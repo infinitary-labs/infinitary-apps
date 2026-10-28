@@ -1,5 +1,6 @@
 import { z } from "zod";
 import type { taskLifecycleOpSchema } from "./cards";
+import { checkSnapshotSchema } from "./checkSnapshot";
 import { computerReachSchema } from "./devices";
 import { liveValidationSummarySchema } from "./liveValidationSummary";
 import { modelReasonSchema } from "./modelReason";
@@ -140,6 +141,8 @@ export const taskDeliveryViewSchema = z.object({
   headSha: z.string().optional(),
   ci: z.enum(["green", "red", "pending", "no-pr", "merged"]).optional(),
   ciAt: z.number().optional(),
+  /** Reported checks; a merge offer itself expresses the crew's judgment. */
+  checks: checkSnapshotSchema.optional(),
   /**
    * When the host says the first check on that head started (INF-587):
    * the checks cell counts from it. Absent until a check has started.
@@ -168,10 +171,7 @@ export const taskDeliveryViewSchema = z.object({
   reviewRiskNote: z.string().optional(),
   reviewedAt: z.number().optional(),
   /**
-   * The round counters and caps the host enforces (delivery rigor phase
-   * 3): unsuccessful declared own repairs (legacy records counted red heads), findings verdicts the review
-   * returned, and when each cap was reached - present while the cap holds
-   * and cleared by the steer that reopens the rounds (`cap_reset`).
+   * Legacy count history remains readable; it no longer places holds or changes readiness.
    */
   ciRounds: z.number().optional(),
   ciRedHead: z.string().optional(),

@@ -4,7 +4,7 @@ import { openDatabase } from "../../src/core/storage/db";
 import { DecisionStore } from "../../src/core/storage/decisionStore";
 import { seedTask } from "../../src/core/tasks/seedTask";
 import { TaskService } from "../../src/core/tasks/taskService";
-import { CHECK_WORDS } from "../../src/shared/vocabulary";
+import { currentCheckSummary } from "../../src/shared/checkSnapshot";
 import { scratchDir } from "../helpers/scratchDirs";
 import { cardBody } from "./frames";
 import { seedGitHubSignIn, seedRepo, startGitHubStub } from "./githubStub";
@@ -156,7 +156,9 @@ test("two baseline failures and one flake request diagnosis without a captain ca
     // moment the record holds - beside the report's own words. The wake's
     // wording is the unit test's to own.
     const refusal = ledger()?.cardRefusal;
-    expect(refusal).toMatchObject({ title: CI_REPAIR_CARD, reason: "checks" });
+    // Captain INF-1555 F12 removes the separate check-readiness prerequisite;
+    // FI3-401 now observes a malformed completion story's real shape refusal.
+    expect(refusal).toMatchObject({ title: CI_REPAIR_CARD, reason: "shape" });
     const refusedAt = new Date(refusal?.at ?? 0).toISOString();
     await expect
       .poll(
@@ -213,8 +215,11 @@ test("two baseline failures and one flake request diagnosis without a captain ca
       ]),
     );
     const frame = cardBody(app.page, CI_REPAIR_CARD);
-    await expect(factsStrip(frame).checks).toHaveText(CHECK_WORDS.green);
+    await expect(factsStrip(frame).checks).toHaveText(
+      currentCheckSummary(ledger() ?? {})?.words ?? "missing check reading",
+    );
     await app.page.screenshot({ path: test.info().outputPath("check-repair-completion.png") });
+    expect(await factsStrip(frame).facts()).not.toContain("crew-verdict");
     expect(ledger()?.ci).toBe("green");
     // The completion card went up, so the refusal no longer stands.
     expect(ledger()?.cardRefusal).toBeUndefined();

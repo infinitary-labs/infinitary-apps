@@ -1,3 +1,4 @@
+import { checkSnapshotSummary } from "./checkSnapshot";
 import { feedRelativeAge } from "./relativeAge";
 import type { RunChecks, TaskDeliveryView } from "./tasks";
 
@@ -18,9 +19,14 @@ export type ChecksSpan = {
 
 /** The span of a reading, or null where no time stands: not started, not read, merged elsewhere. */
 export function checksSpanOf(
-  delivery: Pick<TaskDeliveryView, "ci" | "ciStartedAt" | "ciFinishedAt">,
+  delivery: Pick<TaskDeliveryView, "ci" | "checks" | "headSha" | "ciStartedAt" | "ciFinishedAt">,
 ): ChecksSpan | null {
-  const { ci, ciStartedAt: startedAt, ciFinishedAt: finishedAt } = delivery;
+  if (delivery.checks && delivery.headSha && delivery.checks.headSha !== delivery.headSha)
+    return null;
+  // INF-1555 F21: unreadable is not elapsed work, even with an older check's start.
+  if (delivery.checks?.problem) return null;
+  const { ciStartedAt: startedAt, ciFinishedAt: finishedAt } = delivery;
+  const ci = delivery.checks ? checkSnapshotSummary(delivery.checks).overall : delivery.ci;
   if (startedAt === undefined) return null;
   if (ci === "pending") return { startedAt, finishedAt: null, joint: "for" };
   if (finishedAt === undefined) return null;

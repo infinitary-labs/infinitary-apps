@@ -59,7 +59,9 @@ export const githubChange: Scenario =
       };
     if (!gitReading) return { text: "Waiting for the committed change." };
     if (calledTool(body, "emit_card")) return { text: "done" };
-    if (results.some((result) => result.includes("overall: green")))
+    const reading = results.findLast((result) => result.includes("facts: "));
+
+    if (results.some((result) => result.includes("facts: ")))
       return {
         calls: [
           {
@@ -84,8 +86,7 @@ export const githubChange: Scenario =
           { name: "report", args: { text: "The meter fix is open and its checks passed." } },
         ],
       };
-    if (results.some((result) => result.includes("Read its checks with check_change")))
-      return { calls: [{ name: "check_change", args: {} }] };
+    if (calledTool(body, "open_change")) return { calls: [{ name: "check_change", args: {} }] };
     if (savedStory && !calledTool(body, "prepare_change"))
       return { calls: [prepareMockStory(MOCK_GITHUB_CHANGE_CARD_TITLE, gitReading)] };
     return {

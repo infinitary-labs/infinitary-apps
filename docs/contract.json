@@ -26262,6 +26262,59 @@
                         "ciAt": {
                           "type": "number"
                         },
+                        "checks": {
+                          "type": "object",
+                          "properties": {
+                            "headSha": {
+                              "type": "string"
+                            },
+                            "items": {
+                              "type": "array",
+                              "items": {
+                                "type": "object",
+                                "properties": {
+                                  "name": {
+                                    "type": "string"
+                                  },
+                                  "state": {
+                                    "type": "string",
+                                    "enum": [
+                                      "success",
+                                      "failure",
+                                      "error",
+                                      "cancelled",
+                                      "timed_out",
+                                      "action_required",
+                                      "startup_failure",
+                                      "stale",
+                                      "skipped",
+                                      "neutral",
+                                      "pending"
+                                    ]
+                                  }
+                                },
+                                "required": [
+                                  "name",
+                                  "state"
+                                ]
+                              }
+                            },
+                            "complete": {
+                              "type": "boolean"
+                            },
+                            "problem": {
+                              "type": "string"
+                            },
+                            "absenceDeclared": {
+                              "type": "boolean"
+                            }
+                          },
+                          "required": [
+                            "headSha",
+                            "items",
+                            "absenceDeclared"
+                          ]
+                        },
                         "ciStartedAt": {
                           "type": "number"
                         },
@@ -27577,6 +27630,59 @@
                   },
                   "ciAt": {
                     "type": "number"
+                  },
+                  "checks": {
+                    "type": "object",
+                    "properties": {
+                      "headSha": {
+                        "type": "string"
+                      },
+                      "items": {
+                        "type": "array",
+                        "items": {
+                          "type": "object",
+                          "properties": {
+                            "name": {
+                              "type": "string"
+                            },
+                            "state": {
+                              "type": "string",
+                              "enum": [
+                                "success",
+                                "failure",
+                                "error",
+                                "cancelled",
+                                "timed_out",
+                                "action_required",
+                                "startup_failure",
+                                "stale",
+                                "skipped",
+                                "neutral",
+                                "pending"
+                              ]
+                            }
+                          },
+                          "required": [
+                            "name",
+                            "state"
+                          ]
+                        }
+                      },
+                      "complete": {
+                        "type": "boolean"
+                      },
+                      "problem": {
+                        "type": "string"
+                      },
+                      "absenceDeclared": {
+                        "type": "boolean"
+                      }
+                    },
+                    "required": [
+                      "headSha",
+                      "items",
+                      "absenceDeclared"
+                    ]
                   },
                   "ciStartedAt": {
                     "type": "number"
@@ -31706,6 +31812,59 @@
                     },
                     "ciAt": {
                       "type": "number"
+                    },
+                    "checks": {
+                      "type": "object",
+                      "properties": {
+                        "headSha": {
+                          "type": "string"
+                        },
+                        "items": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "name": {
+                                "type": "string"
+                              },
+                              "state": {
+                                "type": "string",
+                                "enum": [
+                                  "success",
+                                  "failure",
+                                  "error",
+                                  "cancelled",
+                                  "timed_out",
+                                  "action_required",
+                                  "startup_failure",
+                                  "stale",
+                                  "skipped",
+                                  "neutral",
+                                  "pending"
+                                ]
+                              }
+                            },
+                            "required": [
+                              "name",
+                              "state"
+                            ]
+                          }
+                        },
+                        "complete": {
+                          "type": "boolean"
+                        },
+                        "problem": {
+                          "type": "string"
+                        },
+                        "absenceDeclared": {
+                          "type": "boolean"
+                        }
+                      },
+                      "required": [
+                        "headSha",
+                        "items",
+                        "absenceDeclared"
+                      ]
                     },
                     "ciStartedAt": {
                       "type": "number"
@@ -44998,6 +45157,44 @@
               "input": {
                 "type": "object",
                 "properties": {
+                  "declaration": {
+                    "type": "object",
+                    "properties": {
+                      "headSha": {
+                        "type": "string"
+                      },
+                      "verdict": {
+                        "type": "string",
+                        "enum": [
+                          "flake",
+                          "settled"
+                        ]
+                      },
+                      "evidence": {
+                        "type": "string"
+                      },
+                      "check": {
+                        "type": "string"
+                      },
+                      "repairId": {
+                        "type": "string"
+                      },
+                      "outcome": {
+                        "type": "string",
+                        "enum": [
+                          "passed",
+                          "failed",
+                          "superseded",
+                          "void"
+                        ]
+                      }
+                    },
+                    "required": [
+                      "headSha",
+                      "verdict",
+                      "evidence"
+                    ]
+                  },
                   "pull": {
                     "type": "integer",
                     "minimum": 1,
@@ -53223,6 +53420,59 @@
                         "ciAt": {
                           "type": "number"
                         },
+                        "checks": {
+                          "type": "object",
+                          "properties": {
+                            "headSha": {
+                              "type": "string"
+                            },
+                            "items": {
+                              "type": "array",
+                              "items": {
+                                "type": "object",
+                                "properties": {
+                                  "name": {
+                                    "type": "string"
+                                  },
+                                  "state": {
+                                    "type": "string",
+                                    "enum": [
+                                      "success",
+                                      "failure",
+                                      "error",
+                                      "cancelled",
+                                      "timed_out",
+                                      "action_required",
+                                      "startup_failure",
+                                      "stale",
+                                      "skipped",
+                                      "neutral",
+                                      "pending"
+                                    ]
+                                  }
+                                },
+                                "required": [
+                                  "name",
+                                  "state"
+                                ]
+                              }
+                            },
+                            "complete": {
+                              "type": "boolean"
+                            },
+                            "problem": {
+                              "type": "string"
+                            },
+                            "absenceDeclared": {
+                              "type": "boolean"
+                            }
+                          },
+                          "required": [
+                            "headSha",
+                            "items",
+                            "absenceDeclared"
+                          ]
+                        },
                         "ciStartedAt": {
                           "type": "number"
                         },
@@ -54538,6 +54788,59 @@
                         },
                         "ciAt": {
                           "type": "number"
+                        },
+                        "checks": {
+                          "type": "object",
+                          "properties": {
+                            "headSha": {
+                              "type": "string"
+                            },
+                            "items": {
+                              "type": "array",
+                              "items": {
+                                "type": "object",
+                                "properties": {
+                                  "name": {
+                                    "type": "string"
+                                  },
+                                  "state": {
+                                    "type": "string",
+                                    "enum": [
+                                      "success",
+                                      "failure",
+                                      "error",
+                                      "cancelled",
+                                      "timed_out",
+                                      "action_required",
+                                      "startup_failure",
+                                      "stale",
+                                      "skipped",
+                                      "neutral",
+                                      "pending"
+                                    ]
+                                  }
+                                },
+                                "required": [
+                                  "name",
+                                  "state"
+                                ]
+                              }
+                            },
+                            "complete": {
+                              "type": "boolean"
+                            },
+                            "problem": {
+                              "type": "string"
+                            },
+                            "absenceDeclared": {
+                              "type": "boolean"
+                            }
+                          },
+                          "required": [
+                            "headSha",
+                            "items",
+                            "absenceDeclared"
+                          ]
                         },
                         "ciStartedAt": {
                           "type": "number"

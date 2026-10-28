@@ -1,6 +1,8 @@
 import { REVIEW_BRIEF_OPENING } from "../../../src/core/orchestrator/intentBrief";
 import { PERSONAL_WORKSPACE_NAME } from "../../../src/core/paths";
+import { checkSnapshotSummary } from "../../../src/shared/checkSnapshot";
 import { liveValidationSchema } from "../../../src/shared/liveValidation";
+import { CHECK_WORDS } from "../../../src/shared/vocabulary";
 import { noSurfaceProof } from "../../helpers/liveValidation";
 import type { ScriptedCardAction } from "../../helpers/scriptedCalls";
 import {
@@ -17,7 +19,7 @@ import {
   shellJobsRunning,
   sinceLastUser,
 } from "../mockProvider";
-import { providerMessages } from "../providerRequest";
+import { checkFactsSnapshot, providerMessages } from "../providerRequest";
 
 /**
  * The reviewed tier (delivery rigor phases 2 and 3, rigor-reviewed e2e): a
@@ -118,7 +120,7 @@ function firstmateMove({
   latestUserTail,
   hasToolResults,
 }: ScenarioRequest): ScenarioAnswer | undefined {
-  // A reviewed builder's green report: its recorded checks on the wake,
+  // A reviewed builder's ready declaration: separate from the recorded check facts,
   // then spawn_crewmate with review_of.
   const reviewedReport =
     latestUserTail.includes("reported on task") &&
@@ -128,7 +130,7 @@ function firstmateMove({
   // reading); the Firstmate acts on them without a tool call.
   if (
     reviewedReport &&
-    latestUserTail.includes("recorded checks: green") &&
+    latestUserTail.includes(`recorded checks: ${CHECK_WORDS.green}`) &&
     !latestUserTail.includes("Commissioned")
   ) {
     const taskId = latestUserTail.match(/reported on task ([\w-]+)/)?.[1] ?? "missing";
@@ -291,13 +293,15 @@ function crewmateMove({
   // carried it. On red it has nothing more to say.
   const turn = sinceLastUser(body);
   if (turn.user.includes(MOCK_REVIEWED_READ_STEER)) {
-    const reading = turn.results.find((result) => /^overall: /m.test(result));
+    const reading = turn.results.findLast((result) => /^facts: /m.test(result));
     if (!reading) return { calls: [{ name: "check_change", args: {} }] };
+
     const recorded = turn.results.some((result) =>
       result.includes("Validation recorded at evidence revision"),
     );
-    if (recorded || !/^overall: green$/m.test(reading)) return { text: "" };
-    const head = reading.match(/head ([a-f0-9]{40})/)?.[1];
+    const facts = checkFactsSnapshot(reading);
+    if (recorded || !facts || checkSnapshotSummary(facts).overall !== "green") return { text: "" };
+    const head = facts.headSha;
     if (!head) throw new Error("The scripted builder needs its actual checked version.");
     return {
       calls: [
@@ -365,6 +369,11 @@ function crewmateMove({
   // Then its own check reading, as a real builder takes one before
   // it reports: the app records it, and the Firstmate reads it.
   if (!calledTool(body, "check_change")) return { calls: [{ name: "check_change", args: {} }] };
+  const reading = providerMessages(body)
+    .filter((message) => message.role === "tool")
+    .map((message) => message.text)
+    .findLast((text) => text.includes("facts: "));
+
   if (
     !providerMessages(body).some(
       (message) =>

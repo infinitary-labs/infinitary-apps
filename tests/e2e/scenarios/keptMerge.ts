@@ -141,6 +141,7 @@ function keptMergeMove(body: string, firstmate: boolean): ScenarioAnswer | undef
       args: { title: KEPT_MERGE_TITLE, presentation: preparedRevision(results.join("\n")) },
     },
     { name: "check_change", args: {} },
+
     {
       name: "emit_card",
       args: {

@@ -7,14 +7,12 @@ import { TaskService } from "../tasks/taskService";
 import { declareCheckAction, observeCheckRepair } from "./checkRepair";
 import { CHECK_WATCH_SLOW_MS } from "./checkWatch";
 import { type MainBranchReading, MainCheckWatcher } from "./mainCheckWake";
-import { mainCheckPassedOnce, renderWake, type TypedWake } from "./wakes";
+import { renderWake, type TypedWake } from "./wakes";
 
 /**
- * INF-833 Fix 4, the captain's "wakes PRs waiting on a main failure once
- * main's own run of that check passes": a standing baseline wait is a steer
- * when the default branch's own run of that check is success, and not while
- * that run is still failing, waiting, skipped or absent. The named task
- * staying open is the case the close-only rule held (FI3-250).
+ * Captain F5: each default-branch commit's final checks are relayed once;
+ * the crew decides whether those facts clear its baseline wait.
+ * Empty, incomplete and running readings are not final observations.
  */
 
 const HEAD = "c".repeat(40);
@@ -76,18 +74,19 @@ function setup() {
   };
   const reads: string[] = [];
   const steers: { taskId: string; wake: TypedWake }[] = [];
-  const watcher = new MainCheckWatcher({
+  const host = {
     tasks,
     inbox,
-    read: async (repoId) => {
+    read: async (repoId: string) => {
       reads.push(repoId);
       return reading;
     },
-    steer: async (taskId, wake) => {
+    steer: async (taskId: string, wake: TypedWake) => {
       steers.push({ taskId, wake });
       if (wake.once) inbox.enqueueSteerOnce(taskId, { ...wake, once: wake.once });
     },
-  });
+  };
+  let watcher = new MainCheckWatcher(host);
   return {
     db,
     tasks,
@@ -99,60 +98,113 @@ function setup() {
       reading = next;
     },
     poll: (at = 1_700_000_060_000) => watcher.poll(at),
+    restart: () => {
+      watcher = new MainCheckWatcher(host);
+    },
   };
 }
 
 describe("a main failure's wake (INF-833 Fix 4)", () => {
-  it("wakes each waiting pull request once the default branch's own run of that check passes, and not before", async () => {
-    const { db, tasks, owner, waiters, reads, steers, answer, poll } = setup();
-    try {
-      await poll();
-      expect(reads).toEqual(["infinitary"]);
-      expect(steers).toEqual([]);
-      expect(owner.status).toBe("active");
+  // INF-1555 F14 and captain F5: explain a refused list on each task, never invent a final wake.
+  it.each(["read", "failed"] as const)(
+    "records a %s refusal reason once per waiting task without a non-final wake",
+    async (kind) => {
+      const { db, tasks, waiters, answer, poll, steers, restart } = setup();
+      try {
+        const problem =
+          "GitHub could not provide all check runs: Resource not accessible by integration";
+        answer(
+          kind === "read"
+            ? {
+                kind,
+                sha: MAIN,
+                complete: false,
+                problem,
+                items: [{ name: CHECK, state: "success" }],
+              }
+            : { kind, problem },
+        );
+        await poll();
+        restart();
+        await poll();
+        expect(steers).toEqual([]);
+        for (const task of waiters) {
+          const notes = tasks.timeline(task.id).filter((event) => event.data?.mainCheckReadProblem);
+          expect(notes).toHaveLength(1);
+          expect(notes[0]).toMatchObject({
+            text: `The default branch's checks cannot be read: ${problem}`,
+            data: { news: true },
+          });
+          // F14 retains only the identity actually read; a failed lookup has no main commit.
+          expect(notes[0]?.data?.mainCheckReadProblem).toEqual(
+            kind === "read" ? { sha: MAIN, problem } : { problem },
+          );
+        }
+        answer({
+          kind: "read",
+          sha: MAIN,
+          complete: true,
+          items: [{ name: CHECK, state: "success" }],
+        });
+        await poll(1_700_000_060_000 + CHECK_WATCH_SLOW_MS);
+        expect(steers).toHaveLength(waiters.length);
+      } finally {
+        db.close();
+      }
+    },
+  );
 
-      answer({ kind: "read", sha: MAIN, items: [{ name: CHECK, state: "pending" }] });
-      await poll();
-      answer({ kind: "read", sha: MAIN, items: [{ name: CHECK, state: "skipped" }] });
-      await poll();
-      answer({ kind: "read", sha: MAIN, items: [{ name: "unit-tests", state: "success" }] });
-      await poll();
+  // Captain F5: one final-state wake per main commit, not each check transition.
+  it("relays final checks once per commit across transitions and restart", async () => {
+    const { db, tasks, waiters, reads, steers, answer, poll, restart } = setup();
+    try {
+      for (const items of [
+        [],
+        [{ name: CHECK, state: "pending" }],
+        [
+          { name: CHECK, state: "success" },
+          { name: "phone", state: "pending" },
+        ],
+      ] as const) {
+        answer({ kind: "read", sha: MAIN, items: [...items] });
+        await poll();
+        expect(steers).toEqual([]);
+      }
       answer({
         kind: "read",
         sha: MAIN,
-        items: [
-          { name: CHECK, state: "success" },
-          { name: CHECK, state: "pending" },
-        ],
+        items: [{ name: CHECK, state: "failure" }],
+        complete: false,
       });
       await poll();
       expect(steers).toEqual([]);
-
-      answer({ kind: "read", sha: MAIN, items: [{ name: CHECK, state: "success" }] });
+      const final = [
+        { name: CHECK, state: "failure" },
+        { name: "phone", state: "skipped" },
+      ] as const;
+      answer({ kind: "read", sha: MAIN, items: [...final], complete: true });
       await poll();
-      expect(steers.map((steer) => steer.taskId).sort()).toEqual(
+      expect(steers.map((entry) => entry.taskId).sort()).toEqual(
         waiters.map((task) => task.id).sort(),
       );
-      for (const steer of steers) {
-        expect(renderWake(steer.wake)).toBe(
-          `The default branch's own run of ${CHECK} passed at ${MAIN.slice(0, 7)}. Bring your change up to date and read the checks again.`,
-        );
-        expect(steer.wake.once).toBe(mainCheckPassedOnce(CHECK, MAIN));
-      }
-      const woken = steers.length;
+      expect(steers.at(-1)?.wake.facts).toEqual({
+        kind: "main-check-observed",
+        sha: MAIN,
+        checks: [...final],
+      });
+      expect(renderWake(steers.at(-1)!.wake)).toContain(
+        "Judge whether this clears your declared wait",
+      );
       await poll();
-      expect(steers).toHaveLength(woken);
-
-      const stillWaiting = waiters[0];
-      const alreadyGreen = waiters[1];
-      if (!stillWaiting || !alreadyGreen) {
-        throw new Error("the two waiting pull requests were not seeded");
-      }
+      restart();
+      answer({ kind: "read", sha: MAIN, items: [{ name: CHECK, state: "success" }] });
+      await poll();
+      expect(steers).toHaveLength(waiters.length);
+      expect(reads.every((repo) => repo === "infinitary")).toBe(true);
+      seedDelivery(tasks, waiters[1]!.id, { ci: "green", headSha: LATER });
       answer({ kind: "read", sha: LATER, items: [{ name: CHECK, state: "success" }] });
-      seedDelivery(tasks, alreadyGreen.id, { ci: "green", headSha: LATER });
       await poll();
-      expect(steers.slice(woken).map((steer) => steer.taskId)).toEqual([stillWaiting.id]);
-      expect(steers.at(-1)?.wake.once).toBe(mainCheckPassedOnce(CHECK, LATER));
+      expect(steers.slice(waiters.length).map((entry) => entry.taskId)).toEqual([waiters[0]!.id]);
     } finally {
       db.close();
     }

@@ -2,6 +2,7 @@ import type { ChildProcess } from "node:child_process";
 import { randomUUID } from "node:crypto";
 import { appendFileSync, cpSync, existsSync, mkdirSync, readdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
+import type { BrowserContext } from "@playwright/test";
 import type { MockProviderServer } from "./mockProvider";
 import { runDir } from "./runEvidence";
 
@@ -60,4 +61,13 @@ export function launchDiagnostics(
       stopRecording?.();
     },
   };
+}
+
+/** INF-1555 F16: Electron's context is not the runner's default traced browser context. */
+export async function recordAppTrace(
+  context: BrowserContext,
+  path: string,
+): Promise<() => Promise<void>> {
+  await context.tracing.start({ screenshots: true, snapshots: true, sources: false });
+  return () => context.tracing.stop({ path });
 }

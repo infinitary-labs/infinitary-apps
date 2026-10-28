@@ -8,9 +8,11 @@ import { CardStore } from "../../src/core/storage/cardStore";
 import { openDatabase } from "../../src/core/storage/db";
 import { seedTask } from "../../src/core/tasks/seedTask";
 import { TaskService } from "../../src/core/tasks/taskService";
+import { currentCheckSummary } from "../../src/shared/checkSnapshot";
 import type { TaskDetail } from "../../src/shared/tasks";
-import { CHECK_WORDS, MERGE_WORDS } from "../../src/shared/vocabulary";
+import { MERGE_WORDS } from "../../src/shared/vocabulary";
 import { scratchDir } from "../helpers/scratchDirs";
+import { seedDelivery } from "../helpers/taskDelivery";
 import { API_WRITE_GUARD_MARKER, mergeWriteCases, savedWriteAsks } from "./apiWriteCases";
 import { cardBody } from "./frames";
 import {
@@ -210,7 +212,12 @@ for (const host of HOSTS) {
       const webUrl = `https://${host}/${GITLAB_STUB_PROJECT}/-/merge_requests/1`;
       const facts = factsStrip(cardBody(page, cardTitle));
       await expect(facts.change.locator(`a[href="${webUrl}"]`)).toHaveText("!1");
-      await expect(facts.checks).toHaveText(CHECK_WORDS.green);
+      await expect(facts.checks).toHaveText(
+        currentCheckSummary(task.delivery ?? {})?.words ?? "missing check reading",
+      );
+      await expect(cardBody(page, cardTitle).locator('[data-inf-fact="crew-verdict"]')).toHaveCount(
+        0,
+      );
       expect(
         await page.evaluate((id) => window.infinitary.tasks.detail(id), task.id),
       ).toMatchObject({
@@ -415,6 +422,7 @@ const REFUSALS: {
   change: string;
   arrange: (gitlab: GitLabStub, repo: Repo) => string;
   asksGitLab: boolean;
+  crewVerdict?: "ready" | "red";
   stoppedBy: (stop: ReturnType<typeof stopOf>, fact: string) => boolean;
 }[] = [
   {
@@ -424,6 +432,7 @@ const REFUSALS: {
       return "answered 409";
     },
     asksGitLab: true,
+    crewVerdict: "ready",
     stoppedBy: (stop, answer) => stop.problem.includes(answer),
   },
   {
@@ -433,6 +442,7 @@ const REFUSALS: {
       return "Branch cannot be merged";
     },
     asksGitLab: true,
+    crewVerdict: "ready",
     stoppedBy: (stop, answer) => stop.problem.includes(answer),
   },
   {
@@ -442,6 +452,7 @@ const REFUSALS: {
       return "red";
     },
     asksGitLab: false,
+    crewVerdict: "red",
     stoppedBy: (stop, reading) => stop.ci === reading,
   },
   {
@@ -488,6 +499,7 @@ const REFUSALS: {
       return "red";
     },
     asksGitLab: false,
+    crewVerdict: "red",
     stoppedBy: (stop, reading) => stop.ci === reading,
   },
 ];
@@ -532,6 +544,28 @@ for (const host of HOSTS) {
         worktreeDir,
         branch,
       });
+      // This saved crew judgment lets the structural refusers reach their own
+      // merge boundary; red/pending cases retain their distinct readiness facts.
+      if (refusal.crewVerdict) {
+        const tasks = new TaskService({ db, strict: true });
+        const headSha = git("-C", repoDir, "rev-parse", `refs/heads/${branch}`);
+        seedDelivery(tasks, taskId, {
+          ciRepair: {
+            failures: [],
+            diagnoses: [],
+            repairs: [],
+            declarations: [
+              {
+                headSha,
+                verdict: refusal.crewVerdict,
+                evidence:
+                  "The scripted crew judged the arranged pipeline before the captain's click.",
+                at: Date.now(),
+              },
+            ],
+          },
+        });
+      }
       new CardStore(db).upsert({
         id: `card-${taskId}-1`,
         taskId,

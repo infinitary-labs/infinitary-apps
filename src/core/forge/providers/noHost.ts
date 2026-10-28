@@ -34,7 +34,7 @@ export class NoHostForge implements Forge {
   }
 
   async checks() {
-    return { overall: "green" as const, items: [] };
+    return { items: [] };
   }
 
   async putIn(): Promise<undefined> {

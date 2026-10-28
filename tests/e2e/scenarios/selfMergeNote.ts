@@ -43,7 +43,9 @@ export const selfMergeNote: Scenario =
       };
     if (!gitReading) return { text: "Waiting for the committed change." };
     if (calledTool(body, "emit_card")) return { text: "done" };
-    if (results.some((result) => result.includes("overall: green")))
+    const reading = results.findLast((result) => result.includes("facts: "));
+
+    if (results.some((result) => result.includes("facts: ")))
       return {
         calls: [
           {
@@ -59,8 +61,7 @@ export const selfMergeNote: Scenario =
           },
         ],
       };
-    if (results.some((result) => result.includes("Read its checks with check_change")))
-      return { calls: [{ name: "check_change", args: {} }] };
+    if (calledTool(body, "open_change")) return { calls: [{ name: "check_change", args: {} }] };
     if (!calledTool(body, "prepare_change"))
       return { calls: [prepareMockStory(MOCK_SELF_MERGE_CHANGE_TITLE, gitReading)] };
     return {

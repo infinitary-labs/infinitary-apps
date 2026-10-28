@@ -20,7 +20,7 @@ import { splitTurn } from "./taskExecutionStore";
 import { splitPolicies } from "./taskPolicyStore";
 import { migrateTaskRecordRetirement } from "./taskRecordProjection";
 import { conversationOf } from "./taskSessionStore";
-import { standingCap, type TaskDelivery } from "./taskStore";
+import type { TaskDelivery } from "./taskStore";
 import {
   createViews,
   dropViews,
@@ -1484,30 +1484,7 @@ function migrateCapGates(db: AppDatabase): void {
       migrated_at INTEGER NOT NULL
     );
   `);
-  const rows = db
-    .prepare(
-      "SELECT id, delivery_json FROM tasks WHERE status = 'active' AND kind = 'work' AND gate_kind IS NULL AND delivery_json IS NOT NULL",
-    )
-    .all() as { id: string; delivery_json: string }[];
-  const gate = db.prepare(
-    "UPDATE tasks SET gate_kind = 'captain', gate_ref = ?, gate_until = NULL, gate_reason = ? WHERE id = ?",
-  );
-  const log = db.prepare(
-    "INSERT OR REPLACE INTO cap_gate_backfill (task_id, gate_ref, gate_reason, migrated_at) VALUES (?, ?, ?, ?)",
-  );
-  const now = Date.now();
-  for (const row of rows) {
-    let delivery: TaskDelivery;
-    try {
-      delivery = JSON.parse(row.delivery_json) as TaskDelivery;
-    } catch {
-      continue;
-    }
-    const cap = standingCap(delivery);
-    if (!cap) continue;
-    gate.run(cap.head ?? null, cap.reason, row.id);
-    log.run(row.id, cap.head ?? null, cap.reason, now);
-  }
+  // Retired caps never create new captain gates; the table preserves historical rows.
 }
 
 function migrateWorkShape(db: AppDatabase): void {

@@ -87,7 +87,8 @@ export const continueChange: Scenario =
     if (shell.pending) return { text: "The push is still running." };
     const gitReading = shell.readings.find((message) => message.role === "tool")?.text;
     if (calledTool(latestUserTail, "report")) return { text: "The first change is ready." };
-    if (latestUserTail.includes("overall: green")) {
+
+    if (calledTool(latestUserTail, "check_change")) {
       if (!calledTool(latestUserTail, "file_followup"))
         return {
           calls: [
@@ -112,7 +113,7 @@ export const continueChange: Scenario =
         ],
       };
     }
-    if (latestUserTail.includes("Read its checks with check_change"))
+    if (calledTool(latestUserTail, "open_change"))
       return { calls: [{ name: "check_change", args: {} }] };
     if (!calledTool(latestUserTail, "prepare_change"))
       return {

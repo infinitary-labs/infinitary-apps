@@ -98,7 +98,8 @@ test("the reviewed builder reads its checks once its slow save point has exited"
   expect(next()).toEqual({ calls: [{ name: "check_change", args: {} }] });
   const committed = "9b51c0e7a2d4f86b3e1c5a7d9f0b2e4c6a8d1f3b";
   results(
-    `pull request #55 https://github.com/o/meterlab/pull/55 head ${committed}\noverall: green\n- ci: completed / success`,
+    // INF-1555 F12: the current tool carries typed facts, not a crew-ready or overall prose line.
+    `pull request #55 https://github.com/o/meterlab/pull/55 head ${committed}\nfacts: ${JSON.stringify({ headSha: committed, complete: true, checks: [{ name: "ci", state: "success" }] })}\n- ci: completed / success`,
   );
   expect(next()).toMatchObject({
     calls: [

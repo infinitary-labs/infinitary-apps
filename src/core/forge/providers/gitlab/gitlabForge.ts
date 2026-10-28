@@ -14,7 +14,6 @@ import {
   type ForgeReadiness,
   ForgeWriteError,
   isFullCommitId,
-  overallOfChecks,
 } from "../../forge";
 import { gitLabReleaseUpload, nextGitLabPagePath, parseGitLabApiRequest } from "./api";
 import { GitLabAttachments } from "./attachments";
@@ -268,13 +267,17 @@ export class GitLabForge implements Forge {
     );
     const counted = await this.countedPipelines([...ofRequest, ...onHead], head, iid);
     const items: ForgeCheck[] = [];
+    let complete =
+      ofRequest.length < 100 &&
+      onHead.length < 100 &&
+      new Map([...ofRequest, ...onHead].map((pipeline) => [pipeline.id, pipeline])).size <=
+        MAX_MERGE_COMMIT_READS;
     for (const pipeline of counted) {
-      items.push(...(await this.pipelineChecks(pipeline, counted.length > 1)));
+      const read = await this.pipelineChecks(pipeline, counted.length > 1);
+      items.push(...read.items);
+      complete &&= read.complete;
     }
-    // A merge request's pipelines start only on its head: one it moved past waits on none (INF-988).
-    const waiting = movedPast === undefined ? await this.notStarted(ofRequest, counted, iid) : null;
-    if (waiting) items.push({ name: waiting, state: "pending" });
-    return { overall: overallOfChecks(items), items };
+    return { items, complete };
   }
 
   /**
@@ -408,6 +411,8 @@ export class GitLabForge implements Forge {
       ...(request.source_branch ? { branch: request.source_branch } : {}),
       ...(request.title ? { title: request.title } : {}),
       readiness: readinessOf(request),
+      mergeable: null,
+      mergeableState: request.detailed_merge_status ?? request.merge_status,
     };
   }
 
@@ -470,25 +475,22 @@ export class GitLabForge implements Forge {
   ): Promise<PipelineJson[]> {
     const byId = new Map(listed.map((pipeline) => [pipeline.id, pipeline]));
     const newestFirst = [...byId.values()].sort((a, b) => b.id - a.id);
-    const counted = new Map<string, PipelineJson>();
+    const counted: PipelineJson[] = [];
     // A merged-result ref whose newest pipeline merged an earlier head holds
     // none for this one yet: older pipelines there are older still.
-    const passed = new Set<string>();
     let opened = 0;
     for (const pipeline of newestFirst) {
-      if (counted.has(pipeline.ref) || passed.has(pipeline.ref)) continue;
       if (pipeline.sha === head) {
-        counted.set(pipeline.ref, pipeline);
+        counted.push(pipeline);
         continue;
       }
       const ref = MERGE_REQUEST_REF.exec(pipeline.ref);
       if (!ref || Number(ref[1]) !== iid || ref[2] === "head") continue;
       if (opened >= MAX_MERGE_COMMIT_READS) continue;
       opened += 1;
-      if (await this.mergesHead(pipeline.sha, head)) counted.set(pipeline.ref, pipeline);
-      else passed.add(pipeline.ref);
+      if (await this.mergesHead(pipeline.sha, head)) counted.push(pipeline);
     }
-    return [...counted.values()].sort((a, b) => a.id - b.id);
+    return counted.sort((a, b) => a.id - b.id);
   }
 
   /** Whether a merged-result commit merges the head: the head is one of its parents. */
@@ -505,10 +507,20 @@ export class GitLabForge implements Forge {
   }
 
   /** A pipeline as checks: the pipeline itself, then each of its jobs (latest attempts only). */
-  private async pipelineChecks(pipeline: PipelineJson, several: boolean): Promise<ForgeCheck[]> {
+  private async pipelineChecks(
+    pipeline: PipelineJson,
+    several: boolean,
+  ): Promise<{ items: ForgeCheck[]; complete: boolean }> {
     const what = pipelineKind(pipeline.ref);
     const items: ForgeCheck[] = [
-      { name: `pipeline #${pipeline.id} (${what})`, state: pipelineState(pipeline.status) },
+      {
+        name: `pipeline #${pipeline.id} (${what})`,
+        state: pipelineState(pipeline.status),
+        run: pipeline.id,
+        event: pipeline.source,
+        status: pipeline.status,
+        ref: pipeline.ref,
+      },
     ];
     for (let page = 1; page <= MAX_JOB_PAGES; page++) {
       const jobs = await this.read(
@@ -516,50 +528,18 @@ export class GitLabForge implements Forge {
       );
       if (!Array.isArray(jobs)) throw unreadable(this.place, `pipeline #${pipeline.id}'s jobs`);
       for (const job of jobs as JobJson[]) {
-        const check = { ...jobCheck(job), ...checkTimes(job.started_at, job.finished_at) };
+        const check = {
+          ...jobCheck(job),
+          ...checkTimes(job.started_at, job.finished_at),
+          run: pipeline.id,
+          event: pipeline.source,
+          ref: pipeline.ref,
+        };
         items.push(several ? { ...check, name: `${check.name} [${what}]` } : check);
       }
-      if (jobs.length < 100) return items;
+      if (jobs.length < 100) return { items, complete: true };
     }
-    items.push({
-      name: `pipeline #${pipeline.id} has more jobs than the app reads`,
-      state: "pending",
-    });
-    return items;
-  }
-
-  /**
-   * Why the head has no pipeline yet where one will run: a merge request
-   * pipeline for an earlier head of this merge request with none for this
-   * one, or no pipeline at all on a project that runs them for merge
-   * requests or branches. Null where none is coming - a project that runs
-   * no pipelines, which reads green with zero checks.
-   */
-  private async notStarted(
-    ofRequest: PipelineJson[],
-    counted: PipelineJson[],
-    iid: number,
-  ): Promise<string | null> {
-    const requestRef = (pipeline: PipelineJson) => {
-      const ref = MERGE_REQUEST_REF.exec(pipeline.ref);
-      return ref !== null && Number(ref[1]) === iid && ref[2] !== "train";
-    };
-    if (ofRequest.some(requestRef) && !counted.some(requestRef)) {
-      return "the merge request pipeline for this version has not started yet";
-    }
-    if (counted.length > 0) return null;
-    if (ofRequest.length > 0) return "the pipeline for this version has not started yet";
-    const forRequests = await this.pipelines(
-      `${this.projectPath()}/pipelines?source=merge_request_event&per_page=1`,
-    );
-    if (forRequests.length > 0) return "the pipeline for this version has not started yet";
-    const target = await this.defaultBranch();
-    const onBranches = await this.pipelines(
-      `${this.projectPath()}/pipelines?scope=branches&per_page=100`,
-    );
-    return onBranches.some((pipeline) => pipeline.ref !== target)
-      ? "the pipeline for this version has not started yet"
-      : null;
+    return { items, complete: false };
   }
 
   private read(path: string): Promise<unknown> {
@@ -636,25 +616,12 @@ function pipelineState(status: string): ForgeCheckState {
  * blocks the pipeline is held until a person starts it.
  */
 function jobCheck(job: JobJson): ForgeCheck {
-  const optional = job.allow_failure === true;
-  switch (job.status) {
-    case "success":
-      return { name: job.name, state: "success" };
-    case "failed":
-      return optional
-        ? { name: `${job.name} (failed, allowed to fail)`, state: "skipped" }
-        : { name: job.name, state: "failure" };
-    case "canceled":
-      return { name: job.name, state: "cancelled" };
-    case "skipped":
-      return { name: job.name, state: "skipped" };
-    case "manual":
-      return optional
-        ? { name: `${job.name} (manual, optional, not started)`, state: "skipped" }
-        : { name: `${job.name} (manual: waits for someone to start it)`, state: "neutral" };
-    default:
-      return { name: job.name, state: "pending" };
-  }
+  return {
+    name: job.name,
+    state: pipelineState(job.status),
+    status: job.status,
+    ...(typeof job.allow_failure === "boolean" ? { allowFailure: job.allow_failure } : {}),
+  };
 }
 
 /** GitLab statuses that are a rule holding the merge, not a conflict or a computation. */

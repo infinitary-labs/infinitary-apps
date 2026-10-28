@@ -277,60 +277,49 @@ describe("renderWake", () => {
     );
   });
 
-  it("words a cap from the facts it carries: the cap it reached, and the head in short", () => {
+  // Accepted INF-1177: old typed notices cannot recreate retired count policy.
+  it.each([
+    "ci-cap",
+    "review-cap",
+    "delegated-review-cap",
+    "idle-ci-cap",
+    "idle-review-cap",
+  ] as const)("serves a queued %s as history without an active count hold", (kind) => {
     const task = { id: "t1", title: "Fix the pin" };
-    expect(
-      renderWake(ciCapWake(task, { rounds: 4, cap: 4, headSha: "89abcdef0123" })).split("\n")[0],
-    ).toBe(
-      '[fm-op] task t1 "Fix the pin" hit its CI cap: 4 own repairs failed (the cap is 4), last at 89abcde. Its completion card and its re-reviews are held until the captain answers and your steer reopens its rounds.',
-    );
-    expect(
-      renderWake(ciCapWake(task, { rounds: 4, cap: 4, headSha: "89abcdef0123" }, false)),
-    ).toContain('"label": "Try a stronger model"');
-    const capped = renderWake(
-      reviewCapWake(task, {
-        rounds: 4,
-        cap: 3,
-        findings: {
-          kind: "review-verdict",
-          task: { id: "r1", title: "Review: Fix the pin" },
-          builder: task,
-          crewmate: "crewmate 2",
-          verdict: "findings",
-          excerpt: "verdict: findings F1 racy",
-          cards: [],
-        },
-      }),
-    );
-    // The cap's own words name the way: the findings' next steps wait on the captain.
-    expect(capped.split("\n")[0]).toBe(
-      '[fm-op] crewmate 2 reported on review task r1 "Review: Fix the pin" - the review of task t1 "Fix the pin" - with verdict findings: verdict: findings F1 racy This is findings round 4 on task t1, past the review cap of 3 re-reviews: no more re-reviews go out until the captain answers and your steer reopens the rounds.',
-    );
-    expect(capped).toContain('"held": "review-cap"');
-  });
-
-  it("serves delegated review caps without captain choices and preserves legacy captain wakes (INF-166)", () => {
-    const task = { id: "t1", title: "Fix the pin" };
-    const wake = reviewCapWake(task, {
-      rounds: 3,
-      cap: 2,
-      owner: "firstmate",
-      findings: {
-        kind: "review-verdict",
-        task: { id: "r1", title: "Review" },
-        builder: task,
-        crewmate: "crewmate 2",
-        verdict: "findings",
-        excerpt: "F1 info say likely - ask-user",
-        cards: [],
-      },
-    });
-    expect(wake.facts).toMatchObject({ owner: "firstmate" });
-    expect(wake.ways).toBeUndefined();
-    expect(renderWake(wake)).toContain("your steer reopens the review rounds, every time");
-    expect(renderWake({ facts: { kind: "review-cap", task, rounds: 3, cap: 2 } })).toContain(
-      "until the captain answers",
-    );
+    const wake =
+      kind === "ci-cap"
+        ? ciCapWake(task, { rounds: 3, cap: 3, headSha: "89abcdef0123" })
+        : kind.startsWith("idle-")
+          ? {
+              facts: {
+                kind: "idle-owed" as const,
+                held: kind === "idle-ci-cap" ? ("ci-cap" as const) : ("review-cap" as const),
+                task,
+                idleMs: 60000,
+                wakes: 1,
+              },
+            }
+          : reviewCapWake(task, {
+              rounds: 3,
+              cap: 2,
+              ...(kind === "delegated-review-cap" ? { owner: "firstmate" as const } : {}),
+              findings: {
+                kind: "review-verdict",
+                task: { id: "r1", title: "Review" },
+                builder: task,
+                crewmate: "crewmate 2",
+                verdict: "findings",
+                excerpt: "F1 racy",
+                cards: [],
+              },
+            });
+    const body = renderWake(wake);
+    expect(body).toContain(task.id);
+    expect(body).toContain("count holds are retired");
+    expect(body).toContain("grants no authorization");
+    expect(body).not.toContain("until the captain answers");
+    expect(body).not.toContain('"held":');
+    if (kind === "review-cap" || kind === "delegated-review-cap") expect(body).toContain("F1 racy");
   });
 
   it("words each reviewed-tier step on the wake it arises on (FI3-566 cut C)", () => {
@@ -436,7 +425,7 @@ describe("renderWake", () => {
     return new InboxStore(db).pending(FIRSTMATE_RECIPIENT, 2_000);
   }
 
-  it("serves a review cap the previous build queued with its findings wake as prose, as it served it", () => {
+  it("drains queued review findings without reviving their retired cap", () => {
     const rows = laneWith({
       v: 1,
       facts: {
@@ -449,9 +438,12 @@ describe("renderWake", () => {
       },
       ways: [],
     });
-    expect(drainWakes(rows).map((wake) => wake.body)).toEqual([
-      '[fm-op] crewmate 2 reported on review task r1 "Review: Fix": verdict: findings F1 racy This is findings round 3 on task t1, past the review cap of 2 re-reviews: no more re-reviews go out until the captain answers and your steer reopens the rounds.\n```json\n{\n  "held": "review-cap",\n  "task": {\n    "id": "t1",\n    "title": "Fix"\n  },\n  "ways": []\n}\n```',
-    ]);
+    const body = drainWakes(rows)[0]?.body;
+    expect(body).toContain("count holds are retired");
+    expect(body).toContain(
+      '[fm-op] crewmate 2 reported on review task r1 "Review: Fix": verdict: findings F1 racy',
+    );
+    expect(body).not.toContain("no more re-reviews go out");
   });
 
   it("serves a known kind whose facts it cannot word as data, so the lane still drains", () => {
@@ -466,30 +458,25 @@ describe("renderWake", () => {
   it('words the check watch\'s end for each way it ends (docs/forge.md, "The check watch")', () => {
     const settled = (facts: Omit<Extract<WakeFacts, { kind: "checks-settled" }>, "kind">) =>
       renderWake({ facts: { kind: "checks-settled", ...facts } });
-    expect(settled({ outcome: "passed", change: "PR #7", head: "cafe0001", count: 0 })).toBe(
-      "The checks on PR #7 finished at cafe000 and it reports no checks, so it reads green on the strength of your local gate. Carry on from where you stopped. If the rest needs this merged first, file it as Continue: … and end this task with the completion decision.",
-    );
-    expect(
-      settled({
-        outcome: "failed",
+    const checks = [{ name: "lint", state: "failure" }];
+    const finished = settled({ outcome: "finished", change: "PR #7", head: "cafe0001", checks });
+    expect(finished).toContain("lint (failure)");
+    // Captain INF-1555 F12: facts lead to an offer, not a second readiness declaration.
+    expect(finished).toContain("offer its merge when ready");
+    for (const outcome of ["passed", "failed", "not-green"] as const) {
+      const facts = {
+        outcome,
         change: "PR #7",
         head: "cafe0001",
-        checks: [{ name: "lint", state: "failure" }],
+        checks,
         cap: { rounds: 3, cap: 3 },
-      }),
-    ).toBe(
-      "The checks on PR #7 failed at cafe000: lint (failure). 3 own repairs failed (the limit is 3): stop here and report it as a blocker.",
-    );
-    expect(
-      settled({
-        outcome: "not-green",
-        change: "PR #7",
-        head: "cafe0001",
-        checks: [{ name: "docs", state: "neutral" }],
-      }),
-    ).toBe(
-      `The checks on PR #7 finished at cafe000 without all passing: docs (neutral). A neutral check keeps it from green. ${CHECK_DIAGNOSIS_NEXT}`,
-    );
+      };
+      const body = settled(facts);
+      expect(body).toContain(JSON.stringify({ kind: "checks-settled", ...facts }));
+      expect(body).toContain("history, not a current readiness verdict");
+      expect(body).toContain("counts are retired and place no hold");
+      expect(body).not.toContain("stop here");
+    }
     // The sign-in problem already says what to do; nothing is added to it.
     expect(
       settled({

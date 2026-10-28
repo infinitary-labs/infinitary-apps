@@ -28,7 +28,7 @@ In order; the order IS the rule.
 | 2a | The task waits on work nobody has started: a task its standing baseline wait names, or a blocker holding its close, that only a start begins (FI3-671) | the first mate's, which starts it, folds the fix in or asks | wake, naming that work | `rule:waits-unstarted` |
 | 2b | The task is a running program's part and the report carries the answer its program waits for: its checked result, or, with no result shape, a report that hands the turn to nobody (INF-799, `docs/programs.md`) | the program's, which reads the answer and closes the part | no wake | `rule:program-part` |
 | 3 | A job running inside its bound, guidance its lane will still deliver, a captured settle, a timed wait on its gate, the host watching its change's checks or a named run (`docs/forge.md`), or a wait on work underway (FI3-250) | the crewmate's | no wake | `rule:still-moving` |
-| 4 | The gate holds it for the captain and no card is up (a captain-owned round cap before the first mate's card, or a wait its crewmate declared with nothing on the captain's screen, INF-11) | the first mate's, which owes the card | wake | `rule:captain-gate` |
+| 4 | The gate holds it for the captain and no card is up (a wait its crewmate declared with nothing on the captain's screen, INF-11) | the first mate's, which owes the card | wake | `rule:captain-gate` |
 | 4a | A typed cut-off holds its account, or the computer that runs work it runs on is out of reach or not yet caught up (`docs/helper.md`, "The home's side") | the crewmate's, when the account serves again or that computer is back | no wake | `rule:still-moving` |
 | 4b | None of the above, and the first mate declared the task an internal step (`shape.internal_step`) | the first mate's, which decides the next step | wake on any backend | `rule:step-answered` |
 | 5 | None of the above, and the host can see all of this backend's work | nobody's | **wake now**, with the report's own words | `rule:stopped` |
@@ -177,8 +177,8 @@ The order is the rule's own:
    So does a task whose own browser is in the captain's hands - paused for the captain's help, being taken, or the captain's (`browserWithCaptain`, counted in `decisionCardOpen`; `docs/task-browser.md`, "Taking control"): the captain's Return control is the crewmate's one wake, so the card behind it may already be answered.
 5. Moving, nothing: guidance that will still be delivered (including a row waiting out its backoff, `InboxStore.hasDeliverable`), a background job inside its bound, a captured settle, a timed wait on its gate (a due one is the sweep's, on the same tick).
    A streaming turn never reaches the reconciler; the quiet watchdog owns it.
-6. The gate holds it for the captain and no card is up - a captain-owned round cap before the first mate raised its card, or a wait its crewmate declared with no card of the task up (INF-11): the first mate's turn.
-   The clock is read, but the nudge never fires (the crewmate cannot act): the first wake comes at the nudge's time plus ten, and it carries the gate's own hold - the cap's ways (retry, one model retry - premium if it can serve, otherwise stronger when a rung remains - and discard; `held: ci-cap`), never an idle-stall naming a different three.
+6. The gate holds it for the captain and no card is up - a wait its crewmate declared with no card of the task up (INF-11): the first mate's turn.
+   The clock is read, but the nudge never fires (the crewmate cannot act): the first wake comes at the nudge's time plus ten and carries the gate's own reason (`held: captain-gate`).
    The repeat and the host's card follow as below.
 7. A typed cut-off holds its account (`accountHeld`), or the computer that runs work it runs on is out of reach or not yet caught up (`outOfReach`): moving, nothing - the crewmate's turn comes when the account serves again, or once that computer is back and its work caught up here.
 8. Otherwise nobody's turn, and the clock is read.
@@ -205,7 +205,6 @@ The ladder holds its clock at each tick the wake still waits (`InboxStore.holdsU
 **The host's stall card** (`card-stall-<task>`, author host, so it presents as attention): a captain decision of 2026-09-26 that revises the card rule
 - the first mate let two wakes go, so the work cannot move without the captain.
   Its title says how long ("<title> has been stuck for 1h 20m"), its body what the crewmate last said or the problem its last try ended in, what the ladder already did, what each button does, and that anything else goes in a reply.
-  On a task a standing CI or captain-owned review cap holds, the body instead says it reached its limit of tries and needs the captain's call (try again, the eligible model retry, or discard), that the first mate has not asked the captain, and that Nudge gives it no more tries - to try again, the captain replies there; the Nudge there, like the task card's Continue, is not the cap's answer.
   **Nudge** is the nudge again with the captain's authority (host op `continue-task`, naming a note up as rung 1 does), **Keep waiting** has no effect and closes the card as the captain's close does, **Discard** is the host's `settle discard` with the unlanded-work guard, whose refusal names its ways like any settle refusal (INF-1670: the captain removed Drop task and left nuanced operations to the reply).
   A reply under it goes to the first mate, which answers in its thread (`docs/card-threads.md`, "The stuck alert's reply row").
   While it is up the task is the captain's turn and nothing repeats.

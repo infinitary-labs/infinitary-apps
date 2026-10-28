@@ -141,11 +141,37 @@ export type MergeGuidanceDeclaration = {
   evidence: string;
 };
 
+/** Evidence-backed flake and repair settlement judgments remain crew-owned. */
+export const CHECK_DECLARATION_VERDICTS = ["flake", "settled"] as const;
+
+export type CheckDeclaration = {
+  headSha: string;
+  verdict: (typeof CHECK_DECLARATION_VERDICTS)[number];
+  evidence: string;
+  check?: string;
+  repairId?: string;
+  outcome?: "passed" | "failed" | "superseded" | "void";
+};
+
+/**
+ * Append-only history. Saved ready/red declarations remain readable history,
+ * never current authority: a merge offer itself expresses the crew's judgment.
+ */
+export type CheckDeclarationEntry =
+  | ((CheckDeclaration | (Omit<CheckDeclaration, "verdict"> & { verdict: "ready" | "red" })) & {
+      kind?: "verdict";
+      at: number;
+    })
+  | (CheckDiagnosis & { kind: "diagnosis"; at: number })
+  | (CheckRepair & { kind: "repair"; at: number })
+  | (CheckRerun & { kind: "rerun"; at: number });
+
 /** Optional declarations on the existing check_change seam, shared by both seats. */
 export type CheckChangeInput = {
+  declaration?: CheckDeclaration;
   diagnosis?: CheckDiagnosis;
   repair?: CheckRepair;
-  /** Reserve the task's one flake rerun BEFORE rerunning the failed job. */
+  /** Record the crew's evidenced rerun judgment. */
   rerun?: CheckRerun;
   /** A repair of a change the captain already approved to merge (FI3-304). */
   conflictRepair?: MergeRepairDeclaration;
@@ -187,8 +213,9 @@ export function failingRun(
   );
 }
 
-/** Persisted independently of raw check observations and the captain's round hold. */
+/** One declaration history, raw observations, and compatibility projections for existing readers. */
 export type CheckRepairLedger = {
+  declarations?: CheckDeclarationEntry[];
   /** Pre-upgrade failed-version counts are history, not declared repair attempts. */
   legacyFailedVersions?: number;
   failures: { headSha: string; checks: string[] }[];
@@ -214,22 +241,3 @@ export type CheckRepairLedger = {
   })[];
   rerun?: CheckRerun;
 };
-
-/**
- * Whether every check seen failing at the change's current version carries
- * its crewmate's diagnosis there (INF-1137 friction 6): the closed fact that
- * lets a completion card go up on failed checks, so the captain can merge
- * it anyway. A version with no failure on record is not one.
- */
-export function diagnosedRed(
-  delivery: { headSha?: string; ciRepair?: CheckRepairLedger } | null | undefined,
-): boolean {
-  const head = delivery?.headSha;
-  const ledger = delivery?.ciRepair;
-  if (!head || !ledger) return false;
-  const failed = ledger.failures.find((f) => f.headSha === head)?.checks ?? [];
-  return (
-    failed.length > 0 &&
-    failed.every((check) => ledger.diagnoses.some((d) => d.headSha === head && d.check === check))
-  );
-}

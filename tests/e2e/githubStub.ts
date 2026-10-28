@@ -60,7 +60,14 @@ export type StubDispatch = {
   inputs?: Record<string, string | boolean | number>;
 };
 
-type StubCheckRun = { name: string; status: string; conclusion: string | null; run?: number };
+type StubCheckRun = {
+  name: string;
+  status: string;
+  conclusion: string | null;
+  run?: number;
+  started_at?: string;
+  completed_at?: string;
+};
 
 /** One merge GitHub accepted, as the app asked for it. */
 export type StubMerge = {
@@ -150,6 +157,8 @@ export type GitHubStub = {
    * pull request workflow; the version's workflow runs list those runs.
    */
   setChecks: (runs: StubCheckRun[]) => void;
+  /** INF-1555 F14: refuse the version's workflow metadata list, not its sign-in or registered checks. */
+  setWorkflowReadFailure: (failure: { status: number; message: string } | undefined) => void;
   /** Every failed-job rerun GitHub accepted, `POST /path`, in order. */
   reruns: () => string[];
   /** A completed measurement workflow on this exact disposable project version. */
@@ -227,6 +236,7 @@ export async function startGitHubStub(
     { name: "linux-checks", status: "completed", conclusion: "success" },
   ];
   let evidenceHead: string | undefined;
+  let workflowReadFailure: { status: number; message: string } | undefined;
   const measurementZip = readFileSync("tests/fixtures/forge/measurement.zip");
   let rejected = false;
   let device: {
@@ -497,6 +507,15 @@ export async function startGitHubStub(
           return;
         }
         const [, owner, name, rest = ""] = repo as unknown as [string, string, string, string?];
+        if (
+          method === "GET" &&
+          rest === "/actions/runs" &&
+          url.searchParams.has("head_sha") &&
+          workflowReadFailure
+        ) {
+          send(workflowReadFailure.status, { message: workflowReadFailure.message });
+          return;
+        }
         if (method === "POST" && rest === "/actions/workflows/verify.yml/dispatches") {
           const body = JSON.parse(raw || "{}") as { ref?: string; inputs?: StubDispatch["inputs"] };
           let headSha: string | undefined;
@@ -1002,6 +1021,9 @@ export async function startGitHubStub(
     setChecks: (runs) => {
       checkRuns = runs;
     },
+    setWorkflowReadFailure: (failure) => {
+      workflowReadFailure = failure;
+    },
     reruns: () => [...reruns],
     serveWorkflowEvidence: (headSha) => {
       evidenceHead = headSha;
@@ -1088,12 +1110,18 @@ export function seedGitHubSignIn(
  * direct-pr specs' working folder. Its origin is recorded on the repos row;
  * nothing here pushes anywhere.
  */
-export function seedRepo(userDataDir: string): { repoDir: string } {
+export function seedRepo(userDataDir: string): {
+  repoDir: string;
+  branchHead: (branch: string) => string;
+} {
   const repoDir = join(userDataDir, "repo");
   const git = (...args: string[]) => execFileSync("git", args, { stdio: "pipe" }).toString();
   git("init", "--initial-branch=main", repoDir);
   git("-C", repoDir, "config", "user.name", "Test");
   git("-C", repoDir, "config", "user.email", "test@localhost");
   git("-C", repoDir, "commit", "--allow-empty", "-m", "init");
-  return { repoDir };
+  return {
+    repoDir,
+    branchHead: (branch: string) => git("-C", repoDir, "rev-parse", `refs/heads/${branch}`).trim(),
+  };
 }

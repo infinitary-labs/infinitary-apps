@@ -1,3 +1,4 @@
+import { checkSnapshotSchema } from "@shared/checkSnapshot";
 import { committedPlacementSchema } from "@shared/placement";
 import { workShapeSchema } from "@shared/routingPolicy";
 import { effectiveTaskPoliciesSchema } from "@shared/taskPolicies";
@@ -82,6 +83,7 @@ const deliverySchema = z.object({
   changeLabel: z.string().optional(),
   ci: z.enum(["green", "red", "pending", "no-pr", "merged"]).optional(),
   ciAt: z.number().optional(),
+  checks: checkSnapshotSchema.optional(),
   landedMode: z.enum(["fast-forward", "merge", "pr"]).optional(),
   closedPolicies: effectiveTaskPoliciesSchema.optional(),
   result: z.object({ at: z.number(), value: z.record(z.string(), z.unknown()) }).optional(),

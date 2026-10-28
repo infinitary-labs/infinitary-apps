@@ -23,7 +23,6 @@ import {
   type ForgeReadiness,
   ForgeWriteError,
   GITLAB_PRIVATE_MEDIA_REFUSAL,
-  overallOfChecks,
   presentationCommitMessage,
   presentationContentHash,
   presentationMarkdown,
@@ -37,6 +36,8 @@ import { git } from "../workspace/git";
 import { RepoRegistry } from "../workspace/repoRegistry";
 import { readChangeReading } from "../workspace/workspaceService";
 import { ChangePresentations } from "./changePresentations";
+import { CheckWatcher } from "./checkWatch";
+import { MERGE_CHECKS_HOLD_REASON } from "./mergeAuthorization";
 import { type MergeGuard, PrCiService } from "./prCi";
 import { reviewCoversHead } from "./reviewCarry";
 
@@ -51,8 +52,8 @@ vi.mock("../utilityQos", async (importOriginal) =>
 );
 
 /**
- * check_pr_ci's host behavior (contract v1): the standing CI rule in code,
- * fail-soft text on every edge, and the timestamped record the host's
+ * Raw check facts, crew-declared judgments, fail-soft text on every edge,
+ * and the timestamped record the host's
  * settle-facts strip renders (contract v2.0) - read through the forge seam
  * (git integration PR 1.1), so a fake forge stands where the project lives.
  * GitHub over its REST API is `githubForge.test.ts`; a plain
@@ -170,7 +171,7 @@ class FakeForge implements Forge {
         state,
         ...this.times?.[index],
       }));
-    return { overall: overallOfChecks(items), items };
+    return { items };
   }
   async putIn(change: ForgeChange, headSha: string) {
     this.calls.push(`putIn ${change.branch} ${headSha}`);
@@ -193,7 +194,6 @@ function setup(
   options: {
     forge?: FakeForge;
     now?: () => number;
-    onCap?: (taskId: string, facts: { rounds: number; headSha: string }) => void;
     onNote?: (text: string) => void;
     /** Check commit names against real git rather than skipping the check. */
     realRange?: boolean;
@@ -215,7 +215,6 @@ function setup(
     ...(options.bringBranchHome ? { bringBranchHome: options.bringBranchHome } : {}),
     ...(options.realRange ? {} : { validateRange: async () => {} }),
     ...(options.now ? { now: options.now } : {}),
-    ...(options.onCap ? { onCap: options.onCap } : {}),
     ...(options.onNote ? { onNote: options.onNote } : {}),
   });
   return { db, tasks, repos, service, forge, paths, presentations, readHead };
@@ -262,7 +261,8 @@ describe("PrCiService", () => {
     await insertDirectPrTask(tasks, repos);
     recordPr(tasks, 23);
     tasks.updateChangePresentation("ab12cd34", () => ({ revisions: [], receipts: [] }));
-    expect(await service.checkForCrew("ab12cd34")).toContain("overall: green");
+    await service.checkForCrew("ab12cd34");
+    expect(service.reading("ab12cd34")?.overall).toBe("green");
     const result = await service.merge("ab12cd34");
     expect(result.ok).toBe(false);
     expect(result.text).toContain("story has not been published");
@@ -426,13 +426,13 @@ describe("PrCiService", () => {
       forge.change = { ...forge.change!, headSha: currentHead };
       seedDelivery(tasks, task.id, { reviewVerdict: "pass", reviewSha: head });
       expect(await service.readWatched(task.id)).toMatchObject({
-        kind: "settled",
+        kind: "finished",
         head: currentHead,
       });
       expect(forge.calls.filter((call) => call.startsWith("markReady"))).toHaveLength(0);
       seedDelivery(tasks, task.id, { reviewSha: currentHead });
       expect(await service.readWatched(task.id)).toMatchObject({
-        kind: "settled",
+        kind: "finished",
         head: currentHead,
       });
       expect(forge.calls.filter((call) => call.startsWith("markReady"))).toHaveLength(0);
@@ -492,8 +492,7 @@ describe("PrCiService", () => {
         await started;
         try {
           expect(await service.readWatched(task.id)).toMatchObject({
-            kind: "settled",
-            overall: "green",
+            kind: "finished",
           });
           expect(pendingReady).toHaveBeenCalledTimes(1);
         } finally {
@@ -506,13 +505,13 @@ describe("PrCiService", () => {
         forge.failReady = new Error("Readiness response lost");
         const reading = await service.checkForCrew(task.id);
         expect(reading).toContain("Readiness response lost");
-        expect(reading).toContain("overall: green");
+        expect(reading).toContain("facts: ");
+        expect(reading).not.toContain("crew verdict:");
         expect(tasks.get(task.id)?.delivery?.validationReadiness?.state).toBe("unknown");
         if (readiness === "not-applied") {
           // N2: failed readiness never wedges any of the three ordinary entry points.
           expect(await service.readWatched(task.id)).toMatchObject({
-            kind: "settled",
-            overall: "green",
+            kind: "finished",
           });
           const reopened = await service.open(task.id, input);
           expect(reopened).toContain("already open");
@@ -534,7 +533,8 @@ describe("PrCiService", () => {
         }
         forge.failReady = undefined;
       }
-      expect(await service.checkForCrew(task.id)).toContain("overall: green");
+      await service.checkForCrew(task.id);
+      expect(service.reading(task.id)?.overall).toBe("green");
       expect(forge.calls.filter((call) => call.startsWith("markReady"))).toHaveLength(
         kind === "git" ? 0 : readiness === "not-applied" ? 4 : 1,
       );
@@ -548,10 +548,10 @@ describe("PrCiService", () => {
         // INF-203 P2: the captain chose to preserve a person's restored draft at this head.
         forge.change = { ...forge.change!, draft: true };
         expect(await service.readWatched(task.id)).toMatchObject({
-          kind: "settled",
-          overall: "green",
+          kind: "finished",
         });
-        expect(await service.checkForCrew(task.id)).toContain("overall: green");
+        await service.checkForCrew(task.id);
+        expect(service.reading(task.id)?.overall).toBe("green");
         expect(await service.open(task.id, input)).toContain("already open");
         expect(forge.change.draft).toBe(true);
         expect(forge.calls.filter((call) => call.startsWith("markReady"))).toEqual([
@@ -576,14 +576,16 @@ describe("PrCiService", () => {
         const nextHead = await git(task.repoDir, ["rev-parse", task.branch!]);
         expect(nextHead).not.toBe(currentHead);
         forge.change = { ...forge.change, headSha: nextHead };
-        expect(await service.checkForCrew(task.id)).toContain("overall: green");
+        await service.checkForCrew(task.id);
+        expect(service.reading(task.id)?.overall).toBe("green");
         expect(forge.change.draft).toBe(true);
         expect(forge.calls.filter((call) => call.startsWith("markReady"))).toHaveLength(1);
         seedDelivery(tasks, task.id, {
           reviewSha: nextHead,
           liveValidation: { ...noSurfaceProof(nextHead), permissions: published },
         });
-        expect(await service.checkForCrew(task.id)).toContain("overall: green");
+        await service.checkForCrew(task.id);
+        expect(service.reading(task.id)?.overall).toBe("green");
         expect(forge.change.draft).toBe(false);
         expect(forge.calls.filter((call) => call.startsWith("markReady"))).toEqual([
           `markReady ${currentHead}`,
@@ -603,23 +605,73 @@ describe("PrCiService", () => {
     },
   );
 
-  it("reads a change with no checks as green, says so, and lets the put-in through", async () => {
-    // A repo whose check suite is deliberately absent (or skipped for the
-    // branch) must still be landable: the recorded reading is green, the
-    // text names the absence, and the put-in proceeds on that reading.
-    const forge = new FakeForge();
-    forge.states = [];
-    const { tasks, repos, service } = setup({ forge });
+  it("merges a deliberately no-CI project after positive absence and crew readiness (captain F3)", async () => {
+    const { tasks, repos, service, forge } = setup();
     await insertDirectPrTask(tasks, repos);
-    const result = await service.checkForCrew("ab12cd34");
-    expect(result).toContain("overall: green");
-    expect(result).toContain("- no checks reported on the head SHA");
-    expect(service.reading("ab12cd34")?.overall).toBe("green");
-    expect(tasks.get("ab12cd34")?.delivery?.ci).toBe("green");
-
-    const merged = await service.merge("ab12cd34");
+    const task = tasks.get("ab12cd34")!;
+    repos.configure(task.repoId!, { origin: "https://github.com/x/y.git" });
+    const headSha = await git(task.repoDir, ["rev-parse", "HEAD"]);
+    forge.change = { ...forge.change!, headSha };
+    forge.states = [];
+    Object.assign(forge, {
+      pull: async () => ({
+        number: 23,
+        state: "open",
+        merged: false,
+        headSha,
+        base: "main",
+        branch: task.branch,
+        headRepo: "x/y",
+        title: "fix: ship the meter",
+      }),
+    });
+    await service.checkForCrew(task.id);
+    const absence = {
+      headSha,
+      evidence: "The trusted default-branch project policy explicitly declares no CI.",
+      localGate: "The fixture's applicable local checks passed.",
+    };
+    const response = await service.checkForCrew(task.id, { pull: 23, absentChecks: absence });
+    expect(response).toContain("Merge review");
+    expect(service.reading(task.id)?.overall).toBe("green");
+    await service.checkForCrew(task.id);
+    expect(service.reading(task.id)?.overall).toBe("green");
+    const reviews = tasks.get(task.id)!.delivery!.mergeReviews!;
+    // F3: evidence from another project, branch or version is not positive evidence here.
+    for (const wrongScope of [
+      { owner: "another-owner" },
+      { branch: "another-branch" },
+      { headSha: "another-version" },
+    ]) {
+      seedDelivery(tasks, task.id, {
+        mergeReviews: reviews.map((review) => ({ ...review, ...wrongScope })),
+      });
+      await service.checkForCrew(task.id);
+      expect(service.reading(task.id)?.overall).toBe("pending");
+    }
+    seedDelivery(tasks, task.id, { mergeReviews: reviews });
+    await service.checkForCrew(task.id);
+    expect(service.reading(task.id)?.overall).toBe("green");
+    expect(tasks.get(task.id)?.delivery?.checks).toMatchObject({
+      items: [],
+      absenceDeclared: true,
+    });
+    forge.states = ["pending"];
+    await service.checkForCrew(task.id);
+    expect(tasks.get(task.id)?.delivery).toMatchObject({
+      ci: "pending",
+      checks: { items: [{ state: "pending" }] },
+    });
+    forge.states = ["failure"];
+    await service.checkForCrew(task.id);
+    expect(tasks.get(task.id)?.delivery).toMatchObject({
+      ci: "red",
+      checks: { items: [{ state: "failure" }] },
+    });
+    forge.states = [];
+    const merged = await service.merge(task.id);
     expect(merged.ok).toBe(true);
-    expect(forge.calls).toContain("putIn fm/task-ab12cd34 feedbeef");
+    expect(forge.calls).toContain(`putIn ${task.branch} ${headSha}`);
   });
 
   it("reports every check on the change head and records the overall", async () => {
@@ -631,7 +683,8 @@ describe("PrCiService", () => {
     await insertDirectPrTask(tasks, repos);
     const result = await service.checkForCrew("ab12cd34");
     expect(result).toContain("pull request #23 https://github.com/x/y/pull/23 head abc123def456");
-    expect(result).toContain("overall: pending");
+    expect(result).toContain("facts: ");
+    expect(result).not.toContain("crew verdict:");
     expect(result).toContain("- checks: completed / success");
     expect(result).toContain("- package-smoke: in_progress / -");
     expect(forge.calls[0]).toBe("changeFor fm/task-ab12cd34");
@@ -696,7 +749,6 @@ describe("PrCiService", () => {
 
     it("answers pending on an early return too, whatever an earlier reading said", async () => {
       const forge = new FakeForge();
-      forge.states = [];
       const { tasks, repos, service } = setup({ forge });
       await insertDirectPrTask(tasks, repos, {
         worktreeDir: join(tmpdir(), "infinitary-gone-worktree"),
@@ -743,6 +795,36 @@ describe("PrCiService", () => {
     ]);
   });
 
+  // Captain INF-1555 F12: the offer carries readiness; legacy verdicts add no check hold.
+  it.each(["red", "missing"] as const)(
+    "does not add a separate %s readiness hold over passing checks",
+    async (verdict) => {
+      const forge = new FakeForge();
+      const { tasks, repos, service } = setup({ forge });
+      await insertDirectPrTask(tasks, repos);
+      if (verdict === "red")
+        seedDelivery(tasks, "ab12cd34", {
+          ciRepair: {
+            failures: [],
+            diagnoses: [],
+            repairs: [],
+            declarations: [
+              { headSha: "feedbeef", verdict, evidence: "Saved earlier separate verdict.", at: 1 },
+            ],
+          },
+        });
+      await service.checkForCrew("ab12cd34");
+      const result = await service.merge("ab12cd34");
+      expect(tasks.get("ab12cd34")?.delivery).toMatchObject({
+        ci: "green",
+        checks: { items: [{ name: "linux-checks", state: "success" }] },
+      });
+      expect(tasks.get("ab12cd34")?.delivery).not.toHaveProperty("crewVerdict");
+      expect(result.ok).toBe(true);
+      expect(forge.calls.filter((call) => call.startsWith("putIn"))).toHaveLength(1);
+    },
+  );
+
   it("blocks the put-in when any head check is not successful", async () => {
     const forge = new FakeForge();
     forge.states = ["success", "pending"];
@@ -751,9 +833,9 @@ describe("PrCiService", () => {
 
     const result = await service.merge("ab12cd34");
     expect(result.ok).toBe(false);
-    expect(result.text).toContain("the checks have not all passed");
+    expect(result.text).toContain(MERGE_CHECKS_HOLD_REASON);
     // The feed's reason is the app's own words; the check names stay in the text.
-    expect(result.plain).toBe("the checks have not all passed yet");
+    expect(result.plain).toBe(MERGE_CHECKS_HOLD_REASON);
     expect(result.problem).toBeUndefined();
     expect(forge.calls.some((call) => call.startsWith("putIn"))).toBe(false);
   });
@@ -844,7 +926,8 @@ describe("PrCiService", () => {
       shape: { kind: "fix", kind_source: "none", delivery_ask: "direct-pr" },
     });
     const result = await service.checkForCrew("ab12cd34");
-    expect(result).toContain("overall: green");
+    expect(result).toContain("facts: ");
+    expect(result).not.toContain("crew verdict:");
     expect(forge.calls).not.toEqual([]);
   });
 
@@ -877,9 +960,14 @@ describe("PrCiService", () => {
       await insertDirectPrTask(tasks, repos);
       const text = await service.checkForCrew("ab12cd34");
       expect(text).toContain("the pushed branch fm/task-ab12cd34 head 5e0b");
-      expect(text).toContain("overall: green");
+      expect(text).toContain("facts: ");
+      expect(service.reading("ab12cd34")?.overall).toBe("green");
       const delivery = tasks.get("ab12cd34")?.delivery;
-      expect(delivery).toMatchObject({ changeLabel: "fm/task-ab12cd34", ci: "green" });
+      expect(delivery).toMatchObject({
+        changeLabel: "fm/task-ab12cd34",
+        checks: { items: [], absenceDeclared: true },
+      });
+      expect(service.reading("ab12cd34")?.overall).toBe("green");
       expect(delivery?.prNumber).toBeUndefined();
       expect(delivery?.prUrl).toBeUndefined();
       const opened = tasks.timeline("ab12cd34").find((event) => event.kind === "pr_opened");
@@ -979,976 +1067,17 @@ describe("PrCiService", () => {
   });
 });
 
-/**
- * GitHub's own reading of PR #203 (INF-643) at two of its versions, read on
- * 2026-10-20: the signing repair's version, where the verify run's build of
- * signed copies passed while its two installed-update jobs ran out of time and
- * a newer push cancelled the rest, and the version the pull request then moved
- * to (its eight package checks and twelve journey shards, all passed, left out).
- * The INF-685 tests read a repair at the version it was declared at.
- */
-const PR203 = {
-  /** Verify run 17's version, where the signing build failed. */
-  source: "68c8b8eaeb4323faa8d5fea1c119390a171c08b6",
-  /** Verify run 18's version: the repair's own. */
-  repaired: "4b7fe8c8c76a2627a632a141dc7c3c00d80c1b95",
-  current: "831702bf451322a10b9a2d0cf62313ac58754fe1",
-  build: "Verify signed installer and updater / Build signed verification copies",
-  atRepaired: (
-    [
-      ["Verify signed installer and updater / Apple silicon", "cancelled"],
-      ["Verify signed installer and updater / Intel", "cancelled"],
-      [
-        "check (${{ matrix.system }}${{ ((matrix.image && format(' {0}', matrix.image)) || '') }})",
-        "cancelled",
-      ],
-      ["affected-journeys", "cancelled"],
-      ["linux-source / source-desktop", "cancelled"],
-      ["choose-journeys", "success"],
-      ["build", "cancelled"],
-      ["native-phone", "cancelled"],
-      ["integration-tests (2/2)", "success"],
-      ["integration-tests (1/2)", "success"],
-      ["probe-tests", "failure"],
-      ["typecheck-lint-build", "success"],
-      ["unit-tests", "failure"],
-      ["matrix.lane", "skipped"],
-      ["linux-e2e", "skipped"],
-      ["choose-phone", "success"],
-      ["cancel-replaced", "success"],
-      ["Verify signed installer and updater / Build signed verification copies", "success"],
-    ] as const
-  ).map(([name, state]) => ({ name, state })),
-  atCurrent: (
-    [
-      ["affected-journeys", "success"],
-      ["native-phone", "pending"],
-      ["linux-source / source-desktop (parallel)", "success"],
-      ["linux-source / source-desktop (desktop)", "success"],
-      ["choose-journeys", "success"],
-      ["integration-tests (1/2)", "success"],
-      ["integration-tests (2/2)", "success"],
-      ["typecheck-lint-build", "success"],
-      ["probe-tests", "success"],
-      ["unit-tests", "success"],
-      ["cancel-replaced", "success"],
-      ["build", "success"],
-      ["choose-phone", "success"],
-    ] as const
-  ).map(([name, state]) => ({ name, state })),
-};
-
-/**
- * GitHub's own reading of PR #203 (INF-643) at three later versions, read on
- * 2026-10-26: the source of its last repair, where the verify run's two
- * installed-update jobs failed (the pull request's own checks, all passed,
- * left out); that repair's version, where every pull request check finished
- * but no verify run ever started, and no branch is at it now; and the
- * reviewed integration the pull request moved to, where all 45 checks passed.
- * The ten package checks and the overflow journey shards, all passed, are
- * left out of the last two. INF-1488 carries the repair to the integration.
- */
-const PR203_INTEGRATION = {
-  /** Verify run 40168241408's version. */
-  source: "48f1391d6ab8d6953fa4fc15f5372b6669a688c8",
-  /** The repair's own version. */
-  stranded: "abaf009482c881d9750cb5c0561f4acaede1cde2",
-  integrated: "ff19bd110f1b6416b11f43c83e56ac507569964c",
-  intel: "Verify signed installer and updater / Intel",
-  atSource: (
-    [
-      ["Verify signed installer and updater / Build signed verification copies", "success"],
-      ["matrix.lane", "skipped"],
-      ["linux-e2e", "skipped"],
-      ["Verify signed installer and updater / Intel", "failure"],
-      ["Verify signed installer and updater / Apple silicon", "failure"],
-    ] as const
-  ).map(([name, state]) => ({ name, state })),
-  atStranded: (
-    [
-      ["cancel-replaced", "success"],
-      ["choose-phone", "success"],
-      ["native-phone", "failure"],
-      ["affected-journeys", "success"],
-      ["linux-source / source-desktop (desktop)", "success"],
-      ["linux-source / source-desktop (parallel)", "success"],
-      ["unit-tests", "success"],
-      ["integration-tests (1/2)", "success"],
-      ["probe-tests", "success"],
-      ["integration-tests (2/2)", "success"],
-      ["typecheck-lint-build", "success"],
-      ["choose-journeys", "success"],
-      ["build", "success"],
-      ["upgrade (alpha rehearsal)", "success"],
-    ] as const
-  ).map(([name, state]) => ({ name, state })),
-  atIntegrated: (
-    [
-      ["affected-journeys", "success"],
-      ["native-phone", "success"],
-      ["scene-evidence", "skipped"],
-      ["cancel-replaced", "success"],
-      ["upgrade (alpha rehearsal)", "success"],
-      ["integration-tests (2/2)", "success"],
-      ["choose-phone", "success"],
-      ["probe-tests", "success"],
-      ["linux-source / source-desktop (desktop)", "success"],
-      ["typecheck-lint-build", "success"],
-      ["linux-source / source-desktop (parallel)", "success"],
-      ["integration-tests (1/2)", "success"],
-      ["build", "success"],
-      ["unit-tests", "success"],
-      ["choose-journeys", "success"],
-    ] as const
-  ).map(([name, state]) => ({ name, state })),
-};
-
-/**
- * GitHub's own reading of PR #372 (INF-886) at its pager repair's version, read
- * on 2026-10-23 in the order GitHub listed it, its sixteen overflow journey
- * shards left out. GitHub lists a check name once per workflow run, so the
- * version holds three `affected-journeys`: two journey runs requested by hand,
- * which passed, and the pull request's own, which failed (INF-991).
- */
-const PR372 = {
-  /** Its journey check was cancelled here, the stalled worker the repair diagnosed. */
-  source: "503b1f2f59d12e0fb3c69f88c2c17606c34855b1",
-  repaired: "9d6667c8799ba1aa04938cd8826592b40ba18b4d",
-  current: "e966f30af9963b842b8ec9b97fd2f872c91859fa",
-  atRepaired: (
-    [
-      ["linux-overflow", "skipped"],
-      ["linux-overflow", "skipped"],
-      ["affected-journeys", "success"],
-      ["affected-journeys", "success"],
-      ["linux-source", "skipped"],
-      ["choose-journeys", "success"],
-      ["linux-source", "skipped"],
-      ["choose-journeys", "success"],
-      ["affected-journeys", "failure"],
-      ["native-phone", "success"],
-      ["linux-source / source-desktop (parallel)", "success"],
-      ["linux-source / source-desktop (desktop)", "success"],
-      ["probe-tests", "success"],
-      ["unit-tests", "success"],
-      ["integration-tests (1/2)", "success"],
-      ["integration-tests (2/2)", "success"],
-      ["choose-journeys", "success"],
-      ["typecheck-lint-build", "success"],
-      ["choose-phone", "success"],
-      ["cancel-replaced", "success"],
-    ] as const
-  ).map(([name, state]) => ({ name, state })),
-};
-
-describe("the CI round counter (delivery rigor phase 3)", () => {
-  /** A forge whose change head and check state the test moves between calls. */
-  function movingForge() {
-    const forge = new FakeForge();
-    const state = {
-      set head(sha: string) {
-        forge.change = {
-          number: 9,
-          url: "https://github.com/o/r/pull/9",
-          branch: "fm/task-ab12cd34",
-          headSha: sha,
-        };
-      },
-      set checks(value: ForgeCheckState) {
-        forge.states = [value];
-      },
-    };
-    state.head = "aaaaaaa";
-    return { state, forge };
-  }
-
-  it("two evidenced baseline failures then a flake never spend repairs or wake the captain", async () => {
-    const { state, forge } = movingForge();
-    const onCap = vi.fn();
-    const { db, tasks, repos, service } = setup({ forge, onCap });
-    await insertDirectPrTask(tasks, repos);
-    const owner = tasks.create({
-      id: "baseline-owner",
-      title: "Fix baseline",
-      prompt: "Fix baseline",
-      repoId: tasks.get("ab12cd34")?.repoId ?? null,
-    });
-    for (const head of ["baseline1", "baseline2"]) {
-      state.head = head;
-      state.checks = "failure";
-      expect(await service.checkForCrew("ab12cd34")).toContain(
-        "Read the failed step and logs first",
-      );
-      expect(
-        await service.checkForCrew("ab12cd34", {
-          diagnosis: {
-            headSha: head,
-            check: "linux-checks",
-            classification: "baseline-blocked",
-            evidence: "Owner reproduced the same failing assertion on untouched main; log attached",
-            dependencyTask: owner.id,
-          },
-        }),
-      ).toContain("Diagnosis recorded");
-      // An unrelated wait and a fresh service over the durable record change no allowance.
-      tasks.setGate("ab12cd34", { kind: "at-time", until: 9000 });
-      await service.checkOverall("ab12cd34");
-      expect(tasks.get("ab12cd34")?.delivery?.ciRounds).toBeUndefined();
-    }
-    state.head = "flake";
-    await service.readWatched("ab12cd34");
-    await service.checkForCrew("ab12cd34", {
-      diagnosis: {
-        headSha: "flake",
-        check: "linux-checks",
-        classification: "suspected-flake",
-        evidence: "Same-head verify job passed the same tests; standalone job timeout logs differ",
-        changedTest: false,
-      },
-    });
-    const reserve = {
-      rerun: {
-        headSha: "flake",
-        check: "linux-checks",
-        evidence: "Same-version successful verification and timeout log",
-      },
-    };
-    expect(await service.checkForCrew("ab12cd34", reserve)).toContain("Rerun authorized once");
-    const reboot = new PrCiService({
-      tasks: new TaskService({ db, strict: true }),
-      repos,
-      forgeFor: () => forge,
-    });
-    expect(await reboot.checkForCrew("ab12cd34", reserve)).toContain("Rerun refused");
-    state.checks = "success";
-    expect(await reboot.checkOverall("ab12cd34")).toBe("green");
-    expect(tasks.get("ab12cd34")?.delivery).toMatchObject({
-      ciRepair: {
-        failures: [{ headSha: "baseline1" }, { headSha: "baseline2" }, { headSha: "flake" }],
-      },
-    });
-    expect(onCap).not.toHaveBeenCalled();
-    expect(tasks.get("ab12cd34")?.delivery?.ciCapAt).toBeUndefined();
-  });
-
-  // INF-840, the captain's direction 2: PR #276's own new journey failed
-  // CI and was called flaky; a test the change adds or edits never is.
-  it("refuses a suspected flake in a test the change adds or edits", async () => {
-    const { state, forge } = movingForge();
-    const { tasks, repos, service } = setup({ forge });
-    await insertDirectPrTask(tasks, repos);
-    state.head = "agentsreach";
-    state.checks = "failure";
-    await service.readWatched("ab12cd34");
-    const flake = {
-      headSha: "agentsreach",
-      check: "linux-checks",
-      classification: "suspected-flake" as const,
-      evidence:
-        "agents-reach.spec.ts timed out waiting for the rerun line; it passed on the same version once",
-    };
-    for (const changedTest of [undefined, true]) {
-      expect(
-        await service.checkForCrew("ab12cd34", { diagnosis: { ...flake, changedTest } }),
-      ).toContain("is never a suspected flake");
-    }
-    expect(tasks.get("ab12cd34")?.delivery?.ciRepair?.diagnoses).toEqual([]);
-    expect(
-      await service.checkForCrew("ab12cd34", {
-        rerun: { headSha: "agentsreach", check: "linux-checks", evidence: flake.evidence },
-      }),
-    ).toContain("Rerun refused");
-    expect(
-      await service.checkForCrew("ab12cd34", {
-        diagnosis: { ...flake, classification: "own-regression", changedTest: true },
-      }),
-    ).toContain("Diagnosis recorded: own-regression");
-  });
-
-  // FI3-671: the answer to a declared wait says where the named task stands,
-  // so the crewmate moves the wait or escalates it instead of sitting on it.
-  it.each([
-    {
-      state: "planned on request",
-      seed: { status: "queued", startPolicy: "on-request" },
-      says: "Nobody has started",
-      next: "Lead your report with its key",
-    },
-    {
-      state: "held behind a gate",
-      seed: { status: "queued", gate: { kind: "captain" } },
-      says: "Nobody has started",
-      next: "wakes the first mate",
-    },
-    {
-      state: "queued to start when ready",
-      seed: { status: "queued" },
-      says: "is queued and starts by itself",
-      next: "report the wait once and end your turn",
-    },
-    {
-      state: "underway",
-      seed: { status: "running" },
-      says: "is underway",
-      next: "report the wait once and end your turn",
-    },
-    {
-      state: "done",
-      seed: { status: "idle" },
-      done: true,
-      says: "is already done",
-      next: "bring your change up to date",
-    },
-  ] as const)("a baseline wait on work $state is answered with that state", async (entry) => {
-    const { tasks, repos, service, forge } = setup();
-    await insertDirectPrTask(tasks, repos);
-    forge.states = ["failure"];
-    await service.checkForCrew("ab12cd34");
-    const owner = seedTask(tasks, {
-      id: "baseline-owner",
-      title: "Fix baseline",
-      repoId: tasks.get("ab12cd34")?.repoId ?? null,
-      ...entry.seed,
-    } as TaskSeed);
-    if ("done" in entry) tasks.close(owner.id, { status: "done", reason: "merged", actor: "host" });
-    const answer = await service.checkForCrew("ab12cd34", {
-      diagnosis: {
-        headSha: "feedbeef",
-        check: "linux-checks",
-        classification: "baseline-blocked",
-        evidence: "The same assertion fails on untouched main; log attached",
-        dependencyTask: owner.id,
-      },
-    });
-    expect(answer).toContain("Diagnosis recorded: baseline-blocked");
-    expect(answer).toContain(`${owner.key} "Fix baseline"`);
-    expect(answer).toContain(entry.says);
-    expect(answer).toContain(entry.next);
-  });
-
-  it("counts three unsuccessful own repairs once across foreground/watch reads and restarts", async () => {
-    const { state, forge } = movingForge();
-    const onCap = vi.fn();
-    const { db, tasks, repos, service } = setup({ forge, onCap, now: () => 5000 });
-    await insertDirectPrTask(tasks, repos);
-    state.checks = "failure";
-    await service.checkForCrew("ab12cd34");
-    expect(tasks.get("ab12cd34")?.delivery?.ciRounds).toBeUndefined();
-    let current = service;
-    let sourceHead = "aaaaaaa";
-    for (let i = 1; i <= 3; i++) {
-      await current.checkForCrew("ab12cd34", {
-        diagnosis: {
-          headSha: sourceHead,
-          check: "linux-checks",
-          classification: "own-regression",
-          evidence: "Failed assertion reproduced only with my diff",
-        },
-      });
-      const headSha = `repair${i}`;
-      state.head = headSha;
-      state.checks = "pending";
-      const input = {
-        repair: {
-          id: `attempt${i}`,
-          sourceHead,
-          headSha,
-          check: "linux-checks",
-          evidence: "Corrected the assertion's broken code path",
-        },
-      };
-      await current.checkForCrew("ab12cd34", input);
-      expect(tasks.get("ab12cd34")?.delivery?.ciRounds ?? 0).toBe(i - 1);
-      current = new PrCiService({
-        tasks: new TaskService({ db, strict: true }),
-        repos,
-        forgeFor: () => forge,
-        onCap,
-        now: () => 5000,
-      });
-      state.checks = "failure";
-      const read = await current.readWatched("ab12cd34");
-      if (i === 3) expect(read).toMatchObject({ cap: { rounds: 3 } });
-      await current.checkForCrew("ab12cd34");
-      await current.checkOverall("ab12cd34");
-      expect(tasks.get("ab12cd34")?.delivery?.ciRounds).toBe(i);
-      sourceHead = headSha;
-    }
-    expect(onCap).toHaveBeenCalledTimes(1);
-    expect(onCap).toHaveBeenCalledWith("ab12cd34", { rounds: 3, headSha: "repair3" });
-    expect(tasks.get("ab12cd34")?.delivery).toMatchObject({ ciRounds: 3, ciCapAt: 5000 });
-    const capped = tasks.timeline("ab12cd34").filter((e) => e.kind === "ci" && e.feed);
-    expect(capped).toHaveLength(1);
-    expect(
-      capped[0] && tasks.get("ab12cd34")
-        ? taskFeedLine(
-            tasks.get("ab12cd34") as NonNullable<ReturnType<typeof tasks.get>>,
-            capped[0],
-          )?.text
-        : undefined,
-    ).toContain("3 repairs did not get the checks to pass");
-    // A historical head revisit and a passing result cannot erase the captain hold.
-    state.head = "aaaaaaa";
-    await current.checkOverall("ab12cd34");
-    state.checks = "success";
-    await current.checkOverall("ab12cd34");
-    expect(tasks.get("ab12cd34")?.delivery?.ciCapAt).toBe(5000);
-    expect(onCap).toHaveBeenCalledTimes(1);
-  });
-
-  it.each(["success", "skipped"] as const)(
-    "refuses unsupported exemptions and accepts a %s repaired target without spending an attempt",
-    async (accepted) => {
-      const { tasks, repos, service, forge } = setup();
-      await insertDirectPrTask(tasks, repos);
-      forge.states = ["failure"];
-      await service.checkForCrew("ab12cd34");
-      const diagnosis = {
-        headSha: "feedbeef",
-        check: "linux-checks",
-        evidence: "Failed step log",
-        classification: "baseline-blocked" as const,
-      };
-      expect(await service.checkForCrew("ab12cd34", { diagnosis })).toContain("Diagnosis refused");
-      expect(
-        await service.checkForCrew("ab12cd34", {
-          diagnosis: { ...diagnosis, classification: "unknown" },
-        }),
-      ).toContain("Investigate once");
-      expect(
-        await service.checkForCrew("ab12cd34", {
-          diagnosis: { ...diagnosis, classification: "unknown" },
-        }),
-      ).toContain("Stop rereading");
-      expect(
-        await service.checkForCrew("ab12cd34", {
-          rerun: { headSha: "feedbeef", check: "linux-checks", evidence: "Maybe flaky" },
-        }),
-      ).toContain("Rerun refused");
-      const repair = {
-        id: "one",
-        headSha: "new",
-        sourceHead: "feedbeef",
-        check: "linux-checks",
-        evidence: "Fixed code",
-      };
-      expect(await service.checkForCrew("ab12cd34", { repair })).toContain("Repair refused");
-      await service.checkForCrew("ab12cd34", {
-        diagnosis: { ...diagnosis, classification: "own-regression" },
-      });
-      forge.change = { ...(forge.change as ForgeChange), headSha: "new" };
-      forge.states = [accepted, "failure"];
-      await service.checkForCrew("ab12cd34", { repair });
-      // The repaired check passed even though another check failed: no unsuccessful own repair.
-      expect(tasks.get("ab12cd34")?.delivery?.ciRounds).toBeUndefined();
-      expect(await service.checkOverall("ab12cd34")).toBe("red");
-      expect(
-        await service.checkForCrew("ab12cd34", { repair: { ...repair, id: "different" } }),
-      ).toContain("Repair refused");
-    },
-  );
-
-  it("archives unqualified legacy failed versions without charging new own repairs", async () => {
-    const { tasks, repos, service, forge } = setup();
-    await insertDirectPrTask(tasks, repos);
-    seedDelivery(tasks, "ab12cd34", { ciRounds: 2, ciRedHead: "legacy-head" });
-    forge.states = ["failure"];
-    await service.checkForCrew("ab12cd34");
-    expect(tasks.get("ab12cd34")?.delivery).toMatchObject({
-      ciRepair: { legacyFailedVersions: 2 },
-    });
-    expect(tasks.get("ab12cd34")?.delivery?.ciRounds).toBeUndefined();
-    await service.checkForCrew("ab12cd34", {
-      diagnosis: {
-        headSha: "feedbeef",
-        check: "linux-checks",
-        classification: "own-regression",
-        evidence: "Only my diff fails this assertion",
-      },
-    });
-    forge.change = { ...(forge.change as ForgeChange), headSha: "first-own-repair" };
-    await service.checkForCrew("ab12cd34", {
-      repair: {
-        id: "one",
-        sourceHead: "feedbeef",
-        headSha: "first-own-repair",
-        check: "linux-checks",
-        evidence: "Fixed the failed path",
-      },
-    });
-    expect(tasks.get("ab12cd34")?.delivery?.ciRounds).toBe(1);
-    expect(tasks.get("ab12cd34")?.delivery?.ciCapAt).toBeUndefined();
-  });
-
-  it.each(["pending", "failure", "neutral"] as const)(
-    "%s never permits putting a repair in",
-    async (state) => {
-      const { tasks, repos, service, forge } = setup();
-      await insertDirectPrTask(tasks, repos);
-      forge.states = ["failure"];
-      await service.checkForCrew("ab12cd34");
-      await service.checkForCrew("ab12cd34", {
-        diagnosis: {
-          headSha: "feedbeef",
-          check: "linux-checks",
-          classification: "own-regression",
-          evidence: "Failed-step assertion only reproduces on this diff",
-        },
-      });
-      forge.change = { ...(forge.change as ForgeChange), headSha: "repair-head" };
-      forge.states = [state, "success"];
-      await service.checkForCrew("ab12cd34", {
-        repair: {
-          id: "one",
-          sourceHead: "feedbeef",
-          headSha: "repair-head",
-          check: "linux-checks",
-          evidence: "Corrected the path",
-        },
-      });
-      expect(tasks.get("ab12cd34")?.delivery?.ciRounds ?? 0).toBe(state === "pending" ? 0 : 1);
-      expect((await service.merge("ab12cd34")).ok).toBe(false);
-      expect(forge.calls.some((call) => call.startsWith("putIn"))).toBe(false);
-    },
-  );
-
-  // INF-685: a repair declared at a version the pull request has moved past is
-  // read at that version, so the next repair is not refused forever.
-  describe("a repair the change moved past", () => {
-    /** Move the change to `head`, where GitHub holds `checks`. */
-    function at(forge: FakeForge, head: string, checks?: FakeForge["atHead"][string]) {
-      forge.change = { ...(forge.change as ForgeChange), headSha: head };
-      if (checks) forge.atHead[head] = checks;
-    }
-    const signingRepair = {
-      id: "installer-signing-preferences-home",
-      sourceHead: PR203.source,
-      headSha: PR203.repaired,
-      check: PR203.build,
-      evidence: "Create the scratch keychain preferences before signing",
-    };
-    const quarantineRepair = {
-      id: "cask-quarantine-behavior",
-      sourceHead: PR203.repaired,
-      headSha: PR203.current,
-      check: "unit-tests",
-      evidence: "Replaced the source-text xattr assertion with a behavioral quarantine check",
-    };
-    /** INF-643's history: the signing repair declared, then unit-tests failing at its version. */
-    async function declareSigningRepair(service: PrCiService, forge: FakeForge) {
-      at(forge, PR203.source, [{ name: PR203.build, state: "failure" }]);
-      await service.checkForCrew("ab12cd34");
-      await service.checkForCrew("ab12cd34", {
-        diagnosis: {
-          headSha: PR203.source,
-          check: PR203.build,
-          classification: "own-regression",
-          evidence: "Verify run 17: the scratch keychain had no preferences file",
-        },
-      });
-      // Its version's checks are still running when it is declared.
-      at(
-        forge,
-        PR203.repaired,
-        PR203.atRepaired.map((check) =>
-          check.state === "failure" ? check : { ...check, state: "pending" as const },
-        ),
-      );
-      await service.checkForCrew("ab12cd34", { repair: signingRepair });
-      await service.checkForCrew("ab12cd34", {
-        diagnosis: {
-          headSha: PR203.repaired,
-          check: "unit-tests",
-          classification: "own-regression",
-          evidence: "tapPublication.test.ts:125 rejects the intentional ownership writer",
-        },
-      });
-    }
-
-    it("settles it from that version's own checks and keeps the reading at the newer head", async () => {
-      const { tasks, repos, service, forge } = setup();
-      await insertDirectPrTask(tasks, repos);
-      await declareSigningRepair(service, forge);
-      // The pull request moves on; the repair's version finishes afterwards.
-      forge.atHead[PR203.repaired] = PR203.atRepaired;
-      at(forge, PR203.current, PR203.atCurrent);
-      forge.calls.length = 0;
-      const answer = await service.checkForCrew("ab12cd34", { repair: quarantineRepair });
-      expect(forge.calls).toContain(`checks ${PR203.repaired}`);
-      expect(answer).toContain(`${PR203.build} completed / success there, so it passed`);
-      const delivery = tasks.get("ab12cd34")?.delivery;
-      expect(delivery).toMatchObject({ headSha: PR203.current, ci: "pending" });
-      expect(delivery?.ciRounds).toBeUndefined();
-      expect(delivery?.ciRepair?.repairs.map((repair) => [repair.id, repair.outcome])).toEqual([
-        [signingRepair.id, "passed"],
-        [quarantineRepair.id, undefined],
-      ]);
-      // The cancelled verification jobs stay failures of that version, beside its earlier ones.
-      expect(delivery?.ciRepair?.failures).toEqual([
-        { headSha: PR203.source, checks: [PR203.build] },
-        {
-          headSha: PR203.repaired,
-          checks: expect.arrayContaining([
-            "unit-tests",
-            "probe-tests",
-            "Verify signed installer and updater / Apple silicon",
-            "Verify signed installer and updater / Intel",
-          ]),
-        },
-      ]);
-      expect(delivery?.ciRepair?.diagnoses).toHaveLength(2);
-    });
-
-    it("counts it unsuccessful from its own version even when the newer head passes, holding there at the cap", async () => {
-      const onCap = vi.fn();
-      const { tasks, repos, service, forge } = setup({ onCap, now: () => 7000 });
-      await insertDirectPrTask(tasks, repos);
-      const failing = [{ name: PR203.build, state: "failure" as const }];
-      at(forge, PR203.source, failing);
-      await service.checkForCrew("ab12cd34");
-      let sourceHead = PR203.source;
-      for (const [i, headSha] of ["second-try", "third-try", PR203.repaired].entries()) {
-        await service.checkForCrew("ab12cd34", {
-          diagnosis: {
-            headSha: sourceHead,
-            check: PR203.build,
-            classification: "own-regression",
-            evidence: "The signing step's log names the missing keychain preferences",
-          },
-        });
-        at(forge, headSha, [{ name: PR203.build, state: "pending" }]);
-        await service.checkForCrew("ab12cd34", {
-          repair: { ...signingRepair, id: `attempt-${i}`, sourceHead, headSha },
-        });
-        forge.atHead[headSha] = failing;
-        if (headSha !== PR203.repaired) await service.checkForCrew("ab12cd34");
-        sourceHead = headSha;
-      }
-      // The last attempt's version fails only after the change moved on to a passing head.
-      at(forge, PR203.current, [{ name: PR203.build, state: "success" }]);
-      expect(await service.checkForCrew("ab12cd34")).toContain(
-        `${PR203.build} completed / failure there, so it is an unsuccessful own repair (3/3)`,
-      );
-      expect(tasks.get("ab12cd34")?.delivery).toMatchObject({
-        headSha: PR203.current,
-        ci: "green",
-        ciRounds: 3,
-        ciRedHead: PR203.repaired,
-        ciCapAt: 7000,
-      });
-      expect(onCap).toHaveBeenCalledTimes(1);
-      expect(onCap).toHaveBeenCalledWith("ab12cd34", { rounds: 3, headSha: PR203.repaired });
-    });
-
-    // INF-988: INF-643's repair was declared at a version GitHub never ran
-    // anything on (PR #203 conflicted there), and the pull request moved on.
-    it("supersedes it when its version holds no check at all, spending nothing and accepting the next repair", async () => {
-      const { tasks, repos, service, forge } = setup();
-      await insertDirectPrTask(tasks, repos);
-      await declareSigningRepair(service, forge);
-      forge.atHead[PR203.repaired] = [];
-      at(forge, PR203.current, PR203.atCurrent);
-      const answer = await service.checkForCrew("ab12cd34", { repair: quarantineRepair });
-      expect(answer).toContain(
-        `Repair ${signingRepair.id} at ${PR203.repaired} (the change is now at ${PR203.current}): no check ran there and none will start now that the change moved past it, so it is superseded and spent no attempt.`,
-      );
-      expect(answer).not.toContain("Repair refused");
-      const delivery = tasks.get("ab12cd34")?.delivery;
-      expect(delivery?.ciRounds).toBeUndefined();
-      expect(delivery?.ciRepair?.repairs.map((repair) => [repair.id, repair.outcome])).toEqual([
-        [signingRepair.id, "superseded"],
-        [quarantineRepair.id, undefined],
-      ]);
-      expect(delivery).toMatchObject({ headSha: PR203.current });
-      expect(
-        tasks
-          .timeline("ab12cd34")
-          .some((event) => event.text?.includes(`Repair ${signingRepair.id} superseded`)),
-      ).toBe(true);
-    });
-
-    it.each([
-      {
-        version: "is still running",
-        held: () => PR203.atRepaired.map((check) => ({ ...check, state: "pending" as const })),
-        says: "that version's checks are still running, so it has no result yet",
-      },
-      {
-        version: "never ran the repaired check",
-        held: () => PR203.atRepaired.filter((check) => check.name !== PR203.build),
-        says: `no check named ${PR203.build} reported there, so it has no result`,
-      },
-      {
-        version: "cannot be read",
-        held: () => new ForgeError("transient", "GitHub answered 502"),
-        says: "its checks could not be read there (GitHub answered 502), so it has no result yet",
-      },
-      {
-        // INF-1185: a branch may still be at it, where a run can start.
-        version: "holds no check and its branches cannot be read",
-        held: () => [],
-        branchesAt: () => Promise.reject(new ForgeError("transient", "GitHub answered 502")),
-        says: "no check has started there yet, and the branches at that version could not be read (GitHub answered 502), so it has no result yet",
-      },
-    ])(
-      "leaves it outstanding while its version $version, refusing the next repair",
-      async (entry) => {
-        const { tasks, repos, service, forge } = setup();
-        await insertDirectPrTask(tasks, repos);
-        await declareSigningRepair(service, forge);
-        forge.atHead[PR203.repaired] = entry.held();
-        if ("branchesAt" in entry) forge.branchesAt = entry.branchesAt;
-        at(forge, PR203.current, PR203.atCurrent);
-        const answer = await service.checkForCrew("ab12cd34", { repair: quarantineRepair });
-        expect(answer).toContain(entry.says);
-        expect(answer).toContain(
-          `Repair refused: attempt ${signingRepair.id} at ${PR203.repaired} has no result yet`,
-        );
-        expect(tasks.get("ab12cd34")?.delivery?.ciRepair?.repairs).toEqual([signingRepair]);
-        // A plain reading still reads the newer head and says the same.
-        expect(await service.checkForCrew("ab12cd34")).toContain(entry.says);
-        expect(tasks.get("ab12cd34")?.delivery).toMatchObject({ headSha: PR203.current });
-      },
-    );
-  });
-
-  // INF-1488: INF-643's repair was declared at a version whose pull request
-  // checks all ran but whose signed Intel check never started, and the pull
-  // request moved to a reviewed integration carrying the same repair.
-  describe("a repair whose check never started at a version the change moved past", () => {
-    const { source, stranded, integrated, intel } = PR203_INTEGRATION;
-    const prerequisiteRepair = {
-      id: "installer-command-and-homebrew-prerequisite-integrated",
-      sourceHead: source,
-      headSha: stranded,
-      check: intel,
-      evidence:
-        "GitHub started no checks on the earlier version because of a conflict; the integration keeps the diagnostic and Homebrew-prerequisite helpers unchanged.",
-    };
-    const carriedRepair = {
-      ...prerequisiteRepair,
-      headSha: integrated,
-      evidence:
-        "The prior repair version never ran this signed Intel check; the fixture repair patch is unchanged in the verified range-diff.",
-    };
-    /** INF-643's history: the Intel job failed, the repair declared, its version's own checks finished. */
-    async function strandRepair(service: PrCiService, forge: FakeForge) {
-      forge.change = { ...(forge.change as ForgeChange), headSha: source };
-      forge.atHead[source] = PR203_INTEGRATION.atSource;
-      await service.checkForCrew("ab12cd34");
-      await service.checkForCrew("ab12cd34", {
-        diagnosis: {
-          headSha: source,
-          check: intel,
-          classification: "own-regression",
-          evidence: "Verify run 40168241408: stapler validation lost its command output on Intel",
-        },
-      });
-      forge.change = { ...(forge.change as ForgeChange), headSha: stranded };
-      forge.atHead[stranded] = PR203_INTEGRATION.atStranded.map((check) => ({
-        ...check,
-        state: "pending" as const,
-      }));
-      await service.checkForCrew("ab12cd34", { repair: prerequisiteRepair });
-      forge.atHead[stranded] = PR203_INTEGRATION.atStranded;
-      await service.checkForCrew("ab12cd34");
-      forge.change = { ...(forge.change as ForgeChange), headSha: integrated };
-      forge.atHead[integrated] = PR203_INTEGRATION.atIntegrated;
-    }
-
-    it("carries it to the change's version when declared again as itself, so only its result there decides it", async () => {
-      const { tasks, repos, service, forge } = setup({ now: () => 9000 });
-      await insertDirectPrTask(tasks, repos);
-      await strandRepair(service, forge);
-      // A new attempt is still refused, naming the way to carry the open one.
-      const refused = await service.checkForCrew("ab12cd34", {
-        repair: { ...carriedRepair, id: "installer-prerequisite-after-phone-integration" },
-      });
-      expect(refused).toContain(
-        `Repair ${prerequisiteRepair.id} at ${stranded} (the change is now at ${integrated}): no check named ${intel} reported there, so it has no result. None can start there now that the change moved past it`,
-      );
-      expect(refused).toContain(
-        `Repair refused: attempt ${prerequisiteRepair.id} at ${stranded} has no result yet, and none can start there. If ${integrated} carries that same repair, carry it forward before starting another: declare it again under id ${prerequisiteRepair.id}, with source head ${source}, check ${intel} and headSha ${integrated}.`,
-      );
-      expect(tasks.get("ab12cd34")?.delivery?.ciRepair?.repairs).toEqual([prerequisiteRepair]);
-
-      const carried = await service.checkForCrew("ab12cd34", { repair: carriedRepair });
-      expect(carried).toContain(
-        `Repair ${prerequisiteRepair.id} carried forward from ${stranded} to ${integrated}: ${intel} never started at ${stranded} and none can start there now.`,
-      );
-      expect(carried).not.toContain("Repair refused");
-      expect(carried).toContain("overall: green");
-      let delivery = tasks.get("ab12cd34")?.delivery;
-      expect(delivery?.ciRepair?.repairs).toEqual([
-        {
-          ...carriedRepair,
-          carried: [{ headSha: stranded, evidence: prerequisiteRepair.evidence, at: 9000 }],
-        },
-      ]);
-      expect(delivery?.ciRounds).toBeUndefined();
-      expect(
-        tasks
-          .timeline("ab12cd34")
-          .some((event) => event.text?.includes(`Repair ${prerequisiteRepair.id} carried forward`)),
-      ).toBe(true);
-      // Declaring it again there is a repeat, not another move.
-      expect(await service.checkForCrew("ab12cd34", { repair: carriedRepair })).not.toContain(
-        "Repair refused",
-      );
-      expect(tasks.get("ab12cd34")?.delivery?.ciRepair?.repairs).toHaveLength(1);
-
-      // Every other check passing there is no result of the signed check.
-      await service.checkForCrew("ab12cd34");
-      expect(tasks.get("ab12cd34")?.delivery?.ciRepair?.repairs[0]?.outcome).toBeUndefined();
-
-      // The signed run there decides it, and spends one attempt only on failing.
-      forge.atHead[integrated] = [
-        ...PR203_INTEGRATION.atIntegrated,
-        { name: intel, state: "failure" as const },
-      ];
-      await service.checkForCrew("ab12cd34");
-      delivery = tasks.get("ab12cd34")?.delivery;
-      expect(delivery?.ciRepair?.repairs.map((repair) => repair.outcome)).toEqual(["failed"]);
-      expect(delivery).toMatchObject({ ciRounds: 1, ciRedHead: integrated });
-      // Every version's failures stay on record.
-      expect(delivery?.ciRepair?.failures).toEqual([
-        {
-          headSha: source,
-          checks: [intel, "Verify signed installer and updater / Apple silicon"],
-        },
-        { headSha: stranded, checks: ["native-phone"] },
-        { headSha: integrated, checks: [intel] },
-      ]);
-    });
-
-    it.each([
-      {
-        when: "a branch is still at its version",
-        branchesAt: async () => ["fm/evidence-abaf009"],
-        declared: carriedRepair,
-        says: "fm/evidence-abaf009 is still at that version, where a run can still start.",
-      },
-      {
-        when: "the branches at its version cannot be read",
-        branchesAt: () => Promise.reject(new ForgeError("transient", "GitHub answered 502")),
-        declared: carriedRepair,
-        says: "The branches at that version could not be read (GitHub answered 502), so a run may still start there.",
-      },
-      {
-        when: "its version's checks are still running",
-        atStranded: PR203_INTEGRATION.atStranded.map((check) =>
-          check.name === "native-phone" ? { ...check, state: "pending" as const } : check,
-        ),
-        declared: carriedRepair,
-        says: "that version's checks are still running, so it has no result yet.",
-      },
-      {
-        when: "it names a version the change is not at",
-        declared: { ...carriedRepair, headSha: PR203.current },
-        says: `Repair refused: attempt ${prerequisiteRepair.id} carries forward only as itself - source head ${source} and check ${intel} - to the change's current version ${integrated}, which no other attempt names.`,
-      },
-      {
-        when: "it names another check",
-        declared: {
-          ...carriedRepair,
-          check: "Verify signed installer and updater / Apple silicon",
-        },
-        says: `Repair refused: attempt ${prerequisiteRepair.id} carries forward only as itself`,
-      },
-    ])("does not carry it when $when", async (entry) => {
-      const { tasks, repos, service, forge } = setup();
-      await insertDirectPrTask(tasks, repos);
-      await strandRepair(service, forge);
-      if (entry.branchesAt) forge.branchesAt = entry.branchesAt;
-      if (entry.atStranded) forge.atHead[stranded] = entry.atStranded;
-      const answer = await service.checkForCrew("ab12cd34", { repair: entry.declared });
-      expect(answer).toContain(entry.says);
-      expect(answer).toContain("Repair refused");
-      expect(answer).not.toContain("carried forward from");
-      const delivery = tasks.get("ab12cd34")?.delivery;
-      expect(delivery?.ciRepair?.repairs).toEqual([prerequisiteRepair]);
-      expect(delivery?.ciRounds).toBeUndefined();
-    });
-  });
-
-  // INF-991: PR #372's pager repair read as passed or failed depending on
-  // which of its version's three journey checks GitHub listed first.
-  describe("a repair whose check name repeats at its version", () => {
-    const pagerRepair = {
-      id: "pager-waits-for-arrival",
-      sourceHead: PR372.source,
-      headSha: PR372.repaired,
-      check: "affected-journeys",
-      evidence: "Wait for the requested card to arrive before paging",
-    };
-    /** INF-886's history: the journey check cancelled at the source, then the repair declared. */
-    async function declarePagerRepair(
-      service: PrCiService,
-      forge: FakeForge,
-      atRepaired: { name: string; state: ForgeCheckState }[],
-    ) {
-      forge.change = { ...(forge.change as ForgeChange), headSha: PR372.source };
-      forge.atHead[PR372.source] = [{ name: "affected-journeys", state: "cancelled" }];
-      await service.checkForCrew("ab12cd34");
-      await service.checkForCrew("ab12cd34", {
-        diagnosis: {
-          headSha: PR372.source,
-          check: "affected-journeys",
-          classification: "own-regression",
-          evidence: "The worker waited in showCard's last assertion after paging too early",
-        },
-      });
-      forge.change = { ...(forge.change as ForgeChange), headSha: PR372.repaired };
-      forge.atHead[PR372.repaired] = atRepaired;
-      await service.checkForCrew("ab12cd34", { repair: pagerRepair });
-    }
-
-    it.each([
-      { listed: "in GitHub's order", checks: () => PR372.atRepaired },
-      { listed: "in reverse", checks: () => [...PR372.atRepaired].reverse() },
-    ])(
-      "counts it unsuccessful when any check of that name failed there, listed $listed",
-      async ({ checks }) => {
-        const { tasks, repos, service, forge } = setup();
-        await insertDirectPrTask(tasks, repos);
-        await declarePagerRepair(service, forge, checks());
-        const delivery = tasks.get("ab12cd34")?.delivery;
-        expect(delivery?.ciRepair?.repairs.map((repair) => repair.outcome)).toEqual(["failed"]);
-        expect(delivery).toMatchObject({ ciRounds: 1, ciRedHead: PR372.repaired });
-      },
-    );
-
-    it("names the check of that name that failed once the change moved past it", async () => {
-      const { tasks, repos, service, forge } = setup();
-      await insertDirectPrTask(tasks, repos);
-      await declarePagerRepair(
-        service,
-        forge,
-        PR372.atRepaired.map((check) => ({ ...check, state: "pending" as const })),
-      );
-      forge.atHead[PR372.repaired] = PR372.atRepaired;
-      forge.change = { ...(forge.change as ForgeChange), headSha: PR372.current };
-      forge.atHead[PR372.current] = [{ name: "affected-journeys", state: "pending" }];
-      expect(await service.checkForCrew("ab12cd34")).toContain(
-        "affected-journeys completed / failure there (1 of 3 checks of that name did not pass), so it is an unsuccessful own repair (1/3).",
-      );
-      expect(tasks.get("ab12cd34")?.delivery).toMatchObject({
-        headSha: PR372.current,
-        ciRounds: 1,
-        ciRedHead: PR372.repaired,
-      });
-    });
-  });
-
-  it("does not open the change again for a task whose number was recorded before the label", async () => {
-    // A record written before the forge seam carries `prNumber` alone.
-    const { tasks, repos, service } = setup();
-    await insertDirectPrTask(tasks, repos);
-    recordPr(tasks, 23);
-    await service.checkOverall("ab12cd34");
-    expect(tasks.timeline("ab12cd34").filter((event) => event.kind === "pr_opened")).toEqual([]);
-  });
+// Legacy publication idempotence is independent of the retired repair-count tests.
+it("does not open a change again when an older task recorded its number before its label", async () => {
+  const { tasks, repos, service, forge } = setup();
+  await insertDirectPrTask(tasks, repos);
+  recordPr(tasks, 23);
+  await service.checkOverall("ab12cd34");
+  expect(tasks.timeline("ab12cd34").filter((event) => event.kind === "pr_opened")).toEqual([]);
+  expect(forge.calls.some((call) => call.startsWith("openChange"))).toBe(false);
 });
+
+// Crew judgment and settlement live in checkDeclarations.test.ts (accepted INF-1177).
 
 describe("the commit-name check measures only the branch's own commits", () => {
   it("ignores merged commits a stale local main lacks, and merge commits that take in newer work", async () => {
@@ -2312,19 +1441,6 @@ describe("PrCiService and the sign-in where the project lives", () => {
     expect(text).toContain("its work merges locally");
     expect(forge.calls).toEqual([]);
   });
-
-  it("gives the crewmate the cap in its own words", async () => {
-    const forge = new FakeForge();
-    forge.states = ["failure"];
-    const { tasks, repos, service } = setup({ forge });
-    await insertDirectPrTask(tasks, repos);
-    seedDelivery(tasks, "ab12cd34", { ciRounds: 3, ciCapAt: 5000 });
-    const text = await service.checkForCrew("ab12cd34");
-    expect(text).toContain(
-      "Three unsuccessful own repairs exhausted the allowance (3/3): stop and report the failing check and attempts.",
-    );
-    expect(text).not.toContain("your decision card");
-  });
 });
 
 describe('the check watch\'s side of a reading (docs/forge.md, "The check watch")', () => {
@@ -2428,7 +1544,8 @@ describe('the check watch\'s side of a reading (docs/forge.md, "The check watch"
       const said = await service.checkForCrew("ab12cd34");
       console.log(`[skipped checks] check_change:
 ${said}`);
-      expect(said).toContain("overall: green");
+      expect(said).toContain("facts: ");
+      expect(said).not.toContain("crew verdict:");
       expect(said).not.toContain("Read the failed step");
       expect(said).not.toContain("watching");
       const delivery = tasks.get("ab12cd34")?.delivery;
@@ -2437,8 +1554,7 @@ ${said}`);
       expect(delivery?.ciRepair?.failures).toEqual([]);
       expect(delivery?.ciWatch).toBeUndefined();
       expect(await service.readWatched("ab12cd34")).toMatchObject({
-        kind: "settled",
-        overall: "green",
+        kind: "finished",
       });
       const merged = await service.merge("ab12cd34");
       console.log(`[skipped checks] merge: ${JSON.stringify(merged)}`);
@@ -2460,7 +1576,346 @@ ${said}`);
     expect(tasks.get("ab12cd34")?.delivery?.ciWatch).toBeUndefined();
   });
 
+  it("reports a renamed repair job and lets the crew settle its original record while actual checks still control the merge (INF-1480)", async () => {
+    const { tasks, repos, service, forge } = setup();
+    await insertDirectPrTask(tasks, repos);
+    const task = tasks.get("ab12cd34")!;
+    const commit = async (subject: string) => {
+      await git(task.repoDir, [
+        "-c",
+        "commit.gpgsign=false",
+        "-c",
+        "user.name=Test",
+        "-c",
+        "user.email=test@localhost",
+        "commit",
+        "--allow-empty",
+        "-m",
+        subject,
+      ]);
+      return git(task.repoDir, ["rev-parse", "HEAD"]);
+    };
+    const sourceHead = await commit("chore: source before prompt repair");
+    const repairHead = await commit("fix: selected runbook prompt");
+    const currentHead = await commit("chore: preserve the prompt repair");
+    forge.change = { ...forge.change!, headSha: currentHead };
+    // Names reported in INF-1480 and PR #588's current check list. The host
+    // reports the old name's absence; only the crew claims a replacement.
+    const oldCheck = "card-sent-settings/knowledge-directions";
+    const replacement = "affected-journeys";
+    forge.names = [replacement];
+    await service.checkForCrew(task.id, {
+      repair: {
+        id: "runbooks-selected-prompt-2",
+        sourceHead,
+        headSha: repairHead,
+        check: oldCheck,
+        evidence: "The prompt repair is preserved in the following version.",
+      },
+    });
+    const reading = await service.checkForCrew(task.id);
+    const facts = JSON.parse(
+      reading
+        .split("\n")
+        .find((line) => line.startsWith("facts: "))!
+        .slice(7),
+    );
+    expect(facts).toMatchObject({
+      headSha: currentHead,
+      repairChecksNotInReading: [
+        { id: "runbooks-selected-prompt-2", headSha: repairHead, check: oldCheck },
+      ],
+      checks: [expect.objectContaining({ name: replacement, state: "success" })],
+    });
+    // Review F6: current facts retain the unresolved identity, not repeated history.
+    expect(reading).not.toContain("The prompt repair is preserved in the following version.");
+    expect(reading).not.toContain("Crew declarations:");
+    expect(tasks.get(task.id)!.delivery!.ciRepair!.repairs[0]!.outcome).toBeUndefined();
+    const settlement = await service.checkForCrew(task.id, {
+      declaration: {
+        headSha: repairHead,
+        repairId: "runbooks-selected-prompt-2",
+        verdict: "settled",
+        outcome: "passed",
+        check: replacement,
+        evidence:
+          "The crew verified the preserved repair through the renamed affected-journey job and local prompt journey.",
+      },
+    });
+    const delivery = tasks.get(task.id)!.delivery!;
+    expect(delivery.ciRepair!.repairs[0]).toMatchObject({
+      id: "runbooks-selected-prompt-2",
+      check: oldCheck,
+      headSha: repairHead,
+      outcome: "passed",
+    });
+    expect(delivery.ciRepair!.declarations?.at(-1)).toMatchObject({
+      verdict: "settled",
+      headSha: repairHead,
+      check: replacement,
+    });
+    expect(delivery).toMatchObject({ ci: "green" });
+    expect(service.reading(task.id)?.overall).toBe("green");
+    expect(delivery.mergeAuthorization).toBeUndefined();
+    const settledFacts = JSON.parse(
+      settlement
+        .split("\n")
+        .find((line) => line.startsWith("facts: "))!
+        .slice(7),
+    );
+    expect(settledFacts.repairChecksNotInReading).toEqual([]);
+    expect(settlement).not.toContain("Crew declarations:");
+    expect(delivery.ciRepair!.repairs[0]!.evidence).toBe(
+      "The prompt repair is preserved in the following version.",
+    );
+    // Captain INF-1555 F12/F18d: the green reading needs no second crew-ready declaration.
+    // The internal merge executor is invoked separately; settlement minted no captain authorization above.
+    const merged = await service.merge(task.id);
+    expect(merged.ok).toBe(true);
+    expect(forge.calls.filter((call) => call.startsWith("putIn"))).toEqual([
+      `putIn ${task.branch} ${currentHead}`,
+    ]);
+    expect(merged.text).not.toContain("Crew declarations:");
+    expect(merged.text).not.toContain("The prompt repair is preserved in the following version.");
+    console.info(
+      JSON.stringify({
+        case: "INF-1480 renamed repair check",
+        reading,
+        settlement,
+        savedRepair: delivery.ciRepair!.repairs[0],
+        savedDeclaration: delivery.ciRepair!.declarations?.at(-1),
+        currentReadiness: service.reading(task.id)?.overall,
+      }),
+    );
+  });
+
+  // INF-1555 F25: both real service entry points preserve a bounded watch on transient reads.
+  it("preserves a watch through a crewmate read and watcher hiccup, then recovers", async () => {
+    const { tasks, repos, service, forge } = setup();
+    await insertDirectPrTask(tasks, repos);
+    forge.states = ["pending"];
+    await service.checkForCrew("ab12cd34");
+    const before = tasks.get("ab12cd34")!.delivery!.ciWatch!;
+    expect(before).toBeDefined();
+    forge.fail.checks = new ForgeError(
+      "transient",
+      "GitHub answered 502 while listing workflow runs",
+    );
+    const ownRead = await service.checkForCrew("ab12cd34");
+    expect(ownRead).toContain("502");
+    expect(tasks.get("ab12cd34")?.delivery?.ciWatch).toEqual(before);
+    expect(await service.readWatched("ab12cd34")).toMatchObject({
+      kind: "failed",
+      transient: true,
+    });
+    const wakes: unknown[] = [];
+    const watcher = new CheckWatcher({
+      tasks,
+      inbox: { woken: () => false },
+      read: (id) => service.readWatched(id),
+      steer: async (_id, wake) => {
+        wakes.push(wake);
+      },
+    });
+    await watcher.poll(before.nextAt);
+    const retried = tasks.get("ab12cd34")!.delivery!.ciWatch!;
+    expect(retried).toMatchObject({
+      head: before.head,
+      since: before.since,
+      tries: before.tries + 1,
+    });
+    expect(wakes).toEqual([]);
+    forge.fail.checks = undefined;
+    forge.states = ["success"];
+    await watcher.poll(retried.nextAt);
+    expect(tasks.get("ab12cd34")?.delivery?.ci).toBe("green");
+    expect(tasks.get("ab12cd34")?.delivery?.ciWatch).toBeUndefined();
+    expect(wakes).toHaveLength(1);
+    expect(wakes[0]).toMatchObject({ facts: { outcome: "finished" } });
+    console.info(
+      JSON.stringify({
+        case: "F25 bounded transient recovery",
+        ownRead,
+        before,
+        retried,
+        recovered: tasks.get("ab12cd34")?.delivery?.checks,
+        wakes,
+      }),
+    );
+  });
+
+  // INF-1555 F14: partial facts retain the refusal rather than looking complete or endlessly running.
+  it("preserves a lasting list-refusal reason in the task snapshot and factual merge hold", async () => {
+    const { tasks, repos, service, forge } = setup();
+    await insertDirectPrTask(tasks, repos);
+    const problem =
+      "GitHub could not provide all check runs: Resource not accessible by integration";
+    const read = forge.checks.bind(forge);
+    forge.checks = async (change, movedPast) => ({
+      ...(await read(change, movedPast)),
+      complete: false,
+      problem,
+    });
+    const result = await service.checkForCrew("ab12cd34");
+    expect(result).toContain(problem);
+    // INF-1555 F21: the known refusal does not arm a "still running" watch.
+    expect(result).not.toContain("End your turn now and wait");
+    expect(tasks.get("ab12cd34")?.delivery?.ciWatch).toBeUndefined();
+    expect(await service.readWatched("ab12cd34")).toMatchObject({
+      kind: "failed",
+      transient: false,
+      problem,
+    });
+    expect(tasks.get("ab12cd34")?.delivery).toMatchObject({
+      ci: "pending",
+      checks: { complete: false, problem, items: [{ state: "success" }] },
+    });
+    expect(await service.readForOffer("ab12cd34")).toMatchObject({
+      recorded: true,
+      overall: "pending",
+    });
+    const merge = await service.merge("ab12cd34");
+    expect(merge).toMatchObject({ ok: false, notGreen: true });
+    expect(merge.plain).toContain(problem);
+    expect(forge.calls.some((call) => call.startsWith("putIn"))).toBe(false);
+  });
+
+  // INF-1555 F12: a read failure cannot mint another readiness verdict or make old facts fresh.
+  it("retains flake evidence on a failed subsequent read without replacing the recorded check facts", async () => {
+    const { tasks, repos, service, forge } = setup();
+    await insertDirectPrTask(tasks, repos);
+    const headSha = forge.change!.headSha;
+    forge.states = ["failure"];
+    await service.checkForCrew("ab12cd34");
+    forge.states = ["success"];
+    await service.checkForCrew("ab12cd34");
+    const snapshot = tasks.get("ab12cd34")!.delivery!.checks;
+    forge.fail.checks = new Error("The fixture read is unavailable.");
+    await service.checkForCrew("ab12cd34", {
+      declaration: {
+        headSha,
+        verdict: "flake",
+        check: "linux-checks",
+        evidence: "The failure log and successful same-version run identify an intermittent check.",
+      },
+    });
+    expect(tasks.get("ab12cd34")?.delivery).toMatchObject({ ci: "green", checks: snapshot });
+    expect(tasks.get("ab12cd34")?.delivery).not.toHaveProperty("crewVerdict");
+    expect(tasks.get("ab12cd34")?.delivery?.ciRepair?.declarations?.at(-1)).toMatchObject({
+      verdict: "flake",
+    });
+    expect(await service.readForOffer("ab12cd34")).toMatchObject({
+      overall: "pending",
+      recorded: false,
+      problem: "The fixture read is unavailable.",
+    });
+  });
+
+  it("keeps an undeclared empty hosted reading pending without a second readiness judgment (INF-1555 F12/F13)", async () => {
+    const { tasks, repos, service, forge } = setup();
+    await insertDirectPrTask(tasks, repos);
+    forge.states = [];
+    const headSha = forge.change!.headSha;
+    await service.checkForCrew("ab12cd34");
+    expect(service.reading("ab12cd34")?.overall).toBe("pending");
+    expect(tasks.get("ab12cd34")?.delivery).toMatchObject({
+      ci: "pending",
+      checks: { items: [], absenceDeclared: false },
+      ciWatch: { head: headSha },
+    });
+    expect(await service.readWatched("ab12cd34")).toMatchObject({ kind: "pending", pending: [] });
+  });
+
+  it("waits for final checks before preparing or sending a rule bypass (captain F4)", async () => {
+    const { tasks, repos, service, forge } = setup();
+    await insertDirectPrTask(tasks, repos);
+    const task = tasks.get("ab12cd34")!;
+    repos.configure(task.repoId!, { origin: "https://github.com/x/y.git" });
+    const headSha = await git(task.repoDir, ["rev-parse", "HEAD"]);
+    forge.change = { ...forge.change!, headSha };
+    forge.names = ["unit-tests", "affected-journeys"];
+    forge.states = ["failure", "pending"];
+    const send = vi.fn(async () => ({ status: "merged" as const, sha: headSha }));
+    Object.assign(forge, {
+      pull: async () => ({
+        number: 23,
+        state: "open",
+        merged: false,
+        headSha,
+        base: "main",
+        branch: task.branch,
+        headRepo: "x/y",
+        title: "fix: ship the meter",
+        readiness: "blocked",
+      }),
+      branchRules: async () => [
+        { id: 1, name: "main checks", bypass: "always", rules: ["required_status_checks"] },
+      ],
+      putInSkippingRules: send,
+    });
+    await service.checkForCrew(task.id);
+    const input = { pull: 23, skipRules: { headSha, method: "squash" as const } };
+    expect(await service.checkForCrew(task.id, input)).toContain("checks have not finished");
+    expect(tasks.get(task.id)?.delivery?.mergeReviews?.some((review) => review.skips)).not.toBe(
+      true,
+    );
+    forge.states = ["failure", "success"];
+    const completeChecks = forge.checks.bind(forge);
+    forge.checks = async (change, movedPast) => ({
+      ...(await completeChecks(change, movedPast)),
+      complete: false,
+    });
+    expect(await service.checkForCrew(task.id, input)).toContain("checks have not finished");
+    expect(tasks.get(task.id)?.delivery?.mergeReviews?.some((review) => review.skips)).not.toBe(
+      true,
+    );
+    forge.checks = completeChecks;
+    expect(await service.checkForCrew(task.id, input)).toContain("Merge review");
+    const review = tasks.get(task.id)!.delivery!.mergeReviews!.find((entry) => entry.skips)!;
+    expect(review.skips?.failedChecks).toEqual(["unit-tests"]);
+    forge.states = ["failure", "pending"];
+    expect(await service.reviewGate(task.id, review.id)).toContain("checks have not finished");
+    const outcome = await service.mergeReview(task.id, review.id);
+    expect(outcome.ok).toBe(false);
+    expect(outcome.text).toContain("checks have not finished");
+    expect(send).not.toHaveBeenCalled();
+  });
+
   describe("readWatched", () => {
+    it("retains changed raw observations for delivery without recording another readiness verdict (INF-1555 F12)", async () => {
+      const { tasks, repos, service, forge } = setup();
+      await insertDirectPrTask(tasks, repos);
+      const headSha = forge.change!.headSha;
+      await service.checkForCrew("ab12cd34");
+      const first = tasks.get("ab12cd34")!.delivery!.ciObservation!;
+      expect(first.forwarded).toBe(true);
+      await service.readWatched("ab12cd34");
+      expect(tasks.get("ab12cd34")!.delivery!.ciObservation).toEqual(first);
+      forge.states = ["failure"];
+      const reading = await service.readWatched("ab12cd34");
+      const changed = tasks.get("ab12cd34")!.delivery!.ciObservation!;
+      expect(changed).toMatchObject({ forwarded: false });
+      expect(changed.id).not.toBe(first.id);
+      expect(reading).toMatchObject({
+        observationId: changed.id,
+        checks: [expect.objectContaining({ state: "failure" })],
+      });
+      expect(tasks.get("ab12cd34")!.delivery).toMatchObject({
+        ci: "red",
+        checks: { items: [{ state: "failure" }] },
+      });
+      expect(service.reading("ab12cd34")?.overall).toBe("red");
+      await service.readWatched("ab12cd34");
+      expect(tasks.get("ab12cd34")!.delivery!.ciObservation).toEqual(changed);
+      await service.checkForCrew("ab12cd34");
+      expect(tasks.get("ab12cd34")!.delivery!.ciObservation).toEqual({
+        ...changed,
+        forwarded: true,
+      });
+      await service.checkForCrew("ab12cd34");
+      expect(tasks.get("ab12cd34")!.delivery!.ci).toBe("red");
+    });
+
     it("records running checks once per status or head change", async () => {
       const forge = new FakeForge();
       forge.states = ["success", "pending"];
@@ -2470,6 +1925,7 @@ ${said}`);
       const events = tasks.timeline("ab12cd34").length;
       await expect(service.readWatched("ab12cd34")).resolves.toEqual({
         kind: "pending",
+        observationId: expect.any(String),
         head: "feedbeef",
         change: "pull request #23 https://github.com/x/y/pull/23",
         pending: [{ name: "package-smoke", state: "pending" }],
@@ -2529,27 +1985,20 @@ ${said}`);
       const { tasks, repos, service } = setup({ forge });
       await insertDirectPrTask(tasks, repos);
       await expect(service.readWatched("ab12cd34")).resolves.toEqual({
-        kind: "settled",
-        overall: "red",
+        kind: "finished",
+        observationId: expect.any(String),
         head: "feedbeef",
         change: "pull request #23 https://github.com/x/y/pull/23",
-        count: 3,
-        failing: [{ name: "lint", state: "failure" }],
+        checks: [
+          { name: "checks", state: "success" },
+          { name: "lint", state: "failure" },
+          { name: "docs", state: "skipped" },
+        ],
       });
       expect(tasks.get("ab12cd34")?.delivery).toMatchObject({
         ci: "red",
         ciRepair: { failures: [{ headSha: "feedbeef", checks: ["lint"] }] },
       });
-    });
-
-    it("names the cap when the red it read reached it", async () => {
-      const forge = new FakeForge();
-      forge.states = ["failure"];
-      const { tasks, repos, service } = setup({ forge });
-      await insertDirectPrTask(tasks, repos);
-      seedDelivery(tasks, "ab12cd34", { ciRounds: 3, ciCapAt: 5000 });
-      const read = await service.readWatched("ab12cd34");
-      expect(read).toMatchObject({ kind: "settled", overall: "red", cap: { rounds: 3, cap: 3 } });
     });
 
     it("answers a change that is gone, a host hiccup, and a missing sign-in as typed facts", async () => {
@@ -2990,11 +2439,10 @@ describe("the captain's click on a pull request the task did not open, while Git
   });
 });
 
-describe("an absence declaration beside a check GitHub reported (INF-893)", () => {
-  // INF-893: the "checks have not started yet" marker can now sit beside a
-  // real check, as PR #328's dispatched replay-gate did while GitHub created
-  // its pull request runs. A declaration waives only the marker
-  // (docs/forge.md, "A requested merge"), never a check that has not passed.
+describe("an absence declaration beside registered check facts (INF-893, INF-1555 F13)", () => {
+  // INF-893 and accepted INF-1177 raw facts: PR #328's real dispatched replay check
+  // remains authoritative beside the crew-owned absence declaration. The new
+  // provider protocol reports observations, never an invented pending marker.
   const PR328 = {
     number: 328,
     headSha: "21abc81254618e65ff72612b155f0aa261bc5372",
@@ -3002,7 +2450,7 @@ describe("an absence declaration beside a check GitHub reported (INF-893)", () =
     title: "fix(validation): ask before sensitive or costly access",
   };
 
-  /** PR #328 read by its number, with its replay-gate beside the marker. */
+  /** PR #328 read by its number, with its registered replay-gate and the older metadata hint. */
   class NotStartedForge extends FakeForge {
     replayGate: ForgeCheckState = "pending";
     async pull(number: number): Promise<ForgePull> {
@@ -3020,15 +2468,12 @@ describe("an absence declaration beside a check GitHub reported (INF-893)", () =
     }
     override async checks(change: ForgeChange) {
       this.calls.push(`checks ${change.headSha}`);
-      const items: ForgeCheck[] = [
-        { name: "replay-gate", state: this.replayGate },
-        { name: "checks have not started yet", state: "pending" },
-      ];
-      return { overall: overallOfChecks(items), items, notStarted: true };
+      const items: ForgeCheck[] = [{ name: "replay-gate", state: this.replayGate }];
+      return { items, notStarted: true };
     }
   }
 
-  it("merges past the marker only once every check beside it has passed", async () => {
+  it("never lets the crew-owned absence declaration waive a registered running or failed check", async () => {
     const forge = new NotStartedForge();
     const { tasks, repos, service } = setup({ forge });
     await insertDirectPrTask(tasks, repos);
@@ -3070,8 +2515,9 @@ describe("an absence declaration beside a check GitHub reported (INF-893)", () =
       stop: "checks",
     });
     expect(forge.calls.some((call) => call.startsWith("putIn"))).toBe(false);
-    // Passed, only the marker is left, and the declaration waives it.
+    // Passed: there is no invented marker, and every registered check must still pass.
     forge.replayGate = "success";
+    await service.checkForCrew("ab12cd34");
     expect(await service.mergeReview("ab12cd34", review.id)).toMatchObject({
       ok: true,
       relationship: "referenced",
@@ -3217,7 +2663,8 @@ describe("a merge request on GitLab", () => {
     expect(reading).toContain(
       "pull request !23 https://gitlab.com/group/sub/y/-/merge_requests/23 head feedbeef",
     );
-    expect(reading).toContain("overall: green");
+    expect(reading).toContain("facts: ");
+    expect(reading).not.toContain("crew verdict:");
     expect(tasks.get("ab12cd34")?.delivery).toMatchObject({
       changeLabel: "!23",
       prNumber: 23,
@@ -4237,6 +3684,67 @@ describe("shared story delivery boundaries", () => {
     writeFileSync(join(dir, "tracked.txt"), "An uncommitted change\n");
     await expect(at.service.presentationHead("ab12cd34")).rejects.toThrow(
       "Commit the task's changes",
+    );
+  });
+});
+
+// Accepted INF-1177 piece 0: exercise the actual crew check interface and saved declarations.
+describe("check facts without host verdicts", () => {
+  it("returns raw run identity and movement without a separate crew-readiness prerequisite (INF-1555 F12)", async () => {
+    const { tasks, repos, service, forge } = setup();
+    await insertDirectPrTask(tasks, repos);
+    forge.atHead.feedbeef = [
+      { name: "linux-checks", state: "cancelled", run: 41, workflow: 7, event: "pull_request" },
+      { name: "linux-checks", state: "success", run: 42, workflow: 7, event: "pull_request" },
+    ] as ForgeCheck[];
+    Object.assign(forge, {
+      pull: async (number: number): Promise<ForgePull> => ({
+        number,
+        headSha: forge.change!.headSha,
+        state: "open",
+        merged: false,
+        base: "main",
+        readiness: "clean",
+      }),
+    });
+    const first = await service.checkForCrew("ab12cd34");
+    const facts = JSON.parse(
+      first
+        .split("\n")
+        .find((line) => line.startsWith("facts: "))!
+        .slice(7),
+    );
+    expect(facts).toMatchObject({
+      headSha: "feedbeef",
+      moved: false,
+      readiness: "clean",
+      checks: forge.atHead.feedbeef,
+    });
+    expect(tasks.get("ab12cd34")?.delivery).toMatchObject({ ci: "red" });
+    expect(service.reading("ab12cd34")?.overall).toBe("red");
+    const beforeJudgment = await service.merge("ab12cd34");
+    expect(beforeJudgment).toMatchObject({
+      ok: false,
+      plain: "the checks failed",
+    });
+    expect(forge.calls.some((call) => call.startsWith("putIn"))).toBe(false);
+    expect(tasks.get("ab12cd34")?.delivery).not.toHaveProperty("crewVerdict");
+    forge.change = { ...forge.change!, headSha: "cafe0042" };
+    const moved = await service.checkForCrew("ab12cd34");
+    expect(moved).toContain('"moved":true');
+    expect(tasks.get("ab12cd34")?.delivery).toMatchObject({ ci: "green" });
+    expect(service.reading("ab12cd34")?.overall).toBe("green");
+    const afterMovement = await service.merge("ab12cd34");
+    expect(afterMovement.ok).toBe(true);
+    expect(forge.calls.filter((call) => call.startsWith("putIn"))).toHaveLength(1);
+    console.log(
+      JSON.stringify({
+        first,
+        beforeJudgment,
+        moved,
+        afterMovement,
+        saved: tasks.get("ab12cd34")?.delivery,
+      }),
     );
   });
 });

@@ -38,7 +38,6 @@ import type { CheckChangeInput } from "@shared/checkRepair";
 import { NEEDS_REAUTH_CONSEQUENCE } from "@shared/credentialHealth";
 import { HOME } from "@shared/deviceNames";
 import type { FmEvent } from "@shared/events";
-import { factRoundsSvg } from "@shared/factDot";
 import {
   fixedHoldWords,
   overrideTakenBackWords,
@@ -57,7 +56,6 @@ import { plainProblem, typedFailureOf } from "@shared/plainProblem";
 import { CREWMATE_TAB_VIA } from "@shared/provenance";
 import { DROP_REVIEW_STALE, dropReviewKeys, NO_LONGER_WANTED } from "@shared/recordDrop";
 import { RUNS_ON_THIS_MAC } from "@shared/repos";
-import { CI_ROUND_CAP, REVIEW_ROUND_CAP } from "@shared/rigor";
 import type { RiskDeclaration } from "@shared/risk";
 import {
   isFolderRepair,
@@ -105,7 +103,6 @@ import {
   ForgeError,
   type ForgePull,
   type ForgeReadiness,
-  overallOfChecks,
   presentationCardBody,
   presentationMarkdown,
 } from "../forge";
@@ -148,7 +145,7 @@ import {
   InboxStore,
 } from "../storage/inboxStore";
 import type { TaskEvent } from "../storage/taskEventStore";
-import { standingCap, type TaskRecord } from "../storage/taskStore";
+import { type TaskRecord } from "../storage/taskStore";
 import { UsageStore } from "../storage/usageStore";
 import { legacyStateOf, seedTask } from "../tasks/seedTask";
 import { recentFeed, taskFeedLine } from "../tasks/taskFeed";
@@ -163,7 +160,7 @@ import {
   readChangeReading,
   type WorkspaceService,
 } from "../workspace/workspaceService";
-import { CHECK_DIAGNOSIS_NEXT, declareCheckAction, observeCheckRepair } from "./checkRepair";
+import { BASELINE_OBSERVATIONS_NEXT, CHECK_DIAGNOSIS_NEXT, declareCheckAction, observeCheckRepair } from "./checkRepair";
 import { ciFactOf } from "./ciFact";
 import {
   type CrewmateSpec,
@@ -190,7 +187,11 @@ import {
   renderRigorSection,
   type SpawnIntent,
 } from "./intentBrief";
-import { keptFeedLine, type LineageFacts } from "./mergeAuthorization";
+import {
+  keptFeedLine,
+  type LineageFacts,
+  MERGE_CHECKS_HOLD_REASON,
+} from "./mergeAuthorization";
 import { PrCiService, type PrOutcome } from "./prCi";
 import { closingNoteTitle, droppedLine, pendingMergeLine } from "./settleWords";
 import { Ticker } from "./ticker";
@@ -209,6 +210,7 @@ import {
   reviewFindingsNext,
   THREAD_STEER_PREAMBLE,
   WRITE_ANSWERED_LEAD,
+  CHECK_OBSERVATIONS_LEAD,
   type WakeBody,
   type WakeFacts,
 } from "./wakes";
@@ -388,7 +390,7 @@ type SetupExtras = {
   githubRead?: CrewSupervisorOptions["githubRead"];
   githubWrite?: CrewSupervisorOptions["githubWrite"];
   sendTakenIntegrationAsk?: CrewSupervisorOptions["sendTakenIntegrationAsk"];
-  checkCi?: (taskId: string) => Promise<import("./prCi").PrCiOverall>;
+  checkCi?: CrewSupervisorOptions["checkCi"];
   readCheckWatch?: CrewSupervisorOptions["readCheckWatch"];
   readMainChecks?: CrewSupervisorOptions["readMainChecks"];
   /** The home's knowledge, over this setup's projects. */
@@ -4119,7 +4121,7 @@ describe("CrewSupervisor", () => {
       async checks() {
         this.duringChecks();
         const items = this.states.map((state) => ({ name: "linux-checks", state }));
-        return { overall: overallOfChecks(items), items };
+        return { items };
       }
       async putIn(_change: ForgeChange, headSha: string) {
         this.sends += 1;
@@ -4180,7 +4182,7 @@ describe("CrewSupervisor", () => {
         return prCi;
       };
       const harness = setup(crewmate, {
-        checkCi: (id) => service().checkOverall(id),
+        checkCi: (id) => service().readForOffer(id),
         mergePullRequest: (id, guard, beforeDispatch) => service().merge(id, guard, beforeDispatch),
         mergeReview: (id, reviewId, guard) => service().mergeReview(id, reviewId, guard),
         reviewGate: (id, reviewId) => service().reviewGate(id, reviewId),
@@ -4286,7 +4288,7 @@ describe("CrewSupervisor", () => {
       await vi.waitFor(() => expect(h.authorization()?.waiting?.on).toBe("checks"));
       expect(h.forge.merges).toEqual([]);
       h.forge.states = ["success"];
-      expect(await h.checkService.readWatched(h.taskId)).toMatchObject({ kind: "settled", head: REPAIRED, overall: "green" });
+      expect(await h.checkService.readWatched(h.taskId)).toMatchObject({ kind: "finished", head: REPAIRED });
       await repairTurn(h, async () => {});
       await vi.waitFor(() => expect(h.authorization()?.status).toBe("consumed"));
       expect(h.forge.merges).toEqual([REPAIRED]);
@@ -4429,12 +4431,11 @@ describe("CrewSupervisor", () => {
     };
 
     /**
-     * The captain's ask on FI3-1803, as he settled it (INF-23): a click on
-     * checks that have not passed already keeps his approval, so the button
-     * says what it waits for - Merge when checks pass while they run, his
-     * "Merge after fixing errors" once they failed, Merge the pull request
-     * once they pass - and the feed line after a click on failed checks
-     * says the merge waits for a fix.
+     * The kept click (INF-23), with captain F1/F12's separate readiness:
+     * pending readiness reads Merge when ready, an explicit red judgment
+     * keeps his Merge after fixing errors, and ready reads Merge the pull request.
+     * The scripted crew supplies those judgments for the controlled check states;
+     * neither the caption nor the kept feed attributes its judgment to the checks.
      */
     it("names the merge for what a click does while the checks run or have failed, and merges once they pass", async () => {
       const h = await approved();
@@ -4508,10 +4509,10 @@ describe("CrewSupervisor", () => {
       const answer = await revise("I cut it down to one setting; the checks are running.");
       expect(answer).toContain(h.card.id);
       expect(answer).toContain(COMPLETION_REVISED_WHILE_RUNNING);
-      // A new completion card still waits for green.
-      await expect(revise(undefined, "another")).rejects.toThrow(
-        /Card refused: the checks read running, not passed/,
-      );
+      // INF-1555 F12: the shown revision itself carries readiness; its pending checks remain a hold.
+      expect(h.tasks.get(h.taskId)?.delivery).toMatchObject({ ci: "pending" });
+      expect(h.tasks.get(h.taskId)?.delivery).not.toHaveProperty("crewVerdict");
+      expect(h.tasks.get(h.taskId)?.delivery?.completionOffers?.at(-1)?.headSha).toBe(REVISED);
       h.crewmate.finishPrompt();
       await tick();
       const shown = h.cards().find((card) => card.id === h.card.id);
@@ -4532,7 +4533,7 @@ describe("CrewSupervisor", () => {
       await vi.waitFor(() => expect(h.forge.merges).toEqual([REVISED]));
     });
 
-    it("refuses a revision of the completion card while its checks have failed", async () => {
+    it("permits the crew's red offer without treating it as merge permission", async () => {
       const h = await approved();
       h.forge.headSha = "revised00004";
       h.forge.states = ["failure"];
@@ -4544,7 +4545,8 @@ describe("CrewSupervisor", () => {
           body: completionBody("<p>The change is one setting now.</p><p>Pushed.</p>"),
           actions: [{ id: "merge-pr", label: "Merge PR", default: true, effect: SETTLE_MERGE }],
         }),
-      ).rejects.toThrow(/Card refused: the checks read failed, not passed/);
+      ).resolves.toBeDefined();
+      expect(h.forge.merges).toEqual([]);
     });
 
     it("an already-autonomous task can merge through its routine completion offer", async () => {
@@ -4740,7 +4742,7 @@ describe("CrewSupervisor", () => {
       h.forge.states = ["failure"];
       editPolicies(h, { autonomy: true });
       expect((await h.supervisor.settleTaskDetailed(h.taskId, "merge-pr")).text).toContain(
-        "not all passed",
+        "the checks failed",
       );
       expect(h.forge.merges).toEqual([]);
       expect(h.tasks.get(h.taskId)?.delivery?.ci).toBe("red");
@@ -4945,6 +4947,20 @@ describe("CrewSupervisor", () => {
               !action.passes,
           )?.label;
 
+      it("does not add a verdict wait for passing new-version checks or rewrite the shown offer (INF-1555 F12)", async () => {
+        const h = await approved();
+        h.forge.headSha = "passed0002";
+        h.forge.states = ["success"];
+        await h.declare({});
+        expect(h.tasks.get(h.taskId)?.delivery).toMatchObject({
+          ci: "green",
+          checks: { headSha: "passed0002", items: [{ name: "linux-checks", state: "success" }] },
+        });
+        await vi.waitFor(() => expect(mergeLabelOf(h)).toBe(MERGE_WORDS["merge-pr"]));
+        expect(h.tasks.get(h.taskId)?.delivery).not.toHaveProperty("crewVerdict");
+        expect(h.forge.merges).toEqual([]);
+      });
+
       // INF-756: with his words passing the checks at the card's version, the
       // click merges at once, yet the button read Merge after fixing errors.
       it("names the merge for what a click does while his words pass the checks at the card's version, failed or running, and the click merges at once", async () => {
@@ -5044,14 +5060,44 @@ describe("CrewSupervisor", () => {
         expect(anywayOf(h)).toBeUndefined();
       });
 
-      it("puts a new completion card up on failed checks only once every failed check at its version carries the crewmate's diagnosis", async () => {
+      // Captain INF-1555 F12 replaces the separate red prerequisite; the offer carries the judgment.
+      it("accepts a failed-check merge offer without a separate verdict or merge consent (INF-1555 F12)", async () => {
+        const h = await approved();
+        h.forge.headSha = "fixed0004";
+        h.forge.states = ["failure"];
+        await h.declare({
+          diagnosis: {
+            headSha: "fixed0004",
+            check: "linux-checks",
+            classification: "own-regression",
+            evidence: "The failed step reports the meter assertion introduced by this change.",
+          },
+        });
+        const offer = () => h.specs[0]?.onCard?.({
+          id: `card-${h.taskId}-red-declaration-offer`,
+          requiredActions: [],
+          title: "The meter check still fails",
+          body: completionBody("<p>The finished meter check still fails after repair.</p>"),
+          actions: [{ id: "merge-pr", default: true, effect: SETTLE_MERGE }],
+        });
+        await offer();
+        await vi.waitFor(() => expect(
+          h.cards().find((card) => card.title === "The meter check still fails")?.actions
+            .some((action) => action.passes === "checks"),
+        ).toBe(true));
+        expect(h.tasks.get(h.taskId)?.delivery).not.toHaveProperty("crewVerdict");
+        expect(h.authorization()).toBeUndefined();
+        expect(h.forge.merges).toEqual([]);
+      });
+
+      it("offers Merge anyway on actual failed checks without a separate readiness declaration or count gate (INF-1555 F12)", async () => {
         const h = await approved();
         h.forge.headSha = "fixed0004";
         h.forge.states = ["failure"];
         await h.declare({});
         expect(h.tasks.get(h.taskId)?.delivery).toMatchObject({ headSha: "fixed0004", ci: "red" });
-        await expect(h.emit("Still red")).rejects.toThrow(/carries your diagnosis/);
-        expect(h.cards().some((card) => card.title === "Still red")).toBe(false);
+        await h.emit("Still red");
+        expect(h.forge.merges).toEqual([]);
         await h.declare({
           diagnosis: {
             headSha: "fixed0004",
@@ -5100,26 +5146,7 @@ describe("CrewSupervisor", () => {
         expect(h.forge.merges).toEqual([APPROVED]);
       });
 
-      it("reopens a counted limit at once: the repair limit's counters, its cap and the captain gate clear", async () => {
-        const h = await approved();
-        seedDelivery(h.tasks, h.taskId, { ciRounds: 3, ciRedHead: APPROVED, ciCapAt: Date.now() });
-        expect(standingCap(h.tasks.get(h.taskId)?.delivery)).toBeDefined();
-        h.supervisor.declareOverride(h.taskId, {
-          words: "Keep fixing it; take as many tries as it needs.",
-          holds: ["repairs"],
-          until: "task",
-        });
-        const delivery = h.tasks.get(h.taskId)?.delivery;
-        expect(delivery?.ciRounds).toBeUndefined();
-        expect(delivery?.ciCapAt).toBeUndefined();
-        expect(standingCap(delivery)).toBeUndefined();
-        expect(h.tasks.get(h.taskId)?.gate?.reason).not.toBe("the CI cap");
-        expect(
-          h.tasks
-            .timeline(h.taskId)
-            .some((event) => event.kind === "cap_reset" && event.text.includes("the repair limit")),
-        ).toBe(true);
-      });
+      
 
       it("shows on the merge card what his words pass while they pass it, with his words on rest", async () => {
         const h = await approved();
@@ -5248,7 +5275,7 @@ describe("CrewSupervisor", () => {
       expect(authorization()?.attempt).toBeUndefined();
       expect(events).toContainEqual({
         type: "firstmate_note",
-        text: 'Cannot merge "Ship the meter" yet: it conflicts with newer work in the project. Your merge is kept and runs once its crewmate has brought it up to date and the checks pass.',
+        text: keptFeedLine("Ship the meter", "conflict", "GitHub"),
       });
       await vi.waitFor(() =>
         expect(ops.join("\n")).toContain("do not ask the captain to merge again"),
@@ -5403,7 +5430,7 @@ describe("CrewSupervisor", () => {
       harness.supervisor.disposeAll();
     });
 
-    it("an approval withdrawn while its gates are read sends nothing, and a round cap holds it", async () => {
+    it("an approval withdrawn while its gates are read sends nothing", async () => {
       const harness = await kept();
       await repairTurn(harness, async () => {
         harness.forge.headSha = REPAIRED;
@@ -5421,16 +5448,7 @@ describe("CrewSupervisor", () => {
       expect(harness.forge.merges).toEqual([]);
       expect(harness.authorization()?.attempt).toBeUndefined();
 
-      const capped = await kept();
-      seedDelivery(capped.tasks, capped.taskId, { ciCapAt: Date.now(), ciRounds: 3 });
-      await repairTurn(capped, async () => {
-        capped.forge.headSha = REPAIRED;
-        await capped.declare(repair("none"));
-      });
-      await vi.waitFor(() =>
-        expect(capped.authorization()?.waiting).toMatchObject({ on: "cap", head: REPAIRED }),
-      );
-      expect(capped.forge.merges).toEqual([]);
+
     });
 
     // INF-1272, the captain: "A stop still means something is wrong; only
@@ -7511,7 +7529,7 @@ describe("a crewmate's own completion card clears the standing CI gate first", (
     },
   );
 
-  it("refuses a direct-pr merge decision - and shows no card - while CI reads pending", async () => {
+  it("publishes an offer while checks are pending without a second readiness judgment (INF-1555 F12)", async () => {
     const crewmate = fakeCrewmate();
     const checkCi = vi.fn(async () => "pending" as const);
     const { supervisor, specs, cards } = setup(crewmate, { checkCi });
@@ -7535,17 +7553,15 @@ describe("a crewmate's own completion card clears the standing CI gate first", (
       ],
     });
 
-    await expect(result).rejects.toThrow(/Card refused: the checks read running, not passed/);
-    // The refusal names no tool the crewmate may not have.
-    await expect(result).rejects.not.toThrow(/gh /);
+    await expect(result).resolves.toContain("The card is shown; its merge waits on the checks.");
     expect(checkCi).toHaveBeenCalledTimes(1);
     await tick();
-    expect(cards()).toHaveLength(0);
+    expect(cards().map(card => card.title)).toContain("Ready to merge");
   });
 
-  it("asks for the thread answer now when the checks hold a card back while the captain's reply waits", async () => {
+  it("asks for the thread answer now when a missing change holds an offer back while the captain's reply waits", async () => {
     const crewmate = fakeCrewmate();
-    let overall: "green" | "pending" = "green";
+    let overall: "green" | "no-pr" = "green";
     const { supervisor, specs, cards } = setup(crewmate, { checkCi: async () => overall });
     await supervisor.commission({
       title: "Ship the fix",
@@ -7566,13 +7582,13 @@ describe("a crewmate's own completion card clears the standing CI gate first", (
     const card = cards().find((entry) => entry.title === "Ready to merge") as Card;
     // The captain asks for a change, which restarts the checks.
     supervisor.replyToCard(card.id, "rename the flag first");
-    overall = "pending";
+    overall = "no-pr";
     // A revision of that card goes up while they run (INF-834 friction 4);
     // a new completion card still waits for them.
     const refused = specs[0]?.onCard?.(
       completion("<p>The flag is renamed.</p><p>Pushed.</p>", "renamed"),
     );
-    await expect(refused).rejects.toThrow(/Card refused: the checks read running, not passed/);
+    await expect(refused).rejects.toThrow(/no open pull request was found/);
     await expect(refused).rejects.toThrow(
       "The captain's reply in your card's thread is still unanswered: answer it now with reply",
     );
@@ -7583,7 +7599,7 @@ describe("a crewmate's own completion card clears the standing CI gate first", (
     ).rejects.not.toThrow(/still unanswered/);
   });
 
-  it("refuses a direct-pr merge decision while CI reads red, naming the state", async () => {
+  it("publishes an offer with failed checks without a separate red declaration (INF-1555 F12)", async () => {
     const crewmate = fakeCrewmate();
     const checkCi = vi.fn(async () => "red" as const);
     const { supervisor, specs, cards } = setup(crewmate, { checkCi });
@@ -7607,12 +7623,12 @@ describe("a crewmate's own completion card clears the standing CI gate first", (
       ],
     });
 
-    await expect(result).rejects.toThrow(/Card refused: the checks read failed, not passed/);
+    await expect(result).resolves.toContain("card-");
     await tick();
-    expect(cards()).toHaveLength(0);
+    expect(cards().map(card => card.title)).toContain("Ready to merge");
   });
 
-  it.each(["unpublished", "failed checks"])(
+  it.each(["unpublished", "unreadable change"])(
     "removes completion copies after %s refuse the card (INF-228 F3)",
     async (refusal) => {
       let taskId = "";
@@ -7635,7 +7651,7 @@ describe("a crewmate's own completion card clears the standing CI gate first", (
       });
       const { supervisor, tasks, specs, cards, paths } = setup(fakeCrewmate(), {
         completionPresentation,
-        checkCi: async () => "red",
+        checkCi: async () => ({ overall: "pending", recorded: false, problem: "The proposed change could not be read" }),
       });
       ({ taskId } = await supervisor.commission({
         title: "Share the story",
@@ -7649,7 +7665,7 @@ describe("a crewmate's own completion card clears the standing CI gate first", (
       // An earlier card's independent copy must survive this later refusal.
       const earlier = `${taskId}-${"c".repeat(32)}.mp4`;
       writeFileSync(join(dir, earlier), DEMO_RECORDING.bytes);
-      if (refusal === "failed checks")
+      if (refusal === "unreadable change")
         tasks.updateChangePresentation(taskId, () => ({
           revisions: [],
           receipts: [],
@@ -7669,7 +7685,7 @@ describe("a crewmate's own completion card clears the standing CI gate first", (
           presentationRevision: 1,
           actions: [{ id: "merge", effect: SETTLE_MERGE }],
         }),
-      ).rejects.toThrow(refusal === "unpublished" ? /not been published/ : /checks read failed/);
+      ).rejects.toThrow(refusal === "unpublished" ? /not been published/ : /The proposed change could not be read/);
       expect(cards()).toHaveLength(0);
       expect(readdirSync(dir)).toEqual([earlier]);
       expect(readFileSync(join(dir, earlier))).toEqual(DEMO_RECORDING.bytes);
@@ -8033,8 +8049,8 @@ describe("a refused completion card is a fact the Firstmate reads (FI3-401)", ()
     return { ...harness, crewmate, taskId, emitCard };
   }
 
-  it("records the CI gate's refusal, names it beside a report that says the card went up, and clears it once the card goes up", async () => {
-    const checks: { overall: import("./prCi").PrCiOverall } = { overall: "pending" };
+  it("records a missing-target refusal, names it beside a report that says the card went up, and clears it once the card goes up", async () => {
+    const checks: { overall: import("./prCi").PrCiOverall } = { overall: "no-pr" };
     const { supervisor, tasks, ops, ledger, ledgerFacts, cards, crewmate, taskId, emitCard } =
       await shipping(checks);
 
@@ -8046,7 +8062,7 @@ describe("a refused completion card is a fact the Firstmate reads (FI3-401)", ()
         actions: merge,
         risk: METER_RISK,
       }),
-    ).rejects.toThrow(/Card refused: the checks read running, not passed/);
+    ).rejects.toThrow(/no open pull request was found/);
     await tick();
     expect(cards()).toEqual([]);
 
@@ -8057,7 +8073,7 @@ describe("a refused completion card is a fact the Firstmate reads (FI3-401)", ()
       at: expect.any(Number),
       title: "Ready to merge",
       reason: "checks",
-      why: "its checks read running, not passed",
+      why: "no open pull request was found for its branch",
     });
     const at = new Date(refusal?.at ?? 0).toISOString();
     expect(
@@ -8065,13 +8081,13 @@ describe("a refused completion card is a fact the Firstmate reads (FI3-401)", ()
     ).toMatchObject({
       kind: "note",
       actor: "host",
-      text: 'completion card "Ready to merge" refused: its checks read running, not passed',
+      text: 'completion card "Ready to merge" refused: no open pull request was found for its branch',
     });
 
     // The crewmate's report claims the card went up; the wake says it did not.
     await reportTurn(crewmate, taskId, "Completion card emitted.");
     expect(ops).toEqual([
-      `[fm-op] crewmate 1 reported on task ${taskId} "Ship the fix": Completion card emitted. The host refused its completion card "Ready to merge" at ${at}: its checks read running, not passed. That card did not reach the captain, and no card of its is on the captain's screen.`,
+      `[fm-op] crewmate 1 reported on task ${taskId} "Ship the fix": Completion card emitted. The host refused its completion card "Ready to merge" at ${at}: no open pull request was found for its branch. That card did not reach the captain, and no card of its is on the captain's screen.`,
     ]);
     expect(ledgerFacts.at(-1)).toMatchObject({
       kind: "report",
@@ -8082,10 +8098,10 @@ describe("a refused completion card is a fact the Firstmate reads (FI3-401)", ()
       title: "Ready to merge",
       at,
       reason: "checks",
-      why: "its checks read running, not passed",
+      why: "no open pull request was found for its branch",
     });
 
-    // The checks pass and the card goes up: the refusal no longer stands.
+    // The proposed change can be read and the card goes up: the refusal no longer stands.
     checks.overall = "green";
     await supervisor.steerCrewmate(taskId, "the checks passed; emit the completion card");
     await tick();
@@ -8104,7 +8120,7 @@ describe("a refused completion card is a fact the Firstmate reads (FI3-401)", ()
     expect(ledger.at(-1)).toContain("Its card on the captain's screen:");
   });
 
-  it("records a refusal the card tool made before the host saw the card, and the CI cap's", async () => {
+  it("records a picture refusal before the host sees the card", async () => {
     const { tasks, taskId, emitCard, specs } = await shipping({ overall: "green" });
     // The working copy the picture is looked for in, without the picture.
     mkdirSync(specs[0]?.cwd ?? "", { recursive: true });
@@ -8122,20 +8138,7 @@ describe("a refused completion card is a fact the Firstmate reads (FI3-401)", ()
       why: expect.stringMatching(/^Card picture refused: /),
     });
 
-    seedDelivery(tasks, taskId, { ciRounds: 3, ciCapAt: Date.now() });
-    await expect(
-      emitCard.run({
-        required_actions: [],
-        title: "Ready to merge",
-        body: completionBody("<p>The PR is open.</p>"),
-        actions: merge,
-        risk: METER_RISK,
-      }),
-    ).rejects.toThrow(/Card refused: this task hit its CI cap/);
-    expect(tasks.get(taskId)?.delivery?.cardRefusal).toMatchObject({
-      reason: "ci-cap",
-      why: "it hit its CI cap (3 own repairs failed), so the card is held until the captain answers",
-    });
+
   });
 
   it("records nothing for a refused card that is no completion card, or on a task that has none", async () => {
@@ -11256,7 +11259,7 @@ describe("the sign-in where a project lives", () => {
   it("hands the crewmate open_change and check_change where its task ships a change", async () => {
     const crewmate = fakeCrewmate();
     const openChange = vi.fn(async () => "opened");
-    const checkChange = vi.fn(async () => "overall: green");
+    const checkChange = vi.fn(async () => "crew verdict: green");
     const readWorkflow = vi.fn(async () => "workflow log");
     const downloadArtifact = vi.fn(async () => "downloaded ZIP");
     const { supervisor, specs } = setup(crewmate, {
@@ -11272,7 +11275,7 @@ describe("the sign-in where a project lives", () => {
     await tick();
     const spec = specs[0];
     expect(await spec?.onOpenChange?.({ title: "t", body: "b" })).toBe("opened");
-    expect(await spec?.onCheckChange?.()).toBe("overall: green");
+    expect(await spec?.onCheckChange?.()).toBe("crew verdict: green");
     expect(openChange).toHaveBeenCalledWith(taskId, { title: "t", body: "b" });
     expect(checkChange).toHaveBeenCalledWith(taskId, undefined);
     expect(await spec?.onReadWorkflow?.({ runId: 10, jobId: 20 })).toBe("workflow log");
@@ -13654,7 +13657,7 @@ describe("the idle ladder (idle crew recovery, docs/report-sort.md)", () => {
         );
         expect(declared.text).toContain(`${owner.key} "Fix the shared fixture" is underway`);
         expect(declared.text).toContain(
-          "you are resumed when the default branch's own run of that check passes, and when it closes",
+          BASELINE_OBSERVATIONS_NEXT,
         );
       }
       return { ...harness, owner };
@@ -13683,7 +13686,7 @@ describe("the idle ladder (idle crew recovery, docs/report-sort.md)", () => {
     );
 
     it("the shared tick wakes a waiting pull request when the default branch's run of its check passes (INF-833 Fix 4)", async () => {
-      const main = "a".repeat(40);
+      let main = "a".repeat(40);
       let items: { name: string; state: ForgeCheckState }[] = [
         { name: "linux-checks", state: "failure" },
       ];
@@ -13737,20 +13740,24 @@ describe("the idle ladder (idle crew recovery, docs/report-sort.md)", () => {
       const prompts = crewmate.promptCalls.length;
       await harness.supervisor.pollCheckWatches(hostNow);
       await tick();
-      expect(crewmate.promptCalls).toHaveLength(prompts);
+      expect(crewmate.promptCalls).toHaveLength(prompts + 1);
+      await endTurn(crewmate, taskId, "Still waiting for the named baseline work.");
+      // Captain F5: a final reading wakes once per commit; the baseline fix is a new commit.
+      main = "b".repeat(40);
       items = [{ name: "linux-checks", state: "success" }];
       await harness.supervisor.pollCheckWatches(hostNow);
       await tick();
       expect(crewmate.promptCalls.at(-1)).toContain(
-        "The default branch's own run of linux-checks passed",
+        "The default branch reports finished checks",
       );
       expect(crewmate.promptCalls.at(-1)).toContain(
-        "Bring your change up to date and read the checks again.",
+        "Judge whether this clears your declared wait",
       );
+      expect(crewmate.promptCalls.at(-1)).toContain(JSON.stringify(items));
       expect(harness.tasks.get(taskId)?.idleSince).toBeNull();
       await harness.supervisor.pollCheckWatches(hostNow);
       await tick();
-      expect(crewmate.promptCalls).toHaveLength(prompts + 1);
+      expect(crewmate.promptCalls).toHaveLength(prompts + 2);
     });
 
     it("a report on a Pi crewmate waiting on work underway wakes nobody", async () => {
@@ -14048,87 +14055,9 @@ describe("the idle ladder (idle crew recovery, docs/report-sort.md)", () => {
     const heldWakes = (ops: string[]) =>
       ops.filter((line) => line.includes("is held for the captain"));
 
-    it("a capped crewmate is held for the Firstmate's card: no nudge, and no stall wake beside the cap's", async () => {
-      const { supervisor, crewmate, ops, sorts, taskId, tasks, idleSince, at } = await stopped();
-      // The CI service stamps the cap the way prCi does, and the host's one
-      // cap wake goes out; that places the captain gate on the task.
-      hostNow = idleSince;
-      seedDelivery(tasks, taskId, { ciRounds: 3, ciRedHead: HEAD, ciCapAt: idleSince });
-      supervisor.holdForCiCap(taskId, { rounds: 3, headSha: HEAD });
-      expect(tasks.get(taskId)?.gate).toEqual({ kind: "captain", ref: HEAD, reason: "the CI cap" });
-      expect(tasks.flagsOf(tasks.get(taskId) as TaskRecord).held).toBe(true);
-      const prompts = crewmate.promptCalls.length;
+    
 
-      await at(minutes(10));
-      // The crewmate cannot act: no nudge, no ledger row.
-      expect(crewmate.promptCalls).toHaveLength(prompts);
-      expect(sorts.some((sort) => sort.rule === "idle-nudge")).toBe(false);
-      await at(minutes(20) - 1);
-      expect(heldWakes(ops)).toHaveLength(0);
-      await at(minutes(20));
-      // The Firstmate owes the card: the wake is the cap's own hold, with the
-      // cap's ways - never an idle-stall naming a different three.
-      expect(heldWakes(ops)).toHaveLength(1);
-      expect(heldWakes(ops)[0]).toContain("is held for the captain by the CI cap");
-      expect(heldWakes(ops)[0]).toContain('"held": "ci-cap"');
-      expect(heldWakes(ops)[0]).toContain('"label": "Try a premium model"');
-      expect(ops.some((line) => line.includes('"held": "idle-stall"'))).toBe(false);
-      expect(idleWakes(ops)).toEqual([]);
-      expect(sorts.at(-1)).toEqual({ taskId, verdict: "captain", rule: "idle-wake" });
-
-      // The Firstmate raises the decision card on the task: the gate names
-      // it, and the turn is the captain's - nothing fires however long.
-      const cardId = supervisor.addFirstmateCard({
-        taskId,
-        title: "Retry the fix?",
-        body: "<p>CI went red three times.</p><ul><li>Retry, a stronger model, or discard.</li></ul>",
-        actions: [{ id: "retry", label: "Retry", default: true }],
-      });
-      await tick();
-      expect(tasks.get(taskId)?.gate).toEqual({
-        kind: "captain",
-        ref: cardId,
-        reason: "the CI cap",
-      });
-      const opsBefore = ops.length;
-      await at(minutes(600));
-      expect(ops).toHaveLength(opsBefore);
-      expect(crewmate.promptCalls).toHaveLength(prompts);
-
-      // The captain's answer releases the gate; the Firstmate's steer relays
-      // it and reopens the rounds.
-      supervisor.act(cardId, "retry");
-      expect(tasks.get(taskId)?.gate).toBeNull();
-      await supervisor.steerCrewmate(taskId, "The captain says retry.");
-      await tick();
-      expect(tasks.get(taskId)?.delivery?.ciCapAt).toBeUndefined();
-      expect(tasks.get(taskId)?.gate).toBeNull();
-    });
-
-    it("the captain closing the cap's card leaves the cap's own hold, and its clock starts at the close", async () => {
-      const { supervisor, ops, taskId, tasks, idleSince, at } = await stopped();
-      hostNow = idleSince;
-      seedDelivery(tasks, taskId, { ciRounds: 3, ciRedHead: HEAD, ciCapAt: idleSince });
-      supervisor.holdForCiCap(taskId, { rounds: 3, headSha: HEAD });
-      const cardId = supervisor.addFirstmateCard({
-        taskId,
-        title: "Retry the fix?",
-        body: "<p>CI went red three times.</p><ul><li>Retry, a stronger model, or discard.</li></ul>",
-        actions: [{ id: "retry", label: "Retry", default: true }],
-      });
-      await at(minutes(40));
-      const opsBefore = ops.length;
-      hostNow = idleSince + minutes(40);
-      supervisor.close(cardId);
-      // A close is not an answer: the cap stands, and its gate is back on the head.
-      expect(tasks.get(taskId)?.gate).toEqual({ kind: "captain", ref: HEAD, reason: "the CI cap" });
-      expect(tasks.get(taskId)?.idleSince).toBe(idleSince + minutes(40));
-      await at(minutes(59));
-      expect(heldWakes(ops)).toHaveLength(0);
-      expect(ops.slice(opsBefore).filter((line) => line.startsWith("[fm-op]"))).toEqual([]);
-      await at(minutes(60));
-      expect(heldWakes(ops)).toHaveLength(1);
-    });
+    
 
     it("a captain gate on the active record is read while it stands, and the sweep heals one nothing holds", async () => {
       const { supervisor, crewmate, ops, taskId, tasks, at } = await stopped();
@@ -14149,87 +14078,11 @@ describe("the idle ladder (idle crew recovery, docs/report-sort.md)", () => {
       expect(crewmate.promptCalls).toHaveLength(prompts);
     });
 
-    it("the stall card's Nudge on a capped task is not the cap's answer: the cap and its gate stand", async () => {
-      const { supervisor, crewmate, ops, taskId, tasks, cards, idleSince, at } = await stopped();
-      hostNow = idleSince;
-      seedDelivery(tasks, taskId, { ciRounds: 3, ciRedHead: HEAD, ciCapAt: idleSince });
-      supervisor.holdForCiCap(taskId, { rounds: 3, headSha: HEAD });
-      for (const step of [20, 50, 80]) await at(minutes(step));
-      expect(heldWakes(ops)).toHaveLength(2);
-      const stall = `card-stall-${taskId}`;
-      const card = cards().find((entry) => entry.id === stall);
-      // The cap's question is still the captain's: the card says so, and
-      // says Nudge is not an answer to it.
-      expect(card?.body).toContain(
-        "<p>It has reached its limit of tries at getting the checks to pass, so it needs your call: try again, try a premium model, or discard it. Your first mate was told twice and has not asked you yet.</p>",
-      );
-      expect(card?.body).toContain(
-        "<p>Nudge tells it to say what is in its way; it does not give it more tries. To try again or try a premium model, reply here. Keep waiting closes this alert and leaves the task as it is. Discard ends it and throws its work away.</p>",
-      );
-      expect(card?.body).not.toContain("no question for you");
-      expect(card?.actions.map((action) => action.label)).toEqual([
-        "Nudge",
-        "Keep waiting",
-        "Discard",
-      ]);
-      expect(tasks.get(taskId)?.gate).toEqual({
-        kind: "captain",
-        ref: stall,
-        reason: "the CI cap",
-      });
+    
 
-      supervisor.act(stall, "nudge");
-      await tick();
-      // The crewmate is told to carry on, with the captain's authority...
-      expect(crewmate.promptCalls.at(-1)).toBe(IDLE_NUDGE_TEXT);
-      // ...but that card never asked the cap's question, so nothing reopened.
-      expect(tasks.get(taskId)?.delivery).toMatchObject({ ciRounds: 3, ciCapAt: idleSince });
-      expect(tasks.timeline(taskId).some((event) => event.kind === "cap_reset")).toBe(false);
-      expect(tasks.get(taskId)?.gate).toEqual({ kind: "captain", ref: HEAD, reason: "the CI cap" });
-      // The task card's Continue is the same nudge, and no more the cap's answer.
-      supervisor.runTaskOp(taskId, "continue-task");
-      await tick();
-      expect(tasks.get(taskId)?.delivery).toMatchObject({ ciRounds: 3, ciCapAt: idleSince });
-      expect(tasks.timeline(taskId).some((event) => event.kind === "cap_reset")).toBe(false);
-    });
+    
 
-    it("the stall card on a review-capped task names the second look as the limit reached", async () => {
-      const { supervisor, taskId, tasks, cards, idleSince, at } = await stopped();
-      hostNow = idleSince;
-      seedDelivery(tasks, taskId, {
-        reviewRounds: 3,
-        reviewRoundSha: HEAD,
-        reviewCapAt: idleSince,
-      });
-      await supervisor.sweepGates(idleSince);
-      expect(tasks.get(taskId)?.gate).toMatchObject({ kind: "captain", reason: "the review cap" });
-      for (const step of [20, 50, 80]) await at(minutes(step));
-      const card = cards().find((entry) => entry.id === `card-stall-${taskId}`);
-      expect(card?.body).toContain(
-        "<p>It has reached its limit of tries at getting through a review, so it needs your call: try again, try a premium model, or discard it. Your first mate was told twice and has not asked you yet.</p>",
-      );
-      expect(card?.body).not.toContain("no question for you");
-    });
-
-    it("a capped stall names the stronger fallback only when premium cannot serve", async () => {
-      const { supervisor, ops, taskId, tasks, cards, idleSince, at } = await stopped();
-      supervisor.setFirstmateHooks({
-        notifyOp: (wake) => ops.push(served(wake)),
-        retryConverse: vi.fn(),
-        premiumCanServe: () => false,
-      });
-      hostNow = idleSince;
-      seedDelivery(tasks, taskId, { ciRounds: 3, ciRedHead: HEAD, ciCapAt: idleSince });
-      supervisor.holdForCiCap(taskId, { rounds: 3, headSha: HEAD });
-      const capWake = ops.find((line) => line.includes('"held": "ci-cap"'));
-      expect(capWake).toContain('"label": "Try a stronger model"');
-      expect(capWake).not.toContain('"label": "Try a premium model"');
-      for (const step of [20, 50, 80]) await at(minutes(step));
-      const body = cards().find((entry) => entry.id === `card-stall-${taskId}`)?.body;
-      expect(body).toContain("try again, try a stronger model, or discard it");
-      expect(body).toContain("To try again or try a stronger model, reply here.");
-      expect(body).not.toContain("try a premium model");
-    });
+    
 
     it("a timed wait on the active record holds the ladder, and the sweep ends it with one steer", async () => {
       const { supervisor, crewmate, ops, taskId, tasks, idleSince, at } = await stopped();
@@ -15356,22 +15209,19 @@ describe("the idle ladder (idle crew recovery, docs/report-sort.md)", () => {
       expect(cutOffWakes(ops)).toEqual([]);
     });
 
+    
+
     it("a card the Firstmate owes is still owed while a cut-off holds the crewmate", async () => {
+      // The original outage intent survives retirement of its old count-cap fixture.
       const login = claudeLogin();
-      const { supervisor, taskId, tasks, ops, idleSince, at } = await stopped(
-        login.extras,
-        claudeCrewmate(),
-      );
-      const HEAD = "abc1234def5678";
+      const { supervisor, taskId, tasks, ops, idleSince, at } = await stopped(login.extras, claudeCrewmate());
       login.extras.noteCutOff(CLAUDE_ACCOUNT, { class: "refused" });
       supervisor.reconcileCutOffs();
-      seedDelivery(tasks, taskId, { ciRounds: 3, ciRedHead: HEAD, ciCapAt: idleSince });
-      supervisor.holdForCiCap(taskId, { rounds: 3, headSha: HEAD });
+      seedDelivery(tasks, taskId,{captainWait:{at:idleSince,reason:"choose the output format"}});
+      await supervisor.sweepGates(idleSince);
       await at(minutes(20));
       await at(minutes(50));
-      // The cut-off paused only the crewmate: the reminders about the card
-      // the Firstmate owes still come, as without it.
-      const owed = ops.filter((line) => line.includes("is held for the captain"));
+      const owed=ops.filter(line=>line.includes("is held for the captain"));
       expect(owed).toHaveLength(2);
       expect(owed[1]).toContain("This is the second time");
     });
@@ -15650,18 +15500,7 @@ describe("the idle ladder (idle crew recovery, docs/report-sort.md)", () => {
       ]);
     });
 
-    it("the wake a capped task owes, and its repeat", async () => {
-      const { supervisor, ops, taskId, tasks, idleSince, at } = await stopped();
-      hostNow = idleSince;
-      seedDelivery(tasks, taskId, { ciRounds: 3, ciRedHead: HEAD, ciCapAt: idleSince });
-      supervisor.holdForCiCap(taskId, { rounds: 3, headSha: HEAD });
-      await at(minutes(20));
-      await at(minutes(50));
-      expect(ops.filter((line) => line.includes("is held for the captain"))).toEqual([
-        `[fm-op] task ${taskId} "Job" is held for the captain by the CI cap and has had no card up for 20m: its crewmate cannot move until the captain answers one.${heldBlock(taskId, "ci-cap")}`,
-        `[fm-op] task ${taskId} "Job" is held for the captain by the CI cap and has had no card up for 50m: its crewmate cannot move until the captain answers one.${SECOND}${heldBlock(taskId, "ci-cap")}`,
-      ]);
-    });
+    
 
     it("the wake a captain gate with no reason owes", async () => {
       const { ops, taskId, tasks, at } = await stopped();
@@ -16770,72 +16609,19 @@ describe("the task graph (task-system P2)", () => {
       expect(body()).toMatch(/title="Started [^"]+ · read [^"]+"/);
       expect(body()).not.toContain("not read yet");
       expect(cards().filter((card) => card.title === "The smoke test is fixed")).toHaveLength(1);
-      // The holds the host placed ride the same strip (contract v3.6,
-      // captain lock 3): the rounds a cap counts are marks after the Checks
-      // cell's words, in the feed's words on rest, with the head CI last
-      // went red on - one cell, not a Check rounds cell beside it (INF-1501,
-      // the captain: "let's consolidate these two metadata pieces into
-      // one"). The prompts used to ask an agent to type out a count it
-      // cannot see.
+      // Saved round fields remain history; they add no counter cells, marks
+      // or cap titles to the current facts.
       seedDelivery(tasks, taskId, {
         ciRounds: 2,
         ciRedHead: "9f3c1ab0000000000000000000000000000000ee",
       });
       emit();
       await tick();
-      const checksCell = (html: string) =>
-        html.match(/<span class="inf-fact" data-fact="checks"[^>]*>.*?<\/span><\/span>/)?.[0] ??
-        "";
-      const checks = checksCell(body() ?? "");
-      expect(checks).toMatch(
-        /title="Started [^"]+ · read [^"]+ · round 2 of 3, the checks last failed at 9f3c1ab"/,
-      );
-      expect(checks).toContain(
-        `passed in 14m · 6m ago${factRoundsSvg(2, CI_ROUND_CAP, false)}</span>`,
-      );
-      expect(factRoundsSvg(2, CI_ROUND_CAP, false)).toContain('aria-label="round 2 of 3"');
-      expect(body()).not.toContain("Check rounds");
-      // A standing cap marks every round and says held rather than adding a
-      // line, since the checks' own dot can be a tick by then.
-      // It cannot ride the CREWMATE's card - `pendingCiGate` holds that one
-      // while the cap stands - so the surface that carries it is a Firstmate
-      // settle card on the same task, which is exactly what the captain is
-      // answering when the cap asks for a decision.
-      seedDelivery(tasks, taskId, { ciRounds: 3, ciCapAt: Date.now() });
-      const held = supervisor.addFirstmateCard({
-        title: "The smoke test hit its CI cap",
-        body: "<p>CI went red on three heads.</p><p>Choose how to proceed.</p>",
-        taskId,
-        actions: [{ id: "discard", label: "Discard", danger: true, effect: SETTLE_DISCARD }],
-      });
-      await tick();
-      const heldBody = cards().find((card) => card.id === held)?.body ?? "";
-      const heldChecks = checksCell(heldBody);
-      expect(heldChecks).toContain('· held at round 3 of 3, the checks last failed at 9f3c1ab"');
-      expect(heldChecks).toContain(`${factRoundsSvg(3, CI_ROUND_CAP, true)}</span>`);
-      expect(factRoundsSvg(3, CI_ROUND_CAP, true)).toContain(
-        '<span class="inf-fact-held">held</span>',
-      );
-      // The review's findings rounds fold into the Review cell the same way.
-      tasks.updateFields(taskId, { policies: { rigor: "reviewed" } }, "firstmate");
-      seedDelivery(tasks, taskId, {
-        reviewVerdict: "findings",
-        reviewSha: "9f3c1ab0000000000000000000000000000000ee",
-        reviewRounds: 1,
-      });
-      const reviewed = supervisor.addFirstmateCard({
-        title: "The smoke test has review findings",
-        body: "<p>The review found one gap.</p><p>Choose how to proceed.</p>",
-        taskId,
-        actions: [{ id: "discard", label: "Discard", danger: true, effect: SETTLE_DISCARD }],
-      });
-      await tick();
-      const reviewedBody = cards().find((card) => card.id === reviewed)?.body ?? "";
-      expect(reviewedBody).toMatch(
-        /<span class="inf-fact" data-fact="review" title="findings round 1 of 2"><span class="inf-fact-k">Review<\/span>/,
-      );
-      expect(reviewedBody).toContain(`${factRoundsSvg(1, REVIEW_ROUND_CAP, false)}</span></span>`);
-      expect(reviewedBody).not.toContain("Look rounds");
+      expect(body()).toContain("passed in 14m · 6m ago");
+      expect(body()).toMatch(/title="Started [^"]+ · read [^"]+"/);
+      expect(body()).not.toContain('data-fact="check-rounds"');
+      expect(body()).not.toContain('data-fact="look-rounds"');
+      expect(body()).not.toContain('aria-label="round');
     } finally {
       rmSync(dir, { recursive: true, force: true });
     }
@@ -20483,9 +20269,8 @@ describe("the reviewed tier (delivery rigor phase 2)", () => {
       await tick();
       const card = cards().find((entry) => entry.id === cardId);
       expect(card?.body).toContain('passed <span class="inf-mono">0123456</span> · risk low');
-      // The risk note rides the title, then the findings round the review
-      // already spent (INF-1501).
-      expect(card?.body).toContain('title="one test file changed. · findings round 1 of 2"');
+      // The review risk note remains; retired findings counts do not ride it.
+      expect(card?.body).toContain('title="one test file changed."');
       expect(await supervisor.settleTask(builderId, "merge-pr", undefined, "captain")).toContain(
         "Change #55",
       );
@@ -20635,554 +20420,13 @@ describe("the reviewed tier (delivery rigor phase 2)", () => {
     }
   });
 
-  it("holds the completion card at the CI cap until the captain's answer and Firstmate's steer reopen the rounds (phase 3)", async () => {
-    const repo = directPrRepo();
-    try {
-      const crewmate = fakeCrewmate();
-      const checkCi = vi.fn(async () => "green" as const);
-      // The host's one clock, an hour off the process's: the captain's
-      // answer is stamped on it, not on `Date.now()`.
-      const hostNow = () => Date.now() + 3_600_000;
-      const { supervisor, tasks, repos, ops, specs, cards } = setup(crewmate, {
-        routedModel: { provider: "openai-codex", id: "gpt-5.5" },
-        checkCi,
-        now: hostNow,
-      });
-      const { repo: view } = await repos.setup({ kind: "adopt", path: repo.dir, name: repo.name });
-      repos.configure(view.id, { delivery: "direct-pr" });
-      // A standard task, so the review hold stays out of the picture.
-      const { taskId } = await supervisor.commission({
-        title: "Fix the meter test",
-        intent: intentOf("fix it"),
-        repoId: view.id,
-        shape: { rigor_ask: "standard" },
-      });
-      await tick();
-      const completion = () =>
-        (specs[0] as CrewmateSpec).onCard?.({
-          requiredActions: [],
-          title: "The meter test is steady",
-          body: completionBody(
-            [
-              "<h3>Intent</h3><p>The meter test passes.</p>",
-              "<h3>What changed</h3><p>One await moved.</p>",
-              "<h3>Verified</h3><p>pnpm test on the final commit.</p>",
-              "<h3>Risk</h3><p>Low.</p>",
-              "<h3>Not done</h3><p>Nothing.</p>",
-            ].join(""),
-          ),
-          actions: [
-            { id: "merge", label: "Merge PR", default: true, effect: SETTLE_MERGE },
-            { id: "discard", label: "Discard", danger: true, effect: SETTLE_DISCARD },
-          ],
-        });
+  
 
-      // The CI service counted the third red head and stamped the cap;
-      // the host's one wake follows.
-      seedDelivery(tasks, taskId, {
-        prUrl: "https://github.com/o/r/pull/55",
-        prNumber: 55,
-        headSha: HEAD,
-        ci: "red",
-        ciAt: Date.now(),
-        ciRounds: 3,
-        ciRedHead: HEAD,
-        ciCapAt: Date.now(),
-      });
-      supervisor.holdForCiCap(taskId, { rounds: 3, headSha: HEAD });
-      // The cap is a hold on the gate that exists (the primitives review, P2).
-      expect(tasks.get(taskId)?.gate).toEqual({ kind: "captain", ref: HEAD, reason: "the CI cap" });
-      const capWakes = ops.filter((line) => line.includes("hit its CI cap"));
-      expect(capWakes).toHaveLength(1);
-      expect(capWakes[0]).toContain(`task ${taskId} "Fix the meter test" hit its CI cap`);
-      // The wake carries the FACTS and the structured ways out (contract
-      // v3.6, captain lock 3), never the card recipe it used to spell out.
-      expect(capWakes[0]).not.toContain("emit one decision card");
-      expect(capWakes[0]).toContain('"held": "ci-cap"');
-      expect(capWakes[0]).toContain('"label": "Try a premium model"');
+  
 
-      // The card is refused at the cap even though CI reads green now, and
-      // the refusal costs no gh call.
-      await expect(completion()).rejects.toThrow(
-        /Card refused: this task hit its CI cap - 3 own repairs failed \(the cap is 3\)/,
-      );
-      expect(checkCi).not.toHaveBeenCalled();
+  
 
-      // A Firstmate steer before the captain answered reopens nothing.
-      await supervisor.steerCrewmate(taskId, "keep going");
-      await tick();
-      expect(tasks.get(taskId)?.delivery?.ciCapAt).toBeDefined();
-      await expect(completion()).rejects.toThrow(/hit its CI cap/);
-
-      // The Firstmate's decision card on the task; the captain's answer is
-      // the fact the reopening steer needs.
-      const cardId = supervisor.addFirstmateCard({
-        taskId,
-        title: "Retry the meter fix?",
-        body: "<p>CI went red three times on this task.</p><ul><li>Retry, a stronger model, or discard.</li></ul>",
-        actions: [
-          { id: "retry", label: "Retry", default: true },
-          { id: "discard", label: "Discard", danger: true, effect: SETTLE_DISCARD },
-        ],
-      });
-      await tick();
-      expect(cards().some((card) => card.id === cardId)).toBe(true);
-      expect(tasks.get(taskId)?.gate).toEqual({
-        kind: "captain",
-        ref: cardId,
-        reason: "the CI cap",
-      });
-      supervisor.act(cardId, "retry");
-      expect(tasks.get(taskId)?.delivery?.capAnsweredAt).toBe(hostNow());
-      // The answer releases the gate; the rounds wait for the relaying steer.
-      expect(tasks.get(taskId)?.gate).toBeNull();
-      // Still held: the answer is relayed by a steer, and until then the
-      // record stands.
-      await expect(completion()).rejects.toThrow(/hit its CI cap/);
-
-      // The steer with the answer reopens the rounds: one cap_reset event,
-      // both counters cleared, the card publishes on the live green reading.
-      await supervisor.steerCrewmate(taskId, "The captain says retry: fix the failing check.");
-      await tick();
-      expect(tasks.get(taskId)?.delivery).toMatchObject({ ci: "red", prNumber: 55 });
-      expect(tasks.get(taskId)?.delivery?.ciRounds).toBeUndefined();
-      expect(tasks.get(taskId)?.delivery?.ciCapAt).toBeUndefined();
-      expect(tasks.get(taskId)?.delivery?.capAnsweredAt).toBeUndefined();
-      const reset = tasks.timeline(taskId).filter((event) => event.kind === "cap_reset");
-      expect(reset).toHaveLength(1);
-      expect(reset[0]).toMatchObject({
-        actor: "firstmate",
-        feed: false,
-        text: "rounds reopened by the first mate's steer after the captain's answer - checks cap (3 rounds) reset",
-      });
-      const published = await completion();
-      expect(typeof published).toBe("string");
-      expect(checkCi).toHaveBeenCalledTimes(1);
-      // The wake was one, whatever happened after.
-      expect(ops.filter((line) => line.includes("hit its CI cap"))).toHaveLength(1);
-    } finally {
-      repo.dispose();
-    }
-  });
-
-  it("holds the re-reviews at the review cap: a third findings is one wake, no re-review goes out, and the answered steer reopens (phase 3)", async () => {
-    const repo = directPrRepo();
-    try {
-      const builder = fakeCrewmate();
-      const reviewer = fakeCrewmate();
-      const { supervisor, tasks, repos, ops, workspace } = setup(builder, {
-        routedModel: { provider: "openai-codex", id: "gpt-5.5" },
-        crewmates: [reviewer],
-      });
-      const { repo: view } = await repos.setup({ kind: "adopt", path: repo.dir, name: repo.name });
-      repos.configure(view.id, { delivery: "direct-pr" });
-      const { taskId: builderId } = await supervisor.commission({
-        title: "Fix the meter test",
-        intent: intentOf("fix it"),
-        repoId: view.id,
-        shape: { rigor_ask: "reviewed" },
-      });
-      await tick();
-      await reportTurn(builder, builderId, BUILDER_REPORT);
-      seedDelivery(tasks, builderId, {
-        prUrl: "https://github.com/o/r/pull/55",
-        prNumber: 55,
-        headSha: HEAD,
-        ci: "green",
-        ciAt: Date.now(),
-      });
-      // The review reads the committed branch head, not the recorded pull request head.
-      vi.mocked(workspace.branchHead).mockResolvedValue(HEAD);
-      const { taskId: reviewId } = await supervisor.commission({
-        title: "Review",
-        intent: intentOf("fix it"),
-        shape: { review_of: builderId },
-      });
-      await tick();
-      const findings = (n: number) =>
-        `verdict: findings\nF${n} error src/meter.test.ts:12 still racy - auto-fix\nrisk: medium - one line moves.`;
-      const HEAD_2 = HEAD.replace("0123", "aaaa");
-      const HEAD_3 = HEAD.replace("0123", "bbbb");
-
-      // Round 1 is the review; rounds 2 and 3 are the two re-reviews, each
-      // at a NEW head - a round is one per head (captain ruling,
-      // 2026-09-19), so a repeated verdict at the same head counts nothing.
-      await reportTurn(reviewer, reviewId, findings(1));
-      expect(tasks.get(builderId)?.delivery?.reviewRounds).toBe(1);
-      // A repeated verdict at the SAME head records the verdict but spends
-      // no round.
-      await supervisor.steerCrewmate(reviewId, `re-review at head ${HEAD}`);
-      await tick();
-      await reportTurn(reviewer, reviewId, findings(1));
-      expect(tasks.get(builderId)?.delivery?.reviewRounds).toBe(1);
-      expect(
-        tasks
-          .timeline(builderId)
-          .some((event) => event.kind === "review" && event.text.includes("round not counted")),
-      ).toBe(true);
-      seedDelivery(tasks, builderId, { headSha: HEAD_2 });
-      vi.mocked(workspace.branchHead).mockResolvedValue(HEAD_2);
-      await supervisor.steerCrewmate(reviewId, `re-review at head ${HEAD_2}`);
-      await tick();
-      await reportTurn(reviewer, reviewId, findings(2));
-      expect(tasks.get(builderId)?.delivery?.reviewRounds).toBe(2);
-      expect(tasks.get(builderId)?.delivery?.reviewCapAt).toBeUndefined();
-      seedDelivery(tasks, builderId, { headSha: HEAD_3 });
-      vi.mocked(workspace.branchHead).mockResolvedValue(HEAD_3);
-      await supervisor.steerCrewmate(reviewId, `re-review at head ${HEAD_3}`);
-      await tick();
-      await reportTurn(reviewer, reviewId, findings(3));
-      expect(tasks.get(builderId)?.delivery).toMatchObject({ reviewRounds: 3 });
-      expect(tasks.get(builderId)?.delivery?.reviewCapAt).toBeDefined();
-      // The third findings wake is the cap wake - one wake, not two.
-      const capped = ops.filter((line) => line.includes("past the review cap"));
-      expect(capped).toHaveLength(1);
-      expect(capped[0]).toContain("with verdict findings");
-      expect(capped[0]).toContain(
-        `This is findings round 3 on task ${builderId}, past the review cap of 2 re-reviews: no more re-reviews go out until the captain answers`,
-      );
-      expect(capped[0]).toContain('"held": "review-cap"');
-      expect(capped[0]).not.toContain("emit one decision card");
-      expect(tasks.get(builderId)?.gate).toEqual({
-        kind: "captain",
-        ref: HEAD_3,
-        reason: "the review cap",
-      });
-      expect(supervisor.crewStatus(builderId)[0]?.review).toBe("review: findings (cap reached)");
-
-      // No re-review goes out while the cap holds; the refusal is text
-      // that names the door.
-      await expect(supervisor.steerCrewmate(reviewId, `re-review at head ${HEAD}`)).rejects.toThrow(
-        new RegExp(
-          `Task ${reviewId} is the review of task ${builderId}, which hit its review cap \\(3 findings rounds; the cap is 2 re-reviews\\)`,
-        ),
-      );
-      expect(reviewer.promptCalls).toHaveLength(4);
-      // The builder's completion card is held by the unpassed review as
-      // before: nothing new to refuse there.
-
-      // The captain answers the Firstmate's card and the Firstmate steers
-      // the builder with it: the rounds reopen, and the re-review goes out.
-      const cardId = supervisor.addFirstmateCard({
-        taskId: builderId,
-        title: "Three findings rounds on the meter fix",
-        body: "<p>The reviewer keeps finding the race.</p><ul><li>Retry with the findings, or discard.</li></ul>",
-        actions: [
-          { id: "retry", label: "Retry with the findings", default: true },
-          { id: "discard", label: "Discard", danger: true, effect: SETTLE_DISCARD },
-        ],
-      });
-      await tick();
-      expect(tasks.get(builderId)?.gate?.ref).toBe(cardId);
-      supervisor.act(cardId, "retry");
-      await supervisor.steerCrewmate(builderId, "The captain says retry: fix F3 and push.");
-      await tick();
-      expect(tasks.get(builderId)?.gate).toBeNull();
-      expect(tasks.get(builderId)?.delivery?.reviewRounds).toBeUndefined();
-      expect(tasks.get(builderId)?.delivery?.reviewCapAt).toBeUndefined();
-      expect(tasks.timeline(builderId).filter((event) => event.kind === "cap_reset")).toHaveLength(
-        1,
-      );
-      expect(supervisor.crewStatus(builderId)[0]?.review).toBe(
-        `review open (${tasks.get(reviewId)?.key})`,
-      );
-      await supervisor.steerCrewmate(reviewId, `re-review at head ${HEAD_3}`);
-      await tick();
-      expect(reviewer.promptCalls).toHaveLength(5);
-      seedDelivery(tasks, builderId, {
-        liveValidation: noSurfaceProof(tasks.get(reviewId)!.delivery!.headSha!, reviewId),
-      });
-      seedDelivery(tasks, reviewId, {
-        validationAssignment: {
-          head: tasks.get(reviewId)!.delivery!.headSha!,
-          revision: 1,
-          scenarioRevision: 1,
-          effects: [],
-        },
-      });
-      await reportTurn(reviewer, reviewId, "verdict: pass\nNo findings.\nrisk: low - one test.");
-      expect(tasks.get(reviewId)).toMatchObject({ status: "done", closedReason: "finished" });
-      expect(tasks.get(builderId)?.delivery?.reviewVerdict).toBe("pass");
-    } finally {
-      repo.dispose();
-    }
-  });
-
-  it("reopens every trivial review cap on the first mate's steer without a captain gate (accepted INF-166 A)", async () => {
-    const repo = directPrRepo();
-    try {
-      const builder = fakeCrewmate();
-      const reviewer = fakeCrewmate();
-      const { supervisor, tasks, repos, ops, workspace } = setup(builder, {
-        routedModel: { provider: "openai-codex", id: "gpt-5.5" },
-        crewmates: [reviewer],
-      });
-      const { repo: view } = await repos.setup({ kind: "adopt", path: repo.dir, name: repo.name });
-      repos.configure(view.id, { delivery: "direct-pr" });
-      const { taskId: builderId } = await supervisor.commission({
-        title: "Fix the meter test",
-        intent: intentOf("fix it"),
-        repoId: view.id,
-        shape: { rigor_ask: "reviewed" },
-      });
-      await tick();
-      await reportTurn(builder, builderId, BUILDER_REPORT);
-      vi.mocked(workspace.branchHead).mockResolvedValue(HEAD);
-      const { taskId: reviewId } = await supervisor.commission({
-        title: "Review",
-        intent: intentOf("fix it"),
-        shape: { review_of: builderId },
-      });
-      await tick();
-      // Two consecutive qualifying caps: the accepted answer explicitly removed once-only.
-      for (const [index, finding] of [
-        "F1 warning protocol version: raise the minor - auto-fix",
-        "F1 info PR description: say likely - ask-user",
-      ].entries()) {
-        const head = `${index}${HEAD.slice(1)}`;
-        vi.mocked(workspace.branchHead).mockResolvedValue(head);
-        seedDelivery(tasks, builderId, { reviewRounds: 2, reviewRoundSha: undefined });
-        await reportTurn(
-          reviewer,
-          reviewId,
-          `verdict: findings\n${finding}\nrisk: low - words and version.`,
-        );
-        expect(tasks.get(builderId)?.delivery).toMatchObject({
-          reviewRounds: 3,
-          reviewCapOwner: "firstmate",
-          reviewSha: head,
-        });
-        expect(tasks.get(builderId)?.gate).toBeNull();
-        expect(supervisor.crewStatus(builderId)[0]?.review).toBe(
-          "review: findings (first mate can reopen)",
-        );
-        expect(ops.at(-1)).toContain("This hold is yours");
-        expect(ops.at(-1)).not.toContain('"held": "review-cap"');
-        await expect(supervisor.steerCrewmate(reviewId, "re-review")).rejects.toThrow("steer task");
-        await supervisor.steerCrewmate(builderId, "Apply the finding; say likely.");
-        await tick();
-        expect(tasks.get(builderId)?.delivery?.reviewCapAt).toBeUndefined();
-        expect(tasks.get(builderId)?.delivery?.reviewCapOwner).toBeUndefined();
-        expect(tasks.get(builderId)?.gate).toBeNull();
-        const resets = tasks.timeline(builderId).filter((event) => event.kind === "cap_reset");
-        expect(resets).toHaveLength(index + 1);
-        expect(resets.at(-1)).toMatchObject({ actor: "firstmate", feed: true });
-        const nextHead = `${index + 1}${HEAD.slice(1)}`;
-        vi.mocked(workspace.branchHead).mockResolvedValue(nextHead);
-        // INF-125: this empty-branch cap fixture still needs current proof;
-        // reopening review rounds never substitutes for the proof judgment.
-        const proof = noSurfaceProof(nextHead);
-        proof.reviews = [];
-        seedDelivery(tasks, builderId, { liveValidation: proof });
-        await supervisor.steerCrewmate(reviewId, `re-review at ${nextHead}`);
-        await tick();
-      }
-      seedDelivery(tasks, builderId, {
-        liveValidation: noSurfaceProof(tasks.get(reviewId)!.delivery!.headSha!, reviewId),
-      });
-      await reportTurn(
-        reviewer,
-        reviewId,
-        "verdict: pass\nNo findings.\nrisk: low - words and version.",
-      );
-      expect(tasks.get(builderId)?.delivery?.reviewVerdict).toBe("pass");
-      expect(tasks.get(reviewId)?.status).toBe("done");
-      // Delegation never releases a CI cap, even when both caps coexist.
-      seedDelivery(tasks, builderId, {
-        ciRounds: 3,
-        ciCapAt: Date.now(),
-        reviewRounds: 3,
-        reviewCapAt: Date.now(),
-        reviewCapOwner: "firstmate",
-      });
-      supervisor.holdForCiCap(builderId, { rounds: 3, headSha: HEAD });
-      await supervisor.steerCrewmate(builderId, "Apply another wording fix.");
-      await tick();
-      expect(tasks.get(builderId)?.delivery?.reviewCapAt).toBeUndefined();
-      expect(tasks.get(builderId)?.delivery?.ciRounds).toBe(3);
-      expect(tasks.get(builderId)?.gate?.reason).toBe("the CI cap");
-    } finally {
-      repo.dispose();
-    }
-  });
-
-  describe("the served text of every cap wake (the typed envelope, P3)", () => {
-    const heldBlock = (id: string, held: string) => `
-\`\`\`json
-{
-  "held": "${held}",
-  "task": {
-    "id": "${id}",
-    "title": "Fix the meter test"
-  },
-  "ways": [
-    {
-      "label": "Retry with the captain's guidance",
-      "tool": "steer_crewmate",
-      "args": {
-        "task_id": "${id}"
-      }
-    },
-    {
-      "label": "Try a premium model",
-      "tool": "spawn_crewmate",
-      "args": {
-        "shape": {
-          "escalate_from": "${id}",
-          "premium_ask": true
-        }
-      }
-    },
-    {
-      "label": "Discard the work",
-      "tool": "settle_task",
-      "args": {
-        "task_id": "${id}",
-        "mode": "discard"
-      }
-    }
-  ]
-}
-\`\`\``;
-
-    const FINDINGS =
-      "verdict: findings\nF3 error src/meter.test.ts:12 still racy - auto-fix\nrisk: medium - one line moves.";
-
-    /** A builder with a PR, and its review task, the builder's review rounds already at `rounds`. */
-    async function underReview(rounds: number) {
-      const repo = directPrRepo();
-      const builder = fakeCrewmate();
-      const reviewer = fakeCrewmate();
-      const env = setup(builder, {
-        routedModel: { provider: "openai-codex", id: "gpt-5.5" },
-        crewmates: [reviewer],
-      });
-      const { supervisor, tasks, repos, workspace } = env;
-      const { repo: view } = await repos.setup({ kind: "adopt", path: repo.dir, name: repo.name });
-      repos.configure(view.id, { delivery: "direct-pr" });
-      const { taskId: builderId } = await supervisor.commission({
-        title: "Fix the meter test",
-        intent: intentOf("fix it"),
-        repoId: view.id,
-        shape: { rigor_ask: "reviewed" },
-      });
-      await tick();
-      await reportTurn(builder, builderId, BUILDER_REPORT);
-      seedDelivery(tasks, builderId, {
-        prUrl: "https://github.com/o/r/pull/55",
-        prNumber: 55,
-        headSha: HEAD,
-        ci: "green",
-        ciAt: Date.now(),
-        reviewRounds: rounds,
-        reviewRoundSha: HEAD.replace("0123", "aaaa"),
-      });
-      vi.mocked(workspace.branchHead).mockResolvedValue(HEAD);
-      const { taskId: reviewId } = await supervisor.commission({
-        title: "Review",
-        intent: intentOf("fix it"),
-        shape: { review_of: builderId },
-      });
-      await tick();
-      const findings = () => reportTurn(reviewer, reviewId, FINDINGS);
-      return { ...env, repo, builderId, reviewId, findings };
-    }
-
-    it("the findings wake that reaches the review cap", async () => {
-      const { ops, repo, builderId, reviewId, findings } = await underReview(2);
-      try {
-        await findings();
-        expect(ops.filter((line) => line.includes("with verdict"))).toEqual([
-          `[fm-op] crewmate 2 reported on review task ${reviewId} "Review: Fix the meter test" - the review of task ${builderId} "Fix the meter test" - with verdict findings: ${FINDINGS} This is findings round 3 on task ${builderId}, past the review cap of 2 re-reviews: no more re-reviews go out until the captain answers and your steer reopens the rounds.${heldBlock(builderId, "review-cap")}`,
-        ]);
-      } finally {
-        repo.dispose();
-      }
-    });
-
-    it("both cap wakes ride the Firstmate's lane as typed facts, and serve the pinned text", async () => {
-      const { supervisor, tasks, inbox, db, repo, builderId, reviewId, findings } =
-        await underReview(2);
-      try {
-        // The real agent's notifyOp: the inbox's deduped wake path.
-        supervisor.setFirstmateHooks({
-          notifyOp: (wake, origin, ref) => {
-            inbox.enqueueWake(FIRSTMATE_RECIPIENT, wake, origin, ref);
-          },
-          retryConverse: vi.fn(),
-        });
-        await findings();
-        seedDelivery(tasks, builderId, { ciRounds: 3, ciRedHead: HEAD, ciCapAt: Date.now() });
-        supervisor.holdForCiCap(builderId, { rounds: 3, headSha: HEAD });
-        const stored = (
-          db
-            .prepare("SELECT payload FROM inbox WHERE recipient = ? ORDER BY id")
-            .all(FIRSTMATE_RECIPIENT) as { payload: string }[]
-        ).map((row) => JSON.parse(row.payload) as { facts?: { kind: string } });
-        const capRows = stored.filter(
-          (row) => row.facts?.kind === "review-cap" || row.facts?.kind === "ci-cap",
-        );
-        const report = `[fm-op] crewmate 2 reported on review task ${reviewId} "Review: Fix the meter test" - the review of task ${builderId} "Fix the meter test" - with verdict findings: ${FINDINGS}`;
-        const ways = crewHoldWays(builderId);
-        expect(capRows).toEqual([
-          {
-            v: 1,
-            facts: {
-              kind: "review-cap",
-              owner: "captain",
-              task: { id: builderId, title: "Fix the meter test" },
-              rounds: 3,
-              cap: 2,
-              findings: {
-                kind: "review-verdict",
-                task: { id: reviewId, title: "Review: Fix the meter test" },
-                builder: { id: builderId, title: "Fix the meter test" },
-                crewmate: "crewmate 2",
-                verdict: "findings",
-                excerpt: FINDINGS,
-                cards: [],
-                briefed: true,
-              },
-            },
-            ways,
-          },
-          {
-            v: 1,
-            facts: {
-              kind: "ci-cap",
-              task: { id: builderId, title: "Fix the meter test" },
-              rounds: 3,
-              cap: 3,
-              head: HEAD,
-            },
-            ways,
-          },
-        ]);
-        const served = inbox
-          .allFor(FIRSTMATE_RECIPIENT)
-          .filter((row) => row.facts?.kind === "review-cap" || row.facts?.kind === "ci-cap")
-          .map(renderWake);
-        expect(served).toEqual([
-          `${report} This is findings round 3 on task ${builderId}, past the review cap of 2 re-reviews: no more re-reviews go out until the captain answers and your steer reopens the rounds.${heldBlock(builderId, "review-cap")}`,
-          `[fm-op] task ${builderId} "Fix the meter test" hit its CI cap: 3 own repairs failed (the cap is 3), last at 0123456. Its completion card and its re-reviews are held until the captain answers and your steer reopens its rounds.${heldBlock(builderId, "ci-cap")}`,
-        ]);
-        // The same cap wake built again is not new information.
-        expect(
-          inbox.enqueueWake(
-            FIRSTMATE_RECIPIENT,
-            ciCapWake(
-              { id: builderId, title: "Fix the meter test" },
-              { rounds: 3, cap: 3, headSha: HEAD },
-            ),
-            "agent",
-            builderId,
-          ),
-        ).toBeNull();
-      } finally {
-        repo.dispose();
-      }
-    });
-  });
+  
 
   it("the served text of every review verdict wake (the typed envelope, P3)", async () => {
     const repo = directPrRepo();
@@ -25384,7 +24628,7 @@ describe('the host\'s check watch (docs/forge.md, "The check watch")', () => {
         name: ["linux-checks", "lint"][index] ?? `check-${index}`,
         state,
       }));
-      return { overall: overallOfChecks(items), items };
+      return { items };
     }
     async putIn() {
       return undefined;
@@ -25426,7 +24670,6 @@ describe('the host\'s check watch (docs/forge.md, "The check watch")', () => {
       repos: harness.repos,
       forgeFor: () => forge,
       now: hostClock,
-      onCap: (taskId, facts) => harness.supervisor.holdForCiCap(taskId, facts),
     });
     const { repo } = await harness.repos.setup({ kind: "init", name: "watched" });
     harness.repos.configure(repo.id, { delivery: "direct-pr" });
@@ -25463,7 +24706,8 @@ describe('the host\'s check watch (docs/forge.md, "The check watch")', () => {
   it("pending then green: exactly one wake, and no model turn while the checks run", async () => {
     const { crewmate, forge, taskId, tasks, said, sorts, ops, at } = await waiting();
     // The reading tells the crewmate to wait for the wake, and the watch stands.
-    expect(said).toContain("overall: pending");
+    expect(said).toContain("facts: ");
+    expect(said).not.toContain("crew verdict:");
     expect(said).toContain("The app is watching these checks and will wake you once");
     expect(tasks.get(taskId)?.delivery?.ciWatch).toMatchObject({ head: forge.headSha, tries: 0 });
     // Its report waits on the watch: nobody's turn to act, so it wakes nobody.
@@ -25484,7 +24728,7 @@ describe('the host\'s check watch (docs/forge.md, "The check watch")', () => {
     const wokenAt = hostNow;
     expect(crewmate.promptCalls).toHaveLength(prompts + 1);
     expect(crewmate.promptCalls.at(-1)).toBe(
-      "The checks on pull request #7 https://github.com/o/r/pull/7 passed at cafe000: all 2 completed successfully. Carry on from where you stopped. If the rest needs this merged first, file it as Continue: … and end this task with the completion decision.",
+      renderWake({facts:{kind:"checks-settled",outcome:"finished",change:"pull request #7 https://github.com/o/r/pull/7",head:forge.headSha,checks:[{name:"linux-checks",state:"success"},{name:"lint",state:"success"}]}}),
     );
     expect(tasks.get(taskId)?.delivery).toMatchObject({ ci: "green", headSha: forge.headSha });
     expect(tasks.get(taskId)?.delivery?.ciWatch).toBeUndefined();
@@ -25573,10 +24817,11 @@ describe('the host\'s check watch (docs/forge.md, "The check watch")', () => {
     expect(record.delivery?.ciRounds ?? 0).toBe(0);
   });
 
-  it("refreshes settled checks and every open card strip without an agent call", async () => {
+  it("forwards changed check facts and refreshes the card strip independently of the crew judgment (captain F1)", async () => {
     const { crewmate, forge, taskId, tasks, specs, at, supervisor } = await waiting();
     forge.states = ["success", "success"];
     await at(minutes(5));
+    await specs[0]?.onCheckChange?.();
     await specs[0]?.onCard?.({
       requiredActions: [],
       title: "Ship it is ready",
@@ -25595,18 +24840,35 @@ describe('the host\'s check watch (docs/forge.md, "The check watch")', () => {
     const prompts = crewmate.promptCalls.length;
     forge.states = ["success", "failure"];
     await at(minutes(10));
+    expect(tasks.get(taskId)?.delivery).toMatchObject({ ci: "red" });
+    expect(checks()).toContain("failed");
+    expect(crewmate.promptCalls).toHaveLength(prompts + 1);
+    expect(crewmate.promptCalls.at(-1)).toContain(CHECK_OBSERVATIONS_LEAD);
+    await specs[0]?.onCheckChange?.();
     expect(tasks.get(taskId)?.delivery?.ci).toBe("red");
     expect(checks()).toContain("failed");
-    expect(crewmate.promptCalls).toHaveLength(prompts);
+    crewmate.emit({ type: "turn_end", taskId });
+    crewmate.finishPrompt();
+    await tick();
     forge.headSha = "beef0002cafef00d";
     forge.states = ["pending", "pending"];
     await at(minutes(15));
     expect(tasks.get(taskId)?.delivery?.ci).toBe("pending");
     expect(checks()).toContain("running");
+    await specs[0]?.onCheckChange?.({});
+    crewmate.emit({ type: "turn_end", taskId });
+    crewmate.finishPrompt();
+    await tick();
     forge.states = ["success", "success"];
     await at(minutes(16));
+    expect(tasks.get(taskId)?.delivery).toMatchObject({ ci: "green" });
+    expect(checks()).toContain("passed");
+    await specs[0]?.onCheckChange?.();
     expect(tasks.get(taskId)?.delivery?.ci).toBe("green");
     expect(checks()).toContain("passed");
+    crewmate.emit({ type: "turn_end", taskId });
+    crewmate.finishPrompt();
+    await tick();
   });
 
   it("neither reads nor records the checks of a task idle behind another task until that work closes (INF-721 friction 6)", async () => {
@@ -25652,7 +24914,7 @@ describe('the host\'s check watch (docs/forge.md, "The check watch")', () => {
     forge.states = ["success", "failure"];
     for (let minute = 6; minute <= 20; minute++) await at(minutes(minute));
     expect(watchWakes(crewmate.promptCalls)).toEqual([
-      `The checks on pull request #7 https://github.com/o/r/pull/7 failed at cafe000: lint (failure). ${CHECK_DIAGNOSIS_NEXT}`,
+      renderWake({facts:{kind:"checks-settled",outcome:"finished",change:"pull request #7 https://github.com/o/r/pull/7",head:forge.headSha,checks:[{name:"linux-checks",state:"success"},{name:"lint",state:"failure"}]}}),
     ]);
     expect(crewmate.promptCalls).toHaveLength(prompts + 1);
     expect(tasks.get(taskId)?.delivery).toMatchObject({
@@ -25662,60 +24924,7 @@ describe('the host\'s check watch (docs/forge.md, "The check watch")', () => {
     expect(tasks.get(taskId)?.delivery?.ciWatch).toBeUndefined();
   });
 
-  it("three unsuccessful declared own repairs produce one cap wake and one decision, never raw failures", async () => {
-    const h = await waiting();
-    const { forge, taskId, tasks, supervisor, specs, ops, prCi } = h;
-    forge.states = ["success", "failure"];
-    await h.at(minutes(1));
-    expect(supervisor.cardsSnapshot()).toEqual([]);
-    expect(ops).toEqual([]);
-    let sourceHead = forge.headSha;
-    for (let i = 1; i <= 3; i++) {
-      await specs[0]?.onCheckChange?.({
-        diagnosis: {
-          headSha: sourceHead,
-          check: "lint",
-          classification: "own-regression",
-          evidence: "Assertion fails only with my diff; failed-step log read",
-        },
-      });
-      forge.headSha = `repair${i}`;
-      await specs[0]?.onCheckChange?.({
-        repair: {
-          id: `own-${i}`,
-          sourceHead,
-          headSha: forge.headSha,
-          check: "lint",
-          evidence: "Corrected the failing path and pushed the fix",
-        },
-      });
-      await prCi?.readWatched(taskId);
-      sourceHead = forge.headSha;
-    }
-    expect(tasks.get(taskId)?.delivery).toMatchObject({ ciRounds: 3 });
-    expect(ops.filter((op) => op.includes("hit its CI cap"))).toHaveLength(1);
-    expect(tasks.get(taskId)?.gate).toMatchObject({ kind: "captain" });
-    const capCard = supervisor.addFirstmateCard({
-      taskId,
-      id: "own-repair-cap",
-      title: "The three repairs did not pass",
-      body: "<p>The three repairs did not pass; another try needs your choice.</p>",
-      actions: [
-        { id: "retry", label: "Try again", default: true },
-        { id: "stop", label: "Stop" },
-      ],
-    });
-    for (let i = 0; i < 3; i++) await prCi?.checkForCrew(taskId);
-    expect(supervisor.cardsSnapshot()).toHaveLength(1);
-    expect(ops.filter((op) => op.includes("hit its CI cap"))).toHaveLength(1);
-    supervisor.act(capCard, "retry");
-    await supervisor.steerCrewmate(taskId, "The captain chose another repair attempt.");
-    expect(tasks.get(taskId)?.delivery?.ciRounds).toBeUndefined();
-    expect(tasks.get(taskId)?.delivery?.ciRepair?.repairs).toHaveLength(3);
-    await prCi?.checkForCrew(taskId);
-    expect(tasks.get(taskId)?.delivery?.ciRounds).toBeUndefined();
-    expect(ops.filter((op) => op.includes("hit its CI cap"))).toHaveLength(1);
-  });
+  
 
   it("a new push re-arms the watch for the new head, and only the new head is woken about", async () => {
     const { crewmate, forge, taskId, tasks, at } = await waiting();
@@ -25726,14 +24935,15 @@ describe('the host\'s check watch (docs/forge.md, "The check watch")', () => {
     forge.states = ["success", "success"];
     for (let minute = 4; minute <= 10; minute++) await at(minutes(minute));
     expect(watchWakes(crewmate.promptCalls)).toEqual([
-      expect.stringContaining("passed at beadbee"),
+      expect.stringContaining("finished at beadbee"),
     ]);
   });
 
   it("a host without checks is never watched, and the crewmate is told no wake will come", async () => {
     const forge = new ChecksForge("git");
     const { crewmate, taskId, tasks, said, sorts, at } = await waiting(forge);
-    expect(said).toContain("overall: green");
+    expect(said).toContain("facts: ");
+    expect(said).not.toContain("crew verdict:");
     expect(said).toContain(
       "git.example.com runs no checks the app can watch, so no wake will come: the local gate you ran is the evidence.",
     );
@@ -25789,7 +24999,7 @@ describe('the host\'s check watch (docs/forge.md, "The check watch")', () => {
     }
     // The resumed crewmate hears it once.
     expect(watchWakes(second.crewmate.promptCalls)).toEqual([
-      expect.stringContaining("passed at cafe000"),
+      expect.stringContaining("finished at cafe000"),
     ]);
     expect(second.tasks.get(taskId)?.delivery?.ciWatch).toBeUndefined();
     second.supervisor.disposeAll();

@@ -4,6 +4,7 @@ import { join } from "node:path";
 import { expect, test } from "@playwright/test";
 import { SYNC_CAP_MS } from "../../src/core/jobs/jobManager";
 import { openDatabase } from "../../src/core/storage/db";
+import { CHECKS_ABSENT_WORDS } from "../../src/shared/checkSnapshot";
 import {
   CARE_WORDS,
   CHECK_WORDS,
@@ -138,8 +139,8 @@ test("a project on a plain Git host: the work is sent up, the card names it ther
   await input.fill(`${SPAWN_PROMPT_MARKER} ${title}`);
   await input.press("Enter");
 
-  // The completion card passed the checks gate: the seam found the sent-up
-  // working copy where the project lives and read it green with no checks.
+  // The seam found the sent-up working copy with no checks, and the scripted
+  // crew explicitly declared it ready before offering the completion card.
   await expect(shownCard(page, MOCK_SENT_UP_CARD_TITLE)).toBeVisible({ timeout: 45_000 });
   const board = await page.evaluate(() => window.infinitary.tasks.board());
   const task = board.tasks.find((row) => row.title === title);
@@ -155,7 +156,8 @@ test("a project on a plain Git host: the work is sent up, the card names it ther
   await expect(facts.care).toHaveText(CARE_WORDS.quick);
   await expect(facts.change).toHaveText(branch);
   await expect(facts.change.locator("a")).toHaveCount(0);
-  await expect(facts.checks).toHaveText(CHECK_WORDS.green);
+  await expect(facts.checks).toHaveText(CHECKS_ABSENT_WORDS);
+  expect(await factsStrip(frame).facts()).not.toContain("crew-verdict");
   // The lines the sent-up change adds and deletes, as git counts them where
   // the project lives (INF-820).
   let added = 0;
@@ -183,7 +185,13 @@ test("a project on a plain Git host: the work is sent up, the card names it ther
     (id) => window.infinitary.tasks.detail(id),
     task?.id as string,
   );
-  expect(detail?.delivery).toMatchObject({ changeLabel: branch, ci: "green" });
+  // INF-1555 F1, the captain's split choice: no hosted checks is a fact, not an invented passing result.
+  expect(detail?.delivery).toMatchObject({
+    changeLabel: branch,
+    checks: { headSha: sentUp, items: [], absenceDeclared: true },
+  });
+  expect(detail?.delivery).not.toHaveProperty("crewVerdict");
+  expect(detail?.delivery?.ci).toBeUndefined();
   expect(detail?.delivery?.prNumber).toBeUndefined();
   const feed = (await page.evaluate(() => window.infinitary.feed.recent()))
     .map((line) => line.text)

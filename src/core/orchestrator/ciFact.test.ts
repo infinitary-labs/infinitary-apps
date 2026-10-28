@@ -2,6 +2,27 @@ import { describe, expect, it } from "vitest";
 import { ciFactOf, ciFactWords } from "./ciFact";
 
 describe("the recorded CI reading the Firstmate reads", () => {
+  it("reports actual failures without a separate readiness verdict (INF-1555 F12)", () => {
+    const fact = ciFactOf(
+      {
+        mode: "direct-pr",
+        ci: "red",
+        ciAt: 0,
+        headSha: "pr604-version",
+        checks: {
+          headSha: "pr604-version",
+          absenceDeclared: false,
+          items: [{ name: "unit-tests", state: "failure" }],
+        },
+      },
+      0,
+    )!;
+    expect(fact).toMatchObject({ overall: "red", checksWords: "failed" });
+    expect(ciFactWords(fact)).toContain("recorded checks: failed");
+    expect(fact).not.toHaveProperty("crewVerdict");
+    expect(ciFactWords(fact)).not.toContain("Crew verdict:");
+  });
+
   const now = Date.UTC(2026, 9, 9, 12, 0, 0);
 
   it("carries the overall, when, how old and the head the reading saw", () => {

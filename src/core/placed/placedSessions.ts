@@ -48,6 +48,7 @@ import {
 } from "@shared/work";
 import { z } from "zod";
 import { DeviceOutOfReachError, type WorkDeviceContact } from "../connection/connection";
+import { contractChange, listsChange } from "../connection/contractChanges";
 import {
   dueIn,
   dueRule,
@@ -162,6 +163,9 @@ export type PlacedHost = {
   toolsNow?(taskId: string): readonly string[] | undefined;
 };
 
+const CHECK_DECLARATIONS = contractChange("check-declarations");
+const MERGE_OFFER_READINESS = contractChange("merge-offer-readiness");
+
 /** What the crew reads of the computers that run work (`CrewSupervisorOptions.machines`). */
 export type CrewMachines = {
   /** The factories that open a conversation there; undefined when no computer can. */
@@ -180,6 +184,8 @@ export type CrewMachines = {
    * (`report-result.md`); false while the home cannot tell.
    */
   takesResults?(machine: string): boolean;
+  /** The computer understands current check declarations and offer-based readiness. */
+  takesCheckDeclarations?(machine: string): boolean;
   /**
    * The task's working copy there, made now or found as it was: its
    * project cloned there once, then a working copy on the task's branch
@@ -567,6 +573,14 @@ export class PlacedSessions implements PlacedWork, CrewMachines {
   private takesCurrentWork(machine: string): boolean {
     const version = this.options.devices.version(machine);
     return !!version && takesWork(version.contract);
+  }
+
+  takesCheckDeclarations(machine: string): boolean {
+    return (
+      this.takesCurrentWork(machine) &&
+      listsChange(this.options.devices.version(machine)?.changes, CHECK_DECLARATIONS) &&
+      listsChange(this.options.devices.version(machine)?.changes, MERGE_OFFER_READINESS)
+    );
   }
 
   takesResults(machine: string): boolean {
@@ -1333,6 +1347,10 @@ export class PlacedSessions implements PlacedWork, CrewMachines {
         return { text: await (callbacks?.onOpenChange ?? missing())(input) };
       }
       case "inf:work:check-change": {
+        if (!this.takesCheckDeclarations(placed.deviceId))
+          return {
+            text: "Update Infinitary on the work computer before it reads check facts and records check or repair declarations. No declaration was recorded.",
+          };
         const { input } = request as InvokeRequest<"inf:work:check-change">[0];
         return { text: await (callbacks?.onCheckChange ?? missing())(input) };
       }

@@ -27,16 +27,6 @@ export const HOLDS = {
     restsOn: "record",
     name: "the open decisions",
   },
-  repairs: {
-    level: "soft",
-    restsOn: "made-up number",
-    name: "the repair limit",
-  },
-  rounds: {
-    level: "soft",
-    restsOn: "made-up number",
-    name: "the re-review limit",
-  },
   review: {
     level: "soft",
     restsOn: "record",
@@ -66,11 +56,6 @@ export const HOLDS = {
     level: "soft",
     restsOn: "consent",
     name: "the saved story",
-  },
-  rerun: {
-    level: "soft",
-    restsOn: "made-up number",
-    name: "the rerun limit",
   },
   escalation: {
     level: "soft",
@@ -191,7 +176,7 @@ export function overridePasses(
 
 /** The holds an override passes, in the captain's words: `the review and the checks`. */
 export function holdNames(kinds: readonly HoldKind[]): string {
-  const names = kinds.map((kind) => HOLDS[kind].name);
+  const names = kinds.flatMap((kind) => (HOLDS[kind] ? [HOLDS[kind].name] : []));
   return names.length <= 1
     ? (names[0] ?? "")
     : `${names.slice(0, -1).join(", ")} and ${names.at(-1)}`;
@@ -217,6 +202,8 @@ export function overrideWords(override: Pick<HoldOverride, "words" | "holds" | "
 export function standingOverrideWords(
   override: Pick<HoldOverride, "words" | "holds" | "until">,
 ): string {
+  if (!holdNames(override.holds))
+    return `The captain's earlier count holds are retired, but their standing words still apply ${overrideSpan(override)}: "${override.words}". Judge which consent asks their words reach; keychain or signing access, writes outside the project and browser handoffs still ask. Only their words take it back.`;
   return `The captain's standing override on this task, recorded by the first mate: their words pass ${holdNames(override.holds)} ${overrideSpan(override)}: "${override.words}". Where their words reach a consent ask of your own, such as their plan's allowance, they are that consent and you do not ask again; keychain or signing access, writes outside the project and browser handoffs still ask. Only their words take it back.`;
 }
 
@@ -224,6 +211,8 @@ export function standingOverrideWords(
 export function reviewerOverrideWords(
   override: Pick<HoldOverride, "words" | "holds" | "until">,
 ): string {
+  if (!holdNames(override.holds))
+    return `The captain's standing words on this change ${overrideSpan(override)}: "${override.words}". The earlier count holds are retired; access or a step their words cover is not a finding.`;
   return `The captain's standing override on this change: their words pass ${holdNames(override.holds)} ${overrideSpan(override)}: "${override.words}". Access or a step their words cover is not a finding.`;
 }
 
@@ -235,7 +224,9 @@ export function overrideTakenBackWords(override: Pick<HoldOverride, "holds">): s
 /** The facts strip's override cell: each hold his words pass, the live proof as going without it. */
 export function overrideCellWords(holds: readonly OverridableHold[]): string {
   return holds
-    .map((kind) => (kind === "live-proof" ? "without live proof" : HOLDS[kind].name))
+    .map((kind) =>
+      kind === "live-proof" ? "without live proof" : (HOLDS[kind]?.name ?? "retired hold"),
+    )
     .join(" · ");
 }
 

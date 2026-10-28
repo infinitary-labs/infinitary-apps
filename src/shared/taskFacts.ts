@@ -1,3 +1,4 @@
+import { currentCheckSummary } from "./checkSnapshot";
 import { type ChecksSpan, checksSpanOf, runChecksSpanOf } from "./checksSpan";
 import type { FactDotState } from "./factDot";
 import { type ModelReason, modelFootnote } from "./modelReason";
@@ -77,6 +78,8 @@ export type TaskBrowserLine = {
  * read, and how long they have run or took by the host's own times (INF-587).
  */
 export type TaskChecks = {
+  /** A refused reading has a reason, not an ongoing-work label. */
+  problem?: string;
   dot: FactDotState;
   words: string;
   at: number | null;
@@ -258,11 +261,13 @@ function deliveryOf(task: Pick<TaskView, "status" | "delivery">): TaskDelivery |
   const live = task.status !== "done" && task.status !== "dropped";
   const change = live ? taskChangeOf(facts) : null;
   const ci = facts.ci ?? "no-pr";
+  const observed = currentCheckSummary(facts);
   const checks =
-    live && (change || ci !== "no-pr")
+    live && (observed || change || ci !== "no-pr")
       ? {
-          dot: CHECKS_DOT[ci],
-          words: ci === "no-pr" ? CHECKS_NOT_READ_WORDS : CHECK_WORDS[ci],
+          ...(observed?.problem ? { problem: observed.problem } : {}),
+          dot: observed?.dot ?? CHECKS_DOT[ci],
+          words: observed?.words ?? (ci === "no-pr" ? CHECKS_NOT_READ_WORDS : CHECK_WORDS[ci]),
           at: facts.ciAt ?? null,
           span: checksSpanOf(facts),
         }

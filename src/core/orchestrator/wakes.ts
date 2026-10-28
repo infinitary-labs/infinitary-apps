@@ -875,9 +875,16 @@ export type WakeFacts =
     }
   | {
       /**
-       * The default branch's own run of a check a baseline wait named has
-       * passed (INF-833 Fix 4): one steer, before the named task closes.
+       * One finished default-branch reading per commit for a baseline wait.
+       * The crew judges it, rather than the host deciding that the wait cleared.
        */
+      kind: "main-check-observed";
+      checks: { name: string; state: string }[];
+      /** Older saved observations named a single check. */
+      check?: string;
+      sha: string;
+    }
+  | {
       kind: "main-check-passed";
       /** The check, as the forge names it on the pull request and on the default branch. */
       check: string;
@@ -1143,6 +1150,8 @@ export type WakeFacts =
 
 /** What a check watch reports: the first red check, the finish, or the host stopping. */
 export type CheckWatchOutcome =
+  | "observed"
+  | "finished"
   | "first-failure"
   | "passed"
   | "failed"
@@ -1181,28 +1190,23 @@ function renderRunWatch(facts: Extract<WakeFacts, { kind: "run-watch" }>): strin
 type ChecksSettledFacts = Extract<WakeFacts, { kind: "checks-settled" }>;
 
 /** The check watch's steer, in the crewmate's words (docs/forge.md, "The check watch"). */
+export const CHECK_OBSERVATIONS_LEAD = "New check observations for";
+
 function renderChecksSettled(facts: ChecksSettledFacts): string {
   const change = facts.change ?? "your pull request";
   const head = facts.head ? ` at ${facts.head.slice(0, 7)}` : "";
   const named = (facts.checks ?? []).map((check) => `${check.name} (${check.state})`).join(", ");
   switch (facts.outcome) {
+    case "observed":
+      return `${CHECK_OBSERVATIONS_LEAD} ${change}${head}: ${named}. Read current facts with check_change and follow your delivery guidance before offering a merge. This notice is not a merge offer.`;
+    case "finished":
+      return `The checks on ${change} finished${head}: ${named || "no checks reported"}. Judge the work from these facts and your delivery guidance; offer its merge when ready.`;
     case "first-failure":
       return `The first failed check on ${change} was seen while others are still running${head}: ${named || "a check failed"}. Read its log and diagnose it. The app wakes you again when the checks finish; end your turn instead of calling check_change again.`;
-    case "passed": {
-      const next =
-        "Carry on from where you stopped. If the rest needs this merged first, file it as Continue: … and end this task with the completion decision.";
-      return facts.count
-        ? `The checks on ${change} passed${head}: all ${facts.count} completed successfully. ${next}`
-        : `The checks on ${change} finished${head} and it reports no checks, so it reads green on the strength of your local gate. ${next}`;
-    }
+    case "passed":
     case "failed":
-      return `The checks on ${change} failed${head}: ${named || "a check failed"}. ${
-        facts.cap
-          ? `${facts.cap.rounds} own repairs failed (the limit is ${facts.cap.cap}): stop here and report it as a blocker.`
-          : CHECK_DIAGNOSIS_NEXT
-      }`;
     case "not-green":
-      return `The checks on ${change} finished${head} without all passing: ${named || "a check did not pass"}. A neutral check keeps it from green. ${facts.cap ? `${facts.cap.rounds} own repairs failed (the limit is ${facts.cap.cap}): stop here and report it as a blocker.` : CHECK_DIAGNOSIS_NEXT}`;
+      return `An earlier check-watch record reports ${JSON.stringify(facts)}. It is history, not a current readiness verdict. Repair counts are retired and place no hold. Read current check facts and follow your delivery guidance before offering a merge.`;
     case "timed-out":
       return `The checks on ${change}${head} are still running after ${formatDurationShort(facts.waitedMs ?? 0)}${named ? `: ${named}` : ""}. The app stopped watching them: read them with check_change, and report a blocker if they never finish.`;
     case "gone":
@@ -1837,6 +1841,11 @@ function scheduledSource(facts: Extract<WakeFacts, { kind: "scheduled" }>): stri
 export const CAREFUL_NOTICE =
   "Careful means an independent review before the merge. Commit any remaining work on your branch and report under the five headings without pushing; the first mate starts the review of your committed version. A pull request already open stays as it is until the review passes: no push and no new story. When the first mate relays a pass on the version already pushed, emit the completion card again as soon as its checks read passed. After fixes, push once to the same pull request after the pass, and emit the completion card when the fresh checks pass.";
 
+/** Typed legacy count notices remain readable, but no longer ask the agents to enforce a hold. */
+function retiredCountHold(task: WakeTask): string {
+  return `[fm-op] An earlier version recorded a count hold on task ${task.id} "${task.title}". Repair, re-review and rerun count holds are retired. This record places no hold and grants no authorization. Read current facts and judge the next action from your delivery guidance.`;
+}
+
 function renderFacts(facts: WakeFacts, wake: Pick<WakeEnvelope, "ways" | "text">): string {
   switch (facts.kind) {
     case "resource-pressure":
@@ -1893,6 +1902,7 @@ function renderFacts(facts: WakeFacts, wake: Pick<WakeEnvelope, "ways" | "text">
       return `[fm-op] ${crewmate} on task ${facts.task.id} "${facts.task.title}" asked you ${formatDurationShort(facts.askedMs)} ago to act: ${facts.request ?? ""}. ${since}${builtOnText(facts.builtOn)}${reminder} The ask authorizes nothing by itself; the captain's own words do. Act on it, or steer the crewmate to tell it why not.${last}`;
     }
     case "idle-owed":
+      if (facts.held !== "captain-gate") return retiredCountHold(facts.task);
       return renderHold(
         hold(
           facts.held,
@@ -1902,26 +1912,9 @@ function renderFacts(facts: WakeFacts, wake: Pick<WakeEnvelope, "ways" | "text">
         ),
       );
     case "ci-cap":
-      return renderHold(
-        hold(
-          "ci-cap",
-          facts.task,
-          wake.ways,
-          `[fm-op] task ${facts.task.id} "${facts.task.title}" hit its CI cap: ${facts.rounds} own repairs failed (the cap is ${facts.cap}), last at ${facts.head.slice(0, 7)}. Its completion card and its re-reviews are held until the captain answers and your steer reopens its rounds.`,
-        ),
-      );
+      return retiredCountHold(facts.task);
     case "review-cap":
-      if (facts.owner === "firstmate") {
-        return `${facts.findings ? renderReviewVerdict(facts.findings, false) : (facts.report ?? "")} This is findings round ${facts.rounds} on task ${facts.task.id}, past the review cap of ${facts.cap} re-reviews. This hold is yours: no finding needs a captain decision. Decide info ask-user findings yourself and steer the builder with the fixes and your decision; your steer reopens the review rounds, every time the capping findings qualify. Do not ask the captain about this cap. ${REVIEWER_IDLE_NEXT}`;
-      }
-      return `${facts.findings ? renderReviewVerdict(facts.findings, false) : (facts.report ?? "")}${renderHold(
-        hold(
-          "review-cap",
-          facts.task,
-          wake.ways,
-          ` This is findings round ${facts.rounds} on task ${facts.task.id}, past the review cap of ${facts.cap} re-reviews: no more re-reviews go out until the captain answers and your steer reopens the rounds.`,
-        ),
-      )}`;
+      return `${retiredCountHold(facts.task)} ${facts.findings ? renderReviewVerdict(facts.findings, false) : (facts.report ?? "")}`;
     case "outage-failed":
       return `[fm-op] ${facts.crewmate}'s turn on task ${facts.task.id} "${facts.task.title}" failed at the provider: ${facts.error}. Nothing was set aside: the host keeps its guidance and retries it on its own, backing off to every 15 minutes, so do not resend it. You will hear when it answers again, and if it is still failing in 15 minutes. You can still steer or interrupt it.`;
     case "outage-still-down":
@@ -2062,6 +2055,8 @@ function renderFacts(facts: WakeFacts, wake: Pick<WakeEnvelope, "ways" | "text">
       return renderRunWatch(facts);
     case "checks-settled":
       return renderChecksSettled(facts);
+    case "main-check-observed":
+      return `The default branch reports ${facts.check ?? "finished checks"} at ${facts.sha}: ${JSON.stringify(facts.checks)}. Judge whether this clears your declared wait; these facts do not declare your change ready.`;
     case "main-check-passed":
       return renderMainCheckPassed(facts);
     case "dependency-closed":

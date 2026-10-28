@@ -66,6 +66,86 @@ const names = modelNames([
 ]);
 
 describe("the shared task facts", () => {
+  it("shows actual check failures without a separate readiness fact (INF-1555 F12)", () => {
+    const facts = taskFactsOf(
+      detail({
+        delivery: {
+          mode: "direct-pr",
+          ci: "red",
+          ciAt: 100,
+          headSha: "pr604-version",
+          checks: {
+            headSha: "pr604-version",
+            absenceDeclared: false,
+            items: [
+              { name: "unit-tests", state: "failure" },
+              { name: "affected-journeys", state: "pending" },
+            ],
+          },
+        },
+      }),
+      names,
+    );
+    expect(facts.delivery?.checks).toMatchObject({ dot: "failed", words: "1 failed · 1 running" });
+    expect(facts.delivery).not.toHaveProperty("crewVerdict");
+  });
+
+  it("does not show an older check reading as current (INF-1555 F1/F12)", () => {
+    const facts = taskFactsOf(
+      detail({
+        delivery: {
+          mode: "direct-pr",
+          ci: "green",
+          ciAt: 100,
+          headSha: "new-version",
+          ciStartedAt: Date.UTC(2026, 9, 27, 5, 57),
+          ciFinishedAt: Date.UTC(2026, 9, 27, 5, 59),
+          checks: {
+            headSha: "earlier-version",
+            absenceDeclared: false,
+            items: [{ name: "unit-tests", state: "success" }],
+          },
+        },
+      }),
+      names,
+    );
+    expect(facts.delivery?.checks).toMatchObject({
+      dot: "idle",
+      words: "not read for this version",
+      span: null,
+    });
+    expect(facts.delivery).not.toHaveProperty("crewVerdict");
+  });
+
+  // INF-1555 F14: a refused list is unknown, with its actual reason, not an endlessly running or passing reading.
+  it("shows a known unreadable-list reason with a warning even when the observed check passed", () => {
+    const problem =
+      "GitHub could not provide all check runs: Resource not accessible by integration";
+    const facts = taskFactsOf(
+      detail({
+        delivery: {
+          mode: "direct-pr",
+          headSha: "pr604-version",
+          ci: "pending",
+          ciAt: 100,
+          checks: {
+            headSha: "pr604-version",
+            complete: false,
+            problem,
+            absenceDeclared: false,
+            items: [{ name: "unit-tests", state: "success" }],
+          },
+        },
+      }),
+      names,
+    );
+    expect(facts.delivery?.checks?.dot).toBe("warn");
+    expect(facts.delivery?.checks?.words).toContain("cannot read all checks");
+    expect(facts.delivery?.checks?.words).toContain(problem);
+    expect(facts.delivery?.checks?.words).not.toBe("passed");
+    expect(facts.delivery).not.toHaveProperty("crewVerdict");
+  });
+
   it("keeps one order, the fact strip's cells as the merge card names them, then why that model", () => {
     expect(TASK_FACTS).toEqual([
       "status",

@@ -67,23 +67,18 @@ describe("the holds registry check", () => {
   it("refuses an entry no site cites", () => {
     const problems = holdProblems(
       HOLDS,
-      sites.filter((site) => !site.path.endsWith("/rerun.ts")),
+      sites.filter((site) => !site.path.endsWith("/review.ts")),
       docs,
     );
-    expect(problems).toEqual([expect.stringContaining('"rerun" has no site')]);
+    expect(problems).toEqual([expect.stringContaining('"review" has no site')]);
   });
 
   it("refuses a docs table out of step with the registry", () => {
-    const drifted = docs.replace(
-      "| `rerun` | soft | made-up number |",
-      "| `rerun` | fixed | made-up number |",
-    );
+    const drifted = docs.replace("| `review` | soft | record |", "| `review` | fixed | record |");
     expect(holdProblems(HOLDS, sites, drifted)).toEqual([
-      expect.stringContaining(
-        '"rerun" reads fixed, made-up number; the registry holds it soft, made-up number',
-      ),
+      expect.stringContaining('"review" reads fixed, record; the registry holds it soft, record'),
     ]);
-    const missing = docs.replace(/^\| `rerun` \|.*\n/m, "");
+    const missing = docs.replace(/^\| `review` \|.*\n/m, "");
     expect(holdProblems(HOLDS, sites, missing)).toEqual([
       expect.stringContaining('"The holds" table lists'),
     ]);

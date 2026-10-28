@@ -41,7 +41,7 @@ On-request rows never appear in it; a captain-held row waits on its card.
 The gate is one hold, read by every reader of "is this task moving, and whose turn is it" (the primitives review's P2, captain-approved 2026-09-26).
 It holds an **active** row as it holds an open one: `flagsOf` and the board's view both report `held` whenever `gate` is set, and the board's `needsYou` counts a `captain` gate whose ref is a durable open card.
 `waitingCardId` is separate: only an eligible shown ready decision, not the gate itself (`docs/task-record.md`, "Ready waiting is a presentation projection").
-On an active work row the `captain` gate is written in one place, `IdleLadder.syncCaptainGate` (`src/core/orchestrator/idleLadder.ts`), from what holds the task: a card with actions up on it (the one the gate already names while it stays up, else the newest), or - with no card - a captain-owned round cap that stands (`standingCap`: `ciCapAt` / `reviewCapAt` past any `capAnsweredAt`, ref the head it was reached at; `docs/delivery-rigor.md`).
+On an active work row the `captain` gate is written in one place, `IdleLadder.syncCaptainGate` (`src/core/orchestrator/idleLadder.ts`), from a card with actions up on it (the one the gate already names while it stays up, else the newest), or a wait on the captain its crewmate declared.
 Every card placement and departure, cap and answer runs it; a change on an idle record restarts its idle clock (`docs/report-sort.md`).
 These writes are machinery: no timeline event of their own - the card and cap events already say what happened.
 

@@ -6,6 +6,7 @@ import {
 } from "@shared/servedFrame";
 import { decode } from "@toon-format/toon";
 import { renderWake, type WakeChoice } from "../../src/core/orchestrator/wakes";
+import { type CheckSnapshot, checkSnapshotSchema } from "../../src/shared/checkSnapshot";
 
 export type ProviderContext = {
   directions?: string;
@@ -209,5 +210,19 @@ export function captainCardChoice(
     body: renderWake({
       facts: { kind: "card-choice", to: "firstmate", source: "chrome", card, choice },
     }),
+  });
+}
+
+/** INF-1555 F12: scripted crews read the tool's typed facts, never retired readiness prose. */
+export function checkFactsSnapshot(reading: string): CheckSnapshot | undefined {
+  const line = reading.split("\n").find((line) => line.startsWith("facts: "));
+  if (!line) return undefined;
+  const facts = JSON.parse(line.slice("facts: ".length));
+  return checkSnapshotSchema.parse({
+    headSha: facts.headSha,
+    items: facts.checks,
+    complete: facts.complete ?? undefined,
+    problem: facts.problem ?? undefined,
+    absenceDeclared: false,
   });
 }

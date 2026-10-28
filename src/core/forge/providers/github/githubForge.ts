@@ -30,7 +30,6 @@ import {
   isFullCommitId,
   isSignInForgeFailure,
   isTransientForgeFailure,
-  overallOfChecks,
 } from "../../forge";
 import { RELEASE_UPLOAD_TIMEOUT_MS } from "../../releaseFile";
 import { GitHubAttachments } from "./attachments";
@@ -43,19 +42,8 @@ import { GitHubWorkflows } from "./workflows";
  * project on GitHub to one of these; nothing else on this Mac - no other
  * program's sign-in - is ever read.
  *
- * The green rule is the seam's (`overallOfChecks`) over BOTH of GitHub's
- * check sources: every check run on the head must be completed and
- * successful or skipped - but for a cancellation a later run of its
- * workflow superseded (`withoutSupersededCancellations`) - and every
- * commit status context `success`. Every unfinished workflow run holds
- * the reading pending even before its waiting jobs create checks; zero reads
- * green only on a project that runs no checks on pull requests: where
- * GitHub already holds a workflow run for the version, or has run workflows
- * for the project's pull requests before, an empty list is checks that have
- * not started (or, on a conflicting change, never will), which reads
- * pending. A 401 is a sign-in fact, a 403 a permission fact, and neither is
- * retried; a 502/503/504 or a network failure is `transient`, which the
- * caller may retry quietly.
+ * Reads checks and workflow identity as GitHub reports them.
+ * Readiness, supersession and repair settlement are crew declarations.
  */
 
 export const GITHUB_API_URL = "https://api.github.com";
@@ -185,6 +173,7 @@ type StatusJson = { context: string; state: string; created_at?: string; updated
 
 /** The workflow run a check suite belongs to, as far as superseding needs it. */
 type SuiteRunJson = {
+  id?: number;
   name?: string;
   check_suite_id: number;
   workflow_id: number;
@@ -440,21 +429,23 @@ export class GitHubForge implements Forge {
       (page) => (page as { statuses?: StatusJson[] }).statuses ?? [],
     );
     // Waiting jobs can have no check yet. Read the workflow runs once for
-    // both that gap and superseded cancellations. An unreadable side list
-    // leaves the old check reading, including its sign-in/transient refusals.
+    // both that gap and superseded cancellations. Preserve a refused side list's
+    // reason with the partial facts; existing sign-in/transient boundaries stay intact.
     let workflowRuns: { total_count?: number; workflow_runs?: SuiteRunJson[] } | null = null;
+    let problem: string | undefined;
     try {
       workflowRuns = (await this.request(
         "GET",
         `${this.repoPath()}/actions/runs?head_sha=${sha}&per_page=100`,
       )) as { total_count?: number; workflow_runs?: SuiteRunJson[] };
     } catch (caught) {
-      if (
-        isSignInForgeFailure(caught) ||
-        (runs.items.some((run) => runState(run) === "cancelled") && isTransientForgeFailure(caught))
-      ) {
-        throw caught;
-      }
+      // F25: a passing network error is not a lasting refusal, with or without cancellations.
+      if (isSignInForgeFailure(caught) || isTransientForgeFailure(caught)) throw caught;
+      const why = caught instanceof Error ? caught.message : String(caught);
+      problem =
+        caught instanceof ForgeError && caught.failure === "permission"
+          ? `${this.place} refused access to the remaining checks. ${why}`
+          : `${this.place} could not provide all check runs: ${why}`;
     }
     const workflows = workflowRuns?.workflow_runs ?? [];
     const items: ForgeCheck[] = [
@@ -474,32 +465,72 @@ export class GitHubForge implements Forge {
         items.push({
           name: `${run.name ?? "workflow"} (run ${run.run_number})`,
           state: "pending",
+          run: run.id,
+          workflow: run.workflow_id,
+          event: run.event,
           ...checkTimes(run.run_started_at, null),
         });
       }
     }
-    if (workflows.length === 100 && (workflowRuns?.total_count ?? 0) > workflows.length) {
-      items.push({ name: "more workflow runs than the app reads", state: "pending" });
-    }
-    if (!runs.complete || !statuses.complete) {
-      items.push({ name: "more checks than the app reads", state: "pending" });
-    }
-    let notStarted = false;
-    // GitHub starts a pull request's workflows only on its head: a version it
-    // moved past gets none, so nothing there is waiting to start (INF-988).
-    const waiting =
-      movedPast === undefined
-        ? await this.notStarted(change, workflowRuns, items.length === 0)
-        : null;
-    if (waiting) {
-      items.push({ name: waiting, state: "pending" });
-      notStarted = waiting === "checks have not started yet";
-    }
     return {
-      overall: overallOfChecks(items),
       items,
-      ...(notStarted ? { notStarted: true } : {}),
+      ...(problem ? { problem } : {}),
+      complete:
+        runs.complete &&
+        statuses.complete &&
+        workflowRuns !== null &&
+        (workflowRuns.total_count ?? workflows.length) <= workflows.length,
     };
+  }
+
+  /** Captain F26: restore main's same-workflow/event cancellation filter, preserving available facts. */
+  private withoutSupersededCancellations(
+    runs: CheckRunJson[],
+    workflowRuns: SuiteRunJson[],
+  ): ForgeCheck[] {
+    const read = runs.map((run) => {
+      const workflow = workflowRuns.find((item) => item.check_suite_id === run.check_suite?.id);
+      return {
+        run,
+        check: {
+          name: run.name,
+          state: runState(run),
+          status: run.status,
+          conclusion: run.conclusion,
+          ...checkTimes(run.started_at, run.completed_at),
+          ...(workflow
+            ? { run: workflow.id, workflow: workflow.workflow_id, event: workflow.event }
+            : {}),
+        },
+      };
+    });
+    if (!read.some(({ check }) => check.state === "cancelled")) {
+      return read.map(({ check }) => check);
+    }
+    const bySuite = new Map(workflowRuns.map((run) => [run.check_suite_id, run]));
+    const origin = (run: CheckRunJson) =>
+      run.check_suite ? bySuite.get(run.check_suite.id) : undefined;
+    return read.flatMap(({ run, check }): ForgeCheck[] => {
+      const from = origin(run);
+      if (check.state !== "cancelled" || !from) return [check];
+      const later = workflowRuns.filter(
+        (next) =>
+          next.workflow_id === from.workflow_id &&
+          next.event === from.event &&
+          next.run_number > from.run_number,
+      );
+      if (later.length === 0) return [check];
+      const decided = runs.some((other) => {
+        const next = origin(other);
+        return other.name === run.name && next !== undefined && later.includes(next);
+      });
+      if (decided) return [];
+      // The later run holds no check of this name yet: pending until it
+      // does, and still cancelled if it finished without one.
+      return later.some((next) => next.status !== "completed")
+        ? [{ name: check.name, state: "pending" }]
+        : [check];
+    });
   }
 
   /**
@@ -559,112 +590,6 @@ export class GitHubForge implements Forge {
       }
     }
     return { items, complete: false };
-  }
-
-  /**
-   * The check runs that still speak for the version. GitHub lists every
-   * workflow run's checks on a commit, so when two runs of one workflow
-   * start for one version - one push that GitHub answered with two pull
-   * request runs, where `ci.yml`'s concurrency cancels the older before it
-   * starts - the older run's cancelled check stays on the list beside the
-   * newer run's own reading of the same check. Only that cancellation is
-   * set aside: a cancelled check whose workflow run has a later run of the
-   * same workflow, started by the same event, on this version. The later
-   * run's check of the same name then decides; while that later run has not
-   * created it yet, the check reads pending. Nothing else is ever set
-   * aside: a failure, a time-out or a check still running counts whatever
-   * ran after it, and a check the app cannot place in a workflow run counts
-   * as it reads. A side read GitHub refuses leaves every check counted.
-   */
-  private withoutSupersededCancellations(
-    runs: CheckRunJson[],
-    workflowRuns: SuiteRunJson[],
-  ): ForgeCheck[] {
-    const read = runs.map((run) => ({
-      run,
-      check: {
-        name: run.name,
-        state: runState(run),
-        ...checkTimes(run.started_at, run.completed_at),
-      },
-    }));
-    if (!read.some(({ check }) => check.state === "cancelled")) {
-      return read.map(({ check }) => check);
-    }
-    const bySuite = new Map(workflowRuns.map((run) => [run.check_suite_id, run]));
-    const origin = (run: CheckRunJson) =>
-      run.check_suite ? bySuite.get(run.check_suite.id) : undefined;
-    return read.flatMap(({ run, check }): ForgeCheck[] => {
-      const from = origin(run);
-      if (check.state !== "cancelled" || !from) return [check];
-      const later = workflowRuns.filter(
-        (next) =>
-          next.workflow_id === from.workflow_id &&
-          next.event === from.event &&
-          next.run_number > from.run_number,
-      );
-      if (later.length === 0) return [check];
-      const decided = runs.some((other) => {
-        const next = origin(other);
-        return other.name === run.name && next !== undefined && later.includes(next);
-      });
-      if (decided) return [];
-      // The later run holds no check of this name yet: pending until it
-      // does, and still cancelled if it finished without one.
-      return later.some((next) => next.status !== "completed")
-        ? [{ name: check.name, state: "pending" }]
-        : [check];
-    });
-  }
-
-  /**
-   * Why the list is not every check the version will get: its checks are
-   * queued or blocked rather than absent. An empty list waits when GitHub
-   * already has a workflow run for the version, or has run workflows for
-   * this project's pull requests before. A pull request's list that holds
-   * other checks - a run started by hand on the version, another app's
-   * check - waits when the project has run pull request workflows before
-   * and none is on the version yet: GitHub creates them a moment after the
-   * pull request opens or moves (INF-893). Null (the list reads as it is)
-   * for a project that runs none, and for a list beside the pull request's
-   * own runs, which count as pending until they finish. A failed side read
-   * is no evidence, never a failed check read.
-   */
-  private async notStarted(
-    change: ForgeChange,
-    workflowRuns: { total_count?: number; workflow_runs?: SuiteRunJson[] } | null,
-    empty: boolean,
-  ): Promise<string | null> {
-    if (!workflowRuns) return null;
-    const onVersion = workflowRuns.workflow_runs ?? [];
-    const ownRunsAwaited =
-      change.number !== undefined && !onVersion.some((run) => run.event === "pull_request");
-    if (!empty && !ownRunsAwaited) return null;
-    try {
-      const total = async (query: string): Promise<number> =>
-        (
-          (await this.request("GET", `${this.repoPath()}/actions/runs?${query}&per_page=1`)) as {
-            total_count?: number;
-          }
-        ).total_count ?? 0;
-      const heldForVersion = empty && (workflowRuns.total_count ?? onVersion.length) > 0;
-      if (!heldForVersion && (await total("event=pull_request")) === 0) {
-        return null;
-      }
-      if (change.number !== undefined) {
-        const pull = (await this.request("GET", `${this.repoPath()}/pulls/${change.number}`)) as {
-          mergeable?: boolean | null;
-          mergeable_state?: string;
-        };
-        if (pull.mergeable === false || pull.mergeable_state === "dirty") {
-          return "checks have not started: the change conflicts with the default branch, and GitHub starts no checks until it is brought up to date";
-        }
-      }
-      return "checks have not started yet";
-    } catch (caught) {
-      if (caught instanceof ForgeError && caught.failure === "sign-in") throw caught;
-      return null;
-    }
   }
 
   async putIn(change: ForgeChange, headSha: string): Promise<{ sha?: string }> {
@@ -748,6 +673,8 @@ export class GitHubForge implements Forge {
       ...(pull.title ? { title: pull.title } : {}),
       ...(headRepo ? { headRepo } : {}),
       readiness: readinessOf(pull),
+      mergeable: pull.mergeable ?? null,
+      ...(pull.mergeable_state ? { mergeableState: pull.mergeable_state } : {}),
     };
   }
 

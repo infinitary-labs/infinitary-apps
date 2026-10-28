@@ -1,0 +1,19 @@
+{
+  "entries": [
+    {
+      "id": "crew-check-judgments",
+      "kind": "improvement",
+      "area": "tasks",
+      "title": "Clearer checks on merge cards",
+      "body": "Merge cards show the checks the project reported, including checks not yet seen and reasons they cannot be read. The crew offers a merge when the work is ready; your choice still authorizes it. Repairs, reviews and reruns no longer pause at a fixed count, and cards omit those allowances. A merge waiting on pending or unreadable checks reads Merge when checks pass; failed checks read Merge after fixing errors.",
+      "picture": {
+        "dark": "crew-check-judgments-dark.webp",
+        "light": "crew-check-judgments-light.webp",
+        "alt": "A completion card shows reported check results and check-only merge choices, without a separate readiness verdict or repair and review allowances"
+      },
+      "provenance": {
+        "origin": "change"
+      }
+    }
+  ]
+}

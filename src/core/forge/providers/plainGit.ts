@@ -58,7 +58,7 @@ export class PlainGitForge implements Forge {
   }
 
   async checks() {
-    return { overall: "green" as const, items: [] };
+    return { items: [] };
   }
 
   async putIn(change: ForgeChange, headSha: string): Promise<undefined> {

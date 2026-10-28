@@ -34,6 +34,20 @@ const folds = (events: TaskEventView[]) =>
   ]);
 
 describe("the record's condensed activity", () => {
+  it("keeps check facts without a separate current verdict while leaving old event data intact (INF-1555 F12)", () => {
+    const checks = {
+      headSha: "pr604-version",
+      absenceDeclared: false,
+      items: [{ name: "unit-tests", state: "failure" }],
+    };
+    const events = [
+      event("ci", "CI red", { ci: "red", checks, crewVerdict: "ready" }),
+      event("ci", "CI red", { ci: "red", checks, crewVerdict: "red" }),
+    ];
+    expect(read(events)).toEqual([["ci", "Checks: failed."]]);
+    expect(events.map((event) => event.data?.crewVerdict)).toEqual(["ready", "red"]);
+  });
+
   it("folds host chores and non-terminal status under the row they led to, keeping what the crew and the captain said", () => {
     const events = [
       event("note", "a warm working copy was reused"),
@@ -194,7 +208,7 @@ describe("the record's condensed activity", () => {
     ).toEqual([["status", DROPPED_BEFORE_START_ACTIVITY]]);
   });
 
-  it("says a check reading once per result, counting a failed round against its cap, and folds the repeats", () => {
+  it("reads historical check results and folds repeats without reviving an allowance", () => {
     const events = [
       event("pr_opened", "Pushed the branch fm/task-ab12 to origin", {
         changeLabel: "fm/task-ab12",
@@ -207,12 +221,12 @@ describe("the record's condensed activity", () => {
     ];
     expect(read(events)).toEqual([
       ["pr_opened", "Pushed the branch fm/task-ab12."],
-      ["ci", "The checks failed on branch fm/task-ab12, round 1 of 3."],
+      ["ci", "The checks failed on branch fm/task-ab12, recorded round 1."],
       ["ci", "The checks are running on branch fm/task-ab12."],
-      ["ci", "The checks failed on branch fm/task-ab12, round 2 of 3."],
+      ["ci", "The checks failed on branch fm/task-ab12, recorded round 2."],
     ]);
     expect(folds(events)[2]?.[1]).toEqual([
-      "The checks failed on branch fm/task-ab12, round 1 of 3.",
+      "The checks failed on branch fm/task-ab12, recorded round 1.",
       "The checks failed on branch fm/task-ab12.",
     ]);
   });

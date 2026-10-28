@@ -1,18 +1,14 @@
 import { describe, expect, it } from "vitest";
 import {
-  CI_ROUND_CAP,
   carriesEvidenceHeadings,
-  ciCapReached,
   EVIDENCE_HEADINGS,
   findingsBlock,
   missingEvidenceHeading,
   parseReviewFindings,
   parseReviewReport,
-  REVIEW_ROUND_CAP,
   type RigorInput,
   reportEvidenceHeadings,
   reviewCapOwner,
-  reviewCapReached,
   rigorFor,
   rigorRequiresEvidence,
   withoutIntentLead,
@@ -106,24 +102,7 @@ describe("rigorFor: the derivation order", () => {
   });
 });
 
-describe("the round caps (phase 3)", () => {
-  it("holds CI at the third unsuccessful own repair, and a review one past its two re-reviews", () => {
-    // The crewmate prompt's own bound is three rounds; the host's record
-    // reaches the cap after the third unsuccessful declared own repair.
-    expect(CI_ROUND_CAP).toBe(3);
-    expect(ciCapReached(undefined)).toBe(false);
-    expect(ciCapReached(2)).toBe(false);
-    expect(ciCapReached(3)).toBe(true);
-    expect(ciCapReached(4)).toBe(true);
-    // The first findings verdict is the review itself; the cap bounds the
-    // re-reviews after it, so the third findings is one past the cap.
-    expect(REVIEW_ROUND_CAP).toBe(2);
-    expect(reviewCapReached(undefined)).toBe(false);
-    expect(reviewCapReached(1)).toBe(false);
-    expect(reviewCapReached(2)).toBe(false);
-    expect(reviewCapReached(3)).toBe(true);
-  });
-
+describe("the evidence contract", () => {
   it("holds the standard and reviewed tiers to the evidence contract, and quick to nothing", () => {
     expect(EVIDENCE_HEADINGS).toEqual(["Intent", "What changed", "Verified", "Risk", "Not done"]);
     expect(rigorRequiresEvidence("standard")).toBe(true);

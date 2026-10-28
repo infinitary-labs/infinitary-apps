@@ -91,7 +91,8 @@ GitHub, each GitLab host and each GitHub Enterprise host are shown in Settings -
   The worktree is not created and the task returns to the queue behind `forge-sign-in:<host>`; a host card opens Integrations with that host's sign-in started.
   When the host's existing sign-in reports `ok`, the gate is cleared and the task is dispatched again, re-fetching its base.
   DNS, connection, SSH, other-host and unstructured text failures continue through the ordinary stale-ref fallback; they never trigger GitHub sign-in.
-- **The crewmate's pair** (`src/core/pi/forgeTools.ts`, entries of the crewmate tool spec both runtimes generate from, `docs/claude-client.md`): `open_change({ title, body })` offers the task's branch as a proposed change (on GitHub the crewmate sends the branch up first; on a plain host the forge sends it) and records `pr_opened`; `check_change({ diagnosis?, repair?, rerun?, conflictRepair?, captainGuidance? })` records explicit evidenced failure classifications, stable own repair ids/results, the one flake reservation, a repair of a change the captain's kept merge approval covers, or what the captain's newer words do to that change (`docs/delivery-rigor.md`) - a baseline-blocked diagnosis is answered with where its dependency stands: not started, underway or queued, or done (FI3-671) - and reads the same checks the completion card's gate does, recorded through the same service so the fact strip and the repair ledger see it.
+- **The crewmate's pair** (`src/core/pi/forgeTools.ts`): `open_change` offers the pushed branch; `check_change` reads raw check and mergeability facts and records evidence-backed declarations without deciding readiness or repair settlement.
+  Existing diagnosis, repair and rerun fields remain readable; conflictRepair and captainGuidance retain the captain's approval boundary.
   Handed to every crewmate whose task ships a change, never on the personal workspace or an answer task.
 - **The personal panels' read**: `forge.changes` (`inf:forges:changes`) - the captain's open pull requests on every GitHub and GitLab host the captain signed in to, newest first across them, each with its checks and the host's own name for it (`label`: `#12`, `!4`).
   GitHub's come from one GraphQL request per host with each one's check rollup (`providers/github/changes.ts`); GitLab's from `GET /merge_requests?scope=created_by_me&state=opened`, 20 at most, then each merge request's own read for its head pipeline, five at a time (`providers/gitlab/changes.ts`): a passed or skipped pipeline is passed, a failed or cancelled one failed, any other pending, and none is none.
@@ -200,13 +201,11 @@ A GitLab project's direct-pr task delivers the way a GitHub one does: the crewma
 - **Its checks** are read for the head and nothing older (`checks()`):
   - every pipeline on the head counts - a branch pipeline, a merge request pipeline (`refs/merge-requests/<N>/head`) - and so does a merged-results or merge-train pipeline (`.../merge`, `.../train`), whose own commit is a merge of the head into the target branch: the app reads that commit's parents and counts it only when the head is one of them;
   - a later pipeline on the same ref for the same head stands for that ref, the way a rerun does on GitHub; pipelines on different refs all count;
-  - each counted pipeline is one check and each of its jobs another (latest attempts, 100 a page, five pages, more is a pending item);
+  - each counted pipeline is one check and each of its jobs another; pagination limits mark the reading incomplete rather than inventing a pending check;
   - a running, created, pending, scheduled or waiting job or pipeline is `pending`; a failed one is `failure`, a cancelled one `cancelled`, a skipped one `skipped`;
-  - a manual job a person must start, and a pipeline GitLab marks `manual`, is `neutral`: it holds green without being red, and arms no watch, since nothing finishes on its own;
+  - a manual job a person must start, and a pipeline GitLab marks `manual`, is `neutral`, a reported state distinct from a pass, a failure or a running check;
   - a failed job the project allows to fail and a manual job it marks optional read `skipped`, their names saying so, because GitLab's own pipeline passes without them;
-  - with no pipeline for the head, the list is pending ("has not started yet") when the merge request ran pipelines for an earlier head, or the project runs pipelines for merge requests or for branches other than the default; a project that runs none reads green with zero checks, as on GitHub;
-  - a merge request whose merge request pipelines ran for an earlier head and have none for this one reads pending even beside a branch pipeline that passed, so a merged-results pipeline that has not started never leaves a false green.
-    A read GitLab refuses or answers unreadably fails the reading; it is never taken as no checks.
+  - no matching pipeline yields an empty list, not an expected check inferred from earlier heads or project history; A read GitLab refuses or answers unreadably fails the reading; it is never taken as no checks.
 - **Its readiness** (`pull`) reads `detailed_merge_status`: `mergeable` is clean; `conflict` (or `has_conflicts`) is a conflict; `need_rebase` is behind; a draft is a draft; an approval, a discussion, a required pipeline or another rule is blocked; GitLab still checking, or a status the app does not know, is computing.
   A server older than `detailed_merge_status` answers `merge_status`.
 - **Its merge** (`putIn`) checks the merge request's title is conventional, then asks `PUT /merge_requests/<N>/merge` with `sha` (GitLab refuses 409 when the merge request moved on), `squash: true` and the squash commit message `<title>`, a blank line and the description.
@@ -259,7 +258,7 @@ A program the captain asks a crewmate to run still runs; these tools do not read
 `read_workflow` and `download_artifact` are entries of the same runtime-neutral tool spec as `open_change`; both Pi and Claude receive them, including project answer tasks, never personal-workspace tasks.
 The supervisor binds the task id, `WorkflowEvidenceService` resolves its registered project and working copy, and the optional `Forge.workflows` capability reads only that project's GitHub Actions API, or its GitLab pipelines, using the existing app-owned sign-in.
 Reads do not record a CI reading, classify a failure, reserve a rerun, spend a repair, or modify a workflow.
-A short read does keep the run's failed jobs on the repair ledger, so `check_change` takes a diagnosis or the one flake rerun reservation for one of them with no pull request ("A workflow run's failures" below).
+A short read does keep the run's failed jobs on the repair ledger, so `check_change` takes a diagnosis or an evidenced rerun declaration for one of them with no pull request ("A workflow run's failures" below).
 
 - Listing runs and artifacts is still `github_read`'s job (see the gateway below): `GET /repos/{owner}/{repo}/actions/runs?head_sha=<full commit id>` lists a version's runs, an untouched-main commit gives the baseline comparison, and `/actions/runs/{runId}/artifacts` lists artifact metadata.
   A named run's jobs are the short read below, not a jobs page the crewmate has to page itself.
@@ -455,31 +454,35 @@ The owner's verdict: git is bundled with the app, the GitHub Desktop model, beca
   A plain host reached over `https://` whose sign-in only that helper held now answers nothing under the app (git fails at once, never prompts).
   GitHub (the app's sign-in), SSH origins (the person's agent) and helpers named in the person's own `~/.gitconfig` with a path are unaffected.
 
-## The green rule
+## Check facts and crew judgment
 
-One home: `overallOfChecks` in `src/core/forge/forge.ts`; GitLab's pipelines and jobs reach it as checks ("GitLab merge requests" above).
-Green when every check completed successfully or was skipped; terminal failures are red; anything else - queued, running, neutral - blocks green without being red; zero checks reads green, so a project with no checks can still put work in.
-On GitHub an empty list is not always "no checks": when GitHub holds a workflow run for the version, or has run workflows for the project's pull requests before, `checks()` returns one pending item ("checks have not started yet", or - when the change conflicts with the default branch, where GitHub starts no pull-request workflows - the need to bring it up to date), which arms the check watch and keeps the completion card's last check and the merge click from reading green in the seconds before checks start.
-The marker belongs to the pull request's own head: an earlier version it moved past, read for a repair declared there (`checks(change, movedPast)`), gets none on GitHub or GitLab, since neither starts the pull request's checks for it now (INF-988).
-A run on another branch still at that version can start there yet, so an empty list there settles a repair only once no branch is at it (`branchesAt`, INF-1185; `docs/delivery-rigor.md`, "CI rounds").
-A pull request's list that holds other checks is not always complete either (INF-893): PR #328 read green on its `replay.yml` check, a run started by hand on the version, a second before GitHub listed its `ci`, `journeys` and `phone` runs.
-So when the project has run workflows for its pull requests before and none of the version's workflow runs was started by the pull request (`event` `pull_request`), the same pending item joins the list.
-A reading of the default branch, and a project that has never run a pull request workflow, read their checks as they are.
-On GitHub both check runs and commit statuses count.
-Every unfinished workflow run on the version also counts as pending, even when every listed check passed: GitHub may not yet have created a job waiting on another job.
-This keeps a re-run of a prerequisite from briefly reading green before its dependent check appears.
+`check_change` reads the newest change through the forge and returns a `facts` JSON object: the version, whether it moved since the recorded reading, mergeability as the host reports it, and each check's name, state, run, workflow and event where available.
+GitHub check runs retain their reported status, conclusion and available run identity.
+The captain’s F26 choice restores the existing exception for a cancelled duplicate: a later run of the same workflow and event decides that check of the same name; unrelated and latest cancellations still count.
+No observed checks or workflow runs yields an empty list.
+The restored cancellation filter keeps a replacement pending while its known later workflow run has not created that check; it does not invent a successful check.
+The reading identifies incomplete lists rather than inventing a check for a physical read limit.
+An empty hosted reading stays pending and watched until checks register or the crew records positive, exact-version absence evidence through `absentChecks` with `pull`.
+That evidence names an explicit no-CI policy from the trusted default branch and the applicable local gate; elapsed time, history and missing workflow files are not evidence of that policy.
+A host that runs no checks, such as a plain Git host, needs no invented hosted check.
+An absence declaration never removes registered checks from the reading or marks them passed.
+The completion strip, shared task facts, task record Activity and first-mate facts show the reported check facts for their recorded version, never a newer unread version.
+A lasting refusal to list workflow runs stays on the partial reading with its reason, so the task says that all checks cannot be read rather than silently appearing complete or endlessly running.
+A lasting unreadable reading has no running duration, and the check watch reports it through its unreadable outcome rather than claiming the checks are still running.
+A typed transient read failure preserves the existing bounded watch and its retry clock, including on a crewmate’s own read (F25).
+A refused default-branch reading also appears on each task waiting on those checks, without sending a non-final default-branch wake.
 
-On GitHub a cancelled check run can be superseded (FI3-585).
-GitHub lists every workflow run's checks on a commit; its default `filter=latest` drops only earlier attempts inside one workflow run.
-When one version gets two runs of one workflow - PR #632's `e5cacebe` got two `ci` runs from one push, and `ci.yml`'s `cancel-in-progress` concurrency cancelled the older before its Linux check took a step - the older run's cancelled check stays on the list beside the newer run's pass, and counting both reads red forever.
-`checks()` sets a cancelled check run aside only when its workflow run has a later run (higher `run_number`) of the same workflow, started by the same event, on the same version.
-That later run's check of the same name decides; while the later run has not created it yet, the check reads pending.
-Nothing else is set aside: an earlier failure, time-out or unfinished check counts beside a later pass; another workflow or event with the same check name is a different check; and a check the app cannot place in a workflow run counts as it reads.
-The version's workflow runs (`GET /actions/runs?head_sha=`) are read once per check reading, shared by unfinished-run guarding, cancellation handling and the not-started read.
-More runs than the list holds add a pending item rather than claiming the reading is complete.
-An unreadable run list leaves the existing check reading; a refused sign-in still fails the reading, as does a hiccup when cancellation handling needs the list.
+The crewmate's merge offer itself expresses its judgment that the work is ready.
+There is no separate ready/red declaration, current verdict cache or verdict cell.
+The offer neither marks failed checks passed nor authorizes a merge: actual check facts still hold it and the captain still gives separate consent.
+The crewmate declares only `flake` or `settled` with its version and evidence using `declaration`.
+Older ready/red declarations remain history and grant no authority; the old current cache is ignored without rewriting that history.
+A settled declaration names a recorded repair and its outcome; raw check reads never settle, void or supersede repairs.
+The host places no repair, review-round or rerun count hold.
+The delivery guidance remains in the crewmate prompt until the delivery runbook is available.
 
-Checks that failed or are still running are a soft hold (`checks`): the captain's recorded override passes them, for the completion card and the merge, at the version it covers, and the rules where the project lives still decide whether it merges (`docs/delivery-rigor.md`, "The holds").
+The merge boundary still checks the captain's authorization or standing autonomy, the exact approved change and version, GitHub's rules and mergeability, and the send-once result.
+The sign-in, consent and unknown-outcome boundaries are unchanged.
 
 ## A requested merge
 
@@ -546,11 +549,14 @@ The design follows the firstmate repo's PR poll: a watcher that is not a model, 
   `failureSeen` means the early wake for that head already went, or the crewmate already read a red check, so that wake is not sent again.
 - **Read** on the shared 60 s tick (`CrewSupervisor.pollCheckWatches`, through `PrCiService.readWatched`): every minute for 10 minutes, then every 2, up to the two-hour bound.
   Every successful reading updates the saved reading time, even when running checks keep the same status and head, so the reading time shown on rest stays current.
-  A reading - the watch's, the quiet refresh's or `check_change`'s - records a `ci` event only when it changes the check state: the status, the head, or the repair ledger (a failure first seen there, an attempt's result, a round or the cap).
-  A reading that changes none of them moves only the reading time, so an idle pull request adds no rows to the task record (`changesCheckState`).
-  Settled readings record raw failure history and, only for an unsuccessful declared own repair, an attempt and its cap.
+  A reading - the watch's, the quiet refresh's or `check_change`'s - records a `ci` event only when it changes the check state: the status, the head, or the repair ledger (a failure first seen there or a crew declaration).
+  A reading that changes none of them adds no CI event; it advances the reading time and retains observation-forwarding bookkeeping (`changesCheckState`).
+  Raw readings retain named failure history without settling repairs or counting attempts.
 - **Quiet refresh** continues every five minutes (`CHECK_REFRESH_MS`) for live tasks with a recorded open pull request, even after a watch ends, using the same reading and delivery facts.
   It runs on the shared tick after a restart too and backs off unreadable checks.
+  Changed raw readings retain a durable `ciObservation` identity until a crew tool response or the existing inbox forwards them.
+  The quiet reader forwards changed observations once, including across a restart; only the crew's declaration changes readiness.
+  Unchanged readings start no model turn.
   The same tick reads each live task's recorded pull request by number, independently of check completion, dependencies or a captain gate.
   A confirmed external merge immediately records `ci: merged`, but PR ownership alone never closes its task.
   The crewmate declares `report.merge_completes_task` with that task's recorded PR number and checked head only when that merge finishes all its work; `TaskService` keeps the declaration until its next turn or report.
@@ -568,10 +574,10 @@ The design follows the firstmate repo's PR poll: a watcher that is not a model, 
 - **Two wakes at most** for one head, each a `checks-settled` steer on the crewmate's own lane, the supervisor's, through the ordinary steer path (it resumes an idle task).
   The first is `first-failure`, naming each red check, while others are still running.
   A read that first sees a failure and also sees the checks finished sends only the end wake.
-  The end wake is whatever ends the watch: `passed`; `failed`, naming the red checks, or telling it to stop and report a blocker at the CI cap; `not-green` (a neutral check); `timed-out`, still running after `CHECK_WATCH_BOUND_MS` (two hours); `gone` (no open change for the branch); `unreadable` (a sign-in, permission or other refusal; a transient failure reads again inside the bound).
+  The end wake carries the finished check states without a passing verdict; `timed-out`, still running after `CHECK_WATCH_BOUND_MS` (two hours); `gone` (no open change for the branch); `unreadable` (a sign-in, permission or other refusal; a transient failure reads again inside the bound).
   Each wake is named by the watch and the event (`check-watch:<head>:<since>:failure` or `:end`), and the inbox records the name with the row it queues (`InboxStore.enqueueSteerOnce`), so a restart between the wake and the clear never sends it again.
   A wake recorded before the early wake existed, named `check-watch:<head>:<since>`, still counts as the end wake.
-  A red check is a state the green rule already calls red; pull request checks carry no allowed-to-fail flag, so the watch does not guess one from a name.
+  The watch relays failure states without deciding readiness; the fact reader retains any explicit allowed-to-fail metadata.
   The early wake spends no repair round and does not change how a pull request goes green.
 - **The idle ladder** reads a standing watch as the task moving (`Witnesses.checksWatched`, `docs/report-sort.md`): the crewmate that ends its turn to wait is neither nudged nor reported stuck, and its report wakes nobody until the checks finish.
   The early wake does not clear the watch, so the task still reads Waiting for checks.
@@ -632,7 +638,7 @@ While a watch stands, `checksWatched` keeps the idle ladder from nudging or repo
 Each reading also keeps the run's state and host times for the checks cell ("The checks cell's time").
 
 The run watch never writes pull request check readings, diagnoses, repair counts or merge permission; like the short read, it keeps the run's failed jobs on the repair ledger ("A workflow run's failures" below).
-`check_change` remains the pull request green gate; `github_read`, job log reads and downloads keep their existing contracts.
+`check_change` remains the pull request fact reader and declaration seam; `github_read`, job log reads and downloads keep their existing contracts.
 An accepted own-project `github_write` dispatch with `workflow_run_id` arms the run watch immediately and says so.
 The crewmate sends `"return_run_details": true` itself; the app never adds it, because older GitHub Enterprise servers may refuse it.
 A GitHub dispatch that does not send `"return_run_details": true` gets no run number back, so the app lists that workflow's dispatched runs before sending it and again after, up to three times while GitHub queues the run (one budgeted call each, `GithubGatewayService.dispatchBaseline`, INF-1428).
@@ -649,21 +655,17 @@ Reruns of a task's pull request still record its existing rerun reservation and 
 
 ### A workflow run's failures
 
-A run a task reads needs no pull request for its diagnosis or its one flake rerun (INF-688).
+A run a task reads needs no pull request for its diagnosis or an evidenced rerun declaration (INF-688).
 Every short `read_workflow({ runId })` and every reading of the run watch records the run's failed jobs on the task's repair ledger (`observeRunFailures` in `src/core/orchestrator/checkRepair.ts`, `recordRunFailures` in `runWatch.ts`).
 Each failed job's name joins `ciRepair.failures` at the run's version, so `check_change` accepts a diagnosis keyed to that version and job name, as it does a failed pull request check.
 `ciRepair.runs` keeps each run's newest reading: its version, its attempt and that attempt's failed jobs.
 A newer reading replaces it, so a job that passed on a rerun is no longer listed; an incomplete job list never drops a job the same attempt already showed failed.
 A reading with no failed job is recorded only for a run already on the ledger.
 
-A run counts only at the change's current version, or at any version while the task has no pull request version yet (`failingRun` in `src/shared/checkRepair.ts`), so a new version ends what an older run showed.
-A flake rerun reservation is current at the change's current failed head, as before, or else while the newest reading of a run that counts still lists the job failed.
-The second kind is bound to that run (`ciRepair.rerun.runId`), and only an accepted rerun of that run or of one of its jobs dates it.
-A baseline-blocked diagnosis at a run's version stands while the newest reading of a run that counts still lists the job failed (`baselineStands` in `src/core/tasks/dependencyWaits.ts`), so the crewmate is resumed when the default branch's own run of that check passes, and still when the separately owned task closes, as on a pull request.
-A repair declared while its branch has no open pull request is settled at its own version, like one a pull request moved past (INF-970; `docs/delivery-rigor.md`, "CI rounds").
-`check_change` reads that version's checks before the next repair is declared and on every plain reading, and settles the attempt from them by the usual rules.
-GitLab reads checks only through a merge request, so there the attempt has no result until one opens.
-A task whose work never has a pull request still declares a run's diagnosis or rerun with `check_change`, without a check reading after it, and declares no repair.
+A workflow reading retains its exact version, attempt and failed job names.
+Diagnoses and evidenced rerun decisions are declarations, not requests for a host allowance.
+A baseline-blocked diagnosis still names a separately owned dependency, whose closure and default-branch check observations can wake its crewmate.
+Repair settlement always comes from the crew's explicit declaration, including before a pull request opens or after it moves to a newer version.
 
 ## Failures are typed
 
@@ -691,7 +693,7 @@ The provider files under `src/core/forge/providers/` are fenced by Biome `noRest
 
 ## Evidence
 
-`src/core/forge/providers/*.test.ts` (the REST forge, the device flow and the open-changes read against a local HTTP stub, and a GitHub Enterprise host's API addresses and its pull request under `/api/v3`; the plain host against real repositories and a bare remote), `src/core/forge/signIns.test.ts` (the store's modes, the five health rules, the health log across a restart and a sign-out, a short-lived sign-in against a scripted GitHub - renewed at the next start after it ran out while closed, ahead of its end, on an early 401 and before a forge request, one renewal at a time, `needs_reauth` only on a refused renewal, `unavailable` when the renewal cannot be asked, never over a sign-out - every way a code ends, the git helper over the store's own file, and a key sign-in to a host on the person's own server - kept with its kind and git user name, refused, unreachable or not that kind of server with nothing kept, known from a project or by its `.ghe.com` name, its health and sign-out), `src/shared/forge.test.ts` (known hosts and typed addresses), `src/core/workspace/repoRegistry.test.ts` (stamping a known host's projects, never back), `src/core/workspace/forgeAuth.test.ts` (the refusal keyed by a known host), `src/core/hostEnv.gitSignIn.test.ts` (real git - the search path's and, on a Mac, the app's own - against a local HTTPS host: the helper answers with the app's sign-in and a helper in the person's own git config never does, and a host signed in since the helper was named answers with its own git user name), `src/core/workspace/git.test.ts` (the app's git resolved, run by the host and first in a crewmate's shell, the system git without it), `tests/e2e/app-git.spec.ts` (a crewmate's `git status` on a launch whose search path holds no git at all), `tests/e2e/run-work.spec.ts` ("a Mac with no git of its own": the work mode's join, clone, crewmate's shell and work brought home on a search path with no git), `src/core/orchestrator/prCi.test.ts` (the service over a fake forge, `open_change` and `check_change` included, and the check watch's arming and read, a finished reading recorded once until its state changes), `src/core/orchestrator/checkWatch.test.ts` (the watch's minute-then-two-minute reads, its bound, a hiccup and a refusal, a change gone, a newer reading or a close while a read is out), `src/core/orchestrator/mainCheckWake.test.ts` (a standing baseline wait woken when the default branch's own run of that check passes, and not while it fails, waits, is skipped or absent), `src/core/orchestrator/crewSupervisor.test.ts` ("the host's check watch": pending then green or red is one finish wake and no model turn between, a failed check while others run is one early wake, a new push re-arms for the new head, a host without checks is never watched, a restart mid-watch still wakes once, a task idle behind another task neither read nor recorded until that work closes), `tests/e2e/forge-seam.spec.ts` (a plain host), and `tests/e2e/forge-signin.spec.ts` (the sign-in in Settings -> Projects against a local GitHub stub - code shown, cancelled, refused, expired, approved; the first mate's listing; a crewmate's `open_change` and the captain's put-in; GitHub refusing the sign-in, the one card and signing in again; a project kept on this Mac naming no host; signing out, the health log's dated lines for all of it, a real quit and start bracketing the sign-in on file, and a short-lived sign-in renewing itself when GitHub ends it - one code exchanged once, no card, git's helper answering with the renewed sign-in; and a GitHub Enterprise host the app has never seen, signed in by keys alone with a key it first refuses, its projects then GitHub projects in the first mate's facts, listed through its `/api/v3`, git's helper answering it with the key, and a crewmate's pull request opened, read and merged there).
+`src/core/forge/providers/*.test.ts` (the REST forge, the device flow and the open-changes read against a local HTTP stub, and a GitHub Enterprise host's API addresses and its pull request under `/api/v3`; the plain host against real repositories and a bare remote), `src/core/forge/signIns.test.ts` (the store's modes, the five health rules, the health log across a restart and a sign-out, a short-lived sign-in against a scripted GitHub - renewed at the next start after it ran out while closed, ahead of its end, on an early 401 and before a forge request, one renewal at a time, `needs_reauth` only on a refused renewal, `unavailable` when the renewal cannot be asked, never over a sign-out - every way a code ends, the git helper over the store's own file, and a key sign-in to a host on the person's own server - kept with its kind and git user name, refused, unreachable or not that kind of server with nothing kept, known from a project or by its `.ghe.com` name, its health and sign-out), `src/shared/forge.test.ts` (known hosts and typed addresses), `src/core/workspace/repoRegistry.test.ts` (stamping a known host's projects, never back), `src/core/workspace/forgeAuth.test.ts` (the refusal keyed by a known host), `src/core/hostEnv.gitSignIn.test.ts` (real git - the search path's and, on a Mac, the app's own - against a local HTTPS host: the helper answers with the app's sign-in and a helper in the person's own git config never does, and a host signed in since the helper was named answers with its own git user name), `src/core/workspace/git.test.ts` (the app's git resolved, run by the host and first in a crewmate's shell, the system git without it), `tests/e2e/app-git.spec.ts` (a crewmate's `git status` on a launch whose search path holds no git at all), `tests/e2e/run-work.spec.ts` ("a Mac with no git of its own": the work mode's join, clone, crewmate's shell and work brought home on a search path with no git), `src/core/orchestrator/prCi.test.ts` (the service over a fake forge, `open_change` and `check_change` included, and the check watch's arming and read, a finished reading recorded once until its state changes), `src/core/orchestrator/checkWatch.test.ts` (the watch's minute-then-two-minute reads, its bound, a hiccup and a refusal, a change gone, a newer reading or a close while a read is out), `src/core/orchestrator/mainCheckWake.test.ts` (a standing baseline wait given changed default-branch observations without a host readiness judgment), `src/core/orchestrator/crewSupervisor.test.ts` ("the host's check watch": pending then green or red is one finish wake and no model turn between, a failed check while others run is one early wake, a new push re-arms for the new head, a host without checks is never watched, a restart mid-watch still wakes once, a task idle behind another task neither read nor recorded until that work closes), `tests/e2e/forge-seam.spec.ts` (a plain host), and `tests/e2e/forge-signin.spec.ts` (the sign-in in Settings -> Projects against a local GitHub stub - code shown, cancelled, refused, expired, approved; the first mate's listing; a crewmate's `open_change` and the captain's put-in; GitHub refusing the sign-in, the one card and signing in again; a project kept on this Mac naming no host; signing out, the health log's dated lines for all of it, a real quit and start bracketing the sign-in on file, and a short-lived sign-in renewing itself when GitHub ends it - one code exchanged once, no card, git's helper answering with the renewed sign-in; and a GitHub Enterprise host the app has never seen, signed in by keys alone with a key it first refuses, its projects then GitHub projects in the first mate's facts, listed through its `/api/v3`, git's helper answering it with the key, and a crewmate's pull request opened, read and merged there).
 The stub hands a code's sign-in over once and spends a refresh token once, as GitHub does.
 The direct-pr specs (`rigor-standard`, `rigor-reviewed`, `autonomy`, `settle-effects`, `honest-settles`) run on the same stub (`tests/e2e/githubStub.ts`).
 A computer's own sign-in is `src/core/helper/signIns.test.ts` (GitHub's device flow on the computer against a stand-in GitHub, its store, its git's environment, its health and a sign-out from here, a stopped or expired code) and `tests/e2e/device-sign-ins.spec.ts` (Settings -> Projects against this stub, with the computer in the test's own process and git's helper answering with its sign-in).

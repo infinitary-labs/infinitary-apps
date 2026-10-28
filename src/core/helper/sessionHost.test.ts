@@ -38,6 +38,7 @@ import {
 import type { ContractWorld } from "../../../tests/helpers/sessionContract";
 import { moveWorkFolder, olderWorkFolder } from "../../../tests/helpers/workFolderMove";
 import { type HomeConnection, startConnection } from "../connection/connection";
+import { CONTRACT_CHANGES } from "../connection/contractChanges";
 import { DevicePairing } from "../devices/pairing";
 import type { CoreActor, CoreDispatch } from "../dispatcher";
 import { CoreEventBus } from "../events";
@@ -1370,6 +1371,45 @@ describe("a conversation held on a computer that runs work", () => {
       "runs an older Infinitary that cannot show a project's fonts",
     );
   });
+
+  // INF-1555 F12: an older home must not silently apply a separate-ready protocol.
+  it.each(["check-declarations", "merge-offer-readiness", undefined] as const)(
+    "forwards current check declarations only with the current protocol (missing: %s)",
+    async (missing) => {
+      const supported = missing === undefined;
+      const at = await placed({
+        homeChanges: CONTRACT_CHANGES.names.filter((name) => name !== missing),
+      });
+      await at.order("inf:session:open", [
+        {
+          orderId: `open:${TASK}:1`,
+          task: TASK,
+          spec: { ...at.spec, tools: [...at.spec.tools, "check_change"] },
+        },
+      ]);
+      const input = {
+        declaration: {
+          headSha: "93355db9d04e964513879db74d068a7789cb4c16",
+          verdict: "flake",
+          check: "linux-checks",
+          evidence: "The failed log differs from the successful same-version rerun.",
+        },
+      };
+      model([{ tools: [{ name: "check_change", args: input }] }, { text: "Recorded the result." }]);
+      await at.order("inf:session:prompt", [
+        { orderId: "check-judgment", task: TASK, text: "Record the check judgment." },
+      ]);
+      await at.ended(1);
+      const effects = at.home.effects.filter(
+        (effect) => effect.channel === "inf:work:check-change",
+      );
+      if (supported) expect(effects.map((effect) => effect.request.input)).toEqual([input]);
+      else {
+        expect(effects).toEqual([]);
+        expect(JSON.stringify(api.requests.at(-1)?.body?.messages)).toContain("Nothing was sent");
+      }
+    },
+  );
 
   // INF-497: a home before `STORY_AROUND_SINCE` strips around from open_change and
   // would answer as if the words had been changed; the computer refuses first.

@@ -121,7 +121,7 @@ function checkRepairMove(
       : { text: "Completion recorded." };
   }
   if (user.includes(`${CI_REPAIR_MARKER} diagnose`)) {
-    const headSha = CI_REPAIR_HEADS.find((head) => user.includes(head)) ?? "missing";
+    const headSha = user.match(/"head":\s*"([^"\n]+)"/)?.[1] ?? "missing";
     const flake = headSha === CI_REPAIR_HEADS[2];
     const diagnose: ScriptedCall = {
       name: "check_change",
@@ -150,21 +150,31 @@ function checkRepairMove(
     const report: ScriptedCall = {
       name: "report",
       args: {
-        text: `${CI_REPAIR_MARKER} ${flake ? "completion correctly refused before the diagnosis; rerun reserved" : "waiting for the evidenced separate baseline owner"}`,
+        text: `${CI_REPAIR_MARKER} ${flake ? "completion correctly refused for malformed shape; diagnosis recorded and rerun reserved" : "waiting for the evidenced separate baseline owner"}`,
       },
     };
-    // At the flake it first tries premature completion, to exercise the
-    // actual card gate on failed checks: no check failing at this version
-    // carries a diagnosis yet, so the gate refuses. Once every one does, the
-    // card goes up with Merge anyway beside the merge (INF-1137 friction 6).
-    const move = (flake ? [card, diagnose, rerun, report] : [diagnose, report])[results.length];
+    // FI3-401 still owns persistence of an actual refusal. Captain INF-1555 F12
+    // retires the diagnosis prerequisite, so exercise the existing physical card-shape rule instead.
+    const malformedCard: ScriptedCall = {
+      ...card,
+      args: {
+        ...card.args,
+        body: "<p>This completion is missing its required change-story sections.</p>",
+      },
+    };
+    const move = (flake ? [malformedCard, diagnose, rerun, report] : [diagnose, report])[
+      results.length
+    ];
     return move ? { calls: [move] } : { text: "Waiting." };
   }
   if (!results.length) return { calls: [{ name: "check_change", args: {} }] };
   if (results.length === 1) {
     // It names the version it read, as a crewmate does: two failures at
     // two versions are two reports, never one repeated wake.
-    const head = CI_REPAIR_HEADS.find((h) => results[0]?.includes(h)) ?? "the current version";
+    const line = results[0]?.split("\n").find((line) => line.startsWith("facts: "));
+    const head = line
+      ? (JSON.parse(line.slice(7)) as { headSha: string }).headSha
+      : "the current version";
     return {
       calls: [
         {

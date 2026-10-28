@@ -46,10 +46,10 @@ import {
 } from "@shared/cards";
 import {
   type CheckChangeInput,
-  diagnosedRed,
   isRepairAssessment,
   REPAIR_ASSESSMENT_SOURCE,
 } from "@shared/checkRepair";
+import { currentCheckStatus, currentCheckSummary } from "@shared/checkSnapshot";
 import {
   checksFinishedAgo,
   checksRestWords,
@@ -80,7 +80,7 @@ import {
   noNewWorkWaitLine,
 } from "@shared/deviceUpdateNudge";
 import type { CrewCounts, FmEvent } from "@shared/events";
-import { factDotSvg, factRoundsSvg, roundWords } from "@shared/factDot";
+import { factDotSvg } from "@shared/factDot";
 import { reportSummary } from "@shared/feed";
 import {
   type FolderNoticed,
@@ -153,14 +153,7 @@ import {
   RUNS_ON_THIS_MAC,
   runsHereOnly,
 } from "@shared/repos";
-import {
-  CI_ROUND_CAP,
-  parseReviewReport,
-  REVIEW_ROUND_CAP,
-  type Rigor,
-  reviewCapOwner,
-  reviewCapReached,
-} from "@shared/rigor";
+import { parseReviewReport, type Rigor, reviewCapOwner } from "@shared/rigor";
 import { RISK_DIMENSIONS, RISK_WORDS, type RiskAssessment } from "@shared/risk";
 import {
   type Deliverable,
@@ -788,7 +781,9 @@ export type CrewSupervisorOptions = {
    * standing CI rule). Absent means the gate is not wired (tests, replay)
    * and a crewmate's completion card publishes unchecked, as before.
    */
-  checkCi?: (taskId: string) => Promise<PrCiOverall>;
+  checkCi?: (
+    taskId: string,
+  ) => Promise<PrCiOverall | { overall: PrCiOverall; recorded: boolean; problem?: string }>;
   /**
    * The crewmate's own pair where the project lives (git integration PR
    * 1.2): `open_change` offers the task's branch as a proposed change and
@@ -1346,7 +1341,7 @@ const IDLE_RULES: ReadonlySet<string> = new Set<IdleRule>([
  * and the merge waits for the checks on its own.
  */
 export const COMPLETION_REVISED_WHILE_RUNNING =
-  "Your revision is up while the checks still run: its merge waits for them to pass, so do not emit it again for that. If they fail, fix them as usual.";
+  "The card is shown; its merge waits on the checks. Do not emit it again just for that. Read missing results and fix failures as usual.";
 
 export class CardChoiceUnavailableError extends Error {
   constructor(reason: "not-ready" | "task-closed" | "undeclared" | "action-changed" = "not-ready") {
@@ -1554,8 +1549,7 @@ export class CrewSupervisor {
       tasks: options.tasks,
       cardStore: options.cardStore,
       syncCaptainGate: (taskId, at) => this.ladder.syncCaptainGate(taskId, at),
-      noteCapAnswered: (card, action, by, firstmateCard) =>
-        this.ladder.noteCapAnswered(card, action, by, firstmateCard),
+      noteCapAnswered: () => {},
       closeAnsweredTask: (card, action, by) => this.settle.closeAnsweredTask(card, action, by),
       settleFacts: (taskId) => this.settleFacts(taskId),
       mergeLabel: (card) => this.mergeLabel(card),
@@ -3590,7 +3584,6 @@ export class CrewSupervisor {
   private reviewToReread(builder: TaskRecord): WakeOpenReview | undefined {
     const verdict = builder.delivery?.reviewVerdict;
     if (verdict !== "findings" && verdict !== "blocked") return undefined;
-    if (builder.delivery?.reviewCapAt !== undefined) return undefined;
     const open = this.openReviewOf(builder.id);
     if (!open || this.options.tasks.verdictReviewOf(builder)?.id !== open.id) return undefined;
     const head = builder.delivery?.reviewSha;
@@ -4263,22 +4256,10 @@ export class CrewSupervisor {
     if (this.policiesOf(record)?.rigor.value !== "reviewed") return undefined;
     const verdict = record.delivery?.reviewVerdict;
     if (verdict === "pass") return "review passed";
-    // The review cap (phase 3) outranks the open review: the reviewer may
-    // still be idle on the task, but no re-review goes out until the
-    // decision the cap asked for is answered.
-    if (record.delivery?.reviewCapAt !== undefined)
-      return record.delivery.reviewCapOwner === "firstmate"
-        ? "review: findings (first mate can reopen)"
-        : "review: findings (cap reached)";
     const open = this.openReviewOf(record.id);
     if (open) return `review open (${open.key || open.id})`;
     if (verdict) return `review: ${verdict}`;
     return "awaiting review";
-  }
-
-  /** The CI round cap was reached (delivery rigor phase 3): the gate and the one wake (idleLadder.ts). */
-  holdForCiCap(taskId: string, facts: { rounds: number; headSha: string }): void {
-    this.ladder.holdForCiCap(taskId, facts);
   }
 
   /** The personal workspace as a repo (Step 4), or a loud refusal when this build has none. */
@@ -5634,6 +5615,15 @@ export class CrewSupervisor {
         const machines = this.options.machines;
         if (!machines?.folders(machine, taskId))
           throw new Error("The computer this task runs on is out of reach.");
+        if (
+          record &&
+          this.taskDelivery(taskId) === "direct-pr" &&
+          this.deliverableOf(record) === "change" &&
+          !machines.takesCheckDeclarations?.(machine)
+        )
+          throw new Error(
+            `${machines.placeOf(machine).who ?? "That computer"} must be updated before it runs a change whose check and repair declarations it does not understand.`,
+          );
         if (record?.shape?.result_schema && !machines.takesResults?.(machine))
           throw new Error(
             `${this.options.machines?.placeOf(machine).who ?? "That computer"} must be updated before it runs a task whose report carries a typed result.`,
@@ -7781,48 +7771,16 @@ export class CrewSupervisor {
       );
       return;
     }
-    // A findings verdict is one round per version/evidence pair (captain ruling,
-    // 2026-09-19): a stated verdict at a pair already counted - a repeat
-    // of the same review - records the verdict without spending a round,
-    // so only real re-reviews walk toward the cap.
-    const pair = validationPair(sha, review.delivery?.validationAssignment?.revision ?? 0);
-    const countedPairs =
-      builder.delivery?.reviewRoundPairs ??
-      (builder.delivery?.reviewRoundSha
-        ? [validationPair(builder.delivery.reviewRoundSha, 0)]
-        : []);
-    const newHead = !countedPairs.includes(pair);
-    const rounds =
-      parsed.verdict === "findings" && newHead
-        ? (builder.delivery?.reviewRounds ?? 0) + 1
-        : undefined;
-    this.options.tasks.recordChangeEvidence(
-      builder.id,
-      {
-        ...facts,
-        ...(rounds !== undefined ? { reviewRounds: rounds } : {}),
-        ...(rounds !== undefined && sha
-          ? { reviewRoundSha: sha, reviewRoundPairs: [...countedPairs, pair] }
-          : {}),
+    // The verdict is recorded without a host-owned review allowance.
+    this.options.tasks.recordChangeEvidence(builder.id, facts, {
+      kind: "review",
+      text: `review ${parsed.verdict} at ${shortSha}, ${riskText}${blockedReason ? ` - ${blockedReason}` : ""}`,
+      feed: false,
+      data: {
+        reviewTaskId: task.id,
+        ...(blockedReason ? { validationReason: blockedReason } : {}),
       },
-      {
-        kind: "review",
-        text: `review ${parsed.verdict} at ${shortSha}, ${riskText}${
-          rounds !== undefined ? ` - findings round ${rounds}` : ""
-        }${parsed.verdict === "findings" && !newHead ? " - same head, round not counted" : ""}${blockedReason ? ` - ${blockedReason}` : ""}`,
-        feed: false,
-        data: {
-          reviewTaskId: task.id,
-          ...(blockedReason ? { validationReason: blockedReason } : {}),
-        },
-      },
-    );
-    const capped =
-      this.policiesOf(this.options.tasks.get(builder.id))?.rigor.value === "reviewed" &&
-      rounds !== undefined &&
-      reviewCapReached(rounds) &&
-      builder.delivery?.reviewCapAt === undefined &&
-      !overridePasses(builder.delivery, "rounds", builder.delivery?.headSha);
+    });
     const history = earlierHistory(
       reviewHistory(this.options.tasks, this.options.tasks.get(builder.id) ?? builder),
     );
@@ -7843,19 +7801,7 @@ export class CrewSupervisor {
       ...(blockedReason ? { validationReason: blockedReason } : {}),
       ...(history.length > 0 ? { history } : {}),
     };
-    this.hooks.notifyOp(
-      capped
-        ? this.ladder.holdForReviewCap(
-            builder,
-            rounds,
-            at,
-            verdict,
-            reviewCapOwner(parsed.findings),
-          )
-        : { facts: verdict },
-      "crewmate-report",
-      task.id,
-    );
+    this.hooks.notifyOp({ facts: verdict }, "crewmate-report", task.id);
   }
 
   /**
@@ -8104,23 +8050,7 @@ export class CrewSupervisor {
     // A reply the captain typed under a card: the record reads the captain's words in the message.
     const words = replyWordsSpan(body);
     const source = words ? { ...given, words } : given;
-    // A re-review past the review cap (phase 3) is refused as text: the
-    // builder's decision card is the way out, and a steer to the builder
-    // reopens the rounds - nothing is lost, the guidance just has a door.
     const reviewBuilder = this.reviewBuilderOf(this.options.tasks.get(taskId));
-    if (
-      reviewBuilder &&
-      reviewBuilder.delivery?.reviewCapAt !== undefined &&
-      !overridePasses(reviewBuilder.delivery, "rounds", reviewBuilder.delivery.headSha)
-    ) {
-      throw new Error(
-        `Task ${taskId} is the review of task ${reviewBuilder.id}, which hit its review cap (${reviewBuilder.delivery.reviewRounds ?? 0} findings rounds; the cap is ${REVIEW_ROUND_CAP} re-reviews): ${reviewBuilder.delivery.reviewCapOwner === "firstmate" ? `steer task ${reviewBuilder.id} with the fixes or your decision to reopen its rounds before re-reviewing` : `no re-review goes out until the captain answers the decision card on task ${reviewBuilder.id} and you steer task ${reviewBuilder.id} with the answer, which reopens the rounds.`} ${softHoldWords("rounds", "firstmate")}`,
-      );
-    }
-    // The captain's close of a card is not his answer to a cap.
-    if (typeof body === "string" || body.facts.kind !== "card-closed") {
-      this.ladder.resetCapsOnSteer(taskId, source);
-    }
     const hasImages = Boolean(images?.length);
     const withPictures = (guidance: WakeBody): WakeBody =>
       attachments?.length
@@ -8832,7 +8762,6 @@ export class CrewSupervisor {
       },
     );
     this.overrideNoticed(taskId, override);
-    this.ladder.reopenForOverride(taskId, holds);
     // His kept merge click reads the same record: one waiting on a hold his
     // words pass runs now (a no-op when none stands).
     void this.settle.runMergeAuthorization(taskId).catch((caught: unknown) => {
@@ -9672,7 +9601,8 @@ export class CrewSupervisor {
         (action) =>
           settleEffectOf(action) || requestMergeEffectOf(action) || requestWriteEffectOf(action),
       ) &&
-      record?.delivery?.ci === "green" &&
+      currentCheckStatus(record?.delivery) === "green" &&
+      record?.delivery &&
       (record.delivery.changeLabel || record.delivery.prNumber !== undefined)
         ? ` No button on this card can merge ${record.delivery.changeLabel ?? `#${record.delivery.prNumber}`}. If the rest needs that merged first, file it as Continue: … and emit the completion decision.`
         : "";
@@ -10095,27 +10025,9 @@ export class CrewSupervisor {
   }
 
   /**
-   * The standing CI rule's counterpart for a crewmate's own completion card
-   * (FIRSTMATE_PROMPT_CORE: "Not green: ... no captain card. ... Otherwise
-   * the crewmate's completion card is the decision"). That rule only fires
-   * when the Firstmate agent processes a crewmate's `report`; a completion
-   * card reaches the captain straight through `emit_card`, on the
-   * crewmate's own turn, without passing through the Firstmate at all - so
-   * without this, a card carrying a merge default could show "CI not yet
-   * checked" right alongside a captain review it never should have reached.
-   * Runs the same live check_pr_ci lookup right before publish, so a stale
-   * or missing reading can never let a red or pending build masquerade as a
-   * ready review. Returns undefined (no gate) when `checkCi` is not wired
-   * (tests, replay) or the card carries no merge decision on a direct-pr
-   * task; otherwise a promise that resolves `checked` once CI reads green,
-   * or rejects with the tool's refusal text.
-   *
-   * One exception (INF-834 friction 4): a revision of the completion card
-   * already on the captain's stack goes up while the checks still run, so
-   * his reply is answered in the card's own words at once. It resolves
-   * `running`: the revision's offer is kept at the version whose checks
-   * run, so its button reads Merge when checks pass and a click waits on
-   * them (`mergeLabel`, the kept approval); a new card still waits for green.
+   * Read the offered change before binding the card to its exact version.
+   * The offer itself is the crew's judgment; only actual check facts hold
+   * its merge, and the captain still gives separate consent at the click.
    */
   private pendingCiGate(
     taskId: string,
@@ -10132,40 +10044,28 @@ export class CrewSupervisor {
     }
     const carriesMerge = input.actions.some((action) => settleEffectOf(action)?.mode === "merge");
     if (!carriesMerge || this.taskDelivery(taskId) !== "direct-pr") return undefined;
-    // The CI cap holds the card whatever CI says now (phase 3): the record
-    // is what the captain's decision is about, and a green after the cap
-    // is a fourth round, not an answer. Checked before the live reading so
-    // a held card costs no gh call, and again after it, because the
-    // reading that just landed may be the round that reached the cap.
-    const held = this.ciCapRefusal(taskId);
-    if (held) return Promise.reject(held);
     if (!this.options.checkCi) return undefined;
-    return this.options.checkCi(taskId).then((overall) => {
-      const capped = this.ciCapRefusal(taskId);
-      if (capped) throw capped;
-      // A pull request merged outside the app has nothing left to check:
-      // the captain's click closes the task as merged (FI3-213).
-      if (overall === "green" || overall === "merged") return "checked";
-      // The captain's override on the checks lets the card go up at the
-      // version it covers; the merge reads the same record.
-      const delivery = this.options.tasks.get(taskId)?.delivery;
-      if (overall !== "no-pr" && overridePasses(delivery, "checks", delivery?.headSha))
-        return "checked";
-      if (overall === "pending" && this.cards.openCompletionCard(taskId, input.id))
-        return "running";
-      // A crewmate stopped only by failed checks it has read and diagnosed
-      // puts its card up (INF-1137 friction 6): the checks still hold the
-      // merge, and the card offers Merge anyway beside it for the captain.
-      if (overall === "red" && diagnosedRed(this.options.tasks.get(taskId)?.delivery))
-        return "checked";
-      const state = overall === "no-pr" ? "nothing - no open PR was found" : CHECK_WORDS[overall];
-      throw new CardRefusedError(
-        `Card refused: the checks read ${state}, not passed; a merge decision must wait. Re-check them with the repository's own check tools, fix or wait, and emit the completion card again once they pass.${overall === "red" ? " If they still fail after you tried, it goes up once every failed check at this version carries your diagnosis (check_change diagnosis), and the app offers Merge anyway on it." : ""}${this.waitingReplyNote(taskId)}${overall === "no-pr" ? "" : ` ${softHoldWords("checks", "crewmate")}`}`,
-        "checks",
-        overall === "no-pr"
-          ? "no open pull request was found for its branch"
-          : `its checks read ${state}, not passed`,
-      );
+    return this.options.checkCi(taskId).then((result) => {
+      const read =
+        typeof result === "string"
+          ? { overall: result, recorded: true, problem: undefined }
+          : result;
+      if (!read.recorded || read.overall === "no-pr") {
+        const why =
+          read.problem ??
+          (read.overall === "no-pr"
+            ? "no open pull request was found for its branch"
+            : "the proposed change could not be read");
+        throw new CardRefusedError(
+          `Card refused: ${why}. Read the proposed change before offering its exact version.${this.waitingReplyNote(taskId)}`,
+          "checks",
+          why,
+        );
+      }
+      // Captain INF-1555 F12: the offer is the crew's judgment.
+      // Pending, failed or partially unreadable checks remain facts on the
+      // card and holds at the click, never a second readiness declaration.
+      return read.overall === "pending" ? ("running" as const) : ("checked" as const);
     });
   }
 
@@ -10177,7 +10077,7 @@ export class CrewSupervisor {
    */
   private waitingReplyNote(taskId: string): string {
     return this.cards.threadAwaitingAuthor(taskId)
-      ? " The captain's reply in your card's thread is still unanswered: answer it now with reply, in one line saying what you did and who goes next, and update the card once the checks pass."
+      ? " The captain's reply in your card's thread is still unanswered: answer it now with reply, in one line saying what you did and who goes next, and update the card once the proposed change can be read."
       : "";
   }
 
@@ -10195,19 +10095,6 @@ export class CrewSupervisor {
     if (this.isPersonalTask(task.id) || this.deliverableOf(record) !== "change") return;
     if (record.shape?.in_place) return;
     this.options.tasks.recordCardRefusal(task.id, refusal);
-  }
-
-  /** The completion card's refusal while the CI cap holds, or undefined. */
-  private ciCapRefusal(taskId: string): CardRefusedError | undefined {
-    const delivery = this.options.tasks.get(taskId)?.delivery;
-    if (delivery?.ciCapAt === undefined) return undefined;
-    if (overridePasses(delivery, "repairs", delivery.headSha)) return undefined;
-    const rounds = delivery.ciRounds ?? CI_ROUND_CAP;
-    return new CardRefusedError(
-      `Card refused: this task hit its CI cap - ${rounds} own repairs failed (the cap is ${CI_ROUND_CAP}) - so its completion card is held, even with CI green now, until the captain answers the decision card on it and the first mate steers you with the answer. Report where CI stands with report and wait for that steer. ${softHoldWords("repairs", "crewmate")}`,
-      "ci-cap",
-      `it hit its CI cap (${rounds} own repairs failed), so the card is held until the captain answers`,
-    );
   }
 
   /**
@@ -10723,65 +10610,39 @@ export class CrewSupervisor {
       );
     }
     this.readChangeLines(record);
-    // What the host is holding on this task, drawn from its own records
-    // (contract v3.6, captain lock 3): the rounds each cap counts, as marks
-    // after the cell they belong to (INF-1501), and the head CI last went
-    // red on. The prompts used to ask an agent to type a count it cannot
-    // see; here the captain reads it off the card.
-    const rounds = record.delivery;
-    const ciMarks = rounds?.ciRounds
-      ? factRoundsSvg(rounds.ciRounds, CI_ROUND_CAP, rounds.ciCapAt !== undefined)
-      : "";
-    const ciRoundTitle = rounds?.ciRounds
-      ? `${rounds.ciCapAt !== undefined ? "held at " : ""}${roundWords(rounds.ciRounds, CI_ROUND_CAP)}${rounds.ciRedHead ? `, the checks last failed at ${rounds.ciRedHead.slice(0, 7)}` : ""}`
-      : undefined;
-    const joinTitle = (...parts: (string | undefined)[]) =>
-      parts.filter((part) => part).join(" · ") || undefined;
     const ci = record.delivery?.ci;
+    const observed = record.delivery ? currentCheckSummary(record.delivery) : undefined;
     const ciAt = record.delivery?.ciAt;
-    if (ci && ciAt !== undefined) {
+    if ((ci || observed) && ciAt !== undefined) {
       // How long the checks ran or took and how long ago they finished, in
       // the open; when they started and when the app last read them, on
       // rest (INF-587). The host rewrites the strip on every tick, so both
       // ages stay current while the card is up.
       const span = record.delivery ? checksSpanOf(record.delivery) : null;
-      const words = CHECK_WORDS[ci] ?? ci;
+      const words = observed?.words ?? (ci ? CHECK_WORDS[ci] : CHECKS_NOT_READ_WORDS);
       const dot =
-        ci === "green" || ci === "merged"
+        observed?.dot ??
+        (ci === "green" || ci === "merged"
           ? "ok"
           : ci === "red"
             ? "failed"
             : ci === "pending"
               ? "running"
-              : "idle";
+              : "idle");
       cell(
         "checks",
         "Checks",
-        `${statusDot(dot)}${span ? checksSpanWords(words, span, this.now()) : words}${span?.finishedAt != null ? ` · ${checksFinishedAgo(span.finishedAt, this.now())}` : ""}${ciMarks}`,
-        joinTitle(checksRestWords(span, ciAt), ciRoundTitle),
+        `${statusDot(dot)}${span ? checksSpanWords(words, span, this.now()) : words}${span?.finishedAt != null ? ` · ${checksFinishedAgo(span.finishedAt, this.now())}` : ""}`,
+        checksRestWords(span, ciAt),
       );
-    } else if (delivery === "direct-pr" || ciMarks) {
-      cell(
-        "checks",
-        "Checks",
-        `${statusDot("idle")}${CHECKS_NOT_READ_WORDS}${ciMarks}`,
-        ciRoundTitle,
-      );
+    } else if (delivery === "direct-pr") {
+      cell("checks", "Checks", `${statusDot("idle")}${CHECKS_NOT_READ_WORDS}`);
     }
     // The independent review's word on a reviewed task (delivery rigor
     // phase 2): the verdict and the head it read, the risk beside CI and
     // never a hold (Q4), or where the review stands while it is live.
     if (this.policiesOf(record)?.rigor.value === "reviewed") {
       const review = record.delivery;
-      // The findings rounds the review cap counts, the same way as the
-      // checks' rounds (INF-1501).
-      const lookHeld = review?.reviewCapAt !== undefined;
-      const lookMarks = review?.reviewRounds
-        ? factRoundsSvg(review.reviewRounds, REVIEW_ROUND_CAP, lookHeld)
-        : "";
-      const lookRoundTitle = review?.reviewRounds
-        ? `${lookHeld ? "held at " : ""}findings ${roundWords(review.reviewRounds, REVIEW_ROUND_CAP)}`
-        : undefined;
       if (review?.reviewVerdict) {
         const at = review.reviewSha
           ? ` <span class="inf-mono">${escapeCardText(review.reviewSha.slice(0, 7))}</span>`
@@ -10790,13 +10651,13 @@ export class CrewSupervisor {
         cell(
           "review",
           "Review",
-          `${statusDot(review.reviewVerdict === "pass" ? "ok" : review.reviewVerdict === "blocked" ? "failed" : "warn")}${REVIEW_WORDS[review.reviewVerdict]}${at}${risk}${lookMarks}`,
-          joinTitle(review.reviewRiskNote, lookRoundTitle),
+          `${statusDot(review.reviewVerdict === "pass" ? "ok" : review.reviewVerdict === "blocked" ? "failed" : "warn")}${REVIEW_WORDS[review.reviewVerdict]}${at}${risk}`,
+          review.reviewRiskNote,
         );
       } else if (this.openReviewOf(record.id)) {
-        cell("review", "Review", `${statusDot("running")}open${lookMarks}`, lookRoundTitle);
+        cell("review", "Review", `${statusDot("running")}open`);
       } else {
-        cell("review", "Review", `${statusDot("idle")}awaiting${lookMarks}`, lookRoundTitle);
+        cell("review", "Review", `${statusDot("idle")}awaiting`);
       }
     }
     // The captain's standing override (docs/delivery-rigor.md, "The
@@ -13926,11 +13787,10 @@ export class CrewSupervisor {
   }
 
   /**
-   * What a completion card's merge says it does (INF-23): a click on checks
-   * still running keeps the captain's approval and the host merges once
-   * they pass, so it reads Merge when checks pass; on failed checks the
-   * approval waits for a fix, so it reads Merge after fixing errors;
-   * otherwise Merge the pull request. The captain's override on the checks
+   * What a completion card's merge says it does (captain INF-1555 F12):
+   * pending checks keep the captain's approval and read Merge when checks pass;
+   * failed checks read Merge after fixing errors (captain INF-1555 F20);
+   * otherwise Merge the pull request. Raw check results remain separate. The captain's override on the checks
    * at the card's version passes either, so a click merges now and it reads
    * Merge the pull request (INF-756). Undefined - the label as it stands -
    * on a card whose click approves nothing (`approvableOffer`), where a
@@ -13948,7 +13808,7 @@ export class CrewSupervisor {
     const head = offer.baseline.headSha;
     if (record.delivery?.headSha === head && overridePasses(record.delivery, "checks", head))
       return MERGE_WORDS["merge-pr"];
-    const ci = record.delivery?.ci;
+    const ci = currentCheckStatus(record.delivery);
     if (ci === "red") return MERGE_AFTER_FIXING_WORDS;
     return ci === "pending" ? MERGE_WHEN_CHECKS_PASS_WORDS : MERGE_WORDS["merge-pr"];
   }
@@ -13956,13 +13816,13 @@ export class CrewSupervisor {
   /**
    * Whether a completion card offers Merge anyway beside its merge
    * (INF-1137 friction 6): on an offer a click would approve, while the
-   * pull request is still at the card's version and its checks there read
-   * failed, and the captain's override does not already pass them. Once
-   * they pass, or a new version comes, it goes.
+   * pull request is still at the card's version and its checks failed,
+   * and the captain's override does not already pass them.
+   * It goes when the checks no longer fail or a new version comes.
    */
   private mergeAnyway(card: Card): boolean {
     const record = card.taskId ? this.options.tasks.get(card.taskId) : undefined;
-    if (!record || record.delivery?.ci !== "red") return false;
+    if (!record?.delivery || currentCheckStatus(record.delivery) !== "red") return false;
     const repo = record.repoId ? this.options.repos.get(record.repoId) : undefined;
     const offer = approvableOffer(record, repo, this.taskDelivery(record.id), {
       cardId: card.id,

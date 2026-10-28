@@ -76,6 +76,18 @@
   min-width: 0;
   white-space: nowrap;
 }
+/* INF-1555 F14: the refusal's reason remains inside the summary/record, not outside its edge. */
+.fm-task-facts .cell [data-check-read-problem] {
+  align-items: flex-start;
+  white-space: normal;
+}
+.fm-task-facts [data-check-read-problem] [data-task-fact-checks] {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.fm-task-facts [data-check-read-problem] > .dot {
+  margin-top: var(--space-1);
+}
 /* A value too long for its cell (a model's name) ends in an ellipsis; its title has it whole. */
 .fm-task-facts .cell [data-task-fact="model"],
 .fm-task-facts .cell [data-task-fact="change"] {

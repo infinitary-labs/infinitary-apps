@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { existsSync } from "node:fs";
 import { type Card, settleEffectOf } from "@shared/cards";
+import { currentCheckStatus } from "@shared/checkSnapshot";
 import { HERE } from "@shared/deviceNames";
 import type { FmEvent } from "@shared/events";
 import type { FolderNoticed, FolderRefreshRefusal } from "@shared/folderRefresh";
@@ -18,12 +19,11 @@ import { MERGE_WORDS } from "@shared/vocabulary";
 import { type ForgePull, forgeLocationOf, signInRefusal } from "../forge";
 import { CAREFUL_LIVE_VALIDATION } from "../prompts/liveValidation";
 import { FIRSTMATE_RECIPIENT, type InboxStore } from "../storage/inboxStore";
-import {
-  type MergeAuthorization,
-  type MergeWait,
-  type PendingSettleIntent,
-  standingCap,
-  type TaskRecord,
+import type {
+  MergeAuthorization,
+  MergeWait,
+  PendingSettleIntent,
+  TaskRecord,
 } from "../storage/taskStore";
 import { type SettleRefusal, type SettleWay, TaskService } from "../tasks/taskService";
 import type { RepoRegistry } from "../workspace/repoRegistry";
@@ -106,7 +106,7 @@ export type SettleOutcome = {
   problem?: string;
   /** The reason in the app's words, where `text` carries raw detail that is not a failure. */
   plain?: string;
-  /** The merge was refused only because the checks had not all passed. */
+  /** The merge was refused only because current readiness was not established. */
   notGreen?: boolean;
   /** Why a merge under the captain's kept approval stopped (`MergeStop`). */
   stop?: MergeStop;
@@ -567,11 +567,6 @@ export class SettleService {
       if (gate) return gate.text;
       const autonomy = this.autonomyRefusal(record, mode, actor);
       if (autonomy) return autonomy.text;
-      const cap = standingCap(record.delivery);
-      if (cap) {
-        const hold = cap.held === "ci-cap" ? "repairs" : "rounds";
-        return `a repair allowance still needs the captain's answer. ${softHoldWords(hold, "firstmate")}`;
-      }
       // The version a version-long override is read at: the one being sent.
       const at = head ?? record.delivery?.headSha;
       if (actor === "firstmate" && !overridePasses(record.delivery, "decisions", at)) {
@@ -1107,7 +1102,7 @@ export class SettleService {
         const outcome = kept
           ? {
               ...result,
-              text: `${result.text}\n\n${keptNote(kept.wait, kept.head, this.placeOf(record))}`,
+              text: `${result.text}\n\n${keptNote(kept.wait, kept.head, this.placeOf(record), currentCheckStatus(this.host.tasks.get(taskId)?.delivery))}`,
             }
           : result;
         if (kept?.changed && unattended)
@@ -1120,7 +1115,7 @@ export class SettleService {
               record.title,
               kept.wait,
               this.placeOf(record),
-              this.host.tasks.get(taskId)?.delivery?.ci,
+              currentCheckStatus(this.host.tasks.get(taskId)?.delivery),
             ),
           });
         }
@@ -2070,7 +2065,10 @@ export class SettleService {
     const kept = authorization ? this.afterAttempt(taskId, authorization, result) : undefined;
     if (kept) {
       const place = this.placeOf(this.host.tasks.get(taskId));
-      result = { ...result, text: `${result.text}\n\n${keptNote(kept.wait, kept.head, place)}` };
+      result = {
+        ...result,
+        text: `${result.text}\n\n${keptNote(kept.wait, kept.head, place, currentCheckStatus(this.host.tasks.get(taskId)?.delivery))}`,
+      };
     }
     this.reportOutcome(taskId, title, mode, confirm, result, kept?.wait);
   }
@@ -2432,7 +2430,6 @@ export class SettleService {
       this.endAuthorization(record.id, "superseded", "its crewmate put up a new completion card");
       return { ended: true };
     }
-    if (standingCap(record.delivery)) return { wait: "cap" };
     if (outstandingGuidance(authorization) !== undefined) return { wait: "guidance" };
     if (authorization.undecided) {
       // Its crewmate could not judge the repair: one independent assessment
@@ -2535,7 +2532,7 @@ export class SettleService {
               title,
               checked.wait,
               this.placeOf(record),
-              this.host.tasks.get(taskId)?.delivery?.ci,
+              currentCheckStatus(this.host.tasks.get(taskId)?.delivery),
             ),
           },
           checked.wait,
@@ -2625,11 +2622,11 @@ export class SettleService {
     const place = this.placeOf(record);
     this.host.broadcastEvent({
       type: "firstmate_note",
-      text: keptFeedLine(title, wait, place, record?.delivery?.ci),
+      text: keptFeedLine(title, wait, place, currentCheckStatus(record?.delivery)),
     });
     this.wakeOnSettle(taskId, title, "merge-pr (kept)", {
       ...result,
-      text: `${result.text}\n\n${keptNote(wait, head, place)}${wait === "review" && record ? ` ${acceptedValidation(record.delivery?.liveValidation, head).reason}${this.host.tasks.briefContains(record.id, CAREFUL_LIVE_VALIDATION) ? "" : ` Relay this missing contract to the builder: ${CAREFUL_LIVE_VALIDATION}`}` : ""}`,
+      text: `${result.text}\n\n${keptNote(wait, head, place, currentCheckStatus(record?.delivery))}${wait === "review" && record ? ` ${acceptedValidation(record.delivery?.liveValidation, head).reason}${this.host.tasks.briefContains(record.id, CAREFUL_LIVE_VALIDATION) ? "" : ` Relay this missing contract to the builder: ${CAREFUL_LIVE_VALIDATION}`}` : ""}`,
     });
   }
 
@@ -2801,7 +2798,7 @@ export class SettleService {
             title,
             kept,
             this.placeOf(this.host.tasks.get(taskId)),
-            this.host.tasks.get(taskId)?.delivery?.ci,
+            currentCheckStatus(this.host.tasks.get(taskId)?.delivery),
           )
         : settleFeedLine(title, mode, result),
     });

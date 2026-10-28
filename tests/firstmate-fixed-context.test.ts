@@ -599,11 +599,6 @@ const LEDGER: { rule: string; home: Home; says: string }[] = [
     home: { wake: "captain queue" },
     says: "Do not start it: the host starts it when its wait ends.",
   },
-  {
-    rule: "a capped task's card and re-reviews wait for the steer",
-    home: { wake: "ci cap" },
-    says: "Its completion card and its re-reviews are held until the captain answers and your steer reopens its rounds.",
-  },
   // INF-547's closing sentence: settle_task and the core no longer restate each other.
   {
     rule: "a settle names the task id from crew_status",

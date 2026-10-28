@@ -72,6 +72,116 @@ function setup() {
 }
 
 describe("CheckWatcher", () => {
+  // INF-1555 F21: a refused reading ends or reports through the existing unreadable path, never a running timeout.
+  it.each([true, false])(
+    "reports a refusal once without a running watch (already watched: %s)",
+    async (watched) => {
+      const { tasks, start, answer, at, steers, watch } = setup();
+      const problem = "GitHub refused access to the remaining checks.";
+      seedDelivery(tasks, "t1", {
+        ci: "pending",
+        ciAt: start,
+        prNumber: 7,
+        ciWatch: watched ? armWatch(undefined, HEAD, start) : undefined,
+        ciObservation: { id: "refused-list", signature: "refused-list", forwarded: false },
+      });
+      answer({ kind: "failed", transient: false, problem, observationId: "refused-list" });
+      await at(minutes(watched ? 1 : 5));
+      expect(steers).toHaveLength(1);
+      expect(steers[0]?.facts).toMatchObject({
+        kind: "checks-settled",
+        outcome: "unreadable",
+        problem,
+      });
+      expect(renderWake(steers[0]!)).not.toContain("still running");
+      expect(watch()).toBeUndefined();
+      expect(tasks.get("t1")?.delivery?.ciObservation?.forwarded).toBe(true);
+      await at(CHECK_WATCH_BOUND_MS + minutes(5));
+      expect(steers).toHaveLength(1);
+    },
+  );
+
+  it("forwards an unacknowledged observation once across restart, without deciding readiness (INF-1177 piece 0)", async () => {
+    const { tasks, inbox, at, start, answer, steers } = setup();
+    seedDelivery(tasks, "t1", {
+      ciWatch: undefined,
+      ci: "green",
+      ciAt: start,
+      prNumber: 7,
+      ciObservation: { id: "observation-one", signature: "failed-check-reading", forwarded: false },
+    });
+    const reading: WatchedReading = {
+      kind: "finished",
+      observationId: "observation-one",
+      head: HEAD,
+      change: "PR #7",
+      checks: [{ name: "linux-checks", state: "failure" }],
+    };
+    answer(reading);
+    await at(minutes(5));
+    expect(steers).toHaveLength(1);
+    expect(steers[0]).toMatchObject({
+      once: "check-observation:observation-one",
+      facts: { kind: "checks-settled", outcome: "observed", checks: reading.checks },
+    });
+    expect(tasks.get("t1")?.delivery).toMatchObject({
+      ci: "green",
+      ciObservation: { forwarded: true },
+    });
+    // The inbox committed, but a crash preceded the delivery acknowledgement.
+    seedDelivery(tasks, "t1", {
+      ciObservation: { id: "observation-one", signature: "failed-check-reading", forwarded: false },
+    });
+    const restarted = new CheckWatcher({
+      tasks,
+      inbox,
+      read: async () => reading,
+      steer: async (_id, wake) => {
+        steers.push(wake);
+      },
+    });
+    await restarted.poll(start + minutes(10));
+    expect(steers).toHaveLength(1);
+    expect(tasks.get("t1")?.delivery?.ciObservation?.forwarded).toBe(true);
+    await restarted.poll(start + minutes(15));
+    expect(steers).toHaveLength(1);
+  });
+
+  it("does not repeat a watched finish as a quiet-refresh notice after a restart (INF-1177 piece 0)", async () => {
+    const { tasks, inbox, at, start, answer, steers } = setup();
+    seedDelivery(tasks, "t1", {
+      ci: "pending",
+      ciAt: start,
+      prNumber: 7,
+      ciObservation: { id: "watched-finish", signature: "finished-reading", forwarded: false },
+    });
+    const reading: WatchedReading = {
+      kind: "finished",
+      observationId: "watched-finish",
+      head: HEAD,
+      change: "PR #7",
+      checks: [{ name: "linux-checks", state: "success" }],
+    };
+    answer(reading);
+    await at(minutes(1));
+    expect(steers).toHaveLength(1);
+    const receipt = tasks.get("t1")!.delivery!.ciObservation!;
+    expect(receipt.notice).toBe(steers[0]!.once);
+    seedDelivery(tasks, "t1", { ciObservation: { ...receipt, forwarded: false } });
+    const restarted = new CheckWatcher({
+      tasks,
+      inbox,
+      read: async () => reading,
+      steer: async (_id, wake) => {
+        steers.push(wake);
+      },
+    });
+    await restarted.poll(start + minutes(6));
+    expect(steers).toHaveLength(1);
+    expect(tasks.get("t1")!.delivery!.ciObservation!.forwarded).toBe(true);
+    expect(tasks.get("t1")!.delivery!.ci).toBe("pending");
+  });
+
   it("quietly refreshes finished checks, backs off refusals and stops on close", async () => {
     const { tasks, reads, steers, at, start, answer } = setup();
     seedDelivery(tasks, "t1", { ciWatch: undefined, ci: "green", ciAt: start, prNumber: 7 });
@@ -147,12 +257,10 @@ describe("CheckWatcher", () => {
       // The crewmate pushed and read the new head while the host was asking.
       seedDelivery(tasks, "t1", { ciWatch: newer });
       return {
-        kind: "settled",
-        overall: "green",
+        kind: "finished",
         head: HEAD,
         change: "PR #7",
-        count: 1,
-        failing: [],
+        checks: [{ name: "linux-checks", state: "success" }],
       };
     });
     await at(minutes(1));
@@ -165,12 +273,10 @@ describe("CheckWatcher", () => {
     answer(() => {
       tasks.close("t1", { status: "dropped", reason: "discarded", actor: "captain", text: "gone" });
       return {
-        kind: "settled",
-        overall: "green",
+        kind: "finished",
         head: HEAD,
         change: "PR #7",
-        count: 1,
-        failing: [],
+        checks: [{ name: "linux-checks", state: "success" }],
       };
     });
     await at(minutes(1));
@@ -182,7 +288,12 @@ describe("CheckWatcher", () => {
     const standing = watch();
     if (!standing) throw new Error("no watch armed");
     inbox.enqueueSteerOnce("t1", {
-      facts: { kind: "checks-settled", outcome: "passed", head: HEAD, count: 1 },
+      facts: {
+        kind: "checks-settled",
+        outcome: "finished",
+        head: HEAD,
+        checks: [{ name: "linux-checks", state: "success" }],
+      },
       once: checkWatchOnce(standing),
     });
     await at(minutes(1));

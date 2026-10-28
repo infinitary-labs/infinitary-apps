@@ -1877,7 +1877,6 @@ export async function createServices(
     // the app's own GitHub sign-in (PR 1.2), read at each request. A 401
     // asks the sign-in service to look again; its health read is the proof.
     forgeFor,
-    onCap: (taskId, facts) => supervisor.holdForCiCap(taskId, facts),
     onNote: (text, taskId) => broadcastEvent({ type: "firstmate_note", text, taskId }),
     bringBranchHome: (taskId, strict) => placed.bringBranchHome(taskId, strict),
     verifyValidationEvidence: (taskId): void => supervisor.verifyValidationEvidence(taskId),
@@ -2362,7 +2361,7 @@ export async function createServices(
     reviewGate: (taskId, reviewId) => prCi.reviewGate(taskId, reviewId),
     readPull: (taskId, prNumber) => prCi.pullState(taskId, prNumber),
     closePullRequest: (taskId) => prCi.close(taskId),
-    checkCi: (taskId) => prCi.checkOverall(taskId),
+    checkCi: (taskId) => prCi.readForOffer(taskId),
     prepareChange: (taskId, input) => prCi.preparePresentation(taskId, input),
     openChange: (taskId, input) => prCi.open(taskId, input),
     completionPresentation: (taskId, revision) => prCi.completionPresentation(taskId, revision),

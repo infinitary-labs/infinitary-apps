@@ -5,17 +5,10 @@ import { holdNames, type OverridableHold } from "@shared/holds";
 import { plainProblem, typedFailureOf } from "@shared/plainProblem";
 import { type SteerEventData, TASK_CARD_VIA } from "@shared/provenance";
 import { formatDurationShort } from "@shared/quotaSignals";
-import { CI_ROUND_CAP, REVIEW_ROUND_CAP } from "@shared/rigor";
 import type { ServedWakeOrigin } from "@shared/servedFrame";
 import { capWithOverflow } from "../overflow";
 import { FIRSTMATE_RECIPIENT, INBOX_ATTEMPT_MAX, type InboxStore } from "../storage/inboxStore";
-import {
-  type FirstmateAsk,
-  standingCap,
-  type TaskDelivery,
-  type TaskGate,
-  type TaskRecord,
-} from "../storage/taskStore";
+import type { FirstmateAsk, TaskDelivery, TaskGate, TaskRecord } from "../storage/taskStore";
 import { type DependencyWait, standingDependencyWaits } from "../tasks/dependencyWaits";
 import { builtOnRows } from "../tasks/taskQuery";
 import { TaskService } from "../tasks/taskService";
@@ -287,9 +280,7 @@ export class IdleLadder {
     // card the Firstmate owes. With no card up he has nothing to answer, so
     // its gate is a card the Firstmate owes as well (INF-11).
     const captainWait =
-      Boolean(record?.delivery?.captainWait) &&
-      !standingCap(record?.delivery) &&
-      (cardUp || gateCardUp || this.anyCardFor(taskId));
+      Boolean(record?.delivery?.captainWait) && (cardUp || gateCardUp || this.anyCardFor(taskId));
     // A browser in the captain's hands wakes its crewmate when he returns it.
     const browserWithCaptain = this.host.browserWithCaptain?.(taskId) === true;
     // Work its crewmate declared finished waits on his close of its own card
@@ -1099,13 +1090,12 @@ export class IdleLadder {
     return { facts };
   }
 
-  /** The hold a captain gate with no card behind it stands for: the cap's, or the gate's own. */
+  /** The reason a captain gate with no card behind it stands for. */
   private owedWake(record: TaskRecord, idleMs: number, wakes: number): TypedWake {
-    const cap = standingCap(record.delivery);
-    const reason = record.gate?.reason ?? cap?.reason;
+    const reason = record.gate?.reason;
     const facts: WakeFacts = {
       kind: "idle-owed",
-      held: cap?.held ?? "captain-gate",
+      held: "captain-gate",
       task: { id: record.id, title: record.title },
       ...(reason ? { reason } : {}),
       idleMs,
@@ -1180,28 +1170,11 @@ export class IdleLadder {
     const told = this.episodeNudged(record)
       ? "It was nudged once, and your first mate was told twice, and nothing has moved since."
       : "Your first mate was told twice, and nothing has moved since.";
-    // A task a standing cap holds has a question for the captain - the
-    // cap's, which the Firstmate never put to him - so its card says so.
-    // Nudge stays the nudge and is not the cap's answer
-    // (`resetCapsOnSteer`), so the words say what it does not do.
-    const cap = standingCap(record.delivery);
-    const modelWay = cap
-      ? crewHoldWays(record.id, record, undefined, this.host.premiumCanServe?.())
-          .find((way) => way.tool === "spawn_crewmate")
-          ?.label.toLowerCase()
-      : undefined;
-    const choices = modelWay ? `try again, ${modelWay}, or discard it` : "try again or discard it";
-    // A wait its crewmate declared with no card up is a question nobody put
-    // to him (INF-11): the card names it in the crewmate's words.
-    const wait = cap ? undefined : record.delivery?.captainWait;
-    const opening = cap
-      ? `<p>It has reached its limit of tries at ${cap.held === "review-cap" ? "getting through a review" : "getting the checks to pass"}, so it needs your call: ${choices}. Your first mate was told twice and has not asked you yet.</p>`
-      : wait
-        ? `<p>It waits on you to ${escapeCardText(wait.reason)}, and no card has asked you. ${told}</p>`
-        : `<p>It stopped with nothing running and no question for you. ${told}</p>`;
-    const nudges = cap
-      ? `Nudge tells it to say what is in its way; it does not give it more tries. To try again${modelWay ? ` or ${modelWay}` : ""}, reply here.`
-      : "Nudge tells it to finish or say what is in its way.";
+    const wait = record.delivery?.captainWait;
+    const opening = wait
+      ? `<p>It waits on you to ${escapeCardText(wait.reason)}, and no card has asked you. ${told}</p>`
+      : `<p>It stopped with nothing running and no question for you. ${told}</p>`;
+    const nudges = "Nudge tells it to finish or say what is in its way.";
     const card: Card = {
       id,
       taskId: record.id,
@@ -1215,7 +1188,7 @@ export class IdleLadder {
       body: [
         opening,
         lastLine,
-        `<p>${nudges} Keep waiting closes this alert and leaves the task as it is. Discard ends it and throws its work away.${cap ? "" : " For anything else, reply here."}</p>`,
+        `<p>${nudges} Keep waiting closes this alert and leaves the task as it is. Discard ends it and throws its work away. For anything else, reply here.</p>`,
       ].join(""),
       // The captain's choice on INF-1670: a reply here goes to the first
       // mate, which can always answer, and nuanced operations ride it.
@@ -1306,13 +1279,10 @@ export class IdleLadder {
   }
 
   private captainGateFor(record: TaskRecord): TaskGate | null {
-    const cap = standingCap(record.delivery);
-    const reason = cap ? { reason: cap.reason } : {};
     const cards = this.decisionCardsFor(record.id);
     const held = record.gate?.kind === "captain" ? record.gate.ref : undefined;
     const card = cards.find((entry) => entry.id === held) ?? newestCard(cards);
-    if (card) return { kind: "captain", ref: card.id, ...reason };
-    if (cap) return { kind: "captain", ...(cap.head ? { ref: cap.head } : {}), reason: cap.reason };
+    if (card) return { kind: "captain", ref: card.id };
     const wait = record.delivery?.captainWait;
     if (wait)
       return { kind: "captain", ...(wait.cardId ? { ref: wait.cardId } : {}), reason: wait.reason };
@@ -1322,206 +1292,6 @@ export class IdleLadder {
   private restartClock(record: TaskRecord, now: number): void {
     if (record.idleSince == null || (record.recoveryRung ?? 0) >= 3) return;
     this.host.tasks.recordRecovery(record.id, { rung: 0, count: 0, at: null, idleSince: now });
-  }
-
-  // ---- the caps -----------------------------------------------------------
-
-  /**
-   * The CI round cap was reached on a task (delivery rigor phase 3): the
-   * CI service counted the round and stamped `ciCapAt`, which places the
-   * captain gate on the task (ref the red head); this is the ONE `[fm-op]`
-   * the cap earns, asking the Firstmate for the decision card - retry, a
-   * stronger model on the captain's word, or discard. The completion card
-   * stays refused until the captain's answer and the Firstmate's steer
-   * reopen the rounds; when that card is raised the gate names it.
-   */
-  holdForCiCap(taskId: string, facts: { rounds: number; headSha: string }): void {
-    const record = this.host.tasks.get(taskId);
-    if (!record) return;
-    this.syncCaptainGate(taskId, this.host.now());
-    this.host.notifyOp(
-      ciCapWake(record, { ...facts, cap: CI_ROUND_CAP }, this.host.premiumCanServe?.()),
-      "agent",
-      taskId,
-    );
-  }
-
-  /**
-   * The review cap (phase 3), the CI cap's twin: a third findings verdict
-   * is one past the two re-reviews the tier allows. Stamps `reviewCapAt`
-   * on the builder with its owner (legacy absence means captain), and returns the
-   * `findings` wake with the cap riding it, so the cap is one wake and not
-   * a second; a re-review steer to the review task is refused while it
-   * holds. Only a captain-owned cap places the captain gate.
-   */
-  holdForReviewCap(
-    builder: TaskRecord,
-    rounds: number,
-    at: number,
-    findings: ReviewVerdictFacts,
-    owner: "firstmate" | "captain" = "captain",
-  ): TypedWake {
-    this.host.tasks.recordChangeEvidence(builder.id, { reviewCapAt: at, reviewCapOwner: owner });
-    this.syncCaptainGate(builder.id, at);
-    return reviewCapWake(
-      builder,
-      { rounds, cap: REVIEW_ROUND_CAP, findings, owner },
-      this.host.premiumCanServe?.(),
-    );
-  }
-
-  /**
-   * The captain's answer to a Firstmate decision card on a capped task
-   * (phase 3): `capAnsweredAt` is the gate's release, the fact the
-   * reopening steer needs. A dismissal is not an answer, and a crewmate's
-   * own card is not the cap's decision.
-   */
-  noteCapAnswered(
-    card: Card,
-    action: string,
-    by: "captain" | "firstmate" | "crewmate",
-    firstmateCard: boolean,
-  ): void {
-    if (!card.taskId || by !== "captain" || !firstmateCard) return;
-    if (action === "dismissed" || action === "closed") return;
-    if (!standingCap(this.host.tasks.get(card.taskId)?.delivery)) return;
-    this.host.tasks.recordChangeEvidence(card.taskId, { capAnsweredAt: this.host.now() });
-  }
-
-  /**
-   * A cap is answered when the captain resolves a Firstmate decision card
-   * on the task after the cap was reached (`noteCapAnswered`), or steers
-   * the task in person; the Firstmate's steer that follows - the answer,
-   * relayed - reopens the rounds. Both counters and both caps clear
-   * together: the decision was about the task, not about one counter, and
-   * a lineage that starts over starts over whole. The `cap_reset` event
-   * records who reopened it, and the captain gate goes with the caps. The
-   * Nudge on the stall card or Continue on the task card is the captain's steer but
-   * not the cap's answer: neither put the cap's decision to him, so the cap
-   * stands.
-   */
-  resetCapsOnSteer(
-    taskId: string,
-    source: {
-      actor: "firstmate" | "captain" | "supervisor";
-      via: SteerEventData["via"];
-      cardId: string | null;
-    },
-  ): void {
-    const actor = source.actor;
-    if (actor === "supervisor" || source.via === TASK_CARD_VIA) return;
-    if (source.cardId === stallCardId(taskId)) return;
-    const record = this.host.tasks.get(taskId);
-    const delivery = record?.delivery;
-    if (!record || !delivery) return;
-    // Delegated review caps never authorize reopening the independent CI cap.
-    if (
-      actor === "firstmate" &&
-      delivery.reviewCapAt !== undefined &&
-      delivery.reviewCapOwner === "firstmate"
-    ) {
-      this.host.tasks.recordChangeEvidence(
-        taskId,
-        {
-          reviewRounds: undefined,
-          reviewRoundSha: undefined,
-          reviewCapAt: undefined,
-          reviewCapOwner: undefined,
-        },
-        {
-          kind: "cap_reset",
-          actor,
-          feed: true,
-          text: "The first mate reopened the review rounds: the findings need no captain decision.",
-        },
-      );
-      this.syncCaptainGate(taskId, this.host.now());
-      return;
-    }
-    const capAt = Math.max(delivery.ciCapAt ?? 0, delivery.reviewCapAt ?? 0);
-    if (capAt === 0) return;
-    const answered =
-      actor === "captain" ||
-      (delivery.capAnsweredAt !== undefined && delivery.capAnsweredAt >= capAt);
-    if (!answered) return;
-    const held = [
-      ...(delivery.ciCapAt !== undefined ? [`checks cap (${delivery.ciRounds ?? 0} rounds)`] : []),
-      ...(delivery.reviewCapAt !== undefined
-        ? [`review cap (${delivery.reviewRounds ?? 0} findings rounds)`]
-        : []),
-    ].join(" and ");
-    this.host.tasks.recordChangeEvidence(
-      taskId,
-      {
-        ciRepair: delivery.ciRepair ? { ...delivery.ciRepair, rerun: undefined } : undefined,
-        ciRounds: undefined,
-        ciRedHead: undefined,
-        ciCapAt: undefined,
-        reviewRounds: undefined,
-        reviewRoundSha: undefined,
-        reviewRoundPairs: undefined,
-        reviewCapAt: undefined,
-        reviewCapOwner: undefined,
-        capAnsweredAt: undefined,
-      },
-      {
-        kind: "cap_reset",
-        text: `rounds reopened by ${actor === "captain" ? "the captain" : "the first mate"}'s steer after the captain's answer - ${held} reset`,
-        actor,
-        feed: false,
-      },
-    );
-    this.syncCaptainGate(taskId, this.host.now());
-  }
-
-  /**
-   * The captain's override on the repair, re-review or rerun limit reopens
-   * it at once (docs/delivery-rigor.md, "The holds"): the counters it names
-   * clear as an answered steer clears them, with one `cap_reset` row, and
-   * the captain gate goes with the cap. While the override lasts, the caps
-   * it names do not place again (`standingCap`, `observeCheckRepair`).
-   */
-  reopenForOverride(taskId: string, kinds: readonly OverridableHold[]): void {
-    const delivery = this.host.tasks.get(taskId)?.delivery;
-    if (!delivery) return;
-    const patch: Partial<TaskDelivery> = {};
-    const reopened: OverridableHold[] = [];
-    if (
-      kinds.includes("repairs") &&
-      (delivery.ciRounds !== undefined || delivery.ciCapAt !== undefined)
-    ) {
-      Object.assign(patch, { ciRounds: undefined, ciRedHead: undefined, ciCapAt: undefined });
-      reopened.push("repairs");
-    }
-    if (
-      kinds.includes("rounds") &&
-      (delivery.reviewRounds !== undefined || delivery.reviewCapAt !== undefined)
-    ) {
-      Object.assign(patch, {
-        reviewRounds: undefined,
-        reviewRoundSha: undefined,
-        reviewRoundPairs: undefined,
-        reviewCapAt: undefined,
-        reviewCapOwner: undefined,
-      });
-      reopened.push("rounds");
-    }
-    if (kinds.includes("rerun") && delivery.ciRepair?.rerun) {
-      patch.ciRepair = { ...delivery.ciRepair, rerun: undefined };
-      reopened.push("rerun");
-    }
-    if (reopened.length === 0) return;
-    this.host.tasks.recordChangeEvidence(
-      taskId,
-      { ...patch, capAnsweredAt: undefined },
-      {
-        kind: "cap_reset",
-        text: `the captain's override reopened ${holdNames(reopened)}`,
-        actor: "firstmate",
-        feed: false,
-      },
-    );
-    this.syncCaptainGate(taskId, this.host.now());
   }
 
   // ---- the ready sweep ----------------------------------------------------

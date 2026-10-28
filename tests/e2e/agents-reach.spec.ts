@@ -300,19 +300,21 @@ test("the captain's words pass a soft hold once on the record, a fixed limit ref
       await send(REREVIEW_PROMPT_MARKER);
       await expect
         .poll(() => detail(builder.id), { timeout: 30_000 })
-        .toMatchObject({ delivery: expect.objectContaining({ reviewRounds: round }) });
+        .toMatchObject({
+          delivery: expect.objectContaining({ reviewSha: reviewed, reviewVerdict: "findings" }),
+        });
     }
     await expect
       .poll(() => detail(builder.id), { timeout: 30_000 })
       .toMatchObject({
-        delivery: expect.objectContaining({ reviewCapAt: expect.any(Number), reviewSha: reviewed }),
+        delivery: expect.objectContaining({ reviewSha: reviewed, reviewVerdict: "findings" }),
       });
-    const capCard = await cardTitled(MOCK_REVIEW_CAP_CARD_TITLE);
+    const capCard = await cardTitled(MOCK_REVIEW_ASK_CARD_TITLE);
     // The version the reviewer last read fails its checks too.
     github.setChecks(FAILED);
     await builderReads(builder.id, reviewed, "red");
-    await showCard(page, MOCK_REVIEW_CAP_CARD_TITLE);
-    await regionShot(shownCard(page, MOCK_REVIEW_CAP_CARD_TITLE), out("1-review-cap-card.png"));
+    await showCard(page, MOCK_REVIEW_ASK_CARD_TITLE);
+    await regionShot(shownCard(page, MOCK_REVIEW_ASK_CARD_TITLE), out("1-review-cap-card.png"));
 
     // The captain's own words, typed: the first mate declares the override
     // they pass, retires its cap card and relays them to the builder.
@@ -400,7 +402,7 @@ test("the captain's words pass a soft hold once on the record, a fixed limit ref
       .toMatchObject({ status: "dropped", closedReason: "superseded" });
     const after = await detail(builder.id);
     expect(after.events.filter((event) => event.kind === "review")).toHaveLength(reviewRows);
-    expect(after.events.some((event) => event.kind === "cap_reset")).toBe(true);
+    expect(after.events.some((event) => event.kind === "cap_reset")).toBe(false);
     expect(
       (await detail(review.id)).events.filter((event) => event.kind === "steered"),
     ).toHaveLength(reviewerSteers);
@@ -482,88 +484,21 @@ test("the captain's words pass a soft hold once on the record, a fixed limit ref
     expect(github.merges()).toEqual(merged.map((change) => expect.objectContaining(change)));
   });
 
-  await test.step("3. the rerun limit refuses a second rerun, and the captain's reply under the crewmate's card reopens it", async () => {
+  await test.step("3. the crew records a second evidenced rerun without a host allowance", async () => {
     github.setChecks(FAILED);
     github.serveNext(REACH_RERUN_CHANGE);
     await send(`${SPAWN_PROMPT_MARKER} ${RERUN_TITLE}`);
     const task = await boardRow((row) => row.title === RERUN_TITLE);
-    const card = await cardTitled(REACH_RERUN_CARD_TITLE);
-    // The crewmate asks on its own card: no second card of the first mate's.
-    expect(card).toMatchObject({ taskId: task.id, author: "crewmate" });
-    expect(github.reruns()).toEqual([`POST ${REACH_RERUN_PATH}`]);
-    // The crewmate's second reservation was refused in the rerun hold's words.
-    expect(
-      servedTexts().some(
-        (text) => text.startsWith("Rerun refused") && withoutHoldWords(text) !== text,
-      ),
-    ).toBe(true);
-    await showCard(page, REACH_RERUN_CARD_TITLE);
-    await regionShot(shownCard(page, REACH_RERUN_CARD_TITLE), out("3-rerun-card.png"));
-
-    // INF-1216: the captain's reply under the crewmate's card. The crewmate
-    // relays it, and the first mate records it as his override in that
-    // relay turn, citing the card, with no card of its own.
-    const composer = cardReply(page);
-    await composer.field.fill(REACH_RERUN_REPLY);
-    await pressKey(composer.field, "Enter");
     await expect
-      .poll(() => github.reruns(), { timeout: 30_000 })
+      .poll(() => github.reruns(), { timeout: 30000 })
       .toEqual([`POST ${REACH_RERUN_PATH}`, `POST ${REACH_RERUN_PATH}`]);
-    expect(stored(task.id)?.override).toMatchObject({
-      words: REACH_RERUN_REPLY,
-      holds: REACH_RERUN_HOLDS,
-      until: "version",
-    });
-    const rows = await overrideRows(task.id);
-    expect(rows).toHaveLength(1);
-    expect(rows[0]?.text).toBe(
-      overrideWords({ words: REACH_RERUN_REPLY, holds: REACH_RERUN_HOLDS, until: "version" }),
-    );
-    await expect(feedLine(page, rows[0]?.text ?? "")).toHaveCount(1);
-    // The crewmate's next turn was served his standing words.
-    const crewmateTurns = (launched.mockProvider?.requestBodies() ?? [])
-      .filter((body) => body.includes(REACH_RERUN_MARKER) && !body.includes(FM_SYSTEM_MARKER))
-      .flatMap((body) => providerMessages(body))
-      .flatMap((message) => (message.role === "user" ? [message.text] : []));
-    expect(
-      crewmateTurns.some((text) =>
-        text.includes(
-          standingOverrideWords({
-            words: REACH_RERUN_REPLY,
-            holds: REACH_RERUN_HOLDS,
-            until: "version",
-          }),
-        ),
-      ),
-    ).toBe(true);
-    // No card of the first mate's asked him again.
+    await expect(reportLine(page, task.key)).toBeVisible({ timeout: 30000 });
+    expect(await overrideRows(task.id)).toEqual([]);
     expect(
       (await page.evaluate(() => window.infinitary.cards.list())).filter(
-        (entry) => entry.taskId === task.id && entry.author === "firstmate",
+        (card) => card.taskId === task.id,
       ),
     ).toEqual([]);
-
-    // The crewmate reports once its write's answer is back, which the
-    // gateway gives only after it dated the rerun it sent.
-    await expect(reportLine(page, task.key)).toHaveCount(3, { timeout: 30_000 });
-    const record = await detail(task.id);
-    expect(stored(task.id)?.override).toMatchObject({
-      holds: REACH_RERUN_HOLDS,
-      until: "version",
-      head: record.delivery?.headSha,
-    });
-    expect(await overrideRows(task.id)).toHaveLength(1);
-    expect(record.events.some((event) => event.kind === "cap_reset")).toBe(true);
-    // Each rerun the forge took is one the task's record dated.
-    const started = new Set(
-      record.events.flatMap((event) => {
-        const rerun = (event.data?.ciRepair as { rerun?: { startedAt?: number } } | undefined)
-          ?.rerun;
-        return rerun?.startedAt === undefined ? [] : [rerun.startedAt];
-      }),
-    );
-    expect(started.size).toBe(2);
-    await page.screenshot({ path: out("3-rerun-once-more.png") });
   });
 
   await test.step("4. the weekly audit rule, set to run once now, starts its one task", async () => {
@@ -635,7 +570,7 @@ test("the captain's words pass a soft hold once on the record, a fixed limit ref
       rigor: { overrides_by_hold: Record<string, number>; metrics: Record<string, number | null> };
     };
     // The counts come from the holds the first mate declared, one per override.
-    const declared = [REACH_STOP_HOLDS, REACH_RULE_HOLDS, REACH_RERUN_HOLDS];
+    const declared = [REACH_STOP_HOLDS, REACH_RULE_HOLDS];
     const expected: Record<string, number> = {};
     for (const holds of declared)
       for (const hold of holds) expected[hold] = (expected[hold] ?? 0) + 1;

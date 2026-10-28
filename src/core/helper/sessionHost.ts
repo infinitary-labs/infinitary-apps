@@ -228,6 +228,9 @@ const FORWARDED_TOOLS = new Set([
 /** The provider's retries a crewmate's turn gets when the home names none. */
 const RETRIES = 2;
 
+const CHECK_DECLARATIONS = contractChange("check-declarations");
+const MERGE_OFFER_READINESS = contractChange("merge-offer-readiness");
+
 const toolTextSchema = workRequests["inf:work:close-card"].response;
 const integrationAnswerSchema = workRequests["inf:work:use-integration"].response;
 type IntegrationWireAnswer = ReturnType<typeof integrationAnswerSchema.parse>;
@@ -1405,6 +1408,14 @@ export class SessionHost {
         return ask("inf:work:open-change", { input }, signal);
       },
       onCheckChange: (input, signal) => {
+        if (!listsChange(this.options.homeChanges?.(), MERGE_OFFER_READINESS))
+          throw new Error(
+            `Check reading refused: ${HOME.the} needs an update before it understands current check facts and merge offers. Nothing was sent.`,
+          );
+        if (input?.declaration && !listsChange(this.options.homeChanges?.(), CHECK_DECLARATIONS))
+          throw new Error(
+            `Check declaration refused: ${HOME.the} needs an update before it can record crew check judgments. Nothing was sent.`,
+          );
         const repair = input?.conflictRepair;
         const wire = repair
           ? { ...input, conflictRepair: { ...repair, impact: wireRepairImpact(repair.impact) } }

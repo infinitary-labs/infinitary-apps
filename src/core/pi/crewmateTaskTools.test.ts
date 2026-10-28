@@ -1,4 +1,5 @@
 import { validateToolArguments } from "@earendil-works/pi-ai";
+import { CHECK_DECLARATION_VERDICTS } from "@shared/checkRepair";
 import { Type } from "typebox";
 import { describe, expect, it } from "vitest";
 import { z } from "zod";
@@ -447,6 +448,32 @@ describe("the crewmate tool spec", () => {
         },
       ]);
       expect(claudeDelegate.calls, `browser: ${withBrowser}`).toEqual(piDelegate.calls);
+    }
+  });
+
+  it("forwards evidence-backed check verdicts whole on both runtimes (INF-1177)", async () => {
+    for (const verdict of CHECK_DECLARATION_VERDICTS) {
+      const input = {
+        declaration: {
+          headSha: "93355db9d04e964513879db74d068a7789cb4c16",
+          verdict,
+          evidence: "The exact-version check reading and failed-job log.",
+          ...(verdict === "settled" ? { repairId: "phone-fix", outcome: "superseded" } : {}),
+        },
+      };
+      const received: unknown[] = [];
+      const receive = async (input: unknown) => {
+        received.push(input);
+        return "recorded";
+      };
+      const pi = { ...crewmateToolDelegate(), onCheckChange: receive },
+        claude = { ...crewmateToolDelegate(), onCheckChange: receive };
+      await runPi(createCrewmateTools(pi).find((tool) => tool.name === "check_change")!, input);
+      await runClaude(
+        claudeCrewmateTools(claude).find((tool) => tool.name === "check_change")!,
+        input,
+      );
+      expect(received).toEqual([input, input]);
     }
   });
 

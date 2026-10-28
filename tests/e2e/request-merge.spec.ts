@@ -67,6 +67,21 @@ function seedReviewCard(
   seedDelivery(new TaskService({ db, strict: true }), taskId, {
     mode: "direct-pr",
     mergeReviews: [review],
+    // A saved review records the scripted reviewer's judgment of this exact
+    // candidate; the captain's separate key remains the merge authorization.
+    ciRepair: {
+      failures: [],
+      diagnoses: [],
+      repairs: [],
+      declarations: [
+        {
+          headSha: review.headSha,
+          verdict: "ready",
+          at: review.at,
+          evidence: "The scripted reviewer read the arranged checks for this candidate.",
+        },
+      ],
+    },
   });
   new CardStore(db).upsert({
     id: `card-${taskId}-merge`,

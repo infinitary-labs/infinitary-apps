@@ -121,6 +121,8 @@ export const reviewCarefully: Scenario =
         ],
       };
     }
+    if (!calledTool(body, "check_change")) return { calls: [{ name: "check_change", args: {} }] };
+
     return calledTool(body, "emit_card")
       ? { text: "done" }
       : { calls: card(MOCK_CAREFUL_CARD_TITLE) };

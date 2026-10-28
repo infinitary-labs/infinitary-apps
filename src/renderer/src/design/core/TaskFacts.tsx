@@ -130,7 +130,7 @@ export function FactDot({ state }: { state: FactDotState }) {
   );
 }
 
-/** One cell of the fact strip: its micro label over its value, the value one line. */
+/** One fact cell; ordinary values stay one line, while a check-read refusal wraps within it. */
 function Cell({
   label,
   fact,
@@ -370,7 +370,7 @@ export function hasFactStrip(facts: TaskFacts): boolean {
 /**
  * The task's fact strip (FI3-1159, the captain's layout B), the merge
  * card's own shape: one cell per fact, each an uppercase micro label over a
- * one-line value, the cells wrapping whole - the model, its intelligence
+ * one-line value (a check-read refusal wraps within its cell), the cells wrapping whole - the model, its intelligence
  * level and its reasoning (FI3-439), then the change (a link where the
  * host has a page and the surface takes clicks), its checks with how long
  * they have run or took, and a review's verdict - then the footnote saying why
@@ -431,7 +431,12 @@ export function TaskFactStrip({
           </Cell>
         )}
         {checks && (
-          <Cell label="Checks" fact="checks" data-dot={checks.dot}>
+          <Cell
+            label="Checks"
+            fact="checks"
+            data-dot={checks.dot}
+            {...(checks.problem ? { "data-check-read-problem": "" } : {})}
+          >
             <FactDot state={checks.dot} />
             <ChecksWords checks={checks} now={now} focusable={focusable} />
             {checks.span?.finishedAt != null && (
@@ -439,6 +444,7 @@ export function TaskFactStrip({
             )}
           </Cell>
         )}
+
         {review && (
           <Cell label="Review" fact="review" data-dot={review.dot}>
             <FactDot state={review.dot} />

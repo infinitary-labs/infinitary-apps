@@ -1434,8 +1434,8 @@ describe("buildCrewmateSystemPrompt (contract v2.0: policy only, one note per ba
     expect(report?.description).toContain(
       "The first mate hears only an explicit report, or your final message when a turn ends with text",
     );
-    expect(CHECK_CHANGE_TOOL_DESCRIPTION).toContain(
-      "green only when all completed successfully or skipped",
+    expect(CREWMATE_TOOLS.find((tool) => tool.name === "check_change")?.description).toBe(
+      CHECK_CHANGE_TOOL_DESCRIPTION,
     );
     expect(prompt).not.toContain("The first mate hears only an explicit report");
     expect(prompt).not.toContain("Standing CI rule");
@@ -1449,6 +1449,11 @@ describe("buildCrewmateSystemPrompt (contract v2.0: policy only, one note per ba
     expect(prompt).toContain("before writing the final report or emitting the completion decision");
     // The completion decision itself is gated on green, not merely on push.
     expect(prompt).toContain("Never emit a completion decision on anything but green");
+    // Captain INF-1555 F12 replaces the earlier F2 declaration prerequisite, not diagnosis or consent.
+    expect(prompt).toContain("finished checks you diagnosed with check_change still fail");
+    expect(prompt).toContain("naming each failed check and your diagnosis");
+    expect(prompt).not.toContain("record an evidence-backed red verdict");
+    expect(prompt).not.toContain("Diagnosis alone does not permit that offer");
     // Genuinely blocked is a report, never a card of its own.
     expect(prompt).toContain(
       "say so in your report as a blocker instead of emitting one; that is the escalation, not a card",

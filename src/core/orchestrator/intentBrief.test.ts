@@ -292,7 +292,7 @@ describe("renderReviewBrief (delivery rigor phase 2, review-before-PR)", () => {
   it("carries the captain's standing override, and none when no override stands", () => {
     const override = {
       words: "keep going until the checks pass",
-      holds: ["rerun" as const],
+      holds: ["checks" as const],
       until: "task" as const,
     };
     const brief = renderReviewBrief(

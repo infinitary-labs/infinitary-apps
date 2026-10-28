@@ -68,17 +68,12 @@ import { setThemeViaSettings } from "./theme";
  * builder's merge on a `blocks` edge; the reviewer's findings reach the
  * Firstmate directly (never supervision) and become one steer and one
  * decision card; a merge asked for while the review is open is refused;
- * two re-reviews return findings again and the third findings is one past
- * the review cap (phase 3): the host's one wake becomes the Firstmate's
- * decision card, a further re-review is refused as text, and the captain's
- * answer plus the Firstmate's steer reopen the rounds (`cap_reset`); the
- * captain's next re-review passes, which closes the review task, releases
- * the hold and is one feed line; the completion card then renders with the
- * review beside CI in the host's facts strip, and its merge succeeds.
+ * repeated re-reviews return findings without a host round allowance;
+ * a later re-review passes, which closes the review task, releases the hold
+ * and is one feed line; the completion card shows the review and merges.
  *
- * Real: the repository, the task worktrees, the rigor derivation, the
- * review brief, the blocks hold, the verdict parsing, the round counter and
- * its cap, the card path and the settle. Stand-ins: the models (the mock
+ * Real: the repository, task working copies, care derivation, review brief,
+ * blocks hold, verdict parsing, card path and settle. Stand-ins: models (the mock
  * provider IS the scripted shape of each session) and GitHub, a local
  * stand-in the app reads through its own sign-in, which answers the change,
  * its checks and the merge the way GitHub's API would (`./githubStub.ts`).
@@ -333,105 +328,28 @@ test("a reviewed task is held by its reviewer until the review passes, then merg
     .poll(() => page.evaluate((id) => window.infinitary.tasks.detail(id), builder.id))
     .toMatchObject({ status: "active", closedReason: null });
 
-  // 6. The review cap (phase 3). Two re-reviews return the same finding;
-  //    each is a plain steer back to the builder and no card. The third
-  //    findings is one past the cap: the host's one wake becomes the
-  //    Firstmate's decision card on the builder's task, and the record
-  //    says the rounds are spent.
+  // Accepted INF-1177: repeated review facts never create a host round allowance.
   const detail = () => page.evaluate((id) => window.infinitary.tasks.detail(id), builder.id);
-  const roundFixes: Record<number, string> = {
-    2: "fix: await the meter snapshot",
-    3: "fix: keep the meter steady",
-  };
-  for (const round of [2, 3]) {
-    // The third round's fix answers the second's re-finding, so the
-    // Firstmate relays it to the builder first: the reading below is a
-    // captain turn this journey scripts, which answers only its own words
-    // and would leave a re-finding that rode along with them unrelayed.
-    if (round === 3)
+  for (const [index, subject] of [
+    "fix: await the meter snapshot",
+    "fix: keep the meter steady",
+  ].entries()) {
+    if (index)
       await expect(
         reportLine(page, builder.key).filter({
           hasText: reportSummary(MOCK_REVIEWED_REFIX_REPORT),
         }),
-      ).toBeVisible({ timeout: 30_000 });
-    // The builder's fix moved the head; its own reading records the head
-    // and its checks before the re-review, so the round counts.
-    await builderReads(builder.id, pushFix(builderBranch, roundFixes[round] as string));
-    await input.click();
+      ).toBeVisible({ timeout: 30000 });
+    const head = pushFix(builderBranch, subject);
+    await builderReads(builder.id, head);
     await input.fill(REREVIEW_PROMPT_MARKER);
     await input.press("Enter");
-    await expect
-      .poll(detail, { timeout: 30_000 })
-      .toMatchObject({ delivery: expect.objectContaining({ reviewRounds: round }) });
+    await expect.poll(detail, { timeout: 30000 }).toMatchObject({
+      delivery: expect.objectContaining({ reviewSha: head, reviewVerdict: "findings" }),
+    });
+    expect((await detail()).delivery?.reviewCapAt).toBeUndefined();
+    expect((await detail()).delivery?.reviewRounds).toBeUndefined();
   }
-  await expect.poll(detail).toMatchObject({
-    delivery: expect.objectContaining({ reviewRounds: 3, reviewCapAt: expect.any(Number) }),
-  });
-  await expect(pager(page, 2)).toBeVisible({ timeout: 30_000 });
-  await page.screenshot({ path: test.info().outputPath("rigor-reviewed-pager.png") });
-  await showCard(page, MOCK_REVIEW_CAP_CARD_TITLE);
-  await expect(page.getByRole("button", { name: MOCK_REVIEW_CAP_RETRY_LABEL })).toBeVisible();
-  await expect(shownCard(page, MOCK_REVIEW_CAP_CARD_TITLE).locator("[data-card-meta]")).toHaveText(
-    builder.title,
-  );
-  await expect(
-    shownCard(page, MOCK_REVIEW_CAP_CARD_TITLE).getByText(REVIEW_FINDING_LABEL, { exact: true }),
-  ).toHaveCount(0);
-  await regionShot(
-    shownCard(page, MOCK_REVIEW_CAP_CARD_TITLE),
-    test.info().outputPath("task-card-dark.png"),
-  );
-  // No re-review goes out while the cap holds: the Firstmate's steer to
-  // the reviewer is refused (its words are crewSupervisor.test.ts's), so
-  // the reviewer's record gains no steer.
-  const reviewerSteers = await steersOn(review.id);
-  const capped = answeredTurns(REREVIEW_PROMPT_MARKER, review.id);
-  await input.click();
-  await input.fill(REREVIEW_PROMPT_MARKER);
-  await input.press("Enter");
-  await expect.poll(capped.count, { timeout: 30_000 }).toBeGreaterThan(capped.seen);
-  expect(await steersOn(review.id)).toBe(reviewerSteers);
-  await expect.poll(detail).toMatchObject({
-    delivery: expect.objectContaining({ reviewRounds: 3, reviewVerdict: "findings" }),
-  });
-
-  // 7. The captain's answer on the cap card, relayed by the Firstmate's
-  //    steer, reopens the rounds: one cap_reset on the timeline, the
-  //    counters cleared, the builder's retry reported. The mock Firstmate
-  //    answers only the turn this click serves: the card and the choice as
-  //    the app lists them, rendered by the product's own wake renderer.
-  const capCard = (await page.evaluate(() => window.infinitary.cards.list())).find(
-    (card) => card.title === MOCK_REVIEW_CAP_CARD_TITLE,
-  );
-  const retry = capCard?.actions.find((action) => action.label === MOCK_REVIEW_CAP_RETRY_LABEL);
-  if (!capCard || !retry) throw new Error("the cap card is up with its retry");
-  if (!mockProvider) throw new Error("this journey runs on the mock provider");
-  expect(capCard.taskId).toBe(builder.id);
-  const capRetry = mockProvider.scriptFirstmateTurn(
-    captainCardChoice(
-      { id: capCard.id, title: capCard.title, taskId: builder.id },
-      { id: retry.id, label: retry.label },
-    ),
-    [{ name: "steer_crewmate", args: { task_id: builder.id, message: MOCK_CAP_RETRY_STEER } }],
-  );
-  await page.getByRole("button", { name: MOCK_REVIEW_CAP_RETRY_LABEL }).click();
-  // The click's turn was served as the captain's, answered with the one
-  // steer, and the steer's result came back. A miss prints the whole
-  // outcome: what the Firstmate was served instead.
-  await expect
-    .poll(capRetry.outcome, { timeout: 30_000 })
-    .toEqual(expect.objectContaining({ state: "closed", results: [expect.any(String)] }));
-  await expect(
-    reportLine(page, builder.key).filter({ hasText: reportSummary(MOCK_REVIEWED_RETRY_REPORT) }),
-  ).toBeVisible({ timeout: 30_000 });
-  await expect.poll(detail).toMatchObject({
-    events: expect.arrayContaining([expect.objectContaining({ kind: "cap_reset" })]),
-  });
-  const reopened = await detail();
-  expect(reopened.delivery?.reviewRounds).toBeUndefined();
-  expect(reopened.delivery?.reviewCapAt).toBeUndefined();
-  await page.screenshot({ path: test.info().outputPath("rigor-reviewed-retry.png") });
-
   // 8. The captain's re-review at yet another head: the pass closes the
   //    review task, records the verdict and risk on the builder, releases
   //    the hold, and is one feed line - the builder's own.
@@ -514,7 +432,7 @@ test("a reviewed task is held by its reviewer until the review passes, then merg
   );
   expect(builderBodies.some((body) => body.includes(MOCK_REVIEW_AUTOFIX_FINDING))).toBe(true);
   expect(builderBodies.some((body) => body.includes(MOCK_REVIEW_REFIX_STEER))).toBe(true);
-  expect(builderBodies.some((body) => body.includes(MOCK_CAP_RETRY_STEER))).toBe(true);
+  expect(builderBodies.some((body) => body.includes(MOCK_CAP_RETRY_STEER))).toBe(false);
 
   // Each later step of the review reached the Firstmate on the wake it
   // arises on (FI3-566 cut C), and the builder's brief holds the fix rules

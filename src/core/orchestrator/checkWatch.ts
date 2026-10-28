@@ -16,7 +16,7 @@ import type { TypedWake, WakeFacts } from "./wakes";
  *   outlives a restart and ends with the task.
  * - Bound to the change's head: a new push the watch sees re-arms it for
  *   the new head, and only the head it last saw is ever woken about.
- * - Two wakes at most for one head: the first red check while others still
+ * - A standing watch has two notices: the first red check while others still
  *   run, then the end - passed, failed with the red checks named, still
  *   running at the bound, the change gone, or the checks unreadable.
  *   Each is named by the watch (`once`), so the inbox never queues it
@@ -26,7 +26,8 @@ import type { TypedWake, WakeFacts } from "./wakes";
  * - Bounded: it reads on the shared tick, every minute for ten minutes
  *   and then every two, and stops at `CHECK_WATCH_BOUND_MS`.
  * - Finished checks on live pull requests refresh quietly every five minutes
- *   through the same reader. Only a running new head arms another watch.
+ *   through the same reader. Changed observations reach the crew for judgment.
+ *   Only a running new head arms another watch.
  *   A task idle behind another task is not refreshed while it waits.
  *
  * While a watch stands the crewmate is waiting on the host, so the idle
@@ -83,6 +84,7 @@ export type WatchedCheck = { name: string; state: string };
 export type WatchedReading =
   | {
       kind: "pending";
+      observationId?: string;
       head: string;
       change: string;
       pending: WatchedCheck[];
@@ -90,20 +92,20 @@ export type WatchedReading =
       failing?: WatchedCheck[];
     }
   | {
-      /**
-       * Nothing is running any more. `pending` here is a reading that
-       * finished without being green or red: a neutral check.
-       */
-      kind: "settled";
-      overall: "green" | "red" | "pending";
+      kind: "finished";
+      observationId?: string;
       head: string;
       change: string;
-      count: number;
-      failing: WatchedCheck[];
-      cap?: { rounds: number; cap: number };
+      checks: WatchedCheck[];
     }
   | { kind: "gone" }
-  | { kind: "failed"; transient: boolean; problem: string; signIn?: boolean };
+  | {
+      kind: "failed";
+      transient: boolean;
+      problem: string;
+      signIn?: boolean;
+      observationId?: string;
+    };
 
 export type CheckWatcherHost = {
   tasks: TaskService;
@@ -189,12 +191,70 @@ export class CheckWatcher {
     const after = this.host.tasks.get(taskId);
     if (!after || TaskService.isClosed(after) || after.delivery?.ciWatch) return;
     // A new push whose checks are running gets the existing bounded watch.
-    // Same-head reruns only refresh the display, as do settled readings.
     if (read.kind === "pending" && read.head !== head) {
       this.host.tasks.recordChangeEvidence(taskId, {
         ciWatch: armWatch(undefined, read.head, now),
       });
+      // Its armed watch owns the next failure/finish notice, not a second initial wake.
+      return;
     }
+    const observation = after.delivery?.ciObservation;
+    if (
+      (read.kind === "finished" || read.kind === "pending" || read.kind === "failed") &&
+      observation &&
+      observation.id === read.observationId &&
+      !observation.forwarded
+    ) {
+      const once = observation.notice ?? `check-observation:${observation.id}`;
+      this.notifyObservation(
+        taskId,
+        {
+          facts:
+            read.kind === "failed"
+              ? { kind: "checks-settled", outcome: "unreadable", problem: read.problem }
+              : {
+                  kind: "checks-settled",
+                  outcome: "observed",
+                  head: read.head,
+                  change: read.change,
+                  checks:
+                    read.kind === "finished"
+                      ? read.checks
+                      : [...read.pending, ...(read.failing ?? [])],
+                },
+          once,
+        },
+        observation.id,
+      );
+    }
+  }
+
+  private forwardedObservation(taskId: string, id: string | undefined): void {
+    const current = this.host.tasks.get(taskId)?.delivery?.ciObservation;
+    if (id && current?.id === id && !current.forwarded)
+      this.host.tasks.recordChangeEvidence(taskId, {
+        ciObservation: { ...current, forwarded: true },
+      });
+  }
+
+  /** Persist the notice identity before enqueue; a restart reads its inbox receipt. */
+  private notifyObservation(taskId: string, wake: TypedWake, id: string | undefined): void {
+    const current = this.host.tasks.get(taskId)?.delivery?.ciObservation;
+    if (id && current?.id === id && wake.once && current.notice !== wake.once)
+      this.host.tasks.recordChangeEvidence(taskId, {
+        ciObservation: { ...current, notice: wake.once, forwarded: false },
+      });
+    if (wake.once && this.host.inbox.woken(taskId, wake.once)) {
+      this.forwardedObservation(taskId, id);
+      return;
+    }
+    void this.host
+      .steer(taskId, wake)
+      .then(() => {
+        if (wake.once && this.host.inbox.woken(taskId, wake.once))
+          this.forwardedObservation(taskId, id);
+      })
+      .catch((caught: unknown) => console.warn("[crew] check observation not forwarded:", caught));
   }
 
   private async pollTask(taskId: string, now: number): Promise<void> {
@@ -226,44 +286,57 @@ export class CheckWatcher {
     if (!sameWatch(after.delivery?.ciWatch, watch)) return;
     // A new push re-arms the watch for the new head.
     const current =
-      (read.kind === "pending" || read.kind === "settled") && read.head !== watch.head
+      (read.kind === "pending" || read.kind === "finished") && read.head !== watch.head
         ? { head: read.head, since: now, nextAt: now, tries: 0 }
         : watch;
     const inBound = now - current.since < CHECK_WATCH_BOUND_MS;
     switch (read.kind) {
       case "pending": {
         if (!inBound) {
-          return this.end(taskId, current, {
-            outcome: "timed-out",
-            change: read.change,
-            head: read.head,
-            checks: read.pending,
-            waitedMs: now - current.since,
-          });
+          return this.end(
+            taskId,
+            current,
+            {
+              outcome: "timed-out",
+              change: read.change,
+              head: read.head,
+              checks: read.pending,
+              waitedMs: now - current.since,
+            },
+            read.observationId,
+          );
         }
         const next = await this.noteFailure(taskId, watch, current, read);
         if (!next) return;
         return this.readAgain(taskId, watch, next, now);
       }
-      case "settled":
-        return this.end(taskId, current, {
-          outcome:
-            read.overall === "green" ? "passed" : read.overall === "red" ? "failed" : "not-green",
-          change: read.change,
-          head: read.head,
-          ...(read.overall === "green" ? { count: read.count } : { checks: read.failing }),
-          ...(read.cap ? { cap: read.cap } : {}),
-        });
+      case "finished":
+        return this.end(
+          taskId,
+          current,
+          {
+            outcome: "finished",
+            change: read.change,
+            head: read.head,
+            checks: read.checks,
+          },
+          read.observationId,
+        );
       case "gone":
         return this.end(taskId, current, { outcome: "gone" });
       case "failed":
         // A host hiccup is not a verdict: read again, inside the bound.
         if (read.transient && inBound) return this.readAgain(taskId, watch, current, now);
-        return this.end(taskId, current, {
-          outcome: "unreadable",
-          problem: read.problem,
-          ...(read.signIn ? { signIn: true } : {}),
-        });
+        return this.end(
+          taskId,
+          current,
+          {
+            outcome: "unreadable",
+            problem: read.problem,
+            ...(read.signIn ? { signIn: true } : {}),
+          },
+          read.observationId,
+        );
     }
   }
 
@@ -331,17 +404,14 @@ export class CheckWatcher {
    * so the inbox queues it once, then the watch clears. The wait's end
    * opens a new idle episode, as a timed wait's does.
    */
-  private end(taskId: string, watch: CiWatch, facts: SettledFacts): void {
+  private end(taskId: string, watch: CiWatch, facts: SettledFacts, observationId?: string): void {
     const once = checkWatchOnce(watch);
-    if (!this.host.inbox.woken(taskId, once)) {
-      this.host.tasks.endIdle(taskId);
-      void this.host
-        .steer(taskId, { facts: { kind: "checks-settled", ...facts }, once })
-        .catch((caught: unknown) => {
-          // No conversation to resume: the ladder reads the task on its own clock.
-          console.warn("[crew] check watch's steer not delivered:", caught);
-        });
-    }
+    if (!this.host.inbox.woken(taskId, once)) this.host.tasks.endIdle(taskId);
+    this.notifyObservation(
+      taskId,
+      { facts: { kind: "checks-settled", ...facts }, once },
+      observationId,
+    );
     this.clear(taskId);
   }
 

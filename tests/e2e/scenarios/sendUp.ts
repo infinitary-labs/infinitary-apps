@@ -9,9 +9,9 @@ import { providerMessages } from "../providerRequest";
 /**
  * A project on a plain Git host (git integration PR 1.1, forge-seam e2e): a
  * brief carrying this marker saves a point in its working copy and sends it
- * up with its own shell, then declares the completion card and reports - so
- * the host's forge seam finds the sent-up copy, reads it green with no
- * checks, and the captain's click puts it in.
+ * up with its own shell, reads the raw checks and explicitly declares ready,
+ * then offers the completion card and reports. The host's forge seam finds
+ * the sent-up copy; the captain's separate click puts it in.
  */
 export const SEND_UP_PROMPT_MARKER = "send the meter fix up to its host";
 
@@ -42,6 +42,13 @@ export const sendUp: Scenario =
         ],
       };
     }
+    // INF-1479: no checks is a fact, not automatic readiness, on a plain host too.
+    const results = providerMessages(body)
+      .filter((message) => message.role === "tool")
+      .map((message) => message.text);
+
+    if (!results.some((result) => result.includes("facts: ")))
+      return { calls: [{ name: "check_change", args: {} }] };
     return {
       calls: [
         {

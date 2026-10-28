@@ -1,7 +1,8 @@
-import { randomUUID } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
 import { existsSync } from "node:fs";
 import type { OpenChangeInput, StagedChangePresentation } from "@shared/changePresentation";
 import type { CheckChangeInput } from "@shared/checkRepair";
+import { checkSnapshotSummary, currentCheckStatus } from "@shared/checkSnapshot";
 import { forgeOf, hasChangeRequests } from "@shared/forge";
 import { notSignedInText } from "@shared/forges";
 import { fixedHoldWords, overridePasses, softHoldWords } from "@shared/holds";
@@ -16,7 +17,6 @@ import {
 } from "@shared/mergeReview";
 import { isMergeConflict } from "@shared/plainProblem";
 import { deliveryForRecord, type RepoView } from "@shared/repos";
-import { CI_ROUND_CAP } from "@shared/rigor";
 import { effectiveTaskPolicies } from "@shared/taskPolicies";
 import { NEVER_SENT_AGAIN } from "@shared/writeAsk";
 import {
@@ -33,7 +33,6 @@ import {
   type ForgeRepo,
   type ForgeRuleset,
   ForgeWriteError,
-  isAcceptedCheckState,
   isRedCheckState,
   isSignInForgeFailure,
   isTransientForgeFailure,
@@ -41,7 +40,7 @@ import {
   PresentationAroundError,
   presentationLines,
 } from "../forge";
-import type { CiWatch, TaskDelivery } from "../storage/taskStore";
+import type { CiWatch, TaskDelivery, TaskRecord } from "../storage/taskStore";
 import { earlyPublication } from "../tasks/liveValidation";
 import type { TaskService } from "../tasks/taskService";
 import { requireConventional, requireConventionalRange } from "../workspace/conventional";
@@ -49,15 +48,7 @@ import { git } from "../workspace/git";
 import type { RepoRegistry } from "../workspace/repoRegistry";
 import { readChangeReading } from "../workspace/workspaceService";
 import type { ChangePresentations } from "./changePresentations";
-import {
-  checkRepairWords,
-  closeCheckRepair,
-  declareCheckAction,
-  observeCheckRepair,
-  outstandingRepair,
-  repairCheck,
-  type StrandedRepair,
-} from "./checkRepair";
+import { declareCheckAction, observeCheckRepair } from "./checkRepair";
 import { armWatch, type WatchedCheck, type WatchedReading } from "./checkWatch";
 import type { MainBranchReading } from "./mainCheckWake";
 import {
@@ -66,45 +57,14 @@ import {
   declareMergeRepair,
   type LineageFacts,
   type LineageQuestion,
+  MERGE_CHECKS_HOLD_REASON,
   outstandingGuidance,
   standingAuthorization,
 } from "./mergeAuthorization";
 import { carryPassedReview, reviewCoversHead } from "./reviewCarry";
 
-/**
- * check_pr_ci's host side (contract v1, spec section 1.4): the standing
- * CI rule as typed code instead of prompt-steered bash. Resolves a task's
- * repo and branch, asks the forge seam where the project lives for the
- * branch's open proposed change, and reports every check on its head
- * version; overall green requires every check completed successfully or skipped
- * (`overallOfChecks` in `src/core/forge/forge.ts`).
- * Every result is recorded on the task's delivery facts with a timestamp
- * (task-system P0) - that record is what the host renders as the checks on
- * a settle card (contract v2.0) and it survives a restart; the checked
- * change and the forge that answered stay in memory for the click that
- * follows.
- *
- * Which host answers is the seam's business (git integration PR 1.1,
- * `docs/forge.md`): a pull request on GitHub, a working copy sent up as its
- * own branch on a plain Git host. The change is named by the forge's label
- * (`#N`, or the branch), never by parsing a link.
- *
- * Fail soft by contract: task unknown, repo local-only, no change, and
- * forge failures all return as explanatory tool text, never a throw.
- *
- * Raw failed readings request diagnosis, never spend an attempt. The existing
- * check_change seam records explicit, evidenced diagnoses, own repair ids and
- * one flake reservation in delivery JSON. Only unsuccessful declared own
- * repair results count; watch and foreground reads use the same persisted
- * ledger. Reobservations and waits count nothing. The third failed repair
- * stamps the captain hold once; the all-checks-accepted gate is unchanged.
- *
- * A reading that finds the checks running arms the host's check watch
- * (`./checkWatch.ts`, docs/forge.md "The check watch") on a host whose
- * forge has checks: the watch is a delivery fact beside the reading, and
- * `readWatched` is its quiet read. A settled reading the crewmate took
- * itself ends the watch - it already knows; the Firstmate's does not, so
- * the crewmate is still woken.
+/** Reads forge facts and records the crew's version-bound declarations.
+ * Merge identity, consent, host readiness and send-once effects remain host-owned.
  */
 
 /**
@@ -127,7 +87,7 @@ export type PrOutcome = {
   text: string;
   problem?: string;
   plain?: string;
-  /** The merge was refused because the checks had not all passed (no sign-in or forge failure). */
+  /** The merge was refused because current readiness was not established (no sign-in or forge failure). */
   notGreen?: boolean;
   /**
    * Why a guarded merge stopped, as a typed fact (FI3-304): the settle path
@@ -232,13 +192,6 @@ const sleep = (ms: number): Promise<void> => new Promise((resolve) => setTimeout
 /** The checked change, and the forge that answered, for the put-in that follows. */
 type CheckedChange = { change: ForgeChange; forge: Forge };
 
-/**
- * One line for reading an open repair at a version the change is no longer
- * at, and, when no reading there can ever settle it, that fact for the
- * declaration that carries it forward (INF-1488).
- */
-type EarlierRepair = { text: string; stranded?: StrandedRepair };
-
 /** A merge's refusal on the saved story names the soft hold the captain's words pass (INF-1365). */
 function storyHeld(caught: unknown): never {
   const message = caught instanceof Error ? caught.message : String(caught);
@@ -285,12 +238,6 @@ export class PrCiService {
       forgeFor: (repo: ForgeRepo | undefined, fallbackDir?: string) => Forge;
       now?: () => number;
       /**
-       * The CI round cap was just reached on this task (delivery rigor
-       * phase 3): called once per cap, after the record carries `ciCapAt`.
-       * The host answers with the one `[fm-op]` wake.
-       */
-      onCap?: (taskId: string, facts: { rounds: number; headSha: string }) => void;
-      /**
        * One feed line (a host refusing a change the app cannot fix itself),
        * naming the task it is about.
        */
@@ -312,13 +259,14 @@ export class PrCiService {
   ) {}
 
   /**
-   * The recorded CI reading on the task's delivery facts: what the host
-   * renders as the CI state on the task's settle card, with its age.
+   * Exact-version check status at the last reading's time, not a separate
+   * judgment of the work. The crew expresses that by making its merge offer.
    */
   reading(taskId: string): { overall: PrCiOverall; at: number } | undefined {
     const delivery = this.options.tasks.get(taskId)?.delivery;
-    if (!delivery?.ci || delivery.ciAt === undefined) return undefined;
-    return { overall: delivery.ci, at: delivery.ciAt };
+    if (!delivery || delivery.ciAt === undefined) return undefined;
+    const overall = currentCheckStatus(delivery);
+    return overall ? { overall, at: delivery.ciAt } : undefined;
   }
 
   /**
@@ -331,19 +279,40 @@ export class PrCiService {
    * reading says nothing about the head the card is about now.
    */
   async checkOverall(taskId: string): Promise<PrCiOverall> {
+    return (await this.readForOffer(taskId)).overall;
+  }
+
+  /** Whether this lookup obtained the proposed change, not a judgment of its readiness. */
+  async readForOffer(taskId: string): Promise<{
+    overall: PrCiOverall;
+    recorded: boolean;
+    problem?: string;
+  }> {
     const run = await this.run(taskId);
-    if (!run.recorded) return "pending";
-    return this.reading(taskId)?.overall ?? "pending";
+    return {
+      overall: run.recorded ? (this.reading(taskId)?.overall ?? "pending") : "pending",
+      recorded: run.recorded,
+      ...(run.problem ? { problem: run.problem } : {}),
+    };
   }
 
   /**
    * The crewmate's check_change (git integration PR 1.2): the same reading
-   * check_pr_ci takes and records - so the fact strip and the CI round
-   * counter see it - in words for the crewmate. A missing sign-in is the
+   * check_pr_ci takes and records - so the fact strip and check watch
+   * see it - in words for the crewmate. A missing sign-in is the
    * captain's to fix: the crewmate reports it, never signs in itself.
    */
   async checkForCrew(taskId: string, input: CheckChangeInput = {}): Promise<string> {
     if (input.pull !== undefined) {
+      if (input.declaration) {
+        const recorded = declareCheckAction(
+          this.options.tasks,
+          taskId,
+          { declaration: input.declaration },
+          this.now(),
+        );
+        if (!recorded.read) return recorded.text;
+      }
       return input.skipRules
         ? this.prepareSkipReview(taskId, input.pull, input.skipRules)
         : this.prepareReview(taskId, input.pull, input.absentChecks);
@@ -367,7 +336,7 @@ export class PrCiService {
       declared = declaration.text;
     }
     if (conflictRepair) {
-      if (checkInput.diagnosis || checkInput.repair || checkInput.rerun) {
+      if (checkInput.declaration || checkInput.diagnosis || checkInput.repair || checkInput.rerun) {
         return [
           declared,
           "Check declaration refused: send a conflictRepair on its own, not beside a diagnosis, repair or rerun.",
@@ -406,44 +375,10 @@ export class PrCiService {
       if (!declaration.read) return [declared, declaration.text].filter(Boolean).join("\n");
       declared = [declared, declaration.text].filter(Boolean).join("\n");
     }
-    if (checkInput.diagnosis || checkInput.repair || checkInput.rerun) {
-      const located = this.locate(taskId);
-      let id: string;
-      let earlier: EarlierRepair | undefined;
-      let target: { held?: boolean; where: string } | undefined;
-      if ("said" in located) {
-        // Only a repair is settled by its version's checks, which a task that
-        // never has a pull request does not read: a diagnosis or rerun
-        // reservation for a workflow run the task read needs none (INF-688).
-        const record = checkInput.repair ? undefined : this.options.tasks.get(taskId.trim());
-        if (!record) return located.said;
-        id = record.id;
-      } else {
-        id = located.record.id;
-        // A new repair waits on the outstanding one, so one the change moved
-        // past is read at its own version first (INF-685).
-        earlier = checkInput.repair ? await this.settleBeforeRepair(located) : undefined;
-        // A repair names a version the host's checks will run at, so one it
-        // holds no commit at is refused before it is recorded (INF-1184).
-        if (checkInput.repair)
-          target = {
-            held: await this.holdsVersion(located.forge, checkInput.repair.headSha),
-            where: placeWords(located.forge),
-          };
-      }
-      const declaration = declareCheckAction(
-        this.options.tasks,
-        id,
-        checkInput,
-        this.now(),
-        target,
-        earlier?.stranded,
-      );
-      if (!declaration.read) return [earlier?.text, declaration.text].filter(Boolean).join("\n");
-      // A carried repair's own line replaces the reading that offered it.
-      declared = [declared, declaration.carried ? declaration.text : earlier?.text]
-        .filter(Boolean)
-        .join("\n");
+    if (checkInput.declaration || checkInput.diagnosis || checkInput.repair || checkInput.rerun) {
+      const declaration = declareCheckAction(this.options.tasks, taskId, checkInput, this.now());
+      if (!declaration.read) return declaration.text;
+      declared = [declared, declaration.text].filter(Boolean).join("\n");
     }
     const run = await this.run(taskId, "crewmate");
     const reading = run.signIn ? crewSignInText(run.signIn) : run.text;
@@ -559,8 +494,8 @@ export class PrCiService {
       whose,
       "request_merge references this review. This request grants no approval and does not itself merge anything. With autonomy off, only the captain's merge button authorizes execution.",
       absentChecks
-        ? "Absence declaration stored for this version. It waives only a host marker that checks have not started, never a failed, pending or unreadable check."
-        : "No absence declaration stored. Checks that are not passing still block the merge.",
+        ? "Absence evidence stored for this version. A merge offer expresses the crew's judgment; this evidence grants no merge permission."
+        : "No absence declaration stored. An empty hosted reading alone does not establish that checks are absent.",
     ].join("\n");
   }
 
@@ -727,11 +662,11 @@ export class PrCiService {
     // A check reading names a PR; it does not transfer branch ownership.
     const owned = pull.branch === record.branch;
     const relationship: MergeRelationship = owned ? "owned" : "referenced";
-    const read = await this.readSkipState(forge, pull);
+    const read = await this.readSkipState(taskId, forge, pull);
     if (!read.ok) return `Merge review refused: ${read.text}`;
     const { rules, failedChecks } = read;
     if (pull.readiness === "clean" && failedChecks.length === 0) {
-      return `Merge review refused: nothing holds pull request ${number}: GitHub reads it ready and every check passed. Prepare an ordinary review with pull alone.`;
+      return `Merge review refused: nothing holds pull request ${number}: GitHub reports no rule or terminal failure to skip. Prepare an ordinary review with pull alone.`;
     }
     const review: MergeReview = {
       id: `mr${randomUUID().replace(/-/g, "").slice(0, 12)}`,
@@ -767,7 +702,7 @@ export class PrCiService {
         : "No branch rule holds it.",
       failedChecks.length
         ? `It merges with these checks failed: ${failedChecks.join(", ")}.`
-        : "Every check passed.",
+        : "No terminal check failures were reported.",
       "request_merge references this review; the app names each rule and failed check on the card. Only the captain's click on that card sends it, once, at this version; the who-merges setting and every other path never do. A new version needs a new review.",
     ].join("\n");
   }
@@ -780,6 +715,7 @@ export class PrCiService {
    * may; otherwise why not, in the host's words.
    */
   private async readSkipState(
+    taskId: string,
     forge: Forge,
     pull: ForgePull,
   ): Promise<
@@ -824,15 +760,23 @@ export class PrCiService {
         stop: isSignInForgeFailure(caught) ? "sign-in" : "checks",
       };
     }
-    if (checks.items.some((item) => item.state === "pending")) {
+    // Captain F4: final results precede both bypass preparation and sending.
+    if (checks.problem)
+      return { ok: false, text: `The checks cannot be read. ${checks.problem}`, stop: "checks" };
+    const record = this.options.tasks.get(taskId);
+    const absent = record && this.absenceDeclared(record, { forge, change });
+    if (
+      checks.complete === false ||
+      checks.items.some((item) => item.state === "pending") ||
+      (checks.items.length === 0 && !absent)
+    )
       return {
         ok: false,
-        text: "a check has not finished yet. Wait until every check finishes, then prepare the review.",
+        text: "The checks have not finished. Wait for their final results before preparing or sending a rule-bypass review.",
         stop: "checks",
       };
-    }
     const failedChecks = checks.items
-      .filter((item) => !isAcceptedCheckState(item.state))
+      .filter((item) => isRedCheckState(item.state))
       .map((item) => item.name);
     const holding = sets.filter((set) => set.rules.some((rule) => mergeRuleWords(rule)));
     const locked = holding.filter((set) => set.bypass === null || set.bypass === "never");
@@ -926,7 +870,7 @@ export class PrCiService {
         stop: "moved",
       };
     }
-    const read = await this.readSkipState(forge, pull);
+    const read = await this.readSkipState(taskId, forge, pull);
     if (!read.ok) return read;
     const named = new Set(
       (review.skips?.rules ?? []).map((rule) => `${rule.ruleset}\u0000${rule.rule}`),
@@ -1226,30 +1170,38 @@ export class PrCiService {
         stop: isSignInForgeFailure(caught) ? "sign-in" : "checks",
       };
     }
-    // The marker is pending, so it is the one item that has not passed: a
-    // check beside it that has not passed is never waived.
-    const waived =
-      checks.notStarted === true &&
-      review.absentChecks?.headSha === pull.headSha &&
-      checks.items.filter((item) => !isAcceptedCheckState(item.state)).length === 1;
-    if (checks.overall !== "green" && !waived) {
-      return {
-        ok: false,
-        text: "the checks have not all passed, and no absence declaration covers this version.",
-        stop: "checks",
-      };
-    }
+    const record = this.options.tasks.get(taskId);
     if (
-      checks.items.some(
-        (item) => item.state === "failure" || item.state === "error" || item.state === "cancelled",
-      )
-    ) {
+      checks.items.length === 0 &&
+      (!record || !this.absenceDeclared(record, { forge, change })) &&
+      !overridePasses(record?.delivery, "checks", pull.headSha)
+    )
       return {
         ok: false,
-        text: "a check failed. An absence declaration cannot waive it.",
+        text: "No checks have registered and no positive absence declaration covers this version.",
         stop: "checks",
       };
-    }
+    const status = checkSnapshotSummary({
+      headSha: pull.headSha,
+      items: checks.items,
+      complete: checks.complete,
+      problem: checks.problem,
+      absenceDeclared: Boolean(record && this.absenceDeclared(record, { forge, change })),
+    }).overall;
+    if (
+      status !== "green" &&
+      status !== "none" &&
+      !overridePasses(record?.delivery, "checks", pull.headSha)
+    )
+      return {
+        ok: false,
+        text: checks.problem
+          ? `the checks cannot be read. ${checks.problem}`
+          : status === "red"
+            ? "the checks failed"
+            : MERGE_CHECKS_HOLD_REASON,
+        stop: "checks",
+      };
     return { ok: true, forge, pull };
   }
 
@@ -1379,44 +1331,58 @@ export class PrCiService {
       change = await this.readyPrerequisite(taskId, forge, change);
       const checks = await forge.checks(change);
       this.assertCheckTarget(record);
+      const observationId = this.observeChecks(taskId, change.headSha, checks, false);
       const words = changeWords(forge, change);
-      if (running(checks.items)) {
-        if (record.delivery?.ci !== checks.overall || record.delivery.headSha !== change.headSha) {
-          this.record(record.id, checks.overall, { change, forge }, "watch", true, checks.items);
-        } else {
-          // An unchanged result is still a fresh reading, not a new status event.
-          this.options.tasks.recordChangeEvidence(record.id, {
-            ciAt: this.now(),
-            ...checksSpan(checks.overall, checks.items),
-          });
-        }
+      if (checks.problem) {
+        this.record(
+          record.id,
+          "pending",
+          { change, forge },
+          "watch",
+          false,
+          checks.items,
+          checks.complete,
+          checks.problem,
+        );
+        return { kind: "failed", transient: false, problem: checks.problem, observationId };
+      }
+      if (this.checksPending(record, { change, forge }, checks)) {
+        this.record(
+          record.id,
+          "pending",
+          { change, forge },
+          "watch",
+          true,
+          checks.items,
+          checks.complete,
+          checks.problem,
+        );
         const failing = named(checks.items.filter((check) => isRedCheckState(check.state)));
         return {
           kind: "pending",
+          observationId,
           head: change.headSha,
           change: words,
           pending: named(checks.items.filter((check) => check.state === "pending")),
           ...(failing.length > 0 ? { failing } : {}),
         };
       }
-      this.record(record.id, checks.overall, { change, forge }, "watch", false, checks.items);
-      const after = this.options.tasks.get(record.id)?.delivery;
+      this.record(
+        record.id,
+        "pending",
+        { change, forge },
+        "watch",
+        false,
+        checks.items,
+        checks.complete,
+        checks.problem,
+      );
       return {
-        kind: "settled",
-        overall: checks.overall,
+        kind: "finished",
+        observationId,
         head: change.headSha,
         change: words,
-        count: checks.items.length,
-        failing: named(
-          checks.items.filter((check) =>
-            checks.overall === "red"
-              ? isRedCheckState(check.state)
-              : !isAcceptedCheckState(check.state),
-          ),
-        ),
-        ...(after?.ciCapAt !== undefined
-          ? { cap: { rounds: after.ciRounds ?? CI_ROUND_CAP, cap: CI_ROUND_CAP } }
-          : {}),
+        checks: checks.items,
       };
     } catch (caught) {
       if (isSignInForgeFailure(caught)) {
@@ -1448,10 +1414,16 @@ export class PrCiService {
     if (!forge.hasChecks || !forge.branchChecks) return { kind: "unsupported" };
     try {
       const read = await forge.branchChecks();
-      return { kind: "read", sha: read.sha, items: read.checks.items };
+      return {
+        kind: "read",
+        sha: read.sha,
+        items: read.checks.items,
+        complete: read.checks.complete,
+        problem: read.checks.problem,
+      };
     } catch (caught) {
       console.warn("[crew] could not read the default branch's checks:", caught);
-      return { kind: "failed" };
+      return { kind: "failed", problem: caught instanceof Error ? caught.message : String(caught) };
     }
   }
 
@@ -2167,36 +2139,31 @@ export class PrCiService {
           this.merged.set(record.id, { pull, forge });
           return { text: mergedWords(forge, pull, audience), recorded: true };
         }
-        // A repair declared before any pull request opened is read at its
-        // own version, as one a pull request moved past is (INF-970).
-        const earlier = await this.settleEarlierRepair(record.id, forge, branch, null);
         this.assertCheckTarget(record);
         this.record(record.id, "no-pr");
-        const after = this.options.tasks.get(record.id)?.delivery;
         return {
-          text: [
-            hasChangeRequests(forge.kind)
-              ? `overall: no-pr\nNo open PR found for branch ${branch}.${pull ? ` ${numberLabel(forge, pull.number)} was closed without merging.` : ""}`
-              : `overall: no-pr\nNothing pushed for branch ${branch}${forge.place ? ` on ${forge.place}` : ""} yet.`,
-            ...(earlier ? [earlier.text] : []),
-            ...(after?.ciCapAt === undefined ? [] : checkRepairWords(after)),
-          ].join("\n"),
+          text: hasChangeRequests(forge.kind)
+            ? `overall: no-pr\nNo open PR found for branch ${branch}.${pull ? ` ${numberLabel(forge, pull.number)} was closed without merging.` : ""}`
+            : `overall: no-pr\nNothing pushed for branch ${branch}${forge.place ? ` on ${forge.place}` : ""} yet.`,
           recorded: true,
         };
       }
       change = await this.readyPrerequisite(taskId, forge, change);
       const checks = await forge.checks(change);
+      const mergeability =
+        change.number !== undefined && forge.pull ? await forge.pull(change.number) : undefined;
       this.assertCheckTarget(record);
-      const earlier = await this.settleEarlierRepair(record.id, forge, branch, change);
-      this.assertCheckTarget(record);
-      const stillRunning = running(checks.items);
+      this.observeChecks(taskId, change.headSha, checks, audience === "crewmate");
+      const stillRunning = this.checksPending(record, { change, forge }, checks);
       this.record(
         record.id,
-        checks.overall,
+        "pending",
         { change, forge },
         audience,
         stillRunning,
         checks.items,
+        checks.complete,
+        checks.problem,
       );
       const lines = checks.items.map(
         (check) => `- ${check.name}: ${describeCheckState(check.state)}`,
@@ -2204,21 +2171,38 @@ export class PrCiService {
       const after = this.options.tasks.get(record.id)?.delivery;
       const watched = stillRunning && after?.ciWatch?.head === change.headSha;
       const earlyOwed = watched && after?.ciWatch?.failureSeen !== true;
-      const cap = after?.ciCapAt === undefined ? [] : checkRepairWords(after);
-      const diagnosis =
-        !stillRunning && checks.overall !== "green" && cap.length === 0
-          ? checkRepairWords(after)
-          : [];
       return {
         text: [
           `${changeWords(forge, change)} head ${change.headSha}`,
-          `overall: ${checks.overall}`,
+          `facts: ${JSON.stringify({
+            headSha: change.headSha,
+            currentHead: mergeability?.headSha ?? change.headSha,
+            moved:
+              (record.delivery?.headSha !== undefined &&
+                record.delivery.headSha !== change.headSha) ||
+              (mergeability !== undefined && mergeability.headSha !== change.headSha),
+            mergeable: mergeability?.mergeable ?? null,
+            readiness: mergeability?.readiness ?? null,
+            mergeableState: mergeability?.mergeableState ?? null,
+            complete: checks.complete ?? null,
+            problem: checks.problem ?? null,
+            repairChecksNotInReading: (after?.ciRepair?.repairs ?? [])
+              .filter(
+                (repair) =>
+                  !repair.outcome && !checks.items.some((check) => check.name === repair.check),
+              )
+              .map((repair) => ({ id: repair.id, headSha: repair.headSha, check: repair.check })),
+            checks: checks.items.map((check) => ({
+              ...check,
+              run: check.run ?? null,
+              workflow: check.workflow ?? null,
+              event: check.event ?? null,
+            })),
+          })}`,
           ...(this.readinessProblem(taskId, change) ? [this.readinessProblem(taskId, change)] : []),
           ...(checks.items.length > 0 ? lines : ["- no checks reported on the head SHA"]),
-          ...(earlier ? [earlier.text] : []),
-          ...cap,
-          ...diagnosis,
-          ...watchWords(forge, audience, watched && cap.length === 0, earlyOwed),
+
+          ...watchWords(forge, audience, watched, earlyOwed),
         ].join("\n"),
         recorded: true,
       };
@@ -2332,7 +2316,7 @@ export class PrCiService {
         };
       }
     }
-    // Red or unfinished checks are a soft hold: the captain's override on
+    // Actual check results are a soft hold: the captain's override on
     // the checks passes them at the version it covers. GitHub's own rules
     // still decide whether it merges.
     const unfinished = reading?.overall === "red" || reading?.overall === "pending";
@@ -2342,17 +2326,20 @@ export class PrCiService {
       checked !== undefined &&
       overridePasses(this.options.tasks.get(taskId)?.delivery, "checks", checked.change.headSha);
     if (!checked || (!checksPassed && (!status.recorded || reading?.overall !== "green"))) {
+      const problem = this.options.tasks.get(taskId)?.delivery?.checks?.problem;
+      const reason = problem
+        ? `the checks cannot be read: ${problem}`
+        : reading?.overall === "red"
+          ? "the checks failed"
+          : reading?.overall === "no-pr"
+            ? "no open pull request was found for it"
+            : MERGE_CHECKS_HOLD_REASON;
       return {
         ok: false,
-        text: `Cannot merge yet - the checks have not all passed. ${status.text}${unfinished ? ` ${softHoldWords("checks", "firstmate")}` : ""}`,
+        text: `Cannot merge yet - ${reason}. ${status.text}${unfinished ? ` ${softHoldWords("checks", "firstmate")}` : ""}`,
         notGreen: true,
         ...(guard ? { stop: "checks" as const } : {}),
-        plain:
-          reading?.overall === "red"
-            ? "the checks failed"
-            : reading?.overall === "no-pr"
-              ? "no open pull request was found for it"
-              : "the checks have not all passed yet",
+        plain: reason,
       };
     }
     const { change, forge } = checked;
@@ -2654,16 +2641,49 @@ export class PrCiService {
     }
   }
 
+  private checksPending(
+    record: TaskRecord,
+    checked: CheckedChange,
+    checks: Awaited<ReturnType<Forge["checks"]>>,
+  ): boolean {
+    return (
+      !checks.problem &&
+      (checks.complete === false ||
+        running(checks.items) ||
+        (checks.items.length === 0 && !this.absenceDeclared(record, checked)))
+    );
+  }
+
+  /** Positive, exact-version absence evidence, never inferred from an empty result or history. */
+  private absenceDeclared(record: TaskRecord, checked: CheckedChange): boolean {
+    if (!checked.forge.hasChecks) return true;
+    const change = checked.change;
+    const reviews = [
+      ...(record.delivery?.mergeReviews ?? []),
+      ...(record.delivery?.mergeAuthorization?.review
+        ? [record.delivery.mergeAuthorization.review]
+        : []),
+    ];
+    const origin = forgeOf(
+      record.repoId ? this.options.repos.get(record.repoId)?.origin : undefined,
+    );
+    return reviews.some(
+      (review) =>
+        review.kind === checked.forge.kind &&
+        review.host === origin.host &&
+        review.owner === origin.owner &&
+        review.name === origin.name &&
+        review.number === change.number &&
+        review.branch === change.branch &&
+        review.headSha === change.headSha &&
+        review.absentChecks?.headSha === change.headSha,
+    );
+  }
+
   /**
-   * Record the reading on the task: the CI verdict and its time, plus the
-   * change's facts when one exists - its label from the forge, and its
-   * number and link where the host has them. A newly seen change is a
-   * `pr_opened` event; a reading that changes the check state is a `ci`
-   * event on the timeline, and one that changes nothing only moves the
-   * reading's time (`changesCheckState`). A red on
-   * a declared repair head is counted only on its unsuccessful result; the round that
-   * reaches the cap stamps `ciCapAt`, is the one feed-worthy `ci` event,
-   * and tells the host.
+   * Store raw check facts. The merge offer carries the crew's judgment. Changed facts
+   * create a ci event; an unchanged reading only refreshes its time. Raw
+   * readings do not judge readiness or settle declared repairs.
    */
   private record(
     taskId: string,
@@ -2672,6 +2692,8 @@ export class PrCiService {
     audience: Audience = "firstmate",
     stillRunning = false,
     checks: ForgeCheck[] = [],
+    complete?: boolean,
+    problem?: string,
   ): void {
     const at = this.now();
     const task = this.options.tasks.get(taskId);
@@ -2686,15 +2708,20 @@ export class PrCiService {
     const label = checked ? checked.forge.label(checked.change) : undefined;
     if (checked) this.noteChange(taskId, checked);
     const round = change ? observeCheckRepair(task.delivery, change.headSha, checks, at) : {};
+    const snapshot = checked
+      ? {
+          headSha: checked.change.headSha,
+          items: checks.map(({ name, state }) => ({ name, state })),
+          absenceDeclared: this.absenceDeclared(task, checked),
+          ...(complete !== undefined ? { complete } : {}),
+          ...(problem ? { problem } : {}),
+        }
+      : undefined;
+    const actual = snapshot ? checkSnapshotSummary(snapshot).overall : overall;
     const where = change
       ? ` on ${change.number !== undefined ? "PR " : ""}${label} head ${change.headSha}`
       : "";
-    const roundText =
-      round.ciRounds === undefined
-        ? ""
-        : round.ciCapAt !== undefined
-          ? ` - round ${round.ciRounds} of ${CI_ROUND_CAP}, the CI cap`
-          : ` - round ${round.ciRounds} of ${CI_ROUND_CAP}`;
+
     // The head the reading saw rides beside it: a reviewer is briefed at
     // that head, and a review verdict names the head it read.
     const watch = watchAfter(
@@ -2708,215 +2735,28 @@ export class PrCiService {
     this.options.tasks.recordChangeEvidence(
       taskId,
       {
-        ci: overall,
+        ci: actual === "none" ? undefined : actual,
         ciAt: at,
-        ...checksSpan(overall, checks),
+        checks: snapshot,
+        ...checksSpan(actual, checks),
         ...(change ? { headSha: change.headSha } : {}),
         ...round,
         ...watch,
       },
-      changesCheckState(task.delivery, overall, change?.headSha, round)
+      changesCheckState(
+        task.delivery,
+        actual === "none" ? undefined : actual,
+        change?.headSha,
+        round,
+      ) || JSON.stringify(task.delivery?.checks) !== JSON.stringify(snapshot)
         ? {
             kind: "ci",
-            text: `CI ${overall}${where}${roundText}`,
-            feed: round.ciCapAt !== undefined,
+            text: `CI ${actual}${where}`,
+            data: { checks: snapshot },
+            feed: false,
           }
         : undefined,
     );
-    if (round.ciCapAt !== undefined && change) {
-      this.options.onCap?.(taskId, { rounds: round.ciRounds as number, headSha: change.headSha });
-    }
-  }
-
-  /**
-   * An own repair declared at a version the change is no longer at
-   * (INF-685), or while the branch has no open pull request at all, as a
-   * repair of a workflow run's failed job may be (INF-970): no reading of
-   * the change's head can settle it, and while it is outstanding no further
-   * repair may be declared. Read that exact version's checks and settle the
-   * attempt from them alone, never from another head's. Only the repair
-   * ledger is written - the failures seen there, the attempt's result and
-   * any attempt it spends - so the change's own reading stays at its
-   * current head. A version that cannot be read (a host that reads checks
-   * only through a pull request says so), is still running or never ran
-   * the check is no result: the attempt stays outstanding. A version an
-   * open change moved past with no check at all there is superseded and
-   * spends nothing, since the host starts none for it now (INF-988), unless
-   * a branch is still at it, as an evidence branch whose dispatched runs
-   * GitHub has not listed yet is: that is no result yet (INF-1185). A version
-   * it moved past whose other checks all finished without the repaired one,
-   * with no branch at it, stays outstanding but stranded: no reading there
-   * can settle it, so the crewmate may carry it to the change's version
-   * (INF-1488). Answers one line for the reading, with that fact when it
-   * holds, or nothing when no such attempt is open.
-   */
-  private async settleEarlierRepair(
-    taskId: string,
-    forge: Forge,
-    branch: string,
-    change: ForgeChange | null,
-  ): Promise<EarlierRepair | undefined> {
-    const delivery = this.options.tasks.get(taskId)?.delivery;
-    const attempt = outstandingRepair(delivery?.ciRepair);
-    if (!attempt || attempt.headSha === change?.headSha) return undefined;
-    const name = `Repair ${attempt.id} at ${attempt.headSha} (${change ? `the change is now at ${change.headSha}` : "with no open pull request"})`;
-    // Asked first: a host can read checks at a longer id from the commit its
-    // first 40 characters name, which is not the attempt's version (INF-1184).
-    if ((await this.holdsVersion(forge, attempt.headSha)) === false) {
-      const where = placeWords(forge);
-      this.options.tasks.recordChangeEvidence(
-        taskId,
-        closeCheckRepair(delivery, attempt.headSha, "void"),
-        {
-          kind: "ci",
-          text: `Repair ${attempt.id} void at ${attempt.headSha}: no such commit ${where}`,
-        },
-      );
-      return {
-        text: `${name}: no commit ${attempt.headSha} exists ${where}, so no check can run there; it is void and spent no attempt, and its id may name the repair at its pushed version.`,
-      };
-    }
-    let checks: ForgeCheck[];
-    try {
-      checks = (
-        change
-          ? await forge.checks(change, attempt.headSha)
-          : await forge.checks({ branch, headSha: attempt.headSha, url: null })
-      ).items;
-    } catch (caught) {
-      const message = caught instanceof Error ? caught.message : String(caught);
-      return {
-        text: `${name}: its checks could not be read there (${message}), so it has no result yet.`,
-      };
-    }
-    if (change && checks.length === 0) {
-      // The open change moved past a version the host ran nothing on, and it
-      // starts nothing there now (INF-988) - unless another branch is still at
-      // it, where a pushed or dispatched run may yet start (INF-1185).
-      let at: string[] | undefined;
-      try {
-        at = await forge.branchesAt?.(attempt.headSha);
-      } catch (caught) {
-        const message = caught instanceof Error ? caught.message : String(caught);
-        return {
-          text: `${name}: no check has started there yet, and the branches at that version could not be read (${message}), so it has no result yet.`,
-        };
-      }
-      if (at && at.length > 0) {
-        return {
-          text: `${name}: no check has started there yet, and ${at.join(", ")} ${at.length === 1 ? "is" : "are"} still at that version, where a run can still start, so it has no result yet.`,
-        };
-      }
-      this.options.tasks.recordChangeEvidence(
-        taskId,
-        closeCheckRepair(delivery, attempt.headSha, "superseded"),
-        {
-          kind: "ci",
-          text: `Repair ${attempt.id} superseded at earlier head ${attempt.headSha}: no check ran there`,
-        },
-      );
-      return {
-        text: at
-          ? `${name}: no check ran there and no branch is at that version now, so none will start; it is superseded and spent no attempt.`
-          : `${name}: no check ran there and none will start now that the change moved past it, so it is superseded and spent no attempt.`,
-      };
-    }
-    const round = observeCheckRepair(delivery, attempt.headSha, checks, this.now());
-    const outcome = round.ciRepair?.repairs.find((r) => r.id === attempt.id)?.outcome;
-    const rounds =
-      round.ciRounds === undefined
-        ? ""
-        : ` - round ${round.ciRounds} of ${CI_ROUND_CAP}${round.ciCapAt !== undefined ? ", the CI cap" : ""}`;
-    this.options.tasks.recordChangeEvidence(
-      taskId,
-      round,
-      outcome
-        ? {
-            kind: "ci",
-            text: `Repair ${attempt.id} ${outcome} at earlier head ${attempt.headSha}${rounds}`,
-            feed: round.ciCapAt !== undefined,
-          }
-        : undefined,
-    );
-    if (round.ciCapAt !== undefined) {
-      this.options.onCap?.(taskId, { rounds: round.ciRounds as number, headSha: attempt.headSha });
-    }
-    const target = repairCheck(checks, attempt.check);
-    if (outcome && target) {
-      const named =
-        target.named === 1
-          ? ""
-          : outcome === "passed"
-            ? ` (all ${target.named} checks of that name passed)`
-            : ` (${target.unpassed} of ${target.named} checks of that name did not pass)`;
-      const read = `${name}: ${attempt.check} ${describeCheckState(target.check.state)} there${named}`;
-      return {
-        text:
-          outcome === "passed"
-            ? `${read}, so it passed and spent no attempt.`
-            : `${read}, so it is an unsuccessful own repair (${round.ciRounds ?? 0}/${CI_ROUND_CAP}).`,
-      };
-    }
-    if (checks.some((check) => check.state === "pending"))
-      return { text: `${name}: that version's checks are still running, so it has no result yet.` };
-    const none = `${name}: no check named ${attempt.check} reported there, so it has no result.`;
-    // The repaired check never started at a version the open change moved
-    // past, though others ran there: once no branch is at it, none can start
-    // there, and the attempt may be carried to the change's version
-    // (INF-1488). A failure of it on record there says it did start.
-    const failedThere = round.ciRepair?.failures.some(
-      (failure) => failure.headSha === attempt.headSha && failure.checks.includes(attempt.check),
-    );
-    if (!change || failedThere) return { text: none };
-    let at: string[] | undefined;
-    try {
-      at = await forge.branchesAt?.(attempt.headSha);
-    } catch (caught) {
-      const message = caught instanceof Error ? caught.message : String(caught);
-      return {
-        text: `${none} The branches at that version could not be read (${message}), so a run may still start there.`,
-      };
-    }
-    if (at && at.length > 0) {
-      return {
-        text: `${none} ${at.join(", ")} ${at.length === 1 ? "is" : "are"} still at that version, where a run can still start.`,
-      };
-    }
-    return {
-      text: `${none} None can start there now that the change moved past it: if ${change.headSha} carries this same repair, carry it forward by declaring it again under id ${attempt.id}, with source head ${attempt.sourceHead}, check ${attempt.check} and headSha ${change.headSha}. Its result there decides it, and carrying it spends no attempt.`,
-      stranded: { headSha: attempt.headSha, current: change.headSha },
-    };
-  }
-
-  /**
-   * Whether the project's host holds `sha` as a commit (INF-1184): false only
-   * on its own answer, and unknown - nothing refused or closed - where it
-   * cannot look a commit up or could not answer.
-   */
-  private async holdsVersion(forge: Forge, sha: string): Promise<boolean | undefined> {
-    return forge.holdsCommit ? forge.holdsCommit(sha).catch(() => undefined) : undefined;
-  }
-
-  /**
-   * Before a repair is declared: the open change, then any earlier
-   * attempt's own version - with no open pull request too (INF-970). A
-   * change that could not be read settles nothing.
-   */
-  private async settleBeforeRepair(located: {
-    record: NonNullable<ReturnType<TaskService["get"]>>;
-    branch: string;
-    forge: Forge;
-  }): Promise<EarlierRepair | undefined> {
-    if (!outstandingRepair(this.options.tasks.get(located.record.id)?.delivery?.ciRepair)) {
-      return undefined;
-    }
-    const change = await this.checkChange(located.record, located.branch, located.forge).then(
-      (found) => ({ found }),
-      () => undefined,
-    );
-    return change
-      ? this.settleEarlierRepair(located.record.id, located.forge, located.branch, change.found)
-      : undefined;
   }
 
   /**
@@ -2951,6 +2791,25 @@ export class PrCiService {
     );
   }
 
+  /** An unread observation survives a restart until it reaches the crew's durable inbox. */
+  private observeChecks(
+    taskId: string,
+    head: string,
+    checks: { items: readonly ForgeCheck[]; complete?: boolean; problem?: string },
+    forwarded: boolean,
+  ): string {
+    const previous = this.options.tasks.get(taskId)?.delivery?.ciObservation;
+    const signature = createHash("sha256").update(JSON.stringify({ head, checks })).digest("hex");
+    let observation =
+      previous?.signature === signature
+        ? previous
+        : { id: randomUUID(), signature, forwarded: false };
+    if (forwarded && !observation.forwarded) observation = { ...observation, forwarded: true };
+    if (observation !== previous)
+      this.options.tasks.recordChangeEvidence(taskId, { ciObservation: observation });
+    return observation.id;
+  }
+
   private now(): number {
     return this.options.now?.() ?? Date.now();
   }
@@ -2963,7 +2822,7 @@ export class PrCiService {
  * without them clears an earlier version's times.
  */
 function checksSpan(
-  overall: PrCiOverall,
+  overall: PrCiOverall | "none",
   items: readonly Pick<ForgeCheck, "state" | "startedAt" | "finishedAt">[],
 ): { ciStartedAt: number | undefined; ciFinishedAt: number | undefined } {
   const starts = items.flatMap((item) => (item.startedAt === undefined ? [] : [item.startedAt]));
@@ -2989,19 +2848,19 @@ function checksSpan(
 
 /**
  * Whether a reading changes the check state the record already holds: its
- * result, the head it read, or what it settles in the repair ledger (a
- * failure first seen, an attempt's result, a round or the cap). The quiet
+ * reported result, the head it read, or durable repair observations.
+ * Comparing a reading never settles a declared repair. The quiet
  * refresh reads an open pull request every five minutes, and a reading
  * that changes none of these writes no `ci` event (INF-721 friction 6:
  * 239 identical rows a day for one idle pull request).
  */
 function changesCheckState(
   before: TaskDelivery | null | undefined,
-  overall: PrCiOverall,
+  overall: PrCiOverall | undefined,
   headSha: string | undefined,
   round: Partial<TaskDelivery>,
 ): boolean {
-  if (before?.ci !== overall) return true;
+  if (!before || before.ci !== overall) return true;
   if (headSha !== undefined && before.headSha !== headSha) return true;
   return (
     ("ciRounds" in round && round.ciRounds !== before.ciRounds) ||

@@ -1,4 +1,4 @@
-import { failingRun } from "@shared/checkRepair";
+import { type CheckDiagnosis, failingRun } from "@shared/checkRepair";
 import type { TaskDelivery, TaskRecord } from "../storage/taskStore";
 
 /**
@@ -21,9 +21,14 @@ export type DependencyWait = { task: TaskRecord; since?: number };
  */
 export function baselineStands(
   delivery: TaskDelivery | null | undefined,
-  failed: { headSha: string; check: string },
+  failed: CheckDiagnosis,
 ): boolean {
   if (!delivery) return false;
+  // The declaration list is append-only; only its latest diagnosis for this pair is current.
+  const latest = delivery.ciRepair?.diagnoses.findLast(
+    (d) => d.headSha === failed.headSha && d.check === failed.check,
+  );
+  if (latest !== failed || latest.classification !== "baseline-blocked") return false;
   return (
     (failed.headSha === delivery.headSha && delivery.ci !== "green") ||
     failingRun(delivery, failed) !== undefined
@@ -33,8 +38,8 @@ export function baselineStands(
 /**
  * The checks a task's standing baseline waits name (INF-833 Fix 4): each
  * check of a baseline-blocked diagnosis that still stands, once. The host
- * reads the default branch's own run of these and wakes the task when one
- * passes, without waiting for the named task to close.
+ * reads the default branch's observations for these and relays changes,
+ * without judging whether they clear the wait.
  */
 export function standingBaselineChecks(delivery: TaskDelivery | null | undefined): string[] {
   if (!delivery) return [];

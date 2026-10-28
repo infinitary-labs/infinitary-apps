@@ -430,7 +430,7 @@ function buildFixture(dir: string): void {
   seedDelivery(
     tasks,
     "t-build",
-    { override: override(["repairs", "rounds"], 20) },
+    { override: override(["checks", "review"], 20) },
     {
       kind: "note",
       actor: "firstmate",
@@ -448,13 +448,13 @@ function buildFixture(dir: string): void {
       actor: "firstmate",
       feed: true,
       text: "You took back your words.",
-      data: { news: true, overrideWithdrawn: override(["repairs", "rounds"], 20) },
+      data: { news: true, overrideWithdrawn: override(["checks", "review"], 20) },
     },
   );
   seedDelivery(
     tasks,
     "t-build",
-    { override: override(["repairs"], 30) },
+    { override: override(["checks"], 30) },
     {
       kind: "note",
       actor: "firstmate",
@@ -2486,7 +2486,7 @@ describe("corpus export - the R1 corrections", { timeout: 30_000 }, () => {
     expect(rigor.cap_hits).toBe(0);
     // Each override the captain's words declared, per hold kind it passed:
     // two declared, one taken back between them (INF-484 move 8).
-    expect(rigor.overrides_by_hold).toEqual({ repairs: 2, rounds: 1 });
+    expect(rigor.overrides_by_hold).toEqual({ checks: 2, review: 1 });
     // The numbers are the metric module's, not a second implementation: the
     // findings are counted off the reviewer's own report, and the CI rounds
     // are charged to the one direct-pr change that opened a pull request.

@@ -1,3 +1,4 @@
+import type { ForgeCheckState } from "@shared/checkSnapshot";
 import type { ForgeKind } from "@shared/forge";
 import type { ForgeProject } from "@shared/forges";
 import type { ForgeApi } from "./api";
@@ -69,18 +70,8 @@ export type ForgeChange = {
  * and so blocks green without being red; anything
  * still queued or running is `pending`.
  */
-export type ForgeCheckState =
-  | "success"
-  | "failure"
-  | "error"
-  | "cancelled"
-  | "timed_out"
-  | "action_required"
-  | "startup_failure"
-  | "stale"
-  | "skipped"
-  | "neutral"
-  | "pending";
+export type { ForgeCheckState } from "@shared/checkSnapshot";
+export { isRedCheckState } from "@shared/checkSnapshot";
 
 /**
  * One check, with when the host says it started and finished (epoch ms),
@@ -91,6 +82,13 @@ export type ForgeCheck = {
   state: ForgeCheckState;
   startedAt?: number;
   finishedAt?: number;
+  run?: number;
+  workflow?: number;
+  event?: string;
+  status?: string;
+  conclusion?: string | null;
+  allowFailure?: boolean;
+  ref?: string;
 };
 
 /** A check's start and finish from the host's ISO times, leaving out any it lacks or garbles. */
@@ -109,7 +107,11 @@ export function checkTimes(
 export type ForgeOverall = "green" | "red" | "pending";
 
 export type ForgeChecks = {
-  overall: ForgeOverall;
+  complete?: boolean;
+  /** A known read refusal, preserved with partial facts rather than hidden as running. */
+  problem?: string;
+  /** Legacy readers may supply this; the host never uses it as a verdict. */
+  overall?: ForgeOverall;
   items: ForgeCheck[];
   /**
    * The host added its own "checks have not started yet" marker, not a real
@@ -149,6 +151,8 @@ export type ForgePull = {
    */
   headRepo?: string;
   readiness: ForgeReadiness;
+  mergeable?: boolean | null;
+  mergeableState?: string;
 };
 
 /**
@@ -341,41 +345,6 @@ export interface Forge {
 /** A full commit id: 40 hexadecimal characters, or 64 in a SHA-256 repository. */
 export function isFullCommitId(sha: string): boolean {
   return /^[0-9a-f]{40}(?:[0-9a-f]{24})?$/.test(sha);
-}
-
-const RED_STATES = new Set<ForgeCheckState>([
-  "failure",
-  "error",
-  "cancelled",
-  "timed_out",
-  "action_required",
-  "startup_failure",
-  "stale",
-]);
-
-/**
- * The standing green rule, the one home for every kind: green only
- * when EVERY check completed successfully or was skipped; terminal failures are red;
- * anything else - queued, running, neutral - blocks green without
- * being red. Zero checks reads green here: a project with no checks must still
- * be able to put work in, and the result text says so. A forge that knows
- * checks are coming but have not started (GitHub: `githubForge.ts`) reports
- * a pending item instead of an empty list, so this rule never sees it.
- */
-export function overallOfChecks(items: { state: ForgeCheckState }[]): ForgeOverall {
-  if (items.every((item) => isAcceptedCheckState(item.state))) return "green";
-  if (items.some((item) => RED_STATES.has(item.state))) return "red";
-  return "pending";
-}
-
-/** A completed check that does not block approval, including conditional skips. */
-export function isAcceptedCheckState(state: ForgeCheckState): boolean {
-  return state === "success" || state === "skipped";
-}
-
-/** A terminal non-success: the states that make a reading red. */
-export function isRedCheckState(state: ForgeCheckState): boolean {
-  return RED_STATES.has(state);
 }
 
 /** A check state in a tool's words: `completed / <conclusion>`, or still running. */

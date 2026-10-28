@@ -208,6 +208,7 @@ function guidedMergeMove(body: string, firstmate: boolean): ScenarioAnswer | und
       args: { title: GUIDED_MERGE_TITLE, presentation: preparedRevision(results.join("\n")) },
     },
     { name: "check_change", args: {} },
+
     {
       name: "emit_card",
       args: {

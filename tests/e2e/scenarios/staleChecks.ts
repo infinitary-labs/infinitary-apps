@@ -1,3 +1,4 @@
+import { CHECK_OBSERVATIONS_LEAD } from "../../../src/core/orchestrator/wakes";
 import { completionCardBody } from "../../helpers/completionCard";
 import {
   contextRepos,
@@ -12,12 +13,35 @@ import {
 /** A completion card whose checks change on GitHub after it went up. */
 export const STALE_CHECKS_MARKER = "exercise stale check strip";
 export const STALE_CHECKS_CARD = "The stale strip change is ready";
+export const STALE_CHECKS_REFUSAL = "Resource not accessible by integration";
 
 function staleChecksMove(
   body: string,
   firstmate: boolean,
 ): { calls: ScriptedCall[] } | { text: string } | undefined {
   const { user, results } = sinceLastUser(body);
+  if (
+    !firstmate &&
+    (user.includes(CHECK_OBSERVATIONS_LEAD) || user.includes(STALE_CHECKS_REFUSAL)) &&
+    body.includes(STALE_CHECKS_MARKER)
+  ) {
+    if (!results.length) return { calls: [{ name: "check_change", args: {} }] };
+    if (results.length === 1)
+      return {
+        calls: [
+          {
+            name: "report",
+            args: {
+              text: "The current check facts were refreshed; the merge offer remains on its card.",
+              waiting_on_captain: {
+                reason: "The existing merge choice is still on its card.",
+              },
+            },
+          },
+        ],
+      };
+    return { text: "The changed check facts are recorded." };
+  }
   if (!user.includes(STALE_CHECKS_MARKER)) return undefined;
   const taskId =
     indexTaskId(body, `meterlab ${STALE_CHECKS_MARKER}`) ??

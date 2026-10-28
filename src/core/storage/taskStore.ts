@@ -3,6 +3,7 @@ import type {
   MergeRepairDeclaration,
   MergeRepairImpact,
 } from "@shared/checkRepair";
+import type { CheckSnapshot } from "@shared/checkSnapshot";
 import { type HoldOverride, overridePasses } from "@shared/holds";
 import type { LiveValidation } from "@shared/liveValidation";
 import type { MergeReview } from "@shared/mergeReview";
@@ -315,6 +316,10 @@ export type TaskDelivery = {
   changeLines?: { base: string; head: string; added: number; deleted: number; at: number };
   ci?: "green" | "red" | "pending" | "no-pr" | "merged";
   ciAt?: number;
+  /** Current raw check facts; the merge offer itself is the crew's judgment. */
+  checks?: CheckSnapshot;
+  /** A raw reading's durable identity; forwarded by a tool response or the inbox, never a verdict. */
+  ciObservation?: { id: string; signature: string; forwarded: boolean; notice?: string };
   /** When the host says the first check on that head started (INF-587). */
   ciStartedAt?: number;
   /** When the checks finished: the last finish when green, the first failure's when red. */
@@ -363,13 +368,8 @@ export type TaskDelivery = {
   reviewRiskNote?: string;
   reviewedAt?: number;
   /**
-   * The round counters and caps (delivery rigor phase 3), on the BUILDER:
-   * `ciRounds` counts unsuccessful declared own repairs (`ciRedHead` is the
-   * last failed repair head), `reviewRounds` the findings verdicts; `ciCapAt` / `reviewCapAt`
-   * are set when the cap was reached and hold until the steer that reopens
-   * the rounds clears them; `capAnsweredAt` records the captain's answer to
-   * a Firstmate decision card on the task since the cap - the answer the
-   * reopening steer needs.
+   * The declaration record and preserved legacy count fields.
+   * The host never increments these counts or uses their caps as holds.
    */
   ciRepair?: CheckRepairLedger;
   ciRounds?: number;
@@ -510,36 +510,6 @@ export type CiWatch = {
   tries: number;
   failureSeen?: boolean;
 };
-
-/**
- * A round cap that stands on a builder: placed (`ciCapAt` / `reviewCapAt`)
- * and not yet answered (`capAnsweredAt`), excluding first-mate review holds.
- * It is what places the builder's
- * `captain` gate when no card is up (docs/delivery-rigor.md, "The caps"):
- * `reason` is the gate's, `head` its ref - the head the cap was reached at.
- */
-export type StandingCap = { held: "ci-cap" | "review-cap"; reason: string; head?: string };
-
-export function standingCap(delivery: TaskDelivery | null | undefined): StandingCap | undefined {
-  // The captain's override on the repair or re-review limit lifts that cap.
-  const ciAt = overridePasses(delivery, "repairs", delivery?.headSha)
-    ? undefined
-    : delivery?.ciCapAt;
-  const reviewAt =
-    delivery?.reviewCapOwner === "firstmate" ||
-    overridePasses(delivery, "rounds", delivery?.headSha)
-      ? undefined
-      : delivery?.reviewCapAt;
-  if (!delivery || (ciAt === undefined && reviewAt === undefined)) return undefined;
-  const capAt = Math.max(ciAt ?? 0, reviewAt ?? 0);
-  if (delivery.capAnsweredAt !== undefined && delivery.capAnsweredAt >= capAt) return undefined;
-  if (ciAt !== undefined && ciAt >= (reviewAt ?? 0)) {
-    const head = delivery.ciRedHead ?? delivery.headSha;
-    return { held: "ci-cap", reason: "the CI cap", ...(head ? { head } : {}) };
-  }
-  const head = delivery.reviewRoundSha ?? delivery.reviewSha ?? delivery.headSha;
-  return { held: "review-cap", reason: "the review cap", ...(head ? { head } : {}) };
-}
 
 export type TaskRecord = {
   id: string;

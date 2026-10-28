@@ -268,7 +268,7 @@ export function cardReply(page: Page): {
 }
 
 /**
- * The shown completion card's merge control, named by its typed action.
+ * The shown completion card's ordinary merge control, never its check-override action (F27).
  * The host owns its label (including the delivery posture), so a journey
  * finds what the action does and reads its words from the card itself.
  */
@@ -277,8 +277,9 @@ export async function completionAction(page: Page, title: string): Promise<Locat
     const card = (await window.infinitary.cards.list()).find((card) => card.title === wanted);
     return card?.actions.find(
       (action) =>
-        (action.effect?.kind === "settle" && action.effect.mode === "merge") ||
-        action.effect?.kind === "request_merge",
+        !action.passes &&
+        ((action.effect?.kind === "settle" && action.effect.mode === "merge") ||
+          action.effect?.kind === "request_merge"),
     )?.label;
   }, title);
   if (!label) throw new Error(`Card "${title}" has no completion action`);

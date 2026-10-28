@@ -244,12 +244,10 @@ describe("a workflow run read without a pull request (INF-688)", () => {
 
       // Its diagnosis and reservation need no pull request.
       expect(await f.checkChange({ diagnosis: FLAKE })).toContain(
-        "Diagnosis recorded: suspected-flake",
+        "Diagnosis recorded with evidence.",
       );
       const reserved = await f.checkChange({ rerun: RESERVE });
-      expect(reserved).toContain(
-        `Rerun authorized once: rerun only this failed job of run ${RUN_ID}`,
-      );
+      expect(reserved).toContain("Crew check declaration recorded with evidence.");
       expect(f.ledger()?.rerun).toEqual({ ...RESERVE, runId: RUN_ID });
 
       // The job's own rerun dates the reservation through the job's run, and the app watches the run.
@@ -271,20 +269,20 @@ describe("a workflow run read without a pull request (INF-688)", () => {
 
       // A failed rerun is diagnosis, not another rerun.
       expect(await f.checkChange({ rerun: RESERVE })).toContain(
-        "already reserved its one failed-job rerun",
+        "Crew check declaration recorded with evidence.",
       );
     },
   );
 
-  it("refuses a diagnosis for a job no reading showed failed", async () => {
+  it("records an evidenced diagnosis without deciding its attribution (INF-1177)", async () => {
     const f = await setup();
     await f.readWorkflow(RUN_ID);
     expect(
       await f.checkChange({ diagnosis: { ...FLAKE, check: "linux-e2e / journeys (desktop 1/4)" } }),
-    ).toContain("Diagnosis refused: name an observed failing head/check");
+    ).toContain("Diagnosis recorded with evidence.");
   });
 
-  it("refuses the reservation once a newer reading of the run no longer lists the job failed", async () => {
+  it("records a new rerun judgment without imposing a host allowance (INF-1177)", async () => {
     const f = await setup();
     await f.readWorkflow(RUN_ID);
     await f.checkChange({ diagnosis: FLAKE });
@@ -292,9 +290,9 @@ describe("a workflow run read without a pull request (INF-688)", () => {
     f.githubShows({ run: run(2, false), jobs: attempt2(false) });
     expect(await f.readWorkflow(RUN_ID)).toContain("linux-checks — in_progress");
     expect(await f.checkChange({ rerun: RESERVE })).toContain(
-      "no workflow run you read still shows that job failed there",
+      "Crew check declaration recorded with evidence.",
     );
-    expect(f.ledger()?.rerun).toBeUndefined();
+    expect(f.ledger()?.rerun).toMatchObject(RESERVE);
   });
 
   it("leaves a run's reservation undated when another run is rerun", async () => {
@@ -361,7 +359,7 @@ describe("a workflow run read without a pull request (INF-688)", () => {
     await flaky.checkChange({ diagnosis: FLAKE });
     moveOn(flaky);
     expect(await flaky.checkChange({ rerun: RESERVE })).toContain(
-      "no workflow run you read still shows that job failed there",
+      "Crew check declaration recorded with evidence.",
     );
   });
 });

@@ -1286,7 +1286,7 @@ describe("migration 46 (the two graph gaps)", () => {
 });
 
 describe("migration 47 (the gate becomes a witness, the primitives review P2)", () => {
-  it("gates an active builder whose cap stands, logs each row, leaves the rest, and reverses", () => {
+  it("keeps legacy count history without creating retired captain gates (INF-1177)", () => {
     const dir = tmpUserData();
     const at46 = openDatabase(dir, 46);
     const tasks = new TaskService({ db: at46 });
@@ -1315,16 +1315,9 @@ describe("migration 47 (the gate becomes a witness, the primitives review P2)", 
     const upgraded = openDatabase(dir);
     expect(appliedVersions(upgraded)).toEqual(ALL_VERSIONS);
     const read = new TaskService({ db: upgraded });
-    expect(read.get("ci-capped")?.gate).toEqual({
-      kind: "captain",
-      ref: "abc1234",
-      reason: "the CI cap",
-    });
-    expect(read.get("review-capped")?.gate).toEqual({
-      kind: "captain",
-      ref: "def5678",
-      reason: "the review cap",
-    });
+    expect(read.get("ci-capped")?.gate).toBeNull();
+    expect(read.get("review-capped")?.gate).toBeNull();
+    expect(read.get("ci-capped")?.delivery?.ciRounds).toBe(3);
     expect(read.get("answered")?.gate).toBeNull();
     expect(read.get("gated")?.gate).toEqual({ kind: "at-time", until: 999 });
     expect(read.get("uncapped")?.gate).toBeNull();
@@ -1332,10 +1325,7 @@ describe("migration 47 (the gate becomes a witness, the primitives review P2)", 
       upgraded
         .prepare("SELECT task_id, gate_ref, gate_reason FROM cap_gate_backfill ORDER BY task_id")
         .all(),
-    ).toEqual([
-      { task_id: "ci-capped", gate_ref: "abc1234", gate_reason: "the CI cap" },
-      { task_id: "review-capped", gate_ref: "def5678", gate_reason: "the review cap" },
-    ]);
+    ).toEqual([]);
 
     // Reversible: clear the gate of every logged row and drop the log.
     upgraded.exec(

@@ -346,7 +346,9 @@ describe("the GitHub stand-in, through the app's forge", () => {
       github.servePull({ number: 55, title: TITLE });
       github.setChecks([{ name: "linux-checks", status: "completed", conclusion: "failure" }]);
       const change = await forge.changeFor("fm/task-meter");
-      expect((await forge.checks(change as NonNullable<typeof change>)).overall).toBe("red");
+      expect((await forge.checks(change as NonNullable<typeof change>)).items).toContainEqual(
+        expect.objectContaining({ state: "failure" }),
+      );
     });
   });
 });

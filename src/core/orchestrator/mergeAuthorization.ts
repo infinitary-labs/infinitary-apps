@@ -45,7 +45,7 @@ import type { WakeBody } from "./wakes";
 
 /**
  * The offer a captain's merge click on this card approves (FI3-304): the
- * completion offer the host published after its checks passed at a known
+ * completion offer the host published after reading its known
  * head, on a direct-pr task whose project lives on GitHub or GitLab, for
  * the pull request the task still names - with where that project lives.
  * Undefined where the click approves no head and is one attempt: a first
@@ -583,12 +583,14 @@ export function decideMergeRepair(
   return { decided: "ended", head: undecided.toHead, reason };
 }
 
+export const MERGE_CHECKS_HOLD_REASON = "the checks have not all passed";
+
 /**
  * The feed line for a click whose merge did not happen yet but whose
  * approval stands, in the vocabulary's words (never a raw failure). `place`
  * is where the project lives in the person's words ("GitHub", "GitLab", a
- * host's own address); `checks` is the task's last checks reading, which
- * tells a wait for a fix from a wait for checks still running (INF-23).
+ * host's own address). The current check facts distinguish waiting for a fix
+ * from waiting for results (captain F20/F27), never a separate crew verdict.
  */
 export function keptFeedLine(
   title: string,
@@ -599,7 +601,7 @@ export function keptFeedLine(
   const kept = "Your merge is kept";
   switch (wait) {
     case "conflict":
-      return `Cannot merge "${title}" yet: it conflicts with newer work in the project. ${kept} and runs once its crewmate has brought it up to date and the checks pass.`;
+      return `Cannot merge "${title}" yet: it conflicts with newer work in the project. ${kept} and runs once its crewmate has brought it up to date and its checks pass.`;
     case "repair":
       return `Cannot merge "${title}" yet: it changed after the card you approved. ${kept} and runs once its crewmate shows the work is still what you approved.`;
     case "evidence":
@@ -607,7 +609,7 @@ export function keptFeedLine(
     case "checks":
       return checks === "red"
         ? `Your merge of "${title}" waits for a fix: its checks failed. A fix brings a new version with fresh checks: when it changed the work, its crewmate asks you again on a new card; otherwise your merge runs once they pass.`
-        : `Your merge of "${title}" waits for the checks: it runs by itself once they all pass.`;
+        : `Your merge of "${title}" waits: ${MERGE_CHECKS_HOLD_REASON}. Your approval is kept. If a fix changes the work, its crewmate asks you again; otherwise the merge runs when its checks pass.`;
     case "review":
       return `Cannot merge "${title}" yet: its review has not passed on this change. ${kept} and runs once it does.`;
     case "cap":
@@ -633,19 +635,21 @@ export function keptFeedLine(
  * What the Firstmate is told beside a wait on a kept approval: who moves
  * next, and that the captain is not asked for a second click.
  */
-export function keptNote(wait: MergeWait, head: string, place: string): string {
+export function keptNote(wait: MergeWait, head: string, place: string, checks?: string): string {
   const kept =
     "The captain's merge approval is KEPT: the host merges by itself once the gates pass, so do not ask the captain to merge again or to put up a new card.";
   const declare = `When the crewmate pushes a new version - brought up to date, or a fix for what stopped the merge - it declares the repair with check_change conflictRepair from ${head}: impact none keeps the approval; changed-work ends it and it puts up a new completion card.`;
   switch (wait) {
     case "conflict":
-      return `${kept} Steer the crewmate to bring the branch up to date with the default branch, rerun its validation, push, declare the repair and drive the checks green. ${declare}`;
+      return `${kept} Steer the crewmate to bring the branch up to date with the default branch, rerun its validation, push, declare the repair, read the current check facts. ${declare}`;
     case "repair":
       return `${kept} The pull request is past the version the approval covers (${head}). Steer the crewmate to declare what changed. ${declare}`;
     case "evidence":
       return `${kept} The crewmate declared its repair from ${head} unknown, so the host has an independent crewmate assess it once its turn ends: none keeps the approval and the host merges; any other answer ends it, and the host tells the crewmate to put up a new completion card. Nothing is needed from you.`;
     case "checks":
-      return `${kept} The checks on ${head} have not all passed: the crewmate diagnoses and repairs under its usual rules, and a fix that changes the head is declared as a repair. ${declare}`;
+      return checks === "red"
+        ? `${kept} For ${head}, the checks failed and the merge waits for a fix. The crewmate reads failed logs and fixes the cause; a changed version is declared as a repair. ${declare}`
+        : `${kept} For ${head}, ${MERGE_CHECKS_HOLD_REASON}. The crewmate reads missing results; the merge runs when its checks pass. ${declare}`;
     case "review":
       return `${kept} This task ships at the reviewed tier and its review has not passed for this change (${head}): commission the review; the host merges once it passes.`;
     case "cap":

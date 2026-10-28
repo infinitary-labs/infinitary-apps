@@ -59,9 +59,8 @@ export const MERGE_WORDS = {
 export const REVIEW_CAREFULLY_WORDS = "Review carefully";
 
 /**
- * The merge button on a completion card while its pull request's checks
- * are still running (INF-23): the click keeps the captain's approval, and
- * the app merges by itself once the checks pass.
+ * The merge button while checks have not passed (captain INF-1555 F12).
+ * The click keeps the captain's approval; the app merges when the checks pass.
  */
 export const MERGE_WHEN_CHECKS_PASS_WORDS = "Merge when checks pass";
 

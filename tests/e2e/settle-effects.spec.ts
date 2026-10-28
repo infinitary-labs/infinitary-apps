@@ -9,6 +9,7 @@ import { seedTask } from "../../src/core/tasks/seedTask";
 import { TaskService } from "../../src/core/tasks/taskService";
 import type { TaskDetail } from "../../src/shared/tasks";
 import { scratchDir } from "../helpers/scratchDirs";
+import { seedDelivery } from "../helpers/taskDelivery";
 import { launchClaudeCrew } from "./claudeCrew";
 import {
   type GitHubStub,
@@ -17,6 +18,7 @@ import {
   startGitHubStub,
 } from "./githubStub";
 import { type LaunchedApp, launchApp } from "./launch";
+import { recordAppTrace } from "./launchDiagnostics";
 import { SPAWN_PROMPT_MARKER } from "./mockProvider";
 import { regionShot } from "./pictures";
 import { seedHostedOrigins } from "./projectSeed";
@@ -132,8 +134,32 @@ function seedCompletionCard(
   });
 }
 
+/** Historical ready/red entries remain readable but grant no current authority (captain INF-1555 F12). */
+function seedHistoricalCheckDeclaration(
+  db: ReturnType<typeof openDatabase>,
+  taskId: string,
+  headSha: string,
+  verdict: "ready" | "red",
+) {
+  seedDelivery(new TaskService({ db, strict: true }), taskId, {
+    ciRepair: {
+      failures: [],
+      diagnoses: [],
+      repairs: [],
+      declarations: [
+        {
+          headSha,
+          verdict,
+          at: Date.now(),
+          evidence: "The scripted crew judged the arranged check runs for this candidate.",
+        },
+      ],
+    },
+  });
+}
+
 /**
- * Checks that let a change go in. The second is PR #632's version (FI3-585):
+ * Captain F26: checks that pass, including a later run replacing a cancelled duplicate. The second is PR #632's version (FI3-585):
  * one push started two runs of the same workflow, the later run cancelled
  * the earlier before it began, and the later run's check passed.
  */
@@ -236,6 +262,8 @@ const REFUSALS: {
   change: string;
   arrange: (github: GitHubStub, repo: Repo) => string;
   asksGitHub: boolean;
+  crewVerdict: "ready" | "red";
+  crewHead?: (repo: Repo, fact: string) => string;
   stoppedBy: (stop: ReturnType<typeof stopOf>, fact: string) => boolean;
 }[] = [
   {
@@ -245,6 +273,7 @@ const REFUSALS: {
       return JSON.stringify("The crewmate's work");
     },
     asksGitHub: false,
+    crewVerdict: "ready",
     stoppedBy: (stop, title) => stop.problem.includes(title),
   },
   {
@@ -254,6 +283,7 @@ const REFUSALS: {
       return JSON.stringify("");
     },
     asksGitHub: false,
+    crewVerdict: "ready",
     stoppedBy: (stop, title) => stop.problem.includes(title),
   },
   {
@@ -264,7 +294,9 @@ const REFUSALS: {
       github.headOf(() => elsewhere);
       return elsewhere;
     },
+    crewHead: (_repo, fact) => fact,
     asksGitHub: false,
+    crewVerdict: "ready",
     stoppedBy: (stop, head) => stop.problem.includes(head),
   },
   {
@@ -275,6 +307,7 @@ const REFUSALS: {
       return "GitHub answered 409";
     },
     asksGitHub: true,
+    crewVerdict: "ready",
     stoppedBy: (stop, answer) => stop.problem.includes(answer),
   },
   {
@@ -285,6 +318,7 @@ const REFUSALS: {
       return "red";
     },
     asksGitHub: false,
+    crewVerdict: "red",
     stoppedBy: (stop, reading) => stop.ci === reading,
   },
   {
@@ -298,6 +332,7 @@ const REFUSALS: {
       return "red";
     },
     asksGitHub: false,
+    crewVerdict: "red",
     stoppedBy: (stop, reading) => stop.ci === reading,
   },
 ];
@@ -325,6 +360,12 @@ for (const refusal of REFUSALS) {
       worktreeDir: repo.worktreeDir,
       branch: repo.branch,
     });
+    seedHistoricalCheckDeclaration(
+      db,
+      taskId,
+      refusal.crewHead?.(repo, fact) ?? repo.branchHead(),
+      refusal.crewVerdict,
+    );
     seedCompletionCard(db, taskId, "Merge the pull request");
     db.close();
 
@@ -647,7 +688,13 @@ for (const backend of CREW_BACKENDS) {
     let taskId = "";
     const record = () => tasks.get(taskId);
     const mergeRequests = () => github.requests().filter((request) => request.endsWith("/merge"));
+    let stopTrace: (() => Promise<void>) | undefined;
     try {
+      // INF-1555 F16: retain real frame/network facts if Activity stops, not just test-call tracing.
+      stopTrace = await recordAppTrace(
+        app.app.context(),
+        test.info().outputPath("guided-merge-app-trace.zip"),
+      );
       const { page } = app;
       const input = promptInput(page);
       await input.fill(`${SPAWN_PROMPT_MARKER} ${title}`);
@@ -764,9 +811,13 @@ for (const backend of CREW_BACKENDS) {
       keepMergeFailure(app, tasks, github);
       throw error;
     } finally {
-      await app.close();
-      await github.close();
-      db.close();
+      try {
+        await stopTrace?.();
+      } finally {
+        await app.close();
+        await github.close();
+        db.close();
+      }
     }
   });
 }

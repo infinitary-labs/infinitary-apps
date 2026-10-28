@@ -151,56 +151,6 @@ test("a crewmate stuck past every nudge and wake is the app's own card, which ta
  * captain gate does not hold the card back. The card's words are
  * crewSupervisor.test.ts's.
  */
-test("a capped task stuck past every wake is still put to the captain on the app's own card", async () => {
-  const userDataDir = scratchDir("infinitary-idle-ladder-cap-");
-  const db = openDatabase(userDataDir);
-  const tasks = new TaskService({ db });
-  const worktreeDir = join(userDataDir, "worktrees", "capped-task");
-  mkdirSync(worktreeDir, { recursive: true });
-  seedTask(tasks, {
-    id: "capped-task",
-    title: "Fix the gauge test",
-    status: "completed",
-    worktreeDir,
-    outcome: "The checks failed again on the gauge test.",
-  });
-  const head = "abc1234def5678";
-  const now = Date.now();
-  seedDelivery(tasks, "capped-task", {
-    headSha: head,
-    ci: "red",
-    ciRounds: 3,
-    ciRedHead: head,
-    ciCapAt: now - 90 * 60_000,
-  });
-  tasks.setGate("capped-task", { kind: "captain", ref: head, reason: "the CI cap" });
-  tasks.recordRecovery("capped-task", {
-    rung: 2,
-    count: 2,
-    at: now - 35 * 60_000,
-    idleSince: now - 90 * 60_000,
-  });
-  db.close();
-
-  const launched = await launchApp({ userDataDir });
-  try {
-    const { page } = launched;
-    // The cap's captain gate does not hide it: the host puts the task to
-    // him on its own card.
-    await expect
-      .poll(() =>
-        page.evaluate(async () =>
-          (await window.infinitary.cards.list()).some(
-            (card) => card.taskId === "capped-task" && card.author === "host",
-          ),
-        ),
-      )
-      .toBe(true);
-    await expect(cardSurface(page)).toBeVisible();
-  } finally {
-    await launched.close();
-  }
-});
 
 /**
  * A wait its crewmate declared with no card up (FI3-435, and INF-11 from the

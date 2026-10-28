@@ -179,7 +179,15 @@ export function composeDelivery(
 ): Values | null {
   if (!history) return null;
   const changes = evidenceFields(evidence);
-  return { ...history, ...changes, ...permissionFields(permissions, changes.liveValidation) };
+  const delivery = {
+    ...history,
+    ...changes,
+    ...permissionFields(permissions, changes.liveValidation),
+  };
+  // Captain INF-1555 F12: discard only the obsolete current cache.
+  // Its old declarations and timeline remain history, never merge authority.
+  delete delivery.crewVerdict;
+  return delivery;
 }
 
 type SavedDatabase = {

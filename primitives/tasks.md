@@ -39,7 +39,7 @@ Status is `open | active | done | dropped`, with `activity` and `closed_reason` 
 An open row waits on a gate (`quota-reset | at-time | captain`), on `blocks` links, or on request (`start_policy`).
 The ready query is the dispatch list: open work, no gate, `when-ready`, every blocker `done`; on-request rows never dispatch on their own.
 It runs on the shared tick, after any close, after any graph change, on quota refresh and at boot (`CrewSupervisor.sweepGates`).
-The gate is a witness: every card with actions, and a wait on the captain a crewmate declares in its report, places the `captain` gate on its task (a task-less host card files an `operation` row), a round cap is that gate, never a second wait (`docs/task-graph.md`).
+The gate is a witness: every card with actions, and a wait on the captain a crewmate declares in its report, places the `captain` gate on its task (a task-less host card files an `operation` row) (`docs/task-graph.md`).
 The whose-turn sort and the idle ladder read that gate as one witness among their shared set (`IdleLadder.witnesses`, [report-sort](../docs/report-sort.md)), which stays documented there.
 On an active work row the `captain` gate has one writer, `IdleLadder.syncCaptainGate`.
 

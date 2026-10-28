@@ -71,6 +71,7 @@ import { attachmentPath, keepImages } from "../attachments";
 import { renderIntegrationReply } from "../axi/integrationCommands";
 import type { IntegrationReply } from "../axi/protocol";
 import { CLAUDE_MODELS } from "../claude/claudeModels";
+import { CONTRACT_CHANGES } from "../connection/contractChanges";
 import { Computers } from "../devices/computers";
 import { DevicePairing } from "../devices/pairing";
 import { pathsOf } from "../folderMove/due";
@@ -1113,6 +1114,50 @@ describe("a task that runs on a computer that runs work", () => {
         workTasks: [task],
       }),
     );
+  });
+
+  // INF-1555 F12: both declaration and offer semantics are required before remote work begins.
+  it("keeps a direct-pr change queued until both current protocol names are advertised", async () => {
+    const at = await world(undefined, {
+      changes: CONTRACT_CHANGES.names.filter((change) => change !== "check-declarations"),
+    });
+    const home = at.home();
+    await expect
+      .poll(() => home.devices.version(at.deviceId)?.changes)
+      .toEqual(CONTRACT_CHANGES.names.filter((change) => change !== "check-declarations"));
+    expect(home.placed.takesCheckDeclarations(at.deviceId)).toBe(false);
+    // The same computer now reports the older draft's declarations but not the replacement offer semantics.
+    await at.restartComputer({
+      changes: CONTRACT_CHANGES.names.filter((change) => change !== "merge-offer-readiness"),
+    });
+    await expect
+      .poll(() => home.devices.version(at.deviceId)?.changes)
+      .toEqual(CONTRACT_CHANGES.names.filter((change) => change !== "merge-offer-readiness"));
+    expect(home.placed.takesCheckDeclarations(at.deviceId)).toBe(false);
+
+    const { repo } = await home.repos.setup({ kind: "init", name: "check-declarations" });
+    home.repos.configure(repo.id, { delivery: "direct-pr" });
+    seedTask(home.tasks, {
+      id: "t-old-check-tool",
+      title: "Fix the project checks",
+      status: "queued",
+      repoId: repo.id,
+      deviceId: at.deviceId,
+      shape: { kind: "fix", kind_source: "host:test", deliverable: "change", rigor_ask: "quick" },
+    });
+    const requests = api.requests.length;
+    await home.supervisor.dispatchQueuedTask("t-old-check-tool");
+    expect(home.tasks.get("t-old-check-tool")).toMatchObject({
+      status: "open",
+      gate: {
+        kind: "captain",
+        ref: "dispatch-failed",
+        reason: expect.stringContaining("must be updated"),
+      },
+    });
+    expect(api.requests).toHaveLength(requests);
+    await at.restartComputer({ changes: CONTRACT_CHANGES.names });
+    await expect.poll(() => home.placed.takesCheckDeclarations(at.deviceId)).toBe(true);
   });
 
   it.each(["10.1.0", "11.0.0"])(

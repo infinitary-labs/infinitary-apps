@@ -87,37 +87,6 @@ export function rigorFor(input: RigorInput): RigorDecision {
 }
 
 /**
- * The round caps the host enforces (delivery rigor phase 3, plan section
- * 4.1.2). Phase 1 asked the crewmate to bound itself by instruction - three
- * unsuccessful own repairs, then a blocker report - and phase 2 asked the Firstmate to
- * re-review at most twice. From phase 3 the counts are RECORDS on the
- * builder's delivery facts (`ciRounds`, `reviewRounds`) and the caps are
- * holds: at the cap the host writes one `[fm-op]` to the Firstmate and
- * refuses the completion card - even once CI is green - until the decision
- * that wake asks for is answered and a steer reopens the rounds
- * (`cap_reset` on the timeline).
- */
-
-/** Unsuccessful declared own repairs before the host holds the card. */
-export const CI_ROUND_CAP = 3;
-/**
- * Re-reviews a findings verdict may ask for before the host holds. The
- * first `findings` is the review itself, so the cap bounds the rounds
- * AFTER it: a third findings verdict is one past the cap.
- */
-export const REVIEW_ROUND_CAP = 2;
-
-/** Whether a CI round count has reached the cap. */
-export function ciCapReached(ciRounds: number | undefined): boolean {
-  return (ciRounds ?? 0) >= CI_ROUND_CAP;
-}
-
-/** Whether a findings count has spent its re-reviews: one past the cap. */
-export function reviewCapReached(reviewRounds: number | undefined): boolean {
-  return (reviewRounds ?? 0) > REVIEW_ROUND_CAP;
-}
-
-/**
  * The evidence contract's five headings, in the order a standard or reviewed
  * change carries them in its REPORT and its PR body (the crewmate prompt and
  * `renderRigorSection` ask for exactly this). Phase 3 also asked for them in

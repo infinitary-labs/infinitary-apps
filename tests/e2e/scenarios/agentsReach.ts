@@ -1,4 +1,5 @@
 import { captainTurn, renderWake } from "../../../src/core/orchestrator/wakes";
+import { checkSnapshotSummary } from "../../../src/shared/checkSnapshot";
 import { fixedHoldWords, type OverridableHold } from "../../../src/shared/holds";
 import { noSurfaceProof } from "../../helpers/liveValidation";
 import {
@@ -13,7 +14,13 @@ import {
   type ScenarioRequest,
   sinceLastUser,
 } from "../mockProvider";
-import { holdsSegment, latestServedTurn, providerMessages, served } from "../providerRequest";
+import {
+  checkFactsSnapshot,
+  holdsSegment,
+  latestServedTurn,
+  providerMessages,
+  served,
+} from "../providerRequest";
 
 /**
  * The agent's-reach story (INF-484 ring 4, INF-140), run end to end by
@@ -39,7 +46,7 @@ import { holdsSegment, latestServedTurn, providerMessages, served } from "../pro
 /** The captain's words on the capped review (ring 4's own quote). */
 export const REACH_STOP_WORDS = "stop the review and merge it";
 /** The soft holds the first mate reads those words to pass, for this version. */
-export const REACH_STOP_HOLDS: OverridableHold[] = ["rounds", "review", "live-proof", "checks"];
+export const REACH_STOP_HOLDS: OverridableHold[] = ["review", "live-proof", "checks"];
 export const REACH_STOP_STEER =
   "The captain said stop the review and merge it: his words pass the review, its live proof and the checks at this version. Emit your completion card now; no re-review.";
 export const REACH_STOP_CARD_TITLE = "The meter fix merges at the reviewed version";
@@ -95,7 +102,7 @@ const REACH_RERUN_REPORT =
 export const REACH_RERUN_CARD_TITLE = "The meter retry check failed again after its one rerun";
 /** The captain's reply under that card (INF-1216's journey, the plan's own words). */
 export const REACH_RERUN_REPLY = "keep going until the checks pass";
-export const REACH_RERUN_HOLDS: OverridableHold[] = ["rerun"];
+export const REACH_RERUN_HOLDS: OverridableHold[] = ["checks"];
 /** The crewmate's relay of his reply, naming the card it came under. */
 const REACH_RERUN_RELAY = "Relayed from card";
 const REACH_RERUN_ANSWER = "I passed your words to the first mate to record for this task.";
@@ -244,13 +251,15 @@ function crewmateMove({ body, hasToolResults }: ScenarioRequest): ScenarioAnswer
   const turn = sinceLastUser(body);
   if (body.includes(REVIEWED_TIER_PROMPT_MARKER) && turn.user.includes(REACH_READ_STEER)) {
     const { results } = turn;
-    const reading = results.find((result) => /^overall: /m.test(result));
+    const reading = results.findLast((result) => /^facts: /m.test(result));
     if (!reading) return { calls: [{ name: "check_change", args: {} }] };
+
     const recorded = results.some((result) =>
       result.includes("Validation recorded at evidence revision"),
     );
-    if (recorded || !/^overall: green$/m.test(reading)) return { text: "" };
-    const head = reading.match(/head ([a-f0-9]{40})/)?.[1];
+    const facts = checkFactsSnapshot(reading);
+    if (recorded || !facts || checkSnapshotSummary(facts).overall !== "green") return { text: "" };
+    const head = facts.headSha;
     if (!head) throw new Error("The scripted builder needs its actual checked version.");
     const proof = noSurfaceProof(head).runs[0];
     if (!proof) throw new Error("The fixture's proof has its run.");
@@ -302,7 +311,8 @@ function crewmateMove({ body, hasToolResults }: ScenarioRequest): ScenarioAnswer
           },
         ],
       };
-    if (results.length === 1)
+    if (results.length === 1) return { calls: [{ name: "check_change", args: {} }] };
+    if (results.length === 2)
       return {
         calls: [
           {
@@ -397,28 +407,11 @@ function crewmateMove({ body, hasToolResults }: ScenarioRequest): ScenarioAnswer
         ],
       };
     if (results.length === 3) return { calls: [rerun] };
-    if (results.length === 4 && results[3]?.startsWith("Rerun authorized once"))
-      return { calls: [write] };
+    if (results.length === 4) return { calls: [write] };
     if (results.length === 5) return { calls: [rerun] };
-    if (results.length === 6)
-      return {
-        calls: [
-          {
-            name: "emit_card",
-            args: {
-              title: REACH_RERUN_CARD_TITLE,
-              body:
-                "<p>The linux-checks job failed again after the one rerun I may run.</p>" +
-                "<p>Another rerun needs your word; the evidence still points at a slow network step.</p>",
-              actions: [
-                { id: "leave-red", label: "Leave it red", default: true },
-                { id: "drop-it", label: "Drop the change" },
-              ],
-            },
-          },
-          { name: "report", args: { text: `${REACH_RERUN_REPORT} ${results[5]}` } },
-        ],
-      };
+    if (results.length === 6) return { calls: [write] };
+    if (results.length === 7)
+      return { calls: [{ name: "report", args: { text: REACH_RERUN_DONE_REPORT } }] };
     return { text: "done" };
   }
 
@@ -433,10 +426,10 @@ function crewmateMove({ body, hasToolResults }: ScenarioRequest): ScenarioAnswer
             title: REACH_AUDIT_CARD_TITLE,
             body:
               "<p>The week added no limit, hold or served sentence that decides for the agent.</p>" +
-              "<p>Your words passed one hold each: the review, its live proof, the checks, the re-review limit, asking first and the rerun limit.</p>",
+              "<p>Your words passed one hold each: the review, its live proof, the checks and asking first.</p>",
             actions: [
               { id: "keep", label: "Keep the holds as they are", default: true },
-              { id: "lower-rerun", label: "Lower the rerun limit" },
+              { id: "review-holds", label: "Review the holds" },
             ],
           },
         },

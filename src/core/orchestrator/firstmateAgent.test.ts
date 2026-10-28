@@ -9063,7 +9063,12 @@ describe("the captain's override, cited from his message on the task", () => {
         { id: "cd34", title: "Trim the help copy", status: "idle", sessionFile: "/tmp/cd34.jsonl" },
       ],
       seedCards: [
-        crewCard("card-ab12", "ab12", "The retry check failed again", "<p>Rerun it?</p>"),
+        crewCard(
+          "card-ab12",
+          "ab12",
+          "The checks are still failing",
+          "<p>Do you accept these failed checks?</p>",
+        ),
         crewCard("card-cd34", "cd34", "The help copy is one line", "<p>Done.</p>"),
       ],
     });
@@ -9077,10 +9082,10 @@ describe("the captain's override, cited from his message on the task", () => {
         .get("update_task")
         ?.execute("override", {
           task: "ab12",
-          override: { holds: ["rerun"], until: "task", from },
+          override: { holds: ["checks"], until: "task", from },
         });
-    const reply = "keep going until the checks pass";
-    const tabLine = "and use my plan's allowance for it";
+    const reply = "I accept the current failed checks on this task.";
+    const tabLine = "Keep that exception for the rest of this task.";
     f.supervisor.replyToCard("card-ab12", reply);
     f.supervisor.replyToCard("card-cd34", "merge it");
     await tick();
@@ -9098,7 +9103,7 @@ describe("the captain's override, cited from his message on the task", () => {
     expect(JSON.stringify(await declare("card-ab12"))).toContain("Recorded the captain's override");
     expect(f.tasks.get("ab12")?.delivery?.override).toMatchObject({
       words: reply,
-      holds: ["rerun"],
+      holds: ["checks"],
       until: "task",
     });
     await finish();
@@ -9132,7 +9137,7 @@ describe("the captain's override, cited from his message on the task", () => {
       override?: string;
     }[];
     expect(crew.find((entry) => entry.task_id === "ab12")?.override).toBe(
-      "the rerun limit for the rest of this task",
+      "the checks for the rest of this task",
     );
     await finish();
     f.agent.dispose();

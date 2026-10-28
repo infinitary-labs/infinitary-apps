@@ -3,6 +3,7 @@ import { createServer, type IncomingMessage, type Server } from "node:http";
 import type { AddressInfo } from "node:net";
 import { Readable } from "node:stream";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { checkSnapshotSummary } from "../../../../shared/checkSnapshot";
 import { presentationCommitMessage } from "../../presentation";
 import { readOpenChanges } from "./changes";
 import {
@@ -148,69 +149,39 @@ describe("GitHubForge", () => {
     await expect(forge.changeFor("fm/task-1")).resolves.toBeNull();
   });
 
-  it("reads an empty check list as not started once GitHub runs workflows for the change or the project", async () => {
-    let versionRuns = 0;
-    let projectRuns = 0;
-    let pull: Record<string, unknown> = { mergeable: true, mergeable_state: "clean" };
+  // Accepted INF-1177 piece 0: absence is a reading, not a host verdict.
+  it("returns an empty check list without inventing a pending check", async () => {
     const { forge } = await stub({
       "GET /repos/octo/meter/commits/feedbeef/check-runs": () => ({ json: { check_runs: [] } }),
       "GET /repos/octo/meter/commits/feedbeef/status": () => ({ json: { statuses: [] } }),
-      "GET /repos/octo/meter/actions/runs": (request) => ({
-        json: { total_count: request.url.includes("head_sha=") ? versionRuns : projectRuns },
-      }),
-      "GET /repos/octo/meter/pulls/23": () => ({ json: pull }),
+      "GET /repos/octo/meter/actions/runs": () => ({ json: { total_count: 0, workflow_runs: [] } }),
     });
-    const change = { number: 23, url: null, branch: "b", headSha: "feedbeef" };
-    // A project that has never run a pull request workflow runs no checks: green.
-    expect(await forge.checks(change)).toEqual({ overall: "green", items: [] });
-    // Earlier pull requests ran workflows, so this one's have not started.
-    projectRuns = 4;
-    const waiting = await forge.checks(change);
-    expect(waiting.overall).toBe("pending");
-    expect(waiting.items).toEqual([{ name: "checks have not started yet", state: "pending" }]);
-    // A run GitHub already holds for the version says the same.
-    projectRuns = 0;
-    versionRuns = 1;
-    expect((await forge.checks(change)).overall).toBe("pending");
-    // A conflicting change gets no checks until it is brought up to date, and says so.
-    projectRuns = 4;
-    pull = { mergeable: false, mergeable_state: "dirty" };
-    const conflicted = await forge.checks(change);
-    expect(conflicted.overall).toBe("pending");
-    expect(conflicted.items[0]?.name).toContain("brought up to date");
+    expect(await forge.checks({ number: 23, url: null, branch: "b", headSha: "feedbeef" })).toEqual(
+      { items: [], complete: true },
+    );
   });
 
   // INF-988: INF-643's repair was declared at 93355db9 while PR #203
   // conflicted, so GitHub never ran anything there; the pull request then
   // moved on, clean. These are GitHub's answers on 2026-10-23.
-  it("reads a version the pull request moved past as it is, with no marker of the pull request's own (INF-988)", async () => {
-    const declared = "93355db9d04e964513879db74d068a7789cb4c16";
+  it("reads the requested earlier version without interpreting repair settlement", async () => {
+    const head = "93355db9d04e964513879db74d068a7789cb4c16";
     const { forge, seen } = await stub({
-      [`GET /repos/octo/meter/commits/${declared}/check-runs`]: () => ({
+      [`GET /repos/octo/meter/commits/${head}/check-runs`]: () => ({
         json: { total_count: 0, check_runs: [] },
       }),
-      [`GET /repos/octo/meter/commits/${declared}/status`]: () => ({ json: { statuses: [] } }),
-      "GET /repos/octo/meter/actions/runs": (request) => ({
-        json: request.url.includes("head_sha=")
-          ? { total_count: 0, workflow_runs: [] }
-          : { total_count: 1812, workflow_runs: [] },
-      }),
-      "GET /repos/octo/meter/pulls/203": () => ({
-        json: { mergeable: true, mergeable_state: "clean" },
-      }),
+      [`GET /repos/octo/meter/commits/${head}/status`]: () => ({ json: { statuses: [] } }),
+      "GET /repos/octo/meter/actions/runs": () => ({ json: { total_count: 0, workflow_runs: [] } }),
     });
-    const change = { number: 203, url: null, branch: "fm/task-643", headSha: "c7f9d964" };
-    // Read as the pull request's own head, the empty list waits on its workflows.
-    expect(await forge.checks({ ...change, headSha: declared })).toMatchObject({
-      overall: "pending",
-      notStarted: true,
-    });
-    // Read as a version it moved past, nothing will start there: the list is what it is.
-    seen.length = 0;
-    expect(await forge.checks(change, declared)).toEqual({ overall: "green", items: [] });
-    expect(seen.map((call) => call.url.split("?")[0])).toEqual([
-      `/repos/octo/meter/commits/${declared}/check-runs`,
-      `/repos/octo/meter/commits/${declared}/status`,
+    expect(
+      await forge.checks(
+        { number: 203, url: null, branch: "fm/task-643", headSha: "c7f9d964" },
+        head,
+      ),
+    ).toEqual({ items: [], complete: true });
+    expect(seen.map((c) => c.url.split("?")[0])).toEqual([
+      `/repos/octo/meter/commits/${head}/check-runs`,
+      `/repos/octo/meter/commits/${head}/status`,
       "/repos/octo/meter/actions/runs",
     ]);
   });
@@ -218,7 +189,7 @@ describe("GitHubForge", () => {
   // INF-893: PR #328 read green at 19:07:01Z on its dispatched replay-gate
   // alone, while GitHub was creating its ci, journeys and phone runs. The
   // runs, check and project count below are #328's own, as GitHub gave them.
-  it("reads a pull request as not started while none of its own workflow runs is on the version (INF-893)", async () => {
+  it("relays dispatched and pull-request workflow facts without inferring missing checks (INF-1177)", async () => {
     const head = "21abc81254618e65ff72612b155f0aa261bc5372";
     const replay = {
       id: 39836971427,
@@ -276,15 +247,12 @@ describe("GitHubForge", () => {
     const change = { number: 328, url: null, branch: "fm/task-7aa0123e", headSha: head };
 
     // The reading #328 got: the project runs pull request workflows, and none is on the version yet.
-    expect(await forge.checks(change)).toEqual({
-      overall: "pending",
-      items: [replayGateRead, { name: "checks have not started yet", state: "pending" }],
-      notStarted: true,
+    expect(await forge.checks(change)).toMatchObject({
+      items: [replayGateRead],
     });
     // GitHub lists the run before its jobs have checks: still pending, now by the run.
     versionRuns = [ci, replay];
-    expect(await forge.checks(change)).toEqual({
-      overall: "pending",
+    expect(await forge.checks(change)).toMatchObject({
       items: [
         replayGateRead,
         { name: "ci (run 819)", state: "pending", startedAt: Date.parse(ci.run_started_at) },
@@ -303,12 +271,12 @@ describe("GitHubForge", () => {
       },
       replayGate,
     ];
-    expect((await forge.checks(change)).overall).toBe("green");
+    expect((await forge.checks(change)).items[0]?.state).toBe("success");
     // A project that has never run a pull request workflow reads the dispatched check as it is.
     versionRuns = [replay];
     checkRuns = [replayGate];
     projectRuns = 0;
-    expect(await forge.checks(change)).toEqual({ overall: "green", items: [replayGateRead] });
+    expect(await forge.checks(change)).toMatchObject({ items: [replayGateRead] });
   });
 
   it("reads the default branch's own check runs, not a pull request's (INF-833 Fix 4)", async () => {
@@ -338,7 +306,6 @@ describe("GitHubForge", () => {
     await expect(forge.branchChecks()).resolves.toMatchObject({
       sha,
       checks: {
-        overall: "green",
         items: [expect.objectContaining({ name: "linux-checks", state: "success" })],
       },
     });
@@ -351,7 +318,7 @@ describe("GitHubForge", () => {
     ]);
   });
 
-  it("reads check runs and commit statuses together by the one green rule", async () => {
+  it("relays check runs and commit statuses without a suite verdict", async () => {
     let runs: { name: string; status: string; conclusion: string | null }[] = [];
     let statuses: { context: string; state: string }[] = [];
     const { forge, seen } = await stub({
@@ -369,11 +336,10 @@ describe("GitHubForge", () => {
       body: "Why",
     };
     // Zero of both: green, so a project with no checks can still put work in.
-    expect(await forge.checks(change)).toEqual({ overall: "green", items: [] });
+    expect(await forge.checks(change)).toMatchObject({ items: [] });
     runs = [{ name: "linux-checks", status: "completed", conclusion: "success" }];
     statuses = [{ context: "deploy/preview", state: "success" }];
-    expect(await forge.checks(change)).toEqual({
-      overall: "green",
+    expect(await forge.checks(change)).toMatchObject({
       items: [
         { name: "linux-checks", state: "success" },
         { name: "deploy/preview", state: "success" },
@@ -381,19 +347,21 @@ describe("GitHubForge", () => {
     });
     // A queued run or a pending status is not green yet, and not red.
     runs = [{ name: "linux-checks", status: "queued", conclusion: null }];
-    expect((await forge.checks(change)).overall).toBe("pending");
+    expect((await forge.checks(change)).items[0]?.state).toBe("pending");
     // A conditional skipped run is finished and does not block green.
     runs = [{ name: "linux-checks", status: "completed", conclusion: "skipped" }];
-    expect((await forge.checks(change)).overall).toBe("green");
+    expect((await forge.checks(change)).items[0]?.state).toBe("skipped");
     // Skips do not hide unfinished runs or change the neutral policy.
     runs.push({ name: "review", status: "in_progress", conclusion: null });
-    expect((await forge.checks(change)).overall).toBe("pending");
+    expect((await forge.checks(change)).items[1]?.state).toBe("pending");
     runs = [{ name: "review", status: "completed", conclusion: "neutral" }];
-    expect((await forge.checks(change)).overall).toBe("pending");
+    expect((await forge.checks(change)).items[0]?.state).toBe("neutral");
     // Any terminal failure on either source is red.
     runs = [{ name: "linux-checks", status: "completed", conclusion: "success" }];
     statuses = [{ context: "deploy/preview", state: "failure" }];
-    expect((await forge.checks(change)).overall).toBe("red");
+    expect(
+      (await forge.checks(change)).items.find((item) => item.name === "deploy/preview")?.state,
+    ).toBe("failure");
     expect(seen.every((request) => request.method === "GET")).toBe(true);
   });
 
@@ -439,7 +407,7 @@ describe("GitHubForge", () => {
       }),
     });
     const change = { number: 23, url: null, branch: "b", headSha: "feedbeef", title: "fix: x" };
-    expect((await forge.checks(change)).items).toEqual([
+    expect((await forge.checks(change)).items).toMatchObject([
       {
         name: "integration-tests (2/2)",
         state: "pending",
@@ -460,7 +428,142 @@ describe("GitHubForge", () => {
     ]);
   });
 
-  it("sets aside a cancelled check only when a later run of the same workflow and event decides it", async () => {
+  // INF-1555 F25: passing checks do not turn a transient workflow-list failure into a lasting refusal.
+  it.each([502, 503, 504, "timeout"] as const)(
+    "keeps workflow metadata failure %s transient with passing checks",
+    async (failure) => {
+      let metadataStatus = typeof failure === "number" ? failure : 200;
+      const { base } = await stub({
+        "GET /repos/octo/meter/commits/feedbeef/check-runs": () => ({
+          json: {
+            check_runs: [{ name: "linux-checks", status: "completed", conclusion: "success" }],
+          },
+        }),
+        "GET /repos/octo/meter/commits/feedbeef/status": () => ({ json: { statuses: [] } }),
+        "GET /repos/octo/meter/actions/runs": () => ({
+          status: metadataStatus,
+          json:
+            metadataStatus === 200
+              ? { total_count: 0, workflow_runs: [] }
+              : { message: "Temporarily unavailable" },
+        }),
+      });
+      let timedOut = failure === "timeout";
+      const forge = new GitHubForge(
+        { kind: "github", host: "github.com", owner: "octo", name: "meter", dir: "/r" },
+        {
+          token: async () => "gho_test",
+          apiBaseUrl: base,
+          fetch: (input, init) =>
+            timedOut && String(input).includes("/actions/runs?")
+              ? Promise.reject(new DOMException("The request timed out", "TimeoutError"))
+              : fetch(input, init),
+        },
+      );
+      const change = { number: 23, url: null, branch: "b", headSha: "feedbeef" };
+      try {
+        await expect(forge.checks(change)).rejects.toMatchObject({ failure: "transient" });
+      } finally {
+        timedOut = false;
+      }
+      metadataStatus = 200;
+      expect(await forge.checks(change)).toMatchObject({
+        complete: true,
+        items: [{ name: "linux-checks", state: "success" }],
+      });
+    },
+  );
+
+  it("sets aside the cancelled duplicate and retains the later check’s run, workflow and event facts (captain F26)", async () => {
+    let metadataStatus = 200;
+    const { forge } = await stub({
+      "GET /repos/octo/meter/commits/feedbeef/check-runs": () => ({
+        json: {
+          check_runs: [
+            {
+              name: "linux-checks",
+              status: "completed",
+              conclusion: "cancelled",
+              check_suite: { id: 410 },
+            },
+            {
+              name: "linux-checks",
+              status: "completed",
+              conclusion: "success",
+              check_suite: { id: 420 },
+            },
+          ],
+        },
+      }),
+      "GET /repos/octo/meter/commits/feedbeef/status": () => ({ json: { statuses: [] } }),
+      "GET /repos/octo/meter/actions/runs": () =>
+        metadataStatus !== 200
+          ? {
+              status: metadataStatus,
+              json: {
+                message: metadataStatus === 401 ? "Bad credentials" : "Metadata unavailable",
+              },
+            }
+          : {
+              json: {
+                total_count: 2,
+                workflow_runs: [
+                  {
+                    id: 41,
+                    check_suite_id: 410,
+                    workflow_id: 7,
+                    event: "pull_request",
+                    run_number: 41,
+                    status: "completed",
+                  },
+                  {
+                    id: 42,
+                    check_suite_id: 420,
+                    workflow_id: 7,
+                    event: "pull_request",
+                    run_number: 42,
+                    status: "completed",
+                  },
+                ],
+              },
+            },
+    });
+    const facts = await forge.checks({ number: 23, url: null, branch: "b", headSha: "feedbeef" });
+    expect(facts).toEqual({
+      complete: true,
+      items: [
+        {
+          name: "linux-checks",
+          state: "success",
+          status: "completed",
+          conclusion: "success",
+          run: 42,
+          workflow: 7,
+          event: "pull_request",
+        },
+      ],
+    });
+    // The raw-facts change preserves the existing auth and transient-error boundaries.
+    metadataStatus = 403;
+    const unread = await forge.checks({ number: 23, url: null, branch: "b", headSha: "feedbeef" });
+    expect(unread).toMatchObject({
+      complete: false,
+      items: [{ state: "cancelled" }, { state: "success" }],
+    });
+    // INF-1555 F14: the lasting refusal remains a fact with its actual reason.
+    expect(unread.problem).toContain("Metadata unavailable");
+    expect(unread.problem).toContain("GitHub");
+    metadataStatus = 503;
+    await expect(
+      forge.checks({ number: 23, url: null, branch: "b", headSha: "feedbeef" }),
+    ).rejects.toMatchObject({ failure: "transient" });
+    metadataStatus = 401;
+    await expect(
+      forge.checks({ number: 23, url: null, branch: "b", headSha: "feedbeef" }),
+    ).rejects.toMatchObject({ failure: "sign-in" });
+  });
+
+  it("restores the same-workflow/event cancellation boundaries (captain F26, FI3-585)", async () => {
     type Run = { id: number; workflow: number; event: string; status: string };
     type Check = { name: string; status: string; conclusion: string | null; suite?: number };
     let workflowRuns: Run[] = [];
@@ -492,6 +595,20 @@ describe("GitHubForge", () => {
         },
     });
     const change = { number: 23, url: null, branch: "b", headSha: "feedbeef" };
+    // Observe the filtered facts through the same summary the app uses, not a returned verdict.
+    const read = async () => {
+      const facts = await forge.checks(change);
+      return {
+        ...facts,
+        overall: checkSnapshotSummary({
+          headSha: change.headSha,
+          items: facts.items,
+          complete: facts.complete,
+          problem: facts.problem,
+          absenceDeclared: false,
+        }).overall,
+      };
+    };
     const ci = (id: number, status = "completed"): Run => ({
       id,
       workflow: 7,
@@ -511,14 +628,14 @@ describe("GitHubForge", () => {
     // may not have created checks yet.
     workflowRuns = [ci(41)];
     checks = [check(41, "success")];
-    expect((await forge.checks(change)).overall).toBe("green");
+    expect((await read()).overall).toBe("green");
     expect(actionsReads()).toBe(1);
 
     // PR #632's version: one push started two runs of ci, the second
     // cancelled the first before it began, and the second passed.
     workflowRuns = [ci(42), ci(41)];
     checks = [check(41, "cancelled"), check(42, "success")];
-    expect(await forge.checks(change)).toEqual({
+    expect(await read()).toMatchObject({
       overall: "green",
       items: [{ name: "linux-checks", state: "success" }],
     });
@@ -526,14 +643,14 @@ describe("GitHubForge", () => {
 
     // The later run's own check decides, whatever it reads.
     checks = [check(41, "cancelled"), check(42, null, "in_progress")];
-    expect((await forge.checks(change)).overall).toBe("pending");
+    expect((await read()).overall).toBe("pending");
     checks = [check(41, "cancelled"), check(42, "failure")];
-    expect((await forge.checks(change)).overall).toBe("red");
+    expect((await read()).overall).toBe("red");
 
     // A later run that has not created the check yet: pending, never green.
     workflowRuns = [ci(42, "queued"), ci(41)];
     checks = [check(41, "cancelled"), { name: "lint", status: "completed", conclusion: "success" }];
-    expect(await forge.checks(change)).toEqual({
+    expect(await read()).toMatchObject({
       overall: "pending",
       items: [
         { name: "linux-checks", state: "pending" },
@@ -543,14 +660,14 @@ describe("GitHubForge", () => {
     });
     // Finished without it, the cancellation still counts.
     workflowRuns = [ci(42), ci(41)];
-    expect((await forge.checks(change)).overall).toBe("red");
+    expect((await read()).overall).toBe("red");
 
     // Only a cancellation is set aside: an earlier failure counts beside a later pass.
     checks = [check(41, "failure"), check(42, "success")];
-    expect((await forge.checks(change)).overall).toBe("red");
+    expect((await read()).overall).toBe("red");
     // The latest run's cancellation counts, whatever ran before it.
     checks = [check(41, "success"), check(42, "cancelled")];
-    expect((await forge.checks(change)).overall).toBe("red");
+    expect((await read()).overall).toBe("red");
     // Another workflow or another event is not the same check, even under one name.
     for (const later of [
       { ...ci(42), workflow: 8 },
@@ -558,22 +675,22 @@ describe("GitHubForge", () => {
     ]) {
       workflowRuns = [later, ci(41)];
       checks = [check(41, "cancelled"), check(42, "success")];
-      expect((await forge.checks(change)).overall).toBe("red");
+      expect((await read()).overall).toBe("red");
     }
     // A check the app cannot place in a workflow run counts as it reads.
     workflowRuns = [ci(42), ci(41)];
     checks = [{ ...check(41, "cancelled"), suite: undefined }, check(42, "success")];
-    expect((await forge.checks(change)).overall).toBe("red");
+    expect((await read()).overall).toBe("red");
 
     // A side read GitHub refuses leaves every check counted; a hiccup or a
     // refused sign-in fails the reading instead of guessing.
     checks = [check(41, "cancelled"), check(42, "success")];
     runsAnswer = { status: 403, json: { message: "Resource not accessible" } };
-    expect((await forge.checks(change)).overall).toBe("red");
+    expect((await read()).overall).toBe("red");
     runsAnswer = { status: 503, json: { message: "unavailable" } };
-    await expect(forge.checks(change)).rejects.toMatchObject({ failure: "transient" });
+    await expect(read()).rejects.toMatchObject({ failure: "transient" });
     runsAnswer = { status: 401, json: { message: "Bad credentials" } };
-    await expect(forge.checks(change)).rejects.toMatchObject({ failure: "sign-in" });
+    await expect(read()).rejects.toMatchObject({ failure: "sign-in" });
   });
 
   it("sends the saved plain summary on both merge routes, not the rendered story (INF-228 F2)", async () => {
@@ -738,7 +855,7 @@ describe("GitHubForge", () => {
     const change = { number: 23, url: null, branch: "b", headSha: "feedbeef" };
     const read = await forge.checks(change);
     expect(read.items).toHaveLength(131);
-    expect(read.overall).toBe("green");
+    expect(read.items[0]?.state).toBe("success");
     expect(
       seen.filter((request) => request.url.includes("/check-runs")).map((request) => request.url),
     ).toEqual([
@@ -747,13 +864,15 @@ describe("GitHubForge", () => {
     ]);
     // A failure on the second page is a failure of the suite.
     lastConclusion = "failure";
-    expect((await forge.checks(change)).overall).toBe("red");
+    expect((await forge.checks(change)).items.find((item) => item.name === "job-2-0")?.state).toBe(
+      "failure",
+    );
     // More checks than the pages the app reads: one pending item stands for the rest.
     lastConclusion = "success";
     total = 1_500;
     const past = await forge.checks(change);
-    expect(past.overall).toBe("pending");
-    expect(past.items.at(-1)).toEqual({ name: "more checks than the app reads", state: "pending" });
+    expect(past.complete).toBe(false);
+    expect(past.items.every((item) => item.state === "success")).toBe(true);
   });
 
   it("reads a pull request by its number with whether it may merge now, in the seam's terms", async () => {
@@ -782,6 +901,7 @@ describe("GitHubForge", () => {
     );
     pull = { state: "closed", merged: true, merge_commit_sha: "squash01" };
     expect(await forge.pull(23)).toEqual({
+      mergeable: null,
       number: 23,
       state: "closed",
       merged: true,

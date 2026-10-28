@@ -280,6 +280,11 @@ export function rowSummary(page: Page): Locator {
   return page.locator(`[${POINT_SUMMARY}]`);
 }
 
+/** The actual summary panel, excluding the full-window tie drawing around it. */
+export function rowSummaryBody(page: Page): Locator {
+  return rowSummary(page).locator("[data-crew-summary]");
+}
+
 /**
  * The panel task's summary while it is open: one still fading out after its
  * rest ended is hidden (`aria-hidden`) and is not it, so a new rest's

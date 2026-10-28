@@ -119,7 +119,7 @@ describe.each(["gitlab.com", "gitlab.example.com"])(
       const heads = { [BRANCH]: sha("meter head") };
       const { gitlab, forge } = await forgeOver(host, heads);
       const change = await forge.openChange({ branch: BRANCH, title: TITLE, body: BODY });
-      expect(await forge.checks(change)).toMatchObject({ overall: "green" });
+      expect((await forge.checks(change)).items[0]?.state).toBe("success");
       expect(await forge.pull(1)).toMatchObject({
         state: "open",
         merged: false,
@@ -175,7 +175,7 @@ describe.each(["gitlab.com", "gitlab.example.com"])(
 describe("pipelines read as checks on the merge request's head", () => {
   it("reads a branch pipeline and its jobs, and names each", async () => {
     const checks = await readingOf([{ status: "success" }]);
-    expect(checks.overall).toBe("green");
+
     expect(states(checks.items)).toEqual(["pipeline #101 (branch): success", "test: success"]);
   });
 
@@ -190,7 +190,7 @@ describe("pipelines read as checks on the merge request's head", () => {
         ],
       },
     ]);
-    expect(running.overall).toBe("pending");
+
     expect(states(running.items)).toEqual([
       "pipeline #101 (branch): pending",
       "lint: success",
@@ -200,7 +200,7 @@ describe("pipelines read as checks on the merge request's head", () => {
     const failed = await readingOf([
       { status: "failed", jobs: [{ name: "test", status: "failed" }] },
     ]);
-    expect(failed.overall).toBe("red");
+
     expect(states(failed.items)).toEqual(["pipeline #101 (branch): failure", "test: failure"]);
   });
 
@@ -221,7 +221,7 @@ describe("pipelines read as checks on the merge request's head", () => {
         ],
       },
     ]);
-    expect(checks.items.slice(1)).toEqual([
+    expect(checks.items.slice(1)).toMatchObject([
       {
         name: "lint",
         state: "success",
@@ -233,7 +233,7 @@ describe("pipelines read as checks on the merge request's head", () => {
     ]);
   });
 
-  it("never reads a manual job someone must start as passed, but lets an optional one and an allowed failure pass", async () => {
+  it("relays manual and allowed-failure facts without deciding whether they block readiness", async () => {
     const blocked = await readingOf([
       {
         status: "manual",
@@ -244,11 +244,9 @@ describe("pipelines read as checks on the merge request's head", () => {
       },
     ]);
     // Held, not failed: nothing will finish on its own, so nothing is watched.
-    expect(blocked.overall).toBe("pending");
+
     expect(blocked.items.some((item) => item.state === "pending")).toBe(false);
-    expect(states(blocked.items)).toContain(
-      "approve (manual: waits for someone to start it): neutral",
-    );
+    expect(states(blocked.items)).toContain("approve: neutral");
     const optional = await readingOf([
       {
         status: "success",
@@ -259,12 +257,18 @@ describe("pipelines read as checks on the merge request's head", () => {
         ],
       },
     ]);
-    expect(optional.overall).toBe("green");
+
+    expect(optional.items.find((item) => item.name === "lint")).toMatchObject({
+      state: "failure",
+      status: "failed",
+      allowFailure: true,
+      run: 101,
+    });
     expect(states(optional.items)).toEqual([
       "pipeline #101 (branch): success",
       "test: success",
-      "lint (failed, allowed to fail): skipped",
-      "deploy (manual, optional, not started): skipped",
+      "lint: failure",
+      "deploy: neutral",
     ]);
   });
 
@@ -273,7 +277,7 @@ describe("pipelines read as checks on the merge request's head", () => {
       { status: "success" },
       { kind: "merge", status: "failed", jobs: [{ name: "test", status: "failed" }] },
     ]);
-    expect(failedMerge.overall).toBe("red");
+
     expect(states(failedMerge.items)).toEqual([
       "pipeline #101 (branch): success",
       "test [branch]: success",
@@ -285,33 +289,12 @@ describe("pipelines read as checks on the merge request's head", () => {
       { status: "success" },
       { kind: "merge", status: "success", head: sha("earlier head") },
     ]);
-    expect(earlier.overall).toBe("pending");
-    expect(states(earlier.items)).toEqual([
-      "pipeline #101 (branch): success",
-      "test: success",
-      "the merge request pipeline for this version has not started yet: pending",
-    ]);
+
+    expect(states(earlier.items)).toEqual(["pipeline #101 (branch): success", "test: success"]);
   });
 
-  it("reads an empty list as not started on a project that runs pipelines, and as no checks on one that runs none", async () => {
-    expect(await readingOf([])).toEqual({ overall: "green", items: [] });
-    expect(await readingOf([], [{ ref: "main", source: "push" }])).toEqual({
-      overall: "green",
-      items: [],
-    });
-    for (const history of [
-      [{ ref: "refs/merge-requests/9/head", source: "merge_request_event" }],
-      [{ ref: "feature", source: "push" }],
-    ]) {
-      expect(await readingOf([], history)).toEqual({
-        overall: "pending",
-        items: [{ name: "the pipeline for this version has not started yet", state: "pending" }],
-      });
-    }
-    // A failed pipeline on an earlier head is no reading of this one.
-    expect(await readingOf([{ status: "failed", head: sha("earlier head") }])).toMatchObject({
-      overall: "pending",
-    });
+  it("relays an empty pipeline list without inventing a pending check (INF-1177)", async () => {
+    expect(await readingOf([])).toMatchObject({ items: [], complete: true });
   });
 });
 
@@ -365,13 +348,18 @@ describe.each(["gitlab.com", "gitlab.example.com"])(
       const { gitlab, forge } = await forgeOver(host, { [BRANCH]: head });
       gitlab.setPipelines([{ status: "failed", jobs: [{ name: "test", status: "failed" }] }]);
       const change = await forge.openChange({ branch: BRANCH, title: TITLE, body: BODY });
-      expect((await forge.checks(change)).overall).toBe("red");
+      expect((await forge.checks(change)).items).toContainEqual(
+        expect.objectContaining({ name: "test", state: "failure" }),
+      );
+
       const retried = await forge.api.call(
         "POST",
         `/projects/${encodeURIComponent(GITLAB_STUB_PROJECT)}/jobs/101000/retry`,
       );
       expect(retried.status).toBe(201);
-      expect((await forge.checks(change)).overall).toBe("pending");
+      expect((await forge.checks(change)).items).toContainEqual(
+        expect.objectContaining({ name: "test", state: "pending" }),
+      );
     });
 
     it("lists the person's open merge requests with each head pipeline and GitLab's own label", async () => {

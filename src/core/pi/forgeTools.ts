@@ -6,7 +6,11 @@ import {
   type StoryAround,
   storyAroundSchema,
 } from "@shared/changePresentation";
-import { MERGE_GUIDANCE_IMPACTS, MERGE_REPAIR_IMPACTS } from "@shared/checkRepair";
+import {
+  CHECK_DECLARATION_VERDICTS,
+  MERGE_GUIDANCE_IMPACTS,
+  MERGE_REPAIR_IMPACTS,
+} from "@shared/checkRepair";
 import { Type } from "typebox";
 import { callWithSignal, crewmateTool, stringEnum, zodParameter } from "../session/tools";
 import { cardPictureRoot } from "./cardImages";
@@ -49,13 +53,13 @@ export const OPEN_CHANGE_AROUND_DESCRIPTION = [
 ].join(" ");
 
 export const CHECK_CHANGE_TOOL_DESCRIPTION = [
-  "Read every check on the newest PR version: green only when all completed successfully or skipped. With no checks use the local gate; unstarted checks are pending, not green.",
-  "While checks run the app watches them and wakes you once on the first failed check, then once when they finish. End your turn; do not call check_change again until a wake comes. If the host runs no checks the app can watch, no wake will come.",
-  "On failure read logs first, then pass diagnosis keyed to headSha/check with classification and evidence; baseline-blocked also needs a separately owned dependencyTask reproduced on untouched main. A workflow run you read with read_workflow needs no PR: key it to the run's version and the failed job's name. A wait is not evidence. Unknown earns one investigation. No captain card for diagnosis, repair or dependency waits.",
-  "For your regression pass repair with a stable id, sourceHead, new headSha, check and evidence of the fix; only unsuccessful own repairs spend the three attempts. For an evidenced flake reserve rerun before rerunning the failed job once with github_write; proceed only if this call authorizes it. A duplicate reservation is not permission. A failed rerun is diagnosis, not another rerun.",
-  "A reading is only good for the version it read: after you push a fix, read the new version.",
-  "When the captain's merge is kept after a refusal, declare each new version you push with conflictRepair; impact none automatically republishes the unchanged story before merging. While it is kept, their new words hold the merge until you declare their impact with captainGuidance.",
-  "Pass pull to review any PR in this project, including one this task did not open, such as a Release Please PR. Put its returned review id in request_merge on a decision card; only the captain's Merge click merges it. Merge or approve only if explicitly asked; who may merge does not change. For a no-check release PR, pass absentChecks for that head with workflow evidence and the local gate; it waives no failed, pending or unreadable check.",
+  "Read typed facts on the newest pull request: each check's name, state, run, workflow and event where reported, the host's mergeability answer, and whether the version moved. The host does not judge the work or settle repairs.",
+  "Your merge offer itself expresses that the work is ready; do not record a separate ready or red verdict. Actual check facts still hold the merge, and only the captain's separate choice authorizes it. Use declaration only for flake or settled, with headSha and evidence. Settle at the recorded repair's headSha with repairId and outcome; check may name a renamed job and evidence explains the link. Facts list repair checks absent from this reading without guessing replacements.",
+  "Read failed logs and record diagnosis with evidence; repair records your fix. Judge readiness, flakes, settlement and when to stop from your delivery guidance, not a host count. Raw check readings never settle a repair. Rerun records your evidenced rerun decision; an unclear write is never replayed.",
+  "An empty hosted reading stays pending. With pull, absentChecks records positive no-CI evidence from trusted default-branch policy and the local gate; time, history or missing workflow files prove nothing.",
+  "While checks run the app watches them and wakes you on the first failure and when they finish. End your turn until that wake. With no watchable checks no wake comes.",
+  "After a refused merge click, conflictRepair declares each new version's impact; captainGuidance declares newer words' impact. Neither grants fresh merge consent.",
+  "Pass pull to prepare a review of any pull request in this project, not permission. Put its review id in request_merge; only the captain's click sends it with autonomy off. skipRules prepares a separate exact-version request to bypass rules GitHub says the sign-in may bypass; only its captain click sends it once, after every check finishes.",
 ].join(" ");
 
 /** The conflictRepair parameter's own words: the rule a Claude crewmate must see is here. */
@@ -77,7 +81,7 @@ export const CAPTAIN_GUIDANCE_DESCRIPTION = [
 /** The skipRules parameter's own words: the rule a Claude crewmate must see is here (FI3-1571 piece 2). */
 export const SKIP_RULES_DESCRIPTION = [
   "With pull, prepare a GitHub merge that skips the branch rules your sign-in may skip, failed checks included: headSha is the version you read, method squash.",
-  "It is stored only when a rule or a failed check holds that version, GitHub says the sign-in may skip every rule set holding the default branch, and every check has finished.",
+  "It is stored only when a rule or a failed check holds that version, GitHub says the sign-in may skip every rule set holding the default branch, and the crew declared its exact-version judgment with evidence.",
   "The review names each rule and failed check, and request_merge's card shows them. Only the captain's click on that card sends it, once, at that version.",
 ].join(" ");
 
@@ -159,6 +163,22 @@ export const CHECK_CHANGE_TOOL = crewmateTool({
   label: "Check change",
   description: CHECK_CHANGE_TOOL_DESCRIPTION,
   parameters: Type.Object({
+    declaration: Type.Optional(
+      Type.Object(
+        {
+          headSha: Type.String(),
+          verdict: stringEnum(CHECK_DECLARATION_VERDICTS),
+          evidence: Type.String(),
+          check: Type.Optional(Type.String()),
+          repairId: Type.Optional(Type.String()),
+          outcome: Type.Optional(stringEnum(["passed", "failed", "superseded", "void"])),
+        },
+        {
+          description:
+            "Your evidence-backed judgment at this version. ready enables the merge offer, not merge permission; red permits a failed-check offer. settled names a recorded repair and its outcome. The host records it without judging checks or counting attempts.",
+        },
+      ),
+    ),
     diagnosis: Type.Optional(
       Type.Object(
         {
@@ -204,7 +224,7 @@ export const CHECK_CHANGE_TOOL = crewmateTool({
         },
         {
           description:
-            "Reserve the one evidenced flake rerun before running it; only a new authorization permits a rerun.",
+            "Record the evidenced decision to rerun; the host places no rerun count limit.",
         },
       ),
     ),
@@ -278,7 +298,7 @@ export const READ_WORKFLOW_TOOL = crewmateTool({
     "Lines over 2,000 characters are clipped; logs over 8 MiB are refused. offset and limit apply only with jobId.",
     "On GitHub runId is an Actions run. On GitLab runId is the pipeline id and jobId the job id.",
     "Find a run for a version with github_read: GET /repos/{owner}/{repo}/actions/runs?head_sha=<full commit id> (use an untouched-main commit for a baseline), or on GitLab GET /projects/<url-encoded group/name>/pipelines?sha=<full commit id>.",
-    "Read failed logs before diagnosing check_change. These reads do not change check state, reserve a rerun, or spend a repair attempt.",
+    "Read failed logs before diagnosing check_change. These reads do not change check state, record a rerun judgment, or settle a repair.",
     "Missing or expired evidence is not proof of a failure's cause. A host with no workflow reader refuses as it does today.",
   ].join(" "),
   parameters: Type.Object({

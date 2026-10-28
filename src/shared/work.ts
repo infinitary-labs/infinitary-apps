@@ -2,7 +2,11 @@ import { z } from "zod";
 import { CARD_MEDIA_KINDS, CARD_MEDIA_PIECE_BYTES, CARD_TYPEFACE_KINDS } from "./cardPictures";
 import { cardEffectSchema, cardPictureSchema, riskDeclarationSchema } from "./cards";
 import { openChangeInputSchema, stagedChangePresentationSchema } from "./changePresentation";
-import { LEGACY_NO_IMPACT, MERGE_GUIDANCE_IMPACTS } from "./checkRepair";
+import {
+  CHECK_DECLARATION_VERDICTS,
+  LEGACY_NO_IMPACT,
+  MERGE_GUIDANCE_IMPACTS,
+} from "./checkRepair";
 import { crewSpeedSchema, speedSelectionSchema } from "./crewSpeed";
 import { cutOffSchema, fmEventSchema } from "./events";
 import { keptValidationInputSchema } from "./liveValidation";
@@ -378,6 +382,16 @@ export type WorkingCopyBase = z.infer<typeof workingCopyBaseSchema>;
 
 /** check_change's declarations, as the crewmate's tool takes them (src/shared/checkRepair.ts). */
 const checkChangeInputSchema = z.object({
+  declaration: z
+    .object({
+      headSha: z.string(),
+      verdict: z.enum(CHECK_DECLARATION_VERDICTS),
+      evidence: z.string(),
+      check: z.string().optional(),
+      repairId: z.string().optional(),
+      outcome: z.enum(["passed", "failed", "superseded", "void"]).optional(),
+    })
+    .optional(),
   pull: z.number().int().min(1).optional(),
   absentChecks: z
     .object({ headSha: z.string(), evidence: z.string(), localGate: z.string() })

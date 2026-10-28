@@ -1,7 +1,8 @@
+import { checkSnapshotSchema, checkSnapshotSummary } from "@shared/checkSnapshot";
 import { reportSummary } from "@shared/feed";
 import { CREWMATE_TAB_VIA } from "@shared/provenance";
 import { DROP_BEFORE_START, DROPPED_BEFORE_START_ACTIVITY } from "@shared/recordDrop";
-import { CI_ROUND_CAP, withoutIntentLead } from "@shared/rigor";
+import { withoutIntentLead } from "@shared/rigor";
 import type {
   TaskActionLine,
   TaskActivityLine,
@@ -215,13 +216,21 @@ export function condenseActivity(
         } else fold(event.text);
         break;
       case "ci": {
-        const result = typeof data.ci === "string" ? data.ci : undefined;
-        if (!result || result === "no-pr" || result === lastCi) {
-          fold(result ? checksSentence(result, change, data.ciRounds) : event.text);
+        const parsed = checkSnapshotSchema.safeParse(data.checks);
+        const snapshot = parsed.success ? checkSnapshotSummary(parsed.data) : undefined;
+        const result = snapshot?.overall ?? (typeof data.ci === "string" ? data.ci : undefined);
+        const words = snapshot
+          ? `Checks: ${snapshot.words}${change ? ` on ${change.startsWith("#") ? "pull request" : "branch"} ${change}` : ""}.`
+          : result
+            ? checksSentence(result, change, data.ciRounds)
+            : event.text;
+        const identity = snapshot ? JSON.stringify([snapshot.words]) : result;
+        if (!result || result === "no-pr" || identity === lastCi) {
+          fold(words);
           break;
         }
-        lastCi = result;
-        show(checksSentence(result, change, data.ciRounds));
+        lastCi = identity;
+        show(words);
         break;
       }
       case "pr_opened": {
@@ -568,6 +577,6 @@ export function checksSentence(
   if (result === "pending") return `The checks are running${on}.`;
   if (result === "merged")
     return `The ${change ? `pull request ${change}` : "pull request"} was merged outside the app.`;
-  const round = typeof rounds === "number" ? `, round ${rounds} of ${CI_ROUND_CAP}` : "";
+  const round = typeof rounds === "number" ? `, recorded round ${rounds}` : "";
   return `The checks failed${on}${round}.`;
 }

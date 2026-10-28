@@ -35,6 +35,24 @@ describe("the checks cell's time", () => {
     expect(checksSpanOf({})).toBeNull();
   });
 
+  // INF-1555 F21: a refused list is unknown, not a check continuing from the last reported start.
+  it("does not attach a growing duration to an unreadable reading", () => {
+    expect(
+      checksSpanOf({
+        ci: "pending",
+        ciStartedAt: started,
+        ciFinishedAt: finished,
+        checks: {
+          headSha: "a0cf68a2",
+          items: [{ name: "linux-checks", state: "success" }],
+          complete: false,
+          absenceDeclared: false,
+          problem: "GitHub refused access to the remaining checks.",
+        },
+      }),
+    ).toBeNull();
+  });
+
   it("says how long ago finished checks finished", () => {
     expect(checksFinishedAgo(finished, finished + 5 * 60_000)).toBe("5m ago");
     expect(checksFinishedAgo(finished, finished + 20_000)).toBe("just now");

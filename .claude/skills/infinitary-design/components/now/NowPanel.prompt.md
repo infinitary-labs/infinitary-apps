@@ -118,7 +118,7 @@ The action bar follows in a separate piece.
 
 The crew summary and the task record read one set of task facts: status, task, Now, Progress, then the fact strip - model, intelligence, reasoning, the change, its checks, a review - with the model's reason under it, and the browser.
 The summary draws them in that order, leaves the browser out, and adds a Project row under Task from the Tasks row's own project name, followed by where another computer runs it (`website · on Mac mini`).
-The status, the task title and the project wrap in full; the other summary facts stay one line.
+The status, the task title and the project wrap in full; the other summary facts stay one line, except a check-read refusal, whose reason wraps inside its cell.
 The task record draws the same values in the same order, keeps the browser line with Now and Progress, and places the fact strip just above its action bar, after Goal and your words, Activity and Details.
 A smaller surface shows fewer of them, never different ones; the Tasks row stays a mark, key and title.
 
@@ -138,6 +138,8 @@ A smaller surface shows fewer of them, never different ones; the Tasks row stays
   Absent when the crewmate never sent a plan; a closed task keeps its list on the record and its summary draws none.
 - **The fact strip** (FI3-1159, the captain's layout B) is the merge card's strip in the window's own type, so a task's facts read the same on its record, its summary and its merge card: one cell per fact, each an uppercase micro label over a one-line value 5px under it, the cells `--space-4` apart, wrapping whole with `--space-2` between rows, under a `--line-1` hairline with 10px above and below it.
   Its cells, in order: MODEL, INTELLIGENCE (the `SlotBadge`), REASONING (in words); then PULL REQUEST, the change by the label its host gave it (`#612`; BRANCH and the branch's name on a plain Git host), a link where the host has a page and the surface takes clicks; CHECKS, the merge card's 10px state dot and word (`running`, `passed`, `failed`, `not read yet`, `merged outside the app`) with how long the checks have run or took by the host's own times (`running for 15m`, `passed in 14m`, `failed after 9m`; whole minutes, `under 1m` at first, `1h 05m` past the hour), and once they finished how long ago after a `·` (`5m ago`), the start and the last reading on hover (`Started 9:01 PM · read 9:13 PM`); checks that have not started, not read yet or merged outside the app show no time; and REVIEW, an independent review's dot and verdict (`passed`, `findings`, `blocked`) with its risk (`findings · risk high`).
+  A check-read refusal keeps its reason readable inside the Checks cell on the summary and record, wrapping without overflowing the surface; it uses the warning dot unless a reported failed check already gives it the failed mark.
+  It shows no running duration: an unreadable reading does not say that a check is still running.
   Under the cells comes the footnote saying why that model was chosen (`--text-xs`, `--fg-3`).
   A value the record cannot say leaves its cell out; the strip is absent until the task has a model, a change or a checks reading.
   A closed task names its change once, on its closing line, so its strip keeps only the review of the change.

@@ -68,11 +68,9 @@ export {
   describeCheckState,
   ForgeError,
   ForgeWriteError,
-  isAcceptedCheckState,
   isRedCheckState,
   isSignInForgeFailure,
   isTransientForgeFailure,
-  overallOfChecks,
 } from "./forge";
 export {
   messageWithoutPresentation,

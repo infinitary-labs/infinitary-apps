@@ -533,10 +533,6 @@ export const BASELINE: Record<string, Record<string, string>> = {
     RESOURCE_MAX_SAMPLE_MS: "reads as unknown (interrupted); a later read samples again",
     RESOURCE_MAX_AGE_MS: "a stale reading counts as unknown; the computer waits for a fresh one",
   },
-  "src/shared/rigor.ts": {
-    CI_ROUND_CAP: "soft hold: the captain's words, relayed or overridden, reopen it",
-    REVIEW_ROUND_CAP: "soft hold: the captain's words, relayed or overridden, reopen it",
-  },
   "src/shared/taskBrowser.ts": {
     TASK_BROWSER_PAGES_MAX: "refused and named; close a page, or open its address yourself",
     TASK_BROWSER_REQUEST_MAX: "the card is refused in words naming 200; resend it shorter",

@@ -92,7 +92,7 @@ describe("PlainGitForge", () => {
     expect(sent).toEqual({ branch: "fm/task-1", headSha: head, url: null });
     expect(run(bare, "rev-parse", "refs/heads/fm/task-1")).toBe(head);
     expect(await forge.changeFor("fm/task-1")).toEqual(sent);
-    expect(await forge.checks(sent)).toEqual({ overall: "green", items: [] });
+    expect(await forge.checks(sent)).toEqual({ items: [] });
     expect(forge.label(sent)).toBe("fm/task-1");
     expect(forge.url(sent)).toBeNull();
     expect(await forge.defaultBranch()).toBe("main");

@@ -192,6 +192,7 @@ export function useForgeHostSignIn() {
         address={keyForm.host}
         applicationId={view.signIns.find((row) => row.host === keyForm.host)?.applicationId}
         server={keyForm.server}
+        ended={view.ended}
         onDone={() => setKeyForm(null)}
         onKey={(host) => setKeyForm({ ...keyForm, host, method: "key" })}
         onCancel={() => {

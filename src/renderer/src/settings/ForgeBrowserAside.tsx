@@ -3,9 +3,11 @@ import {
   FORGE_BROWSER_WORDS,
   FORGE_SECTION_WORDS,
   type ForgeServerView,
+  type ForgesView,
   forgeAddressExample,
   forgeApplicationsPage,
   forgeBrowserRedirect,
+  forgeStartProblemText,
 } from "@shared/forges";
 import { type FormEvent, useId, useState } from "react";
 import { Button, Input } from "../design";
@@ -15,6 +17,7 @@ export function ForgeBrowserAside({
   address: initialAddress,
   applicationId: savedApplicationId,
   server,
+  ended,
   onDone,
   onKey,
   onCancel,
@@ -22,6 +25,8 @@ export function ForgeBrowserAside({
   address: string;
   applicationId?: string | undefined;
   server: ForgeServerView;
+  /** How the last sign-in ended; a failed start names the host's reason. */
+  ended: ForgesView["ended"];
   onDone: () => void;
   onKey: (address: string) => void;
   onCancel: () => void;
@@ -29,14 +34,20 @@ export function ForgeBrowserAside({
   const [address, setAddress] = useState(initialAddress);
   const [applicationId, setApplicationId] = useState(savedApplicationId ?? "");
   const [checking, setChecking] = useState(false);
-  const [problem, setProblem] = useState("");
+  const [failed, setFailed] = useState(false);
   const ids = useId();
   const host = hostOfAddress(address);
+  // The reason rides the view's push, which may land just before or after the refusal.
+  const problem = !failed
+    ? ""
+    : host && ended?.host === host && ended.end === "failed"
+      ? forgeStartProblemText(ended.problem, host)
+      : FORGE_BROWSER_WORDS.failed;
   const submit = async (event: FormEvent) => {
     event.preventDefault();
     if (!host || !applicationId.trim() || checking) return;
     setChecking(true);
-    setProblem("");
+    setFailed(false);
     try {
       await window.infinitary.forges.signInWithBrowser({
         kind: server.kind,
@@ -45,7 +56,7 @@ export function ForgeBrowserAside({
       });
       onDone();
     } catch {
-      setProblem(FORGE_BROWSER_WORDS.failed);
+      setFailed(true);
     } finally {
       setChecking(false);
     }
@@ -74,7 +85,7 @@ export function ForgeBrowserAside({
           onChange={(event) => {
             if (hostOfAddress(event.target.value) !== host) setApplicationId("");
             setAddress(event.target.value);
-            setProblem("");
+            setFailed(false);
           }}
         />
       </div>
@@ -96,6 +107,9 @@ export function ForgeBrowserAside({
             Turn off <code>Confidential</code> and select <code>api</code> and{" "}
             <code>write_repository</code>. These allow Infinitary to read your projects, push and
             merge changes.
+          </li>
+          <li>
+            Turn on <code>{FORGE_BROWSER_WORDS.deviceGrant}</code>. This allows the code sign-in.
           </li>
           <li>
             Save the application and paste its <code>Application ID</code> below, not its{" "}

@@ -1,6 +1,13 @@
 import { setTimeout as sleep } from "node:timers/promises";
 import { settingFrom } from "@shared/envSettings";
-import type { ForgeDeviceCode, ForgeDeviceResult, ForgeIssued, ForgeRenewal } from "../../signIns";
+import type { ForgeStartProblem } from "@shared/forges";
+import {
+  type ForgeDeviceCode,
+  type ForgeDeviceResult,
+  type ForgeIssued,
+  type ForgeRenewal,
+  ForgeStartError,
+} from "../../signIns";
 
 /** GitLab 17.9+: the device authorization grant, with a public application and no secret. */
 const SCOPES = ["api", "write_repository"];
@@ -9,6 +16,44 @@ const MAX_BYTES = 16 * 1024;
 
 type Options = { baseUrl: string; applicationId: string; fetch?: typeof fetch };
 type Answer = { status: number; body: Record<string, unknown> };
+
+/** An answer that arrived but is not GitLab's OAuth JSON, such as a plain-text 404 page. */
+class UnreadableAnswer extends Error {
+  constructor(
+    readonly status: number,
+    reason: string,
+  ) {
+    super(reason);
+  }
+}
+
+/** OAuth error codes GitLab answers a device request with; any other code is logged as `other`. */
+const START_ERRORS: Record<string, ForgeStartProblem> = {
+  access_denied: "not-allowed",
+  unauthorized_client: "not-allowed",
+  invalid_client: "client",
+  invalid_scope: "scope",
+};
+
+/** Why GitLab would not start the sign-in, from its status and OAuth error code alone. */
+function startRefusal({ status, body }: Answer): ForgeStartError {
+  const code =
+    typeof body.error === "string" && Object.hasOwn(START_ERRORS, body.error)
+      ? body.error
+      : undefined;
+  const problem: ForgeStartProblem =
+    status === 404
+      ? "not-found"
+      : status >= 500
+        ? "unreachable"
+        : code
+          ? (START_ERRORS[code] ?? "answer")
+          : "answer";
+  return new ForgeStartError(
+    problem,
+    `HTTP ${status}${body.error === undefined ? "" : `, ${code ?? "other"}`}`,
+  );
+}
 
 export function gitlabOAuthBaseFor(
   host: string,
@@ -35,7 +80,7 @@ async function post(
       : AbortSignal.timeout(TIMEOUT_MS),
   });
   const reader = response.body?.getReader();
-  if (!reader) throw new Error("GitLab supplied no sign-in answer");
+  if (!reader) throw new UnreadableAnswer(response.status, "GitLab supplied no sign-in answer");
   const chunks: Uint8Array[] = [];
   let bytes = 0;
   try {
@@ -45,7 +90,7 @@ async function post(
       bytes += chunk.value.byteLength;
       if (bytes > MAX_BYTES) {
         await reader.cancel();
-        throw new Error("GitLab supplied an oversized sign-in answer");
+        throw new UnreadableAnswer(response.status, "GitLab supplied an oversized sign-in answer");
       }
       chunks.push(chunk.value);
     }
@@ -56,10 +101,10 @@ async function post(
   try {
     body = JSON.parse(Buffer.concat(chunks).toString("utf8"));
   } catch {
-    throw new Error("GitLab supplied an unreadable sign-in answer");
+    throw new UnreadableAnswer(response.status, "GitLab supplied an unreadable sign-in answer");
   }
   if (!body || typeof body !== "object" || Array.isArray(body))
-    throw new Error("GitLab supplied an unreadable sign-in answer");
+    throw new UnreadableAnswer(response.status, "GitLab supplied an unreadable sign-in answer");
   return { status: response.status, body: body as Record<string, unknown> };
 }
 
@@ -87,44 +132,48 @@ export function gitlabBrowserSignIn(options: Options) {
   return {
     applicationId: options.applicationId,
     start: async (signal?: AbortSignal): Promise<ForgeDeviceCode> => {
+      let answer: Answer;
       try {
-        const { status, body } = await post(
+        answer = await post(
           options,
           "/oauth/authorize_device",
-          {
-            scope: SCOPES.join(" "),
-          },
+          { scope: SCOPES.join(" ") },
           signal,
         );
-        if (
-          status !== 200 ||
-          typeof body.device_code !== "string" ||
-          !body.device_code ||
-          body.device_code.length > 2048 ||
-          typeof body.user_code !== "string" ||
-          !body.user_code ||
-          body.user_code.length > 32 ||
-          typeof body.verification_uri !== "string" ||
-          !positive(body.expires_in, 3600) ||
-          (body.interval !== undefined && !positive(body.interval, 300))
-        )
-          throw new Error("Invalid device authorization answer");
-        const page = new URL(body.verification_uri);
-        // A named server may not send the person or the code to an unrelated site.
-        if (page.origin !== new URL(options.baseUrl).origin || page.username || page.password)
-          throw new Error("Unexpected verification page");
-        return {
-          deviceCode: body.device_code,
-          userCode: body.user_code,
-          verificationUri: page.href,
-          expiresInS: body.expires_in,
-          intervalS: typeof body.interval === "number" ? body.interval : 5,
-        };
-      } catch {
-        throw new Error(
-          "Could not start GitLab browser sign-in; check the application registration and server version",
+      } catch (caught) {
+        if (!(caught instanceof UnreadableAnswer))
+          throw new ForgeStartError("unreachable", "GitLab could not be reached");
+        throw new ForgeStartError(
+          caught.status === 404 ? "not-found" : caught.status >= 500 ? "unreachable" : "answer",
+          `HTTP ${caught.status}, not GitLab's sign-in answer`,
         );
       }
+      if (answer.status !== 200) throw startRefusal(answer);
+      const { body } = answer;
+      if (
+        typeof body.device_code !== "string" ||
+        !body.device_code ||
+        body.device_code.length > 2048 ||
+        typeof body.user_code !== "string" ||
+        !body.user_code ||
+        body.user_code.length > 32 ||
+        typeof body.verification_uri !== "string" ||
+        !URL.canParse(body.verification_uri) ||
+        !positive(body.expires_in, 3600) ||
+        (body.interval !== undefined && !positive(body.interval, 300))
+      )
+        throw new ForgeStartError("answer", "invalid device authorization answer");
+      const page = new URL(body.verification_uri);
+      // A named server may not send the person or the code to an unrelated site.
+      if (page.origin !== new URL(options.baseUrl).origin || page.username || page.password)
+        throw new ForgeStartError("answer", "unexpected verification page");
+      return {
+        deviceCode: body.device_code,
+        userCode: body.user_code,
+        verificationUri: page.href,
+        expiresInS: body.expires_in,
+        intervalS: typeof body.interval === "number" ? body.interval : 5,
+      };
     },
     wait: async (code: ForgeDeviceCode, signal: AbortSignal): Promise<ForgeDeviceResult> => {
       const expiresAt = Date.now() + code.expiresInS * 1000;

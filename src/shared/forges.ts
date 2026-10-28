@@ -99,6 +99,26 @@ export const forgeSignInFlowSchema = z
 export type ForgeSignInFlow = z.infer<typeof forgeSignInFlowSchema>;
 
 /**
+ * Why the host would not start a browser sign-in, from its answer alone:
+ * the application may not use the code sign-in (`not-allowed`, OAuth
+ * `access_denied` or `unauthorized_client`), the host does not accept the
+ * application (`client`, `invalid_client`), the application lacks a scope
+ * the app asks for (`scope`, `invalid_scope`), the host found nothing at
+ * the sign-in address (`not-found`, a 404 or an answer that is not
+ * GitLab's JSON), the host could not be reached (`unreachable`, a network
+ * failure or a 5xx), or any other answer (`answer`).
+ */
+export const forgeStartProblemSchema = z.enum([
+  "not-allowed",
+  "client",
+  "scope",
+  "not-found",
+  "unreachable",
+  "answer",
+]);
+export type ForgeStartProblem = z.infer<typeof forgeStartProblemSchema>;
+
+/**
  * How the last sign-in ended when it did not end signed in: the code ran
  * out (`expired`, offered again on request) or the host could not be
  * asked (`failed`). A person saying no on the host's page is quiet - the
@@ -108,6 +128,8 @@ export const forgeSignInEndSchema = z
   .object({
     host: z.string().min(1).max(253),
     end: z.enum(["expired", "failed"]),
+    /** Why a browser sign-in could not start, as the host answered; absent when it gave no reason. */
+    problem: forgeStartProblemSchema.optional(),
   })
   .strict();
 export type ForgeSignInEnd = z.infer<typeof forgeSignInEndSchema>;
@@ -161,12 +183,35 @@ export const forgeBrowserSignInSchema = z
   .strict();
 export type ForgeBrowserSignIn = z.infer<typeof forgeBrowserSignInSchema>;
 
+/** The words browser setup shows when the host would not start the sign-in. */
+export function forgeStartProblemText(
+  problem: ForgeStartProblem | undefined,
+  host: string,
+): string {
+  switch (problem) {
+    case "not-allowed":
+      return `${host} does not allow this application to sign in with a code. Edit the application on ${host}, turn on ${FORGE_BROWSER_WORDS.deviceGrant}, save, and try again.`;
+    case "client":
+      return `${host} did not accept this application. Check the Application ID, turn off Confidential on the application, and try again.`;
+    case "scope":
+      return `This application lacks api or write_repository. Edit the application on ${host}, select both, save, and try again.`;
+    case "not-found":
+      return `${host} did not find this application. Check that you pasted the whole Application ID from ${host}, or use a key instead.`;
+    case "unreachable":
+      return `Could not reach ${host}. Check the address and your connection, then try again.`;
+    default:
+      return FORGE_BROWSER_WORDS.failed;
+  }
+}
+
 export const FORGE_BROWSER_WORDS = {
   applicationId: "Application ID",
   register: "Register Infinitary once per server",
   start: "Get a sign-in code",
   useKey: "Use a key instead",
   useBrowser: "Use browser sign-in",
+  /** GitLab's own label for the application setting that allows the code sign-in. */
+  deviceGrant: "Device authorization grant",
   failed:
     "Could not start browser sign-in. Check the address and Application ID, or use a key instead.",
   requires:

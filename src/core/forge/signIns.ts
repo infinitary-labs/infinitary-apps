@@ -24,6 +24,7 @@ import {
   type ForgeServerView,
   type ForgeSignInFlow,
   type ForgeSignInState,
+  type ForgeStartProblem,
   type ForgesView,
   isForgeHostName,
 } from "@shared/forges";
@@ -245,6 +246,21 @@ export type ForgeSignInProvider = {
   /** Renew a short-lived sign-in with its refresh token; a host without them has none. */
   renew?: (refreshToken: string) => Promise<ForgeRenewal>;
 };
+
+/**
+ * A browser sign-in the host would not start, with the reason its answer
+ * gave. The message names the status and OAuth error code only, never the
+ * Application ID or the host's own text.
+ */
+export class ForgeStartError extends Error {
+  constructor(
+    readonly problem: ForgeStartProblem,
+    detail: string,
+  ) {
+    super(`${problem}: ${detail}`);
+    this.name = "ForgeStartError";
+  }
+}
 
 /** The host's answer to a renewal: a new pair, a refusal (the proof), or no answer. */
 export type ForgeRenewal =
@@ -505,7 +521,11 @@ export class ForgeSignIns {
     } catch (caught) {
       if (this.starting !== starting) throw new Error("Sign-in cancelled");
       this.starting = undefined;
-      this.ended = { host, end: "failed" };
+      this.ended = {
+        host,
+        end: "failed",
+        ...(caught instanceof ForgeStartError ? { problem: caught.problem } : {}),
+      };
       this.log(`sign-in to ${host} could not start: ${messageOf(caught)}`);
       this.pushView();
       throw caught;

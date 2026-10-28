@@ -8,10 +8,13 @@ import {
   FORGE_SECTION_WORDS,
   forgeKeyPage,
   forgeKeyProblemText,
+  forgeStartProblemText,
   GITLAB,
 } from "../../src/shared/forges";
 import { scratchDir } from "../helpers/scratchDirs";
 import {
+  GITLAB_STUB_APPLICATION,
+  GITLAB_STUB_APPLICATION_NO_DEVICE,
   GITLAB_STUB_KEY,
   GITLAB_STUB_LOGIN,
   GITLAB_STUB_PROJECT,
@@ -157,3 +160,57 @@ for (const host of ["gitlab.com", "gitlab.example.com"]) {
     }
   });
 }
+
+/**
+ * The captain could not sign in to gitlab.com with browser sign-in and saw
+ * one generic message (INF-1671): GitLab leaves Device authorization grant
+ * off on a new application and refuses it as `access_denied`, and an ID it
+ * does not know is a 404. Setup names the missing step, the form says which
+ * reason GitLab gave, and an application set up that way gets its code.
+ */
+test("browser sign-in to gitlab.com names the setting GitLab refused and then shows a code", async () => {
+  const home = scratchDir("fm-gitlab-browser-home-");
+  const userDataDir = scratchDir("fm-gitlab-browser-data-");
+  const stub = await startGitLabStub("gitlab.com");
+  const launched = await launchApp({
+    homeDir: home,
+    userDataDir,
+    withMockProvider: true,
+    env: stub.env,
+  });
+  try {
+    const { page } = launched;
+    await resizeWindow(launched.app, page, { width: 1280, height: 800 });
+    await page.getByRole("button", { name: "Settings", exact: true }).click();
+    await pressKey(page.getByRole("tab", { name: "Projects", exact: true }), "Enter");
+    const add = page.locator("[data-add-project]");
+    await pressKey(add.getByRole("button", { name: "GitLab repo", exact: true }), "Enter");
+    await pressKey(
+      add.getByRole("button", { name: projectSignInWords(GITLAB.name), exact: true }),
+      "Enter",
+    );
+    const form = page.locator("[data-forge-browser-form]");
+    await expect(form.getByRole("listitem")).toContainText([FORGE_BROWSER_WORDS.deviceGrant]);
+    const application = form.getByLabel(FORGE_BROWSER_WORDS.applicationId);
+    const start = form.getByRole("button", { name: FORGE_BROWSER_WORDS.start });
+    await application.fill(GITLAB_STUB_APPLICATION_NO_DEVICE);
+    await pressKey(start, "Enter");
+    await expect(form.getByRole("status")).toHaveText(
+      forgeStartProblemText("not-allowed", "gitlab.com"),
+    );
+    await application.fill(`${GITLAB_STUB_APPLICATION}x`);
+    await pressKey(start, "Enter");
+    await expect(form.getByRole("status")).toHaveText(
+      forgeStartProblemText("not-found", "gitlab.com"),
+    );
+    await application.fill(GITLAB_STUB_APPLICATION);
+    await pressKey(start, "Enter");
+    await expect(page.locator("[data-forge-code]")).toHaveText("WDJBMJHT");
+    expect(
+      stub.requests().filter((request) => request.endsWith("/oauth/authorize_device")),
+    ).toHaveLength(3);
+  } finally {
+    await launched.close();
+    await stub.close();
+  }
+});

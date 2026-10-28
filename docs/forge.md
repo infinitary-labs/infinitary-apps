@@ -143,7 +143,8 @@ Older servers keep key sign-in.
 
 An application belongs to one GitLab host, never every server.
 The project carries no shared gitlab.com application, so the app guides a personal registration there as well as on self-hosted servers.
-Settings opens `https://<host>/-/user_settings/applications` and explains the host's fields: name Infinitary, Confidential off, scopes `api` and `write_repository`, and Redirect URI `https://<host>/oauth/device` (required by registration, unused by the device grant).
+Settings opens `https://<host>/-/user_settings/applications` and explains the host's fields: name Infinitary, Confidential off, scopes `api` and `write_repository`, Device authorization grant on, and Redirect URI `https://<host>/oauth/device` (required by registration, unused by the device grant).
+GitLab leaves Device authorization grant off on a new application and refuses its code sign-in as `access_denied` until the person turns it on.
 The person supplies the Application ID, never the Secret; if server policy prevents registration, its administrator can supply an ID or the person can use a key.
 The Application ID survives a successful sign-in in the same host's file and prefills a later browser setup; signing out forgets it with the sign-in.
 
@@ -154,6 +155,8 @@ The Application ID survives a successful sign-in in the same host's file and pre
 Pending waits, slow-down adds five seconds, expiry offers a fresh code, denial closes quietly, and Cancel or a replacement ends the attempt, including a delayed start or identity read.
 Only the user code and same-origin verification page reach the view; the device code, access token and refresh token never do.
 Both endpoints refuse redirects and bound their answers to 16 KiB and each request to 30 seconds; errors never repeat server response text.
+A start GitLab refuses throws `ForgeStartError` with a closed `ForgeStartProblem` (`src/shared/forges.ts`) read from the status and OAuth error code alone: `not-allowed` (`access_denied`, `unauthorized_client`), `client` (`invalid_client`), `scope` (`invalid_scope`), `not-found` (a 404 or an answer that is not OAuth JSON), `unreachable` (no answer or a 5xx) or `answer`.
+`ForgesView.ended.problem` carries it to browser setup, which says what to change (`forgeStartProblemText`), and the app's forge log line names it with the status and code, never the Application ID.
 `INFINITARY_GITLAB_OAUTH_URL` overrides the host only in an unpackaged development/test run.
 
 The host's existing 0600 sign-in file keeps `applicationId`, `kind: gitlab`, `gitUser: oauth2`, the access token, expiry and refresh token when issued.

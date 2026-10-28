@@ -14638,6 +14638,17 @@
                       "expired",
                       "failed"
                     ]
+                  },
+                  "problem": {
+                    "type": "string",
+                    "enum": [
+                      "not-allowed",
+                      "client",
+                      "scope",
+                      "not-found",
+                      "unreachable",
+                      "answer"
+                    ]
                   }
                 },
                 "required": [
@@ -15140,6 +15151,17 @@
                       "expired",
                       "failed"
                     ]
+                  },
+                  "problem": {
+                    "type": "string",
+                    "enum": [
+                      "not-allowed",
+                      "client",
+                      "scope",
+                      "not-found",
+                      "unreachable",
+                      "answer"
+                    ]
                   }
                 },
                 "required": [
@@ -15382,6 +15404,17 @@
                     "enum": [
                       "expired",
                       "failed"
+                    ]
+                  },
+                  "problem": {
+                    "type": "string",
+                    "enum": [
+                      "not-allowed",
+                      "client",
+                      "scope",
+                      "not-found",
+                      "unreachable",
+                      "answer"
                     ]
                   }
                 },
@@ -56869,6 +56902,17 @@
                     "enum": [
                       "expired",
                       "failed"
+                    ]
+                  },
+                  "problem": {
+                    "type": "string",
+                    "enum": [
+                      "not-allowed",
+                      "client",
+                      "scope",
+                      "not-found",
+                      "unreachable",
+                      "answer"
                     ]
                   }
                 },

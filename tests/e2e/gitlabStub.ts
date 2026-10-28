@@ -53,6 +53,19 @@ export const GITLAB_STUB_KEY = "glpat-hermetic-sign-in-key";
 export const GITLAB_STUB_LOGIN = "octo";
 export const GITLAB_STUB_PROJECT = "group/subgroup/field-notes";
 
+/**
+ * Public applications registered on the stand-in's host, by Application ID.
+ * GitLab leaves Device authorization grant off on a new application and
+ * refuses its device request as Doorkeeper's 400 `access_denied`; gitlab.com
+ * answers an ID it does not know with a plain-text 404 page (INF-1671).
+ */
+export const GITLAB_STUB_APPLICATION = "a".repeat(64);
+export const GITLAB_STUB_APPLICATION_NO_DEVICE = "b".repeat(64);
+const STUB_APPLICATIONS = new Map([
+  [GITLAB_STUB_APPLICATION, { deviceGrant: true }],
+  [GITLAB_STUB_APPLICATION_NO_DEVICE, { deviceGrant: false }],
+]);
+
 /** The commit main points at where the project lives: the first parent of a merged result. */
 export const GITLAB_STUB_MAIN_SHA = createHash("sha1").update("gitlab stub main").digest("hex");
 
@@ -389,6 +402,30 @@ export async function startGitLabStub(host: string) {
         res.writeHead(status, { "Content-Type": "application/json" });
         res.end(JSON.stringify(json));
       };
+      // The device authorization grant asks no key, only the public application's ID.
+      if (method === "POST" && path === "/oauth/authorize_device") {
+        const form = new URLSearchParams(raw);
+        const application = STUB_APPLICATIONS.get(form.get("client_id") ?? "");
+        if (!application) {
+          res.writeHead(404, { "Content-Type": "text/plain; charset=utf-8" });
+          res.end("404 page not found\n");
+        } else if (!application.deviceGrant) {
+          send(400, {
+            error: "access_denied",
+            error_description: "The resource owner or authorization server denied the request.",
+          });
+        } else {
+          send(200, {
+            device_code: "stub-device-code",
+            user_code: "WDJBMJHT",
+            verification_uri: `http://127.0.0.1:${port}/oauth/device`,
+            verification_uri_complete: `http://127.0.0.1:${port}/oauth/device?user_code=WDJBMJHT`,
+            expires_in: 300,
+            interval: 5,
+          });
+        }
+        return;
+      }
       // Signed storage: the address is the grant, and the key never belongs here.
       const stored = /^\/storage\/job-artifacts\/(\d+)\.zip$/.exec(path);
       if (method === "GET" && stored) {
@@ -686,7 +723,10 @@ export async function startGitLabStub(host: string) {
   const port = (server.address() as AddressInfo).port;
   return {
     url: `http://127.0.0.1:${port}/api/v4`,
-    env: { INFINITARY_GITLAB_API_URL: `http://127.0.0.1:${port}/api/v4` },
+    env: {
+      INFINITARY_GITLAB_API_URL: `http://127.0.0.1:${port}/api/v4`,
+      INFINITARY_GITLAB_OAUTH_URL: `http://127.0.0.1:${port}`,
+    },
     /** Every request, `METHOD /path` (query dropped). */
     requests: () => [...requests],
     /** Every merge GitLab accepted, in order; a refused one is only a request. */

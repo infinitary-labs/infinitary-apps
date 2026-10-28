@@ -314,6 +314,7 @@ function resumeOf(spec: SessionSpec | undefined): SessionResume | undefined {
 function setup(
   options: {
     session?: FakeSession;
+    computerVersions?: ConstructorParameters<typeof FirstmateAgent>[0]["computerVersions"];
     scheduler?: ConstructorParameters<typeof FirstmateAgent>[0]["scheduler"];
     failCreate?: string;
     onCaptainTurnAccepted?: () => void;
@@ -429,6 +430,7 @@ function setup(
   const agent = createTrackedAgent(
     {
       paths,
+      ...(options.computerVersions ? { computerVersions: options.computerVersions } : {}),
       inbox: new InboxStore(db),
       settings,
       onTurnSettled: (outcome) => turns.push(outcome),
@@ -734,6 +736,80 @@ describe("FirstmateAgent", () => {
     f.session.resolveNextPrompt();
     await vi.waitFor(() => expect(f.agent.isBusy()).toBe(false));
     f.agent.dispose();
+    f.db.close();
+  });
+
+  it("reads running computer versions and a crewmate’s persisted first-release report without another worker (INF-1607)", async () => {
+    const versions = [
+      { id: "this-mac", name: "Home", role: "home", connected: true, version: "0.1.30" },
+      {
+        id: "mini",
+        name: "Mini",
+        role: "work",
+        connected: true,
+        version: "0.1.12" as string | null,
+      },
+    ];
+    const f = setup({ computerVersions: () => versions });
+    expect(decodeContext(f.agent.buildContextBlock()).computer_versions).toEqual(versions);
+    versions[1] = { ...versions[1]!, connected: false, version: null };
+    expect(decodeContext(f.agent.buildContextBlock()).computer_versions).toEqual(versions);
+    const { repo } = await f.repos.setup({ kind: "adopt", path: process.cwd() });
+    const merged = seedTask(f.tasks, {
+      repoId: repo.id,
+      id: "version-fix",
+      title: "Show running version",
+      status: "idle",
+    });
+    f.tasks.close(merged.id, { status: "done", reason: "merged", actor: "captain" });
+    await f.agent.converse("which release carries the version fix?");
+    const spawn = f.specs[0]?.tools.find((tool) => tool.name === "spawn_crewmate");
+    if (!spawn) throw new Error("Missing spawn_crewmate");
+    await spawn.run({
+      title: "Verify released changes",
+      goal: "Record the first release containing the version fix",
+      user_words: "which release carries the version fix?",
+      repo_id: repo.id,
+    });
+    await vi.waitFor(() => expect(f.crewSpecs).toHaveLength(1));
+    const report = f.crewSpecs[0]?.tools?.find((tool) => tool.name === "report");
+    if (!report) throw new Error("Missing report");
+    const release = {
+      version: "0.1.30",
+      url: "https://github.com/infinitary-labs/infinitary/releases/tag/v0.1.30",
+      evidence: "The published source contains this task's merge; the preceding release does not.",
+    };
+    const answer = await report.run({
+      text: "Verified the published source contains the merged version fix.",
+      summary: "The version fix has its first verified release.",
+      first_release: { ...release, tasks: [merged.key] },
+    });
+    expect(answer.text).toContain("Recorded 1 first-release");
+    expect(f.tasks.get(merged.id)?.delivery?.firstRelease).toEqual(release);
+    const query = f.specs[0]?.tools.find((tool) => tool.name === "tasks");
+    if (!query) throw new Error("Missing tasks");
+    const read = await query.run({ key: merged.key });
+    expect(parseTasksQueryText(read.text ?? "").rows[0]?.first_release).toEqual(release);
+    expect(f.crewSpecs).toHaveLength(1);
+    const evidenceDir = process.env.INFINITARY_VERSION_EVIDENCE_DIR;
+    if (evidenceDir)
+      writeFileSync(
+        join(evidenceDir, "firstmate-version-facts.json"),
+        JSON.stringify(
+          {
+            context: decodeContext(f.agent.buildContextBlock()).computer_versions,
+            mutation: answer.text,
+            saved: f.tasks.get(merged.id)?.delivery?.firstRelease,
+            history: f.tasks.timeline(merged.id).map(({ text, data }) => ({ text, data })),
+          },
+          null,
+          2,
+        ),
+      );
+    f.session.resolveNextPrompt();
+    await vi.waitFor(() => expect(f.agent.isBusy()).toBe(false));
+    f.agent.dispose();
+    await f.supervisor.disposeAll();
     f.db.close();
   });
 

@@ -223,6 +223,7 @@ function shell(
   const startConnectionSpy = vi.fn(
     (): HomeConnection => ({
       close: closeConnection,
+      runningVersions: () => [],
       listening: () => [],
       settled: async () => {},
       ask: async () => {

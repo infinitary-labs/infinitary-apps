@@ -619,3 +619,16 @@ A keyed `tasks` read includes `live_validation` and, for a reviewer, `validation
 That agent-facing record carries proof identities and digests, not duplicate transcript bytes; the reviewer reads the verified files named in its assignment.
 
 Proof for a different committed version remains readable, with its scenario result marked Another version rather than a current live pass.
+
+## First release of merged work
+
+The delivery evidence keeps `mergedSha` from the forge's merge receipt, distinct from the proposed branch's `headSha`.
+A merged or locally landed task's `tasks` read exposes `merge_commit` when known and `first_release`, which is null until verified, not a claim that it is unreleased.
+A crewmate verifying a published release declares `report.first_release`: its earliest published version, release page, included merged task keys and evidence of membership and earliest publication.
+The agent verifies publication and source membership; the host stores that declaration rather than guessing from merge time, release names or version ordering.
+The report parameter instructs the releasing crewmate to verify every included merged task, including changes with no release note, and report groups sharing an earliest release.
+`TaskService.recordFirstRelease` records an entire same-project batch atomically with the reporting task as provenance, and refuses unknown, unmerged or other-project tasks before writing any attribution.
+Later release reports preserve existing first releases; an explicit `corrects` names the previous version before replacing an attribution and keeps both declarations in the timeline.
+Repeating an attribution adds no event.
+Old tasks and projects with no verified release remain unknown until that verification, and no release attribution changes their closed status or merge permissions.
+The crewmate's `tasks skip` pages row lists beyond the per-read limit; release verifiers collect all keys before attribution writes change the list's ordering.

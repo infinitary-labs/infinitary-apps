@@ -150,7 +150,7 @@ import { createCrewmateTranscriptResolver } from "./observe/transcriptSource";
 import { isAllowedOpenExternalUrl } from "./openExternal";
 import { ChangePresentations } from "./orchestrator/changePresentations";
 import { CrewSupervisor, type PersonalLiveDelegate } from "./orchestrator/crewSupervisor";
-import { FirstmateAgent } from "./orchestrator/firstmateAgent";
+import { FirstmateAgent, type RunningComputerVersion } from "./orchestrator/firstmateAgent";
 import { firstmateCanServe } from "./orchestrator/firstmateAvailability";
 import { Flagship } from "./orchestrator/flagship";
 import { GithubGatewayService } from "./orchestrator/githubGateway";
@@ -2852,7 +2852,40 @@ export async function createServices(
         });
     },
   });
+  const homeComputerName = await ownComputerName({ packaged: host.app.packaged, env: process.env });
   const firstmate = new FirstmateAgent({
+    computerVersions: () => {
+      const running = workDevices.runningVersions();
+      return [
+        {
+          id: "this-mac",
+          name: homeComputerName,
+          role: "home",
+          connected: true,
+          version: host.app.version,
+        },
+        ...computers.list().flatMap((device): RunningComputerVersion[] => {
+          const live = running.filter((row) => row.deviceId === device.id);
+          return live.length > 0
+            ? live.map((row) => ({
+                id: device.id,
+                name: device.name,
+                role: row.role,
+                connected: true,
+                version: row.version,
+              }))
+            : [
+                {
+                  id: device.id,
+                  name: device.name,
+                  role: device.kind,
+                  connected: false,
+                  version: null,
+                },
+              ];
+        }),
+      ];
+    },
     paths,
     platform: host.app.platform,
     inbox,

@@ -34,6 +34,8 @@ export type TaskQueryInput = {
   /** Children of this task (key or id). */
   parent?: string;
   limit?: number;
+  /** Row pagination for a crewmate collecting a complete task list. */
+  skip?: number;
   /**
    * Every project instead of tasks: its key, name and folder on the
    * computer where the first mate lives (INF-1217), so a crewmate names a
@@ -99,6 +101,8 @@ export type TaskQueryRow = {
   required_action?: CaptainAction;
   key: string;
   task_id: string;
+  first_release?: TaskDelivery["firstRelease"] | null;
+  merge_commit?: string;
   kind: string;
   status: string;
   title: string;
@@ -282,8 +286,9 @@ export function queryTasks(
         b.updatedAt - a.updatedAt,
     );
   const projectKeys = new Map(tasks.projects.list().map((entry) => [entry.id, entry.key]));
+  const skip = one ? 0 : Math.max(0, Math.floor(input.skip ?? 0));
   const rows = matched
-    .slice(0, limit)
+    .slice(skip, skip + limit)
     // A by-key fetch is one row and reads the whole answer; a list is the
     // compact index and never carries bodies in bulk.
     .map((record) => {
@@ -378,6 +383,12 @@ function toRow(
   return {
     key: record.key || record.id,
     task_id: record.id,
+    ...(record.closedReason === "merged" || record.closedReason === "landed"
+      ? {
+          first_release: record.delivery?.firstRelease ?? null,
+          ...(record.delivery?.mergedSha ? { merge_commit: record.delivery.mergedSha } : {}),
+        }
+      : {}),
     ...(record.delivery?.captainAction ? { required_action: record.delivery.captainAction } : {}),
     ...(policies ? { policies } : {}),
     kind: record.kind,

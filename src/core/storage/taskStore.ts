@@ -12,6 +12,7 @@ import type { ReviewRisk, ReviewVerdict } from "@shared/rigor";
 import type { RiskAssessment } from "@shared/risk";
 import type { WorkShape } from "@shared/routingPolicy";
 import type { EffectiveTaskPolicies } from "@shared/taskPolicies";
+import type { FirstRelease } from "@shared/taskRelease";
 import type { RunChecks, TaskDeliveryMode } from "@shared/tasks";
 import type { WriteAsk } from "@shared/writeAsk";
 import type { SpawnIntent } from "../orchestrator/intentBrief";
@@ -321,6 +322,10 @@ export type TaskDelivery = {
   /** The newest watched run's state and host times, kept after its watch ends (INF-594). */
   runChecks?: RunChecks;
   landedMode?: "fast-forward" | "merge" | "pr";
+  /** The resulting merge, not the proposed branch head. */
+  mergedSha?: string;
+  /** Earliest published release verified to contain the change; absent is unknown. */
+  firstRelease?: FirstRelease;
   /**
    * The independent review's latest verdict on a reviewed task (delivery
    * rigor phase 2), recorded on the BUILDER: the verdict, the head the

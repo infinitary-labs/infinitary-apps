@@ -36,6 +36,7 @@ import {
   workRequests,
 } from "@shared/work";
 import type { CrewmateBrowser } from "../browser/taskBrowsers";
+import { contractChange, listsChange } from "../connection/contractChanges";
 import { WorkRequestAbortedError } from "../devices/homeLink";
 import { PLACED_RELEASE_FILE_REFUSAL } from "../forge";
 import {
@@ -113,6 +114,8 @@ import type { WorkingCopies } from "./workingCopies";
  * background task a Claude client still ran when it ended while this
  * computer ran on.
  */
+
+const FIRST_RELEASE_REPORTS = contractChange("first-release-reports");
 
 export type SessionHostOptions = {
   tasks: PlacedTasks;
@@ -1260,6 +1263,13 @@ export class SessionHost {
         this.withDeadline(
           "inf:work:report",
           async (signal) => {
+            if (
+              declared?.firstRelease &&
+              !listsChange(this.options.homeChanges?.(), FIRST_RELEASE_REPORTS)
+            )
+              throw new Error(
+                "The home cannot record first-release facts yet. Nothing was sent; report the verification gap to the first mate.",
+              );
             if (declared?.validation?.kind === "run") {
               verifyKeptValidationEvidenceSync(
                 declared.validation.evidence,
@@ -1339,6 +1349,13 @@ export class SessionHost {
         this.withDeadline(
           "inf:work:tasks",
           async (signal) => {
+            if (
+              input.skip !== undefined &&
+              !listsChange(this.options.homeChanges?.(), FIRST_RELEASE_REPORTS)
+            )
+              throw new Error(
+                "The home cannot page task lists yet. Nothing was sent; report the verification gap to the first mate.",
+              );
             const answer = tasksAnswerSchema.parse(
               await this.call(held, "inf:work:tasks", { callId: randomUUID(), input }, signal),
             );

@@ -251,12 +251,23 @@ describe("the crewmate tool spec", () => {
       text: "The captain approved the plan by reply, with the limit at 32.",
       needs_firstmate: "start the builder on the approved plan",
       finished: true,
+      // INF-1607: the same evidenced attribution reaches the host from either runtime.
+      first_release: {
+        version: "0.6.0",
+        url: "https://github.com/infinitary-labs/infinitary/releases/tag/v0.6.0",
+        evidence: "Published source contains the merge, absent from earlier published sources.",
+        tasks: ["INF-1607"],
+      },
     };
     const pi = createCrewmateTools(delegate).find((tool) => tool.name === "report");
     const claude = claudeCrewmateTools(delegate).find((tool) => tool.name === "report");
     await runPi(pi as PiTool, params);
     await runClaude(claude as ClaudeTool, params);
-    const expected = { needsFirstmate: "start the builder on the approved plan", finished: true };
+    const expected = {
+      needsFirstmate: "start the builder on the approved plan",
+      finished: true,
+      firstRelease: params.first_release,
+    };
     expect(declared).toEqual([expected, expected]);
     // The rule rides a top-level parameter, which the Claude client serves.
     expect(

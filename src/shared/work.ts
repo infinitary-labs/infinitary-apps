@@ -23,6 +23,7 @@ import {
   taskBrowserRequestSchema,
   taskBrowserSizeSchema,
 } from "./taskBrowser";
+import { firstReleaseReportSchema } from "./taskRelease";
 
 /**
  * A crewmate's conversation held on a computer that runs work (piece 8,
@@ -563,6 +564,7 @@ export const workRequests = {
       summary: z.string().optional(),
       declared: z
         .object({
+          firstRelease: firstReleaseReportSchema.optional(),
           validation: keptValidationInputSchema.optional(),
           wait: z.object({ reason: z.string(), cardId: z.string().optional() }).optional(),
           finished: z.boolean().optional(),
@@ -611,6 +613,7 @@ export const workRequests = {
         text: z.string().optional(),
         parent: z.string().optional(),
         limit: z.number().int().min(1).max(100).optional(),
+        skip: z.number().int().nonnegative().optional(),
         // Every project and its folder instead of tasks (`project-folders.md`).
         projects: z.boolean().optional(),
       }),

@@ -287,6 +287,7 @@ async function placed(
     probeTypeface?: TypefaceProbe;
     /** The contract the home's welcome says, in place of the one the link heard. */
     homeVersion?: string;
+    homeChanges?: readonly string[];
     /** Claude's factory on the scripted client, for a conversation the home binds to Claude. */
     claude?: ContractWorld;
     /** Its work starts in Firstmate 3000's folder, before its first update to Infinitary (`moveComputer`). */
@@ -377,6 +378,7 @@ async function placed(
             : homeVersion
               ? { homeVersion }
               : {}),
+          ...(options.homeChanges ? { homeChanges: () => options.homeChanges ?? [] } : {}),
           log: () => {},
         });
         const held = host;
@@ -478,6 +480,52 @@ async function placed(
 }
 
 describe("a conversation held on a computer that runs work", () => {
+  it.each([true, false])(
+    "forwards first-release facts only to a home that records them (INF-1607; supported: %s)",
+    async (supported) => {
+      const at = await placed({ homeChanges: supported ? ["first-release-reports"] : [] });
+      await at.open();
+      const release = {
+        version: "0.6.0",
+        url: "https://github.com/infinitary-labs/infinitary/releases/tag/v0.6.0",
+        evidence: "Published source contains the task's merge; earlier published sources do not.",
+        tasks: ["INF-1607"],
+      };
+      model([
+        { tools: [{ name: "tasks", args: { status: "done", skip: 100 } }] },
+        {
+          tools: [
+            {
+              name: "report",
+              args: {
+                text: "Verified the first published release of the merged fix.",
+                first_release: release,
+              },
+            },
+          ],
+        },
+        { text: "Reported the release verification." },
+      ]);
+      await at.order("inf:session:prompt", [
+        { orderId: "release:1", task: TASK, text: "Record the verified release." },
+      ]);
+      await at.ended(1);
+      const queries = at.home.effects.filter((effect) => effect.channel === "inf:work:tasks");
+      if (supported)
+        expect(queries[0]?.request).toMatchObject({ input: { status: "done", skip: 100 } });
+      else expect(queries).toEqual([]);
+      const reports = at.home.effects.filter((effect) => effect.channel === "inf:work:report");
+      if (supported)
+        expect(reports[0]?.request).toMatchObject({ declared: { firstRelease: release } });
+      else expect(reports).toEqual([]);
+      expect(
+        at.home.events.find(
+          (record) => record.event.type === "tool_end" && record.event.toolName === "report",
+        )?.event,
+      ).toMatchObject({ isError: !supported });
+    },
+  );
+
   it("runs the home's prompt there, does each callback once at the home, and tells the home every event once, in order", async () => {
     const at = await placed();
     const opened = await at.open();

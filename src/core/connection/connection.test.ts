@@ -1,4 +1,5 @@
 import { once } from "node:events";
+import { writeFileSync } from "node:fs";
 import { request as httpsRequest } from "node:https";
 import { connect as plainConnect } from "node:net";
 import { join } from "node:path";
@@ -843,6 +844,67 @@ describe("the home's connection", () => {
     await second.close();
     await expect.poll(() => heard.at(-1)).toEqual({ deviceId: grant.deviceId, version: null });
     expect(heard).toHaveLength(5);
+  });
+
+  it("exposes running versions for views and work without confusing a name lookup or a disconnect with a running app (INF-1607)", async () => {
+    const at = await home();
+    const grant = await at.join("work", "Mini");
+    const viewGrant = await at.join("view", "Laptop");
+    const old = await connectClient(grant, {
+      protocolVersion: beforePlacedWork(),
+      appVersion: "0.1.12",
+    });
+    const view = await connectClient(viewGrant, { appVersion: "0.1.30" });
+    const observed = [
+      { state: "work and view connected", versions: at.connection.runningVersions() },
+    ];
+    expect(at.connection.runningVersions()).toEqual([
+      { deviceId: grant.deviceId, role: "work", version: "0.1.12" },
+      { deviceId: viewGrant.deviceId, role: "view", version: "0.1.30" },
+    ]);
+    const lookup = await connectClient(await at.join("work", "Lookup"), {
+      nameOnly: true,
+      appVersion: "0.1.30",
+    });
+    expect(at.connection.runningVersions()).toHaveLength(2);
+    observed.push({ state: "name lookup excluded", versions: at.connection.runningVersions() });
+    await view.close();
+    await expect
+      .poll(() => at.connection.runningVersions())
+      .toEqual([{ deviceId: grant.deviceId, role: "work", version: "0.1.12" }]);
+    await old.close();
+    await expect.poll(() => at.connection.runningVersions()).toEqual([]);
+    const unsaid = await connectClient(grant);
+    expect(at.connection.runningVersions()).toEqual([
+      { deviceId: grant.deviceId, role: "work", version: null },
+    ]);
+    const updated = await connectClient(grant, { appVersion: "0.1.30" });
+    expect(at.connection.runningVersions()).toEqual([
+      { deviceId: grant.deviceId, role: "work", version: null },
+      { deviceId: grant.deviceId, role: "work", version: "0.1.30" },
+    ]);
+    observed.push({
+      state: "two running versions on one computer",
+      versions: at.connection.runningVersions(),
+    });
+    await updated.close();
+    await expect
+      .poll(() => at.connection.runningVersions())
+      .toEqual([{ deviceId: grant.deviceId, role: "work", version: null }]);
+    observed.push({
+      state: "only unsaid version remains",
+      versions: at.connection.runningVersions(),
+    });
+    await unsaid.close();
+    await expect.poll(() => at.connection.runningVersions()).toEqual([]);
+    observed.push({ state: "disconnected", versions: at.connection.runningVersions() });
+    await lookup.close();
+    const evidenceDir = process.env.INFINITARY_VERSION_EVIDENCE_DIR;
+    if (evidenceDir)
+      writeFileSync(
+        join(evidenceDir, "live-connection-versions.json"),
+        JSON.stringify(observed, null, 2),
+      );
   });
 
   it("keeps what a device says it is in its hello beside its kind", async () => {

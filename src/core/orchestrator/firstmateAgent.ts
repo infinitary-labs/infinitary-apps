@@ -254,8 +254,18 @@ export function formatFlagshipError(
   return `${prefix}${trimmed}`;
 }
 
+export type RunningComputerVersion = {
+  id: string;
+  name: string;
+  role: string;
+  connected: boolean;
+  version: string | null;
+};
+
 export type FirstmateAgentOptions = {
   paths: AppPaths;
+  /** Live running app versions; null means not known, never the available update. */
+  computerVersions?: () => RunningComputerVersion[];
   /** The home's system (`host.app.platform`), whose settings an offered card names; a Mac's unless named. */
   platform?: string;
   /**
@@ -3658,6 +3668,9 @@ export class FirstmateAgent {
       })),
       // Served only while another computer runs work, so one computer pays nothing (INF-992).
       ...(this.options.supervisor.computersListed() ? { computers: COMPUTERS_RULE } : {}),
+      ...(this.options.computerVersions
+        ? { computer_versions: this.options.computerVersions() }
+        : {}),
       task_index: this.renderTaskIndex(),
       ...this.renderOpenAsks(),
       ...(introduction && introductionId

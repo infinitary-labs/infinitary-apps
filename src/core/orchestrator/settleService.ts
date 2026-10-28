@@ -979,7 +979,10 @@ export class SettleService {
         reason: "merged",
         actor,
         text: result.text,
-        delivery: { landedMode: "pr" },
+        delivery: {
+          landedMode: "pr",
+          ...(result.receipt?.sha ? { mergedSha: result.receipt.sha } : {}),
+        },
       },
       { recordBeforeStop: actor === "host" },
     );
@@ -2719,7 +2722,7 @@ export class SettleService {
         reason: "merged",
         actor: "captain",
         text,
-        delivery: { landedMode: "pr" },
+        delivery: { landedMode: "pr", ...(pull.mergedSha ? { mergedSha: pull.mergedSha } : {}) },
       });
       this.reportOutcome(taskId, title, "merge-pr", undefined, { ok: true, text }, undefined);
     } finally {

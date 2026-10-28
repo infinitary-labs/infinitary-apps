@@ -11941,12 +11941,24 @@ export class CrewSupervisor {
     if (declaration?.finished && this.askEnding.crewmateStep(task.id)) {
       throw new Error(CREWMATE_ANSWER_ASK);
     }
-    const linked = this.linkReportedWaits(task, declaration?.waitsOn);
+    const { recordedReleases, linked } = this.options.tasks.atomic(
+      () => ({
+        recordedReleases: declaration?.firstRelease
+          ? this.options.tasks.recordFirstRelease(task.id, declaration.firstRelease)
+          : undefined,
+        linked: this.linkReportedWaits(task, declaration?.waitsOn),
+      }),
+      () => {},
+    );
     task.explicitReport = report;
     task.explicitSummary = summary?.replace(/\s+/g, " ").trim() || undefined;
     task.explicitDeclared = declaration;
     this.noteTaskActivity(task);
     const receipt = ["Reported."];
+    if (recordedReleases !== undefined)
+      receipt.push(
+        `Recorded ${recordedReleases} first-release attribution(s); existing attributions kept unless explicitly corrected.`,
+      );
     if (declaration?.wait) {
       receipt.push(
         "Your task now waits on the captain: nothing nudges you, and you hear when they act or you are steered.",
@@ -12031,6 +12043,7 @@ export class CrewSupervisor {
     const needs = {
       ...(waitsOn ? { waitsOn } : {}),
       ...(ask ? { needsFirstmate: ask.slice(0, 300) } : {}),
+      ...(declared?.firstRelease ? { firstRelease: declared.firstRelease } : {}),
       ...(completion ? { mergeCompletesTask: completion } : {}),
       ...(result ? { result } : {}),
       ...(checkBack ? { checkBack } : {}),

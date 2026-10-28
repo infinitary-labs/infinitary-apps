@@ -263,7 +263,11 @@ export type ConnectionOptions = {
   ) => Promise<FarBuild | null>;
 };
 
+export type RunningDeviceVersion = { deviceId: string; role: DeviceRole; version: string | null };
+
 export type HomeConnection = {
+  /** Live hello facts, including views and incompatible work computers; never a cached installation. */
+  runningVersions(): RunningDeviceVersion[];
   /** Where it listens now, as address:port; empty while nothing is paired. */
   listening(): string[];
   /**
@@ -1090,6 +1094,18 @@ export function startConnection(options: ConnectionOptions): HomeConnection {
 
   return {
     listening: listeningNow,
+    runningVersions: () => {
+      const versions = new Map<string, RunningDeviceVersion>();
+      for (const client of run?.clients ?? []) {
+        if (!client.welcomed || client.closing || client.nameOnly || !client.role) continue;
+        versions.set(JSON.stringify([client.device.id, client.role, client.appVersion ?? null]), {
+          deviceId: client.device.id,
+          role: client.role,
+          version: client.appVersion ?? null,
+        });
+      }
+      return [...versions.values()];
+    },
     ask: (deviceId, channel, args, askOptions) => {
       const client = workClient(deviceId, askOptions?.anyVersion === true);
       if (!client) return Promise.reject(new DeviceOutOfReachError());

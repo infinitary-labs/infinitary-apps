@@ -1,0 +1,12 @@
+{
+  "entries": [{
+    "id": "version-and-release-facts",
+    "kind": "improvement",
+    "title": "Your first mate knows which version is running",
+    "body": "Your first mate can read each connected computer’s running version and keep the first verified release containing a merged fix.",
+    "area": "firstmate",
+    "noPicture": "This adds facts the first mate reads, not a new screen or control.",
+    "provenance": { "origin": "change" }
+  }],
+  "exclusions": []
+}

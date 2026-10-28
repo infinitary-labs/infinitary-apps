@@ -70,6 +70,7 @@ import {
   queueStartedRefusal,
   UNQUEUED_ACTIVITY,
 } from "@shared/taskQueue";
+import { type FirstReleaseReport, firstReleaseReportSchema } from "@shared/taskRelease";
 import type { DropEffects } from "@shared/tasks";
 import { isUnstartedWork } from "@shared/tasks";
 import { CARE_WORDS } from "@shared/vocabulary";
@@ -421,6 +422,7 @@ function settleRef(record: TaskRecord | undefined, fallbackId: string): SettleTa
  * can raise it again while the Firstmate leaves it unanswered (FI3-714).
  */
 export type ReportDeclaration = {
+  firstRelease?: FirstReleaseReport;
   validation?: KeptValidationInput;
   wait?: { reason: string; cardId?: string };
   finished?: boolean;
@@ -3562,6 +3564,65 @@ export class TaskService {
     run();
   }
 
+  /** A verified release report writes all its same-project attributions together, with provenance. */
+  recordFirstRelease(reporterId: string, input: FirstReleaseReport): number {
+    const report = firstReleaseReportSchema.parse(input);
+    const { tasks: refs, corrects, ...release } = report;
+    const at = this.now();
+    let recorded = 0;
+    const run = this.write(() => {
+      const reporter = this.mustGet(reporterId);
+      if (!reporter.repoId) throw new TaskGraphRefusal("Release attribution needs a project.");
+      const targets = [
+        ...new Set(
+          refs.map((ref) => {
+            const target = this.resolve(ref);
+            if (!target) throw new TaskGraphRefusal(`Unknown release task "${ref}".`);
+            return target.id;
+          }),
+        ),
+      ].map((id) => this.mustGet(id));
+      // Check the entire batch before writing any attribution.
+      for (const target of targets) {
+        if (target.repoId !== reporter.repoId || target.projectId !== reporter.projectId)
+          throw new TaskGraphRefusal("Release tasks must belong to your own project.");
+        if (
+          target.status !== "done" ||
+          (target.closedReason !== "merged" && target.closedReason !== "landed")
+        )
+          throw new TaskGraphRefusal(`Release task ${target.key || target.id} is not merged work.`);
+        if (corrects !== undefined && target.delivery?.firstRelease?.version !== corrects)
+          throw new TaskGraphRefusal(
+            `Release task ${target.key || target.id} no longer records ${corrects}. Read it before correcting it.`,
+          );
+      }
+      for (const target of targets) {
+        const previous = target.delivery?.firstRelease;
+        if (previous && corrects === undefined) continue;
+        if (JSON.stringify(previous) === JSON.stringify(release)) continue;
+        this.patch(target.id, {
+          delivery: this.mergeDelivery(target, { firstRelease: release }),
+          updatedAt: at,
+        });
+        this.addEvent({
+          taskId: target.id,
+          at,
+          actor: "crewmate",
+          kind: "note",
+          text: `First verified release: ${release.version}`,
+          data: {
+            firstRelease: release,
+            ...(previous ? { previousFirstRelease: previous } : {}),
+            reportedBy: reporter.id,
+          },
+        });
+        recorded += 1;
+      }
+    });
+    run();
+    return recorded;
+  }
+
   /**
    * A turn ended with a report: the outcome columns and a `report` event.
    * The headline is the report's own one-line summary when the crewmate gave
@@ -3645,6 +3706,7 @@ export class TaskService {
             ? { checkBack: { until: checkBack.until, waitingFor: checkBack.waitingFor } }
             : {}),
           ...(result ? { result } : {}),
+          ...(input.declared?.firstRelease ? { firstRelease: input.declared.firstRelease } : {}),
         },
       });
     });

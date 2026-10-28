@@ -1175,3 +1175,11 @@ Both that hello and address-based setup carry the outcome; the SSH controller re
 A manually started worker can be reachable while automatic startup remains unavailable.
 Updates do not claim that a saved service file alone can restart a Linux worker.
 The existing explicit work process and its lifetime are described in [the helper manual](helper.md#in-the-background).
+
+## Running versions in first mate facts
+
+Every first mate context includes `computer_versions`: the home's running app version and each paired device's current authenticated hello version, with its name, role and connection state.
+The connection's `runningVersions` snapshot includes views and computers on incompatible versions as well as computers taking work, excludes name-only lookups, and stops reporting a connection as soon as it closes.
+`WorkDevices.runningVersions` forwards that live snapshot without saving an installation claim or using an available update as the running version.
+A disconnected device, or an older client that did not say its app version, has a null version; its contract number is not an app version.
+Distinct live roles or versions on one device keep separate rows rather than picking one as the computer's only running app.

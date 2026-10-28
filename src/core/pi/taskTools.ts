@@ -773,7 +773,7 @@ function tasksQueryRun(onQueryTasks: NonNullable<CrewmateToolDelegate["onQueryTa
   // A new read supersedes the previous one; never combine pages from different cuts.
   const timelines = new Map<string, TaskQueryRow>();
   return async (
-    params: Static<typeof TASKS_QUERY_OBJECT> & { projects?: boolean },
+    params: Static<typeof TASKS_QUERY_OBJECT> & { projects?: boolean; skip?: number },
     signal?: AbortSignal,
   ) => {
     if ((params.field !== undefined || params.offset !== undefined) && !params.key) {
@@ -782,6 +782,8 @@ function tasksQueryRun(onQueryTasks: NonNullable<CrewmateToolDelegate["onQueryTa
     if (params.offset !== undefined && !params.field) {
       return { text: "offset applies only with a field." };
     }
+    if (params.skip !== undefined && (params.key || params.field))
+      return { text: "skip applies only to task lists." };
     const continuing = params.field === "timeline" && (params.offset ?? 1) > 1;
     const retained = timelines.values().next().value;
     const snapshot =
@@ -805,6 +807,7 @@ function tasksQueryRun(onQueryTasks: NonNullable<CrewmateToolDelegate["onQueryTa
               ...(params.text ? { text: params.text } : {}),
               ...(params.parent ? { parent: params.parent } : {}),
               ...(params.limit !== undefined ? { limit: params.limit } : {}),
+              ...(params.skip !== undefined ? { skip: params.skip } : {}),
               ...(params.projects ? { projects: true } : {}),
             },
           ],
@@ -835,7 +838,16 @@ export const TASKS_QUERY_TOOL = crewmateTool({
   name: TASKS_QUERY_TOOL_NAME,
   label: "Tasks",
   description: TASKS_QUERY_TOOL_DESCRIPTION,
-  parameters: Type.Object({ ...TASKS_QUERY_PARAMETERS, projects: PROJECTS_PARAMETER }),
+  parameters: Type.Object({
+    ...TASKS_QUERY_PARAMETERS,
+    projects: PROJECTS_PARAMETER,
+    skip: Type.Optional(
+      Type.Integer({
+        minimum: 0,
+        description: "Skip this many task-list rows; collect all keys before recording releases.",
+      }),
+    ),
+  }),
   bind: ({ onQueryTasks }) => onQueryTasks && tasksQueryRun(onQueryTasks),
 });
 

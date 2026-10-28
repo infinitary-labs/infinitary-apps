@@ -150,6 +150,22 @@ export const REPORT_TOOL = crewmateTool({
   label: "Report",
   description: REPORT_TOOL_DESCRIPTION,
   parameters: Type.Object({
+    first_release: Type.Optional(
+      Type.Object(
+        {
+          version: Type.String({ minLength: 1 }),
+          url: Type.String(),
+          evidence: Type.String({ minLength: 1 }),
+          tasks: Type.Array(Type.String({ minLength: 1 }), { minItems: 1 }),
+          corrects: Type.Optional(Type.String({ minLength: 1 })),
+        },
+        {
+          additionalProperties: false,
+          description:
+            "After verifying a published release, identify every merged task it contains in your project, including internal changes, and report each earliest release here: version, release page, tasks (keys or ids), and evidence proving membership and earliest publication. Collect all task keys with tasks skip before recording; group those with the same earliest release and report again for other groups. Arrange missing verification, never guess from merge time or call unknown unshipped. Existing attributions stay unless corrects names the previous version you read and evidence explains the correction. This records facts only, never publishes or merges.",
+        },
+      ),
+    ),
     validation: Type.Optional(
       zodParameter<LiveValidationInput>(liveValidationInputSchema, {
         description:
@@ -248,6 +264,7 @@ export const REPORT_TOOL = crewmateTool({
           params.text,
           params.summary,
           {
+            ...(params.first_release ? { firstRelease: params.first_release } : {}),
             ...(params.validation
               ? {
                   validation: await keepValidationEvidence(

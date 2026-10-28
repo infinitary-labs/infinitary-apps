@@ -1,6 +1,7 @@
 import {
   DeviceOutOfReachError,
   type HomeConnection,
+  type RunningDeviceVersion,
   type ViewDeviceContact,
   type WorkDeviceContact,
   type WorkDeviceVersion,
@@ -20,7 +21,10 @@ import {
 /** What the core needs of the home's connection. */
 export type WorkDeviceLink = Pick<HomeConnection, "ask" | "onWorkDevice" | "onViewDevice"> &
   Partial<
-    Pick<HomeConnection, "settled" | "listening" | "onWorkVersion" | "onListening" | "onAppSent">
+    Pick<
+      HomeConnection,
+      "settled" | "listening" | "onWorkVersion" | "onListening" | "onAppSent" | "runningVersions"
+    >
   >;
 
 export class WorkDevices {
@@ -114,6 +118,11 @@ export class WorkDevices {
     return () => {
       this.listeningListeners.delete(listener);
     };
+  }
+
+  /** Live versions of every connected device, not just computers taking work. */
+  runningVersions(): RunningDeviceVersion[] {
+    return this.link?.runningVersions?.() ?? [];
   }
 
   /** The computer is welcomed and takes work now. */

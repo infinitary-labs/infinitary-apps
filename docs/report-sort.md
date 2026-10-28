@@ -30,6 +30,7 @@ In order; the order IS the rule.
 | 3 | A job running inside its bound, guidance its lane will still deliver, a captured settle, a timed wait on its gate, the host watching its change's checks or a named run (`docs/forge.md`), or a wait on work underway (FI3-250) | the crewmate's | no wake | `rule:still-moving` |
 | 4 | The gate holds it for the captain and no card is up (a wait its crewmate declared with nothing on the captain's screen, INF-11) | the first mate's, which owes the card | wake | `rule:captain-gate` |
 | 4a | A typed cut-off holds its account, or the computer that runs work it runs on is out of reach or not yet caught up (`docs/helper.md`, "The home's side") | the crewmate's, when the account serves again or that computer is back | no wake | `rule:still-moving` |
+| 4r | None of the above, and the turn left a typed work stall or read-only recovery findings (INF-1550; "Self-resolving work waits" below) | the first mate's, which takes the next consent-free way | wake, with the stall and findings | `rule:recovery` |
 | 4b | None of the above, and the first mate declared the task an internal step (`shape.internal_step`) | the first mate's, which decides the next step | wake on any backend | `rule:step-answered` |
 | 5 | None of the above, and the host can see all of this backend's work | nobody's | **wake now**, with the report's own words | `rule:stopped` |
 | 6 | None of the above, and it cannot | nobody's, as far as the host can see | **wake now**, with the report's own words (INF-11) | `rule:cannot-tell` |
@@ -148,6 +149,51 @@ Those were never sorted, so they record nothing here either.
 That lane carries most report wakes today and deserves its own look before the rule is applied to it (R4.5).
 An independent repair assessment's report is not sorted at all: it is the host's own verdict on a kept merge (FI3-663, `docs/delivery-rigor.md`), and the host reads it and closes the assessment.
 
+## Self-resolving work waits
+
+INF-1550 implements B and C from INF-1540's approved audit, as the captain's answers to its review (INF-1554, F1 to F7) shaped them.
+A work wait is a typed report declaration, `work_wait`: `owner`, the `end` fact, the current `observation`, and `cheapestWay` around it.
+Missing ownership or an end produces a stall fact rather than an accepted quiet wait.
+Two successive reports with the same owner, end and observation produce `repeated-wait`.
+A new observation ends that comparison; the host compares declared fields, never report prose.
+A check-back with no observable running job and no work-wait declaration produces `wait-without-owner`.
+Captain waits keep their existing card and gate semantics.
+
+A stall is the first mate's only when nothing else owns the wait (F3, "if any watcher owns the wait, it is not a stall").
+Row 4r sits after every owner the table reads: an open captain card, a running job, guidance its lane will deliver, a captured settle, a watched check or run, work underway, an account hold and a computer out of reach all keep the report quiet.
+A row above it that wakes the first mate on its own, such as the gate's row 4, carries the same stall facts on its wake.
+A timer is not an owner: a check-back whose claimed job is not running holds nothing (`IdleLadder.unownedTimer`).
+The sort, the ladder's witnesses and the timer's end read that one rule, so its timed gate is out of row 3, the ladder climbs past it, and its end neither steers the crewmate nor restarts the idle episode; the ladder's own nudge is the look again.
+
+These observations live on the task's existing timeline, so a restart retains the comparison.
+Reports retain work waits and recovery findings on their durable entries, not a second store.
+Empty recovery findings are absent and never change whose turn it is.
+The report owner keeps recovery strings within the existing short declaration band and recovery lists within the shared message band, retaining full details through the existing overflow pointer.
+Long wait facts keep a content digest so clipping neither merges different observations nor makes identical observations appear new.
+Routing reads those kept facts, and a combined stall/findings wake serves the recovery procedure once.
+
+The first mate lists ways forward, takes the cheapest consent-free move, records its choice through the existing task verdict, and reads the next fact before taking another.
+When its own ways run out or fail, it commissions one bounded read-only internal step on that project, with the stalled task's goal, branch, refusals and named evidence.
+The step reports `recovery_ways` to the first mate and stops, with no captain card or edits.
+Each finding names an action, its `approach` (`workaround`, `pass-hold` or `stronger-model`), the hold, evidence and next fact; the host adds the hold's registry basis and `needsConsent` (`recoveryConsent`).
+Only a declared workaround can be consent-free (F7): passing any hold or choosing a stronger model needs the captain whatever the hold's basis, and so does a workaround of a consent-basis hold or of sign-in, which rests on an outside fact only the captain can supply.
+A finding kept before approaches existed declared none and reads as passing its hold.
+A finding whose hold or approach this build does not know, from a work computer on another build or a report saved before that hold was retired, keeps its words with no basis and needs the captain; it never refuses the report (`keptRecoveryWaySchema`).
+No label authorizes bypassing a hold, makes a physical impossibility possible, or permits repeating an unknown effect.
+Signing, releases, merges, destruction and new access retain their existing consent requirements.
+The first mate asks the captain only after every remaining viable way needs that consent.
+
+When the same wait stays stuck after the idle ladder's two wakes, the ladder's last rung raises the host's stall card as for any idle task (F1, "Keep the card for you after the last wake"; "The idle ladder" below).
+The card keeps the question it already asks - a declared captain wait's, or none - and adds what the task still waits on: the newest report's work-wait observation.
+Beside it the card counts the attempts the first mate recorded as verdicts since that report and quotes the latest; an older verdict is not an attempt at it.
+Work that resolved or has an owner gets no card: a new turn ends the episode, and any witness above keeps the ladder from climbing.
+
+A crewmate blocked only by its own host record or a merged host fix absent from the running app files a takeover rather than polling for an alpha.
+A takeover's title begins `Take over:`, distinct from a must-merge-first `Continue:` filing (F2).
+The first mate reuses an existing takeover or starts this one immediately with `branch_from` naming the old task and the original goal and user words, hands files on with `steer_crewmate files_from`, and links the tasks as related and with a `blocks` link from the takeover to the old task, so the old author waits on its successor.
+No blocking edge runs from the old task to the takeover.
+A fresh task retains the evidence and consent requirements; it is not permission to retry an unknown effect or bypass failed checks.
+
 ## The idle ladder
 
 Captain-approved 2026-09-26 (the idle crew recovery specification, board answers Q1-Q9; it continues FI3-83, which stranded when a provider outage parked the captain's reply under a decision card and nothing ever read it again).
@@ -205,6 +251,7 @@ The ladder holds its clock at each tick the wake still waits (`InboxStore.holdsU
 **The host's stall card** (`card-stall-<task>`, author host, so it presents as attention): a captain decision of 2026-09-26 that revises the card rule
 - the first mate let two wakes go, so the work cannot move without the captain.
   Its title says how long ("<title> has been stuck for 1h 20m"), its body what the crewmate last said or the problem its last try ended in, what the ladder already did, what each button does, and that anything else goes in a reply.
+  When its newest report declared a work wait, the body also says what it still waits on and the recovery attempts the first mate recorded since ("Self-resolving work waits" above).
   **Nudge** is the nudge again with the captain's authority (host op `continue-task`, naming a note up as rung 1 does), **Keep waiting** has no effect and closes the card as the captain's close does, **Discard** is the host's `settle discard` with the unlanded-work guard, whose refusal names its ways like any settle refusal (INF-1670: the captain removed Drop task and left nuanced operations to the reply).
   A reply under it goes to the first mate, which answers in its thread (`docs/card-threads.md`, "The stuck alert's reply row").
   While it is up the task is the captain's turn and nothing repeats.
@@ -243,8 +290,8 @@ Nothing kills the job - the bound demands inspection, never an automatic kill.
 The job registry exposes the oldest running job per owner (`JobManager.oldestRunningJob`).
 
 **A check-back on a running job** (INF-1244): a silent job counts as moving for its whole bound, so a crewmate whose turn ends with one running names when it looks again.
-Its report's `check_back` carries the minutes until then and what it waits for; the host keeps it on the record (`delivery.checkBack`) and sets the task's `at-time` gate, so the task reads as moving until then (row 3).
-At that time the sweep ends the wait with one steer that names the task's oldest running job, its command and how long it has run (`timed-wait-over`).
+Its report's `check_back` carries the minutes until then and what it waits for; the host keeps it on the record (`delivery.checkBack`) and sets the task's `at-time` gate, so the task reads as moving until then (row 3) while its job runs.
+At that time the sweep ends the wait with one steer that names the task's oldest running job, its command and how long it has run (`timed-wait-over`); a check-back with no job behind it ends silently ("Self-resolving work waits" above).
 A job that ends first, or any other turn, clears it with the rest of the report's declaration.
 A turn that ends with a job running, no `check_back` and no wait on the captain or finished work gets one steer asking for a time, once per job (`check-back-ask`, `CrewSupervisor.askForCheckBack`).
 A check-back later than the bound never silences it: the job bound stays the backstop.

@@ -724,7 +724,7 @@ describe("FIRSTMATE_PROMPT_CORE (contract v1.4 and v1.7, host-run settle outcome
   it("offers exactly one non-default premium choice on blocked reports, only when available", () => {
     const served = buildFirstmateSystemPrompt();
     expect(served).toContain(
-      "Only exhausted own repairs or captain-only decisions/access/information earn a decision",
+      "Exhausted repairs follow stall recovery; only captain-owned decisions/access/information earn a card",
     );
     expect(served).toContain(
       'That card offers exactly one extra, non-default, effect-free action labeled "Try a premium model"',
@@ -827,9 +827,10 @@ describe("FIRSTMATE_PROMPT_CORE (contract v3.3, delivery rigor phase 2: the revi
     );
   });
 
-  it("routes a crewmate blocker by its guidance without hard-coding a repair count", () => {
+  // INF-1540 approved B/C: recovery comes before a remaining captain-only choice (INF-1550).
+  it("routes a crewmate blocker through stall recovery, then its guidance, without hard-coding a repair count", () => {
     expect(core).toContain(
-      "A crewmate's blocker report follows its delivery guidance: coordinate the next owner, or ask for a captain-only decision on its task, carrying the other ways that wake names. Steer the crewmate with the captain's answer; never infer merge consent.",
+      "A crewmate's blocker report first follows stall recovery, then its delivery guidance: coordinate the next owner, or ask for a captain-only decision on its task, carrying the other ways that wake names. Steer the crewmate with the captain's answer; never infer merge consent.",
     );
     // A blocker never grants merge consent or invents a host allowance.
     expect(core).not.toContain("until then the host holds its completion card");
@@ -842,6 +843,19 @@ describe("FIRSTMATE_PROMPT_CORE (contract v3.3, delivery rigor phase 2: the revi
     // model is still only the captain's say-so (v3.1).
     expect(core.indexOf("The host derives rigor")).toBeGreaterThan(
       core.indexOf("Escalation is the user's move."),
+    );
+  });
+
+  // Source: INF-1554 F2, "Give takeovers their own title prefix so they start right away".
+  it("starts a takeover filing now from its origin's branch, unlike a Continue filing", () => {
+    const takeover = core.slice(core.indexOf('For a "Take over: …" filing'));
+    expect(takeover).toMatch(
+      /^For a "Take over: …" filing, reuse any existing takeover, set branch_from to the origin and start it now, hand files on with steer_crewmate files_from, and link related and blocks from successor to origin; never block the successor on the origin\. For a "Continue: …" filing, in this turn first link_tasks blocks from origin to filing/,
+    );
+    // The crewmate's half rides file_followup, which both backends serve whole.
+    const fileFollowup = CREWMATE_TOOLS.find((tool) => tool.name === "file_followup");
+    expect(fileFollowup?.description).toContain(
+      "For a host-record takeover, file Take over: my branch in a fresh task, then needs_firstmate to start it now; no merge prerequisite, never to bypass consent or repeat an unknown effect.",
     );
   });
 });

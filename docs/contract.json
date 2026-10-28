@@ -43933,6 +43933,65 @@
                       }
                     ]
                   },
+                  "workWait": {
+                    "type": "object",
+                    "properties": {
+                      "owner": {
+                        "type": "string",
+                        "minLength": 1
+                      },
+                      "end": {
+                        "type": "string",
+                        "minLength": 1
+                      },
+                      "observation": {
+                        "type": "string",
+                        "minLength": 1
+                      },
+                      "cheapestWay": {
+                        "type": "string",
+                        "minLength": 1
+                      }
+                    },
+                    "required": [
+                      "observation",
+                      "cheapestWay"
+                    ]
+                  },
+                  "recoveryWays": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "action": {
+                          "type": "string",
+                          "minLength": 1
+                        },
+                        "approach": {
+                          "type": "string",
+                          "minLength": 1
+                        },
+                        "hold": {
+                          "type": "string",
+                          "minLength": 1
+                        },
+                        "evidence": {
+                          "type": "string",
+                          "minLength": 1
+                        },
+                        "nextFact": {
+                          "type": "string",
+                          "minLength": 1
+                        }
+                      },
+                      "required": [
+                        "action",
+                        "hold",
+                        "evidence",
+                        "nextFact"
+                      ]
+                    }
+                  },
                   "wait": {
                     "type": "object",
                     "properties": {

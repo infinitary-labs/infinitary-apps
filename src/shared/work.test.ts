@@ -40,4 +40,35 @@ describe("what a computer that runs work tells its home", () => {
     ).toBe(true);
     expect(told({ type: "model_served" }).success).toBe(false);
   });
+
+  // Source: R6 of INF-1644: a same-major work computer may run a build whose hold registry differs.
+  it("carries a recovery way whose hold the home's build does not know", () => {
+    const report = workRequests["inf:work:report"].request;
+    const way = {
+      action: "Push one more repair",
+      approach: "workaround",
+      hold: "repairs",
+      evidence: "The checks failed on the same version",
+      nextFact: "Read the next check result",
+    };
+    const read = report.safeParse([
+      {
+        task: "t1",
+        callId: "c1",
+        text: "The checks still fail.",
+        declared: { recoveryWays: [way] },
+      },
+    ]);
+    expect(read.data?.[0].declared?.recoveryWays).toEqual([way]);
+    expect(
+      report.safeParse([
+        {
+          task: "t1",
+          callId: "c1",
+          text: "The checks still fail.",
+          declared: { recoveryWays: [{ ...way, hold: "" }] },
+        },
+      ]).success,
+    ).toBe(false);
+  });
 });

@@ -1,4 +1,4 @@
-import { randomUUID } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
 import type { AttachmentRef } from "@shared/attachments";
 import type {
   CardAnswer,
@@ -43,6 +43,7 @@ import {
   NO_LONGER_WANTED,
   sameDropReview,
 } from "@shared/recordDrop";
+import { type KeptRecoveryWay, recoveryWay, type WorkWait } from "@shared/recovery";
 import { deliveryForRecord, type RepoView } from "@shared/repos";
 import {
   type CaptainAction,
@@ -89,7 +90,7 @@ import {
   JUDGEABLE_DELIVERY,
 } from "../orchestrator/answerDelivery";
 import { amendBriefGoal, type BriefPart, type SpawnIntent } from "../orchestrator/intentBrief";
-import type { MessageFile } from "../overflow";
+import { capWithOverflow, MESSAGE_EXCERPT_LIMIT, type MessageFile } from "../overflow";
 import { KIND_SOURCE } from "../routing/kindClassifier";
 import { tierFor } from "../routing/policy";
 import {
@@ -423,6 +424,8 @@ function settleRef(record: TaskRecord | undefined, fallbackId: string): SettleTa
  */
 export type ReportDeclaration = {
   firstRelease?: FirstReleaseReport;
+  workWait?: WorkWait;
+  recoveryWays?: KeptRecoveryWay[];
   validation?: KeptValidationInput;
   wait?: { reason: string; cardId?: string };
   finished?: boolean;
@@ -453,6 +456,63 @@ export type ReportDeclaration = {
    */
   waitsOn?: string[];
 };
+
+/**
+ * F4/F5 of INF-1554: one durable boundary for recovery facts. Scalar excerpts
+ * use the existing 300-character declaration band; the list uses the shared
+ * message band. Full details spill through the existing overflow owner.
+ * A long fact keeps its content digest, so a changed tail is never mistaken
+ * for the same observation after clipping, and identical facts stay equal.
+ */
+function reportRecoveryOf(declared: ReportDeclaration | undefined) {
+  let overflow = false;
+  const short = (text: string) => {
+    if (text.length <= 300) return text;
+    overflow = true;
+    const digest = ` [sha256:${createHash("sha256").update(text).digest("hex")}]`;
+    return text.slice(0, 300 - digest.length) + digest;
+  };
+  const wait = declared?.workWait;
+  const workWait = wait
+    ? {
+        ...(wait.owner ? { owner: short(wait.owner) } : {}),
+        ...(wait.end ? { end: short(wait.end) } : {}),
+        observation: short(wait.observation),
+        cheapestWay: short(wait.cheapestWay),
+      }
+    : undefined;
+  const ways: KeptRecoveryWay[] = [];
+  let size = 2; // The array's brackets, then each serialized item and its comma.
+  for (const way of declared?.recoveryWays ?? []) {
+    const bounded = {
+      action: short(way.action),
+      ...(way.approach ? { approach: short(way.approach) } : {}),
+      hold: short(way.hold),
+      evidence: short(way.evidence),
+      nextFact: short(way.nextFact),
+    };
+    const next = JSON.stringify(recoveryWay(bounded)).length + (ways.length ? 1 : 0);
+    if (size + next > MESSAGE_EXCERPT_LIMIT) {
+      overflow = true;
+      break;
+    }
+    ways.push(bounded);
+    size += next;
+  }
+  return {
+    ...(workWait ? { workWait } : {}),
+    ...(ways.length ? { recoveryWays: ways } : {}),
+    ...(overflow
+      ? {
+          overflow: capWithOverflow(
+            JSON.stringify({ workWait: wait, recoveryWays: declared?.recoveryWays }),
+            "report-recovery",
+            { limit: 0, force: true },
+          ),
+        }
+      : {}),
+  };
+}
 
 function hasDeclaration(record: TaskRecord): boolean {
   return (
@@ -3660,6 +3720,10 @@ export class TaskService {
   ): void {
     const at = this.now();
     const summary = input.summary?.trim() || reportSummary(input.text) || null;
+    const recovery = reportRecoveryOf(input.declared);
+    const text = recovery.overflow
+      ? `${input.text}\n\nFull recovery details: ${recovery.overflow}`
+      : input.text;
     const wait = input.declared?.wait;
     const finished = input.declared?.finished === true;
     const request = input.declared?.needsFirstmate;
@@ -3698,7 +3762,7 @@ export class TaskService {
             }
           : {};
       this.patch(id, {
-        outcome: input.text,
+        outcome: text,
         outcomeSummary: summary,
         ...(delivery ? { delivery } : {}),
         ...timed,
@@ -3709,7 +3773,7 @@ export class TaskService {
         at,
         actor: input.actor ?? "crewmate",
         kind: "report",
-        text: input.text,
+        text,
         data: {
           ...(summary ? { summary } : {}),
           ...(input.usage ? { usage: input.usage } : {}),
@@ -3726,6 +3790,8 @@ export class TaskService {
             : {}),
           ...(result ? { result } : {}),
           ...(input.declared?.firstRelease ? { firstRelease: input.declared.firstRelease } : {}),
+          ...(recovery.workWait ? { workWait: recovery.workWait } : {}),
+          ...(recovery.recoveryWays ? { recoveryWays: recovery.recoveryWays } : {}),
         },
       });
     });

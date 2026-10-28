@@ -333,17 +333,22 @@ export function planAllowances(
     inputTokens: reservation(test.bytes, calls[i]!, limits),
   }));
 }
-export async function runEvaluation(
-  options: Options,
-  deps: Deps = {},
-): Promise<{ sheet: Sheet; sheetHash: string; responses?: Record<string, EvalRun> }> {
-  const evaluation = deps.module ?? approvalEvaluation;
-  const limits = {
+/** The run limits an evaluation module's sheet carries: the shared ones with its own allowances. */
+export function evaluationLimits(evaluation: EvaluationModule): Limits {
+  return {
     ...LIMITS,
     toolResultBytes: evaluation.toolResultBytes ?? LIMITS.toolResultBytes,
     firstmateCalls: evaluation.firstmateCalls ?? LIMITS.firstmateCalls,
     builderCalls: evaluation.builderCalls ?? LIMITS.builderCalls,
   };
+}
+
+export async function runEvaluation(
+  options: Options,
+  deps: Deps = {},
+): Promise<{ sheet: Sheet; sheetHash: string; responses?: Record<string, EvalRun> }> {
+  const evaluation = deps.module ?? approvalEvaluation;
+  const limits = evaluationLimits(evaluation);
   if (
     !Number.isSafeInteger(limits.toolResultBytes) ||
     limits.toolResultBytes < 1 ||

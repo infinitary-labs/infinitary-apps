@@ -61,6 +61,10 @@
  *     round cap before the Firstmate's card, or a wait its crewmate
  *     declared with nothing on his screen to answer): the FIRSTMATE's turn,
  *     which owes that card. Wake. Never the crewmate's - it cannot act.
+ *  4r. The turn left a typed work stall or read-only recovery findings
+ *     (INF-1550), and no witness above owns the wait: the FIRSTMATE's
+ *     turn, which takes the next consent-free way. Wake. A check-back
+ *     timer whose claimed job is not running owns nothing (INF-1554 F3).
  *  4b. A declared internal step has reported its answer, with no witness
  *     holding its turn: the FIRSTMATE's turn. Wake on any backend so it
  *     can start the next step; the report is the step's deliverable.
@@ -95,6 +99,7 @@
 export type ReportSortRule =
   | "thread-unanswered"
   | "needs-firstmate"
+  | "recovery"
   | "waited-on"
   | "captain-card"
   | "finished"
@@ -238,6 +243,8 @@ export type Witnesses = {
 };
 
 export type ReportSortFacts = Witnesses & {
+  /** A typed stall or read-only recovery findings need the first mate, not a captain card. */
+  recovery?: boolean;
   /** The turn filed follow-ups (`filedThisTurn`). */
   filedFollowups: boolean;
   /** The report declared its work finished (the report tool's `finished`). */
@@ -395,6 +402,13 @@ export function sortReport(facts: ReportSortFacts): ReportSortResult {
         "the computer it runs on is out of reach; its turn continues there and catches up here when it is back.",
     };
   }
+  if (facts.recovery)
+    return {
+      rule: "recovery",
+      verdict: "captain",
+      wake: true,
+      reason: "typed recovery facts need the first mate to take the next consent-free way.",
+    };
   if (facts.internalStep) {
     return {
       rule: "step-answered",

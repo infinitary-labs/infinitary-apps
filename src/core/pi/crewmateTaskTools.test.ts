@@ -280,6 +280,122 @@ describe("the crewmate tool spec", () => {
     ).toContain("authorizes nothing");
   });
 
+  it("INF-1554 F4: omits empty recovery findings on both runtimes but carries real findings", async () => {
+    const declared: Record<string, unknown>[] = [];
+    const delegate = {
+      ...crewmateToolDelegate(),
+      onReport: (_text: string, _summary?: string, declaration?: unknown) => {
+        declared.push(declaration as Record<string, unknown>);
+        return "reported";
+      },
+    };
+    const pi = createCrewmateTools(delegate).find((tool) => tool.name === "report");
+    const claude = claudeCrewmateTools(delegate).find((tool) => tool.name === "report");
+    for (const run of [
+      () => runPi(pi as PiTool, { text: "The checks still run.", recovery_ways: [] }),
+      () => runClaude(claude as ClaudeTool, { text: "The checks still run.", recovery_ways: [] }),
+    ])
+      await run();
+    expect(declared).toEqual([{}, {}]);
+    const ways = [
+      {
+        action: "Take over the blocked branch",
+        hold: "waits",
+        evidence: "The running host record owns the refusal",
+        nextFact: "The successor starts on the branch",
+      },
+    ];
+    await runPi(pi as PiTool, { text: "A takeover is available.", recovery_ways: ways });
+    await runClaude(claude as ClaudeTool, {
+      text: "A takeover is available.",
+      recovery_ways: ways,
+    });
+    expect(declared.slice(2)).toEqual([{ recoveryWays: ways }, { recoveryWays: ways }]);
+  });
+
+  it("INF-1554 F7: carries each recovery way's declared approach on both runtimes", async () => {
+    const declared: unknown[] = [];
+    const delegate = {
+      ...crewmateToolDelegate(),
+      onReport: (_text: string, _summary?: string, declaration?: unknown) => {
+        declared.push(declaration);
+        return "reported";
+      },
+    };
+    const ways = [
+      {
+        action: "Start the takeover from the committed branch",
+        approach: "workaround",
+        hold: "waits",
+        evidence: "The running first mate serves branch_from",
+        nextFact: "The takeover starts on the branch",
+      },
+      {
+        action: "Retry the checks on a stronger model",
+        approach: "stronger-model",
+        hold: "escalation",
+        evidence: "The same check failed after two repairs",
+        nextFact: "The captain picks a model",
+      },
+    ];
+    const pi = createCrewmateTools(delegate).find((tool) => tool.name === "report");
+    const claude = claudeCrewmateTools(delegate).find((tool) => tool.name === "report");
+    await runPi(pi as PiTool, { text: "Two ways remain.", recovery_ways: ways });
+    await runClaude(claude as ClaudeTool, { text: "Two ways remain.", recovery_ways: ways });
+    expect(declared).toEqual([{ recoveryWays: ways }, { recoveryWays: ways }]);
+  });
+
+  // Source: R6 of INF-1644: the home reads another build's way leniently, so
+  // this build's report tool is where an unknown hold or approach is refused.
+  it("refuses a recovery way outside this build's holds and approaches on both runtimes", () => {
+    const pi = createCrewmateTools(crewmateToolDelegate()).find(
+      (tool) => tool.name === "report",
+    ) as PiTool;
+    const claude = claudeCrewmateTools(crewmateToolDelegate()).find(
+      (tool) => tool.name === "report",
+    ) as ClaudeTool;
+    const reportWith = (way: Record<string, unknown>) => ({
+      text: "One way remains.",
+      recovery_ways: [
+        {
+          action: "Start the takeover from the committed branch",
+          hold: "waits",
+          evidence: "The running first mate serves branch_from",
+          nextFact: "The takeover starts on the branch",
+          ...way,
+        },
+      ],
+    });
+    // What each runtime checks a call against before the tool runs.
+    const accepted = (args: unknown) => {
+      let pass = true;
+      try {
+        validateToolArguments(
+          pi as never,
+          {
+            type: "toolCall",
+            id: "call-1",
+            name: "report",
+            arguments: args,
+          } as never,
+        );
+      } catch {
+        pass = false;
+      }
+      const claudePass = z
+        .object(claude.inputSchema as Record<string, z.ZodType>)
+        .safeParse(args).success;
+      return { pi: pass, claude: claudePass };
+    };
+    const both = { pi: true, claude: true };
+    const neither = { pi: false, claude: false };
+    expect(accepted(reportWith({}))).toEqual(both);
+    expect(accepted(reportWith({ approach: "workaround" }))).toEqual(both);
+    // INF-1688 retired the repair limit; an older build's other words are not this build's.
+    expect(accepted(reportWith({ hold: "repairs" }))).toEqual(neither);
+    expect(accepted(reportWith({ approach: "reroute" }))).toEqual(neither);
+  });
+
   it("INF-125: carries validation once, separately from a report's captain wait on both runtimes", async () => {
     const declared: unknown[] = [];
     const delegate = {

@@ -27,6 +27,10 @@ export type EvalTask = {
 
   /** Open a real inert owner session before evaluating Firstmate. */
   availableOwner?: boolean;
+  /** Files this task committed on its own branch, in the case's disposable project. */
+  committed?: Record<string, string>;
+  /** The task whose committed branch this one starts from. */
+  branchFrom?: string;
   internalStep?: boolean;
   autonomy: false;
   blocked_by: string[];

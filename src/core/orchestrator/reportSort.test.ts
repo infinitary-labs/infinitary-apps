@@ -66,6 +66,31 @@ describe("sortReport", () => {
     expect(sortReport(facts({ internalStep: true, [witness]: true })).rule).toBe(rule);
   });
 
+  // INF-1554 F3: existing owners are not displaced by repeated waits or findings.
+  it.each([
+    "decisionCardOpen",
+    "finishedCardUp",
+    "jobsRunning",
+    "deliverable",
+    "pendingSettle",
+    "timedWait",
+    "checksWatched",
+    "waitsOnUnderway",
+    "accountHeld",
+    "outOfReach",
+  ] as const)("recovery respects %s", (witness) => {
+    expect(sortReport(facts({ recovery: true, [witness]: true }))).toMatchObject({
+      wake: false,
+      rule:
+        witness === "decisionCardOpen" || witness === "finishedCardUp"
+          ? "captain-card"
+          : "still-moving",
+    });
+  });
+  it("INF-1554 F3: an unowned typed stall still wakes recovery", () => {
+    expect(sortReport(facts({ recovery: true }))).toMatchObject({ wake: true, rule: "recovery" });
+  });
+
   const cases: Array<{
     name: string;
     facts: ReportSortFacts;

@@ -163,20 +163,14 @@ export const CHECK_CHANGE_TOOL = crewmateTool({
   description: CHECK_CHANGE_TOOL_DESCRIPTION,
   parameters: Type.Object({
     declaration: Type.Optional(
-      Type.Object(
-        {
-          headSha: Type.String(),
-          verdict: stringEnum(CHECK_DECLARATION_VERDICTS),
-          evidence: Type.String(),
-          check: Type.Optional(Type.String()),
-          repairId: Type.Optional(Type.String()),
-          outcome: Type.Optional(stringEnum(["passed", "failed", "superseded", "void"])),
-        },
-        {
-          description:
-            "Your evidence-backed judgment at this version. ready enables the merge offer, not merge permission; red permits a failed-check offer. settled names a recorded repair and its outcome. The host records it without judging checks or counting attempts.",
-        },
-      ),
+      Type.Object({
+        headSha: Type.String(),
+        verdict: stringEnum(CHECK_DECLARATION_VERDICTS),
+        evidence: Type.String(),
+        check: Type.Optional(Type.String()),
+        repairId: Type.Optional(Type.String()),
+        outcome: Type.Optional(stringEnum(["passed", "failed", "superseded", "void"])),
+      }),
     ),
     diagnosis: Type.Optional(
       Type.Object(

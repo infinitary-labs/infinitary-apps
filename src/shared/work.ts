@@ -16,6 +16,7 @@ import {
   placementFactsRequestSchema,
 } from "./placement";
 import { reasoningSchema } from "./reasoning";
+import { keptRecoveryWaySchema, workWaitSchema } from "./recovery";
 import { requiredActionsSchema } from "./requiredActions";
 import { runbookSkillFilesSchema } from "./runbooks";
 import {
@@ -582,6 +583,8 @@ export const workRequests = {
         .object({
           firstRelease: firstReleaseReportSchema.optional(),
           validation: keptValidationInputSchema.optional(),
+          workWait: workWaitSchema.optional(),
+          recoveryWays: z.array(keptRecoveryWaySchema).optional(),
           wait: z.object({ reason: z.string(), cardId: z.string().optional() }).optional(),
           finished: z.boolean().optional(),
           mergeCompletesTask: z

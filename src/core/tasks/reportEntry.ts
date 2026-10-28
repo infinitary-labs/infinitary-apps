@@ -1,3 +1,9 @@
+import {
+  keptRecoveryWaySchema,
+  recoveryWay,
+  type WorkWait,
+  workWaitSchema,
+} from "@shared/recovery";
 import type { TaskEvent, TaskEventActor } from "../storage/taskEventStore";
 
 /**
@@ -27,6 +33,8 @@ export type ReportEntry = {
   result: Record<string, unknown> | null;
   /** What it declared about whose turn followed it, as recorded then (it no longer stands). */
   declared: {
+    workWait?: WorkWait;
+    recoveryWays?: ReturnType<typeof recoveryWay>[];
     waitingOnCaptain?: { reason: string; cardId?: string };
     finished?: true;
     needsFirstmate?: string;
@@ -43,7 +51,16 @@ export function reportEntryOf(event: TaskEvent): ReportEntry {
   const data = event.data ?? {};
   const wait = plainObject(data.waitingOnCaptain);
   const checkBack = plainObject(data.checkBack);
+  const workWait = workWaitSchema.safeParse(data.workWait);
+  const recoveryWays = Array.isArray(data.recoveryWays)
+    ? data.recoveryWays.flatMap((way) => {
+        const read = keptRecoveryWaySchema.safeParse(way);
+        return read.success ? [recoveryWay(read.data)] : [];
+      })
+    : undefined;
   const declared: ReportEntry["declared"] = {
+    ...(workWait.success ? { workWait: workWait.data } : {}),
+    ...(recoveryWays?.length ? { recoveryWays } : {}),
     ...(wait && typeof wait.reason === "string"
       ? {
           waitingOnCaptain: {

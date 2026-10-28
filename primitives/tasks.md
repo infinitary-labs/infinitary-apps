@@ -85,6 +85,8 @@ Overriding a soft hold needs the captain's words in that turn.
 A graph refusal is tool text, never a thrown error or a silent no-op (`docs/task-graph.md`).
 `TaskGraphRefusal` (a `blocks` cycle, a live-wait loop naming the full key loop) writes nothing and spends no repair attempt.
 A close refused by the rules returns a `SettleRefusal` with typed ways out that ride the settle wake.
+A declared work wait no owner moves wakes the self-resolving loop: the first mate tries consent-free alternatives, then commissions a bounded read-only internal step before asking the captain ([report sort](../docs/report-sort.md), "Self-resolving work waits").
+A host-record takeover uses `branch_from` and `files_from` immediately, with a related link rather than a must-merge-first edge from the stalled task.
 A dropped blocker produces one deduped `[fm-op]` wake (`wakeDeadGate`); `link_tasks remove` or `update_task drop` are the ways out, and `start_now` refuses while the dead edge stands.
 Dropped work starts again as a fresh task joined by `replaced-by` (`TaskService.startAgain`), never by reviving the old row.
 

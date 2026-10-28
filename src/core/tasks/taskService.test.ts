@@ -1,13 +1,17 @@
 import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
+import { waitStall } from "@shared/recovery";
 import { describe, expect, it } from "vitest";
 import { freshDatabase } from "../../../tests/helpers/database";
 import { noSurfaceProof } from "../../../tests/helpers/liveValidation";
+import { scratchDir } from "../../../tests/helpers/scratchDirs";
 import { seedDelivery } from "../../../tests/helpers/taskDelivery";
 import { DECISION_RECORD_SCHEMA, type DecisionRecord } from "../../shared/provenance";
 import type { WorkShape } from "../../shared/routingPolicy";
+import { initOverflowDir, MESSAGE_EXCERPT_LIMIT } from "../overflow";
 import { savedDeliveryReader } from "../storage/taskDeliveryFields";
 import type { TaskRecord } from "../storage/taskStore";
+import { reportEntryOf } from "./reportEntry";
 import { seedTask } from "./seedTask";
 import { TaskService, TIMELINE_CAP, TIMELINE_KEEP } from "./taskService";
 
@@ -1058,5 +1062,160 @@ describe("reading many tasks (INF-940)", () => {
         ).toEqual([]);
       }
     }
+  });
+});
+
+// Source: INF-1554 F4/F5, authorized repairs to INF-1540's approved B/C.
+describe("review F4/F5 recovery report bounds", () => {
+  const history =
+    "The host fix is merged, but the installed app still lacks it; no release owner has started an alpha. ".repeat(
+      8,
+    );
+  it("bounds durable recovery fields and counts, retaining the complete details through existing overflow", () => {
+    initOverflowDir(scratchDir("infinitary-recovery-overflow-"));
+    const { tasks, db } = setup();
+    seedTask(tasks, { id: "recovery", title: "Recover the blocked branch", status: "idle" });
+    const workWait = {
+      owner: "INF-1539",
+      end: history,
+      observation: history,
+      cheapestWay: history,
+    };
+    const recoveryWays = Array.from({ length: 100 }, (_, index) => ({
+      action: `Inspect report ${index + 1} for a cheaper consent-free alternative.`,
+      hold: "waits" as const,
+      evidence: history,
+      nextFact: "The named owner starts its takeover.",
+    }));
+    tasks.recordReport("recovery", {
+      text: "The work still waits on its host record.",
+      declared: { workWait, recoveryWays },
+    });
+    const entry = tasks.reportEntries("recovery").at(-1);
+    const kept = entry?.declared;
+    for (const value of Object.values(kept?.workWait ?? {}))
+      expect(value.length).toBeLessThanOrEqual(300);
+    expect(kept?.recoveryWays?.length).toBeGreaterThan(0);
+    expect(kept?.recoveryWays?.length).toBeLessThan(recoveryWays.length);
+    expect(JSON.stringify(kept?.recoveryWays).length).toBeLessThanOrEqual(MESSAGE_EXCERPT_LIMIT);
+    for (const way of kept?.recoveryWays ?? [])
+      for (const value of [way.action, way.evidence, way.nextFact])
+        expect(value.length).toBeLessThanOrEqual(300);
+    const file = /full text: (.+)\]/.exec(entry?.text ?? "")?.[1];
+    expect(file).toBeDefined();
+    expect(JSON.parse(readFileSync(file ?? "", "utf8"))).toEqual({ workWait, recoveryWays });
+    expect(tasks.get("recovery")?.outcome).toBe(entry?.text);
+    console.info(
+      "[F5] bounded report:",
+      JSON.stringify({
+        waysKept: kept?.recoveryWays?.length,
+        originalWays: recoveryWays.length,
+        contextCharacters: JSON.stringify(kept).length,
+        fullDetailsRetained: true,
+      }),
+    );
+    db.close();
+  });
+
+  it("keeps long wait identity stable and distinguishes a changed tail after clipping", () => {
+    initOverflowDir(scratchDir("infinitary-wait-overflow-"));
+    const { tasks, db } = setup();
+    seedTask(tasks, { id: "recovery", title: "Check takeover ownership", status: "idle" });
+    const workWait = {
+      owner: "INF-1539",
+      end: "The takeover starts",
+      observation: `${history}The takeover is still planned.`,
+      cheapestWay: "Start the takeover",
+    };
+    const record = (observation: string) => {
+      tasks.recordReport("recovery", {
+        text: "Read the owner's next fact.",
+        declared: { workWait: { ...workWait, observation } },
+      });
+      return tasks.reportEntries("recovery").at(-1)?.declared.workWait;
+    };
+    const first = record(workWait.observation);
+    const same = record(workWait.observation);
+    const changed = record(`${history}The takeover has started.`);
+    expect(first).toBeDefined();
+    expect(same).toEqual(first);
+    expect(changed).toBeDefined();
+    if (!first || !same || !changed) throw new Error("No kept wait");
+    expect(waitStall(same, first)?.kind).toBe("repeated-wait");
+    expect(waitStall(changed, same)).toBeUndefined();
+    db.close();
+  });
+
+  // Source: INF-1554 F7, "Only ways that work around a hold; passing a hold or a stronger model stays your call".
+  it("keeps a declared approach and reads an older way without one as captain-owned", () => {
+    const { tasks, db } = setup();
+    seedTask(tasks, { id: "recovery", title: "Take over the blocked branch", status: "idle" });
+    const way = {
+      action: "Start the takeover from the committed branch",
+      hold: "waits" as const,
+      evidence: "The running first mate serves branch_from",
+      nextFact: "The takeover starts on the branch",
+    };
+    tasks.recordReport("recovery", {
+      text: "A takeover works around the host record.",
+      declared: { recoveryWays: [{ ...way, approach: "workaround" }] },
+    });
+    expect(tasks.reportEntries("recovery").at(-1)?.declared.recoveryWays).toEqual([
+      { ...way, approach: "workaround", basis: "record", needsConsent: false },
+    ]);
+    const event = tasks
+      .timeline("recovery")
+      .filter((entry) => entry.kind === "report")
+      .at(-1);
+    if (!event) throw new Error("No report");
+    // A report kept before approaches existed declared none.
+    expect(
+      reportEntryOf({ ...event, data: { ...event.data, recoveryWays: [way] } }).declared
+        .recoveryWays,
+    ).toEqual([{ ...way, approach: "pass-hold", basis: "record", needsConsent: true }]);
+    db.close();
+  });
+
+  // Source: R6 of INF-1644: a report saved before INF-1688 retired its hold stays readable.
+  it("reads a saved recovery way whose hold this build retired as captain-owned", () => {
+    const { tasks, db } = setup();
+    seedTask(tasks, { id: "recovery", title: "Repair the failing checks", status: "idle" });
+    tasks.recordReport("recovery", { text: "The checks still fail on the same version." });
+    const event = tasks
+      .timeline("recovery")
+      .filter((entry) => entry.kind === "report")
+      .at(-1);
+    if (!event) throw new Error("No report");
+    const way = {
+      action: "Push one more repair",
+      approach: "workaround",
+      hold: "repairs",
+      evidence: "The checks failed on the same version",
+      nextFact: "Read the next check result",
+    };
+    expect(
+      reportEntryOf({ ...event, data: { ...event.data, recoveryWays: [way] } }).declared
+        .recoveryWays,
+    ).toEqual([{ ...way, basis: undefined, needsConsent: true }]);
+    db.close();
+  });
+
+  it("omits empty findings at the durable writer and when reading an older report", () => {
+    const { tasks, db } = setup();
+    seedTask(tasks, { id: "recovery", title: "Wait for the check owner", status: "idle" });
+    tasks.recordReport("recovery", {
+      text: "The checks remain watched.",
+      declared: { recoveryWays: [] },
+    });
+    const event = tasks
+      .timeline("recovery")
+      .filter((entry) => entry.kind === "report")
+      .at(-1);
+    expect(event?.data).not.toHaveProperty("recoveryWays");
+    if (!event) throw new Error("No report");
+    expect(
+      reportEntryOf({ ...event, data: { ...event.data, recoveryWays: [] } }).declared,
+    ).not.toHaveProperty("recoveryWays");
+    db.close();
   });
 });

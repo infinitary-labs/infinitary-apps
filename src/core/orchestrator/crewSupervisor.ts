@@ -144,6 +144,7 @@ import {
   dropStartedRefusal,
   NO_LONGER_WANTED,
 } from "@shared/recordDrop";
+import { keptRecoveryWaySchema, waitStall, workWaitSchema } from "@shared/recovery";
 import {
   autonomyForRecord,
   deliveryFor,
@@ -7529,7 +7530,21 @@ export class CrewSupervisor {
   ): void {
     const finished = declared?.finished === true;
     const needsFirstmate = declared?.needsFirstmate;
+    // Read what the report owner normalized and kept, never the uncapped declaration.
+    const reports = this.options.tasks.reportEntries(task.id);
+    const kept = report ? reports.at(-1) : undefined;
+    const workWait = kept?.declared.workWait;
     const record = this.options.tasks.get(task.id);
+    // F3 of INF-1554 (R1 of INF-1644): the ladder's one rule, a check-back
+    // with no claimed job owns no wait; its witnesses already leave it out.
+    const unownedTimer =
+      declared?.checkBack !== undefined && record !== undefined && this.ladder.unownedTimer(record);
+    const stall = workWait
+      ? waitStall(workWait, reports.at(-2)?.declared.workWait)
+      : unownedTimer && declared?.checkBack
+        ? { kind: "wait-without-owner" as const, observation: declared.checkBack.waitingFor }
+        : undefined;
+    const recoveryWays = kept?.declared.recoveryWays;
     const refused = record?.delivery?.cardRefusal;
     const ci = ciFactOf(record?.delivery, this.now());
     const waits = (record ? this.ladder.unstartedWaits(record) : []).map((wait) => ({
@@ -7555,7 +7570,7 @@ export class CrewSupervisor {
         kind: "report",
         task: { id: task.id, title: task.title },
         crewmate: task.crewmate,
-        excerpt: capWithOverflow(report, "task-report"),
+        excerpt: capWithOverflow(kept?.text ?? report, "task-report"),
         filed: filed.map(({ key, title, blocks }) => ({ key, title, blocks })),
         ...(waits.length > 0 ? { waits } : {}),
         ...(waiting.length > 0 ? { waiting } : {}),
@@ -7564,6 +7579,9 @@ export class CrewSupervisor {
         ...(unseenWait ? { captainWait: unseenWait.reason } : {}),
         ...(finished ? { finished: true } : {}),
         ...(needsFirstmate ? { needsFirstmate } : {}),
+        ...(stall ? { stall } : {}),
+        ...(recoveryWays ? { recoveryWays } : {}),
+        ...(workWait ? { workWait } : {}),
         ...(builtOn ? { builtOn } : {}),
         ...(declared?.result ? { result: declared.result } : {}),
         ...(ci ? { ci } : {}),
@@ -7585,6 +7603,7 @@ export class CrewSupervisor {
       internalStep: record?.shape?.internal_step === true,
       finished,
       needsFirstmate: needsFirstmate !== undefined,
+      recovery: stall !== undefined || recoveryWays !== undefined,
       waitedOn: waiting.length > 0,
       programPart,
       // A session that is gone cannot prove anything either; the record
@@ -12064,11 +12083,17 @@ export class CrewSupervisor {
         );
       }
     }
+    const workWait = declared?.workWait ? workWaitSchema.parse(declared.workWait) : undefined;
+    const recoveryWays = declared?.recoveryWays?.length
+      ? declared.recoveryWays.map((way) => keptRecoveryWaySchema.parse(way))
+      : undefined;
     const result = this.checkResult(task, declared);
     const checkBack = checkBackOf(declared);
     const waitsOn = this.reportedWaits(task, declared);
     const needs = {
       ...(waitsOn ? { waitsOn } : {}),
+      ...(workWait ? { workWait } : {}),
+      ...(recoveryWays ? { recoveryWays } : {}),
       ...(ask ? { needsFirstmate: ask.slice(0, 300) } : {}),
       ...(declared?.firstRelease ? { firstRelease: declared.firstRelease } : {}),
       ...(completion ? { mergeCompletesTask: completion } : {}),

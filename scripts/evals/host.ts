@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { existsSync, mkdirSync, realpathSync } from "node:fs";
+import { existsSync, mkdirSync, realpathSync, writeFileSync } from "node:fs";
 import { dirname, isAbsolute, join, relative, resolve, sep } from "node:path";
 import { createCoreDispatcher } from "../../src/core/dispatcher.ts";
 import type { HostCapabilities } from "../../src/core/host.ts";
@@ -27,7 +27,9 @@ import { InboxStore } from "../../src/core/storage/inboxStore.ts";
 import { SettingsStore } from "../../src/core/storage/settingsStore.ts";
 import { seedTask } from "../../src/core/tasks/seedTask.ts";
 import { TaskService } from "../../src/core/tasks/taskService.ts";
+import { APP_GIT_IDENTITY, git } from "../../src/core/workspace/git.ts";
 import { RepoRegistry } from "../../src/core/workspace/repoRegistry.ts";
+import { WorkspaceService } from "../../src/core/workspace/workspaceService.ts";
 import { isolatedWorkspace, wireIsolatedHost } from "../replay/isolatedHost.ts";
 import type { ApprovalCase, EvalRun } from "./approvalHandoff.ts";
 
@@ -101,15 +103,38 @@ export async function approvalHost(
     knowledge!.changeDirection({ ...direction, op: "add", reason: "Fictional audit fixture" });
   const ids = Object.fromEntries(Object.keys(test.tasks).map((alias) => [alias, randomUUID()]));
   const aliases = Object.fromEntries(Object.entries(ids).map(([alias, id]) => [id, alias]));
+  // Work a fixture calls committed is a real commit on its task's branch, in a registered
+  // disposable project the production branch and working-copy paths read (R5 of INF-1644).
+  const committed = Object.values(test.tasks).some((task) => task.committed);
+  const workspace = committed
+    ? new WorkspaceService(paths, { pool: false })
+    : isolatedWorkspace(paths);
+  const project = committed
+    ? (await repos.setup({ kind: "init", name: "meter" })).repo
+    : undefined;
+  if (project) aliases[project.id] = "PROJECT";
+  const names: Record<string, string> = project ? { ...ids, PROJECT: project.id } : ids;
   const pendingChoices: {
     cardId: string;
     resolution: NonNullable<ApprovalCase["tasks"][string]["resolution"]>;
   }[] = [];
   for (const [alias, task] of Object.entries(test.tasks)) {
     const closeThroughHost = test.taskIndexOnly && task.status === "done" && task.resolution;
+    const copy =
+      project && task.committed
+        ? await workspace.createTaskWorktree(ids[alias]!, project.path)
+        : undefined;
+    if (copy) {
+      for (const [file, text] of Object.entries(task.committed!))
+        writeFileSync(join(copy.cwd, file), text);
+      await git(copy.cwd, ["add", "-A"]);
+      await git(copy.cwd, [...APP_GIT_IDENTITY, "commit", "-m", `feat: ${task.title}`]);
+    }
     seedTask(tasks, {
       id: ids[alias]!,
       title: task.title,
+      ...(project ? { repoId: project.id } : {}),
+      ...(copy ? { repoDir: copy.repoDir, worktreeDir: copy.cwd, branch: copy.branch } : {}),
       parentId: task.parent ? ids[task.parent] : undefined,
       status: closeThroughHost
         ? "idle"
@@ -124,6 +149,7 @@ export async function approvalHost(
         ...(closeThroughHost ? { deliverable: "answer" as const } : {}),
         autonomy_ask: false,
         ...(task.basis ? { basis: ids[task.basis] } : {}),
+        ...(task.branchFrom ? { branch_from: tasks.get(ids[task.branchFrom]!)!.key } : {}),
         ...(task.internalStep
           ? { internal_step: true, deliverable: "answer", kind: "reproduce" }
           : {}),
@@ -249,7 +275,7 @@ export async function approvalHost(
         );
         return reviewSpec;
       },
-      workspace: isolatedWorkspace(paths),
+      workspace,
       repos,
       tasks,
       cardStore: cards,
@@ -391,6 +417,7 @@ export async function approvalHost(
               }
             : task),
           task_id: ids[alias],
+          repo_id: project?.id,
           basis: task.basis ? ids[task.basis] : undefined,
           parent: task.parent ? ids[task.parent] : undefined,
         },
@@ -423,16 +450,28 @@ export async function approvalHost(
           ...(knowledge ? ["knowledge", "app_change"] : []),
         ]
       : ["tasks", "report", "note_progress", "emit_card", "close_card"];
-  const refs = new Set(["task", "task_id", "key", "basis", "parent", "from", "to", "blocked_by"]);
+  const refs = new Set([
+    "task",
+    "task_id",
+    "key",
+    "basis",
+    "parent",
+    "from",
+    "to",
+    "blocked_by",
+    "branch_from",
+    "files_from",
+    "repo_id",
+  ]);
   const actualArgs = (raw: unknown): Record<string, unknown> =>
     Object.fromEntries(
       Object.entries(raw as Record<string, unknown>).map(([key, value]) => [
         key,
         refs.has(key)
           ? typeof value === "string"
-            ? (ids[value] ?? value)
+            ? (names[value] ?? value)
             : Array.isArray(value)
-              ? value.map((ref) => ids[String(ref)] ?? ref)
+              ? value.map((ref) => names[String(ref)] ?? ref)
               : value
           : value,
       ]),
@@ -524,7 +563,7 @@ export async function approvalHost(
       builtins: "none" as const,
     },
     prompt,
-    ids,
+    ids: names,
     starts,
     normalize,
     state: (): EvalRun["state"] => {

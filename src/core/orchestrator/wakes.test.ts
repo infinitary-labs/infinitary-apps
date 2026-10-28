@@ -23,11 +23,64 @@ import {
   renderWake,
   reviewCapWake,
   reviewFindingsNext,
+  STALL_RECOVERY_GUIDANCE,
   stillDownWake,
   type WakeFacts,
 } from "./wakes";
 
 describe("renderWake", () => {
+  it("INF-1554 F4/F5: emits combined recovery guidance once and omits empty findings", () => {
+    const facts: Extract<WakeFacts, { kind: "report" }> = {
+      kind: "report",
+      task: { id: "t1", title: "Recover the branch" },
+      crewmate: "crewmate 1",
+      excerpt: "The host record still blocks the same step.",
+      filed: [],
+      cards: [],
+      stall: {
+        kind: "repeated-wait",
+        observation: "The running app still refuses this task's record",
+      },
+      recoveryWays: [
+        {
+          action: "Take over the branch",
+          approach: "workaround",
+          hold: "waits",
+          basis: "record",
+          needsConsent: false,
+          evidence: "The host owns the refusal",
+          nextFact: "The successor starts",
+        },
+      ],
+    };
+    const combined = renderWake({ facts });
+    expect(combined).toContain("Typed stall:");
+    expect(combined).toContain("Recovery ways");
+    expect(combined.split(STALL_RECOVERY_GUIDANCE)).toHaveLength(2);
+    const empty = renderWake({ facts: { ...facts, stall: undefined, recoveryWays: [] } });
+    expect(empty).not.toContain("Recovery ways");
+    expect(empty).not.toContain(STALL_RECOVERY_GUIDANCE);
+  });
+
+  // Source: the captain's fix-and-rerun choice on INF-1641, after a live first mate
+  // started a recovery way and recorded it but ended its turn without reading it back.
+  it("asks for a recovery way's result to be read back in the turn that took it", () => {
+    const wake = renderWake({
+      facts: {
+        kind: "report",
+        task: { id: "t1", title: "Recover the branch" },
+        crewmate: "crewmate 1",
+        excerpt: "The host record refused the delivery step again.",
+        filed: [],
+        cards: [],
+        stall: { kind: "repeated-wait", observation: "The same host-record wait" },
+      },
+    });
+    expect(wake).toContain(
+      "record it with update_task verdict, then in the same turn read the result through tasks/crew_status or its owner.",
+    );
+  });
+
   it("serves prose as itself, from a body or a row", () => {
     expect(renderWake("[fm-op] a background job finished")).toBe(
       "[fm-op] a background job finished",

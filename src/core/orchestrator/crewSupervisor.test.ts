@@ -90,6 +90,7 @@ import {
   type FakeSessionOptions,
   fakeBinding,
   fakeSession,
+  fakeSessionFactory,
 } from "../../../tests/helpers/fakeSession";
 import { jpegImage, pngImage } from "../../../tests/helpers/images";
 import { noSurfaceProof } from "../../../tests/helpers/liveValidation";
@@ -110,12 +111,21 @@ import { hostEnv } from "../hostEnv";
 import { renderReferenceImport } from "../knowledge/context";
 import { KnowledgeService } from "../knowledge/knowledgeService";
 import { initOverflowDir, withPastedFiles, type MessageFile } from "../overflow";
-import { type AppPaths, appPathsFor, crewmateEvidenceDir } from "../paths";
+import {
+  type AppPaths,
+  appPathsFor,
+  crewmateEvidenceDir,
+  crewmateHandoverDir,
+  crewmateTempDir,
+} from "../paths";
+import { keepHandoverFiles } from "../tasks/handoverFiles";
+import { FirstmateAgent } from "./firstmateAgent";
 import { packagedPlanStepLines } from "../personal/sequencesSkill";
 import { EMIT_CARD_TOOL } from "../pi/cardTool";
 import { PI_CONTROL_PROFILE } from "../pi/controlProfile";
 import { carryOnWords, RESTART_RESUMED_WORDS } from "../tasks/recordActivity";
 import { createModelRuntime } from "../pi/modelRuntime";
+import type { ModelRuntime } from "../pi/types";
 import { piSessionEvents } from "../pi/piEvents";
 import { CREWMATE_BROWSER_LINE, crewmateComputersNote } from "../pi/piResources";
 import { createPiSessionFactory, holdingRecoverableAttempt } from "../pi/session";
@@ -13053,6 +13063,18 @@ describe('the captain takes a task\'s browser over (docs/task-browser.md, "Takin
   });
 });
 
+function withConsentLabels(block: string): string {
+  const read = JSON.parse(block.slice(block.indexOf("{"), block.lastIndexOf("}") + 1));
+  read.ways = read.ways.map((way: { tool: string }) => ({
+    ...way,
+    hold: read.held === "idle-stall" && way.tool === "steer_crewmate" ? "waits" : "asks-first",
+    basis: read.held === "idle-stall" && way.tool === "steer_crewmate" ? "record" : "consent",
+    approach: read.held === "idle-stall" && way.tool === "steer_crewmate" ? "workaround" : "pass-hold",
+    needsConsent: !(read.held === "idle-stall" && way.tool === "steer_crewmate"),
+  }));
+  return `\n\`\`\`json\n${JSON.stringify(read, null, 2)}\n\`\`\``;
+}
+
 describe("the idle ladder (idle crew recovery, docs/report-sort.md)", () => {
   // These run on the host's one clock (P5, `ticker.ts`): the test moves
   // `hostNow` itself, so nothing here fakes a timer or `Date`.
@@ -13249,6 +13271,298 @@ describe("the idle ladder (idle crew recovery, docs/report-sort.md)", () => {
       );
     protocol.dispose();
     await h.supervisor.interruptCrewmate(taskId, "cancel");
+  });
+
+  describe("self-resolving stalls (INF-1550, approved B/C)", () => {
+    it.each([false, true])("INF-1554 F4: empty findings preserve the current owner (decision card: %s)", async (cardUp) => {
+      const h = await stopped({ hasRunningJobs: () => true });
+      if (cardUp) {
+        h.specs[0]?.onCard?.({ title: "Choose the remaining consent", body: "<p>Signing needs your consent.</p>", actions: [{ id: "allow", label: "Allow signing", default: true }, { id: "hold", label: "Keep waiting" }] });
+        await tick();
+      }
+      await h.supervisor.steerCrewmate(h.taskId, "Report only the current state.");
+      await tick();
+      const before = h.ops.length;
+      h.specs[0]?.onReport?.("The current owner still has the next move.", undefined, { recoveryWays: [] });
+      await endTurn(h.crewmate, h.taskId);
+      expect(h.ops.length).toBe(before);
+      expect(h.sorts.at(-1)?.rule).toBe(cardUp ? "captain-card" : "still-moving");
+      expect(h.tasks.reportEntries(h.taskId).at(-1)?.declared).not.toHaveProperty("recoveryWays");
+      expect(h.tasks.timeline(h.taskId).filter((e) => e.kind === "report").at(-1)?.data).not.toHaveProperty("recoveryWays");
+      console.info("[F4] empty findings:", JSON.stringify({ cardUp, sort: h.sorts.at(-1)?.rule, wakes: h.ops.length - before }));
+    });
+
+    it("INF-1554 F5: serves the kept bounded recovery facts, retained overflow and one procedure", async () => {
+      initOverflowDir(scratchDir("infinitary-recovery-wake-"));
+      const h = await stopped();
+      await h.supervisor.steerCrewmate(h.taskId, "Report the observations and alternatives.");
+      await tick();
+      const observation = "The host fix is merged, but the running app still lacks it; the branch can move without an alpha. ".repeat(8);
+      h.specs[0]?.onReport?.("The wait has alternatives.", undefined, {
+        workWait: { observation, cheapestWay: "Take over the blocked branch" },
+        recoveryWays: Array.from({ length: 100 }, (_, index) => ({ action: `Inspect report ${index + 1} for an available alternative.`, hold: "waits" as const, evidence: observation, nextFact: "Read the named owner's next fact" })),
+      });
+      await endTurn(h.crewmate, h.taskId);
+      const kept = h.tasks.reportEntries(h.taskId).at(-1);
+      const wake = h.ops.at(-1) ?? "";
+      expect(wake).not.toContain(observation);
+      expect(wake).toContain(kept?.declared.workWait?.observation);
+      expect(wake).toContain("Full recovery details:");
+      expect(wake.match(/On a typed stall or idle wake/g)).toHaveLength(1);
+      expect(kept?.declared.recoveryWays?.length).toBeLessThan(100);
+      expect(h.sorts.at(-1)?.rule).toBe("recovery");
+      console.info("[F5] served bounded recovery:", JSON.stringify({ wakeCharacters: wake.length, waysKept: kept?.declared.recoveryWays?.length, hasFullDetailsPointer: wake.includes("Full recovery details:"), procedures: wake.match(/On a typed stall or idle wake/g)?.length }));
+    });
+
+    it("wakes for an unowned wait even behind a timed gate, then reports typed recovery ways without a card", async () => {
+      const h = await stopped();
+      await h.supervisor.steerCrewmate(
+        h.taskId,
+        "Report the release wait and cheapest alternative.",
+      );
+      await tick();
+      h.specs[0]?.onReport?.("The running app still lacks the host fix.", undefined, {
+        checkBack: { minutes: 15, waitingFor: "the installed alpha" },
+        workWait: {
+          observation: "No alpha has been cut since the host fix merged.",
+          cheapestWay: "Move the branch to a fresh task.",
+        },
+      });
+      await endTurn(h.crewmate, h.taskId);
+      expect(h.ops.at(-1)).toContain('"kind":"wait-without-owner"');
+      expect(h.ops.at(-1)).toContain("Move the branch to a fresh task.");
+      expect(h.cards()).toEqual([]);
+      expect(h.sorts.at(-1)?.rule).toBe("recovery");
+      console.info("[recovery] unowned wait wake:", h.ops.at(-1));
+      const kept = h.tasks
+        .timeline(h.taskId)
+        .filter((event) => event.kind === "report")
+        .at(-1);
+      expect(kept?.data?.workWait).toMatchObject({
+        cheapestWay: "Move the branch to a fresh task.",
+      });
+
+      await h.supervisor.steerCrewmate(
+        h.taskId,
+        "Read-only: find ways around this host record; report, no card, then stop.",
+      );
+      await tick();
+      h.specs[0]?.onReport?.(
+        "The existing branch_from capability can move this work today.",
+        undefined,
+        {
+          recoveryWays: [
+            {
+              action: "Take over the branch in a fresh task",
+              approach: "workaround",
+              hold: "waits",
+              evidence: "branch_from is available in the running app",
+              nextFact: "The new task starts on the branch",
+            },
+            {
+              action: "Cut a signed alpha",
+              hold: "asks-first",
+              evidence: "The host fix is merged",
+              nextFact: "The captain authorizes signing",
+            },
+          ],
+        },
+      );
+      await endTurn(h.crewmate, h.taskId);
+      expect(h.ops.at(-1)).toContain('"needsConsent":false');
+      expect(h.ops.at(-1)).toContain('"needsConsent":true');
+      expect(h.ops.at(-1)).toContain("Recovery ways");
+      console.info("[recovery] findings to first mate:", h.ops.at(-1));
+      expect(h.cards()).toEqual([]);
+    });
+
+    // Source: R6 of INF-1644, "rejects legitimate reports across the supported boundary".
+    it("keeps a report whose recovery way names a hold this build retired, read as the captain's", async () => {
+      const h = await stopped();
+      await h.supervisor.steerCrewmate(h.taskId, "Read-only: report ways around the failing checks.");
+      await tick();
+      // INF-1688 retired the repair limit; a same-major work computer on an older build still names it.
+      const way = {
+        action: "Push one more repair",
+        approach: "workaround",
+        hold: "repairs",
+        evidence: "The checks failed on the same version",
+        nextFact: "Read the next check result",
+      };
+      expect(() => h.specs[0]?.onReport?.("The checks still fail on the same version.", undefined, { recoveryWays: [way] })).not.toThrow();
+      await endTurn(h.crewmate, h.taskId);
+      expect(h.tasks.reportEntries(h.taskId).at(-1)?.declared.recoveryWays).toEqual([
+        { ...way, basis: undefined, needsConsent: true },
+      ]);
+      expect(h.ops.at(-1)).toContain('"hold":"repairs"');
+      expect(h.ops.at(-1)).toContain('"needsConsent":true');
+      expect(h.sorts.at(-1)?.rule).toBe("recovery");
+    });
+
+    // Source: INF-1554 F1, "Keep the card for you after the last wake, and fix the wake's wording".
+    describe("INF-1554 F1: the captain backstop after ignored recovery", () => {
+      /** A crewmate that reported a typed wait, before the ladder's first rung. */
+      async function waited(extras: SetupExtras = {}) {
+        const h = await stopped(extras);
+        // A verdict from before the wait is not an attempt at it.
+        h.tasks.updateFields(h.taskId, { verdict: "Let the crewmate finish step one." }, "firstmate");
+        hostNow += 1;
+        await h.supervisor.steerCrewmate(h.taskId, "Name the wait.");
+        await tick();
+        h.specs[0]?.onReport?.("No release owner exists.", undefined, {
+          workWait: { observation: "No alpha is being cut", cheapestWay: "Take over the branch" },
+        });
+        await endTurn(h.crewmate, h.taskId);
+        return { ...h, base: hostNow - h.idleSince };
+      }
+      const backstop = (h: Awaited<ReturnType<typeof waited>>) =>
+        h.cards().find((card) => card.id === `card-stall-${h.taskId}`);
+
+      it("names the same wait, the attempts recorded since it and the captain's ways out", async () => {
+        const h = await waited();
+        hostNow += 1;
+        h.tasks.updateFields(
+          h.taskId,
+          { verdict: "Started the takeover check; the wait did not move." },
+          "firstmate",
+        );
+        await h.at(h.base + minutes(10));
+        await endTurn(h.crewmate, h.taskId);
+        for (const step of [20, 50]) await h.at(h.base + minutes(step));
+        expect(backstop(h)).toBeUndefined();
+        await h.at(h.base + minutes(80));
+        const body = backstop(h)?.body;
+        expect(body).toContain(
+          "<p>It stopped with nothing running and no question for you. It was nudged once, and your first mate was told twice, and nothing has moved since.</p>",
+        );
+        expect(body).toContain(
+          "<p>It is still waiting: No alpha is being cut</p><p>Your first mate recorded one attempt to get around it since then; the latest: Started the takeover check; the wait did not move.</p>",
+        );
+        expect(body).not.toContain("Let the crewmate finish step one.");
+        expect(backstop(h)?.actions.map((action) => action.label)).toEqual(["Nudge", "Keep waiting", "Discard"]);
+        expect(h.sorts.at(-1)).toEqual({ taskId: h.taskId, verdict: "captain", rule: "idle-card" });
+        console.info("[F1] terminal backstop:", JSON.stringify({ body, ledger: h.sorts.at(-1) }));
+      });
+
+      it("raises nothing while a running job owns the wait", async () => {
+        const h = await waited({ hasRunningJobs: () => true });
+        for (const step of [10, 20, 50, 80, 120]) await h.at(h.base + minutes(step));
+        expect(h.cards()).toEqual([]);
+      });
+
+      it("raises nothing once the crewmate's next turn resolves the wait", async () => {
+        const h = await waited();
+        await h.at(h.base + minutes(10));
+        await endTurn(h.crewmate, h.taskId);
+        await h.at(h.base + minutes(20));
+        hostNow += 1;
+        await h.supervisor.steerCrewmate(h.taskId, "Read the owner again.");
+        await tick();
+        h.specs[0]?.onReport?.("The takeover started on the branch.");
+        await endTurn(h.crewmate, h.taskId);
+        // Where the old episode would have raised its card, the new one has
+        // only reached its own nudge and first wake.
+        await h.at(h.base + minutes(50));
+        await endTurn(h.crewmate, h.taskId);
+        await h.at(h.base + minutes(80));
+        expect(backstop(h)).toBeUndefined();
+        expect(h.sorts.map(({ rule }) => rule)).not.toContain("idle-card");
+      });
+    });
+
+    // Source: INF-1554 F3, "if any watcher owns the wait, it is not a stall"; a timer with no claimed job is not one.
+    it("INF-1554 F3: wakes on an unchanged work wait behind the crewmate's own timer with no job", async () => {
+      const h = await stopped();
+      const wait = {
+        owner: "INF-1539",
+        end: "the takeover starts",
+        observation: "The takeover is still planned",
+        cheapestWay: "Start the existing takeover now",
+      };
+      const report = async () => {
+        await h.supervisor.steerCrewmate(h.taskId, "Check the named owner once.");
+        await tick();
+        h.specs[0]?.onReport?.("Checked the takeover owner.", undefined, {
+          workWait: wait,
+          checkBack: { minutes: 15, waitingFor: "the takeover to start" },
+        });
+        await endTurn(h.crewmate, h.taskId);
+      };
+      await report();
+      // R1 of INF-1644: the timer owns nothing in the sort either, so the
+      // first report is a stop the first mate reads, not a moving task.
+      expect(h.sorts.at(-1)?.rule).toBe("stopped");
+      const before = h.ops.length;
+      await report();
+      expect(h.sorts.at(-1)?.rule).toBe("recovery");
+      expect(h.ops).toHaveLength(before + 1);
+      expect(h.ops.at(-1)).toContain('"kind":"repeated-wait"');
+      expect(h.cards()).toEqual([]);
+    });
+
+    // Source: R1 of INF-1644, "apply the approved ownership rule consistently
+    // across the sort, ladder and timer lifecycle", under INF-1554 F3's "A
+    // timer with no claimed job is not an owner".
+    it("R1 of INF-1644: a crewmate that only sets check-back timers still reaches the captain's card", async () => {
+      const h = await stopped();
+      const lookLater = async () => {
+        h.specs[0]?.onReport?.("Nothing moved yet; I will look again.", undefined, {
+          checkBack: { minutes: 15, waitingFor: "the release owner to answer" },
+        });
+        await endTurn(h.crewmate, h.taskId);
+      };
+      hostNow += 1;
+      await h.supervisor.steerCrewmate(h.taskId, "Check the release owner.");
+      await tick();
+      await lookLater();
+      const base = hostNow - h.idleSince;
+      const timerEnds: number[] = [];
+      // Every turn the crewmate is given, it answers with one more timer and
+      // no job, for two hours of the host's clock.
+      for (let step = 5; step <= 120; step += 5) {
+        const prompts = h.crewmate.promptCalls.length;
+        const timer = h.tasks.get(h.taskId)?.gate;
+        await h.at(base + minutes(step));
+        await h.supervisor.sweepGates(hostNow);
+        await tick();
+        if (timer?.kind === "at-time" && h.tasks.get(h.taskId)?.gate === null) timerEnds.push(step);
+        if (h.crewmate.promptCalls.length > prompts) await lookLater();
+      }
+      // Its timers ended without steering it or restarting its idle episode:
+      // the ladder's own nudge was its one look again, and the card went up.
+      expect(timerEnds.length).toBeGreaterThan(0);
+      expect(h.crewmate.promptCalls.filter((prompt) => prompt === IDLE_NUDGE_TEXT)).toHaveLength(1);
+      expect(h.crewmate.promptCalls.some((prompt) => prompt.includes("the release owner to answer"))).toBe(false);
+      expect(h.cards().find((card) => card.id === `card-stall-${h.taskId}`)).toBeDefined();
+      expect(h.sorts.filter(({ rule }) => rule === "idle-card")).toHaveLength(1);
+    });
+
+    it("INF-1554 F3: keeps a running job as owner across unchanged work-wait reports", async () => {
+      const h = await stopped({ hasRunningJobs: () => true });
+      const wait = {
+        owner: "INF-1539",
+        end: "the takeover starts",
+        observation: "The task is still planned",
+        cheapestWay: "Start the existing takeover now",
+      };
+      const report = async (observation: string) => {
+        await h.supervisor.steerCrewmate(h.taskId, "Check the named owner once.");
+        await tick();
+        h.specs[0]?.onReport?.("Checked the takeover owner.", undefined, {
+          workWait: { ...wait, observation },
+        });
+        await endTurn(h.crewmate, h.taskId);
+      };
+      await report(wait.observation);
+      const before = h.ops.length;
+      await report(wait.observation);
+      expect(h.ops.length).toBe(before);
+      expect(h.sorts.at(-1)?.rule).toBe("still-moving");
+      const repeated = h.ops.length;
+      await report("The takeover is running on the branch");
+      expect(h.ops.length).toBe(repeated);
+      expect(h.cards()).toEqual([]);
+    });
   });
 
   it("climbs nudge, wake, repeat and the host's card at 10, 20, 50 and 80 idle minutes, then holds", async () => {
@@ -15371,7 +15685,8 @@ describe("the idle ladder (idle crew recovery, docs/report-sort.md)", () => {
   // the text the prose templates served before the move, byte for byte.
   describe("the served text of every idle wake (the typed envelope, P3)", () => {
     const HEAD = "abc1234def5678";
-    const stallBlock = (id: string) => `
+    const stallBlock = (id: string) =>
+      withConsentLabels(`
 \`\`\`json
 {
   "held": "idle-stall",
@@ -15405,8 +15720,9 @@ describe("the idle ladder (idle crew recovery, docs/report-sort.md)", () => {
     }
   ]
 }
-\`\`\``;
-    const heldBlock = (id: string, held: string) => `
+\`\`\``);
+    const heldBlock = (id: string, held: string) =>
+      withConsentLabels(`
 \`\`\`json
 {
   "held": "${held}",
@@ -15442,7 +15758,7 @@ describe("the idle ladder (idle crew recovery, docs/report-sort.md)", () => {
     }
   ]
 }
-\`\`\``;
+\`\`\``);
     const SECOND =
       " This is the second time: if nothing is done about it in 30 minutes, the host puts it to the captain on a card of its own.";
 
@@ -27430,6 +27746,148 @@ describe("typed results and branch_from (INF-799 piece 1)", () => {
       expect(crewmate.promptCalls[1]).toContain(
         `Your working copy starts at ${first.key} "Migrate the meter module"'s last commit (${first.branch}), not at the default branch`,
       );
+    });
+
+    it("INF-1550: takes over a host-blocked branch without a merge or captain card, keeping the origin's evidence", async () => {
+      const h = await firstStage();
+      // The origin's own check evidence: a failed check at its committed version.
+      h.tasks.recordChangeEvidence(h.first.id, {
+        ciRepair: { failures: [{ headSha: h.head, checks: ["unit-tests"] }], diagnoses: [], repairs: [] },
+      });
+      h.tasks.recordReport(h.first.id, {
+        text: "The running host record blocks this task; use branch_from instead of waiting for an alpha.",
+      });
+      const original = h.tasks.get(h.first.id);
+      const { taskId } = await h.supervisor.commission({
+        title: "Take over the blocked branch",
+        intent: original?.intent ?? intentOf("Migrate the meter module."),
+        repoId: h.repoId,
+        shape: { branch_from: h.first.key },
+      });
+      const next = await vi.waitFor(() => {
+        const task = h.tasks.get(taskId);
+        if (!task?.worktreeDir || !existsSync(task.worktreeDir)) throw new Error("not started");
+        return task;
+      }, REAL_GIT_WAIT);
+      await vi.waitFor(() => expect(h.crewmate.promptCalls).toHaveLength(2), REAL_GIT_WAIT);
+      expect(git(next.worktreeDir, "rev-parse", "HEAD")).toBe(h.head);
+      expect(readFileSync(join(next.worktreeDir, "meter.ts"), "utf8")).toBe(
+        "export const meter = 2;\n",
+      );
+      expect(h.tasks.get(h.first.id)?.delivery?.ciRepair).toEqual(original?.delivery?.ciRepair);
+      expect(h.tasks.get(h.first.id)?.status).toBe("active");
+      expect(h.supervisor.cardsSnapshot()).toEqual([]);
+      console.info(
+        "[recovery] branch takeover:",
+        JSON.stringify({
+          original: h.first.key,
+          takeover: next.key,
+          sameCommittedWork: git(next.worktreeDir, "rev-parse", "HEAD") === h.head,
+          originalEvidenceKept:
+            JSON.stringify(h.tasks.get(h.first.id)?.delivery?.ciRepair) ===
+            JSON.stringify(original?.delivery?.ciRepair),
+          cards: h.supervisor.cardsSnapshot().length,
+        }),
+      );
+    });
+
+    it("INF-1550 F9: runs the served spawn, file-steer and relationship tools for an immediate takeover", async () => {
+      const h = await firstStage();
+      // The origin's own check evidence: a failed check at its committed version.
+      h.tasks.recordChangeEvidence(h.first.id, {
+        ciRepair: { failures: [{ headSha: h.head, checks: ["unit-tests"] }], diagnoses: [], repairs: [] },
+      });
+      h.tasks.recordReport(h.first.id, {
+        text: "The host record refused further work; the committed meter change can continue in a fresh task.",
+      });
+      const original = h.tasks.get(h.first.id)!;
+      const artifact = join(scratchDir("infinitary-takeover-reading-"), "host-reading.txt");
+      writeFileSync(
+        artifact,
+        "The host record refused further work; the committed meter change is retained.\n",
+      );
+      const [kept] = await keepHandoverFiles([artifact], crewmateHandoverDir(h.paths, h.first.id));
+      if (!kept) throw new Error("the source reading was not retained");
+      const seat = fakeSessionFactory("pi");
+      const firstmate = new FirstmateAgent({
+        paths: h.paths,
+        inbox: h.inbox,
+        settings: new SettingsStore(h.db),
+        modelRuntime: {} as ModelRuntime,
+        availableModels: () => [{ provider: "fm-mock", id: "mock-1" }],
+        quotaModels: () => undefined,
+        quotaLine: () => "",
+        repos: h.repos,
+        supervisor: h.supervisor,
+        tasks: h.tasks,
+        broadcastEvent: () => {},
+        selfSourceDir: join(h.paths.userData, "self-source"),
+        seats: { pi: seat },
+      });
+      try {
+        await firstmate.rebind("isolated-takeover");
+        const tools = seat.specs[0]?.tools;
+        const run = async (name: string, args: Record<string, unknown>) => {
+          const tool = tools?.find((entry) => entry.name === name);
+          if (!tool) throw new Error(`the production first mate did not serve ${name}`);
+          const result = await tool.run(args);
+          expect(result.details?.refusal).toBeUndefined();
+          return result;
+        };
+        const title = "Take over: blocked meter branch";
+        await run("spawn_crewmate", {
+          title,
+          goal: original.intent!.goal,
+          user_words: original.intent!.userWords,
+          constraints: [],
+          repo_id: h.repoId,
+          branch_from: h.first.key,
+        });
+        const next = await vi.waitFor(() => {
+          const task = h.tasks.list().find((entry) => entry.title === title);
+          if (!task?.worktreeDir || !existsSync(task.worktreeDir)) throw new Error("not started");
+          return task;
+        }, REAL_GIT_WAIT);
+        await vi.waitFor(() => expect(h.crewmate.promptCalls).toHaveLength(2), REAL_GIT_WAIT);
+        await run("steer_crewmate", {
+          task_id: next.id,
+          message:
+            "Continue the existing authorized meter change and inspect the retained host reading.",
+          files_from: h.first.key,
+        });
+        await run("link_tasks", { from: h.first.key, to: next.key, type: "related" });
+        // The old task waits for its successor, never the other way round.
+        await run("link_tasks", { from: next.key, to: h.first.key, type: "blocks" });
+        const delivered = join(crewmateTempDir(h.paths, next.id), "handover", kept.file);
+        expect(readFileSync(delivered)).toEqual(readFileSync(artifact));
+        expect(git(next.worktreeDir!, "rev-parse", "HEAD")).toBe(h.head);
+        expect(readFileSync(join(next.worktreeDir!, "meter.ts"), "utf8")).toBe(
+          "export const meter = 2;\n",
+        );
+        expect(h.tasks.blockers(next.id)).toEqual([]);
+        expect(h.tasks.blockers(h.first.id).map((task) => task.id)).toContain(next.id);
+        expect(h.tasks.relationshipsOf(h.first.id)).toContainEqual(
+          expect.objectContaining({ kind: "related", from: h.first.id, to: next.id }),
+        );
+        expect(h.tasks.get(h.first.id)).toMatchObject({
+          status: "active",
+          delivery: original.delivery,
+        });
+        expect(h.supervisor.cardsSnapshot()).toEqual([]);
+        console.info(
+          "[recovery] served takeover tools:",
+          JSON.stringify({
+            started: next.status,
+            committedWorkPreserved: git(next.worktreeDir!, "rev-parse", "HEAD") === h.head,
+            handoverBytesPreserved: readFileSync(delivered).equals(readFileSync(artifact)),
+            successorBlockers: h.tasks.blockers(next.id).length,
+            originWaitsForSuccessor: h.tasks.blockers(h.first.id).some((task) => task.id === next.id),
+            captainCards: h.supervisor.cardsSnapshot().length,
+          }),
+        );
+      } finally {
+        firstmate.dispose();
+      }
     });
 
     it("starts at the kept ref once the first stage's working copy is gone", async () => {

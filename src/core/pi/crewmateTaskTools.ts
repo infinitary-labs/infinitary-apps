@@ -1,4 +1,6 @@
+import { HOLD_KINDS, type HoldKind } from "@shared/holds";
 import { type LiveValidationInput, liveValidationInputSchema } from "@shared/liveValidation";
+import { RECOVERY_APPROACHES, type RecoveryApproach } from "@shared/recovery";
 import { Type } from "typebox";
 import { KNOWLEDGE_TOOL, RECORD_KNOWLEDGE_TOOL } from "../knowledge/knowledgeTools";
 import {
@@ -85,7 +87,8 @@ export const FILE_FOLLOWUP_TOOL_DESCRIPTION = [
   "It becomes a separate planned task, recorded as discovered from yours - not a part of it - and waits until the first mate decides; nothing starts on its own and you keep working.",
   "The first mate hears about it with your report, not as a message of its own, and triages it there.",
   "Filing it does NOT hold your own task up: your work still stands on its own merits.",
-  "If the rest of your own work must wait for this to be merged, file it here with a title beginning Continue: and say in why that it needs this merged first; name it in your report, end that turn without a card, and wait for the first mate to link it before emitting the completion decision on its steer. The first mate makes it start when ready after this task closes.",
+  "For work needing your merge first, use a title beginning Continue:, say why, report it, end that turn without a card, and wait for the first mate to link it before your completion decision. It starts after your task closes.",
+  "For a host-record takeover, file Take over: my branch in a fresh task, then needs_firstmate to start it now; no merge prerequisite, never to bypass consent or repeat an unknown effect.",
   "The one exception is blocks_me, which is a real dependency - pass it true only when your task genuinely cannot merge until that work does, because it will then stop your task from closing.",
   "Give a sentence-case title, a one-sentence goal saying what done looks like, and why - what you found, in plain words.",
   "When the follow-up is a test failure, pass test_failure true and test_path, the failing test's path: the host refuses a test failure with no path, stores the path, and answers with the existing key instead of filing a second open row for the same path.",
@@ -163,6 +166,38 @@ export const REPORT_TOOL = crewmateTool({
           additionalProperties: false,
           description:
             "After verifying a published release, identify every merged task it contains in your project, including internal changes, and report each earliest release here: version, release page, tasks (keys or ids), and evidence proving membership and earliest publication. Collect all task keys with tasks skip before recording; group those with the same earliest release and report again for other groups. Arrange missing verification, never guess from merge time or call unknown unshipped. Existing attributions stay unless corrects names the previous version you read and evidence explains the correction. This records facts only, never publishes or merges.",
+        },
+      ),
+    ),
+    // Plain schemas keep the fixed context small; the host parses each with its owner's schema.
+    work_wait: Type.Optional(
+      Type.Object(
+        {
+          owner: Type.Optional(Type.String()),
+          end: Type.Optional(Type.String()),
+          observation: Type.String(),
+          cheapestWay: Type.String(),
+        },
+        {
+          description:
+            "A work wait: owner, end fact, current observation and cheapest way around it. Omit owner/end only when unknown; never poll an unchanged wait. Jobs and captain waits retain their own declarations.",
+        },
+      ),
+    ),
+    recovery_ways: Type.Optional(
+      Type.Array(
+        Type.Object({
+          action: Type.String(),
+          approach: Type.Optional(
+            Type.Unsafe<RecoveryApproach>({ type: "string", enum: [...RECOVERY_APPROACHES] }),
+          ),
+          hold: Type.Unsafe<HoldKind>({ type: "string", enum: [...HOLD_KINDS] }),
+          evidence: Type.String(),
+          nextFact: Type.String(),
+        }),
+        {
+          description:
+            "Read-only recovery findings for the first mate, never a card. Only a workaround may be consent-free; passing a hold or choosing a stronger model remains the captain's, as does sign-in. Signing, releases, merges, destruction and access use asks-first; a workaround never bypasses consent or replays an unknown effect.",
         },
       ),
     ),
@@ -283,6 +318,8 @@ export const REPORT_TOOL = crewmateTool({
                   },
                 }
               : {}),
+            ...(params.work_wait ? { workWait: params.work_wait } : {}),
+            ...(params.recovery_ways?.length ? { recoveryWays: params.recovery_ways } : {}),
             ...(params.check_back
               ? {
                   checkBack: {

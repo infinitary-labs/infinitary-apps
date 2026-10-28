@@ -5,6 +5,7 @@ import { holdNames, type OverridableHold } from "@shared/holds";
 import { plainProblem, typedFailureOf } from "@shared/plainProblem";
 import { type SteerEventData, TASK_CARD_VIA } from "@shared/provenance";
 import { formatDurationShort } from "@shared/quotaSignals";
+import { withoutDigest, workWaitSchema } from "@shared/recovery";
 import type { ServedWakeOrigin } from "@shared/servedFrame";
 import { capWithOverflow } from "../overflow";
 import { FIRSTMATE_RECIPIENT, INBOX_ATTEMPT_MAX, type InboxStore } from "../storage/inboxStore";
@@ -302,13 +303,29 @@ export class IdleLadder {
       jobsRunning: this.jobInBound(taskId, now),
       pendingSettle: Boolean(record?.pendingSettle),
       // A due one is the sweep's, on this same tick: counting it until then
-      // keeps the nudge and the wait's own steer from both going out.
-      timedWait: gate?.kind === "at-time",
+      // keeps the nudge and the wait's own steer from both going out. A
+      // check-back with no job behind it holds nothing (`unownedTimer`).
+      timedWait: gate?.kind === "at-time" && !(record && this.unownedTimer(record)),
       checksWatched: record ? this.host.checksWatched?.(record) === true : false,
       accountHeld: record ? this.cutOffHolds(record) : false,
       outOfReach: this.host.outOfReach?.(taskId) === true,
       ...(record ? this.waitWitnesses(record) : { waitsOnUnstarted: false }),
     };
+  }
+
+  /**
+   * F3 of INF-1554 (R1 of INF-1644): a check-back its crewmate set with no
+   * claimed job behind it owns no wait. The sort, the witnesses and the
+   * timer's end all read it here, so a task that only sets timers climbs
+   * the ladder to the captain's card like any other stopped task.
+   */
+  unownedTimer(record: TaskRecord): boolean {
+    return (
+      record.gate?.kind === "at-time" &&
+      record.delivery?.checkBack !== undefined &&
+      record.gate.until === record.delivery.checkBack.until &&
+      this.host.hasRunningJobs?.(record.id) !== true
+    );
   }
 
   /**
@@ -1151,6 +1168,11 @@ export class IdleLadder {
    * on the first mate, which answers it (INF-1670) - or when the task closes.
    */
   private raiseStallCard(record: TaskRecord, now: number): void {
+    const observed = this.host.tasks
+      .timeline(record.id)
+      .filter((event) => event.kind === "report")
+      .at(-1);
+    const typedWait = workWaitSchema.safeParse(observed?.data?.workWait);
     const id = stallCardId(record.id);
     this.host.tasks.recordRecovery(record.id, {
       rung: 3,
@@ -1170,10 +1192,28 @@ export class IdleLadder {
     const told = this.episodeNudged(record)
       ? "It was nudged once, and your first mate was told twice, and nothing has moved since."
       : "Your first mate was told twice, and nothing has moved since.";
+    // A wait its crewmate declared with no card up is a question nobody put
+    // to him (INF-11): the card names it in the crewmate's words.
     const wait = record.delivery?.captainWait;
     const opening = wait
       ? `<p>It waits on you to ${escapeCardText(wait.reason)}, and no card has asked you. ${told}</p>`
       : `<p>It stopped with nothing running and no question for you. ${told}</p>`;
+    // The same typed wait it stopped on (F1 of INF-1554, "Keep the card for
+    // you after the last wake"): what it still waits on, and the recovery
+    // attempts the first mate recorded since, never an older verdict.
+    const attempts = observed
+      ? this.host.tasks
+          .timeline(record.id)
+          .filter((event) => event.data?.ledger === "verdict" && event.at >= observed.at)
+      : [];
+    const latest = attempts.at(-1);
+    const recovery = typedWait.success
+      ? `<p>It is still waiting: ${escapeCardText(withoutDigest(typedWait.data.observation))}</p><p>${
+          latest
+            ? `Your first mate recorded ${attempts.length === 1 ? "one attempt" : `${attempts.length} attempts`} to get around it since then; the latest: ${escapeCardText(latest.text)}`
+            : "Your first mate has recorded no attempt to get around it."
+        }</p>`
+      : "";
     const nudges = "Nudge tells it to finish or say what is in its way.";
     const card: Card = {
       id,
@@ -1187,6 +1227,7 @@ export class IdleLadder {
       meta: "",
       body: [
         opening,
+        recovery,
         lastLine,
         `<p>${nudges} Keep waiting closes this alert and leaves the task as it is. Discard ends it and throws its work away. For anything else, reply here.</p>`,
       ].join(""),
@@ -1395,7 +1436,13 @@ export class IdleLadder {
    * episode, so the turn it starts is the task's own, not a ladder turn.
    */
   private endTimedWait(taskId: string, gate: TaskGate, now: number): void {
+    const record = this.host.tasks.get(taskId);
+    const unowned = record ? this.unownedTimer(record) : false;
     this.host.tasks.setGate(taskId, null);
+    // A check-back with no job owned nothing, so its end is no move of the
+    // task: the episode and its rungs go on, and the ladder's own nudge is
+    // the look again (R1 of INF-1644).
+    if (unowned) return;
     this.host.tasks.endIdle(taskId);
     const job = this.host.hasRunningJobs?.(taskId)
       ? this.host.oldestRunningJob?.(taskId)

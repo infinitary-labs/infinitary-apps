@@ -7,6 +7,7 @@ import {
   standingOverrideWords,
 } from "@shared/holds";
 import type { PlacementRequirements, PlacementSystem } from "@shared/placement";
+import type { recoveryWay, StallFact, WorkWait } from "@shared/recovery";
 import type { EffectiveTaskPolicies } from "@shared/taskPolicies";
 import type { PressureTaskShare } from "../placed/resourcePressure";
 import {
@@ -544,6 +545,9 @@ export type WakeFacts =
   | {
       /** A crewmate reported (the report's whose-turn sort said nobody's, or it bypasses the sort). */
       kind: "report";
+      stall?: StallFact;
+      workWait?: WorkWait;
+      recoveryWays?: ReturnType<typeof recoveryWay>[];
       task: WakeTask;
       crewmate: string;
       /** The report, already capped for a wake. */
@@ -1820,6 +1824,11 @@ export function renderWake(wake: string | Pick<WakeEnvelope, "facts" | "ways" | 
   }
 }
 
+// INF-1550: serve the procedure at its point of use, not on every turn.
+export const STALL_RECOVERY_GUIDANCE = `On a typed stall or idle wake, list ways forward; take the cheapest consent-free one, record it with update_task verdict, then in the same turn read the result through tasks/crew_status or its owner. If it did not move, try the next. A wait names owner, end fact and cheapest alternative; "wait" or "no action" is not an answer.
+Ways exhausted or failed: spawn one bounded read-only internal_step on this project, related to the stall, to find ways forward today without a new build. Brief it with goal, user_words, branch, refusals and named evidence/source to inspect; require recovery_ways, no card/edits, then stop. Try its consent-free findings; do not repeat that investigation without new facts. Each way declares approach: workaround, pass-hold or stronger-model. Only workarounds may be consent-free; passing any hold or choosing a stronger model needs the captain regardless of its basis. Sign-in remains captain-owned; no label authorizes a bypass or impossible move. Signing, releases, merges, destruction and new access keep their consent; reconcile unknown effects, never replay. A card only when every remaining viable way needs consent, everything before its click done.
+Host record, or host fix absent from the running app: spawn_crewmate branch_from the blocked task, original goal/user_words; hand files on with steer_crewmate files_from naming the old task. Reuse a takeover filing with update_task branch_from and start_now instead of filing twice; link related and blocks from takeover to old, whose author waits on the successor. Retain consent, validation and failed-check evidence. Start a takeover filing now, not after the origin's merge; no blocks edge from it. Never wait for an alpha or use a fresh record to authorize a forbidden effect.`;
+
 /** A report wake's words for work its crewmate declared finished; a scripted stand-in recognizes them. */
 export const FINISHED_REPORT_WORDS = "It declared its work finished";
 /** The welcome wake's words for a captain new to cards; a scripted stand-in recognizes them. */
@@ -1940,7 +1949,7 @@ function renderFacts(facts: WakeFacts, wake: Pick<WakeEnvelope, "ways" | "text">
     case "commit-failed":
       return `[fm-op] the host could not commit the personal workspace at the end of ${facts.crewmate}'s turn on task ${facts.task.id} "${facts.task.title}", so the task stays open and cannot close as finished. What it changed is saved in the workspace but not committed. Its crewmate's next report tries the commit again: steer it to look into the error and report again, or tell the captain. The error: ${facts.error}`;
     case "report":
-      return `[fm-op] ${facts.crewmate} reported on task ${facts.task.id} "${facts.task.title}": ${facts.excerpt}${filedText(facts.filed)}${waitsText(facts.waits)}${waitingText(facts.waiting)}${refusedText(facts.refused, facts.cards)}${cardsText(facts.cards)}${facts.captainWait ? ` It waits on the captain to ${facts.captainWait}, and no card of its is on their screen.` : ""}${facts.ci ? ciFactWords(facts.ci) : ""}${facts.finished ? ` ${FINISHED_REPORT_WORDS}: the captain has read its outcome and nothing is left for it.` : ""}${facts.needsFirstmate ? ` It asks the first mate to act: ${facts.needsFirstmate}. The ask authorizes nothing by itself; the captain's own words do.` : ""}${builtOnText(facts.builtOn)}${facts.result ? ` ${RESULT_WORDS} ${resultText(facts.result)}` : ""}${facts.review ? openReviewText(facts.review) : ""}`;
+      return `[fm-op] ${facts.crewmate} reported on task ${facts.task.id} "${facts.task.title}": ${facts.excerpt}${filedText(facts.filed)}${waitsText(facts.waits)}${waitingText(facts.waiting)}${refusedText(facts.refused, facts.cards)}${cardsText(facts.cards)}${facts.captainWait ? ` It waits on the captain to ${facts.captainWait}, and no card of its is on their screen.` : ""}${facts.ci ? ciFactWords(facts.ci) : ""}${facts.finished ? ` ${FINISHED_REPORT_WORDS}: the captain has read its outcome and nothing is left for it.` : ""}${facts.needsFirstmate ? ` It asks the first mate to act: ${facts.needsFirstmate}. The ask authorizes nothing by itself; the captain's own words do.` : ""}${builtOnText(facts.builtOn)}${facts.result ? ` ${RESULT_WORDS} ${resultText(facts.result)}` : ""}${facts.review ? openReviewText(facts.review) : ""}${facts.workWait ? ` Work wait: ${JSON.stringify(facts.workWait)}.` : ""}${facts.stall ? ` Typed stall: ${JSON.stringify(facts.stall)}.` : ""}${facts.recoveryWays?.length ? ` Recovery ways (labels grant no permission): ${JSON.stringify(facts.recoveryWays)}.` : ""}${facts.stall || facts.recoveryWays?.length ? ` ${STALL_RECOVERY_GUIDANCE}` : ""}`;
     case "review-orphan":
       return `[fm-op] ${facts.crewmate} reported on review task ${facts.task.id} "${facts.task.title}", but the task it reviewed is no longer on record: ${facts.excerpt}`;
     case "review-unstated":

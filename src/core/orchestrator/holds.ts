@@ -16,11 +16,15 @@
  * card", because the card rule in its prompt already does.
  */
 
+import type { HoldKind } from "@shared/holds";
 import { DROP_TASK_LABEL } from "@shared/recordDrop";
+import { type RecoveryWay, recoveryConsent } from "@shared/recovery";
 import { escalationFloor } from "../routing/policy";
 
 /** One way out of a hold: exactly what the Firstmate runs to take it. */
 export type HoldWay = {
+  hold?: HoldKind;
+  approach?: RecoveryWay["approach"];
   label: string;
   tool: "steer_crewmate" | "spawn_crewmate" | "settle_task" | "interrupt_crewmate";
   args: Record<string, unknown>;
@@ -93,7 +97,13 @@ export function crewHoldWays(
  */
 export function idleStallWays(taskId: string): HoldWay[] {
   return [
-    { label: "Tell it what to do next", tool: "steer_crewmate", args: { task_id: taskId } },
+    {
+      hold: "waits",
+      approach: "workaround",
+      label: "Tell it what to do next",
+      tool: "steer_crewmate",
+      args: { task_id: taskId },
+    },
     {
       label: DROP_TASK_LABEL,
       tool: "interrupt_crewmate",
@@ -116,5 +126,9 @@ export function idleStallWays(taskId: string): HoldWay[] {
  */
 export function renderHold(hold: HoldRefusal): string {
   const { text, ...structured } = hold;
+  structured.ways = hold.ways.map(({ hold, approach, ...way }) => ({
+    ...way,
+    ...recoveryConsent(hold ?? "asks-first", approach),
+  }));
   return `${text}\n\`\`\`json\n${JSON.stringify(structured, null, 2)}\n\`\`\``;
 }

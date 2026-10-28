@@ -53,6 +53,21 @@ A refused tool, missing transcript or bounded turn is not a pass.
 The no-cost fixture tests prove native direction reads and writes stay disposable, not that a live model follows the guidance.
 The same run-sheet approval and Claude-client requirements apply; a first-mate-only module still supplies the runner's unused builder selection explicitly, using the same account and model.
 
+## Stalled-work recovery evaluation
+
+Use `--module scripts/evals/stallRecovery.ts` for INF-1550's recovery-choice cases.
+Three first mate cases cover an available authorized alternative, an observed failed prior alternative, and a bounded read-only investigation when no inspected way remains.
+One investigator case asks a real model to classify evidence-backed ways forward from disposable readings, separating workarounds from captain-owned actions.
+The first mate cases use the existing role call limit; the investigator gets one request beyond the builder limit (`builderCalls`), so its closing reply fits after its report, and the run sheet reserves their sum.
+The module adds no retries or sign-in access.
+Read the real responses, executed calls, returned observations and host state independently before declaring any case passed.
+A dispatch and owner read show that the selected alternative started, not that its inert worker completed the inspection.
+The failed-first-way case supplies the earlier failed attempt as a recorded fact; it does not show the evaluated model performing that attempt.
+The investigator's report call and receipt remain in the trace, but the inert owner does not replay a real crewmate turn-end, so the fixture does not prove durable report completion.
+The three first mate cases put the stalled task's committed meter change on its branch in a registered disposable project, so the inspection and any investigation start from that commit through the production branch and working-copy paths, and their records name that project.
+`tests/stall-recovery-eval.test.ts` checks the disconnected fixtures, native alternative dispatch and a recorded investigation's start from the committed branch; the served-tool takeover regression in `crewSupervisor.test.ts` separately owns the takeover's real Git branch, handed-file and relationship chain.
+Those checks prove host behavior, never real-model instruction following, and a live run still requires the named-account run-sheet approval above.
+
 ## The Claude crewmate's client
 
 The running app holds the machine's Claude store for a Claude crewmate's client from its start to its exit (the session lease in `docs/claude-client.md`), so the app's own renewal never runs beside the evaluation's Claude clients over a single-use refresh token.

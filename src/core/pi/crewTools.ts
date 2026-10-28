@@ -483,7 +483,9 @@ export function createCrewTools(delegate: CrewDelegate) {
         description: "As create_task's placement_requirements.",
       }),
       result_schema: Type.Optional(RESULT_SCHEMA_PARAM),
-      branch_from: Type.Optional(Type.String()),
+      branch_from: Type.Optional(
+        Type.String({ description: "Start from this task’s last commit." }),
+      ),
       start_after: Type.Optional(
         Type.Object(
           {

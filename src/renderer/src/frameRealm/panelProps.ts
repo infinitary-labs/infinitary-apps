@@ -88,6 +88,13 @@ function framePoint(
       need("openRecord");
       return answer("point.openRecord", { taskId });
     },
+    peekLine: (peek) => {
+      if (!config.reads.includes("feed.recent"))
+        throw new Error('point.peekLine: name "feed.recent" in manifest.json "reads".');
+      bridge
+        .action("point.peekLine", peek)
+        .catch((error: unknown) => warn("point.peekLine:", error));
+    },
     peekTask: (peek) => {
       need("peekTask");
       bridge

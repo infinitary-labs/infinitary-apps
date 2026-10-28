@@ -5,7 +5,6 @@ import {
   litTaskIn,
   type PanelTaskKeys,
   PanelTaskKeyText,
-  useOverflowTitle,
   usePanelTaskKeys,
 } from "@infinitary/ui";
 import { memo, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
@@ -85,14 +84,66 @@ const Row = memo(function Row({
 }) {
   const kind = semanticKind(line.kind);
   const [reveal] = useState(fresh);
-  const lineFit = useOverflowTitle(line.text);
+  const quiet = useRef(false);
+  const held = useRef(false);
+  const rest = (row: HTMLElement | null) => {
+    if (!row) {
+      if (held.current) point.peekLine(null);
+      held.current = false;
+      return;
+    }
+    if (quiet.current) return;
+    const { top, right, bottom, left } = row.getBoundingClientRect();
+    held.current = true;
+    point.peekLine({ line, box: { top, right, bottom, left } });
+  };
+  useEffect(() => {
+    const close = () => {
+      if (held.current) {
+        quiet.current = true;
+        held.current = false;
+        point.peekLine(null);
+      }
+    };
+    const key = (event: KeyboardEvent) => {
+      if (event.key === "Escape" && held.current) {
+        event.stopPropagation();
+        close();
+      }
+    };
+    window.addEventListener("keydown", key, true);
+    window.addEventListener("scroll", close, true);
+    return () => {
+      window.removeEventListener("keydown", key, true);
+      window.removeEventListener("scroll", close, true);
+      if (held.current) point.peekLine(null);
+    };
+  }, [point]);
   return (
     <div
       data-in-place-reveal={reveal ? "fade" : undefined}
       data-feed-row={kind}
       data-feed-kind={kind}
       data-feed-event={line.event}
-      title={lineFit.title}
+      onPointerEnter={(event) => {
+        quiet.current = false;
+        rest(event.currentTarget);
+      }}
+      onPointerMove={(event) => {
+        if (event.target instanceof Element && event.target.closest("[data-task-key]")) {
+          held.current = false;
+          return;
+        }
+        if (!held.current) rest(event.currentTarget);
+      }}
+      onPointerLeave={() => {
+        quiet.current = false;
+        rest(null);
+      }}
+      onPointerDown={() => {
+        quiet.current = true;
+        rest(null);
+      }}
     >
       {/* Type is a semantic color dot at the far left; age stays at the right.
           The line's words say what its color does, so it is no stop of its
@@ -101,7 +152,7 @@ const Row = memo(function Row({
       <span className={`dot ${kind}`} data-feed-dot={kind} role="img" aria-label={kind} />
       {/* The line's cell: an optional key prefix, then the text itself, so
           `.text` is always exactly the core's line. */}
-      <span className="line" data-feed-line="" ref={lineFit.ref}>
+      <span className="line" data-feed-line="">
         {line.taskKey && (
           <>
             <span className="key" data-feed-key={line.taskKey}>
@@ -202,6 +253,7 @@ export default function ActivityPanel({ reads, asks, rail, point, view }: PanelP
         line: newest.text.slice(0, SUMMARY_LINE_MAX),
         lead: newest.taskKey,
         tone: newest.kind,
+        feed: newest,
       },
       { text: feedRelativeAge(newest.at, now) },
     ]);

@@ -1,3 +1,4 @@
+import type { PanelFeedLine } from "@shared/personal/contracts";
 import { useSyncExternalStore } from "react";
 import type { Box } from "../../character/crew/hover";
 import { litTask } from "./litTask";
@@ -17,10 +18,12 @@ export type KeyPeek = { taskId: string; key: Box; card: Box; frame: HTMLIFrameEl
  * panels like any other.
  */
 export type PanelPeek = {
-  taskId: string;
+  taskId: string | null;
   box: Box;
   page: HTMLElement;
   pageFrame: HTMLIFrameElement | null;
+  /** A recorded feed line; taskId is null when it names no known task. */
+  line?: PanelFeedLine;
 };
 
 /** The row's box in the window now, including a frame resized since the page reported it. */
@@ -66,7 +69,13 @@ const same = (a: TaskPeek, b: TaskPeek): boolean => {
   if (a === b) return true;
   if (a === null || b === null || a.taskId !== b.taskId) return false;
   if ("page" in a) {
-    return "page" in b && a.page === b.page && a.pageFrame === b.pageFrame && sameBox(a.box, b.box);
+    return (
+      "page" in b &&
+      a.page === b.page &&
+      a.pageFrame === b.pageFrame &&
+      a.line === b.line &&
+      sameBox(a.box, b.box)
+    );
   }
   if ("page" in b) return false;
   if ("anchor" in a) {
@@ -93,7 +102,7 @@ export const taskPeek = {
     if (same(pointed, next)) return;
     pointed = next;
     // What the pointer or the keyboard rests on is lit on every surface (./litTask.ts).
-    if (next) litTask.set(next.taskId, "peek");
+    if (next?.taskId) litTask.set(next.taskId, "peek");
     else litTask.release("peek");
     for (const listener of listeners) listener();
   },

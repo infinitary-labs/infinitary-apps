@@ -3,6 +3,8 @@ import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { FeedLine } from "../design";
 import { useOverflowTitle } from "../design/core/overflowTitle";
 import { motionEase, motionToken } from "../design/motion";
+import { peekFeedLine } from "./panelPoint";
+import { taskPeek } from "./point/taskPeek";
 
 /** Each line holds the header at least this long while newer lines wait. */
 export const SAID_LINE_DWELL_MS = 700;
@@ -165,7 +167,29 @@ function Row({
     return () => motion.cancel();
   }, []);
   const words = line.lead ? `${line.lead} ${line.line}` : line.line;
-  const lineFit = useOverflowTitle(leaving ? undefined : words);
+  const lineFit = useOverflowTitle(leaving || line.feed ? undefined : words);
+  const quiet = useRef(false);
+  const held = useRef<ReturnType<typeof taskPeek.get>>(null);
+  const rest = (node: HTMLElement | null) => {
+    const page = ref.current?.closest<HTMLElement>("[data-side-panel]");
+    if (!page || !line.feed || leaving) return;
+    if (!node) {
+      if (held.current && taskPeek.get() === held.current) taskPeek.release(page);
+      held.current = null;
+      return;
+    }
+    if (quiet.current) return;
+    const { top, right, bottom, left } = node.getBoundingClientRect();
+    peekFeedLine({ line: line.feed, box: { top, right, bottom, left } }, page, null);
+    held.current = taskPeek.get();
+  };
+  useEffect(() => {
+    const page = ref.current?.closest<HTMLElement>("[data-side-panel]");
+    return () => {
+      if (line.feed && page && held.current && taskPeek.get() === held.current)
+        taskPeek.release(page);
+    };
+  }, [line.feed]);
   return (
     <button
       ref={ref}
@@ -179,7 +203,36 @@ function Row({
       data-panel-summary-line={leaving ? undefined : ""}
       data-panel-summary-line-leaving={leaving ? "" : undefined}
       title={lineFit.title}
-      onClick={onOpen}
+      onPointerEnter={(event) => {
+        quiet.current = false;
+        rest(event.currentTarget);
+      }}
+      onPointerLeave={() => {
+        quiet.current = false;
+        rest(null);
+      }}
+      onFocus={(event) => {
+        if (event.currentTarget.matches(":focus-visible")) rest(event.currentTarget);
+      }}
+      onBlur={() => {
+        quiet.current = false;
+        rest(null);
+      }}
+      onPointerDown={() => {
+        quiet.current = true;
+        rest(null);
+      }}
+      onKeyDown={(event) => {
+        if (line.feed && !leaving && event.key === "Escape") {
+          quiet.current = true;
+          rest(null);
+          event.stopPropagation();
+        }
+      }}
+      onClick={() => {
+        rest(null);
+        onOpen?.();
+      }}
       style={{
         appearance: "none",
         background: "none",

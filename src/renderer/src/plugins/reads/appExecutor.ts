@@ -1,5 +1,6 @@
 import { computerPresenceOf } from "@shared/devices";
 import type { CorePushChannel } from "@shared/ipc";
+import type { PanelFeedLine } from "@shared/personal/contracts";
 import { type ComputerResourcesView, panelComputerResources } from "@shared/resources";
 import type { ProjectView, TaskBoard, TaskBoardDelta, TaskDetail, TaskView } from "@shared/tasks";
 import { presentBoard, presentProjects, presentTask } from "@shared/taskWaiting";
@@ -85,6 +86,12 @@ const PUSHES: Record<Exclude<CorePushChannel, "inf:event">, ReadApi["onPush"]> =
   "inf:devices:sign-in": (_channel, listener) => window.infinitary.devices.onSignIn(listener),
 };
 
+/** The recorded feed as last presented, for the host's checked line pointing. */
+let presentedFeed: readonly PanelFeedLine[] = [];
+export function feedOnScreen(): readonly PanelFeedLine[] {
+  return presentedFeed;
+}
+
 /**
  * The task board as the app last presented it to a reader, or undefined
  * before anything read it: what a panel's pointing is checked against
@@ -106,6 +113,9 @@ const SEARCHED_KEPT = 500;
 const searched = new Map<string, TaskView>();
 export function searchedTask(taskId: string): TaskView | undefined {
   return searched.get(taskId);
+}
+export function searchedTaskByKey(key: string): TaskView | undefined {
+  return [...searched.values()].find((task) => task.key === key);
 }
 function rememberFound(tasks: readonly TaskView[]): void {
   for (const task of tasks) {
@@ -144,6 +154,7 @@ export function firstmateReadApi(): ReadApi {
       if (name === "tasks.board") {
         return projectBoard(rememberBoard(value as TaskBoard));
       }
+      if (name === "feed.recent") presentedFeed = value as PanelFeedLine[];
       if (name === "tasks.detail") return presentTask(value as TaskDetail, cards);
       if (name === "tasks.search") rememberFound(value as TaskView[]);
       if (name === "projects.list" && board) {

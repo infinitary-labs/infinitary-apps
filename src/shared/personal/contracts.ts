@@ -1063,6 +1063,8 @@ export type PanelPoint = {
    * adding where the page sits in the window.
    */
   peekTask: (peek: { taskId: string; box: PanelBox } | null) => void;
+  /** Rest on a line returned by feed.recent; the host checks the recorded line. */
+  peekLine: (peek: { line: PanelFeedLine; box: PanelBox } | null) => void;
   /**
    * Brings a task's waiting card forward on the stack, by the
    * `waitingCardId` the read gave; answers whether it came forward.
@@ -1169,6 +1171,8 @@ export type PanelSummaryLine = {
   lead?: string;
   /** The dot's color, as the app's own feed colors a line. */
   tone?: PanelFeedLine["kind"];
+  /** The recorded feed line to read on rest, checked against feed.recent. */
+  feed?: PanelFeedLine;
 };
 
 /**

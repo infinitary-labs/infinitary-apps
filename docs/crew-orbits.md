@@ -447,6 +447,18 @@ A move the window receives aimed at the frame element itself is not outside it: 
 The pointer leaving the window lets it go too, heard as the window document's `pointerleave`: macOS hands Chromium's exit to the window's own page alone, so a frame under the pointer never hears it and never reports `null`.
 It never inspects a crewmate and never slows the stage; the lit task below puts brackets on that task's crewmate, and nothing else.
 
+**From a feed line** (INF-1761, approved INF-1759 direction A).
+
+Every Activity line opens a read-only line summary on rest, including the newest line in the collapsed header.
+The panel sends `point.peekLine` with its recorded `feed.recent` line and box; the host checks the line against the feed it presented and places it through the same `taskPeek` store and `PeekSummary` layer as a Tasks row.
+`LineSummary` reads the recorded words in full, the kind dot and exact local time, then the task's title and project where the board or a task search knows it.
+A task-less line has no task fact rows, and an unknown task keeps its recorded key alone.
+The summary reuses the task summary's panel, beat, hairline, placement, width and motion; it lights its task but never pauses the stage.
+Leaving, Esc, a press, scrolling, resizing or losing window focus closes it; after Esc or a press the same line stays quiet until the pointer leaves it.
+Keys keep their own task summaries and clicks, and the list keeps its existing keyboard model: focus wraps every line and the arrows scroll it.
+The collapsed header shows the line summary on keyboard focus too.
+`tests/e2e/activity-line-preview.spec.ts` drives the line, short-line, key and collapsed-header journeys, while `point/linePeek.test.ts` owns recorded-line validation and read grants.
+
 **The lit task** (INF-237, "hover a task anywhere, highlight it everywhere").
 A rest on a task on any surface lights it on every surface that shows it.
 `plugins/point/litTask.ts` is a second small window-view store beside `taskPeek`: `{ taskId, by }` or none, one at a time, the last rest winning, and a source lets go only of what it lit.

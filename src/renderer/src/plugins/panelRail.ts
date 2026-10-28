@@ -1,3 +1,4 @@
+import { feedLineSchema } from "@shared/feed";
 import type { PanelRail, PanelSummaryLine, PanelSummaryPart } from "@shared/personal/contracts";
 import { useSyncExternalStore } from "react";
 import { z } from "zod";
@@ -45,6 +46,7 @@ const summarySchema = z
         line: z.string().min(1).max(PANEL_SUMMARY_LINE_MAX),
         lead: z.string().min(1).max(PANEL_SUMMARY_TEXT_MAX).optional(),
         tone: z.enum(["info", "ok", "warn", "danger", "you"]).optional(),
+        feed: feedLineSchema.strict().optional(),
       }),
     ]),
   )

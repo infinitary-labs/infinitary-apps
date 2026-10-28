@@ -34,3 +34,18 @@ In the app this is the Activity panel's folder (`src/panels/activity/`), drawn i
 **Closing a card with the cross writes one line** (FI3-579, the captain's 5 "yes"), the one place the captain learns where the card went: `You closed "<title>". It stays on FI3-569's record.` (the key of the task the card is about, a first mate decision's own record included).
 A card with no record to point at keeps the plain `captain dismissed the card "<title>".`.
 A choice, a merge, a withdrawal or the app taking a card down writes no such line (a merge already has its own), and opening the card again from the Cards row (`components/cards/TaskRecord`) writes none.
+
+## Line hover (INF-1761, approved direction A)
+
+Resting on every line opens a read-only line summary beside the panel, including the newest line in the collapsed header.
+It reuses the Tasks row summary's panel, hairline, placement, 130ms beat, 14px lead, 360px width cap and motion, in the window-wide layer, never clipped by the rail.
+The head holds the recorded task key when any, the line's kind dot and its exact local time (`9:05 AM` today, `Oct 21, 9:05 AM` otherwise).
+Below it read the feed's recorded words in full, then TASK and PROJECT rows when the task is known; a task-less line has no fact rows.
+The task's key stays lit while its line is rested on.
+Moving between lines moves the summary at once; leaving, Esc, a press, scrolling, a window resize or loss of focus closes it as a Tasks row's summary does.
+After Esc or a press it stays closed until the pointer leaves that line.
+No native title appears on the line.
+A key keeps its own task summary and click; moving back to the words restores the line summary.
+The list keeps its keyboard model: focus wraps every line in full, the arrows scroll, and task keys remain their own Tab stops.
+The collapsed header's line opens this summary on keyboard focus too.
+The task record's Activity, other panels' lines and iOS are unchanged.

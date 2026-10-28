@@ -1,3 +1,4 @@
+import { feedLineSchema } from "@shared/feed";
 import { PANEL_DRAFT_MAX, type PanelPoint, type PanelView } from "@shared/personal/contracts";
 import { pointNeedsBoardMessage } from "@shared/personal/manifest";
 import { useMemo } from "react";
@@ -17,7 +18,7 @@ import { pluginHost } from "./host";
 import { useLitTaskId } from "./point/litTask";
 import { openTask } from "./point/openTask";
 import { taskPeek } from "./point/taskPeek";
-import { boardOnScreen, searchedTask } from "./reads/appExecutor";
+import { boardOnScreen, feedOnScreen, searchedTask, searchedTaskByKey } from "./reads/appExecutor";
 
 /**
  * Pointing at the app's own tasks and cards, the host's side (FI3-1014
@@ -55,6 +56,9 @@ export const PANEL_POINT_ACTIONS = [
   "point.focusProject",
 ] as const;
 
+/** A feed reader's rest, independent of task-board pointing. */
+export const PANEL_LINE_PEEK_ACTION = "point.peekLine";
+
 /** The one pointing every panel's page has, whatever it reads: `point.draft`. */
 export const PANEL_DRAFT_ACTION = "point.draft";
 /** And the other: `point.openSettings`. */
@@ -91,6 +95,7 @@ const boxSchema = z.strictObject({
   bottom: z.number().finite(),
   left: z.number().finite(),
 });
+const linePeekSchema = z.strictObject({ line: feedLineSchema.strict(), box: boxSchema }).nullable();
 const peekSchema = z.strictObject({ taskId: taskIdSchema, box: boxSchema }).nullable();
 const draftSchema = z
   .string()
@@ -161,6 +166,16 @@ export function panelPoint(panel: string, page: PointPage): PanelPoint {
         return useShellStore.getState().focusCard(task.minimizedCardId, since);
       useShellStore.getState().openRecord(id);
       return true;
+    },
+    peekLine: (peek) => {
+      if (!page.reads.includes("feed.recent"))
+        throw new Error('point.peekLine: name "feed.recent" in manifest.json "reads".');
+      const parsed = linePeekSchema.safeParse(peek);
+      if (!parsed.success)
+        throw new Error("point.peekLine: a recorded feed line and its box, or null");
+      const where = pageOf(panel, page.card);
+      if (!where) return;
+      peekFeedLine(parsed.data, where, page.frame());
     },
     peekTask: (peek) => {
       need("peekTask");
@@ -249,6 +264,34 @@ export function panelPoint(panel: string, page: PointPage): PanelPoint {
   };
 }
 
+/** Host chrome and a panel's checked pointing share the same recorded-line lookup. */
+export function peekFeedLine(
+  peek: Parameters<PanelPoint["peekLine"]>[0],
+  page: HTMLElement,
+  pageFrame: HTMLIFrameElement | null,
+): void {
+  const asked = peek?.line;
+  const line =
+    asked &&
+    feedOnScreen().find(
+      (row) =>
+        row.at === asked.at &&
+        row.text === asked.text &&
+        row.kind === asked.kind &&
+        row.taskKey === asked.taskKey &&
+        row.event === asked.event,
+    );
+  if (!line || !peek) {
+    taskPeek.release(page);
+    return;
+  }
+  const task =
+    line.taskKey &&
+    (boardOnScreen()?.tasks.find((row) => row.key === line.taskKey) ??
+      searchedTaskByKey(line.taskKey));
+  taskPeek.set({ taskId: task ? task.id : null, line, box: peek.box, page, pageFrame });
+}
+
 /**
  * The host's answers to a frame's pointing (`PANEL_POINT_ACTIONS`), over
  * the same checks as the window's: the value each action carries is the
@@ -270,6 +313,9 @@ export function framePointAction(
         return point.openTask(arg?.taskId as string);
       case "point.openRecord":
         return point.openRecord(arg?.taskId as string);
+      case "point.peekLine":
+        point.peekLine(value as never);
+        return undefined;
       case "point.peekTask":
         point.peekTask(value as never);
         return undefined;

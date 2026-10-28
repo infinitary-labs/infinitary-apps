@@ -83,6 +83,7 @@ const isolatedUnit = [
   "src/renderer/src/plugins/panelCards.test.ts",
   "src/renderer/src/plugins/panelPoint.test.ts",
   "src/renderer/src/plugins/point/openTask.test.ts",
+  "src/renderer/src/plugins/point/linePeek.test.ts",
   "src/renderer/src/plugins/railStore.test.ts",
   "src/renderer/src/plugins/reads/appExecutor.test.ts",
   "src/renderer/src/voice/micRecorder.test.ts",

@@ -3,6 +3,7 @@ import { framePanelCardAction, PANEL_CARD_ACTIONS, PANEL_CARD_VIEW_ACTIONS } fro
 import {
   framePointAction,
   PANEL_DRAFT_ACTION,
+  PANEL_LINE_PEEK_ACTION,
   PANEL_OPEN_SETTINGS_ACTION,
   PANEL_POINT_ACTIONS,
   panelPoint,
@@ -56,6 +57,7 @@ export function framePanelActions(page: FramePanelPage): {
   const actions = [
     ...(card === undefined ? PANEL_CARD_ACTIONS : PANEL_CARD_VIEW_ACTIONS),
     ...(points ? PANEL_POINT_ACTIONS : []),
+    ...(page.reads.includes("feed.recent") ? [PANEL_LINE_PEEK_ACTION] : []),
     PANEL_DRAFT_ACTION,
     PANEL_OPEN_SETTINGS_ACTION,
     ...(page.moves ? PANEL_TASKS_ACTIONS : []),

@@ -313,8 +313,12 @@ The task key also stays on hover, search, and the row locator; project chips kee
 The panel points with the calls every panel that reads the board gets ("Pointing and the view" below), which the host checks like any input from across the frame boundary.
 A click on a row is `point.openTask`: a row waiting on you has its decision card come to the front while that card is on the stack; otherwise the task's record card opens.
 Resting on a row is `point.peekTask` with the row's box in the panel's page, or `null`; the host adds the frame's rect and opens the crew summary beside that row (FI3-565 piece 3, `docs/crew-orbits.md` "From a Tasks row").
+A panel that reads `feed.recent` may also send `point.peekLine` with the line exactly as read and its box, or `null` to let go.
+The host checks the line against the feed it presented and opens its full recorded words and time in the same window-wide summary layer, with the task title and project when known.
+A `PanelSummaryLine` may carry `feed`, that recorded line, so the host's collapsed header opens the same summary on rest or keyboard focus without trusting the shortened header words.
+The Activity panel uses both paths; its keys keep `peekTask`, its list keeps keyboard wrapping, and its line summaries never read a task's whole report in place of the feed's recorded words.
 Nothing a row's gesture does mutates app data.
-Activity points only from the task keys on its lines (FI3-1271): it reads `tasks.board` and `tasks.search` to know which keys name tasks, and a key is pointed at as a row is.
+Activity points from each recorded line and from the task keys on its lines (FI3-1271): it reads `tasks.board` and `tasks.search` to know which keys name tasks, and a key is pointed at as a row is.
 
 **The board push is the read's value.**
 `tasks.board` now declares `valueFromPush: "inf:tasks"` (`src/shared/reads.ts`): the executor hands the pushed board to every subscriber as it lands, with no second coalescing window and no round trip, and drops a read still in flight from before it as stale (`executor.test.ts`).

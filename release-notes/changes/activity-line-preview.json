@@ -1,0 +1,17 @@
+{
+  "entries": [
+    {
+      "id": "activity-line-preview",
+      "kind": "improvement",
+      "title": "Read an Activity line in full without opening its task",
+      "body": "Rest on any Activity line to read its full words and exact time beside the panel. A line about a task also names its title and project. The newest line in the collapsed Activity header opens the same preview.",
+      "area": "tasks",
+      "picture": {
+        "dark": "activity-line-preview-dark.webp",
+        "light": "activity-line-preview-light.webp",
+        "alt": "An Activity line preview beside the panel, showing the full recorded words, exact time, task title and project"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

@@ -26,6 +26,7 @@ import {
 } from "../../character/crew/summaryMotion";
 import { useBoardTasks } from "../../character/crew/useCrewBoard";
 import { appReadExecutor } from "../reads/appExecutor";
+import { LineSummary } from "./LineSummary";
 import { panelPeekBox, type TaskPeek, taskPeek, useTaskPeek } from "./taskPeek";
 
 /**
@@ -130,7 +131,8 @@ export function PeekSummary() {
   const modelName = useModelNames();
   const task = peek && rested?.id === peek.taskId ? rested : undefined;
 
-  const open = peek !== null && task !== undefined;
+  const feedLine = peek && "page" in peek ? peek.line : undefined;
+  const open = peek !== null && (feedLine !== undefined || task !== undefined);
   const openRef = useRef(open);
   openRef.current = open;
   const resting = pointed === null ? null : kindOf(pointed);
@@ -295,10 +297,10 @@ export function PeekSummary() {
   useLayoutEffect(() => {
     const panel = panelRef.current;
     const line = lineRef.current;
-    if (!peek || !task || !panel || !line) return;
+    if (!peek || (!task && !("page" in peek && peek.line)) || !panel || !line) return;
     const from = poseOf(panel, line);
     place();
-    const target = `${kindOf(peek)}:${peek.taskId}`;
+    const target = `${kindOf(peek)}:${peek.taskId}:${"page" in peek && peek.line ? `${peek.line.at}:${peek.line.text}` : ""}`;
     const before = placedFor.current?.panel === panel ? placedFor.current.target : null;
     if (before === null) openSummary(panel, line, angleRef.current);
     else if (before !== target) moveSummary(panel, line, from, true);
@@ -319,7 +321,8 @@ export function PeekSummary() {
       ref={layerRef}
       className="fm-row-summary-layer"
       data-key-summary={kind === "key" ? peek.taskId : undefined}
-      data-point-summary={kind === "page" ? peek.taskId : undefined}
+      data-point-summary={kind === "page" && !feedLine ? peek.taskId : undefined}
+      data-line-summary={feedLine ? String(feedLine.at) : undefined}
       aria-hidden={leaving || undefined}
       style={{ "--crew-summary-max": `${CREW_HOVER.maxWidthPx}px` } as CSSProperties}
     >
@@ -331,7 +334,11 @@ export function PeekSummary() {
         aria-hidden="true"
       />
       <div ref={panelRef}>
-        <CrewSummary taskId={peek.taskId} facts={{ task, modelName }} />
+        {feedLine ? (
+          <LineSummary line={feedLine} task={task} />
+        ) : (
+          task && <CrewSummary taskId={task.id} facts={{ task, modelName }} />
+        )}
       </div>
     </div>
   );

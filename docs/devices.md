@@ -717,6 +717,7 @@ Linux keeps its current delivery path, and a Mac a command added downloads over 
 1. "Updating Infinitary on Mac mini.": the home asks the update order, `fm:firstmate:update` (`updateOrders`, `src/shared/work.ts`), of a connected computer whatever its version (`ask` with `anyVersion`).
    The order takes no arguments and answers `{ restarts }`, and its name and shape never change across majors, so a home on any later major can still ask it.
 2. A computer that keeps a copy of Infinitary - another Mac added by a command - gets this Mac's at `/firstmate` with its own key and no code (below, "Getting Infinitary by its own key"), unpacks it beside its own and keeps it in its place; another user on this Mac runs this Mac's own app, so it gets nothing.
+   Another Mac that joined by pasting its link runs its own installed app, so its first update keeps this Mac's copy the same way and its background starts that copy from then on (`docs/helper.md`, "Updated by its home").
    This Mac counts what it sends that computer as it goes (`onAppSent`), and the row and one feed line rewritten in place say "Sending Infinitary to Mac mini… 42.3 MB sent", as for a Mac reached by its address (above, "How far the copy has gone").
    Nothing there changes if the copy does not arrive whole.
 3. It answers, then its run ends, and its background, which keeps it running while it is joined, starts it again from what is kept (`docs/helper.md`, "Updated by its home").

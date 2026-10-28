@@ -1,4 +1,4 @@
-import { execFile } from "node:child_process";
+import { execFile, spawn } from "node:child_process";
 import { mkdirSync, readdirSync, readFileSync, rmSync, symlinkSync } from "node:fs";
 import type { NetworkInterfaceInfo } from "node:os";
 import { basename, dirname, join } from "node:path";
@@ -41,7 +41,14 @@ export type Launcher = { executable: string; args: readonly string[] };
 /** What one call to the service manager answered: `launchctl`, or `systemctl --user`. */
 export type LaunchctlResult = { ok: boolean; output: string };
 
-export type Launchctl = (args: readonly string[]) => Promise<LaunchctlResult>;
+/**
+ * Asks the service manager; `program` names the one it runs, which a
+ * process of its own can run too (`reloadInBackground`), and is absent for
+ * a stand-in asked in this process.
+ */
+export type Launchctl = ((args: readonly string[]) => Promise<LaunchctlResult>) & {
+  readonly program?: string;
+};
 
 /** `systemctl`, which the systemd adapter always asks with `--user` first. */
 export type Systemctl = Launchctl;
@@ -728,6 +735,41 @@ export function rewriteInBackground(
 }
 
 /**
+ * Has launchd read a Mac's agent file anew and start it, from outside the
+ * agent's own run: what an update that rewrote the agent of the run asking
+ * does last (`./update.ts`, "Kept here first"). Taking the agent away ends
+ * every process of its run but one in a session of its own, so a shell in
+ * its own session takes it away and sets it up again, outliving the run; a
+ * stand-in asked in this process is asked here, in the same order. Nothing
+ * is waited for: run from that agent, the first step ends this process.
+ */
+export async function reloadInBackground(
+  context: BackgroundContext,
+  service: Service,
+): Promise<void> {
+  if (!("launchctl" in context)) throw new Error("Only a Mac's agent is read anew this way.");
+  const domain = `gui/${context.uid}`;
+  const { launchctl } = context;
+  if (!launchctl.program) {
+    await launchctl(["bootout", `${domain}/${service.label}`]);
+    await launchctl(["bootstrap", domain, service.file]);
+    return;
+  }
+  spawn(
+    "/bin/sh",
+    [
+      "-c",
+      '"$0" bootout "$1"; "$0" bootstrap "$2" "$3"',
+      launchctl.program,
+      `${domain}/${service.label}`,
+      domain,
+      service.file,
+    ],
+    { detached: true, stdio: "ignore", env: hostEnv() },
+  ).unref();
+}
+
+/**
  * What a move that stopped partway left beside the agent `installed.json`
  * records, taken away by the run once it holds the data folder: an agent of
  * this flavor under another of the app's labels whose file still names this
@@ -817,11 +859,11 @@ export async function backgroundState(
 }
 
 /** The system's own launchctl, which a test never reaches. */
-export const systemLaunchctl: Launchctl = (args) => runManager("/bin/launchctl", args);
+export const systemLaunchctl: Launchctl = launchctlAt("/bin/launchctl");
 
 /** A development run's stand-in for launchctl or systemctl, which tests use so no real agent is ever loaded. */
 export function launchctlAt(program: string): Launchctl {
-  return (args) => runManager(program, args);
+  return Object.assign((args: readonly string[]) => runManager(program, args), { program });
 }
 
 /** This Linux computer's own systemctl, where its search path finds it. */

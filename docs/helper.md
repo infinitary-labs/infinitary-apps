@@ -357,6 +357,9 @@ On any version from `WORK_UPDATE_SINCE` on, the run answers its home's update or
    The same app under the other name of the Infinitary rename - `Infinitary.app` for a computer that keeps `Firstmate 3000.app`, or back, of the same flavor - is kept beside the one here instead, and the background moves to it under that app's own label before the answer goes (above, "Under the other name"); the old copy and agent go once the run let the folder go.
    A background that will not move takes the new copy away again, changes nothing, and the order is refused.
    Another user on the home's Mac runs that Mac's own app, which is the home's already, so nothing is got.
+   A separate Mac whose agent starts its own installed app - one that joined at its first launch (above, "A Mac that also controls") - is not on the home's version, so its first update keeps the home's copy in `app/` as a command-added Mac keeps one, and rewrites its agent to start that copy before the answer goes; once the run let the folder go, a shell in a session of its own takes the agent away and sets it up again, since taking it away ends every process of the run but one in its own session (`reloadInBackground`).
+   Should that not happen, the agent starts the copy from the next login; every later update replaces the kept copy, and the installed app is left as it is.
+   A home that sends an app the agent's label is not for changes nothing, and the order is refused.
 2. It answers `{ restarts }`, whether a background is set up here (`installed.json`'s `service`), and says "MacBook Pro updated Infinitary on this computer to its version." and "It starts again now."
    (or, with nothing set up, "Start it again to run its work.").
 3. Its run then ends as `updated`: every conversation lets go, as when it quits, and the command exits 0.
@@ -375,7 +378,7 @@ From `WORK_DOWNLOAD_SINCE` on, on any major, a Mac's run also answers the downlo
 3. Kept, it answers `{ restarts }` with its last count, says the updated lines, and its run ends as `updated`, as above.
 4. Anything short of that changes nothing here and answers `fallback`, `mismatch` for a download that did not match its checksum or publisher, or `failed`: a download that failed, stopped after two minutes with no byte moving, or did not finish checking within the update's thirty-minute backstop.
    The home then asks the update order at once.
-   A Linux computer answers `failed` at once, and another user on the home's Mac runs the home's app, so it answers as the update order does.
+   A Linux computer answers `failed` at once, and another user on the home's Mac runs the home's app, so it answers as the update order does; a separate Mac whose agent starts its own installed app downloads its first copy, kept as in step 1 of the update order.
 5. A home that goes out of reach does not stop it: the home follows it by its progress once it is back (`docs/devices.md`, "Downloading over the connection").
    The run stopping stops it, and the run lets the folder go only once what it fetched is gone.
 

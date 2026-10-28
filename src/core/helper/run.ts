@@ -378,10 +378,10 @@ export function startHelper(options: StartHelperOptions): StartHelperOutcome {
       })
       .then(async () => {
         release();
-        // What an update that moved the background leaves for last.
+        // What an update that moved or rewrote the background leaves for last.
         if (how === "updated" && afterUpdate)
           await afterUpdate().catch((error) =>
-            log(`could not take away the copy it moved from: ${String(error)}`),
+            log(`could not finish what the update left for last: ${String(error)}`),
           );
         finish(how);
       });

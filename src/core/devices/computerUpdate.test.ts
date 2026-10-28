@@ -389,6 +389,69 @@ describe("a computer that runs work on another version of Firstmate", () => {
     expect(updated.otherVersion).toBeUndefined();
   });
 
+  // INF-1752, the captain's "Keep a copy" for every Mac that joined by its
+  // link: its agent starts the Mac's own installed app, so an update that got
+  // nothing came back on the old version.
+  it("joined by its link on another Mac, keeps this Mac's copy as its first, starts its agent from it and comes back on this Mac's version", async () => {
+    const at = await world({ fromAnotherMac: true });
+    const asked: string[][] = [];
+    const context: BackgroundContext = {
+      flavor: "release",
+      dataDir: at.dataDir,
+      homeDir: scratchDir("infinitary-update-agents-"),
+      uid: 502,
+      launchctl: async (args) => {
+        asked.push([...args]);
+        return { ok: true, output: "" };
+      },
+    };
+    // What the window's join set up there: an agent that starts the Mac's own app.
+    const installedApp = bundle("the Mac's own app");
+    const ownLauncher = fetchedLauncher(installedApp);
+    if (!ownLauncher) throw new Error("no launcher");
+    await startInBackground(
+      { ...context, spelling: "fm" },
+      { launcher: ownLauncher, env: {}, app: null },
+    );
+    const service = readInstalled(at.dataDir).service;
+    if (!service) throw new Error("no agent");
+
+    const before = at.start({ appVersion: "0.1.20" }, context);
+    await expect.poll(() => at.view()?.otherVersion?.updateBy).toBe("connection");
+    asked.length = 0;
+    const updating = at.computers.update(at.deviceId);
+    expect(await before.ended).toBe("updated");
+
+    // This Mac's copy is kept in its work folder, and its agent starts it from now on.
+    const kept = join(at.dataDir, "app", "Firstmate 3000.app");
+    expect(readInstalled(at.dataDir)).toEqual({ service, app: kept });
+    expect(readFileSync(join(kept, "Contents", "Resources", "marker"), "utf8").trim()).toBe(
+      "the home's own copy",
+    );
+    const agent = readFileSync(service.file, "utf8");
+    expect(agent).toContain(
+      `<string>${join(kept, "Contents", "MacOS", "Firstmate 3000")}</string>`,
+    );
+    expect(agent).not.toContain(ownLauncher.executable);
+    // launchd read the agent anew once the run let the folder go.
+    expect(asked).toEqual([
+      ["bootout", `gui/502/${service.label}`],
+      ["bootstrap", "gui/502", service.file],
+    ]);
+    // The Mac's own app is left as it was.
+    expect(readFileSync(join(installedApp, "Contents", "Resources", "marker"), "utf8").trim()).toBe(
+      "the Mac's own app",
+    );
+
+    // The agent starts the kept copy, on this Mac's version, within the wait.
+    at.start({ appVersion: HOME_APP }, context);
+    const updated = await updating;
+    if ("asks" in updated) throw new Error("Update asked for a password.");
+    expect(updated.otherVersion).toBeUndefined();
+    const builder = { name: "Mac mini", user: "builder", onThisMac: false };
+    expect(at.feed().at(-1)).toBe(remoteLoginWords.updated(builder, "running"));
+  });
+
   it("says when it has not started again, or will only once it is started by hand", async () => {
     const late = await world({ waitMs: 100 });
     late.start({ appVersion: "0.1.20" });

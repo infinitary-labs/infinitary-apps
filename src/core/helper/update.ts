@@ -29,7 +29,9 @@ import {
   backgroundState,
   moveInBackground,
   readInstalled,
+  reloadInBackground,
   rewriteInBackground,
+  separateMac,
   writeInstalled,
 } from "./background";
 import { fetchedLauncher, keepApp } from "./join";
@@ -40,10 +42,18 @@ import { homeDialOptions } from "./route";
  * home"): the home's update order brings Firstmate here to the home's own
  * version. Where a command or the home kept a copy of Firstmate here (`app/`),
  * the home's is got with this computer's own key and kept in its place, at
- * the same path the background starts; where this user runs its Mac's own
- * app, that app is the home's already and nothing is got. Either way the run
- * then ends, and the background - which keeps it running while it is
- * joined - starts it again from what is kept here.
+ * the same path the background starts; where another user on the home's Mac
+ * runs that Mac's own app, that app is the home's already and nothing is
+ * got. Either way the run then ends, and the background - which keeps it
+ * running while it is joined - starts it again from what is kept here.
+ *
+ * Kept here first: a separate Mac that joined by its link at its first
+ * launch runs its own installed app, which is not the home's. Its first
+ * update keeps the home's copy in `app/` as a command-added Mac keeps one,
+ * rewrites its agent to start that copy before the answer goes, and once
+ * the run let the folder go has launchd read the agent anew from outside
+ * the run (`reloadInBackground`); should that not happen, the agent starts
+ * the copy from the next login. The installed app is left as it is.
  *
  * A home on the other side of the Infinitary rename sends that app, under
  * its own name (FI3-1780 step 2): `Infinitary.app` to a computer that keeps
@@ -111,8 +121,9 @@ async function canRestart(
 export async function updateHere(options: UpdateHereOptions): Promise<UpdatedHere> {
   const { dataDir, grant } = options;
   const installed = readInstalled(dataDir);
+  const first = keepsFirst(options, installed);
   let afterRun: (() => Promise<void>) | undefined;
-  if (installed.app) {
+  if (installed.app || first) {
     // Unpacked beside the folder's own copy, on the same disk, so keeping it
     // clones rather than copies; deleted whatever happens.
     const into = mkdtempSync(join(dataDir, "update-"));
@@ -121,7 +132,7 @@ export async function updateHere(options: UpdateHereOptions): Promise<UpdatedHer
       // its SSH connection keeps, or the grant's address.
       // It asks for the system of the copy it keeps: a Mac's bundle, or a Linux AppImage.
       const { chip } = thisDeviceSystem();
-      const system = installed.app.endsWith(".AppImage") ? "linux" : "macos";
+      const system = installed.app?.endsWith(".AppImage") ? "linux" : "macos";
       const bundle = await getFirstmate(
         grant,
         into,
@@ -133,7 +144,7 @@ export async function updateHere(options: UpdateHereOptions): Promise<UpdatedHer
           ? { system, chip }
           : undefined,
       );
-      afterRun = await keepHere(options, installed, bundle);
+      afterRun = first ? keepFirst(first, bundle) : await keepHere(options, installed, bundle);
     } finally {
       rmSync(into, { recursive: true, force: true });
     }
@@ -142,6 +153,52 @@ export async function updateHere(options: UpdateHereOptions): Promise<UpdatedHer
     restarts: await canRestart(options, installed.service),
     ...(afterRun ? { afterRun } : {}),
   };
+}
+
+/** What a first copy is kept for: this run's background, its agent and the work folder. */
+type FirstCopy = {
+  dataDir: string;
+  context: BackgroundContext;
+  env: Readonly<Record<string, string>>;
+  service: NonNullable<ReturnType<typeof readInstalled>["service"]>;
+};
+
+/**
+ * Whether this update keeps the first copy here ("Kept here first"): no copy
+ * is kept, a Mac's agent starts this run, and the home is on another Mac.
+ */
+function keepsFirst(
+  options: UpdateHereOptions,
+  installed: ReturnType<typeof readInstalled>,
+): FirstCopy | null {
+  const { background } = options;
+  if (installed.app || !installed.service || !background) return null;
+  if (!("launchctl" in background.context) || !separateMac(options.dataDir)) return null;
+  return { dataDir: options.dataDir, ...background, service: installed.service };
+}
+
+/**
+ * Keeps the home's app as this Mac's first copy and rewrites its agent to
+ * start it, then answers what follows once the run let the folder go: launchd
+ * reads the agent anew. An app the agent's label is not for changes nothing.
+ */
+function keepFirst(first: FirstCopy, bundle: string): () => Promise<void> {
+  const { context, service } = first;
+  const spelling = spellingOfMacApp(basename(bundle), context.flavor);
+  if (!spelling || workLabelOf(spelling, context.flavor) !== service.label)
+    throw new Error("The home sent another app than the one that runs here, so nothing changed.");
+  const kept = keepApp(bundle, first.dataDir);
+  try {
+    rewriteInBackground(context, service, {
+      launcher: fetchedLauncher(kept) as NonNullable<ReturnType<typeof fetchedLauncher>>,
+      env: first.env,
+      app: kept,
+    });
+  } catch (error) {
+    rmSync(kept, { recursive: true, force: true });
+    throw error;
+  }
+  return () => reloadInBackground(context, service);
 }
 
 /**
@@ -202,14 +259,16 @@ const CODESIGN = "/usr/bin/codesign";
  * byte moving for `idleSeconds`, or was stopped (`signal`, as when its run
  * stops), or one that did not match its checksum or publisher
  * (`mismatch`). A Linux computer, which keeps getting its copy from its
- * home, answers `fallback` at once; one that runs its Mac's own app has
- * nothing to get, as with the update order.
+ * home, answers `fallback` at once; another user on the home's Mac has
+ * nothing to get, as with the update order, and a Mac whose agent starts its
+ * own installed app downloads its first copy ("Kept here first").
  */
 export async function downloadHere(options: DownloadHereOptions): Promise<DownloadedHere> {
   const { dataDir } = options;
   const installed = readInstalled(dataDir);
-  if (!installed.app) return { ...(await updateHere(options)), received: 0 };
-  if (!installed.app.endsWith(".app")) return { fallback: "failed", received: 0 };
+  const first = keepsFirst(options, installed);
+  if (!installed.app && !first) return { ...(await updateHere(options)), received: 0 };
+  if (installed.app && !installed.app.endsWith(".app")) return { fallback: "failed", received: 0 };
   const into = mkdtempSync(join(dataDir, "update-"));
   let last: DownloadCount = { received: 0 };
   try {
@@ -224,7 +283,8 @@ export async function downloadHere(options: DownloadHereOptions): Promise<Downlo
     const bundle = readdirSync(into).find((entry) => entry.endsWith(".app"));
     if (!bundle) return { fallback: "failed", ...last };
     options.onProgress({ ...last, state: "updating" });
-    const afterRun = await keepHere(options, installed, join(into, bundle));
+    const got = join(into, bundle);
+    const afterRun = first ? keepFirst(first, got) : await keepHere(options, installed, got);
     return {
       restarts: await canRestart(options, installed.service),
       ...last,

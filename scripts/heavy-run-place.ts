@@ -35,10 +35,14 @@ export const heavyRunWords = {
  * stopped with its whole process group, its end closes this input: a run still
  * waiting then leaves the line instead of holding its place until admitted.
  */
-const SUPERVISE = `"$@" <&0 &
+// A POSIX shell may replace a background list's stdin with /dev/null before
+// applying its redirects. Keep the gate's pipe on fd 3 so dash can restore it.
+const SUPERVISE = `exec 3<&0
+"$@" <&3 3<&- &
 run=$!
-(cat; for group in $(pgrep -P "$run"); do kill -TERM -- "-$group"; done) <&0 >/dev/null 2>&1 &
+(cat; for group in $(pgrep -P "$run"); do kill -TERM "-$group"; done) <&3 3<&- >/dev/null 2>&1 &
 watch=$!
+exec 3<&-
 wait "$run"
 status=$?
 kill "$watch" 2>/dev/null

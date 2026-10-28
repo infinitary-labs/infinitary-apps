@@ -9,7 +9,7 @@ import type { CrewPlaceKind } from "../scripts/crew-place";
 import { HEAVY_RUN_NEEDS, heavyRunWords, takeHeavyRunPlace } from "../scripts/heavy-run-place";
 import { AXI_ADDRESS_ENV, AXI_KEY_ENV, AXI_VERSION_ENV, AxiChannel } from "../src/core/axi/channel";
 import { hostEnv } from "../src/core/hostEnv";
-import { LoadLine } from "../src/core/placed/loadLine";
+import { LoadLine, loadGroupExists } from "../src/core/placed/loadLine";
 import { forkChildProcess } from "../src/core/sql/forkChildProcess";
 import { LOAD_COMMAND } from "../src/shared/load";
 import type { ResourceObservation } from "../src/shared/resources";
@@ -70,7 +70,8 @@ const declared = (kind: CrewPlaceKind) => ({
 /** A computer's line and its task channel, as the app opens them. */
 async function computerLine() {
   const dir = scratchDir("infinitary-heavy-run-");
-  const line = new LoadLine({ stateFile: join(dir, "load.json") });
+  const groupExists = vi.fn(loadGroupExists);
+  const line = new LoadLine({ stateFile: join(dir, "load.json"), groupExists });
   const channel = await AxiChannel.open({
     spawner: forkChildProcess(entry),
     binDir: bin,
@@ -91,7 +92,7 @@ async function computerLine() {
   };
   const runs = () =>
     line.snapshot().runs.map(({ taskId, state, demand }) => ({ taskId, state, demand }));
-  return { line, shell, runs };
+  return { line, shell, runs, groupExists };
 }
 
 /**
@@ -133,7 +134,7 @@ function start(command: string, args: string[], env: NodeJS.ProcessEnv, detached
 
 describe("a local heavy run in this computer's load line", () => {
   it("a local journey run waits with its declared needs before any test starts, then holds them until it ends", async () => {
-    const { line, shell, runs } = await computerLine();
+    const { line, shell, runs, groupExists } = await computerLine();
     const fixtures = join(__dirname, "fixtures", "run-evidence");
     const log = join(scratchDir("infinitary-heavy-journey-"), "started.log");
     writeFileSync(log, "");
@@ -163,9 +164,15 @@ describe("a local heavy run in this computer's load line", () => {
       expect(readFileSync(log, "utf8")).toBe("");
       line.observe(reading, null);
       await expect.poll(() => readFileSync(log, "utf8")).toBe("held\n");
+      // INF-1700: dash ended the hold at admission. A stale snapshot could pass
+      // until the line checked the group, so witness that real check while the
+      // journey is still waiting for its release file, even on an idle host.
+      groupExists.mockClear();
+      await expect.poll(() => runs().length === 0 || groupExists.mock.calls.length > 0).toBe(true);
       expect(runs()).toEqual([
         { taskId: "journeys", state: "running", demand: declared("journeys") },
       ]);
+      expect(groupExists.mock.results.every(({ value }) => value === true)).toBe(true);
       writeFileSync(release, "go");
       expect(await run.exited).toBe(0);
       await expect.poll(runs).toEqual([]);
@@ -210,6 +217,36 @@ describe("a local heavy run in this computer's load line", () => {
       }
     },
   );
+
+  // INF-1700: the dash watcher must keep the input pipe and terminate the
+  // waiting process group when its gate dies, before admission can happen.
+  it("a local heavy gate stopped while waiting gives its place back without admission", async () => {
+    const { shell, runs } = await computerLine();
+    const gate = start(
+      process.execPath,
+      [
+        "--input-type=module",
+        "-e",
+        `
+import { takeHeavyRunPlace } from ${JSON.stringify(module)};
+await takeHeavyRunPlace("journeys", "journeys");
+setInterval(() => {}, 60000);
+`,
+      ],
+      shell("journeys"),
+    );
+    try {
+      await expect
+        .poll(runs)
+        .toEqual([{ taskId: "journeys", state: "waiting", demand: declared("journeys") }]);
+      gate.child.kill("SIGKILL");
+      await gate.exited;
+      await expect.poll(runs).toEqual([]);
+      expect(gate.output()).not.toContain(heavyRunWords.admitted("journeys"));
+    } finally {
+      gate.child.kill("SIGKILL");
+    }
+  });
 
   it("a run that dies while it holds its place gives the place back", async () => {
     const { line, shell, runs } = await computerLine();

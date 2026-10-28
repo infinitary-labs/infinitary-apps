@@ -177,6 +177,7 @@ Inside CI the job already holds its runner's place and asks for none.
 A phone part the gate starts rides the gate's place.
 
 Where the shell has this computer's load line, the run declares its needs there through `infinitary-load-axi run` and holds them until it ends (`docs/heavy-runs.md`).
+The supervisor preserves the gate's input pipe on a separate descriptor before starting background children, including under dash; closing that pipe ends an admitted hold or terminates a still-waiting group.
 A phone gate declares 4 processors and 8192 MiB and a journey run 4 processors and 4096 MiB, the shares the Mac mini's crew places reserve, which include the simulators launchd starts outside the run's process group (INF-1664).
 The run prints the line's facts while it waits and says when it is admitted.
 A run that ends or dies gives its hold back.

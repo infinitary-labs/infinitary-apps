@@ -1,6 +1,8 @@
 import { execFileSync, spawnSync } from "node:child_process";
+import { createHash } from "node:crypto";
 import {
   chmodSync,
+  cpSync,
   existsSync,
   lstatSync,
   mkdirSync,
@@ -1831,15 +1833,21 @@ describe("signed release workflow", () => {
     expect(
       new Set(expressions.map((expression) => workflowValue(expression, { secrets }))),
     ).toEqual(new Set(Object.values(secrets)));
-    // Storage credentials belong only to the upload/switch recipients, never rehearsal or public fetch-back.
+    // Storage credentials belong only to the upload/switch recipients, never rehearsal or public fetch-back,
+    // all in the publication job since INF-1716.
+    const publication = (id: string) => {
+      const found = parsed.jobs.publish?.steps?.find((step) => step.id === id);
+      if (!found) throw new Error(`release.yml's publication job has no step "${id}"`);
+      return found;
+    };
     for (const id of ["public", "feeds"]) {
-      const environment = parsed.jobs.release?.steps?.find((step) => step.id === id)?.env;
+      const environment = publication(id).env;
       for (const name of ["R2_ENDPOINT", "R2_ACCESS_KEY_ID", "R2_SECRET_ACCESS_KEY"]) {
         expect(workflowValue(environment?.[name] ?? "", { secrets })).toBe(secrets[name]);
       }
     }
     for (const id of ["feed-rehearsal", "public-fetch-back"]) {
-      const environment = parsed.jobs.release?.steps?.find((step) => step.id === id)?.env ?? {};
+      const environment = publication(id).env ?? {};
       expect(Object.keys(environment)).not.toContain("R2_ENDPOINT");
       expect(Object.keys(environment)).not.toContain("R2_ACCESS_KEY_ID");
       expect(Object.keys(environment)).not.toContain("R2_SECRET_ACCESS_KEY");
@@ -2419,6 +2427,9 @@ describe("the signed channel workflow", () => {
     secrets?: unknown;
     "runs-on"?: string;
     strategy?: { matrix: Record<string, string> };
+    env?: Record<string, string>;
+    outputs?: Record<string, string>;
+    permissions?: Record<string, string>;
     steps?: Step[];
   };
   type Workflow = {
@@ -2435,10 +2446,15 @@ describe("the signed channel workflow", () => {
     if (!job) throw new Error(`no job "${id}"`);
     return job;
   };
-  const steps = jobOf(release, "release").steps ?? [];
+  // INF-1716: the signing job ends at the checked disk image, and the
+  // publication job continues from its handoff; a release's operations are
+  // the signing job's steps followed by the publication job's.
+  const signingSteps = jobOf(release, "release").steps ?? [];
+  const publishSteps = jobOf(release, "publish").steps ?? [];
+  const steps = [...signingSteps, ...publishSteps];
   const step = (id: string) => {
     const found = steps.find((candidate) => (candidate.id ?? candidate.name) === id);
-    if (!found) throw new Error(`release.yml's signing job has no step "${id}"`);
+    if (!found) throw new Error(`release.yml's signing and publication jobs have no step "${id}"`);
     return found;
   };
   const lane = jobOf(verify, "lane");
@@ -2492,6 +2508,7 @@ describe("the signed channel workflow", () => {
       "linux",
       "installer",
       "release",
+      "publish",
       "old-cask-upgrade",
     ]);
     const runner = (name: string) =>
@@ -2623,6 +2640,377 @@ describe("the signed channel workflow", () => {
         }
       }
     }
+  });
+
+  // INF-1716, the captain's "After the disk-image check": the real Mac signs
+  // through the checked disk image, and one existing virtual Mac publishes
+  // from the signing job's handoff, only once that job succeeded.
+  it("publishes only after the signing job succeeded, in one virtual Mac, from its handoff", () => {
+    const publish = jobOf(release, "publish");
+    expect(publish.needs).toEqual(["resolve", "release"]);
+    expect(publish["runs-on"]).toBe("mini-mac-virtual");
+    for (const result of ["success", "failure", "cancelled", "skipped"]) {
+      for (const cancelled of [false, true]) {
+        const needs = { resolve: { result: "success" }, release: { result } };
+        expect(
+          workflowValue(
+            publish.if ?? "",
+            { needs },
+            { success: result === "success", failure: false, always: true, cancelled },
+          ),
+          `${result}${cancelled ? ", run cancelled" : ""}`,
+        ).toBe(result === "success" && !cancelled);
+      }
+    }
+    // Its checkout keeps no credential, and it holds only the access its moves need.
+    expect(publishSteps[0]).toMatchObject({
+      uses: "actions/checkout@v4",
+      with: {
+        // biome-ignore lint/suspicious/noTemplateCurlyInString: the workflow's own expression, matched literally.
+        ref: "${{ needs.resolve.outputs.source_commit }}",
+        "persist-credentials": false,
+      },
+    });
+    expect(publish.permissions).toEqual({ contents: "write", actions: "read" });
+    // The handoff is stored as is, one artifact per producer attempt, and
+    // fetched by the immutable id the signing job recorded.
+    const upload = step("handoff-upload");
+    expect(upload).toMatchObject({
+      uses: "actions/upload-artifact@v4",
+      with: {
+        // biome-ignore lint/suspicious/noTemplateCurlyInString: the workflow's own expression, matched literally.
+        name: "${{ steps.handoff.outputs.name }}",
+        "compression-level": 0,
+        "if-no-files-found": "error",
+      },
+    });
+    const fetch = publishSteps.find((candidate) => candidate.name === "Fetch the checked files");
+    expect(fetch).toMatchObject({
+      uses: "actions/download-artifact@v4",
+      // biome-ignore lint/suspicious/noTemplateCurlyInString: the workflow's own expression, matched literally.
+      with: { "artifact-ids": "${{ needs.release.outputs.handoff_id }}" },
+    });
+    expect(publishSteps.indexOf(fetch as Step)).toBeLessThan(
+      publishSteps.indexOf(step("handoff-check")),
+    );
+    // Nothing that publishes or holds a publication credential comes before the validation.
+    const checked = publishSteps.indexOf(step("handoff-check"));
+    for (const candidate of publishSteps.slice(0, checked))
+      expect(
+        PUBLISHES.test(candidate.run ?? "") ||
+          PUBLICATION_TOKEN.test(JSON.stringify(candidate.env ?? {})),
+        candidate.name,
+      ).toBe(false);
+    const outputs = jobOf(release, "release").outputs ?? {};
+    expect(outputs).toEqual({
+      // biome-ignore lint/suspicious/noTemplateCurlyInString: the workflow's own expression, matched literally.
+      handoff_id: "${{ steps.handoff-upload.outputs.artifact-id }}",
+      // biome-ignore lint/suspicious/noTemplateCurlyInString: the workflow's own expression, matched literally.
+      handoff_name: "${{ steps.handoff.outputs.name }}",
+      // biome-ignore lint/suspicious/noTemplateCurlyInString: the workflow's own expression, matched literally.
+      handoff_manifest: "${{ steps.handoff.outputs.manifest }}",
+      // biome-ignore lint/suspicious/noTemplateCurlyInString: the workflow's own expression, matched literally.
+      sha256: "${{ steps.handoff.outputs.sha256 }}",
+      // biome-ignore lint/suspicious/noTemplateCurlyInString: the workflow's own expression, matched literally.
+      direct: "${{ steps.handoff.outputs.direct }}",
+    });
+    // The signing job keeps its keychain cleanup on every exit, after its handoff.
+    const cleanup = signingSteps.at(-1);
+    expect(cleanup?.name).toBe("Remove the signing keychain");
+    expect(cleanup?.if).toBe("always()");
+    expect(signingSteps.indexOf(step("handoff-upload"))).toBeLessThan(signingSteps.length - 1);
+  });
+
+  /**
+   * The handoff's two ends as Actions runs them: the signing job's step
+   * writes the files and manifest, the artifact carries them unchanged, and
+   * the publication job's step accepts them or refuses before any effect.
+   * Readings from release run 40651382197, alpha 0.6.1-alpha.30, whose
+   * Linux files the release's own renderer lays out here.
+   */
+  describe("the handoff between the signing and publication jobs", () => {
+    const version = "0.6.1-alpha.30";
+    const source = "2e1588dc71ecc13f6695114b0c852049c4d3fe7c";
+    const workflowSha = "28d2fcb16ddcd5bffe26db7587e084d212d253b6";
+    const runId = "40651382197";
+    const bytes = readFileSync(join(root, "packaging/build/icon.png"));
+    const resolveOutputs = (overrides: Record<string, string> = {}) => ({
+      channel: "alpha",
+      dry_run: "false",
+      source_commit: source,
+      version,
+      tag_name: `v${version}`,
+      zip_name: `Infinitary-${version}-universal.zip`,
+      old_cask: "true",
+      ...overrides,
+    });
+    const run = (script: string, env: Record<string, string>) =>
+      spawnSync("bash", ["--noprofile", "--norc", "-e", "-c", script], {
+        encoding: "utf8",
+        env: { PATH: process.env.PATH, ...env },
+      });
+    const outputsOf = (file: string) =>
+      Object.fromEntries(
+        readFileSync(file, "utf8")
+          .trim()
+          .split("\n")
+          .map((line) => [line.slice(0, line.indexOf("=")), line.slice(line.indexOf("=") + 1)]),
+      );
+    const jobEnv = (id: string, resolve: Record<string, string>) =>
+      Object.fromEntries(
+        Object.entries(jobOf(release, id).env ?? {}).map(([name, value]) => [
+          name,
+          workflowString(value, { needs: { resolve: { outputs: resolve } } }),
+        ]),
+      );
+    const stepEnv = (found: Step, contexts: Record<string, unknown>) =>
+      Object.fromEntries(
+        Object.entries(found.env ?? {}).map(([name, value]) => [
+          name,
+          workflowString(value, contexts),
+        ]),
+      );
+
+    /** The signing job's handoff step on a run's files; its outputs and the job's. */
+    const produce = (options: {
+      dryRun?: boolean;
+      direct?: boolean;
+      adopted?: boolean;
+      attempt?: string;
+    }) => {
+      const { dryRun = false, direct = true, adopted = false, attempt = "1" } = options;
+      const temp = scratchDir("infinitary-handoff-signing-");
+      const resolve = resolveOutputs({ dry_run: String(dryRun) });
+      const env = jobEnv("release", resolve);
+      mkdirSync(join(temp, "dist"));
+      const distZip = join(temp, "dist", env.ZIP_NAME ?? "");
+      writeFileSync(distZip, bytes);
+      // A retry's record keeps the bytes published first, which differ from its rebuild.
+      const recorded = adopted
+        ? join(temp, "private-release", "published", env.ZIP_NAME ?? "")
+        : distZip;
+      if (adopted) {
+        mkdirSync(dirname(recorded), { recursive: true });
+        writeFileSync(recorded, Buffer.concat([bytes, Buffer.from("published first")]));
+      }
+      const sha = (file: string) => createHash("sha256").update(readFileSync(file)).digest("hex");
+      const packages = join(temp, "linux-packages");
+      mkdirSync(packages);
+      for (const name of [
+        `infinitary-${version}-linux-amd64.deb`,
+        `infinitary-${version}-linux-x86_64.rpm`,
+        `Infinitary-${version}-linux-x86_64.AppImage`,
+      ])
+        writeFileSync(join(packages, name), bytes);
+      execFileSync(process.execPath, [
+        join(root, "scripts/linux-recipes.ts"),
+        "release",
+        "--version",
+        version,
+        "--packages",
+        packages,
+        "--out",
+        join(temp, "linux-release"),
+      ]);
+      const builtDmg = dryRun || direct;
+      const dmg = join(temp, "dmg", env.DMG_NAME ?? "");
+      if (builtDmg) {
+        mkdirSync(dirname(dmg));
+        writeFileSync(dmg, Buffer.concat([bytes, Buffer.from("disk image")]));
+      }
+      const steps = {
+        private: dryRun ? {} : { outputs: { zip: recorded, sha256: sha(recorded) } },
+        checksum: { outputs: { sha256: sha(distZip) } },
+        dmg: { outputs: builtDmg ? { path: dmg } : {} },
+        visibility: { outputs: dryRun ? {} : { direct: String(direct) } },
+      };
+      const output = join(temp, "output");
+      const result = run(step("handoff").run ?? "", {
+        ...env,
+        ...stepEnv(step("handoff"), {
+          steps,
+          needs: { resolve: { outputs: resolve } },
+          github: { run_id: runId, run_attempt: attempt, sha: workflowSha },
+        }),
+        RUNNER_TEMP: temp,
+        GITHUB_OUTPUT: output,
+        dist_zip: distZip,
+      });
+      expect(result.status, result.stderr).toBe(0);
+      const handoff = outputsOf(output);
+      const job = Object.fromEntries(
+        Object.entries(jobOf(release, "release").outputs ?? {}).map(([name, value]) => [
+          name,
+          workflowString(value, {
+            steps: {
+              handoff: { outputs: handoff },
+              "handoff-upload": { outputs: { "artifact-id": "4711" } },
+            },
+          }),
+        ]),
+      );
+      return { temp, handoff, job, resolve, recorded, dmg, linux: join(temp, "linux-release") };
+    };
+
+    /** The artifact as the publication job fetches it, then its validation step. */
+    const consume = (
+      produced: ReturnType<typeof produce>,
+      options: {
+        alter?: (download: string) => void;
+        resolve?: Record<string, string>;
+        job?: Record<string, string>;
+        github?: Record<string, string>;
+      } = {},
+    ) => {
+      const temp = scratchDir("infinitary-handoff-publication-");
+      const download = join(temp, "handoff-download");
+      cpSync(produced.handoff.path ?? "", download, { recursive: true });
+      options.alter?.(download);
+      const resolve = options.resolve ?? produced.resolve;
+      const contexts = {
+        needs: {
+          resolve: { outputs: resolve },
+          release: { outputs: { ...produced.job, ...options.job } },
+        },
+        github: { run_id: runId, run_attempt: "1", sha: workflowSha, ...options.github },
+      };
+      const output = join(temp, "output");
+      const result = run(step("handoff-check").run ?? "", {
+        ...jobEnv("publish", resolve),
+        ...stepEnv(step("handoff-check"), contexts),
+        RUNNER_TEMP: temp,
+        GITHUB_OUTPUT: output,
+      });
+      return { temp, result, outputs: existsSync(output) ? outputsOf(output) : {} };
+    };
+    const accepted = (consumed: ReturnType<typeof consume>) => {
+      expect(consumed.result.status, consumed.result.stderr).toBe(0);
+      return consumed.outputs;
+    };
+    const refused = (consumed: ReturnType<typeof consume>, reason: RegExp) => {
+      expect(consumed.result.status).not.toBe(0);
+      expect(consumed.result.stderr).toMatch(/Refusing the handoff: /);
+      expect(consumed.result.stderr).toMatch(reason);
+      // Nothing was laid out for publication to read.
+      expect(consumed.outputs).toEqual({});
+      expect(existsSync(join(consumed.temp, "handoff"))).toBe(false);
+    };
+
+    it("hands publication the record's zip, the checked image and the finalized Linux files, byte for byte", () => {
+      const produced = produce({ adopted: true });
+      expect(produced.job.handoff_id).toBe("4711");
+      expect(produced.job.handoff_name).toBe("release-handoff-1");
+      expect(produced.job.direct).toBe("true");
+      const outputs = accepted(consume(produced));
+      // The previously published zip wins over the retry's rebuild.
+      expect(readFileSync(outputs.zip ?? "")).toEqual(readFileSync(produced.recorded));
+      expect(produced.job.sha256).toBe(
+        createHash("sha256").update(readFileSync(produced.recorded)).digest("hex"),
+      );
+      expect(readFileSync(outputs.dmg ?? "")).toEqual(readFileSync(produced.dmg));
+      const linux = join(dirname(outputs.zip ?? ""), "..", "linux-release");
+      expect(readdirSync(linux).sort()).toEqual(readdirSync(produced.linux).sort());
+      for (const name of readdirSync(produced.linux))
+        expect(readFileSync(join(linux, name)), name).toEqual(
+          readFileSync(join(produced.linux, name)),
+        );
+      // Only the allowlist travels: no app, workspace or environment.
+      expect(readdirSync(produced.handoff.path ?? "").sort()).toEqual([
+        "dmg",
+        "linux",
+        "manifest.json",
+        "zip",
+      ]);
+      expect(readFileSync(join(produced.handoff.path ?? "", "manifest.json"), "utf8")).not.toMatch(
+        /secret|TOKEN|KEY/,
+      );
+    });
+
+    it("hands no disk image without direct downloads, and a rehearsal's checked zip and image", () => {
+      const homebrewOnly = accepted(consume(produce({ direct: false })));
+      expect(homebrewOnly.dmg).toBe("");
+      const rehearsal = produce({ dryRun: true });
+      expect(rehearsal.job.direct).toBe("false");
+      expect(accepted(consume(rehearsal)).dmg).toMatch(/mac-universal\.dmg$/);
+    });
+
+    it("lets a publication-only rerun reuse an earlier attempt's handoff, and refuses one from a later attempt", () => {
+      const produced = produce({ attempt: "1" });
+      expect(accepted(consume(produced, { github: { run_attempt: "2" } })).attempt).toBe("1");
+      const rerun = produce({ attempt: "3" });
+      expect(rerun.job.handoff_name).toBe("release-handoff-3");
+      refused(consume(rerun, { github: { run_attempt: "2" } }), /attempt 3 is not of this run/);
+      refused(consume(produced, { job: { handoff_name: "release-handoff-2" } }), /not attempt 1's/);
+    });
+
+    it.each([
+      [
+        "an altered zip",
+        (dir: string) =>
+          writeFileSync(join(dir, "zip", `Infinitary-${version}-universal.zip`), "altered"),
+        /zip\/Infinitary-.* is not the file the signing job checked/,
+      ],
+      [
+        "an altered image",
+        (dir: string) =>
+          writeFileSync(join(dir, "dmg", `Infinitary-${version}-mac-universal.dmg`), "altered"),
+        /dmg\/.* is not the file/,
+      ],
+      [
+        "a missing Linux file",
+        (dir: string) => rmSync(join(dir, "linux", "SHA256SUMS")),
+        /missing \["linux\/SHA256SUMS"\]/,
+      ],
+      [
+        "an extra file",
+        (dir: string) => writeFileSync(join(dir, "zip", "unlisted.zip"), "extra"),
+        /extra \["zip\/unlisted\.zip"\]/,
+      ],
+      [
+        "an edited manifest",
+        (dir: string) =>
+          writeFileSync(
+            join(dir, "manifest.json"),
+            readFileSync(join(dir, "manifest.json"), "utf8").replace(
+              '"channel": "alpha"',
+              '"channel": "stable"',
+            ),
+          ),
+        /manifest is not the one the signing job recorded/,
+      ],
+    ])("refuses %s before any effect", (_name, alter, reason) => {
+      refused(consume(produce({}), { alter }), reason);
+    });
+
+    it("refuses a handoff from another release, run or workflow revision", () => {
+      const produced = produce({});
+      refused(
+        consume(produced, {
+          resolve: resolveOutputs({
+            version: "0.6.1-alpha.31",
+            zip_name: "Infinitary-0.6.1-alpha.31-universal.zip",
+          }),
+        }),
+        /its version is "0\.6\.1-alpha\.30"/,
+      );
+      refused(
+        consume(produced, { resolve: resolveOutputs({ source_commit: "f".repeat(40) }) }),
+        /its source is/,
+      );
+      refused(
+        consume(produced, { resolve: resolveOutputs({ channel: "stable" }) }),
+        /its channel is "alpha", not "stable"/,
+      );
+      refused(
+        consume(produced, { resolve: resolveOutputs({ old_cask: "false" }) }),
+        /its oldCask is true, not false/,
+      );
+      refused(consume(produced, { github: { run_id: "40651382198" } }), /its run is "40651382197"/);
+      refused(consume(produced, { github: { sha: "e".repeat(40) } }), /its workflow is/);
+      refused(consume(produced, { job: { direct: "false" } }), /its direct is true, not false/);
+      refused(consume(produced, { job: { sha256: "0".repeat(64) } }), /its sha256 is/);
+      refused(consume(produced, { job: { handoff_manifest: "" } }), /manifest is not the one/);
+    });
   });
 
   it("inherits the published alpha's run, found by its number, only when both lanes passed in its latest attempt, and refuses the stable otherwise", async () => {
@@ -2825,6 +3213,10 @@ describe("the signed channel workflow", () => {
     );
     expect(steps[firstSecret]?.name).toBe("Restore App Store Connect API key");
     expect(steps.indexOf(step("build"))).toBeLessThan(firstSecret);
+    // Apple signing material stays in the signing job; publication holds none.
+    expect(JSON.stringify(jobOf(release, "publish"))).not.toMatch(
+      /secrets\.(MAC_DEVELOPER_ID|APP_STORE_CONNECT)|CSC_KEYCHAIN|keychain/,
+    );
   });
 
   it("checks the release notes before anything verifies or signs, and packages exactly that catalog", () => {
@@ -2992,32 +3384,43 @@ describe("the signed channel workflow", () => {
     /gh release (create|upload)|publish-release-asset\.sh|publish-(?:tap|feeds)\.sh live|publish-downloads\.ts|git push/;
   const PUBLICATION_TOKEN =
     /secrets\.(GITHUB_TOKEN|R2_ACCESS_KEY_ID|R2_SECRET_ACCESS_KEY|HOMEBREW_TAP_TOKEN|OLD_TAP_TOKEN)/;
-  /** The steps of a passing run of a channel, live or rehearsed, in order. */
-  const ranSteps = (channel: string, dryRun: boolean, oldCask = false, direct = true) =>
-    steps.filter(
-      (candidate) =>
-        candidate.if === undefined ||
-        workflowValue(candidate.if, {
-          needs: {
-            resolve: {
-              outputs: {
-                channel,
-                dry_run: String(dryRun),
-                old_cask: String(oldCask),
-                release_repository: releaseSource.repository,
-              },
-            },
-          },
-          github: { repository: releaseSource.repository },
-          steps: Object.fromEntries(
-            steps.flatMap((each) =>
-              each.id
-                ? [[each.id, { outcome: "success", outputs: { direct: String(direct) } }]]
-                : [],
+  /**
+   * The steps of a passing run of a channel, live or rehearsed, in order:
+   * the signing job's, then the publication job's when it starts after them.
+   */
+  const ranSteps = (channel: string, dryRun: boolean, oldCask = false, direct = true) => {
+    const needs = {
+      resolve: {
+        result: "success",
+        outputs: {
+          channel,
+          dry_run: String(dryRun),
+          old_cask: String(oldCask),
+          release_repository: releaseSource.repository,
+        },
+      },
+      // The signing job hands on what its visibility step chose.
+      release: { result: "success", outputs: { direct: String(dryRun ? false : direct) } },
+    };
+    const ran = (jobSteps: Step[]) =>
+      jobSteps.filter(
+        (candidate) =>
+          candidate.if === undefined ||
+          workflowValue(candidate.if, {
+            needs,
+            github: { repository: releaseSource.repository },
+            steps: Object.fromEntries(
+              jobSteps.flatMap((each) =>
+                each.id
+                  ? [[each.id, { outcome: "success", outputs: { direct: String(direct) } }]]
+                  : [],
+              ),
             ),
-          ),
-        }) === true,
-    );
+          }) === true,
+      );
+    const publishes = workflowValue(jobOf(release, "publish").if ?? "", { needs }) === true;
+    return [...ran(signingSteps), ...(publishes ? ran(publishSteps) : [])];
+  };
 
   it.each(["stable", "alpha"])("rehearses %s's whole profile and publishes nothing", (channel) => {
     const ran = ranSteps(channel, true);
@@ -3037,10 +3440,20 @@ describe("the signed channel workflow", () => {
         "zip",
         "checksum",
         "dmg",
+        "handoff",
+        "handoff-upload",
+        "handoff-check",
+        "tap-rehearsal",
+        "old-tap-rehearsal",
         "feed-rehearsal",
         "Keep the rehearsed release metadata",
         "Summarize",
+        "Summarize the publication",
       ]),
+    );
+    // A rehearsal's feeds are written from the checked image it handed over.
+    expect(step("feed-rehearsal").run).toContain(
+      'DIST_ZIP="${{ steps.handoff-check.outputs.zip }}" DIST_DMG="${{ steps.handoff-check.outputs.dmg }}"',
     );
     // The feed rehearsal may read a not-yet-public repository, but cannot publish.
     expect(step("feed-rehearsal").run).toContain("scripts/publish-feeds.sh rehearsal");
@@ -3085,15 +3498,23 @@ describe("the signed channel workflow", () => {
         expect(ran).toEqual(
           expect.arrayContaining(["homebrew-public", "homebrew-fetch-back", "tap"]),
         );
+        // The signing job ends after the image and its handoff; publication
+        // starts by validating that handoff, before any effect.
+        expect(ran.indexOf("handoff")).toBeGreaterThan(ran.indexOf(direct ? "dmg" : "private"));
+        expect(ran.indexOf("handoff-check")).toBeGreaterThan(ran.indexOf("handoff-upload"));
+        expect(ran.indexOf("handoff-check")).toBeLessThan(
+          ran.indexOf(direct ? "recorded-dmg" : "private-fetch-back"),
+        );
         expect(ran.indexOf("homebrew-fetch-back")).toBeGreaterThan(ran.indexOf("homebrew-public"));
         expect(ran.indexOf("tap")).toBeGreaterThan(ran.indexOf("homebrew-fetch-back"));
         expect(ran).not.toContain("tap-rehearsal");
       }
       expect(JSON.stringify(step("public-fetch-back").env)).not.toContain("secrets.");
-      expect(step("public").env?.DIST_ZIP).toBe("${{ steps.private.outputs.zip }}");
+      // Publication reads the validated handoff's zip, the record's own (INF-1716).
+      expect(step("public").env?.DIST_ZIP).toBe("${{ steps.handoff-check.outputs.zip }}");
       expect(step("public").env?.DIST_DMG).toBe("${{ steps.recorded-dmg.outputs.zip }}");
       for (const id of ["private-fetch-back", "public-fetch-back"])
-        expect(step(id).env?.ARTIFACT_SHA256).toBe("${{ steps.private.outputs.sha256 }}");
+        expect(step(id).env?.ARTIFACT_SHA256).toBe("${{ needs.release.outputs.sha256 }}");
       expect(
         steps
           .filter(
@@ -3281,15 +3702,18 @@ describe("the old-cask upgrade check (INF-884)", () => {
   const check = upgrade.jobs.upgrade as Job;
 
   it("runs after a live release that switched the cask, at that release, and after no other", () => {
-    const runs = (outputs: Record<string, string>) =>
+    const runs = (outputs: Record<string, string>, publish = "success") =>
       workflowValue(call.if ?? "", {
-        needs: { resolve: { outputs }, release: { result: "success" } },
+        needs: { resolve: { outputs }, publish: { result: publish } },
       });
-    expect(call.needs).toEqual(["resolve", "release"]);
+    // INF-1716: it waits for the publication itself, not merely the signing.
+    expect(call.needs).toEqual(["resolve", "publish"]);
     expect(call.uses).toBe("./.github/workflows/old-cask-upgrade.yml");
     expect(runs({ dry_run: "false", old_cask: "true" })).toBe(true);
     expect(runs({ dry_run: "true", old_cask: "true" })).toBe(false);
     expect(runs({ dry_run: "false", old_cask: "false" })).toBe(false);
+    for (const publish of ["failure", "cancelled", "skipped"])
+      expect(runs({ dry_run: "false", old_cask: "true" }, publish), publish).toBe(false);
     const passed = (name: string) =>
       workflowValue(call.with?.[name] ?? "", {
         needs: {
@@ -3717,14 +4141,13 @@ describe("the private alpha (roadmap 1.2)", () => {
 
   it("publishes the selected source's finalized downloads and verifies them without a sign-in", () => {
     const workflow = loadYamlFile(".github/workflows/release.yml") as {
-      jobs: {
-        release: {
-          env: Record<string, string>;
-          steps: { id?: string; env?: Record<string, string> }[];
-        };
-      };
+      jobs: Record<
+        "release" | "publish",
+        { env: Record<string, string>; steps: { id?: string; env?: Record<string, string> }[] }
+      >;
     };
     const job = workflow.jobs.release;
+    const publication = workflow.jobs.publish;
     const context = {
       needs: {
         resolve: {
@@ -3738,7 +4161,9 @@ describe("the private alpha (roadmap 1.2)", () => {
     };
     expect(workflowValue(job.env.PUBLIC_TAG ?? "", context)).toBe("v1.2.3");
     expect(workflowValue(job.env.RELEASE_REPOSITORY ?? "", context)).toBe(releaseSource.repository);
-    const publicRead = job.steps.find((step) => step.id === "public-fetch-back");
+    // The publication job publishes under the same names (INF-1716).
+    expect(publication.env).toEqual(job.env);
+    const publicRead = publication.steps.find((step) => step.id === "public-fetch-back");
     expect(Object.keys(publicRead?.env ?? {})).toEqual(["ARTIFACT_SHA256"]);
   });
 

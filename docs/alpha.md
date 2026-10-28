@@ -118,7 +118,7 @@ People who keep their Homebrew installation therefore continue using its usual u
 The switch lists `alpha` and `stable`; releases of either channel also update the corresponding older cask.
 
 - **The person's upgrade is checked.**
-  After a live switched release, `release.yml`'s `old-cask-upgrade` job runs the person's own update in a throwaway virtual Mac, the placement service's `mini-mac-virtual` (`old-cask-upgrade.yml`, `scripts/check-old-cask-upgrade.sh`).
+  After a live switched release's publication job succeeds, `release.yml`'s `old-cask-upgrade` job runs the person's own update in a throwaway virtual Mac, the placement service's `mini-mac-virtual` (`old-cask-upgrade.yml`, `scripts/check-old-cask-upgrade.sh`).
   It installs the cask as it stood before the switch and opens Firstmate 3000 once, so it makes saved work, then runs `brew update && brew upgrade --cask firstmate-3000@alpha`, or `firstmate-3000` for stable.
   `Firstmate 3000.app` must be gone and `Infinitary.app` there with the marker above, and Infinitary's first launch must move the saved work and keep the marker (`scripts/check-saved-work-move.sh`).
   The app must report the version the release published.
@@ -158,7 +158,8 @@ The switch lists `alpha` and `stable`; releases of either channel also update th
   `scripts/check-app-launch.sh <app> <logical version>` proves them separately at every launch gate - the built app, the distribution zip, and both fetched-back copies: the two fields from the bundle, the logical version by asking the running app, on a throwaway profile, through its own healthcheck over Chromium's debugging port (`scripts/app-runtime-version.mjs`).
 - **Linux in every release.**
   The `linux` job calls `linux-packages.yml` at the release's version on its one source commit, with the notes job's catalog, for both channels, a stable promotion included: it builds the Linux packages and installs and opens each on a clean copy of its system (`docs/linux-packages.md`) while verify runs.
-  The signing job waits for it, lays out the Linux files (`linux-files`) and publishes them inside the same publication steps as the zip: the source record adopts any package a retry finds already published, the public release must match the record byte for byte, and both fetch-backs - the public one without a credential - compare every file and its sidecar before the feed commit writes the builds file.
+  The signing job waits for it, lays out the Linux files (`linux-files`) and records them in the source record beside the zip, adopting any package a retry finds already published.
+  The publication job publishes them inside the same publication steps as the zip: the public release must match the record byte for byte, and both fetch-backs - the public one without a credential - compare every file and its sidecar before the feed commit writes the builds file.
 - **Full alpha checks, inherited stable checks (FI3-482).**
   Every alpha, including a rehearsal, runs verify.yml's `linux-checks`, `linux-e2e` and `mac` lanes: hosted Linux typecheck, lint, adherence lint, unit tests and build; every Playwright journey on hosted Linux, in shards (`docs/testing.md`, "The Linux source desktop"); macOS unit tests, every Playwright journey, the installed Claude client check, the replay gate, and the development package with its signature, data-folder and bundled-git checks.
   The release also runs `mac-installer.yml` in disposable Actions Macs, checking the signed installer and native updater on Apple silicon and Intel.
@@ -175,6 +176,16 @@ The switch lists `alpha` and `stable`; releases of either channel also update th
   An API error stops resolution rather than inventing assurance.
   The signing job is the same for both channels and repeats none of the lanes' checks: it checks public-download visibility and updater capability, then builds, performs Developer ID signing, signed-app, launch and data-folder gates, notarization and stapling, the distribution zip's Gatekeeper and launch gates and checksum.
   Stable rebuilds new bytes, so all publication and fetch-back gates stay.
+- **Signing on the real Mac, publication in a virtual Mac (INF-1716).**
+  The signing job runs on the real Mac through the source record and the checked disk image, then hands off and frees it.
+  Its handoff is one uncompressed Actions artifact per attempt: the recorded zip, the finalized Linux files and, when one was built, the checked disk image, with a manifest of the run, attempt, workflow revision, source, channel, version, download mode, and each file's size and checksum.
+  It never carries the app, the workspace, a credential or the environment; the artifact's id and the manifest's checksum are the signing job's outputs.
+  The `publish` job starts only after the signing job succeeded, in one disposable virtual Mac from the placement service's existing pool (`mini-mac-virtual`); it waits for a free place and never falls back to the real Mac.
+  Before any effect it validates the handoff: the manifest is the recorded one, names this run, an attempt no later than this one, this workflow revision and this release, and the files are exactly those it lists, byte for byte.
+  Then it records the disk image and runs every later step in its existing order: the record's fetch-back, Cloudflare, Homebrew, the casks, the old-cask switch and the feeds, or a rehearsal's tap and feed rehearsals.
+  Every Mac check there - signature, Gatekeeper, launch and version, the disk image against the zip - still runs, never replaced by a checksum; the job holds no Apple signing material, and each destination's credential stays on its own steps.
+  Rerunning only the publication job reuses the signing job's handoff from whichever attempt produced it; rerunning the signing job hands off anew, and the record's immutable adoption still decides which bytes publish.
+  The handoff code lives in the workflow itself, so an older alpha promoted to stable needs none of it in its source.
 - **Release notes are checked first (`docs/release-notes.md`).**
   The `notes` job runs before `verify` or any signing, on the resolved source with full history.
   The candidate is the reviewed source: the job hands it to the check, which refuses a live alpha without it.

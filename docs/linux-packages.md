@@ -105,7 +105,7 @@ A Mac and a run from source never ask, and the app started by a command says the
 
 `linux-packages.yml` runs on a pull request that changes how the packages are made, on demand, and inside every release, where `release.yml`'s `linux` job calls it with the release's source commit and version.
 There it builds with the notes job's verified catalog and the release's diagnostics settings, and verifies the packaged catalog, as the Mac build does.
-It keeps the packages, the two rendered recipes and `SHA256SUMS` as the run's `linux-packages` artifact for 30 days; the workflow itself uploads them nowhere else, and only a release's signing job publishes the files it checked.
+It keeps the packages, the two rendered recipes and `SHA256SUMS` as the run's `linux-packages` artifact for 30 days; the workflow itself uploads them nowhere else, and only a release's signing job records the files it checked, which its publication job then publishes.
 `scripts/check-linux-package.sh` then installs each one the way a person would, one job a system:
 
 - the Ubuntu package with apt on hosted Ubuntu 24.04 and 26.04 themselves, AppArmor's restriction on user namespaces left on;

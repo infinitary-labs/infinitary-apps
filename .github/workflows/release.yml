@@ -21,9 +21,16 @@ name: release
 # builds the Ubuntu and Fedora packages, the AppImage and each channel's Arch
 # recipe and Nix package at the release's version from the same source
 # commit, and checks each on a clean copy of its system; the signing job
-# publishes exactly those files beside the zip, fetches them back like the
-# zip, and writes the builds file keyed by system and chip in the same tap
-# commit (docs/alpha.md "Builds by system and chip").
+# records exactly those files beside the zip, and the publication job
+# publishes them, fetches them back like the zip, and writes the builds file
+# keyed by system and chip in the same tap commit (docs/alpha.md "Builds by
+# system and chip").
+#
+# Signing on the real Mac, publication in a virtual Mac (INF-1716;
+# docs/alpha.md): the signing job ends once the disk image passes its check
+# and hands its checked files to the publish job, which validates them and
+# runs every later publication step and download check in one disposable
+# virtual Mac, with no Apple signing material.
 #
 # The old-cask switch (docs/alpha.md "The old-cask switch"): for each channel
 # packaging/old-cask-switch.json lists - alpha since the rename's step 13,
@@ -31,7 +38,7 @@ name: release
 # Linux files under Firstmate 3000's names on its tap, and moves Firstmate
 # 3000's cask and frozen-schema update files to it, so the usual Firstmate
 # 3000 update installs Infinitary. A rehearsal writes what that switch would, always.
-# After a live release that switched the cask, the old-cask-upgrade job runs
+# After a live publication that switched the cask, the old-cask-upgrade job runs
 # that update in a throwaway virtual Mac, from Firstmate 3000 with saved work
 # to the Infinitary just published (old-cask-upgrade.yml); the linux job has
 # already installed the Ubuntu and Fedora packages over Firstmate 3000's.
@@ -346,7 +353,7 @@ jobs:
     # A plain name: a job skipped behind a red verify shows its name
     # unevaluated. The run's summary says the channel, the version and
     # whether it was a dry run.
-    name: Build, sign, notarize, and publish (a dry run publishes nothing)
+    name: Build, sign, notarize, and record (a dry run records nothing)
     needs: [resolve, notes, verify, linux, installer]
     if: ${{ always() && !cancelled() && needs.resolve.result == 'success' && needs.notes.result == 'success' && needs.linux.result == 'success' && ((needs.resolve.outputs.verify_required == 'true' && needs.verify.result == 'success' && needs.installer.result == 'success') || (needs.resolve.outputs.verify_required == 'false' && needs.verify.result == 'skipped' && needs.installer.result == 'skipped')) }}
     # INF-603: it signs with the captain's Developer ID certificate, so it
@@ -354,6 +361,14 @@ jobs:
     # REAL_MAC_RUNNER (docs/testing.md, "The real Mac's place").
     runs-on: ${{ vars.REAL_MAC_RUNNER || vars.MAC_RUNNER || 'macos-15' }}
     timeout-minutes: 90
+    # What the publication job reads: the checked files' artifact, its
+    # manifest's checksum, the zip's checksum and whether downloads are direct.
+    outputs:
+      handoff_id: ${{ steps.handoff-upload.outputs.artifact-id }}
+      handoff_name: ${{ steps.handoff.outputs.name }}
+      handoff_manifest: ${{ steps.handoff.outputs.manifest }}
+      sha256: ${{ steps.handoff.outputs.sha256 }}
+      direct: ${{ steps.handoff.outputs.direct }}
     env:
       CHANNEL: ${{ needs.resolve.outputs.channel }}
       DRY_RUN: ${{ needs.resolve.outputs.dry_run }}
@@ -709,12 +724,284 @@ jobs:
           (cd "$(dirname "$DIST_DMG")" && shasum -a 256 "$DMG_NAME" > "$DMG_NAME.sha256")
           echo "path=$DIST_DMG" >> "$GITHUB_OUTPUT"
 
+      # The handoff (INF-1716): the signing job ends at the checked disk image,
+      # and the publication job finishes in a virtual Mac. It hands over only
+      # what publication reads - the recorded zip, the finalized Linux files
+      # and, when one was built, the checked disk image - with a manifest
+      # binding them to this run, attempt, workflow revision and release.
+      # Never the unpacked app, the workspace, a credential or the environment.
+      - name: Prepare the checked files for publication
+        id: handoff
+        env:
+          RECORDED_ZIP: ${{ steps.private.outputs.zip }}
+          RECORDED_SHA256: ${{ steps.private.outputs.sha256 }}
+          CHECKED_SHA256: ${{ steps.checksum.outputs.sha256 }}
+          CHECKED_DMG: ${{ steps.dmg.outputs.path }}
+          DIRECT: ${{ steps.visibility.outputs.direct }}
+          OLD_CASK: ${{ needs.resolve.outputs.old_cask }}
+          RUN_ID: ${{ github.run_id }}
+          RUN_ATTEMPT: ${{ github.run_attempt }}
+          WORKFLOW_SHA: ${{ github.sha }}
+        run: |
+          node --input-type=module <<'JS'
+          import { createHash } from 'node:crypto';
+          import { appendFileSync, copyFileSync, lstatSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+          import { basename, join } from 'node:path';
+          const env = process.env;
+          const out = join(env.RUNNER_TEMP, 'handoff');
+          rmSync(out, { recursive: true, force: true });
+          const dryRun = env.DRY_RUN === 'true';
+          const direct = env.DIRECT === 'true';
+          // A rehearsal records nothing: its zip is the one the zip gate checked.
+          const zip = dryRun ? env.dist_zip : env.RECORDED_ZIP;
+          const sha256 = dryRun ? env.CHECKED_SHA256 : env.RECORDED_SHA256;
+          const files = [];
+          const place = (folder, from) => {
+            if (!lstatSync(from).isFile()) throw new Error(`Not a regular file: ${from}`);
+            mkdirSync(join(out, folder), { recursive: true });
+            const bytes = readFileSync(from);
+            copyFileSync(from, join(out, folder, basename(from)));
+            files.push({ path: `${folder}/${basename(from)}`, size: bytes.length, sha256: createHash('sha256').update(bytes).digest('hex') });
+          };
+          if (!zip || basename(zip) !== env.ZIP_NAME) throw new Error(`No recorded ${env.ZIP_NAME} to hand off`);
+          place('zip', zip);
+          if (files[0].sha256 !== sha256) throw new Error('The zip to hand off is not the recorded zip');
+          const linux = join(env.RUNNER_TEMP, 'linux-release');
+          for (const name of readdirSync(linux).sort()) place('linux', join(linux, name));
+          if (dryRun || direct) {
+            if (!env.CHECKED_DMG || basename(env.CHECKED_DMG) !== env.DMG_NAME) throw new Error(`No checked ${env.DMG_NAME} to hand off`);
+            place('dmg', env.CHECKED_DMG);
+          } else if (env.CHECKED_DMG) {
+            throw new Error('A disk image was built for a release without direct downloads');
+          }
+          const manifest = {
+            run: env.RUN_ID, attempt: env.RUN_ATTEMPT, workflow: env.WORKFLOW_SHA,
+            source: env.SOURCE_COMMIT, channel: env.CHANNEL, version: env.VERSION,
+            dryRun, direct, oldCask: env.OLD_CASK === 'true', sha256, files,
+          };
+          const text = `${JSON.stringify(manifest, null, 2)}\n`;
+          writeFileSync(join(out, 'manifest.json'), text);
+          const digest = createHash('sha256').update(text).digest('hex');
+          appendFileSync(env.GITHUB_OUTPUT, `path=${out}\nname=release-handoff-${env.RUN_ATTEMPT}\nmanifest=${digest}\nsha256=${sha256}\ndirect=${direct}\n`);
+          console.log(`Handing off ${files.length} files, manifest sha256 ${digest}`);
+          JS
+
+      # Stored as is: the files are already compressed, and each producer
+      # attempt keeps its own artifact rather than replacing one.
+      - name: Keep the checked files for publication
+        id: handoff-upload
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ steps.handoff.outputs.name }}
+          path: ${{ steps.handoff.outputs.path }}
+          if-no-files-found: error
+          compression-level: 0
+          retention-days: 7
+
+      # A report of typed outcomes and artifact identities, never a gate of its own.
+      - name: Summarize
+        if: always()
+        continue-on-error: true
+        env:
+          LANES: ${{ needs.resolve.outputs.verify_required == 'true' && 'linux-checks, linux-e2e, mac' || 'none' }}
+          OMITTED: ${{ needs.resolve.outputs.verify_required == 'true' && 'none' || 'linux-checks, linux-e2e and mac; inherited from the published alpha, not passed in this run' }}
+          SHA256: ${{ steps.private.outputs.sha256 || steps.checksum.outputs.sha256 }}
+          HANDOFF: artifact ${{ steps.handoff-upload.outputs.artifact-id || 'none' }}, manifest sha256 ${{ steps.handoff.outputs.manifest || 'none' }}
+          GATES: >-
+            visibility=${{ steps.visibility.outcome }} capability=${{ steps.capability.outcome }}
+            installer=${{ needs.installer.result }}
+            build=${{ steps.build.outcome }} package=${{ steps.package.outcome }}
+            packaged-notes=${{ steps.packaged-notes.outcome }} signed-app=${{ steps.signed-app.outcome }}
+            launch=${{ steps.launch.outcome }} data-folder=${{ steps.data-folder.outcome }}
+            work-mode=${{ steps.work-mode.outcome }} notarize=${{ steps.notarize.outcome }}
+            zip=${{ steps.zip.outcome }} checksum=${{ steps.checksum.outcome }}
+            linux-files=${{ steps.linux-files.outcome }}
+            recorded=${{ steps.private.outcome }} dmg=${{ steps.dmg.outcome }}
+            handoff=${{ steps.handoff.outcome }} handoff-upload=${{ steps.handoff-upload.outcome }}
+        run: |
+          APP="dist/mac-universal/$APP_NAME"
+          field() { /usr/libexec/PlistBuddy -c "Print :$1" "$APP/Contents/Info.plist" 2>/dev/null || echo unread; }
+          {
+            echo "### Release: $CHANNEL $VERSION from \`$SOURCE_COMMIT\`"
+            [[ "$DRY_RUN" != true ]] || echo 'Dry run: no tag, release, cask or public feed was published.'
+            echo "Verify lanes: $LANES. Omitted: $OMITTED."
+            [[ -z "$ALPHA_RUN" ]] || echo "Inherited alpha verification: $PROMOTED_FROM — $ALPHA_RUN"
+            [[ -z "$HIGHLIGHTS" ]] || echo "Highlights picked, lead first: $HIGHLIGHTS"
+            echo "Version identities: CFBundleShortVersionString $(field CFBundleShortVersionString), CFBundleVersion $(field CFBundleVersion); $(cat "$RUNNER_TEMP/launch-gate.txt" 2>/dev/null || echo 'the launch gate did not run')."
+            for stage in $GATES; do echo "- ${stage%%=*}: ${stage#*=}"; done
+            echo 'A skipped stage did not pass in this run. Publication and its download checks follow in the publication job, from the handoff below.'
+            echo "The handoff to publication: $HANDOFF."
+            echo "sha256 of the zip: \`${SHA256:-none}\`"
+            if [[ -f "$RUNNER_TEMP/linux-release/SHA256SUMS" ]]; then
+              echo 'Linux files checked on clean copies of their systems:'
+              echo '```'
+              cat "$RUNNER_TEMP/linux-release/SHA256SUMS"
+              echo '```'
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Remove the signing keychain
+        if: always()
+        continue-on-error: true
+        run: node scripts/with-search-list-lock.mjs -- security delete-keychain "${{ steps.developer_id_cert.outputs.keychain_path }}" || true
+
+  # Publication and the download checks after it (INF-1716), in one
+  # disposable virtual Mac from the placement service's existing pool, so the
+  # real Mac is free once the disk image passes its check. It waits for a
+  # free place when both are busy; it never falls back to the real Mac. It
+  # holds no Apple signing material: the files it publishes were signed,
+  # notarized and checked by the signing job, which hands them over in a
+  # manifest this job validates before any effect. Every Mac check that
+  # follows - signature, Gatekeeper, launch and version, the disk image
+  # against the zip - still runs here, never replaced by a checksum.
+  # Rerunning only this job reuses the signing job's handoff, from whichever
+  # attempt produced it; rerunning the signing job hands over anew, and the
+  # record's immutable adoption still decides which bytes publish.
+  publish:
+    name: Publish and check the downloads (a dry run publishes nothing)
+    needs: [resolve, release]
+    if: ${{ always() && !cancelled() && needs.resolve.result == 'success' && needs.release.result == 'success' }}
+    runs-on: mini-mac-virtual
+    timeout-minutes: 90
+    permissions:
+      contents: write
+      actions: read
+    env:
+      CHANNEL: ${{ needs.resolve.outputs.channel }}
+      DRY_RUN: ${{ needs.resolve.outputs.dry_run }}
+      SOURCE_COMMIT: ${{ needs.resolve.outputs.source_commit }}
+      VERSION: ${{ needs.resolve.outputs.version }}
+      BUNDLE_VERSION: ${{ needs.resolve.outputs.bundle_version }}
+      TAG_NAME: ${{ needs.resolve.outputs.tag_name }}
+      PUBLIC_TAG: ${{ needs.resolve.outputs.tag_name }}
+      RELEASE_REPOSITORY: ${{ needs.resolve.outputs.release_repository }}
+      DMG_NAME: Infinitary-${{ needs.resolve.outputs.version }}-mac-universal.dmg
+      ZIP_NAME: ${{ needs.resolve.outputs.zip_name }}
+      DOWNLOAD_URL: ${{ needs.resolve.outputs.download_base }}releases/${{ needs.resolve.outputs.tag_name }}/${{ needs.resolve.outputs.zip_name }}
+      CASK_TOKEN: ${{ needs.resolve.outputs.cask_token }}
+      PRERELEASE: ${{ needs.resolve.outputs.prerelease }}
+      PROMOTED_FROM: ${{ needs.resolve.outputs.promoted_from }}
+      HIGHLIGHTS: ${{ needs.resolve.outputs.highlights }}
+      ALPHA_RUN: ${{ needs.resolve.outputs.alpha_run }}
+
+    steps:
+      - name: Checkout the source commit
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.resolve.outputs.source_commit }}
+          persist-credentials: false
+
+      - uses: pnpm/action-setup@v4
+        with:
+          dest: ${{ runner.temp }}/setup-pnpm
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      # By the immutable id the signing job recorded, never by a name a later
+      # attempt could reuse. The download's own digest check only warns, so
+      # the next step is the gate.
+      - name: Fetch the checked files
+        uses: actions/download-artifact@v4
+        with:
+          artifact-ids: ${{ needs.release.outputs.handoff_id }}
+          path: ${{ runner.temp }}/handoff-download
+          merge-multiple: true
+
+      # Before any effect: the manifest is the one the signing job recorded,
+      # it names this run, an attempt no later than this one, this workflow
+      # revision and this release, and the files are exactly those it lists,
+      # byte for byte. Local paths are rebuilt here, never read from it.
+      - name: Validate the handoff
+        id: handoff-check
+        env:
+          MANIFEST_SHA256: ${{ needs.release.outputs.handoff_manifest }}
+          HANDOFF_NAME: ${{ needs.release.outputs.handoff_name }}
+          ZIP_SHA256: ${{ needs.release.outputs.sha256 }}
+          DIRECT: ${{ needs.release.outputs.direct }}
+          OLD_CASK: ${{ needs.resolve.outputs.old_cask }}
+          RUN_ID: ${{ github.run_id }}
+          RUN_ATTEMPT: ${{ github.run_attempt }}
+          WORKFLOW_SHA: ${{ github.sha }}
+        run: |
+          node --input-type=module <<'JS'
+          import { createHash } from 'node:crypto';
+          import { appendFileSync, lstatSync, mkdirSync, readdirSync, readFileSync, renameSync, rmSync } from 'node:fs';
+          import { join } from 'node:path';
+          const env = process.env;
+          const fail = (message) => { throw new Error(`Refusing the handoff: ${message}`); };
+          const hash = (bytes) => createHash('sha256').update(bytes).digest('hex');
+          const from = join(env.RUNNER_TEMP, 'handoff-download');
+          const text = readFileSync(join(from, 'manifest.json'));
+          if (!/^[0-9a-f]{64}$/.test(env.MANIFEST_SHA256 ?? '') || hash(text) !== env.MANIFEST_SHA256) fail('its manifest is not the one the signing job recorded');
+          const manifest = JSON.parse(text);
+          const expected = {
+            run: env.RUN_ID, workflow: env.WORKFLOW_SHA, source: env.SOURCE_COMMIT,
+            channel: env.CHANNEL, version: env.VERSION, dryRun: env.DRY_RUN === 'true',
+            direct: env.DIRECT === 'true', oldCask: env.OLD_CASK === 'true', sha256: env.ZIP_SHA256,
+          };
+          for (const [key, value] of Object.entries(expected)) {
+            if (manifest[key] !== value) fail(`its ${key} is ${JSON.stringify(manifest[key])}, not ${JSON.stringify(value)}`);
+          }
+          if (!/^[1-9][0-9]*$/.test(manifest.attempt ?? '') || Number(manifest.attempt) > Number(env.RUN_ATTEMPT)) fail(`its attempt ${manifest.attempt} is not of this run`);
+          if (env.HANDOFF_NAME !== `release-handoff-${manifest.attempt}`) fail(`it is ${env.HANDOFF_NAME}, not attempt ${manifest.attempt}'s`);
+          const found = [];
+          const walk = (dir, prefix) => {
+            for (const name of readdirSync(dir)) {
+              const path = prefix ? `${prefix}/${name}` : name;
+              const stat = lstatSync(join(dir, name));
+              if (stat.isDirectory()) walk(join(dir, name), path);
+              else if (stat.isFile()) found.push(path);
+              else fail(`${path} is not a regular file`);
+            }
+          };
+          walk(from, '');
+          const listed = (manifest.files ?? []).map((file) => file.path);
+          const wanted = [...listed, 'manifest.json'].sort();
+          const missing = wanted.filter((path) => !found.includes(path));
+          const extra = found.filter((path) => !wanted.includes(path));
+          if (missing.length || extra.length || new Set(listed).size !== listed.length) fail(`missing ${JSON.stringify(missing)}, extra ${JSON.stringify(extra)}`);
+          for (const file of manifest.files) {
+            if (!/^(zip|dmg|linux)\/[A-Za-z0-9][A-Za-z0-9._+-]*$/.test(file.path)) fail(`${file.path} is not a handoff path`);
+            const bytes = readFileSync(join(from, file.path));
+            if (bytes.length !== file.size || hash(bytes) !== file.sha256) fail(`${file.path} is not the file the signing job checked`);
+          }
+          const inFolder = (folder) => listed.filter((path) => path.startsWith(`${folder}/`)).map((path) => path.slice(folder.length + 1));
+          const [zip] = inFolder('zip');
+          if (inFolder('zip').length !== 1 || zip !== env.ZIP_NAME) fail(`it holds ${JSON.stringify(inFolder('zip'))}, not ${env.ZIP_NAME}`);
+          if (manifest.files.find((file) => file.path === `zip/${zip}`).sha256 !== env.ZIP_SHA256) fail('its zip is not the recorded zip');
+          const dmg = inFolder('dmg');
+          const wantsDmg = expected.dryRun || expected.direct;
+          if (JSON.stringify(dmg) !== JSON.stringify(wantsDmg ? [env.DMG_NAME] : [])) fail(`it holds disk images ${JSON.stringify(dmg)}`);
+          const linux = inFolder('linux');
+          if (!linux.includes('assets.txt')) fail('it holds no Linux asset list');
+          for (const name of ['manifest.json', 'SHA256SUMS', ...readFileSync(join(from, 'linux', 'assets.txt'), 'utf8').trim().split('\n')]) {
+            if (!linux.includes(name)) fail(`it holds no Linux ${name}`);
+          }
+          const files = join(env.RUNNER_TEMP, 'handoff');
+          const linuxRelease = join(env.RUNNER_TEMP, 'linux-release');
+          for (const dir of [files, linuxRelease]) {
+            rmSync(dir, { recursive: true, force: true });
+            mkdirSync(dir, { recursive: true });
+          }
+          renameSync(join(from, 'zip', env.ZIP_NAME), join(files, env.ZIP_NAME));
+          if (wantsDmg) renameSync(join(from, 'dmg', env.DMG_NAME), join(files, env.DMG_NAME));
+          for (const name of linux) renameSync(join(from, 'linux', name), join(linuxRelease, name));
+          rmSync(from, { recursive: true, force: true });
+          appendFileSync(env.GITHUB_OUTPUT, `zip=${join(files, env.ZIP_NAME)}\ndmg=${wantsDmg ? join(files, env.DMG_NAME) : ''}\nattempt=${manifest.attempt}\n`);
+          console.log(`Accepted ${listed.length} files from attempt ${manifest.attempt}, manifest sha256 ${env.MANIFEST_SHA256}`);
+          JS
+
       - name: Record the immutable disk image
         id: recorded-dmg
-        if: ${{ needs.resolve.outputs.dry_run == 'false' && steps.visibility.outputs.direct == 'true' }}
+        if: ${{ needs.resolve.outputs.dry_run == 'false' && needs.release.outputs.direct == 'true' }}
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          ARTIFACT: ${{ steps.dmg.outputs.path }}
+          ARTIFACT: ${{ steps.handoff-check.outputs.dmg }}
         run: |
           WORK="$RUNNER_TEMP/recorded-dmg" scripts/publish-release-asset.sh adopt "$GITHUB_REPOSITORY" "$TAG_NAME" "$ARTIFACT"
 
@@ -725,7 +1012,7 @@ jobs:
         # it (pi-launcher's philosophy).
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          ARTIFACT_SHA256: ${{ steps.private.outputs.sha256 }}
+          ARTIFACT_SHA256: ${{ needs.release.outputs.sha256 }}
         run: |
           set -euo pipefail
           DOWNLOAD_DIR="$RUNNER_TEMP/downloaded-verify"
@@ -751,24 +1038,24 @@ jobs:
 
       - name: Publish immutable Cloudflare downloads
         id: public
-        if: ${{ needs.resolve.outputs.dry_run == 'false' && steps.visibility.outputs.direct == 'true' }}
+        if: ${{ needs.resolve.outputs.dry_run == 'false' && needs.release.outputs.direct == 'true' }}
         env:
           R2_ENDPOINT: ${{ secrets.R2_ENDPOINT }}
           R2_BUCKET: ${{ vars.R2_BUCKET }}
           R2_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
           R2_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
-          DIST_ZIP: ${{ steps.private.outputs.zip }}
+          DIST_ZIP: ${{ steps.handoff-check.outputs.zip }}
           DIST_DMG: ${{ steps.recorded-dmg.outputs.zip }}
         run: |
           LINUX_DIRECTORY="$RUNNER_TEMP/linux-release" node scripts/publish-downloads.ts
 
       - name: Verify every public download without a sign-in
         id: public-fetch-back
-        if: ${{ needs.resolve.outputs.dry_run == 'false' && steps.visibility.outputs.direct == 'true' }}
+        if: ${{ needs.resolve.outputs.dry_run == 'false' && needs.release.outputs.direct == 'true' }}
         # No credential: neither the installer nor the updater requires a GitHub sign-in.
         # No channel advances until the fetched-back ZIP and DMG both pass their gates.
         env:
-          ARTIFACT_SHA256: ${{ steps.private.outputs.sha256 }}
+          ARTIFACT_SHA256: ${{ needs.release.outputs.sha256 }}
         run: |
           set -euo pipefail
           PUBLIC_DIR="$RUNNER_TEMP/public-verify"
@@ -815,8 +1102,8 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
           PUBLIC_TAG: ${{ needs.resolve.outputs.public_tag }}
-          ARTIFACT: ${{ steps.private.outputs.zip }}
-          ARTIFACT_SHA256: ${{ steps.private.outputs.sha256 }}
+          ARTIFACT: ${{ steps.handoff-check.outputs.zip }}
+          ARTIFACT_SHA256: ${{ needs.release.outputs.sha256 }}
           DOWNLOAD_URL: ${{ needs.resolve.outputs.download_url }}
           TITLE: Infinitary ${{ needs.resolve.outputs.version }} (private alpha${{ needs.resolve.outputs.channel == 'alpha' && ', alpha channel' || '' }})
           TARGET: main
@@ -849,7 +1136,7 @@ jobs:
         # performs, so a private, missing or altered asset fails the release
         # before the tap learns of it.
         env:
-          ARTIFACT_SHA256: ${{ steps.private.outputs.sha256 }}
+          ARTIFACT_SHA256: ${{ needs.release.outputs.sha256 }}
           DOWNLOAD_URL: ${{ needs.resolve.outputs.download_url }}
         run: |
           set -euo pipefail
@@ -888,7 +1175,7 @@ jobs:
         if: ${{ needs.resolve.outputs.dry_run == 'false' }}
         env:
           HOMEBREW_TAP_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
-          SHA256: ${{ steps.private.outputs.sha256 }}
+          SHA256: ${{ needs.release.outputs.sha256 }}
           DOWNLOAD_URL: ${{ needs.resolve.outputs.download_url }}
           LINUX_MANIFEST: ${{ runner.temp }}/linux-release/manifest.json
         run: |
@@ -907,8 +1194,8 @@ jobs:
         if: ${{ needs.resolve.outputs.dry_run == 'false' && needs.resolve.outputs.old_cask == 'true' }}
         env:
           GH_TOKEN: ${{ secrets.OLD_TAP_TOKEN }}
-          ARTIFACT: ${{ steps.private.outputs.zip }}
-          ARTIFACT_SHA256: ${{ steps.private.outputs.sha256 }}
+          ARTIFACT: ${{ steps.handoff-check.outputs.zip }}
+          ARTIFACT_SHA256: ${{ needs.release.outputs.sha256 }}
           DOWNLOAD_URL: ${{ needs.resolve.outputs.download_url }}
           OLD_PUBLIC_TAG: ${{ needs.resolve.outputs.old_public_tag }}
           TITLE: Infinitary ${{ needs.resolve.outputs.version }} for Firstmate 3000's ${{ needs.resolve.outputs.channel }} cask
@@ -937,7 +1224,7 @@ jobs:
         id: old-public-fetch-back
         if: ${{ needs.resolve.outputs.dry_run == 'false' && needs.resolve.outputs.old_cask == 'true' }}
         env:
-          ARTIFACT_SHA256: ${{ steps.private.outputs.sha256 }}
+          ARTIFACT_SHA256: ${{ needs.release.outputs.sha256 }}
           DOWNLOAD_URL: ${{ needs.resolve.outputs.download_url }}
           OLD_DOWNLOAD_URL: ${{ needs.resolve.outputs.old_download_url }}
         run: |
@@ -963,7 +1250,7 @@ jobs:
         if: ${{ needs.resolve.outputs.dry_run == 'false' && needs.resolve.outputs.old_cask == 'true' }}
         env:
           HOMEBREW_TAP_TOKEN: ${{ secrets.OLD_TAP_TOKEN }}
-          SHA256: ${{ steps.private.outputs.sha256 }}
+          SHA256: ${{ needs.release.outputs.sha256 }}
           DOWNLOAD_URL: ${{ needs.resolve.outputs.old_download_url }}
           LINUX_MANIFEST: ${{ runner.temp }}/linux-release/manifest.json
           NAMES: firstmate
@@ -980,7 +1267,7 @@ jobs:
         id: tap-rehearsal
         if: ${{ needs.resolve.outputs.dry_run == 'true' }}
         env:
-          SHA256: ${{ steps.checksum.outputs.sha256 }}
+          SHA256: ${{ needs.release.outputs.sha256 }}
           DOWNLOAD_URL: ${{ needs.resolve.outputs.download_url }}
           LINUX_MANIFEST: ${{ runner.temp }}/linux-release/manifest.json
         run: |
@@ -995,7 +1282,7 @@ jobs:
         id: old-tap-rehearsal
         if: ${{ needs.resolve.outputs.dry_run == 'true' }}
         env:
-          SHA256: ${{ steps.checksum.outputs.sha256 }}
+          SHA256: ${{ needs.release.outputs.sha256 }}
           DOWNLOAD_URL: ${{ needs.resolve.outputs.old_download_url }}
           LINUX_MANIFEST: ${{ runner.temp }}/linux-release/manifest.json
           NAMES: firstmate
@@ -1015,7 +1302,7 @@ jobs:
 
       - name: Advance the verified public feeds atomically
         id: feeds
-        if: ${{ needs.resolve.outputs.dry_run == 'false' && steps.visibility.outputs.direct == 'true' }}
+        if: ${{ needs.resolve.outputs.dry_run == 'false' && needs.release.outputs.direct == 'true' }}
         env:
           R2_ENDPOINT: ${{ secrets.R2_ENDPOINT }}
           R2_BUCKET: ${{ vars.R2_BUCKET }}
@@ -1030,7 +1317,7 @@ jobs:
         id: feed-rehearsal
         if: ${{ needs.resolve.outputs.dry_run == 'true' }}
         run: |
-          DIST_ZIP="$dist_zip" DIST_DMG="${{ steps.dmg.outputs.path }}" \
+          DIST_ZIP="${{ steps.handoff-check.outputs.zip }}" DIST_DMG="${{ steps.handoff-check.outputs.dmg }}" \
           LINUX_MANIFEST="$RUNNER_TEMP/linux-release/manifest.json" WORK="$RUNNER_TEMP/release-feeds" \
             scripts/publish-feeds.sh rehearsal
 
@@ -1046,23 +1333,15 @@ jobs:
             ${{ runner.temp }}/release-feeds/feeds/versions/*.json
 
       # A report of typed outcomes and artifact identities, never a gate of its own.
-      - name: Summarize
+      - name: Summarize the publication
         if: always()
         continue-on-error: true
         env:
-          LANES: ${{ needs.resolve.outputs.verify_required == 'true' && 'linux-checks, linux-e2e, mac' || 'none' }}
-          OMITTED: ${{ needs.resolve.outputs.verify_required == 'true' && 'none' || 'linux-checks, linux-e2e and mac; inherited from the published alpha, not passed in this run' }}
-          SHA256: ${{ steps.private.outputs.sha256 || steps.checksum.outputs.sha256 }}
+          SHA256: ${{ needs.release.outputs.sha256 }}
+          HANDOFF: artifact ${{ needs.release.outputs.handoff_id || 'none' }}, manifest sha256 ${{ needs.release.outputs.handoff_manifest || 'none' }}, from attempt ${{ steps.handoff-check.outputs.attempt || 'unread' }}
           GATES: >-
-            visibility=${{ steps.visibility.outcome }} capability=${{ steps.capability.outcome }}
-            installer=${{ needs.installer.result }}
-            build=${{ steps.build.outcome }} package=${{ steps.package.outcome }}
-            packaged-notes=${{ steps.packaged-notes.outcome }} signed-app=${{ steps.signed-app.outcome }}
-            launch=${{ steps.launch.outcome }} data-folder=${{ steps.data-folder.outcome }}
-            work-mode=${{ steps.work-mode.outcome }} notarize=${{ steps.notarize.outcome }}
-            zip=${{ steps.zip.outcome }} checksum=${{ steps.checksum.outcome }}
-            linux-files=${{ steps.linux-files.outcome }} dmg=${{ steps.dmg.outcome }}
-            recorded=${{ steps.private.outcome }} recorded-dmg=${{ steps.recorded-dmg.outcome }}
+            handoff-check=${{ steps.handoff-check.outcome }}
+            recorded-dmg=${{ steps.recorded-dmg.outcome }}
             recorded-fetch-back=${{ steps.private-fetch-back.outcome }}
             public=${{ steps.public.outcome }} public-fetch-back=${{ steps.public-fetch-back.outcome }}
             homebrew-public=${{ steps.homebrew-public.outcome }} homebrew-fetch-back=${{ steps.homebrew-fetch-back.outcome }}
@@ -1071,30 +1350,14 @@ jobs:
             old-tap=${{ steps.old-tap.outcome }} old-tap-rehearsal=${{ steps.old-tap-rehearsal.outcome }}
             feeds=${{ steps.feeds.outcome }} rehearsal=${{ steps.feed-rehearsal.outcome }}
         run: |
-          APP="dist/mac-universal/$APP_NAME"
-          field() { /usr/libexec/PlistBuddy -c "Print :$1" "$APP/Contents/Info.plist" 2>/dev/null || echo unread; }
           {
-            echo "### Release: $CHANNEL $VERSION from \`$SOURCE_COMMIT\`"
+            echo "### Publication: $CHANNEL $VERSION from \`$SOURCE_COMMIT\`"
             [[ "$DRY_RUN" != true ]] || echo 'Dry run: no tag, release, cask or public feed was published.'
-            echo "Verify lanes: $LANES. Omitted: $OMITTED."
-            [[ -z "$ALPHA_RUN" ]] || echo "Inherited alpha verification: $PROMOTED_FROM — $ALPHA_RUN"
-            [[ -z "$HIGHLIGHTS" ]] || echo "Highlights picked, lead first: $HIGHLIGHTS"
-            echo "Version identities: CFBundleShortVersionString $(field CFBundleShortVersionString), CFBundleVersion $(field CFBundleVersion); $(cat "$RUNNER_TEMP/launch-gate.txt" 2>/dev/null || echo 'the launch gate did not run')."
+            echo "The signing job's handoff: $HANDOFF."
             for stage in $GATES; do echo "- ${stage%%=*}: ${stage#*=}"; done
             echo 'A skipped stage did not pass in this run. Homebrew casks and direct-install feeds each advance only after their downloads verify.'
             echo "sha256 of the zip: \`${SHA256:-none}\`"
-            if [[ -f "$RUNNER_TEMP/linux-release/SHA256SUMS" ]]; then
-              echo 'Linux files checked on clean copies of their systems:'
-              echo '```'
-              cat "$RUNNER_TEMP/linux-release/SHA256SUMS"
-              echo '```'
-            fi
           } >> "$GITHUB_STEP_SUMMARY"
-
-      - name: Remove the signing keychain
-        if: always()
-        continue-on-error: true
-        run: node scripts/with-search-list-lock.mjs -- security delete-keychain "${{ steps.developer_id_cert.outputs.keychain_path }}" || true
 
   # The person's side of the old-cask switch, once it is published: their
   # usual brew update && brew upgrade, in a throwaway virtual Mac, lands on
@@ -1102,8 +1365,8 @@ jobs:
   # comes after the publication, which it does not undo: it says the
   # switched cask needs a fix before people meet it.
   old-cask-upgrade:
-    needs: [resolve, release]
-    if: ${{ needs.resolve.outputs.dry_run == 'false' && needs.resolve.outputs.old_cask == 'true' }}
+    needs: [resolve, publish]
+    if: ${{ always() && !cancelled() && needs.publish.result == 'success' && needs.resolve.outputs.dry_run == 'false' && needs.resolve.outputs.old_cask == 'true' }}
     uses: ./.github/workflows/old-cask-upgrade.yml
     with:
       ref: ${{ needs.resolve.outputs.source_commit }}

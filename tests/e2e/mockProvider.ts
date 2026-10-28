@@ -11,6 +11,7 @@ import { BROWSER_COMMAND } from "../../src/core/browser/commandWords";
 import { REF_PATTERN } from "../../src/core/browser/outline";
 import { BUILD_IN_PLACE_OPENING } from "../../src/core/orchestrator/intentBrief";
 import {
+  ANSWER_MISSING_ENDED_OPENING,
   ANSWER_MISSING_OPENING,
   BROWSER_RETURNED_OPENING,
   CARD_CLOSED_STEER_PREFIX,
@@ -1510,11 +1511,17 @@ export async function startMockProvider(
         // short close-out after tool results, plain chat text otherwise.
         if (isFirstmate && wantsStream) {
           // The answer-delivery retry (a captain message nothing took effect
-          // after, such as plain chat the mock answers in closing words): the
-          // mock reacts, as a model with nothing more to show does, so the
-          // message is covered quietly. It never re-reads the captain's quoted
-          // words as a new ask.
-          if (latestUserTail.includes(ANSWER_MISSING_OPENING)) {
+          // after, such as plain chat the mock answers in closing words, or
+          // one whose work ended with no card answering it - a personal
+          // build the host closed on its report, a crewmate that failed):
+          // the mock reacts, as a model with nothing more to show does, so
+          // the message is covered quietly. Both openings are the one retry
+          // (docs/task-capture.md, "How a message ends"); it never re-reads
+          // the captain's quoted words as a new ask.
+          if (
+            latestUserTail.includes(ANSWER_MISSING_OPENING) ||
+            latestUserTail.includes(ANSWER_MISSING_ENDED_OPENING)
+          ) {
             if (latestUserTail.includes(RETRY_SILENT_MARKER) || hasToolResults) {
               streamText(MOCK_FM_DONE_TEXT);
             } else if (latestUserTail.includes(RETRY_ACTS_MARKER)) {

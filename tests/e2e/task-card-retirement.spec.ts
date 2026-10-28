@@ -1,7 +1,6 @@
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { expect, test } from "@playwright/test";
-import { ANSWER_NOTICE_TITLE } from "../../src/core/orchestrator/answerDelivery";
 import { closingNoteTitle } from "../../src/core/orchestrator/settleWords";
 import type { Card } from "../../src/shared/cards";
 import { scratchDir } from "../helpers/scratchDirs";
@@ -19,6 +18,7 @@ import {
 } from "./mockProvider";
 import { promptInput } from "./prompt";
 import { expandDock, taskLine } from "./rails";
+import { readSavedData } from "./savedData";
 import { shownCard } from "./stack";
 
 /** A private wrapper records only its own client's pid, so the test can end that session outright. */
@@ -68,9 +68,24 @@ async function closedWithoutChoices(
     });
   const detail = await page.evaluate((id) => window.infinitary.tasks.detail(id), taskId);
   // The decision is retired. A cancel the first mate made leaves only its
-  // own note with its closing sentence (INF-547). A failure leaves only the
-  // one notice for the captain's message its work ended without answering
-  // (INF-1610 piece 2, docs/task-capture.md "How a message ends").
+  // own note with its closing sentence (INF-547). A failure leaves nothing:
+  // the captain's message its work ended without answering goes to the
+  // first mate step, whose stand-in reacts, so the message ends answered
+  // with no notice (INF-1610 piece 2, docs/task-capture.md "How a message
+  // ends"). The stack is read once the message has ended.
+  if (reason === "failed") {
+    await expect
+      .poll(
+        () =>
+          readSavedData(app.userDataDir, (db) =>
+            db
+              .prepare("SELECT answered_at IS NOT NULL AS answered, delivery FROM captain_asks")
+              .all(),
+          ),
+        { timeout: 30_000 },
+      )
+      .toEqual([{ answered: 1, delivery: "covered" }]);
+  }
   const left = (cards: Card[]) =>
     cards.map((card) => ({
       author: card.author,
@@ -84,9 +99,9 @@ async function closedWithoutChoices(
     .toEqual(
       reason === "cancelled"
         ? [{ author: "firstmate", title: closingNoteTitle(detail.key, "dropped"), actions: [] }]
-        : [{ author: "host", title: ANSWER_NOTICE_TITLE, actions: ["ask-again", "leave-it"] }],
+        : [],
     );
-  await expect(page.locator("[data-card-layer]")).toHaveCount(1);
+  await expect(page.locator("[data-card-layer]")).toHaveCount(reason === "cancelled" ? 1 : 0);
   writeFileSync(
     test.info().outputPath(`${reason}-state.json`),
     JSON.stringify(

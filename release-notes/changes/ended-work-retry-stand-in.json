@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "ended-work-retry-stand-in",
+      "reason": "Test-only repair: the journeys' stand-in first mate now recognizes the answer retry for a message whose work ended, instead of reading the captain's quoted words as a new ask; the app's behavior is unchanged."
+    }
+  ]
+}

@@ -29421,7 +29421,6 @@
                   "plan",
                   "research",
                   "reproduce",
-                  "teach",
                   "review"
                 ]
               },
@@ -39003,7 +39002,6 @@
                                         "research",
                                         "retrieval",
                                         "reproduce",
-                                        "teach",
                                         "implement",
                                         "fix",
                                         "chore",
@@ -39816,7 +39814,6 @@
                                   "research",
                                   "retrieval",
                                   "reproduce",
-                                  "teach",
                                   "implement",
                                   "fix",
                                   "chore",

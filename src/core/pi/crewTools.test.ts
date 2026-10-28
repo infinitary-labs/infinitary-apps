@@ -96,6 +96,24 @@ describe("crew tools", () => {
     });
   });
 
+  // Intent: INF-1177 piece 2, declared facts replace a lesson-only spawn path.
+  it.each([true, false])(
+    "carries ongoing %s and requested intelligence through the spawn adapter",
+    async (ongoing) => {
+      const { delegate, byName } = toolset();
+      await byName.get("spawn_crewmate")?.execute("subject", {
+        title: "Teach chess",
+        goal: "Practise rook moves",
+        user_words: "teach me chess",
+        personal_ui: true,
+        shape: { ongoing, intelligence: "high" },
+      });
+      expect(delegate.commission).toHaveBeenCalledWith(
+        expect.objectContaining({ shape: { ongoing, intelligence: "high" } }),
+      );
+    },
+  );
+
   it("spawn marks a personal-ui ask on the intent and leaves the binding to the host", async () => {
     const { delegate, byName } = toolset();
     await byName.get("spawn_crewmate")?.execute("t1", {
@@ -690,6 +708,8 @@ describe("spawn_crewmate's groups (contract v4.12, primitives P7)", () => {
     const properties = spawnSchema().properties ?? {};
     expect(Object.keys(properties)).toHaveLength(15);
     expect(Object.keys(properties.shape?.properties ?? {})).toEqual([
+      "ongoing",
+      "intelligence",
       "kind",
       "delivery_ask",
       "basis",

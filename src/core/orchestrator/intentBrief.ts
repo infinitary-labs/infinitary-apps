@@ -142,7 +142,7 @@ const DELIVERY_TEXT: Record<RepoDelivery, string> = {
  * this names the two to start from rather than listing them again.
  */
 export type PersonalBriefFacts = {
-  kind?: WorkKind;
+  ongoing?: boolean;
   workspaceDir: string;
   surfaces: { id: string; title: string; placement: { x: "left" | "right" } }[];
 };
@@ -248,18 +248,15 @@ function renderPersonalFacts(personal: PersonalBriefFacts): string[] {
           .map((surface) => `${surface.id} "${surface.title}" (${surface.placement.x} rail)`)
           .join("; ")
       : "none yet";
-  if (personal.kind === "teach") {
-    return [
-      `${BUILD_IN_PLACE_OPENING}: this is a teach task on the personal workspace, with no branch, pull request or rigor tier.`,
-      `Workspace: ${personal.workspaceDir} - your working directory. Do not commit; the host commits each turn.`,
-      "Read the lessons skill listed in your session before the first card, and follow the standing directions each turn carries. Teach through lesson cards and keep the subject's panel record current using the tested part in the lessons guide. Read lessons/learner.md and keep the subject's progress under lessons/<subject>/. Do not open the panel skill, infinitary-env.d.ts, or the design overview.",
-      "Your report commits this round, not the end of the subject. Keep one subject task open across rounds; use the lessons guide for the goal, round and welcome-back cards. Your completion is a report, never a merge card.",
-    ];
-  }
   return [
     `${BUILD_IN_PLACE_OPENING}: this task carries no delivery posture and no rigor tier, because nothing here ships through a gate. What that means concretely:`,
     `Workspace: ${personal.workspaceDir} - your working directory. There is no worktree, no branch, and no pull request: you edit these files in place. The app compiles what you save as you save it, apart from the captain's rails: they keep each panel as it was until place_panel puts your version there, and the host commits it with your report. Do not commit; the host commits at the end of each of your turns with your report as the message. Your completion is a factual note showing what you built, with no actions, then your report; there is nothing to merge, land, or discard.`,
-    "Your session carries the workspace's AGENTS.md and lists its skills under .claude/skills/. Open personal-panel before you write or change a panel, and follow the standing directions each turn carries: the captain's panel instructions among them. Before every report, lint_panel checks your files, place_panel puts your version on the captain's rail and says whether their window drew it, and capture_panel photographs it there.",
+    "Your session carries the workspace's AGENTS.md and lists its skills under .claude/skills/. Read the skill your brief names. Open personal-panel before you write or change a panel. Before reporting a panel change, lint_panel checks it, place_panel puts it on the captain's rail, and capture_panel photographs it there.",
+    ...(personal.ongoing
+      ? [
+          "This task is ongoing: each turn is committed without closing the task or reporting routine progress to the first mate. Report needs_firstmate when coordination is needed, or finished true when the work ends.",
+        ]
+      : []),
     `Surfaces now: ${surfaces}. A change to one of these is an edit of that directory, not a new one.`,
   ];
 }
@@ -445,8 +442,6 @@ export function renderRigorSection(rigor: Rigor): string {
  * plan, so its brief said answer only and the preview's click closed it).
  * A crewmate's follow-up has no intent and so no declaration: its kind
  * decides, the answer branch of `KINDS_BY_DELIVERABLE` being answers.
- * A `teach` task is never an answer: a choice on a lesson card must never
- * close the subject.
  */
 export function deliverableFor(
   intent: SpawnIntent | undefined,
@@ -455,7 +450,6 @@ export function deliverableFor(
   assertDeliverableConstraints(intent);
   if (intent?.constraints?.some((constraint) => constraint.kind === "operation"))
     return "operation";
-  if (kind === "teach") return "change";
   if (!intent) {
     return isAnswerKind(kind) ? "answer" : "change";
   }

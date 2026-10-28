@@ -52,7 +52,7 @@ A panel's installed copy has its own record, grant and lifecycle.
 A crew section's manifest selectors match only the kind, project or personal place, delivery, care, backend and project id already known at dispatch.
 Each supplied selector must match; an omitted selector is unrestricted, and an empty selector matches nothing.
 The kinds selected by the testing runbook are data: plan, reproduce, implement, fix and chore on a project.
-Research, retrieval, review, teach and the personal workspace receive none of that section.
+Research, retrieval, review and the personal workspace receive none of that section.
 A runbook's optional projects list restricts its crew reach by project id.
 Its skills remain available on demand throughout that reach, independently of the narrower crew-section selectors.
 
@@ -75,14 +75,17 @@ Common workflows is the single switch for planning, features, bugfixes, refactor
 Its retrieval line follows INF-1441: a fact or how/why answer from what the app can read now is retrieval; comparing past runs, a reproduction, a measurement or the web is research.
 Programs has its own switch, so turning Common workflows off does not remove the programs guidance.
 Casual projects holds the small-project setup guidance.
-Lessons holds its first-mate section and the lesson skill with its tested parts; removing the teach lifecycle special cases is a separate piece.
+Lessons holds its first-mate section and the lesson skill with its tested parts and warm voice.
+It declares ongoing work and a requested intelligence rather than a special task kind.
 Testing rules supplies only its selected crew sections.
 Commit and PR naming supplies guidance and the data convention read by the existing commit-range, story-title and forge title checks.
 Turning naming off drops that check's convention, but a project's own instructions and release tooling are unchanged.
 
 Runbook guidance may decide author choices on the cards it describes, such as voice, length, layout, opening and button names.
 The fixed card shape, merge authorization, consent, delivery and care facts remain core.
-The delivery-judgment runbook waits for the separate check-facts piece.
+Delivery judgment supplies only direct-pr crewmates with the checks, repair, readiness and stopping guidance.
+Its switch removes those judgments from new crew prompts without changing check facts, merge authorization, consent or the fixed care procedure.
+The host tools carry check facts and record declarations; the runbook holds the judgments, including the default repair and rerun counts.
 The panel-building runbook was not selected, so those skills and the design skill stay workspace-owned.
 
 ## Checks

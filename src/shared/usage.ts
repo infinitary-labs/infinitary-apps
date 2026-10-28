@@ -97,7 +97,6 @@ export const USAGE_WORK_KINDS = [
   "research",
   "retrieval",
   "reproduce",
-  "teach",
   "implement",
   "fix",
   "chore",

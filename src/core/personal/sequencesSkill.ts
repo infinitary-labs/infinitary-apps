@@ -51,21 +51,6 @@ export function planStepAttached(
   );
 }
 
-/** The packaged lesson line is a closed instruction, just like the plan line. */
-export function teachStepAttached(
-  constraints: readonly { kind: string; text?: string }[] | undefined,
-): boolean {
-  const line = SEQUENCES_SEED.match(/^- (teach:.*)$/m)?.[1];
-  return (
-    !!line &&
-    (constraints ?? []).some(
-      (constraint) =>
-        constraint.kind === "free" &&
-        constraint.text?.replace(/\s+/g, " ").trim() === line.replace(/\s+/g, " ").trim(),
-    )
-  );
-}
-
 /**
  * The plan step's whole instruction, the one packaged plan line: the feature
  * sequence points at it rather than repeating it, and says to relay it whole, so
@@ -196,15 +181,9 @@ captain premium_ask on program. Medium for narrowed work; high for open or final
 - deep research: Promise.all medium per question, high writer after all.
 - migrate: medium per item, from previous; return last branch.
 
-## personal asks - lessons, projects and panels
-Learning or practising a subject, like a math quiz or flash cards, is a lesson. A game or
-anything else to play or use on its own, like a piano game or a tip calculator, is a
-project of its own.
-Something to glance at beside your work on the app's rails, like a clock, is a panel.
-When an ask could be either, choose a lesson when the words name something to learn,
-otherwise a project, and say which in the activity line; do not ask an extra question.
-Leave existing quiz and piano panels alone.
-- teach: personal_ui true, one task per subject; steer its open one. Return lesson cards using the lessons skill, never a panel.
+## personal projects and panels
+A game or anything else to play or use on its own belongs in its own project.
+Something to glance at beside your work on the app's rails is a panel.
 - project: in an existing project, ordinary work there, no setup card. A new game, toy,
   page or small app: its own project via app_change project-setup; only Add project
   adds it. Serious: the ask names a framework, engine or build step, hosting or a store, a

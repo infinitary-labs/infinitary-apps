@@ -31,8 +31,8 @@ const LESSONS_STOPPED_REPORT = "Lessons stopped; records kept.";
  * The lessons (FI3-1474): the mock Firstmate spawns each subject's teacher
  * on the personal workspace, and the mock teacher plays scripted rounds from
  * the shipped lesson parts, one batch of calls per captain event, never a
- * model's teaching. The kind classifier, which answers before any scenario,
- * still sorts a lesson's goal as teach in the shared stand-in.
+ * model's teaching. The first mate declares ongoing work and requested
+ * intelligence from the Lessons runbook, without a special task kind.
  */
 export const lessons: Scenario =
   () =>
@@ -54,6 +54,7 @@ export const lessons: Scenario =
                   goal: lesson.goal,
                   user_words: lesson.ask,
                   personal_ui: true,
+                  shape: { ongoing: true, intelligence: "high" },
                 },
               },
             ],

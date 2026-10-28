@@ -42,7 +42,6 @@ export const workKindSchema = z.enum([
   "research",
   "retrieval",
   "reproduce",
-  "teach",
   "implement",
   "fix",
   "chore",
@@ -74,7 +73,6 @@ export const CLASSIFIABLE_KINDS = [
   "research",
   "retrieval",
   "reproduce",
-  "teach",
   "implement",
   "fix",
   "chore",
@@ -86,12 +84,11 @@ export const CLASSIFIABLE_KINDS = [
  * offers only that branch, so an answer is never sorted into a change kind
  * or a change into an answer kind. A crewmate's follow-up carries no
  * declaration, so its kind decides the branch the other way round
- * (`deliverableFor`). `teach` is a change: a lesson card's choice must
- * never close the subject.
+ * (`deliverableFor`).
  */
 export const KINDS_BY_DELIVERABLE = {
   answer: ["retrieval", "research", "plan", "reproduce"],
-  change: ["implement", "fix", "chore", "teach"],
+  change: ["implement", "fix", "chore"],
   operation: [],
 } as const satisfies Record<Deliverable, ReadonlyArray<(typeof CLASSIFIABLE_KINDS)[number]>>;
 
@@ -126,6 +123,10 @@ export const workShapeSchema = z.object({
   /** Current edits; original asks and dispatch stamps remain provenance. */
   policies: taskPolicyStateSchema.optional(),
   kind: workKindSchema,
+  /** Work persists across turns until explicitly finished. */
+  ongoing: z.boolean().optional(),
+  /** The first mate's requested intelligence; premium still needs the captain's ask. */
+  intelligence: intelligenceBucketSchema.optional(),
   /** The task whose report is the spec or the reproduction, when one exists. */
   basis: z.string().optional(),
   /**
@@ -382,6 +383,8 @@ export function isPullRepair(facts: InPlaceWork | undefined): facts is InPlacePu
  */
 export const CAPTAIN_OWNED_SHAPE_FIELDS = [
   "policies",
+  "ongoing",
+  "intelligence",
   "basis",
   "premium_ask",
   "override_model_id",
@@ -456,6 +459,8 @@ export function planSkippedText(reason: string): string {
  */
 export const workShapeAskSchema = workShapeSchema
   .pick({
+    ongoing: true,
+    intelligence: true,
     basis: true,
     premium_ask: true,
     override_model_id: true,
@@ -529,8 +534,6 @@ export const routingPolicySchema = z.object({
     research: intelligenceBucketSchema,
     retrieval: intelligenceBucketSchema,
     reproduce: intelligenceBucketSchema,
-    /** Tutoring a learner: a lesson loop is never a change nor an answer. */
-    teach: intelligenceBucketSchema,
     chore: intelligenceBucketSchema,
     /** An independent review reads like research (delivery rigor phase 2, Q5). */
     review: intelligenceBucketSchema,
@@ -578,7 +581,6 @@ export type RoutingPolicy = z.infer<typeof routingPolicySchema>;
  * 7 low = simple config/docs/cosmetic work;
  * 8 unclear -> high.
  * R10 adds retrieval -> low (FI3-1238; a how or why read from what is here since INF-1430), without changing R2/R7.
- * `teach` (tutoring a learner through lessons) -> high, through R2.
  */
 const DEFAULT_ROUTING_POLICY_VALUE: RoutingPolicy = {
   version: 1,
@@ -587,7 +589,6 @@ const DEFAULT_ROUTING_POLICY_VALUE: RoutingPolicy = {
     research: "high",
     retrieval: "low",
     reproduce: "high",
-    teach: "high",
     chore: "low",
     review: "high",
   },

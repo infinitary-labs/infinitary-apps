@@ -15,7 +15,7 @@ export const modelReasonSchema = z.object({
   asked: slotSchema,
   served: slotSchema,
   /** R2: the kind the rule read. */
-  kind: z.enum(["plan", "research", "reproduce", "teach", "review"]).optional(),
+  kind: z.enum(["plan", "research", "reproduce", "review"]).optional(),
   /** R4, R6: the key of the verified basis. */
   basis: z.string().optional(),
   /** R1b: the key of the attempt the captain rejected. */
@@ -42,7 +42,6 @@ function workOf(reason: ModelReason): string | null {
       if (reason.kind === "plan") return "planning";
       if (reason.kind === "research") return "research";
       if (reason.kind === "reproduce") return "reproducing a bug";
-      if (reason.kind === "teach") return "teaching";
       if (reason.kind === "review")
         return reason.reviewOf ? `reviewing ${reason.reviewOf}` : "reviewing";
       return null;

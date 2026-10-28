@@ -269,7 +269,11 @@ export const DELIVERY_NOTE_PARAM = Type.Optional(
  * parameter, and a Pi seat reads the same words in the same place.
  */
 const SHAPE_FIELD_RULES = {
-  kind: "Declare the kind: read-only answers use plan/retrieval/research/reproduce; changes use implement/fix/chore/teach. The classifier sorts only what you omit; review stays host-owned.",
+  ongoing:
+    "True for work that continues across turns until explicitly finished; routine personal-workspace turns commit without waking the first mate.",
+  intelligence:
+    "The intelligence requested for this work: low, medium or high. Premium still needs the captain's premium ask.",
+  kind: "Declare the kind: read-only answers use plan/retrieval/research/reproduce; changes use implement/fix/chore. The classifier sorts only what you omit; review stays host-owned.",
   delivery_ask:
     "Only when the user asked in words for this task to ship as a pull request or to stay local. The repository's default is unchanged.",
   basis: BASIS_DESCRIPTION,
@@ -315,6 +319,8 @@ export const START_AFTER_GROUP_DESCRIPTION = groupDescription(
 
 /** The work-shape facts spawn_crewmate carries in `shape`, with the type each holds. */
 const SHAPE_FIELDS = {
+  ongoing: "boolean",
+  intelligence: "string",
   kind: "string",
   delivery_ask: "string",
   basis: "string",
@@ -451,6 +457,8 @@ export function createCrewTools(delegate: CrewDelegate) {
       shape: Type.Optional(
         Type.Object(
           {
+            ongoing: Type.Optional(Type.Boolean()),
+            intelligence: Type.Optional(stringEnum(["low", "medium", "high", "premium"])),
             kind: Type.Optional(stringEnum([...CLASSIFIABLE_KINDS, "unclear"])),
             delivery_ask: Type.Optional(stringEnum(["direct-pr", "local-only"])),
             basis: Type.Optional(Type.String()),
@@ -710,6 +718,8 @@ export function createCrewStatusTool(crewStatus: (taskId?: string) => CrewStatus
  * supplied nothing at all.
  */
 function shapeAskFrom(params: {
+  ongoing?: boolean;
+  intelligence?: WorkShapeAsk["intelligence"];
   kind?: Exclude<WorkKind, "review">;
   basis?: string;
   premium_ask?: boolean;
@@ -736,6 +746,8 @@ function shapeAskFrom(params: {
   // At the start, following the project is the same as saying nothing.
   const runsOn = params.runs_on_ask?.trim().replace(/^project$/, "");
   const ask: WorkShapeAsk = {
+    ...(params.ongoing !== undefined ? { ongoing: params.ongoing } : {}),
+    ...(params.intelligence ? { intelligence: params.intelligence } : {}),
     ...(params.kind ? { kind: params.kind } : {}),
     ...(basis ? { basis } : {}),
     ...(params.premium_ask ? { premium_ask: true as const } : {}),

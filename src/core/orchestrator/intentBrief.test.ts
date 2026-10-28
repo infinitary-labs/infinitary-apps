@@ -160,7 +160,7 @@ describe("renderIntentBrief", () => {
     // Every report follows a look at the version on the captain's own rail
     // (INF-607): the checks name place_panel before the report.
     expect(brief).toContain(
-      "Before every report, lint_panel checks your files, place_panel puts your version on the captain's rail and says whether their window drew it, and capture_panel photographs it there.",
+      "Before reporting a panel change, lint_panel checks it, place_panel puts it on the captain's rail, and capture_panel photographs it there.",
     );
     expect(brief).toContain('Surfaces now: open-prs "Open PRs" (right rail).');
     // Without the facts nothing of the workspace is said; without surfaces
@@ -502,7 +502,7 @@ describe("the deliverable axis (Task B, captain F1 A)", () => {
     for (const kind of ["plan", "research", "retrieval", "reproduce"] as const)
       expect(deliverableFor(undefined, kind)).toBe("answer");
     expect(deliverableFor(undefined, "fix")).toBe("change");
-    expect(deliverableFor(undefined, "teach")).toBe("change");
+    expect(deliverableFor(undefined, "chore")).toBe("change");
   });
 
   it("derives a change for everything else, including unclear and plan-first", () => {
@@ -918,7 +918,7 @@ describe("operations deliverable", () => {
     constraints: [{ kind: "operation" }],
   });
   it("derives an operation independently of a classifier kind", () => {
-    for (const kind of ["unclear", "fix", "chore", "research", "teach"] as const)
+    for (const kind of ["unclear", "fix", "chore", "research", "implement"] as const)
       expect(deliverableFor(intent, kind)).toBe("operation");
     expect(renderOperationShapeSection()).toContain("effect is the deliverable");
     expect(renderOperationShapeSection()).toContain("stop and report if code must change");

@@ -14,14 +14,13 @@ This Mac user is one learner, so `lessons/` holds one learner.
 
 ## The task
 
-The first mate declares `teach` on spawn or create, including a named-model dispatch; the classifier sorts only an undeclared kind (`docs/kind-classifier.md`).
-R2 requests high (`docs/routing.md`).
-`deliverableFor` never makes it an answer, so a button on a lesson card does not close the subject.
-The first mate starts it with `spawn_crewmate` and `personal_ui` true, one task per subject; the Lessons runbook has the one line (`docs/sequences.md`).
-Its brief names the teach kind, the lessons skill and lesson records instead of the panel build instructions, both at spawn and when queued work starts.
-The workspace instructions do the same: a lesson opens the lessons skill and the learner records, and is not told to read panel types or the design overview.
-On the personal workspace a report normally commits the turn and, once the commit lands, routes to the first mate like any other report.
-For a teach task every finished turn is committed, with the report as the message or `lesson turn` when there is none, and none closes the task or wakes the first mate.
+The Lessons runbook asks the first mate to declare `ongoing: true` and `intelligence: high` on spawn or create, including a named-model dispatch.
+There is no lesson work kind: an undeclared kind keeps the ordinary classifier path.
+R11 reads the declared intelligence below named-model, premium and escalation choices (`docs/routing.md`).
+The task is ordinary personal-workspace change work, so a card choice does not close it.
+The runbook tells the first mate to relay the lesson skill and learner records in the brief, one task per subject.
+The workspace's generic instructions ask the crewmate to open the skill its brief names, and panel checks apply only when it changes a panel.
+For ongoing personal work every finished turn is committed, with the report as the message or `ongoing work turn` when there is none, without closing the task or waking the first mate for routine progress.
 A commit that fails is the one exception: it wakes the first mate with git's words, as on any personal task (`docs/personal-panels.md`, "Report, commit, close").
 A report that asks the first mate for something, or declares the work finished, routes as any other report once its commit lands; the first mate closes a finished subject with `settle_task` `finished`, which keeps the files (INF-1677).
 `lessons/` is a record folder: it holds no `panel.tsx` or `server.ts`, so a panel build never loads, stamps, lints, places or copies it (`isPanel`, `src/core/personal/liveWorkspace.ts`).
@@ -71,9 +70,9 @@ It stays until chosen and the task stays open, so a restart brings it back with 
 
 ## Voice
 
-A crewmate card that declares `holds_place` may be warm: short praise for effort and strategy, `!` and the chess pawn.
+The Lessons runbook's cards use `holds_place` and a warm voice: short praise for effort and strategy, `!` and the chess pawn.
 The tested subject panel also uses short effort praise and exclamation points, but no emoji; other panels keep their calm voice.
-The card authoring contract says so in one crewmate-only sentence; the first mate's cards and every card without it keep the calm voice the contract asks for.
+The Lessons runbook owns this voice; the core card contract lets a runbook set the author's choices on the cards it describes while fixed shape, consent and effects always hold.
 No lint rule reads the voice: it is the author's (`docs/card-authoring.md`, "The shape lint").
 
 ## The six ideas

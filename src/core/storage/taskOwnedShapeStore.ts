@@ -4,6 +4,7 @@ import { prepared } from "./statements";
 
 /** Each remaining shape field's typed owner; the composed WorkShape remains a compatible read. */
 export const CONTRACT_FIELDS = [
+  "ongoing",
   "internal_step",
   "result_schema",
   "skipped_plan_because",
@@ -21,6 +22,7 @@ export const PLACEMENT_FIELDS = [
   "placement_wait",
 ] as const satisfies readonly (keyof WorkShape)[];
 export const ROUTING_FIELDS = [
+  "intelligence",
   "kind",
   "premium_ask",
   "override_model_id",

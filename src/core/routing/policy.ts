@@ -43,12 +43,14 @@ export function tierFor(
       reason: `rule R1b: escalation attempt ${attempt} from ${from} runs at ${floor}`,
     };
   }
-  const intelligence = shape.program_part?.intelligence;
+  const intelligence = shape.intelligence ?? shape.program_part?.intelligence;
   if (intelligence && intelligence !== "premium") {
     return {
       rule: "R11",
       bucket: intelligence,
-      reason: `rule R11: the program chose ${intelligence} for this part`,
+      reason: shape.intelligence
+        ? `rule R11: the first mate requested ${intelligence}`
+        : `rule R11: the program chose ${intelligence} for this part`,
     };
   }
   if (shape.deliverable === "operation") {
@@ -62,7 +64,6 @@ export function tierFor(
     case "plan":
     case "research":
     case "reproduce":
-    case "teach":
     case "review": {
       const bucket = policy.kindTier[shape.kind];
       return { rule: "R2", bucket, reason: `rule R2: ${shape.kind} -> ${bucket}` };

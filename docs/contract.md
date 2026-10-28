@@ -161,7 +161,8 @@ The home alone sets it and enforces the gate it chooses.
 
 A plan item's `label` and `short` in `inf:tasks:detail` carry no length limit: a plan keeps its crewmate's words, and each surface cuts what it cannot show (`docs/task-record.md`).
 
-`teach` and `retrieval` are work and usage kinds; `teach` is also a model reason's `kind`, and `R10` one of its rules.
+`retrieval` is a work and usage kind, and `R10` one of the model reason rules.
+The retired teaching kind is no longer published; ongoing work and requested intelligence are generic declarations (`docs/routing.md`).
 
 Crew speed has a per-model write (`inf:models:speed:set`), the placed speed read (`inf:work:speed`), and optional speed fields on model rows (`speed`, `speeds`), task shapes (`override_speed`) and the placed spec (`speed`).
 Speed capability stays on the executing computer; only the requested setting is read from the home.

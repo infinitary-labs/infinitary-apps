@@ -97,6 +97,24 @@ describe("task tools", () => {
     expect(delegate.startNow).not.toHaveBeenCalled();
   });
 
+  // Intent: INF-1177 piece 2 keeps the same declared facts when work is filed before it starts.
+  it.each([true, false])(
+    "files ongoing %s and requested intelligence without a special kind",
+    async (ongoing) => {
+      const { delegate, byName } = toolset();
+      await byName.get("create_task")?.execute("subject", {
+        title: "Teach chess",
+        goal: "Practise rook moves",
+        user_words: "teach me chess",
+        ongoing,
+        intelligence: "high",
+      });
+      expect(delegate.plan).toHaveBeenCalledWith(
+        expect.objectContaining({ shape: { ongoing, intelligence: "high" } }),
+      );
+    },
+  );
+
   it("create_task carries the intent and the graph placement", async () => {
     const { delegate, byName } = toolset();
     const result = await byName.get("create_task")?.execute("c1", {

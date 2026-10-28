@@ -32,7 +32,7 @@ The adapter over one of the user's own subscription models and the native questi
 
 ## Kinds nest under the deliverable
 
-The kinds sit under what the work delivers (`KINDS_BY_DELIVERABLE`, INF-1430 piece 1): `retrieval`, `research`, `plan` and `reproduce` under an answer, `implement`, `fix`, `chore` and `teach` under a change.
+The kinds sit under what the work delivers (`KINDS_BY_DELIVERABLE`, INF-1430 piece 1): `retrieval`, `research`, `plan` and `reproduce` under an answer, `implement`, `fix` and `chore` under a change.
 `classifyShape` passes the deliverable the first mate's `read-only` declaration makes (`deliverableFor`), never the kind it is about to give, and the classifier is offered only that branch's kinds and `unclear`.
 The adapter's instruction stays one byte-stable text that teaches both branches; its user message names the deliverable and the kinds it may answer with, and the parse accepts only those, so a word from the other branch is `classifier-failed:unparsed`, which R8 routes high.
 A native model is asked the branch's own question (`KIND_QUESTIONS`), with only that branch's options.
@@ -50,13 +50,6 @@ The dominant-effort rule applies only after retrieval is excluded.
 A retrieval crewmate's brief tells it to stop at that boundary: its card says what is and is not established, names the source still needed, and makes Look deeper the default (`renderAnswerShapeSection`).
 R10 requests low for retrieval; for work the first mate commissioned the kind never decides the deliverable, which only the typed `read-only` constraint makes an answer (`docs/delivery-rigor.md`, "The deliverable axis").
 An older task's saved classification is not rewritten.
-
-## Teaching
-
-`teach` means the whole task is tutoring a learner through a subject or skill with lessons and practice (`docs/lessons.md`).
-R2 requests high for it, below the same named-model, premium and escalation rules.
-It is never an answer task: `deliverableFor` returns `change` for it even with a `read-only` constraint, so a choice on a lesson card never closes the subject (`SettleService.closeAnsweredTask`).
-A teach task on the personal workspace has no gate to ship through, so its own turns are committed and never close it (`docs/lessons.md`, "The task").
 
 ## The call
 

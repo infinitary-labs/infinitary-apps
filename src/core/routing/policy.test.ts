@@ -50,6 +50,34 @@ describe("tierFor: the captain's table", () => {
     });
   });
 
+  // Intent: INF-1177 piece 2 replaces feature-specific tier decisions with declared facts.
+  it.each(["low", "medium", "high"] as const)(
+    "routes a first-mate request at %s without overriding captain choices",
+    (intelligence) => {
+      expect(tierFor(shape({ intelligence, kind: "chore" }))).toMatchObject({
+        rule: "R11",
+        bucket: intelligence,
+      });
+      expect(tierFor(shape({ intelligence, override_model_id: "captain-model" }))).toMatchObject({
+        rule: "R0",
+        pin: "captain-model",
+      });
+      expect(tierFor(shape({ intelligence, premium_ask: true }))).toMatchObject({
+        rule: "R1a",
+        bucket: "premium",
+      });
+      expect(
+        tierFor(shape({ intelligence, escalation: { from: "prior", attempt: 1, floor: "high" } })),
+      ).toMatchObject({ rule: "R1b", bucket: "high" });
+    },
+  );
+  it("does not treat a first-mate premium hint as consent", () => {
+    expect(tierFor(shape({ kind: "chore", intelligence: "premium" }))).toMatchObject({
+      rule: "R7",
+      bucket: "low",
+    });
+  });
+
   it("defines the approved reasoning effort for each tier", () => {
     expect(DEFAULT_ROUTING_POLICY.effort).toEqual({
       premium: "xhigh",

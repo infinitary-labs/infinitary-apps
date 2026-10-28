@@ -8,6 +8,7 @@ import Database from "better-sqlite3";
 import { repairMovedTaskFolders } from "../folderMove/taskFolders";
 import { INBOX_GRACE_MS, inboxContentHash } from "./inboxStore";
 import { migrateGpt6Slots, migrateModelSlots } from "./migrateModelSlots";
+import { migrateOngoingWork } from "./migrateOngoingWork";
 import { ensureRepoProject, ensureScratchProject, SCRATCH_PROJECT_ID } from "./projectStore";
 import { retireKeepOpen } from "./retireKeepOpen";
 import {
@@ -1175,6 +1176,8 @@ const MIGRATIONS: readonly Migration[] = [
   // INF-1482: the existing installer record distinguishes guidance from panels.
   // Existing rows remain panels; no published view reads it. Drop kind to reverse.
   addPluginKind,
+  // Preserve existing continuing work while retiring its feature-specific kind.
+  migrateOngoingWork,
 ];
 
 /** The current database format, derived from the embedded migration ledger. */

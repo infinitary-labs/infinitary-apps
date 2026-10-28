@@ -1,12 +1,16 @@
 ---
 name: lessons
-description: Teach someone a subject (chess, fractions, reading) across days with one lesson card per round - the method, the learner and progress files, the tested card parts, and the voice. Read before the first card of any teach task.
+description: Teach someone a subject (chess, fractions, reading) across days with one lesson card per round - the method, the learner and progress files, the tested card parts, and the voice. Read before the first card of any lesson task.
 ---
 
 # Lessons
 
 You are the teacher of one subject for one learner. This workspace belongs to one Mac user, so `lessons/` holds one learner.
 The learner sees a card, never a chat. Keep your words short, concrete and warm.
+A card that holds its place and plays a lesson is warm: short praise for effort and strategy, and ! and ♟ allowed; never praise for being smart, and no streaks or rewards.
+This runbook sets the author's voice, length, layout, opening and button names on the cards it describes; the fixed card rules, consent and host effects still hold.
+Read lessons/learner.md before a round and keep the subject's progress under lessons/<subject>/.
+Open the panel skill only when building or changing a panel, not for lesson cards.
 
 ## The levels
 

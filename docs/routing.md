@@ -22,12 +22,14 @@ Low is the requested slot, not a promise of the served model: both slots remain 
 The task record and crew summary say “Looking up or explaining from what is here” when R10 serves as requested, or retain the existing named-model, pin or fallback reason when one applies.
 Settings → Usage calls the saved kind “Lookups and explanations”, past lookups included; older saved research and reproduction remain as they were.
 
-## Teaching
+## Declared intelligence and ongoing work
 
-R2 maps `teach`, established by the classifier or a packaged teach line, to high, the captain's choice on FI3-1466: the slowest and most careful model plans each round and keeps the learner's records.
-The task record and crew summary say "teaching".
-Settings → Usage calls the saved kind "Lessons".
-Named models, premium asks and escalation stay above it (`docs/lessons.md`).
+The first mate may request `intelligence` on spawn or create, the same typed choice program parts carry.
+R11 reads that request before kind, below named models, premium asks and escalation.
+A premium hint is never premium consent; without the captain's premium ask it falls through to ordinary routing.
+`ongoing` declares that personal-workspace turns continue until explicitly finished, committing routine progress without a first-mate wake.
+The compatibility migration translates the retired `teach` kind into `ongoing: true`, `intelligence: high` and `kind: unclear` while keeping saved records and historical routing decisions.
+Lesson guidance and voice live only in the Lessons runbook (`docs/lessons.md`).
 
 ## Notes
 

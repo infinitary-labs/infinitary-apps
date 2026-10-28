@@ -70,8 +70,6 @@ export const KIND_CRITERIA: Record<string, string> = {
   retrieval: RETRIEVAL_CRITERION,
   reproduce:
     "establishing that a defect really happens and under what conditions, before anything is fixed",
-  teach:
-    "tutoring a learner through a subject or skill with lessons and practice; the work is the learner's progress",
   implement: "building something that does not exist yet",
   fix: "correcting something that exists and is wrong",
   chore: "small mechanical work with no design in it",

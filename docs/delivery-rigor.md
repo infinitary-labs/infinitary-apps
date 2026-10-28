@@ -168,7 +168,7 @@ Rule 0's first case is its own fact on the record.
 `WorkShape.deliverable` is `answer`, `change` or `operation`, derived by the host at the mint from the first mate’s typed constraints (`deliverableFor` in `src/core/orchestrator/intentBrief.ts`): `read-only` declares an answer and `operation` declares an effect.
 The sequences document marks every plan, retrieval, research and reproduce step read-only, and the constraint’s description says a task without read-only or operation ships a change.
 Folder work is an operation; read-only beside operation or folder work is refused before starting.
-Everything else is a change, and a `teach` kind without operation is always a change even with read-only: its card is never the end of the work.
+Everything else is a change; no feature-specific kind overrides the typed deliverable.
 For work the first mate commissioned, the classifier's kind only routes, never decides the deliverable (INF-990 friction 7: a build whose goal asked for a preview first was classified a plan, so its brief said answer only and the captain's choice on the preview closed it).
 A plan is its own answer step since contract v4.6 (`docs/sequences.md`), so the retired `plan-first` constraint - which a stored intent may still name - changes nothing here.
 No agent judges it, the same way none judges the tier or the rigor.
@@ -185,7 +185,7 @@ Merge and land are refused; dismissal of a note is never proof of the effect.
 An answer task is told so, in the one place the visual-density audit measured as the channel every model family obeys - the brief.
 It gets no `Delivery:` line, no rigor section, and `renderAnswerShapeSection` says the rest as facts about the task: its card is the deliverable, its worktree is a laboratory that is discarded when the task closes, and it commits nothing, pushes nothing, and opens no pull request.
 The host does not only ask: `settle_task merge-pr` and `land` are refused on it, a card carrying a settle effect is refused at the card boundary the way the personal workspace's is, and its worktree is removed whatever it holds with nothing saved first (every other closed task's unlanded work is saved on a hidden kept ref before its tree goes) - the record's own `deliverable` is what says the worktree was scratch.
-The kinds nest under it (`KINDS_BY_DELIVERABLE`, INF-1430): the classifier is told the deliverable the host derived and offered only that branch's kinds - `retrieval`, `research`, `plan` and `reproduce` for an answer, `implement`, `fix`, `chore` and `teach` for a change - so an answer is never sorted into a change kind or the reverse.
+The kinds nest under it (`KINDS_BY_DELIVERABLE`, INF-1430): the classifier is told the deliverable the host derived and offered only that branch's kinds - `retrieval`, `research`, `plan` and `reproduce` for an answer, `implement`, `fix` and `chore` for a change - so an answer is never sorted into a change kind or the reverse.
 A crewmate's follow-up has no intent, so nobody declared it: for it alone the classifier is offered every kind and its kind decides, an answer-branch kind being an answer.
 It is held to the same brief, though it has no intent to render from: its brief was written at filing, with the `Delivery:` line last, so when its kind makes it an answer the host drops that line (`withoutDeliveryLine`) and appends the same answer-shape section.
 Its tools follow the same stamped deliverable, so an answer is never told to open a pull request it has no `open_change` to open (FI3-598).
@@ -369,9 +369,11 @@ The personal workspace takes no policy at all - its registry refuses the whole p
 
 **Check facts and declarations.**
 `check_change` returns check and mergeability facts and records the crewmate's evidence-backed judgments (`docs/forge.md`, "Check facts and crew judgment").
+The crew-only Delivery judgment runbook (`resources/runbooks/delivery`) supplies direct-pr work with readiness, diagnosis, repair, rerun and stopping guidance.
+Its switch changes new crew prompts, not the fixed care procedure, actual check facts, consent or merge authorization.
 The host does not decide green from check states, automatically settle repairs, or enforce a repair, rerun or review-round count.
 The delivery guidance tells the crew how to judge readiness, diagnose a failure, investigate uncertainty and decide when to stop.
-A declaration of ready applies only to its named version and grants no merge permission.
+A merge offer expresses readiness only for its named version and grants no merge permission.
 A declaration of red permits a completion offer with Merge anyway, whose captain click passes the checks hold for that version.
 A diagnosis alone does not permit that offer.
 Normal check replies carry current facts and unresolved repair identities, not the whole historical ledger; the task record retains declaration history.

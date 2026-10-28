@@ -827,11 +827,11 @@ describe("FIRSTMATE_PROMPT_CORE (contract v3.3, delivery rigor phase 2: the revi
     );
   });
 
-  it("keeps a crewmate's three-round CI blocker and the host's cap wake as one decision card on its task (v3.4)", () => {
+  it("routes a crewmate blocker by its guidance without hard-coding a repair count", () => {
     expect(core).toContain(
-      "A crewmate's blocker report that names three unsuccessful own repairs, and the host's wake that a task hit its CI or review cap, are one decision card on its task, carrying the other ways that wake names; steer the crewmate with the captain's retry answer, which reopens its rounds.",
+      "A crewmate's blocker report follows its delivery guidance: coordinate the next owner, or ask for a captain-only decision on its task, carrying the other ways that wake names. Steer the crewmate with the captain's answer; never infer merge consent.",
     );
-    // What the host holds until then is the cap wake's to say (INF-490; the ledger names it).
+    // A blocker never grants merge consent or invents a host allowance.
     expect(core).not.toContain("until then the host holds its completion card");
     // A repository's standing rigor is set by talking (phase 3): the tool,
     // named once, on the user's words alone - the Firstmate judges none.
@@ -1628,10 +1628,10 @@ describe("buildCrewmateSystemPrompt (contract v2.0: policy only, one note per ba
 // INF-680 adds the Anything else? box sentence for crewmates; INF-924 makes it the one field's.
 // INF-490 drops the sentences its refusals and the tool answers already say.
 it("keeps the full authoring and handoff sources word for word", () => {
-  // INF-1177 explicitly adds runbook precedence for author choices; the rest of the card contract stays fixed.
+  // INF-1177 moves lesson voice into its runbook; fixed card mechanics and runbook precedence stay.
   const hash = (text: string) => createHash("sha256").update(text).digest("hex");
   expect(hash(CARD_AUTHORING)).toBe(
-    "8364a7ab6148f2d0597b0ccd0b96e3ef80205cfedd045f54b03904d4f6ee8e68",
+    "d2b564d6bb5375dc7a353924d7aa1fdf709c9ac611751b5a813e595920d6cd6d",
   );
   // INF-416 piece H drops HANDOFF's restatement of reading the saved plan by key; the core still says it.
   // INF-976 widens the first mate's check before a start to filing, read off the built-on work.

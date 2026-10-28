@@ -34,7 +34,6 @@ import { completionCardBody } from "../helpers/completionCard";
 import type { ScriptedArgs, ScriptedCall, ScriptedCardAction } from "../helpers/scriptedCalls";
 import { WRITE_ASK_ANSWER_MARKER } from "./apiWriteCases";
 import { DEMO_CAPTION, DEMO_POSTER } from "./demoFixtures";
-import { LESSON_CHESS_GOAL, LESSON_FRACTIONS_GOAL } from "./lessonFixtures";
 import {
   bytesOf,
   CHANGE_AFTER_PICTURES,
@@ -1516,9 +1515,7 @@ export async function startMockProvider(
         if (body.includes(CLASSIFIER_SYSTEM_MARKER)) {
           // A sequences reproduce step is sorted as what it is, so it is an
           // answer task the way a real classifier makes it one.
-          if (body.includes(LESSON_CHESS_GOAL) || body.includes(LESSON_FRACTIONS_GOAL))
-            streamText("teach");
-          else if (body.includes(RETRIEVAL_TASK_GOAL)) streamText("retrieval");
+          if (body.includes(RETRIEVAL_TASK_GOAL)) streamText("retrieval");
           else if (body.includes(SEQ_REPRODUCE_GOAL)) streamText("reproduce");
           else if (body.includes(CLASSIFY_CHORE_MARKER)) streamText("chore");
           // A crewmate's filed follow-up is sorted as research, so started

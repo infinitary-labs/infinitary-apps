@@ -341,7 +341,7 @@ describe("DecisionKindClassifier over the adapter", () => {
         new AbortController().signal,
       );
       expect(offered.prompts[0]).toContain(
-        "delivers: a change (one of: implement, fix, chore, teach, unclear)",
+        "delivers: a change (one of: implement, fix, chore, unclear)",
       );
       expect(verdict).toMatchObject({ kind: "unclear", source: `${KIND_SOURCE.failed}unparsed` });
     }

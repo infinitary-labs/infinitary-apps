@@ -7,8 +7,7 @@
  */
 export const PERSONAL_AGENTS_MD = `# Personal workspace
 
-This folder holds personal panels and lesson records, not standalone games or apps.
-A lesson comes back as cards. Open the lessons skill, read \`lessons/learner.md\`, and keep that subject's progress under \`lessons/<subject>/\`. Do not open the panel skill, \`infinitary-env.d.ts\`, or the design overview for a lesson.
+This folder holds personal panels and records, not standalone games or apps.
 A game or a standalone app belongs in its own project. That project keeps the setup, planning and delivery the captain submitted. It does not use this folder's rule of no branch and no pull request.
 
 ## Stay inside this workspace

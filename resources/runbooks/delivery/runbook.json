@@ -1,0 +1,13 @@
+{
+  "id": "delivery",
+  "name": "Delivery judgment",
+  "description": "How crewmates judge checks, repairs and readiness to merge.",
+  "crew": {
+    "file": "crew.json",
+    "when": {
+      "delivery": [
+        "direct-pr"
+      ]
+    }
+  }
+}

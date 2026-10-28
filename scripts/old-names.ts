@@ -269,7 +269,7 @@ export const RULES: readonly Rule[] = [
   {
     class: "reader",
     why: "the design skill's folder before the rename, which a workspace seed takes away",
-    path: /^src\/core\/personal\/workspaceSkills(\.test)?\.ts$/,
+    path: /^(src\/core\/personal\/workspaceSkills(\.test)?\.ts|resources\/personal-workspace\/retired-skills\.json)$/,
     line: /firstmate-3000-design/,
   },
 ];

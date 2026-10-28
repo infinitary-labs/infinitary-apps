@@ -22,7 +22,7 @@ An answer that needs past runs compared, a computer the app does not reach, a re
 When the captain chooses Look deeper on a retrieval answer's card, the first mate starts a read-only research step built on that answer, its goal naming the source the answer said was missing.
 
 The Lessons and Casual projects runbooks draw the line between lessons, projects and panels.
-Someone learning or practising a subject, including a math quiz, gets one `teach` task per subject on the personal workspace with `personal_ui` true and the packaged teach line attached; its brief names the lessons guide and cards (`docs/lessons.md`).
+Someone learning or practising a subject, including a math quiz, gets one ongoing task per subject on the personal workspace with `personal_ui` true and requested intelligence high; its brief names the lessons guide and cards (`docs/lessons.md`).
 A glanceable rail surface remains a panel, and existing quiz or game panels stay untouched.
 An ambiguous ask naming something to learn becomes a lesson, otherwise a project; the first mate states its choice in the activity line.
 A new game, toy, page or small app gets its own project on the existing setup card; work in an existing project needs no setup.

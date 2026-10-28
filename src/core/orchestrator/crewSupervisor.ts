@@ -3197,13 +3197,13 @@ export class CrewSupervisor {
             input.intent,
             delivery,
             escalation.facts,
-            personal ? { ...personal, kind: shaped.kind } : undefined,
+            personal ? { ...personal, ongoing: shaped.ongoing } : undefined,
             folder,
           )
         : renderIntentBrief(
             input.intent,
             delivery,
-            personal ? { ...personal, kind: shaped.kind } : undefined,
+            personal ? { ...personal, ongoing: shaped.ongoing } : undefined,
             folder,
           );
     };
@@ -4274,10 +4274,10 @@ export class CrewSupervisor {
   }
 
   /** The personal brief's workspace facts (Step 4): the directory and the surfaces that exist. */
-  private personalFacts(kind?: WorkShape["kind"]): PersonalBriefFacts | undefined {
+  private personalFacts(ongoing?: boolean): PersonalBriefFacts | undefined {
     const personal = this.options.personal;
     if (!personal) return undefined;
-    return { workspaceDir: personal.workspaceDir, surfaces: personal.surfaces(), kind };
+    return { workspaceDir: personal.workspaceDir, surfaces: personal.surfaces(), ongoing };
   }
 
   /**
@@ -4663,6 +4663,12 @@ export class CrewSupervisor {
       const inFolder = ask?.in_folder || isFolderWork(inherited?.in_place);
       return {
         ...(inherited?.deliverable === "operation" ? { deliverable: "operation" as const } : {}),
+        ...((ask?.ongoing ?? inherited?.ongoing) !== undefined
+          ? { ongoing: ask?.ongoing ?? inherited?.ongoing }
+          : {}),
+        ...((ask?.intelligence ?? inherited?.intelligence)
+          ? { intelligence: ask?.intelligence ?? inherited?.intelligence }
+          : {}),
         kind: inherited?.kind ?? "unclear",
         kind_source: "none",
         ...(ask?.premium_ask ? { premium_ask: true as const } : {}),
@@ -4688,6 +4694,8 @@ export class CrewSupervisor {
       };
     }
     return {
+      ...(ask?.ongoing !== undefined ? { ongoing: ask.ongoing } : {}),
+      ...(ask?.intelligence ? { intelligence: ask.intelligence } : {}),
       kind: ask?.kind ?? "unclear",
       kind_source: ask?.kind ? "firstmate:declared" : "none",
       ...(ask?.premium_ask ? { premium_ask: true as const } : {}),
@@ -7333,20 +7341,18 @@ export class CrewSupervisor {
     // finished. A commit that fails keeps the task open and tells the
     // Firstmate instead (`commitFailed`), so it never reads as finished.
     const personal = this.options.personal;
-    // A teach task is a subject kept open across days: every finished turn is
-    // committed (its records are files), and none closes the task or wakes
-    // the Firstmate, with a report or without one. Only a report that asks
-    // Firstmate for something, or says it is finished, routes like any other.
+    // Ongoing work commits every personal turn without waking the first mate
+    // for routine progress. Coordination and completion route normally.
     if (
       !turnError &&
       !options.interrupted &&
       personal &&
       this.isPersonalTask(task.id) &&
-      this.options.tasks.get(task.id)?.shape?.kind === "teach" &&
+      this.options.tasks.get(task.id)?.shape?.ongoing === true &&
       !declared?.needsFirstmate &&
       declared?.finished !== true
     ) {
-      void this.commitLiveTurn(task, report || "lesson turn", personal);
+      void this.commitLiveTurn(task, report || "ongoing work turn", personal);
       return;
     }
     const saved =
@@ -12341,7 +12347,7 @@ export class CrewSupervisor {
     return renderIntentBrief(
       record.intent,
       delivery,
-      personal ? this.personalFacts(shape.kind) : undefined,
+      personal ? this.personalFacts(shape.ongoing) : undefined,
     );
   }
 

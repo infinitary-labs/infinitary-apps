@@ -25,6 +25,7 @@ import {
   LESSON_ROUND_TWO_TITLE,
   LESSON_WELCOME_TITLE,
 } from "./lessonFixtures";
+import { FM_SYSTEM_MARKER, servedInstructions } from "./mockProvider";
 import { heroShot, regionShot } from "./pictures";
 import { readSavedData } from "./savedData";
 import { lessons } from "./scenarios/lessons";
@@ -68,7 +69,7 @@ const choose = (page: Page, name: string) =>
 
 /**
  * The whole accepted lesson loop, scripted: the teacher's words are fixed
- * (`lessonFixtures.ts`), so this proves the app's behavior - the teach kind,
+ * (`lessonFixtures.ts`), so this proves the app's behavior - declared ongoing work,
  * the card's own answer key, reply continuity, forward arrivals, committed
  * records, the welcome-back card through a restart - and nothing about a
  * model's teaching. One ordered journey with named sections.
@@ -94,8 +95,9 @@ test("a lesson plays in one card, keeps its records and welcomes the learner bac
   db.close();
   let launched = await launchApp({ scenarios: [lessons], userDataDir, withMockProvider: true });
   const teacherRequests = () =>
-    (launched.mockProvider?.requestBodies() ?? []).filter((body) =>
-      body.includes(LESSON_CHESS_ASK),
+    (launched.mockProvider?.requestBodies() ?? []).filter(
+      (body) =>
+        body.includes(LESSON_CHESS_ASK) && !servedInstructions(body).includes(FM_SYSTEM_MARKER),
     );
   try {
     await test.step("a teach request starts one teacher, which asks the goal first", async () => {
@@ -108,13 +110,13 @@ test("a lesson plays in one card, keeps its records and welcomes the learner bac
       const chess = tasksOf(userDataDir).filter((task) => task.title === "Teach chess");
       expect(chess).toHaveLength(1);
       const shape = JSON.parse(chess[0]?.shape ?? "{}");
-      expect(shape).toMatchObject({ kind: "teach", deliverable: "change" });
+      expect(shape).toMatchObject({ ongoing: true, intelligence: "high", deliverable: "change" });
       const routing = readSavedData(userDataDir, (saved) =>
         saved
           .prepare("SELECT rule, bucket FROM routing_decisions WHERE task_id = ?")
           .all(chess[0]?.id),
       );
-      expect(routing.at(-1)).toMatchObject({ rule: "R2", bucket: "high" });
+      expect(routing.at(-1)).toMatchObject({ rule: "R11", bucket: "high" });
       // The first card asks for the goal, in the warm voice a lesson card may use.
       await expect(
         cardBody(page, LESSON_GOAL_TITLE).getByLabel("What do you want to be able to do?"),

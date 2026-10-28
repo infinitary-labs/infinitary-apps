@@ -1,5 +1,8 @@
 import { copyFile, mkdir, readdir, readFile, rm, stat } from "node:fs/promises";
 import { join, relative } from "node:path";
+import retiredSkillIds from "../../../resources/personal-workspace/retired-skills.json" with {
+  type: "json",
+};
 
 /**
  * The app-owned skills in the personal workspace (talk-to-personalize Step
@@ -42,7 +45,7 @@ const DESIGN_SKILL_SOURCE = join(".claude", "skills", DESIGN_SKILL_ID);
  * The design skill's folder before the Infinitary rename (step 9): an
  * app-owned copy a seed takes away, so the workspace keeps one design skill.
  */
-export const RETIRED_SKILL_IDS = ["firstmate-3000-design", "lessons", "sequences"] as const;
+export const RETIRED_SKILL_IDS = retiredSkillIds as [string, ...string[]];
 
 /** The authoring skills, at theirs. */
 export const AUTHORING_SKILL_IDS = [

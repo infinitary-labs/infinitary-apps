@@ -1,0 +1,17 @@
+{
+  "entries": [
+    {
+      "id": "delivery-runbook",
+      "kind": "feature",
+      "title": "Choose your crew's delivery guidance",
+      "body": "Delivery judgment joins the runbooks in Settings → Intelligence. Turn it off there or ask your first mate. It guides crewmates checking a pull request, repairing failures and deciding when their work is ready. Changing it never grants permission to merge. Lessons now keep their teaching method and warm voice in their own runbook, while continuing subjects keep their saved progress.",
+      "area": "crewmates",
+      "picture": {
+        "dark": "delivery-runbook-dark.webp",
+        "light": "delivery-runbook-light.webp",
+        "alt": "Settings shows the Delivery judgment switch turned on between Casual projects and Lessons"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

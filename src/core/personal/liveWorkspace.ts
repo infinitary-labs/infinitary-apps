@@ -80,7 +80,7 @@ export async function changedPaths(workspaceDir: string): Promise<string[]> {
  * (docs/personal-panels.md, "Build, live"): a top-level folder named like
  * a panel id that holds `panel.tsx` or `server.ts`. `topFiles` names the
  * files at the folder's top, from the disk or from a commit. Any other
- * folder - `lessons/`, notes, a half-built folder with no entry file yet -
+ * folder - records, notes, a half-built folder with no entry file yet -
  * holds records, and nothing loads, stamps, lints or places it.
  */
 export function isPanel(id: string, topFiles: Iterable<string>): boolean {

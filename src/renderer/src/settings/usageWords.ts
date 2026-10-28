@@ -230,7 +230,6 @@ export const KIND_WORDS: Record<UsageWorkKind, string> = {
   research: "Research",
   retrieval: "Lookups and explanations",
   reproduce: "Issue reproduction",
-  teach: "Lessons",
   implement: "Implementation",
   fix: "Fixes",
   chore: "Maintenance",

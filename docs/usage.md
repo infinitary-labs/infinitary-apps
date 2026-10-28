@@ -67,7 +67,7 @@ Usage subscribers refresh on these completions as well as ordinary replies.
   `attribution` is the weakest naming among its records, and `priceSources` where its estimates came from.
 - **Where it went.**
   `where` holds the first mate, each project's task work, and other work.
-  A project carries its subtotal and the same usage by the kind of work its tasks' shapes saved (`tasks.shape_json`): plan, research, retrieval, reproduce, teach, implement, fix, chore or review.
+  A project carries its subtotal and the same usage by the kind of work its tasks' shapes saved (`tasks.shape_json`): plan, research, retrieval, reproduce, implement, fix, chore or review.
   A task with no saved kind, `unclear`, or a kind the list does not know is null, other task work in its project; nothing guesses a kind from a title.
   A task whose project the record no longer has sums under a null project.
   The first mate, the project subtotals and other work add up to the total, and a project's kinds add up to its subtotal, never to more.

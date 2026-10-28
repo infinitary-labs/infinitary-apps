@@ -28,9 +28,9 @@ function fixture() {
 }
 // Intent: the captain's accepted INF-1177 settings; the fixtures are the actual bundled procedures.
 describe("runbooks over existing prompt and skill doors", () => {
-  it("starts all six on and persists an individual switch without taking programs away", () => {
+  it("starts every bundled runbook on and persists an individual switch without taking programs away", () => {
     const { db, books } = fixture();
-    expect(books.list()).toHaveLength(6);
+    expect(books.list()).toHaveLength(7);
     expect(books.list().every((book) => book.enabled)).toBe(true);
     const before = books.firstmate();
     books.set("sequences", false);
@@ -58,6 +58,45 @@ describe("runbooks over existing prompt and skill doors", () => {
     }
     books.set("testing", false);
     expect(books.crew(code).text).not.toContain(passage);
+  });
+  it("serves delivery judgment only to direct-pr crew, and its switch removes it", () => {
+    const { books, db } = fixture();
+    const passage = (
+      JSON.parse(readFileSync(join(root, "delivery/crew.json"), "utf8")) as string
+    ).trim();
+    for (const backend of ["pi", "claude"]) {
+      expect(books.crew({ ...code, backend }).text).toContain(passage);
+      expect(books.crew({ ...code, backend, delivery: "local-only" }).text).not.toContain(passage);
+    }
+    expect(books.firstmate().text).not.toContain(passage);
+    books.set("delivery", false);
+    expect(new Runbooks(root, new SettingsStore(db)).crew(code).text).not.toContain(passage);
+  });
+  it("removes delivery judgments from actual crew prompts on both backends without removing consent", () => {
+    const { books } = fixture();
+    const cwd = scratchDir("inf-delivery-prompt-");
+    for (const backend of ["pi", "claude"] as const) {
+      const binding = backend === "pi" ? fakeBinding("test") : { backend, accountId: "test" };
+      const prompt = () =>
+        crewmateSessionSpec(
+          appPathsFor(cwd),
+          {
+            taskId: "delivery",
+            machineId: "local",
+            cwd,
+            runbookText: books.crew({ ...code, backend }).text,
+            procedure: { delivery: "direct-pr", rigor: "standard" },
+          },
+          binding,
+        ).instructions.base;
+      expect(prompt()).toContain("Up to three unsuccessful own repairs");
+      books.set("delivery", false);
+      expect(prompt()).not.toContain("Up to three unsuccessful own repairs");
+      expect(prompt()).not.toContain("Never emit a completion decision on anything but green");
+      expect(prompt()).toContain("The completion offer never grants merge permission");
+      expect(prompt()).toContain("Before anything sensitive or costly");
+      books.set("delivery", true);
+    }
   });
   it("matches every declared axis without judging words", () => {
     expect(

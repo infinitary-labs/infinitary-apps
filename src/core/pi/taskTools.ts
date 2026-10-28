@@ -164,6 +164,8 @@ export function createTaskTools(delegate: TaskToolsDelegate) {
       ),
       start_policy: Type.Optional(START_POLICY),
       priority: PRIORITY,
+      ongoing: Type.Optional(Type.Boolean({ description: "As spawn_crewmate shape.ongoing." })),
+      intelligence: Type.Optional(stringEnum(["low", "medium", "high", "premium"])),
       kind: Type.Optional(stringEnum([...CLASSIFIABLE_KINDS, "unclear"])),
       basis: Type.Optional(Type.String({ description: "As spawn_crewmate's shape.basis." })),
       placement_requirements: Type.Optional({
@@ -191,6 +193,8 @@ export function createTaskTools(delegate: TaskToolsDelegate) {
           ? { placement_requirements: params.placement_requirements }
           : {}),
         ...(basis ? { basis } : {}),
+        ...(params.ongoing !== undefined ? { ongoing: params.ongoing } : {}),
+        ...(params.intelligence ? { intelligence: params.intelligence } : {}),
         ...(params.kind ? { kind: params.kind } : {}),
         ...(params.internal_step ? { internal_step: true } : {}),
         ...(params.result_schema

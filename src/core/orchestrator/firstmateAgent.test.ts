@@ -7988,6 +7988,84 @@ describe("FirstmateAgent answer delivery", () => {
     expect(g.tasks.getAsk(original?.id ?? "")?.delivery).toBe("unresolved");
   });
 
+  // INF-1433: Ask again must send the retained pictures, even with no words.
+  it.each(["What is in these pictures?", ""])(
+    "resends the original pictures and their names with Ask again (%j)",
+    async (text) => {
+      const f = setup({ silent: true });
+      const images = [
+        { ...pngImage, name: "screenshot.png" },
+        { ...jpegImage, name: "photo.jpg" },
+      ];
+      await f.agent.converse({ text, images });
+      await finish(f);
+      await drained(f.session, 2);
+      await finish(f);
+      await vi.waitFor(() => expect(noticeOf(f)).toBeDefined());
+      const original = f.tasks.listAsks()[0];
+      expect(original?.attachments).toHaveLength(2);
+
+      f.supervisor.act(`card-ask-${original?.id}`, "ask-again");
+      await vi.waitFor(() => expect(f.session.prompts).toHaveLength(3));
+      expect(f.session.promptImages[2]).toEqual(images);
+      const again = f.tasks.listAsks().at(-1);
+      expect(again).toMatchObject({ text, deliveryFacts: { retryOf: original?.id } });
+      expect(
+        again?.attachments?.map(({ name, mimeType, bytes, sha256 }) => ({
+          name,
+          mimeType,
+          bytes,
+          sha256,
+        })),
+      ).toEqual(
+        original?.attachments?.map(({ name, mimeType, bytes, sha256 }) => ({
+          name,
+          mimeType,
+          bytes,
+          sha256,
+        })),
+      );
+      for (const [index, attachment] of (again?.attachments ?? []).entries()) {
+        expect(readFileSync(attachmentPath(attachment)).toString("base64")).toBe(
+          images[index]?.data,
+        );
+      }
+      expect(noticeOf(f)).toBeUndefined();
+    },
+  );
+
+  // The same intent excludes a partial resend when one retained picture is unavailable.
+  it.each(["missing", "changed"])(
+    "does not resend words or a subset of pictures when a saved picture is %s",
+    async (condition) => {
+      const f = setup({ silent: true });
+      await f.agent.converse({
+        text: "Compare these pictures",
+        images: [
+          { ...pngImage, name: "first.png" },
+          { ...jpegImage, name: "second.jpg" },
+        ],
+      });
+      await finish(f);
+      await drained(f.session, 2);
+      await finish(f);
+      await vi.waitFor(() => expect(noticeOf(f)).toBeDefined());
+      const original = f.tasks.listAsks()[0];
+      const attachment = original?.attachments?.[1] as AttachmentRef;
+      if (condition === "missing") rmSync(attachmentPath(attachment));
+      else writeFileSync(attachmentPath(attachment), Buffer.from(pngImage.data, "base64"));
+
+      f.supervisor.act(`card-ask-${original?.id}`, "ask-again");
+      await tick();
+      expect(f.session.prompts).toHaveLength(2);
+      expect(f.tasks.listAsks()).toHaveLength(1);
+      expect(f.events).toContainEqual({
+        type: "firstmate_note",
+        text: expect.stringContaining('The picture "second.jpg" is not available'),
+      });
+    },
+  );
+
   it("judges each message by the actions after it: a card before a steered message does not cover it", async () => {
     const f = setup({ silent: true });
     await f.agent.converse("first question");

@@ -80,6 +80,9 @@ The check runs at the turn's end, after reply capture and the first mate's close
 3. A missing answer gets one retry: the typed `answer-missing` wake (`docs/inbox.md`), once-name `answer-repair:<askId>`, served alone at the captain thinking level.
    During it every tool that starts, steers, stops or closes work or changes a setting answers with a refusal as text (`ANSWER_ONLY_REFUSED_TOOLS`); `emit_card`, `close_card`, `emote`, `link_tasks` and the lookups stay.
 4. A retry that still leaves the answer missing raises one task-less host notice, `card-ask-<askId>`: the captain's own words escaped, a typed reason when one is known, **Ask again** (default; host op `ask-again`, a fresh captain turn with the same hint, linked `retryOf`) and **Leave it** (runs nothing).
+   Ask again loads and verifies the message's retained pictures before accepting the fresh turn, preserving their names alongside the original words and complete text-file references; a picture-only message is sent too.
+   A missing or changed picture refuses the whole resend and explains in Activity that the message needs to be sent again with the picture, rather than sending only its words or remaining pictures.
+   Older messages with no retained picture copies keep their text-only retry.
    It never quotes closing words, refusal text or an error, and the host's own record for it files no crewmate task.
    The message, and every message joined to it, ends `unresolved`.
 

@@ -442,7 +442,7 @@ export type TurnPayload =
   | {
       text?: string;
       messageFiles?: MessageFile[];
-      images?: Array<{ mimeType: string; data: string }>;
+      images?: Array<{ mimeType: string; data: string; name?: string }>;
       visibleCardId?: string;
       /** The task the open record card points at (P4); a hint like the card. */
       taskId?: string;
@@ -660,15 +660,35 @@ export class FirstmateAgent {
    * captain turn that keeps the same hint and links back to it. It runs with
    * the captain's own authority like any turn of theirs.
    */
-  private askAgain(askId: string): void {
+  private async askAgain(askId: string): Promise<void> {
     const ask = this.options.tasks.getAsk(askId);
     if (!ask) return;
-    void this.converse({
-      text: ask.text,
-      ...(ask.messageFiles?.length ? { messageFiles: ask.messageFiles } : {}),
-      ...(ask.hintTaskId ? { taskId: ask.hintTaskId } : {}),
-      retryOf: askId,
-    });
+    try {
+      // Read and verify every retained copy before accepting a fresh turn.
+      // Never turn a picture-only retry into an empty message, or resend
+      // just the words when one of the original pictures is unavailable.
+      const refs = ask.attachments ?? [];
+      const images = loadImages(refs).map((image, index) => ({
+        ...image,
+        name: refs[index]?.name,
+      }));
+      await this.converse({
+        text: ask.text,
+        ...(images.length ? { images } : {}),
+        ...(ask.messageFiles?.length ? { messageFiles: ask.messageFiles } : {}),
+        ...(ask.hintTaskId ? { taskId: ask.hintTaskId } : {}),
+        retryOf: askId,
+      });
+    } catch (caught) {
+      const why =
+        caught instanceof AttachmentUnavailableError
+          ? `${caught.message} Send it again with the picture.`
+          : "Please send it again.";
+      this.options.broadcastEvent({
+        type: "firstmate_note",
+        text: `Your message could not be sent again. ${why}`,
+      });
+    }
   }
 
   /** Save one action that took effect (or one refused card) for the messages the turn has read. */

@@ -23,6 +23,8 @@ import {
   type ForgeReadiness,
   ForgeWriteError,
   GITLAB_PRIVATE_MEDIA_REFUSAL,
+  NO_MISTAKES_ATTESTATION_PREFIX,
+  NO_MISTAKES_SIGNATURE,
   presentationCommitMessage,
   presentationContentHash,
   presentationMarkdown,
@@ -3346,6 +3348,47 @@ describe("shared story delivery boundaries", () => {
       ).toContain("The current proof or review changed before publication");
       expect(at.update).not.toHaveBeenCalled();
       expect(at.tasks.changePresentation("ab12cd34")?.published?.revision).toBe(1);
+    },
+  );
+
+  // INF-1793, the captain: "it's my intended design to have infinitary's careful rigor be counted
+  // as no-mistakes in those PR enforcements". Default care writes neither line.
+  it.each(["reviewed", "standard"] as const)(
+    "INF-1793: a %s story carries no-mistakes' attestation only from Careful's records",
+    async (rigor) => {
+      const at = await saved();
+      at.tasks.setDevice("ab12cd34", null);
+      at.repos.configure(at.tasks.get("ab12cd34")!.repoId!, { rigor });
+      seedDelivery(at.tasks, "ab12cd34", {
+        reviewVerdict: "pass",
+        reviewSha: original,
+        liveValidation: noSurfaceProof(original),
+      });
+      const title = "fix: explain the publication recovery";
+      at.tasks.updateChangePresentation("ab12cd34", (current) => ({
+        ...current!,
+        revisions: [...current!.revisions, { ...at.story, revision: 2, title }],
+      }));
+      await at.service.open("ab12cd34", { title, presentation: 2 });
+      const body = at.forge.change?.body ?? "";
+      expect(at.tasks.changePresentation("ab12cd34")?.published?.revision).toBe(2);
+      if (rigor === "standard") {
+        expect(body).not.toContain(NO_MISTAKES_SIGNATURE);
+        expect(body).not.toContain(NO_MISTAKES_ATTESTATION_PREFIX);
+        return;
+      }
+      expect(body).toContain(NO_MISTAKES_SIGNATURE);
+      const start =
+        body.indexOf(NO_MISTAKES_ATTESTATION_PREFIX) + NO_MISTAKES_ATTESTATION_PREFIX.length;
+      expect(JSON.parse(body.slice(start, body.indexOf(" -->", start)))).toEqual({
+        head_sha: original,
+        steps: [
+          { step: "review", status: "completed" },
+          { step: "test", status: "completed" },
+          { step: "document", status: "completed" },
+        ],
+        producer: "infinitary",
+      });
     },
   );
 

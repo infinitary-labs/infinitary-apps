@@ -74,6 +74,12 @@ export {
 } from "./forge";
 export { githubCliFor } from "./githubCli";
 export {
+  NO_MISTAKES_ATTESTATION_PREFIX,
+  NO_MISTAKES_SIGNATURE,
+  neutralizePipelineAttestation,
+  pipelineAttestationSection,
+} from "./pipelineAttestation";
+export {
   messageWithoutPresentation,
   PresentationAroundError,
   presentationAround,

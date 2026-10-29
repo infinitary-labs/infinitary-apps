@@ -24,6 +24,8 @@ import {
   type Forge,
   type ForgeChange,
   ForgeWriteError,
+  NO_MISTAKES_ATTESTATION_PREFIX,
+  NO_MISTAKES_SIGNATURE,
   presentationMarkdown,
   presentationRegionMarkers,
   readPresentationRegion,
@@ -822,6 +824,78 @@ describe("saved change publication", () => {
 
 // INF-497 (the captain on INF-100's PR #138): correct only the words around the
 // published story, leave the story unchanged, and refuse a concurrent edit.
+// INF-1793: Careful counts as no-mistakes; the app writes the one live attestation.
+describe("no-mistakes' attestation on a Careful story", () => {
+  const attested = (body: string | undefined) => {
+    const text = body ?? "";
+    const start = text.indexOf(NO_MISTAKES_ATTESTATION_PREFIX);
+    if (start < 0) return undefined;
+    const from = start + NO_MISTAKES_ATTESTATION_PREFIX.length;
+    return JSON.parse(text.slice(from, text.indexOf(" -->", from))) as { head_sha: string };
+  };
+  const publish = (at: Awaited<ReturnType<typeof arrange>>, revision: number, covered: string[]) =>
+    at.service.publish(
+      TASK,
+      revision,
+      at.forge,
+      BRANCH,
+      "feat: share the change story",
+      "pending",
+      undefined,
+      undefined,
+      { attests: (head) => covered.includes(head) },
+    );
+
+  it("makes a quoted attestation in the project's words inert, so the check reads the app's own", async () => {
+    const at = await arrange();
+    // A contributor template that quotes another PR's attestation, as no-mistakes' own docs do.
+    const quoted = `Closes #24\n\n${NO_MISTAKES_ATTESTATION_PREFIX}{"head_sha":"0000000000000000000000000000000000000000","steps":[]} -->`;
+    const staged = await stageChangePresentation(
+      { ...at.draft, projectText: quoted },
+      { taskId: TASK, worktree: at.worktree, dir: at.media },
+    );
+    await at.service.prepare(TASK, staged, at.forge);
+    await publish(at, 1, [HEAD]);
+    const body = at.change?.body ?? "";
+    expect(body).toContain(NO_MISTAKES_SIGNATURE);
+    expect(body.split(NO_MISTAKES_ATTESTATION_PREFIX)).toHaveLength(2);
+    expect(attested(body)?.head_sha).toBe(HEAD);
+    expect(body).toContain("Closes #24");
+    expect(readPresentationRegion(body, TASK)).toBe(
+      at.tasks.changePresentation(TASK)?.published?.region,
+    );
+  });
+
+  it("leaves both lines off until Careful's records cover a later push, then names that version", async () => {
+    const at = await arrange();
+    await at.prepare();
+    await publish(at, 1, [HEAD]);
+    expect(attested(at.change?.body)?.head_sha).toBe(HEAD);
+    const pushed = "c40687d8d4f738056e62db6ab98b90f7f7d17497";
+    at.setHead(pushed);
+    at.change = { ...(at.change as ForgeChange), headSha: pushed };
+    // A CI repair that leaves the view as captured.
+    const repaired = {
+      ...at.staged,
+      head: pushed,
+      views: at.staged.views.map((view) => ({
+        ...view,
+        after: view.after.map((media) => ({
+          ...media,
+          applicability: "The CI repair leaves the captured view unchanged.",
+        })),
+      })),
+    };
+    await at.service.prepare(TASK, repaired, at.forge);
+    await publish(at, 2, [HEAD]);
+    expect(at.change?.body).not.toContain(NO_MISTAKES_SIGNATURE);
+    expect(attested(at.change?.body)).toBeUndefined();
+    await at.service.prepare(TASK, repaired, at.forge);
+    await publish(at, 3, [HEAD, pushed]);
+    expect(attested(at.change?.body)?.head_sha).toBe(pushed);
+  });
+});
+
 describe("the words around a published story", () => {
   const obsolete =
     "This first publication advances the published protocol to 9.0.0. One Linux integration failure remains open and is tracked separately.";

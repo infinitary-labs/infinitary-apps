@@ -18,13 +18,17 @@ import {
   type Forge,
   type ForgeChange,
   ForgeWriteError,
+  neutralizePipelineAttestation,
   PresentationAroundError,
+  pipelineAttestationSection,
+  presentationAround,
   presentationBodyLimit,
   presentationCardBody,
   presentationCommitMessage,
   presentationContentHash,
   presentationLines,
   presentationMarkdown,
+  presentationRegionMarkers,
   presentationSizingUrl,
   readPresentationRegion,
   replaceAroundPresentation,
@@ -64,6 +68,8 @@ type PublicationOpening = {
   draft?: boolean;
   /** Recheck and consume the caller's publication authority after preflight, before uploads. */
   beforePublish?: (head: string) => void;
+  /** Whether Careful's records complete no-mistakes' review, test and document at this version. */
+  attests?: (head: string) => boolean;
 };
 
 /** Serialization, retained receipts and the all-files-first barrier; never merge authority. */
@@ -247,6 +253,15 @@ export class ChangePresentations {
     this.renameFor(story, ledger, existing, forge, title);
     const previousRegion =
       recovery?.replaceRegion ?? ledger.reconciled?.region ?? ledger.published?.region;
+    // INF-1793: Careful counts as no-mistakes on github.com; the attestation sits at
+    // the end of the app's own region, read from the records when the region is written.
+    const { end: regionEnd } = presentationRegionMarkers(taskId);
+    const attested = (rendered: string): string =>
+      story.destination.host === "github.com" &&
+      rendered.endsWith(regionEnd) &&
+      opening?.attests?.(story.head)
+        ? `${rendered.slice(0, -regionEnd.length)}${pipelineAttestationSection(story.head)}\n\n${regionEnd}`
+        : rendered;
     const bodyFor = (region: string, current: ForgeChange | null): string => {
       if (around && !current)
         throw new PresentationAroundError(
@@ -256,9 +271,16 @@ export class ChangePresentations {
         current && previousRegion !== undefined
           ? replacePresentationRegion(current.body ?? "", previousRegion, region, taskId)
           : [story.projectText, region].filter(Boolean).join("\n\n");
-      const body = around
+      const changed = around
         ? replaceAroundPresentation(replaced, around, taskId, forge.kind === "gitlab")
         : replaced;
+      // The check reads the first attestation it finds; words around the region carry none live.
+      const outside = region.includes(pipelineAttestationSection(story.head))
+        ? presentationAround(changed, taskId)
+        : undefined;
+      const body = outside
+        ? `${neutralizePipelineAttestation(outside.above)}${region}${neutralizePipelineAttestation(outside.below)}`
+        : changed;
       const limit = presentationBodyLimit(story.destination.host);
       if (Array.from(body).length > limit)
         throw new Error(
@@ -269,16 +291,18 @@ export class ChangePresentations {
     // Render the actual layout, escaping, links and recovery-preserved words before sending files.
     bodyFor(
       kept?.region ??
-        presentationMarkdown(
-          story,
-          // Never saved as a receipt or sent: a real receipt's length, for sizing alone.
-          new Map(
-            this.uploadAssets(story).map((asset) => [
-              asset.id,
-              presentationSizingUrl(story.destination.host, asset.mediaType),
-            ]),
+        attested(
+          presentationMarkdown(
+            story,
+            // Never saved as a receipt or sent: a real receipt's length, for sizing alone.
+            new Map(
+              this.uploadAssets(story).map((asset) => [
+                asset.id,
+                presentationSizingUrl(story.destination.host, asset.mediaType),
+              ]),
+            ),
+            existing ? checks : "pending",
           ),
-          existing ? checks : "pending",
         ),
       existing,
     );
@@ -339,7 +363,8 @@ export class ChangePresentations {
     }
     // Uploading may have taken time. No write until code, destination and all retained files still match.
     await this.validateCurrent(story, forge, branch, remoteOnly);
-    const region = kept?.region ?? presentationMarkdown(story, urls, existing ? checks : "pending");
+    const region =
+      kept?.region ?? attested(presentationMarkdown(story, urls, existing ? checks : "pending"));
     const fresh = await forge.changeFor(branch);
     if (existing?.number !== fresh?.number)
       throw new Error(`The ${words.change} changed during publication. Read it again.`);
@@ -703,6 +728,7 @@ export class ChangePresentations {
     forge: Forge,
     branch: string,
     title: string,
+    attests?: (head: string) => boolean,
   ): Promise<void> {
     await this.serial(taskId, async () => {
       const record = this.ledger(taskId);
@@ -749,6 +775,8 @@ export class ChangePresentations {
         undefined,
         true,
         record.published?.contentHash ?? presentationContentHash(published),
+        undefined,
+        attests ? { attests } : undefined,
       );
     });
   }

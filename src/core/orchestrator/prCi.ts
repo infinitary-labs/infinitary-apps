@@ -280,6 +280,24 @@ export class PrCiService {
    * failed forge call leaves an earlier reading on the record, and that
    * reading says nothing about the head the card is about now.
    */
+  /**
+   * INF-1793: whether Careful's records complete no-mistakes' steps at a version - review and
+   * document from a Careful review that passed there (its brief also judges the documents),
+   * test from live validation that review accepted. A captain's override completes none.
+   */
+  private attestsAt(taskId: string): (head: string) => boolean {
+    return (head) => {
+      const current = this.options.tasks.get(taskId);
+      if (!current) return false;
+      const repo = current.repoId ? this.options.repos.get(current.repoId) : undefined;
+      return (
+        effectiveTaskPolicies(current, repo)?.rigor.value === "reviewed" &&
+        reviewCoversHead(current.delivery, head) &&
+        acceptedValidation(current.delivery?.liveValidation, head).ready
+      );
+    };
+  }
+
   async checkOverall(taskId: string): Promise<PrCiOverall> {
     return (await this.readForOffer(taskId)).overall;
   }
@@ -1714,6 +1732,7 @@ export class PrCiService {
           validationHead
             ? {
                 beforePublish: beginPublication,
+                attests: this.attestsAt(taskId),
                 ...(prerequisite && !existing ? { draft: hasChangeRequests(forge.kind) } : {}),
               }
             : undefined,
@@ -2442,6 +2461,7 @@ export class PrCiService {
             forge,
             change.branch,
             change.title ?? "",
+            this.attestsAt(taskId),
           );
           const refreshed = await forge.changeFor(change.branch);
           if (

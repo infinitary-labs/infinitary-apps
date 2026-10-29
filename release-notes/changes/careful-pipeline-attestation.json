@@ -1,0 +1,14 @@
+{
+  "entries": [
+    {
+      "id": "careful-pipeline-attestation",
+      "kind": "feature",
+      "area": "crewmates",
+      "title": "Careful pull requests carry their pipeline record",
+      "body": "A Careful task's pull request on GitHub now ends with a Pipeline section saying its review, testing and documents check passed at that exact version. A repository that requires that record before merging accepts the pull request. When a later push moves the pull request on, the record follows only after Careful's review of the update passes.",
+      "noPicture": "The record shows in the pull request's description on GitHub, not on a screen of the app.",
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

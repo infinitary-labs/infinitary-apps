@@ -1,6 +1,7 @@
 import { reviewerOverrideWords } from "@shared/holds";
 import { describe, expect, it } from "vitest";
 import {
+  ANSWER_MARK_WORDS,
   amendBriefGoal,
   assertDeliverableConstraints,
   basisSectionParts,
@@ -566,6 +567,15 @@ describe("the answer-shape section (contract v3.6, captain lock 2; Task B)", () 
     expect(section).not.toMatch(/bar chart|timeline|flow ?chart|diagram of/i);
     // And no condition handed back to the author (captain lock 2).
     expect(section).not.toMatch(/wherever|if a picture|when a picture|you may/i);
+  });
+
+  // INF-1732: INF-1718's answer note carried no mark, so the captain's close
+  // closed nothing; the brief tells a captain-asked answer to mark its card
+  // and names finished as the fallback. A step's answer goes to a report.
+  it("tells a captain-asked answer to mark its answer card answering, with finished as the fallback (INF-1732)", () => {
+    expect(renderAnswerShapeSection()).toContain(ANSWER_MARK_WORDS);
+    expect(ANSWER_MARK_WORDS).toContain("report with finished true");
+    expect(renderAnswerShapeSection(true)).not.toContain(ANSWER_MARK_WORDS);
   });
 
   it("tells an answer task it ships nothing and its worktree is scratch", () => {

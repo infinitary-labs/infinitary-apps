@@ -14637,7 +14637,7 @@ export class CrewSupervisor {
             taken: this.options.tasks.takeWriteAsk(home.id, integrationAsk.ask),
           }
         : undefined;
-    this.cards.dismiss(card, submission);
+    const closedAnswer = this.cards.dismiss(card, submission);
     if (card.taskId && integrationAsk?.kind === "request_write")
       this.answerWriteAsk(card, card.taskId, integrationAsk.ask, "deny");
     if (firstmateAsk)
@@ -14656,7 +14656,9 @@ export class CrewSupervisor {
           ? `You closed "${card.title}". It stays on ${home.key}'s record.`
           : `Captain dismissed the card "${card.title}".`,
     });
-    this.tellCardClosed(card);
+    // His close of a marked answer note closed its task (INF-1732): the
+    // crewmate has nothing left to judge.
+    if (!closedAnswer) this.tellCardClosed(card);
   }
 
   /**
@@ -14680,6 +14682,9 @@ export class CrewSupervisor {
           kind: "card-closed",
           card: { id: card.id, title: card.title },
           ...(duplicateOf ? { duplicateOf } : {}),
+          ...(record.shape?.deliverable === "answer" && !record.shape.internal_step
+            ? { answer: true as const }
+            : {}),
         },
       },
       "captain",

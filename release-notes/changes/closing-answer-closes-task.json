@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "id": "closing-answer-closes-task",
+      "kind": "fix",
+      "area": "tasks",
+      "title": "Closing a crewmate's answer closes its task",
+      "body": "When you ask a question and a crewmate answers it on a note, closing that note now closes the task as answered. Before, the task could stay open after you closed the answer, until the crewmate reported again. Closing a question the crewmate asks along the way still leaves the task open.",
+      "noPicture": "No screen changes; the task now leaves the open work when you close its answer, as it already did when you chose a button on it.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

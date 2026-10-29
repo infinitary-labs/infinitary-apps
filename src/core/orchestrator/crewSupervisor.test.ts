@@ -145,7 +145,7 @@ import { SettingsStore } from "../storage/settingsStore";
 import type { KindInput } from "../routing/kindClassifier";
 import { tierFor } from "../routing/policy";
 import type { ModelSession, SessionEvent, SessionSpec } from "../session/session";
-import { bindTool } from "../session/tools";
+import { bindTool, type EmittedAction } from "../session/tools";
 import { ActivityStore } from "../storage/activityStore";
 import { CardStore } from "../storage/cardStore";
 import {
@@ -211,7 +211,9 @@ import {
   CAREFUL_NOTICE,
   ciCapWake,
   GUIDANCE_MARK_WORDS,
+  IDLE_ANSWER_NUDGE_TEXT,
   IDLE_NUDGE_TEXT,
+  isCardClosedSteer,
   idleNoteNudgeText,
   RESTART_REPLAY_NOTE,
   REVIEW_NEW_HEAD_NEXT,
@@ -13177,12 +13179,13 @@ describe("the idle ladder (idle crew recovery, docs/report-sort.md)", () => {
   }
 
   /** A Pi crewmate that reported and stopped: nobody's turn, clock running. */
-  async function stopped(extras: SetupExtras = {}, crewmate = fakeCrewmate()) {
+  async function stopped(
+    extras: SetupExtras = {},
+    crewmate = fakeCrewmate(),
+    intent: SpawnIntent = intentOf("Start"),
+  ) {
     const harness = wakesThroughInbox(clockedSetup(crewmate, extras));
-    const { taskId } = await harness.supervisor.commission({
-      title: "Job",
-      intent: intentOf("Start"),
-    });
+    const { taskId } = await harness.supervisor.commission({ title: "Job", intent });
     await tick();
     await endTurn(crewmate, taskId, "Done with step one.");
     // A job running at that end earns its one check-back ask (INF-1244),
@@ -13967,6 +13970,28 @@ describe("the idle ladder (idle crew recovery, docs/report-sort.md)", () => {
     supervisor.act(`card-stall-${taskId}`, "nudge");
     await tick();
     expect(crewmate.promptCalls.at(-1)).toBe(idleNoteNudgeText(note));
+  });
+
+  // INF-1732: INF-1718's crewmate was nudged for a completion card on an
+  // answer task, said "The task is finished" in prose, and its task stayed
+  // open. An answer task's nudge names the finished flag instead.
+  it("nudges an idle answer task for finished, never a completion card (INF-1732)", async () => {
+    const { crewmate, tasks, taskId, at, ledgerFacts } = await stopped(
+      {
+        classifier: {
+          classify: async () =>
+            ({ kind: "research", source: "classifier:xai/grok-cheap", version: "kc1-abc" }) as const,
+        },
+      },
+      fakeCrewmate(),
+      { ...intentOf("why is nothing running?"), constraints: [{ kind: "read-only" }] },
+    );
+    expect(tasks.get(taskId)?.shape?.deliverable).toBe("answer");
+    await at(minutes(10));
+    expect(ledgerFacts.at(-1)).toEqual({ kind: "idle-nudge", thread: false, answer: true });
+    expect(crewmate.promptCalls.at(-1)).toBe(IDLE_ANSWER_NUDGE_TEXT);
+    expect(crewmate.promptCalls.at(-1)).toContain("report with finished true");
+    expect(crewmate.promptCalls.at(-1)).not.toContain("completion card -");
   });
 
   // FI3-250: a wait on work another crewmate is doing is not idleness. The
@@ -21794,13 +21819,21 @@ describe("the deliverable axis (Task B)", () => {
     expect(inbox.pending(FIRSTMATE_RECIPIENT)).toEqual([]);
     const opsBefore = ops.length;
 
-    // His close is not a choice: the task stays open and its crewmate is told.
+    // His close of a card not marked answering is not a choice: the task
+    // stays open and its crewmate is told, with `finished` named (INF-1732).
     supervisor.close(card.id);
     await tick();
     expect(tasks.get(taskId)?.status).toBe("active");
     expect(crewmate.promptCalls.at(-1)).toBe(
-      `The captain closed your card "The answer" (${card.id}) without choosing.`,
+      renderWake({
+        facts: {
+          kind: "card-closed",
+          card: { id: card.id, title: "The answer" },
+          answer: true,
+        },
+      }),
     );
+    expect(crewmate.promptCalls.at(-1)).toContain("report with finished true");
     // Until the crewmate says it is finished, the Firstmate cannot close an
     // answer the captain asked for.
     expect((await supervisor.closeAnswerUsedAsBasis(taskId)).text).toContain(
@@ -21816,6 +21849,60 @@ describe("the deliverable axis (Task B)", () => {
     ]);
     expect(await supervisor.closeAnswerUsedAsBasis(taskId)).toMatchObject({ ok: true });
     expect(tasks.get(taskId)).toMatchObject({ status: "done", closedReason: "answered" });
+  });
+
+  // INF-1732: INF-1718's answer note was closed and its task stayed open,
+  // because no report of its crewmate set finished. The captain's close of
+  // a note marked answering now closes the task itself.
+  async function answerCardUp(crewmate: FakeCrewmate, actions: EmittedAction[] = []) {
+    const harness = await investigation(crewmate);
+    harness.specs[0]?.onCard?.({
+      title: "The answer",
+      body: "<p>INF-1718 stayed open because no report set the finished flag.</p>",
+      actions,
+      answering: true,
+    });
+    await tick();
+    const card = harness.cards().find((entry) => entry.taskId === harness.taskId) as Card;
+    harness.specs[0]?.onReport?.("The answer is on its card for the captain to read.", undefined, {
+      wait: { reason: "read the answer", cardId: card.id },
+    });
+    crewmate.finishPrompt();
+    await tick();
+    return { ...harness, card };
+  }
+
+  it("closes the answer task answered when the captain closes its note marked answering, with no finished report (INF-1732)", async () => {
+    const crewmate = fakeCrewmate();
+    const { supervisor, tasks, taskId, card } = await answerCardUp(crewmate);
+    const prompts = crewmate.promptCalls.length;
+    supervisor.close(card.id);
+    await tick();
+    expect(tasks.get(taskId)).toMatchObject({ status: "done", closedReason: "answered" });
+    // The task is closed: its crewmate has no close left to judge.
+    expect(crewmate.promptCalls.slice(prompts).filter(isCardClosedSteer)).toEqual([]);
+  });
+
+  it("keeps the answer task open when the captain closes a decision marked answering without choosing (INF-1732)", async () => {
+    const crewmate = fakeCrewmate();
+    const { supervisor, tasks, taskId, card } = await answerCardUp(crewmate, [
+      { id: "file", label: "File the fix", default: true },
+      { id: "leave", label: "Leave it" },
+    ]);
+    supervisor.close(card.id);
+    await tick();
+    expect(tasks.get(taskId)?.status).toBe("active");
+    expect(crewmate.promptCalls.at(-1)).toSatisfy(isCardClosedSteer);
+  });
+
+  it("keeps the answer task open when the captain closes a marked answer note whose reply waits on its crewmate (INF-1732)", async () => {
+    const crewmate = fakeCrewmate();
+    const { supervisor, tasks, taskId, card } = await answerCardUp(crewmate);
+    await supervisor.replyToCard(card.id, "but why did the flag not get set?");
+    await tick();
+    supervisor.close(card.id);
+    await tick();
+    expect(tasks.get(taskId)?.status).toBe("active");
   });
 
   /**

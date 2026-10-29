@@ -709,6 +709,8 @@ A card that asks to send a kept write is never the deliverable either, whatever 
 Nor is a card that hands the captain the task's browser (`browser_handoff`, its attachment's `handoff`): its open-browser choice hands the browser over and the crewmate goes on from Return control, and any other choice on it reaches the crewmate (INF-1322: INF-1317's "Open browser and sign in" closed its read-only check and stopped the browser the captain had just taken).
 `renderAnswerShapeSection` tells the crewmate which of its cards closes the task.
 The captain's close control is not a choice: like every crewmate card's close it reaches the crewmate (FI3-435, captain's answer "Send it to the crewmate like every other card"), which reports `finished` once the captain has read it and nothing is left, and the first mate then closes the task with `settle_task answered`.
+The exception is the answer itself (INF-1732): the brief tells the crewmate to mark its answer card `answering` (`ANSWER_MARK_WORDS`), and the captain's close of such a note with no reply of theirs waiting under it closes the task `done/answered`, as a choice on it would.
+On an answer task the `card-closed` wake and the idle nudge name `finished` as the fallback, because a crewmate that says it is finished only in words leaves the task open.
 So the card carries the answer itself rather than a pointer to it: a builder spawned with `basis` naming that task receives this body verbatim, saved whole in a file its brief names, and any agent can read it back with the `tasks` query by key.
 
 ## Replying to a card

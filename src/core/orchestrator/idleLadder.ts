@@ -121,6 +121,11 @@ function declaredStep(record: TaskRecord | undefined): boolean {
   return record?.shape?.internal_step === true;
 }
 
+/** Whether the task delivers an answer (INF-1732): its nudge names `finished`, never a completion card. */
+function deliversAnswer(record: TaskRecord | undefined): boolean {
+  return record?.shape?.deliverable === "answer";
+}
+
 /** The host's own card for a task the idle ladder could not move (rung 3). */
 export function stallCardId(taskId: string): string {
   return `card-stall-${taskId}`;
@@ -535,7 +540,8 @@ export class IdleLadder {
 
   /** The stall card's Nudge: the nudge, naming the newest note up on the task, as rung 1 does. */
   nudgeFor(taskId: string): TypedWake {
-    return idleNudge(false, this.noteFor(taskId), declaredStep(this.host.tasks.get(taskId)));
+    const record = this.host.tasks.get(taskId);
+    return idleNudge(false, this.noteFor(taskId), declaredStep(record), [], deliversAnswer(record));
   }
 
   private cardOpen(id: string): boolean {
@@ -992,7 +998,13 @@ export class IdleLadder {
   private nudge(record: TaskRecord, now: number, threadUnanswered: boolean): void {
     const note = threadUnanswered ? undefined : this.noteFor(record.id);
     const waiting = threadUnanswered ? this.host.threadsAwaitingAuthor(record.id) : [];
-    const nudge = idleNudge(threadUnanswered, note, declaredStep(record), waiting);
+    const nudge = idleNudge(
+      threadUnanswered,
+      note,
+      declaredStep(record),
+      waiting,
+      deliversAnswer(record),
+    );
     this.host.tasks.recordRecovery(record.id, { rung: 1, count: 0, at: now });
     this.host.recordSort(
       record.id,

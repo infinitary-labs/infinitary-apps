@@ -539,6 +539,14 @@ const ANSWER_CONTINUES_CARD =
   "A card whose choice you go on from rather than your answer, such as a consent before you use something sensitive, declares continues on each revision: that choice comes back to you, and the captain's choice on any other card of yours closes this task as answered.";
 
 /**
+ * Which close ends a captain-asked answer (INF-1732): INF-1718's answer
+ * note was closed and its task stayed open, because nothing marked it and
+ * no report set `finished`. The host reads only the mark and the flag.
+ */
+export const ANSWER_MARK_WORDS =
+  "Mark the card that is your answer answering on each revision: when it is a note, the captain's close of it closes this task as answered. When nothing is left for you otherwise, report with finished true - saying so in words does not close the task.";
+
+/**
  * The one section the brief carries about what an answer task's answer
  * looks like, appended where `renderRigorSection` sits for a change
  * (captain lock 2 of 2026-09-19, visual-density audit section 6.1: the
@@ -594,6 +602,7 @@ function answerShape(internalStep: boolean): string {
     "Names, numbers, quotes and caveats are prose beside the figure they qualify; the evidence a reader who digs would want, including paths and commands, goes in <details>.",
     "When your findings warrant a concrete next move, identify it and put it in the card's actions with one recommended default; do not invent an action when the answer is a pure fact, which stays a note.",
     ANSWER_CONTINUES_CARD,
+    ANSWER_MARK_WORDS,
     "Your report stays the short factual account; the card is where the answer is shown.",
     "Your report is also the answer this task keeps, and work built on it starts from it: when the captain's replies change the answer, report it again in full - the final agreed version, with their tweaks and anything decided on the card - before they choose.",
     "Rigor: none - this task ships nothing; the card is the deliverable.",

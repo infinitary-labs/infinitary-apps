@@ -11,9 +11,12 @@ import {
   captainTurn,
   ciCapWake,
   drainWakes,
+  IDLE_ANSWER_NUDGE_TEXT,
   IDLE_NUDGE_TEXT,
+  IDLE_STEP_NUDGE_TEXT,
   IDLE_THREAD_NUDGE_TEXT,
   idleNudge,
+  isCardClosedSteer,
   jobBoundWake,
   providerBackWake,
   providerCutOffWake,
@@ -122,6 +125,32 @@ describe("renderWake", () => {
     // The captain's words in a thread come first: that nudge carries no note.
     expect(idleNudge(true, note).facts).toEqual({ kind: "idle-nudge", thread: true });
     expect(renderWake(idleNudge(true, note))).toBe(IDLE_THREAD_NUDGE_TEXT);
+  });
+
+  // INF-1732: an answer task's crewmate is asked for the finished flag, the
+  // fallback that closes it, never a completion card its brief forbids.
+  it("asks an answer task for finished, with the step's and the thread's words outranking it (INF-1732)", () => {
+    expect(renderWake(idleNudge(false, undefined, false, [], true))).toBe(IDLE_ANSWER_NUDGE_TEXT);
+    expect(IDLE_ANSWER_NUDGE_TEXT).toContain("report with finished true");
+    const note = { id: "card-t1-answer", title: "The answer" };
+    const noted = renderWake(idleNudge(false, note, false, [], true));
+    expect(noted).toContain("report with waiting_on_captain naming it");
+    expect(noted).toContain("report with finished true");
+    expect(noted).not.toContain("completion card -");
+    expect(renderWake(idleNudge(false, undefined, true, [], true))).toBe(IDLE_STEP_NUDGE_TEXT);
+    expect(renderWake(idleNudge(true, undefined, false, [], true))).toBe(IDLE_THREAD_NUDGE_TEXT);
+  });
+
+  it("names finished when the captain closes a card on an answer task without choosing (INF-1732)", () => {
+    const card = { id: "card-t1-answer", title: "The answer" };
+    const plain = renderWake({ facts: { kind: "card-closed", card } });
+    const answer = renderWake({ facts: { kind: "card-closed", card, answer: true } });
+    expect(plain).toBe(
+      'The captain closed your card "The answer" (card-t1-answer) without choosing.',
+    );
+    expect(answer.startsWith(plain)).toBe(true);
+    expect(answer).toContain("report with finished true");
+    expect(isCardClosedSteer(answer)).toBe(true);
   });
 
   it("says a note is up in the stall wake, never that no card is (FI3-438)", () => {

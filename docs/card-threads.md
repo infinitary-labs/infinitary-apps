@@ -28,6 +28,7 @@ A reply resolves nothing.
 The buttons stay pinned, and a card still leaves the stage on a button, a settle, the captain's close, the author's withdrawal, or a note's seen-collapse - all host code.
 
 The captain's close of a crewmate's card on a live task reaches that crewmate the same way (FI3-435, captain-approved 2026-10-01): a captain steer stamped `via: "card"` with the card's id, the typed `card-closed` wake ("The captain closed your card ... without choosing.").
+The one exception is an answer task's note marked `answering`: the captain's close of it closes the task, so no wake goes (INF-1732, `docs/card-authoring.md` "An answer task's card is its deliverable").
 A close is not a choice, so the author judges what it meant by instruction - read and finished, still waiting on the captain, or a passing note - and its report declares it (`waiting_on_captain` or `finished`, `docs/report-sort.md`).
 The host reads none of it.
 The captain's close of a crewmate's card the captain replied under holds through the answer the crewmate is still writing (FI3-693): until that crewmate closes out, `emit_card` under the card's id is refused in words that send the answer to its report, so the answer does not open the card again.

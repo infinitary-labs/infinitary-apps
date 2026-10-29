@@ -554,7 +554,7 @@ export class CardService {
    * declared action. Its row resolves `close`, and the record says it was a
    * dismissal of the offer he was looking at, never a choice.
    */
-  dismiss(card: Card, submission?: unknown): void {
+  dismiss(card: Card, submission?: unknown): boolean {
     let observation: string | undefined;
     this.host.cardStore.transaction(() => {
       this.host.cardStore.resolve(card.id, "close");
@@ -579,8 +579,15 @@ export class CardService {
     this.cards.delete(card.id);
     this.staged.delete(card.id);
     this.host.captainResponded?.(head ?? card, "close");
-    this.recordResolution(card, "dismissed", "captain", undefined, observation);
+    const closedAnswer = this.recordResolution(
+      head ?? card,
+      "dismissed",
+      "captain",
+      undefined,
+      observation,
+    );
     this.scheduleBroadcast();
+    return closedAnswer;
   }
 
   /** A task that never started leaves no card rows behind. */

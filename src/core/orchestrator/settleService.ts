@@ -169,6 +169,15 @@ function workspaceOf(record: TaskRecord): TaskWorkspace {
 }
 
 /**
+ * A note its author marked as the answer, with no reply of the captain's
+ * waiting under it (INF-1732): his close of it answers. A decision closed
+ * without a choice answers nothing, and neither does a note along the way.
+ */
+function closedAnswerNote(card: Card): boolean {
+  return card.answering === true && card.actions.length === 0 && card.awaiting !== "answer";
+}
+
+/**
  * The feed line for a settle the captain clicked. An outcome with no raw
  * failure is already written in the app's words and reads as-is; one that
  * quotes a git, gh or network error says what it means instead (the
@@ -667,11 +676,16 @@ export class SettleService {
    * declining a decision the Firstmate raised. His close control is not a
    * choice: it reaches the crewmate like every other card's close, and the
    * crewmate judges whether the task is finished (FI3-435) - the Firstmate
-   * then closes it with settle_task `answered`. Interrupt, cancel and
-   * `update_task drop` keep their own closes.
+   * then closes it with settle_task `answered`. The one close that answers
+   * is his close of a note its crewmate marked `answering` with no reply of
+   * his waiting under it (INF-1732, the same test `AskEnding.captainResponded`
+   * accepts a closed note by): INF-1718 stayed open after he closed its
+   * answer note, because no report of its crewmate set `finished`.
+   * Interrupt, cancel and `update_task drop` keep their own closes.
    */
   closeAnsweredTask(card: Card, action: string, by: "captain" | "firstmate" | "crewmate"): boolean {
-    if (by !== "captain" || !card.taskId || action === "dismissed") return false;
+    if (by !== "captain" || !card.taskId) return false;
+    if (action === "dismissed" && !closedAnswerNote(card)) return false;
     const record = this.host.tasks.get(card.taskId);
     if (record?.status !== "active" || record.kind !== "work") return false;
     // A card that asks to send a kept write is never the answer (FI3-1571
@@ -696,7 +710,10 @@ export class SettleService {
     if (choice && !choice.effect)
       this.host.tasks.recordResultHandoff(record.id, { cardId: card.id, action });
     if (this.host.deliverableOf(record) !== "answer") return false;
-    const text = action === "closed" ? "answer closed" : `chose "${choice?.label ?? action}"`;
+    const text =
+      action === "closed" || action === "dismissed"
+        ? "answer closed"
+        : `chose "${choice?.label ?? action}"`;
     // An invalid action never produces a closure-choice wake.
     const handoff = choice ? this.answerTaskClosedPayload(record, card, choice) : undefined;
     void this.closeTask(card.taskId, {

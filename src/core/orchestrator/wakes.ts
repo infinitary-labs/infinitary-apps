@@ -88,21 +88,44 @@ const STEP_FINISH_WORDS =
 export const IDLE_STEP_NUDGE_TEXT = `You stopped with nothing running and nothing up for the captain to decide. ${STEP_ANSWER_WORDS} Either ${STEP_FINISH_WORDS}`;
 
 /**
+ * What a captain-asked answer task is told it is (INF-1732): its card marked
+ * answering is its outcome, and `finished` is the fallback that closes it
+ * when the captain's close of that card did not - INF-1718 said "finished"
+ * in prose and stayed open.
+ */
+const ANSWER_WORDS =
+  "This task's deliverable is an answer, shown on your card marked answering; it takes no completion card.";
+
+/** How the nudge asks an answer task to finish: the typed flag, never the words. */
+const ANSWER_FINISH_WORDS =
+  "when nothing is left for you, report with finished true - saying so in words does not close the task - or say what blocks you.";
+
+/** The nudge to a task whose deliverable is an answer the captain asked for. */
+export const IDLE_ANSWER_NUDGE_TEXT = `You stopped with nothing running and nothing up for the captain to decide. ${ANSWER_WORDS} Either post that card, or ${ANSWER_FINISH_WORDS}`;
+
+/**
  * The nudge while a note is up on the task (FI3-438). A note does not hold
  * the turn, so the ladder still nudges, but it names the note: a crewmate
  * whose outcome it is says it waits, and is never asked to post it again.
  * A declared internal step is asked for its answer, never a completion card.
  */
-export function idleNoteNudgeText(note: WakeNote, step = false): string {
+export function idleNoteNudgeText(note: WakeNote, step = false, answer = false): string {
   const noted = `You stopped with nothing running, and the note "${note.title}" (${note.id}) is up, asking the captain nothing.`;
   const waits =
     "If that note is your outcome and only the captain can act next, report with waiting_on_captain naming it; do not post it again.";
-  return step
-    ? `${noted} ${STEP_ANSWER_WORDS} ${waits} Otherwise either ${STEP_FINISH_WORDS}`
-    : `${noted} ${waits} Otherwise either finish - report under the five headings and emit your completion card - or say what blocks you.`;
+  if (step) return `${noted} ${STEP_ANSWER_WORDS} ${waits} Otherwise either ${STEP_FINISH_WORDS}`;
+  if (answer) return `${noted} ${ANSWER_WORDS} ${waits} Otherwise, ${ANSWER_FINISH_WORDS}`;
+  return `${noted} ${waits} Otherwise either finish - report under the five headings and emit your completion card - or say what blocks you.`;
 }
 /** How the steer telling a crewmate the captain closed its card begins (FI3-435). */
 export const CARD_CLOSED_STEER_PREFIX = "The captain closed your card ";
+
+/**
+ * What that steer adds on a captain-asked answer task (INF-1732): the close
+ * of a card not marked answering closes nothing, so `finished` does.
+ */
+const CARD_CLOSED_ANSWER_WORDS =
+  "If that card was your answer and nothing is left for you, report with finished true - saying so in words does not close the task - and mark your answer card answering on each revision, so the captain's close of it closes the task.";
 
 /** Whether a crewmate's served guidance is that steer: the replay finds it no recorded answer. */
 export function isCardClosedSteer(text: string): boolean {
@@ -347,6 +370,8 @@ export type WakeFacts =
       note?: WakeNote;
       /** The Firstmate declared the task an internal step (`shape.internal_step`, FI3-801). */
       step?: true;
+      /** The task's deliverable is an answer the captain asked for (INF-1732). */
+      answer?: true;
     }
   | {
       /** Rung 2 (and its repeat): an idle crewmate nobody is moving. */
@@ -769,6 +794,8 @@ export type WakeFacts =
        */
       kind: "card-closed";
       card: { id: string; title: string };
+      /** The task's deliverable is an answer the captain asked for (INF-1732). */
+      answer?: true;
       /** The earlier card it repeats, when the captain closed it as a duplicate (INF-759). */
       duplicateOf?: { id: string; title: string };
     }
@@ -1470,13 +1497,15 @@ export function answerMissingWake(
 /**
  * The nudge as a typed wake: the ladder's rung 1, and the stall card's
  * Continue. The thread's nudge outranks the note's and the step's: the
- * captain spoke, and its words are the same for a step.
+ * captain spoke, and its words are the same for a step. A step's words
+ * outrank an answer's: its answer goes to the next step, not to a card.
  */
 export function idleNudge(
   thread = false,
   note?: WakeNote,
   step = false,
   waiting: readonly WakeNote[] = [],
+  answer = false,
 ): TypedWake {
   return {
     facts: {
@@ -1485,6 +1514,7 @@ export function idleNudge(
       ...(thread && waiting.length > 0 ? { waiting: [...waiting] } : {}),
       ...(note && !thread ? { note } : {}),
       ...(step && !thread ? { step: true as const } : {}),
+      ...(answer && !step && !thread ? { answer: true as const } : {}),
     },
   };
 }
@@ -1922,8 +1952,9 @@ function renderFacts(facts: WakeFacts, wake: Pick<WakeEnvelope, "ways" | "text">
         : standingOverrideWords(facts.override);
     case "idle-nudge":
       if (facts.thread) return idleThreadNudgeText(facts.waiting);
-      if (facts.note) return idleNoteNudgeText(facts.note, facts.step === true);
-      return facts.step ? IDLE_STEP_NUDGE_TEXT : IDLE_NUDGE_TEXT;
+      if (facts.note) return idleNoteNudgeText(facts.note, facts.step === true, facts.answer);
+      if (facts.step) return IDLE_STEP_NUDGE_TEXT;
+      return facts.answer ? IDLE_ANSWER_NUDGE_TEXT : IDLE_NUDGE_TEXT;
     case "idle-stall": {
       const state = facts.thread
         ? `since the captain wrote under ${facts.waiting?.length ? waitingCardWords(facts.waiting) : "its card"}, without answering them, and nothing queued will`
@@ -2078,7 +2109,7 @@ function renderFacts(facts: WakeFacts, wake: Pick<WakeEnvelope, "ways" | "text">
     case "card-closed":
       return facts.duplicateOf
         ? `${CARD_CLOSED_STEER_PREFIX}"${facts.card.title}" (${facts.card.id}) as a duplicate of "${facts.duplicateOf.title}" (${facts.duplicateOf.id}), without choosing.`
-        : `${CARD_CLOSED_STEER_PREFIX}"${facts.card.title}" (${facts.card.id}) without choosing.`;
+        : `${CARD_CLOSED_STEER_PREFIX}"${facts.card.title}" (${facts.card.id}) without choosing.${facts.answer ? ` ${CARD_CLOSED_ANSWER_WORDS}` : ""}`;
     case "project-change":
       return `The captain answered the app’s project change card “${facts.title}”: ${facts.outcome}.${facts.reason ? ` ${facts.reason}` : ""} Read the current project values before starting work. This is an outcome, not permission for another change.`;
     case "project-setup":

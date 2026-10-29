@@ -542,6 +542,8 @@ SpringBoard logs `Arbiter changing style from` as it applies an appearance, the 
 The app's read of the new size applies the change, even when it is logged in the save's own millisecond.
 A read of the old size after the save proves the app missed it, and only that proof sets the size once more; two proven misses fail the part.
 A missing line or a stopped observer is unknown and sets nothing more.
+A live log stream can drop a line the simulator's kept log holds, so before a witness answers unknown the runner reads the kept log since the change for it (INF-1799).
+Every witness of one display request stops waiting at the journey's request cap less two minutes, one for that read and one for the request's way there and back (`phoneDisplayDeadline`), so the journey always hears the unknown before its own request ends.
 An appearance SpringBoard misses leaves no line, and the simulator writes nothing when asked for the appearance it already has, so the runner sets each appearance once and prints one it could not confirm.
 A turn of the device waits until a target the turn carries elsewhere has left its old frame and holds still in its new place (`turnPhone`), since until the app turns that target holds still where it was.
 A check that read a dialog's button, a gliding row or a web page's answer right after an action waits for it on the load clock instead.

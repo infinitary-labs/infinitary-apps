@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "phone-display-witness-kept-log",
+      "reason": "Internal tests: the phone check's runner reads the simulator's kept log for a display line its live stream dropped, and answers before the journey's request ends; nothing in the app changes."
+    }
+  ]
+}

@@ -5,16 +5,19 @@ import { join } from "node:path";
 import { PassThrough } from "node:stream";
 import { gunzipSync } from "node:zlib";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { startLoadClock, waitCap } from "./helpers/budgets";
 import {
   changePhoneTextSize,
   hardwareKeyboardArguments,
   observePhoneKeyboard,
+  PHONE_DISPLAY_REQUEST_BUDGET_MS,
   PHONE_HARDWARE_KEYBOARD_STATE,
   PhoneDisplayChanges,
   PhoneKeyRegistrations,
   PhonePickerPreviews,
   PhoneTouchOutcomes,
   phoneApplicationPid,
+  phoneDisplayDeadline,
   phoneLogMilliseconds,
   withPhoneHardwareKeyboard,
 } from "./helpers/phoneKeyboard";
@@ -853,5 +856,130 @@ describe("the owned simulator's hardware keyboard during a chord's acknowledgeme
       witness,
     );
     expect(commands).toEqual([String((33 << 8) | 1), String(33 << 8)]);
+  });
+});
+
+// INF-1799: phone run 40817473942's iPhone join part, in its kept simulator log (the part's failure collection). The
+// runner asked for the Large text size at 04:35:46.365 by its own log; SpringBoard changed to dark, the simulator saved
+// Large and the app read Large 587 ms later, but the runner's live log stream delivered no read of it.
+const keptDark = {
+  processImagePath: springBoard,
+  timestamp: "2026-10-29 04:35:46.412000+0000",
+  eventMessage: "Arbiter changing style from 1 to 2, notifying: 1",
+};
+const keptLargeSaved = {
+  processImagePath: bridge,
+  timestamp: "2026-10-29 04:35:46.904000+0000",
+  eventMessage:
+    "Saved CategoryName: per-app = 0, category name = UICTContentSizeCategoryL, usermode = 1",
+};
+const keptLargeRead = {
+  processImagePath: phoneApp,
+  timestamp: "2026-10-29 04:35:46.952000+0000",
+  eventMessage: "Read CategoryName: per-app = 0, category name = UICTContentSizeCategoryL",
+};
+const largeAsked = phoneLogMilliseconds("2026-10-29 04:35:46.365000+0000");
+
+/** A `log` child: its stream announces its filter; a `log show` writes its records and exits, or never answers. */
+function logChild(records: object[] | "hangs" | "stream") {
+  const stdout = new PassThrough();
+  const stderr = new PassThrough();
+  const child = Object.assign(new EventEmitter(), {
+    stdout,
+    stderr,
+    kill: vi.fn(() => {
+      stdout.end();
+      stderr.end();
+      queueMicrotask(() => child.emit("close", null, "SIGTERM"));
+      return true;
+    }),
+  });
+  queueMicrotask(() => {
+    if (records === "stream")
+      stdout.write("Filtering the log data using the registration predicate\n");
+    else if (records !== "hangs") {
+      stdout.once("end", () => queueMicrotask(() => child.emit("close", 0, null)));
+      for (const record of records) stdout.write(`${JSON.stringify(record)}\n`);
+      stdout.end();
+      stderr.end();
+    }
+  });
+  return child;
+}
+
+describe("a display witness the live log dropped (INF-1799)", () => {
+  const clockKey = Symbol.for("infinitary.loadClock");
+  afterEach(() => {
+    delete (globalThis as { [clockKey]?: unknown })[clockKey];
+  });
+
+  it("reads the simulator's kept log for the app's read before it answers unknown", async () => {
+    vi.useFakeTimers({ now: largeAsked });
+    const stream = logChild("stream");
+    const kept = logChild([keptDark, keptLargeSaved, keptLargeRead]);
+    spawn.mockReturnValueOnce(stream).mockReturnValueOnce(kept);
+    const observer = await observePhoneKeyboard({
+      simulator: "73A1ACE6-4598-4DFC-AA31-2A09D6081FF3",
+      env: {},
+      evidence: scratchDir("phone-keyboard-kept-"),
+      children: new Set<ChildProcess>(),
+    });
+    const size = observer.textSize(largeAsked, "large");
+    for (const record of [keptDark, keptLargeSaved])
+      stream.stdout.write(`${JSON.stringify(record)}\n`);
+    await vi.advanceTimersByTimeAsync(30_000);
+    await expect(size).resolves.toEqual({
+      outcome: "applied",
+      timestamp: keptLargeRead.timestamp,
+      proof: keptLargeRead.eventMessage,
+    });
+    expect(spawn).toHaveBeenLastCalledWith(
+      "xcrun",
+      expect.arrayContaining(["73A1ACE6-4598-4DFC-AA31-2A09D6081FF3", "log", "show", "--start"]),
+      expect.anything(),
+    );
+    await observer.close();
+  });
+
+  it("answers unknown before the journey's display request ends, on a host as starved as that run's", async () => {
+    vi.useFakeTimers({ now: largeAsked });
+    // That run's runner counted its witness's 30 s of load time in no less than 600 s of wall time.
+    const processors = 4;
+    const clock = startLoadClock(
+      () => Date.now(),
+      () => 20 * processors,
+      processors,
+    );
+    (globalThis as { [clockKey]?: unknown })[clockKey] = clock;
+    const stream = logChild("stream");
+    // The worst case: the kept log lacks the read too and never answers.
+    const kept = logChild("hangs");
+    spawn.mockReturnValueOnce(stream).mockReturnValueOnce(kept);
+    const observer = await observePhoneKeyboard({
+      simulator: "73A1ACE6-4598-4DFC-AA31-2A09D6081FF3",
+      env: {},
+      evidence: scratchDir("phone-keyboard-starved-"),
+      children: new Set<ChildProcess>(),
+    });
+    // The display control starts once the journey's request reaches it, so that request ends no earlier than this.
+    const started = Date.now();
+    const journeyRequestEnds = started + waitCap(PHONE_DISPLAY_REQUEST_BUDGET_MS);
+    // The simulator's two writes took until the save in that run.
+    vi.setSystemTime(phoneLogMilliseconds(keptLargeSaved.timestamp));
+    const size = observer
+      .textSize(started, "large", phoneDisplayDeadline(started))
+      .then((outcome) => ({ outcome, at: Date.now() }));
+    for (const record of [keptDark, keptLargeSaved])
+      stream.stdout.write(`${JSON.stringify(record)}\n`);
+    await vi.advanceTimersByTimeAsync(journeyRequestEnds - Date.now());
+    const answered = await Promise.race([size, Promise.resolve(undefined)]);
+    expect(answered?.outcome).toMatchObject({
+      outcome: "unknown",
+      reason: expect.stringContaining("the app did not read UICTContentSizeCategoryL"),
+    });
+    expect(answered?.at).toBeLessThan(journeyRequestEnds);
+    expect(kept.kill).toHaveBeenCalled();
+    clock.stop();
+    await observer.close();
   });
 });

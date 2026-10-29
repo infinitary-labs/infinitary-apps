@@ -9,7 +9,7 @@ import { budgetTimer, GRADES_BUDGETS, startPhoneLoadClock } from "../tests/helpe
 import { observePhoneLog } from "../tests/helpers/phoneLogs.ts";
 import { capturePhoneKeyboardTimeout } from "../tests/helpers/phoneStacks.ts";
 import { libraryPhotoAdded, logTime, photosOpened } from "../tests/helpers/phonePhotos.ts";
-import { changePhoneTextSize, hardwareKeyboardArguments, observePhoneKeyboard, type PhoneChord, type PhoneDisplayReport, type PhoneTextSize, phoneApplicationPid, withPhoneHardwareKeyboard } from "../tests/helpers/phoneKeyboard.ts";
+import { changePhoneTextSize, hardwareKeyboardArguments, observePhoneKeyboard, type PhoneChord, type PhoneDisplayReport, type PhoneTextSize, phoneApplicationPid, phoneDisplayDeadline, withPhoneHardwareKeyboard } from "../tests/helpers/phoneKeyboard.ts";
 import { removeScratchDirs, scratchDir } from "../tests/helpers/scratchDirs.ts";
 import { ciModeRefusal } from "./checks-mode.ts";
 import { openModuleRunner, REPO_ROOT } from "./moduleRunner.ts";
@@ -127,8 +127,9 @@ const recordings: { name: string; raw: string }[] = [];
 // INF-1785: the appearance this part last asked for; its gate set light before the part began.
 let askedAppearance: "light" | "dark" = "light";
 // An appearance SpringBoard misses leaves no line to prove it, so it is confirmed and never set again. Its witness
-// runs while the text size changes, so one display change waits out at most one witness deadline.
-const changeAppearance = async (style: "light" | "dark") => {
+// runs while the text size changes, and every witness of one display control answers by `until` (INF-1799), so its
+// unknown reaches the journey before the journey's own request ends.
+const changeAppearance = async (style: "light" | "dark", until: number) => {
   if (!simulator || !keyboard) throw new Error("No owned simulator display observer exists");
   const observer = keyboard;
   const since = Date.now();
@@ -137,7 +138,7 @@ const changeAppearance = async (style: "light" | "dark") => {
     // The simulator writes nothing for the appearance it already has, so SpringBoard has nothing to change.
     if (style === askedAppearance) return { outcome: "unchanged" };
     askedAppearance = style;
-    const outcome = await observer.appearance(since, style);
+    const outcome = await observer.appearance(since, style, until);
     if (outcome.outcome !== "applied") console.log(`Appearance ${style}: ${JSON.stringify(outcome)}`);
     return outcome;
   };
@@ -169,17 +170,18 @@ const recording = {
     });
   },
   display: async (appearance: "light" | "dark", large: boolean): Promise<PhoneDisplayReport> => {
-    const { confirmed } = await changeAppearance(appearance);
+    const until = phoneDisplayDeadline();
+    const { confirmed } = await changeAppearance(appearance, until);
     if (!simulator || !keyboard) throw new Error("No owned simulator display observer exists");
     const [owned, observer] = [simulator, keyboard];
     const size: PhoneTextSize = large ? "extra-extra-extra-large" : "large";
     const textSize = await changePhoneTextSize(size,
       () => run("xcrun", ["simctl", "ui", owned, "content_size", size]),
-      (since) => observer.textSize(since, size));
+      (since) => observer.textSize(since, size, until));
     for (const outcome of textSize) if (outcome.outcome !== "applied") console.log(`Text size ${size}: ${JSON.stringify(outcome)}`);
     return { appearance: await confirmed, textSize };
   },
-  appearance: async (theme: "dark" | "light"): Promise<PhoneDisplayReport> => ({ appearance: await (await changeAppearance(theme)).confirmed }),
+  appearance: async (theme: "dark" | "light"): Promise<PhoneDisplayReport> => ({ appearance: await (await changeAppearance(theme, phoneDisplayDeadline())).confirmed }),
   damageRecord: async () => {
     if (!simulator) throw new Error("No owned simulator exists");
     const container = resolve((await run("xcrun", ["simctl", "get_app_container", simulator, phoneBundle, "data"])).trim());

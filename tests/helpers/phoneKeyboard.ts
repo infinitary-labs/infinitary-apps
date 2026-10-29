@@ -5,7 +5,8 @@ import { createInterface } from "node:readline";
 import { pipeline } from "node:stream/promises";
 import { createGzip } from "node:zlib";
 
-import { budgetTimer } from "./budgets.ts";
+import { budgetTimer, waitCap } from "./budgets.ts";
+import { logTime } from "./phonePhotos.ts";
 
 export type PhoneChord = { key: string; modifiers: string[] };
 type Registration = { pid: number; token: string; keys: Set<string>; timestamp: string };
@@ -314,6 +315,22 @@ const PHONE_APP_PROCESS = "Infinitary";
 type DisplayReading = { value: string; at: number; timestamp: string; line: string };
 /** UIKit's style numbers in SpringBoard's appearance arbiter lines. */
 const ARBITER_STYLES: Record<string, "light" | "dark"> = { "1": "light", "2": "dark" };
+/** The journey's display requests' budget, `home`'s default in PhoneJourney.swift; its wall cap is waitCap's formula. */
+export const PHONE_DISPLAY_REQUEST_BUDGET_MS = 60_000;
+/**
+ * INF-1799: the longest the runner reads the simulator's kept log for a witness line its live stream dropped. The
+ * read covers the minutes since one display change and takes seconds; past a minute the host is too starved to answer.
+ */
+const PHONE_DISPLAY_RECOVERY_CAP_MS = 60_000;
+
+/**
+ * INF-1799: when every witness of a display control that began at `start` stops waiting. Both deadlines used to cap
+ * at 10 minutes, so on a starved host the journey's request, sent first, ended before the runner's non-fatal unknown.
+ * One recovery read's worth is left for the kept log, and one for the request's way to the runner and back.
+ */
+export function phoneDisplayDeadline(start = Date.now()): number {
+  return start + waitCap(PHONE_DISPLAY_REQUEST_BUDGET_MS) - 2 * PHONE_DISPLAY_RECOVERY_CAP_MS;
+}
 
 /**
  * INF-1785 (the captain's choice "Confirm each change from the simulator's log, and set it once more only when the
@@ -323,6 +340,8 @@ const ARBITER_STYLES: Record<string, "light" | "dark"> = { "1": "light", "2": "d
  * asked, past the journey's wait. Each change is confirmed by its consumer's own line: SpringBoard's appearance
  * arbiter changing to the asked style, or the app reading the asked text size. The app reading another size after the
  * simulator logged the save is the proof of a miss. An appearance miss leaves no line at all, so it is never proven.
+ * INF-1799: a live stream can drop a line the simulator's kept log holds, so before a witness answers unknown it
+ * reads `recover`, the kept log since the change.
  */
 export class PhoneDisplayChanges {
   private styles: DisplayReading[] = [];
@@ -330,6 +349,12 @@ export class PhoneDisplayChanges {
   private reads: DisplayReading[] = [];
   private listeners = new Set<() => void>();
   private failure: Error | undefined;
+
+  private recover: ((since: number) => Promise<object[]>) | undefined;
+
+  constructor(recover?: (since: number) => Promise<object[]>) {
+    this.recover = recover;
+  }
 
   receive(record: { processImagePath?: string; eventMessage?: string; timestamp?: string }) {
     const process = basename(record.processImagePath ?? "");
@@ -354,17 +379,25 @@ export class PhoneDisplayChanges {
   }
 
   /** Whether SpringBoard applied the appearance the runner asked for at `since`, on its own clock in milliseconds. */
-  appearance(since: number, style: "light" | "dark"): Promise<PhoneDisplayOutcome> {
-    return this.witness(since, `SpringBoard did not change to ${style}`, () => {
+  appearance(
+    since: number,
+    style: "light" | "dark",
+    until = phoneDisplayDeadline(),
+  ): Promise<PhoneDisplayOutcome> {
+    return this.witness(since, until, `SpringBoard did not change to ${style}`, () => {
       const changed = this.styles.find((each) => each.at >= since && each.value === style);
       return changed && { outcome: "applied", timestamp: changed.timestamp, proof: changed.line };
     });
   }
 
   /** Whether the app read the text size the runner asked for at `since`, or proved it missed the simulator's save. */
-  textSize(since: number, size: PhoneTextSize): Promise<PhoneDisplayOutcome> {
+  textSize(
+    since: number,
+    size: PhoneTextSize,
+    until = phoneDisplayDeadline(),
+  ): Promise<PhoneDisplayOutcome> {
     const category = PHONE_TEXT_SIZES[size];
-    return this.witness(since, `the app did not read ${category}`, () => {
+    return this.witness(since, until, `the app did not read ${category}`, () => {
       const read = this.reads.find((each) => each.at >= since && each.value === category);
       if (read) return { outcome: "applied", timestamp: read.timestamp, proof: read.line };
       // A read in the save's own millisecond can come before it, as on the iPad of run 40788049243, so it proves nothing.
@@ -382,12 +415,19 @@ export class PhoneDisplayChanges {
 
   private witness(
     since: number,
+    until: number,
     missing: string,
     decide: () => PhoneDisplayOutcome | undefined,
   ): Promise<PhoneDisplayOutcome> {
     return new Promise((resolve) => {
-      const finish = (result: PhoneDisplayOutcome) => {
+      let stopped = false;
+      const stop = () => {
+        stopped = true;
         deadline.cancel();
+        clearTimeout(wall);
+      };
+      const finish = (result: PhoneDisplayOutcome) => {
+        stop();
         this.listeners.delete(check);
         resolve(result);
       };
@@ -399,15 +439,26 @@ export class PhoneDisplayChanges {
         const decided = decide();
         if (decided) finish(decided);
       };
-      // A failure deadline, not a delay: without a witness the runner sets nothing again.
-      const deadline = budgetTimer(
-        () =>
-          finish({
-            outcome: "unknown",
-            reason: `No display witness since ${new Date(since).toISOString()}: ${missing}`,
-          }),
-        30_000,
-      );
+      const giveUp = async () => {
+        if (stopped) return;
+        stop();
+        let kept = "";
+        if (this.recover && !this.failure)
+          try {
+            for (const record of await this.recover(since)) this.receive(record);
+            kept = ", in its live or kept log";
+          } catch (error) {
+            kept = `; the simulator's kept log could not be read: ${(error as Error).message}`;
+          }
+        check();
+        finish({
+          outcome: "unknown",
+          reason: `No display witness since ${new Date(since).toISOString()}: ${missing}${kept}`,
+        });
+      };
+      // Failure deadlines, not delays: without a witness the runner sets nothing again.
+      const deadline = budgetTimer(() => void giveUp(), 30_000);
+      const wall = setTimeout(() => void giveUp(), Math.max(0, until - Date.now()));
       this.listeners.add(check);
       check();
     });
@@ -537,17 +588,69 @@ export async function observePhoneKeyboard(options: PhoneKeyboardOptions) {
     wait: (pid: number, chord: PhoneChord) => stream.wait(pid, chord),
     touch: (since: number) => stream.touch(since),
     preview: (since: number) => stream.preview(since),
-    appearance: (since: number, style: "light" | "dark") => stream.appearance(since, style),
-    textSize: (since: number, size: PhoneTextSize) => stream.textSize(since, size),
+    appearance: (since: number, style: "light" | "dark", until?: number) =>
+      stream.appearance(since, style, until),
+    textSize: (since: number, size: PhoneTextSize, until?: number) =>
+      stream.textSize(since, size, until),
     close: () => stream.close(),
   };
+}
+
+/** INF-1799: the simulator's kept log of the witness lines since `since`, which holds lines a live stream dropped. */
+function keptPhoneLog(options: PhoneKeyboardOptions, since: number): Promise<object[]> {
+  return new Promise((resolve, reject) => {
+    const show = spawn(
+      "xcrun",
+      [
+        "simctl",
+        "spawn",
+        options.simulator,
+        "log",
+        "show",
+        "--start",
+        logTime(new Date(since)),
+        "--style",
+        "ndjson",
+        "--info",
+        "--debug",
+        "--predicate",
+        PHONE_KEYBOARD_LOG_PREDICATE,
+      ],
+      { env: options.env, stdio: ["ignore", "pipe", "pipe"] },
+    );
+    options.children.add(show);
+    const records: object[] = [];
+    createInterface({ input: show.stdout }).on("line", (line) => {
+      try {
+        records.push(JSON.parse(line));
+      } catch {
+        /* Non-record log diagnostics are not witnesses. */
+      }
+    });
+    show.stderr.resume();
+    // A wall cap, not a load budget: the display control's answer must still reach the journey in time.
+    const cap = setTimeout(() => {
+      show.kill("SIGTERM");
+      reject(new Error(`it took over ${PHONE_DISPLAY_RECOVERY_CAP_MS / 1000} seconds`));
+    }, PHONE_DISPLAY_RECOVERY_CAP_MS);
+    show.once("error", (error) => {
+      clearTimeout(cap);
+      reject(error);
+    });
+    show.once("close", (status) => {
+      clearTimeout(cap);
+      options.children.delete(show);
+      if (status === 0) resolve(records);
+      else reject(new Error(`log show exited with ${status}`));
+    });
+  });
 }
 
 async function openPhoneKeyboardStream(options: PhoneKeyboardOptions, append: boolean) {
   const registrations = new PhoneKeyRegistrations();
   const touches = new PhoneTouchOutcomes();
   const previews = new PhonePickerPreviews();
-  const displays = new PhoneDisplayChanges();
+  const displays = new PhoneDisplayChanges((since) => keptPhoneLog(options, since));
   const child = spawn(
     "xcrun",
     [
@@ -657,8 +760,10 @@ async function openPhoneKeyboardStream(options: PhoneKeyboardOptions, append: bo
     wait: (pid: number, chord: PhoneChord) => registrations.wait(pid, chord),
     touch: (since: number) => touches.outcome(since),
     preview: (since: number) => previews.preview(since),
-    appearance: (since: number, style: "light" | "dark") => displays.appearance(since, style),
-    textSize: (since: number, size: PhoneTextSize) => displays.textSize(since, size),
+    appearance: (since: number, style: "light" | "dark", until?: number) =>
+      displays.appearance(since, style, until),
+    textSize: (since: number, size: PhoneTextSize, until?: number) =>
+      displays.textSize(since, size, until),
     close,
   };
 }

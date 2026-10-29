@@ -668,7 +668,6 @@ Leave `PHONE_VIRTUAL_MAC` unset with the placement service: a job already inside
 
 The repository variable `VIRTUAL_MAC_RUNNER`, which `native-phone` reads before `MAC_RUNNER`, names the service's virtual-Mac label, `mini-mac-virtual`, so the phone check never takes the real Mac's place (INF-897).
 GitHub hands a scale set's new runner whichever of that set's waiting jobs it picks, not the one the service started it for, so in the scale set the other Mac jobs share, the service's choice does not hold.
-Under the virtual-Mac label the phone check shares its scale set only with `old-cask-upgrade.yml`'s check, which runs after a release that switched the old cask, on request, or for a pull request that changes it.
 On that label each phone check takes a concurrency group of its own, so phone checks no longer wait in one line: each waits only for a free virtual place, and both virtual places can run phone checks at once (the captain's choice on INF-989: "let both virtual Macs run phone checks at once by ending the one-at-a-time line").
 The real Mac never takes that label, so a phone check never takes its place.
 A runner the service starts for one phone check may take another waiting phone check, or that rarer check in the same set; either is a job that asked for a virtual Mac.

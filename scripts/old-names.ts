@@ -195,8 +195,8 @@ export const RULES: readonly Rule[] = [
   },
   {
     class: "identity",
-    why: "Firstmate 3000's casks, tap and Linux packages, as the release tooling, the old-cask switch, the update reader and the checks that upgrade from them name them",
-    path: /^(scripts\/(resolve-release\.sh|publish-tap\.sh|publish-release-asset\.sh|generate-cask\.sh|tap-publication\.ts|linux-recipes\.ts|check-linux-package\.sh|check-old-cask-upgrade\.sh|check-saved-work-move\.sh|check-user-data-dir\.sh|verify-app\.sh)|src\/core\/devices\/(ubuntuPackage|publishedBuilds|farSystems|remoteLogin)\.ts|src\/core\/update\/(linuxInstall|updateChannels|tapPublication)\.ts|packaging\/|electron-builder\.linux\.yml|\.github\/workflows\/(release|republish-casks|linux-packages|old-cask-upgrade)\.yml)/,
+    why: "Firstmate 3000's casks, tap and Linux packages, as the release tooling, the old-cask switch and the update reader name them",
+    path: /^(scripts\/(resolve-release\.sh|publish-tap\.sh|publish-release-asset\.sh|generate-cask\.sh|tap-publication\.ts|linux-recipes\.ts|check-linux-package\.sh|check-user-data-dir\.sh|verify-app\.sh)|src\/core\/devices\/(ubuntuPackage|publishedBuilds|farSystems|remoteLogin)\.ts|src\/core\/update\/(linuxInstall|updateChannels|tapPublication)\.ts|packaging\/|electron-builder\.linux\.yml|\.github\/workflows\/(release|republish-casks|linux-packages)\.yml)/,
     families: ["3000"],
   },
   {

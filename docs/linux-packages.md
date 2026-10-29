@@ -34,7 +34,7 @@ The install script is electron-builder's own with that one step added (`packagin
 On Ubuntu dpkg runs it once the replaced package is gone, but on Fedora rpm runs it before it takes the replaced package away, which deletes both paths, so the Fedora package makes the links again in `%posttrans`, once its whole transaction is done (`packaging/linux/scripts/rpm-posttrans.sh`).
 The removal script (`packaging/linux/scripts/after-remove.tpl`) takes the links away on a removal alone, never on an upgrade, and only while they still lead into `/opt/infinitary`.
 `scripts/check-linux-package.sh` checks that both paths lead to the installed program after each Ubuntu and Fedora install.
-The checks also install the Ubuntu and Fedora packages over Firstmate 3000's last published ones, as its own update does, and check the saved work it made moves ("The checks").
+No check installs a package over Firstmate 3000's yet: each installs on a clean system ("The checks").
 
 ## The inbox's command
 
@@ -111,7 +111,6 @@ It keeps the packages, the two rendered recipes and `SHA256SUMS` as the run's `l
 - the Ubuntu package with apt on Ubuntu 24.04 and 26.04 machines themselves, AppArmor's restriction on user namespaces left on;
 - the Ubuntu package with apt in clean `ubuntu:24.04` and `ubuntu:26.04` containers;
 - the Fedora package with dnf in a clean `fedora:latest` container;
-- the Ubuntu and Fedora packages again, in clean `ubuntu:24.04` and `fedora:latest` containers, each installed over Firstmate 3000's published 0.4.1 package of that system, the matrix's `over`;
 - the Arch recipe, built with `makepkg` and installed with `pacman`, in a clean `archlinux:latest` container;
 - the AppImage in a clean `fedora:latest` container with a desktop's libraries and no git, where it must ask for git and quit when told to, and then, with git installed, the journey below;
 - the Nix package, built with `nix-build` against nixos-26.05 and run from the Nix store on the runner.
@@ -125,12 +124,6 @@ On each, `tests/installed/installed-package.spec.ts` opens the installed app as 
 The release's fuses turn off the Node inspector Playwright's Electron launcher needs, so it reaches the window through Chromium's debugging port (`tests/installed/installedApp.ts`).
 It checks that no process of the app runs with `--no-sandbox`, that the app reports the package's version, and that a crewmate takes a task on a project in a worktree the system's git made and reports.
 Each job keeps its pictures, the app's output and the results as its own artifact.
-
-A job with `over` first installs Firstmate 3000's package, fetched from Firstmate 3000's tap and checked against its release's own checksum, and opens it once as the person (`scripts/check-saved-work-move.sh`).
-Firstmate 3000's own first launch makes its folder and database, and the check then adds a settings row and a file to stand for the person's work.
-Then it installs the Infinitary package with the command Firstmate 3000's update runs (`apt-get install -y --allow-downgrades` or `dnf install -y`), and Firstmate 3000's package must be gone and both old paths must lead to Infinitary.
-Infinitary's first launch, as the person, must finish the one-time move (`docs/saved-data-compatibility.md`) and start again on its own folder.
-The row, the file and every database migration Firstmate 3000 applied must be there, and Firstmate 3000's folder retired, before the journey runs.
 
 ## Automatic startup for joined work
 

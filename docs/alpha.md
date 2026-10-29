@@ -117,17 +117,6 @@ For channels activated in `packaging/old-cask-switch.json`, the release also mir
 People who keep their Homebrew installation therefore continue using its usual upgrade command; moving to a disk image remains optional.
 The switch lists `alpha` and `stable`; releases of either channel also update the corresponding older cask.
 
-- **The person's upgrade is checked.**
-  After a live switched release's publication job succeeds, `release.yml`'s `old-cask-upgrade` job runs the person's own update in a throwaway virtual Mac, the placement service's `mini-mac-virtual` (`old-cask-upgrade.yml`, `scripts/check-old-cask-upgrade.sh`).
-  It installs the cask as it stood before the switch and opens Firstmate 3000 once, so it makes saved work, then runs `brew update && brew upgrade --cask firstmate-3000@alpha`, or `firstmate-3000` for stable.
-  `Firstmate 3000.app` must be gone and `Infinitary.app` there with the marker above, and Infinitary's first launch must move the saved work and keep the marker (`scripts/check-saved-work-move.sh`).
-  The app must report the version the release published.
-  A failure comes after the publication and does not undo it: it says the switched cask needs a fix before people meet it.
-  A pull request that changes the check or the switch's writer runs its rehearsal: the writer switches the tapped cask in a commit never pushed, to the newest Infinitary of the channel on Infinitary's tap, whose download goes where Homebrew caches the cask's address.
-  The check runs on demand too, live or as a rehearsal.
-  The script refuses outside a virtual Mac, since it writes `/Applications` and Homebrew quits `Firstmate 3000.app` by its bundle id.
-  Every release's Linux checks install the Ubuntu and Fedora packages over Firstmate 3000's published ones, with the same saved-work check (`docs/linux-packages.md`, "The checks").
-
 ## The signed channel workflow
 
 `release.yml` resolves one source and publishes verified immutable artifacts before any channel moves.

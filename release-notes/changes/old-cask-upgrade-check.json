@@ -1,9 +1,0 @@
-{
-  "entries": [],
-  "exclusions": [
-    {
-      "id": "old-cask-upgrade-check",
-      "reason": "Release checks only: a release that switches Firstmate 3000's cask now runs the person's brew upgrade in a throwaway virtual Mac, and the Linux checks install over Firstmate 3000's packages. Nothing a person sees changes."
-    }
-  ]
-}

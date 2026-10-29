@@ -5,6 +5,7 @@ import type { KnownForgeHost } from "@shared/forge";
 import type { ForgesView } from "@shared/forges";
 import { describe, expect, it } from "vitest";
 import { scratchDir } from "../../../tests/helpers/scratchDirs";
+import { type GitHubCli, type GitHubCliToken, readGitHubCliToken } from "./githubCli";
 import {
   type ForgeDeviceCode,
   type ForgeDeviceResult,
@@ -985,5 +986,307 @@ describe("a key sign-in to a host on the person's own server", () => {
     again.signOut("github.corp.example");
     expect(again.knownHosts()).toEqual([]);
     expect(h.store.hosts()).toEqual([]);
+  });
+});
+
+/**
+ * GitHub through GitHub CLI's own sign-in (INF-1775, the captain: "provide an
+ * alternative way for them to connect infinitary with their github, which is
+ * through gh cli which they have already setup on their machine"): the file
+ * names the way and the program, never the token; `token` asks GitHub CLI
+ * and keeps its answer a minute; health asks it afresh. Over a scripted
+ * GitHub CLI here, and a real program for the reader and the git helper.
+ */
+describe("a sign-in through GitHub CLI", () => {
+  const PROGRAM = "/opt/homebrew/bin/gh";
+  const CLI_TOKEN = "gho_from_github_cli_0123456789";
+
+  function cliHarness(
+    options: {
+      whoAmI?: (token: string) => Promise<ForgeWhoAmI>;
+      answer?: () => GitHubCliToken;
+      found?: () => string | undefined;
+    } = {},
+  ) {
+    let clock = 10_000;
+    const asked: string[] = [];
+    const cli: GitHubCli = {
+      find: options.found ?? (() => PROGRAM),
+      token: async (program, host) => {
+        asked.push(`${program} ${host}`);
+        return options.answer?.() ?? { token: CLI_TOKEN };
+      },
+    };
+    const sent: string[] = [];
+    const server: ForgeServer = {
+      kind: "github",
+      name: "GitHub Enterprise",
+      gitUser: "x-access-token",
+      signIn: (host) => ({
+        host,
+        name: host,
+        server: { kind: "github", name: "GitHub Enterprise" },
+        whoAmI: async () => ({ state: "ok", login: "mona", status: 200 }),
+      }),
+    };
+    const provider = scripted({
+      whoAmI: async (token) => {
+        sent.push(token);
+        return (
+          options.whoAmI?.(token) ??
+          ({
+            state: "ok",
+            login: "octo",
+            status: 200,
+            scopes: ["repo", "read:org", "gist"],
+          } as const)
+        );
+      },
+    });
+    const root = join(scratchDir("infinitary-forges-"), "forges");
+    const store = new ForgeSignInStore(root);
+    const pushed: ForgesView[] = [];
+    const changes: ForgeHealthChange[] = [];
+    const service = () =>
+      new ForgeSignIns({
+        store,
+        providers: [provider],
+        servers: [server],
+        projectsOn: () => 1,
+        push: (view) => pushed.push(view),
+        onHealthChange: (change) => changes.push(change),
+        cli,
+        now: () => clock,
+      });
+    return {
+      root,
+      store,
+      pushed,
+      changes,
+      asked,
+      sent,
+      service,
+      tick: (ms: number) => {
+        clock += ms;
+      },
+    };
+  }
+
+  it("keeps the way and the program, never GitHub CLI's token, and every request asks GitHub CLI", async () => {
+    const h = cliHarness();
+    const signIns = h.service();
+    expect(signIns.view().githubCli).toBe(true);
+    expect(await signIns.signInWithCli("github.com")).toEqual({ ok: true, host: "github.com" });
+    const file = readFileSync(join(h.root, "github.com", "sign-in.json"), "utf8");
+    expect(file).not.toContain(CLI_TOKEN);
+    expect(JSON.parse(file)).toEqual({
+      scopes: ["repo", "read:org", "gist"],
+      login: "octo",
+      createdAt: 10_000,
+      way: "cli",
+      program: PROGRAM,
+    });
+    expect(signIns.view().signIns).toEqual([
+      {
+        host: "github.com",
+        name: "GitHub",
+        login: "octo",
+        state: "ok",
+        projects: 1,
+        since: 10_000,
+        way: "cli",
+      },
+    ]);
+    expect(h.changes).toEqual([{ host: "github.com", name: "GitHub", from: "none", to: "ok" }]);
+    expect(await signIns.token("github.com")).toBe(CLI_TOKEN);
+    expect(JSON.stringify(h.pushed)).not.toContain(CLI_TOKEN);
+    expect(readFileSync(join(h.root, HEALTH_LOG), "utf8")).toContain(
+      "github.com sign-in none -> ok (signed in through GitHub CLI, answered 200)",
+    );
+  });
+
+  it("asks GitHub CLI once a minute, and again at once after GitHub refuses a request", async () => {
+    const h = cliHarness();
+    const signIns = h.service();
+    await signIns.signInWithCli("github.com");
+    const before = h.asked.length;
+    await Promise.all([signIns.token("github.com"), signIns.token("github.com")]);
+    expect(h.asked.length).toBe(before);
+    h.tick(60_000);
+    await Promise.all([signIns.token("github.com"), signIns.token("github.com")]);
+    expect(h.asked.length).toBe(before + 1);
+    signIns.rejected("github.com");
+    await signIns.token("github.com");
+    expect(h.asked.length).toBeGreaterThan(before + 1);
+  });
+
+  it("asks the person to sign in to GitHub CLI again when it holds none or GitHub refuses it, and recovers on Check now", async () => {
+    let answer: GitHubCliToken = {
+      problem: "none",
+      reason: "GitHub CLI holds no sign-in for github.com",
+    };
+    let refuse = false;
+    const h = cliHarness({
+      answer: () => answer,
+      whoAmI: async () =>
+        refuse ? { state: "rejected", status: 401 } : { state: "ok", login: "octo", status: 200 },
+    });
+    h.store.write("github.com", {
+      token: "",
+      scopes: [],
+      login: "octo",
+      createdAt: 1,
+      way: "cli",
+      program: PROGRAM,
+    });
+    const signIns = h.service();
+    await signIns.checkNow("github.com");
+    expect(signIns.stateOf("github.com")).toBe("needs_reauth");
+    answer = { token: CLI_TOKEN };
+    refuse = true;
+    await signIns.checkNow("github.com");
+    expect(signIns.stateOf("github.com")).toBe("needs_reauth");
+    refuse = false;
+    await signIns.checkNow("github.com");
+    expect(signIns.stateOf("github.com")).toBe("ok");
+    expect(h.changes.map((change) => change.to)).toEqual(["needs_reauth", "ok"]);
+    // Nothing renews it: GitHub CLI refreshes its own token.
+    expect(h.store.read("github.com")).toMatchObject({ way: "cli", login: "octo" });
+  });
+
+  it("reads a GitHub CLI gone from its path as unknown, and one that would not answer as unavailable", async () => {
+    let answer: GitHubCliToken = {
+      problem: "missing",
+      reason: `GitHub CLI was not found at ${PROGRAM}`,
+    };
+    const h = cliHarness({ answer: () => answer });
+    h.store.write("github.com", {
+      token: "",
+      scopes: [],
+      login: "octo",
+      createdAt: 1,
+      way: "cli",
+      program: PROGRAM,
+    });
+    const signIns = h.service();
+    await signIns.checkNow("github.com");
+    expect(signIns.stateOf("github.com")).toBe("unknown");
+    expect(await signIns.token("github.com")).toBeUndefined();
+    answer = { problem: "failed", reason: "GitHub CLI did not answer in time" };
+    await signIns.checkNow("github.com");
+    expect(signIns.stateOf("github.com")).toBe("unavailable");
+  });
+
+  it("keeps nothing GitHub CLI or the host did not answer for, and says why", async () => {
+    let answer: GitHubCliToken = { token: CLI_TOKEN };
+    let reading: ForgeWhoAmI = { state: "ok", login: "octo", status: 200 };
+    const h = cliHarness({ answer: () => answer, whoAmI: async () => reading });
+    const signIns = h.service();
+    answer = { problem: "none", reason: "GitHub CLI holds no sign-in for github.com" };
+    expect(await signIns.signInWithCli("github.com")).toEqual({
+      ok: false,
+      problem: "none",
+      host: "github.com",
+    });
+    answer = { token: CLI_TOKEN };
+    reading = { state: "rejected", status: 401 };
+    expect(await signIns.signInWithCli("github.com")).toMatchObject({
+      ok: false,
+      problem: "refused",
+    });
+    reading = { state: "unavailable", reason: "fetch failed" };
+    expect(await signIns.signInWithCli("github.com")).toMatchObject({
+      ok: false,
+      problem: "unreachable",
+    });
+    expect(await signIns.signInWithCli("gitlab.com")).toMatchObject({
+      ok: false,
+      problem: "not-github",
+    });
+    expect(h.store.read("github.com")).toBeUndefined();
+    const missing = cliHarness({ found: () => undefined });
+    const without = missing.service();
+    expect(without.view().githubCli).toBeUndefined();
+    expect(await without.signInWithCli("github.com")).toMatchObject({
+      ok: false,
+      problem: "missing",
+    });
+  });
+
+  it("signs a GitHub Enterprise host in by its address, with its kind and git's user name", async () => {
+    const h = cliHarness();
+    const signIns = h.service();
+    expect(await signIns.signInWithCli("https://github.corp.example/acme/meter")).toEqual({
+      ok: true,
+      host: "github.corp.example",
+    });
+    expect(h.asked).toEqual([`${PROGRAM} github.corp.example`]);
+    expect(h.store.read("github.corp.example")).toMatchObject({
+      kind: "github",
+      gitUser: "x-access-token",
+      way: "cli",
+      login: "mona",
+    });
+    expect(signIns.knownHosts()).toContainEqual({ host: "github.corp.example", kind: "github" });
+    expect(signIns.gitHosts()).toContain("github.corp.example");
+  });
+
+  it("forgets only the app's file when signed out; GitHub CLI is not asked to sign out", async () => {
+    const h = cliHarness();
+    const signIns = h.service();
+    await signIns.signInWithCli("github.com");
+    const asked = h.asked.length;
+    signIns.signOut("github.com");
+    expect(existsSync(join(h.root, "github.com"))).toBe(false);
+    expect(h.asked.length).toBe(asked);
+    expect(await signIns.token("github.com")).toBeUndefined();
+  });
+
+  describe("over a real program", () => {
+    /** A stand-in GitHub CLI: answers `auth token --hostname github.com`, and nothing else. */
+    function program(): string {
+      const dir = scratchDir("infinitary-gh-");
+      const path = join(dir, "gh");
+      writeFileSync(
+        path,
+        `#!/bin/sh\nif [ "$1 $2 $3 $4" = "auth token --hostname github.com" ]; then echo ${CLI_TOKEN}; exit 0; fi\necho "no oauth token found for $4" >&2\nexit 1\n`,
+        { mode: 0o755 },
+      );
+      return path;
+    }
+
+    it("reads GitHub CLI's token, a host it holds none for, and a program that is gone", async () => {
+      const gh = program();
+      const env = { PATH: process.env.PATH };
+      expect(await readGitHubCliToken(gh, "github.com", env)).toEqual({ token: CLI_TOKEN });
+      expect(await readGitHubCliToken(gh, "github.corp.example", env)).toMatchObject({
+        problem: "none",
+      });
+      expect(await readGitHubCliToken(join(gh, "..", "nothing"), "github.com", env)).toMatchObject({
+        problem: "missing",
+      });
+    });
+
+    it("lets the app's git helper answer git with GitHub CLI's token for a sign-in through it", () => {
+      const gh = program();
+      const { root, store } = harness(scripted({}));
+      store.write("github.com", {
+        token: "",
+        scopes: [],
+        login: "octo",
+        createdAt: 1,
+        way: "cli",
+        program: gh,
+      });
+      const askpass = join(__dirname, "../../../resources/git-askpass");
+      const ask = (prompt: string) =>
+        spawnSync(askpass, [prompt], {
+          encoding: "utf8",
+          env: { PATH: process.env.PATH, INFINITARY_GIT_SIGNIN_DIR: root },
+        });
+      expect(ask("Username for 'https://github.com': ").stdout).toBe("x-access-token\n");
+      const pass = ask("Password for 'https://x-access-token@github.com': ");
+      expect([pass.status, pass.stdout]).toEqual([0, `${CLI_TOKEN}\n`]);
+    });
   });
 });

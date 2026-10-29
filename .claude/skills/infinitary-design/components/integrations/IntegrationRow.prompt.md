@@ -14,6 +14,7 @@ Then the one list box `ForgeRow` draws (`--bg-1`, `--line-1` hairline, `--radius
 A connection the app renamed to avoid a GitHub name clash carries one quiet explanation directly below its row, in `--text-sm --fg-3`, aligned with the row's name, even while collapsed.
 It says "Renamed from “GitHub” to keep it distinct from your GitHub connection." and stays across restarts until the person chooses a name themselves.
 A refused sign-in carries one small primary "Sign in again", as a forge row does.
+A GitHub sign-in the person took from GitHub CLI reads "as octo · through GitHub CLI · 2 actions"; when GitHub CLI no longer holds a sign-in its `--danger` line reads "Sign in to GitHub CLI again, then Check now." and the small primary is "Check now", since the app never runs GitHub CLI's own sign-in.
 Its `RowMenu` holds "Check now", "Pause" (detail "Nobody reaches it until you resume it") or "Resume", and, behind a separator, "Sign out and remove" (danger).
 With nothing connected the box holds one quiet line, "Nothing connected yet.", never a warning.
 Open, the row is followed by its actions, indented to the name: each a row of its label in `--text-sm --fg-1`, an outline `Badge` with what it does ("reads", "changes", "sends"), its rule in mono `--fg-3` ("Allowed", "Asks you", "Off"), and a `Switch` whose name is "<label> on".
@@ -23,6 +24,7 @@ A kind that signs in with keys follows its actions with its keys, indented the s
 The field starts empty every time and never shows a kept value; one `--text-xs --fg-3` line closes the keys, "It stays on this computer.
 Your first mate and your crew use it but never see it."
 The foot is the `ConnectChips` row: one chip per kind not yet connected ("+ GitHub", "+ Google"), whose sign-in aside is `ForgeRow`'s device-code aside, under the chip or under the row signing in again.
+Where GitHub CLI is installed, GitHub's aside closes, below a `--line-1` hairline, with one `--text-sm --fg-3` line, "If your organization blocks apps like Infinitary, use the GitHub sign-in that GitHub CLI already holds on this computer.", and a small ghost "Use GitHub CLI"; nothing is asked of GitHub CLI before that click.
 Before Google's page opens, Google's notice takes that place and box (INF-949; Google's Workspace user data policy asks an app to show what it uses and where it goes, right before the sign-in, and to wait for an accept).
 The chip, a row's "Sign in again" and a card that opens Google's sign-in all open the notice first, and nothing is asked of Google until it is accepted.
 It reads, top to bottom: the title "Before you connect Google" in `--text-sm` weight 500 `--fg-1`; one `--text-sm --fg-2` lead; two groups, "What Infinitary uses" and "Where it goes", each under an `--text-xs --fg-3` head like the keys' "Keys"; one `--text-sm --fg-3` closing line; then a small primary "Accept and continue to Google" beside a ghost "Cancel".

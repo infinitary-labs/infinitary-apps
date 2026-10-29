@@ -19,6 +19,7 @@ import {
 } from "@shared/forge";
 import {
   type ForgeBrowserSignIn,
+  type ForgeCliSignInResult,
   type ForgeKeySignIn,
   type ForgeKeySignInResult,
   type ForgeServerView,
@@ -28,6 +29,12 @@ import {
   type ForgesView,
   isForgeHostName,
 } from "@shared/forges";
+import {
+  GITHUB_CLI_KEPT_MS,
+  type GitHubCli,
+  type GitHubCliToken,
+  isGitHubCliPath,
+} from "./githubCli";
 
 /**
  * The app's own sign-ins where projects live (git integration PR 1.2,
@@ -37,7 +44,7 @@ import {
  *   userData/forges/<host>/            0700
  *       sign-in.json                   0600 { token, scopes, login, createdAt,
  *                                             refreshToken?, expiresAt?, refreshExpiresAt?,
- *                                             kind?, gitUser? }
+ *                                             kind?, gitUser?, way?, program? }
  *   userData/forges/health.log         0600 one dated line per change of health
  *
  * Two readers only: this file (for the forge's requests and the health
@@ -80,6 +87,15 @@ import {
  * sign-in with a public Application ID registered on that host, kept with
  * the sign-in so the same renewal owner can refresh it after a restart.
  *
+ * A GitHub host may instead sign in through GitHub CLI (`docs/forge.md`,
+ * "GitHub CLI's sign-in"), for a person whose organization blocks
+ * third-party OAuth apps such as the app's: the file then names the way
+ * (`cli`) and the program's path and holds no token. `token` asks that
+ * program at the moment a sign-in is needed, keeps its answer a minute and
+ * drops it on a refusal; the git helper asks it the same way. GitHub CLI
+ * refreshes its own token, so nothing here renews it, and only the person
+ * signs GitHub CLI in again. Everything above `token` stays as it is.
+ *
  * Every change of health, every completed sign-in and every sign-out is one
  * dated line in `health.log` (and the console): the states and what the
  * host answered - its HTTP status, or why it could not be asked - and never
@@ -105,6 +121,10 @@ export type ForgeSignInRecord = {
   gitUser?: string;
   /** Public application identifier for renewing a browser sign-in on this host. */
   applicationId?: string;
+  /** The sign-in is GitHub CLI's: `token` is empty and never on disk, `program` is asked for it. */
+  way?: "cli";
+  /** GitHub CLI's path on this computer, which the git helper runs too. */
+  program?: string;
 };
 
 export const SIGN_IN_FILE = "sign-in.json";
@@ -138,9 +158,15 @@ export class ForgeSignInStore {
     if (!existsSync(file)) return undefined;
     try {
       const parsed = JSON.parse(readFileSync(file, "utf8")) as Partial<ForgeSignInRecord>;
-      if (typeof parsed.token !== "string" || !parsed.token) return "unreadable";
+      const cli =
+        parsed.way === "cli" &&
+        typeof parsed.program === "string" &&
+        isGitHubCliPath(parsed.program);
+      if (cli) {
+        if (parsed.token !== undefined) return "unreadable";
+      } else if (typeof parsed.token !== "string" || !parsed.token) return "unreadable";
       return {
-        token: parsed.token,
+        token: cli ? "" : (parsed.token as string),
         scopes: Array.isArray(parsed.scopes)
           ? parsed.scopes.filter((s) => typeof s === "string")
           : [],
@@ -160,6 +186,7 @@ export class ForgeSignInStore {
         ...(typeof parsed.gitUser === "string" && parsed.gitUser
           ? { gitUser: parsed.gitUser }
           : {}),
+        ...(cli ? { way: "cli" as const, program: parsed.program } : {}),
       };
     } catch {
       return "unreadable";
@@ -173,8 +200,11 @@ export class ForgeSignInStore {
     mkdirSync(dir, { recursive: true, mode: 0o700 });
     const file = join(dir, SIGN_IN_FILE);
     const temp = `${file}.${process.pid}.tmp`;
+    // GitHub CLI's sign-in is asked for each time: its token is never written.
+    const { token, ...rest } = record;
+    const kept = record.way === "cli" ? rest : record;
     // One line: the git helper reads the token field with a line tool.
-    writeFileSync(temp, `${JSON.stringify(record)}\n`, { mode: 0o600 });
+    writeFileSync(temp, `${JSON.stringify(kept)}\n`, { mode: 0o600 });
     renameSync(temp, file);
   }
 
@@ -329,6 +359,8 @@ export type ForgeSignInsOptions = {
   onHealthChange?: (change: ForgeHealthChange) => void;
   /** A short-lived sign-in renewed itself: work a refusal held for it can go again. */
   onRenewed?: (host: string) => void;
+  /** The person's own GitHub CLI, which a GitHub host may sign in through. */
+  cli?: GitHubCli;
   log?: (message: string) => void;
   now?: () => number;
 };
@@ -341,6 +373,9 @@ export class ForgeSignIns {
   private readonly checking = new Map<string, Promise<void>>();
   private readonly renewing = new Map<string, Promise<Renewal>>();
   private readonly onServers = new Map<string, ForgeSignInProvider>();
+  /** GitHub CLI's last answer per host, kept a minute; one ask at a time per host. */
+  private readonly cliTokens = new Map<string, { token: string; at: number }>();
+  private readonly cliAsking = new Map<string, Promise<GitHubCliToken>>();
 
   constructor(private readonly options: ForgeSignInsOptions) {
     for (const host of this.signedInHosts()) {
@@ -367,6 +402,7 @@ export class ForgeSignIns {
           ? { applicationId: record.applicationId }
           : {}),
         ...serverOf(this.provider(host)),
+        ...(record && record !== "unreadable" && record.way ? { way: record.way } : {}),
       };
     });
     return {
@@ -388,6 +424,7 @@ export class ForgeSignIns {
       })),
       flow: this.flight?.flow ?? null,
       ended: this.ended,
+      ...(this.options.cli?.find() ? { githubCli: true } : {}),
     };
   }
 
@@ -490,6 +527,10 @@ export class ForgeSignIns {
    */
   async token(host: string): Promise<string | undefined> {
     const record = this.usable(host);
+    if (record?.way === "cli") {
+      const asked = await this.askCli(host, record, false);
+      return "token" in asked ? asked.token : undefined;
+    }
     if (!record || !this.expiring(record)) return record?.token;
     await this.renew(host, record);
     return this.usable(host)?.token;
@@ -622,6 +663,75 @@ export class ForgeSignIns {
     return { ok: true, host };
   }
 
+  /**
+   * Sign in to a GitHub host through GitHub CLI's own sign-in: github.com,
+   * or a GitHub Enterprise host by its address. GitHub CLI is asked for its
+   * token and the host who that is, and only a sign-in the host answers for
+   * is kept - as the way and the program's path, never the token. The app
+   * never runs GitHub CLI's own sign-in.
+   */
+  async signInWithCli(address: string): Promise<ForgeCliSignInResult> {
+    const host = hostOfAddress(address);
+    if (!host || !isForgeHostName(host)) return { ok: false, problem: "not-github", host: null };
+    const offered = this.options.providers.find((provider) => provider.host === host);
+    const server = this.serverFor("github");
+    const named = kindByName(host);
+    const known = this.knownHosts().find((entry) => entry.host === host)?.kind;
+    let provider: ForgeSignInProvider | undefined;
+    if (offered) {
+      if ((named ?? "github") === "github") provider = offered;
+    } else if (
+      server &&
+      !(isPublicForgeHost(host) && !server.hosts?.includes(host)) &&
+      (named ?? "github") === "github" &&
+      (known ?? "github") === "github"
+    ) {
+      provider = server.signIn(host);
+    }
+    if (!provider) return { ok: false, problem: "not-github", host };
+    const program = this.options.cli?.find();
+    if (!this.options.cli || !program) return { ok: false, problem: "missing", host };
+    const asked = await this.options.cli
+      .token(program, host)
+      .catch((caught): GitHubCliToken => ({ problem: "failed", reason: messageOf(caught) }));
+    if (!("token" in asked)) {
+      this.log(`sign-in to ${host} through GitHub CLI was not kept: ${asked.reason}`);
+      return { ok: false, problem: asked.problem, host };
+    }
+    const reading = await whoAmI(provider, asked.token);
+    if (reading.state !== "ok") {
+      const status = reading.status;
+      const problem = reading.state === "rejected" || status === 403 ? "refused" : "unreachable";
+      this.log(`sign-in to ${host} through GitHub CLI was not kept: ${answerOf(reading)}`);
+      return { ok: false, problem, host };
+    }
+    if (!offered) this.onServers.set(host, provider);
+    if (this.flight?.flow.host === host || this.starting?.host === host) this.cancel();
+    const before = this.health.get(host)?.state ?? "none";
+    this.options.store.write(host, {
+      token: "",
+      scopes: reading.scopes ?? [],
+      login: reading.login,
+      createdAt: this.now(),
+      ...(offered || !server ? {} : { kind: server.kind, gitUser: server.gitUser }),
+      way: "cli",
+      program,
+    });
+    this.cliTokens.set(host, { token: asked.token, at: this.now() });
+    this.health.set(host, { state: "ok", login: reading.login });
+    if (this.ended?.host === host) this.ended = null;
+    this.record(host, before, "ok", `signed in through GitHub CLI, ${answerOf(reading)}`);
+    this.changed(host, before, "ok");
+    if (!offered && server) this.options.onSignedIn?.({ host, kind: server.kind });
+    this.pushView();
+    return { ok: true, host };
+  }
+
+  /** How a host's sign-in on file is made: GitHub CLI's, or the app's own. */
+  wayOf(host: string): "cli" | undefined {
+    return this.usable(host)?.way;
+  }
+
   /** The person's Cancel: the code stops being asked about. */
   cancel(): void {
     this.starting?.abort.abort();
@@ -640,6 +750,7 @@ export class ForgeSignIns {
     const before = this.health.get(host)?.state ?? "none";
     this.options.store.remove(host);
     this.onServers.delete(host);
+    this.cliTokens.delete(host);
     this.health.delete(host);
     this.ended = null;
     this.record(host, before, "none", "signed out");
@@ -666,6 +777,7 @@ export class ForgeSignIns {
    * the row and the card follow.
    */
   rejected(host: string): void {
+    this.cliTokens.delete(host);
     void this.checkHost(host);
   }
 
@@ -687,6 +799,10 @@ export class ForgeSignIns {
     if (record === "unreadable" || !provider) {
       next = { state: "unknown", login: before?.login ?? null };
       answer = "the sign-in file is unreadable";
+    } else if (record.way === "cli") {
+      const read = await this.readCliHealth(host, provider, record, before);
+      if (!read) return;
+      ({ next, answer } = read);
     } else {
       let current = record;
       let renewal: Renewal | undefined;
@@ -727,6 +843,85 @@ export class ForgeSignIns {
       this.changed(host, before?.state ?? "unknown", next.state);
       this.pushView();
     }
+  }
+
+  /**
+   * The health read of a sign-in through GitHub CLI: GitHub CLI asked
+   * afresh, then the host asked who that is. GitHub CLI holding no sign-in,
+   * or the host refusing it, is `needs_reauth` - only the person signs
+   * GitHub CLI in again; a program gone from its path is `unknown`, and one
+   * that could not be asked is `unavailable`. Undefined when signed out
+   * while it read.
+   */
+  private async readCliHealth(
+    host: string,
+    provider: ForgeSignInProvider,
+    record: ForgeSignInRecord,
+    before: Health | undefined,
+  ): Promise<{ next: Health; answer: string } | undefined> {
+    this.cliTokens.delete(host);
+    const asked = await this.askCli(host, record, true);
+    const latest = this.usable(host);
+    if (!latest || latest.way !== "cli") return undefined;
+    const login = before?.login ?? latest.login;
+    if (!("token" in asked)) {
+      const state: ForgeSignInState =
+        asked.problem === "none"
+          ? "needs_reauth"
+          : asked.problem === "missing"
+            ? "unknown"
+            : "unavailable";
+      return { next: { state, login }, answer: asked.reason };
+    }
+    const reading = await whoAmI(provider, asked.token);
+    const now = this.usable(host);
+    if (!now || now.way !== "cli") return undefined;
+    const answer = `through GitHub CLI, ${answerOf(reading)}`;
+    if (reading.state === "ok") {
+      if (reading.login !== now.login)
+        this.options.store.write(host, { ...now, login: reading.login });
+      return { next: { state: "ok", login: reading.login }, answer };
+    }
+    this.cliTokens.delete(host);
+    return {
+      next: { state: reading.state === "rejected" ? "needs_reauth" : "unavailable", login },
+      answer,
+    };
+  }
+
+  /**
+   * GitHub CLI's token for a host: the one it gave within the last minute,
+   * unless `fresh`, else asked of the program the file names. Concurrent
+   * asks for one host share one run.
+   */
+  private askCli(host: string, record: ForgeSignInRecord, fresh: boolean): Promise<GitHubCliToken> {
+    const kept = this.cliTokens.get(host);
+    if (!fresh && kept && this.now() - kept.at < GITHUB_CLI_KEPT_MS) {
+      return Promise.resolve({ token: kept.token });
+    }
+    const running = this.cliAsking.get(host);
+    if (running) return running;
+    const cli = this.options.cli;
+    const program = record.program;
+    const asking = (
+      cli && program
+        ? cli.token(program, host)
+        : Promise.resolve<GitHubCliToken>({
+            problem: "missing",
+            reason: "GitHub CLI is not available here",
+          })
+    )
+      .catch((caught): GitHubCliToken => ({ problem: "failed", reason: messageOf(caught) }))
+      .then((answer) => {
+        // Signed out, or signed in another way, while it answered: keep nothing.
+        if ("token" in answer && this.usable(host)?.way === "cli") {
+          this.cliTokens.set(host, { token: answer.token, at: this.now() });
+        }
+        return answer;
+      })
+      .finally(() => this.cliAsking.delete(host));
+    this.cliAsking.set(host, asking);
+    return asking;
   }
 
   private async finish(
@@ -816,7 +1011,7 @@ export class ForgeSignIns {
           ? "not signed in"
           : record === "unreadable"
             ? "the sign-in file is unreadable"
-            : `signed in since ${isoOf(record.createdAt)}${record.expiresAt ? `, short-lived until ${isoOf(record.expiresAt)}` : ""}`;
+            : `signed in${record.way === "cli" ? " through GitHub CLI" : ""} since ${isoOf(record.createdAt)}${record.expiresAt ? `, short-lived until ${isoOf(record.expiresAt)}` : ""}`;
       const state = this.health.get(host)?.state;
       const lastRead = state && state !== "unknown" ? `, last read ${state}` : "";
       this.write(`${isoOf(this.now())} ${host} app ${moment}: ${onFile}${lastRead}`);

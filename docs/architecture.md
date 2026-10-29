@@ -732,6 +732,9 @@ The app's own sign-in to the host a project lives on - GitHub, for now - is a SI
   `userData/forges/<host>/sign-in.json`, 0700 directory, 0600 file (`src/core/forge/signIns.ts`).
   One per host.
   Signing out deletes the directory; an OAuth App with no secret cannot revoke from the app, so the person revokes on GitHub's own page.
+- **GitHub CLI's sign-in.**
+  A GitHub host may instead sign in through the person's own GitHub CLI, for an organization that blocks third-party OAuth apps: the file then names the way (`cli`) and the program's path, never a token, and `ForgeSignIns.token` and the git helper ask the program at the moment a sign-in is needed (`docs/forge.md`, "GitHub CLI's sign-in").
+  Everything above `token` stays as it is.
 - **Health, through the five rules** (§16.4) on the supervisor's tick: `GET /user` 200 is `ok`; a 401 is `needs_reauth` only on proof - no refresh token, a refused renewal, or a 401 that survived a real renewal (GitHub's OAuth App sign-ins are eight-hour sign-ins with a refresh token by default since 2026-08-14; the app renews them, `docs/forge.md`) - and raises the one host card `card-forge-<host>`, which takes itself down when GitHub answers again; a 403 on a spent allowance, a 5xx or no network is `unavailable`, retried, never a sign-out; an unreadable store is `unknown`.
   A forge request refused with 401 asks for a health read at once rather than trusting one refusal.
 - **Git never prompts.**

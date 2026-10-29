@@ -10,6 +10,10 @@
 # reads the sign-in from its 0600 file and prints it to git alone: never an
 # argument, never the environment.
 #
+# A sign-in made through GitHub CLI names the way ("way":"cli") and the
+# program's path instead of a token: the helper asks that program for the
+# host's token (gh auth token --hostname <host>) each time git asks.
+#
 # The user name is the host's own: the file's "gitUser" where the sign-in
 # names one (a host on the person's own server), else GitHub's
 # x-access-token.
@@ -39,7 +43,19 @@ esac
 
 file=$dir/$host/sign-in.json
 [ -f "$file" ] || exit 1
-token=$(sed -n 's/.*"token":"\([^"\\]*\)".*/\1/p' "$file" | head -n 1)
+way=$(sed -n 's/.*"way":"\([^"\\]*\)".*/\1/p' "$file" | head -n 1)
+if [ "$way" = cli ]; then
+  # A sign-in through GitHub CLI holds no token: ask the program it names.
+  program=$(sed -n 's/.*"program":"\([^"\\]*\)".*/\1/p' "$file" | head -n 1)
+  case $program in
+    /*) ;;
+    *) exit 1 ;;
+  esac
+  [ -x "$program" ] || exit 1
+  token=$("$program" auth token --hostname "$host" 2>/dev/null | head -n 1)
+else
+  token=$(sed -n 's/.*"token":"\([^"\\]*\)".*/\1/p' "$file" | head -n 1)
+fi
 [ -n "$token" ] || exit 1
 
 user=$(sed -n 's/.*"gitUser":"\([^"\\]*\)".*/\1/p' "$file" | head -n 1)

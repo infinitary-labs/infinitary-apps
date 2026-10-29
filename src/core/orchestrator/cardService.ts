@@ -46,7 +46,13 @@ import {
   deviceForgeSignInTitle,
 } from "@shared/deviceSetup";
 import type { FmEvent } from "@shared/events";
-import { forgeRefusedText, forgeSignInTitle, LOCAL_PROJECTS_UNAFFECTED } from "@shared/forges";
+import {
+  forgeCliRefusedText,
+  forgeRefusedText,
+  forgeSignInTitle,
+  LOCAL_PROJECTS_UNAFFECTED,
+} from "@shared/forges";
+import { INTEGRATIONS_WORDS } from "@shared/integrations";
 import { FIRSTMATE_SESSION_ID } from "@shared/observe";
 import { MERGE_ANYWAY_WORDS } from "@shared/vocabulary";
 import { z } from "zod";
@@ -2257,10 +2263,12 @@ export class CardService {
     host: string,
     name: string,
     waitingChanges: number,
-    options: { reauth?: boolean } = {},
+    options: { reauth?: boolean; cli?: boolean } = {},
   ): void {
     if (this.cards.has(id)) return;
     const reauth = options.reauth ?? true;
+    // A sign-in through GitHub CLI is signed in again in GitHub CLI itself, never here.
+    const cli = reauth && options.cli === true;
     const waiting =
       waitingChanges === 0
         ? ""
@@ -2274,13 +2282,13 @@ export class CardService {
       title: forgeSignInTitle(name, reauth),
       meta: name,
       body: reauth
-        ? `<p>${forgeRefusedText(name)}${waiting}</p><p>${LOCAL_PROJECTS_UNAFFECTED}</p>`
+        ? `<p>${cli ? forgeCliRefusedText(name) : forgeRefusedText(name)}${waiting}</p><p>${LOCAL_PROJECTS_UNAFFECTED}</p>`
         : `<p>A task for a project on ${name} is waiting for your sign-in.${waiting}</p><p>Once you sign in, your first mate will retry starting the task. ${LOCAL_PROJECTS_UNAFFECTED}</p>`,
 
       actions: [
         {
           id: "sign-in",
-          label: reauth ? "Sign in again" : `Sign in to ${name}`,
+          label: cli ? INTEGRATIONS_WORDS.open : reauth ? "Sign in again" : `Sign in to ${name}`,
           variant: "primary",
           effect: { kind: "open", target: "projects", signIn: host },
         },

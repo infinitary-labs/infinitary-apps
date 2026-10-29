@@ -2944,7 +2944,7 @@ export class CrewSupervisor {
     host: string,
     name: string,
     waitingChanges: number,
-    options: { reauth?: boolean } = {},
+    options: { reauth?: boolean; cli?: boolean } = {},
   ): void {
     this.cards.addForgeSignInCard(id, host, name, waitingChanges, options);
   }

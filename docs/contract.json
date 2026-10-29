@@ -14512,6 +14512,12 @@
                     "kind",
                     "name"
                   ]
+                },
+                "way": {
+                  "type": "string",
+                  "enum": [
+                    "cli"
+                  ]
                 }
               },
               "required": [
@@ -14668,6 +14674,9 @@
                 "type": "null"
               }
             ]
+          },
+          "githubCli": {
+            "type": "boolean"
           }
         },
         "required": [
@@ -14945,6 +14954,80 @@
         ]
       }
     },
+    "inf:forges:sign-in-cli": {
+      "effect": "change",
+      "reach": "home",
+      "request": {
+        "type": "array",
+        "prefixItems": [
+          {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 2000
+          }
+        ],
+        "minItems": 1,
+        "items": false
+      },
+      "response": {
+        "oneOf": [
+          {
+            "type": "object",
+            "properties": {
+              "ok": {
+                "type": "boolean",
+                "const": true
+              },
+              "host": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 253
+              }
+            },
+            "required": [
+              "ok",
+              "host"
+            ]
+          },
+          {
+            "type": "object",
+            "properties": {
+              "ok": {
+                "type": "boolean",
+                "const": false
+              },
+              "problem": {
+                "type": "string",
+                "enum": [
+                  "not-github",
+                  "missing",
+                  "none",
+                  "refused",
+                  "unreachable",
+                  "failed"
+                ]
+              },
+              "host": {
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "maxLength": 253
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              }
+            },
+            "required": [
+              "ok",
+              "problem",
+              "host"
+            ]
+          }
+        ]
+      }
+    },
     "inf:forges:cancel": {
       "effect": "change",
       "reach": "home",
@@ -15024,6 +15107,12 @@
                   "required": [
                     "kind",
                     "name"
+                  ]
+                },
+                "way": {
+                  "type": "string",
+                  "enum": [
+                    "cli"
                   ]
                 }
               },
@@ -15181,6 +15270,9 @@
                 "type": "null"
               }
             ]
+          },
+          "githubCli": {
+            "type": "boolean"
           }
         },
         "required": [
@@ -15279,6 +15371,12 @@
                     "kind",
                     "name"
                   ]
+                },
+                "way": {
+                  "type": "string",
+                  "enum": [
+                    "cli"
+                  ]
                 }
               },
               "required": [
@@ -15435,6 +15533,9 @@
                 "type": "null"
               }
             ]
+          },
+          "githubCli": {
+            "type": "boolean"
           }
         },
         "required": [
@@ -57454,6 +57555,12 @@
                     "kind",
                     "name"
                   ]
+                },
+                "way": {
+                  "type": "string",
+                  "enum": [
+                    "cli"
+                  ]
                 }
               },
               "required": [
@@ -57610,6 +57717,9 @@
                 "type": "null"
               }
             ]
+          },
+          "githubCli": {
+            "type": "boolean"
           }
         },
         "required": [

@@ -171,6 +171,12 @@ export function integrationSignInValue(
         ? { kind: "github-enterprise", host }
         : { host };
   }
+  if (channel === "inf:forges:sign-in-cli") {
+    // GitHub CLI's sign-in serves GitHub hosts alone: github.com, or GitHub Enterprise.
+    const host = hostOfAddress(String(args[0])) ?? undefined;
+    if (host === INTEGRATIONS_SIGN_IN_HOST) return { kind: "github" };
+    return { kind: "github-enterprise", ...(host ? { host } : {}) };
+  }
   const input = args[0] as { kind: string; address: string };
   const host = hostOfAddress(input.address) ?? undefined;
   const kind =
@@ -875,6 +881,7 @@ const actionLines = {
       "inf:forges:sign-in",
       "inf:forges:sign-in-key",
       "inf:forges:sign-in-browser",
+      "inf:forges:sign-in-cli",
     ],
     // An MCP server is added from a form; a stand-in is a test run's own, never connected by hand.
     value: z.strictObject({

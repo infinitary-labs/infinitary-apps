@@ -176,6 +176,13 @@ Its explanation lives separately in `integrations/name-repairs.json`, matched to
 Older builds ignore the new file and keep reading every setting; a later name change by an older build makes the explanation inapplicable.
 No persisted format revision changes.
 
+## A sign-in through GitHub CLI
+
+A GitHub host's `forges/<host>/sign-in.json` may name the way `cli` and GitHub CLI's `program` and hold no `token` (`docs/forge.md`, "GitHub CLI's sign-in").
+Files written before it read the same.
+An older build reads such a file as unreadable, because it has no token: the row reads "signed in · checking", git gets no answer and fails at once, and the sign-in card asks for GitHub; nothing is rewritten or deleted, so the sign-in works again in a build that knows the way.
+The format revision therefore stays at 1.
+
 ## Card pictures with a demo recording
 
 A card picture may carry an optional `demo` (docs/card-authoring.md, "Demo recordings"): the recording its poster stands for - its id, kind, size, length, byte size and SHA-256.

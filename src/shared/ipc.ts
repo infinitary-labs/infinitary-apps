@@ -109,6 +109,7 @@ import { type CrewWord, crewWordSchema, type FirstRunView, firstRunViewSchema } 
 import {
   type ForgeBrowserSignIn,
   type ForgeChangesView,
+  type ForgeCliSignInResult,
   type ForgeKeySignIn,
   type ForgeKeySignInResult,
   type ForgeProject,
@@ -116,6 +117,7 @@ import {
   type ForgesView,
   forgeBrowserSignInSchema,
   forgeChangesViewSchema,
+  forgeCliSignInResultSchema,
   forgeKeySignInResultSchema,
   forgeKeySignInSchema,
   forgeProjectSchema,
@@ -1674,6 +1676,17 @@ export const invokeContract = {
     reach: "home",
     request: z.tuple([forgeKeySignInSchema]),
     response: forgeKeySignInResultSchema,
+  },
+  // A GitHub host signed in through the person's own GitHub CLI: the core
+  // asks GitHub CLI for its sign-in and the host who that is, and keeps
+  // only the way and the program's path (docs/forge.md, "GitHub CLI's
+  // sign-in"). The address is github.com or a GitHub Enterprise host's.
+  "inf:forges:sign-in-cli": {
+    effect: "change",
+    surface: "core",
+    reach: "home",
+    request: z.tuple([z.string().min(1).max(2000)]),
+    response: forgeCliSignInResultSchema,
   },
   "inf:forges:cancel": {
     effect: "change",
@@ -3737,7 +3750,8 @@ export type FirstmateApi = {
    * the host's device flow and answers with the code to enter on the
    * host's page; how it ends arrives on `onChange`. `signInWithKey` signs
    * in to a host on the person's own server with a key made there, and
-   * answers whether it was kept.
+   * answers whether it was kept. `signInWithCli` signs a GitHub host in
+   * through the person's own GitHub CLI, and answers whether it was kept.
    */
   forges: {
     projects: (host: string) => Promise<ForgeProject[]>;
@@ -3745,6 +3759,7 @@ export type FirstmateApi = {
     signIn: (host: string) => Promise<ForgeSignInFlow>;
     signInWithBrowser: (input: ForgeBrowserSignIn) => Promise<ForgeSignInFlow>;
     signInWithKey: (input: ForgeKeySignIn) => Promise<ForgeKeySignInResult>;
+    signInWithCli: (address: string) => Promise<ForgeCliSignInResult>;
     cancel: () => Promise<ForgesView>;
     signOut: (host: string) => Promise<ForgesView>;
     /** The person's open proposed changes there, newest first (the `forge.changes` read). */

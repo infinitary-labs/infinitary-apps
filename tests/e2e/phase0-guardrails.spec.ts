@@ -120,6 +120,7 @@ test("keeps node globals out of the page and exposes a tamper-proof bridge", asy
     "projects",
     "signIn",
     "signInWithBrowser",
+    "signInWithCli",
     "signInWithKey",
     "signOut",
   ]);

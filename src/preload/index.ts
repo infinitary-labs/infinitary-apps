@@ -532,6 +532,7 @@ const api: FirstmateApi = {
     signIn: (host) => invoke("inf:forges:sign-in", host),
     signInWithBrowser: (input) => invoke("inf:forges:sign-in-browser", input),
     signInWithKey: (input) => invoke("inf:forges:sign-in-key", input),
+    signInWithCli: (address) => invoke("inf:forges:sign-in-cli", address),
     cancel: () => invoke("inf:forges:cancel"),
     signOut: (host) => invoke("inf:forges:sign-out", host),
     changes: () => invoke("inf:forges:changes"),

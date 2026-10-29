@@ -442,6 +442,9 @@ export function hermeticEnv(input: {
     // unless the spec names its own, so no test reads this Mac's own
     // privacy log (docs/macos-privacy.md).
     INFINITARY_PRIVACY_LOG: "/usr/bin/true",
+    // No GitHub CLI unless the spec names its own stand-in, so no test finds
+    // or asks the one installed on this Mac (docs/forge.md, "GitHub CLI's sign-in").
+    INFINITARY_GITHUB_CLI: "none",
     INFINITARY_CONNECTION_LOOPBACK_PORT: loopbackPort,
   };
 }

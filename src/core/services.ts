@@ -107,6 +107,7 @@ import {
   ForgeSignIns,
   forgeSignInProviders,
   forgeSignInServers,
+  githubCliFor,
   isSignInForgeFailure,
   remoteProjectsText,
 } from "./forge";
@@ -596,6 +597,8 @@ export async function createServices(
     },
     onHealthChange: (change) => onForgeHealth(change),
     onRenewed: (forgeHost) => onForgeRenewed(forgeHost),
+    // A GitHub host may sign in through the person's own GitHub CLI instead (docs/forge.md).
+    cli: githubCliFor(forgeEndpoints),
     log: (message) => console.info(message),
   });
   knownForgeHosts = () => forgeSignIns.knownHosts();
@@ -2564,6 +2567,7 @@ export async function createServices(
         change.host,
         change.name,
         waitingChangesOn(change.host),
+        { cli: forgeSignIns.wayOf(change.host) === "cli" },
       );
     } else if (change.to === "ok" || change.to === "none") {
       supervisor.clearAuthDecisionCard(cardId);

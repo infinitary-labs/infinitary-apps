@@ -9,6 +9,7 @@ import { PERSONAL_WORKSPACE_NAME } from "../../src/core/paths";
 import { openDatabase } from "../../src/core/storage/db";
 import { TaskStore } from "../../src/core/storage/taskStore";
 import {
+  FORGE_CLI_WORDS,
   FORGE_SECTION_WORDS,
   forgeKeyPage,
   forgeKeyProblemText,
@@ -164,9 +165,12 @@ async function arrange({
   signedIn,
   host = "github.com",
   keptHere = false,
+  githubCli,
 }: {
   signedIn: boolean;
   host?: string;
+  /** A stand-in GitHub CLI the app finds on this computer, by its path. */
+  githubCli?: string;
   /** Also a project with no origin at all, kept on this computer: notebook. */
   keptHere?: boolean;
 }): Promise<void> {
@@ -215,7 +219,7 @@ async function arrange({
     withMockProvider: true,
     scenarios: [githubChange, continueChange, forgeSignin, forgeSigninReads, mergeWriteGuard],
     userDataDir,
-    env: github.env,
+    env: { ...github.env, ...(githubCli ? { INFINITARY_GITHUB_CLI: githubCli } : {}) },
   });
   // `launched` is read when the test ends, so a relaunch is the one stopped.
   stop = async () => {
@@ -640,6 +644,78 @@ test("a crewmate opens its change on GitHub with its own tools, and the captain'
   await expect
     .poll(() => page.evaluate((id) => window.infinitary.tasks.detail(id), task?.id as string))
     .toMatchObject({ status: "done", closedReason: "merged" });
+});
+
+/**
+ * A stand-in GitHub CLI signed in to github.com with the stand-in GitHub's
+ * own sign-in: it answers `gh auth token --hostname github.com` and logs
+ * every call, as the person's own GitHub CLI would answer the app.
+ */
+function standInGitHubCli(): { path: string; calls: () => string[] } {
+  const dir = scratchDir("infinitary-github-cli-");
+  const log = join(dir, "gh-calls.log");
+  const path = join(dir, "gh");
+  writeFileSync(
+    path,
+    `#!/bin/sh\nprintf '%s\\n' "$*" >> '${log}'\nif [ "$1 $2 $3 $4" = "auth token --hostname github.com" ]; then echo gho_e2e_sign_in; exit 0; fi\necho "no oauth token found for $4" >&2\nexit 1\n`,
+    { mode: 0o755 },
+  );
+  return {
+    path,
+    calls: () => (existsSync(log) ? readFileSync(log, "utf8").trimEnd().split("\n") : []),
+  };
+}
+
+test("an organization that blocks the app: GitHub CLI's sign-in, chosen under the code, carries a crewmate's change", async () => {
+  // INF-1775, the captain: "provide an alternative way for them to connect
+  // infinitary with their github, which is through gh cli which they have
+  // already setup on their machine".
+  const cli = standInGitHubCli();
+  await arrange({ signedIn: false, githubCli: cli.path });
+  const { page } = launched;
+  await openIntegrations(page);
+  const forges = section(page);
+
+  // The code stays first; GitHub CLI's one line sits under it, and nothing
+  // asks GitHub CLI until the person clicks.
+  await page.getByRole("button", { name: "Sign in to GitHub", exact: true }).click();
+  await expect(page.locator("[data-forge-code]")).toHaveText(STUB_USER_CODE);
+  const line = forges.locator('[data-forge-cli="github.com"]');
+  await expect(line).toContainText(FORGE_CLI_WORDS.offer);
+  expect(cli.calls()).toEqual([]);
+  await regionShot(
+    forges.locator("[data-forge-flow]"),
+    test.info().outputPath("forge-signin-github-cli-line.png"),
+  );
+  await line.getByRole("button", { name: FORGE_CLI_WORDS.use }).click();
+
+  // The row says who, and through what; the code is gone.
+  const row = page.locator('[data-forge-row="github.com"]');
+  await expect(row).toHaveAttribute("data-forge-state", "ok", { timeout: 15_000 });
+  await expect(row).toContainText(`as ${STUB_LOGIN} · ${FORGE_CLI_WORDS.through}`);
+  await expect(page.locator("[data-forge-flow]")).toHaveCount(0);
+  await regionShot(row, test.info().outputPath("forge-signin-github-cli-row.png"));
+  expect(cli.calls()).toContain("auth token --hostname github.com");
+  // The app keeps the way and the program, never GitHub CLI's sign-in.
+  const file = readFileSync(join(userDataDir, "forges", "github.com", "sign-in.json"), "utf8");
+  expect(file).not.toContain("gho_");
+  expect(JSON.parse(file)).toMatchObject({ way: "cli", program: cli.path, login: STUB_LOGIN });
+  expect(healthLines()).toEqual([
+    "github.com sign-in none -> ok (signed in through GitHub CLI, answered 200)",
+  ]);
+  await page.keyboard.press("Escape");
+
+  // Every GitHub reach above the sign-in is unchanged: a crewmate opens its
+  // change with GitHub CLI's sign-in, and its checks clear the gate.
+  const title = `meterlab ${GITHUB_CHANGE_PROMPT_MARKER}`;
+  await send(page, `${SPAWN_PROMPT_MARKER} ${title}`);
+  await expect(shownCard(page, MOCK_GITHUB_CHANGE_CARD_TITLE)).toBeVisible({ timeout: 45_000 });
+  expect(github.requests()).toContain("POST /repos/octo/meterlab/pulls");
+  const board = await page.evaluate(() => window.infinitary.tasks.board());
+  const task = board.tasks.find((entry) => entry.title === title);
+  expect(
+    git("-C", bare, "rev-list", "--count", `refs/heads/main..refs/heads/fm/task-${task?.id}`),
+  ).toBe("1");
 });
 
 test("a crewmate cannot merge or move the default branch through raw GitHub writes", async () => {

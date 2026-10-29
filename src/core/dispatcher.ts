@@ -1073,6 +1073,7 @@ export function createCoreDispatcher(options: CoreDispatcherOptions): CoreDispat
 
     "inf:forges:sign-in-browser": (input) => services.forges.signInWithBrowser(input),
     "inf:forges:sign-in-key": (input) => services.forges.signInWithKey(input),
+    "inf:forges:sign-in-cli": (address) => services.forges.signInWithCli(address),
 
     "inf:forges:cancel": () => {
       services.forges.cancel();

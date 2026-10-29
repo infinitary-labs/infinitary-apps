@@ -72,6 +72,7 @@ export {
   isSignInForgeFailure,
   isTransientForgeFailure,
 } from "./forge";
+export { githubCliFor } from "./githubCli";
 export {
   messageWithoutPresentation,
   PresentationAroundError,

@@ -1,5 +1,5 @@
 import type { AutomationList, AutomationRule } from "@shared/automation";
-import { FORGE_SECTION_WORDS, type ForgesView } from "@shared/forges";
+import { FORGE_CLI_WORDS, FORGE_SECTION_WORDS, type ForgesView } from "@shared/forges";
 import {
   INBOX_WORDS,
   INTEGRATION_EFFECT_WORDS,
@@ -229,7 +229,9 @@ export function IntegrationsTab() {
     if (!loaded || (pending !== "github.com" && pending !== "google")) return;
     if (pending === INTEGRATIONS_SIGN_IN_HOST) {
       useShellStore.getState().clearPendingForgeSignIn();
-      signIn();
+      // A sign-in through GitHub CLI is signed in again in GitHub CLI; its row says so.
+      const github = forges.signIns.find((row) => row.host === INTEGRATIONS_SIGN_IN_HOST);
+      if (github?.way !== "cli") signIn();
       return;
     }
     useShellStore.getState().clearPendingForgeSignIn();
@@ -237,7 +239,7 @@ export function IntegrationsTab() {
       view.addable.find((entry) => entry.kind === pending)?.kind ??
       view.integrations.find((row) => row.kind === pending)?.kind;
     if (kind) startBrowserSignIn(kind);
-  }, [pending, loaded, signIn, view, startBrowserSignIn]);
+  }, [pending, loaded, signIn, view, forges, startBrowserSignIn]);
 
   // The inbox has nothing to wait for: it is on when the answer comes back.
   const turnOnInbox = () => {
@@ -269,6 +271,7 @@ export function IntegrationsTab() {
         hosts: [{ host: INTEGRATIONS_SIGN_IN_HOST, name: "GitHub" }, ...forges.hosts],
       }}
       onRetry={signIn}
+      githubCli={forges.githubCli === true}
     />
   );
   const browserAside = browser && (
@@ -323,6 +326,13 @@ export function IntegrationsTab() {
           <div key={integration.id}>
             <IntegrationRow
               integration={integration}
+              way={
+                integration.kind === "github" || integration.host
+                  ? forges.signIns.find(
+                      (row) => row.host === (integration.host ?? INTEGRATIONS_SIGN_IN_HOST),
+                    )?.way
+                  : undefined
+              }
               open={open === integration.id}
               busy={integration.kind === "github" ? starting : browser === integration.kind}
               onToggle={() =>
@@ -532,9 +542,10 @@ function IntegrationNoticeAside({
 
 /**
  * "as octo · 2 actions", or what an MCP server runs: "npx -y @scope/notes ·
- * 3 actions"; a paused one says so first.
+ * 3 actions"; a paused one says so first, and a sign-in through GitHub CLI
+ * says so after who it is: "as octo · through GitHub CLI · 2 actions".
  */
-export function integrationRowSub(integration: IntegrationView): string {
+export function integrationRowSub(integration: IntegrationView, way?: "cli"): string {
   const on = integration.actions.filter((action) => action.enabled).length;
   const actions = on === 1 ? "1 action" : `${on} actions`;
   const who = integration.account ? `as ${integration.account}` : null;
@@ -544,6 +555,7 @@ export function integrationRowSub(integration: IntegrationView): string {
       ? INTEGRATION_KIND_NAMES[integration.kind]
       : null,
     who,
+    way === "cli" ? FORGE_CLI_WORDS.through : null,
     integration.runs,
     actions,
   ]
@@ -552,7 +564,10 @@ export function integrationRowSub(integration: IntegrationView): string {
 }
 
 /** A row's dot and its words: a sign-in's for a kind that signs in, a connection's for an MCP server. */
-function integrationRowView(integration: IntegrationView): {
+function integrationRowView(
+  integration: IntegrationView,
+  way?: "cli",
+): {
   tone: StatusDotTone;
   label: string;
   reauth: boolean;
@@ -564,7 +579,11 @@ function integrationRowView(integration: IntegrationView): {
     return {
       ...row,
       badge: "signed in",
-      problem: row.reauth ? FORGE_SECTION_WORDS.reauth : null,
+      problem: row.reauth
+        ? way === "cli"
+          ? FORGE_CLI_WORDS.reauth
+          : FORGE_SECTION_WORDS.reauth
+        : null,
     };
   }
   const problem = integration.health === "unavailable" ? "could not reach it" : null;
@@ -580,6 +599,7 @@ function integrationRowView(integration: IntegrationView): {
 
 function IntegrationRow({
   integration,
+  way,
   open,
   busy,
   onToggle,
@@ -589,6 +609,8 @@ function IntegrationRow({
   onRemove,
 }: {
   integration: IntegrationView;
+  /** The sign-in is GitHub CLI's: signed in again there, so the row offers Check now. */
+  way?: "cli" | undefined;
   open: boolean;
   busy: boolean;
   onToggle: () => void;
@@ -597,7 +619,7 @@ function IntegrationRow({
   onPause: (paused: boolean) => void;
   onRemove: () => void;
 }) {
-  const row = integrationRowView(integration);
+  const row = integrationRowView(integration, way);
   return (
     <div
       className="fm-forges-row"
@@ -653,10 +675,15 @@ function IntegrationRow({
         ) : (
           <Badge tone="ok">{row.badge}</Badge>
         )}
-        <span className="fm-forges-sub">{integrationRowSub(integration)}</span>
+        <span className="fm-forges-sub">{integrationRowSub(integration, way)}</span>
       </span>
       <span className="fm-forges-action">
-        {row.reauth && (
+        {row.reauth && way === "cli" && (
+          <Button variant="primary" size="sm" onClick={onCheck}>
+            Check now
+          </Button>
+        )}
+        {row.reauth && way !== "cli" && (
           <Button
             variant="primary"
             size="sm"

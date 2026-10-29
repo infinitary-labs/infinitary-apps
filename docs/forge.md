@@ -133,6 +133,29 @@ The app's OAuth App lives on github.com alone and does not exist there, so such 
 - **How GitLab fits**: a self-hosted GitLab is one more `ForgeServer` (kind `gitlab`, git user `oauth2`, its own `whoAmI`), one more binding for `gitlab`, and its kind in `forgeAuthRequired`'s list; the known hosts, the stamping, the key form, the store's `kind`/`gitUser`, the helper and the host-keyed waits are already its.
 - **Not yet**: a computer that runs work signs in to github.com alone (`docs/helper.md`), so a GitHub Enterprise project set to run there is tried with that computer's own git setup; a host whose certificate comes from a company's own authority is not trusted by the app's requests; a workflow artifact a server keeps on storage other than its own host or GitHub's is refused as an unsafe download; and only the captain's own words sign the first mate out of github.com, not another host.
 
+## GitHub CLI's sign-in
+
+Some organizations do not approve third-party OAuth apps such as Infinitary, and GitHub then hides their private repositories from the app's own sign-in.
+GitHub lists GitHub CLI among the GitHub-owned apps a person may authorize even where an organization owner restricted OAuth app access ("Privileged OAuth apps"), so a person who already set up GitHub CLI can let the app use its sign-in instead (INF-1774, the captain: "provide an alternative way for them to connect infinitary with their github, which is through gh cli").
+It is a third way inside the one sign-in store, so everything above `ForgeSignIns.token` - the forges, the gateway, the workflow tools, the panels, the crew's tools and the first mate's facts - is unchanged.
+
+- **Finding it** (`githubCli.ts`): GitHub CLI on the search path the app captured (`findOnPath` over `hostEnv()`), never installed or updated by the app.
+  `INFINITARY_GITHUB_CLI` stands in for it in dev and e2e only - a program's path, or `none` - and the e2e launcher sets `none`, so no test finds the one installed on the Mac it runs on.
+- **Choosing it** (`ForgeSignIns.signInWithCli`, `inf:forges:sign-in-cli`): one line under the GitHub code aside, and under the GitHub Enterprise key form, shown only while GitHub CLI is found (`ForgesView.githubCli`); nothing asks GitHub CLI until the click.
+  The core asks `gh auth token --hostname <host>` and the host who that is (`GET /user`), and keeps only a sign-in the host answers for.
+  GitHub CLI holding no sign-in is `none`, a missing program `missing`, a 401 or 403 `refused`, no answer `unreachable`; Settings says each in `forgeCliProblemText`'s words.
+- **The file**: `{ scopes, login, createdAt, way: "cli", program }`, with `kind` and `gitUser` for a GitHub Enterprise host - never GitHub CLI's token.
+  The health log dates it (`signed in through GitHub CLI, answered 200`).
+- **The token** (`ForgeSignIns.token`): asked of the program the file names at the moment a sign-in is needed, kept `GITHUB_CLI_KEPT_MS` (a minute) so a burst of requests asks once, and dropped on a refused request.
+  GitHub CLI refreshes an expiring token of its own before it prints it, so nothing here renews it.
+- **Its git**: the helper reads `way` and runs the named program for the host's token each time git asks (`resources/git-askpass`); the credential helpers stay emptied for the host, so only the app's helper answers it.
+- **Its health and card**: the health read asks GitHub CLI afresh, then the host.
+  GitHub CLI holding no sign-in, or the host's 401, is `needs_reauth`; a program gone from its path is `unknown`; one that could not be asked is `unavailable`.
+  Only the person signs GitHub CLI in again, so the row reads "Sign in to GitHub CLI again, then Check now." with a Check now button, and the host card names GitHub CLI and opens Integrations without starting a code (`forgeCliRefusedText`).
+- **Its row** reads "as octo · through GitHub CLI · 2 actions"; "Sign out and remove" deletes the app's file only, and GitHub CLI stays signed in for the person's own use.
+- **The owner's earlier verdict**, "ignore any GitHub sign-in already on the Mac", stays the default: GitHub CLI is asked only for a host whose sign-in the person chose to make through it (`tests/e2e/forge-seam.spec.ts` keeps asserting that nothing else asks it).
+- **Not yet**: a computer that runs work keeps its own github.com sign-in and does not use GitHub CLI (`docs/helper.md`); the row does not say which of the app's three scopes GitHub CLI's sign-in lacks; and the app cannot tell a blocked organization from a missing repository.
+
 ## GitLab sign-in and projects
 
 GitLab offers browser sign-in and a key alternative on gitlab.com and on the person's own server.

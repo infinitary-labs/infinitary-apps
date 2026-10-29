@@ -68,6 +68,8 @@ export const forgeSignInViewSchema = z
     applicationId: z.string().max(256).optional(),
     /** The kind of server and the methods it offers. */
     server: forgeServerViewSchema.optional(),
+    /** The sign-in is GitHub CLI's, asked each time it is needed; absent for the app's own. */
+    way: z.enum(["cli"]).optional(),
   })
   .strict();
 export type ForgeSignInView = z.infer<typeof forgeSignInViewSchema>;
@@ -142,6 +144,8 @@ export const forgesViewSchema = z
     servers: z.array(forgeServerViewSchema).optional(),
     flow: forgeSignInFlowSchema.nullable(),
     ended: forgeSignInEndSchema.nullable(),
+    /** GitHub CLI is installed on this computer, so a GitHub host can sign in through it. */
+    githubCli: z.boolean().optional(),
   })
   .strict();
 export type ForgesView = z.infer<typeof forgesViewSchema>;
@@ -254,6 +258,68 @@ export const forgeKeySignInResultSchema = z.discriminatedUnion("ok", [
     .strict(),
 ]);
 export type ForgeKeySignInResult = z.infer<typeof forgeKeySignInResultSchema>;
+
+/**
+ * Why a sign-in through GitHub CLI was not kept (`docs/forge.md`, "GitHub
+ * CLI's sign-in"): the host is not a GitHub host; GitHub CLI is not on this
+ * computer; it holds no sign-in for the host; the host refused it; the host
+ * could not be reached; or GitHub CLI could not be asked.
+ */
+export const forgeCliProblemSchema = z.enum([
+  "not-github",
+  "missing",
+  "none",
+  "refused",
+  "unreachable",
+  "failed",
+]);
+export type ForgeCliProblem = z.infer<typeof forgeCliProblemSchema>;
+
+export const forgeCliSignInResultSchema = z.discriminatedUnion("ok", [
+  z.object({ ok: z.literal(true), host: z.string().min(1).max(253) }).strict(),
+  z
+    .object({
+      ok: z.literal(false),
+      problem: forgeCliProblemSchema,
+      host: z.string().max(253).nullable(),
+    })
+    .strict(),
+]);
+export type ForgeCliSignInResult = z.infer<typeof forgeCliSignInResultSchema>;
+
+/** The words for GitHub CLI's sign-in: GitHub's own name for the program, as the captain chose. */
+export const FORGE_CLI_WORDS = {
+  offer: `If your organization blocks apps like Infinitary, use the GitHub sign-in that GitHub CLI already holds on ${HERE.this}.`,
+  use: "Use GitHub CLI",
+  through: "through GitHub CLI",
+  checking: "Asking GitHub CLI...",
+  reauth: "Sign in to GitHub CLI again, then Check now.",
+  failed: "Could not ask GitHub CLI. Try again.",
+} as const;
+
+/** The words a sign-in through GitHub CLI says when it was not kept. */
+export function forgeCliProblemText(problem: ForgeCliProblem, host: string | null): string {
+  const where = host ?? "that address";
+  switch (problem) {
+    case "not-github":
+      return `${where} is not a GitHub host.`;
+    case "missing":
+      return `GitHub CLI is no longer on ${HERE.this}.`;
+    case "none":
+      return `GitHub CLI is not signed in to ${where}. Sign in to GitHub CLI, then try again.`;
+    case "refused":
+      return `${where} did not accept GitHub CLI's sign-in. Sign in to GitHub CLI again, then try again.`;
+    case "unreachable":
+      return `Could not reach ${where}. Check your connection and try again.`;
+    case "failed":
+      return FORGE_CLI_WORDS.failed;
+  }
+}
+
+/** The refused sign-in card's opening words when the sign-in is GitHub CLI's. */
+export function forgeCliRefusedText(name: string): string {
+  return `${name} no longer accepts GitHub CLI's sign-in on ${HERE.this}, so your first mate cannot open, check or merge pull requests there. Sign in to GitHub CLI again, then choose Check now in Integrations.`;
+}
 
 /** GitHub on the person's own server, as the chip and the row call it. */
 export const GITHUB_ENTERPRISE: ForgeServerView = { kind: "github", name: "GitHub Enterprise" };

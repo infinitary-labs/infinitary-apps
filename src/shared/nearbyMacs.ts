@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { COMPUTER } from "./deviceNames";
 import { type DeviceView, deviceNameSchema } from "./devices";
+import { addressParts } from "./remoteLogin";
 
 /**
  * Macs on this network with Remote Login on, listed while "By its address"
@@ -63,7 +64,8 @@ export function nearbyAddress(mac: NearbyMac, user: string | null): string {
 }
 
 /** The part of an address after its user, as names compare: no case, no closing dot. */
-function placeOf(address: string): string {
+function placeOf(text: string): string {
+  const { address } = addressParts(text);
   const at = address.lastIndexOf("@");
   return (at < 0 ? address : address.slice(at + 1)).replace(/\.$/, "").toLowerCase();
 }

@@ -1,10 +1,52 @@
 import { describe, expect, it } from "vitest";
 import {
+  addressAtPort,
+  addressParts,
+  parseRemoteLoginAddress,
   readWorkOutcome,
   remoteLoginRefusalLines,
   remoteLoginWords,
   workOutcomeLine,
 } from "./remoteLogin";
+
+// INF-1827, the captain's answer on its plan: an optional port beside the address, on the first
+// launch's Join by its address and in Settings -> Devices' By its address.
+describe("an address with a port typed beside it", () => {
+  it("is the address as typed at no port or 22, and SSH's own ssh:// form at any other", () => {
+    expect(addressAtPort("kun@studio", "")).toBe("kun@studio");
+    expect(addressAtPort(" kun@studio ", " 22 ")).toBe("kun@studio");
+    expect(addressAtPort("kun@studio", "2222")).toBe("ssh://kun@studio:2222");
+    expect(addressAtPort("studio.local", "65535")).toBe("ssh://studio.local:65535");
+    expect(addressAtPort("kun@fd7a::1", "2222")).toBe("ssh://kun@[fd7a::1]:2222");
+    // Each is an address every request takes, and comes apart into what was typed.
+    for (const [typed, port] of [
+      ["kun@studio", "2222"],
+      ["studio.local", "65535"],
+      ["kun@fd7a::1", "2222"],
+    ] as const) {
+      const address = addressAtPort(typed, port);
+      expect(address && parseRemoteLoginAddress(address)).toBe(address);
+      expect(addressParts(address ?? "")).toEqual({ address: typed, port });
+    }
+    expect(addressParts("kun@studio")).toEqual({ address: "kun@studio", port: "" });
+  });
+
+  it("is none for a port that is not one, or an address that is not one", () => {
+    for (const port of ["0", "65536", "22a", "-1", "2 2"])
+      expect(addressAtPort("kun@studio", port), port).toBeNull();
+    expect(addressAtPort("-oProxyCommand=x", "2222")).toBeNull();
+    expect(addressAtPort("kun@studio", "x")).toBeNull();
+    // An address that names a port already takes no second one.
+    expect(addressAtPort("ssh://kun@studio:2222", "2200")).toBeNull();
+    for (const text of [
+      "ssh://kun@studio",
+      "ssh://kun@studio:0",
+      "ssh://-o@studio:22",
+      "ssh://kun@stu dio:22",
+    ])
+      expect(parseRemoteLoginAddress(text), text).toBeNull();
+  });
+});
 
 describe("a refusal's lines", () => {
   it("reads the two lines a refusal's message carries, and one line when it has no break", () => {

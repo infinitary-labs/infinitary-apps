@@ -1,8 +1,21 @@
 import { randomUUID } from "node:crypto";
 import type { Writable } from "node:stream";
 import { COMPUTER } from "@shared/deviceNames";
-import { type DeviceChip, type DeviceView, deviceLabel, KEY_TEXT_PATTERN } from "@shared/devices";
+import {
+  type DeviceChip,
+  type DeviceView,
+  deviceLabel,
+  KEY_TEXT_PATTERN,
+  parsePairingLink,
+} from "@shared/devices";
 import type { FmEvent } from "@shared/events";
+import type { JoinAtAnswer, JoinAtOptions, JoinAtRefusal } from "@shared/joinByAddress";
+import {
+  COMPUTER_LINK_COMMAND,
+  COMPUTER_LINK_NONE,
+  type ComputerLinkNone,
+  readComputerLinkAnswer,
+} from "@shared/phoneLink";
 import {
   type BackgroundState,
   LINUX_INSTALLERS,
@@ -34,7 +47,7 @@ import {
   LOOK,
   REMOVE,
 } from "./farSystems";
-import { readHostKey, signInUser } from "./hostKey";
+import { readHostKey, resolveDestination, signInUser } from "./hostKey";
 import { sameHostKey } from "./hostTrust";
 import { type Locality, type LocalityChallenge, placeLocalityChallenge } from "./locality";
 import type { DevicePairing, SshCleanup } from "./pairing";
@@ -118,6 +131,15 @@ import {
 
 /** One step of an operation over Remote Login, as the feed says it. */
 export type DeviceSetupEvent = Extract<FmEvent, { type: "device_setup" }>;
+
+/**
+ * What asking a computer for a link answers (`RemoteLogin.linkAt`): a step
+ * the window asks the captain, or the link with the host to dial first,
+ * which never leaves the main process.
+ */
+export type LinkAtAnswer =
+  | Exclude<JoinAtAnswer, { asks: "join" }>
+  | { link: string; host: string | null };
 
 export type RemoteLoginOptions = {
   pairing: DevicePairing;
@@ -375,6 +397,78 @@ export class RemoteLogin {
       if (!connections) return setUp();
       return found ? connections.hold(found.id, setUp) : connections.settingUp(setUp);
     });
+  }
+
+  /**
+   * Asks the Infinitary open on the computer at `text` for a one-use link
+   * for this computer (docs/view.md, "Joining by its address"), as this
+   * app's first launch joins it: the key line first, then a sign-in with the
+   * captain's own SSH, or the password asked once to let Infinitary's own key
+   * in, then the one fixed command (`COMPUTER_LINK_COMMAND`). Nothing is
+   * written to the feed, and nothing is installed or started there. The link
+   * comes back only to the main process, with the host the captain's SSH
+   * resolved the address to, which the join dials first; a link this app
+   * made for itself is refused.
+   */
+  async linkAt(text: string, options: JoinAtOptions = {}): Promise<LinkAtAnswer> {
+    const address = parseRemoteLoginAddress(text);
+    if (!address) return { refused: "not-an-address" };
+    return this.once(address, address, async () => {
+      const step = this.stepper(address, "add", undefined, true);
+      try {
+        const gated = await this.confirmHost(address, options.confirm);
+        if ("asks" in gated) return gated;
+        if ("refusal" in gated) return { refused: gated.refusal };
+        let asked = await this.askLink(address);
+        if ("refusal" in asked && asked.refusal === "key-refused") {
+          const methods = asked.methods ?? null;
+          if (methods?.length === 0) return { refused: "password-off" };
+          const user = await signInUser(this.options.ssh, address);
+          const question = { asks: "password" as const, address, ...(user ? { user } : {}) };
+          if (!options.password) return question;
+          const letIn = await this.letIn(address, methods, options.password, step);
+          if (letIn === "wrong") return { ...question, wrong: true };
+          asked = await this.askLink(address);
+          if ("refusal" in asked && asked.refusal === "key-refused")
+            return { refused: "key-not-taken" };
+        }
+        if ("refusal" in asked) return { refused: asked.refusal };
+        if ("none" in asked) return { refused: linkNoneRefusal(asked.none) };
+        let key: string;
+        try {
+          key = parsePairingLink(asked.link).key;
+        } catch {
+          return { refused: "no-link" };
+        }
+        if (key === this.options.pairing.identity().pin) return { refused: "self" };
+        const where = await resolveDestination(this.options.ssh, address);
+        return { link: asked.link, host: where?.host ?? null };
+      } catch (error) {
+        if (error instanceof RemoteLoginRefusedError) return { refused: error.refusal };
+        throw error;
+      }
+    });
+  }
+
+  /** One run of the fixed command there: its answer, or why SSH did not sign in. */
+  private async askLink(
+    address: string,
+  ): Promise<
+    | ReturnType<typeof readComputerLinkAnswer>
+    | { refusal: RemoteLoginRefusal; methods?: PasswordMethod[] | null }
+  > {
+    const ran = await runSsh({
+      ...this.sshFor(address),
+      command: COMPUTER_LINK_COMMAND,
+      timeoutMs: this.options.lookTimeoutMs ?? LOOK_TIMEOUT_MS,
+    });
+    if (ran.code === SSH_FAILED) {
+      const refusal = sshRefusal(ran.stderr);
+      return refusal === "key-refused"
+        ? { refusal, methods: passwordMethods(ran.stderr) }
+        : { refusal };
+    }
+    return readComputerLinkAnswer(ran.stdout);
   }
 
   /**
@@ -1431,14 +1525,18 @@ export class RemoteLogin {
     };
   }
 
-  /** Says each step of one operation in the feed, and its refusal as two warn lines. */
-  private stepper(address: string, doing: RemoteLoginDoing, device?: DeviceView) {
+  /**
+   * Says each step of one operation in the feed, and its refusal as two warn
+   * lines; `quiet` says nothing there, for a join that writes no feed line.
+   */
+  private stepper(address: string, doing: RemoteLoginDoing, device?: DeviceView, quiet = false) {
     const emit = (
       stage: RemoteLoginStage,
       text: string,
       tone: "info" | "warn",
       extra: StepFacts = {},
     ) =>
+      !quiet &&
       this.options.emit({
         type: "device_setup",
         address,
@@ -1581,4 +1679,20 @@ export function sendCopy(
     stream.unpipe(sink);
     stop();
   });
+}
+
+/** The join's refusal for why the fixed command made no link. */
+function linkNoneRefusal(none: ComputerLinkNone): JoinAtRefusal {
+  switch (none) {
+    case COMPUTER_LINK_NONE.notOpen:
+      return "not-open";
+    case COMPUTER_LINK_NONE.tooOld:
+      return "too-old";
+    case COMPUTER_LINK_NONE.noCurl:
+      return "no-curl";
+    case COMPUTER_LINK_NONE.controls:
+      return "controls";
+    default:
+      return "no-link";
+  }
 }

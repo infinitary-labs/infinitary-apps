@@ -1,6 +1,9 @@
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 import { HERE } from "../../../shared/deviceNames";
+import { joinAtRefusalWords } from "../../../shared/joinByAddress";
+import { NEARBY_OFF, type NearbyMacsView } from "../../../shared/nearbyMacs";
+import { remoteLoginWords } from "../../../shared/remoteLogin";
 import { ControllingTabView } from "../settings/ControllingTab";
 import { joinedWhen } from "../settings/DevicesTab";
 import { JoinAnotherMacView, type JoinAnotherMacViewProps } from "./JoinAnotherMac";
@@ -190,7 +193,11 @@ describe("controlling another Mac", () => {
 });
 
 describe("joining another Mac at first launch", () => {
-  const render = (step: JoinAnotherMacViewProps["step"], value = "") =>
+  const render = (
+    step: JoinAnotherMacViewProps["step"],
+    value = "",
+    typed: Partial<Pick<JoinAnotherMacViewProps, "address" | "port" | "account" | "nearby">> = {},
+  ) =>
     renderToStaticMarkup(
       <JoinAnotherMacView
         step={step}
@@ -200,13 +207,30 @@ describe("joining another Mac at first launch", () => {
         onContinue={noop}
         onConfirm={noop}
         onCancel={noop}
+        address=""
+        port=""
+        account=""
+        nearby={NEARBY_OFF}
+        onAddress={noop}
+        onPort={noop}
+        onAccount={noop}
+        onOpenAddress={noop}
+        onContinueAddress={noop}
+        onKeyYes={noop}
+        onKeyCancel={noop}
+        onPassword={noop}
+        {...typed}
       />,
     );
 
-  it("offers one chip under the provider chips, and an aside that takes only a pasted link", () => {
+  it("offers two chips under the provider chips, and an aside that takes only a pasted link", () => {
     const closed = render({ step: "closed" });
     expect(closed).toContain("Your first mate is on another computer");
     expect(closed).toContain("Paste its link");
+    // INF-1827: Join by its address sits beside it, a button of its own, so Tab reaches both.
+    expect(closed).toMatch(
+      /<button type="button"[^>]*data-join-address-chip=""[^>]*>.*Join by its address/,
+    );
     const paste = render({ step: "paste", notALink: false });
     expect(paste).toContain("Paste the link from Infinitary on your other computer");
     expect(paste).toContain('placeholder="infinitary://join?…"');
@@ -256,5 +280,124 @@ describe("joining another Mac at first launch", () => {
     expect(joinRefusalWords("not-that-mac", "192.168.1.20")).toBe(
       "Something answered at 192.168.1.20, but not the computer that made this link. Nothing was sent to it.",
     );
+  });
+});
+
+/**
+ * INF-1827's accepted plan, with the captain's answers: Join by its address
+ * at first launch - the account and computer, an optional port, Your account
+ * above the computers nearby, the key line, the password once, and one
+ * warning line per refusal with the address kept.
+ */
+describe("joining another computer by its address at first launch", () => {
+  const STUDIO_NEARBY: NearbyMacsView = {
+    state: "looking",
+    user: "kun",
+    macs: [
+      { name: "Studio", at: "Studio.local" },
+      { name: "Mac mini", at: "Mac-mini.local" },
+    ],
+  };
+  const render = (
+    step: JoinAnotherMacViewProps["step"],
+    typed: Partial<Pick<JoinAnotherMacViewProps, "address" | "port" | "account" | "nearby">> = {},
+  ) =>
+    renderToStaticMarkup(
+      <JoinAnotherMacView
+        step={step}
+        value=""
+        onValue={noop}
+        onOpen={noop}
+        onContinue={noop}
+        onConfirm={noop}
+        onCancel={noop}
+        address=""
+        port=""
+        account=""
+        nearby={NEARBY_OFF}
+        onAddress={noop}
+        onPort={noop}
+        onAccount={noop}
+        onOpenAddress={noop}
+        onContinueAddress={noop}
+        onKeyYes={noop}
+        onKeyCancel={noop}
+        onPassword={noop}
+        {...typed}
+      />,
+    );
+
+  it("asks the account and computer and an optional port, with Your account above the computers nearby", () => {
+    const html = render({ step: "address" }, { account: "kun", nearby: STUDIO_NEARBY });
+    expect(html).toContain("Join by its address");
+    expect(html).toContain('placeholder="kun@studio"');
+    expect(html).toContain('aria-label="Port"');
+    expect(html).toContain('placeholder="Port 22"');
+    // Continue waits for an address.
+    expect(html).toMatch(/<button[^>]*type="submit"[^>]*disabled=""[^>]*>Continue/);
+    // Your account sits above the list, and each row fills that account at the computer's name.
+    expect(html.indexOf("Your account")).toBeLessThan(html.indexOf("Studio.local"));
+    expect(html).toContain('value="kun"');
+    expect(html).toContain(">kun@Studio.local<");
+    expect(html).toContain(">kun@Mac-mini.local<");
+    // With no account typed, a row fills the computer's name alone.
+    expect(render({ step: "address" }, { nearby: STUDIO_NEARBY })).toContain(">Studio.local<");
+    // While nothing is nearby there is no Your account field.
+    expect(render({ step: "address" })).not.toContain("Your account");
+  });
+
+  it("says one warning line for a refusal, and keeps the address and the port", () => {
+    const html = render(
+      { step: "address", refused: "not-open", at: "ssh://kun@studio:2222" },
+      { address: "kun@studio", port: "2222" },
+    );
+    expect(html).toContain('value="kun@studio"');
+    expect(html).toContain('value="2222"');
+    expect(html.match(/data-join-warn=""/g)).toHaveLength(1);
+    expect(html).toContain(joinAtRefusalWords("not-open", "ssh://kun@studio:2222"));
+  });
+
+  it("asks once whether the key line is that computer, with Cancel focused", () => {
+    const line = "ED25519 SHA256:abcdefghijklmnopqrstuvwxyz0123456789ABCDEFG";
+    const html = render({ step: "key", address: "kun@studio", line });
+    expect(html).toContain(remoteLoginWords.confirmQuestion("kun@studio")[0]);
+    expect(html).toContain(line);
+    // Cancel holds the focus, so Enter never says this is the computer.
+    expect(html).toMatch(/<button[^>]*autofocus=""[^>]*>Cancel<\/button>/i);
+    expect(html).not.toMatch(/autofocus=""[^>]*>This is the computer/i);
+  });
+
+  it("asks that account's password once, and says a wrong one over an empty field", () => {
+    const question = { asks: "password" as const, address: "kun@studio", user: "kun" };
+    const html = render({ step: "password", question });
+    expect(html).toContain(remoteLoginWords.passwordQuestion("kun@studio")[0]);
+    expect(html).toContain('type="password"');
+    expect(html).toContain(remoteLoginWords.passwordField("kun").replaceAll("'", "&#x27;"));
+    expect(html).not.toContain("data-join-warn");
+    const wrong = render({ step: "password", question: { ...question, wrong: true } });
+    expect(wrong).toContain(joinAtRefusalWords("password-wrong", "kun@studio"));
+    expect(wrong).toContain('value=""');
+  });
+
+  it("asks the paste path's question for the computer it reached, and offers Try again when the join is refused", () => {
+    const confirm = render({
+      step: "confirm",
+      address: "studio",
+      runsWork: true,
+      byAddress: true,
+    });
+    expect(confirm).toContain(
+      "Your first mate stays on the computer at <code>studio</code>. Control it from here?",
+    );
+    expect(confirm).toContain(JOIN_RUNS_WORK);
+    const refused = render({
+      step: "refused",
+      refused: "unreachable",
+      address: "studio",
+      byAddress: true,
+    });
+    expect(refused).toContain("Could not reach <code>studio</code>.");
+    expect(refused).toContain(">Try again<");
+    expect(refused).not.toContain("Paste another link");
   });
 });

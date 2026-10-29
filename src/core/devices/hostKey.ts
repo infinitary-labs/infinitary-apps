@@ -1,6 +1,6 @@
 import { spawn } from "node:child_process";
 import { createConnection } from "node:net";
-import type { RemoteLoginRefusal } from "@shared/remoteLogin";
+import { addressParts, type RemoteLoginRefusal } from "@shared/remoteLogin";
 import { hostEnv } from "../hostEnv";
 import { hostPlatform } from "../platform";
 import { type HostKey, preferHostKey } from "./hostTrust";
@@ -25,7 +25,7 @@ export type HostKeyRead = HostKey | { refusal: RemoteLoginRefusal };
  * resolve it, or null when it cannot tell; the password question names it.
  */
 export function signInUser(ssh: SshProgram, address: string): Promise<string | null> {
-  const typed = /^([^@]+)@/.exec(address)?.[1];
+  const typed = /^([^@]+)@/.exec(addressParts(address).address)?.[1];
   if (typed) return Promise.resolve(typed);
   return run(ssh.program, [...ssh.args, "-G", "--", address], SCAN_TIMEOUT_MS).then((ran) => {
     const user = ran.code === 0 ? /^user (\S+)$/m.exec(ran.stdout)?.[1] : undefined;
@@ -41,7 +41,7 @@ export function readHostKey(ssh: SshProgram, address: string): Promise<HostKeyRe
 }
 
 /** Where the captain's own SSH would connect, without connecting. */
-function resolveDestination(
+export function resolveDestination(
   ssh: SshProgram,
   address: string,
 ): Promise<{ host: string; port: number } | null> {

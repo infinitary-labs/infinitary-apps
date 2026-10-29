@@ -76,3 +76,15 @@
   font-size: var(--text-sm);
   color: var(--fg-3);
 }
+
+/* Join by its address: Your account above the computers nearby. */
+.fm-join-account {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  margin-top: var(--space-3);
+}
+
+.fm-join-account .fm-join-sub {
+  margin: 0;
+}

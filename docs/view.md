@@ -28,7 +28,7 @@ Card pictures and project fonts it has shown are kept in memory for the run, up 
 
 ## Joining
 
-The first-launch stage carries a second group under the provider chips, `FIRSTMATE IS ON ANOTHER COMPUTER` with "+ Paste its link" (`src/renderer/src/devices/JoinAnotherMac.tsx`).
+The first-launch stage carries a second group under the provider chips, `YOUR FIRST MATE IS ON ANOTHER COMPUTER` with "+ Paste its link" and "+ Join by its address" (`src/renderer/src/devices/JoinAnotherMac.tsx`).
 A link joins only by being pasted there and confirmed: nothing on either Mac answers the link's scheme.
 
 1. The window reads the pasted text as a link (`parsePairingLink`) and refuses text that is not one before anything is sent.
@@ -44,6 +44,18 @@ A link joins only by being pasted there and confirmed: nothing on either Mac ans
 A refusal changes nothing here and says what happened: not a link, a link for another user on that Mac, used, expired, no longer open, nothing answering at the address, or something answering there that is not the Mac that made the link.
 A development run may stand in another name with `INFINITARY_DEVICE_NAME`, so two apps on one Mac read as two Macs; a packaged app ignores it.
 The Mac where the first mate lives takes a second app on its own Mac for a view, which only controls; a development run there may stand in another Mac for every device that joins with `INFINITARY_JOINS_FROM_ANOTHER_MAC=1`, so two apps on one Mac join as two Macs.
+
+### Joining by its address
+
+"+ Join by its address" reaches the same question with no link to copy (INF-1827, design skill `components/devices/JoinAnotherMac`, "By its address"), on a Mac and on Linux alike.
+
+1. The person types the address they sign in to that computer with, such as `kun@studio`, and a port when its SSH server listens on another than 22 (`addressAtPort`); or picks a computer nearby, which fills the address from the "Your account" field above the list.
+2. `inf:devices:join-at` signs in there with the person's own SSH (`RemoteLogin.linkAt`): the key-line question the first time, kept by address and port, and the password once when that computer refuses the person's key, letting Infinitary's own key in as Settings -> Devices does.
+3. That computer's open Infinitary makes a one-use computer link (`docs/devices.md`, "A computer that joins by its address"), which the shell holds; the window gets only whether it runs work and names a private address.
+4. The window asks step 2's question above, naming the computer the typed address names (`kun@studio` asks of `studio`), and `inf:devices:join-held` joins with the held link as step 3 above does, dialing first the host SSH reached; Cancel forgets it.
+
+Each stop is one warning line with the address kept: Infinitary not open there, which starts nothing there; too old; controlling another computer; this computer itself; no curl on Linux; or Remote Login's own refusals.
+Nothing reaches the feed or the record until the join itself.
 
 ## A Mac that runs work
 
@@ -194,5 +206,7 @@ The first-launch gate stays derived (`docs/first-launch.md`); the line only says
 - `tests/e2e/update-channels.spec.ts`, "a Mac controlling a newer Firstmate on another Mac is offered its own update": the other Mac's newer contract named in the top bar, this Mac's own offer there, its release page opened here, and the other Mac offered nothing.
 - `src/main/shell.test.ts`, "a Mac that controls another and runs its work": joining with a link for a Mac keeps the grant for its work and sets it up in the background, a Mac a command added opens as a view with its work's grant and never again as the device it left, and a grant that only runs work stays the work's; `src/core/helper/fromWindow.test.ts` the work folder's side.
 - `tests/e2e/view.spec.ts`, "a Mac joined at its first launch also runs that Mac's work": the home standing in another Mac for each app, a link pasted at first launch joins a Mac that controls and, its work started, is in reach to run work; a Mac a command added opens Infinitary there and controls with no first launch and no new link, and its Leave says it stops its work too.
+- `src/core/devices/remoteLogin.test.ts`, "asking a computer for a link by its address", and `src/core/devices/phoneDoor.test.ts`, "the computer link command": the key line then a link, a port kept with its key line, not open, this app's own link, the password once, and the command under each login shell with each reason it makes no link.
+- `tests/e2e/join-by-address.spec.ts`: a fresh app, by keys only, joins another app on the same computer by its address over a local SSH server, answers the key line, controls it and is listed as a Mac.
 - `tests/e2e/view.spec.ts`: two apps on one Mac - a fresh app joins at its first launch, shows the other's cards with their pictures, its feed and its tasks, an answer in either shows in the other, a button that opens Settings there sends nothing and keeps its card on both Macs, out of reach refuses changes and never sends them, a restart there catches it up, it restarts as a view with its record untouched, and Leave returns it to its own first launch.
   A second journey drops a picture, a text file and a PDF on a view: the picture and the text reach the other Mac's first mate and are kept there, and the PDF, dropped or chosen, on the input or a reply, is refused with no path of this Mac sent.

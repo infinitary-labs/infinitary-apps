@@ -8,6 +8,7 @@ import {
   deviceNameSchema,
   deviceRunsWork,
   deviceWords,
+  linkDialingFirst,
   namesInWords,
   type PairingLink,
   parsePairingLink,
@@ -69,6 +70,28 @@ describe("the pairing link", () => {
       );
       expect(reason).not.toContain("c".repeat(43));
     }
+  });
+
+  // INF-1827's accepted plan: a link Join by its address asked for dials first the computer the
+  // person's own SSH reached, at the link's port, then each address the link names.
+  it("dials the host SSH reached first, at the link's port, then the link's own addresses", () => {
+    const text = buildPairingLink({ ...link, kind: "mac", also: ["100.101.102.103:47623"] });
+    expect(parsePairingLink(linkDialingFirst(text, "127.0.0.1"))).toEqual({
+      ...link,
+      kind: "mac",
+      at: "127.0.0.1:47623",
+      also: ["192.168.1.20:47623", "100.101.102.103:47623"],
+    });
+    expect(parsePairingLink(linkDialingFirst(text, "fd7a::1")).at).toBe("[fd7a::1]:47623");
+    // The host the link already names first is not named twice.
+    expect(parsePairingLink(linkDialingFirst(text, "192.168.1.20")).also).toEqual([
+      "100.101.102.103:47623",
+    ]);
+    // No host, one that is no dial address, or a link that reaches its home another way: unchanged.
+    expect(linkDialingFirst(text, null)).toBe(text);
+    expect(linkDialingFirst(text, "bad_host")).toBe(text);
+    const overSsh = buildPairingLink({ ...link, kind: "work", at: "127.0.0.1:1", via: "ssh" });
+    expect(linkDialingFirst(overSsh, "192.168.1.30")).toBe(overSsh);
   });
 
   it("splits a dial address into its host and port", () => {

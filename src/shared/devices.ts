@@ -161,6 +161,25 @@ export function linkAddresses(link: {
   return [...new Set([link.at, ...(link.also ?? [])])];
 }
 
+/**
+ * A link that dials `host` first, at the port the link names, then each of
+ * its own addresses (docs/view.md, "Joining by its address"): the computer
+ * its SSH reached, which the link may not name. A link that reaches its home
+ * another way, or a host that is no dial address, stays as it is.
+ */
+export function linkDialingFirst(text: string, host: string | null): string {
+  if (!host) return text;
+  const link = parsePairingLink(text);
+  const port = splitDialAddress(link.at)?.port;
+  if (link.via || port === undefined) return text;
+  const at = host.includes(":") ? `[${host}]:${port}` : `${host}:${port}`;
+  if (!splitDialAddress(at)) return text;
+  const also = linkAddresses(link)
+    .filter((each) => each !== at)
+    .slice(0, 8);
+  return buildPairingLink({ ...link, at, also });
+}
+
 /** Whether a link names a private-network address besides the first, so the confirm question says so. */
 export function linkNamesPrivateToo(link: {
   at: string;

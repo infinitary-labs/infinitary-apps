@@ -218,6 +218,7 @@ When that computer does not let the captain's key in, Infinitary asks once for t
 An Ubuntu 24.04 or 26.04 computer is set up from Infinitary's Ubuntu package instead of the AppImage (below, "The Ubuntu package").
 It is the captain's own click: Settings -> Devices' "By its address", or Add it on the first mate's card (below, "Asking the first mate"), which asks `inf:devices:add` with the address (`RemoteLogin`, `src/core/devices/remoteLogin.ts`).
 The address is the one thing the captain supplies: one address, never an option, with no space and never a leading dash (`remoteLoginAddressSchema`, `src/shared/remoteLogin.ts`).
+A port other than SSH's 22, typed in the Port field beside it, joins the address as SSH's own URI, `ssh://sam@mini.local:2222` (`addressAtPort`), so ssh, `ssh -G` and the kept key line all read one address, and every later update, removal and key check reaches the computer there.
 An alias from the captain's own SSH settings works, because the captain's own SSH resolves it.
 
 ### Macs nearby
@@ -538,6 +539,17 @@ With no door, Chromium's `SingletonLock` in a data folder tells a running Infini
 The same door, with the same key, answers this account's own `infinitary link` at `/link?for=computer` or `?for=phone` (`LINK_COMMAND_PATH`): JSON with the link and when it expires, from `DevicePairing.invite({ kind: "mac" })`, or `phone: true` for a phone, or with 503 pairing's reason when it made none (`docs/run.md`, "A link by command").
 It too answers a link only once the connection listens for it.
 The key command, the one a password signs in for, adds the phone's public key line to that account's `~/.ssh/authorized_keys` once, making the folder and file only that account may change.
+
+## A computer that joins by its address
+
+Infinitary at its first launch joins the first mate on another computer by the address its person signs in with, the way a phone does (INF-1827; `docs/view.md`, "Joining by its address").
+It signs in there with the person's own SSH, as adding a computer does, and runs one fixed command, `COMPUTER_LINK_COMMAND` in `src/shared/phoneLink.ts`, one line for any login shell under the same rule as the phone's.
+That command asks the same door for `/link?for=computer`, as `infinitary link` does, and prints `infinitary-computer-link 1 answer <json> <status>`, or `infinitary-computer-link 1 none <why>` (`readComputerLinkAnswer`).
+Its reasons are the phone's - no app open, one too old to have a door, or a Linux computer with no curl - and `controls`, a running app that controls another computer: it opens no door, and keeps that computer's grant in `joined/home.json`.
+A door that answers 404 is an Infinitary from before `/link`, read as too old; one that made no link answers its 503, read as refused.
+`RemoteLogin.linkAt` runs it with no feed line, and refuses a link that carries this app's own pin.
+The link stays in the main process (`Shell.joinAt`, `inf:devices:join-at`): the window reads only the paste path's question, and `inf:devices:join-held` joins with the held link as a pasted one joins, dialing first the host SSH reached (`linkDialingFirst`).
+No log, feed line, record entry or file carries it.
 
 ## Finding the home again
 

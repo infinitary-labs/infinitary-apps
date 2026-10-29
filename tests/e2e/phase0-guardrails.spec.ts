@@ -89,6 +89,8 @@ test("keeps node globals out of the page and exposes a tamper-proof bridge", asy
     "forgeSignOut",
     "invite",
     "join",
+    "joinAt",
+    "joinHeld",
     "keep",
     "leave",
     "list",

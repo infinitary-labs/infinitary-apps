@@ -10,8 +10,15 @@ import type { HostNotifications } from "@core/host";
 import type { Core } from "@core/index";
 import type { UpdateChecker } from "@core/update/updateChecker";
 import { COMPUTER, HERE } from "@shared/deviceNames";
-import { type JoinOutcome, parsePairingLink, type ThisMac } from "@shared/devices";
+import {
+  type JoinOutcome,
+  linkDialingFirst,
+  linkNamesPrivateToo,
+  parsePairingLink,
+  type ThisMac,
+} from "@shared/devices";
 import type { CoreInvokeChannel, InvokeResponse, PushChannel } from "@shared/ipc";
+import type { JoinAtAnswer, JoinAtOptions } from "@shared/joinByAddress";
 import { DEFAULT_SAVED_KEYMAP, type SavedKeymap, type SavedKeymapRead } from "@shared/keymap";
 import type { KeySystem } from "@shared/platform";
 import { DEFAULT_SHELL_PREFERENCES, type ShellPreferences } from "@shared/preferences";
@@ -140,6 +147,8 @@ export class Shell {
   private mode: HomeMode | ViewMode | null = null;
   private coreStarted = false;
   private switching: Promise<void> | null = null;
+  /** The link Join by its address asked for, held in memory until the captain's yes or Cancel. */
+  private held: { link: string; host: string | null } | null = null;
   private readonly now: () => number;
 
   constructor(private readonly options: ShellOptions) {
@@ -244,6 +253,36 @@ export class Shell {
       });
     });
     return { ok: true };
+  }
+
+  /**
+   * One step of Join by its address (docs/view.md, "Joining by its
+   * address"): this app's core asks the computer at `address` for a one-use
+   * link over the person's own SSH. Once it has one, the link stays here,
+   * never in the window, and the window asks the paste path's question.
+   */
+  async joinAt(address: string, options: JoinAtOptions = {}): Promise<JoinAtAnswer> {
+    this.held = null;
+    if (this.mode?.kind !== "home" || this.switching) return { refused: "failed" };
+    const answer = await this.mode.core.services.remoteLogin.linkAt(address, options);
+    if (!("link" in answer)) return answer;
+    const link = parsePairingLink(answer.link);
+    // A link for another user there is not for Firstmate here.
+    if (link.kind !== "mac" && link.kind !== "view") return { refused: "no-link" };
+    this.held = answer;
+    return { asks: "join", runsWork: link.kind === "mac", alsoPrivate: linkNamesPrivateToo(link) };
+  }
+
+  /**
+   * The captain's answer to the paste path's question after Join by its
+   * address: join with the held link exactly as a pasted one, dialing first
+   * the host their SSH reached, or forget it.
+   */
+  async joinHeld(choice: "join" | "forget"): Promise<JoinOutcome> {
+    const held = this.held;
+    this.held = null;
+    if (choice === "forget" || !held) return { ok: false, refused: "other" };
+    return this.join(linkDialingFirst(held.link, held.host));
   }
 
   /**

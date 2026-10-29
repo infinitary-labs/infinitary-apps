@@ -105,7 +105,8 @@ Pick the one that suits it.", with three small secondary Buttons and a ghost "Ca
 - "Paste a link into Infinitary there": the link panel below, for a computer the person sits at (`JoinAnotherMac.prompt.md`).
 - "Run a command there": the command panel below, for a computer with no screen.
 - "By its address": "The other computer's address" over "The one you use with SSH.
-  Remote Login must be on there.", a mono `Input` with the placeholder "you@mini.local", a small primary "Add it" and a ghost "Cancel" (`AddAMac.prompt.md`).
+  Remote Login must be on there.", a mono `Input` with the placeholder "you@mini.local", beside it a narrow mono `Input` labelled "Port" with the placeholder "Port 22", a small primary "Add it" and a ghost "Cancel" (`AddAMac.prompt.md`).
+  The port stays empty for SSH's usual one; another port joins the address as SSH writes it, `ssh://you@mini.local:2222`, and that is the address the row names and later updates reach.
   On a Linux home, where the other computer is as likely Linux, the line under the label reads "The one you use with SSH.
   Its SSH server, or Remote Login on a Mac, must be on.", and the same in place of "Remote Login must be on there." on a row's own address question.
   Under them, the computers on this network with Remote Login on, under the micro label `ON THIS NETWORK`, each filling in the field when picked (`AddAMac.prompt.md`, "Nearby").

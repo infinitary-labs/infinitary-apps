@@ -238,6 +238,8 @@ describe("ipc contract", () => {
       "inf:browser:unwatch",
       "inf:browser:watch",
       "inf:devices:join",
+      "inf:devices:join-at",
+      "inf:devices:join-held",
       "inf:devices:leave",
       "inf:devices:this-mac",
       "inf:files:choose",

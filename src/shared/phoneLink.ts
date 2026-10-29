@@ -131,7 +131,43 @@ const PLACE_SCRIPT = [
   say("placed"),
 ].join("; ");
 
-for (const script of [LINK_SCRIPT, PLACE_SCRIPT])
+/**
+ * Joining a home from another computer's first launch by its address
+ * (docs/view.md, "Joining by its address"): that computer signs in over SSH
+ * and runs this script there, which asks the open Infinitary's door for a
+ * one-use computer link, the request `infinitary link` makes. It finds the
+ * door as the phone's does; with none, a running app that controls another
+ * computer (its `joined/home.json`) says so, any other running app is too
+ * old, and none is not open. The door's answer follows `answer` with its
+ * status last, which `readComputerLinkAnswer` reads.
+ */
+export const COMPUTER_LINK_HEADER = "infinitary-computer-link";
+
+/** Why the computer link script made no link: the phone's reasons, and one more. */
+export const COMPUTER_LINK_NONE = {
+  ...PHONE_LINK_NONE,
+  /** The Infinitary open there controls another computer, so it has no door. */
+  controls: "controls",
+} as const;
+
+const sayComputer = (words: string) => `echo "$h ${PHONE_LINK_VERSION} ${words}"`;
+
+const COMPUTER_LINK_SCRIPT_TEXT = [
+  `h=${COMPUTER_LINK_HEADER}`,
+  `set -- ${DATA_FOLDERS.join(" ")}`,
+  "d=",
+  `for c do if [ -n "$c" ] && [ -r "$c/${PHONE_DOOR_FOLDER}/${PHONE_DOOR_FILES.key}" ] && [ -r "$c/${PHONE_DOOR_FOLDER}/${PHONE_DOOR_FILES.address}" ]; then d=$c; break; fi; done`,
+  `if [ -z "$d" ]; then for c in "$@" ${OLDER_FOLDERS.join(" ")}; do l=$(readlink "$c/SingletonLock" 2>/dev/null) && [ -n "$c" ] && kill -0 "\${l##*-}" 2>/dev/null && { [ -e "$c/joined/home.json" ] && { ${sayComputer(`none ${COMPUTER_LINK_NONE.controls}`)}; exit 0; }; ${sayComputer(`none ${COMPUTER_LINK_NONE.tooOld}`)}; exit 0; }; done; ${sayComputer(`none ${COMPUTER_LINK_NONE.notOpen}`)}; exit 0; fi`,
+  `read -r a < "$d/${PHONE_DOOR_FOLDER}/${PHONE_DOOR_FILES.address}"`,
+  `case $a in 127.0.0.1:*) ;; *) ${sayComputer(`none ${COMPUTER_LINK_NONE.notOpen}`)}; exit 0 ;; esac`,
+  "u=/usr/bin/curl",
+  `[ -x "$u" ] || u=$(command -v curl) || { ${sayComputer(`none ${COMPUTER_LINK_NONE.noCurl}`)}; exit 0; }`,
+  // -q first: no ~/.curlrc may add options to this request.
+  `r=$("$u" -q -s --noproxy "*" --max-time 30 -X POST -H "@$d/${PHONE_DOOR_FOLDER}/${PHONE_DOOR_FILES.key}" -w " %{http_code}" "http://$a${LINK_COMMAND_PATH}?for=computer") || { ${sayComputer(`none ${COMPUTER_LINK_NONE.notOpen}`)}; exit 0; }`,
+  `echo "$h ${PHONE_LINK_VERSION} answer $r"`,
+].join("; ");
+
+for (const script of [LINK_SCRIPT, PLACE_SCRIPT, COMPUTER_LINK_SCRIPT_TEXT])
   if (/['\\!\n]/.test(script))
     throw new Error("A phone's fixed command must suit every login shell.");
 
@@ -146,3 +182,50 @@ export const PHONE_PLACE_KEY_COMMAND = `/bin/sh -c '${PLACE_SCRIPT}' ${PHONE_LIN
 
 /** The answer line the place command prints once the key is in. */
 export const PHONE_KEY_PLACED = `${PHONE_LINK_HEADER} ${PHONE_LINK_VERSION} placed`;
+
+/**
+ * The computer link script's words for `/bin/sh -c`: the remote command a
+ * computer runs over SSH, each word quoted for whatever login shell the
+ * account has.
+ */
+export const COMPUTER_LINK_COMMAND: readonly string[] = [
+  "/bin/sh",
+  "-c",
+  COMPUTER_LINK_SCRIPT_TEXT,
+];
+
+/** Why no computer link came back: the script's own reasons, an older door, or an answer it could not read. */
+export type ComputerLinkNone =
+  | (typeof COMPUTER_LINK_NONE)[keyof typeof COMPUTER_LINK_NONE]
+  | "unreadable";
+
+/**
+ * What the computer link script printed: the link, or why there is none. A
+ * door with no `/link` answers 404, which is too old; pairing's own refusal
+ * (503) and any other answer made no link.
+ */
+export function readComputerLinkAnswer(
+  stdout: string,
+): { link: string } | { none: ComputerLinkNone } {
+  const header = `${COMPUTER_LINK_HEADER} ${PHONE_LINK_VERSION} `;
+  const at = stdout.indexOf(header);
+  if (at < 0) return { none: "unreadable" };
+  const said = stdout.slice(at + header.length);
+  const none = /^none ([a-z-]+)\s*$/.exec(said)?.[1];
+  if (none !== undefined) {
+    const known = Object.values(COMPUTER_LINK_NONE) as string[];
+    return { none: known.includes(none) ? (none as ComputerLinkNone) : "unreadable" };
+  }
+  const answer = /^answer ([\s\S]*?)\s*([0-9]{3})\s*$/.exec(said);
+  if (!answer) return { none: "unreadable" };
+  const status = answer[2];
+  if (status === "404") return { none: COMPUTER_LINK_NONE.tooOld };
+  if (status !== "200") return { none: COMPUTER_LINK_NONE.refused };
+  try {
+    const parsed = linkCommandAnswerSchema.safeParse(JSON.parse(answer[1] ?? ""));
+    if (parsed.success && "link" in parsed.data) return { link: parsed.data.link };
+  } catch {
+    // Not JSON: no link.
+  }
+  return { none: "unreadable" };
+}

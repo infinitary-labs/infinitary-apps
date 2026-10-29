@@ -22,19 +22,64 @@ import { type DeviceView, deviceLabel, deviceViewSchema, userDisplayName } from 
  * `sam@mini.local`, `sam@192.168.1.30`, or an alias their own SSH settings
  * name. The app reads no SSH settings: their own SSH resolves it. It never
  * starts with a dash, so it cannot be read as an option, and holds no space
- * or character a shell or SSH would read.
+ * or character a shell or SSH would read. A port typed beside it, other
+ * than 22, makes it SSH's own `ssh://sam@mini.local:2222` (`addressAtPort`),
+ * which every ssh, `ssh -G` and the kept key line read as one address.
  */
 export const remoteLoginAddressSchema = z
   .string()
   .trim()
   .min(1)
   .max(255)
-  .regex(/^(?:[A-Za-z0-9_][A-Za-z0-9_.-]{0,63}@)?[A-Za-z0-9_[][A-Za-z0-9_.:%[\]-]{0,190}$/);
+  .regex(
+    /^(?:(?:[A-Za-z0-9_][A-Za-z0-9_.-]{0,63}@)?[A-Za-z0-9_[][A-Za-z0-9_.:%[\]-]{0,190}|ssh:\/\/(?:[A-Za-z0-9_][A-Za-z0-9_.-]{0,63}@)?(?:[A-Za-z0-9_][A-Za-z0-9_.-]{0,190}|\[[A-Za-z0-9:.%]{2,64}\]):[1-9][0-9]{0,4})$/,
+  );
 
 /** The address a person typed, or null when it is not one. */
 export function parseRemoteLoginAddress(text: string): string | null {
   const parsed = remoteLoginAddressSchema.safeParse(text);
   return parsed.success ? parsed.data : null;
+}
+
+/** A port a person typed: empty for SSH's own, or a number from 1 to 65535. */
+export function parsePort(text: string): number | "none" | null {
+  const typed = text.trim();
+  if (typed === "") return "none";
+  if (!/^[0-9]{1,5}$/.test(typed)) return null;
+  const port = Number(typed);
+  return port >= 1 && port <= 65535 ? port : null;
+}
+
+/**
+ * The address to reach with the port typed beside it: as typed when the
+ * port is empty or 22, otherwise SSH's own `ssh://` form. Null when either
+ * is not one, or when the address already names a port.
+ */
+export function addressAtPort(text: string, portText: string): string | null {
+  const address = parseRemoteLoginAddress(text);
+  const port = parsePort(portText);
+  if (!address || port === null) return null;
+  if (port === "none" || port === 22) return address;
+  if (address.startsWith("ssh://")) return null;
+  const at = address.lastIndexOf("@");
+  const user = at < 0 ? "" : address.slice(0, at + 1);
+  const host = at < 0 ? address : address.slice(at + 1);
+  // An IPv6 address takes brackets before its port, as SSH reads it.
+  const place = host.includes(":") && !host.startsWith("[") ? `[${host}]` : host;
+  return parseRemoteLoginAddress(`ssh://${user}${place}:${port}`);
+}
+
+/**
+ * An address taken apart into what a person types: the account and computer,
+ * and the port when it names one other than SSH's own.
+ */
+export function addressParts(address: string): { address: string; port: string } {
+  const uri = /^ssh:\/\/(.+):([0-9]+)$/.exec(address);
+  if (!uri) return { address, port: "" };
+  const at = (uri[1] ?? "").lastIndexOf("@");
+  const user = at < 0 ? "" : (uri[1] ?? "").slice(0, at + 1);
+  const host = (uri[1] ?? "").slice(at + 1).replace(/^\[(.*)\]$/, "$1");
+  return { address: `${user}${host}`, port: uri[2] ?? "" };
 }
 
 /**

@@ -1,0 +1,98 @@
+import { z } from "zod";
+import { COMPUTER, HERE } from "./deviceNames";
+import {
+  remoteLoginPasswordQuestionSchema,
+  remoteLoginRefusalSchema,
+  remoteLoginWords,
+} from "./remoteLogin";
+
+/**
+ * Joining the first mate on another computer by its address, from this
+ * app's first launch (docs/view.md, "Joining by its address"; design skill
+ * `components/devices/JoinAnotherMac`, "By its address"): this computer
+ * signs in there with the person's own SSH, asks the Infinitary open there
+ * for a one-use computer link, then asks the paste path's question and
+ * joins as a pasted link does. The link stays in the main process; the
+ * window reads only these answers.
+ */
+
+/** What the person agreed to on the way: the key line they said was that computer, and its password, typed once. */
+export const joinAtOptionsSchema = z.strictObject({
+  confirm: z.string().min(1).max(160).optional(),
+  password: z.string().min(1).max(1024).optional(),
+});
+export type JoinAtOptions = z.infer<typeof joinAtOptionsSchema>;
+
+/**
+ * Why no link came back: a reason the Remote Login reach already names
+ * (`remoteLoginRefusalSchema`), or one of this join's own:
+ *
+ * - `not-an-address`: the text is no address, or the port no port.
+ * - `not-open`: no Infinitary is open for that account there.
+ * - `too-old`: the Infinitary open there makes no link this way.
+ * - `no-curl`: that Linux computer has no curl, which the link is asked with.
+ * - `controls`: the Infinitary open there controls another computer.
+ * - `no-link`: it answered without a link.
+ * - `self`: the link it made is this app's own.
+ */
+export const joinAtRefusalSchema = z.union([
+  remoteLoginRefusalSchema,
+  z.enum(["not-an-address", "not-open", "too-old", "no-curl", "controls", "no-link", "self"]),
+]);
+export type JoinAtRefusal = z.infer<typeof joinAtRefusalSchema>;
+
+/**
+ * What one step answers: the key line to compare, the password question,
+ * the paste path's question once a link is held, or why it stopped.
+ */
+export const joinAtAnswerSchema = z.union([
+  z.strictObject({
+    asks: z.literal("confirm"),
+    address: z.string().min(1).max(255),
+    line: z.string().min(1).max(160),
+  }),
+  remoteLoginPasswordQuestionSchema,
+  z.strictObject({
+    asks: z.literal("join"),
+    /** The link adds a computer that can also run work. */
+    runsWork: z.boolean(),
+    /** The link also names a private-network address. */
+    alsoPrivate: z.boolean(),
+  }),
+  z.strictObject({ refused: joinAtRefusalSchema }),
+]);
+export type JoinAtAnswer = z.infer<typeof joinAtAnswerSchema>;
+
+/** The computer an address names, for the paste path's question: `studio` for `kun@studio`. */
+export function computerOf(address: string): string {
+  const at = address.lastIndexOf("@");
+  return at < 0 ? address : address.slice(at + 1);
+}
+
+/** The one warning line for each refusal, naming the address as typed. */
+export function joinAtRefusalWords(refused: JoinAtRefusal, address: string): string {
+  switch (refused) {
+    case "not-an-address":
+      return `That is not an address to reach a ${COMPUTER.one} at, such as kun@studio, with a port from 1 to 65535 or none.`;
+    case "not-open":
+      return `Infinitary is not open on ${address}. Open it there, then try again.`;
+    case "too-old":
+      return `Infinitary on ${address} is too old to make a link this way. Update it there, or paste a link from it instead.`;
+    case "no-curl":
+      return `${address} has no curl, which ${HERE.this} asks Infinitary there for a link with. Install curl there, then try again.`;
+    case "controls":
+      return `Infinitary on ${address} controls your first mate on another ${COMPUTER.one}. Join that ${COMPUTER.one} instead.`;
+    case "no-link":
+      return `Infinitary on ${address} made no link. Make one there, in Settings → Devices, and paste it instead.`;
+    case "self":
+      return `${address} is ${HERE.this}. Type the address of the ${COMPUTER.one} your first mate is on.`;
+    case "password-off":
+      return `${address} did not accept your SSH key, and does not take a password. Let your SSH key in there, then try again.`;
+    case "key-not-taken":
+      return `${address} did not let Infinitary's own key in after it was placed there. Paste a link from that ${COMPUTER.one} instead.`;
+    case "failed":
+      return `Could not ask ${address} for a link. Try again.`;
+    default:
+      return remoteLoginWords.refused(refused, { address }).join(" ");
+  }
+}

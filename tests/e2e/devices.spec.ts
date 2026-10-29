@@ -637,7 +637,7 @@ test("the captain asks Firstmate to add a Mac at its address: Devices reaches it
     const refusedAddress = "sam@no-such-mac.invalid";
     const [what, todo] = remoteLoginWords.refused("unreachable", { address: refusedAddress });
     const question = page.locator("[data-device-address-question]");
-    const field = question.getByRole("textbox");
+    const field = question.getByLabel(`The other ${COMPUTER.one}'s address`);
     await expect(question).toBeVisible();
     await expect(field).toHaveValue(refusedAddress);
     await expect(question.locator("[data-device-address-refusal]")).toHaveCount(2);
@@ -646,6 +646,9 @@ test("the captain asks Firstmate to add a Mac at its address: Devices reaches it
     const again = question.getByRole("button", { name: "Try again", exact: true });
     const cancel = question.getByRole("button", { name: "Cancel", exact: true });
     await focusOn(field);
+    // The port comes next (INF-1827), then Try again and Cancel.
+    await page.keyboard.press("Tab");
+    await expect(question.getByLabel("Port", { exact: true })).toBeFocused();
     await page.keyboard.press("Tab");
     await expect(again).toBeFocused();
     await page.keyboard.press("Tab");
@@ -1108,7 +1111,12 @@ async function addByAddress(page: Page, address: string, timeout = 5_000): Promi
   await pressKey(page.locator('[data-device-add="mac"]'), "Enter");
   await pressKey(page.getByRole("button", { name: "By its address", exact: true }), "Enter");
   // The question takes the caret once it has drawn.
-  await typeInto(page.locator("[data-device-address-question]").getByRole("textbox"), address);
+  await typeInto(
+    page
+      .locator("[data-device-address-question]")
+      .getByLabel(`The other ${COMPUTER.one}'s address`),
+    address,
+  );
   await page.keyboard.press("Enter");
   const check = page.locator("[data-device-confirm-question]");
   await expect(check).toBeVisible();
@@ -1160,7 +1168,7 @@ test("the first reach shows the check line and sends nothing until this is the M
     await pressKey(page.locator('[data-device-add="mac"]'), "Enter");
     await pressKey(page.getByRole("button", { name: "By its address", exact: true }), "Enter");
     const question = page.locator("[data-device-address-question]");
-    await typeInto(question.getByRole("textbox"), sshd.address);
+    await typeInto(question.getByLabel(`The other ${COMPUTER.one}'s address`), sshd.address);
     await page.keyboard.press("Enter");
     const check = page.locator("[data-device-confirm-question]");
     const [asked, compare] = remoteLoginWords.confirmQuestion(sshd.address);
@@ -1177,7 +1185,9 @@ test("the first reach shows the check line and sends nothing until this is the M
     await expect(yes).toBeFocused();
     await pressKey(cancel, "Enter");
     await expect(check).toHaveCount(0);
-    await expect(question.getByRole("textbox")).toHaveValue(sshd.address);
+    await expect(question.getByLabel(`The other ${COMPUTER.one}'s address`)).toHaveValue(
+      sshd.address,
+    );
     expect(await page.evaluate(() => window.infinitary.devices.list())).toHaveLength(0);
     expect(existsSync(record)).toBe(false);
     await page.keyboard.press("Enter");
@@ -1302,7 +1312,7 @@ test("By its address lists Macs nearby but this one, and adds one picked and edi
     await pressKey(page.locator('[data-device-add="mac"]'), "Enter");
     await pressKey(page.getByRole("button", { name: "By its address", exact: true }), "Enter");
     const question = page.locator("[data-device-address-question]");
-    const field = question.getByRole("textbox");
+    const field = question.getByLabel(`The other ${COMPUTER.one}'s address`);
     const nearby = question.locator("[data-device-nearby-mac]");
     // This Mac is never a row: only the Mac mini, with your user name.
     await expect(nearby).toHaveCount(1);
@@ -1373,7 +1383,7 @@ test("By its address says when macOS has not allowed the local network, and stil
     await expect(question.locator("[data-device-nearby-not-allowed]")).toContainText(allowIt);
     await expect(question.locator("[data-device-nearby-mac]")).toHaveCount(0);
     // A private network's name still goes in, and Add it takes it.
-    const field = question.getByRole("textbox");
+    const field = question.getByLabel(`The other ${COMPUTER.one}'s address`);
     await typeInto(field, "sam@studio.tailnet-1a2b.ts.net");
     await expect(field).toHaveValue("sam@studio.tailnet-1a2b.ts.net");
     await expect(question.getByRole("button", { name: "Add it", exact: true })).toBeEnabled();
@@ -1414,7 +1424,9 @@ test("a Mac that did not let your SSH key in asks for that user's password once,
     await pressKey(page.locator('[data-device-add="mac"]'), "Enter");
     await pressKey(page.getByRole("button", { name: "By its address", exact: true }), "Enter");
     await typeInto(
-      page.locator("[data-device-address-question]").getByRole("textbox"),
+      page
+        .locator("[data-device-address-question]")
+        .getByLabel(`The other ${COMPUTER.one}'s address`),
       sshd.address,
     );
     await page.keyboard.press("Enter");

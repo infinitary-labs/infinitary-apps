@@ -37,7 +37,12 @@ async function openDevices(page: Page) {
 async function addByAddress(page: Page, address: string): Promise<DeviceView> {
   await pressKey(page.locator('[data-device-add="mac"]'), "Enter");
   await pressKey(page.getByRole("button", { name: "By its address", exact: true }), "Enter");
-  await typeInto(page.locator("[data-device-address-question]").getByRole("textbox"), address);
+  await typeInto(
+    page
+      .locator("[data-device-address-question]")
+      .getByLabel(`The other ${COMPUTER.one}'s address`),
+    address,
+  );
   await page.keyboard.press("Enter");
   const check = page.locator("[data-device-confirm-question]");
   await expect(check).toBeVisible({ timeout: 30_000 });

@@ -21,6 +21,7 @@ import {
 import {
   NEARBY_OFF,
   NEARBY_RENEW_MS,
+  type NearbyMac,
   type NearbyMacsView,
   nearbyAddress,
   nearbyMacsWords,
@@ -28,6 +29,8 @@ import {
 } from "@shared/nearbyMacs";
 import { catalogEntry } from "@shared/providers";
 import {
+  addressAtPort,
+  addressParts,
   type RemoteLoginConfirmQuestion,
   type RemoteLoginCopy,
   type RemoteLoginLeaveQuestion,
@@ -575,6 +578,14 @@ function HomeDevicesTab() {
   const [askingAddress, setAskingAddress] = useState(false);
   /** The address in By its address, kept across a refusal so it is not retyped. */
   const [addressDraft, setAddressDraft] = useState("");
+  /** The port beside it, empty for SSH's own; kept the same way. */
+  const [portDraft, setPortDraft] = useState("");
+  /** Keeps an address in the two fields it was typed in. */
+  const keepTyped = useCallback((address: string) => {
+    const parts = addressParts(address);
+    setAddressDraft(parts.address);
+    setPortDraft(parts.port);
+  }, []);
   /** The refusal's lines, in that aside. Null until a try is refused. */
   const [addressRefusal, setAddressRefusal] = useState<readonly string[] | null>(null);
   /** A Cancel during a try ignores that try's refusal, so it does not reopen the aside. */
@@ -738,62 +749,66 @@ function HomeDevicesTab() {
   // Firstmate's work asks once; `leave` is the yes. A Mac that did not let
   // the captain's key in asks for that user's password, which goes on this
   // one call and is kept nowhere here.
-  const addAt = useCallback(async (address: string, with_: AddWith = {}) => {
-    const { leave, confirm, password } = with_;
-    setProblem(null);
-    setChoosing(false);
-    setChanging(null);
-    setLeaving(null);
-    setConfirming(null);
-    setPasswording(null);
-    const setups = useSetups.getState();
-    if (setups.adding.some((mac) => mac.address === address)) return;
-    const mine = ++addressTry.current;
-    setAddressRefusal(null);
-    // The reaching row says a key is in use. It waits until the captain has
-    // said this is the Mac, which is the call that carries `confirm`. The
-    // call that carries the password is the one that lets Firstmate's key in.
-    if (password) setups.addFrom(address, "letting-in");
-    else if (confirm) setups.addFrom(address);
-    try {
-      const answer = await window.infinitary.devices.add(address, {
-        ...(leave ? { leave: true as const } : {}),
-        ...(confirm ? { confirm } : {}),
-        ...(password ? { password } : {}),
-      });
-      if (mine !== addressTry.current) return;
-      if ("asks" in answer && answer.asks === "confirm") {
-        setAddressDraft(address);
-        setAskingAddress(false);
-        setConfirming(answer);
-        return;
-      }
-      if ("asks" in answer && answer.asks === "password") {
-        setAddressDraft(address);
-        setAskingAddress(false);
-        setPasswording(answer);
-        return;
-      }
-      if ("asks" in answer) {
-        setAskingAddress(false);
-        setLeaving(answer);
-        return;
-      }
-      setAskingAddress(false);
-      setAddressDraft("");
+  const addAt = useCallback(
+    async (address: string, with_: AddWith = {}) => {
+      const { leave, confirm, password } = with_;
+      setProblem(null);
+      setChoosing(false);
+      setChanging(null);
+      setLeaving(null);
+      setConfirming(null);
+      setPasswording(null);
+      const setups = useSetups.getState();
+      if (setups.adding.some((mac) => mac.address === address)) return;
+      const mine = ++addressTry.current;
       setAddressRefusal(null);
-    } catch (caught) {
-      if (mine !== addressTry.current) return;
-      const message =
-        caught instanceof Error ? caught.message : `Could not add this ${COMPUTER.one}.`;
-      const lines = remoteLoginRefusalLines(message);
-      setAddressDraft(address);
-      setAddressRefusal(lines.length > 0 ? lines : [`Could not add this ${COMPUTER.one}.`]);
-      setAskingAddress(true);
-    } finally {
-      useSetups.getState().addDone(address);
-    }
-  }, []);
+      // The reaching row says a key is in use. It waits until the captain has
+      // said this is the Mac, which is the call that carries `confirm`. The
+      // call that carries the password is the one that lets Firstmate's key in.
+      if (password) setups.addFrom(address, "letting-in");
+      else if (confirm) setups.addFrom(address);
+      try {
+        const answer = await window.infinitary.devices.add(address, {
+          ...(leave ? { leave: true as const } : {}),
+          ...(confirm ? { confirm } : {}),
+          ...(password ? { password } : {}),
+        });
+        if (mine !== addressTry.current) return;
+        if ("asks" in answer && answer.asks === "confirm") {
+          keepTyped(address);
+          setAskingAddress(false);
+          setConfirming(answer);
+          return;
+        }
+        if ("asks" in answer && answer.asks === "password") {
+          keepTyped(address);
+          setAskingAddress(false);
+          setPasswording(answer);
+          return;
+        }
+        if ("asks" in answer) {
+          setAskingAddress(false);
+          setLeaving(answer);
+          return;
+        }
+        setAskingAddress(false);
+        setAddressDraft("");
+        setPortDraft("");
+        setAddressRefusal(null);
+      } catch (caught) {
+        if (mine !== addressTry.current) return;
+        const message =
+          caught instanceof Error ? caught.message : `Could not add this ${COMPUTER.one}.`;
+        const lines = remoteLoginRefusalLines(message);
+        keepTyped(address);
+        setAddressRefusal(lines.length > 0 ? lines : [`Could not add this ${COMPUTER.one}.`]);
+        setAskingAddress(true);
+      } finally {
+        useSetups.getState().addDone(address);
+      }
+    },
+    [keepTyped],
+  );
 
   const update = useCallback(
     async (deviceId: string, password?: string) => {
@@ -964,11 +979,14 @@ function HomeDevicesTab() {
       }}
       onCancelChoose={() => setChoosing(false)}
       addressDraft={addressDraft}
+      portDraft={portDraft}
       addressRefusal={addressRefusal}
       onAddressDraft={setAddressDraft}
+      onPortDraft={setPortDraft}
       onAskAddress={() => {
         setChoosing(false);
         setAddressDraft("");
+        setPortDraft("");
         setAddressRefusal(null);
         setAskingAddress(true);
       }}
@@ -1048,6 +1066,9 @@ export type DevicesTabViewProps = {
   passwording: RemoteLoginPasswordQuestion | null;
   /** What the address field holds, kept after a refusal. */
   addressDraft: string;
+  /** What the port field beside it holds, empty for SSH's own. */
+  portDraft: string;
+  onPortDraft: (port: string) => void;
   /** The refusal's lines in that aside, or null while none is showing. */
   addressRefusal: readonly string[] | null;
   onAddressDraft: (address: string) => void;
@@ -1268,15 +1289,18 @@ function AddChooser({ busy, onMake, onCancelChoose, onAskAddress }: DevicesTabVi
  */
 function AddressQuestion({
   addressDraft,
+  portDraft,
   addressRefusal,
   adding,
   nearby,
   devices,
   onAddressDraft,
+  onPortDraft,
   onAddAt,
   onCancelAddress,
 }: DevicesTabViewProps) {
-  const typed = addressDraft.trim();
+  // The address with the port typed beside it, or null while either is not one.
+  const typed = addressAtPort(addressDraft, portDraft);
   const trying = adding.some((mac) => mac.address === typed);
   const form = useRef<HTMLFormElement>(null);
   const field = () => form.current?.querySelector<HTMLInputElement>("#device-remote-login");
@@ -1341,6 +1365,7 @@ function AddressQuestion({
           }}
           style={{ flex: 1, minWidth: 220, width: "auto" }}
         />
+        <PortField id="device-remote-login-port" value={portDraft} onChange={onPortDraft} />
         <Button type="submit" size="sm" disabled={!typed || trying}>
           {addressRefusal ? "Try again" : "Add it"}
         </Button>
@@ -1364,6 +1389,36 @@ function AddressQuestion({
         }}
       />
     </form>
+  );
+}
+
+/**
+ * The optional port beside an address (design skill AddAMac, "By its
+ * address"): empty is SSH's own, 22, or whatever the person's SSH settings
+ * name for that address.
+ */
+export function PortField({
+  id,
+  value,
+  onChange,
+}: {
+  id: string;
+  value: string;
+  onChange: (port: string) => void;
+}) {
+  return (
+    <Input
+      id={id}
+      mono
+      aria-label="Port"
+      inputMode="numeric"
+      autoComplete="off"
+      spellCheck={false}
+      placeholder="Port 22"
+      value={value}
+      onChange={(event) => onChange(event.target.value)}
+      style={{ width: 96, flex: "none" }}
+    />
   );
 }
 
@@ -1393,7 +1448,7 @@ export function nearbyStep(key: string, at: number, count: number): number | nul
  * Remote Login, as a Mac home has always said; a Linux home, where the other
  * computer is as likely Linux, names both.
  */
-function sshMustBeOn(): string {
+export function sshMustBeOn(): string {
   return thisDesktop().mac
     ? "Remote Login must be on there."
     : "Its SSH server, or Remote Login on a Mac, must be on.";
@@ -1404,18 +1459,23 @@ function sshMustBeOn(): string {
  * by its own name, drawn as text, and the address it fills in; one already
  * on Your devices is marked. The list is one Tab stop and the arrows move
  * through it. While none answered it says it is looking; when macOS has not
- * allowed the local network, or the looking stopped, it says so.
+ * allowed the local network, or the looking stopped, it says so. The first
+ * launch's Join by its address draws the same list (`JoinAnotherMac`), with
+ * the address its own Your account field fills.
  */
-function NearbyList({
+export function NearbyList({
   nearby,
   devices,
   onPick,
   onLeave,
+  addressOf = (mac) => nearbyAddress(mac, nearby.user),
 }: {
   nearby: NearbyMacsView;
   devices: readonly DeviceView[];
   onPick: (address: string) => void;
   onLeave: () => void;
+  /** The address a row fills in; this Mac's user at its name unless given. */
+  addressOf?: (mac: NearbyMac) => string;
 }) {
   const [stop, setStop] = useState(0);
   const list = useRef<HTMLUListElement>(null);
@@ -1449,7 +1509,7 @@ function NearbyList({
       {macs.length > 0 && (
         <ul ref={list} className="fm-devices-nearby-list" aria-labelledby="device-nearby-label">
           {macs.map((mac, index) => {
-            const address = nearbyAddress(mac, nearby.user);
+            const address = addressOf(mac);
             const onList = nearbyOnList(mac, devices);
             return (
               <li key={`${mac.at} ${mac.name}`}>

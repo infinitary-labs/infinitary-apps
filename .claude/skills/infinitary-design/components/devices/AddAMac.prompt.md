@@ -10,7 +10,8 @@ Nothing needs to be open on it." and "Only your click can add a computer, so I a
 Devices' "By its address" does the same with no card.
 A Linux computer is added the same way, at its SSH server; this computer asks its system first, and sends the Infinitary made for it.
 When that is not this computer's own - a Mac adding a Linux computer, or a Linux computer adding a Mac - it is the one published for that system at this computer's version, got and checked before anything is sent, and the feed says so: "Getting Infinitary for Studio's system from its published release, and checking it.", while the row still reads "Preparing Infinitary for Studio…".
-The address is the one thing the person supplies.
+The address is the one thing the person supplies, with a port beside it only when its SSH server listens on another one than 22.
+That address is then `ssh://sam@mini.local:2222`, as SSH writes one, and every later update, removal and key check reaches the computer there.
 An alias from their own SSH settings works, because their own SSH resolves it; the app reads no SSH settings.
 While it works, a row stands in the list with an `idle` dot and the summary "Reaching sam@mini.local with your SSH key…", then "Preparing Infinitary for Mac mini…", "Sending Infinitary to Mac mini… 42.3 MB sent", and "Starting Infinitary on Mac mini…".
 The count is what was sent so far, in the words a file's size takes on a chip ("640 KB", "42.3 MB"), and it moves about once a second while the copy goes (captain's approval of FI3-1361).

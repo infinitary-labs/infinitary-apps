@@ -1,11 +1,12 @@
 import { execFile } from "node:child_process";
 import { existsSync, mkdirSync, readFileSync, statSync, symlinkSync, writeFileSync } from "node:fs";
-import { request as httpRequest } from "node:http";
+import { createServer, request as httpRequest } from "node:http";
 import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 import { scratchDir } from "../../../tests/helpers/scratchDirs";
 import { PAIRING_LINK_TTL_MS, parsePairingLink } from "../../shared/devices";
 import {
+  COMPUTER_LINK_COMMAND,
   LINK_COMMAND_PATH,
   linkCommandAnswerSchema,
   PHONE_DOOR_FILES,
@@ -16,9 +17,11 @@ import {
   PHONE_LINK_COMMAND,
   PHONE_LINK_HEADER,
   PHONE_PLACE_KEY_COMMAND,
+  readComputerLinkAnswer,
 } from "../../shared/phoneLink";
 import { DevicePairing } from "./pairing";
 import { PhoneDoor } from "./phoneDoor";
+import { shellWord } from "./shellWord";
 
 /**
  * INF-1183, the captain's approved plan "join a home from the iOS app by SSH
@@ -285,6 +288,99 @@ describe("the phone's link command", () => {
         await run("/bin/sh", PHONE_LINK_COMMAND, { HOME: home, INFINITARY_USER_DATA_DIR: data }),
       ),
     ).toEqual(["1", "none", "refused"]);
+  });
+});
+
+/**
+ * INF-1827's accepted plan, "Join by its address" at a computer's first
+ * launch: the one fixed command that computer runs over SSH, as each login
+ * shell runs the line its ssh sends, asking the open Infinitary's door for a
+ * computer link, the request `infinitary link` makes.
+ */
+describe("the computer link command", () => {
+  /** The command line as the joining computer's ssh sends it: each word quoted for any login shell. */
+  const LINE = COMPUTER_LINK_COMMAND.map(shellWord).join(" ");
+
+  it.each(SHELLS)("answers a one-use computer link that pairing made, under %s", async (shell) => {
+    const home = scratchDir("infinitary-computer-door-home-");
+    const data = join(home, "data");
+    const { pairing } = await openHome(data);
+    const said = readComputerLinkAnswer(
+      await run(shell, LINE, { HOME: home, INFINITARY_USER_DATA_DIR: data }),
+    );
+    if (!("link" in said)) throw new Error(`No link: ${JSON.stringify(said)}`);
+    const link = parsePairingLink(said.link);
+    expect(link.kind).toBe("mac");
+    expect(link.key).toBe(pairing.identity().pin);
+    // Each ask is a link of its own, good for one use.
+    const again = readComputerLinkAnswer(
+      await run(shell, LINE, { HOME: home, INFINITARY_USER_DATA_DIR: data }),
+    );
+    expect("link" in again && parsePairingLink(again.link).code).not.toBe(link.code);
+  });
+
+  it("says Infinitary is not open, too old, or controlling another computer when no door answers", async () => {
+    const home = scratchDir("infinitary-computer-door-home-");
+    expect(readComputerLinkAnswer(await run("/bin/sh", LINE, { HOME: home }))).toEqual({
+      none: "not-open",
+    });
+    const data = join(home, "Library", "Application Support", "infinitary");
+    mkdirSync(data, { recursive: true });
+    // Chromium's single-instance lock names the running app's host and process.
+    symlinkSync(`a-mac-${process.pid}`, join(data, "SingletonLock"));
+    expect(readComputerLinkAnswer(await run("/bin/sh", LINE, { HOME: home }))).toEqual({
+      none: "too-old",
+    });
+    // An app that controls another computer keeps that computer's grant, and opens no door.
+    mkdirSync(join(data, "joined"));
+    writeFileSync(join(data, "joined", "home.json"), "{}");
+    expect(readComputerLinkAnswer(await run("/bin/sh", LINE, { HOME: home }))).toEqual({
+      none: "controls",
+    });
+  });
+
+  it("says a door with no computer link is too old, and one that made none refused", async () => {
+    // An Infinitary from before `infinitary link` answers its phone door only, and 404 elsewhere.
+    const home = scratchDir("infinitary-computer-door-home-");
+    const data = join(home, "data");
+    const older = createServer((_request, response) => response.writeHead(404).end());
+    await new Promise<void>((resolve) => older.listen(0, "127.0.0.1", resolve));
+    const address = older.address();
+    if (!address || typeof address === "string") throw new Error("No port.");
+    mkdirSync(join(data, PHONE_DOOR_FOLDER), { recursive: true });
+    writeFileSync(
+      join(data, PHONE_DOOR_FOLDER, PHONE_DOOR_FILES.address),
+      `127.0.0.1:${address.port}\n`,
+    );
+    writeFileSync(
+      join(data, PHONE_DOOR_FOLDER, PHONE_DOOR_FILES.key),
+      `${PHONE_DOOR_KEY_HEADER}: k\n`,
+    );
+    try {
+      expect(
+        readComputerLinkAnswer(
+          await run("/bin/sh", LINE, { HOME: home, INFINITARY_USER_DATA_DIR: data }),
+        ),
+      ).toEqual({ none: "too-old" });
+    } finally {
+      older.close();
+    }
+
+    const refusing = join(scratchDir("infinitary-computer-door-home-"), "data");
+    doors.push(
+      await PhoneDoor.open({
+        dir: join(refusing, PHONE_DOOR_FOLDER),
+        invite: () => {
+          throw new Error("The saved device list cannot be read.");
+        },
+        listening: NO_CONNECTION,
+      }),
+    );
+    expect(
+      readComputerLinkAnswer(
+        await run("/bin/sh", LINE, { HOME: home, INFINITARY_USER_DATA_DIR: refusing }),
+      ),
+    ).toEqual({ none: "refused" });
   });
 });
 

@@ -1,0 +1,17 @@
+{
+  "entries": [
+    {
+      "id": "join-by-address",
+      "kind": "feature",
+      "area": "devices",
+      "title": "Join your first mate on another computer by its address",
+      "body": "At Infinitary's first launch, Join by its address joins the first mate on a Mac or Linux computer you already have, with no link to copy: type the account and computer you sign in to with SSH, or pick one on your network, and Infinitary signs in with your own SSH key and asks the Infinitary open there for a link. When Infinitary is not open there, it says so and starts nothing. Settings → Devices' By its address also takes a port now, for a computer whose SSH listens on another one.",
+      "picture": {
+        "dark": "join-by-address-dark.webp",
+        "light": "join-by-address-light.webp",
+        "alt": "The first-launch aside Join by its address: an address field, a Port field, Your account, and two computers on this network"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

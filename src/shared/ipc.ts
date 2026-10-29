@@ -141,6 +141,12 @@ import {
   integrationsViewSchema,
 } from "./integrations";
 import {
+  type JoinAtAnswer,
+  type JoinAtOptions,
+  joinAtAnswerSchema,
+  joinAtOptionsSchema,
+} from "./joinByAddress";
+import {
   isPanelCommandId,
   MAIN_COMMAND_IDS,
   type MainCommandId,
@@ -1322,6 +1328,23 @@ export const invokeContract = {
     effect: "change",
     surface: "host",
     request: z.tuple([z.string().min(1).max(1024)]),
+    response: joinOutcomeSchema,
+  },
+  // Join by its address (docs/view.md, "Joining by its address"): one step
+  // of asking the computer at an address for a one-use link over the
+  // person's own SSH - the key line, the password once, then the link,
+  // which the shell holds in memory and answers only as the paste path's
+  // question. `inf:devices:join-held` joins with that link, or forgets it.
+  "inf:devices:join-at": {
+    effect: "change",
+    surface: "host",
+    request: z.tuple([remoteLoginAddressSchema, joinAtOptionsSchema.optional()]),
+    response: joinAtAnswerSchema,
+  },
+  "inf:devices:join-held": {
+    effect: "change",
+    surface: "host",
+    request: z.tuple([z.enum(["join", "forget"])]),
     response: joinOutcomeSchema,
   },
   // Leave: this Mac stops controlling the other one and returns to its own
@@ -3452,6 +3475,10 @@ export type FirstmateApi = {
     onThisMac: (listener: (thisMac: ThisMac) => void) => () => void;
     /** Joins Firstmate on another Mac with a pasted link; on success the window starts over. */
     join: (link: string) => Promise<JoinOutcome>;
+    /** One step of asking the computer at an address for a link over SSH (`inf:devices:join-at`). */
+    joinAt: (address: string, options?: JoinAtOptions) => Promise<JoinAtAnswer>;
+    /** Joins with the link `joinAt` held, or forgets it. */
+    joinHeld: (choice: "join" | "forget") => Promise<JoinOutcome>;
     /** Stops controlling the other Mac and returns this app to its own first launch. */
     leave: () => Promise<{ ok: true }>;
     /** Each computer that runs work, with what it last said of its own sign-ins. */

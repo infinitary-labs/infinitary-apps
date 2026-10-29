@@ -68,6 +68,10 @@ export function registerIpc(options: IpcOptions): void {
   // leaving it (docs/view.md).
   handleInvoke("inf:devices:this-mac", rendererSource, () => shell.thisMac());
   handleInvoke("inf:devices:join", rendererSource, (_event, link) => shell.join(link));
+  handleInvoke("inf:devices:join-at", rendererSource, (_event, address, options) =>
+    shell.joinAt(address, options),
+  );
+  handleInvoke("inf:devices:join-held", rendererSource, (_event, choice) => shell.joinHeld(choice));
   handleInvoke("inf:devices:leave", rendererSource, async () => {
     await shell.leave();
     return { ok: true as const };

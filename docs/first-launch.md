@@ -47,7 +47,7 @@ The renderer reads it over `inf:app:first-run` (a core channel on the frozen `ap
 
 ## Joining the first mate on another Mac
 
-Under the provider chips a second group, a hairline apart, offers the other way in: `YOUR FIRST MATE IS ON ANOTHER COMPUTER` and "+ Paste its link", which joins the first mate on a Mac the person already has instead (`docs/view.md`).
+Under the provider chips a second group, a hairline apart, offers the other way in: `YOUR FIRST MATE IS ON ANOTHER COMPUTER` with "+ Paste its link" and "+ Join by its address", which join the first mate on a computer the person already has instead (`docs/view.md`, "Joining").
 Above the subscription chips, the first mate's line asks to be set up on a computer that stays on, and says other devices need the first mate awake.
 When a connected subscription still cannot answer, that place keeps "Pick a computer that stays on.
 Other computers need it awake."

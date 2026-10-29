@@ -71,6 +71,9 @@ import SwiftUI
         view.scrollView.minimumZoomScale = 1; view.scrollView.maximumZoomScale = 1
         view.scrollView.pinchGestureRecognizer?.isEnabled = false
         view.accessibilityIdentifier = "card-body"
+        // INF-1263 / INF-1651: until the reveal, the body is one closed accessibility element that takes no taps.
+        // WebKit ignores the hidden-children flag, and hiding the frame inside the page sticks on iOS 27.0.
+        view.isAccessibilityElement = true; view.isUserInteractionEnabled = false
         self.view = view
         // Agent HTML is assigned to an opaque iframe's srcdoc, never interpolated into this parent.
         // Its own hash policy narrows this parent's inline permission. Neither realm can use the network.
@@ -116,7 +119,7 @@ import SwiftUI
         view?.evaluateJavaScript("window.phoneCard?.theme('\(theme == "dark" ? "dark" : "light")')", completionHandler: nil)
     }
 
-    /// INF-1263 / INF-1574: the page lets the body take taps and reach accessibility, and the footer enables, only once
+    /// INF-1263 / INF-1574: the body takes taps and reaches accessibility, and the footer enables, only once
     /// the view's own layout holds the drawn height, so nothing is offered where the 48-point placeholder clipped it.
     /// A SwiftUI update that reads `drawn` runs before that layout, so it cannot be the signal. The reveal waits one
     /// main-queue turn, so no view update or layout pass changes what the footer reads.
@@ -125,7 +128,8 @@ import SwiftUI
         DispatchQueue.main.async { [weak self] in
             guard let self, self.isShown else { return }
             self.revealed = true
-            self.view?.evaluateJavaScript("window.phoneCard?.reveal()", completionHandler: nil)
+            self.view?.isAccessibilityElement = false; self.view?.isUserInteractionEnabled = true
+            UIAccessibility.post(notification: .layoutChanged, argument: nil)
         }
     }
     private var isShown: Bool {

@@ -10,7 +10,7 @@ interface NativeHost { postMessage(value: unknown): Promise<unknown> }
 declare global {
   interface Window {
     webkit: { messageHandlers: { cardHost: NativeHost } };
-    phoneCard: { mount(input: Input): Promise<void>; collect(): Promise<FrameAnswers>; theme(value: FrameTheme): void; ping(seq: number): void; reveal(): void };
+    phoneCard: { mount(input: Input): Promise<void>; collect(): Promise<FrameAnswers>; theme(value: FrameTheme): void; ping(seq: number): void };
   }
 }
 type Input = { body: string; theme: FrameTheme; fill: unknown; readOnly: boolean; actions: string[]; width: "regular" | "wide" | "full" };
@@ -103,10 +103,8 @@ window.phoneCard = {
     frame.title = "Card body";
     frame.setAttribute("sandbox", FRAME_SANDBOX);
     frame.style.cssText = "display:block;width:100%;height:48px;border:0";
-    // INF-1263: until native code has given the web view the drawn body's height, the view clips the body, so a tap
-    // on its text would land outside the card. The body stays out of reach and out of accessibility until reveal().
-    frame.setAttribute("aria-hidden", "true");
-    frame.inert = true;
+    // INF-1263 / INF-1651: native code keeps the web view out of reach and out of accessibility until it holds the
+    // drawn body's height. Hiding the frame here would stick on iOS 27.0, which never exposes the body again.
     frame.srcdoc = document;
     window.document.body.replaceChildren(frame);
   },
@@ -121,5 +119,4 @@ window.phoneCard = {
   },
   theme(value) { send({ type: "theme", theme: value }); },
   ping(seq) { send({ type: "ping", seq }); },
-  reveal() { frame?.removeAttribute("aria-hidden"); if (frame) frame.inert = false; },
 };

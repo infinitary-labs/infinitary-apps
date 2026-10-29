@@ -837,6 +837,13 @@ import XCTest
 
     private func showCard(_ title: String) {
         if app.staticTexts["card-title"].label == title { return }
+        // INF-1651: a pick made while the shown card finishes drawing is lost with the menu still open, so the pager
+        // opens once the shown body is revealed: until then it is one closed element with nothing inside.
+        let body = app.webViews.matching(identifier: "card-body").firstMatch
+        if body.exists {
+            let revealed = NSPredicate { _, _ in body.descendants(matching: .any).firstMatch.exists }
+            XCTAssertEqual(waitForPhonePredicate(revealed, object: nil, timeout: 10), .completed, "The shown card body was never revealed")
+        }
         // SwiftUI Menu is a popup on current iOS; use its own stable identity rather than a legacy button type.
         let pager = app.descendants(matching: .any).matching(identifier: "card-pager").firstMatch
         XCTAssertTrue(pager.waitForPresence(timeout: 10), app.debugDescription); tapOnPhone(pager)
@@ -847,10 +854,15 @@ import XCTest
 
     private func reveal(_ element: XCUIElement) {
         let scroll = app.scrollViews["card-scroll"]
+        let body = app.webViews.matching(identifier: "card-body").firstMatch
         for _ in 0..<8 {
-            if element.isHittable { return }
+            // INF-1651: after the card moves, iOS 27.0 reports a body element's frame one layout behind, partly outside
+            // the body, until the card scrolls. A control's own frame can overhang the body by a point.
+            let stale = body.exists && body.frame.intersects(element.frame)
+                && !body.frame.insetBy(dx: -2, dy: -2).contains(element.frame)
+            if element.isHittable && !stale { return }
             // Use the card's actual viewport: a whole-screen swipe hits the keyboard while replying.
-            if element.exists && element.frame.maxY < scroll.frame.minY { scroll.swipeDown() }
+            if stale || (element.exists && element.frame.maxY < scroll.frame.minY) { scroll.swipeDown() }
             else { scroll.swipeUp() }
         }
         XCTAssertTrue(element.isHittable, app.debugDescription)
@@ -1008,10 +1020,17 @@ import XCTest
         app.staticTexts["card-title"].swipeRight()
         XCTAssertTrue(cardHeading(choice).waitForPresence(timeout: 10))
         // INF-1263: the paged-back body offers its text only where a tap reaches it. Read the body and the text in one
-        // snapshot the moment the text appears; before the fix it appeared below the body's 48-point placeholder.
-        let shown = firstShown("North Basin", in: app.webViews.matching(identifier: "card-body").firstMatch)
-        XCTAssertTrue(shown.body.contains(shown.text), "North Basin \(shown.text) lies outside the card body \(shown.body)")
+        // snapshot the moment the text appears; before the fix it appeared while the body was its 48-point placeholder.
+        // INF-1651: iOS 27.0 first reports the text's frame relative to the web view, so where the text sits is read
+        // once it settles.
+        let body = app.webViews.matching(identifier: "card-body").firstMatch
+        let shown = firstShown("North Basin", in: body)
         let north = app.webViews.staticTexts["North Basin"].firstMatch
+        let settled = NSPredicate { _, _ in body.frame.contains(north.frame) }
+        XCTAssertEqual(waitForPhonePredicate(settled, object: nil, timeout: 10), .completed,
+                       "North Basin \(north.frame) lies outside the card body \(body.frame)")
+        XCTAssertEqual(shown.body.height, body.frame.height, accuracy: 0.5,
+                       "North Basin appeared before the card body held its drawn height")
         reveal(north); tapOnPhone(north)
         let marker = app.webViews.buttons["Move the marker"]
         reveal(marker)

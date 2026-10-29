@@ -115,8 +115,11 @@ const SIMULATOR_LOG = 'process == "Infinitary" OR process BEGINSWITH "com.apple.
   + ' OR (process == "runningboardd" AND (eventMessage CONTAINS "WebKit" OR eventMessage CONTAINS "Infinitary"))';
 // INF-819: the simulator's own system, keyboard and accessibility processes, which answer XCUITest's
 // "Check for interrupting elements"; on a few iPhone talk parts they stopped answering after a keyboard switch.
-const SYSTEM_LOG = 'process IN {"SpringBoard", "backboardd", "AccessibilityUIServer", "testmanagerd", "kbd"}'
-  + ' OR process ENDSWITH "-Runner" OR subsystem BEGINSWITH[c] "com.apple.accessibility"';
+// INF-1645: iOS 27.0's backboardd repeats one IOSurface line about 1.2 thousand times a second (346 MB in
+// 20 minutes, against 758 lines on iOS 26.4), so the phone check's log leaves that line out.
+const SYSTEM_LOG = '(process IN {"SpringBoard", "backboardd", "AccessibilityUIServer", "testmanagerd", "kbd"}'
+  + ' OR process ENDSWITH "-Runner" OR subsystem BEGINSWITH[c] "com.apple.accessibility")'
+  + ' AND NOT eventMessage CONTAINS "IOSurfaceQueryTransactionList"';
 let keyboard: Awaited<ReturnType<typeof observePhoneKeyboard>> | undefined;
 let simulatorLog: Awaited<ReturnType<typeof observePhoneLog>> | undefined;
 let timeoutStack: ReturnType<typeof capturePhoneKeyboardTimeout> | undefined;

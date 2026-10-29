@@ -315,8 +315,11 @@ const PHONE_APP_PROCESS = "Infinitary";
 type DisplayReading = { value: string; at: number; timestamp: string; line: string };
 /** UIKit's style numbers in SpringBoard's appearance arbiter lines. */
 const ARBITER_STYLES: Record<string, "light" | "dark"> = { "1": "light", "2": "dark" };
-/** The journey's display requests' budget, `home`'s default in PhoneJourney.swift; its wall cap is waitCap's formula. */
-export const PHONE_DISPLAY_REQUEST_BUDGET_MS = 60_000;
+/**
+ * The journey's display requests' budget, `displayBudget` in PhoneJourney.swift; its wall cap is waitCap's formula.
+ * INF-1786: as long as that cap, so the request's load clock never ends it before the appearance witness answers.
+ */
+export const PHONE_DISPLAY_REQUEST_BUDGET_MS = 600_000;
 /**
  * INF-1799: the longest the runner reads the simulator's kept log for a witness line its live stream dropped. The
  * read covers the minutes since one display change and takes seconds; past a minute the host is too starved to answer.
@@ -378,13 +381,17 @@ export class PhoneDisplayChanges {
     for (const notify of this.listeners) notify();
   }
 
-  /** Whether SpringBoard applied the appearance the runner asked for at `since`, on its own clock in milliseconds. */
+  /**
+   * Whether SpringBoard applied the appearance the runner asked for at `since`, on its own clock in milliseconds.
+   * INF-1786 (the captain's choice "Wait for SpringBoard's own line, up to the request's 8-minute limit"): in run
+   * 40792658138 SpringBoard applied light 250 seconds after the request, so this waits until `until` alone.
+   */
   appearance(
     since: number,
     style: "light" | "dark",
     until = phoneDisplayDeadline(),
   ): Promise<PhoneDisplayOutcome> {
-    return this.witness(since, until, `SpringBoard did not change to ${style}`, () => {
+    return this.witness(since, until, undefined, `SpringBoard did not change to ${style}`, () => {
       const changed = this.styles.find((each) => each.at >= since && each.value === style);
       return changed && { outcome: "applied", timestamp: changed.timestamp, proof: changed.line };
     });
@@ -397,7 +404,7 @@ export class PhoneDisplayChanges {
     until = phoneDisplayDeadline(),
   ): Promise<PhoneDisplayOutcome> {
     const category = PHONE_TEXT_SIZES[size];
-    return this.witness(since, until, `the app did not read ${category}`, () => {
+    return this.witness(since, until, 30_000, `the app did not read ${category}`, () => {
       const read = this.reads.find((each) => each.at >= since && each.value === category);
       if (read) return { outcome: "applied", timestamp: read.timestamp, proof: read.line };
       // A read in the save's own millisecond can come before it, as on the iPad of run 40788049243, so it proves nothing.
@@ -416,6 +423,7 @@ export class PhoneDisplayChanges {
   private witness(
     since: number,
     until: number,
+    budget: number | undefined,
     missing: string,
     decide: () => PhoneDisplayOutcome | undefined,
   ): Promise<PhoneDisplayOutcome> {
@@ -423,7 +431,7 @@ export class PhoneDisplayChanges {
       let stopped = false;
       const stop = () => {
         stopped = true;
-        deadline.cancel();
+        deadline?.cancel();
         clearTimeout(wall);
       };
       const finish = (result: PhoneDisplayOutcome) => {
@@ -457,7 +465,7 @@ export class PhoneDisplayChanges {
         });
       };
       // Failure deadlines, not delays: without a witness the runner sets nothing again.
-      const deadline = budgetTimer(() => void giveUp(), 30_000);
+      const deadline = budget === undefined ? undefined : budgetTimer(() => void giveUp(), budget);
       const wall = setTimeout(() => void giveUp(), Math.max(0, until - Date.now()));
       this.listeners.add(check);
       check();

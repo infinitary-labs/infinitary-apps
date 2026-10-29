@@ -722,6 +722,38 @@ describe("a display change's witness (INF-1785)", () => {
     });
   });
 
+  // INF-1786, the captain's choice "Wait for SpringBoard's own line, up to the request's 8-minute limit".
+  it("waits for SpringBoard's own line as late as run 40792658138's light, and no longer than the journey's request", async () => {
+    vi.useFakeTimers({ now: lightAsked });
+    const displays = new PhoneDisplayChanges();
+    const until = phoneDisplayDeadline(lightAsked);
+    let outcome: unknown;
+    const light = displays.appearance(lightAsked, "light", until).then((value) => {
+      outcome = value;
+    });
+    await vi.advanceTimersByTimeAsync(
+      phoneLogMilliseconds(lightAppliedLate.timestamp) - Date.now(),
+    );
+    expect(outcome).toBeUndefined();
+    displays.receive(lightAppliedLate);
+    await light;
+    expect(outcome).toEqual({
+      outcome: "applied",
+      timestamp: lightAppliedLate.timestamp,
+      proof: lightAppliedLate.eventMessage,
+    });
+    // A line that never comes is unknown at the deadline, before the journey's own request ends.
+    const never = displays.appearance(Date.now(), "dark", phoneDisplayDeadline());
+    await vi.advanceTimersByTimeAsync(phoneDisplayDeadline() - Date.now() - 1);
+    await expect(Promise.race([never, Promise.resolve("waiting")])).resolves.toBe("waiting");
+    await vi.advanceTimersByTimeAsync(1);
+    await expect(never).resolves.toMatchObject({
+      outcome: "unknown",
+      reason: expect.stringContaining("SpringBoard did not change to dark"),
+    });
+    expect(until).toBeLessThan(lightAsked + waitCap(PHONE_DISPLAY_REQUEST_BUDGET_MS));
+  });
+
   it("sets the text size once more only on a proven miss, and fails after two", async () => {
     vi.useFakeTimers();
     // Each save is answered by the readings of one real save, the iPhone's missed one or the iPad's read one, on a

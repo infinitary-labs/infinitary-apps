@@ -7,6 +7,9 @@ import XCTest
 @MainActor final class PhoneJourney: XCTestCase {
     private let app = XCUIApplication()
     private var control: String { ProcessInfo.processInfo.environment["PHONE_TEST_HOME"]! }
+    /// INF-1786: a display request waits for SpringBoard's own line, up to its 10-minute cap; a 60-second load budget
+    /// ended it first. PHONE_DISPLAY_REQUEST_BUDGET_MS in tests/helpers/phoneKeyboard.ts mirrors it.
+    private let displayBudget: TimeInterval = 600
 
     private func home(_ command: String, method: String = "POST", body: String? = nil, budget: TimeInterval = 60) async throws -> [String: Any] {
         var request = URLRequest(url: URL(string: control + "/" + command)!, timeoutInterval: budget)
@@ -81,11 +84,11 @@ import XCTest
         let shown = element.firstMatch
         let light = waitForRedraw(shown, from: nil)
         picture(name, screenshot: try appearancePicture(name, dark: false))
-        _ = try await home("display-dark")
+        _ = try await home("display-dark", budget: displayBudget)
         app.activate()
         let dark = waitForRedraw(shown, from: light)
         picture(name + "-dark", screenshot: try appearancePicture(name + "-dark", dark: true))
-        _ = try await home("display-light")
+        _ = try await home("display-light", budget: displayBudget)
         app.activate()
         _ = waitForRedraw(shown, from: dark)
         _ = try appearancePicture(name + "-restored", dark: false)
@@ -241,7 +244,7 @@ import XCTest
         // INF-1541 piece 1: the card's heading redraws at the largest type before the strip is read against it.
         let heading = app.staticTexts["Your phone is reading your Mac"]
         let standard = waitForRedraw(heading, from: nil)
-        _ = try await home("display-large")
+        _ = try await home("display-large", budget: displayBudget)
         let largest = waitForRedraw(heading, from: standard)
         XCTAssertTrue(waitForPhonePress(app.buttons["computer-details"]))
         // INF-1062: the strip keeps the bar's own size at the largest standard type, so no word truncates and the
@@ -252,7 +255,7 @@ import XCTest
         XCTAssertTrue(waitForPhonePress(app.buttons["leave"]))
         picture("computer-details-largest-standard-type")
         tapOnPhone(app.buttons["close-computer-details"])
-        _ = try await home("display-light")
+        _ = try await home("display-light", budget: displayBudget)
         _ = waitForRedraw(heading, from: largest)
         if UIDevice.current.userInterfaceIdiom == .pad {
             // INF-1541 piece 1: turned, the card's heading moves onto the stage beside the sidebar, and back upright.
@@ -1086,10 +1089,10 @@ import XCTest
             XCTAssertGreaterThanOrEqual(control.frame.height + 0.001, 44, id)
         }
         picture("card-form-before-answer")
-        _ = try await home("appearance-dark")
+        _ = try await home("appearance-dark", budget: displayBudget)
         XCTAssertTrue(app.webViews.staticTexts["Night chart"].waitForPresence(timeout: 10))
         picture("card-form-dark")
-        _ = try await home("appearance-light")
+        _ = try await home("appearance-light", budget: displayBudget)
         XCTAssertTrue(app.webViews.staticTexts["Day chart"].waitForPresence(timeout: 10))
         let before = try await home("card-state", method: "GET")
         XCTAssertEqual(before["leaks"] as? Int, 0)
@@ -1329,11 +1332,11 @@ import XCTest
         XCTAssertTrue(app.webViews.staticTexts["Chart for daylight sailing"].waitForPresence(timeout: 10))
         verifyPhoneComposerBounds(app: app)
         picture("cards-hero-light")
-        _ = try await home("appearance-dark")
+        _ = try await home("appearance-dark", budget: displayBudget)
         XCTAssertTrue(app.webViews.staticTexts["Chart for night sailing"].waitForPresence(timeout: 10))
         verifyPhoneComposerBounds(app: app)
         picture("cards-hero-dark")
-        _ = try await home("appearance-light")
+        _ = try await home("appearance-light", budget: displayBudget)
         // INF-944 item 5 with INF-945's pick: the Mac's row, pinned at the card's foot with no scrolling,
         // the default last at the right and every choice keeping a 44-point touch area.
         let keepChoice = app.buttons["card-action-keep"], waitChoice = app.buttons["card-action-wait"]
@@ -1498,7 +1501,7 @@ import XCTest
         for round in 1...20 {
             print("INF-1735 relaunch pair \(round)")
             for (command, dark) in [("appearance-dark", true), ("appearance-light", false)] {
-                _ = try await home(command)
+                _ = try await home(command, budget: displayBudget)
                 app.terminate(); try await launchPhoneApp(app)
                 reach("In reach", timeout: 20)
                 XCTAssertTrue(app.staticTexts["last-turn-you"].waitForPresence(timeout: 10))

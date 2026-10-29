@@ -21,13 +21,14 @@ import {
   HOME_CAPABILITIES,
   invokeContract,
   PROTOCOL_VERSION,
+  VIEW_FLOOR,
   VIEW_INVOKE_CHANNELS,
   WORK_INVOKE_CHANNELS,
 } from "@shared/ipc";
 import { SETUP_CARD_WORDS } from "@shared/projectSetup";
 import type { QuotaSnapshotView } from "@shared/quota";
 import { remoteLoginWords } from "@shared/remoteLogin";
-import type { TaskBoard } from "@shared/tasks";
+import { type TaskBoard, type TaskKind, taskKindSchema } from "@shared/tasks";
 import { afterAll, afterEach, beforeAll, describe, expect, it, onTestFinished, vi } from "vitest";
 import {
   ANSWER_PROMPT_MARKER,
@@ -4088,7 +4089,12 @@ describe("a client that knows only the published contract", () => {
   let core: Core;
   let connection: ReturnType<typeof startConnection>;
   let at: string;
-  const stuck = ["contract-current", "contract-behind", "contract-outside"] as const;
+  const stuck = [
+    "contract-current",
+    "contract-newer",
+    "contract-behind",
+    "contract-outside",
+  ] as const;
   const major = Number(PROTOCOL_VERSION.split(".")[0]);
 
   beforeAll(async () => {
@@ -4190,9 +4196,11 @@ describe("a client that knows only the published contract", () => {
     expect(client.lines.filter((line) => line.t === "invalid")).toEqual([]);
   });
 
-  it("requires a client one major behind to update before changing anything", async () => {
-    const client = await startScriptedClient(await pairView("A major behind"), {
-      speak: `${major - 1}.4.0`,
+  it("requires a client below the view floor to update before changing anything", async () => {
+    // INF-1649 direction A: a view at or above VIEW_FLOOR keeps changing
+    // things, so the client that must update is the one below it.
+    const client = await startScriptedClient(await pairView("Below the floor"), {
+      speak: `${VIEW_FLOOR - 1}.4.0`,
     });
     expect(client.welcome).toMatchObject({ protocolVersion: PROTOCOL_VERSION, access: "read" });
     expect(await client.ask("inf:feed:recent", [])).toMatchObject({ t: "result", ok: true });
@@ -4201,7 +4209,7 @@ describe("a client that knows only the published contract", () => {
     ).toMatchObject({ t: "result", ok: false });
     expect(core.services.tasks.get("contract-behind")?.status).not.toBe("dropped");
     console.info(
-      "Previous-major view reading:",
+      "Below-floor view reading:",
       JSON.stringify({
         welcome: client.welcome,
         taskStatus: core.services.tasks.get("contract-behind")?.status,
@@ -4213,9 +4221,77 @@ describe("a client that knows only the published contract", () => {
     expect(await client.close()).toBe(0);
   });
 
+  it("lets a newer client change things when the view floor its hello says reaches this home", async () => {
+    // INF-1649 direction A, newer-phone "Yes, both directions": the scripted
+    // client is a view, and says the file's floor unless told another.
+    const client = await startScriptedClient(await pairView("Newer within its floor"), {
+      speak: `${major + 1}.0.0`,
+    });
+    expect(client.welcome).toMatchObject({ protocolVersion: PROTOCOL_VERSION, access: "full" });
+    await answerAndRead(client, "contract-newer");
+    expect(await client.close()).toBe(0);
+    expect(client.lines.filter((line) => line.t === "invalid")).toEqual([]);
+  });
+
+  // INF-1649 open-lists: "Yes, for what phones and views read"; review R11 asked for it at the
+  // separate-process client, in a push as well as in answers. Its file predates the task kind this home sends, as the file of a
+  // home before it added that member to the open lists does.
+  it("reads a task of a kind its file does not list, as its own process", async () => {
+    const kind = taskKindSchema.options.at(-1) as TaskKind;
+    const published = JSON.parse(
+      readFileSync(join(process.cwd(), "docs", "contract.json"), "utf8"),
+    );
+    const lists: { members: string[] }[] = published.versionRule.openLists;
+    const isOpen = (members: unknown) =>
+      Array.isArray(members) &&
+      lists.some(
+        (list) =>
+          list.members.length === members.length &&
+          list.members.every((member) => members.includes(member)),
+      );
+    const withoutKind = (value: unknown): unknown => {
+      if (Array.isArray(value)) return value.map(withoutKind);
+      if (value === null || typeof value !== "object") return value;
+      return Object.fromEntries(
+        Object.entries(value).map(([key, inner]) => [
+          key,
+          (key === "enum" || key === "members") && isOpen(inner)
+            ? (inner as string[]).filter((member) => member !== kind)
+            : withoutKind(inner),
+        ]),
+      );
+    };
+    const file = join(scratchDir("infinitary-core-contract-file-"), "contract.json");
+    writeFileSync(file, JSON.stringify(withoutKind(published)));
+    const client = await startScriptedClient(await pairView("Older file"), { contract: file });
+    // Added once the client listens, so the home pushes the board that carries it.
+    seedTask(core.services.tasks, {
+      id: "contract-newer-kind",
+      title: "Run the newer kind",
+      status: "queued",
+      startPolicy: "on-request",
+      kind,
+    });
+    const pushed = await client.line(
+      (line) =>
+        line.t === "push" &&
+        (line.channel === "inf:tasks" || line.channel === "inf:tasks:delta") &&
+        JSON.stringify(line.payload).includes('"contract-newer-kind"'),
+    );
+    expect(JSON.stringify(pushed.payload)).toContain(`"kind":"${kind}"`);
+    const detail = await client.ask("inf:tasks:detail", ["contract-newer-kind"]);
+    expect(detail).toMatchObject({ t: "result", ok: true });
+    expect(JSON.stringify(detail.value)).toContain(`"kind":"${kind}"`);
+    expect(await client.ask("inf:tasks:board", [])).toMatchObject({ t: "result", ok: true });
+    expect(await client.close()).toBe(0);
+    expect(client.lines.filter((line) => line.t === "invalid")).toEqual([]);
+  });
+
   it("lets an older or newer client read the cards and the feed, and refuses its answer", async () => {
     // No client is older than the window while this contract is on its first
-    // majors, so the same core is also served as a home two majors on.
+    // majors, so the same core is also served as a home two majors on, whose
+    // majors broke views (its view floor is its own major). The newer client
+    // says a floor above this home's major: its own major broke views too.
     const laterAt = `127.0.0.1:${await claimedPort()}`;
     const later = startConnection({
       dispatch: core.dispatch,
@@ -4223,11 +4299,13 @@ describe("a client that knows only the published contract", () => {
       devices: core.services.devices,
       port: Number(laterAt.split(":")[1]),
       protocolVersion: `${major + 2}.0.0`,
+      viewFloor: major + 2,
     });
     try {
       const older = await startScriptedClient(await pairView("Older", laterAt));
       const newer = await startScriptedClient(await pairView("Newer"), {
         speak: `${major + 1}.0.0`,
+        floor: major + 1,
       });
       for (const client of [older, newer]) {
         expect(client.welcome.access).toBe("read");

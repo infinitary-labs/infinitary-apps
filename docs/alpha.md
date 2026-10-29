@@ -278,7 +278,7 @@ It never waits for main's own checks, which cancel each other as merges land: th
    It commits the review on that branch and pushes it.
    That commit is the candidate: main's code plus changes under `release-notes/` only.
 3. **Dispatch.**
-   `gh workflow run release.yml --ref main -f channel=alpha -f candidate=<the commit's full id>`.
+   `gh workflow run release.yml --ref main -f channel=alpha -f candidate=<the commit's full id>`, once a phone build that keeps changing things on the candidate is on TestFlight ("The phone goes first").
    Merges that land on main meanwhile wait for the next alpha; nobody re-reads notes or follows main.
 4. **Publish.**
    The run checks the notes, runs every lane on the candidate, signs and publishes; the source tag `v<version>` names the candidate and keeps it.
@@ -288,6 +288,24 @@ It never waits for main's own checks, which cancel each other as merges land: th
    It opens one pull request that brings the review and the record to main.
 
 A note the review adds names the change it describes in `covers`, so the note belongs to the same releases after the pull request is squashed onto main.
+
+## The phone goes first
+
+A phone updates more slowly than the desktop app, so a desktop release waits for a phone build that keeps changing things on it (INF-1649).
+The captain's words: "alpha desktop builds wait for phone build is on testflight. stable desktop releases wait for phone builds are live in app store (which we haven't done yet, so enforce this only once the first ios app release is live in app store)".
+A phone build keeps changing things on a release when the release's view floor reaches the phone's contract, or the phone's own floor reaches the release's (`docs/contract.md`, "The version rule").
+
+- **Alpha.**
+  The release run's phone job (`scripts/phone-order.ts`) looks for such a build on TestFlight: an `ios-release.yml` run whose availability job passed, or a later status check of its build that passed.
+  A build Apple once confirmed stays enough, and the job does not ask Apple whether it is still on TestFlight (the captain's "A past success is enough").
+  A major that kept views leaves the build already on TestFlight enough, so the alpha waits for nothing.
+  After a major that broke views, the release crewmate dispatches `ios-release.yml` from main first, with the next phone version, and dispatches the alpha once its availability job has passed.
+- **Stable.**
+  The phone job asks Apple which phone build is live in the App Store and waits for one that keeps changing things on the stable.
+  Until Apple shows that a version of Infinitary was ever released in the App Store, a stable waits for no phone.
+  Once one was, a stable always waits for such a build, also while a withdrawn version leaves none live.
+
+Without such a build the phone job fails, and neither the installer job nor the release job signs or publishes anything; a rehearsal says what it would wait for and never fails on it.
 
 ## Promoting an alpha
 

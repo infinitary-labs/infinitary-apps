@@ -84,6 +84,8 @@ export async function connectClient(
     nameOnly?: boolean;
     /** What this connection of a Mac does: its window's `view`, or its `work`. */
     as?: DeviceRole;
+    /** The oldest home major its hello says it can change things on (a view's `viewFloor`); unsaid by default. */
+    viewFloor?: number;
     /** The system and chip its hello says it runs (docs/devices.md, "What a device is"); unsaid by default. */
     system?: { system?: string; chip?: string };
     /**
@@ -163,6 +165,7 @@ export async function connectClient(
         ...(options.appVersion ? { appVersion: options.appVersion } : {}),
         ...(options.nameOnly ? { nameOnly: true } : {}),
         ...(options.as ? { as: options.as } : {}),
+        ...(options.viewFloor !== undefined ? { viewFloor: options.viewFloor } : {}),
         ...options.system,
         ...(options.spellings === null ? {} : { spellings: options.spellings ?? SPELLINGS }),
         cursor: options.cursor,

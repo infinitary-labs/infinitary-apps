@@ -89,7 +89,10 @@ struct PhoneWorkspace<Stage: View, Tasks: View, Composer: View>: View {
 
     var body: some View {
         // INF-1062: the system tab controller holds the tabs with its own bar hidden; the strip in the top bar is the one control.
-        TabView(selection: Binding(get: { shown }, set: { if !(wideBar || homeAhead) { selection = $0 } })) {
+        // With its bar hidden the controller has no press of its own, so it never writes the selection: a write from it
+        // could only repeat the strip or put back the tab it showed before a press (INF-1649 review R9: a Tasks press
+        // right after launch, while Home's card was still loading, stayed on Home), as a second strip could.
+        TabView(selection: Binding(get: { shown }, set: { _ in })) {
             tab(.home) { home }
             // INF-944 item 6: Activity is the last tab.
             if let tasks { tab(.tasks) { noticed(tasks.background(PhoneTheme.background)) } }

@@ -236,6 +236,7 @@ export const APPLICATION_SUITES = [
   "tasks-working-count.spec.ts",
   "usage.spec.ts",
   "view.spec.ts",
+  "view-floor.spec.ts",
   "whats-new.spec.ts",
   "window-shot.spec.ts",
   "window-size.spec.ts",

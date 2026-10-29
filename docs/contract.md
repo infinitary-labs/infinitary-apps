@@ -52,23 +52,35 @@ Every change to the contract adds one Markdown file to `src/shared/contract-chan
   A minor change adds its file and moves no number, so two changes open at once each add a file of their own and merge cleanly.
 - **Major**: anything a client written against an older version could not survive - a request, push or field removed or renamed, a field made required, a new member of a closed set, a meaning changed.
   A major change replaces the folder's one major file, `major-<N>.md`, with `major-<N+1>.md`, removes every minor file, and sets `PROTOCOL_VERSION` to `<N+1>.0.0`.
+  Its file says on a line of its own whether it broke views: `Views: keep.` or `Views: break.`
 
 The minor stays where it is until the next major: major 10 keeps 10.1, the last minor typed before changes had names, and every later major stays at its first minor, 0.
 `src/core/connection/contractChanges.test.ts` holds `PROTOCOL_VERSION` to the version the folder allows, so two majors open at once both add the same file and conflict on purpose, and the one that merges second takes the next number.
 The published file and the phone's generated file carry the version, so they change it only with a major too.
 
-A home answers every request only on its own major (`PROTOCOL_MAJORS_BEHIND`, 0).
-A client on any other major, older or newer, is answered its reads (`effect: "read"`) and sent every push, and each change (`effect: "change"`) is refused, as the result's error, until the client is updated.
+A computer that runs work is answered every request only on the home's own major (`PROTOCOL_MAJORS_BEHIND`, 0), because the home updates it over the connection from the same release.
+A view - a phone, or a computer with Infinitary open that controls the home - updates on its own schedule, a phone through TestFlight or App Review, so it is answered every request from the home's view floor (`VIEW_FLOOR`, `src/shared/ipc.ts`) up to the home's major.
+A newer view says its own floor in its hello (`viewFloor`), and is answered every request on an older home whose major that floor reaches.
+A computer viewing from before the floor says none and reads closed lists strictly, so it is answered as a computer that runs work is; a phone from before it reads those lists as text and is measured against the floor all the same.
+A client outside its window is answered its reads (`effect: "read"`) and sent every push, and each change (`effect: "change"`) is refused, as the result's error, until the older side is updated.
 A client on an answered major keeps everything it knows whatever its minor, because a minor only adds.
 
+The floor moves only with a major that breaks what views send or read, and then to that major: its file says `Views: break.`, and a major that leaves views working says `Views: keep.` and leaves the floor below it (`src/core/connection/contractChanges.test.ts` holds `VIEW_FLOOR` to the file).
+A new member of an open list does not break views: a view keeps a member it does not know as the list's stand-in (`VIEW_OPEN_LISTS`, `src/shared/openLists.ts`), where the window reads every answer and push (`src/preload/index.ts`), and the phone reads those sets as text.
+The file publishes the lists and their stand-ins as the version rule's `openLists`, so a client written against the file alone reads them the same way.
+A new member of any other closed set still breaks them.
+A view on an older major than its home misses only what that major's own changes added, and a newer view against an older home asks what the home may not have yet: the home refuses a request it does not answer in words, and ignores a field it does not read.
+
 The home applies the rule at the connection (`contractAccess`, `src/core/connection/connection.ts`): the client's `hello` names the version it speaks, and the `welcome` answers the home's own version and `access`, `full` or `read`, so a client hides what it may not do instead of computing the rule itself.
+A view outside its window names the side to update from the two versions (`sideToUpdate`): itself when the home is newer, the home when the home is older.
 A client also hides what its home lacks by the `capabilities` it lists, not by reasoning about versions.
 
 Both sides read the envelope leniently: a frame field this version does not know is ignored, so adding one is a minor change, never a closed connection.
 A request's arguments are read as published.
 
-A major may retire earlier shapes under their existing channel names; paired views must update before changing anything.
+A major may retire earlier shapes under their existing channel names only when it moves the view floor; views below the floor must update before changing anything.
 A computer that runs work on another major takes no work until it is updated (`takesWork`, `docs/helper.md`), while the update and download orders it is asked stay the same on every major.
+Because the phone updates slowest, a desktop release waits for a phone build that keeps changing things on it (`docs/alpha.md`, "The phone goes first").
 `src/shared/ipc.test.ts` exercises the rule with explicit versions and derives the current boundary from the version owner.
 
 ## Changes by name
@@ -264,12 +276,14 @@ It runs under plain Node, imports only Node, `ws` and Ajv, and reads every chann
 
 ```
 node scripts/contract-client.ts --grant grant.json [--contract docs/contract.json]
-  [--speak 1.56.0] [--cursor <epoch>:<seq>]
+  [--speak 1.56.0] [--floor 11] [--cursor <epoch>:<seq>]
 ```
 
 - `--grant` is a device's saved grant (`docs/devices.md`, "Joining").
   Pairing makes it; the client only dials with it, pinned to the home's key.
 - `--speak` is the version its hello names, the file's own by default, so it can stand in an older or newer client.
+- `--floor` is the view floor its hello says, the file's own `viewFloor` by default, since the client is a view.
+- It reads a value the file's `openLists` do not list as that list's `unknown`, as a view does, and reports any other value that does not fit.
 - It reads one request per line on stdin, `{ "id", "channel", "args" }`, and writes one line per event on stdout: `welcome`, each `result` and `push`, `refused` for a request it would not send (no such channel in the file, or arguments that do not fit), `invalid` for anything from the home that does not fit the file, and `closed`.
   It exits 1 if anything was invalid.
 - It hides nothing the version rule would, so it shows what the home answers.
@@ -279,6 +293,7 @@ node scripts/contract-client.ts --grant grant.json [--contract docs/contract.jso
 - `src/shared/publishedContract.test.ts`: the committed file is what the contract renders; every core request and push is published with the version and the rule, and no host channel; every shape compiles in a standard validator; argument lists are admitted exactly as the home admits them; what the home sends is open to a later field.
 - `src/shared/ipc.test.ts`, "the version rule": the window, read by majors alone, and a version that cannot be read gets reads only.
 - `src/core/connection/contractChanges.test.ts`: `PROTOCOL_VERSION` is the version the folder allows, a minor file moves no version, the next major's file makes it `<N+1>.0.0`, a folder with no major file or two is refused, a wait for a name no file has is refused, and a side that listed nothing has no change.
+- `tests/contract-client.test.ts`: the scripted client reads a task kind its file does not list as its open list's unknown, and still reports any other value that does not fit.
 - `src/core/devices/homeLink.test.ts`, "a home and a computer that list their contract changes": each side lists this build's changes, keeps the other's, and keeps none from a side that listed nothing.
 - `src/core/connection/connection.test.ts`: a home two majors on answers its own major in full, and an older or a newer client only its reads, with every push; a frame's unknown fields are ignored.
 - `src/core/core.test.ts`, "a client that knows only the published contract": the scripted client, as its own process against the real core, answers a stall card and reads the feed; a client one major behind reads the feed but cannot answer a card; an older and a newer one read the cards and the feed and have their answer refused, and the card stays.

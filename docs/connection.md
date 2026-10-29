@@ -49,7 +49,7 @@ A `mac` may hold one of each at once; a `view` device is only ever a view, and a
 
 ## The handshake and the numbering
 
-A device's first frame is `hello`, carrying the contract version it speaks (`PROTOCOL_VERSION`), the version of Infinitary it runs (`appVersion`, from `WORK_UPDATE_SINCE` on), when it was connected before its cursor, for a `mac` what this connection is (`as`: `view` from its window, `work` from its work mode), what the device is (`system` and `chip`, from protocol 2.15; `docs/devices.md`, "The shape"), which the home keeps beside its kind (`PairedDevices.noteSystem`), the spellings of channel names it reads (`spellings`, from protocol 8.2; below, "Two spellings"), and the name of each contract change it has (`changes`, `docs/contract.md`, "Changes by name").
+A device's first frame is `hello`, carrying the contract version it speaks (`PROTOCOL_VERSION`), the version of Infinitary it runs (`appVersion`, from `WORK_UPDATE_SINCE` on), when it was connected before its cursor, for a `mac` what this connection is (`as`: `view` from its window, `work` from its work mode), for a view the oldest home major it can still change things on (`viewFloor`, its build's `VIEW_FLOOR`; `docs/contract.md`, "The version rule"), what the device is (`system` and `chip`, from protocol 2.15; `docs/devices.md`, "The shape"), which the home keeps beside its kind (`PairedDevices.noteSystem`), the spellings of channel names it reads (`spellings`, from protocol 8.2; below, "Two spellings"), and the name of each contract change it has (`changes`, `docs/contract.md`, "Changes by name").
 A system or chip this version has no word for is a later major's, so its hello is closed as `protocol`; a device on a system the record has no word for leaves the field out.
 Absent, a connection is what its kind is, and a `mac`'s is its work; a hello whose `as` its kind may not be is closed as `protocol`.
 The home answers `welcome` with its own contract version, its journal's `epoch` and newest `seq`, what the version rule lets the device ask (`access`, below), its own `name` when it can read it (`computerName`, `src/core/devices/computerName.ts`; a view says the Mac it controls by it), the spellings of channel names it reads (`spellings`), the name of each contract change it has (`changes`), and how the device catches up:
@@ -70,7 +70,8 @@ A journey waiting for first contact allows both phases, rather than failing a st
 
 Either way the device's cursor is then the welcome's `epoch` with the newest `seq` it holds.
 
-`access` is `full` when the hello's major is the home's own, and `read` for any other major, older or newer (`contractAccess`, `docs/contract.md`).
+`access` is `full` when the hello's major is the home's own.
+A `view` connection is also `full` from the home's view floor (`VIEW_FLOOR`) up to the home's major, and on an older home when the `viewFloor` its hello said reaches that home's major, provided its hello says a floor or it is a phone (`system: ios`); a `work` connection is `read` on any other major (`contractAccess`, `docs/contract.md`).
 Both sides ignore a frame's fields they do not know, so a later minor can add one.
 
 Every core push is numbered once, at the connection, by one journal per listening run (`EventJournal`, `src/core/connection/journal.ts`): `seq` counts from 1 in a fresh random `epoch`, and every welcomed device is sent the same frame under the same number.

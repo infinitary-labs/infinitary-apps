@@ -119,3 +119,26 @@ export function listsChange(
 ): boolean {
   return listed?.includes(change) ?? false;
 }
+
+/**
+ * What a major's file says it did to views (src/shared/contract-changes/README.md,
+ * "Adding a major change"): `keep`, when nothing a view sends or reads broke,
+ * or `break`, which moves `VIEW_FLOOR` to that major. Refuses a file that
+ * says neither, or both.
+ */
+export function viewsDeclaration(text: string): "keep" | "break" {
+  const said = [...text.matchAll(/^Views: (keep|break)\.$/gm)].map((match) => match[1]);
+  if (said.length !== 1)
+    throw new Error(
+      `A major's file says once whether views break, on a line of its own: "Views: keep." or "Views: break." (src/shared/contract-changes/README.md).`,
+    );
+  return said[0] as "keep" | "break";
+}
+
+/**
+ * Whether a view floor agrees with its major's declaration: a major that
+ * breaks views is the floor, and one that keeps them leaves the floor below it.
+ */
+export function viewFloorAgrees(major: number, views: "keep" | "break", floor: number): boolean {
+  return views === "break" ? floor === major : floor < major;
+}

@@ -1,13 +1,18 @@
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import { clientFrameSchema, homeFrameSchema } from "@shared/connection";
-import { PROTOCOL_VERSION } from "@shared/ipc";
+import { PROTOCOL_VERSION, VIEW_FLOOR } from "@shared/ipc";
 import { describe, expect, it } from "vitest";
 import {
   CONTRACT_CHANGES,
   contractChange,
   contractChangeFiles,
+  contractChangesDir,
   listsChange,
   protocolVersionOf,
   readContractChanges,
+  viewFloorAgrees,
+  viewsDeclaration,
 } from "./contractChanges";
 
 /**
@@ -93,5 +98,29 @@ describe("the contract's changes by name", () => {
     expect(listsChange([], limits)).toBe(false);
     expect(listsChange(undefined, limits)).toBe(false);
     expect(listsChange(null, limits)).toBe(false);
+  });
+
+  // INF-1649 (the captain's direction A): a floor for every view, moved only by a major that breaks views.
+  it("holds the view floor to what the current major's file says it did to views", () => {
+    const text = readFileSync(
+      join(contractChangesDir(), `major-${CONTRACT_CHANGES.major}.md`),
+      "utf8",
+    );
+    const views = viewsDeclaration(text);
+    expect(
+      viewFloorAgrees(CONTRACT_CHANGES.major, views, VIEW_FLOOR),
+      `major-${CONTRACT_CHANGES.major}.md says "Views: ${views}.", so VIEW_FLOOR (src/shared/ipc.ts) is ${views === "break" ? "that major" : "below it"}`,
+    ).toBe(true);
+  });
+
+  it("refuses a major's file that does not say once whether views break", () => {
+    expect(viewsDeclaration("# Major 13\n\nA field went.\nViews: break.\n")).toBe("break");
+    expect(() => viewsDeclaration("# Major 13\n\nA field went.\n")).toThrow("Views: keep.");
+    expect(() => viewsDeclaration("Views: keep.\nViews: break.\n")).toThrow("Views: keep.");
+    // A major that breaks views is the floor; one that keeps them leaves it below.
+    expect(viewFloorAgrees(13, "break", 13)).toBe(true);
+    expect(viewFloorAgrees(13, "break", 11)).toBe(false);
+    expect(viewFloorAgrees(13, "keep", 11)).toBe(true);
+    expect(viewFloorAgrees(13, "keep", 13)).toBe(false);
   });
 });

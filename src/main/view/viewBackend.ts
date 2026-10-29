@@ -15,7 +15,9 @@ import {
   PROTOCOL_VERSION,
   type PushChannel,
   parseInvokeRequest,
+  sideToUpdate,
 } from "@shared/ipc";
+import { readKeepingUnknown } from "@shared/openLists";
 import { type ShellPreferences, shellPreferencesSchema } from "@shared/preferences";
 import { ViewLook } from "./viewLook";
 
@@ -307,14 +309,18 @@ export class ViewBackend {
   }
 
   private observeCards(payload: unknown): void {
-    const cards = cardsSnapshotSchema.safeParse(payload);
+    const cards = readKeepingUnknown(cardsSnapshotSchema, payload);
     if (cards.success) this.notifier.observe(cards.data);
   }
 
   /** What the other Mac shows now, so the next card it gains is news here. */
   private async seedNotifier(): Promise<void> {
     try {
-      this.notifier.seed(cardsSnapshotSchema.parse(await this.link.invoke("inf:cards:list", [])));
+      const cards = readKeepingUnknown(
+        cardsSnapshotSchema,
+        await this.link.invoke("inf:cards:list", []),
+      );
+      if (cards.success) this.notifier.seed(cards.data);
     } catch {
       // The next push seeds it instead.
     }
@@ -410,8 +416,7 @@ export class ViewBackend {
 
 /** Whether the two Firstmates are too far apart for this Mac to make changes, and which is newer. */
 function readOnly(state: HomeLinkState): "newer-there" | "older-there" | null {
-  if (state.access !== "read" || !state.homeVersion) return null;
-  const there = Number(/^(\d+)\./.exec(state.homeVersion)?.[1] ?? Number.NaN);
-  const here = Number(/^(\d+)\./.exec(PROTOCOL_VERSION)?.[1] ?? Number.NaN);
-  return there < here ? "older-there" : "newer-there";
+  if (!state.access || !state.homeVersion) return null;
+  const side = sideToUpdate(state.access, PROTOCOL_VERSION, state.homeVersion);
+  return side === "home" ? "older-there" : side === "this" ? "newer-there" : null;
 }

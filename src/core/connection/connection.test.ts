@@ -748,6 +748,60 @@ describe("the home's connection", () => {
     ]);
   });
 
+  // INF-1649, the captain's direction A: a floor for every view, while work computers stay strict.
+  it("lets a view change things from the home's floor and an older home its own floor reaches, and work only on its own major", async () => {
+    const at = await home({ protocolVersion: "3.2.0", viewFloor: 2 });
+    const viewGrant = await at.join("view");
+    const behind = await connectClient(viewGrant, { protocolVersion: "2.9.0", viewFloor: 2 });
+    const below = await connectClient(viewGrant, { protocolVersion: "1.56.0", viewFloor: 1 });
+    const newer = await connectClient(viewGrant, { protocolVersion: "4.0.0", viewFloor: 3 });
+    const beyond = await connectClient(viewGrant, { protocolVersion: "4.0.0", viewFloor: 4 });
+    const work = await connectClient(await at.join("work", "Mini"), { protocolVersion: "2.9.0" });
+    expect(behind.welcome.access).toBe("full");
+    expect(newer.welcome.access).toBe("full");
+    expect([below, beyond, work].map((device) => device.welcome.access)).toEqual([
+      "read",
+      "read",
+      "read",
+    ]);
+    // In the window a view's change reaches the core, whose stand-in refuses it.
+    for (const device of [behind, newer])
+      await expect(device.invoke("inf:cards:close", ["card-1"])).rejects.toThrow(
+        "malformed request",
+      );
+    await expect(below.invoke("inf:cards:close", ["card-1"])).rejects.toThrow(
+      "only reads from a home on 3.2.0 until it is updated",
+    );
+    expect(at.asked.map((ask) => ask.channel)).toEqual(["inf:cards:close", "inf:cards:close"]);
+  });
+
+  // INF-1649 review R4, the captain's "Keep version-11 views read-only": a computer viewing from
+  // before the floor reads closed lists strictly, so it changes things only on the home's major,
+  // while a phone from before the floor reads them as text and keeps changing things.
+  it("keeps a computer viewing from before the floor on reads, and lets a phone from before it change things", async () => {
+    const at = await home({ protocolVersion: "3.2.0", viewFloor: 2 });
+    const viewGrant = await at.join("view");
+    const computer = await connectClient(viewGrant, {
+      protocolVersion: "2.9.0",
+      system: { system: "macos" },
+    });
+    const unsaid = await connectClient(viewGrant, { protocolVersion: "2.9.0" });
+    const phone = await connectClient(viewGrant, {
+      protocolVersion: "2.9.0",
+      system: { system: "ios" },
+    });
+    expect([computer, unsaid, phone].map((device) => device.welcome.access)).toEqual([
+      "read",
+      "read",
+      "full",
+    ]);
+    await expect(computer.invoke("inf:cards:close", ["card-1"])).rejects.toThrow(
+      "only reads from a home on 3.2.0 until it is updated",
+    );
+    await expect(phone.invoke("inf:cards:close", ["card-1"])).rejects.toThrow("malformed request");
+    expect(at.asked.map((ask) => ask.channel)).toEqual(["inf:cards:close"]);
+  });
+
   it("lets a computer that runs work take new work only on the home's own major", async () => {
     const at = await home({ protocolVersion: "3.2.0" });
     const grant = await at.join("work", "Mini");

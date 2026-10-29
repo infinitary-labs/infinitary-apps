@@ -112,7 +112,7 @@ On macOS it dials through macOS's own nc, as every device does (`docs/devices.md
   Nothing typed is lost to a reload: the window does not start over.
 - **Read only**: a welcome whose `access` is `read` (`docs/contract.md`) means the two copies of Infinitary are too far apart; the window says which one is newer and makes no changes.
   When the newer one is there, the window asks for this Mac to be updated, and this Mac's own update notice is how.
-  A development run may stand in another contract version for the Mac where the first mate lives with `INFINITARY_CONTRACT_VERSION`, so a view on the same build reads as too far apart; a packaged app ignores it.
+  A development run may stand in another contract version for the Mac where the first mate lives with `INFINITARY_CONTRACT_VERSION`, and its view floor with `INFINITARY_VIEW_FLOOR`, so a view on the same build reads as too far apart; a packaged app ignores both.
 
 ## Out of reach in the window
 

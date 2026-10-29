@@ -9,6 +9,7 @@ import {
   type PushPayload,
   pushContract,
 } from "@shared/ipc";
+import { readKeepingUnknown } from "@shared/openLists";
 import { PLATFORM_ATTRIBUTE, platformFromArgv } from "@shared/platform";
 import {
   type ReadArgs,
@@ -36,7 +37,18 @@ async function invoke<C extends InvokeChannel>(
   ...args: InvokeRequest<C>
 ): Promise<InvokeResponse<C>> {
   const raw = await ipcRenderer.invoke(channel, ...args);
-  return invokeContract[channel].response.parse(raw) as InvokeResponse<C>;
+  return readAnswer(invokeContract[channel].response, raw) as InvokeResponse<C>;
+}
+
+/**
+ * An answer read against its schema. When this app views a newer home, a
+ * member of an open list it does not know is kept as that list's stand-in
+ * (`VIEW_OPEN_LISTS`); anything else that breaks the schema still throws.
+ */
+function readAnswer(schema: z.ZodType, raw: unknown): unknown {
+  const parsed = readKeepingUnknown(schema, raw);
+  if (!parsed.success) throw parsed.error;
+  return parsed.data;
 }
 
 /**
@@ -49,7 +61,7 @@ async function invokeRead(name: ReadName, args: unknown, grant: ReadGrant = {}):
   const entry: ReadEntry<CoreInvokeChannel, z.ZodType> = readCatalog[name];
   const request = entry.toRequest(entry.args.parse(args) as never, grant) as unknown[];
   const raw = await ipcRenderer.invoke(entry.channel, ...request);
-  return invokeContract[entry.channel].response.parse(raw);
+  return readAnswer(invokeContract[entry.channel].response, raw);
 }
 
 /** One ipcRenderer listener and one validation per push, per channel (./pushHub.ts). */
@@ -59,7 +71,7 @@ const pushes = createPushHub(
     off: (channel, handler) => ipcRenderer.off(channel, handler),
   },
   (channel, raw) => {
-    const parsed = pushContract[channel as PushChannel].payload.safeParse(raw);
+    const parsed = readKeepingUnknown(pushContract[channel as PushChannel].payload, raw);
     return parsed.success ? { ok: true, value: parsed.data } : { ok: false };
   },
 );

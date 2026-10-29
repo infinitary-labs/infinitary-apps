@@ -13,7 +13,7 @@ import { appPathsFor } from "@core/paths";
 import { seedTask } from "@core/tasks/seedTask";
 
 import type { FmEvent } from "@shared/events";
-import { PROTOCOL_VERSION, SCENE_OBSERVATIONS_SINCE } from "@shared/ipc";
+import { PROTOCOL_VERSION, SCENE_OBSERVATIONS_SINCE, VIEW_FLOOR } from "@shared/ipc";
 import { pastEndingWords } from "@shared/pastCard";
 import {
   ANSWER_PROMPT_MARKER,
@@ -226,7 +226,7 @@ export async function startPhoneHome(
   // INF-1390: the core reaches each connection this home starts, as the app's shell attaches its
   // own (src/main/shell.ts), so the core's door answers the phone's link once it listens.
   let unreach = () => {};
-  const connect = (protocolVersion = PROTOCOL_VERSION, sceneSupport = true) => {
+  const connect = (protocolVersion = PROTOCOL_VERSION, sceneSupport = true, viewFloor?: number) => {
     const connection = startConnection({
       dispatch: async (channel, args, actor) => {
         if (channel === "inf:conversation:state" || channel === "inf:computers:presence") {
@@ -295,6 +295,7 @@ export async function startPhoneHome(
       address: [],
       name: () => "Test Mac mini",
       protocolVersion,
+      ...(viewFloor !== undefined ? { viewFloor } : {}),
       ...(sceneSupport ? {} : { changes: [] }),
     });
     connection.onViewDevice(({ deviceId, contact }) => {
@@ -1018,12 +1019,37 @@ export async function startPhoneHome(
           await controls?.start("character");
           result = { ok: true };
           break;
-        case "POST read-only":
+        // A future home whose major broke views: its floor is its own major, so the phone reads only.
+        case "POST read-only": {
+          const future = Number(PROTOCOL_VERSION.split(".")[0]) + 2;
           await connection.close();
-          connection = connect(`${Number(PROTOCOL_VERSION.split(".")[0]) + 2}.0.0`);
+          connection = connect(`${future}.0.0`, true, future);
           await connection.settled();
           result = { ok: true };
           break;
+        }
+        // INF-1649: a newer home whose major kept views, its floor at the phone's own major.
+        case "POST within-floor":
+          await connection.close();
+          connection = connect(
+            `${Number(PROTOCOL_VERSION.split(".")[0]) + 1}.0.0`,
+            true,
+            Number(PROTOCOL_VERSION.split(".")[0]),
+          );
+          await connection.settled();
+          result = { ok: true };
+          break;
+        // INF-1649 review R8: an older home, which this phone's floor (its build's VIEW_FLOOR) does
+        // not reach, so the line names the computer; and one at that floor, which it does.
+        case "POST older-home":
+        case "POST older-home-within": {
+          const major = command === "older-home" ? VIEW_FLOOR - 1 : VIEW_FLOOR;
+          await connection.close();
+          connection = connect(`${major}.0.0`, true, major);
+          await connection.settled();
+          result = { ok: true };
+          break;
+        }
         case "POST lose-reply":
           loseNextReply = true;
           result = { ok: true };

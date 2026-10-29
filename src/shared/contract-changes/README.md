@@ -53,8 +53,12 @@ The numbers typed before changes had names (`*_SINCE`) stay as they are.
 A major change is anything a side written against the older contract could not survive: a request, push or field removed or renamed, a field made required, a new member of a closed set, a meaning changed.
 
 1. Add `major-<N+1>.md` and remove `major-<N>.md` and every minor file, since every side that takes work on the new major has them all.
+   On a line of its own the file says whether it broke what views send or read: `Views: keep.` or `Views: break.`
+   A new member of an open list (`VIEW_OPEN_LISTS`, `src/shared/openLists.ts`) keeps views; a removed or renamed request, push or field a view uses, or a new member of any other closed set a view reads, breaks them.
+   A major that breaks views sets `VIEW_FLOOR` (`src/shared/ipc.ts`) to its own number, and one that keeps them leaves it; `src/core/connection/contractChanges.test.ts` refuses a floor that disagrees.
 2. Set `PROTOCOL_VERSION` to `<N+1>.0.0` and run `pnpm generate:contract`.
 3. Remove each wait for a removed name: a computer takes work only on its home's major (`takesWork`), so the feature no longer waits.
+   A view feature may still meet an older home within its floor, so it waits for the name or the new major, as the phone's scene readings wait for `sceneObservationsSince`.
 
 Two majors open at once both add the same file, so they conflict on purpose: the one that merges second takes the next number.
 

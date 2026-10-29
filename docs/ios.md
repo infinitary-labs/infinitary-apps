@@ -313,6 +313,8 @@ Tool results open on demand through their published read.
 Task cards, browser pages and rich transcript pictures remain outside this piece.
 
 A mutation requires both **In reach** and the welcome’s `full` access.
+The phone connects as a view, and its hello says its build's view floor (`viewFloor`, generated from the published contract), so it keeps changing things across majors that kept views, in both directions (`docs/contract.md`, "The version rule").
+Outside that window the line under the message box names the older side (`PhoneUpdate`): "Update Infinitary on this phone to make changes." when the computer is newer, and "Update Infinitary on your computer to make changes." when it is older.
 Every request has one connection-bound response and a bounded wait; a disconnect, timeout or unreadable mutation response explains that its outcome is unconfirmed.
 The phone retains the draft, asks the captain to check the Mac, and never queues or retries a mutation after reconnecting.
 A native draft, last turn, task and transcript are never written to the phone’s saved connection file.

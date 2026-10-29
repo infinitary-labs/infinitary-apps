@@ -8,6 +8,25 @@ public struct ActivityLine: Decodable, Sendable {
     public let at: Double
 }
 
+/// Which side a reads-only phone updates (INF-1649): the older one, named in the line under the message box.
+public enum PhoneUpdate: Equatable, Sendable {
+    case phone, computer
+
+    /// The computer is older when its contract's major is below the phone's; otherwise the phone updates.
+    public static func side(phone: String, computer: String?) -> PhoneUpdate {
+        func major(_ version: String?) -> Int? { version?.split(separator: ".").first.flatMap { Int($0) } }
+        guard let mine = major(phone), let theirs = major(computer) else { return .phone }
+        return theirs < mine ? .computer : .phone
+    }
+
+    public var words: String {
+        switch self {
+        case .phone: return "Update Infinitary on this phone to make changes."
+        case .computer: return "Update Infinitary on your computer to make changes."
+        }
+    }
+}
+
 /// One card's arrival: a new card, or its author's answer to the captain's reply.
 public struct PhoneNotice: Equatable, Sendable {
     public let cardID: String
@@ -38,6 +57,8 @@ public struct PhoneNotice: Equatable, Sendable {
     @ObservationIgnored private var sceneObservations = false
     public private(set) var workRevision = 0
     public private(set) var access = "read"
+    /// The contract the computer's welcome said it speaks, which names the side a reads-only phone updates.
+    public private(set) var homeVersion: String?
     public var notice: PhoneNotice?
     /// Offers the stage has drawn while the person could see it, kept for this computer's session only.
     public private(set) var seenCards = Set<String>()
@@ -48,7 +69,7 @@ public struct PhoneNotice: Equatable, Sendable {
     public var canChange: Bool { contact == "in-reach" && access == "full" }
     public var changeRefusal: String? {
         if contact != "in-reach" { return "Your computer is out of reach. Nothing will be sent later." }
-        if access != "full" { return "Update Infinitary on this phone and your computer to make changes." }
+        if access != "full" { return PhoneUpdate.side(phone: PhoneContract.version, computer: homeVersion).words }
         return nil
     }
     public private(set) var contact = "reaching"
@@ -287,7 +308,7 @@ public struct PhoneNotice: Equatable, Sendable {
                     access = "read"; firstmateBusy = false; firstmateObserved = false
                     contact = heardAt == nil ? "reaching" : "lost"
                     var hello: [String: Any] = ["t": "hello", "protocolVersion": PhoneContract.version,
-                        "as": "view", "system": "ios", "spellings": ["inf"], "appVersion": "0.1.0"]
+                        "as": "view", "viewFloor": PhoneContract.viewFloor, "system": "ios", "spellings": ["inf"], "appVersion": "0.1.0"]
                     if let epoch { hello["cursor"] = ["epoch": epoch, "seq": sequence] }
                     let watchdog = Task { [weak self, weak socket] in
                         // Bound the handshake too: send(hello) can wait for a connection to open.
@@ -380,6 +401,7 @@ public struct PhoneNotice: Equatable, Sendable {
             else { throw PhoneError.invalidReply }
             if catchUp == "reload" { self.sequence = seq; primed = false; notified = [:]; awaited = [] }
             access = frame["access"] as? String == "full" ? "full" : "read"
+            homeVersion = frame["protocolVersion"] as? String
             self.epoch = epoch
             refused = 0
             if let name = frame["name"] as? String, !name.isEmpty {

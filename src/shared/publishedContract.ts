@@ -31,10 +31,12 @@ import {
   pushContract,
   SIGN_INS_SINCE,
   TASK_BROWSERS_THERE_SINCE,
+  VIEW_FLOOR,
   WORK_DOWNLOAD_SINCE,
   WORK_UPDATE_SINCE,
 } from "./ipc";
-import { RESOURCE_OBSERVATIONS_SINCE, resourceOrders } from "./resources";
+import { VIEW_OPEN_LISTS } from "./openLists";
+import { RESOURCE_OBSERVATIONS_SINCE, RESOURCE_ORDER, resourceOrders } from "./resources";
 import { SIGN_IN_ORDER_CHANNELS, signInOrders } from "./signIns";
 import {
   BROWSER_ORDER_CHANNELS,
@@ -124,14 +126,17 @@ function boundTuple(
 
 export const VERSION_RULE = {
   majorsBehind: PROTOCOL_MAJORS_BEHIND,
+  viewFloor: VIEW_FLOOR,
   minor:
     "Additive: a new request, a new push, a new optional field or a new capability. Nothing a client already sends or reads changes meaning.",
   major:
     "Anything a client written against an older version could not survive: a request, push or field removed or renamed, a field made required, or a meaning changed.",
   window:
-    "A home answers every request of a client whose major is its own or one of the majorsBehind before it. A client on any other major, older or newer, is answered its reads (effect read) and sent every push, and each change (effect change) is refused until the client is updated. The welcome's access says which the client got.",
+    "A home answers every request of a computer that runs work only on its own major or one of the majorsBehind before it. A view (hello as view) changes things from the home's viewFloor up to the home's major, and on an older home when the viewFloor its own hello says reaches that home's major. A computer viewing whose hello says no viewFloor is answered as work is; a phone (system ios) that says none is measured against the home's viewFloor. A client outside its window is answered its reads (effect read) and sent every push, and each change (effect change) is refused until the older side is updated. The welcome's access says which the client got.",
   reading:
-    "A client ignores fields, pushes and capabilities it does not know, so what the home sends is published open. The home ignores envelope fields it does not know; a request's arguments are read as published.",
+    "A client ignores fields, pushes and capabilities it does not know, so what the home sends is published open. A value the home sends from one of the openLists that the client's file does not list is read as that list's unknown. The home ignores envelope fields it does not know; a request's arguments are read as published.",
+  // The closed sets a view reads that a newer home may add to (src/shared/openLists.ts).
+  openLists: VIEW_OPEN_LISTS.map(({ list, unknown }) => ({ members: [...list.options], unknown })),
   refusals:
     "The home checks more than these shapes can say, such as sizes in bytes and rules across fields. Its refusal comes back as the result's error.",
 } as const;

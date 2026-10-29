@@ -31,13 +31,20 @@ export type ScriptedClient = {
 
 export async function startScriptedClient(
   grant: DeviceGrant,
-  options: { speak?: string } = {},
+  options: { speak?: string; floor?: number; contract?: string } = {},
 ): Promise<ScriptedClient & { welcome: ClientLine }> {
   const grantFile = join(scratchDir("infinitary-scripted-client-"), "grant.json");
   writeFileSync(grantFile, JSON.stringify(grant), { mode: 0o600 });
   const child: ChildProcessWithoutNullStreams = spawn(
     process.execPath,
-    [SCRIPT, "--grant", grantFile, ...(options.speak ? ["--speak", options.speak] : [])],
+    [
+      SCRIPT,
+      "--grant",
+      grantFile,
+      ...(options.speak ? ["--speak", options.speak] : []),
+      ...(options.floor !== undefined ? ["--floor", String(options.floor)] : []),
+      ...(options.contract ? ["--contract", options.contract] : []),
+    ],
     { stdio: ["pipe", "pipe", "pipe"] },
   );
   const lines: ClientLine[] = [];

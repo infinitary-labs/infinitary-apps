@@ -325,6 +325,14 @@ export const clientFrameSchema = z.union([
        */
       as: deviceRoleSchema.optional(),
       /**
+       * For a view: the oldest home major it can still change things on, its
+       * own build's `VIEW_FLOOR` (docs/contract.md, "The version rule"), so a
+       * newer view keeps changing things on an older home. Absent from a
+       * view too old to say it, which changes things on its own major and
+       * newer only; a computer that runs work never says it.
+       */
+      viewFloor: z.number().int().nonnegative().optional(),
+      /**
        * The system the device runs and its chip (docs/devices.md, "What a
        * device is"), which the home keeps beside its kind. Absent from a
        * device too old to say them, or on a system it has no word for.
@@ -356,7 +364,8 @@ export const homeFrameSchema = z.union([
     catchUp: z.enum(["replay", "reload"]),
     /**
      * What the version rule lets this device ask, from the version its hello
-     * spoke: everything, or the reads alone (`contractAccess`).
+     * spoke and, for a view, the floor it said: everything, or the reads
+     * alone (`contractAccess`).
      */
     access: z.enum(["full", "read"]) satisfies z.ZodType<ContractAccess>,
     /**

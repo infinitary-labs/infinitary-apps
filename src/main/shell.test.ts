@@ -52,7 +52,7 @@ function shown(id: string, overrides: Partial<Card> = {}): Card {
 
 /** The Mac where Firstmate lives: what it was asked, its pairing, and links to it. */
 async function otherMac(
-  options: { protocolVersion?: string; startedByCommand?: boolean } = {},
+  options: { protocolVersion?: string; viewFloor?: number; startedByCommand?: boolean } = {},
   pairingOptions: { joinsFromAnotherMac?: boolean } = {},
 ) {
   const asked: string[] = [];
@@ -534,7 +534,8 @@ describe("the app as a view of another Mac", () => {
     // Beyond the supported window there: this Mac only reads until it is updated.
     const newerMajor = Number(PROTOCOL_VERSION.split(".")[0]) + PROTOCOL_MAJORS_BEHIND + 1;
     const newerVersion = `${newerMajor}.0.0`;
-    const pro = await otherMac({ protocolVersion: newerVersion });
+    // A major that broke views moves the floor to itself (docs/contract.md).
+    const pro = await otherMac({ protocolVersion: newerVersion, viewFloor: newerMajor });
     const air = shell();
     await air.shell.start();
     await air.shell.join(await pro.link());

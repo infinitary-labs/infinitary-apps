@@ -188,7 +188,7 @@ test("a Mac controlling a newer Firstmate on another Mac is offered its own upda
   tap = await startTap();
   tap.reply.targets = published({ alpha: target("0.1.30-alpha.5") });
   // The Mac where Firstmate lives runs the newest alpha, on a contract major
-  // beyond the window this Mac's own contract is answered in (docs/contract.md).
+  // that broke views, beyond the window this Mac's own contract is answered in (docs/contract.md).
   const newerMajor = Number(PROTOCOL_VERSION.split(".")[0]) + PROTOCOL_MAJORS_BEHIND + 1;
   const pro = await launchApp({
     withMockProvider: true,
@@ -197,6 +197,8 @@ test("a Mac controlling a newer Firstmate on another Mac is offered its own upda
       INFINITARY_DEVICE_NAME: "MacBook Pro",
       INFINITARY_UPDATE_CURRENT_VERSION: "0.1.30-alpha.5",
       INFINITARY_CONTRACT_VERSION: `${newerMajor}.0.0`,
+      // A major that broke views moves the floor to itself (docs/contract.md).
+      INFINITARY_VIEW_FLOOR: `${newerMajor}`,
     },
   });
   let air: LaunchedApp | undefined;

@@ -2507,6 +2507,7 @@ describe("the signed channel workflow", () => {
       "notes",
       "verify",
       "linux",
+      "phone",
       "installer",
       "release",
       "publish",
@@ -2616,6 +2617,7 @@ describe("the signed channel workflow", () => {
           verify: { result },
           linux: { result: "success" },
           installer: { result: required === "true" ? "success" : "skipped" },
+          phone: { result: "success" },
         };
         expect(workflowValue(jobOf(release, "verify").if ?? "", { needs })).toBe(
           required === "true",
@@ -2628,6 +2630,14 @@ describe("the signed channel workflow", () => {
           expect(
             workflowValue(jobOf(release, "release").if ?? "", {
               needs: { ...needs, installer: { result: installer } },
+            }),
+          ).toBe(false);
+        }
+        // INF-1649: a release with no phone build that keeps changing things on it never signs.
+        for (const phone of ["failure", "cancelled", "skipped"]) {
+          expect(
+            workflowValue(jobOf(release, "release").if ?? "", {
+              needs: { ...needs, phone: { result: phone } },
             }),
           ).toBe(false);
         }
@@ -3014,6 +3024,25 @@ describe("the signed channel workflow", () => {
     });
   });
 
+  it("holds every job that holds signing material behind the phone (INF-1649 review R3)", () => {
+    const jobs = (release as { jobs: Record<string, { needs?: string | string[] }> }).jobs;
+    const needsOf = (name: string): string[] => {
+      const needs = jobs[name]?.needs ?? [];
+      return typeof needs === "string" ? [needs] : needs;
+    };
+    const waitsFor = (name: string, target: string): boolean =>
+      needsOf(name).some((need) => need === target || waitsFor(need, target));
+    const signing = Object.keys(jobs).filter((name) =>
+      /secrets: ?inherit|"secrets":"inherit"|secrets\.(MAC_DEVELOPER_ID|CSC_)/.test(
+        JSON.stringify(jobs[name]),
+      ),
+    );
+    expect(signing).toEqual(expect.arrayContaining(["installer", "release"]));
+    for (const name of signing) expect(waitsFor(name, "phone"), name).toBe(true);
+    // A failed phone job skips the installer: it has no always() to run past it.
+    expect(jobOf(release, "installer").if ?? "").not.toContain("always()");
+  });
+
   it("inherits the published alpha's run, found by its number, only when both lanes passed in its latest attempt, and refuses the stable otherwise", async () => {
     const script = (jobOf(release, "resolve").steps ?? []).find(
       (candidate) => candidate.id === "verification",
@@ -3187,7 +3216,7 @@ describe("the signed channel workflow", () => {
     });
     // Nothing verify runs holds a secret.
     expect(call.secrets).toBeUndefined();
-    expect(signing.needs).toEqual(["resolve", "notes", "verify", "linux", "installer"]);
+    expect(signing.needs).toEqual(["resolve", "notes", "verify", "linux", "installer", "phone"]);
     expect(steps[0]).toMatchObject({
       uses: "actions/checkout@v4",
       // biome-ignore lint/suspicious/noTemplateCurlyInString: the workflow's own expression, matched literally.

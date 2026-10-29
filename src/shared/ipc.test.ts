@@ -16,8 +16,10 @@ import {
   parseInvokeRequest,
   pushContract,
   RUN_HOME_ONLY_CHANNELS,
+  sideToUpdate,
   speaksChangePresentations,
   takesWork,
+  VIEW_FLOOR,
   VIEW_INVOKE_CHANNELS,
   WORK_INVOKE_CHANNELS,
 } from "./ipc";
@@ -418,7 +420,7 @@ describe("the version rule (docs/contract.md)", () => {
   it("lets a computer that runs work take new work only on the home's own major", () => {
     expect(takesWork("3.4.1", "3.0.0")).toBe(true);
     expect(takesWork("3.0.0", "3.9.2")).toBe(true);
-    // INF-416 L: paired views, like work, must update across a major.
+    // INF-416 L: a computer that runs work must update across a major (INF-1649 keeps it strict).
     expect(contractAccess("2.17.0", "3.0.0")).toBe("read");
     expect(takesWork("2.17.0", "3.0.0")).toBe(false);
     expect(takesWork("4.0.0", "3.9.2")).toBe(false);
@@ -432,6 +434,36 @@ describe("the version rule (docs/contract.md)", () => {
     expect(takesWork(PLACED_WORK_SINCE, PLACED_WORK_SINCE)).toBe(true);
     expect(takesWork(`${major}.${(minor ?? 0) + 3}.0`, PLACED_WORK_SINCE)).toBe(true);
     if (minor) expect(takesWork(`${major}.${minor - 1}.9`, `${major}.${minor + 1}.0`)).toBe(false);
+  });
+
+  // INF-1649, the captain's direction A: a floor for every view while work computers stay strict,
+  // in both directions ("Yes, both directions").
+  it("lets a view change things from the home's floor up to the home's major, and work only on its own", () => {
+    const home = { homeFloor: 11 };
+    expect(contractAccess("11.0.0", "12.0.0", home)).toBe("full");
+    expect(contractAccess("12.3.0", "12.0.0", home)).toBe("full");
+    expect(contractAccess("10.1.0", "12.0.0", home)).toBe("read");
+    // The same versions as work: the strict same-major rule.
+    expect(contractAccess("11.0.0", "12.0.0")).toBe("read");
+    // A newer view against an older home: only when the floor its hello said reaches that home.
+    expect(contractAccess("13.0.0", "12.0.0", { ...home, clientFloor: 12 })).toBe("full");
+    expect(contractAccess("13.0.0", "12.0.0", { ...home, clientFloor: 11 })).toBe("full");
+    expect(contractAccess("13.0.0", "12.0.0", { ...home, clientFloor: 13 })).toBe("read");
+    expect(contractAccess("13.0.0", "12.0.0", home)).toBe("read");
+    for (const version of ["", "12", "v12.0.0", "12.0.0-alpha.1"])
+      expect(contractAccess(version, "12.0.0", { ...home, clientFloor: 0 })).toBe("read");
+  });
+
+  it("names the side a view outside the window updates", () => {
+    expect(sideToUpdate("read", "11.0.0", "13.0.0")).toBe("this");
+    expect(sideToUpdate("read", "13.0.0", "11.0.0")).toBe("home");
+    expect(sideToUpdate("full", "11.0.0", "12.0.0")).toBeNull();
+    expect(sideToUpdate("read", "x", "12.0.0")).toBeNull();
+  });
+
+  it("measures a view against this contract's own floor when the home names none", () => {
+    expect(contractAccess(`${VIEW_FLOOR}.0.0`, PROTOCOL_VERSION, {})).toBe("full");
+    expect(contractAccess(`${VIEW_FLOOR - 1}.0.0`, PROTOCOL_VERSION, {})).toBe("read");
   });
 
   it("measures against this contract when no home version is given", () => {

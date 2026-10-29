@@ -24,7 +24,7 @@ struct PhoneSettingsSheet: View {
                     VStack(alignment: .leading, spacing: PhoneTheme.space2) {
                         Text(device).font(PhoneFont.headline)
                         Text(session.contact == "in-reach" && session.access != "full"
-                            ? "Reads cards, Activity and tasks. Update Infinitary on both devices to make changes."
+                            ? "Reads cards, Activity and tasks. \(PhoneUpdate.side(phone: PhoneContract.version, computer: session.homeVersion).words)"
                             : "Answers cards, sends messages and controls tasks on your computer.")
                             .font(PhoneFont.callout).foregroundStyle(PhoneTheme.secondary)
                         Text("Conversation stays on your computer.").font(PhoneFont.callout).foregroundStyle(PhoneTheme.secondary)

@@ -17,12 +17,15 @@ import { WebSocket } from "ws";
  * modules if it tried.
  *
  *   node scripts/contract-client.ts --grant grant.json [--contract docs/contract.json]
- *     [--speak 1.56.0] [--cursor <epoch>:<seq>]
+ *     [--speak 1.56.0] [--floor 11] [--cursor <epoch>:<seq>]
  *
  * `--grant` is a device's saved grant (docs/devices.md, "Joining"): where it
  * dials, the home's pin, and its own key and certificate. `--speak` is the
  * contract version its hello names, the file's own by default, so it can
- * stand in an older or newer client under the version rule.
+ * stand in an older or newer client under the version rule. `--floor` is the
+ * oldest home major its hello says it changes things on (the view floor), the
+ * file's own by default. It reads a value from one of the file's open lists
+ * that the file does not list as that list's unknown, as a view does.
  *
  * It reads requests from stdin, one JSON line each: `{ "id", "channel",
  * "args" }`. It writes one JSON line per event to stdout: the `welcome`, each
@@ -35,8 +38,10 @@ import { WebSocket } from "ws";
  */
 
 type JsonSchema = Record<string, unknown>;
+type OpenList = { members: unknown[]; unknown: unknown };
 type Contract = {
   protocolVersion: string;
+  versionRule: { viewFloor?: number; openLists?: OpenList[] };
   connection: {
     path: string;
     maxFrameBytes: number;
@@ -46,6 +51,47 @@ type Contract = {
   requests: Record<string, { effect: string; reach: string; request: JsonSchema; response: JsonSchema }>;
   pushes: Record<string, { payload: JsonSchema }>;
 };
+type Issue = { keyword: string; instancePath: string; params: Record<string, unknown> };
+
+/**
+ * Replaces each value an enum issue points at with its open list's unknown,
+ * when the issue's allowed values are exactly one of the file's open lists.
+ * True when it replaced one. A value from any other closed set stays wrong.
+ */
+function keepUnknownMembers(root: unknown, issues: readonly Issue[], openLists: readonly OpenList[]) {
+  let replaced = false;
+  for (const issue of issues) {
+    if (issue.keyword !== "enum" || !issue.instancePath) continue;
+    const allowed = issue.params.allowedValues;
+    if (!Array.isArray(allowed)) continue;
+    const open = openLists.find(
+      ({ members }) =>
+        members.length === allowed.length && members.every((member) => allowed.includes(member)),
+    );
+    if (!open) continue;
+    const path = issue.instancePath.slice(1).split("/").map((part) => part.replace(/~1/g, "/").replace(/~0/g, "~"));
+    const key = path.pop() as string;
+    let parent: unknown = root;
+    for (const part of path) parent = (parent as Record<string, unknown> | null)?.[part];
+    if (parent === null || typeof parent !== "object") continue;
+    const current = (parent as Record<string, unknown>)[key];
+    if (typeof current !== "string" || allowed.includes(current)) continue;
+    (parent as Record<string, unknown>)[key] = open.unknown;
+    replaced = true;
+  }
+  return replaced;
+}
+
+/** Whether what the home sent fits once each unknown member of an open list reads as its unknown. */
+export function readsKeepingOpen(validate: ValidateFunction, value: unknown, openLists: readonly OpenList[]) {
+  if (validate(value)) return true;
+  const copy = structuredClone(value);
+  // Each pass replaces at least one unknown member, and a value holds finitely many.
+  while (keepUnknownMembers(copy, (validate.errors ?? []) as Issue[], openLists))
+    if (validate(copy)) return true;
+  return false;
+}
+
 type Grant = { at: string; homeKey: string; key: string; cert: string };
 type Asked = { id: string | number; channel: string; args: unknown };
 
@@ -95,6 +141,7 @@ export async function main(argv: string[]): Promise<number> {
       grant: { type: "string" },
       contract: { type: "string", default: DEFAULT_CONTRACT },
       speak: { type: "string" },
+      floor: { type: "string" },
       cursor: { type: "string" },
     },
   });
@@ -117,6 +164,13 @@ export async function main(argv: string[]): Promise<number> {
       compiled.set(schema, validate);
     }
     return validate(value) ? null : ajv.errorsText(validate.errors);
+  };
+  /** As fits, for what the home sends: an unknown member of an open list reads as its unknown. */
+  const reads = (schema: JsonSchema, value: unknown) => {
+    const first = fits(schema, value);
+    const validate = compiled.get(schema);
+    if (!first || !validate) return first;
+    return readsKeepingOpen(validate, value, contract.versionRule.openLists ?? []) ? null : first;
   };
 
   let invalid = 0;
@@ -153,7 +207,7 @@ export async function main(argv: string[]): Promise<number> {
       const published = contract.pushes[channel];
       // A push the file does not name is a later minor's; a client ignores it.
       if (!published) return;
-      const wrong = fits(published.payload, frame.payload);
+      const wrong = reads(published.payload, frame.payload);
       if (wrong) notFitting(`${channel} push`, wrong);
       return say(frame);
     }
@@ -161,7 +215,7 @@ export async function main(argv: string[]): Promise<number> {
     const channel = asked.get(id);
     asked.delete(id);
     if (channel && frame.ok === true) {
-      const wrong = fits(contract.requests[channel]?.response ?? {}, frame.value);
+      const wrong = reads(contract.requests[channel]?.response ?? {}, frame.value);
       if (wrong) notFitting(`${channel} response`, wrong);
     }
     say({ ...frame, channel });
@@ -186,6 +240,9 @@ export async function main(argv: string[]): Promise<number> {
   send({
     t: "hello",
     protocolVersion: values.speak ?? contract.protocolVersion,
+    ...(values.floor !== undefined || contract.versionRule.viewFloor !== undefined
+      ? { viewFloor: values.floor !== undefined ? Number(values.floor) : contract.versionRule.viewFloor }
+      : {}),
     ...(spelling ? { spellings: [spelling] } : {}),
     ...(epoch && seq ? { cursor: { epoch, seq: Number(seq) } } : {}),
   });

@@ -21,6 +21,7 @@ import {
   type CoreInvokeChannel,
   invokeContract,
   PROTOCOL_VERSION,
+  VIEW_FLOOR,
 } from "@shared/ipc";
 import type { WebSocket } from "ws";
 import { CONTRACT_CHANGES } from "../connection/contractChanges";
@@ -108,6 +109,12 @@ export type HomeLinkOptions = {
   grant: DeviceGrant;
   /** The contract version the device speaks; the version rule reads its major. */
   protocolVersion?: string;
+  /**
+   * The oldest home major a view connection can still change things on,
+   * which its hello says. Defaults to this build's own (`VIEW_FLOOR`); a
+   * test stands in another view's with it.
+   */
+  viewFloor?: number;
   /**
    * The contract changes its hello lists by name. Defaults to this build's
    * own (`CONTRACT_CHANGES`); a test stands in another device's with it,
@@ -423,6 +430,10 @@ export class HomeLink {
               ? { automaticStartup: this.options.automaticStartup }
               : {}),
             ...(this.options.as && this.grant.kind === "mac" ? { as: this.options.as } : {}),
+            // A view says how old a home it can still change things on.
+            ...(this.options.as === "view" || this.grant.kind === "view"
+              ? { viewFloor: this.options.viewFloor ?? VIEW_FLOOR }
+              : {}),
             ...(this.options.system ?? thisDeviceSystem()),
             spellings: SPELLINGS,
             ...(changes.length ? { changes } : {}),

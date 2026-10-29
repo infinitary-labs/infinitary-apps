@@ -3,6 +3,7 @@ public enum PhoneContract {
     public static let sceneObservations = "native-scene-observations"
     public static let sceneObservationsSince = 12
     public static let version = "12.0.0"
+    public static let viewFloor = 11
     public static let pairPath = "/pair"
     public static let connectionPath = "/connection"
     public static let maxFrameBytes = 67108864

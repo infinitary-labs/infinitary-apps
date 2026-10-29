@@ -548,6 +548,11 @@ export async function startApp(mainDir: string, run: RunStart | null = null): Pr
       const standInContract = isDev
         ? settingFrom(process.env, "CONTRACT_VERSION")?.trim() || undefined
         : undefined;
+      // ...and its view floor, so a stand-in newer contract can be one whose
+      // major broke views (docs/contract.md, "The version rule").
+      const standInViewFloor = isDev
+        ? Number.parseInt(settingFrom(process.env, "VIEW_FLOOR")?.trim() ?? "", 10)
+        : Number.NaN;
       // ...and Infinitary's spelling of channel names, so two development
       // runs rehearse a home and a device on two sides of the rename
       // (docs/connection.md, "Two spellings"); a packaged app ignores it.
@@ -601,6 +606,7 @@ export async function startApp(mainDir: string, run: RunStart | null = null): Pr
             app: () => core.services.appBundle(),
             build: (system, chip, kind) => core.services.farBuild(system, chip, kind),
             ...(standInContract ? { protocolVersion: standInContract } : {}),
+            ...(Number.isInteger(standInViewFloor) ? { viewFloor: standInViewFloor } : {}),
             ...(standInSpelling ? { speaks: standInSpelling } : {}),
             // ...and a view of it asks what its window would (docs/run.md).
             startedByCommand: windowless,

@@ -428,12 +428,28 @@ import { workRequests, workRequestWire } from "./work";
 export const PROTOCOL_VERSION = "12.0.0";
 
 /**
- * The version rule's window (docs/contract.md): a home answers every request
- * of a client whose major is its own (the previous-major allowance is zero). A client
- * of any other major, older or newer, is answered its reads only until it is
- * updated.
+ * The version rule's window for a computer that runs work (docs/contract.md):
+ * a home answers every request of such a computer only on its own major (the
+ * previous-major allowance is zero), because the home updates it over the
+ * connection from the same release. One of any other major, older or newer,
+ * is answered its reads only until it is updated.
  */
 export const PROTOCOL_MAJORS_BEHIND = 0;
+
+/**
+ * The view floor (docs/contract.md, "The version rule"; INF-1649): the oldest
+ * major a view - a phone, or a computer with Infinitary open that controls
+ * this home - may still change things from. A view updates on its own
+ * schedule, a phone through TestFlight or App Review, so a home keeps
+ * answering every request of a view from the floor up to its own major.
+ * Only a major that breaks what views send or read moves it, to that major;
+ * the major's file says which it did (`Views: keep` or `Views: break`,
+ * src/shared/contract-changes/README.md), and
+ * `src/core/connection/contractChanges.test.ts` holds this line to it.
+ * A view says its own floor in its hello (`viewFloor`), so a newer view
+ * keeps changing things on an older home its floor reaches.
+ */
+export const VIEW_FLOOR = 11;
 
 /** What a client may ask of a home under the version rule: everything, or the reads alone. */
 export type ContractAccess = "full" | "read";
@@ -443,13 +459,45 @@ export type ContractAccess = "full" | "read";
  * majors count: a minor is additive, so a client on an older or newer minor
  * of an answered major keeps everything it knows. A version that does not
  * read as `major.minor.patch` is answered its reads only.
+ *
+ * A computer that runs work changes things only on the home's own major.
+ * A view (`view` set) changes things from the home's floor up to the home's
+ * major, and on an older home when the floor its hello said reaches that
+ * home's major; a view that said no floor is answered as before it had one.
+ * The home sets `view` only for a view that reads the open lists: one whose
+ * hello says its floor, or a phone, which reads closed lists as text. A
+ * computer viewing from before the floor reads them strictly, so it is
+ * answered as work is (INF-1649 review R4).
  */
 export function contractAccess(
   clientVersion: string,
   homeVersion: string = PROTOCOL_VERSION,
+  view?: { clientFloor?: number; homeFloor?: number },
 ): ContractAccess {
-  const behind = majorOf(homeVersion) - majorOf(clientVersion);
-  return behind >= 0 && behind <= PROTOCOL_MAJORS_BEHIND ? "full" : "read";
+  const client = majorOf(clientVersion);
+  const home = majorOf(homeVersion);
+  const behind = home - client;
+  if (behind >= 0 && behind <= PROTOCOL_MAJORS_BEHIND) return "full";
+  if (!view) return "read";
+  if (behind > 0) return client >= (view.homeFloor ?? VIEW_FLOOR) ? "full" : "read";
+  return behind < 0 && view.clientFloor !== undefined && view.clientFloor <= home ? "full" : "read";
+}
+
+/**
+ * Which side a view outside the window updates to change things again:
+ * `this` when the home is newer, `home` when the home is older. Null while
+ * the view may change things, or when either version does not read.
+ */
+export function sideToUpdate(
+  access: ContractAccess,
+  viewVersion: string,
+  homeVersion: string,
+): "this" | "home" | null {
+  if (access !== "read") return null;
+  const view = majorOf(viewVersion);
+  const home = majorOf(homeVersion);
+  if (Number.isNaN(view) || Number.isNaN(home)) return null;
+  return home < view ? "home" : "this";
 }
 
 /**

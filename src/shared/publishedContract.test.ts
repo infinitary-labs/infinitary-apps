@@ -13,6 +13,7 @@ import {
   PROTOCOL_VERSION,
   parseInvokeRequest,
   SIGN_INS_SINCE,
+  VIEW_FLOOR,
   WORK_DOWNLOAD_SINCE,
   WORK_UPDATE_SINCE,
 } from "./ipc";
@@ -102,6 +103,7 @@ describe("the published contract", () => {
   it("publishes every core request and push with the version and its rule, and nothing of the shell's own", () => {
     expect(published.protocolVersion).toBe(PROTOCOL_VERSION);
     expect(published.versionRule.majorsBehind).toBe(PROTOCOL_MAJORS_BEHIND);
+    expect(published.versionRule.viewFloor).toBe(VIEW_FLOOR);
     expect(Object.keys(published.requests)).toEqual(CORE_INVOKE_CHANNELS);
     expect(Object.keys(published.pushes)).toEqual(CORE_PUSH_CHANNELS);
     for (const channel of HOST_INVOKE_CHANNELS)

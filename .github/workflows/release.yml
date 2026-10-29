@@ -340,10 +340,41 @@ jobs:
       ref: ${{ needs.resolve.outputs.source_commit }}
       version: ${{ needs.resolve.outputs.version }}
 
+  # The phone goes first (INF-1649; docs/alpha.md, "The phone goes first"): an
+  # alpha waits for a phone build on TestFlight that keeps changing things on
+  # it, and a stable for such a build live in the App Store once any version
+  # of Infinitary is live there. It runs from the workflow's own commit and
+  # reads each contract from git; a rehearsal says what it would wait for.
+  phone:
+    name: Wait for the phone
+    needs: resolve
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout every branch and tag
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - name: Find a phone build that keeps changing things on this release
+        env:
+          CHANNEL: ${{ needs.resolve.outputs.channel }}
+          DRY_RUN: ${{ needs.resolve.outputs.dry_run }}
+          SOURCE_COMMIT: ${{ needs.resolve.outputs.source_commit }}
+          GH_TOKEN: ${{ github.token }}
+          APP_STORE_CONNECT_KEY_ID: ${{ secrets.APP_STORE_CONNECT_KEY_ID }}
+          APP_STORE_CONNECT_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
+          APP_STORE_CONNECT_API_KEY: ${{ secrets.APP_STORE_CONNECT_API_KEY }}
+        run: node scripts/phone-order.ts
+
+  # It restores the Developer ID identity and signs, so it waits for the phone too.
   installer:
     name: Verify signed installer and updater
     if: ${{ needs.resolve.outputs.verify_required == 'true' }}
-    needs: [resolve, notes]
+    needs: [resolve, notes, phone]
     uses: ./.github/workflows/mac-installer.yml
     with:
       ref: ${{ needs.resolve.outputs.source_commit }}
@@ -354,8 +385,8 @@ jobs:
     # unevaluated. The run's summary says the channel, the version and
     # whether it was a dry run.
     name: Build, sign, notarize, and record (a dry run records nothing)
-    needs: [resolve, notes, verify, linux, installer]
-    if: ${{ always() && !cancelled() && needs.resolve.result == 'success' && needs.notes.result == 'success' && needs.linux.result == 'success' && ((needs.resolve.outputs.verify_required == 'true' && needs.verify.result == 'success' && needs.installer.result == 'success') || (needs.resolve.outputs.verify_required == 'false' && needs.verify.result == 'skipped' && needs.installer.result == 'skipped')) }}
+    needs: [resolve, notes, verify, linux, installer, phone]
+    if: ${{ always() && !cancelled() && needs.resolve.result == 'success' && needs.notes.result == 'success' && needs.linux.result == 'success' && needs.phone.result == 'success' && ((needs.resolve.outputs.verify_required == 'true' && needs.verify.result == 'success' && needs.installer.result == 'success') || (needs.resolve.outputs.verify_required == 'false' && needs.verify.result == 'skipped' && needs.installer.result == 'skipped')) }}
     # INF-603: it signs with the captain's Developer ID certificate, so it
     # asks for the real Mac, never a virtual one, once the switch sets
     # REAL_MAC_RUNNER (docs/testing.md, "The real Mac's place").

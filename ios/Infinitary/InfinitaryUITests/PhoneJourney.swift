@@ -1486,8 +1486,44 @@ import XCTest
         _ = try await home("read-only")
         reach("In reach", timeout: 20)
         XCTAssertFalse(app.buttons["send-message"].isEnabled, "A version-mismatched view can read but cannot act")
+        // INF-1649: the line names the side to update; a home past the phone's floor means this phone.
+        XCTAssertEqual(app.staticTexts["connection-refusal"].label, "Update Infinitary on this phone to make changes.")
         verifyPhoneComposerBounds(app: app)
         picture("read-only-draft")
+        // INF-1649, the captain's direction A: a newer home whose major kept views answers this phone in full.
+        _ = try await home("within-floor")
+        reach("In reach", timeout: 20)
+        XCTAssertTrue(app.staticTexts["connection-refusal"].waitForAbsence(timeout: 20), "Within the floor nothing refuses a change")
+        XCTAssertTrue(app.buttons["send-message"].isEnabled, "A view within the home's floor can act")
+        XCTAssertEqual(input.value as? String, "Keep this unsent draft")
+        picture("within-floor-draft")
+        // INF-1649 review R8: a change across majors reaches the newer home: the kept draft sends once.
+        tapOnPhone(app.buttons["send-message"])
+        XCTAssertEqual(waitForPhonePredicate(NSPredicate(format: "value != %@", "Keep this unsent draft"), object: input, timeout: 20), .completed)
+        let olderView = try await home("talk-state", method: "GET")
+        let olderViewWrites = try XCTUnwrap(olderView["writes"] as? [[String: Any]])
+        XCTAssertEqual(olderViewWrites.count, try XCTUnwrap(once["writes"] as? [Any]).count + 1, "A view within the floor changes things on a newer home")
+        XCTAssertEqual(olderViewWrites.last?["channel"] as? String, "inf:converse")
+        XCTAssertEqual((olderViewWrites.last?["args"] as? [[String: Any]])?.first?["text"] as? String, "Keep this unsent draft")
+        // A home older than this phone's floor: the line names the computer, and the draft waits.
+        focusForPhoneTyping(input, in: app); input.typeText("Sent to an older computer")
+        _ = try await home("older-home")
+        reach("In reach", timeout: 20)
+        XCTAssertTrue(app.staticTexts["connection-refusal"].waitForPresence(timeout: 20))
+        XCTAssertEqual(app.staticTexts["connection-refusal"].label, "Update Infinitary on your computer to make changes.")
+        XCTAssertFalse(app.buttons["send-message"].isEnabled, "A view newer than the home's reach can read but cannot act")
+        picture("older-home-draft")
+        // A home at this phone's floor answers it in full, and the draft sends there.
+        _ = try await home("older-home-within")
+        reach("In reach", timeout: 20)
+        XCTAssertTrue(app.staticTexts["connection-refusal"].waitForAbsence(timeout: 20), "On a home its floor reaches nothing refuses a change")
+        XCTAssertEqual(input.value as? String, "Sent to an older computer")
+        tapOnPhone(app.buttons["send-message"])
+        XCTAssertEqual(waitForPhonePredicate(NSPredicate(format: "value != %@", "Sent to an older computer"), object: input, timeout: 20), .completed)
+        let newerView = try await home("talk-state", method: "GET")
+        let newerViewWrites = try XCTUnwrap(newerView["writes"] as? [[String: Any]])
+        XCTAssertEqual(newerViewWrites.count, olderViewWrites.count + 1, "A newer view changes things on an older home its floor reaches")
+        XCTAssertEqual((newerViewWrites.last?["args"] as? [[String: Any]])?.first?["text"] as? String, "Sent to an older computer")
 
         // INF-355: exercise first-after-relaunch paging and Send after the original journey.
         // Earlier relaunches here would erase that journey's in-session past-card prerequisite.
@@ -1530,7 +1566,7 @@ import XCTest
         XCTAssertEqual(waitForPhonePredicate(NSPredicate(format: "value == %@", emptyDraft), object: input, timeout: 20), .completed)
         let keySent = try await home("talk-state", method: "GET")
         let keyWrites = try XCTUnwrap(keySent["writes"] as? [[String: Any]])
-        XCTAssertEqual(keyWrites.count, try XCTUnwrap(once["writes"] as? [Any]).count + 1)
+        XCTAssertEqual(keyWrites.count, newerViewWrites.count + 1)
         let keyMessage = try XCTUnwrap(keyWrites.last)
         XCTAssertEqual(keyMessage["channel"] as? String, "inf:converse")
         XCTAssertEqual((keyMessage["actor"] as? [String: Any])?["kind"] as? String, "captain")

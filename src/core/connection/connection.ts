@@ -51,6 +51,7 @@ import {
   isWorkInvokeChannel,
   PROTOCOL_VERSION,
   takesWork,
+  VIEW_FLOOR,
 } from "@shared/ipc";
 import { WebSocket, WebSocketServer } from "ws";
 import { copyStream, type FarBuild } from "../devices/farBuilds";
@@ -214,6 +215,11 @@ export type ConnectionOptions = {
    * a test stands in a later home with it.
    */
   protocolVersion?: string;
+  /**
+   * The oldest major a view may change things from on this home. Defaults to
+   * VIEW_FLOOR; a test stands in a later home's with it.
+   */
+  viewFloor?: number;
   /**
    * The contract changes this home's welcome lists by name. Defaults to this
    * build's own (`CONTRACT_CHANGES`); a test stands in another home's with
@@ -421,6 +427,7 @@ export function startConnection(options: ConnectionOptions): HomeConnection {
   const maxBufferedBytes = options.maxBufferedBytes ?? 32 * 1024 * 1024;
   const onProblem = options.onProblem ?? ((text) => console.warn(`[connection] ${text}`));
   const homeVersion = options.protocolVersion ?? PROTOCOL_VERSION;
+  const viewFloor = options.viewFloor ?? VIEW_FLOOR;
   const homeChanges = options.changes ?? CONTRACT_CHANGES.names;
   const startedByCommand = options.startedByCommand === true;
   const speaks = options.speaks ?? OWN_SPELLING;
@@ -614,7 +621,16 @@ export function startConnection(options: ConnectionOptions): HomeConnection {
       client.speaks = hello.protocolVersion;
       client.spelling = spellingFor(readSpellings(hello.spellings), speaks);
       client.appVersion = hello.appVersion;
-      client.access = contractAccess(hello.protocolVersion, homeVersion);
+      // A view changes things across majors its floor allows; work only on this home's own.
+      // A computer viewing from before the floor (its hello says none) reads closed lists
+      // strictly, so like work it changes things only on this home's major (INF-1649 review
+      // R4, the captain's "Keep version-11 views read-only"); a phone reads them as text.
+      const floored = role === "view" && (hello.viewFloor !== undefined || hello.system === "ios");
+      client.access = contractAccess(
+        hello.protocolVersion,
+        homeVersion,
+        floored ? { clientFloor: hello.viewFloor, homeFloor: viewFloor } : undefined,
+      );
       const takes = role === "work" && takesWork(hello.protocolVersion, homeVersion);
       // A join hearing the name is welcomed as any connection is, and is
       // nothing more: never that computer in reach, so Devices can tell one

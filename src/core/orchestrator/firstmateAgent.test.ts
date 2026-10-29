@@ -9,6 +9,7 @@ import { type Card, onStage } from "@shared/cards";
 import { HERE } from "@shared/deviceNames";
 import { AUTOMATIC_EMOTE_WORDS } from "@shared/emotes";
 import { type FmEvent, type FmUsage, fmEventSchema } from "@shared/events";
+import { choiceWords } from "@shared/holds";
 import type { KnowledgeDirectionChange, KnowledgeDirectionsArgs } from "@shared/knowledge";
 import type { PersonalSnapshot } from "@shared/personal/manifest";
 import type { PanelMounts } from "@shared/personal/mounts";
@@ -665,6 +666,22 @@ const tick = () =>
  */
 const drained = (session: { prompts: string[] }, count: number) =>
   vi.waitFor(() => expect(session.prompts).toHaveLength(count), { timeout: 5_000, interval: 10 });
+
+/** A decision the first mate showed on a task, with its buttons (the card-fm- prefix). */
+function firstmateCard(id: string, taskId: string, title: string, actions: Card["actions"]): Card {
+  return {
+    id,
+    taskId,
+    author: "firstmate",
+    priority: 50,
+    title,
+    meta: "firstmate",
+    body: "<p>Choose one.</p>",
+    actions,
+    status: "ready",
+    createdAt: Date.now(),
+  };
+}
 
 /** A card a crewmate emitted on its task (never the card-fm- prefix). */
 function crewCard(id: string, taskId: string, title: string, body: string): Card {
@@ -9158,6 +9175,159 @@ describe("the captain's override, cited from his message on the task", () => {
       "the checks for the rest of this task",
     );
     await finish();
+    f.agent.dispose();
+    f.db.close();
+  });
+});
+
+/**
+ * INF-1582 finding 2, filed on the captain's words "a click on a yes button
+ * does not count as your yes": a click on a card's button is his words on
+ * every card alike, his words typed while a turn runs count in that turn,
+ * and the one sentence recorded names more holds without a second.
+ */
+describe("the captain's override, from a click, a thread or words typed mid-turn", () => {
+  const meterTask = {
+    id: "ab12",
+    title: "Steady the meter retry",
+    status: "idle" as const,
+    sessionFile: "/tmp/ab12.jsonl",
+  };
+  const harness = (seedCards: Card[] = []) => {
+    const f = setup({ silent: true, seedTasks: [meterTask], seedCards });
+    const finish = async () => {
+      f.session.emitTurnEnd("Noted.");
+      f.session.resolveNextPrompt();
+      await tick();
+    };
+    const declare = async (override: Record<string, unknown>) =>
+      JSON.stringify(
+        await toolsOf(f.specs).get("update_task")?.execute("override", { task: "ab12", override }),
+      );
+    const report = (excerpt: string) =>
+      notifyProse(
+        f.db,
+        f.agent,
+        `[fm-op] crewmate 1 reported on task ab12 "Steady the meter retry": ${excerpt}`,
+        "crewmate-report",
+        "ab12",
+      );
+    const recorded = () => f.tasks.get("ab12")?.delivery?.override;
+    return { ...f, finish, declare, report, recorded };
+  };
+
+  it("records the button's words from a click on the first mate's own card, and nothing from its script's choice", async () => {
+    const rerun = "Rerun the meter fix's checks after a GitHub outage?";
+    const f = harness([
+      firstmateCard("card-fm-rerun", "ab12", rerun, [
+        { id: "rerun", label: "Rerun the five checks", default: true },
+        { id: "leave", label: "Leave them" },
+      ]),
+      firstmateCard("card-fm-timeline", "ab12", "Show the retry timeline?", [
+        { id: "show", label: "Show it", default: true },
+      ]),
+    ]);
+    // A script in the card's body chooses: its author's choice, never his.
+    f.supervisor.act("card-fm-timeline", "show", "frame");
+    await drained(f.session, 1);
+    expect(
+      await f.declare({ holds: ["checks"], until: "task", from: "card-fm-timeline" }),
+    ).toContain("The record holds no words of the captain's on card");
+    expect(f.recorded()).toBeUndefined();
+    await f.finish();
+    // His click, as on Oct 26: its own turn cites the card it was on.
+    f.supervisor.act("card-fm-rerun", "rerun");
+    await drained(f.session, 2);
+    expect(await f.declare({ holds: ["checks"], until: "task", from: "card-fm-rerun" })).toContain(
+      "Recorded the captain's override",
+    );
+    expect(f.recorded()).toMatchObject({
+      words: choiceWords("Rerun the five checks", rerun),
+      holds: ["checks"],
+      until: "task",
+    });
+    await f.finish();
+    f.agent.dispose();
+    f.db.close();
+  });
+
+  it("records a click on a crewmate's card in the relay turn, and a reply under the first mate's card in a later turn", async () => {
+    const failing = "The checks are still failing";
+    const f = harness([
+      {
+        ...crewCard("card-ab12", "ab12", failing, "<p>Do you accept these failed checks?</p>"),
+        actions: [{ id: "accept", label: "Accept the failed checks", default: true }],
+      },
+      firstmateCard("card-fm-review", "ab12", "Skip the review on the meter fix?", [
+        { id: "skip", label: "Skip it", default: true },
+      ]),
+    ]);
+    f.supervisor.act("card-ab12", "accept");
+    await tick();
+    f.report(`the captain clicked "Accept the failed checks" on card card-ab12`);
+    await drained(f.session, 1);
+    expect(await f.declare({ holds: ["checks"], until: "task", from: "card-ab12" })).toContain(
+      "Recorded the captain's override",
+    );
+    expect(f.recorded()?.words).toBe(choiceWords("Accept the failed checks", failing));
+    await f.finish();
+    // His reply under the first mate's card is its own turn; a report later cites it.
+    const reply = "Skip the review this once; the diff is one line.";
+    f.supervisor.replyToCard("card-fm-review", reply);
+    await drained(f.session, 2);
+    await f.finish();
+    f.report("the review is the one hold left.");
+    await drained(f.session, 3);
+    expect(await f.declare({ holds: ["review"], until: "task", from: "card-fm-review" })).toContain(
+      "Recorded the captain's override",
+    );
+    expect(f.recorded()).toMatchObject({ words: reply, holds: ["review"] });
+    await f.finish();
+    f.agent.dispose();
+    f.db.close();
+  });
+
+  it("records the words the captain typed while a crewmate's report was being read", async () => {
+    const f = harness();
+    f.report("five checks failed while GitHub could not serve downloads.");
+    await drained(f.session, 1);
+    // He types into the running turn, as at 5:34 PM on Oct 26.
+    const words = "Rerun them, and merge if they pass.";
+    await f.agent.converse(words);
+    expect(f.session.steers).toHaveLength(1);
+    expect(await f.declare({ holds: ["checks"], until: "task" })).toContain(
+      "Recorded the captain's override",
+    );
+    expect(f.recorded()).toMatchObject({ words, holds: ["checks"], until: "task" });
+    await f.finish();
+    f.agent.dispose();
+    f.db.close();
+  });
+
+  it("names more holds with the words already standing, and refuses that when none stands", async () => {
+    const f = harness();
+    f.report("the checks and the review both hold the merge.");
+    await drained(f.session, 1);
+    expect(await f.declare({ holds: ["checks"], until: "task", from: "standing" })).toContain(
+      "No override stands on",
+    );
+    expect(f.recorded()).toBeUndefined();
+    await f.finish();
+    const words = "Get the meter fix merged today.";
+    await f.agent.converse(words);
+    await drained(f.session, 2);
+    expect(await f.declare({ holds: ["checks"], until: "task" })).toContain(
+      "Recorded the captain's override",
+    );
+    await f.finish();
+    // A later report names a hold his sentence also reaches: the same words, no second ask.
+    f.report("the review still holds the merge.");
+    await drained(f.session, 3);
+    expect(
+      await f.declare({ holds: ["checks", "review"], until: "task", from: "standing" }),
+    ).toContain("Recorded the captain's override");
+    expect(f.recorded()).toMatchObject({ words, holds: ["checks", "review"], until: "task" });
+    await f.finish();
     f.agent.dispose();
     f.db.close();
   });

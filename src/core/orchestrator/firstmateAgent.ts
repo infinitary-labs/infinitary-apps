@@ -3209,20 +3209,22 @@ export class FirstmateAgent {
         asText(() => {
           const record = resolve(input.task);
           // Consent is the one fact the host checks: the words are the
-          // captain's own - this turn's, or the message on this task the
+          // captain's own - this turn's, or the words on this task the
           // first mate cites (INF-1216) - which the row keeps and nothing
-          // reads. A scheduled check carries none of his words.
+          // reads. This turn's are every message of his it carries, however
+          // it began: typed while it ran, or batched beside a crewmate's
+          // report (INF-1582 finding 2). A scheduled check carries none.
           let words: string;
           if (input.from) {
-            if (!this.turnCanCreate)
+            if (!this.turnCanCreate && this.turnAsked.length === 0)
               return "Override refused: nothing was recorded. A scheduled check records no override, since no words of the captain's arrived with it; the one standing still applies.";
             const cited = supervisor.citedCaptainWords(record.id, input.from);
             if (!cited.ok) return cited.text;
             words = cited.words;
           } else {
-            words = this.turnOrigin === "captain-turn" ? this.turnAsked.join("\n").trim() : "";
+            words = this.turnAsked.join("\n").trim();
             if (!words)
-              return "Override refused: only the captain's own words declare one: this turn's, or their reply under a card of the task or line in its Crewmate tab, cited with from.";
+              return "Override refused: only the captain's own words declare one: this turn's, or their reply or click on a card of the task or line in its Crewmate tab, cited with from.";
           }
           this.asks.attach(record.id, "update_task");
           const declared = supervisor.declareOverride(record.id, {

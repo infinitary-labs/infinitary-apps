@@ -90,6 +90,7 @@ import {
 import { forgeOf, forgePlace } from "@shared/forge";
 import { forgeSignInCardId } from "@shared/forges";
 import {
+  choiceWords,
   fixedHoldWords,
   type HoldOverride,
   holdNames,
@@ -98,6 +99,7 @@ import {
   overridePasses,
   overrideSpan,
   overrideWords,
+  STANDING_WORDS_FROM,
   softHoldWords,
   standingOverride,
   standingOverrideWords,
@@ -8867,11 +8869,14 @@ export class CrewSupervisor {
   }
 
   /**
-   * The captain's own message the first mate cites for an override
-   * (INF-1216): his newest reply under a card of this task (`from` is the
-   * card's id), or his newest line in its Crewmate tab (`crewmate-tab`),
-   * read from the steer that carried it to the crewmate. The host checks
-   * only that the message is his and on this task, and reads none of it.
+   * The captain's own words the first mate cites for an override (INF-1216,
+   * INF-1582 finding 2): on a card of this task (`from` is the card's id),
+   * the newest of his reply in its thread and his click on its button, on
+   * the first mate's cards and a crewmate's alike; his newest line in its
+   * Crewmate tab (`crewmate-tab`), read from the steer that carried it; or
+   * the words of the override standing on it (`standing`), so one sentence
+   * names more holds. The host checks only that the words are his and on
+   * this task, and reads none of them.
    */
   citedCaptainWords(
     taskId: string,
@@ -8881,40 +8886,72 @@ export class CrewSupervisor {
     if (!record) throw new Error(`Unknown task "${taskId}".`);
     const handle = record.key || record.id;
     const cited = from.trim();
-    const tab = cited === CREWMATE_TAB_VIA;
-    let where = `${handle}'s Crewmate tab`;
-    if (!tab) {
-      const card = this.cards.get(cited) ?? this.cards.stored(cited);
-      if (!card)
-        return {
-          ok: false,
-          text: `Override refused: nothing was recorded. There is no card "${cited}"; pass from as the id of the card the captain replied under, or ${CREWMATE_TAB_VIA}.`,
-        };
-      if (card.taskId !== taskId)
-        return {
-          ok: false,
-          text: `Override refused: nothing was recorded. Card "${card.title}" is not on ${handle}, so the captain's reply there passes nothing on it.`,
-        };
-      where = `card "${card.title}"`;
+    if (cited === STANDING_WORDS_FROM) {
+      const standing = standingOverride(record.delivery, record.delivery?.headSha);
+      return standing
+        ? { ok: true, words: standing.words }
+        : {
+            ok: false,
+            text: `Override refused: nothing was recorded. No override stands on ${handle} at this version, so there are no recorded words of the captain's to name more holds with.`,
+          };
     }
-    const message = this.options.tasks
-      .timeline(taskId)
-      .findLast(
-        (event) =>
-          event.kind === "steered" &&
-          event.actor === "captain" &&
-          (tab
-            ? event.data?.via === CREWMATE_TAB_VIA
-            : event.data?.via === "thread" && event.data?.cardId === cited),
-      );
-    const span = message?.data?.words as { from: number; to: number } | undefined;
-    const words = message && span ? message.text.slice(span.from, span.to).trim() : "";
+    if (cited === CREWMATE_TAB_VIA) {
+      const message = this.options.tasks
+        .timeline(taskId)
+        .findLast(
+          (event) =>
+            event.kind === "steered" &&
+            event.actor === "captain" &&
+            event.data?.via === CREWMATE_TAB_VIA,
+        );
+      const span = message?.data?.words as { from: number; to: number } | undefined;
+      const words = message && span ? message.text.slice(span.from, span.to).trim() : "";
+      return words
+        ? { ok: true, words }
+        : {
+            ok: false,
+            text: `Override refused: nothing was recorded. The record holds no words the captain typed in ${handle}'s Crewmate tab.`,
+          };
+    }
+    const card = this.cards.get(cited) ?? this.cards.stored(cited);
+    if (!card)
+      return {
+        ok: false,
+        text: `Override refused: nothing was recorded. There is no card "${cited}"; pass from as the id of the card the captain replied under or clicked, ${CREWMATE_TAB_VIA}, or ${STANDING_WORDS_FROM}.`,
+      };
+    if (card.taskId !== taskId)
+      return {
+        ok: false,
+        text: `Override refused: nothing was recorded. Card "${card.title}" is not on ${handle}, so the captain's words there pass nothing on it.`,
+      };
+    const words = this.captainWordsOnCard(cited);
     if (!words)
       return {
         ok: false,
-        text: `Override refused: nothing was recorded. The record holds no words the captain typed in ${where}.`,
+        text: `Override refused: nothing was recorded. The record holds no words of the captain's on card "${card.title}": no reply in its thread and no click on its buttons.`,
       };
     return { ok: true, words };
+  }
+
+  /**
+   * The captain's newest words on a card: his reply in its thread, or his
+   * click on one of its buttons (`choiceWords`), whichever came last. A
+   * body's own script choosing is never his click.
+   */
+  private captainWordsOnCard(cardId: string): string | undefined {
+    const reply = this.cards.messages(cardId).findLast((message) => message.who === "captain");
+    const typed = reply?.text.trim();
+    const past = this.cards.past(cardId);
+    const ending = past?.ending;
+    const clicked =
+      past && ending?.how === "chose" && ending.by === "captain" && ending.label
+        ? {
+            at: ending.at,
+            words: choiceWords(ending.label, past.title, anythingElseOf(past.answers)),
+          }
+        : undefined;
+    if (clicked && (!typed || !reply || clicked.at >= reply.at)) return clicked.words;
+    return typed || undefined;
   }
 
   /** The interrupt request or outcome's timeline event (R2 forward capture). */
@@ -13478,7 +13515,7 @@ export class CrewSupervisor {
     // Merge anyway (INF-1137 friction 6): his click passes the checks at
     // the card's version before the merge below runs, so it merges now.
     if (chosen.passes === "checks" && source === "chrome" && card.taskId && !closedAnswer)
-      this.passChecksFromCard(card, chosen.label);
+      this.passChecksFromCard(card, chosen.label, anythingElseOf(answers));
     switch (effect?.kind) {
       case "settle": {
         // Host-owned teardown: the host runs it instead of steering the
@@ -13616,7 +13653,7 @@ export class CrewSupervisor {
    * reason, so the merge it starts and every other site that reads the
    * checks hold see the same record. A new version brings the hold back.
    */
-  private passChecksFromCard(card: Card, label: string): void {
+  private passChecksFromCard(card: Card, label: string, written?: string): void {
     const taskId = card.taskId;
     const record = taskId ? this.options.tasks.get(taskId) : undefined;
     if (!taskId || !record) return;
@@ -13628,7 +13665,7 @@ export class CrewSupervisor {
     const head = offer?.baseline.headSha ?? record.delivery?.headSha;
     if (!head) return;
     const override: HoldOverride = {
-      words: `${label}, on the card "${card.title}"`,
+      words: choiceWords(label, card.title, written),
       holds: ["checks"],
       until: "version",
       head,

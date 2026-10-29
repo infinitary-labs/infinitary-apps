@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "id": "click-counts-as-your-go-ahead",
+      "kind": "fix",
+      "area": "firstmate",
+      "title": "A click on a card's button counts as your go-ahead",
+      "body": "When you click a button such as Rerun the checks on one of the first mate's cards or a crewmate's, the first mate now takes that click as your go-ahead, the way Merge anyway always counted, instead of asking you to type approval words. A message you send while the first mate is reading a crewmate's report counts too, and words you already gave on a task carry over, so you are never asked to say the same yes twice.",
+      "noPicture": "No screen changes; the first mate stops asking for typed approval words after a click, and the activity line it writes for the go-ahead already exists.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

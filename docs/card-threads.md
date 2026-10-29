@@ -243,6 +243,7 @@ Without the declaration the report sorts like any other, and on a backend the ho
 Words that pass one of the app's holds, or tell the crewmate to go on without asking, are relayed the same way, with the card left up (INF-1216).
 The crewmate judges whether they are such words; if so, it reports them with `needs_firstmate`, naming the card, and carries on with what they already allow.
 The first mate records them as the captain's override in that relay turn with `update_task override` and `from` naming the card, and the host takes the words from the captain's own reply on the task's record (`docs/delivery-rigor.md`, "The holds").
+A click on one of the card's buttons is relayed the same way, and the host takes the button's words from the card's record.
 A line the captain types in the task's Crewmate tab is relayed the same way, with `from` as `crewmate-tab`.
 
 That is the captain's Q2 as the captain corrected it: "crewmate should not answer the user with 'not mine'. it should just close the card and pass the decision to firstmate to execute."

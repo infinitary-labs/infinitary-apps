@@ -355,7 +355,7 @@ export function createTaskTools(delegate: TaskToolsDelegate) {
           },
           {
             description:
-              "Captain's words (this turn's; or from: card id of a relayed reply, or crewmate-tab) pass soft holds you judge, until as they mean, even unrefused; empty holds takes it back.",
+              "Captain's words (this turn's; or from: a card id, their reply or click there; crewmate-tab; or standing, the recorded words, to add holds) pass soft holds you judge, until as they mean, even unrefused; empty holds takes it back.",
           },
         ),
       ),

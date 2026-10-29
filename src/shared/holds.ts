@@ -174,6 +174,25 @@ export function overridePasses(
   return standingOverride(delivery, head)?.holds.includes(kind) ?? false;
 }
 
+/**
+ * What `from` names to reuse the words of the override standing on a task
+ * (INF-1582 finding 2): the first mate names more holds with the captain's
+ * one recorded sentence, so a second sentence is never asked for the same
+ * go-ahead.
+ */
+export const STANDING_WORDS_FROM = "standing";
+
+/**
+ * The captain's click on a card's button as the words it records (INF-1582
+ * finding 2): the button's words, the card they were on, and anything they
+ * wrote beside the click. The same on every card, the first mate's and a
+ * crewmate's, Merge anyway included.
+ */
+export function choiceWords(label: string, cardTitle: string, written?: string): string {
+  const said = written?.trim();
+  return `${label}, on the card "${cardTitle}"${said ? `: ${said}` : ""}`;
+}
+
 /** The holds an override passes, in the captain's words: `the review and the checks`. */
 export function holdNames(kinds: readonly HoldKind[]): string {
   const names = kinds.flatMap((kind) => (HOLDS[kind] ? [HOLDS[kind].name] : []));
@@ -242,8 +261,8 @@ export function softHoldWords(
   const hold = HOLDS[kind];
   if ("way" in hold) return `Soft hold ${kind}: it passes when ${hold.way}.`;
   return audience === "firstmate"
-    ? `Soft hold ${kind}: the captain's own words pass it; when their words in this turn, or their reply or Crewmate tab line a crewmate relays, pass it, declare it with update_task override (from cites a relayed one).`
-    : `Soft hold ${kind}: only the captain's words pass it, relayed by the first mate; if they gave them, report them, naming the card or the Crewmate tab they came in.`;
+    ? `Soft hold ${kind}: the captain's own words pass it; when their words in this turn, or their reply or click on a card of the task or Crewmate tab line, pass it, declare it with update_task override (from cites one not in this turn).`
+    : `Soft hold ${kind}: only the captain's words pass it, relayed by the first mate; if they gave them, in a reply, a click on your card's button or the Crewmate tab, report them, naming the card or the Crewmate tab they came in.`;
 }
 
 /** The sentence a fixed limit's refusal ends with: no one's word passes it. */

@@ -1,0 +1,18 @@
+{
+  "entries": [
+    {
+      "id": "installer-window-takeoff",
+      "kind": "improvement",
+      "title": "The Mac installer window says Ready for takeoff",
+      "body": "When you open the Mac disk image, its window now shows a sunrise over a planet's edge with the words Ready for takeoff. Drag Infinitary onto Applications along the arrow, as before. The picture is sharp on Retina screens, and the window title is now just Infinitary.",
+      "area": "updates",
+      "picture": {
+        "dark": "installer-window-takeoff-dark.webp",
+        "light": "installer-window-takeoff-light.webp",
+        "alt": "The Mac installer window with Ready for takeoff over a sunrise, and an arrow from Infinitary to Applications"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

@@ -265,10 +265,14 @@ What differs is decided by the system, never by the person's choice of desktop: 
 
 ## Disk-image installation
 
-The Mac installer uses a fixed light-theme background so Finder’s native icon labels remain legible.
-Use the light color tokens and Space Grotesk, with the app at the left, an Applications shortcut at the right, and one accent arrow under “Drag to install”.
-The window has no wizard or license dialog; the foot line says to open the installed copy and eject the image.
-The artwork source is `packaging/build/dmg-background.svg`, rendered by `scripts/render-dmg-background.mjs` with the skill’s tokens and font.
+The Mac installer window is First light: a sunrise over a planet's edge, the feeling of a ship getting ready for takeoff.
+The window is 600 by 360 points; Finder centres the app at (140, 190) and the Applications shortcut at (460, 190), 96 pt icons with 13 pt names.
+The headline "Ready for takeoff" sits in the starry sky in Space Grotesk 500, with the app icon's hexagon drawn as a faint constellation at the upper left.
+Finder draws icon names in black over a background picture and never swaps the picture in dark mode, so the icons, their names, the drag line and the foot line all sit on the bright ground below the horizon.
+One accent-blue arc runs from the app to Applications over "Drag to Applications"; the foot line says to open the installed copy and eject the image.
+The window has no wizard, license dialog or motion, and its title is just "Infinitary".
+The artwork source is `packaging/build/dmg-background.svg`, with literal colors because the sky and sunrise are not theme colors.
+`scripts/render-dmg-background.mjs` renders it with the skill's Space Grotesk to `dmg-background.png` and `dmg-background@2x.png`, which the disk image joins into one Retina picture.
 
 ## ICONOGRAPHY
 - **Icon set:** [Lucide](https://lucide.dev) via CDN (`lucide` UMD), stroke 1.5, sized 14–18px, colored `currentColor`.

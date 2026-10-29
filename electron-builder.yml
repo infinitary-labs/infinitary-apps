@@ -168,6 +168,11 @@ mac:
 
 dmg:
   writeUpdateInfo: false
+  # The installer window's title and volume name; without it the universal
+  # build appends "-universal" to the version.
+  title: Infinitary
+  # dmg-builder joins dmg-background@2x.png beside it into one Retina picture
+  # (scripts/render-dmg-background.mjs renders both from the svg).
   background: packaging/build/dmg-background.png
   window:
     width: 600

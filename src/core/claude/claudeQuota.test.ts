@@ -105,6 +105,79 @@ describe("keychain naming", () => {
   });
 });
 
+/**
+ * INF-1798: on a real Mac the client's item was keyed on account "unknown"
+ * (the client runs on Bun, whose userInfo() names an unset USER that way)
+ * while the app ran as USER "kunchen", so every check that asked for
+ * "kunchen" alone read a signed-in Mac as signed out. The item is found
+ * whatever its account, and every later read names that one item.
+ */
+describe("the client's item under an account other than USER", () => {
+  const SERVICE = "Claude Code-credentials";
+  const env = { HOME: "/tmp/infinitary-no-claude-home", USER: "kunchen" };
+
+  /** A store holding these items by account, the first one found when none is named. */
+  function savedPasswords(items: Record<string, string>) {
+    const found = (account: string | undefined): HostKeychainOutcome =>
+      account !== undefined && account in items
+        ? { kind: "found", modifiedAt: "20261028213000Z", locked: false, account }
+        : { kind: "absent" };
+    return fakeKeychain({
+      find: (query) => found(query.account ?? Object.keys(items)[0]),
+      read: (query) => {
+        const value = query.account === undefined ? undefined : items[query.account];
+        return value === undefined ? { kind: "absent" } : { kind: "value", value };
+      },
+    });
+  }
+
+  beforeEach(() => {
+    clearKeychainLock();
+    clearClaudeCredentialCache();
+  });
+
+  it("reads it as a live login, by attribute only", async () => {
+    const keychain = savedPasswords({ unknown: credentialJson("client-token") });
+    expect(await readClaudeCredentialEvidence(storeDir(), { keychain, env })).toEqual({
+      state: "live",
+    });
+    expect(keychain.finds).toEqual([
+      { service: SERVICE, account: "kunchen" },
+      { service: SERVICE },
+    ]);
+    expect(keychain.reads).toHaveLength(0);
+  });
+
+  it("reads that one item's value for the meter, by the account presence found", async () => {
+    const keychain = savedPasswords({ unknown: credentialJson("client-token", 4102444800000) });
+    expect(await resolveClaudeQuotaAuthResult(storeDir(), { keychain, env })).toEqual({
+      status: "resolved",
+      auth: { accessToken: "client-token", expiresAt: 4102444800000 },
+    });
+    expect(keychain.reads).toEqual([{ service: SERVICE, account: "unknown" }]);
+  });
+
+  it("dates it for the cut-off stamp", async () => {
+    const keychain = savedPasswords({ unknown: credentialJson("client-token") });
+    expect(await readClaudeCredentialStamp(storeDir(), { keychain, env })).toEqual({
+      written: "keychain:20261028213000Z",
+    });
+  });
+
+  it("prefers the item under USER when both are there, as the client running with that USER does", async () => {
+    const keychain = savedPasswords({
+      unknown: credentialJson("other-token"),
+      kunchen: credentialJson("user-token"),
+    });
+    expect(await resolveClaudeQuotaAuthResult(storeDir(), { keychain, env })).toMatchObject({
+      status: "resolved",
+      auth: { accessToken: "user-token" },
+    });
+    expect(keychain.finds).toEqual([{ service: SERVICE, account: "kunchen" }]);
+    expect(keychain.reads).toEqual([{ service: SERVICE, account: "kunchen" }]);
+  });
+});
+
 describe("resolveClaudeQuotaAuth", () => {
   beforeEach(() => {
     clearKeychainLock();

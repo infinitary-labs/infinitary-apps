@@ -1,0 +1,14 @@
+{
+  "entries": [
+    {
+      "id": "claude-sign-in-any-keychain-account",
+      "kind": "fix",
+      "title": "Claude stays signed in however this Mac saved its sign-in",
+      "body": "Claude saves its sign-in in your Mac's saved passwords under a name of its own choosing. When that name was not the one Infinitary expected, Claude could show as not signed in, and a first mate on Claude could pause and ask you to sign in again while you were signed in. Infinitary now finds Claude's sign-in whatever name it was saved under.",
+      "area": "subscriptions",
+      "noPicture": "Nothing new appears on screen; the fix stops a wrong signed-out state and pause that only showed on Macs where Claude saved its sign-in under another name.",
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

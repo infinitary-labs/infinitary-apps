@@ -22,7 +22,8 @@ import { runRenewalStoreTask, type StoreLeaseResult } from "./claudeStoreLease";
  * Infinitary never mints or refreshes Anthropic OAuth. It reads what the vendor's
  * own `claude login` maintains: a `.credentials.json` in the default config
  * root (`~/.claude`) when the Keychain is unavailable, otherwise the bare
- * login-Keychain item `Claude Code-credentials` (no per-account suffix).
+ * login-Keychain item `Claude Code-credentials` (no per-account suffix),
+ * under whatever account the client keyed it on (findClaudeKeychainItem).
  * Setting CLAUDE_CONFIG_DIR would hash a suffix onto that name and miss the
  * everyday login - the login probe measured that, which is why Claude runs
  * leave the variable unset. One Claude account, ever.
@@ -254,10 +255,41 @@ function safeHomedir(): string {
   }
 }
 
-/** The account name the client keys its Keychain item on. */
+/**
+ * The account name the client keys its Keychain item on when it runs with
+ * this USER: asked for first, never required (findClaudeKeychainItem).
+ */
 export function keychainAccountName(env: NodeJS.ProcessEnv = process.env): string {
   const candidate = env.USER?.trim() || safeUsername();
   return candidate && /^[A-Za-z0-9._@-]{1,128}$/.test(candidate) ? candidate : "claude-code-user";
+}
+
+/** Which item presence found, and the account every later read of it names. */
+type ClaudeKeychainItem = { presence: HostKeychainOutcome; account?: string };
+
+/**
+ * The client's Keychain item: the exact service, under whatever account the
+ * client keyed it on. The client names it after USER, but its runtime (Bun)
+ * names an unset USER "unknown" where this process would name the real user,
+ * and other versions or launchers may differ again. So the name the client
+ * keys on with this USER is asked first - when both exist, that is the item
+ * the client itself reads - and on a definite miss the service alone, which
+ * still matches only Claude's own items, never another saved password.
+ * Attributes only, never the value. The returned account is the found
+ * item's own, so the value read, the unlock and the Apple tool all reach
+ * that one item.
+ */
+async function findClaudeKeychainItem(
+  keychain: HostKeychain,
+  env: NodeJS.ProcessEnv,
+): Promise<ClaudeKeychainItem> {
+  const service = keychainServiceFor();
+  const account = keychainAccountName(env);
+  const exact = await keychain.findGenericPassword({ service, account });
+  if (!isAbsentOutcome(exact)) return { presence: exact, account };
+  const any = await keychain.findGenericPassword({ service });
+  const found = any.kind === "found" ? any.account : undefined;
+  return { presence: any, ...(found !== undefined ? { account: found } : {}) };
 }
 
 function safeUsername(): string {
@@ -437,15 +469,12 @@ type KeychainReadOptions = {
 async function readKeychain(options: KeychainReadOptions): Promise<KeychainRead> {
   const { configDir, keychain, env, allowPrompt, persistLock, useCache, now } = options;
   const accountIdentity = await readAccountIdentityRecord(configDir, env);
+  const { presence, account } = await findClaudeKeychainItem(keychain, env);
   const query = {
     service: keychainServiceFor(),
-    account: keychainAccountName(env),
+    ...(account !== undefined ? { account } : {}),
     ...(allowPrompt ? { interactive: true as const } : {}),
   };
-  const presence = await keychain.findGenericPassword({
-    service: query.service,
-    account: query.account,
-  });
   if (isAbsentOutcome(presence)) {
     credentialCache.delete(configDir);
     return { kind: "absent" };
@@ -906,8 +935,8 @@ export async function readClaudeCredentialStamp(
     // No plain-file store: the Keychain item is the store.
   }
   if (written === undefined) {
-    const presence = await keychain
-      .findGenericPassword({ service: keychainServiceFor(), account: keychainAccountName(env) })
+    const presence = await findClaudeKeychainItem(keychain, env)
+      .then((item) => item.presence)
       .catch(() => undefined);
     if (presence?.kind === "found" && presence.modifiedAt) {
       written = `keychain:${presence.modifiedAt}`;
@@ -961,18 +990,16 @@ export async function readClaudeCredentialEvidence(
 }
 
 /**
- * The default login's Keychain item, by the exact service and account, never
- * a broader search and never the value. `"absent"` is a definite miss.
+ * The default login's Keychain item, by the exact service under whatever
+ * account the client keyed it on (findClaudeKeychainItem), never another
+ * service and never the value. `"absent"` is a definite miss.
  */
 async function readKeychainEvidence(
   keychain: HostKeychain,
   env: NodeJS.ProcessEnv,
   identity: Promise<{ label?: string } | undefined>,
 ): Promise<ClaudeCredentialEvidence | "absent"> {
-  const presence = await keychain.findGenericPassword({
-    service: keychainServiceFor(),
-    account: keychainAccountName(env),
-  });
+  const { presence } = await findClaudeKeychainItem(keychain, env);
   // Only a definite miss is an absence; anything else (a failed host read,
   // a timeout, a denied search) is simply unreadable.
   if (isAbsentOutcome(presence)) return "absent";

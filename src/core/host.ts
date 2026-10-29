@@ -75,7 +75,11 @@ export type HostPresence = {
  */
 export type HostKeychainQuery = {
   readonly service: string;
-  readonly account: string;
+  /**
+   * Omitted: any account - the first item of this exact service the store
+   * finds. Never a broader match than the service itself.
+   */
+  readonly account?: string;
   /**
    * When true, the host may raise the one-time grant dialog. Sign-in and an
    * explicit Retry set this; background ticks omit it so a missing grant
@@ -89,9 +93,10 @@ export type HostKeychainOutcome =
   /**
    * `locked` is whether the store holding the item is locked right now, when
    * the host could tell. Presence answers on a locked store; the VALUE read
-   * does not.
+   * does not. `account` is the item's own account attribute, when the host
+   * could read it: what a later read names to reach this same item.
    */
-  | { kind: "found"; modifiedAt?: string; locked?: boolean }
+  | { kind: "found"; modifiedAt?: string; locked?: boolean; account?: string }
   | { kind: "absent" }
   | { kind: "failed"; code?: number; message: string };
 

@@ -29,8 +29,10 @@ import type { KeychainUnlocker } from "./keychainUnlock";
  *
  * Uses the C-string Keychain Services API (`SecKeychainFindGenericPassword`)
  * so the FFI stays small. Presence passes NULL for the secret and reads only
- * the item's modification-date attribute, plus whether the store holding it
- * is locked; the VALUE read is the one that can raise the grant dialog.
+ * the item's modification-date and account attributes, plus whether the store
+ * holding it is locked; the VALUE read is the one that can raise the grant
+ * dialog. A query with no account passes NULL for it too, which matches any
+ * account of that exact service.
  *
  * The unlock dialog is not this process's to raise. macOS settles, at this
  * process's first touch of a store, whether it may ever show that store's
@@ -52,6 +54,12 @@ export const SEC_ITEM_NOT_FOUND = -25300;
 const SEC_INTERACTION_NOT_ALLOWED = -25308;
 /** kSecUnlockStateStatus in SecKeychainGetStatus's bit field. */
 const UNLOCK_STATE_STATUS = 1;
+/** kSecModDateItemAttr ('mdat') and kSecAccountItemAttr ('acct'). */
+const MODIFIED_AT_TAG = 0x6d646174;
+const ACCOUNT_TAG = 0x61636374;
+/** CSSM_DB_ATTRIBUTE_FORMAT_TIME_DATE and CSSM_DB_ATTRIBUTE_FORMAT_BLOB. */
+const FORMAT_TIME_DATE = 5;
+const FORMAT_BLOB = 6;
 const PATH_BUFFER_BYTES = 4096;
 
 const STATUS_MESSAGE: Record<number, string> = {
@@ -64,6 +72,8 @@ const STATUS_MESSAGE: Record<number, string> = {
 export type DarwinPresence = {
   status: number;
   modifiedAt?: string;
+  /** The found item's own account attribute, when it could be read. */
+  account?: string;
   /** Whether the store holding the item is locked, when it could be read. */
   locked?: boolean;
   /** That store's file, for the unlock helper. Never leaves the host. */
@@ -72,8 +82,9 @@ export type DarwinPresence = {
 
 export type DarwinKeychainApi = {
   setUserInteractionAllowed: (allowed: boolean) => void;
-  findGenericPassword: (service: string, account: string) => DarwinPresence;
-  readGenericPassword: (service: string, account: string) => { status: number; value?: string };
+  /** An undefined account matches any: the first item of that exact service. */
+  findGenericPassword: (service: string, account?: string) => DarwinPresence;
+  readGenericPassword: (service: string, account?: string) => { status: number; value?: string };
   /**
    * Whether Claude's one item already trusts Apple's tool, judged in process.
    * Absent on a stand-in: the tool must not be used.
@@ -172,25 +183,27 @@ export function createDarwinKeychain(
       // an auth failure reach the Apple-tool path, and only after that one
       // item's access rules say the tool may read it. A cancelled dialog, a
       // locked store, and every other item keep the original result. The
-      // tool is NEVER tried on an unverified ACL.
+      // tool is NEVER tried on an unverified ACL, nor for a query that names
+      // no account: the item checked and the item read must be the one item.
+      const account = query.account;
       if (
         result.kind !== "failed" ||
         result.code !== -25293 ||
-        query.service !== "Claude Code-credentials"
+        query.service !== "Claude Code-credentials" ||
+        account === undefined
       )
         return result;
       const loaded = resolveApi();
       if (!loaded) return result;
       try {
         loaded.setUserInteractionAllowed(false);
-        const presence = loaded.findGenericPassword(query.service, query.account);
+        const presence = loaded.findGenericPassword(query.service, account);
         if (presence.status !== SEC_SUCCESS || presence.locked !== false || !presence.keychainPath)
           return result;
         // No stand-in trust check means the tool stays unused. A false
         // answer is the original refusal, not a read that did not finish.
-        if (loaded.claudeItemTrustsAppleTool?.(query.service, query.account) !== true)
-          return result;
-        const value = await readTrusted(query.account, presence.keychainPath);
+        if (loaded.claudeItemTrustsAppleTool?.(query.service, account) !== true) return result;
+        const value = await readTrusted(account, presence.keychainPath);
         if (value.kind === "value") return value;
         if (value.kind === "incomplete") {
           return {
@@ -214,6 +227,7 @@ export function mapFind(result: DarwinPresence): HostKeychainOutcome {
       kind: "found",
       ...(result.modifiedAt !== undefined ? { modifiedAt: result.modifiedAt } : {}),
       ...(result.locked !== undefined ? { locked: result.locked } : {}),
+      ...(result.account !== undefined ? { account: result.account } : {}),
     };
   }
   if (result.status === SEC_ITEM_NOT_FOUND) return { kind: "absent" };
@@ -252,16 +266,18 @@ function bindSecurityFramework(keychainPath?: string): DarwinKeychainApi {
 
   const voidPtr = koffi.pointer("void");
   const voidPtrPtr = koffi.pointer(voidPtr);
-  const attribute = koffi.struct("FmSecKeychainAttribute", {
+  // Unnamed: koffi registers a named type once per process, and a test opens
+  // a binding for each throwaway keychain it makes.
+  const attribute = koffi.struct({
     tag: "uint32",
     length: "uint32",
     data: voidPtr,
   });
-  const attributeList = koffi.struct("FmSecKeychainAttributeList", {
+  const attributeList = koffi.struct({
     count: "uint32",
     attr: koffi.pointer(attribute),
   });
-  const attributeInfo = koffi.struct("FmSecKeychainAttributeInfo", {
+  const attributeInfo = koffi.struct({
     count: "uint32",
     tag: koffi.pointer("uint32"),
     format: koffi.pointer("uint32"),
@@ -495,26 +511,28 @@ function bindSecurityFramework(keychainPath?: string): DarwinKeychainApi {
     },
     findGenericPassword: (service, account) => {
       const itemRef: [unknown] = [null];
+      // A NULL account leaves it out of the search: any item of this service.
       const status = findPresence(
         keychain,
         Buffer.byteLength(service),
         service,
-        Buffer.byteLength(account),
-        account,
+        account === undefined ? 0 : Buffer.byteLength(account),
+        account ?? null,
         null,
         null,
         itemRef,
       ) as number;
       let modifiedAt: string | undefined;
+      let foundAccount: string | undefined;
       let store: { locked?: boolean; keychainPath?: string } = {};
       const attributes: [unknown] = [null];
       try {
         if (status === SEC_SUCCESS && itemRef[0] != null) {
-          const tags = [0x6d646174];
-          const formats = [5];
+          const tags = [MODIFIED_AT_TAG, ACCOUNT_TAG];
+          const formats = [FORMAT_TIME_DATE, FORMAT_BLOB];
           const attributeStatus = copyAttributes(
             itemRef[0],
-            { count: 1, tag: tags, format: formats },
+            { count: tags.length, tag: tags, format: formats },
             null,
             attributes,
             null,
@@ -525,13 +543,21 @@ function bindSecurityFramework(keychainPath?: string): DarwinKeychainApi {
               count: number;
               attr: unknown;
             };
-            if (list.count > 0 && list.attr != null) {
-              const found = koffi.decode(list.attr, attribute) as {
-                length: number;
-                data: unknown;
-              };
-              if (found.data != null && found.length > 0) {
-                modifiedAt = koffi.decode.string(found.data, found.length);
+            const found =
+              list.count > 0 && list.attr != null
+                ? (koffi.decode(list.attr, attribute, list.count) as {
+                    tag: number;
+                    length: number;
+                    data: unknown;
+                  }[])
+                : [];
+            for (const entry of found) {
+              if (entry.data == null || entry.length <= 0) continue;
+              if (entry.tag === MODIFIED_AT_TAG) {
+                modifiedAt = koffi.decode.string(entry.data, entry.length);
+              } else if (entry.tag === ACCOUNT_TAG) {
+                const bytes = koffi.decode(entry.data, koffi.array("uint8", entry.length));
+                foundAccount = Buffer.from(bytes as number[]).toString("utf8");
               }
             }
           }
@@ -541,7 +567,12 @@ function bindSecurityFramework(keychainPath?: string): DarwinKeychainApi {
         if (attributes[0] != null) freeAttributes(attributes[0], null);
         if (itemRef[0] != null) cfRelease(itemRef[0]);
       }
-      return { status, ...(modifiedAt !== undefined ? { modifiedAt } : {}), ...store };
+      return {
+        status,
+        ...(modifiedAt !== undefined ? { modifiedAt } : {}),
+        ...(foundAccount !== undefined ? { account: foundAccount } : {}),
+        ...store,
+      };
     },
     readGenericPassword: (service, account) => {
       const passwordLength = [0];
@@ -551,8 +582,8 @@ function bindSecurityFramework(keychainPath?: string): DarwinKeychainApi {
         keychain,
         Buffer.byteLength(service),
         service,
-        Buffer.byteLength(account),
-        account,
+        account === undefined ? 0 : Buffer.byteLength(account),
+        account ?? null,
         passwordLength,
         passwordData,
         itemRef,

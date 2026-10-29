@@ -122,8 +122,10 @@ describe("Claude connect adopts a usable default login", () => {
     expect(relay.notices.map((notice) => notice.message).join(" ")).toMatch(
       /login on this computer/i,
     );
+    // The miss is definite: this USER's name, then any account of the service.
     expect(passwords.finds).toEqual([
       { service: "Claude Code-credentials", account: keychainAccountName(env) },
+      { service: "Claude Code-credentials" },
     ]);
     expect(passwords.reads).toBe(0);
   });

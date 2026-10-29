@@ -158,7 +158,7 @@ describe("ClaudeAuthBackend", () => {
   it("the default sign-in prime is a host-capability VALUE read, interactive so the grant is Infinitary's", async () => {
     const client = fakeClient();
     const store = accountDir("host-prime");
-    const reads: { service: string; account: string; interactive?: boolean }[] = [];
+    const reads: { service: string; account?: string; interactive?: boolean }[] = [];
     const backend = new ClaudeAuthBackend({
       run: client.run,
       available: () => true,

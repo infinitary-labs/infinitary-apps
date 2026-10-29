@@ -49,7 +49,7 @@ Every relation below is one kind of the checked relationship contract, with its 
 
 - Parent (`parent_id`, one per task) means containment; a child inherits its parent's project and repository, and the ancestor walk refuses a cycle.
 - `blocks`: the target is not ready until the source is `done`; a dropped blocker never clears readiness and becomes a dead wait the first mate resolves.
-- `related` is informational; `discovered-from` is provenance; `replaced-by` records that a dropped task's work moved to another; none of the three affects readiness or closing.
+- `related` is informational; `discovered-from` is provenance; `replaced-by` records that a task's work moved to another, and a task closed through it reads done, carried on by that task, rather than dropped; none of the three affects readiness or closing.
 - Basis: a task names one task whose answer it builds on, a `basis` row of `task_references`; whether it holds is derived at every read, never stored, and a name that names no task yet is kept.
 - Branch inheritance: a parent moves no code; `branch_from` names a task in the same project whose last commit the working copy starts at, a `branch-source` row, and it is the one relation that moves code.
 - Retry provenance: a stronger-model retry names the attempt it retries, a `retry-of` row; the escalation stamp beside it stays on the shape as a fact of how it ran.

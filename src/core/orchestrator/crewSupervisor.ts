@@ -11677,7 +11677,7 @@ export class CrewSupervisor {
     const handle = `${record.key || record.id} "${record.title}"`;
     if (record.status !== "open") {
       return record.status === "active"
-        ? `Cannot drop ${handle} here: a crewmate holds it. Use settle_task (discard) for work that has started.`
+        ? `Cannot drop ${handle} here: a crewmate holds it. Use settle_task (discard) for work that has started, or carried_on when another task carries its work.`
         : `${handle} is already ${describeStatus(record)}.`;
     }
     const started = this.options.tasks
@@ -11719,21 +11719,44 @@ export class CrewSupervisor {
         ...(replacement ? { replacedBy: replacement.id } : {}),
       }),
     );
-    this.cards.retireTaskCards(record.id, "dropped");
+    this.cards.retireTaskCards(record.id, replacement ? "superseded" : "dropped");
     for (const child of dropped) this.cards.retireTaskCards(child.id, "superseded");
+    // Work another task carries on closed done through it (INF-1825).
+    const other = replacement ? replacement.key || replacement.id : "";
+    const parts =
+      dropped.length > 0
+        ? `${dropped.length} ${dropped.length === 1 ? "child" : "children"} under it`
+        : "";
     this.options.broadcastEvent({
       type: "firstmate_note",
-      text:
-        dropped.length > 0
-          ? `Dropped "${record.title}" (${record.key}) and ${dropped.length} ${dropped.length === 1 ? "child" : "children"} under it - ${input.reason}.`
-          : `Dropped "${record.title}" (${record.key}) - ${input.reason}.`,
+      text: replacement
+        ? `"${record.title}" (${record.key}) is carried on by ${other}${parts ? `; dropped ${parts}` : ""}.`
+        : `Dropped "${record.title}" (${record.key})${parts ? ` and ${parts}` : ""} - ${input.reason}.`,
     });
     this.cards.scheduleBroadcast();
     this.graphChanged();
-    const replaces = replacement ? ` ${replacement.key || replacement.id} replaces it.` : "";
+    const named = dropped.map((child) => child.key || child.id).join(", ");
+    if (replacement)
+      return `Closed ${handle} as done: ${other} carries on its work.${named ? ` Dropped ${named} as superseded.` : ""}`;
     return dropped.length > 0
-      ? `Dropped ${handle} and ${dropped.map((child) => child.key || child.id).join(", ")} as superseded.${replaces}`
-      : `Dropped ${handle}.${replaces}`;
+      ? `Dropped ${handle} and ${named} as superseded.`
+      : `Dropped ${handle}.`;
+  }
+
+  /**
+   * settle_task carried_on (INF-1825): work another task carries on closes
+   * done through it. Unstarted work closes as update_task drop with
+   * replaced_by closes it; started work through the settle path, which
+   * keeps its commits and closes its own pull request.
+   */
+  async carryOnTask(taskRef: string, carrierRef: string): Promise<string> {
+    const record = this.resolveTaskRef(taskRef, "task_id");
+    if (record.status === "open")
+      return this.dropTask(record.id, {
+        reason: `carried on by ${carrierRef}`,
+        replacedBy: carrierRef,
+      });
+    return (await this.settle.closeCarriedOn(record.id, carrierRef)).text;
   }
 
   /**

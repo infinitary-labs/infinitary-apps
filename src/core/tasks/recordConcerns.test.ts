@@ -7,7 +7,7 @@ import { ACTIVITY_PLACES } from "./recordActivity";
 import { seedTask } from "./seedTask";
 import { exportTaskRecords, parseTaskExport } from "./taskExport";
 import { TaskProtocol } from "./taskProtocol";
-import { TaskGraphRefusal, TaskService, TIMELINE_CAP } from "./taskService";
+import { carriedOnClose, TaskGraphRefusal, TaskService, TIMELINE_CAP } from "./taskService";
 
 /**
  * Whom an event concerns (FI3-1189's rule 1; docs/task-record.md). Each
@@ -171,12 +171,13 @@ describe("whom an event concerns (FI3-1189's rule 1)", () => {
     });
     merge(tasks, "fix", 977);
     const [hang, fix] = [keyOf("hang"), keyOf("fix")];
-    // The first task lists all three: the filing, the drop for its
-    // replacement, and the replacement's merge.
+    // The first task lists all three: the filing, the close for its
+    // replacement, and the replacement's merge. Work another task carries
+    // on closes done through it, never dropped (INF-1825).
     const origin = detail("origin").activityLog.map((row) => row.text);
     expect(origin).toContainEqual(`follow-up filed: "Journey hangs" (${hang})`);
     expect(fromOthers("origin")).toEqual([
-      [hang, `${hang}, filed by this task, was dropped: ${fix} replaces it.`],
+      [hang, `${hang}, filed by this task, closed: ${fix} carries on its work.`],
       [fix, `${fix}, which replaced ${hang}, opened pull request #977.`],
       [fix, `${fix}, which replaced ${hang}, merged pull request #977.`],
     ]);
@@ -192,6 +193,55 @@ describe("whom an event concerns (FI3-1189's rule 1)", () => {
       [fix, `${fix}, which replaced this task, opened pull request #977.`],
       [fix, `${fix}, which replaced this task, merged pull request #977.`],
     ]);
+  });
+
+  // INF-1825, the captain's words: "its record reads \"Done through
+  // INF-1737\"". The status is Done from the close; the words beside it
+  // follow the task carrying the work, so "Done through" is never said
+  // before that task is done, and a chain names its last task.
+  it("carried on: the record reads where the work stands, through the last task carrying it", () => {
+    const { tasks, keyOf, detail } = setup();
+    work(tasks, "old", "Fix the notice");
+    work(tasks, "next", "Fix the notice in its own pull request");
+    tasks.link("old", "next", "replaced-by", "firstmate");
+    tasks.close("old", carriedOnClose({ id: "next", key: keyOf("next") }, "firstmate"));
+    const [old, next] = [keyOf("old"), keyOf("next")];
+    const reads = (id: string) => ({
+      status: detail(id).status,
+      note: detail(id).closing?.note,
+      replacedBy: detail(id).replacedBy,
+    });
+    expect(reads("old")).toEqual({
+      status: "done",
+      note: `Carried on by ${next}`,
+      replacedBy: next,
+    });
+    // The task carrying it says whose work it carries on.
+    expect(detail("next").activityLog.map((row) => row.text)).toContainEqual(
+      `replaces "Fix the notice" (${old})`,
+    );
+
+    // The task carrying it was carried on in turn: the last one is named.
+    work(tasks, "last", "Finish the notice");
+    tasks.link("next", "last", "replaced-by", "firstmate");
+    tasks.close("next", carriedOnClose({ id: "last", key: keyOf("last") }, "firstmate"));
+    const last = keyOf("last");
+    expect(detail("old").closing?.note).toBe(`Carried on by ${last}`);
+
+    merge(tasks, "last", 675);
+    expect(detail("old").closing?.note).toBe(`Done through ${last}`);
+    expect(detail("next").closing?.note).toBe(`Done through ${last}`);
+
+    // A carrier dropped later is said as it is; the close stays done.
+    work(tasks, "lost", "Fix the banner");
+    work(tasks, "taker", "Fix the banner elsewhere");
+    tasks.link("lost", "taker", "replaced-by", "firstmate");
+    tasks.close("lost", carriedOnClose({ id: "taker", key: keyOf("taker") }, "firstmate"));
+    tasks.close("taker", { status: "dropped", reason: "cancelled", actor: "firstmate" });
+    expect(detail("lost")).toMatchObject({
+      status: "done",
+      closing: { note: `Carried on by ${keyOf("taker")}, which was dropped` },
+    });
   });
 
   // INF-976: INF-926 built INF-797's answer and merged, and nothing on

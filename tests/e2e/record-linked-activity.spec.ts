@@ -146,14 +146,15 @@ test("a task's record lists its follow-up's drop for a replacement and that repl
       page.evaluate((taskId) => window.infinitary.tasks.detail(taskId), id);
     const [hang, fix] = [seed.followup.key, seed.fix.key];
 
-    // Firstmate drops the follow-up for its replacement.
+    // Firstmate closes the follow-up for its replacement: done through it,
+    // since the replacement carries on its work (INF-1825).
     const dropped = await ask(app, `Drop ${hang}; ${fix} does its work.`, [
       {
         name: "update_task",
         args: { task: hang, drop: true, reason: "the fix is its own task", replaced_by: fix },
       },
     ]);
-    expect(dropped.results[0]).toContain(`${fix} replaces it`);
+    expect(dropped.results[0]).toContain(`${fix} carries on its work`);
     // The captain merges the replacement.
     await (await completionAction(page, "The hang fix is ready")).click();
     await expect
@@ -165,7 +166,7 @@ test("a task's record lists its follow-up's drop for a replacement and that repl
     const origin = await detail("origin");
     const texts = origin.activityLog.map((row) => [row.from?.key ?? null, row.text]);
     expect(texts).toContainEqual([null, expect.stringContaining(`follow-up filed`)]);
-    expect(texts).toContainEqual([hang, expect.stringContaining(`${fix} replaces it`)]);
+    expect(texts).toContainEqual([hang, expect.stringContaining(`${fix} carries on its work`)]);
     expect(texts).toContainEqual([fix, expect.stringContaining(`merged pull request #977`)]);
 
     // By keys: open the record, open Activity, and open the replacement from its line.

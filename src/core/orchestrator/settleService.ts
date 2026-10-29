@@ -25,7 +25,12 @@ import type {
   PendingSettleIntent,
   TaskRecord,
 } from "../storage/taskStore";
-import { type SettleRefusal, type SettleWay, TaskService } from "../tasks/taskService";
+import {
+  carriedOnClose,
+  type SettleRefusal,
+  type SettleWay,
+  TaskService,
+} from "../tasks/taskService";
 import type { RepoRegistry } from "../workspace/repoRegistry";
 import {
   keptWorkWords,
@@ -342,6 +347,19 @@ export type SettleServiceHost = {
   broadcastEvent: (event: FmEvent) => void;
 };
 
+/** Whether two tasks deliver through the same pull request or pushed branch. */
+function sameChange(left: TaskRecord, right: TaskRecord): boolean {
+  const a = left.delivery;
+  const b = right.delivery;
+  if (a?.prUrl && b?.prUrl) return a.prUrl === b.prUrl;
+  return (
+    left.repoId !== null &&
+    left.repoId === right.repoId &&
+    a?.prNumber !== undefined &&
+    a.prNumber === b?.prNumber
+  );
+}
+
 /**
  * A card that holds `settle_task answered`. A crewmate card still up is the
  * captain's to close. A Firstmate note stays through a done close, so it
@@ -434,7 +452,7 @@ export class SettleService {
    */
   private placeOutcome(
     record: TaskRecord,
-    reason: TaskClose["reason"],
+    reason: string,
     actor: TaskClose["actor"],
     sentence: string | undefined,
   ): void {
@@ -1340,6 +1358,84 @@ export class SettleService {
       ways,
       text: `${verb} ${task.key} "${record.title}" is not yours to do: ${why}. ${pointer} ${softHoldWords("asks-first", "firstmate")}`,
     };
+  }
+
+  /**
+   * settle_task carried_on (INF-1825): started work another task carries on
+   * closes done through it. The replaced-by link is written first, so the
+   * waits on this task move to that one (`TaskService.moveWaits`) before
+   * the close clears them; its unmerged commits are saved as every close
+   * saves them, and its own pull request is closed unless the other task
+   * carries that same pull request. No closing note goes up: the close's
+   * reason gives none (`closedWithoutClick`).
+   */
+  async closeCarriedOn(
+    taskRef: string,
+    carrierRef: string,
+  ): Promise<{ ok: boolean; text: string }> {
+    const record = this.host.resolveTaskRef(taskRef, "task_id");
+    const carrier = this.host.resolveTaskRef(carrierRef, "carried_by");
+    const handle = `${record.key || record.id} "${record.title}"`;
+    const other = carrier.key || carrier.id;
+    const refuse = (why: string) => ({
+      ok: false,
+      text: `Cannot close ${handle} as carried on by ${other}: ${why}`,
+    });
+    if (TaskService.isClosed(record)) return refuse(`it is already ${describeStatus(record)}.`);
+    const refusal = this.host.tasks.carrierRefusal(record.id, carrier.id);
+    if (refusal) return { ok: false, text: refusal };
+    const card = this.host.cards
+      .snapshot()
+      .find((entry) => entry.taskId === record.id && entry.actions.length > 0);
+    if (card)
+      return refuse(
+        `its card "${card.title}" still waits on the captain, and their choice there comes first.`,
+      );
+    const gate = this.host.tasks.closeRefusal(record.id);
+    if (gate) return refuse(gate.text);
+    const pending = this.settlingTasks.get(record.id);
+    if (pending) return refuse(`${pending} is already in progress. Wait for its outcome.`);
+    this.settlingTasks.set(record.id, "carried_on");
+    let pullRequest = "";
+    try {
+      this.host.tasks.link(record.id, carrier.id, "replaced-by", "firstmate");
+      const end = this.host.tasks.carrierOf(record.id);
+      const shared = [carrier, end].some((next) => next && sameChange(record, next));
+      if (!shared) pullRequest = (await this.closeOpenPullRequest(record.id)).text;
+      await this.closeTask(record.id, carriedOnClose(carrier, "firstmate"));
+    } finally {
+      this.settlingTasks.delete(record.id);
+    }
+    this.placeHeldOutcome(record.id);
+    return {
+      ok: true,
+      text: `Closed ${handle} as done: ${other} carries on its work.${pullRequest ? ` ${pullRequest}` : ""}`,
+    };
+  }
+
+  /**
+   * The outcome of a carrier that closed before the work it carries on
+   * (INF-1825): the old task's message held it back while that task was
+   * open, and the old task's close puts up nothing of its own, so the
+   * carrier's outcome is placed once, where it would have gone.
+   */
+  private placeHeldOutcome(oldId: string): void {
+    const carrier = this.host.tasks.carrierOf(oldId);
+    if (!carrier || carrier.id === oldId || !TaskService.isClosed(carrier)) return;
+    if (!carrier.closedReason) return;
+    const chain = this.host.askEnding.chainsOf(carrier.id)[0];
+    if (!chain?.work.some((task) => task.id === oldId)) return;
+    const close = this.host.tasks
+      .timeline(carrier.id)
+      .findLast(
+        (event) =>
+          event.data?.status === carrier.status && event.data?.reason === carrier.closedReason,
+      );
+    if (!close) return;
+    const sentence =
+      typeof close.data?.closingSentence === "string" ? close.data.closingSentence : undefined;
+    const actor = close.actor === "captain" || close.actor === "firstmate" ? close.actor : "host";
+    this.placeOutcome(carrier, carrier.closedReason, actor, sentence);
   }
 
   /**
@@ -2912,7 +3008,8 @@ export class SettleService {
   ): Promise<void> {
     // The close reaches its crewmate, which leaves once the spark lands; a
     // superseded one hands over to its successor, whose start is its spark.
-    if (close.reason !== "superseded") this.host.announceReach?.(taskId);
+    // Work carried on closes done and goes home like any done task.
+    if (close.reason !== "superseded" || close.status === "done") this.host.announceReach?.(taskId);
     this.host.killJobs?.(taskId);
     this.host.endLiveTask(taskId);
     const stopping = this.host.stopRuntime(taskId);

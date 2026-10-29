@@ -468,6 +468,10 @@
       if (current.delivery?.ci === "green") line.push(" The checks passed.");
       return line;
     }
+    // Work another task carries on closed done (INF-1825): its words say
+    // where that work stands, and the close's time follows them.
+    if (current.status === "done" && current.closedReason === "superseded" && current.closing?.note)
+      return [`${current.closing.note}, closed `, when, "."];
     const reason = current.closedReason;
     const word = reason
       ? (CLOSE_WORDS[reason] ?? reason)

@@ -2392,6 +2392,22 @@ export class FirstmateAgent {
       // label read, so `escalate_from` is reachable only from a turn that
       // carries the captain's own words.
       isCaptainTurn: () => this.turnOrigin === "captain-turn",
+      carryOnTask: async (taskId, carriedBy, closingSentence) => {
+        this.asks.attach(taskId, "settle_task");
+        const close = () => supervisor.carryOnTask(taskId, carriedBy);
+        const text = closingSentence
+          ? await supervisor.withClosingSentence(
+              this.options.tasks.resolve(taskId)?.id ?? taskId,
+              closingSentence,
+              close,
+            )
+          : await close();
+        if (this.options.tasks.get(taskId)?.status === "done") {
+          this.deliveredThisTurn = true;
+          this.noteDelivery({ outcome: "action", kind: "work", tool: "settle_task", ref: taskId });
+        }
+        return text;
+      },
       settleTask: async (taskId, mode, confirm, proceedWithOpen, evidence, closingSentence) => {
         this.asks.attach(taskId, "settle_task");
         const settle = async (): Promise<{ text: string; refusal?: SettleRefusal }> =>

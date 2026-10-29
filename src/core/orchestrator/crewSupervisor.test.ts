@@ -2514,6 +2514,158 @@ describe("CrewSupervisor", () => {
     });
   });
 
+  // INF-1825 (Finding 3 of INF-1810), the captain's words: "A task closes as
+  // \"carried on by\" another task through its typed replaced-by link, its
+  // record reads \"Done through INF-1737\", and no note is posted. The word
+  // \"dropped\" is kept for work that was really abandoned." INF-1605's work
+  // moved to INF-1737, and the first mate could only cancel it.
+  describe("work another task carries on (INF-1825)", () => {
+    const SENTENCE = "INF-1737 carries the notice fix on in its own pull request.";
+    const left = (cards: Card[], taskId: string) =>
+      cards.filter((card) => card.taskId === taskId).map((card) => card.title);
+
+    async function carriedWork(extras: SetupExtras = {}) {
+      const crewmate = fakeCrewmate();
+      const harness = setup(crewmate, extras);
+      const { taskId } = await harness.supervisor.commission({
+        title: "Fix the notice",
+        intent: intentOf("fix the notice"),
+      });
+      const ask = harness.tasks.openAsk({ id: `ask-${taskId}`, text: "fix the notice" });
+      harness.tasks.attachAsk(ask.id, taskId, "tool:spawn_crewmate");
+      harness.tasks.closeAsk(ask.id, "closed");
+      await tick();
+      crewmate.finishPrompt();
+      await tick();
+      expect(legacyStateOf(harness.tasks.get(taskId))).toBe("idle");
+      const carrier = seedTask(harness.tasks, {
+        id: "carrier",
+        title: "Fix the notice in its own pull request",
+        status: "running",
+      });
+      return { ...harness, crewmate, taskId, ask, carrier };
+    }
+
+    it("closes started work as done through the task carrying it: waits move, its own pull request closes, and no note goes up", async () => {
+      const closePullRequest = vi.fn(async () => ({ ok: true, text: "Closed PR #9." }));
+      const h = await carriedWork({ closePullRequest });
+      vi.spyOn(h.supervisor, "taskDelivery").mockReturnValue("direct-pr");
+      seedDelivery(h.tasks, h.taskId, { prNumber: 9 });
+      const waiter = seedTask(h.tasks, { id: "waiter", title: "Ship the notice", status: "idle" });
+      h.tasks.link(h.taskId, waiter.id, "blocks", "firstmate");
+
+      const text = await h.supervisor.withClosingSentence(h.taskId, SENTENCE, () =>
+        h.supervisor.carryOnTask(h.taskId, h.carrier.key),
+      );
+      await tick();
+
+      expect(text).toContain(`${h.carrier.key} carries on its work.`);
+      expect(h.tasks.get(h.taskId)).toMatchObject({ status: "done", closedReason: "superseded" });
+      expect(h.tasks.replacementOf(h.taskId)).toBe(h.carrier.key);
+      // Done clears a wait, so the wait moved before the close.
+      expect(h.tasks.linksTo(waiter.id)).toEqual([
+        expect.objectContaining({ fromId: h.carrier.id, type: "blocks" }),
+      ]);
+      expect(closePullRequest).toHaveBeenCalledExactlyOnceWith(h.taskId);
+      expect(h.workspace.removeTaskWorktree).toHaveBeenCalledWith(
+        expect.objectContaining({ taskId: h.taskId }),
+      );
+      expect(left(h.cards(), h.taskId)).toEqual([]);
+      const record = h.tasks.get(h.taskId);
+      const close = h.tasks.timeline(h.taskId).find((event) => event.kind === "status");
+      if (!record || !close) throw new Error("The close left no event");
+      expect(taskFeedLine(record, close)?.text).toBe(`Carried on by ${h.carrier.key}`);
+    });
+
+    it("keeps the pull request open when the task carrying the work carries that same pull request", async () => {
+      const closePullRequest = vi.fn(async () => ({ ok: true, text: "Closed PR #9." }));
+      const h = await carriedWork({ closePullRequest });
+      vi.spyOn(h.supervisor, "taskDelivery").mockReturnValue("direct-pr");
+      const prUrl = "https://github.com/acme/app/pull/9";
+      seedDelivery(h.tasks, h.taskId, { prNumber: 9, prUrl });
+      seedDelivery(h.tasks, h.carrier.id, { prNumber: 9, prUrl });
+
+      await h.supervisor.carryOnTask(h.taskId, h.carrier.key);
+      await tick();
+
+      expect(h.tasks.get(h.taskId)?.status).toBe("done");
+      expect(closePullRequest).not.toHaveBeenCalled();
+    });
+
+    it("refuses the task itself, a task under it, a dropped task and a task whose card waits on the captain, writing nothing", async () => {
+      const h = await carriedWork();
+      h.tasks.create({
+        id: "part",
+        title: "A part of it",
+        prompt: "p",
+        repoId: null,
+        parentId: h.taskId,
+      });
+      h.tasks.close("part", { status: "dropped", reason: "cancelled", actor: "firstmate" });
+      const gone = seedTask(h.tasks, { id: "gone", title: "Gone", status: "cancelled" });
+      const key = h.tasks.get(h.taskId)?.key ?? "";
+      expect(await h.supervisor.carryOnTask(h.taskId, h.taskId)).toBe(
+        `Refused: ${key} cannot be replaced by itself.`,
+      );
+      expect(await h.supervisor.carryOnTask(h.taskId, "part")).toContain("is under");
+      expect(await h.supervisor.carryOnTask(h.taskId, gone.key)).toBe(
+        `Refused: ${gone.key} is dropped itself, so it does not do ${key}'s work.`,
+      );
+      h.specs[0]?.onCard?.({
+        title: "Which notice wording?",
+        body: "<p>Pick one.</p>",
+        actions: [
+          { id: "a", label: "Short", default: true },
+          { id: "b", label: "Long" },
+        ],
+      });
+      await tick();
+      expect(await h.supervisor.carryOnTask(h.taskId, h.carrier.key)).toContain(
+        'its card "Which notice wording?" still waits on the captain',
+      );
+      expect(h.tasks.get(h.taskId)?.status).toBe("active");
+      expect(h.tasks.allLinks().filter((link) => link.type === "replaced-by")).toEqual([]);
+    });
+
+    it("places the outcome of a carrier that closed first once, where it would have gone", async () => {
+      const h = await carriedWork();
+      // The carrier worked for the same message, so the old task held its outcome back.
+      h.tasks.attachAsk(h.ask.id, h.carrier.id, "tool:spawn_crewmate");
+      const merged = "The notice fix merged in PR #12.";
+      await h.supervisor.withClosingSentence(h.carrier.id, merged, () =>
+        h.supervisor.closeTask(h.carrier.id, {
+          status: "done",
+          reason: "merged",
+          actor: "firstmate",
+        }),
+      );
+      await tick();
+      expect(left(h.cards(), h.carrier.id)).toEqual([]);
+
+      await h.supervisor.carryOnTask(h.taskId, h.carrier.key);
+      await tick();
+
+      expect(left(h.cards(), h.taskId)).toEqual([]);
+      expect(left(h.cards(), h.carrier.id)).toEqual([closingNoteTitle(h.carrier.key, "merged")]);
+      expect(h.cards().find((card) => card.taskId === h.carrier.id)?.body).toContain(merged);
+    });
+
+    it("closes unstarted work named by update_task drop with replaced_by as done, not dropped", async () => {
+      const crewmate = fakeCrewmate();
+      const { supervisor, tasks } = setup(crewmate);
+      tasks.create({ id: "planned", title: "Planned fix", prompt: "p", repoId: null });
+      const carrier = seedTask(tasks, { id: "carrier", title: "Carrier", status: "running" });
+      expect(
+        supervisor.dropTask("planned", { reason: "moved to its carrier", replacedBy: carrier.key }),
+      ).toContain(`${carrier.key} carries on its work.`);
+      expect(tasks.get("planned")).toMatchObject({ status: "done", closedReason: "superseded" });
+      // A drop that names no replacement stays dropped.
+      tasks.create({ id: "stopped", title: "Stopped fix", prompt: "p", repoId: null });
+      supervisor.dropTask("stopped", { reason: "not needed" });
+      expect(tasks.get("stopped")).toMatchObject({ status: "dropped", closedReason: "cancelled" });
+    });
+  });
+
   it("announces an intelligence downgrade in the feed, never silently (P7)", async () => {
     const crewmate = fakeCrewmate();
     const { supervisor, events } = setup(crewmate, {

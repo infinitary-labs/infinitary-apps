@@ -194,6 +194,8 @@ export type CrewDelegate = {
     evidence?: string,
     closingSentence?: string,
   ): Promise<{ text: string; refusal?: SettleRefusal }>;
+  /** settle_task carried_on (INF-1825): close a task done through the task carrying its work. */
+  carryOnTask(taskId: string, carriedBy: string, closingSentence?: string): Promise<string>;
 };
 
 /**
@@ -202,7 +204,7 @@ export type CrewDelegate = {
  * settle_task's says it once; interrupt_crewmate's points there.
  */
 export const CLOSING_SENTENCE_DESCRIPTION =
-  "Required except answered: one plain sentence for the captain on what became of the work and why.";
+  "Required except answered and carried_on: one plain sentence for the captain on what became of the work and why.";
 
 /** A close of started work refused for want of its sentence: what is missing and how to answer. */
 export function closingSentenceMissing(mode: string): string {
@@ -651,11 +653,24 @@ export function createCrewTools(delegate: CrewDelegate) {
       "delivery through an external release process, with release_evidence. finished closes verified, reported, idle " +
       "operations, in_folder or personal_ui work with completion_evidence; folder files and git stay. " +
       "Missing changes or dismissed cards prove nothing. Never discard successful folder work or use finished to bypass merging. " +
+      "carried_on closes work another task carries on, named by carried_by, as done through it, never dropped: " +
+      "its waits move there, commits are kept and its own PR closed; no note goes up. " +
       "Records and sessions stay. " +
       "Use crew_status to pick the task id; never guess among several matches.",
     parameters: Type.Object({
       task_id: Type.String({ description: "The task id from crew_status or spawn" }),
-      mode: stringEnum(["merge-pr", "land", "discard", "answered", "released", "finished"]),
+      mode: stringEnum([
+        "merge-pr",
+        "land",
+        "discard",
+        "answered",
+        "released",
+        "finished",
+        "carried_on",
+      ]),
+      carried_by: Type.Optional(
+        Type.String({ description: "For carried_on: the task (key or id) carrying its work" }),
+      ),
       completion_evidence: Type.Optional(
         Type.String({ description: "For finished: the completed result and what proves it" }),
       ),
@@ -676,6 +691,14 @@ export function createCrewTools(delegate: CrewDelegate) {
     }),
     run: async (params) => {
       const sentence = params.closing_sentence?.trim();
+      if (params.mode === "carried_on") {
+        const carriedBy = params.carried_by?.trim();
+        if (!carriedBy)
+          return {
+            text: "Not closed: carried_on needs carried_by, the task carrying this task's work. Call it again with one.",
+          };
+        return { text: await delegate.carryOnTask(params.task_id, carriedBy, sentence) };
+      }
       if (params.mode !== "answered" && !sentence)
         return { text: closingSentenceMissing(params.mode) };
       const { text, refusal } = await delegate.settleTask(

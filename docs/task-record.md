@@ -255,7 +255,7 @@ An unavailable source is explicit; opening history grants nothing, changes no pe
 ## Starting dropped work again
 
 The dropped work record offers Start again in its action bar's next slot, with no confirmation and the shared keyboard focus ring.
-Done records have no bar; dropped work with parts, a `replaced-by` successor or a stronger-model retry has no Start again.
+Done records have no bar, including work carried on by another task ("Work carried on by another task"); dropped work with parts, a `replaced-by` successor or a stronger-model retry has no Start again.
 An accepted click removes that record from the stack, not from history; a refusal is inline and writes nothing.
 The old task stays dropped.
 
@@ -410,8 +410,22 @@ Such a row takes no fold, and it never stands as the task's Now line ("The Now l
 | `linked` and `unlinked` | the link's other end | `SCR-4 waits for this task.`; the far end of a filing folds under the filing's own note |
 | A refused merge (`note` with `data.refused`) | each task the refusal names that a link or a parent edge joins to it | `SCR-1, which waits for this task, could not merge.` |
 
-A drop reads with its reason, and a drop for a replacement names it (`SCR-3, filed by this task, was dropped: SCR-6 replaces it.`).
+A drop reads with its reason, and work another task carries on names that task (`SCR-3, filed by this task, closed: SCR-6 carries on its work.`).
 The first mate declares the replacement with `update_task`'s `replaced_by` beside `drop`, which writes a `replaced-by` link from the dropped task to its replacement before the close, or with `link_tasks` type `replaced-by` (`docs/task-graph.md`).
+
+## Work carried on by another task
+
+Work another task carries on closes done, never dropped (INF-1825): "dropped" is kept for work that was really abandoned.
+The first mate closes started work with `settle_task` mode `carried_on` and `carried_by`, the task carrying it (`SettleService.closeCarriedOn`), and unstarted work with `update_task` `drop` and `replaced_by` (`TaskService.dropWithChildren`).
+The close writes the `replaced-by` link first, so the old task's live waits move to that task before the close clears them (`docs/task-graph.md`, "A wait follows moved work").
+Its unmerged commits are saved as every close saves them, and its own pull request is closed unless the task carrying the work carries that same pull request.
+It closes with status `done` and reason `superseded`, an existing closing reason, so the published contract gains no member (`carriedOnClose`).
+`closedWithoutClick` gives that reason no outcome, so no closing note goes up; Activity shows one line, `Carried on by SCR-6`.
+The close is refused for the task itself, a task under it, a dropped task, a task already carried on by another, and while a decision card of the old task waits on the captain.
+The record's closed line follows the last task of the replacement chain (`TaskService.carriedOn`): `Carried on by SCR-6` while it runs, `Done through SCR-6` once it is done, and `Carried on by SCR-6, which was dropped` if it drops later.
+The task view publishes `replacedBy` on such a done row as it does on a dropped one.
+When the task carrying the work closed first, its outcome was held back while the old task was open in the same message, so the old task's close places that outcome once, where it would have gone.
+Its crewmate goes home on the ring as any done task's does.
 An event another task reads is exempt from timeline compaction, so the row it makes there never folds away.
 A `compacted` row keeps the newest plan it folded (`plan`, written at `planAt`) and the highest program line number per op it folded (`programLines`), so the task's plan and a program's replay still read them.
 The task export carries each event's concerns on its line (`concerns`), and an import writes them back with the event.

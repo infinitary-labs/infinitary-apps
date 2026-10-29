@@ -537,7 +537,7 @@ export class TaskProtocol {
       }),
       said: this.options.said?.(record) ?? null,
       plan: planOf(timeline),
-      closing: closingOf(record, events),
+      closing: closingOf(record, events, tasks.carriedOn(id)),
       problem: problemOf(events),
       ...(hold ? { hold: taskHoldWords(hold) } : {}),
       asks: tasks.asksFor(id).map((ask) => ({
@@ -631,7 +631,7 @@ export class TaskProtocol {
             }
           : {}),
         closedReason: record.closedReason,
-        ...(record.status === "dropped"
+        ...(record.status === "dropped" || record.closedReason === "superseded"
           ? { replacedBy: this.options.tasks.replacementOf(record.id) }
           : {}),
         seq: change.seq,
@@ -873,7 +873,7 @@ export class TaskProtocol {
       activity: record.activity,
       workPosture: posture,
       closedReason: record.closedReason,
-      ...(record.status === "dropped"
+      ...(record.status === "dropped" || record.closedReason === "superseded"
         ? { replacedBy: this.options.tasks.replacementOf(record.id) }
         : {}),
       startPolicy: record.startPolicy,
@@ -1077,18 +1077,33 @@ export function taskEventOf(record: TaskRecord, event: TaskEvent): FmEvent {
 /**
  * How a closed row closed: its closing event's time, and the words recorded
  * with it beyond the reason's own word - a drop's reason (`dropped - <why>`,
- * as `dropWithChildren` writes it) or a supersede's line. Null while open.
+ * as `dropWithChildren` writes it) or a supersede's line. Work carried on
+ * reads where its work stands now (INF-1825): carried on by the task at the
+ * end of its replacements while that runs, done through it once it is done.
+ * Null while open.
  */
-function closingOf(record: TaskRecord, events: readonly TaskEventView[]): TaskDetail["closing"] {
+function closingOf(
+  record: TaskRecord,
+  events: readonly TaskEventView[],
+  carried?: ReturnType<TaskService["carriedOn"]>,
+): TaskDetail["closing"] {
   if (!TaskService.isClosed(record)) return null;
   const close = events.findLast(
     (event) => event.data?.status === record.status && event.data?.reason === record.closedReason,
   );
   const at = close?.at ?? record.closedAt;
   if (at == null) return null;
+  if (carried) return { at, note: carriedOnWords(carried) };
   const words = close?.text.replace(/^(?:dropped|superseded) - /, "").trim() ?? "";
   const note = words && words !== record.closedReason ? words : null;
   return { at, note };
+}
+
+/** Where the work of a task closed as carried on stands, in the record's words (INF-1825). */
+export function carriedOnWords(carried: NonNullable<ReturnType<TaskService["carriedOn"]>>): string {
+  if (carried.state === "done") return `Done through ${carried.key}`;
+  if (carried.state === "dropped") return `Carried on by ${carried.key}, which was dropped`;
+  return `Carried on by ${carried.key}`;
 }
 
 /**

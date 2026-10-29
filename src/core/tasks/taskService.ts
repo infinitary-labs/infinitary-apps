@@ -678,6 +678,25 @@ export type CloseInput = {
   feed?: boolean;
 };
 
+/**
+ * The close of work another task carries on (INF-1825): done, superseded,
+ * with the replaced-by link's end and its key, so Activity says "Carried on
+ * by KEY" and no closing note goes up (`closedWithoutClick`).
+ */
+export function carriedOnClose<A extends TaskEventActor>(
+  carrier: Pick<TaskRecord, "id" | "key">,
+  actor: A,
+): CloseInput & { status: "done"; reason: "superseded"; actor: A; text: string } {
+  const key = carrier.key || carrier.id;
+  return {
+    status: "done",
+    reason: "superseded",
+    actor,
+    text: `Carried on by ${key}`,
+    data: { replacedBy: carrier.id, carriedBy: key },
+  };
+}
+
 export type OpenAskInput = {
   /** The turn id. */
   id: string;
@@ -1784,6 +1803,42 @@ export class TaskService {
     return record;
   }
 
+  /**
+   * Why `carrierId` cannot carry on `id`'s work (INF-1825), or undefined:
+   * not the task itself, not a task under it (its close would take it
+   * along), and not a dropped task, which does no work.
+   */
+  carrierRefusal(id: string, carrierId: string): string | undefined {
+    const record = this.mustGet(id);
+    const carrier = this.mustGet(carrierId);
+    const key = record.key || record.id;
+    const other = carrier.key || carrier.id;
+    if (carrier.id === record.id) return `Refused: ${key} cannot be replaced by itself.`;
+    if (this.ancestors(carrier.id).some((ancestor) => ancestor.id === record.id))
+      return `Refused: ${other} is under ${key}, so closing ${key} would close it too; name a task outside it.`;
+    if (carrier.status === "dropped")
+      return `Refused: ${other} is dropped itself, so it does not do ${key}'s work.`;
+    const named = this.links.listFrom(record.id, "replaced-by")[0];
+    const elsewhere = named && named.toId !== carrier.id ? this.store.get(named.toId) : undefined;
+    if (elsewhere)
+      return `Refused: ${elsewhere.key || elsewhere.id} already carries on ${key}'s work.`;
+    return undefined;
+  }
+
+  /**
+   * Where the work of a task closed as carried on stands (INF-1825): the
+   * task at the end of its replacement chain, and whether that task still
+   * runs, is done or was dropped. Undefined for any other close.
+   */
+  carriedOn(id: string): { key: string; state: "running" | "done" | "dropped" } | undefined {
+    const record = this.store.get(id);
+    if (record?.status !== "done" || record.closedReason !== "superseded") return undefined;
+    const carrier = this.carrierOf(id);
+    if (!carrier || carrier.id === id) return undefined;
+    const state = TaskService.isClosed(carrier) ? carrier.status : "running";
+    return { key: carrier.key || carrier.id, state: state as "running" | "done" | "dropped" };
+  }
+
   /** Predecessors are work to recover, never a spec or a routing discount. */
   replacedPredecessors(id: string): TaskRecord[] {
     return this.links
@@ -2768,21 +2823,8 @@ export class TaskService {
       const record = this.mustGet(id);
       const replacement = input.replacedBy ? this.mustGet(input.replacedBy) : undefined;
       if (replacement) {
-        const key = record.key || record.id;
-        const other = replacement.key || replacement.id;
-        if (replacement.id === id) {
-          throw new TaskGraphRefusal(`Refused: ${key} cannot be replaced by itself.`);
-        }
-        if (this.ancestors(replacement.id).some((ancestor) => ancestor.id === id)) {
-          throw new TaskGraphRefusal(
-            `Refused: ${other} is under ${key}, so dropping ${key} would drop it too; name a task outside it.`,
-          );
-        }
-        if (replacement.status === "dropped") {
-          throw new TaskGraphRefusal(
-            `Refused: ${other} is dropped itself, so it does not do ${key}'s work.`,
-          );
-        }
+        const refusal = this.carrierRefusal(id, replacement.id);
+        if (refusal) throw new TaskGraphRefusal(refusal);
         this.insertLink(id, replacement.id, "replaced-by", input.actor, this.now());
       }
       const dropped: TaskRecord[] = [];
@@ -2797,6 +2839,12 @@ export class TaskService {
         });
         dropped.push(this.mustGet(descendant.id));
       }
+      // Work another task carries on closes done through it (INF-1825):
+      // the drop's word is kept for work nobody carries on.
+      if (replacement) {
+        this.close(id, carriedOnClose(replacement, input.actor));
+        return dropped;
+      }
       // The first mate's reason is its closing sentence (INF-547): what
       // Activity's line for the drop says.
       const closingSentence = input.actor === "firstmate" ? input.reason.trim() : "";
@@ -2805,14 +2853,7 @@ export class TaskService {
         reason: "cancelled",
         actor: input.actor,
         text: input.text ?? `dropped - ${input.reason}`,
-        ...(replacement || closingSentence
-          ? {
-              data: {
-                ...(replacement ? { replacedBy: replacement.id } : {}),
-                ...(closingSentence ? { closingSentence } : {}),
-              },
-            }
-          : {}),
+        ...(closingSentence ? { data: { closingSentence } } : {}),
       });
       return dropped;
     });

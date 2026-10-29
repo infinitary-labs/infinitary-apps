@@ -31,6 +31,7 @@ function toolset(overrides: Partial<CrewDelegate> = {}) {
     crewStatus: vi.fn(() => []),
     isCaptainTurn: vi.fn(() => true),
     settleTask: vi.fn(async () => ({ text: "settled" })),
+    carryOnTask: vi.fn(async () => "carried"),
     ...overrides,
   };
   const tools = piToolsOf(createCrewTools(delegate)) as unknown as AnyTool[];
@@ -575,6 +576,23 @@ describe("crew tools", () => {
       "v1.2.3 published and verified",
       sentence,
     );
+  });
+
+  // INF-1825: work another task carries on closes through carried_by, with no closing sentence required.
+  it("settle_task carried_on names the task carrying the work, and asks for one when it is missing", async () => {
+    const { delegate, byName } = toolset();
+    const missing = await byName
+      .get("settle_task")
+      ?.execute("t1", { task_id: "ab12", mode: "carried_on" });
+    expect(missing?.content[0]?.text).toContain("carried_on needs carried_by");
+    expect(delegate.carryOnTask).not.toHaveBeenCalled();
+
+    const carried = await byName
+      .get("settle_task")
+      ?.execute("t1", { task_id: "ab12", mode: "carried_on", carried_by: " INF-1737 " });
+    expect(delegate.carryOnTask).toHaveBeenCalledWith("ab12", "INF-1737", undefined);
+    expect(carried?.content[0]?.text).toBe("carried");
+    expect(delegate.settleTask).not.toHaveBeenCalled();
   });
 
   // INF-1279: success in a project folder reaches the task owner with its own evidence.

@@ -62,7 +62,11 @@ export function taskFeedLine(record: FeedSubject, event: TaskEvent): FeedLine | 
     case "status": {
       const reason = text(data.reason);
       const sentence = text(data.closingSentence);
-      if (status === "dropped" && sentence) {
+      const carriedBy = text(data.carriedBy);
+      if (status === "done" && reason === "superseded" && carriedBy) {
+        // Work another task carries on (INF-1825): one line, no note.
+        line = `Carried on by ${carriedBy}`;
+      } else if (status === "dropped" && sentence) {
         // A drop the first mate made carries its own sentence (INF-547):
         // the line says what the drop was, the same words as its note.
         line = droppedLine(sentence);

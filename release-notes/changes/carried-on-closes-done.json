@@ -1,0 +1,17 @@
+{
+  "entries": [
+    {
+      "id": "carried-on-closes-done",
+      "kind": "fix",
+      "title": "Work another task carries on is done, not dropped",
+      "body": "When Firstmate moves a task's work to another task, the first task now closes as done instead of dropped, and no note about it goes up. Its record says which task carries the work on, then reads \"Done through\" that task once it is done. Dropped now means work that was really stopped.",
+      "area": "tasks",
+      "picture": {
+        "dark": "carried-on-closes-done-dark.webp",
+        "light": "carried-on-closes-done-light.webp",
+        "alt": "A done task's record reading Done through SCR-2, the task that carried its work on"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

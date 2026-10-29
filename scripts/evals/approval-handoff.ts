@@ -53,6 +53,7 @@ try {
       crewStatus: unavailable,
       isCaptainTurn: () => true,
       settleTask: unavailable,
+      carryOnTask: unavailable,
     }),
     createEmitCardTool(unavailable, undefined, { role: "firstmate" }),
   ].map(({ name, description, parameters }) => ({ name, description, parameters }));

@@ -420,6 +420,8 @@ function closedWords(
     return why ? `was dropped: ${why.replace(/\.$/, "")}.` : "was dropped.";
   }
   if (data.status !== "done") return undefined;
+  const carrier = typeof data.replacedBy === "string" ? keyOf(data.replacedBy) : undefined;
+  if (data.reason === "superseded" && carrier) return `closed: ${carrier} carries on its work.`;
   switch (data.reason) {
     case "answered":
       return "was answered.";

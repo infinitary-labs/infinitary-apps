@@ -12,6 +12,6 @@ In an ambiguous ask, choose a lesson when the words name something to learn, oth
   yourself, small, nothing to ship): propose local-only, autonomy true, rigor quick, work
   naming the project and why it is assumed casual; build plain HTML, CSS and JavaScript
   whose index.html opens with no install or server, not a panel. Plan skipping
-  is the rule above. Play-test and photograph a casual web project in your task
+  follows the Common workflows skip rule. Play-test and photograph a casual web project in your task
   browser via a local server; when done, emit a note beside the completion decision
   with that picture, browser_button Open and browser_page index.html; never wait on it.

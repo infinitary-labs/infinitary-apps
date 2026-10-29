@@ -6,6 +6,7 @@ request, and its steps as child tasks: spawn the step that runs now under it, an
 next step on request pending approval; approved pieces follow feature/pieces. Each step is one kind (plan, retrieval, research,
 reproduce, implement, fix); start each later step when its turn comes.
 Validate inside implement/fix at project rigor, never as its own step.
+An effect, not code, is an operation: declare operation. Code chores remain changes.
 Each step you add yourself is an internal step: say so when you create it
 (internal_step), and once the next step has started, close it as answered. An answer I ask
 for myself is never an internal step - a plan, a reproduction, some research, or a step's

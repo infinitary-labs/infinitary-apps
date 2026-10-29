@@ -204,5 +204,5 @@ See `HANDOFF` for how an agent uses these facts and `docs/replay-harness.md` for
 
 The first mate declares the operation constraint when the requested result is a named effect rather than an answer or a code change (INF-1430 piece 2).
 Folder work becomes an operation too; read-only beside either declaration is refused.
-The sequence guide’s operation line distinguishes named effects from chores that ship code; the tool description owns the verified finished close, and the operation brief owns consent and effect-only instructions.
+The Common workflows guide’s operation line distinguishes named effects from chores that ship code; the tool description owns the verified finished close, and the operation brief owns consent and effect-only instructions.
 An operation’s report names the effect and its verification; once idle and verified the first mate closes it finished with completion evidence, never merged or discarded as a substitute for success.

@@ -44,6 +44,21 @@ describe("runbooks over existing prompt and skill doors", () => {
     expect(reopened.firstmate()).toEqual(before);
     expect(() => reopened.set("missing", false)).toThrow("not available");
   });
+  it("serves the operation line, and Casual projects names where its skip rule lives rather than a place", () => {
+    // Intent: INF-1865. The move into runbooks dropped the operation line docs/sequences.md
+    // ("Operations") describes, and Casual projects, served first, pointed to a skip rule "above".
+    const { books } = fixture();
+    const served = books.firstmate().text;
+    const workflows = served.slice(served.indexOf("# Common workflows"));
+    expect(workflows).toContain(
+      "An effect, not code, is an operation: declare operation. Code chores remain changes.",
+    );
+    expect(workflows).toContain("Skip the plan only when");
+    const start = served.indexOf("# Casual projects");
+    const casual = served.slice(start, served.indexOf("\n# ", start)).replace(/\s+/g, " ");
+    expect(casual).toContain("Plan skipping follows the Common workflows skip rule.");
+    expect(casual).not.toMatch(/\b(above|below)\b/);
+  });
   it("copies editable guidance off, replaces the built-in on request and keeps both across restart", () => {
     // Intent: INF-1177 piece 4, using the actual bundled Common workflows.
     const { db, settings } = fixture();

@@ -17,6 +17,7 @@ The manifest may declare a replacement; enabling it turns the named runbook off 
 Adding a runbook from elsewhere uses the existing installer; personal copies use the same guidance reader and switches.
 
 Enabled first-mate sections go through the appended-instructions door at each idle boundary, with `instructions_sha` over the exact joined text.
+They are joined in list order - bundled folders by name, then added and personal ones - so a section names the runbook that holds a rule it relies on, never a place above or below it.
 Runbooks are outside the first mate's hard fixed-context budget; the model's physical context window still applies.
 A switch affects the first mate's next idle boundary and newly opened crew conversations, not a prompt already running.
 No procedure is refused for exceeding the core budget.

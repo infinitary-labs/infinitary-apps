@@ -1,6 +1,14 @@
 import type { ChildProcess } from "node:child_process";
 import { randomUUID } from "node:crypto";
-import { appendFileSync, cpSync, existsSync, mkdirSync, readdirSync, writeFileSync } from "node:fs";
+import {
+  appendFileSync,
+  cpSync,
+  existsSync,
+  lstatSync,
+  mkdirSync,
+  readdirSync,
+  writeFileSync,
+} from "node:fs";
 import { join } from "node:path";
 import type { BrowserContext } from "@playwright/test";
 import type { MockProviderServer } from "./mockProvider";
@@ -50,7 +58,12 @@ export function launchDiagnostics(
         const target = join(dir, "crewmates", task.name, "sessions");
         mkdirSync(target, { recursive: true });
         try {
-          cpSync(sessions, target, { recursive: true, dereference: false });
+          // A link (a staged skill) points into the disposable scratch; copied, it
+          // would dangle once that is removed, and packaging stats every file.
+          cpSync(sessions, target, {
+            recursive: true,
+            filter: (source) => !lstatSync(source).isSymbolicLink(),
+          });
         } catch (error) {
           // Diagnostics must not replace the assertion or prevent app cleanup.
           appendFileSync(join(dir, "collection-errors.log"), `${task.name}: ${String(error)}\n`);

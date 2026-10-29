@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "phone-relaunch-tab-proof",
+      "reason": "Internal phone journey repair: observe the requested appearance before the post-relaunch Tasks press and exercise independent relaunch pairs without retrying a failed press. No product behavior changes."
+    }
+  ]
+}

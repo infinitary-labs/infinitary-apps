@@ -99,10 +99,10 @@ import XCTest
         XCTAssertTrue(app.buttons["close-computer-details"].waitForPresence(timeout: 10))
     }
 
-    private func tab(_ name: String) {
+    private func tab(_ name: String, repeatDiscarded: Bool = true) {
         // INF-1062: the tabs are words in the top bar's strip, the same on iPhone and an upright iPad; the pressed one lights.
         let tab = app.buttons["tab-" + name.lowercased()]
-        XCTAssertTrue(tab.waitForPresence(timeout: 10), app.debugDescription); tapOnPhone(tab)
+        XCTAssertTrue(tab.waitForPresence(timeout: 10), app.debugDescription); tapOnPhone(tab, repeatDiscarded: repeatDiscarded)
         XCTAssertEqual(waitForPhonePredicate(NSPredicate(format: "selected == true"), object: tab, timeout: 10), .completed, "\(name) is the lit tab after its press")
     }
 
@@ -1358,18 +1358,24 @@ import XCTest
         XCTAssertEqual(app.buttons.matching(identifier: "photo-chip").count, 0)
         verifyPhoneComposerBounds(app: app)
         picture("last-turn")
-        _ = try await home("appearance-dark")
-        app.terminate(); try await launchPhoneApp(app)
-        reach("In reach", timeout: 20)
-        XCTAssertTrue(app.staticTexts["last-turn-you"].waitForPresence(timeout: 10))
-        picture("talk-hero-dark")
-        _ = try await home("appearance-light")
-        app.terminate(); try await launchPhoneApp(app)
-        reach("In reach", timeout: 20)
-        XCTAssertTrue(app.staticTexts["last-turn-you"].waitForPresence(timeout: 10))
-        picture("talk-hero-light")
-
-        tab("Tasks")
+        // INF-1735: reach and the restored last turn can precede the requested appearance's drawn chrome.
+        // Use the same observed-appearance owner as appearances(), not a raw hero screenshot followed by a press.
+        // Each round is a fresh dark/light relaunch pair with exactly one Tasks press; a miss fails immediately.
+        for round in 1...20 {
+            print("INF-1735 relaunch pair \(round)")
+            for (command, dark) in [("appearance-dark", true), ("appearance-light", false)] {
+                _ = try await home(command)
+                app.terminate(); try await launchPhoneApp(app)
+                reach("In reach", timeout: 20)
+                XCTAssertTrue(app.staticTexts["last-turn-you"].waitForPresence(timeout: 10))
+                let name = dark ? "talk-hero-dark" : "talk-hero-light"
+                let screenshot = try appearancePicture(name, dark: dark)
+                if round == 1 { picture(name, screenshot: screenshot) }
+            }
+            tab("Tasks", repeatDiscarded: false)
+            XCTAssertTrue(app.buttons["group-backlog"].waitForPresence(timeout: 10), "Tasks shows its list after relaunch pair \(round)")
+            if round < 20 { tab("Home", repeatDiscarded: false) }
+        }
         XCTAssertTrue(app.buttons["group-backlog"].waitForPresence(timeout: 10))
         picture("tasks")
         tapOnPhone(app.buttons["group-backlog"])
@@ -1579,7 +1585,7 @@ import XCTest
     /// INF-209 and INF-82 integration: one composer retains the actual typed/photo draft across tabs and rotation.
     /// This extends the existing real-home journey, using its owned simulator, selected photo and captain ask.
     private func verifyComposerDraft(_ words: String) async throws {
-        try await verifyPhoneComposerDrafts(app: app, words: words, tab: tab, picture: picture) { start in
+        try await verifyPhoneComposerDrafts(app: app, words: words, tab: { tab($0) }, picture: picture) { start in
             _ = try await self.home(start ? "capture-composer-start" : "capture-stop")
         }
     }

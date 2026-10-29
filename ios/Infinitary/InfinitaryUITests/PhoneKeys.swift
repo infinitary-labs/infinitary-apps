@@ -68,15 +68,16 @@ import XCTest
 /// INF-1541 piece 1: each tap first waits for its target to hold still (waitForSteadyTarget), since XCTest no longer waits
 /// for the app's animations. A crewmate in the scene orbits on the display clock and never holds still; its taps pass
 /// `orbiting`, and revealCrew reads its frame against the scene's instead.
-@MainActor func tapOnPhone(_ element: XCUIElement, orbiting: Bool = false) {
-    tapOnPhone("\(element)", steady: orbiting ? nil : element) { element.tap() }
+/// INF-1735's single-press regression passes repeatDiscarded: false: even a proven discarded tap fails, never repeats.
+@MainActor func tapOnPhone(_ element: XCUIElement, orbiting: Bool = false, repeatDiscarded: Bool = true) {
+    tapOnPhone("\(element)", steady: orbiting ? nil : element, repeatDiscarded: repeatDiscarded) { element.tap() }
 }
 
 @MainActor func tapOnPhone(_ point: XCUICoordinate, orbiting: Bool = false) {
     tapOnPhone("\(point)", steady: orbiting ? nil : point.referencedElement) { point.tap() }
 }
 
-@MainActor private func tapOnPhone(_ target: String, steady: XCUIElement?, _ tap: () -> Void) {
+@MainActor private func tapOnPhone(_ target: String, steady: XCUIElement?, repeatDiscarded: Bool = true, _ tap: () -> Void) {
     var ignored: [String] = []
     for _ in 0..<2 {
         guard !PhoneFailures.recorded else { tap(); return }
@@ -87,6 +88,10 @@ import XCTest
         guard !PhoneFailures.recorded, let outcome = phoneTouchOutcome(since: since) else { return }
         if outcome["outcome"] as? String != "delivered" { print("Touch outcome: \(outcome)") }
         guard outcome["outcome"] as? String == "discarded", let proof = outcome["proof"] as? String else { return }
+        guard repeatDiscarded else {
+            XCTFail("The simulator ignored the single tap on \(target): \(proof)")
+            return
+        }
         ignored.append(proof)
     }
     XCTFail("The simulator ignored both taps on \(target): \(ignored)")

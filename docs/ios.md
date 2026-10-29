@@ -520,6 +520,7 @@ The same backboardd subscription also carries touch screen attachments, touching
 The tap stays synchronous for its callers: the helper asks the test home off the main actor and turns the run loop until the answer arrives, so each tap also waits for its backboardd line to reach the test home.
 A built-in touch screen was delivered, and so was a screen whose own contact backboardd reports touching, since iOS 27.0 attaches every XCTest screen as an accessory and still delivers its touches, naming the screen on each contact line.
 Any other screen whose touches backboardd reports ignoring was discarded; only that proof sends one more tap, and two ignored taps fail the part.
+A single-press check passes `repeatDiscarded: false` to the same owner; a proven discarded tap then fails at once instead of sending another (INF-1735's post-relaunch Tasks check).
 Any other screen alone, a missing line or a stopped observer is unknown and sends nothing more.
 Once a part has recorded a failure, XCTest synthesizes no more events, so a later tap attaches no touch screen; `tapOnPhone` then sends the tap without waiting for its target or reading its outcome (`PhoneFailures`).
 A warning is not a failure: after UIKit's runtime warning about a reparented view, XCTest goes on sending events, so every later tap still waits for its target and reads its outcome.

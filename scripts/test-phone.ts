@@ -9,7 +9,7 @@ import { budgetTimer, GRADES_BUDGETS, startPhoneLoadClock } from "../tests/helpe
 import { observePhoneLog } from "../tests/helpers/phoneLogs.ts";
 import { capturePhoneKeyboardTimeout } from "../tests/helpers/phoneStacks.ts";
 import { libraryPhotoAdded, logTime, photosOpened } from "../tests/helpers/phonePhotos.ts";
-import { hardwareKeyboardArguments, observePhoneKeyboard, type PhoneChord, phoneApplicationPid, withPhoneHardwareKeyboard } from "../tests/helpers/phoneKeyboard.ts";
+import { changePhoneTextSize, hardwareKeyboardArguments, observePhoneKeyboard, type PhoneChord, type PhoneDisplayReport, type PhoneTextSize, phoneApplicationPid, withPhoneHardwareKeyboard } from "../tests/helpers/phoneKeyboard.ts";
 import { removeScratchDirs, scratchDir } from "../tests/helpers/scratchDirs.ts";
 import { ciModeRefusal } from "./checks-mode.ts";
 import { openModuleRunner, REPO_ROOT } from "./moduleRunner.ts";
@@ -124,6 +124,25 @@ let recorder: ChildProcess | undefined;
 let recorded: Promise<void> | undefined;
 let recordingLog = "";
 const recordings: { name: string; raw: string }[] = [];
+// INF-1785: the appearance this part last asked for; its gate set light before the part began.
+let askedAppearance: "light" | "dark" = "light";
+// An appearance SpringBoard misses leaves no line to prove it, so it is confirmed and never set again. Its witness
+// runs while the text size changes, so one display change waits out at most one witness deadline.
+const changeAppearance = async (style: "light" | "dark") => {
+  if (!simulator || !keyboard) throw new Error("No owned simulator display observer exists");
+  const observer = keyboard;
+  const since = Date.now();
+  await run("xcrun", ["simctl", "ui", simulator, "appearance", style]);
+  const confirmed = async (): Promise<PhoneDisplayReport["appearance"]> => {
+    // The simulator writes nothing for the appearance it already has, so SpringBoard has nothing to change.
+    if (style === askedAppearance) return { outcome: "unchanged" };
+    askedAppearance = style;
+    const outcome = await observer.appearance(since, style);
+    if (outcome.outcome !== "applied") console.log(`Appearance ${style}: ${JSON.stringify(outcome)}`);
+    return outcome;
+  };
+  return { confirmed: confirmed() };
+};
 const recording = {
   keyboardBeforeLaunch: async () => {
     if (!keyboard) throw new Error("No owned simulator keyboard observer exists");
@@ -149,15 +168,18 @@ const recording = {
       return observer.wait(phoneApplicationPid(services, phoneBundle), chord);
     });
   },
-  display: async (appearance: "light" | "dark", large: boolean) => {
-    if (!simulator) throw new Error("No owned simulator exists");
-    await run("xcrun", ["simctl", "ui", simulator, "appearance", appearance]);
-    await run("xcrun", ["simctl", "ui", simulator, "content_size", large ? "extra-extra-extra-large" : "large"]);
+  display: async (appearance: "light" | "dark", large: boolean): Promise<PhoneDisplayReport> => {
+    const { confirmed } = await changeAppearance(appearance);
+    if (!simulator || !keyboard) throw new Error("No owned simulator display observer exists");
+    const [owned, observer] = [simulator, keyboard];
+    const size: PhoneTextSize = large ? "extra-extra-extra-large" : "large";
+    const textSize = await changePhoneTextSize(size,
+      () => run("xcrun", ["simctl", "ui", owned, "content_size", size]),
+      (since) => observer.textSize(since, size));
+    for (const outcome of textSize) if (outcome.outcome !== "applied") console.log(`Text size ${size}: ${JSON.stringify(outcome)}`);
+    return { appearance: await confirmed, textSize };
   },
-  appearance: async (theme: "dark" | "light") => {
-    if (!simulator) throw new Error("No owned simulator exists");
-    await run("xcrun", ["simctl", "ui", simulator, "appearance", theme]);
-  },
+  appearance: async (theme: "dark" | "light"): Promise<PhoneDisplayReport> => ({ appearance: await (await changeAppearance(theme)).confirmed }),
   damageRecord: async () => {
     if (!simulator) throw new Error("No owned simulator exists");
     const container = resolve((await run("xcrun", ["simctl", "get_app_container", simulator, phoneBundle, "data"])).trim());

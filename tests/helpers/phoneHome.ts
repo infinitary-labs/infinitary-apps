@@ -33,6 +33,7 @@ import { claimedPort } from "./claimedPort";
 import { standInDnsSd } from "./dnsSdStandIn";
 import type {
   PhoneChord,
+  PhoneDisplayReport,
   PhoneKeyWitness,
   PhonePickerPreview,
   PhoneTouchOutcome,
@@ -59,8 +60,8 @@ export async function startPhoneHome(
     start(name?: string): Promise<void>;
     stop(): Promise<void>;
     damageRecord?(): Promise<void>;
-    appearance?(theme: "dark" | "light"): Promise<void>;
-    display?(appearance: "light" | "dark", large: boolean): Promise<void>;
+    appearance?(theme: "dark" | "light"): Promise<PhoneDisplayReport>;
+    display?(appearance: "light" | "dark", large: boolean): Promise<PhoneDisplayReport>;
     keyboardBeforeLaunch?(): Promise<{ generation: number }>;
     keyboardReady?(chord: PhoneChord): Promise<PhoneKeyWitness>;
     touchOutcome?(since: number): Promise<PhoneTouchOutcome>;
@@ -880,18 +881,18 @@ export async function startPhoneHome(
         case "POST display-large":
           if (!controls?.display)
             throw new Error("Only the owned simulator can change its display");
-          await controls.display(
+          result = await controls.display(
             command === "display-dark" ? "dark" : "light",
             command === "display-large",
           );
-          result = { ok: true };
+          observations.push({ check: "display", result });
           break;
         case "POST appearance-dark":
         case "POST appearance-light":
           if (!controls?.appearance)
             throw new Error("Only the owned simulator can change its theme");
-          await controls.appearance(command === "appearance-dark" ? "dark" : "light");
-          result = { ok: true };
+          result = await controls.appearance(command === "appearance-dark" ? "dark" : "light");
+          observations.push({ check: "appearance", result });
           break;
         case "POST damage-record":
           if (!controls?.damageRecord)

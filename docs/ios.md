@@ -535,6 +535,12 @@ A check that a control can be pressed waits the same way before it asks XCTest, 
 Any other such check waits on the load clock until XCTest finds the control's tap point (`waitForPhonePress`), since on a busy iPad the sidebar's first group read none right after it appeared.
 A typed field waits for keyboard focus after its tap (`focusForPhoneTyping`), so a dropped tap fails where it happened rather than at the typing.
 A display change, such as dark appearance or the largest type, waits until a still part of the screen draws differently than before the change and settles (`waitForRedraw`), and its pictures are taken after that.
+The runner confirms each display change from the simulator's own log before it answers the journey (INF-1785, the captain's "Confirm each change from the simulator's log, and set it once more only when the log proves the phone missed it").
+SpringBoard logs `Arbiter changing style from` as it applies an appearance, the simulator's bridge logs `Saved CategoryName` as it saves a text size, and the app logs `Read CategoryName` as it reads one (`PhoneDisplayChanges`).
+The app's read of the new size applies the change, even when it is logged in the save's own millisecond.
+A read of the old size after the save proves the app missed it, and only that proof sets the size once more; two proven misses fail the part.
+A missing line or a stopped observer is unknown and sets nothing more.
+An appearance SpringBoard misses leaves no line, and the simulator writes nothing when asked for the appearance it already has, so the runner sets each appearance once and prints one it could not confirm.
 A turn of the device waits until a target the turn carries elsewhere has left its old frame and holds still in its new place (`turnPhone`), since until the app turns that target holds still where it was.
 A check that read a dialog's button, a gliding row or a web page's answer right after an action waits for it on the load clock instead.
 If Xcode stops offering that method, or changes what it takes, the journey fails naming it; the gate fails a part whose log never printed "Phone animation wait skipped", and prints how many animation waits XCTest still ran out in each part.

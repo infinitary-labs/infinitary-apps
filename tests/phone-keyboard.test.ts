@@ -6,9 +6,11 @@ import { PassThrough } from "node:stream";
 import { gunzipSync } from "node:zlib";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
+  changePhoneTextSize,
   hardwareKeyboardArguments,
   observePhoneKeyboard,
   PHONE_HARDWARE_KEYBOARD_STATE,
+  PhoneDisplayChanges,
   PhoneKeyRegistrations,
   PhonePickerPreviews,
   PhoneTouchOutcomes,
@@ -584,6 +586,218 @@ describe("a photo tap the picker read as a press-and-hold (INF-1477)", () => {
     });
     stopped.receive(pickerHeld);
     await expect(stopped.preview(photoTapBegan)).resolves.toMatchObject({ previewed: false });
+  });
+});
+
+// INF-1785 (the captain's choice "Confirm each change from the simulator's log, and set it once more only when the log
+// proves the phone missed it"). Phone run 40788049243's join parts, at the compact log's millisecond times in that
+// virtual Mac's UTC: the runner asked for the largest text size, the simulator saved it, and the iPhone's app read the
+// old size a millisecond later and never again; the iPad's app read the new size in the save's own millisecond, logged
+// before the save. Each part's `since` is when the runner sent that request, by its own network log. The app's own
+// path is the one a local join run's log stream recorded for its reads.
+const springBoard =
+  "/Library/Developer/CoreSimulator/Volumes/iOS_23E244/Library/Developer/CoreSimulator/Profiles/Runtimes/iOS 26.4.simruntime/Contents/Resources/RuntimeRoot/System/Library/CoreServices/SpringBoard.app/SpringBoard";
+const bridge =
+  "/Library/Developer/PrivateFrameworks/CoreSimulator.framework/Versions/A/Resources/Platforms/iphoneos/usr/libexec/CoreSimulatorBridge";
+const phoneApp =
+  "/Users/kunchen/Library/Developer/CoreSimulator/Devices/AA9BA1FF-FC50-4657-B842-DDDDBBA53926/data/Containers/Bundle/Application/736BB5B4-7381-44F7-8A93-7A48061FE25E/Infinitary.app/Infinitary";
+const iphoneLargestSaved = {
+  processImagePath: bridge,
+  timestamp: "2026-10-28 23:58:42.292000+0000",
+  eventMessage:
+    "Saved CategoryName: per-app = 0, category name = UICTContentSizeCategoryXXXL, usermode = 1",
+};
+const iphoneReadOld = {
+  processImagePath: phoneApp,
+  timestamp: "2026-10-28 23:58:42.293000+0000",
+  eventMessage: "Read CategoryName: per-app = 0, category name = UICTContentSizeCategoryL",
+};
+const iphoneWebReadOld = {
+  processImagePath: phoneApp,
+  timestamp: "2026-10-28 23:58:42.295000+0000",
+  eventMessage:
+    "WebContent[8370] Read CategoryName: per-app = 0, category name = UICTContentSizeCategoryL",
+};
+// The iPhone's previous read, of the default size the runner set before.
+const iphoneReadBefore = {
+  processImagePath: phoneApp,
+  timestamp: "2026-10-28 23:58:19.447000+0000",
+  eventMessage: "Read CategoryName: per-app = 0, category name = UICTContentSizeCategoryL",
+};
+const iphoneLargestAsked = phoneLogMilliseconds("2026-10-28 23:58:42.017000+0000");
+const ipadReadLargest = {
+  processImagePath: phoneApp,
+  timestamp: "2026-10-28 23:44:40.557000+0000",
+  eventMessage: "Read CategoryName: per-app = 0, category name = UICTContentSizeCategoryXXXL",
+};
+const ipadLargestSaved = {
+  processImagePath: bridge,
+  timestamp: "2026-10-28 23:44:40.557000+0000",
+  eventMessage:
+    "Saved CategoryName: per-app = 0, category name = UICTContentSizeCategoryXXXL, usermode = 1",
+};
+const ipadLargestAsked = phoneLogMilliseconds("2026-10-28 23:44:40.203000+0000");
+// Phone run 40792658138's iPhone join part: SpringBoard applied dark under two seconds after the runner asked, and
+// light about 250 seconds after, past the journey's wait; its live log dropped the dark line, its own store kept it.
+const darkApplied = {
+  processImagePath: springBoard,
+  timestamp: "2026-10-29 00:45:34.742000+0000",
+  eventMessage: "Arbiter changing style from 1 to 2, notifying: 1",
+};
+const lightAppliedLate = {
+  processImagePath: springBoard,
+  timestamp: "2026-10-29 00:49:51.069000+0000",
+  eventMessage: "Arbiter changing style from 2 to 1, notifying: 1",
+};
+const darkAsked = phoneLogMilliseconds("2026-10-29 00:45:32.972000+0000");
+const lightAsked = phoneLogMilliseconds("2026-10-29 00:45:40.050000+0000");
+
+describe("a display change's witness (INF-1785)", () => {
+  it("confirms a text size only by the app's own read of it, even logged before the simulator's save", async () => {
+    const displays = new PhoneDisplayChanges();
+    displays.receive(ipadReadLargest);
+    displays.receive(ipadLargestSaved);
+    await expect(displays.textSize(ipadLargestAsked, "extra-extra-extra-large")).resolves.toEqual({
+      outcome: "applied",
+      timestamp: ipadReadLargest.timestamp,
+      proof: ipadReadLargest.eventMessage,
+    });
+  });
+
+  it("proves a missed text size only by the app's read of another size after the simulator logged the save", async () => {
+    vi.useFakeTimers();
+    const displays = new PhoneDisplayChanges();
+    let outcome: unknown;
+    const read = displays.textSize(iphoneLargestAsked, "extra-extra-extra-large").then((value) => {
+      outcome = value;
+    });
+    // A read from before the runner asked, or the app's web page's read, says nothing about this save.
+    displays.receive(iphoneReadBefore);
+    displays.receive(iphoneWebReadOld);
+    displays.receive(iphoneLargestSaved);
+    await Promise.resolve();
+    expect(outcome).toBeUndefined();
+    displays.receive(iphoneReadOld);
+    await read;
+    expect(outcome).toEqual({
+      outcome: "missed",
+      timestamp: iphoneReadOld.timestamp,
+      proof: `${iphoneLargestSaved.eventMessage}; then ${iphoneReadOld.eventMessage}`,
+    });
+  });
+
+  it("confirms an appearance only by SpringBoard changing to it, and reads no change as unknown", async () => {
+    vi.useFakeTimers();
+    const displays = new PhoneDisplayChanges();
+    displays.receive(darkApplied);
+    await expect(displays.appearance(darkAsked, "dark")).resolves.toEqual({
+      outcome: "applied",
+      timestamp: darkApplied.timestamp,
+      proof: darkApplied.eventMessage,
+    });
+    // The earlier change to dark is no witness for light, and an appearance miss has no line to prove it.
+    const light = displays.appearance(lightAsked, "light");
+    await vi.runAllTimersAsync();
+    await expect(light).resolves.toMatchObject({
+      outcome: "unknown",
+      reason: expect.stringContaining("SpringBoard did not change to light"),
+    });
+    displays.receive(lightAppliedLate);
+    await expect(displays.appearance(lightAsked, "light")).resolves.toMatchObject({
+      outcome: "applied",
+    });
+    // A stopped observer is not a witness either, even with the proof already cached.
+    const stopped = new PhoneDisplayChanges();
+    stopped.receive(iphoneLargestSaved);
+    stopped.receive(iphoneReadOld);
+    stopped.close();
+    await expect(
+      stopped.textSize(iphoneLargestAsked, "extra-extra-extra-large"),
+    ).resolves.toMatchObject({
+      outcome: "unknown",
+      reason: expect.stringContaining("observer stopped"),
+    });
+  });
+
+  it("sets the text size once more only on a proven miss, and fails after two", async () => {
+    vi.useFakeTimers();
+    // Each save is answered by the readings of one real save, the iPhone's missed one or the iPad's read one, on a
+    // clock set to when the runner asked for it.
+    const missed: [number, object[]] = [iphoneLargestAsked, [iphoneLargestSaved, iphoneReadOld]];
+    const read: [number, object[]] = [ipadLargestAsked, [ipadReadLargest, ipadLargestSaved]];
+    const unread: [number, object[]] = [iphoneLargestAsked, [iphoneLargestSaved]];
+    let saves = 0;
+    const change = (answers: [number, object[]][]) => {
+      saves = 0;
+      const pending = [...answers];
+      const next = () => {
+        const answer = pending.shift();
+        if (answer) vi.setSystemTime(answer[0]);
+        return answer;
+      };
+      let answer = next();
+      const displays = new PhoneDisplayChanges();
+      return changePhoneTextSize(
+        "extra-extra-extra-large",
+        async () => {
+          for (const record of answer?.[1] ?? []) displays.receive(record);
+          saves += 1;
+          answer = next();
+        },
+        (since) => displays.textSize(since, "extra-extra-extra-large"),
+      );
+    };
+    await expect(change([missed, read])).resolves.toMatchObject([
+      { outcome: "missed" },
+      { outcome: "applied" },
+    ]);
+    expect(saves).toBe(2);
+    await expect(change([missed, missed])).rejects.toThrow(
+      "The app read the old text size after both of the simulator's saves",
+    );
+    expect(saves).toBe(2);
+    // An unproven save, such as one whose read the log dropped, is set only once.
+    const unproven = change([unread, read]);
+    await vi.runAllTimersAsync();
+    await expect(unproven).resolves.toMatchObject([{ outcome: "unknown" }]);
+    expect(saves).toBe(1);
+  });
+
+  it("answers display changes from the same renewed subscription as the chords", async () => {
+    const evidence = scratchDir("phone-keyboard-display-");
+    const stdout = new PassThrough();
+    const stderr = new PassThrough();
+    const child = Object.assign(new EventEmitter(), {
+      stdout,
+      stderr,
+      kill: vi.fn(() => {
+        stdout.end();
+        stderr.end();
+        queueMicrotask(() => child.emit("close", null, "SIGTERM"));
+        return true;
+      }),
+    });
+    spawn.mockImplementation(() => {
+      queueMicrotask(() =>
+        stdout.write("Filtering the log data using the registration predicate\n"),
+      );
+      return child;
+    });
+    const children = new Set<ChildProcess>();
+    const observer = await observePhoneKeyboard({
+      simulator: "73A1ACE6-4598-4DFC-AA31-2A09D6081FF3",
+      env: {},
+      evidence,
+      children,
+    });
+    const dark = observer.appearance(darkAsked, "dark");
+    const size = observer.textSize(iphoneLargestAsked, "extra-extra-extra-large");
+    for (const record of [darkApplied, iphoneLargestSaved, iphoneReadOld])
+      stdout.write(`${JSON.stringify(record)}\n`);
+    await expect(dark).resolves.toMatchObject({ outcome: "applied" });
+    await expect(size).resolves.toMatchObject({ outcome: "missed" });
+    await observer.close();
+    expect(children.size).toBe(0);
   });
 });
 

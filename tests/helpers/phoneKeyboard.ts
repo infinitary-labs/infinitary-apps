@@ -295,6 +295,153 @@ export class PhonePickerPreviews {
   }
 }
 
+export type PhoneDisplayOutcome =
+  | { outcome: "applied" | "missed"; timestamp: string; proof: string }
+  | { outcome: "unknown"; reason: string };
+/** What one display change did: its appearance, unchanged when the part already asked for it, and each text size save. */
+export type PhoneDisplayReport = {
+  appearance: PhoneDisplayOutcome | { outcome: "unchanged" };
+  textSize?: PhoneDisplayOutcome[];
+};
+/** The simulator's names for the type sizes the journeys set, and the category its own log names for each. */
+export const PHONE_TEXT_SIZES = {
+  large: "UICTContentSizeCategoryL",
+  "extra-extra-extra-large": "UICTContentSizeCategoryXXXL",
+} as const;
+export type PhoneTextSize = keyof typeof PHONE_TEXT_SIZES;
+/** The app's own process, whose reads of the text size are the ones its screen draws with. */
+const PHONE_APP_PROCESS = "Infinitary";
+type DisplayReading = { value: string; at: number; timestamp: string; line: string };
+/** UIKit's style numbers in SpringBoard's appearance arbiter lines. */
+const ARBITER_STYLES: Record<string, "light" | "dark"> = { "1": "light", "2": "dark" };
+
+/**
+ * INF-1785 (the captain's choice "Confirm each change from the simulator's log, and set it once more only when the
+ * log proves the phone missed it"): on a starved simulator a display change the runner asks for can miss the app.
+ * In phone run 40788049243 the simulator saved the largest text size and the iPhone's app read the old size a
+ * millisecond later and never again; in run 40792658138 SpringBoard applied light about 250 seconds after the runner
+ * asked, past the journey's wait. Each change is confirmed by its consumer's own line: SpringBoard's appearance
+ * arbiter changing to the asked style, or the app reading the asked text size. The app reading another size after the
+ * simulator logged the save is the proof of a miss. An appearance miss leaves no line at all, so it is never proven.
+ */
+export class PhoneDisplayChanges {
+  private styles: DisplayReading[] = [];
+  private saves: DisplayReading[] = [];
+  private reads: DisplayReading[] = [];
+  private listeners = new Set<() => void>();
+  private failure: Error | undefined;
+
+  receive(record: { processImagePath?: string; eventMessage?: string; timestamp?: string }) {
+    const process = basename(record.processImagePath ?? "");
+    const message = record.eventMessage ?? "";
+    let readings: DisplayReading[];
+    let value: string | undefined;
+    if (process === "SpringBoard") {
+      readings = this.styles;
+      value = ARBITER_STYLES[/^Arbiter changing style from \d+ to (\d+),/.exec(message)?.[1] ?? ""];
+    } else if (process === "CoreSimulatorBridge") {
+      readings = this.saves;
+      value = /^Saved CategoryName: per-app = 0, category name = (\w+),/.exec(message)?.[1];
+    } else if (process === PHONE_APP_PROCESS) {
+      readings = this.reads;
+      // The app also logs its web pages' reads, as "WebContent[pid] Read CategoryName", which draw no native text.
+      value = /^Read CategoryName: per-app = 0, category name = (\w+)$/.exec(message)?.[1];
+    } else return;
+    const at = phoneLogMilliseconds(record.timestamp ?? "");
+    if (!value || Number.isNaN(at)) return;
+    readings.push({ value, at, timestamp: record.timestamp ?? "", line: firstLine(message) });
+    for (const notify of this.listeners) notify();
+  }
+
+  /** Whether SpringBoard applied the appearance the runner asked for at `since`, on its own clock in milliseconds. */
+  appearance(since: number, style: "light" | "dark"): Promise<PhoneDisplayOutcome> {
+    return this.witness(since, `SpringBoard did not change to ${style}`, () => {
+      const changed = this.styles.find((each) => each.at >= since && each.value === style);
+      return changed && { outcome: "applied", timestamp: changed.timestamp, proof: changed.line };
+    });
+  }
+
+  /** Whether the app read the text size the runner asked for at `since`, or proved it missed the simulator's save. */
+  textSize(since: number, size: PhoneTextSize): Promise<PhoneDisplayOutcome> {
+    const category = PHONE_TEXT_SIZES[size];
+    return this.witness(since, `the app did not read ${category}`, () => {
+      const read = this.reads.find((each) => each.at >= since && each.value === category);
+      if (read) return { outcome: "applied", timestamp: read.timestamp, proof: read.line };
+      // A read in the save's own millisecond can come before it, as on the iPad of run 40788049243, so it proves nothing.
+      const saved = this.saves.find((each) => each.at >= since && each.value === category);
+      const stale = saved && this.reads.find((each) => each.at > saved.at);
+      return (
+        stale && {
+          outcome: "missed",
+          timestamp: stale.timestamp,
+          proof: `${saved.line}; then ${stale.line}`,
+        }
+      );
+    });
+  }
+
+  private witness(
+    since: number,
+    missing: string,
+    decide: () => PhoneDisplayOutcome | undefined,
+  ): Promise<PhoneDisplayOutcome> {
+    return new Promise((resolve) => {
+      const finish = (result: PhoneDisplayOutcome) => {
+        deadline.cancel();
+        this.listeners.delete(check);
+        resolve(result);
+      };
+      const check = () => {
+        if (this.failure) {
+          finish({ outcome: "unknown", reason: this.failure.message });
+          return;
+        }
+        const decided = decide();
+        if (decided) finish(decided);
+      };
+      // A failure deadline, not a delay: without a witness the runner sets nothing again.
+      const deadline = budgetTimer(
+        () =>
+          finish({
+            outcome: "unknown",
+            reason: `No display witness since ${new Date(since).toISOString()}: ${missing}`,
+          }),
+        30_000,
+      );
+      this.listeners.add(check);
+      check();
+    });
+  }
+
+  close(error = new Error("The simulator display observer stopped")) {
+    this.failure ??= error;
+    for (const notify of this.listeners) notify();
+  }
+}
+
+/**
+ * INF-1785: sets the text size, and once more only when the app's own read proves it missed the first save; the
+ * simulator posts a save to the app again even when the size is unchanged. Two proven misses fail the part.
+ */
+export async function changePhoneTextSize(
+  size: PhoneTextSize,
+  write: () => Promise<unknown>,
+  confirm: (since: number) => Promise<PhoneDisplayOutcome>,
+): Promise<PhoneDisplayOutcome[]> {
+  const outcomes: PhoneDisplayOutcome[] = [];
+  do {
+    // The runner's and the simulator's records share this Mac's clock; the save logs after this.
+    const since = Date.now();
+    await write();
+    outcomes.push(await confirm(since));
+  } while (outcomes.length < 2 && outcomes.at(-1)?.outcome === "missed");
+  if (outcomes.every((outcome) => outcome.outcome === "missed"))
+    throw new Error(
+      `The app read the old text size after both of the simulator's saves of ${size}: ${JSON.stringify(outcomes)}`,
+    );
+  return outcomes;
+}
+
 /** The simulator-wide state UIKit reads through GSEventIsHardwareKeyboardAttached. */
 export const PHONE_HARDWARE_KEYBOARD_STATE = "GSEventHardwareKeyboardAttached";
 // GraphicsServices packs (countryCode << 8) | (type << 16) | attached, and tests the low byte.
@@ -358,13 +505,16 @@ const PICKER_PREVIEW_LINE = "performAllAnimations for animator: <_UIContextMenuA
 
 /** Registration subset of INF-355's observe.sh, limited to the runner's own simulator,
  * INF-1477's touch screen attachments, touching contacts that name their screen and ignored touches
- * from the same backboardd, and the photo picker's press-and-hold. */
+ * from the same backboardd, the photo picker's press-and-hold, and INF-1785's display changes. */
 const PHONE_KEYBOARD_LOG_PREDICATE =
   '(process == "backboardd" AND (composedMessage BEGINSWITH "new key command registrations for pid:"' +
   ' OR composedMessage BEGINSWITH "init: <BKDirectTouchState"' +
   ' OR (composedMessage BEGINSWITH "[" AND composedMessage ENDSWITH "presence: touching")' +
   ' OR composedMessage BEGINSWITH "ignoring digitizer event"))' +
-  ` OR (process == "PhotosPicker" AND composedMessage BEGINSWITH "${PICKER_PREVIEW_LINE}")`;
+  ` OR (process == "PhotosPicker" AND composedMessage BEGINSWITH "${PICKER_PREVIEW_LINE}")` +
+  ' OR (process == "SpringBoard" AND composedMessage BEGINSWITH "Arbiter changing style from")' +
+  ' OR (process == "CoreSimulatorBridge" AND composedMessage BEGINSWITH "Saved CategoryName: per-app = 0")' +
+  ` OR (process == "${PHONE_APP_PROCESS}" AND composedMessage BEGINSWITH "Read CategoryName: per-app = 0")`;
 
 type PhoneKeyboardOptions = {
   simulator: string;
@@ -387,6 +537,8 @@ export async function observePhoneKeyboard(options: PhoneKeyboardOptions) {
     wait: (pid: number, chord: PhoneChord) => stream.wait(pid, chord),
     touch: (since: number) => stream.touch(since),
     preview: (since: number) => stream.preview(since),
+    appearance: (since: number, style: "light" | "dark") => stream.appearance(since, style),
+    textSize: (since: number, size: PhoneTextSize) => stream.textSize(since, size),
     close: () => stream.close(),
   };
 }
@@ -395,6 +547,7 @@ async function openPhoneKeyboardStream(options: PhoneKeyboardOptions, append: bo
   const registrations = new PhoneKeyRegistrations();
   const touches = new PhoneTouchOutcomes();
   const previews = new PhonePickerPreviews();
+  const displays = new PhoneDisplayChanges();
   const child = spawn(
     "xcrun",
     [
@@ -437,6 +590,7 @@ async function openPhoneKeyboardStream(options: PhoneKeyboardOptions, append: bo
     registrations.close(error);
     touches.close(error);
     previews.close(error);
+    displays.close(error);
     child.kill("SIGTERM");
   };
   void saved.catch(failed);
@@ -448,6 +602,7 @@ async function openPhoneKeyboardStream(options: PhoneKeyboardOptions, append: bo
       registrations.close();
       touches.close();
       previews.close();
+      displays.close();
       options.children.delete(child);
       resolve();
     }),
@@ -470,6 +625,7 @@ async function openPhoneKeyboardStream(options: PhoneKeyboardOptions, append: bo
         registrations.close(error);
         touches.close(error);
         previews.close(error);
+        displays.close(error);
         reject(error);
       });
       child.once("close", () => {
@@ -487,6 +643,7 @@ async function openPhoneKeyboardStream(options: PhoneKeyboardOptions, append: bo
           registrations.receive(record);
           touches.receive(record);
           previews.receive(record);
+          displays.receive(record);
         } catch {
           /* Non-record log diagnostics are not witnesses. */
         }
@@ -500,6 +657,8 @@ async function openPhoneKeyboardStream(options: PhoneKeyboardOptions, append: bo
     wait: (pid: number, chord: PhoneChord) => registrations.wait(pid, chord),
     touch: (since: number) => touches.outcome(since),
     preview: (since: number) => previews.preview(since),
+    appearance: (since: number, style: "light" | "dark") => displays.appearance(since, style),
+    textSize: (since: number, size: PhoneTextSize) => displays.textSize(since, size),
     close,
   };
 }

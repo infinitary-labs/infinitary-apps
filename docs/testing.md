@@ -8,12 +8,13 @@ Cohorts and probes are `docs/test-cohorts.md`; the e2e harness is `docs/e2e-cont
 Which tests a crewmate writes, and how it repairs a failing one, is the crew's default rule on tests (`docs/delivery-rigor.md`, "The default rule on tests").
 A new end-to-end journey follows that rule like any other test, with no ask.
 Its review names the promised result, the data, the completion signal, the platform prerequisites and the shared resources (FI3-1732).
-This project adds three rulings of the captain, which win over that default:
+This project adds four rulings of the captain, which win over that default:
 
 - Weakening, skipping or deleting an existing test waits for the captain's approval.
 - A phone part sends a tap once more only when backboardd's own log proves the simulator ignored the first one, and only through `tapOnPhone` (INF-1477, "Allow a proven second tap"; `docs/ios.md`).
   The photo pick alone also taps once more when the photo picker's own log proves it read the first tap as a press-and-hold and chose no photo ("Allow one more photo tap"), after one tap below the open preview closes it ("Allow the closing tap").
 - A phone journey never waits for XCTest's animation reply: it skips that wait and keeps the app's run loop wait, and each tap waits until its own target, and the screen inside it, holds still (INF-1541, "The test code skips Apple's animation wait and checks each target itself"; `docs/ios.md`).
+- A phone part's display change sets the text size once more only when the app's own log proves it read the old size after the simulator saved the new one, and never sets an appearance twice (INF-1785, "Confirm each change from the simulator's log, and set it once more only when the log proves the phone missed it"; `docs/ios.md`).
 
 The crew's default rule has the change's own tests repeated before the completion card (INF-840): ten runs for a journey file or unit test file the change adds or edits, and three on each device for a phone part whose UI test code it edits (the chooser's distance 0, "The phone parts a pull request runs").
 The captain's ruling puts those repeats on the Mac and only for those tests: "locally on mac only. only run affected tests".

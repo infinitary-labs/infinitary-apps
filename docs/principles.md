@@ -86,3 +86,21 @@ A step whose cost the captain should weigh is a yes they give, never work they d
 The shared instruction lives in `src/core/prompts/fleetWork.ts`, served once after each persona core.
 A required action holds only a part the captain alone can give; work the fleet can do after a merge becomes a `Continue: …` filing instead (`docs/required-actions.md`).
 Consent gates, sign-in and signing boundaries remain unchanged.
+
+## A test runs on the Mac only when it needs a Mac (captain, 2026-10-28)
+
+INF-1763, asked as "is it actually ok to dedup all the mac journeys that are covered by linux journeys, and just rely on linux to test those flows?", with the instruction "make sure this becomes a durable principle for future tests so we don't gradually regress back".
+It covers every test.
+A test runs on the Mac only when it needs a Mac.
+Linux runs every test it can.
+The Mac runs only the tests that need it, plus every journey in the nightly full check and every alpha.
+A journey that needs a Mac carries `MAC_ONLY_TAG` (`tests/e2e/tags.ts`): it skips on Linux, or it has a step only a Mac runs.
+A unit test that needs a Mac is a file of the reviewed list in `scripts/mac-unit-tests.ts` (`docs/test-cohorts.md`).
+
+Three checks hold the rule for journeys, so it does not wear away:
+
+1. Every Linux journey job fails on a test that skipped there without the tag (`scripts/untagged-skips.ts`).
+2. The `e2e-mac-tag` lint in `pnpm check` refuses an untagged test that reads a Mac fact (`THIS_DESKTOP`, `HAS_APP_MENU` or "darwin") and a tagged test that reads none (`tests/lint/e2eMacTag.ts`).
+3. `tests/release-contract.test.ts` holds the Mac steps of a pull request's journeys, a request for journeys and a requested full check to the tag.
+
+How each check runs is `docs/testing.md`, "Tests that need a Mac".

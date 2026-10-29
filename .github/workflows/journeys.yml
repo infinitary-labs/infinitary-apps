@@ -1,9 +1,11 @@
 name: journeys
 
-# INF-658: keep the closest six measured minutes on Mac; run overflow on
-# Linux in parallel, at most one job per PC place (INF-1720). Every Linux job
-# runs on the label LINUX_RUNNER names, as ci.yml's do, hosted Ubuntu when it
-# is unset. Every alpha still runs the full Mac suite.
+# A test runs on the Mac only when it needs a Mac (docs/principles.md,
+# 2026-10-28): every chosen journey runs on Linux, at most one job per PC
+# place (INF-1720), and the Mac runs only the chosen tests tagged
+# MAC_ONLY_TAG (tests/e2e/tags.ts). Every Linux job runs on the label
+# LINUX_RUNNER names, as ci.yml's do, hosted Ubuntu when it is unset. The
+# nightly full check and every alpha still run the full Mac suite.
 # INF-800: on request, the journeys a branch names, placed the same way
 # (docs/testing.md, "Journeys on request").
 
@@ -18,6 +20,10 @@ on:
         description: Journey files to run, by name or path, separated by spaces or commas
         required: true
         type: string
+      mac_all:
+        description: Run every named journey on the Mac too, not only its tests that need a Mac
+        type: boolean
+        default: false
       starve:
         description: Run the chosen Mac journeys under the load controller (scripts/starve-check.py)
         type: boolean
@@ -114,15 +120,14 @@ jobs:
         run: |
           if [ "$EVENT" = workflow_dispatch ]; then
             node scripts/affected-journeys.ts --named "$NAMED" --json > "$RUNNER_TEMP/affected.json"
-            : > "$RUNNER_TEMP/changed.txt"
           else
             node scripts/affected-journeys.ts --base "origin/${{ github.base_ref }}" --head HEAD --json > "$RUNNER_TEMP/affected.json"
-            git diff --name-only "origin/${{ github.base_ref }}...HEAD" > "$RUNNER_TEMP/changed.txt"
           fi
-          node scripts/journey-budget.ts --selection "$RUNNER_TEMP/affected.json" --timings "$RUNNER_TEMP/journey-times/e2e-results.json" --changed "$RUNNER_TEMP/changed.txt" > "$RUNNER_TEMP/placement.json"
+          node scripts/journey-budget.ts --selection "$RUNNER_TEMP/affected.json" --timings "$RUNNER_TEMP/journey-times/e2e-results.json" $EVERY > "$RUNNER_TEMP/placement.json"
         env:
           EVENT: ${{ github.event_name }}
           NAMED: ${{ inputs.files }}
+          EVERY: ${{ inputs.mac_all && '--every-on-mac' || '' }}
       - uses: actions/upload-artifact@v4
         with:
           name: journey-placement
@@ -189,7 +194,8 @@ jobs:
       - id: e2e
         name: Build, then run the chosen journeys
         # --no-deps: the desktop lane is the other lanes' teardown and a
-        # teardown project ignores the file filter (docs/testing.md).
+        # teardown project ignores the file filter (docs/testing.md). ONLY
+        # keeps the tests tagged MAC_ONLY_TAG; Linux runs the rest.
         # The run ends at 75 minutes and the command at 90 (INF-1083, the
         # captain's check limits); a stuck wait ends sooner, at its own cap.
         timeout-minutes: 90
@@ -198,11 +204,12 @@ jobs:
           pnpm build
           if [ "$STARVE" = true ]; then
             # The requested load experiment has its own limit (docs/testing.md, "Journeys on request").
-            python3 scripts/starve-check.py --timeout 900 -- pnpm exec playwright test --no-deps $FILES
+            python3 scripts/starve-check.py --timeout 900 -- pnpm exec playwright test --no-deps $ONLY $FILES
           else
-            pnpm exec playwright test --no-deps $FILES
+            pnpm exec playwright test --no-deps $ONLY $FILES
           fi
         env:
+          ONLY: ${{ !inputs.mac_all && '--grep @mac-only' || '' }}
           STARVE: ${{ inputs.starve }}
           INFINITARY_E2E_RUN_MINUTES: 75
           INFINITARY_PERF_BUDGETS: ${{ inputs.perf && '1' || '' }}

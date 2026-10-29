@@ -16,6 +16,7 @@ import {
   settingRow,
   settingsFeedback,
 } from "./settings";
+import { MAC_ONLY_TAG } from "./tags";
 import { setThemeViaSettings } from "./theme";
 
 const KEY = "disposable-decision-key";
@@ -31,7 +32,9 @@ function saveEvidence(name: string, state: unknown) {
 }
 
 for (const theme of ["dark", "light"] as const) {
-  test(`notification and presence refusals restore saved values and remain retryable (${theme})`, async () => {
+  test(`notification and presence refusals restore saved values and remain retryable (${theme})`, {
+    tag: MAC_ONLY_TAG,
+  }, async () => {
     const launched = await launchApp();
     try {
       const { app, page } = launched;
@@ -398,7 +401,9 @@ function savedLook(page: Page) {
   return page.evaluate(() => window.infinitary.settings.getAppearance());
 }
 
-test("appearance refusals show the saved look again and say why beside the choice", async () => {
+test("appearance refusals show the saved look again and say why beside the choice", {
+  tag: MAC_ONLY_TAG,
+}, async () => {
   const launched = await launchApp();
   try {
     const { app, page } = launched;

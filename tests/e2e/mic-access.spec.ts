@@ -3,6 +3,7 @@ import { STANDARD_PLACEHOLDER } from "@shared/firstRun";
 import type { MicAccess } from "@shared/voice";
 import { type LaunchedApp, launchApp } from "./launch";
 import { probeMicrophone } from "./micPreflight";
+import { MAC_ONLY_TAG } from "./tags";
 
 /**
  * Microphone access is a line under the input, never a card
@@ -87,7 +88,9 @@ async function tabTo(page: Page, target: Locator): Promise<void> {
     .toBe(true);
 }
 
-test("while macOS asks, a line under the input explains, no card covers the Firstmate, and allowing takes it down", async () => {
+test("while macOS asks, a line under the input explains, no card covers the Firstmate, and allowing takes it down", {
+  tag: MAC_ONLY_TAG,
+}, async () => {
   const launched = await launchApp({
     withMockProvider: true,
     env: { INFINITARY_MIC_ACCESS: "not-determined" },
@@ -120,7 +123,9 @@ test("while macOS asks, a line under the input explains, no card covers the Firs
   }
 });
 
-test("Don't Allow leaves a line that leads to System Settings, and access turned on there takes it down", async () => {
+test("Don't Allow leaves a line that leads to System Settings, and access turned on there takes it down", {
+  tag: MAC_ONLY_TAG,
+}, async () => {
   const launched = await launchApp({
     withMockProvider: true,
     env: { INFINITARY_MIC_ACCESS: "not-determined" },
@@ -206,6 +211,6 @@ test("Don't Allow leaves a line that leads to System Settings, and access turned
 // failed before its first journey, granted or not. It runs here under the
 // same loader as the global setup, on a Mac whose runner may open the
 // microphone.
-test("the run's microphone check opens the fake microphone", async () => {
+test("the run's microphone check opens the fake microphone", { tag: MAC_ONLY_TAG }, async () => {
   expect(await probeMicrophone()).toBe("opened");
 });

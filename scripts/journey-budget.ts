@@ -1,10 +1,12 @@
 import { appendFileSync, readFileSync } from "node:fs";
 import { basename, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
-import { APPLICATION_SUITES, E2E_MAX_WORKERS, RENDERER_SUITES } from "../tests/e2e/lanes.ts";
-import { importsOf, type Reasons } from "./affected-journeys.ts";
+import { APPLICATION_SUITES, RENDERER_SUITES } from "../tests/e2e/lanes.ts";
+import { MAC_ONLY_TAG } from "../tests/e2e/tags.ts";
+import { needsMac } from "../tests/lint/e2eMacTag.ts";
+import type { Reasons } from "./affected-journeys.ts";
 
-// INF-658: the captain chose six minutes of journeys, not a job timeout.
+// INF-658: the captain chose six minutes of journeys, not a job timeout; it sizes the Linux jobs.
 export const JOURNEY_BUDGET_MS = 6 * 60 * 1000;
 /** The PC's self-hosted Linux places, five at once (INF-1720's plan). */
 export const LINUX_PLACES = 5;
@@ -41,58 +43,16 @@ export function journeyTimes(report: { suites: ReportSuite[] }): Map<string, num
 }
 
 /**
- * Explicitly edited specs first, then the shortest test-import path, then
- * screen readers, callers of a changed window message and declared journeys.
+ * A test runs on the Mac only when it needs a Mac (docs/principles.md,
+ * 2026-10-28): every picked file runs on Linux, and the Mac runs the picked
+ * files that hold a test tagged MAC_ONLY_TAG, only those tests. A request may
+ * run every picked file on the Mac as well (`everyOnMac`).
  */
-export function proximity(
-  file: string,
-  reasons: string[],
-  changed: Set<string>,
-  read: (file: string) => string | undefined,
-): number {
-  if (changed.has(file)) return 0;
-  let frontier = [file];
-  const seen = new Set(frontier);
-  for (let depth = 1; frontier.length; depth++) {
-    const next: string[] = [];
-    for (const importer of frontier) {
-      for (const dependency of importsOf(
-        importer,
-        read(importer) ?? "",
-        (path) => read(path) !== undefined,
-      )) {
-        if (changed.has(dependency)) return depth;
-        if (!seen.has(dependency) && !dependency.startsWith("src/")) {
-          seen.add(dependency);
-          next.push(dependency);
-        }
-      }
-    }
-    frontier = next;
-  }
-  return reasons.some((why) => /reads |names |holds |calls |declare it reaches /.test(why))
-    ? 1
-    : Number.MAX_SAFE_INTEGER;
-}
-
-/** Files stay intact: serial desktop work adds; parallel files pack onto ten workers. */
-export function macTime(files: string[], cost: (file: string) => number): number {
-  const workers = Array<number>(E2E_MAX_WORKERS).fill(0);
-  let serial = 0;
-  for (const file of [...files].sort((a, b) => cost(b) - cost(a) || a.localeCompare(b))) {
-    if (laneOf(file) === "desktop") serial += cost(file);
-    else {
-      const index = workers.indexOf(Math.min(...workers));
-      workers[index] = (workers[index] ?? 0) + cost(file);
-    }
-  }
-  return serial + Math.max(...workers);
-}
-
 export function budget(
   reasons: Reasons,
   times: Map<string, number>,
-  distance: (file: string) => number,
+  tagged: (file: string) => boolean,
+  everyOnMac = false,
 ) {
   // New and previously skipped journeys use the slowest measured file in their lane.
   const cost = (file: string) =>
@@ -101,15 +61,8 @@ export function budget(
       1,
       ...[...times].filter(([path]) => laneOf(path) === laneOf(file)).map(([, ms]) => ms),
     );
-  const ordered = [...reasons.keys()].sort(
-    (a, b) => distance(a) - distance(b) || a.localeCompare(b),
-  );
-  const mac: string[] = [];
-  const overflow: string[] = [];
-  for (const file of ordered) {
-    if (macTime([...mac, file], cost) <= JOURNEY_BUDGET_MS) mac.push(file);
-    else overflow.push(file);
-  }
+  const ordered = [...reasons.keys()].sort((a, b) => a.localeCompare(b));
+  const mac = ordered.filter((file) => everyOnMac || tagged(file));
   // INF-658's measured Linux rates: one Mac minute of parallel work per minute,
   // and 0.6 Mac minutes of serial work per minute. Sum is conservative for parallel files.
   const linuxCost = (file: string) => cost(file) / (laneOf(file) === "desktop" ? 0.6 : 1);
@@ -118,7 +71,7 @@ export function budget(
   // minutes while `places` is unbounded, otherwise into exactly `places` jobs.
   const pack = (lane: Bin["lane"], places: number): Bin[] => {
     const bins: Bin[] = [];
-    for (const file of overflow
+    for (const file of ordered
       .filter((file) => laneOf(file) === lane)
       .sort((a, b) => linuxCost(b) - linuxCost(a) || a.localeCompare(b))) {
       const lightest = bins.toSorted((a, b) => a.estimatedMs - b.estimatedMs)[0];
@@ -136,15 +89,15 @@ export function budget(
     return bins;
   };
   const lanes = (["parallel", "desktop"] as const).filter((lane) =>
-    overflow.some((file) => laneOf(file) === lane),
+    ordered.some((file) => laneOf(file) === lane),
   );
   let linux = lanes.flatMap((lane) => pack(lane, Number.POSITIVE_INFINITY));
   if (linux.length > LINUX_PLACES) {
-    // INF-1720's plan: overflow runs on the PC's Linux places, five at once,
+    // INF-1720's plan: the journeys run on the PC's Linux places, five at once,
     // so it packs into at most one job per place, each repeating the setup
     // once. Each lane takes places by its share of the work, one at least.
     const work = (lane: Bin["lane"]) =>
-      overflow.filter((file) => laneOf(file) === lane).reduce((sum, file) => sum + linuxCost(file), 0);
+      ordered.filter((file) => laneOf(file) === lane).reduce((sum, file) => sum + linuxCost(file), 0);
     const total = lanes.reduce((sum, lane) => sum + work(lane), 0);
     const first = lanes[0] as Bin["lane"];
     const share =
@@ -155,7 +108,6 @@ export function budget(
   }
   return {
     mac,
-    estimatedMacMs: macTime(mac, cost),
     linux,
     unmeasured: ordered.filter((file) => !times.get(file)),
   };
@@ -167,7 +119,6 @@ function main() {
     Object.entries(JSON.parse(readFileSync(value("--selection"), "utf8"))),
   );
   const times = journeyTimes(JSON.parse(readFileSync(value("--timings"), "utf8")));
-  const changed = new Set(readFileSync(value("--changed"), "utf8").trim().split("\n"));
   const read = (file: string) => {
     try {
       return readFileSync(file, "utf8");
@@ -175,8 +126,11 @@ function main() {
       return undefined;
     }
   };
-  const result = budget(reasons, times, (file) =>
-    proximity(file, reasons.get(file) ?? [], changed, read),
+  const result = budget(
+    reasons,
+    times,
+    (file) => needsMac(read(file) ?? "", file),
+    process.argv.includes("--every-on-mac"),
   );
   console.log(JSON.stringify(result, null, 2));
   if (process.env.GITHUB_OUTPUT)
@@ -187,7 +141,7 @@ function main() {
   if (process.env.GITHUB_STEP_SUMMARY)
     appendFileSync(
       process.env.GITHUB_STEP_SUMMARY,
-      `### Journey placement\n\nMac: ${result.mac.length} files, estimated ${(result.estimatedMacMs / 60000).toFixed(1)} minutes.\n\n` +
+      `### Journey placement\n\nMac: ${result.mac.length} files${process.argv.includes("--every-on-mac") ? ", every test, as requested" : `, only their tests tagged ${MAC_ONLY_TAG}`}.\n\n` +
         result.mac.map((file) => `- Mac: ${file}: ${reasons.get(file)?.join("; ")}`).join("\n") +
         "\n\n" +
         result.linux

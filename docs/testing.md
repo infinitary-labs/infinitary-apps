@@ -119,7 +119,8 @@ Moved verbatim from `AGENTS.md` on 2026-09-24; `AGENTS.md` keeps a one-line poin
   A new test file joins its cohort's job on its own; a new kind of check joins one of the jobs, never a step with a condition.
   The Linux jobs have no release-branch exemption: they must actually run to provide the required project verification, even though the generic forge verdict accepts conditional skipped checks.
   CI green means every check on the exact head commit SHA reports status=completed and conclusion=success or skipped (`gh pr checks`); a project that runs no checks reads green with the empty list, but on GitHub an empty list where workflow runs exist or have run for earlier pull requests reads pending ("checks have not started yet"), and so does a pull request's list with none of its own workflow runs on the version yet where the project runs them (`docs/forge.md`, "The green rule").
-  The macOS work - the Playwright e2e suite and the run-alone pass's Mac-only tests, the universal package smoke, the replay gate - is `verify.yml`'s mac lane, in a reusable workflow that `release.yml` calls before its signing job (every alpha runs linux-checks, the whole Playwright suite on Linux as `linux-e2e` ("The Linux source desktop" below) and mac; a stable promotion inherits its alpha's successful checks or is refused: `docs/alpha.md` "The signed channel workflow") and that crewmates request on demand through `github_write` (`docs/forge.md`, "Verification workflow requests"); it is deliberately not per PR and not nightly (the per-PR mac job was 98% of a ~$200/month bill).
+  The macOS work - the Playwright e2e suite and the run-alone pass's Mac-only tests, the universal package smoke, the replay gate - is `verify.yml`'s mac lane, in a reusable workflow that `release.yml` calls before its signing job (every alpha runs linux-checks, the whole Playwright suite on Linux as `linux-e2e` ("The Linux source desktop" below) and mac; a stable promotion inherits its alpha's successful checks or is refused: `docs/alpha.md` "The signed channel workflow") and that crewmates request on demand through `github_write` (`docs/forge.md`, "Verification workflow requests"); it is deliberately not per PR and has no schedule of its own (the per-PR mac job was 98% of a ~$200/month bill).
+  An alpha runs every journey on the Mac, and so does the nightly full check, which requests it with `all_journeys: true`; any other request runs there only the tests tagged `MAC_ONLY_TAG`, since `linux-e2e` runs every other one ("Tests that need a Mac").
   Crewmate validation is agent-driven and evidence-first (captain rulings 2026-09-19, the no-mistakes alignment; `docs/delivery-rigor.md`): demonstrate the user intent end-to-end with product-level evidence for each concrete thing an end user would do and relevant existing end-to-end tests covering the surfaces changed, re-run after an overlapping rebase, named under Verified, and a relevant test that cannot run is named, never dropped quietly - the full unit suite is the PR checks' job and the full Playwright suite and `pnpm package:mac` are `verify.yml`'s mac lane, with the full suite on Linux beside it (every alpha, and on demand), with full e2e runs only in CI, never locally, and no configured command is mandated anywhere in the rigor pipeline.
   Never treat old SHAs as authoritative for the current head.
 - A timing claim in a test is asserted as an ORDER or as WORK, never as a wall-clock window (captain's B1, 2026-09-24: "one clock, budgets measured"): on a host running several suites at once a millisecond budget, a runner-clock interval, or two short real timers racing measure the load.
@@ -135,6 +136,32 @@ Moved verbatim from `AGENTS.md` on 2026-09-24; `AGENTS.md` keeps a one-line poin
 - Test ports: a test that gives a home, a stand-in server or any other listener a loopback port takes it from `claimedPort` (`tests/helpers/claimedPort.ts`), in vitest and Playwright alike.
   A port found by listening on port 0 and closing again is free only for that moment: another worker can be handed the same one, and the home that listens second fails while its join reaches the other worker's home, refused as not that Mac (INF-698).
   A claimed port lies below every ephemeral range and stays claimed by its worker until the worker exits, so no other worker, run or port-0 listener on the computer takes it, and a home that quits can open again where it was.
+
+## Tests that need a Mac
+
+The captain's principle of 2026-10-28 (`docs/principles.md`): a test runs on the Mac only when it needs a Mac, and Linux runs every test it can.
+A journey needs a Mac when it skips on Linux, or when it has a step only a Mac runs; it then carries `MAC_ONLY_TAG` (`tests/e2e/tags.ts`) in its own details, `test("…", { tag: MAC_ONLY_TAG }, …)`, or a describe's around it, beside its own `test.skip` and reason.
+A unit test that needs a Mac is a file of the reviewed list in `scripts/mac-unit-tests.ts` instead (`docs/test-cohorts.md`).
+
+Where each journey runs:
+
+| Run | Linux | Mac |
+| --- | --- | --- |
+| A pull request (`journeys.yml`) | every chosen journey | the chosen journeys' tagged tests |
+| A request for journeys (`journeys.yml`) | every named journey | their tagged tests, or every test with `mac_all` |
+| A requested full check (`verify.yml`) | every journey | every tagged test, or every journey with `all_journeys` |
+| The nightly full check and every alpha (`verify.yml`) | every journey | every journey |
+
+Three checks hold the tag to what a test needs:
+
+1. Every Linux journey job, `source-journeys.yml`'s starters, overflow and full shards, fails on a test that skipped there without the tag (`scripts/untagged-skips.ts`), whether its journeys passed or failed.
+   The run-alone pass refuses one itself ("Each test owns its prerequisites" above).
+2. The `e2e-mac-tag` lint in `pnpm check` (`tests/lint/e2eMacTag.ts`) refuses an untagged test that reads a Mac fact, and a tagged test that reads none.
+   A test reads a Mac fact when its own code, or a `test.skip` or hook of the describe or file around it, names `THIS_DESKTOP` or `HAS_APP_MENU` (`tests/e2e/desktop.ts`) or the platform name "darwin".
+   A step only Linux runs, such as a comparison with "linux", needs no Mac, and a helper the test calls is not followed.
+3. `tests/release-contract.test.ts` holds the Mac steps of `journeys.yml` and `verify.yml` to the tag (`--grep @mac-only`), and the untagged-skip step to every Linux journey job.
+
+`tests/e2e-mac-tag.test.ts` drives the first two on this repository's own journeys and a Linux run's real result.
 
 ## Full e2e runs are CI-only
 
@@ -281,23 +308,24 @@ Without that input, it takes the same line and runner as a pull request's phone 
 
 A pull request gets `journeys.yml`'s Linux `choose-journeys` check, which installs the locked tools, selects the journey files and writes the reasons and placement in its summary.
 The chooser downloads `e2e-results` from the newest successful `verify.yml` run that has an unexpired artifact of that name and sums each journey file's measured Mac durations.
+Only a run of every journey keeps that artifact, so a requested check of the tagged tests alone never becomes the journeys' times.
 It finds that run in the workflow's plain run list, newest first, never through GitHub's search by result, which has answered no run while passing ones were listed.
 It asks for that list without each run's pull requests, which it never reads: working them out has run past GitHub's time limit and answered 502, and leaving them out drops no run.
 It reads each passing run's artifact list and keeps paging past runs without usable `e2e-results`, including installer-only verifications.
 If no passing run has usable results, the chooser fails rather than silently dropping journeys; run full verification to supply fresh timings.
 An artifact-list error or a failed download still fails the chooser.
-`scripts/journey-budget.ts` keeps the closest journeys on Mac up to six estimated minutes: edited specs first, then the shortest changed-helper import path, screen readers and callers of a changed window message, with filename ties.
-It adds serial desktop durations to the longest of ten packed parallel workers, matching the Mac configuration.
-A new or previously skipped file uses the slowest measured file in its lane, and the summary lists it as unmeasured.
-Its Mac count and file list pass to `affected-journeys`, on the Mac mini (the `MAC_RUNNER` label).
-The remainder passes to `linux-overflow`, Linux machines running concurrently with Mac, packed into six-minute groups separately for parallel and desktop files.
+`scripts/journey-budget.ts` places every chosen file on Linux, and on the Mac mini (the `MAC_RUNNER` label) only the chosen files that hold a test tagged `MAC_ONLY_TAG`, whose `affected-journeys` job runs only those tests (`--grep @mac-only`), as "Tests that need a Mac" says.
+A file with a tagged test runs on both: its tagged tests on the Mac, and its other tests on Linux, where its tagged tests skip or run their shared steps.
+A tagged test is never sent to Linux alone.
+`linux-overflow` packs the chosen files into six-minute groups separately for parallel and desktop files, on Linux machines running beside the Mac.
 It is at most five jobs, one per Linux place on the PC (`LINUX_PLACES`, INF-1720's plan), so each job repeats its setup once: past five groups, each lane takes places by its share of the estimated work, at least one, and a file joins its lane's least loaded job, which may then exceed six minutes.
+A new or previously skipped file uses the slowest measured file in its lane, and the summary lists it as unmeasured.
 Linux estimates use the plan's observed rates: one Mac minute of parallel work per Linux minute and 0.6 Mac minutes of desktop work.
 A file stays intact, so an indivisible slow file may exceed six minutes; setup, runner waits and shared-machine slowdown are not part of this estimate.
-Every selected file runs exactly once in this placement; the independent Linux starter coverage still runs too.
+Every selected file runs on Linux exactly once in this placement; the independent Linux starter coverage still runs too.
 The chooser keeps its selection and placement as the `journey-placement` artifact.
-The full Mac suite remains part of every alpha's `verify.yml`; a Mac-only break in Linux overflow may first surface there.
-When the chooser passes with no files, the Mac job skips by its own condition without taking a runner; when the chooser fails, its failed check holds the merge.
+The full Mac suite remains part of every alpha's `verify.yml` and of the nightly full check; a break that only a Mac shows in an untagged test first surfaces there.
+When the chooser passes with no tagged files, the Mac job skips by its own condition without taking a runner; when the chooser fails, its failed check holds the merge.
 Both success and a job-condition skip satisfy the app's green rule.
 If GitHub branch rules ever require `affected-journeys`, they must require `choose-journeys` too: a job skipped because its prerequisite failed does not itself hold a merge.
 It reverses captain decision B of 2026-09-15 for pull requests in part (FI3-1305, the captain's answer of 2026-10-08).
@@ -377,7 +405,7 @@ A change no journey or helper it imports reaches runs nothing and the chooser re
 A change to an export every journey imports still runs them all, because that is the break this check exists to catch.
 A changed screen file that draws a hook most journeys read, such as `HomeScreen.tsx` with `data-stage-entry`, likewise runs most journeys.
 A model behavior only a few journeys need lives in its own scenario file instead ("A journey's own scenarios"), so an edit to it runs only those journeys.
-The Mac job refuses an empty file list, builds once, then runs exactly the chosen files with `--no-deps`, as a local run does (`docs/testing.md`, "Full e2e runs are CI-only").
+The Mac job refuses an empty file list, builds once, then runs the chosen files' tagged tests with `--no-deps`, as a local run does (`docs/testing.md`, "Full e2e runs are CI-only").
 It does not repeat the release's other stages: the run-alone pass, the replay gate, the package smoke and the full suite stay `verify.yml`'s, inside every alpha and on demand.
 A newer push to the same pull request cancels the older run, because the Mac mini is one machine.
 `tests/affected-journeys.test.ts` pins the selection and `tests/release-contract.test.ts` the workflow's shape.
@@ -389,7 +417,8 @@ Its on-demand `parts`, `starve` and `perf` inputs select native parts and reprod
 
 `journeys.yml` also runs on request for any branch, with the journeys it names: `POST /repos/{owner}/{repo}/actions/workflows/journeys.yml/dispatches` with `{"ref":"<branch>","inputs":{"files":"now-panel task-crewmate.spec.ts"}}`.
 The names are read as a `Journeys:` trailer's are, separated by spaces or commas, and a name that is no journey fails the chooser (`scripts/affected-journeys.ts --named`).
-The chooser places the named files exactly as it places a pull request's, closest six minutes on the Mac mini and the rest on Linux, and the run skips the pull request's Linux starter coverage.
+The chooser places the named files exactly as it places a pull request's, every one on Linux and their tagged tests on the Mac mini, and the run skips the pull request's Linux starter coverage.
+Its `mac_all` input runs every named journey on the Mac mini as well, every test of it, for a check of the Mac itself such as a `starve` experiment.
 It is a computer's route for journeys in CI mode ("Where the heavy checks run"), such as a journey a change is still being written against.
 Its optional `mac_runner` input selects an isolated Mac runner for that request, as `verify.yml` does, without changing shared runner variables.
 Each request is its own concurrency group, so another request on the same branch, `main` included, never cancels it, whatever journeys either names (INF-941); only a newer push to a pull request replaces that pull request's older run.
@@ -800,8 +829,9 @@ It starts Xvfb with `-noreset`: Xvfb otherwise resets as its last client leaves,
 Every app window opens centred, so a pointer at the centre sits in each one, and the windows of parallel journeys, opening and closing over one another, hand it to the window under test, whose page then hears it leave what its journey rests on.
 Linux text is antialiased in grey, as macOS draws it (`--disable-lcd-text`): Chromium draws subpixel text only on an opaque layer of its own, so a component would otherwise draw different pixels in a panel and out of one.
 A journey reads this computer's desktop through `tests/e2e/desktop.ts` (`THIS_DESKTOP`, `HAS_APP_MENU`, and a key's words and `aria-keyshortcuts` through their owners in `src/shared/keyboard.ts`), and its dictation key and hints through `tests/e2e/dictation.ts`, so the same journey reads ⌘ and right ⌥ on a Mac and Ctrl and right Ctrl on Linux.
-A step whose subject only a Mac has - the window wash, Show in dock, the app menu - runs where the desktop has it, and the rest of its journey runs on both.
-A journey whose whole subject is the Mac's skips on Linux and says why: the shell keys' default keys (`multiline-composer`, `card-threads`; `docs/composer.md`, "Shell keys"), the window wash (`window-wash`, `activity-runs`), macOS's microphone permission (`mic-access`), the app's own git (`app-git`, `run-work`; `docs/forge.md`, "The app's own git"), work run in the background through launchd (`run-work`; `docs/helper.md`), and, as before, the Mac's own SSH server (`devices`, `run-work`), `CFFIXED_USER_HOME` (`user-data-folder`) and the real voice model (`voice-freeze.check`).
+A step whose subject only a Mac has - the window wash, Show in dock, the app menu - runs where the desktop has it, the rest of its journey runs on both, and the test carries `MAC_ONLY_TAG` so a pull request's Mac job runs that step.
+A journey whose whole subject is the Mac's skips on Linux, says why and carries `MAC_ONLY_TAG` ("Tests that need a Mac"): the shell keys' default keys (`multiline-composer`, `card-threads`; `docs/composer.md`, "Shell keys"), the window wash (`window-wash`, `activity-runs`), macOS's microphone permission (`mic-access`), macOS's question about other apps' data (`macos-privacy`), the app's own git (`app-git`, `run-work`; `docs/forge.md`, "The app's own git"), the Mac app another Mac downloads with its zip tools (`devices`, `run-work`), `CFFIXED_USER_HOME` (`user-data-folder`) and the real voice model (`voice-freeze.check`).
+The SSH journeys run on Linux too, against the runner's own OpenSSH (`tests/helpers/sshServer.ts`).
 The demo encoder is the release's static FFmpeg 7 there ("Recording a demo" above).
 A mock crewmate writes its fixture files one bash call each, since Linux refuses a command argument over 128 KiB (`writeFilesCalls` in `tests/e2e/mockProvider.ts`).
 

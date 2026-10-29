@@ -2,9 +2,12 @@ import { expect, test } from "@playwright/test";
 import { THIS_DESKTOP } from "./desktop";
 import { launchApp } from "./launch";
 import { minimumWindowSize, resizeWindow } from "./layout";
+import { MAC_ONLY_TAG } from "./tags";
 import { pressKey } from "./windowKeys";
 
-test("Appearance groups the existing saved choices without changing General or resetting them", async () => {
+test("Appearance groups the existing saved choices without changing General or resetting them", {
+  tag: MAC_ONLY_TAG,
+}, async () => {
   // Settings offers the window wash only beside the Mac's window material
   // (docs/translucent-window.md); elsewhere the other choices are grouped
   // the same way.

@@ -16,6 +16,7 @@ import { APP_CATALOG_PROMPT_MARKER } from "./mockProvider";
 import { promptInput } from "./prompt";
 import { settingRow } from "./settings";
 import { SHOWN_ENTRY, shownCardFrame } from "./stack";
+import { MAC_ONLY_TAG } from "./tags";
 import {
   commandSearch,
   endRecording,
@@ -120,7 +121,9 @@ const chooseHelpItem = (app: ElectronApplication) =>
 const shownEntryId = (page: Page) =>
   page.locator(SHOWN_ENTRY).first().getAttribute("data-stage-entry-id");
 
-test("What's new brings the release note back from the Help menu, command search, Settings, Firstmate and a key of its own", async () => {
+test("What's new brings the release note back from the Help menu, command search, Settings, Firstmate and a key of its own", {
+  tag: MAC_ONLY_TAG,
+}, async () => {
   test.setTimeout(120_000);
   const { userDataDir, notes } = upgradedProfile();
   const launched = await launchApp({
@@ -237,7 +240,9 @@ test("What's new brings the release note back from the Help menu, command search
   }
 });
 
-test("before any release note, every way in says there is none and runs nothing", async () => {
+test("before any release note, every way in says there is none and runs nothing", {
+  tag: MAC_ONLY_TAG,
+}, async () => {
   const launched = await launchApp({ withMockProvider: true });
   try {
     const { app, page } = launched;

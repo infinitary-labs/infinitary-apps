@@ -686,7 +686,109 @@ describe("local packaging identity (electron-builder.dev.yml)", () => {
     );
     expect(choices.some((run) => run.includes("scripts/affected-journeys.ts"))).toBe(true);
     expect(runs.join("\n")).not.toMatch(/test:e2e|e2e-alone|replay:gate|electron-builder/);
-    expect(runs.some((run) => /playwright test --no-deps \$FILES/.test(run))).toBe(true);
+    expect(runs.some((run) => /playwright test --no-deps \$ONLY \$FILES/.test(run))).toBe(true);
+  });
+
+  /**
+   * The captain's principle of 2026-10-28 (INF-1763, docs/principles.md): a
+   * test runs on the Mac only when it needs a Mac. A pull request's Mac job,
+   * a request for journeys and a requested full check run only the tests
+   * tagged MAC_ONLY_TAG, since Linux runs every other one; the nightly check
+   * and every alpha run every journey there, and a request can ask for every
+   * named journey.
+   */
+  it("runs on the Mac only the tests that need a Mac, except in an alpha or when asked for all", () => {
+    type Job = { if?: string; steps: Step[] };
+    const journeys = loadYamlFile(".github/workflows/journeys.yml") as {
+      on: { workflow_dispatch: { inputs: Record<string, { default?: unknown }> } };
+      jobs: Record<string, Job>;
+    };
+    expect(journeys.on.workflow_dispatch.inputs.mac_all?.default).toBe(false);
+    const mac = journeys.jobs["affected-journeys"]?.steps.find((step) => step.id === "e2e");
+    const only = (inputs: Record<string, unknown>) =>
+      workflowString(mac?.env?.ONLY ?? "", { inputs });
+    // A pull request has no inputs; a request names its files and may ask for all.
+    expect(only({})).toBe(`--grep ${MAC_ONLY_TAG}`);
+    expect(only({ files: "window-wash", mac_all: false })).toBe(`--grep ${MAC_ONLY_TAG}`);
+    expect(only({ files: "window-wash", mac_all: true })).toBe("");
+    for (const command of (mac?.run ?? "")
+      .split("\n")
+      .filter((line) => /playwright test/.test(line)))
+      expect(command).toMatch(/--no-deps \$ONLY \$FILES$/);
+    // The chooser puts every chosen file on the Mac only when the request asks.
+    const select = journeys.jobs["choose-journeys"]?.steps.find((step) => step.id === "select");
+    expect(select?.run).toContain("scripts/journey-budget.ts");
+    expect(select?.run).toContain("$EVERY");
+    const every = (inputs: Record<string, unknown>) =>
+      workflowString(select?.env?.EVERY ?? "", { inputs });
+    expect([every({}), every({ mac_all: false }), every({ mac_all: true })]).toEqual([
+      "",
+      "",
+      "--every-on-mac",
+    ]);
+
+    const verify = loadYamlFile(".github/workflows/verify.yml") as {
+      on: Record<
+        "workflow_call" | "workflow_dispatch",
+        { inputs: Record<string, { default?: unknown }> }
+      >;
+      jobs: { lane: Job };
+    };
+    // An alpha calls verify with no say; a request runs only the tagged tests unless it asks.
+    expect(verify.on.workflow_call.inputs.all_journeys?.default).toBe(true);
+    expect(verify.on.workflow_dispatch.inputs.all_journeys?.default).toBe(false);
+    const release = loadYamlFile(".github/workflows/release.yml") as {
+      jobs: { verify: { with?: Record<string, unknown> } };
+    };
+    expect(release.jobs.verify.with ?? {}).not.toHaveProperty("all_journeys");
+    const steps = verify.jobs.lane.steps;
+    const e2e = steps.find((step) => step.id === "e2e");
+    expect(e2e?.run).toBe("pnpm exec playwright test --workers=50% $ONLY");
+    const verifyOnly = (all_journeys: boolean) =>
+      workflowString(e2e?.env?.ONLY ?? "", { inputs: { all_journeys } });
+    expect(verifyOnly(false)).toBe(`--grep ${MAC_ONLY_TAG}`);
+    expect(verifyOnly(true)).toBe("");
+    // Only a run of every journey supplies the chooser's journey times.
+    const kept = steps.find((step) => step.name === "Keep the e2e result");
+    const keptAs = (all_journeys: boolean) =>
+      workflowString(String(kept?.with?.name ?? ""), { inputs: { all_journeys } });
+    expect(keptAs(true)).toBe("e2e-results");
+    expect(keptAs(false)).not.toBe("e2e-results");
+  });
+
+  /**
+   * Linux runs every test it can (INF-1763): a test that skips on Linux
+   * without MAC_ONLY_TAG runs on no pull request's Mac either, so every
+   * Linux journey job refuses one, whether its journeys passed or failed.
+   */
+  it("refuses a test that skipped on Linux without the Mac tag in every Linux journey job", () => {
+    const source = loadYamlFile(".github/workflows/source-journeys.yml") as {
+      jobs: { "source-desktop": { steps: Step[] } };
+    };
+    const steps = source.jobs["source-desktop"].steps;
+    const journeys = steps.findIndex((step) => step.env?.PLAYWRIGHT_JSON_OUTPUT_FILE);
+    const result = steps[journeys]?.env?.PLAYWRIGHT_JSON_OUTPUT_FILE;
+    const refuse = steps.find((step) => step.run?.startsWith("node scripts/untagged-skips.ts"));
+    expect(refuse?.run).toBe(`node scripts/untagged-skips.ts ${result}`);
+    expect(steps.indexOf(refuse as Step)).toBeGreaterThan(journeys);
+    const runs = (os: string, lane: string, status: Partial<Record<"failure", boolean>> = {}) =>
+      workflowValue(
+        refuse?.if ?? "",
+        { runner: { os }, matrix: { lane } },
+        {
+          success: !status.failure,
+          failure: Boolean(status.failure),
+          always: true,
+          cancelled: false,
+        },
+      );
+    for (const lane of ["parallel", "desktop"]) {
+      expect(runs("Linux", lane)).toBe(true);
+      expect(runs("Linux", lane, { failure: true })).toBe(true);
+      expect(runs("macOS", lane)).toBe(false);
+    }
+    // The run-alone pass refuses an untagged skip itself (scripts/e2e-alone.ts).
+    expect(runs("Linux", "alone")).toBe(false);
   });
 
   /**
@@ -1159,7 +1261,7 @@ describe("local packaging identity (electron-builder.dev.yml)", () => {
     const steps = verify.jobs.lane.steps;
     const e2e = steps.findIndex((step) => step.id === "e2e");
     // Half the processor: both Mac runner slots share it (INF-741).
-    expect(steps[e2e]?.run).toBe("pnpm exec playwright test --workers=50%");
+    expect(steps[e2e]?.run).toBe("pnpm exec playwright test --workers=50% $ONLY");
     const result = steps[e2e]?.env?.PLAYWRIGHT_JSON_OUTPUT_FILE ?? "";
     expect(result).not.toBe("");
     const upload = (path: string) =>
@@ -2545,7 +2647,7 @@ describe("the signed channel workflow", () => {
       expect.arrayContaining([
         'mac_tests="$(node scripts/mac-unit-tests.ts)"\npnpm test $mac_tests\n',
         "pnpm build",
-        "pnpm exec playwright test --workers=50%",
+        "pnpm exec playwright test --workers=50% $ONLY",
         "pnpm replay:gate",
       ]),
     );

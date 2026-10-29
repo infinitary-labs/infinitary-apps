@@ -26,9 +26,12 @@ import {
 } from "./scenarios/relayedSetting";
 import { boxLoginItems, settingRow } from "./settings";
 import { showCard, shownEntry } from "./stack";
+import { MAC_ONLY_TAG } from "./tags";
 import { pressKey } from "./windowKeys";
 
-test("captain clicks and Firstmate catalog changes share persisted settings and trails without cards", async () => {
+test("captain clicks and Firstmate catalog changes share persisted settings and trails without cards", {
+  tag: MAC_ONLY_TAG,
+}, async () => {
   const app = await launchApp({
     withMockProvider: true,
     prepareHome: (home) => mkdirSync(join(home, "catalog-projects")),
@@ -267,7 +270,9 @@ test("Intelligence requests persist and show the same account and routing contro
   }
 });
 
-test("presence requests reach Settings while sharing and purge stay yours and a decision key offers a button", async () => {
+test("presence requests reach Settings while sharing and purge stay yours and a decision key offers a button", {
+  tag: MAC_ONLY_TAG,
+}, async () => {
   const app = await launchApp({ withMockProvider: true });
   await boxLoginItems(app.app);
   try {

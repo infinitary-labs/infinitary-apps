@@ -9,6 +9,7 @@ import { claimedPort } from "../helpers/claimedPort";
 import { scratchDir } from "../helpers/scratchDirs";
 import { builtAppDir, defaultClaudeStubDir, hermeticEnv } from "./launch";
 import { writeMockClaudeClient } from "./mockClaudeClient";
+import { MAC_ONLY_TAG } from "./tags";
 
 /**
  * INF-1228 piece 2: a person asks status before, during and after a command.
@@ -79,7 +80,9 @@ async function status(env: Record<string, string>, label: string) {
   return JSON.parse(read.out()) as RunStatus;
 }
 
-test("status observes a live command, its clean stop and its forced stop without starting another app", async () => {
+test("status observes a live command, its clean stop and its forced stop without starting another app", {
+  tag: MAC_ONLY_TAG,
+}, async () => {
   const data = scratchDir("status-command-data-");
   const env = await environment(data);
   expect(await status(env, "Before starting")).toMatchObject({ running: false, lastStop: null });

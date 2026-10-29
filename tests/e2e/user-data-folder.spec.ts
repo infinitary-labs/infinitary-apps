@@ -4,6 +4,7 @@ import { _electron as electron, expect, test } from "@playwright/test";
 import { scratchDir } from "../helpers/scratchDirs";
 import { builtAppDir, closeApp, launchApp } from "./launch";
 import { writeMockClaudeClient } from "./mockClaudeClient";
+import { MAC_ONLY_TAG } from "./tags";
 
 /**
  * Which folder a run really opens (src/shared/userDataFolders.ts). A dev run
@@ -18,7 +19,9 @@ import { writeMockClaudeClient } from "./mockClaudeClient";
 
 test.skip(process.platform !== "darwin", "CFFIXED_USER_HOME is macOS's");
 
-test("an unpackaged run opens <appData>/infinitary-dev, never the release's folder", async () => {
+test("an unpackaged run opens <appData>/infinitary-dev, never the release's folder", {
+  tag: MAC_ONLY_TAG,
+}, async () => {
   const home = realpathSync(scratchDir("infinitary-flavor-home-"));
   const inherited = { ...(process.env as Record<string, string>) };
   delete inherited.INFINITARY_USER_DATA_DIR;
@@ -55,7 +58,9 @@ test("an unpackaged run opens <appData>/infinitary-dev, never the release's fold
   }
 });
 
-test("INFINITARY_USER_DATA_DIR still wins on an unpackaged run", async () => {
+test("INFINITARY_USER_DATA_DIR still wins on an unpackaged run", {
+  tag: MAC_ONLY_TAG,
+}, async () => {
   const launched = await launchApp();
   try {
     const userData = await launched.app.evaluate(({ app }) => app.getPath("userData"));

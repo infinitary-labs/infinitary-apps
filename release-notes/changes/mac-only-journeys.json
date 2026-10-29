@@ -1,0 +1,8 @@
+{
+  "exclusions": [
+    {
+      "id": "mac-only-journeys",
+      "reason": "Internal CI placement: journeys run on Linux, and on the Mac only the tests tagged as needing a Mac, plus every journey nightly and per alpha. No app surface changes."
+    }
+  ]
+}

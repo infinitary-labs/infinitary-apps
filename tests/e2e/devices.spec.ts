@@ -59,6 +59,7 @@ import { addedProjects } from "./projects";
 import { promptInput } from "./prompt";
 import { feedLine, feedLineOf } from "./rails";
 import { savedText } from "./savedText";
+import { MAC_ONLY_TAG } from "./tags";
 import { focusOn, pressKey, runFromSearch, typeInto } from "./windowKeys";
 
 const appPackage = JSON.parse(
@@ -925,166 +926,172 @@ async function otherMacOverSsh(
  * key or shared port is used.
  */
 for (const operation of ["download", "fallback"] as const) {
-  // biome-ignore lint/correctness/noEmptyPattern: Playwright requires a destructured fixture signature.
-  test(`a Mac a command added downloads its update with progress from the keyboard: ${operation}`, async ({}, testInfo) => {
-    test.skip(process.platform !== "darwin", "needs macOS zip tools");
-    test.setTimeout(120_000);
-    process.env.PI_OFFLINE = "1";
-    /** A stand-in app with a payload, its marker saying whose copy it is. */
-    const standIn = (marker: string) => {
-      const bundle = join(scratchDir("infinitary-e2e-command-app-"), "Infinitary.app");
-      mkdirSync(join(bundle, "Contents", "MacOS"), { recursive: true });
-      mkdirSync(join(bundle, "Contents", "Resources"), { recursive: true });
-      writeFileSync(join(bundle, "Contents", "MacOS", "Infinitary"), "#!/bin/sh\n", {
-        mode: 0o755,
-      });
-      writeFileSync(join(bundle, "Contents", "Resources", "marker"), `${marker}\n`);
-      addStandInPayload(bundle, randomBytes(8_000_000));
-      return bundle;
-    };
-    const release = await macRelease(standIn("the published copy"), appPackage.version, 150);
-    if (operation === "fallback") release.mode("corrupt");
-    const demo = await startDemo({
-      withMockProvider: true,
-      size: { width: 1280, height: 800 },
-      env: {
-        INFINITARY_APP_BUNDLE: standIn("the home's own copy"),
-        INFINITARY_JOINS_FROM_ANOTHER_MAC: "1",
-        INFINITARY_PUBLISHED_TAP: release.dir,
-      },
-    });
-    const app = demo.launched;
-    let runner: HelperRun | undefined;
-    try {
-      const { page } = app;
-      const thisVersion = await app.app.evaluate(({ app: electron }) => electron.getVersion());
-      await openDevices(page);
-      await pressKey(page.locator('[data-device-add="mac"]'), "Enter");
-      await pressKey(
-        page.getByRole("button", { name: "Run a command there", exact: true }),
-        "Enter",
-      );
-      const command = (await linkInTab(page).textContent()) ?? "";
-      // Its command downloads the same published version there first.
-      expect(command).toContain(shellWord(release.publicUrl));
-      expect(command).toContain(shellWord(release.sha256));
-      // The computer's run is this process: its curl reaches the stand-in
-      // release at the public address, through the release's tunnel, and
-      // trusts its certificate alone. The app started without them.
-      process.env.HTTPS_PROXY = release.proxy;
-      process.env.CURL_CA_BUNDLE = release.cert;
-      const dataDir = scratchDir("infinitary-e2e-command-mini-");
-      const at = command.indexOf(PAIRING_LINK_PREFIX);
-      const joined = await joinHome({
-        text: command.slice(at, command.indexOf("'", at)),
-        dataDir,
-        io: { say: () => {}, ask: async () => "yes" },
-        device: { name: "Mac mini", user: BUILDER },
-        timeoutMs: 5_000,
-      });
-      if (!joined.ok) throw new Error(joined.reason);
-      const deviceId = joined.grant.deviceId;
-      await pressKey(page.getByRole("button", { name: "Done", exact: true }), "Enter");
-      // What its command kept there, and the background that starts it.
-      const kept = keepApp(standIn("the copy it kept"), dataDir);
-      writeInstalled(dataDir, {
-        service: {
-          label: "com.kunchenguid.firstmate3000.dev.work",
-          file: join(dataDir, "agent.plist"),
-        },
-        app: kept,
-      });
-      const start = (appVersion: string) => {
-        const started = startHelper({
-          dataDir,
-          appVersion,
-          say: () => {},
-          retryMs: [50],
-          log: () => {},
-          verifier: release.programs["/usr/bin/codesign"],
+  test(
+    `a Mac a command added downloads its update with progress from the keyboard: ${operation}`,
+    { tag: MAC_ONLY_TAG },
+    // biome-ignore lint/correctness/noEmptyPattern: Playwright requires a destructured fixture signature.
+    async ({}, testInfo) => {
+      test.skip(process.platform !== "darwin", "needs macOS zip tools");
+      test.setTimeout(120_000);
+      process.env.PI_OFFLINE = "1";
+      /** A stand-in app with a payload, its marker saying whose copy it is. */
+      const standIn = (marker: string) => {
+        const bundle = join(scratchDir("infinitary-e2e-command-app-"), "Infinitary.app");
+        mkdirSync(join(bundle, "Contents", "MacOS"), { recursive: true });
+        mkdirSync(join(bundle, "Contents", "Resources"), { recursive: true });
+        writeFileSync(join(bundle, "Contents", "MacOS", "Infinitary"), "#!/bin/sh\n", {
+          mode: 0o755,
         });
-        if (!started.ok) throw new Error(started.reason);
-        runner = started.run;
-        return started.run;
+        writeFileSync(join(bundle, "Contents", "Resources", "marker"), `${marker}\n`);
+        addStandInPayload(bundle, randomBytes(8_000_000));
+        return bundle;
       };
-      const older = start("0.0.1");
-      const row = page.locator(`[data-device-row="${deviceId}"]`);
-      await expect(row).toHaveAttribute("data-other-version", "takes-work");
-      const label = "Mac mini";
-      const update = row.getByRole("button", { name: `Update ${label}`, exact: true });
-      await page.evaluate(() => {
-        const seen = window as Window & { __updateEvents?: unknown[] };
-        seen.__updateEvents = [];
-        window.infinitary.events.on((event) => {
-          if (event.type === "device_update") seen.__updateEvents?.push(event);
-        });
-      });
-      await demo.record(
-        "Update a Mac a command added, with its download's count",
-        "window",
-        async () => {
-          await pressKey(update, "Enter");
-          await expect(row).toContainText(
-            remoteLoginWords.downloading(label, 0).split("…")[0] ?? label,
-            { timeout: 30_000 },
-          );
-          await expect(row).not.toContainText("%");
-          await expect(row).toContainText(remoteLoginWords.startingRow(label), { timeout: 30_000 });
-          await demo.step(async () => {
-            await expect(row).toContainText(remoteLoginWords.startingRow(label));
-          });
-          expect(await older.ended).toBe("updated");
-          start(thisVersion);
-          await expect(row).not.toHaveAttribute("data-other-version", /.+/, { timeout: 30_000 });
-          await demo.step(async () => {
-            await expect(row).toContainText(SEEN_WORDS.now);
-          });
+      const release = await macRelease(standIn("the published copy"), appPackage.version, 150);
+      if (operation === "fallback") release.mode("corrupt");
+      const demo = await startDemo({
+        withMockProvider: true,
+        size: { width: 1280, height: 800 },
+        env: {
+          INFINITARY_APP_BUNDLE: standIn("the home's own copy"),
+          INFINITARY_JOINS_FROM_ANOTHER_MAC: "1",
+          INFINITARY_PUBLISHED_TAP: release.dir,
         },
-      );
-      expect(readFileSync(join(kept, "Contents", "Resources", "marker"), "utf8").trim()).toBe(
-        operation === "download" ? "the published copy" : "the home's own copy",
-      );
-      const said = (await page.evaluate(
-        () => (window as Window & { __updateEvents?: unknown[] }).__updateEvents ?? [],
-      )) as Extract<FmEvent, { type: "device_update" }>[];
-      const downloads = said.filter((event) => event.copy?.download);
-      expect(downloads.length).toBeGreaterThan(1);
-      expect(downloads.at(-1)?.copy?.download).toEqual({
-        received: release.size,
-        total: release.size,
       });
-      expect(new Set(downloads.map((event) => event.run?.id)).size).toBe(1);
-      const sent = said.filter((event) => event.copy?.state === "sending");
-      await page.keyboard.press("Escape");
-      if (operation === "fallback") {
-        expect(sent.at(-1)?.copy?.sent).toBeGreaterThan(8_000_000);
-        await expect(feedLineOf(page, sent.at(-1) as FmEvent)).toBeVisible();
+      const app = demo.launched;
+      let runner: HelperRun | undefined;
+      try {
+        const { page } = app;
+        const thisVersion = await app.app.evaluate(({ app: electron }) => electron.getVersion());
+        await openDevices(page);
+        await pressKey(page.locator('[data-device-add="mac"]'), "Enter");
+        await pressKey(
+          page.getByRole("button", { name: "Run a command there", exact: true }),
+          "Enter",
+        );
+        const command = (await linkInTab(page).textContent()) ?? "";
+        // Its command downloads the same published version there first.
+        expect(command).toContain(shellWord(release.publicUrl));
+        expect(command).toContain(shellWord(release.sha256));
+        // The computer's run is this process: its curl reaches the stand-in
+        // release at the public address, through the release's tunnel, and
+        // trusts its certificate alone. The app started without them.
+        process.env.HTTPS_PROXY = release.proxy;
+        process.env.CURL_CA_BUNDLE = release.cert;
+        const dataDir = scratchDir("infinitary-e2e-command-mini-");
+        const at = command.indexOf(PAIRING_LINK_PREFIX);
+        const joined = await joinHome({
+          text: command.slice(at, command.indexOf("'", at)),
+          dataDir,
+          io: { say: () => {}, ask: async () => "yes" },
+          device: { name: "Mac mini", user: BUILDER },
+          timeoutMs: 5_000,
+        });
+        if (!joined.ok) throw new Error(joined.reason);
+        const deviceId = joined.grant.deviceId;
+        await pressKey(page.getByRole("button", { name: "Done", exact: true }), "Enter");
+        // What its command kept there, and the background that starts it.
+        const kept = keepApp(standIn("the copy it kept"), dataDir);
+        writeInstalled(dataDir, {
+          service: {
+            label: "com.kunchenguid.firstmate3000.dev.work",
+            file: join(dataDir, "agent.plist"),
+          },
+          app: kept,
+        });
+        const start = (appVersion: string) => {
+          const started = startHelper({
+            dataDir,
+            appVersion,
+            say: () => {},
+            retryMs: [50],
+            log: () => {},
+            verifier: release.programs["/usr/bin/codesign"],
+          });
+          if (!started.ok) throw new Error(started.reason);
+          runner = started.run;
+          return started.run;
+        };
+        const older = start("0.0.1");
+        const row = page.locator(`[data-device-row="${deviceId}"]`);
+        await expect(row).toHaveAttribute("data-other-version", "takes-work");
+        const label = "Mac mini";
+        const update = row.getByRole("button", { name: `Update ${label}`, exact: true });
+        await page.evaluate(() => {
+          const seen = window as Window & { __updateEvents?: unknown[] };
+          seen.__updateEvents = [];
+          window.infinitary.events.on((event) => {
+            if (event.type === "device_update") seen.__updateEvents?.push(event);
+          });
+        });
+        await demo.record(
+          "Update a Mac a command added, with its download's count",
+          "window",
+          async () => {
+            await pressKey(update, "Enter");
+            await expect(row).toContainText(
+              remoteLoginWords.downloading(label, 0).split("…")[0] ?? label,
+              { timeout: 30_000 },
+            );
+            await expect(row).not.toContainText("%");
+            await expect(row).toContainText(remoteLoginWords.startingRow(label), {
+              timeout: 30_000,
+            });
+            await demo.step(async () => {
+              await expect(row).toContainText(remoteLoginWords.startingRow(label));
+            });
+            expect(await older.ended).toBe("updated");
+            start(thisVersion);
+            await expect(row).not.toHaveAttribute("data-other-version", /.+/, { timeout: 30_000 });
+            await demo.step(async () => {
+              await expect(row).toContainText(SEEN_WORDS.now);
+            });
+          },
+        );
+        expect(readFileSync(join(kept, "Contents", "Resources", "marker"), "utf8").trim()).toBe(
+          operation === "download" ? "the published copy" : "the home's own copy",
+        );
+        const said = (await page.evaluate(
+          () => (window as Window & { __updateEvents?: unknown[] }).__updateEvents ?? [],
+        )) as Extract<FmEvent, { type: "device_update" }>[];
+        const downloads = said.filter((event) => event.copy?.download);
+        expect(downloads.length).toBeGreaterThan(1);
+        expect(downloads.at(-1)?.copy?.download).toEqual({
+          received: release.size,
+          total: release.size,
+        });
+        expect(new Set(downloads.map((event) => event.run?.id)).size).toBe(1);
+        const sent = said.filter((event) => event.copy?.state === "sending");
+        await page.keyboard.press("Escape");
+        if (operation === "fallback") {
+          expect(sent.at(-1)?.copy?.sent).toBeGreaterThan(8_000_000);
+          await expect(feedLineOf(page, sent.at(-1) as FmEvent)).toBeVisible();
+          await expect(
+            feedLine(page, remoteLoginWords.downloadFallback(label, true)).first(),
+          ).toBeVisible();
+        } else expect(sent).toEqual([]);
+        // The count's line was rewritten in place: its last count stands, its first does not.
+        await expect(feedLineOf(page, downloads.at(-1) as FmEvent)).toHaveCount(1);
+        await expect(feedLineOf(page, downloads[0] as FmEvent)).toHaveCount(0);
         await expect(
-          feedLine(page, remoteLoginWords.downloadFallback(label, true)).first(),
+          feedLine(page, remoteLoginWords.updated({ name: label }, "running")).first(),
         ).toBeVisible();
-      } else expect(sent).toEqual([]);
-      // The count's line was rewritten in place: its last count stands, its first does not.
-      await expect(feedLineOf(page, downloads.at(-1) as FmEvent)).toHaveCount(1);
-      await expect(feedLineOf(page, downloads[0] as FmEvent)).toHaveCount(0);
-      await expect(
-        feedLine(page, remoteLoginWords.updated({ name: label }, "running")).first(),
-      ).toBeVisible();
-      writeFileSync(testInfo.outputPath("update-events.json"), JSON.stringify(said, null, 2));
-      await demo.finish({
-        dir: testInfo.outputPath("demo"),
-        name: `command-${operation}-after`,
-        poster: "last",
-      });
-    } finally {
-      delete process.env.HTTPS_PROXY;
-      delete process.env.CURL_CA_BUNDLE;
-      await runner?.stop();
-      await catalogRefreshesSettled();
-      await app.close();
-      await app.mockProvider?.close();
-      await release.stop();
-    }
-  });
+        writeFileSync(testInfo.outputPath("update-events.json"), JSON.stringify(said, null, 2));
+        await demo.finish({
+          dir: testInfo.outputPath("demo"),
+          name: `command-${operation}-after`,
+          poster: "last",
+        });
+      } finally {
+        delete process.env.HTTPS_PROXY;
+        delete process.env.CURL_CA_BUNDLE;
+        await runner?.stop();
+        await catalogRefreshesSettled();
+        await app.close();
+        await app.mockProvider?.close();
+        await release.stop();
+      }
+    },
+  );
 }
 /** Whether a process is still running. */
 function running(pid: number): boolean {
@@ -1894,158 +1901,164 @@ test("a computer on another version of Firstmate: Devices says so, Update brings
  * no real computer, provider, release, signing key or shared port is used.
  */
 for (const operation of ["add", "update", "fallback"] as const) {
-  // biome-ignore lint/correctness/noEmptyPattern: Playwright requires a destructured fixture signature.
-  test(`an addressed Mac downloads with progress from the keyboard: ${operation}`, async ({}, testInfo) => {
-    test.skip(
-      !SSH_SERVER_AVAILABLE || process.platform !== "darwin",
-      "needs macOS zip tools and isolated SSH",
-    );
-    test.setTimeout(120_000);
-    process.env.PI_OFFLINE = "1";
-    const gateDir = scratchDir("infinitary-download-start-");
-    const gate = {
-      when: operation === "add" ? ("join" as const) : ("update" as const),
-      ready: join(gateDir, "ready"),
-      resume: join(gateDir, "resume"),
-    };
-    const { sshd, them, work, bundle } = await otherMacOverSsh(undefined, gate);
-    addStandInPayload(bundle, randomBytes(8_000_000));
-    const release = await macRelease(bundle, appPackage.version, 150);
-    const ssh = sshd.ssh({
-      remote: {
-        HOME: them,
-        CFFIXED_USER_HOME: them,
-        TMPDIR: them,
-        INFINITARY_HELPER_DATA_DIR: work,
-        INFINITARY_DEVICE_NAME: "Mac mini",
-        ELECTRON_RENDERER_URL: "",
-        PI_OFFLINE: "1",
-        CURL_CA_BUNDLE: release.cert,
-      },
-      downloads: release.downloads,
-      programs: release.programs,
-      elsewhere: true,
-    });
-    const demo = await startDemo({
-      withMockProvider: true,
-      size: { width: 1280, height: 800 },
-      env: {
-        INFINITARY_SSH: ssh.program,
-        INFINITARY_APP_BUNDLE: bundle,
-        INFINITARY_PUBLISHED_TAP: release.dir,
-      },
-    });
-    const app = demo.launched;
-    let runner: HelperRun | undefined;
-    try {
-      const { page } = app;
-      await openDevices(page);
-      await page.evaluate(() => {
-        const seen = window as Window & { __downloadEvents?: unknown[] };
-        seen.__downloadEvents = [];
-        window.infinitary.events.on((event) => {
-          if (event.type === "device_setup") seen.__downloadEvents?.push(event);
-        });
+  test(
+    `an addressed Mac downloads with progress from the keyboard: ${operation}`,
+    { tag: MAC_ONLY_TAG },
+    // biome-ignore lint/correctness/noEmptyPattern: Playwright requires a destructured fixture signature.
+    async ({}, testInfo) => {
+      test.skip(
+        !SSH_SERVER_AVAILABLE || process.platform !== "darwin",
+        "needs macOS zip tools and isolated SSH",
+      );
+      test.setTimeout(120_000);
+      process.env.PI_OFFLINE = "1";
+      const gateDir = scratchDir("infinitary-download-start-");
+      const gate = {
+        when: operation === "add" ? ("join" as const) : ("update" as const),
+        ready: join(gateDir, "ready"),
+        resume: join(gateDir, "resume"),
+      };
+      const { sshd, them, work, bundle } = await otherMacOverSsh(undefined, gate);
+      addStandInPayload(bundle, randomBytes(8_000_000));
+      const release = await macRelease(bundle, appPackage.version, 150);
+      const ssh = sshd.ssh({
+        remote: {
+          HOME: them,
+          CFFIXED_USER_HOME: them,
+          TMPDIR: them,
+          INFINITARY_HELPER_DATA_DIR: work,
+          INFINITARY_DEVICE_NAME: "Mac mini",
+          ELECTRON_RENDERER_URL: "",
+          PI_OFFLINE: "1",
+          CURL_CA_BUNDLE: release.cert,
+        },
+        downloads: release.downloads,
+        programs: release.programs,
+        elsewhere: true,
       });
-      let device: DeviceView | undefined;
-      if (operation === "add") {
-        await demo.record("Add a Mac with download progress", "window", async () => {
-          const joining = addByAddress(page, sshd.address, 30_000);
-          await expect(page.locator("[data-device-adding]")).toContainText(
-            remoteLoginWords.startingRow("Mac mini"),
-            { timeout: 30_000 },
-          );
-          await demo.step(async () => {
+      const demo = await startDemo({
+        withMockProvider: true,
+        size: { width: 1280, height: 800 },
+        env: {
+          INFINITARY_SSH: ssh.program,
+          INFINITARY_APP_BUNDLE: bundle,
+          INFINITARY_PUBLISHED_TAP: release.dir,
+        },
+      });
+      const app = demo.launched;
+      let runner: HelperRun | undefined;
+      try {
+        const { page } = app;
+        await openDevices(page);
+        await page.evaluate(() => {
+          const seen = window as Window & { __downloadEvents?: unknown[] };
+          seen.__downloadEvents = [];
+          window.infinitary.events.on((event) => {
+            if (event.type === "device_setup") seen.__downloadEvents?.push(event);
+          });
+        });
+        let device: DeviceView | undefined;
+        if (operation === "add") {
+          await demo.record("Add a Mac with download progress", "window", async () => {
+            const joining = addByAddress(page, sshd.address, 30_000);
             await expect(page.locator("[data-device-adding]")).toContainText(
               remoteLoginWords.startingRow("Mac mini"),
+              { timeout: 30_000 },
             );
+            await demo.step(async () => {
+              await expect(page.locator("[data-device-adding]")).toContainText(
+                remoteLoginWords.startingRow("Mac mini"),
+              );
+            });
+            writeFileSync(gate.resume, "resume");
+            device = await joining;
           });
-          writeFileSync(gate.resume, "resume");
-          device = await joining;
-        });
-      } else {
-        device = await addByAddress(page, sshd.address, 30_000);
-        const started = startHelper({
-          dataDir: work,
-          appVersion: "0.0.1",
-          say: () => {},
-          retryMs: [50],
-          log: () => {},
-        });
-        if (!started.ok) throw new Error(started.reason);
-        runner = started.run;
-        const updatingDevice = device;
-        const row = page.locator(`[data-device-row="${device.id}"]`);
-        const label = deviceLabel(device);
-        const update = row.getByRole("button", { name: `Update ${label}`, exact: true });
-        await expect(update).toBeVisible();
-        if (operation === "fallback") release.mode("corrupt");
-        await page.evaluate(() => {
-          (window as Window & { __downloadEvents?: unknown[] }).__downloadEvents = [];
-        });
-        await demo.record("Update a Mac with download progress", "window", async () => {
-          await pressKey(update, "Enter");
-          await expect(row).toContainText(
-            remoteLoginWords.downloading(label, 0).split("…")[0] ?? label,
-            { timeout: 30_000 },
-          );
+        } else {
+          device = await addByAddress(page, sshd.address, 30_000);
+          const started = startHelper({
+            dataDir: work,
+            appVersion: "0.0.1",
+            say: () => {},
+            retryMs: [50],
+            log: () => {},
+          });
+          if (!started.ok) throw new Error(started.reason);
+          runner = started.run;
+          const updatingDevice = device;
+          const row = page.locator(`[data-device-row="${device.id}"]`);
+          const label = deviceLabel(device);
+          const update = row.getByRole("button", { name: `Update ${label}`, exact: true });
+          await expect(update).toBeVisible();
+          if (operation === "fallback") release.mode("corrupt");
+          await page.evaluate(() => {
+            (window as Window & { __downloadEvents?: unknown[] }).__downloadEvents = [];
+          });
+          await demo.record("Update a Mac with download progress", "window", async () => {
+            await pressKey(update, "Enter");
+            await expect(row).toContainText(
+              remoteLoginWords.downloading(label, 0).split("…")[0] ?? label,
+              { timeout: 30_000 },
+            );
 
-          await expect(row).not.toContainText("%");
-          await expect(row).toContainText(remoteLoginWords.startingRow(label), { timeout: 30_000 });
-          await demo.step(async () => {
-            await expect(row).toContainText(remoteLoginWords.startingRow(label));
+            await expect(row).not.toContainText("%");
+            await expect(row).toContainText(remoteLoginWords.startingRow(label), {
+              timeout: 30_000,
+            });
+            await demo.step(async () => {
+              await expect(row).toContainText(remoteLoginWords.startingRow(label));
+            });
+            writeFileSync(gate.resume, "resume");
+            await expect(update).toBeVisible({ timeout: 30_000 });
+            // The older test helper deliberately keeps reporting its old version.
+            // Remote Login already checked the new app's work-update outcome.
+            await page.keyboard.press("Escape");
+            await expect(
+              feedLine(page, remoteLoginWords.updated(updatingDevice, "running")).first(),
+            ).toBeVisible();
           });
-          writeFileSync(gate.resume, "resume");
-          await expect(update).toBeVisible({ timeout: 30_000 });
-          // The older test helper deliberately keeps reporting its old version.
-          // Remote Login already checked the new app's work-update outcome.
-          await page.keyboard.press("Escape");
-          await expect(
-            feedLine(page, remoteLoginWords.updated(updatingDevice, "running")).first(),
-          ).toBeVisible();
+        }
+        const said = (await page.evaluate(
+          () => (window as Window & { __downloadEvents?: unknown[] }).__downloadEvents ?? [],
+        )) as Extract<FmEvent, { type: "device_setup" }>[];
+        const downloads = said.filter((event) => event.copy?.download);
+        expect(downloads.length).toBeGreaterThan(2);
+        expect(downloads.at(-1)?.copy?.download).toEqual({
+          received: release.size,
+          total: release.size,
         });
+        expect(new Set(downloads.map((event) => event.run?.id)).size).toBe(1);
+        const sent = said.filter((event) => event.copy?.state === "sending");
+        if (operation === "fallback") {
+          expect(sent.at(-1)?.copy?.sent).toBeGreaterThan(8_000_000);
+          await expect(feedLineOf(page, sent.at(-1) as FmEvent)).toBeVisible();
+          await expect(
+            feedLine(
+              page,
+              remoteLoginWords.downloadFallback(deviceLabel(device ?? { name: "Mac mini" }), true),
+            ).first(),
+          ).toBeVisible();
+        } else expect(sent).toEqual([]);
+        await page.keyboard.press("Escape");
+        const finalDownload = feedLineOf(page, downloads.at(-1) as FmEvent);
+        // Add and Update each retain their own completed run with the same words.
+        await expect(finalDownload).toHaveCount(operation === "add" ? 1 : 2);
+        await expect(finalDownload.last()).toBeVisible();
+        await expect(feedLineOf(page, downloads[0] as FmEvent)).toHaveCount(0);
+        writeFileSync(testInfo.outputPath("download-events.json"), JSON.stringify(said, null, 2));
+        await demo.finish({
+          dir: testInfo.outputPath("demo"),
+          name: `${operation}-after`,
+          poster: "last",
+        });
+      } finally {
+        writeFileSync(gate.resume, "resume");
+        await runner?.stop();
+        await catalogRefreshesSettled();
+        await app.close();
+        await app.mockProvider?.close();
+        await sshd.stop();
+        await release.stop();
       }
-      const said = (await page.evaluate(
-        () => (window as Window & { __downloadEvents?: unknown[] }).__downloadEvents ?? [],
-      )) as Extract<FmEvent, { type: "device_setup" }>[];
-      const downloads = said.filter((event) => event.copy?.download);
-      expect(downloads.length).toBeGreaterThan(2);
-      expect(downloads.at(-1)?.copy?.download).toEqual({
-        received: release.size,
-        total: release.size,
-      });
-      expect(new Set(downloads.map((event) => event.run?.id)).size).toBe(1);
-      const sent = said.filter((event) => event.copy?.state === "sending");
-      if (operation === "fallback") {
-        expect(sent.at(-1)?.copy?.sent).toBeGreaterThan(8_000_000);
-        await expect(feedLineOf(page, sent.at(-1) as FmEvent)).toBeVisible();
-        await expect(
-          feedLine(
-            page,
-            remoteLoginWords.downloadFallback(deviceLabel(device ?? { name: "Mac mini" }), true),
-          ).first(),
-        ).toBeVisible();
-      } else expect(sent).toEqual([]);
-      await page.keyboard.press("Escape");
-      const finalDownload = feedLineOf(page, downloads.at(-1) as FmEvent);
-      // Add and Update each retain their own completed run with the same words.
-      await expect(finalDownload).toHaveCount(operation === "add" ? 1 : 2);
-      await expect(finalDownload.last()).toBeVisible();
-      await expect(feedLineOf(page, downloads[0] as FmEvent)).toHaveCount(0);
-      writeFileSync(testInfo.outputPath("download-events.json"), JSON.stringify(said, null, 2));
-      await demo.finish({
-        dir: testInfo.outputPath("demo"),
-        name: `${operation}-after`,
-        poster: "last",
-      });
-    } finally {
-      writeFileSync(gate.resume, "resume");
-      await runner?.stop();
-      await catalogRefreshesSettled();
-      await app.close();
-      await app.mockProvider?.close();
-      await sshd.stop();
-      await release.stop();
-    }
-  });
+    },
+  );
 }

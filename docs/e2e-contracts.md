@@ -188,7 +188,7 @@ Each wait also ends by its wall cap, 20 times its budget and at most 10 minutes 
 A journey's own failure timer in the test process goes through `budgetTimer`, as the app's quit grace in `launch.ts` and the microphone probe do; a poll interval, a deliberate pause or a product deadline stays a plain timer.
 A graded run (`INFINITARY_PERF_BUDGETS=1`) starts no clock, and every wait keeps its budget on the wall clock; so do the runner's own process and its whole-run limit.
 Test durations, traces and reports keep the wall clock either way.
-The runner's timeout slots accumulate wall elapsed time separately from their load elapsed time, so durations exposed to hooks and reports, and consumed by `scripts/journey-budget.ts` for Mac placement, include time spent frozen without spending the timeout budget.
+The runner's timeout slots accumulate wall elapsed time separately from their load elapsed time, so durations exposed to hooks and reports, and consumed by `scripts/journey-budget.ts` for journey placement, include time spent frozen without spending the timeout budget.
 `tests/load-clock.test.ts` runs the real runner over a fixture and freezes its whole process group: a writer frozen 7 s past its 5 s budget still passes, a frozen after-hook writer also passes, both durations include the freeze, a missing file fails at its budget on a quiet run and by the cap under a frozen runner, and a graded run fails the frozen writer at its budget.
 
 Unit tests run their limits and waits on the same clock and cap, through a clock of their own in each vitest worker (`docs/test-cohorts.md`, "Budgets").

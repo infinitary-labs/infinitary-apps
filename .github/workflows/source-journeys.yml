@@ -186,6 +186,13 @@ jobs:
           LANE: ${{ matrix.lane }}
           SHARD: ${{ matrix.shard }}
           SCREEN: 2560x1600x24
+      # Linux runs every test it can (docs/testing.md, "Tests that need a
+      # Mac"): a test that skipped here without MAC_ONLY_TAG runs on no pull
+      # request's Mac either, so the job fails on it, whether its journeys
+      # passed or failed.
+      - name: Refuse a test that skipped on Linux without the Mac tag
+        if: ${{ !cancelled() && runner.os == 'Linux' && matrix.lane != 'alone' }}
+        run: node scripts/untagged-skips.ts playwright-report/source-results.json
       - name: Keep the Linux window and the journeys' results
         if: always()
         uses: actions/upload-artifact@v4

@@ -7,6 +7,7 @@ import { type LaunchedApp, launchApp } from "./launch";
 import { APP_CATALOG_PROMPT_MARKER } from "./mockProvider";
 import { promptInput } from "./prompt";
 import { dockTitle, feedLine } from "./rails";
+import { MAC_ONLY_TAG } from "./tags";
 
 /**
  * A run of the captain's own steps on one setting settles where it is
@@ -57,7 +58,9 @@ async function dragWash(page: Page, strengths: number[]): Promise<void> {
   await page.keyboard.press("Escape");
 }
 
-test("a drag of the window wash is one Activity line and one change, also after a restart", async () => {
+test("a drag of the window wash is one Activity line and one change, also after a restart", {
+  tag: MAC_ONLY_TAG,
+}, async () => {
   // Its setting is the Mac's window wash, which Settings offers only there.
   test.skip(!THIS_DESKTOP.material, "the window wash is the Mac's");
   let launched: LaunchedApp = await launchApp({ withMockProvider: true });

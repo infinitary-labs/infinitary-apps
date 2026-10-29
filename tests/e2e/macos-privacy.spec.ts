@@ -5,6 +5,7 @@ import { standInPrivacyLog } from "../helpers/privacyLogStandIn";
 import { crewRoster } from "./crewRoster";
 import { launchApp } from "./launch";
 import { expandDock, restOnRow, rowSummary, taskFact } from "./rails";
+import { MAC_ONLY_TAG } from "./tags";
 
 /**
  * INF-1217, direction A (the captain chose "Build A: fewer searches,
@@ -20,7 +21,9 @@ import { expandDock, restOnRow, rowSummary, taskFact } from "./rails";
  */
 test.skip(process.platform !== "darwin", "the privacy log and the dialog are macOS's");
 
-test("a crewmate's search that macOS asks about shows the task waiting on macOS, then its answer", async () => {
+test("a crewmate's search that macOS asks about shows the task waiting on macOS, then its answer", {
+  tag: MAC_ONLY_TAG,
+}, async () => {
   const fixture = await crewRoster(1, {
     idPrefix: "privacy-crew",
     title: () => "Find the retained archive",

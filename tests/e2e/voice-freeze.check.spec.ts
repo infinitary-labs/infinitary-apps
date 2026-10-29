@@ -11,6 +11,7 @@ import { scratchDir } from "../helpers/scratchDirs";
 import { launchApp } from "./launch";
 import { GRADES_BUDGETS, measured, PERF_TAG } from "./perf";
 import { promptInput } from "./prompt";
+import { MAC_ONLY_TAG } from "./tags";
 
 const MODEL_DIR = process.env.INFINITARY_VOICE_MODEL_DIR ?? "";
 /** One 60 Hz frame: the longest a task may hold the thread that presents the window. */
@@ -100,7 +101,7 @@ function busyMs(slices: Slice[]): number {
 }
 
 test("starting and ending voice input leaves the window thread free", {
-  tag: PERF_TAG,
+  tag: [PERF_TAG, MAC_ONLY_TAG],
 }, async () => {
   const userDataDir = scratchDir("infinitary-voice-freeze-");
   mkdirSync(join(userDataDir, "models"), { recursive: true });

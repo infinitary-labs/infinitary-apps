@@ -1,9 +1,12 @@
 import { expect, test } from "@playwright/test";
 import { HAS_APP_MENU } from "./desktop";
 import { launchApp } from "./launch";
+import { MAC_ONLY_TAG } from "./tags";
 
 for (const build of ["development", "local-package", "release"] as const) {
-  test(`${build}: developer boundary and crashed page returns without a loop`, async () => {
+  test(`${build}: developer boundary and crashed page returns without a loop`, {
+    tag: MAC_ONLY_TAG,
+  }, async () => {
     const run = await launchApp({
       packaged: build !== "development",
       devFlavor: build === "local-package",

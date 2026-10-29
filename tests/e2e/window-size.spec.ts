@@ -28,6 +28,7 @@ import {
   MOCK_LONG_ACTION_LABEL,
 } from "./scenarios/everyCardKind";
 import { cardReply, cardSurface, pager, showCard, shownEntry } from "./stack";
+import { MAC_ONLY_TAG } from "./tags";
 import { pressWindowKey } from "./windowKeys";
 
 async function capture(launched: LaunchedApp, name: string) {
@@ -185,7 +186,9 @@ const zoomFactor = (app: ElectronApplication) =>
     BrowserWindow.getAllWindows()[0]?.webContents.getZoomFactor(),
   );
 
-test("shortcuts, menu, picker and restart share the saved size", async () => {
+test("shortcuts, menu, picker and restart share the saved size", {
+  tag: MAC_ONLY_TAG,
+}, async () => {
   let launched = await launchApp();
   const userDataDir = launched.userDataDir;
   try {

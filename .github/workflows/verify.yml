@@ -42,6 +42,12 @@ on:
         required: false
         type: string
         default: stable
+      # An alpha runs every journey on the Mac.
+      all_journeys:
+        description: Run every journey on the Mac, not only the tests that need a Mac
+        required: false
+        type: boolean
+        default: true
   workflow_dispatch:
     inputs:
       ref:
@@ -81,6 +87,13 @@ on:
         default: both
       perf:
         description: Also grade the e2e paint and latency budgets and the unit tests' time limits (run this on a quiet host)
+        required: false
+        type: boolean
+        default: false
+      # A requested check runs only the tests that need a Mac there, since
+      # linux-e2e runs every other one; the nightly check sets this.
+      all_journeys:
+        description: Run every journey on the Mac, not only the tests that need a Mac (the nightly check sets this)
         required: false
         type: boolean
         default: false
@@ -229,7 +242,10 @@ jobs:
         if: ${{ !cancelled() && matrix.lane == 'mac' && steps.install.outcome == 'success' }}
         run: pnpm exec playwright install ffmpeg
       # The complete desktop suite, on the build above and the signed dev
-      # Electron (`pnpm test:e2e` is the same two commands in one).
+      # Electron (`pnpm test:e2e` is the same two commands in one), when
+      # all_journeys is set: every alpha and the nightly check. A requested
+      # check runs only the tests tagged MAC_ONLY_TAG (tests/e2e/tags.ts),
+      # since linux-e2e runs every other one (docs/principles.md, 2026-10-28).
       # A local run keeps its JSON result in its own run directory
       # (tests/e2e/runEvidence.ts); this one names the fixed path kept below.
       # Both Mac runner slots share one processor, so the parallel lanes take
@@ -240,8 +256,9 @@ jobs:
         # The run ends at 150 minutes and the command at 180 (INF-1083, the
         # captain's check limits); a stuck wait ends sooner, at its own cap.
         timeout-minutes: 180
-        run: pnpm exec playwright test --workers=50%
+        run: pnpm exec playwright test --workers=50% $ONLY
         env:
+          ONLY: ${{ !inputs.all_journeys && '--grep @mac-only' || '' }}
           INFINITARY_E2E_RUN_MINUTES: 150
           PLAYWRIGHT_JSON_OUTPUT_FILE: playwright-report/e2e-results.json
       # What the e2e run leaves for whoever reads it (docs/testing.md):
@@ -252,11 +269,13 @@ jobs:
       # of this job holds a secret; a trace records the launch environment's
       # shape, never its values. Neither upload can fail the job, and neither
       # runs when an earlier stage kept e2e from starting.
+      # Only a run of every journey keeps its result as e2e-results, the
+      # journey times journeys.yml's chooser reads.
       - name: Keep the e2e result
         if: ${{ always() && steps.e2e.outcome != 'skipped' }}
         uses: actions/upload-artifact@v4
         with:
-          name: e2e-results
+          name: ${{ inputs.all_journeys && 'e2e-results' || 'e2e-results-mac-only' }}
           path: Application Support/firstmate/playwright-report/e2e-results.json
           if-no-files-found: ignore
           retention-days: 14
@@ -286,7 +305,7 @@ jobs:
       - id: perf
         if: ${{ !cancelled() && inputs.perf && matrix.lane == 'mac' && steps.e2e.outcome != 'skipped' }}
         run: |
-          grep -l "tag: PERF_TAG" tests/e2e/*.spec.ts | xargs pnpm exec playwright test --no-deps
+          grep -lE "tag: .*PERF_TAG" tests/e2e/*.spec.ts | xargs pnpm exec playwright test --no-deps
         env:
           INFINITARY_PERF_BUDGETS: "1"
           # Its own result file: the one the summary reads stays the suite's.

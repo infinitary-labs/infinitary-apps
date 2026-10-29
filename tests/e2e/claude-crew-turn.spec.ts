@@ -21,6 +21,7 @@ import {
 import { reportLine, taskKey } from "./rails";
 import { shownCard } from "./stack";
 import { claudeStarter } from "./starters";
+import { MAC_ONLY_TAG } from "./tags";
 
 /**
  * A Claude crewmate runs a real turn (W1 S5; the owner's "tests for the
@@ -72,7 +73,9 @@ test.afterAll(async () => {
 
 // These checks inspect the same turn, so they are ordered sections of one
 // self-contained journey, not named tests consuming a predecessor's state.
-test("a Claude crew turn shows its card, takes a mid-turn steer, and remains readable from the app's transcript copy", async () => {
+test("a Claude crew turn shows its card, takes a mid-turn steer, and remains readable from the app's transcript copy", {
+  tag: MAC_ONLY_TAG,
+}, async () => {
   await test.step("a Claude crewmate's tool call becomes a card, and a steer lands mid-turn", async () => {
     const { page, mockProvider, homeDir } = launched;
     const input = page.getByRole("textbox", { name: "Task prompt" });

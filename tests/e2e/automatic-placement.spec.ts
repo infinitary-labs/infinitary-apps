@@ -406,7 +406,7 @@ test("a task in an Automatic project that requires a system no computer runs wai
   // required system" until Firstmate happened to look. Nothing is paired
   // here, so this computer is the only one, and the task requires the
   // system it does not run, as its own facts read it.
-  const here = process.platform === "darwin" ? "macos" : "linux";
+  const here = process.platform === "linux" ? "linux" : "macos";
   const required = here === "macos" ? "linux" : "macos";
   const app = await launchApp({ scenarios: [gitStatus], userDataDir, withMockProvider: true });
   const mock = app.mockProvider;

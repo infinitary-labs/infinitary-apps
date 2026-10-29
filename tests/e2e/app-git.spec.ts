@@ -10,6 +10,7 @@ import { SPAWN_PROMPT_MARKER } from "./mockProvider";
 import { promptInput } from "./prompt";
 import { reportLine, taskKey } from "./rails";
 import { GIT_STATUS_PROMPT_MARKER, gitStatus, MOCK_GIT_REPORT_PREFIX } from "./scenarios/gitStatus";
+import { MAC_ONLY_TAG } from "./tags";
 
 /**
  * The app brings its own git (git integration phase 2, `docs/forge.md`
@@ -66,7 +67,9 @@ test.afterAll(async () => {
   await launched.close();
 });
 
-test("a crewmate's git works on a Mac whose search path holds no git", async () => {
+test("a crewmate's git works on a Mac whose search path holds no git", {
+  tag: MAC_ONLY_TAG,
+}, async () => {
   const { page } = launched;
   const input = promptInput(page);
   await input.click();

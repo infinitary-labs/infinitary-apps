@@ -3,6 +3,7 @@ import { KEYBOARD_COMMANDS } from "../../src/shared/keyboard";
 import { ariaKeysOf, HAS_APP_MENU, keyWords } from "./desktop";
 import { type LaunchedApp, launchApp } from "./launch";
 import { promptInput } from "./prompt";
+import { MAC_ONLY_TAG } from "./tags";
 import {
   commandSearch,
   endRecording,
@@ -36,7 +37,9 @@ async function openKeyboardSettings(app: LaunchedApp["app"], page: Page): Promis
   await expect(keyboardSettings(page).search).toBeFocused();
 }
 
-test("a person changes keys, moves one on purpose, and keeps them across a restart until Reset all", async () => {
+test("a person changes keys, moves one on purpose, and keeps them across a restart until Reset all", {
+  tag: MAC_ONLY_TAG,
+}, async () => {
   test.setTimeout(120_000);
   let launched = await launchApp();
   const { userDataDir, homeDir } = launched;

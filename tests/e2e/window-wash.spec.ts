@@ -3,12 +3,15 @@ import { openDatabase } from "../../src/core/storage/db";
 import { scratchDir } from "../helpers/scratchDirs";
 import { THIS_DESKTOP } from "./desktop";
 import { launchApp } from "./launch";
+import { MAC_ONLY_TAG } from "./tags";
 
 // The window wash tints the Mac's window material; Linux draws an opaque
 // window and Settings offers no wash there (docs/translucent-window.md).
 test.skip(!THIS_DESKTOP.material, "the window wash is the Mac's");
 
-test("saved 20% becomes 0% once, and a later 20% survives relaunch", async () => {
+test("saved 20% becomes 0% once, and a later 20% survives relaunch", {
+  tag: MAC_ONLY_TAG,
+}, async () => {
   const userDataDir = scratchDir("infinitary-wash-migration-");
   const db = openDatabase(userDataDir);
   const write = db.prepare("INSERT INTO settings (key, value) VALUES (?, ?)");

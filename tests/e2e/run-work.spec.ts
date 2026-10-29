@@ -64,6 +64,7 @@ import {
   startMockProvider,
 } from "./mockProvider";
 import { GIT_STATUS_PROMPT_MARKER, gitStatus, MOCK_GIT_REPORT_PREFIX } from "./scenarios/gitStatus";
+import { MAC_ONLY_TAG } from "./tags";
 
 /**
  * The app runs work for another Mac's Firstmate with no window
@@ -840,7 +841,9 @@ test("the command for another user on this Mac starts this Mac's app, which asks
   });
 });
 
-test("the command for another Mac gets Firstmate from the home, and the copy it got joins and runs in the background", async () => {
+test("the command for another Mac gets Firstmate from the home, and the copy it got joins and runs in the background", {
+  tag: MAC_ONLY_TAG,
+}, async () => {
   // The command gets a Mac's app bundle from the home and starts it: a Linux
   // computer joins by a link pasted into its own Firstmate (docs/devices.md).
   test.skip(process.platform !== "darwin", "the command for another Mac gets a Mac's app");
@@ -973,7 +976,9 @@ test("on Linux with no screen, the command joins with the Infinitary installed t
  * the computer is on the home's list, and its background starts the
  * downloaded copy. macOS only: the command downloads a Mac's app.
  */
-test("the command for another Mac downloads the published version, and the copy it downloaded joins and runs in the background", async () => {
+test("the command for another Mac downloads the published version, and the copy it downloaded joins and runs in the background", {
+  tag: MAC_ONLY_TAG,
+}, async () => {
   test.skip(process.platform !== "darwin", "the command downloads a Mac's app");
   const program = (bundle: string) => join(bundle, "Contents", "MacOS", "Firstmate 3000");
   const app = (marker: string) => {
@@ -1102,7 +1107,9 @@ test("updated over the connection: the copy a command kept gets the home's First
  * installed app never reads. Completion: the run exits, and the copy kept
  * there is the downloaded one. macOS only: it downloads a Mac's app.
  */
-test("updated over the connection, the copy a command kept downloads the published version itself, keeps it, and ends", async () => {
+test("updated over the connection, the copy a command kept downloads the published version itself, keeps it, and ends", {
+  tag: MAC_ONLY_TAG,
+}, async () => {
   test.skip(process.platform !== "darwin", "a Mac downloads a Mac's app");
   const program = (bundle: string) => join(bundle, "Contents", "MacOS", "Firstmate 3000");
   const app = (marker: string) => {
@@ -1900,7 +1907,9 @@ test("a task in a project works in a working copy the app that runs work cloned,
   });
 });
 
-test("a Mac with no git of its own runs a project's work with the app's own git, and tells the home it has git", async () => {
+test("a Mac with no git of its own runs a project's work with the app's own git, and tells the home it has git", {
+  tag: MAC_ONLY_TAG,
+}, async () => {
   // Only the Mac app brings its own git (docs/forge.md, "The app's own git").
   test.skip(process.platform !== "darwin", "the app's own git is the Mac's");
   // A search path that holds no git at all - the system folders without

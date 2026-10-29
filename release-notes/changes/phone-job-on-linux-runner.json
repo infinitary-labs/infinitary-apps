@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "phone-job-on-linux-runner",
+      "reason": "Internal CI: the release run's phone job reads LINUX_RUNNER like every other Linux job; nothing in the app changes."
+    }
+  ]
+}

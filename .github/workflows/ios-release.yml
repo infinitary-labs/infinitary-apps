@@ -26,7 +26,8 @@ env:
 
 jobs:
   resolve:
-    runs-on: ${{ vars.LINUX_RUNNER || 'ubuntu-latest' }}
+    # The PC's gate label (docs/testing.md, DOP-157): its runners take only gate jobs.
+    runs-on: ${{ vars.LINUX_RUNNER && format('{0}-gate', vars.LINUX_RUNNER) || 'ubuntu-latest' }}
     timeout-minutes: 5
     outputs:
       version: ${{ steps.resolve.outputs.version }}

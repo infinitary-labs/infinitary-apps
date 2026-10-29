@@ -3924,9 +3924,22 @@ describe("the jobs that ask for the real Mac", () => {
  * repository variable LINUX_RUNNER sends it, the PC's shell-pc-linux places,
  * as ci.yml's already did, and on GitHub's hosted Ubuntu when it is unset.
  * The package check's Ubuntu 26.04 leg takes the PC's 26.04 image's label.
+ * DOP-157's approved plan (direction A): the gate jobs - the three that open
+ * a pull request's phone and journeys runs and the four Linux jobs that open
+ * a release - take the PC's gate label, LINUX_RUNNER plus -gate, whose
+ * runners take no other job, so a runner started for one runs one.
  * Each job's runner is evaluated both ways, for every matrix entry.
  */
 it("sends every Linux job to LINUX_RUNNER, and hosted Ubuntu when it is unset", () => {
+  const gate = [
+    "phone.yml:cancel-replaced",
+    "phone.yml:choose-phone",
+    "journeys.yml:choose-journeys",
+    "release.yml:resolve",
+    "release.yml:notes",
+    "release.yml:phone",
+    "ios-release.yml:resolve",
+  ];
   type Job = { "runs-on"?: string; strategy?: { matrix?: Record<string, unknown> } };
   const evaluate = (value: string, contexts: Record<string, unknown>) =>
     value.includes("${{") ? workflowValue(value, contexts) : value;
@@ -3952,8 +3965,13 @@ it("sends every Linux job to LINUX_RUNNER, and hosted Ubuntu when it is unset", 
         if (typeof hosted !== "string" || !hosted.startsWith("ubuntu-")) continue;
         const name = `${file}:${id} ${JSON.stringify(entry)}`;
         linux.push(name);
+        if (gate.includes(`${file}:${id}`)) expect(hosted, name).toBe("ubuntu-latest");
         expect(runner({ LINUX_RUNNER: "shell-pc-linux" }), name).toBe(
-          hosted === "ubuntu-26.04" ? "shell-pc-linux-2604" : "shell-pc-linux",
+          gate.includes(`${file}:${id}`)
+            ? "shell-pc-linux-gate"
+            : hosted === "ubuntu-26.04"
+              ? "shell-pc-linux-2604"
+              : "shell-pc-linux",
         );
       }
     }
@@ -3971,6 +3989,7 @@ it("sends every Linux job to LINUX_RUNNER, and hosted Ubuntu when it is unset", 
     "linux-packages.yml:check",
     "release.yml:notes",
     "ios-release.yml:availability",
+    ...gate,
   ])
     expect(
       linux.some((name) => name.startsWith(`${job} `)),

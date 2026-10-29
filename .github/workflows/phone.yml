@@ -57,7 +57,8 @@ permissions:
 
 jobs:
   cancel-replaced:
-    runs-on: ${{ vars.LINUX_RUNNER || 'ubuntu-latest' }}
+    # The PC's gate label (docs/testing.md, DOP-157): its runners take only gate jobs.
+    runs-on: ${{ vars.LINUX_RUNNER && format('{0}-gate', vars.LINUX_RUNNER) || 'ubuntu-latest' }}
     permissions:
       actions: write
       contents: read
@@ -79,7 +80,8 @@ jobs:
           GITHUB_TOKEN: ${{ github.token }}
   choose-phone:
     if: inputs.evidence_run == ''
-    runs-on: ${{ vars.LINUX_RUNNER || 'ubuntu-latest' }}
+    # The PC's gate label (docs/testing.md, DOP-157): its runners take only gate jobs.
+    runs-on: ${{ vars.LINUX_RUNNER && format('{0}-gate', vars.LINUX_RUNNER) || 'ubuntu-latest' }}
     # INF-827: reading the newest passing check of main's part times.
     permissions:
       actions: read

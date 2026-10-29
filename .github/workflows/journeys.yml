@@ -50,7 +50,8 @@ jobs:
     if: github.event_name == 'pull_request'
     uses: ./.github/workflows/source-journeys.yml
   choose-journeys:
-    runs-on: ${{ vars.LINUX_RUNNER || 'ubuntu-latest' }}
+    # The PC's gate label (docs/testing.md, DOP-157): its runners take only gate jobs.
+    runs-on: ${{ vars.LINUX_RUNNER && format('{0}-gate', vars.LINUX_RUNNER) || 'ubuntu-latest' }}
     defaults:
       run:
         working-directory: Application Support/firstmate

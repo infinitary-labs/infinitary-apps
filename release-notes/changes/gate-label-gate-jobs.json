@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "gate-label-gate-jobs",
+      "reason": "Internal CI: the jobs that open a pull request's phone and journeys runs and a release's Linux openers run on the PC's gate label, so they no longer wait behind long jobs; nothing in the app changes."
+    }
+  ]
+}

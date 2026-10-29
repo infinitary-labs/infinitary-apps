@@ -70,6 +70,8 @@ describe("the phone journey's parts", () => {
       "iphone join",
       "ipad talk",
       "iphone talk",
+      "ipad relaunch",
+      "iphone relaunch",
       "ipad cards",
       "iphone cards",
       "ipad address",

@@ -12,17 +12,19 @@ export function testHomeKeys(plan: Record<string, unknown>): string[] {
   return keys;
 }
 
-// INF-662 piece 2 (the captain's "Both at once, journey in parts"): the phone journey is five
+// INF-662 piece 2 (the captain's "Both at once, journey in parts"): the phone journey is six
 // tests, and each runs alone from its own test home and a clean app on its device's one simulator
 // (INF-1438), the devices side by side. The order is the start order, longest first as measured
 // on Oct 19 and 20: join and recover 4.2 minutes, talk and tasks 3.7, cards 2.3, the character and
-// past choices 0.7.
+// past choices 0.7. INF-1878: INF-1735's 20 relaunch pairs took about 11 of the talk part's 20 minutes
+// on the loaded Mac mini of run 40937645392, so they are a part of their own beside it.
 // INF-804: `photos` marks a part that chooses a library photo; the gate waits for its device's Photos
 // to open its shared-with-you library first, since Photos hands over no chosen photo before then.
 export const PHONE_JOURNEY = "InfinitaryUITests/PhoneJourney";
 export const PHONE_PARTS = [
   { name: "join", test: "testJoinAndRecover", photos: false },
   { name: "talk", test: "testTalkAndTasks", photos: true },
+  { name: "relaunch", test: "testRelaunchThenTasks", photos: false },
   { name: "cards", test: "testCards", photos: false },
   // INF-1183: joining a home by its address, against the Mac's own sshd beside the test home.
   { name: "address", test: "testJoinByAddress", photos: false },

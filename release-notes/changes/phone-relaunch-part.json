@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "phone-relaunch-part",
+      "reason": "Internal phone check change: INF-1735's 20 relaunch-then-Tasks pairs move from the talk part into a part of their own, so the talk part fits its 20-minute allowance. No product behavior changes."
+    }
+  ]
+}

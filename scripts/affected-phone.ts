@@ -76,6 +76,8 @@ export const PART_OWNERS: Record<PhonePart, readonly string[]> = {
     "ios/Infinitary/InfinitaryApp/MessageComposer.swift",
     "ios/Infinitary/InfinitaryKit/Sources/InfinitaryKit/PhoneWork.swift",
   ],
+  // INF-1878: INF-1735's relaunch pairs, split from talk, own no file, so talk stays the closest part for its own.
+  relaunch: [],
   cards: [
     "ios/Infinitary/CardRuntime/",
     "ios/Infinitary/InfinitaryApp/CardAssets/",

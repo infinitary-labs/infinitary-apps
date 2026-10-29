@@ -644,6 +644,49 @@ import XCTest
         try await talkAndTasks()
     }
 
+    /// The relaunch part: INF-1735's 20 dark/light relaunch pairs, each lighting Tasks with one press.
+    /// Their own part, so the talk part keeps room within its 20-minute allowance on a loaded Mac (INF-1878).
+    /// Data: the talk part's hero card, its on-request harbour task and a sent captain ask, so each launch restores a last turn.
+    /// Completion: every pair draws the requested appearance, then lights Tasks and shows its list after a single press.
+    /// Resources: this part's own fresh simulator and home; no photo, signing material or real account.
+    func testRelaunchThenTasks() async throws {
+        try await launchJoined()
+        // The talk part's state before its relaunch pair: the hero card on the stage and a restored last turn.
+        _ = try await home("empty-cards")
+        let hero = try await home("hero-card")
+        XCTAssertTrue(cardHeading(try XCTUnwrap(hero["title"] as? String)).waitForPresence(timeout: 10), app.debugDescription)
+        let fixture = try await home("talk-fixture")
+        let input = app.textFields["message-box"]
+        focusForPhoneTyping(input, in: app); input.typeText(try XCTUnwrap(fixture["text"] as? String))
+        tapOnPhone(app.buttons["send-message"])
+        let sent = try await home("talk-sent")
+        XCTAssertEqual((sent["lastTurn"] as? [String: Any])?["you"] as? String, fixture["text"] as? String)
+        XCTAssertTrue(app.staticTexts["last-turn-you"].waitForPresence(timeout: 10))
+        try await relaunchPairs(20)
+    }
+
+    /// INF-1735: reach and the restored last turn can precede the requested appearance's drawn chrome.
+    /// Use the same observed-appearance owner as appearances(), not a raw hero screenshot followed by a press.
+    /// Each round is a fresh dark/light relaunch pair with exactly one Tasks press; a miss fails immediately.
+    /// Tasks stays shown after the last round. `pictured` keeps the first round's hero pictures.
+    private func relaunchPairs(_ rounds: Int, pictured: Bool = false) async throws {
+        for round in 1...rounds {
+            print("INF-1735 relaunch pair \(round)")
+            for (command, dark) in [("appearance-dark", true), ("appearance-light", false)] {
+                _ = try await home(command, budget: displayBudget)
+                app.terminate(); try await launchPhoneApp(app)
+                reach("In reach", timeout: 20)
+                XCTAssertTrue(app.staticTexts["last-turn-you"].waitForPresence(timeout: 10))
+                let name = dark ? "talk-hero-dark" : "talk-hero-light"
+                let screenshot = try appearancePicture(name, dark: dark)
+                if pictured && round == 1 { picture(name, screenshot: screenshot) }
+            }
+            tab("Tasks", repeatDiscarded: false)
+            XCTAssertTrue(app.buttons["group-backlog"].waitForPresence(timeout: 10), "Tasks shows its list after relaunch pair \(round)")
+            if round < rounds { tab("Home", repeatDiscarded: false) }
+        }
+    }
+
     /// Part 4, the character and past choices: a real held turn, saved-sign-in and saved-answer choices, past-card context.
     func testCharacterAndPastChoices() async throws {
         try await launchJoined()
@@ -1517,24 +1560,8 @@ import XCTest
         XCTAssertEqual(app.buttons.matching(identifier: "photo-chip").count, 0)
         verifyPhoneComposerBounds(app: app)
         picture("last-turn")
-        // INF-1735: reach and the restored last turn can precede the requested appearance's drawn chrome.
-        // Use the same observed-appearance owner as appearances(), not a raw hero screenshot followed by a press.
-        // Each round is a fresh dark/light relaunch pair with exactly one Tasks press; a miss fails immediately.
-        for round in 1...20 {
-            print("INF-1735 relaunch pair \(round)")
-            for (command, dark) in [("appearance-dark", true), ("appearance-light", false)] {
-                _ = try await home(command, budget: displayBudget)
-                app.terminate(); try await launchPhoneApp(app)
-                reach("In reach", timeout: 20)
-                XCTAssertTrue(app.staticTexts["last-turn-you"].waitForPresence(timeout: 10))
-                let name = dark ? "talk-hero-dark" : "talk-hero-light"
-                let screenshot = try appearancePicture(name, dark: dark)
-                if round == 1 { picture(name, screenshot: screenshot) }
-            }
-            tab("Tasks", repeatDiscarded: false)
-            XCTAssertTrue(app.buttons["group-backlog"].waitForPresence(timeout: 10), "Tasks shows its list after relaunch pair \(round)")
-            if round < 20 { tab("Home", repeatDiscarded: false) }
-        }
+        // One pair here for the hero pictures; the relaunch part runs INF-1735's 20 (testRelaunchThenTasks).
+        try await relaunchPairs(1, pictured: true)
         XCTAssertTrue(app.buttons["group-backlog"].waitForPresence(timeout: 10))
         picture("tasks")
         tapOnPhone(app.buttons["group-backlog"])

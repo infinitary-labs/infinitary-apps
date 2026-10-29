@@ -58,6 +58,7 @@ describe("the phone check's parts on a pull request", () => {
       ["join", 2, false],
       ["talk", 2, false],
       // A part main has no time for yet costs the slowest measured one.
+      ["relaunch", 2, false],
       ["address", 2, false],
     ]);
     expect(placed.find((part) => !part.kept)?.reason).toMatch(/nightly check of main/);
@@ -82,7 +83,7 @@ describe("the phone check's parts on a pull request", () => {
 
   it("runs every part the change reaches when no part times can be read", () => {
     for (const times of [null, "", "{}", "not json"]) {
-      expect(kept("e3be41f53", times)).toEqual(["address", "cards", "join", "rest", "talk"]);
+      expect(kept("e3be41f53", times)).toEqual(PHONE_PARTS.map((part) => part.name).sort());
       expect(choose("e3be41f53", times)![0]!.reason).toMatch(/no part times/);
     }
   });

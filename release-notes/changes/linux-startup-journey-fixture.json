@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "linux-startup-journey-fixture",
+      "reason": "Test-only Linux startup journey diagnosis and fixture repair; no product behavior changes."
+    }
+  ]
+}

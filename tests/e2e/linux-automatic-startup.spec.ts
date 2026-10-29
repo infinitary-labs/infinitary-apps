@@ -1,3 +1,4 @@
+import { userInfo } from "node:os";
 import { JoinedHome } from "@core/devices/joinedHome";
 import { joinHome } from "@core/helper/join";
 import { expect, test } from "@playwright/test";
@@ -31,11 +32,18 @@ test("unsupported startup keeps the join while explicit work starts and stops in
       text: link ?? "",
       dataDir,
       timeoutMs: 2_000,
-      device: { name: "ubuntu-box", user: { name: "sam", uid: 1000 } },
+      // INF-1816: loopback work must join as another user, including on UID 1000 runners.
+      device: {
+        name: "ubuntu-box",
+        user: { name: "sam", uid: (process.getuid?.() ?? userInfo().uid) + 1000 },
+      },
       io: { ask: async () => "yes", say: (lines) => said.push(...lines) },
       background: async () => "unavailable",
     });
-    expect(outcome).toMatchObject({ ok: true, background: "unavailable" });
+    expect(outcome, outcome.ok ? undefined : outcome.reason).toMatchObject({
+      ok: true,
+      background: "unavailable",
+    });
     const joined = new JoinedHome(dataDir, () => {}).read()!;
     const row = page.locator(`[data-device-row="${joined.grant.deviceId}"]`);
     await expect(row).toContainText(automaticStartupWords.unavailable);

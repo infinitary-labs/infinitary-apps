@@ -1,0 +1,15 @@
+{
+  "entries": [
+    {
+      "id": "tasks-panel-shared-board",
+      "kind": "fix",
+      "area": "tasks",
+      "title": "The Tasks panel keeps up with a long task list",
+      "body": "Moving the pointer across Tasks rows, scrolling with the pointer resting on the list, and coming back from Settings no longer make the app rebuild your whole task list each time. With many tasks, the summary beside each row and the list after Settings now appear sooner.",
+      "noPicture": "The Tasks panel looks the same; its summaries and rows appear sooner.",
+      "provenance": {
+        "origin": "change"
+      }
+    }
+  ]
+}

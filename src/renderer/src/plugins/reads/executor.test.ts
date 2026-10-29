@@ -207,7 +207,7 @@ describe("ReadExecutor", () => {
       executor.subscribe("tasks.board", {}, subscriber),
     ];
     await flush();
-    expect(read).toHaveBeenCalledTimes(2);
+    expect(read).toHaveBeenCalledTimes(1);
     shown = "b";
     for (const listener of presentation) listener();
     await vi.advanceTimersByTimeAsync(COALESCE_MS * 4);
@@ -215,15 +215,83 @@ describe("ReadExecutor", () => {
       { seq: 1, shown: "b" },
       { seq: 1, shown: "b" },
     ]);
-    expect(read).toHaveBeenCalledTimes(2);
+    expect(read).toHaveBeenCalledTimes(1);
     // What the core derives from the stack still arrives on its own push.
     push("inf:tasks", { seq: 2 });
     expect(values.slice(-2)).toEqual([
       { seq: 2, shown: "b" },
       { seq: 2, shown: "b" },
     ]);
-    expect(read).toHaveBeenCalledTimes(2);
+    expect(read).toHaveBeenCalledTimes(1);
     for (const stop of stops) stop();
+  });
+
+  // INF-1860: a hover summary that opens on every row, and a Tasks panel
+  // remounted on the way back from Settings, each asked the core to rebuild
+  // the whole board while the app already held it.
+  it("shares one read of the board among its readers and hands a later reader the held value", async () => {
+    const { fake, read, set, push, listeners } = api();
+    set({ seq: 1 });
+    const executor = new ReadExecutor(fake);
+    const held: unknown[] = [];
+    const stopHeld = executor.subscribe(
+      "tasks.board",
+      {},
+      { onValue: (v) => held.push(v), onError: () => {} },
+    );
+    await flush();
+    expect(held).toEqual([{ seq: 1 }]);
+    push("inf:tasks", { seq: 2 });
+    // A summary opens and closes on each row the pointer crosses.
+    for (let row = 0; row < 5; row++) {
+      const seen: unknown[] = [];
+      const stop = executor.subscribe(
+        "tasks.board",
+        {},
+        { onValue: (v) => seen.push(v), onError: () => {} },
+      );
+      await flush();
+      expect(seen).toEqual([{ seq: 2 }]);
+      stop();
+    }
+    expect(read).toHaveBeenCalledTimes(1);
+    // The one push reaches each reader once, and leaving keeps the rest attached.
+    expect(listeners().pushes.get("inf:tasks")?.size).toBe(1);
+    push("inf:tasks", { seq: 3 });
+    expect(held).toEqual([{ seq: 1 }, { seq: 2 }, { seq: 3 }]);
+    // With no reader left nothing holds the board, so the next reader reads it.
+    stopHeld();
+    expect(listeners().pushes.get("inf:tasks")?.size).toBe(0);
+    executor.subscribe("tasks.board", {}, { onValue: () => {}, onError: () => {} });
+    await flush();
+    expect(read).toHaveBeenCalledTimes(2);
+  });
+
+  it("joins a reader that arrives mid-read to that read, and retries one that follows a failure", async () => {
+    const { fake } = api();
+    let settle: { resolve: (v: unknown) => void; reject: (e: Error) => void } | undefined;
+    const read = vi.fn(
+      () =>
+        new Promise((resolve, reject) => {
+          settle = { resolve, reject };
+        }),
+    );
+    const executor = new ReadExecutor({ ...fake, read });
+    const errors: unknown[] = [];
+    const values: unknown[] = [];
+    executor.subscribe("tasks.board", {}, { onValue: () => {}, onError: (e) => errors.push(e) });
+    executor.subscribe("tasks.board", {}, { onValue: () => {}, onError: (e) => errors.push(e) });
+    expect(read).toHaveBeenCalledTimes(1);
+    settle?.reject(new Error("core away"));
+    await flush();
+    expect(errors).toHaveLength(2);
+    // Nothing is held after the failure, so a new reader asks again.
+    executor.subscribe("tasks.board", {}, { onValue: (v) => values.push(v), onError: () => {} });
+    await vi.advanceTimersByTimeAsync(COALESCE_MS * 2);
+    expect(read).toHaveBeenCalledTimes(2);
+    settle?.resolve({ seq: 1 });
+    await flush();
+    expect(values).toEqual([{ seq: 1 }]);
   });
 
   it("honours an invalidation that lands mid-read with exactly one follow-up", async () => {

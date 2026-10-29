@@ -36,6 +36,7 @@ Each catalog entry maps one name onto a `surface: "core"` channel of [`../src/sh
 An invalidation is any of: an `inf:event` predicate (`events`), a push channel (`pushes`), a push whose payload is the value (`valueFromPush`), a push carrying a change folded onto the held value (`deltaFromPush`), a presentation overlay (`presentation`), or a poll (`pollMs`); `sameValue` keeps a re-run that says the same thing from being delivered twice.
 `ReadExecutor.subscribe(name, args, listener, grant)` validates the name and args synchronously, reads, and re-reads on each declared invalidation, coalescing bursts to one read per `COALESCE_MS` with exactly one follow-up for an invalidation that lands mid-read.
 A read that started before a pushed value landed is dropped as stale; a delta that cannot apply (a gap, no value yet) falls back to a full read.
+A pushed read (`valueFromPush` or `deltaFromPush`) runs once however many subscribe to the same request: they share one read and one held value, and a subscriber that arrives while it runs is handed that value with no read of its own.
 A resync (the source of truth could not replay a gap, [the view](../docs/view.md)) re-runs every read the window holds.
 Names are frozen once landed: adding an entry is additive, renaming one is a protocol change, and every core shape is published in `docs/contract.json` under the version rule ([contract](../docs/contract.md)).
 

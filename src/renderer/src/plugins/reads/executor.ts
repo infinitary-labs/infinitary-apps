@@ -19,6 +19,9 @@ import type { z } from "zod";
  * entry names as its VALUE (`valueFromPush`) is different: the payload is
  * handed to the subscriber the moment it arrives, with no window and no
  * read, and a read still in flight from before it is dropped as stale.
+ * Such a pushed read runs once however many read it: readers of the same
+ * request share one run and one held value, and a reader that arrives
+ * later is handed that value with no read of its own.
  * Framework-free and built over an injected api, so it is unit-tested
  * against fakes and served in the app over `window.infinitary`.
  */
@@ -57,7 +60,13 @@ export class ReadSubscriptionError extends Error {
 
 type AnyEntry = ReadEntry<never, z.ZodType>;
 
+/** One running read; `join` adds a reader and returns what removes it. */
+type Source = { join: (listener: ReadListener) => () => void };
+
 export class ReadExecutor {
+  /** The running pushed reads, by name and request, while any reader holds one. */
+  private readonly shared = new Map<string, Source>();
+
   constructor(
     private readonly api: ReadApi,
     private readonly catalog: Record<string, AnyEntry> = readCatalog as unknown as Record<
@@ -87,6 +96,48 @@ export class ReadExecutor {
     }
     const args = parsed.data;
     const readName = name as ReadName;
+    const { invalidate } = entry;
+    // A pushed read's value is kept current by its pushes, so every reader
+    // of the same request shares one: one read, one held value, and a new
+    // reader takes that value instead of asking the core to rebuild it.
+    // The task board is the one this is for: a hover summary that opens
+    // per row, and a Tasks panel remounted on the way back from Settings,
+    // each rebuilt the whole board in the core (INF-1860).
+    const key =
+      invalidate.valueFromPush || invalidate.deltaFromPush
+        ? `${name}\u0000${JSON.stringify(entry.toRequest(args, grant))}`
+        : undefined;
+    let source = key === undefined ? undefined : this.shared.get(key);
+    if (!source) {
+      source = this.open(readName, entry, args, grant, () => {
+        if (key !== undefined) this.shared.delete(key);
+      });
+      if (key !== undefined) this.shared.set(key, source);
+    }
+    return source.join(listener);
+  }
+
+  /** One read's run, held value and invalidations, handed to every reader joined to it. */
+  private open(
+    readName: ReadName,
+    entry: AnyEntry,
+    args: unknown,
+    grant: ReadGrant,
+    closed: () => void,
+  ): Source {
+    const listeners = new Set<ReadListener>();
+    const each = (send: (listener: ReadListener) => void) => {
+      for (const listener of [...listeners]) {
+        try {
+          send(listener);
+        } catch (caught) {
+          // One failing reader must not starve the others.
+          queueMicrotask(() => {
+            throw caught;
+          });
+        }
+      }
+    };
 
     let disposed = false;
     let inFlight = false;
@@ -103,7 +154,8 @@ export class ReadExecutor {
       epoch += 1;
       current = value;
       hasValue = true;
-      listener.onValue(this.api.present?.(readName, value) ?? value);
+      const shown = this.api.present?.(readName, value) ?? value;
+      each((listener) => listener.onValue(shown));
     };
 
     const { sameValue } = entry.invalidate;
@@ -126,10 +178,11 @@ export class ReadExecutor {
         })
         .catch((caught: unknown) => {
           if (!disposed) {
-            listener.onError({
+            const error: FrameError = {
               code: "read_failed",
               message: caught instanceof Error ? caught.message : String(caught),
-            });
+            };
+            each((listener) => listener.onError(error));
           }
         })
         .finally(() => {
@@ -158,7 +211,10 @@ export class ReadExecutor {
           // its own declared pushes, and a re-read here would rebuild the
           // whole board once per subscriber on every card change.
           epoch += 1;
-          if (hasValue) listener.onValue(this.api.present?.(readName, current) ?? current);
+          if (hasValue) {
+            const shown = this.api.present?.(readName, current) ?? current;
+            each((listener) => listener.onValue(shown));
+          }
         }),
       );
     }
@@ -206,12 +262,40 @@ export class ReadExecutor {
     }
     if (this.api.onResync) detach.push(this.api.onResync(schedule));
 
-    run();
-    return () => {
+    const stop = () => {
       if (disposed) return;
       disposed = true;
       if (timer !== undefined) clearTimeout(timer);
-      for (const stop of detach) stop();
+      for (const detachOne of detach) detachOne();
+      closed();
+    };
+    return {
+      join: (subscriber) => {
+        // Its own entry, so one listener object subscribed twice is two readers.
+        const listener: ReadListener = {
+          onValue: (value) => subscriber.onValue(value),
+          onError: (error) => subscriber.onError(error),
+        };
+        const first = listeners.size === 0;
+        listeners.add(listener);
+        if (first) {
+          run();
+        } else if (hasValue) {
+          // The held value, handed over after subscribe returns as a read's
+          // would be; skipped when a newer value reached this reader first.
+          const joined = epoch;
+          queueMicrotask(() => {
+            if (disposed || !listeners.has(listener) || epoch !== joined) return;
+            listener.onValue(this.api.present?.(readName, current) ?? current);
+          });
+        } else if (!inFlight) {
+          // An earlier read failed and nothing has arrived since: try again.
+          schedule();
+        }
+        return () => {
+          if (listeners.delete(listener) && listeners.size === 0) stop();
+        };
+      },
     };
   }
 }

@@ -112,10 +112,12 @@ mac:
   # build). electron-builder adds a system's `files` to the list above.
   files:
     - "!node_modules/onnxruntime-node/bin/napi-v6/{linux,win32}/**"
-  # 1024px transparent png with an inset, rounded body, rendered from the
-  # design skill's app-icon.svg (scripts/render-app-icon.mjs).
-  # electron-builder derives the icns without applying a macOS mask.
-  icon: packaging/build/icon.png
+  # Apple's iconutil icns of packaging/build/icon.png, the 1024px transparent
+  # png with an inset, rounded body rendered from the design skill's
+  # app-icon.svg (scripts/render-app-icon.mjs, scripts/render-app-icns.mjs).
+  # electron-builder ships an icns unchanged; its own png conversion stores
+  # the small sizes in a form macOS draws as stripes.
+  icon: packaging/build/icon.icns
   target:
     - target: zip
       arch:

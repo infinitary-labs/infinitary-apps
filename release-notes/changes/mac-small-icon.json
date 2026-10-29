@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "id": "mac-small-icon",
+      "kind": "fix",
+      "title": "The Mac app icon draws correctly at small sizes",
+      "body": "Infinitary's icon no longer shows as a striped square in small lists on a Mac, such as Privacy & Security in System Settings.",
+      "area": "other",
+      "noPicture": "The icon shows in macOS's own System Settings and Finder, outside the app's window, where the app's picture tools cannot photograph it.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

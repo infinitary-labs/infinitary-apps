@@ -9,9 +9,28 @@ const require = createRequire(import.meta.url);
 const builder = createRequire(require.resolve("electron-builder/package.json"));
 const yaml = builder("js-yaml") as { load(text: string): { mac: { icon: string } } };
 
-function iconPixels() {
+// The Mac package's icon, as electron-builder.yml hands it to the packager,
+// which ships an .icns unchanged.
+function macIcon() {
   const config = yaml.load(readFileSync(resolve("electron-builder.yml"), "utf8"));
-  const png = readFileSync(resolve(config.mac.icon));
+  const icns = readFileSync(resolve(config.mac.icon));
+  expect(icns.toString("ascii", 0, 4), "mac.icon is an icns").toBe("icns");
+  expect(icns.readUInt32BE(4)).toBe(icns.length);
+  const entries = new Map<string, Buffer>();
+  for (let offset = 8; offset < icns.length; ) {
+    const length = icns.readUInt32BE(offset + 4);
+    entries.set(
+      icns.toString("ascii", offset, offset + 4),
+      icns.subarray(offset + 8, offset + length),
+    );
+    offset += length;
+  }
+  return entries;
+}
+
+const isPng = (data: Buffer) => data.subarray(0, 8).toString("hex") === "89504e470d0a1a0a";
+
+function iconPixels(png: Buffer) {
   expect(png.subarray(0, 8).toString("hex")).toBe("89504e470d0a1a0a");
   const width = png.readUInt32BE(16);
   const height = png.readUInt32BE(20);
@@ -55,7 +74,9 @@ function iconPixels() {
 }
 
 it("supplies a rounded, inset icon to macOS versions that do not apply a system mask", () => {
-  const { width, height, alpha } = iconPixels();
+  const png = macIcon().get("ic10");
+  expect(png, "the 1024px entry").toBeDefined();
+  const { width, height, alpha } = iconPixels(png ?? Buffer.alloc(0));
   expect(width).toBe(1024);
   expect(height).toBe(1024);
   for (const [x, y] of [
@@ -83,3 +104,69 @@ it("supplies a rounded, inset icon to macOS versions that do not apply a system 
   expect(alpha(512, 110)).toBe(255);
   expect(alpha(512, 512)).toBe(255);
 });
+
+// The captain's report (INF-1782): the icon drew as a striped square in
+// System Settings' Privacy & Security list. electron-builder 26.15's icon tool
+// stored the 16-64px sizes as PNG in icp4/icp5/icp6, which macOS's icon
+// service decodes as raw pixels at small 1x sizes; macOS reads those sizes
+// from ic04/ic05 ARGB, as Apple's iconutil writes them.
+it("stores the small Mac icon sizes in a form macOS's icon service draws", () => {
+  const entries = macIcon();
+  for (const type of ["icp4", "icp5", "icp6"]) {
+    const data = entries.get(type);
+    expect(data != null && isPng(data), `${type} holds PNG data macOS draws as stripes`).toBe(
+      false,
+    );
+  }
+  // Each PNG entry holds the size its type stands for (the builder's tool
+  // also wrote 512px into the 256px@2x entry).
+  const sizes: Record<string, number> = {
+    ic07: 128,
+    ic08: 256,
+    ic09: 512,
+    ic10: 1024,
+    ic11: 32,
+    ic12: 64,
+    ic13: 256,
+    ic14: 512,
+  };
+  for (const [type, data] of entries) {
+    if (!isPng(data)) continue;
+    expect(sizes[type], `${type} is a known PNG entry`).toBeDefined();
+    expect([data.readUInt32BE(16), data.readUInt32BE(20)], type).toEqual([
+      sizes[type],
+      sizes[type],
+    ]);
+  }
+  // The 1x 16px and 32px pictures are ARGB whose alpha is the rounded, inset
+  // body: transparent corners and an opaque centre.
+  for (const [type, size] of [
+    ["ic04", 16],
+    ["ic05", 32],
+  ] as const) {
+    const data = entries.get(type);
+    expect(data?.toString("ascii", 0, 4), `${type} is ARGB`).toBe("ARGB");
+    const alpha = unpackBits(data?.subarray(4) ?? Buffer.alloc(0), size * size);
+    const at = (x: number, y: number) => alpha[y * size + x];
+    expect([at(0, 0), at(size - 1, 0), at(0, size - 1), at(size - 1, size - 1)], type).toEqual([
+      0, 0, 0, 0,
+    ]);
+    expect(at(size / 2, size / 2), type).toBe(255);
+  }
+});
+
+// icns run-length coding: a byte under 0x80 copies the next n+1 bytes, any
+// other repeats the next byte n-0x80+3 times. Returns the first channel.
+function unpackBits(data: Buffer, length: number) {
+  const out: number[] = [];
+  for (let i = 0; out.length < length && i < data.length; ) {
+    const n = data[i++] ?? 0;
+    if (n < 0x80) {
+      for (let k = 0; k <= n; k++) out.push(data[i++] ?? 0);
+    } else {
+      const value = data[i++] ?? 0;
+      for (let k = 0; k < n - 0x80 + 3; k++) out.push(value);
+    }
+  }
+  return out.slice(0, length);
+}

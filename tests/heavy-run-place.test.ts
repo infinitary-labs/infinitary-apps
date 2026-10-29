@@ -350,6 +350,29 @@ describe("a local heavy run whose shell has no load line", () => {
     );
   });
 
+  // INF-1823: the placement line already owns the borrowed VM's share.
+  it.each(["phone", "journeys"] as const)(
+    "%s rides a borrowed place without asking either line",
+    async (kind) => {
+      const { shell, runs } = await computerLine();
+      const service = await crewPlaces();
+      const told: string[] = [];
+      const place = await takeHeavyRunPlace(kind, "borrowed run", {
+        env: {
+          ...shell(kind),
+          CI: "",
+          BORROWED_PLACE: "mini-vm2",
+          INFINITARY_CREW_PLACE_SOCKET: service.path,
+        },
+        log: (line) => told.push(line),
+      });
+      place.close();
+      expect(told).toEqual([heavyRunWords.borrowed("mini-vm2")]);
+      expect(runs()).toEqual([]);
+      expect(service.asked).toEqual([]);
+    },
+  );
+
   it("asks neither the line nor the crew place service in CI", async () => {
     const { shell, runs } = await computerLine();
     const service = await crewPlaces();

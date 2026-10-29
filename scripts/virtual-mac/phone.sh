@@ -6,7 +6,8 @@
 # phone check runs at a time (phone.yml's mac-mini-phone queue, which this
 # variable keeps): phone checks wait only for each other, never for journeys (the captain's INF-517 answer on INF-79's rule).
 #
-# usage: scripts/virtual-mac/phone.sh start <results folder>
+# usage: scripts/virtual-mac/phone.sh run <results folder> <iphone|ipad>...
+#        scripts/virtual-mac/phone.sh start <results folder>
 #        scripts/virtual-mac/phone.sh gate <iphone|ipad>...
 #        scripts/virtual-mac/phone.sh delete
 #
@@ -20,7 +21,7 @@
 set -euo pipefail
 
 IMAGE="${IMAGE:-infinitary-lane}"
-NAME="${PHONE_VM:-$IMAGE-phone}"
+NAME="${BORROWED_VM:-${PHONE_VM:-$IMAGE-phone}}"
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 # The clone's shared input folder outlives each step: the clone runs from
 # start to delete.
@@ -29,7 +30,7 @@ WORK="${RUNNER_TEMP:-${TMPDIR:-/tmp}}/$NAME"
 source "$ROOT/scripts/virtual-mac/vm.sh"
 
 usage() {
-  echo "usage: scripts/virtual-mac/phone.sh start <results folder> | gate <iphone|ipad>... | delete" >&2
+  echo "usage: scripts/virtual-mac/phone.sh run <results folder> <iphone|ipad>... | start <results folder> | gate <iphone|ipad>... | delete" >&2
   exit 2
 }
 stamp() { date -u +%Y-%m-%dT%H:%M:%SZ; }
@@ -45,9 +46,25 @@ delete_clone() {
   fi
 }
 
+# shellcheck source=scripts/virtual-mac/borrow.sh
+source "$ROOT/scripts/virtual-mac/borrow.sh"
 case "${1:-}" in
+  run)
+    [ "$#" -ge 3 ] || usage
+    borrow_virtual_mac "Infinitary phone check" "$@"
+    out="$2"
+    shift 2
+    # Keep the borrow until the gates and cleanup finish, including failure.
+    trap '"/bin/bash" "$0" delete' EXIT
+    /bin/bash "$0" start "$out"
+    /bin/bash "$0" gate "$@"
+    ;;
   start)
     [ "$#" -eq 2 ] || usage
+    if [ -z "${CI:-}" ] && [ -z "${BORROWED_PLACE:-}" ] && command -v borrow-virtual-mac > /dev/null; then
+      echo "Use phone.sh run <results folder> <iphone|ipad>... so the borrow covers start, gates and delete." >&2
+      exit 2
+    fi
     mkdir -p "$2"
     OUT="$(cd "$2" && pwd)"
     delete_clone
@@ -58,6 +75,9 @@ case "${1:-}" in
     git -C "$ROOT" archive --format=tar -o "$WORK/in/source.tar" HEAD
     echo "== Starting $NAME, a fresh clone of $IMAGE, at $(git -C "$ROOT" rev-parse --short HEAD) ($(stamp))"
     "$TART" clone "$IMAGE" "$NAME"
+    if [ -n "${BORROWED_PLACE:-}" ]; then
+      "$TART" set "$NAME" --cpu "${BORROWED_CPUS:?}" --memory "${BORROWED_MEMORY_MB:?}"
+    fi
     start_vm "$NAME" "$WORK/tart-run.log" "$SHARED/in/phone-job.sh" "--dir=in:$WORK/in:ro" "--dir=out:$OUT"
     echo "== The virtual Mac started ($(stamp))"
     "$TART" exec "$NAME" /bin/bash -lc "/bin/bash '$SHARED/in/phone-job.sh' prepare '$SHARED/in'"

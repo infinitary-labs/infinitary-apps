@@ -28,6 +28,7 @@ export const heavyRunWords = {
     `Asking this computer's load line for ${HEAVY_RUN_NEEDS[kind].processors} processors and ${HEAVY_RUN_NEEDS[kind].memoryMib} MiB (${LOAD_COMMAND}).`,
   admitted: (kind: CrewPlaceKind) =>
     `Admitted by this computer's load line; holding ${HEAVY_RUN_NEEDS[kind].processors} processors and ${HEAVY_RUN_NEEDS[kind].memoryMib} MiB until this run ends.`,
+  borrowed: (place: string) => `This run rides borrowed place ${place}; asking neither the load line nor a crew place.`,
   noLine: `${LOAD_COMMAND} is not available in this shell; asking the Mac mini's crew place service instead.`,
 };
 
@@ -129,6 +130,10 @@ export async function takeHeavyRunPlace(
 ): Promise<HeavyRunPlace> {
   const env = options.env ?? process.env;
   const log = options.log ?? ((line: string) => console.error(line));
+  if (env.BORROWED_PLACE) {
+    log(heavyRunWords.borrowed(env.BORROWED_PLACE));
+    return { close() {} };
+  }
   if (env.CI) return { close() {} };
   const command = onPath(env);
   if (command && (await lineAnswers(command, env))) return takeLine(command, kind, env, log);

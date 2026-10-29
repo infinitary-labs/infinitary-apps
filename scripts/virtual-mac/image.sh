@@ -23,12 +23,15 @@ set -euo pipefail
 
 NAME="${1:-infinitary-lane}"
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+# shellcheck source=scripts/virtual-mac/borrow.sh
+source "$ROOT/scripts/virtual-mac/borrow.sh"
+borrow_virtual_mac "Infinitary image" "$@"
 pin() { python3 -c 'import json, sys; print(json.load(open(sys.argv[1]))[sys.argv[2]])' "$ROOT/scripts/phone-pin.json" "$1"; }
 PIN_XCODE="$(pin xcode)"
 PIN_IOS_BUILD="$(pin iosBuild)"
 BASE_IMAGE="${BASE_IMAGE:-ghcr.io/cirruslabs/macos-tahoe-xcode:$PIN_XCODE}"
-CPUS="${CPUS:-6}"
-MEMORY_MB="${MEMORY_MB:-16384}"
+CPUS="${BORROWED_CPUS:-${CPUS:-6}}"
+MEMORY_MB="${BORROWED_MEMORY_MB:-${MEMORY_MB:-16384}}"
 NODE_MAJOR=24
 IOS_RUNTIME_VERSION="${IOS_RUNTIME_VERSION:-26.1}"
 # shellcheck source=scripts/virtual-mac/vm.sh
@@ -72,7 +75,7 @@ printf -v RUNTIME_ENV 'IOS_RUNTIME_VERSION=%q IOS_RUNTIME_DMG=%q PIN_XCODE=%q PI
 
 # Built under another name and renamed only once provisioning passed, so a
 # failed build never leaves a half-made image under the lane's name.
-BUILDING="$NAME-building"
+BUILDING="${BORROWED_VM:-$NAME-building}"
 SHARE="$(mktemp -d "${TMPDIR:-/tmp}/virtual-mac-image.XXXXXX")"
 cleanup() {
   stop_vm "$BUILDING"

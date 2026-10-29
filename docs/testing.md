@@ -208,6 +208,7 @@ A value other than `ci` or `local` refuses rather than guess.
 
 A local `pnpm test:phone` gate and every local `playwright test` run, repeats included, take a place before their heavy work: the gate before it builds, a journey run in the e2e global setup before any test starts (`scripts/heavy-run-place.ts`).
 Inside CI the job already holds its runner's place and asks for none.
+With `BORROWED_PLACE` set, the run says it rides that borrowed place and asks neither the load line nor a crew place; the virtual Mac's measured load is not declared again.
 A phone part the gate starts rides the gate's place.
 
 Where the shell has this computer's load line, the run declares its needs there through `infinitary-load-axi run` and holds them until it ends (`docs/heavy-runs.md`).
@@ -726,9 +727,19 @@ The affected-journey selector retains that journey for changes to the core Mac c
 
 ## A virtual Mac as a runner
 
+On the Mac mini, start a local virtual Mac only under `borrow-virtual-mac --label <text> --minutes <n> -- <command>`.
+It borrows `mini-vm1` or `mini-vm2`, never a crew place; do not add a load-line declaration, crew place or hand-made hold for that virtual Mac.
+The borrow owns the whole command's lifetime, ends at completion or the later of one hour and the declared minutes, and cleans up a leftover virtual Mac.
+Outside CI, `image.sh`, `run.sh` and `phone.sh run` enter that command automatically where it exists, using `BORROW_MINUTES` (required there) and optional `BORROW_LABEL`.
+An existing `BORROWED_PLACE` reuses the outer borrow without asking again; scripts use its `BORROWED_VM` name and granted processor and memory size.
+Where the command is missing, the scripts start at once as before; CI keeps its existing placement.
+For example, `BORROW_MINUTES=30 scripts/virtual-mac/run.sh tests/e2e/mic-access.spec.ts` borrows for the journey and cleanup.
+For a phone check, use `BORROW_MINUTES=45 scripts/virtual-mac/phone.sh run <results folder> iphone ipad`; split `start`/`gate`/`delete` calls are only for CI, an explicit outer borrow, or a computer without the command.
+A local split `start` refuses where borrowing is available, because returning from it would free the place before the gates ran.
+
 A virtual Mac runs the journeys like the Mac mini does only when its image holds two things the app and macOS look for there.
 `scripts/virtual-mac/image.sh [name]` builds that image with tart (`brew install cirruslabs/cli/tart`, or name it with `TART`), under tart's own `TART_HOME`, `~/.tart` by default.
-It clones Cirrus Labs' `macos-tahoe-xcode` image of the Xcode `scripts/phone-pin.json` names with 6 CPUs and 16 GB as `infinitary-lane`, and `provision.sh` adds Node 24, the `packageManager` pnpm, a warm pnpm store and the two things below inside it.
+It clones Cirrus Labs' `macos-tahoe-xcode` image of the Xcode `scripts/phone-pin.json` names with 6 CPUs and 16 GB by default (the granted size under a borrow) as `infinitary-lane`, and `provision.sh` adds Node 24, the `packageManager` pnpm, a warm pnpm store and the two things below inside it.
 Each part checks itself as the image is built, and the image is renamed into place only once all of them pass, so a fix lands in the script and never in an image by hand.
 `scripts/virtual-mac/run.sh <files>` runs journeys in a fresh clone of the image the way `journeys.yml` runs them on the Mac mini, on the working copy's committed version, keeps the run's log and `test-results/runs/` in `test-results/virtual-mac/`, and deletes the clone.
 `scripts/virtual-mac/phone.sh` runs the phone check's device gates in a clone of the same image when `PHONE_VIRTUAL_MAC` is set (`docs/ios.md`, "The phone check in a virtual Mac").

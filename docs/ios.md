@@ -642,6 +642,14 @@ Mac-side checks remain the project's normal gate and affected Devices journeys.
 
 ### The phone check in a virtual Mac
 
+On the Mac mini, a local virtual Mac runs only under `borrow-virtual-mac --label <text> --minutes <n> -- <command>`, borrowing `mini-vm1` or `mini-vm2` beside CI jobs.
+Use `BORROW_MINUTES=45 scripts/virtual-mac/phone.sh run <results folder> iphone ipad` to keep one borrow through startup, the gates and deletion, returning the gate's exit status even on failure.
+Outside CI the script borrows automatically where the command exists, reuses `BORROWED_PLACE` when already borrowed, and starts at once where the command is missing.
+It uses `BORROWED_VM` and the granted size; a run with `BORROWED_PLACE` asks neither the load line nor a crew place and says it rides the borrow.
+Do not add a load-line declaration, crew place or hand-made hold for that virtual Mac.
+The borrow lasts until the command ends or the later of one hour and the declared minutes.
+Local split `start`/`gate`/`delete` calls require an explicit outer borrow where the command exists; CI's split lifecycle below is unchanged.
+
 The repository variable `PHONE_VIRTUAL_MAC` moves the pull request's two device gates off the Mac mini and into a fresh virtual Mac cloned from the lane's image (`docs/testing.md`, "A virtual Mac as a runner").
 Unset or empty, `native-phone` runs exactly as described above.
 Set, the job runs on the phone check's own runner, labelled `mini-mac-vm`, which takes no Mac mini slot, and it installs no packages on the Mac itself.

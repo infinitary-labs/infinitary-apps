@@ -60,6 +60,7 @@ state="$TART_STAND_IN"
 echo "$*" >> "$state/calls"
 vm="$state/vms/$2"
 case "$1" in
+  set) ;;
   clone)
     [ -d "$state/vms/$2" ] && [ ! -e "$state/vms/$3" ] || exit 1
     cp -R "$state/vms/$2" "$state/vms/$3" ;;
@@ -119,7 +120,7 @@ const PNPM = `#!/bin/bash
 echo "$PWD $* $(cat package.json)" >> "$TART_STAND_IN/installs"
 `;
 
-function fixture(recording = false) {
+function fixture(recording = false, placement: "absent" | "borrow" | "ci" = "absent") {
   const root = scratchDir("infinitary-virtual-phone-");
   const state = join(root, "tart");
   const bin = join(state, "vms", IMAGE, "home", "node", "bin");
@@ -130,7 +131,7 @@ function fixture(recording = false) {
   // A committed working copy holding the lane's scripts, and an edit not yet committed.
   const repo = join(root, "Application Support", "firstmate");
   mkdirSync(join(repo, "scripts", "virtual-mac"), { recursive: true });
-  for (const script of ["phone.sh", "phone-job.sh", "vm.sh"])
+  for (const script of ["phone.sh", "phone-job.sh", "vm.sh", "borrow.sh", "run.sh", "image.sh"])
     copyFileSync(
       join("scripts", "virtual-mac", script),
       join(repo, "scripts", "virtual-mac", script),
@@ -138,6 +139,14 @@ function fixture(recording = false) {
   writeFileSync(join(repo, "package.json"), '{"name":"committed"}');
   const env = {
     ...hostEnv(),
+    CI: placement === "ci" ? "true" : "",
+    BORROWED_PLACE: "",
+    BORROWED_VM: "",
+    BORROW_MINUTES: "25",
+    PATH: `${root}:${(hostEnv().PATH ?? "")
+      .split(":")
+      .filter((dir) => !existsSync(join(dir, "borrow-virtual-mac")))
+      .join(":")}`,
     TART: join(root, "tart.sh"),
     TART_STAND_IN: state,
     PHONE_RECORDING: recording ? "1" : "",
@@ -147,6 +156,24 @@ function fixture(recording = false) {
     GIT_COMMITTER_NAME: "t",
     GIT_COMMITTER_EMAIL: "t@example.com",
   };
+  if (placement !== "absent") {
+    writeFileSync(
+      join(root, "borrow-virtual-mac"),
+      `#!/bin/bash
+set -eu
+printf '%s\\n' "$*" >> "$TART_STAND_IN/borrows"
+[ "$1" = --label ] && [ "$3" = --minutes ] && [ "$4" = 25 ] && [ "$5" = -- ] || exit 64
+shift 5
+export BORROWED_PLACE=mini-vm2 BORROWED_VM=borrowed-mini-vm2 BORROWED_CPUS=4 BORROWED_MEMORY_MB=16384
+set +e
+"$@"
+status=$?
+printf 'released\\n' >> "$TART_STAND_IN/borrows"
+exit "$status"
+`,
+      { mode: 0o755 },
+    );
+  }
   mkdirSync(env.RUNNER_TEMP);
   const results = join(env.RUNNER_TEMP, "phone");
   const phone = async (...args: string[]) => {
@@ -167,6 +194,9 @@ function fixture(recording = false) {
   };
   return {
     state,
+    root,
+    env,
+    repo,
     results,
     phone,
     commit: async () => {
@@ -188,6 +218,96 @@ function fixture(recording = false) {
     },
   };
 }
+
+// INF-1823 approved plan: borrow a virtual place once for the entire VM
+// lifecycle; retain immediate startup when absent and CI's existing placement.
+describe.skipIf(process.platform === "win32")("local virtual Mac borrowing", () => {
+  it.each(["absent", "borrow", "ci"] as const)(
+    "owns the phone lifecycle with placement=%s",
+    async (placement) => {
+      const f = fixture(false, placement);
+      try {
+        await f.commit();
+        writeFileSync(join(f.state, "fail-ipad"), "");
+        if (placement === "borrow") {
+          const split = await f.phone("start", f.results);
+          expect(split.code).toBe(2);
+          expect(f.vms()).toEqual([IMAGE]);
+        }
+        const run = await f.phone("run", f.results, "iphone", "ipad");
+        expect(run.code, run.stdout).toBe(3);
+        expect(f.vms()).toEqual([IMAGE]);
+        for (const device of ["iphone", "ipad"])
+          expect(readFileSync(join(f.results, device, "bundle.xcresult", "summary"), "utf8")).toBe(
+            `${device} result\n`,
+          );
+        const name = placement === "borrow" ? "borrowed-mini-vm2" : CLONE;
+        expect(f.calls()).toContain(`clone ${IMAGE} ${name}`);
+        expect(f.calls()).toContain(`delete ${name}`);
+        if (placement === "borrow") {
+          expect(f.calls()).toContain(`set ${name} --cpu 4 --memory 16384`);
+          const borrows = f.read("borrows").trim().split("\n");
+          expect(borrows).toHaveLength(2);
+          expect(borrows[0]).toContain("--label Infinitary phone check --minutes 25 -- /bin/bash");
+          expect(borrows[1]).toBe("released");
+        } else expect(existsSync(join(f.state, "borrows"))).toBe(false);
+      } finally {
+        f.close();
+      }
+    },
+  );
+
+  it.each(["absent", "borrow", "ci"] as const)(
+    "journeys return their result and delete the clone with placement=%s",
+    async (placement) => {
+      const f = fixture(false, placement);
+      writeFileSync(
+        join(f.repo, "scripts/virtual-mac/job.sh"),
+        '#!/bin/bash\nprintf 7 > "$OUT/exit"\necho "journey completed"\n',
+      );
+      try {
+        await f.commit();
+        await expect(
+          execute("bash", [join(f.repo, "scripts/virtual-mac/run.sh"), "example.spec.ts"], {
+            env: { ...f.env, OUT: f.results },
+          }),
+        ).rejects.toMatchObject({ code: 7, stdout: expect.stringContaining("journey completed") });
+        expect(readFileSync(join(f.results, "exit"), "utf8")).toBe("7");
+        expect(f.vms()).toEqual([IMAGE]);
+        const name =
+          placement === "borrow"
+            ? "borrowed-mini-vm2"
+            : f
+                .calls()
+                .find((call) => call.startsWith("clone "))
+                ?.split(" ")[2];
+        expect(f.calls()).toContain(`delete ${name}`);
+        if (placement === "borrow") {
+          expect(f.calls()).toContain(`set ${name} --cpu 4 --memory 16384`);
+          expect(f.read("borrows").trim().split("\n")).toHaveLength(2);
+        } else expect(existsSync(join(f.state, "borrows"))).toBe(false);
+      } finally {
+        f.close();
+      }
+    },
+  );
+
+  it.each(["run.sh", "image.sh"])(
+    "%s enters the borrow before doing any VM work, and returns its refusal",
+    async (script) => {
+      const f = fixture(false, "borrow");
+      writeFileSync(
+        join(f.root, "borrow-virtual-mac"),
+        '#!/bin/sh\necho "waiting for a virtual place" >&2\nexit 37\n',
+        { mode: 0o755 },
+      );
+      await expect(
+        execute("bash", [join(f.repo, "scripts/virtual-mac", script), "example"], { env: f.env }),
+      ).rejects.toMatchObject({ code: 37, stderr: "waiting for a virtual place\n" });
+      expect(existsSync(join(f.state, "calls"))).toBe(false);
+    },
+  );
+});
 
 describe.skipIf(process.platform === "win32")("the phone check in a virtual Mac", () => {
   // INF-1066: opt-in simulator evidence reaches the same isolated launcher on either CI route.

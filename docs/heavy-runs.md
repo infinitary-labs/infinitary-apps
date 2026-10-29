@@ -58,6 +58,8 @@ Disposal ends observation, not running work, and leaves the saved reservations f
 
 Processes that escape the group, including work a system service starts, cannot be contained or attributed by a process-group reservation.
 The caller includes that work's needs in its declaration and keeps the wrapped run alive until it finishes.
+This project's local virtual Macs borrow a virtual place through `borrow-virtual-mac` instead (`docs/testing.md`, "A virtual Mac as a runner").
+Their phone and journey gates reuse `BORROWED_PLACE`, asking neither this load line nor a crew place; the virtual Mac appears here only as measured load.
 Programs that never declare a run stay visible through measured resource use; the app does not pretend to contain them.
 
 ## What the task shows

@@ -23,7 +23,10 @@ OUT="${OUT:-$ROOT/test-results/virtual-mac/$(date -u +%Y%m%dT%H%M%SZ)}"
 # shellcheck source=scripts/virtual-mac/vm.sh
 source "$ROOT/scripts/virtual-mac/vm.sh"
 
-NAME="$IMAGE-run-$$"
+# shellcheck source=scripts/virtual-mac/borrow.sh
+source "$ROOT/scripts/virtual-mac/borrow.sh"
+borrow_virtual_mac "Infinitary journeys" "$@"
+NAME="${BORROWED_VM:-$IMAGE-run-$$}"
 IN="$(mktemp -d "${TMPDIR:-/tmp}/virtual-mac-run.XXXXXX")"
 mkdir -p "$OUT"
 cleanup() {
@@ -39,6 +42,9 @@ printf '%q ' "$@" > "$IN/args"
 
 echo "Running in $NAME, a fresh clone of $IMAGE, at $(git -C "$ROOT" rev-parse --short HEAD): $*"
 "$TART" clone "$IMAGE" "$NAME"
+if [ -n "${BORROWED_PLACE:-}" ]; then
+  "$TART" set "$NAME" --cpu "${BORROWED_CPUS:?}" --memory "${BORROWED_MEMORY_MB:?}"
+fi
 start_vm "$NAME" "$OUT/tart-run.log" "$SHARED/in/job.sh" "--dir=in:$IN:ro" "--dir=out:$OUT"
 "$TART" exec "$NAME" /bin/bash -lc "/bin/bash '$SHARED/in/job.sh'" 2>&1 | tee "$OUT/job.log" || true
 exit "$(cat "$OUT/exit" 2> /dev/null || echo 1)"

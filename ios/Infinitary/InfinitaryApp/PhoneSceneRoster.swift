@@ -200,6 +200,11 @@ struct PhoneSceneRoster {
         if let posture = task.workPosture { return posture.state == "active" }
         return task.activity == "running" || task.activity == "starting"
     }
+    /// Its working is a background wait, as on the desktop (INF-676, INF-1777): the checks watch, or local work it left running.
+    static func wait(_ task: PhoneTask) -> String? {
+        guard task.workPosture?.state == "active", let reason = task.workPosture?.reason, reason == "checks" || reason == "job" else { return nil }
+        return reason
+    }
     /// Only an unreachable computer freezes its crew, as on the desktop; an unobserved posture still orbits as idle (INF-1520).
     static func unknown(_ task: PhoneTask, computer: Computer) -> Bool {
         !computer.reachable
@@ -220,7 +225,9 @@ struct PhoneSceneRoster {
         /// Its place on the orbits; a program part drawn on its branch has none.
         var orbit: PhoneSceneRoster.Orbit?
         var depth = 0.5, spin = 0.0, alpha = 1.0, unfold = 1.0, work = 0.0, flicker = 0.0, nudge = 0.0
-        var unknown = false, checks = false, programPart = false
+        var unknown = false, programPart = false
+        /// A background wait's eased blend (banked, inside the dashed wait ring) and the share of it that is local work (ember wires).
+        var wait = 0.0, job = 0.0
         /// Waiting on the captain (INF-1543): its eased blend and when the wait began, the breath's phase.
         var captain = 0.0, captainSince = 0.0
         /// A warp's change of size and its light trail (CharacterWarp.ride), on the drawn frame only.
@@ -388,9 +395,12 @@ struct PhoneSceneRoster {
             for task in computer.tasks {
                 guard let (point, depth, place) = positions[task.id] else { continue }
                 let unknown = PhoneSceneRoster.unknown(task, computer: computer)
+                // A background wait keeps it working at an idle pace, banked, as on the desktop.
+                let wait = unknown ? nil : PhoneSceneRoster.wait(task), hot = !unknown && wait == nil && PhoneSceneRoster.working(task)
                 target[task.id] = Glyph(task: task, point: point, center: center, orbit: place, depth: depth,
-                    spin: localTime * (PhoneSceneRoster.working(task) ? 1.6 : 0.35), work: !unknown && PhoneSceneRoster.working(task) ? 1 : 0,
-                    unknown: unknown, checks: !unknown && task.workPosture?.state == "active" && task.workPosture?.reason == "checks", programPart: computer.programParts.contains(task.id),
+                    spin: localTime * (hot ? 1.6 : 0.35), work: hot ? 1 : 0,
+                    unknown: unknown, programPart: computer.programParts.contains(task.id),
+                    wait: wait == nil ? 0 : 1, job: wait == "job" ? 1 : 0,
                     captain: task.group == .waiting ? 1 : 0, captainSince: now)
             }
         }
@@ -412,6 +422,9 @@ struct PhoneSceneRoster {
                 next.spin = member.glyph.spin
             } else if !initial && !settled { next.spin = member.glyph.spin + dt * (glyph.work > 0 ? 1.6 : 0.35) }
             next.work = member.glyph.work + (glyph.work - member.glyph.work) * eased
+            next.wait = member.glyph.wait + (glyph.wait - member.glyph.wait) * eased
+            // The wires' color only moves while it waits, so a wait ending keeps its hue as the ring fades.
+            next.job = glyph.wait > 0 ? member.glyph.job + (glyph.job - member.glyph.job) * eased : member.glyph.job
             // The beacon eases in with the heat; its breath starts from the faintest light when the wait begins.
             next.captain = member.glyph.captain + (glyph.captain - member.glyph.captain) * eased
             next.captainSince = glyph.captain > 0 && member.glyph.captain < 0.001 ? now : member.glyph.captainSince

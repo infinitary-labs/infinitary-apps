@@ -1,0 +1,17 @@
+{
+  "entries": [
+    {
+      "id": "background-wait-crewmates",
+      "kind": "improvement",
+      "title": "A crewmate shows what its background work waits on",
+      "body": "A crewmate waiting on a background command it started now rests dimmed inside a dashed ring, in orange, because the work is still running on your computer. A crewmate waiting on its checks rests in the same ring in blue, because the wait is outside. The dashes keep both apart from the full ring of a crewmate waiting on you, and the Tasks list marks each row the same way.",
+      "area": "crewmates",
+      "picture": {
+        "dark": "background-wait-crewmates-dark.webp",
+        "light": "background-wait-crewmates-light.webp",
+        "alt": "The crew around Firstmate: an orange crewmate and a blue crewmate, each resting dimmed inside a dashed ring"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

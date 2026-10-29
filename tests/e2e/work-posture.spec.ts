@@ -1,7 +1,7 @@
 import { writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { expect, test } from "@playwright/test";
-import { waitForFirstmateIdle } from "./crew";
+import { emberRing, waitForFirstmateIdle } from "./crew";
 import { launchApp } from "./launch";
 import { SPAWN_PROMPT_MARKER } from "./mockProvider";
 import { promptInput } from "./prompt";
@@ -100,8 +100,16 @@ test("both visible indicators stay hot for a background job and cool when no wor
       "aria-label",
       /1 working.*0 idle/,
     );
+    await expect(nowRow(page, key).locator("[data-task-mark]")).toHaveAttribute(
+      "data-task-wait",
+      "job",
+    );
     await expandDock(page, "activity");
     await waitForFirstmateIdle(page, 5_000);
+    // INF-1777, the captain's plan: "when crewmate is waiting for a background command, it
+    // should be orange" - banked ember inside the wait ring, its row an ember dot in the dashed ring.
+    await expect.poll(async () => (await emberRing(page)).ember).toBeGreaterThan(0);
+    await expect.poll(async () => (await emberRing(page)).ring).toBeGreaterThan(20);
     await page.screenshot({ path: test.info().outputPath("work-posture-active-orbit.png") });
     const row = await task();
     if (!row) throw new Error("missing task");
@@ -124,6 +132,8 @@ test("both visible indicators stay hot for a background job and cool when no wor
       /0 working.*1 idle/,
     );
     await waitForFirstmateIdle(page, 5_000);
+    // No work continues: the wait ring and the ember are gone.
+    await expect.poll(async () => (await emberRing(page)).ember).toBe(0);
     // A collapsed dock's frame never paints, so the frame wait below needs Tasks shown.
     await expandDock(page, "now");
     await nowRow(page, key)

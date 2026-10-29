@@ -164,19 +164,20 @@ describe("crew orbit wiring", () => {
     seedCrew(booted, [view({ activity: "idle", workPosture: checks })], 0);
     const boot = booted.update(0);
     expect(boot.working).toBe(1);
-    expect(boot.crew[0]).toMatchObject({ status: "working", work: 0, checks: 1 });
+    expect(boot.crew[0]).toMatchObject({ status: "working", work: 0, wait: 1 });
+    expect(boot.crew[0]?.job).toBeUndefined();
 
     const m = new CrewOrbit(0);
     seedCrew(m, [view({ workPosture: { state: "active", reason: "turn" } })], 0);
-    expect(m.update(0).crew[0]?.checks).toBeUndefined();
+    expect(m.update(0).crew[0]?.wait).toBeUndefined();
     applyCrewEvent(m, changed({ activity: "idle", workPosture: checks }), 16);
     const waiting = run(m, 16, 2000);
     expect(waiting.working).toBe(1);
     expect(waiting.crew[0]?.work).toBeLessThan(0.01);
-    expect(waiting.crew[0]?.checks).toBeGreaterThan(0.99);
-    expect(waiting.crew[0]?.checksArc).toBeDefined();
+    expect(waiting.crew[0]?.wait).toBeGreaterThan(0.99);
+    expect(waiting.crew[0]?.waitArc).toBeDefined();
     // Reduced motion draws the ring whole and still.
-    expect(m.update(2016, true).crew[0]?.checksArc).toBeUndefined();
+    expect(m.update(2016, true).crew[0]?.waitArc).toBeUndefined();
 
     applyCrewEvent(
       m,
@@ -185,7 +186,32 @@ describe("crew orbit wiring", () => {
     );
     const turn = run(m, 2032, 4000);
     expect(turn.crew[0]?.work).toBeGreaterThan(0.99);
-    expect(turn.crew[0]?.checks).toBeUndefined();
+    expect(turn.crew[0]?.wait).toBeUndefined();
+  });
+
+  // INF-1777, the captain's approved plan: a crewmate waiting on local work it
+  // left running rests banked in the same wait ring with ember wires, and
+  // moving to a checks wait eases its wires to ice cyan while the ring stays.
+  it("banks a crewmate waiting on a background command in ember, and eases to checks", () => {
+    const job = { state: "active", reason: "job" } as const;
+    const booted = new CrewOrbit(0);
+    seedCrew(booted, [view({ activity: "idle", workPosture: job })], 0);
+    const boot = booted.update(0);
+    expect(boot.working).toBe(1);
+    expect(boot.crew[0]).toMatchObject({ status: "working", work: 0, wait: 1, job: 1 });
+
+    applyCrewEvent(
+      booted,
+      changed({ activity: "idle", workPosture: { state: "active", reason: "checks" } }),
+      16,
+    );
+    const midway = booted.update(116);
+    expect(midway.crew[0]?.wait).toBeGreaterThan(0.99);
+    expect(midway.crew[0]?.job).toBeGreaterThan(0.01);
+    expect(midway.crew[0]?.job).toBeLessThan(0.99);
+    const checks = run(booted, 116, 2000);
+    expect(checks.crew[0]?.wait).toBeGreaterThan(0.99);
+    expect(checks.crew[0]?.job).toBeUndefined();
   });
 
   // INF-1543, the captain's direction A: a crewmate the Tasks panel lists

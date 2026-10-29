@@ -73,34 +73,42 @@ describe("the shared task mark", () => {
       }
     },
   );
-  // INF-676, the captain's direction A: the checks watch is Working drawn as
-  // an ember dot inside the accent ring, the fact strip's running-checks mark.
-  it("draws the checks watch as an ember dot in the accent ring, and a turn as the filled dot", () => {
-    const checks = renderToStaticMarkup(
-      <TaskStatusMark
-        reading={taskStatusOf({
-          ...base,
-          status: "active",
-          activity: "idle",
-          workPosture: { state: "active", reason: "checks" },
-        })}
-      />,
-    );
-    const turn = renderToStaticMarkup(
-      <TaskStatusMark
-        reading={taskStatusOf({
-          ...base,
-          status: "active",
-          activity: "running",
-          workPosture: { state: "active", reason: "turn" },
-        })}
-      />,
+  // INF-676, the captain's direction A, and INF-1777, the captain's answer:
+  // "make the symbol look similar to the animation ... perhaps it's the
+  // 'ring' that needs to look different from a full ring". A background wait
+  // is Working drawn as a dot in a dashed accent ring - the accent for checks,
+  // ember for local work - never Waiting on you's full ring.
+  it("draws a background wait as a dot in a dashed accent ring, and a turn as the filled dot", () => {
+    const mark = (reason: "checks" | "job" | "turn", activity: "idle" | "running" = "idle") =>
+      renderToStaticMarkup(
+        <TaskStatusMark
+          reading={taskStatusOf({
+            ...base,
+            status: "active",
+            activity,
+            workPosture: { state: "active", reason },
+          })}
+        />,
+      );
+    const checks = mark("checks");
+    const job = mark("job");
+    const turn = mark("turn", "running");
+    const waiting = renderToStaticMarkup(
+      <TaskStatusMark reading={{ mark: "waiting", word: "Waiting on you", reason: "" }} />,
     );
     expect(checks).toContain('data-task-mark="working"');
     expect(checks).toContain('data-task-wait="checks"');
     expect(checks).toContain('aria-label="Working · Waiting for checks"');
-    expect(checks).toContain('r="6" fill="none" stroke="var(--accent)"');
-    expect(checks).toContain('r="3" fill="currentColor"');
+    expect(checks).toContain("color:var(--accent)");
+    expect(job).toContain('data-task-mark="working"');
+    expect(job).toContain('data-task-wait="job"');
+    expect(job).toContain("color:var(--warn)");
+    for (const wait of [checks, job]) {
+      expect(wait).toContain('r="6" fill="none" stroke="var(--accent)"');
+      expect(wait).toContain("stroke-dasharray");
+      expect(wait).toContain('r="3" fill="currentColor"');
+    }
+    expect(waiting).not.toContain("stroke-dasharray");
     expect(turn).not.toContain("data-task-wait");
     expect(turn).toContain('r="6" fill="currentColor"');
   });

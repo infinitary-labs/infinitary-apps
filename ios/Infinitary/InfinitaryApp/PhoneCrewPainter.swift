@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// Native solids share desktop vertices, edges, depth projection, heat, banked checks and the waiting-on-you beacon.
+/// Native solids share desktop vertices, edges, depth projection, heat, the banked background-wait ring and the waiting-on-you beacon.
 enum PhoneCrewPainter {
     static func circle(_ at: CGPoint, _ r: Double) -> Path {
         Path(ellipseIn: CGRect(x: at.x - r, y: at.y - r, width: r * 2, height: r * 2))
@@ -31,7 +31,7 @@ enum PhoneCrewPainter {
     private static func streak(_ glyph: PhoneSceneMotion.Glyph, in context: inout GraphicsContext, palette: CharacterPainter.Palette) {
         let points = glyph.streak, segments = points.count - 1
         guard segments > 0, glyph.unfold > 0.01 else { return }
-        let color = palette.acc.mix(palette.hot, glyph.unknown ? 0 : glyph.work).mix(CharacterPainter.RGB(255, 246, 230), 0.25)
+        let color = palette.acc.mix(palette.hot, glyph.unknown ? 0 : max(glyph.work, glyph.wait * glyph.job)).mix(CharacterPainter.RGB(255, 246, 230), 0.25)
         for i in 0..<segments {
             let fade = 1 - Double(i) / Double(segments)
             context.stroke(Path { $0.move(to: points[i]); $0.addLine(to: points[i + 1]) },
@@ -42,9 +42,11 @@ enum PhoneCrewPainter {
     private static func draw(_ glyph: PhoneSceneMotion.Glyph, now: Double, still: Bool, in context: inout GraphicsContext, palette: CharacterPainter.Palette) {
         let solid = CharacterCatalog.shared.solids[glyph.task.tier ?? "low"] ?? CharacterCatalog.shared.solids["low"]!
         let work = glyph.unknown ? 0 : glyph.work
-        let color = palette.acc.mix(palette.hot, max(work, glyph.checks ? 1 : 0))
+        // A background wait banks to idle strength; its wires stay ember only for local work, ice cyan for checks (INF-1777).
+        let waits = CharacterCatalog.shared.wait, wait = glyph.unknown ? 0 : glyph.wait
+        let color = palette.acc.mix(palette.hot, max(work, wait * glyph.job))
         let beacon = CharacterCatalog.shared.captain
-        let banked = glyph.checks ? 0.6 : 0.55 + 0.45 * work
+        let working = 0.55 + 0.45 * work, banked = working + (waits["strength"]! - working) * wait
         let strength = (banked + (beacon["wire"]! - banked) * glyph.captain) * glyph.alpha * (glyph.unknown ? 0.45 : 1) * palette.boost
         let jitter = glyph.nudge * 3
         let at = CGPoint(x: glyph.point.x + CharacterSky.twinkle(now * 14) * jitter, y: glyph.point.y + CharacterSky.twinkle(now * 13) * jitter)
@@ -71,14 +73,18 @@ enum PhoneCrewPainter {
             context.fill(circle(at, halo), with: .radialGradient(Gradient(colors: [color.color(alpha), color.color(0)]), center: at, startRadius: 0, endRadius: halo))
         }
         if glyph.unfold < 1 { context.fill(circle(at, 2.8 * (1 - glyph.unfold)), with: .color(palette.acc.color(glyph.alpha))) }
-        if glyph.checks {
-            context.stroke(circle(at, glyph.size * 0.8), with: .color(palette.acc.color(still ? 0.6 : 0.22)), lineWidth: 1)
+        // The wait ring: dashed, never the beacon's full ring, with a brighter arc travelling round it; a still frame holds it whole.
+        let ringK = wait * glyph.alpha * glyph.unfold
+        if ringK > 0.01 {
+            let ringR = glyph.size * waits["ring"]!, dash = 2 * .pi * ringR / waits["dashes"]!
+            context.stroke(circle(at, ringR), with: .color(palette.acc.color(min(1, (still ? 0.6 : 0.3) * ringK * palette.boost))),
+                           style: StrokeStyle(lineWidth: 1, dash: [dash * waits["dashShare"]!, dash * (1 - waits["dashShare"]!)]))
             if !still {
                 let arc = CharacterSky.path(20) { t in
-                    let angle = now * 1.6 + t * 1.1
-                    return CGPoint(x: at.x + cos(angle) * glyph.size * 0.8, y: at.y + sin(angle) * glyph.size * 0.8)
+                    let angle = now * waits["arcRate"]! + t * waits["arc"]!
+                    return CGPoint(x: at.x + cos(angle) * ringR, y: at.y + sin(angle) * ringR)
                 }
-                context.stroke(arc, with: .color(palette.acc.color(0.9)), lineWidth: 1.4)
+                context.stroke(arc, with: .color(palette.acc.mix(CharacterPainter.RGB(255, 244, 224), 0.2).color(min(1, 0.9 * ringK))), style: StrokeStyle(lineWidth: 1.4, lineCap: .round))
             }
         }
         let width = max(1, min(1.6, 1.4 * glyph.size / 30)) * solid.ink[1]

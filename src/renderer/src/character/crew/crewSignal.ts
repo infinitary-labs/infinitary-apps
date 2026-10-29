@@ -8,7 +8,7 @@ import { prefersReducedMotion } from "../reducedMotion";
 import { stageNow } from "../stageClock";
 import { ComputerOrbits } from "./computers";
 import { programsOf } from "./constellation";
-import type { CrewOrbit, CrewStatus, LeaveMode } from "./orbit";
+import type { CrewOrbit, CrewStatus, CrewWait, LeaveMode } from "./orbit";
 
 // Side channel from the store's event stream to the crew orbit, as a module
 // ref rather than Zustand state (the emoteSignal pattern): positions are not
@@ -35,9 +35,15 @@ export function crewStatusOf(activity: TaskView["activity"]): CrewStatus {
   return activity === "starting" || activity === "running" ? "working" : "idle";
 }
 
-/** Its working is the host's checks watch: the banked look with the checks ring (INF-676). */
-export function crewWaitsOnChecks(posture: TaskView["workPosture"]): boolean {
-  return posture?.state === "active" && posture.reason === "checks";
+/**
+ * Its working is a background wait: the host's checks watch (INF-676), or
+ * local work it left running - a host job, a heavy run, the Claude client's
+ * background list. Either rests banked inside the wait ring; checks paint
+ * blue, local work ember (INF-1777).
+ */
+export function crewWaitOf(posture: TaskView["workPosture"]): CrewWait {
+  if (posture?.state !== "active") return null;
+  return posture.reason === "checks" || posture.reason === "job" ? posture.reason : null;
 }
 
 function centerNode(task: TaskView): CenterNode {
@@ -108,12 +114,12 @@ export function applyCrewEvent(model: CrewOrbit, event: FmEvent, now: number): v
         // The served slot rides the change (absent says nothing new, null
         // says it never routed): the crewmate's solid follows it.
         const tier = event.tier ?? undefined;
-        const checks = crewWaitsOnChecks(event.workPosture);
+        const wait = crewWaitOf(event.workPosture);
         if (model.has(event.taskId)) {
           model.setStatus(event.taskId, status);
-          model.setChecks(event.taskId, checks);
+          model.setWait(event.taskId, wait);
           if (event.tier !== undefined) model.setTier(event.taskId, tier);
-        } else model.spawn(event.taskId, status, now, false, tier, checks);
+        } else model.spawn(event.taskId, status, now, false, tier, wait);
       } else {
         model.leave(event.taskId, leaveModeOf(event.status), now);
       }
@@ -177,7 +183,7 @@ export function seedCrew(
       now,
       true,
       task.tier ?? undefined,
-      crewWaitsOnChecks(task.workPosture),
+      crewWaitOf(task.workPosture),
     );
   }
   for (const task of tasks) {

@@ -36,6 +36,11 @@ test("a disposable home publishes the scene facts without device-management data
     expect(scene.board.links).toContainEqual(
       expect.objectContaining({ fromId: scene.first, toId: scene.second, type: "blocks" }),
     );
+    // INF-1777: the scene's background waits are the host's own postures, not invented on the phone.
+    const posture = (id: string) =>
+      scene.board.tasks.find((task: { id: string }) => task.id === id)?.workPosture;
+    expect(posture(scene.job)).toEqual({ state: "active", reason: "job" });
+    expect(posture(scene.checks)).toEqual({ state: "active", reason: "checks" });
     const phone = await home.checkPublishedClient();
     expect(phone.conversation.value).toEqual(scene.conversation);
     expect(phone.computers.value).toEqual(scene.computers);

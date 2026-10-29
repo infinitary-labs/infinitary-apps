@@ -8,6 +8,7 @@ import type { Program } from "./constellation";
 import {
   CrewOrbit,
   type CrewStatus,
+  type CrewWait,
   type Cue,
   type DependencyLink,
   type LeaveMode,
@@ -445,14 +446,14 @@ export class ComputerOrbits extends CrewOrbit {
     now: number,
     settled = false,
     tier?: Slot,
-    checks = false,
+    wait: CrewWait = null,
   ): void {
     const existed = this.has(id);
     const computer = this.computerOf(id);
     this.owners.set(id, computer);
     this.tiers.set(id, tier);
     if (computer === HOME_COMPUTER) {
-      super.spawn(id, status, now, settled, tier, checks);
+      super.spawn(id, status, now, settled, tier, wait);
       return;
     }
     const local = this.local(computer);
@@ -460,7 +461,7 @@ export class ComputerOrbits extends CrewOrbit {
       delete local.frozen;
       delete local.lastFrame;
     }
-    local.model.spawn(id, status, local.time, settled, tier, checks);
+    local.model.spawn(id, status, local.time, settled, tier, wait);
   }
   override setStatus(id: string, status: CrewStatus): void {
     if (this.isHome(id)) super.setStatus(id, status);
@@ -473,9 +474,9 @@ export class ComputerOrbits extends CrewOrbit {
     super.setCaptainWaits(this.captainIds);
     for (const local of this.locals.values()) local.model.setCaptainWaits(this.captainIds);
   }
-  override setChecks(id: string, checks: boolean): void {
-    if (this.isHome(id)) super.setChecks(id, checks);
-    else this.local(this.computerOf(id)).model.setChecks(id, checks);
+  override setWait(id: string, wait: CrewWait): void {
+    if (this.isHome(id)) super.setWait(id, wait);
+    else this.local(this.computerOf(id)).model.setWait(id, wait);
   }
   override setTier(id: string, tier: Slot | undefined): void {
     this.tiers.set(id, tier);
@@ -609,8 +610,9 @@ export class ComputerOrbits extends CrewOrbit {
           ...(!computer.reachable
             ? {
                 work: 0,
-                checks: undefined,
-                checksArc: undefined,
+                wait: undefined,
+                waitArc: undefined,
+                job: undefined,
                 activityUnknown: true,
                 status: "idle" as const,
                 alpha: c.alpha * 0.45,

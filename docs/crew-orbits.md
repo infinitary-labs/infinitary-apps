@@ -295,11 +295,14 @@ An account cut-off or quota gate pauses queued delivery.
 A question with no continuing work and a dependency with no continuation are idle.
 Paused/unknown postures stay cool; the Tasks dot's tooltip carries the reason.
 
-Waiting on its checks (posture active, reason `checks`: a watched pull request's checks or a hand-started run) is working with a look of its own (captain's INF-676 direction A).
-On the stage the crewmate stays counted among the working but banks: its ember at idle strength (0.6) and idle pace, no filament tick, no halo, sitting at the idle radius, inside a thin cyan ring at 0.8 of the glyph whose brighter arc travels round at 1.6 radians a second, the fact strip's running-checks mark carried onto the stage.
-It eases in and out on the working blend's own ease and heats back to full ember the moment a turn runs; reduced motion draws the ring whole and still.
-The shared mark draws it as an ember dot inside an accent ring, still reading `Working · Waiting for checks`, and the Tasks row adds the dim word `checks`.
-`crewSignal.test.ts` and `crewmate.test.ts` check the stage look, and `tests/e2e/task-wait-reason.spec.ts` reads the ring off the painted stage and the mark off the row and the record.
+A background wait is working with a look of its own (captain's INF-676 direction A and INF-1777 plan): waiting on its checks (posture active, reason `checks`: a watched pull request's checks or a hand-started run), or on local work it left running (reason `job`: a host job, a heavy run on a computer, or the Claude client's background list).
+On the stage the crewmate stays counted among the working but banks: idle strength (0.6) and idle pace, no filament tick, no halo, sitting at the idle radius, inside a thin dashed cyan ring at 0.8 of the glyph, twelve dashes, whose brighter arc travels round at 1.6 radians a second, the fact strip's running-checks mark carried onto the stage.
+The dashes keep the ring apart from the beacon's full ring below.
+Its wires say where the wait is: ember for local work, because the crew is still somewhat active here, and ice cyan for checks, because the wait is outside; local work outranks checks, as the posture already ranks it.
+It eases in and out on the working blend's own ease, the wires easing between the two colors while the ring stays, and heats back to full ember the moment a turn runs; reduced motion draws the dashed ring whole and still.
+`WAIT_LIGHT` in `crewmate.ts` and `WAIT_ARC_RATE` in `orbit.ts` own the numbers, and `scripts/generate-phone-scene.ts` carries them to the phone's painter as `wait`.
+The shared mark draws it as a dot inside a dashed accent ring, the accent for checks and ember for local work, still reading `Working · Waiting for checks` or `Working · Background work continues`, and a checks row adds the dim word `checks`.
+`crewSignal.test.ts` and `crewmate.test.ts` check the stage look, `tests/e2e/task-wait-reason.spec.ts` reads the checks ring off the painted stage and the mark off the row and the record, `tests/e2e/work-posture.spec.ts` reads the background command's ember ring, and `PhoneSceneRosterTests` checks the phone's two waits.
 Interrupted turns retain the danger dot unless continuing work is known.
 
 Waiting on the captain has a look of its own too, the beacon (captain's INF-1543 direction A, with the settings chosen in its preview).

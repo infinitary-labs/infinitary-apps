@@ -69,6 +69,12 @@ export type OrbitProjection = (
 ) => { x: number; y: number; depth: number };
 
 export type CrewStatus = "working" | "idle";
+/**
+ * The background wait its working is, when it is one: the host's checks
+ * watch, or local work it left running (posture reason `job`). Either rests
+ * banked inside the wait ring; only the wires' color tells them apart.
+ */
+export type CrewWait = "checks" | "job" | null;
 export type CrewPhase = "spawning" | "orbiting" | "leaving";
 export type LeaveMode = "home" | "away";
 export type PacketDirection = "report" | "steer";
@@ -252,16 +258,21 @@ export type CrewmateFrame = {
   /** 0..1 eased working blend. */
   work: number;
   /**
-   * 0..1 eased blend of waiting on its checks (INF-676): working that rests
-   * banked - ember at idle strength and pace - inside a cyan checks ring.
+   * 0..1 eased blend of a background wait (INF-676, INF-1777): working that
+   * rests banked - idle strength and pace - inside the dashed wait ring.
    * Absent when it is not waiting.
    */
-  checks?: number;
+  wait?: number;
   /**
-   * Where the checks ring's travelling arc starts, radians; absent on a
+   * 0..1 eased share of that wait that is local work (posture `job`): its
+   * wires stay ember; a wait on checks turns them ice cyan. Absent at zero.
+   */
+  job?: number;
+  /**
+   * Where the wait ring's travelling arc starts, radians; absent on a
    * settled (reduced-motion) frame, which draws the ring whole and still.
    */
-  checksArc?: number;
+  waitArc?: number;
   /**
    * 0..1 eased blend of waiting on the captain (INF-1543, the captain's
    * direction A): the Tasks row's Waiting on you ring, round the solid,
@@ -436,9 +447,10 @@ type Crewmate = {
   angle: Spring;
   radius: Spring;
   work: number;
-  /** Its working is the host's checks watch (posture active, reason checks). */
-  checks: boolean;
-  checksBlend: number;
+  /** The background wait its working is (posture active, reason checks or job). */
+  wait: CrewWait;
+  waitBlend: number;
+  jobBlend: number;
   /** 0..1 eased blend of waiting on the captain, and when that wait began (its breath's phase). */
   captainBlend: number;
   captainSince: number;
@@ -474,8 +486,8 @@ type Crewmate = {
   drawn?: Point;
 };
 
-/** The checks ring's travelling arc, radians a second: the fact strip's running mark, carried round. */
-const CHECKS_ARC_RATE = 1.6;
+/** The wait ring's travelling arc, radians a second: the fact strip's running mark, carried round. */
+export const WAIT_ARC_RATE = 1.6;
 
 /** One breath of the waiting-on-you beacon, ms (INF-1543, the captain's settings). */
 export const CAPTAIN_BREATH_MS = 3200;
@@ -715,7 +727,7 @@ export class CrewOrbit {
    * the ring opens every new slot immediately, so the others re-space once.
    * `settled` places a crewmate that was already out (the roster at boot):
    * restart is not a spawn, so no spark, no stagger, no send-off.
-   * `checks` says its working is the wait on its checks, so it starts banked.
+   * `wait` says its working is a background wait, so it starts banked.
    */
   spawn(
     id: string,
@@ -723,7 +735,7 @@ export class CrewOrbit {
     now: number,
     settled = false,
     tier?: Slot,
-    checks = false,
+    wait: CrewWait = null,
   ): void {
     if (this.crew.has(id)) return;
     const spawnAt = settled ? now : Math.max(now, this.lastSpawnAt + this.tuning.staggerMs);
@@ -735,7 +747,7 @@ export class CrewOrbit {
     // with fewer crew takes the arrival, the first on a tie.
     const plane = counts.findIndex((n, i) => n < (CROWDED_PLANES[i]?.capacity ?? 0));
     const chosenPlane = plane < 0 ? counts.indexOf(Math.min(...counts)) : plane;
-    const waits = status === "working" && checks;
+    const waits = status === "working" && wait !== null;
     const hot = status === "working" && !waits;
     const c: Crewmate = {
       id,
@@ -750,8 +762,9 @@ export class CrewOrbit {
       // An idle crewmate's posture sits farther out from the first frame.
       radius: new Spring(ringR * (hot ? 1 : 1 + this.tuning.idleOffset), 0.8, 1),
       work: hot ? 1 : 0,
-      checks: waits,
-      checksBlend: waits ? 1 : 0,
+      wait,
+      waitBlend: waits ? 1 : 0,
+      jobBlend: waits && wait === "job" ? 1 : 0,
       captainBlend: this.captainWaits.has(id) ? 1 : 0,
       captainSince: now,
       seed: this.random() * 1000,
@@ -788,14 +801,14 @@ export class CrewOrbit {
   }
 
   /**
-   * Its working is, or stops being, the wait on its checks (INF-676). It
-   * stays among the working; only its look banks, and it heats back to full
-   * ember the moment a turn runs again.
+   * Its working is, or stops being, a background wait (INF-676, INF-1777).
+   * It stays among the working; only its look banks, and it heats back to
+   * full ember the moment a turn runs again.
    */
-  setChecks(id: string, checks: boolean): void {
+  setWait(id: string, wait: CrewWait): void {
     const c = this.crew.get(id);
-    if (!c || c.checks === checks) return;
-    c.checks = checks;
+    if (!c || c.wait === wait) return;
+    c.wait = wait;
     this.bump();
   }
 
@@ -1260,15 +1273,17 @@ export class CrewOrbit {
       }
       if (lead > 0) c.angle.x += this.slotRate(c) * lead;
       // Working blend and own spin: the rig's dt*4 ease, spin easing over ~0.3s.
-      // The rush lends the spin a share of its boost. Waiting on its checks
+      // The rush lends the spin a share of its boost. A background wait
       // keeps it working at an idle pace, banked, on the same ease; a
-      // settled frame shows both blends as they will be.
-      const waits = c.status === "working" && c.checks;
+      // settled frame shows the blends as they will be.
+      const waits = c.status === "working" && c.wait !== null;
       const workTarget = c.status === "working" && !waits ? 1 : 0;
-      const checksTarget = waits ? 1 : 0;
+      const waitTarget = waits ? 1 : 0;
       const ease = settled ? 1 : Math.min(dt * 4, 1);
       c.work += (workTarget - c.work) * ease;
-      c.checksBlend += (checksTarget - c.checksBlend) * ease;
+      c.waitBlend += (waitTarget - c.waitBlend) * ease;
+      // The wires' color only moves while it waits, so a wait ending keeps its hue as the ring fades.
+      if (waits) c.jobBlend += ((c.wait === "job" ? 1 : 0) - c.jobBlend) * ease;
       // Waiting on the captain eases in on the same heat ramp; its breath
       // starts from the faintest light when the wait begins.
       const captainTarget = this.captainWaits.has(c.id) ? 1 : 0;
@@ -1443,10 +1458,11 @@ export class CrewOrbit {
         trail,
         ...(streak ? { streak } : {}),
         work: c.work,
-        ...(c.checksBlend > 0.001
+        ...(c.waitBlend > 0.001
           ? {
-              checks: c.checksBlend,
-              ...(settled ? {} : { checksArc: (now / 1000) * CHECKS_ARC_RATE + c.seed }),
+              wait: c.waitBlend,
+              ...(c.jobBlend > 0.001 ? { job: c.jobBlend } : {}),
+              ...(settled ? {} : { waitArc: (now / 1000) * WAIT_ARC_RATE + c.seed }),
             }
           : {}),
         ...(c.captainBlend > 0.001

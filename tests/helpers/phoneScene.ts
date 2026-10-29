@@ -1,7 +1,10 @@
+import { execFileSync } from "node:child_process";
 import { mkdirSync } from "node:fs";
 import { join } from "node:path";
 import { claimLink } from "@core/devices/dial";
+import { hostEnv } from "@core/hostEnv";
 import type { Core } from "@core/index";
+import { armWatch } from "@core/orchestrator/checkWatch";
 import { openDatabase } from "@core/storage/db";
 import { DecisionStore } from "@core/storage/decisionStore";
 import { seedTask, type TaskSeed } from "@core/tasks/seedTask";
@@ -14,6 +17,7 @@ import {
 } from "../../src/renderer/src/character/crew/constellation";
 import { partsCountWords } from "../../src/renderer/src/character/crew/programWords";
 import { MOCK_MODEL_ID, MOCK_PROVIDER_ID } from "../e2e/mockProvider";
+import { seedDelivery } from "./taskDelivery";
 
 /** INF-1066: actual task, routing, graph and pairing readings for the native scene.
  * No provider, account or external computer is contacted. A paired but absent helper stays unknown.
@@ -31,6 +35,7 @@ export function phoneSceneFixture(core: Core, userData: string, ready: () => Pro
       core.services.supervisor.closeCard(waitingCard, { kind: "firstmate" }, "Scene fixture");
     waitingCard = undefined;
     for (const id of [...ids].reverse()) {
+      core.services.jobs.killForOwner(id);
       const task = tasks.get(id);
       if (task && task.status !== "done" && task.status !== "dropped")
         tasks.close(id, { status: "dropped", reason: "cancelled", actor: "host" });
@@ -129,6 +134,50 @@ export function phoneSceneFixture(core: Core, userData: string, ready: () => Pro
           ],
         });
         core.services.supervisor.setCardMinimized(waitingCard, true);
+        // INF-1777: one crewmate waits on a real background command and one on its watched checks,
+        // so the scene draws both banked looks inside the wait ring.
+        const job = crew[crew.length - 3] as string;
+        const jobDir = join(userData, "scene-workspaces", job);
+        await core.services.jobs.run({
+          ownerId: job,
+          command: "sleep 600",
+          cwd: jobDir,
+          background: true,
+        });
+        const checks = crew[crew.length - 2] as string;
+        // The durable watch reads a real head. Its first read is put past the scene's life: a read finds no forge,
+        // ends the watch and takes the crewmate out of its checks wait while a part is still reading the scene.
+        const git = (...args: string[]) =>
+          execFileSync("git", args, {
+            cwd: join(userData, "scene-workspaces", checks),
+            env: hostEnv({ HOME: userData, GIT_CONFIG_GLOBAL: "/dev/null" }),
+            encoding: "utf8",
+            stdio: "pipe",
+          }).trim();
+        git("init", "--initial-branch=main");
+        git(
+          "-c",
+          "user.name=Fixture",
+          "-c",
+          "user.email=fixture@localhost",
+          "-c",
+          "commit.gpgsign=false",
+          "commit",
+          "--allow-empty",
+          "-m",
+          "chore: seed checks",
+        );
+        const head = git("rev-parse", "HEAD");
+        seedDelivery(tasks, checks, {
+          mode: "direct-pr",
+          prNumber: 57,
+          headSha: head,
+          ci: "pending",
+          ciWatch: {
+            ...armWatch(undefined, head, Date.now()),
+            nextAt: Date.now() + 24 * 60 * 60_000,
+          },
+        });
         const remote = add("remote", "Read the offshore chart", { deviceId: computer });
         const remotePart = add("remote-part", "Verify the offshore tide", {
           deviceId: computer,
@@ -187,6 +236,8 @@ export function phoneSceneFixture(core: Core, userData: string, ready: () => Pro
           remotePart,
           review,
           waiting,
+          job,
+          checks,
           crew,
           ordinary: crew.filter((id) => !liveParts.includes(id)),
           computer,

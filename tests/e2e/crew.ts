@@ -97,6 +97,45 @@ export function crewSummary(page: Page) {
   return page.locator("[data-crew-summary]");
 }
 
+/**
+ * The stage as painted: the ember crewmate's ink, and how much accent ink
+ * lies in a band round it where the wait ring is drawn (INF-676, INF-1777).
+ * The first mate's own accent wires sit far inside the orbit, outside the band.
+ */
+export async function emberRing(page: Page): Promise<{ ember: number; ring: number }> {
+  return page.evaluate(() => {
+    const pixels: { x: number; y: number; ember: boolean }[] = [];
+    let scale = 1;
+    for (const layer of ["far", "near"]) {
+      const canvas = document.querySelector<HTMLCanvasElement>(
+        `canvas[data-crew-layer="${layer}"]`,
+      );
+      const ctx = canvas?.getContext("2d");
+      if (!canvas || !ctx) throw new Error(`crew ${layer} layer missing`);
+      scale = canvas.width / Math.max(1, canvas.clientWidth);
+      const data = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
+      for (let i = 0; i < data.length; i += 4) {
+        const [r = 0, g = 0, b = 0, a = 0] = [data[i], data[i + 1], data[i + 2], data[i + 3]];
+        if (a < 40) continue;
+        const ember = r - b > 90 && r > g;
+        const accent = b - r > 60;
+        if (!ember && !accent) continue;
+        const p = i / 4;
+        pixels.push({ x: p % canvas.width, y: Math.floor(p / canvas.width), ember });
+      }
+    }
+    const embers = pixels.filter((p) => p.ember);
+    if (embers.length === 0) return { ember: 0, ring: 0 };
+    const cx = embers.reduce((sum, p) => sum + p.x, 0) / embers.length;
+    const cy = embers.reduce((sum, p) => sum + p.y, 0) / embers.length;
+    const ring = pixels.filter((p) => {
+      const d = Math.hypot(p.x - cx, p.y - cy) / scale;
+      return !p.ember && d > 12 && d < 34;
+    }).length;
+    return { ember: embers.length, ring };
+  });
+}
+
 /** The task id of the crewmate the pointer (or the keyboard) is on, or null. */
 export function crewInspecting(page: Page): Promise<string | null> {
   return page.locator("[data-crew-formation]").getAttribute("data-crew-inspecting");

@@ -94,6 +94,12 @@ import XCTest
             XCTAssertEqual(first.glyphs.filter { $0.captain > 0 }.map(\.task.id), [waitingID])
             XCTAssertEqual(first.glyphs.first { $0.task.id == waitingID }?.task.group, .waiting)
             XCTAssertEqual(first.glyphs.first { $0.task.id == waitingID }?.captain, 1)
+            // INF-1777: a background command and a checks watch both rest banked inside the wait ring, ember wires only for the local one.
+            let jobID = try XCTUnwrap(fixture["job"] as? String), checksID = try XCTUnwrap(fixture["checks"] as? String)
+            XCTAssertEqual(Set(first.glyphs.filter { $0.wait > 0 }.map(\.task.id)), [jobID, checksID])
+            let job = try XCTUnwrap(first.glyphs.first { $0.task.id == jobID }), checks = try XCTUnwrap(first.glyphs.first { $0.task.id == checksID })
+            XCTAssertEqual(job.wait, 1); XCTAssertEqual(job.job, 1); XCTAssertEqual(job.work, 0)
+            XCTAssertEqual(checks.wait, 1); XCTAssertEqual(checks.job, 0); XCTAssertEqual(checks.work, 0)
             let remote = try XCTUnwrap(first.glyphs.first { $0.task.id == remoteID })
             XCTAssertTrue(remote.unknown); XCTAssertEqual(remote.work, 0)
             let advanced = motion.frame(roster: roster, now: 2, settled: false)

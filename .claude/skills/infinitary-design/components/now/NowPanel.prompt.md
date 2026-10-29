@@ -106,7 +106,9 @@ Paused for access, Background work is unknown and No continuing work keep their 
 The stage beneath a crewmate shows none of these words.
 
 Marks occupy a fixed 12px square, using a 16-unit viewBox: Backlog is a hollow circle, Queued adds a central dot, Working/Idle/Interrupted are filled circles in ember/cyan/lava, Waiting on you is an accent dot inside an accent ring, Done is a neutral check, Dropped is a tertiary cross.
-Working while waiting on its checks (`Working · Waiting for checks`) is an ember dot inside an accent ring, the fact strip's running-checks ring around the working ember (captain's INF-676 direction A); it stays Working in the Working group, and the Tasks row, which shows no reason, adds the dim word `checks`.
+Working on a background wait is a dot inside a dashed accent ring, the stage's wait ring (captain's INF-676 direction A and INF-1777 answer); the dashes keep it apart from Waiting on you's full ring.
+The dot is the accent while it waits on checks (`Working · Waiting for checks`) and ember while it waits on local work it left running (`Working · Background work continues`).
+It stays Working in the Working group, and a checks row, which shows no reason, adds the dim word `checks`.
 Starting is a still open ring, cyan on the arc and neutral on the rest, with no spin.
 Shape carries lifecycle, not just color.
 All three surfaces use these same marks without animation.

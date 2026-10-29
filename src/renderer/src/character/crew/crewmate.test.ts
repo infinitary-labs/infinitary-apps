@@ -23,34 +23,53 @@ describe("crewmateLight", () => {
   });
 });
 
-// INF-676, the captain's direction A: waiting on its checks keeps the ember,
-// banked to idle strength, inside a cyan ring.
-describe("a crewmate waiting on its checks", () => {
-  it("keeps the ember but at idle strength", () => {
-    const banked = crewmateLight(colors, 0, 1);
-    expect(banked.color).toEqual(colors.hot);
-    expect(banked.strength).toBeCloseTo(0.6, 5);
-    expect(banked.strength).toBeLessThan(crewmateLight(colors, 1).strength);
+// INF-676, the captain's direction A, and INF-1777, the captain's approved
+// plan: a background wait banks the crewmate to idle strength inside a dashed
+// cyan ring - "when waiting for checks, the crewmate should become blue ...
+// when crewmate is waiting for a background command, it should be orange" -
+// and the ring is never the beacon's full one ("perhaps it's the 'ring' that
+// needs to look different from a full ring").
+describe("a crewmate on a background wait", () => {
+  it("banks to idle strength, ember for a background command and ice cyan for checks", () => {
+    const local = crewmateLight(colors, 0, 1, 0, 1);
+    const checks = crewmateLight(colors, 0, 1, 0, 0);
+    expect(local.color).toEqual(colors.hot);
+    expect(checks.color).toEqual(colors.accent);
+    expect(local.strength).toBeCloseTo(0.6, 5);
+    expect(checks.strength).toBeCloseTo(0.6, 5);
+    expect(local.strength).toBeLessThan(crewmateLight(colors, 1).strength);
   });
 
-  it("draws a cyan ring with a travelling arc round the solid, and no tick or halo", () => {
-    const rec = recordingContext();
-    drawCrewmate(rec.ctx, { ...settled, checks: 1, checksArc: 2 }, 0, 0, colors, 5_000);
-    const ring = rec.log.filter((line) => line.startsWith("A120,0,24"));
-    expect(ring).toHaveLength(2);
-    const [faint, arc] = rec.strokes;
-    expect(channels(faint?.style ?? "")).toEqual(colors.accent);
-    expect(channels(arc?.style ?? "")).not.toEqual(colors.accent);
-    // The solid itself is ember, with no white-hot filament tick.
-    const solid = rec.strokes.slice(2);
-    expect(solid.every((s) => channels(s.style).join() === colors.hot.join())).toBe(true);
-    expect(rec.strokes.some((s) => whiteHot(s.style))).toBe(false);
+  it("draws a dashed cyan ring with a travelling arc round the solid, and no tick or halo", () => {
+    for (const [job, wires] of [
+      [1, colors.hot],
+      [undefined, colors.accent],
+    ] as const) {
+      const rec = recordingContext();
+      drawCrewmate(rec.ctx, { ...settled, wait: 1, job, waitArc: 2 }, 0, 0, colors, 5_000);
+      const ring = rec.log.filter((line) => line.startsWith("A120,0,24"));
+      expect(ring).toHaveLength(2);
+      // The faint ring is broken into twelve even dashes; the arc is whole.
+      const dash = (2 * Math.PI * 24) / 12;
+      expect(rec.dashes[0]?.[0]).toBeCloseTo(dash * 0.55, 5);
+      expect(rec.dashes[0]?.[1]).toBeCloseTo(dash * 0.45, 5);
+      const [faint, arc] = rec.strokes;
+      expect(faint?.dash).toHaveLength(2);
+      expect(arc?.dash).toHaveLength(0);
+      expect(channels(faint?.style ?? "")).toEqual(colors.accent);
+      expect(channels(arc?.style ?? "")).not.toEqual(colors.accent);
+      // The solid itself carries the wait's color, with no white-hot filament tick.
+      const solid = rec.strokes.slice(2);
+      expect(solid.every((s) => channels(s.style).join() === wires.join())).toBe(true);
+      expect(rec.strokes.some((s) => whiteHot(s.style))).toBe(false);
+    }
   });
 
-  it("holds the ring whole and still on a settled frame, and draws none when not waiting", () => {
+  it("holds the dashed ring whole and still on a settled frame, and draws none when not waiting", () => {
     const still = recordingContext();
-    drawCrewmate(still.ctx, { ...settled, checks: 1 }, 0, 0, colors, 5_000);
+    drawCrewmate(still.ctx, { ...settled, wait: 1 }, 0, 0, colors, 5_000);
     expect(still.log.filter((line) => line.startsWith("A120,0,24"))).toHaveLength(1);
+    expect(still.strokes[0]?.dash).toHaveLength(2);
     const plain = recordingContext();
     drawCrewmate(plain.ctx, settled, 0, 0, colors, 5_000);
     expect(plain.log.filter((line) => line.startsWith("A120,0,24"))).toHaveLength(0);
@@ -98,7 +117,9 @@ describe("a crewmate waiting on the captain", () => {
 
 /** A 2D context that records what each stroke and fill would paint, and nothing else. */
 function recordingContext() {
-  const strokes: { style: string; alpha: number }[] = [];
+  const strokes: { style: string; alpha: number; dash: number[] }[] = [];
+  const dashes: number[][] = [];
+  let dash: number[] = [];
   const fills: { style: string; alpha: number }[] = [];
   /** Every call in order, with its arguments: two identical logs paint identical pixels. */
   const log: string[] = [];
@@ -119,12 +140,17 @@ function recordingContext() {
       fills.push({ style: String(ctx.fillStyle), alpha: ctx.globalAlpha });
       log.push(`F${String(ctx.fillStyle)}@${ctx.globalAlpha}`);
     },
+    setLineDash: (segments: number[]) => {
+      dash = [...segments];
+      if (dash.length) dashes.push(dash);
+      log.push(`D${dash.join(",")}`);
+    },
     stroke: () => {
-      strokes.push({ style: String(ctx.strokeStyle), alpha: ctx.globalAlpha });
+      strokes.push({ style: String(ctx.strokeStyle), alpha: ctx.globalAlpha, dash });
       log.push(`S${String(ctx.strokeStyle)}@${ctx.globalAlpha}/${ctx.lineWidth}`);
     },
   };
-  return { ctx: ctx as unknown as CanvasRenderingContext2D, strokes, fills, log };
+  return { ctx: ctx as unknown as CanvasRenderingContext2D, strokes, fills, log, dashes };
 }
 
 const settled: CrewmateFrame = {

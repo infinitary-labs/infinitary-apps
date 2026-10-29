@@ -3697,5 +3697,13 @@
     "wire": 0.55,
     "line": 1.2,
     "breathMs": 3200
+  },
+  "wait": {
+    "strength": 0.6,
+    "ring": 0.8,
+    "arc": 1.1,
+    "dashes": 12,
+    "dashShare": 0.55,
+    "arcRate": 1.6
   }
 }

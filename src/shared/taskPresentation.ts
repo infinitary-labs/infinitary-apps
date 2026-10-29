@@ -21,11 +21,12 @@ export type TaskStatusReading = {
    */
   outOfReach?: true;
   /**
-   * Working that is the host's checks watch (posture active, reason checks):
-   * the same word and reason, drawn as an ember dot in the accent ring the
-   * fact strip's running checks use (INF-676, direction A).
+   * Working that is a background wait (posture active, reason checks or
+   * job): the same word and reason, drawn as the stage draws it (INF-676,
+   * INF-1777) - a dot in a dashed accent ring, never Waiting on you's full
+   * one; the dot is the accent for checks and ember for local work.
    */
-  wait?: "checks";
+  wait?: "checks" | "job";
   /**
    * When the one wait it stands idle on was recorded (INF-38), when known:
    * the tile's second line and the summary's Blocked by name it. Absent for
@@ -174,8 +175,9 @@ export function taskStatusOf(task: TaskStatusInput): TaskStatusReading {
     (!task.workPosture && (task.activity === "running" || task.activity === "starting"))
   ) {
     if (away) return awayReading("working", null);
-    return task.workPosture?.state === "active" && task.workPosture.reason === "checks"
-      ? { ...reading("working", reason), wait: "checks" }
+    const wait = task.workPosture?.state === "active" ? task.workPosture.reason : undefined;
+    return wait === "checks" || wait === "job"
+      ? { ...reading("working", reason), wait }
       : reading("working", reason);
   }
   if (task.activity === "interrupted") return reading("interrupted", reason);

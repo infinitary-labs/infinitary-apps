@@ -10,11 +10,14 @@
 // slow tumble, a slow bob, sitting a touch farther out. Color says the same
 // thing, the Firstmate's own way (captain's board call): a working crewmate
 // heats from ice cyan to ember (`--wire-hot`) as the rig does on its turn,
-// an idle one stays a dim ice cyan. A crewmate waiting on its checks is
-// still working, banked (INF-676, the captain's direction A): its ember at
-// idle strength and pace, no tick and no halo, inside a thin cyan ring whose
-// arc travels as the fact strip's running checks do; reduced motion holds
-// the ring whole and still. A crewmate waiting on the captain (INF-1543,
+// an idle one stays a dim ice cyan. A crewmate whose working is a
+// background wait is still working, banked (INF-676, the captain's
+// direction A; INF-1777): idle strength and pace, no tick and no halo,
+// inside a thin dashed cyan ring whose arc travels as the fact strip's
+// running checks do; reduced motion holds the ring whole and still. The
+// dashes keep it apart from the beacon's full ring. Its wires say where the
+// wait is: ember for local work it left running, ice cyan for checks
+// outside. A crewmate waiting on the captain (INF-1543,
 // the captain's direction A, the beacon) wears the Tasks row's Waiting on
 // you ring: a thin accent circle round its solid, under a soft halo, that
 // breathes slowly - brightening, fading and swelling a touch - with no
@@ -185,27 +188,40 @@ function rgba(c: Rgb, alpha: number): string {
  * A crewmate's wire color and strength at a working blend (0 idle .. 1
  * working): the rig's heat ramp, ice cyan to ember, and an idle crewmate
  * receding by strength, never by a second hue (components/mate/Crewmate).
+ * `wait` banks it for a background wait, and `job` is the share of that wait
+ * that is local work, which keeps the ember; a wait on checks is ice cyan.
  */
 export function crewmateLight(
   colors: CrewColors,
   work: number,
-  checks = 0,
+  wait = 0,
   captain = 0,
+  job = 0,
 ): { color: Rgb; strength: number } {
   const w = Math.max(0, Math.min(1, work));
-  const c = Math.max(0, Math.min(1, checks));
+  const c = Math.max(0, Math.min(1, wait));
   const k = Math.max(0, Math.min(1, captain));
-  // Waiting on its checks keeps the ember but banks it to idle strength.
+  const j = Math.max(0, Math.min(1, job));
+  // A background wait banks it to idle strength, ember only for local work.
   const working = 0.55 + 0.45 * w;
-  const banked = working + (CHECKS_LIGHT.strength - working) * c;
+  const banked = working + (WAIT_LIGHT.strength - working) * c;
   return {
-    color: mix(colors.accent, colors.hot, Math.max(w, c)),
+    color: mix(colors.accent, colors.hot, Math.max(w, c * j)),
     strength: banked + (CAPTAIN_LIGHT.wire - banked) * k,
   };
 }
 
-/** The banked wire strength, and the checks ring around the solid as a share of the glyph. */
-const CHECKS_LIGHT = { strength: 0.6, ring: 0.8, arc: 1.1 } as const;
+/**
+ * The banked wire strength, the wait ring around the solid as a share of the
+ * glyph, its travelling arc's sweep, and how many dashes break the ring.
+ */
+export const WAIT_LIGHT = {
+  strength: 0.6,
+  ring: 0.8,
+  arc: 1.1,
+  dashes: 12,
+  dashShare: 0.55,
+} as const;
 
 /**
  * The beacon, as the captain set it in INF-1543's preview: the ring as a
@@ -263,40 +279,37 @@ function drawCaptainRing(
 }
 
 /**
- * The checks ring (INF-676): the fact strip's running-checks mark carried onto
- * the stage, a faint accent circle with a brighter arc travelling round it,
- * or the whole circle still on a settled frame.
+ * The wait ring (INF-676, INF-1777): the fact strip's running-checks mark
+ * carried onto the stage, a faint dashed accent circle - never the beacon's
+ * full one - with a brighter arc travelling round it, or the dashed circle
+ * whole and still on a settled frame.
  */
-function drawChecksRing(
+function drawWaitRing(
   ctx: CanvasRenderingContext2D,
   f: CrewmateFrame,
   px: number,
   py: number,
   colors: CrewColors,
 ): void {
-  const k = (f.checks ?? 0) * f.alpha * f.unfold;
+  const k = (f.wait ?? 0) * f.alpha * f.unfold;
   if (k <= 0.01) return;
-  const r = f.size * CHECKS_LIGHT.ring;
-  ctx.lineCap = "round";
-  if (f.checksArc === undefined) {
-    ctx.globalAlpha = 1;
-    ctx.strokeStyle = rgba(colors.accent, 0.6 * k * colors.boost);
-    ctx.lineWidth = 1;
-    ctx.beginPath();
-    ctx.arc(px, py, r, 0, TAU);
-    ctx.stroke();
-    return;
-  }
+  const r = f.size * WAIT_LIGHT.ring;
+  const dash = (TAU * r) / WAIT_LIGHT.dashes;
+  ctx.lineCap = "butt";
   ctx.globalAlpha = 1;
-  ctx.strokeStyle = rgba(colors.accent, 0.22 * k * colors.boost);
+  ctx.strokeStyle = rgba(colors.accent, (f.waitArc === undefined ? 0.6 : 0.3) * k * colors.boost);
   ctx.lineWidth = 1;
+  ctx.setLineDash([dash * WAIT_LIGHT.dashShare, dash * (1 - WAIT_LIGHT.dashShare)]);
   ctx.beginPath();
   ctx.arc(px, py, r, 0, TAU);
   ctx.stroke();
+  ctx.setLineDash([]);
+  if (f.waitArc === undefined) return;
+  ctx.lineCap = "round";
   ctx.strokeStyle = rgba(mix(colors.accent, WHITE_HOT, 0.2), 0.9 * k);
   ctx.lineWidth = 1.4;
   ctx.beginPath();
-  ctx.arc(px, py, r, f.checksArc, f.checksArc + CHECKS_LIGHT.arc);
+  ctx.arc(px, py, r, f.waitArc, f.waitArc + WAIT_LIGHT.arc);
   ctx.stroke();
 }
 
@@ -317,7 +330,7 @@ function drawStreak(
   cy: number,
   colors: CrewColors,
 ): void {
-  const color = mix(crewmateLight(colors, f.work, f.checks, f.captain).color, WHITE_HOT, 0.25);
+  const color = mix(crewmateLight(colors, f.work, f.wait, f.captain, f.job).color, WHITE_HOT, 0.25);
   const segments = streak.length - 1;
   ctx.lineCap = "round";
   for (let i = 0; i < segments; i++) {
@@ -381,10 +394,10 @@ export function drawCrewmate(
   if (f.unfold <= 0.01) return;
 
   drawCaptainRing(ctx, f, px, py, colors);
-  drawChecksRing(ctx, f, px, py, colors);
+  drawWaitRing(ctx, f, px, py, colors);
   const work = f.work;
   const flick = f.flicker;
-  const light = crewmateLight(colors, work, f.checks, f.captain);
+  const light = crewmateLight(colors, work, f.wait, f.captain, f.job);
   // A working crewmate carries a little light of its own, in its own heat;
   // a completed request's flicker is a filament on the wires, so only a
   // whisper of it spills here (../flicker `glowSpill`).

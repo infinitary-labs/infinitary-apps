@@ -51,7 +51,12 @@ describe("one task status", () => {
         activity: "interrupted",
         workPosture: { state: "active", reason: "job" },
       }),
-    ).toEqual({ mark: "working", word: "Working", reason: "Background work continues" });
+    ).toEqual({
+      mark: "working",
+      word: "Working",
+      reason: "Background work continues",
+      wait: "job",
+    });
     expect(
       read({
         status: "active",
@@ -77,19 +82,24 @@ describe("one task status", () => {
       }),
     ).toEqual({ mark: "idle", word: "Idle", reason: "Work is paused" });
   });
-  // INF-676 (captain's direction A): the checks watch keeps Working and its
-  // reason, and only it carries the wait the shared mark draws.
-  it("marks only the checks watch as a wait inside Working", () => {
+  // INF-676 (captain's direction A) and INF-1777 (the captain's approved
+  // plan): the checks watch and local background work keep Working and their
+  // reasons, and only they carry the wait the shared mark draws.
+  it("marks only the checks watch and background work as a wait inside Working", () => {
     const checks = read({ status: "active", workPosture: { state: "active", reason: "checks" } });
     expect(checks).toMatchObject({ mark: "working", word: "Working", wait: "checks" });
     expect(taskStatusLabel(checks)).toBe("Working · Waiting for checks");
-    for (const reason of ["turn", "job", "guidance", "settlement", "timed-wait"] as const)
+    const job = read({ status: "active", workPosture: { state: "active", reason: "job" } });
+    expect(job).toMatchObject({ mark: "working", word: "Working", wait: "job" });
+    expect(taskStatusLabel(job)).toBe("Working · Background work continues");
+    for (const reason of ["turn", "guidance", "settlement", "timed-wait"] as const)
       expect(
         read({ status: "active", workPosture: { state: "active", reason } }),
       ).not.toHaveProperty("wait");
-    expect(
-      read({ status: "active", workPosture: { state: "idle", reason: "checks" } }),
-    ).not.toHaveProperty("wait");
+    for (const reason of ["checks", "job"] as const)
+      expect(read({ status: "active", workPosture: { state: "idle", reason } })).not.toHaveProperty(
+        "wait",
+      );
   });
   // INF-38 (INF-1137 friction 5, "should they resume?"): a started crewmate
   // idle on other work names that work and, when known, when the wait was

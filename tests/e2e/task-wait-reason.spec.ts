@@ -11,6 +11,7 @@ import { TaskService } from "../../src/core/tasks/taskService";
 import { taskHoldWords } from "../../src/shared/taskHold";
 import { scratchDir } from "../helpers/scratchDirs";
 import { seedDelivery } from "../helpers/taskDelivery";
+import { emberRing } from "./crew";
 import { launchApp } from "./launch";
 import { resizeWindow } from "./layout";
 import { heroShot, regionShot } from "./pictures";
@@ -35,49 +36,11 @@ const BLOCKER =
 const CHECKS = "The pull request checks are still running.";
 
 /**
- * The stage as painted: the ember crewmate's ink, and how much accent ink
- * lies in a band round it where the checks ring is drawn (INF-676). The
- * first mate's own accent wires sit far inside the orbit, outside the band.
- */
-async function emberRing(page: Page): Promise<{ ember: number; ring: number }> {
-  return page.evaluate(() => {
-    const pixels: { x: number; y: number; ember: boolean }[] = [];
-    let scale = 1;
-    for (const layer of ["far", "near"]) {
-      const canvas = document.querySelector<HTMLCanvasElement>(
-        `canvas[data-crew-layer="${layer}"]`,
-      );
-      const ctx = canvas?.getContext("2d");
-      if (!canvas || !ctx) throw new Error(`crew ${layer} layer missing`);
-      scale = canvas.width / Math.max(1, canvas.clientWidth);
-      const data = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
-      for (let i = 0; i < data.length; i += 4) {
-        const [r = 0, g = 0, b = 0, a = 0] = [data[i], data[i + 1], data[i + 2], data[i + 3]];
-        if (a < 40) continue;
-        const ember = r - b > 90 && r > g;
-        const accent = b - r > 60;
-        if (!ember && !accent) continue;
-        const p = i / 4;
-        pixels.push({ x: p % canvas.width, y: Math.floor(p / canvas.width), ember });
-      }
-    }
-    const embers = pixels.filter((p) => p.ember);
-    if (embers.length === 0) return { ember: 0, ring: 0 };
-    const cx = embers.reduce((sum, p) => sum + p.x, 0) / embers.length;
-    const cy = embers.reduce((sum, p) => sum + p.y, 0) / embers.length;
-    const ring = pixels.filter((p) => {
-      const d = Math.hypot(p.x - cx, p.y - cy) / scale;
-      return !p.ember && d > 12 && d < 34;
-    }).length;
-    return { ember: embers.length, ring };
-  });
-}
-
-/**
  * The stage's cyan crewmates as painted, each as how far its accent ink
- * spreads from its centre in css px (the 90th percentile distance), the
+ * spreads from its centre in css px (the 90th percentile distance), any
  * ember crewmate left out. A plain solid's wires stay close; the beacon's
- * ring (INF-1543) carries the ink out to most of the glyph's size.
+ * ring (INF-1543) and the wait ring (INF-676, INF-1777) carry the ink out
+ * to most of the glyph's size.
  */
 async function cyanSpreads(page: Page): Promise<number[]> {
   return page.evaluate(() => {
@@ -213,12 +176,11 @@ test("a cardless wait opens its record with the reported reason, while a real ch
       if (!row) throw new Error(`Missing fixture task ${id}`);
       return row.key;
     };
-    // INF-676, the captain's direction A: the crewmate waiting on its checks
-    // keeps Working and its group, banked ember inside a cyan checks ring on
-    // the stage, an ember dot in the accent ring and the dim word "checks"
-    // in its row; a decision's row keeps its own mark.
-    await expect.poll(async () => (await emberRing(page)).ember).toBeGreaterThan(0);
-    await expect.poll(async () => (await emberRing(page)).ring).toBeGreaterThan(20);
+    // INF-676, the captain's direction A, and INF-1777, the captain's plan:
+    // the crewmate waiting on its checks keeps Working and its group, banked
+    // ice cyan - never ember - inside the wait ring on the stage, an accent
+    // dot in the dashed accent ring and the dim word "checks" in its row; a
+    // decision's row keeps its own mark.
     const checksMark = nowRow(page, key("checks")).locator("[data-task-mark]");
     await expect(checksMark).toHaveAttribute("data-task-mark", "working");
     await expect(checksMark).toHaveAttribute("data-task-wait", "checks");
@@ -229,18 +191,20 @@ test("a cardless wait opens its record with the reported reason, while a real ch
       /.*/,
     );
     // INF-1543, the captain's direction A: the crewmate under Waiting on you
-    // wears the beacon, the row's ring round its solid; the idle crewmate
-    // whose wait is only reported keeps its plain solid.
+    // wears the beacon, the row's ring round its solid, as the checks crewmate
+    // wears the wait ring; the idle crewmate whose wait is only reported keeps
+    // its plain solid.
     await expect(nowRow(page, key("choice")).locator("[data-task-mark]")).toHaveAttribute(
       "data-task-mark",
       "waiting",
     );
     await expect
       .poll(async () => {
-        const spreads = await cyanSpreads(page);
-        return spreads.length === 2 ? Math.max(...spreads) / Math.min(...spreads) : 0;
+        const spreads = (await cyanSpreads(page)).sort((m, n) => m - n);
+        return spreads.length === 3 ? (spreads[1] ?? 0) / (spreads[0] ?? 1) : 0;
       })
       .toBeGreaterThan(1.5);
+    expect((await emberRing(page)).ember).toBe(0);
     const dir = process.env.FM_WAIT_PICTURES;
     if (dir) {
       mkdirSync(dir, { recursive: true });

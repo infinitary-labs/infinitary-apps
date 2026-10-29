@@ -43,6 +43,7 @@ import {
   reservation,
   runEvaluation,
 } from "../scripts/evals/runner.ts";
+import { claudeEnvFor } from "../src/core/claude/claudeCli.ts";
 import { createClaudeSessionFactory } from "../src/core/claude/session.ts";
 import type { Ticker } from "../src/core/orchestrator/ticker.ts";
 import { appPathsFor } from "../src/core/paths.ts";
@@ -562,13 +563,18 @@ describe("account evaluation stop reasons", () => {
 });
 
 describe("a live Claude run stays under the Claude crewmate's client", () => {
-  const crew = { CLAUDE_CODE_ENTRYPOINT: "sdk-ts" };
+  // The environment the app gives a crewmate's client, which passes it on to its shell (INF-1861).
+  const crew = claudeEnvFor({ PATH: process.env.PATH });
   it("finds the crewmate's client among the run's ancestors, and nothing else", () => {
     expect(claudeCrewClient({ ...crew, CLAUDE_PID: String(process.ppid) })()).toBe(true);
-    // A person's own terminal session, and a shell no Claude client started.
-    expect(
-      claudeCrewClient({ CLAUDE_CODE_ENTRYPOINT: "cli", CLAUDE_PID: String(process.ppid) })(),
-    ).toBe(false);
+    // A person's own terminal session, another program's SDK client, and a shell no Claude client started.
+    for (const entrypoint of ["cli", "sdk-ts"])
+      expect(
+        claudeCrewClient({
+          CLAUDE_CODE_ENTRYPOINT: entrypoint,
+          CLAUDE_PID: String(process.ppid),
+        })(),
+      ).toBe(false);
     expect(claudeCrewClient(crew)()).toBe(false);
     // A live process the run does not descend from.
     const other = spawn(process.execPath, ["-e", "setTimeout(() => {}, 20000)"], {

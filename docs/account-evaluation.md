@@ -72,7 +72,7 @@ Those checks prove host behavior, never real-model instruction following, and a 
 
 The running app holds the machine's Claude store for a Claude crewmate's client from its start to its exit (the session lease in `docs/claude-client.md`), so the app's own renewal never runs beside the evaluation's Claude clients over a single-use refresh token.
 A live run with a Claude role therefore runs under that client, and the runner checks it rather than trusting the caller (`claudeCrewClient` in `scripts/evals/runner.ts`).
-The client names itself to every command it runs (`CLAUDE_PID`), and the app starts a crewmate's client through the SDK (`CLAUDE_CODE_ENTRYPOINT=sdk-ts`), unlike a person's terminal session.
+The client names itself to every command it runs (`CLAUDE_PID`) and passes on the app's own label (`CLAUDE_CODE_ENTRYPOINT=infinitary`, `INFINITARY_ENTRYPOINT` in `src/core/claude/claudeCli.ts`), which a person's terminal session (`cli`) and another program's SDK client (`sdk-ts`) do not carry.
 Before the run uses the sheet, at each case's start, at each model request and on every tick of the run's clock, that client must be one of the run's ancestors in the process table.
 A run that is not under it is refused before `run-started.json` is written, so the approval is not spent.
 A run that stops being under it, because its client ended or because it was detached with `nohup`, `setsid` or a shell that exited, cuts its open case and opens no other; the case files and `usage.json` record `Claude crewmate client ended`.

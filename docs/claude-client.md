@@ -20,6 +20,7 @@ The shared environment reaches first mate, crewmate and decision-question sessio
 Both home and helper conversations use that same session factory.
 This applies the custom-entrypoint workaround discussed in [Claude Code issue 97074](https://github.com/anthropics/claude-code/issues/97074#issuecomment-6426128541); community reports of lower allowance consumption are not an Anthropic guarantee or a measured saving for Infinitary.
 Only new processes receive the identity; running processes and saved conversations are not rewritten, and the person's Claude settings, sign-in and Infinitary's usage calculations stay unchanged.
+The client passes the label on to every command it runs, and the account evaluation runner reads it to know a shell belongs to one of the app's own Claude crewmates (`docs/account-evaluation.md`, "The Claude crewmate's client").
 `claudeEntrypoint.integration.test.ts` checks actual request billing metadata for all three roles and persisted transcript labels for rolling sessions, including a resumed conversation and an SDK-default control, on a boxed real client with dummy credentials and a local API.
 
 `claudeEnvFor` leaves `CLAUDE_CONFIG_DIR` unset: setting it at all, even to `~/.claude`, selects a differently named Keychain item rather than the machine's default login (CD-1=B, captain, 2026-09-10).

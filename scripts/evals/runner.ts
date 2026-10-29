@@ -7,6 +7,7 @@ import { join, resolve } from "node:path";
 import Database from "better-sqlite3";
 import { Value } from "typebox/value";
 import { hostEnv } from "../../src/core/hostEnv.ts";
+import { INFINITARY_ENTRYPOINT } from "../../src/core/claude/claudeCli.ts";
 import { defaultClaudeConfigDir } from "../../src/core/claude/claudeQuota.ts";
 import { createClaudeSessionFactory } from "../../src/core/claude/session.ts";
 import { appPathsFor } from "../../src/core/paths.ts";
@@ -152,18 +153,23 @@ function processParents(): Map<number, number> {
  * Whether this run still runs under the Claude crewmate's client it was started from. The running
  * app holds the machine's Claude store for that client's whole life, so the evaluation's own Claude
  * clients never race the app's renewal over a single-use refresh token. The client names itself to
- * every command it runs (`CLAUDE_PID`), and the app starts a crewmate's client through the SDK
- * (`sdk-ts`), unlike a person's terminal session; a Pi crewmate's shell carries neither. A process
- * whose parent ends is adopted by another, so a run detached from the client (`nohup`, `setsid`, a
- * shell that exited) or outliving it no longer finds the client among its ancestors. A process
- * table that cannot be read holds nothing.
+ * every command it runs (`CLAUDE_PID`), and the app labels every client it starts with its own
+ * entrypoint (`INFINITARY_ENTRYPOINT`), unlike a person's terminal session or another program's
+ * SDK client; a Pi crewmate's shell carries neither. A process whose parent ends is adopted by
+ * another, so a run detached from the client (`nohup`, `setsid`, a shell that exited) or outliving
+ * it no longer finds the client among its ancestors. A process table that cannot be read holds
+ * nothing.
  */
 export function claudeCrewClient(
   env: NodeJS.ProcessEnv = process.env,
   parents: () => Map<number, number> = processParents,
 ): () => boolean {
   const client = Number(env.CLAUDE_PID);
-  if (env.CLAUDE_CODE_ENTRYPOINT !== "sdk-ts" || !Number.isInteger(client) || client <= 1)
+  if (
+    env.CLAUDE_CODE_ENTRYPOINT !== INFINITARY_ENTRYPOINT ||
+    !Number.isInteger(client) ||
+    client <= 1
+  )
     return () => false;
   return () => {
     try {

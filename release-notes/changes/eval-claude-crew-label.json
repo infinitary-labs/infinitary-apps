@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "eval-claude-crew-label",
+      "reason": "Internal: the developer-only live account evaluation runner accepts a run started from a Claude crewmate's shell by the label the app now gives every Claude client it starts, and still stops a run detached from that client; nothing a person sees in the app changes."
+    }
+  ]
+}

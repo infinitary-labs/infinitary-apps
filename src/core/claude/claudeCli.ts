@@ -378,6 +378,12 @@ function spawnableExecutable(candidate: string): string | undefined {
 }
 
 /**
+ * The label every Claude client the app starts carries (`CLAUDE_CODE_ENTRYPOINT`),
+ * which the client passes on to every command it runs.
+ */
+export const INFINITARY_ENTRYPOINT = "infinitary";
+
+/**
  * The environment a Claude client run sees: the machine's default login
  * (CLAUDE_CONFIG_DIR left unset, so the client uses the bare Keychain item)
  * and nothing ambient, on the host search path (`hostEnv.ts`) so every
@@ -389,7 +395,7 @@ export function claudeEnvFor(base: NodeJS.ProcessEnv = hostEnv()): NodeJS.Proces
   const env: NodeJS.ProcessEnv = { ...base };
   // Identify our own app, never an inherited SDK or first-party client.
   // Claude Code issue 97074's workaround requires an explicit overwrite.
-  env.CLAUDE_CODE_ENTRYPOINT = "infinitary";
+  env.CLAUDE_CODE_ENTRYPOINT = INFINITARY_ENTRYPOINT;
   // CD-1=B: the vendor's own default login, never a per-account store.
   delete env.CLAUDE_CONFIG_DIR;
   // Ambient credentials would silently serve a key the user never connected

@@ -318,7 +318,7 @@ A withdrawal or proven task retirement is never fed to admission: its evidence c
 
 ### Requested-plan approval interpretation evaluation
 
-`node scripts/evals/approval-handoff.ts` exports twelve isolated prompts and `cases.json`: ten first mate cases with the current contract, sequences seed, historical conflicting planning note and native task/crew/card tool schemas, plus two read-only successor-brief reviews.
+`node scripts/evals/approval-handoff.ts` exports twelve isolated prompts and `cases.json`: ten first mate cases with the current contract, the bundled runbooks' first-mate guidance, historical conflicting planning note and native task/crew/card tool schemas, plus two read-only successor-brief reviews served the runbooks' crew guidance for implement work on a direct-pr project.
 Cases cover ordinary acceptance, non-default task-card count, repeated delivery, welcome recovery with saved answers, design-only acceptance, settings capture, dismissal, Save and defer on a plan no task builds on yet, explicit hold, motion's real unresolved question, and an operational plan whose later step waits on a credential gate.
 The complete welcome/task-card specifications live in `tests/fixtures/approval-handoff/`; their provenance and fictional fixture approvals are explicit, never retroactive backlog consent.
 Every row carries non-autonomy.

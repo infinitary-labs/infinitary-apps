@@ -1,5 +1,7 @@
-import { SEQUENCES_SEED } from "../../../src/core/personal/sequencesSkill";
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import { APPROVE_AND_BUILD, SAVE_AND_DEFER } from "../../../src/core/prompts/cardContract";
+import { runbookManifestSchema } from "../../../src/shared/runbooks";
 import { completionCardBody } from "../../helpers/completionCard";
 import type { ScriptedArgs, ScriptedCall } from "../../helpers/scriptedCalls";
 import {
@@ -57,14 +59,21 @@ export const SEQ_BUG_NO = {
   reproduce: "Reproduce: the dock flicker",
   fix: "Fix: the dock flicker",
 } as const;
+/** The Common workflows runbook's first-mate guide: the step lines the app serves. */
+const workflowRoot = join(process.cwd(), "resources/runbooks/sequences");
+const workflowSection = runbookManifestSchema.parse(
+  JSON.parse(readFileSync(join(workflowRoot, "runbook.json"), "utf8")),
+).firstmate;
+if (!workflowSection) throw new Error("Common workflows has no first-mate section.");
+const WORKFLOW_GUIDE = readFileSync(join(workflowRoot, workflowSection), "utf8");
 /**
- * The seeded document's implement line, which the Firstmate relays word for
+ * The guide's implement line, which the Firstmate relays word for
  * word as the implement step's free constraint.
  */
 export const SEQ_IMPLEMENT_AMENDED_GOAL =
   "Implement the accepted direction for the settings page, including saved sample-count choices and replacement-only height motion";
 export const SEQ_IMPLEMENT_LINE =
-  stepLineOf(SEQUENCES_SEED, "feature", "implement") ?? "the seed has no feature implement line";
+  stepLineOf(WORKFLOW_GUIDE, "feature", "implement") ?? "the guide has no feature implement line";
 export const SEQ_PLAN_GOAL = "Propose two or three directions for the settings page as one card";
 const SEQ_IMPLEMENT_GOAL = "Implement the accepted direction for the settings page";
 const SEQ_SMALL_GOAL = "The settings page title reads Settings";
@@ -130,8 +139,8 @@ function stepLineOf(document: string, section: string, step: string): string | u
     ?.replace(/\s+/g, " ")
     .trim();
 }
-/** The seeded plan line, which says what an ask for a prototype is. */
-export const SEQ_PLAN_LINE = planLineOf(SEQUENCES_SEED) ?? "the seed has no plan line";
+/** The guide's plan line, which says what an ask for a prototype is. */
+export const SEQ_PLAN_LINE = planLineOf(WORKFLOW_GUIDE) ?? "the guide has no plan line";
 /**
  * An ask for a prototype (FI3-872): the plan line it was served sends it to
  * one read-only plan step whose card is a playable preview; Approve and

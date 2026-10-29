@@ -114,7 +114,8 @@ The panel-building runbook was not selected, so those skills and the design skil
 `src/core/runbooks/runbooks.test.ts` drives real bundle manifests, persisted switches, typed reach, naming and staged skill parts.
 `tests/e2e/runbooks.spec.ts` switches Common workflows by keyboard, relaunches, and asks the first mate to turn it back on through the shared catalog.
 The fixed-context test measures the core separately from runbook guidance.
-The existing lesson and workflow journeys cover the guidance's consumers, and the replay gate measures the built-in first-mate guidance.
+The existing lesson and workflow journeys cover the guidance's consumers.
+The replay gate and the signed-in evaluations serve the bundled runbooks through their shared isolated host (`scripts/replay/isolatedHost.ts`), as a fresh app does; `tests/eval-host-runbooks.test.ts` holds that for the evaluations.
 
 `src/core/plugins/pluginInstaller.test.ts` also drives folder, local git and npm runbooks through real host consent, replacement, skill staging, separate panel consent and removal.
 `tests/e2e/installed-runbooks.spec.ts` adds and declines a runbook by keyboard, checks its persisted switches after restart, observes the served guidance and removes it by talking.

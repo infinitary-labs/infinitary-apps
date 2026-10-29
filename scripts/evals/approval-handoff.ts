@@ -1,7 +1,7 @@
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { parseArgs } from "node:util";
-import { openModuleRunner } from "../moduleRunner.ts";
+import { openModuleRunner, REPO_ROOT } from "../moduleRunner.ts";
 import { approvalCases, type EvalRun, scoreApprovalRun } from "./approvalHandoff.ts";
 
 const { values } = parseArgs({
@@ -15,9 +15,9 @@ try {
   const { buildFirstmateSystemPrompt, buildCrewmateSystemPrompt } = (await runner.import(
     "src/core/pi/piResources.ts",
   )) as typeof import("../../src/core/pi/piResources.ts");
-  const { SEQUENCES_SEED } = (await runner.import(
-    "src/core/personal/sequencesSkill.ts",
-  )) as typeof import("../../src/core/personal/sequencesSkill.ts");
+  const { Runbooks, crewRunbookText } = (await runner.import(
+    "src/core/runbooks/runbooks.ts",
+  )) as typeof import("../../src/core/runbooks/runbooks.ts");
   const { createTaskTools } = (await runner.import(
     "src/core/pi/taskTools.ts",
   )) as typeof import("../../src/core/pi/taskTools.ts");
@@ -57,6 +57,33 @@ try {
     }),
     createEmitCardTool(unavailable, undefined, { role: "firstmate" }),
   ].map(({ name, description, parameters }) => ({ name, description, parameters }));
+  // The guidance a fresh app serves: the bundled runbooks with every built-in on.
+  const runbooks = new Runbooks(join(REPO_ROOT, "resources", "runbooks"), {
+    getRunbookStates: () => ({}),
+    setRunbookStates: () => {},
+  });
+  // The builder fixture's stated facts: implement work on a direct-pr project at standard care.
+  const builderPrompt = buildCrewmateSystemPrompt(
+    undefined,
+    undefined,
+    undefined,
+    undefined,
+    undefined,
+    undefined,
+    undefined,
+    undefined,
+    undefined,
+    undefined,
+    crewRunbookText(
+      runbooks.crew({
+        kind: "implement",
+        place: "project",
+        delivery: "direct-pr",
+        care: "standard",
+        backend: "pi",
+      }),
+    ),
+  );
   const out = values.out as string;
   mkdirSync(out, { recursive: true });
   writeFileSync(join(out, "task-tools.json"), JSON.stringify(tools, null, 2));
@@ -65,7 +92,7 @@ try {
     const plan = test.tasks.PLAN!;
     const body =
       test.role === "builder"
-        ? `${buildCrewmateSystemPrompt()}\n\n${renderBasisSection({
+        ? `${builderPrompt}\n\n${renderBasisSection({
             key: "PLAN",
             title: plan.title,
             outcome: plan.outcome,
@@ -75,7 +102,7 @@ try {
               (answer) => `- ${answer.name}: ${answer.values.join(", ")}`,
             ),
           })}\n\nTask autonomy: false. Delivery: direct-pr. No captain merge authorization.`
-        : `${buildFirstmateSystemPrompt()}\n\n${SEQUENCES_SEED}\n\nNative tool definitions:\n${JSON.stringify(tools)}`;
+        : `${buildFirstmateSystemPrompt()}\n\n${runbooks.firstmate().text}\n\nNative tool definitions:\n${JSON.stringify(tools)}`;
     writeFileSync(
       join(out, `${test.id}.txt`),
       `${body}\n\n${test.context}\n\nIsolated task records (tasks by key returns these facts; crew_status reports the stated autonomy):\n${JSON.stringify(test.tasks, null, 2)}\n\nUse only these isolated records. Do not touch other tasks.\n`,

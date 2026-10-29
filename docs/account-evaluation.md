@@ -102,6 +102,7 @@ The Claude crewmate keeps the run inside its turn:
 ## Isolation and evidence
 
 `approvalHost` uses the same `isolatedWorkspace` and `wireIsolatedHost` as replay, with app migrations, real task/card services and supervisor.
+`wireIsolatedHost` gives the first mate and crew the app bundle's runbooks under the host's own switches, every built-in on as on a fresh app, so a case is served the guidance the app serves, never the built-in copy a host without runbooks falls back to (`tests/eval-host-runbooks.test.ts`).
 Every case gets fresh disposable state and ids; fixture tasks enter through `seedTask`.
 Crew dispatch opens inert sessions only; it never opens another model session, creates a git repository or merges.
 Tools come from the production seat/crewmate presets, restricted to the fictional graph, crew and cards (builder reviews only get read/report/card tools).

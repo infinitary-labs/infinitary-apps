@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "eval-host-serves-runbooks",
+      "reason": "Developer tooling only: the replay and signed-in evaluation hosts, the evaluation prompt export and a journey's stand-in now read the bundled runbooks the app serves instead of the retired built-in guidance copy; nothing a person notices."
+    }
+  ]
+}

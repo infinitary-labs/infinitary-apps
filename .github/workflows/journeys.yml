@@ -1,7 +1,9 @@
 name: journeys
 
 # INF-658: keep the closest six measured minutes on Mac; run overflow on
-# hosted Linux in parallel. Every alpha still runs the full Mac suite.
+# Linux in parallel, at most one job per PC place (INF-1720). Every Linux job
+# runs on the label LINUX_RUNNER names, as ci.yml's do, hosted Ubuntu when it
+# is unset. Every alpha still runs the full Mac suite.
 # INF-800: on request, the journeys a branch names, placed the same way
 # (docs/testing.md, "Journeys on request").
 
@@ -42,7 +44,7 @@ jobs:
     if: github.event_name == 'pull_request'
     uses: ./.github/workflows/source-journeys.yml
   choose-journeys:
-    runs-on: ubuntu-latest
+    runs-on: ${{ vars.LINUX_RUNNER || 'ubuntu-latest' }}
     defaults:
       run:
         working-directory: Application Support/firstmate

@@ -217,7 +217,7 @@ It runs as a step of the `mac` lane in `.github/workflows/verify.yml` - inside e
 - the harness, its fixtures, or the workflow
 
 On a computer in CI mode (`infinitary.checks = ci`, `docs/testing.md` "Where the heavy checks run") `pnpm replay:gate` refuses outside CI.
-Its route there is `replay.yml` on request, which runs the gate alone on hosted Linux and keeps `replay-report.json` as the `replay-report` artifact: `POST /repos/{owner}/{repo}/actions/workflows/replay.yml/dispatches` with `{"ref":"<branch>"}`.
+Its route there is `replay.yml` on request, which runs the gate alone on Linux (`LINUX_RUNNER`, hosted when unset) and keeps `replay-report.json` as the `replay-report` artifact: `POST /repos/{owner}/{repo}/actions/workflows/replay.yml/dispatches` with `{"ref":"<branch>"}`.
 
 **The baseline changes only in a PR that explains it.**
 An improvement passes the gate as is.

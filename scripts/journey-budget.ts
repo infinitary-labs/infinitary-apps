@@ -6,6 +6,8 @@ import { importsOf, type Reasons } from "./affected-journeys.ts";
 
 // INF-658: the captain chose six minutes of journeys, not a job timeout.
 export const JOURNEY_BUDGET_MS = 6 * 60 * 1000;
+/** The PC's self-hosted Linux places, five at once (INF-1720's plan). */
+export const LINUX_PLACES = 5;
 const parallel = new Set([...APPLICATION_SUITES, ...RENDERER_SUITES].map((file) => basename(file)));
 export const laneOf = (file: string): "parallel" | "desktop" =>
   parallel.has(basename(file)) ? "parallel" : "desktop";
@@ -108,26 +110,48 @@ export function budget(
     if (macTime([...mac, file], cost) <= JOURNEY_BUDGET_MS) mac.push(file);
     else overflow.push(file);
   }
-  const linux: { lane: "parallel" | "desktop"; files: string; estimatedMs: number }[] = [];
-  for (const lane of ["parallel", "desktop"] as const) {
-    // INF-658's measured Linux rates: one Mac minute of parallel work per minute,
-    // and 0.6 Mac minutes of serial work per minute. Sum is conservative for parallel files.
-    const linuxCost = (file: string) => cost(file) / (lane === "desktop" ? 0.6 : 1);
+  // INF-658's measured Linux rates: one Mac minute of parallel work per minute,
+  // and 0.6 Mac minutes of serial work per minute. Sum is conservative for parallel files.
+  const linuxCost = (file: string) => cost(file) / (laneOf(file) === "desktop" ? 0.6 : 1);
+  type Bin = { lane: "parallel" | "desktop"; files: string; estimatedMs: number };
+  // Longest file first, each into its lane's least loaded job: within six
+  // minutes while `places` is unbounded, otherwise into exactly `places` jobs.
+  const pack = (lane: Bin["lane"], places: number): Bin[] => {
+    const bins: Bin[] = [];
     for (const file of overflow
       .filter((file) => laneOf(file) === lane)
       .sort((a, b) => linuxCost(b) - linuxCost(a) || a.localeCompare(b))) {
-      let bin = linux
-        .filter(
-          (bin) => bin.lane === lane && bin.estimatedMs + linuxCost(file) <= JOURNEY_BUDGET_MS,
-        )
-        .sort((a, b) => a.estimatedMs - b.estimatedMs)[0];
+      const lightest = bins.toSorted((a, b) => a.estimatedMs - b.estimatedMs)[0];
+      let bin =
+        lightest && (bins.length >= places || lightest.estimatedMs + linuxCost(file) <= JOURNEY_BUDGET_MS)
+          ? lightest
+          : undefined;
       if (!bin) {
         bin = { lane, files: "", estimatedMs: 0 };
-        linux.push(bin);
+        bins.push(bin);
       }
       bin.files = [bin.files, file].filter(Boolean).join(" ");
       bin.estimatedMs += linuxCost(file);
     }
+    return bins;
+  };
+  const lanes = (["parallel", "desktop"] as const).filter((lane) =>
+    overflow.some((file) => laneOf(file) === lane),
+  );
+  let linux = lanes.flatMap((lane) => pack(lane, Number.POSITIVE_INFINITY));
+  if (linux.length > LINUX_PLACES) {
+    // INF-1720's plan: overflow runs on the PC's Linux places, five at once,
+    // so it packs into at most one job per place, each repeating the setup
+    // once. Each lane takes places by its share of the work, one at least.
+    const work = (lane: Bin["lane"]) =>
+      overflow.filter((file) => laneOf(file) === lane).reduce((sum, file) => sum + linuxCost(file), 0);
+    const total = lanes.reduce((sum, lane) => sum + work(lane), 0);
+    const first = lanes[0] as Bin["lane"];
+    const share =
+      lanes.length === 1
+        ? LINUX_PLACES
+        : Math.min(LINUX_PLACES - 1, Math.max(1, Math.round((LINUX_PLACES * work(first)) / total)));
+    linux = lanes.flatMap((lane) => pack(lane, lane === first ? share : LINUX_PLACES - share));
   }
   return {
     mac,
@@ -172,7 +196,7 @@ function main() {
               `- Linux ${index + 1} (${bin.lane}): ${(bin.estimatedMs / 60000).toFixed(1)} minutes: ${bin.files}`,
           )
           .join("\n") +
-        `\n\nUnmeasured files (slowest measured lane file used): ${result.unmeasured.join(", ") || "none"}. Estimates exclude setup and runner waits; indivisible files can exceed six minutes.\n`,
+        `\n\nUnmeasured files (slowest measured lane file used): ${result.unmeasured.join(", ") || "none"}. Estimates exclude setup and runner waits; indivisible files, and groups past the PC's ${LINUX_PLACES} Linux places, can exceed six minutes.\n`,
     );
 }
 if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) main();

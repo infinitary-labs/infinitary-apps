@@ -5,6 +5,7 @@ import {
   budget,
   JOURNEY_BUDGET_MS,
   journeyTimes,
+  LINUX_PLACES,
   laneOf,
   macTime,
   proximity,
@@ -12,7 +13,8 @@ import {
 } from "../scripts/journey-budget.ts";
 
 // INF-658's approved choice: six measured minutes on Mac, every extra file on
-// hosted Linux. Readings are from the passing verify run named by the plan.
+// Linux; INF-1720's plan packs that Linux overflow into at most one job per
+// PC place. Readings are from the passing verify run named by the plan.
 const fixture = JSON.parse(
   readFileSync(new URL("./fixtures/affected-journeys/verify-times.json", import.meta.url), "utf8"),
 ) as { times: Record<string, number> };
@@ -30,7 +32,10 @@ describe("INF-658 measured journey placement", () => {
     const all = [...result.mac, ...result.linux.flatMap((bin) => bin.files.split(" "))];
     expect(all.toSorted()).toEqual([...reasons.keys()].toSorted());
     expect(new Set(all).size).toBe(all.length);
-    expect(result.linux.length).toBeGreaterThan(1);
+    // INF-1720: every journey overflows far past five six-minute groups, and
+    // still runs as one job per PC place, each lane in at least one.
+    expect(result.linux).toHaveLength(LINUX_PLACES);
+    expect(new Set(result.linux.map((bin) => bin.lane))).toEqual(new Set(["parallel", "desktop"]));
     for (const bin of result.linux) {
       const files = bin.files.split(" ");
       expect(files.every((file) => laneOf(file) === bin.lane)).toBe(true);
@@ -42,11 +47,32 @@ describe("INF-658 measured journey placement", () => {
         0,
       );
       expect(bin.estimatedMs).toBeCloseTo(estimated);
-      expect(bin.estimatedMs <= JOURNEY_BUDGET_MS || files.length === 1).toBe(true);
     }
     expect(
       budget(new Map([...reasons].reverse()), times, (file) => (file === closest ? 0 : 1)),
     ).toEqual(result);
+  });
+
+  it("keeps a modest overflow in six-minute groups, fewer than one job per PC place", () => {
+    // Every serial desktop file, which fills most of the Mac's six minutes,
+    // and about twenty-five minutes of parallel files: the overflow needs fewer
+    // than five six-minute groups, so none grows past six minutes.
+    const measured = [...times].filter(([, ms]) => ms > 0).sort((a, b) => a[0].localeCompare(b[0]));
+    const picked = measured.filter(([file]) => laneOf(file) === "desktop").map(([file]) => file);
+    let total = 0;
+    for (const [file, ms] of measured.filter(([file]) => laneOf(file) === "parallel")) {
+      if (total > 25 * 60 * 1000) break;
+      picked.push(file);
+      total += ms;
+    }
+    const pick = new Map(picked.map((file) => [file, ["the change edits this journey"]]));
+    const result = budget(pick, times, () => 0);
+    expect(result.linux.length).toBeGreaterThan(1);
+    expect(result.linux.length).toBeLessThan(LINUX_PLACES);
+    for (const bin of result.linux)
+      expect(bin.estimatedMs <= JOURNEY_BUDGET_MS || !bin.files.includes(" ")).toBe(true);
+    const all = [...result.mac, ...result.linux.flatMap((bin) => bin.files.split(" "))];
+    expect(all.toSorted()).toEqual(picked.toSorted());
   });
 
   it("keeps a small pick on Mac, skips empty picks, and accounts for serial plus parallel work", () => {

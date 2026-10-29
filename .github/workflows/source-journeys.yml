@@ -2,8 +2,11 @@ name: Source desktop journeys
 
 # The app built from source on a desktop (docs/testing.md, "The Linux source
 # desktop"): a pull request's starter journeys (journeys.yml), and with suite
-# full every journey in the suite, split across hosted machines, before every
-# alpha and on demand (verify.yml). Packaging comes later.
+# full every journey in the suite, split across Linux machines, before every
+# alpha and on demand (verify.yml). Packaging comes later. Every job runs on
+# the label the repository variable LINUX_RUNNER names, as ci.yml's do, and
+# on GitHub's hosted Ubuntu when it is unset; the PC's job image supplies its
+# own pnpm store, so only hosted jobs restore setup-node's cache.
 on:
   # A hosted-only proof of the fresh-state jobs, without Mac or packaging work.
   workflow_dispatch:
@@ -21,7 +24,6 @@ on:
       runner:
         required: false
         type: string
-        default: ubuntu-24.04
       artifact-suffix:
         type: string
         default: source
@@ -54,7 +56,7 @@ jobs:
         lane: ${{ fromJSON(inputs.suite == 'alone' && '["alone"]' || (inputs.suite != 'affected' && '["parallel", "desktop"]' || format('["{0}"]', inputs.lane))) }}
         shard: ${{ fromJSON((inputs.suite == 'full' || inputs.suite == 'alone') && '[1, 2, 3, 4]' || '[1]') }}
         include: ${{ fromJSON(inputs.suite == 'full' && '[{"lane":"alone","shard":1},{"lane":"alone","shard":2},{"lane":"alone","shard":3},{"lane":"alone","shard":4}]' || '[]') }}
-    runs-on: ${{ inputs.runner || 'ubuntu-24.04' }}
+    runs-on: ${{ inputs.runner || vars.LINUX_RUNNER || 'ubuntu-24.04' }}
     defaults:
       run:
         working-directory: Application Support/firstmate
@@ -70,7 +72,7 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 24
-          cache: pnpm
+          cache: ${{ !vars.LINUX_RUNNER && 'pnpm' || '' }}
           cache-dependency-path: Application Support/firstmate/pnpm-lock.yaml
       - name: Install virtual display and desktop libraries
         if: runner.os == 'Linux'
@@ -82,9 +84,10 @@ jobs:
         env:
           NPM_PACKAGE_CONFIG_NODE_GYP_NODEDIR: ${{ env.INFINITARY_NODE_HEADERS }}
       # An unpacked Electron download has no installer to configure its
-      # sandbox helper. Do that only in this disposable hosted Linux job.
+      # sandbox helper. Do that only in this disposable Linux job: a hosted
+      # machine, or the PC's fresh virtual machine deleted after the job.
       - name: Configure Electron's sandbox helper
-        if: runner.os == 'Linux' && runner.environment == 'github-hosted'
+        if: runner.os == 'Linux'
         run: |
           sandbox="$(node -p 'require("node:path").join(require("node:path").dirname(require("electron")), "chrome-sandbox")')"
           test -f "$sandbox"

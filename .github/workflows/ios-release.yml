@@ -26,7 +26,7 @@ env:
 
 jobs:
   resolve:
-    runs-on: ubuntu-latest
+    runs-on: ${{ vars.LINUX_RUNNER || 'ubuntu-latest' }}
     timeout-minutes: 5
     outputs:
       version: ${{ steps.resolve.outputs.version }}
@@ -142,7 +142,7 @@ jobs:
     # A status-only dispatch makes no Mac job. Failed uploads may have reached Apple:
     # inspect them with check_build, never automatically resubmit the upload.
     if: ${{ !cancelled() && needs.resolve.result == 'success' && (needs.resolve.outputs.mode == 'status' || needs.testflight.result == 'success') }}
-    runs-on: ubuntu-latest
+    runs-on: ${{ vars.LINUX_RUNNER || 'ubuntu-latest' }}
     timeout-minutes: 40
     steps:
       - uses: actions/checkout@v4

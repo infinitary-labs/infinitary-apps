@@ -125,7 +125,7 @@ jobs:
   # workflow's own commit and reads the rest from git. No secret, no install.
   resolve:
     name: Resolve the source commit and version
-    runs-on: ubuntu-latest
+    runs-on: ${{ vars.LINUX_RUNNER || 'ubuntu-latest' }}
     outputs:
       channel: ${{ steps.resolve.outputs.channel }}
       dry_run: ${{ steps.resolve.outputs.dry_run }}
@@ -244,7 +244,7 @@ jobs:
   notes:
     name: Check the release notes
     needs: resolve
-    runs-on: ubuntu-latest
+    runs-on: ${{ vars.LINUX_RUNNER || 'ubuntu-latest' }}
     steps:
       - name: Checkout the source commit with its history
         uses: actions/checkout@v4

@@ -134,7 +134,7 @@ The switch lists `alpha` and `stable`; releases of either channel also update th
 
 - **One source commit.**
   The `channel` input is `stable` - the workflow's default - or `alpha`, and both are requested from main, so the workflow file is always main's.
-  The `resolve` job (hosted Linux, no secret) runs `scripts/resolve-release.sh` from the workflow's own commit, in a clone with every branch and tag, and pins the source commit first.
+  The `resolve` job (Linux, no secret) runs `scripts/resolve-release.sh` from the workflow's own commit, in a clone with every branch and tag, and pins the source commit first.
   For an alpha it is the `candidate` ("Cutting an alpha"); for a stable, the `promote`d alpha's own commit ("Promoting an alpha").
   The verify lanes, the installer proof, the signing job and the source tag use exactly it, and the targets file records it.
 - **One candidate.**
@@ -163,7 +163,7 @@ The switch lists `alpha` and `stable`; releases of either channel also update th
   The signing job waits for it, lays out the Linux files (`linux-files`) and records them in the source record beside the zip, adopting any package a retry finds already published.
   The publication job publishes them inside the same publication steps as the zip: the public release must match the record byte for byte, and both fetch-backs - the public one without a credential - compare every file and its sidecar before the feed commit writes the builds file.
 - **Full alpha checks, inherited stable checks (FI3-482).**
-  Every alpha, including a rehearsal, runs verify.yml's `linux-checks`, `linux-e2e` and `mac` lanes: hosted Linux typecheck, lint, adherence lint, unit tests and build; every Playwright journey on hosted Linux, in shards (`docs/testing.md`, "The Linux source desktop"); macOS unit tests, every Playwright journey, the installed Claude client check, the replay gate, and the development package with its signature, data-folder and bundled-git checks.
+  Every alpha, including a rehearsal, runs verify.yml's `linux-checks`, `linux-e2e` and `mac` lanes: Linux typecheck, lint, adherence lint, unit tests and build; every Playwright journey on Linux, in shards (`docs/testing.md`, "The Linux source desktop"); macOS unit tests, every Playwright journey, the installed Claude client check, the replay gate, and the development package with its signature, data-folder and bundled-git checks.
   The release also runs `mac-installer.yml` in disposable Actions Macs, checking the signed installer and native updater on Apple silicon and Intel.
   Signing for publication waits for the check lanes and both installed-update proofs.
   There is no Linux-only bypass.

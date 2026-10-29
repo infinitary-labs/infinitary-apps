@@ -6,7 +6,7 @@ Every alpha and stable publishes them at the configured public destination besid
 
 ## What is built
 
-`linux-packages.yml` builds them on hosted Ubuntu 24.04 from `electron-builder.linux.yml`, which extends `electron-builder.yml`:
+`linux-packages.yml` builds them on Ubuntu 24.04 from `electron-builder.linux.yml`, which extends `electron-builder.yml`:
 
 | System | Package | Made by |
 | --- | --- | --- |
@@ -108,16 +108,18 @@ There it builds with the notes job's verified catalog and the release's diagnost
 It keeps the packages, the two rendered recipes and `SHA256SUMS` as the run's `linux-packages` artifact for 30 days; the workflow itself uploads them nowhere else, and only a release's signing job records the files it checked, which its publication job then publishes.
 `scripts/check-linux-package.sh` then installs each one the way a person would, one job a system:
 
-- the Ubuntu package with apt on hosted Ubuntu 24.04 and 26.04 themselves, AppArmor's restriction on user namespaces left on;
+- the Ubuntu package with apt on Ubuntu 24.04 and 26.04 machines themselves, AppArmor's restriction on user namespaces left on;
 - the Ubuntu package with apt in clean `ubuntu:24.04` and `ubuntu:26.04` containers;
 - the Fedora package with dnf in a clean `fedora:latest` container;
 - the Ubuntu and Fedora packages again, in clean `ubuntu:24.04` and `fedora:latest` containers, each installed over Firstmate 3000's published 0.4.1 package of that system, the matrix's `over`;
 - the Arch recipe, built with `makepkg` and installed with `pacman`, in a clean `archlinux:latest` container;
 - the AppImage in a clean `fedora:latest` container with a desktop's libraries and no git, where it must ask for git and quit when told to, and then, with git installed, the journey below;
-- the Nix package, built with `nix-build` against nixos-26.05 and run from the Nix store on the hosted runner.
+- the Nix package, built with `nix-build` against nixos-26.05 and run from the Nix store on the runner.
+
+Every job runs on the label the repository variable `LINUX_RUNNER` names, the PC's fresh virtual machines, and the 26.04 machine on that label with `-2604` (`shell-pc-linux-2604`); with the variable unset, each runs on GitHub's hosted Ubuntu of its release (`docs/testing.md`, "Notes").
 
 A container stands in for a clean copy of its system.
-It runs privileged so Chromium can make its sandbox's namespaces, and the runner lifts Ubuntu's restriction on user namespaces for it, as Fedora, Arch and NixOS have none; the hosted Ubuntu jobs keep the restriction and the package's own profile.
+It runs privileged so Chromium can make its sandbox's namespaces, and the runner lifts Ubuntu's restriction on user namespaces for it, as Fedora, Arch and NixOS have none; the Ubuntu machine jobs keep the restriction and the package's own profile.
 
 On each, `tests/installed/installed-package.spec.ts` opens the installed app as its desktop entry does, on the runner's virtual screen with a throwaway HOME, profile and mock model provider (`playwright.installed.config.ts`, never the journey suite's).
 The release's fuses turn off the Node inspector Playwright's Electron launcher needs, so it reaches the window through Chromium's debugging port (`tests/installed/installedApp.ts`).

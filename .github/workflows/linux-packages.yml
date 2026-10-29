@@ -57,7 +57,9 @@ permissions:
 jobs:
   build:
     name: build
-    runs-on: ubuntu-24.04
+    # Every job runs where LINUX_RUNNER sends it (ci.yml says how), and on
+    # GitHub's hosted Ubuntu when it is unset.
+    runs-on: ${{ vars.LINUX_RUNNER || 'ubuntu-24.04' }}
     outputs:
       version: ${{ steps.version.outputs.version }}
     steps:
@@ -69,7 +71,7 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 24
-          cache: pnpm
+          cache: ${{ !vars.LINUX_RUNNER && 'pnpm' || '' }}
       # electron-builder makes the Fedora package with the system's rpmbuild.
       - run: sudo apt-get update && sudo apt-get install -y rpm
       - uses: ./.github/actions/node-headers
@@ -155,7 +157,9 @@ jobs:
           - { system: arch, runner: ubuntu-24.04, image: "archlinux:latest" }
           - { system: appimage, runner: ubuntu-24.04, image: "fedora:latest" }
           - { system: nix, runner: ubuntu-24.04 }
-    runs-on: ${{ matrix.runner }}
+    # The Ubuntu 26.04 leg runs on the PC's 26.04 job image, the
+    # LINUX_RUNNER label with -2604 (shell-pc-linux-2604).
+    runs-on: ${{ vars.LINUX_RUNNER && (matrix.runner == 'ubuntu-26.04' && format('{0}-2604', vars.LINUX_RUNNER) || vars.LINUX_RUNNER) || matrix.runner }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -164,7 +168,7 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 24
-          cache: pnpm
+          cache: ${{ !vars.LINUX_RUNNER && 'pnpm' || '' }}
       - uses: ./.github/actions/node-headers
       - run: pnpm install --frozen-lockfile
         # Scope Node headers to this install, never to Electron rebuilds.

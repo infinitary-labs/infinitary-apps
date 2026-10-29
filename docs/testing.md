@@ -85,7 +85,7 @@ A full run never stops at its first failure: it reports every failure, later tes
 A journey's waits run on the load clock and end by their wall cap, 20 times their budget and at most 10 minutes; a graded run keeps the wall clock (`docs/e2e-contracts.md`, "Waits run on the load clock").
 A unit test's limits and waits run on the same clock and cap, and each `ci.yml` test step ends at 30 minutes (`docs/test-cohorts.md`, "Budgets").
 Above every wait sit the whole check's limits (INF-1083, the captain's check limits).
-A pull request's journeys and journeys on request end their run at 75 minutes (Playwright's `globalTimeout`, which `playwright.config.ts` reads from the workflow's `INFINITARY_E2E_RUN_MINUTES`) and their command at 90 (the step's `timeout-minutes`), on the Mac mini and on the hosted Linux overflow alike.
+A pull request's journeys and journeys on request end their run at 75 minutes (Playwright's `globalTimeout`, which `playwright.config.ts` reads from the workflow's `INFINITARY_E2E_RUN_MINUTES`) and their command at 90 (the step's `timeout-minutes`), on the Mac mini and on the Linux overflow alike.
 The full Mac suite in `verify.yml` ends its run at 150 minutes and its command at 180.
 The Mac command's 90 minutes include the build and run; it does not wait for a command lease.
 
@@ -110,6 +110,7 @@ Moved verbatim from `AGENTS.md` on 2026-09-24; `AGENTS.md` keeps a one-line poin
   The hosted runner has two processors and a personal account is offered no larger one, so the jobs run side by side; together they run `verify.yml`'s `linux-checks` lane, which runs every probe, and `tests/release-contract.test.ts` holds every vitest project to one job or to shards that cover it, the probe project to its chooser.
   Every job runs on the label the repository variable `LINUX_RUNNER` names, the placement service's `shell-pc-linux` places (a fresh two-processor VM per job on the Windows PC, five at once), and on GitHub's hosted `ubuntu-latest` when the variable is unset; `tests/release-contract.test.ts` evaluates each job's runner both ways.
   The shell PC job image supplies Node 24 and a pre-filled pnpm store, so `ci.yml` disables setup-node's pnpm cache when `LINUX_RUNNER` is set; hosted jobs keep caching.
+  Every other workflow's Linux jobs read the same variable the same way (INF-1720's plan): the journeys' chooser, starters and overflow, `verify.yml`'s Linux lanes, the phone chooser, the replay gate, Linux startup, the Linux packages and the release's Linux helpers; the package check's Ubuntu 26.04 leg takes the variable's label with `-2604`, the PC's 26.04 job image.
   Linux dependency installs use `.github/actions/node-headers`, which finds the running Node archive's `include/node` headers and refuses an image missing them; only the install receives that root as `NPM_PACKAGE_CONFIG_NODE_GYP_NODEDIR`.
   Uppercase preserves the setting through pnpm's lifecycle environment filter.
   That setting belongs only to the install, so later Electron rebuilds keep their own headers.
@@ -118,7 +119,7 @@ Moved verbatim from `AGENTS.md` on 2026-09-24; `AGENTS.md` keeps a one-line poin
   A new test file joins its cohort's job on its own; a new kind of check joins one of the jobs, never a step with a condition.
   The Linux jobs have no release-branch exemption: they must actually run to provide the required project verification, even though the generic forge verdict accepts conditional skipped checks.
   CI green means every check on the exact head commit SHA reports status=completed and conclusion=success or skipped (`gh pr checks`); a project that runs no checks reads green with the empty list, but on GitHub an empty list where workflow runs exist or have run for earlier pull requests reads pending ("checks have not started yet"), and so does a pull request's list with none of its own workflow runs on the version yet where the project runs them (`docs/forge.md`, "The green rule").
-  The macOS work - the Playwright e2e suite and the run-alone pass's Mac-only tests, the universal package smoke, the replay gate - is `verify.yml`'s mac lane, in a reusable workflow that `release.yml` calls before its signing job (every alpha runs linux-checks, the whole Playwright suite on hosted Linux as `linux-e2e` ("The Linux source desktop" below) and mac; a stable promotion inherits its alpha's successful checks or is refused: `docs/alpha.md` "The signed channel workflow") and that crewmates request on demand through `github_write` (`docs/forge.md`, "Verification workflow requests"); it is deliberately not per PR and not nightly (the per-PR mac job was 98% of a ~$200/month bill).
+  The macOS work - the Playwright e2e suite and the run-alone pass's Mac-only tests, the universal package smoke, the replay gate - is `verify.yml`'s mac lane, in a reusable workflow that `release.yml` calls before its signing job (every alpha runs linux-checks, the whole Playwright suite on Linux as `linux-e2e` ("The Linux source desktop" below) and mac; a stable promotion inherits its alpha's successful checks or is refused: `docs/alpha.md` "The signed channel workflow") and that crewmates request on demand through `github_write` (`docs/forge.md`, "Verification workflow requests"); it is deliberately not per PR and not nightly (the per-PR mac job was 98% of a ~$200/month bill).
   Crewmate validation is agent-driven and evidence-first (captain rulings 2026-09-19, the no-mistakes alignment; `docs/delivery-rigor.md`): demonstrate the user intent end-to-end with product-level evidence for each concrete thing an end user would do and relevant existing end-to-end tests covering the surfaces changed, re-run after an overlapping rebase, named under Verified, and a relevant test that cannot run is named, never dropped quietly - the full unit suite is the PR checks' job and the full Playwright suite and `pnpm package:mac` are `verify.yml`'s mac lane, with the full suite on Linux beside it (every alpha, and on demand), with full e2e runs only in CI, never locally, and no configured command is mandated anywhere in the rigor pipeline.
   Never treat old SHAs as authoritative for the current head.
 - A timing claim in a test is asserted as an ORDER or as WORK, never as a wall-clock window (captain's B1, 2026-09-24: "one clock, budgets measured"): on a host running several suites at once a millisecond budget, a runner-clock interval, or two short real timers racing measure the load.
@@ -222,7 +223,7 @@ A change to the generated phone contract that touches only its `public static le
 The setup inputs are `phone.yml`, `scripts/test-phone.ts`, `tests/helpers/phoneHome.ts`, `tests/helpers/phoneKeyboard.ts`, the activity writer `scripts/phone-activity.ts`, the leftover sweep `scripts/phone-leftovers.ts`, the check runner `scripts/phone-checks.ts`, the simulator selector `scripts/phone-simulator.ts` and the test plan helper `scripts/phone-test-plan.ts`.
 Setup the device gates never run does not select it: the chooser itself, the replacement helper `scripts/replaced-phone-runs.ts`, the local test home `scripts/phone-test-home.ts`, and the virtual Mac scripts `scripts/virtual-mac/phone.sh`, `phone-job.sh` and `vm.sh` while `PHONE_VIRTUAL_MAC` is unset.
 Changes to general shared modules, connection/device code, packages or the lockfile alone do not select the native gate.
-Its hosted Linux chooser reads the complete git comparison; an unreadable comparison selects the gate rather than silently skipping it.
+Its Linux chooser reads the complete git comparison; an unreadable comparison selects the gate rather than silently skipping it.
 The `native-phone` job runs the disposable `scripts/test-phone.ts --both` gate on `MAC_RUNNER`, with `mini-mac` as its fallback label, never a paid hosted Mac.
 When the job fails, or a run on request records, it keeps native result bundles, logs, published-client results and connection readings in the `phone-results` artifact.
 The same command logs also live in the smaller `phone-logs` artifact, independently of the result bundles.
@@ -278,7 +279,7 @@ Without that input, it takes the same line and runner as a pull request's phone 
 
 ## Journeys on the pull request
 
-A pull request gets `journeys.yml`'s hosted Linux `choose-journeys` check, which installs the locked tools, selects the journey files and writes the reasons and placement in its summary.
+A pull request gets `journeys.yml`'s Linux `choose-journeys` check, which installs the locked tools, selects the journey files and writes the reasons and placement in its summary.
 The chooser downloads `e2e-results` from the newest successful `verify.yml` run that has an unexpired artifact of that name and sums each journey file's measured Mac durations.
 It finds that run in the workflow's plain run list, newest first, never through GitHub's search by result, which has answered no run while passing ones were listed.
 It asks for that list without each run's pull requests, which it never reads: working them out has run past GitHub's time limit and answered 502, and leaving them out drops no run.
@@ -289,7 +290,8 @@ An artifact-list error or a failed download still fails the chooser.
 It adds serial desktop durations to the longest of ten packed parallel workers, matching the Mac configuration.
 A new or previously skipped file uses the slowest measured file in its lane, and the summary lists it as unmeasured.
 Its Mac count and file list pass to `affected-journeys`, on the Mac mini (the `MAC_RUNNER` label).
-The remainder passes to `linux-overflow`, hosted machines running concurrently with Mac, packed into six-minute groups separately for parallel and desktop files.
+The remainder passes to `linux-overflow`, Linux machines running concurrently with Mac, packed into six-minute groups separately for parallel and desktop files.
+It is at most five jobs, one per Linux place on the PC (`LINUX_PLACES`, INF-1720's plan), so each job repeats its setup once: past five groups, each lane takes places by its share of the estimated work, at least one, and a file joins its lane's least loaded job, which may then exceed six minutes.
 Linux estimates use the plan's observed rates: one Mac minute of parallel work per Linux minute and 0.6 Mac minutes of desktop work.
 A file stays intact, so an indivisible slow file may exceed six minutes; setup, runner waits and shared-machine slowdown are not part of this estimate.
 Every selected file runs exactly once in this placement; the independent Linux starter coverage still runs too.
@@ -387,7 +389,7 @@ Its on-demand `parts`, `starve` and `perf` inputs select native parts and reprod
 
 `journeys.yml` also runs on request for any branch, with the journeys it names: `POST /repos/{owner}/{repo}/actions/workflows/journeys.yml/dispatches` with `{"ref":"<branch>","inputs":{"files":"now-panel task-crewmate.spec.ts"}}`.
 The names are read as a `Journeys:` trailer's are, separated by spaces or commas, and a name that is no journey fails the chooser (`scripts/affected-journeys.ts --named`).
-The chooser places the named files exactly as it places a pull request's, closest six minutes on the Mac mini and the rest on hosted Linux, and the run skips the pull request's Linux starter coverage.
+The chooser places the named files exactly as it places a pull request's, closest six minutes on the Mac mini and the rest on Linux, and the run skips the pull request's Linux starter coverage.
 It is a computer's route for journeys in CI mode ("Where the heavy checks run"), such as a journey a change is still being written against.
 Its optional `mac_runner` input selects an isolated Mac runner for that request, as `verify.yml` does, without changing shared runner variables.
 Each request is its own concurrency group, so another request on the same branch, `main` included, never cancels it, whatever journeys either names (INF-941); only a newer push to a pull request replaces that pull request's older run.
@@ -468,7 +470,7 @@ In the 2026-09 release cuts, side-rails' collapse and settings cases and forge-s
   `test.describe.configure({ mode: "serial" })` orders tests; it does not make an undeclared prerequisite correct.
 - **The run-alone pass** checks the rule, since no lint can see what a test borrows.
   `scripts/e2e-alone.ts` lists the tests with Playwright's own `--list`, and runs each test after the first of a spec file that shares one app (a `beforeAll`) by itself, by `file:line`, in a Playwright run of its own on the current build.
-  `verify.yml`'s `linux-e2e` runs it over every spec file across four isolated hosted jobs, `journeys (run alone N/4)` ("The Linux source desktop", below), keeps each share’s result as the `e2e-alone-N` artifact and lists its counts and failures in that job's summary.
+  `verify.yml`'s `linux-e2e` runs it over every spec file across four isolated Linux jobs, `journeys (run alone N/4)` ("The Linux source desktop", below), keeps each share’s result as the `e2e-alone-N` artifact and lists its counts and failures in that job's summary.
   A test that runs only on a Mac carries `MAC_ONLY_TAG` (`tests/e2e/tags.ts`) beside its own `test.skip` and reason: on Linux it is recorded as skipped, and `verify.yml`'s mac lane runs those tests alone (`--tag @mac-only`) after its other stages, whether the suite passed or failed, keeps their result as the `e2e-alone-mac` artifact, and lists their failures apart from the suite's in the job summary ("A red verify's evidence", below).
   A test that skips without the tag, or skips on a Mac, fails the pass, since it never ran alone.
   `tests/release-contract.test.ts` holds both steps.
@@ -779,14 +781,14 @@ Set `INFINITARY_VOICE_HOLD_MS=60000` to check release after a minute of real cap
 
 ## The Linux source desktop
 
-`source-journeys.yml` builds the checkout and runs journeys on the app built from source on hosted Ubuntu 24.04 x64, under Xvfb on a 2560 by 1600 virtual screen with Chromium's sandbox enabled.
+`source-journeys.yml` builds the checkout and runs journeys on the app built from source on Ubuntu 24.04 x64 (`LINUX_RUNNER`, hosted when unset), under Xvfb on a 2560 by 1600 virtual screen with Chromium's sandbox enabled.
 `journeys.yml` calls it as `linux-source` on every pull request with the starter journeys, split onto two machines by the existing parallel and serial desktop lanes: `source-start`, `phase0-guardrails`, `answer-delivery` and `claude-crew-turn`, the keyboard journeys `keyboard-routing` and `keyboard-regions`, which press Ctrl where a Mac presses ⌘ (`docs/keyboard.md`, "Keys on each system"), the task browser's journeys (`task-browser`, `task-browser-actions`, `task-browser-diagnostics` and `task-browser-booking`), the device journeys (`devices`) unconditionally, without a second selector, and the voice journeys (`phase6-voice`, `voice-prompt-focus` and `repro-voice-press`), which hold right Ctrl, with a stand-in graphics card and a stand-in voice helper (`docs/e2e-contracts.md`); the real card check is the captain's on each Linux alpha (`docs/architecture.md` section 8, "Where speech runs").
-`verify.yml` calls it as `linux-e2e` with `suite: full`: every journey in the suite, before every alpha and on demand, in eight jobs, and the run-alone pass in four more isolated hosted jobs.
+`verify.yml` calls it as `linux-e2e` with `suite: full`: every journey in the suite, before every alpha and on demand, in eight jobs, and the run-alone pass in four more isolated jobs.
 Four take a quarter each of the parallel lanes (`styles`, `renderer` and `application`) and four a quarter each of the serial `desktop` lane, each run with `--no-deps` so neither lane waits as the other's teardown and the desktop lane still runs alone on its machine; a job is named for its share, such as `journeys (desktop 2/4)`.
 The four `journeys (run alone N/4)` jobs divide the run-alone pass’s ordered listing by round-robin position with `--shard N/4`; together they cover every later file:line/lane selection once, without splitting tests that share a line.
 Each share keeps the existing fresh Playwright process and home for each selection, runs the parallel lanes at the existing local width and then its desktop selections serially, and keeps a distinct `e2e-alone-N` artifact and summary.
 The Mac-only tests skip there and run alone on the Mac lane.
-Request `source-journeys.yml` on a branch with `suite: alone` to check just those four hosted jobs, without the ordinary suite, Mac checks or packaging.
+Request `source-journeys.yml` on a branch with `suite: alone` to check just those four jobs, without the ordinary suite, Mac checks or packaging.
 A stable promotion inherits them with the other lanes ("Full alpha checks, inherited stable checks" in `docs/alpha.md`).
 The replay gate and packaging stay on the Mac lane.
 The Linux packages have their own checks, an installed-package journey on a clean copy of each system (`docs/linux-packages.md`, "The checks").
@@ -803,7 +805,7 @@ A journey whose whole subject is the Mac's skips on Linux and says why: the shel
 The demo encoder is the release's static FFmpeg 7 there ("Recording a demo" above).
 A mock crewmate writes its fixture files one bash call each, since Linux refuses a command argument over 128 KiB (`writeFilesCalls` in `tests/e2e/mockProvider.ts`).
 
-The disposable hosted Linux runner installs the downloaded Electron sandbox helper root-owned with mode 4755 at a space-free temporary path, named by `CHROME_DEVEL_SANDBOX`.
+The disposable Linux runner, a hosted machine or the PC's fresh virtual machine, installs the downloaded Electron sandbox helper root-owned with mode 4755 at a space-free temporary path, named by `CHROME_DEVEL_SANDBOX`.
 It removes the unpacked adjacent helper after installing it because Chromium prefers an adjacent helper to the development fallback.
 Chromium splits the helper's command-prefix path at spaces, so the helper is separate while the checkout and app executable still stay under `Application Support`.
 The Playwright launcher explicitly enables Chromium sandboxing.
@@ -816,7 +818,7 @@ The launcher gives each app a throwaway HOME, userData, TMPDIR and XDG configura
 
 ## Linux automatic startup fixtures
 
-`linux-startup.yml` runs the production runtime/session classifier on GitHub-hosted Ubuntu for pull requests and main.
+`linux-startup.yml` runs the production runtime/session classifier on a disposable Ubuntu machine for pull requests and main: the PC's fresh virtual machine through `LINUX_RUNNER`, or GitHub-hosted Ubuntu when it is unset.
 It checks a disposable logged-out user under running systemd, then starts that user's manager for the available case.
 It also checks a plain Ubuntu container with installed systemctl but no running systemd, then an unavailable systemctl.
 The job logs the runtime, commands, statuses and classification, never the user manager's environment values.

@@ -95,7 +95,7 @@ concurrency:
 
 jobs:
   # linux-e2e: every Playwright journey on the app built from source on
-  # hosted Ubuntu, in shards (docs/testing.md, "The Linux source desktop").
+  # Ubuntu (LINUX_RUNNER, hosted when unset), in shards (docs/testing.md, "The Linux source desktop").
   # Journeys that are the Mac's alone skip there and say why.
   linux-e2e:
     if: ${{ !inputs.installer_only && !inputs.installer_reuse }}
@@ -127,7 +127,7 @@ jobs:
       fail-fast: false
       matrix:
         lane: ${{ fromJSON('["linux-checks","mac"]') }}
-    runs-on: ${{ matrix.lane == 'mac' && (inputs.mac_runner || vars.MAC_RUNNER || 'macos-15') || 'ubuntu-latest' }}
+    runs-on: ${{ matrix.lane == 'mac' && (inputs.mac_runner || vars.MAC_RUNNER || 'macos-15') || vars.LINUX_RUNNER || 'ubuntu-latest' }}
     # Every crewmate works under "Application Support". The gate here does
     # too, so a check that only fails from a path with a space fails here
     # instead of only in a working copy (FI3-152).
@@ -164,7 +164,7 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 24
-          cache: ${{ matrix.lane != 'mac' && 'pnpm' || '' }}
+          cache: ${{ matrix.lane != 'mac' && !vars.LINUX_RUNNER && 'pnpm' || '' }}
           cache-dependency-path: Application Support/firstmate/pnpm-lock.yaml
       - uses: ./Application Support/firstmate/.github/actions/node-headers
       - id: install

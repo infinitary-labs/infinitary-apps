@@ -715,7 +715,6 @@ describe("local packaging identity (electron-builder.dev.yml)", () => {
     };
     expect(Object.keys(replay.on)).toEqual(["workflow_dispatch"]);
     const gate = replay.jobs["replay-gate"];
-    expect(gate?.["runs-on"]).toBe("ubuntu-latest");
     expect(gate?.steps.flatMap((step) => (step.run ? [step.run] : []))).toEqual([
       "pnpm install --frozen-lockfile",
       "pnpm replay:gate",
@@ -3787,6 +3786,65 @@ describe("the jobs that ask for the real Mac", () => {
       "mini-mac-real",
     );
   });
+});
+
+/**
+ * INF-1720's approved plan: every Linux job of every workflow runs where the
+ * repository variable LINUX_RUNNER sends it, the PC's shell-pc-linux places,
+ * as ci.yml's already did, and on GitHub's hosted Ubuntu when it is unset.
+ * The package check's Ubuntu 26.04 leg takes the PC's 26.04 image's label.
+ * Each job's runner is evaluated both ways, for every matrix entry.
+ */
+it("sends every Linux job to LINUX_RUNNER, and hosted Ubuntu when it is unset", () => {
+  type Job = { "runs-on"?: string; strategy?: { matrix?: Record<string, unknown> } };
+  const evaluate = (value: string, contexts: Record<string, unknown>) =>
+    value.includes("${{") ? workflowValue(value, contexts) : value;
+  const linux: string[] = [];
+  for (const file of readdirSync(join(root, ".github/workflows")).filter((name) =>
+    name.endsWith(".yml"),
+  )) {
+    const { jobs } = loadYamlFile(`.github/workflows/${file}`) as { jobs: Record<string, Job> };
+    for (const [id, job] of Object.entries(jobs)) {
+      if (!job["runs-on"]) continue;
+      const matrix = job.strategy?.matrix ?? {};
+      const include = Array.isArray(matrix.include) ? (matrix.include as object[]) : [];
+      const lanes = typeof matrix.lane === "string" ? evaluate(matrix.lane, { inputs: {} }) : [];
+      const entries: object[] = include.length
+        ? include
+        : Array.isArray(lanes) && lanes.length
+          ? lanes.map((lane) => ({ lane }))
+          : [{}];
+      for (const entry of entries) {
+        const runner = (vars: Record<string, string>) =>
+          evaluate(job["runs-on"] ?? "", { vars, matrix: entry, inputs: {} });
+        const hosted = runner({});
+        if (typeof hosted !== "string" || !hosted.startsWith("ubuntu-")) continue;
+        const name = `${file}:${id} ${JSON.stringify(entry)}`;
+        linux.push(name);
+        expect(runner({ LINUX_RUNNER: "shell-pc-linux" }), name).toBe(
+          hosted === "ubuntu-26.04" ? "shell-pc-linux-2604" : "shell-pc-linux",
+        );
+      }
+    }
+  }
+  // The jobs the plan named, so a job the check could not read is not missed.
+  for (const job of [
+    "ci.yml:unit-tests",
+    "journeys.yml:choose-journeys",
+    "source-journeys.yml:source-desktop",
+    "verify.yml:lane",
+    "phone.yml:choose-phone",
+    "replay.yml:replay-gate",
+    "linux-startup.yml:runtime-facts",
+    "linux-packages.yml:build",
+    "linux-packages.yml:check",
+    "release.yml:notes",
+    "ios-release.yml:availability",
+  ])
+    expect(
+      linux.some((name) => name.startsWith(`${job} `)),
+      job,
+    ).toBe(true);
 });
 
 /**

@@ -1593,6 +1593,7 @@ type SavedSignInFile = {
   site: string;
   cookies: { name: string; value: string }[];
   storage?: { origin: string; items: [string, string][] }[];
+  session?: { origin: string; items: [string, string][] }[];
 };
 
 /** The saved sign-ins' files on this Mac, each as the store wrote it. */
@@ -2109,6 +2110,207 @@ test("a site that keeps its sign-in in its own page storage is saved, used and r
       await closeSettings();
       expect(savedSignInFiles()).toEqual([]);
       await expect.poll(pageStorage).toEqual({});
+      expect(await page.evaluate((id) => window.infinitary.browser.stop(id), b.id)).toEqual({
+        ok: true,
+      });
+      await expect.poll(async () => (await detailTitled(second))?.browser?.state).toBe("stopped");
+      expect(savedSignInFiles()).toEqual([]);
+    });
+  } finally {
+    await closeSite(club);
+  }
+});
+
+/**
+ * A club page that keeps its sign-in in its page's session storage alone,
+ * as a site that signs its page in with a token does: its server sets no
+ * cookie, and it keeps nothing in local storage. Sign in (a real click
+ * only) keeps the token there and reloads. The password never leaves the
+ * page.
+ */
+const SESSION_CLUB_PAGE = `<!doctype html>
+<html>
+  <head><title>Club</title><style>body { background: rgb(40, 110, 90); color: white; font: 18px sans-serif; } input, button { font: inherit; margin: 8px; }</style></head>
+  <body>
+    <h1>Club</h1>
+    <p id="state">Not signed in</p>
+    <p><label>Email <input id="email" type="email"></label></p>
+    <p><label>Password <input id="password" type="password"></label></p>
+    <p><button id="sign-in">Sign in</button></p>
+    <script>
+      const repository = JSON.parse(sessionStorage.getItem("repository") || "null");
+      if (repository) document.getElementById("state").textContent = "Signed in as " + repository.who;
+      document.getElementById("sign-in").addEventListener("click", (event) => {
+        if (!event.isTrusted) return;
+        const who = document.getElementById("email").value;
+        sessionStorage.setItem("repository", JSON.stringify({ who, token: Math.random().toString(36).slice(2) }));
+        location.reload();
+      });
+    </script>
+  </body>
+</html>`;
+
+test("a site that keeps its sign-in in its page's session storage is saved at the hand-back, used on one click and removed (INF-1849)", async () => {
+  // One journey, the captain's approved INF-1849 plan: the session storage
+  // saved as one task's browser is handed back, left as saved when that
+  // browser stops after the site cleared it, granted to a second task on
+  // one click, and removed while that task uses it.
+  test.setTimeout(240_000);
+  const { page, app } = launched;
+  await stopTaskBrowsers(page);
+  const evidence = process.env.INFINITARY_TASK_EVIDENCE_DIR;
+  const shoot = async (target: Locator, name: string): Promise<void> => {
+    if (evidence) await target.screenshot({ path: join(evidence, name) });
+  };
+  const club = createServer((_request, response) => {
+    response.writeHead(200, { "content-type": "text/html; charset=utf-8" });
+    response.end(SESSION_CLUB_PAGE);
+  });
+  await new Promise<void>((resolve) => club.listen(0, "127.0.0.1", resolve));
+  const clubUrl = `http://127.0.0.1:${(club.address() as AddressInfo).port}/`;
+  const site = new URL(clubUrl).host;
+  const origin = new URL(clubUrl).origin;
+  const PASSWORD = "session-club-hunter2-battery-staple";
+  /** What a saved file keeps of the club's own session storage, by key. */
+  const savedSession = (): Record<string, string> =>
+    Object.fromEntries(
+      savedSignInFiles()[0]?.session?.find((held) => held.origin === origin)?.items ?? [],
+    );
+  /** Run a script in a task's hidden page on the club: nothing when none is open. */
+  const onClubPage = (script: string): Promise<unknown> =>
+    app.evaluate(
+      async ({ webContents }, { url, script }) => {
+        const contents = webContents
+          .getAllWebContents()
+          .find((candidate) => candidate.getURL().startsWith(url));
+        return contents ? contents.executeJavaScript(script) : null;
+      },
+      { url: clubUrl, script },
+    );
+  /** The session storage a task's hidden page on the club holds now, by key. */
+  const pageSession = async (): Promise<Record<string, string> | null> => {
+    const held = await onClubPage("JSON.stringify({ ...sessionStorage })");
+    return typeof held === "string" ? JSON.parse(held) : null;
+  };
+  const titled = (who: string) => `${TASK_BROWSER_SAVED_MARKER}${clubUrl} as ${who}`;
+  try {
+    await resizeWindow(app, page, { width: 1280, height: 900 });
+    const first = titled("session task one");
+    const second = titled("session task two");
+
+    const a =
+      await test.step("the captain signs in, and Return control's tick saves the page's session storage", async () => {
+        const task = await askToSignIn(first);
+        await showCard(page, MOCK_SAVED_CARD_TITLE);
+        await savedCardRegion().getByRole("button", { name: MOCK_SAVED_ACTION }).click();
+        await expect(view(page, task.id)).toHaveAttribute("data-browser-state", "captain");
+        await expect.poll(async () => (await canvasReading(page)).frames).toBeGreaterThan(0);
+        await typeOnPage(app, page, task.id, clubUrl, "email", "sam@example.com");
+        await typeOnPage(app, page, task.id, clubUrl, "password", PASSWORD);
+        await clickOnPage(app, page, task.id, clubUrl, "sign-in");
+        await expect
+          .poll(() => pageSays(app, clubUrl, "state").catch(() => null))
+          .toBe("Signed in as sam@example.com");
+        const sharing = view(page, task.id).locator("[data-browser-sharing]");
+        await sharing.getByRole("checkbox", { name: rememberSignInLabel(site) }).check();
+        await runFromSearch(app, page, "browser.control");
+        await expect
+          .poll(async () => (await detailTitled(first))?.outcome ?? "", { timeout: 60_000 })
+          .toContain(`${MOCK_SAVED_REPORT_PREFIX} "Signed in as sam@example.com"`);
+        expect((await detailTitled(first))?.browser).toMatchObject({
+          saved: [site],
+          returned: true,
+        });
+        // The site keeps no cookie and no local storage: its sign-in is its page's session storage.
+        expect(savedSignInFiles()).toEqual([
+          expect.objectContaining({
+            site,
+            cookies: [],
+            storage: [],
+            session: [expect.objectContaining({ origin })],
+          }),
+        ]);
+        expect(JSON.parse(savedSession().repository ?? "{}")).toMatchObject({
+          who: "sam@example.com",
+        });
+        await shoot(view(page, task.id), "view-session-returned-after-dark.png");
+        expect(filesHolding(launched.userDataDir, PASSWORD)).toEqual([]);
+        const section = await openGeneralSettings();
+        await expect(section.locator(`[data-website-sign-in="${site}"]`)).toContainText(site);
+        await shoot(section, "settings-session-sign-in-after-dark.png");
+        await closeSettings();
+        return task;
+      });
+
+    await test.step("the browser's stop leaves the saved session storage as the hand-back saved it", async () => {
+      const saved = savedSession().repository;
+      // The site signs its page out while the browser sits idle, before the browser stops.
+      await onClubPage('sessionStorage.removeItem("repository")');
+      expect(await pageSession()).toEqual({});
+      expect(await page.evaluate((id) => window.infinitary.browser.stop(id), a.id)).toEqual({
+        ok: true,
+      });
+      await expect.poll(async () => (await detailTitled(first))?.browser?.state).toBe("stopped");
+      expect(savedSession().repository).toBe(saved);
+    });
+
+    const b =
+      await test.step("a later task's request offers it, and one click signs its page in from session storage", async () => {
+        const task = await askToSignIn(second);
+        expect(
+          (await savedCardOf(task.id))?.actions.map((action) => ({
+            label: action.label,
+            default: action.default === true,
+          })),
+        ).toEqual([
+          { label: "Leave waiting", default: false },
+          { label: SIGN_IN_MYSELF_LABEL, default: false },
+          { label: savedSignInLabel(site), default: true },
+        ]);
+        // Its browser started empty: nothing of the club's session storage is in it yet.
+        expect(await pageSays(app, clubUrl, "state")).toBe("Not signed in");
+        expect(await pageSession()).toEqual({});
+        await showCard(page, MOCK_SAVED_CARD_TITLE);
+        await shoot(page.locator(SHOWN_ENTRY), "card-session-sign-in-after-dark.png");
+        await savedCardRegion()
+          .getByRole("button", { name: savedSignInLabel(site) })
+          .click();
+        await expect(view(page, task.id)).toBeVisible();
+        await expect
+          .poll(async () => (await detailTitled(second))?.outcome ?? "", { timeout: 60_000 })
+          .toContain(`${MOCK_SAVED_REPORT_PREFIX} "Signed in as sam@example.com"`);
+        const current = (await detailTitled(second)) as TaskDetail;
+        expect(current.browser).toMatchObject({ state: "open", saved: [site] });
+        expect(current.events.map((event) => event.text)).toContain(
+          `you let it use your saved sign-in at ${site}`,
+        );
+        expect(await pageSession()).toMatchObject({ repository: expect.stringContaining("sam@") });
+        await expect.poll(async () => (await canvasReading(page)).frames).toBeGreaterThan(0);
+        await shoot(view(page, task.id), "view-session-sign-in-granted-after-dark.png");
+        if (evidence)
+          await heroShot(app, page, {
+            region: view(page, task.id),
+            name: "task-browser-saved-session-storage",
+          });
+        expect(crewmateCalls(second).some((body) => body.includes(PASSWORD))).toBe(false);
+        return task;
+      });
+
+    await test.step("Remove in Settings clears the page's session storage, so it reloads signed out", async () => {
+      const section = await openGeneralSettings();
+      await section
+        .locator(`[data-website-sign-in="${site}"]`)
+        .getByRole("button", { name: "Remove" })
+        .click();
+      await expect(section.locator(`[data-website-sign-in="${site}"]`)).toHaveCount(0);
+      await closeSettings();
+      expect(savedSignInFiles()).toEqual([]);
+      await expect.poll(pageSession).toEqual({});
+      // A reload may end the script's page before it answers.
+      await onClubPage("location.reload()").catch(() => null);
+      await expect
+        .poll(() => pageSays(app, clubUrl, "state").catch(() => null))
+        .toBe("Not signed in");
       expect(await page.evaluate((id) => window.infinitary.browser.stop(id), b.id)).toEqual({
         ok: true,
       });

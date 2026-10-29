@@ -149,6 +149,7 @@ export class PlacedBrowsers implements PlacedBrowserSink {
         this.options.signIns?.refresh(event.site, event.id, {
           cookies: cookiesOfSite(event.held.cookies, event.site),
           storage: storageOfSite(event.held.storage, event.site),
+          ...(event.held.session ? { session: storageOfSite(event.held.session, event.site) } : {}),
         });
         return;
     }
@@ -252,6 +253,7 @@ export class PlacedBrowsers implements PlacedBrowserSink {
       const held = {
         cookies: cookiesOfSite(remembered.held.cookies, site),
         storage: remembered.held.storage,
+        ...(remembered.held.session ? { session: remembered.held.session } : {}),
       };
       try {
         if (options.savedId) {
@@ -307,6 +309,7 @@ export class PlacedBrowsers implements PlacedBrowserSink {
         savedAt: record.savedAt,
         cookies: liveCookies(record.cookies, this.now()),
         storage: storageOfSite(record.storage, record.site),
+        session: storageOfSite(record.session, record.site),
       },
     });
   }

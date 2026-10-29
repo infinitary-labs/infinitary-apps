@@ -462,8 +462,13 @@ export const originStorageSchema = z.object({
   items: z.array(z.tuple([z.string(), z.string()])),
 });
 
-/** What a browser holds of one site's sign-in: its cookies and its own origins' page storage. */
+/**
+ * What a browser holds of one site's sign-in: its cookies, its own origins'
+ * local storage, and their session storage when it was read (absent from a
+ * computer without session storage in saves, which reads as none).
+ */
 export const heldSignInSchema = z.object({
   cookies: z.array(webCookieSchema),
   storage: z.array(originStorageSchema),
+  session: z.array(originStorageSchema).optional(),
 });

@@ -110,9 +110,13 @@ class LentSignIns implements SignInStore {
       id: this.saving?.id ?? randomUUID(),
       cookies: [...held.cookies],
       storage: storageOfSite(held.storage, key),
+      session: storageOfSite(held.session ?? [], key),
     };
     if (this.saving)
-      this.saving.taken = { site: key, held: { cookies: record.cookies, storage: record.storage } };
+      this.saving.taken = {
+        site: key,
+        held: { cookies: record.cookies, storage: record.storage, session: record.session },
+      };
     return record;
   }
 
@@ -205,8 +209,10 @@ export class ComputerBrowsers {
         const result = workRequests["inf:work:browser-sign-in"].response.parse(
           await options.tell("inf:work:browser-sign-in", [{ task, site }]),
         );
-        if (result.signIn) this.owners.set(result.signIn.id, task);
-        return result.signIn;
+        if (!result.signIn) return undefined;
+        this.owners.set(result.signIn.id, task);
+        // A home without session storage in saves sends none.
+        return { ...result.signIn, session: result.signIn.session ?? [] };
       },
     });
   }
@@ -343,6 +349,7 @@ export class ComputerBrowsers {
           id: signIn.id,
           cookies: signIn.cookies,
           storage: signIn.storage,
+          session: signIn.session ?? [],
         };
         this.owners.set(record.id, task);
         return this.lent.lending(record, () =>

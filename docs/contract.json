@@ -49195,6 +49195,38 @@
                   ]
                 }
               },
+              "session": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "origin": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "items": {
+                      "type": "array",
+                      "items": {
+                        "type": "array",
+                        "prefixItems": [
+                          {
+                            "type": "string"
+                          },
+                          {
+                            "type": "string"
+                          }
+                        ],
+                        "minItems": 2,
+                        "items": false
+                      }
+                    }
+                  },
+                  "required": [
+                    "origin",
+                    "items"
+                  ]
+                }
+              },
               "site": {
                 "type": "string"
               },
@@ -49419,6 +49451,38 @@
                             }
                           },
                           "storage": {
+                            "type": "array",
+                            "items": {
+                              "type": "object",
+                              "properties": {
+                                "origin": {
+                                  "type": "string",
+                                  "minLength": 1
+                                },
+                                "items": {
+                                  "type": "array",
+                                  "items": {
+                                    "type": "array",
+                                    "prefixItems": [
+                                      {
+                                        "type": "string"
+                                      },
+                                      {
+                                        "type": "string"
+                                      }
+                                    ],
+                                    "minItems": 2,
+                                    "items": false
+                                  }
+                                }
+                              },
+                              "required": [
+                                "origin",
+                                "items"
+                              ]
+                            }
+                          },
+                          "session": {
                             "type": "array",
                             "items": {
                               "type": "object",
@@ -65884,6 +65948,38 @@
                               "items"
                             ]
                           }
+                        },
+                        "session": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "origin": {
+                                "type": "string",
+                                "minLength": 1
+                              },
+                              "items": {
+                                "type": "array",
+                                "items": {
+                                  "type": "array",
+                                  "prefixItems": [
+                                    {
+                                      "type": "string"
+                                    },
+                                    {
+                                      "type": "string"
+                                    }
+                                  ],
+                                  "minItems": 2,
+                                  "items": false
+                                }
+                              }
+                            },
+                            "required": [
+                              "origin",
+                              "items"
+                            ]
+                          }
                         }
                       },
                       "required": [
@@ -66222,6 +66318,38 @@
                       }
                     },
                     "storage": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "origin": {
+                            "type": "string",
+                            "minLength": 1
+                          },
+                          "items": {
+                            "type": "array",
+                            "items": {
+                              "type": "array",
+                              "prefixItems": [
+                                {
+                                  "type": "string"
+                                },
+                                {
+                                  "type": "string"
+                                }
+                              ],
+                              "minItems": 2,
+                              "items": false
+                            }
+                          }
+                        },
+                        "required": [
+                          "origin",
+                          "items"
+                        ]
+                      }
+                    },
+                    "session": {
                       "type": "array",
                       "items": {
                         "type": "object",

@@ -205,6 +205,32 @@ class FakePage implements HostBrowserPage {
     },
   };
 
+  /** Its own session storage by origin, which no other page shares, as a real page keeps it. */
+  sessionStore = new FakeStore();
+
+  /** Its own origin's session storage alone, kept by this page only. */
+  session: HostPageStorage = {
+    read: async (): Promise<HostOriginStorage | undefined> => {
+      const origin = pageOrigin(this.current);
+      this.effects.push(`read session ${origin ?? "none"}`);
+      return origin
+        ? { origin, items: [...(this.sessionStore.origins.get(origin) ?? [])] }
+        : undefined;
+    },
+    write: async (storage) => {
+      if (this.store.refuse || pageOrigin(this.current) !== storage.origin) {
+        throw new Error("the page is not on that origin");
+      }
+      const held = this.sessionStore.origins.get(storage.origin) ?? new Map<string, string>();
+      for (const [name, value] of storage.items) held.set(name, value);
+      this.sessionStore.origins.set(storage.origin, held);
+      this.effects.push(`write session ${storage.origin}`);
+    },
+    clear: async (origin) => {
+      if (pageOrigin(this.current) === origin) this.sessionStore.origins.delete(origin);
+    },
+  };
+
   /** The page changed while watched: one picture to whoever watches. */
   paint(data = "jpeg"): void {
     this.watcher?.({ data, ...this.size });
@@ -2509,6 +2535,105 @@ describe('saved website sign-ins (docs/task-browser.md, "Saved sign-ins")', () =
     // Its own origins' storage goes; another site's stays.
     expect([...page.store.origins.keys()]).toEqual(["https://aurora.example"]);
     expect([...first.store.origins.keys()]).toEqual(["https://aurora.example"]);
+  });
+
+  // INF-1849, the captain's approved plan: a save also keeps the session
+  // storage of the site's own origins, read at the hand-back, written into
+  // the page before it reloads, left as saved at a browser's stop, and
+  // cleared in every page by Remove.
+
+  /** Task t1's browser, signed in by the captain on a page that keeps its sign-in in session storage alone, handed back with the tick. */
+  async function sessionStoredAndReturned(h: ReturnType<typeof onThisMac>) {
+    const browser = h.browsers.forTask("t1");
+    await browser.navigate({ url: "http://localhost:5173/account" });
+    const page = h.pages.at(-1) as FakePage;
+    const handle = { session: h.browsers.session, generation: 1 };
+    await h.browsers.requestHelp("t1", request);
+    await h.browsers.takeControl("t1", handle);
+    page.sessionStore.put(ORIGIN, { repository: "token-1" });
+    page.sessionStore.put("https://aurora.example", { token: "another site's" });
+    expect(await h.browsers.returnControl("t1", handle, { remember: true })).toEqual({ ok: true });
+    return { browser, page, handle };
+  }
+
+  it("saves a site that keeps its sign-in in session storage alone, and writes it into the waiting page before it reloads", async () => {
+    const h = onThisMac();
+    await sessionStoredAndReturned(h);
+    expect(h.signIns.get("localhost:5173")).toMatchObject({
+      cookies: [],
+      storage: [],
+      session: [{ origin: ORIGIN, items: [["repository", "token-1"]] }],
+    });
+    const { page, handle } = await asking(h);
+    // A new browser's page starts with no session storage of its own.
+    expect(page.sessionStore.origins.size).toBe(0);
+    expect(h.browsers.savedSignInFor("t2", "localhost:5173")).toEqual({
+      site: "localhost:5173",
+      savedAt: 1_000,
+    });
+    expect(await h.browsers.grantSavedSignIn("t2", handle)).toEqual({ ok: true });
+    expect(page.sessionStore.of(ORIGIN)).toEqual({ repository: "token-1" });
+    expect([...page.sessionStore.origins.keys()]).toEqual([ORIGIN]);
+    expect(page.effects.slice(-2)).toEqual([`write session ${ORIGIN}`, "reload"]);
+  });
+
+  it("leaves the saved session storage as the hand-back saved it when the browser stops, and refreshes it at the next hand-back", async () => {
+    const h = onThisMac();
+    const { page: first, handle: firstHandle } = await sessionStoredAndReturned(h);
+    const { browser, page, handle } = await asking(h);
+    await h.browsers.grantSavedSignIn("t2", handle);
+    // The site signed itself out while the browser sat idle, before it stopped.
+    page.sessionStore.origins.delete(ORIGIN);
+    page.sessionStore.put(ORIGIN, { idle: "signed out" });
+    await browser.close();
+    await tick();
+    expect(page.effects.filter((effect) => effect.startsWith("read session"))).toEqual([]);
+    expect(h.signIns.get("localhost:5173")?.session).toEqual([
+      { origin: ORIGIN, items: [["repository", "token-1"]] },
+    ]);
+
+    // The captain's next hand-back on the saved site reads it again.
+    const saved = h.signIns.get("localhost:5173");
+    if (!saved) throw new Error("The fixture did not save its sign-in");
+    await h.browsers.takeControl("t1", firstHandle);
+    first.sessionStore.put(ORIGIN, { repository: "token-2" });
+    expect(
+      await h.browsers.returnControl("t1", firstHandle, { site: saved.site, savedId: saved.id }),
+    ).toEqual({ ok: true });
+    expect(h.signIns.get("localhost:5173")).toMatchObject({
+      id: saved.id,
+      session: [{ origin: ORIGIN, items: [["repository", "token-2"]] }],
+    });
+  });
+
+  it("uses the saved session storage on a future task's visit the captain allowed", async () => {
+    const h = onThisMac();
+    await sessionStoredAndReturned(h);
+    const saved = h.signIns.get("localhost:5173");
+    if (!saved) throw new Error("The fixture did not save its sign-in");
+    expect(h.browsers.allowAutomaticSignIn(saved.site, saved.id, true)).toEqual({ ok: true });
+    const answer = await h.browsers
+      .forTask("automatic")
+      .navigate({ url: "http://localhost:5173/account" });
+    const page = h.pages.at(-1) as FakePage;
+    expect(answer.text).toContain("used it automatically");
+    expect(page.sessionStore.of(ORIGIN)).toEqual({ repository: "token-1" });
+    expect(page.effects.slice(-2)).toEqual([`write session ${ORIGIN}`, "reload"]);
+  });
+
+  it("clears the site's own session storage in every page of each browser using a sign-in the captain removes", async () => {
+    const h = onThisMac();
+    const { page: first } = await sessionStoredAndReturned(h);
+    const { page, handle } = await asking(h);
+    await h.browsers.grantSavedSignIn("t2", handle);
+    const second = openPopup(page, "http://localhost:5173/reports") as FakePage;
+    second.sessionStore.put(ORIGIN, { repository: "token-1" });
+    page.sessionStore.put("https://aurora.example", { token: "another site's" });
+    expect(await h.browsers.removeSavedSignIn("localhost:5173")).toEqual({ ok: true });
+    // Its own origin's session storage goes from each page; another site's stays.
+    expect([...page.sessionStore.origins.keys()]).toEqual(["https://aurora.example"]);
+    expect([...second.sessionStore.origins.keys()]).toEqual([]);
+    expect([...first.sessionStore.origins.keys()]).toEqual(["https://aurora.example"]);
   });
 
   it("closes at once when the app quits, and copies nothing back", async () => {

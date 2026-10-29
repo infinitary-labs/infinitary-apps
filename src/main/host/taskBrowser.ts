@@ -685,7 +685,8 @@ async function drivePage(
 
   return {
     cookies: cookieJar(contents.session),
-    storage: pageStorage(contents.session, send),
+    storage: pageStorage(contents.session, send, true),
+    session: pageStorage(contents.session, send, false),
     url: () => (contents.isDestroyed() ? "" : contents.getURL()),
     title: () => (contents.isDestroyed() ? "" : contents.getTitle()),
     load: async (url) => {
@@ -1048,14 +1049,16 @@ function cookieJar(ses: Session): HostBrowserCookies {
 const FIRST_PARTY_KEY = /^https?:\/\/[^/^\s]+\/$/;
 
 /**
- * A page's own local storage (docs/task-browser.md, "Saved sign-ins"),
- * over the page's protocol by its top frame's own storage key. The
- * protocol finds that storage in this page alone, by that key, so a
+ * A page's own local or session storage (docs/task-browser.md, "Saved
+ * sign-ins"), over the page's protocol by its top frame's own storage key.
+ * The protocol finds that storage in this page alone, by that key, so a
  * frame's storage, another origin's, or a page that moved on is never
- * read or written. A clear goes through the browser's site data, whether
- * or not a page is on the origin.
+ * read or written. A local clear goes through the browser's site data,
+ * whether or not a page is on the origin; that does not reach session
+ * storage, which each page keeps for itself, so a session clear empties
+ * this page's own when it is on the origin.
  */
-function pageStorage(ses: Session, send: ProtocolSend): HostPageStorage {
+function pageStorage(ses: Session, send: ProtocolSend, isLocalStorage: boolean): HostPageStorage {
   const ownKey = async (): Promise<string | undefined> => {
     const { frameTree } = await send<{ frameTree: { frame: { id: string } } }>("Page.getFrameTree");
     const { storageKey } = await send<{ storageKey?: string }>("Storage.getStorageKey", {
@@ -1068,7 +1071,7 @@ function pageStorage(ses: Session, send: ProtocolSend): HostPageStorage {
       const key = await ownKey().catch(() => undefined);
       if (!key) return undefined;
       const { entries } = await send<{ entries?: string[][] }>("DOMStorage.getDOMStorageItems", {
-        storageId: { storageKey: key, isLocalStorage: true },
+        storageId: { storageKey: key, isLocalStorage },
       });
       return {
         origin: key.slice(0, -1),
@@ -1084,14 +1087,20 @@ function pageStorage(ses: Session, send: ProtocolSend): HostPageStorage {
       if (!key || key !== `${storage.origin}/`) throw new Error("the page is not on that origin");
       for (const [name, value] of storage.items) {
         await send("DOMStorage.setDOMStorageItem", {
-          storageId: { storageKey: key, isLocalStorage: true },
+          storageId: { storageKey: key, isLocalStorage },
           key: name,
           value,
         });
       }
     },
     clear: async (origin) => {
-      await ses.clearStorageData({ origin, storages: ["localstorage"] });
+      if (isLocalStorage) {
+        await ses.clearStorageData({ origin, storages: ["localstorage"] });
+        return;
+      }
+      const key = await ownKey().catch(() => undefined);
+      if (key !== `${origin}/`) return;
+      await send("DOMStorage.clear", { storageId: { storageKey: key, isLocalStorage } });
     },
   };
 }

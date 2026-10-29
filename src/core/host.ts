@@ -330,6 +330,13 @@ export type HostBrowserPage = {
   cookies: HostBrowserCookies;
   /** The page's own local storage, read and written through this page alone. */
   storage: HostPageStorage;
+  /**
+   * The page's own session storage, read and written through this page
+   * alone: no other page, even of the same browser, sees it. Its `clear`
+   * empties the origin's session storage in this page only, when its top
+   * document is on that origin.
+   */
+  session: HostPageStorage;
   /** The first page's close ends the browser: every page, its site data and its sign-in to the guard. */
   close: () => void;
 };
@@ -364,7 +371,7 @@ export type HostBrowserCookies = {
 };
 
 /**
- * One origin's local storage, as a page keeps it (`http://127.0.0.1:5173`,
+ * One origin's local or session storage, as a page keeps it (`http://127.0.0.1:5173`,
  * its keys and values): what a saved website sign-in keeps beside its
  * cookies for a site that keeps its sign-in there (docs/task-browser.md,
  * "Saved sign-ins").

@@ -1,0 +1,17 @@
+{
+  "entries": [
+    {
+      "id": "task-browser-saved-session-storage",
+      "kind": "improvement",
+      "title": "Saved website sign-ins work for more sites",
+      "body": "Some websites keep your sign-in only in the page itself, for as long as the page stays open. When you tick Remember as you hand a task's browser back, Infinitary now saves that too, so a later task's one click on Use my saved sign-in opens the site signed in. These sites can still end a sign-in on their own schedule, and then the page asks you to sign in again. What such a site keeps in its page can include what you typed to sign in; it stays in the same private file on this Mac as the rest of the saved sign-in, and Remove deletes it.",
+      "area": "tasks",
+      "picture": {
+        "dark": "task-browser-saved-session-storage-dark.webp",
+        "light": "task-browser-saved-session-storage-light.webp",
+        "alt": "A task's browser signed in to a site after one click on a saved sign-in, its foot line reading signed in and saved on this computer"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

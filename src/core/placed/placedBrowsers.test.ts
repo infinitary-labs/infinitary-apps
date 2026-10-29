@@ -102,4 +102,38 @@ describe("home-owned saved-site handback across computers", () => {
     ).toEqual({ ok: false, text: "Work computer cannot be reached" });
     expect(unavailable.store.list()).toEqual([]);
   });
+
+  it("carries session storage both ways, and leaves it as saved when a stop or an older computer sends none (INF-1849)", async () => {
+    const session = [
+      { origin: `https://${site}`, items: [["repository", "token-1"]] as [string, string][] },
+    ];
+    const asked: unknown[] = [];
+    const { store, browsers } = setup(async (channel, args) => {
+      asked.push([channel, args]);
+      return channel === "inf:task-browser:return"
+        ? { ok: true, remembered: { site, held: { ...held, session } } }
+        : { ok: true };
+    });
+    expect(await browsers.returnControl("task", handle, { site, remember: true })).toEqual({
+      ok: true,
+    });
+    const record = store.get(site);
+    expect(record?.session).toEqual(session);
+    if (!record) throw new Error("The hand-back saved nothing");
+
+    await browsers.grantSavedSignIn("task", handle);
+    expect(asked.at(-1)).toMatchObject([
+      "inf:task-browser:grant",
+      [{ signIn: { id: record.id, session } }],
+    ]);
+
+    // A browser's stop there copies back cookies and local storage alone.
+    browsers.heardEvent("work-computer", "task", {
+      kind: "sign-in",
+      site,
+      id: record.id,
+      held: { cookies: [], storage: held.storage },
+    });
+    expect(store.get(site)?.session).toEqual(session);
+  });
 });

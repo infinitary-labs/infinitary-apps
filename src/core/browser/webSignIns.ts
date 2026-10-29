@@ -20,16 +20,19 @@ import type { HostCookie, HostOriginStorage } from "../host";
  *
  * A saved sign-in is what a task's browser held of one site when the
  * captain handed it back with "Remember my <site> sign-in on this Mac"
- * ticked: the site's cookies, and the page storage of its own origins,
- * where a site that keeps its sign-in in the page rather than in a cookie
- * keeps it - the site's own signed-in state, the way a browser keeps it -
- * and never anything he typed, the person's own Safari or Chrome profile,
- * or the app's subscription sign-ins, which live in their own stores. A
- * task's browser uses one after its request-card grant or the captain's
- * separate, lasting permission for future tasks on that site. The browser
- * copies it back on human return and when it stops, so a refreshed session stays
- * current. Each save mints a new `id`, so a browser copies back only into
- * the save it was given, never into one the captain removed and saved anew.
+ * ticked: the site's cookies, and the local and session storage of its
+ * own origins, where a site that keeps its sign-in in the page rather than
+ * in a cookie keeps it - the site's own signed-in state, the way a browser
+ * keeps it, which can include what its page chose to keep of what he typed
+ * - and never the person's own Safari or Chrome profile, or the app's
+ * subscription sign-ins, which live in their own stores. A task's browser
+ * uses one after its request-card grant or the captain's separate, lasting
+ * permission for future tasks on that site. The browser copies its cookies
+ * and local storage back on human return and when it stops, so a refreshed
+ * session stays current; session storage only on human return, since a
+ * site may clear it while the browser sits idle before it stops. Each save
+ * mints a new `id`, so a browser copies back only into the save it was
+ * given, never into one the captain removed and saved anew.
  */
 
 /** One saved sign-in's file: its site, when it was saved, which save it is, its cookies and page storage. */
@@ -39,13 +42,21 @@ export type SavedSignInRecord = {
   id: string;
   automatic?: boolean;
   cookies: HostCookie[];
+  /** Its own origins' local storage. */
   storage: HostOriginStorage[];
+  /** Its own origins' session storage. */
+  session: HostOriginStorage[];
 };
 
-/** What a browser holds of one site's sign-in: its cookies and its own origins' page storage. */
+/**
+ * What a browser holds of one site's sign-in: its cookies and its own
+ * origins' local storage, and their session storage when it was read -
+ * absent when it was not, as at a browser's stop.
+ */
 export type HeldSignIn = {
   cookies: readonly HostCookie[];
   storage: readonly HostOriginStorage[];
+  session?: readonly HostOriginStorage[];
 };
 
 const recordSchema = z.object({
@@ -57,6 +68,8 @@ const recordSchema = z.object({
   cookies: z.array(webCookieSchema),
   // A save made before page storage was kept has none.
   storage: z.array(originStorageSchema).default([]),
+  // A save made before session storage was kept has none.
+  session: z.array(originStorageSchema).default([]),
 });
 
 /** A site as the store keys it: the page's host and port, lower case. */
@@ -124,6 +137,17 @@ export function storageOfSite(
   });
 }
 
+/** A save's storage with each of the site's own origins read now in place of what it held. */
+function mergeStorage(
+  saved: readonly HostOriginStorage[],
+  read: readonly HostOriginStorage[],
+  site: string,
+): HostOriginStorage[] {
+  const now = storageOfSite(read, site);
+  const origins = new Set(now.map((origin) => origin.origin));
+  return [...saved.filter((origin) => !origins.has(origin.origin)), ...now];
+}
+
 /** A site's own origins, whose page storage is the site's: plain and secure, at its host and port. */
 export function siteOrigins(site: string): string[] {
   const key = signInSite(site);
@@ -175,6 +199,7 @@ export class WebSignIns {
       id,
       cookies: [...held.cookies],
       storage: storageOfSite(held.storage, key),
+      session: storageOfSite(held.session ?? [], key),
     };
     this.write(record);
     return record;
@@ -184,19 +209,21 @@ export class WebSignIns {
    * Copy what a browser holds of a site's sign-in back into the save it was
    * given, so a session the site refreshed stays current: its cookies, when
    * it holds any, and each of the site's own origins' page storage it could
-   * read, origin by origin; what it holds nothing of stays as it was saved.
+   * read, origin by origin, and the same of its session storage when that
+   * was read; what it holds nothing of stays as it was saved.
    * Nothing is written when that save was removed or replaced since; when
    * it was, false.
    */
   refresh(site: string, id: string, held: HeldSignIn): boolean {
     const record = this.get(site);
     if (!record || record.id !== id) return false;
-    const storage = storageOfSite(held.storage, record.site);
-    const read = new Set(storage.map((origin) => origin.origin));
     this.write({
       ...record,
       cookies: held.cookies.length > 0 ? [...held.cookies] : record.cookies,
-      storage: [...record.storage.filter((origin) => !read.has(origin.origin)), ...storage],
+      storage: mergeStorage(record.storage, held.storage, record.site),
+      session: held.session
+        ? mergeStorage(record.session, held.session, record.site)
+        : record.session,
     });
     return true;
   }

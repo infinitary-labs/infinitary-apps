@@ -81,14 +81,15 @@ export type SignInStore = Pick<WebSignIns, "list" | "get" | "save" | "refresh" |
 
 /**
  * What of a saved sign-in a browser's page can use now: its cookies still
- * alive, and the page storage of the very origin the page is on, since a
- * page takes its own origin's storage alone.
+ * alive, and the local and session storage of the very origin the page is
+ * on, since a page takes its own origin's storage alone.
  */
 export function usableSignIn(record: SavedSignInRecord, address: string, now: number): HeldSignIn {
   const origin = originOf(address);
   return {
     cookies: liveCookies(record.cookies, now),
     storage: storageOfSite(record.storage, record.site).filter((held) => held.origin === origin),
+    session: storageOfSite(record.session, record.site).filter((held) => held.origin === origin),
   };
 }
 
@@ -622,9 +623,17 @@ function originOf(url: string): string | undefined {
   }
 }
 
-/** Whether a browser holds anything of a site's sign-in: a cookie, or page storage. */
+/** Whether a browser holds anything of a site's sign-in: a cookie, or local or session storage. */
 function holds(held: HeldSignIn): boolean {
-  return held.cookies.length > 0 || held.storage.length > 0;
+  return held.cookies.length > 0 || held.storage.length > 0 || (held.session?.length ?? 0) > 0;
+}
+
+/** Write what a page can use of a saved sign-in into it: its cookies, and its own origin's local and session storage. */
+async function writeSignIn(page: HostBrowserPage, usable: HeldSignIn): Promise<void> {
+  await page.cookies.set(usable.cookies);
+  // The page takes its own origin's storage alone, and refuses once it moved on.
+  for (const storage of usable.storage) await page.storage.write(storage);
+  for (const storage of usable.session ?? []) await page.session.write(storage);
 }
 
 /** The site a crewmate named, as `siteOf` would read it: its host and port, lower case. */
@@ -1194,13 +1203,11 @@ export class TaskBrowsers {
     try {
       // Mark the grant before asynchronous page writes, so Remove can sign it out.
       browser.saved.set(site, record.id);
-      await entry.page.cookies.set(usable.cookies);
-      for (const storage of usable.storage) await entry.page.storage.write(storage);
+      await writeSignIn(entry.page, usable);
       if (this.browsers.get(taskId) !== browser) return;
       if (browser.saved.get(site) !== record.id) {
         // Remove may have cleared the grant while asynchronous writes were in flight.
-        await entry.page.cookies.remove(cookiesOfSite(await entry.page.cookies.all(), site));
-        for (const origin of siteOrigins(site)) await entry.page.storage.clear(origin);
+        await this.signOut(browser, site);
         return;
       }
       await this.loadOwn(entry, entry.page.reload());
@@ -1255,9 +1262,7 @@ export class TaskBrowsers {
         return { ok: false, text: `No sign-in for ${site} is saved on ${HERE.this}.` };
       }
       try {
-        await entry.page.cookies.set(usable.cookies);
-        // The page takes its own origin's storage alone, and refuses once it moved on.
-        for (const storage of usable.storage) await entry.page.storage.write(storage);
+        await writeSignIn(entry.page, usable);
       } catch {
         return { ok: false, text: `${HERE.This} could not use your saved sign-in right now.` };
       }
@@ -1298,8 +1303,9 @@ export class TaskBrowsers {
   /**
    * The captain's Remove in Settings: the site's saved sign-in goes from
    * this Mac, and every browser using it is signed out of that site at
-   * once - its cookies there and its own origins' page storage go, and
-   * nothing is copied back - and its crewmate is told on its next command.
+   * once - its cookies there, its own origins' local storage, and their
+   * session storage in each of its pages go, and nothing is copied back -
+   * and its crewmate is told on its next command.
    */
   async removeSavedSignIn(site: string): Promise<TaskBrowserCommandResult> {
     const key = signInSite(site);
@@ -1308,10 +1314,7 @@ export class TaskBrowsers {
     for (const [taskId, browser] of using) {
       browser.saved.delete(key);
       try {
-        const first = browser.pages[0]?.page;
-        const cookies = await first?.cookies.all();
-        if (cookies) await first?.cookies.remove(cookiesOfSite(cookies, key));
-        for (const origin of siteOrigins(key)) await first?.storage.clear(origin);
+        await this.signOut(browser, key);
       } catch {
         // A browser that stopped meanwhile has nothing left to sign out.
       }
@@ -1334,7 +1337,7 @@ export class TaskBrowsers {
    * Save the current page's site's sign-in from this browser: the captain's
    * tick on Return control. The browser uses that save from then on, and
    * copies back into it when it stops. A site that holds neither cookies
-   * nor page storage saves nothing.
+   * nor local or session storage saves nothing.
    */
   private async rememberSignIn(
     browser: Browser,
@@ -1349,7 +1352,8 @@ export class TaskBrowsers {
     try {
       const held: HeldSignIn = {
         cookies: cookiesOfSite(await browser.current.page.cookies.all(), site),
-        storage: storageOfSite(await this.storageOn(browser, new Set([site])), site),
+        storage: storageOfSite(await this.storageOn(browser, new Set([site]), "storage"), site),
+        session: storageOfSite(await this.storageOn(browser, new Set([site]), "session"), site),
       };
       if (signInSite(siteOf(this.addressOf(browser, browser.current))) !== site)
         return "Control returned, but the page changed sites. No sign-in was saved.";
@@ -1374,7 +1378,9 @@ export class TaskBrowsers {
   /**
    * Copy each saved sign-in a stopping browser uses back into its save, so
    * a session the site refreshed stays current: the site's cookies, and the
-   * page storage of each of its origins a page is on now. A save the
+   * local storage of each of its origins a page is on now. Its session
+   * storage stays as the captain's hand-back saved it: a site may have
+   * cleared it while the browser sat idle before it stopped. A save the
    * captain removed or replaced since is left alone, and what the site
    * holds nothing of now copies nothing back over the save it came from.
    */
@@ -1384,7 +1390,7 @@ export class TaskBrowsers {
     const first = browser.pages[0]?.page;
     if (!first) return;
     const cookies = await first.cookies.all();
-    const storage = await this.storageOn(browser, new Set(browser.saved.keys()));
+    const storage = await this.storageOn(browser, new Set(browser.saved.keys()), "storage");
     for (const [site, id] of browser.saved) {
       const held = { cookies: cookiesOfSite(cookies, site), storage: storageOfSite(storage, site) };
       if (holds(held)) store.refresh(site, id, held);
@@ -1393,23 +1399,42 @@ export class TaskBrowsers {
 
   /**
    * What of a saved sign-in a browser's page can use now: its cookies still
-   * alive, and the page storage of the very origin the page is on, since a
-   * page takes its own origin's storage alone.
+   * alive, and the local and session storage of the very origin the page is
+   * on, since a page takes its own origin's storage alone.
    */
   private usable(record: SavedSignInRecord, address: string): HeldSignIn {
     return usableSignIn(record, address, this.now());
   }
 
   /**
-   * The page storage a browser's pages on these sites hold for their own
-   * origins, one per origin, the current page's first. A page on any other
-   * site is never read.
+   * Sign a browser out of a site: its cookies there, its own origins' local
+   * storage, and their session storage in each of its pages, which keep
+   * their own.
    */
-  private async storageOn(browser: Browser, sites: Set<string>): Promise<HostOriginStorage[]> {
+  private async signOut(browser: Browser, site: string): Promise<void> {
+    const first = browser.pages[0]?.page;
+    const cookies = await first?.cookies.all();
+    if (cookies) await first?.cookies.remove(cookiesOfSite(cookies, site));
+    for (const origin of siteOrigins(site)) await first?.storage.clear(origin);
+    for (const entry of new Set([browser.current, ...browser.pages])) {
+      for (const origin of siteOrigins(site)) await entry.page.session.clear(origin);
+    }
+  }
+
+  /**
+   * The local or session storage a browser's pages on these sites hold for
+   * their own origins, one per origin, the current page's first. A page on
+   * any other site is never read.
+   */
+  private async storageOn(
+    browser: Browser,
+    sites: Set<string>,
+    area: "storage" | "session",
+  ): Promise<HostOriginStorage[]> {
     const held = new Map<string, HostOriginStorage>();
     for (const entry of new Set([browser.current, ...browser.pages])) {
       if (!sites.has(signInSite(siteOf(this.addressOf(browser, entry))))) continue;
-      const storage = await entry.page.storage.read().catch(() => undefined);
+      const storage = await entry.page[area].read().catch(() => undefined);
       if (storage && !held.has(storage.origin)) held.set(storage.origin, storage);
     }
     return [...held.values()];

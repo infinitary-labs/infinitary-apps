@@ -143,6 +143,41 @@ describe("the saved sign-ins store", () => {
     });
   });
 
+  it("keeps the site's own origins' session storage, and leaves it as saved when a copy back holds none (INF-1849)", () => {
+    const store = new WebSignIns(join(scratchDir("infinitary-web-sign-ins-"), "web-sign-ins"));
+    const own: HostOriginStorage = {
+      origin: "https://club.example",
+      items: [["repository", "token-1"]],
+    };
+    const saved = store.save("club.example", {
+      cookies: [],
+      storage: [],
+      session: [own, { origin: "https://bank.example", items: [["token", "not-the-club's"]] }],
+    });
+    expect(saved.session).toEqual([own]);
+    // A browser's stop reads no session storage: what it copies back leaves it as saved.
+    store.refresh("club.example", saved.id, cookies(cookie("club.example", "sid")));
+    expect(store.get("club.example")?.session).toEqual([own]);
+    // A hand-back reads it, origin by origin.
+    const refreshed: HostOriginStorage = { origin: own.origin, items: [["repository", "t-2"]] };
+    store.refresh("club.example", saved.id, { cookies: [], storage: [], session: [refreshed] });
+    expect(store.get("club.example")?.session).toEqual([refreshed]);
+  });
+
+  it("reads a save made before session storage was kept as one with none (INF-1849)", () => {
+    const root = join(scratchDir("infinitary-web-sign-ins-"), "web-sign-ins");
+    const store = new WebSignIns(root);
+    store.save("aurora.example", cookies(cookie("aurora.example", "sid")));
+    const [file] = readdirSync(root);
+    const path = join(root, file as string);
+    const { session: _session, ...older } = JSON.parse(readFileSync(path, "utf8"));
+    writeFileSync(path, JSON.stringify(older));
+    expect(store.get("aurora.example")).toMatchObject({
+      cookies: [cookie("aurora.example", "sid")],
+      session: [],
+    });
+  });
+
   it("reads a broken file as nothing saved", () => {
     const root = join(scratchDir("infinitary-web-sign-ins-"), "web-sign-ins");
     const store = new WebSignIns(root);

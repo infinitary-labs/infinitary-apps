@@ -1,0 +1,14 @@
+{
+  "entries": [
+    {
+      "id": "waits-follow-moved-work",
+      "kind": "fix",
+      "area": "crewmates",
+      "title": "A crewmate's wait follows work that moves to another task",
+      "body": "When a task's work moves to another task, every crewmate waiting on that work now waits on the new task instead. It hears once when the new task is done, with its pull request named. A crewmate already told the old task was dropped hears once that the work goes on.",
+      "noPicture": "This changes when a waiting crewmate is told to carry on, not a view or control.",
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

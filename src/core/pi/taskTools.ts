@@ -494,8 +494,9 @@ export function createTaskTools(delegate: TaskToolsDelegate) {
     description: [
       "Record a typed edge between two tasks (ids or keys). blocks: `to` cannot start until",
       "`from` closes, and a cycle is refused as text. related: work neither task is waiting on.",
-      "discovered-from: `from` was found while doing `to`. replaced-by: `from` was",
-      "dropped for `to`, which does its work. Pass remove true to unlink.",
+      "discovered-from: `from` was found while doing `to`. replaced-by: `to` does `from`'s work now;",
+      "link it on every move of work to another task (a drop, a takeover, a fresh task) - the waits",
+      "on `from`, and its own, move to `to`. Pass remove true to unlink.",
     ].join(" "),
     parameters: Type.Object({
       from: Type.String({ description: "The task the edge starts at (id or key)" }),

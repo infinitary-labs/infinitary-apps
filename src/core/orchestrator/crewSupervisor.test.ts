@@ -12219,6 +12219,46 @@ describe("the whose-turn rule at the report's call site (S7c, R4.8)", () => {
       ).toThrow(/^Report refused: .*would close a cycle/);
       expect(tasks.linksTo(taskId)).toHaveLength(1);
     });
+
+    // INF-1826 (spec item 3): a wait named on replaced work is recorded on the
+    // task carrying it, and a carrier already done is refused by name.
+    it("records a wait named on replaced work on the task carrying it, and refuses a carrier already done", async () => {
+      const crewmate = fakeCrewmate();
+      const { specs, tasks, taskId } = await reportedTask(crewmate, {
+        hasRunningJobs: () => true,
+      });
+      const onReport = specs[0]?.onReport;
+      if (!onReport) throw new Error("Missing production report callback");
+      const old = seedTask(tasks, { id: "inf-1550", title: "Runbooks piece 0", status: "idle" });
+      const carrier = seedTask(tasks, {
+        id: "inf-1641",
+        title: "Publish Runbooks piece 0",
+        status: "running",
+      });
+      tasks.dropWithChildren(old.id, {
+        reason: "moved to a fresh task",
+        actor: "firstmate",
+        replacedBy: carrier.id,
+      });
+      expect(onReport("Waiting on runbooks.", undefined, { waitsOn: [old.key] })).toContain(
+        `Recorded: your task waits on ${carrier.key}.`,
+      );
+      expect(tasks.linksTo(taskId)).toEqual([
+        expect.objectContaining({ fromId: carrier.id, type: "blocks" }),
+      ]);
+
+      const gone = seedTask(tasks, { id: "gone", title: "Old loader", status: "idle" });
+      const merged = seedTask(tasks, { id: "merged", title: "New loader", status: "running" });
+      tasks.dropWithChildren(gone.id, {
+        reason: "moved",
+        actor: "firstmate",
+        replacedBy: merged.id,
+      });
+      tasks.close(merged.id, { status: "done", reason: "merged", actor: "host" });
+      expect(() => onReport("Waiting on the loader.", undefined, { waitsOn: [gone.key] })).toThrow(
+        `waits_on names ${gone.key}, whose work moved to ${merged.key}, which is already done`,
+      );
+    });
   });
 
   it("wakes on every report while a blocking filing stays planned, and not once it starts", async () => {
@@ -14221,6 +14261,109 @@ describe("the idle ladder (idle crew recovery, docs/report-sort.md)", () => {
         expect(supervisor.unlinkTasks(owner.key, key, "blocks")).toMatch(/^No such link/);
       },
     );
+
+    // INF-1826, replaying INF-1641's case: INF-1688 waited on INF-1550, whose
+    // work moved to INF-1641. The wait follows the replaced-by link, and the
+    // waiter hears one steer at the carrier's close (the captain's q3: at the
+    // close only) naming it, its pull request and whose work it took over.
+    it("follows a wait to the task carrying the moved work and wakes once at its close", async () => {
+      const crewmate = fakeCrewmate();
+      const { supervisor, tasks } = clockedSetup(crewmate);
+      const waiting = seedTask(tasks, {
+        id: "inf-1688",
+        title: "Finish self-resolving stalls",
+        status: "completed",
+        worktreeDir: "/work/waiting",
+        sessionFile: "/tmp/waiting.jsonl",
+      });
+      const old = seedTask(tasks, { id: "inf-1550", title: "Runbooks piece 0", status: "running" });
+      const carrier = seedTask(tasks, {
+        id: "inf-1641",
+        title: "Publish Runbooks piece 0",
+        status: "running",
+      });
+      const loader = seedTask(tasks, { id: "inf-1479", title: "Runbook loader", status: "running" });
+      tasks.link(loader.id, carrier.id, "related", "firstmate");
+      tasks.link(old.id, waiting.id, "blocks", "crewmate");
+      supervisor.reconcileIdle(hostNow);
+      hostNow += minutes(30);
+      const before = crewmate.promptCalls.length;
+      tasks.dropWithChildren(old.id, {
+        reason: "its branch moved to a fresh task",
+        actor: "firstmate",
+        replacedBy: carrier.id,
+      });
+      await supervisor.sweepGates(hostNow);
+      await tick();
+      // No premature "dropped, carry on": the wait is on the carrier now.
+      expect(crewmate.promptCalls).toHaveLength(before);
+      expect(tasks.blockers(waiting.id).map((row) => row.id)).toEqual([carrier.id]);
+
+      hostNow += minutes(60);
+      seedDelivery(tasks, carrier.id, { prNumber: 412 });
+      tasks.close(carrier.id, { status: "done", reason: "merged", actor: "captain" });
+      await supervisor.sweepGates(hostNow);
+      await tick();
+      expect(crewmate.promptCalls.slice(before)).toHaveLength(1);
+      expect(crewmate.promptCalls.at(-1)).toContain(
+        `${carrier.key} "Publish Runbooks piece 0" (PR #412), which took over the work of ${old.key} that your task could not merge before, is done.`,
+      );
+      await supervisor.sweepGates(hostNow + minutes(5));
+      await tick();
+      expect(crewmate.promptCalls.slice(before)).toHaveLength(1);
+    });
+
+    // INF-1826 (the captain's q4): a replaced-by link written after the
+    // waiter heard the old task was dropped is one steer naming the new task.
+    it("tells a waiter already told of the drop once that the work goes on in another task", async () => {
+      const crewmate = fakeCrewmate();
+      const { supervisor, tasks } = clockedSetup(crewmate);
+      const waiting = seedTask(tasks, {
+        id: "inf-1688",
+        title: "Finish self-resolving stalls",
+        status: "completed",
+        worktreeDir: "/work/waiting",
+        sessionFile: "/tmp/waiting.jsonl",
+      });
+      const old = seedTask(tasks, { id: "inf-1550", title: "Runbooks piece 0", status: "running" });
+      const carrier = seedTask(tasks, {
+        id: "inf-1641",
+        title: "Publish Runbooks piece 0",
+        status: "running",
+      });
+      tasks.link(old.id, waiting.id, "blocks", "crewmate");
+      supervisor.reconcileIdle(hostNow);
+      hostNow += minutes(30);
+      tasks.close(old.id, { status: "dropped", reason: "cancelled", actor: "firstmate" });
+      await supervisor.sweepGates(hostNow);
+      await tick();
+      expect(crewmate.promptCalls.at(-1)).toContain("was dropped and no longer holds it");
+      await endTurn(crewmate, waiting.id, "Carrying on.");
+      const told = crewmate.promptCalls.length;
+
+      hostNow += minutes(10);
+      tasks.link(old.id, carrier.id, "replaced-by", "firstmate");
+      await supervisor.sweepGates(hostNow);
+      await tick();
+      expect(crewmate.promptCalls.slice(told)).toEqual([
+        expect.stringContaining(
+          `${old.key} "Runbooks piece 0", which you heard was dropped, goes on in ${carrier.key} "Publish Runbooks piece 0", so your task waits on ${carrier.key} now`,
+        ),
+      ]);
+      await endTurn(crewmate, waiting.id, "Waiting on the carrier.");
+      await supervisor.sweepGates(hostNow + minutes(5));
+      await tick();
+      expect(crewmate.promptCalls.slice(told)).toHaveLength(1);
+
+      hostNow += minutes(60);
+      tasks.close(carrier.id, { status: "done", reason: "merged", actor: "captain" });
+      await supervisor.sweepGates(hostNow);
+      await tick();
+      expect(crewmate.promptCalls.slice(told)).toHaveLength(2);
+      expect(crewmate.promptCalls.at(-1)).toContain(
+        `which took over the work of ${old.key} that your task could not merge before, is done.`,
+      );
+    });
 
     it("goes out once across a restart: the inbox remembers the resume, not the process", async () => {
       const crewmate = fakeCrewmate();

@@ -38,6 +38,8 @@ import {
   type WakeFacts,
   type WakeNote,
   type WakeTask,
+  waitMovedOnce,
+  waitMovedWake,
   wakeBuiltOn,
 } from "./wakes";
 
@@ -1405,6 +1407,7 @@ export class IdleLadder {
         this.endTimedWait(record.id, gate, now);
       }
       for (const ended of this.endedWaits(record)) this.endDependencyWait(record.id, ended);
+      for (const moved of this.movedWaits(record)) this.tellMovedWait(record.id, moved);
     }
     // A wait that can never end (a dropped blocker) is one wake to the
     // Firstmate, whose tools already express every way out; the row stays
@@ -1465,11 +1468,82 @@ export class IdleLadder {
     if (this.resumesTried.has(tried) || this.host.inbox.woken(taskId, once)) return;
     this.resumesTried.add(tried);
     this.host.tasks.endIdle(taskId);
+    const pullRequest = ended.task.delivery?.prNumber;
+    const carried =
+      ended.kind === "blocks"
+        ? this.movedFrom(taskId, ended.task.id).map((task) => task.key || task.id)
+        : [];
     void this.host
-      .steer(taskId, dependencyClosedWake(ended.task, ended.kind))
+      .steer(
+        taskId,
+        dependencyClosedWake(
+          { ...ended.task, ...(pullRequest ? { pullRequest } : {}) },
+          ended.kind,
+          carried,
+        ),
+      )
       .catch((caught: unknown) => {
         // No conversation to resume: the ladder reads the task on its own clock.
         console.warn("[crew] a closed dependency's steer not delivered:", caught);
+      });
+  }
+
+  /**
+   * The tasks whose wait the task's timeline records moving to `carrierId`
+   * when a replaced-by link was written (INF-1826, `TaskService.moveWaits`).
+   */
+  private movedFrom(taskId: string, carrierId: string): TaskRecord[] {
+    const tasks = this.host.tasks;
+    const ids = new Set(
+      tasks
+        .timeline(taskId)
+        .filter((event) => event.kind === "unlinked" && event.data?.movedTo === carrierId)
+        .map((event) => event.data?.fromId)
+        .filter((id): id is string => typeof id === "string"),
+    );
+    return [...ids].flatMap((id) => [tasks.get(id)].filter((row): row is TaskRecord => !!row));
+  }
+
+  /**
+   * The live waits that moved to another task after the waiter was told the
+   * old one was dropped (INF-1826): a late replaced-by link. Each names the
+   * dropped task and the one carrying its work now.
+   */
+  private movedWaits(record: TaskRecord): { replaced: TaskRecord; carrier: TaskRecord }[] {
+    const tasks = this.host.tasks;
+    return this.liveWaits(record).flatMap(({ task, kind }) => {
+      if (kind !== "blocks") return [];
+      const told = tasks
+        .replacedPredecessors(task.id)
+        .filter(
+          (old) =>
+            old.status === "dropped" &&
+            this.host.inbox.woken(record.id, dependencyClosedOnce(old)) &&
+            !this.host.inbox.woken(record.id, waitMovedOnce(old, task)),
+        );
+      if (told.length === 0) return [];
+      const moved = new Set(this.movedFrom(record.id, task.id).map((old) => old.id));
+      return told
+        .filter((old) => moved.has(old.id))
+        .map((replaced) => ({ replaced, carrier: task }));
+    });
+  }
+
+  /** One steer naming the task that carries the work a dropped wait was on (INF-1826). */
+  private tellMovedWait(
+    taskId: string,
+    moved: { replaced: TaskRecord; carrier: TaskRecord },
+  ): void {
+    const once = waitMovedOnce(moved.replaced, moved.carrier);
+    const tried = `${taskId}\n${once}`;
+    if (this.resumesTried.has(tried)) return;
+    this.resumesTried.add(tried);
+    this.host.tasks.endIdle(taskId);
+    void this.host
+      .steer(taskId, waitMovedWake(moved.replaced, moved.carrier))
+      .catch((caught: unknown) => {
+        // No conversation to resume: the ladder reads the task on its own clock.
+        console.warn("[crew] a moved wait's steer not delivered:", caught);
       });
   }
 }

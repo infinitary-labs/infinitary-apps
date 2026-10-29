@@ -246,7 +246,7 @@ export const REPORT_TOOL = crewmateTool({
     waits_on: Type.Optional(
       Type.Array(Type.String(), {
         description:
-          "Keys of open tasks your work cannot go on without, such as one whose merge you need first: each is recorded as a link your task waits on. While that work is underway nothing nudges you, and its close steers you; work nobody has started goes to the first mate. Unknown, closed or circular keys refuse the report. Never with finished.",
+          "Keys of open tasks your work cannot go on without, such as one whose merge you need first: each is recorded as a link your task waits on. While that work is underway nothing nudges you, and its close steers you; work nobody has started goes to the first mate. A replaced task's wait goes to its carrier; unknown, closed or circular keys refuse the report. Never with finished.",
       }),
     ),
     merge_completes_task: Type.Optional(

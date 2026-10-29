@@ -655,6 +655,84 @@ describe("the task graph (task-system P2)", () => {
       expect(tasks.flagsOf(tasks.get("origin") as never).blocked).toBe(true);
     });
 
+    // INF-1826 (the captain's Approve and build, q1 A and q2 yes): a replaced-by
+    // link moves the live waits on both ends of the old task to the one that
+    // carries its work, in the same write. The tasks are INF-1641's case.
+    it("moves the live waits on a replaced task, and its own, to the task carrying its work", () => {
+      const { tasks, work, tick } = setup();
+      const old = work("inf-1550", { title: "Runbooks piece 0", status: "active" });
+      const carrier = work("inf-1641", { title: "Publish Runbooks piece 0", status: "active" });
+      const waiter = work("inf-1688", { title: "Finish self-resolving stalls", status: "active" });
+      const held = work("inf-1481", { title: "Pause the stall alert", status: "open" });
+      const finished = work("inf-1480", { title: "Count the stalls", status: "active" });
+      const prerequisite = work("inf-1479", { title: "Runbook loader", status: "active" });
+      const done = work("done-fix", { title: "Old fixture fix", status: "active" });
+      const review = work("review", {
+        parentId: old.id,
+        status: "active",
+        shape: { kind: "review", kind_source: "host:review" },
+      });
+      tasks.link(old.id, waiter.id, "blocks", "crewmate");
+      tasks.link(old.id, held.id, "blocks", "firstmate", true);
+      tasks.link(old.id, finished.id, "blocks", "crewmate");
+      tasks.link(prerequisite.id, old.id, "blocks", "firstmate");
+      tasks.link(done.id, old.id, "blocks", "firstmate");
+      tasks.link(review.id, old.id, "blocks", "host");
+      tasks.link(old.id, carrier.id, "related", "firstmate");
+      const began = tasks.linksTo(waiter.id)[0]?.createdAt;
+      tasks.close(finished.id, { status: "done", reason: "merged", actor: "captain" });
+      tasks.close(done.id, { status: "done", reason: "merged", actor: "captain" });
+      tick(60_000);
+
+      tasks.dropWithChildren(old.id, {
+        reason: "its branch moved to a fresh task",
+        actor: "firstmate",
+        replacedBy: carrier.id,
+      });
+
+      const waitsOf = (id: string) =>
+        tasks
+          .linksTo(id)
+          .filter((link) => link.type === "blocks")
+          .map((link) => ({ from: link.fromId, holdsMerge: link.holdsMerge }));
+      expect(waitsOf(waiter.id)).toEqual([{ from: carrier.id, holdsMerge: false }]);
+      expect(tasks.linksTo(waiter.id)[0]?.createdAt).toBe(began);
+      expect(waitsOf(held.id)).toEqual([{ from: carrier.id, holdsMerge: true }]);
+      expect(tasks.blockerRefusal(held.id)?.tasks.map((row) => row.id)).toEqual([carrier.id]);
+      // A closed waiter keeps its history; done work holds nothing to move.
+      expect(waitsOf(finished.id)).toEqual([{ from: old.id, holdsMerge: false }]);
+      expect(waitsOf(carrier.id)).toEqual([{ from: prerequisite.id, holdsMerge: false }]);
+      expect(
+        waitsOf(old.id)
+          .map((wait) => wait.from)
+          .sort(),
+      ).toEqual([done.id, review.id].sort());
+      expect(
+        tasks
+          .linksFrom(old.id)
+          .map((link) => link.type)
+          .sort(),
+      ).toEqual(["blocks", "related", "replaced-by"].sort());
+      expect(tasks.timeline(waiter.id).filter((event) => event.kind === "unlinked")).toMatchObject([
+        { data: { fromId: old.id, type: "blocks", movedTo: carrier.id } },
+      ]);
+      // Nothing waits on the dropped task any more, so no dead gate is left behind.
+      expect(tasks.listDeadBlocked().map((row) => row.id)).not.toContain(held.id);
+      expect(tasks.carrierOf(old.id)?.id).toBe(carrier.id);
+    });
+
+    it("leaves a wait on the replaced task when moving it would close a cycle", () => {
+      const { tasks, work } = setup();
+      const old = work("old", { status: "active" });
+      const carrier = work("carrier", { status: "active" });
+      const waiter = work("waiter", { status: "active" });
+      tasks.link(old.id, waiter.id, "blocks", "crewmate");
+      tasks.link(waiter.id, carrier.id, "blocks", "firstmate");
+      tasks.link(old.id, carrier.id, "replaced-by", "firstmate");
+      expect(tasks.linksTo(waiter.id).map((link) => link.fromId)).toEqual([old.id]);
+      expect(tasks.replacementOf(old.id)).toBe(carrier.key);
+    });
+
     it("copies a merge mark when dropped work starts again, and a required action's prerequisite holds", () => {
       const { tasks, work } = setup();
       const old = work("old", { status: "active" });

@@ -1767,6 +1767,23 @@ export class TaskService {
     return retry?.data?.escalated_to as string | undefined;
   }
 
+  /**
+   * The task that carries this one's work now (INF-1826): the end of its
+   * `replaced-by` links, or the task itself when nothing replaced it.
+   */
+  carrierOf(id: string): TaskRecord | undefined {
+    let record = this.store.get(id);
+    const seen = new Set<string>();
+    while (record && !seen.has(record.id)) {
+      seen.add(record.id);
+      const next = this.links.listFrom(record.id, "replaced-by")[0];
+      const carrier = next ? this.store.get(next.toId) : undefined;
+      if (!carrier) return record;
+      record = carrier;
+    }
+    return record;
+  }
+
   /** Predecessors are work to recover, never a spec or a routing discount. */
   replacedPredecessors(id: string): TaskRecord[] {
     return this.links
@@ -1786,7 +1803,7 @@ export class TaskService {
     return undefined;
   }
 
-  /** Copy the specification and move outstanding outgoing waits in one transaction. */
+  /** Copy the specification and move outstanding waits in one transaction. */
   startAgain(
     id: string,
     input: {
@@ -1817,13 +1834,8 @@ export class TaskService {
         startPolicy: "on-request",
         actor: input.actor,
       });
+      // The link moves the outstanding waits with it (`moveWaits`).
       this.link(id, fresh.id, "replaced-by", input.actor);
-      for (const link of this.links.listFrom(id, "blocks")) {
-        const waiting = this.get(link.toId);
-        if (!waiting || TaskService.isClosed(waiting)) continue;
-        this.unlink(id, waiting.id, "blocks", input.actor);
-        this.link(fresh.id, waiting.id, "blocks", input.actor, link.holdsMerge);
-      }
       this.note(id, `Started again as ${fresh.key}.`, {
         actor: input.actor,
         news: true,
@@ -5940,6 +5952,62 @@ export class TaskService {
     this.touch(task.id);
   }
 
+  /**
+   * A replaced-by link carries the live waits with the work (INF-1826): each
+   * live task waiting on `fromId` now waits on `toId`, and each wait of
+   * `fromId`'s own on live work becomes `toId`'s, keeping its merge mark and
+   * when it began. A link between the two ends and the host's own delivery
+   * machinery (a review) stay where they are, and so does a wait whose move
+   * would close a cycle. Baseline waits on a delivery record are not links
+   * and do not move.
+   */
+  private moveWaits(fromId: string, toId: string, actor: TaskEventActor, at: number): void {
+    const moves = (other: TaskRecord | undefined): other is TaskRecord =>
+      !!other && other.id !== fromId && other.id !== toId && !TaskService.isDeliveryChild(other);
+    const from = this.store.get(fromId);
+    const to = this.store.get(toId);
+    if (from && TaskService.isDeliveryChild(from)) return;
+    if (to && TaskService.isDeliveryChild(to)) return;
+    const move = (link: TaskLink, next: { fromId: string; toId: string }) => {
+      try {
+        this.insertLink(
+          next.fromId,
+          next.toId,
+          "blocks",
+          actor,
+          at,
+          link.holdsMerge,
+          link.createdAt,
+        );
+      } catch (caught) {
+        if (caught instanceof TaskGraphRefusal) return;
+        throw caught;
+      }
+      this.links.delete(link.fromId, link.toId, "blocks");
+      this.touch(link.fromId);
+      this.addEvent({
+        taskId: link.toId,
+        at,
+        actor,
+        kind: "unlinked",
+        text: `no longer ${LINK_WORDS.blocks} "${this.store.get(link.fromId)?.title ?? link.fromId}"`,
+        data: { fromId: link.fromId, type: "blocks", movedTo: toId },
+        ref: link.fromId,
+        feed: false,
+      });
+    };
+    for (const link of this.links.listFrom(fromId, "blocks")) {
+      const waiter = this.store.get(link.toId);
+      if (!moves(waiter) || TaskService.isClosed(waiter)) continue;
+      move(link, { fromId: toId, toId: waiter.id });
+    }
+    for (const link of this.links.listTo(fromId, "blocks")) {
+      const blocker = this.store.get(link.fromId);
+      if (!moves(blocker) || !TaskService.blockerHoldsClose(blocker)) continue;
+      move(link, { fromId: blocker.id, toId });
+    }
+  }
+
   private insertLink(
     fromId: string,
     toId: string,
@@ -5947,6 +6015,7 @@ export class TaskService {
     actor: TaskEventActor,
     at: number,
     holdsMerge = false,
+    createdAt = at,
   ): boolean {
     const from = this.mustGet(fromId);
     const to = this.mustGet(toId);
@@ -5969,9 +6038,10 @@ export class TaskService {
       toId,
       type,
       actor,
-      createdAt: at,
+      createdAt,
       holdsMerge: type === "blocks" && holdsMerge,
     });
+    if (created && type === "replaced-by") this.moveWaits(fromId, toId, actor, at);
     if (created) {
       // Both ends' views change (blockedBy on one, blocks on the other).
       this.touch(fromId);

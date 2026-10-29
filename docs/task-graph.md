@@ -15,7 +15,7 @@ P0 made a task a durable record, P1 made every captain ask land on one; P2 gives
   **Discovery is not containment**: a follow-up a crewmate files is never a child of the task it was found on (see "Follow-ups are not children" below).
 - **Links** (`task_links`, primary key `(from, to, type)`): `blocks` - `to` is not ready until `from` closes successfully (`done`; dropped never clears).
   A `holds_merge` mark on that edge, set only by a must-merge-first filing, the host's review, or a required action's prerequisite, is what holds `to`'s close while `from` is still live work.
-  `related` is informational; `discovered-from` - `from` was found while doing `to`, provenance with no effect on readiness or closing; `replaced-by` - `from` was dropped for `to`, which does its work, with no effect on readiness or closing either.
+  `related` is informational; `discovered-from` - `from` was found while doing `to`, provenance with no effect on readiness or closing; `replaced-by` - `to` does `from`'s work now (a drop, a takeover or a fresh task), with no effect on readiness or closing either.
   Each link reads on both ends, and the links decide which tasks read another's milestones (`docs/task-record.md`, "Whom an event concerns").
   A `blocks` edge that would close a cycle is refused at insert (`TaskGraphRefusal`, surfaced as tool text): the walk follows `blocks` edges outward from `to` and must not reach `from`.
   Both ordinary insertion and baseline-diagnosis acceptance also call one live-wait reachability guard, normalizing blockers to waiter → prerequisite and reading `standingDependencyWaits` at the current non-green head.
@@ -25,6 +25,12 @@ P0 made a task a durable record, P1 made every captain ask land on one; P2 gives
 - **Derived, never stored** (design principle 4): `blocked`, `held`, `ready`, `deadBlocker` come from `TaskService.flagsOf` at read time.
 
 Start again uses the existing `replaced-by` link: the dropped predecessor stays closed, and a fresh task takes its outgoing waits from still-open or active work atomically (`docs/task-record.md`, "Starting dropped work again").
+**A wait follows moved work** (INF-1826).
+Writing a `replaced-by` link from A to B moves the live waits in the same write (`TaskService.moveWaits`, called from the one link writer): each open or active task A blocks now waits on B, and each `blocks` edge into A from open or active work now runs into B, keeping its merge mark and its `createdAt`.
+A link between A and B, a closed waiter, done or dropped work A waited on, the host's delivery machinery (a review), and a wait whose move would close a cycle stay where they are, and so does a baseline wait on a delivery record, which is not a link.
+The `unlinked` event the move writes on the waiter carries `movedTo`, which the idle ladder reads to name the work a carrier took over.
+The first mate links `replaced-by` on every move of work to another task (`link_tasks`'s description), and `update_task`'s `replaced_by` and Start again write the same link.
+Nothing moves back when the link is removed.
 Closed dependents keep their historical edges.
 A second restart of the same record refuses once a replacement or stronger-model retry exists; a task with any parts refuses too.
 The successor inherits the predecessor's parent only while that parent is still live, and its basis still means a specification.
@@ -148,7 +154,7 @@ The prompt's class 4 is "spawn or plan"; the C5 dispatch extractor sorts `create
 Crewmates (`src/core/pi/crewmateTaskTools.ts`, the same pair over Claude's tool server in `src/core/claude/claudeTaskTools.ts`): `file_followup` (title, goal, why, `blocks_me`, and for a test failure `test_failure` plus `test_path`) files an on-request task of its own - never a child - joined to the crewmate's task by a `discovered-from` edge and placed in its project and repo, and the first mate hears one `[fm-op]` that names the key, whether it holds the origin up, and the choices.
 The host stores `test_path` and answers with the existing key instead of filing a second open or active row for the same path; a test failure with no path is refused.
 A test that fails outside the crewmate's change is a follow-up only when it also fails on the untouched main line, otherwise one line in the report.
-A report's `waits_on` records an existing open task its work cannot go on without as a `blocks` link that holds no merge, refusing an unknown, closed, own or circular key (`TaskService.linkWaits`; `docs/report-sort.md`, "A wait on work nobody has started is the first mate's turn").
+A report's `waits_on` records an existing open task its work cannot go on without as a `blocks` link that holds no merge, on the task carrying its work when a `replaced-by` link moved it (`TaskService.carrierOf`), refusing an unknown, closed, own or circular key (`TaskService.linkWaits`; `docs/report-sort.md`, "A wait on work nobody has started is the first mate's turn").
 `note_progress` writes one `progress` event on the crewmate's own timeline with `feed = 0`.
 Both register through `CrewmateSpec.onFollowup` / `onProgress`.
 

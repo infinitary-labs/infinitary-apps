@@ -898,11 +898,24 @@ export type WakeFacts =
   | {
       /** Work an active task waited on closed (FI3-250): its one steer. */
       kind: "dependency-closed";
-      /** The work that closed, by its key and title. */
-      dependency: { key: string; title: string };
+      /** The work that closed, by its key and title, and its pull request when it had one. */
+      dependency: { key: string; title: string; pullRequest?: number };
       closed: "done" | "dropped";
       /** How the wait was declared: a baseline wait on its checks, or a blocks link holding its merge. */
       wait: "baseline" | "blocks";
+      /** The tasks whose work it took over, by key (INF-1826): a moved wait names them. */
+      carried?: string[];
+    }
+  | {
+      /**
+       * A wait moved after its waiter heard the old task was dropped
+       * (INF-1826): the work it waited on goes on in another task.
+       */
+      kind: "wait-moved";
+      /** The task that took the work over, by its key and title. */
+      dependency: { key: string; title: string };
+      /** The dropped task the waiter was told about, by its key and title. */
+      replaced: { key: string; title: string };
     }
   | {
       /**
@@ -1340,11 +1353,18 @@ export function mainCheckPassedWake(check: string, sha: string): TypedWake {
 
 /** A closed dependency's one steer, in the crewmate's words (FI3-250). */
 function renderDependencyClosed(facts: Extract<WakeFacts, { kind: "dependency-closed" }>): string {
-  const name = `${facts.dependency.key} "${facts.dependency.title}"`;
+  const { key, title, pullRequest } = facts.dependency;
+  const name = `${key} "${title}"${pullRequest ? ` (PR #${pullRequest})` : ""}`;
   if (facts.wait === "baseline") {
     return facts.closed === "done"
       ? `${name}, the separately owned work your failing checks waited on, is done. Bring your change up to date and read the checks again.`
       : `${name}, the separately owned work your failing checks waited on, was dropped, so nobody is fixing that failure. Lead your report with its key and that it was dropped: that report wakes the first mate, which decides the next move.`;
+  }
+  if (facts.carried?.length) {
+    const work = `which took over the work of ${facts.carried.join(" and ")} that your task could not merge before`;
+    return facts.closed === "done"
+      ? `${name}, ${work}, is done. Carry on from where you stopped.`
+      : `${name}, ${work}, was dropped and no longer holds it. Carry on from where you stopped.`;
   }
   return facts.closed === "done"
     ? `${name}, which your task could not merge before, is done. Carry on from where you stopped.`
@@ -1743,19 +1763,52 @@ export function dependencyClosedOnce(task: { id: string }): string {
   return `dependency-closed:${task.id}`;
 }
 
-/** The one steer to a task whose wait on other work ended with that work's close (FI3-250). */
+/**
+ * The one steer to a task whose wait on other work ended with that work's
+ * close (FI3-250), naming its pull request and, for a wait that moved to it,
+ * the tasks whose work it took over (INF-1826).
+ */
 export function dependencyClosedWake(
-  task: { id: string; key: string; title: string; status: string },
+  task: { id: string; key: string; title: string; status: string; pullRequest?: number },
   wait: "baseline" | "blocks",
+  carried: readonly string[] = [],
 ): TypedWake {
   return {
     facts: {
       kind: "dependency-closed",
-      dependency: { key: task.key || task.id, title: task.title },
+      dependency: {
+        key: task.key || task.id,
+        title: task.title,
+        ...(task.pullRequest ? { pullRequest: task.pullRequest } : {}),
+      },
       closed: task.status === "done" ? "done" : "dropped",
       wait,
+      ...(carried.length ? { carried: [...carried] } : {}),
     },
     once: dependencyClosedOnce(task),
+  };
+}
+
+/** The name a moved wait's steer goes out once for: the dropped task and the one that took it over. */
+export function waitMovedOnce(replaced: { id: string }, carrier: { id: string }): string {
+  return `wait-moved:${replaced.id}:${carrier.id}`;
+}
+
+/**
+ * The one steer to a task told its wait's work was dropped, once that work
+ * turns out to go on in another task (INF-1826).
+ */
+export function waitMovedWake(
+  replaced: { id: string; key: string; title: string },
+  carrier: { id: string; key: string; title: string },
+): TypedWake {
+  return {
+    facts: {
+      kind: "wait-moved",
+      dependency: { key: carrier.key || carrier.id, title: carrier.title },
+      replaced: { key: replaced.key || replaced.id, title: replaced.title },
+    },
+    once: waitMovedOnce(replaced, carrier),
   };
 }
 
@@ -2070,6 +2123,8 @@ function renderFacts(facts: WakeFacts, wake: Pick<WakeEnvelope, "ways" | "text">
       return renderMainCheckPassed(facts);
     case "dependency-closed":
       return renderDependencyClosed(facts);
+    case "wait-moved":
+      return `${facts.replaced.key} "${facts.replaced.title}", which you heard was dropped, goes on in ${facts.dependency.key} "${facts.dependency.title}", so your task waits on ${facts.dependency.key} now and its close steers you. If you carried on without that work, check what your task still needs from it.`;
     case "repair-assessed":
       return renderRepairAssessed(facts);
     case "browser-returned":

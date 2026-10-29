@@ -259,7 +259,7 @@ Done records have no bar; dropped work with parts, a `replaced-by` successor or 
 An accepted click removes that record from the stack, not from history; a refusal is inline and writes nothing.
 The old task stays dropped.
 
-`TaskService.startAgain` creates a fresh record and the old-to-new `replaced-by` link in one transaction, moving outgoing `blocks` links whose waiting task is still open or active to the new task.
+`TaskService.startAgain` creates a fresh record and the old-to-new `replaced-by` link in one transaction, and the link moves the old task's live waits to the new task (`docs/task-graph.md`, "A wait follows moved work").
 It copies title, goal, intent (including the captain's words and constraints), project, repository, priority and a parent that is still open or active.
 The supervisor carries the basis, captain-named model and task-level delivery, autonomy and care declarations, but no session, chosen model/account, delivery outcome or escalation stamp.
 It dispatches through the ordinary Start path with fresh routing, not a tier increase, after pending retirement has finished.

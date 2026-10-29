@@ -8,9 +8,10 @@ import type { TaskEventActor } from "./taskEventStore";
  * that the same edge also holds `to`'s close, set only where someone
  * promised that hold (INF-416 piece E). `related` is informational;
  * `discovered-from` is provenance with no readiness effect; `replaced-by`:
- * `from` was dropped for `to`, which does its work (FI3-1189's rule 1), with
- * no readiness effect either. P0 carries the after-task wait on `blocks`;
- * the full graph (cycle refusal, parents, the ready query) is P2.
+ * `to` does `from`'s work now (FI3-1189's rule 1), with no readiness effect
+ * of its own; writing it moves `from`'s live waits to `to` (INF-1826). P0
+ * carries the after-task wait on `blocks`; the full graph (cycle refusal,
+ * parents, the ready query) is P2.
  */
 
 export type TaskLinkType = "blocks" | "related" | "discovered-from" | "replaced-by";

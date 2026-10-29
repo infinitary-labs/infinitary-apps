@@ -12174,10 +12174,17 @@ export class CrewSupervisor {
     }
     const ids: string[] = [];
     for (const ref of refs) {
-      const record = this.options.tasks.resolve(ref);
-      if (!record) {
+      const named = this.options.tasks.resolve(ref);
+      if (!named) {
         throw new Error(
           `Report refused: waits_on names "${ref}", which is no task. Search with tasks and pass its key.`,
+        );
+      }
+      // A replaced task's wait is recorded on the task carrying its work (INF-1826).
+      const record = this.options.tasks.carrierOf(named.id) ?? named;
+      if (record.id !== named.id && record.status === "done") {
+        throw new Error(
+          `Report refused: waits_on names ${named.key || named.id}, whose work moved to ${record.key || record.id}, which is already done, so nothing waits on it any more.`,
         );
       }
       if (record.id === task.id) {

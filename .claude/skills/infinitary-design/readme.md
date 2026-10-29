@@ -44,7 +44,7 @@ The product feeling: **calm, peaceful, confident, futuristic, a bit of space-tra
   Voice activation is keybind-only — a plain click on the input focuses it for typing.
 - **Cards, not chat** - agent responses arrive as a prioritized stack of cards, one shown at a time.
   ONE card shape: its chip is derived from what it is, never declared - a card with actions is a decision, one without a note, one the app itself raised (sign in, the first mate down, a crewmate stuck past every nudge) an attention; a working preview is a decision whose body is interactive (`components/cards/ResponseCard`).
-  No message bubbles ever.
+  No message bubbles ever, with one exception: the last turn above the input draws the captain's words in a soft grey bubble (INF-1770's Chat layout, `components/voice/VoiceInput.prompt.md`); cards stay cards.
   A new card never takes the shown card's place, and it is never gone unseen: it lands on the stack unread, the pager marks it (an accent dot on the arrow that leads to it, one "1 new" badge beside the pager - `components/cards/CardStack`) until it is paged to, and the first mate gives one notice pulse.
   A note the captain has already seen steps aside on its own once it is old: it collapses out of the stack into its task record.
   A closed card can be read again as a **past card** (`components/cards/ResponseCard`, "Past card"): a shell-held, read-only entry with a PAST strip, the version last seen with its figures, the submitted answers, the offered buttons shown inert with the chosen one marked, and its thread beside it with no reply row.

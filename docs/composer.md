@@ -117,22 +117,24 @@ The Edit menu's Redo item reaches the page only when the platform has something 
 
 ## The last turn
 
-The captain's last message and the first mate's reply sit just above the input, two quoted lines of type with no shape around either, and nothing else does (FI3-1089's plan, the captain's Approve and build: the dots, "Working…"; drawn as FI3-1225's borderless Subtitles, the captain's Approve and build with the captain's words in grey; quoted as FI3-1387's Quotes, the captain's Approve and build, so a bare "Got it" no longer reads as a button).
+The captain's last two messages, each with the first mate's reply kept beside it, sit just above the input, and nothing else does (FI3-1089's plan, the captain's Approve and build: the dots, "Working…"; drawn as INF-1770's Chat layout, the captain's Approve and build: "allow last two rounds of messages instead of one round, with the older one fading a bit", "'working' should not block the user from seeing the last message if there is one" and "looks a bit more like chat for familarity").
 They replace the activity line that used to pass there; the Activity panel keeps every line.
+A round is one message of the captain's and the reply line kept beside it.
 
 - **What shows.**
-  Both lines are centered on the axis the character and the input share, with no border, fill or padding.
-  Each line's words sit inside quotation marks drawn in `--fg-3`.
-  The captain's words come first, `--text-sm` in `--fg-2` on an 18 px row; a message that was only pictures reads "A picture", with no quotation marks, since it said no words.
-  The first mate's line sits 4 px below, the same `--text-sm` in `--fg-1` on an 18 px row.
-  Each takes at most 80% of the width, and its words are cut with an ellipsis inside the marks; resting on a cut line shows its whole text.
-  The captain's line is not a control: a click does nothing, Tab passes over it, and it draws no underline or focus ring.
-  A finished or failed reply line is a button that opens the reply note (below): it takes the pointer, a Tab stop and the focus ring, and no other chrome; the working words are not a button.
-  The Activity panel keeps every line.
+  The newest round sits nearest the input and the older round above it at 50% opacity.
+  The captain's words sit on the right in a soft grey bubble (`--fg-1` mixed at 8%, corners 11, 11, 4 and 11 px, padding 2 px by 10 px), `--text-sm` in `--fg-1` on a 22 px row, at most 75% of the width; a message that was only pictures reads "A picture".
+  The first mate's reply sits 2 px below on the left, plain `--text-sm` in `--fg-1` on a 20 px row, after the first mate's mark, the app's 14 px hexagon in `--accent`, 8 px before the words, at most 80% of the width.
+  Neither carries quotation marks.
+  Each line is one line, cut with an ellipsis; resting on a cut line shows its whole text.
+  The captain's words are not a control: a click does nothing, Tab passes over them, and they draw no underline or focus ring.
+  Each reply line, the older one included, is a button that opens that reply as the reply note (below): it takes the pointer, a Tab stop and the focus ring, and no other chrome; the working words are not a button.
+  While a card or another stack entry is up, only the newest round shows, so a card keeps about the room it had with one round.
 - **Working.**
-  While the first mate's busy signal is up (`firstmate_state`), its line shows three `--hot` dots, the ember the app uses for work in flight, each brightening in turn, and "Working…" in `--fg-3`, with no quotation marks.
-  An operational wake shows it too, and the reply comes back when that turn ends.
-  Before its turn has started, and after a turn where nothing took effect, the first mate's line is absent and the captain's stands alone.
+  While the first mate's busy signal is up (`firstmate_state`), three `--hot` dots, the ember the app uses for work in flight, each brightening in turn, follow the newest reply's words.
+  Working never takes a reply's place: an operational wake leaves the reply on screen with the dots after it.
+  A message with no reply yet shows the dots and "Working…" in `--fg-3` where its reply will go.
+  Before its turn has started, and after a turn where nothing took effect, the first mate's line is absent and the captain's words stand alone.
 - **The reply line.**
   The core chooses it at the end of each captain turn that read the newest message (`replyLine`; INF-772's plan, the captain's Approve and build).
   It is the turn's closing words: the words of the turn's last model request, one plain sentence of about 40 characters that says what took effect, held to that by the prompt alone (`FIRSTMATE_PROMPT_CORE`'s close sentence); the core joins their lines with spaces and cuts nothing.
@@ -146,41 +148,44 @@ They replace the activity line that used to pass there; the Activity panel keeps
   A reply under the first mate's own card answered in its closing words shows those words on the line as well as in the card's thread; another action supplies Got it when nothing else replied.
   When nothing took effect the line stays absent, whatever the closing words say, and the answer check retries the message (`docs/task-capture.md`).
   An unread message receives no line, and a later turn that never reads the newest message leaves its saved reply untouched.
-  A failed or paused turn's line is `plainProblem`'s words for it, in `--danger` inside the `--fg-3` marks.
+  A failed or paused turn's line is `plainProblem`'s words for it, in `--danger`.
   A message the paused seat keeps says so at once: its receipt (`keptMessageWords`) is the reply line as well as a feed line.
-  The core sends it as `firstmate_reply` before the busy signal falls, so the working words turn straight into it, and an operational wake never sends one.
+  The core sends it as `firstmate_reply` before the busy signal falls, so the working words turn straight into it as it arrives, and an operational wake never sends one.
   When the closing words are the line and differ from it, the core keeps them as written beside it (`replyWords`, the reply's optional `words`), line breaks included, for the reply note.
 - **What stays.**
-  A message sent replaces the pair at once (`user_turn`); one sent while the first mate is busy keeps the working dots.
-  A completed reply fades after 15 seconds of visible reading time, then both lines dissolve in place over `--dur-slow` (700 ms), with no movement.
+  A message sent becomes the newest round at once (`user_turn`), the round it follows becomes the older one, and the round before that leaves; one sent while the first mate is busy keeps the working dots.
+  The older round comes back as the older round on a new message even after it dissolved.
+  A completed newest reply starts 15 seconds of visible reading time, then only the older round dissolves in place over `--dur-slow` (700 ms), with no movement; the newest round stays until the next message.
   The count starts only once that reply is on screen and the first mate is idle.
   It pauses while the window is inactive, the message area is hidden (Settings, or a maximized card), or the pointer or a text selection is on the lines.
   Working, a queued receipt, an unanswered message, a problem, and a line with no eligibility stay until the next message.
   Eligibility is a typed fact on the reply (`completed` or `queued`), never a reading of its words; a line saved before that fact is unknown and stays.
   A new reply starts a fresh 15 seconds even when the words repeat.
-  Background work does not restart that count or bring a faded pair back; while it runs, Working… may show alone in the reserved slot.
+  Background work does not restart that count or bring a dissolved older round back.
   Each window keeps its own remaining time across those temporary hides.
-  A relaunch shows the saved pair again and, for a known completed reply, starts a fresh 15 seconds.
-  Fading never clears the saved message or the reply line, and it does not move the input: the 40 px pair, the 10 px gap and the 18 px stage allowance stay reserved and empty, with no link and no dim text.
+  A relaunch shows the two saved rounds again and, for a known completed reply, starts a fresh 15 seconds.
+  Dissolving never clears a saved message or reply line, and it does not move the input: the older round's room stays reserved and empty, with no link and no dim text.
   Reduced motion cuts the dissolve to an instant and does not shorten the 15 seconds.
   Fading does not move focus, change the draft, or read the reply out again.
-  The saved pair is the newest `captain_asks` row and the reply line kept beside it (`TaskService.setAskReply`, migration 68), read once as the window opens (`inf:conversation:last-turn`).
+  The saved rounds are the two newest `captain_asks` rows and the reply lines kept beside them (`TaskService.setAskReply`, migration 68), read once as the window opens (`inf:conversation:last-turn`, the older round as its `previous`).
 - **The reply note.**
   A click on the reply line, or Enter or Space on it, opens the whole reply as a note at the front of the stack, in front of any open card (INF-1102's plan, the captain's Approve and build, reversing "neither line is a control" for the reply line only).
   The window holds it, as it holds a past card (`{ replyNote }` in `OpenRecord`, `store.ts`): nothing is saved or sent, and the first mate is not told.
-  Its title is the captain's message in quotation marks, so the card reads as the two lines unfolded; a message that was only pictures reads "A picture".
+  Its title is that round's message in quotation marks, so the card reads as the round unfolded; a message that was only pictures reads "A picture".
   Its body is the reply as the first mate wrote it, line breaks kept and nothing read as formatting; a reply saved before the words were kept, a typed line and a problem show the line itself, a problem in `--danger`.
   It has the Note chip and no buttons or reply row; the × or Esc closes it.
-  There is one reply note: opening it again brings it to the front with the newest reply, and it stays until it is closed, even after a new message.
+  There is one reply note: opening it again brings it to the front with the reply whose line was pressed, and it stays until it is closed, even after a new message.
   Opening it does not change the fade.
   Open the first mate's reply (`firstmate.reply`, `docs/keyboard.md`) opens it from command search while a reply is saved, after the line has faded too, and comes home from Settings first.
 - **Motion.**
-  A new pair rises 6 px into place over `--dur-med` while the old one leaves over `--dur-fast`; the working words leave over `--dur-fast` and the reply rises 4 px in over `--dur-med`, its quotation marks with it.
+  A new round rises 6 px into place over `--dur-med`, the rounds that stay glide up to their new places over `--dur-med`, the newest eases to the older round's strength, and the round pushed out leaves over `--dur-fast`; the working words leave over `--dur-fast` and the reply rises 4 px in over `--dur-med`.
   Under reduced motion the durations are zero, so every move is a cut, and the dots stand still.
-  A screen reader hears the reply once as it arrives, never the working words.
+  A screen reader hears the newest reply once as it arrives, never the working words or the older round.
 - **Room.**
-  The pair is 40 px tall and 10 px above the input's top edge, in the slot hung from that edge, so it never moves the input; the notices stay under the input.
-  The stage's air already held one 22 px line and its gap there, so while a turn shows the remaining 18 px (`LAST_TURN_RISE`, `promptGeometry.ts`) rides in `--prompt-rise`: the first mate and the card lift by half of it, a tall card's cap shrinks by all of it, and the input's own growth gives up as much.
+  A round is 44 px tall; the two rounds are 10 px apart and the newest is 10 px above the input's top edge, in the slot hung from that edge, so it never moves the input; the notices stay under the input.
+  The lane is 108 px with two rounds and 54 px with one (`lastTurnLane`, `promptGeometry.ts`).
+  The stage's air already held one 22 px line and its gap there, so while a turn shows the rest of the lane (`lastTurnRise`) rides in `--prompt-rise`: the first mate and the card lift by half of it, a tall card's cap shrinks by all of it, and the input's own growth gives up as much.
+  An expanded panel beside the input always clears the whole 108 px lane, so a message coming or dissolving never moves it.
 
 ## Paste and limits
 

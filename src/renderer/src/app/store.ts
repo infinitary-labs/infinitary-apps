@@ -828,7 +828,8 @@ export type ShellState = {
   firstRunSettled: boolean;
   /**
    * The last turn above the input (./LastTurn, docs/composer.md "The last
-   * turn"): the captain's newest message and the Firstmate's reply line.
+   * turn"): the captain's newest message and the Firstmate's reply line,
+   * with the round before it (`previous`).
    * Read from the core as the window opens; `user_turn` and
    * `firstmate_reply` keep it after that.
    */
@@ -1001,11 +1002,11 @@ export type ShellState = {
   /** Opens or focuses a closed card's front stack entry, read-only (FI3-579). */
   openPastCard: (cardId: string) => void;
   /**
-   * Opens the Firstmate's newest reply whole, as a note the window holds at
-   * the front (docs/composer.md "The reply note"); false while no reply is
-   * kept, and nothing opens.
+   * Opens the Firstmate's newest reply whole, or the older round's with
+   * `"older"`, as a note the window holds at the front (docs/composer.md
+   * "The reply note"); false while no such reply is kept, and nothing opens.
    */
-  openReplyNote: () => boolean;
+  openReplyNote: (round?: "older") => boolean;
   /** Closes the reply note wherever it sits; the shown entry stays shown. */
   closeReplyNote: () => void;
   /**
@@ -2240,8 +2241,9 @@ export const useShellStore = create<ShellState>()((set, get) => ({
         phase: derivePhase(s.recording, s.cards, s.firstmateBusy, offStack(s), records),
       };
     }),
-  openReplyNote: () => {
-    const turn = get().lastTurn;
+  openReplyNote: (round) => {
+    const newest = get().lastTurn;
+    const turn = round === "older" ? newest?.previous : newest;
     if (!turn?.reply) return false;
     const replyNote: ReplyNote = {
       you: turn.you,
@@ -2575,10 +2577,15 @@ export const useShellStore = create<ShellState>()((set, get) => ({
     // the core chooses and sends (`firstmate_reply`).
     if (event.type === "firstmate_emote") requestCharacterEmote(event.emote);
     // The last turn above the input (./LastTurn): a message sent starts a
-    // new pair, and the turn that read it fills in the reply line.
+    // new round, the newest becomes the older one, and the turn that read
+    // it fills in the reply line.
     if (event.type === "user_turn") {
       set((s) => ({
-        lastTurn: { you: event.text, reply: null },
+        lastTurn: {
+          you: event.text,
+          reply: null,
+          previous: s.lastTurn ? { you: s.lastTurn.you, reply: s.lastTurn.reply } : null,
+        },
         lastTurnSeq: s.lastTurnSeq + 1,
       }));
     }

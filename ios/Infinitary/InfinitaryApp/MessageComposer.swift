@@ -17,7 +17,7 @@ struct MessageComposer: View {
     @Environment(\.verticalSizeClass) private var verticalSize
     @Environment(\.scenePhase) private var phase
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
-    @State private var replyOpen = false
+    @State private var replyOpen: OpenedReply?
     /// The reading clock (docs/composer.md "The last turn"): the reply it counts, the time left, and whether it faded.
     @State private var fadeKey: String?
     @State private var remaining = Self.readingTime
@@ -108,37 +108,63 @@ struct MessageComposer: View {
             .sensoryFeedback(.phone, trigger: sent)
     }
 
-    /// The Mac's two lines (src/renderer/src/app/LastTurn.tsx): the captain's words, then the first mate's ember dots
-    /// and Working… whenever it is busy, else its reply line, which opens the whole reply. A completed reply fades after
-    /// 15 seconds on screen; the pair keeps its room, so the input never moves.
+    /// The Mac's last turn (src/renderer/src/app/LastTurn.tsx), drawn as INF-1770's Chat layout: the last two rounds,
+    /// each the captain's words in a soft grey bubble on the right and the first mate's reply beside its mark on the
+    /// left, the older round at half strength and only the newest while a card is up. While the first mate works, ember
+    /// dots follow the newest reply, or stand with Working… where no reply is yet. After 15 seconds of a completed
+    /// reply on screen the older round dissolves and keeps its room, so the input never moves.
     private func lastTurn(_ turn: PhoneLastTurn) -> some View {
         let key = Self.fadeKey(turn)
         let hidden = faded && key != nil && key == fadeKey
         // The count runs only while Home is shown, the app is open, the phone is upright and the first mate is idle.
         let readable = messageContext.cardsVisible && phase == .active && !compact && !session.firstmateBusy
-        return VStack(spacing: 0) {
-            Group { turn.you.isEmpty ? Text("A picture") : quoted(turn.you) }
-                .foregroundStyle(PhoneTheme.secondary).accessibilityIdentifier("last-turn-you")
-                .opacity(hidden ? 0 : 1).accessibilityHidden(hidden)
-            Group {
-                if session.firstmateBusy {
-                    HStack(spacing: 6) {
-                        WorkingDots(still: reduceMotion)
-                        Text("Working…").foregroundStyle(PhoneTheme.muted)
-                    }.accessibilityElement(children: .combine)
-                } else if let reply = turn.reply {
-                    Button { replyOpen = true } label: {
-                        quoted(reply.text).foregroundStyle(reply.problem == true ? PhoneTheme.danger : PhoneTheme.text)
-                    }.buttonStyle(.plain).accessibilityHint("Opens the whole reply")
-                        .opacity(hidden ? 0 : 1).accessibilityHidden(hidden).disabled(hidden)
-                } else {
-                    Text(verbatim: " ").accessibilityHidden(true)
-                }
-            }.accessibilityIdentifier("last-turn-reply")
-        }.font(PhoneFont.caption).lineLimit(1).multilineTextAlignment(.center)
+        let cardUp = messageContext.cardsVisible && messageContext.card != nil
+        let older = cardUp ? nil : turn.previous
+        return VStack(spacing: 10) {
+            if let older {
+                round(older, newest: false)
+                    .opacity(hidden ? 0 : 0.5).accessibilityHidden(hidden).disabled(hidden)
+            }
+            round(PhoneLastRound(you: turn.you, reply: turn.reply), newest: true)
+        }.font(PhoneFont.caption).lineLimit(1)
             .frame(maxWidth: .infinity)
             .task(id: "\(key ?? "")|\(readable)") { await read(key, readable: readable) }
-            .sheet(isPresented: $replyOpen) { PhoneReplySheet(turn: turn) }
+            .sheet(item: $replyOpen) { opened in PhoneReplySheet(round: opened.round) }
+    }
+
+    /// One round: the captain's bubble, then the first mate's line. The older round's identifiers carry `older`.
+    private func round(_ round: PhoneLastRound, newest: Bool) -> some View {
+        let id = newest ? "last-turn" : "last-turn-older"
+        let busy = newest && session.firstmateBusy
+        return VStack(alignment: .leading, spacing: 2) {
+            Text(round.you.isEmpty ? "A picture" : round.you)
+                .foregroundStyle(PhoneTheme.text)
+                .padding(.vertical, 2).padding(.horizontal, 10)
+                .background(PhoneTheme.text.opacity(0.08), in: UnevenRoundedRectangle(
+                    topLeadingRadius: 11, bottomLeadingRadius: 11, bottomTrailingRadius: 4, topTrailingRadius: 11))
+                // The bubble keeps clear of the reply's side, as the Mac's 75% width does.
+                .frame(maxWidth: .infinity, alignment: .trailing).padding(.leading, 64)
+                .accessibilityIdentifier("\(id)-you")
+            if round.reply != nil || busy {
+                HStack(spacing: 8) {
+                    MateMark().frame(width: 14, height: 14)
+                    if let reply = round.reply {
+                        Button { replyOpen = OpenedReply(round: round) } label: {
+                            Text(reply.text).foregroundStyle(reply.problem == true ? PhoneTheme.danger : PhoneTheme.text)
+                        }.buttonStyle(.plain).accessibilityHint("Opens the whole reply")
+                            .accessibilityIdentifier("\(id)-reply")
+                        if busy { WorkingDots(still: reduceMotion) }
+                    } else {
+                        HStack(spacing: 6) {
+                            WorkingDots(still: reduceMotion)
+                            Text("Working…").foregroundStyle(PhoneTheme.muted)
+                        }.accessibilityElement(children: .combine).accessibilityIdentifier("\(id)-reply")
+                    }
+                }.frame(maxWidth: .infinity, alignment: .leading)
+            } else {
+                Text(verbatim: " ").accessibilityHidden(true)
+            }
+        }
     }
 
     /// The reply this clock may fade, or nil while the line must stay: a problem, a queued receipt or an unknown line.
@@ -158,12 +184,6 @@ struct MessageComposer: View {
         }
         remaining = .zero
         withAnimation(reduceMotion ? nil : .linear(duration: 0.7)) { faded = true }
-    }
-
-    /// Quotation marks in the faintest ink, so even a bare "Got it" reads as something said.
-    private func quoted(_ words: String) -> Text {
-        let open = Text(verbatim: "“").foregroundStyle(PhoneTheme.muted), close = Text(verbatim: "”").foregroundStyle(PhoneTheme.muted)
-        return Text("\(open)\(words)\(close)")
     }
 
     private func send() {
@@ -232,19 +252,48 @@ private struct WorkingDots: View {
     }
 }
 
+/// The round whose reply line was pressed: the newest or the older one.
+private struct OpenedReply: Identifiable {
+    let id = UUID()
+    let round: PhoneLastRound
+}
+
+/// The first mate's mark beside each reply line: the app's hexagon in accent, as the Mac draws it (lastTurn.css).
+private struct MateMark: View {
+    var body: some View {
+        Canvas { context, size in
+            let scale = min(size.width, size.height) / 16
+            func hexagon(_ points: [(CGFloat, CGFloat)]) -> Path {
+                var path = Path()
+                path.addLines(points.map { CGPoint(x: $0.0 * scale, y: $0.1 * scale) })
+                path.closeSubpath()
+                return path
+            }
+            let stroke = StrokeStyle(lineWidth: 1.2 * scale)
+            context.stroke(hexagon([(8, 1.2), (13.9, 4.6), (13.9, 11.4), (8, 14.8), (2.1, 11.4), (2.1, 4.6)]),
+                           with: .color(PhoneTheme.accent), style: stroke)
+            context.stroke(hexagon([(12, 8), (10, 11.46), (6, 11.46), (4, 8), (6, 4.54), (10, 4.54)]),
+                           with: .color(PhoneTheme.accent.opacity(0.45)), style: stroke)
+            let dot = 1.3 * scale
+            context.fill(Path(ellipseIn: CGRect(x: 8 * scale - dot, y: 8 * scale - dot, width: dot * 2, height: dot * 2)),
+                         with: .color(PhoneTheme.accent))
+        }.accessibilityHidden(true)
+    }
+}
+
 /// INF-1517, the captain's pick: the reply line opens the whole reply in a half-height sheet, as the Mac's reply note.
 /// Its title is the captain's message in quotation marks; its body the reply as written, a problem in red.
 private struct PhoneReplySheet: View {
-    let turn: PhoneLastTurn
+    let round: PhoneLastRound
     @Environment(\.dismiss) private var dismiss
 
     var body: some View {
         NavigationStack {
             ScrollView {
                 VStack(alignment: .leading, spacing: PhoneTheme.space2) {
-                    Text(turn.you.isEmpty ? "A picture" : "“\(turn.you)”").font(PhoneFont.headline)
+                    Text(round.you.isEmpty ? "A picture" : "“\(round.you)”").font(PhoneFont.headline)
                         .accessibilityIdentifier("reply-note-title")
-                    if let reply = turn.reply {
+                    if let reply = round.reply {
                         Text(reply.words ?? reply.text).font(PhoneFont.callout)
                             .foregroundStyle(reply.problem == true ? PhoneTheme.danger : PhoneTheme.text)
                             .textSelection(.enabled).accessibilityIdentifier("reply-note-words")

@@ -155,11 +155,11 @@ import { DiagnosticsNotice } from "./DiagnosticsNotice";
 import { FirstRunGate } from "./FirstRunGate";
 import { focusTakenElsewhere } from "./focusRecovery";
 import { useCommandKeys } from "./keyHints";
-import { LastTurn } from "./LastTurn";
+import { LastTurn, useCardUp } from "./LastTurn";
 import { oncePressesHeard, pressesSoFar } from "./presses";
 import { useProjectFocus } from "./projectFocus";
 import { usePromptFoot } from "./promptFoot";
-import { LAST_TURN_LANE, LAST_TURN_RISE, promptFoldsRails, promptShellMax } from "./promptGeometry";
+import { lastTurnLane, lastTurnRise, promptFoldsRails, promptShellMax } from "./promptGeometry";
 import { ReplyNoteCard } from "./ReplyNote";
 import { firstTabbable, lastTabbable } from "./regions";
 import { foldRails, type ShellLayout, useShellLayout } from "./shellLayout";
@@ -2544,17 +2544,21 @@ export const HomePrompt = memo(function HomePrompt() {
   const recording = phase === "recording";
   const gateOpen = firstRun?.gateOpen === true;
   // The last turn above the input takes room the stage gives it the way it
-  // gives the composer's growth (./promptGeometry `LAST_TURN_RISE`).
-  const laneRise = useShellStore((s) => (s.lastTurn ? LAST_TURN_RISE : 0));
+  // gives the composer's growth (./promptGeometry `lastTurnRise`): two
+  // rounds, or only the newest while a card is up (./LastTurn).
+  const cardUp = useCardUp();
+  const lastTurnRounds = useShellStore((s) =>
+    !s.lastTurn ? 0 : s.lastTurn.previous && !cardUp ? 2 : 1,
+  );
+  const laneRise = lastTurnRise(lastTurnRounds);
   // The whole lane, for what sits above the input and must clear it (the gate).
-  const hasLastTurn = useShellStore((s) => Boolean(s.lastTurn));
   useEffect(() => {
     const root = document.documentElement;
-    root.style.setProperty("--last-turn-lane", `${hasLastTurn ? LAST_TURN_LANE : 0}px`);
+    root.style.setProperty("--last-turn-lane", `${lastTurnLane(lastTurnRounds)}px`);
     return () => {
       root.style.removeProperty("--last-turn-lane");
     };
-  }, [hasLastTurn]);
+  }, [lastTurnRounds]);
 
   const focusRequest = useShellStore((s) => s.focusRequest);
   const focusCaret = useShellStore((s) => s.focusCaret);

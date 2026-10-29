@@ -1,7 +1,7 @@
 import { writeFileSync } from "node:fs";
 import { expect, type Page, test } from "@playwright/test";
 import { quoted } from "../../src/renderer/src/app/lastTurnWords";
-import { askFirstmate, bubbleWords, mateBubble, yourBubble } from "./lastTurn";
+import { askFirstmate, bubbleWords, mateBubble, olderRound, yourBubble } from "./lastTurn";
 import { type LaunchedApp, launchApp } from "./launch";
 import { intersects, minimumWindowSize, resizeWindow, settled } from "./layout";
 import {
@@ -21,7 +21,7 @@ import {
   WORDLESS_CLOSE_PROMPT_MARKER,
 } from "./scenarios/lastTurnWords";
 import { REPLY_NOTE_MARKER, REPLY_NOTE_WORDS, replyNote } from "./scenarios/replyNote";
-import { cardSurface, SHOWN_ENTRY } from "./stack";
+import { cardSurface, closeOpenCards, SHOWN_ENTRY } from "./stack";
 import { pressKey, runFromSearch } from "./windowKeys";
 
 /**
@@ -29,8 +29,11 @@ import { pressKey, runFromSearch } from "./windowKeys";
  * captain's message shows at once, the Firstmate's bubble says it is working
  * while its turn runs and turns into its reply as the turn ends - the turn's
  * closing words, or the app's typed line when it closed with none (INF-772) -
- * a new message replaces the pair, and the pair comes back after a relaunch.
- * Driven through the real Firstmate session and the mock provider.
+ * a new message makes the newest round the older one above it (INF-1771:
+ * "allow last two rounds of messages instead of one round, with the older
+ * one fading a bit"), a card leaves only the newest round, and both rounds
+ * come back after a relaunch. Driven through the real Firstmate session and
+ * the mock provider.
  *
  * Every timing claim is an ORDER on the page's own log, never a window: the
  * page records the Firstmate's busy signal and reply line as the shell hears
@@ -146,40 +149,64 @@ test("a turn shows your message, the Firstmate working, then its reply, and come
     await expect(bubbleWords(yourBubble(page))).toHaveText(sent);
     const seen = await saw(page, "mate:reply", from);
     const said = seen.join(" > ");
-    // Working while the turn runs; the reply line arrives before busy
-    // falls, and the bubble turns into it after.
+    // Working while the turn runs with no reply yet; the reply line arrives
+    // before busy falls, and the bubble turns into it as it arrives: working
+    // never holds a reply back (INF-1771).
     const reply = seen.indexOf("reply");
     expect(reply, said).toBeGreaterThan(0);
     expect(seen.slice(0, reply), said).toContain("mate:working");
-    const fall = seen.indexOf("busy:false", reply);
-    expect(fall, said).toBeGreaterThan(reply);
-    expect(seen.indexOf("mate:reply", fall), said).toBeGreaterThan(fall);
+    expect(seen.indexOf("busy:false", reply), said).toBeGreaterThan(reply);
     await expect(bubbleWords(mateBubble(page))).toHaveText(MOCK_FM_DONE_TEXT);
+    // Once the turn is over, no working dots follow the reply.
+    await expect(mateBubble(page)).not.toHaveAttribute("data-working");
+    await expect(page.locator("[data-last-turn] [data-last-turn-dots]")).toHaveCount(0);
   });
 
-  await test.step("the pair sits above the input, and the input never moved", async () => {
+  const second = "How is the alpha coming along?";
+  await test.step("a new message makes the round before it the older round, drawn fainter above it", async () => {
+    const from = await say(page, second);
+    await expect(bubbleWords(yourBubble(page))).toHaveText(second);
+    await expect(bubbleWords(yourBubble(page, "older"))).toHaveText(
+      `${SALUTE_PROMPT_MARKER}, ${SLOW_CLOSE_PROMPT_MARKER}`,
+    );
+    await expect(bubbleWords(mateBubble(page, "older"))).toHaveText(MOCK_FM_DONE_TEXT);
+    await saw(page, "mate:reply", from);
+    await expect(bubbleWords(mateBubble(page))).toHaveText(MOCK_FM_DONE_TEXT);
+    // The older round at the strength the captain chose, above the newest.
+    await expect(olderRound(page)).toHaveCSS("opacity", "0.5");
+    const older = await box(yourBubble(page, "older"));
+    expect(older.y + older.height).toBeLessThanOrEqual((await box(yourBubble(page))).y);
+  });
+
+  await test.step("both rounds sit above the input, and the input never moved", async () => {
     const inputAfter = await settled(page, () => box(input));
     expect(inputAfter).toEqual(inputBefore);
-    for (const bubble of [yourBubble(page), mateBubble(page)]) {
+    for (const bubble of [
+      yourBubble(page, "older"),
+      mateBubble(page, "older"),
+      yourBubble(page),
+      mateBubble(page),
+    ]) {
       const at = await box(bubble);
       expect(at.y + at.height).toBeLessThanOrEqual(inputAfter.y);
     }
   });
 
   const wordless = `${ANSWER_PROMPT_MARKER} ${WORDLESS_CLOSE_PROMPT_MARKER}`;
-  await test.step("a new message replaces the pair, and a turn that closed with no words replies with its card's title", async () => {
+  await test.step("a turn that closed with no words replies with its card's title, and with the card up only the newest round shows", async () => {
     const from = await say(page, wordless);
     await expect(bubbleWords(yourBubble(page))).toHaveText(wordless);
     await saw(page, "mate:reply", from);
     await expect(bubbleWords(mateBubble(page))).toHaveText(MOCK_ANSWER_TITLE);
-    // The card on the stage keeps clear of the pair.
+    await expect(olderRound(page)).toHaveCount(0);
+    // The card on the stage keeps clear of the round.
     const card = await settled(page, () => box(cardSurface(page)));
     for (const bubble of [yourBubble(page), mateBubble(page)]) {
       expect(intersects(card, await box(bubble))).toBe(false);
     }
   });
 
-  await test.step("the last turn comes back after a relaunch", async () => {
+  await test.step("the last two rounds come back after a relaunch", async () => {
     const { userDataDir, homeDir } = launched;
     await launched.close();
     launched = await launchApp({
@@ -192,6 +219,13 @@ test("a turn shows your message, the Firstmate working, then its reply, and come
     await expect(bubbleWords(yourBubble(again))).toHaveText(wordless);
     await expect(mateBubble(again)).toHaveAttribute("data-state", "reply");
     await expect(bubbleWords(mateBubble(again))).toHaveText(MOCK_ANSWER_TITLE);
+    const kept = await again.evaluate(() => window.infinitary.conversation.lastTurn());
+    expect(kept?.previous).toMatchObject({ you: second, reply: { text: MOCK_FM_DONE_TEXT } });
+    // The card is still up, so only the newest round shows; closing it
+    // brings the older round back.
+    await expect(olderRound(again)).toHaveCount(0);
+    await closeOpenCards(again);
+    await expect(bubbleWords(yourBubble(again, "older"))).toHaveText(second);
   });
 });
 

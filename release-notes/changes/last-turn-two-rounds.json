@@ -1,0 +1,18 @@
+{
+  "entries": [
+    {
+      "id": "last-turn-two-rounds",
+      "kind": "improvement",
+      "title": "Your last two messages show above the message box, like a chat",
+      "body": "Above the message box you now see your last two messages, each with your first mate's reply, and the older one is faded. Your words sit on the right in a soft grey bubble, and each reply sits on the left beside your first mate's mark. While your first mate works, three dots follow its last reply instead of hiding it. With a card open, only the newest message and reply show. After about 15 seconds the older pair fades away, and the newest stays until your next message. Infinitary on iPhone and iPad shows them the same way.",
+      "area": "message-box",
+      "picture": {
+        "dark": "last-turn-two-rounds-dark.webp",
+        "light": "last-turn-two-rounds-light.webp",
+        "alt": "Two messages above the message box, each in a grey bubble on the right with the first mate's reply beside its mark on the left, the older pair faded"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

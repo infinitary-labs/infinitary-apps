@@ -344,7 +344,7 @@ The input is centred on the window, and its width leaves room for the rails on b
 An expanded panel stands on its rail's floor, so there it would run under the input.
 `usePromptFoot` marks each rail with an expanded panel whose columns the input shares, with `--space-4` of air to either side, as `data-rail-lifted`; a folded rail is drawn nowhere and shares nothing.
 With a 300px rail that is a page narrower than 1,192px (twice the rail, the 560px input and the air): a window under 1,192px wide at 100%, about 1,311px at 110%, 1,490px at 125% and 1,788px at 150%.
-A marked rail ends `--space-4` above the input's top, less the last turn's whole 50px lane (`LAST_TURN_LANE`): its bottom padding is `--prompt-floor` plus `--prompt-height`, the lane and the air (`design/styles.css`).
+A marked rail ends `--space-4` above the input's top, less the last turn's whole 108px lane (`LAST_TURN_LANE`): its bottom padding is `--prompt-floor` plus `--prompt-height`, the lane and the air (`design/styles.css`).
 The lane is kept whether a turn shows or not, so a message coming or fading never moves the panel.
 The padding eases with the rail's own transition, a cut under reduced motion, so a resize that brings the mark moves the panel smoothly; the composer's growth, published alone as `--prompt-growth`, is the rail's bottom margin, which no transition eases, so the panel moves with each new line at once.
 The input keeps its width and place, and nothing folds that did not fold before.

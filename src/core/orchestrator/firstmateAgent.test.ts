@@ -8341,6 +8341,11 @@ describe("FirstmateAgent reply line", () => {
     f.session.resolveNextPrompt();
     await tick();
   };
+  /** The newest message and its reply line, without the round before it. */
+  const newestRound = (f: Fixture) => {
+    const turn = f.tasks.lastTurn();
+    return turn && { you: turn.you, reply: turn.reply };
+  };
   /** The reply lines and busy signals, in the order the window hears them. */
   const heard = (f: Fixture) =>
     f.events.flatMap((event) =>
@@ -8561,7 +8566,7 @@ describe("FirstmateAgent reply line", () => {
       expect(f.tasks.list().find((task) => task.title === title)?.status).toBe("active");
       await finish(f);
       expect(f.tasks.lastTurn()?.reply?.text).not.toBe(title);
-      expect(f.tasks.lastTurn()).toEqual({
+      expect(newestRound(f)).toEqual({
         you: words,
         reply: { text: `Started: ${title}`, eligibility: "completed" },
       });
@@ -8618,7 +8623,7 @@ describe("FirstmateAgent reply line", () => {
     f.session.readSteers();
     await tools.get("emit_card")?.execute("c1", note("alpha", "The alpha is cut"));
     await finish(f);
-    expect(f.tasks.lastTurn()).toEqual({
+    expect(newestRound(f)).toEqual({
       you: "how is the alpha?",
       reply: { text: "The alpha is cut", eligibility: "completed" },
     });
@@ -8629,7 +8634,7 @@ describe("FirstmateAgent reply line", () => {
     await f.agent.converse("what is PR 58's state?");
     await finish(f, "PR 58 merged an hour ago.");
     await drained(f.session, 2);
-    expect(f.tasks.lastTurn()).toEqual({ you: "what is PR 58's state?", reply: null });
+    expect(newestRound(f)).toEqual({ you: "what is PR 58's state?", reply: null });
     expect(f.tasks.listAsks().at(-1)?.delivery).toBe("retrying");
   });
 
@@ -8662,7 +8667,7 @@ describe("FirstmateAgent reply line", () => {
     await toolsOf(f.specs).get("emit_card")?.execute("c1", note("alpha", "The alpha is cut"));
     await finish(f);
     expect(heard(f)).toEqual(["busy:true", "reply:The alpha is cut", "busy:false"]);
-    expect(f.tasks.lastTurn()).toEqual({
+    expect(newestRound(f)).toEqual({
       you: "how is the alpha coming along?",
       reply: { text: "The alpha is cut", eligibility: "completed" },
     });
@@ -8693,7 +8698,7 @@ describe("FirstmateAgent reply line", () => {
       text: "The captain always squash-merges when landing work.",
     });
     await finish(f);
-    expect(f.tasks.lastTurn()).toEqual({
+    expect(newestRound(f)).toEqual({
       you: "remember that I always squash-merge",
       reply: { text: AUTOMATIC_EMOTE_WORDS.tuck, eligibility: "completed" },
     });
@@ -8736,7 +8741,7 @@ describe("FirstmateAgent reply line", () => {
     await f.agent.converse("second question");
     await finish(f);
     await drained(f.session, 2);
-    expect(f.tasks.lastTurn()).toEqual({ you: "second question", reply: null });
+    expect(newestRound(f)).toEqual({ you: "second question", reply: null });
     expect(heard(f).filter((line) => line.startsWith("reply:"))).toEqual([]);
     expect(f.tasks.listAsks().at(-1)?.delivery).toBe("retrying");
   });
@@ -8754,7 +8759,7 @@ describe("FirstmateAgent reply line", () => {
     await finish(f);
     await drained(f.session, 2);
     expect(f.tasks.getAsk(late?.id ?? "")).toMatchObject({ turnState: "open", taskId: null });
-    expect(f.tasks.lastTurn()).toEqual({ you: "late question", reply: null });
+    expect(newestRound(f)).toEqual({ you: "late question", reply: null });
     expect(heard(f).filter((line) => line.startsWith("reply:"))).toEqual([]);
     await toolsOf(f.specs).get("emit_card")?.execute("answer", note("late", "Late answer"));
     await finish(f);

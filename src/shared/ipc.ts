@@ -835,7 +835,7 @@ export const invokeContract = {
   },
   // The last turn above the input (docs/composer.md "The last turn"): the
   // captain's newest message and the Firstmate's reply line kept beside it,
-  // read once as the window opens; `user_turn` and `firstmate_reply` carry
+  // with the round before it (`previous`), read once as the window opens; `user_turn` and `firstmate_reply` carry
   // it after that.
   "inf:conversation:last-turn": {
     effect: "read",

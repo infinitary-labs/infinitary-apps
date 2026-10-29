@@ -897,6 +897,56 @@
                     "type": "null"
                   }
                 ]
+              },
+              "previous": {
+                "anyOf": [
+                  {
+                    "type": "object",
+                    "properties": {
+                      "you": {
+                        "type": "string"
+                      },
+                      "reply": {
+                        "anyOf": [
+                          {
+                            "type": "object",
+                            "properties": {
+                              "text": {
+                                "type": "string"
+                              },
+                              "problem": {
+                                "type": "boolean"
+                              },
+                              "eligibility": {
+                                "type": "string",
+                                "enum": [
+                                  "completed",
+                                  "queued"
+                                ]
+                              },
+                              "words": {
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "text"
+                            ]
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      }
+                    },
+                    "required": [
+                      "you",
+                      "reply"
+                    ]
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
               }
             },
             "required": [

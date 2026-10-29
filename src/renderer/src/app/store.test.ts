@@ -2382,21 +2382,39 @@ describe("the last turn above the input (./LastTurn, docs/composer.md)", () => {
     });
   });
 
-  it("starts a pair with each message sent, and the turn that read it fills in the reply", () => {
+  it("starts a round with each message sent, keeps the round before it, and the turn that read it fills in the reply", () => {
     state().applyEvent({ type: "user_turn", text: "How is the alpha coming along?" });
-    expect(state().lastTurn).toEqual({ you: "How is the alpha coming along?", reply: null });
+    expect(state().lastTurn).toEqual({
+      you: "How is the alpha coming along?",
+      reply: null,
+      previous: null,
+    });
     expect(state().lastTurnSeq).toBe(1);
     state().applyEvent({ type: "firstmate_reply", text: "The alpha is cut" });
     expect(state().lastTurn).toEqual({
       you: "How is the alpha coming along?",
       reply: { text: "The alpha is cut" },
+      previous: null,
     });
-    // The next message replaces the pair; its reply is not yet given.
+    // INF-1771, the captain's ask: "allow last two rounds of messages
+    // instead of one round". The next message becomes the newest round and
+    // the round it follows the older one; its reply is not yet given.
     state().applyEvent({ type: "user_turn", text: "Merge it" });
-    expect(state().lastTurn).toEqual({ you: "Merge it", reply: null });
+    expect(state().lastTurn).toEqual({
+      you: "Merge it",
+      reply: null,
+      previous: { you: "How is the alpha coming along?", reply: { text: "The alpha is cut" } },
+    });
     expect(state().lastTurnSeq).toBe(2);
     state().applyEvent({ type: "firstmate_reply", text: "Something went wrong", problem: true });
     expect(state().lastTurn?.reply).toEqual({ text: "Something went wrong", problem: true });
+    // A third message pushes the oldest out: two rounds, never more.
+    state().applyEvent({ type: "user_turn", text: "Try again" });
+    expect(state().lastTurn).toEqual({
+      you: "Try again",
+      reply: null,
+      previous: { you: "Merge it", reply: { text: "Something went wrong", problem: true } },
+    });
   });
 
   it("puts no reply up before any message, and leaves emote words to the reply line", () => {
@@ -2406,7 +2424,7 @@ describe("the last turn above the input (./LastTurn, docs/composer.md)", () => {
     state().applyEvent({ type: "firstmate_emote", emote: "salute", text: "On it" });
     // The motion still plays; only the core's reply line changes the area.
     expect(drain()).toEqual(["salute"]);
-    expect(state().lastTurn).toEqual({ you: "Salute me", reply: null });
+    expect(state().lastTurn).toEqual({ you: "Salute me", reply: null, previous: null });
   });
 
   it("reads the last turn back from the core as the window opens", async () => {
@@ -2422,7 +2440,7 @@ describe("the last turn above the input (./LastTurn, docs/composer.md)", () => {
     state().applyEvent({ type: "user_turn", text: "A newer message" });
     answer({ you: "An older message", reply: { text: "Got it" } });
     await reading;
-    expect(state().lastTurn).toEqual({ you: "A newer message", reply: null });
+    expect(state().lastTurn).toEqual({ you: "A newer message", reply: null, previous: null });
   });
 
   // INF-1103, the captain's Approve and build on INF-1102's plan: a click
@@ -2461,6 +2479,17 @@ describe("the last turn above the input (./LastTurn, docs/composer.md)", () => {
       { replyNote: { you: "Merge it", words: "Something went wrong", problem: true } },
     ]);
     expect(shown()?.replyNote?.words).toBe("Something went wrong");
+    // INF-1770's plan: the older round's reply line opens its own reply.
+    state().openReplyNote("older");
+    expect(state().records).toEqual([
+      {
+        replyNote: {
+          you: "Can the Mac mini run the Linux checks?",
+          words: "Looking at:\n- which checks run;\n- the risk.",
+          problem: false,
+        },
+      },
+    ]);
     state().closeRecord();
     expect(state().records).toEqual([]);
     expect(shown()?.id).toBe("decision");

@@ -208,12 +208,12 @@ html[data-rails-folded]
 /* An expanded panel beside the input (docs/renderer.md, "Expanded panels
    beside the input"): where the input shares the columns of a rail with
    an expanded panel (`data-rail-lifted`, app/promptFoot.ts), that rail
-   ends --space-4 above the input's top less the last turn's whole 50px
+   ends --space-4 above the input's top less the last turn's whole 108px
    lane (LAST_TURN_LANE, app/promptGeometry.ts), kept whether a turn shows
    or not, so a message coming or fading never moves it. It eases there
    with the rail's padding, and follows the composer's growth at once. */
 [data-rail][data-rail-lifted] {
-  padding-bottom: calc(var(--prompt-floor) + var(--prompt-height) + 50px + var(--space-4));
+  padding-bottom: calc(var(--prompt-floor) + var(--prompt-height) + 108px + var(--space-4));
   margin-bottom: var(--prompt-growth);
 }
 /* A maximized card (design skill ResponseCard, "Maximize") folds the rails

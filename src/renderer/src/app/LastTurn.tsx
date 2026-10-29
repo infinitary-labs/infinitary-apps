@@ -1,5 +1,5 @@
-import type { LastTurn as Turn } from "@shared/lastTurn";
-import { useEffect, useRef, useState, useSyncExternalStore } from "react";
+import type { LastRound, LastTurn as Turn } from "@shared/lastTurn";
+import { useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore } from "react";
 import { prefersReducedMotion } from "../character/reducedMotion";
 import { useOverflowTitle } from "../design/core/overflowTitle";
 import {
@@ -10,43 +10,48 @@ import {
   subscribeFade,
   syncFade,
 } from "./lastTurnFade";
-import { CLOSE_QUOTE, OPEN_QUOTE } from "./lastTurnWords";
-import { useShellStore } from "./store";
+import { offStack, useShellStore, visibleStack } from "./store";
 import "./lastTurn.css";
 
 /**
- * The last turn above the input (FI3-1089's plan, the captain's Approve and
- * build, drawn as FI3-1225's borderless Subtitles and quoted as FI3-1387's
- * Quotes; behavior documented in docs/composer.md "The last turn"): the
- * captain's last message and, under it, the Firstmate's, one centered line
- * each inside quotation marks, with no shape around either. While the
- * Firstmate works its line shows three dots and "Working…"; when the turn
- * ends it becomes the reply line the core chose (`firstmate_reply`). The
- * pair stays until the next message. A completed reply then fades after
- * 15 seconds of visible reading time (./lastTurnFade). The captain's line
- * is plain text; a finished or failed reply line is a button that opens the
- * whole reply as a note (./ReplyNote, docs/composer.md "The reply note").
- * Resting on a cut line shows its whole text and pauses that count.
+ * The last turn above the input (FI3-1089's plan, redrawn as INF-1770's
+ * Chat layout, the captain's Approve and build; behavior documented in
+ * docs/composer.md "The last turn"): the captain's last two messages, each
+ * with the Firstmate's reply line kept beside it. A round is the captain's
+ * words in a soft grey bubble on the right and, under them, the reply as
+ * plain type beside the first mate's mark on the left. The older round sits
+ * above at half strength; while a card is up only the newest shows.
+ *
+ * While the Firstmate works, three ember dots follow the newest reply's
+ * words; a message with no reply yet shows the dots and "Working…" in its
+ * place. Working never hides a reply. A completed newest reply starts 15
+ * seconds of visible reading time (./lastTurnFade), after which only the
+ * older round dissolves; the newest stays until the next message. Each
+ * reply line is a button that opens that reply whole as a note
+ * (./ReplyNote, docs/composer.md "The reply note"); the captain's words
+ * are plain text. Resting on a cut line shows its whole text and pauses
+ * the count.
  *
  * Its words and busy signal are shell state (./store `lastTurn`,
- * `firstmateBusy`); this component owns only the two moves a class change
- * cannot sequence: the old pair leaving as a new one enters, and the
- * working words leaving before the reply rises in.
+ * `firstmateBusy`); this component owns only the moves a class change
+ * cannot sequence: the rounds gliding up as a new one enters, the oldest
+ * leaving, and the working words leaving before the reply rises in.
  */
 
 /** The working words beside the dots: the captain's own word. */
 export const WORKING_WORDS = "Working…";
 /** A message that was only pictures. */
 export const PICTURE_ONLY_WORDS = "A picture";
-/** A leaving pair or set of words is gone after --dur-fast. */
+/** A leaving round or set of words is gone after --dur-fast. */
 const LEAVE_MS = 160;
 
 type Mate = { kind: "working" } | { kind: "reply"; text: string; problem: boolean };
 
-function mateOf(busy: boolean, turn: Turn): Mate | null {
-  if (busy) return { kind: "working" };
-  if (!turn.reply) return null;
-  return { kind: "reply", text: turn.reply.text, problem: turn.reply.problem === true };
+/** The Firstmate's line: its reply when there is one, else working while busy. */
+function mateOf(busy: boolean, round: LastRound): Mate | null {
+  if (round.reply)
+    return { kind: "reply", text: round.reply.text, problem: round.reply.problem === true };
+  return busy ? { kind: "working" } : null;
 }
 
 /** What the Firstmate's line says, as one comparable value. */
@@ -55,8 +60,48 @@ function mateKey(mate: Mate | null): string {
   return mate.kind === "working" ? "working" : `reply:${mate.problem}:${mate.text}`;
 }
 
+/** The three ember dots: seen, never read out. */
+function Dots() {
+  return (
+    <span data-last-turn-dots="" aria-hidden="true">
+      <i />
+      <i />
+      <i />
+    </span>
+  );
+}
+
+/** The first mate's mark, the app's hexagon, beside each reply line. */
+function MateMark() {
+  return (
+    <svg
+      className="mark"
+      viewBox="0 0 16 16"
+      fill="none"
+      strokeWidth="1.2"
+      aria-hidden="true"
+      data-last-turn-mark=""
+    >
+      <polygon className="o" points="8,1.2 13.9,4.6 13.9,11.4 8,14.8 2.1,11.4 2.1,4.6" />
+      <polygon className="i" points="12,8 10,11.46 6,11.46 4,8 6,4.54 10,4.54" />
+      <circle className="d" cx="8" cy="8" r="1.3" stroke="none" />
+    </svg>
+  );
+}
+
 /** The Firstmate's line, swapping its words with a leave and a rise. */
-function MateLine({ target, announce }: { target: Mate | null; announce: boolean }) {
+function MateLine({
+  target,
+  busy,
+  announce,
+  older,
+}: {
+  target: Mate | null;
+  /** The Firstmate works: dots follow a reply's words. */
+  busy: boolean;
+  announce: boolean;
+  older: boolean;
+}) {
   const [shown, setShown] = useState<Mate | null>(target);
   const [leaving, setLeaving] = useState(false);
   const shownRef = useRef(shown);
@@ -94,92 +139,96 @@ function MateLine({ target, announce }: { target: Mate | null; announce: boolean
     <>
       <div className="row mate">
         {shown && (
-          <Bubble
-            {...(reply ? { type: "button" as const, onClick: () => openReplyNote() } : {})}
-            data-last-turn-bubble="firstmate"
-            data-state={shown.kind === "working" ? "working" : reply?.problem ? "problem" : "reply"}
-            title={mateFit.title}
-          >
-            {shown.kind === "working" && (
-              <span data-last-turn-dots="" aria-hidden="true">
-                <i />
-                <i />
-                <i />
-              </span>
-            )}
-            <span
-              // Newer words enter as new text, so the rise replays for each.
-              key={reply ? `reply:${reply.text}` : "working"}
-              className="said"
-              data-leaving={leaving ? "" : undefined}
-            >
-              {reply && <Quote mark={OPEN_QUOTE} />}
-              <span className="words" data-last-turn-words="" ref={mateFit.ref}>
-                {mateWords}
-              </span>
-              {reply && <Quote mark={CLOSE_QUOTE} />}
+          <>
+            <MateMark />
+            <span className="line">
+              <Bubble
+                {...(reply
+                  ? {
+                      type: "button" as const,
+                      onClick: () => openReplyNote(older ? "older" : undefined),
+                    }
+                  : {})}
+                data-last-turn-bubble="firstmate"
+                data-state={
+                  shown.kind === "working" ? "working" : reply?.problem ? "problem" : "reply"
+                }
+                data-working={busy && reply ? "" : undefined}
+                title={mateFit.title}
+              >
+                {shown.kind === "working" && <Dots />}
+                <span
+                  // Newer words enter as new text, so the rise replays for each.
+                  key={reply ? `reply:${reply.text}` : "working"}
+                  className="said"
+                  data-leaving={leaving ? "" : undefined}
+                >
+                  <span className="words" data-last-turn-words="" ref={mateFit.ref}>
+                    {mateWords}
+                  </span>
+                </span>
+              </Bubble>
+              {busy && reply && !leaving && <Dots />}
             </span>
-          </Bubble>
+          </>
         )}
       </div>
-      {/* The reply is read out once as it arrives, never the working words. */}
-      <div className="status" role="status" aria-live="polite" aria-atomic="true">
-        {announce && reply && !leaving ? reply.text : ""}
-      </div>
+      {/* The newest reply is read out once as it arrives, never the working words. */}
+      {!older && (
+        <div className="status" role="status" aria-live="polite" aria-atomic="true">
+          {announce && reply && !leaving ? reply.text : ""}
+        </div>
+      )}
     </>
   );
 }
 
-/** One quotation mark: seen, never read out. */
-function Quote({ mark }: { mark: string }) {
-  return (
-    <span className="quote" aria-hidden="true">
-      {mark}
-    </span>
-  );
-}
-
-/** One message and its reply, as the turn and the busy signal say. */
-export function LastTurnPair({
-  turn,
+/** One message and its reply, as the round and the busy signal say. */
+export function LastTurnRound({
+  round,
   busy,
+  older = false,
   leaving = false,
   fading = false,
   announce = true,
 }: {
-  turn: Turn;
+  round: LastRound;
+  /** The Firstmate works on the newest round. */
   busy: boolean;
-  /** The pair a newer message replaces: visible as it leaves, out of the a11y tree. */
+  /** The round before the newest: drawn at half strength, never read out. */
+  older?: boolean;
+  /** The round a newer message pushes out: visible as it leaves, out of the a11y tree. */
   leaving?: boolean;
-  /** The reading time has ended: both lines dissolve in place. */
+  /** The reading time has ended: the older round dissolves in place. */
   fading?: boolean;
   /** A remount of a reply already read out says nothing. */
   announce?: boolean;
 }) {
-  // A message of pictures alone said no words, so its name is not quoted.
-  const said = turn.you.trim();
+  const said = round.you.trim();
   const you = said || PICTURE_ONLY_WORDS;
   const youFit = useOverflowTitle(leaving ? undefined : you);
   return (
     <div
       data-last-turn-pair=""
+      data-older={older ? "" : undefined}
       data-leaving={leaving ? "" : undefined}
       data-fading={fading ? "" : undefined}
-      inert={leaving}
+      inert={leaving || fading}
       aria-hidden={leaving || undefined}
     >
       <div className="row you">
         <span data-last-turn-bubble="you" title={youFit.title}>
-          <span className="said">
-            {said && <Quote mark={OPEN_QUOTE} />}
-            <span className="words" data-last-turn-words="" ref={youFit.ref}>
-              {you}
-            </span>
-            {said && <Quote mark={CLOSE_QUOTE} />}
+          <span className="words" data-last-turn-words="" ref={youFit.ref}>
+            {you}
           </span>
         </span>
       </div>
-      <MateLine target={mateOf(busy, turn)} announce={announce} />
+      <MateLine
+        target={mateOf(busy && !older, round)}
+        busy={busy && !older}
+        announce={announce && !older}
+        older={older}
+      />
     </div>
   );
 }
@@ -192,27 +241,24 @@ function messageCovered(): boolean {
   return document.documentElement.hasAttribute("data-card-maximized");
 }
 
-/** Working… in its own row, after a faded pair, so the old words stay gone. */
-function WorkingAlone() {
-  return (
-    <div data-last-turn-pair="" data-last-turn-working="">
-      <div className="row you" />
-      <div className="row mate">
-        <span data-last-turn-bubble="firstmate" data-state="working">
-          <span data-last-turn-dots="" aria-hidden="true">
-            <i />
-            <i />
-            <i />
-          </span>
-          <span className="said">
-            <span className="words" data-last-turn-words="">
-              {WORKING_WORDS}
-            </span>
-          </span>
-        </span>
-      </div>
-    </div>
-  );
+/** Whether a card or another stack entry is up: then only the newest round shows. */
+export function useCardUp(): boolean {
+  return useShellStore((s) => visibleStack(s.cards, offStack(s), s.records).length > 0);
+}
+
+type Shown = { round: LastRound; key: number; older: boolean };
+/** A round leaving, drawn where it stood. */
+type Outgoing = Shown & { top: number };
+
+/**
+ * The rounds to draw, oldest first, keyed by the message's place in this
+ * window's sequence so the newest keeps its node as it becomes the older.
+ */
+function roundsOf(turn: Turn, seq: number, withOlder: boolean): Shown[] {
+  const newest: Shown = { round: turn, key: seq, older: false };
+  return withOlder && turn.previous
+    ? [{ round: turn.previous, key: seq - 1, older: true }, newest]
+    : [newest];
 }
 
 export function LastTurn() {
@@ -221,13 +267,17 @@ export function LastTurn() {
   const replySeq = useShellStore((s) => s.lastTurnReplySeq);
   const busy = useShellStore((s) => s.firstmateBusy);
   const view = useShellStore((s) => s.view);
+  const cardUp = useCardUp();
   const fade = useSyncExternalStore(subscribeFade, getFade, getFade);
-  const [outgoing, setOutgoing] = useState<{ turn: Turn; seq: number } | null>(null);
+  const [outgoing, setOutgoing] = useState<Outgoing | null>(null);
   const [hovering, setHovering] = useState(false);
   const [selecting, setSelecting] = useState(false);
   const [awake, setAwake] = useState(windowAwake);
   const [covered, setCovered] = useState(messageCovered);
-  const shown = useRef<{ turn: Turn; seq: number } | null>(null);
+  const shownRef = useRef<{ rounds: Shown[]; seq: number } | null>(null);
+  /** Where each round stood after the last render, and the render before it. */
+  const tops = useRef(new Map<number, number>());
+  const earlierTops = useRef(new Map<number, number>());
   const rootRef = useRef<HTMLDivElement>(null);
   /** The reply this mount read out, so a later render does not clear the live region. */
   const spoken = useRef<string | null>(null);
@@ -286,51 +336,74 @@ export function LastTurn() {
     };
   }, []);
 
-  // A new message replaces the pair: the old one leaves over --dur-fast
-  // while the new one enters. A fade already running is cancelled by the new key.
-  useEffect(() => {
-    const before = shown.current;
-    shown.current = turn ? { turn, seq } : null;
-    if (!before || before.seq === seq || prefersReducedMotion()) return;
-    setOutgoing(before);
-    const id = window.setTimeout(() => setOutgoing(null), LEAVE_MS + 60);
-    return () => window.clearTimeout(id);
-  }, [turn, seq]);
-
-  if (!turn) return null;
   const hidden = key !== null && fade.key === key && fade.phase === "hidden";
   const fading = key !== null && fade.key === key && fade.phase === "fading";
+  const rounds = turn ? roundsOf(turn, seq, !cardUp) : [];
+
+  // A new message pushes the oldest round out: it leaves over --dur-fast
+  // from where it stood while the rest glide up.
+  useEffect(() => {
+    const now = turn ? roundsOf(turn, seq, !cardUp) : [];
+    const before = shownRef.current;
+    shownRef.current = { rounds: now, seq };
+    if (!before || before.seq === seq || prefersReducedMotion()) return;
+    const gone = before.rounds.find((round) => !now.some((kept) => kept.key === round.key));
+    if (!gone) return;
+    setOutgoing({ ...gone, top: earlierTops.current.get(gone.key) ?? 0 });
+    const id = window.setTimeout(() => setOutgoing(null), LEAVE_MS + 60);
+    return () => window.clearTimeout(id);
+  }, [turn, seq, cardUp]);
+
+  // The glide: a round that stays starts from where it stood and eases to
+  // its new place over --dur-med. Reduced motion lands it at once.
+  useLayoutEffect(() => {
+    const root = rootRef.current;
+    if (!root) return;
+    const nodes = root.querySelectorAll<HTMLElement>(":scope > [data-round]:not([data-outgoing])");
+    const next = new Map<number, number>();
+    for (const node of nodes) {
+      const at = Number(node.dataset.round);
+      const top = node.offsetTop;
+      next.set(at, top);
+      const was = tops.current.get(at);
+      if (was === undefined || was === top || prefersReducedMotion()) continue;
+      const style = getComputedStyle(node);
+      node.animate([{ translate: `0 ${was - top}px` }, { translate: "0 0" }], {
+        duration: Number.parseFloat(style.getPropertyValue("--dur-med")) || 0,
+        easing: style.getPropertyValue("--ease-out").trim() || "ease-out",
+      });
+    }
+    earlierTops.current = tops.current;
+    tops.current = next;
+  });
+
+  if (!turn) return null;
   return (
     <div
       data-last-turn=""
+      data-last-turn-rounds={rounds.length}
       data-last-turn-fade={hidden ? "hidden" : fading ? "fading" : "shown"}
       ref={rootRef}
       onPointerEnter={() => setHovering(true)}
       onPointerLeave={() => setHovering(false)}
     >
-      {hidden && busy ? (
-        <WorkingAlone />
-      ) : (
-        !hidden && (
-          <>
-            {outgoing && outgoing.seq !== seq && (
-              <LastTurnPair
-                key={outgoing.seq}
-                turn={outgoing.turn}
-                busy={false}
-                leaving
-                announce={false}
-              />
-            )}
-            <LastTurnPair
-              key={seq}
-              turn={turn}
+      {outgoing && !rounds.some((round) => round.key === outgoing.key) && (
+        <div data-round={outgoing.key} data-outgoing="" style={{ top: outgoing.top }}>
+          <LastTurnRound round={outgoing.round} busy={false} older leaving announce={false} />
+        </div>
+      )}
+      {rounds.map((shown) =>
+        shown.older && hidden ? null : (
+          <div key={shown.key} data-round={shown.key} className="slot">
+            <LastTurnRound
+              round={shown.round}
               busy={busy}
-              fading={fading}
-              announce={spoken.current === key}
+              older={shown.older}
+              fading={shown.older && fading}
+              announce={!shown.older && spoken.current === key}
             />
-          </>
-        )
+          </div>
+        ),
       )}
     </div>
   );

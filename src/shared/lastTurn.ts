@@ -34,10 +34,22 @@ export const lastTurnReplySchema = z.object({
 });
 export type LastTurnReply = z.infer<typeof lastTurnReplySchema>;
 
-export const lastTurnSchema = z.object({
+/** One round: a message of the captain's and the reply line kept beside it. */
+export const lastRoundSchema = z.object({
   /** The captain's words; empty for a message that was only pictures. */
   you: z.string(),
   /** The Firstmate's reply line, or null while none has been given. */
   reply: lastTurnReplySchema.nullable(),
+});
+export type LastRound = z.infer<typeof lastRoundSchema>;
+
+/**
+ * The newest round, with the round before it (INF-1771, the captain's
+ * Approve and build on INF-1770's plan: the last two rounds, the older one
+ * faded). `previous` is absent from an older core and null before a second
+ * message (`last-turn-previous.md`).
+ */
+export const lastTurnSchema = lastRoundSchema.extend({
+  previous: lastRoundSchema.nullable().optional(),
 });
 export type LastTurn = z.infer<typeof lastTurnSchema>;

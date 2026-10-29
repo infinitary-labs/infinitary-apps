@@ -37,27 +37,30 @@ Short windows: a larger size can make the window shorter than 640 px to the page
 The input is centered on the window, at most 560 px wide and `--space-4` clear of each docked rail, and never narrower than 328 px, its width with Activity and Tasks both expanded in the 960 px window at 100%, where every hint has a form that fits its line.
 Where a larger Size would leave it less, the docked rails fold for it as they do for a card, with or without a card up: their panels go out of sight, keep running and keep their saved choices, and come back when a wider window or a smaller Size gives the room back.
 The input is never drawn over a collapsed side panel's header at a rail's foot, which takes no card room and so can sit under it in a narrow window: with no card up, the input's foot stands on the highest such header it shares columns with; while a card is up, those headers step aside (hidden in place, their pages running) and the input keeps its foot, so the card keeps its room, and they come back when the last card goes.
-Its growth is the runtime variable `--prompt-rise` (its height minus `--prompt-height`, plus the last turn's extra 18 px while it shows; the host writes it on the document, it is not a token).
+Its growth is the runtime variable `--prompt-rise` (its height minus `--prompt-height`, plus the last turn's share while it shows (`lastTurnRise`: 76 px with two rounds, 22 px with one); the host writes it on the document, it is not a token).
 The first mate and the card lift by half of it; the card's height cap shrinks by all of it, so the air between a tall card and the input never closes (the card body scrolls); the last turn rides above the input's top edge.
 The lift eases over `--dur-fast` on `--ease-out`, and nothing moves under reduced motion.
 Per-line growth itself is instant.
 
-The last turn (captain's Approve and build on FI3-1089's plan: dots, "Working…"; drawn as FI3-1225's Subtitles, the captain's Approve and build; quoted as FI3-1387's Quotes, the captain's Approve and build): the captain's last message and the first mate's reply, two lines of type in a slot hung 10 px above the input's top edge, so they never move it; nothing else shows there, and the notices stay under the input.
-Neither line has a border, a fill or padding.
-Each line's words sit inside quotation marks drawn in `--fg-3`, 1 px from the words, so even a bare "Got it" reads as something said, never as a button; the order says who said it.
-Both are centered on the axis the character and the input share.
-The captain's words come first, `--text-sm` in `--fg-2` on an 18 px row (the captain's pick of grey over `--captain` violet); 4 px below, the reply is the same `--text-sm` in `--fg-1` on an 18 px row, 40 px in all.
-A message of pictures alone reads "A picture" with no quotation marks, since it said no words.
+The last turn (captain's Approve and build on FI3-1089's plan: dots, "Working…"; drawn as INF-1770's Chat layout, the captain's Approve and build): the captain's last two messages, each with the first mate's reply, in a slot hung 10 px above the input's top edge, so they never move it; nothing else shows there, and the notices stay under the input.
+A round is the captain's words and the reply under them; the newest round sits nearest the input, and the older round 10 px above it at 50% opacity.
+The captain's words sit on the right in a soft grey bubble: `--fg-1` mixed at 8%, corners 11, 11, 4 and 11 px, padding 2 px by 10 px, `--text-sm` in `--fg-1` on a 22 px row, at most 75% of the width.
+2 px below, the reply sits on the left as plain `--text-sm` in `--fg-1` on a 20 px row, at most 80% of the width, after the first mate's mark: the app's 14 px hexagon in `--accent`, 8 px before the words.
+A round is 44 px; the lane is 108 px with two rounds and 54 px with one.
+No quotation marks: the side says who said it.
+A message of pictures alone reads "A picture".
 The reply is the first mate's closing sentence, about 40 characters saying what took effect (INF-772), and the app's own words, such as a card's title or "Started:" with the task's title, when it wrote none.
-Each line takes at most 80% of the width, and its words are cut with an ellipsis inside the marks.
-While the first mate works its line shows three 4 px `--hot` dots (ember, the working color a busy crewmate and a busy row's dot share), 3 px apart, each brightening in turn over 1.2 s, and "Working…" in `--fg-3`, with no quotation marks; a failed turn's words are `--danger` inside the `--fg-3` marks.
-A new pair rises 6 px into place over `--dur-med` as the old one leaves over `--dur-fast`; the working words leave over `--dur-fast` and the reply rises 4 px in over `--dur-med`; under reduced motion every move is a cut and the dots stand still.
-A completed reply fades after 15 seconds of visible reading time, then both lines dissolve in place over `--dur-slow`, with no movement; reduced motion cuts that dissolve to an instant and does not shorten the 15 seconds.
-The count pauses while the window is inactive, the message area is hidden, or the pointer or a selection rests on the lines, and a problem, a queued receipt, an unanswered message or an unknown line stays until the next message.
-After the dissolve the slot stays empty, the same 40 px and the same 10 px gap, so the input does not move, and there is no control to bring the lines back.
-A relaunch shows the saved pair again and starts a fresh 15 seconds for a known completed reply.
-The captain's line is not a control: the pointer stays an arrow, a click does nothing, Tab passes over it, and it draws no underline or focus ring; resting on a cut line shows its whole text.
-A finished or failed reply line is a button with no chrome of its own (INF-1102's plan, the captain's Approve and build): it takes the pointer, a Tab stop and the focus ring, and a click, Enter or Space opens the whole reply as a note at the front of the stack, titled with the captain's message in quotation marks, its words as the first mate wrote them; × or Esc closes it (`docs/composer.md` "The reply note").
+Each line is one line, its words cut with an ellipsis.
+While the first mate works, three 4 px `--hot` dots (ember, the working color a busy crewmate and a busy row's dot share), 3 px apart, each brightening in turn over 1.2 s, follow the newest reply's words 8 px after them: working never hides a reply.
+A message with no reply yet shows the dots and "Working…" in `--fg-3` in its reply's place; a failed turn's words are `--danger`.
+While a card is up only the newest round shows.
+A new round rises 6 px into place over `--dur-med`, the rounds that stay glide up over `--dur-med`, the newest eases to the older round's strength, and the round pushed out leaves over `--dur-fast`; the working words leave over `--dur-fast` and the reply rises 4 px in over `--dur-med`; under reduced motion every move is a cut and the dots stand still.
+A completed newest reply starts 15 seconds of visible reading time, then only the older round dissolves in place over `--dur-slow`, with no movement; the newest stays until the next message, and reduced motion cuts that dissolve to an instant and does not shorten the 15 seconds.
+The count pauses while the window is inactive, the message area is hidden, or the pointer or a selection rests on the lines, and a problem, a queued receipt, an unanswered message or an unknown line keeps the older round until the next message.
+After the dissolve the older round's room stays empty, so the input does not move, and there is no control to bring it back; the next message brings the round before it back as the older round.
+A relaunch shows the two saved rounds again and starts a fresh 15 seconds for a known completed reply.
+The captain's words are not a control: the pointer stays an arrow, a click does nothing, Tab passes over them, and they draw no underline or focus ring; resting on a cut line shows its whole text.
+Each reply line, the older one included, is a button with no chrome of its own (INF-1102's plan, the captain's Approve and build): it takes the pointer, a Tab stop and the focus ring, and a click, Enter or Space opens that whole reply as a note at the front of the stack, titled with its message in quotation marks, its words as the first mate wrote them; × or Esc closes it (`docs/composer.md` "The reply note").
 
 Keys: Enter sends.
 Shift+Enter or Option+Enter adds a line (right Option is the default voice key; Enter while recording is ignored).

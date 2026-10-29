@@ -194,7 +194,7 @@ Command-1, Command-2 and Command-3 switch tabs, Command-Comma opens Settings and
 `PhoneWorkspace` holds the tabs in the system tab controller with its own bar hidden, so each tab keeps its draft, scroll position and search while another is shown, and a tab that is away leaves the view hierarchy: nothing in it is drawn, pressable or read, and a keyboard typing into the message box closes with the tab it leaves.
 Home is one column: the stage, then the last turn and the message box under it, in the layout rather than floating over it; Tasks and Activity run to the foot with nothing over them, so the last row is whole and pressable after scrolling to the end.
 No bar height is measured or guessed, and nothing recedes on scroll.
-No panel sits behind the message box: the last turn is two bare lines over the capsule, which is native glass on iOS 26 and the field's fill and hairline on iOS 18.
+No panel sits behind the message box: the last turn is its rounds of lines over the capsule, which is native glass on iOS 26 and the field's fill and hairline on iOS 18.
 The capsule is 48 points tall, with the photo glyph 16 points in, the words 52 points in and send a 32-point filled circle 8 points from its end, each control in a 44-point touch area (INF-1517, following ChatGPT's input).
 Settings is this phone's own sheet, `PhoneSettingsSheet`: this device and what it can do, that appearance follows the device, and the app's version; the computer's sheet keeps the computer's name, reach, address and Leave or Forget.
 Both open at half height on the system's glass and can be pulled up, with the same headings and spacing; Leave, or Forget while out of reach, is the computer sheet's second section under its own heading.
@@ -276,10 +276,10 @@ The details sheet names the connected view's ability to answer cards, send messa
 
 ## Talk and tasks
 
-The message box keeps the captain’s last message and the first mate’s reply above its native multiline field, by the Mac's rules (`docs/composer.md`, "The last turn"; INF-1517).
+The message box keeps the captain’s last two messages and the first mate’s replies above its native multiline field, by the Mac's rules and in its Chat layout (`docs/composer.md`, "The last turn"; INF-1517, INF-1771): the captain's words in a grey bubble on the right, each reply beside the first mate's mark on the left, the older round at half strength and only the newest while a card is up.
 While the first mate is busy its line shows three ember dots brightening in turn and Working…; a message that was only photos reads "A picture".
 A completed reply fades after 15 seconds on screen over 0.7 seconds, an instant under reduced motion, keeping its room so the input never moves; the count runs only while Home is shown, the app is in front, the phone is upright and the first mate is idle.
-A tap on the reply line opens the whole reply in a half-height sheet, titled by the captain's message, as the Mac's reply note.
+A tap on a reply line opens that whole reply in a half-height sheet, titled by its message, as the Mac's reply note.
 Its component owns messages and photos; the shared shell places it at the foot of Home.
 A send carries the visible entry’s `visibleCardId`, `pastCardId` or `taskId` through the published conversation request as a hint, never as the message’s topic.
 The native multiline field uses the keyboard’s own dictation; Infinitary adds no speech model or microphone permission.

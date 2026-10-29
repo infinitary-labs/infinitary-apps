@@ -321,12 +321,17 @@ export class AskStore {
     return row?.id;
   }
 
-  /** The newest message and its reply line: the last turn above the input. */
+  /** The two newest messages and their reply lines: the last turn above the input. */
   lastTurn(): LastTurn | null {
-    const row = this.db
-      .prepare("SELECT text, reply FROM captain_asks ORDER BY at DESC, rowid DESC LIMIT 1")
-      .get() as Pick<Row, "text" | "reply"> | undefined;
-    return row ? { you: row.text, reply: replyOf(row.reply) } : null;
+    const [row, before] = this.db
+      .prepare("SELECT text, reply FROM captain_asks ORDER BY at DESC, rowid DESC LIMIT 2")
+      .all() as Pick<Row, "text" | "reply">[];
+    if (!row) return null;
+    return {
+      you: row.text,
+      reply: replyOf(row.reply),
+      previous: before ? { you: before.text, reply: replyOf(before.reply) } : null,
+    };
   }
 
   /** Asks whose turn has not closed yet, oldest first. */

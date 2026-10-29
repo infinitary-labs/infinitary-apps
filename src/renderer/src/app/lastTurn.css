@@ -1,46 +1,60 @@
 /*
- * The last turn above the input (docs/composer.md "The last turn"): the
- * captain's last message and the Firstmate's reply as two lines of type,
- * with no border, fill or padding around either (the Subtitles design the
- * captain approved on FI3-1225's plan), each inside quotation marks drawn in
- * --fg-3 (the Quotes the captain approved on FI3-1387's plan), so even a
- * bare "Got it" reads as something said. Both sit centered on the axis the
- * character and the input share, the same size on 18 px rows 4 px apart:
- * the captain's words first in --fg-2, the reply under them in --fg-1. Each
- * line takes at most 80% of the width and its words are cut with an
- * ellipsis inside the marks; the pair is 40 px tall and 10 px above the
- * input's top edge, in the slot hung from that edge, so it never moves the
- * input. The captain's line is plain text: no pointer, underline or focus
- * ring. A finished or failed reply line is a button (docs/composer.md "The
- * reply note"): the pointer, a Tab stop and the focus ring, and no other
- * chrome, so it still reads as a line of type.
+ * The last turn above the input (docs/composer.md "The last turn"), drawn as
+ * the Chat layout the captain approved on INF-1770's plan: the last two
+ * rounds, each the captain's words in a soft grey bubble on the right and,
+ * under them, the Firstmate's reply as plain type beside its mark on the
+ * left. The older round sits above at half strength. Type is --text-sm on
+ * 18 px lines: the captain's row is 22 px with its bubble, the reply's
+ * 20 px, 2 px apart, so a round is 44 px; rounds are 10 px apart and the
+ * newest 10 px above the input's top edge, in the slot hung from that edge,
+ * so it never moves the input. Each line is one line, cut with an
+ * ellipsis. The captain's words are plain text: no pointer, underline or
+ * focus ring. A reply line is a button (docs/composer.md "The reply note"):
+ * the pointer, a Tab stop and the focus ring, and no other chrome, so it
+ * still reads as a line of type.
  *
- * A pair enters with a 6 px rise over --dur-med; the pair a new message
- * replaces leaves over --dur-fast. The working words leave over --dur-fast
- * and the reply rises in over --dur-med. A completed reply later dissolves
- * in place over --dur-slow, with no movement, and the slot stays. Under
+ * A round enters with a 6 px rise over --dur-med; on a new message the
+ * rounds that stay glide up over --dur-med (LastTurn's glide), the newest
+ * eases to the older round's strength, and the round pushed out leaves over
+ * --dur-fast. The working words leave over --dur-fast and the reply rises
+ * in over --dur-med. After its reading time the older round dissolves in
+ * place over --dur-slow, with no movement, and the slot stays. Under
  * reduced motion the durations are zero, so every move is a cut, and the
  * dots stand still.
  */
 
 [data-last-turn] {
   position: relative;
-  height: 40px;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  gap: 10px;
+  height: 44px;
   margin: 0 14px 10px;
+  color: var(--fg-1);
+  font-size: var(--text-sm);
+  line-height: 18px;
   pointer-events: none;
+}
+[data-last-turn][data-last-turn-rounds="2"] {
+  height: 98px;
 }
 /* While the lines are up, the slot takes the pointer so resting on them pauses the fade. */
 [data-last-turn][data-last-turn-fade="shown"],
 [data-last-turn][data-last-turn-fade="fading"] {
   pointer-events: auto;
 }
+/* The round a new message pushes out leaves from where it stood. */
+[data-last-turn] > [data-outgoing] {
+  position: absolute;
+  left: 0;
+  right: 0;
+}
 
 [data-last-turn-pair] {
-  position: absolute;
-  inset: 0;
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 2px;
   transition:
     opacity var(--dur-med) var(--ease-out),
     transform var(--dur-med) var(--ease-out);
@@ -51,12 +65,16 @@
     transform: translateY(6px);
   }
 }
+/* The older round, at the strength the captain chose. */
+[data-last-turn-pair][data-older] {
+  opacity: 0.5;
+}
 [data-last-turn-pair][data-leaving] {
   opacity: 0;
   transform: translateY(-4px);
   transition-duration: var(--dur-fast);
 }
-/* A completed reply dissolves in place after its reading time. No movement,
+/* The older round dissolves in place after its reading time. No movement,
    and reduced motion cuts --dur-slow to zero, so the dissolve is a cut. */
 [data-last-turn-pair][data-fading] {
   opacity: 0;
@@ -67,9 +85,16 @@
 
 [data-last-turn] .row {
   display: flex;
-  justify-content: center;
-  height: 18px;
+  align-items: center;
   min-width: 0;
+}
+[data-last-turn] .row.you {
+  justify-content: flex-end;
+  height: 22px;
+}
+[data-last-turn] .row.mate {
+  gap: 8px;
+  height: 20px;
 }
 
 [data-last-turn-bubble] {
@@ -79,7 +104,6 @@
   align-items: center;
   gap: 8px;
   min-width: 0;
-  max-width: 80%;
   height: 18px;
   color: var(--fg-1);
   font-size: var(--text-sm);
@@ -87,13 +111,19 @@
   cursor: default;
   pointer-events: auto;
 }
+/* The captain's words in a soft grey bubble, its tail corner toward the input's end. */
 [data-last-turn-bubble="you"] {
-  color: var(--fg-2);
+  box-sizing: border-box;
+  max-width: 75%;
+  height: 22px;
+  padding: 2px 10px;
+  border-radius: 11px 11px 4px 11px;
+  background: color-mix(in srgb, var(--fg-1) 8%, transparent);
 }
 /* The reply line as a button: the same line of type, with the pointer. */
 button[data-last-turn-bubble] {
   margin: 0;
-  padding: 0 4px;
+  padding: 0;
   border: 0;
   border-radius: var(--radius-s);
   background: none;
@@ -103,15 +133,34 @@ button[data-last-turn-bubble] {
   cursor: pointer;
 }
 
-/* The words inside their quotation marks: the marks stay whole, and the words are cut. */
+/* The first mate's mark: the app's hexagon in --accent. */
+[data-last-turn] .mark {
+  flex: none;
+  width: 14px;
+  height: 14px;
+}
+[data-last-turn] .mark .o {
+  stroke: var(--accent);
+}
+[data-last-turn] .mark .i {
+  stroke: var(--accent);
+  opacity: 0.45;
+}
+[data-last-turn] .mark .d {
+  fill: var(--accent);
+}
+/* The reply and, while the Firstmate works, the dots after its words. */
+[data-last-turn] .line {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  max-width: 80%;
+}
+
 [data-last-turn] .said {
   display: inline-flex;
-  gap: 1px;
   min-width: 0;
-}
-[data-last-turn] .quote {
-  flex: none;
-  color: var(--fg-3);
 }
 [data-last-turn] .words {
   min-width: 0;

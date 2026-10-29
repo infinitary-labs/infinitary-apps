@@ -14,19 +14,33 @@ export const STAGE_LIFT = 60;
 /** The Firstmate's frame (HomeMate's `size`). */
 export const MATE_FRAME = 300;
 /**
- * The last turn above the input (./LastTurn, docs/composer.md "The last
- * turn"): the captain's 18 px line, the 4 px under it, the reply's 18 px
- * line, and the 10 px above the input's top edge.
+ * One round of the last turn above the input (./LastTurn, docs/composer.md
+ * "The last turn"): the captain's 22 px bubble, the 2 px under it, and the
+ * reply's 20 px line.
  */
-export const LAST_TURN_LANE = 18 + 4 + 18 + 10;
+export const LAST_TURN_ROUND = 22 + 2 + 20;
+/** The room between the two rounds, and between the newest and the input's top edge. */
+export const LAST_TURN_GAP = 10;
+
+/** The room the last turn takes above the input with `rounds` rounds shown (0, 1 or 2). */
+export function lastTurnLane(rounds: number): number {
+  return rounds === 0 ? 0 : rounds * (LAST_TURN_ROUND + LAST_TURN_GAP);
+}
+
+/** The whole lane, with both rounds shown: what sits above the input must clear it. */
+export const LAST_TURN_LANE = lastTurnLane(2);
+
 /**
  * The stage's air between a tall card and the input already holds one 22 px
  * line and its 10 px gap above the input; the last turn takes the rest,
  * published with the composer's growth in `--prompt-rise` while a turn
  * shows. The Firstmate and the card lift by half of it, a tall card's cap
- * shrinks by all of it, and the input's own growth gives up as much.
+ * shrinks by all of it, and the input's own growth gives up as much. A card
+ * shows only the newest round, so it gives up one round's share.
  */
-export const LAST_TURN_RISE = LAST_TURN_LANE - (22 + 10);
+export function lastTurnRise(rounds: number): number {
+  return rounds === 0 ? 0 : lastTurnLane(rounds) - (22 + 10);
+}
 
 /** The air the input keeps from the docked rails, both sides together (2 × `--space-4`). */
 export const PROMPT_RAIL_MARGIN = 32;

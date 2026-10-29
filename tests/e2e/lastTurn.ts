@@ -10,25 +10,35 @@ declare global {
 
 /**
  * The last turn above the input (`data-last-turn`, painted by `LastTurn`;
- * docs/composer.md "The last turn"): the captain's last message and the
- * Firstmate's bubble beside it. The pair a newer message replaces leaves
- * marked `data-leaving`, so these read only the pair that stays. A spec
- * never types the reply's words: they are the mock provider's own, or the
- * line the core kept (`window.infinitary.conversation.lastTurn()`).
+ * docs/composer.md "The last turn"): the captain's last two messages, each
+ * with the Firstmate's bubble beside it. The older round is marked
+ * `data-older`, and the round a newer message pushes out leaves marked
+ * `data-leaving`, so `yourBubble` and `mateBubble` read only the newest
+ * round. A spec never types the reply's words: they are the mock provider's
+ * own, or the line the core kept
+ * (`window.infinitary.conversation.lastTurn()`).
  */
-const PAIR = "[data-last-turn] [data-last-turn-pair]:not([data-leaving])";
+const ROUND = "[data-last-turn] [data-last-turn-pair]:not([data-leaving])";
+const NEWEST = `${ROUND}:not([data-older])`;
+const OLDER = `${ROUND}[data-older]`;
 
-/** The captain's own bubble. */
-export function yourBubble(page: Page): Locator {
-  return page.locator(`${PAIR} [data-last-turn-bubble="you"]`);
+/** The captain's own bubble in the newest round, or the older one's. */
+export function yourBubble(page: Page, round: "newest" | "older" = "newest"): Locator {
+  return page.locator(`${round === "older" ? OLDER : NEWEST} [data-last-turn-bubble="you"]`);
 }
 
 /**
- * The Firstmate's bubble; `data-state` says whether it is `working`, a
- * `reply` or a `problem`.
+ * The Firstmate's bubble in the newest round, or the older one's;
+ * `data-state` says whether it is `working`, a `reply` or a `problem`, and
+ * `data-working` marks a reply the working dots follow.
  */
-export function mateBubble(page: Page): Locator {
-  return page.locator(`${PAIR} [data-last-turn-bubble="firstmate"]`);
+export function mateBubble(page: Page, round: "newest" | "older" = "newest"): Locator {
+  return page.locator(`${round === "older" ? OLDER : NEWEST} [data-last-turn-bubble="firstmate"]`);
+}
+
+/** The older round, while it shows. */
+export function olderRound(page: Page): Locator {
+  return page.locator(OLDER);
 }
 
 /** A bubble's whole words, however narrow the bubble draws them. */

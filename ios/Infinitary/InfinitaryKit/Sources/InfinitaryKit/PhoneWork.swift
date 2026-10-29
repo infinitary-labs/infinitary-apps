@@ -3,6 +3,8 @@ import Foundation
 public struct PhoneLastTurn: Decodable, Sendable {
     public let you: String
     public let reply: Reply?
+    /// INF-1771: the round before the newest, absent from an older Mac and null before a second message.
+    public let previous: PhoneLastRound?
     public struct Reply: Decodable, Sendable {
         public let text: String
         public let problem: Bool?
@@ -11,6 +13,13 @@ public struct PhoneLastTurn: Decodable, Sendable {
         /// The closing words as written, line breaks kept, when they differ from `text`.
         public let words: String?
     }
+}
+
+/// One round of the last turn: a message of the captain's and the reply line kept beside it.
+public struct PhoneLastRound: Decodable, Sendable {
+    public let you: String
+    public let reply: PhoneLastTurn.Reply?
+    public init(you: String, reply: PhoneLastTurn.Reply?) { self.you = you; self.reply = reply }
 }
 
 public struct PhoneMove: Decodable, Sendable {

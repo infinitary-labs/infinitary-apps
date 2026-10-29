@@ -2923,16 +2923,18 @@ describe("migration 68 (the reply line beside each captain message, FI3-1089)", 
     expect(appliedVersions(upgraded)).toEqual(ALL_VERSIONS);
     const tasks = new TaskService({ db: upgraded, strict: true, now: () => 2 });
     // A message written before the column has no reply line.
-    expect(tasks.lastTurn()).toEqual({ you: "before the line", reply: null });
+    expect(tasks.lastTurn()).toEqual({ you: "before the line", reply: null, previous: null });
     tasks.openAsk({ id: "new1", text: "how is the alpha?" });
     tasks.setAskReply("new1", { text: "The alpha is cut" });
     upgraded.close();
 
-    // An app restart reads the last turn back from disk.
+    // An app restart reads the last turn back from disk, with the round
+    // before it (INF-1771: the last two rounds above the input).
     const reopened = openDatabase(dir);
     expect(new TaskService({ db: reopened, strict: true }).lastTurn()).toEqual({
       you: "how is the alpha?",
       reply: { text: "The alpha is cut" },
+      previous: { you: "before the line", reply: null },
     });
     // Reversible: dropping the column restores the v67 shape with every row.
     dropViews(reopened);

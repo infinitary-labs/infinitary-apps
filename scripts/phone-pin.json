@@ -1,0 +1,6 @@
+{
+  "xcode": "27.1",
+  "ios": "27.0",
+  "iosBuild": "24A434",
+  "devices": { "iphone": "iPhone 16", "ipad": "iPad Pro 11-inch (M4)" }
+}

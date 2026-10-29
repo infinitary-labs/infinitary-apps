@@ -10,7 +10,9 @@
 # usage: scripts/virtual-mac/image.sh [name]       (default: infinitary-lane)
 #
 # TART names tart (default: tart on PATH); tart keeps the image under its own
-# TART_HOME (default ~/.tart). BASE_IMAGE, CPUS, MEMORY_MB and
+# TART_HOME (default ~/.tart). The base is Cirrus Labs' image of the Xcode
+# scripts/phone-pin.json names, and provisioning refuses it unless it holds
+# that Xcode and the pinned iOS simulator (INF-1645). BASE_IMAGE, CPUS, MEMORY_MB and
 # CLAUDE_CODE_VERSION override the defaults below. IOS_RUNTIME_VERSION defaults
 # to 26.1 (the simulator suite's pin). IOS_RUNTIME_DMG can name its Apple-supplied
 # disk; otherwise runtime.sh locates a verified installed copy on this Mac.
@@ -20,12 +22,15 @@
 set -euo pipefail
 
 NAME="${1:-infinitary-lane}"
-BASE_IMAGE="${BASE_IMAGE:-ghcr.io/cirruslabs/macos-tahoe-xcode:26.4}"
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+pin() { python3 -c 'import json, sys; print(json.load(open(sys.argv[1]))[sys.argv[2]])' "$ROOT/scripts/phone-pin.json" "$1"; }
+PIN_XCODE="$(pin xcode)"
+PIN_IOS_BUILD="$(pin iosBuild)"
+BASE_IMAGE="${BASE_IMAGE:-ghcr.io/cirruslabs/macos-tahoe-xcode:$PIN_XCODE}"
 CPUS="${CPUS:-6}"
 MEMORY_MB="${MEMORY_MB:-16384}"
 NODE_MAJOR=24
 IOS_RUNTIME_VERSION="${IOS_RUNTIME_VERSION:-26.1}"
-ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 # shellcheck source=scripts/virtual-mac/vm.sh
 source "$ROOT/scripts/virtual-mac/vm.sh"
 
@@ -63,7 +68,7 @@ IOS_RUNTIME_DMG="${IOS_RUNTIME_DMG:-$(/bin/bash "$ROOT/scripts/virtual-mac/runti
 [ -f "$IOS_RUNTIME_DMG" ] || { echo "The required Apple-supplied iOS runtime disk is missing." >&2; exit 2; }
 RUNTIME_DIR="$(cd "$(dirname "$IOS_RUNTIME_DMG")" && pwd)"
 RUNTIME_DISK="$SHARED/ios-runtime/$(basename "$IOS_RUNTIME_DMG")"
-printf -v RUNTIME_ENV 'IOS_RUNTIME_VERSION=%q IOS_RUNTIME_DMG=%q' "$IOS_RUNTIME_VERSION" "$RUNTIME_DISK"
+printf -v RUNTIME_ENV 'IOS_RUNTIME_VERSION=%q IOS_RUNTIME_DMG=%q PIN_XCODE=%q PIN_IOS_BUILD=%q' "$IOS_RUNTIME_VERSION" "$RUNTIME_DISK" "$PIN_XCODE" "$PIN_IOS_BUILD"
 
 # Built under another name and renamed only once provisioning passed, so a
 # failed build never leaves a half-made image under the lane's name.

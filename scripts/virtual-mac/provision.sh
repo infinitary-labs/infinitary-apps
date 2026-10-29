@@ -85,14 +85,22 @@ killall -u "$(whoami)" tccd || true
 # What every project's Mac jobs find in a virtual place (INF-603): one image
 # serves them all (docs/testing.md, "One image for every project"). These are
 # the tools their workflows name: sshhip's simulator suite checks node,
-# python3, perl, gh, git, xcodebuild and swift, and picks an Xcode 26; the
-# phone check and the suite boot an iOS simulator.
+# python3, perl, gh, git, xcodebuild and swift; the phone check and the suite
+# boot an iOS simulator.
 for tool in git gh python3 perl swift xcodebuild xcrun; do
   command -v "$tool"
 done
-xcodebuild -version | grep '^Xcode 26' > /dev/null
-# sshhip's complete suite passes --runtime 26.1 explicitly. The Xcode 26.4
-# base has only iOS 26.4, which is not a substitute for that job's fixture.
+# The phone check's pin (scripts/phone-pin.json, INF-1645): the base's
+# Xcode and the iOS simulator build the check accepts alone. Xcode's own
+# simulator cannot host the check's devices, so Apple's download adds the
+# pinned build beside it.
+: "${PIN_XCODE:?}" "${PIN_IOS_BUILD:?}"
+test "$(xcodebuild -version | sed -n 's/^Xcode //p')" = "$PIN_XCODE"
+pinned_runtime() { xcrun simctl list runtimes available | grep -F " - $PIN_IOS_BUILD)" > /dev/null; }
+pinned_runtime || xcodebuild -downloadPlatform iOS -buildVersion "$PIN_IOS_BUILD"
+pinned_runtime
+# sshhip's complete suite passes --runtime 26.1 explicitly. The base has
+# only its own Xcode's simulators, which are not a substitute for that job's fixture.
 /bin/bash "$SHARE/runtime.sh" install "${IOS_RUNTIME_VERSION:?}" "${IOS_RUNTIME_DMG:?}"
 
 # Nothing that signs as the captain: a job that signs with his Apple

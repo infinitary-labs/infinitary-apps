@@ -18,7 +18,7 @@ import { startPhoneActivity } from "./phone-activity.ts";
 import { runEveryCheck } from "./phone-checks.ts";
 import { GATE_SIMULATOR, removePhoneLeftovers, SCRATCH_PREFIX } from "./phone-leftovers.ts";
 import { phoneRecording } from "./phone-recording.ts";
-import { phoneSimulator } from "./phone-simulator.ts";
+import { phoneSimulator, phoneXcode } from "./phone-simulator.ts";
 import { PHONE_PARTS, type PhoneDevice, partSelection, phoneAnimationWaits, phoneExecutionArguments, phoneJobs, runDeviceLanes, testHomeKeys } from "./phone-test-plan.ts";
 
 // INF-800: with CI mode on, the phone check runs only through CI (docs/testing.md).
@@ -298,6 +298,7 @@ const photosReady = (lane: Lane, stopping: AbortSignal) => lane.photos ??= (asyn
 // for that device, each part as its own gate from that build with its own test home, the devices side
 // by side, at most --simulators of them at once.
 const everyPart = async () => {
+  phoneXcode(await run("xcodebuild", ["-version"]));
   await run("xcodebuild", [...project, "-destination", "generic/platform=iOS Simulator",
     "-derivedDataPath", join(root, "DerivedData"), `ARCHS=${process.arch === "x64" ? "x86_64" : "arm64"}`, "build-for-testing"]);
   const products = join(root, "DerivedData", "Build", "Products");

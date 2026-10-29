@@ -199,6 +199,8 @@ describe("the native pull-request gate", () => {
     "scripts/phone-test-plan.ts",
     // INF-1552: the extracted selector still reaches the device gate.
     "scripts/phone-simulator.ts",
+    // INF-1645: a new pin must start the device gate on the pinned simulator.
+    "scripts/phone-pin.json",
   ])("runs the actual workflow condition when %s changes", (path) => {
     expect(eligible(phoneDecision([path]).run)).toBe("true");
   });

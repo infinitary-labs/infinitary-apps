@@ -249,7 +249,7 @@ Priority never interrupts running work, and capacity, test gates and merge conse
 
 `phone.yml` selects the iPhone and iPad gate for `ios/`, the phone-card generator, the phone-contract generator with its shape guard, and the gate's own setup (`scripts/affected-phone.ts`).
 A change to the generated phone contract that touches only its `public static let version` line, a first-number change included, does not select it; `pnpm check` still verifies the file is current on every pull request.
-The setup inputs are `phone.yml`, `scripts/test-phone.ts`, `tests/helpers/phoneHome.ts`, `tests/helpers/phoneKeyboard.ts`, the activity writer `scripts/phone-activity.ts`, the leftover sweep `scripts/phone-leftovers.ts`, the check runner `scripts/phone-checks.ts`, the simulator selector `scripts/phone-simulator.ts` and the test plan helper `scripts/phone-test-plan.ts`.
+The setup inputs are `phone.yml`, `scripts/test-phone.ts`, `tests/helpers/phoneHome.ts`, `tests/helpers/phoneKeyboard.ts`, the activity writer `scripts/phone-activity.ts`, the leftover sweep `scripts/phone-leftovers.ts`, the check runner `scripts/phone-checks.ts`, the simulator selector `scripts/phone-simulator.ts` and its pin `scripts/phone-pin.json`, and the test plan helper `scripts/phone-test-plan.ts`.
 Setup the device gates never run does not select it: the chooser itself, the replacement helper `scripts/replaced-phone-runs.ts`, the local test home `scripts/phone-test-home.ts`, and the virtual Mac scripts `scripts/virtual-mac/phone.sh`, `phone-job.sh` and `vm.sh` while `PHONE_VIRTUAL_MAC` is unset.
 Changes to general shared modules, connection/device code, packages or the lockfile alone do not select the native gate.
 Its Linux chooser reads the complete git comparison; an unreadable comparison selects the gate rather than silently skipping it.
@@ -728,7 +728,7 @@ The affected-journey selector retains that journey for changes to the core Mac c
 
 A virtual Mac runs the journeys like the Mac mini does only when its image holds two things the app and macOS look for there.
 `scripts/virtual-mac/image.sh [name]` builds that image with tart (`brew install cirruslabs/cli/tart`, or name it with `TART`), under tart's own `TART_HOME`, `~/.tart` by default.
-It clones Cirrus Labs' `macos-tahoe-xcode:26.4` with 6 CPUs and 16 GB as `infinitary-lane`, and `provision.sh` adds Node 24, the `packageManager` pnpm, a warm pnpm store and the two things below inside it.
+It clones Cirrus Labs' `macos-tahoe-xcode` image of the Xcode `scripts/phone-pin.json` names with 6 CPUs and 16 GB as `infinitary-lane`, and `provision.sh` adds Node 24, the `packageManager` pnpm, a warm pnpm store and the two things below inside it.
 Each part checks itself as the image is built, and the image is renamed into place only once all of them pass, so a fix lands in the script and never in an image by hand.
 `scripts/virtual-mac/run.sh <files>` runs journeys in a fresh clone of the image the way `journeys.yml` runs them on the Mac mini, on the working copy's committed version, keeps the run's log and `test-results/runs/` in `test-results/virtual-mac/`, and deletes the clone.
 `scripts/virtual-mac/phone.sh` runs the phone check's device gates in a clone of the same image when `PHONE_VIRTUAL_MAC` is set (`docs/ios.md`, "The phone check in a virtual Mac").
@@ -741,8 +741,9 @@ Provisioning installs its checksum-verified Node archive under `$HOME/tool-cache
 `$HOME/node` links to that installation, preserving the guest services' and login shells' path.
 The placement service points virtual runners' `RUNNER_TOOL_CACHE` at `$HOME/tool-cache`, outside the runner's wiped `_work`, so the first job in a fresh clone finds Node without downloading a manifest or archive.
 After reboot, the image builder checks the completion marker, cached executable and shared installation before publishing the image.
-`provision.sh` fails the build unless the tools those jobs' workflows name are there: `git`, `gh`, `python3`, `perl`, `swift`, `xcodebuild` and `xcrun`, an Xcode 26 and the iOS 26.1 runtime sshhip's full simulator suite explicitly requests.
-The Xcode 26.4 base provides iOS 26.4, not that pinned fixture.
+`provision.sh` fails the build unless the tools those jobs' workflows name are there: `git`, `gh`, `python3`, `perl`, `swift`, `xcodebuild` and `xcrun`, and the iOS 26.1 runtime sshhip's full simulator suite explicitly requests.
+The base is Cirrus Labs' image of the Xcode `scripts/phone-pin.json` names, and the build refuses it unless that Xcode is the one selected and the pin's iOS simulator build is available; provisioning downloads that build from Apple when the base lacks it (`docs/ios.md`, "Disposable verification").
+Neither base provides sshhip's iOS 26.1 fixture.
 Provisioning also updates the guest's Homebrew and installs its Python and Bash, refusing an image without `tomllib`, Homebrew's tap-trust command or Bash 4+ on the job's path.
 The full Mac gate consumes Python and Homebrew, and sshhip's simulator admission wrapper uses Bash's `coproc`; macOS's Bash 3.2 is not sufficient.
 Both Tart services prepend the image's Node and Homebrew to their child process path and use launchd's `ProcessType Interactive`, so their children do not inherit background scheduling.

@@ -18,6 +18,7 @@
       "identifier": "com.apple.CoreSimulator.SimRuntime.iOS-26-4",
       "isAvailable": true,
       "version": "26.4",
+      "buildversion": "23E244",
       "supportedDeviceTypes": [
         {
           "name": "iPhone 16",
@@ -33,6 +34,7 @@
       "identifier": "com.apple.CoreSimulator.SimRuntime.iOS-27-0",
       "isAvailable": true,
       "version": "27.0",
+      "buildversion": "24A434",
       "supportedDeviceTypes": [
         {
           "name": "iPhone 16",
@@ -48,6 +50,7 @@
       "identifier": "com.apple.CoreSimulator.SimRuntime.iOS-27-1",
       "isAvailable": true,
       "version": "27.1",
+      "buildversion": "24A94425",
       "supportedDeviceTypes": [
         {
           "name": "iPhone Duo",

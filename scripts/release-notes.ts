@@ -161,10 +161,10 @@ class Repo {
     return this.git("rev-parse", "--verify", `${rev}^{commit}`);
   }
 
-  /** Whether this checkout has the commit at all. */
-  has(commit: string): boolean {
+  /** Whether this checkout shares history with the commit, not just its objects. */
+  sharesHistory(commit: string): boolean {
     try {
-      this.resolve(commit);
+      this.git("merge-base", "HEAD", commit);
       return true;
     } catch {
       return false;
@@ -310,9 +310,10 @@ const freshCache = new WeakMap<Loaded, Set<string> | null>();
 
 /**
  * When this checkout starts a fresh history - the ledger keeps a record of
- * past releases, and the newest archived stable's commit is not here - the
- * entries those releases carry, which every release standing on the archived
- * tree carries too. Null when the history is whole (or there is no record).
+ * past releases, and the newest archived stable shares no ancestor with HEAD -
+ * the entries those releases carry, which every release standing on the archived
+ * tree carries too. Fetching archived objects does not change this boundary.
+ * Null when the history is whole (or there is no record).
  */
 function freshHistory(repo: Repo, loaded: Loaded): Set<string> | null {
   if (!freshCache.has(loaded)) {
@@ -320,7 +321,8 @@ function freshHistory(repo: Repo, loaded: Loaded): Set<string> | null {
     const newest = archive
       ? loaded.manifests.find((item) => item.manifest.version === archive.stable)
       : undefined;
-    const fresh = archive !== null && newest !== undefined && !repo.has(newest.manifest.sourceCommit);
+    const fresh =
+      archive !== null && newest !== undefined && !repo.sharesHistory(newest.manifest.sourceCommit);
     const manifests = loaded.manifests.map((item) => item.manifest);
     freshCache.set(loaded, fresh && archive ? archivedEntries(archive, manifests) : null);
   }
@@ -433,8 +435,10 @@ function validate(repo: Repo, loaded: Loaded): string[] {
   const fresh = freshHistory(repo, loaded) !== null;
   for (const { path, manifest } of loaded.manifests) {
     if (fresh && archived(loaded, manifest.version)) {
-      // Its hash is checked above; its commits stay with the archived history.
-      if (tags.has(manifest.version))
+      // Its hash is checked above. A fetched tag may still name its archived
+      // source, but this history cannot retag that published version.
+      const tagged = tags.get(manifest.version);
+      if (tagged !== undefined && tagged !== manifest.sourceCommit)
         problems.push(
           `${path}: v${manifest.version} was published from the archived history, so this history never tags it`,
         );

@@ -79,8 +79,8 @@ The Infinitary rename (step 7 of FI3-1780's plan) starts a new repository from o
   `node scripts/release-notes.ts archive --repository <owner/name> --write` pins it from the full history: every published release must already have its manifest, the ledger must check out against git, and then each manifest's file is recorded by its SHA-256, with the newest version each channel published.
   While this history is the one it records, pinning a manifest pins the record again with it, and `validate` refuses a manifest the record does not list.
 - **How a fresh history reads it.**
-  A checkout is a fresh history when the record's newest stable names a commit the checkout does not have.
-  There, each listed manifest is checked by its hash rather than re-derived, and a tag of a listed version is refused, because this history never published it.
+  A checkout is a fresh history when its current commit and the record's newest stable share no ancestor, even if the archived objects have been fetched.
+  There, each listed manifest is checked by its hash rather than re-derived, and a fetched tag of a listed version must still name that manifest's source commit; this history never retags an archived version.
   Every release on it carries the entries the archived releases carried, since its first commit holds their tree, plus the entries whose notes its own commits added: the first commit adds every note file, so a note that was not yet released is the first release's.
   The source changes a release must cover start at that first commit, which covers itself by adding the notes.
   Only the full history pins the record again.

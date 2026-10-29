@@ -678,6 +678,57 @@ describe("a fresh history", () => {
     expect(() => f.cli("archive", "--write")).toThrow(/which this checkout does not have/);
   });
 
+  it("keeps published membership when the separate archived history and its tags are fetched", () => {
+    // INF-1883: fetching the old repository must not turn a parentless copy
+    // back into that repository or re-derive its immutable published notes.
+    const old = archivedHistory();
+    const fresh = freshCopy(old);
+    const root = fresh.git("rev-parse", "HEAD");
+    const archiveBefore = readFileSync(join(fresh.dir, "release-notes/archive.json"), "utf8");
+    const archivedBefore = readFileSync(
+      join(fresh.dir, "release-notes/releases/1.0.1.json"),
+      "utf8",
+    );
+    fresh.git("fetch", "--quiet", "--tags", old.dir, "main");
+    expect(fresh.git("rev-parse", "v1.0.1")).toBe(old.git("rev-parse", "v1.0.1"));
+    expect(fresh.cli("validate")).toContain("consistent");
+    expect(() => fresh.cli("archive", "--write")).toThrow(/which this checkout does not have/);
+
+    const version = "1.0.2-alpha.1";
+    expect(
+      fresh.cli("check", "--source", root, "--version", version, "--reviewed", root),
+    ).toContain("all covered");
+    const out = join(scratchDir("infinitary-release-notes-out-"), "release-notes.json");
+    fresh.cli("generate", "--version", version, "--source", root, "--out", out);
+    const catalog = JSON.parse(readFileSync(out, "utf8")) as {
+      releases: { version: string; entryIds: string[] }[];
+    };
+    const inherited = JSON.parse(archivedBefore) as { entryIds: string[] };
+    expect(catalog.releases.find((release) => release.version === version)?.entryIds).toEqual(
+      inherited.entryIds,
+    );
+    expect(catalog.releases.find((release) => release.version === "1.0.1")).toEqual(
+      JSON.parse(archivedBefore),
+    );
+    fresh.tag(version);
+    pin(fresh, version);
+    expect(fresh.cli("validate")).toContain("consistent");
+    expect(readFileSync(join(fresh.dir, "release-notes/archive.json"), "utf8")).toBe(archiveBefore);
+    expect(readFileSync(join(fresh.dir, "release-notes/releases/1.0.1.json"), "utf8")).toBe(
+      archivedBefore,
+    );
+    // Imported objects do not relax either kind of immutability check.
+    fresh.commit("docs: retroactively add a note to the new release", {
+      "release-notes/changes/retroactive.json": note("retroactive-change", "A late correction", {
+        provenance: { origin: "release-review", covers: [root] },
+      }),
+    });
+    expect(() => fresh.cli("validate")).toThrow(/published membership changed/);
+    const archivedPath = join(fresh.dir, "release-notes/releases/1.0.1.json");
+    writeFileSync(archivedPath, `${archivedBefore}\n`);
+    expect(() => fresh.cli("validate")).toThrow(/is not the manifest it pins/);
+  });
+
   it("refuses an archived version tagged on the new history, and an archived record that changed", () => {
     const fresh = freshCopy(archivedHistory());
     fresh.tag("1.0.1");

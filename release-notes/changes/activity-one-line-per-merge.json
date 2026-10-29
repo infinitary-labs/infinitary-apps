@@ -1,0 +1,17 @@
+{
+  "entries": [
+    {
+      "id": "activity-one-line-per-merge",
+      "kind": "improvement",
+      "area": "tasks",
+      "title": "Activity shows one line per merge, under the task's key",
+      "body": "A merge now writes one line in Activity, under its task's key: it says Merging #709 while it runs and becomes Merged #709 on GitHub, or Cannot merge with the reason. Lines no longer carry web addresses, a finished report writes no line of its own, and your choice on a card reads You chose. On your iPhone and iPad, Activity shows each line on one row with the newest at the bottom, follows new lines like a chat, opens a line's summary when you tap it and opens the task's record when you tap its key.",
+      "picture": {
+        "dark": "activity-one-line-per-merge-dark.webp",
+        "light": "activity-one-line-per-merge-light.webp",
+        "alt": "Activity with three lines under SCR-1: Started, Opened a pull request, and Merged #55 on GitHub"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

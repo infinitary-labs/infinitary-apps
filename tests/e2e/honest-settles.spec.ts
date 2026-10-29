@@ -2,10 +2,11 @@ import { execFileSync } from "node:child_process";
 import { writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { expect, type Page, test } from "@playwright/test";
-import { cannotMergeText, discardedText } from "../../src/core/orchestrator/settleWords";
+import { cannotMergeText } from "../../src/core/orchestrator/settleWords";
 import { CardStore } from "../../src/core/storage/cardStore";
 import { openDatabase } from "../../src/core/storage/db";
 import { seedTask } from "../../src/core/tasks/seedTask";
+import { DISCARDED_LINE } from "../../src/core/tasks/taskFeed";
 import { TaskService } from "../../src/core/tasks/taskService";
 import {
   PROJECT_POLICY_WORDS,
@@ -18,7 +19,7 @@ import { seedGitHubSignIn, startGitHubStub } from "./githubStub";
 import { launchApp } from "./launch";
 import { seedHostedOrigins } from "./projectSeed";
 import { projectRow, projectRowWords } from "./projects";
-import { feedLine } from "./rails";
+import { noteLines, statusLine, taskKey } from "./rails";
 import { shownCard } from "./stack";
 
 /**
@@ -118,10 +119,12 @@ test("discarding a task that never opened a pull request asks GitHub nothing and
   try {
     const { page } = launched;
     await page.getByRole("button", { name: "Discard", exact: true }).click();
-    // The feed says it is gone, and nothing about a pull request.
-    await expect(feedLine(page, discardedText(DISCARDED_TITLE))).toBeVisible({
+    // The feed says it is gone on the task's own close line (INF-1845), and nothing about a pull request.
+    const key = await taskKey(page, DISCARDED_TITLE);
+    await expect(statusLine(page, key).filter({ hasText: DISCARDED_LINE })).toBeVisible({
       timeout: 20_000,
     });
+    await expect(noteLines(page, key)).toHaveCount(0);
     await expect
       .poll(() => page.evaluate((id) => window.infinitary.tasks.detail(id), taskId))
       .toMatchObject({ status: "dropped", closedReason: "discarded" });
@@ -193,9 +196,11 @@ test("a put-in the project's host refuses reads plainly in the feed, and the raw
     await expect.poll(refusal, { timeout: 20_000 }).toBeDefined();
     // The feed says what that refusal means, never the host's raw words.
     const problem = (await refusal()) as string;
-    await expect(feedLine(page, cannotMergeText(REFUSED_TITLE, plainProblem(problem)))).toBeVisible(
-      { timeout: 20_000 },
-    );
+    await expect(
+      noteLines(page, await taskKey(page, REFUSED_TITLE)).filter({
+        hasText: cannotMergeText(plainProblem(problem)),
+      }),
+    ).toBeVisible({ timeout: 20_000 });
     // Nothing went in; the task stays open, its work kept.
     expect(github.merges()).toEqual([]);
     const feed = (await feedTexts(page)).join("\n");

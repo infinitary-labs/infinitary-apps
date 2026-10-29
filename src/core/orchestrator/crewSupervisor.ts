@@ -14645,7 +14645,7 @@ export class CrewSupervisor {
   /**
    * Chrome close: the card leaves the stack without a declared action. The
    * resolution is on the record (the card row, the task timeline) and one
-   * feed line says so and where the card stays (the task's record, FI3-579). A crewmate's own card on a live task reaches that
+   * feed line on the record the card stays on says so (FI3-579; its key names that record). A crewmate's own card on a live task reaches that
    * crewmate, on the path a click takes (FI3-435): the author judges what
    * the close meant - read and finished, still waiting on the captain, or a
    * passing note - and its report declares it. Anything else wakes nobody
@@ -14689,13 +14689,12 @@ export class CrewSupervisor {
       (action) => action.effect?.kind === "host" && HOST_DECLINE_OPS.has(action.effect.op),
     )?.effect;
     if (card.author === "host" && decline?.kind === "host") this.runHostOp(decline);
-    this.options.broadcastEvent({
-      type: "firstmate_note",
-      text:
-        home?.key && home.kind !== "operation"
-          ? `You closed "${card.title}". It stays on ${home.key}'s record.`
-          : `Captain dismissed the card "${card.title}".`,
-    });
+    // On the record the card stays on, so the line carries its key (INF-1845).
+    this.options.broadcastEvent(
+      home?.key && home.kind !== "operation"
+        ? { type: "firstmate_note", taskId: home.id, text: `You closed "${card.title}"` }
+        : { type: "firstmate_note", text: `Captain dismissed the card "${card.title}".` },
+    );
     // His close of a marked answer note closed its task (INF-1732): the
     // crewmate has nothing left to judge.
     if (!closedAnswer) this.tellCardClosed(card);

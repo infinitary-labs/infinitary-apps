@@ -9,7 +9,7 @@ import { launchApp } from "./launch";
 import { settled } from "./layout";
 import {
   expandDock,
-  notesNaming,
+  noteLines,
   nowFrame,
   pressRow,
   RECORD_FRAME_SELECTOR,
@@ -194,10 +194,9 @@ test("the cross on a card writes one line saying where it went, and the record l
     await expect(shownCard(page, QUAY_TITLE)).toBeVisible();
     await page.getByRole("button", { name: "Close", exact: true }).click();
     await expectNoCard(page, QUAY_TITLE);
-    // One line names the card, and says the record it stays on.
-    const said = notesNaming(page, QUAY_TITLE);
+    // One line names the card, on the record it stays on, so it carries that task's key (INF-1845).
+    const said = noteLines(page, task.key).filter({ hasText: QUAY_TITLE });
     await expect(said).toHaveCount(1);
-    await expect(said).toContainText(task.key);
 
     await expandDock(page, "now");
     await click(nowFrame(page).locator('[data-now-group-header="backlog"]'));

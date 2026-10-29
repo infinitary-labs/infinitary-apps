@@ -9,21 +9,37 @@ import { FOLDER_REPAIR_TITLE, PULL_REPAIR_TITLE } from "./intentBrief";
 
 /**
  * The feed's receipt of a settle the captain clicked, in the app's words
- * (`SettleService`): a discard that went through, and a merge that did not,
- * said in what its failure means (`plainProblem`); and the words around
+ * (`SettleService`): the click itself, a discard that went through, and a
+ * merge that did not, said in what its failure means (`plainProblem`). Each
+ * is a line on the task's own record, so Activity paints the task's key
+ * before it and the words never name the task again (INF-1845); and the words around
  * the first mate's own sentence when it closes started work without their
  * click. A plain module, so a journey reads the receipt from its owner;
  * `crewSupervisor.test.ts` owns the sentences.
  */
 
+/**
+ * The captain's click, until its outcome takes the line's place: the change
+ * by its label where it has one ("Merging #709"), and whether it waits for
+ * the crewmate's turn to end.
+ */
+export function settlingText(
+  mode: "merge-pr" | "land" | "discard",
+  change: string | undefined,
+  waitsForTurn: boolean,
+): string {
+  const action = mode === "discard" ? "Discarding" : change ? `Merging ${change}` : "Merging";
+  return waitsForTurn ? `${action} once its crewmate finishes what it is doing` : action;
+}
+
 /** A discard that closed the task, then what became of its pull request, when it had one. */
-export function discardedText(title: string, pullRequest = ""): string {
-  return `Discarded "${title}".${pullRequest ? ` ${pullRequest}` : ""}`;
+export function discardedText(pullRequest = ""): string {
+  return `Discarded.${pullRequest ? ` ${pullRequest}` : ""}`;
 }
 
 /** A merge that did not go in, in what its failure means. */
-export function cannotMergeText(title: string, plain: string): string {
-  return `Cannot merge "${title}": ${plain}`;
+export function cannotMergeText(plain: string): string {
+  return `Cannot merge: ${plain}`;
 }
 
 /**

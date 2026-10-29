@@ -24,6 +24,26 @@ import type { TaskService } from "./taskService";
  * cannot say something the record does not.
  */
 
+/**
+ * The fold every settle line of a task shares (INF-1845): the captain's
+ * click ("Merging #709"), what became of it ("Cannot merge: ...", a kept
+ * merge's wait), and the close that merged or discarded it. Activity shows
+ * only the newest, so one merge is one line; the timeline keeps each.
+ */
+export const SETTLE_FOLD = "settle";
+
+/** A discarded task's own line: its close says it, with nothing more to add. */
+export const DISCARDED_LINE = "Discarded";
+
+/** The fold a timeline event's feed line belongs to, if any (`recentFeed`). */
+function foldOf(event: TaskEvent): string | undefined {
+  const once = text(event.data?.feedOnce);
+  if (once) return once;
+  if (event.kind === "merged" || event.kind === "landed") return SETTLE_FOLD;
+  if (event.kind === "status" && event.data?.reason === "discarded") return SETTLE_FOLD;
+  return undefined;
+}
+
 /** What a feed line needs from the record beside the event. */
 export type FeedSubject = Pick<TaskRecord, "key" | "assignee" | "delivery">;
 
@@ -42,6 +62,9 @@ export function taskFeedLine(record: FeedSubject, event: TaskEvent): FeedLine | 
       line = "Started";
       break;
     case "report": {
+      // A finished report is followed by its task's own Finished line, so
+      // it writes none of its own (INF-1845).
+      if (data.finished === true) return null;
       const summary = text(data.summary) ?? reportSummary(event.text);
       line = summary ? `Reported: ${summary}` : "Reported";
       break;
@@ -57,7 +80,8 @@ export function taskFeedLine(record: FeedSubject, event: TaskEvent): FeedLine | 
     }
     case "landed":
     case "merged":
-      line = "Merged";
+      // The close carries the change and where it went in (INF-1845).
+      line = text(data.line) ?? "Merged";
       break;
     case "status": {
       const reason = text(data.reason);
@@ -77,6 +101,9 @@ export function taskFeedLine(record: FeedSubject, event: TaskEvent): FeedLine | 
           reason === "finished"
             ? "Done: everything under it is finished"
             : "Stopped: nothing under it went ahead";
+      } else if (reason === "answered" && text(data.choice)) {
+        // The captain's own choice on the answer's card (INF-1845).
+        line = `You chose "${text(data.choice)}"`;
       } else if (
         reason === "answered" &&
         (typeof data.basisOf === "string" ||
@@ -87,6 +114,10 @@ export function taskFeedLine(record: FeedSubject, event: TaskEvent): FeedLine | 
         // waited on, or a step whose reported answer the first mate passed
         // on itself (settle_task answered): it was used, not thrown away.
         line = `Answered: ${event.text.replace(/^answered - /, "")}`;
+      } else if (reason === "answered") {
+        line = "Answered";
+      } else if (reason === "discarded") {
+        line = DISCARDED_LINE;
       } else if (reason === "released") {
         line = "Released outside this task";
       } else if (reason === "finished" && record.delivery?.mode === "in-place") {
@@ -164,9 +195,11 @@ export function taskFeedLine(record: FeedSubject, event: TaskEvent): FeedLine | 
       line = `Updated: ${event.text}`;
   }
   return {
-    // A model the backend chose on its own is worth a look.
+    // A model the backend chose on its own, or a project folder a merge
+    // left behind, is worth a look.
     kind:
-      event.kind === "note" && data.fallback !== undefined && text(data.servedModel)
+      event.kind === "note" &&
+      ((data.fallback !== undefined && text(data.servedModel)) || data.folderRefresh !== undefined)
         ? "warn"
         : taskFeedKind(event.kind, status),
     text: line,
@@ -183,15 +216,15 @@ export function taskFeedLine(record: FeedSubject, event: TaskEvent): FeedLine | 
  * each record. The event store folds before limiting, so a program's many
  * parts cannot crowd unrelated work out of the retained view (INF-1137).
  * A line its writer marked to show once per task (`data.feedOnce`, such
- * as queued guidance going out) appears only at its newest; the timeline
- * keeps every one.
+ * as queued guidance going out, or a settle's `SETTLE_FOLD`) appears only
+ * at its newest; the timeline keeps every one.
  */
 export function recentFeed(tasks: TaskService, activity: ActivityStore, limit: number): FeedLine[] {
   const records = new Map<string, TaskRecord | undefined>();
   const shown = new Set<string>();
   // Newest first, so the first of a fold seen is the one that stays.
   const taskLines = tasks.listFeedEvents(limit).flatMap((event) => {
-    const once = text(event.data?.feedOnce);
+    const once = foldOf(event);
     if (once) {
       const fold = `${event.taskId}\u0000${once}`;
       if (shown.has(fold)) return [];

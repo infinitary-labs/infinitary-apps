@@ -3,6 +3,7 @@ import { existsSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { expect, test } from "@playwright/test";
 import { keptFeedLine } from "../../src/core/orchestrator/mergeAuthorization";
+import { settlingText } from "../../src/core/orchestrator/settleWords";
 import { CardStore } from "../../src/core/storage/cardStore";
 import { openDatabase } from "../../src/core/storage/db";
 import { seedTask } from "../../src/core/tasks/seedTask";
@@ -24,7 +25,7 @@ import { regionShot } from "./pictures";
 import { seedHostedOrigins } from "./projectSeed";
 import { promptInput } from "./prompt";
 import { providerMessages } from "./providerRequest";
-import { dockRegion, expandDock, notesNaming, putInLine, taskKey } from "./rails";
+import { dockRegion, expandDock, noteLines, putInLine, taskKey } from "./rails";
 import {
   GUIDED_MERGE_ANSWER,
   GUIDED_MERGE_ASK,
@@ -208,14 +209,15 @@ for (const passing of PASSING) {
       // Activity is mounted before the click, so its lines are read as they land.
       await expandDock(page, "activity");
       await page.getByRole("button", { name: "Merge the pull request", exact: true }).click();
-      // The click is acknowledged at once, in a note naming the task, and
-      // the outcome is the task's own put-in line. The notes' words are
-      // crewSupervisor.test.ts's and prCi.test.ts's.
+      // The click is acknowledged at once, in a line on the task, and the
+      // outcome takes that line's place: the task's own put-in line
+      // (INF-1845). The words are crewSupervisor.test.ts's and prCi.test.ts's.
       await expectNoCard(page, READY_CARD_TITLE);
-      await expect(notesNaming(page, "Ship the PR").first()).toBeVisible();
-      await expect(putInLine(page, await taskKey(page, "Ship the PR"))).toBeVisible({
-        timeout: 20_000,
-      });
+      const key = await taskKey(page, "Ship the PR");
+      await expect(putInLine(page, key)).toBeVisible({ timeout: 20_000 });
+      await expect(
+        noteLines(page, key).filter({ hasText: settlingText("merge-pr", "#55", false) }),
+      ).toHaveCount(0);
       await page.screenshot({ path: test.info().outputPath("settle-merge-put-in.png") });
       // GitHub was asked to squash exactly that PR at exactly the branch's
       // head, under its own title, and the local checkout was never touched:
@@ -374,7 +376,8 @@ for (const refusal of REFUSALS) {
       const { page } = launched;
       await expandDock(page, "activity");
       await page.getByRole("button", { name: "Merge the pull request", exact: true }).click();
-      await expect(notesNaming(page, "Ship the PR").first()).toBeVisible();
+      const key = await taskKey(page, "Ship the PR");
+      await expect(noteLines(page, key)).toHaveCount(1);
       // The record says why it stopped, in terms of what this change got wrong.
       const detail = () => page.evaluate((id) => window.infinitary.tasks.detail(id), taskId);
       await expect
@@ -388,9 +391,10 @@ for (const refusal of REFUSALS) {
         refusal.asksGitHub ? 1 : 0,
       );
       expect(repo.mainLog()).not.toContain("the crewmate's work");
-      // The feed says so: a second note naming the task, and no put-in line.
-      await expect(notesNaming(page, "Ship the PR")).toHaveCount(2);
-      await expect(putInLine(page, await taskKey(page, "Ship the PR"))).toHaveCount(0);
+      // The feed says so: the task's one settle line is the refusal now, and no put-in line.
+      await expect(noteLines(page, key)).toHaveCount(1);
+      await expect(noteLines(page, key)).toContainText(/Cannot merge|Your merge/);
+      await expect(putInLine(page, key)).toHaveCount(0);
       expect(await detail()).toMatchObject({ status: "active", closedReason: null });
       expect((await detail())?.delivery?.landedMode).toBeUndefined();
       expect(existsSync(join(repo.worktreeDir, "feature.txt"))).toBe(true);
@@ -426,7 +430,6 @@ test("the same settle merge effect on a local-only task lands the branch into th
     await expandDock(page, "activity");
     await page.getByRole("button", { name: "Merge the branch", exact: true }).click();
     await expectNoCard(page, READY_CARD_TITLE);
-    await expect(notesNaming(page, "Land the branch").first()).toBeVisible();
     await expect(putInLine(page, await taskKey(page, "Land the branch"))).toBeVisible({
       timeout: 20_000,
     });
@@ -471,8 +474,10 @@ test("closing a settle card is the keep: nothing lands, nothing goes, the crewma
     await expandDock(page, "activity");
     await page.getByRole("button", { name: "Close", exact: true }).click();
     await expectNoCard(page, READY_CARD_TITLE);
-    // The feed notes the card was put away, naming it.
-    await expect(notesNaming(page, READY_CARD_TITLE)).toBeVisible();
+    // The feed notes the card was put away, naming it, on its task (INF-1845).
+    await expect(
+      noteLines(page, await taskKey(page, "Keep the work")).filter({ hasText: READY_CARD_TITLE }),
+    ).toBeVisible();
     expect(repo.mainLog()).not.toContain("the crewmate's work");
     expect(existsSync(join(repo.worktreeDir, "feature.txt"))).toBe(true);
     await expect
@@ -604,7 +609,9 @@ for (const backend of CREW_BACKENDS) {
       await (await completionAction(page, KEPT_MERGE_CARD)).click();
       // GitHub refused it, and the click is kept rather than spent.
       await expect(
-        notesNaming(page, title).filter({ hasText: keptFeedLine(title, "conflict", "GitHub") }),
+        noteLines(page, await taskKey(page, title)).filter({
+          hasText: keptFeedLine("conflict", "GitHub"),
+        }),
       ).toBeVisible({
         timeout: 20_000,
       });
@@ -736,7 +743,9 @@ for (const backend of CREW_BACKENDS) {
       await expandDock(page, "activity");
       await (await completionAction(page, GUIDED_MERGE_CARD)).click();
       await expect(
-        notesNaming(page, title).filter({ hasText: keptFeedLine(title, "conflict", "GitHub") }),
+        noteLines(page, await taskKey(page, title)).filter({
+          hasText: keptFeedLine("conflict", "GitHub"),
+        }),
       ).toBeVisible({
         timeout: 20_000,
       });

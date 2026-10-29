@@ -601,16 +601,13 @@ export function statusLine(page: Page, key: string): Locator {
 }
 
 /**
- * The feed's task-less notes that name something the spec gave - a task's
- * or a card's title - found by what they are (an information row no task
- * event wrote), never by the note's words: those are its writer's, which
- * its unit tests own. What happened to a task itself is its own line
- * (`putInLine`, `reportLine`, `statusLine`).
+ * A task's own notes - a settle's one line (the captain's click, then what
+ * became of it) or a card the captain closed - found by what they are and
+ * whose they are, never by their words: those are their writers', which
+ * their unit tests own (INF-1845).
  */
-export function notesNaming(page: Page, title: string): Locator {
-  return activityFrame(page)
-    .locator('[data-feed-row][data-feed-kind="info"]:not([data-feed-event])')
-    .filter({ hasText: title });
+export function noteLines(page: Page, key: string): Locator {
+  return taskLine(page, key, "note");
 }
 
 /** The feed's failure lines, task or not, by their kind. */

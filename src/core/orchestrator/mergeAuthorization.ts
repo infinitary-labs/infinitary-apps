@@ -591,43 +591,39 @@ export const MERGE_CHECKS_HOLD_REASON = "the checks have not all passed";
  * is where the project lives in the person's words ("GitHub", "GitLab", a
  * host's own address). The current check facts distinguish waiting for a fix
  * from waiting for results (captain F20/F27), never a separate crew verdict.
+ * It is a line on the task's record, so the task's key names it (INF-1845).
  */
-export function keptFeedLine(
-  title: string,
-  wait: MergeWait,
-  place: string,
-  checks?: string,
-): string {
+export function keptFeedLine(wait: MergeWait, place: string, checks?: string): string {
   const kept = "Your merge is kept";
   switch (wait) {
     case "conflict":
-      return `Cannot merge "${title}" yet: it conflicts with newer work in the project. ${kept} and runs once its crewmate has brought it up to date and its checks pass.`;
+      return `Cannot merge yet: it conflicts with newer work in the project. ${kept} and runs once its crewmate has brought it up to date and its checks pass.`;
     case "repair":
-      return `Cannot merge "${title}" yet: it changed after the card you approved. ${kept} and runs once its crewmate shows the work is still what you approved.`;
+      return `Cannot merge yet: it changed after the card you approved. ${kept} and runs once its crewmate shows the work is still what you approved.`;
     case "evidence":
-      return `Cannot merge "${title}" yet: its crewmate could not tell whether its last change kept the work you approved, so another crewmate is checking. ${kept} and runs if that check finds the work is still what you approved.`;
+      return `Cannot merge yet: its crewmate could not tell whether its last change kept the work you approved, so another crewmate is checking. ${kept} and runs if that check finds the work is still what you approved.`;
     case "checks":
       return checks === "red"
-        ? `Your merge of "${title}" waits for a fix: its checks failed. A fix brings a new version with fresh checks: when it changed the work, its crewmate asks you again on a new card; otherwise your merge runs once they pass.`
-        : `Your merge of "${title}" waits: ${MERGE_CHECKS_HOLD_REASON}. Your approval is kept. If a fix changes the work, its crewmate asks you again; otherwise the merge runs when its checks pass.`;
+        ? `Your merge waits for a fix: its checks failed. A fix brings a new version with fresh checks: when it changed the work, its crewmate asks you again on a new card; otherwise your merge runs once they pass.`
+        : `Your merge waits: ${MERGE_CHECKS_HOLD_REASON}. Your approval is kept. If a fix changes the work, its crewmate asks you again; otherwise the merge runs when its checks pass.`;
     case "review":
-      return `Cannot merge "${title}" yet: its review has not passed on this change. ${kept} and runs once it does.`;
+      return `Cannot merge yet: its review has not passed on this change. ${kept} and runs once it does.`;
     case "cap":
-      return `Cannot merge "${title}" yet: it is waiting for your answer about its repair attempts. ${kept} for after that.`;
+      return `Cannot merge yet: it is waiting for your answer about its repair attempts. ${kept} for after that.`;
     case "protected":
-      return `Cannot merge "${title}" yet: ${place} holds it for a required review or another rule on the main branch. ${kept} and runs once ${place} allows it.`;
+      return `Cannot merge yet: ${place} holds it for a required review or another rule on the main branch. ${kept} and runs once ${place} allows it.`;
     case "computing":
     case "transient":
     case "outcome":
-      return `Cannot merge "${title}" yet: ${place} did not give a clear answer. ${kept} and the app tries again shortly.`;
+      return `Cannot merge yet: ${place} did not give a clear answer. ${kept} and the app tries again shortly.`;
     case "draft":
-      return `Cannot merge "${title}" yet: its pull request is a draft. ${kept} and runs once it is ready for review.`;
+      return `Cannot merge yet: its pull request is a draft. ${kept} and runs once it is ready for review.`;
     case "sign-in":
-      return `Cannot merge "${title}" yet: the app's ${place} sign-in is needed. ${kept} and runs once you sign in again.`;
+      return `Cannot merge yet: the app's ${place} sign-in is needed. ${kept} and runs once you sign in again.`;
     case "refused":
-      return `Cannot merge "${title}" yet: ${place} refused it. ${kept} and runs again once its crewmate has fixed the cause.`;
+      return `Cannot merge yet: ${place} refused it. ${kept} and runs again once its crewmate has fixed the cause.`;
     case "guidance":
-      return `Cannot merge "${title}" yet: its crewmate has not said whether your newer words change the work you approved. ${kept} and runs once it says they do not.`;
+      return `Cannot merge yet: its crewmate has not said whether your newer words change the work you approved. ${kept} and runs once it says they do not.`;
   }
 }
 

@@ -225,10 +225,8 @@ struct PhoneWorkspace<Stage: View, Tasks: View, Composer: View>: View {
     }
 
     private var activity: some View {
-        ScrollView {
-            PhoneActivity(lines: session.activity)
-                .padding(PhoneTheme.space4).frame(maxWidth: PhoneColumn.width).frame(maxWidth: .infinity)
-        }
+        PhoneActivity(lines: session.activity, board: session.board,
+                      openTask: tasks == nil ? nil : { messageContext.openTask = $0 })
     }
 
     // INF-589 item 16: Tasks and Activity as a segmented pair at the sidebar's top, each scrolling alone.
@@ -383,31 +381,93 @@ extension PhoneWorkspace where Tasks == EmptyView, Composer == EmptyView {
     }
 }
 
+/// INF-1845, the captain's plan B: Activity as the Mac's panel draws it, with the Mac's own words. The newest line is
+/// at the bottom, and each line is one row: its dot, its key inside the words, the words cut with "…", and its age.
+/// The list opens at its newest line and follows each new one while the reader is at the bottom, as a chat does; once
+/// they scroll up it stays where they read until they come back down. A tap on a line shows the Mac's line summary
+/// (INF-1761); a tap on its key opens the task's record, as a click on a key does on the Mac.
 struct PhoneActivity: View {
     let lines: [ActivityLine]
+    var board: PhoneBoard?
+    /// Opens a task's record by its key; nil where the phone shows no Tasks.
+    var openTask: ((String) -> Void)?
+    @State private var position = ScrollPosition(edge: .bottom)
+    @State private var atBottom = true
+    /// Whether the list follows new lines: true until the reader leaves the bottom, and again once they come back.
+    @State private var pinned = true
+    @State private var summary: Summary?
+
+    private struct Summary: Identifiable { let id: Int; let line: ActivityLine }
+
+    /// What changes when a line arrives, the window slides or the newest line is written again.
+    private var newest: String { "\(lines.count)|\(lines.last?.at ?? 0)|\(lines.last?.text ?? "")" }
 
     var body: some View {
-        TimelineView(.periodic(from: .now, by: 60)) { timeline in
-            LazyVStack(alignment: .leading, spacing: PhoneTheme.space3) {
-                if lines.isEmpty { Text("No activity yet").foregroundStyle(PhoneTheme.muted).font(PhoneFont.callout) }
-                ForEach(Array(lines.reversed().enumerated()), id: \.offset) { _, line in
-                    HStack(alignment: .firstTextBaseline, spacing: PhoneTheme.space2) {
-                        Circle().fill(tone(line.kind)).frame(width: 6, height: 6).accessibilityHidden(true)
-                        // INF-589 item 14: the key sits inline before the words at micro size, as the Mac's feed line.
-                        HStack(alignment: .firstTextBaseline, spacing: PhoneTheme.space2) {
-                            if let key = line.taskKey {
-                                Text(key).font(PhoneFont.micro).foregroundStyle(PhoneTheme.muted).fixedSize()
-                            }
-                            Text(line.text).font(PhoneFont.callout).foregroundStyle(PhoneTheme.secondary)
-                                .fixedSize(horizontal: false, vertical: true).accessibilityIdentifier("activity-text")
-                        }.frame(maxWidth: .infinity, alignment: .leading)
-                        Text(Self.age(line.at, now: timeline.date)).font(PhoneFont.micro).foregroundStyle(PhoneTheme.muted)
-                            .fixedSize().accessibilityLabel(Date(timeIntervalSince1970: line.at / 1000)
-                                .formatted(date: .abbreviated, time: .shortened))
-                    }.accessibilityElement(children: .contain)
+        ScrollView {
+            TimelineView(.periodic(from: .now, by: 60)) { timeline in
+                LazyVStack(alignment: .leading, spacing: 0) {
+                    if lines.isEmpty { Text("No activity yet").foregroundStyle(PhoneTheme.muted).font(PhoneFont.callout) }
+                    ForEach(Array(lines.enumerated()), id: \.offset) { index, line in
+                        row(line, now: timeline.date)
+                            .contentShape(Rectangle())
+                            .onTapGesture { summary = Summary(id: index, line: line) }
+                    }
                 }
             }
+            .padding(PhoneTheme.space4).frame(maxWidth: PhoneColumn.width).frame(maxWidth: .infinity)
         }
+        .scrollPosition($position)
+        .defaultScrollAnchor(.bottom, for: .initialOffset)
+        .onScrollGeometryChange(for: Bool.self) { geometry in
+            geometry.visibleRect.maxY >= geometry.contentSize.height + geometry.contentInsets.bottom - PhoneTheme.space2
+        } action: { _, bottom in atBottom = bottom }
+        // Only the reader's own scroll pins or unpins the list, once it has come to rest.
+        .onScrollPhaseChange { _, phase in if phase == .idle { pinned = atBottom } }
+        .onChange(of: newest) { if pinned { position.scrollTo(edge: .bottom) } }
+        // Lines that came while another tab was shown are followed on the way back, too.
+        .onAppear { if pinned { position.scrollTo(edge: .bottom) } }
+        .sheet(item: $summary) { shown in
+            PhoneActivitySummary(line: shown.line, task: task(shown.line.taskKey), project: project(shown.line.taskKey)) {
+                summary = nil
+            }
+            .presentationDetents([.medium, .large]).presentationDragIndicator(.visible).phoneSheetSurface()
+        }
+    }
+
+    private func row(_ line: ActivityLine, now: Date) -> some View {
+        HStack(alignment: .firstTextBaseline, spacing: PhoneTheme.space2) {
+            Circle().fill(Self.tone(line.kind)).frame(width: 6, height: 6).accessibilityHidden(true)
+            if let key = line.taskKey {
+                if let openTask, task(key) != nil {
+                    Button(key) { openTask(key) }.buttonStyle(.plain)
+                        .font(PhoneFont.micro).foregroundStyle(PhoneTheme.muted).underline().fixedSize()
+                        .accessibilityHint("Opens the task").accessibilityIdentifier("activity-key")
+                } else {
+                    Text(key).font(PhoneFont.micro).foregroundStyle(PhoneTheme.muted).fixedSize()
+                }
+            }
+            Text(line.text).font(PhoneFont.callout).foregroundStyle(PhoneTheme.secondary)
+                .lineLimit(1).truncationMode(.tail).frame(maxWidth: .infinity, alignment: .leading)
+                .accessibilityIdentifier("activity-text")
+            Text(Self.age(line.at, now: now)).font(PhoneFont.micro).foregroundStyle(PhoneTheme.muted)
+                .fixedSize().accessibilityLabel(Self.exactTime(line.at))
+        }
+        .padding(.vertical, 6)
+        .accessibilityElement(children: .contain)
+    }
+
+    private func task(_ key: String?) -> PhoneTask? {
+        guard let key else { return nil }
+        return board?.tasks.first { $0.key == key }
+    }
+
+    private func project(_ key: String?) -> String? {
+        guard let task = task(key) else { return nil }
+        return board?.projects.first { $0.id == task.projectId }?.name
+    }
+
+    static func exactTime(_ at: Double) -> String {
+        Date(timeIntervalSince1970: at / 1000).formatted(date: .abbreviated, time: .shortened)
     }
 
     // The same units as the desktop's feedRelativeAge; wording still comes from the computer.
@@ -419,13 +479,54 @@ struct PhoneActivity: View {
         return "\(seconds / 86400)d"
     }
 
-    private func tone(_ kind: String) -> Color {
+    static func tone(_ kind: String) -> Color {
         switch kind {
         case "ok": PhoneTheme.accent
         case "warn": PhoneTheme.warning
         case "danger": PhoneTheme.danger
         case "you": PhoneTheme.captain
         default: PhoneTheme.muted
+        }
+    }
+}
+
+/// INF-1845: the Mac's Activity line summary (INF-1761) on the phone, for the line a tap chose: its key, dot and exact
+/// time, its whole words, and the task and project it is about. Recorded words, not a second task summary.
+private struct PhoneActivitySummary: View {
+    let line: ActivityLine
+    let task: PhoneTask?
+    let project: String?
+    let close: () -> Void
+
+    var body: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: PhoneTheme.space3) {
+                HStack(alignment: .firstTextBaseline, spacing: PhoneTheme.space2) {
+                    if let key = line.taskKey { Text(key).font(PhoneFont.micro).foregroundStyle(PhoneTheme.muted) }
+                    Circle().fill(PhoneActivity.tone(line.kind)).frame(width: 6, height: 6).accessibilityHidden(true)
+                    Text(PhoneActivity.exactTime(line.at)).font(PhoneFont.micro).foregroundStyle(PhoneTheme.muted)
+                    Spacer()
+                    Button("Close", action: close).font(PhoneFont.callout).accessibilityIdentifier("close-activity-summary")
+                }
+                Text(line.text).font(PhoneFont.body).foregroundStyle(PhoneTheme.text)
+                    .fixedSize(horizontal: false, vertical: true).textSelection(.enabled)
+                    .accessibilityIdentifier("activity-summary-text")
+                if let task {
+                    VStack(alignment: .leading, spacing: PhoneTheme.space2) {
+                        fact("Task", task.title)
+                        if let project { fact("Project", project) }
+                    }
+                }
+            }.padding(PhoneTheme.space5)
+        }
+        .accessibilityIdentifier("activity-summary")
+    }
+
+    private func fact(_ label: String, _ value: String) -> some View {
+        HStack(alignment: .firstTextBaseline, spacing: PhoneTheme.space3) {
+            Text(label).textCase(.uppercase).font(PhoneFont.micro).tracking(1).foregroundStyle(PhoneTheme.muted)
+                .frame(width: 64, alignment: .leading)
+            Text(value).font(PhoneFont.callout).foregroundStyle(PhoneTheme.secondary).fixedSize(horizontal: false, vertical: true)
         }
     }
 }

@@ -98,6 +98,11 @@ export type PrOutcome = {
   /** The merge GitHub confirmed, at the head it merged. */
   receipt?: { head: string; sha?: string; already?: boolean };
   /**
+   * A merge's line in Activity: the result without its address or closing
+   * period ("Merged #709 on GitHub", INF-1845).
+   */
+  line?: string;
+  /**
    * The host refused who the app is (git integration PR 1.2): not signed
    * in to it here, or a sign-in it no longer accepts. The settle path
    * turns this into the not-signed-in refusal and its two ways.
@@ -2491,7 +2496,7 @@ export class PrCiService {
       const receipt = await forge.putIn(publishedChange, publishedChange.headSha);
       return {
         ok: true,
-        text: this.putInText(taskId, forge, change),
+        ...this.putInText(taskId, forge, change),
         ...(guard
           ? { receipt: { head: change.headSha, ...(receipt?.sha ? { sha: receipt.sha } : {}) } }
           : {}),
@@ -2613,19 +2618,25 @@ export class PrCiService {
   }
 
   /**
-   * The merge result, which is also its feed line: GitHub's change by its
-   * number ("Merged #N on GitHub."), a pushed branch by the task's title
-   * and the host's name - the provider's name is the person's word, a
-   * host's address is the thing itself.
+   * The merge result and its Activity line: GitHub's change by its number
+   * ("Merged #N on GitHub"), a pushed branch by the task's title and the
+   * host's name - the provider's name is the person's word, a host's
+   * address is the thing itself. Only the result carries the change's
+   * address; the line sits beside the task's key (INF-1845).
    */
-  private putInText(taskId: string, forge: Forge, change: ForgeChange): string {
+  private putInText(
+    taskId: string,
+    forge: Forge,
+    change: ForgeChange,
+  ): { text: string; line: string } {
     const url = forge.url(change);
     const where = forge.place ? `on ${forge.place}` : "where the project lives";
     if (change.number !== undefined) {
-      return `Merged ${forge.label(change)} ${where}.${url ? ` ${url}` : ""}`;
+      const line = `Merged ${forge.label(change)} ${where}`;
+      return { text: `${line}.${url ? ` ${url}` : ""}`, line };
     }
     const title = this.options.tasks.get(taskId)?.title ?? forge.label(change);
-    return `Merged "${title}" ${where}.`;
+    return { text: `Merged "${title}" ${where}.`, line: `Merged ${where}` };
   }
 
   /**

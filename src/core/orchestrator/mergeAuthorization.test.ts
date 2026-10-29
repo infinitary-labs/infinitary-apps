@@ -123,8 +123,8 @@ describe("a repair's declared impact (INF-493)", () => {
 describe("kept merge check words", () => {
   // Captain F20/F27: a failed check waits for a fix, not merely another passing read.
   it("names the fix and its fresh-check consequences after failed checks", () => {
-    expect(keptFeedLine("Ship the meter", "checks", "GitHub", "red")).toBe(
-      'Your merge of "Ship the meter" waits for a fix: its checks failed. A fix brings a new version with fresh checks: when it changed the work, its crewmate asks you again on a new card; otherwise your merge runs once they pass.',
+    expect(keptFeedLine("checks", "GitHub", "red")).toBe(
+      "Your merge waits for a fix: its checks failed. A fix brings a new version with fresh checks: when it changed the work, its crewmate asks you again on a new card; otherwise your merge runs once they pass.",
     );
     expect(keptNote("checks", "feedbeef", "GitHub", "red")).toContain(
       "the checks failed and the merge waits for a fix",
@@ -132,8 +132,8 @@ describe("kept merge check words", () => {
   });
 
   it("keeps approval for passing checks, preserving the changed-work exception", () => {
-    expect(keptFeedLine("Ship the meter", "checks", "GitHub")).toBe(
-      'Your merge of "Ship the meter" waits: the checks have not all passed. Your approval is kept. If a fix changes the work, its crewmate asks you again; otherwise the merge runs when its checks pass.',
+    expect(keptFeedLine("checks", "GitHub")).toBe(
+      "Your merge waits: the checks have not all passed. Your approval is kept. If a fix changes the work, its crewmate asks you again; otherwise the merge runs when its checks pass.",
     );
     const note = keptNote("checks", "feedbeef", "GitHub");
     expect(note).toContain("the host merges by itself once the gates pass");
@@ -141,7 +141,7 @@ describe("kept merge check words", () => {
       "The crewmate reads missing results; the merge runs when its checks pass",
     );
     expect(note).not.toContain("The checks on feedbeef have not all passed");
-    expect(keptFeedLine("Ship the meter", "conflict", "GitHub")).toContain(
+    expect(keptFeedLine("conflict", "GitHub")).toContain(
       "brought it up to date and its checks pass",
     );
     expect(keptNote("conflict", "feedbeef", "GitHub")).toContain("read the current check facts");

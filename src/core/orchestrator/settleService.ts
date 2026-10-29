@@ -25,6 +25,7 @@ import type {
   PendingSettleIntent,
   TaskRecord,
 } from "../storage/taskStore";
+import { SETTLE_FOLD } from "../tasks/taskFeed";
 import {
   carriedOnClose,
   type SettleRefusal,
@@ -63,6 +64,7 @@ import {
   folderNotUpdatedText,
   mergedLine,
   pullLeftOpenText,
+  settlingText,
   unlandedWorkText,
   withCloseLine,
   withMergeLine,
@@ -117,6 +119,8 @@ export type SettleOutcome = {
   stop?: MergeStop;
   /** The merge GitHub confirmed. */
   receipt?: PrOutcome["receipt"];
+  /** A merge's Activity line (`PrOutcome.line`). */
+  line?: string;
   /**
    * A sentence in the app's words that follows the outcome on the feed even
    * when a raw failure is said plainly: the task the host started for what
@@ -190,7 +194,6 @@ function closedAnswerNote(card: Card): boolean {
  * task's timeline.
  */
 function settleFeedLine(
-  title: string,
   mode: "merge-pr" | "land" | "discard",
   result: { ok: boolean; text: string; problem?: string; plain?: string; followup?: string },
 ): string {
@@ -199,10 +202,10 @@ function settleFeedLine(
   const plain = result.problem ? plainProblem(result.problem) : (result.plain as string);
   if (mode === "discard") {
     return result.ok
-      ? `Discarded "${title}". Its pull request is still open where the project lives: ${plain}${result.followup ? `. ${result.followup}` : ""}`
-      : `Could not discard "${title}": ${plain}`;
+      ? `Discarded. Its pull request is still open where the project lives: ${plain}${result.followup ? `. ${result.followup}` : ""}`
+      : `Could not discard: ${plain}`;
   }
-  return cannotMergeText(title, plain);
+  return cannotMergeText(plain);
 }
 
 /** The record's state in the words the tools and refusals use. */
@@ -987,6 +990,7 @@ export class SettleService {
     return this.closeMerged(record, actor, {
       ok: true,
       text: `${this.changeName(record, pull.number)} is already merged on ${this.placeOf(record)}.`,
+      line: `Merged ${this.changeName(record, pull.number)} on ${this.placeOf(record)}`,
       receipt: {
         head: pull.headSha,
         ...(pull.mergedSha ? { sha: pull.mergedSha } : {}),
@@ -1009,6 +1013,9 @@ export class SettleService {
         reason: "merged",
         actor,
         text: result.text,
+        // Activity's line for the merge: the change and where it went in,
+        // never its address (INF-1845).
+        ...(result.line ? { data: { line: result.line } } : {}),
         delivery: {
           landedMode: "pr",
           ...(result.receipt?.sha ? { mergedSha: result.receipt.sha } : {}),
@@ -1043,9 +1050,9 @@ export class SettleService {
    * A merge whose project folder the host could not bring up to date
    * (INF-549): the typed fact is kept on the merged task's record, the task
    * that brings the folder up to date is filed (or the standing one told),
-   * and the sentence returns for the settle's own text. The captain's click
-   * already puts that text in Activity (`reportOutcome`); the first mate's
-   * own settle has no line of its own, so its note is the line.
+   * and the sentence returns for the settle's own text. Its note is the
+   * task's warning line in Activity, beside the merge's own line, whoever
+   * merged (INF-1845).
    */
   private folderNotUpdated(
     record: TaskRecord,
@@ -1065,7 +1072,7 @@ export class SettleService {
     );
     this.host.tasks.note(record.id, text, {
       news: true,
-      feed: actor !== "captain",
+      feed: true,
       data: {
         feedLine: true,
         folderRefresh: {
@@ -1143,16 +1150,14 @@ export class SettleService {
         if (kept?.changed && unattended)
           this.noteWait(taskId, record.title, kept.head, result, kept.wait);
         else if (kept?.changed) {
-          this.host.broadcastEvent({
-            type: "firstmate_note",
+          this.settleLine(
             taskId,
-            text: keptFeedLine(
-              record.title,
+            keptFeedLine(
               kept.wait,
               this.placeOf(record),
               currentCheckStatus(this.host.tasks.get(taskId)?.delivery),
             ),
-          });
+          );
         }
         if (!unattended && review) this.host.mergeContinued?.(taskId, review, outcome);
         return outcome;
@@ -2054,7 +2059,7 @@ export class SettleService {
     await this.closeTask(taskId, { status: "dropped", reason: "discarded", actor });
     return {
       ok: true,
-      text: discardedText(record.title, prResult.text),
+      text: discardedText(prResult.text),
       ...(problem ? { problem } : {}),
       ...(prResult.repair ? { followup: prResult.repair } : {}),
     };
@@ -2131,21 +2136,14 @@ export class SettleService {
     confirm?: boolean,
     proceedWithOpen?: boolean,
   ): Promise<void> {
-    const title = this.host.tasks.get(taskId)?.title ?? taskId;
-    if (!this.settlingTasks.has(taskId)) {
+    const record = this.host.tasks.get(taskId);
+    const title = record?.title ?? taskId;
+    if (!this.settlingTasks.has(taskId) && record) {
       const waitsForTurn = (mode === "merge-pr" || mode === "land") && this.working(taskId);
-      const action =
-        mode === "merge-pr"
-          ? "Putting the change in"
-          : mode === "land"
-            ? "Putting the work in"
-            : "Discarding";
-      this.host.broadcastEvent({
-        type: "firstmate_note",
-        text: waitsForTurn
-          ? `${action} for "${title}" is queued and will run when the crewmate finishes what it is doing.`
-          : `${action} for "${title}" - the result will appear here.`,
-      });
+      const number = record.delivery?.prNumber;
+      const change =
+        mode === "merge-pr" && number !== undefined ? this.changeName(record, number) : undefined;
+      this.settleLine(taskId, settlingText(mode, change, waitsForTurn));
     }
     // The click's own approval, minted with its card resolution (FI3-304):
     // this attempt merges only the head that approval covers.
@@ -2642,7 +2640,6 @@ export class SettleService {
           {
             ok: false,
             text: keptFeedLine(
-              title,
               checked.wait,
               this.placeOf(record),
               currentCheckStatus(this.host.tasks.get(taskId)?.delivery),
@@ -2733,10 +2730,7 @@ export class SettleService {
     if (!wakesFirstmate(wait)) return;
     const record = this.host.tasks.get(taskId);
     const place = this.placeOf(record);
-    this.host.broadcastEvent({
-      type: "firstmate_note",
-      text: keptFeedLine(title, wait, place, currentCheckStatus(record?.delivery)),
-    });
+    this.settleLine(taskId, keptFeedLine(wait, place, currentCheckStatus(record?.delivery)));
     this.wakeOnSettle(taskId, title, "merge-pr (kept)", {
       ...result,
       text: `${result.text}\n\n${keptNote(wait, head, place, currentCheckStatus(record?.delivery))}${wait === "review" && record ? ` ${acceptedValidation(record.delivery?.liveValidation, head).reason}${this.host.tasks.briefContains(record.id, CAREFUL_LIVE_VALIDATION) ? "" : ` Relay this missing contract to the builder: ${CAREFUL_LIVE_VALIDATION}`}` : ""}`,
@@ -2886,6 +2880,20 @@ export class SettleService {
     }
   }
 
+  /**
+   * A settle's line in Activity, on its task's record so it carries the
+   * task's key: the click, then whatever became of it, each taking the
+   * last one's place (`SETTLE_FOLD`, INF-1845).
+   */
+  private settleLine(taskId: string, text: string): void {
+    if (!this.host.tasks.get(taskId)) return;
+    this.host.tasks.note(taskId, text, {
+      news: true,
+      feed: true,
+      data: { feedLine: true, feedOnce: SETTLE_FOLD },
+    });
+  }
+
   /** The feed's receipt of a settle and the wake that makes a refusal actionable. */
   private reportOutcome(
     taskId: string,
@@ -2904,17 +2912,23 @@ export class SettleService {
     // says what it means, the raw text is kept on the task's timeline one
     // click deeper, and the wake carries it verbatim for the Firstmate.
     this.recordRefusal(taskId, mode, result);
-    this.host.broadcastEvent({
-      type: "firstmate_note",
-      text: kept
-        ? keptFeedLine(
-            title,
-            kept,
-            this.placeOf(this.host.tasks.get(taskId)),
-            currentCheckStatus(this.host.tasks.get(taskId)?.delivery),
-          )
-        : settleFeedLine(title, mode, result),
-    });
+    // The click's line on the task's record gives way to its outcome
+    // (`SETTLE_FOLD`, INF-1845). A merge that closed the task already has
+    // its line: the close's own ("Merged #709 on GitHub"), and so has a
+    // discard that closed it with nothing more to say ("Discarded").
+    const record = this.host.tasks.get(taskId);
+    const merged =
+      result.ok &&
+      record &&
+      TaskService.isClosed(record) &&
+      (mode !== "discard" || (!result.problem && !result.plain));
+    if (kept)
+      this.settleLine(
+        taskId,
+        keptFeedLine(kept, this.placeOf(record), currentCheckStatus(record?.delivery)),
+      );
+    // Contention settled nothing: the attempt that owns the task says what became of it.
+    else if (!merged && !result.contention) this.settleLine(taskId, settleFeedLine(mode, result));
     // A merge that went through is the feed line above and nothing more,
     // unless it freed work only a start begins (friction 7 of the
     // captain's Oct 22 audit: 45 of 62 merge wakes were idle turns).

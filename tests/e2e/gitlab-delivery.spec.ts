@@ -29,7 +29,7 @@ import { heroShot, regionShot } from "./pictures";
 import { seedHostedOrigins } from "./projectSeed";
 import { addedProjects } from "./projects";
 import { promptInput } from "./prompt";
-import { expandDock, notesNaming, putInLine, taskKey } from "./rails";
+import { expandDock, noteLines, putInLine, taskKey } from "./rails";
 import { readSavedData } from "./savedData";
 import { MOCK_GITHUB_STORY } from "./scenarios/changeStory";
 import {
@@ -594,7 +594,8 @@ for (const host of HOSTS) {
         await expect(shownCard(page, READY_CARD_TITLE)).toBeVisible();
         await expandDock(page, "activity");
         await page.getByRole("button", { name: MERGE_WORDS["merge-pr"], exact: true }).click();
-        await expect(notesNaming(page, "Sync the notes").first()).toBeVisible();
+        const key = await taskKey(page, "Sync the notes");
+        await expect(noteLines(page, key)).toHaveCount(1);
         const detail = () => page.evaluate((id) => window.infinitary.tasks.detail(id), taskId);
         await expect
           .poll(async () => refusal.stoppedBy(stopOf(await detail()), fact), { timeout: 20_000 })
@@ -606,8 +607,10 @@ for (const host of HOSTS) {
         expect(gitlab.requests().filter((request) => request.endsWith("/merge"))).toHaveLength(
           refusal.asksGitLab ? 1 : 0,
         );
-        await expect(notesNaming(page, "Sync the notes")).toHaveCount(2);
-        await expect(putInLine(page, await taskKey(page, "Sync the notes"))).toHaveCount(0);
+        // The task's one settle line is the refusal now (INF-1845), and no put-in line.
+        await expect(noteLines(page, key)).toHaveCount(1);
+        await expect(noteLines(page, key)).toContainText(/Cannot merge|Your merge/);
+        await expect(putInLine(page, key)).toHaveCount(0);
         expect(await detail()).toMatchObject({ status: "active", closedReason: null });
         expect(existsSync(join(worktreeDir, "sync.txt"))).toBe(true);
       } finally {

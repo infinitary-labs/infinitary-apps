@@ -26,7 +26,7 @@ import { openInMemoryDatabase } from "../storage/db";
 import { DecisionStore } from "../storage/decisionStore";
 import { seedTask } from "./seedTask";
 import { exportTaskRecords, parseTaskExport } from "./taskExport";
-import { recentFeed } from "./taskFeed";
+import { recentFeed, SETTLE_FOLD } from "./taskFeed";
 import { TaskProtocol } from "./taskProtocol";
 import { queryTasks } from "./taskQuery";
 import { type TaskChange, TaskService, TIMELINE_CAP } from "./taskService";
@@ -1710,6 +1710,38 @@ describe("the task protocol (task-system P3)", () => {
       "First mate · remembered: squash merges",
       "Reported: Built.",
     ]);
+  });
+
+  // INF-1845, the captain's pick: one keyed line, "Merging #709", which becomes "Merged #709 on GitHub" or "Cannot merge: …".
+  it("shows one line per settle: the click gives way to its outcome, and the record keeps both", () => {
+    const { tasks, activity, tick } = setup();
+    tasks.create({ id: "a", title: "Ship it", prompt: "p", repoId: "r1" });
+    const settle = (text: string) => {
+      tasks.note("a", text, {
+        news: true,
+        feed: true,
+        data: { feedLine: true, feedOnce: SETTLE_FOLD },
+      });
+      tick();
+    };
+    const shown = () =>
+      recentFeed(tasks, activity, 200)
+        .filter((line) => line.taskKey === tasks.get("a")?.key)
+        .map((line) => line.text);
+    settle("Merging #709");
+    expect(shown()).toEqual(["Merging #709"]);
+    settle("Cannot merge: it conflicts with newer work in the project");
+    expect(shown()).toEqual(["Cannot merge: it conflicts with newer work in the project"]);
+    settle("Merging #709");
+    tasks.close("a", {
+      status: "done",
+      reason: "merged",
+      actor: "captain",
+      text: "Merged #709 on GitHub. https://github.com/o/r/pull/709",
+      data: { line: "Merged #709 on GitHub" },
+    });
+    expect(shown()).toEqual(["Merged #709 on GitHub"]);
+    expect(tasks.timeline("a").filter((event) => event.kind === "note")).toHaveLength(3);
   });
 
   it("folds only programs into one feed row before the recent limit (INF-1137 friction 8)", () => {

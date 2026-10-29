@@ -162,7 +162,7 @@ import type { TaskEvent } from "../storage/taskEventStore";
 import { type TaskRecord } from "../storage/taskStore";
 import { UsageStore } from "../storage/usageStore";
 import { legacyStateOf, seedTask } from "../tasks/seedTask";
-import { recentFeed, taskFeedLine } from "../tasks/taskFeed";
+import { recentFeed, SETTLE_FOLD, taskFeedLine } from "../tasks/taskFeed";
 import { TaskProtocol } from "../tasks/taskProtocol";
 import { queryTasks } from "../tasks/taskQuery";
 import { TaskService, TIMELINE_CAP } from "../tasks/taskService";
@@ -752,6 +752,14 @@ const completionBody = (after: string) =>
 
 /** The [fm-op] lines a host-run settle sends back to the Firstmate. */
 const settleWakes = (ops: string[]) => ops.filter((line) => line.includes("the host settled it"));
+
+/** A task's settle lines, oldest first: the click and its outcome on the task's record (INF-1845). */
+function settleLines(tasks: TaskService, taskId: string): string[] {
+  return tasks
+    .timeline(taskId)
+    .filter((event) => event.kind === "note" && event.data?.feedOnce === SETTLE_FOLD)
+    .map((event) => event.text);
+}
 
 function deferred<T>() {
   let resolve!: (value: T) => void;
@@ -2244,7 +2252,7 @@ describe("CrewSupervisor", () => {
     await tick();
     expect(legacyStateOf(tasks.get(taskId))).toBe("idle");
 
-    expect(await supervisor.settleTask(taskId, "discard")).toBe('Discarded "c".');
+    expect(await supervisor.settleTask(taskId, "discard")).toBe('Discarded.');
     await tick();
     // The row survives, closed; its timeline says why; the card row stays
     // resolved rather than deleted.
@@ -2863,7 +2871,7 @@ describe("CrewSupervisor", () => {
     const result = await supervisor.settleTask(taskId, "discard");
     expect(closePullRequest).toHaveBeenCalledWith(taskId);
     expect(result).toBe(
-      'Discarded "Shipped elsewhere". Closed PR #9 on GitHub. https://github.com/x/y/pull/9',
+      'Discarded. Closed PR #9 on GitHub. https://github.com/x/y/pull/9',
     );
     expect(tasks.get(taskId)).toMatchObject({ status: "dropped", closedReason: "discarded" });
     expect(workspace.removeTaskWorktree).toHaveBeenCalled();
@@ -3027,7 +3035,7 @@ describe("CrewSupervisor", () => {
 
     const result = await supervisor.settleTask(taskId, "discard");
     expect(closePullRequest).not.toHaveBeenCalled();
-    expect(result).toBe('Discarded "Local only".');
+    expect(result).toBe('Discarded.');
     expect(tasks.get(taskId)).toMatchObject({ status: "dropped", closedReason: "discarded" });
   });
 
@@ -3342,21 +3350,15 @@ describe("CrewSupervisor", () => {
       const first = offer();
       const second = offer();
       supervisor.act(first, action);
-      const actionText =
-        action === "merge-pr"
-          ? "Putting the change in"
-          : action === "land"
-            ? "Putting the work in"
-            : "Discarding";
-      expect(events).toContainEqual({
-        type: "firstmate_note",
-        text: `${actionText} for "Ship it" - the result will appear here.`,
-      });
+      // INF-1845: one keyed line on the task's record, which its outcome replaces.
+      expect(settleLines(tasks, "receipt")).toEqual([
+        action === "discard" ? "Discarding" : "Merging",
+      ]);
       expect(supervisor.cardsSnapshot().map((card) => card.id)).not.toContain(first);
       expect(cardStore.chosenAction(first)).toBe(action);
       expect(cardStore.listOpen().map((card) => card.id)).not.toContain(first);
       expect(tasks.get("receipt")?.status).toBe("active");
-      expect(tasks.timeline("receipt").at(-1)).toMatchObject({
+      expect(tasks.timeline("receipt").find((event) => event.kind === "card_resolved")).toMatchObject({
         kind: "card_resolved",
         actor: "captain",
       });
@@ -3365,10 +3367,9 @@ describe("CrewSupervisor", () => {
       expect(await supervisor.settleTask("receipt", "merge-pr")).toContain("already in progress");
       await tick();
       expect(cards()).toEqual([]); // Coalesced push is independent of the operation.
-      expect(events).toContainEqual({
-        type: "firstmate_note",
-        text: expect.stringContaining("already in progress"),
-      });
+      // The second card's attempt settled nothing: the attempt that owns the task says what happened.
+      expect(settleLines(tasks, "receipt")).toHaveLength(1);
+      expect(events.filter((event) => event.type === "firstmate_note")).toEqual([]);
       expect(mergePullRequest).toHaveBeenCalledTimes(action === "merge-pr" ? 1 : 0);
       expect(workspace.landTaskWork).toHaveBeenCalledTimes(action === "land" ? 1 : 0);
       expect(workspace.taskWorkStatus).toHaveBeenCalledTimes(action === "discard" ? 1 : 0);
@@ -3377,13 +3378,17 @@ describe("CrewSupervisor", () => {
       expect(await supervisor.settleTask("receipt", "discard")).toContain("already in progress");
       cleanup.resolve();
       await vi.waitFor(() =>
-        expect(events).toContainEqual({
-          type: "firstmate_note",
-          text: expect.stringMatching(/^(Merged ".*"|Change #\d+ is in on GitHub|Discarded)/),
-        }),
+        expect(tasks.timeline("receipt").at(-1)).toMatchObject(
+          action === "discard"
+            ? { kind: "status", data: { reason: "discarded" } }
+            : { kind: action === "land" ? "landed" : "merged" },
+        ),
       );
       expect(cardStore.chosenAction(first)).toBe(action); // Receipt is never rewritten as success.
-      expect(await supervisor.settleTask("receipt", "discard")).not.toContain("in progress");
+      // A merge writes its line as it closes the task, a moment before the settle lets the task go.
+      await vi.waitFor(async () =>
+        expect(await supervisor.settleTask("receipt", "discard")).not.toContain("in progress"),
+      );
     },
   );
 
@@ -3444,10 +3449,9 @@ describe("CrewSupervisor", () => {
       mode: "merge-pr",
       actor: "captain",
     });
-    expect(events).toContainEqual({
-      type: "firstmate_note",
-      text: 'Putting the change in for "Ship while reporting" is queued and will run when the crewmate finishes what it is doing.',
-    });
+    expect(settleLines(tasks, taskId)).toEqual([
+      "Merging once its crewmate finishes what it is doing",
+    ]);
 
     crewmate.finishPrompt();
     await vi.waitFor(() => expect(mergePullRequest).toHaveBeenCalledTimes(1));
@@ -3742,18 +3746,14 @@ describe("CrewSupervisor", () => {
     supervisor.act(id, "discard");
     expect(supervisor.cardsSnapshot()).toEqual([]);
     await vi.waitFor(() =>
-      expect(
-        events.some(
-          (event) => event.type === "firstmate_note" && event.text.includes("never merged"),
-        ),
-      ).toBe(true),
+      expect(settleLines(tasks, "dirty").some((line) => line.includes("never merged"))).toBe(true),
     );
     const refusal = await supervisor.settleTask("dirty", "discard");
     expect(refusal).toContain("2 commits and uncommitted edits that were never merged");
-    expect(events).toContainEqual({ type: "firstmate_note", text: refusal });
+    expect(settleLines(tasks, "dirty")).toContain(refusal);
     expect(workspace.removeTaskWorktree).not.toHaveBeenCalled();
     expect(tasks.get("dirty")?.status).toBe("active");
-    expect(await supervisor.settleTask("dirty", "discard", true)).toBe('Discarded "Unlanded".');
+    expect(await supervisor.settleTask("dirty", "discard", true)).toBe('Discarded.');
   });
 
   it("wakes the Firstmate with a confirm-gated discard refusal, so the dead end is orchestratable", async () => {
@@ -3781,11 +3781,7 @@ describe("CrewSupervisor", () => {
     expect(settleWakes(ops)[0]).toContain('"tool": "settle_task"');
     // The feed keeps its receipt either way: the captain sees the outcome
     // whether or not the Firstmate has anything to say about it.
-    expect(
-      events.some(
-        (event) => event.type === "firstmate_note" && event.text.includes("never merged"),
-      ),
-    ).toBe(true);
+    expect(settleLines(tasks, "dirty").some((line) => line.includes("never merged"))).toBe(true);
   });
 
   it("stays quiet on contention, which settles nothing and has no outcome to report", async () => {
@@ -3810,7 +3806,7 @@ describe("CrewSupervisor", () => {
     // One wake for the settle that ran, none for the one that was turned
     // away - announcing a settle that never happened is not an outcome.
     await vi.waitFor(() => expect(settleWakes(ops)).toHaveLength(1));
-    expect(settleWakes(ops)[0]).toContain('the outcome was: Discarded "Contended".');
+    expect(settleWakes(ops)[0]).toContain('the outcome was: Discarded.');
     expect(settleWakes(ops).join("\n")).not.toContain("already in progress");
   });
 
@@ -3852,7 +3848,7 @@ describe("CrewSupervisor", () => {
       settleWakes(ops).find((line) => line.includes(`for task ${taskId} `)) ?? "";
     // A discard is an outcome too: the agent is told what its crew's work
     // became, and decides for itself whether that is worth a word.
-    expect(wake("clean")).toContain('the outcome was: Discarded "Task clean".');
+    expect(wake("clean")).toContain('the outcome was: Discarded.');
     expect(wake("land")).toContain("Cannot merge: The main worktree is dirty.");
     expect(wake("merge")).toContain("PR merge blocked: CI is red.");
   });
@@ -3882,17 +3878,16 @@ describe("CrewSupervisor", () => {
         );
       const closed = (taskId: string) =>
         vi.waitFor(() => expect(tasks.get(taskId)?.status).toBe("done"));
-      const feed = (title: string) =>
-        events.filter(
-          (event) => event.type === "firstmate_note" && event.text.includes(`"${title}"`),
-        );
+      // INF-1845: the merge's line is its task's close, which the click's line gives way to.
+      const feed = (taskId: string) =>
+        tasks.timeline(taskId).filter((event) => event.kind === (mode === "land" ? "landed" : "merged"));
 
       // Nothing waits on it: the feed line is the whole receipt.
       seedTask(tasks, { id: "plain", title: "Plain", status: "idle", worktreeDir: "/plain" });
       merge("plain");
       await closed("plain");
       await tick();
-      expect(feed("Plain").length).toBeGreaterThan(0);
+      expect(feed("plain").length).toBeGreaterThan(0);
       expect(settleWakes(ops)).toEqual([]);
 
       // Work that starts by itself once it merges is no decision: the queue owns it.
@@ -4148,7 +4143,7 @@ describe("CrewSupervisor", () => {
   it("catches a rejected merge, releases its guard, and permits an independent task while it waits", async () => {
     const operation = deferred<{ ok: boolean; text: string }>();
     const mergePullRequest = vi.fn(() => operation.promise);
-    const { supervisor, tasks, events } = setup(fakeCrewmate(), { mergePullRequest });
+    const { supervisor, tasks } = setup(fakeCrewmate(), { mergePullRequest });
     seedTask(tasks, { id: "merge", title: "PR", status: "idle", worktreeDir: "/pr" });
     seedTask(tasks, { id: "other", title: "Other", status: "idle", worktreeDir: "/other" });
     vi.spyOn(supervisor, "taskDelivery").mockReturnValue("direct-pr");
@@ -4162,16 +4157,15 @@ describe("CrewSupervisor", () => {
     supervisor.act(id, "merge-pr");
     expect(await supervisor.landTask("merge", "captain")).toContain("already in progress");
     expect(await supervisor.mergePrTask("merge", "captain")).toContain("already in progress");
-    expect(await supervisor.settleTask("other", "discard")).toBe('Discarded "Other".');
+    expect(await supervisor.settleTask("other", "discard")).toBe('Discarded.');
     operation.reject(new Error("GitHub is unreachable"));
     // The feed says what it means; the raw failure is kept on the record.
     await vi.waitFor(() =>
-      expect(events).toContainEqual({
-        type: "firstmate_note",
-        text: 'Cannot merge "PR": something went wrong - try again',
-      }),
+      expect(settleLines(tasks, "merge")).toContain(
+        "Cannot merge: something went wrong - try again",
+      ),
     );
-    expect(tasks.timeline("merge").at(-1)).toMatchObject({
+    expect(tasks.timeline("merge").find((event) => event.data?.problem)).toMatchObject({
       kind: "note",
       feed: false,
       text: "Could not complete merge-pr for task merge: GitHub is unreachable",
@@ -4194,27 +4188,21 @@ describe("CrewSupervisor", () => {
     });
     supervisor.act(id, "land");
     await vi.waitFor(() =>
-      expect(events).toContainEqual({
-        type: "firstmate_note",
-        text: 'Cannot merge "Branch": something went wrong - try again',
-      }),
+      expect(settleLines(tasks, "land")).toContain("Cannot merge: something went wrong - try again"),
     );
-    expect(tasks.timeline("land").at(-1)).toMatchObject({
+    expect(tasks.timeline("land").find((event) => event.data?.problem)).toMatchObject({
       kind: "note",
       text: "Cannot merge: The main worktree is dirty.",
       data: { problem: "The main worktree is dirty." },
     });
     vi.mocked(workspace.removeTaskWorktree).mockRejectedValue(new Error("Cleanup failed."));
     await supervisor.requestDiscard("land");
-    expect(events).toContainEqual({
-      type: "firstmate_note",
-      text: 'Could not discard "Branch": something went wrong - try again',
-    });
+    expect(settleLines(tasks, "land")).toContain("Could not discard: something went wrong - try again");
     // The row closed but its worktree is still there, so a second discard
     // retries the cleanup instead of claiming there is nothing left (WI-7).
     expect(tasks.get("land")).toMatchObject({ status: "dropped", workspaceState: "present" });
     vi.mocked(workspace.removeTaskWorktree).mockResolvedValue(undefined);
-    expect(await supervisor.settleTask("land", "discard")).toBe('Discarded "Branch".');
+    expect(await supervisor.settleTask("land", "discard")).toBe('Discarded.');
     expect(tasks.get("land")).toMatchObject({
       status: "dropped",
       closedReason: "discarded",
@@ -4634,10 +4622,7 @@ describe("CrewSupervisor", () => {
       h.supervisor.act(h.card.id, "merge");
       await vi.waitFor(() => expect(h.authorization()?.waiting).toMatchObject({ on: "checks" }));
       expect(h.forge.merges).toEqual([]);
-      expect(h.events).toContainEqual({
-        type: "firstmate_note",
-        text: keptFeedLine("Ship the meter", "checks", "GitHub", "red"),
-      });
+      expect(settleLines(h.tasks, h.taskId)).toContain(keptFeedLine("checks", "GitHub", "red"));
       // They pass on this version, and the next idle boundary merges it with no second click.
       await repairTurn(h, async () => {
         h.forge.states = ["success"];
@@ -5430,7 +5415,7 @@ describe("CrewSupervisor", () => {
     });
 
     it("mints an approval of the offer the captain saw at the head its checks read, and keeps it through a 405 conflict", async () => {
-      const { authorization, card, events, ops, forge } = await kept();
+      const { authorization, card, tasks, taskId, ops, forge } = await kept();
       expect(authorization()).toMatchObject({
         version: 1,
         status: "standing",
@@ -5442,10 +5427,7 @@ describe("CrewSupervisor", () => {
         waiting: { on: "conflict", head: APPROVED },
       });
       expect(authorization()?.attempt).toBeUndefined();
-      expect(events).toContainEqual({
-        type: "firstmate_note",
-        text: keptFeedLine("Ship the meter", "conflict", "GitHub"),
-      });
+      expect(settleLines(tasks, taskId)).toContain(keptFeedLine("conflict", "GitHub"));
       await vi.waitFor(() =>
         expect(ops.join("\n")).toContain("do not ask the captain to merge again"),
       );
@@ -5829,10 +5811,9 @@ describe("CrewSupervisor", () => {
       h.crewmate.finishPrompt();
       await tick();
       await vi.waitFor(() =>
-        expect(h.events).toContainEqual({
-          type: "firstmate_note",
-          text: 'Cannot merge "Ship the meter" yet: its crewmate has not said whether your newer words change the work you approved. Your merge is kept and runs once it says they do not.',
-        }),
+        expect(settleLines(h.tasks, h.taskId)).toContain(
+          "Cannot merge yet: its crewmate has not said whether your newer words change the work you approved. Your merge is kept and runs once it says they do not.",
+        ),
       );
       expect(h.authorization()).toMatchObject({
         status: "standing",
@@ -5884,7 +5865,7 @@ describe("CrewSupervisor", () => {
     });
 
     it("a click on an offer the host never published at a known head approves nothing", async () => {
-      const { supervisor, tasks, events } = setup(fakeCrewmate(), {
+      const { supervisor, tasks } = setup(fakeCrewmate(), {
         mergePullRequest: vi.fn(
           async (): Promise<PrOutcome> => ({ ok: false, text: conflict, problem: conflict }),
         ),
@@ -5900,10 +5881,9 @@ describe("CrewSupervisor", () => {
       });
       supervisor.act(id, "merge-pr");
       await vi.waitFor(() =>
-        expect(events).toContainEqual({
-          type: "firstmate_note",
-          text: 'Cannot merge "Ship it": it conflicts with newer work in the project - its crewmate needs to bring it up to date',
-        }),
+        expect(settleLines(tasks, "merge")).toContain(
+          "Cannot merge: it conflicts with newer work in the project - its crewmate needs to bring it up to date",
+        ),
       );
       expect(tasks.get("merge")?.delivery?.mergeAuthorization).toBeUndefined();
     });
@@ -5950,26 +5930,21 @@ describe("CrewSupervisor", () => {
     });
     supervisor.act(id, "merge-pr");
     await vi.waitFor(() =>
-      expect(events).toContainEqual({
-        type: "firstmate_note",
-        text: 'Cannot merge "Ship the fix": the project\'s host did not accept the sign-in on this computer',
-      }),
+      expect(settleLines(tasks, "merge")).toContain(
+        "Cannot merge: the project's host did not accept the sign-in on this computer",
+      ),
     );
     await supervisor.requestDiscard("gone");
-    expect(events).toContainEqual({
-      type: "firstmate_note",
-      text: 'Discarded "Old idea". Its pull request is still open where the project lives: could not reach the project\'s host - try again',
-    });
-    const feed = events
-      .filter((event) => event.type === "firstmate_note")
-      .map((event) => (event as { text: string }).text)
-      .join("\n");
+    expect(settleLines(tasks, "gone")).toContain(
+      "Discarded. Its pull request is still open where the project lives: could not reach the project's host - try again",
+    );
+    const feed = [...settleLines(tasks, "merge"), ...settleLines(tasks, "gone")].join("\n");
     expect(feed).not.toMatch(/fatal:|Could not resolve host|PR merge blocked/);
     // The Firstmate still reads exactly what git said, and so does the record.
     await vi.waitFor(() => expect(settleWakes(ops)).toHaveLength(2));
     expect(settleWakes(ops).join("\n")).toContain(signedOut);
     expect(settleWakes(ops).join("\n")).toContain("Could not resolve host: github.com");
-    expect(tasks.timeline("merge").at(-1)).toMatchObject({
+    expect(tasks.timeline("merge").find((event) => event.data?.problem)).toMatchObject({
       kind: "note",
       text: `PR merge blocked: ${signedOut}`,
     });
@@ -5989,10 +5964,7 @@ describe("CrewSupervisor", () => {
     });
     supervisor.act(again, "merge-pr");
     await vi.waitFor(() =>
-      expect(events).toContainEqual({
-        type: "firstmate_note",
-        text: 'Cannot merge "Ship the fix": the checks failed',
-      }),
+      expect(settleLines(tasks, "merge")).toContain("Cannot merge: the checks failed"),
     );
     await vi.waitFor(() => expect(settleWakes(ops)).toHaveLength(3));
     expect(settleWakes(ops).at(-1)).toContain("linux-checks: completed / failure");
@@ -6164,9 +6136,7 @@ describe("CrewSupervisor", () => {
     );
     // The task survives a refused merge, and the captain is told why.
     expect(tasks.get(taskId)).toBeDefined();
-    expect(
-      events.some((event) => event.type === "firstmate_note" && /not fully green/.test(event.text)),
-    ).toBe(true);
+    expect(settleLines(tasks, taskId).some((line) => /not fully green/.test(line))).toBe(true);
   });
 
   it("wakes with the refusal on a refused PR merge and raises no retry card; the Firstmate re-settles", async () => {
@@ -6716,10 +6686,8 @@ describe("CrewSupervisor", () => {
         (event) => event.type === "firstmate_note" && /closed|dismissed/.test(event.text),
       ),
     ).toEqual([
-      {
-        type: "firstmate_note",
-        text: `You closed "Pick a course". It stays on ${key}'s record.`,
-      },
+      // INF-1845: on the task's record, so the line carries its key.
+      { type: "firstmate_note", taskId, text: `You closed "Pick a course"` },
     ]);
     // Mid-turn, the close reaches the crewmate's running turn (FI3-435).
     expect(crewmate.steer.mock.calls.at(-1)?.[0]).toBe(
@@ -8417,7 +8385,7 @@ describe("the task record (task-system P0)", () => {
     const { taskId } = await supervisor.commission({ title: "Mid-flight", intent: intentOf("go") });
     await tick();
     const result = await supervisor.settleTask(taskId, "discard", true);
-    expect(result).toBe('Discarded "Mid-flight".');
+    expect(result).toBe('Discarded.');
     // The abort resolves the turn; its finish path sees a closed record and
     // leaves the discard reason alone.
     crewmate.failPrompt("aborted");
@@ -17114,7 +17082,7 @@ describe("the task graph (task-system P2)", () => {
     crewmate.finishPrompt();
     await tick();
     expect(await supervisor.settleTask(taskId, "discard")).toBe(
-      'Discarded "Fix the keychain prompt".',
+      'Discarded.',
     );
     expect(tasks.get(taskId)).toMatchObject({ status: "dropped", closedReason: "discarded" });
   });
@@ -18266,7 +18234,7 @@ describe("fleet hygiene (interaction P0, WI-7)", () => {
 
     expect(await supervisor.settleTask(taskId, "discard")).toContain("2 commits");
     expect(await supervisor.settleTask(taskId, "discard", true)).toBe(
-      'Discarded "Tidy the meter test".',
+      'Discarded.',
     );
     // The close stands as cancelled; only the worktree it kept is gone.
     expect(tasks.get(taskId)).toMatchObject({
@@ -25030,7 +24998,7 @@ describe("the served text of every remaining wake (the typed envelope, P3)", () 
     }
     expect(settleWakes(ops)).toEqual([
       `[fm-op] the captain chose discard for task dirty "Unlanded"; the host settled it and the outcome was: Cannot discard SCR-1 "Unlanded" without confirm: 2 commits and uncommitted edits that were never merged. Discard with confirm to abandon them, or merge the branch instead.\n\`\`\`json\n{\n  "refused": "unlanded-work",\n  "task": {\n    "id": "dirty",\n    "key": "SCR-1",\n    "title": "Unlanded"\n  },\n  "tasks": [],\n  "ways": [\n    {\n      "label": "Discard anyway",\n      "tool": "settle_task",\n      "args": {\n        "task_id": "dirty",\n        "mode": "discard",\n        "confirm": true\n      }\n    },\n    {\n      "label": "Merge the branch instead",\n      "tool": "settle_task",\n      "args": {\n        "task_id": "dirty",\n        "mode": "land"\n      }\n    }\n  ],\n  "text": "Cannot discard SCR-1 \\"Unlanded\\" without confirm: 2 commits and uncommitted edits that were never merged. Discard with confirm to abandon them, or merge the branch instead."\n}\n\`\`\``,
-      `[fm-op] the captain chose discard for task clean "Clean"; the host settled it and the outcome was: Discarded "Clean".`,
+      `[fm-op] the captain chose discard for task clean "Clean"; the host settled it and the outcome was: Discarded.`,
     ]);
   });
 
@@ -27130,16 +27098,15 @@ describe("a merge that leaves the project's folder behind (INF-549, real git)", 
     const [repair] = repairOf(h.tasks, h.repo.id);
     if (!repair) throw new Error("no repair task was filed");
     const sentence = `Merged, but your project's folder was not brought up to date: it has edits that are not committed. Infinitary started ${repair.key} "Bring the folder up to date" to do it.`;
+    // INF-1845: the note is the task's keyed warning line beside the merge's own line.
     await vi.waitFor(
       () =>
-        expect(h.events).toContainEqual({
-          type: "firstmate_note",
-          text: expect.stringContaining(sentence),
-        }),
+        expect(h.tasks.timeline("clicked1").find((event) => event.data?.folderRefresh)).toMatchObject(
+          { text: sentence, feed: true },
+        ),
       REAL_GIT_WAIT,
     );
-    const note = h.tasks.timeline("clicked1").find((event) => event.data?.folderRefresh);
-    expect(note).toMatchObject({ text: sentence, feed: false });
+    expect(settleLines(h.tasks, "clicked1").filter((line) => line.includes(sentence))).toEqual([]);
     await vi.waitFor(() => expect(h.sessionSpecs.at(-1)?.cwd).toBe(h.folder), REAL_GIT_WAIT);
     await h.supervisor.disposeAll();
   });
@@ -27725,14 +27692,13 @@ describe("a discard that leaves its pull request open (INF-549's sibling)", () =
 
     const [repair] = h.repairs();
     if (!repair) throw new Error("no repair task was filed");
-    expect(h.events).toContainEqual({
-      type: "firstmate_note",
-      text: expect.stringMatching(
+    expect(settleLines(h.tasks, h.taskId)).toContainEqual(
+      expect.stringMatching(
         new RegExp(
-          `^Discarded "An idea the captain dropped"\\. Its pull request is still open where the project lives: .+\\. Infinitary started ${repair.key} "Close the pull request" to close it\\.$`,
+          `^Discarded\\. Its pull request is still open where the project lives: .+\\. Infinitary started ${repair.key} "Close the pull request" to close it\\.$`,
         ),
       ),
-    });
+    );
     const note = h.tasks.timeline(h.taskId).find((event) => event.data?.pullRepair);
     expect(note).toMatchObject({ feed: false });
 

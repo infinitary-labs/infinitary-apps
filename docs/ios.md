@@ -72,7 +72,10 @@ SwiftNIO SSH has no keyboard-interactive sign-in, so a computer that takes passw
 
 The session sends a view hello and its current in-memory epoch/sequence cursor, then reads cards, Activity, the task board and the last turn.
 The generated `PhoneRequest` limits the additional requests to the published view channels and derives their read/change distinction and message limits from the contract.
-Activity shows the newest line first and uses the Mac's feed wording, not a second event-to-words implementation.
+Activity shows the newest line at the bottom, as on the Mac, and uses the Mac's feed wording, not a second event-to-words implementation.
+Each line is one row: its dot, its task key, its words cut with an ellipsis and its age (INF-1845).
+Tapping a row opens the line's summary with the whole words and its exact time; tapping a key on the board opens that task's record.
+The list opens at the bottom and follows a new line while the reader is at the bottom, as a chat does; a reader scrolled up stays where they are.
 The native contract constants are generated from `docs/contract.json` with `node scripts/generate-phone-contract.ts`.
 `pnpm generate:contract` updates them together, and `pnpm check` refuses stale native constants, theme values or bundled card code and fonts.
 Generation also verifies the required native fields in cards, Activity, task boards, records, search, last turns and crewmate transcripts, including the pushed card and task snapshots.

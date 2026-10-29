@@ -325,7 +325,8 @@ import XCTest
         let feed = try XCTUnwrap(first["feed"] as? [[String: Any]])
         let line = try XCTUnwrap(feed.first?["text"] as? String)
         XCTAssertTrue(app.staticTexts[line].waitForPresence(timeout: 10))
-        XCTAssertEqual(app.staticTexts.matching(identifier: "activity-text").firstMatch.label, feed.last?["text"] as? String)
+        // INF-1845, the captain: "At the bottom on both, as on the Mac" - the newest line is the last row.
+        XCTAssertEqual(app.staticTexts.matching(identifier: "activity-text").allElementsBoundByIndex.last?.label, feed.last?["text"] as? String)
         try await appearances("activity", showing: app.staticTexts[line])
         tab("Home")
         _ = try await home("empty-cards")
@@ -375,10 +376,27 @@ import XCTest
         let caughtUpFeed = try XCTUnwrap(caughtUp["feed"] as? [[String: Any]])
         let newest = try XCTUnwrap(caughtUpFeed.last?["text"] as? String)
         XCTAssertTrue(app.staticTexts[newest].waitForPresence(timeout: 10))
-        XCTAssertEqual(app.staticTexts.matching(identifier: "activity-text").firstMatch.label, newest)
+        XCTAssertEqual(app.staticTexts.matching(identifier: "activity-text").allElementsBoundByIndex.last?.label, newest)
         let taskKey = try XCTUnwrap(caughtUpFeed.last?["taskKey"] as? String)
-        XCTAssertTrue(app.staticTexts[taskKey].exists, "Activity shows the actual computer-authored task key")
+        let keyLabel = NSPredicate(format: "label == %@", taskKey)
+        XCTAssertTrue(app.descendants(matching: .any).matching(keyLabel).firstMatch.exists,
+            "Activity shows the actual computer-authored task key")
         picture("activity-caught-up")
+        // INF-1845, the captain's plan B: tapping a line shows its summary, with the whole words.
+        tapOnPhone(app.staticTexts[newest])
+        let summaryText = app.staticTexts["activity-summary-text"]
+        XCTAssertTrue(summaryText.waitForPresence(timeout: 10), app.debugDescription)
+        XCTAssertEqual(summaryText.label, newest)
+        picture("activity-summary")
+        tapOnPhone(app.buttons["close-activity-summary"])
+        XCTAssertTrue(summaryText.waitForAbsence(timeout: 10))
+        // Tapping a line's key opens that task's record.
+        let key = try XCTUnwrap(app.buttons.matching(identifier: "activity-key").allElementsBoundByIndex.last)
+        XCTAssertEqual(key.label, taskKey)
+        tapOnPhone(key)
+        XCTAssertTrue(app.staticTexts["task-record-title"].waitForPresence(timeout: 10), app.debugDescription)
+        tapOnPhone(app.buttons["close-record"])
+        tab("Activity")
         // INF-1062, the captain: Activity runs to the foot with nothing over it, so after scrolling to its end
         // the last row is whole in the window and pressable; the message box belongs to Home.
         XCTAssertFalse(app.textFields["message-box"].exists, "Activity has no message box over it")
@@ -387,13 +405,17 @@ import XCTest
         let newestLine = app.staticTexts.matching(NSPredicate(format: "label CONTAINS %@", try XCTUnwrap(long["newest"] as? String))).firstMatch
         XCTAssertTrue(newestLine.waitForPresence(timeout: 10), app.debugDescription)
         let oldest = app.staticTexts.matching(NSPredicate(format: "label == %@", try XCTUnwrap(caughtUpFeed.first?["text"] as? String))).firstMatch
+        // INF-1845, the captain: "make sure activity tab auto-scrolls to the bottom like how a chat app normally would";
+        // the newest line, the last row, is whole in the window and pressable with no swipe.
+        waitForSteadyTarget(newestLine)
+        XCTAssertTrue(waitForPhonePress(newestLine), "The newest line, the last row, shows without a swipe: \(app.debugDescription)")
+        XCTAssertLessThanOrEqual(newestLine.frame.maxY, app.frame.maxY, "The last row is whole in the window")
+        picture("activity-end")
         let list = app.scrollViews["activity-list"]
-        for _ in 0..<12 where !(oldest.exists && oldest.isHittable) { list.swipeUp() }
+        for _ in 0..<12 where !(oldest.exists && oldest.isHittable) { list.swipeDown() }
         // INF-1541 piece 1: XCTest no longer waits out the last swipe's glide, so the row is read once it holds still.
         waitForSteadyTarget(oldest)
-        XCTAssertTrue(waitForPhonePress(oldest), "The oldest line, the last row, can be reached and pressed: \(app.debugDescription)")
-        XCTAssertLessThanOrEqual(oldest.frame.maxY, app.frame.maxY, "The last row is whole in the window")
-        picture("activity-end")
+        XCTAssertTrue(waitForPhonePress(oldest), "The oldest line, the first row, can be reached and pressed: \(app.debugDescription)")
         tab("Home")
 
         // INF-1528, the captain: "the moment i minimize the ios app, it seems it immediately disconnects.

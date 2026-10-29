@@ -34,7 +34,7 @@ import {
   expectRecordBody,
   expectRecordSized,
   hideRecord,
-  notesNaming,
+  noteLines,
   nowRow,
   recordCard,
   recordFrame,
@@ -260,17 +260,18 @@ for (const kind of ["failed", "empty", "unreadable"] as const) {
       await (await completionAction(app.page, STALE_CHECKS_CARD)).click();
       await expect.poll(() => ledger()?.delivery?.mergeAuthorization?.waiting?.on).toBe("checks");
       await expandDock(app.page, "activity");
-      await expect(notesNaming(app.page, title).last()).toBeVisible();
+      const settled = noteLines(app.page, ledger()?.key ?? "");
+      await expect(settled.last()).toBeVisible();
       // The existing keyboard view wraps Activity rows in full rather than ellipsizing them.
       await pressKey(activityFrame(app.page).locator("[data-feed-scroller]"), "End");
-      await atRest(notesNaming(app.page, title).last());
+      await atRest(settled.last());
       await regionShot(
         dockRegion(app.page, "activity"),
         test.info().outputPath("kept-checks-activity.png"),
       );
       await expect(
-        notesNaming(app.page, title).filter({
-          hasText: keptFeedLine(title, "checks", "GitHub", currentCheckStatus(ledger()?.delivery)),
+        settled.filter({
+          hasText: keptFeedLine("checks", "GitHub", currentCheckStatus(ledger()?.delivery)),
         }),
       ).toBeVisible();
       expect(github.merges()).toEqual([]);

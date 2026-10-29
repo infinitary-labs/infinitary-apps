@@ -789,6 +789,7 @@ describe("PrCiService", () => {
     await expect(service.merge("ab12cd34")).resolves.toEqual({
       ok: true,
       text: "Merged #23 on GitHub. https://github.com/x/y/pull/23",
+      line: "Merged #23 on GitHub",
     });
     expect(forge.calls).toEqual([
       "changeFor fm/task-ab12cd34",
@@ -872,6 +873,7 @@ describe("PrCiService", () => {
     expect(result).toEqual({
       ok: true,
       text: "Merged #23 on GitHub. https://github.com/x/y/pull/23",
+      line: "Merged #23 on GitHub",
     });
     expect(forge.calls.filter((call) => call.startsWith("changeFor"))).toHaveLength(2);
   });
@@ -978,6 +980,7 @@ describe("PrCiService", () => {
       await expect(service.merge("ab12cd34")).resolves.toEqual({
         ok: true,
         text: 'Merged "Ship it" on git.example.com.',
+        line: "Merged on git.example.com",
       });
     });
 
@@ -2675,6 +2678,7 @@ describe("a merge request on GitLab", () => {
     expect(await service.merge("ab12cd34")).toMatchObject({
       ok: true,
       text: "Merged !23 on GitLab. https://gitlab.com/group/sub/y/-/merge_requests/23",
+      line: "Merged !23 on GitLab",
     });
   });
 

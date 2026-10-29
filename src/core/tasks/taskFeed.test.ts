@@ -32,10 +32,20 @@ describe("task feed updates", () => {
     ["failed", { fatal: false }, "Problem: something went wrong - try again"],
     ["landed", null, "Merged"],
     ["merged", null, "Merged"],
+    // INF-1845: the merge's own line, the change and where it went in.
+    ["merged", { line: "Merged #709 on GitHub" }, "Merged #709 on GitHub"],
     ["status", { container: true, reason: "finished" }, "Done: everything under it is finished"],
     ["status", { container: true, reason: "cancelled" }, "Stopped: nothing under it went ahead"],
     ["status", { reason: "answered", basisOf: "FM3K-43" }, "Answered: The update itself."],
     ["status", { reason: "answered", waitedOnBy: "FM3K-43" }, "Answered: The update itself."],
+    // INF-1845: the captain's choice on an answer's card, never "Updated: chose".
+    [
+      "status",
+      { reason: "answered", choice: "Approve and build" },
+      'You chose "Approve and build"',
+    ],
+    ["status", { reason: "answered" }, "Answered"],
+    ["status", { reason: "discarded" }, "Discarded"],
     ["status", { reason: "released" }, "Released outside this task"],
     ["status", { reason: "finished" }, "Finished"],
     ["status", { reason: "cancelled" }, "Stopped"],
@@ -115,6 +125,24 @@ describe("task feed updates", () => {
     expect(
       taskFeedLine({ ...record, assignee: null }, event("status", { reason: "cancelled" }))?.text,
     ).toBe("Updated: The update itself.");
+  });
+
+  // INF-1845, the captain's "stay consistent with desktop": a finished report is followed by Finished.
+  it("leaves a finished report off the feed, and keeps one that is not", () => {
+    expect(
+      taskFeedLine(record, event("report", { summary: "All done.", finished: true })),
+    ).toBeNull();
+    expect(taskFeedLine(record, event("report", { summary: "All done." }))?.text).toBe(
+      "Reported: All done.",
+    );
+  });
+
+  // INF-1845: a merge that left the project's folder behind still says so, as a warning.
+  it("paints a folder a merge left behind as a warning", () => {
+    expect(
+      taskFeedLine(record, event("note", { feedLine: true, folderRefresh: { cause: "dirty" } }))
+        ?.kind,
+    ).toBe("warn");
   });
 
   it("keeps timeline-only events off the feed and preserves semantic kinds", () => {

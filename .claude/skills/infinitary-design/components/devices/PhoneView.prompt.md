@@ -68,22 +68,29 @@ A row has a semantic kind dot, the computer-authored words, an optional task key
 The exact local date and time remains available to VoiceOver; an empty Activity says “No activity yet”.
 
 Home shows one card at a time, with a peek of the next card at its right edge and a quiet pager below it: two chevrons around the count; an ordinary arrival never replaces the card being read.
-The count opens a menu of the current titles, then Minimized; the next chevron carries a dot while an unread card lies ahead.
-With no card to page the chevrons and count hide; a lone Minimized menu stays while there are minimized cards, and nothing shows when there are none.
+The count opens a menu of the current titles; the next chevron carries a dot while an unread card lies ahead.
+With no card to page the pager hides; a card put aside waits in Tasks, and its row there brings it back.
 Home carries a dot in the strip while a card is not yet read, and VoiceOver hears the count.
 The peek stays within the shorter of the foreground card and its scrolling viewport, never filling the empty space beneath a short card or reaching the pager.
 Swiping the native card head changes cards without intercepting the body's own sliders, canvases or pinch gestures.
-The card stage fits the shell's available column, up to 560 logical points, and owns neither navigation nor the computer-details sheet.
-The kind chip, attribution, title, close control, footer buttons and reply field are native controls outside the body’s web view.
+The card stage fits the shell's available column, up to 560 logical points, and owns neither navigation nor the computer-details sheet; on an iPad the card's head can maximize it to the stage's whole width.
+A card is the Mac's raised surface: a solid fill, a thin edge, a light line inside its top and a soft drop shadow, and the next card's sliver is raised the same way.
+The head, footer buttons and reply field are native controls outside the body’s web view.
+The head reads as the Mac's: the kind chip (Attention in red), the task's key in mono, which opens its record, where the task runs, the model chip and the risk, then the title and the revised line; it names no sender.
+Put aside, a minus before the close, puts the card away until it changes; the close asks first, in the Mac's words, before it discards picks, typed words or a reply still waiting on its answer.
+A merge card's risk is a row of seven dots in the levels' colors, and a tap opens a sheet with each dimension's name, level words and the crewmate's why.
 The native controls inherit the shell's tint and retain platform focus and touch behavior.
-A review-finding card shows Review finding in the warning color above its title, and the builder’s task name in its attribution.
-The default choice is filled with the accent, with the dark void's ink, in either appearance, as the approved card does.
+A review-finding card shows Review finding in the warning color on its head's first line.
+The default choice is filled with the accent, with the dark void's ink, in either appearance, as the approved card does; while a required question waits it is drawn muted, and a pressed choice shows a pending mark.
+Above the choices sit the host's fact strip, the actions to take after merging, one written out or more folded under their count, and the reply field, which reads "anything to add?", takes photos from the library or camera, and whose words go with a choice too.
 The body uses the Mac’s card stylesheet and fonts, fits the available width and permits pinch zoom; its pictures open a separate viewer and its recordings offer playback there.
 Named form answers and reply drafts stay in memory while paging; choosing a form value sends nothing, and a footer press collects the current answers.
 Required questions hold the default choice, and a failure keeps the draft with an explanation.
 A failed body with a saved reading says that choices use the last saved answers and offers Retry; a timeout on a press never sends that choice.
-The thread opens below the card, with plain messages and their submitted answers, never message bubbles.
-Past cards show their last-seen body, submitted answers and chosen button, with Hide instead of Close and no reply field or working actions.
+The thread opens below the card, with plain messages labelled you, crew, mate or app with their times, a captain's settings folded on one line and a working line, never message bubbles; it opens when a new message arrives.
+A body's links open in the device's default browser, its task keys open their records and its draft buttons fill the message box, unsent.
+Past cards show their last-seen body, submitted answers and the chosen button at full contrast with an accent edge, the words sent with it, Hide instead of Close and no reply field or working actions.
+A crewmate's browser shows as a strip naming Browser, the site and who is driving.
 A Settings or browser door says to do it on the named computer and keeps the card open.
 Using a saved sign-in is a normal choice sent to that computer, not a request to open its browser here.
 While out of reach, the shown body remains readable, actions and the dimmed reply row are unavailable, and no change waits to be sent later.
@@ -145,5 +152,6 @@ The actions sit at the record's foot like a card's footer: Start or Continue las
 A closed task remains readable without a message box or actions.
 New cards and answered replies announce themselves while the phone is open, following the Mac’s Notifications switch.
 The notice is a quiet pill at the top of every tab, under the top bar and over the stage beside the landscape sidebar: a mono New card or Reply label in the accent, then the card's title, on the raised surface with a hairline.
+On Home a new card is counted beside the pager instead, as "1 new" in the accent, and only a reply's pill shows there.
 A tap opens the card on Home and a swipe dismisses it; a reply notice leaves after a few seconds, a new-card notice when its card is read, and VoiceOver offers Dismiss.
 No notice requests background delivery, and an initial snapshot does not announce old cards.

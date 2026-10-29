@@ -1,4 +1,5 @@
 import InfinitaryKit
+import PhotosUI
 import SwiftUI
 
 struct PhoneCards: View {
@@ -10,6 +11,8 @@ struct PhoneCards: View {
     @State private var replies: [String: String] = [:]
     @State private var previousIDs: [String] = []
     @State private var sent = 0
+    /// INF-1524, the captain's yes on iPad only: the card takes the stage's whole width, as the Mac's maximize does.
+    @State private var maximized = false
     private var card: PhoneCard? { past ?? session.stack.first(where: { $0.id == selected }) ?? session.stack.first }
 
     var body: some View {
@@ -24,7 +27,9 @@ struct PhoneCards: View {
                     onPage: { page($0) },
                     onSent: { sent += 1 },
                     showsNext: past == nil && index < session.stack.count - 1, visible: messageContext.cardsVisible,
-                    replyLeaves: !card.value["holdsPlace"].flag && session.stack.count > 1)
+                    replyLeaves: !card.value["holdsPlace"].flag && session.stack.count > 1,
+                    maximized: $maximized,
+                    onTask: { messageContext.openTask = $0 }, onDraft: { messageContext.draft = $0 })
                     .id("\(card.id):\(card.offerID ?? card.body):\(card.isPast)")
             } else {
                 // INF-1060 keeps the empty stage free of placeholder words; INF-1066 adds its native crew.
@@ -34,7 +39,7 @@ struct PhoneCards: View {
             // INF-589 item 11: with no card to page, the pager hides. INF-1517: cards put aside wait in Tasks, as on the Mac.
             if !session.stack.isEmpty { pager }
         }
-        .padding(.horizontal, PhoneTheme.space4).frame(maxWidth: card == nil ? .infinity : PhoneColumn.width).frame(maxWidth: .infinity)
+        .padding(.horizontal, PhoneTheme.space4).frame(maxWidth: card == nil || maximized ? .infinity : PhoneColumn.width).frame(maxWidth: .infinity)
         .background(PhoneTheme.background)
         // INF-589 item 12: a soft tap once the computer accepts an answer or a reply; never on a page turn.
         .sensoryFeedback(.phone, trigger: sent)
@@ -81,11 +86,21 @@ struct PhoneCards: View {
                     }
             }
                 .disabled(!canPageNext).accessibilityIdentifier("next-card")
+            // INF-1524, the captain's pick: on Home a new card is counted here rather than in a pill over the stage.
+            if !fresh.isEmpty {
+                Button { selected = fresh[0].id; past = nil } label: {
+                    Text("\(fresh.count) new").font(PhoneFont.mono).foregroundStyle(PhoneTheme.accent).frame(minHeight: 44)
+                }.accessibilityIdentifier("card-new")
+            }
         }
         .background {
             PhonePagerKeys(previous: canPagePrevious ? { page(-1) } : nil, next: canPageNext ? { page(1) } : nil)
                 .frame(width: 0, height: 0)
         }
+    }
+    /// The cards on the stack not yet read, besides the one shown.
+    private var fresh: [PhoneCard] {
+        session.stack.filter { $0.id != card?.id && !session.seenCards.contains($0.offerID ?? $0.id) }
     }
     private var index: Int { session.stack.firstIndex { $0.id == (selected ?? session.stack.first?.id) } ?? 0 }
     private var canPagePrevious: Bool { past == nil && index > 0 }
@@ -161,6 +176,9 @@ private struct PhoneCardPane: View {
     /// The stage is on screen: a card drawn behind another tab is not yet read.
     let visible: Bool
     let replyLeaves: Bool
+    @Binding var maximized: Bool
+    let onTask: (String) -> Void
+    let onDraft: (String) -> Void
     @State private var surfaceHeight: CGFloat = 0
     @State private var contentHeight: CGFloat = 0
     /// The body runs on below the choices, so a hairline separates them, as on the Mac.
@@ -170,26 +188,67 @@ private struct PhoneCardPane: View {
     @State private var headHeight: CGFloat = 0
     @State private var footHeight: CGFloat = 0
     @State private var host: CardWebHost
+    /// INF-1524: a settle card's fact strip, drawn read-only beside its choices once the body has split it off.
+    @State private var factsHost: CardWebHost?
     @State private var problem: String?
     @State private var threadOpen = false
     /// The "You asked" line is open; held here because a taller head moves into or out of the scroller.
     @State private var askedOpen = false
     @State private var retry = 0
+    /// INF-1524: the choice pressed and still on its way, which shows its pending mark.
+    @State private var pending: String?
+    @State private var closeAsk: CloseAsk?
+    @State private var photos: [PhonePhoto] = []
+    @State private var photoSelection: [PhotosPickerItem] = []
+    @State private var libraryOpen = false
+    @State private var cameraOpen = false
     @Environment(\.scenePhase) private var phase
+    @Environment(\.openURL) private var openURL
     @FocusState private var replyFocused: Bool
 
+    /// What the close asks first (the Mac's CloseQuestion): about unsent picks or words, about a reply still unanswered, or both.
+    struct CloseAsk { let words: String; let picks: Bool }
+
     init(card: PhoneCard, session: ReadOnlySession, fill: PhoneJSON, reply: Binding<String>,
-         onReading: @escaping (PhoneJSON) -> Void, onSeen: @escaping () -> Void, onHide: @escaping () -> Void, onPage: @escaping (Int) -> Void, onSent: @escaping () -> Void, showsNext: Bool, visible: Bool, replyLeaves: Bool) {
+         onReading: @escaping (PhoneJSON) -> Void, onSeen: @escaping () -> Void, onHide: @escaping () -> Void, onPage: @escaping (Int) -> Void, onSent: @escaping () -> Void, showsNext: Bool, visible: Bool, replyLeaves: Bool,
+         maximized: Binding<Bool>, onTask: @escaping (String) -> Void, onDraft: @escaping (String) -> Void) {
         self.card = card; self.session = session; _reply = reply
         self.onReading = onReading; self.onSeen = onSeen; self.onHide = onHide; self.onPage = onPage; self.onSent = onSent
         self.showsNext = showsNext; self.visible = visible; self.replyLeaves = replyLeaves
-        _host = State(initialValue: CardWebHost(card: card, session: session, fill: fill))
+        _maximized = maximized; self.onTask = onTask; self.onDraft = onDraft
+        _host = State(initialValue: Self.bodyHost(card, session, fill))
+    }
+    private static func bodyHost(_ card: PhoneCard, _ session: ReadOnlySession, _ fill: PhoneJSON,
+                                 heightLag: TimeInterval = 0) -> CardWebHost {
+        // The body links the keys of the tasks the phone holds, besides the card's own, as the Mac's does.
+        let own = card.value["taskId"].text
+        let keys = (session.board?.tasks ?? []).filter { $0.id != own }.map(\.key)
+        return CardWebHost(card: card, session: session, fill: fill, keys: keys, heightLag: heightLag)
     }
     private var messages: [PhoneJSON] { card.isPast ? card.value["messages"].list : session.threads[card.id]?["messages"].list ?? [] }
     private var reachable: Bool { session.contact == "in-reach" }
-    private var canSendReply: Bool { !host.changing && session.canChange && host.drawn && PhoneCard.canSendReply(reply) }
+    private var replyWords: String { reply.trimmingCharacters(in: .whitespacesAndNewlines) }
+    private var canSendReply: Bool { !host.changing && session.canChange && host.drawn && replyFits }
+    /// The words or photos alone, which the send checks again once its change has begun and the card counts as changing.
+    private var replyFits: Bool { reply.utf16.count <= PhoneLimits.reply && (!replyWords.isEmpty || !photos.isEmpty) }
+    private var takesReply: Bool { card.takesReplies && !card.isPast }
+    /// The task the card is about, which leads its head as its door to the task's record.
+    private var task: PhoneTask? {
+        guard let id = card.value["taskId"].text ?? card.reviewTaskId else { return nil }
+        return session.board?.tasks.first { $0.id == id }
+    }
+    /// Its author is at work on it: the first mate's turn, or its crewmate's task running.
+    private var working: Bool {
+        card.isPast ? false : card.author == "firstmate" ? session.firstmateBusy
+            : ["running", "starting"].contains(task?.activity ?? "")
+    }
+    private var asking: Bool { !card.isPast && (host.reading["of"].numeric ?? 0) > 0 }
+    /// A closing choice waits until every required question has an answer (the captain's Q2 A on the Mac).
+    private var unanswered: Bool { asking && (host.reading["answered"].numeric ?? 0) < (host.reading["of"].numeric ?? 0) }
 
-    private var hasFoot: Bool { !card.actions.isEmpty || problem != nil }
+    private var hasFoot: Bool {
+        !card.actions.isEmpty || problem != nil || takesReply || factsHost != nil || !card.value["requiredActions"].list.isEmpty
+    }
     /// A short stage, such as an iPhone on its side with a long draft, would leave the body a sliver between its pinned
     /// head and choices; unless the body keeps at least the room they take, the whole card scrolls as it did before.
     @State private var pinsFrame = true
@@ -199,8 +258,10 @@ private struct PhoneCardPane: View {
     /// Moving the head and choices changes what they measure, and while a rotation animates both places are drawn at once,
     /// so the frame changes its shape at most once for each stage height and never animates the move; otherwise the two
     /// could trade places on every frame and the app would never come to rest.
+    /// INF-1524: the reply field sits in the pinned foot, and moving the foot in or out of the scroller makes a new field,
+    /// so the keyboard its focus raises, which shortens the stage, never reshapes the frame; the shape settles once it closes.
     private func shapeFrame() {
-        guard paneHeight > 0 else { return }
+        guard paneHeight > 0, !replyFocused else { return }
         let pins = paneHeight - headHeight - footHeight >= headHeight + footHeight
         guard pins != pinsFrame, shapedAt != paneHeight else { return }
         shapedAt = paneHeight
@@ -221,6 +282,7 @@ private struct PhoneCardPane: View {
     }
 
     var body: some View {
+        let shape = RoundedRectangle(cornerRadius: PhoneTheme.cardRadius, style: .continuous)
         // INF-944 items 1 and 2, the Mac's shape: the head and the choices stay in the frame, and the body and
         // thread scroll between them in this one native scroller. The body's web view never scrolls on its own.
         VStack(alignment: .leading, spacing: 0) {
@@ -244,57 +306,114 @@ private struct PhoneCardPane: View {
             if hasFoot && pinsFrame { measuredFoot }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(PhoneTheme.surface, in: RoundedRectangle(cornerRadius: PhoneTheme.cardRadius, style: .continuous))
-        .clipShape(RoundedRectangle(cornerRadius: PhoneTheme.cardRadius, style: .continuous))
+        .clipShape(shape)
+        // INF-1524 piece 1: the Mac's raised surface, its edge and shadow outside the clipped content.
+        .phoneCardSurface()
         // A frame holding only its scroller is that scroller to accessibility, which then keeps the scroller's name.
         .accessibilityElement(children: .contain).accessibilityIdentifier(pinsFrame ? "card-frame" : "card-scroll")
         .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { surfaceHeight = $0 }
         .frame(maxHeight: .infinity, alignment: .top)
         .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { paneHeight = $0 }
         .onChange(of: [paneHeight, headHeight, footHeight]) { shapeFrame() }
+        .onChange(of: replyFocused) { _, focused in if !focused { shapeFrame() } }
         .background(alignment: .topTrailing) {
             if showsNext {
-                // The stack follows the card's frame, which never reaches the pager.
-                RoundedRectangle(cornerRadius: PhoneTheme.cardRadius)
-                    .fill(PhoneTheme.surface).overlay {
-                        RoundedRectangle(cornerRadius: PhoneTheme.cardRadius).stroke(PhoneTheme.line)
-                    }
+                // The stack follows the card's frame, which never reaches the pager; the sliver is raised as the card is.
+                RoundedRectangle(cornerRadius: PhoneTheme.cardRadius, style: .continuous).fill(.clear)
+                    .phoneCardSurface()
                     .frame(width: PhoneTheme.space5)
                     .frame(maxHeight: max(0, surfaceHeight - 2 * PhoneTheme.space3))
                     .padding(.vertical, PhoneTheme.space3)
                     .offset(x: PhoneTheme.space2).accessibilityHidden(true).allowsHitTesting(false)
             }
         }
-        .onAppear { connectHost(); readThread() }
+        .onAppear { connectHost(); readThread(); if let facts = host.facts { showFacts(facts) } }
+        .onChange(of: host.facts) { _, facts in if let facts { showFacts(facts) } }
         .onChange(of: session.contact) { _, contact in if contact == "in-reach" { readThread(); markSeen() } }
         .onChange(of: phase) { _, phase in if phase == .active { markSeen() } }
         .onChange(of: visible) { _, visible in if visible { markSeen() } }
+        // INF-1524: the thread opens on a new message.
+        .onChange(of: messages.count) { before, after in if after > before { threadOpen = true } }
         .sheet(isPresented: Binding(get: { host.presentation != nil }, set: { if !$0 { host.presentation = nil } })) {
             if let presentation = host.presentation { CardMediaView(presentation: presentation, session: session) }
+        }
+        .alert(PhoneCardWords.closeQuestionTitle, isPresented: Binding(get: { closeAsk != nil }, set: { if !$0 { closeAsk = nil } }),
+               presenting: closeAsk) { ask in
+            if ask.picks {
+                Button(PhoneCardWords.keepAnswering, role: .cancel) {}
+                Button(PhoneCardWords.discardAndClose, role: .destructive) { close() }
+            } else {
+                Button(PhoneCardWords.putAsideInstead) { putAside() }
+                Button(PhoneCardWords.closeAnyway, role: .destructive) { close() }
+            }
+        } message: { ask in Text(ask.words) }
+        .photosPicker(isPresented: $libraryOpen, selection: $photoSelection,
+                      maxSelectionCount: max(1, PhoneLimits.images - photos.count), matching: .images)
+        .task(id: photoSelection) { await loadPhotos() }
+        .fullScreenCover(isPresented: $cameraOpen) {
+            PhoneCamera { image in
+                do { photos.append(try PhonePhoto(bytes: image.jpegData(compressionQuality: 0.95) ?? Data())) }
+                catch { problem = error.localizedDescription }
+            }.ignoresSafeArea()
         }
     }
 
     private var head: some View {
-        HStack(alignment: .top) {
+        HStack(alignment: .top, spacing: 0) {
             VStack(alignment: .leading, spacing: PhoneTheme.space2) {
-                ViewThatFits(in: .horizontal) {
-                    HStack(spacing: PhoneTheme.space2) { kind; attribution }
-                    VStack(alignment: .leading, spacing: PhoneTheme.space2) { kind; attribution }
+                PhoneFlowRow(spacing: PhoneTheme.space2) {
+                    kind
+                    if card.reviewTaskId != nil {
+                        Text(PhoneCardWords.reviewFinding).font(PhoneFont.caption).foregroundStyle(PhoneTheme.warning)
+                    }
+                    if let task {
+                        Button(task.key) { onTask(task.key) }
+                            .font(PhoneFont.mono).foregroundStyle(PhoneTheme.secondary).buttonStyle(.plain)
+                            .frame(minHeight: 28).contentShape(Rectangle())
+                            .accessibilityHint("Opens its record").accessibilityIdentifier("card-task-key")
+                    }
+                    if let place = card.value["place"].text {
+                        Text(place).font(PhoneFont.mono).foregroundStyle(PhoneTheme.secondary).accessibilityIdentifier("card-place")
+                    }
+                    if let model = card.value["model"].text {
+                        Text(model).font(PhoneFont.micro).foregroundStyle(PhoneTheme.secondary)
+                            .padding(.horizontal, 6).padding(.vertical, 2)
+                            .overlay { Capsule().strokeBorder(PhoneTheme.line) }
+                            .accessibilityIdentifier("card-model")
+                    }
+                    if card.value["risk"]["declared"] != .null { PhoneRiskDots(declared: card.value["risk"]["declared"]) }
                 }
-                if card.reviewTaskId != nil {
-                    Text("Review finding").font(PhoneFont.caption).foregroundStyle(PhoneTheme.warning)
+                // The first mate's card names the task it speaks about; a crewmate's own name stays off the head.
+                if card.author == "firstmate", let meta = card.meta, meta != "firstmate" {
+                    Text(meta).font(PhoneFont.caption).foregroundStyle(PhoneTheme.secondary)
                 }
                 Text(card.title).font(.custom("SpaceGrotesk-Light", size: 20, relativeTo: .title3).weight(.semibold))
                     .accessibilityIdentifier("card-title")
+                if let revised { Text(revised).font(PhoneFont.caption).foregroundStyle(PhoneTheme.secondary).accessibilityIdentifier("card-revised") }
                 if let asked = card.asked { PhoneAskedLine(asked: asked, open: $askedOpen) }
             }
-            Spacer()
-            Button {
-                if card.isPast { onHide() } else { perform(closesCard: true) { _ = try await session.ask(.close, [.string(card.id), card.submission()]) } }
-            } label: {
+            Spacer(minLength: PhoneTheme.space2)
+            if !card.isPast {
+                Button(action: putAside) {
+                    Label(PhoneCardWords.putAside, systemImage: "minus")
+                        .labelStyle(.iconOnly).frame(minWidth: 44, minHeight: 44).contentShape(Rectangle())
+                }
+                .keyboardShortcut("m", modifiers: [.command, .shift])
+                .accessibilityHint(rest(PhoneCardWords.putAsideRest))
+                .accessibilityIdentifier("put-aside-card").disabled(host.changing || !session.canChange)
+            }
+            if UIDevice.current.userInterfaceIdiom == .pad {
+                Button { maximized.toggle() } label: {
+                    Label(maximized ? PhoneCardWords.restore : PhoneCardWords.maximize,
+                          systemImage: maximized ? "arrow.down.right.and.arrow.up.left" : "arrow.up.left.and.arrow.down.right")
+                        .labelStyle(.iconOnly).frame(minWidth: 44, minHeight: 44).contentShape(Rectangle())
+                }.accessibilityIdentifier("maximize-card")
+            }
+            Button(action: closeTapped) {
                 Label(card.isPast ? "Hide" : "Close", systemImage: "xmark")
                     .labelStyle(.iconOnly).frame(minWidth: 44, minHeight: 44).contentShape(Rectangle())
             }
+                .accessibilityHint(card.isPast ? "" : rest(PhoneCardWords.closeRest(task?.key)))
                 .accessibilityIdentifier("close-card").disabled(host.changing || (!card.isPast && !session.canChange))
         }
         .contentShape(Rectangle())
@@ -304,6 +423,22 @@ private struct PhoneCardPane: View {
                 onPage(value.translation.width < 0 ? 1 : -1)
             }
         })
+    }
+
+    /// The words after a control's name in the Mac's rest line ("Close · stays on INF-1's record"), as its VoiceOver hint.
+    private func rest(_ line: String) -> String {
+        let words = line.components(separatedBy: " · ").dropFirst().joined(separator: " · ")
+        return words.prefix(1).uppercased() + words.dropFirst()
+    }
+
+    /// The Mac's revised line under the title: when the card last changed, and how much of it.
+    private var revised: String? {
+        let changes = card.value["changes"]
+        guard !card.isPast, changes != .null, let at = changes["at"].numeric else { return nil }
+        let date = Date(timeIntervalSince1970: at / 1000)
+        let time = date.formatted(date: Calendar.current.isDateInToday(date) ? .omitted : .abbreviated, time: .shortened)
+        return PhoneCardWords.revisedLine(time: time, added: Int(changes["added"].numeric ?? 0),
+                                          removed: Int(changes["removed"].numeric ?? 0), rewritten: changes["rewritten"].flag)
     }
 
     @ViewBuilder private var content: some View {
@@ -318,64 +453,20 @@ private struct PhoneCardPane: View {
                 }
                 Button("Retry") {
                     let fill = host.reading["answers"]; host.close(); problem = nil
-                    host = CardWebHost(card: card, session: session, fill: fill, heightLag: CardWebHost.retriedHeightLag)
+                    host = Self.bodyHost(card, session, fill, heightLag: CardWebHost.retriedHeightLag)
                     connectHost(); retry += 1
                 }.buttonStyle(PhoneChoiceStyle(.secondary)).disabled(host.changing).accessibilityIdentifier("retry-card")
             } else {
                 CardWebView(host: host).frame(height: host.height).id(retry)
             }
             if let notice = host.notice { Text(notice).foregroundStyle(PhoneTheme.warning).accessibilityIdentifier("card-notice") }
-            ForEach(Array(card.value["requiredActions"].list.enumerated()), id: \.offset) { _, action in
-                VStack(alignment: .leading) {
-                    Text("After merging: \(action["title"].text ?? "") · \(action["target"].text ?? "")").font(PhoneFont.headline)
-                    Text(action["consequence"].text ?? "").font(PhoneFont.callout)
-                }
-            }
             if card.value["attachment"] != .null {
-                Button(card.value["attachment"]["label"].text ?? "Open browser") { host.notice = "Do this on \(session.mac.name)." }
-                    .accessibilityIdentifier("card-browser")
+                PhoneBrowserStrip(attachment: card.value["attachment"], session: session) { host.notice = "Do this on \(session.mac.name)." }
             }
             if !messages.isEmpty {
                 DisclosureGroup("Thread", isExpanded: $threadOpen) {
-                    VStack(alignment: .leading, spacing: PhoneTheme.space4) {
-                        ForEach(Array(messages.enumerated()), id: \.offset) { _, message in
-                            VStack(alignment: .leading, spacing: PhoneTheme.space2) {
-                                Text(message["who"].text == "captain" ? "You" : message["who"].text == "host" ? "Infinitary" : "Your first mate").font(PhoneFont.caption)
-                                Text(message["text"].text ?? "").textSelection(.enabled)
-                                ForEach(Array(message["answers"].list.enumerated()), id: \.offset) { _, answer in
-                                    Text("\(answer["name"].text ?? ""): \(answer["values"].list.compactMap(\.text).joined(separator: ", "))\(answer["written"].text.map { " — " + $0 } ?? "")").font(PhoneFont.caption)
-                                }
-                            }.frame(maxWidth: .infinity, alignment: .leading)
-                        }
-                    }.padding(.top, PhoneTheme.space3)
+                    PhoneCardThread(messages: messages, working: working).padding(.top, PhoneTheme.space3)
                 }.accessibilityIdentifier("card-thread")
-            }
-            if card.takesReplies && !card.isPast {
-                HStack(alignment: .bottom, spacing: 0) {
-                    TextField("Reply to this card", text: $reply, axis: .vertical).lineLimit(1...5)
-                        .padding(.leading, PhoneTheme.space4).padding(.vertical, PhoneTheme.space2).frame(minHeight: 44)
-                        .focused($replyFocused).accessibilityIdentifier("card-reply")
-                    Button {
-                        perform {
-                            let text = reply
-                            guard PhoneCard.canSendReply(text) else { return }
-                            let snapshot = try await host.submissionReading()
-                            let reading = snapshot.value
-                            _ = try await session.ask(.reply, [.string(card.id), .object(["text": .string(text), "answers": reading["answers"]]),
-                                card.submission(reading: reading, fresh: snapshot.fresh), .bool(replyLeaves)])
-                            if reply == text { reply = "" }
-                            threadOpen = true; replyFocused = false; onSent()
-                        }
-                    } label: {
-                        Label("Send reply", systemImage: "arrow.up.circle.fill").labelStyle(.iconOnly).imageScale(.large)
-                            .foregroundStyle(canSendReply ? PhoneTheme.accent : PhoneTheme.muted)
-                            .frame(minWidth: 44, minHeight: 44).contentShape(Rectangle())
-                    }.accessibilityIdentifier("send-reply")
-                        .disabled(!canSendReply)
-                }.phoneInput()
-                    // INF-589 item 11: the line under the composer says why; the reply row only dims.
-                    .opacity(session.canChange ? 1 : 0.5)
-                if reply.utf16.count > PhoneLimits.reply { Text("Keep your reply within \(PhoneLimits.reply.formatted()) characters.").foregroundStyle(PhoneTheme.warning) }
             }
         }
     }
@@ -386,48 +477,52 @@ private struct PhoneCardPane: View {
         card.actions.filter { !$0["default"].flag } + card.actions.filter { $0["default"].flag }
     }
 
-    /// The Mac's footerVariant: the action's own variant, else primary for the default.
+    /// The Mac's footerVariant: the action's own variant, else primary for the default. The default waits muted while a
+    /// required question has no answer.
     private func footerKind(_ action: PhoneJSON) -> PhoneChoiceStyle.Kind {
+        if unanswered && action["default"].flag { return .muted }
         switch action["variant"].text {
-        case "primary": .primary
-        case "danger": .danger
-        case "secondary", "ghost": action["danger"].flag ? .danger : .secondary
-        default: action["danger"].flag ? .danger : action["default"].flag ? .primary : .secondary
+        case "primary": return .primary
+        case "danger": return .danger
+        case "secondary", "ghost": return action["danger"].flag ? .danger : .secondary
+        default: return action["danger"].flag ? .danger : action["default"].flag ? .primary : .secondary
         }
     }
 
+    private var chosenID: PhoneJSON? { card.isPast && card.value["ending"]["how"].text != "closed" ? card.value["ending"]["actionId"] : nil }
+
     private var foot: some View {
         VStack(alignment: .leading, spacing: PhoneTheme.space2) {
+            // INF-1524 piece 3: a merge card's facts and what to do after merging stay with its choices.
+            if let factsHost, factsHost.failure == nil {
+                CardWebView(host: factsHost).frame(height: factsHost.height)
+            }
+            let required = card.value["requiredActions"].list
+            if !required.isEmpty { PhoneRequiredActions(actions: required) }
             if let problem { Text(problem).foregroundStyle(PhoneTheme.warning).accessibilityIdentifier("card-error") }
+            if takesReply { replyField }
+            if card.isPast, let words = sentWords {
+                Text("\(PhoneCardWords.sentWithChoice) \(words)").font(PhoneFont.caption).foregroundStyle(PhoneTheme.secondary)
+                    .accessibilityIdentifier("past-sent-words")
+            }
             if !card.actions.isEmpty {
                 PhoneChoiceRow {
-                    if !card.isPast, let count = host.reading["of"].numeric, count > 0 {
-                        Text("\(Int(host.reading["answered"].numeric ?? 0)) of \(Int(count)) answered")
+                    if asking, let count = host.reading["of"].numeric {
+                        Text(PhoneCardWords.answersLine(answered: Int(host.reading["answered"].numeric ?? 0), of: Int(count),
+                                                        changed: Int(host.reading["changed"].numeric ?? 0), preview: host.preview))
                             .font(PhoneFont.mono).foregroundStyle(PhoneTheme.secondary)
                             .layoutValue(key: PhoneChoiceRow.Leading.self, value: true)
                     }
                     ForEach(Array(footerOrder.enumerated()), id: \.offset) { _, action in
-                        Button {
-                            if onMac(action) { host.notice = "Do this on \(session.mac.name)."; return }
-                            perform(closesCard: true) {
-                                let snapshot = try await host.submissionReading()
-                                let reading = snapshot.value
-                                guard !action["default"].flag || reading["answered"] == reading["of"] else {
-                                    throw PhoneRequestError("Answer each required question first.")
-                                }
-                                let result = try await session.ask(.act, [.string(card.id), action["id"], .string("chrome"),
-                                    .object(["answers": reading["answers"]]), card.submission(reading: reading, fresh: snapshot.fresh)])
-                                if let refusal = result["refusal"].text { throw PhoneRequestError(refusal) }
-                                onSent()
-                            }
-                        } label: {
+                        Button { choose(action) } label: {
                             HStack(spacing: 6) {
                                 Text(action["label"].text ?? "Choose")
-                                if card.isPast && card.value["ending"]["actionId"] == action["id"] { Image(systemName: "checkmark").accessibilityLabel("Chosen") }
+                                if pending != nil && pending == action["id"].text { ProgressView().controlSize(.mini).accessibilityLabel("Sending") }
                             }
                         }
-                        .buttonStyle(PhoneChoiceStyle(footerKind(action)))
+                        .buttonStyle(PhoneChoiceStyle(footerKind(action), chosen: chosenID == action["id"]))
                         .disabled(card.isPast || host.changing || !session.canChange || !host.revealed)
+                        .accessibilityValue(chosenID == action["id"] ? "Chosen" : "")
                         .accessibilityIdentifier("card-action-\(action["id"].text ?? "")")
                     }
                 }
@@ -437,20 +532,57 @@ private struct PhoneCardPane: View {
         .frame(maxWidth: .infinity, alignment: .leading)
         .overlay(alignment: .top) { if runsOn && pinsFrame { Rectangle().fill(PhoneTheme.line).frame(height: 1) } }
     }
+
+    /// INF-1524, the captain's picks: the reply field pinned above the choices, its words also going with a choice, and
+    /// photos from the library or the camera.
+    private var replyField: some View {
+        VStack(alignment: .leading, spacing: PhoneTheme.space2) {
+            if !photos.isEmpty {
+                ScrollView(.horizontal) {
+                    HStack {
+                        ForEach(photos) { photo in
+                            Button { photos.removeAll { $0.id == photo.id } } label: {
+                                Image(uiImage: photo.image).resizable().scaledToFill()
+                                    .frame(width: 44, height: 44).clipped()
+                                    .overlay(alignment: .topTrailing) { Image(systemName: "xmark.circle.fill").foregroundStyle(PhoneTheme.text, PhoneTheme.surface) }
+                            }.accessibilityLabel("Remove photo").accessibilityIdentifier("reply-photo-chip")
+                        }
+                    }
+                }
+            }
+            HStack(alignment: .bottom, spacing: 0) {
+                Menu {
+                    Button { libraryOpen = true } label: { Label("Choose photos", systemImage: "photo.on.rectangle") }
+                    if UIImagePickerController.isSourceTypeAvailable(.camera) {
+                        Button { cameraOpen = true } label: { Label("Take photo", systemImage: "camera") }
+                    }
+                } label: {
+                    Label("Add photos", systemImage: "photo").labelStyle(.iconOnly).frame(minWidth: 44, minHeight: 44).contentShape(Rectangle())
+                }
+                .disabled(photos.count >= PhoneLimits.images || host.changing).accessibilityIdentifier("reply-photos")
+                TextField(PhoneCardWords.replyHint, text: $reply, axis: .vertical).lineLimit(1...5)
+                    .padding(.vertical, PhoneTheme.space2).frame(minHeight: 44)
+                    .focused($replyFocused).accessibilityIdentifier("card-reply")
+                Button(action: sendReply) {
+                    Label("Send reply", systemImage: "arrow.up.circle.fill").labelStyle(.iconOnly).imageScale(.large)
+                        .foregroundStyle(canSendReply ? PhoneTheme.accent : PhoneTheme.muted)
+                        .frame(minWidth: 44, minHeight: 44).contentShape(Rectangle())
+                }.accessibilityIdentifier("send-reply")
+                    .disabled(!canSendReply)
+            }.phoneInput()
+                // INF-589 item 11: the line under the composer says why; the reply row only dims.
+                .opacity(session.canChange ? 1 : 0.5)
+            if reply.utf16.count > PhoneLimits.reply { Text("Keep your reply within \(PhoneLimits.reply.formatted()) characters.").foregroundStyle(PhoneTheme.warning) }
+        }
+    }
+
     private var kind: some View {
-        Text(card.isPast ? "Past" : card.author == "host" ? "Attention" : card.actions.isEmpty ? "Note" : "Decision")
+        let attention = !card.isPast && card.author == "host"
+        return Text(card.isPast ? "Past" : attention ? "Attention" : card.actions.isEmpty ? "Note" : "Decision")
             .font(.custom("JetBrainsMono-Regular", size: 11, relativeTo: .caption2))
-            .foregroundStyle(card.actions.isEmpty ? PhoneTheme.secondary : PhoneTheme.accent)
+            .foregroundStyle(attention ? PhoneTheme.danger : card.actions.isEmpty || card.isPast ? PhoneTheme.secondary : PhoneTheme.accent)
             .padding(.horizontal, PhoneTheme.space2).padding(.vertical, 4)
             .background(PhoneTheme.background, in: RoundedRectangle(cornerRadius: PhoneTheme.controlRadius))
-    }
-    private var attribution: some View {
-        VStack(alignment: .leading, spacing: PhoneTheme.space2) {
-            Text(card.author == "firstmate" ? "Your first mate" : card.author == "host" ? "Infinitary" : card.meta ?? "Crewmate")
-            if card.author == "firstmate", let meta = card.meta, meta != "firstmate" {
-                Text(meta)
-            }
-        }.font(PhoneFont.caption).foregroundStyle(PhoneTheme.secondary)
     }
     private var ending: String {
         let end = card.endingForWords
@@ -458,11 +590,82 @@ private struct PhoneCardPane: View {
         guard let at = end["at"].numeric else { return words }
         return "\(words) · \(Date(timeIntervalSince1970: at / 1000).formatted(date: .abbreviated, time: .shortened))"
     }
+    /// The words a past card's choice carried from its field (the Mac's anythingElseOf).
+    private var sentWords: String? {
+        let words = card.value["answers"].list.first { $0["name"].text == PhoneCardWords.anythingElse }?["written"].text
+        return words?.isEmpty == false ? words : nil
+    }
     private func onMac(_ action: PhoneJSON) -> Bool {
         let effect = action["effect"]
         return (effect["kind"].text == "open" && !(effect["target"].text == "browser" && effect["savedSignIn"].flag))
             || (effect["kind"].text == "host" && effect["op"].text == "restore-account")
     }
+
+    private func choose(_ action: PhoneJSON) {
+        if onMac(action) { host.notice = "Do this on \(session.mac.name)."; return }
+        let id = action["id"].text
+        perform(closesCard: true) {
+            pending = id
+            defer { pending = nil }
+            let snapshot = try await host.submissionReading()
+            let reading = snapshot.value
+            guard !action["default"].flag || reading["answered"] == reading["of"] else {
+                throw PhoneRequestError("Answer each required question first.")
+            }
+            // INF-1524: the field's words go with the choice as its anything-else answer, as the Mac's withAnythingElse sends them.
+            let words = replyWords
+            var answers = reading["answers"].list.filter { $0["name"].text != PhoneCardWords.anythingElse }
+            if !words.isEmpty {
+                answers.append(.object(["name": .string(PhoneCardWords.anythingElse), "values": .array([]),
+                                        "changed": .bool(true), "written": .string(words)]))
+            }
+            let result = try await session.ask(.act, [.string(card.id), action["id"], .string("chrome"),
+                .object(["answers": .array(answers)]), card.submission(reading: reading, fresh: snapshot.fresh)])
+            if let refusal = result["refusal"].text { throw PhoneRequestError(refusal) }
+            if replyWords == words { reply = "" }
+            onSent()
+        }
+    }
+
+    private func sendReply() {
+        perform {
+            let text = reply, sent = photos
+            guard replyFits else { return }
+            let snapshot = try await host.submissionReading()
+            let reading = snapshot.value
+            var payload: [String: PhoneJSON] = ["text": .string(text), "answers": reading["answers"]]
+            if !sent.isEmpty {
+                payload["images"] = .array(sent.map { photo in .object(photo.wire.mapValues(PhoneJSON.string)) })
+            }
+            _ = try await session.ask(.reply, [.string(card.id), .object(payload),
+                card.submission(reading: reading, fresh: snapshot.fresh), .bool(replyLeaves)])
+            if reply == text { reply = "" }
+            photos.removeAll { photo in sent.contains { $0.id == photo.id } }
+            threadOpen = true; replyFocused = false; onSent()
+        }
+    }
+
+    private func closeTapped() {
+        if card.isPast { onHide(); return }
+        // The Mac's CloseQuestion: unsent picks or words, and a reply its author has not answered yet.
+        let count = Int((host.preview ? host.reading["changed"] : host.reading["picked"]).numeric ?? 0)
+        let wrote = !replyWords.isEmpty
+        let waiting = card.awaiting == "answer" || messages.last?["who"].text == "captain"
+        let picks = count > 0 || wrote
+        guard picks || waiting else { close(); return }
+        let author = card.author == "firstmate" ? "your first mate" : task?.assignee ?? "the crewmate"
+        let words = (picks ? [PhoneCardWords.closeQuestion(count: count, preview: host.preview, wrote: wrote)] : [])
+            + (waiting ? [PhoneCardWords.unansweredReply(author: author, key: task?.key)] : [])
+        closeAsk = CloseAsk(words: words.joined(separator: " "), picks: picks)
+    }
+    private func close() {
+        perform(closesCard: true) { _ = try await session.ask(.close, [.string(card.id), card.submission()]) }
+    }
+    /// Put aside: the Mac's minimize. The card leaves the stack and comes back when it changes.
+    private func putAside() {
+        perform(closesCard: true) { _ = try await session.ask(.minimize, [.string(card.id), .bool(true)]) }
+    }
+
     private func perform(closesCard: Bool = false, _ operation: @escaping @MainActor () async throws -> Void) {
         let activeHost = host
         guard activeHost.beginChange() else { return }
@@ -473,7 +676,21 @@ private struct PhoneCardPane: View {
             catch { problem = error.localizedDescription }
         }
     }
-    private func connectHost() { host.onReading = onReading; host.onDrawn = markSeen }
+    private func connectHost() {
+        host.onReading = onReading; host.onDrawn = markSeen
+        host.onLink = { url in openURL(url) }
+        host.onDraft = onDraft
+        host.onTask = onTask
+    }
+    /// The fact strip the body split off, drawn by a host of its own that holds only it and takes no answers.
+    private func showFacts(_ facts: String) {
+        guard factsHost == nil, case .object(var value) = card.value else { return }
+        value["body"] = .string(facts); value["actions"] = .array([]); value["changes"] = .null
+        guard let strip = try? PhoneCard(.object(value)) else { return }
+        let factsHost = CardWebHost(card: strip, session: session, fill: .array([]), part: .facts)
+        factsHost.onLink = { url in openURL(url) }
+        self.factsHost = factsHost
+    }
     private func markSeen() {
         guard !card.isPast, host.drawn, reachable, visible, phase == .active else { return }
         onSeen()
@@ -482,6 +699,19 @@ private struct PhoneCardPane: View {
     private func readThread() {
         guard !card.isPast, reachable else { return }
         Task { do { try await session.readThread(card.id) } catch { problem = error.localizedDescription } }
+    }
+    private func loadPhotos() async {
+        guard !photoSelection.isEmpty else { return }
+        defer { photoSelection = [] }
+        for item in photoSelection {
+            do {
+                guard photos.count < PhoneLimits.images, let bytes = try await item.loadTransferable(type: Data.self) else {
+                    throw PhoneError.refused("Could not add this photo. Choose another.")
+                }
+                photos.append(try PhonePhoto(bytes: bytes))
+            } catch is CancellationError { return }
+            catch { problem = error.localizedDescription }
+        }
     }
 }
 

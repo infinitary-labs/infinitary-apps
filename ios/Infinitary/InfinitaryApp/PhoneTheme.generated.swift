@@ -28,6 +28,9 @@ enum PhoneTheme {
     static let accent = Color(uiColor: UIColor { traits in
         traits.userInterfaceStyle == .light ? UIColor(red: 0.054901960784313725, green: 0.5607843137254902, blue: 0.8156862745098039, alpha: 1) : UIColor(red: 0.4980392156862745, green: 0.8627450980392157, blue: 1, alpha: 1)
     })
+    static let ok = Color(uiColor: UIColor { traits in
+        traits.userInterfaceStyle == .light ? UIColor(red: 0.054901960784313725, green: 0.5607843137254902, blue: 0.8156862745098039, alpha: 1) : UIColor(red: 0.4980392156862745, green: 0.8627450980392157, blue: 1, alpha: 1)
+    })
     static let warning = Color(uiColor: UIColor { traits in
         traits.userInterfaceStyle == .light ? UIColor(red: 0.8509803921568627, green: 0.47843137254901963, blue: 0.12156862745098039, alpha: 1) : UIColor(red: 1, green: 0.6352941176470588, blue: 0.3411764705882353, alpha: 1)
     })
@@ -57,4 +60,13 @@ enum PhoneTheme {
     })
     static func wireBoost(_ scheme: ColorScheme) -> Double { scheme == .light ? 1.4 : 1 }
     static func haloBoost(_ scheme: ColorScheme) -> Double { scheme == .light ? 1.2 : 1.2 }
+    /// The card's light top edge: a line this tall inside its top.
+    static func cardEdgeHeight(_ scheme: ColorScheme) -> CGFloat { scheme == .light ? 1 : 1 }
+    static let cardEdge = Color(uiColor: UIColor { traits in
+        traits.userInterfaceStyle == .light ? UIColor(red: 1, green: 1, blue: 1, alpha: 0.9) : UIColor(red: 1, green: 1, blue: 1, alpha: 0.1)
+    })
+    /// The card's drop shadows, as CSS writes them: offset, blur and spread.
+    static func cardShadows(_ scheme: ColorScheme) -> [PhoneShadow] { scheme == .light ? [PhoneShadow(color: Color(uiColor: UIColor(red: 0.0784313725490196, green: 0.11764705882352941, blue: 0.23529411764705882, alpha: 0.28)), x: 0, y: 12, blur: 32, spread: -12), PhoneShadow(color: Color(uiColor: UIColor(red: 0.0784313725490196, green: 0.11764705882352941, blue: 0.23529411764705882, alpha: 0.1)), x: 0, y: 2, blur: 8, spread: -2)] : [PhoneShadow(color: Color(uiColor: UIColor(red: 0, green: 0, blue: 0, alpha: 0.6)), x: 0, y: 24, blur: 48, spread: -24)] }
 }
+
+struct PhoneShadow { let color: Color; let x: CGFloat; let y: CGFloat; let blur: CGFloat; let spread: CGFloat }

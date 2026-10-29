@@ -4,7 +4,10 @@ import { Button } from "../design";
 import { usePopoverPresence } from "../design/motion";
 import {
   CLOSE_ANYWAY,
+  CLOSE_QUESTION_TITLE,
   closeQuestionWords,
+  DISCARD_AND_CLOSE,
+  KEEP_ANSWERING,
   PUT_ASIDE_INSTEAD,
   unansweredReplyWords,
 } from "./closeQuestionWords";
@@ -115,7 +118,7 @@ export function CloseQuestion({
     <div
       ref={panel}
       role="dialog"
-      aria-label="Close this card?"
+      aria-label={CLOSE_QUESTION_TITLE}
       data-card-close-confirm=""
       style={{
         position: "absolute",
@@ -148,10 +151,10 @@ export function CloseQuestion({
       {picks ? (
         <div style={{ display: "flex", justifyContent: "flex-end", gap: "var(--space-2)" }}>
           <Button variant="secondary" size="sm" onClick={() => shown.ask?.onKeep()}>
-            Keep answering
+            {KEEP_ANSWERING}
           </Button>
           <Button size="sm" onClick={() => shown.ask?.onClose()}>
-            Discard and close
+            {DISCARD_AND_CLOSE}
           </Button>
         </div>
       ) : (

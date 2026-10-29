@@ -87,8 +87,134 @@ try {
   // INF-1183: the fixed commands a phone runs over SSH come from the home's door owner, never a native copy.
   const link = await runner.import<typeof import("../src/shared/phoneLink.ts")>(join(REPO_ROOT, "src/shared/phoneLink.ts"));
   const sshCommands = `\npublic enum PhoneSSHCommand {\n    public static let header = ${JSON.stringify(link.PHONE_LINK_HEADER)}\n    public static let version = ${JSON.stringify(link.PHONE_LINK_VERSION)}\n    public static let link = ${JSON.stringify(link.PHONE_LINK_COMMAND)}\n    public static let placeKey = ${JSON.stringify(link.PHONE_PLACE_KEY_COMMAND)}\n    public static let placed = ${JSON.stringify(link.PHONE_KEY_PLACED)}\n    public static let notOpen = ${JSON.stringify(link.PHONE_LINK_NONE.notOpen)}\n    public static let tooOld = ${JSON.stringify(link.PHONE_LINK_NONE.tooOld)}\n    public static let noCurl = ${JSON.stringify(link.PHONE_LINK_NONE.noCurl)}\n}\n`;
+  const cardWords = await phoneCardWords(runner);
+  const wordsPath = join(REPO_ROOT, "ios/Infinitary/InfinitaryApp/PhoneCardWords.generated.swift");
+  if (process.argv.includes("--check")) {
+    if (readFileSync(wordsPath, "utf8") !== cardWords) throw new Error("Run node scripts/generate-phone-contract.ts");
+  } else writeFileSync(wordsPath, cardWords);
   const path = join(REPO_ROOT, "ios/Infinitary/InfinitaryKit/Sources/InfinitaryKit/PhoneContract.generated.swift");
   if (process.argv.includes("--check")) {
     if (readFileSync(path, "utf8") !== text + cardEnum + requestEnum + limits + groupEnum + pastWords + sshCommands) throw new Error("Run node scripts/generate-phone-contract.ts");
   } else writeFileSync(path, text + cardEnum + requestEnum + limits + groupEnum + pastWords + sshCommands);
 } finally { await runner.close(); }
+
+/**
+ * INF-1524: a phone card says what the Mac's card says, read from the Mac's own word owners. A count, a key or a time
+ * is a sample here, swapped for the Swift value it stands for; every other word is the owner's own.
+ */
+async function phoneCardWords(runner: Awaited<ReturnType<typeof openModuleRunner>>): Promise<string> {
+  const load = <T>(file: string) => runner.import<T>(join(REPO_ROOT, file));
+  const cards = await load<typeof import("../src/shared/cards.ts")>("src/shared/cards.ts");
+  const risk = await load<typeof import("../src/shared/risk.ts")>("src/shared/risk.ts");
+  const browser = await load<typeof import("../src/shared/taskBrowser.ts")>("src/shared/taskBrowser.ts");
+  const close = await load<typeof import("../src/renderer/src/app/closeQuestionWords.ts")>("src/renderer/src/app/closeQuestionWords.ts");
+  const size = await load<typeof import("../src/renderer/src/design/cards/cardSizeWords.ts")>("src/renderer/src/design/cards/cardSizeWords.ts");
+  const required = await load<typeof import("../src/renderer/src/cards/requiredActionsWords.ts")>("src/renderer/src/cards/requiredActionsWords.ts");
+  const thread = await load<typeof import("../src/renderer/src/cards/threadWords.ts")>("src/renderer/src/cards/threadWords.ts");
+  const answers = await load<typeof import("../src/renderer/src/cards/answersLine.ts")>("src/renderer/src/cards/answersLine.ts");
+  const revised = await load<typeof import("../src/renderer/src/cards/revisedLine.ts")>("src/renderer/src/cards/revisedLine.ts");
+  const text = (words: string) => JSON.stringify(words);
+  /** The owner's words with each sample swapped for a Swift interpolation; a sample must appear exactly once. */
+  const fill = (words: string, samples: Record<string, string> | [string, string][]) => {
+    let literal = text(words);
+    for (const [sample, swift] of Array.isArray(samples) ? samples : Object.entries(samples)) {
+      if (literal.split(sample).length !== 2) throw new Error(`The sample ${sample} is not once in ${words}`);
+      literal = literal.replace(sample, `\\(${swift})`);
+    }
+    return literal;
+  };
+  const counts = [0, 1, 7] as const;
+  const closeCases = counts.flatMap((count) => [false, true].flatMap((preview) => [false, true].map((wrote) => {
+    const words = close.closeQuestionWords(count, preview, wrote);
+    return `        case (${count === 7 ? "_" : count}, ${preview}, ${wrote}): ${count === 7 && words.includes("7") ? fill(words, { 7: "count" }) : text(words)}`;
+  })));
+  const answerCases = [false, true].flatMap((preview) => [0, 4].map((changed) => {
+    const words = answers.answersLine({ answered: 3, of: 5, changed }, preview);
+    return `        case (${preview}, ${changed > 0}): ${fill(words, { 3: "answered", 5: "of", ...(changed ? { 4: "changed" } : {}) })}`;
+  }));
+  const at = new Date(2026, 0, 2, 9, 41).getTime();
+  const time = revised.clock(at, at);
+  const revisedCases = [0, 1, 7].flatMap((added) => [0, 1, 9].map((removed) => {
+    const words = revised.revisedLine({ at, added, removed, rewritten: false, marks: [] }, at);
+    const samples: [string, string][] = [[time, "time"]];
+    if (added === 7) samples.push(["7", "added"]);
+    if (removed === 9) samples.push(["9", "removed"]);
+    return `        case (${added === 7 ? "_" : added}, ${removed === 9 ? "_" : removed}): ${fill(words, samples)}`;
+  }));
+  const rewritten = fill(revised.revisedLine({ at, added: 0, removed: 0, rewritten: true, marks: [] }, at), { [time]: "time" });
+  const unanswered = (key: boolean) => fill(close.unansweredReplyWords("crewmate 7", key ? "KEY-1" : undefined), [["Crewmate 7", "who"], ...(key ? [["KEY-1", "key"] as [string, string]] : [])]);
+  const dimensions = risk.RISK_DIMENSIONS.map((dimension) => {
+    const words = risk.RISK_WORDS[dimension];
+    const levels = risk.RISK_LEVELS.map((level) => `${text(level)}: ${text(words.levels[level])}`).join(", ");
+    return `        Dimension(id: ${text(dimension)}, label: ${text(words.label)}, levels: [${levels}]),`;
+  }).join("\n");
+  const tones = risk.RISK_LEVELS.map((level) => `${text(level)}: ${text(risk.riskTone(level))}`).join(", ");
+  const table = (record: Record<string, string>) => `[${Object.entries(record).map(([key, words]) => `${text(key)}: ${text(words)}`).join(", ")}]`;
+  return `// Generated by scripts/generate-phone-contract.ts from src/shared/cards.ts, src/shared/risk.ts, src/shared/taskBrowser.ts,
+// src/renderer/src/app/closeQuestionWords.ts, src/renderer/src/design/cards/cardSizeWords.ts and src/renderer/src/cards/
+// (requiredActionsWords.ts, threadWords.ts, answersLine.ts, revisedLine.ts).
+enum PhoneCardWords {
+    static let replyHint = ${text(cards.CARD_REPLY_HINT)}
+    static let anythingElse = ${text(cards.ANYTHING_ELSE_ANSWER)}
+    static let sentWithChoice = ${text(cards.PAST_CARD_WORDS_LEAD)}
+    static let reviewFinding = ${text(cards.REVIEW_FINDING_LABEL)}
+    static let putAside = ${text(size.PUT_ASIDE_LABEL)}
+    static let putAsideRest = ${text(size.PUT_ASIDE_REST)}
+    static let maximize = ${text(size.MAXIMIZE_LABEL)}
+    static let restore = ${text(size.RESTORE_LABEL)}
+    static let closeQuestionTitle = ${text(close.CLOSE_QUESTION_TITLE)}
+    static let keepAnswering = ${text(close.KEEP_ANSWERING)}
+    static let discardAndClose = ${text(close.DISCARD_AND_CLOSE)}
+    static let putAsideInstead = ${text(close.PUT_ASIDE_INSTEAD)}
+    static let closeAnyway = ${text(close.CLOSE_ANYWAY)}
+    static let requiredActionsLead = ${text(required.REQUIRED_ACTIONS_LEAD)}
+    static let threadWho = ${table(thread.THREAD_WHO_LABELS)}
+    static let threadWorking = ${text(thread.THREAD_WORKING)}
+    static let driverWords = ${table(browser.DRIVER_WORDS)}
+    static let stopLineWords = ${table(browser.STOP_LINE_WORDS)}
+    static let staleBrowser = ${JSON.stringify(browser.STALE_ATTACHMENT_LINE)}
+
+    static func requiredActionsCount(_ count: Int) -> String { ${fill(required.requiredActionsCount(7), { 7: "count" })} }
+    static func settingsCount(_ count: Int) -> String {
+        count == 1 ? ${text(thread.settingsCountWords(1))} : ${fill(thread.settingsCountWords(7), { 7: "count" })}
+    }
+    static func closeRest(_ key: String?) -> String {
+        guard let key else { return ${text(close.closeRestWords(undefined))} }
+        return ${fill(close.closeRestWords("KEY-1"), { "KEY-1": "key" })}
+    }
+    static func closeQuestion(count: Int, preview: Bool, wrote: Bool) -> String {
+        switch (min(count, 2) == 2 ? -1 : count, preview, wrote) {
+${closeCases.map((line) => line.replace("case (_,", "case (-1,")).join("\n")}
+        default: ""
+        }
+    }
+    /** \`author\` as the Mac names it: "your first mate" or the crewmate. */
+    static func unansweredReply(author: String, key: String?) -> String {
+        let who = author.prefix(1).uppercased() + author.dropFirst()
+        guard let key else { return ${unanswered(false)} }
+        return ${unanswered(true)}
+    }
+    static func answersLine(answered: Int, of: Int, changed: Int, preview: Bool) -> String {
+        switch (preview, changed > 0) {
+${answerCases.join("\n")}
+        }
+    }
+    /** \`time\` is the time of day, with the date in front when it was not today, as the Mac's clock writes it. */
+    static func revisedLine(time: String, added: Int, removed: Int, rewritten: Bool) -> String {
+        if rewritten { return ${rewritten} }
+        return switch (min(added, 2) == 2 ? -1 : added, min(removed, 2) == 2 ? -1 : removed) {
+${revisedCases.map((line) => line.replaceAll("_,", "-1,").replace(", _)", ", -1)")).join("\n")}
+        default: ""
+        }
+    }
+
+    struct Dimension { let id: String; let label: String; let levels: [String: String] }
+    /** The seven dimensions in the Mac's order, each with its name and what each level means. */
+    static let riskDimensions: [Dimension] = [
+${dimensions}
+    ]
+    /** A level's color, in the checks' language. */
+    static let riskTone: [String: String] = [${tones}]
+}
+`;
+}

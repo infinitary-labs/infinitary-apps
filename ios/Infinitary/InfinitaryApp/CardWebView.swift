@@ -29,11 +29,24 @@ import SwiftUI
     private var bodyHeight: CGFloat = 48
     private let fill: PhoneJSON
     private let heightLag: TimeInterval
+    /// INF-1524: a settle card draws its fact strip in a second, read-only host pinned above its choices, as the Mac does.
+    enum Part { case body, facts }
+    private let part: Part
+    private let keys: [String]
+    /// The body's own fact strip, once the page has split it off; nil when the card takes none.
+    var facts: String?
+    /// The body is a playable preview, so the count of its answers reads as settings.
+    var preview = false
     var onReading: ((PhoneJSON) -> Void)?
     var onDrawn: (() -> Void)?
+    var onLink: ((URL) -> Void)?
+    var onDraft: ((String) -> Void)?
+    var onTask: ((String) -> Void)?
 
-    init(card: PhoneCard, session: ReadOnlySession, fill: PhoneJSON, heightLag: TimeInterval = 0) {
-        self.card = card; self.session = session; self.fill = fill; self.heightLag = heightLag
+    init(card: PhoneCard, session: ReadOnlySession, fill: PhoneJSON, part: Part = .body, keys: [String] = [],
+         heightLag: TimeInterval = 0) {
+        self.card = card; self.session = session; self.fill = fill; self.part = part; self.keys = keys
+        self.heightLag = heightLag
     }
 
     /// INF-1574: the isolated phone gate's stand-in for a loaded computer, where a retried body's drawn height reaches
@@ -70,7 +83,7 @@ import SwiftUI
         view.scrollView.contentInsetAdjustmentBehavior = .never
         view.scrollView.minimumZoomScale = 1; view.scrollView.maximumZoomScale = 1
         view.scrollView.pinchGestureRecognizer?.isEnabled = false
-        view.accessibilityIdentifier = "card-body"
+        view.accessibilityIdentifier = part == .facts ? "card-facts" : "card-body"
         // INF-1263 / INF-1651: until the reveal, the body is one closed accessibility element that takes no taps.
         // WebKit ignores the hidden-children flag, and hiding the frame inside the page sticks on iOS 27.0.
         view.isAccessibilityElement = true; view.isUserInteractionEnabled = false
@@ -106,7 +119,7 @@ import SwiftUI
     func close() {
         watchdog?.cancel(); watchdog = nil
         if let id = collection?.id { finishCollection(id, .failure(PhoneRequestError("This card did not answer. Your choice was not sent."))) }
-        onReading = nil; onDrawn = nil
+        onReading = nil; onDrawn = nil; onLink = nil; onDraft = nil; onTask = nil
         view?.configuration.userContentController.removeScriptMessageHandler(forName: "cardHost", contentWorld: .page)
         assets?.cancel(); assets = nil
         view?.stopLoading(); view?.navigationDelegate = nil; view?.uiDelegate = nil; view = nil
@@ -178,8 +191,16 @@ import SwiftUI
         let actions = card.actions.compactMap { action -> PhoneJSON? in
             guard let id = action["id"].text, !effectIDs.contains(id) else { return nil }; return .string(id)
         }
-        let input: PhoneJSON = .object(["body": .string(card.body), "theme": .string(theme), "readOnly": .bool(card.isPast),
-            "fill": fill, "actions": .array(actions), "width": card.value["width"] == .null ? .string("wide") : card.value["width"]])
+        var input: PhoneJSON = .object(["body": .string(card.body), "theme": .string(theme), "readOnly": .bool(card.isPast || part == .facts),
+            "fill": fill, "actions": .array(part == .facts ? [] : actions), "width": card.value["width"] == .null ? .string("wide") : card.value["width"],
+            "keys": .array(keys.map(PhoneJSON.string))])
+        if part == .body, case .object(var fields) = input {
+            var facts: [String: PhoneJSON] = ["actions": .array(card.actions)]
+            for key in ["reviewTaskId", "risk"] where card.value[key] != .null { facts[key] = card.value[key] }
+            fields["card"] = .object(facts)
+            fields["marks"] = card.value["changes"]["marks"] == .null ? .array([]) : card.value["changes"]["marks"]
+            input = .object(fields)
+        }
         do {
             webView.callAsyncJavaScript("await window.phoneCard.mount(input)", arguments: ["input": try input.foundation], in: nil, in: .page) { [weak self] result in
                 if case .failure = result { self?.fail() }
@@ -213,6 +234,21 @@ import SwiftUI
         case "ready": watch.bodyReady(); replyHandler(true, nil)
         case "pong": watch.bodyAnswered(Int(payload["seq"].numeric ?? 0)); replyHandler(true, nil)
         case "mac-only": notice = "Do this on \(session.mac.name)."; replyHandler(true, nil)
+        case "mounted":
+            if part == .body { facts = payload["facts"].text; preview = payload["preview"] == .bool(true) }
+            replyHandler(true, nil)
+        case "link":
+            // The page checked the address against the Mac's own rule; this checks the scheme once more before it leaves.
+            guard let url = URL(string: payload["href"].text ?? ""), ["https", "http"].contains(url.scheme?.lowercased() ?? "") else {
+                replyHandler(nil, "This link cannot open."); return
+            }
+            onLink?(url); replyHandler(true, nil)
+        case "draft":
+            guard let text = payload["text"].text, !text.isEmpty else { replyHandler(nil, "This card cannot do that."); return }
+            onDraft?(text); replyHandler(true, nil)
+        case "task":
+            guard let key = payload["key"].text, keys.contains(key) else { replyHandler(nil, "This card cannot do that."); return }
+            onTask?(key); replyHandler(true, nil)
         case "image", "demo": presentation = payload; replyHandler(true, nil)
         case "action":
             guard !card.isPast, let id = payload["id"].text,

@@ -43,6 +43,7 @@ import type { CollectAnswers } from "./PrototypeBody";
 import { RevisionLinks } from "./RevisionNavigation";
 import { useMessageEntrance, useWorkingEntrance } from "./SurfaceReveal";
 import { KeyedText } from "./TaskKey";
+import { settingsCountWords, THREAD_WHO_LABELS, THREAD_WORKING } from "./threadWords";
 import { useReplyDoing } from "./useReplyDoing";
 import { type ThreadWaitLine, useThreadWait } from "./useThreadWait";
 import "./cardThread.css";
@@ -67,11 +68,11 @@ const NO_REPLY_IMAGES: ImageAttachment[] = [];
 
 /** Who wrote it, in the words the thread shows and the color it uses. */
 const WHO: Record<CardMessageWho, { label: string; color: string }> = {
-  captain: { label: "you", color: "var(--captain)" },
-  crewmate: { label: "crew", color: "var(--accent)" },
-  firstmate: { label: "mate", color: "var(--accent)" },
+  captain: { label: THREAD_WHO_LABELS.captain, color: "var(--captain)" },
+  crewmate: { label: THREAD_WHO_LABELS.crewmate, color: "var(--accent)" },
+  firstmate: { label: THREAD_WHO_LABELS.firstmate, color: "var(--accent)" },
   // The host is not a party to the conversation: no accent, the whole row quiet.
-  host: { label: "app", color: "var(--fg-3)" },
+  host: { label: THREAD_WHO_LABELS.host, color: "var(--fg-3)" },
 };
 
 function timeOf(at: number): string {
@@ -774,7 +775,7 @@ function WorkingRow({ entrance, doing }: { entrance: boolean; doing?: string | u
         color: "var(--fg-3)",
       }}
     >
-      <span style={{ fontFamily: "var(--font-mono)", flex: "none" }}>working</span>
+      <span style={{ fontFamily: "var(--font-mono)", flex: "none" }}>{THREAD_WORKING}</span>
       {doing && (
         <span
           data-thread-doing=""
@@ -943,7 +944,7 @@ function ReplySettings({ answers, at }: { answers: readonly CardAnswer[]; at: nu
         onClick={() => setOpen((was) => !was)}
       >
         <span data-thread-settings-caret="" aria-hidden="true" />
-        settings · {rows.length} {rows.length === 1 ? "value" : "values"}
+        {settingsCountWords(rows.length)}
       </button>
       {open && (
         <section

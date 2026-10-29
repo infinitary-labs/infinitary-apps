@@ -84,6 +84,12 @@ struct PhoneTasks: View {
                 earlier = found
             } catch { if !Task.isCancelled { problem = error.localizedDescription } }
         }
+        // INF-1524: a task key pressed on a card opens that task's record here.
+        .onChange(of: messageContext.openTask, initial: true) { _, key in
+            guard let key, let task = session.board?.tasks.first(where: { $0.key == key }) else { return }
+            messageContext.openTask = nil
+            messageContext.taskID = task.id; selected = task
+        }
         .sheet(item: $selected, onDismiss: { messageContext.taskID = nil }) { task in
             NavigationStack {
                 PhoneTaskRecord(session: session, initial: task)

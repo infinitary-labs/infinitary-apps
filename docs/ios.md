@@ -120,7 +120,8 @@ The stack follows the Mac's stage rule (`onStage` in `src/shared/cards.ts`): a n
 A replied-under card carrying `sentBackAt` keeps its place while its author answers.
 A card minimized on any Mac leaves the phone's stack and count, and waits in Tasks, as on the Mac (INF-1517).
 A tap on its row there sends `inf:cards:minimize` with `false`, which brings it back on every Mac too, and shows it on Home.
-A card is one framed surface that fits the stage: its head stays at the top, its choices stay at its foot, and the body, attachments, thread and reply row scroll between them in one native scroller.
+A card is one framed surface that fits the stage: its head stays at the top, its choices stay at its foot, and the body, attachments and thread scroll between them in one native scroller.
+The surface is the Mac's raised card (`PhoneCardSurface`): a solid fill, its thin edge, the light line inside its top and its drop shadows, read from the Mac's `--acrylic-shadow` by `scripts/generate-phone-theme.ts`; the next card's sliver is raised the same way.
 The body's web view never scrolls, zooms or adds insets of its own; it takes its content's height inside that scroller, so there is only one scroll and nothing runs past the card's rounded frame.
 Until the body reports drawn, its web view is a 48-point placeholder that clips the body, so native code keeps the web view one closed accessibility element that takes no taps until it has laid the view out at the body's height.
 The page itself never hides the body: on iOS 27.0, a frame hidden from accessibility inside the page stays hidden after it is shown (INF-1651).
@@ -131,12 +132,23 @@ On a short stage, such as an iPhone on its side, where the pinned head and choic
 The session keeps which offers the stage drew while the person could see it, so the next chevron's dot marks an unread card ahead.
 Swiping the native head pages cards without capturing the body's horizontal form and canvas gestures.
 Ordinary arrivals keep the shown card in place; a new `holdsPlace` card comes forward, and a departure chooses an unread card before the first card.
+On Home, unread cards besides the shown one are counted beside the pager ("1 new"), and a press shows the first of them; the new-card pill shows only on the other tabs, while a reply's pill shows on every tab.
 Form and reply drafts live only in memory and survive paging.
-Native controls own the title, attribution, close, footer choices and reply field; a body cannot draw over or press them.
+Native controls own the head, footer choices and reply field; a body cannot draw over or press them.
+The head draws the Mac's: the kind (Attention in the danger color), Review finding, the task's key in mono, where the task runs, the model chip and the risk, then the title and the revised line; it names no sender.
+The task's key opens its record on Tasks, or in the sidebar beside the stage.
+A merge card's risk, on a merge card, a past merge card or a self-merge note, is a row of seven dots in the levels' colors, and a press opens a sheet naming each dimension, its level's words and the crewmate's why.
+Put aside (a minus before the close, ⇧⌘M from a keyboard) sends `inf:cards:minimize` with `true`; the core brings the card back when it changes.
+On an iPad the head also maximizes the card to the stage's whole width.
+The close asks first, in the Mac's words (`closeQuestionWords.ts`), while picks or typed words would be discarded, or while the captain's reply waits on its answer, which offers Put aside instead.
+VoiceOver reads the close's and put aside's rest words as their hints.
+The words a phone card shows come from the Mac's owners through `PhoneCardWords.generated.swift`, written by `scripts/generate-phone-contract.ts`.
 The footer choices are the Mac's row (`PhoneChoiceStyle` in `PhoneChoiceRow`): rounded rectangles with 16-point words, drawn about 37 points tall inside a 44-point touch area, each keeping its own width at the trailing edge and wrapping onto another line when they do not fit.
 As on the Mac (`footerGroups`), the default is drawn last, filled with the accent; a danger choice has a red outline and the rest a hairline outline.
-The answered count sits in mono at the start of the first line, and a hairline sits above the row while the body runs on beneath it.
-A card carrying the host-validated `reviewTaskId` shows Review finding above its title, and first mate cards about tasks name their task in the existing meta line.
+The answers line (`answersLine.ts`) sits in mono at the start of the first line, and a hairline sits above the row while the body runs on beneath it.
+While a required question has no answer the default choice is drawn muted, and a press of it asks for the missing answer; a pressed choice shows a pending mark until the computer answers.
+Above the choices sit the host's fact strip, which the body's page splits off as the Mac does and a second read-only web view draws, then the actions to take after merging, one written out or more folded under their count, as the Mac shows them, then the reply field.
+The reply field reads "anything to add?", takes photos from the library or the camera, and its words also go with a choice as the `anything_else` answer, as the Mac's field does.
 A footer press collects a fresh form reading through the computer’s shared bridge, including question definitions and staged settings, and sends the mounted offer and lifecycle with its own interaction id.
 If the body has already failed, a later deliberate press may use its last observed draft, marked `fallback` with `no-fresh-reading` rather than fresh question evidence.
 A timeout on the current press still refuses it; a body that never supplied a reading keeps choices unavailable rather than inventing answers.
@@ -145,12 +157,16 @@ The core still owns refusals, effects and closing, and a refusal leaves the card
 Body and footer choices share one native pending gate, and an accepted choice remains locked until its card leaves.
 Reply admission counts UTF-16 units against `PhoneLimits.reply`, generated from the published request’s text limit.
 A shown, drawn card reports seen only while the phone is active and the Mac is in reach.
-A reply sends its words and current settings to the card’s author, keeps the thread’s messages as plain text and makes no closing choice.
+A reply sends its words, photos and current settings to the card’s author and makes no closing choice.
+The thread shows each message as the Mac's does: who wrote it (you, crew, mate or app) in its color, its time, its words as plain text and a captain's settings folded on one line, then a working line while its author is at work; it opens when a new message arrives.
+The body's change bars mark the parts the revised line counts, and the body's task keys open their records.
+A link in the body opens in the device's default browser, and a draft button puts its words at the start of the message box, unsent.
+A crewmate's browser on its card is a strip naming Browser, the page's site and who is driving, read from its task's record; its button names the computer.
 A lone or marked card stays; an ordinary reply with another card declares its departure to the core.
 Settings and browser doors name the computer where they must be used and send no action.
 The host’s saved-sign-in choice needs no local browser page and is sent like any other choice.
 The phone keeps recently closed cards in memory through `inf:cards:past` and also opens a past card the Mac points to with `past_card_shown`.
-A past card has its last-seen body, saved answers, inert choices with the chosen one marked, its thread and Hide; it has no reply or mutation path.
+A past card has its last-seen body, saved answers, inert choices with the chosen one at full contrast and an accent edge, the words sent with that choice, its thread and Hide; it has no reply or mutation path.
 Its ending words are generated from `src/shared/pastCard.ts`, so the captain, first mate and crewmate keep their own attribution, alongside withdrawn, taken-down and duplicate endings.
 An evidence actor of `frame` is projected to the card’s typed author for those words; the stored ending stays unchanged.
 The same read accepts older past-card ids; the current Tasks record does not expose its cards.
@@ -170,6 +186,7 @@ A native collection timeout also releases a waiting footer or reply when the web
 It asks through `ReadOnlySession.read`, which waits until the computer is in reach and asks again after a reconnect, so a card drawn from the first cards read, before the other first reads answer, still gets its pictures.
 A separate script-free, nonpersistent web view shows pictures and GIFs, with no native message handler.
 Both web views disable system link previews as well as refusing navigation.
+A body's link leaves only on the captain's own press, when the parent's `isSafeCardHref` admits it, and native code checks its scheme again before the system opens it.
 MP4 recordings use the native player, whose resource loader serves only bounded bytes read through the pinned connection and writes nothing to disk.
 The asset refuses all external references, and the player disables external playback and picture-in-picture.
 Assets and drafts are memory-only and are cleared when their owner goes away.

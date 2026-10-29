@@ -128,6 +128,7 @@ import XCTest
         let link = try XCTUnwrap(invitation["link"] as? String)
         tapOnPhone(app.buttons["paste-link"])
         let field = app.textFields["join-link"]
+        // A fresh iOS keyboard presents its own typing guide before accepting other taps; the focus owner waits it out.
         focusForPhoneTyping(field, in: app)
         field.typeText(link)
         // INF-1312: Paste and Continue share one row; pictured once, on the first link.
@@ -602,6 +603,7 @@ import XCTest
         // so the stalled-answer check below sees a body that is drawn but still clipped by its placeholder.
         app.launchEnvironment["INFINITARY_TEST_RETRIED_CARD_LAG"] = "3"
         try await launchJoined()
+        try await verifyMergeCard()
         try await verifyCards()
     }
 
@@ -860,6 +862,17 @@ import XCTest
             // the body, until the card scrolls. A control's own frame can overhang the body by a point.
             let stale = body.exists && body.frame.intersects(element.frame)
                 && !body.frame.insetBy(dx: -2, dy: -2).contains(element.frame)
+            // A body element reads hittable even where the card's scroller clips it, as under the pinned footer, whose reply
+            // field a press there focused on iPhone. So a body element is first moved inside the scroller.
+            let view = scroll.exists ? scroll.frame : .null
+            if !view.isNull, element.exists, !stale, body.exists, body.frame.insetBy(dx: -2, dy: -2).contains(element.frame),
+               element.frame.height < view.height,
+               element.frame.minY < view.minY - 1 || element.frame.maxY > view.maxY + 1 {
+                let dy = max(-view.height * 0.4, min(view.height * 0.4, view.midY - element.frame.midY))
+                let start = scroll.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5))
+                start.press(forDuration: 0.05, thenDragTo: start.withOffset(CGVector(dx: 0, dy: dy)), withVelocity: .slow, thenHoldForDuration: 0.3)
+                continue
+            }
             if element.isHittable && !stale { return }
             // Use the card's actual viewport: a whole-screen swipe hits the keyboard while replying.
             if stale || (element.exists && element.frame.maxY < scroll.frame.minY) { scroll.swipeDown() }
@@ -953,6 +966,106 @@ import XCTest
     /// INF-1541 piece 1: XCTest no longer waits out a dialog's entrance, so its button is read once it takes a touch.
     private func waitUntilHittable(_ element: XCUIElement) {
         XCTAssertTrue(waitForPhonePress(element), app.debugDescription)
+    }
+
+    /// INF-1524, the captain: "ios app's cards don't have minimize button. also the merge card doesn't have the radar chart."
+    /// Data: a crewmate's merge card with its task, model, place, risk, the host's fact strip, an action to take after
+    /// merging, a revision and a thread. Completion: the phone draws the Mac's head and foot, puts the card aside on the
+    /// computer, asks before discarding typed words, counts a new card beside the pager and sends the words with a choice.
+    private func verifyMergeCard() async throws {
+        let fixture = try await home("merge-card")
+        let title = try XCTUnwrap(fixture["title"] as? String)
+        let words = try XCTUnwrap(fixture["words"] as? String)
+        showCard(title)
+        XCTAssertTrue(cardHeading(title).waitForPresence(timeout: 10), app.debugDescription)
+        // The head: the task's key, the model and where it runs, the risk and the revised line.
+        XCTAssertEqual(app.buttons["card-task-key"].label, try XCTUnwrap(fixture["key"] as? String))
+        XCTAssertTrue(app.staticTexts["card-model"].exists)
+        XCTAssertTrue(app.staticTexts["card-place"].exists)
+        XCTAssertTrue(app.staticTexts["card-revised"].exists)
+        XCTAssertTrue(app.buttons["put-aside-card"].exists)
+        XCTAssertEqual(app.buttons["maximize-card"].exists, UIDevice.current.userInterfaceIdiom == .pad)
+        // The foot: the host's fact strip and what to do after merging stay with the choices.
+        XCTAssertTrue(app.webViews["card-facts"].staticTexts.firstMatch.waitForPresence(timeout: 20), app.debugDescription)
+        XCTAssertTrue(app.staticTexts[try XCTUnwrap(fixture["requiredLead"] as? String)].exists)
+        waitUntilEnabled(app.buttons["card-action-merge"])
+        // Both appearances of the merge card supply the release note's hero pair.
+        try await appearances("merge-card", showing: cardHeading(title))
+        // The risk: seven dots that open each dimension's words and the crewmate's why.
+        reveal(app.buttons["card-risk"]); app.buttons["card-risk"].tap()
+        let blast = app.descendants(matching: .any).matching(identifier: "risk-blast").firstMatch
+        XCTAssertTrue(blast.waitForPresence(timeout: 10), app.debugDescription)
+        XCTAssertTrue(blast.label.hasPrefix(try XCTUnwrap(fixture["blast"] as? String)), blast.label)
+        picture("merge-risk")
+        app.buttons["Done"].tap()
+        XCTAssertTrue(blast.waitForAbsence(timeout: 10))
+        // The thread names who wrote each message in the Mac's words.
+        let thread = app.buttons["Thread"]
+        reveal(thread); thread.tap()
+        XCTAssertTrue(app.staticTexts[try XCTUnwrap(fixture["threadCrew"] as? String)].waitForPresence(timeout: 10), app.debugDescription)
+        picture("merge-thread")
+        // Typed words are not lost to a close without a question.
+        // On iPhone the merge card's head and foot outgrow its stage, so the whole card scrolls between them.
+        let reply = app.textFields["card-reply"]
+        reveal(reply); focusForPhoneTyping(reply, in: app); reply.typeText(words)
+        // The focused field holds the scroll while the keyboard is up, so Done hides it, keeping the words, before the head is reached.
+        if app.keyboards.firstMatch.exists {
+            let done = app.buttons["dismiss-phone-keyboard"]
+            XCTAssertTrue(done.waitForPresence(timeout: 10), app.debugDescription); done.tap()
+            XCTAssertTrue(app.keyboards.firstMatch.waitForAbsence(timeout: 10), app.debugDescription)
+        }
+        let close = app.buttons["close-card"]
+        reveal(close); close.tap()
+        let question = app.alerts[try XCTUnwrap(fixture["closeTitle"] as? String)]
+        XCTAssertTrue(question.waitForPresence(timeout: 10), app.debugDescription)
+        picture("merge-close-question")
+        question.buttons[try XCTUnwrap(fixture["keepAnswering"] as? String)].tap()
+        XCTAssertTrue(question.waitForAbsence(timeout: 10))
+        XCTAssertTrue(cardHeading(title).exists, "Keep answering keeps the card")
+        // Put aside is the Mac's minimize: the card leaves the stack and waits on its task's row in Tasks (INF-1517).
+        let putAside = app.buttons["put-aside-card"]
+        reveal(putAside); putAside.tap()
+        XCTAssertTrue(cardHeading(title).waitForAbsence(timeout: 10), app.debugDescription)
+        let aside = try await home("card-state", method: "GET")
+        XCTAssertEqual((aside["mergeCard"] as? [String: Any])?["minimized"] as? Bool, true, "Put aside minimizes the card on the computer")
+        // The join note takes the stage and draws its body after its heading; a Tasks press while it still drew read
+        // Home on a busy iPad, as INF-1735's did after a relaunch, so the press waits for the note's drawn body.
+        let note = app.webViews.staticTexts["This card belongs to the disposable test home."].firstMatch
+        XCTAssertTrue(note.waitForPresence(timeout: 10), app.debugDescription)
+        _ = waitForRedraw(app.scrollViews["card-scroll"].firstMatch, from: nil)
+        tab("Tasks")
+        let restore = app.buttons.matching(identifier: "task-\(try XCTUnwrap(fixture["taskId"] as? String))").firstMatch
+        XCTAssertTrue(restore.waitForPresence(timeout: 10), app.debugDescription)
+        restore.tap()
+        XCTAssertTrue(cardHeading(title).waitForPresence(timeout: 10), app.debugDescription)
+        // A card that arrives while this one is read is counted beside the pager, not in a pill over the stage.
+        // The first mate's new card replaces its earlier note, so the count is read as a count, not as a number.
+        let news = try await home("merge-news")
+        let fresh = app.buttons["card-new"]
+        XCTAssertTrue(fresh.waitForPresence(timeout: 10), app.debugDescription)
+        XCTAssertNotNil(fresh.label.wholeMatch(of: /[1-9][0-9]* new/), fresh.label)
+        XCTAssertFalse(app.buttons["phone-notice"].exists, "Home counts the new card instead of a pill")
+        picture("merge-new-beside-pager")
+        // The words in the field go with a choice.
+        let later = app.buttons["card-action-later"]
+        waitUntilEnabled(later)
+        reveal(later); later.tap()
+        XCTAssertTrue(cardHeading(title).waitForAbsence(timeout: 10), app.debugDescription)
+        let chosen = try await home("card-state", method: "GET")
+        let past = try XCTUnwrap(chosen["merge"] as? [String: Any])
+        let answers = try XCTUnwrap(past["answers"] as? [[String: Any]])
+        XCTAssertEqual(answers.first { $0["name"] as? String == fixture["anythingElse"] as? String }?["written"] as? String, words)
+        _ = try await home("show-merge-past")
+        let sent = app.staticTexts["past-sent-words"]
+        XCTAssertTrue(sent.waitForPresence(timeout: 10), app.debugDescription)
+        XCTAssertEqual(sent.label, "\(try XCTUnwrap(fixture["sentLead"] as? String)) \(words)")
+        XCTAssertEqual(app.buttons["card-action-later"].value as? String, "Chosen")
+        picture("merge-past")
+        reveal(app.buttons["close-card"]); app.buttons["close-card"].tap()
+        let newsTitle = try XCTUnwrap(news["title"] as? String)
+        showCard(newsTitle)
+        reveal(app.buttons["close-card"]); app.buttons["close-card"].tap()
+        XCTAssertTrue(cardHeading(newsTitle).waitForAbsence(timeout: 10))
     }
 
     private func verifyCards() async throws {
@@ -1174,6 +1287,8 @@ import XCTest
         XCTAssertEqual(writes(bodyChoice), writes(afterReconnect) + 1, "The competing body input sends no second change")
         let bodyPast = try XCTUnwrap(bodyChoice["conversation"] as? [String: Any])
         XCTAssertEqual((bodyPast["ending"] as? [String: Any])?["actionId"] as? String, "body")
+        // The choice wakes the first mate; its turn ends before INF-1060 below reads the footer's reply button.
+        _ = try await home("card-choice-turn-ended")
         _ = try await home("show-body-past")
         XCTAssertTrue(app.staticTexts["Past"].waitForPresence(timeout: 10))
         XCTAssertEqual((bodyPast["ending"] as? [String: Any])?["by"] as? String, "frame")
@@ -1454,15 +1569,20 @@ import XCTest
         XCTAssertGreaterThanOrEqual(notice.frame.minY, bar.frame.maxY, "The notice sits under the bar, not over it")
         XCTAssertTrue(app.buttons["tab-tasks"].isSelected, "The notice shows on Tasks, where the record was")
         picture("foreground-notice")
-        // INF-1541 piece 1: turned, an iPad's notice moves over the stage and an iPhone's strip moves into the bar.
+        // INF-1541 piece 1: turned, an iPhone's strip moves into the bar; an iPad brings Home's stage beside the sidebar,
+        // where INF-1524 counts the new card beside the pager, so its count is what the turn carries into view.
         turnPhone(to: .landscapeLeft, in: app,
-                  moving: UIDevice.current.userInterfaceIdiom == .pad ? notice : app.buttons["tab-home"])
+                  moving: UIDevice.current.userInterfaceIdiom == .pad ? app.buttons["card-new"] : app.buttons["tab-home"])
         if UIDevice.current.userInterfaceIdiom == .pad {
-            // INF-589 item 16: in landscape the notice sits over the stage, beside the sidebar rather than across it.
+            // INF-589 item 16: in landscape the stage is Home, beside the sidebar rather than across it.
+            // INF-1524, the captain's pick: Home counts the new card beside the pager instead of a pill over the stage.
             let sidebar = phoneSidebar(app)
             XCTAssertTrue(sidebar.waitForPresence(timeout: 10))
-            XCTAssertTrue(notice.waitForPresence(timeout: 10))
-            XCTAssertGreaterThanOrEqual(notice.frame.minX, sidebar.frame.maxX, "The notice belongs to the stage")
+            let fresh = app.buttons["card-new"]
+            XCTAssertTrue(fresh.waitForPresence(timeout: 10), app.debugDescription)
+            XCTAssertNotNil(fresh.label.wholeMatch(of: /[1-9][0-9]* new/), fresh.label)
+            XCTAssertFalse(notice.exists, "Home counts the new card instead of a pill")
+            XCTAssertGreaterThanOrEqual(fresh.frame.minX, sidebar.frame.maxX, "The count belongs to the stage")
             picture("notice-landscape")
         } else {
             // INF-589 item 17: on its side the card gets the height; the one-row bar keeps its strip and the notice waits.

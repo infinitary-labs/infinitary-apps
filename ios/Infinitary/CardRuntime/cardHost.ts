@@ -1,9 +1,11 @@
-import { cardAnswersSchema, cardQuestionsSchema } from "../../../src/shared/cards";
+import { type Card, cardAnswersSchema, cardQuestionsSchema, isPreviewBody, splitSettleFacts, takesFactStrip } from "../../../src/shared/cards";
 import { demoSources, viewablePictures } from "../../../src/shared/cardPictures";
 import { ACTION_VALUE_MAX_BYTES, frameMessageSchema, frameRequestSchema, type FrameAnswers } from "../../../src/shared/plugins/bridge";
 import { FRAME_SANDBOX, frameCsp } from "../../../src/shared/plugins/containment";
 import { buildFrameDocument, type FrameTheme } from "../../../src/shared/plugins/frameDocument";
-import { cardBodyHtml, cardStylesheet } from "../../../src/renderer/src/cards/prototypeSrcdoc";
+import { isSafeCardHref } from "../../../src/shared/linkify";
+import { taskKeysIn } from "../../../src/shared/taskKeys";
+import { cardBodyMarkup, cardStylesheet } from "../../../src/renderer/src/cards/prototypeSrcdoc";
 
 /** INF-64 piece 4: trusted WK parent, never the agent-authored frame. Native chrome owns effects. */
 interface NativeHost { postMessage(value: unknown): Promise<unknown> }
@@ -13,11 +15,21 @@ declare global {
     phoneCard: { mount(input: Input): Promise<void>; collect(): Promise<FrameAnswers>; theme(value: FrameTheme): void; ping(seq: number): void };
   }
 }
-type Input = { body: string; theme: FrameTheme; fill: unknown; readOnly: boolean; actions: string[]; width: "regular" | "wide" | "full" };
+/**
+ * INF-1524: `marks` are the starts of the parts new since the captain last saw the card, `keys` the recorded tasks other
+ * than the card's own, and `card` what decides whether the body's last fact strip stands apart, as on the Mac.
+ */
+type Input = {
+  body: string; theme: FrameTheme; fill: unknown; readOnly: boolean; actions: string[]; width: "regular" | "wide" | "full";
+  marks?: number[]; keys?: string[]; card?: Pick<Card, "actions" | "reviewTaskId" | "risk">;
+};
 const native = (message: unknown) => window.webkit.messageHandlers.cardHost.postMessage(message);
 let frame: HTMLIFrameElement | undefined;
 let documentID: string | undefined;
 let input: Input;
+let linked: string[] = [];
+/** The captain's own press in the body, as a picture's viewer asks: only then does a link, draft or key leave it. */
+const pressed = () => document.hasFocus() && navigator.userActivation.isActive;
 let next = 0;
 const collections = new Map<number, { resolve: (answers: FrameAnswers) => void; reject: (error: Error) => void; timer: ReturnType<typeof setTimeout> }>();
 const send = (message: object) => frame?.contentWindow?.postMessage({ fm: 2, ...message }, "*");
@@ -36,6 +48,7 @@ window.addEventListener("message", (event: MessageEvent) => {
     send({ type: "form", fill: cardAnswersSchema.parse(input.fill ?? []), readOnly: input.readOnly });
     send({ type: "keys", pictures: true, escape: false });
     send({ type: "width", width: input.width });
+    if (linked.length > 0) send({ type: "tasks", keys: linked });
     // INF-1562: a picture comes over the connection and waits while the computer is out of reach, so the body draws
     // and takes its height without it; WebKit's fonts.ready alone would wait for every picture.
     send({ type: "initialize", document: documentID, latePictures: true });
@@ -84,7 +97,17 @@ window.addEventListener("message", (event: MessageEvent) => {
       if (document.hasFocus() && navigator.userActivation.isActive && demoSources(input.body).has(message.src) && viewablePictures(0, [message.poster]))
         void native({ type: "demo", src: message.src, poster: message.poster, caption: message.caption, play: message.play }).catch(() => {});
       break;
-    case "link": case "draft": case "task": case "entry":
+    // INF-1524: a link opens in the phone's own browser, a draft goes to the message box and a key opens its record.
+    case "link":
+      if (pressed() && isSafeCardHref(message.href)) void native({ type: "link", href: message.href }).catch(() => {});
+      break;
+    case "draft":
+      if (pressed()) void native({ type: "draft", text: message.text }).catch(() => {});
+      break;
+    case "task":
+      if (message.gesture === "open" && linked.includes(message.key)) void native({ type: "task", key: message.key }).catch(() => {});
+      break;
+    case "entry":
       void native({ type: "mac-only" }).catch(() => {}); break;
   }
 });
@@ -92,8 +115,13 @@ window.addEventListener("message", (event: MessageEvent) => {
 window.phoneCard = {
   async mount(value) {
     input = value;
+    // The Mac's split: a settle card's fact strip stands beside its choices, and the body shows the rest.
+    const split = value.card && takesFactStrip(value.card) ? splitSettleFacts(value.body) : undefined;
+    const marks = (value.marks ?? []).map((mark) => (split && mark > split.at ? mark - split.facts.length : mark));
+    linked = value.keys?.length ? taskKeysIn(value.body).filter((key) => value.keys!.includes(key)) : [];
+    void native({ type: "mounted", facts: split?.facts ?? null, preview: isPreviewBody(value.body) }).catch(() => {});
     // DOMParser is inert. Hash the script text the browser actually parses, never an event attribute.
-    const body = cardBodyHtml(value.body);
+    const body = cardBodyMarkup(split?.body ?? value.body, marks).html;
     const parsed = new DOMParser().parseFromString(body, "text/html");
     const scripts = Array.from(parsed.querySelectorAll("script:not([src])"), (script) => script.textContent ?? "");
     const hashes = await native({ type: "hash", scripts }) as string[];

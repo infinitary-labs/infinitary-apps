@@ -82,23 +82,29 @@ private struct PhoneSheetSurface: ViewModifier {
 /// Rounded rectangles at the Mac's size, the default filled with the accent, a danger choice in a red outline,
 /// the rest in a hairline outline. Each is drawn about 37 points tall inside a 44-point touch area.
 struct PhoneChoiceStyle: ButtonStyle {
-    enum Kind { case primary, secondary, danger }
+    /// INF-1524: `muted` is the Mac's default choice while a required question waits, drawn quiet until it is answered.
+    enum Kind { case primary, secondary, danger, muted }
     let kind: Kind
+    /// INF-1524: on a past card, the choice that was made keeps full contrast with an accent edge, as on the Mac.
+    var chosen = false
     @Environment(\.isEnabled) private var enabled
 
-    init(_ kind: Kind) { self.kind = kind }
+    init(_ kind: Kind, chosen: Bool = false) { self.kind = kind; self.chosen = chosen }
     init(primary: Bool, danger: Bool = false) { kind = primary ? .primary : danger ? .danger : .secondary }
 
     func makeBody(configuration: Configuration) -> some View {
         let shape = RoundedRectangle(cornerRadius: PhoneTheme.controlRadius, style: .continuous)
         configuration.label
             .font(PhoneFont.callout)
-            .foregroundStyle(kind == .primary ? PhoneTheme.onAccent : kind == .danger ? PhoneTheme.danger : PhoneTheme.text)
+            .foregroundStyle(kind == .primary ? PhoneTheme.onAccent : kind == .danger ? PhoneTheme.danger : kind == .muted ? PhoneTheme.muted : PhoneTheme.text)
             .padding(.horizontal, PhoneTheme.space4).padding(.vertical, PhoneTheme.space2)
             .frame(minHeight: PhoneChoiceRow.drawnHeight)
             .background { if kind == .primary { shape.fill(PhoneTheme.accent) } }
-            .overlay { if kind != .primary { shape.strokeBorder(kind == .danger ? PhoneTheme.danger : PhoneTheme.line) } }
-            .opacity(!enabled ? 0.5 : configuration.isPressed ? 0.7 : 1)
+            .overlay {
+                if chosen { shape.strokeBorder(PhoneTheme.accent, lineWidth: 1.5) }
+                else if kind != .primary { shape.strokeBorder(kind == .danger ? PhoneTheme.danger : PhoneTheme.line) }
+            }
+            .opacity(chosen ? 1 : !enabled ? 0.5 : configuration.isPressed ? 0.7 : 1)
             .padding(.vertical, (44 - PhoneChoiceRow.drawnHeight) / 2)
             .contentShape(Rectangle())
     }

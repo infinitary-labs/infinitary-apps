@@ -36,12 +36,7 @@ struct MessageComposer: View {
         session.canChange && !sending && !loading && !(text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty && photos.isEmpty)
     }
 
-    struct Photo: Identifiable {
-        let id = UUID()
-        let data: Data
-        let image: UIImage
-        var wire: [String: String] { ["mimeType": "image/jpeg", "data": data.base64EncodedString(), "name": "Photo.jpg"] }
-    }
+    typealias Photo = PhonePhoto
 
     var body: some View {
         VStack(alignment: .leading, spacing: PhoneTheme.space2) {
@@ -104,6 +99,13 @@ struct MessageComposer: View {
             // INF-589 item 15: the message box lines up with the card above it, inside the gutters the footer keeps.
             .frame(maxWidth: PhoneColumn.inside).frame(maxWidth: .infinity)
             .task(id: selection) { await loadPhotos() }
+            // INF-1524: a card's draft button puts its words at the start of the box, unsent, for the captain to finish.
+            .onChange(of: messageContext.draft, initial: true) { _, draft in
+                guard let draft else { return }
+                messageContext.draft = nil
+                text = text.isEmpty ? draft : "\(draft) \(text)"
+                focused = true
+            }
             // INF-589 item 12: a soft tap once the computer accepts the message.
             .sensoryFeedback(.phone, trigger: sent)
     }
@@ -209,20 +211,11 @@ struct MessageComposer: View {
         defer { loading = false; selection = [] }
         for item in selection {
             do {
-                guard photos.count < PhoneLimits.images, let bytes = try await item.loadTransferable(type: Data.self),
-                      let source = CGImageSourceCreateWithData(bytes as CFData, nil),
-                      let thumbnail = CGImageSourceCreateThumbnailAtIndex(source, 0, [
-                        kCGImageSourceCreateThumbnailFromImageAlways: true,
-                        kCGImageSourceCreateThumbnailWithTransform: true,
-                        kCGImageSourceThumbnailMaxPixelSize: 2048,
-                      ] as CFDictionary) else { throw PhoneError.refused("Could not add this photo. Choose another.") }
-                try Task.checkCancellation()
-                let image = UIImage(cgImage: thumbnail)
-                guard let data = image.jpegData(compressionQuality: 0.85), data.count <= 5 * 1024 * 1024,
-                      ((data.count + 2) / 3) * 4 <= PhoneLimits.imageBase64 else {
-                    throw PhoneError.refused("This photo is too large. Choose a smaller photo.")
+                guard photos.count < PhoneLimits.images, let bytes = try await item.loadTransferable(type: Data.self) else {
+                    throw PhoneError.refused("Could not add this photo. Choose another.")
                 }
-                photos.append(Photo(data: data, image: image))
+                try Task.checkCancellation()
+                photos.append(try PhonePhoto(bytes: bytes))
             } catch is CancellationError { return }
             catch { problem = error.localizedDescription }
         }
@@ -307,5 +300,31 @@ private struct PhoneReplySheet: View {
         }
         .font(PhoneFont.body).foregroundStyle(PhoneTheme.text).tint(PhoneTheme.accent)
         .presentationDetents([.medium, .large]).presentationDragIndicator(.visible).phoneSheetSurface()
+    }
+}
+
+/// A photo the captain adds to a message or a card's reply: scaled to at most 2,048 pixels and sent as a JPEG.
+struct PhonePhoto: Identifiable {
+    let id = UUID()
+    let data: Data
+    let image: UIImage
+    var wire: [String: String] { ["mimeType": "image/jpeg", "data": data.base64EncodedString(), "name": "Photo.jpg"] }
+
+    init(bytes: Data) throws {
+        guard let source = CGImageSourceCreateWithData(bytes as CFData, nil),
+              let thumbnail = CGImageSourceCreateThumbnailAtIndex(source, 0, [
+                kCGImageSourceCreateThumbnailFromImageAlways: true,
+                kCGImageSourceCreateThumbnailWithTransform: true,
+                kCGImageSourceThumbnailMaxPixelSize: 2048,
+              ] as CFDictionary) else { throw PhoneError.refused("Could not add this photo. Choose another.") }
+        try self.init(image: UIImage(cgImage: thumbnail))
+    }
+
+    init(image: UIImage) throws {
+        guard let data = image.jpegData(compressionQuality: 0.85), data.count <= 5 * 1024 * 1024,
+              ((data.count + 2) / 3) * 4 <= PhoneLimits.imageBase64 else {
+            throw PhoneError.refused("This photo is too large. Choose a smaller photo.")
+        }
+        self.data = data; self.image = image
     }
 }

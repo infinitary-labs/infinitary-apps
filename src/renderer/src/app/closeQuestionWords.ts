@@ -20,6 +20,13 @@ export function closeRestWords(taskKey: string | undefined): string {
   return taskKey ? `Close · stays on ${taskKey}'s record` : "Close · stays readable in Tasks";
 }
 
+/** What the close's question is called, to a screen reader and on the phone's alert. */
+export const CLOSE_QUESTION_TITLE = "Close this card?";
+
+/** The two choices of the close's question about unsent picks or words. */
+export const KEEP_ANSWERING = "Keep answering";
+export const DISCARD_AND_CLOSE = "Discard and close";
+
 /** The two choices of the close's question about an unanswered reply (INF-770). */
 export const PUT_ASIDE_INSTEAD = "Put aside instead";
 export const CLOSE_ANYWAY = "Close anyway";

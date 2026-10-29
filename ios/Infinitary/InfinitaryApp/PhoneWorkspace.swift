@@ -10,6 +10,10 @@ import Observation
     var taskID: String?
     /// INF-1517: a card a Tasks row brought back, shown on Home once the computer's stack holds it again.
     var restoring: String?
+    /// INF-1524: a task key pressed on a card, for Tasks to open its record.
+    var openTask: String?
+    /// INF-1524: a card's draft button, for the message box to take its words, unsent.
+    var draft: String?
     var fields: [String: String] {
         if let taskID { return ["taskId": taskID] }
         guard cardsVisible else { return [:] }
@@ -119,6 +123,11 @@ struct PhoneWorkspace<Stage: View, Tasks: View, Composer: View>: View {
         // The message box is Home's alone, so a keyboard typing into it closes with the tab it leaves.
         .onChange(of: shown) { _, tab in if tab != .home { dismissPhoneKeyboard() } }
         .onChange(of: messageContext.restoring) { _, id in if id != nil { selection = .home } }
+        // INF-1524: a card's task key opens its record on Tasks, or in the sidebar beside the stage.
+        .onChange(of: messageContext.openTask) { _, key in
+            guard key != nil, tasks != nil else { return }
+            if wide { rail = .tasks } else { selection = .tasks }
+        }
         .background(alignment: .top) {
             // INF-1590: Home brought in for a turn into landscape is laid out at the new size while the window is still
             // upright, so this fill reaches past the workspace's foot and the root's system white never shows.
@@ -172,7 +181,7 @@ struct PhoneWorkspace<Stage: View, Tasks: View, Composer: View>: View {
                 Rectangle().fill(PhoneTheme.line).frame(width: 1)
             }
             VStack(spacing: 0) {
-                noticed(stage.frame(maxWidth: .infinity, maxHeight: .infinity))
+                noticed(stage.frame(maxWidth: .infinity, maxHeight: .infinity), home: true)
                 if let composer {
                     composer
                         .fixedSize(horizontal: false, vertical: true)
@@ -198,11 +207,12 @@ struct PhoneWorkspace<Stage: View, Tasks: View, Composer: View>: View {
 
     /// INF-589 item 6, placed by item 16: the pill sits at the top of what it is over, under the bar and beside the sidebar.
     /// An iPhone on its side gives the card that height, so the pill waits until it is upright.
-    private func noticed(_ content: some View) -> some View {
+    /// INF-1524, the captain's pick: on Home a new card is counted beside the pager instead, so only a reply's pill shows there.
+    private func noticed(_ content: some View, home: Bool = false) -> some View {
         content.overlay(alignment: .top) {
             ZStack {
                 // The card already on the stage needs no pill pointing at it.
-                if let notice = session.notice, !phoneOnItsSide(verticalSize),
+                if let notice = session.notice, !phoneOnItsSide(verticalSize), !(home && !notice.reply),
                    !(messageContext.cardsVisible && messageContext.card == .current(notice.cardID)) {
                     PhoneNoticePill(notice: notice, open: {
                         selection = .home; session.showCardID = notice.cardID; session.notice = nil

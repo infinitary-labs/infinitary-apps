@@ -133,7 +133,11 @@ private struct PhoneTargetReading: Equatable {
     tapOnPhone(input)
     // INF-1377: the first letter keyboard can show iOS's typing guide. Dismiss that
     // known interruption before observing focus; send no tap beyond tapOnPhone's proven second one, and no priming text.
+    // INF-1525: the guide rises with the keyboard, after the tap returns, so look for it only once
+    // the keyboard or the guide is up; reading it at once missed it and typing found no focus.
     let guide = app.staticTexts["Speed up your typing by sliding your finger across the letters to compose a word."]
+    XCTAssertEqual(waitForPhonePredicate(NSPredicate { _, _ in app.keyboards.firstMatch.exists || guide.exists },
+        object: input, timeout: 10), .completed, app.debugDescription)
     if guide.exists {
         tapOnPhone(app.buttons["Continue"])
         XCTAssertTrue(guide.waitForAbsence(timeout: 10), app.debugDescription)
@@ -144,7 +148,8 @@ private struct PhoneTargetReading: Equatable {
 
 /// The native count includes every named answer, not only required questions.
 /// Match equal, nonzero observed counts rather than inventing a fixture-specific total.
-let phoneAnsweredFormPattern = #"([1-9][0-9]*) of \1 answered"#
+/// INF-1524: a card counts in the Mac's words, "picked" (a preview says "answered"), with "· N changed" once a pick moved.
+let phoneAnsweredFormPattern = #"([1-9][0-9]*) of \1 (picked|answered)( · [1-9][0-9]* changed)?"#
 
 @MainActor func waitForAnsweredPhoneForm(in app: XCUIApplication) {
     let complete = app.staticTexts.matching(NSPredicate(format: "label MATCHES %@", phoneAnsweredFormPattern)).firstMatch

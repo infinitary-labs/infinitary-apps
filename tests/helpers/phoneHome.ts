@@ -9,12 +9,20 @@ import { claimLink } from "@core/devices/dial";
 import { createKeyIdentity } from "@core/devices/identity";
 import { absentKeychain } from "@core/host";
 import { startCore } from "@core/index";
+import type { CardService } from "@core/orchestrator/cardService";
 import { appPathsFor } from "@core/paths";
 import { seedTask } from "@core/tasks/seedTask";
-
+import { ANYTHING_ELSE_ANSWER, PAST_CARD_WORDS_LEAD } from "@shared/cards";
 import type { FmEvent } from "@shared/events";
 import { PROTOCOL_VERSION, SCENE_OBSERVATIONS_SINCE, VIEW_FLOOR } from "@shared/ipc";
 import { pastEndingWords } from "@shared/pastCard";
+import { RISK_WORDS } from "@shared/risk";
+import {
+  CLOSE_QUESTION_TITLE,
+  KEEP_ANSWERING,
+} from "../../src/renderer/src/app/closeQuestionWords";
+import { REQUIRED_ACTIONS_LEAD } from "../../src/renderer/src/cards/requiredActionsWords";
+import { THREAD_WHO_LABELS } from "../../src/renderer/src/cards/threadWords";
 import {
   ANSWER_PROMPT_MARKER,
   CLAUDE_CREW_PROMPT_MARKER,
@@ -26,7 +34,6 @@ import {
   mockModelsJson,
   startMockProvider,
 } from "../e2e/mockProvider";
-
 import { encodePng } from "../e2e/pictureFixtures";
 import { budgetTimer, type DeadlineTimer, keepControlConnection } from "./budgets";
 import { claimedPort } from "./claimedPort";
@@ -148,7 +155,16 @@ export async function startPhoneHome(
   const views = new Set<string>();
   const cardRequests: { channel: string; args: unknown }[] = [];
   let leaks = 0;
-  const cardIDs = { choice: "", conversation: "", note: "", saved: "", fallback: "", context: "" };
+  const cardIDs = {
+    choice: "",
+    conversation: "",
+    note: "",
+    saved: "",
+    fallback: "",
+    context: "",
+    merge: "",
+    news: "",
+  };
   const cardBarrier = () => {
     let resolve!: () => void;
     const promise = new Promise<void>((done) => {
@@ -682,6 +698,119 @@ export async function startPhoneHome(
           result = { title, words: PHONE_ASKED_MESSAGE };
           break;
         }
+        // INF-1524: a crewmate's merge card as the Mac draws it - its task's key, model and place, its risk, the
+        // host's fact strip, what to do after merging, a revision and a thread - for the phone's card head and foot.
+        case "POST merge-card": {
+          const merging = seedTask(core.services.tasks, {
+            id: "phone-merge",
+            title: "Keep the harbour chart's north entrance clear",
+            status: "idle",
+          });
+          // The crew's own writer, as a crewmate's completion card reaches it; the supervisor's emit needs a live session.
+          const cards = (core.services.supervisor as unknown as { cards: CardService }).cards;
+          const story = (extra: string) => ({
+            id: "harbour-merge",
+            title: "Merge the north entrance chart",
+            body: `<h3>Why</h3><p>You asked for the north entrance to stay clear on the next chart.</p>
+              <h3>What changed</h3><p>The chart marks the north entrance as kept clear at every tide.</p>${extra}`,
+            requiredActions: [
+              {
+                id: "harbour-notice",
+                target: "Harbour office",
+                title: "Post the new chart at the harbour office",
+                consequence: "Skippers keep reading the old chart until it is posted.",
+                instructions: ["Print the new chart and pin it beside the old one."],
+                criterion: "The new chart hangs at the harbour office.",
+                prerequisites: [],
+                completion: { kind: "manual" as const, label: "Posted" },
+              },
+            ],
+            risk: {
+              declared: {
+                blast: { level: "low" as const, why: "One chart layer" },
+                behavior: {
+                  level: "medium" as const,
+                  why: "The north entrance reads as kept clear by default",
+                },
+                undo: { level: "low" as const, why: "Revert and done" },
+                evidence: { level: "low" as const, why: "Shown on the chart at every tide" },
+                sensitivity: { level: "low" as const, why: "None" },
+                novelty: { level: "low" as const, why: "Edits the existing chart layer" },
+                deps: { level: "low" as const, why: "Nothing added" },
+              },
+            },
+            actions: [
+              { id: "later", label: "Not yet" },
+              {
+                id: "merge",
+                label: "Merge",
+                default: true,
+                effect: { kind: "settle" as const, mode: "merge" as const },
+              },
+            ],
+          });
+          cardIDs.merge = cards.emitCrewmateCard(
+            merging.id,
+            story(""),
+            merging.title,
+            "Sonnet 5.5",
+            "on Mac mini",
+          );
+          // The crewmate's turn ends, which brings its card to the stage.
+          cards.closeOut({ kind: "crewmate", taskId: merging.id }, "idle");
+          core.services.supervisor.addCardMessage(
+            cardIDs.merge,
+            "captain",
+            "Does it cover the evening tide too?",
+          );
+          // The captain saw the first version, so the crewmate's revision adds one part the revised line and change bar name.
+          // INF-1623: a revision answering the captain carries its answer, which the thread shows as the crewmate's.
+          cards.seen(cardIDs.merge, cards.shown(cardIDs.merge)?.offerId ?? "");
+          cards.emitCrewmateCard(
+            merging.id,
+            {
+              ...story("<h3>After</h3><p>The evening tide keeps the entrance clear too.</p>"),
+              reply: "Yes: the chart keeps it clear at every tide.",
+            },
+            merging.title,
+            "Sonnet 5.5",
+            "on Mac mini",
+          );
+          cards.closeOut({ kind: "crewmate", taskId: merging.id }, "idle");
+          // The words the phone shows come from the Mac's owners, which the phone's generated words copy.
+          result = {
+            title: "Merge the north entrance chart",
+            key: core.services.tasks.get(merging.id)?.key,
+            taskId: merging.id,
+            words: "Hold it for the morning survey.",
+            closeTitle: CLOSE_QUESTION_TITLE,
+            keepAnswering: KEEP_ANSWERING,
+            blast: `${RISK_WORDS.blast.label} · ${RISK_WORDS.blast.levels.low}`,
+            sentLead: PAST_CARD_WORDS_LEAD,
+            anythingElse: ANYTHING_ELSE_ANSWER,
+            requiredLead: REQUIRED_ACTIONS_LEAD,
+            threadCrew: THREAD_WHO_LABELS.crewmate,
+          };
+          break;
+        }
+        // INF-1524: a card that arrives while the merge card is read, which Home counts beside the pager.
+        case "POST merge-news":
+          cardIDs.news = core.services.supervisor.addFirstmateCard({
+            id: "phone-news",
+            title: "The survey boat is back",
+            body: "<p>The survey boat is back in the harbour.</p>",
+            actions: [],
+          });
+          // The first mate's turn ends, as its own card reaches the stage.
+          (core.services.supervisor as unknown as { cards: CardService }).cards.closeOut(
+            { kind: "firstmate" },
+            "turn-end",
+          );
+          result = { title: "The survey boat is back" };
+          break;
+        case "POST show-merge-past":
+          result = await core.dispatch("inf:cards:show-past", [cardIDs.merge]);
+          break;
         case "POST hero-card": {
           const title = "Choose the harbour";
           heroId = core.services.supervisor.addFirstmateCard({
@@ -790,6 +919,24 @@ export async function startPhoneHome(
           cardHold = undefined;
           result = { ok: true };
           break;
+        // INF-1525: the body's choice on the first mate's own card wakes the first mate (a card-choice op), whose real
+        // turn shows "Working…" where the footer's reply button stands. Settle once that turn has reached the model
+        // and ended, so a later look at the footer reads the first mate at rest.
+        case "POST card-choice-turn-ended":
+          await until(
+            () =>
+              !firstmateBusy &&
+              provider
+                .requestBodies()
+                .some(
+                  (body) =>
+                    body.includes("a script chose") &&
+                    body.includes(`(body) on card`) &&
+                    body.includes(cardIDs.conversation),
+                ),
+          );
+          result = { busy: firstmateBusy };
+          break;
         // INF-499 #1/#6: exercise the published saved-sign-in choice and a failed body's last reading.
         // This disposable home has no saved website data; the test proves forwarding and the stored choice, not a sign-in.
         case "POST review-cards":
@@ -851,6 +998,11 @@ export async function startPhoneHome(
             saved: core.services.supervisor.cardPast(cardIDs.saved) ?? null,
             fallback: core.services.supervisor.cardPast(cardIDs.fallback) ?? null,
             note: core.services.supervisor.cardPast(cardIDs.note) ?? null,
+            merge: core.services.supervisor.cardPast(cardIDs.merge) ?? null,
+            mergeCard:
+              (
+                (await core.dispatch("inf:cards:list", [])) as { id: string; minimized?: boolean }[]
+              ).find((card) => card.id === cardIDs.merge) ?? null,
             thread: core.services.supervisor.cardThread(cardIDs.conversation),
           };
           observations.push({ check: "cards", result });

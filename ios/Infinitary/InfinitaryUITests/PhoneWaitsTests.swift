@@ -61,9 +61,12 @@ import XCTest
     func testFormReadinessUsesEveryObservedNamedAnswer() {
         // INF-1122: actual Cards accessibility readings, including note and staged chart.
         let complete = NSPredicate(format: "SELF MATCHES %@", phoneAnsweredFormPattern)
+        XCTAssertTrue(complete.evaluate(with: "3 of 3 picked"))
+        XCTAssertTrue(complete.evaluate(with: "3 of 3 picked · 1 changed"))
         XCTAssertTrue(complete.evaluate(with: "3 of 3 answered"))
+        XCTAssertFalse(complete.evaluate(with: "2 of 3 picked"))
         XCTAssertFalse(complete.evaluate(with: "2 of 3 answered"))
-        XCTAssertFalse(complete.evaluate(with: "0 of 0 answered"))
+        XCTAssertFalse(complete.evaluate(with: "0 of 0 picked"))
     }
 
     func testSteadyReadingNeedsTwoEqualReadsOfAFoundTarget() {

@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "id": "ipad-card-keys-one-page",
+      "kind": "fix",
+      "title": "On iPad one press of Shift-Command-] moves one card",
+      "body": "In Infinitary on iPad with iPadOS 26 or later, one press of Shift-Command-] or Shift-Command-[ could skip a card while the next one was still opening. Each press now moves exactly one card, as on your Mac.",
+      "area": "devices",
+      "noPicture": "The fix is how many cards one key press moves, which a still picture cannot show.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

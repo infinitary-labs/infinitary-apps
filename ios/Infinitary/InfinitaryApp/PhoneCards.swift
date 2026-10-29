@@ -62,8 +62,7 @@ struct PhoneCards: View {
     private var pager: some View {
         HStack(spacing: PhoneTheme.space2) {
             Button { page(-1) } label: { Label("Previous card", systemImage: "chevron.left").labelStyle(.iconOnly).frame(minWidth: 44, minHeight: 44) }
-                .disabled(past != nil || index <= 0).accessibilityIdentifier("previous-card")
-                .keyboardShortcut("[", modifiers: [.command, .shift])
+                .disabled(!canPagePrevious).accessibilityIdentifier("previous-card")
             Menu {
                 ForEach(session.stack) { item in
                     Button(item.title) { selected = item.id; past = nil }
@@ -81,11 +80,16 @@ struct PhoneCards: View {
                         }
                     }
             }
-                .disabled(past != nil || index >= session.stack.count - 1).accessibilityIdentifier("next-card")
-                .keyboardShortcut("]", modifiers: [.command, .shift])
+                .disabled(!canPageNext).accessibilityIdentifier("next-card")
+        }
+        .background {
+            PhonePagerKeys(previous: canPagePrevious ? { page(-1) } : nil, next: canPageNext ? { page(1) } : nil)
+                .frame(width: 0, height: 0)
         }
     }
     private var index: Int { session.stack.firstIndex { $0.id == (selected ?? session.stack.first?.id) } ?? 0 }
+    private var canPagePrevious: Bool { past == nil && index > 0 }
+    private var canPageNext: Bool { past == nil && index < session.stack.count - 1 }
     /// A card a Tasks row brought back shows once its return reaches the stack, whichever arrives first.
     private func showRestored(_ ids: [String]) {
         guard let id = messageContext.restoring, ids.contains(id) else { return }
@@ -95,6 +99,53 @@ struct PhoneCards: View {
         let next = index + delta
         if session.stack.indices.contains(next) { selected = session.stack[next].id; past = nil }
     }
+}
+
+/// INF-1753: Shift-Command-[ and Shift-Command-] page the stage, as `cards.previous` and `cards.next` do on the Mac,
+/// and like them never repeat while held. A page turn builds the next card's web view, which on a busy iPad held the
+/// main thread past UIKit's key repeat delay, so a SwiftUI shortcut turned a second page before the key-up arrived.
+/// The chords are UIKit key commands that never repeat (iOS 26 and later), kept on the window's root view controller
+/// beside SwiftUI's own shortcuts while the pager is in the window.
+struct PhonePagerKeys: UIViewRepresentable {
+    let previous: (() -> Void)?
+    let next: (() -> Void)?
+
+    func makeUIView(context: Context) -> Anchor { Anchor() }
+    func updateUIView(_ anchor: Anchor, context: Context) {
+        anchor.previousPage = previous
+        anchor.nextPage = next
+    }
+
+    final class Anchor: UIView {
+        fileprivate static weak var shown: Anchor?
+        var previousPage: (() -> Void)?
+        var nextPage: (() -> Void)?
+        private weak var owner: UIViewController?
+        private let commands = [("[", "Previous card", -1), ("]", "Next card", 1)].map { input, title, delta in
+            let command = UIKeyCommand(title: title, action: #selector(UIApplication.infinitaryPageCard(_:)), input: input,
+                                       modifierFlags: [.command, .shift], propertyList: delta)
+            if #available(iOS 26, *) { command.repeatBehavior = .nonRepeatable }
+            return command
+        }
+        override func didMoveToWindow() {
+            super.didMoveToWindow()
+            if let owner { commands.forEach(owner.removeKeyCommand) }
+            owner = window?.rootViewController
+            if let owner { commands.forEach(owner.addKeyCommand) }
+            if window != nil { Self.shown = self } else if Self.shown === self { Self.shown = nil }
+        }
+        fileprivate func press(_ command: UIKeyCommand) {
+            // A sheet keeps the pager's chords from the stage behind it.
+            guard owner?.presentedViewController == nil, let delta = command.propertyList as? Int else { return }
+            (delta < 0 ? previousPage : nextPage)?()
+        }
+    }
+}
+
+extension UIApplication {
+    /// The pager's chords sit on the root view controller, so their action travels up the responder chain from wherever
+    /// focus is; the application ends every such chain.
+    @objc fileprivate func infinitaryPageCard(_ command: UIKeyCommand) { PhonePagerKeys.Anchor.shown?.press(command) }
 }
 
 private struct PhoneCardPane: View {

@@ -113,6 +113,9 @@ Neither reconnection nor discovery queues or retries a mutation.
 `PhoneCards(session:)` is the card-stage integration point: it fills its available column without adding navigation, a toolbar or the app's message box.
 It keeps one shown card with a next-card peek and a lower pager of two chevrons around the count, whose menu lists the current titles.
 With no current card the stage shows the character alone, as the Mac does, and the pager hides.
+Shift-Command-[ and Shift-Command-] turn one page per press, as `cards.previous` and `cards.next` do on the Mac, and a sheet keeps them from the stage behind it (INF-1753).
+They are UIKit key commands on the window's root view controller with `repeatBehavior` `.nonRepeatable`, because a page turn builds the next card's web view and can hold the main thread past UIKit's key repeat delay, and SwiftUI's shortcuts repeat even with `buttonRepeatBehavior(.disabled)`.
+Before iOS 26 UIKit offers no way to stop that repeat.
 The stack follows the Mac's stage rule (`onStage` in `src/shared/cards.ts`): a new card awaiting its author's close-out stays out of the stage, pager and unread count until it is released.
 A replied-under card carrying `sentBackAt` keeps its place while its author answers.
 A card minimized on any Mac leaves the phone's stack and count, and waits in Tasks, as on the Mac (INF-1517).

@@ -63,7 +63,11 @@ import {
   type WorkShape,
   type WorkShapeAsk,
 } from "@shared/routingPolicy";
-import type { TaskBrowserFact } from "@shared/taskBrowser";
+import {
+  SAVED_SIGN_IN_FAILED_LABEL,
+  SIGN_IN_MYSELF_LABEL,
+  type TaskBrowserFact,
+} from "@shared/taskBrowser";
 import { effectiveTaskPolicies } from "@shared/taskPolicies";
 import { formatDurationShort } from "@shared/quotaSignals";
 import { queueStartedRefusal } from "@shared/taskQueue";
@@ -12677,7 +12681,9 @@ describe('the captain takes a task\'s browser over (docs/task-browser.md, "Takin
         { ok: true; handle: { session: string; generation: number } } | { ok: false; text: string }
       >;
       /** The sign-in this Mac has saved for the browser's site, if any. */
-      saved?: { site: string; savedAt: number };
+      saved?: { site: string; savedAt: number; failedAt?: number };
+      /** Whether the browser uses a save its crewmate's word can mark. */
+      marks?: boolean;
       grant?: () => Promise<{ ok: true } | { ok: false; text: string }>;
       /** A read-only check whose deliverable is an answer (INF-1317), not a booking. */
       readOnly?: boolean;
@@ -12712,6 +12718,10 @@ describe('the captain takes a task\'s browser over (docs/task-browser.md, "Takin
       savedSignInFor: vi.fn((_taskId: string, site: string) =>
         answers.saved && answers.saved.site === site ? answers.saved : undefined,
       ),
+      markSavedSignInFailed: vi.fn((_taskId: string, _site: string) => {
+        calls.push("mark");
+        return answers.marks ?? false;
+      }),
       grantSavedSignIn: vi.fn(
         async (): Promise<{ ok: true } | { ok: false; text: string }> =>
           answers.grant ? answers.grant() : { ok: true },
@@ -13071,6 +13081,58 @@ describe('the captain takes a task\'s browser over (docs/task-browser.md, "Takin
     expect(h.browsers.takeControl).not.toHaveBeenCalled();
     await tick();
     expect(h.saved()).toBeUndefined();
+  });
+
+  // INF-1849, the captain's answer: after a save fails, keep it as a second
+  // choice that says it did not work last time; Sign in myself is the default.
+  it("leads with Sign in myself and keeps a save a crewmate marked as a second choice that says it did not work", async () => {
+    const h = await crewmateWithBrowser({
+      saved: {
+        site: "aurora.example",
+        savedAt: Date.parse("2026-10-02T09:00:00Z"),
+        failedAt: Date.parse("2026-10-03T09:00:00Z"),
+      },
+    });
+    await h.emitCard.run(REQUEST);
+    expect(
+      h.saved()?.actions.map(({ id, label, default: chosen }) => ({
+        id,
+        label,
+        ...(chosen ? { default: true } : {}),
+      })),
+    ).toEqual([
+      { id: "leave", label: "Leave waiting" },
+      { id: "use-saved-sign-in", label: SAVED_SIGN_IN_FAILED_LABEL },
+      // The default stands last in the row.
+      { id: "sign-in", label: SIGN_IN_MYSELF_LABEL, default: true },
+    ]);
+  });
+
+  it("marks the save its browser uses when the crewmate says it did not sign the page in, before the card is offered", async () => {
+    const h = await crewmateWithBrowser({ marks: true });
+    const answer = await h.emitCard.run({
+      ...REQUEST,
+      browser_handoff: { ...HANDOFF, saved_failed: true },
+    });
+    expect(h.browsers.markSavedSignInFailed).toHaveBeenCalledWith(h.taskId, "aurora.example");
+    expect(h.calls.indexOf("mark")).toBeLessThan(h.calls.indexOf(`pause ${h.taskId}`));
+    expect(answer.text).not.toContain("marked nothing");
+    expect(h.saved()?.title).toBe(REQUEST.title);
+  });
+
+  it("tells the crewmate its word marked nothing when its browser uses no saved sign-in", async () => {
+    const h = await crewmateWithBrowser({ marks: false });
+    const answer = await h.emitCard.run({
+      ...REQUEST,
+      browser_handoff: { ...HANDOFF, saved_failed: true },
+    });
+    expect(answer.text).toContain(
+      "Your browser uses no saved sign-in for aurora.example, so saved_failed marked nothing.",
+    );
+    // A card without the word marks nothing.
+    const plain = await crewmateWithBrowser({ marks: true });
+    await plain.emitCard.run(REQUEST);
+    expect(plain.browsers.markSavedSignInFailed).not.toHaveBeenCalled();
   });
 
   it("never counts the saved sign-in against the crewmate's own 2 or 3 actions (FI3-411)", async () => {

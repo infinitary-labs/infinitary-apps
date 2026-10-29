@@ -2362,6 +2362,36 @@ describe('saved website sign-ins (docs/task-browser.md, "Saved sign-ins")', () =
     expect(h.browsers.savedSignInFor("t2", "localhost:5173")).toBeUndefined();
   });
 
+  // INF-1849 piece 2: only the crewmate says a save failed, and the next
+  // task's card reads the mark.
+  it("marks the exact save a browser was given when its crewmate says it failed, and offers it marked to the next task", async () => {
+    const h = onThisMac();
+    await signedInAndReturned(h, true);
+    const { handle } = await asking(h);
+    const id = h.signIns.get("localhost:5173")?.id;
+    // A browser that uses no save for the site marks nothing.
+    await h.browsers.forTask("t3").navigate({ url: "http://localhost:5173/account" });
+    expect(h.browsers.markSavedSignInFailed("t3", "localhost:5173")).toBe(false);
+    expect(h.browsers.markSavedSignInFailed("t2", "localhost:5173")).toBe(false);
+    expect(h.signIns.get("localhost:5173")?.failedAt).toBeUndefined();
+    await h.browsers.grantSavedSignIn("t2", handle);
+    expect(h.browsers.markSavedSignInFailed("t2", "http://LOCALHOST:5173/login")).toBe(true);
+    expect(h.signIns.get("localhost:5173")).toMatchObject({ id, failedAt: 1_000 });
+    expect(h.notes).toContain(
+      "t2: said your saved sign-in at localhost:5173 did not sign its page in",
+    );
+    // The next task asking on the site is offered the save with the mark.
+    await h.browsers.requestHelp("t3", request);
+    expect(h.browsers.savedSignInFor("t3", "localhost:5173")).toEqual({
+      site: "localhost:5173",
+      savedAt: 1_000,
+      failedAt: 1_000,
+    });
+    // A save removed since is never marked.
+    await h.browsers.removeSavedSignIn("localhost:5173");
+    expect(h.browsers.markSavedSignInFailed("t2", "localhost:5173")).toBe(false);
+  });
+
   it("copies the sign-in back when the browser stops, so a refreshed session stays current", async () => {
     const h = onThisMac();
     await signedInAndReturned(h, true);

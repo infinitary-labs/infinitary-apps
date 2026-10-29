@@ -4,6 +4,8 @@ import { basename, join, resolve, sep } from "node:path";
 import { HERE } from "@shared/deviceNames";
 import {
   FRESH_LOOK_WORDS,
+  type OfferedSignIn,
+  SAVED_SIGN_IN_FAILED_WORDS,
   SAVED_SIGN_INS_PER_BROWSER,
   type SavedSignIn,
   TASK_BROWSER_PAGE,
@@ -114,6 +116,20 @@ export function offeredSignIn(
   if (!record) return undefined;
   const usable = usableSignIn(record, fact.url, now);
   return holds(usable) ? { record, usable } : undefined;
+}
+
+/** A saved sign-in as a request card offers it. */
+export function offeredOf(record: SavedSignInRecord): OfferedSignIn {
+  return {
+    site: record.site,
+    savedAt: record.savedAt,
+    ...(record.failedAt !== undefined ? { failedAt: record.failedAt } : {}),
+  };
+}
+
+/** The task's timeline line once its crewmate said a saved sign-in did not sign its page in. */
+export function failedSignInNote(site: string): string {
+  return `said your saved sign-in at ${site} did not sign its page in`;
 }
 
 /**
@@ -637,7 +653,7 @@ async function writeSignIn(page: HostBrowserPage, usable: HeldSignIn): Promise<v
 }
 
 /** The site a crewmate named, as `siteOf` would read it: its host and port, lower case. */
-function siteNamed(named: string): string {
+export function siteNamed(named: string): string {
   const text = named.trim().toLowerCase();
   try {
     if (/^[a-z][a-z0-9+.-]*:\/\//.test(text)) return new URL(text).host;
@@ -1168,9 +1184,25 @@ export class TaskBrowsers {
    * handed back nor a saved sign-in already in use. Otherwise nothing, so a
    * site that turned a copied sign-in away leaves the captain to sign in.
    */
-  savedSignInFor(taskId: string, site: string): SavedSignIn | undefined {
+  savedSignInFor(taskId: string, site: string): OfferedSignIn | undefined {
     const offer = offeredSignIn(this.fact(taskId), site, this.options.signIns, this.now());
-    return offer ? { site: offer.record.site, savedAt: offer.record.savedAt } : undefined;
+    return offer ? offeredOf(offer.record) : undefined;
+  }
+
+  /**
+   * The crewmate said on its request card that the saved sign-in its
+   * browser was given did not sign the page in (docs/task-browser.md,
+   * "Saved sign-ins"): that exact save keeps the mark, and the task's
+   * timeline says so. False when the browser uses no save for the site, or
+   * that save was removed or replaced since.
+   */
+  markSavedSignInFailed(taskId: string, site: string): boolean {
+    const key = siteNamed(site);
+    const id = this.browsers.get(taskId)?.saved.get(key);
+    const store = this.options.signIns;
+    if (!id || !(store instanceof WebSignIns) || !store.markFailed(key, id)) return false;
+    this.options.note?.(taskId, failedSignInNote(key));
+    return true;
   }
 
   /** Use separately permitted sites on an explicit visit, never instead of a captain handoff or final-submission review. */
@@ -1212,7 +1244,7 @@ export class TaskBrowsers {
       }
       await this.loadOwn(entry, entry.page.reload());
       this.handBackBooks(taskId, browser);
-      browser.notice = `The captain allowed future tasks to use the sign-in saved for ${site}. This browser used it automatically. Take a fresh look; this never authorizes a payment or final submission.`;
+      browser.notice = `The captain allowed future tasks to use the sign-in saved for ${site}. This browser used it automatically. Take a fresh look; this never authorizes a payment or final submission. ${SAVED_SIGN_IN_FAILED_WORDS}`;
       this.options.note?.(
         taskId,
         `used your saved sign-in at ${site}, as you allowed for future tasks`,

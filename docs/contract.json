@@ -43047,6 +43047,10 @@
                       },
                       "after": {
                         "type": "string"
+                      },
+                      "savedFailed": {
+                        "type": "boolean",
+                        "const": true
                       }
                     },
                     "required": [

@@ -699,3 +699,46 @@ it('carries a crewmate\'s request that the captain take its browser over (docs/t
     ),
   ).toContain("only that task's crewmate may ask the captain to take over");
 });
+
+// INF-1849 piece 2: the crewmate's word that a saved sign-in did not sign its page in.
+it("carries saved_failed inside browser_handoff to the declared handoff", async () => {
+  const onCard = vi.fn((_card: DeclaredCardInput) => "card-1");
+  const browser = {
+    navigate: vi.fn(async () => ({ text: "" })),
+    inspect: vi.fn(async () => ({ text: "" })),
+    act: vi.fn(async () => ({ text: "" })),
+    capture: vi.fn(async () => ({ text: "" })),
+    close: vi.fn(async () => ({ text: "" })),
+    pages: vi.fn(async () => ({ text: "" })),
+  };
+  const request = {
+    title: "Sign in to aurora.example again",
+    body: "<p>Aurora still asks for a sign-in after the saved one.</p>",
+    browser_handoff: {
+      site: "aurora.example",
+      reason: "The saved sign-in did not sign the page in",
+      after: "fill in the passenger details",
+    },
+    actions: [
+      { id: "leave", label: "Leave waiting" },
+      {
+        id: "sign-in",
+        label: "Open browser and sign in",
+        default: true,
+        effect: { kind: "open" as const, target: "browser" as const },
+      },
+    ],
+  };
+  const tool = bindTool(EMIT_CARD_TOOL, { onCard, taskId: "t1", browser });
+  await tool.run({
+    ...request,
+    browser_handoff: { ...request.browser_handoff, saved_failed: true },
+  });
+  expect(onCard.mock.calls[0]?.[0]).toMatchObject({
+    browserHandoff: { ...request.browser_handoff, savedFailed: true },
+  });
+  await tool.run(request);
+  expect(onCard.mock.calls[1]?.[0]).toMatchObject({ browserHandoff: request.browser_handoff });
+  expect(onCard.mock.calls[1]?.[0]?.browserHandoff).not.toHaveProperty("savedFailed");
+  expect(onCard).toHaveBeenCalledTimes(2);
+});

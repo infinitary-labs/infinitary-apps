@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto";
 import { HERE } from "@shared/deviceNames";
 import type { InvokeRequest, InvokeResponse } from "@shared/ipc";
 import type {
+  OfferedSignIn,
   SavedSignIn,
   TaskBrowserCommandResult,
   TaskBrowserFact,
@@ -22,8 +23,11 @@ import {
   type BrowserFrameSink,
   type BrowserReturned,
   type CrewmateBrowser,
+  failedSignInNote,
+  offeredOf,
   offeredSignIn,
   type ProjectPage,
+  siteNamed,
   type TaskBrowsers,
 } from "../browser/taskBrowsers";
 import {
@@ -91,6 +95,8 @@ export class PlacedBrowsers implements PlacedBrowserSink {
   private readonly watchers = new Map<string, Set<BrowserFrameSink>>();
   /** The room a maximized view gives each task's page, with the view that asked. */
   private readonly sizes = new Map<string, { sink: BrowserFrameSink; size: TaskBrowserSize }>();
+  /** The save this Mac lent or made for each task's browser there, by site: the one a failure marks. */
+  private readonly lent = new Map<string, Map<string, string>>();
   private readonly log: (line: string) => void;
 
   constructor(private readonly options: PlacedBrowsersOptions) {
@@ -113,9 +119,10 @@ export class PlacedBrowsers implements PlacedBrowserSink {
   ): InvokeResponse<"inf:work:browser-sign-in">["signIn"] {
     if (!this.holds(task)) return undefined;
     const record = this.options.signIns?.get(site);
-    return record?.automatic
-      ? { ...record, automatic: true, cookies: liveCookies(record.cookies, this.now()) }
-      : undefined;
+    if (!record?.automatic) return undefined;
+    this.lend(task, record.site, record.id);
+    const { failedAt: _failedAt, ...lent } = record;
+    return { ...lent, automatic: true, cookies: liveCookies(record.cookies, this.now()) };
   }
 
   heardFact(deviceId: string, task: string, fact: TaskBrowserFact | null): void {
@@ -260,7 +267,8 @@ export class PlacedBrowsers implements PlacedBrowserSink {
           if (!store.refresh(site, id, held))
             warning =
               "Control returned, but that saved sign-in was removed or replaced. It was not changed.";
-        } else if (!store.get(site)) store.save(site, held, id);
+          else this.lend(taskId, site, id);
+        } else if (!store.get(site)) this.lend(taskId, store.save(site, held, id).site, id);
         else
           warning = "Control returned, but this site's saved sign-in changed. It was not replaced.";
       } catch {
@@ -278,9 +286,33 @@ export class PlacedBrowsers implements PlacedBrowserSink {
     return this.order(taskId, "inf:task-browser:request", { request });
   }
 
-  savedSignInFor(taskId: string, site: string): SavedSignIn | undefined {
+  savedSignInFor(taskId: string, site: string): OfferedSignIn | undefined {
     const offer = offeredSignIn(this.fact(taskId), site, this.options.signIns, this.now());
-    return offer ? { site: offer.record.site, savedAt: offer.record.savedAt } : undefined;
+    return offer ? offeredOf(offer.record) : undefined;
+  }
+
+  /**
+   * The crewmate said the saved sign-in its browser there was given did not
+   * sign the page in: the save this Mac lent or made for it keeps the mark,
+   * while that browser still uses it.
+   */
+  markSavedSignInFailed(taskId: string, site: string): boolean {
+    const key = siteNamed(site);
+    const fact = this.fact(taskId);
+    const id = this.lent.get(taskId)?.get(key);
+    if (fact?.state !== "open" || !fact.saved?.includes(key) || !id) return false;
+    if (!this.options.signIns?.markFailed(key, id)) return false;
+    this.options.note(taskId, failedSignInNote(key));
+    return true;
+  }
+
+  private lend(taskId: string, site: string, id: string): void {
+    let sites = this.lent.get(taskId);
+    if (!sites) {
+      sites = new Map();
+      this.lent.set(taskId, sites);
+    }
+    sites.set(signInSite(site), id);
   }
 
   /**
@@ -301,7 +333,7 @@ export class PlacedBrowsers implements PlacedBrowserSink {
         text: `No sign-in for ${fact?.site ?? "that site"} is saved on ${HERE.this}.`,
       };
     }
-    return this.command(taskId, "inf:task-browser:grant", {
+    const answer = await this.command(taskId, "inf:task-browser:grant", {
       handle,
       signIn: {
         site: record.site,
@@ -312,6 +344,8 @@ export class PlacedBrowsers implements PlacedBrowserSink {
         session: storageOfSite(record.session, record.site),
       },
     });
+    if (answer.ok) this.lend(taskId, record.site, record.id);
+    return answer;
   }
 
   /**
@@ -337,6 +371,7 @@ export class PlacedBrowsers implements PlacedBrowserSink {
    * closes its conversation, and the captain reads it stopped now.
    */
   closeTask(taskId: string): void {
+    this.lent.delete(taskId);
     const heard = this.facts.get(taskId);
     if (heard) {
       const { fact } = heard;
@@ -584,10 +619,16 @@ export class HomeBrowsers {
     return this.local.savedSignIns();
   }
 
-  savedSignInFor(taskId: string, site: string): SavedSignIn | undefined {
+  savedSignInFor(taskId: string, site: string): OfferedSignIn | undefined {
     return this.there.holds(taskId)
       ? this.there.savedSignInFor(taskId, site)
       : this.local.savedSignInFor(taskId, site);
+  }
+
+  markSavedSignInFailed(taskId: string, site: string): boolean {
+    return this.there.holds(taskId)
+      ? this.there.markSavedSignInFailed(taskId, site)
+      : this.local.markSavedSignInFailed(taskId, site);
   }
 
   grantSavedSignIn(taskId: string, handle: TaskBrowserHandle): Promise<TaskBrowserCommandResult> {

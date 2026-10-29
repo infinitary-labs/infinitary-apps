@@ -436,13 +436,17 @@ function taskBrowserHandoffStep(body: string): ScriptedCall[] | undefined {
  * reports that it asked. Woken, by Return control or by the saved sign-in,
  * it opens the page again, so the club's server sees its sign-in, and
  * reports the wake's first sentence and what the page said, read off the
- * tool results, never assumed.
+ * tool results, never assumed. When a saved sign-in left the page signed
+ * out, it asks again on a card that says so (`saved_failed`,
+ * INF-1849) and reports what that card's answer said.
  */
 export const TASK_BROWSER_SAVED_MARKER = "use the club page at ";
 export const MOCK_SAVED_CARD_TITLE = "Sign in to the club page to continue";
 export const MOCK_SAVED_ACTION = BROWSER_SIGN_IN_STEP;
 export const MOCK_SAVED_ASKED_REPORT = "I asked the captain to sign in to the club page.";
 export const MOCK_SAVED_REPORT_PREFIX = "The club page said";
+export const MOCK_SAVED_FAILED_CARD_TITLE = "Sign in to the club page again";
+export const MOCK_SAVED_FAILED_REPORT = "The saved sign-in left the club page signed out.";
 const SAVED_WAKES = [
   BROWSER_RETURNED_OPENING,
   `The captain let this task use the sign-in saved on ${HERE.this}`,
@@ -498,6 +502,41 @@ function taskBrowserSavedStep(body: string): ScriptedCall[] | undefined {
   if (after.length === 0) return [browser("open", url)];
   const state = after[0]?.match(/text "((?:Not signed in|Signed in as [^"]+))"/)?.[1];
   const woken = firstSentence(messages[wake]?.text);
+  if (state === "Not signed in" && messages[wake]?.text.includes(SAVED_WAKES[1] as string)) {
+    if (after.length === 1) {
+      return [
+        {
+          name: "emit_card",
+          args: {
+            id: "club-sign-in-again",
+            title: MOCK_SAVED_FAILED_CARD_TITLE,
+            body: "<p>The club page still asks for a sign-in after your saved one, so I paused the browser on it again.</p><p>While you have control I cannot see the page, and your typing is not recorded.</p>",
+            browser_handoff: {
+              site: new URL(url).host,
+              reason: "The saved sign-in did not sign the club page in",
+              after: "read the club page and report what it says",
+              saved_failed: true,
+            },
+            actions: [
+              { id: "leave", label: "Leave waiting" },
+              {
+                id: "sign-in",
+                label: MOCK_SAVED_ACTION,
+                default: true,
+                effect: { kind: "open", target: "browser" },
+              },
+            ],
+          },
+        },
+      ];
+    }
+    return [
+      {
+        name: "report",
+        args: { text: `${MOCK_SAVED_FAILED_REPORT} The card: "${after[1]?.split("\n")[0]}"` },
+      },
+    ];
+  }
   return [
     {
       name: "report",

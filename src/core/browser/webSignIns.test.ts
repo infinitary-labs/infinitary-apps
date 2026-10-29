@@ -178,6 +178,37 @@ describe("the saved sign-ins store", () => {
     });
   });
 
+  // INF-1849 piece 2: the crewmate marks a save that did not sign its page in.
+  it("marks only the save a browser was given, with when, keeps the mark through refreshes and clears it with a new save", () => {
+    const root = scratchDir("infinitary-web-sign-ins-");
+    let now = 1_000;
+    const store = new WebSignIns(root, () => now);
+    const first = store.save("aurora.example", cookies(cookie("aurora.example", "sid")));
+    expect(store.get(first.site)?.failedAt).toBeUndefined();
+    now = 5_000;
+    expect(store.markFailed("Aurora.example", first.id)).toBe(true);
+    expect(new WebSignIns(root).get(first.site)?.failedAt).toBe(5_000);
+    // The captain's hand-back refreshing the save, and the future-task permission, keep the mark.
+    expect(store.refresh(first.site, first.id, cookies(cookie("aurora.example", "sid2")))).toBe(
+      true,
+    );
+    expect(store.allowAutomatic(first.site, first.id, true)).toBe(true);
+    expect(store.get(first.site)?.failedAt).toBe(5_000);
+    // Settings lists nothing new.
+    expect(store.list()).toEqual([
+      { site: "aurora.example", savedAt: 1_000, id: first.id, automatic: true },
+    ]);
+    // A new save clears it, and a stale id never marks the new one.
+    const second = store.save("aurora.example", cookies(cookie("aurora.example", "sid3")));
+    expect(store.get(second.site)?.failedAt).toBeUndefined();
+    expect(store.markFailed(second.site, first.id)).toBe(false);
+    expect(store.get(second.site)?.failedAt).toBeUndefined();
+    // A removed save is never marked.
+    store.remove(second.site);
+    expect(store.markFailed(second.site, second.id)).toBe(false);
+    expect(store.get(second.site)).toBeUndefined();
+  });
+
   it("reads a broken file as nothing saved", () => {
     const root = join(scratchDir("infinitary-web-sign-ins-"), "web-sign-ins");
     const store = new WebSignIns(root);

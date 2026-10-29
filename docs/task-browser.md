@@ -396,7 +396,7 @@ A site that holds none of the three saves nothing, and a site that keeps its sig
 The browser that saves or refreshes a site's sign-in uses it from then on.
 
 **Where they live.**
-`WebSignIns` (`src/core/browser/webSignIns.ts`) is the one writer over `userData/web-sign-ins/`: a 0700 folder with one 0600 file per site, named by a digest of the site, holding the site, when it was saved, which save it is (`id`), its cookies, its local storage and session storage by origin and its optional `automatic` permission.
+`WebSignIns` (`src/core/browser/webSignIns.ts`) is the one writer over `userData/web-sign-ins/`: a 0700 folder with one 0600 file per site, named by a digest of the site, holding the site, when it was saved, which save it is (`id`), its cookies, its local storage and session storage by origin, its optional `automatic` permission and its optional `failedAt`, when a crewmate last said it did not sign its page in.
 A save made before local or session storage was kept reads as one with none, and a save with no `automatic` permission remains save-only.
 `TaskBrowsers` is its only caller; nothing else reads it, and nothing makes the folder until the captain first ticks Remember.
 
@@ -441,7 +441,19 @@ Clearing site data does not reach session storage, so Remove clears it in each p
 
 **What it cannot promise.**
 Sites end sessions on their own schedule, and a site that binds a session to the browser or device that made it may turn a copied one away.
-Then the page asks for a sign-in again; the crewmate's wake tells it to ask the captain again on a card, and since its browser now holds a saved sign-in the card offers only `Sign in myself`.
+Then the page asks for a sign-in again; the crewmate's wake tells it to ask the captain again on a card with `browser_handoff` carrying `saved_failed` true, and since its browser now holds a saved sign-in the card offers only `Sign in myself`.
+An automatic use's notice tells it the same.
+
+**A save that did not work.**
+Only the crewmate decides that a saved sign-in failed: a second request card on the same site may be a payment review, so the host never infers it.
+Its `saved_failed` marks the exact save its browser was given, by its `id`, with when (`WebSignIns.markFailed`, `TaskBrowsers.markSavedSignInFailed`), and writes one line on the task's timeline, `said your saved sign-in at <site> did not sign its page in`.
+A browser on another computer marks the save this Mac lent it or made from its hand-back (`PlacedBrowsers.markSavedSignInFailed`).
+A browser that uses no save for the site marks nothing, and its crewmate's tool answer says so; a removed or replaced save is never marked.
+The rule rides the saved sign-in's notice, not the card tool's own words, so it costs the fixed context nothing.
+The next request card on that site that offers the save leads with `Sign in myself` as its default and keeps `Use my saved sign-in (did not work last time)` as a second choice, without the site, which the card names.
+A new save clears the mark; the captain's hand-back refreshing the save, a browser's copy back and the future-task permission keep it.
+An allowed automatic visit still tries a marked save once, since it costs the captain no click, and Settings shows nothing new.
+
 A saved sign-in is as safe as this Mac's own login and its disk.
 
 ## A final submission

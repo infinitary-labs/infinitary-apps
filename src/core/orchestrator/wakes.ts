@@ -50,7 +50,7 @@ import type { ProjectSetupOutcome } from "@shared/projectSetup";
 import { formatDurationShort } from "@shared/quotaSignals";
 import type { ReviewVerdict } from "@shared/rigor";
 import type { ServedOrigin } from "@shared/servedFrame";
-import { UNKNOWN_OUTCOME_WORDS } from "@shared/taskBrowser";
+import { SAVED_SIGN_IN_FAILED_WORDS, UNKNOWN_OUTCOME_WORDS } from "@shared/taskBrowser";
 import { browserCommand } from "../browser/commandWords";
 import { CAREFUL_LIVE_VALIDATION } from "../prompts/liveValidation";
 import type { LeftOut, LeftOutReason } from "../routing/placementEngine";
@@ -1277,7 +1277,7 @@ function renderBrowserReturned(facts: Extract<WakeFacts, { kind: "browser-return
     ? ` You said that next you would: ${facts.after.replace(/\.$/, "")}.`
     : "";
   if (facts.saved) {
-    return `The captain let this task use the sign-in saved on ${HERE.this} for ${facts.site}, and your browser is yours again: its page reloaded with that sign-in. Your earlier refs are gone: run ${browserCommand()} for a fresh look at the page as it is now, and check that it is signed in before you carry on.${after} If the site still asks for a sign-in, it did not take the saved one: ask the captain again on a card, and the captain signs in. A saved sign-in gives this task the signed-in site, not permission to buy, pay or submit anything that matters: ask on a card first.`;
+    return `The captain let this task use the sign-in saved on ${HERE.this} for ${facts.site}, and your browser is yours again: its page reloaded with that sign-in. Your earlier refs are gone: run ${browserCommand()} for a fresh look at the page as it is now, and check that it is signed in before you carry on.${after} ${SAVED_SIGN_IN_FAILED_WORDS} A saved sign-in gives this task the signed-in site, not permission to buy, pay or submit anything that matters: ask on a card first.`;
   }
   return `${BROWSER_RETURNED_OPENING}, on ${facts.site}. Your earlier refs are gone: run ${browserCommand()} for a fresh look at the page as it is now, including anything the captain signed in to, and check what changed before you carry on.${after} If you asked the captain to pay or submit something, read what the page says happened and keep only the result, such as a reference. If the page does not confirm it - an error, a page still processing, no answer, or a browser that is gone - the outcome is unknown: never submit, reload or resend it; check where the site lists it, such as its bookings, and ask the captain on a card to check in the browser. ${UNKNOWN_OUTCOME_WORDS} Returning control gives this task the signed-in site, not permission to buy, pay or submit anything that matters: ask on a card first.`;
 }

@@ -33,6 +33,11 @@ import type { HostCookie, HostOriginStorage } from "../host";
  * site may clear it while the browser sits idle before it stops. Each save
  * mints a new `id`, so a browser copies back only into the save it was
  * given, never into one the captain removed and saved anew.
+ *
+ * A crewmate whose page still asked for a sign-in after a save was used
+ * says so on its next request card, and the save it was given keeps that
+ * mark, with when, until a new save replaces it; the next request card
+ * then leads with the captain's own sign-in.
  */
 
 /** One saved sign-in's file: its site, when it was saved, which save it is, its cookies and page storage. */
@@ -46,6 +51,8 @@ export type SavedSignInRecord = {
   storage: HostOriginStorage[];
   /** Its own origins' session storage. */
   session: HostOriginStorage[];
+  /** When a crewmate last said this save did not sign its page in; absent while none has. */
+  failedAt?: number;
 };
 
 /**
@@ -70,6 +77,7 @@ const recordSchema = z.object({
   storage: z.array(originStorageSchema).default([]),
   // A save made before session storage was kept has none.
   session: z.array(originStorageSchema).default([]),
+  failedAt: z.number().optional(),
 });
 
 /** A site as the store keys it: the page's host and port, lower case. */
@@ -225,6 +233,19 @@ export class WebSignIns {
         ? mergeStorage(record.session, held.session, record.site)
         : record.session,
     });
+    return true;
+  }
+
+  /**
+   * A crewmate said the save it was given did not sign its page in: that
+   * save keeps the mark, with when, until a new save replaces it. Nothing
+   * is written when that save was removed or replaced since; when it was,
+   * false.
+   */
+  markFailed(site: string, id: string): boolean {
+    const record = this.get(site);
+    if (!record || record.id !== id) return false;
+    this.write({ ...record, failedAt: this.now() });
     return true;
   }
 

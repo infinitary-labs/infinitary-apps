@@ -353,7 +353,15 @@ export const placedCardSchema = z.object({
   /** The label of the card's door to its task's browser, from a crewmate whose task has one there. */
   browserButton: z.string().optional(),
   /** Its request that the captain take its browser over (docs/task-browser.md, "Asking for help"). */
-  browserHandoff: z.object({ site: z.string(), reason: z.string(), after: z.string() }).optional(),
+  browserHandoff: z
+    .object({
+      site: z.string(),
+      reason: z.string(),
+      after: z.string(),
+      /** The saved sign-in its browser was given did not sign the page in (docs/task-browser.md, "Saved sign-ins"). */
+      savedFailed: z.literal(true).optional(),
+    })
+    .optional(),
   /** Bind the shown ordinary action to a recorded validation request. */
   validationDecision: z.object({ request: z.string(), action: z.string() }).optional(),
   /** The page from its task's project that its browser button opens (docs/task-browser.md, "A page from the project"). */

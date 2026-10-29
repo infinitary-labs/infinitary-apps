@@ -192,7 +192,7 @@ export type EmittedCard = {
    * (`browser_handoff`, only on a task that has one): the host pauses the
    * browser before the card goes up, or refuses the card.
    */
-  browserHandoff?: { site: string; reason: string; after: string };
+  browserHandoff?: { site: string; reason: string; after: string; savedFailed?: true };
   /** Bind the shown ordinary action to a recorded validation request. */
   validationDecision?: { request: string; action: string };
   /**
@@ -388,7 +388,7 @@ type EmitCardParams = Omit<Static<typeof crewmateCardParams>, "actions" | "risk"
   standalone?: boolean;
   browser_button?: string;
   validation_request?: { request: string; action: string };
-  browser_handoff?: { site: string; reason: string; after: string };
+  browser_handoff?: { site: string; reason: string; after: string; saved_failed?: boolean };
   browser_page?: string;
 };
 
@@ -498,7 +498,7 @@ const BROWSER_HANDOFF_DESCRIPTION = [
   `Give site (the page's host), reason (why you need the captain) and after (what you will do once control comes back), each a short sentence of at most ${TASK_BROWSER_REQUEST_MAX} characters.`,
   `The card is an ordinary decision naming the site and why; give it exactly one action whose effect is { kind: "open", target: "browser" }, labeled as the captain's step, such as ${BROWSER_SIGN_IN_STEP}, beside one such as Leave waiting.`,
   "The app pauses your browser before the card goes up: your browser commands refuse until the captain returns control, and nothing the captain types or sees reaches you.",
-  "Only the captain's Return control resumes you, once, with your earlier refs gone: take a fresh look and check what changed.",
+  "Only the captain's Return control resumes you, once, with your earlier refs gone: take a fresh look.",
   `Returning control gives this task the signed-in site, never permission to buy, pay or submit something that matters. ${browserCommand("stop")} withdraws a waiting request.`,
   "A purchase, booking or other submission that commits the captain is the captain's to make: prepare it up to its last step and ask here, with the card as its review.",
   `The review names what the captain commits to, read from the page now - for a trip the route, dates and times with time zones, passengers, seller, total and currency, baggage and fare rules - with anything uncertain and what changed since the captain chose; label the step, such as ${BROWSER_PAY_STEP}, beside one such as Stop here.`,
@@ -528,7 +528,13 @@ const crewmateBrowserCardParams = Type.Object({
   browser_page: Type.Optional(Type.String({ description: BROWSER_PAGE_DESCRIPTION })),
   browser_handoff: Type.Optional(
     Type.Object(
-      { site: Type.String(), reason: Type.String(), after: Type.String() },
+      {
+        site: Type.String(),
+        reason: Type.String(),
+        after: Type.String(),
+        // The saved-sign-in notice says when; it is not fixed context (INF-1849).
+        saved_failed: Type.Optional(Type.Boolean()),
+      },
       { description: BROWSER_HANDOFF_DESCRIPTION },
     ),
   ),
@@ -699,7 +705,14 @@ async function emitCard(
       : {}),
     ...(params.validation_request ? { validationDecision: params.validation_request } : {}),
     ...(options.browserButton && params.browser_handoff !== undefined
-      ? { browserHandoff: params.browser_handoff }
+      ? {
+          browserHandoff: {
+            site: params.browser_handoff.site,
+            reason: params.browser_handoff.reason,
+            after: params.browser_handoff.after,
+            ...(params.browser_handoff.saved_failed === true ? { savedFailed: true as const } : {}),
+          },
+        }
       : {}),
     ...(options.browserButton && params.browser_page !== undefined
       ? { browserPage: params.browser_page }

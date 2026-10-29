@@ -593,7 +593,7 @@ describe("renderWake", () => {
       facts: { kind: "browser-returned", site: "aurora.example", saved: true },
     });
     expect(words).toBe(
-      "The captain let this task use the sign-in saved on this computer for aurora.example, and your browser is yours again: its page reloaded with that sign-in. Your earlier refs are gone: run `infinitary-browser-axi` for a fresh look at the page as it is now, and check that it is signed in before you carry on. If the site still asks for a sign-in, it did not take the saved one: ask the captain again on a card, and the captain signs in. A saved sign-in gives this task the signed-in site, not permission to buy, pay or submit anything that matters: ask on a card first.",
+      "The captain let this task use the sign-in saved on this computer for aurora.example, and your browser is yours again: its page reloaded with that sign-in. Your earlier refs are gone: run `infinitary-browser-axi` for a fresh look at the page as it is now, and check that it is signed in before you carry on. If the site still asks for a sign-in, it did not take the saved one: ask the captain again on a card with browser_handoff carrying saved_failed true, so the next card leads with the captain signing in. A saved sign-in gives this task the signed-in site, not permission to buy, pay or submit anything that matters: ask on a card first.",
     );
   });
 

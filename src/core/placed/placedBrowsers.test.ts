@@ -13,6 +13,7 @@ const held = {
 const handle = { session: "work-browser", generation: 1 };
 function setup(answer: (channel: string, args: unknown) => Promise<unknown>) {
   const store = new WebSignIns(scratchDir("infinitary-home-sign-ins-"));
+  const notes: string[] = [];
   const browsers = new PlacedBrowsers({
     devices: {
       ask: async (_device, channel, args) => answer(channel, args),
@@ -21,7 +22,7 @@ function setup(answer: (channel: string, args: unknown) => Promise<unknown>) {
     deviceOf: () => "work-computer",
     nameOf: () => "Work computer",
     signIns: store,
-    note: () => {},
+    note: (task, text) => notes.push(`${task}: ${text}`),
     onChange: () => {},
     onReturned: () => {},
   });
@@ -33,7 +34,7 @@ function setup(answer: (channel: string, args: unknown) => Promise<unknown>) {
     control: "captain",
     ...handle,
   });
-  return { store, browsers };
+  return { store, browsers, notes };
 }
 
 describe("home-owned saved-site handback across computers", () => {
@@ -135,5 +136,37 @@ describe("home-owned saved-site handback across computers", () => {
       held: { cookies: [], storage: held.storage },
     });
     expect(store.get(site)?.session).toEqual(session);
+  });
+
+  // INF-1849 piece 2: a crewmate on another computer marks the save the home lent its browser.
+  it("marks the save this Mac lent a browser there when its crewmate says it failed, and nothing it did not lend", async () => {
+    const { store, browsers, notes } = setup(async () => ({ ok: true }));
+    const record = store.save(site, held);
+    const usingSave = (saved: boolean) =>
+      browsers.heardFact("work-computer", "task", {
+        state: "open",
+        site,
+        url: `https://${site}/`,
+        title: "Club",
+        ...(saved ? { saved: [site] } : {}),
+        ...handle,
+      });
+    // Nothing lent yet: nothing to mark.
+    usingSave(true);
+    expect(browsers.markSavedSignInFailed("task", site)).toBe(false);
+    expect(store.get(site)?.failedAt).toBeUndefined();
+    expect(await browsers.grantSavedSignIn("task", handle)).toEqual({ ok: true });
+    // A browser there that no longer uses the save marks nothing.
+    usingSave(false);
+    expect(browsers.markSavedSignInFailed("task", site)).toBe(false);
+    usingSave(true);
+    expect(browsers.markSavedSignInFailed("task", site)).toBe(true);
+    expect(store.get(site)).toMatchObject({ id: record.id, failedAt: expect.any(Number) });
+    expect(notes).toEqual([`task: said your saved sign-in at ${site} did not sign its page in`]);
+    expect(browsers.savedSignInFor("task", site)).toBeUndefined();
+    // A save replaced since is never marked.
+    store.save(site, held);
+    expect(browsers.markSavedSignInFailed("task", site)).toBe(false);
+    expect(store.get(site)?.failedAt).toBeUndefined();
   });
 });

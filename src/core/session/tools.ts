@@ -99,7 +99,7 @@ export type EmittedCardInput = {
    * is on, why it needs him, and what it does once control comes back. The
    * host pauses the browser before the card goes up, or refuses the card.
    */
-  browserHandoff?: { site: string; reason: string; after: string };
+  browserHandoff?: { site: string; reason: string; after: string; savedFailed?: true };
   /** Bind the shown ordinary action to a recorded validation request. */
   validationDecision?: { request: string; action: string };
   /**

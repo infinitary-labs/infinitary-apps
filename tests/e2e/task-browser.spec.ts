@@ -21,6 +21,7 @@ import {
   RETURN_CONTROL_NOTICE,
   RETURNED_CAPTION,
   rememberSignInLabel,
+  SAVED_SIGN_IN_FAILED_LABEL,
   SIGN_IN_MYSELF_LABEL,
   savedCaption,
   savedSignInLabel,
@@ -63,6 +64,8 @@ import {
   MOCK_SAVED_ACTION,
   MOCK_SAVED_ASKED_REPORT,
   MOCK_SAVED_CARD_TITLE,
+  MOCK_SAVED_FAILED_CARD_TITLE,
+  MOCK_SAVED_FAILED_REPORT,
   MOCK_SAVED_REPORT_PREFIX,
   MOCK_SIGNED_IN_PICTURE,
   MOCK_SIGNED_IN_PICTURE_REASON,
@@ -1591,6 +1594,7 @@ test("a page's second page opens inside the task's browser, named by its own sit
 /** A saved sign-in's file, as the store wrote it. */
 type SavedSignInFile = {
   site: string;
+  failedAt?: number;
   cookies: { name: string; value: string }[];
   storage?: { origin: string; items: [string, string][] }[];
   session?: { origin: string; items: [string, string][] }[];
@@ -2318,6 +2322,143 @@ test("a site that keeps its sign-in in its page's session storage is saved at th
       expect(savedSignInFiles()).toEqual([]);
     });
   } finally {
+    await closeSite(club);
+  }
+});
+
+test("a saved sign-in the site turned away is marked by the crewmate, and the next request leads with Sign in myself (INF-1849)", async () => {
+  // One journey, the captain's approved INF-1849 plan, piece 2: a club that
+  // ends its sessions on its own schedule turns a day-old saved sign-in
+  // away; the crewmate says so on its next card, and a later task's
+  // request keeps the save as a second choice that says it did not work.
+  test.setTimeout(240_000);
+  const { page, app } = launched;
+  await stopTaskBrowsers(page);
+  const evidence = process.env.INFINITARY_TASK_EVIDENCE_DIR;
+  /** The club's live sessions, by token: ending them is the club's own schedule. */
+  const sessions = new Map<string, string>();
+  const club = createServer((request, response) => {
+    const token = (request.headers.cookie ?? "").match(/(?:^|;\s*)token=([^;]+)/)?.[1];
+    if (request.method === "POST" && request.url === "/sign-in") {
+      let body = "";
+      request.on("data", (chunk) => {
+        body += String(chunk);
+      });
+      request.on("end", () => {
+        const minted = `t${sessions.size + 1}-${Date.now()}`;
+        sessions.set(minted, body);
+        response.writeHead(204, {
+          "set-cookie": `token=${minted}; Path=/; HttpOnly; SameSite=Lax`,
+        });
+        response.end();
+      });
+      return;
+    }
+    response.writeHead(200, { "content-type": "text/html; charset=utf-8" });
+    response.end(clubPage(token ? sessions.get(token) : undefined));
+  });
+  await new Promise<void>((resolve) => club.listen(0, "127.0.0.1", resolve));
+  const clubUrl = `http://127.0.0.1:${(club.address() as AddressInfo).port}/`;
+  const site = new URL(clubUrl).host;
+  const titled = (who: string) => `${TASK_BROWSER_SAVED_MARKER}${clubUrl} as ${who}`;
+  const stop = async (title: string, id: string): Promise<void> => {
+    expect(await page.evaluate((task) => window.infinitary.browser.stop(task), id)).toEqual({
+      ok: true,
+    });
+    await expect.poll(async () => (await detailTitled(title))?.browser?.state).toBe("stopped");
+  };
+  /** A card's buttons as the stack holds them: label and whether it is the default. */
+  const buttons = async (title: string, taskId: string) =>
+    (await page.evaluate(() => window.infinitary.cards.list()))
+      .find((card) => card.title === title && card.taskId === taskId)
+      ?.actions.map((action) => ({ label: action.label, default: action.default === true }));
+  try {
+    await resizeWindow(app, page, { width: 1280, height: 900 });
+    const first = titled("strict one");
+    const second = titled("strict two");
+    const third = titled("strict three");
+
+    await test.step("the captain signs in and Return control's tick saves the club's sign-in", async () => {
+      const task = await askToSignIn(first);
+      await showCard(page, MOCK_SAVED_CARD_TITLE);
+      await savedCardRegion().getByRole("button", { name: MOCK_SAVED_ACTION }).click();
+      await expect(view(page, task.id)).toHaveAttribute("data-browser-state", "captain");
+      await expect.poll(async () => (await canvasReading(page)).frames).toBeGreaterThan(0);
+      await typeOnPage(app, page, task.id, clubUrl, "email", "sam@example.com");
+      await typeOnPage(app, page, task.id, clubUrl, "password", "strict-club-password");
+      await clickOnPage(app, page, task.id, clubUrl, "sign-in");
+      await expect
+        .poll(() => pageSays(app, clubUrl, "state").catch(() => null))
+        .toBe("Signed in as sam@example.com");
+      const sharing = view(page, task.id).locator("[data-browser-sharing]");
+      await sharing.getByRole("checkbox", { name: rememberSignInLabel(site) }).check();
+      await runFromSearch(app, page, "browser.control");
+      await expect
+        .poll(async () => (await detailTitled(first))?.outcome ?? "", { timeout: 60_000 })
+        .toContain(`${MOCK_SAVED_REPORT_PREFIX} "Signed in as sam@example.com"`);
+      expect(savedSignInFiles()).toEqual([expect.objectContaining({ site })]);
+      expect(savedSignInFiles()[0]).not.toHaveProperty("failedAt");
+      await stop(first, task.id);
+    });
+
+    const b =
+      await test.step("the club ends the session, the saved sign-in leaves the page signed out, and the crewmate marks it", async () => {
+        // The club's own schedule: the saved token is no longer accepted.
+        sessions.clear();
+        const task = await askToSignIn(second);
+        expect(await buttons(MOCK_SAVED_CARD_TITLE, task.id)).toEqual([
+          { label: "Leave waiting", default: false },
+          { label: SIGN_IN_MYSELF_LABEL, default: false },
+          { label: savedSignInLabel(site), default: true },
+        ]);
+        await showCard(page, MOCK_SAVED_CARD_TITLE);
+        // The same crop as the request after the mark, into the evidence folder alone.
+        if (evidence)
+          await heroShot(app, page, {
+            region: savedCardRegion(),
+            name: "card-saved-sign-in-before",
+            dir: evidence,
+          });
+        await savedCardRegion()
+          .getByRole("button", { name: savedSignInLabel(site) })
+          .click();
+        await expect
+          .poll(async () => (await detailTitled(second))?.outcome ?? "", { timeout: 60_000 })
+          .toContain(MOCK_SAVED_FAILED_REPORT);
+        const current = (await detailTitled(second)) as TaskDetail;
+        // The host marked the save the browser was given; its tool answer says nothing went unmarked.
+        expect(current.outcome).not.toContain("marked nothing");
+        expect(savedSignInFiles()).toEqual([
+          expect.objectContaining({ site, failedAt: expect.any(Number) }),
+        ]);
+        expect(current.events.map((event) => event.text)).toContain(
+          `said your saved sign-in at ${site} did not sign its page in`,
+        );
+        // Its browser uses the save already, so its own card offers only the captain's sign-in.
+        expect(await buttons(MOCK_SAVED_FAILED_CARD_TITLE, task.id)).toEqual([
+          { label: "Leave waiting", default: false },
+          { label: MOCK_SAVED_ACTION, default: true },
+        ]);
+        return task;
+      });
+
+    await test.step("a later task's request leads with Sign in myself and keeps the save as a second choice", async () => {
+      const task = await askToSignIn(third);
+      expect(await buttons(MOCK_SAVED_CARD_TITLE, task.id)).toEqual([
+        { label: "Leave waiting", default: false },
+        { label: SAVED_SIGN_IN_FAILED_LABEL, default: false },
+        { label: SIGN_IN_MYSELF_LABEL, default: true },
+      ]);
+      await showCard(page, MOCK_SAVED_CARD_TITLE);
+      const card = savedCardRegion();
+      await expect(card.getByRole("button", { name: SAVED_SIGN_IN_FAILED_LABEL })).toBeVisible();
+      if (evidence)
+        await heroShot(app, page, { region: card, name: "task-browser-saved-sign-in-failed" });
+      await stop(third, task.id);
+      await stop(second, b.id);
+    });
+  } finally {
+    await page.evaluate((named) => window.infinitary.browser.removeSignIn(named), site);
     await closeSite(club);
   }
 });

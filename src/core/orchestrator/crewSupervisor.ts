@@ -175,7 +175,8 @@ import type { ServedWakeOrigin } from "@shared/servedFrame";
 import {
   attachmentStanding,
   BROWSER_DOOR_LABEL,
-  type SavedSignIn,
+  type OfferedSignIn,
+  SAVED_SIGN_IN_FAILED_LABEL,
   SIGN_IN_MYSELF_LABEL,
   savedSignInLabel,
   TASK_BROWSER_REQUEST_MAX,
@@ -922,7 +923,13 @@ export type CrewSupervisorOptions = {
      * The saved sign-in a request card on this site may offer
      * (docs/task-browser.md, "Saved sign-ins"); absent where none.
      */
-    savedSignInFor?: (taskId: string, site: string) => SavedSignIn | undefined;
+    savedSignInFor?: (taskId: string, site: string) => OfferedSignIn | undefined;
+    /**
+     * The crewmate's request card says the saved sign-in its browser was
+     * given did not sign the page in: that save keeps the mark. False when
+     * the browser uses none for the site.
+     */
+    markSavedSignInFailed?: (taskId: string, site: string) => boolean;
     /** The captain's click on a request card's saved sign-in. */
     grantSavedSignIn?: (
       taskId: string,
@@ -9569,6 +9576,13 @@ export class CrewSupervisor {
           ?.version === 2,
     });
     if (refusal) throw new CardRefusedError(`Card refused: ${refusal}`, "shape", refusal);
+    // The crewmate says the saved sign-in its browser was given did not
+    // sign the page in: that save keeps the mark before anything is offered
+    // (docs/task-browser.md, "Saved sign-ins").
+    const unmarked =
+      handoff?.savedFailed && !this.options.browsers?.markSavedSignInFailed?.(task.id, handoff.site)
+        ? ` Your browser uses no saved sign-in for ${handoff.site}, so saved_failed marked nothing.`
+        : "";
     // A saved sign-in is offered after the lint: the crewmate never learns
     // which sites are saved, so it is never counted for an action it could
     // not declare. A request card is never a completion card, so the pair
@@ -9702,7 +9716,7 @@ export class CrewSupervisor {
     const pausedWords = handoff
       ? " Your browser is paused for the captain: your browser commands refuse until the captain takes control and returns it, which wakes you once. End your turn when nothing else needs doing; report with waiting_on_captain naming this card."
       : "";
-    const answer = (text: string) => `${text}${advisory}${pausedWords}`;
+    const answer = (text: string) => `${text}${advisory}${unmarked}${pausedWords}`;
     // A revision that went up while the checks run says what still holds
     // the merge, and what to do once they pass.
     const gated = (risk?: RiskAssessment) =>
@@ -9732,7 +9746,7 @@ export class CrewSupervisor {
   private browserHandoffOf(
     actions: readonly DeclaredAction[],
     declared: EmittedCardInput["browserHandoff"],
-  ): { site: string; reason: string; after: string } | undefined {
+  ): { site: string; reason: string; after: string; savedFailed?: true } | undefined {
     if (actions.some((action) => action.effect?.kind === "open" && action.effect.savedSignIn)) {
       throw new Error(
         `Card refused: the saved sign-in choice is the host's to add, never a crewmate's. Declare only your own open-browser action; the host offers a saved sign-in beside it when ${HERE.this} has one for the site.`,
@@ -9777,34 +9791,37 @@ export class CrewSupervisor {
         "Card refused: a request for the captain to take over your browser is a decision of its own, never a completion card.",
       );
     }
-    return handoff;
+    return declared.savedFailed ? { ...handoff, savedFailed: true } : handoff;
   }
 
   /**
    * A request card's actions once this Mac has a sign-in saved for its site
    * (docs/task-browser.md, "Saved sign-ins"): the host adds Use my saved
    * <site> sign-in as the default, and the crewmate's open-browser action
-   * becomes Sign in myself beside it. The crewmate never learns which sites
-   * are saved; without one its actions stand as it declared them.
+   * becomes Sign in myself beside it. Once a crewmate said that save did not
+   * sign its page in, Sign in myself leads and the save stays a second
+   * choice that says so. The crewmate never learns which sites are saved;
+   * without one its actions stand as it declared them.
    */
   private withSavedSignIn(
     taskId: string,
     site: string,
     actions: readonly EmittedAction[],
   ): EmittedAction[] {
-    const saved = this.options.browsers?.savedSignInFor?.(taskId, site);
+    const saved: OfferedSignIn | undefined = this.options.browsers?.savedSignInFor?.(taskId, site);
     if (!saved) return [...actions];
+    const failed = saved.failedAt !== undefined;
     const own = actions.map(({ default: _default, ...action }) =>
       action.effect?.kind === "open" && action.effect.target === "browser"
-        ? { ...action, label: SIGN_IN_MYSELF_LABEL }
+        ? { ...action, label: SIGN_IN_MYSELF_LABEL, ...(failed ? { default: true } : {}) }
         : action,
     );
     return [
       ...own,
       {
         id: USE_SAVED_SIGN_IN_ACTION,
-        label: savedSignInLabel(saved.site),
-        default: true,
+        label: failed ? SAVED_SIGN_IN_FAILED_LABEL : savedSignInLabel(saved.site),
+        ...(failed ? {} : { default: true }),
         effect: { kind: "open", target: "browser", savedSignIn: true },
       },
     ];

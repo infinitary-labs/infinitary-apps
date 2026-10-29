@@ -325,6 +325,23 @@ export function rememberSignInLabel(site: string): string {
 export function savedSignInLabel(site: string): string {
   return `Use my saved ${site} sign-in`;
 }
+/**
+ * The saved sign-in's choice once a crewmate said it did not sign its page
+ * in: a second choice beside `SIGN_IN_MYSELF_LABEL`, which leads. The card
+ * names the site, so the label leaves it out to stay short.
+ */
+export const SAVED_SIGN_IN_FAILED_LABEL = "Use my saved sign-in (did not work last time)";
+/**
+ * The saved sign-in a request card may offer: its site, when it was saved,
+ * and when a crewmate last said it did not sign its page in.
+ */
+export type OfferedSignIn = { site: string; savedAt: number; failedAt?: number };
+/**
+ * What a crewmate is told after a saved sign-in was used: how to say on
+ * its next request card that the saved sign-in did not sign the page in.
+ */
+export const SAVED_SIGN_IN_FAILED_WORDS =
+  "If the site still asks for a sign-in, it did not take the saved one: ask the captain again on a card with browser_handoff carrying saved_failed true, so the next card leads with the captain signing in.";
 /** The request card's open-browser action, beside a saved sign-in. */
 export const SIGN_IN_MYSELF_LABEL = "Sign in myself";
 /** The id the host gives the saved sign-in action it adds to a request card. */

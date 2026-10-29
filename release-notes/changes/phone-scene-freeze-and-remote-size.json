@@ -1,0 +1,26 @@
+{
+  "entries": [
+    {
+      "id": "phone-scene-no-freeze",
+      "kind": "fix",
+      "area": "devices",
+      "title": "The crew on your phone no longer freeze every couple of seconds",
+      "body": "With a long task list, the crew around the first mate on iPhone and iPad paused for a split second each time a task changed. Infinitary on your phone now takes in only what changed, so the crew keep moving smoothly.",
+      "noPicture": "The fix is smooth motion, which a still picture cannot show.",
+      "provenance": { "origin": "change" }
+    },
+    {
+      "id": "phone-remote-crew-size",
+      "kind": "fix",
+      "area": "devices",
+      "title": "Crew on your other computers are drawn a little smaller on your phone, as on your Mac",
+      "body": "On iPhone and iPad, crewmates working on another computer now draw at the same smaller size the Mac uses, and smaller again when that computer has more than twelve. Crewmates on your main computer match the Mac's size too.",
+      "picture": {
+        "dark": "phone-remote-crew-size-dark.webp",
+        "light": "phone-remote-crew-size-light.webp",
+        "alt": "Four crewmates on the left at full size, and Studio Mac's four smaller crewmates on the right"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

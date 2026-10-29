@@ -20,7 +20,7 @@ try {
   const { WARP_RELEASE_MS } = await runner.import<typeof import("../src/renderer/src/character/crew/warp.ts")>(join(character, "crew/warp.ts"));
   const { FLICKER_TUNING } = await runner.import<typeof import("../src/renderer/src/character/flicker.ts")>(join(character, "flicker.ts"));
   const { REPLY_EMOTES, replyFrame } = await runner.import<typeof import("../src/renderer/src/character/replies.ts")>(join(character, "replies.ts"));
-  const { CAPTAIN_BREATH_MS, CrewOrbit, DEFAULT_ORBIT, REMOTE_TRIP, WAIT_ARC_RATE } = await runner.import<typeof import("../src/renderer/src/character/crew/orbit.ts")>(join(character, "crew/orbit.ts"));
+  const { CAPTAIN_BREATH_MS, CrewOrbit, DEFAULT_ORBIT, PLANES_GLYPH_PX, REMOTE_TRIP, WAIT_ARC_RATE } = await runner.import<typeof import("../src/renderer/src/character/crew/orbit.ts")>(join(character, "crew/orbit.ts"));
   const { CONSTELLATION } = await runner.import<typeof import("../src/renderer/src/character/crew/constellation.ts")>(join(character, "crew/constellation.ts"));
   const { FIRSTMATE_SESSION_ID } = await runner.import<typeof import("../src/shared/observe.ts")>(join(REPO_ROOT, "src/shared/observe.ts"));
   const { DEPENDENCY_VISUAL } = await runner.import<typeof import("../src/shared/dependencyVisual.ts")>(join(REPO_ROOT, "src/shared/dependencyVisual.ts"));
@@ -31,7 +31,8 @@ try {
       firstmateID: FIRSTMATE_SESSION_ID, dependency: { ...DEPENDENCY_VISUAL, sceneReachPx: SCENE_REACH_PX, phase: satellitePhase(0, 1, 0, true) },
       targets: FM_STATES, durations: EMOTE_DURATION_MS, fidgets: FIDGET_DURATION_MS,
       solids: TIER_SOLIDS, planes: CROWDED_PLANES,
-      ring: { startRadiusPx: GROWING_RING.startRadiusPx, remoteShare: CLUSTER_LAYOUT.sizeShare }, constellations: { orion: ORION, dipper: BIG_DIPPER },
+      ring: { startRadiusPx: GROWING_RING.startRadiusPx, remoteShare: CLUSTER_LAYOUT.sizeShare, glyphPx: PLANES_GLYPH_PX,
+        remoteGlyphPx: CLUSTER_LAYOUT.crewGlyphPx, crowdedGlyphPx: CLUSTER_LAYOUT.crowdedGlyphPx, crowdedCrew: CLUSTER_LAYOUT.crowdedCrew }, constellations: { orion: ORION, dipper: BIG_DIPPER },
       saturn: SATURN, galaxy: GALAXY, algol: ALGOL, flicker: FLICKER_TUNING, warp: warpData(),
       captain: { ...CAPTAIN_LIGHT, breathMs: CAPTAIN_BREATH_MS },
       wait: { ...WAIT_LIGHT, arcRate: WAIT_ARC_RATE },

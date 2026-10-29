@@ -102,6 +102,12 @@ import XCTest
             XCTAssertEqual(checks.wait, 1); XCTAssertEqual(checks.job, 0); XCTAssertEqual(checks.work, 0)
             let remote = try XCTUnwrap(first.glyphs.first { $0.task.id == remoteID })
             XCTAssertTrue(remote.unknown); XCTAssertEqual(remote.work, 0)
+            // INF-1854, the captain's "on desktop i think we shrink them a little": another computer's crew draw at the
+            // desktop's cluster glyph, smaller than home's crowded one (computers.ts, orbit.ts), not one size for all.
+            let ring = CharacterCatalog.shared.ring
+            XCTAssertEqual(remote.px, ring["remoteGlyphPx"]); XCTAssertLessThan(remote.px, try XCTUnwrap(ring["glyphPx"]))
+            let homeCrew = first.glyphs.filter { $0.task.executionDeviceId == nil && !$0.programPart }
+            XCTAssertFalse(homeCrew.isEmpty); XCTAssertTrue(homeCrew.allSatisfy { $0.px == ring["glyphPx"] })
             let advanced = motion.frame(roster: roster, now: 2, settled: false)
             XCTAssertEqual(advanced.glyphs.first { $0.task.id == remoteID }?.point, remote.point)
             XCTAssertEqual(advanced.glyphs.first { $0.task.id == remoteID }?.spin, remote.spin)

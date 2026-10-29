@@ -82,7 +82,8 @@ Its card requests are a closed enum generated from the published contract, not a
 A return consumes numbered replay pushes, or reads fresh snapshots after a reload welcome.
 All four initial snapshots must arrive before the app says **In reach**.
 A card or task-board push supplies the new snapshot directly and supersedes any older initial read still in flight.
-A task-board delta requests a coalesced full board, the published resynchronization path, rather than duplicating the Mac’s delta application logic.
+A task-board delta folds onto the board the app holds, as the Mac’s `applyTaskBoardDelta` does (`PhoneBoard.applying`), because a full read of a large board on every task change stalled the crew scene on the main thread (INF-1854).
+Only a delta whose base is not the board held requests a coalesced full board, the published resynchronization path.
 Only a closed list of non-streaming events that can change the feed requests a coalesced feed refresh; assistant and thinking deltas cause no reads.
 The feed owner exports `FEED_EVENT_TYPES`, with its authoring switch checked exhaustively against that list, and the contract generator derives the Swift `FeedChange` enum from it.
 A gap in numbering drops the cursor and reconnects rather than silently losing updates.
@@ -267,7 +268,8 @@ Homes on `SCENE_OBSERVATIONS_SINCE` (`src/shared/ipc.ts`, major 12) or later, an
 A numbered push supersedes an older pending read; an older home retains event-only busy observation and unknown remote reach without sending unsupported requests.
 Joining shows only the first mate until real board facts arrive, and the accessibility value names unknown conversation activity until the home supplies a reading.
 `PhoneCrewScene` renders home's formation and every other computer's at the desktop's share of it in a continuous native scroller, with touch panning and arrow keys rather than paging or shrinking the entire scene, and no scroll bars.
-The phone draws the desktop's orbits at `PhoneSceneRoster.ringScale`, derived so that eight crewmates on the first orbit stay inside the narrowest portrait iPhone (375 points), the captain's ask; crew glyphs and the first mate keep the desktop's size.
+The phone draws the desktop's orbits at `PhoneSceneRoster.ringScale`, derived so that eight crewmates on the first orbit stay inside the narrowest portrait iPhone (375 points), the captain's ask.
+Crew glyphs keep the desktop's size: home's crowded glyph (`PLANES_GLYPH_PX`), and in another computer's cluster the smaller glyph `CLUSTER_LAYOUT` names, smaller again once that cluster holds more than its `crowdedCrew` (INF-1854).
 Crew sit on the desktop's growing two-orbit ring (`docs/crew-orbits.md`): the first orbit widens with each crewmate up to its seats, the next arrival opens the second orbit inside it, and no third orbit opens.
 `PhoneSceneRoster.SeatBook` remembers each crewmate's orbit and seat across board reads as the desktop's orbit does, logical membership counting every running part for allocation and growth, and each computer's area follows its first orbit's size.
 `PhoneSceneMotion` keeps separate drawing seat books: only visible main-orbit occupants take angular seats, including program rings but excluding branch parts and circling crew (INF-1375, approved A).

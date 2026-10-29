@@ -448,9 +448,15 @@ public struct PhoneNotice: Equatable, Sendable {
                 board = try JSONDecoder().decode(PhoneBoard.self, from: JSONSerialization.data(withJSONObject: payload))
                 supersede(PhoneRequest.board.rawValue); workRevision += 1
             }
-            // A full read is also the contract's resync path for a delta we cannot apply.
-            if frame["channel"] as? String == "inf:tasks:delta" {
-                try await refresh(PhoneRequest.board.rawValue, on: socket)
+            // A delta folds onto the board held, as on the Mac (INF-1854); a full read is the contract's resync path
+            // for a delta with no base to apply to.
+            if frame["channel"] as? String == "inf:tasks:delta", let payload = frame["payload"] {
+                let delta = try JSONDecoder().decode(PhoneBoardDelta.self, from: JSONSerialization.data(withJSONObject: payload))
+                if let held = board, let next = held.applying(delta) {
+                    if next.seq != held.seq { board = next; supersede(PhoneRequest.board.rawValue); workRevision += 1 }
+                } else {
+                    try await refresh(PhoneRequest.board.rawValue, on: socket)
+                }
             }
             if frame["channel"] as? String == "inf:event", let event = frame["payload"] as? [String: Any], let type = event["type"] as? String {
                 if type == "firstmate_state", let busy = event["busy"] as? Bool {

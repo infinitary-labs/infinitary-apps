@@ -118,6 +118,9 @@ export const DEFAULT_ORBIT: OrbitTuning = {
   packetMs: 520,
 };
 
+/** A home crewmate's glyph in the crowded planes, px, before the depth cue. */
+export const PLANES_GLYPH_PX = 25;
+
 /** How long before emission the Firstmate's send-off cue starts. */
 export const SENDOFF_LEAD_MS = 240;
 /**
@@ -1451,7 +1454,9 @@ export class CrewOrbit {
         x: position.x,
         y: position.y + wobble,
         depth,
-        size: (tuning.glyph * glyphK + (25 - tuning.glyph * glyphK) * mix) * (0.84 + 0.32 * depth),
+        size:
+          (tuning.glyph * glyphK + (PLANES_GLYPH_PX - tuning.glyph * glyphK) * mix) *
+          (0.84 + 0.32 * depth),
         alpha: alpha * (0.78 + 0.22 * depth + (-0.1 + 0.1 * depth) * mix),
         unfold,
         spark,

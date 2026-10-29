@@ -115,6 +115,22 @@ public struct PhoneBoard: Decodable, Sendable {
     public struct Link: Decodable, Sendable { public let fromId: String; public let toId: String; public let type: String }
     public struct Project: Decodable, Sendable { public let id: String; public let name: String }
 
+    /// The Mac's `applyTaskBoardDelta` (src/shared/tasks.ts): this board when the delta is older, the next board when
+    /// the delta's base is this board's seq, and nil on a gap, which resyncs from a full read (INF-1854: re-reading
+    /// a large board on every change stalled the scene).
+    public func applying(_ delta: PhoneBoardDelta) -> PhoneBoard? {
+        if delta.seq <= seq { return self }
+        guard delta.baseSeq == seq else { return nil }
+        let removed = Set(delta.removed), upserted = Set(delta.upserts.map(\.id))
+        let rows = tasks.filter { !removed.contains($0.id) && !upserted.contains($0.id) } + delta.upserts
+        func key(_ link: Link) -> String { "\(link.fromId) \(link.toId) \(link.type)" }
+        let unlinked = Set(delta.links.removed.map(key)), linked = Set(delta.links.added.map(key))
+        let edges = (links ?? []).filter { !unlinked.contains(key($0)) && !linked.contains(key($0)) } + delta.links.added
+        return PhoneBoard(seq: delta.seq,
+                          tasks: rows.sorted { $0.createdAt == $1.createdAt ? $0.id < $1.id : $0.createdAt < $1.createdAt },
+                          projects: delta.projects, links: edges.sorted { key($0) < key($1) })
+    }
+
     /// INF-1517: the Mac's `presentTask` rule (src/shared/taskWaiting.ts, docs/task-record.md "Minimized cards in
     /// Tasks") for a card put aside: its task lists under Waiting on you, unless the task is active and its author still
     /// works or owes the card an answer. Presentation only; the card stays minimized until a row brings it back.
@@ -170,6 +186,17 @@ public struct PhoneBoard: Decodable, Sendable {
             return (task.id, working.contains(task.id) && group != .waiting ? .working : group)
         })
     }
+}
+
+/// What changed between two boards, as the Mac pushes it above its delta trigger (`taskBoardDeltaSchema`).
+public struct PhoneBoardDelta: Decodable, Sendable {
+    public let baseSeq: Int
+    public let seq: Int
+    public let upserts: [PhoneTask]
+    public let removed: [String]
+    public let projects: [PhoneBoard.Project]
+    public let links: Links
+    public struct Links: Decodable, Sendable { public let added: [PhoneBoard.Link]; public let removed: [PhoneBoard.Link] }
 }
 
 public struct PhoneCrew: Decodable, Sendable {

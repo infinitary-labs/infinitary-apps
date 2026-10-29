@@ -32,6 +32,11 @@ export const CLUSTER_LAYOUT = {
   gapPx: 40,
   /** A remote cluster's orbits, as a share of home's. */
   sizeShare: 0.5,
+  /** A cluster crewmate's glyph, px, before the depth cue... */
+  crewGlyphPx: 23,
+  /** ...and once the cluster holds more crew than `crowdedCrew`. */
+  crowdedGlyphPx: 18,
+  crowdedCrew: 12,
   /** Half a glyph beyond the outer orbit: where a formation's edge is, px. */
   glyphPx: 13,
   /** A cluster's name sits this far under its edge, px. */
@@ -606,7 +611,11 @@ export class ComputerOrbits extends CrewOrbit {
           ...c,
           computerId: computer.id,
           // The glyphs keep their size, with home's depth cue: nearer is larger.
-          size: (count > 12 ? 18 : 23) * (0.84 + 0.32 * c.depth),
+          size:
+            (count > CLUSTER_LAYOUT.crowdedCrew
+              ? CLUSTER_LAYOUT.crowdedGlyphPx
+              : CLUSTER_LAYOUT.crewGlyphPx) *
+            (0.84 + 0.32 * c.depth),
           ...(!computer.reachable
             ? {
                 work: 0,

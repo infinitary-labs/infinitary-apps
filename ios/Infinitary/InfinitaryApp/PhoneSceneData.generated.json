@@ -1291,7 +1291,11 @@
   ],
   "ring": {
     "startRadiusPx": 150,
-    "remoteShare": 0.5
+    "remoteShare": 0.5,
+    "glyphPx": 25,
+    "remoteGlyphPx": 23,
+    "crowdedGlyphPx": 18,
+    "crowdedCrew": 12
   },
   "constellations": {
     "orion": {

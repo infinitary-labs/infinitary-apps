@@ -48,6 +48,14 @@ export function assertPhoneReaderShapes(contract: ReaderContract): void {
     requireRows(name, schema?.properties?.tasks, task);
     requireRows(`${name} projects`, schema?.properties?.projects, { id: "string", name: "string" });
   }
+  // INF-1854: the phone folds a board delta onto the board it holds rather than re-reading the whole board.
+  const delta = contract.pushes["inf:tasks:delta"]?.payload;
+  requireFields("inf:tasks:delta", delta, { baseSeq: "number", seq: "number", upserts: "array", removed: "array", projects: "array", links: "object" });
+  requireRows("inf:tasks:delta upserts", delta?.properties?.upserts, task);
+  requireRows("inf:tasks:delta projects", delta?.properties?.projects, { id: "string", name: "string" });
+  for (const side of ["added", "removed"]) {
+    requireRows(`inf:tasks:delta links ${side}`, delta?.properties?.links?.properties?.[side], { fromId: "string", toId: "string", type: "string" });
+  }
   requireRows("inf:tasks:search", contract.requests["inf:tasks:search"]?.response, task);
   const detail = contract.requests["inf:tasks:detail"]?.response;
   requireFields("inf:tasks:detail", detail, task);

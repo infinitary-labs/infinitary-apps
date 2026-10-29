@@ -41,6 +41,18 @@ describe("the native reader's published response shapes", () => {
     row.required = row.required.filter((key: string) => key !== field);
     expect(() => assertPhoneReaderShapes(changed)).toThrow(`must require ${field}`);
   });
+  // INF-1854: the phone applies the board delta it is pushed, so its decoder's fields stay published.
+  it.each([
+    [[], "baseSeq"],
+    [["properties", "upserts", "items"], "createdAt"],
+    [["properties", "links", "properties", "added", "items"], "toId"],
+  ] as const)("refuses an incompatible board delta at %j field %s", (path, field) => {
+    const changed = contract();
+    let row = changed.pushes["inf:tasks:delta"].payload;
+    for (const part of path) row = row[part];
+    row.required = row.required.filter((key: string) => key !== field);
+    expect(() => assertPhoneReaderShapes(changed)).toThrow(`must require ${field}`);
+  });
   // INF-82's live character must keep consuming the real typed conversation state.
   it("refuses a missing or incompatible first-mate busy event", () => {
     const missing = contract();

@@ -63,4 +63,41 @@ struct PhoneBoardTests {
         ]
         #expect(raw.presenting(cards).tasklessMinimized(cards).map(\.title) == ["Your phone is reading your Mac"])
     }
+
+    // INF-1854: re-reading a whole 1,227-row board on every task change stalled the phone's scene each couple of
+    // seconds. A delta folds onto the board held, as the Mac's applyTaskBoardDelta does; only a gap re-reads.
+    private func delta(base: Int, seq: Int, upserts: [[String: Any]], removed: [String],
+                       added: [[String: String]] = [], unlinked: [[String: String]] = []) throws -> PhoneBoardDelta {
+        let json: [String: Any] = ["baseSeq": base, "seq": seq, "at": 1_793_000_100_000, "upserts": upserts, "removed": removed,
+                                   "projects": [["id": "proj-harbour", "name": "Harbour"]], "links": ["added": added, "removed": unlinked]]
+        return try JSONDecoder().decode(PhoneBoardDelta.self, from: JSONSerialization.data(withJSONObject: json))
+    }
+
+    @Test func aDeltaOnItsBaseGivesTheNextBoard() throws {
+        var later = task("t-tide", key: "INF-14", title: "Read the tide table", status: "open")
+        later["createdAt"] = 1_793_000_000_500
+        let held = try board([
+            task("t-chart", key: "INF-12", title: "Chart the northern entrance", status: "active", activity: "idle"),
+            task("t-buoys", key: "INF-13", title: "Count the buoys", status: "open"),
+        ])
+        let next = try #require(held.applying(delta(
+            base: 41, seq: 42,
+            upserts: [later, task("t-chart", key: "INF-12", title: "Chart the northern entrance", status: "active", activity: "running")],
+            removed: ["t-buoys"], added: [["fromId": "t-chart", "toId": "t-tide", "type": "blocks"]])))
+        #expect(next.seq == 42)
+        #expect(next.tasks.map(\.id) == ["t-chart", "t-tide"])
+        #expect(next.tasks.first?.activity == "running")
+        #expect(next.groups["t-chart"] == .working)
+        #expect(next.links?.map(\.toId) == ["t-tide"])
+        let unlinked = try #require(next.applying(delta(base: 42, seq: 43, upserts: [], removed: [],
+                                                        unlinked: [["fromId": "t-chart", "toId": "t-tide", "type": "blocks"]])))
+        #expect(unlinked.links?.isEmpty == true)
+    }
+
+    @Test func aDeltaPastAGapAsksForTheWholeBoardAndAnOldOneChangesNothing() throws {
+        let held = try board([task("t-chart", key: "INF-12", title: "Chart the northern entrance", status: "open")])
+        #expect(held.applying(try delta(base: 43, seq: 44, upserts: [], removed: ["t-chart"])) == nil)
+        let stale = try #require(held.applying(delta(base: 40, seq: 41, upserts: [], removed: ["t-chart"])))
+        #expect(stale.seq == 41 && stale.tasks.map(\.id) == ["t-chart"])
+    }
 }

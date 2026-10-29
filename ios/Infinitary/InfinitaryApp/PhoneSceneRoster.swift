@@ -163,7 +163,7 @@ struct PhoneSceneRoster {
         let catalog = CharacterCatalog.shared, plane = catalog.planes[0], incline = plane.inclination * .pi / 180
         // How far across the screen the tilted first orbit reaches, as a share of its radius.
         let across = (pow(cos(plane.node), 2) + pow(cos(incline) * sin(plane.node), 2)).squareRoot()
-        let glyph = catalog.orbit["glyph"]! * (0.84 + 0.32) / 2
+        let glyph = catalog.ring["glyphPx"]! * (0.84 + 0.32) / 2
         return (narrowestPortraitWidth / 2 - PhoneTheme.space3 - glyph) / (desktopRadius(0, counts: [8]) * across)
     }()
     /// The desktop's growing ring (orbitalPlanes.ts planeRadius): the innermost open orbit grows a notch with every
@@ -232,7 +232,15 @@ struct PhoneSceneRoster {
         var captain = 0.0, captainSince = 0.0
         /// A warp's change of size and its light trail (CharacterWarp.ride), on the drawn frame only.
         var scale = 1.0, streak: [CGPoint] = []
-        var size: Double { (programPart ? CharacterCatalog.shared.program["crewGapPx"]! : CharacterCatalog.shared.orbit["glyph"]!) * (0.84 + 0.32 * depth) * scale }
+        /// Its glyph before the depth cue, as the desktop draws it: home's crowded planes, a smaller one in another
+        /// computer's cluster, and smaller again once that cluster is crowded (orbit.ts, computers.ts).
+        var px = CharacterCatalog.shared.ring["glyphPx"]!
+        var size: Double { px * (0.84 + 0.32 * depth) * scale }
+        static func px(computer: PhoneSceneRoster.Computer, programPart: Bool) -> Double {
+            let ring = CharacterCatalog.shared.ring
+            if computer.id != "home" { return Double(computer.tasks.count) > ring["crowdedCrew"]! ? ring["crowdedGlyphPx"]! : ring["remoteGlyphPx"]! }
+            return programPart ? CharacterCatalog.shared.program["crewGapPx"]! : ring["glyphPx"]!
+        }
     }
     struct Packet { let id: UUID; let taskID: String; let report: Bool; let started: Double }
     struct Mark: Identifiable {
@@ -401,7 +409,8 @@ struct PhoneSceneRoster {
                     spin: localTime * (hot ? 1.6 : 0.35), work: hot ? 1 : 0,
                     unknown: unknown, programPart: computer.programParts.contains(task.id),
                     wait: wait == nil ? 0 : 1, job: wait == "job" ? 1 : 0,
-                    captain: task.group == .waiting ? 1 : 0, captainSince: now)
+                    captain: task.group == .waiting ? 1 : 0, captainSince: now,
+                    px: Glyph.px(computer: computer, programPart: computer.programParts.contains(task.id)))
             }
         }
         markOrbits = markPlaces

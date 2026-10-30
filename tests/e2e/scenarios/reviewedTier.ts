@@ -1,7 +1,8 @@
 import { REVIEW_BRIEF_OPENING } from "../../../src/core/orchestrator/intentBrief";
 import { PERSONAL_WORKSPACE_NAME } from "../../../src/core/paths";
 import { checkSnapshotSummary } from "../../../src/shared/checkSnapshot";
-import { liveValidationSchema } from "../../../src/shared/liveValidation";
+import type { KeptValidationInput } from "../../../src/shared/liveValidation";
+import { type ReviewFinding, renderFinding } from "../../../src/shared/rigor";
 import { CHECK_WORDS } from "../../../src/shared/vocabulary";
 import { noSurfaceProof } from "../../helpers/liveValidation";
 import type { ScriptedCardAction } from "../../helpers/scriptedCalls";
@@ -40,18 +41,34 @@ export const REVIEW_BRIEF_MARKER = REVIEW_BRIEF_OPENING;
 export const MOCK_REVIEWED_BUILDER_REPORT =
   "Intent: the meter test passes ten runs in a row. What changed: the test awaits the job queue flush before it reads the meter. Verified: pnpm test and pnpm test:e2e on the final commit; the PR is green on its head. Risk: low, one test file changed. Not done: nothing.";
 const REVIEWED_BUILDER_NEEDLE = "the PR is green on its head";
-export const MOCK_REVIEW_AUTOFIX_FINDING =
-  "F1 error tests/meter.test.ts:12 the flush is awaited after the read, so the race stands - auto-fix";
-export const MOCK_REVIEW_ASK_FINDING =
-  "F2 warning src/meter.ts:40 the empty-state copy says Later, which the captain retired - ask-user";
-export const MOCK_REVIEW_FINDINGS_REPORT = [
-  "verdict: findings",
-  MOCK_REVIEW_AUTOFIX_FINDING,
-  MOCK_REVIEW_ASK_FINDING,
-  "risk: medium - one production line moves.",
-].join("\n");
-export const MOCK_REVIEW_PASS_REPORT =
-  "verdict: pass\nNo findings; the flush is awaited before the read now.\nrisk: low - one test file changed.";
+/**
+ * The reviewer's findings, typed (INF-1875): the verdict is the review
+ * record on its report, never a line of the report text. The app renders
+ * each finding as one line on the first mate's wake, which the mock first
+ * mate reads them off.
+ */
+const AUTOFIX_FINDING: ReviewFinding = {
+  id: "F1",
+  severity: "error",
+  file: "tests/meter.test.ts",
+  line: 12,
+  text: "the flush is awaited after the read, so the race stands",
+  action: "auto-fix",
+};
+const ASK_FINDING: ReviewFinding = {
+  id: "F2",
+  severity: "warning",
+  file: "src/meter.ts",
+  line: 40,
+  text: "the empty-state copy says Later, which the captain retired",
+  action: "ask-user",
+};
+export const MOCK_REVIEW_AUTOFIX_FINDING = renderFinding(AUTOFIX_FINDING);
+export const MOCK_REVIEW_ASK_FINDING = renderFinding(ASK_FINDING);
+export const MOCK_REVIEW_FINDINGS_REPORT =
+  "Two findings: the flush is awaited after the read, and the empty-state copy says Later.";
+const MOCK_REVIEW_FINDINGS_RISK = { level: "medium", why: "one production line moves." } as const;
+export const MOCK_REVIEW_PASS_REPORT = "No findings; the flush is awaited before the read now.";
 export const MOCK_REVIEWED_FIX_REPORT =
   "Fixed F1: the flush is awaited before the read; pushed a new head and the checks passed again.";
 export const MOCK_REVIEW_ASK_CARD_TITLE = "Keep the Later copy?";
@@ -69,13 +86,16 @@ export const MOCK_REREVIEW_STEER = "re-review at the new head";
  * steer, and the captain's answer on the cap card into the steer that
  * reopens the rounds; the builder reports the retry.
  */
-export const MOCK_REVIEW_REFINDING =
-  "F1 error tests/meter.test.ts:12 the flush is still awaited after the read - auto-fix";
-export const MOCK_REVIEW_REFINDINGS_REPORT = [
-  "verdict: findings",
-  MOCK_REVIEW_REFINDING,
-  "risk: medium - one production line moves.",
-].join("\n");
+const REFINDING: ReviewFinding = {
+  id: "F1",
+  severity: "error",
+  file: "tests/meter.test.ts",
+  line: 12,
+  text: "the flush is still awaited after the read",
+  action: "auto-fix",
+};
+export const MOCK_REVIEW_REFINDING = renderFinding(REFINDING);
+export const MOCK_REVIEW_REFINDINGS_REPORT = "The flush is still awaited after the read.";
 export const MOCK_REVIEW_REFIX_STEER = "F1 still stands: move the await before the read.";
 export const MOCK_REVIEWED_REFIX_REPORT =
   "Fixed F1 again: the await is before the read now; pushed a new head.";
@@ -281,8 +301,19 @@ function crewmateMove({
   // reviewed marker, so it is read before the builder.
   if (body.includes(REVIEW_BRIEF_MARKER)) {
     const rereviews = body.split(MOCK_REREVIEW_STEER).length - 1;
-    if (!latestUserTail.includes(MOCK_REREVIEW_STEER)) return { text: MOCK_REVIEW_FINDINGS_REPORT };
-    return rereviews >= 3 ? liveReviewAnswer(body) : { text: MOCK_REVIEW_REFINDINGS_REPORT };
+    if (!latestUserTail.includes(MOCK_REREVIEW_STEER))
+      return reviewAnswer(body, hasToolResults, MOCK_REVIEW_FINDINGS_REPORT, {
+        code: "findings",
+        findings: [AUTOFIX_FINDING, ASK_FINDING],
+        risk: MOCK_REVIEW_FINDINGS_RISK,
+      });
+    return rereviews >= 3
+      ? liveReviewAnswer(body, hasToolResults)
+      : reviewAnswer(body, hasToolResults, MOCK_REVIEW_REFINDINGS_REPORT, {
+          code: "findings",
+          findings: [REFINDING],
+          risk: MOCK_REVIEW_FINDINGS_RISK,
+        });
   }
   // The reviewed builder: a green report and no card on its brief, the
   // fix on the auto-fix steer, the completion card once told the
@@ -405,19 +436,38 @@ function proofAt(head: string) {
 }
 
 /** INF-125: the scripted pass carries the assigned proof judgment, not prose alone. */
-export function liveReviewAnswer(body: string): ScenarioAnswer {
-  if (calledTool(body, "report")) return { text: MOCK_REVIEW_PASS_REPORT };
-  const assignment = providerMessages(body)
-    .filter((message) => message.role === "user")
-    .map((message) => message.text)
-    .join("\n")
-    .matchAll(/Assigned live-validation record: (.+)/g);
-  const snapshot = [...assignment].at(-1)?.[1];
-  if (!snapshot) throw new Error("The scripted reviewer needs its assigned validation record.");
-  const validation = liveValidationSchema.parse(JSON.parse(snapshot));
-  const run = validation.runs.at(-1);
-  if (!run) throw new Error("The scripted reviewer has no assigned proof.");
-  const review = noSurfaceProof(run.head).reviews[0];
+export function liveReviewAnswer(body: string, hasToolResults: boolean): ScenarioAnswer {
+  return reviewAnswer(body, hasToolResults, MOCK_REVIEW_PASS_REPORT, {
+    code: "clear",
+    risk: { level: "low", why: "one test file changed." },
+  });
+}
+
+/**
+ * One reviewer turn (INF-1875): the typed review record on the report tool,
+ * at the head and evidence revision the latest assignment in its
+ * conversation names, with the no-surface proof judgment this lifecycle
+ * fixture's empty branch gets; then the report text ending the turn.
+ */
+function reviewAnswer(
+  body: string,
+  hasToolResults: boolean,
+  text: string,
+  input: Pick<Extract<KeptValidationInput, { kind: "review" }>, "code" | "findings" | "risk">,
+): ScenarioAnswer {
+  if (hasToolResults) return { text };
+  const assigned = [
+    ...providerMessages(body)
+      .filter((message) => message.role === "user")
+      .map((message) => message.text)
+      .join("\n")
+      .matchAll(/with kind review, head ([a-f0-9]{40}) and revision (\d+)/g),
+  ].at(-1);
+  const head = assigned?.[1];
+  const revision = assigned?.[2];
+  if (!head || revision === undefined)
+    throw new Error("The scripted reviewer needs its assigned head and evidence revision.");
+  const review = noSurfaceProof(head).reviews[0];
   if (!review) throw new Error("The lifecycle fixture has no review template.");
   const {
     reviewer: _reviewer,
@@ -429,10 +479,7 @@ export function liveReviewAnswer(body: string): ScenarioAnswer {
     calls: [
       {
         name: "report",
-        args: {
-          text: MOCK_REVIEW_PASS_REPORT,
-          validation: { ...reviewInput, revision: run.revision },
-        },
+        args: { text, validation: { ...reviewInput, revision: Number(revision), ...input } },
       },
     ],
   };

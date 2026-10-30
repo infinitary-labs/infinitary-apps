@@ -1,15 +1,13 @@
 import { z } from "zod";
+import { reviewFindingSchema, reviewRiskSchema } from "./rigor";
 
 /** Careful's closed facts. Judgment belongs to the builder and reviewer, never a prose parser. */
 const words = z.string().trim().min(1).max(4000);
 const id = z.string().regex(/^[a-zA-Z0-9][a-zA-Z0-9_-]{0,63}$/);
 const head = z.string().regex(/^[a-f0-9]{40,64}$/);
 const revision = z.number().int().nonnegative();
-export const validationVerdictSchema = z
-  .enum(["go", "no-go", "inconclusive", "no-surface"])
-  .describe(
-    "go: live proof; no-go: a failure; inconclusive: missing proof; no-surface: nothing to run.",
-  );
+/** What each verdict means is said once, in the Careful prompt every builder and reviewer is served. */
+export const validationVerdictSchema = z.enum(["go", "no-go", "inconclusive", "no-surface"]);
 export const validationScenarioSchema = z.object({
   id,
   source: words,
@@ -37,7 +35,7 @@ export const validationObservationSchema = z.object({
   actual: words,
   evidence: z.array(id).max(32),
   standIns: z.array(words).max(20),
-  unproven: z.array(words).max(20).describe("Gaps inside this boundary; a live pass requires []."),
+  unproven: z.array(words).max(20),
   attempted: z.array(words).max(20),
   missingCapability: words.optional(),
   reason: words.optional(),
@@ -102,6 +100,10 @@ export const validationReviewSchema = z.object({
   head,
   revision,
   code: z.enum(["clear", "findings", "blocked"]),
+  /** The findings the code judgment rests on (INF-1875): the verdict is this record, never a line of the report. */
+  findings: z.array(reviewFindingSchema).max(100).optional(),
+  /** The reviewer's risk of merging the change as it stands, recorded beside the checks and never a hold. */
+  risk: z.object({ level: reviewRiskSchema, why: words }).optional(),
   coverage: z.enum(["complete", "missing"]),
   coverageReason: words,
   effects: z.array(id).max(100),
@@ -149,9 +151,7 @@ export const validationGapSchema = z.object({
   head,
   scenario: id,
   missingCapability: words,
-  reason: words.describe(
-    "Match the current inconclusive run: scenario untested, not live; safe alternatives exhausted.",
-  ),
+  reason: words,
   alternatives: z
     .array(z.object({ attempted: words, result: words }))
     .min(1)

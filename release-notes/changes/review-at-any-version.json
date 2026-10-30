@@ -1,0 +1,14 @@
+{
+  "entries": [
+    {
+      "id": "review-at-any-version",
+      "kind": "improvement",
+      "title": "Review carefully starts the review right away",
+      "body": "When you press Review carefully on a merge card, a reviewer starts on the version the card offered as soon as the care rises, and the task's record notes which review it started. Firstmate can also ask for a review of any task's change at any care, before or after its pull request, and the reviewer's verdict, findings and risk are kept as typed facts on the task rather than read off its words.",
+      "area": "tasks",
+      "noPicture": "The review starts behind the merge card as soon as you press Review carefully; no view changes shape.",
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

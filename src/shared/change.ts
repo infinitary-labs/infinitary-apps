@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { checkSnapshotSchema, mainCheckEvidenceSchema } from "./checkSnapshot";
-import { reviewRiskSchema, reviewVerdictSchema } from "./rigor";
+import { reviewFindingSchema, reviewRiskSchema, reviewVerdictSchema } from "./rigor";
 import { taskClosedReasonSchema } from "./tasks";
 
 /**
@@ -40,9 +40,11 @@ export const changeChecksSchema = z.object({
 });
 export type ChangeChecks = z.infer<typeof changeChecksSchema>;
 
-/** The review verdict declared at one version, with its risk and the reading it rests on. */
+/** The review verdict declared at one version, with its findings, its risk and the reading it rests on. */
 export const changeReviewSchema = z.object({
   verdict: reviewVerdictSchema,
+  /** The typed findings the reviewer declared at this version (INF-1875). */
+  findings: z.array(reviewFindingSchema).optional(),
   risk: reviewRiskSchema.optional(),
   riskNote: z.string().optional(),
   at: z.number().optional(),

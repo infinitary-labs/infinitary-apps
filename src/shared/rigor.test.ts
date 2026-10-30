@@ -4,11 +4,11 @@ import {
   EVIDENCE_HEADINGS,
   findingsBlock,
   missingEvidenceHeading,
-  parseReviewFindings,
-  parseReviewReport,
+  REVIEW_VERDICT_OF_CODE,
   type RigorInput,
+  renderFinding,
   reportEvidenceHeadings,
-  reviewCapOwner,
+  reviewFindingSchema,
   rigorFor,
   rigorRequiresEvidence,
   withoutIntentLead,
@@ -112,109 +112,66 @@ describe("the evidence contract", () => {
   });
 });
 
-describe("parseReviewFindings and the blocking rule", () => {
-  it("reads one finding per line with its severity and action, skipping the verdict and risk lines", () => {
-    const findings = parseReviewFindings(
-      [
-        "verdict: findings",
-        "F1 error src/x.ts:12 the retry loop never backs off - auto-fix",
-        "F2 warning src/y.ts:40 the copy says 'Later' which the captain retired - ask-user",
-        "F3 info docs/z.md:3 the doc still names the old flow - no-op",
-        "Some prose between findings carries neither token.",
-        "risk: medium - two call sites change behaviour under load.",
-      ].join("\n"),
-    );
-    expect(findings).toEqual([
-      { severity: "error", action: "auto-fix", line: expect.stringContaining("F1") },
-      { severity: "warning", action: "ask-user", line: expect.stringContaining("F2") },
-      { severity: "info", action: "no-op", line: expect.stringContaining("F3") },
-    ]);
+describe("the typed finding and the blocking rule (INF-1875)", () => {
+  it("renders a finding as one line: id, severity, where, text and action", () => {
+    expect(
+      renderFinding({
+        id: "F1",
+        severity: "error",
+        file: "src/x.ts",
+        line: 12,
+        text: "the retry loop never backs off",
+        action: "auto-fix",
+      }),
+    ).toBe("F1 error src/x.ts:12 the retry loop never backs off - auto-fix");
+    expect(
+      renderFinding({
+        id: "F2",
+        severity: "info",
+        file: "docs/z.md",
+        text: "the doc still names the old flow",
+        action: "no-op",
+      }),
+    ).toBe("F2 info docs/z.md the doc still names the old flow - no-op");
+    expect(
+      renderFinding({
+        id: "F3",
+        severity: "warning",
+        text: "the copy says Later, which the captain retired",
+        action: "ask-user",
+      }),
+    ).toBe("F3 warning the copy says Later, which the captain retired - ask-user");
   });
 
-  it("blocks on error or warning severity, on any ask-user action, and on an unreadable severity", () => {
-    expect(findingsBlock([{ severity: "error", action: "auto-fix", line: "x" }])).toBe(true);
-    expect(findingsBlock([{ severity: "warning", action: "no-op", line: "x" }])).toBe(true);
-    expect(findingsBlock([{ severity: "info", action: "ask-user", line: "x" }])).toBe(true);
-    // Failing toward the human: a line naming an action but no severity.
-    expect(findingsBlock([{ action: "auto-fix", line: "x" }])).toBe(true);
+  it("blocks on error or warning severity and on any ask-user action; info never blocks", () => {
+    expect(findingsBlock([{ severity: "error", action: "auto-fix" }])).toBe(true);
+    expect(findingsBlock([{ severity: "warning", action: "no-op" }])).toBe(true);
+    expect(findingsBlock([{ severity: "info", action: "ask-user" }])).toBe(true);
     // Info never blocks (the no-mistakes rule).
-    expect(findingsBlock([{ severity: "info", action: "no-op", line: "x" }])).toBe(false);
-    expect(findingsBlock([{ severity: "info", line: "x" }])).toBe(false);
+    expect(findingsBlock([{ severity: "info", action: "no-op" }])).toBe(false);
     expect(findingsBlock([])).toBe(false);
   });
-});
 
-describe("parseReviewReport: the verdict line, the findings, and the risk line", () => {
-  it("reads the verdict off the first line and the risk with its note off the last risk line", () => {
-    const parsed = parseReviewReport(
-      [
-        "verdict: findings",
-        "F1 error src/x.ts:12 the retry loop never backs off - auto-fix",
-        "F2 warning src/y.ts:40 the copy says 'Later' which the captain retired - ask-user",
-        "risk: medium - two call sites change behaviour under load.",
-      ].join("\n"),
-    );
-    expect(parsed.verdict).toBe("findings");
-    expect(parsed.stated).toBe(true);
-    expect(parsed.derivedPass).toBe(false);
-    expect(parsed.findings).toHaveLength(2);
-    expect(parsed.risk).toBe("medium");
-    expect(parsed.riskNote).toBe("two call sites change behaviour under load.");
+  it("refuses a finding with no severity, no action or no place on a line: the record fails toward the human, never a parser", () => {
+    const finding = {
+      id: "F1",
+      severity: "error",
+      text: "the flush races the read",
+      action: "auto-fix",
+    };
+    expect(reviewFindingSchema.safeParse(finding).success).toBe(true);
+    expect(reviewFindingSchema.safeParse({ ...finding, severity: undefined }).success).toBe(false);
+    expect(reviewFindingSchema.safeParse({ ...finding, action: undefined }).success).toBe(false);
+    expect(reviewFindingSchema.safeParse({ ...finding, line: 0 }).success).toBe(false);
+    expect(reviewFindingSchema.safeParse({ ...finding, text: " " }).success).toBe(false);
   });
 
-  it("reads a clean pass, case-insensitively, with a bare risk", () => {
-    const parsed = parseReviewReport("Verdict: PASS\nNo findings.\nRisk: low");
-    expect(parsed.verdict).toBe("pass");
-    expect(parsed.stated).toBe(true);
-    expect(parsed.derivedPass).toBe(false);
-    expect(parsed.risk).toBe("low");
-  });
-
-  it("derives a pass from a stated findings verdict whose findings are all info/no-op: info never blocks", () => {
-    const parsed = parseReviewReport(
-      [
-        "verdict: findings",
-        "F1 info docs/z.md:3 the doc still names the old flow - no-op",
-        "F2 info src/y.ts:9 a tradeoff worth noting - no-op",
-        "risk: low - cosmetic notes only.",
-      ].join("\n"),
-    );
-    expect(parsed.verdict).toBe("pass");
-    expect(parsed.derivedPass).toBe(true);
-    expect(parsed.findings).toHaveLength(2);
-  });
-
-  it("never derives a pass when a finding blocks, when none parsed, or when the verdict was not stated", () => {
-    // An ask-user info finding still goes to the captain.
-    expect(
-      parseReviewReport("verdict: findings\nF1 info src/x.ts:1 odd choice - ask-user\nrisk: low")
-        .verdict,
-    ).toBe("findings");
-    // A findings verdict with no readable finding lines proves nothing.
-    expect(parseReviewReport("verdict: findings\nrisk: low").verdict).toBe("findings");
-    // An unstated report is never upgraded, whatever its lines say.
-    expect(parseReviewReport("F1 info docs/z.md:3 stale doc - no-op\nrisk: low").derivedPass).toBe(
-      false,
-    );
-  });
-
-  it("states nothing without a verdict line: the caller records no verdict and spends no round", () => {
-    // A reviewer that forgot the shape must never read as a pass; since
-    // the captain's 2026-09-19 ruling the caller also spends no round on
-    // it - `stated` is the seam.
-    const parsed = parseReviewReport("Looks good to me, ship it.\nrisk: low");
-    expect(parsed.verdict).toBe("findings");
-    expect(parsed.stated).toBe(false);
-    // The verdict must OPEN the report, not appear somewhere in it.
-    expect(parseReviewReport("Summary first.\nverdict: pass\nrisk: low").stated).toBe(false);
-    expect(parseReviewReport("").stated).toBe(false);
-  });
-
-  it("reads blocked as blocked, with no risk when none was named", () => {
-    const parsed = parseReviewReport("verdict: blocked\nThe PR head no longer exists.");
-    expect(parsed.verdict).toBe("blocked");
-    expect(parsed.stated).toBe(true);
-    expect(parsed.risk).toBeUndefined();
+  it("maps the typed code judgment to the verdict, and parses nothing off the report's words", () => {
+    expect(REVIEW_VERDICT_OF_CODE).toEqual({
+      clear: "pass",
+      findings: "findings",
+      blocked: "blocked",
+    });
   });
 });
 
@@ -284,28 +241,5 @@ describe("withoutIntentLead: a report's headline starts past its Intent section"
     expect(withoutIntentLead("Intentionally left the flag off.")).toBe(
       "Intentionally left the flag off.",
     );
-  });
-});
-
-// Accepted INF-166 A, with the captain's every-time reopening choice.
-describe("review cap ownership", () => {
-  it.each([
-    ["F1 info PR description: say likely - ask-user", "firstmate"],
-    ["F1 warning protocol version: raise the minor - auto-fix", "firstmate"],
-    ["F1 warning comment: optional wording - no-op", "firstmate"],
-    ["F1 error codesign requirement: missing equals - auto-fix", "captain"],
-    ["F1 warning evidence: run on the live Mac? - ask-user", "captain"],
-    ["F1 protocol version: raise the minor - auto-fix", "captain"],
-    ["F1 warning protocol version: missing action", "captain"],
-    ["", "captain"],
-  ])("routes %s to %s", (report, owner) => {
-    expect(reviewCapOwner(parseReviewFindings(report))).toBe(owner);
-  });
-  it("keeps a mixed round with a serious finding captain-owned", () => {
-    expect(
-      reviewCapOwner(
-        parseReviewFindings("F1 info wording - ask-user\nF2 error signing - auto-fix"),
-      ),
-    ).toBe("captain");
   });
 });

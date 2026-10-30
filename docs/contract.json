@@ -43907,8 +43907,7 @@
                               "no-go",
                               "inconclusive",
                               "no-surface"
-                            ],
-                            "description": "go: live proof; no-go: a failure; inconclusive: missing proof; no-surface: nothing to run."
+                            ]
                           },
                           "reason": {
                             "type": "string",
@@ -43965,8 +43964,7 @@
                                     "type": "string",
                                     "minLength": 1,
                                     "maxLength": 4000
-                                  },
-                                  "description": "Gaps inside this boundary; a live pass requires []."
+                                  }
                                 },
                                 "attempted": {
                                   "maxItems": 20,
@@ -44097,6 +44095,78 @@
                               "blocked"
                             ]
                           },
+                          "findings": {
+                            "maxItems": 100,
+                            "type": "array",
+                            "items": {
+                              "type": "object",
+                              "properties": {
+                                "id": {
+                                  "type": "string",
+                                  "minLength": 1,
+                                  "maxLength": 64
+                                },
+                                "severity": {
+                                  "type": "string",
+                                  "enum": [
+                                    "error",
+                                    "warning",
+                                    "info"
+                                  ]
+                                },
+                                "file": {
+                                  "type": "string",
+                                  "minLength": 1
+                                },
+                                "line": {
+                                  "type": "integer",
+                                  "minimum": 1,
+                                  "maximum": 9007199254740991
+                                },
+                                "text": {
+                                  "type": "string",
+                                  "minLength": 1,
+                                  "maxLength": 4000
+                                },
+                                "action": {
+                                  "type": "string",
+                                  "enum": [
+                                    "auto-fix",
+                                    "ask-user",
+                                    "no-op"
+                                  ]
+                                }
+                              },
+                              "required": [
+                                "id",
+                                "severity",
+                                "text",
+                                "action"
+                              ]
+                            }
+                          },
+                          "risk": {
+                            "type": "object",
+                            "properties": {
+                              "level": {
+                                "type": "string",
+                                "enum": [
+                                  "low",
+                                  "medium",
+                                  "high"
+                                ]
+                              },
+                              "why": {
+                                "type": "string",
+                                "minLength": 1,
+                                "maxLength": 4000
+                              }
+                            },
+                            "required": [
+                              "level",
+                              "why"
+                            ]
+                          },
                           "coverage": {
                             "type": "string",
                             "enum": [
@@ -44133,8 +44203,7 @@
                               "no-go",
                               "inconclusive",
                               "no-surface"
-                            ],
-                            "description": "go: live proof; no-go: a failure; inconclusive: missing proof; no-surface: nothing to run."
+                            ]
                           },
                           "reason": {
                             "type": "string",
@@ -44332,8 +44401,7 @@
                                   "reason": {
                                     "type": "string",
                                     "minLength": 1,
-                                    "maxLength": 4000,
-                                    "description": "Match the current inconclusive run: scenario untested, not live; safe alternatives exhausted."
+                                    "maxLength": 4000
                                   },
                                   "alternatives": {
                                     "minItems": 1,

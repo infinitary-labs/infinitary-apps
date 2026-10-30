@@ -163,7 +163,6 @@ const WAKES = {
     task: BUILDER,
     reviewKey: "FI3-9",
     crewmate: "crewmate 2",
-    derived: false,
     excerpt: "verdict: pass",
   },
   // INF-490: the wakes that carry what the core no longer repeats.

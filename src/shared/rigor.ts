@@ -221,136 +221,64 @@ export type FindingSeverity = z.infer<typeof findingSeveritySchema>;
 export const findingActionSchema = z.enum(["auto-fix", "ask-user", "no-op"]);
 export type FindingAction = z.infer<typeof findingActionSchema>;
 
-/** One finding line as the host reads it: the line is the unit. */
-export type ReviewFinding = {
-  severity?: FindingSeverity;
-  action?: FindingAction;
-  line: string;
-};
-
-const SEVERITY_PATTERN = /\b(error|warning|info)\b/i;
-const ACTION_PATTERNS: readonly (readonly [FindingAction, RegExp])[] = [
-  ["auto-fix", /\bauto[\s._-]?fix\b/i],
-  ["ask-user", /\bask[\s._-]?user\b/i],
-  ["no-op", /\bno[\s._-]?op\b/i],
-];
-
 /**
- * The findings in a reviewer's report, one per line - the brief asks for
- * id, severity, file and line, one sentence, and an action on each line,
- * so a line naming both a severity and an action is a finding, the first
- * token of each kind is its own, and the verdict and risk lines the host
- * already reads are never findings. This is the ONE reading (the metric in
- * `scripts/interaction-metrics.ts` counts actions by the same line rule):
- * what blocks, what auto-fixes and what merely informs all come off it.
+ * One finding a reviewer substantiated, as the typed review record carries
+ * it (INF-1875): what it is, how much it matters, where it sits and what
+ * should be done about it. The record is the verdict; the host never reads
+ * a finding off a line of the report.
  */
-export function parseReviewFindings(text: string): ReviewFinding[] {
-  const findings: ReviewFinding[] = [];
-  for (const raw of text.split(/\r?\n/)) {
-    const line = raw.trim();
-    if (!line || /^verdict:/i.test(line) || /^risk:/i.test(line)) continue;
-    const severity = SEVERITY_PATTERN.exec(line)?.[1]?.toLowerCase() as FindingSeverity | undefined;
-    const action = ACTION_PATTERNS.find(([, pattern]) => pattern.test(line))?.[0];
-    if (severity === undefined && action === undefined) continue;
-    findings.push({
-      ...(severity !== undefined ? { severity } : {}),
-      ...(action !== undefined ? { action } : {}),
-      line,
-    });
-  }
-  return findings;
-}
+/**
+ * One typed finding (INF-1875). The brief says what each severity and action
+ * means; a nested description never reaches a Claude crewmate and would
+ * only spend the crewmate's fixed context.
+ */
+export const reviewFindingSchema = z.object({
+  id: z.string().trim().min(1).max(64),
+  severity: findingSeveritySchema,
+  file: z.string().trim().min(1).optional(),
+  line: z.number().int().min(1).optional(),
+  text: z.string().trim().min(1).max(4000),
+  action: findingActionSchema,
+});
+export type ReviewFinding = z.infer<typeof reviewFindingSchema>;
 
-/** INF-166 direction A: only the reviewer's typed facts route the cap.
- * Unknown severity/action (or no readable findings) fails toward the captain.
- * The captain chose this on every qualifying cap, not only the first.
- */
-export function reviewCapOwner(findings: ReviewFinding[]): "firstmate" | "captain" {
-  return findings.length > 0 &&
-    findings.every(
-      ({ severity, action }) =>
-        (severity === "info" || severity === "warning") &&
-        (action === "auto-fix" ||
-          action === "no-op" ||
-          (severity === "info" && action === "ask-user")),
-    )
-    ? "firstmate"
-    : "captain";
+/** A finding as one line, for a wake, a brief's history or a feed line. */
+export function renderFinding(finding: ReviewFinding): string {
+  const where = finding.file
+    ? finding.line === undefined
+      ? finding.file
+      : `${finding.file}:${finding.line}`
+    : undefined;
+  return `${[finding.id, finding.severity, where, finding.text].filter(Boolean).join(" ")} - ${finding.action}`;
 }
 
 /**
  * Whether a set of findings holds the merge (the no-mistakes blocking
  * rule, captain-approved 2026-09-19): an error or warning severity blocks,
  * and so does an ask-user action at any severity - the captain has a
- * question to answer. Info findings with no ask never block; a finding
- * whose severity could not be read blocks, failing toward the human.
+ * question to answer. Info findings with no ask never block.
  */
-export function findingsBlock(findings: ReviewFinding[]): boolean {
+export function findingsBlock(
+  findings: readonly Pick<ReviewFinding, "severity" | "action">[],
+): boolean {
   return findings.some(
     (finding) =>
       finding.severity === "error" ||
       finding.severity === "warning" ||
-      finding.severity === undefined ||
       finding.action === "ask-user",
   );
 }
 
 /**
- * What the host reads off a reviewer's report: the verdict on its FIRST
- * line, the risk on its last `risk:` line, and the finding lines between.
- * A report with no verdict line states nothing - the host records no
- * verdict and spends no round on it (a reviewer's acknowledgment is not a
- * review; the merge stays held either way, so it still fails toward the
- * human). A stated `findings` whose findings are all info/no-op derives
- * `pass`: info never blocks (the no-mistakes rule). The risk is recorded
- * beside CI and never holds (Q4).
+ * The review verdict a typed review record declares (INF-1875): the code
+ * judgment is the verdict - clear is a pass - and nothing is parsed off the
+ * report's words. The record cannot contradict itself: the writer refuses
+ * clear code beside a finding that blocks, and code findings none of
+ * which block (`recordValidation`), so info findings ride a clear review
+ * and never block (the no-mistakes rule).
  */
-export function parseReviewReport(text: string): {
-  verdict: ReviewVerdict;
-  /** True when the first line really carried a verdict. */
-  stated: boolean;
-  /** True when a stated findings verdict carried only non-blocking findings. */
-  derivedPass: boolean;
-  findings: ReviewFinding[];
-  risk?: ReviewRisk;
-  riskNote?: string;
-} {
-  const lines = text
-    .split(/\r?\n/)
-    .map((line) => line.trim())
-    .filter((line) => line.length > 0);
-  const first = lines[0] ?? "";
-  const verdictMatch = /^verdict:\s*(pass|findings|blocked)\b/i.exec(first);
-  let verdict = verdictMatch
-    ? (verdictMatch[1]?.toLowerCase() as ReviewVerdict)
-    : ("findings" as const);
-  let risk: ReviewRisk | undefined;
-  let riskNote: string | undefined;
-  for (let index = lines.length - 1; index >= 0; index -= 1) {
-    const riskMatch = /^risk:\s*(low|medium|high)\b[\s,.:;-]*(.*)$/i.exec(lines[index] ?? "");
-    if (riskMatch) {
-      risk = riskMatch[1]?.toLowerCase() as ReviewRisk;
-      const note = riskMatch[2]?.trim();
-      if (note) riskNote = note;
-      break;
-    }
-  }
-  const findings = parseReviewFindings(text);
-  // Info-only findings derive a pass, but only from a STATED findings
-  // verdict with at least one readable finding: an empty or unreadable
-  // list proves nothing and stays findings.
-  const derivedPass =
-    verdictMatch !== null &&
-    verdict === "findings" &&
-    findings.length > 0 &&
-    !findingsBlock(findings);
-  if (derivedPass) verdict = "pass";
-  return {
-    verdict,
-    stated: verdictMatch !== null,
-    derivedPass,
-    findings,
-    ...(risk ? { risk } : {}),
-    ...(riskNote ? { riskNote } : {}),
-  };
-}
+export const REVIEW_VERDICT_OF_CODE = {
+  clear: "pass",
+  findings: "findings",
+  blocked: "blocked",
+} as const satisfies Record<"clear" | "findings" | "blocked", ReviewVerdict>;

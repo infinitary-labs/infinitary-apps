@@ -38,8 +38,9 @@ import { pressWindowKey, untilWindowCommands } from "./windowKeys";
  * raised, and they looked at the card and felt it's risky"), end to end by
  * keys: a Default pull request's merge card offers Review carefully at ⌘2;
  * the key closes the card, makes the task Careful and starts its crewmate,
- * which reports without pushing; the first mate starts the review, whose
- * brief names the card the captain read; the pass brings a new merge card,
+ * which reports without pushing; the app starts the review of the version
+ * the card offered (INF-1875), whose brief names the card the captain read;
+ * the pass brings a new merge card,
  * Careful with the review's verdict and no Review carefully, while the pull
  * request was never touched.
  *
@@ -166,9 +167,10 @@ test("a Default pull request's merge card is made Careful by ⌘2, reviewed, and
     started?.lastIndexOf(REVIEW_CAREFULLY_WORDS) ?? -1,
   );
 
-  // 4. The first mate started the review; its brief names the open pull
-  //    request and the card the captain read, saved whole as a file. The
-  //    reviewer sends its brief only after its row exists (INF-632).
+  // 4. The app started the review of the version the card offered; its
+  //    brief names the open pull request and the card the captain read,
+  //    saved whole as a file. The reviewer sends its brief only after its
+  //    row exists (INF-632).
   const review = await taskRow((task) => task.reviewOf === builder.id);
   const briefed = () =>
     (mockProvider?.requestBodies() ?? []).find(

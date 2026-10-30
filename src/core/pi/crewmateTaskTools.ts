@@ -73,7 +73,6 @@ export const REPORT_TOOL_DESCRIPTION = [
   "Report verified work, findings or blockers to the first mate.",
   "The first mate hears only an explicit report, or your final message when a turn ends with text; ending silently reports nothing.",
   "For new outcomes, lead with the result in a few plain sentences.",
-  "Always pass summary: one plain sentence saying what happened, the task's headline.",
   "Not progress (note_progress) or repeated reports.",
   "Autonomy on: at green, show the completion story as a note without actions; report needs_firstmate to merge. A standing exception needs a completion decision and needs_firstmate to set ask-first, citing the direction.",
 ].join(" ");
@@ -204,7 +203,7 @@ export const REPORT_TOOL = crewmateTool({
     validation: Type.Optional(
       zodParameter<LiveValidationInput>(liveValidationInputSchema, {
         description:
-          "Typed validation facts, kept at every care level; only a Careful task's merge waits on them, and its brief or care notice carries the rules. Requests grant nothing; only the captain's click on its emit_card.validation_request card does.",
+          "Typed validation facts, kept at every care; only a Careful merge waits on them, and its brief carries the rules. A request grants nothing; only the captain's click on its emit_card.validation_request card does.",
       }),
     ),
     text: Type.String({
@@ -213,7 +212,7 @@ export const REPORT_TOOL = crewmateTool({
     summary: Type.Optional(
       Type.String({
         description:
-          "One plain sentence: what happened, as the task's headline. Never a heading like Intent, never the ask restated",
+          "Always pass it: one plain sentence saying what happened, the task's headline; never a heading like Intent, never the ask restated",
       }),
     ),
     waiting_on_captain: Type.Optional(

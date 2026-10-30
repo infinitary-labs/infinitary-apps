@@ -113,7 +113,11 @@ import {
   standingOverrideWords,
 } from "@shared/holds";
 import type { IntegrationApprovalChoice } from "@shared/integrations";
-import type { ValidationForgeWrite, ValidationPermission } from "@shared/liveValidation";
+import type {
+  KeptValidationInput,
+  ValidationForgeWrite,
+  ValidationPermission,
+} from "@shared/liveValidation";
 import {
   acceptedValidation,
   keptValidationInputSchema,
@@ -167,7 +171,7 @@ import {
   RUNS_ON_THIS_MAC,
   runsHereOnly,
 } from "@shared/repos";
-import { parseReviewReport, type Rigor, reviewCapOwner } from "@shared/rigor";
+import { REVIEW_VERDICT_OF_CODE, type Rigor, renderFinding } from "@shared/rigor";
 import { RISK_DIMENSIONS, RISK_WORDS, type RiskAssessment } from "@shared/risk";
 import {
   type Deliverable,
@@ -1078,6 +1082,8 @@ type TaskRuntime = {
   explicitSummary?: string;
   /** What `explicitReport` declared about whose turn follows it (FI3-435). */
   explicitDeclared?: ReportDeclaration;
+  /** The typed review this turn's report recorded (INF-1875): a reviewer's verdict, read at the turn's end. */
+  turnReview?: Extract<KeptValidationInput, { kind: "review" }>;
   /** Streaming while a prompt runs; idle between turns, still steerable. */
   state: "starting" | "streaming" | "idle";
   /** This boundary was opened by the provider rather than runTurn(). */
@@ -2018,7 +2024,7 @@ export class CrewSupervisor {
       branch: builder.branch,
       headSha,
       ...(prUrl ? { prUrl } : {}),
-      builderReport: builder.outcome ?? "",
+      builderReport: builder.outcome ?? "The builder has not reported yet.",
       evidenceDir,
       changedFiles,
       ...(changeReading ? { changeReading } : {}),
@@ -3507,20 +3513,12 @@ export class CrewSupervisor {
         `${handle} is already ${describeStatus(builder)}; there is nothing left to review.`,
       );
     }
-    const rigor = this.policiesOf(builder)?.rigor.value;
-    if (rigor !== "reviewed") {
-      throw new Error(
-        `${handle} ships at the ${rigor ?? "quick"} tier, not reviewed, so no independent review holds its merge: its completion card is the decision. Nothing was spawned.`,
-      );
-    }
+    // A review is an operation on a change at a version (INF-1875): any
+    // change with commits can be reviewed on request, at any care. Care is
+    // a name the record carries; what it asks for is runbook guidance.
     const delivery = this.taskDelivery(builder.id) ?? "local-only";
-    if (!builder.outcome) {
-      throw new Error(
-        `${handle} has not reported yet; a reviewer reads the builder's report beside its change. Wait for the report.`,
-      );
-    }
-    // Review-before-PR: the reviewer reads the builder's branch at its
-    // current head and evidence, including unpublished repairs to an existing PR.
+    // The reviewer reads the builder's branch at its current head and
+    // evidence, including unpublished repairs to an existing PR.
     const facts = await this.reviewFacts(builder);
     const { headSha, prUrl } = facts;
     const open = this.openReviewOf(builder.id);
@@ -3569,6 +3567,14 @@ export class CrewSupervisor {
       builder.deviceId ?? null,
       avoidProvider,
     );
+    // Two asks for the same review at once - the captain's click and the
+    // first mate's spawn - open one review: the second finds the first.
+    const raced = this.openReviewOf(builder.id);
+    if (raced) {
+      throw new Error(
+        `${handle} already has a review open: ${raced.key || raced.id} "${raced.title}". Steer it to re-review at the new head instead of spawning another.`,
+      );
+    }
     this.options.tasks.create({
       id: taskId,
       kind: "work",
@@ -4312,13 +4318,13 @@ export class CrewSupervisor {
         ? `assesses ${builder?.key || record.parentId}'s repair`
         : `reviews ${builder?.key || record.parentId}`;
     }
-    if (this.policiesOf(record)?.rigor.value !== "reviewed") return undefined;
+    // A review happens at any care (INF-1875); only Careful awaits one.
     const verdict = record.delivery?.reviewVerdict;
     if (verdict === "pass") return "review passed";
     const open = this.openReviewOf(record.id);
     if (open) return `review open (${open.key || open.id})`;
     if (verdict) return `review: ${verdict}`;
-    return "awaiting review";
+    return this.policiesOf(record)?.rigor.value === "reviewed" ? "awaiting review" : undefined;
   }
 
   /** The personal workspace as a repo (Step 4), or a loud refusal when this build has none. */
@@ -7281,10 +7287,12 @@ export class CrewSupervisor {
     // final text that stood in for it.
     const candidateSummary = task.explicitReport !== undefined ? task.explicitSummary : undefined;
     const declared = task.explicitReport !== undefined ? task.explicitDeclared : undefined;
+    const turnReview = task.turnReview;
     task.turnReport = undefined;
     task.explicitReport = undefined;
     task.explicitSummary = undefined;
     task.explicitDeclared = undefined;
+    task.turnReview = undefined;
     task.currentTurnText = "";
     const filed = task.filedThisTurn;
     task.filedThisTurn = [];
@@ -7491,10 +7499,10 @@ export class CrewSupervisor {
       // merge's undecided repair (FI3-663).
       void this.settleRepairAssessment(task, report);
     } else if (report && this.options.tasks.get(task.id)?.shape?.kind === "review") {
-      // A reviewer's report is a verdict (delivery rigor phase 2): the host
-      // reads its first line, records it on the builder, and on a pass
-      // closes the review - which is what releases the merge hold.
-      void this.settleReview(task, report);
+      // A reviewer's report settles its review (INF-1875): the typed review
+      // record the turn reported is the verdict, recorded on the builder,
+      // and a pass closes the review - which is what releases the hold.
+      void this.settleReview(task, report, turnReview);
     } else if (report && saved) {
       void saved.then((committed) => {
         const record = this.options.tasks.get(task.id);
@@ -7705,13 +7713,16 @@ export class CrewSupervisor {
 
   /**
    * A review task reported (delivery rigor phase 2; verdict semantics
-   * revised by the captain 2026-09-19). The host reads the first line -
-   * `verdict: pass|findings|blocked` - the finding lines, and the closing
-   * `risk:` line. A report with NO verdict line records nothing and spends
-   * no round: a reviewer's acknowledgment is not a review, and the merge
-   * stays held regardless. A stated findings verdict whose findings are
-   * all info/no-op derives a pass - info never blocks (the no-mistakes
-   * rule) - and a findings round counts only at a head not yet counted.
+   * revised by the captain 2026-09-19; the typed record, INF-1875). The
+   * verdict is the typed review record the turn reported on
+   * report.validation at the assigned head: its code judgment maps to the
+   * verdict, its findings and risk ride along, and nothing is read off the
+   * report's words. A report with no typed record, or one at another head,
+   * records nothing and spends no round: a reviewer's acknowledgment is not
+   * a review, and the merge stays held regardless. Info findings never
+   * block (the no-mistakes rule), so they ride a clear review; the record
+   * itself refuses a contradiction. At Careful a clear review whose live
+   * proof is not accepted is recorded blocked with the reason.
    * The verdict lands on the BUILDER's delivery facts as a `review`
    * timeline event, the risk beside CI and never a hold (Q4). A pass
    * closes the review task done - the one feed line is the builder's own
@@ -7722,7 +7733,11 @@ export class CrewSupervisor {
    * blocked leave the reviewer idle and steerable for a re-review, and
    * the wake refs the review task.
    */
-  private async settleReview(task: TaskRuntime, report: string): Promise<void> {
+  private async settleReview(
+    task: TaskRuntime,
+    report: string,
+    typed: Extract<KeptValidationInput, { kind: "review" }> | undefined,
+  ): Promise<void> {
     const review = this.options.tasks.get(task.id);
     const builder = this.reviewBuilderOf(review);
     const excerpt = capWithOverflow(report, "task-report");
@@ -7738,13 +7753,7 @@ export class CrewSupervisor {
       return;
     }
     const builderTask = { id: builder.id, title: builder.title };
-    const parsed = parseReviewReport(report);
-    // A report with no verdict line states nothing (captain ruling,
-    // 2026-09-19): a reviewer's acknowledgment - "standing by", "no new
-    // head yet" - is a plain report, never a verdict and never a round.
-    // The merge stays held either way, so this still fails toward the
-    // human. Four of the first thirteen recorded verdicts were these.
-    if (!parsed.stated) {
+    const unstated = (words = excerpt) =>
       this.hooks.notifyOp(
         {
           facts: {
@@ -7752,43 +7761,39 @@ export class CrewSupervisor {
             task: reviewTask,
             builder: builderTask,
             crewmate: task.crewmate,
-            excerpt,
+            excerpt: words,
           },
         },
         "crewmate-report",
         task.id,
       );
+    // The typed review record on the turn's report is the verdict
+    // (INF-1875). A report without one states nothing (captain ruling,
+    // 2026-09-19): a reviewer's acknowledgment - "standing by", "no new
+    // head yet" - is a plain report, never a verdict and never a round.
+    // The merge stays held either way, so this still fails toward the
+    // human.
+    if (!typed) {
+      unstated();
       return;
     }
     // A verdict belongs to the commit assigned before this turn, not a
     // newer builder commit that happened to arrive while the reviewer read.
     const sha = review.delivery?.headSha;
     if (!sha) {
-      this.hooks.notifyOp(
-        {
-          facts: {
-            kind: "review-unstated",
-            task: reviewTask,
-            builder: builderTask,
-            crewmate: task.crewmate,
-            excerpt:
-              "No assigned review commit is recorded. Steer the reviewer for a new review before accepting a verdict.",
-          },
-        },
-        "crewmate-report",
-        task.id,
+      unstated(
+        "No assigned review commit is recorded. Steer the reviewer for a new review before accepting a verdict.",
       );
       return;
     }
-    const proof = this.options.tasks.get(builder.id)?.delivery?.liveValidation;
+    if (typed.head !== sha) {
+      unstated(
+        `The typed review names ${typed.head.slice(0, 7)}, not the assigned commit ${sha.slice(0, 7)}. Steer the reviewer to review the assigned commit.`,
+      );
+      return;
+    }
+    const proof = builder.delivery?.liveValidation;
     const assigned = review.delivery?.validationAssignment;
-    const typedVerdict = proof?.reviews.findLast(
-      (item) =>
-        item.reviewer === task.id &&
-        item.head === sha &&
-        item.revision === assigned?.revision &&
-        (item.stateRevision ?? 0) === (assigned?.stateRevision ?? 0),
-    );
     const acceptance = acceptedValidation(proof, sha);
     const validationReason = !acceptance.ready
       ? acceptance.reason
@@ -7798,33 +7803,37 @@ export class CrewSupervisor {
           (assigned.stateRevision !== undefined &&
             assigned.stateRevision !== validationStateRevision(proof))
         ? "The validation facts changed after assignment; re-review the current validation state, even at the same head."
-        : !typedVerdict
-          ? "The assigned reviewer has not reported a typed judgment of this validation state."
-          : undefined;
-    const blockedReason = parsed.verdict === "pass" ? validationReason : undefined;
-    if (blockedReason) {
-      parsed.verdict = "blocked";
-      parsed.derivedPass = false;
-    }
+        : undefined;
+    // Careful reads the live proof beside the code: a clear code judgment
+    // whose proof is not accepted is recorded blocked with the reason, so
+    // the review stays open for the proof's re-review at the same head.
+    // Below Careful nothing reads the proof, and the code judgment is the
+    // verdict as typed.
+    const declared = REVIEW_VERDICT_OF_CODE[typed.code];
+    const blockedReason =
+      declared === "pass" && this.policiesOf(builder)?.rigor.value === "reviewed"
+        ? validationReason
+        : undefined;
+    const verdict = blockedReason ? "blocked" : declared;
+    const findings = (typed.findings ?? []).map(renderFinding);
+    const risk = typed.risk?.level;
+    const riskNote = typed.risk?.why;
     const shortSha = sha.slice(0, 7);
     const at = this.now();
-    const riskText = parsed.risk
-      ? `risk ${parsed.risk}${parsed.riskNote ? `: ${parsed.riskNote}` : ""}`
-      : "risk unstated";
-    const derived = parsed.derivedPass ? " (info-only findings; derived pass)" : "";
+    const riskText = risk ? `risk ${risk}${riskNote ? `: ${riskNote}` : ""}` : "risk unstated";
     const facts = {
-      reviewVerdict: parsed.verdict,
-      ...(sha ? { reviewSha: sha } : {}),
+      reviewVerdict: verdict,
+      reviewSha: sha,
       reviewChange: review.delivery?.reviewChange,
       reviewCarrySha: undefined,
-      ...(parsed.risk ? { reviewRisk: parsed.risk } : {}),
-      ...(parsed.riskNote ? { reviewRiskNote: parsed.riskNote } : {}),
+      ...(risk ? { reviewRisk: risk } : {}),
+      ...(riskNote ? { reviewRiskNote: riskNote } : {}),
       reviewedAt: at,
     };
-    if (parsed.verdict === "pass") {
+    if (verdict === "pass") {
       this.options.tasks.recordChangeEvidence(builder.id, facts, {
         kind: "review",
-        text: `review passed at ${shortSha}, ${riskText}${derived}`,
+        text: `review passed at ${shortSha}, ${riskText}`,
         feed: true,
         data: { reviewTaskId: task.id },
       });
@@ -7855,10 +7864,9 @@ export class CrewSupervisor {
             task: builderTask,
             reviewKey: task.key,
             crewmate: task.crewmate,
-            ...(sha ? { head: sha } : {}),
-            ...(parsed.risk ? { risk: parsed.risk } : {}),
-            ...(parsed.riskNote ? { riskNote: parsed.riskNote } : {}),
-            derived: parsed.derivedPass,
+            head: sha,
+            ...(risk ? { risk } : {}),
+            ...(riskNote ? { riskNote } : {}),
             excerpt,
           },
         },
@@ -7870,7 +7878,7 @@ export class CrewSupervisor {
     // The verdict is recorded without a host-owned review allowance.
     this.options.tasks.recordChangeEvidence(builder.id, facts, {
       kind: "review",
-      text: `review ${parsed.verdict} at ${shortSha}, ${riskText}${blockedReason ? ` - ${blockedReason}` : ""}`,
+      text: `review ${verdict} at ${shortSha}, ${riskText}${blockedReason ? ` - ${blockedReason}` : ""}`,
       feed: false,
       data: {
         reviewTaskId: task.id,
@@ -7880,13 +7888,14 @@ export class CrewSupervisor {
     const history = earlierHistory(
       reviewHistory(this.options.tasks, this.options.tasks.get(builder.id) ?? builder),
     );
-    const verdict: ReviewVerdictFacts = {
+    const verdictFacts: ReviewVerdictFacts = {
       kind: "review-verdict",
       task: reviewTask,
       builder: builderTask,
       crewmate: task.crewmate,
-      verdict: parsed.verdict,
+      verdict,
       excerpt,
+      ...(findings.length > 0 ? { findings } : {}),
       cards: this.cards.shownCards(task.id),
       // The reviewed brief carries the fix rules; a builder dispatched at
       // another care never read them, so the wake names them for its steer.
@@ -7897,7 +7906,7 @@ export class CrewSupervisor {
       ...(blockedReason ? { validationReason: blockedReason } : {}),
       ...(history.length > 0 ? { history } : {}),
     };
-    this.hooks.notifyOp({ facts: verdict }, "crewmate-report", task.id);
+    this.hooks.notifyOp({ facts: verdictFacts }, "crewmate-report", task.id);
   }
 
   /**
@@ -11487,10 +11496,11 @@ export class CrewSupervisor {
       cell("checks", "Checks", `${statusDot("idle")}${CHECKS_NOT_READ_WORDS}`);
     }
     if (record.delivery) cells.push(checkVerdicts(record.delivery));
-    // The independent review's word on a reviewed task (delivery rigor
-    // phase 2): the verdict and the head it read, the risk beside CI and
-    // never a hold (Q4), or where the review stands while it is live.
-    if (this.policiesOf(record)?.rigor.value === "reviewed") {
+    // The independent review's word on a change (delivery rigor phase 2,
+    // at any care since INF-1875): the verdict and the head it read, the
+    // risk beside CI and never a hold (Q4), or where the review stands
+    // while it is live; only a Careful task awaits one.
+    {
       const review = record.delivery;
       if (review?.reviewVerdict) {
         const at = review.reviewSha
@@ -11505,7 +11515,7 @@ export class CrewSupervisor {
         );
       } else if (this.openReviewOf(record.id)) {
         cell("review", "Review", `${statusDot("running")}open`);
-      } else {
+      } else if (this.policiesOf(record)?.rigor.value === "reviewed") {
         cell("review", "Review", `${statusDot("idle")}awaiting`);
       }
     }
@@ -12761,11 +12771,16 @@ export class CrewSupervisor {
     const builder = this.reviewBuilderOf(record);
     const owner = builder ?? record;
     // INF-994: records are kept at every care level, so a raise to Careful
-    // mid-task keeps them; only Careful's merge reads them.
-    if (this.taskDelivery(owner.id) !== "direct-pr")
+    // mid-task keeps them; only Careful's merge reads them. A review's
+    // record is the verdict on any change (INF-1875), however it delivers.
+    if (input.kind !== "review" && this.taskDelivery(owner.id) !== "direct-pr")
       throw new Error("Live validation belongs to a change delivered through a pull request.");
     const care = this.policiesOf(owner)?.rigor.value;
-    const currentHead = await this.validationHead(owner);
+    // A review's record binds to the head its turn was assigned (INF-1875):
+    // the version under review, read when the turn began, never the
+    // builder's branch as it stands now.
+    const currentHead =
+      input.kind === "review" && builder ? undefined : await this.validationHead(owner);
     const head = builder ? record.delivery?.validationAssignment?.head : currentHead;
     if (!head)
       throw new Error(
@@ -12776,9 +12791,10 @@ export class CrewSupervisor {
         "Bind validation permission with emit_card.validation_request so the shown offer carries its exact facts; a report cannot attach permission to an unrelated card.",
       );
     if (
-      input.kind === "run" ||
-      (input.kind === "request" && input.request.kind === "effect") ||
-      (input.kind === "effect-state" && input.state === "started")
+      currentHead !== undefined &&
+      (input.kind === "run" ||
+        (input.kind === "request" && input.request.kind === "effect") ||
+        (input.kind === "effect-state" && input.state === "started"))
     )
       await this.requireCleanValidationWork(owner, currentHead);
     if (input.kind === "request" && input.request.kind === "effect" && input.request.preChange) {
@@ -12800,11 +12816,15 @@ export class CrewSupervisor {
       head,
       ...(builder ? { reviewer: task.id, assignment: record.delivery?.validationAssignment } : {}),
     });
-    this.options.tasks.recordChangeEvidence(owner.id, { validationHead: currentHead });
+    if (currentHead !== undefined)
+      this.options.tasks.recordChangeEvidence(owner.id, { validationHead: currentHead });
+    // The reviewer's typed review is this turn's verdict (INF-1875); the
+    // turn's end records it on the builder.
+    if (input.kind === "review") task.turnReview = input;
     const { validation: _validation, ...declaration } = declared;
     const revision = validationRevision(this.options.tasks.get(owner.id)?.delivery?.liveValidation);
     const counts =
-      care === "reviewed"
+      care === "reviewed" || input.kind === "review"
         ? ""
         : ` Nothing reads it at ${CARE_WORDS[care ?? "standard"]} care; it counts if this task becomes Careful.${input.kind === "request" && input.request.kind === "gap" ? " A gap has nothing to waive below Careful, so ask the captain nothing about it." : ""}`;
     if (
@@ -14344,7 +14364,8 @@ export class CrewSupervisor {
     // Review carefully (INF-562): the captain's care lands on the record
     // first, so its notice waits on the crewmate's lane ahead of the choice
     // that starts it below, the way any choice on its card does.
-    if (chosen.care && card.taskId && !closedAnswer) this.careFromCard(card.taskId, chosen.care);
+    if (chosen.care && card.taskId && !closedAnswer && this.careFromCard(card.taskId, chosen.care))
+      void this.reviewFromCard(card.taskId);
     // Merge anyway (INF-1137 friction 6): his click passes the checks at
     // the card's version before the merge below runs, so it merges now.
     if (chosen.passes === "checks" && source === "chrome" && card.taskId && !closedAnswer)
@@ -14462,7 +14483,7 @@ export class CrewSupervisor {
    * notice as update_task, with the captain as its author and the merge
    * card as where it came from. A refusal is a feed line, never a silent no-op.
    */
-  private careFromCard(taskId: string, care: Rigor): void {
+  private careFromCard(taskId: string, care: Rigor): boolean {
     const before = this.policiesOf(this.options.tasks.get(taskId));
     try {
       this.options.tasks.updateFields(
@@ -14473,9 +14494,48 @@ export class CrewSupervisor {
     } catch (caught) {
       if (!(caught instanceof TaskGraphRefusal)) throw caught;
       this.options.broadcastEvent({ type: "firstmate_note", text: caught.message, taskId });
-      return;
+      return false;
     }
     this.policiesChanged(taskId, { rigor: care }, before);
+    return true;
+  }
+
+  /**
+   * The review the captain's Review carefully asks for (INF-1875): the app
+   * starts it on the builder's committed version - the one its merge card
+   * offered - as soon as the care is on the record. The click is a typed
+   * fact starting an operation, never a judgment; the reviewer's brief
+   * carries the card the captain read. What the app cannot start it says in
+   * the feed, and the first mate starts the review as on any Careful task.
+   */
+  private async reviewFromCard(taskId: string): Promise<void> {
+    const builder = this.options.tasks.get(taskId);
+    if (!builder || TaskService.isClosed(builder)) return;
+    try {
+      if (!builder.intent) throw new Error("the task has no recorded words to review against.");
+      const { taskId: reviewId } = await this.commissionReview(
+        {
+          title: `Review: ${builder.title}`,
+          intent: builder.intent,
+          ...(builder.repoId ? { repoId: builder.repoId } : {}),
+        },
+        builder.id,
+      );
+      const review = this.options.tasks.get(reviewId);
+      if (this.options.tasks.get(taskId))
+        this.options.tasks.note(
+          taskId,
+          `the app started review ${review?.key || reviewId} of the version on the merge card`,
+          { news: true, data: { reviewTaskId: reviewId } },
+        );
+    } catch (caught) {
+      const message = caught instanceof Error ? caught.message : String(caught);
+      this.options.broadcastEvent({
+        type: "firstmate_note",
+        text: `${REVIEW_CAREFULLY_WORDS}: the app could not start the review of ${builder.key || builder.id}: ${message}`,
+        taskId,
+      });
+    }
   }
 
   /**

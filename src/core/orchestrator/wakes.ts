@@ -267,6 +267,8 @@ export type ReviewVerdictFacts = {
   verdict: ReviewVerdict;
   /** The report, already capped for a wake. */
   excerpt: string;
+  /** The typed findings the verdict rests on, one line each (INF-1875). */
+  findings?: string[];
   cards: WakeCard[];
   /**
    * The builder's brief carries the reviewed fix rules (it was dispatched
@@ -622,7 +624,7 @@ export type WakeFacts =
       excerpt: string;
     }
   | {
-      /** A reviewer reported with no verdict line, so no verdict was recorded. */
+      /** A reviewer reported with no typed review record, so no verdict was recorded. */
       kind: "review-unstated";
       task: WakeTask;
       builder: WakeTask;
@@ -642,8 +644,6 @@ export type WakeFacts =
       head?: string;
       risk?: string;
       riskNote?: string;
-      /** A findings verdict whose findings were all info. */
-      derived: boolean;
       excerpt: string;
     }
   | {
@@ -1935,7 +1935,7 @@ function scheduledSource(facts: Extract<WakeFacts, { kind: "scheduled" }>): stri
  * the reviewed procedure for a change that may already have a pull request.
  */
 export const CAREFUL_NOTICE =
-  "Careful means an independent review before the merge. Commit any remaining work on your branch and report under the five headings without pushing; the first mate starts the review of your committed version. A pull request already open stays as it is until the review passes: no push and no new story. When the first mate relays a pass on the version already pushed, emit the completion card again as soon as its checks read passed. After fixes, push once to the same pull request after the pass, and emit the completion card when the fresh checks pass.";
+  "Careful means an independent review before the merge. Commit any remaining work on your branch and report under the five headings without pushing. When the captain pressed Review carefully on your merge card, the app started the review of the version that card offered; otherwise the first mate starts the review of your committed version. A pull request already open stays as it is until the review passes: no push and no new story. When the first mate relays a pass on the version already pushed, emit the completion card again as soon as its checks read passed. After fixes, push once to the same pull request after the pass, and emit the completion card when the fresh checks pass.";
 
 /** Typed legacy count notices remain readable, but no longer ask the agents to enforce a hold. */
 function retiredCountHold(task: WakeTask): string {
@@ -2041,14 +2041,14 @@ function renderFacts(facts: WakeFacts, wake: Pick<WakeEnvelope, "ways" | "text">
     case "review-orphan":
       return `[fm-op] ${facts.crewmate} reported on review task ${facts.task.id} "${facts.task.title}", but the task it reviewed is no longer on record: ${facts.excerpt}`;
     case "review-unstated":
-      return `[fm-op] ${facts.crewmate} reported on review task ${facts.task.id} "${facts.task.title}" - the review of task ${facts.builder.id} "${facts.builder.title}" - with no verdict line, so no verdict was recorded: ${facts.excerpt} ${REVIEWER_IDLE_NEXT}`;
+      return `[fm-op] ${facts.crewmate} reported on review task ${facts.task.id} "${facts.task.title}" - the review of task ${facts.builder.id} "${facts.builder.title}" - with no typed review record, so no verdict was recorded: ${facts.excerpt} ${REVIEWER_IDLE_NEXT}`;
     case "review-verdict":
       return renderReviewVerdict(facts);
     case "review-passed": {
       const risk = facts.risk
         ? `risk ${facts.risk}${facts.riskNote ? `: ${facts.riskNote}` : ""}`
         : "risk unstated";
-      return `[fm-op] the review of task ${facts.task.id} "${facts.task.title}" passed at ${facts.head ? facts.head.slice(0, 7) : "an unrecorded head"} (${risk})${facts.derived ? " (info-only findings; derived pass)" : ""}; the hold is released and review task ${facts.reviewKey} is closed. ${facts.crewmate}'s report: ${facts.excerpt} ${REVIEW_PASSED_NEXT}`;
+      return `[fm-op] the review of task ${facts.task.id} "${facts.task.title}" passed at ${facts.head ? facts.head.slice(0, 7) : "an unrecorded head"} (${risk}); the hold is released and review task ${facts.reviewKey} is closed. ${facts.crewmate}'s report: ${facts.excerpt} ${REVIEW_PASSED_NEXT}`;
     }
     case "task-failed":
       return `[fm-op] task ${facts.task.id} "${facts.task.title}" failed: ${facts.error}`;
@@ -2422,7 +2422,7 @@ function unknownWake(facts: unknown, ways: HoldWay[] | undefined): string {
  * review cap rides a findings one without them: its own words name the way.
  */
 function renderReviewVerdict(facts: ReviewVerdictFacts, next = true): string {
-  return `[fm-op] ${facts.crewmate} reported on review task ${facts.task.id} "${facts.task.title}" - the review of task ${facts.builder.id} "${facts.builder.title}" - with verdict ${facts.verdict}: ${facts.excerpt}${facts.validationReason ? ` The host held the reported pass: ${facts.validationReason} Steer the builder to address this reason, then re-review the changed validation state.` : ""}${facts.history?.length ? `\n${renderReviewHistory(facts.history)}\n` : ""}${cardsText(facts.cards)}${facts.liveValidationBriefed === false ? ` Relay the missing Careful contract to the builder: ${CAREFUL_LIVE_VALIDATION}` : ""}${next ? ` ${reviewFindingsNext(facts.briefed === true)}` : ""}`;
+  return `[fm-op] ${facts.crewmate} reported on review task ${facts.task.id} "${facts.task.title}" - the review of task ${facts.builder.id} "${facts.builder.title}" - with verdict ${facts.verdict}: ${facts.excerpt}${facts.findings?.length ? `\nFindings:\n${facts.findings.map((line) => `- ${line}`).join("\n")}` : ""}${facts.validationReason ? ` The host held the reported pass: ${facts.validationReason} Steer the builder to address this reason, then re-review the changed validation state.` : ""}${facts.history?.length ? `\n${renderReviewHistory(facts.history)}\n` : ""}${cardsText(facts.cards)}${facts.liveValidationBriefed === false ? ` Relay the missing Careful contract to the builder: ${CAREFUL_LIVE_VALIDATION}` : ""}${next ? ` ${reviewFindingsNext(facts.briefed === true)}` : ""}`;
 }
 
 /** A builder report's open review, and the re-review it may ask for. */

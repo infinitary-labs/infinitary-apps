@@ -287,8 +287,14 @@ function checksAt(delivery: TaskDelivery, head: string): ChangeChecks | null {
 
 function reviewAt(delivery: TaskDelivery, head: string): ChangeReview | null {
   if (delivery.reviewSha !== head || !delivery.reviewVerdict) return null;
+  // The typed review record at this version (INF-1875) carries the findings
+  // the verdict rests on; an older record without one carries none.
+  const findings = delivery.liveValidation?.reviews.findLast(
+    (review) => review.head === head && review.findings !== undefined,
+  )?.findings;
   return {
     verdict: delivery.reviewVerdict,
+    ...(findings ? { findings } : {}),
     ...(delivery.reviewRisk ? { risk: delivery.reviewRisk } : {}),
     ...(delivery.reviewRiskNote ? { riskNote: delivery.reviewRiskNote } : {}),
     ...(delivery.reviewedAt !== undefined ? { at: delivery.reviewedAt } : {}),

@@ -73,7 +73,7 @@ import { setThemeViaSettings } from "./theme";
  * and is one feed line; the completion card shows the review and merges.
  *
  * Real: the repository, task working copies, care derivation, review brief,
- * blocks hold, verdict parsing, card path and settle. Stand-ins: models (the mock
+ * blocks hold, the typed verdict, card path and settle. Stand-ins: models (the mock
  * provider IS the scripted shape of each session) and GitHub, a local
  * stand-in the app reads through its own sign-in, which answers the change,
  * its checks and the merge the way GitHub's API would (`./githubStub.ts`).

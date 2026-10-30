@@ -464,9 +464,9 @@ const ASSESSMENT_LINE = /^impact:\s*(none|conflict-only|changed-work|unknown)\b/
 
 /**
  * The verdict an independent repair assessment's report states (FI3-663):
- * its first line, `impact: none|changed-work|unknown`, the way a review's
- * first line is its verdict. A report without it states nothing, which the
- * host reads as no verdict - and no verdict never merges.
+ * its first line, `impact: none|changed-work|unknown`. A report without it
+ * states nothing, which the host reads as no verdict - and no verdict never
+ * merges.
  */
 export function parseRepairAssessment(report: string): MergeRepairImpact | "unstated" {
   const first =

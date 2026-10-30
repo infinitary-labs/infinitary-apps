@@ -465,6 +465,46 @@ describe("Careful's accepted live-validation contract", () => {
       }).permissions[0]?.state,
     ).toBe("requested");
   });
+
+  it("INF-1875: the typed review is the verdict, so it cannot contradict its findings, and keeps findings and risk", () => {
+    const state = run(plan());
+    const blocking = {
+      id: "F1",
+      severity: "error" as const,
+      file: "src/x.ts",
+      line: 12,
+      text: "the flush races the read",
+      action: "auto-fix" as const,
+    };
+    const note = {
+      id: "F2",
+      severity: "info" as const,
+      text: "a tradeoff worth noting",
+      action: "no-op" as const,
+    };
+    expect(() => review(state, head, { code: "clear", findings: [blocking] })).toThrow(
+      "contradicts a finding that blocks",
+    );
+    expect(() => review(state, head, { code: "findings", findings: [note] })).toThrow(
+      "needs a finding that blocks",
+    );
+    expect(() => review(state, head, { code: "findings" })).toThrow("needs a finding that blocks");
+    const kept = review(state, head, {
+      code: "findings",
+      findings: [blocking, note],
+      risk: { level: "medium", why: "one production line moves." },
+    });
+    expect(kept.reviews.at(-1)).toMatchObject({
+      code: "findings",
+      findings: [blocking, note],
+      risk: { level: "medium", why: "one production line moves." },
+    });
+    // Info findings ride a clear review; a blocked review needs none.
+    expect(review(state, head, { code: "clear", findings: [note] }).reviews.at(-1)?.code).toBe(
+      "clear",
+    );
+    expect(review(state, head, { code: "blocked" }).reviews.at(-1)?.code).toBe("blocked");
+  });
 });
 
 // INF-1824's accepted plan, built from the three records that drew it: one

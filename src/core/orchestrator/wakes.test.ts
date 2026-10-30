@@ -426,6 +426,27 @@ describe("renderWake", () => {
     expect(verdict({ briefed: true })).toBe(
       "[fm-op] crewmate 2 reported on review task r1 \"Review: Fix the pin\" - the review of task t1 \"Fix the pin\" - with verdict findings: verdict: findings F1 racy - auto-fix F2 copy - ask-user Steer the builder with every auto-fix finding verbatim; its brief says how to fix them. Info findings never block and need no steer. Decide an ask-user finding yourself when the user's own words already settle it; the rest are ONE decision card per round on the builder's task, with the step you would take as its default. Pass review_task_id naming this review. Start the title with Review of the builder's key; name the change in the first line. For each finding, show its number, severity, file and reviewed version above the reviewer's verbatim words. Steer a reviewer only to re-review at a new head, evidence revision or validation state its builder reports (including a captain-granted gap exception or a new effect request) - an idle reviewer needs no stand-by and no status.",
     );
+    // The typed findings ride the wake as lines after the excerpt (INF-1875).
+    expect(
+      renderWake({
+        facts: {
+          kind: "review-verdict",
+          task: review,
+          builder: task,
+          crewmate: "crewmate 2",
+          verdict: "findings",
+          excerpt: "Two findings.",
+          findings: [
+            "F1 error src/x.ts:12 racy - auto-fix",
+            "F2 warning src/y.ts:40 copy - ask-user",
+          ],
+          cards: [],
+          briefed: true,
+        },
+      }),
+    ).toContain(
+      "with verdict findings: Two findings.\nFindings:\n- F1 error src/x.ts:12 racy - auto-fix\n- F2 warning src/y.ts:40 copy - ask-user Steer the builder with every auto-fix finding verbatim",
+    );
     expect(renderRigorSection("reviewed")).toContain(REVIEW_FIX_RULES);
     expect(verdict({ verdict: "blocked", briefed: true }).endsWith(reviewFindingsNext(true))).toBe(
       true,
@@ -474,7 +495,7 @@ describe("renderWake", () => {
         },
       }),
     ).toBe(
-      `[fm-op] crewmate 2 reported on review task r1 "Review: Fix the pin" - the review of task t1 "Fix the pin" - with no verdict line, so no verdict was recorded: Standing by. ${REVIEWER_IDLE_NEXT}`,
+      `[fm-op] crewmate 2 reported on review task r1 "Review: Fix the pin" - the review of task t1 "Fix the pin" - with no typed review record, so no verdict was recorded: Standing by. ${REVIEWER_IDLE_NEXT}`,
     );
     // A pass sends the builder to push, open its PR and drive CI green.
     expect(
@@ -486,7 +507,6 @@ describe("renderWake", () => {
           crewmate: "crewmate 2",
           head: "0123456789ab",
           risk: "low",
-          derived: false,
           excerpt: "verdict: pass",
         },
       }),

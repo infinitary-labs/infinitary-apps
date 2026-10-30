@@ -368,22 +368,24 @@ describe("renderReviewBrief (delivery rigor phase 2, review-before-PR)", () => {
     expect(brief).toContain(
       "simplification means reducing complexity through non-functional refactoring",
     );
-    // The finding shape with the ported severity and action vocabulary.
+    // The typed review record is the verdict (INF-1875): the code judgment
+    // at the assigned head and evidence revision, the finding shape with the
+    // ported severity and action vocabulary, the ported risk ladder and the
+    // info-never-blocks rule.
     expect(brief).toContain(
-      "Report one finding per line: id, severity (error: should absolutely not get merged; warning: worth addressing but can be done in a follow up; info: nice to have), file and line, one sentence, and an action",
+      "Your verdict is the typed review record on report.validation with kind review, head 0123456789abcdef0123456789abcdef01234567 and revision 0, never a line of the report text. code: clear when nothing needs a fix, findings when at least one finding blocks, blocked when you could not review.",
+    );
+    expect(brief).toContain(
+      "findings: one entry per finding - id, severity (error: should absolutely not get merged; warning: worth addressing but can be done in a follow up; info: nice to have), file and line, one sentence of text, and an action",
     );
     expect(brief).toContain(
       "ask-user for anything about functional requirements or product behavior, or that challenges a deliberate choice, even if it looks wrong, and when in doubt",
     );
-    // The two lines the host parses, the info-never-blocks rule, and the
-    // ported risk ladder.
-    expect(brief).toContain(
-      "Open your report with exactly one line, verdict: pass|findings|blocked, and close with one line, risk: low|medium|high",
-    );
     expect(brief).toContain("high: should not be merged without explicit human approval");
     expect(brief).toContain(
-      "Info findings never block: a review whose findings are all info/no-op is read as a pass.",
+      "An error, a warning or an ask-user finding blocks; info findings never block, so they ride a clear review",
     );
+    expect(brief).not.toContain("verdict: pass|findings|blocked");
     // INF-125 convergence, carried by the app since INF-993: the decided
     // history, and no verdict without a new proof pair.
     expect(brief).toContain(

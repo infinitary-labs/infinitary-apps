@@ -13,6 +13,7 @@ import {
   validationRevision,
   validationStateRevision,
 } from "@shared/liveValidation";
+import { findingsBlock } from "@shared/rigor";
 
 /** Pure transitions; TaskService is the only writer. No reported fact can mint consent. */
 export function recordValidation(
@@ -126,6 +127,15 @@ export function recordValidation(
         fail("Only effects assigned to this review may be cleared.");
       if (input.coverage === "complete" && input.omitted.length)
         fail("An omitted required scenario is incomplete coverage.");
+      // The typed record is the verdict (INF-1875), so it cannot contradict
+      // itself: a finding that blocks is not clear code, and code findings
+      // rest on at least one finding.
+      if (input.code === "clear" && findingsBlock(input.findings ?? []))
+        fail("Code clear contradicts a finding that blocks; report code findings.");
+      if (input.code === "findings" && !findingsBlock(input.findings ?? []))
+        fail(
+          "Code findings needs a finding that blocks (error, warning or ask-user); report code clear and keep the notes as findings.",
+        );
       state.reviews.push({
         ...input,
         reviewer: context.reviewer,

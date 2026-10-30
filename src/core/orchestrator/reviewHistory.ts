@@ -1,7 +1,7 @@
 import { type CardAnswer, cardAnswerLines } from "@shared/cards";
 import { isRepairAssessment } from "@shared/checkRepair";
 import { gapPermission, type LiveValidation } from "@shared/liveValidation";
-import { parseReviewFindings } from "@shared/rigor";
+import { renderFinding } from "@shared/rigor";
 import type { TaskEvent } from "../storage/taskEventStore";
 import type { TaskRecord } from "../storage/taskStore";
 
@@ -19,7 +19,7 @@ export type ReviewHistoryEntry =
       review: string;
       verdict: string;
       head?: string;
-      /** The report's finding lines, verbatim. */
+      /** The round's typed findings, one line each. */
       findings: string[];
     }
   | {
@@ -54,9 +54,10 @@ export type ReviewHistoryReader = {
 const NOT_AN_ANSWER = new Set(["dismissed", "closed"]);
 
 /**
- * The review history of a builder, oldest first: every review round its
- * reviews reported with a verdict, the captain's answers and replies on
- * its cards word for word, and each live-validation answer.
+ * The review history of a builder, oldest first: every review round the
+ * host recorded from its reviews, with the typed findings each reported,
+ * the captain's answers and replies on its cards word for word, and each
+ * live-validation answer.
  */
 export function reviewHistory(
   reader: ReviewHistoryReader,
@@ -70,27 +71,28 @@ export function reviewHistory(
   const reviews = reader
     .children(builder.id)
     .filter((child) => child.shape?.kind === "review" && !isRepairAssessment(child.shape));
+  const typed = builder.delivery?.liveValidation?.reviews ?? [];
   for (const review of reviews) {
-    const recordedFor = verdicts.filter((event) => event.data?.reviewTaskId === review.id);
-    for (const report of reader.timeline(review.id)) {
-      if (report.kind !== "report") continue;
-      // A report with no verdict line recorded nothing (the host reads the
-      // same line), so it is no round.
-      const stated = /^\s*verdict:\s*(pass|findings|blocked)\b/im.exec(report.text)?.[1];
-      if (!stated) continue;
-      // The verdict the host recorded for it - a held pass reads blocked -
-      // with its head, when the builder's timeline still holds it.
-      const index = recordedFor.findIndex((event) => event.at >= report.at);
-      const recorded = index >= 0 ? recordedFor.splice(index, 1)[0] : undefined;
-      const verdict = (recorded?.data?.reviewVerdict as string | undefined) ?? stated.toLowerCase();
-      const head = recorded?.data?.reviewSha;
+    // Each round is the verdict the host recorded for this review - a held
+    // pass reads blocked - with the head it read; its findings are the
+    // typed review record the reviewer reported for that round (INF-1875).
+    // A record written before reviews were typed has rounds and no findings.
+    for (const event of verdicts) {
+      if (event.data?.reviewTaskId !== review.id) continue;
+      const head = event.data?.reviewSha;
+      const record = typed.findLast(
+        (item) =>
+          item.reviewer === review.id &&
+          (typeof head !== "string" || item.head === head) &&
+          item.at <= event.at,
+      );
       entries.push({
         kind: "round",
-        at: report.at,
+        at: event.at,
         review: review.key || review.id,
-        verdict,
+        verdict: event.data?.reviewVerdict as string,
         ...(typeof head === "string" ? { head } : {}),
-        findings: parseReviewFindings(report.text).map((finding) => finding.line),
+        findings: (record?.findings ?? []).map(renderFinding),
       });
     }
   }

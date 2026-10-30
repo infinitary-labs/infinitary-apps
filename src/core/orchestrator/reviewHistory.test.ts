@@ -4,6 +4,7 @@
 // The app now writes every round, answer and gap answer into each reviewer
 // turn and the first mate's findings wake. The fixture is INF-812's record.
 import type { LiveValidation, ValidationScenario } from "@shared/liveValidation";
+import { type ReviewFinding, renderFinding } from "@shared/rigor";
 import { describe, expect, it } from "vitest";
 import { freshDatabase } from "../../../tests/helpers/database";
 import { seedDelivery } from "../../../tests/helpers/taskDelivery";
@@ -15,12 +16,59 @@ import { renderWake } from "./wakes";
 
 const FIRST = "d2be517a1c3f40b6a9e0d2be517a1c3f40b6a9e0";
 const SECOND = "1cca114b2d3e40f5a6b7c1cca114b2d3e40f5a6b";
-const F5 =
-  "F5 warning src/core/programs/runner.ts:212 A script that returns none falls back to the default branch instead of shipping nothing. ask-user";
-const F6 =
-  "F6 warning src/core/programs/runner.ts:88 The comments claim script-size and result-size limits the code never enforces. ask-user";
-const F7 =
-  "F7 error src/core/programs/journal.ts:41 A replay reads the journal before its last line is flushed. auto-fix";
+const f5: ReviewFinding = {
+  id: "F5",
+  severity: "warning",
+  file: "src/core/programs/runner.ts",
+  line: 212,
+  text: "A script that returns none falls back to the default branch instead of shipping nothing.",
+  action: "ask-user",
+};
+const f6: ReviewFinding = {
+  id: "F6",
+  severity: "warning",
+  file: "src/core/programs/runner.ts",
+  line: 88,
+  text: "The comments claim script-size and result-size limits the code never enforces.",
+  action: "ask-user",
+};
+const f7: ReviewFinding = {
+  id: "F7",
+  severity: "error",
+  file: "src/core/programs/journal.ts",
+  line: 41,
+  text: "A replay reads the journal before its last line is flushed.",
+  action: "auto-fix",
+};
+const F5 = renderFinding(f5);
+const F6 = renderFinding(f6);
+const F7 = renderFinding(f7);
+
+/** The typed review record the reviewer reported for one round (INF-1875). */
+function typedReview(
+  head: string,
+  revision: number,
+  findings: ReviewFinding[],
+  at: number,
+): LiveValidation["reviews"][number] {
+  return {
+    kind: "review",
+    head,
+    revision,
+    code: "findings",
+    findings,
+    coverage: "complete",
+    coverageReason: "The one scenario covers the captain's words.",
+    effects: [],
+    omitted: [],
+    verdict: "inconclusive",
+    reason: "The real model was not reached.",
+    reviewer: "review",
+    scenarioRevision: 1,
+    stateRevision: 0,
+    at,
+  };
+}
 
 const realModel: ValidationScenario = {
   id: "real-model",
@@ -69,7 +117,7 @@ function proof(observedReason: string): LiveValidation {
         evidence: [],
       },
     ],
-    reviews: [],
+    reviews: [typedReview(FIRST, 1, [f5, f6], 1_900), typedReview(SECOND, 2, [f7], 12_900)],
     permissions: [
       {
         request: {
@@ -215,6 +263,16 @@ describe("the review history the app writes (INF-993)", () => {
     });
     expect(wake).toContain(renderReviewHistory(history));
     expect(wake).toContain("Leave them out, and correct the comments that claim them");
+  });
+
+  it("keeps the rounds of a record written before reviews were typed, with no findings", () => {
+    const { tasks } = inf812(approvedReason);
+    seedDelivery(tasks, "builder", { liveValidation: { ...proof(approvedReason), reviews: [] } });
+    const builder = tasks.get("builder");
+    if (!builder) throw new Error("the builder was not seeded");
+    const rounds = reviewHistory(tasks, builder).filter((entry) => entry.kind === "round");
+    expect(rounds.map((round) => round.head)).toEqual([FIRST, SECOND]);
+    expect(rounds.map((round) => round.findings)).toEqual([[], []]);
   });
 
   it("writes nothing before anything was decided", () => {

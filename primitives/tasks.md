@@ -95,7 +95,7 @@ Dropped work starts again as a fresh task joined by `replaced-by` (`TaskService.
 - Every captain ask lands on a task through capture ([task capture](../docs/task-capture.md)).
 - The sequences guide's feature and bugfix shapes: a parent with plan, implement, reproduce and fix steps.
 - Crewmate follow-ups (`file_followup`), joined by `discovered-from` and triaged by the first mate.
-- The reviewed rigor's independent review child, joined to its builder by the parent edge ([delivery rigor](../docs/delivery-rigor.md)).
+- A change's independent review child, started on request at any care, joined to its builder by the parent edge ([delivery rigor](../docs/delivery-rigor.md)).
 - Program parts filed by `ProgramRunner` as child tasks.
 
 ## Checks

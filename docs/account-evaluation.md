@@ -136,6 +136,8 @@ The sheet fixes the plan before approval: every case row carries `promptBytes`, 
 The run reserves exactly that plan, so an earlier case can never shorten a later one.
 The reservation ceiling is 12 million.
 If a module's full plan passes either ceiling, the largest allowance gives up one call at a time (the later case on a tie) until it fits, and the sheet states those smaller allowances before anyone approves it.
+This is the first fitting plan in that reduction order, not a promise that no reduced case could regain a cheaper call.
+The planner never refills allowances after it reaches that plan.
 
 A cut-off, refused/invalid/failed tool execution, missing served-model evidence or exhausted budget stops subsequent cases.
 Each case file's `reason` and `usage.json`'s `stop` name what stopped it.
@@ -174,7 +176,7 @@ The Claude usage proof scripts two tool-using cases with nonzero cache counters,
 A scripted local endpoint leaves the second request's answer open after a call the evaluation refuses, and the case and `usage.json` read unknown although the client reported the first request's smaller total.
 `tests/account-eval-usage.test.ts` also checks partial unknowns, side-model contributions and reported zeros; `src/core/storage/sessionReader.test.ts` checks repeated content blocks and late usage updates.
 It checks sheet/hash admission, registry checksums, native response/model/usage artifacts, all twelve normal endings, review fields left unapproved, repeat-run refusal, graph effects and repeated-start refusal.
-The allowance proofs build the twelve real hosts: the sheet gives every case its full allowance under the ceiling, a plan padded past the ceiling states smaller allowances, and one twelve-case run on the mock provider opens every session with exactly its sheet allowance (the old running reservation opened cases six to eight with 5 calls even when every case made one request).
+The allowance proofs build the twelve real hosts: the sheet follows the documented reduction order and stops at the first plan under both ceilings, a plan padded past the ceiling states smaller allowances, and one twelve-case run on the mock provider opens every session with exactly its sheet allowance (the old running reservation opened cases six to eight with 5 calls even when every case made one request).
 A basis edit is judged by the task the record now names, whether the tool stored its key or its id, so welcome-recovery's attach-then-start path is checked through the production tools.
 A scripted local endpoint asks for a settle, which the evaluation refuses, and the case and `usage.json` keep `tool refusal or failure` after the cut turn reports its failure.
 The crewmate-client proofs find the client among the run's ancestors in the real process table and nowhere else, let go of a run the system adopted away from it, refuse a Claude run outside a crewmate's client without writing `run-started.json`, and stop a mock Claude run whose client ends during its first request at that request, opening no later case.

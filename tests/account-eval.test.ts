@@ -362,7 +362,7 @@ describe("account evaluation approval and isolation", () => {
 
 describe("account evaluation call allowances", () => {
   const full = (role: string) => (role === "builder" ? LIMITS.builderCalls : LIMITS.firstmateCalls);
-  it("fixes every case's full call allowance on the sheet at the real prompt sizes", async () => {
+  it("fixes the first fitting ordered-reduction plan on the sheet at the real prompt sizes", async () => {
     const { sheet } = await runEvaluation(options(scratchDir("eval-plan-")), {
       scratch: () => scratchDir("eval-case-"),
     });
@@ -373,13 +373,29 @@ describe("account evaluation call allowances", () => {
     for (const row of sheet.cases) {
       expect(row.calls).toBeGreaterThanOrEqual(1);
       expect(row.calls).toBeLessThanOrEqual(full(row.role));
-      if (row.calls < full(row.role)) {
-        expect(
-          sheet.maximumInputTokens - row.inputTokens + reservation(row.promptBytes, row.calls + 1),
-        ).toBeGreaterThan(sheet.limits.inputTokens);
-      }
+    }
+    // INF-2017, captain-approved correction: the documented policy removes calls
+    // in this order and stops at the first fitting plan; it does not refill cheaper cases.
+    // Rank the actual hosts' possible cuts independently of the allocator's reduction loop.
+    const cutOrder = sheet.cases
+      .flatMap((row, index) =>
+        Array.from({ length: full(row.role) }, (_, call) => ({ index, calls: call + 1 })),
+      )
+      .sort((a, b) => b.calls - a.calls || b.index - a.index);
+    const removed = cutOrder.filter((cut) => cut.calls > sheet.cases[cut.index]!.calls);
+    expect(removed).toEqual(cutOrder.slice(0, removed.length));
+    const lastCut = removed.at(-1);
+    if (lastCut) {
+      const row = sheet.cases[lastCut.index]!;
+      const previousInput =
+        sheet.maximumInputTokens - row.inputTokens + reservation(row.promptBytes, row.calls + 1);
+      // Undo only the last prescribed cut: its predecessor must exceed at least one ceiling.
+      expect(
+        sheet.maximumCalls + 1 > sheet.limits.calls || previousInput > sheet.limits.inputTokens,
+      ).toBe(true);
     }
     expect(sheet.maximumCalls).toBe(sheet.cases.reduce((sum, row) => sum + row.calls, 0));
+    expect(sheet.maximumCalls).toBeLessThanOrEqual(sheet.limits.calls);
     for (const row of sheet.cases)
       expect(row.inputTokens).toBe(reservation(row.promptBytes, row.calls));
     expect(sheet.maximumInputTokens).toBe(

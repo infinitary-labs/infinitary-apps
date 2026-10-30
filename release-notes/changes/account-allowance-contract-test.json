@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "account-allowance-contract-test",
+      "reason": "Captain-approved correction of the developer account-evaluation probe to test the documented reduction order, with no allocation or app behavior change."
+    }
+  ]
+}

@@ -1,0 +1,14 @@
+{
+  "entries": [
+    {
+      "id": "queued-run-identity",
+      "kind": "fix",
+      "title": "Queued checks keep their place",
+      "body": "A temporary failure to read running programs no longer ends a check already waiting to start. The check waits for a fresh reading before it starts.",
+      "area": "tasks",
+      "noPicture": "This repairs background admission without changing the task's appearance or controls.",
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

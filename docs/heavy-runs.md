@@ -16,6 +16,9 @@ The caller's program and arguments stay in that shell, never crossing the task c
 After admission the child execs the original program, retaining standard input, output, error, environment and working directory; the outer wrapper returns its exit status.
 The waiting wrapper prints line facts on standard error, leaving the admitted program's standard output intact.
 Short claim requests use the existing two-second cadence and bypass the shell's kept-answer mechanism; the waiting wrapper is itself the shell job.
+If a later process-table reading is unavailable, a previously verified caller with the same task, group and declaration keeps waiting in its existing place instead of treating the missing reading as proof it ended.
+The reply grants no execution until a fresh reading verifies the caller, even if capacity has already admitted its saved hold; that reservation remains counted in the meantime.
+An unreadable first claim, a caller absent from a readable table, a changed declaration and an unverified nested claim still refuse.
 
 A nested wrapper carries `INFINITARY_LOAD_HOLD` and reuses the outer declaration only when the app verifies the same task and process group.
 A nested demand larger than the outer declaration refuses before starting its program.

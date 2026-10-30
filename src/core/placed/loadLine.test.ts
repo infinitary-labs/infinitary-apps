@@ -1,3 +1,4 @@
+import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import type { ResourceObservation } from "@shared/resources";
 import { afterEach, describe, expect, it } from "vitest";
@@ -55,6 +56,65 @@ function setup() {
       .claim({ pid: rowAt(rows, index).pid, demand: { cpu, memoryBytes: 1024 ** 3 } });
   return { line, rows, claim };
 }
+
+// INF-1978: an unavailable OS reading is not evidence that a waiting group ended.
+// Recorded identities above drive the same public claim boundary as native wrappers.
+describe("queued identity checks", () => {
+  it("retains the same hold and queue position, but never grants on an unreadable table", async () => {
+    let rows: ProcessReading[] | null = identities;
+    const stateFile = join(scratchDir("identity-line-"), "holds.json");
+    const line = new LoadLine({
+      stateFile,
+      processes: async () => rows,
+      groupExists: () => true,
+    });
+    lines.push(line);
+    const input = { pid: rowAt(identities, 0).pid, demand: { cpu: 4, memoryBytes: 1024 ** 3 } };
+    const task = line.forTask("queued");
+    const first = await task.claim(input);
+    const following = line.forTask("following");
+    const next = { ...input, pid: rowAt(identities, 1).pid };
+    const second = await following.claim(next);
+    const saved = readFileSync(stateFile, "utf8");
+    rows = null;
+    expect(await task.claim(input)).toEqual({ ...first, reason: "unavailable" });
+    expect(await following.claim(next)).toEqual({ ...second, reason: "unavailable" });
+    expect(readFileSync(stateFile, "utf8")).toBe(saved);
+    expect(line.snapshot().runs.map((run) => run.taskId)).toEqual(["queued", "following"]);
+    line.observe(reading, null);
+    expect(line.snapshot().runs[0]?.state).toBe("running");
+    expect(await task.claim(input)).toEqual({ ...first, reason: "unavailable" });
+    rows = identities;
+    expect(await task.claim(input)).toEqual({ ...first, state: "running", reason: undefined });
+  });
+
+  it("still refuses missing identities, unknown new callers and mismatched declarations", async () => {
+    let rows: ProcessReading[] | null = identities;
+    const line = new LoadLine({
+      stateFile: join(scratchDir("identity-refusal-"), "holds.json"),
+      processes: async () => rows,
+      groupExists: () => true,
+    });
+    lines.push(line);
+    const input = { pid: rowAt(identities, 0).pid, demand: { cpu: 4, memoryBytes: 1024 ** 3 } };
+    const task = line.forTask("queued");
+    const held = await task.claim(input);
+    rows = null;
+    const refused = "The run's process could not be read; nothing started.";
+    await expect(line.forTask("other").claim(input)).rejects.toThrow(refused);
+    await expect(task.claim({ ...input, pid: rowAt(identities, 1).pid })).rejects.toThrow(refused);
+    await expect(task.claim({ ...input, demand: { ...input.demand, cpu: 5 } })).rejects.toThrow(
+      refused,
+    );
+    await expect(
+      task.claim({ ...input, demand: { ...input.demand, memoryBytes: 2 * 1024 ** 3 } }),
+    ).rejects.toThrow(refused);
+    await expect(task.claim({ ...input, parent: held.id })).rejects.toThrow(refused);
+    rows = identities.slice(1); // A readable table proves the original caller is missing.
+    await expect(task.claim(input)).rejects.toThrow(refused);
+    expect(line.snapshot().runs).toEqual([held]);
+  });
+});
 
 describe("accepted counted-once admission", () => {
   it("starts a lone run at zero idle but still requires fresh memory and normal pressure", async () => {

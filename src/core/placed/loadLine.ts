@@ -196,7 +196,23 @@ export class LoadLine {
     const rows = await (this.options.processes ?? readProcesses)();
     this.check();
     const row = rows?.find((row) => row.pid === input.pid);
-    if (!row) throw new Error("The run's process could not be read; nothing started.");
+    if (!row) {
+      // An unavailable table does not prove that a previously verified caller
+      // ended. Keep its place, but never hand out a saved admission without a
+      // fresh identity check, even if observe() admitted it during this read.
+      const held =
+        rows === null && !input.parent
+          ? this.held.find(
+              (held) =>
+                held.taskId === taskId &&
+                held.pid === input.pid &&
+                held.demand.cpu === demand.cpu &&
+                held.demand.memoryBytes === demand.memoryBytes,
+            )
+          : undefined;
+      if (held) return { ...this.runOf(held.id), state: "waiting", reason: "unavailable" };
+      throw new Error("The run's process could not be read; nothing started.");
+    }
     if (input.parent) {
       const parent = this.held.find((held) => held.id === input.parent && held.taskId === taskId);
       if (parent?.state !== "running" || row.group !== parent.pid)

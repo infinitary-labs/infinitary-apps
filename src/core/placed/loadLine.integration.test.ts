@@ -171,6 +171,58 @@ describe("the declared heavy-run line through its native command", () => {
     }
   });
 
+  // INF-1978: a transient unreadable process table must not end a queued check.
+  // Keep the real wrapper and its live identity; fault only the OS reader's null result.
+  it("keeps a queued command waiting through an unreadable identity check, then starts it once", async () => {
+    const dir = scratchDir("infinitary-load-unreadable-");
+    let unavailable = false;
+    const line = new LoadLine({
+      stateFile: join(dir, "load.json"),
+      processes: async () => (unavailable ? null : readProcesses()),
+    });
+    lines.push(line);
+    line.observe({ ...reading, memory: { ...reading.memory, memoryPressure: "warning" } }, null);
+    const channel = await AxiChannel.open({
+      spawner: forkChildProcess(entry),
+      binDir: bin,
+      version: "9.9.9-test",
+      keysDir: join(dir, "keys"),
+    });
+    channels.push(channel);
+    const waiting = run(channel.grant("unreadable", { load: line.forTask("unreadable") }), dir, [
+      process.execPath,
+      "-e",
+      "console.log('requested check started')",
+    ]);
+    try {
+      await expect.poll(waiting.errors).toContain("reason: pressure");
+      const hold = line.snapshot().runs[0]?.id;
+      unavailable = true;
+      // Admission may advance independently while this caller cannot be verified.
+      // It must not execute on that saved grant alone, or lose its place and exit.
+      line.observe(reading, null);
+      await expect.poll(waiting.errors).toContain("reason: unavailable");
+      expect(waiting.child.exitCode).toBeNull();
+      expect(waiting.output()).toBe("");
+      expect(line.snapshot().runs[0]?.id).toBe(hold);
+      unavailable = false;
+      expect(await waiting.ended).toBe(0);
+      expect(waiting.output()).toBe("requested check started\n");
+      await expect.poll(() => line.snapshot().runs).toEqual([]);
+      console.info(
+        "Unreadable identity recovery proof",
+        JSON.stringify({
+          waiting: waiting.errors(),
+          output: waiting.output(),
+          remaining: line.snapshot(),
+        }),
+      );
+    } finally {
+      channel.close();
+      await waiting.ended;
+    }
+  });
+
   it("holds a surviving group after its leader exits and restores that hold after app restart", async () => {
     const dir = scratchDir("infinitary-load-descendant-");
     const stateFile = join(dir, "load.json");

@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "automatic-placement-unread-wait",
+      "reason": "Internal: the Automatic placement journey keeps waiting while this computer has no current resource reading, as when a slowed Mac runner's read overruns its deadline, and still requires the CPU wait, the start and a fresh available reading. No product behavior changes."
+    }
+  ]
+}

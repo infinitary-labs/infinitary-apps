@@ -165,6 +165,7 @@ The journey replays captured CPU counters only inside its isolated Electron proc
 It first observes a fresh busy sample, asks for a task, checks that the task waits unstarted for CPU room, then releases available counters and checks that the next placement sweep starts it on its own branch.
 The sampler still measures counter deltas over its real window, and the journey checks its resulting CPU observation.
 A wait for anything other than CPU room or an outstanding comparison fails in the task's own words.
+A wait because this computer had no current reading, unknown or too old, is still an outstanding comparison: on a slowed runner a read can overrun its deadline, and the next round reads again.
 The shared Mac's other work cannot hold the replay busy: release follows the observed wait, not elapsed time or the real processor becoming idle.
 The journey's ordinary load-clock deadlines still bound a missing comparison or start.
 It also holds a premium ask that computer cannot serve on the premium reset, and checks that the first mate hears once.

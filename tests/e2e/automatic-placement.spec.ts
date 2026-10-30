@@ -54,6 +54,27 @@ const BUSY_WAIT = placementWait(
   PLACEMENT_DEMANDS.standard,
 ).words;
 
+/**
+ * The words a task waits with while this computer has no current reading,
+ * from their owner: a read that overran its five-second deadline is unknown,
+ * and one past the ten-second allowance too old (docs/helper.md). The next
+ * round reads again, so neither is a comparison. INF-1899: on the release
+ * run's Mac lane, whose processor another runner slot shares, a read after
+ * the release overran its deadline and this journey failed on that wait.
+ */
+const UNREAD_WAITS = (["resources-unknown", "resources-stale"] as const).map(
+  (reason) =>
+    placementWait(
+      [{ name: HERE.This, rejections: [reason], capacity: null }],
+      PLACEMENT_DEMANDS.standard,
+    ).words,
+);
+
+/** No comparison yet: none has run, or this computer had no current reading for it. */
+function uncompared(state: string): boolean {
+  return state === PLACEMENT_WAIT || UNREAD_WAITS.includes(state);
+}
+
 /** Keep both successful and failed CI runs' observed task and sampler states. */
 async function recordCpuState(app: LaunchedApp, task: TaskDetail, phase: string): Promise<void> {
   const reading = await homeReading(app);
@@ -74,7 +95,10 @@ async function recordCpuState(app: LaunchedApp, task: TaskDetail, phase: string)
   );
 }
 
-/** Wait for a compared task, rejecting waits unrelated to the CPU immediately. */
+/**
+ * Wait for a compared task, rejecting waits unrelated to the CPU immediately;
+ * a wait with no current reading of this computer is not yet compared.
+ */
 async function placementState(detail: () => Promise<TaskDetail>): Promise<string> {
   const task = await detail();
   if (task.startedAt !== null) return "started";
@@ -96,7 +120,7 @@ async function startsAfterCpuRelease(
     .poll(
       async () => {
         state = await placementState(detail);
-        return state;
+        return uncompared(state) ? PLACEMENT_WAIT : state;
       },
       { timeout: 90_000 },
     )
@@ -112,7 +136,7 @@ async function startsAfterCpuRelease(
     .poll(
       async () => {
         state = await placementState(detail);
-        return state === BUSY_WAIT || state === PLACEMENT_WAIT ? "waiting" : state;
+        return state === BUSY_WAIT || uncompared(state) ? "waiting" : state;
       },
       { timeout: 90_000 },
     )

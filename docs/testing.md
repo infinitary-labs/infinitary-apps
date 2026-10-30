@@ -865,6 +865,18 @@ It removes the unpacked adjacent helper after installing it because Chromium pre
 Chromium splits the helper's command-prefix path at spaces, so the helper is separate while the checkout and app executable still stay under `Application Support`.
 The Playwright launcher explicitly enables Chromium sandboxing.
 Each job keeps the machine-readable result and any failed journey evidence; the job that runs `source-start` also keeps a 1280 by 800 Linux window picture.
+Ordinary Linux source jobs additionally keep a separate `journey-timing-Linux-<suffix>-<lane>-<shard>` artifact for 14 days, without changing those evidence bundles.
+`scripts/journey-timing.ts` projects the existing Playwright JSON into `journey-timing.json`: schema version, run and attempt, checked-out revision, platform and architecture, suite/lane/shard, requested and observed selected files, configured and actual workers, outcomes and per-file/project attempt intervals and work.
+Paths retain their directory identity, including styles files under `tests/renderer`; repeated attempts keep their retry and worker identity, without logs, steps, pictures or attachment paths.
+`elapsedMs` spans the first executed attempt's start through the last one's end in that file/project group, including intervening gaps; `workMs` sums non-skipped attempts and is not wall time.
+Skipped attempts remain observed skips, with null elapsed intervals when nothing executed; missing reports, absent requested files and tests without results remain explicit and cannot be successful complete observations.
+The exporter marks a report successful only when the test command succeeded, every selected test has a completed result, and Playwright records no global errors, unexpected outcomes or flakes.
+This flag describes the test observation, not the final workflow conclusion; a timing consumer must also check that job's successful conclusion and compatible provenance before using it.
+`setupMs` spans the first job step through test-command entry; `jobObservedMs` and `testStepObservedMs` end at export, after the skip gate but before uploads and runner cleanup.
+These are bounded observations, not total job occupancy or runner waiting: join the run/attempt/job and matrix identity to GitHub's job timestamps for final job time, including checkout before the first step and work after export.
+A missing report records null workers and Playwright timing, never zero work or a skip.
+Run-alone keeps its existing per-selection reports unchanged and does not export the final child process as an ordinary complete timing observation.
+No allocator consumes these artifacts yet; selection, worker limits, lane definitions, shard counts, cancellation and release gates stay unchanged.
 On Mac, a pull request editing `tests/e2e/layout.ts` still runs every resize and minimum-size caller selected by `scripts/journey-callers.ts`, including calls through the demo helper.
 The Mac affected-journey selector covers the same callers through their imports.
 Window sizes in `resizeWindow`, its returned restore value and `minimumWindowSize` describe content pixels before page zoom, not outer bounds that include a native menu or frame.

@@ -1,0 +1,971 @@
+{
+  "config": {
+    "workers": 2,
+    "metadata": {
+      "actualWorkers": 1
+    }
+  },
+  "suites": [
+    {
+      "title": "devices.spec.ts",
+      "file": "devices.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [
+        {
+          "title": "a Mac joins with a link made from Firstmate's card, and Remove cuts it off",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 60000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "desktop",
+              "projectName": "desktop",
+              "results": [
+                {
+                  "workerIndex": 0,
+                  "parallelIndex": 0,
+                  "status": "passed",
+                  "duration": 8995,
+                  "retry": 0,
+                  "startTime": "2026-10-30T10:34:15.567Z"
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "441c969b5ac029ba9e26-e99e4b5ba741942dc5ab",
+          "file": "devices.spec.ts",
+          "line": 104,
+          "column": 1
+        },
+        {
+          "title": "a device says what it is when it connects, and Devices names a phone a phone and a Linux computer a computer with its chip",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 60000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "desktop",
+              "projectName": "desktop",
+              "results": [
+                {
+                  "workerIndex": 0,
+                  "parallelIndex": 0,
+                  "status": "passed",
+                  "duration": 4104,
+                  "retry": 0,
+                  "startTime": "2026-10-30T10:34:24.593Z"
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "441c969b5ac029ba9e26-da0dbd3e9037ffecf45e",
+          "file": "devices.spec.ts",
+          "line": 220,
+          "column": 1
+        },
+        {
+          "title": "a phone joins as a view whichever link it used, and this Mac announces while it can join or is listed",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 60000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "desktop",
+              "projectName": "desktop",
+              "results": [
+                {
+                  "workerIndex": 0,
+                  "parallelIndex": 0,
+                  "status": "passed",
+                  "duration": 3995,
+                  "retry": 0,
+                  "startTime": "2026-10-30T10:34:28.705Z"
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "441c969b5ac029ba9e26-7d01dba2ce14502cd226",
+          "file": "devices.spec.ts",
+          "line": 270,
+          "column": 1
+        },
+        {
+          "title": "A phone opens its code by keyboard, joins read-only and can stop an unused link",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 60000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "desktop",
+              "projectName": "desktop",
+              "results": [
+                {
+                  "workerIndex": 0,
+                  "parallelIndex": 0,
+                  "status": "passed",
+                  "duration": 3759,
+                  "retry": 0,
+                  "startTime": "2026-10-30T10:34:32.709Z"
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "441c969b5ac029ba9e26-39d08fb8bf6d2c839b36",
+          "file": "devices.spec.ts",
+          "line": 328,
+          "column": 1
+        },
+        {
+          "title": "phone links explain private preference and local-only fallback",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 60000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "desktop",
+              "projectName": "desktop",
+              "results": [
+                {
+                  "workerIndex": 0,
+                  "parallelIndex": 0,
+                  "status": "passed",
+                  "duration": 8137,
+                  "retry": 0,
+                  "startTime": "2026-10-30T10:34:36.477Z"
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "441c969b5ac029ba9e26-7c0dbbb7d656f6c3ec44",
+          "file": "devices.spec.ts",
+          "line": 357,
+          "column": 1
+        },
+        {
+          "title": "another user on this Mac joins with a command made from Firstmate's card, Devices lists what it runs, and Remove takes it off",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 60000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "desktop",
+              "projectName": "desktop",
+              "results": [
+                {
+                  "workerIndex": 0,
+                  "parallelIndex": 0,
+                  "status": "passed",
+                  "duration": 7364,
+                  "retry": 0,
+                  "startTime": "2026-10-30T10:34:44.622Z"
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "441c969b5ac029ba9e26-b1dff495e9be8b513b68",
+          "file": "devices.spec.ts",
+          "line": 427,
+          "column": 1
+        },
+        {
+          "title": "the captain asks Firstmate to add a Mac at its address: Devices reaches it over SSH and sets it up, and a refusal says what to do",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 60000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "desktop",
+              "projectName": "desktop",
+              "results": [
+                {
+                  "workerIndex": 0,
+                  "parallelIndex": 0,
+                  "status": "passed",
+                  "duration": 8199,
+                  "retry": 0,
+                  "startTime": "2026-10-30T10:34:51.996Z"
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "441c969b5ac029ba9e26-cd0a0f86bec96b7d936b",
+          "file": "devices.spec.ts",
+          "line": 578,
+          "column": 1
+        },
+        {
+          "title": "a Mac whose user runs another Firstmate's work: Add it asks once, Cancel changes nothing, and Leave it and add, from the keyboard, adds it",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 60000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "desktop",
+              "projectName": "desktop",
+              "results": [
+                {
+                  "workerIndex": 0,
+                  "parallelIndex": 0,
+                  "status": "passed",
+                  "duration": 7629,
+                  "retry": 0,
+                  "startTime": "2026-10-30T10:35:00.205Z"
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "441c969b5ac029ba9e26-c9329ad021a1680a7732",
+          "file": "devices.spec.ts",
+          "line": 713,
+          "column": 1
+        },
+        {
+          "title": "this Mac's address changes: a computer added by a command says how it comes back, and a new command brings it back as the same computer",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 60000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "desktop",
+              "projectName": "desktop",
+              "results": [
+                {
+                  "workerIndex": 0,
+                  "parallelIndex": 0,
+                  "status": "passed",
+                  "duration": 7379,
+                  "retry": 0,
+                  "startTime": "2026-10-30T10:35:07.841Z"
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "441c969b5ac029ba9e26-c67ce0a9b889971a7b96",
+          "file": "devices.spec.ts",
+          "line": 791,
+          "column": 1
+        },
+        {
+          "title": "a Mac a command added downloads its update with progress from the keyboard: download",
+          "ok": true,
+          "tags": ["mac-only"],
+          "tests": [
+            {
+              "timeout": 60000,
+              "annotations": [
+                {
+                  "type": "skip",
+                  "description": "needs macOS zip tools",
+                  "location": {
+                    "file": "/home/runner/work/infinitary/infinitary/Application Support/firstmate/tests/e2e/devices.spec.ts",
+                    "line": 937,
+                    "column": 12
+                  }
+                }
+              ],
+              "expectedStatus": "skipped",
+              "projectId": "desktop",
+              "projectName": "desktop",
+              "results": [
+                {
+                  "workerIndex": 0,
+                  "parallelIndex": 0,
+                  "status": "skipped",
+                  "duration": 2,
+                  "retry": 0,
+                  "startTime": "2026-10-30T10:35:15.229Z"
+                }
+              ],
+              "status": "skipped"
+            }
+          ],
+          "id": "441c969b5ac029ba9e26-0fbcee60cd0230c26dad",
+          "file": "devices.spec.ts",
+          "line": 932,
+          "column": 3
+        },
+        {
+          "title": "a Mac a command added downloads its update with progress from the keyboard: fallback",
+          "ok": true,
+          "tags": ["mac-only"],
+          "tests": [
+            {
+              "timeout": 60000,
+              "annotations": [
+                {
+                  "type": "skip",
+                  "description": "needs macOS zip tools",
+                  "location": {
+                    "file": "/home/runner/work/infinitary/infinitary/Application Support/firstmate/tests/e2e/devices.spec.ts",
+                    "line": 937,
+                    "column": 12
+                  }
+                }
+              ],
+              "expectedStatus": "skipped",
+              "projectId": "desktop",
+              "projectName": "desktop",
+              "results": [
+                {
+                  "workerIndex": 0,
+                  "parallelIndex": 0,
+                  "status": "skipped",
+                  "duration": 0,
+                  "retry": 0,
+                  "startTime": "2026-10-30T10:35:15.239Z"
+                }
+              ],
+              "status": "skipped"
+            }
+          ],
+          "id": "441c969b5ac029ba9e26-bedf4f451d9f4d061000",
+          "file": "devices.spec.ts",
+          "line": 932,
+          "column": 3
+        },
+        {
+          "title": "the first reach shows the check line and sends nothing until this is the Mac",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 120000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "desktop",
+              "projectName": "desktop",
+              "results": [
+                {
+                  "workerIndex": 0,
+                  "parallelIndex": 0,
+                  "status": "passed",
+                  "duration": 5216,
+                  "retry": 0,
+                  "startTime": "2026-10-30T10:35:15.247Z"
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "441c969b5ac029ba9e26-cf7309c7db94944ede36",
+          "file": "devices.spec.ts",
+          "line": 1139,
+          "column": 1
+        },
+        {
+          "title": "adding a Mac by its address says how far the copy has gone: preparing it, what it sent so far, then starting it there",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 120000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "desktop",
+              "projectName": "desktop",
+              "results": [
+                {
+                  "workerIndex": 0,
+                  "parallelIndex": 0,
+                  "status": "passed",
+                  "duration": 5314,
+                  "retry": 0,
+                  "startTime": "2026-10-30T10:35:20.474Z"
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "441c969b5ac029ba9e26-43feef2841a42187e645",
+          "file": "devices.spec.ts",
+          "line": 1207,
+          "column": 1
+        },
+        {
+          "title": "By its address lists Macs nearby but this one, and adds one picked and edited by keys",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 120000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "desktop",
+              "projectName": "desktop",
+              "results": [
+                {
+                  "workerIndex": 0,
+                  "parallelIndex": 0,
+                  "status": "passed",
+                  "duration": 4877,
+                  "retry": 0,
+                  "startTime": "2026-10-30T10:35:25.795Z"
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "441c969b5ac029ba9e26-a53301c86ccc09a5e9af",
+          "file": "devices.spec.ts",
+          "line": 1278,
+          "column": 1
+        },
+        {
+          "title": "By its address says when macOS has not allowed the local network, and still takes a typed address",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 60000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "desktop",
+              "projectName": "desktop",
+              "results": [
+                {
+                  "workerIndex": 0,
+                  "parallelIndex": 0,
+                  "status": "passed",
+                  "duration": 3588,
+                  "retry": 0,
+                  "startTime": "2026-10-30T10:35:30.679Z"
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "441c969b5ac029ba9e26-664a9320577b45b6842c",
+          "file": "devices.spec.ts",
+          "line": 1370,
+          "column": 1
+        },
+        {
+          "title": "a Mac that did not let your SSH key in asks for that user's password once, says a wrong one, and adds it with Firstmate's own key, from the keyboard",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 120000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "desktop",
+              "projectName": "desktop",
+              "results": [
+                {
+                  "workerIndex": 0,
+                  "parallelIndex": 0,
+                  "status": "passed",
+                  "duration": 7430,
+                  "retry": 0,
+                  "startTime": "2026-10-30T10:35:34.276Z"
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "441c969b5ac029ba9e26-1deb12b20432b9122e42",
+          "file": "devices.spec.ts",
+          "line": 1395,
+          "column": 1
+        },
+        {
+          "title": "a Mac added by its address is reached over this Mac's own SSH: it comes back by itself when this Mac moves, says why when SSH stops it, and Try again and Change address work from the keyboard",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 60000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "desktop",
+              "projectName": "desktop",
+              "results": [
+                {
+                  "workerIndex": 0,
+                  "parallelIndex": 0,
+                  "status": "passed",
+                  "duration": 23846,
+                  "retry": 0,
+                  "startTime": "2026-10-30T10:35:41.713Z"
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "441c969b5ac029ba9e26-a25524b22988318f887c",
+          "file": "devices.spec.ts",
+          "line": 1504,
+          "column": 1
+        },
+        {
+          "title": "a Mac added by its address that leaves for another Firstmate: this Mac stops trying and says so, and Remove takes it off the list now, without waiting for it",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 60000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "desktop",
+              "projectName": "desktop",
+              "results": [
+                {
+                  "workerIndex": 0,
+                  "parallelIndex": 0,
+                  "status": "passed",
+                  "duration": 10259,
+                  "retry": 0,
+                  "startTime": "2026-10-30T10:36:05.567Z"
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "441c969b5ac029ba9e26-ee35d49bf42bd5562891",
+          "file": "devices.spec.ts",
+          "line": 1599,
+          "column": 1
+        },
+        {
+          "title": "a Mac a command added that macOS holds on the local network: Devices says why, and Add it by its address, from the keyboard, brings it back over this Mac's own SSH",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 60000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "desktop",
+              "projectName": "desktop",
+              "results": [
+                {
+                  "workerIndex": 0,
+                  "parallelIndex": 0,
+                  "status": "passed",
+                  "duration": 8662,
+                  "retry": 0,
+                  "startTime": "2026-10-30T10:36:15.834Z"
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "441c969b5ac029ba9e26-bb9a1ac553830b8da08f",
+          "file": "devices.spec.ts",
+          "line": 1659,
+          "column": 1
+        },
+        {
+          "title": "a computer on another version of Firstmate: Devices says so, Update brings it to this Mac's version, and one too old gets the command",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 60000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "desktop",
+              "projectName": "desktop",
+              "results": [
+                {
+                  "workerIndex": 0,
+                  "parallelIndex": 0,
+                  "status": "passed",
+                  "duration": 4936,
+                  "retry": 0,
+                  "startTime": "2026-10-30T10:36:24.505Z"
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "441c969b5ac029ba9e26-00d0a357906278535525",
+          "file": "devices.spec.ts",
+          "line": 1776,
+          "column": 1
+        },
+        {
+          "title": "an addressed Mac downloads with progress from the keyboard: add",
+          "ok": true,
+          "tags": ["mac-only"],
+          "tests": [
+            {
+              "timeout": 60000,
+              "annotations": [
+                {
+                  "type": "skip",
+                  "description": "needs macOS zip tools and isolated SSH",
+                  "location": {
+                    "file": "/home/runner/work/infinitary/infinitary/Application Support/firstmate/tests/e2e/devices.spec.ts",
+                    "line": 1921,
+                    "column": 12
+                  }
+                }
+              ],
+              "expectedStatus": "skipped",
+              "projectId": "desktop",
+              "projectName": "desktop",
+              "results": [
+                {
+                  "workerIndex": 0,
+                  "parallelIndex": 0,
+                  "status": "skipped",
+                  "duration": 1,
+                  "retry": 0,
+                  "startTime": "2026-10-30T10:36:29.448Z"
+                }
+              ],
+              "status": "skipped"
+            }
+          ],
+          "id": "441c969b5ac029ba9e26-ed7aa03f06ed0a17d412",
+          "file": "devices.spec.ts",
+          "line": 1916,
+          "column": 3
+        },
+        {
+          "title": "an addressed Mac downloads with progress from the keyboard: update",
+          "ok": true,
+          "tags": ["mac-only"],
+          "tests": [
+            {
+              "timeout": 60000,
+              "annotations": [
+                {
+                  "type": "skip",
+                  "description": "needs macOS zip tools and isolated SSH",
+                  "location": {
+                    "file": "/home/runner/work/infinitary/infinitary/Application Support/firstmate/tests/e2e/devices.spec.ts",
+                    "line": 1921,
+                    "column": 12
+                  }
+                }
+              ],
+              "expectedStatus": "skipped",
+              "projectId": "desktop",
+              "projectName": "desktop",
+              "results": [
+                {
+                  "workerIndex": 0,
+                  "parallelIndex": 0,
+                  "status": "skipped",
+                  "duration": 0,
+                  "retry": 0,
+                  "startTime": "2026-10-30T10:36:29.454Z"
+                }
+              ],
+              "status": "skipped"
+            }
+          ],
+          "id": "441c969b5ac029ba9e26-e6a2c08981644c3917a3",
+          "file": "devices.spec.ts",
+          "line": 1916,
+          "column": 3
+        },
+        {
+          "title": "an addressed Mac downloads with progress from the keyboard: fallback",
+          "ok": true,
+          "tags": ["mac-only"],
+          "tests": [
+            {
+              "timeout": 60000,
+              "annotations": [
+                {
+                  "type": "skip",
+                  "description": "needs macOS zip tools and isolated SSH",
+                  "location": {
+                    "file": "/home/runner/work/infinitary/infinitary/Application Support/firstmate/tests/e2e/devices.spec.ts",
+                    "line": 1921,
+                    "column": 12
+                  }
+                }
+              ],
+              "expectedStatus": "skipped",
+              "projectId": "desktop",
+              "projectName": "desktop",
+              "results": [
+                {
+                  "workerIndex": 0,
+                  "parallelIndex": 0,
+                  "status": "skipped",
+                  "duration": 0,
+                  "retry": 0,
+                  "startTime": "2026-10-30T10:36:29.460Z"
+                }
+              ],
+              "status": "skipped"
+            }
+          ],
+          "id": "441c969b5ac029ba9e26-2a9a4960e7fd58761c4d",
+          "file": "devices.spec.ts",
+          "line": 1916,
+          "column": 3
+        }
+      ]
+    },
+    {
+      "title": "phase6-voice.spec.ts",
+      "file": "phase6-voice.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [
+        {
+          "title": "first hold asks for download consent and declining leaves everything local and idle",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 60000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "desktop",
+              "projectName": "desktop",
+              "results": [
+                {
+                  "workerIndex": 0,
+                  "parallelIndex": 0,
+                  "status": "passed",
+                  "duration": 261,
+                  "retry": 0,
+                  "startTime": "2026-10-30T10:36:29.474Z"
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "0f0d86c5fb14b95262b0-b12abb480757d018572f",
+          "file": "phase6-voice.spec.ts",
+          "line": 35,
+          "column": 1
+        },
+        {
+          "title": "the one-row off switch releases the key and mic, and saves the chosen key across restart",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 60000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "desktop",
+              "projectName": "desktop",
+              "results": [
+                {
+                  "workerIndex": 0,
+                  "parallelIndex": 0,
+                  "status": "passed",
+                  "duration": 6817,
+                  "retry": 0,
+                  "startTime": "2026-10-30T10:36:32.388Z"
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "0f0d86c5fb14b95262b0-cfffcab6133132fd266f",
+          "file": "phase6-voice.spec.ts",
+          "line": 72,
+          "column": 1
+        },
+        {
+          "title": "turning dictation off drops an active recording without losing typed text",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 60000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "desktop",
+              "projectName": "desktop",
+              "results": [
+                {
+                  "workerIndex": 0,
+                  "parallelIndex": 0,
+                  "status": "passed",
+                  "duration": 3819,
+                  "retry": 0,
+                  "startTime": "2026-10-30T10:36:39.216Z"
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "0f0d86c5fb14b95262b0-90ed07264f65de908d98",
+          "file": "phase6-voice.spec.ts",
+          "line": 192,
+          "column": 1
+        }
+      ]
+    },
+    {
+      "title": "repro-voice-press.spec.ts",
+      "file": "repro-voice-press.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [
+        {
+          "title": "dictation key taps toggle talking while a hold stops on release",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 60000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "desktop",
+              "projectName": "desktop",
+              "results": [
+                {
+                  "workerIndex": 0,
+                  "parallelIndex": 0,
+                  "status": "passed",
+                  "duration": 6247,
+                  "retry": 0,
+                  "startTime": "2026-10-30T10:36:43.202Z"
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "b7b2c11d0b76d67973e1-d5de6cdf382bfd73d5bb",
+          "file": "repro-voice-press.spec.ts",
+          "line": 8,
+          "column": 1
+        }
+      ]
+    },
+    {
+      "title": "voice-prompt-focus.spec.ts",
+      "file": "voice-prompt-focus.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [
+        {
+          "title": "a transcribed hold and a toggled recording both return focus to the end of the prompt",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 60000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "desktop",
+              "projectName": "desktop",
+              "results": [
+                {
+                  "workerIndex": 0,
+                  "parallelIndex": 0,
+                  "status": "passed",
+                  "duration": 7174,
+                  "retry": 0,
+                  "startTime": "2026-10-30T10:36:49.460Z"
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "8eede921630238212ed9-03d1b9969e26e87365af",
+          "file": "voice-prompt-focus.spec.ts",
+          "line": 56,
+          "column": 1
+        },
+        {
+          "title": "clicking submit leaves the prompt ready for the next typed turn",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 60000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "desktop",
+              "projectName": "desktop",
+              "results": [
+                {
+                  "workerIndex": 0,
+                  "parallelIndex": 0,
+                  "status": "passed",
+                  "duration": 3493,
+                  "retry": 0,
+                  "startTime": "2026-10-30T10:36:56.641Z"
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "8eede921630238212ed9-df6b3e7fb684ddb4be56",
+          "file": "voice-prompt-focus.spec.ts",
+          "line": 120,
+          "column": 1
+        },
+        {
+          "title": "a transcript lands at the caret mid-draft, and the draft stays on screen while recording",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 60000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "desktop",
+              "projectName": "desktop",
+              "results": [
+                {
+                  "workerIndex": 0,
+                  "parallelIndex": 0,
+                  "status": "passed",
+                  "duration": 4419,
+                  "retry": 0,
+                  "startTime": "2026-10-30T10:37:00.141Z"
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "8eede921630238212ed9-7560db8adb895c2eb8bd",
+          "file": "voice-prompt-focus.spec.ts",
+          "line": 141,
+          "column": 1
+        }
+      ]
+    }
+  ],
+  "errors": [],
+  "stats": {
+    "startTime": "2026-10-30T10:34:02.673Z",
+    "duration": 182192.935,
+    "expected": 25,
+    "skipped": 5,
+    "unexpected": 0,
+    "flaky": 0
+  }
+}

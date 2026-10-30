@@ -61,6 +61,9 @@ jobs:
       run:
         working-directory: Application Support/firstmate
     steps:
+      - name: Record the timing observation start
+        working-directory: ${{ runner.temp }}
+        run: echo "TIMING_JOB_START=$(date +%s)" >> "$GITHUB_ENV"
       - uses: actions/checkout@v4
         with:
           ref: ${{ inputs.ref || github.ref }}
@@ -138,10 +141,12 @@ jobs:
       # (scripts/e2e-alone.ts); the Mac-only ones skip here and run alone in
       # verify.yml's mac lane.
       - name: Run the journeys with the sandbox on, and affected resize callers on Mac
+        id: journeys
         # A pull request's affected journeys end at 75 minutes and their
         # command at 90 (INF-1083, the captain's check limits, as journeys.yml).
         timeout-minutes: ${{ inputs.suite == 'affected' && 90 || 360 }}
         run: |
+          echo "TIMING_TEST_START=$(date +%s)" >> "$GITHUB_ENV"
           on_screen() {
             xvfb-run -a -s "-screen 0 $SCREEN -noreset" sh -c '
               width=${SCREEN%%x*}; height=${SCREEN#*x}; height=${height%%x*}
@@ -193,6 +198,28 @@ jobs:
       - name: Refuse a test that skipped on Linux without the Mac tag
         if: ${{ !cancelled() && runner.os == 'Linux' && matrix.lane != 'alone' }}
         run: node scripts/untagged-skips.ts playwright-report/source-results.json
+      # Run-alone owns a separate per-selection report; do not mistake its last
+      # child process for the complete job. Ordinary lanes use their existing JSON.
+      - name: Export compact Linux timing
+        if: always() && runner.os == 'Linux' && matrix.lane != 'alone'
+        run: |
+          export TIMING_REVISION="$(git rev-parse HEAD)"
+          node scripts/journey-timing.ts playwright-report/source-results.json "$RUNNER_TEMP/journey-timing.json"
+        env:
+          SUITE: ${{ inputs.suite }}
+          FILES: ${{ inputs.files }}
+          LANE: ${{ matrix.lane }}
+          SHARD: ${{ matrix.shard }}
+          ARTIFACT_SUFFIX: ${{ inputs.artifact-suffix }}
+          TEST_OUTCOME: ${{ steps.journeys.outcome }}
+      - name: Keep compact Linux timing separately
+        if: always() && runner.os == 'Linux' && matrix.lane != 'alone'
+        uses: actions/upload-artifact@v4
+        with:
+          name: journey-timing-${{ runner.os }}-${{ inputs.artifact-suffix }}-${{ matrix.lane }}-${{ matrix.shard }}
+          path: ${{ runner.temp }}/journey-timing.json
+          if-no-files-found: ignore
+          retention-days: 14
       - name: Keep the Linux window and the journeys' results
         if: always()
         uses: actions/upload-artifact@v4

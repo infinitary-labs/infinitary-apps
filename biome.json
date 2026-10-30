@@ -409,6 +409,7 @@
         "!src/core/workspace/workspaceService.test.ts",
         "!src/core/workspace/conventional.test.ts",
         "!src/core/workspace/worktreePool.test.ts",
+        "!src/core/workspace/workMove.test.ts",
         "!src/main/host/darwinKeychain.scratch.test.ts",
         "!src/main/host/darwinSecretCustody.scratch.test.ts",
         "!src/main/host/darwinFreshAuthentication.test.ts",

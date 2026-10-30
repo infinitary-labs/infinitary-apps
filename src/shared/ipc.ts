@@ -344,6 +344,8 @@ import {
   taskBrowserSizeSchema,
 } from "./taskBrowser";
 import {
+  type MoveOptions,
+  moveOptionsSchema,
   type ProjectView,
   projectViewSchema,
   type TaskBoard,
@@ -949,6 +951,27 @@ export const invokeContract = {
     ]),
     response: z.discriminatedUnion("ok", [
       okSchema,
+      z.object({ ok: z.literal(false), text: z.string().min(1) }),
+    ]),
+  },
+  // The task record's Move to a computer (docs/helper.md, "Moving a started
+  // task"): where the task could move, and the move itself - to a computer
+  // that runs work by its device id or `this-mac`, or null to cancel a move
+  // that still waits. A refusal comes back as text and writes nothing.
+  "inf:task:move-options": {
+    effect: "read",
+    surface: "core",
+    reach: "views",
+    request: z.tuple([z.string().min(1).max(64)]),
+    response: moveOptionsSchema,
+  },
+  "inf:task:move": {
+    effect: "change",
+    surface: "core",
+    reach: "views",
+    request: z.tuple([z.string().min(1).max(64), z.string().min(1).max(128).nullable()]),
+    response: z.discriminatedUnion("ok", [
+      z.object({ ok: z.literal(true), text: z.string() }),
       z.object({ ok: z.literal(false), text: z.string().min(1) }),
     ]),
   },
@@ -3354,6 +3377,13 @@ export type FirstmateApi = {
       /** The panel whose page the captain moved it from, by its title. */
       from?: TaskMoveFrom,
     ) => Promise<{ ok: true } | { ok: false; text: string }>;
+    /** Where a started task could move: Move to a computer's choices. */
+    moveOptions: (taskId: string) => Promise<MoveOptions>;
+    /** Move a started task to a computer, or cancel its waiting move with null. */
+    move: (
+      taskId: string,
+      to: string | null,
+    ) => Promise<{ ok: true; text: string } | { ok: false; text: string }>;
     /** A line the captain typed in the Crewmate tab: his steer on the crewmate's lane. */
     steer: (taskId: string, text: string) => Promise<CrewSendResult>;
     /** ⌃C or Stop in the Crewmate tab: his interrupt of the crewmate's running turn. */

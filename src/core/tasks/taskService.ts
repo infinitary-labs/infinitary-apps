@@ -16,6 +16,7 @@ import type { KeptValidationInput } from "@shared/liveValidation";
 import type { ReasoningChoice } from "@shared/modelSlots";
 import {
   type CommittedPlacement,
+  type ComputerMove,
   PLACEMENT_WAIT,
   type PlacementRequirements,
   type PlacementSnapshot,
@@ -3273,6 +3274,87 @@ export class TaskService {
       });
     });
     run();
+  }
+
+  /**
+   * A started task's move to another computer as it stands
+   * (docs/helper.md, "Moving a started task"), or null once none does. A
+   * `line` is one timeline row, and a feed line with `feed`, written as
+   * whoever acted. Its key, branch, working copy and history stay.
+   */
+  setComputerMove(
+    id: string,
+    move: ComputerMove | null,
+    line?: { text: string; actor: "captain" | "firstmate" | "host"; feed?: boolean },
+  ): void {
+    const at = this.now();
+    this.write(() => {
+      const record = this.mustGet(id);
+      const { computer_move: _move, ...rest } = record.shape ?? { kind: "unclear" as const };
+      this.patch(id, {
+        shape: { ...rest, ...(move ? { computer_move: move } : {}) } as WorkShape,
+        updatedAt: at,
+      });
+      if (line)
+        this.addEvent({
+          taskId: id,
+          at,
+          actor: line.actor,
+          kind: "note",
+          text: line.text,
+          data: { news: line.feed === true, ...(move ? { computerMove: move } : {}) },
+          feed: line.feed === true,
+        });
+    })();
+  }
+
+  /**
+   * The one commit of a move to another computer: the record names the
+   * computer the task runs on now and its working copy there - a folder
+   * here, or none here for a computer that runs work - and the move turns
+   * to removing the copy it left. Its start's placement ends: it describes
+   * where the task started. Refused for a closed task or one that already
+   * runs on `deviceId`.
+   */
+  commitComputerMove(
+    id: string,
+    input: {
+      deviceId: string | null;
+      repoDir: string;
+      worktreeDir: string;
+      branch: string;
+      move: ComputerMove;
+      actor: "captain" | "firstmate";
+      text: string;
+    },
+  ): void {
+    const at = this.now();
+    this.write(() => {
+      const record = this.mustGet(id);
+      if (TaskService.isClosed(record)) throw new Error("This task is closed.");
+      if ((record.deviceId ?? null) === input.deviceId)
+        throw new Error("This task already runs on that computer.");
+      const { computer_move: _move, ...rest } = record.shape ?? { kind: "unclear" as const };
+      this.patch(id, {
+        deviceId: input.deviceId,
+        placement: null,
+        repoDir: input.repoDir,
+        worktreeDir: input.worktreeDir,
+        branch: input.branch,
+        workspaceState: "present",
+        shape: { ...rest, computer_move: input.move } as WorkShape,
+        updatedAt: at,
+      });
+      this.addEvent({
+        taskId: id,
+        at,
+        actor: input.actor,
+        kind: "note",
+        text: input.text,
+        data: { news: true, computerMove: input.move },
+        feed: true,
+      });
+    })();
   }
 
   /** A dispatch that failed returns the row to the queue behind a gate. */

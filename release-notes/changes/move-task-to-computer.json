@@ -1,0 +1,17 @@
+{
+  "entries": [
+    {
+      "id": "move-task-to-computer",
+      "kind": "feature",
+      "title": "Move a started task to another computer",
+      "body": "A started task's record now offers Move to a computer. Pick one of your computers and the task moves there once its crewmate's current turn ends, keeping its key, branch, files and record. Until then the record says what the move waits for, and Cancel move keeps the task where it is. You can also ask your first mate to move a task.",
+      "area": "tasks",
+      "picture": {
+        "dark": "move-task-to-computer-dark.webp",
+        "light": "move-task-to-computer-light.webp",
+        "alt": "A task's record with Move to a computer open, listing the Mac mini to pick, beside Cancel and Move"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

@@ -1,6 +1,7 @@
 import {
   appendFileSync,
   closeSync,
+  existsSync,
   fsyncSync,
   ftruncateSync,
   mkdirSync,
@@ -165,6 +166,8 @@ export type PlacedHost = {
 
 const CHECK_DECLARATIONS = contractChange("check-declarations");
 const MERGE_OFFER_READINESS = contractChange("merge-offer-readiness");
+/** A started task's move to or from that computer (`task-move.md`). */
+const TASK_MOVE = contractChange("task-move");
 
 /** What the crew reads of the computers that run work (`CrewSupervisorOptions.machines`). */
 export type CrewMachines = {
@@ -247,6 +250,35 @@ export type CrewMachines = {
   takesChangePresentations?(machine: string): boolean;
   /** The working copy's dependencies, installed there; a failure is an outcome. */
   install(machine: string, taskId: string): Promise<DependencyInstall>;
+  /**
+   * Whether the computer takes a started task's move to or from it
+   * (`task-move`, docs/helper.md, "Moving a started task"); false while the
+   * home cannot tell.
+   */
+  takesMoves?(machine: string): boolean;
+  /** Packs a task's work there to move it, into `pack` here (`PlacedCopies.moveOut`). */
+  moveOut?(
+    machine: string,
+    taskId: string,
+    attempt: string,
+    pack: string,
+    keep?: readonly string[],
+  ): Promise<{ head: string; branch: string; repoDir: string }>;
+  /** Makes a moving task's working copy there from the work packed here (`PlacedCopies.moveIn`). */
+  moveIn?(
+    machine: string,
+    taskId: string,
+    attempt: string,
+    input: { repoId: string | null; head: string; branch: string; pack: string },
+  ): Promise<PlacedCopy>;
+  /** Removes a working copy a move left there (`PlacedCopies.retireMoved`). */
+  retireMoved?(machine: string, taskId: string): Promise<void>;
+  /**
+   * A moved task's conversation starts over where it runs now: what this Mac
+   * kept of its conversation on the computer it left - the newest event, the
+   * callbacks answered - is set aside, so the new one's numbers start fresh.
+   */
+  forgetExecution?(taskId: string): void;
   /** What the task's working copy there holds unmerged; null while nobody can tell. */
   workStatus(taskId: string): Promise<{ dirty: boolean; unlandedCommits: number } | null>;
   /**
@@ -648,6 +680,41 @@ export class PlacedSessions implements PlacedWork, CrewMachines {
 
   install(machine: string, taskId: string): Promise<DependencyInstall> {
     return this.copies.install(machine, taskId);
+  }
+  takesMoves(machine: string): boolean {
+    return listsChange(this.options.devices.version(machine)?.changes, TASK_MOVE);
+  }
+
+  moveOut(
+    machine: string,
+    taskId: string,
+    attempt: string,
+    pack: string,
+    keep?: readonly string[],
+  ): Promise<{ head: string; branch: string; repoDir: string }> {
+    return this.copies.moveOut(machine, taskId, attempt, pack, keep);
+  }
+
+  moveIn(
+    machine: string,
+    taskId: string,
+    attempt: string,
+    input: { repoId: string | null; head: string; branch: string; pack: string },
+  ): Promise<PlacedCopy> {
+    return this.copies.moveIn(machine, taskId, attempt, input);
+  }
+
+  retireMoved(machine: string, taskId: string): Promise<void> {
+    return this.copies.retireMoved(machine, taskId);
+  }
+
+  forgetExecution(taskId: string): void {
+    const placed = this.placed.get(taskId);
+    if (placed?.session && !placed.session.letGo)
+      throw new Error("The task's conversation there is still held here.");
+    this.placed.delete(taskId);
+    const dir = crewmatePlacedDir(this.options.paths, taskId);
+    if (existsSync(dir)) renameSync(dir, `${dir}-before-${this.options.now()}`);
   }
 
   workStatus(taskId: string): Promise<{ dirty: boolean; unlandedCommits: number } | null> {

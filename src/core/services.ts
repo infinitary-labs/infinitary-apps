@@ -48,7 +48,12 @@ import { runsForAnotherFirstmate } from "@shared/sshConnection";
 import { BUILTIN_SURFACES } from "@shared/surfaces";
 import type { TaskBrowserFact } from "@shared/taskBrowser";
 import type { TaskRunsOn } from "@shared/taskPolicies";
-import { BOARD_DELTA_TRIGGER, type TaskActionLine, type TaskPlace } from "@shared/tasks";
+import {
+  BOARD_DELTA_TRIGGER,
+  type TaskActionLine,
+  type TaskPlace,
+  type TaskView,
+} from "@shared/tasks";
 import type { UsageQuery, UsageSummary, UsageTasks, UsageTasksQuery } from "@shared/usage";
 import { WELCOME_NOTE } from "@shared/welcome";
 import type { WorkPosture } from "@shared/workPosture";
@@ -855,6 +860,8 @@ export async function createServices(
   const crewLive = new CrewLiveText();
   let runsOnOf: (record: TaskRecord) => TaskRunsOn | undefined = () => undefined;
   let placeOf: (record: TaskRecord) => TaskPlace | undefined = () => undefined;
+  let computerMoveOf: (record: TaskRecord) => Pick<TaskView, "movable" | "computerMove"> =
+    () => ({});
   let scheduleWorkPresentation = () => {};
   let hearPresentation: (event: FmEvent) => void = () => {};
   let readWorkPosture: ((record: TaskRecord) => WorkPosture) | undefined;
@@ -936,6 +943,7 @@ export async function createServices(
     // And where a task runs, which the crew supervisor below decides.
     runsOn: (record) => runsOnOf(record),
     place: (record) => placeOf(record),
+    computerMove: (record) => computerMoveOf(record),
     startAttempt: (taskId) => tasks.startAttemptOf(taskId),
     // The crewmate's solid on the orbit: the slot its newest routing chose.
     tiers: (taskIds) => servedSlots(ledger, taskIds),
@@ -2311,8 +2319,10 @@ export async function createServices(
     protectedIds: (providerId) => slots.protectedIds(providerId),
     running: (record): boolean => supervisor.placementRunning(record),
     eligible: (record): boolean => supervisor.automaticFor(record),
+    forgeSignIns: () => forgeSignIns.view().signIns,
+    knownForgeHosts: () => forgeSignIns.knownHosts(),
   });
-  const supervisor = new CrewSupervisor({
+  const supervisor: CrewSupervisor = new CrewSupervisor({
     automaticPlacement,
     // A program's script runs in a process of its own; its ask() is one typed read.
     ...(host.programProcess ? { programProcess: host.programProcess } : {}),
@@ -2443,6 +2453,7 @@ export async function createServices(
   });
   runsOnOf = (record) => supervisor.runsOnFact(record);
   placeOf = (record) => supervisor.taskPlace(record);
+  computerMoveOf = (record) => supervisor.computerMoveFacts(record);
   closingResolutionOf = (taskId) => supervisor.newestCardResolution(taskId);
   cardStack = supervisor;
   readWorkPosture = (record) => supervisor.workPosture(record);

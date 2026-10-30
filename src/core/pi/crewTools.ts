@@ -171,6 +171,16 @@ export type CrewDelegate = {
     closingSentence?: string,
   ): Promise<void>;
   crewStatus(taskId?: string): CrewStatusEntry[];
+  /**
+   * Moves a started task to another computer at a safe pause, or cancels
+   * a move that has not started crossing (`computer` null); answers what
+   * happened in words (docs/helper.md, "Moving a started task").
+   */
+  moveTask?(
+    taskId: string,
+    computer: string | null,
+    keep?: string[],
+  ): Promise<{ ok: boolean; text: string }>;
   /** Whether the named lineage has a higher rung left; unknown tasks defer to the card rule. */
   escalationEligible?(taskId: string): boolean;
   /** Whether a premium-slot model is available and has not exhausted measured quota. */
@@ -713,9 +723,46 @@ export function createCrewTools(delegate: CrewDelegate) {
     },
   });
 
+  const move = boundTool({
+    name: "move_task",
+    label: "Move task",
+    description:
+      "Moves started work to another computer that runs work, or to this Mac, at a safe pause: " +
+      "its crewmate's turn and commands finish first and no new turn starts meanwhile. It keeps " +
+      "its key, branch, uncommitted work, files and record, and continues in a new conversation " +
+      "there on the same model. Only on the captain's ask; never to balance load. cancel stops a " +
+      "move that has not started crossing. Files git ignores stay behind and go with the old copy " +
+      "unless keep names them.",
+    parameters: Type.Object({
+      task_id: Type.String(),
+      computer: Type.Optional(
+        Type.String({ description: "The computer's name or deviceId from app_state, or this-mac" }),
+      ),
+      cancel: Type.Optional(Type.Boolean()),
+      keep: Type.Optional(
+        Type.Array(Type.String(), {
+          description:
+            "Ignored files or folders in its working copy that must move too, by path in it, as the captain or its crewmate named them",
+        }),
+      ),
+    }),
+    run: async (params) => {
+      if (!delegate.moveTask)
+        return { text: "Moving a task to another computer is not available." };
+      if (!params.cancel && !params.computer?.trim())
+        return { text: "Name the computer to move it to, or pass cancel." };
+      const done = await delegate.moveTask(
+        params.task_id,
+        params.cancel ? null : (params.computer ?? "").trim(),
+        params.keep,
+      );
+      return { text: done.text };
+    },
+  });
+
   const status = createCrewStatusTool((taskId) => delegate.crewStatus(taskId));
 
-  return [spawn, steer, interrupt, settle, status];
+  return [spawn, steer, interrupt, settle, move, status];
 }
 
 /** The crew_status query tool, shared with the supervision session. */

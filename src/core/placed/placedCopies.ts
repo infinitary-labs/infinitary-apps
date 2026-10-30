@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto";
-import { closeSync, existsSync, mkdirSync, openSync, readSync, writeSync } from "node:fs";
+import { closeSync, existsSync, mkdirSync, openSync, readSync, statSync, writeSync } from "node:fs";
 import { rm } from "node:fs/promises";
 import { join } from "node:path";
 import { HERE } from "@shared/deviceNames";
@@ -9,6 +9,7 @@ import { speaksInfinitaryNames } from "@shared/ipc";
 import {
   type BundledRef,
   PLACED_COPY_CHUNK_BYTES,
+  type ReadableRef,
   type WorkingCopyBase,
   type WorkOrderChannel,
   type WorkOrderResponse,
@@ -17,7 +18,7 @@ import {
 import { type AppPaths, crewmatePlacedDir } from "../paths";
 import { TaskService } from "../tasks/taskService";
 import { ARTIFACTS_FOLDER, artifactPath, OLDER_ARTIFACTS_FOLDER } from "../workspace/artifacts";
-import { bundleRef, commitOf, takeBundle } from "../workspace/bundles";
+import { bundleRef, commitOf, sha256Of, takeBundle } from "../workspace/bundles";
 import { ForgeAuthRequiredError } from "../workspace/forgeAuth";
 import { git } from "../workspace/git";
 import {
@@ -421,6 +422,10 @@ export class PlacedCopies {
       if (!this.options.devices.inReach(deviceId)) return;
       // Placed there again since: the record's own rule applies.
       if (this.options.tasks.get(taskId)?.deviceId === deviceId) return;
+      // A move to or from that computer removes what it left there itself
+      // (`retireMoved`): its work is the work that moved, never a leftover.
+      const move = this.options.tasks.get(taskId)?.shape?.computer_move;
+      if (move && (move.from === deviceId || move.to === deviceId)) return;
       try {
         await this.ask(deviceId, "inf:session:close", [
           { orderId: `close:${taskId}`, task: taskId },
@@ -434,6 +439,149 @@ export class PlacedCopies {
       } catch (caught) {
         this.options.log(`could not remove what ${taskId} left there yet: ${messageOf(caught)}`);
       }
+    });
+  }
+
+  /**
+   * Packs a task's work on the computer it runs on to move it elsewhere
+   * (docs/helper.md, "Moving a started task"): its conversation there is let
+   * go, its branch comes home as a bundle into `refs/heads/<branch>` of the
+   * task's repository here, and its pack is read into `pack` here, checked
+   * against the digest that computer gave. Answers the commit the checkout
+   * is at and the repository here.
+   */
+  moveOut(
+    deviceId: string,
+    taskId: string,
+    attempt: string,
+    pack: string,
+    keep: readonly string[] = [],
+  ): Promise<{ head: string; branch: string; repoDir: string }> {
+    return this.serial(taskId, async () => {
+      const record = this.options.tasks.get(taskId);
+      if (!record) throw new Error("The task has no record here.");
+      const repoDir = await this.options.homeRepo(record.repoId ?? null);
+      if (!repoDir) throw new Error(`${HERE.This} has no repository for this task's work.`);
+      const out = await this.ask(deviceId, "inf:working-copy:move-out", [
+        {
+          orderId: `move-out:${taskId}:${attempt}`,
+          task: taskId,
+          ...(keep.length ? { keep: [...keep] } : {}),
+        },
+      ]);
+      const ref = `refs/heads/${out.branch}`;
+      const sha = await this.take(deviceId, taskId, repoDir, "branch", ref);
+      if (!sha || !(await commitOf(repoDir, out.head)))
+        throw new Error("The task's commits did not arrive here.");
+      mkdirSync(join(pack, ".."), { recursive: true, mode: 0o700 });
+      await this.download(deviceId, taskId, "move", out.pack.size, join(pack, ".."), pack);
+      if ((await sha256Of(pack)) !== out.pack.sha256)
+        throw new Error("The moved work that arrived is not what was packed.");
+      return { head: out.head, branch: out.branch, repoDir };
+    });
+  }
+
+  /**
+   * Makes the working copy of a task that moves to that computer from the
+   * work packed here: a task with no project sends this Mac's workspace
+   * first, as its start does; the branch's commits that computer lacks
+   * cross as a bundle, the pack as a source file, and that computer makes
+   * the working copy at `head` and unpacks the work, checked against what
+   * left. Answers the working copy there.
+   */
+  moveIn(
+    deviceId: string,
+    taskId: string,
+    attempt: string,
+    input: { repoId: string | null; head: string; branch: string; pack: string },
+  ): Promise<PlacedCopy> {
+    return this.serial(taskId, async () => {
+      const repoDir = await this.options.homeRepo(input.repoId);
+      if (!repoDir) throw new Error(`${HERE.This} has no repository for this task's work.`);
+      // A project kept here only, or cloned from a folder of this Mac, has
+      // no origin that computer can clone: its commits all cross in the
+      // bundle, and its repository there starts on this one's branch at the
+      // commit the task's branch left it at.
+      const origin = input.repoId
+        ? await this.originOf(input.repoId).then(
+            (found) => (forgeOf(found.origin).host ? found.origin : undefined),
+            () => undefined,
+          )
+        : undefined;
+      const seed = input.repoId ? undefined : await this.seed(deviceId, taskId);
+      const base = {
+        task: taskId,
+        ...(origin
+          ? { project: { origin } }
+          : input.repoId
+            ? { project: { local: input.repoId, base: await integrationBase(repoDir, input.head) } }
+            : {}),
+        ...(seed ? { seed } : {}),
+        head: input.head,
+      };
+      const asked = await this.ask(deviceId, "inf:working-copy:move-in", [
+        { orderId: `move-in:${taskId}:${attempt}:ask`, ...base },
+      ]);
+      if (asked.outcome !== "need") throw new Error("The moved work was not asked for.");
+      const dir = join(this.options.paths.crewmatesDir, taskId, "move");
+      const bundleFile = join(dir, `move-${attempt}.bundle`);
+      try {
+        const made = await bundleRef(repoDir, `refs/heads/${input.branch}`, asked.have, bundleFile);
+        if (made.sha !== input.head)
+          throw new Error("The task's branch here is not at the moved work's commit.");
+        let bundle: { name: string; size: number; sha256: string } | undefined;
+        if (made.bundle) {
+          const name = `move-${attempt}.bundle`;
+          await sendSourceFile(this.options.devices, deviceId, taskId, name, bundleFile);
+          bundle = { name, ...made.bundle };
+        }
+        const packName = `move-${attempt}.pack`;
+        await sendSourceFile(this.options.devices, deviceId, taskId, packName, input.pack);
+        const ready = await this.ask(deviceId, "inf:working-copy:move-in", [
+          {
+            orderId: `move-in:${taskId}:${attempt}`,
+            ...base,
+            ...(bundle ? { bundle } : {}),
+            pack: { name: packName, ...(await digestOf(input.pack)) },
+          },
+        ]);
+        if (ready.outcome !== "ready") throw new Error("The moved work was not taken there.");
+        return { cwd: ready.dir, branch: ready.branch };
+      } finally {
+        await rm(bundleFile, { force: true });
+      }
+    });
+  }
+
+  /**
+   * The working copy a task left on a computer it moved off, or a moved
+   * copy a move that did not finish made there: once the task's work is
+   * on the computer it runs on now, this one goes - its conversation there
+   * closed for good, what it holds kept there as one commit only so the
+   * copy can be removed, the copy removed, then the task's folder there.
+   * Nothing of it comes here: the work it holds is the work that moved.
+   * Throws while that computer is out of reach or a step fails.
+   */
+  retireMoved(deviceId: string, taskId: string): Promise<void> {
+    return this.serial(taskId, async () => {
+      if (!this.options.devices.inReach(deviceId))
+        throw new Error(`${this.options.deviceName(deviceId)} is out of reach.`);
+      await this.ask(deviceId, "inf:session:close", [
+        { orderId: `move-close:${taskId}:${this.options.now()}`, task: taskId },
+      ]);
+      const status = await this.ask(deviceId, "inf:working-copy:status", [{ task: taskId }]);
+      if (status.present) {
+        const stamp = this.options.now();
+        const { kept } = await this.ask(deviceId, "inf:working-copy:keep", [
+          { orderId: `move-keep:${taskId}:${stamp}`, task: taskId },
+        ]);
+        await this.ask(deviceId, "inf:working-copy:retire", [
+          { orderId: `move-retire:${taskId}:${stamp}`, task: taskId, kept: kept?.sha ?? null },
+        ]);
+      }
+      await this.ask(deviceId, "inf:session:remove", [
+        { orderId: `move-remove:${taskId}:${this.options.now()}`, task: taskId },
+      ]);
     });
   }
 
@@ -526,7 +674,7 @@ export class PlacedCopies {
   private async download(
     deviceId: string,
     taskId: string,
-    ref: BundledRef,
+    ref: ReadableRef,
     size: number,
     dir: string,
     file: string,
@@ -729,6 +877,20 @@ async function bundledName(
   return keptRefsFor(taskId).find((name) => heads.includes(name)) ?? keptRefFor(taskId);
 }
 
+/**
+ * Where a project's repository on another computer starts when it has no
+ * origin there to clone: this repository's own branch, at the commit the
+ * task's branch left it at, or the task's commit when they share none.
+ */
+async function integrationBase(
+  repoDir: string,
+  head: string,
+): Promise<{ branch: string; sha: string }> {
+  const branch = await git(repoDir, ["symbolic-ref", "--short", "HEAD"]).catch(() => "main");
+  const sha = await git(repoDir, ["merge-base", "HEAD", head]).catch(() => head);
+  return { branch, sha };
+}
+
 /** An https address with any name or password taken out; any other address as it is. */
 export function withoutSignIn(origin: string): string {
   try {
@@ -745,4 +907,11 @@ export function withoutSignIn(origin: string): string {
 
 function messageOf(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
+}
+
+async function digestOf(file: string): Promise<{ size: number; sha256: string }> {
+  return {
+    size: statSync(file).size,
+    sha256: await sha256Of(file),
+  };
 }

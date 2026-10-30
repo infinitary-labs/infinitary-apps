@@ -97,6 +97,7 @@ Every reader takes the installed map ("The installed map"), never the catalog's 
 | `cards.thread`, Show or hide the card's thread | window, run by the shell page | ⌘\ (collapse, expand, chat, replies and messages find it too) |
 | `cards.show-info`, Show Info; `cards.show-crewmate`, Show Crewmate; `cards.show-browser`, Show Browser; `cards.next-tab`, Next tab; `cards.previous-tab`, Previous tab | window, run by the shell page | none: chosen by name (open and task record find Show Info too); on a card about a task, Show Info, Show Crewmate and Show Browser open that task's tab in front of the card |
 | `browser.control`, Take or return browser control | window, run by the shell page | none: chosen by name; the shown browser uses the same control and shows an assigned key hint |
+| `task.move-computer`, Move the task to another computer | window, run by the shell page | none: chosen by name (computer, Mac, machine, device and record find it too); presses the shown record's Move to a computer, which opens its picker |
 | `settings.open`, Open Settings | window, run by the shell page | ⌘, |
 | `settings.keyboard`, Open Keyboard settings | window, run by the shell page | none: chosen by name, or Keyboard Settings… in the app menu |
 | `whats-new.show`, Show what's new | window, run by the shell page | none: chosen by name (release, notes, changes and version find it too), or What’s New in the Help menu |

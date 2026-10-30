@@ -36,7 +36,11 @@ import { computerBoardModels } from "../../src/core/routing/computerPool";
 import { type AccountModels, ModelSlots } from "../../src/core/routing/modelSlots";
 import { Router } from "../../src/core/routing/router";
 import type { PiModelRef } from "../../src/core/routing/routingEngine";
-import type { ControlProfile, SessionBinding } from "../../src/core/session/session";
+import type {
+  ControlProfile,
+  SessionBinding,
+  SessionFactory,
+} from "../../src/core/session/session";
 import { CardStore } from "../../src/core/storage/cardStore";
 import { type AppDatabase, openDatabase } from "../../src/core/storage/db";
 import { DecisionStore } from "../../src/core/storage/decisionStore";
@@ -172,6 +176,12 @@ export function startPlacedHome(options: {
   runsForAnotherFirstmate?: (deviceId: string) => boolean;
   /** The one reach value. Absent, out of reach. */
   reachOf?: (deviceId: string) => ComputerReach;
+  /**
+   * What a task's conversation runs on here, for a task that moves home,
+   * which keeps its working copy in this Mac's real workspace; absent,
+   * nothing runs here.
+   */
+  here?: SessionFactory;
   log?: (line: string) => void;
 }): PlacedHome {
   const { now } = options;
@@ -229,7 +239,10 @@ export function startPlacedHome(options: {
         slots,
       })
     : undefined;
-  const workspace = homeWorkspace(paths);
+  // A task that moves home keeps its working copy here, in the real workspace.
+  const workspace = options.here
+    ? new WorkspaceService(paths, { pool: false })
+    : homeWorkspace(paths);
   const placed = new PlacedSessions({
     tasks,
     paths,
@@ -394,7 +407,7 @@ export function startPlacedHome(options: {
   const supervisor = new CrewSupervisor({
     personalResourcesEnabled: () => settings.getPersonalResourcesEnabled(),
     sessions: {
-      pi: { ...nothingHere, backend: "pi" },
+      pi: options.here ?? { ...nothingHere, backend: "pi" },
       claude: { ...nothingHere, backend: "claude" },
     },
     machines: placed,

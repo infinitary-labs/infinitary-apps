@@ -6,7 +6,7 @@ import {
   intelligenceBucketSchema,
   reasoningChoiceSchema,
 } from "./modelSlots";
-import { placementRequirementsSchema, placementWaitSchema } from "./placement";
+import { computerMoveSchema, placementRequirementsSchema, placementWaitSchema } from "./placement";
 import { repoDeliverySchema } from "./repos";
 import { rigorSchema } from "./rigor";
 import { taskPolicyStateSchema } from "./taskPolicies";
@@ -205,6 +205,8 @@ export const workShapeSchema = z.object({
       dependencies: z.number().optional(),
     })
     .optional(),
+  /** A started task's move to another computer, written only by the host (`computerMoveSchema`). */
+  computer_move: computerMoveSchema.optional(),
   /**
    * The Firstmate's own declaration, made when it creates the task: this is
    * an internal step of a sequence it is running for an ask, whose answer is
@@ -431,6 +433,7 @@ export const HOST_KEPT_SHAPE_FIELDS = [
   "placement_fallback_accepted",
   "placement_wait",
   "start_wait_since",
+  "computer_move",
   "program_part",
 ] as const satisfies readonly (keyof WorkShape)[];
 

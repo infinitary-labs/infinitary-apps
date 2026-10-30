@@ -605,6 +605,7 @@ export const FIRSTMATE_TOOLS: readonly { name: string; module: string }[] = [
   { name: "steer_crewmate", module: "src/core/pi/crewTools.ts" },
   { name: "interrupt_crewmate", module: "src/core/pi/crewTools.ts" },
   { name: "settle_task", module: "src/core/pi/crewTools.ts" },
+  { name: "move_task", module: "src/core/pi/crewTools.ts" },
   { name: "crew_status", module: "src/core/pi/crewTools.ts" },
   { name: "create_task", module: "src/core/pi/taskTools.ts" },
   { name: "update_task", module: "src/core/pi/taskTools.ts" },

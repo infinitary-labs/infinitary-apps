@@ -26,6 +26,7 @@ import { GOOGLE_DATA_KEPT, NOTICE_ACCEPTED } from "@shared/integrations";
 import { PROTOCOL_VERSION } from "@shared/ipc";
 import { STARTER_SLOTS } from "@shared/modelSlots";
 import { CLAUDE_PROVIDER_ID } from "@shared/providers";
+import { RUNS_ON_THIS_MAC } from "@shared/repos";
 import { RISK_DIMENSIONS, type RiskDeclaration } from "@shared/risk";
 import { outsideDataDeletedNote } from "@shared/savedOutsideData";
 import type { ComputerForges } from "@shared/signIns";
@@ -264,6 +265,8 @@ function startHome(
     Parameters<typeof startPlacedHome>[0],
     "routing" | "runsForAnotherFirstmate" | "github" | "google"
   > & {
+    /** A task that moves home runs its conversation here on real Pi. */
+    runsHere?: boolean;
     claude?: ContractWorld;
     scheduleCopy?: Parameters<typeof startPlacedHome>[0]["scheduleCopy"];
   } = {},
@@ -288,6 +291,9 @@ function startHome(
       : {}),
     ...(extra.github ? { github: extra.github } : {}),
     ...(extra.google ? { google: extra.google } : {}),
+    ...(extra.runsHere
+      ? { here: createPiSessionFactory({ agentDir: join(userData, "pi-agent") }) }
+      : {}),
     log: (line) => process.env.PLACED_DEBUG && process.stderr.write(`[home] ${line}\n`),
   });
   stops.push(home.quit);
@@ -382,6 +388,8 @@ async function world(
     github?: Parameters<typeof startPlacedHome>[0]["github"];
     /** Google's stand-in, which the home's integrations reach. */
     google?: Parameters<typeof startPlacedHome>[0]["google"];
+    /** A task that moves home runs its conversation here on real Pi. */
+    runsHere?: boolean;
     /**
      * The computer's task channel, as the work mode opens it
      * (`ComputerBrowsers`), over the command process bundled at this path;
@@ -2573,6 +2581,82 @@ describe("a task that runs on a computer that runs work", () => {
     expect(await git(project.home, ["branch", "--list", "fm/task-t-copy"])).toBe("");
     expect(home.tasks.timeline("t-copy").at(-1)?.text).toBe(
       "working copy on Mac mini removed - its 1 commit not in yet and uncommitted edits saved here first",
+    );
+  });
+
+  // INF-1713, and review INF-1772 R11: a move's copies are retired through
+  // the real working copies on both sides, a computer the task ran on takes
+  // it again, and what the copy it left asks after is refused here.
+  it("moves a started task home and there again with its work, removing each copy it left, and refuses what a copy it left asks after", async () => {
+    const project = await gitProject();
+    // The computer is signed in to the account that serves the task's model, so it can take it back.
+    const at = await world(() => project.forge(Buffer.from("")), {
+      runsHere: true,
+      signedInTo: [computerAccount("acct_placed_there", PROVIDER)],
+      served: [{ accountId: "acct_placed_there", models: [{ provider: PROVIDER, id: MODEL }] }],
+    });
+    const home = at.home();
+    const { repo } = await adoptHere(home.repos, project.home);
+    model([{ text: "Started on the footer." }]);
+    await at.start("t-move", "Make the footer blue.", repo.id);
+    const there = at.folders("t-move").work;
+    await expect.poll(() => home.tasks.get("t-move")?.activity).toBe("idle");
+    writeFileSync(join(there, "footer.html"), "<footer>blue</footer>\n");
+    const tip = await commit(there, "feat: a blue footer");
+    writeFileSync(join(there, "notes.txt"), "still thinking\n");
+    const settled = async () => {
+      await expect
+        .poll(() => home.tasks.get("t-move")?.shape?.computer_move, { timeout: 15_000 })
+        .toBeUndefined();
+    };
+
+    // Home: the work arrives in a working copy here, and the copy there goes.
+    expect(
+      await home.supervisor.requestComputerMove("t-move", RUNS_ON_THIS_MAC, "captain"),
+    ).toMatchObject({ ok: true });
+    await settled();
+    const here = home.tasks.get("t-move")?.worktreeDir ?? "";
+    expect(home.tasks.get("t-move")?.deviceId ?? null).toBeNull();
+    expect(await git(here, ["rev-parse", "HEAD"])).toBe(tip);
+    expect(readFileSync(join(here, "notes.txt"), "utf8")).toBe("still thinking\n");
+    await expect.poll(() => existsSync(there)).toBe(false);
+    expect(at.holds().workingCopies).not.toContain("t-move");
+    // The conversation it left there is closed: what it asks after is not this Mac's to answer.
+    await expect(
+      home.placed.answer(at.deviceId, "inf:work:report", {
+        task: "t-move",
+        callId: "call-stale",
+        text: "Done there.",
+      }),
+    ).rejects.toThrow(NO_PLACED_TASK);
+
+    // There again: the computer it ran on takes it, from a bundle, since the
+    // project's origin is a folder of this Mac; the copy here goes.
+    writeFileSync(join(here, "notes.txt"), "thought it through\n");
+    expect(
+      await home.supervisor.requestComputerMove("t-move", at.deviceId, "captain"),
+    ).toMatchObject({ ok: true });
+    await settled();
+    expect(home.tasks.get("t-move")?.deviceId).toBe(at.deviceId);
+    const again = at.folders("t-move").work;
+    expect(await git(again, ["rev-parse", "HEAD"])).toBe(tip);
+    expect(readFileSync(join(again, "notes.txt"), "utf8")).toBe("thought it through\n");
+    // Review INF-1772 round 2 R12: it never clones this Mac's folder there.
+    expect(listed(join(at.dataDir, "repos"))).toContain(`local-${repo.id}`);
+    await expect.poll(() => existsSync(here)).toBe(false);
+
+    // Home once more: the copy there, in a repository that began empty, goes too.
+    expect(
+      await home.supervisor.requestComputerMove("t-move", RUNS_ON_THIS_MAC, "captain"),
+    ).toMatchObject({ ok: true });
+    await settled();
+    expect(home.tasks.get("t-move")?.deviceId ?? null).toBeNull();
+    const last = home.tasks.get("t-move")?.worktreeDir ?? "";
+    expect(readFileSync(join(last, "notes.txt"), "utf8")).toBe("thought it through\n");
+    await expect.poll(() => existsSync(again)).toBe(false);
+    expect(at.holds().workingCopies).not.toContain("t-move");
+    expect(home.tasks.timeline("t-move").at(-1)?.text).toBe(
+      "the working copy it left on Mac mini was removed",
     );
   });
 

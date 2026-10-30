@@ -64,6 +64,8 @@ export type WindowFacts = {
   /** A modal dialog other than command search holds focus: the picture viewer, the custom API form. */
   dialogOpen: boolean;
   browserControl?: boolean;
+  /** The shown task record offers Move to a computer. */
+  taskMove?: boolean;
   computers?: { page: number; pages: number };
   /** The top bar's project pill: whether it shows, and the focus that holds (docs/project-focus.md). */
   projectFocus?: { shown: boolean; focus: string | null };
@@ -261,6 +263,8 @@ const REFUSALS: Readonly<
   "cards.show-crewmate": (s) => tabRefusal(s, "cards.show-crewmate"),
   "browser.control": (_s, facts) =>
     facts.browserControl ? null : "Show a browser with control available first",
+  "task.move-computer": (_s, facts) =>
+    facts.taskMove ? null : "Show a started task that can move to another computer first",
   "cards.show-browser": (s) => tabRefusal(s, "cards.show-browser"),
   "cards.next-tab": (s) => tabRefusal(s, "cards.next-tab"),
   "cards.previous-tab": (s) => tabRefusal(s, "cards.previous-tab"),

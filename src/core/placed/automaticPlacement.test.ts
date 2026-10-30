@@ -1,4 +1,6 @@
-import { HERE } from "@shared/deviceNames";
+import { mkdirSync, writeFileSync } from "node:fs";
+import { join } from "node:path";
+import { chipWords, HERE } from "@shared/deviceNames";
 import type { ComputerReach, DeviceView } from "@shared/devices";
 import {
   AUTOMATIC_COMPUTER,
@@ -12,6 +14,8 @@ import type { ResourceObservation } from "@shared/resources";
 import type { WorkShape } from "@shared/routingPolicy";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { freshDatabase } from "../../../tests/helpers/database";
+import { scratchDir } from "../../../tests/helpers/scratchDirs";
+import { ForgeSignInStore, ForgeSignIns } from "../forge";
 import type { RoutePreview, Router } from "../routing/router";
 import { seedTask } from "../tasks/seedTask";
 import { TaskService } from "../tasks/taskService";
@@ -159,6 +163,7 @@ function world(
   ) => placement.choose(record, project, record.title, shape);
   return {
     tasks,
+    placement,
     running,
     task,
     start,
@@ -448,5 +453,186 @@ describe("AutomaticPlacement's word on an added computer it leaves out", () => {
     } finally {
       w.dispose();
     }
+  });
+});
+
+/**
+ * Review INF-1772 R6, the captain: "Add the planned checks back"; and R8:
+ * "we should try to support all projects, except for when the project is on
+ * a forge that isn't signed in on the destination machine". A started task
+ * moves only to a computer that can run it, read as a start reads it, and a
+ * move back home is read the same way.
+ */
+describe("AutomaticPlacement's word on a computer a started task cannot move to", () => {
+  const record = { shape: { kind: "fix" } as WorkShape };
+  /** The Mac mini's own sign-ins where projects live, as its facts answer names them. */
+  const signedInTo = (...hosts: { host: string; state: "ok" | "needs_reauth" }[]) => ({
+    providers: [],
+    accounts: [],
+    quota: null,
+    forges: {
+      signIns: hosts.map(({ host, state }) => ({
+        host,
+        name: "GitHub",
+        login: "kunchenguid",
+        state,
+        since: 1,
+      })),
+      hosts: [{ host: "github.com", name: "GitHub" }],
+    },
+  });
+  /** What the Mac mini answers about itself for the ledger project, able to run it. */
+  const mini = {
+    system: "macos",
+    chip: "arm64",
+    physicalComputerId: "b".repeat(64),
+    tools: { git: "available" },
+    projectAccess: "available",
+    signIns: signedInTo({ host: "github.com", state: "ok" }),
+  } as const;
+  const answering = (answer: object) =>
+    world(undefined, {
+      work: {
+        onWorkDevice: () => () => {},
+        inReach: () => true,
+        version: () => ({ contract: PLACEMENT_FACTS_SINCE }),
+        ask: async () => answer,
+      } as unknown as WorkDevices,
+    });
+  const notSignedIn = "Mac mini is not signed in to github.com, where ledger lives.";
+
+  it("takes a computer that runs the project, and names what stops one that cannot", async () => {
+    for (const [answer, refusal] of [
+      [mini, undefined],
+      [
+        { ...mini, chip: "x64" },
+        `Mac mini has ${chipWords("x64", "macos")}, and this task runs on ${chipWords("arm64", "macos")}.`,
+      ],
+      [
+        { ...mini, tools: { git: "unavailable" } },
+        "Mac mini does not have git, which this task needs.",
+      ],
+      [{ ...mini, signIns: signedInTo() }, notSignedIn],
+      [
+        { ...mini, signIns: signedInTo({ host: "github.com", state: "needs_reauth" }) },
+        notSignedIn,
+      ],
+      [
+        { ...mini, signIns: null },
+        "Infinitary could not read whether Mac mini is signed in to github.com.",
+      ],
+    ] as const) {
+      const w = answering(answer);
+      try {
+        expect(await w.placement.moveRefusal(record, ledger, macMini.id, "Mac mini")).toBe(refusal);
+      } finally {
+        w.dispose();
+      }
+    }
+  });
+
+  // Review INF-1772 round 2 R6: a public project answers a read without any
+  // sign-in, so reaching it is not the destination's sign-in to its forge.
+  it("refuses a computer that reaches a public project but is not signed in to its forge", async () => {
+    const w = answering({ ...mini, projectAccess: "available", signIns: signedInTo() });
+    try {
+      expect(await w.placement.moveRefusal(record, ledger, macMini.id, "Mac mini")).toBe(
+        notSignedIn,
+      );
+    } finally {
+      w.dispose();
+    }
+  });
+
+  it("moves a project kept on this computer only, with no forge to sign in to", async () => {
+    const w = answering({ ...mini, signIns: signedInTo() });
+    try {
+      const kept: RepoView = { ...ledger, origin: null, host: null, setupKind: "init" };
+      expect(await w.placement.moveRefusal(record, kept, macMini.id, "Mac mini")).toBeUndefined();
+      const path: RepoView = { ...ledger, origin: "/Users/kun/code/ledger", host: null };
+      expect(await w.placement.moveRefusal(record, path, macMini.id, "Mac mini")).toBeUndefined();
+    } finally {
+      w.dispose();
+    }
+  });
+
+  // Review INF-1772 round 3 R6: a move back home reads this computer's own
+  // sign-ins and their health, as a move to another computer reads that one's.
+  it("reads this computer's own sign-ins and their health for a move back home", async () => {
+    const notHere = `${HERE.This} is not signed in to github.com, where ledger lives.`;
+    for (const [listed, refusal] of [
+      [signedInTo().forges.signIns, notHere],
+      [signedInTo({ host: "github.com", state: "needs_reauth" }).forges.signIns, notHere],
+      [signedInTo({ host: "github.com", state: "ok" }).forges.signIns, undefined],
+      [undefined, `Infinitary could not read whether ${HERE.This} is signed in to github.com.`],
+    ] as const) {
+      const w = world(undefined, listed ? { forgeSignIns: () => [...listed] } : {});
+      try {
+        expect(await w.placement.moveRefusal(record, ledger, null, HERE.This)).toBe(refusal);
+      } finally {
+        w.dispose();
+      }
+    }
+  });
+
+  // Review INF-1772 round 4 R6: the owner lists an unreadable sign-in file,
+  // and one whose health is not read yet, as a sign-in in unknown health;
+  // both destinations name it unread, read through the real owner's view.
+  it("reads an unreadable or unread sign-in through its owner as unread, on both computers", async () => {
+    const root = join(scratchDir("infinitary-move-forges-"), "forges");
+    const store = new ForgeSignInStore(root);
+    let answer: "ok" | "rejected" = "ok";
+    const owner = new ForgeSignIns({
+      store,
+      providers: [
+        {
+          host: "github.com",
+          name: "GitHub",
+          start: async () => {
+            throw new Error("No sign-in starts in this test.");
+          },
+          wait: async () => ({ outcome: "denied" }),
+          whoAmI: async () =>
+            answer === "ok"
+              ? { state: "ok", login: "kunchenguid" }
+              : { state: "rejected", status: 401 },
+        },
+      ],
+      projectsOn: () => 1,
+      push: () => {},
+    });
+    const unread = (name: string) =>
+      `Infinitary could not read whether ${name} is signed in to github.com.`;
+    const lapsed = (name: string) => `${name} is not signed in to github.com, where ledger lives.`;
+    const read = async (): Promise<[string | undefined, string | undefined]> => {
+      const home = world(undefined, { forgeSignIns: () => owner.view().signIns });
+      const there = answering({ ...mini, signIns: { ...signedInTo(), forges: owner.view() } });
+      try {
+        return [
+          await home.placement.moveRefusal(record, ledger, null, HERE.This),
+          await there.placement.moveRefusal(record, ledger, macMini.id, "Mac mini"),
+        ];
+      } finally {
+        home.dispose();
+        there.dispose();
+      }
+    };
+    mkdirSync(join(root, "github.com"), { recursive: true });
+    writeFileSync(join(root, "github.com", "sign-in.json"), "{broken");
+    await owner.checkHealth();
+    expect(owner.view().signIns.map((each) => each.host)).toEqual(["github.com"]);
+    expect(await read()).toEqual([unread(HERE.This), unread("Mac mini")]);
+    store.write("github.com", {
+      token: "gho_x",
+      scopes: ["repo"],
+      login: "kunchenguid",
+      createdAt: 1,
+    });
+    expect(await read()).toEqual([unread(HERE.This), unread("Mac mini")]);
+    await owner.checkHealth();
+    expect(await read()).toEqual([undefined, undefined]);
+    answer = "rejected";
+    await owner.checkHealth();
+    expect(await read()).toEqual([lapsed(HERE.This), lapsed("Mac mini")]);
   });
 });

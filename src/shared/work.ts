@@ -1014,6 +1014,20 @@ const bundleSchema = z.object({
 export const bundledRefSchema = z.enum(["branch", "kept"]);
 export type BundledRef = z.infer<typeof bundledRefSchema>;
 
+/** What `read` reads: a bundle, or the pack of a task that moves (`task-move`). */
+export const readableRefSchema = z.enum(["branch", "kept", "move"]);
+export type ReadableRef = z.infer<typeof readableRefSchema>;
+
+/** A file the home sent as a source file (`inf:session:source-file`), by its name there. */
+const sourceFileSchema = z.object({
+  name: z
+    .string()
+    .regex(/^[A-Za-z0-9_-]+\.[A-Za-z0-9]+$/)
+    .max(200),
+  size: z.number().int().nonnegative(),
+  sha256: z.string().regex(/^[0-9a-f]{64}$/),
+});
+
 /**
  * The orders a home asks a computer that runs work. The computer answers
  * them; the home sends them only to a computer whose welcome says it takes
@@ -1387,13 +1401,13 @@ export const workOrders = {
     ]),
     response: z.object({ sha: commitSchema.nullable(), bundle: bundleSchema.optional() }),
   },
-  /** The bundle made last for that ref, from `offset`: at most `PLACED_COPY_CHUNK_BYTES`. */
+  /** The bundle (or move pack) made last for that ref, from `offset`: at most `PLACED_COPY_CHUNK_BYTES`. */
   "inf:working-copy:read": {
     effect: "read",
     request: z.tuple([
       z.object({
         task: placedTaskIdSchema,
-        ref: bundledRefSchema,
+        ref: readableRefSchema,
         offset: z.number().int().nonnegative(),
       }),
     ]),
@@ -1446,6 +1460,59 @@ export const workOrders = {
     ]),
     /** `exists` when a file was there already, which it never writes over. */
     response: z.object({ outcome: z.enum(["partial", "written", "exists"]) }),
+  },
+  /**
+   * Packs the task's work to move it to another computer (`task-move`,
+   * docs/helper.md, "Moving a started task"): its conversation must be idle
+   * and is let go first, never closed, so the task can run here again if the
+   * move does not finish. The pack - what is staged and not, untracked
+   * files and the task's own folders - waits in `bundles/` for `read` with
+   * `move`, and its branch's commits for `bundle` with `branch`.
+   */
+  "inf:working-copy:move-out": {
+    effect: "change",
+    request: ordered({
+      /** Ignored files in the working copy that move too (`ComputerMove.keep`). */
+      keep: z.array(z.string().min(1).max(4096)).max(256).optional(),
+    }),
+    response: z.object({ head: commitSchema, branch: z.string().min(1), pack: bundleSchema }),
+  },
+  /**
+   * Makes the working copy of a task that moves here (`task-move`): asked
+   * first with neither file, it answers the commits it holds that a bundle
+   * may leave out (`need`); then, with the task's branch as a source file
+   * (none when every commit is here) and its pack, it fetches the branch,
+   * makes the working copy at `head` and unpacks the work, checked against
+   * what left (`ready`). Asked again once ready, it answers the same.
+   */
+  "inf:working-copy:move-in": {
+    effect: "change",
+    request: ordered({
+      /**
+       * Where the project lives, to clone it from; or, for a project the
+       * home keeps on itself or clones from a folder, its id, whose commits
+       * come in the bundle alone, with the home's own branch and the commit
+       * the task's branch left it at, which the repository there starts on.
+       */
+      project: z
+        .union([
+          z.object({ origin: z.string().min(1).max(4096) }),
+          z.object({
+            local: z.string().min(1).max(64),
+            base: z.object({ branch: z.string().min(1).max(255), sha: commitSchema }),
+          }),
+        ])
+        .optional(),
+      /** A task with no project: the home's workspace commit it sent first. */
+      seed: commitSchema.optional(),
+      head: commitSchema,
+      bundle: sourceFileSchema.optional(),
+      pack: sourceFileSchema.optional(),
+    }),
+    response: z.discriminatedUnion("outcome", [
+      z.object({ outcome: z.literal("need"), have: z.array(commitSchema).max(64) }),
+      z.object({ outcome: z.literal("ready"), dir: z.string(), branch: z.string() }),
+    ]),
   },
 } as const satisfies Record<
   `inf:session:${string}` | `inf:working-copy:${string}` | typeof PLACEMENT_FACTS_ORDER,

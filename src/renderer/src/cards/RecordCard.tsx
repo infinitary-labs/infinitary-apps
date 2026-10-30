@@ -293,6 +293,12 @@ export function RecordCard({
               revision={shown}
               onRun={runOp}
               onShowCard={() => void showCard().catch(() => {})}
+              move={{
+                ...(shown.movable ? { movable: shown.movable } : {}),
+                ...(shown.computerMove ? { computerMove: shown.computerMove } : {}),
+                options: () => window.infinitary.task.moveOptions(taskId),
+                move: (to) => window.infinitary.task.move(taskId, to),
+              }}
             />
           </>
         )

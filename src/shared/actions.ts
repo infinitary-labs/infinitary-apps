@@ -779,8 +779,8 @@ const actionLines = {
   "task-actions": guidance(
     "general",
     "asked",
-    "Use update_task, interrupt_crewmate or steer_crewmate for task start, stop, continue and drop.",
-    ["inf:task:abort", "inf:task:delete", "inf:task:run"],
+    "Use update_task, interrupt_crewmate or steer_crewmate for task start, stop, continue and drop, and move_task to move started work to another computer.",
+    ["inf:task:abort", "inf:task:delete", "inf:task:run", "inf:task:move"],
   ),
   settle: guidance(
     "general",

@@ -331,6 +331,8 @@ describe("ipc contract", () => {
       "inf:settings:notifications:get",
       "inf:shell:preferences",
       "inf:task:interrupt",
+      "inf:task:move",
+      "inf:task:move-options",
       "inf:task:run",
       "inf:task:steer",
       "inf:tasks:board",

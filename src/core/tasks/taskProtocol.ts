@@ -187,6 +187,12 @@ export type TaskProtocolOptions = {
    * (`TaskView.place`); absent for a task this Mac runs.
    */
   place?: (record: TaskRecord) => TaskPlace | undefined;
+  /**
+   * Whether started work may move to another computer, and the move that
+   * stands (`TaskView.movable`, `TaskView.computerMove`; docs/helper.md,
+   * "Moving a started task").
+   */
+  computerMove?: (record: TaskRecord) => Pick<TaskView, "movable" | "computerMove">;
   /** An accepted start the board should show before the row is claimed. */
   startAttempt?: (taskId: string) => { phase: "preparing" | "checking"; since: number } | undefined;
   /** The event seam every FmEvent crosses (feed persistence, Observe, clients). */
@@ -252,7 +258,11 @@ export class TaskProtocol {
       live.add(record.id);
       const workPosture = this.options.workPosture?.(record);
       read?.(record, workPosture);
-      const posture = JSON.stringify([workPosture, this.options.place?.(record)]);
+      const posture = JSON.stringify([
+        workPosture,
+        this.options.place?.(record),
+        this.options.computerMove?.(record),
+      ]);
       if (this.postures.get(record.id) === posture) continue;
       this.postures.set(record.id, posture);
       changed.push(record.id);
@@ -855,6 +865,7 @@ export class TaskProtocol {
     const place = this.options.place?.(record);
     const startAttempt =
       this.options.startAttempt?.(record.id) ?? this.options.tasks.startAttemptOf(record.id);
+    const computerMove = record.kind === "work" ? this.options.computerMove?.(record) : undefined;
     return withMoves({
       id: record.id,
       key: record.key,
@@ -865,6 +876,7 @@ export class TaskProtocol {
         : {}),
       ...(record.shape?.program ? { program: true as const } : {}),
       ...(place ? { place } : {}),
+      ...computerMove,
       kind: record.kind,
       title: record.title,
       goal: record.goal,

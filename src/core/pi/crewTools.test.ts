@@ -45,6 +45,7 @@ describe("crew tools", () => {
     expect([...byName.keys()].sort()).toEqual([
       "crew_status",
       "interrupt_crewmate",
+      "move_task",
       "settle_task",
       "spawn_crewmate",
       "steer_crewmate",
@@ -478,6 +479,34 @@ describe("crew tools", () => {
       "cancel",
       "The captain no longer needs the meter fix.",
     );
+  });
+
+  // INF-1713: the captain asks for a started task to move to another
+  // computer, and can take the ask back before it crosses.
+  it("move_task names the computer, or null to cancel, and answers the host's words", async () => {
+    const moveTask = vi.fn(async (_task: string, to: string | null) => ({
+      ok: true,
+      text: to ? `Moving to ${to}.` : "It stays.",
+    }));
+    const { byName } = toolset({ moveTask });
+    const moved = await byName
+      .get("move_task")
+      ?.execute("t1", { task_id: "ab12", computer: " Mac mini " });
+    expect(moveTask).toHaveBeenCalledWith("ab12", "Mac mini", undefined);
+    expect(moved?.content[0]?.text).toBe("Moving to Mac mini.");
+    // Ignored files the move must carry ride as named (INF-1772 R7).
+    await byName
+      .get("move_task")
+      ?.execute("t1", { task_id: "ab12", computer: "Mac mini", keep: [".env.local"] });
+    expect(moveTask).toHaveBeenLastCalledWith("ab12", "Mac mini", [".env.local"]);
+    const cancelled = await byName
+      .get("move_task")
+      ?.execute("t1", { task_id: "ab12", computer: "Mac mini", cancel: true });
+    expect(moveTask).toHaveBeenLastCalledWith("ab12", null, undefined);
+    expect(cancelled?.content[0]?.text).toBe("It stays.");
+    const unnamed = await byName.get("move_task")?.execute("t1", { task_id: "ab12" });
+    expect(unnamed?.content[0]?.text).toMatch(/Name the computer/);
+    expect(moveTask).toHaveBeenCalledTimes(3);
   });
 
   // INF-547: a close of started work the captain did not click carries the

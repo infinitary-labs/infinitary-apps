@@ -21,6 +21,7 @@ export const PLACEMENT_FIELDS = [
   "placement_fallback_accepted",
   "placement_wait",
   "start_wait_since",
+  "computer_move",
 ] as const satisfies readonly (keyof WorkShape)[];
 export const ROUTING_FIELDS = [
   "intelligence",

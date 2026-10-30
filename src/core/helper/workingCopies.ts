@@ -16,6 +16,7 @@ import {
   type BundledRef,
   PLACED_COPY_CHUNK_BYTES,
   placedTaskIdSchema,
+  type ReadableRef,
   type WorkingCopyBase,
   type WorkOrderRequest,
   type WorkOrderResponse,
@@ -24,6 +25,7 @@ import { writeArtifact } from "../workspace/artifacts";
 import { bundleRef, commitOf, sha256Of, takeBundle } from "../workspace/bundles";
 import { forgeAuthRequired } from "../workspace/forgeAuth";
 import { git } from "../workspace/git";
+import { type MovedFolders, packWork, readManifest, unpackWork } from "../workspace/workMove";
 import {
   type DependencyInstall,
   type DispatchBase,
@@ -302,6 +304,34 @@ export class WorkingCopies {
     return run;
   }
 
+  /**
+   * The repository here for a project the home keeps only on itself: empty
+   * at first, so the home's bundle carries every commit a moved task needs.
+   */
+  private async localProject(repoId: string): Promise<string> {
+    if (!/^[A-Za-z0-9_-]{1,64}$/.test(repoId)) throw new Error(`No project is named ${repoId}.`);
+    const dir = join(this.reposDir, `local-${repoId}`);
+    if (!existsSync(dir)) {
+      await mkdir(this.reposDir, { recursive: true, mode: 0o700 });
+      await git(this.reposDir, ["init", "--quiet", "--bare", dir]);
+    }
+    return dir;
+  }
+
+  /**
+   * A project's repository here that began empty starts on the home's
+   * branch at the commit the task's branch left it at, so the task's work
+   * is read against it as against a clone's, and the copy can go after.
+   */
+  private async startOn(repoDir: string, base: { branch: string; sha: string }): Promise<void> {
+    if (await git(repoDir, ["rev-parse", "--verify", "--quiet", "HEAD"]).catch(() => "")) return;
+    await git(repoDir, ["check-ref-format", "--branch", base.branch]);
+    if (!(await commitOf(repoDir, base.sha)))
+      throw new Error("The moved work's starting commit did not arrive here.");
+    await git(repoDir, ["update-ref", `refs/heads/${base.branch}`, base.sha, ""]);
+    await git(repoDir, ["symbolic-ref", "HEAD", `refs/heads/${base.branch}`]);
+  }
+
   private async cloneOnce(origin: string, dir: string): Promise<{ dir: string; cloned: boolean }> {
     if (existsSync(dir)) {
       const url = await git(dir, ["remote", "get-url", "origin"]).catch(() => "");
@@ -403,8 +433,8 @@ export class WorkingCopies {
     });
   }
 
-  /** The bundle made last for that ref, from `offset` (`inf:working-copy:read`). */
-  read(task: string, ref: BundledRef, offset: number): WorkOrderResponse<"inf:working-copy:read"> {
+  /** The bundle (or move pack) made last for that ref, from `offset` (`inf:working-copy:read`). */
+  read(task: string, ref: ReadableRef, offset: number): WorkOrderResponse<"inf:working-copy:read"> {
     const fd = openSync(this.bundleFile(task, ref), "r");
     try {
       const size = fstatSync(fd).size;
@@ -480,8 +510,97 @@ export class WorkingCopies {
           for (const name of keptRefsFor(task))
             await git(workspace.repoDir, ["update-ref", "-d", name]).catch(() => {});
       }
-      for (const ref of ["branch", "kept"] as const)
+      for (const ref of ["branch", "kept", "move"] as const)
         await rm(this.bundleFile(task, ref), { force: true });
+    });
+  }
+
+  /**
+   * Packs the task's work to move it to another computer
+   * (`inf:working-copy:move-out`): the pack waits in `bundles/` for the
+   * home to read with `move`, until the next one or until the task retires.
+   * Its conversation must already be idle and let go (`SessionHost`).
+   */
+  moveOut(
+    task: string,
+    folders: MovedFolders,
+    keep: readonly string[] = [],
+  ): Promise<WorkOrderResponse<"inf:working-copy:move-out">> {
+    return this.serial(task, async () => {
+      const workspace = await this.workspaceOf(task);
+      if (!workspace) throw new Error("No working copy is here for this task.");
+      const branch = `${TASK_BRANCH_PREFIX}${task}`;
+      const { manifest, pack } = await packWork(
+        workspace.cwd,
+        branch,
+        folders,
+        this.bundleFile(task, "move"),
+        keep,
+      );
+      return { head: manifest.head, branch, pack };
+    });
+  }
+
+  /**
+   * The working copy of a task that moves here (`inf:working-copy:move-in`):
+   * the commits a bundle may leave out first; then the branch's commits
+   * from the bundle the home sent, a working copy at `head` on the task's
+   * branch, and its work unpacked from the pack, checked against what left.
+   * A working copy already here at `head` holding exactly that work is the
+   * answer again; one holding anything else is refused, never replaced.
+   */
+  moveIn(
+    request: WorkOrderRequest<"inf:working-copy:move-in">[0],
+    files: { bundle?: string; pack?: string },
+    folders: MovedFolders,
+  ): Promise<WorkOrderResponse<"inf:working-copy:move-in">> {
+    const { task, project, seed, head } = request;
+    return this.serial(task, async () => {
+      const repoDir = !project
+        ? await this.workspace.ensureDefaultRepo()
+        : "origin" in project
+          ? (await this.clone(project.origin)).dir
+          : await this.localProject(project.local);
+      if (seed && (await commitOf(repoDir, SEEDED_REF)) !== seed)
+        throw new Error("The home's workspace did not arrive here before the moved work.");
+      if (!request.pack) {
+        if (await commitOf(repoDir, head)) return { outcome: "need" as const, have: [head] };
+        const tips = await git(repoDir, [
+          "for-each-ref",
+          "--count=64",
+          "--sort=-committerdate",
+          "--format=%(objectname)",
+          "refs/heads",
+          "refs/remotes",
+          SEEDED_REF,
+        ]);
+        return {
+          outcome: "need" as const,
+          have: [...new Set(tips.split("\n").filter(Boolean))].slice(0, 64),
+        };
+      }
+      const branch = `${TASK_BRANCH_PREFIX}${checked(task)}`;
+      if (request.bundle && files.bundle && !(await commitOf(repoDir, head))) {
+        const to = `refs/infinitary/sources/${checked(task)}-move`;
+        await takeBundle(repoDir, files.bundle, request.bundle, `refs/heads/${branch}`, to, head);
+        await git(repoDir, ["update-ref", "-d", to]).catch(() => {});
+      }
+      if (!(await commitOf(repoDir, head)))
+        throw new Error("The moved work's commits did not arrive here.");
+      if (project && "local" in project) await this.startOn(repoDir, project.base);
+      if (!files.pack) throw new Error("The moved work's pack did not arrive here.");
+      const pack = files.pack;
+      if (readManifest(pack).manifest.head !== head)
+        throw new Error("The moved work's pack is for another commit.");
+      // A working copy already here - made before an answer was lost - takes
+      // the work only when it is at `head` and holds that work or nothing.
+      const dir = this.has(task)
+        ? this.dir(task)
+        : (await this.workspace.createTaskWorktree(checked(task), repoDir, { headSha: head })).cwd;
+      await unpackWork(dir, pack, folders, request.pack);
+      if (files.bundle) await rm(files.bundle, { force: true });
+      await rm(pack, { force: true });
+      return { outcome: "ready" as const, dir, branch };
     });
   }
 
@@ -568,8 +687,8 @@ export class WorkingCopies {
     return workspace;
   }
 
-  private bundleFile(task: string, ref: BundledRef): string {
-    return join(this.bundlesDir, `${checked(task)}-${ref}.bundle`);
+  private bundleFile(task: string, ref: ReadableRef): string {
+    return join(this.bundlesDir, `${checked(task)}-${ref}.${ref === "move" ? "pack" : "bundle"}`);
   }
 
   private serial<T>(key: string, run: () => Promise<T>): Promise<T> {

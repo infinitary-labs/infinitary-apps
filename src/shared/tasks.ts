@@ -250,6 +250,44 @@ export const taskPlaceSchema = z.object({
 });
 export type TaskPlace = z.infer<typeof taskPlaceSchema>;
 
+/**
+ * A started task's move to another computer (docs/helper.md, "Moving a
+ * started task"): where it moves from and to, by name, and where the move
+ * stands - `waiting` for a safe pause, `moving` while its work crosses and
+ * the new computer takes it, `retiring` while the old working copy is
+ * removed. `waitingFor` says, in words, what still stops a safe pause, and
+ * `problem` why the last try did not finish. Absent when no move stands.
+ */
+export const computerMoveViewSchema = z.object({
+  from: z.string(),
+  to: z.string(),
+  state: z.enum(["waiting", "moving", "retiring"]),
+  waitingFor: z.array(z.string()),
+  problem: z.string().optional(),
+});
+export type ComputerMoveView = z.infer<typeof computerMoveViewSchema>;
+
+/** One computer a started task could move to, and why it cannot now. */
+export const moveDestinationSchema = z.object({
+  /** A computer that runs work by its device id, or `this-mac`. */
+  id: z.string(),
+  name: z.string(),
+  /** Absent when it can take the task now. */
+  unavailable: z.string().optional(),
+});
+export type MoveDestination = z.infer<typeof moveDestinationSchema>;
+
+/** Where a started task could move: where it runs now, and every other computer. */
+export const moveOptionsSchema = z.discriminatedUnion("ok", [
+  z.object({
+    ok: z.literal(true),
+    from: z.string(),
+    destinations: z.array(moveDestinationSchema),
+  }),
+  z.object({ ok: z.literal(false), text: z.string().min(1) }),
+]);
+export type MoveOptions = z.infer<typeof moveOptionsSchema>;
+
 export const taskViewSchema = z.object({
   id: z.string(),
   /** `<PROJECT_KEY>-<seq>`, the conversational handle (D6). */
@@ -268,6 +306,13 @@ export const taskViewSchema = z.object({
   program: z.literal(true).optional(),
   /** Where it runs, in words, when another computer runs it; absent on this Mac. */
   place: taskPlaceSchema.optional(),
+  /**
+   * Started work that may move to another computer now: the record offers
+   * Move to a computer. Absent otherwise, and on an older home.
+   */
+  movable: z.literal(true).optional(),
+  /** Its move to another computer, while one stands. */
+  computerMove: computerMoveViewSchema.optional(),
   kind: taskKindSchema,
   title: z.string(),
   goal: z.string().nullable(),

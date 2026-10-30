@@ -86,6 +86,9 @@ const OPERATE_TOOLS = [
   "locate_project",
   "update_task",
   "link_tasks",
+  // Moving a started task to another computer (INF-1713) changes where it
+  // runs, never what it does: fleet management, like the graph edits.
+  "move_task",
   // The captain's own surfaces (talk-to-personalize Step 1, contract v2.8):
   // the personalization case of the operate move, and a panel someone else
   // made, which the host then asks the captain about on its own card.

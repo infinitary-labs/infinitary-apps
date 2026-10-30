@@ -1,5 +1,10 @@
 import type { DropTaskReview, TaskLifecycleOp } from "@shared/cards";
-import { RECORD_NEXT_LABELS, type RecordBar } from "@shared/recordBar";
+import {
+  computerMoveLine,
+  MOVE_LABELS,
+  RECORD_NEXT_LABELS,
+  type RecordBar,
+} from "@shared/recordBar";
 import {
   DROP_CANCEL_LABEL,
   DROP_REVIEW_STALE,
@@ -11,9 +16,9 @@ import {
   HIDE_RECORD_LABEL,
 } from "@shared/recordDrop";
 import type { TaskStatusReading } from "@shared/taskPresentation";
-import type { DropEffects } from "@shared/tasks";
+import type { ComputerMoveView, DropEffects, MoveDestination, MoveOptions } from "@shared/tasks";
 import type React from "react";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Badge, Button, IconButton } from "../design";
 import { CardCorner } from "../design/cards/CardSize";
 import { useCutWords } from "../design/core/overflowTitle";
@@ -187,6 +192,18 @@ export function RecordPaneChrome({
 }
 
 /**
+ * A started task's Move to a computer on its record (docs/helper.md,
+ * "Moving a started task"): whether it may move now, the move that stands,
+ * where it could go and the ask itself, which `null` cancels.
+ */
+export type RecordMove = {
+  movable?: true;
+  computerMove?: ComputerMoveView;
+  options: () => Promise<MoveOptions>;
+  move: (to: string | null) => Promise<{ ok: boolean; text: string }>;
+};
+
+/**
  * The record's action bar (FI3-565 direction A, piece 4; FI3-948 layout B):
  * the host's own row of buttons, read only from the task's typed state
  * (`recordBarOf`) - the end slot (Drop task) at its left edge and the next
@@ -212,6 +229,7 @@ export function RecordPaneFooter({
   revision,
   onRun,
   onShowCard,
+  move,
 }: {
   bar: RecordBar | null;
   effects: DropEffects | null;
@@ -222,10 +240,15 @@ export function RecordPaneFooter({
   revision: unknown;
   onRun: (op: TaskLifecycleOp, review?: DropTaskReview) => Promise<unknown>;
   onShowCard: () => void;
+  move?: RecordMove;
 }) {
   const [confirming, setConfirming] = useState(false);
   const [pending, setPending] = useState<TaskLifecycleOp | null>(null);
   const [error, setError] = useState<string | null>(null);
+  /** Move to a computer's picker, while it is open: every other computer, and the one chosen. */
+  const [picking, setPicking] = useState<MoveDestination[] | null>(null);
+  const [chosen, setChosen] = useState<string | null>(null);
+  const [moving, setMoving] = useState<"open" | "move" | "cancel" | null>(null);
   const reviewKey = effects ? JSON.stringify(effects) : "";
 
   // A new reading of the record settles whatever was in flight.
@@ -238,6 +261,13 @@ export function RecordPaneFooter({
     setConfirming(false);
     setError(null);
   }, [bar?.end, bar?.next, taskKey, reviewKey]);
+  // A move that started, or a task that may no longer move, closes the picker.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: the move's state and the task are the triggers.
+  useEffect(() => {
+    setPicking(null);
+    setChosen(null);
+    setMoving(null);
+  }, [move?.movable, move?.computerMove?.state, taskKey]);
 
   if (!bar || (!bar.end && !bar.next)) return null;
   const end = bar.end;
@@ -276,7 +306,47 @@ export function RecordPaneFooter({
       });
   };
 
+  const openPicker = () => {
+    if (!move) return;
+    setMoving("open");
+    setError(null);
+    move
+      .options()
+      .then((options) => {
+        setMoving(null);
+        if (!options.ok) setError(options.text);
+        else {
+          setPicking(options.destinations);
+          setChosen(null);
+        }
+      })
+      .catch((caught: unknown) => {
+        setMoving(null);
+        setError(caught instanceof Error ? caught.message : String(caught));
+      });
+  };
+  const ask = (to: string | null) => {
+    if (!move) return;
+    setMoving(to === null ? "cancel" : "move");
+    setError(null);
+    move
+      .move(to)
+      .then((done) => {
+        setMoving(null);
+        if (!done.ok) setError(done.text);
+        else {
+          setPicking(null);
+          setChosen(null);
+        }
+      })
+      .catch((caught: unknown) => {
+        setMoving(null);
+        setError(caught instanceof Error ? caught.message : String(caught));
+      });
+  };
+
   const asking = confirming && end !== null;
+  const choosing = !asking && picking !== null;
   let confirmLine = "";
   if (asking) {
     const unstarted = end === "drop-task" && effects;
@@ -289,7 +359,41 @@ export function RecordPaneFooter({
 
   let endButton: React.ReactNode = null;
   let nextButton: React.ReactNode = null;
-  if (asking) {
+  let between: React.ReactNode = confirmLine;
+  if (choosing) {
+    endButton = (
+      <Button
+        variant="secondary"
+        disabled={moving !== null}
+        onClick={() => {
+          setPicking(null);
+          setChosen(null);
+        }}
+      >
+        {MOVE_LABELS.cancel}
+      </Button>
+    );
+    between = (
+      <MovePicker
+        taskKey={taskKey}
+        destinations={picking}
+        chosen={chosen}
+        disabled={moving !== null}
+        onChoose={setChosen}
+      />
+    );
+    nextButton = (
+      <Button
+        variant="primary"
+        data-record-move-confirm=""
+        pending={moving === "move"}
+        disabled={chosen === null || moving !== null}
+        onClick={() => chosen && ask(chosen)}
+      >
+        {MOVE_LABELS.move}
+      </Button>
+    );
+  } else if (asking) {
     endButton = (
       <Button variant="secondary" autoFocus disabled={busy} onClick={() => setConfirming(false)}>
         {DROP_CANCEL_LABEL}
@@ -301,13 +405,41 @@ export function RecordPaneFooter({
       </Button>
     );
   } else {
-    if (end) {
-      endButton = (
-        <Button variant="secondary" disabled={busy} onClick={beginDrop}>
-          {DROP_TASK_LABEL}
+    const moveButton =
+      move?.computerMove?.state === "waiting" ? (
+        <Button
+          variant="secondary"
+          data-record-move-cancel=""
+          pending={moving === "cancel"}
+          disabled={busy || moving !== null}
+          onClick={() => ask(null)}
+        >
+          {MOVE_LABELS.cancelMove}
         </Button>
+      ) : move?.movable && !move.computerMove ? (
+        <Button
+          variant="secondary"
+          data-record-move-open=""
+          pending={moving === "open"}
+          disabled={busy || moving !== null}
+          onClick={openPicker}
+        >
+          {MOVE_LABELS.open}
+        </Button>
+      ) : null;
+    if (end || moveButton) {
+      endButton = (
+        <>
+          {end && (
+            <Button variant="secondary" disabled={busy} onClick={beginDrop}>
+              {DROP_TASK_LABEL}
+            </Button>
+          )}
+          {moveButton}
+        </>
       );
     }
+    if (move?.computerMove) between = computerMoveLine(move.computerMove);
     if (bar.next === "show-card") {
       nextButton = (
         <Button variant="primary" onClick={onShowCard}>
@@ -342,7 +474,7 @@ export function RecordPaneFooter({
 
   return (
     <div
-      data-record-footer={asking ? "confirm" : "bar"}
+      data-record-footer={asking ? "confirm" : choosing ? "move" : "bar"}
       data-record-end={end ?? "none"}
       data-record-next={bar.next ?? "none"}
       style={{
@@ -356,12 +488,20 @@ export function RecordPaneFooter({
       }}
     >
       <div style={{ display: "flex", alignItems: "center", gap: "var(--space-3)" }}>
-        <div data-record-slot="end" style={{ display: "flex", flexShrink: 0 }}>
+        <div
+          data-record-slot="end"
+          style={{ display: "flex", flexShrink: 0, gap: "var(--space-2)" }}
+        >
           {endButton}
         </div>
-        {/* Between the slots: empty at rest, the confirm sentence while Drop task asks. */}
+        {/* Between the slots: empty at rest, the confirm sentence while Drop
+            task asks, the computers while Move to a computer picks, and where
+            a move stands while one does. */}
         <div
           {...(asking ? { "data-record-confirm": end } : {})}
+          {...(!asking && !choosing && move?.computerMove
+            ? { "data-record-move": move.computerMove.state }
+            : {})}
           style={{
             flex: "1 1 0",
             minWidth: 0,
@@ -370,7 +510,7 @@ export function RecordPaneFooter({
             whiteSpace: "normal",
           }}
         >
-          {confirmLine}
+          {between}
         </div>
         <div data-record-slot="next" style={{ display: "flex", flexShrink: 0 }}>
           {nextButton}
@@ -381,6 +521,90 @@ export function RecordPaneFooter({
           <KeyedText text={error} own={taskId} />
         </p>
       )}
+    </div>
+  );
+}
+
+/**
+ * Move to a computer's choices: every other computer as one radio button,
+ * reached with Tab and moved between with the arrow keys. A computer that
+ * cannot take the task now stays in the list, off, and says why on rest or
+ * focus. Picking saves nothing: Move does.
+ */
+function MovePicker({
+  taskKey,
+  destinations,
+  chosen,
+  disabled,
+  onChoose,
+}: {
+  taskKey: string;
+  destinations: MoveDestination[];
+  chosen: string | null;
+  disabled: boolean;
+  onChoose: (id: string) => void;
+}) {
+  const group = useRef<HTMLDivElement>(null);
+  const takers = destinations.filter((destination) => !destination.unavailable);
+  const first = takers[0]?.id ?? destinations[0]?.id;
+  // Focus goes to the chosen computer, else the first that can take the task.
+  useEffect(() => {
+    group.current
+      ?.querySelector<HTMLButtonElement>('[role="radio"][tabindex="0"]')
+      ?.focus({ preventScroll: true });
+  }, []);
+  const onKeyDown = (event: React.KeyboardEvent) => {
+    const step =
+      event.key === "ArrowRight" || event.key === "ArrowDown"
+        ? 1
+        : event.key === "ArrowLeft" || event.key === "ArrowUp"
+          ? -1
+          : 0;
+    if (!step || takers.length === 0) return;
+    event.preventDefault();
+    const at = takers.findIndex((destination) => destination.id === (chosen ?? first));
+    const next = takers[(at + step + takers.length) % takers.length];
+    if (!next) return;
+    onChoose(next.id);
+    group.current
+      ?.querySelector<HTMLButtonElement>(`[data-record-move-to="${CSS.escape(next.id)}"]`)
+      ?.focus({ preventScroll: true });
+  };
+  return (
+    <div
+      ref={group}
+      role="radiogroup"
+      aria-label={`${MOVE_LABELS.to} ${taskKey}`}
+      onKeyDown={onKeyDown}
+      style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: "var(--space-2)" }}
+    >
+      <span>{MOVE_LABELS.to}</span>
+      {destinations.map((destination) => {
+        const selected = chosen === destination.id;
+        const tabbable = destination.id === (chosen ?? first);
+        return (
+          <Button
+            key={destination.id}
+            variant="secondary"
+            size="sm"
+            role="radio"
+            aria-checked={selected}
+            tabIndex={tabbable ? 0 : -1}
+            data-record-move-to={destination.id}
+            disabled={disabled}
+            off={destination.unavailable !== undefined}
+            {...(destination.unavailable ? { note: destination.unavailable } : {})}
+            onClick={() => onChoose(destination.id)}
+            style={
+              selected
+                ? { borderColor: "var(--accent)", background: "var(--accent-dim)" }
+                : undefined
+            }
+          >
+            {destination.name}
+          </Button>
+        );
+      })}
     </div>
   );
 }

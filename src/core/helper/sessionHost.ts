@@ -76,9 +76,10 @@ import {
   OutcomeUnknownError,
 } from "../session/tools";
 import { changeRecoveryCheck, sameNames } from "../session/workRecovery";
-import { HANDOVER_OUT_DIR_NAME } from "../tasks/handoverFiles";
+import { HANDOVER_IN_DIR_NAME, HANDOVER_OUT_DIR_NAME } from "../tasks/handoverFiles";
 import type { TaskQueryRow } from "../tasks/taskQuery";
 import { ForgeAuthRequiredError } from "../workspace/forgeAuth";
+import type { MovedFolders } from "../workspace/workMove";
 import type { PlacedJob, PlacedTaskState, PlacedTasks } from "./placedTasks";
 import { PLACED_REQUEST_WAIT_MS } from "./toolWait";
 import type { WorkingCopies } from "./workingCopies";
@@ -758,6 +759,37 @@ export class SessionHost {
           answer = { ok: true };
           break;
         }
+        case "inf:working-copy:move-out": {
+          // Moving to another computer (docs/helper.md, "Moving a started
+          // task"): only between turns, with nothing it started still
+          // running, and the conversation let go, never closed, so the task
+          // can run here again if the move does not finish.
+          if (held.opening || held.state.running || held.state.continuing)
+            throw new Error("This task's conversation is in a turn here.");
+          if (this.options.tasks.jobs(held.task).some((job) => !job.exit && !job.stoppedAt))
+            throw new Error("A command this task started is still running here.");
+          await this.releaseConversation(held);
+          const [out] = request as WorkOrderRequest<"inf:working-copy:move-out">;
+          answer = await copies.moveOut(held.task, this.movedFolders(held.task), out?.keep);
+          break;
+        }
+        case "inf:working-copy:move-in": {
+          const [move] = request as WorkOrderRequest<"inf:working-copy:move-in">;
+          if (held.state.closed)
+            throw new Error(
+              "This task's earlier conversation here was closed and is not removed yet, so it takes no moved work.",
+            );
+          const sources = this.options.tasks.folders(held.task).sourceCards;
+          answer = await copies.moveIn(
+            move,
+            {
+              ...(move.bundle ? { bundle: join(sources, move.bundle.name) } : {}),
+              ...(move.pack ? { pack: join(sources, move.pack.name) } : {}),
+            },
+            this.movedFolders(held.task),
+          );
+          break;
+        }
         default:
           throw new Error(`${channel} is not a request this computer answers.`);
       }
@@ -1008,6 +1040,18 @@ export class SessionHost {
   }
 
   /** Lets an idle conversation go so a later open can bind the tools this spec names. */
+  /** The task's own folders a move carries, here (`workMove.ts`). */
+  private movedFolders(task: string): MovedFolders {
+    const folders = this.options.tasks.ensure(task);
+    return {
+      evidence: folders.evidence,
+      "card-bodies": folders.cardBodies,
+      "source-cards": folders.sourceCards,
+      sessions: folders.sessions,
+      handover: join(folders.temp, HANDOVER_IN_DIR_NAME),
+    };
+  }
+
   private async releaseConversation(held: Held): Promise<void> {
     held.unsubscribe?.();
     held.unsubscribe = null;

@@ -912,7 +912,7 @@ The first mate sets it only from the captain's words, never by judging, and only
   The task then starts where it now runs, routed among that place's own subscriptions, and is never routed or held for the computer it left.
   Whatever Automatic chose, a computer or this Mac, still counts as Automatic, so its own choice never starts it over.
   From that check to the claim nothing waits, and once claimed the task has started, so a move is refused.
-  A started task finishes where it started.
+  A started task stays where it started unless the captain moves it (below, "Moving a started task").
   Start again and a stronger-model retry carry the ask to the new task, as they carry `autonomy_ask` (`workShape`).
 - **Refusals, in plain words.**
   `CrewSupervisor.runsOnRefusal` refuses a started task ("has started, so it finishes where it started, on Mac mini."), the personal workspace, a project kept on this Mac only, a review, and a device id that is not a computer that runs work on the list; `update_task` then changes nothing, and `spawn_crewmate` starts nothing ("Nothing was spawned.").
@@ -929,6 +929,50 @@ The first mate sets it only from the captain's words, never by judging, and only
 - **Where the captain sees it.**
   The task record's Details has a read-only Runs on row once a computer that runs work is on the list (for a task with no project, only once it or its parent has its own) (`TaskDetail.runsOn`, `CrewSupervisor.runsOnFact`): where it started, or where it would start now, then its source, "This task", "Parent task" or "Project setting" (design skill `components/cards/TaskRecord`).
   A card from the task names where it runs as before ("Fix the footer · on Mac mini").
+
+## Moving a started task
+
+The captain can move a started task to another computer that runs work, or to this computer, and it keeps its key, branch, files and record (INF-1713's plan, which the captain narrowed to moving only).
+It moves only when the captain asks: the record's Move to a computer, the `task.move-computer` command that presses it, or the first mate's `move_task` on the captain's words.
+Nothing moves work on its own, to balance load or to fail over.
+
+- **What may move.**
+  Started work with a working copy of its own moves; the personal workspace, work in a project's own folder and an independent review do not (`CrewSupervisor.moveRefusal`).
+  A computer that runs work must list the `task-move` contract change to move a task to or from it (`src/shared/contract-changes/task-move.md`); an older one is named with "Update it first."
+  A destination must be in reach and must serve the task's own model through a signed-in account of its own (`destinationRefusal`); the task never changes model on the way.
+  It must also be able to run the task, read as a start reads it: the system and chip the project or task names, the programs it needs, and, for a project that lives on a forge, its own sign-in there, read from the sign-ins it lists rather than from whether it can reach the project, which a public project answers without one (`AutomaticPlacement.moveRefusal`); a move back to this computer reads this computer's own list the same way, so a sign-in that needs renewing counts as none, and a list that cannot be read, or a sign-in in unknown health because its file is unreadable or its health is not read yet, is named as unread.
+  A refusal says which, such as "Mac mini is not signed in to github.com, where meter lives."
+  A project kept on this computer only, or cloned from a folder of this computer, moves too: it has no address the destination can clone, so its commits cross in a bundle of the whole branch into an empty project there (`local`, `WorkingCopies.localProject`), which then starts on this computer's branch at the commit the task's branch left it at (`base`), so the copy there is read and removed as a clone's is.
+  The record offers Move to a computer only while the task may move and another computer is on the list (`TaskView.movable`), and its picker lists every other computer, with why one cannot take the task now (`inf:task:move-options`).
+- **A safe pause.**
+  The ask is kept on the record as `WorkShape.computer_move` (`ComputerMove`) in phase `waiting`, so a quit finds it.
+  The task moves once its crewmate's turn ends, the commands it started finish, its merge is settled, its independent review finishes, its browser is closed and both computers are in reach (`pauseBlockers`); no turn is cut short, and no live page, or one in the captain's hands, moves or closes.
+  No new turn starts meanwhile: the lane is held (`laneHeld`), and steers and job results wait on it.
+  The record's footer says what the move still waits for (`TaskView.computerMove`, `computerMoveLine`), and Cancel move, or `move_task` with `cancel`, ends the ask until the work starts crossing.
+- **The work crossing** (`CrewSupervisor.runComputerMove`, phase `moving`).
+  The crewmate's conversation is let go, never closed, so a move that does not finish reopens it where it was.
+  The work is packed where the task runs (`src/core/workspace/workMove.ts`): the branch's commits cross as a git bundle, and one pack carries what is staged and what is not, as two binary patches against the commit the checkout is at, the files git does not track and does not ignore, the ignored files the move names to keep, and the task's evidence, card bodies, source cards, sessions and handed files.
+  A file git ignores stays behind and goes with the old copy unless the ask names it in `keep` (`move_task`), as paths inside the working copy; a kept path that is not there, or that leaves the working copy or passes through a link, refuses the pack.
+  No commit is made to carry them, a checkout off its branch or in a merge, rebase, cherry-pick, revert or bisect is refused, as is one with changes inside a submodule, which git's trees cannot check, or a submodule at a commit none of its remotes holds, or submodules git cannot list, and a link is kept as a link.
+  A clean submodule is checked out again on the receiving side at the commit that left, or the unpack fails there.
+  Unpacking writes nothing through a link already on the receiving side, the working copy and the task's folders themselves included, and reads and writes each file a piece at a time.
+  A computer that runs work packs on `inf:working-copy:move-out`, and its pack comes here through `inf:working-copy:read` with the ref `move`; a computer that takes the task gets the bundle and the pack as source files and makes its working copy on `inf:working-copy:move-in` (`PlacedCopies.moveOut`, `moveIn`).
+  The side that unpacks checks each part's digest and then the restored index and working tree against the trees the packing side read, so what arrives is what left.
+  A pack that cannot be made changes nothing: the move waits again and says why.
+- **One commit.**
+  Once the destination holds the work, `TaskService.commitComputerMove` writes the record once: the computer it runs on, its working copy there, and phase `retiring`, with a feed line ("the captain moved it from this computer to Mac mini").
+  Before that, what this computer kept of a conversation on the computer it leaves is set aside (`PlacedSessions.forgetExecution`), so the new one there starts fresh.
+  The commit also writes the conversation it left (`restartFrom`), so whichever path resumes the task first - the move itself, the next tick or a quit's reopen - opens a new conversation on the destination through the same session factory, on the same model, told it moved, with its brief and where its earlier conversation is (`conversationRestartWake`, `changed: "computer"`), and never the old one.
+  The lane stays held until the destination installed its dependencies, as a first turn's are (`prepareFirstTurn`): the commit marks the move `preparing`, the install's end clears it, and a quit before then installs again at the next launch; then what waited on it goes next.
+  The work crossing and that install run beside the shared tick, never inside it, so a large pack or a long install holds nothing else.
+  The task keeps its cards, threads, policies and limits, and no consent carries over that it did not already have.
+- **The old copy goes** (phase `retiring`).
+  Once the new conversation has opened, the working copy left on the computer it moved off is removed: here with its worktree, on a computer that runs work by closing its conversation there, removing its copy and then its task folder (`PlacedCopies.retireMoved`), so a later move back starts from nothing it left.
+  An unreachable computer is tried again on each tick, and the record's footer says so; the leftover sweep never touches a task while a move names that computer.
+  Once removed, the move ends with a timeline line and no card.
+- **A move that does not finish.**
+  A failure before the commit, or a quit while the work crossed, ends the move: the task stays where it was with its work and conversation, and its timeline and the feed say why ("its move to Mac mini did not finish: …").
+  What the move made on the destination is removed (phase `undoing`), tried again while that computer is out of reach, and the lane's held work goes on where the task runs.
 
 ## Its own sign-ins
 

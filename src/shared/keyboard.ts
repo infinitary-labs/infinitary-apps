@@ -358,6 +358,17 @@ export const KEYBOARD_COMMANDS = {
     keys: [],
     searchWords: ["handback", "take", "return", "browser"],
   },
+  // The shown task record's Move to a computer (docs/helper.md, "Moving a
+  // started task"): opens its picker, which saves nothing until Move.
+  "task.move-computer": {
+    label: "Move the task to another computer",
+    scope: "window",
+    runs: "shell",
+    repeat: false,
+    risk: "navigate",
+    keys: [],
+    searchWords: ["computer", "mac", "machine", "move", "device", "record"],
+  },
   "cards.show-browser": {
     label: "Show Browser",
     scope: "window",

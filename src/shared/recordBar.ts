@@ -1,5 +1,5 @@
 import { type TaskStatusInput, taskStatusOf } from "./taskPresentation";
-import { isUnstartedWork, type TaskView } from "./tasks";
+import { type ComputerMoveView, isUnstartedWork, type TaskView } from "./tasks";
 
 /**
  * The task record's action bar (FI3-565 direction A, piece 4; the design
@@ -98,4 +98,40 @@ export function recordBarOf(task: RecordBarInput): RecordBar | null {
     next,
     blocked: next === "starting" || ((next === "start" || next === "try-again") && blocked),
   };
+}
+
+/**
+ * The record's Move to a computer (docs/helper.md, "Moving a started task"):
+ * the button that opens its picker, the picker's own buttons, and the line
+ * that says where a move stands while one does.
+ */
+export const MOVE_LABELS = {
+  open: "Move to a computer",
+  to: "Move to",
+  move: "Move",
+  cancel: "Cancel",
+  cancelMove: "Cancel move",
+} as const;
+
+/** Why a computer out of reach cannot take or give up a task now. */
+export function moveOutOfReach(computer: string): string {
+  return `${computer} is out of reach.`;
+}
+
+/** Where a move stands, in one line: what it waits for, or what it is doing now. */
+export function computerMoveLine(move: ComputerMoveView): string {
+  const line =
+    move.state === "retiring"
+      ? `Moved to ${move.to}. Removing the working copy it left on ${move.from}.`
+      : move.state === "moving"
+        ? `Moving to ${move.to} now.`
+        : move.waitingFor.length
+          ? `Moves to ${move.to} once ${andList(move.waitingFor)}.`
+          : `Moving to ${move.to}.`;
+  return move.problem ? `${line} Last try: ${move.problem}.` : line;
+}
+
+function andList(items: readonly string[]): string {
+  if (items.length <= 1) return items.join("");
+  return `${items.slice(0, -1).join(", ")} and ${items.at(-1)}`;
 }

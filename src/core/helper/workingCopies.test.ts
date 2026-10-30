@@ -11,9 +11,10 @@ import { join } from "node:path";
 import { PLACED_COPY_CHUNK_BYTES } from "@shared/work";
 import { describe, expect, it, vi } from "vitest";
 import { scratchDir } from "../../../tests/helpers/scratchDirs";
-import { takeBundle } from "../workspace/bundles";
+import { bundleRef, takeBundle } from "../workspace/bundles";
 import * as gitModule from "../workspace/git";
 import { git } from "../workspace/git";
+import { packWork } from "../workspace/workMove";
 import { keptRefFor, keptRefsFor, WorkspaceService } from "../workspace/workspaceService";
 import { WorkingCopies } from "./workingCopies";
 
@@ -491,6 +492,81 @@ describe("the working copies a computer that runs work keeps", () => {
       await copies.poolSettled();
       spy.mockRestore();
     }
+  });
+
+  it("takes a moved task whose project is kept on the home only, from a bundle of its whole branch, and lets it go after", async () => {
+    // Review INF-1772 R8, the captain: "we should try to support all projects, except for when
+    // the project is on a forge that isn't signed in on the destination machine".
+    const root = scratchDir("infinitary-copies-local-");
+    const home = join(root, "meter");
+    mkdirSync(home);
+    await git(home, ["init", "--quiet", "--initial-branch=main"]);
+    writeFileSync(join(home, "meter.ts"), "export const unit = 'kWh';\n");
+    const start = await commitAll(home, "chore: start the meter");
+    const cwd = join(root, "task");
+    await git(home, ["worktree", "add", "--quiet", "-b", "fm/task-t-meter", cwd]);
+    writeFileSync(join(cwd, "meter.ts"), "export const unit = 'Wh';\n");
+    const head = await commitAll(cwd, "fix: meter unit");
+    writeFileSync(join(cwd, "meter.ts"), "export const unit = 'mWh';\n");
+    writeFileSync(join(cwd, "notes.md"), "untracked notes\n");
+    const packFile = join(root, "move.pack");
+    const { pack } = await packWork(cwd, "fm/task-t-meter", {}, packFile);
+    const { copies } = computer();
+
+    // This computer holds none of its commits, so it asks for all of them.
+    const project = { local: "repo-meter", base: { branch: "main", sha: start } };
+    expect(
+      await copies.moveIn({ orderId: "move-in:t-meter:1", task: "t-meter", project, head }, {}, {}),
+    ).toEqual({
+      outcome: "need",
+      have: [],
+    });
+    const bundleFile = join(root, "move.bundle");
+    const made = await bundleRef(home, "refs/heads/fm/task-t-meter", [], bundleFile);
+    if (!made.bundle) throw new Error("The home made no bundle.");
+    const ready = await copies.moveIn(
+      {
+        orderId: "move-in:t-meter:2",
+        task: "t-meter",
+        project,
+        head,
+        bundle: { name: "move.bundle", ...made.bundle },
+        pack: { name: "move.pack", ...pack },
+      },
+      { bundle: bundleFile, pack: packFile },
+      {},
+    );
+    expect(ready).toMatchObject({ outcome: "ready", branch: "fm/task-t-meter" });
+    const dir = ready.outcome === "ready" ? ready.dir : "";
+    expect(await git(dir, ["log", "--format=%s"])).toBe("fix: meter unit\nchore: start the meter");
+    expect(readFileSync(join(dir, "meter.ts"), "utf8")).toBe("export const unit = 'mWh';\n");
+    expect(readFileSync(join(dir, "notes.md"), "utf8")).toBe("untracked notes\n");
+
+    // Review INF-1772 round 2 R8: once the task moves on again, its copy here
+    // is read against the home's branch and goes, as a clone's copy does.
+    expect(await copies.status("t-meter")).toEqual({
+      present: true,
+      dirty: true,
+      unlandedCommits: 1,
+      origin: null,
+    });
+    const { kept } = await copies.keep("t-meter");
+    expect(kept).toMatchObject({ dirty: true, unlandedCommits: 1 });
+    await copies.retire("t-meter", kept?.sha ?? null);
+    expect(copies.has("t-meter")).toBe(false);
+    expect(existsSync(dir)).toBe(false);
+    await expect(
+      copies.moveIn(
+        {
+          orderId: "move-in:t-other:1",
+          task: "t-other",
+          project: { local: "../meter", base: { branch: "main", sha: start } },
+          head,
+        },
+        {},
+        {},
+      ),
+    ).rejects.toThrow("No project is named ../meter.");
   });
 
   it("gives a task with no project a working copy of the computer's own local workspace", async () => {

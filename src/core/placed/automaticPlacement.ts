@@ -1,6 +1,8 @@
 import { randomUUID } from "node:crypto";
-import { HERE } from "@shared/deviceNames";
+import { tmpdir } from "node:os";
+import { chipWords, HERE, SYSTEM_WORDS } from "@shared/deviceNames";
 import { type ComputerReach, type DeviceView, deviceLabel, deviceRunsWork } from "@shared/devices";
+import { forgeOf, type KnownForgeHost } from "@shared/forge";
 import { speaksSince } from "@shared/ipc";
 import {
   PLACEMENT_FACT_MAX_AGE_MS,
@@ -16,6 +18,7 @@ import {
 import type { RepoView } from "@shared/repos";
 import { RESOURCE_READ_TIMEOUT_MS } from "@shared/resources";
 import type { WorkShape } from "@shared/routingPolicy";
+import type { ComputerForges, ComputerSignIns } from "@shared/signIns";
 import { narrowServedThere } from "../models/piAccountLists";
 import { thisDeviceSystem } from "../platform";
 import type { QuotaCatalogModel } from "../quota/auth";
@@ -40,6 +43,8 @@ import type { WorkDevices } from "./workDevices";
 
 type Facts = {
   facts: PlacementFacts;
+  /** What a computer that runs work said it is signed in to; absent for this computer. */
+  signIns?: ComputerSignIns | null;
   pool?: ReturnType<typeof actualComputerPool>;
   started: number;
   generation: number;
@@ -101,6 +106,14 @@ export class AutomaticPlacement {
       /** Evidence that the conversation is running, including one reconciled after restart. */
       running: (task: TaskRecord) => boolean;
       localFacts?: typeof readPlacementFacts;
+      /**
+       * This computer's own sign-ins where projects live, with each one's
+       * health, as it lists them for a home (`ForgeSignIns.view`): the same
+       * facts a computer that runs work answers with.
+       */
+      forgeSignIns?: () => ComputerForges["signIns"];
+      /** The forge hosts on the person's own servers this computer knows. */
+      knownForgeHosts?: () => readonly KnownForgeHost[];
       /** This computer's system and chip; absent, the running process's. */
       home?: () => ReturnType<typeof thisDeviceSystem>;
       /** Re-read inherited choices after asynchronous compatibility reads. */
@@ -145,7 +158,7 @@ export class AutomaticPlacement {
       const id = existing.snapshot.computerId;
       const facts = await this.facts(
         id,
-        repo,
+        repo.path,
         existing.snapshot.requirements.tools ?? [],
         existing.snapshot.origin,
       );
@@ -214,7 +227,9 @@ export class AutomaticPlacement {
     const origin = repo.origin ? withoutSignIn(repo.origin) : undefined;
     const facts = await Promise.all(
       computers.map((computer) =>
-        computer.inReach ? this.facts(computer.computerId, repo, requirements.tools, origin) : null,
+        computer.inReach
+          ? this.facts(computer.computerId, repo.path, requirements.tools, origin)
+          : null,
       ),
     );
     await resourceRound;
@@ -493,13 +508,13 @@ export class AutomaticPlacement {
 
   private facts(
     id: string | null,
-    repo: RepoView,
+    cwd: string,
     tools: string[],
     origin?: string,
   ): Promise<Facts | null> {
     if (id && !speaksSince(this.options.work.version(id)?.contract ?? "", PLACEMENT_FACTS_SINCE))
       return Promise.resolve(null);
-    const key = `${id ?? "home"}\n${JSON.stringify({ origin, tools, cwd: id === null ? repo.path : undefined })}`;
+    const key = `${id ?? "home"}\n${JSON.stringify({ origin, tools, cwd: id === null ? cwd : undefined })}`;
     const previous = this.reads.get(key);
     if (previous && this.now() - previous.started < 2_000) return previous.result;
     const started = this.now();
@@ -510,6 +525,7 @@ export class AutomaticPlacement {
           const answer = placementFactsAnswerSchema.parse(raw);
           return {
             facts: answer,
+            signIns: answer.signIns,
             pool: actualComputerPool(
               id,
               this.options.protectedIds
@@ -522,7 +538,7 @@ export class AutomaticPlacement {
             generation,
           };
         })
-      : (this.options.localFacts ?? readPlacementFacts)(request, repo.path).then((facts) => ({
+      : (this.options.localFacts ?? readPlacementFacts)(request, cwd).then((facts) => ({
           facts,
           started,
           generation,
@@ -546,6 +562,59 @@ export class AutomaticPlacement {
         if (this.reads.get(key) === held) held.started = started;
       });
     return result;
+  }
+
+  /**
+   * Why a started task cannot run on `computerId` (null is this Mac) once
+   * moved there, read from the facts a start reads (docs/helper.md, "Moving
+   * a started task"): the system and chip the project and task allow, the
+   * programs they require, and, for a project that lives on a forge, that
+   * computer's own sign-in there. A fact that cannot be read refuses too.
+   * Undefined when nothing stops it.
+   */
+  async moveRefusal(
+    record: Pick<TaskRecord, "shape">,
+    repo: RepoView | undefined,
+    computerId: string | null,
+    name: string,
+  ): Promise<string | undefined> {
+    const requirements = resolvePlacementRequirements({
+      ...(repo?.placementRequirements ? { project: repo.placementRequirements } : {}),
+      ...(record.shape?.placement_requirements
+        ? { task: record.shape.placement_requirements }
+        : {}),
+      home: this.options.home?.() ?? thisDeviceSystem(),
+      workingCopy: true,
+    });
+    const origin = repo?.origin ? withoutSignIn(repo.origin) : undefined;
+    const read = await this.facts(computerId, repo?.path ?? tmpdir(), requirements.tools, origin);
+    if (!read) return `Infinitary could not read what ${name} runs.`;
+    const { system, chip, tools } = read.facts;
+    if (!system || !requirements.systems.includes(system))
+      return `${name} runs ${system ? SYSTEM_WORDS[system] : "a system Infinitary cannot read"}, and this task runs on ${requirements.systems.map((each) => SYSTEM_WORDS[each]).join(" or ")}.`;
+    if (!chip || !requirements.chips.includes(chip))
+      return `${name} has ${chip ? chipWords(chip, system) : "a chip Infinitary cannot read"}, and this task runs on ${requirements.chips.map((each) => chipWords(each, system)).join(" or ")}.`;
+    const missing = requirements.tools.filter((tool) => tools[tool] !== "available");
+    if (missing.length)
+      return `${name} does not have ${missing.join(", ")}, which this task needs.`;
+    // Only a forge's sign-in refuses (INF-1772 R8, the captain: "except for when the project
+    // is on a forge that isn't signed in on the destination machine"), read from that
+    // computer's own sign-ins, never from whether the project answered; a project in a
+    // plain folder or kept here only crosses in a bundle.
+    const where = origin ? forgeOf(origin, this.options.knownForgeHosts?.() ?? []) : undefined;
+    if (!where?.host || where.kind === "git" || where.kind === "none") return undefined;
+    const host = where.host;
+    // One reading for both destinations: each computer's own list of sign-ins
+    // and their health, where a lapsed one is no sign-in, and no list or a
+    // sign-in in unknown health (its file unreadable, or not read yet) is unread.
+    const signIns =
+      computerId === null ? this.options.forgeSignIns?.() : read.signIns?.forges?.signIns;
+    const signIn = signIns?.find((each) => each.host === host);
+    if (!signIns || signIn?.state === "unknown")
+      return `Infinitary could not read whether ${name} is signed in to ${host}.`;
+    if (!signIn || signIn.state === "needs_reauth")
+      return `${name} is not signed in to ${host}, where ${repo?.name ?? "its project"} lives.`;
+    return undefined;
   }
 
   private now(): number {

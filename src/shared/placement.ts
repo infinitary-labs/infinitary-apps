@@ -414,3 +414,35 @@ export function placementCandidateLines(snapshot: PlacementSnapshot): string[] {
       : []),
   ];
 }
+
+/**
+ * A started task's move to another computer, kept on its record so a
+ * restart finds it (docs/helper.md, "Moving a started task"). `from` and
+ * `to` are a computer that runs work by its device id, or `this-mac`.
+ * `waiting`: asked for, until a safe pause. `moving`: its work is crossing;
+ * the record still names `from`. `retiring`: the record names `to`, and the
+ * working copy left on `from` (in `fromDir` when that is this Mac) is
+ * being removed. `undoing`: a move that did not finish, whose copy made on
+ * `to` is being removed; the task stays on `from`. `restartFrom`: written
+ * with the commit, the conversation the task left on `from`; until a new
+ * conversation opens on `to`, told of it, nothing resumes that one there.
+ * `preparing`: written with the commit too, and cleared once the new
+ * conversation's dependencies installed on `to`; until then nothing on its
+ * lane starts a turn, and a restart installs them again first.
+ * `keep`: files git ignores in the working copy that must move too, by
+ * their paths in it, as the move's ask named them; every other ignored file
+ * stays and goes with the old copy.
+ */
+export const computerMoveSchema = z.object({
+  from: z.string().min(1),
+  to: z.string().min(1),
+  by: z.enum(["captain", "firstmate"]),
+  at: z.number(),
+  phase: z.enum(["waiting", "moving", "retiring", "undoing"]),
+  fromDir: z.string().optional(),
+  restartFrom: z.string().optional(),
+  preparing: z.literal(true).optional(),
+  keep: z.array(z.string().min(1).max(4096)).max(256).optional(),
+  problem: z.string().optional(),
+});
+export type ComputerMove = z.infer<typeof computerMoveSchema>;

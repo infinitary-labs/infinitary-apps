@@ -142,6 +142,8 @@ const api: FirstmateApi = {
         : review
           ? invoke("inf:task:run", taskId, op, review)
           : invoke("inf:task:run", taskId, op),
+    moveOptions: (taskId) => invoke("inf:task:move-options", taskId),
+    move: (taskId, to) => invoke("inf:task:move", taskId, to),
     steer: (taskId, text) => invoke("inf:task:steer", taskId, text),
     interrupt: (taskId) => invoke("inf:task:interrupt", taskId),
   },

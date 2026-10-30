@@ -1,7 +1,15 @@
 import { randomUUID } from "node:crypto";
 import { existsSync, mkdirSync, writeFileSync } from "node:fs";
 import { rm } from "node:fs/promises";
-import { dirname, isAbsolute, join, resolve as resolvePath } from "node:path";
+import {
+  basename,
+  dirname,
+  isAbsolute,
+  join,
+  normalize,
+  resolve as resolvePath,
+  sep,
+} from "node:path";
 import { type AttachmentRef, attachmentWords, fileSizeWords } from "@shared/attachments";
 import { type CutOff, type CutOffClass, isAuthFailureMessage } from "@shared/authFailure";
 import { cardPictureFiles } from "@shared/cardPictures";
@@ -120,6 +128,7 @@ import { offeringKey, parseOfferingKey, type Slot } from "@shared/modelSlots";
 import {
   AUTOMATIC_COMPUTER,
   AUTOMATIC_WORD,
+  type ComputerMove,
   placementCandidateLines,
   placementReason,
   UNCOMPARED_WAIT,
@@ -140,6 +149,7 @@ import {
 } from "@shared/providers";
 import { formatResetText } from "@shared/quota";
 import { formatDurationShort } from "@shared/quotaSignals";
+import { moveOutOfReach } from "@shared/recordBar";
 import {
   DROP_REVIEW_STALE,
   dropMissingRefusal,
@@ -197,7 +207,7 @@ import {
   taskPolicyEditsSchema,
 } from "@shared/taskPolicies";
 import { queueMissingRefusal, queueStartedRefusal } from "@shared/taskQueue";
-import type { TaskPlace } from "@shared/tasks";
+import type { MoveDestination, MoveOptions, TaskPlace, TaskView } from "@shared/tasks";
 import {
   CARE_WORDS,
   CHECK_WORDS,
@@ -362,6 +372,7 @@ import { ForgeAuthRequiredError } from "../workspace/forgeAuth";
 import { gitFailure } from "../workspace/git";
 import { projectPageFile } from "../workspace/projectPage";
 import type { RepoRegistry } from "../workspace/repoRegistry";
+import { type MovedFolders, packWork, unpackWork } from "../workspace/workMove";
 import {
   type DependencyInstall,
   type DispatchBase,
@@ -1517,6 +1528,10 @@ export class CrewSupervisor {
   private readonly starting = new Set<string>();
   /** Tasks moving to another provider now (INF-849). */
   private readonly moving = new Set<string>();
+  /** Tasks whose move to another computer is being carried out now (`runComputerMove`). */
+  private readonly computerMoving = new Set<string>();
+  /** Tasks whose moved-off or unfinished copy is being removed now (`retireMovedSource`, `undoMovedDestination`). */
+  private readonly clearingMoves = new Set<string>();
   /** The card stack: the open cards and every write to them. */
   private readonly cards: CardService;
   /** How each captain's message ends (INF-1610, docs/task-capture.md "How a message ends"). */
@@ -1887,6 +1902,18 @@ export class CrewSupervisor {
    */
   private laneHeld(taskId: string): boolean {
     const record = this.options.tasks.get(taskId);
+    // A move to another computer starts no new turn until it has moved, its
+    // new conversation opened there and its dependencies installed
+    // (`restartFrom`, `preparing`, `reopenMovedTask`).
+    const move = record?.shape?.computer_move;
+    if (
+      move?.phase === "waiting" ||
+      move?.phase === "moving" ||
+      move?.restartFrom !== undefined ||
+      move?.preparing === true ||
+      this.computerMoving.has(taskId)
+    )
+      return true;
     const accountId = this.tasks.get(taskId)?.accountId ?? record?.accountId;
     return (
       this.ladder.cutOffHolds({
@@ -7474,6 +7501,9 @@ export class CrewSupervisor {
       // A move asked for mid-turn runs at this boundary, and delivers what
       // waits once the task reopens on its new provider (INF-849).
       void this.runMove(task.id, move);
+    } else if (this.options.tasks.get(task.id)?.shape?.computer_move?.phase === "waiting") {
+      // The safe pause a move to another computer waited for.
+      void this.runComputerMove(task.id);
     } else {
       this.deliverPendingToTask(task, { announce: true });
     }
@@ -8283,11 +8313,26 @@ export class CrewSupervisor {
    * Reopen the session of an idle task left by a previous process, or of
    * one moving to another provider (`move`, INF-849): it opens on the
    * move's model and account in the same working copy, resuming the same
-   * conversation when the new backend can reopen it.
+   * conversation when the new backend can reopen it. With `restart`, a new
+   * conversation opens instead, told why and where the earlier one is: a
+   * task that moved to another computer (docs/helper.md, "Moving a started
+   * task").
    */
-  private async resumeTask(taskId: string, move?: MoveTarget): Promise<TaskRuntime> {
+  private async resumeTask(
+    taskId: string,
+    move?: MoveTarget,
+    restart?: CrewmateRestart,
+  ): Promise<TaskRuntime> {
     const record = this.options.tasks.get(taskId);
     if (!record) throw new Error(`Unknown task "${taskId}".`);
+    // A committed move to another computer opens a new conversation there,
+    // whichever path resumes it first (docs/helper.md, "Moving a started task").
+    const movedFrom = record.shape?.computer_move?.restartFrom;
+    const fresh: CrewmateRestart | undefined =
+      restart ??
+      (!move && movedFrom !== undefined
+        ? { from: movedFrom, changed: "computer", to: this.computerName(this.computerOf(record)) }
+        : undefined);
     if (!record.sessionFile) {
       throw new Error(`Task ${taskId} has no session to resume. Spawn a follow-up instead.`);
     }
@@ -8383,7 +8428,7 @@ export class CrewSupervisor {
           taskId: record.id,
           machineId: machine,
           cwd,
-          resumeToken: record.sessionFile,
+          ...(fresh ? {} : { resumeToken: record.sessionFile }),
           ...(move
             ? { model: move.model, thinkingLevel: move.thinkingLevel }
             : this.reopenedOn(record)),
@@ -8401,7 +8446,17 @@ export class CrewSupervisor {
     task.unsubscribe = this.follow(task, session);
     // A moved task's record names the conversation it opened now, so a quit
     // before its first turn ends reopens this one.
-    this.recordCrewSession(task, session, task.conversationBegan ?? (move ? "move" : "resume"));
+    this.recordCrewSession(
+      task,
+      session,
+      task.conversationBegan ?? (move || fresh ? "move" : "resume"),
+    );
+    if (fresh) this.recordRestart(task, machine, fresh);
+    const opened = this.options.tasks.get(record.id)?.shape?.computer_move;
+    if (opened?.restartFrom !== undefined) {
+      const { restartFrom: _told, ...rest } = opened;
+      this.options.tasks.setComputerMove(record.id, rest);
+    }
     livePersonal?.beginLiveTask(record.id);
     // A conversation on another computer may be in a turn this Mac follows
     // from here (`continuation_started`), which is no idle boundary.
@@ -8635,6 +8690,603 @@ export class CrewSupervisor {
       });
     } finally {
       this.moving.delete(taskId);
+      this.broadcastCrewCounts();
+    }
+  }
+
+  /**
+   * Where a started task could move now (docs/helper.md, "Moving a started
+   * task"): the computer it runs on, and each other computer with why it
+   * cannot take the task, when it cannot. A refusal is text.
+   */
+  async moveOptions(taskId: string): Promise<MoveOptions> {
+    const record = this.options.tasks.get(taskId);
+    if (!record) return { ok: false, text: `Unknown task "${taskId}".` };
+    const refused = this.moveRefusal(record);
+    if (refused) return { ok: false, text: refused };
+    const from = this.computerOf(record);
+    const ids = [RUNS_ON_THIS_MAC, ...(this.options.machines?.computers() ?? [])].filter(
+      (id) => id !== from,
+    );
+    const destinations: MoveDestination[] = [];
+    for (const id of ids) {
+      const unavailable = await this.destinationRefusal(record, id);
+      destinations.push({
+        id,
+        name: this.computerName(id),
+        ...(unavailable ? { unavailable } : {}),
+      });
+    }
+    return { ok: true, from: this.computerName(from), destinations };
+  }
+
+  /**
+   * Move a started task to another computer (docs/helper.md, "Moving a
+   * started task"): the record's Move to a computer, or move_task. It keeps
+   * its key, branch, working copy, files and record. It moves at a safe
+   * pause - its crewmate's turn over and nothing it started still running -
+   * and no new turn starts meanwhile. A refusal is text and changes nothing.
+   */
+  async requestComputerMove(
+    taskId: string,
+    ask: string,
+    by: "captain" | "firstmate",
+    keep: readonly string[] = [],
+  ): Promise<{ ok: boolean; text: string }> {
+    const record = this.options.tasks.get(taskId) ?? this.options.tasks.resolve(taskId);
+    if (!record) return { ok: false, text: `Unknown task "${taskId}".` };
+    const handle = `${record.key || record.id} "${record.title}"`;
+    const refused = this.moveRefusal(record);
+    if (refused) return { ok: false, text: refused };
+    let to: string;
+    try {
+      to = this.resolveRunsOn(ask);
+    } catch (caught) {
+      return { ok: false, text: caught instanceof Error ? caught.message : String(caught) };
+    }
+    if (to === AUTOMATIC_COMPUTER)
+      return { ok: false, text: `Name the computer ${handle} moves to.` };
+    const from = this.computerOf(record);
+    if (to === from)
+      return { ok: false, text: `${handle} already runs on ${this.computerName(to)}.` };
+    const kept = [...new Set(keep.map((path) => path.trim()).filter(Boolean))];
+    const outside = kept.find(
+      (path) => isAbsolute(path) || path === ".." || normalize(path).startsWith(`..${sep}`),
+    );
+    if (outside)
+      return {
+        ok: false,
+        text: `${handle} cannot move: ${outside} is outside its working copy; keep names files in it.`,
+      };
+    const unavailable = await this.destinationRefusal(record, to);
+    if (unavailable) return { ok: false, text: `${handle} cannot move: ${unavailable}` };
+    // The record may have moved on while the destination was read.
+    const now = this.options.tasks.get(record.id);
+    const again = now ? this.moveRefusal(now) : `Unknown task "${taskId}".`;
+    if (again) return { ok: false, text: again };
+    const who = by === "captain" ? "the captain" : "the first mate";
+    const toName = this.computerName(to);
+    this.options.tasks.setComputerMove(
+      record.id,
+      { from, to, by, at: this.now(), phase: "waiting", ...(kept.length ? { keep: kept } : {}) },
+      {
+        text: `${who} asked to move it from ${this.computerName(from)} to ${toName}`,
+        actor: by,
+      },
+    );
+    this.broadcastCrewCounts();
+    const waiting = this.pauseBlockers(record.id);
+    void this.runComputerMove(record.id);
+    return {
+      ok: true,
+      text: waiting.length
+        ? `${handle} moves to ${toName} once ${waiting.join(" and ")}. No new turn starts meanwhile.`
+        : `Moving ${handle} to ${toName}; it keeps its key, branch, working copy and files.`,
+    };
+  }
+
+  /** Cancel a move that has not started crossing; a refusal is text. */
+  cancelComputerMove(taskId: string, by: "captain" | "firstmate"): { ok: boolean; text: string } {
+    const record = this.options.tasks.get(taskId) ?? this.options.tasks.resolve(taskId);
+    if (!record) return { ok: false, text: `Unknown task "${taskId}".` };
+    const handle = `${record.key || record.id} "${record.title}"`;
+    const move = record.shape?.computer_move;
+    if (!move || move.phase === "undoing")
+      return { ok: false, text: `${handle} is not moving to another computer.` };
+    if (move.phase !== "waiting" || this.computerMoving.has(record.id))
+      return {
+        ok: false,
+        text: `${handle} is already moving to ${this.computerName(move.to)}, so the move can no longer be cancelled.`,
+      };
+    const who = by === "captain" ? "the captain" : "the first mate";
+    this.options.tasks.setComputerMove(record.id, null, {
+      text: `${who} cancelled its move to ${this.computerName(move.to)}; it stays on ${this.computerName(move.from)}`,
+      actor: by,
+    });
+    this.broadcastCrewCounts();
+    this.deliverLane(record.id);
+    return { ok: true, text: `${handle} stays on ${this.computerName(move.from)}.` };
+  }
+
+  /**
+   * A task's move as its record shows it: whether it may move now, and the
+   * move that stands with what still stops a safe pause (`TaskView`).
+   */
+  computerMoveFacts(record: TaskRecord): Pick<TaskView, "movable" | "computerMove"> {
+    const move = record.shape?.computer_move;
+    if (move) {
+      if (move.phase === "undoing") return {};
+      return {
+        computerMove: {
+          from: this.computerName(move.from),
+          to: this.computerName(move.to),
+          state: move.phase,
+          waitingFor: move.phase === "waiting" ? this.pauseBlockers(record.id) : [],
+          ...(move.problem ? { problem: move.problem } : {}),
+        },
+      };
+    }
+    if (this.moveRefusal(record)) return {};
+    const from = this.computerOf(record);
+    const others = [RUNS_ON_THIS_MAC, ...(this.options.machines?.computers() ?? [])].filter(
+      (id) => id !== from,
+    );
+    return others.length ? { movable: true } : {};
+  }
+
+  /** A computer that runs work by its device id, or `this-mac`, as the record holds it. */
+  private computerOf(record: TaskRecord): string {
+    return record.deviceId ?? RUNS_ON_THIS_MAC;
+  }
+
+  private computerName(id: string): string {
+    return id === RUNS_ON_THIS_MAC
+      ? HERE.this
+      : (this.options.machines?.nameOf(id) ?? `the other ${COMPUTER.one}`);
+  }
+
+  /** Why a task cannot move to another computer at all, or undefined when it can. */
+  private moveRefusal(record: TaskRecord): string | undefined {
+    const handle = `${record.key || record.id} "${record.title}"`;
+    if (record.kind !== "work" || record.status !== "active" || TaskService.isClosed(record))
+      return `${handle} is ${describeStatus(record)}; only started work moves to another computer.`;
+    if (!record.sessionFile || !record.branch)
+      return `${handle} has no working copy of its own to move.`;
+    if (this.isPersonalTask(record.id))
+      return `${handle} builds in your personal workspace, which stays on ${HERE.this}.`;
+    if (record.shape?.in_place)
+      return `${handle} works in its project's own folder, which stays where it is.`;
+    if (record.shape?.kind === "review")
+      return `${handle} is a review and follows its builder's computer.`;
+    const move = record.shape?.computer_move;
+    if (move?.phase === "waiting" || move?.phase === "moving")
+      return `${handle} is already moving to ${this.computerName(move.to)}.`;
+    if (move) return `${handle} is still finishing its last move; try again once it has.`;
+    const from = this.computerOf(record);
+    const machines = this.options.machines;
+    if (from !== RUNS_ON_THIS_MAC && machines?.takesMoves?.(from) !== true)
+      // A computer out of reach has no version to read until it is back.
+      return machines?.ready(from, record.id) !== true
+        ? moveOutOfReach(this.computerName(from))
+        : `Infinitary on ${this.computerName(from)} cannot move a started task yet. Update it first.`;
+    return undefined;
+  }
+
+  /** Why `to` cannot take this task now, or undefined when it can. */
+  private async destinationRefusal(record: TaskRecord, to: string): Promise<string | undefined> {
+    const name = this.computerName(to);
+    const repo = record.repoId ? this.options.repos.get(record.repoId) : undefined;
+    // What a start reads of a computer: its system, chip and programs, and
+    // its own sign-in where the project lives; a project kept here only
+    // crosses in a bundle (docs/helper.md, "Moving a started task").
+    const eligible = () =>
+      this.options.automaticPlacement?.moveRefusal(
+        record,
+        repo,
+        to === RUNS_ON_THIS_MAC ? null : to,
+        name,
+      );
+    if (to === RUNS_ON_THIS_MAC) return eligible();
+    const machines = this.options.machines;
+    if (!machines?.computers().includes(to))
+      return "No computer that runs work has that deviceId. Look with app_state.";
+    // Reach first: a computer out of reach has no version to read until it is back.
+    if (machines.ready(to, record.id) !== true) return moveOutOfReach(name);
+    if (machines.takesMoves?.(to) !== true || !machines.moveIn)
+      return `Infinitary on ${name} cannot take a started task yet. Update it first.`;
+    const model = this.modelOfTask(record);
+    if (model) {
+      const pool = await machines.served(to).catch(() => undefined);
+      const serves = pool
+        ? (pool.modelAccounts?.has(offeringKey(model)) ?? pool.accounts.has(model.provider))
+        : false;
+      if (!serves) return `${name} has no signed-in account that serves ${this.modelName(model)}.`;
+    }
+    return eligible();
+  }
+
+  /** The model a task runs on: its newest routing choice, else its record's. */
+  private modelOfTask(record: TaskRecord): { provider: string; id: string } | undefined {
+    const routed = this.options.router?.servedChoice(record.id)?.model;
+    if (routed) return { provider: routed.provider, id: routed.id };
+    if (!record.model) return undefined;
+    const parsed = parseOfferingKey(record.model);
+    return parsed.provider ? { provider: parsed.provider, id: parsed.id } : undefined;
+  }
+
+  /** What still stops a safe pause for a task's move, in words; empty when nothing does. */
+  private pauseBlockers(taskId: string): string[] {
+    const record = this.options.tasks.get(taskId);
+    if (!record) return [];
+    const runtime = this.tasks.get(taskId);
+    const blockers: string[] = [];
+    if (
+      runtime &&
+      (runtime.state !== "idle" ||
+        runtime.settling === true ||
+        runtime.session?.isStreaming() === true)
+    )
+      blockers.push("its crewmate's current turn ends");
+    if (
+      this.options.hasRunningJobs?.(taskId) === true ||
+      this.clientJobStart(taskId) !== undefined ||
+      (runtime?.clientTasks.size ?? 0) > 0
+    )
+      blockers.push("the commands it started finish");
+    if (record.pendingSettle) blockers.push("its merge is settled");
+    // A live page, or one in the captain's hands, never moves or closes under the captain.
+    if (
+      this.options.browsers?.fact(taskId)?.state === "open" ||
+      this.options.browsers?.withCaptain(taskId) === true
+    )
+      blockers.push("its browser is closed");
+    if (
+      this.options.tasks
+        .children(taskId)
+        .some((child) => child.shape?.kind === "review" && !TaskService.isClosed(child))
+    )
+      blockers.push("its independent review finishes");
+    const move = record.shape?.computer_move;
+    for (const id of move ? [move.from, move.to] : []) {
+      if (id === RUNS_ON_THIS_MAC) continue;
+      if (this.updating.has(id) || this.options.machines?.ready(id, taskId) !== true)
+        blockers.push(`${this.computerName(id)} is in reach`);
+    }
+    return blockers;
+  }
+
+  /** The task's own folders a move carries, here (`MOVED_FOLDERS`). */
+  private localMoveFolders(taskId: string): MovedFolders {
+    const paths = this.options.paths;
+    return {
+      evidence: crewmateEvidenceDir(paths, taskId),
+      "card-bodies": crewmateCardBodiesDir(paths, taskId),
+      "source-cards": crewmateSourceCardsDir(paths, taskId),
+      sessions: crewmateSessionsDir(paths, taskId),
+      handover: join(crewmateTempDir(paths, taskId), HANDOVER_IN_DIR_NAME),
+    };
+  }
+
+  /**
+   * Every standing move to another computer goes one step further: one
+   * waiting for a safe pause moves once nothing stops it, a commit's old
+   * working copy is removed, and a copy a move that did not finish made is
+   * removed. A move a quit cut off while its work crossed did not finish.
+   * Runs on the shared tick and once at boot. The work crossing and the
+   * new conversation's install run on their own, so a large pack or a long
+   * install never holds the rest of the tick; `computerMoving` keeps a
+   * later tick from starting either twice.
+   */
+  private async driveComputerMoves(): Promise<void> {
+    for (const record of this.options.tasks.listActive()) {
+      const move = record.shape?.computer_move;
+      if (!move || this.computerMoving.has(record.id)) continue;
+      if (move.phase === "waiting") void this.runComputerMove(record.id).catch(warnMove);
+      else if (move.phase === "moving")
+        await this.endUnfinishedMove(record.id, "Infinitary stopped while its work moved");
+      else if (move.phase === "retiring" && (move.restartFrom !== undefined || move.preparing))
+        void this.reopenMovedTask(record.id).catch(warnMove);
+      else if (move.phase === "retiring") await this.retireMovedSource(record.id);
+      else await this.undoMovedDestination(record.id);
+    }
+    // A task closed meanwhile moves no further; what its move left goes with its close.
+    for (const record of this.options.tasks.list()) {
+      if (!record.shape?.computer_move || !TaskService.isClosed(record)) continue;
+      if (this.computerMoving.has(record.id)) continue;
+      this.options.tasks.setComputerMove(record.id, null);
+    }
+  }
+
+  /**
+   * The move itself, at a safe pause: the crewmate's conversation is let
+   * go, the work is packed where it runs - the branch's commits, what is
+   * staged and what is not, the files git does not track and the task's own
+   * folders - and unpacked on the destination, checked against what left.
+   * Then the record names the destination once, the old conversation's
+   * execution state is set aside, a new conversation opens there with the
+   * brief and where the earlier conversation is, and the old working copy
+   * goes. A failure before that commit leaves the task where it was.
+   */
+  private async runComputerMove(taskId: string): Promise<void> {
+    if (this.computerMoving.has(taskId) || this.disposed) return;
+    const record = this.options.tasks.get(taskId);
+    const move = record?.shape?.computer_move;
+    if (!record || move?.phase !== "waiting") return;
+    if (this.pauseBlockers(taskId).length) {
+      this.broadcastCrewCounts();
+      return;
+    }
+    this.computerMoving.add(taskId);
+    const machines = this.options.machines;
+    const attempt = String(this.now());
+    const pack = join(this.options.paths.crewmatesDir, taskId, "move", `move-${attempt}.pack`);
+    let committed = false;
+    try {
+      const runtime = this.tasks.get(taskId);
+      if (runtime) {
+        this.releaseSession(runtime);
+        this.tasks.delete(taskId);
+        await runtime.session?.closed().catch(() => {});
+      }
+      this.options.tasks.setComputerMove(taskId, { ...move, phase: "moving", problem: undefined });
+      this.broadcastCrewCounts();
+      mkdirSync(dirname(pack), { recursive: true, mode: 0o700 });
+      let out: { head: string; branch: string; repoDir: string };
+      try {
+        if (move.from === RUNS_ON_THIS_MAC) {
+          const { manifest } = await packWork(
+            record.worktreeDir || "",
+            record.branch || "",
+            this.localMoveFolders(taskId),
+            pack,
+            move.keep,
+          );
+          out = { head: manifest.head, branch: manifest.branch, repoDir: record.repoDir };
+        } else {
+          if (!machines?.moveOut) throw new Error("this Mac cannot reach that computer's work");
+          out = await machines.moveOut(move.from, taskId, attempt, pack, move.keep);
+        }
+      } catch (caught) {
+        // Nothing has changed anywhere yet: the move waits, and says why.
+        this.options.tasks.setComputerMove(taskId, {
+          ...move,
+          problem: `its work could not be packed: ${messageOf(caught)}`,
+        });
+        this.broadcastCrewCounts();
+        return;
+      }
+      const toName = this.computerName(move.to);
+      let cwd: string;
+      let branch = out.branch;
+      let accountId: string | undefined;
+      if (move.to === RUNS_ON_THIS_MAC) {
+        const model = this.modelOfTask(record);
+        accountId = model
+          ? this.options.accounts?.selectForSpawn(taskId, model.provider)
+          : undefined;
+        if (model && this.options.accounts && !accountId)
+          throw new Error(
+            `${HERE.this} has no signed-in account that serves ${this.modelName(model)}`,
+          );
+        const workspace = await this.options.workspace.createTaskWorktree(taskId, out.repoDir, {
+          headSha: out.head,
+        });
+        await unpackWork(workspace.cwd, pack, this.localMoveFolders(taskId));
+        cwd = workspace.cwd;
+        branch = workspace.branch;
+      } else {
+        if (!machines?.moveIn) throw new Error(`${toName} cannot take a started task`);
+        const copy = await machines.moveIn(move.to, taskId, attempt, {
+          repoId: record.repoId,
+          head: out.head,
+          branch: out.branch,
+          pack,
+        });
+        cwd = copy.cwd;
+      }
+      if (move.from !== RUNS_ON_THIS_MAC) machines?.forgetExecution?.(taskId);
+      const who = move.by === "captain" ? "the captain" : "the first mate";
+      this.options.tasks.commitComputerMove(taskId, {
+        deviceId: move.to === RUNS_ON_THIS_MAC ? null : move.to,
+        repoDir: out.repoDir,
+        worktreeDir: move.to === RUNS_ON_THIS_MAC ? cwd : "",
+        branch,
+        move: {
+          ...move,
+          phase: "retiring",
+          problem: undefined,
+          ...(move.from === RUNS_ON_THIS_MAC && record.worktreeDir
+            ? { fromDir: record.worktreeDir }
+            : {}),
+          restartFrom: basename(record.sessionFile ?? "").replace(/\.jsonl$/, ""),
+          preparing: true,
+        },
+        actor: move.by,
+        text: `${who} moved it from ${this.computerName(move.from)} to ${toName}; it keeps its key, branch, working copy and files`,
+      });
+      committed = true;
+      // A computer that runs work binds its own account there again.
+      this.options.tasks.setAccountId(taskId, accountId ?? null);
+      this.broadcastCrewCounts();
+      await rm(pack, { force: true });
+      // Still held: nothing on its lane starts a turn before it reopened there.
+      await this.reopenMovedTask(taskId, true);
+    } catch (caught) {
+      if (!committed) {
+        this.computerMoving.delete(taskId);
+        await this.endUnfinishedMove(taskId, messageOf(caught));
+      } else {
+        // Its record names the destination: the next tick reopens it there.
+        this.options.tasks.note(
+          taskId,
+          `it moved, but could not reopen yet: ${messageOf(caught)}`,
+          {
+            news: true,
+          },
+        );
+      }
+    } finally {
+      await rm(pack, { force: true }).catch(() => {});
+      this.computerMoving.delete(taskId);
+      this.broadcastCrewCounts();
+    }
+    if (committed) {
+      this.deliverLane(taskId);
+      await this.retireMovedSource(taskId);
+    }
+  }
+
+  /**
+   * A committed move's new conversation where the task runs now: it opens
+   * told it moved (`restartFrom`, read by `resumeTask`), and its
+   * dependencies install there before anything on its lane starts a turn,
+   * as a first turn's do (`prepareFirstTurn`). The lane stays held
+   * meanwhile, by the record's `preparing` until the install is over, so a
+   * quit mid-install installs again at the next launch before any turn;
+   * `held` says the caller already holds it, and retires the copy it left
+   * itself. A failure is kept for the next tick.
+   */
+  private async reopenMovedTask(taskId: string, held = false): Promise<void> {
+    if (!held) {
+      if (this.computerMoving.has(taskId) || this.disposed) return;
+      this.computerMoving.add(taskId);
+    }
+    try {
+      const resumed = this.tasks.get(taskId) ?? (await this.resumeTask(taskId));
+      const machine = this.machineOf(taskId);
+      const installing =
+        machine !== LOCAL_MACHINE_ID
+          ? this.options.machines?.install(machine, taskId)
+          : resumed.workspace?.cwd
+            ? this.options.workspace.installDependencies(resumed.workspace.cwd)
+            : undefined;
+      const install = await installing?.catch(
+        (caught): DependencyInstall => ({ outcome: "failed", ms: 0, error: messageOf(caught) }),
+      );
+      if (install && install.outcome !== "skipped" && this.options.tasks.get(taskId))
+        this.options.tasks.note(taskId, installText(install), {
+          news: install.outcome === "failed",
+          data: {
+            install: install.outcome,
+            ms: install.ms,
+            ...(install.outcome === "failed" ? { error: install.error } : {}),
+          },
+        });
+      const prepared = this.options.tasks.get(taskId)?.shape?.computer_move;
+      if (prepared?.preparing) {
+        const { preparing: _done, ...rest } = prepared;
+        this.options.tasks.setComputerMove(taskId, rest);
+      }
+    } catch (caught) {
+      // Its record names the destination: the next tick reopens it there.
+      const problem = `it moved, but could not reopen yet: ${messageOf(caught)}`;
+      const move = this.options.tasks.get(taskId)?.shape?.computer_move;
+      if (move && move.problem !== problem) {
+        this.options.tasks.setComputerMove(taskId, { ...move, problem });
+        this.options.tasks.note(taskId, problem, { news: true });
+      }
+    } finally {
+      if (!held) this.computerMoving.delete(taskId);
+    }
+    if (held || !this.tasks.has(taskId)) return;
+    this.deliverLane(taskId);
+    await this.retireMovedSource(taskId);
+  }
+
+  /**
+   * A move that did not finish before its commit: the task stays where it
+   * was, with its work and conversation there untouched, and its timeline
+   * and the feed say why. What the move made on the destination is
+   * removed next (`undoing`).
+   */
+  private async endUnfinishedMove(taskId: string, reason: string): Promise<void> {
+    const record = this.options.tasks.get(taskId);
+    const move = record?.shape?.computer_move;
+    if (!record || !move) return;
+    const from = this.computerName(move.from);
+    this.options.tasks.setComputerMove(
+      taskId,
+      { ...move, phase: "undoing", problem: reason },
+      {
+        text: `its move to ${this.computerName(move.to)} did not finish: ${reason}. It stays on ${from}`,
+        actor: "host",
+        feed: true,
+      },
+    );
+    this.broadcastCrewCounts();
+    await this.undoMovedDestination(taskId);
+    this.deliverLane(taskId);
+  }
+
+  /** Removes the copy an unfinished move made on its destination; retried while out of reach. */
+  private async undoMovedDestination(taskId: string): Promise<void> {
+    const record = this.options.tasks.get(taskId);
+    const move = record?.shape?.computer_move;
+    if (!record || move?.phase !== "undoing" || this.clearingMoves.has(taskId)) return;
+    this.clearingMoves.add(taskId);
+    try {
+      if (move.to === RUNS_ON_THIS_MAC) {
+        const cwd = join(this.options.paths.worktreesDir, taskId);
+        if (existsSync(cwd) && cwd !== record.worktreeDir)
+          await this.options.workspace.removeTaskWorktree({
+            taskId,
+            cwd,
+            branch: record.branch || `fm/task-${taskId}`,
+            repoDir: record.repoDir,
+          });
+      } else {
+        await this.options.machines?.retireMoved?.(move.to, taskId);
+      }
+      if (this.sameMove(taskId, move)) this.options.tasks.setComputerMove(taskId, null);
+    } catch (caught) {
+      // Kept, and tried again on the next tick.
+      console.warn("[crew] a moved copy could not be removed yet:", caught);
+    } finally {
+      this.clearingMoves.delete(taskId);
+    }
+  }
+
+  /** The task's move is still `move` in the same phase: a newer ask is never cleared by an older one's end. */
+  private sameMove(taskId: string, move: Pick<ComputerMove, "at" | "to" | "phase">): boolean {
+    const now = this.options.tasks.get(taskId)?.shape?.computer_move;
+    return (
+      now !== undefined && now.at === move.at && now.to === move.to && now.phase === move.phase
+    );
+  }
+
+  /** Removes the working copy a committed move left on the computer it left; retried while out of reach. */
+  private async retireMovedSource(taskId: string): Promise<void> {
+    const record = this.options.tasks.get(taskId);
+    const move = record?.shape?.computer_move;
+    if (!record || move?.phase !== "retiring" || this.clearingMoves.has(taskId)) return;
+    // Its old conversation stays until a new one opened where it runs now.
+    if (move.restartFrom !== undefined || move.preparing) return;
+    this.clearingMoves.add(taskId);
+    try {
+      if (move.from === RUNS_ON_THIS_MAC) {
+        if (move.fromDir && existsSync(move.fromDir))
+          await this.options.workspace.removeTaskWorktree({
+            taskId,
+            cwd: move.fromDir,
+            branch: `fm/task-${taskId}`,
+            repoDir: record.repoDir,
+          });
+      } else {
+        if (!this.options.machines?.retireMoved)
+          throw new Error(`${this.computerName(move.from)} cannot remove it`);
+        await this.options.machines.retireMoved(move.from, taskId);
+      }
+      if (this.sameMove(taskId, move))
+        this.options.tasks.setComputerMove(taskId, null, {
+          text: `the working copy it left on ${this.computerName(move.from)} was removed`,
+          actor: "host",
+        });
+    } catch (caught) {
+      const problem = `the working copy it left on ${this.computerName(move.from)} is not removed yet: ${messageOf(caught)}`;
+      if (move.problem !== problem && this.sameMove(taskId, move))
+        this.options.tasks.setComputerMove(taskId, { ...move, problem });
+    } finally {
+      this.clearingMoves.delete(taskId);
       this.broadcastCrewCounts();
     }
   }
@@ -11562,6 +12214,9 @@ export class CrewSupervisor {
 
   private async sweepReady(now: number): Promise<void> {
     this.cards.fileMissingHostCardTasks();
+    // Only a sweep with a move to drive yields here, so one with none keeps its order.
+    if (this.options.tasks.list().some((record) => record.shape?.computer_move))
+      await this.driveComputerMoves();
     for (const record of this.options.tasks.listOpen()) {
       const action = record.delivery?.captainAction;
       if (
@@ -13103,7 +13758,7 @@ export class CrewSupervisor {
    */
   conversationBusy(taskId: string): boolean {
     const runtime = this.tasks.get(taskId);
-    if (this.moving.has(taskId)) return true;
+    if (this.moving.has(taskId) || this.computerMoving.has(taskId)) return true;
     if (!runtime) return false;
     return (
       runtime.state !== "idle" ||
@@ -13116,7 +13771,7 @@ export class CrewSupervisor {
 
   /** A live crewmate holds its conversation's files. */
   conversationHeld(taskId: string): boolean {
-    return this.tasks.has(taskId) || this.moving.has(taskId);
+    return this.tasks.has(taskId) || this.moving.has(taskId) || this.computerMoving.has(taskId);
   }
 
   /**
@@ -14970,4 +15625,13 @@ function checkBackOf(
     );
   }
   return { minutes: back.minutes, waitingFor: waitingFor.slice(0, 300) };
+}
+
+/** A move step that threw past its own handling; the next tick tries it again. */
+function warnMove(caught: unknown): void {
+  console.warn("[crew] a move to another computer could not go on yet:", caught);
+}
+
+function messageOf(caught: unknown): string {
+  return caught instanceof Error ? caught.message : String(caught);
 }

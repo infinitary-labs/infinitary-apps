@@ -2388,6 +2388,17 @@ export class FirstmateAgent {
         });
       },
       crewStatus: (taskId) => supervisor.crewStatus(taskId),
+      moveTask: async (taskId, computer, keep) => {
+        const done =
+          computer === null
+            ? supervisor.cancelComputerMove(taskId, "firstmate")
+            : await supervisor.requestComputerMove(taskId, computer, "firstmate", keep);
+        if (done.ok) {
+          this.deliveredThisTurn = true;
+          this.noteDelivery({ outcome: "action", kind: "work", tool: "move_task", ref: taskId });
+        }
+        return done;
+      },
       // The escalation gate (S4): the same wake stamp memory and the miss
       // label read, so `escalate_from` is reachable only from a turn that
       // carries the captain's own words.

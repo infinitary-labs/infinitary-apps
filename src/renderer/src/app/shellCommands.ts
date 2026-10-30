@@ -94,6 +94,10 @@ function shownPart(entryId: string, selector: string): HTMLElement | null {
 const browserControlButton = (entryId: string) =>
   shownPart(entryId, "[data-browser-handoff] button:not(:disabled):not([aria-disabled=true])");
 
+/** The shown task record's Move to a computer, while its task may move. */
+const moveComputerButton = (entryId: string) =>
+  shownPart(entryId, "[data-record-move-open]:enabled");
+
 /** The shown card's reply field. */
 const replyField = (cardId: string) =>
   shownPart(cardId, `[data-card-reply="${CSS.escape(cardId)}"] textarea`);
@@ -241,6 +245,8 @@ const SHELL_COMMANDS: Readonly<Record<ShellCommandId, () => void>> = {
   "cards.show-info": () => toTab("cards.show-info"),
   "cards.show-crewmate": () => toTab("cards.show-crewmate"),
   "browser.control": () => toShownPart(browserControlButton, (button) => button.click()),
+  // The click itself: the picker opens with focus on its first computer.
+  "task.move-computer": () => toShownPart(moveComputerButton, (button) => button.click()),
   "cards.show-browser": () => toTab("cards.show-browser"),
   "cards.next-tab": () => toTab("cards.next-tab"),
   "cards.previous-tab": () => toTab("cards.previous-tab"),
@@ -332,6 +338,10 @@ function windowFacts(): WindowFacts {
     browserControl: (() => {
       const id = shownEntry(useShellStore.getState())?.id;
       return !!id && browserControlButton(id) !== null;
+    })(),
+    taskMove: (() => {
+      const id = shownEntry(useShellStore.getState())?.id;
+      return !!id && moveComputerButton(id) !== null;
     })(),
     updateAvailable: useUpdateState.getState().status?.updateAvailable ?? false,
     computers: { page: crewOrbit().page, pages: crewOrbit().pages },

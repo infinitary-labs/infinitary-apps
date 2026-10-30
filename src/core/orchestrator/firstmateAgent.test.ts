@@ -2585,6 +2585,7 @@ describe("FirstmateAgent", () => {
       "knowledge",
       "link_tasks",
       "locate_project",
+      "move_task",
       "personalize",
       "record_knowledge",
       "settle_task",

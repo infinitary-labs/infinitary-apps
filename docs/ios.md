@@ -483,6 +483,9 @@ A choice after paging waits for the restored native form reading as well as its 
 The gate starts `simulator-live.log` before XCTest starts, so a failed test that tears down the simulator domain cannot erase the earlier app, WebKit and system log.
 On failure it also prints the native wait's budget and cap, and the app's own WebContent launch requests and WebKit-measured startup durations, with their timestamps and app PIDs (`tests/helpers/phoneWebContent.ts`, INF-1888).
 It reads both the live stream and the same simulator's kept log, deduplicates their witnesses, and keeps them in `webcontent-startup.log` beside the original test failure.
+The post-failure app and system log queries stream both output pipes to their numbered command files with backpressure, never accumulate the whole log in a string, and join their children and file writers before cleanup (`scripts/phone-failure-logs.ts`, INF-1885).
+The app log's startup witnesses are read back one line at a time.
+A collection or read failure is reported without hiding the next log, the live-reader join, or the original test failure.
 A missing launch completion stays unknown, and an earlier launch does not establish the cause of a later card failure; these readings identify startup delays without claiming CPU load, concurrent simulators or a runtime defect caused them.
 No diagnostic changes the failed status, retries an action or extends a wait.
 In the talk part, the first actual UIKit keyboard-queue timeout triggers a one-second stack sample after the runner confirms that PID still belongs to its own simulator's app.

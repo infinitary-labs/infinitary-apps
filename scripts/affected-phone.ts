@@ -10,7 +10,7 @@ import { PHONE_PARTS, type PhonePart } from "./phone-test-plan.ts";
 const INPUTS = [
   "ios/", "scripts/generate-phone-cards.ts", "scripts/generate-phone-contract.ts", "scripts/phone-contract-shapes.ts",
   ".github/workflows/phone.yml", "scripts/test-phone.ts", "tests/helpers/phoneHome.ts", "tests/helpers/phoneKeyboard.ts",
-  "scripts/phone-checks.ts", "scripts/phone-activity.ts", "scripts/phone-simulator.ts",
+  "scripts/phone-checks.ts", "scripts/phone-failure-logs.ts", "scripts/phone-activity.ts", "scripts/phone-simulator.ts",
   // INF-1645: the one Xcode and iOS simulator every Mac's phone check uses.
   "scripts/phone-pin.json",
   // INF-1596: the sweep of earlier runs' simulators and scratch folders at the gate's start.

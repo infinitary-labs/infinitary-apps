@@ -9,7 +9,7 @@ import { budgetTimer, GRADES_BUDGETS, startPhoneLoadClock } from "../tests/helpe
 import { observePhoneLog } from "../tests/helpers/phoneLogs.ts";
 import { capturePhoneKeyboardTimeout } from "../tests/helpers/phoneStacks.ts";
 import { phoneWebContentStartup } from "../tests/helpers/phoneWebContent.ts";
-import { libraryPhotoAdded, logTime, photosOpened } from "../tests/helpers/phonePhotos.ts";
+import { libraryPhotoAdded, photosOpened } from "../tests/helpers/phonePhotos.ts";
 import { changePhoneTextSize, hardwareKeyboardArguments, observePhoneKeyboard, type PhoneChord, type PhoneDisplayReport, type PhoneTextSize, phoneApplicationPid, phoneDisplayDeadline, withPhoneHardwareKeyboard } from "../tests/helpers/phoneKeyboard.ts";
 import { removeScratchDirs, scratchDir } from "../tests/helpers/scratchDirs.ts";
 import { ciModeRefusal } from "./checks-mode.ts";
@@ -17,6 +17,7 @@ import { openModuleRunner, REPO_ROOT } from "./moduleRunner.ts";
 import { takeHeavyRunPlace } from "./heavy-run-place.ts";
 import { startPhoneActivity } from "./phone-activity.ts";
 import { runEveryCheck } from "./phone-checks.ts";
+import { keepPhoneFailureLogs, runPhoneLog } from "./phone-failure-logs.ts";
 import { GATE_SIMULATOR, removePhoneLeftovers, SCRATCH_PREFIX } from "./phone-leftovers.ts";
 import { phoneRecording } from "./phone-recording.ts";
 import { phoneSimulator, phoneXcode } from "./phone-simulator.ts";
@@ -424,28 +425,14 @@ const onePart = async () => {
       for (const line of (error.output ?? "").split("\n").filter((each) => / error: |Test Case .* failed|^Phone wait failed:/.test(each)).slice(0, 20))
         console.log(line);
       console.log("The pre-failure simulator log is kept in simulator-live.log, even if XCTest tore its domain down.");
-      // INF-804: what the app, Photos and WebKit logged on this simulator, kept with the command logs.
-      await run("xcrun", ["simctl", "spawn", owned, "log", "show", "--start", logTime(testing), "--style", "compact", "--info",
-        "--predicate", SIMULATOR_LOG])
-        .then((log) => {
-          // A live stream can miss a reading; use the same owned simulator's kept log too.
-          for (const line of log.split("\n")) webContent.receive(line);
-          console.log(`The simulator's log is in ${number}-xcrun.log`);
-        })
-        .catch((problem: Error) => console.log(`The simulator's log could not be kept: ${problem.message}`));
-      // INF-819: what the simulator's system logged from the part's first test to its failure, in its own log.
-      await run("xcrun", ["simctl", "spawn", owned, "log", "show", "--start", logTime(testing), "--style", "compact",
-        "--info", "--predicate", SYSTEM_LOG])
-        .then(() => console.log(`The simulator's system log is in ${number}-xcrun.log`))
-        .catch((problem: Error) => console.log(`The simulator's system log could not be kept: ${problem.message}`));
-      // Join the live reader before taking its final snapshot, even if log show failed.
-      // A diagnostic failure must not replace the original test failure.
-      try {
-        await simulatorLog?.close();
-        const startup = webContent.report();
-        console.log(startup);
-        writeFileSync(join(evidence, "webcontent-startup.log"), startup + "\n");
-      } catch (problem) { console.log(`WebContent startup evidence could not be kept: ${String(problem)}`); }
+      await keepPhoneFailureLogs({ device: owned, testing, appPredicate: SIMULATOR_LOG, systemPredicate: SYSTEM_LOG,
+        evidence, webContent, closeLive: async () => { await simulatorLog?.close(); },
+        nextLog: () => join(evidence, `${++number}-xcrun.log`),
+        keepLog: async (args, log) => {
+          if (interrupted && !cleaningUp) throw new Error("The native gate was interrupted");
+          await runPhoneLog({ command: "xcrun", args, cwd: REPO_ROOT, env, children, log });
+        },
+      });
       throw error;
     })
     .finally(() => console.log(`XCTest animation waits that ran out: ${phoneAnimationWaits(output).missed}`));

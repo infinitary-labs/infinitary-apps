@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "phone-large-failure-logs",
+      "reason": "Internal phone-check diagnostics stream large simulator logs and finish failure handling without changing the app or its test assertions."
+    }
+  ]
+}

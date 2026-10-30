@@ -988,6 +988,7 @@ export class PlacedSessions implements PlacedWork, CrewMachines {
         ...(spec.thinking.quick ? { quick: true } : {}),
       },
       instructions: spec.instructions.base,
+      ...(spec.homeSource ? { homeSource: spec.homeSource } : {}),
       ...(spec.runbookSkills ? { runbookSkills: spec.runbookSkills } : {}),
       ...(spec.personalResources !== undefined
         ? { personalResources: spec.personalResources }

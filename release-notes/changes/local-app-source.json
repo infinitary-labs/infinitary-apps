@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "id": "local-app-source",
+      "kind": "fix",
+      "title": "Tasks find Infinitary’s source on their own computer",
+      "body": "Tasks use the source bundled with the Infinitary copy running them, including background installations. They receive its version and report missing or mismatched source instead of assuming an Applications folder location.",
+      "area": "devices",
+      "noPicture": "This changes the source facts supplied to agents, not an app screen.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

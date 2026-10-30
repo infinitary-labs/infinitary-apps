@@ -681,6 +681,7 @@ export type CrewSupervisorOptions = {
   bind: (accountId: string | undefined, providerId?: string) => Promise<SessionBinding>;
   /** The home's opt-in, carried without its files to whichever Mac opens the session. */
   personalResourcesEnabled?: () => boolean;
+  source?: () => import("../selfSource/resolve").SelfSourceFacts;
   runbooks?: Runbooks;
   /**
    * The crewmate preset. Absent, `crewmateSessionSpec` over the app's paths;
@@ -6006,6 +6007,7 @@ export class CrewSupervisor {
     }
     const briefed = {
       ...crewmate,
+      ...(this.options.source ? { source: this.options.source() } : {}),
       procedure: crewmateProcedureFor(this.policiesOf(this.options.tasks.get(task.id))),
       // Every crewmate is told the captain's computers and which one it runs on (INF-992).
       ...this.computersFor(crewmate.machineId),

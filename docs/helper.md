@@ -1227,3 +1227,13 @@ The home verifies filenames, ownership, bytes and content digests before recordi
 The reviewer receives verified copies through the existing source-file transport on the computer that owns its review.
 Both session backends use the same report and decision declarations.
 The contract version must support those declarations; the existing same-major work rule prevents an older helper from silently dropping them.
+
+## Source on the executing computer
+
+Each installed app already carries its tracked source and index; background installations use their own resources folder, never a guessed Applications location.
+The home sends only its build identity in the optional placed-session `homeSource` field, not its source path.
+The executing computer resolves its own source facts when opening or reopening a conversation and adds them before stamping the effective instructions for either backend.
+An idle conversation whose source facts changed renews on its next open; restart, update and task relocation resolve from the new app location.
+Missing, unreadable or inconsistent maps remain explicit and do not block unrelated work; older computers with no source facts stay unknown.
+Agents compare known immutable source commits before investigating another computer's build and use the existing verified file handoff when they differ or are unknown.
+No source download, clone, additional store, setting or task-placement rule is involved.

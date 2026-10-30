@@ -2,6 +2,7 @@ import type { CutOff } from "@shared/authFailure";
 import type { CrewSpeed, SpeedSelection } from "@shared/crewSpeed";
 import type { FmEvent } from "@shared/events";
 import type { Reasoning } from "@shared/reasoning";
+import type { SourceIdentity } from "@shared/selfSource";
 import type { RunbookSkillFiles } from "../../shared/runbooks";
 import type { ServedInstructions, ServedState } from "../orchestrator/seat";
 import type { ModelRuntime } from "../pi/types";
@@ -175,6 +176,7 @@ export type SessionBounds = {
 export type TaskShell = { env: Readonly<Record<string, string>>; path: readonly string[] };
 
 export type SessionSpec = {
+  homeSource?: SourceIdentity;
   /**
    * The machine the session runs on (D-11): "local" for this Mac, or a
    * computer that runs work by its device id, which only that computer's

@@ -19,6 +19,7 @@ import { reasoningSchema } from "./reasoning";
 import { keptRecoveryWaySchema, workWaitSchema } from "./recovery";
 import { requiredActionsSchema } from "./requiredActions";
 import { runbookSkillFilesSchema } from "./runbooks";
+import { sourceIdentitySchema } from "./selfSource";
 import {
   heldSignInSchema,
   taskBrowserCommandResultSchema,
@@ -176,6 +177,8 @@ export type PlacedState = z.infer<typeof placedStateSchema>;
  * names the crewmate tools to bind, each to callbacks that ask the home.
  */
 export const placedSpecSchema = z.object({
+  /** Home build identity only; each computer resolves its own source path. */
+  homeSource: sourceIdentitySchema.optional(),
   /** Resolve the home’s saved speed before each request; eligibility stays on this computer. */
   speed: z.boolean().optional(),
   binding: z.object({

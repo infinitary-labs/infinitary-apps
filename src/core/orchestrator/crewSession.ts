@@ -12,6 +12,8 @@ import {
   toolsFingerprint,
 } from "../pi/piResources";
 import { timeZoneFact } from "../prompts/timeZone";
+import type { SelfSourceFacts } from "../selfSource/resolve";
+import { sourceContext, sourceIdentity } from "../selfSource/resolve";
 import {
   type ContractStamp,
   LOCAL_MACHINE_ID,
@@ -39,6 +41,7 @@ export { type CrewmateComputers, type CrewmateProcedureFacts, crewmateProcedureF
 /** A crewmate as the supervisor starts it: the task's facts, and the callbacks its tools run on. */
 export type CrewmateSpec = CrewmateToolDelegate & {
   runbookText?: string;
+  source?: SelfSourceFacts;
   taskId: string;
   /** The machine it runs on (D-11): "local", or the computer that runs work its task names. */
   machineId: string;
@@ -202,25 +205,31 @@ export function crewmateSessionSpec(
 ): SessionSpec {
   const resume = crewmateResume(spec.resumeToken, binding.backend);
   // The captain's zone as this Mac reads it when the session opens.
-  const instructions = buildCrewmateSystemPrompt(
-    binding.backend,
-    spec.evidenceDir,
-    spec.cardBodiesDir,
-    timeZoneFact(Date.now()),
-    // A task on another computer is granted its command by that computer's
-    // own task channel, beside its shell there.
-    spec.browser !== undefined && (spec.shell !== undefined || spec.machineId !== LOCAL_MACHINE_ID),
-    spec.procedure,
-    spec.tempDir,
-    spec.computers,
-    // Its integrations' command rides the same channel, here or there.
-    spec.integrations !== undefined &&
-      (spec.shell !== undefined || spec.machineId !== LOCAL_MACHINE_ID),
-    spec.load,
-    spec.runbookText,
-  );
+  const instructions =
+    buildCrewmateSystemPrompt(
+      binding.backend,
+      spec.evidenceDir,
+      spec.cardBodiesDir,
+      timeZoneFact(Date.now()),
+      // A task on another computer is granted its command by that computer's
+      // own task channel, beside its shell there.
+      spec.browser !== undefined &&
+        (spec.shell !== undefined || spec.machineId !== LOCAL_MACHINE_ID),
+      spec.procedure,
+      spec.tempDir,
+      spec.computers,
+      // Its integrations' command rides the same channel, here or there.
+      spec.integrations !== undefined &&
+        (spec.shell !== undefined || spec.machineId !== LOCAL_MACHINE_ID),
+      spec.load,
+      spec.runbookText,
+    ) +
+    (spec.machineId === LOCAL_MACHINE_ID
+      ? `\n${sourceContext(spec.source, spec.source && sourceIdentity(spec.source))}`
+      : "\nThe executing computer supplies its own Infinitary source facts separately. If absent, its source is unknown; never reuse a path from another computer.");
   const tools = bindTools(CREWMATE_TOOLS, spec);
   return {
+    ...(spec.source ? { homeSource: sourceIdentity(spec.source) } : {}),
     machine: spec.machineId,
     owner: spec.taskId,
     cwd: spec.cwd,

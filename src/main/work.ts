@@ -1,4 +1,5 @@
 import { appendFileSync } from "node:fs";
+import { hostname } from "node:os";
 import { join } from "node:path";
 import { inspect } from "node:util";
 import { runCli } from "@core/helper/cli";
@@ -7,6 +8,7 @@ import type { HostKeychain } from "@core/host";
 import { settingFrom } from "@shared/envSettings";
 import { app } from "electron";
 import { hostPlatform } from "../core/platform";
+import { readSelfSource } from "../core/selfSource/resolve";
 import { registerFrameScheme } from "./frames/frameScheme";
 import { createAxiProcessSpawner } from "./host/axiProcess";
 import { readResourceMemory } from "./host/resourceMemory";
@@ -158,6 +160,14 @@ export function runWorkMode(args: readonly string[], mainDir: string): void {
 
   void runCli(args, {
     version: app.getVersion(),
+    source: () =>
+      readSelfSource({
+        isPackaged: app.isPackaged,
+        resourcesPath: process.resourcesPath,
+        appPath: app.getAppPath(),
+        version: app.getVersion(),
+        computer: hostname(),
+      }),
     place,
     // The background starts this app again as it was started here: the
     // installed app itself, or Electron with the checkout's folder.

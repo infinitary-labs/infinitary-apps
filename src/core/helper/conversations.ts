@@ -156,6 +156,7 @@ export type ComputerBrowserParts = Pick<
 >;
 
 export async function startConversations(options: {
+  source?: () => import("../selfSource/resolve").SelfSourceFacts;
   dataDir: string;
   load?: import("../placed/loadLine").LoadLine;
   ask: (channel: WorkInvokeChannel, args: unknown, signal?: AbortSignal) => Promise<unknown>;
@@ -250,6 +251,7 @@ export async function startConversations(options: {
   host = new SessionHost({
     tasks,
     copies,
+    ...(options.source ? { source: options.source } : {}),
     ask: options.ask,
     factories: {
       pi: createPiSessionFactory({

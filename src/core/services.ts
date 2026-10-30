@@ -240,7 +240,7 @@ import { PlacedWorkScores } from "./routing/placedWork";
 import { quotaGateCleared, quotaGateRefValid } from "./routing/quotaGate";
 import { Router, servedSlots } from "./routing/router";
 import { Runbooks } from "./runbooks/runbooks";
-import { resolveSelfSourceDir } from "./selfSource/resolve";
+import { readSelfSource, resolveSelfSourceDir } from "./selfSource/resolve";
 import { SessionBinder } from "./session/binding";
 import { BoundsWatcher } from "./session/bounds";
 import { LOCAL_MACHINE_ID, type SessionFactories } from "./session/session";
@@ -1901,6 +1901,15 @@ export async function createServices(
     focused: () => host.notifications.focused(),
     show: (notification) => host.notifications.show(notification),
   });
+  const sourceComputer = await ownComputerName({ packaged: host.app.packaged, env: process.env });
+  const source = () =>
+    readSelfSource({
+      isPackaged: host.app.packaged,
+      resourcesPath: host.app.resourcesDir,
+      appPath: host.app.appDir,
+      version: host.app.version,
+      computer: sourceComputer,
+    });
   const selfSourceDir = resolveSelfSourceDir({
     isPackaged: host.app.packaged,
     resourcesPath: host.app.resourcesDir,
@@ -2349,6 +2358,7 @@ export async function createServices(
     personalResourcesEnabled: () => settings.getPersonalResourcesEnabled(),
     runbooks,
     build: host.app.version,
+    source,
     sessions: sessionFactories,
     machines: placed,
     takesNoWorkUntilUpdated,
@@ -2993,6 +3003,7 @@ export async function createServices(
     scheduler,
     broadcastEvent,
     selfSourceDir,
+    selfSourceFacts: source,
     noteCutOff,
     // The orchestrator's own burn is tracked under the conversation surface.
     recordUsage: ({ accountId, model, usage }) =>

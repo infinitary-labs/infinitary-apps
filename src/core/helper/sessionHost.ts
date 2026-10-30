@@ -56,6 +56,7 @@ import {
 import type { MediaProbe, TypefaceProbe } from "../pi/cardImages";
 import { CREWMATE_TOOLS } from "../pi/crewmateTaskTools";
 import { verifyKeptValidationEvidenceSync } from "../pi/validationEvidence";
+import { type SelfSourceFacts, sourceContext } from "../selfSource/resolve";
 import {
   type ClientBackgroundTask,
   LOCAL_MACHINE_ID,
@@ -121,6 +122,7 @@ const FIRST_RELEASE_REPORTS = contractChange("first-release-reports");
 const TASK_LIST_SNAPSHOT = contractChange("task-list-snapshot");
 
 export type SessionHostOptions = {
+  source?: () => SelfSourceFacts;
   tasks: PlacedTasks;
   /** Asks the home one work request; asked again after every drop until it answers. */
   ask: (channel: WorkInvokeChannel, args: unknown, signal?: AbortSignal) => Promise<unknown>;
@@ -289,6 +291,7 @@ type Held = {
     | {
         tools: readonly string[];
         instructions: string;
+        sourceContext: string;
         browser: boolean;
         integrations: boolean;
         load: boolean;
@@ -813,6 +816,7 @@ export class SessionHost {
   private async open(held: Held, spec: PlacedSpec): Promise<PlacedState> {
     if (held.state.closed)
       throw new Error("This task's conversation was closed here, so it opens no more.");
+    const sourceFacts = sourceContext(this.options.source?.(), spec.homeSource);
     held.speed = spec.speed === true;
     if (held.opening) await held.opening;
     if (held.session) {
@@ -820,7 +824,7 @@ export class SessionHost {
       // conversation whose named tools or instructions changed, because the
       // home reopened it for a contract this computer now speaks, lets go
       // and opens again, so a version-gated tool arrives without a restart here.
-      if (held.state.running || !this.contractMoved(held, spec)) {
+      if (held.state.running || !this.contractMoved(held, spec, sourceFacts)) {
         this.recordJobs(held, true);
         return this.stateOf(held);
       }
@@ -833,7 +837,7 @@ export class SessionHost {
       if (this.options.copies && !this.options.copies.has(held.task))
         throw new Error("This task has no working copy here yet.");
       const folders = this.options.tasks.ensure(held.task);
-      const instructions = spec.instructions;
+      const instructions = `${spec.instructions}\n${sourceFacts}`;
       // Pi records belong to this task's sessions folder, never a path a
       // home cached before an update. Claude's token is its session id.
       const token =
@@ -919,6 +923,7 @@ export class SessionHost {
       held.opened = {
         tools: spec.tools,
         instructions: spec.instructions,
+        sourceContext: sourceFacts,
         browser: spec.browser === true,
         integrations: spec.integrations === true,
         load: spec.load === true,
@@ -957,12 +962,13 @@ export class SessionHost {
   }
 
   /** Whether this open names tools or instructions the held conversation was not opened with. */
-  private contractMoved(held: Held, spec: PlacedSpec): boolean {
+  private contractMoved(held: Held, spec: PlacedSpec, sourceFacts: string): boolean {
     const opened = held.opened;
     if (!opened) return false;
     return (
       !sameNames(opened.tools, spec.tools) ||
       opened.instructions !== spec.instructions ||
+      opened.sourceContext !== sourceFacts ||
       opened.browser !== (spec.browser === true) ||
       opened.integrations !== (spec.integrations === true) ||
       opened.load !== (spec.load === true)

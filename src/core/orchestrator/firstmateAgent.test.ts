@@ -43,6 +43,7 @@ import {
   type SDKUserMessage,
   scriptedClaudeQuery,
 } from "../../../tests/helpers/scriptedClaudeQuery";
+import { sourceInstall } from "../../../tests/helpers/sourceInstall";
 import { seedDelivery } from "../../../tests/helpers/taskDelivery";
 import {
   pageTaskField,
@@ -77,6 +78,7 @@ import type { ModelRuntime } from "../pi/types";
 import type { CrewMachines } from "../placed/placedSessions";
 import { ShellPreferencesService } from "../preferences/shellPreferences";
 import { localTimeZoneName, timeZoneFact } from "../prompts/timeZone";
+import { readSelfSource } from "../selfSource/resolve";
 import type {
   ModelSession,
   SessionBackend,
@@ -373,6 +375,7 @@ function setup(
     session?: FakeSession;
     computerVersions?: ConstructorParameters<typeof FirstmateAgent>[0]["computerVersions"];
     scheduler?: ConstructorParameters<typeof FirstmateAgent>[0]["scheduler"];
+    selfSourceFacts?: ConstructorParameters<typeof FirstmateAgent>[0]["selfSourceFacts"];
     failCreate?: string;
     onCaptainTurnAccepted?: () => void;
     availableModels?: () => { provider: string; id: string }[];
@@ -520,6 +523,7 @@ function setup(
       flagDuplicate: (input) => supervisor.flagDuplicate(input),
       broadcastEvent: (event) => events.push(event),
       selfSourceDir,
+      ...(options.selfSourceFacts ? { selfSourceFacts: options.selfSourceFacts } : {}),
       recordUsage: (input) => usages.push(input),
       ...(options.noteCutOff ? { noteCutOff: options.noteCutOff } : {}),
       coalesceMs: options.coalesceMs ?? 0,
@@ -887,7 +891,11 @@ describe("FirstmateAgent", () => {
   });
 
   it("prefixes every user turn with the context block and does not scrape final text into the feed", async () => {
-    const { agent, session, events, repos, usages, selfSourceDir } = setup();
+    // INF-1977 A: the home context distinguishes identity from its local path,
+    // and reads fresh facts rather than treating an earlier build as current.
+    const installed = sourceInstall(scratchDir("firstmate-source-"));
+    const selfSourceFacts = () => readSelfSource(installed.location);
+    const { agent, session, events, repos, usages, selfSourceDir } = setup({ selfSourceFacts });
     await repos.setup({ kind: "adopt", path: process.cwd() });
     await agent.converse("how are we doing on quota?");
     expect(session.prompts).toHaveLength(1);
@@ -897,6 +905,12 @@ describe("FirstmateAgent", () => {
     expect(context.repos[0]).toMatchObject({ repo_id: expect.any(String) });
     expect(context.quota).toBe("codex 62% weekly on_pace");
     expect(context.self_source).toBe(selfSourceDir);
+    expect(context.self_source_facts).toEqual(selfSourceFacts());
+    installed.location.version = "a different running version";
+    expect(decodeContext(agent.buildContextBlock()).self_source_facts).toMatchObject({
+      availability: "unavailable",
+      commit: null,
+    });
     expect(turn).toContain("[user]\nhow are we doing on quota?");
     expect(events).toContainEqual({ type: "firstmate_state", busy: true });
 

@@ -61564,6 +61564,44 @@
                 "spec": {
                   "type": "object",
                   "properties": {
+                    "homeSource": {
+                      "type": "object",
+                      "properties": {
+                        "computer": {
+                          "type": "string"
+                        },
+                        "version": {
+                          "anyOf": [
+                            {
+                              "type": "string"
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        },
+                        "commit": {
+                          "anyOf": [
+                            {
+                              "type": "string",
+                              "pattern": "^[a-f0-9]{40,64}$"
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        },
+                        "mutable": {
+                          "type": "boolean"
+                        }
+                      },
+                      "required": [
+                        "computer",
+                        "version",
+                        "commit",
+                        "mutable"
+                      ]
+                    },
                     "speed": {
                       "type": "boolean"
                     },

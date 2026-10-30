@@ -364,6 +364,7 @@ export type FirstmateAgentOptions = {
   onCaptainTurnAccepted?: () => void;
   /** The Firstmate agent's packaged source tree, named for delegated source tasks. */
   selfSourceDir: string;
+  selfSourceFacts?: () => import("../selfSource/resolve").SelfSourceFacts;
   /**
    * A typed cut-off the seat's turn observed, recorded on its bound account
    * (`AccountVault.noteCutOff`), the same fact crew turns record.
@@ -3846,6 +3847,7 @@ export class FirstmateAgent {
       // The zone CARD_AUTHORING's time rule says times in (FI3-1006).
       captain_time_zone: whole(timeZoneFact(this.now())),
       self_source: whole(this.options.selfSourceDir),
+      self_source_facts: whole(this.options.selfSourceFacts?.() ?? null),
     };
     const turn = {
       // When this input's facts were read: the times above count from it.

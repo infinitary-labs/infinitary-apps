@@ -50,6 +50,7 @@ import { helperWords } from "./words";
  */
 
 export type CliContext = {
+  source?: () => import("../selfSource/resolve").SelfSourceFacts;
   /** The app's own version. */
   version: string;
   /** Where its data lives, and whether it runs from a packaged app. */
@@ -476,6 +477,7 @@ export async function runCli(args: readonly string[], context: CliContext): Prom
         say: io.say,
         packaged: place.packaged,
         appVersion: context.version,
+        ...(context.source ? { source: context.source } : {}),
         ...(verifier ? { verifier } : {}),
         background: inBackground ? { context: inBackground, env: context.backgroundEnv } : null,
         ...(context.gitAskpass ? { gitAskpass: context.gitAskpass } : {}),

@@ -213,7 +213,10 @@ Non-negotiable baseline (enforced by a startup assertion in dev builds):
   Reading is a crewmate's job (`docs/orchestrator-contract.md`). rev-4's Q1 jailed read-only tools are not what production runs.
   Packaged builds still ship the git-tracked tree as `Contents/Resources/self-source/` plus `self-map.json` (`scripts/generate-self-source.mjs`, extraResources); unpackaged/dev uses the checkout.
   The tree is data: nothing executes from it.
-  The system prompt names the path so a read-only crewmate can inspect it; the seat has no write tools and no read tools.
+  The first mate's context distinguishes its own machine-local path from its source facts (`self_source_facts`); the seat has no write tools and no read tools.
+  `selfSource/resolve.ts` reads app-relative source facts anew when a conversation opens, checks both installed maps against the running app version and verifies indexed files are readable within the source root.
+  Development checkouts are explicitly mutable, with the running version but no frozen source commit claim.
+  Every local crewmate receives these facts before its contract is stamped, identically for Pi and Claude.
 - **Crewmate isolation**: production crewmates run Pi's stock tools including `bash`, `edit`, and `write`, with `cwd` set to the task git worktree (`PI_CODING_BUILTINS` in `src/core/pi/session.ts`).
   They can leave that worktree; bash cannot be routed through the path guard.
   Isolation is deliberately **social** - the system prompt says "nothing outside the worktree is your concern" - plus the git worktree, not a filesystem jail.

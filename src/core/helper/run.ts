@@ -84,6 +84,7 @@ export type HelperRun = {
 };
 
 export type StartHelperOptions = {
+  source?: () => import("../selfSource/resolve").SelfSourceFacts;
   dataDir: string;
   say: (lines: readonly string[]) => void;
   /** Whether it runs from a packaged app; the dev and test endpoint overrides are read only off one. */
@@ -147,6 +148,7 @@ export type StartHelperOptions = {
     signedIn: () => Promise<ComputerAccounts> | undefined;
     probeMedia?: MediaProbe;
     probeTypeface?: TypefaceProbe;
+    source?: () => import("../selfSource/resolve").SelfSourceFacts;
     homeVersion?: () => string | null;
     homeChanges?: () => readonly string[] | null;
     /** Whether its crewmates' builds and tests stay below the UI: on the home's own Mac (`separateMac`). */
@@ -335,6 +337,7 @@ export function startHelper(options: StartHelperOptions): StartHelperOutcome {
           accounts: async () => (await signingIn()).accounts,
           signedIn: () => signIns?.then((held) => held.accounts),
           ...(options.probeMedia ? { probeMedia: options.probeMedia } : {}),
+          ...(options.source ? { source: options.source } : {}),
           ...(options.probeTypeface ? { probeTypeface: options.probeTypeface } : {}),
           // The contract its home said in its welcome, which decides whether it keeps project fonts.
           homeVersion: () => link.state().homeVersion,

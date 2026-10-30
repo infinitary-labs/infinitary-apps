@@ -970,6 +970,7 @@ Nothing moves work on its own, to balance load or to fail over.
   Once the new conversation has opened, the working copy left on the computer it moved off is removed: here with its worktree, on a computer that runs work by closing its conversation there, removing its copy and then its task folder (`PlacedCopies.retireMoved`), so a later move back starts from nothing it left.
   An unreachable computer is tried again on each tick, and the record's footer says so; the leftover sweep never touches a task while a move names that computer.
   Once removed, the move ends with a timeline line and no card.
+  The quit includes in-flight crossing, reopening and copy removal in its existing bounded settlement; tests also await the move’s recorded completion before draining pool returns and deleting their fixtures.
 - **A move that does not finish.**
   A failure before the commit, or a quit while the work crossed, ends the move: the task stays where it was with its work and conversation, and its timeline and the feed say why ("its move to Mac mini did not finish: …").
   What the move made on the destination is removed (phase `undoing`), tried again while that computer is out of reach, and the lane's held work goes on where the task runs.

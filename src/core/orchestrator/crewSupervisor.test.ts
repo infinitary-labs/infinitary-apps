@@ -28828,6 +28828,36 @@ describe("the first mate's integration approval card (INF-1108)", () => {
 describe("a started task moves to another computer (INF-1713, real git)", {
   timeout: 10_000,
 }, () => {
+  const movingFixtures: {
+    supervisor: CrewSupervisor;
+    workspace: RealWorkspaceService;
+    tasks: TaskService;
+  }[] = [];
+  afterEach(async () => {
+    for (const { supervisor, workspace, tasks } of movingFixtures.splice(0)) {
+      await supervisor.disposeAll();
+      // Quit is bounded; the fixture is not. Wait for the move's persisted
+      // completion before draining the pool it can still enqueue work on.
+      await movesFinished(tasks);
+      await workspace.poolSettled();
+      await workspace.deletionsSettled();
+    }
+  });
+  function movesFinished(tasks: TaskService): Promise<void> {
+    return new Promise<void>((resolve) => {
+      const finished = () =>
+        !tasks.list().some((task) => {
+          const move = task.shape?.computer_move;
+          return move && move.phase !== "waiting";
+        });
+      if (finished()) return resolve();
+      const unsubscribe = tasks.onChange(() => {
+        if (!finished()) return;
+        unsubscribe();
+        resolve();
+      });
+    });
+  }
   beforeEach(() => {
     vi.useRealTimers();
   });
@@ -28963,6 +28993,11 @@ describe("a started task moves to another computer (INF-1713, real git)", {
             } as unknown as CrewSupervisorOptions["browsers"],
           }
         : {}),
+    });
+    movingFixtures.push({
+      supervisor: h0.supervisor,
+      workspace: h0.realWorkspace as RealWorkspaceService,
+      tasks: h0.tasks,
     });
     const { repo } = await h0.repos.setup({ kind: "init", name: "meter" });
     writeFileSync(join(repo.path, "meter.ts"), "export const unit = 'kWh';\n");
@@ -29433,6 +29468,101 @@ describe("a started task moves to another computer (INF-1713, real git)", {
     await h.supervisor.sweepGates(Date.now());
     await vi.waitFor(() => expect(h.tasks.get(h.taskId)?.deviceId).toBe(MINI), REAL_GIT_WAIT);
     await h.supervisor.disposeAll();
+  });
+
+  it.each(["reopening", "retiring"] as const)(
+    "disposal waits for a move that is %s before the fixture settles its pool",
+    async (phase) => {
+      // INF-1935: disposal must own source retirement even before it queues pool work.
+      const entered = deferred<void>();
+      const release = deferred<void>();
+      const h = await startedHere({
+        ...(phase === "reopening"
+          ? { install: async () => {
+              entered.resolve();
+              await release.promise;
+              return { outcome: "skipped" as const };
+            } }
+          : {}),
+      });
+      const workspace = h.realWorkspace as RealWorkspaceService;
+      const remove = workspace.removeTaskWorktree.bind(workspace);
+      const retirement = vi.spyOn(workspace, "removeTaskWorktree").mockImplementation(async (work) => {
+        if (phase === "retiring") {
+          entered.resolve();
+          await release.promise;
+        }
+        await remove(work);
+      });
+      expect((await h.supervisor.requestComputerMove(h.taskId, MINI, "captain")).ok).toBe(true);
+      h.crewmate.finishPrompt();
+      await entered.promise;
+      const disposal = h.supervisor.disposeAll();
+      let retiredAtDisposal = false;
+      try {
+        // A microtask checkpoint, not a timing window: the blocked operation
+        // cannot finish until this test releases it.
+        const state = await Promise.race([
+          disposal.then(() => "disposed"),
+          Promise.resolve().then(() => {}).then(() => "pending"),
+        ]);
+        expect(state).toBe("pending");
+      } finally {
+        release.resolve();
+        await disposal;
+        retiredAtDisposal = !existsSync(h.cwd) && !h.tasks.get(h.taskId)?.shape?.computer_move;
+        // Also settle on a failing baseline so the regression never leaks its fixture.
+        await vi.waitFor(() => expect(h.tasks.get(h.taskId)?.shape?.computer_move).toBeUndefined(), REAL_GIT_WAIT);
+        await workspace.poolSettled();
+        retirement.mockRestore();
+      }
+      expect(existsSync(h.cwd)).toBe(false);
+      expect(retiredAtDisposal).toBe(true);
+      expect(workspace.pooledTrees()).toHaveLength(1);
+      expect(h.tasks.get(h.taskId)?.deviceId).toBe(MINI);
+    },
+  );
+
+  it("settles retirement before fixture cleanup even after the bounded quit expires", async () => {
+    // INF-1935: a bounded quit is not the fixture's completion barrier.
+    const entered = deferred<void>();
+    const release = deferred<void>();
+    const h = await startedHere();
+    const workspace = h.realWorkspace as RealWorkspaceService;
+    const remove = workspace.removeTaskWorktree.bind(workspace);
+    const retirement = vi.spyOn(workspace, "removeTaskWorktree").mockImplementation(async (work) => {
+      entered.resolve();
+      await release.promise;
+      await remove(work);
+    });
+    expect((await h.supervisor.requestComputerMove(h.taskId, MINI, "captain")).ok).toBe(true);
+    h.crewmate.finishPrompt();
+    await entered.promise;
+    vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
+    try {
+      const disposal = h.supervisor.disposeAll();
+      await vi.advanceTimersByTimeAsync(QUIT_SETTLE_MS);
+      await disposal;
+    } finally {
+      vi.useRealTimers();
+    }
+    let finished = false;
+    const completion = movesFinished(h.tasks).then(() => {
+      finished = true;
+    });
+    try {
+      expect(h.tasks.get(h.taskId)?.shape?.computer_move?.phase).toBe("retiring");
+      await Promise.resolve();
+      expect(finished).toBe(false);
+    } finally {
+      release.resolve();
+      await completion;
+      await workspace.poolSettled();
+      await workspace.deletionsSettled();
+      retirement.mockRestore();
+    }
+    expect(existsSync(h.cwd)).toBe(false);
+    expect(workspace.pooledTrees()).toHaveLength(1);
   });
 
   it("carries the ignored files the move names to keep", async () => {

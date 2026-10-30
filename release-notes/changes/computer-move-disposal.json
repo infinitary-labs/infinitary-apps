@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "computer-move-disposal",
+      "reason": "Internal lifetime repair: disposal tracks in-flight computer moves and the movement fixture drains worktree-pool returns before scratch cleanup; no screen or interaction changes."
+    }
+  ]
+}

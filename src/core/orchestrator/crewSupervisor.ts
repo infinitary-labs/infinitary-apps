@@ -1533,6 +1533,8 @@ export class CrewSupervisor {
   private readonly computerMoving = new Set<string>();
   /** Tasks whose moved-off or unfinished copy is being removed now (`retireMovedSource`, `undoMovedDestination`). */
   private readonly clearingMoves = new Set<string>();
+  /** In-flight moves, including reopening and source/destination cleanup, until their writes end. */
+  private readonly computerMoveOperations = new Set<Promise<void>>();
   /** The card stack: the open cards and every write to them. */
   private readonly cards: CardService;
   /** How each captain's message ends (INF-1610, docs/task-capture.md "How a message ends"). */
@@ -9008,6 +9010,13 @@ export class CrewSupervisor {
     }
   }
 
+  /** Keep the whole lifetime, not just the task-id exclusion, for the quit to await. */
+  private trackComputerMove(operation: Promise<void>): Promise<void> {
+    const tracked = operation.finally(() => this.computerMoveOperations.delete(tracked));
+    this.computerMoveOperations.add(tracked);
+    return tracked;
+  }
+
   /**
    * The move itself, at a safe pause: the crewmate's conversation is let
    * go, the work is packed where it runs - the branch's commits, what is
@@ -9018,7 +9027,11 @@ export class CrewSupervisor {
    * brief and where the earlier conversation is, and the old working copy
    * goes. A failure before that commit leaves the task where it was.
    */
-  private async runComputerMove(taskId: string): Promise<void> {
+  private runComputerMove(taskId: string): Promise<void> {
+    return this.trackComputerMove(this.runComputerMoveOperation(taskId));
+  }
+
+  private async runComputerMoveOperation(taskId: string): Promise<void> {
     if (this.computerMoving.has(taskId) || this.disposed) return;
     const record = this.options.tasks.get(taskId);
     const move = record?.shape?.computer_move;
@@ -9157,7 +9170,11 @@ export class CrewSupervisor {
    * `held` says the caller already holds it, and retires the copy it left
    * itself. A failure is kept for the next tick.
    */
-  private async reopenMovedTask(taskId: string, held = false): Promise<void> {
+  private reopenMovedTask(taskId: string, held = false): Promise<void> {
+    return this.trackComputerMove(this.reopenMovedTaskOperation(taskId, held));
+  }
+
+  private async reopenMovedTaskOperation(taskId: string, held = false): Promise<void> {
     if (!held) {
       if (this.computerMoving.has(taskId) || this.disposed) return;
       this.computerMoving.add(taskId);
@@ -9230,7 +9247,11 @@ export class CrewSupervisor {
   }
 
   /** Removes the copy an unfinished move made on its destination; retried while out of reach. */
-  private async undoMovedDestination(taskId: string): Promise<void> {
+  private undoMovedDestination(taskId: string): Promise<void> {
+    return this.trackComputerMove(this.undoMovedDestinationOperation(taskId));
+  }
+
+  private async undoMovedDestinationOperation(taskId: string): Promise<void> {
     const record = this.options.tasks.get(taskId);
     const move = record?.shape?.computer_move;
     if (!record || move?.phase !== "undoing" || this.clearingMoves.has(taskId)) return;
@@ -9266,7 +9287,11 @@ export class CrewSupervisor {
   }
 
   /** Removes the working copy a committed move left on the computer it left; retried while out of reach. */
-  private async retireMovedSource(taskId: string): Promise<void> {
+  private retireMovedSource(taskId: string): Promise<void> {
+    return this.trackComputerMove(this.retireMovedSourceOperation(taskId));
+  }
+
+  private async retireMovedSourceOperation(taskId: string): Promise<void> {
     const record = this.options.tasks.get(taskId);
     const move = record?.shape?.computer_move;
     if (!record || move?.phase !== "retiring" || this.clearingMoves.has(taskId)) return;
@@ -15441,7 +15466,8 @@ export class CrewSupervisor {
    * The quit: every crewmate is let go of, a running turn cut, and nothing
    * more starts. The returned promise waits, at most `QUIT_SETTLE_MS`, for
    * the cut turns to settle so their usage is kept, and for a ready sweep
-   * already running to end, so its writes land before the database closes.
+   * already running and moves already in flight to end, so their writes
+   * land before the database closes.
    */
   disposeAll(): Promise<void> {
     this.disposed = true;
@@ -15476,11 +15502,11 @@ export class CrewSupervisor {
 
   /**
    * Resolves once every session let go of mid-turn is gone and every ready
-   * sweep has ended, or `boundMs` has passed. A sweep that failed is its
-   * caller's to hear, never the quit's.
+   * sweep and computer move has ended, or `boundMs` has passed. A failed
+   * operation is its caller's to hear, never the quit's.
    */
   private settled(boundMs: number): Promise<void> {
-    const pending = [...this.releasing, ...this.sweeping];
+    const pending = [...this.releasing, ...this.sweeping, ...this.computerMoveOperations];
     if (pending.length === 0) return Promise.resolve();
     let timer: ReturnType<typeof setTimeout> | undefined;
     const bound = new Promise<void>((resolve) => {

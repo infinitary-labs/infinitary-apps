@@ -147,6 +147,11 @@ export class PhoneTouchOutcomes {
   private touching = new Map<string, string>();
   private listeners = new Set<() => void>();
   private failure: Error | undefined;
+  private recover: ((since: number, signal: AbortSignal) => Promise<object[]>) | undefined;
+
+  constructor(recover?: (since: number, signal: AbortSignal) => Promise<object[]>) {
+    this.recover = recover;
+  }
 
   receive(record: { processImagePath?: string; eventMessage?: string; timestamp?: string }) {
     if (basename(record.processImagePath ?? "") !== "backboardd") return;
@@ -187,9 +192,15 @@ export class PhoneTouchOutcomes {
   /** The outcome of the tap the runner began at `since`, on its own clock in milliseconds. */
   outcome(since: number): Promise<PhoneTouchOutcome> {
     return new Promise((resolve) => {
+      let settled = false;
+      let recoveryFailure = "";
+      const recovery = new AbortController();
       const finish = (result: PhoneTouchOutcome) => {
+        if (settled) return;
+        settled = true;
         deadline.cancel();
         this.listeners.delete(check);
+        recovery.abort();
         resolve(result);
       };
       const check = () => {
@@ -220,12 +231,24 @@ export class PhoneTouchOutcomes {
         () =>
           finish({
             outcome: "unknown",
-            reason: `No touch screen witness since ${new Date(since).toISOString()}`,
+            reason: `No touch screen witness since ${new Date(since).toISOString()}${recoveryFailure}`,
           }),
         30_000,
       );
       this.listeners.add(check);
       check();
+      // INF-1917: the completed pager tap's contact was in log show but absent from log stream.
+      // Read the kept log once if the stream has not answered, inside the existing wait, not after
+      // its deadline (which can share the caller's wall cap). Never send another tap to find out.
+      void Promise.resolve().then(async () => {
+        if (settled || !this.recover) return;
+        try {
+          const records = await this.recover(since, recovery.signal);
+          if (!settled) for (const record of records) this.receive(record);
+        } catch (error) {
+          recoveryFailure = `; the simulator's kept log could not be read: ${(error as Error).message}`;
+        }
+      });
     });
   }
 
@@ -605,7 +628,11 @@ export async function observePhoneKeyboard(options: PhoneKeyboardOptions) {
 }
 
 /** INF-1799: the simulator's kept log of the witness lines since `since`, which holds lines a live stream dropped. */
-function keptPhoneLog(options: PhoneKeyboardOptions, since: number): Promise<object[]> {
+function keptPhoneLog(
+  options: PhoneKeyboardOptions,
+  since: number,
+  signal?: AbortSignal,
+): Promise<object[]> {
   return new Promise((resolve, reject) => {
     const show = spawn(
       "xcrun",
@@ -624,7 +651,7 @@ function keptPhoneLog(options: PhoneKeyboardOptions, since: number): Promise<obj
         "--predicate",
         PHONE_KEYBOARD_LOG_PREDICATE,
       ],
-      { env: options.env, stdio: ["ignore", "pipe", "pipe"] },
+      { env: options.env, stdio: ["ignore", "pipe", "pipe"], signal },
     );
     options.children.add(show);
     const records: object[] = [];
@@ -656,7 +683,7 @@ function keptPhoneLog(options: PhoneKeyboardOptions, since: number): Promise<obj
 
 async function openPhoneKeyboardStream(options: PhoneKeyboardOptions, append: boolean) {
   const registrations = new PhoneKeyRegistrations();
-  const touches = new PhoneTouchOutcomes();
+  const touches = new PhoneTouchOutcomes((since, signal) => keptPhoneLog(options, since, signal));
   const previews = new PhonePickerPreviews();
   const displays = new PhoneDisplayChanges((since) => keptPhoneLog(options, since));
   const child = spawn(

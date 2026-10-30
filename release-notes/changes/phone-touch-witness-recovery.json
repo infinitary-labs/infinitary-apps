@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "phone-touch-witness-recovery",
+      "reason": "Test-only repair: read the simulator's kept touch witness when its live log drops it, without changing the app, retrying a tap or extending a timeout."
+    }
+  ]
+}

@@ -374,7 +374,104 @@ const linkContact = {
 };
 const linkTapBegan = phoneLogMilliseconds("2026-10-27 21:51:39.894000-0700");
 
+// INF-1917: phone run 40994573754, iPhone cards, the pager tap at t=274.27s.
+// Its live simulator log lost these records; 12-xcrun.log kept both at millisecond precision.
+const pagerAttached = {
+  processImagePath: backboardd,
+  timestamp: "2026-10-30 03:38:56.868000+0000",
+  eventMessage:
+    "init: <BKDirectTouchState: 0x10592c900; touchScreen; accessory; builtIn: NO; displayIntegrated: YES; authenticated: YES; displayUUID: BAE7661C-9A72-4F1D-AC88-D138EFE44128; senderID: 0x111885E000018; contacts: contacts: []; destinations: []; latentSystemGestureDestinations: ()>",
+};
+const pagerContact = {
+  processImagePath: backboardd,
+  timestamp: pagerAttached.timestamp,
+  eventMessage: "[111885E000018] contact 2 presence: touching",
+};
+// testmanagerd began synthesizing the tap at this time in the same kept log.
+const pagerTapBegan = phoneLogMilliseconds("2026-10-30 03:38:56.856000+0000");
+
 describe("a tap's touch screen witness (INF-1477)", () => {
+  it("recovers the pager tap's delivered witness when the live stream dropped it (INF-1917)", async () => {
+    vi.useFakeTimers();
+    const recover = vi.fn(async () => [pagerAttached, pagerContact]);
+    const touches = new PhoneTouchOutcomes(recover);
+    const read = touches.outcome(pagerTapBegan);
+    await vi.runAllTimersAsync();
+    await expect(read).resolves.toEqual({
+      outcome: "delivered",
+      sender: "111885e000018",
+      timestamp: pagerAttached.timestamp,
+      proof: pagerContact.eventMessage,
+    });
+    expect(recover).toHaveBeenCalledOnce();
+  });
+  it("uses live proof without reading the kept log, and cancels recovery when live proof arrives (INF-1917)", async () => {
+    vi.useFakeTimers();
+    let release!: (records: object[]) => void;
+    const pending = new Promise<object[]>((resolve) => {
+      release = resolve;
+    });
+    const recover = vi.fn((_since: number, _signal: AbortSignal) => pending);
+    const touches = new PhoneTouchOutcomes(recover);
+    const read = touches.outcome(pagerTapBegan);
+    await Promise.resolve();
+    expect(recover).toHaveBeenCalledOnce();
+    for (const record of [pagerAttached, pagerContact]) touches.receive(record);
+    await expect(read).resolves.toMatchObject({
+      outcome: "delivered",
+      proof: pagerContact.eventMessage,
+    });
+    expect(recover.mock.calls[0]?.[1].aborted).toBe(true);
+    release([pickAttached, pickIgnored]);
+    await pending;
+    await expect(touches.outcome(pagerTapBegan)).resolves.toMatchObject({ outcome: "delivered" });
+    await Promise.resolve();
+    expect(recover).toHaveBeenCalledOnce();
+    expect(vi.getTimerCount()).toBe(0);
+  });
+
+  it("keeps the original deadline if the kept-log reader stalls and never invents a discarded tap (INF-1917)", async () => {
+    vi.useFakeTimers();
+    let release!: (records: object[]) => void;
+    const pending = new Promise<object[]>((resolve) => {
+      release = resolve;
+    });
+    const recover = vi.fn((_since: number, _signal: AbortSignal) => pending);
+    const recovered = new PhoneTouchOutcomes(recover);
+    const original = new PhoneTouchOutcomes();
+    const read = recovered.outcome(pagerTapBegan);
+    const unchanged = original.outcome(pagerTapBegan);
+    // Run exactly the pre-existing witness deadline; recovery gets no additional wait.
+    await vi.advanceTimersToNextTimerAsync();
+    expect(await read).toEqual(await unchanged);
+    expect(await read).toMatchObject({ outcome: "unknown" });
+    expect(recover.mock.calls[0]?.[1].aborted).toBe(true);
+    release([pagerAttached, pagerContact]);
+    await pending;
+    expect(await read).toMatchObject({ outcome: "unknown" });
+    expect(vi.getTimerCount()).toBe(0);
+  });
+
+  it("requires the same discarded proof from kept records and keeps a failed read unknown (INF-1917)", async () => {
+    vi.useFakeTimers();
+    const discarded = new PhoneTouchOutcomes(async () => [pickAttached, pickIgnored]);
+    await expect(discarded.outcome(pickBegan)).resolves.toMatchObject({
+      outcome: "discarded",
+      proof: pickIgnored.eventMessage.split("\n")[0],
+    });
+    for (const recover of [
+      async () => [pickAttached],
+      async () => {
+        throw new Error("log show exited with 1");
+      },
+    ]) {
+      const reader = new PhoneTouchOutcomes(recover);
+      const read = reader.outcome(pickBegan);
+      await vi.runAllTimersAsync();
+      await expect(read).resolves.toMatchObject({ outcome: "unknown" });
+    }
+  });
+
   it("reads the tap's own built-in touch screen as delivered, never an earlier tap's that arrives late", async () => {
     vi.useFakeTimers();
     const touches = new PhoneTouchOutcomes();
@@ -483,6 +580,49 @@ describe("a tap's touch screen witness (INF-1477)", () => {
     });
     stopped.receive(pickIgnored);
     await expect(stopped.outcome(pickBegan)).resolves.toMatchObject({ outcome: "unknown" });
+  });
+
+  it("reads the owned simulator's kept log when its live tap subscription omitted the witness (INF-1917)", async () => {
+    const evidence = scratchDir("phone-touch-recovery-");
+    const children = new Set<ChildProcess>();
+    const simulator = "53B86A21-6C98-4ADA-B450-3067365D6B8F";
+    spawn.mockImplementation((_command, args) => {
+      const stdout = new PassThrough();
+      const stderr = new PassThrough();
+      const child = Object.assign(new EventEmitter(), {
+        stdout,
+        stderr,
+        kill: vi.fn(() => {
+          end(null);
+          return true;
+        }),
+      });
+      function end(status: number | null) {
+        stdout.end();
+        stderr.end();
+        queueMicrotask(() => child.emit("close", status));
+      }
+      queueMicrotask(() => {
+        if (args.includes("stream")) {
+          stdout.write("Filtering the log data using the registration predicate\n");
+          // This tap's contact was absent from the live log in the failed run.
+        } else {
+          expect(args.slice(0, 5)).toEqual(["simctl", "spawn", simulator, "log", "show"]);
+          for (const record of [pagerAttached, pagerContact])
+            stdout.write(`${JSON.stringify(record)}\n`);
+          end(0);
+        }
+      });
+      return child;
+    });
+    const observer = await observePhoneKeyboard({ simulator, env: {}, evidence, children });
+    await expect(observer.touch(pagerTapBegan)).resolves.toMatchObject({
+      outcome: "delivered",
+      proof: pagerContact.eventMessage,
+    });
+    expect(spawn).toHaveBeenCalledTimes(2);
+    await observer.close();
+    expect(children.size).toBe(0);
   });
 
   it("answers a tap's outcome and a photo tap's preview from the same renewed subscription as the chords", async () => {

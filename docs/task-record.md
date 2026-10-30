@@ -171,6 +171,32 @@ A record export carries the delivery facts it carried before, which hold no perm
 Restart recovery reads the same facts it read before: a kept approval's attempt token is read back from where the project lives before anything is sent (`docs/delivery-rigor.md`), and a settle that has not run resumes once.
 The offline tools under `scripts/` read a saved database's delivery facts through `savedDeliveryReader`.
 
+## A task's change
+
+The change a task carries is a record of its own (INF-1868 piece 1; `src/core/storage/changeStore.ts`, its shape in `src/shared/change.ts`): one `changes` row and one `change_versions` row per version pushed.
+The change says where it is - the project, the branch it merges into when the record holds it, and its head branch - its handle where the project's host keeps one (a pull request or a merge request with its number, page and label; a plain Git host keeps none), who raised it, and its receipt once merged, discarded or closed.
+A version is a head pushed (the captain's plan), so the record makes one of each head the project's host saw: a check read, an owned merge review, a published story, a merge click and the repairs it was carried to, a completion offer, and an override given for one version.
+Each version, in the order the host saw them, holds the facts the host held at it: the checks it read with their states, times and lines, the review verdict declared with its risk and reading, the story revisions prepared and the one published, and the consent given.
+A version a declared repair carried the approval to before the host read it follows the version the repair started from, in the lineage's own order, whatever the host read in between.
+A review, a lines reading of the working copy or a story prepared at a head the host has not seen makes no version; they attach to it once it is pushed.
+A reading of a referenced pull request (`docs/forge.md`, "A requested merge") writes its number, page and label and the head it read with its checks into the same slot, and an approval of it is consent to merge that pull request, not this change.
+Each of those facts names the pull request it belongs to: the number group carries it, the head and the checks read at it are written with the number of the change they were read from and move with it when the slot names another change, an approval names the review it approved, and an override given for one version names the pull request that version belonged to (`HoldOverride.prNumber`).
+A fact that names a referenced pull request is not this change's, whatever the current selection, and the record reads the task's own number from its owned reviews and completion offers, which never follow a selection, so the referenced pull request's facts, consent and receipt stay off the task's own change.
+A fact saved before it named its pull request - an override, or the head and checks an older writer left beside the own number when it named the own change again - is bound by its head alone: the heads the referenced reviews and approval record, and the head and checks read under a referenced number, are the referenced pull request's, and a fact at one of them is not this change's.
+Such an override whose head no fact names, or that a referenced fact names, in a slot that records a referenced pull request, makes no version and gives no consent, because the host cannot tell whose version it was given for; in a slot that records none it makes a version as any override given for one version does.
+A head the change's own facts name with their pull request - its owned reviews, completion offers, publications and approval, and an override that names its pull request - or that the record already holds as a version is both pull requests' when a referenced fact names it too, because two pull requests can share a commit, and a head and checks an older writer left there are this change's.
+The record's own age tells an older writer's head and checks from a reading: the record exists only since the writers that write the head and the checks read at it with the number they stand beside, so a reading dated since the record was made is this change's at any head, a fresh reading of the own pull request at a commit a referenced review also names included, while one dated before it is bound by head alone.
+Consent at a version is the captain's click on a card, an approval carried to a repaired version by a declared repair, or an override given for that version alone; an override given for the whole task sits on the change.
+Every value is a fact the host held or was told; none is a judgment, and a fact the record does not name is left out, never made up.
+In this piece the record is a projection: `TaskStore` writes it from the task's record on every write that can move it (its delivery facts, status, close, branch, project or shape), the delivery facts keep their writers, and every reader reads them where they were.
+A task carries a change when it is work on a project the app manages, on a branch of its own, not building in place and not raised by the host on another task's change, while it is open.
+An answer, a review the host raised, work in the personal workspace, a task not yet started and a task closed before the record existed carry none.
+A version once recorded stays, dated when the host first saw it, and what the slot says at it is read on every later write, whether or not a pushed-head fact still names it.
+A reading of its checks - state, snapshot and times - replaces the last whole, so a time a rerun no longer names goes with it, while its lines are kept until read again; a review replaces the last whole; and the consent's click, carried approval and override each follow their own newest fact.
+A component the slot no longer names at it - the checks of a head a newer push replaced, the publication the next story moved past, the click a later approval superseded - is kept, and the story's revisions accumulate; a handle, base or override the task no longer names is kept the same way, so the record accumulates what the delivery facts forget.
+A task's hard delete takes its change with it, and a project removed keeps what its changes recorded.
+Later pieces key the tools, the one card and note, and review to the change by its id, and the last removes the delivery fields they read through (`docs/delivery-rigor.md`).
+
 ## Specification delivery and history
 
 `update_task` applies combined edits before `start_now`; a typed graph refusal prevents that start.

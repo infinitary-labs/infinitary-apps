@@ -5000,11 +5000,13 @@ describe("CrewSupervisor", () => {
             until: "version",
           }).ok,
         ).toBe(true);
+        // The version is a head of the pull request the task named then (INF-1884 R2).
         expect(h.tasks.get(h.taskId)?.delivery?.override).toMatchObject({
           words,
           holds: ["review", "live-proof"],
           until: "version",
           head: APPROVED,
+          prNumber: 7,
         });
         const row = h.tasks.timeline(h.taskId).find((event) => event.text.includes(words));
         expect(row).toMatchObject({ kind: "note", actor: "firstmate" });
@@ -5192,6 +5194,7 @@ describe("CrewSupervisor", () => {
           holds: ["checks"],
           until: "version",
           head: APPROVED,
+          prNumber: 7,
           words: `${MERGE_ANYWAY_WORDS}, on the card "Ready to merge"`,
         });
         expect(

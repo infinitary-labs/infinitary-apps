@@ -154,8 +154,11 @@ UPDATE tasks SET pending_settle_json = p.pending_settle_json
 DROP TABLE task_permissions;
 DROP TABLE task_delivery_evidence;
 `;
-/** INF-1296 pieces 3 and 4's records, undone, newest first. */
+/** INF-1868 piece 1's change record, undone: its two tables. */
+const REVERSE_CHANGES = "DROP TABLE IF EXISTS change_versions; DROP TABLE IF EXISTS changes;\n";
+/** INF-1296 pieces 3 and 4's records, undone, newest first, after the change record over them. */
 const REVERSE_RUNNING_WORK =
+  REVERSE_CHANGES +
   taskRecordRetirementReverseSql() +
   REVERSE_TASK_DELIVERY +
   REVERSE_TASK_POLICIES +

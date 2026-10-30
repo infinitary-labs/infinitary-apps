@@ -17,6 +17,7 @@ import type { FirstRelease } from "@shared/taskRelease";
 import type { RunChecks, TaskDeliveryMode } from "@shared/tasks";
 import type { WriteAsk } from "@shared/writeAsk";
 import type { SpawnIntent } from "../orchestrator/intentBrief";
+import { ChangeStore } from "./changeStore";
 import type { AppDatabase } from "./db";
 import { prepared } from "./statements";
 import {
@@ -892,6 +893,17 @@ export type TaskPatch = Partial<Pick<TaskRecord, PatchField>> & {
   pendingSettle?: PendingSettleIntent | null;
 };
 
+/** The patch fields that can move the change a task carries (INF-1868 piece 1). */
+const CHANGE_PATCH_FIELDS: readonly (keyof TaskPatch)[] = [
+  "delivery",
+  "status",
+  "closedReason",
+  "closedAt",
+  "branch",
+  "repoId",
+  "shape",
+];
+
 export class TaskStore {
   private taskColumns: Set<string> | undefined;
   /** Read here so a record's shape carries them; written only by TaskService. */
@@ -902,6 +914,8 @@ export class TaskStore {
   readonly policies: TaskPolicyStore;
   /** A task's change evidence and permissions (INF-1296 piece 4); a record's delivery reads them. */
   readonly delivery: TaskDeliveryStore;
+  /** The change a task carries (INF-1868 piece 1), projected from its record on every write that can move it. */
+  readonly changes: ChangeStore;
   readonly specifications: TaskSpecificationStore;
   readonly shapes: TaskOwnedShapeStore;
 
@@ -912,6 +926,14 @@ export class TaskStore {
     this.execution = new TaskExecutionStore(db);
     this.policies = new TaskPolicyStore(db);
     this.delivery = new TaskDeliveryStore(db);
+    this.changes = new ChangeStore(db);
+  }
+
+  /** Writes the change this task's record now describes, once its saved row says so. */
+  private projectChange(id: string): void {
+    if (!this.changes.exists()) return;
+    const saved = this.get(id);
+    if (saved) this.changes.project(saved);
   }
 
   /** Older migration fixtures still read the schema they were written against. */
@@ -1172,6 +1194,7 @@ export class TaskStore {
         placement: record.placement,
         deviceId: record.placement.snapshot.computerId,
       });
+    this.projectChange(record.id);
   }
 
   /** An open or active row that already names this test, oldest first. */
@@ -1272,9 +1295,12 @@ export class TaskStore {
       values.push(patch.pendingSettle ? JSON.stringify(patch.pendingSettle) : null);
     }
     if (Object.keys(running).length > 0) this.execution.update(id, running);
-    if (sets.length === 0) return;
-    values.push(id);
-    this.db.prepare(`UPDATE tasks SET ${sets.join(", ")} WHERE id = ?`).run(...values);
+    if (sets.length > 0) {
+      values.push(id);
+      this.db.prepare(`UPDATE tasks SET ${sets.join(", ")} WHERE id = ?`).run(...values);
+    }
+    // The change a task carries follows the facts that can move it (INF-1868 piece 1).
+    if (CHANGE_PATCH_FIELDS.some((field) => field in patch)) this.projectChange(id);
   }
 
   pendingPlacements(): TaskRecord[] {
@@ -1464,6 +1490,7 @@ export class TaskStore {
 
   /** Hard delete: a spawn that never ran, or the D-13 purge. */
   delete(id: string): void {
+    this.changes.deleteFor(id);
     this.delivery.deleteFor(id);
     this.execution.deleteFor(id);
     this.policies.deleteFor(id);
@@ -1471,6 +1498,7 @@ export class TaskStore {
   }
 
   deleteAll(): number {
+    this.changes.deleteAll();
     this.delivery.deleteAll();
     this.execution.deleteAll();
     this.policies.deleteAll();

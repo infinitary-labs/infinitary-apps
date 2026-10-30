@@ -30,7 +30,7 @@ import {
   presentationMarkdown,
 } from "../forge";
 import { stageChangePresentation } from "../pi/changePresentation";
-import type { MergeAuthorization } from "../storage/taskStore";
+import { type MergeAuthorization, TaskStore } from "../storage/taskStore";
 import { seedTask, type TaskSeed } from "../tasks/seedTask";
 import { taskFeedLine } from "../tasks/taskFeed";
 import { TaskService } from "../tasks/taskService";
@@ -3793,5 +3793,114 @@ describe("check facts without host verdicts", () => {
         saved: tasks.get("ab12cd34")?.delivery,
       }),
     );
+  });
+});
+
+/**
+ * INF-1884 R2: the slot's number and head name one change. A reading of a
+ * selected pull request writes its number with the head it read, and when
+ * the task's own change is named again the same write names the own head
+ * and drops the selection's reading, so the change record never sees the
+ * selection's head under the task's own number.
+ */
+describe("the slot's head moves with the change it names (INF-1884 R2)", () => {
+  const RELEASE_BRANCH = "release-please--branches--main";
+  const R1 = "1".repeat(40);
+  const R2 = "2".repeat(40);
+  /** The fake forge with a release pull request on another branch, read by its branch and by its number. */
+  class SelectingForge extends FakeForge {
+    release: ForgeChange = {
+      number: 94,
+      url: "https://github.com/infinitary-labs/infinitary/pull/94",
+      branch: RELEASE_BRANCH,
+      headSha: R1,
+      title: "chore(main): release 0.2.0",
+    };
+    override async changeFor(branch: string) {
+      if (branch !== RELEASE_BRANCH) return super.changeFor(branch);
+      this.calls.push(`changeFor ${branch}`);
+      return { ...this.release };
+    }
+    async pull(number: number): Promise<ForgePull> {
+      this.calls.push(`pull ${number}`);
+      const change = number === this.release.number ? this.release : this.change;
+      if (!change) throw new ForgeError("transient", "no such pull request");
+      return {
+        number,
+        state: "open",
+        merged: false,
+        headSha: change.headSha,
+        base: "main",
+        branch: change.branch,
+        title: change.title,
+        headRepo: "infinitary-labs/infinitary",
+        readiness: "clean",
+      };
+    }
+  }
+
+  it("names the own head and drops the selection's reading when the own change is named again, after the selected pull request moved past its review", async () => {
+    const forge = new SelectingForge();
+    const { db, tasks, repos, service } = setup({ forge });
+    await insertDirectPrTask(tasks, repos);
+    repos.configure(tasks.get("ab12cd34")!.repoId!, {
+      origin: "https://github.com/infinitary-labs/infinitary.git",
+    });
+    recordPr(tasks, 23);
+    await service.checkForCrew("ab12cd34");
+    const store = new TaskStore(db);
+    const heads = () => store.changes.forTask("ab12cd34")?.versions.map((version) => version.head);
+    expect(tasks.get("ab12cd34")?.delivery).toMatchObject({
+      prNumber: 23,
+      headSha: "feedbeef",
+      ci: "green",
+    });
+    expect(heads()).toEqual(["feedbeef"]);
+
+    // check_change(pull) selects the release pull request: the slot's number
+    // and head follow it, and the review records the head it read.
+    await service.checkForCrew("ab12cd34", { pull: 94 });
+    expect(tasks.get("ab12cd34")?.delivery).toMatchObject({
+      prNumber: 94,
+      changeLabel: "#94",
+      headSha: R1,
+      checks: { headSha: R1 },
+      checkTarget: { relationship: "referenced", number: 94, headSha: R1 },
+    });
+    // The release pull request moves on; the next reading follows it under its number.
+    forge.release = { ...forge.release, headSha: R2 };
+    await service.checkForCrew("ab12cd34");
+    expect(tasks.get("ab12cd34")?.delivery).toMatchObject({
+      prNumber: 94,
+      headSha: R2,
+      checks: { headSha: R2 },
+      checkTarget: { headSha: R1 },
+    });
+    expect(heads()).toEqual(["feedbeef"]);
+
+    // open_change on the task's own branch names its own change again: one
+    // write carries the own number with the own head and no reading, never
+    // the own number beside the release's head and checks.
+    await service.open("ab12cd34", { title: "fix: ship it", body: "b" });
+    const own = tasks.get("ab12cd34")?.delivery;
+    expect(own).toMatchObject({ prNumber: 23, changeLabel: "#23", headSha: "feedbeef" });
+    expect(own?.checkTarget).toBeUndefined();
+    expect(own?.checks).toBeUndefined();
+    expect(own?.ci).toBeUndefined();
+    expect(own?.ciAt).toBeUndefined();
+    expect(heads()).toEqual(["feedbeef"]);
+    // The own reading follows at the own head.
+    await service.checkForCrew("ab12cd34");
+    expect(tasks.get("ab12cd34")?.delivery).toMatchObject({
+      prNumber: 23,
+      headSha: "feedbeef",
+      ci: "green",
+      checks: { headSha: "feedbeef" },
+    });
+    expect(heads()).toEqual(["feedbeef"]);
+    expect(store.changes.forTask("ab12cd34")?.versions[0]?.checks).toMatchObject({
+      state: "green",
+      snapshot: { headSha: "feedbeef" },
+    });
   });
 });

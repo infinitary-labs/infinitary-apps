@@ -9449,11 +9449,16 @@ export class CrewSupervisor {
         ok: false,
         text: `${handle} has no version yet, so an override for this version has nothing to cover. Declare until task if their words mean the whole task.`,
       };
+    // The version is a head of the pull request the task names now - its own
+    // or a selected one - so the override records which (INF-1884 R2).
+    const prNumber = record.delivery?.prNumber;
     const override: HoldOverride = {
       words: input.words,
       holds,
       until: input.until,
-      ...(input.until === "version" && head ? { head } : {}),
+      ...(input.until === "version" && head
+        ? { head, ...(prNumber !== undefined ? { prNumber } : {}) }
+        : {}),
       at: this.now(),
     };
     this.options.tasks.recordPermissionRecords(
@@ -14366,11 +14371,13 @@ export class CrewSupervisor {
     });
     const head = offer?.baseline.headSha ?? record.delivery?.headSha;
     if (!head) return;
+    const prNumber = offer?.baseline.prNumber ?? record.delivery?.prNumber;
     const override: HoldOverride = {
       words: choiceWords(label, card.title, written),
       holds: ["checks"],
       until: "version",
       head,
+      ...(prNumber !== undefined ? { prNumber } : {}),
       at: this.now(),
     };
     this.options.tasks.recordPermissionRecords(

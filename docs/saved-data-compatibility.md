@@ -309,6 +309,16 @@ Superseded execution copies and mixed task columns are removed only after their 
 Older-format imports remain supported; specification histories in newer exports preserve their revision order through local identity remapping.
 This is a forward migration, not permission to open the profile with an older app or to reverse it over subsequent work.
 
+## The change record
+
+Migration 106 makes the change record's two tables, `changes` and `change_versions`, and one change for each open or active task that carries one, read out of its delivery facts exactly as saved, in one transaction before any service starts (`docs/task-record.md`, "A task's change").
+The delivery facts stay where they were and every reader reads them there: the migration moves nothing and makes no consent, because a version's consent is only the click, carried approval or override the profile already held.
+A version is a head the project's host saw - a check read, an owned merge review, a published story, a merge click and its repairs, a completion offer, or an override given for one version - never a review, a lines reading or a story prepared at a head not yet pushed, and never a referenced pull request's head (`docs/task-record.md`, "A task's change").
+A version's date is the earliest time a saved fact gives it; a version no fact dates comes after the dated ones, and the current head comes last.
+A task closed before this release gets no change and is read as before.
+An older build refuses the profile, because its migration history names a migration it does not know ("Before services start").
+A record export carries the task's delivery facts as before and no change row, and an import projects the change from them again.
+
 ## Linux automatic startup capability
 
 The work folder's optional `automatic-startup.json` records the last Linux setup outcome with its own versioned schema.

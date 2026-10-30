@@ -7,6 +7,7 @@ import type { WorkShape } from "@shared/routingPolicy";
 import Database from "better-sqlite3";
 import { repairMovedTaskFolders } from "../folderMove/taskFolders";
 import { INBOX_GRACE_MS, inboxContentHash } from "./inboxStore";
+import { migrateChanges } from "./migrateChanges";
 import { migrateGpt6Slots, migrateModelSlots } from "./migrateModelSlots";
 import { migrateOngoingWork } from "./migrateOngoingWork";
 import { ensureRepoProject, ensureScratchProject, SCRATCH_PROJECT_ID } from "./projectStore";
@@ -1178,10 +1179,18 @@ const MIGRATIONS: readonly Migration[] = [
   addPluginKind,
   // Preserve existing continuing work while retiring its feature-specific kind.
   migrateOngoingWork,
+  // INF-1868 piece 1: the host's typed change record, one change per open
+  // task that carries one, read out of its delivery facts; the facts stay
+  // where they were and every reader reads them there. Dropping the two
+  // tables reverses it.
+  migrateChanges,
 ];
 
 /** The current database format, derived from the embedded migration ledger. */
 export const DATABASE_VERSION = MIGRATIONS.length;
+
+/** The migration that made the change record (INF-1868 piece 1). */
+export const CHANGES_VERSION = MIGRATIONS.indexOf(migrateChanges) + 1;
 
 export const CARD_ANSWERER_MIGRATION_VERSION = MIGRATIONS.indexOf(addCardAnswerer) + 1;
 export const PLUGIN_KIND_MIGRATION_VERSION = MIGRATIONS.indexOf(addPluginKind) + 1;

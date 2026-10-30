@@ -2798,7 +2798,11 @@ export class PrCiService {
 
   /**
    * A change the record has not named yet: its label from the forge, its
-   * number and link where the host has them, and one `pr_opened` event.
+   * number and link where the host has them, and one `pr_opened` event. The
+   * slot's head and the checks read at it were the change it named before -
+   * its own, or a selected pull request (`docs/forge.md`, "A requested
+   * merge") - so the same write names the new change's head and drops that
+   * reading; the number and the head never name two changes (INF-1884 R2).
    */
   private noteChange(taskId: string, checked: CheckedChange): void {
     const task = this.options.tasks.get(taskId);
@@ -2816,6 +2820,12 @@ export class PrCiService {
         changeLabel: label,
         ...(url ? { prUrl: url } : {}),
         ...(change.number !== undefined ? { prNumber: change.number } : {}),
+        headSha: change.headSha,
+        checks: undefined,
+        ci: undefined,
+        ciAt: undefined,
+        ciStartedAt: undefined,
+        ciFinishedAt: undefined,
       },
       {
         kind: "pr_opened",

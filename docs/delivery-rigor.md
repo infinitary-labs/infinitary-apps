@@ -514,7 +514,7 @@ A soft hold with its own way (`escalation`, `program-bound`, `start-waits`) name
 
 **The override.**
 The captain's words are one recorded override on the task (`delivery.override`, `HoldOverride`): the captain's words, the soft holds the first mate declared they pass, and how long.
-How long is the first mate's reading of the captain's words: `version`, the version it was declared at, or `task`, the rest of the task's life.
+How long is the first mate's reading of the captain's words: `version`, the version it was declared at - the task's head then, of the pull request it named then, its own or one it selected to read - or `task`, the rest of the task's life.
 The first mate declares it with `update_task override` (`holds`, `until`, `from`) on the captain's own words, and the host keeps those words as its reason without reading them.
 The words are the turn's own: every message of the captain's the turn carries, however it began, words typed while a crewmate's report was being read included (INF-1582 finding 2).
 Or they are the words `from` cites (INF-1216): on a card of the task (`from` is the card's id), the newer of the captain's reply in its thread and the captain's click on one of its buttons, on the first mate's cards and a crewmate's alike; the captain's newest line in its Crewmate tab (`crewmate-tab`); or the words of the override standing on the task (`standing`).

@@ -150,6 +150,13 @@ export type HoldOverride = {
   until: "version" | "task";
   /** The version it covers, when it lasts for one version. */
   head?: string;
+  /**
+   * The pull request that version belongs to, as the task's facts named it
+   * when the override was given - the task's own, or one it selected to
+   * read (`docs/forge.md`, "A requested merge") - so the record binds the
+   * override to that pull request rather than to whatever the task names later.
+   */
+  prNumber?: number;
   at: number;
 };
 

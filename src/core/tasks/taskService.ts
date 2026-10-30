@@ -101,6 +101,7 @@ import {
   AskStore,
   type AskTurnState,
 } from "../storage/askStore";
+import { isHostRaisedShape } from "../storage/changeStore";
 import type { AppDatabase } from "../storage/db";
 import { type ProjectRecord, ProjectStore } from "../storage/projectStore";
 import { sessionFilesIn } from "../storage/sessionReader";
@@ -1599,7 +1600,7 @@ export class TaskService {
    * whenever the parent closes.
    */
   static isDeliveryChild(record: TaskRecord): boolean {
-    return record.shape?.kind_source?.startsWith("host:") ?? false;
+    return isHostRaisedShape(record.shape);
   }
 
   // ---- graph reads (P2) ---------------------------------------------------

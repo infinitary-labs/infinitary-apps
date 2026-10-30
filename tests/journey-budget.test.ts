@@ -1,13 +1,17 @@
-import { readFileSync } from "node:fs";
+import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import {
   budget,
+  calibratedPlacement,
   JOURNEY_BUDGET_MS,
   journeyTimes,
   LINUX_PLACES,
+  type LinuxObservation,
   laneOf,
   type ReportSuite,
+  readLinuxObservations,
 } from "../scripts/journey-budget.ts";
+import { scratchDir } from "./helpers/scratchDirs.ts";
 import { needsMac } from "./lint/e2eMacTag.ts";
 
 // INF-658's approved choice sized the journeys' jobs at six measured minutes;
@@ -131,5 +135,206 @@ describe("INF-1763 journey placement", () => {
     for (const [file, duration] of parsed) expect(duration).toBe(times.get(file));
     expect(parsed.size).toBeGreaterThan(0);
     expect(() => journeyTimes({ suites: [] })).toThrow("no measured journeys");
+  });
+});
+
+// INF-1987's accepted change 2: captured Linux observations, same five jobs,
+// complete file identity, conservative fallback and indivisible-file tails.
+const observations = (): LinuxObservation[] =>
+  (["desktop", "parallel"] as const).map((lane) => {
+    const report = JSON.parse(
+      readFileSync(
+        new URL(`./fixtures/journey-timing/compact-${lane}.json`, import.meta.url),
+        "utf8",
+      ),
+    );
+    return {
+      report,
+      job: {
+        conclusion: "success",
+        run: report.run,
+        attempt: report.attempt,
+        startedAt: Date.parse(lane === "desktop" ? "2026-10-30T19:07:41Z" : "2026-10-30T19:07:33Z"),
+        completedAt: Date.parse(
+          lane === "desktop" ? "2026-10-30T19:11:34Z" : "2026-10-30T19:12:15Z",
+        ),
+      },
+    };
+  });
+const capturedBins = () => {
+  const files = observations();
+  const parallelFiles = files[1]?.report.selectedFiles ?? [];
+  const desktopFiles = files[0]?.report.selectedFiles ?? [];
+  return [
+    { lane: "parallel" as const, files: parallelFiles.slice(0, 5).join(" "), estimatedMs: 1 },
+    { lane: "parallel" as const, files: parallelFiles.slice(5).join(" "), estimatedMs: 1 },
+    ...[desktopFiles.slice(0, 1), desktopFiles.slice(1, 2), desktopFiles.slice(2)].map((group) => ({
+      lane: "desktop" as const,
+      files: group.join(" "),
+      estimatedMs: 1,
+    })),
+  ];
+};
+
+describe("INF-1987 Linux-calibrated placement", () => {
+  it("retains conservative execution until adoption is supported, with an explicit verification-only candidate path", () => {
+    // The accepted plan explicitly requires fallback when adoption is unsupported.
+    const source = observations();
+    const pick = new Map(
+      source
+        .flatMap(({ report }) => report.selectedFiles)
+        .map((file) => [file, ["captured Linux selection"]]),
+    );
+    // An older Mac artifact can lack these selected files. Keep its other real
+    // readings so the existing slowest-lane fallback requires five jobs.
+    const olderMac = new Map([...times].filter(([file]) => !pick.has(file)));
+    const original = budget(pick, olderMac, tagged);
+    const advisory = budget(pick, olderMac, tagged, false, source);
+    const explicit = budget(pick, olderMac, tagged, false, source, true);
+    expect(original.linux).toHaveLength(LINUX_PLACES);
+    expect(advisory.candidateTimingSource).toBe("linux");
+    expect(advisory.linuxCandidate).not.toEqual(original.linux);
+    expect(advisory.linux).toEqual(original.linux);
+    expect(advisory.mac).toEqual(original.mac);
+    expect(advisory.timingSource).toBe("conservative");
+    expect(explicit.linux).toEqual(advisory.linuxCandidate);
+    expect(explicit.mac).toEqual(original.mac);
+    expect(linuxFiles(explicit).toSorted()).toEqual([...pick.keys()].toSorted());
+  });
+  it("packs real captured files deterministically in the existing five jobs, respecting the long-file tail and setup", () => {
+    const bins = capturedBins();
+    const result = calibratedPlacement(bins, observations());
+    expect(result.source).toBe("linux");
+    expect(result.linux).toHaveLength(LINUX_PLACES);
+    const before = bins.flatMap((bin) => bin.files.split(" ")).sort();
+    const after = result.linux.flatMap((bin) => bin.files.split(" ")).sort();
+    expect(after).toEqual(before);
+    expect(new Set(after).size).toBe(after.length);
+    expect(calibratedPlacement(bins, observations().reverse())).toEqual(result);
+    for (const bin of result.linux) {
+      const files = bin.files.split(" ");
+      expect(files.every((file) => laneOf(file) === bin.lane)).toBe(true);
+      const source = observations().find((observation) => observation.report.lane === bin.lane);
+      if (!source) throw new Error("missing captured lane");
+      const groups = source.report.files.filter((file) => files.includes(file.file));
+      const tail = Math.max(...groups.map((file) => file.elapsedMs ?? 0));
+      // Every job must pay setup/cleanup as well as its largest intact file.
+      expect(bin.estimatedMs).toBeGreaterThan(tail);
+    }
+  });
+
+  it("keeps small selections and all missing, failed or incompatible observations on the exact prior placement", () => {
+    const bins = capturedBins();
+    const small = bins.slice(0, 1);
+    expect(calibratedPlacement(small, observations()).linux).toEqual(small);
+    const bad: LinuxObservation[][] = [[], observations().slice(0, 1)];
+    for (const mutate of [
+      (o: LinuxObservation) => {
+        o.job.conclusion = "failure";
+      },
+      (o: LinuxObservation) => {
+        o.job.attempt = "2";
+      },
+      (o: LinuxObservation) => {
+        o.report.complete = false;
+      },
+      (o: LinuxObservation) => {
+        o.report.platform = "macOS";
+      },
+      (o: LinuxObservation) => {
+        o.report.actualWorkers = null;
+      },
+      (o: LinuxObservation) => {
+        o.report.configuredWorkers = 0;
+      },
+      (o: LinuxObservation) => {
+        o.report.architecture = "ARM64";
+      },
+      (o: LinuxObservation) => {
+        o.report.files.pop();
+      },
+    ]) {
+      const changed = observations();
+      for (const observation of changed) mutate(observation);
+      bad.push(changed);
+    }
+    for (const input of bad) expect(calibratedPlacement(bins, input).linux).toEqual(bins);
+    const unknown = bins.map((bin) => ({ ...bin }));
+    if (unknown[0]) unknown[0].files += " tests/e2e/new-journey.spec.ts";
+    const result = calibratedPlacement(unknown, observations());
+    expect(result.linux).toEqual(unknown);
+    expect(result.missing).toContain("tests/e2e/new-journey.spec.ts");
+  });
+
+  it("never drops observed skip-only files or mistakes them for missing readings", () => {
+    const input = observations();
+    // Retain real skipped outcomes from the compact report, removing executed
+    // groups to model a selection consisting only of observed Linux skips.
+    const desktop = input[0];
+    if (!desktop) throw new Error("missing desktop report");
+    const skipped = desktop.report.files.find((file) => file.skipped > 0);
+    if (!skipped) throw new Error("captured report contains no skips");
+    // Project the captured skipped attempts as a skip-only selected file.
+    skipped.tests = skipped.skipped;
+    skipped.elapsedMs = null;
+    skipped.startMs = null;
+    skipped.endMs = null;
+    skipped.workMs = 0;
+    const bins = capturedBins();
+    const result = calibratedPlacement(bins, input);
+    expect(result.missing).not.toContain(skipped.file);
+    expect(result.linux.flatMap((bin) => bin.files.split(" "))).toContain(skipped.file);
+    desktop.report.files = [skipped];
+    desktop.report.selectedFiles = [skipped.file];
+    expect(
+      calibratedPlacement([{ lane: "desktop", files: skipped.file, estimatedMs: 1 }], [desktop])
+        .missing,
+    ).toEqual([]);
+  });
+
+  it("joins artifact contents to one successful completed job of the same run, attempt and checkout", () => {
+    const dir = scratchDir("linux-placement-");
+    const source = observations()[0];
+    if (!source) throw new Error("missing captured observation");
+    const reportDir = `${dir}/reports`;
+    mkdirSync(reportDir);
+    writeFileSync(`${reportDir}/journey-timing.json`, JSON.stringify(source.report));
+    const jobsFile = `${dir}/jobs.json`;
+    const job = {
+      run_id: Number(source.job.run),
+      run_attempt: Number(source.job.attempt),
+      head_sha: source.report.revision,
+      name: "linux-source / source-desktop (desktop)",
+      conclusion: "success",
+      started_at: new Date(source.job.startedAt).toISOString(),
+      completed_at: new Date(source.job.completedAt).toISOString(),
+      steps: [
+        {
+          name: "Record the timing observation start",
+          started_at: "2026-10-30T19:07:45Z",
+          completed_at: "2026-10-30T19:07:45Z",
+        },
+        {
+          name: "Export compact Linux timing",
+          started_at: "2026-10-30T19:11:26Z",
+          completed_at: "2026-10-30T19:11:26Z",
+        },
+      ],
+    };
+    writeFileSync(jobsFile, JSON.stringify([job]));
+    const read = readLinuxObservations(reportDir, jobsFile);
+    expect(read).toHaveLength(1);
+    expect(read[0]?.job).toEqual(source.job);
+    expect(read[0]?.report.selectedFiles).toEqual(source.report.selectedFiles);
+    writeFileSync(jobsFile, JSON.stringify([{ ...job, head_sha: "different-checkout" }]));
+    expect(readLinuxObservations(reportDir, jobsFile)).toEqual([]);
+    // INF-1987 broad batches overlap with identical reusable names. The real
+    // report timestamps identify the right job, not just its enclosing interval.
+    writeFileSync(jobsFile, JSON.stringify([job, { ...job, steps: [] }]));
+    expect(readLinuxObservations(reportDir, jobsFile)).toHaveLength(1);
+    writeFileSync(jobsFile, JSON.stringify([job, job]));
+    expect(readLinuxObservations(reportDir, jobsFile)).toEqual([]);
+    writeFileSync(`${reportDir}/journey-timing.json`, "not-json");
+    expect(readLinuxObservations(reportDir, jobsFile)).toEqual([]);
   });
 });

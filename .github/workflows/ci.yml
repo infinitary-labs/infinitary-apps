@@ -26,6 +26,8 @@ name: ci
 # so only hosted jobs restore setup-node's pnpm cache (DOP-66 fix 1).
 
 on:
+  # Linux-only branch validation, including repeated unit-job proofs.
+  workflow_dispatch:
   push:
     branches: [main]
   pull_request:

@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "linux-calibrated-journey-placement",
+      "reason": "Internal CI allocation: compatible Linux timing observations forecast candidate allocations of the existing five affected-journey jobs; automatic execution retains conservative placement pending supported adoption, and every selected test is kept. No app behavior changes."
+    }
+  ]
+}

@@ -116,6 +116,59 @@ jobs:
           run-id: ${{ steps.timing-run.outputs.id }}
           github-token: ${{ github.token }}
           path: ${{ runner.temp }}/journey-times
+      # Optional Linux observations augment, never replace, the conservative
+      # Mac timings above. Only successful default-branch runs can train placement.
+      - id: linux-timing-runs
+        name: Find comparable Linux timing observations
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('node:fs');
+            const root = process.env.RUNNER_TEMP;
+            fs.mkdirSync(`${root}/linux-journey-times`, {recursive: true});
+            const jobs = [];
+            for (const [key, workflow] of [['verify', 'verify.yml'], ['journeys', 'journeys.yml']]) {
+              const pages = github.paginate.iterator(github.rest.actions.listWorkflowRuns, {
+                ...context.repo, workflow_id: workflow,
+                branch: context.payload.repository.default_branch,
+                exclude_pull_requests: true, per_page: 100
+              });
+              let found = false;
+              for await (const {data} of pages) {
+                for (const run of data) {
+                  if (run.conclusion !== 'success') continue;
+                  const artifacts = await github.paginate(github.rest.actions.listWorkflowRunArtifacts, {
+                    ...context.repo, run_id: run.id, per_page: 100
+                  });
+                  if (!artifacts.some(a => !a.expired && a.name.startsWith('journey-timing-Linux-'))) {
+                    found = true; // No compatible reports: retain the conservative placement.
+                    break;
+                  }
+                  jobs.push(...await github.paginate(github.rest.actions.listJobsForWorkflowRunAttempt, {
+                    ...context.repo, run_id: run.id, attempt_number: run.run_attempt, per_page: 100
+                  }));
+                  core.setOutput(key, run.id);
+                  found = true;
+                  break;
+                }
+                if (found) break;
+              }
+            }
+            fs.writeFileSync(`${root}/linux-journey-jobs.json`, JSON.stringify(jobs));
+      - uses: actions/download-artifact@v4
+        if: steps.linux-timing-runs.outputs.verify != ''
+        with:
+          pattern: journey-timing-Linux-*
+          run-id: ${{ steps.linux-timing-runs.outputs.verify }}
+          github-token: ${{ github.token }}
+          path: ${{ runner.temp }}/linux-journey-times/verify
+      - uses: actions/download-artifact@v4
+        if: steps.linux-timing-runs.outputs.journeys != ''
+        with:
+          pattern: journey-timing-Linux-*
+          run-id: ${{ steps.linux-timing-runs.outputs.journeys }}
+          github-token: ${{ github.token }}
+          path: ${{ runner.temp }}/linux-journey-times/journeys
       - id: select
         name: Choose and place the journeys
         run: |
@@ -124,7 +177,7 @@ jobs:
           else
             node scripts/affected-journeys.ts --base "origin/${{ github.base_ref }}" --head HEAD --json > "$RUNNER_TEMP/affected.json"
           fi
-          node scripts/journey-budget.ts --selection "$RUNNER_TEMP/affected.json" --timings "$RUNNER_TEMP/journey-times/e2e-results.json" $EVERY > "$RUNNER_TEMP/placement.json"
+          node scripts/journey-budget.ts --selection "$RUNNER_TEMP/affected.json" --timings "$RUNNER_TEMP/journey-times/e2e-results.json" --linux-timings "$RUNNER_TEMP/linux-journey-times" --linux-jobs "$RUNNER_TEMP/linux-journey-jobs.json" $EVERY > "$RUNNER_TEMP/placement.json"
         env:
           EVENT: ${{ github.event_name }}
           NAMED: ${{ inputs.files }}

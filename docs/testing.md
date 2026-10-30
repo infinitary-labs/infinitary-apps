@@ -331,10 +331,24 @@ An artifact-list error or a failed download still fails the chooser.
 A file with a tagged test runs on both: its tagged tests on the Mac, and its other tests on Linux, where its tagged tests skip or run their shared steps.
 A tagged test is never sent to Linux alone.
 `linux-overflow` packs the chosen files into six-minute groups separately for parallel and desktop files, on Linux machines running beside the Mac.
-It is at most five jobs, one per Linux place on the PC (`LINUX_PLACES`, INF-1720's plan), so each job repeats its setup once: past five groups, each lane takes places by its share of the estimated work, at least one, and a file joins its lane's least loaded job, which may then exceed six minutes.
+It is at most five jobs, one per Linux place on the PC (`LINUX_PLACES`, INF-1720's plan).
+For modest selections the existing grouping and job count stay unchanged.
+For five-job candidate estimates, the chooser additionally reads compact observations from the newest successful default-branch run of each of `journeys.yml` and `verify.yml`.
+Missing or expired reports retain the prior placement; artifact API or download failures still fail the chooser rather than hiding an access problem.
+The timing reader checks schema, Linux X64, run/attempt/checkout identity, successful final job conclusion, complete selection, lane ownership and compatible configured/actual workers.
+It rejects ambiguous reusable-job identities rather than guessing between overlapping jobs.
+Each selected file needs a compatible reading; partial coverage retains the entire prior placement rather than mixing Mac test-work sums with Linux elapsed intervals.
+An observed skip-only file has zero executed work but stays selected, unlike a missing file.
+The estimator preserves file boundaries, schedules files over the observed parallel worker count, keeps desktop serial, and adds observed setup/cleanup outside the executed file span using final job timestamps.
+It uses the largest compatible observed file interval and lane overhead, not a replacement platform multiplier.
+The allocator evaluates advisory lane allocations within the same five jobs, retaining each nonempty lane and accepting only a lower predicted completion without higher predicted summed job occupancy.
+Automatic execution retains the conservative placement until live evidence supports adopting the calibrated model; candidate placements and their timing source remain visible in the placement artifact and summary.
+An explicit `--apply-linux` request on `scripts/journey-budget.ts` runs the candidate for verification; `journeys.yml` does not pass that flag.
+It never hard-codes a three-plus-two split.
+The conservative fallback still gives each lane places by its share of estimated work, at least one, and places a file into its lane's least loaded job, which may exceed six minutes.
 A new or previously skipped file uses the slowest measured file in its lane, and the summary lists it as unmeasured.
-Linux estimates use the plan's observed rates: one Mac minute of parallel work per Linux minute and 0.6 Mac minutes of desktop work.
-A file stays intact, so an indivisible slow file may exceed six minutes; setup, runner waits and shared-machine slowdown are not part of this estimate.
+Conservative Linux estimates use the plan's observed rates: one Mac minute of parallel work per Linux minute and 0.6 Mac minutes of desktop work.
+A file stays intact, so an indivisible slow file may exceed six minutes; conservative estimates exclude setup, and neither model predicts runner waits or shared-machine slowdown.
 Every selected file runs on Linux exactly once in this placement; the independent Linux starter coverage still runs too.
 The chooser keeps its selection and placement as the `journey-placement` artifact.
 The full Mac suite remains part of every alpha's `verify.yml` and of the nightly full check; a break that only a Mac shows in an untagged test first surfaces there.
@@ -876,7 +890,7 @@ This flag describes the test observation, not the final workflow conclusion; a t
 These are bounded observations, not total job occupancy or runner waiting: join the run/attempt/job and matrix identity to GitHub's job timestamps for final job time, including checkout before the first step and work after export.
 A missing report records null workers and Playwright timing, never zero work or a skip.
 Run-alone keeps its existing per-selection reports unchanged and does not export the final child process as an ordinary complete timing observation.
-No allocator consumes these artifacts yet; selection, worker limits, lane definitions, shard counts, cancellation and release gates stay unchanged.
+The affected-journey allocator consumes compatible compact reports as described under "Journeys on the pull request"; selection, worker limits, lane definitions, full-verification shard counts, cancellation and release gates stay unchanged.
 On Mac, a pull request editing `tests/e2e/layout.ts` still runs every resize and minimum-size caller selected by `scripts/journey-callers.ts`, including calls through the demo helper.
 The Mac affected-journey selector covers the same callers through their imports.
 Window sizes in `resizeWindow`, its returned restore value and `minimumWindowSize` describe content pixels before page zoom, not outer bounds that include a native menu or frame.
@@ -890,3 +904,8 @@ It checks a disposable logged-out user under running systemd, then starts that u
 It also checks a plain Ubuntu container with installed systemctl but no running systemd, then an unavailable systemctl.
 The job logs the runtime, commands, statuses and classification, never the user manager's environment values.
 The fixture removes its disposable user and manager; it changes no person's startup configuration.
+
+## Linux-only branch checks
+
+`ci.yml` accepts `workflow_dispatch` for branch validation without triggering any Mac job.
+It runs the same Linux gate and cohorts as a pull request; a successful unit job can be rerun individually to collect required consecutive passes without starting unrelated Mac workflows.

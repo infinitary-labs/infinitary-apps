@@ -1,0 +1,513 @@
+{
+  "schemaVersion": 1,
+  "run": "41109431383",
+  "attempt": "1",
+  "revision": "79e5497f4fac021107099c685680c6f0b939ca3d",
+  "platform": "Linux",
+  "architecture": "X64",
+  "lane": "parallel",
+  "suite": "starter",
+  "shard": "1",
+  "job": "source-desktop",
+  "artifactSuffix": "source",
+  "requestedFiles": [],
+  "jobStartedAt": 1793387258000,
+  "testStepStartedAt": 1793387298000,
+  "observedAt": 1793387517369,
+  "testStepOutcome": "success",
+  "reportState": "present",
+  "complete": true,
+  "successful": true,
+  "configuredWorkers": 2,
+  "actualWorkers": 2,
+  "selectedFiles": [
+    "tests/e2e/answer-delivery.spec.ts",
+    "tests/e2e/claude-crew-turn.spec.ts",
+    "tests/e2e/keyboard-regions.spec.ts",
+    "tests/e2e/keyboard-routing.spec.ts",
+    "tests/e2e/phase0-guardrails.spec.ts",
+    "tests/e2e/source-start.spec.ts",
+    "tests/e2e/task-browser-actions.spec.ts",
+    "tests/e2e/task-browser-booking.spec.ts",
+    "tests/e2e/task-browser-diagnostics.spec.ts",
+    "tests/e2e/task-browser.spec.ts"
+  ],
+  "missingFiles": [],
+  "stats": {
+    "startTime": "2026-10-30T19:08:19.874Z",
+    "duration": 217340.663,
+    "expected": 43,
+    "skipped": 0,
+    "unexpected": 0,
+    "flaky": 0
+  },
+  "timing": {
+    "jobObservedMs": 259369,
+    "setupMs": 40000,
+    "testStepObservedMs": 219369,
+    "playwrightMs": 217340.663
+  },
+  "files": [
+    {
+      "file": "tests/e2e/answer-delivery.spec.ts",
+      "project": "application",
+      "outcomes": {
+        "expected": 5
+      },
+      "tests": 5,
+      "missing": 0,
+      "attempts": [
+        {
+          "startMs": 1793387307544,
+          "durationMs": 7202,
+          "status": "passed",
+          "worker": 0,
+          "retry": 0
+        },
+        {
+          "startMs": 1793387314771,
+          "durationMs": 8824,
+          "status": "passed",
+          "worker": 0,
+          "retry": 0
+        },
+        {
+          "startMs": 1793387323604,
+          "durationMs": 6127,
+          "status": "passed",
+          "worker": 0,
+          "retry": 0
+        },
+        {
+          "startMs": 1793387329739,
+          "durationMs": 6331,
+          "status": "passed",
+          "worker": 0,
+          "retry": 0
+        },
+        {
+          "startMs": 1793387336079,
+          "durationMs": 12039,
+          "status": "passed",
+          "worker": 0,
+          "retry": 0
+        }
+      ],
+      "startMs": 1793387307544,
+      "endMs": 1793387348118,
+      "elapsedMs": 40574,
+      "workMs": 40523,
+      "skipped": 0
+    },
+    {
+      "file": "tests/e2e/claude-crew-turn.spec.ts",
+      "project": "application",
+      "outcomes": {
+        "expected": 1
+      },
+      "tests": 1,
+      "missing": 0,
+      "attempts": [
+        {
+          "startMs": 1793387307397,
+          "durationMs": 5090,
+          "status": "passed",
+          "worker": 1,
+          "retry": 0
+        }
+      ],
+      "startMs": 1793387307397,
+      "endMs": 1793387312487,
+      "elapsedMs": 5090,
+      "workMs": 5090,
+      "skipped": 0
+    },
+    {
+      "file": "tests/e2e/keyboard-regions.spec.ts",
+      "project": "application",
+      "outcomes": {
+        "expected": 4
+      },
+      "tests": 4,
+      "missing": 0,
+      "attempts": [
+        {
+          "startMs": 1793387317784,
+          "durationMs": 6439,
+          "status": "passed",
+          "worker": 1,
+          "retry": 0
+        },
+        {
+          "startMs": 1793387324231,
+          "durationMs": 6094,
+          "status": "passed",
+          "worker": 1,
+          "retry": 0
+        },
+        {
+          "startMs": 1793387330334,
+          "durationMs": 4689,
+          "status": "passed",
+          "worker": 1,
+          "retry": 0
+        },
+        {
+          "startMs": 1793387335030,
+          "durationMs": 5680,
+          "status": "passed",
+          "worker": 1,
+          "retry": 0
+        }
+      ],
+      "startMs": 1793387317784,
+      "endMs": 1793387340710,
+      "elapsedMs": 22926,
+      "workMs": 22902,
+      "skipped": 0
+    },
+    {
+      "file": "tests/e2e/keyboard-routing.spec.ts",
+      "project": "application",
+      "outcomes": {
+        "expected": 5
+      },
+      "tests": 5,
+      "missing": 0,
+      "attempts": [
+        {
+          "startMs": 1793387340743,
+          "durationMs": 1337,
+          "status": "passed",
+          "worker": 1,
+          "retry": 0
+        },
+        {
+          "startMs": 1793387348237,
+          "durationMs": 1587,
+          "status": "passed",
+          "worker": 1,
+          "retry": 0
+        },
+        {
+          "startMs": 1793387349852,
+          "durationMs": 814,
+          "status": "passed",
+          "worker": 1,
+          "retry": 0
+        },
+        {
+          "startMs": 1793387350682,
+          "durationMs": 2387,
+          "status": "passed",
+          "worker": 1,
+          "retry": 0
+        },
+        {
+          "startMs": 1793387353088,
+          "durationMs": 1575,
+          "status": "passed",
+          "worker": 1,
+          "retry": 0
+        }
+      ],
+      "startMs": 1793387340743,
+      "endMs": 1793387354663,
+      "elapsedMs": 13920,
+      "workMs": 7700,
+      "skipped": 0
+    },
+    {
+      "file": "tests/e2e/phase0-guardrails.spec.ts",
+      "project": "application",
+      "outcomes": {
+        "expected": 4
+      },
+      "tests": 4,
+      "missing": 0,
+      "attempts": [
+        {
+          "startMs": 1793387348139,
+          "durationMs": 75,
+          "status": "passed",
+          "worker": 0,
+          "retry": 0
+        },
+        {
+          "startMs": 1793387354194,
+          "durationMs": 42,
+          "status": "passed",
+          "worker": 0,
+          "retry": 0
+        },
+        {
+          "startMs": 1793387354275,
+          "durationMs": 197,
+          "status": "passed",
+          "worker": 0,
+          "retry": 0
+        },
+        {
+          "startMs": 1793387354504,
+          "durationMs": 211,
+          "status": "passed",
+          "worker": 0,
+          "retry": 0
+        }
+      ],
+      "startMs": 1793387348139,
+      "endMs": 1793387354715,
+      "elapsedMs": 6576,
+      "workMs": 525,
+      "skipped": 0
+    },
+    {
+      "file": "tests/e2e/source-start.spec.ts",
+      "project": "application",
+      "outcomes": {
+        "expected": 2
+      },
+      "tests": 2,
+      "missing": 0,
+      "attempts": [
+        {
+          "startMs": 1793387355122,
+          "durationMs": 5117,
+          "status": "passed",
+          "worker": 0,
+          "retry": 0
+        },
+        {
+          "startMs": 1793387360257,
+          "durationMs": 565,
+          "status": "passed",
+          "worker": 0,
+          "retry": 0
+        }
+      ],
+      "startMs": 1793387355122,
+      "endMs": 1793387360822,
+      "elapsedMs": 5700,
+      "workMs": 5682,
+      "skipped": 0
+    },
+    {
+      "file": "tests/e2e/task-browser-actions.spec.ts",
+      "project": "application",
+      "outcomes": {
+        "expected": 1
+      },
+      "tests": 1,
+      "missing": 0,
+      "attempts": [
+        {
+          "startMs": 1793387355117,
+          "durationMs": 8394,
+          "status": "passed",
+          "worker": 1,
+          "retry": 0
+        }
+      ],
+      "startMs": 1793387355117,
+      "endMs": 1793387363511,
+      "elapsedMs": 8394,
+      "workMs": 8394,
+      "skipped": 0
+    },
+    {
+      "file": "tests/e2e/task-browser-booking.spec.ts",
+      "project": "application",
+      "outcomes": {
+        "expected": 7
+      },
+      "tests": 7,
+      "missing": 0,
+      "attempts": [
+        {
+          "startMs": 1793387360876,
+          "durationMs": 17684,
+          "status": "passed",
+          "worker": 0,
+          "retry": 0
+        },
+        {
+          "startMs": 1793387382381,
+          "durationMs": 4660,
+          "status": "passed",
+          "worker": 0,
+          "retry": 0
+        },
+        {
+          "startMs": 1793387387125,
+          "durationMs": 27699,
+          "status": "passed",
+          "worker": 0,
+          "retry": 0
+        },
+        {
+          "startMs": 1793387415345,
+          "durationMs": 10772,
+          "status": "passed",
+          "worker": 0,
+          "retry": 0
+        },
+        {
+          "startMs": 1793387430992,
+          "durationMs": 18474,
+          "status": "passed",
+          "worker": 0,
+          "retry": 0
+        },
+        {
+          "startMs": 1793387449482,
+          "durationMs": 4885,
+          "status": "passed",
+          "worker": 0,
+          "retry": 0
+        },
+        {
+          "startMs": 1793387454375,
+          "durationMs": 33801,
+          "status": "passed",
+          "worker": 0,
+          "retry": 0
+        }
+      ],
+      "startMs": 1793387360876,
+      "endMs": 1793387488176,
+      "elapsedMs": 127300,
+      "workMs": 117975,
+      "skipped": 0
+    },
+    {
+      "file": "tests/e2e/task-browser-diagnostics.spec.ts",
+      "project": "application",
+      "outcomes": {
+        "expected": 1
+      },
+      "tests": 1,
+      "missing": 0,
+      "attempts": [
+        {
+          "startMs": 1793387363525,
+          "durationMs": 8184,
+          "status": "passed",
+          "worker": 1,
+          "retry": 0
+        }
+      ],
+      "startMs": 1793387363525,
+      "endMs": 1793387371709,
+      "elapsedMs": 8184,
+      "workMs": 8184,
+      "skipped": 0
+    },
+    {
+      "file": "tests/e2e/task-browser.spec.ts",
+      "project": "application",
+      "outcomes": {
+        "expected": 13
+      },
+      "tests": 13,
+      "missing": 0,
+      "attempts": [
+        {
+          "startMs": 1793387371790,
+          "durationMs": 19834,
+          "status": "passed",
+          "worker": 1,
+          "retry": 0
+        },
+        {
+          "startMs": 1793387396226,
+          "durationMs": 8358,
+          "status": "passed",
+          "worker": 1,
+          "retry": 0
+        },
+        {
+          "startMs": 1793387404598,
+          "durationMs": 4692,
+          "status": "passed",
+          "worker": 1,
+          "retry": 0
+        },
+        {
+          "startMs": 1793387409314,
+          "durationMs": 14553,
+          "status": "passed",
+          "worker": 1,
+          "retry": 0
+        },
+        {
+          "startMs": 1793387423884,
+          "durationMs": 7919,
+          "status": "passed",
+          "worker": 1,
+          "retry": 0
+        },
+        {
+          "startMs": 1793387431828,
+          "durationMs": 11413,
+          "status": "passed",
+          "worker": 1,
+          "retry": 0
+        },
+        {
+          "startMs": 1793387443262,
+          "durationMs": 18871,
+          "status": "passed",
+          "worker": 1,
+          "retry": 0
+        },
+        {
+          "startMs": 1793387462173,
+          "durationMs": 6170,
+          "status": "passed",
+          "worker": 1,
+          "retry": 0
+        },
+        {
+          "startMs": 1793387468354,
+          "durationMs": 9741,
+          "status": "passed",
+          "worker": 1,
+          "retry": 0
+        },
+        {
+          "startMs": 1793387478108,
+          "durationMs": 11347,
+          "status": "passed",
+          "worker": 1,
+          "retry": 0
+        },
+        {
+          "startMs": 1793387489475,
+          "durationMs": 8332,
+          "status": "passed",
+          "worker": 1,
+          "retry": 0
+        },
+        {
+          "startMs": 1793387497824,
+          "durationMs": 8806,
+          "status": "passed",
+          "worker": 1,
+          "retry": 0
+        },
+        {
+          "startMs": 1793387506642,
+          "durationMs": 10088,
+          "status": "passed",
+          "worker": 1,
+          "retry": 0
+        }
+      ],
+      "startMs": 1793387371790,
+      "endMs": 1793387516730,
+      "elapsedMs": 144940,
+      "workMs": 140124,
+      "skipped": 0
+    }
+  ]
+}

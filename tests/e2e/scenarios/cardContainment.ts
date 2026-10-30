@@ -6,8 +6,10 @@ import {
   calledTool,
   INLINE_PNG,
   type Scenario,
+  shellJobsRunning,
   writeFilesCalls,
 } from "../mockProvider";
+import { providerMessages } from "../providerRequest";
 
 /**
  * Marker prompt: the mock crewmate emits the containment corpus - every
@@ -137,6 +139,9 @@ export const PROJECT_FONT_FAMILY = "Project Face";
 
 export const PROJECT_FONT_REFUSAL = TYPEFACE_UNREAD_WORDS;
 
+/** What the project-font crewmate says when it ends its turn while a font is still being written. */
+export const PROJECT_FONTS_STILL_WRITING = "The font files are still being written.";
+
 const PROJECT_FONT = "shots/project-face.woff2";
 
 const DAMAGED_FONT = "shots/project-face-damaged.woff2";
@@ -176,7 +181,7 @@ function projectFontCardCall(font: string, port: number): ScriptedCall {
  */
 export const cardContainment: Scenario =
   () =>
-  ({ isFirstmate, wantsStream, latestUserTail, hasToolResults, port }) => {
+  ({ body, isFirstmate, wantsStream, latestUserTail, hasToolResults, port }) => {
     // The first mate commissions the crewmate through the shared stand-in.
     if (isFirstmate) return undefined;
     if (latestUserTail.includes(ATTACK_CARDS_PROMPT_MARKER) && !hasToolResults && wantsStream) {
@@ -184,17 +189,27 @@ export const cardContainment: Scenario =
     }
     // The project-font crewmate: write the files, offer the preview with
     // the damaged copy, then with the real file once the host refused it.
-    if (!isFirstmate && latestUserTail.includes(PROJECT_FONT_PROMPT_MARKER) && wantsStream) {
-      if (!hasToolResults) {
+    // It reads the whole conversation, not only its latest turn, because a
+    // write can resume it from a wake.
+    if (body.includes(PROJECT_FONT_PROMPT_MARKER) && wantsStream) {
+      if (!calledTool(body, "bash")) {
         return { calls: writeProjectFontCalls() };
       }
-      if (!calledTool(latestUserTail, "emit_card")) {
+      // INF-2029: a write that outlasts the shell's limit answers with its
+      // job's receipt while the file is still being written, and a card
+      // naming it would be refused as missing. End the turn until every
+      // write's job has exited (as INF-1128 did for pictures).
+      if (shellJobsRunning(body)) return { text: PROJECT_FONTS_STILL_WRITING };
+      if (!calledTool(body, "emit_card")) {
         return { calls: [projectFontCardCall(DAMAGED_FONT, port)] };
       }
       const emits = ['"name":"emit_card","arguments"', '"name": "emit_card", "arguments"']
-        .map((call) => latestUserTail.split(call).length - 1)
+        .map((call) => body.split(call).length - 1)
         .reduce((sum, count) => sum + count, 0);
-      if (emits === 1 && latestUserTail.includes(PROJECT_FONT_REFUSAL)) {
+      // A refusal of the damaged copy names it - unreadable, or missing -
+      // where a shown card answers with its title only.
+      const answers = providerMessages(body).filter((message) => message.role === "tool");
+      if (emits === 1 && answers.at(-1)?.text.includes(DAMAGED_FONT)) {
         return { calls: [projectFontCardCall(PROJECT_FONT, port)] };
       }
     }

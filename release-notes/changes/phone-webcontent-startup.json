@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "phone-webcontent-startup",
+      "reason": "Phone test diagnostics report the simulator's WebContent startup readings without changing the app or its assertions."
+    }
+  ]
+}

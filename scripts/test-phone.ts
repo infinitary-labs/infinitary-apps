@@ -8,6 +8,7 @@ import { parseArgs } from "node:util";
 import { budgetTimer, GRADES_BUDGETS, startPhoneLoadClock } from "../tests/helpers/budgets.ts";
 import { observePhoneLog } from "../tests/helpers/phoneLogs.ts";
 import { capturePhoneKeyboardTimeout } from "../tests/helpers/phoneStacks.ts";
+import { phoneWebContentStartup } from "../tests/helpers/phoneWebContent.ts";
 import { libraryPhotoAdded, logTime, photosOpened } from "../tests/helpers/phonePhotos.ts";
 import { changePhoneTextSize, hardwareKeyboardArguments, observePhoneKeyboard, type PhoneChord, type PhoneDisplayReport, type PhoneTextSize, phoneApplicationPid, phoneDisplayDeadline, withPhoneHardwareKeyboard } from "../tests/helpers/phoneKeyboard.ts";
 import { removeScratchDirs, scratchDir } from "../tests/helpers/scratchDirs.ts";
@@ -405,8 +406,12 @@ const onePart = async () => {
       sample: async (pid, destination) => { await run("/usr/bin/sample", [String(pid), "1", "1", "-mayDie", "-file", destination]); },
     });
   }
+  const webContent = phoneWebContentStartup();
   simulatorLog = await observePhoneLog({ device: owned, env, evidence, children,
-    predicate: `(${SIMULATOR_LOG}) OR (${SYSTEM_LOG})`, onLine: timeoutStack?.receive });
+    predicate: `(${SIMULATOR_LOG}) OR (${SYSTEM_LOG})`, onLine: (line) => {
+      timeoutStack?.receive(line);
+      webContent.receive(line);
+    } });
   const testing = new Date();
   let output = "";
   await run("xcodebuild", ["-xctestrun", plan, ...destination, ...partSelection(values.part![0]!, values.waits),
@@ -416,19 +421,31 @@ const onePart = async () => {
     .catch(async (error: Error & { output?: string }) => {
       output = error.output ?? "";
       // The CI job log names why a part failed; its results archive is often too large to fetch.
-      for (const line of (error.output ?? "").split("\n").filter((each) => / error: |Test Case .* failed/.test(each)).slice(0, 20))
+      for (const line of (error.output ?? "").split("\n").filter((each) => / error: |Test Case .* failed|^Phone wait failed:/.test(each)).slice(0, 20))
         console.log(line);
       console.log("The pre-failure simulator log is kept in simulator-live.log, even if XCTest tore its domain down.");
       // INF-804: what the app, Photos and WebKit logged on this simulator, kept with the command logs.
-      await run("xcrun", ["simctl", "spawn", owned, "log", "show", "--last", "20m", "--style", "compact", "--info",
+      await run("xcrun", ["simctl", "spawn", owned, "log", "show", "--start", logTime(testing), "--style", "compact", "--info",
         "--predicate", SIMULATOR_LOG])
-        .then(() => console.log(`The simulator's log is in ${number}-xcrun.log`))
+        .then((log) => {
+          // A live stream can miss a reading; use the same owned simulator's kept log too.
+          for (const line of log.split("\n")) webContent.receive(line);
+          console.log(`The simulator's log is in ${number}-xcrun.log`);
+        })
         .catch((problem: Error) => console.log(`The simulator's log could not be kept: ${problem.message}`));
       // INF-819: what the simulator's system logged from the part's first test to its failure, in its own log.
       await run("xcrun", ["simctl", "spawn", owned, "log", "show", "--start", logTime(testing), "--style", "compact",
         "--info", "--predicate", SYSTEM_LOG])
         .then(() => console.log(`The simulator's system log is in ${number}-xcrun.log`))
         .catch((problem: Error) => console.log(`The simulator's system log could not be kept: ${problem.message}`));
+      // Join the live reader before taking its final snapshot, even if log show failed.
+      // A diagnostic failure must not replace the original test failure.
+      try {
+        await simulatorLog?.close();
+        const startup = webContent.report();
+        console.log(startup);
+        writeFileSync(join(evidence, "webcontent-startup.log"), startup + "\n");
+      } catch (problem) { console.log(`WebContent startup evidence could not be kept: ${String(problem)}`); }
       throw error;
     })
     .finally(() => console.log(`XCTest animation waits that ran out: ${phoneAnimationWaits(output).missed}`));

@@ -17,7 +17,7 @@ const INPUTS = [
   "scripts/phone-leftovers.ts",
   // INF-1066: native geometry generation and the scene journey's real home fixture.
   "scripts/generate-phone-scene.ts", "tests/helpers/phoneScene.ts", "scripts/phone-recording.ts",
-  "tests/helpers/phoneLogs.ts", "tests/helpers/phoneStacks.ts",
+  "tests/helpers/phoneLogs.ts", "tests/helpers/phoneStacks.ts", "tests/helpers/phoneWebContent.ts",
   // INF-662: each device's own test home in the one build's test plan.
   "scripts/phone-test-plan.ts",
 ] as const;

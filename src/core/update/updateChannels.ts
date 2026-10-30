@@ -111,6 +111,12 @@ function rawUrlOf(tap: TapNames, file: string): string {
   return `https://raw.githubusercontent.com/${tap.repo}/HEAD/${file}`;
 }
 
+/**
+ * The starter list served beside the update feed (docs/model-lists.md,
+ * "The served starter list"), read from this build's own tap.
+ */
+export const STARTERS_URL = rawUrlOf(TAP, "infinitary-starters.json");
+
 /** A tap's update targets file, as installed Macs fetch it. */
 export function targetsUrlOf(tap: TapNames): string {
   return rawUrlOf(tap, tap.targetsFile);

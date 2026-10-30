@@ -1,4 +1,4 @@
-import { HELD_BACK, STARTER_SLOTS, TRACKED_FAMILIES } from "./modelSlots";
+import { HELD_BACK, STARTER_SLOTS, starterMap, TRACKED_FAMILIES } from "./modelSlots";
 
 /**
  * The lean-list rule (captain, 2026-09-23; docs/model-lists.md): which of a
@@ -117,7 +117,7 @@ export function listedIds(
   if (!isTrackedProvider(providerId)) return new Set(served);
   const present = new Set(served);
   const listed = new Set(familyHeads(providerId, served).map((head) => head.id));
-  for (const id of Object.keys(STARTER_SLOTS[providerId] ?? {})) {
+  for (const id of Object.keys(starterMap()[providerId] ?? {})) {
     if (present.has(id)) listed.add(id);
   }
   for (const id of kept) {

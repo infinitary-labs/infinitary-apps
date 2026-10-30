@@ -108,7 +108,7 @@ export type ServedBaselines = z.infer<typeof servedBaselinesSchema>;
  * catalog answers with, and the Claude one moves when the model probe
  * (docs/claude-model-probe.md) says the installed client's answer moved.
  */
-export const STARTER_SLOTS: Readonly<Record<string, Readonly<Record<string, readonly Slot[]>>>> = {
+export const STARTER_SLOTS: StarterMap = {
   // GPT-6.1 Sol takes high and medium (2026-09-29). GPT-6 Astra stays
   // premium and GPT-6 Luna stays low. Existing saved picks remain the
   // person's choices; migration 39 only moved earlier GPT-5.6 picks.
@@ -193,19 +193,66 @@ export const TRACKED_FAMILIES: Readonly<
  */
 export const HELD_BACK: Readonly<Record<string, Readonly<Record<string, string>>>> = {};
 
+/** A starter map's shape: provider, then model id, then its starting slots. */
+export type StarterMap = Readonly<Record<string, Readonly<Record<string, readonly Slot[]>>>>;
+
+/**
+ * The starter list served beside the update feed (docs/model-lists.md,
+ * "The served starter list"): per provider, the rows that replace
+ * `STARTER_SLOTS` for that provider. A provider it leaves out keeps the
+ * shipped rows.
+ */
+export const servedStartersSchema = z.object({
+  schema: z.literal(1),
+  starters: z.record(z.string(), z.record(z.string(), z.array(slotSchema))),
+});
+export type ServedStarters = z.infer<typeof servedStartersSchema>;
+
+/**
+ * The served list as this install last read it, kept so a start with no
+ * network keeps it. `starters` is null when the feed answered that it has
+ * no list; `checkedAt` is when that answer came.
+ */
+export const savedServedStartersSchema = z.object({
+  starters: servedStartersSchema.shape.starters.nullable(),
+  checkedAt: z.number(),
+});
+export type SavedServedStarters = z.infer<typeof savedServedStartersSchema>;
+
+/** The served list, as last read, or none: the shipped map alone. */
+let served: ServedStarters["starters"] | null = null;
+
+/**
+ * Puts a served starter list in force for this process, or takes it away
+ * (null). Only the core's served-starters reader calls it.
+ */
+export function putServedStarters(starters: ServedStarters["starters"] | null): void {
+  served = starters;
+}
+
+/**
+ * The starter map in force: `STARTER_SLOTS` with each provider the served
+ * list names replaced by its served rows. Seeding, reset, the fallback,
+ * listing and the protected ids all read this; the catalog checks read the
+ * shipped map, which is what a release puts in the bundle.
+ */
+export function starterMap(): StarterMap {
+  return served ? { ...STARTER_SLOTS, ...served } : STARTER_SLOTS;
+}
+
 /** The starter slots for one offering. Empty when the map leaves it off. */
 export function starterSlots(providerId: string, id: string): readonly Slot[] {
-  return STARTER_SLOTS[providerId]?.[id] ?? [];
+  return starterMap()[providerId]?.[id] ?? [];
 }
 
 /** The starter-map keys for one provider, as offering keys. */
 export function starterKeys(providerId: string): string[] {
-  return Object.keys(STARTER_SLOTS[providerId] ?? {}).map((id) => `${providerId}/${id}`);
+  return Object.keys(starterMap()[providerId] ?? {}).map((id) => `${providerId}/${id}`);
 }
 
 /** Every starter-map key across providers. */
 export function allStarterKeys(): string[] {
-  return Object.keys(STARTER_SLOTS).flatMap((providerId) => starterKeys(providerId));
+  return Object.keys(starterMap()).flatMap((providerId) => starterKeys(providerId));
 }
 
 /**

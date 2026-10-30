@@ -1,0 +1,27 @@
+{
+  "entries": [
+    {
+      "id": "gpt-6-1-terra-codex",
+      "kind": "improvement",
+      "area": "subscriptions",
+      "title": "GPT-6.1 Terra joins your Codex models",
+      "body": "Models lists GPT-6.1 Terra for Codex accounts whose plan offers it. It starts in no level, so your crew uses it only once you place it. GPT-5.5 and GPT-5.3 Codex Spark leave the Codex list, because they always fail for ChatGPT sign-ins.",
+      "noPicture": "Terra's row comes from the live Codex catalog, which the offline picture launcher cannot reach, and the Models board itself looks the same.",
+      "provenance": {
+        "origin": "change"
+      }
+    },
+    {
+      "id": "served-starting-levels",
+      "kind": "improvement",
+      "area": "subscriptions",
+      "title": "Starting levels for new models can change without an update",
+      "body": "Infinitary checks once a day for the levels new models should start in, so a newly released model can start in the right level without waiting for an Infinitary update. Levels you have already set stay as they are.",
+      "noPicture": "The change is where a newly seen model starts, which the Models board shows the same way as before.",
+      "provenance": {
+        "origin": "change"
+      }
+    }
+  ],
+  "exclusions": []
+}

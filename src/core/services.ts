@@ -149,6 +149,7 @@ import { workingCopyFacts } from "./knowledge/gitFacts";
 import { KnowledgeService } from "./knowledge/knowledgeService";
 import { createAccountStore } from "./models/accountStore";
 import type { ServedModels } from "./models/servedModels";
+import { createServedStarters } from "./models/servedStarters";
 import { CardNotifier } from "./notifications";
 import { isObserveEnabled } from "./observe/gate";
 import { ObserveService } from "./observe/observeService";
@@ -1298,6 +1299,20 @@ export async function createServices(
     },
     now: ticker.now,
   });
+  // The served starter list moves the starting levels with no release
+  // (docs/model-lists.md, "The served starter list"): asked at start, then
+  // once a day. A development or end-to-end run may name its own file; a
+  // packaged app never reads that setting.
+  const startersUrl = host.app.packaged
+    ? undefined
+    : settingFrom(process.env, "STARTERS_URL")?.trim() || undefined;
+  const servedStarters = createServedStarters({
+    settings,
+    ...(startersUrl ? { url: startersUrl } : {}),
+    now: ticker.now,
+  });
+  void servedStarters.refresh();
+  ticker.register("served-starters", 60 * 60 * 1000, () => void servedStarters.refresh());
   /**
    * The routing boundary: the sign-in gate, then the slot record, with the
    * starter-map fallback behind it. Every automatic selection reads THIS;

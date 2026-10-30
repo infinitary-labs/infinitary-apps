@@ -20,7 +20,9 @@ import {
   EMPTY_MODEL_SLOTS,
   type ModelSlotsState,
   modelSlotsStateSchema,
+  type SavedServedStarters,
   type ServedBaselines,
+  savedServedStartersSchema,
   servedBaselinesSchema,
 } from "@shared/modelSlots";
 import {
@@ -157,6 +159,16 @@ export class SettingsStore {
 
   setServedBaselines(baselines: ServedBaselines): void {
     this.set("served-baselines", baselines);
+  }
+
+  /** The served starter list as last read (docs/model-lists.md), or none. */
+  getServedStarters(): SavedServedStarters | null {
+    const parsed = savedServedStartersSchema.safeParse(this.get("served-starters"));
+    return parsed.success ? parsed.data : null;
+  }
+
+  setServedStarters(saved: SavedServedStarters): void {
+    this.set("served-starters", saved);
   }
 
   /**

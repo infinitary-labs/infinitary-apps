@@ -13,8 +13,8 @@ import {
   SLOTS,
   type Slot,
   type SlotModelView,
-  STARTER_SLOTS,
   sortModelRows,
+  starterMap,
   starterSlots,
 } from "@shared/modelSlots";
 import { catalogEntry } from "@shared/providers";
@@ -512,7 +512,7 @@ export class ModelSlots {
    * safety rail (docs/model-lists.md) refuses an answer that omits one.
    */
   protectedIds(providerId: string): string[] {
-    const ids = new Set(Object.keys(STARTER_SLOTS[providerId] ?? {}));
+    const ids = new Set(Object.keys(starterMap()[providerId] ?? {}));
     for (const key of this.keptKeys(this.read())) {
       const ref = parseOfferingKey(key);
       if (ref.provider === providerId) ids.add(ref.id);

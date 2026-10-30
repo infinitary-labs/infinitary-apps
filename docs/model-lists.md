@@ -13,7 +13,7 @@ Naming a hand-picked few misses new generations.
 For each provider, a row goes to:
 
 1. **the newest served generation of each tracked family**, in one runnable variant;
-2. **every starter row** (`STARTER_SLOTS`);
+2. **every starter row** (the starter map in force: `STARTER_SLOTS` with the served starter list over it, below);
 3. **everything the person kept**: placed in a slot, pinned, or chosen as the first mate model.
    A kept model stays listed whatever its generation.
 
@@ -43,6 +43,18 @@ Families are data, beside `STARTER_SLOTS` in `src/shared/modelSlots.ts`:
 The board orders rows by provider, then family by newest generation, newest generation first, then tier.
 So the listed rows are the head of each family group, a newcomer lands at the top of its family, and a generation the person kept sits right beneath the one that replaced it.
 
+## The served starter list
+
+The starting levels can move for every install without an app release (captain, INF-1904: "a starter list served by us so defaults move for every install without a release").
+The file is `infinitary-starters.json` in the public tap `infinitary-labs/homebrew-tap`, beside the update targets file, read from its default branch (`STARTERS_URL` in `src/core/update/updateChannels.ts`).
+Its shape is `servedStartersSchema` in `src/shared/modelSlots.ts`: `{ "schema": 1, "starters": { "<provider>": { "<model id>": ["medium"] } } }`.
+Each provider it names replaces that provider's `STARTER_SLOTS` rows whole; a provider it leaves out keeps the shipped rows.
+`createServedStarters` (`src/core/models/servedStarters.ts`) is its one reader: it asks at start and then once a day, keeps the last answer in the `served-starters` settings row, and puts it in force (`starterMap()`) for seeding, reset, the fallback, listing and the account-list rail.
+A 404 withdraws the list, so the shipped map alone applies; a failed request or a file that does not parse keeps the last answer.
+A served row changes where a model starts, never a level an install already saved: a model this install has seen keeps its levels until the person moves it or resets the provider's levels.
+The catalog checks read the shipped map, since that is what a release puts in the bundle.
+Changing the starting levels is a commit to that file in the tap; a development run names its own file with `INFINITARY_STARTERS_URL`, and every journey points it at an unused port.
+
 ## Where "served" comes from
 
 | Provider | The runtime read | Shipped fallback |
@@ -67,7 +79,9 @@ An answer that omits any starter or kept id Pi can serve is treated as unrecogni
 Neither endpoint can be verified from here without the credentials Infinitary never reads, and a filter that could remove a default would break the rule that a read never says a model is gone.
 **The accepted cost:** in-app dead-default detection comes only from the Claude read; the CI check still covers Pi defaults.
 `CODEX_MODELS_CLIENT_VERSION` is pinned beside the Pi SDK version - review the two together.
-Pi 1.0.0 and 1.1.0 keep the Codex catalog unchanged from Pi 0.99.1, including GPT-6.1 Sol, so Codex client version 0.159.0 remains the paired list request; the account-list safety rail still applies if a particular account does not serve that starter.
+Pi 1.4.0 keeps GPT-6.1 Sol and the other Codex starters, so Codex client version 0.159.0 remains the paired list request; the account-list safety rail still applies if a particular account does not serve a starter.
+The pi.dev catalog sends its updated Codex list, with GPT-6.1 Terra, only to Pi 1.3.0 and newer; Terra is listed and placed in no starting level.
+Pi 1.4.0 drops GPT-5.5 and GPT-5.3 Codex Spark from Codex, which Pi reports always fail for ChatGPT accounts.
 Saved slot choices, including GPT-6 Sol, are preserved rather than silently reassigned on upgrade.
 The session adapter discards `AgentSession.steer()`'s queue disposition after awaiting the call.
 
@@ -201,6 +215,7 @@ Specified in the design skill, `components/quota/ModelsBoard.prompt.md`:
 - `servedModels.test.ts`: never blocking; failure, deferral and the rail.
 - `catalogReaders.test.ts`: each reader's failures, and the rail.
 - `modelSlots.test.ts`: listing, news and the board's new mark, departures, the fallback rungs.
+- `servedStarters.test.ts`: a served list seeds first-seen models and reset, leaves saved levels alone, survives a start with no network, and a 404 withdraws it.
 - `modelRuntime.test.ts`: the create never waits on pi.dev.
 - `tests/e2e/model-lists.spec.ts`: a read that never answers, a successful read, a departure across a relaunch, a failed read - all end to end, over a Claude account whose stand-in client answers the SDK's model list.
 

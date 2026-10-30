@@ -99,6 +99,8 @@ A Linux installation updates through the one update reader (`src/core/update/upd
 The cask generator and strict tap readers remain active release prerequisites for Homebrew installations.
 The new feed writer reuses their typed forward-only target rules with the configured release names; it never renders a cask.
 Every cask's homepage is Infinitary's website, `https://getinfinitary.com/` (`HOMEPAGE`), on both supported taps; the release contract checks it.
+The app's offered Homebrew command runs `brew update` and upgrades the installed channel's fully qualified cask (`upgradeCommandFor`), including the old Firstmate tap.
+Naming the tap and cask lets Homebrew 6 and later trust that cask when the installation predates tap trust, without trusting the whole tap, and works on older Homebrew too.
 
 ## Republishing the casks
 
@@ -114,7 +116,8 @@ Existing Firstmate 3000 users install an Infinitary disk image directly, without
 The existing saved-folder handover preserves their work and explicit channel choice; the new updater replaces the marker's legacy routing fields with its persistent subscription.
 Optional Homebrew ownership cleanup happens before copying the new app and never uses `--zap` (`docs/mac-installation.md`).
 For channels activated in `packaging/old-cask-switch.json`, the release also mirrors the finalized ZIP and Linux assets to the old tap, verifies their public downloads, and advances its casks and frozen-schema metadata.
-People who keep their Homebrew installation therefore continue using its usual upgrade command; moving to a disk image remains optional.
+People who keep their Homebrew installation continue upgrading the same cask; the app's offered command names its tap explicitly so it also works after Homebrew begins requiring tap trust.
+Moving to a disk image remains optional.
 The switch lists `alpha` and `stable`; releases of either channel also update the corresponding older cask.
 
 ## The signed channel workflow
@@ -518,4 +521,7 @@ An item is done when its result is recorded where it names; it is never ticked h
 The source Homebrew repository must already contain those tags and their matching vendored Ruby versions; the test checks them out only in its scratch clone and never fetches or updates the source.
 For archived versions with different Ruby requirements, run each version separately with `INFINITARY_CASK_HOMEBREW_REPOSITORY=<prepared-repository>` pointing at an offline-ready Homebrew copy for that tag.
 Without that variable the test uses the installed version.
+`INFINITARY_CASK_PRETRUST_VERSION=5.1.14 INFINITARY_CASK_HOMEBREW_VERSIONS=5.1.14,6.0.0,7.0.11 pnpm test tests/cask-consumers.test.ts -t "executes the offered upgrade"` installs before tap trust, then runs the app's complete offered command under each selected Homebrew, on both channels and both taps.
+That regression uses the scratch clone's compatible Ruby, local Git sources for `brew update`, and cached stand-in downloads; it verifies the installed version, channel marker, saved work and cask-only trust.
+Its default run revokes scratch tap trust after installation to reproduce the same untrusted state without requiring historical Homebrew tags.
 Every version runs with `HOMEBREW_DEVELOPER=1`, so current Homebrew also proves the deprecated block is not evaluated.

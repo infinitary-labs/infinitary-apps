@@ -8,6 +8,7 @@ import {
   readFileSync,
   realpathSync,
   renameSync,
+  rmSync,
   writeFileSync,
 } from "node:fs";
 import { dirname, join, relative } from "node:path";
@@ -37,6 +38,7 @@ import {
   targetsUrlOf,
   UPDATE_CHANNEL_MARKER,
   UPDATE_TARGETS_FILE,
+  upgradeCommandFor,
 } from "../src/core/update/updateChannels";
 import {
   createInstalledUpdateChecker,
@@ -455,6 +457,131 @@ describe.skipIf(!homebrew)("the casks under a real Homebrew, in scratch state", 
     180_000,
   );
 
+  // INF-1913: the command offered to a Homebrew installation must upgrade a cask
+  // installed before tap trust, including either channel of the old Firstmate tap.
+  // Default runs revoke scratch trust after installation; the historical matrix can
+  // install on 5.1.14 first, then run the same command on each selected Homebrew.
+  it.each(versions)(
+    "Homebrew %s executes the offered upgrade for an installation without tap trust",
+    (version) => {
+      for (const tap of [INFINITARY_TAP, FIRSTMATE_TAP]) {
+        for (const channel of ["stable", "alpha"] as const) {
+          const installedBrew = process.env.INFINITARY_CASK_PRETRUST_VERSION ?? version;
+          const world = scratchWorld(homebrew as string, installedBrew);
+          // An older Homebrew upgrades an existing vendored Ruby to its exact
+          // archive before considering PATH. Move our copied Ruby outside that
+          // slot, retaining /vendor/portable-ruby/ so Homebrew loads its bundled gems.
+          const ruby = join(world.dir, "runtime/vendor/portable-ruby");
+          mkdirSync(dirname(ruby), { recursive: true });
+          renameSync(join(world.prefix, "Library/Homebrew/vendor/portable-ruby"), ruby);
+          world.env.HOMEBREW_USE_RUBY_FROM_PATH = "1";
+          world.env.PATH = [
+            join(world.prefix, "bin"),
+            join(ruby, "current/bin"),
+            world.env.PATH,
+          ].join(":");
+          const token = tap.caskTokens[channel];
+          const fullToken = `${tap.tap}/${token}`;
+          const before = "0.1.25";
+          const after = channel === "alpha" ? "0.1.26-alpha.43" : "0.1.26";
+          const publish = (appVersion: string) => {
+            const target = buildUpdateTarget(
+              {
+                version: appVersion,
+                assetName: `Infinitary-${appVersion}-universal.zip`,
+                sha256: world.standIn(appVersion).sha256,
+                sourceCommit: COMMIT,
+              },
+              tap,
+            );
+            mkdirSync(join(world.tap, "Casks"), { recursive: true });
+            const file = `Casks/${token}.rb`;
+            writeFileSync(
+              join(world.tap, file),
+              renderCask(channel, target, "Private alpha.", tap),
+            );
+            world.commitWritten(
+              { status: 0, stdout: JSON.stringify({ files: [file] }), stderr: "" },
+              appVersion,
+            );
+          };
+          publish(before);
+          world.brewOk("tap", tap.tap, world.tap);
+          const tapped = world.brewOk("--repository", tap.tap).trim();
+          // Keep the real public identity: Homebrew 6 refuses item trust for custom
+          // remotes. Git alone redirects fetches to this test's local source.
+          world.git(tapped, "remote", "set-url", "origin", `https://github.com/${tap.repo}`);
+          world.git(
+            tapped,
+            "config",
+            `url.${world.tap}.insteadOf`,
+            `https://github.com/${tap.repo}`,
+          );
+          const hasTrust = () => existsSync(join(world.prefix, "Library/Homebrew/cmd/trust.rb"));
+          if (hasTrust()) world.brewOk("trust", "--tap", tap.tap);
+          world.cacheDownload(token, tap.tap);
+          world.brewOk("install", "--cask", token);
+          expect(world.installedVersion()).toBe(before);
+          writeFileSync(join(world.dataRoot, "firstmate.db"), "existing saved work");
+          const saved = world.savedWork();
+          const oldTapHead = world.git(tapped, "rev-parse", "HEAD").trim();
+          publish(after);
+          world.updateTap(tap.tap);
+          world.cacheDownload(token, tap.tap);
+          // The new download is cached, but only the actual offered `brew update`
+          // may advance the installed tap. No cask is loaded after trust is removed.
+          world.git(tapped, "reset", "--hard", oldTapHead);
+          if (hasTrust()) world.brewOk("untrust", "--tap", tap.tap);
+          if (version !== installedBrew) {
+            const revision =
+              version === "current"
+                ? world.git(homebrew as string, "rev-parse", "HEAD").trim()
+                : version;
+            world.git(world.prefix, "checkout", "--quiet", revision);
+          }
+          const brewHead = world.git(world.prefix, "rev-parse", "HEAD").trim();
+          const brewSource = join(world.dir, "brew-source.git");
+          world.git(world.dir, "clone", "--quiet", "--bare", "--shared", world.prefix, brewSource);
+          world.git(brewSource, "update-ref", "refs/heads/main", brewHead);
+          world.git(brewSource, "symbolic-ref", "HEAD", "refs/heads/main");
+          world.git(world.prefix, "remote", "set-head", "origin", "main");
+          world.env.HOMEBREW_BREW_GIT_REMOTE = brewSource;
+          if (hasTrust()) {
+            expect(JSON.parse(world.brewOk("trust", "--json=v1"))).toMatchObject({
+              taps: [],
+              casks: [],
+            });
+          }
+          const command = upgradeCommandFor(channel, tap);
+          const result = world.run("/bin/bash", ["-c", command]);
+          console.info(
+            `Homebrew ${installedBrew} -> ${version}: ${command}\n${result.stdout}${result.stderr}`,
+          );
+          expect(result.status, `${result.stdout}\n${result.stderr}`).toBe(0);
+          expect(world.git(world.prefix, "rev-parse", "HEAD").trim()).toBe(brewHead);
+          expect(world.installedVersion()).toBe(after);
+          expect(world.marker()).toEqual({
+            schemaVersion: 1,
+            channel,
+            ...(tap.throughOldCask ? { cameThroughOldCask: true } : {}),
+          });
+          expect(world.savedWork()).toEqual(saved);
+          if (hasTrust()) {
+            expect(JSON.parse(world.brewOk("trust", "--json=v1"))).toMatchObject({
+              taps: [],
+              casks: [fullToken],
+            });
+          }
+          world.brewOk("uninstall", "--cask", fullToken);
+          // Do not accumulate a full Homebrew clone per matrix cell until the
+          // file's cleanup hook; each completed cell no longer needs its files.
+          rmSync(world.dir, { recursive: true, force: true });
+        }
+      }
+    },
+    340_000,
+  );
+
   // INF-643 captain approval: replace the source-text ban on xattr with the safety fact
   // it intended. Execute the generated hooks through real Homebrew on quarantined fixture
   // apps; ownership may change, but quarantine, unrelated metadata and app bytes may not.
@@ -632,7 +759,7 @@ hooks.sort_by { |artifact| phases.index(artifact.class.dsl_key) }.each(&:install
         channel: "alpha",
         latestVersion: "0.1.26-alpha.43",
         updateAvailable: true,
-        upgradeCommand: "brew update && brew upgrade --cask infinitary@alpha",
+        upgradeCommand: upgradeCommandFor("alpha"),
       });
       world.cacheDownload(CASK_TOKENS.alpha);
       brewOk("upgrade", "--cask", CASK_TOKENS.alpha);
@@ -679,7 +806,7 @@ hooks.sort_by { |artifact| phases.index(artifact.class.dsl_key) }.each(&:install
         channel: "stable",
         latestVersion: "0.1.26",
         updateAvailable: false,
-        upgradeCommand: "brew update && brew upgrade --cask infinitary",
+        upgradeCommand: upgradeCommandFor("stable"),
       });
       expect(brewOk("outdated", "--cask", "--greedy").trim()).toBe("");
 
@@ -938,7 +1065,7 @@ hooks.sort_by { |artifact| phases.index(artifact.class.dsl_key) }.each(&:install
         channel: "alpha",
         latestVersion: next,
         updateAvailable: false,
-        upgradeCommand: "brew update && brew upgrade --cask firstmate-3000@alpha",
+        upgradeCommand: upgradeCommandFor("alpha", FIRSTMATE_TAP),
       });
       expect(requests).toEqual([targetsUrlOf(FIRSTMATE_TAP)]);
       brewOk("uninstall", "--cask", token);

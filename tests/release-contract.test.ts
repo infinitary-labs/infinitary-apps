@@ -39,6 +39,7 @@ import {
   CASK_TOKENS,
   FIRSTMATE_TAP,
   publicTagFor,
+  TAP,
   targetProblem,
   upgradeCommandFor,
 } from "../src/core/update/updateChannels";
@@ -4552,7 +4553,11 @@ describe("update indicator alignment", () => {
       }).toString();
       const token = /^cask "([^"]+)" do$/m.exec(cask)?.[1];
       expect(token).toBe(CASK_TOKENS[channel]);
-      expect(upgradeCommandFor(channel)).toBe(`brew update && brew upgrade --cask ${token}`);
+      // INF-1913: the offered command must name the tap as well as the generated
+      // cask, so pre-trust installations can upgrade on Homebrew 6 and later.
+      expect(upgradeCommandFor(channel)).toBe(
+        `brew update && brew upgrade --cask ${TAP.tap}/${token}`,
+      );
       // The download the cask carries, version interpolated as Homebrew
       // reads it, is the target the update reader accepts for that channel.
       const url = (/^ {2}url "([^"]+)"$/m.exec(cask)?.[1] ?? "").replaceAll("#{version}", version);

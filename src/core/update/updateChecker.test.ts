@@ -88,7 +88,7 @@ describe("channel-aware update notices", () => {
       latestVersion: "0.1.25-alpha.10",
       updateAvailable: true,
       releaseUrl: target("0.1.25-alpha.10").releaseUrl,
-      upgradeCommand: "brew update && brew upgrade --cask infinitary@alpha",
+      upgradeCommand: upgradeCommandFor("alpha"),
     });
     await updates.openReleasePage();
     expect(opened).toEqual([target("0.1.25-alpha.10").releaseUrl]);
@@ -129,7 +129,7 @@ describe("channel-aware update notices", () => {
       latestVersion: "0.1.25",
       updateAvailable: false,
       releaseUrl: target("0.1.25").releaseUrl,
-      upgradeCommand: "brew update && brew upgrade --cask infinitary",
+      upgradeCommand: upgradeCommandFor("stable"),
     });
     // Even running an alpha build, a stable subscription never moves back.
     expect(
@@ -392,7 +392,7 @@ describe("the installed app's checker", () => {
       updateAvailable: true,
       releaseUrl:
         "https://github.com/kunchenguid/homebrew-tap/releases/tag/firstmate-3000-alpha-v0.4.2-alpha.3",
-      upgradeCommand: "brew update && brew upgrade --cask firstmate-3000@alpha",
+      upgradeCommand: upgradeCommandFor("alpha", FIRSTMATE_TAP),
     });
     expect(requests).toEqual([targetsUrlOf(FIRSTMATE_TAP)]);
     // The same file names nothing Infinitary's own tap would offer.

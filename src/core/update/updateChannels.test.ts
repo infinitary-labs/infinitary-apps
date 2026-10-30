@@ -4,6 +4,8 @@ import { describe, expect, it } from "vitest";
 import { scratchDir } from "../../../tests/helpers/scratchDirs";
 import {
   buildUpdateTarget,
+  FIRSTMATE_TAP,
+  INFINITARY_TAP,
   parseUpdateTargets,
   readUpdateChannelMarker,
   resolveUpdateChannel,
@@ -57,9 +59,18 @@ describe("the installed subscription", () => {
     }
   });
 
-  it("names each channel's own cask in its upgrade command", () => {
-    expect(upgradeCommandFor("stable")).toBe("brew update && brew upgrade --cask infinitary");
-    expect(upgradeCommandFor("alpha")).toBe("brew update && brew upgrade --cask infinitary@alpha");
+  // INF-1913: an explicit tap/cask lets Homebrew trust an older installation's
+  // selected cask, without trusting the rest of either public tap.
+  it("names each channel's own tap and cask in its upgrade command", () => {
+    for (const tap of [INFINITARY_TAP, FIRSTMATE_TAP]) {
+      for (const channel of ["stable", "alpha"] as const) {
+        expect(upgradeCommandFor(channel, tap)).toBe(
+          `brew update && brew upgrade --cask ${tap.tap}/${tap.caskTokens[channel]}`,
+        );
+      }
+    }
+    expect(upgradeCommandFor("stable")).toBe(upgradeCommandFor("stable", INFINITARY_TAP));
+    expect(upgradeCommandFor("alpha")).toBe(upgradeCommandFor("alpha", INFINITARY_TAP));
   });
 });
 

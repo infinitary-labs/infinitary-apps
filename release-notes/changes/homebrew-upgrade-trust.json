@@ -1,0 +1,17 @@
+{
+  "entries": [
+    {
+      "id": "homebrew-upgrade-trust",
+      "kind": "fix",
+      "title": "Homebrew updates work for older installations",
+      "body": "The update notice now gives you a command that works after Homebrew begins requiring trust, including installations kept from Firstmate 3000. It keeps your update channel and saved work.",
+      "area": "updates",
+      "picture": {
+        "dark": "homebrew-upgrade-trust-dark.webp",
+        "light": "homebrew-upgrade-trust-light.webp",
+        "alt": "The stable update notice names the Infinitary tap and cask in its upgrade command."
+      },
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

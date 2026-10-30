@@ -84,7 +84,9 @@ export const CASK_TOKENS: Readonly<Record<UpdateChannel, string>> = TAP.caskToke
 
 /** The selectable command the update panel shows for the installed channel. */
 export function upgradeCommandFor(channel: UpdateChannel, tap: TapNames = TAP): string {
-  return `brew update && brew upgrade --cask ${tap.caskTokens[channel]}`;
+  // The explicit tap/cask also trusts this cask on Homebrew 6+, including
+  // installations made before tap trust existed; older Homebrew accepts it too.
+  return `brew update && brew upgrade --cask ${tap.tap}/${tap.caskTokens[channel]}`;
 }
 
 /** The public tap's release page of a tag. */

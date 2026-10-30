@@ -36,6 +36,11 @@ import {
 } from "@shared/cards";
 import type { ChangePresentation } from "@shared/changePresentation";
 import type { CheckChangeInput } from "@shared/checkRepair";
+import {
+  CHECKS_ABSENT_WORDS,
+  CHECKS_NOT_REPORTED_WORDS,
+  currentCheckStatus,
+} from "@shared/checkSnapshot";
 import { NEEDS_REAUTH_CONSEQUENCE } from "@shared/credentialHealth";
 import { HERE, HOME } from "@shared/deviceNames";
 import type { FmEvent } from "@shared/events";
@@ -80,6 +85,7 @@ import { threadWait } from "@shared/threadWait";
 import type { IntegrationAsk } from "@shared/writeAsk";
 import {
   CARE_WORDS,
+  CHECK_WORDS,
   changeLinesWords,
   MERGE_AFTER_FIXING_WORDS,
   MERGE_ANYWAY_WORDS,
@@ -127,7 +133,9 @@ import {
   crewmateHandoverDir,
   crewmateTempDir,
 } from "../paths";
+import { standingBaselineChecks } from "../tasks/dependencyWaits";
 import { keepHandoverFiles } from "../tasks/handoverFiles";
+import { CHECK_FAILS_ON_MAIN_WORDS } from "./checkVerdicts";
 import { FirstmateAgent } from "./firstmateAgent";
 import { packagedPlanStepLines } from "../personal/sequencesSkill";
 import { EMIT_CARD_TOOL } from "../pi/cardTool";
@@ -4260,6 +4268,14 @@ describe("CrewSupervisor", () => {
       }
       headSha = APPROVED;
       states: ForgeCheckState[] = ["success"];
+      /** Main's newest run of the checks, once a test gives one (INF-1915 fix 1). */
+      branchChecks?: Forge["branchChecks"];
+      mainRuns(states: ForgeCheckState[], sha = "ma1n0000feed") {
+        this.branchChecks = async () => ({
+          sha,
+          checks: { items: states.map((state) => ({ name: "linux-checks", state })) },
+        });
+      }
       readiness: ForgeReadiness = "clean";
       /** The merge request's answer when it refuses; undefined merges. */
       refuse: ForgeError | undefined;
@@ -4698,19 +4714,36 @@ describe("CrewSupervisor", () => {
       await vi.waitFor(() => expect(h.forge.merges).toEqual([REVISED]));
     });
 
-    it("permits the crew's red offer without treating it as merge permission", async () => {
+    // INF-1891, the captain: "the app turns the merge card down until the
+    // pull request's own checks pass"; a diagnosis of every failed check
+    // lets it up, as stable 0.6.1 did, and never as merge permission.
+    it("holds the crew's red offer until each failed check carries a diagnosis, never as merge permission (INF-1891)", async () => {
       const h = await approved();
       h.forge.headSha = "revised00004";
       h.forge.states = ["failure"];
-      await expect(
+      const revise = () =>
         h.specs[0]?.onCard?.({
           requiredActions: [],
           id: h.card.id,
           title: "Ready to merge",
           body: completionBody("<p>The change is one setting now.</p><p>Pushed.</p>"),
           actions: [{ id: "merge-pr", label: "Merge PR", default: true, effect: SETTLE_MERGE }],
-        }),
-      ).resolves.toBeDefined();
+        });
+      const held = revise();
+      await expect(held).rejects.toThrow(`the checks read ${CHECK_WORDS.red}, not passed`);
+      await expect(held).rejects.toThrow("spend no rerun on it");
+      await expect(held).rejects.toThrow(softHoldWords("checks", "crewmate"));
+      expect(h.tasks.get(h.taskId)?.delivery).toMatchObject({ headSha: "revised00004", ci: "red" });
+      await h.declare({
+        diagnosis: {
+          headSha: "revised00004",
+          check: "linux-checks",
+          classification: "unknown",
+          evidence: "The log ends before the failed step names a cause.",
+        },
+      });
+      await expect(revise()).resolves.toBeDefined();
+      expect(h.authorization()).toBeUndefined();
       expect(h.forge.merges).toEqual([]);
     });
 
@@ -5312,13 +5345,15 @@ describe("CrewSupervisor", () => {
         expect(h.forge.merges).toEqual([]);
       });
 
-      it("offers Merge anyway on actual failed checks without a separate readiness declaration or count gate (INF-1555 F12)", async () => {
+      it("offers Merge anyway on failed checks once each carries a diagnosis, with no count gate (INF-1555 F12, INF-1891)", async () => {
         const h = await approved();
         h.forge.headSha = "fixed0004";
         h.forge.states = ["failure"];
         await h.declare({});
         expect(h.tasks.get(h.taskId)?.delivery).toMatchObject({ headSha: "fixed0004", ci: "red" });
-        await h.emit("Still red");
+        // Undiagnosed, a new offer waits on the checks (INF-1891).
+        await expect(h.emit("Still red")).rejects.toThrow(softHoldWords("checks", "crewmate"));
+        expect(h.cards().find((entry) => entry.title === "Still red")).toBeUndefined();
         expect(h.forge.merges).toEqual([]);
         await h.declare({
           diagnosis: {
@@ -5339,6 +5374,151 @@ describe("CrewSupervisor", () => {
         );
         h.supervisor.act(card?.id ?? "", MERGE_ANYWAY_ACTION);
         await vi.waitFor(() => expect(h.forge.merges).toEqual(["fixed0004"]));
+      });
+
+      // INF-1915 fix 1 (the captain: "Fold fix 1 into INF-1873 and INF-1874"):
+      // main's newest run of the same check failed too, so the card goes up
+      // at once naming the check and why it is outside the change, with no
+      // rerun and no reopening; the captain merges now or waits for main's
+      // fix, which the app watches. A red check never merges on its own.
+      it("puts the offer up at once with Merge anyway when main's newest run of every failed check failed too, stating the fact (INF-1915 fix 1)", async () => {
+        const h = await approved();
+        h.forge.headSha = "fixed0004";
+        h.forge.states = ["failure"];
+        h.forge.mainRuns(["failure"]);
+        await h.declare({});
+        const delivery = h.tasks.get(h.taskId)?.delivery;
+        expect(delivery).toMatchObject({ headSha: "fixed0004", ci: "red" });
+        expect(delivery?.mainChecks).toMatchObject({
+          head: "fixed0004",
+          sha: "ma1n0000feed",
+          items: [{ name: "linux-checks", state: "failure" }],
+        });
+        expect(delivery?.ciRepair?.diagnoses ?? []).toEqual([]);
+        // No card yet, so the crewmate driving its checks hears no wake about main.
+        expect(standingBaselineChecks(delivery)).toEqual([]);
+        await repairTurn(h, async () => {
+          await expect(h.emit("Main fails it too")).resolves.toContain("card-");
+        });
+        const card = () => h.cards().find((entry) => entry.title === "Main fails it too");
+        // With the card up, the main watch reads the same fact: "wait for
+        // main's fix" needs no diagnosis.
+        expect(standingBaselineChecks(h.tasks.get(h.taskId)?.delivery)).toEqual(["linux-checks"]);
+        await vi.waitFor(() =>
+          expect(card()?.actions.find((action) => action.passes === "checks")?.label).toBe(
+            MERGE_ANYWAY_WORDS,
+          ),
+        );
+        const body = card()?.body ?? "";
+        expect(body).toContain(CHECK_FAILS_ON_MAIN_WORDS);
+        expect(body).toContain('data-check-outside="linux-checks"');
+        expect(body).toContain("ma1n000");
+        expect(body).toContain("outside this change");
+        // Nothing merged on the fact alone: a red check never merges on its
+        // own under this rule. Merge now is the captain's one click, Merge anyway.
+        expect(h.authorization()).toBeUndefined();
+        expect(h.forge.merges).toEqual([]);
+        h.supervisor.act(card()?.id ?? "", MERGE_ANYWAY_ACTION);
+        await vi.waitFor(() => expect(h.forge.merges).toEqual(["fixed0004"]));
+      });
+
+      // INF-1955 (the captain: "then this is a bug.. it's confusing for me to
+      // see this"): a project that runs no checks read none reported with
+      // Merge when checks pass, because the crew's absence declaration sent
+      // with no pull named was dropped in silence. It registers against the
+      // task's own pull request now, or is refused in words.
+      const NO_CI = "b9b68d86e69580da41daee76790e7080ee638841";
+      const absence = (headSha: string) => ({
+        headSha,
+        evidence:
+          "The default branch has no CI: no workflows, no branch rule requires a check, and main's own commit has no runs.",
+        localGate: "nix eval and nix build of every host and the unit suite passed at this version.",
+      });
+      const noCiVersion = async (h: Awaited<ReturnType<typeof approved>>) => {
+        h.forge.referencedBranch = h.tasks.get(h.taskId)?.branch ?? "";
+        h.forge.headSha = NO_CI;
+        h.forge.states = [];
+        await h.declare({});
+        expect(h.tasks.get(h.taskId)?.delivery).toMatchObject({
+          headSha: NO_CI,
+          ci: "pending",
+          checks: { items: [], absenceDeclared: false },
+        });
+        await vi.waitFor(() => expect(mergeLabelOf(h)).toBe(MERGE_WHEN_CHECKS_PASS_WORDS));
+      };
+
+      it("registers the crew's own-pull absence declaration or refuses it in words, and the no-CI card then goes up (INF-1955)", async () => {
+        const h = await approved();
+        await noCiVersion(h);
+        expect(h.cards().find((card) => card.id === h.card.id)?.body).toContain(
+          CHECKS_NOT_REPORTED_WORDS,
+        );
+        // A new offer waits on the empty reading, and the refusal names the declaration.
+        const held = h.emit("The no-CI change is ready");
+        await expect(held).rejects.toThrow(`the checks read ${CHECK_WORDS.pending}, not passed`);
+        await expect(held).rejects.toThrow("absentChecks");
+        // Another version is refused in words; nothing registers.
+        expect(await h.declare({ absentChecks: absence("another-version") })).toContain(
+          "Absence declaration refused",
+        );
+        expect(h.tasks.get(h.taskId)?.delivery?.checks?.absenceDeclared).toBe(false);
+        // This version's declaration registers on the task's own pull request.
+        expect(await h.declare({ absentChecks: absence(NO_CI) })).toContain(
+          "Absence evidence stored for this version",
+        );
+        const delivery = h.tasks.get(h.taskId)?.delivery;
+        expect(delivery).toMatchObject({
+          checks: { items: [], absenceDeclared: true },
+          mergeReviews: [{ relationship: "owned", number: 7, headSha: NO_CI }],
+        });
+        expect(delivery && currentCheckStatus(delivery)).toBe("green");
+        await vi.waitFor(() => expect(mergeLabelOf(h)).toBe(MERGE_WORDS["merge-pr"]));
+        const body = h.cards().find((card) => card.id === h.card.id)?.body ?? "";
+        expect(body).toContain(CHECKS_ABSENT_WORDS);
+        expect(body).not.toContain(CHECKS_NOT_REPORTED_WORDS);
+        // The offer goes up now, and nothing failed, so no Merge anyway.
+        await repairTurn(h, async () => {
+          await expect(h.emit("The no-CI change is ready")).resolves.toContain("card-");
+        });
+        const card = h.cards().find((entry) => entry.title === "The no-CI change is ready");
+        expect(card?.actions.some((action) => action.passes === "checks")).toBe(false);
+        expect(h.forge.merges).toEqual([]);
+      });
+
+      it("completes a kept click on an empty reading exactly once when the crew declares that version's absence, with no checks override (INF-1955, INF-1966)", async () => {
+        const h = await approved();
+        await noCiVersion(h);
+        // The crew revises its card at the no-CI version; the empty reading holds its merge.
+        await repairTurn(h, async () => {
+          await expect(
+            h.specs[0]?.onCard?.({
+              requiredActions: [],
+              id: h.card.id,
+              title: "Ready to merge",
+              body: completionBody("<p>The change is one setting now.</p><p>Pushed.</p>"),
+              actions: [{ id: "merge-pr", label: "Merge PR", default: true, effect: SETTLE_MERGE }],
+            }),
+          ).resolves.toContain(COMPLETION_REVISED_WHILE_RUNNING);
+        });
+        expect(h.tasks.get(h.taskId)?.delivery?.completionOffers?.at(-1)?.headSha).toBe(NO_CI);
+        expect(mergeLabelOf(h)).toBe(MERGE_WHEN_CHECKS_PASS_WORDS);
+        // The captain's conditional click waits on the checks and sends nothing.
+        h.supervisor.act(h.card.id, "merge");
+        await vi.waitFor(() => expect(h.authorization()?.waiting).toMatchObject({ on: "checks" }));
+        expect(h.authorization()?.approvedHead).toBe(NO_CI);
+        expect(h.forge.sends).toBe(0);
+        // The crew's declaration for that version arrives; the next idle boundary merges once.
+        await repairTurn(h, async () => {
+          expect(await h.declare({ absentChecks: absence(NO_CI) })).toContain(
+            "Absence evidence stored for this version",
+          );
+        });
+        await vi.waitFor(() => expect(h.forge.merges).toEqual([NO_CI]));
+        expect(h.forge.sends).toBe(1);
+        expect(h.tasks.get(h.taskId)).toMatchObject({ status: "done", closedReason: "merged" });
+        expect(h.authorization()?.status).toBe("consumed");
+        // The conditional click was never turned into a checks waiver.
+        expect(h.tasks.get(h.taskId)?.delivery?.override).toBeUndefined();
       });
 
       it("never holds the first mate's merge on its own card, while a crewmate's question holds it until his words pass it", async () => {
@@ -7735,9 +7915,13 @@ describe("a crewmate's own completion card clears the standing CI gate first", (
     },
   );
 
-  it("publishes an offer while checks are pending without a second readiness judgment (INF-1555 F12)", async () => {
+  // INF-1891: the checks hold a new merge card until the pull request's own
+  // checks pass; a revision of the card already up goes up while they run
+  // (INF-834 friction 4). The offer stays the crew's judgment (INF-1555 F12).
+  it("holds a new offer while the checks run and lets a revision of the card up (INF-1891)", async () => {
     const crewmate = fakeCrewmate();
-    const checkCi = vi.fn(async () => "pending" as const);
+    let overall: "green" | "pending" = "pending";
+    const checkCi = vi.fn(async () => overall);
     const { supervisor, specs, cards } = setup(crewmate, { checkCi });
     await supervisor.commission({
       title: "Ship the fix",
@@ -7746,23 +7930,37 @@ describe("a crewmate's own completion card clears the standing CI gate first", (
     });
     await tick();
     vi.spyOn(supervisor, "taskDelivery").mockReturnValue("direct-pr");
-
-    const result = specs[0]?.onCard?.({
+    const completion = (after: string) => ({
       requiredActions: [],
+      id: "ready",
       title: "Ready to merge",
-      body: completionBody(
-        "<p>The PR is open.</p><p>All changes are pushed and the worktree is clean.</p>",
-      ),
+      body: completionBody(after),
       actions: [
         { id: "merge-pr", label: "Merge PR", default: true, effect: SETTLE_MERGE },
         { id: "discard", label: "Discard", danger: true, effect: SETTLE_DISCARD },
       ],
     });
 
-    await expect(result).resolves.toContain("The card is shown; its merge waits on the checks.");
-    expect(checkCi).toHaveBeenCalledTimes(1);
+    const held = specs[0]?.onCard?.(
+      completion("<p>The PR is open.</p><p>All changes are pushed and the worktree is clean.</p>"),
+    );
+    await expect(held).rejects.toThrow(`the checks read ${CHECK_WORDS.pending}, not passed`);
+    await expect(held).rejects.toThrow(softHoldWords("checks", "crewmate"));
     await tick();
-    expect(cards().map(card => card.title)).toContain("Ready to merge");
+    expect(cards().map((card) => card.title)).not.toContain("Ready to merge");
+
+    overall = "green";
+    await specs[0]?.onCard?.(
+      completion("<p>The PR is open.</p><p>All changes are pushed and the worktree is clean.</p>"),
+    );
+    await tick();
+    overall = "pending";
+    await expect(
+      specs[0]?.onCard?.(completion("<p>The flag is renamed.</p><p>Pushed.</p>")),
+    ).resolves.toContain("The card is shown; its merge waits on the checks.");
+    expect(checkCi).toHaveBeenCalledTimes(3);
+    await tick();
+    expect(cards().filter((card) => card.title === "Ready to merge")).toHaveLength(1);
   });
 
   it("asks for the thread answer now when a missing change holds an offer back while the captain's reply waits", async () => {
@@ -7805,7 +8003,7 @@ describe("a crewmate's own completion card clears the standing CI gate first", (
     ).rejects.not.toThrow(/still unanswered/);
   });
 
-  it("publishes an offer with failed checks without a separate red declaration (INF-1555 F12)", async () => {
+  it("holds an offer with failed checks until each carries a diagnosis or main fails them too (INF-1891, INF-1915 fix 1)", async () => {
     const crewmate = fakeCrewmate();
     const checkCi = vi.fn(async () => "red" as const);
     const { supervisor, specs, cards } = setup(crewmate, { checkCi });
@@ -7829,9 +8027,14 @@ describe("a crewmate's own completion card clears the standing CI gate first", (
       ],
     });
 
-    await expect(result).resolves.toContain("card-");
+    await expect(result).rejects.toThrow(`the checks read ${CHECK_WORDS.red}, not passed`);
+    // The refusal names both ways up and tells the crew to spend no rerun on main's failure.
+    await expect(result).rejects.toThrow("carries your diagnosis");
+    await expect(result).rejects.toThrow("spend no rerun on it");
+    await expect(result).rejects.toThrow(softHoldWords("checks", "crewmate"));
+    expect(checkCi).toHaveBeenCalledTimes(1);
     await tick();
-    expect(cards().map(card => card.title)).toContain("Ready to merge");
+    expect(cards().map((card) => card.title)).not.toContain("Ready to merge");
   });
 
   it.each(["unpublished", "unreadable change"])(

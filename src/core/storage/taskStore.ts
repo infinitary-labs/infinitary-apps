@@ -336,7 +336,9 @@ export type TaskDelivery = {
    * red (INF-1915 fix 1), read with that reading of the task's own pull
    * request and replaced or cleared by the next. Evidence about a failure's
    * cause for the crew's diagnosis and the completion card, never a merge
-   * input: no gate reads it.
+   * input: the merge boundary does not read it; the completion card's
+   * checks hold does, letting the card up at once when that branch fails
+   * every failed check too (`CrewSupervisor.pendingCiGate`).
    */
   mainChecks?: MainCheckEvidence & { head: string };
   /** The newest watched run's state and host times, kept after its watch ends (INF-594). */

@@ -1,4 +1,5 @@
 import { type CheckDiagnosis, failingRun } from "@shared/checkRepair";
+import { checksFailingOnMain } from "@shared/checkSnapshot";
 import type { TaskDelivery, TaskRecord } from "../storage/taskStore";
 
 /**
@@ -37,13 +38,20 @@ export function baselineStands(
 
 /**
  * The checks a task's standing baseline waits name (INF-833 Fix 4): each
- * check of a baseline-blocked diagnosis that still stands, once. The host
- * reads the default branch's observations for these and relays changes,
- * without judging whether they clear the wait.
+ * check of a baseline-blocked diagnosis that still stands, once, and, while
+ * a completion offer stands at the current version, each check that reading
+ * found red that the default branch's newest run failed too (INF-1915 fix
+ * 1), so the merge card's "wait for main's fix" is watched from the recorded
+ * fact without a diagnosis, and a crewmate still driving its checks hears no
+ * wake about main. The host reads the default branch's observations for
+ * these and relays changes, without judging whether they clear the wait.
  */
 export function standingBaselineChecks(delivery: TaskDelivery | null | undefined): string[] {
   if (!delivery) return [];
-  const names = new Set<string>();
+  const offered =
+    delivery.ci !== "green" &&
+    (delivery.completionOffers ?? []).some((offer) => offer.headSha === delivery.headSha);
+  const names = new Set<string>(offered ? checksFailingOnMain(delivery) : []);
   for (const diagnosis of delivery.ciRepair?.diagnoses ?? []) {
     if (
       diagnosis.classification !== "baseline-blocked" ||

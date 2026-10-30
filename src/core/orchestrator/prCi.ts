@@ -357,6 +357,24 @@ export class PrCiService {
     if (input.skipRules) {
       return "Merge review refused: skipRules goes with pull, the pull request's number.";
     }
+    // An absence declaration with no pull named is for this task's own pull
+    // request (INF-1955): read against it, stored or refused in words,
+    // never dropped.
+    if (input.absentChecks) {
+      const beside = (
+        [
+          "declaration",
+          "diagnosis",
+          "repair",
+          "rerun",
+          "conflictRepair",
+          "captainGuidance",
+        ] as const
+      ).filter((field) => input[field] !== undefined);
+      if (beside.length)
+        return `Absence declaration refused: send absentChecks on its own, not beside ${beside.join(", ")}.`;
+      return this.declareOwnAbsence(taskId, input.absentChecks);
+    }
     const { conflictRepair, captainGuidance, ...checkInput } = input;
     let declared = "";
     // The captain's guidance is declared first: it may ride beside a repair.
@@ -433,6 +451,40 @@ export class PrCiService {
       ? `The captain's merge approval is kept and covers ${candidateHead(kept)}${kept.waiting ? ` (the merge waits: ${kept.waiting.on})` : ""}.${repairAsk}${mark === undefined ? "" : ` Their guidance through mark ${mark} holds the merge until you declare its impact with captainGuidance.`}`
       : "";
     return [declared, reading, keptLine].filter(Boolean).join("\n");
+  }
+
+  /**
+   * The crew's absence declaration for this task's own pull request, sent
+   * with no pull named (INF-1955): matched to the pull request the task's
+   * branch holds where the project lives, by its number, branch and the
+   * declared version, and stored on an owned merge review exactly as one
+   * named with pull is. A declaration the record cannot match is refused
+   * in words; an empty hosted reading alone never registers it.
+   */
+  private async declareOwnAbsence(
+    taskId: string,
+    absent: NonNullable<CheckChangeInput["absentChecks"]>,
+  ): Promise<string> {
+    const located = this.locate(taskId);
+    if ("said" in located) return located.said;
+    const { record, branch, forge } = located;
+    if (!forge.hasChecks)
+      return `Absence declaration refused: ${forge.place ?? "where this project lives"} runs no checks, so there is nothing to declare; the reading already says so.`;
+    let change: ForgeChange | null;
+    try {
+      change = await forge.changeFor(branch);
+    } catch (caught) {
+      if (isSignInForgeFailure(caught))
+        return crewSignInText(this.signInFact(forge, record.repoId));
+      const message = caught instanceof Error ? caught.message : String(caught);
+      return `Absence declaration refused: could not read this task's pull request. ${message}`;
+    }
+    if (!change || change.number === undefined)
+      return "Absence declaration refused: this task has no open pull request for its branch yet. Open it with open_change first, or name the pull request with pull.";
+    if (absent.headSha !== change.headSha)
+      return `Absence declaration refused: it names ${absent.headSha}, but this task's pull request ${forge.label(change)} is at ${change.headSha}. Declare that version, with the evidence and the local gate run at it.`;
+    const answer = await this.prepareReview(taskId, change.number, absent);
+    return answer.replace(/^Merge review refused:/, "Absence declaration refused:");
   }
 
   /**
@@ -1446,7 +1498,9 @@ export class PrCiService {
    * The default branch's newest run of each check a reading of the task's
    * own pull request found red (INF-1915 fix 1): evidence about the
    * failure's cause for the crew's diagnosis and the completion card, never
-   * a merge input. Kept from the last reading while the same checks fail at
+   * a merge input, though the card's checks hold reads it (a failure that
+   * branch fails too lets the card up at once, stated from this fact). Kept
+   * from the last reading while the same checks fail at
    * the same version; absent for a selected pull request, where the host
    * cannot read a branch's checks apart from a proposed change, when nothing
    * failed, or when that read itself failed.

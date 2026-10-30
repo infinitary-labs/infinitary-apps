@@ -493,14 +493,16 @@ The owner's verdict: git is bundled with the app, the GitHub Desktop model, beca
 It takes the change's id (`change`) and refuses another task's; a task reads only its own change (INF-1868 piece 2, INF-1873).
 A pull request's checks are the runs the host started for it (INF-1891, the captain: "for merge we only care about the PR checks"): on GitHub a check whose run carries an event stays only when that event is `pull_request` or `pull_request_target`, so a run a person or a tool started on the branch by hand, such as a dispatched heavy check, is read through `read_workflow` and never holds or passes the merge (`ownChecksOf` in `src/core/forge/forge.ts`); a check with no event, such as a commit status, stays as read, and a branch's own checks, read with no number, keep every run at their version.
 When a reading of the task's own pull request finds a check red, the same reading asks the host for the default branch's own checks (`Forge.branchChecks`) and records that branch's newest run of each failed check beside the reading - its version, when, and each check's state there (`TaskDelivery.mainChecks`, `facts.main`, `ChangeChecks.main`; INF-1915 fix 1).
-That is evidence about the failure's cause for the crewmate's diagnosis and the completion card, never a merge input: no gate reads it, a default branch that fails the same check holds nothing and passes nothing, and a selected pull request gets none.
+That is evidence about the failure's cause for the crewmate's diagnosis and the completion card, never a merge input: the merge boundary does not read it, a default branch that fails the same check passes nothing, and a selected pull request gets none.
+The completion card's checks hold does read it (`docs/delivery-rigor.md`, "Check facts and declarations"): when that branch's newest run of every failed check at the offered version failed too, the card goes up at once, says so under its Checks cell and offers Merge anyway, so the crewmate spends no rerun and asks for no reopening; the merge is still the captain's click.
 The evidence is kept while the same checks fail at the same version, read again when the failures change, and cleared by a reading with no failure; a host that cannot read a branch's checks, or a read that fails, records none.
 GitHub check runs retain their reported status, conclusion and available run identity.
 The captain’s F26 choice restores the existing exception for a cancelled duplicate: a later run of the same workflow and event decides that check of the same name; unrelated and latest cancellations still count.
 No observed checks or workflow runs yields an empty list.
 The restored cancellation filter keeps a replacement pending while its known later workflow run has not created that check; it does not invent a successful check.
 The reading identifies incomplete lists rather than inventing a check for a physical read limit.
-An empty hosted reading stays pending and watched until checks register or the crew records positive, exact-version absence evidence through `absentChecks` with `pull`.
+An empty hosted reading stays pending and watched until checks register or the crew records positive, exact-version absence evidence through `absentChecks`, with `pull` or, for the task's own pull request, alone (INF-1955: `PrCiService.declareOwnAbsence` matches it to the pull request the task's branch holds, by number, branch and version, and stores it on an owned merge review).
+A declaration the record cannot match - no open pull request yet, another version, a host that runs no checks - is refused in words, never dropped; the completion card's checks hold names the declaration when an empty reading holds the card.
 That evidence names an explicit no-CI policy from the trusted default branch and the applicable local gate; elapsed time, history and missing workflow files are not evidence of that policy.
 A host that runs no checks, such as a plain Git host, needs no invented hosted check.
 An absence declaration never removes registered checks from the reading or marks them passed.
@@ -623,7 +625,7 @@ The design follows the firstmate repo's PR poll: a watcher that is not a model, 
 ## A main failure's wake
 
 A pull request held because a check also fails on the default branch is woken when that branch's own run of the check passes, without waiting for the named task to close (INF-833 Fix 4).
-The standing baseline diagnoses name the checks (`standingBaselineChecks` in `src/core/tasks/dependencyWaits.ts`).
+The standing baseline diagnoses name the checks, and so does the recorded default-branch run of each check that fails at the change's current version while a completion offer stands at that version (`TaskDelivery.mainChecks` and `completionOffers`; `standingBaselineChecks` in `src/core/tasks/dependencyWaits.ts`), so a merge card that says a check fails on main too is watched without a diagnosis, and a crewmate still driving its checks hears no wake about main.
 On the check watch's tick, one read per project asks the forge for the default branch's checks (`Forge.branchChecks`, `PrCiService.readDefaultBranchChecks`).
 A check has passed only when every item of that exact name on that commit is success: a skip, a pending rerun, a failure or an absent name does not wake.
 Each waiting task hears one `main-check-passed` steer per check and commit, through the ordinary steer path, telling it to bring the change up to date and read the checks again.

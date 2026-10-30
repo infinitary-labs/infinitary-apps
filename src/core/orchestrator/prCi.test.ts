@@ -686,6 +686,83 @@ describe("PrCiService", () => {
     expect(forge.calls).toContain(`putIn ${task.branch} ${headSha}`);
   });
 
+  // INF-1955: the declaration for the task's own pull request, sent with no
+  // pull named, registers against that pull request or is refused in words.
+  it("stores an own-pull absence declaration sent with no pull, and refuses one it cannot match", async () => {
+    const { tasks, repos, service, forge } = setup();
+    await insertDirectPrTask(tasks, repos);
+    const task = tasks.get("ab12cd34")!;
+    repos.configure(task.repoId!, { origin: "https://github.com/x/y.git" });
+    const headSha = await git(task.repoDir, ["rev-parse", "HEAD"]);
+    forge.change = { ...forge.change!, headSha };
+    forge.states = [];
+    Object.assign(forge, {
+      pull: async () => ({
+        number: 23,
+        state: "open",
+        merged: false,
+        headSha,
+        base: "main",
+        branch: task.branch,
+        headRepo: "x/y",
+        title: "fix: ship the meter",
+      }),
+    });
+    const absence = {
+      headSha,
+      evidence: "The trusted default-branch project policy explicitly declares no CI.",
+      localGate: "The fixture's applicable local checks passed.",
+    };
+    await service.checkForCrew(task.id);
+    expect(service.reading(task.id)?.overall).toBe("pending");
+    // Another version is refused, and nothing is stored.
+    const stale = await service.checkForCrew(task.id, {
+      absentChecks: { ...absence, headSha: "another-version" },
+    });
+    expect(stale).toContain("Absence declaration refused");
+    expect(stale).toContain(headSha);
+    expect(tasks.get(task.id)?.delivery?.mergeReviews ?? []).toEqual([]);
+    expect(service.reading(task.id)?.overall).toBe("pending");
+    // Beside another declaration it is refused too, never half-read.
+    expect(
+      await service.checkForCrew(task.id, {
+        absentChecks: absence,
+        diagnosis: { headSha, check: "x", classification: "unknown", evidence: "none" },
+      }),
+    ).toContain("send absentChecks on its own");
+    // The declaration for this version registers on the task's own pull request.
+    const stored = await service.checkForCrew(task.id, { absentChecks: absence });
+    expect(stored).toContain("Absence evidence stored for this version");
+    expect(stored).not.toContain("refused");
+    expect(tasks.get(task.id)?.delivery?.mergeReviews?.[0]).toMatchObject({
+      relationship: "owned",
+      number: 23,
+      headSha,
+      absentChecks: { headSha },
+    });
+    expect(tasks.get(task.id)?.delivery?.checkTarget).toBeUndefined();
+    expect(service.reading(task.id)?.overall).toBe("green");
+    expect(tasks.get(task.id)?.delivery?.checks).toMatchObject({
+      items: [],
+      absenceDeclared: true,
+    });
+    expect((await service.merge(task.id)).ok).toBe(true);
+    expect(forge.calls).toContain(`putIn ${task.branch} ${headSha}`);
+  });
+
+  it("refuses an own-pull absence declaration while the task has no open pull request", async () => {
+    const { tasks, repos, service, forge } = setup();
+    await insertDirectPrTask(tasks, repos);
+    const task = tasks.get("ab12cd34")!;
+    forge.change = null;
+    const answer = await service.checkForCrew(task.id, {
+      absentChecks: { headSha: "feedbeef", evidence: "No CI.", localGate: "Passed." },
+    });
+    expect(answer).toContain("Absence declaration refused");
+    expect(answer).toContain("no open pull request");
+    expect(tasks.get(task.id)?.delivery?.mergeReviews ?? []).toEqual([]);
+  });
+
   it("reports every check on the change head and records the overall", async () => {
     const forge = new FakeForge();
     forge.change = { ...(forge.change as ForgeChange), headSha: "abc123def456" };

@@ -54,10 +54,11 @@ import {
 } from "@shared/cards";
 import {
   type CheckChangeInput,
+  everyFailureDiagnosed,
   isRepairAssessment,
   REPAIR_ASSESSMENT_SOURCE,
 } from "@shared/checkRepair";
-import { currentCheckStatus, currentCheckSummary } from "@shared/checkSnapshot";
+import { currentCheckStatus, currentCheckSummary, everyFailureOnMain } from "@shared/checkSnapshot";
 import {
   checksFinishedAgo,
   checksRestWords,
@@ -10932,10 +10933,56 @@ export class CrewSupervisor {
           why,
         );
       }
-      // Captain INF-1555 F12: the offer is the crew's judgment.
-      // Pending, failed or partially unreadable checks remain facts on the
-      // card and holds at the click, never a second readiness declaration.
-      return read.overall === "pending" ? ("running" as const) : ("checked" as const);
+      // A pull request merged outside the app has nothing left to check:
+      // the captain's click closes the task as merged (FI3-213).
+      if (read.overall === "green" || read.overall === "merged") return "checked" as const;
+      // The captain's override on the checks lets the card go up at the
+      // version it covers; the merge reads the same record.
+      const delivery = this.options.tasks.get(taskId)?.delivery;
+      if (overridePasses(delivery, "checks", delivery?.headSha)) return "checked" as const;
+      // The checks hold a new merge card until the pull request's own checks
+      // pass (INF-1891, the captain: "the app turns the merge card down
+      // until the pull request's own checks pass"). A revision of the card
+      // already up goes up while they run (INF-834 friction 4): its words
+      // are the captain's to read now, and its merge waits on its own.
+      if (read.overall === "pending" && this.cards.openCompletionCard(taskId, input.id))
+        return "running" as const;
+      // Failed checks let the card up with Merge anyway beside the merge in
+      // two cases: every failed check carries the crewmate's diagnosis
+      // (INF-1891, as stable 0.6.1 did), or the default branch's newest run
+      // of every failed check failed too (INF-1915 fix 1), which the strip
+      // states from that fact, so the crewmate spends no rerun and asks for
+      // no reopening and the captain decides on the card: merge now, or
+      // wait for main's fix, which the app watches. The offer is still the
+      // crew's judgment (INF-1555 F12): the facts stay on the card and hold
+      // the merge at the click, never a second readiness declaration.
+      if (
+        read.overall === "red" &&
+        delivery &&
+        (everyFailureOnMain(delivery) || everyFailureDiagnosed(delivery))
+      )
+        return "checked" as const;
+      const state =
+        read.overall === "pending" && read.problem
+          ? `${CHECK_WORDS.pending} (${read.problem})`
+          : CHECK_WORDS[read.overall];
+      // An empty reading with no declaration is pending, never no checks
+      // (INF-1955): the refusal names the declaration that registers them
+      // absent, so a project that runs no checks is not held for a wake
+      // that never comes.
+      const reading = delivery?.checks;
+      const empty =
+        read.overall === "pending" &&
+        reading !== undefined &&
+        reading.headSha === delivery?.headSha &&
+        reading.items.length === 0 &&
+        !reading.absenceDeclared &&
+        !reading.problem;
+      throw new CardRefusedError(
+        `Card refused: the checks read ${state}, not passed; a merge decision must wait. Read them again with check_change, fix or wait, and emit the completion card again once they pass.${read.overall === "red" ? " If they still fail after you tried, it goes up once every failed check at this version carries your diagnosis (check_change diagnosis), and the app offers Merge anyway on it; when main's newest run of every failed check failed too, the reading says so and the card goes up at once stating that fact, so spend no rerun on it." : ""}${empty ? " No check has registered at this version: if this pull request has no checks at all, declare that with check_change absentChecks (its version, the evidence and the local gate run at it), and the reading then says no checks; an empty reading alone stays pending." : ""}${this.waitingReplyNote(taskId)} ${softHoldWords("checks", "crewmate")}`,
+        "checks",
+        `its checks read ${state}, not passed`,
+      );
     });
   }
 
@@ -11508,7 +11555,7 @@ export class CrewSupervisor {
     } else if (delivery === "direct-pr") {
       cell("checks", "Checks", `${statusDot("idle")}${CHECKS_NOT_READ_WORDS}`);
     }
-    if (record.delivery) cells.push(checkVerdicts(record.delivery));
+    if (record.delivery) cells.push(checkVerdicts(record.delivery, this.now()));
     // The independent review's word on a change (delivery rigor phase 2,
     // at any care since INF-1875): the verdict and the head it read, the
     // risk beside CI and never a hold (Q4), or where the review stands

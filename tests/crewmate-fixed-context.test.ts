@@ -107,6 +107,36 @@ const FIXED_CONTEXT_BOUNDARY = (OLLAMA_MIN_CONTEXT - LOCAL_CONTEXT_RESERVE) / 2;
 
 const SIGNED_IN_RULE = "the captain signs in, never you";
 
+type Home = "prompt" | { tool: string };
+
+/**
+ * The ledger (docs/orchestrator-contract.md, "The fixed-context budget"): a
+ * rule the trim took out of the delivery guidance, and the served text that
+ * still says it. INF-1874 paid for the main-fails-too exception this way.
+ */
+const LEDGER: { rule: string; home: Home; says: string }[] = [
+  {
+    rule: "counts in the delivery guidance are the crew's judgment, never a host allowance",
+    home: { tool: "check_change" },
+    says: "Judge readiness, flakes, settlement and when to stop from your delivery guidance, not a host count.",
+  },
+  {
+    rule: "no unrelated failure is fixed on the side",
+    home: "prompt",
+    says: "Do no unrelated work on the side.",
+  },
+  {
+    rule: "a stronger model is the first mate's to arrange, never the crewmate's own switch",
+    home: "prompt",
+    says: "For merging, discarding, a stronger model or unrelated work, close your card and report the captain's words verbatim with needs_firstmate; the first mate acts.",
+  },
+  {
+    rule: "a blocker names the decision or access only the captain can give",
+    home: "prompt",
+    says: "report a sign-in or access only the captain can give as a blocker",
+  },
+];
+
 describe("the crewmate's fixed context (INF-416 piece J)", () => {
   it("stays inside its budget for each runtime and kind of work", () => {
     const over = RUNTIMES.flatMap((runtime) =>
@@ -200,5 +230,26 @@ describe("the crewmate's fixed context (INF-416 piece J)", () => {
     const room = OLLAMA_MIN_CONTEXT - LOCAL_CONTEXT_RESERVE - fixedTokens(systemPrompt);
     expect(fits(room)).toBe(true);
     expect(fits(room + 1)).toBe(false);
+  });
+
+  it("says each rule the trim took out of the delivery guidance in the home the ledger names", () => {
+    const textOf = (
+      home: Home,
+      runtime: CrewmateBackend | undefined,
+      kind: CrewmateProcedureFacts | undefined,
+    ) =>
+      home === "prompt"
+        ? promptFor(runtime, kind)
+        : (CREWMATE_TOOLS.find((tool) => tool.name === home.tool)?.description ?? "");
+    for (const runtime of RUNTIMES) {
+      for (const kind of KINDS) {
+        const missing = LEDGER.filter(
+          ({ home, says }) => !textOf(home, runtime, kind).includes(says),
+        ).map(({ rule }) => rule);
+        expect(missing, `a rule the crewmate (${label(runtime, kind)}) is no longer told`).toEqual(
+          [],
+        );
+      }
+    }
   });
 });

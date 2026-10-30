@@ -171,6 +171,51 @@ describe("evidence-backed check declarations", () => {
     );
   });
 
+  // INF-1915 fix 1: the recorded fact that main's newest run of a failed
+  // check failed too names that check for the main watch on its own, so the
+  // captain's "wait for main's fix" is watched with no diagnosis, while
+  // the merge card stands at that version; before it, the crewmate driving
+  // its checks hears no wake about main.
+  it("names a check main's newest run fails too for the main watch, from the recorded fact alone, while the offer stands", () => {
+    const tasks = fixture();
+    const mainSha = "b".repeat(40);
+    const offer = { cardId: "card-1", offerId: "offer-1", headSha, prNumber: 5, at: 1 };
+    const reading = (ci: "red" | "green", mainHead = headSha, offers = [offer]) => ({
+      mode: "direct-pr" as const,
+      prNumber: 5,
+      headSha,
+      ci,
+      ciAt: 1,
+      completionOffers: offers,
+      checks: {
+        headSha,
+        items: [
+          { name: "phone", state: "failure" as const },
+          { name: "unit-tests", state: "success" as const },
+        ],
+        absenceDeclared: false,
+      },
+      mainChecks: {
+        head: mainHead,
+        sha: mainSha,
+        at: 1,
+        items: [{ name: "phone", state: "failure" as const }],
+      },
+    });
+    seedDelivery(tasks, "checks", reading("red"));
+    expect(standingBaselineChecks(tasks.get("checks")?.delivery)).toEqual(["phone"]);
+    // The fact at another version, a passing reading, no offer yet, or an
+    // offer at an earlier version names nothing.
+    seedDelivery(tasks, "checks", reading("red", "c".repeat(40)));
+    expect(standingBaselineChecks(tasks.get("checks")?.delivery)).toEqual([]);
+    seedDelivery(tasks, "checks", reading("green"));
+    expect(standingBaselineChecks(tasks.get("checks")?.delivery)).toEqual([]);
+    seedDelivery(tasks, "checks", reading("red", headSha, []));
+    expect(standingBaselineChecks(tasks.get("checks")?.delivery)).toEqual([]);
+    seedDelivery(tasks, "checks", reading("red", headSha, [{ ...offer, headSha: "c".repeat(40) }]));
+    expect(standingBaselineChecks(tasks.get("checks")?.delivery)).toEqual([]);
+  });
+
   // FI3-671 still applies: retiring count policy must not remove dependency-state feedback.
   it.each([
     {

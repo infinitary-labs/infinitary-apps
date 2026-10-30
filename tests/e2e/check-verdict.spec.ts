@@ -2,21 +2,24 @@ import { mkdirSync } from "node:fs";
 import { join } from "node:path";
 import { expect, test } from "@playwright/test";
 import {
+  CHECK_FAILS_ON_MAIN_WORDS,
   CHECK_VERDICT_MISSING,
   CHECK_VERDICT_WORDS,
+  failsOnMainSentence,
 } from "../../src/core/orchestrator/checkVerdicts";
 import { CardStore } from "../../src/core/storage/cardStore";
 import { openDatabase } from "../../src/core/storage/db";
 import { seedTask } from "../../src/core/tasks/seedTask";
 import { TaskService } from "../../src/core/tasks/taskService";
 import { type Card, SETTLE_FACTS_OPEN } from "../../src/shared/cards";
+import { checksFinishedAgo } from "../../src/shared/checksSpan";
 import { scratchDir } from "../helpers/scratchDirs";
 import { seedDelivery } from "../helpers/taskDelivery";
 import { cardBody } from "./frames";
 import { launchApp } from "./launch";
 import { resizeWindow } from "./layout";
-import { regionShot } from "./pictures";
-import { factsStrip, showCard } from "./stack";
+import { heroShot, regionShot } from "./pictures";
+import { factsStrip, showCard, shownEntry } from "./stack";
 import { pressKey } from "./windowKeys";
 
 /** Nightly session audit finding 3: a failed merge check must carry the
@@ -24,6 +27,9 @@ import { pressKey } from "./windowKeys";
  * Real saved check_change ledger, isolated Electron, no sign-ins or shared writes.
  * Completion: verdicts visible, evidence opens by keys, live refresh keeps it,
  * and unrelated versions and non-failing readings never show old judgments.
+ * INF-1915 fix 1: a failed check whose newest run on main failed too carries
+ * the host's own sentence saying so under the Checks cell, from the recorded
+ * fact alone, with no diagnosis; a card without that fact shows no such line.
  */
 // biome-ignore lint/correctness/noEmptyPattern: Playwright requires the fixture argument before testInfo.
 test("failed merge checks carry head-bound verdicts with keyboard-readable evidence", async ({}, testInfo) => {
@@ -85,6 +91,56 @@ test("failed merge checks carry head-bound verdicts with keyboard-readable evide
   };
   const cards = new CardStore(db);
   cards.upsert(card);
+  // The merge card that went up at once because main fails the same check.
+  const outsideHead = "e".repeat(40);
+  const mainSha = "f".repeat(40);
+  const now = Date.now();
+  const mainReadAt = now - 5 * 60_000;
+  seedTask(tasks, {
+    id: "check-outside",
+    title: "Fix the liters",
+    status: "completed",
+    worktreeDir,
+  });
+  seedDelivery(tasks, "check-outside", {
+    mode: "direct-pr",
+    prNumber: 59,
+    prUrl: "https://github.com/octo/meterlab/pull/59",
+    headSha: outsideHead,
+    ci: "red",
+    ciAt: now - 5 * 60_000,
+    ciStartedAt: now - 14 * 60_000,
+    ciFinishedAt: now - 5 * 60_000,
+    checks: {
+      headSha: outsideHead,
+      prNumber: 59,
+      items: [
+        { name: "typecheck-lint-build", state: "success" },
+        { name: "unit-tests", state: "failure" },
+        { name: "probe-tests", state: "success" },
+      ],
+      complete: true,
+      absenceDeclared: false,
+    },
+    mainChecks: {
+      head: outsideHead,
+      sha: mainSha,
+      at: mainReadAt,
+      items: [{ name: "unit-tests", state: "failure" }],
+    },
+    ciRepair: {
+      failures: [{ headSha: outsideHead, checks: ["unit-tests"] }],
+      diagnoses: [],
+      repairs: [],
+    },
+  });
+  cards.upsert({
+    ...card,
+    id: "card-outside",
+    taskId: "check-outside",
+    title: "The liters fix is ready",
+    body: `<h2>Why</h2><p>The meter read liters as gallons.</p>${SETTLE_FACTS_OPEN}</div>`,
+  });
   for (const state of ["green", "stale"] as const) {
     const id = `check-${state}`;
     seedTask(tasks, { id, title: id, status: "completed", worktreeDir });
@@ -114,6 +170,8 @@ test("failed merge checks carry head-bound verdicts with keyboard-readable evide
     }
     await expect(strip).toContainText(CHECK_VERDICT_MISSING);
     await expect(strip).not.toContainText("old diagnosis");
+    // No recorded run of main fails these checks, so no line says so.
+    await expect(strip.locator("[data-check-outside]")).toHaveCount(0);
     // Refresh exactly as the host pushes live check ages, without reloading the frame.
     const cards = await launched.page.evaluate(() => window.infinitary.cards.list());
     const refreshed = cards.map((card) => ({
@@ -140,6 +198,27 @@ test("failed merge checks carry head-bound verdicts with keyboard-readable evide
       const other = factsStrip(cardBody(launched.page, `The ${state} reading`)).strip;
       await expect(other.locator("[data-check-verdict]")).toHaveCount(0);
     }
+    // INF-1915 fix 1: the host names the check main fails too and says why
+    // the failure is outside the change, in the open, with no diagnosis.
+    await showCard(launched.page, "The liters fix is ready");
+    const outside = factsStrip(cardBody(launched.page, "The liters fix is ready")).strip;
+    await expect(
+      outside.locator("[data-check-verdict]").filter({ hasText: "unit-tests" }),
+    ).toContainText(CHECK_FAILS_ON_MAIN_WORDS);
+    const fact = outside.locator('[data-check-outside="unit-tests"]');
+    // The host's sentence, less the age it refreshes while the card is up.
+    const [named, why] = failsOnMainSentence({ sha: mainSha, at: mainReadAt }, now).split(
+      checksFinishedAgo(mainReadAt, now),
+    );
+    await expect(fact).toContainText(named ?? "");
+    await expect(fact).toContainText(why ?? "");
+    await expect(fact).toContainText(mainSha.slice(0, 7));
+    await expect(outside.locator("[data-check-outside]")).toHaveCount(1);
+    await expect(outside.locator("details")).toHaveCount(0);
+    await heroShot(launched.app, launched.page, {
+      region: shownEntry(launched.page),
+      name: "failed-check-outside-change",
+    });
   } finally {
     await launched.close();
   }

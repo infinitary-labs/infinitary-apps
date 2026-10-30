@@ -378,8 +378,11 @@ Its switch changes new crew prompts, not the fixed care procedure, actual check 
 The host does not decide green from check states, automatically settle repairs, or enforce a repair, rerun or review-round count.
 The delivery guidance tells the crew how to judge readiness, diagnose a failure, investigate uncertainty and decide when to stop.
 A merge offer expresses readiness only for its named version and grants no merge permission.
-A declaration of red permits a completion offer with Merge anyway, whose captain click passes the checks hold for that version.
-A diagnosis alone does not permit that offer.
+The checks hold a new completion offer until the pull request's own checks pass (INF-1891, the captain: the app turns the merge card down until the pull request's own checks pass), while a revision of a completion card already up goes up as they run.
+A pull request with no check registered reads pending, not no checks, until the crew's absence declaration for that version is stored (INF-1955; `docs/forge.md`, "Check facts and crew judgment"): the refusal names `check_change` `absentChecks`, the stored declaration makes the reading say no checks and lets the offer up, and the captain's kept click on an empty reading completes once that declaration arrives at the approved version, with no checks override.
+A failed reading lets the offer up with Merge anyway beside the merge in two cases (`CrewSupervisor.pendingCiGate`): every failed check at that version carries the crewmate's diagnosis, or the default branch's newest run of every failed check failed too (`TaskDelivery.mainChecks`, INF-1915 fix 1), which the card states from that fact under its Checks cell.
+In the second case the crewmate spends no rerun and asks for no reopening: the captain decides on that card, merging now with Merge anyway or waiting for main's fix, which the app watches (`docs/forge.md`, "A main failure's wake").
+The captain's click on Merge anyway passes the checks hold for that version.
 Normal check replies carry current facts and unresolved repair identities, not the whole historical ledger; the task record retains declaration history.
 A settlement declaration identifies its repair, version, outcome and evidence; a raw reading cannot silently settle or supersede it.
 The durable record keeps declarations and older repair history, but legacy count and cap fields no longer hold a task or produce a count on its card.
@@ -405,7 +408,7 @@ The captain's merge click on a completion card or an ordinary `request_merge` ca
 - **The baseline.**
   When a crewmate offers a merge, that offer itself expresses the crew's judgment that the work is ready; no separate ready/red declaration is required or recorded.
   After the current change lookup obtains its target (`pendingCiGate`), `CrewSupervisor.recordCompletionOffer` keeps the shown offer's id with that head and its pull request (`delivery.completionOffers`, the newest four).
-  Failed, pending and partially unreadable check facts do not prevent the offer; they remain visible on the card and hold the merge at the click.
+  Pending and partially unreadable checks hold a new offer, and failed checks hold it unless each is diagnosed or fails on the default branch too ("Check facts and declarations" above); the facts remain visible on the card and hold the merge at the click.
   A lookup that obtains no target cannot bind an exact-version offer and reports why; it cannot reuse a stale earlier reading as fresh.
   An offer that shows the same content at another head keeps no baseline.
   A new completion or requested-merge card supersedes any standing approval: the crewmate is asking again.
@@ -422,6 +425,7 @@ The captain's merge click on a completion card or an ordinary `request_merge` ca
   The completion card's merge says what a click does, on an offer a click would approve (`approvableOffer`, `CrewSupervisor.mergeLabel`): Merge when checks pass while checks are pending or unreadable, Merge after fixing errors when checks fail (captain INF-1555 F20), and Merge the pull request once the checks pass.
   While the captain's override passes the checks at the card's version and the pull request is still at it, a click merges at once, so it reads Merge the pull request whatever the checks read (INF-756).
   While the checks fail at the card's version and no checks override passes them, the host draws Merge anyway beside the merge (`CrewSupervisor.mergeAnyway`, INF-1137 friction 6).
+  Under the Checks cell, a failed check whose newest run on the default branch failed too reads Fails on main too, with the host's sentence naming that run and when it was read, so the captain sees what failed and why it is outside the change before choosing (`checkVerdicts`, INF-1915 fix 1).
   Its click is the captain's own word: it records the override on the checks for that version in his name, with the button's words and the card's title as its reason (`choiceWords`), and the merge runs at once; GitHub's own rules still decide whether it merges.
   It goes once the checks no longer fail, the pull request moves past the card's version, or an override already passes it.
   `CardService.refreshSettleFacts` writes it with the fact strip whenever the task's record changes, so it follows each new reading.

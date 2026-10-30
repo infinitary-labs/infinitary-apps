@@ -52,7 +52,9 @@ export type CheckSnapshot = z.infer<typeof checkSnapshotSchema>;
  * (INF-1915 fix 1): the version of that branch it was read on, when, and the
  * state there of each check the reading found red, where that branch ran it.
  * Evidence about the failure's cause for the crew's diagnosis and the card,
- * never a merge input: no gate reads it.
+ * never a merge input: the merge boundary does not read it. The completion
+ * card's checks hold does (`checksFailingOnMain`): a failure that branch
+ * fails too lets the card up at once, stated from this fact.
  */
 export const mainCheckEvidenceSchema = z.object({
   /** The default branch's version the checks were read on. */
@@ -142,4 +144,49 @@ export function currentCheckStatus(
   const summary = currentCheckSummary(delivery);
   // Declared absence satisfies the check condition; the visible fact remains "no checks".
   return summary ? (summary.overall === "none" ? "green" : summary.overall) : delivery.ci;
+}
+
+/**
+ * The checks the current reading found red whose newest run on the default
+ * branch failed too (INF-1915 fix 1): read from the recorded evidence, only
+ * while the reading and the evidence are both of the current version. Names,
+ * never a judgment: the card states the fact and the captain decides.
+ */
+export function checksFailingOnMain(delivery: {
+  headSha?: string;
+  checks?: CheckSnapshot;
+  mainChecks?: MainCheckEvidence & { head: string };
+}): string[] {
+  const { headSha, checks, mainChecks } = delivery;
+  if (!headSha || checks?.headSha !== headSha || mainChecks?.head !== headSha) return [];
+  const onMain = new Set(
+    mainChecks.items.filter((item) => isRedCheckState(item.state)).map((item) => item.name),
+  );
+  return [
+    ...new Set(
+      checks.items
+        .filter((item) => isRedCheckState(item.state) && onMain.has(item.name))
+        .map((item) => item.name),
+    ),
+  ];
+}
+
+/**
+ * Whether every check the current reading found red fails on the default
+ * branch too: the one fact that lets a merge card up at once on failed checks
+ * without the crew's diagnosis (INF-1915 fix 1). False with no failure.
+ */
+export function everyFailureOnMain(delivery: {
+  headSha?: string;
+  checks?: CheckSnapshot;
+  mainChecks?: MainCheckEvidence & { head: string };
+}): boolean {
+  const { headSha, checks } = delivery;
+  if (!headSha || checks?.headSha !== headSha) return false;
+  const failed = new Set(
+    checks.items.filter((item) => isRedCheckState(item.state)).map((item) => item.name),
+  );
+  if (failed.size === 0) return false;
+  const onMain = new Set(checksFailingOnMain(delivery));
+  return [...failed].every((name) => onMain.has(name));
 }

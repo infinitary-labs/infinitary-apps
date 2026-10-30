@@ -246,3 +246,22 @@ export type CheckRepairLedger = {
   })[];
   rerun?: CheckRerun;
 };
+
+/**
+ * Whether every check the reading at the current version found failed
+ * carries the crewmate's diagnosis at that version (INF-1891, the captain's
+ * choice: the merge card goes up once the crew diagnoses a failure, with
+ * Merge anyway, as stable 0.6.1 did). False with no recorded failure.
+ */
+export function everyFailureDiagnosed(delivery: {
+  headSha?: string;
+  ciRepair?: CheckRepairLedger;
+}): boolean {
+  const { headSha, ciRepair } = delivery;
+  if (!headSha || !ciRepair) return false;
+  const failed = ciRepair.failures.find((reading) => reading.headSha === headSha)?.checks ?? [];
+  if (failed.length === 0) return false;
+  return failed.every((check) =>
+    ciRepair.diagnoses.some((d) => d.headSha === headSha && d.check === check),
+  );
+}

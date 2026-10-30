@@ -30,6 +30,10 @@ The certificate's public key hashes to the same SHA-256 SPKI pin the Mac owns (`
 The Mac's identity is that pin, not the self-signed certificate's name or dates.
 
 `PinnedTransport` uses an ephemeral URLSession, TLS 1.3, the phone's client identity and the exact saved or scanned server pin, with no cookies, credential store, proxy configuration, cache or redirects.
+The app turns off iOS's transport security (`NSAllowsArbitraryLoads`), because iOS counts a Tailscale address (`100.64.0.0/10`) as not local and fails the Mac's self-signed certificate there even after the pin matches (INF-1903); `NSAllowsLocalNetworking` would bring that failure back, and iOS ignores `NSAllowsArbitraryLoads` beside it.
+`PinnedTransport` is the app's only URL session, and card web views load only local content.
+An App Store submission or external TestFlight build must give Apple a written reason for that setting: the app trusts only the Mac's pinned key, over TLS 1.3 with the phone's own key, and no narrower setting can name a person's own Tailscale address.
+`PhoneTransportSecurityTests` joins and reconnects at `127.1`, a loopback form iOS also counts as not local, under the app's own Info.plist.
 Pairing has short request deadlines; the socket uses a separate configuration whose deadlines outlast its heartbeat, not the pairing POST's timeouts.
 A join sends the invitation's kind and `system: "ios"`; the Mac returns HTTP 201 and kind `view` regardless of that invitation's computer kind.
 Before spending the invitation, a pinned, non-mutating `GET /connection` must return 426 from a reachable candidate.

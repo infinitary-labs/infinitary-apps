@@ -22,6 +22,7 @@
 <key>NSLocalNetworkUsageDescription</key><string>Infinitary finds your computer and reads its cards and Activity on your network, and lists the computers here with Remote Login on when you join by an address.</string>
 <key>NSCameraUsageDescription</key><string>Infinitary scans the code you open in Devices on your computer so this phone can join it, and takes the photos you add to a reply.</string>
 <key>NSBonjourServices</key><array><string>_infinitary._tcp</string><string>_ssh._tcp</string></array>
-<key>NSAppTransportSecurity</key><dict><key>NSAllowsLocalNetworking</key><true/></dict>
+<!-- INF-1903: iOS counts a Tailscale address (100.64.0.0/10) as not local and fails the Mac's self-signed certificate there; PinnedTransport checks the Mac's pin itself (docs/ios.md). -->
+<key>NSAppTransportSecurity</key><dict><key>NSAllowsArbitraryLoads</key><true/></dict>
 <key>UIAppFonts</key><array><string>SpaceGrotesk.ttf</string><string>JetBrainsMono.ttf</string></array>
 </dict></plist>

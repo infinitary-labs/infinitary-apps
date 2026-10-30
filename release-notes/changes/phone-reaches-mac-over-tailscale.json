@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "id": "phone-reaches-mac-over-tailscale",
+      "kind": "fix",
+      "title": "Your iPhone reaches your Mac through Tailscale away from home",
+      "body": "Away from your home network, the iPhone app could not join or reconnect to your Mac at its Tailscale address and said your computer was out of reach. It now connects there, still checking your Mac's own key.",
+      "area": "devices",
+      "noPicture": "The phone looks the same; it now connects at an address where it used to say your computer was out of reach.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

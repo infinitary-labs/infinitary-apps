@@ -34,8 +34,8 @@ This guard catches accidental observer writes directly, rather than waiting for 
 
 - Decode the HTTP JSON, then the served context segment, then TOON (`tests/e2e/providerRequest.ts`).
   Never match escaped context bytes in a request body.
-  Only the newest snapshot is authoritative, including an empty board.
-- Assert the decoded task index and crew entries.
+  `latestContext` folds every context the request carries, in order, the way the model reads a complete context and then its changes; the result is authoritative, including an empty board.
+- Assert the decoded crew entries and backlog counts; unstarted work is read with a `tasks` call, as the first mate reads it.
   Keep the database, UI, workspace-removal and request-delivery assertions.
 - A feed report is the first sentence, capped at 120 characters.
   The full report opens from its line in the task record's Activity.

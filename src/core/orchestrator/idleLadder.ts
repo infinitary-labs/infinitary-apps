@@ -635,6 +635,13 @@ export class IdleLadder {
    * is nobody's - so every captain turn sees it, not only the wake.
    */
   stalledFact(record: TaskRecord, now: number): string | undefined {
+    const stalled = this.stalledSince(record, now);
+    if (!stalled) return undefined;
+    return `stalled ${formatDurationShort(now - stalled.since)} · ${stalled.wakes} wake${stalled.wakes === 1 ? "" : "s"}`;
+  }
+
+  /** The same stall as the time it began and its wakes (INF-1712). */
+  stalledSince(record: TaskRecord, now: number): { since: number; wakes: number } | undefined {
     if (record.idleSince == null || record.recoveryAt == null) return undefined;
     const runtime = this.host.runtime(record.id);
     if (runtime && runtime.state !== "idle") return undefined;
@@ -649,7 +656,7 @@ export class IdleLadder {
           witnesses.finishedNoCard === true;
     if ((record.recoveryRung ?? 0) < 3 && held) return undefined;
     const count = record.recoveryCount ?? 0;
-    return `stalled ${formatDurationShort(now - record.idleSince)} · ${count} wake${count === 1 ? "" : "s"}`;
+    return { since: record.idleSince, wakes: count };
   }
 
   /**

@@ -1100,7 +1100,9 @@ describe("the client's own continuations", () => {
       subtype: "compact_boundary",
       compact_metadata: { trigger: "auto", pre_tokens: 160000 },
     });
-    await vi.waitFor(() => expect(events).toContainEqual({ type: "context_compacted" }));
+    await vi.waitFor(() =>
+      expect(events).toContainEqual({ type: "context_compacted", turn: "unknown" }),
+    );
     unsubscribe();
   });
 

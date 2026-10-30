@@ -169,7 +169,8 @@ function standInHome() {
         return { ok: true };
       }
       case "inf:work:tasks":
-        return { rows: [{ key: "FI3-1", title: "A task" }], total: 1 };
+        // More match than one page holds, so a list read is one that stops short.
+        return { rows: [{ key: "FI3-1", title: "A task" }], total: 2 };
       case "inf:work:card-refused":
       case "inf:work:job-exit":
         return { ok: true };
@@ -524,6 +525,31 @@ describe("a conversation held on a computer that runs work", () => {
           (record) => record.event.type === "tool_end" && record.event.toolName === "report",
         )?.event,
       ).toMatchObject({ isError: !supported });
+    },
+  );
+
+  it.each([true, false])(
+    "asks a home for a task list's cut only when it keeps one, and an older home still answers the first page (INF-1746 R9; supported: %s)",
+    async (supported) => {
+      const at = await placed({ homeChanges: supported ? ["task-list-snapshot"] : [] });
+      await at.open();
+      model([
+        { tools: [{ name: "tasks", args: { status: "open", limit: 1 } }] },
+        { text: "Listed." },
+      ]);
+      await at.order("inf:session:prompt", [
+        { orderId: "list:1", task: TASK, text: "List the open work." },
+      ]);
+      await at.ended(1);
+      const [query] = at.home.effects.filter((effect) => effect.channel === "inf:work:tasks");
+      const input = (query?.request as { input?: Record<string, unknown> } | undefined)?.input;
+      expect(input).toMatchObject({ status: "open", limit: 1 });
+      expect(input?.snapshot).toBe(supported ? true : undefined);
+      expect(
+        at.home.events.find(
+          (record) => record.event.type === "tool_end" && record.event.toolName === "tasks",
+        )?.event,
+      ).toMatchObject({ isError: false });
     },
   );
 

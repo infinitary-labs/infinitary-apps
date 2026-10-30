@@ -202,9 +202,9 @@ test("a crewmate's follow-up is its own task, not a child, and the Firstmate hea
   expect(requests.some((body) => body.includes("filed a follow-up while working on task"))).toBe(
     false,
   );
-  // The Firstmate's next turn places the follow-up by where it was FOUND -
-  // the discovered-from edge, now the only thing that places it - waiting
-  // on request, so it can act on it by key.
+  // The Firstmate's next turn counts the follow-up in its project's
+  // backlog, waiting on request; the context lists only started work, and
+  // the tasks read names where it was found (INF-1712).
   await askFirstmate(page, "what is on the board?", 20_000);
   await expect
     .poll(
@@ -220,13 +220,10 @@ test("a crewmate's follow-up is its own task, not a child, and the Firstmate hea
     (mockProvider?.requestBodies() ?? [])
       .filter((body) => body.includes(FM_SYSTEM_MARKER))
       .at(-1) ?? "";
-  expect(latestContext(latest)?.task_index).toEqual(
-    expect.arrayContaining([
-      expect.stringContaining(
-        `SCR-2 (task_id: ${followup?.id}) open "${MOCK_FOLLOWUP_TITLE}" [found on SCR-1; on request]`,
-      ),
-    ]),
+  expect(latestContext(latest)?.backlog?.projects).toEqual(
+    expect.arrayContaining([expect.objectContaining({ project: "SCR", on_request: 1 })]),
   );
+  expect(latestContext(latest)?.crew.map((entry) => entry.task_id)).not.toContain(followup?.id);
 
   await test.step("started, a follow-up the classifier sorts as research is told it ships nothing, and gets no tool to ship (FI3-598)", async () => {
     // The follow-up was filed with its origin's posture, before any kind.

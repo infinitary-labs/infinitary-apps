@@ -38,6 +38,14 @@ export type TaskQueryInput = {
   /** Row pagination for a crewmate collecting a complete task list. */
   skip?: number;
   /**
+   * A list that stops short also answers `order`: every matching task id in
+   * this read's order, one cut taken in the same read, so later pages read
+   * that cut by `ids` (`task-list-snapshot.md`).
+   */
+  snapshot?: boolean;
+  /** These tasks' rows, in this order: a later page of a kept `order`. */
+  ids?: string[];
+  /**
    * Every project instead of tasks: its key, name and folder on the
    * computer where the first mate lives (INF-1217), so a crewmate names a
    * project's folder instead of searching the disk for it.
@@ -254,8 +262,18 @@ export function queryTasks(
   /** Each live task's work posture, read as the board reads it; absent says nothing is known. */
   posture: (record: TaskRecord) => WorkPosture | undefined = () => undefined,
   reach: TaskQueryReach = {},
-): { rows: TaskQueryRow[]; total: number; projects?: TaskQueryProject[] } {
+): { rows: TaskQueryRow[]; total: number; projects?: TaskQueryProject[]; order?: string[] } {
   if (input.projects) return { rows: [], total: 0, projects: projectRows(tasks, reach) };
+  if (input.ids) {
+    const projectKeys = new Map(tasks.projects.list().map((entry) => [entry.id, entry.key]));
+    const wanted = input.ids.slice(0, TASK_QUERY_MAX_LIMIT);
+    const found = new Map(tasks.getMany(wanted).map((record) => [record.id, record]));
+    const rows = wanted.flatMap((id) => {
+      const record = found.get(id);
+      return record ? [toRow(tasks, record, projectKeys, repoName, undefined, posture)] : [];
+    });
+    return { rows, total: rows.length };
+  }
   const limit = Math.max(
     1,
     Math.min(input.limit ?? TASK_QUERY_DEFAULT_LIMIT, TASK_QUERY_MAX_LIMIT),
@@ -329,7 +347,13 @@ export function queryTasks(
         ...(one ? (reach.placeOf?.(record) ?? {}) : {}),
       };
     });
-  return { rows, total: matched.length };
+  return {
+    rows,
+    total: matched.length,
+    ...(input.snapshot && !one && matched.length > rows.length
+      ? { order: matched.map((record) => record.id) }
+      : {}),
+  };
 }
 
 function toRow(

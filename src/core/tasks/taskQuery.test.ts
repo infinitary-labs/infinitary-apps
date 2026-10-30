@@ -56,6 +56,34 @@ describe("the tasks query's text", () => {
   });
 });
 
+describe("the tasks query's backlog read", () => {
+  // INF-1712: the context lists only started work, so a follow-up waiting
+  // on request is placed by where it was found through this read.
+  it("names an unstarted follow-up's origin and that it starts on request", () => {
+    const { tasks, query } = setup();
+    const origin = tasks.create({
+      id: "origin",
+      title: "Steady the meter",
+      prompt: "p",
+      repoId: null,
+    });
+    tasks.fileFollowup({
+      id: "found",
+      originId: origin.id,
+      title: "Fix the gauge",
+      goal: "The gauge reads true.",
+      why: "It drifted while the meter was steadied.",
+      prompt: "p",
+    });
+    const [row] = query({ text: "Fix the gauge", status: "open" }).rows;
+    expect(row).toMatchObject({
+      task_id: "found",
+      discovered_from: [origin.key || origin.id],
+      start_policy: "on-request",
+    });
+  });
+});
+
 describe("the tasks query's named choices", () => {
   it("reads back the reasoning effort the captain named for a task, and nothing once it is cleared (FI3-1812)", () => {
     const { tasks, query } = setup();

@@ -7,12 +7,13 @@ import { renderIntentBrief } from "../orchestrator/intentBrief";
 import { bindTool } from "../session/tools";
 import { CardStore } from "../storage/cardStore";
 import { openInMemoryDatabase } from "../storage/db";
-import { queryTasks, taskResolutionBody } from "../tasks/taskQuery";
+import { queryTasks, type TaskQueryInput, taskResolutionBody } from "../tasks/taskQuery";
 import { TaskService } from "../tasks/taskService";
 import {
   assembleTasksReads,
   createTasksQueryTool,
   createTaskTools,
+  LIST_PAGING_RESTART,
   parseTasksQueryText,
   renderTasksFieldPage,
   renderTasksQueryResult,
@@ -403,7 +404,7 @@ describe("task tools", () => {
       ),
     });
     const hit = await byName.get("tasks")?.execute("q1", { text: "meter", status: "live" });
-    expect(delegate.query).toHaveBeenCalledWith({ text: "meter", status: "live" });
+    expect(delegate.query).toHaveBeenCalledWith({ text: "meter", status: "live", snapshot: true });
     expect(hit?.content[0]?.text).toContain("1 of 1 matching task:");
     expect(hit?.content[0]?.text).toContain('"key": "SCR-3"');
     const miss = await byName.get("tasks")?.execute("q2", {});
@@ -596,4 +597,77 @@ it("answers project folders, and where they are, when a crewmate asks for projec
   expect(text).toContain(HOME.the);
   expect(text).toContain('"folder": "/fleet/infinitary"');
   expect(text).not.toBe("No tasks match.");
+});
+
+// INF-1746 R11 (the captain chose one consistent snapshot across pages): a
+// remote home answers a page later; a new first page of the same list that
+// lands meanwhile replaces the kept cut, and the page still reading must
+// keep its own cut's total and continuation.
+it("keeps a page's own cut while a new first page replaces it before the home answers", async () => {
+  const db = openInMemoryDatabase();
+  try {
+    const tasks = new TaskService({ db });
+    for (let index = 0; index < 15; index += 1)
+      tasks.create({ id: `w${index}`, title: `Work ${index}`, prompt: "", repoId: null });
+    let release: () => void = () => {};
+    const held = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    const tool = bindTool(TASKS_QUERY_TOOL, {
+      onQueryTasks: async (input) => {
+        if (input.ids) await held;
+        return queryTasks(tasks, input);
+      },
+    });
+    const nextOf = (text: string) =>
+      /More: read with next "([^"]+)" for the next page\./.exec(text)?.[1];
+    const first = (await tool.run({ status: "open", limit: 10 })).text;
+    const next = nextOf(first);
+    expect(next).toBeDefined();
+    const reading = tool.run({ status: "open", limit: 4, next });
+    tasks.create({ id: "late", title: "Late work", prompt: "", repoId: null });
+    const again = (await tool.run({ status: "open", limit: 10 })).text;
+    expect(again).toContain("10 of 16 matching tasks");
+    release();
+    const page = (await reading).text;
+    expect(page).toContain("4 of 15 matching tasks");
+    expect(page).not.toContain("Late work");
+    // Its continuation names its own cut, which the new first page replaced.
+    expect((await tool.run({ status: "open", next: nextOf(page) })).text).toBe(LIST_PAGING_RESTART);
+    expect((await tool.run({ status: "open", next: nextOf(again) })).text).toContain(
+      "6 of 16 matching tasks",
+    );
+  } finally {
+    db.close();
+  }
+});
+
+// INF-1746 R6 and R12: a `next` names its cut, never a filter the caller
+// must repeat, and a tool rebuilt for a new session (a reattached first
+// mate resumes a conversation that kept an old `next`) takes cuts no old
+// `next` can name.
+it("continues a filtered list from next alone, and refuses a next from an earlier binding", async () => {
+  const db = openInMemoryDatabase();
+  try {
+    const tasks = new TaskService({ db });
+    for (let index = 0; index < 15; index += 1)
+      tasks.create({ id: `w${index}`, title: `Meter fix ${index}`, prompt: "", repoId: null });
+    tasks.create({ id: "other", title: "Release notes", prompt: "", repoId: null });
+    const owner = { onQueryTasks: (input: TaskQueryInput) => queryTasks(tasks, input) };
+    const nextOf = (text: string) =>
+      /More: read with next "([^"]+)" for the next page\./.exec(text)?.[1];
+    const tool = bindTool(TASKS_QUERY_TOOL, owner);
+    const first = (await tool.run({ text: "meter", limit: 10 })).text;
+    expect(first).toContain("10 of 15 matching tasks");
+    const next = nextOf(first);
+    const second = (await tool.run({ next })).text;
+    expect(second).toContain("5 of 15 matching tasks");
+    expect(second).not.toContain("Release notes");
+
+    const rebuilt = bindTool(TASKS_QUERY_TOOL, owner);
+    expect(nextOf((await rebuilt.run({ text: "meter", limit: 10 })).text)).toBeDefined();
+    expect((await rebuilt.run({ next })).text).toBe(LIST_PAGING_RESTART);
+  } finally {
+    db.close();
+  }
 });

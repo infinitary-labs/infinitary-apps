@@ -236,7 +236,17 @@ export type BackgroundJobName = { id: string; command: string };
  */
 export type SessionEvent =
   /** The backend replaced older context with a summary. Owner-only, never a feed event. */
-  | { type: "context_compacted" }
+  | {
+      type: "context_compacted";
+      /**
+       * The backend makes another model request in this turn after the fold
+       * (Pi's overflow recovery, or its threshold fold before the next
+       * response), so the turn goes on. Absent on a fold after the turn's
+       * last request, which goes on only for input already queued.
+       * A backend that cannot tell leaves it absent and says `unknown`.
+       */
+      turn?: "goes-on" | "unknown";
+    }
   | {
       type: "background_work_changed";
       count: number | undefined;
@@ -302,6 +312,12 @@ export type ModelSession = {
   prompt(text: string, images?: SessionImage[], order?: string): Promise<void>;
   /** Into the running turn at its next step; a one-shot rejects. `order` as for `prompt`. */
   steer(text: string, images?: SessionImage[], order?: string): Promise<void>;
+  /**
+   * The app's own input that must reach the turn's next request, ahead of
+   * the steers still queued, which keep their order: the first mate's
+   * recovery after a fold. A session without it takes a steer.
+   */
+  steerFirst?(text: string, images?: SessionImage[]): Promise<void>;
   /** Steers accepted that no turn took in, taken idle at a turn's end. */
   takeUndeliveredSteers(): string[];
   /** Honored when the spec asked for `thinking.perTurn`. */

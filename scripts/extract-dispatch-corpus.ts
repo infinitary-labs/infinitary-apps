@@ -106,7 +106,7 @@ const OPERATE_TOOLS = [
  * anything. `integrations` lists what the captain connected and
  * `use_integration` reads through one: a change there waits for the
  * captain's click on a card the host raises, not on the first mate's move
- * (docs/integrations.md). */
+ * (docs/integrations.md). `open_work` reads open messages and cards back. */
 const READ_TOOLS = [
   "crew_status",
   "supervision_log",
@@ -116,6 +116,7 @@ const READ_TOOLS = [
   "knowledge",
   "integrations",
   "use_integration",
+  "open_work",
 ];
 /** Card hygiene: neutral inside any turn, and self-management on its own. */
 const BOOKKEEPING_TOOLS = ["close_card"];
@@ -665,6 +666,10 @@ function parseToonContext(block: string): {
     const value = decode(block.slice(firstBreak + 1));
     if (!value || typeof value !== "object" || Array.isArray(value)) return null;
     const record = value as Record<string, unknown>;
+    // A context of changes (INF-1712) holds only what moved since the one
+    // before it: its fleet is not stated, so it lists none.
+    if (typeof record.delivery === "string" && record.delivery.startsWith("changes"))
+      return { ...record, repos: [], crew: [] };
     if (!Array.isArray(record.repos) || !Array.isArray(record.crew)) return null;
     if (
       !record.repos.every((entry) => entry && typeof entry === "object" && !Array.isArray(entry)) ||

@@ -209,6 +209,12 @@ class WatchedSession implements ModelSession {
     return this.inner.steer(text, images, order);
   }
 
+  steerFirst(text: string, images?: SessionImage[]): Promise<void> {
+    return this.inner.steerFirst
+      ? this.inner.steerFirst(text, images)
+      : this.inner.steer(text, images);
+  }
+
   takeUndeliveredSteers(): string[] {
     return this.inner.takeUndeliveredSteers();
   }

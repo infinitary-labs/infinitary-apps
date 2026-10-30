@@ -282,7 +282,7 @@ After the last reminder nothing more is sent, and the task's crew line carries i
 An act of the first mate's ends all of it: the next reconcile restarts the clock, once, read off the record - the ladder's last act fell after the request and before the act (`endAnsweredAsk`).
 
 **Every captain turn sees it.**
-Once the ladder has acted and while the turn is nobody's, the task's crew line in the first mate's context block and `crew_status` carry `stalled 1h 20m · 2 wakes`.
+Once the ladder has acted and while the turn is nobody's, `crew_status` carries `stalled 1h 20m · 2 wakes`, and the task's crew row in the first mate's context carries the time the idle began and the wake count.
 
 **Restarts and sleeps.**
 The clock is the saved `idle_since`; a record from before the clock, or one a quit interrupted mid-turn, starts its clock at the first reconcile that sees it.

@@ -1529,7 +1529,9 @@ class ClaudeRollingSession extends ClaudeQueryCore<SessionEvent> implements Mode
       event?: { type?: unknown };
     };
     if (record.type === "system" && record.subtype === "compact_boundary") {
-      this.emit({ type: "context_compacted" });
+      // Claude's client folds between its own requests; whether more follow
+      // is not said.
+      this.emit({ type: "context_compacted", turn: "unknown" });
     }
     if (this.spec.builtins === "coding" && result.backgroundJobs !== undefined) {
       this.emit({

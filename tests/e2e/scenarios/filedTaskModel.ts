@@ -1,5 +1,5 @@
 import {
-  indexTaskId,
+  lookUpTask,
   MOCK_MODEL_ID,
   MOCK_PROVIDER_ID,
   type Scenario,
@@ -58,10 +58,8 @@ function filedModelFirstmateMove(
     return { text: "Filed." };
   }
   if (ask.includes(FILED_MODEL_START_ASK)) {
-    if (results.length > 0) return { text: "Started it on the model you named." };
-    const task = indexTaskId(body, FILED_MODEL_TITLE) ?? "missing";
-    return {
-      calls: [
+    return (
+      lookUpTask(FILED_MODEL_TITLE, results, (task) => [
         {
           name: "update_task",
           args: {
@@ -70,8 +68,8 @@ function filedModelFirstmateMove(
             start_now: true,
           },
         },
-      ],
-    };
+      ]) ?? { text: "Started it on the model you named." }
+    );
   }
   return undefined;
 }

@@ -147,6 +147,19 @@ export const PI_PROVIDER_TIMEOUT_MS = 180_000;
  */
 const LOCAL_PROVIDER_TIMEOUT_MS = 300_000;
 
+type QueuedMessage = Parameters<AgentSession["agent"]["steer"]>[0];
+
+/**
+ * Pi's steering queue, oldest first, which its agent keeps private; undefined
+ * when that agent keeps it elsewhere, and then every steer keeps Pi's order.
+ */
+function steeringQueue(agent: AgentSession["agent"]): { messages: QueuedMessage[] } | undefined {
+  const queue = (agent as unknown as { steeringQueue?: { messages?: unknown } }).steeringQueue;
+  return queue && Array.isArray(queue.messages)
+    ? (queue as { messages: QueuedMessage[] })
+    : undefined;
+}
+
 /**
  * Pi carries user-turn images in PromptOptions.images / steer's second
  * argument as flat `{ type, data, mimeType }` parts - never as a content
@@ -361,6 +374,8 @@ class PiRollingSession implements ModelSession {
   private servedPromptPending = false;
   private lastAssistant: AssistantMessage | undefined;
   private disposed = false;
+  /** The app's own inputs that go before every queued steer (`steerFirst`). */
+  private readonly firstSteers = new WeakSet<object>();
   private markClosed!: () => void;
   private readonly closedPromise = new Promise<void>((resolve) => {
     this.markClosed = resolve;
@@ -385,6 +400,21 @@ class PiRollingSession implements ModelSession {
   ) {
     if (options.stripFailed) stripFailedThinking(session.messages);
     this.unsubscribeTracking = session.subscribe((event) => this.onPiEvent(event));
+    // Pi polls for steers after preparing its next request (where it folds
+    // before the next response) only when it holds none already, so an input
+    // that must reach that request - the first mate's recovery from the fold -
+    // goes with it, ahead of the steers Pi holds (INF-1746 R43). Every other
+    // steer keeps Pi's order.
+    const agent = session.agent;
+    const prepare = agent?.prepareNextTurnWithContext;
+    if (agent && prepare)
+      agent.prepareNextTurnWithContext = async (turn, signal) => {
+        const update = await prepare.call(agent, turn, signal);
+        const first = this.takeFirstSteers();
+        return first.length > 0
+          ? { ...update, messages: [...(update?.messages ?? []), ...first] }
+          : update;
+      };
   }
 
   get sessionId(): string {
@@ -555,7 +585,44 @@ class PiRollingSession implements ModelSession {
     await this.session.steer(text, toImageContents(images));
   }
 
+  /**
+   * Queued at once, ahead of every steer still queued and behind earlier
+   * first steers, so the turn's next request takes it: the first poll of a
+   * run (a prompt, or the retry after a fold) takes the queue's head, and a
+   * request after Pi prepares a step takes it from `takeFirstSteers`. It
+   * skips Pi's own input handling, which awaits before queueing and would let
+   * a retry start without it.
+   */
+  async steerFirst(text: string, images?: SessionImage[]): Promise<void> {
+    refuseUnreadablePictures(this.session.model, images);
+    const message = {
+      role: "user" as const,
+      content: [{ type: "text" as const, text }, ...(toImageContents(images) ?? [])],
+      timestamp: Date.now(),
+    };
+    this.firstSteers.add(message);
+    this.session.agent.steer(message);
+    const queue = steeringQueue(this.session.agent);
+    if (!queue) return;
+    const rest = queue.messages.filter((queued) => queued !== message);
+    const ahead = rest.filter((queued) => this.firstSteers.has(queued));
+    queue.messages = [...ahead, message, ...rest.filter((queued) => !this.firstSteers.has(queued))];
+  }
+
+  /** The first steers still queued, taken out of Pi's queue in order. */
+  private takeFirstSteers(): QueuedMessage[] {
+    const queue = steeringQueue(this.session.agent);
+    if (!queue) return [];
+    const first = queue.messages.filter((queued) => this.firstSteers.has(queued));
+    if (first.length > 0)
+      queue.messages = queue.messages.filter((queued) => !this.firstSteers.has(queued));
+    return first;
+  }
+
   takeUndeliveredSteers(): string[] {
+    // A first steer no turn took is the app's own input; its owner sends it
+    // again with the next input, so it is dropped here, never handed back.
+    if (!this.session.isStreaming) this.takeFirstSteers();
     if (this.session.isStreaming || this.session.getSteeringMessages().length === 0) return [];
     return this.session.clearQueue().steering;
   }

@@ -753,7 +753,7 @@ describe("verifyCardImages: project fonts", () => {
       preview(
         "@font-face { font-family: 'Wallet'; font-weight: 600;\n" +
           "  /* src: url(shots/missing.woff2) */\n" +
-          `  src: local(\"Fredoka\"), ${kept} format('woff2'); }\n` +
+          `  src: local("Fredoka"), ${kept} format('woff2'); }\n` +
           `@font-face{font-family:"Wallet bold";src:${kept} format("woff2")}` +
           ".hero { background: url(shots/missing.png); }",
       ),

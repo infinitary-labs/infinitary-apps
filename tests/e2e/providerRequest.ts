@@ -11,8 +11,13 @@ import { type CheckSnapshot, checkSnapshotSchema } from "../../src/shared/checkS
 export type ProviderContext = {
   directions?: string;
   repos: Array<{ name: string; repo_id: string; lives?: string }>;
+  /** Started work: running, idle, paused or held. */
   crew: Array<{ task_id: string; title: string; status: string }>;
-  task_index: string[];
+  /** Unstarted work is a count; the tasks query reads it. */
+  backlog?: {
+    note: string;
+    projects: Array<{ project: string; unstarted: number; on_request?: number }>;
+  };
 };
 
 /**
@@ -142,16 +147,92 @@ export function requestToolNames(body: string): string[] {
   });
 }
 
-/** Decode the wire envelope before reading host data. History is not the current board. */
+/** The id each row section keys its rows by, as the first mate renders them. */
+const ROW_IDS: Record<string, string> = {
+  repos: "repo_id",
+  crew: "task_id",
+  open_cards: "card_id",
+  schedules: "id",
+};
+
+/** Facts of one input alone: the next input's own replace them, or they are gone. */
+const TURN_ONLY = [
+  "delivery",
+  "as_of",
+  "knowledge",
+  "captain_resolutions",
+  "thread_activity",
+  "visible_card_hint",
+  "about",
+  "focused_project",
+  "recovery",
+];
+
+type Fold = Record<string, unknown>;
+
+/**
+ * Apply one served context to what the model holds (INF-1712,
+ * docs/orchestrator-contract.md "What a context carries"): a complete one
+ * replaces it; changes replace rows by id, drop removed ids and sections,
+ * and replace whole sections.
+ */
+function foldContext(held: Fold, context: Fold): Fold {
+  if (String(context.delivery ?? "").startsWith("complete")) return { ...context };
+  const next: Fold = Object.fromEntries(
+    Object.entries(held).filter(([name]) => !TURN_ONLY.includes(name)),
+  );
+  for (const name of (context.removed_sections as string[] | undefined) ?? []) delete next[name];
+  for (const [name, value] of Object.entries(context)) {
+    if (name === "removed_sections") continue;
+    const id = ROW_IDS[name];
+    const change = value as { changed?: Fold[]; removed?: string[] } | undefined;
+    if (!id || Array.isArray(value) || !change || typeof change !== "object") {
+      next[name] = value;
+      continue;
+    }
+    const rows = ((next[name] as Fold[] | undefined) ?? []).filter(
+      (row) => !change.removed?.includes(String(row[id])),
+    );
+    for (const row of change.changed ?? []) {
+      const at = rows.findIndex((held) => held[id] === row[id]);
+      if (at >= 0) rows[at] = row;
+      else rows.push(row);
+    }
+    next[name] = rows;
+  }
+  return next;
+}
+
+/**
+ * Decode the wire envelope before reading host data: every context the
+ * request carries, folded in order, is what the model holds when it reads
+ * the newest. A request with no context holds none.
+ */
 export function latestContext(body: string): ProviderContext | undefined {
+  let held: Fold | undefined;
+  for (const message of providerMessages(body)) {
+    if (message.role !== "user") continue;
+    const segment = parseServedInput(message.text)?.find((part) => part.kind === "context");
+    if (!segment) continue;
+    // A malformed snapshot must fail loudly, never resurrect old state.
+    const context = decode(segment.body.slice(segment.body.indexOf("\n") + 1)) as Fold;
+    held = foldContext(held ?? {}, context);
+  }
+  return held as ProviderContext | undefined;
+}
+
+/**
+ * The newest context the request carries, alone: what that one input sent,
+ * not what the model holds. Reads a fact that goes only when it changed.
+ */
+export function servedContext(body: string): Record<string, unknown> | undefined {
   const messages = providerMessages(body);
   for (let index = messages.length - 1; index >= 0; index -= 1) {
     const message = messages[index] as ProviderMessage;
     if (message.role !== "user") continue;
     const segment = parseServedInput(message.text)?.find((part) => part.kind === "context");
     if (!segment) continue;
-    // A malformed current snapshot must fail loudly, never resurrect old state.
-    return decode(segment.body.slice(segment.body.indexOf("\n") + 1)) as ProviderContext;
+    return decode(segment.body.slice(segment.body.indexOf("\n") + 1)) as Record<string, unknown>;
   }
   return undefined;
 }

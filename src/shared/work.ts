@@ -641,6 +641,9 @@ export const workRequests = {
         parent: z.string().optional(),
         limit: z.number().int().min(1).max(100).optional(),
         skip: z.number().int().nonnegative().optional(),
+        // One cut of a list that stops short, and its later pages (`task-list-snapshot.md`).
+        snapshot: z.boolean().optional(),
+        ids: z.array(z.string()).max(100).optional(),
         // Every project and its folder instead of tasks (`project-folders.md`).
         projects: z.boolean().optional(),
       }),
@@ -651,6 +654,7 @@ export const workRequests = {
       projects: z
         .array(z.object({ key: z.string(), name: z.string(), folder: z.string().optional() }))
         .optional(),
+      order: z.array(z.string()).optional(),
     }),
   },
   "inf:work:read-workflow": {

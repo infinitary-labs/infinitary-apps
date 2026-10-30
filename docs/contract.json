@@ -44819,6 +44819,16 @@
                     "minimum": 0,
                     "maximum": 9007199254740991
                   },
+                  "snapshot": {
+                    "type": "boolean"
+                  },
+                  "ids": {
+                    "maxItems": 100,
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  },
                   "projects": {
                     "type": "boolean"
                   }
@@ -44872,6 +44882,12 @@
                 "key",
                 "name"
               ]
+            }
+          },
+          "order": {
+            "type": "array",
+            "items": {
+              "type": "string"
             }
           }
         },

@@ -2,6 +2,7 @@ import { frameServedInput, type ServedSegmentInput } from "@shared/servedFrame";
 import { encode } from "@toon-format/toon";
 import { afterEach, describe, expect, it } from "vitest";
 import { BROWSER_COMMAND } from "../src/core/browser/commandWords";
+import { DELIVERY_CHANGES, DELIVERY_COMPLETE } from "../src/core/orchestrator/contextDelivery";
 import { renderWake } from "../src/core/orchestrator/wakes";
 import { createEventBashTool } from "../src/core/pi/bashTool";
 import {
@@ -29,7 +30,7 @@ function turn(repos: Array<{ name: string; repo_id: string }>, ask: string, crew
   return frameServedInput([
     {
       kind: "context",
-      body: `[fm-op] context (not the user)\n${encode({ repos, crew, task_index: [] })}`,
+      body: `[fm-op] context (not the user)\n${encode({ delivery: DELIVERY_COMPLETE, repos, crew })}`,
     },
     { kind: "user", origin: "captain", body: `[user]\n${ask}` },
   ]).text;
@@ -122,6 +123,44 @@ describe("mock provider consumes the current served snapshot", () => {
       repos: [],
       crew: [{ task_id: "new", title, status: "idle" }],
     });
+  });
+
+  // INF-1712: a later context carries only what changed, so the reader
+  // folds every context in order, as the model holds them.
+  it("folds a context of changes onto the complete one before it", () => {
+    const changes = (context: Record<string, unknown>) =>
+      frameServedInput([
+        {
+          kind: "context",
+          body: `[fm-op] context (not the user)\n${encode({ delivery: DELIVERY_CHANGES, ...context })}`,
+        },
+        { kind: "user", origin: "captain", body: "[user]\nnext" },
+      ]).text;
+    const body = JSON.stringify({
+      messages: [
+        {
+          role: "user",
+          content: turn([alpha], "first", [
+            { task_id: "t1", title: "Steady the meter", status: "running" },
+            { task_id: "t2", title: "Fix the gauge", status: "idle" },
+          ]),
+        },
+        {
+          role: "user",
+          content: changes({
+            crew: {
+              changed: [{ task_id: "t1", title: "Steady the meter", status: "idle" }],
+              removed: ["t2"],
+            },
+          }),
+        },
+      ],
+    });
+    expect(latestContext(body)).toMatchObject({
+      repos: [alpha],
+      crew: [{ task_id: "t1", title: "Steady the meter", status: "idle" }],
+    });
+    expect(latestContext(body)?.crew).toHaveLength(1);
   });
 
   it("rejects a malformed current snapshot instead of falling back to history", () => {

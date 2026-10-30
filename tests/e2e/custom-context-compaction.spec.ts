@@ -2,11 +2,13 @@ import { mkdirSync, writeFileSync } from "node:fs";
 import { createServer } from "node:http";
 import { join } from "node:path";
 import { expect, test } from "@playwright/test";
+import { DELIVERY_CHANGES, DELIVERY_COMPLETE } from "../../src/core/orchestrator/contextDelivery";
 import { chatFrame, customChatText } from "../helpers/customApiDialect";
 import { fillCustomApi, saveCustomApi } from "./customApi";
 import { askFirstmate } from "./lastTurn";
 import { type LaunchedApp, launchApp } from "./launch";
 import { regionShot } from "./pictures";
+import { servedContext } from "./providerRequest";
 import { pager, showCard, shownCard } from "./stack";
 
 const CTX = 49152;
@@ -26,6 +28,9 @@ type Logged = {
   messages: number;
   status: number;
   summaryInputChars?: number;
+  /** The newest context a first mate request carries, and whether it holds the fold's recovery. */
+  context?: "complete" | "changes";
+  recovery?: boolean;
 };
 
 function filler(turn: number, bytes: number): string {
@@ -91,6 +96,12 @@ test("Firstmate compacts and keeps answering on a 48k custom model", async () =>
       status: 200,
     };
     if (kind === "summary") entry.summaryInputChars = transcript.length;
+    if (kind === "firstmate" && body.messages.at(-1)?.role === "user") {
+      const context = servedContext(raw);
+      if (context?.delivery === DELIVERY_COMPLETE) entry.context = "complete";
+      if (context?.delivery === DELIVERY_CHANGES) entry.context = "changes";
+      entry.recovery = context?.recovery !== undefined;
+    }
     log.push(entry);
     writeFileSync(join(out, "stub-requests.json"), JSON.stringify(log, null, 2));
     // A real server enforces its own window on its own count (chars/4 here).
@@ -153,7 +164,11 @@ test("Firstmate compacts and keeps answering on a 48k custom model", async () =>
       );
       return;
     }
-    if (kind === "firstmate" && body.messages.at(-1)?.role === "user") {
+    // A fold inside a turn steers its recovery in after the tool result
+    // (INF-1712): that user message is the app's own, not a captain message,
+    // so it is answered like the tool result it follows.
+    const recoverySteer = entry.recovery === true && body.messages.at(-2)?.role === "tool";
+    if (kind === "firstmate" && body.messages.at(-1)?.role === "user" && !recoverySteer) {
       calls += 1;
       const args = JSON.stringify({
         title: `Noted part ${calls}`,
@@ -226,6 +241,22 @@ test("Firstmate compacts and keeps answering on a 48k custom model", async () =>
     }
     expect(log.filter((entry) => entry.kind === "summary").length).toBeGreaterThan(0);
     expect(log.every((entry) => entry.status === 200)).toBe(true);
+    // INF-1712 over the real wire: the conversation's first context is
+    // complete, later ones carry only what changed, and the first request
+    // after each summary is complete again with the fold's recovery.
+    const served = log.filter((entry) => entry.context !== undefined);
+    expect(served[0]).toMatchObject({ context: "complete", recovery: false });
+    expect(served.some((entry) => entry.context === "changes")).toBe(true);
+    for (const summary of log.filter((entry) => entry.kind === "summary")) {
+      expect(served.find((entry) => entry.n > summary.n)).toMatchObject({
+        context: "complete",
+        recovery: true,
+      });
+    }
+    expect(
+      served.slice(1).every((entry) => entry.context === "changes" || entry.recovery),
+      "a complete context after the first one follows a fold",
+    ).toBe(true);
     const cards = await page.evaluate(() => window.infinitary.cards.list());
     await expect(pager(page, cards.length)).toBeVisible();
     await showCard(page, `Noted part ${calls}`);

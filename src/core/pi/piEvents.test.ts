@@ -214,6 +214,13 @@ describe("INF-1117: compaction invalidates context-scoped facts", () => {
     expect(
       seatEventsFromPiEvent({ type: "compaction_end", aborted: false }, "firstmate"),
     ).toContainEqual({ type: "context_compacted" });
+    // Overflow recovery retries the request: the turn goes on after the fold.
+    expect(
+      seatEventsFromPiEvent(
+        { type: "compaction_end", aborted: false, willRetry: true },
+        "firstmate",
+      ),
+    ).toContainEqual({ type: "context_compacted", turn: "goes-on" });
     for (const end of [{ aborted: true }, { errorMessage: "Summary failed" }]) {
       expect(
         seatEventsFromPiEvent({ type: "compaction_end", ...end }, "firstmate"),
@@ -358,7 +365,8 @@ describe("completed context shortening usage", () => {
             costParts: { input: 0.1, output: 0.2, cacheRead: 0.03, cacheWrite: 0.04 },
           },
         },
-        { type: "context_compacted" },
+        // Only overflow recovery retries the request after the fold.
+        { type: "context_compacted", ...(reason === "overflow" ? { turn: "goes-on" } : {}) },
       ]);
       expect(translate({ ...end })).toEqual([]);
       translate({ type: "compaction_start", reason });

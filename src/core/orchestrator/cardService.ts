@@ -2750,6 +2750,11 @@ export class CardService {
     });
   }
 
+  /** Who owes an answer on a card now: `closed` once it is off the stack. */
+  owed(cardId: string): ThreadOwed {
+    return this.threadOwed(this.cards.get(cardId));
+  }
+
   /** The current lifecycle's answer hold, the witness the sort and idle ladder read (`ThreadOwed`). */
   private threadOwed(open: Card | undefined): ThreadOwed {
     if (!open) return "closed";

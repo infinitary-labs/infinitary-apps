@@ -7,7 +7,7 @@ import type { ScriptedArgs, ScriptedCall } from "../../helpers/scriptedCalls";
 import {
   CLAUDE_CREW_MODEL,
   calledTool,
-  indexTaskId,
+  lookUpTask,
   type Scenario,
   SEQ_REPRODUCE_GOAL,
   servedInstructions,
@@ -477,11 +477,11 @@ function sequencesFirstmateMove(
     user.includes("[user]") &&
     user.slice(user.lastIndexOf("[user]")).includes(SEQ_START_SHOWN_FIX)
   ) {
-    if (results.length === 0) {
-      const fix = indexTaskId(body, SEQ_BUG_SHOWN.fix) ?? "missing";
-      return { calls: [{ name: "update_task", args: { task: fix, start_now: true } }] };
-    }
-    return { text: "Started the fix; the repro is yours to close." };
+    return (
+      lookUpTask(SEQ_BUG_SHOWN.fix, results, (fix) => [
+        { name: "update_task", args: { task: fix, start_now: true } },
+      ]) ?? { text: "Started the fix; the repro is yours to close." }
+    );
   }
   // The captain chose on the plan's card: the plan step closed answered, and
   // its choice says the implement step's turn has come.
@@ -489,10 +489,8 @@ function sequencesFirstmateMove(
     user.includes('"event":"answer_task_closed"') &&
     user.includes(`"title":"${SEQ_FEATURE.plan}"`)
   ) {
-    if (results.length > 0) return { text: "Started." };
-    const implement = indexTaskId(body, SEQ_FEATURE.implement) ?? "missing";
-    return {
-      calls: [
+    return (
+      lookUpTask(SEQ_FEATURE.implement, results, (implement) => [
         {
           name: "update_task",
           args: {
@@ -502,8 +500,8 @@ function sequencesFirstmateMove(
             goal: SEQ_IMPLEMENT_AMENDED_GOAL,
           },
         },
-      ],
-    };
+      ]) ?? { text: "Started." }
+    );
   }
   // The reproduce step's report: yes starts the fix and closes the step it
   // builds on as answered; no is one decision card with the ways out.
@@ -511,22 +509,18 @@ function sequencesFirstmateMove(
     user.match(new RegExp(`reported on task ([\\w-]+) "${title}": reproduced: ${verdict}`))?.[1];
   const yes = reproduced(SEQ_BUG_YES.reproduce, "yes");
   if (yes) {
-    if (results.length === 0) {
-      const fix = indexTaskId(body, SEQ_BUG_YES.fix) ?? "missing";
-      return {
-        calls: [
-          {
-            name: "update_task",
-            args: {
-              task: fix,
-              start_now: true,
-              ...(onClaude ? { override_model_id: CLAUDE_CREW_MODEL } : {}),
-            },
-          },
-        ],
-      };
-    }
-    if (results.length === 1) {
+    const started = lookUpTask(SEQ_BUG_YES.fix, results, (fix) => [
+      {
+        name: "update_task",
+        args: {
+          task: fix,
+          start_now: true,
+          ...(onClaude ? { override_model_id: CLAUDE_CREW_MODEL } : {}),
+        },
+      },
+    ]);
+    if (started) return started;
+    if (results.length === 2) {
       return {
         calls: [{ name: "settle_task", args: { task_id: yes, mode: "answered" } }],
       };

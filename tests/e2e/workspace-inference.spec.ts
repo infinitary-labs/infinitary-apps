@@ -16,7 +16,7 @@ import { type LaunchedApp, launchApp } from "./launch";
 import { LAND_PROMPT_MARKER, MOCK_FM_CHAT_TEXT } from "./mockProvider";
 import { addedProjects, addFromSetupCard, projectRow, projectRowWords } from "./projects";
 import { promptInput } from "./prompt";
-import { latestContext } from "./providerRequest";
+import { latestContext, servedContext } from "./providerRequest";
 import { putInLine, reportLine, startedLine, taskKey } from "./rails";
 import { readSavedData } from "./savedData";
 import { ADOPT_REPO_PROMPT_MARKER, projectSetup } from "./scenarios/projectSetup";
@@ -432,7 +432,13 @@ test("Scope is saved by keys and shown once in the first mate's next context", a
   await input.fill("Thank you. What is next?");
   await pressKey(input, "Enter");
   await expect.poll(() => contexts().length).toBeGreaterThan(0);
-  expect(contexts().every((context) => context?.project_scopes === undefined)).toBe(true);
+  // Sent once: the next input carries no scopes of its own.
+  const served = mockProvider
+    .requestBodies()
+    .slice(before)
+    .map((body) => servedContext(body))
+    .filter(Boolean);
+  expect(served.every((context) => context?.project_scopes === undefined)).toBe(true);
   await waitForFirstmateIdle(page);
 });
 

@@ -173,6 +173,45 @@ The crewmate prompt follows the same homes: its tools say how `check_change`, `r
 `file_followup` owns filing eligibility, duplicate searches, dependencies and continuations; `note_progress` owns the plan format, `report` owns waiting and finished declarations, and `emit_card` owns completion-card shapes.
 The general validation resource rule owns secret handling on every tier; the core keeps the specific Keychain consent and isolation instructions.
 
+## What a context carries
+
+Each input the first mate is served opens with one context, and a context carries the saved facts once per conversation, then only what changed (INF-1712, the captain on INF-1699's finding 1).
+`ContextDelivery` (`src/core/orchestrator/contextDelivery.ts`) keeps what one model conversation has read, by section and by row.
+
+- **Complete, then changes.**
+  The first context of a conversation is complete: every saved section whole, with `delivery` saying so.
+  Each later context carries only the sections and rows that changed since the model read them: a row section lists `changed` rows, which replace the row with the same id, and `removed` ids; a whole section is sent whole when any of it changed; `removed_sections` names a section now empty.
+  An ordinary wake with nothing saved changed carries none of them.
+- **The read witness moves the view.**
+  What the model holds moves only when the backend reports the input read (`input_read`), never when an input is built or queued.
+  An unread steer, a failed turn or a refused delivery sends its changes again in the next input.
+  Two inputs built before either was read are applied in the order they were read.
+- **A new conversation starts complete.**
+  A fold of the conversation, a restart and a new session each reset the view, so the next context is complete again.
+  An input sent before the reset and read after that complete context still counts, in read order, so a stale fact it puts back goes again in the next input.
+- **The saved sections.**
+  `project_scopes`, `repos` (by repo id), `crew` (by task id), `computers`, `computer_versions`, `backlog`, `open_cards` (by card id), `open_asks`, `introduction`, `schedules` (by id), `recent_fleet_outcomes`, `directions`, `surfaces`, `integrations`, `models_by_intelligence_bucket`, `quota`, `captain_time_zone` and `self_source`.
+  A row carries the time a fact runs from, never an elapsed time, so it changes when its fact does and never with the clock; `as_of` says when the input was read.
+  `directions` is one section: when any direction changes, every current direction goes again whole under its authority line, so the model never holds part of the set.
+- **The facts of one input.**
+  `as_of`, `knowledge`, `captain_resolutions`, `thread_activity`, `visible_card_hint`, `about`, `focused_project` and `recovery` belong to the input they ride and are sent whenever they apply.
+- **The crew lists started work.**
+  `crew` lists every active task: running, idle, paused, held, and work on a computer that cannot be reached.
+  Unstarted work is the `backlog` section's count per project; the `tasks` query reads it, a page at a time: a list that stops short names the `next` that alone reads its later pages from the one cut its first page took, under that page's filters, and a `next` whose cut is no longer kept, or was taken by an earlier session's tool, is refused.
+  A list that stops short keeps the one cut its owner took in the same read as the first page - every matching task id, in order - and its later pages read those ids, so work started or updated between pages neither drops nor repeats a row (`task-list-snapshot.md`); a page with no kept first page reads the live list.
+- **A fold reads open work back.**
+  After a fold, the next context carries `recovery` (`FOLD_RECOVERY`): before going on, the first mate reads `open_work`, which lists every message of the captain's not yet ended and every open card as the app holds them now, and reads one whole by `ask` or `card`.
+  The messages include those still in a turn or waiting to be read, which the answer check judges only once their turn closes; `open_asks` lists them too.
+  A message read whole carries its pictures as the pictures themselves, each checked against its saved copy, and a thread carries the settings the captain sent with each reply.
+  A read longer than one part comes in parts of one version: each part names the next, bound to a digest of the whole, and a part of a version that changed since is refused rather than stitched to an older one.
+  A fold during a turn that goes on - a retried request, a fold before the turn's next response, an input not yet read, or a backend that cannot say - steers that complete context, with its recovery, into the running turn, so it reaches the model before that response.
+  That recovery goes ahead of the captain's words still queued, which keep their order, so the turn's next request reads it (`ModelSession.steerFirst`).
+  A fold after the turn's last request steers nothing, since a steer would start a model request of its own; the next input carries the recovery.
+  The recovery stays on each input until one carrying it is read, and its steer is never redelivered as the captain's words.
+  `src/core/orchestrator/openWork.ts` reads the owners' saved records and changes nothing.
+
+`src/core/orchestrator/contextDelivery.test.ts` and the "INF-1712" tests in `src/core/orchestrator/firstmateAgent.test.ts` hold it; `latestContext` in `tests/e2e/providerRequest.ts` folds a request's contexts in order the way the model reads them.
+
 ## What the served text may name
 
 The app serves one text to every user's first mate and crewmates: the two personas' prompts, each tool's name, description and parameters, the briefs, the wakes, the kind classifier's instruction and the personal workspace's seed.

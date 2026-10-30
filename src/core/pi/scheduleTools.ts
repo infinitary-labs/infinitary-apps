@@ -16,7 +16,7 @@ import type { ScheduleRecord, ScheduleSpec } from "../storage/scheduleStore";
 
 export type ScheduleDelegate = {
   /**
-   * `project` is a project key from the tasks index; unknown is refused.
+   * `project` is a project key (backlog, or tasks with projects); unknown is refused.
    * A draft waits for the captain to turn it on, and so does a recurring
    * schedule made outside a captain's turn.
    */

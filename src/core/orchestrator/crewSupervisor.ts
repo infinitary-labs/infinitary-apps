@@ -392,6 +392,7 @@ import {
   FIRSTMATE_CARD_PREFIX,
   type FirstmatePauseCard,
   type ThreadActivity,
+  type ThreadOwed,
 } from "./cardService";
 import { escapeCardText } from "./cardText";
 import { checkVerdicts } from "./checkVerdicts";
@@ -2883,6 +2884,16 @@ export class CrewSupervisor {
 
   cardThread(cardId: string): CardThread {
     return this.cards.thread(cardId);
+  }
+
+  /** Who owes an answer on an open card now (`ThreadOwed`), for the first mate's reads. */
+  cardOwed(cardId: string): ThreadOwed {
+    return this.cards.owed(cardId);
+  }
+
+  /** A card's row, open or closed, for the first mate's exact card read. */
+  storedCard(cardId: string): Card | undefined {
+    return this.cards.get(cardId) ?? this.cards.stored(cardId);
   }
 
   showRequiredAction(taskId: string): boolean {
@@ -5484,7 +5495,7 @@ export class CrewSupervisor {
     const record = this.options.tasks.resolve(ref);
     if (!record) {
       throw new Error(
-        `Unknown task "${ref}" in ${param}. Use a task id or key from the tasks index, crew_status, or the tasks tool.`,
+        `Unknown task "${ref}" in ${param}. Use a task id or key from the context's crew, crew_status, or the tasks tool.`,
       );
     }
     return record;
@@ -9734,6 +9745,7 @@ export class CrewSupervisor {
         const thread = this.cards.threadFact(record.id);
         const restart = this.restartFact(record.id);
         const stalled = this.ladder.stalledFact(record, this.now());
+        const stalledSince = stalled ? this.ladder.stalledSince(record, this.now()) : undefined;
         const timing = this.timingFacts(record);
         const refused = record.delivery?.cardRefusal;
         const ci = ciFactOf(record.delivery, this.now());
@@ -9772,7 +9784,17 @@ export class CrewSupervisor {
           ...(review ? { review } : {}),
           ...(thread ? { thread } : {}),
           ...(stalled ? { stalled } : {}),
-          ...timing,
+          ...timing.words,
+          ...(Object.keys(timing.times).length > 0 || stalledSince
+            ? {
+                times: {
+                  ...timing.times,
+                  ...(stalledSince
+                    ? { stalledSince: stalledSince.since, stalledWakes: stalledSince.wakes }
+                    : {}),
+                },
+              }
+            : {}),
           ...(override
             ? {
                 override: {
@@ -9810,7 +9832,10 @@ export class CrewSupervisor {
    * oldest job still running and its age, how long ago the crewmate last
    * reported, and the check-back its report named.
    */
-  private timingFacts(record: TaskRecord): Pick<CrewStatusEntry, "job" | "reported" | "checkBack"> {
+  private timingFacts(record: TaskRecord): {
+    words: Pick<CrewStatusEntry, "job" | "reported" | "checkBack">;
+    times: NonNullable<CrewStatusEntry["times"]>;
+  } {
     const now = this.now();
     const running =
       record.status === "active" &&
@@ -9820,7 +9845,14 @@ export class CrewSupervisor {
     const reportedAt =
       record.status === "active" ? this.options.tasks.lastReportAt(record.id) : undefined;
     const back = record.delivery?.checkBack;
-    return {
+    const times: NonNullable<CrewStatusEntry["times"]> = {
+      ...(job
+        ? { jobSince: job.startedAt, job: job.command.replace(/\s+/g, " ").slice(0, 80) }
+        : {}),
+      ...(reportedAt !== undefined ? { reportedAt } : {}),
+      ...(back ? { checkBackUntil: back.until, checkBackFor: back.waitingFor } : {}),
+    };
+    const words = {
       ...(job
         ? {
             job: `running ${formatDurationShort(now - job.startedAt)}: ${job.command.replace(/\s+/g, " ").slice(0, 80)}`,
@@ -9838,6 +9870,7 @@ export class CrewSupervisor {
           }
         : {}),
     };
+    return { words, times };
   }
 
   /**

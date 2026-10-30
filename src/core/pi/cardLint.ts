@@ -597,7 +597,7 @@ export type CardLintContext = {
 
 /** A typed fact: the P1 attach-first refusal for a note that names no task and asserts nothing. */
 export const NOTE_NEEDS_TASK_REFUSAL =
-  "every card is about a task: pass task_id when this answers a question about existing work (the about line, the tasks index, or crew_status name it), or standalone true only when the ask is a one-off with no connection or consequence to any work.";
+  "every card is about a task: pass task_id when this answers a question about existing work (the about line, the context's crew or open cards, crew_status or the tasks tool name it), or standalone true only when the ask is a one-off with no connection or consequence to any work.";
 
 /**
  * A typed fact: the closed-task choice refusal - the click refuses every
@@ -660,7 +660,7 @@ export function lintFirstmateCard(card: EmittedCard, context: CardLintContext): 
   // must either name its task or assert it is standalone - never neither,
   // and not both.
   if (card.taskId && context.taskExists && !context.taskExists(card.taskId)) {
-    return `unknown task_id "${card.taskId}"; use a task id from the about line, the tasks index, or crew_status.`;
+    return `unknown task_id "${card.taskId}"; use a task id from the about line, the context's crew or open cards, crew_status, or the tasks tool.`;
   }
   if (card.taskId && card.standalone) {
     return "pass either task_id (the card is about that task) or standalone true (it is about no task), not both.";

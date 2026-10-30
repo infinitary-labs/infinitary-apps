@@ -500,7 +500,7 @@ const LEDGER: { rule: string; home: Home; says: string }[] = [
   {
     rule: "where a card's task id comes from",
     home: "core",
-    says: "Find it first: the about line, the tasks index in the context block, crew_status, or the tasks query.",
+    says: "Find it first: the about line, the crew and open cards in the context block, crew_status, or the tasks query, which reads the backlog.",
   },
   {
     rule: "a carded task is revised through its crewmate",

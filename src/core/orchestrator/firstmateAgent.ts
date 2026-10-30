@@ -77,6 +77,7 @@ import { type CrewDelegate, createCrewTools } from "../pi/crewTools";
 import { createEmoteTool } from "../pi/emoteTool";
 import { createIntegrationTools } from "../pi/integrationTools";
 import { createLocateProjectTool } from "../pi/locateTool";
+import { createOpenWorkTool } from "../pi/openWorkTool";
 import {
   createPersonalizeTool,
   listSurfaces,
@@ -142,16 +143,24 @@ import {
 import { AnswerDeliveryCheck } from "./answerDeliveryCheck";
 import { AskCapture } from "./askCapture";
 import {
+  cardEmitter,
   FIRSTMATE_FAILURE_CARD_ID,
   FIRSTMATE_MOVE_BACK_CARD_ID,
   type FirstmatePauseCard,
   type ThreadOwed,
 } from "./cardService";
 import { escapeCardText } from "./cardText";
+import {
+  ContextDelivery,
+  type ContextSection,
+  DELIVERY_CHANGES,
+  DELIVERY_COMPLETE,
+} from "./contextDelivery";
 import { type CrewSupervisor, QUIET_CARD_MS, QUIET_FEED_MS } from "./crewSupervisor";
 import { DecisionCapture, type ServedInput } from "./decisionCapture";
 import type { Flagship } from "./flagship";
 import type { LocalOrchestratorSeat } from "./localOrchestrator";
+import { asksInTurn, IN_TURN, readOpenWork } from "./openWork";
 import { type ReplyFacts, replyLine, replyWords, startedReply } from "./replyLine";
 import { scheduleText } from "./scheduler";
 import {
@@ -187,9 +196,11 @@ import {
  * the UI and is never a feed line or chat (captain refinement 4a).
  *
  * Context discipline (index-plus-query): every user turn carries a compact
- * [fm-op] context block - registered repos, the crew, the task index, quota,
- * own source - built as one JavaScript object and encoded as TOON, while
- * crew_status pulls detail on demand. The host state is
+ * [fm-op] context block - registered repos, the crew, the backlog's count,
+ * open cards and messages, quota, own source - built as one JavaScript
+ * object and encoded as TOON, complete once per model context and then only
+ * what changed (INF-1712), while crew_status, tasks and open_work pull
+ * detail on demand. The host state is
  * authoritative; the transcript is lossy by design (Pi compaction bounds the
  * rolling session, captain decision Q4).
  *
@@ -202,9 +213,8 @@ import {
 
 const AUTH_CARD_ID = "card-fm-auth";
 
-/** The task index in the context block: rows per project, and in total. */
-export const TASK_INDEX_PER_PROJECT = 12;
-export const TASK_INDEX_TOTAL = 36;
+/** The open messages the context block lists, newest first; open_work reads them all. */
+export const OPEN_ASKS_LISTED = 12;
 /**
  * What the captain did outside the conversation that a context block lists -
  * his card choices and closes and his task card clicks: the newest this many,
@@ -517,6 +527,19 @@ function aboutCardIdFromRef(ref: string | null | undefined): string | undefined 
   return ref.slice(prefix.length) || undefined;
 }
 
+/** The context segment's body: the plain marker, then one TOON-encoded value. */
+function contextText(context: Record<string, unknown>): string {
+  return `[fm-op] context (not the user)\n${encode(context)}`;
+}
+
+/**
+ * What the first input after a fold says (INF-1712): the summary may have
+ * lost what the captain asked and what is waiting on them, so the agent
+ * reads them back from the app before it goes on.
+ */
+export const FOLD_RECOVERY =
+  "Your conversation was just folded into a summary, so this context is complete again. Before you continue, read open_work: every message of the captain's still open and every open card, as the app holds them now. Carry on from those, not from the summary alone. Reading reopens nothing and grants no permission.";
+
 /**
  * A maybe-line for the on-screen card. The line carries its own caveat
  * (contract v1, spec 2.2) so the prompt needs no rule about it: a hint
@@ -633,9 +656,13 @@ export class FirstmateAgent {
   private resolutionsSeenThrough = 0;
   /** The same watermark for thread activity: a message already listed is not listed again. */
   private threadsSeenThrough = 0;
-  /** The model-bucket lines last shown, so an unchanged placement is not repeated every turn. */
-  private lastModelBucketsShown: string | undefined;
-  private lastProjectScopesShown: string | undefined;
+  /** What this model context has read of the saved facts (INF-1712). */
+  private readonly contextDelivery = new ContextDelivery();
+  /** Set by a fold until an input carrying the recovery instruction is read. */
+  private foldRecovery: number | undefined;
+  private folds = 0;
+  /** The exact recovery steers sent into a running turn: never a captain's words to redeliver. */
+  private recoverySteers = new Set<string>();
   /** After RUNAWAY_REFUSE_AFTER, idle turns wait for Retry rather than hang. */
   private runawayRefused = false;
   /** The running turn's failure text, for the ask it files. */
@@ -724,6 +751,7 @@ export class FirstmateAgent {
 
   private expectRead(text: string, asks: string[]): void {
     this.pendingReads.push({ sha: createHash("sha256").update(text).digest("hex"), asks });
+    this.contextDelivery.expect(text);
   }
 
   /** The answer-delivery check: what took effect after each message the turn read. */
@@ -933,16 +961,14 @@ export class FirstmateAgent {
       this.delivery.endTurn({ asks: [ask.id], held: true, unread: [] });
       return;
     }
-    const context = this.contextForTurn(
-      visibleCardId,
-      hintTaskId,
-      aboutCardId,
-      pastCardId,
-      trimmed,
-    );
+    // Built for the session that reads it: admission may replace the
+    // session and renewed instructions may start it over, and either makes
+    // the next context complete.
+    const contextNow = () =>
+      this.contextForTurn(visibleCardId, hintTaskId, aboutCardId, pastCardId, trimmed);
     const userBody = renderWake(captainTurn(trimmed, false));
     const userSegment: ServedSegmentInput = { kind: "user", body: userBody, origin: "captain" };
-    const captainOnly = (): ServedInput => ({
+    const captainOnly = (context: string): ServedInput => ({
       framed: frameServedInput([{ kind: "context", body: context }, userSegment]),
     });
     if (this.delivery.outputOnly) {
@@ -961,7 +987,15 @@ export class FirstmateAgent {
       // captain is now waiting, so the rest of the turn runs at the captain
       // level even when it began as a low operational drain (WI-13).
       session.setThinkingLevel(FIRSTMATE_CAPTAIN_THINKING_LEVEL);
-      await this.steerRecorded(session, captainOnly(), trimmed, images, kept, aboutCardId, ask.id);
+      await this.steerRecorded(
+        session,
+        captainOnly(contextNow()),
+        trimmed,
+        images,
+        kept,
+        aboutCardId,
+        ask.id,
+      );
       return;
     }
     // The pre-turn admission check: the flagship binding is re-decided only
@@ -979,7 +1013,15 @@ export class FirstmateAgent {
     }
     if (admitted.isStreaming() || this.running) {
       admitted.setThinkingLevel(FIRSTMATE_CAPTAIN_THINKING_LEVEL);
-      await this.steerRecorded(admitted, captainOnly(), trimmed, images, kept, aboutCardId, ask.id);
+      await this.steerRecorded(
+        admitted,
+        captainOnly(contextNow()),
+        trimmed,
+        images,
+        kept,
+        aboutCardId,
+        ask.id,
+      );
       return;
     }
     this.serveInstructionsAt(admitted);
@@ -1001,8 +1043,9 @@ export class FirstmateAgent {
     );
     const pending = served.rows;
     const turnImages = [...(images ?? []), ...(served.images ?? [])];
+    const context = contextNow();
     const input =
-      pending.length > 0 ? this.servedTurn(context, pending, userSegment) : captainOnly();
+      pending.length > 0 ? this.servedTurn(context, pending, userSegment) : captainOnly(context);
     this.options.inbox.markDelivered(pending.map((row) => row.id));
     this.delivery.adopt(pending, (row) => aboutCardIdFromRef(row.ref));
     this.turnAboutCardId = aboutCardId;
@@ -1174,7 +1217,12 @@ export class FirstmateAgent {
   private redeliverUndeliveredSteers(session: ModelSession): AcceptedSteer[] {
     const accepted = this.acceptedSteers;
     this.acceptedSteers = [];
-    const undelivered = session.takeUndeliveredSteers();
+    // A fold's recovery steer is the app's own: an unread one leaves the
+    // recovery set for the next input instead.
+    const undelivered = session
+      .takeUndeliveredSteers()
+      .filter((text) => !this.recoverySteers.has(text));
+    this.recoverySteers.clear();
     if (undelivered.length === 0) return accepted;
     // The queue delivers oldest first, so what is left is the newest steers.
     for (const steer of accepted.slice(-undelivered.length)) {
@@ -1484,7 +1532,9 @@ export class FirstmateAgent {
         ...(resume ? { resume } : {}),
       }),
     );
-    this.lastProjectScopesShown = undefined;
+    // A session opened here - new, resumed or replaced - has read no
+    // context this app can vouch for: its next input is complete.
+    this.contextDelivery.reset();
     this.rememberResume(session);
     this.unsubscribe = session.subscribe((event) => this.onSessionEvent(event));
     const renewal = session.takeRenewal();
@@ -1541,6 +1591,8 @@ export class FirstmateAgent {
     backend: SeatBackend,
     from: { provider: string; model: string },
   ): void {
+    // The new session read no context of this app's: the next one is complete.
+    this.contextDelivery.reset();
     const changed = renewal.changed
       .map((part) => (part === "prompt" ? "the first mate's prompt" : "the served instructions"))
       .join(" and ");
@@ -2579,7 +2631,9 @@ export class FirstmateAgent {
                     this.options.tasks.projects.get(extra.project))
                   : undefined;
                 if (extra.project && (!project || project.archivedAt !== null)) {
-                  throw new Error(`No project "${extra.project}"; use a key from the tasks index.`);
+                  throw new Error(
+                    `No project "${extra.project}"; use a project key from the backlog or tasks with projects.`,
+                  );
                 }
                 const record = scheduler.create(
                   spec,
@@ -2625,6 +2679,21 @@ export class FirstmateAgent {
             },
           )
         : []),
+      // What is still open, read from the app: a fold's recovery (INF-1712).
+      createOpenWorkTool((input) =>
+        readOpenWork(
+          {
+            tasks: this.options.tasks,
+            ending: supervisor.askEnding,
+            openCards: () => supervisor.cardsSnapshot(),
+            storedCard: (id) => supervisor.storedCard(id),
+            pastCard: (id) => supervisor.cardPast(id),
+            owed: (id) => supervisor.cardOwed(id),
+            thread: (id) => supervisor.cardThread(id),
+          },
+          input,
+        ),
+      ),
       // Design B: the durable outcome store's query side - what the fleet
       // did while the captain was not looking, on demand, never as a turn.
       ...(this.options.supervisionLog
@@ -2984,7 +3053,7 @@ export class FirstmateAgent {
       const record = tasks.resolve(ref);
       if (!record) {
         throw new Error(
-          `Unknown task "${ref}". Use a task id or key from the tasks index, crew_status, or the tasks tool.`,
+          `Unknown task "${ref}". Use a task id or key from the context's crew, crew_status, or the tasks tool.`,
         );
       }
       return record;
@@ -3379,10 +3448,11 @@ export class FirstmateAgent {
   }
 
   /**
-   * The context block a turn actually carries: once it is built, the
-   * captain's resolutions it listed are behind the Firstmate, so the next
-   * turn lists only newer ones, and any model-bucket placements it showed
-   * are the new baseline an unchanged next turn stays quiet about.
+   * The context block an input actually carries (INF-1712): complete for a
+   * model context that has not read one, else only the saved facts that
+   * changed since it did. What it lists counts as read - the captain's
+   * resolutions and thread lines behind the first mate, a fold's recovery
+   * done - only once the backend witnesses the read (`ContextDelivery`).
    */
   private contextForTurn(
     visibleCardId?: string,
@@ -3392,7 +3462,7 @@ export class FirstmateAgent {
     words?: string,
   ): string {
     const builtAt = Date.now();
-    const block = this.buildContextBlock(
+    const parts = this.contextParts(
       visibleCardId,
       hintTaskId,
       aboutCardId,
@@ -3400,11 +3470,20 @@ export class FirstmateAgent {
       words,
       this.captainFocus,
     );
-    this.resolutionsSeenThrough = builtAt;
-    this.threadsSeenThrough = builtAt;
-    this.lastModelBucketsShown = this.modelBucketLines().join("\n");
-    this.lastProjectScopesShown = JSON.stringify(this.projectScopes());
-    return block;
+    const rendered = this.contextDelivery.render(parts.saved);
+    const recovery = this.foldRecovery;
+    const body = contextText({
+      delivery: rendered.complete ? DELIVERY_COMPLETE : DELIVERY_CHANGES,
+      ...(recovery ? { recovery: FOLD_RECOVERY } : {}),
+      ...rendered.payload,
+      ...parts.turn,
+    });
+    this.contextDelivery.offer(body, rendered.offer, () => {
+      this.resolutionsSeenThrough = Math.max(this.resolutionsSeenThrough, builtAt);
+      this.threadsSeenThrough = Math.max(this.threadsSeenThrough, builtAt);
+      if (recovery && this.foldRecovery === recovery) this.foldRecovery = undefined;
+    });
+    return body;
   }
 
   /**
@@ -3572,22 +3651,9 @@ export class FirstmateAgent {
   }
 
   /**
-   * The model-bucket section only when what it would show has changed since
-   * it was last shown (the captain's ask): an unchanged placement is not
-   * repeated every turn the way it used to be.
-   */
-  private renderModelBuckets(): string[] {
-    const lines = this.modelBucketLines();
-    if (lines.join("\n") === this.lastModelBucketsShown) return [];
-    return [
-      "models by intelligence bucket (changed since last shown to you; not shown again until it changes):",
-      ...lines,
-    ];
-  }
-
-  /**
-   * The compact per-turn context index. Small on purpose: crew_status and
-   * the read tools are the query side. The marker stays plain model-facing
+   * The complete context block, as a context that has read nothing would
+   * get it. Small on purpose: crew_status and the read tools are the query
+   * side. The marker stays plain model-facing
    * wording; every byte after it is one TOON-encoded JavaScript object.
    */
   buildContextBlock(
@@ -3598,8 +3664,34 @@ export class FirstmateAgent {
     words?: string,
     focusedProjectId?: string,
   ): string {
+    const parts = this.contextParts(
+      visibleCardId,
+      hintTaskId,
+      aboutCardId,
+      pastCardId,
+      words,
+      focusedProjectId,
+    );
+    const { payload } = new ContextDelivery().render(parts.saved);
+    return contextText({ delivery: DELIVERY_COMPLETE, ...payload, ...parts.turn });
+  }
+
+  /**
+   * A context's two halves (INF-1712): the saved facts, which a model
+   * context reads whole once and then only as they change
+   * (`ContextDelivery`), and this input's own facts - what the captain did,
+   * what the turn points at, the knowledge its words match - which every
+   * input carries.
+   */
+  private contextParts(
+    visibleCardId?: string,
+    hintTaskId?: string,
+    aboutCardId?: string,
+    pastCardId?: string,
+    words?: string,
+    focusedProjectId?: string,
+  ): { saved: Record<string, ContextSection>; turn: Record<string, unknown> } {
     const repos = this.options.repos.list();
-    const crew = this.options.supervisor.crewStatus();
     const schedules = this.options.scheduler?.list() ?? [];
     const outcomes = this.options.supervisionLog?.(5) ?? [];
     const shown =
@@ -3667,118 +3759,105 @@ export class FirstmateAgent {
     const integrations = this.options.integrations?.rosterLine();
     const captainResolutions = this.renderCaptainResolutions(Date.now());
     const threadActivity = this.renderThreadActivity(Date.now());
-    const modelBuckets = this.renderModelBuckets();
-    const scopes = this.projectScopes();
-    const showScopes = JSON.stringify(scopes) !== this.lastProjectScopesShown;
     const introductionId = this.options.settings.getFirstRun().welcomeCardId;
     const introduction = introductionId
       ? this.options.tasks.taskForCard(introductionId)
       : undefined;
+    const whole = (value: unknown): ContextSection => ({ kind: "whole", value });
+    const rows = (entries: { id: string; value: unknown }[]): ContextSection => ({
+      kind: "rows",
+      rows: entries,
+    });
 
-    // Build one plain JavaScript value first, then give the entire payload to
-    // the TOON encoder. No section concatenates its own syntax into the
-    // envelope; the model-facing marker remains outside the data so served-frame
-    // and Observe readers can continue to identify the context segment.
-    const context = {
-      ...(showScopes
-        ? {
-            project_scopes: {
-              note: "Project scopes: use these to choose where new work goes. Not repeated until a project or scope changes, or this context is lost.",
-              projects: scopes,
-            },
-          }
-        : {}),
-      repos: repos.map((repo) => ({
-        name: repo.name,
-        repo_id: repo.id,
-        path: repo.path,
-        setup: repo.setupKind,
-        workspace: repo.kind,
-        // Where the project lives and, where its changes go there, the
-        // app's sign-in (git integration PR 1.3).
-        lives: this.livesFact(repo),
-        // The computer keeping its folder, and where its tasks run (INF-567).
-        ...this.placesFact(repo),
-        ...(repo.kind === "personal"
-          ? { delivery: "builds in place" }
-          : {
-              delivery: repo.delivery,
-              autonomy: repo.autonomy,
-              ...(repo.rigor ? { rigor: repo.rigor } : {}),
-            }),
-      })),
-      crew: crew.map((entry) => ({
-        task_id: entry.taskId,
-        status: entry.status,
-        title: entry.title,
-        repo: entry.repoName ?? "default workspace",
-        // The computer it runs on, while another computer runs work (INF-992).
-        ...(entry.computer ? { runs_on: entry.computer } : {}),
-        ...(entry.gate ? { gate: entry.gate } : {}),
-        ...(entry.rigor ? { rigor: entry.rigor } : {}),
-        ...(entry.autonomy === undefined ? {} : { autonomy: entry.autonomy }),
-        ...(entry.review ? { review: entry.review } : {}),
-        ...(entry.thread ? { thread: entry.thread } : {}),
-        ...(entry.restart ? { restart: entry.restart } : {}),
-        ...(entry.stalled ? { stalled: entry.stalled } : {}),
-        // Durations to read, never guess (INF-1244).
-        ...(entry.job ? { job: entry.job } : {}),
-        ...(entry.reported ? { reported: entry.reported } : {}),
-        ...(entry.checkBack ? { check_back: entry.checkBack } : {}),
-        ...(entry.override ? { override: entry.override.passes } : {}),
-      })),
+    // Plain JavaScript values; the whole payload goes to the TOON encoder at
+    // once (`contextText`). No section concatenates its own syntax into the
+    // envelope.
+    const saved: Record<string, ContextSection> = {
+      project_scopes: whole({
+        note: "Project scopes: use these to choose where new work goes. Not repeated until a project or scope changes, or this context is lost.",
+        projects: this.projectScopes(),
+      }),
+      repos: rows(
+        repos.map((repo) => ({
+          id: repo.id,
+          value: {
+            name: repo.name,
+            repo_id: repo.id,
+            path: repo.path,
+            setup: repo.setupKind,
+            workspace: repo.kind,
+            // Where the project lives and, where its changes go there, the
+            // app's sign-in (git integration PR 1.3).
+            lives: this.livesFact(repo),
+            // The computer keeping its folder, and where its tasks run (INF-567).
+            ...this.placesFact(repo),
+            ...(repo.kind === "personal"
+              ? { delivery: "builds in place" }
+              : {
+                  delivery: repo.delivery,
+                  autonomy: repo.autonomy,
+                  ...(repo.rigor ? { rigor: repo.rigor } : {}),
+                }),
+          },
+        })),
+      ),
+      crew: rows(this.rosterRows()),
       // Served only while another computer runs work, so one computer pays nothing (INF-992).
-      ...(this.options.supervisor.computersListed() ? { computers: COMPUTERS_RULE } : {}),
-      ...(this.options.computerVersions
-        ? { computer_versions: this.options.computerVersions() }
-        : {}),
-      task_index: this.renderTaskIndex(),
-      ...this.renderOpenAsks(),
-      ...(introduction && introductionId
-        ? {
-            introduction: {
+      computers: whole(this.options.supervisor.computersListed() ? COMPUTERS_RULE : undefined),
+      computer_versions: whole(this.options.computerVersions?.()),
+      backlog: whole(this.renderBacklog()),
+      open_cards: rows(this.openCardRows()),
+      open_asks: whole(this.renderOpenAsks().open_asks),
+      introduction: whole(
+        introduction && introductionId
+          ? {
               card_id: introductionId,
               title: introduction.title,
               body: introduction.outcome,
               already_created: true,
-            },
-          }
-        : {}),
-      ...(captainResolutions.length > 0 ? { captain_resolutions: captainResolutions } : {}),
-      ...(threadActivity.length > 0 ? { thread_activity: threadActivity } : {}),
-      ...(schedules.length > 0
-        ? {
-            schedules: schedules.map((record) => ({
-              id: record.id,
-              timing: scheduleTextOf(record),
-              prompt: record.prompt.slice(0, 80),
-            })),
-          }
-        : {}),
-      ...(outcomes.length > 0
-        ? {
-            recent_fleet_outcomes: outcomes.map((outcome) => ({
+            }
+          : undefined,
+      ),
+      schedules: rows(
+        schedules.map((record) => ({
+          id: record.id,
+          value: {
+            id: record.id,
+            timing: scheduleTextOf(record),
+            prompt: record.prompt.slice(0, 80),
+          },
+        })),
+      ),
+      recent_fleet_outcomes: whole(
+        outcomes.length > 0
+          ? outcomes.map((outcome) => ({
               verdict: outcome.verdict,
               task_id: outcome.taskId,
               summary: outcome.summary.slice(0, 100),
-            })),
-          }
-        : {}),
-      ...(knowledge ? { knowledge } : {}),
-      ...(directions ? { directions } : {}),
-      ...(surfaces ? { surfaces } : {}),
+            }))
+          : undefined,
+      ),
+      directions: whole(directions),
+      surfaces: whole(surfaces),
       // One name per connected integration; its actions are read on request.
-      ...(integrations ? { integrations } : {}),
-      ...(modelBuckets.length > 0 ? { models_by_intelligence_bucket: modelBuckets } : {}),
-      quota: this.options.quotaLine(),
+      integrations: whole(integrations),
+      models_by_intelligence_bucket: whole(this.modelBucketLines()),
+      quota: whole(this.options.quotaLine()),
       // The zone CARD_AUTHORING's time rule says times in (FI3-1006).
-      captain_time_zone: timeZoneFact(this.now()),
-      self_source: this.options.selfSourceDir,
+      captain_time_zone: whole(timeZoneFact(this.now())),
+      self_source: whole(this.options.selfSourceDir),
+    };
+    const turn = {
+      // When this input's facts were read: the times above count from it.
+      as_of: new Date(this.now()).toISOString(),
+      ...(knowledge ? { knowledge } : {}),
+      ...(captainResolutions.length > 0 ? { captain_resolutions: captainResolutions } : {}),
+      ...(threadActivity.length > 0 ? { thread_activity: threadActivity } : {}),
       ...(maybeCard ? { visible_card_hint: maybeCard } : {}),
       ...(about ? { about } : {}),
       ...(focusLine ? { focused_project: focusLine } : {}),
     };
-    return `[fm-op] context (not the user)\n${encode(context)}`;
+    return { saved, turn };
   }
 
   /**
@@ -3901,18 +3980,9 @@ export class FirstmateAgent {
   }
 
   /**
-   * The open-task index (design section 9.1): per project, counts plus the
-   * top rows - needs-you first, then active, then open - so the agent can
-   * find the task an ask is about and pass its task_id. Closed work is not
-   * listed here (it was noise on every turn); the `tasks` tool's `status:
-   * closed` is the on-demand way to reach it. Bounded per project and in
-   * total; one-off question/operation rows appear only in the counts, never
-   * as rows, so a chatty day cannot crowd the work out.
-   */
-  /**
    * The captain's messages that have not ended on an answer they accepted
    * (INF-1610, docs/task-capture.md "How a message ends"), newest first and
-   * bounded like the task index: so "what is still open?" needs no
+   * bounded (`OPEN_ASKS_LISTED`): so "what is still open?" needs no
    * crewmate. A message the notice answered stays listed while its notice
    * is up. Answered ones are read through the tasks tool.
    */
@@ -3921,7 +3991,14 @@ export class FirstmateAgent {
     const shown = new Set(this.options.supervisor.cardsSnapshot().map((card) => card.id));
     const rows: { at: number; row: Record<string, unknown> }[] = [];
     try {
-      for (const chain of ending.openChains()) {
+      const chains = ending.openChains();
+      for (const ask of asksInTurn(this.options.tasks, chains)) {
+        rows.push({
+          at: ask.at,
+          row: { ask_id: ask.id, sent: new Date(ask.at).toISOString(), state: IN_TURN },
+        });
+      }
+      for (const chain of chains) {
         const state = ending.state(chain);
         const newest = chain.members.at(-1) ?? chain.root;
         const live = ending.ownWork(chain).filter((task) => !TaskService.isClosed(task));
@@ -3968,87 +4045,142 @@ export class FirstmateAgent {
     rows.sort((a, b) => b.at - a.at);
     return {
       open_asks: {
-        note: "The captain's messages not yet answered on a card they accepted, newest first, by when each was sent; their words are in your conversation. Each ends on the card marked answering that they accept.",
-        asks: rows.slice(0, TASK_INDEX_PER_PROJECT).map((entry) => entry.row),
-        ...(rows.length > TASK_INDEX_PER_PROJECT
-          ? { more: rows.length - TASK_INDEX_PER_PROJECT }
-          : {}),
+        note: "The captain's messages not yet answered on a card they accepted, newest first, by when each was sent; their words are in your conversation. Each ends on the card marked answering that they accept. open_work reads every one, with its words.",
+        asks: rows.slice(0, OPEN_ASKS_LISTED).map((entry) => entry.row),
+        ...(rows.length > OPEN_ASKS_LISTED ? { more: rows.length - OPEN_ASKS_LISTED } : {}),
       },
     };
   }
 
-  private renderTaskIndex(): string[] {
+  /**
+   * The roster (INF-1712): every started task that has not closed - running,
+   * idle, paused, held or on a computer out of reach - read from the task
+   * record, with the crew's facts where the supervisor has them. Unstarted
+   * work is the backlog's count, read by lookup. Times are the times they
+   * run from, so a row changes when its facts do, never with the clock.
+   */
+  private rosterRows(): { id: string; value: Record<string, unknown> }[] {
+    const tasks = this.options.tasks;
+    const crew = new Map(
+      this.options.supervisor.crewStatus().map((entry) => [entry.taskId, entry]),
+    );
+    const iso = (at: number) => new Date(at).toISOString();
+    return tasks
+      .listLive()
+      .filter((record) => record.status === "active")
+      .sort((a, b) => a.priority - b.priority || a.createdAt - b.createdAt)
+      .map((record) => {
+        const entry = crew.get(record.id);
+        const times = entry?.times ?? {};
+        const graph = this.indexGraphNote(record).replace(/^ \[|\]$/g, "");
+        return {
+          id: record.id,
+          value: {
+            task_id: record.id,
+            ...(record.key ? { key: record.key } : {}),
+            ...(record.kind === "work" ? {} : { kind: record.kind }),
+            status: entry?.status ?? indexStatus(record),
+            title: record.title,
+            repo:
+              entry?.repoName ??
+              (record.repoId ? this.options.repos.get(record.repoId)?.name : undefined) ??
+              "default workspace",
+            // The computer it runs on, while another computer runs work (INF-992).
+            ...(entry?.computer ? { runs_on: entry.computer } : {}),
+            ...(graph ? { graph } : {}),
+            ...(entry?.gate ? { gate: entry.gate } : {}),
+            ...(entry?.rigor ? { rigor: entry.rigor } : {}),
+            ...(entry?.autonomy === undefined ? {} : { autonomy: entry.autonomy }),
+            ...(entry?.review ? { review: entry.review } : {}),
+            ...(entry?.thread ? { thread: entry.thread } : {}),
+            ...(entry?.restart ? { restart: entry.restart } : {}),
+            // Times to count from as_of, never guess (INF-1244).
+            ...(times.stalledSince !== undefined
+              ? {
+                  stalled: `idle since ${iso(times.stalledSince)} · ${times.stalledWakes ?? 0} wake${times.stalledWakes === 1 ? "" : "s"}`,
+                }
+              : {}),
+            ...(times.jobSince !== undefined
+              ? { job: `running since ${iso(times.jobSince)}: ${times.job ?? ""}` }
+              : {}),
+            ...(times.reportedAt !== undefined ? { reported_at: iso(times.reportedAt) } : {}),
+            ...(times.checkBackUntil !== undefined
+              ? { check_back: `${iso(times.checkBackUntil)}: ${times.checkBackFor ?? ""}` }
+              : {}),
+            ...(entry?.override ? { override: entry.override.passes } : {}),
+          },
+        };
+      });
+  }
+
+  /**
+   * The backlog (INF-1712): unstarted work, counted per project. The rows
+   * are read with the tasks tool; a count is never a reason to start one.
+   */
+  private renderBacklog(): Record<string, unknown> | undefined {
     const tasks = this.options.tasks;
     const byProject = new Map<string, TaskRecord[]>();
-    // The live set alone: reading a long record's closed rows each turn
-    // costs the main process time a keystroke waits on (INF-703).
     for (const record of tasks.listLive()) {
-      const rows = byProject.get(record.projectId) ?? [];
-      rows.push(record);
-      byProject.set(record.projectId, rows);
+      if (record.status !== "open") continue;
+      byProject.set(record.projectId, [...(byProject.get(record.projectId) ?? []), record]);
     }
-    if (byProject.size === 0) return ["tasks:", "- none yet"];
-    const lines = [
-      "tasks (live only; task_id for tools; kinds other than work are marked; closed work: tasks tool, status: closed):",
-    ];
-    let total = 0;
-    let omitted = 0;
-    for (const project of tasks.projects.list()) {
-      const rows = byProject.get(project.id);
-      if (!rows || rows.length === 0) continue;
-      const count = (predicate: (record: TaskRecord) => boolean) => rows.filter(predicate).length;
-      const counts = [
-        `${count((r) => r.status === "open")} open`,
-        `${count((r) => r.status === "active")} active`,
+    if (byProject.size === 0) return undefined;
+    const projects = tasks.projects.list().flatMap((project) => {
+      const open = byProject.get(project.id);
+      if (!open?.length) return [];
+      const count = (predicate: (record: TaskRecord) => boolean) => open.filter(predicate).length;
+      const waiting = count((record) => indexRank(record) === 0);
+      const onRequest = count((record) => record.startPolicy === "on-request");
+      return [
+        {
+          project: project.key,
+          name: project.name,
+          unstarted: open.length,
+          ...(waiting > 0 ? { waiting_on_you: waiting } : {}),
+          ...(onRequest > 0 ? { on_request: onRequest } : {}),
+        },
       ];
-      lines.push(`- ${project.key} ${project.name}: ${counts.join(", ")}`);
-      const rank = (a: TaskRecord, b: TaskRecord) =>
-        indexRank(a) - indexRank(b) || a.priority - b.priority || b.updatedAt - a.updatedAt;
-      // A live child nests under its live parent, so a parent and the work
-      // under it read as one row and count as one against the caps.
-      const live = new Set(rows.map((record) => record.id));
-      const childrenOf = new Map<string, TaskRecord[]>();
-      for (const record of rows) {
-        if (!record.parentId || !live.has(record.parentId)) continue;
-        const siblings = childrenOf.get(record.parentId) ?? [];
-        siblings.push(record);
-        childrenOf.set(record.parentId, siblings);
-      }
-      const listed = rows
-        .filter((record) => !record.parentId || !live.has(record.parentId))
-        .sort(rank);
-      const renderRow = (record: TaskRecord, depth: number, nested: boolean) => {
-        const indent = "  ".repeat(depth + 1);
-        const kind = record.kind === "work" ? "" : `${record.kind} `;
-        lines.push(
-          `${indent}- ${record.key || record.id} (task_id: ${record.id}) ${kind}${indexStatus(record)} "${record.title}"${this.indexGraphNote(record, nested)}`,
-        );
-        // What is on screen for the task (WI-12): the agent revises an
-        // overlapping card, steers a crewmate that already carded it, and
-        // adds a card only for something distinct.
-        for (const card of this.options.supervisor.openCardDigests(record.id)) {
-          lines.push(`${indent}  - ${openCardContextLine(card)}`);
-        }
-        for (const child of (childrenOf.get(record.id) ?? []).sort(rank)) {
-          renderRow(child, depth + 1, true);
-        }
+    });
+    return {
+      note: "Unstarted tasks per project, not listed here: read them with the tasks tool (project, status open; skip pages past limit). The about line and open cards still name one when they point at it.",
+      projects,
+    };
+  }
+
+  /**
+   * Every open card on the stack (WI-12, INF-1712), whatever its task's
+   * state and including cards with no task: the agent revises an
+   * overlapping card, steers a crewmate that already carded it, and adds a
+   * card only for something distinct. Full cards are read with open_work.
+   */
+  private openCardRows(): { id: string; value: Record<string, unknown> }[] {
+    const supervisor = this.options.supervisor;
+    return supervisor.cardsSnapshot().map((card) => {
+      const task = card.taskId ? this.options.tasks.get(card.taskId) : undefined;
+      const emitter =
+        card.author === "host"
+          ? "host"
+          : card.taskId
+            ? cardEmitter(card.id, card.taskId)
+            : card.author;
+      const owed = supervisor.cardOwed(card.id);
+      return {
+        id: card.id,
+        value: {
+          card_id: card.id,
+          ...(card.taskId ? { task: task?.key || card.taskId, task_id: card.taskId } : {}),
+          // A preview's body is markup, not copy: its line stops at the title.
+          line: openCardContextLine({
+            ...card,
+            body: isPreviewBody(card.body) ? "" : card.body,
+            emitter,
+          }),
+          ...(owed === "firstmate" || owed === "author"
+            ? { waits_on: THREAD_OWED_WORDS[owed] }
+            : {}),
+        },
       };
-      for (const record of listed.slice(0, TASK_INDEX_PER_PROJECT)) {
-        if (total >= TASK_INDEX_TOTAL) {
-          omitted += 1;
-          continue;
-        }
-        total += 1;
-        renderRow(record, 0, false);
-      }
-      omitted += Math.max(0, listed.length - TASK_INDEX_PER_PROJECT);
-    }
-    if (omitted > 0) {
-      lines.push(
-        `  - and ${omitted} more; crew_status lists the live crew, tasks queries the rest`,
-      );
-    }
-    return lines;
+    });
   }
 
   /**
@@ -4683,12 +4815,46 @@ export class FirstmateAgent {
     this.coalesceTimer = undefined;
   }
 
+  /**
+   * The backend folded the conversation into a summary (INF-1712): what the
+   * model read of the saved facts may be gone, so the next input is
+   * complete and tells it to re-read the open messages and cards. Inside a
+   * running turn that input is steered in at once, so the turn does not go
+   * on from the summary alone; an unread steer leaves it for the next input.
+   */
+  private afterFold(turn: "goes-on" | "unknown" | undefined): void {
+    this.contextDelivery.reset();
+    this.folds += 1;
+    this.foldRecovery = this.folds;
+    const session = this.session;
+    if (!this.running || !session) return;
+    // A fold after the turn's last request, with its input read, is the
+    // turn's end: a steer would start a request of its own, so the recovery
+    // rides the next input. An unread input, a retried request or a fold
+    // before the next response goes on.
+    if (turn === undefined && this.pendingReads.length === 0) return;
+    const input = this.servedTurn(this.contextForTurn(), []);
+    this.recoverySteers.add(input.framed.text);
+    this.expectRead(input.framed.text, []);
+    // Ahead of any captain words still queued, so the next request reads it.
+    const steer = session.steerFirst
+      ? session.steerFirst(input.framed.text)
+      : session.steer(input.framed.text);
+    steer.then(
+      () => this.decisions.noteSteer(input),
+      () => {
+        // Not queued: the recovery stays set for the next input.
+      },
+    );
+  }
+
   private onSessionEvent(event: SessionEvent): void {
     if (event.type === "context_compacted") {
-      this.lastProjectScopesShown = undefined;
+      this.afterFold(event.turn);
       return;
     }
     if (event.type === "input_read") {
+      this.contextDelivery.read(event.textSha256);
       const index = this.pendingReads.findIndex((input) => input.sha === event.textSha256);
       if (!this.running || index < 0) return;
       const [input] = this.pendingReads.splice(index, 1);

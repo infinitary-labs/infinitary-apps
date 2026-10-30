@@ -348,7 +348,12 @@ export type CrewmateToolDelegate = {
   onQueryTasks?: (
     input: TaskQueryInput,
     signal?: AbortSignal,
-  ) => Awaitable<{ rows: TaskQueryRow[]; total: number; projects?: TaskQueryProject[] }>;
+  ) => Awaitable<{
+    rows: TaskQueryRow[];
+    total: number;
+    projects?: TaskQueryProject[];
+    order?: string[];
+  }>;
   /**
    * The live-build checks (talk-to-personalize Step 4), handed only to a
    * crewmate on the personal workspace: the adherence lint over the extension's
@@ -614,6 +619,7 @@ export const FIRSTMATE_TOOLS: readonly { name: string; module: string }[] = [
   { name: "locate_project", module: "src/core/pi/locateTool.ts" },
   { name: "schedule_prompt", module: "src/core/pi/scheduleTools.ts" },
   { name: "cancel_schedule", module: "src/core/pi/scheduleTools.ts" },
+  { name: "open_work", module: "src/core/pi/openWorkTool.ts" },
   { name: "supervision_log", module: "src/core/pi/supervisionTools.ts" },
   { name: "flag_missed_escalation", module: "src/core/pi/supervisionTools.ts" },
   { name: "flag_duplicate", module: "src/core/pi/supervisionTools.ts" },

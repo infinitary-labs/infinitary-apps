@@ -117,6 +117,8 @@ import type { WorkingCopies } from "./workingCopies";
  */
 
 const FIRST_RELEASE_REPORTS = contractChange("first-release-reports");
+/** A task list's one cut and its later pages (`task-list-snapshot.md`). */
+const TASK_LIST_SNAPSHOT = contractChange("task-list-snapshot");
 
 export type SessionHostOptions = {
   tasks: PlacedTasks;
@@ -1397,20 +1399,33 @@ export class SessionHost {
         this.withDeadline(
           "inf:work:tasks",
           async (signal) => {
-            if (
-              input.skip !== undefined &&
-              !listsChange(this.options.homeChanges?.(), FIRST_RELEASE_REPORTS)
-            )
+            const changes = this.options.homeChanges?.();
+            if (input.skip !== undefined && !listsChange(changes, FIRST_RELEASE_REPORTS))
               throw new Error(
                 "The home cannot page task lists yet. Nothing was sent; report the verification gap to the first mate.",
               );
+            // An older home keeps no cut: its first page goes as before and
+            // names no next page; a later page of a cut it never kept is refused.
+            const snapshots = listsChange(changes, TASK_LIST_SNAPSHOT);
+            if (input.ids !== undefined && !snapshots)
+              throw new Error(
+                "The home cannot page this task list. Nothing was sent; read the list again from its first page.",
+              );
+            const { snapshot, ...plain } = input;
+            const sent = snapshot && snapshots ? input : plain;
             const answer = tasksAnswerSchema.parse(
-              await this.call(held, "inf:work:tasks", { callId: randomUUID(), input }, signal),
+              await this.call(
+                held,
+                "inf:work:tasks",
+                { callId: randomUUID(), input: sent },
+                signal,
+              ),
             );
             return {
               rows: answer.rows as TaskQueryRow[],
               total: answer.total,
               ...(answer.projects ? { projects: answer.projects } : {}),
+              ...(answer.order ? { order: answer.order } : {}),
             };
           },
           toolSignal,

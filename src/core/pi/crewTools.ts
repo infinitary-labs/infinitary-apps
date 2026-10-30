@@ -132,6 +132,20 @@ export type CrewStatusEntry = {
    * while this is here.
    */
   cardRefused?: { title: string; at: string; reason: CardRefusalReason; why: string };
+  /**
+   * The same durations as the times they run from (INF-1712): the first
+   * mate's context serves these, so a row changes when its facts do, never
+   * because the clock moved. crew_status keeps the words above.
+   */
+  times?: {
+    jobSince?: number;
+    job?: string;
+    reportedAt?: number;
+    checkBackUntil?: number;
+    checkBackFor?: string;
+    stalledSince?: number;
+    stalledWakes?: number;
+  };
 };
 
 export type CrewDelegate = {
@@ -778,7 +792,8 @@ export function createCrewStatusTool(crewStatus: (taskId?: string) => CrewStatus
     }),
     run: async (params) => {
       const entries = crewStatus(params.task_id);
-      return { text: entries.length > 0 ? JSON.stringify(entries, null, 2) : "No crew right now." };
+      const shown = entries.map(({ times: _times, ...entry }) => entry);
+      return { text: shown.length > 0 ? JSON.stringify(shown, null, 2) : "No crew right now." };
     },
   });
 }

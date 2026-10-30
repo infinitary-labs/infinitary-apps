@@ -156,7 +156,8 @@ No host parser, trigger store or polling schedule decides these judgments.
 
 Knowledge is the only source for personal context, saved references and standing directions.
 
-- Every first mate context block carries the complete current directions in `directions`, regardless of the words searched or whether the turn is a background wake.
+- The first context of every first mate conversation carries the complete current directions in `directions`, regardless of the words searched or whether the turn is a background wake.
+  When any direction changes, the next context carries the complete set again, and one emptied says so (`docs/orchestrator-contract.md`, "What a context carries").
 - Every crewmate turn carries the complete current project directions, superseding earlier copies; retired directions have no active influence.
   The brief holds none of its own, so a first turn carries them once, and a brief served again to a new conversation carries no stale copy.
 - Rendering never truncates directions to a character budget or a search page.

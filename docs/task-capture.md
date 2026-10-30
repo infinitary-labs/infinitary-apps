@@ -41,8 +41,8 @@ Only a turn end that names an ask closes it (`AskCapture.endTurn` takes the asks
 
 ## Context block and prompt
 
-The `[fm-op]` context block carries a bounded task index (`tasks (live only; task_id for tools; ...)`: per project counts plus up to 12 rows, 36 total; needs-you first, then active, then open) and an `about:` line when a hint exists.
-Closed work is not listed here - it was noise on every turn - and stays reachable on demand through the `tasks` tool's `status: closed`.
+The `[fm-op]` context carries the started work in `crew`, the unstarted work as a `backlog` count per project, and an `about` line when a hint exists (`docs/orchestrator-contract.md`, "What a context carries").
+Unstarted and closed work are not listed here and stay reachable on demand through the `tasks` tool.
 `FIRSTMATE_PROMPT_CORE` gained one rule before the six classes: every turn is about a task, find it first, pass its `task_id`, standalone only for a genuine one-off.
 The C5 dispatch extractor parses the new lines as noise (`tests/extract-dispatch-corpus.test.ts` pins that the fleet parses identically).
 

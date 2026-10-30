@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import { HOME } from "@shared/deviceNames";
 import { HOLD_KINDS, isOverridable, type OverridableHold, overrideRefusal } from "@shared/holds";
 import { type ReasoningChoice, reasoningChoiceSchema } from "@shared/modelSlots";
@@ -263,7 +264,9 @@ export function createTaskTools(delegate: TaskToolsDelegate) {
         Type.String({ description: "New parent (task id or key); empty string clears it" }),
       ),
       project: Type.Optional(
-        Type.String({ description: "Move to this project (key from the tasks index)" }),
+        Type.String({
+          description: "Move to this project (its key: backlog, or tasks with projects)",
+        }),
       ),
       basis: Type.Optional(
         Type.String({
@@ -544,6 +547,10 @@ export const TASK_QUERY_PAGE_CHARACTERS = 50_000;
 
 const PAGE_NOTE =
   "This record does not fit one read. Read remaining fields before acting; nextOffset continues.";
+/** A list that stops short ends by saying where its next page starts. */
+/** A list that stops short ends by naming the read that continues its one cut. */
+const morePagesLine = (next: string) => `More: read with next "${next}" for the next page.`;
+const MORE_PAGES = /\nMore: read with next "[^"]*" for the next page\.$/;
 const LIST_NOTE =
   "This list does not fit one read. Narrow it with status, text, parent or a smaller limit.";
 
@@ -698,7 +705,10 @@ export function parseTasksQueryText(text: string): ParsedTasksQuery {
     if (!match) throw new Error("A task read note must name a field");
     omitted.push({ field: match[1]!, as: match[2] as FieldAs, length: Number(match[3]) });
   }
-  return { rows: JSON.parse(text.slice(jsonAt + 1)) as TaskQueryRow[], omitted };
+  return {
+    rows: JSON.parse(text.slice(jsonAt + 1).replace(MORE_PAGES, "")) as TaskQueryRow[],
+    omitted,
+  };
 }
 
 /** The index read plus every field page, in any order, as the complete rows. */
@@ -738,7 +748,7 @@ export function assembleTasksReads(reads: string[]): TaskQueryRow[] {
 
 /** What every `tasks` query takes, the Firstmate's and a crewmate's alike. */
 const TASKS_QUERY_PARAMETERS = {
-  project: Type.Optional(Type.String({ description: "A project key from the tasks index" })),
+  project: Type.Optional(Type.String({ description: "A project key" })),
   status: Type.Optional(
     stringEnum(["open", "active", "done", "dropped", "live", "closed"], {
       description: "live = open, active; closed = done, dropped",
@@ -765,22 +775,59 @@ const TASKS_QUERY_PARAMETERS = {
 
 const TASKS_QUERY_OBJECT = Type.Object(TASKS_QUERY_PARAMETERS);
 
-/**
- * A crewmate's `tasks` query also lists project folders (INF-1217): it has
- * files to find, which the Firstmate does not, so the Firstmate's fixed
- * context does not carry the parameter.
- */
+/** The `tasks` query also lists projects and their folders (INF-1217). */
 const PROJECTS_PARAMETER = Type.Optional(Type.Boolean({ description: "List project folders" }));
 
 export const TIMELINE_PAGING_RESTART =
   "This timeline read is no longer retained. Read field timeline from offset 1.";
+export const LIST_PAGING_RESTART =
+  "This list's earlier read is no longer retained. Read it again from its first page, without next.";
+
+/**
+ * A list's `next`: which kept cut it continues and where. A cut's id is
+ * random, so a `next` kept in a resumed conversation never matches a cut a
+ * rebuilt tool took later.
+ */
+function listNext(cut: string, skip: number): string {
+  return Buffer.from(JSON.stringify({ cut, skip })).toString("base64url");
+}
+
+function listCursor(next: string): { cut: string; skip: number } | undefined {
+  try {
+    const at = JSON.parse(Buffer.from(next, "base64url").toString()) as unknown;
+    if (
+      typeof at === "object" &&
+      at !== null &&
+      typeof (at as { cut?: unknown }).cut === "string" &&
+      Number.isInteger((at as { skip?: unknown }).skip) &&
+      (at as { skip: number }).skip >= 0
+    )
+      return at as { cut: string; skip: number };
+  } catch {}
+  return undefined;
+}
 
 function tasksQueryRun(onQueryTasks: NonNullable<CrewmateToolDelegate["onQueryTasks"]>) {
   // Retain only this tool's most recent incomplete field read, by canonical id.
   // A new read supersedes the previous one; never combine pages from different cuts.
   const timelines = new Map<string, TaskQueryRow>();
+  // A list that stops short keeps the one cut its owner took in the same
+  // read as the first page - every matching id, in order - and its More line
+  // names a `next` that reads those ids: a task started or updated between
+  // pages moves in the live order, and must neither skip another row nor
+  // show one twice. A `next` whose cut is no longer kept is refused, never
+  // read from the live order. One cut is kept per query, with the filters
+  // it was taken under, so `next` alone continues it.
+  const cuts = new Map<
+    string,
+    { id: string; filters: Omit<TaskQueryInput, "ids">; order: string[]; size: number }
+  >();
   return async (
-    params: Static<typeof TASKS_QUERY_OBJECT> & { projects?: boolean; skip?: number },
+    params: Static<typeof TASKS_QUERY_OBJECT> & {
+      projects?: boolean;
+      skip?: number;
+      next?: string;
+    },
     signal?: AbortSignal,
   ) => {
     if ((params.field !== undefined || params.offset !== undefined) && !params.key) {
@@ -789,8 +836,70 @@ function tasksQueryRun(onQueryTasks: NonNullable<CrewmateToolDelegate["onQueryTa
     if (params.offset !== undefined && !params.field) {
       return { text: "offset applies only with a field." };
     }
-    if (params.skip !== undefined && (params.key || params.field))
-      return { text: "skip applies only to task lists." };
+    if ((params.skip !== undefined || params.next !== undefined) && (params.key || params.field))
+      return { text: "skip and next apply only to task lists." };
+    if (params.next !== undefined && params.skip !== undefined)
+      return { text: "next continues a list; give it without skip." };
+    const listing = !params.key && !params.field && !params.projects;
+    if (listing) {
+      const { skip: _skip, limit: _limit, next: _next, ...rest } = params;
+      const query = JSON.stringify(rest, Object.keys(rest).sort());
+      const filters = {
+        ...(params.project ? { project: params.project } : {}),
+        ...(params.status ? { status: params.status as TaskStatus | "live" | "closed" } : {}),
+        ...(params.text ? { text: params.text } : {}),
+        ...(params.parent ? { parent: params.parent } : {}),
+      };
+      if (params.next !== undefined) {
+        // Capture the cut before any await: a concurrent read may replace
+        // the query's kept cut, and this page reads only the one it names.
+        const at = listCursor(params.next);
+        const cut = at && [...cuts.values()].find((kept) => kept.id === at.cut);
+        if (!at || !cut) return { text: LIST_PAGING_RESTART };
+        const ids = cut.order.slice(at.skip, at.skip + (params.limit ?? cut.size));
+        const page =
+          ids.length > 0
+            ? await callWithSignal(onQueryTasks, [{ ...cut.filters, ids }], signal)
+            : { rows: [], total: 0 };
+        const text = renderTasksQueryResult({ rows: page.rows, total: cut.order.length });
+        const after = at.skip + ids.length;
+        return {
+          text:
+            ids.length > 0 && cut.order.length > after
+              ? `${text}\n${morePagesLine(listNext(cut.id, after))}`
+              : text,
+        };
+      }
+      // The owner takes the whole cut in the same read as the first page;
+      // a skip reads the live list from that offset, as it stands.
+      const skip = params.skip ?? 0;
+      const first = await callWithSignal(
+        onQueryTasks,
+        [
+          {
+            ...filters,
+            ...(params.limit !== undefined ? { limit: params.limit } : {}),
+            ...(skip > 0 ? { skip } : {}),
+            snapshot: true,
+          },
+        ],
+        signal,
+      );
+      const text = renderTasksQueryResult(first);
+      const after = skip + first.rows.length;
+      if (!first.order || first.order.length <= after) {
+        cuts.delete(query);
+        return { text };
+      }
+      const cut = {
+        id: randomUUID(),
+        filters,
+        order: first.order,
+        size: Math.max(1, first.rows.length),
+      };
+      cuts.set(query, cut);
+      return { text: `${text}\n${morePagesLine(listNext(cut.id, after))}` };
+    }
     const continuing = params.field === "timeline" && (params.offset ?? 1) > 1;
     const retained = timelines.values().next().value;
     const snapshot =
@@ -854,25 +963,24 @@ export const TASKS_QUERY_TOOL = crewmateTool({
         description: "Skip this many task-list rows; collect all keys before recording releases.",
       }),
     ),
+    // A list's More line names `next` with its value, so it needs no description.
+    next: Type.Optional(Type.String()),
   }),
   bind: ({ onQueryTasks }) => onQueryTasks && tasksQueryRun(onQueryTasks),
 });
 
-const FIRSTMATE_TASKS_QUERY_TOOL = crewmateTool({
-  name: TASKS_QUERY_TOOL_NAME,
-  label: "Tasks",
-  description: TASKS_QUERY_TOOL_DESCRIPTION,
-  parameters: TASKS_QUERY_OBJECT,
-  bind: ({ onQueryTasks }) => onQueryTasks && tasksQueryRun(onQueryTasks),
-});
-
-/** The `tasks` query tool as the Firstmate's Pi session holds it. */
+/**
+ * The `tasks` query tool as the Firstmate's Pi session holds it: the
+ * crewmate's entry, paging and projects included, since the context lists
+ * only started work and the backlog is read here (INF-1712).
+ */
 export function createTasksQueryTool(
   query: (input: TaskQueryInput) => {
     rows: TaskQueryRow[];
     total: number;
     projects?: TaskQueryProject[];
+    order?: string[];
   },
 ) {
-  return bindTool(FIRSTMATE_TASKS_QUERY_TOOL, { onQueryTasks: query });
+  return bindTool(TASKS_QUERY_TOOL, { onQueryTasks: query });
 }

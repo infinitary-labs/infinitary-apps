@@ -263,7 +263,7 @@ There is no one-card-per-topic cap - several open decisions on one task are legi
 - If none is open, a new card is created as usual.
 - App-raised singletons (`card-fm-auth`, flagship quota cards) are only overwritten when the id matches that singleton.
 
-Every emitter sees what is on screen: the first mate's context block lists each task's open cards, and a crewmate's report wake names its cards.
+Every emitter sees what is on screen: the first mate's context lists every open card, and a crewmate's report wake names its cards.
 On a task whose crewmate already has a card open, the first mate's `emit_card` is refused with "steer the crewmate to revise card X (same id)" - it adds to the crewmate's card through the crewmate, never beside it.
 
 When the captain says a card repeats an earlier one, the first mate's `flag_duplicate` stamps `duplicate_of`, `duplicate_note`, and `duplicate_at` on the card, closes it, and writes one feed line.

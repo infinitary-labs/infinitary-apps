@@ -1017,13 +1017,35 @@ export function servedInstructions(body: string): string {
     .join("\n");
 }
 
-/** A task's id off the current context block's task index, by its exact title. */
+/** A started task's id off the context's crew, by its exact title. */
 export function indexTaskId(body: string, title: string): string | undefined {
-  for (const line of latestContext(body)?.task_index ?? []) {
-    if (!line.includes(`"${title}"`)) continue;
-    const id = line.match(/\(task_id: ([\w-]+)\)/)?.[1];
-    if (id) return id;
-  }
+  return contextCrew(body).find((entry) => entry.title === title)?.task_id;
+}
+
+/** A task's id off a `tasks` read's result, by its exact title. */
+export function queriedTaskId(result: string | undefined, title: string): string | undefined {
+  const start = result?.indexOf("[") ?? -1;
+  if (!result || start < 0) return undefined;
+  const end = result.lastIndexOf("]");
+  const rows = JSON.parse(result.slice(start, end + 1)) as Array<{
+    task_id: string;
+    title: string;
+  }>;
+  return rows.find((row) => row.title === title)?.task_id;
+}
+
+/**
+ * Unstarted work is not in the context (INF-1712): the first mate reads it
+ * with `tasks` by its title, then makes the call that names it. Undefined
+ * once both went out; the caller's later moves count two results more.
+ */
+export function lookUpTask(
+  title: string,
+  results: string[],
+  then: (taskId: string) => ScriptedCall[],
+): { calls: ScriptedCall[] } | undefined {
+  if (results.length === 0) return { calls: [{ name: "tasks", args: { text: title } }] };
+  if (results.length === 1) return { calls: then(queriedTaskId(results[0], title) ?? "missing") };
   return undefined;
 }
 

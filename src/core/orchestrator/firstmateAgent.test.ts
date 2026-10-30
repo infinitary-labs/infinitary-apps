@@ -5,7 +5,7 @@ import { dirname, join } from "node:path";
 import { ACTIONS, actionRefusal } from "@shared/actions";
 import type { AttachmentRef } from "@shared/attachments";
 import type { CutOff } from "@shared/authFailure";
-import { type Card, onStage } from "@shared/cards";
+import { type Card, onStage, replyWithSettings } from "@shared/cards";
 import { HERE } from "@shared/deviceNames";
 import { AUTOMATIC_EMOTE_WORDS } from "@shared/emotes";
 import { type FmEvent, type FmUsage, fmEventSchema } from "@shared/events";
@@ -71,7 +71,7 @@ import {
   firstmatePromptSha,
   toolsFingerprint,
 } from "../pi/piResources";
-import { parseTasksQueryText } from "../pi/taskTools";
+import { LIST_PAGING_RESTART, parseTasksQueryText } from "../pi/taskTools";
 import { piToolsOf } from "../pi/toolSpec";
 import type { ModelRuntime } from "../pi/types";
 import type { CrewMachines } from "../placed/placedSessions";
@@ -101,16 +101,19 @@ import { RepoRegistry } from "../workspace/repoRegistry";
 import type { WorkspaceService } from "../workspace/workspaceService";
 import { ANSWER_ONLY_REFUSAL } from "./answerDelivery";
 import { RECHECK_ALLOWANCE_LABEL } from "./cardService";
+import { DELIVERY_CHANGES, DELIVERY_COMPLETE } from "./contextDelivery";
 import { CrewSupervisor } from "./crewSupervisor";
 import {
   CAPTAIN_TURN_REF,
   FirstmateAgent,
   type FirstmateTurnOutcome,
+  FOLD_RECOVERY,
   formatFlagshipError,
-  TASK_INDEX_PER_PROJECT,
+  OPEN_ASKS_LISTED,
 } from "./firstmateAgent";
 import { Flagship, type FlagshipOptions, type FlagshipVaultView } from "./flagship";
 import { idleStallWays } from "./holds";
+import { IN_TURN } from "./openWork";
 import { Scheduler } from "./scheduler";
 import { ALLOWANCE_CHECKING_WORDS, keptMessageWords } from "./seat";
 import {
@@ -133,7 +136,9 @@ type ContextObject = Record<string, unknown> & {
   repos: Record<string, unknown>[];
   quota: string;
   self_source: string;
-  task_index: string[];
+  crew: Array<Record<string, unknown> & { task_id: string; title: string }>;
+  open_cards?: Array<{ card_id: string; task?: string; task_id?: string; line: string }>;
+  backlog?: { note: string; projects: Array<Record<string, unknown>> };
   surfaces: {
     panels: Array<{ id: string }>;
   };
@@ -143,6 +148,48 @@ type ContextObject = Record<string, unknown> & {
   visible_card_hint?: string;
   about?: string;
 };
+
+/** A row section's id, the way each row names itself. */
+function rowId(row: Record<string, unknown>): string {
+  return String(row.task_id ?? row.repo_id ?? row.card_id ?? row.id);
+}
+
+/**
+ * What a model holds after reading these inputs in order (INF-1712): each
+ * complete context replaces its view, and each later one applies its
+ * changes - the same fold `tests/e2e/providerRequest.ts` makes.
+ */
+function heldContext(inputs: readonly string[]): ContextObject {
+  let held: Record<string, unknown> = {};
+  for (const input of inputs) {
+    const context = decodeContext(input) as Record<string, unknown>;
+    if (String(context.delivery).startsWith("complete")) {
+      held = { ...context };
+      continue;
+    }
+    for (const [name, value] of Object.entries(context)) {
+      if (name === "removed_sections") {
+        for (const gone of value as string[]) delete held[gone];
+        continue;
+      }
+      const prior = held[name];
+      if (Array.isArray(prior) && value && typeof value === "object" && !Array.isArray(value)) {
+        const delta = value as { changed?: Record<string, unknown>[]; removed?: string[] };
+        const rows = new Map(
+          (prior as Record<string, unknown>[]).map((row) => [rowId(row), row] as const),
+        );
+        for (const id of delta.removed ?? []) rows.delete(id);
+        for (const row of delta.changed ?? []) rows.set(rowId(row), row);
+        held[name] = [...rows.values()];
+      } else if (prior === undefined && value && typeof value === "object" && "changed" in value) {
+        held[name] = (value as { changed: unknown[] }).changed;
+      } else {
+        held[name] = value;
+      }
+    }
+  }
+  return held as ContextObject;
+}
 
 function decodeContext(block: string): ContextObject {
   const segment = parseServedInput(block)?.find((entry) => entry.kind === "context")?.body ?? block;
@@ -240,6 +287,14 @@ function fakeSession(
       steers.push(text);
       steerImages.push(images);
       if (holding) queued.push(text);
+      else
+        emit({ type: "input_read", textSha256: createHash("sha256").update(text).digest("hex") });
+    },
+    // Pi's `steerFirst`: ahead of the steers still queued, which keep their order.
+    steerFirst: async (text: string) => {
+      steers.push(text);
+      steerImages.push(undefined);
+      if (holding) queued.unshift(text);
       else
         emit({ type: "input_read", textSha256: createHash("sha256").update(text).digest("hex") });
     },
@@ -2586,6 +2641,7 @@ describe("FirstmateAgent", () => {
       "link_tasks",
       "locate_project",
       "move_task",
+      "open_work",
       "personalize",
       "record_knowledge",
       "settle_task",
@@ -2883,15 +2939,15 @@ describe("FirstmateAgent", () => {
     });
     const owner = tasks.get("owner")?.key;
     const row = () =>
-      decodeContext(agent.buildContextBlock()).task_index.find((line) =>
-        line.includes('"Ship the gauge"'),
+      decodeContext(agent.buildContextBlock()).crew.find(
+        (entry) => entry.title === "Ship the gauge",
       );
-    expect(row()).toMatch(new RegExp(`\\[waits on ${owner}\\]$`));
+    expect(row()?.graph).toBe(`waits on ${owner}`);
     tasks.close("owner", { status: "done", reason: "merged", actor: "captain" });
-    expect(row()).not.toContain("waits on");
+    expect(row()?.graph).toBeUndefined();
   });
 
-  it("lists each task's open cards under it in the context block (WI-12)", async () => {
+  it("lists each open card with its task in the context block (WI-12)", async () => {
     const { agent, session } = setup({
       seedTasks: [{ id: "t58", title: "Check if PR 58 merged", status: "idle" }],
       seedCards: [
@@ -2900,7 +2956,8 @@ describe("FirstmateAgent", () => {
             "card-t58-1",
             "t58",
             "PR 58 is merged",
-            `<h3>Merged</h3><p>${"Merged into main after CI went green. ".repeat(10)}</p><script>draw()</script>`,
+            // A moving figure's script sits inside its figure (card authoring), so this is copy, not a preview.
+            `<h3>Merged</h3><p>${"Merged into main after CI went green. ".repeat(10)}</p><figure aria-label="Checks"><svg viewBox="0 0 10 10"></svg><script>draw()</script></figure>`,
           ),
           actions: [
             { id: "close-task", label: "Close the task", variant: "primary", default: true },
@@ -2909,12 +2966,12 @@ describe("FirstmateAgent", () => {
       ],
     });
     await agent.converse("what is on screen?");
-    const lines = decodeContext(session.prompts[0] as string).task_index as string[];
-    const row = lines.findIndex((line) => line.includes("(task_id: t58)"));
-    expect(row).toBeGreaterThan(-1);
-    const card = lines[row + 1] ?? "";
+    const cards = decodeContext(session.prompts[0] as string).open_cards ?? [];
+    const row = cards.find((entry) => entry.card_id === "card-t58-1");
+    expect(row?.task_id).toBe("t58");
+    const card = row?.line ?? "";
     expect(card).toMatch(
-      /^ {4}- open card card-t58-1 \(decision, from its crewmate\) "PR 58 is merged": Merged Merged into main/,
+      /^open card card-t58-1 \(decision, from its crewmate\) "PR 58 is merged": Merged Merged into main/,
     );
     expect(card).toContain("… [actions: close-task]");
     expect(card).not.toContain("draw()");
@@ -4981,6 +5038,9 @@ describe("the Claude seat starts over when its instructions change (docs/claude-
       '- the captain said "remember the word cobalt"; you used no tool; you said "Noted: cobalt."',
     );
     expect(seat.prompts[1]).toContain("which word?");
+    // INF-1746 R1: the new conversation read no context, so this one is complete.
+    expect(seat.prompts[0]).toContain(DELIVERY_COMPLETE);
+    expect(seat.prompts[1]).toContain(DELIVERY_COMPLETE);
     seat.emitTurnEnd("Cobalt.");
     seat.resolveNextPrompt();
     await tick();
@@ -5908,11 +5968,15 @@ describe("FirstmateAgent capture", () => {
       seedTasks: [{ id: "t1", title: "Add pagination", status: "running" }],
     });
     await agent.converse("how is pagination going?");
-    // The index names the task and its id, so the model can pass task_id.
+    // The roster names the task and its id, so the model can pass task_id.
     const context = decodeContext(session.prompts[0] as string);
-    expect(context.task_index[0]).toContain("tasks (live only; task_id for tools");
-    expect(context.task_index).toContainEqual(
-      expect.stringMatching(/ {2}- SCR-\d+ \(task_id: t1\) running "Add pagination"/),
+    expect(context.crew).toContainEqual(
+      expect.objectContaining({
+        task_id: "t1",
+        key: expect.stringMatching(/^SCR-\d+$/),
+        status: "running",
+        title: "Add pagination",
+      }),
     );
     const [ask] = tasks.listOpenAsks();
     expect(ask?.text).toBe("how is pagination going?");
@@ -6433,30 +6497,58 @@ describe("FirstmateAgent capture", () => {
     });
   });
 
-  it("bounds the task index and keeps one-off rows to the counts", async () => {
+  // INF-1712: the roster lists started work; the backlog is a count, and
+  // every unstarted row is reachable by lookup, past the first page too.
+  it("counts unstarted work in the backlog, lists none of it, and pages to every row", async () => {
     const seedTasks: TaskSeed[] = [];
-    for (let index = 0; index < TASK_INDEX_PER_PROJECT + 3; index += 1) {
+    for (let index = 0; index < 15; index += 1) {
       seedTasks.push({ id: `w${index}`, title: `Work ${index}`, status: "queued" });
     }
-    const { agent, session, tasks } = setup({ seedTasks });
-    // A chatty day: closed one-offs are dropped from the index entirely, not just the rows.
+    const { agent, session, specs, tasks } = setup({ seedTasks });
+    // A chatty day: closed one-offs are in neither the roster nor the count.
     for (let index = 0; index < 5; index += 1) {
       tasks.fileQuestion({ id: `q${index}`, title: `Question ${index}`, outcome: "answered" });
     }
     await agent.converse("what is open?");
     const context = decodeContext(session.prompts[0] ?? "");
-    const taskIndex = context.task_index as string[];
-    const rows = taskIndex.filter((line) => line.startsWith("  - SCR-"));
-    expect(rows).toHaveLength(TASK_INDEX_PER_PROJECT);
-    expect(rows.every((line) => line.includes('"Work '))).toBe(true);
-    expect(taskIndex).toContainEqual(
-      expect.stringContaining(`${TASK_INDEX_PER_PROJECT + 3} open, 0 active`),
+    expect(context.crew ?? []).toEqual([]);
+    expect(context.backlog?.projects).toEqual([
+      expect.objectContaining({ project: "SCR", unstarted: 15 }),
+    ]);
+    const served = JSON.stringify(context);
+    expect(served).not.toContain("Work ");
+    expect(served).not.toContain("Question ");
+
+    const query = toolsOf(specs).get("tasks");
+    const nextOf = (text: string | undefined) =>
+      /More: read with next "([^"]+)" for the next page\./.exec(text ?? "")?.[1];
+    const first = (await query?.execute("q1", { status: "open", limit: 10 }))?.content[0]?.text;
+    expect(first).toContain("10 of 15 matching tasks");
+    const next = nextOf(first);
+    expect(next).toBeDefined();
+    // INF-1746 R6: work filed between pages sorts first in the live order;
+    // the next page reads the list as it stood, so no row repeats or drops.
+    tasks.create({ id: "late", title: "Late work", prompt: "Late work", repoId: null });
+    const second = (await query?.execute("q2", { status: "open", limit: 10, next }))?.content[0]
+      ?.text;
+    expect(second).toContain("5 of 15 matching tasks");
+    expect(nextOf(second)).toBeUndefined();
+    // Each page still parses as a task read, as a crewmate's paging reads it.
+    const read = new Set(
+      [first, second].flatMap((text) => readTaskQueryText(text ?? "").map((row) => row.task_id)),
     );
-    expect(taskIndex.join("\n")).not.toContain("closed recently");
-    expect(taskIndex.join("\n")).not.toContain("Question ");
-    expect(taskIndex).toContainEqual(
-      expect.stringContaining("and 3 more; crew_status lists the live crew"),
-    );
+    expect(read.size).toBe(15);
+    expect(second).not.toContain("Late work");
+    const again = (await query?.execute("q3", { status: "open", limit: 10 }))?.content[0]?.text;
+    expect(again).toContain("10 of 16 matching tasks");
+    // INF-1746 R6: a next whose cut is no longer kept is refused rather
+    // than read from the live order.
+    const stale = (await query?.execute("q4", { status: "open", limit: 10, next }))?.content[0]
+      ?.text;
+    expect(stale).toBe(LIST_PAGING_RESTART);
+    expect(
+      (await query?.execute("q5", { status: "open", next: nextOf(again) }))?.content[0]?.text,
+    ).toContain("6 of 16 matching tasks");
     session.emitTurnEnd("Listed.");
     session.resolveNextPrompt();
     await tick();
@@ -6506,8 +6598,8 @@ describe("the captain's sequences, served at each idle boundary (docs/sequences.
   });
 });
 
-describe("the task index nests children under their parent", () => {
-  it("lists a parent's live children beneath it, says it has no crewmate, and counts it once", async () => {
+describe("the roster places started children under their parent", () => {
+  it("names a running child's parent, counts the unstarted parent and child once each, and leaves closed work out", async () => {
     const seedTasks: TaskSeed[] = [
       { id: "parent", title: "Declutter the settings page", status: "queued" },
       { id: "plan", title: "Plan: ways to declutter", status: "running", parentId: "parent" },
@@ -6515,38 +6607,20 @@ describe("the task index nests children under their parent", () => {
       { id: "shipped", title: "An earlier part", status: "queued", parentId: "parent" },
       { id: "sibling", title: "Fix the meter", status: "running" },
     ];
-    // Enough flat rows that the parent and its children must count as ONE
-    // row for the cap to come out one short.
-    for (let index = 0; index < TASK_INDEX_PER_PROJECT - 1; index += 1) {
-      seedTasks.push({ id: `w${index}`, title: `Work ${index}`, status: "queued" });
-    }
     const { agent, session, tasks } = setup({ seedTasks });
     tasks.close("shipped", { status: "done", reason: "merged", actor: "host" });
     await agent.converse("what is open?");
-    const taskIndex = decodeContext(session.prompts[0] ?? "").task_index as string[];
-
-    const parentAt = taskIndex.findIndex((line) => line.includes('"Declutter the settings page"'));
-    expect(taskIndex[parentAt]).toMatch(
-      /^ {2}- SCR-\d+ \(task_id: parent\) open "Declutter the settings page" \[no crewmate; children: 1 running, 1 open, 1 done\]$/,
+    const context = decodeContext(session.prompts[0] ?? "");
+    const parentKey = tasks.get("parent")?.key;
+    expect(context.crew.map((entry) => entry.task_id).sort()).toEqual(["plan", "sibling"]);
+    expect(context.crew.find((entry) => entry.task_id === "plan")?.graph).toBe(
+      `under ${parentKey}`,
     );
-    const nested = taskIndex.slice(parentAt + 1, parentAt + 3);
-    expect(nested).toEqual([
-      expect.stringMatching(/^ {4}- SCR-\d+ \(task_id: plan\) [a-z]+ "Plan: ways to declutter"$/),
-      expect.stringMatching(/^ {4}- SCR-\d+ \(task_id: build\) open "Implement the direction"$/),
+    expect(context.crew.find((entry) => entry.task_id === "sibling")?.graph).toBeUndefined();
+    expect(context.backlog?.projects).toEqual([
+      expect.objectContaining({ project: "SCR", unstarted: 2 }),
     ]);
-    // A nested row does not repeat the parent it sits under, and a closed
-    // child is in the parent's counts, never a row.
-    expect(taskIndex.join("\n")).not.toContain("under SCR-");
-    expect(taskIndex.join("\n")).not.toContain("An earlier part");
-    expect(taskIndex).toContainEqual(
-      expect.stringMatching(/^ {2}- SCR-\d+ \(task_id: sibling\) [a-z]+ "Fix the meter"$/),
-    );
-
-    const topRows = taskIndex.filter((line) => /^ {2}- SCR-/.test(line));
-    expect(topRows).toHaveLength(TASK_INDEX_PER_PROJECT);
-    expect(taskIndex).toContainEqual(
-      expect.stringContaining("and 1 more; crew_status lists the live crew"),
-    );
+    expect(JSON.stringify(context)).not.toContain("An earlier part");
     session.emitTurnEnd("Listed.");
     session.resolveNextPrompt();
     await tick();
@@ -6616,11 +6690,11 @@ describe("INF-1117: scope snapshots follow changes and context lifetime", () => 
     const personalPath = scratchDir("infinitary-scope-personal-");
     repos.ensurePersonal(personalPath);
     expect((await next()).project_scopes).toBeUndefined();
-    expect(
-      decodeContext(session.prompts.at(-1) as string).repos.every(
-        (repo) => repo.scope === undefined,
-      ),
-    ).toBe(true);
+    const repoRows = decodeContext(session.prompts.at(-1) as string).repos as unknown as {
+      changed: Record<string, unknown>[];
+    };
+    expect(repoRows.changed.length).toBeGreaterThan(0);
+    expect(repoRows.changed.every((row) => row.scope === undefined)).toBe(true);
   });
 });
 
@@ -6655,7 +6729,6 @@ describe("models by intelligence bucket (only shown on change)", () => {
     });
     await agent.converse("what can you route to?");
     const first = decodeContext(session.prompts[0] as string);
-    expect(first.models_by_intelligence_bucket[0]).toContain("models by intelligence bucket");
     expect(first.models_by_intelligence_bucket).toContain(
       "premium (crew: never picked automatically):",
     );
@@ -6672,7 +6745,9 @@ describe("models by intelligence bucket (only shown on change)", () => {
 
     // Nothing changed: the next turn omits the section entirely.
     await agent.converse("and now?");
-    expect(session.prompts[1]).not.toContain("models by intelligence bucket");
+    expect(decodeContext(session.prompts[1] as string)).not.toHaveProperty(
+      "models_by_intelligence_bucket",
+    );
     session.resolveNextPrompt();
     await tick();
   });
@@ -6693,8 +6768,9 @@ describe("models by intelligence bucket (only shown on change)", () => {
 
     bucket = "medium";
     await agent.converse("and now?");
-    expect(session.prompts[1]).toContain("models by intelligence bucket");
-    expect(session.prompts[1]).toContain("medium:");
+    expect(decodeContext(session.prompts[1] as string).models_by_intelligence_bucket).toContain(
+      "medium:",
+    );
     session.resolveNextPrompt();
     await tick();
   });
@@ -7180,17 +7256,18 @@ describe("the graph tools at the Firstmate boundary (task-system P2)", () => {
       text("update_task", { task: "SCR-2", basis: "SCR-1", start_now: true }),
     ).rejects.toThrow("separate start_now");
 
-    // The context block names the graph on each row: the child nests under
-    // its parent, and the parent no crewmate holds says so.
+    // Unstarted, both are the backlog's count (INF-1712); the tasks read
+    // names the graph: the parent's open child, the child's blocker.
     const context = decodeContext(agent.buildContextBlock());
-    expect(context.task_index).toContainEqual(
-      expect.stringMatching(
-        /^ {2}- SCR-1 .*open "Write the ADR" \[no crewmate; children: 0 running, 1 open, 0 done\]$/,
-      ),
-    );
-    expect(context.task_index).toContainEqual(
-      expect.stringMatching(/^ {4}- SCR-2 .*open "Build it" \[blocked by SCR-1\]$/),
-    );
+    expect(context.backlog?.projects).toEqual([
+      expect.objectContaining({ project: "SCR", unstarted: 2 }),
+    ]);
+    expect(readTaskQueryText(await text("tasks", { key: "SCR-1" }))[0]).toMatchObject({
+      children: "1 open of 1",
+    });
+    expect(readTaskQueryText(await text("tasks", { key: "SCR-2" }))[0]).toMatchObject({
+      blocked_by: [expect.stringContaining("SCR-1")],
+    });
     expect(supervisor.crewStatus().map((entry) => entry.gate)).toEqual(
       [adr, impl].map(
         (record) => queryTasks(tasks, { key: record?.id }, () => undefined).rows[0]?.waiting,
@@ -7340,8 +7417,9 @@ describe("the idle ladder's standing line in the context block", () => {
       task_id: string;
       stalled?: string;
     }>;
+    // The time it began, which the next input does not resend (INF-1712).
     expect(crew.find((entry) => entry.task_id === "stuck")?.stalled).toBe(
-      "stalled 1h 20m · 2 wakes",
+      `idle since ${new Date(now - 80 * 60_000).toISOString()} · 2 wakes`,
     );
     expect(crew.find((entry) => entry.task_id === "fine")).not.toHaveProperty("stalled");
   });
@@ -9168,7 +9246,8 @@ describe("the captain's override, cited from his message on the task", () => {
       "A scheduled check records no override",
     );
     expect(f.tasks.get("ab12")?.delivery?.override?.words).toBe(tabLine);
-    const crew = decodeContext(f.session.prompts.at(-1) as string).crew as {
+    // The model holds the line from the input that last changed it.
+    const crew = heldContext(f.session.prompts).crew as {
       task_id: string;
       override?: string;
     }[];
@@ -9380,5 +9459,333 @@ describe("a program's bound", () => {
     await finish();
     f.agent.dispose();
     f.db.close();
+  });
+});
+
+/**
+ * INF-1712 (the captain, on INF-1699's finding 1: "a wake carries only what
+ * changed; the roster lists running and idle tasks with the backlog
+ * reachable by lookup; directions and projects go once per conversation;
+ * after a fold the first mate re-reads open asks and cards from the app").
+ */
+describe("INF-1712: a context carries what changed, and a fold reads open work back", () => {
+  const SAVED = [
+    "project_scopes",
+    "repos",
+    "crew",
+    "backlog",
+    "open_cards",
+    "directions",
+    "quota",
+    "captain_time_zone",
+    "self_source",
+    "models_by_intelligence_bucket",
+  ];
+  const turn = async (
+    { agent, session }: { agent: FirstmateAgent; session: FakeSession },
+    words: string,
+  ) => {
+    await agent.converse(words);
+    const context = decodeContext(session.prompts.at(-1) as string);
+    session.emitTurnEnd("Noted.");
+    session.resolveNextPrompt();
+    await tick();
+    return context;
+  };
+
+  it("serves the saved facts once, nothing saved on an unchanged wake, and one row per change", async () => {
+    const fixture = setup({
+      knowledge: true,
+      seedTasks: [
+        { id: "t1", title: "Steady the meter", status: "running" },
+        { id: "t2", title: "Fix the gauge", status: "idle" },
+        { id: "later", title: "Polish the dial", status: "queued" },
+      ],
+    });
+    const { agent, repos, tasks, knowledge } = fixture;
+    if (!knowledge) throw new Error("No knowledge.");
+    await repos.setup({ kind: "adopt", path: process.cwd() });
+    knowledge.changeDirection({
+      op: "add",
+      id: "squash",
+      text: "Always squash-merge.",
+      reason: "the captain said so",
+    });
+
+    const first = await turn(fixture, "what is going on?");
+    expect(first.delivery).toBe(DELIVERY_COMPLETE);
+    for (const name of ["project_scopes", "repos", "crew", "backlog", "directions", "quota"]) {
+      expect(first).toHaveProperty(name);
+    }
+    expect(first.crew.map((row) => row.task_id).sort()).toEqual(["t1", "t2"]);
+    expect(String(first.directions)).toContain("Always squash-merge.");
+
+    // An ordinary wake with nothing saved changed carries none of it.
+    const second = await turn(fixture, "and now?");
+    expect(second.delivery).toBe(DELIVERY_CHANGES);
+    for (const name of SAVED) expect(second).not.toHaveProperty(name);
+
+    // One task moved: one row. One closed: its id, removed.
+    tasks.close("t2", { status: "done", reason: "merged", actor: "captain" });
+    const third = await turn(fixture, "anything new?");
+    expect(third.crew).toEqual({ removed: ["t2"] });
+    expect(third).not.toHaveProperty("repos");
+
+    // A direction revised or retired reaches the next input whole; the set
+    // emptied clears it.
+    knowledge.changeDirection({
+      op: "retire",
+      id: "squash",
+      reason: "the captain took it back",
+    });
+    const fourth = await turn(fixture, "still squash?");
+    expect(fourth.directions === undefined && fourth.removed_sections === undefined).toBe(false);
+    expect(JSON.stringify(fourth)).not.toContain("Always squash-merge.");
+  });
+
+  it("re-serves everything after a fold, with the recovery, until an input carrying it is read", async () => {
+    const fixture = setup({
+      seedTasks: [{ id: "t1", title: "Steady the meter", status: "running" }],
+    });
+    await fixture.repos.setup({ kind: "adopt", path: process.cwd() });
+    await turn(fixture, "hello");
+    expect(await turn(fixture, "again")).not.toHaveProperty("recovery");
+
+    fixture.session.emit({ type: "context_compacted" });
+    const folded = await turn(fixture, "after the fold");
+    expect(folded.delivery).toBe(DELIVERY_COMPLETE);
+    expect(folded.recovery).toBe(FOLD_RECOVERY);
+    expect(folded.crew.map((row) => row.task_id)).toEqual(["t1"]);
+    expect(folded).toHaveProperty("repos");
+
+    const next = await turn(fixture, "and then?");
+    expect(next).not.toHaveProperty("recovery");
+    expect(next).not.toHaveProperty("repos");
+  });
+
+  it("steers the recovery into a turn a fold interrupts, and never redelivers it as the captain's words", async () => {
+    const fixture = setup({
+      seedTasks: [{ id: "t1", title: "Steady the meter", status: "running" }],
+    });
+    const { agent, session, db } = fixture;
+    await agent.converse("keep going");
+    // Pi's overflow recovery: the fold retries the turn's request.
+    session.emit({ type: "context_compacted", turn: "goes-on" });
+    await tick();
+    expect(session.steers).toHaveLength(1);
+    const steered = decodeContext(session.steers[0] as string);
+    expect(steered.delivery).toBe(DELIVERY_COMPLETE);
+    expect(steered.recovery).toBe(FOLD_RECOVERY);
+    expect(steered.crew.map((row) => row.task_id)).toEqual(["t1"]);
+    session.emitTurnEnd("Read it back.");
+    session.resolveNextPrompt();
+    await tick();
+    // Read inside the turn: the next input is changes only.
+    await agent.converse("next");
+    expect(decodeContext(session.prompts.at(-1) as string).delivery).toBe(DELIVERY_CHANGES);
+    session.emitTurnEnd("ok");
+    session.resolveNextPrompt();
+    await tick();
+
+    // A recovery steer the run never read is the app's own: nothing is
+    // parked as the captain's, and the next input carries it instead.
+    session.holdSteers();
+    await agent.converse("one more");
+    session.emit({ type: "context_compacted", turn: "goes-on" });
+    await tick();
+    session.emitTurnEnd("ok");
+    session.resolveNextPrompt();
+    await tick();
+    const parked = db
+      .prepare("SELECT COUNT(*) AS n FROM inbox WHERE delivered_at IS NULL")
+      .get() as { n: number };
+    expect(parked.n).toBe(0);
+    session.readSteers();
+    await agent.converse("after");
+    const after = decodeContext(session.prompts.at(-1) as string);
+    expect(after.recovery).toBe(FOLD_RECOVERY);
+    expect(after.delivery).toBe(DELIVERY_COMPLETE);
+    session.emitTurnEnd("ok");
+    session.resolveNextPrompt();
+    await tick();
+  });
+
+  // INF-1746 R45: a captain steer queued before the fold is a change against
+  // the old view; read after the recovery, it puts its stale facts back, so
+  // the next wake must correct them.
+  it("corrects what a captain steer queued before a fold puts back after the recovery", async () => {
+    const fixture = setup({ knowledge: true });
+    const { agent, session, knowledge } = fixture;
+    if (!knowledge) throw new Error("No knowledge.");
+    knowledge.changeDirection({
+      op: "add",
+      id: "squash",
+      text: "Always squash-merge.",
+      reason: "the captain said so",
+    });
+    await turn(fixture, "hello");
+    session.holdSteers();
+    await agent.converse("keep going");
+    knowledge.changeDirection({
+      op: "add",
+      id: "rebase",
+      text: "Rebase before review.",
+      reason: "the captain said so",
+    });
+    await agent.converse("and one more thing");
+    await tick();
+    const captain = session.steers.at(-1) as string;
+    expect(String(decodeContext(captain).directions)).toContain("Rebase before review.");
+    knowledge.changeDirection({ op: "retire", id: "rebase", reason: "the captain took it back" });
+    session.emit({ type: "context_compacted", turn: "goes-on" });
+    await tick();
+    const recovery = session.steers.at(-1) as string;
+    expect(decodeContext(recovery).recovery).toBe(FOLD_RECOVERY);
+    expect(String(decodeContext(recovery).directions)).not.toContain("Rebase before review.");
+    // The recovery is read first, then the captain's older steer.
+    session.readSteers();
+    session.emitTurnEnd("Read it back.");
+    session.resolveNextPrompt();
+    await tick();
+    const next = await turn(fixture, "anything new?");
+    expect(next.delivery).toBe(DELIVERY_CHANGES);
+    expect(next).not.toHaveProperty("recovery");
+    expect(String(next.directions)).toContain("Always squash-merge.");
+    expect(String(next.directions)).not.toContain("Rebase before review.");
+    // Once corrected, an unchanged wake carries nothing saved.
+    expect(await turn(fixture, "and now?")).not.toHaveProperty("directions");
+  });
+
+  // A fold after the turn's last request, its input read, is the turn's
+  // end: a steer then would start a model request of its own (the 48k
+  // custom model journey), so the recovery waits for the next input.
+  it("steers nothing into a turn whose fold follows its last request, and serves the recovery next", async () => {
+    const fixture = setup({
+      seedTasks: [{ id: "t1", title: "Steady the meter", status: "running" }],
+    });
+    const { agent, session } = fixture;
+    await agent.converse("noted?");
+    session.emit({ type: "context_compacted" });
+    await tick();
+    expect(session.steers).toHaveLength(0);
+    session.emitTurnEnd("Noted.");
+    session.resolveNextPrompt();
+    await tick();
+    const next = await turn(fixture, "and the rest?");
+    expect(next.recovery).toBe(FOLD_RECOVERY);
+    expect(next.delivery).toBe(DELIVERY_COMPLETE);
+  });
+
+  it("reads back every open message and card, past the context's limit and without a task", async () => {
+    const { agent, specs, supervisor, tasks } = setup({
+      seedTasks: [{ id: "t1", title: "Steady the meter", status: "running" }],
+      seedCards: [
+        {
+          ...crewCard("card-t1-1", "t1", "Which retry?", "<p>Two ways to retry.</p>"),
+          actions: [
+            { id: "fast", label: "Retry fast", default: true },
+            { id: "slow", label: "Retry slow" },
+          ],
+        },
+      ],
+    });
+    const count = OPEN_ASKS_LISTED + 2;
+    for (let index = 0; index < count; index += 1) {
+      tasks.openAsk({
+        id: `ask-${index}`,
+        text: `Message ${index}: ${"keep the meter steady ".repeat(40)}`,
+      });
+      tasks.attachAsk(`ask-${index}`, "t1", "tool:steer_crewmate");
+      tasks.closeAsk(`ask-${index}`, "closed");
+    }
+    const loose = supervisor.addFirstmateCard({
+      title: "A note of mine",
+      body: "<p>The dial is fine.</p>",
+      actions: [],
+    });
+    // The captain's reply sent its card's settings beside the words (INF-1746 R3).
+    const settings = [{ name: "speed", values: ["slow"], changed: true }];
+    supervisor.replyToCard("card-t1-1", "what about the slow one?", undefined, undefined, settings);
+    const replied = replyWithSettings("what about the slow one?", settings);
+    await agent.converse({ text: "what is open?", images: [pngImage] });
+    const read = toolsOf(specs).get("open_work");
+    // Each answer opens with when it was read, then the record.
+    const textOf = (result: Awaited<ReturnType<NonNullable<typeof read>["execute"]>> | undefined) =>
+      (result?.content[0] as { text?: string } | undefined)?.text ?? "";
+    const jsonOf = (text: string) => JSON.parse(text.slice(text.indexOf("\n") + 1));
+    const overview = jsonOf(textOf(await read?.execute("o1", {})));
+    // Messages that steered the same task end together: one chain holds them all.
+    // The message this turn is handling is listed too (INF-1746 R2), though
+    // the answer check judges it only once its turn closes.
+    expect(overview.asks).toHaveLength(2);
+    expect(overview.asks[1]).toMatchObject({
+      state: IN_TURN,
+      messages: [expect.objectContaining({ words: "what is open?" })],
+    });
+    expect(
+      (decodeContext(agent.buildContextBlock()).open_asks as { asks: unknown[] }).asks,
+    ).toContainEqual(expect.objectContaining({ ask_id: overview.asks[1].ask_id, state: IN_TURN }));
+    expect(overview.asks[0].messages).toHaveLength(count);
+    expect(overview.asks[0].messages[0].words).toMatch(/^Message 0: keep the meter steady/);
+    expect(overview.asks[0].messages[0].whole).toBe("ask ask-0");
+    expect(overview.asks[0].work).toEqual([
+      expect.objectContaining({ task_id: "t1", status: "active" }),
+    ]);
+    const cards = overview.cards as Array<Record<string, unknown>>;
+    expect(cards.map((card) => card.card_id).sort()).toEqual(["card-t1-1", loose].sort());
+    expect(cards.find((card) => card.card_id === "card-t1-1")).toMatchObject({
+      task_id: "t1",
+      actions: [
+        { id: "fast", label: "Retry fast", default: true },
+        { id: "slow", label: "Retry slow" },
+      ],
+      waits_on: "its author's answer",
+      unanswered: replied,
+    });
+
+    const whole = jsonOf(textOf(await read?.execute("o2", { ask: "ask-3" })));
+    expect(
+      (whole.messages as Array<{ ask_id: string; words: string }>).find(
+        (message) => message.ask_id === "ask-3",
+      )?.words,
+    ).toBe(`Message 3: ${"keep the meter steady ".repeat(40)}`);
+    const card = jsonOf(textOf(await read?.execute("o3", { card: "card-t1-1" })));
+    expect(card).toMatchObject({ state: "open", body: "<p>Two ways to retry.</p>" });
+    expect(card.messages).toEqual([expect.objectContaining({ who: "captain", text: replied })]);
+    supervisor.close("card-t1-1");
+    const closed = jsonOf(textOf(await read?.execute("o4", { card: "card-t1-1" })));
+    expect(closed).toMatchObject({ state: "closed", ending: { how: "dismissed" } });
+    expect(closed.messages).toEqual([expect.objectContaining({ who: "captain", text: replied })]);
+
+    // INF-1746 R4: a message's picture comes back as the picture itself.
+    const asked = await read?.execute("o5", { ask: overview.asks[1].ask_id });
+    expect(jsonOf(textOf(asked)).messages[0].pictures).toEqual([
+      expect.objectContaining({ copy: "attached, picture 1" }),
+    ]);
+    expect(asked?.content[1]).toMatchObject({
+      type: "image",
+      mimeType: pngImage.mimeType,
+      data: pngImage.data,
+    });
+
+    // INF-1746 R5: a read past one part comes in parts of one version, and
+    // a part of a version that changed since is refused, never stitched.
+    const words = "steady ".repeat(20_000);
+    tasks.openAsk({ id: "ask-long", text: words });
+    const parts: string[] = [];
+    let next: string | undefined;
+    do {
+      const text = textOf(await read?.execute("p", next ? { next } : { ask: "ask-long" }));
+      next = text.match(/with next "([^"]+)"/)?.[1];
+      parts.push(text.slice(text.indexOf("\n", text.indexOf("part ")) + 1));
+    } while (next);
+    expect(parts.length).toBeGreaterThan(1);
+    expect(JSON.parse(parts.join("")).messages[0].words).toBe(words);
+    const first = textOf(await read?.execute("q", { ask: "ask-long" }));
+    tasks.attachAsk("ask-long", "t1", "tool:steer_crewmate");
+    const stale = textOf(
+      await read?.execute("r", { next: first.match(/with next "([^"]+)"/)?.[1] ?? "" }),
+    );
+    expect(stale).toContain("changed since the earlier part was read");
   });
 });

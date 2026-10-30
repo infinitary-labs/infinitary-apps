@@ -150,9 +150,12 @@ export function seatEventsFromPiEvent(
     return [{ type: "request_started" }, ...fmEventsFromPiEvent(event, taskId)];
   }
   const events: SessionEvent[] = fmEventsFromPiEvent(event, taskId, provider);
-  const compact = event as { aborted?: boolean; errorMessage?: string };
+  const compact = event as { aborted?: boolean; errorMessage?: string; willRetry?: boolean };
   if (type === "compaction_end" && !compact.aborted && !compact.errorMessage) {
-    events.push({ type: "context_compacted" });
+    events.push({
+      type: "context_compacted",
+      ...(compact.willRetry === true ? { turn: "goes-on" as const } : {}),
+    });
   }
   if (type !== "turn_end") return events;
   const text = closingText((event as { message?: unknown }).message);
@@ -251,13 +254,23 @@ export function piSessionEvents(
   provider?: () => string | undefined,
 ): (event: unknown) => SessionEvent[] {
   let compactionEnded = false;
+  let running = false;
   return (event) => {
     const type = (event as { type?: unknown } | null)?.type;
+    if (type === "agent_start") running = true;
+    if (type === "agent_end") running = false;
     if (type === "compaction_start") compactionEnded = false;
     if (type === "compaction_end") {
       if (compactionEnded) return [];
       compactionEnded = true;
     }
-    return seatEventsFromPiEvent(event, taskId, provider?.());
+    const events = seatEventsFromPiEvent(event, taskId, provider?.());
+    if (!running) return events;
+    // A fold inside the agent's run comes before its next model request
+    // (Pi's threshold fold before the next response), so the turn goes on.
+    // A fold after the run's last request comes after agent_end.
+    return events.map((seat) =>
+      seat.type === "context_compacted" ? { ...seat, turn: "goes-on" as const } : seat,
+    );
   };
 }

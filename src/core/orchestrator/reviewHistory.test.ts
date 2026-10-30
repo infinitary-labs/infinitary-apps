@@ -173,12 +173,14 @@ describe("the review history the app writes (INF-993)", () => {
     );
   });
 
-  it("says when an approved gap no longer covers the latest run, as INF-812's reworded reason did", () => {
+  // INF-1824 (the captain's answer to its question 6): an accepted gap is
+  // kept by the check's id, so INF-812's reworded reason no longer ends it.
+  it("says an approved gap still covers the latest run after its reason is reworded, as INF-812's was", () => {
     const { tasks, builder } = inf812(
       "The only model sign-ins here are the captain's own accounts.",
     );
     expect(renderReviewHistory(reviewHistory(tasks, builder))).toContain(
-      'is approved ("Proceed without live proof"); it does not cover the latest run, whose scenario or untested observation reads differently.',
+      'is approved ("Proceed without live proof"); it covers the latest run.',
     );
   });
 

@@ -113,11 +113,12 @@ import {
   standingOverrideWords,
 } from "@shared/holds";
 import type { IntegrationApprovalChoice } from "@shared/integrations";
-import type { ValidationForgeWrite } from "@shared/liveValidation";
+import type { ValidationForgeWrite, ValidationPermission } from "@shared/liveValidation";
 import {
   acceptedValidation,
   keptValidationInputSchema,
   LIVE_VALIDATION_WORDS,
+  VALIDATION_GAPS_FIELD,
   validationAssignment,
   validationPair,
   validationRevision,
@@ -10092,21 +10093,42 @@ export class CrewSupervisor {
             throw new Error(
               "The validation approval must be an ordinary decision action, not a merge or another effect.",
             );
-          checkValidationTransition(
-            current.delivery?.liveValidation,
-            {
-              kind: "decision",
-              request: binding.request,
-              card: input.id ?? "pending",
-              action: binding.action,
-            },
-            {
-              head,
-              deviceId: current.deviceId ?? null,
-              at: this.now(),
-              decision: { offer: "pending" },
-            },
-          );
+          const requests = validationRequestsOf(binding);
+          if (requests.length > 1) {
+            // INF-1824: the checklist's ticks are the captain's own, so no
+            // author script or field may share the frame with them.
+            const permissions = current.delivery?.liveValidation?.permissions ?? [];
+            if (
+              new Set(requests).size !== requests.length ||
+              requests.some(
+                (id) => permissions.find((item) => item.request.id === id)?.request.kind !== "gap",
+              )
+            )
+              throw new Error(
+                "A checklist names distinct gap requests of one version; ask about a check approval or an effect on its own card.",
+              );
+            if (/<script\b/i.test(input.body) || input.body.includes(VALIDATION_GAPS_FIELD))
+              throw new Error(
+                "A gap checklist card carries no script and no field of its own; the app draws the checklist.",
+              );
+          }
+          let state = current.delivery?.liveValidation;
+          for (const request of requests)
+            state = checkValidationTransition(
+              state,
+              {
+                kind: "decision",
+                request,
+                card: input.id ?? "pending",
+                action: binding.action,
+              },
+              {
+                head,
+                deviceId: current.deviceId ?? null,
+                at: this.now(),
+                decision: { offer: "pending" },
+              },
+            );
         }
         if (carefulMerge) {
           const proof = current.delivery?.liveValidation?.runs.at(-1);
@@ -10312,7 +10334,7 @@ export class CrewSupervisor {
       (input.validationDecision
         ? this.validationRequestStrip(
             task.id,
-            input.validationDecision.request,
+            validationRequestsOf(input.validationDecision),
             shown.actions.find((action) => action.id === input.validationDecision?.action)?.label ??
               input.validationDecision.action,
           )
@@ -10359,22 +10381,23 @@ export class CrewSupervisor {
       if (input.validationDecision) {
         const offered = this.cards.get(id);
         if (!offered?.offerId) throw new Error("The validation decision has no kept offer.");
-        this.options.tasks.recordLiveValidation(
-          task.id,
-          {
-            kind: "decision",
-            request: input.validationDecision.request,
-            card: id,
-            action: input.validationDecision.action,
-          },
-          {
-            head: current.delivery?.validationHead ?? "",
-            decision: {
-              offer: offered.offerId,
-              ...(offered.lifecycleId ? { lifecycle: offered.lifecycleId } : {}),
+        for (const request of validationRequestsOf(input.validationDecision))
+          this.options.tasks.recordLiveValidation(
+            task.id,
+            {
+              kind: "decision",
+              request,
+              card: id,
+              action: input.validationDecision.action,
             },
-          },
-        );
+            {
+              head: current.delivery?.validationHead ?? "",
+              decision: {
+                offer: offered.offerId,
+                ...(offered.lifecycleId ? { lifecycle: offered.lifecycleId } : {}),
+              },
+            },
+          );
       }
       // A completion card is up: an earlier refusal no longer stands.
       if (card.actions.some((action) => settleEffectOf(action))) {
@@ -12546,28 +12569,72 @@ export class CrewSupervisor {
     return `Filed follow-up ${record.key} "${title}", discovered from your task${input.blocksMe ? " and blocking it: your task cannot land until this one closes" : " and not holding it up"}. The first mate hears about it with your report and decides when it runs; keep going on your own task.`;
   }
 
-  private validationRequestStrip(taskId: string, requestId: string, approvalLabel: string): string {
-    const permission = this.options.tasks
-      .get(taskId)
-      ?.delivery?.liveValidation?.permissions.find((item) => item.request.id === requestId);
-    if (!permission) throw new Error("That validation request is not on this task.");
+  private validationRequestStrip(
+    taskId: string,
+    requestIds: string[],
+    approvalLabel: string,
+  ): string {
+    const permissions = requestIds.map((requestId) => {
+      const permission = this.options.tasks
+        .get(taskId)
+        ?.delivery?.liveValidation?.permissions.find((item) => item.request.id === requestId);
+      if (!permission) throw new Error("That validation request is not on this task.");
+      return permission;
+    });
+    const permission = permissions[0] as ValidationPermission;
     const request = permission.request;
-    if (request.kind === "gap") {
+    const lasting =
+      "This version and every later one, until that check runs and fails or leaves the list of checks. It records no live pass and merges nothing.";
+    const gapDetails = (gap: ValidationPermission) => {
+      if (gap.request.kind !== "gap") return "";
       const list = (items: string[]) =>
         `<ul>${items.map((item) => `<li>${escapeCardText(item)}</li>`).join("")}</ul>`;
+      return [
+        "<details><summary>The recorded gap</summary><dl>",
+        `<dt>Version</dt><dd class="inf-mono">${escapeCardText(gap.request.head.slice(0, 7))}</dd>`,
+        `<dt>Missing</dt><dd>${escapeCardText(gap.request.missingCapability)}</dd>`,
+        `<dt>Why it cannot run</dt><dd>${escapeCardText(gap.request.reason)}</dd>`,
+        `<dt>Tried instead</dt><dd>${list(gap.request.alternatives.map((item) => `${item.attempted}: ${item.result}`))}</dd>`,
+        `<dt>Ways to close it</dt><dd>${list(gap.request.remedies)}</dd>`,
+        "</dl></details>",
+      ].join("");
+    };
+    if (permissions.length > 1) {
+      // INF-1824: one checklist for a version's gaps. Rows start unticked;
+      // the click accepts exactly the ticked rows and keeps the rest held.
+      return [
+        '<section class="inf-call inf-call-gap" data-inf-call="gap">',
+        `<fieldset data-inf-options-only><legend>${escapeCardText(approvalLabel)} lets the ticked checks go ahead without live proof and keeps the rest held</legend>`,
+        '<label><input type="checkbox" data-inf-check-all> Check all</label>',
+        ...permissions.map(
+          (gap) =>
+            `<div><label><input type="checkbox" name="${VALIDATION_GAPS_FIELD}" value="${escapeCardText(gap.request.id)}"> ${escapeCardText(gap.scenario.action)}</label>${gapDetails(gap)}</div>`,
+        ),
+        "</fieldset>",
+        `<p class="inf-muted">${lasting}</p>`,
+        `<script>(function(){var all=document.querySelector("[data-inf-check-all]");var rows=Array.prototype.slice.call(document.querySelectorAll('input[name="${VALIDATION_GAPS_FIELD}"]'));all.addEventListener("change",function(){var on=all.checked;rows.forEach(function(row){row.checked=on;});rows.forEach(function(row){row.dispatchEvent(new Event("change",{bubbles:true}));});});rows.forEach(function(row){row.addEventListener("change",function(){all.checked=rows.every(function(r){return r.checked;});});});})();</script>`,
+        "</section>",
+      ].join("");
+    }
+    if (request.kind === "gap") {
       return [
         '<section class="inf-call inf-call-gap" data-inf-call="gap">',
         `<div class="inf-call-k">${escapeCardText(approvalLabel)} lets this go ahead without live proof of</div>`,
         `<div class="inf-call-line" data-inf-call-line>${escapeCardText(permission.scenario.action)}</div>`,
-        '<p class="inf-muted">This version and later ones while this gap stays the same. It records no live pass and merges nothing.</p>',
-        "<details><summary>The recorded gap</summary><dl>",
-        `<dt>Version</dt><dd class="inf-mono">${escapeCardText(request.head.slice(0, 7))}</dd>`,
-        `<dt>Missing</dt><dd>${escapeCardText(request.missingCapability)}</dd>`,
-        `<dt>Why it cannot run</dt><dd>${escapeCardText(request.reason)}</dd>`,
-        `<dt>Tried instead</dt><dd>${list(request.alternatives.map((item) => `${item.attempted}: ${item.result}`))}</dd>`,
-        `<dt>Ways to close it</dt><dd>${list(request.remedies)}</dd>`,
-        "</dl></details></section>",
+        `<p class="inf-muted">${lasting}</p>`,
+        gapDetails(permission),
+        "</section>",
       ].join("");
+    }
+    if (request.kind === "check") {
+      // INF-1824: the approval is kept on the check by its id, for the
+      // resources and cost per run the check declares.
+      const entries: [string, string][] = [
+        ["Check", permission.scenario.action],
+        ["What it uses", permission.scenario.resources ?? ""],
+        ["Cost of one run", permission.scenario.cost ?? ""],
+      ];
+      return `<section class="inf-panel"><h3>Check approval</h3><dl>${entries.map(([name, value]) => `<dt>${escapeCardText(name)}</dt><dd>${escapeCardText(value)}</dd>`).join("")}</dl><p>${escapeCardText(approvalLabel)} covers every later run of this check in this task, after fixes and on later versions, while each run uses only these and costs no more than this. It grants no merge permission.</p></section>`;
     }
     const entries: [string, string][] = [
       ["Version", request.head.slice(0, 7)],
@@ -14223,6 +14290,7 @@ export class CrewSupervisor {
             action: actionId,
             label: chosen.label,
             head: associated?.delivery?.validationHead ?? "",
+            ticked: answers?.find((answer) => answer.name === VALIDATION_GAPS_FIELD)?.values ?? [],
           });
         carryOffer?.();
         if (card.taskId && associated?.delivery?.captainAction) {
@@ -15625,6 +15693,11 @@ function enrichEvent(task: TaskRuntime, event: FmEvent): FmEvent {
  * names answers and does not parse, or weighs more than the value bound,
  * refuses the click rather than dropping the captain's picks unsaid.
  */
+/** The validation requests one card binds: its request, then any further gaps of its checklist. */
+function validationRequestsOf(binding: { request: string; gaps?: string[] }): string[] {
+  return [binding.request, ...(binding.gaps ?? [])];
+}
+
 function chromeAnswers(value: unknown): CardAnswer[] | undefined {
   if (typeof value !== "object" || value === null || !("answers" in value)) return undefined;
   const parsed = cardChromeValueSchema.safeParse(value);

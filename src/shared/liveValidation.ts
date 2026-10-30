@@ -8,7 +8,7 @@ const revision = z.number().int().nonnegative();
 export const validationVerdictSchema = z
   .enum(["go", "no-go", "inconclusive", "no-surface"])
   .describe(
-    "go: required live proof; no-go: observed failure; inconclusive: missing proof/coverage; no-surface: nothing to run, not missing access.",
+    "go: live proof; no-go: a failure; inconclusive: missing proof; no-surface: nothing to run.",
   );
 export const validationScenarioSchema = z.object({
   id,
@@ -21,6 +21,13 @@ export const validationScenarioSchema = z.object({
   signal: words,
   /** The actual product, service or device the claim requires. */
   boundary: words,
+  /**
+   * INF-1824: what a run uses or reaches that needs the captain's consent, in
+   * the check's own words. Declared, a run of this check needs its approval.
+   */
+  resources: words.optional(),
+  /** What one run of this check costs; an approval covers runs that fit it. */
+  cost: words.optional(),
 });
 export type ValidationScenario = z.infer<typeof validationScenarioSchema>;
 export const validationObservationSchema = z.object({
@@ -151,9 +158,21 @@ export const validationGapSchema = z.object({
     .max(20),
   remedies: z.array(words).min(1).max(20),
 });
+/**
+ * INF-1824: one approval of a check's declared resources and cost per run,
+ * kept by the check's id for every later run and version of the task while
+ * the check declares the same resources and cost.
+ */
+export const validationCheckSchema = z.object({
+  kind: z.literal("check"),
+  id,
+  head,
+  scenario: id,
+});
 export const validationRequestSchema = z.discriminatedUnion("kind", [
   validationEffectSchema,
   validationGapSchema,
+  validationCheckSchema,
 ]);
 export type ValidationRequest = z.infer<typeof validationRequestSchema>;
 export const validationPlanSchema = z.object({
@@ -245,6 +264,8 @@ export const liveValidationSchema = z.object({
   permissions: z.array(validationPermissionSchema),
 });
 export type LiveValidation = z.infer<typeof liveValidationSchema>;
+/** INF-1824: the host-drawn checklist's field, whose ticked values are the gaps the captain accepts. */
+export const VALIDATION_GAPS_FIELD = "inf-accepted-gaps";
 export const LIVE_VALIDATION_WORDS = {
   demonstrated: "Demonstrated for this version",
   noSurface: "No running surface",
@@ -285,20 +306,44 @@ export function sameScenario(a: ValidationScenario, b: ValidationScenario): bool
 export function demonstrated(observation: ValidationObservation): boolean {
   return observation.result === "pass" && observation.live && observation.unproven.length === 0;
 }
-export function gapPermission(
+/**
+ * INF-1824: an accepted gap is kept by the check's id through rewording,
+ * plan changes and later versions; it ends only when that check runs and
+ * fails or leaves the list of checks (`recordValidation`).
+ */
+export function acceptedGap(
   state: LiveValidation,
-  scenario: ValidationScenario,
-  observation: ValidationObservation,
+  scenario: string,
 ): ValidationPermission | undefined {
   return state.permissions.find(
     (permission) =>
       permission.state === "approved" &&
       permission.request.kind === "gap" &&
+      permission.request.scenario === scenario,
+  );
+}
+export function gapPermission(
+  state: LiveValidation,
+  scenario: ValidationScenario,
+  observation: ValidationObservation,
+): ValidationPermission | undefined {
+  return observation.result === "untested" ? acceptedGap(state, scenario.id) : undefined;
+}
+/** The same resources and cost per run, which is all a check approval covers. */
+export function sameCheckReach(a: ValidationScenario, b: ValidationScenario): boolean {
+  return a.resources === b.resources && a.cost === b.cost;
+}
+/** INF-1824: the approval kept on a check, current while it declares the same reach and cost. */
+export function checkApproval(
+  state: LiveValidation,
+  scenario: ValidationScenario,
+): ValidationPermission | undefined {
+  return state.permissions.find(
+    (permission) =>
+      permission.state === "approved" &&
+      permission.request.kind === "check" &&
       permission.request.scenario === scenario.id &&
-      sameScenario(permission.scenario, scenario) &&
-      observation.result === "untested" &&
-      permission.request.missingCapability === observation.missingCapability &&
-      permission.request.reason === observation.reason,
+      sameCheckReach(permission.scenario, scenario),
   );
 }
 /** Closed contradictions, not a judgment of whether the evidence proves the claim. */

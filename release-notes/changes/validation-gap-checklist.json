@@ -1,0 +1,18 @@
+{
+  "entries": [
+    {
+      "id": "validation-gap-checklist",
+      "kind": "improvement",
+      "area": "cards",
+      "title": "One approval per check, and one checklist for missing proof",
+      "body": "When several checks of a Careful task cannot run, they arrive as rows on one card. Tick the ones that may go ahead without live proof, or use Check all; the rest stay held. An accepted gap stays accepted for later versions of the task until that check runs and fails or is dropped. When a check needs something of yours that costs or reaches outside the task, you approve it once, and that approval covers its later runs, including after fixes, while each run stays within what the card named.",
+      "picture": {
+        "dark": "validation-gap-checklist-dark.webp",
+        "light": "validation-gap-checklist-light.webp",
+        "alt": "A decision lists four checks that cannot run as checkbox rows under Check all, with two ticked, above Accept the checked gaps and Keep all held."
+      },
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

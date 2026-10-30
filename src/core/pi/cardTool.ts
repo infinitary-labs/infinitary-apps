@@ -194,7 +194,7 @@ export type EmittedCard = {
    */
   browserHandoff?: { site: string; reason: string; after: string; savedFailed?: true };
   /** Bind the shown ordinary action to a recorded validation request. */
-  validationDecision?: { request: string; action: string };
+  validationDecision?: { request: string; action: string; gaps?: string[] };
   /**
    * The crewmate's risk assessment of its change (`risk`, only on its
    * completion decision; docs/card-authoring.md "The risk chart"): the host
@@ -387,7 +387,7 @@ type EmitCardParams = Omit<Static<typeof crewmateCardParams>, "actions" | "risk"
   review_task_id?: string;
   standalone?: boolean;
   browser_button?: string;
-  validation_request?: { request: string; action: string };
+  validation_request?: { request: string; action: string; gaps?: string[] };
   browser_handoff?: { site: string; reason: string; after: string; saved_failed?: boolean };
   browser_page?: string;
 };
@@ -444,10 +444,18 @@ const crewmateCardParams = Type.Object({
   continues: Type.Optional(Type.Boolean({ description: CARD_PARAMS.continues })),
   validation_request: Type.Optional(
     Type.Object(
-      { request: Type.String(), action: Type.String() },
+      {
+        request: Type.String(),
+        action: Type.String(),
+        gaps: Type.Optional(
+          Type.Array(Type.String(), {
+            description: "Other gaps of this version, on one checklist.",
+          }),
+        ),
+      },
       {
         description:
-          "Bind an approval action to a recorded validation request. Code clearance precedes display. Only the captain's exact chrome choice grants this one effect or gap, never a merge.",
+          "Bind an approval action to a recorded validation request; only the captain's click grants it, never a merge.",
       },
     ),
   ),

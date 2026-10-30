@@ -113,14 +113,14 @@ const review = (
       },
     },
   );
-function askGap(state: LiveValidation) {
+function askGap(state: LiveValidation, id = "no-device") {
   return recordValidation(
     state,
     {
       kind: "request",
       request: {
         kind: "gap",
-        id: "no-device",
+        id,
         head,
         scenario: scenario.id,
         missingCapability: "Actual target device",
@@ -193,48 +193,69 @@ describe("Careful's accepted live-validation contract", () => {
     expect(run(newEvidence, head, false, "run-2").runs).toHaveLength(2);
   });
 
-  it("keeps captain permission separate and carries only the identical required gap across versions and restart", () => {
+  // INF-1824 (the captain's answer to its question 5): an accepted gap ends
+  // only when that check runs and fails, or leaves the list of checks.
+  it("keeps captain permission separate and carries an accepted gap through rewording, later versions and restart", () => {
     const missing = review(askGap(run(plan(), head, true)));
     expect(acceptedValidation(missing, head).ready).toBe(false);
     const permitted = approve(missing, "no-device");
-    const reordered = recordValidation(
-      permitted,
-      {
-        kind: "plan",
-        previousRevision: permitted.scenarioRevision,
-        reason: "The same scenario facts arrive with different JSON key order.",
-        scenarios: [Object.fromEntries(Object.entries(scenario).reverse()) as ValidationScenario],
-      },
-      ctx,
-    );
-    expect(reordered.permissions[0]?.state).toBe("approved");
     expect(acceptedValidation(permitted, head)).toMatchObject({
       ready: true,
       label: "Proceeding without live proof",
     });
+    expect(() => askGap(permitted, "no-device-again")).toThrow("stays accepted");
     const restarted = JSON.parse(JSON.stringify(permitted)) as LiveValidation;
     const next = review(run(restarted, later, true, "run-2"), later);
     expect(acceptedValidation(next, later).label).toBe("Proceeding without live proof");
     expect(next.runs.at(-1)?.observations[0]?.result).toBe("untested");
-    const reached = run(next, later, false, "device-returned");
-    expect(reached.permissions[0]?.state).toBe("expired");
-    const missingAgain = review(run(reached, later, true, "device-gone-again"), later);
-    expect(acceptedValidation(missingAgain, later).ready).toBe(false);
-    const changed = recordValidation(
+    const reworded = recordValidation(
       next,
       {
         kind: "plan",
-        previousRevision: 1,
-        reason: "The captain now asks for another input boundary.",
-        scenarios: [{ ...scenario, boundary: "An actual iPhone" }],
+        previousRevision: next.scenarioRevision,
+        reason: "The same check, described more briefly.",
+        scenarios: [{ ...scenario, boundary: "The actual device keyboard" }],
       },
       { ...ctx, head: later },
     );
-    const changedRun = review(run(changed, later, true, "run-3"), later);
-    expect(acceptedValidation(changedRun, later).ready).toBe(false);
+    expect(reworded.permissions[0]?.state).toBe("approved");
+    const rewordedRun = review(run(reworded, later, true, "run-3"), later);
+    expect(acceptedValidation(rewordedRun, later).ready).toBe(true);
     const newReason = structuredClone(next);
     newReason.runs.at(-1)!.observations[0]!.reason = "The connected device refused access.";
-    expect(acceptedValidation(newReason, later).ready).toBe(false);
+    expect(acceptedValidation(newReason, later).ready).toBe(true);
+    const reached = review(run(next, later, false, "device-returned"), later);
+    expect(reached.permissions[0]?.state).toBe("approved");
+    expect(acceptedValidation(reached, later).label).toBe("Demonstrated for this version");
+    const failed = structuredClone(next);
+    const {
+      revision: _r,
+      at: _a,
+      deviceId: _d,
+      ...input
+    } = run(next, later, false, "x").runs.at(-1)!;
+    const failedRun = recordValidation(
+      failed,
+      {
+        ...input,
+        id: "device-failed",
+        verdict: "no-go",
+        observations: [{ ...input.observations[0]!, result: "fail", live: true }],
+      },
+      { ...ctx, head: later },
+    );
+    expect(failedRun.permissions[0]?.state).toBe("expired");
+    const removed = recordValidation(
+      next,
+      {
+        kind: "plan",
+        previousRevision: next.scenarioRevision,
+        reason: "The captain dropped this check.",
+        scenarios: [{ ...scenario, id: "another-check" }],
+      },
+      { ...ctx, head: later },
+    );
+    expect(removed.permissions[0]?.state).toBe("expired");
   });
 
   it("refuses fabricated go, missing observations and contradictory no-surface results", () => {
@@ -443,5 +464,302 @@ describe("Careful's accepted live-validation contract", () => {
         at: 2,
       }).permissions[0]?.state,
     ).toBe("requested");
+  });
+});
+
+// INF-1824's accepted plan, built from the three records that drew it: one
+// approval per check, a version's gaps on one checklist, accepted gaps that last.
+describe("INF-1824: one approval per check and one card for a version's gaps", () => {
+  const third = "d".repeat(40);
+  const claudeCheck: ValidationScenario = {
+    id: "claude-real-turn",
+    source: "Prove a real Claude crewmate follows the new instruction.",
+    importance: "required",
+    action: "Run one crewmate turn on a real Claude model through the app.",
+    expected: "The crewmate records one typed request instead of a prose ask.",
+    adverse: "A scripted model would prove only the host's behavior.",
+    environment: "Hermetic app home with the captain's own Claude sign-in.",
+    signal: "The task record holds the typed request.",
+    boundary: "A real Claude model",
+    resources: "Your Claude sign-in, through the app, for real model turns",
+    cost: "One crewmate turn of your Claude plan's allowance, about five minutes",
+  };
+  const codexCheck: ValidationScenario = {
+    ...claudeCheck,
+    id: "codex-real-turn",
+    action: "Run one crewmate turn on a real Codex model through the app.",
+    boundary: "A real Codex model",
+    resources: "Your Codex sign-in, through the app, for real model turns",
+    cost: "One crewmate turn of your Codex plan's allowance, about five minutes",
+  };
+  const planned = (scenarios: ValidationScenario[], state?: LiveValidation, at = head) =>
+    recordValidation(
+      state,
+      {
+        kind: "plan",
+        previousRevision: state?.scenarioRevision ?? 0,
+        reason: "The captain asked for proof on real models.",
+        scenarios,
+      },
+      { ...ctx, head: at },
+    );
+  const observed = (state: LiveValidation, at: string, id: string, untested: string[] = []) =>
+    recordValidation(
+      state,
+      {
+        kind: "run",
+        id,
+        head: at,
+        scenarioRevision: state.scenarioRevision,
+        completion: "complete",
+        verdict: untested.length ? "inconclusive" : "go",
+        reason: "Ran each check that could run.",
+        observations: state.scenarios.map((check) =>
+          untested.includes(check.id)
+            ? {
+                scenario: check.id,
+                result: "untested" as const,
+                live: false,
+                actual: "It could not run here.",
+                evidence: [],
+                standIns: [],
+                unproven: [check.expected],
+                attempted: ["A hermetic stand-in, which cannot reach the boundary."],
+                missingCapability: check.boundary,
+                reason: `${check.boundary} is not reachable from this computer.`,
+              }
+            : {
+                scenario: check.id,
+                result: "pass" as const,
+                live: true,
+                actual: check.expected,
+                evidence: ["transcript"],
+                standIns: [],
+                unproven: [],
+                attempted: [],
+              },
+        ),
+        evidence: [
+          {
+            id: "transcript",
+            description: "The run's transcript",
+            file: "transcript.txt",
+            digest: "e".repeat(64),
+            bytes: 2048,
+          },
+        ],
+      },
+      { ...ctx, head: at },
+    );
+  const ask = (state: LiveValidation, request: KeptValidationInput, at = head) =>
+    recordValidation(state, request, { ...ctx, head: at });
+  function decide(
+    state: LiveValidation,
+    card: string,
+    requests: string[],
+    at = head,
+    ticked?: string[],
+  ) {
+    let bound = state;
+    for (const request of requests)
+      bound = recordValidation(
+        bound,
+        { kind: "decision", request, card, action: "accept" },
+        { ...ctx, head: at, decision: { offer: `${card}-offer` } },
+      );
+    return decideValidation(bound, {
+      card,
+      offer: `${card}-offer`,
+      action: "accept",
+      label: "Accept",
+      head: at,
+      at: 5,
+      ...(ticked ? { ticked } : {}),
+    });
+  }
+  const answeredCards = (state: LiveValidation) =>
+    new Set(state.permissions.flatMap((item) => (item.answer ? [item.decision?.card] : []))).size;
+  const gapRequest = (state: LiveValidation, scenarioId: string, id: string, at = head) => {
+    const observation = state.runs
+      .at(-1)!
+      .observations.find((item) => item.scenario === scenarioId)!;
+    return {
+      kind: "request" as const,
+      request: {
+        kind: "gap" as const,
+        id,
+        head: at,
+        scenario: scenarioId,
+        missingCapability: observation.missingCapability!,
+        reason: observation.reason!,
+        alternatives: [
+          { attempted: "A hermetic stand-in", result: "It cannot reach the boundary." },
+        ],
+        remedies: ["Run it where the boundary is reachable."],
+      },
+    };
+  };
+
+  it("INF-1723: script fixes and reruns ride the first approval, so its checks take two approvals, not eight", () => {
+    let state = planned([claudeCheck]);
+    expect(() => observed(state, head, "before-approval")).toThrow("needs your approval");
+    state = decide(
+      ask(state, {
+        kind: "request",
+        request: { kind: "check", id: "claude-run", head, scenario: claudeCheck.id },
+      }),
+      "approve-claude-run",
+      ["claude-run"],
+    );
+    // Script fixes, a rerun and a model the captain picked: no new ask.
+    state = observed(state, head, "first-run");
+    state = observed(state, later, "after-script-fix");
+    state = observed(state, later, "run-once-more");
+    state = observed(
+      planned([{ ...claudeCheck, action: "Run one turn on Sonnet, as you picked." }], state, third),
+      third,
+      "sonnet-run",
+    );
+    expect(() =>
+      ask(
+        state,
+        {
+          kind: "request",
+          request: { kind: "check", id: "claude-again", head: third, scenario: claudeCheck.id },
+        },
+        third,
+      ),
+    ).toThrow("without asking again");
+    // A check that declares another sign-in asks once.
+    state = planned([claudeCheck, codexCheck], state, third);
+    expect(() => observed(state, third, "codex-unapproved")).toThrow(codexCheck.id);
+    state = decide(
+      ask(
+        state,
+        {
+          kind: "request",
+          request: { kind: "check", id: "codex-run", head: third, scenario: codexCheck.id },
+        },
+        third,
+      ),
+      "codex-run-consent",
+      ["codex-run"],
+      third,
+    );
+    state = observed(state, third, "both-models");
+    expect(answeredCards(state)).toBe(2);
+    // Declaring a run that costs more ends the approval until a new answer.
+    const costlier = planned(
+      [{ ...claudeCheck, cost: "Ten crewmate turns of your Claude plan's allowance" }, codexCheck],
+      state,
+      third,
+    );
+    expect(costlier.permissions.find((item) => item.request.id === "claude-run")?.state).toBe(
+      "expired",
+    );
+    expect(() => observed(costlier, third, "costlier")).toThrow(claudeCheck.id);
+  });
+
+  it("FIRS-3: four gaps of one version share one checklist and the next round's gap takes a second card", () => {
+    const checks = [
+      "outside-prs-quick",
+      "full-ci-label",
+      "other-labels-inert",
+      "main-newest-only",
+    ].map((id) => ({ ...scenario, id, action: `Prove ${id} on the real repository's workflows.` }));
+    let state = observed(
+      planned(checks),
+      head,
+      "r1",
+      checks.map((check) => check.id),
+    );
+    for (const check of checks) state = ask(state, gapRequest(state, check.id, `gap-${check.id}`));
+    const ids = checks.map((check) => `gap-${check.id}`);
+    // The captain unticks one row: it stays held.
+    const partial = decide(state, "gaps-r1", ids, head, ids.slice(0, 3));
+    expect(partial.permissions.map((item) => item.state)).toEqual([
+      "approved",
+      "approved",
+      "approved",
+      "declined",
+    ]);
+    state = decide(state, "gaps-r1", ids, head, ids);
+    expect(state.permissions.every((item) => item.state === "approved")).toBe(true);
+    const fork = { ...scenario, id: "trusted-write-fork", action: "Prove a fork cannot write." };
+    state = observed(planned([...checks, fork], state, later), later, "r2", [
+      ...checks.map((check) => check.id),
+      fork.id,
+    ]);
+    state = decide(
+      ask(state, gapRequest(state, fork.id, "gap-fork", later), later),
+      "gaps-r2",
+      ["gap-fork"],
+      later,
+    );
+    expect(answeredCards(state)).toBe(2);
+    expect(acceptedValidation(review(state, later), later).label).toBe(
+      "Proceeding without live proof",
+    );
+    // An effect never rides a gap checklist.
+    const single = observed(planned([checks[0]!]), head, "single", [checks[0]!.id]);
+    const withGap = ask(single, gapRequest(single, checks[0]!.id, "gap-one"));
+    const effect = recordValidation(
+      withGap,
+      {
+        kind: "request",
+        request: {
+          kind: "effect",
+          id: "shared-comment",
+          head,
+          scenario: checks[0]!.id,
+          action: "Comment once on a test pull request",
+          destination: "The project's repository",
+          audience: "Project collaborators",
+          visibility: "others",
+          persistent: true,
+          purpose: "Check the real workflow trigger",
+          lastingEffects: "One comment",
+          cleanup: "Delete the comment",
+          access: "The app's GitHub sign-in",
+          preChange: true,
+          prerequisitePublication: false,
+        },
+      },
+      ctx,
+    );
+    expect(() => decide(effect, "both", ["gap-one", "shared-comment"])).toThrow("only one");
+  });
+
+  it("INF-1731: a reworded check keeps its accepted gap, so the gap is asked about once", () => {
+    const twoComputers = {
+      ...scenario,
+      id: "gap-two-computers",
+      action: "Place a task on a second computer and read its result at home.",
+      boundary: "Two real computers paired with each other",
+    };
+    let state = observed(planned([twoComputers]), head, "r1", [twoComputers.id]);
+    state = decide(
+      ask(state, gapRequest(state, twoComputers.id, "gap-two-computers")),
+      "accept-4pm",
+      ["gap-two-computers"],
+    );
+    state = planned(
+      [
+        {
+          ...twoComputers,
+          expected: "The result arrives.",
+          signal: "It arrives.",
+          boundary: "Two computers",
+        },
+      ],
+      state,
+      later,
+    );
+    state = review(observed(state, later, "r2", [twoComputers.id]), later);
+    expect(acceptedValidation(state, later).label).toBe("Proceeding without live proof");
+    expect(() =>
+      ask(state, gapRequest(state, twoComputers.id, "gap-two-computers-r4", later), later),
+    ).toThrow("stays accepted");
+    expect(state.permissions.filter((item) => item.request.kind === "gap")).toHaveLength(1);
   });
 });

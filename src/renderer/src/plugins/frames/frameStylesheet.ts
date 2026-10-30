@@ -227,6 +227,7 @@ export const FRAME_BASE_STYLE = `
   .inf-call ul { margin: var(--space-1) 0 0; }
   .inf-call li[data-inf-skip="check"] { color: var(--warn); }
   .inf-call-gap details { border: 0; padding: 0; margin: var(--space-2) 0 0; }
+  .inf-call-gap fieldset label + details { margin: var(--space-1) 0 var(--space-2) var(--space-5); }
   .inf-call-gap dt { font-size: var(--text-xs); color: var(--fg-3); letter-spacing: var(--tracking-label); text-transform: uppercase; margin-top: var(--space-2); }
   .inf-call-gap dd { margin: var(--space-1) 0 0; color: var(--fg-2); }
   .inf-call-gap dd.inf-mono { color: var(--fg-1); }

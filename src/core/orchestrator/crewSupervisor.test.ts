@@ -52,7 +52,7 @@ import {
   type PlacementWaitRow,
   placementWait,
 } from "@shared/placement";
-import { acceptedValidation } from "@shared/liveValidation";
+import { acceptedValidation, VALIDATION_GAPS_FIELD } from "@shared/liveValidation";
 import { plainProblem, typedFailureOf } from "@shared/plainProblem";
 import { CREWMATE_TAB_VIA } from "@shared/provenance";
 import { DROP_REVIEW_STALE, dropReviewKeys, NO_LONGER_WANTED } from "@shared/recordDrop";
@@ -19964,6 +19964,139 @@ describe("the reviewed tier (delivery rigor phase 2)", () => {
       expect(
         events.some((event) => event.type === "open_card_shown" && event.cardId === cardId),
       ).toBe(true);
+    } finally {
+      repo.dispose();
+    }
+  });
+
+  it("INF-1824: a version's gaps share one checklist card and the click accepts exactly the ticked rows", async () => {
+    const repo = directPrRepo();
+    try {
+      const builder = fakeCrewmate();
+      const { supervisor, tasks, repos, workspace, specs, cards } = setup(builder);
+      const { repo: view } = await repos.setup({ kind: "adopt", path: repo.dir, name: repo.name });
+      repos.configure(view.id, { delivery: "direct-pr" });
+      const { taskId } = await supervisor.commission({
+        title: "Prove the workflow triggers",
+        intent: intentOf("Prove which workflows each pull request starts."),
+        repoId: view.id,
+        shape: { rigor_ask: "reviewed" },
+      });
+      await tick();
+      const head = execFileSync("git", ["-C", repo.dir, "rev-parse", "HEAD"], {
+        encoding: "utf8",
+      }).trim();
+      vi.mocked(workspace.branchHead).mockResolvedValue(head);
+      const report = specs[0]!.onReport!;
+      // FIRS-3's four gaps at one version, from its record.
+      const checks = [
+        ["outside-prs", "Outside pull requests run quick checks"],
+        ["full-ci-label", "The full-ci label starts the full suite"],
+        ["other-labels", "Other labels start and cancel nothing"],
+        ["main-newest", "Main runs only the newest merge"],
+      ] as const;
+      await report("The checks need the real repository's workflows.", undefined, {
+        validation: {
+          kind: "plan",
+          previousRevision: 0,
+          reason: "The captain asked which workflows each pull request starts.",
+          scenarios: checks.map(([id, action]) => ({
+            id,
+            source: "Prove which workflows each pull request starts.",
+            importance: "required",
+            action,
+            expected: "Only the named workflows start.",
+            adverse: "A workflow that starts unasked is a failure.",
+            environment: "The project's repository on GitHub",
+            signal: "The workflow runs listed for the pull request.",
+            boundary: "GitHub Actions on the real repository",
+          })),
+        },
+      });
+      await report("None of the checks can run without opening test pull requests.", undefined, {
+        validation: {
+          kind: "run",
+          id: "r1",
+          head,
+          scenarioRevision: 1,
+          completion: "complete",
+          verdict: "inconclusive",
+          reason: "Proving them needs pull requests others can see.",
+          observations: checks.map(([id]) => ({
+            scenario: id,
+            result: "untested",
+            live: false,
+            actual: "Not run.",
+            evidence: [],
+            standIns: ["The workflow files read by hand"],
+            unproven: ["The real trigger"],
+            attempted: ["Reading the workflow files cannot prove what GitHub starts."],
+            missingCapability: "Test pull requests on the real repository",
+            reason: "Opening them would be visible to collaborators.",
+          })),
+          evidence: [],
+        },
+      });
+      for (const [id] of checks)
+        await report(`The ${id} gap needs your answer.`, undefined, {
+          validation: {
+            kind: "request",
+            request: {
+              kind: "gap",
+              id: `gap-${id}`,
+              head,
+              scenario: id,
+              missingCapability: "Test pull requests on the real repository",
+              reason: "Opening them would be visible to collaborators.",
+              alternatives: [
+                { attempted: "Reading the workflow files", result: "It cannot prove the trigger." },
+              ],
+              remedies: ["Allow one test pull request."],
+            },
+          },
+        });
+      const ids = checks.map(([id]) => `gap-${id}`);
+      const binding = { request: ids[0]!, action: "accept", gaps: ids.slice(1) };
+      const actions = [
+        { id: "accept", label: "Accept the checked gaps", default: true },
+        { id: "hold", label: "Keep all held" },
+      ];
+      await expect(
+        specs[0]!.onCard!({
+          title: "Four checks cannot run without test pull requests",
+          body: "<p>Tick the checks that may go ahead without live proof.</p><script>document.querySelectorAll('input').forEach(function(i){i.checked=true;})</script>",
+          validationDecision: binding,
+          actions,
+        }),
+      ).rejects.toThrow("no script");
+      const cardId = String(
+        await specs[0]!.onCard!({
+          title: "Four checks cannot run without test pull requests",
+          body: "<p>Tick the checks that may go ahead without live proof.</p>",
+          validationDecision: binding,
+          actions,
+        }),
+      );
+      await reportTurn(builder, taskId, "The four gaps wait on your answer.");
+      const body = parseDocument(cards().find((card) => card.id === cardId)!.body);
+      const rows = DomUtils.findAll(
+        (node) => node.name === "input" && node.attribs.name === VALIDATION_GAPS_FIELD,
+        body.children,
+      );
+      expect(rows.map((row) => row.attribs.value)).toEqual(ids);
+      expect(rows.every((row) => row.attribs.type === "checkbox" && !("checked" in row.attribs))).toBe(
+        true,
+      );
+      expect(
+        DomUtils.findOne((node) => "data-inf-check-all" in node.attribs, body.children),
+      ).toBeTruthy();
+      expect(DomUtils.textContent(body)).toContain("Main runs only the newest merge");
+      supervisor.act(cardId, "accept", "chrome", {
+        answers: [{ name: VALIDATION_GAPS_FIELD, values: [ids[0]!, ids[2]!], changed: true }],
+      });
+      expect(
+        tasks.get(taskId)?.delivery?.liveValidation?.permissions.map((item) => item.state),
+      ).toEqual(["approved", "declined", "approved", "declined"]);
     } finally {
       repo.dispose();
     }

@@ -101,7 +101,7 @@ export type EmittedCardInput = {
    */
   browserHandoff?: { site: string; reason: string; after: string; savedFailed?: true };
   /** Bind the shown ordinary action to a recorded validation request. */
-  validationDecision?: { request: string; action: string };
+  validationDecision?: { request: string; action: string; gaps?: string[] };
   /**
    * The HTML file in its task's project that a crewmate's browser button
    * opens (`browser_page`, docs/task-browser.md "A page from the project"):

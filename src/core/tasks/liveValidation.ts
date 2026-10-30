@@ -1,9 +1,12 @@
 import {
+  acceptedGap,
+  checkApproval,
   checkValidationRun,
   emptyValidation,
   type KeptValidationInput,
   type LiveValidation,
   latestValidationRun,
+  sameCheckReach,
   sameScenario,
   type ValidationPermission,
   type ValidationReview,
@@ -42,10 +45,15 @@ export function recordValidation(
         fail("Read the current scenario revision before changing it.");
       if (new Set(input.scenarios.map((item) => item.id)).size !== input.scenarios.length)
         fail("Scenario identities must be unique.");
+      // INF-1824: an accepted gap lasts while its check is on the list; a
+      // check approval while the check declares the same reach and cost.
       for (const permission of state.permissions) {
-        if (permission.state !== "approved" || permission.request.kind !== "gap") continue;
+        if (permission.state !== "approved" || permission.request.kind === "effect") continue;
         const replacement = input.scenarios.find((item) => item.id === permission.scenario.id);
-        if (!replacement || !sameScenario(permission.scenario, replacement))
+        if (
+          !replacement ||
+          (permission.request.kind === "check" && !sameCheckReach(permission.scenario, replacement))
+        )
           permission.state = "expired";
       }
       state.scenarioRevision++;
@@ -81,17 +89,24 @@ export function recordValidation(
           fail("A run identity cannot be reused for changed evidence or observations.");
         return state;
       }
+      for (const scenario of state.scenarios) {
+        const observation = input.observations.find((item) => item.scenario === scenario.id);
+        if (
+          scenario.resources &&
+          observation?.result !== "untested" &&
+          !checkApproval(state, scenario)
+        )
+          fail(
+            `The check ${scenario.id} declares what it uses, and its run needs your approval of those resources and their cost per run first.`,
+          );
+      }
+      // INF-1824: an accepted gap ends only when its check runs and fails.
       for (const permission of state.permissions) {
         if (permission.state !== "approved" || permission.request.kind !== "gap") continue;
         const observation = input.observations.find(
           (item) => item.scenario === permission.scenario.id,
         );
-        if (
-          observation?.result !== "untested" ||
-          observation.missingCapability !== permission.request.missingCapability ||
-          observation.reason !== permission.request.reason
-        )
-          permission.state = "expired";
+        if (observation?.result === "fail") permission.state = "expired";
       }
       state.runs.push({
         ...input,
@@ -138,7 +153,17 @@ export function recordValidation(
         fail(
           "An earlier identical write has an unknown outcome; reconcile it before asking again.",
         );
+      if (request.kind === "check") {
+        if (!scenario.resources || !scenario.cost)
+          fail("A check approval names the check's declared resources and the cost of one run.");
+        if (checkApproval(state, scenario))
+          fail(
+            "Your approval of this check already covers its runs while it declares the same resources and cost; run it without asking again.",
+          );
+      }
       if (request.kind === "gap") {
+        if (acceptedGap(state, scenario.id))
+          fail("You already accepted this check's gap, and it stays accepted; do not ask again.");
         const run = latestValidationRun(state);
         const observation = run?.observations.find((item) => item.scenario === request.scenario);
         if (
@@ -166,15 +191,23 @@ export function recordValidation(
         !context.decision
       )
         fail("Bind an open decision to a current unanswered request.");
+      // INF-1824: gaps of one version share one checklist card; any other
+      // request keeps its own decision.
+      const shared = state.permissions.filter(
+        (other) =>
+          other !== permission &&
+          other.state === "requested" &&
+          other.decision?.card === input.card,
+      );
       if (
-        state.permissions.some(
-          (other) =>
-            other !== permission &&
-            other.state === "requested" &&
-            other.decision?.card === input.card,
-        )
+        shared.length &&
+        (permission.request.kind !== "gap" ||
+          shared.some(
+            (other) =>
+              other.request.kind !== "gap" || other.request.head !== permission.request.head,
+          ))
       )
-        fail("One decision approves only one validation request.");
+        fail("One decision approves only one validation request, or the gaps of one version.");
       if (permission.request.kind === "gap" && !currentGap(state, permission, context.head))
         fail("The required gap changed; report and ask about the current gap.");
       if (permission.request.kind === "effect" && !permission.request.preChange) {
@@ -222,17 +255,29 @@ export class StaleValidationDecisionError extends Error {}
 /** Only the captain's exact chrome action calls this, inside the card resolution transaction. */
 export function decideValidation(
   state: LiveValidation,
-  input: { card: string; offer: string; action: string; label: string; at: number; head: string },
+  input: {
+    card: string;
+    offer: string;
+    action: string;
+    label: string;
+    at: number;
+    head: string;
+    /** INF-1824: the rows ticked on a checklist of several gaps; the rest stay held. */
+    ticked?: readonly string[];
+  },
 ): LiveValidation {
   const next = structuredClone(state);
-  for (const permission of next.permissions) {
-    if (
-      permission.state !== "requested" ||
-      permission.decision?.card !== input.card ||
-      permission.decision.offer !== input.offer
-    )
-      continue;
-    const accepting = permission.decision.action === input.action;
+  const asked = next.permissions.filter(
+    (permission) =>
+      permission.state === "requested" &&
+      permission.decision?.card === input.card &&
+      permission.decision.offer === input.offer,
+  );
+  const checklist = asked.length > 1;
+  for (const permission of asked) {
+    const accepting =
+      permission.decision?.action === input.action &&
+      (!checklist || (input.ticked ?? []).includes(permission.request.id));
     if (accepting) {
       if (permission.request.head !== input.head)
         throw new StaleValidationDecisionError(

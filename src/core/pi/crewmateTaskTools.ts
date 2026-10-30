@@ -204,7 +204,7 @@ export const REPORT_TOOL = crewmateTool({
     validation: Type.Optional(
       zodParameter<LiveValidationInput>(liveValidationInputSchema, {
         description:
-          "Typed validation facts, kept at every care level; only a Careful task's merge waits on them, and its brief or care notice carries the rules. Careful: plan before edits; keep run proof; review assigned head/revision. Live pass: result pass, live true, unproven []; out-of-scope limits go in reason, never hide gaps. Gaps match a current inconclusive, untested/non-live run's scenario, missingCapability and reason. Requests grant nothing: emit_card.validation_request asks the captain for one action or gap, never follow-on writes. Forge starts approved effects; otherwise record started then outcome; never retry unknown.",
+          "Typed validation facts, kept at every care level; only a Careful task's merge waits on them, and its brief or care notice carries the rules. Requests grant nothing; only the captain's click on its emit_card.validation_request card does.",
       }),
     ),
     text: Type.String({

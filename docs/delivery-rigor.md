@@ -636,9 +636,23 @@ Before editing, the builder records `report.validation` with `kind: plan`.
 Each scenario has a stable identity, the captain's words it serves, required or supplementary importance, an action, expected result, adverse case, environment, completion signal and the actual product, service or device boundary the claim requires.
 A plan revision compares its previous revision and gives a reason; difficulty never silently downgrades required proof.
 The builder runs the actual product, using the real service or device when that boundary changes and following the general validation resource consent rule above.
-The reviewer treats unconsented sensitive or costly access as a finding, while respecting task-long approval for the named sign-in.
-A gap-exception card may also offer ordinary consent to the needed sign-in beside Proceed without live proof and Keep held; the consent choice grants no exception.
+The reviewer treats unconsented sensitive or costly access as a finding, while respecting task-long approval of what a check declares.
+A gap acceptance grants no check approval, and a check approval grants no gap exception.
 A stand-in names exactly what it leaves unproven; a simulator cannot demonstrate device-specific behavior.
+
+### Check approval
+
+A check that needs the captain's consent under the general rule declares, in its own words, its `resources` (what a run uses or reaches) and `cost` (what one run costs) (captain's INF-1824 plan, direction B).
+The approval is generic: it names no sign-in or provider, only what the check itself declares (the captain's written-in answer to that plan).
+The builder records a `request` of kind `check` naming the check and binds it to an ordinary decision through `emit_card.validation_request`.
+The host appends a Check approval panel naming the check, what it uses and the cost of one run, and saying the approval covers every later run while each run stays inside those.
+A card that already asks the captain which account, model or option to use carries the check request on its default action, so the captain's pick or written-in answer with that click approves it, with no separate approval card.
+`TaskService` keeps the approval on the check by its id for every later run and version of the task, including script fixes and reruns, with no limit on runs.
+A plan revision that changes the check's declared resources or cost, or removes the check, expires the approval.
+The host refuses a run that executes a check whose declared resources lack a current approval, and a check request that a current approval already covers.
+Asking needs no reviewer clearance; the reviewer treats a run that used more or cost more than its check declares as a finding.
+The completion card says how many runs each approval covered.
+An effect someone else can see keeps its single-use request below.
 
 A `run` reports its unique identity, committed version, scenario revision, completion state, verdict and one observation for every scenario, including those that could not run.
 The builder records proof and starts or requests validation effects only from a clean working copy at the named committed version.
@@ -713,13 +727,17 @@ After safe alternatives fail, the builder first records a `run` at the current v
 That observation names the attempted alternatives, `missingCapability` and `reason`.
 Only then does the builder record a `request` of kind `gap`, matching that scenario, missing capability and reason in the latest run; a request before the run is refused.
 The builder promptly asks through the same decision binding, giving the alternatives and their results, and ways to close the gap.
+Every gap of one version goes on one card: `validation_request` names one request and the rest in `gaps` (captain's INF-1824 plan).
 The builder addresses the captain as “you” in the gap record and its card, never “the captain”.
 The host appends a send-style panel whose open line names the approval button and untested scenario, followed by the exception's scope and that it records no live pass and merges nothing.
+For several gaps the panel is one checklist instead: a fieldset of checkbox rows, one per gap, each starting unticked, with a Check all control, all reachable by Tab and Space.
+The approval action accepts exactly the ticked rows and keeps the rest held; a checklist names only gaps of one version, and its card carries no script or field of its own, so the ticks are the captain's alone.
 A closed “The recorded gap” disclosure holds the version, missing capability, reason, alternatives and remedies, with each alternative and remedy in its own list item.
 The Validation action panel for effects stays fully open and unchanged.
 Only the captain can permit proceeding without this proof; neither the builder nor reviewer grants an exception.
-The exception carries to later versions only while the scenario, missing capability and reason are identical.
-A changed scenario or gap, or access becoming available, expires it; a later recurrence needs a fresh answer.
+The exception is kept by the check's id: it stays accepted through rewording, plan changes and every later version of the task.
+It ends only when that check runs and fails, or leaves the list of checks; the host refuses a second gap request for a check whose gap stands accepted.
+Once the missing access arrives, the builder runs the check without asking; a change that widens what a check must prove is a new check with a new id, and the reviewer judges whether a rewording under the same id still claims the same thing.
 It never covers a known failure, failed checks or a merge.
 
 The merge completion card is the primary presentation of live validation.

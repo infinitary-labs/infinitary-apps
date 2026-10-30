@@ -363,7 +363,10 @@ export const placedCardSchema = z.object({
     })
     .optional(),
   /** Bind the shown ordinary action to a recorded validation request. */
-  validationDecision: z.object({ request: z.string(), action: z.string() }).optional(),
+  /** INF-1824: `gaps` names further gaps of the same version, drawn as one checklist. */
+  validationDecision: z
+    .object({ request: z.string(), action: z.string(), gaps: z.array(z.string()).optional() })
+    .optional(),
   /** The page from its task's project that its browser button opens (docs/task-browser.md, "A page from the project"). */
   browserPage: z.string().optional(),
 });

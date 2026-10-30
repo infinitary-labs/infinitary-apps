@@ -43362,6 +43362,12 @@
                       },
                       "action": {
                         "type": "string"
+                      },
+                      "gaps": {
+                        "type": "array",
+                        "items": {
+                          "type": "string"
+                        }
                       }
                     },
                     "required": [
@@ -43833,6 +43839,16 @@
                                   "type": "string",
                                   "minLength": 1,
                                   "maxLength": 4000
+                                },
+                                "resources": {
+                                  "type": "string",
+                                  "minLength": 1,
+                                  "maxLength": 4000
+                                },
+                                "cost": {
+                                  "type": "string",
+                                  "minLength": 1,
+                                  "maxLength": 4000
                                 }
                               },
                               "required": [
@@ -43892,7 +43908,7 @@
                               "inconclusive",
                               "no-surface"
                             ],
-                            "description": "go: required live proof; no-go: observed failure; inconclusive: missing proof/coverage; no-surface: nothing to run, not missing access."
+                            "description": "go: live proof; no-go: a failure; inconclusive: missing proof; no-surface: nothing to run."
                           },
                           "reason": {
                             "type": "string",
@@ -44118,7 +44134,7 @@
                               "inconclusive",
                               "no-surface"
                             ],
-                            "description": "go: required live proof; no-go: observed failure; inconclusive: missing proof/coverage; no-surface: nothing to run, not missing access."
+                            "description": "go: live proof; no-go: a failure; inconclusive: missing proof; no-surface: nothing to run."
                           },
                           "reason": {
                             "type": "string",
@@ -44363,6 +44379,33 @@
                                   "reason",
                                   "alternatives",
                                   "remedies"
+                                ]
+                              },
+                              {
+                                "type": "object",
+                                "properties": {
+                                  "kind": {
+                                    "type": "string",
+                                    "const": "check"
+                                  },
+                                  "id": {
+                                    "type": "string",
+                                    "pattern": "^[a-zA-Z0-9][a-zA-Z0-9_-]{0,63}$"
+                                  },
+                                  "head": {
+                                    "type": "string",
+                                    "pattern": "^[a-f0-9]{40,64}$"
+                                  },
+                                  "scenario": {
+                                    "type": "string",
+                                    "pattern": "^[a-zA-Z0-9][a-zA-Z0-9_-]{0,63}$"
+                                  }
+                                },
+                                "required": [
+                                  "kind",
+                                  "id",
+                                  "head",
+                                  "scenario"
                                 ]
                               }
                             ]

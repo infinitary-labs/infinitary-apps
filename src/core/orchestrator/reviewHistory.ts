@@ -35,7 +35,7 @@ export type ReviewHistoryEntry =
       kind: "permission";
       at: number;
       request: string;
-      requestKind: "gap" | "effect";
+      requestKind: "gap" | "effect" | "check";
       scenario: string;
       head: string;
       state: string;
@@ -213,7 +213,7 @@ function historyLine(entry: ReviewHistoryEntry): string {
           ? ""
           : entry.coversLatestRun
             ? "; it covers the latest run"
-            : "; it does not cover the latest run, whose scenario or untested observation reads differently";
+            : "; it does not cover the latest run, where that check did not stay untested";
       return `- The ${entry.requestKind} request ${entry.request} for scenario ${entry.scenario} at ${entry.head.slice(0, 7)} is ${entry.state}${answer}${covers}.`;
     }
   }

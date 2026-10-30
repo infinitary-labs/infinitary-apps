@@ -121,6 +121,14 @@ export const placementSnapshotSchema = z.object({
   physicalComputerId: z.string().regex(/^[a-f0-9]{64}$/),
   orderId: z.string().min(1).max(128),
   origin: z.string().max(4096).optional(),
+  /** Present only when an answered basis changed the ordinary placement winner. */
+  basis: z
+    .object({
+      taskId: z.string(),
+      taskKey: z.string(),
+      computerId: z.string().nullable(),
+    })
+    .optional(),
   demand: demandSchema,
   model: modelSchema,
   acceptedFallback: z.boolean(),
@@ -169,8 +177,13 @@ export const committedPlacementSchema = z.object({
 });
 export type CommittedPlacement = z.infer<typeof committedPlacementSchema>;
 
-export function placementReason(snapshot: Pick<PlacementSnapshot, "computerName">): string {
-  return `Automatic chose ${snapshot.computerName}: it can run this project and had room to start.`;
+export function placementReason(
+  snapshot: Pick<PlacementSnapshot, "computerName" | "basis">,
+): string {
+  const beside = snapshot.basis
+    ? ` This kept the task beside its basis, ${snapshot.basis.taskKey}, without changing model preference.`
+    : "";
+  return `Automatic chose ${snapshot.computerName}: it can run this project and had room to start.${beside}`;
 }
 const STAYS = "Existing work stays where it started.";
 /** A wait whose computers have not been compared yet. */
@@ -397,7 +410,10 @@ export function placementCandidateLines(snapshot: PlacementSnapshot): string[] {
               candidate.rejections,
               candidate.reach === "connecting",
               inheritedWords(snapshot, candidate),
-            ) || "compatible, with less room to start";
+            ) ||
+            (snapshot.basis
+              ? "compatible; the basis computer was preferred"
+              : "compatible, with less room to start");
       const capacity = candidate.remaining
         ? ` After pending work: ${candidate.remaining.cpu.toFixed(1)} CPUs and ${gib(candidate.remaining.memoryBytes)} GiB memory available.`
         : "";

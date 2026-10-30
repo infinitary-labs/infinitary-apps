@@ -501,3 +501,135 @@ describe("evaluatePlacement reads the one memory figure", () => {
     ).toContain("resources-invalid");
   });
 });
+
+/** INF-1870 approved: model-first, Automatic-only locality, never an admission bypass. */
+describe("the basis computer's soft preference", () => {
+  const requirements = resolvePlacementRequirements({
+    home: { system: "macos", chip: "arm64" },
+    workingCopy: true,
+  });
+  const remote: PlacementCandidate = {
+    ...thisMac,
+    computerId: "mac-mini",
+    physicalComputerId: "b".repeat(64),
+  };
+  const pending = (computer: PlacementCandidate, times = 1): PlacementReservation[] => [
+    {
+      orderId: "preparing",
+      physicalComputerId: computer.physicalComputerId!,
+      demand: {
+        cpu: requirements.demand.cpu * times,
+        memoryBytes: requirements.demand.memoryBytes * times,
+      },
+    },
+  ];
+
+  it.each([thisMac, remote])(
+    "prefers $computerId to a computer with more room, without rejecting that computer",
+    (basis) => {
+      const input = { requirements, candidates: [remote, thisMac], reservations: pending(basis) };
+      const ordinary = evaluatePlacement(input);
+      expect(ordinary.chosen?.computerId).not.toBe(basis.computerId);
+      const beside = evaluatePlacement({
+        ...input,
+        basisComputer: { computerId: basis.computerId },
+      });
+      expect(beside.chosen?.computerId).toBe(basis.computerId);
+      expect(beside.basisPreferred).toBe(true);
+      expect(beside.candidates.every((candidate) => candidate.rejections.length === 0)).toBe(true);
+    },
+  );
+
+  it.each([
+    { inReach: false },
+    { workEnabled: false },
+    { system: "linux" as const },
+    { chip: "x64" as const },
+    { tools: { git: "unavailable" as const } },
+    { projectAccess: "unknown" as const },
+    { resources: { status: "unknown" as const, reason: "missing" as const } },
+    { resources: { status: "unknown" as const, reason: "stale" as const } },
+    { model: null },
+    { model: { ...thisMac.model!, requiresReasoningWait: true } },
+  ])("falls back without a locality wait when the basis cannot qualify: %j", (over) => {
+    const decision = evaluatePlacement({
+      requirements,
+      candidates: [thisMac, { ...remote, ...over }],
+      reservations: [],
+      basisComputer: { computerId: remote.computerId },
+    });
+    expect(decision.chosen?.computerId).toBeNull();
+    expect(decision.basisPreferred).toBe(false);
+  });
+
+  it("keeps model preference elsewhere, including its existing wait when busy", () => {
+    const lesser = { ...thisMac, model: { ...thisMac.model!, preferenceRank: 1 } };
+    const input = {
+      requirements,
+      candidates: [lesser, remote],
+      basisComputer: { computerId: null },
+    };
+    expect(evaluatePlacement({ ...input, reservations: [] }).chosen?.computerId).toBe(
+      remote.computerId,
+    );
+    const busy = evaluatePlacement({ ...input, reservations: pending(remote, 3) });
+    expect(busy.status).toBe("waiting");
+    expect(busy.candidates.find((row) => row.computerId === null)?.rejections).toContain(
+      "model-preferred-elsewhere",
+    );
+  });
+
+  it("falls back from insufficient room but never from an explicit binding", () => {
+    const input = {
+      requirements,
+      candidates: [thisMac, remote],
+      reservations: pending(remote, 3),
+      basisComputer: { computerId: remote.computerId },
+    };
+    expect(evaluatePlacement(input).chosen?.computerId).toBeNull();
+    expect(
+      evaluatePlacement({ ...input, boundComputer: { computerId: remote.computerId } }).status,
+    ).toBe("waiting");
+    expect(
+      evaluatePlacement({ ...input, reservations: [], boundComputer: { computerId: null } }).chosen
+        ?.computerId,
+    ).toBeNull();
+  });
+
+  it("preserves ordinary stable tie-breaking when the basis is absent or excluded", () => {
+    for (const candidates of [
+      [thisMac, remote],
+      [remote, thisMac],
+    ]) {
+      const input = { requirements, candidates, reservations: [] };
+      const ordinary = evaluatePlacement(input);
+      const excluded = evaluatePlacement({ ...input, basisComputer: { computerId: "removed" } });
+      expect(ordinary.chosen?.computerId).toBeNull();
+      expect(excluded).toEqual(ordinary);
+      expect(ordinary.basisPreferred).toBe(false);
+    }
+  });
+
+  it("falls back from exhausted processor reservations without bypassing admission", () => {
+    if (remote.resources.status !== "fresh") throw new Error("The captured reading is missing.");
+    const decision = evaluatePlacement({
+      requirements,
+      candidates: [thisMac, remote],
+      basisComputer: { computerId: remote.computerId },
+      reservations: [
+        {
+          orderId: "processor-start",
+          physicalComputerId: remote.physicalComputerId ?? "",
+          demand: {
+            cpu: remote.resources.observation.cpu.logicalCpus,
+            memoryBytes: requirements.demand.memoryBytes,
+          },
+        },
+      ],
+    });
+    expect(decision.chosen?.computerId).toBeNull();
+    expect(
+      decision.candidates.find((row) => row.computerId === remote.computerId)?.rejections,
+    ).toEqual(["cpu-busy"]);
+  });
+});

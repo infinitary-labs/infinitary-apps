@@ -33,3 +33,22 @@ describe("a candidate's saved verdict", () => {
     expect(lines({})[0]).toContain("Mac mini: out of reach.");
   });
 });
+
+/** INF-1870: the record explains locality without inventing it on older snapshots. */
+describe("a basis-influenced placement explanation", () => {
+  it("uses the recorded basis only, and leaves historical explanations unchanged", async () => {
+    const { placementReason } = await import("./placement");
+    const old = { computerName: "Mac mini" };
+    expect(placementReason(old)).toBe(
+      "Automatic chose Mac mini: it can run this project and had room to start.",
+    );
+    expect(
+      placementReason({
+        ...old,
+        basis: { taskId: "plan", taskKey: "INF-1870", computerId: "mini" },
+      }),
+    ).toBe(
+      `${placementReason(old)} This kept the task beside its basis, INF-1870, without changing model preference.`,
+    );
+  });
+});

@@ -4,6 +4,7 @@ import { chipWords, HERE } from "@shared/deviceNames";
 import type { ComputerReach, DeviceView } from "@shared/devices";
 import {
   AUTOMATIC_COMPUTER,
+  PLACEMENT_FACTS_ORDER,
   PLACEMENT_FACTS_SINCE,
   PLACEMENT_HELD_WAIT,
   type PlacementFacts,
@@ -113,7 +114,8 @@ function world(
   now: () => number = () => Date.now(),
   more: Partial<ConstructorParameters<typeof AutomaticPlacement>[0]> = {},
 ) {
-  const tasks = new TaskService({ db: freshDatabase(), strict: true });
+  const db = freshDatabase();
+  const tasks = new TaskService({ db, strict: true });
   const work = {
     onWorkDevice: () => () => {},
     inReach: () => false,
@@ -162,6 +164,7 @@ function world(
     project: RepoView = ledger,
   ) => placement.choose(record, project, record.title, shape);
   return {
+    db,
     tasks,
     placement,
     running,
@@ -634,5 +637,280 @@ describe("AutomaticPlacement's word on a computer a started task cannot move to"
     answer = "rejected";
     await owner.checkHealth();
     expect(await read()).toEqual([lapsed(HERE.This), lapsed("Mac mini")]);
+  });
+});
+
+/** INF-1870: resolve current basis execution inside admission, not from the start's old record. */
+describe("Automatic starts beside their direct answered basis", () => {
+  function basisWorld(afterFacts: () => void = () => {}, atAdmission: () => void = () => {}) {
+    let snapshots = 0;
+    const observation = reading(1);
+    if (observation.status !== "sampled") throw new Error("The captured reading is missing.");
+    const resource = {
+      status: "fresh" as const,
+      observation,
+      ageMs: 0,
+      memoryUsedBytes: memoryUsedBytes(observation.memory),
+    };
+    const work = {
+      onWorkDevice: () => () => {},
+      inReach: () => true,
+      version: () => ({ contract: PLACEMENT_FACTS_SINCE }),
+      ask: async (_id: string, order: string) => {
+        expect(order).toBe(PLACEMENT_FACTS_ORDER);
+        return {
+          ...facts,
+          physicalComputerId: "b".repeat(64),
+          signIns: { providers: [], accounts: [], quota: null, served: [] },
+        };
+      },
+    } as unknown as WorkDevices;
+    return world(undefined, {
+      devices: () => [macMini],
+      work,
+      // Reuse the captured Mac reading, for two independent computers; room
+      // differences below are real pending reservations, not invented samples.
+      resources: {
+        onSample: () => () => {},
+        readCurrent: async () => {},
+        snapshot: () => {
+          if (++snapshots === 2) atAdmission();
+          return {
+            computers: [
+              { computerId: null, reading: resource },
+              { computerId: macMini.id, reading: resource },
+            ],
+          };
+        },
+        sampledAt: () => undefined,
+      } as unknown as ComputerResourceFeed,
+      localFacts: async () => {
+        await Promise.resolve();
+        afterFacts();
+        return facts;
+      },
+    });
+  }
+  const answered = (w: ReturnType<typeof basisWorld>, id: string, deviceId?: string) =>
+    seedTask(w.tasks, {
+      id,
+      title: `Plan ${id}`,
+      status: "idle",
+      outcome: "The plan is ready.",
+      repoId: "another-project",
+      ...(deviceId ? { deviceId } : {}),
+    });
+  const continuation = (w: ReturnType<typeof basisWorld>, id: string, basis: string) => {
+    const task = w.task(id, `Build ${id}`);
+    w.tasks.updateFields(task.id, { basis }, "firstmate");
+    return w.tasks.get(task.id)!;
+  };
+  const move = (w: ReturnType<typeof basisWorld>, id: string, deviceId: string | null) =>
+    w.tasks.commitComputerMove(id, {
+      deviceId,
+      repoDir: "/ledger",
+      worktreeDir: "/ledger/work",
+      branch: "plan",
+      actor: "firstmate",
+      text: "The task moved.",
+      move: {
+        from: deviceId === null ? macMini.id : "this-mac",
+        to: deviceId ?? "this-mac",
+        by: "firstmate",
+        at: Date.now(),
+        phase: "retiring",
+      },
+    });
+
+  it.each([null, macMini.id])(
+    "prefers a recorded %s basis even when a pending start leaves less room there",
+    async (computerId) => {
+      const w = basisWorld();
+      try {
+        const basis = answered(w, "basis", computerId ?? undefined);
+        const first = continuation(w, "first", basis.key);
+        expect(await w.start(first)).toMatchObject({ computerId });
+        const next = continuation(w, "next", basis.key);
+        expect(await w.start(next)).toMatchObject({ computerId });
+        const snapshot = w.tasks.get(next.id)?.placement?.snapshot;
+        expect(snapshot?.basis).toEqual({ taskId: basis.id, taskKey: basis.key, computerId });
+        expect(w.tasks.get(next.id)?.shape?.runs_on_ask).toBeUndefined();
+        expect(placementCandidateLines(snapshot!)).toContainEqual(
+          expect.stringContaining("the basis computer was preferred"),
+        );
+      } finally {
+        w.dispose();
+      }
+    },
+  );
+
+  it("does not treat an unstarted answer as home execution", async () => {
+    const w = basisWorld();
+    try {
+      const cold = w.task("cold", "An unstarted answer");
+      w.tasks.recordReport(cold.id, { text: "The answer is ready without execution." });
+      // Occupy home first, so ordinary ranking chooses the remote.
+      await w.start(w.task("occupy", "Preparing here"));
+      const task = continuation(w, "next", cold.key);
+      expect(await w.start(task)).toMatchObject({ computerId: macMini.id });
+      expect(w.tasks.get(task.id)?.placement?.snapshot.basis).toBeUndefined();
+      expect(w.tasks.get(cold.id)?.startedAt).toBeNull();
+    } finally {
+      w.dispose();
+    }
+  });
+
+  it("restarts a changed-spec comparison, then uses its current basis and keeps the commitment", async () => {
+    let change = () => {};
+    const w = basisWorld(() => change());
+    try {
+      const home = answered(w, "home");
+      const there = answered(w, "there", macMini.id);
+      const task = continuation(w, "next", home.key);
+      change = () => {
+        w.tasks.updateFields(task.id, { basis: there.key }, "firstmate");
+        change = () => {};
+      };
+      // The existing stale-spec guard restarts when the grounding itself
+      // changes during facts; the new comparison must read the new basis.
+      expect(await w.start(task)).toBeUndefined();
+      expect(w.tasks.get(task.id)?.placement).toBeNull();
+      expect(await w.start(w.tasks.get(task.id)!)).toMatchObject({ computerId: macMini.id });
+      const committed = w.tasks.get(task.id)?.placement;
+      expect(committed?.snapshot.basis?.taskId).toBe(there.id);
+      // The existing owner refuses changing grounding after a commitment.
+      expect(() => w.tasks.updateFields(task.id, { basis: home.key }, "firstmate")).toThrow(
+        "has not started",
+      );
+      expect(await w.start(w.tasks.get(task.id)!)).toMatchObject({ computerId: macMini.id });
+      expect(w.tasks.get(task.id)?.placement).toEqual(committed);
+    } finally {
+      w.dispose();
+    }
+  });
+
+  it("uses a committed move made during comparison, not its historical start or a planned move", async () => {
+    let change = () => {};
+    const w = basisWorld(() => change());
+    try {
+      const basis = answered(w, "basis");
+      const task = continuation(w, "next", basis.key);
+      change = () => {
+        move(w, basis.id, macMini.id);
+        change = () => {};
+      };
+      expect(await w.start(task)).toMatchObject({ computerId: macMini.id });
+      const committed = w.tasks.get(task.id)?.placement;
+      move(w, basis.id, null);
+      expect(await w.start(w.tasks.get(task.id)!)).toMatchObject({ computerId: macMini.id });
+      expect(w.tasks.get(task.id)?.placement).toEqual(committed);
+    } finally {
+      w.dispose();
+    }
+  });
+
+  it("keeps concurrent starts within atomic reservations and preserves uncertain preparation", async () => {
+    const w = basisWorld();
+    try {
+      const basis = answered(w, "basis", macMini.id);
+      const tasks = ["one", "two", "three"].map((id) => continuation(w, id, basis.key));
+      const starts = await Promise.all(tasks.map((task) => w.start(task)));
+      expect(
+        starts.map((start) => (start && "computerId" in start ? start.computerId : "waiting")),
+      ).toEqual([macMini.id, macMini.id, null]);
+      const first = tasks[0]!;
+      const held = w.tasks.get(first.id)?.placement;
+      move(w, basis.id, null);
+      expect(await w.start(first)).toMatchObject({ computerId: macMini.id });
+      expect(w.tasks.get(first.id)?.placement).toEqual(held);
+    } finally {
+      w.dispose();
+    }
+  });
+
+  it.each(["absent", "unresolved", "unanswered"] as const)(
+    "adds no locality or wait for an %s basis",
+    async (kind) => {
+      const w = basisWorld();
+      try {
+        await w.start(w.task("occupy", "Preparing here"));
+        const unready = seedTask(w.tasks, {
+          id: "unready",
+          title: "An unanswered basis",
+          status: "idle",
+        });
+        const task = w.tasks.create({
+          id: "next",
+          title: "Continue",
+          prompt: "Continue",
+          repoId: ledger.id,
+          shape: {
+            kind: "fix",
+            ...(kind === "absent"
+              ? {}
+              : { basis: kind === "unresolved" ? "not-created" : unready.key }),
+          },
+        });
+        expect(await w.start(task)).toMatchObject({ computerId: macMini.id });
+        expect(w.tasks.get(task.id)?.placement?.snapshot.basis).toBeUndefined();
+      } finally {
+        w.dispose();
+      }
+    },
+  );
+
+  it("ignores a planned destination until the basis move commits", async () => {
+    const w = basisWorld();
+    try {
+      const basis = answered(w, "basis", macMini.id);
+      w.tasks.setComputerMove(basis.id, {
+        from: macMini.id,
+        to: "this-mac",
+        by: "firstmate",
+        at: Date.now(),
+        phase: "waiting",
+      });
+      const next = continuation(w, "next", basis.key);
+      expect(await w.start(next)).toMatchObject({ computerId: macMini.id });
+    } finally {
+      w.dispose();
+    }
+  });
+
+  it("retains the committed destination and provenance through restart during uncertain preparation", async () => {
+    const w = basisWorld();
+    try {
+      const basis = answered(w, "basis", macMini.id);
+      const next = continuation(w, "next", basis.key);
+      await w.start(next);
+      w.tasks.beginPlacementPreparation(next.id);
+      const before = w.tasks.get(next.id)?.placement;
+      move(w, basis.id, null);
+      const recovered = new TaskService({ db: w.db, strict: true });
+      expect(recovered.get(next.id)?.placement).toEqual(before);
+      expect(recovered.get(next.id)?.deviceId).toBe(macMini.id);
+      expect(await w.start(w.tasks.get(next.id)!)).toMatchObject({ computerId: macMini.id });
+      expect(w.tasks.get(next.id)?.placement).toEqual(before);
+    } finally {
+      w.dispose();
+    }
+  });
+
+  it("re-reads the declared relation inside commitment immediately after the final resource read", async () => {
+    let change = () => {};
+    const w = basisWorld(
+      () => {},
+      () => change(),
+    );
+    try {
+      const home = answered(w, "home");
+      const there = answered(w, "there", macMini.id);
+      const next = continuation(w, "next", home.key);
+      change = () => w.tasks.updateFields(next.id, { basis: there.key }, "firstmate");
+      expect(await w.start(next)).toMatchObject({ computerId: macMini.id });
+      expect(w.tasks.get(next.id)?.placement?.snapshot.basis?.taskId).toBe(there.id);
+    } finally {
+      w.dispose();
+    }
   });
 });

@@ -302,9 +302,18 @@ export class AutomaticPlacement {
           candidate.model = null;
         }
       }
+      // Read the direct relationship and CURRENT execution inside the synchronous
+      // commitment, after all asynchronous facts. A null device is home only
+      // once execution is recorded; an unstarted answer supplies no locality.
+      const current = this.options.tasks.get(record.id);
+      const relation = current && !existing ? this.options.tasks.basisOf(current) : null;
+      const basis = relation?.verified ? this.options.tasks.resolve(relation.ref) : undefined;
+      const basisComputer =
+        basis && basis.startedAt !== null ? { computerId: basis.deviceId ?? null } : undefined;
       const decision = evaluatePlacement({
         requirements,
         candidates,
+        ...(basisComputer ? { basisComputer } : {}),
         reservations: pending.flatMap((task) =>
           task.placement
             ? [
@@ -381,6 +390,11 @@ export class AutomaticPlacement {
         physicalComputerId: chosen.physicalComputerId,
         orderId: `prepare:${randomUUID()}`,
         ...(origin ? { origin } : {}),
+        ...(decision.basisPreferred && basis && basisComputer
+          ? {
+              basis: { taskId: basis.id, taskKey: basis.key, computerId: basisComputer.computerId },
+            }
+          : {}),
         demand: requirements.demand,
         model,
         acceptedFallback: options.ignoreAsk === true,

@@ -809,6 +809,15 @@ An eligible project has a cloneable origin and is not the personal workspace.
 New eligible projects default to `runs_on = automatic`; the additive migration changes every existing eligible project, preserving task overrides and every started task's recorded computer.
 The project select and `project-runs-on` accept `automatic`; `update_task runs_on` and `runs_on_ask` accept the same value for an unstarted task in an eligible project.
 Explicit task and parent choices, reviews following builders, origin-less projects and the personal workspace retain their existing owner.
+For an uncommitted start already using Automatic, the direct basis named by `TaskService.basisOf` contributes locality only when its answer holds and its `startedAt` records actual execution.
+An unstarted answer with an empty device field is not execution at home, and missing or unresolved bases add no preference or wait.
+After asynchronous compatibility and resource reads, the synchronous `commitPlacement` callback resolves that current relationship and reads its current `deviceId`, including a committed move but not a planned destination.
+Among fully admitted candidates at the best existing model preference, that account-specific computer wins before spare-room ranking; unavailable, incompatible, unreadable, stale, model-less or full candidates fall back to ordinary placement or its existing wait.
+A stronger model preference elsewhere remains authoritative even while that computer is busy.
+The new task's own project and requirements decide compatibility, including for a basis in another project; no ancestors, related tasks or physical-computer groups supply locality.
+When locality changes the ordinary winner, the snapshot's optional `basis` records the task id, key and execution computer, and the existing computer-choice sentence and Activity line explain it.
+Older snapshots keep their original explanation without invented provenance, and eligible alternatives are not falsely described as having less room when locality won.
+The preference never writes `runs_on_ask`, extends Automatic to project-free work, changes explicit choices or review placement, copies files, or moves started work.
 A task's first committed computer wins over every later project edit, including a committed home selection represented by null.
 When dynamic model routing is disabled, uncommitted Automatic tasks defer to the existing unrouted home start rather than inventing model availability; an existing commitment still stays on its computer.
 When routing is on but names no model for the home, deferring to the runtime default as it does with no allowance catalog or only an unplaced custom connection, the home still qualifies, as the same task in a This computer project starts there.

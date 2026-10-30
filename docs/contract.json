@@ -29091,6 +29091,32 @@
                 "type": "string",
                 "maxLength": 4096
               },
+              "basis": {
+                "type": "object",
+                "properties": {
+                  "taskId": {
+                    "type": "string"
+                  },
+                  "taskKey": {
+                    "type": "string"
+                  },
+                  "computerId": {
+                    "anyOf": [
+                      {
+                        "type": "string"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  }
+                },
+                "required": [
+                  "taskId",
+                  "taskKey",
+                  "computerId"
+                ]
+              },
               "demand": {
                 "type": "object",
                 "properties": {

@@ -140,6 +140,8 @@ export type PlacementDecision = {
   status: "chosen" | "waiting";
   /** Present only on chosen, since null itself names the home. */
   chosen?: { computerId: string | null; model: RoutePreview; physicalComputerId: string };
+  /** True only when locality changed the ordinary room/tie-break winner. */
+  basisPreferred: boolean;
   requirements: ResolvedPlacementRequirements;
   candidates: PlacementEvaluation[];
 };
@@ -155,6 +157,8 @@ export function evaluatePlacement(input: {
   reservations: readonly PlacementReservation[];
   /** Explicit task/parent/review/local-only binding, resolved by the existing owner. */
   boundComputer?: { computerId: string | null };
+  /** Soft locality, applied only among fully admitted candidates at the best model preference. */
+  basisComputer?: { computerId: string | null };
 }): PlacementDecision {
   const { requirements } = input;
   const groups = new Map<string, PlacementDemand>();
@@ -263,9 +267,13 @@ export function evaluatePlacement(input: {
       const bKey = b.computerId ?? "";
       return aKey < bKey ? -1 : aKey > bKey ? 1 : 0;
     });
-  const chosen = ranked[0];
+  const besideBasis = input.basisComputer
+    ? ranked.find((candidate) => candidate.computerId === input.basisComputer?.computerId)
+    : undefined;
+  const chosen = besideBasis ?? ranked[0];
   return {
     status: chosen ? "chosen" : "waiting",
+    basisPreferred: chosen !== ranked[0],
     ...(chosen?.model && chosen.physicalComputerId
       ? {
           chosen: {

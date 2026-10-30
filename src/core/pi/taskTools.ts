@@ -323,7 +323,7 @@ export function createTaskTools(delegate: TaskToolsDelegate) {
       runs_on: Type.Optional(
         Type.String({
           description:
-            "Before start, for it and its parts: work computer name/id, this-mac, or automatic (fresh compatibility and room); project resets it.",
+            "Before start, for it and its parts: work computer name/id, this-mac, or automatic (model preference, then an answered basis’s current work computer if eligible, then room); project resets it. Automatic is a soft preference only for tasks already using it; name a computer on the captain’s words or a crewmate’s reported need, under the existing placement rules.",
         }),
       ),
       direction: Type.Optional(

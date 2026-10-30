@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "release-update-check",
+      "reason": "Release work: each alpha now checks one real update from the published alpha to its own signed copy on Apple silicon, in place of the five-copy signed installer check, which stays available on request; the app is unchanged."
+    }
+  ]
+}

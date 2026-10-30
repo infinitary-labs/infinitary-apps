@@ -126,7 +126,7 @@ The switch lists `alpha` and `stable`; releases of either channel also update th
   The `resolve` job (Linux, no secret) provisions Node 24 before running `scripts/resolve-release.sh` from the workflow's own commit, in a clone with every branch and tag, and pins the source commit first.
   Both the resolver and its source-destination check need Node on the job's search path; a gate runner's action runtime alone does not provide it.
   For an alpha it is the `candidate` ("Cutting an alpha"); for a stable, the `promote`d alpha's own commit ("Promoting an alpha").
-  The verify lanes, the installer proof, the signing job and the source tag use exactly it, and the targets file records it.
+  The verify lanes, the update check, the signing job and the source tag use exactly it, and the targets file records it.
 - **One candidate.**
   A live alpha refuses to start without a `candidate`, a full commit id that main's history does not have to contain.
   The resolver refuses it unless `git diff --name-only $(git merge-base <candidate> origin/main) <candidate>` lies under `release-notes/`: its code is exactly main's at the commit the review started from.
@@ -154,14 +154,14 @@ The switch lists `alpha` and `stable`; releases of either channel also update th
   The publication job publishes them inside the same publication steps as the zip: the public release must match the record byte for byte, and both fetch-backs - the public one without a credential - compare every file and its sidecar before the feed commit writes the builds file.
 - **Full alpha checks, inherited stable checks (FI3-482).**
   Every alpha, including a rehearsal, runs verify.yml's `linux-checks`, `linux-e2e` and `mac` lanes: Linux typecheck, lint, adherence lint, unit tests and build; every Playwright journey on Linux, in shards (`docs/testing.md`, "The Linux source desktop"); macOS unit tests, every Playwright journey, the installed Claude client check, the replay gate, and the development package with its signature, data-folder and bundled-git checks.
-  The release also runs `mac-installer.yml` in disposable Actions Macs, checking the signed installer and native updater on Apple silicon and Intel.
-  Signing for publication waits for the check lanes and both installed-update proofs.
+  The release also runs the update check (`mac-update.yml`, "The update check" below) on Apple silicon: its rehearsal before signing, and the real update from the signing job's handoff before publication.
+  Signing for publication waits for the check lanes and the rehearsal; publication waits for the update.
   There is no Linux-only bypass.
   Performance grading stays on request (`verify.yml -f perf=true`).
   A stable omits verify and inherits its alpha's checks: the resolve job reads the published alpha's release run, found by its run number (the alpha's suffix), because a run dispatched from main records main's commit rather than the candidate it built.
   The stable's source is the alpha tag's own commit, so nothing differs from what that run checked.
   The run must have succeeded with every lane completed successfully in its latest attempt, each Linux journey shard included; otherwise the stable is refused, never verified again on its own.
-  A promoted alpha must also have passing signed installer and updater jobs for both architectures.
+  A promoted alpha must also have a passing update check on Apple silicon, or, for an alpha released before the update check, passing five-copy signed installer and updater jobs for both architectures.
   An alpha without those results is refused: publish and verify an updater-capable alpha first.
   The resolve and signing summaries name the alpha and link its run, explicitly saying the lanes were omitted, not passed here.
   The conditional reusable-workflow call may show as skipped; its Linux and Mac lane jobs are absent, never green skips.
@@ -217,7 +217,7 @@ The switch lists `alpha` and `stable`; releases of either channel also update th
   A concurrent pointer write is refused rather than overwriting the other publication; read the new snapshot before publishing again.
   A release is never cancelled to start another; only a newer rehearsal of the same channel and ref replaces an older rehearsal.
 - **Rehearsals publish nothing.**
-  `-f dry_run=true` runs the channel's full checks, signed installer proof, Linux packaging, signing, notarization, and disk-image gates.
+  `-f dry_run=true` runs the channel's full checks, the update check's rehearsal, Linux packaging, signing, notarization, the disk-image gates and the update check itself.
   It computes a local initial feed plan and keeps the metadata as `release-feed-rehearsal`, without instantiating a storage client or reading upload credentials.
   The rehearsal proves the release's metadata construction, not compatibility with a live channel's current target; live publication validates that state before switching.
   No tag, release, cask or feed is published, and no repository visibility changes.
@@ -295,7 +295,7 @@ A phone build keeps changing things on a release when the release's view floor r
   Until Apple shows that a version of Infinitary was ever released in the App Store, a stable waits for no phone.
   Once one was, a stable always waits for such a build, also while a withdrawn version leaves none live.
 
-Without such a build the phone job fails, and neither the installer job nor the release job signs or publishes anything; a rehearsal says what it would wait for and never fails on it.
+Without such a build the phone job fails, and the release job neither signs nor publishes anything; a rehearsal says what it would wait for and never fails on it.
 
 ## Promoting an alpha
 
@@ -350,9 +350,34 @@ When a release review rechecks old crew filings, its report names every checked 
 
 Before activation, the storage owner provisions the bucket, download Worker and domain, verifies conditional writes and unsigned downloads, and supplies the R2 settings through the approved credential recipient.
 The source repository remains private; neither this build nor storage activation changes its visibility.
-An updater-capable alpha must pass signed installed-update verification on both architectures before Stable may promote it.
+An updater-capable alpha must pass its update check before Stable may promote it.
 The first new publication creates the selected feed snapshot only after public artifacts pass fetch-back.
 Keep the Homebrew casks publishing alongside direct installers; neither a shared tap nor its historical downloads is retired.
+
+## The update check
+
+Every alpha, a rehearsal included, proves on Apple silicon that the version alpha subscribers have now updates to it (INF-1900, the captain's direction D).
+`.github/workflows/mac-update.yml` runs `scripts/check-update-from-alpha.mjs` in a placement-service virtual Mac (`mini-mac-virtual`).
+Intel is a best-effort side effect of the universal build: no release runs a hosted Mac for it (the captain, INF-1900).
+It reads the published alpha feed, `feeds/alpha-mac.yml`, for the version alpha subscribers have now, which is a promoted stable right after a promotion.
+It downloads that version's public disk image, checks it against its published checksum and copies the app into `/Applications` the way a person installs it, with its direct-installation receipt.
+It then serves a local copy of the alpha feed that offers the release, under the same private local root, hosts entry and isolation guard as the five-copy check below; no production override enters either app.
+
+- **The rehearsal**, the `rehearse` job, starts with the release and needs no signed copy.
+  The installed app must trust the local feed and offer the release without downloading anything, on Alpha.
+  Signing waits for it, so a broken update check stops the release before anything is signed.
+- **The update**, the `update` job, runs after the signing job, from its handoff, and publication waits for it.
+  The handoff's zip must be the one the signing job recorded.
+  A real streaming turn through a local custom connection is running when the installed app takes the update; the release's own signed zip must replace it natively, the app must restart on its own as the new version on Alpha, with a valid signature and its direct receipt.
+  The live reply must stop before the replacement, and the captain's message and a personal draft must survive.
+
+The check builds nothing, signs nothing and sends nothing to Apple; its observations are kept as `update-evidence-*` artifacts.
+The saved work is created by the installed published app itself, through its own interface, because an older app refuses a database a newer build wrote.
+A stable inherits its alpha's update check and runs neither job.
+
+The five-copy check below stays available on request and no longer runs in a release.
+A pull request that changes Electron or `electron-updater`, the update code (`src/main/host/macUpdates.ts`, `src/core/update/`), signing or packaging (`electron-builder.yml`, `scripts/build-mac-dmg.sh`, the entitlements) or how the app shuts down runs it before merging, through `verify.yml` with `installer_only=true`.
+The update check covers only the path from the current alpha to the release; channel switching, refused downloads, the read-only disk image, the saved-work handover and Homebrew are the five-copy check's.
 
 ## Isolated signed verification
 
@@ -459,7 +484,7 @@ The build that showed a given card is in that card's observations (`card_observa
 
 1. Confirm the five Apple secrets listed in `docs/architecture.md` and public readability of the selected download repository.
    A separate destination also needs `PUBLIC_RELEASE_TOKEN`; the selected source repository uses its workflow token.
-2. Run the isolated signed installer proof for the intended source, then rehearse the release with `dry_run=true`.
+2. Rehearse the release with `dry_run=true`, which runs the update check.
    Neither verification nor rehearsal publishes a release or changes visibility.
 3. Cut an alpha from its reviewed candidate, or promote a verified updater-capable alpha with the captain's selected highlights.
    Publication verifies both public Mac downloads and every Linux file before advancing feeds.
@@ -482,7 +507,8 @@ An item is done when its result is recorded where it names; it is never ticked h
 - `tests/release-contract.test.ts` evaluates the release workflow's conditions, promotion evidence and no-publication rehearsals.
 - `tests/e2e/installed-update-work.spec.ts` checks that a fresh app accepts the proof's local connection and message while its real provider stream stays open, then retains the message after stopping.
 - `tests/installed-update-fixtures.test.ts` exercises coherent archive reads across an ordered replacement and the real saved-work mover's retained recovery copy.
-- `scripts/check-installed-updates.mjs` observes real signed replacement and saved work in disposable Actions Macs; `scripts/check-installed-homebrew.mjs` checks signed cask updates and installation-method handover; `scripts/verify-mac-dmg.sh` verifies the finalized installer against its ZIP.
+- `scripts/check-update-from-alpha.mjs` updates the published alpha to each release's own signed zip in a disposable Apple silicon virtual Mac.
+- `scripts/check-installed-updates.mjs` observes real signed replacement and saved work in disposable Actions Macs, on request; `scripts/check-installed-homebrew.mjs` checks signed cask updates and installation-method handover; `scripts/verify-mac-dmg.sh` verifies the finalized installer against its ZIP.
 - Cask producer, republication and isolated real-Homebrew consumer tests gate the Homebrew path, including the per-copy receipt and refusal of native update effects.
   The consumer runs the generated install hooks on quarantined disposable apps and verifies that only the ownership receipt changes, preserving quarantine, other metadata and app bytes.
 

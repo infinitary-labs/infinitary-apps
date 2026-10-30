@@ -224,8 +224,12 @@ jobs:
               core.setFailed(`Alpha ${alpha} cannot be promoted: its release run ${run.html_url} did not pass every check lane in its latest attempt.`);
               return;
             }
-            if (!passed('Verify signed installer and updater / Apple silicon') || !passed('Verify signed installer and updater / Intel')) {
-              core.setFailed(`Alpha ${alpha} cannot be promoted: it has no passing signed installer and updater verification for both architectures.`);
+            // Its update check on Apple silicon (INF-1900; Intel is best effort), or,
+            // for an alpha released before it, the five-copy check on both chips.
+            const updated = passed('Update from the last published alpha / Apple silicon');
+            const fiveCopies = passed('Verify signed installer and updater / Apple silicon') && passed('Verify signed installer and updater / Intel');
+            if (!updated && !fiveCopies) {
+              core.setFailed(`Alpha ${alpha} cannot be promoted: it has no passing update check.`);
               return;
             }
             core.setOutput('required', 'false');
@@ -374,23 +378,27 @@ jobs:
           APP_STORE_CONNECT_API_KEY: ${{ secrets.APP_STORE_CONNECT_API_KEY }}
         run: node scripts/phone-order.ts
 
-  # It restores the Developer ID identity and signs, so it waits for the phone too.
-  installer:
-    name: Verify signed installer and updater
+  # The update check's rehearsal (INF-1900; docs/alpha.md, "The update
+  # check"): before anything signs, a disposable Apple silicon Mac installs
+  # what alpha subscribers have now and reads this release's offer from a
+  # local alpha feed, so a broken check stops the release before signing. A
+  # stable inherits its alpha's update check. It holds no secret.
+  rehearse:
+    name: Rehearse the update from the last published alpha
     if: ${{ needs.resolve.outputs.verify_required == 'true' }}
-    needs: [resolve, notes, phone]
-    uses: ./.github/workflows/mac-installer.yml
+    needs: resolve
+    uses: ./.github/workflows/mac-update.yml
     with:
       ref: ${{ needs.resolve.outputs.source_commit }}
-    secrets: inherit
+      version: ${{ needs.resolve.outputs.version }}
 
   release:
     # A plain name: a job skipped behind a red verify shows its name
     # unevaluated. The run's summary says the channel, the version and
     # whether it was a dry run.
     name: Build, sign, notarize, and record (a dry run records nothing)
-    needs: [resolve, notes, verify, linux, installer, phone]
-    if: ${{ always() && !cancelled() && needs.resolve.result == 'success' && needs.notes.result == 'success' && needs.linux.result == 'success' && needs.phone.result == 'success' && ((needs.resolve.outputs.verify_required == 'true' && needs.verify.result == 'success' && needs.installer.result == 'success') || (needs.resolve.outputs.verify_required == 'false' && needs.verify.result == 'skipped' && needs.installer.result == 'skipped')) }}
+    needs: [resolve, notes, verify, linux, rehearse, phone]
+    if: ${{ always() && !cancelled() && needs.resolve.result == 'success' && needs.notes.result == 'success' && needs.linux.result == 'success' && needs.phone.result == 'success' && ((needs.resolve.outputs.verify_required == 'true' && needs.verify.result == 'success' && needs.rehearse.result == 'success') || (needs.resolve.outputs.verify_required == 'false' && needs.verify.result == 'skipped' && needs.rehearse.result == 'skipped')) }}
     # INF-603: it signs with the captain's Developer ID certificate, so it
     # asks for the real Mac, never a virtual one, once the switch sets
     # REAL_MAC_RUNNER (docs/testing.md, "The real Mac's place").
@@ -865,7 +873,7 @@ jobs:
           HANDOFF: artifact ${{ steps.handoff-upload.outputs.artifact-id || 'none' }}, manifest sha256 ${{ steps.handoff.outputs.manifest || 'none' }}
           GATES: >-
             visibility=${{ steps.visibility.outcome }} capability=${{ steps.capability.outcome }}
-            installer=${{ needs.installer.result }}
+            rehearse=${{ needs.rehearse.result }}
             build=${{ steps.build.outcome }} package=${{ steps.package.outcome }}
             packaged-notes=${{ steps.packaged-notes.outcome }} signed-app=${{ steps.signed-app.outcome }}
             launch=${{ steps.launch.outcome }} data-folder=${{ steps.data-folder.outcome }}
@@ -901,6 +909,24 @@ jobs:
         continue-on-error: true
         run: node scripts/with-search-list-lock.mjs -- security delete-keychain "${{ steps.developer_id_cert.outputs.keychain_path }}" || true
 
+  # The update check (INF-1900; docs/alpha.md, "The update check"): after
+  # the signing job hands off, a disposable Apple silicon Mac installs what
+  # alpha subscribers have now, and this release's own signed zip must
+  # replace it through a local alpha feed, restart it as the new version and
+  # keep its saved work. Publication waits for it. It builds, signs
+  # and sends nothing; a stable inherits its alpha's.
+  update:
+    name: Update from the last published alpha
+    needs: [resolve, release]
+    if: ${{ always() && !cancelled() && needs.resolve.outputs.verify_required == 'true' && needs.release.result == 'success' }}
+    uses: ./.github/workflows/mac-update.yml
+    with:
+      ref: ${{ needs.resolve.outputs.source_commit }}
+      version: ${{ needs.resolve.outputs.version }}
+      handoff_id: ${{ needs.release.outputs.handoff_id }}
+      zip_name: ${{ needs.resolve.outputs.zip_name }}
+      zip_sha256: ${{ needs.release.outputs.sha256 }}
+
   # Publication and the download checks after it (INF-1716), in one
   # disposable virtual Mac from the placement service's existing pool, so the
   # real Mac is free once the disk image passes its check. It waits for a
@@ -915,8 +941,8 @@ jobs:
   # record's immutable adoption still decides which bytes publish.
   publish:
     name: Publish and check the downloads (a dry run publishes nothing)
-    needs: [resolve, release]
-    if: ${{ always() && !cancelled() && needs.resolve.result == 'success' && needs.release.result == 'success' }}
+    needs: [resolve, release, update]
+    if: ${{ always() && !cancelled() && needs.resolve.result == 'success' && needs.release.result == 'success' && ((needs.resolve.outputs.verify_required == 'true' && needs.update.result == 'success') || (needs.resolve.outputs.verify_required == 'false' && needs.update.result == 'skipped')) }}
     runs-on: mini-mac-virtual
     timeout-minutes: 90
     permissions:

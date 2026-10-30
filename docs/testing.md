@@ -699,6 +699,7 @@ The recipe:
 
 `verify.yml` with `installer_only=true` runs `mac-installer.yml` with its build and Apple-silicon checks on the placement service's `mini-mac-virtual` virtual-only label and Intel on `macos-15-intel`, using the selected ref and existing release credentials without publishing anything.
 Its scratch signing home, real notarized binaries, native replacements, saved-work checks and failure cases are described in `docs/alpha.md`, "Isolated signed verification".
+A release no longer runs it: each alpha runs the update check instead, and a pull request that changes the update path runs this check on request (`docs/alpha.md`, "The update check").
 The local `mac-updates.spec.ts` journey owns channel selection, update consent, progress, restart recovery and keyboard access, with native effects replaced; it does not prove signed installation.
 The affected-journey selector retains that journey for changes to the core Mac controller or shared renderer update store, including changes with no new words or hooks.
 
@@ -773,9 +774,9 @@ The build also fails when the image holds any code-signing identity, so nothing 
 
 A job that signs with the captain's Apple certificates asks for the real Mac through the repository variable `REAL_MAC_RUNNER`: `release.yml`'s signing job and `ios-release.yml`'s TestFlight job.
 Each reads `${{ vars.REAL_MAC_RUNNER || vars.MAC_RUNNER || <its fallback> }}`, so until the switch sets `REAL_MAC_RUNNER` it runs where it ran before.
-The signed installer's build and Apple-silicon checks and `release.yml`'s publication job ask for a virtual Mac by the placement service's `mini-mac-virtual` label.
+The signed installer's build and Apple-silicon checks, the release's Apple-silicon update check and `release.yml`'s publication job ask for a virtual Mac by the placement service's `mini-mac-virtual` label.
 The publication job holds no Apple signing material: it publishes and checks the files the signing job handed over once the disk image passed its check (`docs/alpha.md`, "Signing on the real Mac, publication in a virtual Mac").
-These checks require throwaway guests for their signing, trust changes or writes to `/Applications`; the signed installer's Intel check stays on a disposable hosted Mac (`docs/alpha.md`, "Isolated signed verification").
+These checks require throwaway guests for their signing, trust changes or writes to `/Applications`; the signed installer's Intel check, run only on request, stays on a disposable hosted Mac (`docs/alpha.md`, "Isolated signed verification").
 The phone check reads that label from `VIRTUAL_MAC_RUNNER` when the variable is set, so it starts on the next free virtual place, beside any other phone check (`docs/ios.md`, "A phone check the placement service puts in a virtual Mac").
 The other Mac jobs read `MAC_RUNNER` alone and may run in any place, a virtual one or the real Mac's.
 `tests/release-contract.test.ts` holds which jobs ask for the real Mac.

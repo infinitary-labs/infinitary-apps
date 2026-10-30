@@ -2491,7 +2491,13 @@ describe("resolving a release", () => {
     ]) {
       expect(existsSync(join(root, retired)), retired).toBe(false);
     }
-    for (const name of ["ci.yml", "release.yml", "mac-installer.yml", "verify.yml"]) {
+    for (const name of [
+      "ci.yml",
+      "release.yml",
+      "mac-installer.yml",
+      "mac-update.yml",
+      "verify.yml",
+    ]) {
       const workflow = loadYamlFile(`.github/workflows/${name}`) as {
         on: Record<string, unknown>;
         permissions?: Record<string, string>;
@@ -2610,8 +2616,9 @@ describe("the signed channel workflow", () => {
       "verify",
       "linux",
       "phone",
-      "installer",
+      "rehearse",
       "release",
+      "update",
       "publish",
     ]);
     const runner = (name: string) =>
@@ -2717,7 +2724,7 @@ describe("the signed channel workflow", () => {
           notes: { result: "success" },
           verify: { result },
           linux: { result: "success" },
-          installer: { result: required === "true" ? "success" : "skipped" },
+          rehearse: { result: required === "true" ? "success" : "skipped" },
           phone: { result: "success" },
         };
         expect(workflowValue(jobOf(release, "verify").if ?? "", { needs })).toBe(
@@ -2727,10 +2734,11 @@ describe("the signed channel workflow", () => {
           (required === "true" && result === "success") ||
             (required === "false" && result === "skipped"),
         );
-        for (const installer of ["failure", "cancelled", ""]) {
+        // INF-1900: a failed update rehearsal stops the release before signing.
+        for (const rehearse of ["failure", "cancelled", ""]) {
           expect(
             workflowValue(jobOf(release, "release").if ?? "", {
-              needs: { ...needs, installer: { result: installer } },
+              needs: { ...needs, rehearse: { result: rehearse } },
             }),
           ).toBe(false);
         }
@@ -2759,19 +2767,52 @@ describe("the signed channel workflow", () => {
   // from the signing job's handoff, only once that job succeeded.
   it("publishes only after the signing job succeeded, in one virtual Mac, from its handoff", () => {
     const publish = jobOf(release, "publish");
-    expect(publish.needs).toEqual(["resolve", "release"]);
+    expect(publish.needs).toEqual(["resolve", "release", "update"]);
     expect(publish["runs-on"]).toBe("mini-mac-virtual");
     for (const result of ["success", "failure", "cancelled", "skipped"]) {
       for (const cancelled of [false, true]) {
-        const needs = { resolve: { result: "success" }, release: { result } };
+        // INF-1900: an alpha publishes only after its update check passed on
+        // both chips; a stable inherits its alpha's and skips it.
+        for (const [required, update, publishes] of [
+          ["true", "success", true],
+          ["true", "failure", false],
+          ["true", "skipped", false],
+          ["false", "skipped", true],
+          ["false", "success", false],
+        ] as const) {
+          const needs = {
+            resolve: { result: "success", outputs: { verify_required: required } },
+            release: { result },
+            update: { result: update },
+          };
+          expect(
+            workflowValue(
+              publish.if ?? "",
+              { needs },
+              { success: result === "success", failure: false, always: true, cancelled },
+            ),
+            `${result}${cancelled ? ", run cancelled" : ""}, verify ${required}, update ${update}`,
+          ).toBe(result === "success" && !cancelled && publishes);
+        }
+      }
+    }
+    // The update check runs on the signing job's handoff once it succeeded,
+    // only where verification is required.
+    const update = jobOf(release, "update");
+    expect(update.needs).toEqual(["resolve", "release"]);
+    for (const required of ["true", "false"]) {
+      for (const result of ["success", "failure", "skipped"]) {
+        const needs = {
+          resolve: { result: "success", outputs: { verify_required: required } },
+          release: { result },
+        };
         expect(
           workflowValue(
-            publish.if ?? "",
+            update.if ?? "",
             { needs },
-            { success: result === "success", failure: false, always: true, cancelled },
+            { success: result === "success", failure: false, always: true, cancelled: false },
           ),
-          `${result}${cancelled ? ", run cancelled" : ""}`,
-        ).toBe(result === "success" && !cancelled);
+        ).toBe(required === "true" && result === "success");
       }
     }
     // Its checkout keeps no credential, and it holds only the access its moves need.
@@ -3138,10 +3179,11 @@ describe("the signed channel workflow", () => {
         JSON.stringify(jobs[name]),
       ),
     );
-    expect(signing).toEqual(expect.arrayContaining(["installer", "release"]));
+    expect(signing).toEqual(expect.arrayContaining(["release"]));
     for (const name of signing) expect(waitsFor(name, "phone"), name).toBe(true);
-    // A failed phone job skips the installer: it has no always() to run past it.
-    expect(jobOf(release, "installer").if ?? "").not.toContain("always()");
+    // INF-1900: the update check and its rehearsal hold no signing material.
+    expect(signing).not.toContain("rehearse");
+    expect(signing).not.toContain("update");
   });
 
   it("inherits the published alpha's run, found by its number, only when both lanes passed in its latest attempt, and refuses the stable otherwise", async () => {
@@ -3156,12 +3198,13 @@ describe("the signed channel workflow", () => {
       "alpha",
       "stable rehearsal without promotion",
       "eligible stable",
+      "eligible stable from before the update check",
       "failed mac",
       "skipped mac",
       "pending mac",
       "legacy alpha without mac",
       "alpha without installed-update proof",
-      "failed Intel proof",
+      "failed Intel proof from before the update check",
       "pending Apple silicon proof",
       "failed alpha run",
       "missing alpha run",
@@ -3177,18 +3220,24 @@ describe("the signed channel workflow", () => {
         },
         write: async () => {},
       };
+      // INF-1900: an alpha's update check on Apple silicon alone (Intel is
+      // best effort), or the five-copy check on both chips an alpha released
+      // before it passed instead.
+      const legacy = scenario.endsWith("from before the update check");
+      const updateCheck = legacy
+        ? "Verify signed installer and updater"
+        : "Update from the last published alpha";
       const jobs = [
         "verify / linux-checks",
         "verify / linux-e2e / journeys (1/2)",
         "verify / linux-e2e / journeys (2/2)",
         "verify / mac",
-        "Verify signed installer and updater / Apple silicon",
-        "Verify signed installer and updater / Intel",
+        `${updateCheck} / Apple silicon`,
+        ...(legacy ? [`${updateCheck} / Intel`] : []),
       ]
         .filter(
           (name) =>
-            scenario !== "alpha without installed-update proof" ||
-            !name.startsWith("Verify signed installer"),
+            scenario !== "alpha without installed-update proof" || !name.startsWith(updateCheck),
         )
         .filter((name) => scenario !== "legacy alpha without mac" || name !== "verify / mac")
         .map((name) => ({
@@ -3199,7 +3248,7 @@ describe("the signed channel workflow", () => {
               ? "in_progress"
               : "completed",
           conclusion:
-            scenario === "failed Intel proof" && name.endsWith("Intel")
+            scenario === "failed Intel proof from before the update check" && name.endsWith("Intel")
               ? "failure"
               : name.endsWith("mac") && scenario === "failed mac"
                 ? "failure"
@@ -3268,7 +3317,7 @@ describe("the signed channel workflow", () => {
           },
         },
       );
-      const inherited = scenario === "eligible stable";
+      const inherited = scenario.startsWith("eligible stable");
       const refused =
         !inherited && !["alpha", "stable rehearsal without promotion"].includes(scenario);
       expect(outputs.required, scenario).toBe(inherited ? "false" : "true");
@@ -3317,7 +3366,7 @@ describe("the signed channel workflow", () => {
     });
     // Nothing verify runs holds a secret.
     expect(call.secrets).toBeUndefined();
-    expect(signing.needs).toEqual(["resolve", "notes", "verify", "linux", "installer", "phone"]);
+    expect(signing.needs).toEqual(["resolve", "notes", "verify", "linux", "rehearse", "phone"]);
     expect(steps[0]).toMatchObject({
       uses: "actions/checkout@v4",
       // biome-ignore lint/suspicious/noTemplateCurlyInString: the workflow's own expression, matched literally.
@@ -3528,10 +3577,12 @@ describe("the signed channel workflow", () => {
           dry_run: String(dryRun),
           old_cask: String(oldCask),
           release_repository: releaseSource.repository,
+          verify_required: "true",
         },
       },
       // The signing job hands on what its visibility step chose.
       release: { result: "success", outputs: { direct: String(dryRun ? false : direct) } },
+      update: { result: "success" },
     };
     const ran = (jobSteps: Step[]) =>
       jobSteps.filter(
@@ -4200,6 +4251,36 @@ it("keeps installer verification on the selected disposable runners", () => {
     { chip: "arm64", runner: "mini-mac-virtual" },
     { chip: "x64", runner: "macos-15-intel" },
   ]);
+});
+
+// INF-1900 direction D: the release's update check runs in a disposable
+// Apple silicon Mac, rehearsing before signing and updating after it. The
+// captain: Intel is a best-effort side effect, with no hosted Mac runs. The
+// promotion gate reads its job by this name.
+it("runs the update check on Apple silicon only, rehearsing before signing and updating from the handoff", () => {
+  const { jobs } = loadYamlFile(".github/workflows/mac-update.yml") as {
+    jobs: Record<string, { name: string; "runs-on": string; strategy?: unknown }>;
+  };
+  expect(Object.values(jobs).map((job) => [job.name, job["runs-on"], job.strategy])).toEqual([
+    ["Apple silicon", "mini-mac-virtual", undefined],
+  ]);
+  const release = loadYamlFile(".github/workflows/release.yml") as {
+    jobs: Record<
+      "rehearse" | "update",
+      { name: string; uses?: string; secrets?: unknown; with?: Record<string, string> }
+    >;
+  };
+  const { rehearse, update } = release.jobs;
+  for (const job of [rehearse, update]) {
+    expect(job.uses).toBe("./.github/workflows/mac-update.yml");
+    expect(job.secrets).toBeUndefined();
+  }
+  expect(rehearse.with?.handoff_id).toBeUndefined();
+  // biome-ignore lint/suspicious/noTemplateCurlyInString: the workflow's own expression, matched literally.
+  expect(update.with?.handoff_id).toBe("${{ needs.release.outputs.handoff_id }}");
+  // biome-ignore lint/suspicious/noTemplateCurlyInString: the workflow's own expression, matched literally.
+  expect(update.with?.zip_sha256).toBe("${{ needs.release.outputs.sha256 }}");
+  expect(update.name).toBe("Update from the last published alpha");
 });
 
 // INF-1539: the captain approved "Add logging and recheck once" for Apple silicon

@@ -1,0 +1,95 @@
+name: Update from the last published alpha
+
+# INF-1900 direction D (docs/alpha.md, "The update check"): on Apple silicon,
+# a disposable virtual Mac installs the version alpha subscribers have now from its
+# public disk image and updates it through a local alpha feed. Before signing,
+# the release calls it with no handoff: a rehearsal that stops at reading the
+# offer. After signing, it calls it with the signing job's handoff, and the
+# release's own signed zip must replace the installed app, restart it as the
+# new version and keep its saved work. It builds, signs and sends nothing.
+# Intel is a best-effort side effect of the universal build, never a hosted
+# Mac run (the captain, INF-1900).
+
+on:
+  workflow_call:
+    inputs:
+      ref:
+        required: true
+        type: string
+      version:
+        description: The release's version, which the local alpha feed offers
+        required: true
+        type: string
+      handoff_id:
+        description: The signing job's handoff artifact; empty rehearses the offer only
+        required: false
+        type: string
+        default: ''
+      zip_name:
+        required: false
+        type: string
+        default: ''
+      zip_sha256:
+        required: false
+        type: string
+        default: ''
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  update:
+    name: Apple silicon
+    runs-on: mini-mac-virtual
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.ref }}
+          persist-credentials: false
+      - uses: pnpm/action-setup@v4
+        with:
+          dest: ${{ runner.temp }}/setup-pnpm
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+      - name: Refuse the physical Mac before installing or changing the guest
+        run: node scripts/installer-environment.ts
+      - run: pnpm install --frozen-lockfile
+      - name: Confirm the native architecture
+        run: node -e 'if(process.arch !== "arm64") throw new Error("This runner is not Apple silicon");'
+      # By the immutable id the signing job recorded; the next step is the gate.
+      - name: Fetch the release's signed zip
+        if: ${{ inputs.handoff_id != '' }}
+        uses: actions/download-artifact@v4
+        with:
+          artifact-ids: ${{ inputs.handoff_id }}
+          path: ${{ runner.temp }}/handoff-download
+          merge-multiple: true
+      - name: Check it is the zip the signing job recorded
+        id: zip
+        if: ${{ inputs.handoff_id != '' }}
+        env:
+          ZIP_NAME: ${{ inputs.zip_name }}
+          ZIP_SHA256: ${{ inputs.zip_sha256 }}
+        run: |
+          set -euo pipefail
+          ZIP="$RUNNER_TEMP/handoff-download/zip/$ZIP_NAME"
+          [[ "$ZIP_NAME" == "Infinitary-${{ inputs.version }}-universal.zip" ]]
+          [[ "$(shasum -a 256 "$ZIP" | awk '{print $1}')" == "$ZIP_SHA256" ]]
+          echo "path=$ZIP" >> "$GITHUB_OUTPUT"
+      - name: ${{ inputs.handoff_id == '' && 'Install the published alpha and read the offer' || 'Update the published alpha to this release' }}
+        env:
+          UPDATE_TARGET_VERSION: ${{ inputs.version }}
+          UPDATE_TARGET_ZIP: ${{ steps.zip.outputs.path }}
+          INSTALLER_EVIDENCE: ${{ runner.temp }}/update-evidence
+        run: node scripts/check-update-from-alpha.mjs
+      - name: Keep the observed results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: update-evidence-${{ inputs.handoff_id == '' && 'rehearsal' || 'update' }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/update-evidence
+          if-no-files-found: ignore

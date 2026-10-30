@@ -1,6 +1,7 @@
 import { expect, type Locator, test } from "@playwright/test";
 import { renderAnswerShapeSection } from "../../src/core/orchestrator/intentBrief";
 import { renderWake } from "../../src/core/orchestrator/wakes";
+import { ANSWERED_LINE } from "../../src/core/tasks/taskFeed";
 import { reportSummary } from "../../src/shared/feed";
 import type { TaskDetail, TaskView } from "../../src/shared/tasks";
 import { MERGE_WORDS } from "../../src/shared/vocabulary";
@@ -282,9 +283,11 @@ test("closing the answer card reaches its crewmate, which reports it finished, a
         (body) => body.includes("You are a crewmate") && body.includes(CARD_CLOSED_STEER_NEEDLE),
       ),
     ).toBe(true);
-    await expect(
-      reportLine(page, row.key).filter({ hasText: reportSummary(MOCK_ANSWER_FINISHED_AGAIN) }),
-    ).toBeVisible({ timeout: 30_000 });
+    // A finished report writes no line of its own (INF-1845): Activity
+    // shows the task's own close after it, the answer with no choice.
+    await expect(statusLine(page, row.key).filter({ hasText: ANSWERED_LINE })).toBeVisible({
+      timeout: 30_000,
+    });
     await expect(waiting.locator(`[data-now-key="${row.key}"]`)).toHaveCount(0);
     await page.screenshot({ path: test.info().outputPath("answer-close-after.png") });
   } finally {

@@ -35,6 +35,9 @@ export const SETTLE_FOLD = "settle";
 /** A discarded task's own line: its close says it, with nothing more to add. */
 export const DISCARDED_LINE = "Discarded";
 
+/** An answered task's own line when its close names no choice and no use. */
+export const ANSWERED_LINE = "Answered";
+
 /** The fold a timeline event's feed line belongs to, if any (`recentFeed`). */
 function foldOf(event: TaskEvent): string | undefined {
   const once = text(event.data?.feedOnce);
@@ -115,7 +118,7 @@ export function taskFeedLine(record: FeedSubject, event: TaskEvent): FeedLine | 
         // on itself (settle_task answered): it was used, not thrown away.
         line = `Answered: ${event.text.replace(/^answered - /, "")}`;
       } else if (reason === "answered") {
-        line = "Answered";
+        line = ANSWERED_LINE;
       } else if (reason === "discarded") {
         line = DISCARDED_LINE;
       } else if (reason === "released") {

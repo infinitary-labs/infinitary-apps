@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "answer-close-journey-line",
+      "reason": "Internal: the answer-card close journey now waits for the task's own Answered line in Activity, since a finished report writes no line of its own; the feed's words are unchanged."
+    }
+  ]
+}

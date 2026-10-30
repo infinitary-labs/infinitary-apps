@@ -176,7 +176,7 @@ export function linkDialingFirst(text: string, host: string | null): string {
   if (!splitDialAddress(at)) return text;
   const also = linkAddresses(link)
     .filter((each) => each !== at)
-    .slice(0, 8);
+    .slice(0, PAIRING_LINK_ALSO_MAX);
   return buildPairingLink({ ...link, at, also });
 }
 
@@ -187,6 +187,12 @@ export function linkNamesPrivateToo(link: {
 }): boolean {
   return (link.also ?? []).some((at) => dialNetwork(at) === "private");
 }
+
+/**
+ * The most other addresses a link carries after `at`: every installed reader,
+ * on a computer and on the phone, refuses a link with more.
+ */
+export const PAIRING_LINK_ALSO_MAX = 8;
 
 /** A link's parts (docs/devices.md, "The link"). */
 export const pairingLinkSchema = z.strictObject({
@@ -204,7 +210,7 @@ export const pairingLinkSchema = z.strictObject({
    * The other addresses to try, after `at`, when the first does not answer.
    * One optional part, so a link without it reads as before.
    */
-  also: z.array(dialAddressSchema).max(8).optional(),
+  also: z.array(dialAddressSchema).max(PAIRING_LINK_ALSO_MAX).optional(),
 });
 export type PairingLink = z.infer<typeof pairingLinkSchema>;
 

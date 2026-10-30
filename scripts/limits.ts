@@ -346,6 +346,9 @@ export const LIMITS: Record<string, Record<string, LimitEntry>> = {
     CREW_TRANSCRIPT_LINES_MAX: physical("earlier lines are counted, not sent; the tab names how many"),
     CREW_DIFF_LINES_MAX: physical("the rest are counted; the line names how many more"),
   },
+  "src/shared/devices.ts": {
+    PAIRING_LINK_ALSO_MAX: outside("installed readers refuse more; a link carries the first, the welcome all"),
+  },
   "src/shared/emotes.ts": {
     EMOTE_WORDS_MAX: record("refused in words naming 40; nothing shows; resend fewer words"),
   },

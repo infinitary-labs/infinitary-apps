@@ -4,7 +4,7 @@ import type { IncomingMessage } from "node:http";
 import type { NetworkInterfaceInfo } from "node:os";
 import { join } from "node:path";
 import { CONNECTION_PORT } from "@shared/connection";
-import { deviceRunsWork, parsePairingLink } from "@shared/devices";
+import { deviceRunsWork, PAIRING_LINK_ALSO_MAX, parsePairingLink } from "@shared/devices";
 import { afterEach, describe, expect, it } from "vitest";
 import { scratchDir } from "../../../tests/helpers/scratchDirs";
 import { createKeyIdentity, type KeyIdentity } from "./identity";
@@ -638,6 +638,23 @@ describe("device pairing", () => {
       at: `test-mac.local:${CONNECTION_PORT}`,
       also: [`192.168.1.20:${CONNECTION_PORT}`],
     });
+  });
+
+  // INF-1909: a Mac with nine private addresses and a local name showed "Too big: expected array
+  // to have <=8 items" on "also" instead of a phone code. A link carries what its readers take,
+  // in preference order; the rest reach the device in its welcome.
+  it("makes a link on a Mac with more addresses than a link carries", () => {
+    const en0 = Array.from({ length: 9 }, (_, n) => iface(`10.254.253.${20 + n}`));
+    const { pairing } = pairingAt(undefined, undefined, { interfaces: () => ({ en0 }) });
+    pairing.noteNetworkName("test-mac.local");
+    for (const phone of [true, false]) {
+      const offered = pairing.offerTargets(phone);
+      expect(offered).toHaveLength(10);
+      const link = parsePairingLink(
+        pairing.invite({ kind: "mac", ...(phone ? { phone } : {}) }).link,
+      );
+      expect([link.at, ...(link.also ?? [])]).toEqual(offered.slice(0, 1 + PAIRING_LINK_ALSO_MAX));
+    }
   });
 
   it("sends a link every address this Mac has, and no longer keeps a chosen one", () => {

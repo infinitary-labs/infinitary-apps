@@ -56,7 +56,7 @@ Firstmate 3000's computers from before the bridge release read only the old sche
 | --- | --- |
 | `as` | The kind the home made the link for: `mac` for another Mac, by a link, a command or its address, and `work` for another user on this Mac, by its command. A device that cannot be that kind refuses the link before using it. The home makes no new link for a `view` (`inf:devices:invite` refuses one), and still reads one an older home made. |
 | `at` | Where the device dials first, as `host:port`: an address, or a name the device resolves. An older Infinitary reads only this part. |
-| `also` | The other addresses to try after `at`, comma-separated in one optional part. Absent when the link names one address. |
+| `also` | The other addresses to try after `at`, comma-separated in one optional part, at most eight. Absent when the link names one address. |
 | `key` | The home's pin, 43 characters. |
 | `code` | 32 random bytes, base64url, 43 characters. Good for one use, for ten minutes. |
 | `via` | Only `ssh`, and only on a link for a computer that reaches this Mac through this Mac's own SSH connection (below, "Through the home's SSH"). Its `at` is then this Mac's loopback, where that connection delivers it, and the device never dials it. |
@@ -840,12 +840,13 @@ It reaches the first mate through `app_state` and a feed line, so it is quoted t
 
 ## Where devices find this Mac
 
-A new link carries every address this computer has, with `CONNECTION_PORT`.
+A new link carries every address this computer has, up to what a link carries, with `CONNECTION_PORT`.
 An ordinary computer link offers the local network's name, such as `kuns-macbook-pro.local`, first when this computer is on a local network, then each local address, then the private network.
 A phone invitation (`phone: true`) instead offers detected private IPv4 addresses first, then the same local name and local addresses; computer invitations and SSH paths keep their order.
 The phone checks each candidate with a pinned non-mutating request before spending the invitation, preserves private-first order on reconnect and refreshes alternatives from the authenticated welcome (`docs/ios.md`).
 The first stays `at`.
-The rest ride `also`.
+The rest ride `also`, at most `PAIRING_LINK_ALSO_MAX` (eight) of them, since every installed reader, on a computer and on the phone, refuses a link with more.
+A Mac with more addresses than that offers the first nine in this order, and a device that joined hears every one in its welcome.
 Container bridges are left out.
 The connection listens on loopback plus every one of those addresses, never a wildcard, a public address or a link-local address (`docs/connection.md`).
 The other computer tries each in order and keeps the one that answered.

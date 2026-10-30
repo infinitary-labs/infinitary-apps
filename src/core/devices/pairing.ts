@@ -30,6 +30,7 @@ import {
   deviceViewSchema,
   isPhone,
   KEY_TEXT_PATTERN,
+  PAIRING_LINK_ALSO_MAX,
   PAIRING_LINK_TTL_MS,
   splitDialAddress,
 } from "@shared/devices";
@@ -394,7 +395,9 @@ export class DevicePairing implements PairedDevices {
    * look over SSH found it (`locality`), which pairing then reads in place
    * of where its socket dialed from.
    *
-   * The link names the private address in use, or loopback with none. The
+   * The link names the private address in use, or loopback with none, and
+   * as many more as a link carries, first to last (`PAIRING_LINK_ALSO_MAX`);
+   * a device that joined hears every one in its welcome. The
    * command for another user on this Mac names loopback always: that user
    * dials from this Mac itself, where loopback answers whatever network this
    * Mac is on, so a new address never strands its work. A link for a
@@ -439,7 +442,7 @@ export class DevicePairing implements PairedDevices {
         : request.at
           ? [request.at]
           : this.offerTargets(request.phone);
-    const [at, ...also] = targets;
+    const [at, ...also] = targets.slice(0, 1 + PAIRING_LINK_ALSO_MAX);
     return {
       id,
       link: buildPairingLink({

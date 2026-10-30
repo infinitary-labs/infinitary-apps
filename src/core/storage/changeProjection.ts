@@ -54,14 +54,10 @@ const MERGED_CLOSES = new Set<string>(["merged", "landed", "released"]);
 
 /**
  * The pull requests the slot records that are not this task's own, by
- * number, and the heads the record names for them: the heads their reviews
- * and approval record, and the head and checks read under a referenced
- * number, which a reading of the selection at a moved head writes without
- * moving the review. They bind a fact saved before it named its pull request.
+ * number: the ones its referenced reviews, selection and approval name.
  */
-function referencedOf(delivery: TaskDelivery): { numbers: Set<number>; heads: Set<string> } {
+function referencedNumbers(delivery: TaskDelivery): Set<number> {
   const numbers = new Set<number>();
-  const heads = new Set<string>();
   const approval = delivery.mergeAuthorization;
   const reviews = [
     ...(delivery.mergeReviews ?? []),
@@ -69,20 +65,8 @@ function referencedOf(delivery: TaskDelivery): { numbers: Set<number>; heads: Se
     ...(approval?.review ? [approval.review] : []),
   ];
   for (const review of reviews)
-    if (review.relationship === "referenced") {
-      numbers.add(review.number);
-      heads.add(review.headSha);
-    }
-  if (approval?.review?.relationship === "referenced") {
-    heads.add(approval.approvedHead);
-    for (const step of approval.lineage) heads.add(step.toHead);
-    if (approval.receipt) heads.add(approval.receipt.head);
-  }
-  if (delivery.prNumber !== undefined && numbers.has(delivery.prNumber)) {
-    if (delivery.headSha) heads.add(delivery.headSha);
-    if (delivery.checks) heads.add(delivery.checks.headSha);
-  }
-  return { numbers, heads };
+    if (review.relationship === "referenced") numbers.add(review.number);
+  return numbers;
 }
 
 /** The slot's override as its writers save it: the record keeps it without the pull request it binds it by. */
@@ -91,43 +75,33 @@ type SlotOverride = ChangeOverride & { prNumber?: number };
 /**
  * The slot's facts about the task's own change (`docs/forge.md`, "A
  * requested merge"): a reading of a referenced pull request writes its
- * number, page and label and the head it read with its checks, and an
+ * number, page, label and base and the head it read with its checks, and an
  * approval of it is consent to merge that pull request, not this change.
- * Each fact names the pull request it belongs to: the number group carries
- * it, the head and the checks read at it are written with the number of the
- * change they were read from and move with it, an approval names the review
- * it approved, and an override given for one version names the pull request
- * that version belonged to. A fact that names a referenced pull request is
- * not this change's, whatever the current selection. The task's own number
- * is read from the facts that never follow a selection - its owned reviews
- * and completion offers - because a reading never transfers branch
- * ownership. A fact saved before it named its pull request - an override,
- * or a head and its checks an older writer left beside the own number when
- * it named the own change again - is bound by its head alone: at a head
- * only the referenced pull requests' facts name it is theirs, while at a
- * head the own change's facts or its record (`recorded`) name too, it is
- * this change's, because two pull requests can share a commit (INF-1884
- * R9). The record's own age (`createdAt`) tells those older facts from a
- * reading: the record exists only since the writers that bind a head and
- * its checks to the number they are written with, so a reading dated since
- * it was made is this change's at any head, and one dated before it is
- * bound by head. An override saved without its pull request at a head both
- * pull requests share was given for one of their versions, and the host
- * cannot tell which, so it is neither's (R10).
+ * Each fact names the pull request it belongs to, and the record binds it by
+ * that number alone: the number group carries it, the checks are stamped
+ * with the number of the pull request they were read of
+ * (`CheckSnapshot.prNumber`) and the head, state and times read with them
+ * go with that stamp, a head read with no checks goes with the number group
+ * it was written beside, an approval names the review it approved, and an
+ * override given for one version names the pull request that version
+ * belonged to. A fact that names a referenced pull request is not this
+ * change's, whatever the current selection. The task's own number is read
+ * from the facts that never follow a selection - its owned reviews and
+ * completion offers - because a reading never transfers branch ownership. A
+ * reading or a version override saved before its writer stamped it is this
+ * change's only in a slot that records no referenced pull request; in one
+ * that does, the host cannot tell whose it was, so it is nobody's and the
+ * record leaves it out.
  */
-function ownFacts(
-  delivery: TaskDelivery,
-  recorded: readonly string[],
-  createdAt: number,
-): TaskDelivery {
-  const referenced = referencedOf(delivery);
+function ownFacts(delivery: TaskDelivery): TaskDelivery {
+  const referenced = referencedNumbers(delivery);
   const own: TaskDelivery = { ...delivery };
-  const numberReferenced =
-    delivery.prNumber !== undefined && referenced.numbers.has(delivery.prNumber);
+  const numberReferenced = delivery.prNumber !== undefined && referenced.has(delivery.prNumber);
   if (numberReferenced) {
     delete own.prNumber;
     delete own.prUrl;
     delete own.changeLabel;
+    delete own.prBase;
     const number =
       (delivery.mergeReviews ?? []).find((review) => review.relationship === "owned")?.number ??
       delivery.completionOffers?.[0]?.prNumber;
@@ -135,52 +109,33 @@ function ownFacts(
   }
   if (delivery.mergeAuthorization?.review?.relationship === "referenced")
     delete own.mergeAuthorization;
-  const override = delivery.override as SlotOverride | undefined;
-  // The heads the own change's facts name with their pull request, and the
-  // versions the record holds: a referenced head among them is both pull
-  // requests', and a fact at it that names no pull request is this change's.
-  const ownHeads = new Set<string>(recorded);
-  for (const review of delivery.mergeReviews ?? [])
-    if (review.relationship === "owned" && review.number === own.prNumber)
-      ownHeads.add(review.headSha);
-  for (const offer of delivery.completionOffers ?? []) ownHeads.add(offer.headSha);
-  if (own.mergeAuthorization) {
-    ownHeads.add(own.mergeAuthorization.approvedHead);
-    for (const step of own.mergeAuthorization.lineage) ownHeads.add(step.toHead);
-  }
-  for (const head of [
-    delivery.presentation?.published?.head,
-    delivery.presentation?.publication?.head,
-  ])
-    if (head) ownHeads.add(head);
-  if (override?.head && override.prNumber !== undefined && override.prNumber === own.prNumber)
-    ownHeads.add(override.head);
-  const theirs = (head: string | undefined): boolean =>
-    head !== undefined && referenced.heads.has(head) && !ownHeads.has(head);
-  // A reading - the head, the checks read at it and when - dated since the
-  // record was made was written with the own number it stands beside.
-  const reading =
-    delivery.checks !== undefined &&
-    delivery.checks.headSha === delivery.headSha &&
-    delivery.ciAt !== undefined &&
-    delivery.ciAt > createdAt;
-  if (
-    numberReferenced ||
-    (!reading && (theirs(delivery.headSha) || theirs(delivery.checks?.headSha)))
-  ) {
+  const ownNumber = (number: number | undefined): boolean =>
+    number !== undefined &&
+    !referenced.has(number) &&
+    (own.prNumber === undefined || number === own.prNumber);
+  const stamp = delivery.checks?.prNumber;
+  const readingOwn =
+    stamp !== undefined
+      ? ownNumber(stamp)
+      : delivery.checks !== undefined
+        ? referenced.size === 0
+        : !numberReferenced;
+  if (!readingOwn) {
     delete own.headSha;
     delete own.checks;
     delete own.ci;
     delete own.ciAt;
     delete own.ciStartedAt;
     delete own.ciFinishedAt;
+    delete own.mainChecks;
   }
+  const override = delivery.override as SlotOverride | undefined;
   if (override) {
+    const version = override.until !== "task" && override.head !== undefined;
     const foreign =
       override.prNumber !== undefined
-        ? referenced.numbers.has(override.prNumber) ||
-          (own.prNumber !== undefined && override.prNumber !== own.prNumber)
-        : override.head !== undefined && referenced.heads.has(override.head);
+        ? !ownNumber(override.prNumber)
+        : version && referenced.size > 0;
     if (foreign) delete own.override;
   }
   return own;
@@ -196,10 +151,15 @@ function handleOf(delivery: TaskDelivery | null, repo: ChangeRepo): ChangeHandle
   };
 }
 
-/** The base the slot names for this pull request: its newest owned merge review, else the approval's. */
+/**
+ * The base the slot names for this pull request: the one the host named at
+ * the last reading or the open (`prBase`), else its newest owned merge
+ * review's, else the approval's.
+ */
 function baseOf(delivery: TaskDelivery | null): string | null {
   const number = delivery?.prNumber;
   if (!delivery || number === undefined) return null;
+  if (delivery.prBase) return delivery.prBase;
   const owned = (delivery.mergeReviews ?? [])
     .filter((review) => review.relationship === "owned" && review.number === number)
     .sort((a, b) => b.at - a.at)[0];
@@ -213,30 +173,21 @@ function baseOf(delivery: TaskDelivery | null): string | null {
 
 /**
  * The slot's override as the record keeps it: for the whole task, or for one
- * version. A version override is a pushed head (`pushed`) when it names its
- * pull request, or when the slot records no referenced pull request it could
- * have been given for; one saved before it named its pull request, in a slot
- * that records a referenced one, attaches only to a head another fact names,
- * because the host cannot tell whose version it was given for.
+ * version. A version override the slot still names after `ownFacts` is this
+ * change's, so its head is a pushed one (`pushed`): it was given for a
+ * version the host held.
  */
-function overrideOf(
-  delivery: TaskDelivery | null,
-  referenced: boolean,
-): {
+function overrideOf(delivery: TaskDelivery | null): {
   task: ChangeOverride | null;
   version: ChangeOverride | null;
   pushed: ChangeOverride | null;
 } {
   const slot = delivery?.override as SlotOverride | undefined;
   if (!slot) return { task: null, version: null, pushed: null };
-  const { prNumber: bound, ...override } = slot;
+  const { prNumber: _bound, ...override } = slot;
   if (override.until === "task" || !override.head)
     return { task: override, version: null, pushed: null };
-  return {
-    task: null,
-    version: override,
-    pushed: bound !== undefined || !referenced ? override : null,
-  };
+  return { task: null, version: override, pushed: override };
 }
 
 /**
@@ -326,6 +277,10 @@ function checksAt(delivery: TaskDelivery, head: string): ChangeChecks | null {
   if (delivery.changeLines?.head === head) {
     const { base, added, deleted, at } = delivery.changeLines;
     checks.lines = { base, added, deleted, at };
+  }
+  if (delivery.mainChecks?.head === head && delivery.checks?.headSha === head) {
+    const { sha, at, items } = delivery.mainChecks;
+    checks.main = { sha, at, items };
   }
   return Object.keys(checks).length > 0 ? checks : null;
 }
@@ -437,14 +392,9 @@ export function projectChange(
   record: TaskRecord,
   repo: ChangeRepo,
   recorded: readonly string[] = [],
-  /** When the record was made; the task's last write when it is made by this projection. */
-  createdAt: number = record.updatedAt,
 ): ProjectedChange {
-  const delivery = record.delivery ? ownFacts(record.delivery, recorded, createdAt) : null;
-  const override = overrideOf(
-    delivery,
-    record.delivery ? referencedOf(record.delivery).numbers.size > 0 : false,
-  );
+  const delivery = record.delivery ? ownFacts(record.delivery) : null;
+  const override = overrideOf(delivery);
   return {
     repoId: record.repoId ?? "",
     base: baseOf(delivery),

@@ -7,6 +7,7 @@ import type {
   OpenEffect,
   TaskLifecycleOp,
 } from "@shared/cards";
+import type { ChangeRecord } from "@shared/change";
 import type { ChangePresentationRecord } from "@shared/changePresentation";
 import { isRepairAssessment } from "@shared/checkRepair";
 import { reportSummary } from "@shared/feed";
@@ -1019,6 +1020,11 @@ export class TaskService {
 
   get(id: string): TaskRecord | undefined {
     return this.store.get(id);
+  }
+
+  /** The change a task carries, as its record keeps it (INF-1868 piece 1), or undefined. */
+  changeFor(taskId: string): ChangeRecord | undefined {
+    return this.store.changes.forTask(taskId);
   }
 
   byKey(key: string): TaskRecord | undefined {

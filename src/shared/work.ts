@@ -393,6 +393,7 @@ export type WorkingCopyBase = z.infer<typeof workingCopyBaseSchema>;
 
 /** check_change's declarations, as the crewmate's tool takes them (src/shared/checkRepair.ts). */
 const checkChangeInputSchema = z.object({
+  change: z.string().optional(),
   declaration: z
     .object({
       headSha: z.string(),

@@ -3,7 +3,7 @@ import type {
   MergeRepairDeclaration,
   MergeRepairImpact,
 } from "@shared/checkRepair";
-import type { CheckSnapshot } from "@shared/checkSnapshot";
+import type { CheckSnapshot, MainCheckEvidence } from "@shared/checkSnapshot";
 import { type HoldOverride, overridePasses } from "@shared/holds";
 import type { LiveValidation } from "@shared/liveValidation";
 import type { MergeReview } from "@shared/mergeReview";
@@ -306,6 +306,12 @@ export type TaskDelivery = {
    * on a plain Git host. Surfaces read it instead of parsing a link.
    */
   changeLabel?: string;
+  /**
+   * The branch the pull request targets, as the host names it (INF-1873):
+   * the default branch, or the branch `open_change` asked for. Written with
+   * the number group and refreshed by each reading; the change record's base.
+   */
+  prBase?: string;
   /** The PR head the last CI read saw, or the assigned commit on an independent review task. */
   headSha?: string;
   /**
@@ -325,6 +331,14 @@ export type TaskDelivery = {
   ciStartedAt?: number;
   /** When the checks finished: the last finish when green, the first failure's when red. */
   ciFinishedAt?: number;
+  /**
+   * The default branch's newest run of each check the reading at `head` found
+   * red (INF-1915 fix 1), read with that reading of the task's own pull
+   * request and replaced or cleared by the next. Evidence about a failure's
+   * cause for the crew's diagnosis and the completion card, never a merge
+   * input: no gate reads it.
+   */
+  mainChecks?: MainCheckEvidence & { head: string };
   /** The newest watched run's state and host times, kept after its watch ends (INF-594). */
   runChecks?: RunChecks;
   landedMode?: "fast-forward" | "merge" | "pr";

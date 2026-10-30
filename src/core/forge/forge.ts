@@ -62,7 +62,28 @@ export type ForgeChange = {
   body?: string;
   /** Plain text from the verified saved story, never its rendered description. */
   squashMessage?: string;
+  /** The branch the change targets, where the host names one (INF-1873). */
+  base?: string;
 };
+
+/**
+ * The events a pull request's own runs carry on GitHub (INF-1891): the ones
+ * the host starts for the pull request itself. A run a person or a tool
+ * started on the branch by hand, or a schedule, is not the change's check.
+ */
+const CHANGE_RUN_EVENTS = new Set(["pull_request", "pull_request_target"]);
+
+/**
+ * The checks that are a proposed change's own (INF-1891, the captain: "for
+ * merge we only care about the PR checks"): a check whose run the host named
+ * an event for stays only when that event is the change's own, while one
+ * with no event - a commit status, a check an app posted - stays as read.
+ * A branch's own checks, such as the default branch's, are never read
+ * through this: their runs carry the push that made them.
+ */
+export function ownChecksOf(items: ForgeCheck[]): ForgeCheck[] {
+  return items.filter((check) => check.event === undefined || CHANGE_RUN_EVENTS.has(check.event));
+}
 
 /**
  * One check's state, normalised: `success` and `skipped` permit green; terminal
@@ -264,12 +285,17 @@ export interface Forge {
   /** One project by its exact owner/name, or null; absent where the host cannot look one up. */
   findProject?(fullName: string): Promise<ForgeProject | null>;
   defaultBranch(): Promise<string>;
-  /** Offer the branch as a proposed change; on a plain host this sends it up. */
+  /**
+   * Offer the branch as a proposed change; on a plain host this sends it up.
+   * `base` names the branch it targets where the host takes one (INF-1873);
+   * absent, the default branch.
+   */
   openChange(input: {
     branch: string;
     title: string;
     body: string;
     draft?: boolean;
+    base?: string;
   }): Promise<ForgeChange>;
   /**
    * Replace the description, a saved story or legacy words, only if its just-read body and code

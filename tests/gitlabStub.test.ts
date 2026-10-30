@@ -101,6 +101,8 @@ describe.each(["gitlab.com", "gitlab.example.com"])(
         headSha: head,
         title: TITLE,
         body: BODY,
+        // The forge carries the branch a merge request targets (INF-1873).
+        base: "main",
       });
       expect(forge.label(opened)).toBe("!1");
       expect(forge.place).toBe(host === "gitlab.com" ? "GitLab" : host);

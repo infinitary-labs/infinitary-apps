@@ -244,7 +244,7 @@ export class ChangeStore {
         ) as VersionRow[]
       ).map((row) => [row.head, row]),
     );
-    const change = projectChange(task, repo, [...known.keys()], existing?.created_at ?? at);
+    const change = projectChange(task, repo, [...known.keys()]);
     if (existing)
       prepared(
         this.db,

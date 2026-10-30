@@ -114,16 +114,24 @@ class FakeForge implements Forge {
     return "main";
   }
   drafts: boolean[] = [];
+  /** The base each opening asked for; undefined is the default branch. */
+  bases: (string | undefined)[] = [];
   async openChange(input: {
     branch: string;
     title: string;
     body: string;
     draft?: boolean;
+    base?: string;
   }): Promise<ForgeChange> {
     this.drafts.push(input.draft === true);
+    this.bases.push(input.base);
     this.calls.push(`openChange ${input.branch} ${input.title}`);
     if (this.fail.openChange) throw this.fail.openChange;
-    this.change = { ...this.opened, branch: input.branch };
+    this.change = {
+      ...this.opened,
+      branch: input.branch,
+      ...(input.base ? { base: input.base } : {}),
+    };
     return this.change;
   }
   /** GitHub's and GitLab's conditional write: refused unless the change is as just read. */
@@ -160,6 +168,8 @@ class FakeForge implements Forge {
     return this.change;
   }
   branchesAt?: Forge["branchesAt"];
+  /** The default branch's own checks, where a test gives the host them. */
+  branchChecks?: Forge["branchChecks"];
   async checks(change: ForgeChange, movedPast?: string) {
     const headSha = movedPast ?? change.headSha;
     this.calls.push(`checks ${headSha}`);
@@ -708,6 +718,115 @@ describe("PrCiService", () => {
       ci: "green",
       ciAt: now,
     });
+  });
+
+  it("stamps a reading with the pull request it is of and its base, and records the default branch's newest run of a failed check as evidence that no gate reads (INF-1873, INF-1915 fix 1)", async () => {
+    // INF-1915's audit, the captain's choice "Fold fix 1 into INF-1873 and
+    // INF-1874": main's run of the same check is evidence about a failure's
+    // cause, never a merge input. INF-1872's follow-up: the reading names the
+    // pull request it is of, so the change record binds it by that number.
+    const forge = new FakeForge();
+    forge.change = { ...(forge.change as ForgeChange), base: "main" };
+    forge.states = ["failure", "success"];
+    forge.names = ["unit-tests", "typecheck-lint-build"];
+    let onMain: ForgeCheckState = "failure";
+    forge.branchChecks = async () => {
+      forge.calls.push("branchChecks");
+      return {
+        sha: "ma1n0001",
+        checks: {
+          items: [
+            { name: "unit-tests", state: onMain },
+            { name: "typecheck-lint-build", state: "success" },
+          ],
+        },
+      };
+    };
+    const now = 5_000;
+    const { tasks, repos, service } = setup({ forge, now: () => now });
+    await insertDirectPrTask(tasks, repos);
+    const text = await service.checkForCrew("ab12cd34");
+    const facts = JSON.parse(
+      text
+        .split("\n")
+        .find((line) => line.startsWith("facts: "))!
+        .slice("facts: ".length),
+    );
+    const change = tasks.changeFor("ab12cd34");
+    expect(facts.change).toEqual({ id: change?.id, base: "main" });
+    expect(facts.main).toEqual({
+      sha: "ma1n0001",
+      items: [{ name: "unit-tests", state: "failure" }],
+    });
+    const evidence = {
+      sha: "ma1n0001",
+      at: now,
+      items: [{ name: "unit-tests", state: "failure" }],
+    };
+    expect(tasks.get("ab12cd34")?.delivery).toMatchObject({
+      prNumber: 23,
+      prBase: "main",
+      checks: { headSha: "feedbeef", prNumber: 23 },
+      mainChecks: { head: "feedbeef", ...evidence },
+    });
+    expect(change?.base).toBe("main");
+    expect(
+      change?.versions.map((v) => [v.head, v.checks?.snapshot?.prNumber, v.checks?.main]),
+    ).toEqual([["feedbeef", 23, evidence]]);
+    // The same failures read again keep the evidence without a second read of
+    // the default branch; a reading whose failures changed reads it again.
+    await service.checkForCrew("ab12cd34");
+    expect(forge.calls.filter((call) => call === "branchChecks")).toHaveLength(1);
+    forge.states = ["failure", "failure"];
+    await service.checkForCrew("ab12cd34");
+    expect(forge.calls.filter((call) => call === "branchChecks")).toHaveLength(2);
+    expect(tasks.get("ab12cd34")?.delivery?.mainChecks?.items.map((item) => item.name)).toEqual([
+      "unit-tests",
+      "typecheck-lint-build",
+    ]);
+    // A green reading clears it, on the slot and on the record's version, and
+    // the default branch's own failure holds nothing: the pull request's own
+    // checks alone make the reading green.
+    onMain = "failure";
+    forge.states = ["success", "success"];
+    await service.checkForCrew("ab12cd34");
+    expect(tasks.get("ab12cd34")?.delivery?.mainChecks).toBeUndefined();
+    expect(tasks.changeFor("ab12cd34")?.versions[0]?.checks?.main).toBeUndefined();
+    expect(service.reading("ab12cd34")?.overall).toBe("green");
+  });
+
+  it("names the change: check_change reads only this task's change by its id, and open_change opens only on the task's project, onto the base it names (INF-1873)", async () => {
+    // INF-1868 piece 2: open_change takes a repository and base; checks name a change.
+    const forge = new FakeForge();
+    forge.change = null;
+    const { tasks, repos, service } = setup({ forge });
+    await insertDirectPrTask(tasks, repos);
+    const project = repos.get(tasks.get("ab12cd34")?.repoId ?? "");
+    if (!project) throw new Error("the task's project is not registered");
+    const elsewhere = await service.open("ab12cd34", {
+      title: "fix: correct it",
+      body: "b",
+      repository: "octo/other",
+    });
+    expect(elsewhere).toBe(
+      `Cannot open the change on "octo/other": this task works in ${project.name}, and a task's change opens only there. Name that project, or leave repository out.`,
+    );
+    expect(forge.calls).toEqual([]);
+    const opened = await service.open("ab12cd34", {
+      title: "fix: correct it",
+      body: "b",
+      repository: project.name.toUpperCase(),
+      base: "fm/task-lower",
+    });
+    expect(opened).toContain("Opened pull request #42");
+    expect(forge.bases).toEqual(["fm/task-lower"]);
+    expect(tasks.get("ab12cd34")?.delivery?.prBase).toBe("fm/task-lower");
+    const change = tasks.changeFor("ab12cd34");
+    expect(change?.base).toBe("fm/task-lower");
+    expect(await service.checkForCrew("ab12cd34", { change: "chg_other" })).toBe(
+      `check_change refused: "chg_other" is not this task's change; its change is ${change?.id}.`,
+    );
+    expect(await service.checkForCrew("ab12cd34", { change: change?.id })).toContain("facts: ");
   });
 
   describe("checkOverall", () => {

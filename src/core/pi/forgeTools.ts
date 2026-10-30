@@ -37,11 +37,11 @@ export const OPEN_CHANGE_TOOL_NAME = "open_change";
 export const CHECK_CHANGE_TOOL_NAME = "check_change";
 
 export const OPEN_CHANGE_TOOL_DESCRIPTION = [
-  "Offer your task's branch as a pull request where the project lives: a pull request onto the default branch on GitHub, a merge request onto it on GitLab, or the pushed branch on a plain Git host.",
+  "Offer your task's branch as a pull request on GitHub, a merge request on GitLab, or the pushed branch on a plain Git host.",
   "On GitHub or GitLab, push your branch first (git push); the app's sign-in answers the host for you.",
   "Every selected attachment must upload before a new pull or merge request opens or an existing story is replaced. A failed or uncertain upload opens no PR, including a draft; report its blocker, never omit evidence or use a fallback.",
   "When body is the description, it replaces the open description whole; the answer says what the host shows when read back.",
-  "A saved story is replaced whole, preserving surrounding text; to change those words, pass around. Held writes are read first. For a deliberate retry use recovery; disclose a possible orphan before asking to retry an upload. Show edits inside the region on a card and await a republish choice before replacing them. A closed story PR stops publication.",
+  "A saved story is replaced whole, preserving surrounding text; to change those words, pass around. Held writes are read first. A closed story PR stops publication.",
 ].join(" ");
 
 /** The around parameter's own words: no app tool describes a nested field, so from and to are explained here (INF-497). */
@@ -52,13 +52,13 @@ export const OPEN_CHANGE_AROUND_DESCRIPTION = [
 ].join(" ");
 
 export const CHECK_CHANGE_TOOL_DESCRIPTION = [
-  "Read typed facts on the newest pull request: each check's name, state, run, workflow and event where reported, the host's mergeability answer, and whether the version moved. The host does not judge the work or settle repairs.",
-  "Your merge offer itself expresses that the work is ready; do not record a separate ready or red verdict. Actual check facts still hold the merge, and only the captain's separate choice authorizes it. Use declaration only for flake or settled, with headSha and evidence. Settle at the recorded repair's headSha with repairId and outcome; check may name a renamed job and evidence explains the link. Facts list repair checks absent from this reading without guessing replacements.",
-  "Read failed logs and record diagnosis with evidence; repair records your fix. Judge readiness, flakes, settlement and when to stop from your delivery guidance, not a host count. Raw check readings never settle a repair. Rerun records your evidenced rerun decision; an unclear write is never replayed.",
+  "Read typed facts on the newest pull request: each check's name, state, run, workflow and event where reported, mergeability, and whether the version moved. The host does not judge the work or settle repairs. facts.main is the default branch's newest run of a failed check: evidence on the cause, never a merge input.",
+  "Your merge offer says the work is ready; record no separate ready or red verdict. Check facts still hold the merge, and only the captain's separate choice authorizes it. Use declaration only for flake or settled, with headSha and evidence. Settle at the recorded repair's headSha with repairId and outcome; check may name a renamed job and evidence explains the link. Facts list repair checks absent from this reading without guessing replacements.",
+  "Read failed logs and record diagnosis with evidence; repair records your fix. Judge readiness, flakes, settlement and when to stop from your delivery guidance, not a host count. Raw check readings never settle a repair. An unclear write is never replayed.",
   "An empty hosted reading stays pending. With pull, absentChecks records positive no-CI evidence from trusted default-branch policy and the local gate; time, history or missing workflow files prove nothing.",
   "While checks run the app watches them and wakes you on the first failure and when they finish. End your turn until that wake. With no watchable checks no wake comes.",
-  "After a refused merge click, conflictRepair declares each new version's impact; captainGuidance declares newer words' impact. Neither grants fresh merge consent.",
-  "Pass pull to prepare a review of any pull request in this project, not permission. Put its review id in request_merge; only the captain's click sends it with autonomy off. skipRules prepares a separate exact-version request to bypass rules GitHub says the sign-in may bypass; only its captain click sends it once, after every check finishes.",
+  "conflictRepair and captainGuidance grant no fresh merge consent.",
+  "Put pull's review id in request_merge; only the captain's click sends it with autonomy off.",
 ].join(" ");
 
 /** The conflictRepair parameter's own words: the rule a Claude crewmate must see is here. */
@@ -128,6 +128,17 @@ export const OPEN_CHANGE_TOOL = crewmateTool({
   description: OPEN_CHANGE_TOOL_DESCRIPTION,
   parameters: Type.Object({
     title: Type.String({ description: "The pull request's title" }),
+    repository: Type.Optional(
+      Type.String({
+        description: "Your task's own project, by name or owner/name; any other is refused.",
+      }),
+    ),
+    base: Type.Optional(
+      Type.String({
+        description:
+          "The branch the change targets instead of the default one, such as a stacked change's; applies when it opens.",
+      }),
+    ),
     body: Type.Optional(
       Type.String({
         description:
@@ -162,6 +173,11 @@ export const CHECK_CHANGE_TOOL = crewmateTool({
   label: "Check change",
   description: CHECK_CHANGE_TOOL_DESCRIPTION,
   parameters: Type.Object({
+    change: Type.Optional(
+      Type.String({
+        description: "Your task's change id; another's is refused.",
+      }),
+    ),
     declaration: Type.Optional(
       Type.Object({
         headSha: Type.String(),

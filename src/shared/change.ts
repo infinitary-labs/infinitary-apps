@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { checkSnapshotSchema } from "./checkSnapshot";
+import { checkSnapshotSchema, mainCheckEvidenceSchema } from "./checkSnapshot";
 import { reviewRiskSchema, reviewVerdictSchema } from "./rigor";
 import { taskClosedReasonSchema } from "./tasks";
 
@@ -35,6 +35,8 @@ export const changeChecksSchema = z.object({
   lines: z
     .object({ base: z.string(), added: z.number(), deleted: z.number(), at: z.number() })
     .optional(),
+  /** The default branch's newest run of each check the reading found red (INF-1915 fix 1): evidence, never a merge input. */
+  main: mainCheckEvidenceSchema.optional(),
 });
 export type ChangeChecks = z.infer<typeof changeChecksSchema>;
 

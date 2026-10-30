@@ -461,12 +461,16 @@ describe("the migration of an older release's open changes", () => {
     again.close();
   });
 
-  it("binds the facts an older release saved without their pull request by head: a selection's head and the override given there are the referenced pull request's, a head left beside the own number when a selection cleared makes no version, and an override at a head no fact names makes none", () => {
-    // INF-1884 R2 (round 4): the older declareOverride writer saved an override
-    // without its pull request at the slot's head, which a reading of the
-    // selection had moved past the head the referenced review names; the
-    // older noteChange writer named the own change again without moving the
-    // head and checks the selection left. The upgrade reads both as saved.
+  it("leaves out what an older release saved without its pull request in a slot that records a referenced one - a selection's head and checks, the override given there, a head left beside the own number when a selection cleared, and an override at the own head - and binds the upgraded writers' stamped reading by its number", () => {
+    // INF-1884 R2 (round 4) and INF-1873: the older declareOverride writer
+    // saved an override without its pull request, and the older check readers
+    // a head and checks without theirs; the older noteChange writer named the
+    // own change again without moving the head and checks the selection
+    // left. The record binds a fact by the pull request it names, never by
+    // its head, so one saved without it in a slot that records a referenced
+    // pull request is nobody's and is left out - the override at the own
+    // head too, which the host cannot tell from one given for the selection.
+    // The upgrade reads the saved data as it is; nothing rewrites it.
     const dir = scratchDir("change-records-legacy-");
     const at = openDatabase(dir, CHANGES_VERSION - 1);
     addProject(at, "chart", "github");
@@ -581,13 +585,15 @@ describe("the migration of an older release's open changes", () => {
     expect(summary(changes.selected)).toEqual(ownOnly(61));
     expect(summary(changes.again)).toEqual(ownOnly(63));
     expect(summary(changes.cleared)).toEqual(ownOnly(62));
-    expect(summary(changes.kept)).toEqual({
-      ...ownOnly(64),
-      versions: [[own, null, { override: legacyOverride(own) }]],
-    });
-    // The store reads the same on a later write, and the own reading then makes the own version's checks.
+    expect(summary(changes.kept)).toEqual(ownOnly(64));
+    // The store reads the same on a later write. An unstamped reading beside
+    // the own number still makes no version there, while the upgraded reader's
+    // reading, stamped with the pull request it is of, makes the own version's checks.
     const { tasks: after } = setup(upgraded);
     seedDelivery(after, "cleared", readAt(own));
+    expect(summary(byTask(new TaskStore(upgraded)).cleared)).toEqual(ownOnly(62));
+    const stamped = readAt(own);
+    seedDelivery(after, "cleared", { ...stamped, checks: { ...stamped.checks, prNumber: 62 } });
     expect(summary(byTask(new TaskStore(upgraded)).cleared)).toEqual({
       ...ownOnly(62),
       versions: [[own, "green", null]],
@@ -1006,6 +1012,7 @@ describe("the change a task carries after the upgrade", () => {
       ciAt: 7_300,
       checks: {
         headSha: theirs,
+        prNumber: 94,
         items: [{ name: "release", state: "success" }],
         complete: true,
         absenceDeclared: false,
@@ -1027,8 +1034,9 @@ describe("the change a task carries after the upgrade", () => {
       ci: "merged",
     });
     expect(facts(store.changes.forTask("work"))).toEqual(before);
-    // An override saved by an older app, before it named its pull request, is
-    // bound by its head to the heads the referenced review and approval record.
+    // An override saved by an older app, before it named its pull request, in a
+    // slot that records a referenced one, is nobody's: the host cannot tell
+    // whose version it was given for (INF-1873).
     seedDelivery(tasks, "work", {
       override: {
         words: "Merge the release; its only check is the upload.",
@@ -1040,7 +1048,7 @@ describe("the change a task carries after the upgrade", () => {
     });
     expect(facts(store.changes.forTask("work"))).toEqual(before);
     // INF-1884 R2: the check watch reads the release pull request at a newer
-    // head after its review; the slot's head and checks follow it under its number.
+    // head after its review; the slot's head and checks follow it, stamped with its number.
     const theirsLater = "8".repeat(40);
     seedDelivery(tasks, "work", {
       headSha: theirsLater,
@@ -1048,6 +1056,7 @@ describe("the change a task carries after the upgrade", () => {
       ciAt: 7_460,
       checks: {
         headSha: theirsLater,
+        prNumber: 94,
         items: [{ name: "release", state: "success" }],
         complete: true,
         absenceDeclared: false,
@@ -1069,8 +1078,8 @@ describe("the change a task carries after the upgrade", () => {
     expect(facts(store.changes.forTask("work"))).toEqual(before);
     // The writers' own order. open_change clears the selection first, while the
     // slot still names the referenced number and head; naming the own change
-    // then writes its number with its head and no reading, and the own reading
-    // follows as a separate record.
+    // then writes its number with its head and no reading, and the own reading,
+    // stamped with the own number, follows as a separate record.
     seedDelivery(tasks, "work", { checkTarget: undefined });
     expect(facts(store.changes.forTask("work"))).toEqual(before);
     seedDelivery(tasks, "work", {
@@ -1087,6 +1096,7 @@ describe("the change a task carries after the upgrade", () => {
     expect(facts(store.changes.forTask("work"))).toEqual(before);
     const ownChecks = {
       headSha: own,
+      prNumber: 12,
       items: [{ name: "unit-tests", state: "success" as const }],
       complete: true,
       absenceDeclared: false,
@@ -1105,14 +1115,13 @@ describe("the change a task carries after the upgrade", () => {
     });
   });
 
-  it("binds a head and checks dated before the record at a commit both pull requests share by the facts that name it there, leaves a head only the referenced facts name to them, and gives an override saved without its pull request there to neither", () => {
-    // INF-1884 R9 and R10: a pull request another branch opened at the same
-    // commit as the task's own is reviewed as referenced. Every reading here is
-    // dated before the record was made, as an older writer left it, so it is
-    // bound by head: at a commit the own change's facts or the record name it
-    // is this change's, because two pull requests can share a commit; at one
-    // only the referenced facts name it is theirs; and an override saved there
-    // without its pull request is neither change's consent.
+  it("binds a reading at a commit both pull requests share by the pull request it names: the own pull request's reading is this change's though a referenced review names the same commit, a reading of a referenced pull request makes no version, and an override saved without its pull request there is neither's", () => {
+    // INF-1884 R9 and R10, re-keyed by INF-1873: a pull request another branch
+    // opened at the same commit as the task's own is reviewed as referenced.
+    // Every reading names the pull request it is of (`CheckSnapshot.prNumber`),
+    // so two pull requests sharing a commit never share a reading: the own
+    // pull request's is this change's, a referenced one's is theirs; and an
+    // override saved there without its pull request is neither change's consent.
     const { db, tasks } = setup();
     addProject(db, "chart", "github");
     const store = new TaskStore(db);
@@ -1124,12 +1133,13 @@ describe("the change a task carries after the upgrade", () => {
       prUrl: "https://github.com/octo/chart/pull/12",
       changeLabel: "#12",
     };
-    const reading = (head: string, state: "pending" | "success", at: number) => ({
+    const reading = (head: string, state: "pending" | "success", at: number, of = 12) => ({
       headSha: head,
       ci: state === "success" ? ("green" as const) : ("pending" as const),
       ciAt: at,
       checks: {
         headSha: head,
+        prNumber: of,
         items: [{ name: "unit-tests", state }],
         complete: state === "success",
         absenceDeclared: false,
@@ -1151,7 +1161,7 @@ describe("the change a task carries after the upgrade", () => {
     const pending = facts(store.changes.forTask("work"));
     expect(pending?.versions.map((v) => [v.head, v.checks?.state])).toEqual([[shared, "pending"]]);
     // check_change(pull) reviews a pull request another branch opened at the same
-    // commit, and the reading under its number follows it.
+    // commit, and the reading under its number, stamped with it, follows it.
     const mirror: MergeReview = {
       ...KEPT_REVIEW,
       id: "review-mirror",
@@ -1168,13 +1178,13 @@ describe("the change a task carries after the upgrade", () => {
       prNumber: 94,
       prUrl: "https://github.com/octo/chart/pull/94",
       changeLabel: "#94",
-      ...reading(shared, "success", 7_200),
+      ...reading(shared, "success", 7_200, 94),
     });
     expect(facts(store.changes.forTask("work"))).toEqual(pending);
     // The selection clears, the own change is named again at its head with no
-    // reading, and the own reading at the shared commit follows: the record
-    // holds that head as a version, so the reading is this change's, though the
-    // referenced review names the same commit.
+    // reading, and the own reading at the shared commit follows: it names the
+    // own pull request, so it is this change's, though the referenced review
+    // names the same commit.
     seedDelivery(tasks, "work", { checkTarget: undefined });
     seedDelivery(tasks, "work", {
       ...ownChange,
@@ -1202,7 +1212,7 @@ describe("the change a task carries after the upgrade", () => {
       prNumber: 94,
       prUrl: "https://github.com/octo/chart/pull/94",
       changeLabel: "#94",
-      ...reading(next, "success", 7_500),
+      ...reading(next, "success", 7_500, 94),
     });
     expect(store.changes.forTask("work")?.versions.map((v) => v.head)).toEqual([shared]);
     seedDelivery(tasks, "work", { checkTarget: undefined });
@@ -1256,9 +1266,9 @@ describe("the change a task carries after the upgrade", () => {
         consent: null,
       },
     ]);
-    // An override saved by an older app without its pull request at the shared
-    // commit is consent the host cannot place: it was given for one of two
-    // pull requests' versions at that commit, so it is neither's (R10).
+    // An override saved by an older app without its pull request, in a slot
+    // that records a referenced one, is consent the host cannot place: it was
+    // given for one of two pull requests' versions, so it is neither's (R10).
     const legacyOverride = {
       words: "Merge it; the unit tests are its only check.",
       holds: ["checks"],
@@ -1271,8 +1281,8 @@ describe("the change a task carries after the upgrade", () => {
     });
     expect(store.changes.forTask("work")?.versions.map((v) => v.consent)).toEqual([null, null]);
     expect(store.changes.forTask("work")?.override).toBeNull();
-    // The boundary: a head only a referenced review names, left beside the own
-    // number as an older writer left it, makes no version.
+    // The boundary: a reading stamped with a referenced pull request's number
+    // makes no version, whatever number the slot names beside it.
     const other: MergeReview = {
       ...mirror,
       id: "review-other",
@@ -1284,7 +1294,7 @@ describe("the change a task carries after the upgrade", () => {
     };
     seedDelivery(tasks, "work", {
       mergeReviews: [other, mirrorNext, mirror],
-      ...reading(foreign, "success", 7_800),
+      ...reading(foreign, "success", 7_800, 95),
     });
     expect(store.changes.forTask("work")?.versions.map((v) => [v.head, v.checks?.at])).toEqual([
       [shared, 7_300],
@@ -1292,13 +1302,13 @@ describe("the change a task carries after the upgrade", () => {
     ]);
   });
 
-  it("keeps a reading of the own pull request dated since its record was made at a commit a referenced review also names, before any own fact names that commit", () => {
-    // INF-1884 R9 (round 6): an ordinary check_change or check-watch read
-    // writes the own number and the head with its checks together and needs no
-    // earlier own fact at that head. The record's own age tells the writers
-    // apart: it exists only since the writers that bind a reading to its pull
-    // request, so a reading dated since it was made is this change's, and one
-    // dated before it was saved by an older writer and is bound by head alone.
+  it("binds a reading to the pull request it names: the own pull request's reading at a commit only a referenced review names so far is this change's version", () => {
+    // INF-1884 R9 (round 6), re-keyed by INF-1873: an ordinary check_change or
+    // check-watch read writes the own number and the head with its checks
+    // together, stamped with the pull request it is of, and needs no earlier
+    // own fact at that head. The number it names is what binds it, so the
+    // reading at a commit only a referenced review names so far is this
+    // change's, with no record age or head set to consult.
     const { db, tasks } = setup();
     addProject(db, "chart", "github");
     const store = new TaskStore(db);
@@ -1309,12 +1319,13 @@ describe("the change a task carries after the upgrade", () => {
       prUrl: "https://github.com/octo/chart/pull/12",
       changeLabel: "#12",
     };
-    const reading = (head: string, at: number) => ({
+    const reading = (head: string, at: number, of: number) => ({
       headSha: head,
       ci: "green" as const,
       ciAt: at,
       checks: {
         headSha: head,
+        prNumber: of,
         items: [{ name: "unit-tests", state: "success" as const }],
         complete: true,
         absenceDeclared: false,
@@ -1351,67 +1362,46 @@ describe("the change a task carries after the upgrade", () => {
       ciStartedAt: undefined,
       ciFinishedAt: undefined,
     };
-    for (const task of ["since", "before"])
-      seedTask(tasks, {
-        id: task,
-        title: `Label the axis (${task})`,
-        status: "running",
-        repoId: "chart",
-        branch: "fm/task-work",
-      });
-    // The record exists from the task's first write; the readings below are dated against it.
-    const made = store.changes.forTask("since")?.createdAt;
-    if (made === undefined) throw new Error("the task's change was not made at its first write");
+    seedTask(tasks, {
+      id: "since",
+      title: "Label the axis",
+      status: "running",
+      repoId: "chart",
+      branch: "fm/task-work",
+    });
     expect(store.changes.forTask("since")?.versions).toEqual([]);
     // check_change(pull) reviews a pull request another branch opened at a commit the
     // own branch does not have yet, and reads it under its number.
-    const review = mirror("review-mirror", shared, made + 100);
+    const review = mirror("review-mirror", shared, 7_100);
     seedDelivery(tasks, "since", {
       mode: "direct-pr",
       mergeReviews: [review],
       checkTarget: review,
       ...selection,
-      ...reading(shared, made + 200),
+      ...reading(shared, 7_200, 94),
     });
     expect(store.changes.forTask("since")?.versions).toEqual([]);
     // check_change(pull) of the own pull request at its first head: the owned review
     // clears the selection, and the reading under the own number follows.
-    const own = owned("review-own", first, made + 300);
+    const own = owned("review-own", first, 7_300);
     seedDelivery(tasks, "since", { mergeReviews: [own, review], checkTarget: undefined });
     seedDelivery(tasks, "since", { ...ownChange, headSha: first, ...cleared });
-    const atFirst = reading(first, made + 400);
+    const atFirst = reading(first, 7_400, 12);
     seedDelivery(tasks, "since", atFirst);
     expect(store.changes.forTask("since")?.versions.map((v) => [v.head, v.checks])).toEqual([
-      [first, { state: "green", at: made + 400, snapshot: atFirst.checks }],
+      [first, { state: "green", at: 7_400, snapshot: atFirst.checks }],
     ]);
     // The own branch moves to the shared commit and the own pull request is read
     // there: the first own fact at that commit, before any publication, offer or
-    // review names it, while the referenced review still does. It is this
-    // change's version.
-    const atShared = reading(shared, made + 500);
+    // review names it, while the referenced review still does. It names the own
+    // pull request, so it is this change's version.
+    const atShared = reading(shared, 7_500, 12);
     seedDelivery(tasks, "since", atShared);
     expect(store.changes.forTask("since")?.versions.map((v) => [v.head, v.checks])).toEqual([
-      [first, { state: "green", at: made + 400, snapshot: atFirst.checks }],
-      [shared, { state: "green", at: made + 500, snapshot: atShared.checks }],
+      [first, { state: "green", at: 7_400, snapshot: atFirst.checks }],
+      [shared, { state: "green", at: 7_500, snapshot: atShared.checks }],
     ]);
     expect(store.changes.forTask("since")?.handle?.number).toBe(12);
-    // The boundary: the same facts dated before the record was made, as an older
-    // writer left them beside the own number, are bound by head, and the shared
-    // commit only the referenced review names makes no version.
-    const older = store.changes.forTask("before")?.createdAt ?? 0;
-    const was = (at: number) => older - at;
-    seedDelivery(tasks, "before", {
-      mode: "direct-pr",
-      ...ownChange,
-      mergeReviews: [
-        owned("review-own-before", first, was(300)),
-        mirror("review-mirror-before", shared, was(500)),
-      ],
-      ...reading(shared, was(100)),
-    });
-    expect(store.changes.forTask("before")?.versions.map((v) => [v.head, v.checks?.state])).toEqual(
-      [[first, undefined]],
-    );
   });
 
   it("refreshes what the slot says at a head the change already holds, though no pushed-head fact names it any more", () => {

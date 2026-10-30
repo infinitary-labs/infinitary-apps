@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "change-tools-named",
+      "reason": "Internal: the crewmate's delivery tools now name the change they open and check, each check reading names its pull request, and the app records the default branch's run of a failed check as evidence for the crew; nothing a person sees changes."
+    }
+  ]
+}

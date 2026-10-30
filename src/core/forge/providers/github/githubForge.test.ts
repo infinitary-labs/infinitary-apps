@@ -189,7 +189,7 @@ describe("GitHubForge", () => {
   // INF-893: PR #328 read green at 19:07:01Z on its dispatched replay-gate
   // alone, while GitHub was creating its ci, journeys and phone runs. The
   // runs, check and project count below are #328's own, as GitHub gave them.
-  it("relays dispatched and pull-request workflow facts without inferring missing checks (INF-1177)", async () => {
+  it("relays the pull request's own run facts without inferring missing checks, and leaves a run started by hand out of its reading while a branch's reading keeps it (INF-1177, INF-1891)", async () => {
     const head = "21abc81254618e65ff72612b155f0aa261bc5372";
     const replay = {
       id: 39836971427,
@@ -246,17 +246,15 @@ describe("GitHubForge", () => {
     });
     const change = { number: 328, url: null, branch: "fm/task-7aa0123e", headSha: head };
 
-    // The reading #328 got: the project runs pull request workflows, and none is on the version yet.
-    expect(await forge.checks(change)).toMatchObject({
-      items: [replayGateRead],
-    });
+    // The reading #328 got: a replay gate a crewmate started by hand ran at the
+    // version, but it is not the pull request's check (INF-1891, the captain:
+    // "for merge we only care about the PR checks"), and no run of its own is
+    // on the version yet. Nothing is inferred in its place.
+    expect(await forge.checks(change)).toMatchObject({ items: [], complete: true });
     // GitHub lists the run before its jobs have checks: still pending, now by the run.
     versionRuns = [ci, replay];
     expect(await forge.checks(change)).toMatchObject({
-      items: [
-        replayGateRead,
-        { name: "ci (run 819)", state: "pending", startedAt: Date.parse(ci.run_started_at) },
-      ],
+      items: [{ name: "ci (run 819)", state: "pending", startedAt: Date.parse(ci.run_started_at) }],
     });
     // The pull request's own run finished with its checks: green.
     versionRuns = [{ ...ci, status: "completed" }, replay];
@@ -271,12 +269,18 @@ describe("GitHubForge", () => {
       },
       replayGate,
     ];
-    expect((await forge.checks(change)).items[0]?.state).toBe("success");
-    // A project that has never run a pull request workflow reads the dispatched check as it is.
+    expect((await forge.checks(change)).items.map((check) => [check.name, check.state])).toEqual([
+      ["typecheck-lint-build", "success"],
+    ]);
+    // A branch's own reading, as the default branch's checks are read, carries
+    // no pull request: every run at its version is its own, the hand-started one too.
     versionRuns = [replay];
     checkRuns = [replayGate];
     projectRuns = 0;
-    expect(await forge.checks(change)).toMatchObject({ items: [replayGateRead] });
+    expect(await forge.checks({ ...change, number: undefined })).toMatchObject({
+      items: [replayGateRead],
+    });
+    expect(await forge.checks(change)).toMatchObject({ items: [] });
   });
 
   it("reads the default branch's own check runs, not a pull request's (INF-833 Fix 4)", async () => {
@@ -926,6 +930,29 @@ describe("GitHubForge", () => {
       failure: "refused",
       message: "GitHub did not confirm the merge of #23: Base branch was modified",
     });
+  });
+
+  it("opens a change onto the branch open_change names without reading the default branch, and reads a pull request's base (INF-1873)", async () => {
+    const { forge, seen } = await stub({
+      "POST /repos/octo/meter/pulls": () => ({
+        status: 201,
+        json: { ...PULL, base: { ref: "fm/task-lower" } },
+      }),
+      "GET /repos/octo/meter/pulls": () => ({ json: [{ ...PULL, base: { ref: "main" } }] }),
+    });
+    const opened = await forge.openChange({
+      branch: "fm/task-1",
+      title: "Fix",
+      body: "Why",
+      base: "fm/task-lower",
+    });
+    expect(opened.base).toBe("fm/task-lower");
+    expect(seen.map((request) => `${request.method} ${request.url.split("?")[0]}`)).toEqual([
+      "POST /repos/octo/meter/pulls",
+    ]);
+    expect(seen[0]?.body).toMatchObject({ head: "fm/task-1", base: "fm/task-lower" });
+    // Each later reading carries the base the host holds now, retargeted or not.
+    expect((await forge.changeFor("fm/task-1"))?.base).toBe("main");
   });
 
   it("opens a change onto the default branch and lists the person's projects, newest first", async () => {

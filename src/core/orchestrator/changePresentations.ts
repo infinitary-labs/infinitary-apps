@@ -66,6 +66,8 @@ function hostWords(forge: Forge): { place: string; change: string; oneOpen: stri
 
 type PublicationOpening = {
   draft?: boolean;
+  /** The branch the change targets when it opens (INF-1873); an open change keeps its own. */
+  base?: string;
   /** Recheck and consume the caller's publication authority after preflight, before uploads. */
   beforePublish?: (head: string) => void;
   /** Whether Careful's records complete no-mistakes' review, test and document at this version. */
@@ -405,6 +407,7 @@ export class ChangePresentations {
           title,
           body,
           ...(opening?.draft !== undefined ? { draft: opening.draft } : {}),
+          ...(opening?.base ? { base: opening.base } : {}),
         });
         if (opened.number) publication.number = opened.number;
       }

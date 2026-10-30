@@ -91,7 +91,8 @@ GitHub, each GitLab host and each GitHub Enterprise host are shown in Settings -
   The worktree is not created and the task returns to the queue behind `forge-sign-in:<host>`; a host card opens Integrations with that host's sign-in started.
   When the host's existing sign-in reports `ok`, the gate is cleared and the task is dispatched again, re-fetching its base.
   DNS, connection, SSH, other-host and unstructured text failures continue through the ordinary stale-ref fallback; they never trigger GitHub sign-in.
-- **The crewmate's pair** (`src/core/pi/forgeTools.ts`): `open_change` offers the pushed branch; `check_change` reads raw check and mergeability facts and records evidence-backed declarations without deciding readiness or repair settlement.
+- **The crewmate's pair** (`src/core/pi/forgeTools.ts`): `open_change` offers the pushed branch, on the task's own project (`repository`, any other refused) and onto the branch it names (`base`; the default branch otherwise); `check_change` names the task's change (`change`) and reads raw check and mergeability facts and records evidence-backed declarations without deciding readiness or repair settlement.
+  A base other than the default branch is a stacked change's; the app retargets nothing when that branch merges, and the host's own behavior decides where the change then points, which each reading records (`TaskDelivery.prBase`).
   Existing diagnosis, repair and rerun fields remain readable; conflictRepair and captainGuidance retain the captain's approval boundary.
   Handed to every crewmate whose task ships a change, never on the personal workspace or an answer task.
 - **The personal panels' read**: `forge.changes` (`inf:forges:changes`) - the captain's open pull requests on every GitHub and GitLab host the captain signed in to, newest first across them, each with its checks and the host's own name for it (`label`: `#12`, `!4`).
@@ -488,7 +489,12 @@ The owner's verdict: git is bundled with the app, the GitHub Desktop model, beca
 
 ## Check facts and crew judgment
 
-`check_change` reads the newest change through the forge and returns a `facts` JSON object: the version, whether it moved since the recorded reading, mergeability as the host reports it, and each check's name, state, run, workflow and event where available.
+`check_change` reads the newest change through the forge and returns a `facts` JSON object: the change's id and base, the version, whether it moved since the recorded reading, mergeability as the host reports it, and each check's name, state, run, workflow and event where available.
+It takes the change's id (`change`) and refuses another task's; a task reads only its own change (INF-1868 piece 2, INF-1873).
+A pull request's checks are the runs the host started for it (INF-1891, the captain: "for merge we only care about the PR checks"): on GitHub a check whose run carries an event stays only when that event is `pull_request` or `pull_request_target`, so a run a person or a tool started on the branch by hand, such as a dispatched heavy check, is read through `read_workflow` and never holds or passes the merge (`ownChecksOf` in `src/core/forge/forge.ts`); a check with no event, such as a commit status, stays as read, and a branch's own checks, read with no number, keep every run at their version.
+When a reading of the task's own pull request finds a check red, the same reading asks the host for the default branch's own checks (`Forge.branchChecks`) and records that branch's newest run of each failed check beside the reading - its version, when, and each check's state there (`TaskDelivery.mainChecks`, `facts.main`, `ChangeChecks.main`; INF-1915 fix 1).
+That is evidence about the failure's cause for the crewmate's diagnosis and the completion card, never a merge input: no gate reads it, a default branch that fails the same check holds nothing and passes nothing, and a selected pull request gets none.
+The evidence is kept while the same checks fail at the same version, read again when the failures change, and cleared by a reading with no failure; a host that cannot read a branch's checks, or a read that fails, records none.
 GitHub check runs retain their reported status, conclusion and available run identity.
 The captain’s F26 choice restores the existing exception for a cancelled duplicate: a later run of the same workflow and event decides that check of the same name; unrelated and latest cancellations still count.
 No observed checks or workflow runs yields an empty list.
@@ -625,6 +631,7 @@ The inbox records `main-check-passed:<check>:<sha>`, so a restart does not send 
 The named task's close still resumes the crewmate if the run has not passed.
 A host without `branchChecks` — a plain Git host, and GitLab until it can read a branch's checks apart from a merge request — keeps that close as the only resume.
 A failed read waits out the check watch's slow pause and wakes nobody.
+The same branch reading answers a crewmate's own failed check at once: a reading of the task's pull request that finds a check red records the default branch's newest run of it as evidence ("Check facts and crew judgment", INF-1915 fix 1), so the diagnosis a `baseline-blocked` classification needs starts from a typed fact rather than a second read.
 
 ## The checks cell's time
 
@@ -706,7 +713,7 @@ The raw words stay on the error for the record and `plainProblem`; the kind is w
 
 ## Who reads it
 
-`PrCiService` (`src/core/orchestrator/prCi.ts`, the crewmate's `check_change` and the completion-card gate) asks the seam and records what it answers on the task's delivery facts: `changeLabel` from `label()`, and `prNumber`/`prUrl` only where the host has them.
+`PrCiService` (`src/core/orchestrator/prCi.ts`, the crewmate's `check_change` and the completion-card gate) asks the seam and records what it answers on the task's delivery facts: `changeLabel` from `label()`, `prNumber`/`prUrl` only where the host has them, `prBase` where the host names the branch the change targets, and each check reading stamped with the number of the pull request it was read of (`CheckSnapshot.prNumber`), which the change record binds it by (`docs/task-record.md`, "A task's change").
 When the branch has no open change but the task names a pull request, the reading asks for it by its number with `pull`: merged outside the app, it records `ci: merged`, and the strip reads "merged outside the app" until the shared watcher can close a task whose crewmate declared that merge finishes its work.
 A put-in made before that tick also answers the merge already made and closes the task without sending anything.
 The settle card's fact strip (`CrewSupervisor.settleFacts`) and the record card read that label and link - never parse a number back out of a URL.

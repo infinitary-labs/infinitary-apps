@@ -33,6 +33,12 @@ export function isRedCheckState(state: ForgeCheckState): boolean {
 /** One current reading, not the crew's judgment or a second history. */
 export const checkSnapshotSchema = z.object({
   headSha: z.string(),
+  /**
+   * The pull request the reading was of, as the reader named it (INF-1873):
+   * the task's own, or one it selected to read. The change record binds the
+   * reading to that pull request by this number, never by its head alone.
+   */
+  prNumber: z.number().int().positive().optional(),
   items: z.array(z.object({ name: z.string(), state: checkStateSchema })),
   complete: z.boolean().optional(),
   /** Why part of this reading could not be obtained, not a sign-out inference. */
@@ -40,6 +46,21 @@ export const checkSnapshotSchema = z.object({
   absenceDeclared: z.boolean(),
 });
 export type CheckSnapshot = z.infer<typeof checkSnapshotSchema>;
+
+/**
+ * The default branch's newest run of each check that failed in a reading
+ * (INF-1915 fix 1): the version of that branch it was read on, when, and the
+ * state there of each check the reading found red, where that branch ran it.
+ * Evidence about the failure's cause for the crew's diagnosis and the card,
+ * never a merge input: no gate reads it.
+ */
+export const mainCheckEvidenceSchema = z.object({
+  /** The default branch's version the checks were read on. */
+  sha: z.string(),
+  at: z.number(),
+  items: z.array(z.object({ name: z.string(), state: checkStateSchema })),
+});
+export type MainCheckEvidence = z.infer<typeof mainCheckEvidenceSchema>;
 const STATE_WORDS: Record<ForgeCheckState, string> = {
   success: "passed",
   failure: "failed",

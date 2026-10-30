@@ -165,14 +165,17 @@ export class GitLabForge implements Forge {
     title: string;
     body: string;
     draft?: boolean;
+    base?: string;
   }): Promise<ForgeChange> {
-    const target = await this.defaultBranch().catch((error: unknown) => {
-      throw new ForgeWriteError(
-        "failed",
-        error instanceof ForgeError ? error.failure : "transient",
-        `Could not read the default branch on ${this.place}; no merge request was sent.${error instanceof Error ? ` ${error.message}` : ""}`,
-      );
-    });
+    const target =
+      input.base ??
+      (await this.defaultBranch().catch((error: unknown) => {
+        throw new ForgeWriteError(
+          "failed",
+          error instanceof ForgeError ? error.failure : "transient",
+          `Could not read the default branch on ${this.place}; no merge request was sent.${error instanceof Error ? ` ${error.message}` : ""}`,
+        );
+      }));
     const opened = (await this.client.write(
       "POST",
       `${this.projectPath()}/merge_requests`,
@@ -450,6 +453,7 @@ export class GitLabForge implements Forge {
       headSha: headOf(request, this.place),
       title: request.title,
       body: request.description ?? "",
+      base: request.target_branch,
     };
   }
 

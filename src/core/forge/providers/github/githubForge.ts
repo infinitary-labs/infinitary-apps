@@ -31,6 +31,7 @@ import {
   isFullCommitId,
   isSignInForgeFailure,
   isTransientForgeFailure,
+  ownChecksOf,
 } from "../../forge";
 import { RELEASE_UPLOAD_TIMEOUT_MS } from "../../releaseFile";
 import type { ArchiveRanges } from "../../workflows";
@@ -134,6 +135,7 @@ type PullJson = {
   title: string;
   body: string | null;
   head: { sha: string; ref: string; repo?: { full_name?: string } | null };
+  base?: { ref: string };
 };
 
 /** The fields of one pull request read by its number that say whether it may merge. */
@@ -321,14 +323,17 @@ export class GitHubForge implements Forge {
     title: string;
     body: string;
     draft?: boolean;
+    base?: string;
   }): Promise<ForgeChange> {
-    const base = await this.defaultBranch().catch((error: unknown) => {
-      throw new ForgeWriteError(
-        "failed",
-        error instanceof ForgeError ? error.failure : "transient",
-        "Could not read the base branch; no pull request was sent.",
-      );
-    });
+    const base =
+      input.base ??
+      (await this.defaultBranch().catch((error: unknown) => {
+        throw new ForgeWriteError(
+          "failed",
+          error instanceof ForgeError ? error.failure : "transient",
+          "Could not read the base branch; no pull request was sent.",
+        );
+      }));
     const answer = await this.apiCall(
       "POST",
       `${this.repoPath()}/pulls`,
@@ -452,7 +457,7 @@ export class GitHubForge implements Forge {
           : `${this.place} could not provide all check runs: ${why}`;
     }
     const workflows = workflowRuns?.workflow_runs ?? [];
-    const items: ForgeCheck[] = [
+    const read: ForgeCheck[] = [
       ...this.withoutSupersededCancellations(runs.items, workflows),
       ...statuses.items.map((status) => {
         const state = STATUS_STATES[status.state] ?? ("pending" as const);
@@ -466,7 +471,7 @@ export class GitHubForge implements Forge {
     ];
     for (const run of workflows) {
       if (run.status !== "completed") {
-        items.push({
+        read.push({
           name: `${run.name ?? "workflow"} (run ${run.run_number})`,
           state: "pending",
           run: run.id,
@@ -476,6 +481,9 @@ export class GitHubForge implements Forge {
         });
       }
     }
+    // A pull request's checks are the runs it started (INF-1891); a branch's
+    // own checks, read with no number, keep every run at its version.
+    const items = change.number !== undefined ? ownChecksOf(read) : read;
     return {
       items,
       ...(problem ? { problem } : {}),
@@ -1184,6 +1192,7 @@ function changeOf(pull: PullJson, branch: string): ForgeChange {
     ...(pull.draft ? { draft: true } : {}),
     title: pull.title,
     body: pull.body ?? "",
+    ...(pull.base?.ref ? { base: pull.base.ref } : {}),
   };
 }
 

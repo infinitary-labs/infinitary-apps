@@ -168,6 +168,11 @@ export type CheckDeclarationEntry =
 
 /** Optional declarations on the existing check_change seam, shared by both seats. */
 export type CheckChangeInput = {
+  /**
+   * The change the reading is of, by the id the task's change record carries
+   * (INF-1873). A task reads only its own change; another's id is refused.
+   */
+  change?: string;
   declaration?: CheckDeclaration;
   diagnosis?: CheckDiagnosis;
   repair?: CheckRepair;

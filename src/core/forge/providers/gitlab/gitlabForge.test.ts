@@ -262,6 +262,24 @@ describe("GitLabForge", () => {
       ).rejects.toMatchObject({ outcome });
     });
 
+    it("opens onto the branch open_change names without reading the default branch, and carries the target on each read (INF-1873)", async () => {
+      const { forge, fetcher } = forgeAnswering(() =>
+        Response.json(request({ target_branch: "fm/task-lower" }), { status: 201 }),
+      );
+      const opened = await forge.openChange({
+        branch: "fm/task-1",
+        title: "fix: the meter",
+        body: "Why",
+        base: "fm/task-lower",
+      });
+      expect(opened.base).toBe("fm/task-lower");
+      expect(fetcher.mock.calls.map(([, init]) => init?.method ?? "GET")).toEqual(["POST"]);
+      expect(JSON.parse(String(fetcher.mock.calls[0]?.[1]?.body))).toMatchObject({
+        source_branch: "fm/task-1",
+        target_branch: "fm/task-lower",
+      });
+    });
+
     it("sends no opening when the default branch cannot be read", async () => {
       const { forge, fetcher } = forgeAnswering(() =>
         Response.json({ message: "503" }, { status: 503 }),

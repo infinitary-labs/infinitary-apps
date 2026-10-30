@@ -26650,6 +26650,11 @@
                             "headSha": {
                               "type": "string"
                             },
+                            "prNumber": {
+                              "type": "integer",
+                              "exclusiveMinimum": 0,
+                              "maximum": 9007199254740991
+                            },
                             "items": {
                               "type": "array",
                               "items": {
@@ -28070,6 +28075,11 @@
                     "properties": {
                       "headSha": {
                         "type": "string"
+                      },
+                      "prNumber": {
+                        "type": "integer",
+                        "exclusiveMinimum": 0,
+                        "maximum": 9007199254740991
                       },
                       "items": {
                         "type": "array",
@@ -32399,6 +32409,11 @@
                       "properties": {
                         "headSha": {
                           "type": "string"
+                        },
+                        "prNumber": {
+                          "type": "integer",
+                          "exclusiveMinimum": 0,
+                          "maximum": 9007199254740991
                         },
                         "items": {
                           "type": "array",
@@ -45864,6 +45879,12 @@
                   "title": {
                     "type": "string"
                   },
+                  "repository": {
+                    "type": "string"
+                  },
+                  "base": {
+                    "type": "string"
+                  },
                   "body": {
                     "type": "string"
                   },
@@ -45962,6 +45983,9 @@
               "input": {
                 "type": "object",
                 "properties": {
+                  "change": {
+                    "type": "string"
+                  },
                   "declaration": {
                     "type": "object",
                     "properties": {
@@ -54349,6 +54373,11 @@
                             "headSha": {
                               "type": "string"
                             },
+                            "prNumber": {
+                              "type": "integer",
+                              "exclusiveMinimum": 0,
+                              "maximum": 9007199254740991
+                            },
                             "items": {
                               "type": "array",
                               "items": {
@@ -55769,6 +55798,11 @@
                           "properties": {
                             "headSha": {
                               "type": "string"
+                            },
+                            "prNumber": {
+                              "type": "integer",
+                              "exclusiveMinimum": 0,
+                              "maximum": 9007199254740991
                             },
                             "items": {
                               "type": "array",

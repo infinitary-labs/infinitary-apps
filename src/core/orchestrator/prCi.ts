@@ -2,7 +2,11 @@ import { createHash, randomUUID } from "node:crypto";
 import { existsSync } from "node:fs";
 import type { OpenChangeInput, StagedChangePresentation } from "@shared/changePresentation";
 import type { CheckChangeInput } from "@shared/checkRepair";
-import { checkSnapshotSummary, currentCheckStatus } from "@shared/checkSnapshot";
+import {
+  checkSnapshotSummary,
+  currentCheckStatus,
+  type MainCheckEvidence,
+} from "@shared/checkSnapshot";
 import { forgeOf, hasChangeRequests } from "@shared/forge";
 import { notSignedInText } from "@shared/forges";
 import { fixedHoldWords, overridePasses, softHoldWords } from "@shared/holds";
@@ -328,6 +332,14 @@ export class PrCiService {
    * captain's to fix: the crewmate reports it, never signs in itself.
    */
   async checkForCrew(taskId: string, input: CheckChangeInput = {}): Promise<string> {
+    // The reading names the change it is of (INF-1873): a task reads only its own.
+    if (input.change !== undefined) {
+      const own = this.options.tasks.changeFor(taskId.trim());
+      if (!own)
+        return "check_change refused: this task has no change record yet; leave change out.";
+      if (own.id !== input.change.trim())
+        return `check_change refused: "${input.change}" is not this task's change; its change is ${own.id}.`;
+    }
     if (input.pull !== undefined) {
       if (input.declaration) {
         const recorded = declareCheckAction(
@@ -1355,6 +1367,7 @@ export class PrCiService {
       }
       change = await this.readyPrerequisite(taskId, forge, change);
       const checks = await forge.checks(change);
+      const main = await this.mainEvidence(record, forge, change, checks);
       this.assertCheckTarget(record);
       const observationId = this.observeChecks(taskId, change.headSha, checks, false);
       const words = changeWords(forge, change);
@@ -1368,6 +1381,7 @@ export class PrCiService {
           checks.items,
           checks.complete,
           checks.problem,
+          main,
         );
         return { kind: "failed", transient: false, problem: checks.problem, observationId };
       }
@@ -1381,6 +1395,7 @@ export class PrCiService {
           checks.items,
           checks.complete,
           checks.problem,
+          main,
         );
         const failing = named(checks.items.filter((check) => isRedCheckState(check.state)));
         return {
@@ -1401,6 +1416,7 @@ export class PrCiService {
         checks.items,
         checks.complete,
         checks.problem,
+        main,
       );
       return {
         kind: "finished",
@@ -1423,6 +1439,51 @@ export class PrCiService {
         transient: isTransientForgeFailure(caught),
         problem: caught instanceof Error ? caught.message : String(caught),
       };
+    }
+  }
+
+  /**
+   * The default branch's newest run of each check a reading of the task's
+   * own pull request found red (INF-1915 fix 1): evidence about the
+   * failure's cause for the crew's diagnosis and the completion card, never
+   * a merge input. Kept from the last reading while the same checks fail at
+   * the same version; absent for a selected pull request, where the host
+   * cannot read a branch's checks apart from a proposed change, when nothing
+   * failed, or when that read itself failed.
+   */
+  private async mainEvidence(
+    record: TaskRecord,
+    forge: Forge,
+    change: ForgeChange,
+    checks: { items: readonly ForgeCheck[] },
+  ): Promise<(MainCheckEvidence & { head: string }) | undefined> {
+    if (record.delivery?.checkTarget || !forge.branchChecks) return undefined;
+    const failedNames = (items: readonly Pick<ForgeCheck, "name" | "state">[]): string[] =>
+      items.filter((check) => isRedCheckState(check.state)).map((check) => check.name);
+    const failed = failedNames(checks.items);
+    if (failed.length === 0) return undefined;
+    const before = record.delivery;
+    const kept = before?.mainChecks;
+    if (
+      kept?.head === change.headSha &&
+      before?.checks?.headSha === change.headSha &&
+      JSON.stringify([...failedNames(before.checks.items)].sort()) ===
+        JSON.stringify([...failed].sort())
+    )
+      return kept;
+    try {
+      const main = await forge.branchChecks();
+      return {
+        head: change.headSha,
+        sha: main.sha,
+        at: this.now(),
+        items: main.checks.items
+          .filter((check) => failed.includes(check.name))
+          .map(({ name, state }) => ({ name, state })),
+      };
+    } catch (caught) {
+      console.warn("[crew] could not read the default branch's run of a failed check:", caught);
+      return undefined;
     }
   }
 
@@ -1545,6 +1606,10 @@ export class PrCiService {
     const located = this.locate(taskId, "open");
     if ("said" in located) return located.said;
     const { record, branch, forge } = located;
+    if (input.repository !== undefined) {
+      const refused = this.foreignRepository(record, input.repository);
+      if (refused) return refused;
+    }
     try {
       requireConventional(input.title, "pull request title", this.options.namingRule?.());
       this.options.tasks.recordPermissionRecords(taskId, { checkTarget: undefined });
@@ -1734,13 +1799,16 @@ export class PrCiService {
             : "pending",
           input.recovery,
           input.around,
-          validationHead
-            ? {
-                beforePublish: beginPublication,
-                attests: this.attestsAt(taskId),
-                ...(prerequisite && !existing ? { draft: hasChangeRequests(forge.kind) } : {}),
-              }
-            : undefined,
+          {
+            ...(validationHead
+              ? {
+                  beforePublish: beginPublication,
+                  attests: this.attestsAt(taskId),
+                  ...(prerequisite && !existing ? { draft: hasChangeRequests(forge.kind) } : {}),
+                }
+              : {}),
+            ...(input.base ? { base: input.base } : {}),
+          },
         );
         const place = forge.place ?? "the project's host";
         // INF-717: a renamed change says its new title, the story's.
@@ -1762,6 +1830,7 @@ export class PrCiService {
           branch,
           title: input.title,
           body: input.body ?? "",
+          ...(input.base ? { base: input.base } : {}),
           ...(prerequisite && hasChangeRequests(forge.kind) ? { draft: true } : {}),
         });
         if (!hasChangeRequests(forge.kind)) described = keepsNoDescription(forge);
@@ -2112,6 +2181,23 @@ export class PrCiService {
     return { record, branch: record.branch, forge: this.options.forgeFor(repo, dir) };
   }
 
+  /**
+   * open_change names the project the change opens on (INF-1873): the task's
+   * own, by its name, id, owner/name or origin where it lives. A task's
+   * change opens on no other project, so any other name is refused in words.
+   */
+  private foreignRepository(record: TaskRecord, repository: string): string | undefined {
+    const repo = record.repoId ? this.options.repos.get(record.repoId) : undefined;
+    const origin = forgeOf(repo?.origin);
+    const full = origin.owner && origin.name ? `${origin.owner}/${origin.name}` : undefined;
+    const asked = repository.trim().toLowerCase();
+    const names = [repo?.id, repo?.name, full, repo?.origin]
+      .filter((name): name is string => Boolean(name))
+      .map((name) => name.toLowerCase());
+    if (names.includes(asked)) return undefined;
+    return `Cannot open the change on "${repository}": this task works in ${repo?.name ?? "its own project"}${full ? ` (${full})` : ""}, and a task's change opens only there. Name that project, or leave repository out.`;
+  }
+
   private assertCheckTarget(record: NonNullable<ReturnType<TaskService["get"]>>): void {
     if (
       this.options.tasks.get(record.id)?.delivery?.checkTarget?.id !==
@@ -2180,6 +2266,7 @@ export class PrCiService {
       }
       change = await this.readyPrerequisite(taskId, forge, change);
       const checks = await forge.checks(change);
+      const main = await this.mainEvidence(record, forge, change, checks);
       const mergeability =
         change.number !== undefined && forge.pull ? await forge.pull(change.number) : undefined;
       this.assertCheckTarget(record);
@@ -2194,6 +2281,7 @@ export class PrCiService {
         checks.items,
         checks.complete,
         checks.problem,
+        main,
       );
       const lines = checks.items.map(
         (check) => `- ${check.name}: ${describeCheckState(check.state)}`,
@@ -2205,6 +2293,10 @@ export class PrCiService {
         text: [
           `${changeWords(forge, change)} head ${change.headSha}`,
           `facts: ${JSON.stringify({
+            change: {
+              id: this.options.tasks.changeFor(record.id)?.id ?? null,
+              base: mergeability?.base ?? change.base ?? null,
+            },
             headSha: change.headSha,
             currentHead: mergeability?.headSha ?? change.headSha,
             moved:
@@ -2228,6 +2320,9 @@ export class PrCiService {
               workflow: check.workflow ?? null,
               event: check.event ?? null,
             })),
+            // The default branch's newest run of each failed check: evidence
+            // about the cause, never a merge input (INF-1915 fix 1).
+            main: main ? { sha: main.sha, items: main.items } : null,
           })}`,
           ...(this.readinessProblem(taskId, change) ? [this.readinessProblem(taskId, change)] : []),
           ...(checks.items.length > 0 ? lines : ["- no checks reported on the head SHA"]),
@@ -2731,6 +2826,7 @@ export class PrCiService {
     checks: ForgeCheck[] = [],
     complete?: boolean,
     problem?: string,
+    main?: MainCheckEvidence & { head: string },
   ): void {
     const at = this.now();
     const task = this.options.tasks.get(taskId);
@@ -2745,9 +2841,12 @@ export class PrCiService {
     const label = checked ? checked.forge.label(checked.change) : undefined;
     if (checked) this.noteChange(taskId, checked);
     const round = change ? observeCheckRepair(task.delivery, change.headSha, checks, at) : {};
+    // The reading names the pull request it is of: the change record binds
+    // it by that number, never by its head alone (INF-1873).
     const snapshot = checked
       ? {
           headSha: checked.change.headSha,
+          ...(checked.change.number !== undefined ? { prNumber: checked.change.number } : {}),
           items: checks.map(({ name, state }) => ({ name, state })),
           absenceDeclared: this.absenceDeclared(task, checked),
           ...(complete !== undefined ? { complete } : {}),
@@ -2777,6 +2876,8 @@ export class PrCiService {
         checks: snapshot,
         ...checksSpan(actual, checks),
         ...(change ? { headSha: change.headSha } : {}),
+        ...(change?.base ? { prBase: change.base } : {}),
+        mainChecks: main,
         ...round,
         ...watch,
       },
@@ -2820,12 +2921,14 @@ export class PrCiService {
         changeLabel: label,
         ...(url ? { prUrl: url } : {}),
         ...(change.number !== undefined ? { prNumber: change.number } : {}),
+        ...(change.base ? { prBase: change.base } : {}),
         headSha: change.headSha,
         checks: undefined,
         ci: undefined,
         ciAt: undefined,
         ciStartedAt: undefined,
         ciFinishedAt: undefined,
+        mainChecks: undefined,
       },
       {
         kind: "pr_opened",

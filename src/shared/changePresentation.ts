@@ -159,6 +159,14 @@ export type StoryAround = z.infer<typeof storyAroundSchema>;
 
 export const openChangeInputSchema = z.object({
   title: z.string(),
+  /**
+   * The project the change opens on, as the crewmate names it (INF-1873): the
+   * task's own project by name, id or owner/name where it lives. Any other is
+   * refused: a task's change opens on no other project.
+   */
+  repository: z.string().optional(),
+  /** The branch the change targets, when not the default branch: another change's branch for a stacked change. */
+  base: z.string().optional(),
   body: z.string().optional(),
   presentation: z.number().int().positive().optional(),
   recovery: presentationRecoverySchema.optional(),

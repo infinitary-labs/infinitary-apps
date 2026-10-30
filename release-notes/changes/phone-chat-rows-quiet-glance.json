@@ -1,0 +1,18 @@
+{
+  "entries": [
+    {
+      "id": "phone-chat-rows-quiet-glance",
+      "kind": "improvement",
+      "title": "Your last messages above the message box are easier to read on iPhone and iPad",
+      "body": "On iPhone and iPad, your last messages and your first mate's replies above the message box are larger, one step under the words you type. Your message sits in a bubble that fits its words, and each reply is in a softer colour, so the rows read as a quick glance under the card. You can tap anywhere along a reply's row to open the whole reply.",
+      "area": "message-box",
+      "picture": {
+        "dark": "phone-chat-rows-quiet-glance-dark.webp",
+        "light": "phone-chat-rows-quiet-glance-light.webp",
+        "alt": "On iPhone, your message in a grey bubble on the right above the message box and the first mate's reply in a softer colour beside its mark"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

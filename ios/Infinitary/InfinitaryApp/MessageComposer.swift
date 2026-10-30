@@ -114,7 +114,8 @@ struct MessageComposer: View {
     /// each the captain's words in a soft grey bubble on the right and the first mate's reply beside its mark on the
     /// left, the older round at half strength and only the newest while a card is up. While the first mate works, ember
     /// dots follow the newest reply, or stand with Working… where no reply is yet. After 15 seconds of a completed
-    /// reply on screen the older round dissolves and keeps its room, so the input never moves.
+    /// reply on screen the older round dissolves and keeps its room, so the input never moves. INF-1846 chose "A quiet
+    /// glance": 15-point rows, 12 points between rounds and 12 above the box, one line each.
     private func lastTurn(_ turn: PhoneLastTurn) -> some View {
         let key = Self.fadeKey(turn)
         let hidden = faded && key != nil && key == fadeKey
@@ -122,49 +123,54 @@ struct MessageComposer: View {
         let readable = messageContext.cardsVisible && phase == .active && !compact && !session.firstmateBusy
         let cardUp = messageContext.cardsVisible && messageContext.card != nil
         let older = cardUp ? nil : turn.previous
-        return VStack(spacing: 10) {
+        return VStack(spacing: 12) {
             if let older {
                 round(older, newest: false)
                     .opacity(hidden ? 0 : 0.5).accessibilityHidden(hidden).disabled(hidden)
             }
             round(PhoneLastRound(you: turn.you, reply: turn.reply), newest: true)
-        }.font(PhoneFont.caption).lineLimit(1)
-            .frame(maxWidth: .infinity)
+        }.font(PhoneFont.subheadline).lineLimit(1)
+            // The composer's stack adds 8 points; these 4 make the 12 above the box.
+            .frame(maxWidth: .infinity).padding(.bottom, 4)
             .task(id: "\(key ?? "")|\(readable)") { await read(key, readable: readable) }
             .sheet(item: $replyOpen) { opened in PhoneReplySheet(round: opened.round) }
     }
 
-    /// One round: the captain's bubble, then the first mate's line. The older round's identifiers carry `older`.
+    /// One round: the captain's bubble, then the first mate's line, 4 points apart. The bubble hugs its words up to three
+    /// quarters of the column, and the reply row is 24 points tall, in the secondary colour, pressable across its width.
+    /// The older round's identifiers carry `older`.
     private func round(_ round: PhoneLastRound, newest: Bool) -> some View {
         let id = newest ? "last-turn" : "last-turn-older"
         let busy = newest && session.firstmateBusy
-        return VStack(alignment: .leading, spacing: 2) {
-            Text(round.you.isEmpty ? "A picture" : round.you)
-                .foregroundStyle(PhoneTheme.text)
-                .padding(.vertical, 2).padding(.horizontal, 10)
-                .background(PhoneTheme.text.opacity(0.08), in: UnevenRoundedRectangle(
-                    topLeadingRadius: 11, bottomLeadingRadius: 11, bottomTrailingRadius: 4, topTrailingRadius: 11))
-                // The bubble keeps clear of the reply's side, as the Mac's 75% width does.
-                .frame(maxWidth: .infinity, alignment: .trailing).padding(.leading, 64)
-                .accessibilityIdentifier("\(id)-you")
+        return VStack(alignment: .leading, spacing: 4) {
+            BubbleColumn {
+                Text(round.you.isEmpty ? "A picture" : round.you)
+                    .foregroundStyle(PhoneTheme.text)
+                    .padding(.vertical, 4).padding(.horizontal, 12)
+                    .background(PhoneTheme.text.opacity(0.1), in: UnevenRoundedRectangle(
+                        topLeadingRadius: 14, bottomLeadingRadius: 14, bottomTrailingRadius: 5, topTrailingRadius: 14))
+                    .accessibilityIdentifier("\(id)-you")
+            }
             if round.reply != nil || busy {
                 HStack(spacing: 8) {
-                    MateMark().frame(width: 14, height: 14)
+                    MateMark().frame(width: 16, height: 16)
                     if let reply = round.reply {
                         Button { replyOpen = OpenedReply(round: round) } label: {
-                            Text(reply.text).foregroundStyle(reply.problem == true ? PhoneTheme.danger : PhoneTheme.text)
+                            HStack(spacing: 8) {
+                                Text(reply.text).foregroundStyle(reply.problem == true ? PhoneTheme.danger : PhoneTheme.secondary)
+                                if busy { WorkingDots(still: reduceMotion) }
+                            }.frame(maxWidth: .infinity, minHeight: 24, alignment: .leading).contentShape(Rectangle())
                         }.buttonStyle(.plain).accessibilityHint("Opens the whole reply")
                             .accessibilityIdentifier("\(id)-reply")
-                        if busy { WorkingDots(still: reduceMotion) }
                     } else {
                         HStack(spacing: 6) {
                             WorkingDots(still: reduceMotion)
                             Text("Working…").foregroundStyle(PhoneTheme.muted)
-                        }.accessibilityElement(children: .combine).accessibilityIdentifier("\(id)-reply")
+                        }.frame(minHeight: 24).accessibilityElement(children: .combine).accessibilityIdentifier("\(id)-reply")
                     }
                 }.frame(maxWidth: .infinity, alignment: .leading)
             } else {
-                Text(verbatim: " ").accessibilityHidden(true)
+                Text(verbatim: " ").frame(minHeight: 24).accessibilityHidden(true)
             }
         }
     }
@@ -222,14 +228,15 @@ struct MessageComposer: View {
     }
 }
 
-/// The Mac's working dots (lastTurn.css): three 4-point ember dots 3 points apart, each brightening in turn over 1.2 s.
+/// The Mac's working dots (lastTurn.css) at the phone's size (INF-1846): three 5-point ember dots 4 points apart, each
+/// brightening in turn over 1.2 s.
 private struct WorkingDots: View {
     let still: Bool
     var body: some View {
         TimelineView(.animation(paused: still)) { clock in
-            HStack(spacing: 3) {
+            HStack(spacing: 4) {
                 ForEach(0..<3, id: \.self) { dot in
-                    Circle().fill(PhoneTheme.hot).frame(width: 4, height: 4)
+                    Circle().fill(PhoneTheme.hot).frame(width: 5, height: 5)
                         .opacity(still ? 1 : Self.opacity(clock.date.timeIntervalSinceReferenceDate - Double(dot) * 0.2))
                 }
             }
@@ -242,6 +249,24 @@ private struct WorkingDots: View {
         guard phase < 0.6 else { return 0.25 }
         let rise = phase < 0.3 ? phase / 0.3 : (0.6 - phase) / 0.3
         return 0.25 + 0.75 * (0.5 - cos(rise * .pi) / 2)
+    }
+}
+
+/// The captain's bubble on the right, hugging its words up to three quarters of the width it is offered.
+private struct BubbleColumn: Layout {
+    func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {
+        let bubble = subviews.first?.sizeThatFits(widest(proposal.width)) ?? .zero
+        return CGSize(width: proposal.width ?? bubble.width, height: bubble.height)
+    }
+
+    func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) {
+        guard let bubble = subviews.first else { return }
+        let offered = widest(bounds.width)
+        bubble.place(at: CGPoint(x: bounds.maxX, y: bounds.minY), anchor: .topTrailing, proposal: offered)
+    }
+
+    private func widest(_ width: CGFloat?) -> ProposedViewSize {
+        ProposedViewSize(width: width.map { $0 * 0.75 }, height: nil)
     }
 }
 

@@ -6,6 +6,8 @@ enum PhoneFont {
     static let title = Font.custom("SpaceGrotesk-Light", size: 22, relativeTo: .title2).weight(.semibold)
     static let headline = Font.custom("SpaceGrotesk-Light", size: 17, relativeTo: .headline).weight(.semibold)
     static let callout = Font.custom("SpaceGrotesk-Light", size: 16, relativeTo: .callout).weight(.regular)
+    /// INF-1846's chosen 15 points, one step under the message box's words: the rows above the box.
+    static let subheadline = Font.custom("SpaceGrotesk-Light", size: 15, relativeTo: .subheadline).weight(.regular)
     static let mono = Font.custom("JetBrainsMono-Regular", size: 12, relativeTo: .caption)
     static let caption = Font.custom("SpaceGrotesk-Light", size: 12, relativeTo: .caption).weight(.regular)
     static let display = Font.custom("SpaceGrotesk-Light", size: 28, relativeTo: .title).weight(.regular)

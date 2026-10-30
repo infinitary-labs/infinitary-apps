@@ -670,6 +670,7 @@ A task runs in a working copy of its own on the computer that runs it, made from
 - **An artifact.**
   `inf:working-copy:artifact` takes an artifact the home downloaded in pieces, outside the working copy, and once every byte is there and its digest matches writes it where the home writes one, with the same rules (`writeArtifact`, `src/core/workspace/artifacts.ts`): `.infinitary-artifacts/run-<run>/artifact-<id>.zip`, each folder refused when it is a link, never over a file already there.
   A computer on a contract before 8.4 writes it under `.firstmate-artifacts/`, and the home names that path to its crewmate.
+  A selection of an artifact's files arrives with a `part` and is written beside the whole one at `artifact-<id>-<part>.zip` (`docs/forge.md`, "Workflow logs and artifacts"); the home sends one only to a computer that lists `artifact-parts`, since an older one would drop the `part` and write it where the whole archive goes.
 
 **At the home** (`PlacedCopies`, `src/core/placed/placedCopies.ts`, held by `PlacedSessions` as `copies`):
 
@@ -688,6 +689,7 @@ A task runs in a working copy of its own on the computer that runs it, made from
 - **Opening, checking and merging** stay this Mac's, with its own sign-in: a crewmate there calls `open_change`, `check_change` and `download_artifact` as one here does, and the home does each (`inf:work:open-change`, `inf:work:check-change`, `inf:work:download-artifact`).
   `prepare_change` transfers its inspected media to the home through `inf:work:prepare-change`, gated by `CHANGE_PRESENTATIONS_SINCE`; the home retains the story without publishing it (`docs/forge.md`, "Saved change stories").
   An artifact is downloaded here and written into the working copy there before the tool answers, never into a folder here.
+  A listing or a selection of its files (`list`, `files`) is asked only of a home that lists `artifact-parts`; the computer refuses it, sending nothing, when its home does not, since an older home would drop the fields and download the whole archive.
   A crewmate there calls `read_workflow` as one here does (`inf:work:read-workflow`), and the home reads the run through the project's own forge: with `runId` alone the short read, whose run watch wakes the crewmate there (`docs/forge.md`, "The run watch"), and with `jobId` that job's log.
 - **Discarding.**
   A discard asks that computer what the working copy holds; while it is out of reach nobody can tell, so the discard asks for confirmation.

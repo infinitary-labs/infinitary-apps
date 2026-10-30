@@ -1916,6 +1916,7 @@ export async function createServices(
     forgeFor,
     writeElsewhere: (taskId, deviceId, artifact) =>
       placed.copies.writeArtifact(taskId, deviceId, artifact),
+    partsElsewhere: (deviceId) => placed.copies.writesArtifactParts(deviceId),
   });
   const presentations: ChangePresentations = new ChangePresentations({
     namingRule: () => runbooks.naming(),

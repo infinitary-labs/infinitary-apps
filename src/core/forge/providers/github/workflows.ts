@@ -1,5 +1,6 @@
 import { checkTimes, ForgeError } from "../../forge";
 import {
+  type ArchiveRanges,
   type ForgeWorkflows,
   WORKFLOW_ARTIFACT_MAX_BYTES,
   WORKFLOW_JOB_PAGES,
@@ -52,6 +53,7 @@ export class GitHubWorkflows implements ForgeWorkflows {
     private readonly repoPath: () => string,
     private readonly json: (path: string) => Promise<unknown>,
     private readonly bytes: (path: string, maxBytes: number) => Promise<Uint8Array>,
+    private readonly ranges: (path: string, size: number) => Promise<ArchiveRanges>,
   ) {}
 
   async run(id: number) {
@@ -90,6 +92,32 @@ export class GitHubWorkflows implements ForgeWorkflows {
   }
 
   async download(runId: number, artifactId: number) {
+    const artifact = await this.artifactIn(runId, artifactId);
+    if (artifact.sizeBytes > WORKFLOW_ARTIFACT_MAX_BYTES) {
+      throw new ForgeError(
+        "refused",
+        "The artifact exceeds the 64 MiB download limit; list its files with list true and save the ones you need with files.",
+      );
+    }
+    const bytes = await this.bytes(
+      `${this.repoPath()}/actions/artifacts/${artifactId}/zip`,
+      WORKFLOW_ARTIFACT_MAX_BYTES,
+    );
+    return { artifact, bytes };
+  }
+
+  /** The archive in parts, whatever its size: only what a listing or selection reads is fetched. */
+  async archive(runId: number, artifactId: number) {
+    const artifact = await this.artifactIn(runId, artifactId);
+    const archive = await this.ranges(
+      `${this.repoPath()}/actions/artifacts/${artifactId}/zip`,
+      artifact.sizeBytes,
+    );
+    return { artifact, archive };
+  }
+
+  /** The artifact by its id, only when the run uploaded it and GitHub still keeps it. */
+  private async artifactIn(runId: number, artifactId: number): Promise<WorkflowArtifact> {
     const raw = (await this.json(
       `${this.repoPath()}/actions/artifacts/${artifactId}`,
     )) as ArtifactJson;
@@ -98,14 +126,7 @@ export class GitHubWorkflows implements ForgeWorkflows {
     }
     const artifact = artifactOf(raw);
     if (artifact.expired) throw new ForgeError("not-found", "The artifact has expired on GitHub.");
-    if (artifact.sizeBytes > WORKFLOW_ARTIFACT_MAX_BYTES) {
-      throw new ForgeError("refused", "The artifact exceeds the 64 MiB download limit.");
-    }
-    const bytes = await this.bytes(
-      `${this.repoPath()}/actions/artifacts/${artifactId}/zip`,
-      WORKFLOW_ARTIFACT_MAX_BYTES,
-    );
-    return { artifact, bytes };
+    return artifact;
   }
 }
 

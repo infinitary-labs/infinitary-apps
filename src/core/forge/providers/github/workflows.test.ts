@@ -3,6 +3,7 @@ import { readFileSync, statSync, symlinkSync } from "node:fs";
 import { createServer, type IncomingMessage, type ServerResponse } from "node:http";
 import type { AddressInfo } from "node:net";
 import { join } from "node:path";
+import { crc32, inflateRawSync } from "node:zlib";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { scratchDir } from "../../../../../tests/helpers/scratchDirs";
 import { GithubGatewayService } from "../../../orchestrator/githubGateway";
@@ -49,6 +50,14 @@ const ARTIFACT = {
   expires_at: "2026-10-14T00:00:00Z",
   workflow_run: { id: 10 },
 };
+/**
+ * Nine entries copied byte for byte from a real phone-logs artifact, which
+ * actions/upload-artifact@v4 packed: deflated, each followed by a data
+ * descriptor, two of them in folders.
+ */
+const SAMPLE = readFileSync("tests/fixtures/forge/phone-logs-sample.zip");
+/** Four of those files packed again by Info-ZIP with its 64-bit records, as an archive past 65,535 files or 4 GiB has. */
+const SAMPLE_ZIP64 = readFileSync("tests/fixtures/forge/phone-logs-zip64.zip");
 const PREFIX = "/repos/octo/meter";
 const cleanup: (() => Promise<void> | void)[] = [];
 afterEach(async () => {
@@ -60,14 +69,18 @@ async function fixture(
     token?: string | null;
     status?: number;
     artifact?: Partial<typeof ARTIFACT>;
+    /** The archive storage keeps, served in parts as Azure Blob storage serves a Range. */
+    archive?: Buffer;
     route?: (req: IncomingMessage, res: ServerResponse) => boolean;
   } = {},
 ) {
-  const seen: { path: string; auth?: string }[] = [];
+  const seen: { path: string; auth?: string; range?: string }[] = [];
+  const archive = options.archive ?? ZIP;
+  const served = { bytes: 0 };
   let base = "";
   const server = createServer((req, res) => {
     const url = new URL(req.url ?? "/", base);
-    seen.push({ path: req.url ?? "", auth: req.headers.authorization });
+    seen.push({ path: req.url ?? "", auth: req.headers.authorization, range: req.headers.range });
     if (options.route?.(req, res)) return;
     const json = (value: unknown, status = 200) => {
       res.writeHead(status, { "Content-Type": "application/json" });
@@ -98,7 +111,7 @@ async function fixture(
       return;
     }
     if (url.pathname === `${PREFIX}/actions/artifacts/30`) {
-      json({ ...ARTIFACT, ...options.artifact });
+      json({ ...ARTIFACT, size_in_bytes: archive.length, ...options.artifact });
       return;
     }
     if (
@@ -116,7 +129,17 @@ async function fixture(
       return;
     }
     if (url.pathname === "/storage/zip") {
-      res.end(ZIP);
+      const range = /^bytes=(\d+)-(\d+)$/.exec(req.headers.range ?? "");
+      if (!range) {
+        served.bytes += archive.length;
+        res.end(archive);
+        return;
+      }
+      const start = Number(range[1]);
+      const end = Math.min(Number(range[2]), archive.length - 1);
+      served.bytes += end - start + 1;
+      res.writeHead(206, { "content-range": `bytes ${start}-${end}/${archive.length}` });
+      res.end(archive.subarray(start, end + 1));
       return;
     }
     json({ message: `Unexpected request ${req.url}` }, 404);
@@ -176,7 +199,7 @@ async function fixture(
   const download = bindTool(DOWNLOAD_ARTIFACT_TOOL, {
     onDownloadArtifact: (input) => service.download("task-1", input),
   });
-  return { forge, list, read, download, service, tasks, cwd, seen, rejected };
+  return { forge, list, read, download, service, tasks, cwd, seen, served, rejected };
 }
 
 describe("workflow evidence through crewmate tools and the app's sign-in", () => {
@@ -377,5 +400,279 @@ describe("workflow evidence through crewmate tools and the app's sign-in", () =>
     expect(result).toContain("unsafe download address");
     expect(result).not.toMatch(/attacker|secret|gho_/);
     expect(seen.some((entry) => entry.path.includes("/leak"))).toBe(false);
+  });
+});
+
+/**
+ * The phone-logs sample with a 65 MiB screen recording stored after its
+ * files: an archive past the download limit, as phone-results is
+ * (INF-1932: its artifacts were 94 MB, 122 MB and 345 MB).
+ */
+function withRecording(sample: Buffer): Buffer {
+  const at = sample.length - 22;
+  const count = sample.readUInt16LE(at + 10);
+  const directorySize = sample.readUInt32LE(at + 12);
+  const directoryStart = sample.readUInt32LE(at + 16);
+  const name = Buffer.from("ipad/join/recording.mov");
+  const data = Buffer.alloc(65 * 1024 * 1024, 0x2a);
+  const sum = crc32(data);
+  const local = Buffer.alloc(30);
+  local.writeUInt32LE(0x04034b50, 0);
+  local.writeUInt16LE(20, 4);
+  local.writeUInt32LE(sum, 14);
+  local.writeUInt32LE(data.length, 18);
+  local.writeUInt32LE(data.length, 22);
+  local.writeUInt16LE(name.length, 26);
+  const central = Buffer.alloc(46);
+  central.writeUInt32LE(0x02014b50, 0);
+  central.writeUInt16LE(0x0314, 4);
+  central.writeUInt16LE(20, 6);
+  central.writeUInt32LE(sum, 16);
+  central.writeUInt32LE(data.length, 20);
+  central.writeUInt32LE(data.length, 24);
+  central.writeUInt16LE(name.length, 28);
+  central.writeUInt32LE(directoryStart, 42);
+  const directory = Buffer.concat([
+    sample.subarray(directoryStart, directoryStart + directorySize),
+    central,
+    name,
+  ]);
+  const end = Buffer.alloc(22);
+  end.writeUInt32LE(0x06054b50, 0);
+  end.writeUInt16LE(count + 1, 8);
+  end.writeUInt16LE(count + 1, 10);
+  end.writeUInt32LE(directory.length, 12);
+  end.writeUInt32LE(directoryStart + local.length + name.length + data.length, 16);
+  return Buffer.concat([sample.subarray(0, directoryStart), local, name, data, directory, end]);
+}
+
+/** Every file of a ZIP archive unpacked by its central directory, each checked against its CRC. */
+function unzipped(zip: Buffer): Map<string, Buffer> {
+  const at = zip.length - 22;
+  expect(zip.readUInt32LE(at)).toBe(0x06054b50);
+  const files = new Map<string, Buffer>();
+  let p = zip.readUInt32LE(at + 16);
+  for (let i = 0; i < zip.readUInt16LE(at + 10); i++) {
+    expect(zip.readUInt32LE(p)).toBe(0x02014b50);
+    const method = zip.readUInt16LE(p + 10);
+    const sum = zip.readUInt32LE(p + 16);
+    const packed = zip.readUInt32LE(p + 20);
+    const nameLength = zip.readUInt16LE(p + 28);
+    const name = zip.subarray(p + 46, p + 46 + nameLength).toString();
+    const local = zip.readUInt32LE(p + 42);
+    expect(zip.readUInt32LE(local)).toBe(0x04034b50);
+    const from = local + 30 + zip.readUInt16LE(local + 26) + zip.readUInt16LE(local + 28);
+    const raw = zip.subarray(from, from + packed);
+    const bytes = method === 8 ? inflateRawSync(raw) : Buffer.from(raw);
+    expect(crc32(bytes), name).toBe(sum);
+    files.set(name, bytes);
+    p += 46 + nameLength + zip.readUInt16LE(p + 30) + zip.readUInt16LE(p + 32);
+  }
+  return files;
+}
+
+describe("an artifact read in parts through the crewmate tool (INF-1932)", () => {
+  it("lists an archive past the download limit and saves only the named folder and file, reading only their parts", async () => {
+    const archive = withRecording(SAMPLE);
+    const { download, cwd, seen, served } = await fixture({ archive });
+    // The whole archive is refused, and the refusal names the way on.
+    const whole = (await download.run({ runId: 10, artifactId: 30 })).text;
+    expect(whole).toContain("64 MiB download limit; list its files with list true");
+    expect(served.bytes).toBe(0);
+
+    const listing = (await download.run({ runId: 10, artifactId: 30, list: true })).text;
+    const lines = listing.split("\n");
+    expect(lines[0]).toBe(
+      `test-speed-measurements (artifact 30) from Test-speed experiment run 10, version ${HEAD}`,
+    );
+    expect(lines[1]).toMatch(new RegExp(`^archive: ${archive.length} bytes; files: 10, `));
+    expect(lines[3]).toBe("files 1-10 of 10");
+    const paths = lines.slice(4).map((line) => line.split(" ")[2]);
+    expect(paths).toEqual([
+      "11-xcrun.log",
+      "12-xcrun.log",
+      "2-node.log",
+      "35-xcrun.log",
+      "7-xcodebuild.log",
+      "ipad/join/recording.mov",
+      "ipad/photos-stream.log",
+      "ipad/rest/1-plutil.log",
+      "ipad/rest/2-plutil.log",
+      "iphone/rest/1-plutil.log",
+    ]);
+    const recording = lines.find((line) => line.endsWith(" ipad/join/recording.mov"));
+    expect(Number(recording?.split(" ")[0])).toBeGreaterThan(64 * 1024 * 1024);
+    expect(Number(recording?.split(" ")[1])).toBe(65 * 1024 * 1024);
+    // Listing read the archive's last 64 KiB, which hold its central directory: never the recording.
+    expect(served.bytes).toBeLessThan(1024 * 1024);
+
+    const narrowed = (
+      await download.run({ runId: 10, artifactId: 30, list: true, files: ["ipad/rest"], offset: 2 })
+    ).text.split("\n");
+    expect(narrowed[1]).toContain("files under the named paths: 2");
+    expect(narrowed.slice(3)).toEqual([
+      "files 2-2 of 2",
+      expect.stringMatching(/^\d+ 0 ipad\/rest\/2-plutil\.log$/),
+    ]);
+
+    const before = served.bytes;
+    const receipt = JSON.parse(
+      (
+        await download.run({
+          runId: 10,
+          artifactId: 30,
+          files: ["ipad/rest/", "12-xcrun.log", "missing.log"],
+        })
+      ).text,
+    );
+    expect(receipt.path).toMatch(/^\.infinitary-artifacts\/run-10\/artifact-30-[0-9a-f]{12}\.zip$/);
+    expect(receipt.path).toContain(`artifact-30-${receipt.sha256.slice(0, 12)}.zip`);
+    expect(receipt.selected).toEqual({
+      files: 3,
+      size: 5779 + 0 + 37,
+      paths: [
+        { path: "ipad/rest/", files: 2 },
+        { path: "12-xcrun.log", files: 1 },
+        { path: "missing.log", files: 0 },
+      ],
+    });
+    const saved = readFileSync(join(cwd, receipt.path));
+    expect(saved.length).toBe(receipt.bytes);
+    expect(createHash("sha256").update(saved).digest("hex")).toBe(receipt.sha256);
+    expect(statSync(join(cwd, receipt.path)).mode & 0o777).toBe(0o600);
+    const original = unzipped(SAMPLE);
+    const files = unzipped(saved);
+    expect([...files.keys()]).toEqual([
+      "12-xcrun.log",
+      "ipad/rest/1-plutil.log",
+      "ipad/rest/2-plutil.log",
+    ]);
+    for (const [name, bytes] of files)
+      expect(bytes.equals(original.get(name) as Buffer)).toBe(true);
+    // Only the archive's end and the chosen records were read: never the recording.
+    expect(served.bytes - before).toBeLessThan(1024 * 1024);
+    const storage = seen.filter((entry) => entry.path.startsWith("/storage/zip"));
+    expect(storage.every((entry) => entry.range && entry.auth === undefined)).toBe(true);
+    expect(
+      seen
+        .filter((entry) => entry.path.startsWith(PREFIX))
+        .every((entry) => entry.auth === "Bearer gho_fixture_owned_by_app"),
+    ).toBe(true);
+    expect(JSON.stringify(receipt)).not.toMatch(/gho_|signed=/);
+
+    // The same selection again is the same file, never written over.
+    expect(
+      (
+        await download.run({
+          runId: 10,
+          artifactId: 30,
+          files: ["ipad/rest/", "12-xcrun.log", "missing.log"],
+        })
+      ).text,
+    ).toContain("not overwritten");
+  });
+
+  it("refuses a selection past 64 MiB, or one that names nothing in the archive, before reading any file", async () => {
+    const { download, served, cwd } = await fixture({ archive: withRecording(SAMPLE) });
+    const big = (
+      await download.run({ runId: 10, artifactId: 30, files: ["ipad/join/", "12-xcrun.log"] })
+    ).text;
+    expect(big).toContain("over the 64 MiB limit; select fewer");
+    const none = (await download.run({ runId: 10, artifactId: 30, files: ["phone/ipad/"] })).text;
+    expect(none).toContain("None of the named files is in the artifact; list it with list true");
+    expect(served.bytes).toBeLessThan(1024 * 1024);
+    expect(statSync(cwd).isDirectory()).toBe(true);
+    expect(() => statSync(join(cwd, ".infinitary-artifacts"))).toThrow();
+  });
+
+  it("saves a selection on the computer a task runs on only when that computer writes one", async () => {
+    for (const writes of [false, true]) {
+      const { forge, tasks, served } = await fixture({ archive: SAMPLE });
+      seedTask(tasks, {
+        id: "task-there",
+        title: "Measure",
+        status: "idle",
+        repoId: "repo-1",
+        deviceId: "mini",
+      });
+      const sent: { part?: string; bytes: Uint8Array }[] = [];
+      const service = new WorkflowEvidenceService({
+        tasks,
+        repos: { get: () => ({ id: "repo-1", path: "/unused", name: "meter" }) } as never,
+        forgeFor: () => forge,
+        writeElsewhere: async (_task, _device, artifact) => {
+          sent.push(artifact);
+          return `.infinitary-artifacts/run-10/artifact-30-${artifact.part}.zip`;
+        },
+        partsElsewhere: () => writes,
+      });
+      const answer = await service.download("task-there", {
+        runId: 10,
+        artifactId: 30,
+        files: ["12-xcrun.log"],
+      });
+      if (!writes) {
+        expect(answer).toContain(
+          "needs an update before it can save selected files. Nothing was downloaded.",
+        );
+        expect(served.bytes).toBe(0);
+        expect(sent).toEqual([]);
+        continue;
+      }
+      expect(sent).toHaveLength(1);
+      expect(sent[0]?.part).toBe(
+        createHash("sha256")
+          .update(sent[0]?.bytes ?? "")
+          .digest("hex")
+          .slice(0, 12),
+      );
+      expect([...unzipped(Buffer.from(sent[0]?.bytes ?? [])).keys()]).toEqual(["12-xcrun.log"]);
+      expect(JSON.parse(answer).path).toBe(
+        `.infinitary-artifacts/run-10/artifact-30-${sent[0]?.part}.zip`,
+      );
+    }
+  });
+
+  it("reads an archive with 64-bit records", async () => {
+    const { download, cwd } = await fixture({ archive: SAMPLE_ZIP64 });
+    const listing = (await download.run({ runId: 10, artifactId: 30, list: true })).text;
+    expect(
+      listing
+        .split("\n")
+        .slice(4)
+        .map((line) => line.split(" ").slice(1).join(" ")),
+    ).toEqual([
+      "37 12-xcrun.log",
+      "33 7-xcodebuild.log",
+      "5779 ipad/rest/1-plutil.log",
+      "0 ipad/rest/2-plutil.log",
+    ]);
+    const receipt = JSON.parse(
+      (await download.run({ runId: 10, artifactId: 30, files: ["ipad/rest"] })).text,
+    );
+    const files = unzipped(readFileSync(join(cwd, receipt.path)));
+    const original = unzipped(SAMPLE);
+    expect([...files.keys()]).toEqual(["ipad/rest/1-plutil.log", "ipad/rest/2-plutil.log"]);
+    for (const [name, bytes] of files)
+      expect(bytes.equals(original.get(name) as Buffer)).toBe(true);
+  });
+
+  it("refuses storage that sends the whole archive for a part, without reading it", async () => {
+    const { download, cwd } = await fixture({
+      archive: SAMPLE,
+      route: (req, res) => {
+        if (req.url?.startsWith("/storage/zip")) {
+          res.writeHead(200, { "content-length": String(SAMPLE.length) });
+          res.end(SAMPLE);
+          return true;
+        }
+        return false;
+      },
+    });
+    const listing = (await download.run({ runId: 10, artifactId: 30, list: true })).text;
+    expect(listing).toContain("did not send the part of the archive asked for");
+    const saved = (await download.run({ runId: 10, artifactId: 30, files: ["12-xcrun.log"] })).text;
+    expect(saved).toContain("cannot be read in parts");
+    expect(() => statSync(join(cwd, ".infinitary-artifacts"))).toThrow();
   });
 });

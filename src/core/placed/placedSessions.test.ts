@@ -2515,7 +2515,8 @@ describe("a task that runs on a computer that runs work", () => {
 
   it("works in a working copy cloned there, opens its change from here once its branch is home, and takes its kept work home before that computer deletes the copy", async () => {
     const project = await gitProject();
-    const artifact = Buffer.from("the failing test's log\n");
+    // Files copied byte for byte from a real phone-logs artifact.
+    const artifact = readFileSync("tests/fixtures/forge/phone-logs-sample.zip");
     const at = await world(() => project.forge(artifact));
     const home = at.home();
     const { repo } = await adoptHere(home.repos, project.home);
@@ -2523,7 +2524,13 @@ describe("a task that runs on a computer that runs work", () => {
     model([
       { text: "Started on the footer." },
       { tools: [{ name: "open_change", args: { title: "feat: a blue footer", body: "Intent" } }] },
-      { tools: [{ name: "download_artifact", args: { runId: 41, artifactId: 9 } }] },
+      {
+        tools: [
+          { name: "download_artifact", args: { runId: 41, artifactId: 9 } },
+          // INF-1932: only the files it needs, saved beside the whole archive.
+          { name: "download_artifact", args: { runId: 41, artifactId: 9, files: ["ipad/rest/"] } },
+        ],
+      },
       { text: "Opened, and read the artifact." },
     ]);
     const requests = api.requests.length;
@@ -2566,6 +2573,18 @@ describe("a task that runs on a computer that runs work", () => {
     expect(said(api.requests.at(-1))).toContain(
       createHash("sha256").update(artifact).digest("hex"),
     );
+    // The selection too: downloaded in parts here, written there beside it.
+    const selected = readdirSync(join(work, ".infinitary-artifacts", "run-41")).find((name) =>
+      /^artifact-9-[0-9a-f]{12}\.zip$/.test(name),
+    );
+    const part = readFileSync(join(work, ".infinitary-artifacts", "run-41", selected ?? "none"));
+    expect(selected).toBe(
+      `artifact-9-${createHash("sha256").update(part).digest("hex").slice(0, 12)}.zip`,
+    );
+    expect(part.length).toBeLessThan(artifact.length);
+    expect(part.includes("ipad/rest/1-plutil.log")).toBe(true);
+    expect(part.includes("12-xcrun.log")).toBe(false);
+    expect(said(api.requests.at(-1))).toContain(`.infinitary-artifacts/run-41/${selected}`);
     expect(existsSync(join(project.home, ".infinitary-artifacts"))).toBe(false);
 
     // The task closes: its work is kept there, comes home, and only then is
@@ -5056,6 +5075,19 @@ async function gitProject() {
               expiresAt: "2026-11-01T00:00:00Z",
             },
             bytes,
+          }),
+          archive: async (_runId: number, artifactId: number) => ({
+            artifact: {
+              id: artifactId,
+              name: "logs",
+              sizeBytes: bytes.length,
+              expired: false,
+              expiresAt: "2026-11-01T00:00:00Z",
+            },
+            archive: {
+              size: bytes.length,
+              read: async (start: number, end: number) => bytes.subarray(start, end),
+            },
           }),
         },
       },

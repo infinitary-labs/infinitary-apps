@@ -33,6 +33,7 @@ import {
   isTransientForgeFailure,
 } from "../../forge";
 import { RELEASE_UPLOAD_TIMEOUT_MS } from "../../releaseFile";
+import type { ArchiveRanges } from "../../workflows";
 import { GitHubAttachments } from "./attachments";
 import { GitHubWorkflows } from "./workflows";
 
@@ -242,6 +243,7 @@ export class GitHubForge implements Forge {
       () => this.repoPath(),
       (path) => this.request("GET", path),
       (path, maxBytes) => this.downloadBytes(path, maxBytes),
+      (path, size) => this.archiveRanges(path, size),
     );
   }
 
@@ -835,64 +837,122 @@ export class GitHubForge implements Forge {
     if (!token)
       throw new ForgeError("sign-in", notSignedInText(this.place, this.host ?? GITHUB_COM));
     const signal = AbortSignal.timeout(REQUEST_TIMEOUT_MS);
-    let url = new URL(`${this.base}${path}`);
-    const apiOrigin = url.origin;
-    let authenticated = true;
-    try {
-      for (let hops = 0; hops <= 3; hops++) {
-        const response = await this.fetcher(url, {
-          method: "GET",
-          redirect: "manual",
-          signal,
-          headers: authenticated
+    return downloadAnswer(async () => {
+      const { response } = await this.signedGet(
+        { url: new URL(`${this.base}${path}`), authenticated: true },
+        token,
+        path,
+        signal,
+      );
+      return await boundedBytes(response, maxBytes);
+    });
+  }
+
+  /**
+   * The archive behind `path` read in parts (`ArchiveRanges`): the first
+   * part follows the redirects as a whole download does, later parts go
+   * straight to the storage it reached, and every part shares one time
+   * bound. Storage that does not answer a part with exactly those bytes is
+   * refused, never read whole.
+   */
+  private async archiveRanges(path: string, size: number): Promise<ArchiveRanges> {
+    const token = await this.options.token();
+    if (!token)
+      throw new ForgeError("sign-in", notSignedInText(this.place, this.host ?? GITHUB_COM));
+    const signal = AbortSignal.timeout(REQUEST_TIMEOUT_MS);
+    let at = { url: new URL(`${this.base}${path}`), authenticated: true };
+    const read = (start: number, end: number) =>
+      downloadAnswer(async () => {
+        if (!Number.isSafeInteger(start) || start < 0 || end > size || start >= end)
+          throw new ForgeError("refused", "The archive part asked for is outside the archive.");
+        const reached = await this.signedGet(at, token, path, signal, `bytes=${start}-${end - 1}`);
+        at = { url: reached.url, authenticated: reached.authenticated };
+        const { response } = reached;
+        if (
+          response.status !== 206 ||
+          !samePart(response.headers.get("content-range"), start, end, size)
+        ) {
+          await response.body?.cancel();
+          throw new ForgeError(
+            "refused",
+            "GitHub's storage did not send the part of the archive asked for, so the archive cannot be read in parts.",
+          );
+        }
+        const bytes = await boundedBytes(response, end - start, "The archive part");
+        if (bytes.byteLength !== end - start)
+          throw new ForgeError(
+            "transient",
+            "GitHub's storage sent a part of the archive short; try a fresh read.",
+          );
+        return bytes;
+      });
+    return { size, read };
+  }
+
+  /**
+   * One GET of a workflow download through GitHub's signed redirects: the
+   * sign-in goes only with the request to the API, and a next address must
+   * be GitHub's HTTPS storage. Answers the final response and where it came
+   * from, so a later part can go straight there.
+   */
+  private async signedGet(
+    from: { url: URL; authenticated: boolean },
+    token: string,
+    path: string,
+    signal: AbortSignal,
+    range?: string,
+  ): Promise<{ response: Response; url: URL; authenticated: boolean }> {
+    let { url, authenticated } = from;
+    const apiOrigin = new URL(this.base).origin;
+    for (let hops = 0; hops <= 3; hops++) {
+      const response = await this.fetcher(url, {
+        method: "GET",
+        redirect: "manual",
+        signal,
+        headers: {
+          ...(authenticated
             ? {
                 Authorization: `Bearer ${token}`,
                 Accept: "application/vnd.github+json",
                 "X-GitHub-Api-Version": API_VERSION,
               }
-            : {},
-        });
-        if ([301, 302, 303, 307, 308].includes(response.status)) {
-          await response.body?.cancel();
-          const location = response.headers.get("location");
-          if (!location) throw new ForgeError("refused", "GitHub supplied no download address.");
-          const next = new URL(location, url);
-          // Dev stubs can redirect within their own origin. Production only follows
-          // GitHub's HTTPS storage; neither credentials nor a signed URL are returned.
-          const storage =
-            next.protocol === "https:" &&
-            (next.hostname.endsWith(".githubusercontent.com") ||
-              next.hostname.endsWith(".blob.core.windows.net"));
-          if (next.username || next.password || (next.origin !== apiOrigin && !storage)) {
-            throw new ForgeError("refused", "GitHub supplied an unsafe download address.");
-          }
-          url = next;
-          authenticated = false;
-          continue;
+            : {}),
+          ...(range ? { Range: range } : {}),
+        },
+      });
+      if ([301, 302, 303, 307, 308].includes(response.status)) {
+        await response.body?.cancel();
+        const location = response.headers.get("location");
+        if (!location) throw new ForgeError("refused", "GitHub supplied no download address.");
+        const next = new URL(location, url);
+        // Dev stubs can redirect within their own origin. Production only follows
+        // GitHub's HTTPS storage; neither credentials nor a signed URL are returned.
+        const storage =
+          next.protocol === "https:" &&
+          (next.hostname.endsWith(".githubusercontent.com") ||
+            next.hostname.endsWith(".blob.core.windows.net"));
+        if (next.username || next.password || (next.origin !== apiOrigin && !storage)) {
+          throw new ForgeError("refused", "GitHub supplied an unsafe download address.");
         }
-        if (!response.ok) {
-          await response.body?.cancel();
-          if (authenticated && response.status === 401) this.options.onSignInRejected?.();
-          if (response.status === 410)
-            throw new ForgeError("not-found", "The workflow evidence has expired on GitHub.");
-          if (!authenticated)
-            throw new ForgeError(
-              "refused",
-              `The workflow download answered ${response.status}; request a fresh download.`,
-            );
-          throw failureOf(response, "GET", path, "");
-        }
-        return await boundedBytes(response, maxBytes);
+        url = next;
+        authenticated = false;
+        continue;
       }
-      throw new ForgeError("refused", "GitHub redirected the workflow download too many times.");
-    } catch (caught) {
-      if (caught instanceof ForgeError) throw caught;
-      // Fetch failures may contain a signed storage URL: never echo that error.
-      throw new ForgeError(
-        "transient",
-        "Could not finish the workflow download from GitHub; try a fresh read.",
-      );
+      if (!response.ok) {
+        await response.body?.cancel();
+        if (authenticated && response.status === 401) this.options.onSignInRejected?.();
+        if (response.status === 410)
+          throw new ForgeError("not-found", "The workflow evidence has expired on GitHub.");
+        if (!authenticated)
+          throw new ForgeError(
+            "refused",
+            `The workflow download answered ${response.status}; request a fresh download.`,
+          );
+        throw failureOf(response, "GET", path, "");
+      }
+      return { response, url, authenticated };
     }
+    throw new ForgeError("refused", "GitHub redirected the workflow download too many times.");
   }
 
   /**
@@ -1203,6 +1263,30 @@ function failureOf(response: Response, method: string, path: string, text: strin
   if (response.status === 404) return new ForgeError("not-found", what);
   if ([502, 503, 504].includes(response.status)) return new ForgeError("transient", what);
   return new ForgeError("refused", what);
+}
+
+/** A workflow download's answer: fetch failures may hold a signed storage URL, so they are never echoed. */
+async function downloadAnswer<T>(run: () => Promise<T>): Promise<T> {
+  try {
+    return await run();
+  } catch (caught) {
+    if (caught instanceof ForgeError) throw caught;
+    throw new ForgeError(
+      "transient",
+      "Could not finish the workflow download from GitHub; try a fresh read.",
+    );
+  }
+}
+
+/** Whether storage's Content-Range names exactly the part asked for, of an archive this size. */
+function samePart(header: string | null, start: number, end: number, size: number): boolean {
+  const match = /^bytes (\d+)-(\d+)\/(\d+)$/.exec(header?.trim() ?? "");
+  return (
+    !!match &&
+    Number(match[1]) === start &&
+    Number(match[2]) === end - 1 &&
+    Number(match[3]) === size
+  );
 }
 
 /** Bound the actual response, not only the host's size metadata. */

@@ -22,7 +22,7 @@ This is the one home of what the seam is in the code.
 | `label(change)` / `url(change)` | `#N` and its page | `!N` and its page | the branch, no page | the branch, no page |
 | `listProjects()` | the person's repositories, newest first, every page up to 1,000 (`listProjectsPaged` also says whether that was all; `findProject` reads one exact owner/name) | the person's projects, newest first, up to 1,000 (`findProject` reads one exact nested path) | none | none |
 | `hasChecks` | yes: the app watches them (below) | yes | no: nothing is watched, and the crewmate is told so | no |
-| `workflows` | read-only Actions runs, jobs, logs and artifact downloads | read-only pipelines, jobs, logs and artifacts archives | unsupported | unsupported |
+| `workflows` | read-only Actions runs, jobs, logs and artifact downloads, whole or in parts | read-only pipelines, jobs, logs and artifacts archives | unsupported | unsupported |
 | `api` | the gateway's raw REST call under GitHub's policy | the gateway's raw REST call under GitLab's policy | unsupported | unsupported |
 
 A `Forge` is per repository.
@@ -299,6 +299,13 @@ A short read does keep the run's failed jobs on the repair ledger, so `check_cha
   It returns the version, metadata, relative path, actual bytes and SHA-256.
   No automatic extraction, user-controlled destination, artifact-name-derived path, symlink folder or overwrite; do not commit these downloaded archives.
   Downloads are bounded to 64 MiB by metadata and actual response size.
+- On GitHub an artifact of any size is also read in parts (`ForgeWorkflows.archive`, `src/core/forge/zipParts.ts`), with the same membership and expiry checks.
+  `download_artifact({ runId, artifactId, list: true, files?, offset? })` reads only the archive's end and its central directory and answers its files by path, each with its packed bytes (what saving it reads) and unpacked size, `files` narrowing it and `offset` paging it with `nextOffset`.
+  `download_artifact({ runId, artifactId, files })` reads only the named files' own records, a folder's path taking everything under it, and saves them unchanged as a smaller ZIP at `.infinitary-artifacts/run-<runId>/artifact-<artifactId>-<part>.zip`, `<part>` the first twelve hexadecimal digits of its SHA-256, with the same folder and overwrite rules.
+  The answer names how many files each path took; nothing is inflated, and no file is written by an entry's own name.
+  The 64 MiB bound counts the selected records, before any of them is read, and the central directory's own size.
+  Each part is a Range request to the signed address the first one reached, all within one 30-second bound, and must come back 206 with a `Content-Range` naming the artifact's size; storage that sends the whole archive instead is refused.
+  GitLab answers that its host cannot list an artifact's files, and a split archive is refused.
 - Download redirects are followed manually with a 30-second request bound and at most three redirects.
   The app's sign-in is sent only to the initial GitHub API request, never signed storage; production accepts only HTTPS GitHub-owned storage or Azure Blob storage.
   Neither signed URLs nor sign-in material is returned.
@@ -322,6 +329,7 @@ On GitLab (`providers/gitlab/workflows.ts`) a run is a pipeline, a job one of it
 - A 401 asks GitLab who the key is (`GET /user`): only a key it no longer answers for is a sign-in, which asks the health service to look again; otherwise it is a permission refusal.
 
 Evidence: `src/core/forge/providers/github/workflows.test.ts` drives the actual tool entries through the task service and real HTTP stand-in, lists runs, failed steps and artifacts with `github_read`, checks log continuation, verifies the archive bytes/hash/mode, and exercises authorization, membership, expiry, byte limits, unsafe redirects, linked folders and overwrite refusals.
+Its parts tests list and select files from an archive past 64 MiB built from records of a real phone-logs artifact (`tests/fixtures/forge/phone-logs-sample.zip`) and a 64-bit one (`phone-logs-zip64.zip`), unpack the selection with an independent reader, and hold the bytes read under 1 MiB.
 `tests/e2e/forge-signin.spec.ts` commissions a crewmate in the hermetic app with the app's sign-in, lists the version's run, jobs and artifacts with `github_read`, reads a failed measurement job, downloads and reads the ZIP's JSON, and separately proves missing sign-in reports a blocker without an Actions request.
 `crewmateTaskTools.test.ts` holds the Pi and Claude tools to the same callbacks, descriptions and schemas.
 `src/core/forge/providers/gitlab/workflows.test.ts` drives the same tool entries over a GitLab stand-in - the version's pipelines and jobs with `github_read`, a log paged without colour codes, the archive saved from signed storage the key never reaches - and every refusal: another pipeline's job, a missing, expired or oversized archive, a 401 by whether GitLab still answers for the key, an unknown redirect, and the bounds; `tests/gitlabStub.test.ts` reads the e2e stand-in's log and archive on both kinds of host, and `tests/e2e/gitlab-delivery.spec.ts` has a crewmate on gitlab.com and on a self-hosted server list a failed pipeline, read its job's log, save and read its archive, and be refused a write to another project.

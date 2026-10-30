@@ -103,6 +103,9 @@ function setup(run: () => typeof RUN) {
       throw new Error(`unexpected ${path}`);
     },
     async () => new Uint8Array(),
+    async () => {
+      throw new Error("unexpected archive read");
+    },
   );
   const evidence = new WorkflowEvidenceService({
     tasks,

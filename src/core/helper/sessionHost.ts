@@ -233,6 +233,8 @@ const RETRIES = 2;
 
 const CHECK_DECLARATIONS = contractChange("check-declarations");
 const MERGE_OFFER_READINESS = contractChange("merge-offer-readiness");
+/** Listing an artifact's files and saving selected ones (`artifact-parts.md`). */
+const ARTIFACT_PARTS = contractChange("artifact-parts");
 
 const toolTextSchema = workRequests["inf:work:close-card"].response;
 const integrationAnswerSchema = workRequests["inf:work:use-integration"].response;
@@ -1482,7 +1484,16 @@ export class SessionHost {
           : input;
         return ask("inf:work:check-change", { input: wire ?? {} }, signal);
       },
-      onDownloadArtifact: (input, signal) => ask("inf:work:download-artifact", { input }, signal),
+      onDownloadArtifact: (input, signal) => {
+        if (
+          (input.list || input.files !== undefined) &&
+          !listsChange(this.options.homeChanges?.(), ARTIFACT_PARTS)
+        )
+          throw new Error(
+            `Artifact listing refused: ${HOME.the} needs an update before it can list an artifact's files or save selected ones. Nothing was sent.`,
+          );
+        return ask("inf:work:download-artifact", { input }, signal);
+      },
       // The home's knowledge, read and written there as for a crewmate of its own.
       knowledge: {
         read: (input, signal) => ask("inf:work:knowledge", { input }, signal),

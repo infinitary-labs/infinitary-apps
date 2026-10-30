@@ -15,6 +15,7 @@ import {
   type WorkOrderResponse,
   workOrders,
 } from "@shared/work";
+import { contractChange, listsChange } from "../connection/contractChanges";
 import { type AppPaths, crewmatePlacedDir } from "../paths";
 import { TaskService } from "../tasks/taskService";
 import { ARTIFACTS_FOLDER, artifactPath, OLDER_ARTIFACTS_FOLDER } from "../workspace/artifacts";
@@ -34,6 +35,9 @@ import {
 } from "../workspace/workspaceService";
 import { sendSourceFile } from "./sourceFiles";
 import type { WorkDevices } from "./workDevices";
+
+/** A selection of an artifact's files, written beside the whole one (`artifact-parts.md`). */
+const ARTIFACT_PARTS = contractChange("artifact-parts");
 
 /**
  * The home's side of a task's working copy on a computer that runs work
@@ -595,21 +599,29 @@ export class PlacedCopies {
       this.options.tasks.markWorkspaceRemoved(taskId);
   }
 
+  /** Whether that computer writes a selection of an artifact's files beside the whole one. */
+  writesArtifactParts(deviceId: string): boolean {
+    return listsChange(this.options.devices.version(deviceId)?.changes, ARTIFACT_PARTS);
+  }
+
   /**
-   * Writes an artifact this Mac downloaded into the task's working copy
-   * there, in pieces, as this Mac writes one into its own; a file already
-   * there throws `EEXIST`, never written over. Answers where it is there,
-   * in the folder that computer's version writes it in.
+   * Writes an artifact this Mac downloaded, or a selection of its files
+   * (`part`, only to a computer that `writesArtifactParts`), into the
+   * task's working copy there, in pieces, as this Mac writes one into its
+   * own; a file already there throws `EEXIST`, never written over. Answers
+   * where it is there, in the folder that computer's version writes it in.
    */
   async writeArtifact(
     taskId: string,
     deviceId: string,
-    artifact: { runId: number; artifactId: number; bytes: Uint8Array },
+    artifact: { runId: number; artifactId: number; bytes: Uint8Array; part?: string },
   ): Promise<string> {
+    if (artifact.part !== undefined && !this.writesArtifactParts(deviceId))
+      throw new Error("That computer cannot write a selection of an artifact's files yet.");
     const folder = speaksInfinitaryNames(this.options.devices.version(deviceId)?.contract ?? "")
       ? ARTIFACTS_FOLDER
       : OLDER_ARTIFACTS_FOLDER;
-    const path = artifactPath(artifact.runId, artifact.artifactId, folder);
+    const path = artifactPath(artifact.runId, artifact.artifactId, folder, artifact.part);
     const bytes = Buffer.from(artifact.bytes);
     const sha256 = createHash("sha256").update(bytes).digest("hex");
     let offset = 0;
@@ -620,6 +632,7 @@ export class PlacedCopies {
           task: taskId,
           runId: artifact.runId,
           artifactId: artifact.artifactId,
+          ...(artifact.part !== undefined ? { part: artifact.part } : {}),
           size: bytes.length,
           sha256,
           offset,

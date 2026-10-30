@@ -720,6 +720,12 @@ export const workRequests = {
       input: z.object({
         runId: z.number().int().positive(),
         artifactId: z.number().int().positive(),
+        /** The archive's files instead of saving anything (`artifact-parts`). */
+        list: z.boolean().optional(),
+        /** Paths inside the archive to save, or to narrow a listing to (`artifact-parts`). */
+        files: z.array(z.string().min(1).max(4096)).optional(),
+        /** The listing's first file, 1-based (`artifact-parts`). */
+        offset: z.number().int().positive().optional(),
       }),
     }),
     response: toolTextSchema,
@@ -1456,6 +1462,11 @@ export const workOrders = {
         task: placedTaskIdSchema,
         runId: z.number().int().positive(),
         artifactId: z.number().int().positive(),
+        /** A selection of the artifact's files, named by its SHA-256's start (`artifact-parts`). */
+        part: z
+          .string()
+          .regex(/^[0-9a-f]{12}$/)
+          .optional(),
         size: z.number().int().nonnegative(),
         sha256: z.string().regex(/^[0-9a-f]{64}$/),
         offset: z.number().int().nonnegative(),

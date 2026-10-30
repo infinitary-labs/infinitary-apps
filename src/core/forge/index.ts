@@ -160,6 +160,7 @@ export function forgeSignInServers(options: {
 }
 
 export type {
+  ArchiveRanges,
   DownloadArtifactInput,
   ForgeWorkflows,
   ReadWorkflowInput,

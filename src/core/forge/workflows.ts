@@ -86,7 +86,23 @@ export interface ForgeWorkflows {
     runId: number,
     artifactId: number,
   ): Promise<{ artifact: WorkflowArtifact; bytes: Uint8Array }>;
+  /**
+   * The artifact's archive read in parts from signed storage, for listing
+   * its files and saving selected ones; absent where the host cannot.
+   */
+  archive?(
+    runId: number,
+    artifactId: number,
+  ): Promise<{ artifact: WorkflowArtifact; archive: ArchiveRanges }>;
 }
+
+/** An archive read in parts: storage answers each with exactly the bytes asked for. */
+export type ArchiveRanges = {
+  /** The whole archive's size in bytes. */
+  size: number;
+  /** Bytes `start` to `end` (exclusive) of the archive. */
+  read(start: number, end: number): Promise<Uint8Array>;
+};
 
 export type ReadWorkflowInput = {
   runId: number;
@@ -96,7 +112,16 @@ export type ReadWorkflowInput = {
   limit?: number;
 };
 
-export type DownloadArtifactInput = { runId: number; artifactId: number };
+export type DownloadArtifactInput = {
+  runId: number;
+  artifactId: number;
+  /** Answer the archive's files instead of saving anything. */
+  list?: boolean;
+  /** Paths inside the archive; a folder's path takes everything under it. */
+  files?: string[];
+  /** The listing's first file, 1-based; only with `list`. */
+  offset?: number;
+};
 
 export const WORKFLOW_LOG_MAX_BYTES = 8 * 1024 * 1024;
 export const WORKFLOW_ARTIFACT_MAX_BYTES = 64 * 1024 * 1024;

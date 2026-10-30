@@ -7,7 +7,12 @@ import { DeviceSignIns } from "../../src/core/devices/deviceSignIns";
 import type { DevicePairing } from "../../src/core/devices/pairing";
 import type { CoreDispatch } from "../../src/core/dispatcher";
 import { CoreEventBus } from "../../src/core/events";
-import type { Forge, ForgeRepo, ReadWorkflowInput } from "../../src/core/forge";
+import type {
+  DownloadArtifactInput,
+  Forge,
+  ForgeRepo,
+  ReadWorkflowInput,
+} from "../../src/core/forge";
 import { GitHubForge } from "../../src/core/forge/providers/github/githubForge";
 import {
   FIRSTMATE_READER,
@@ -316,6 +321,7 @@ export function startPlacedHome(options: {
         forgeFor,
         writeElsewhere: (taskId, deviceId, artifact) =>
           placed.copies.writeArtifact(taskId, deviceId, artifact),
+        partsElsewhere: (deviceId) => placed.copies.writesArtifactParts(deviceId),
         now,
       })
     : undefined;
@@ -440,7 +446,7 @@ export function startPlacedHome(options: {
     ...(evidence
       ? {
           readWorkflow: (taskId: string, input: ReadWorkflowInput) => evidence.read(taskId, input),
-          downloadArtifact: (taskId: string, input: { runId: number; artifactId: number }) =>
+          downloadArtifact: (taskId: string, input: DownloadArtifactInput) =>
             evidence.download(taskId, input),
           readRunWatch: (taskId: string, runId: number) => evidence.readWatched(taskId, runId),
         }

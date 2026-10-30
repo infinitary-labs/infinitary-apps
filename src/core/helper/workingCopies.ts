@@ -628,10 +628,10 @@ export class WorkingCopies {
   artifact(
     request: WorkOrderRequest<"inf:working-copy:artifact">[0],
   ): Promise<WorkOrderResponse<"inf:working-copy:artifact">> {
-    const { task, runId, artifactId, size, sha256, offset } = request;
+    const { task, runId, artifactId, part, size, sha256, offset } = request;
     return this.serial(`${task}:artifact`, async () => {
       if (!this.has(task)) throw new Error("No working copy is here for this task.");
-      const key = `${checked(task)}-run-${runId}-artifact-${artifactId}`;
+      const key = `${checked(task)}-run-${runId}-artifact-${artifactId}${part ? `-${part}` : ""}`;
       let arriving = this.arriving.get(key);
       if (!arriving || arriving.size !== size) {
         await mkdir(this.artifactsDir, { recursive: true, mode: 0o700 });
@@ -656,7 +656,7 @@ export class WorkingCopies {
       try {
         if ((await sha256Of(arriving.file)) !== sha256)
           throw new Error("The artifact that arrived is not the one the home downloaded.");
-        await writeArtifact(this.dir(task), runId, artifactId, await readFile(arriving.file));
+        await writeArtifact(this.dir(task), runId, artifactId, await readFile(arriving.file), part);
         return { outcome: "written" as const };
       } catch (caught) {
         if ((caught as NodeJS.ErrnoException).code === "EEXIST")

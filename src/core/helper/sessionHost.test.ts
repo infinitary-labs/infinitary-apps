@@ -1437,6 +1437,48 @@ describe("a conversation held on a computer that runs work", () => {
     },
   );
 
+  // INF-1932: an older home drops list and files and would save the whole archive instead.
+  it.each([true, false])(
+    "asks the home to list or select an artifact's files only when it lists the change (has it: %s)",
+    async (supported) => {
+      const at = await placed({
+        homeChanges: CONTRACT_CHANGES.names.filter(
+          (name) => supported || name !== "artifact-parts",
+        ),
+      });
+      await at.order("inf:session:open", [
+        {
+          orderId: `open:${TASK}:1`,
+          task: TASK,
+          spec: { ...at.spec, tools: [...at.spec.tools, "download_artifact"] },
+        },
+      ]);
+      const whole = { runId: 41007625484, artifactId: 12960596943 };
+      const selected = { ...whole, files: ["ipad/join/48-xcodebuild.log"] };
+      model([
+        {
+          tools: [
+            { name: "download_artifact", args: whole },
+            { name: "download_artifact", args: selected },
+          ],
+        },
+        { text: "Read the log." },
+      ]);
+      await at.order("inf:session:prompt", [
+        { orderId: "artifact-parts", task: TASK, text: "Read the iPad join log." },
+      ]);
+      await at.ended(1);
+      const asked = at.home.effects
+        .filter((effect) => effect.channel === "inf:work:download-artifact")
+        .map((effect) => effect.request.input);
+      expect(asked).toEqual(supported ? [whole, selected] : [whole]);
+      if (!supported)
+        expect(JSON.stringify(api.requests.at(-1)?.body?.messages)).toContain(
+          "needs an update before it can list an artifact's files or save selected ones. Nothing was sent.",
+        );
+    },
+  );
+
   // INF-497: a home before `STORY_AROUND_SINCE` strips around from open_change and
   // would answer as if the words had been changed; the computer refuses first.
   it("refuses to change the words around a story through a home too old to keep the story, sending nothing", async () => {

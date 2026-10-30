@@ -10,17 +10,24 @@ export const ARTIFACTS_FOLDER = ".infinitary-artifacts";
  */
 export const OLDER_ARTIFACTS_FOLDER = ".firstmate-artifacts";
 
+/** A selection's name in its path: the first twelve hex digits of its SHA-256. */
+export const ARTIFACT_PART = /^[0-9a-f]{12}$/;
+
 /**
  * Where a downloaded workflow artifact goes in a task's working copy:
  * host-controlled parts only, never an artifact's name or a path a caller
- * chose.
+ * chose. A selection of its files (`part`, the start of the saved
+ * archive's SHA-256) sits beside the whole archive.
  */
 export function artifactPath(
   runId: number,
   artifactId: number,
   folder: string = ARTIFACTS_FOLDER,
+  part?: string,
 ): string {
-  return `${folder}/run-${runId}/artifact-${artifactId}.zip`;
+  if (part !== undefined && !ARTIFACT_PART.test(part))
+    throw new Error("An artifact part is twelve hexadecimal digits.");
+  return `${folder}/run-${runId}/artifact-${artifactId}${part ? `-${part}` : ""}.zip`;
 }
 
 /** The artifact folder is a link, or not a folder: nothing is written through it. */
@@ -43,6 +50,7 @@ export async function writeArtifact(
   runId: number,
   artifactId: number,
   bytes: Uint8Array,
+  part?: string,
 ): Promise<string> {
   const root = await realpath(cwd);
   const directory = join(root, ARTIFACTS_FOLDER, `run-${runId}`);
@@ -53,7 +61,7 @@ export async function writeArtifact(
     const stat = await lstat(dir);
     if (stat.isSymbolicLink() || !stat.isDirectory()) throw new ArtifactFolderError();
   }
-  const relativePath = artifactPath(runId, artifactId);
+  const relativePath = artifactPath(runId, artifactId, ARTIFACTS_FOLDER, part);
   const file = await open(
     join(root, relativePath),
     constants.O_CREAT | constants.O_EXCL | constants.O_WRONLY | constants.O_NOFOLLOW,

@@ -126,7 +126,10 @@ export const LIMITS: Record<string, Record<string, LimitEntry>> = {
   },
   "src/core/forge/workflows.ts": {
     WORKFLOW_LOG_MAX_BYTES: physical("refused in words naming 8 MiB; no way to read a longer log"),
-    WORKFLOW_ARTIFACT_MAX_BYTES: physical("refused in words naming 64 MiB; no way to fetch a larger artifact"),
+    WORKFLOW_ARTIFACT_MAX_BYTES: physical("refused in words naming 64 MiB; list a larger one and save selected files"),
+  },
+  "src/core/forge/zipParts.ts": {
+    ZIP_MAX_ENTRIES: outside("refused in words naming 65,534 files; save the selection in parts"),
   },
   "src/core/gifFormat.ts": {
     MAX_GIF_DEMO_LONG_SIDE: physical("refused in words naming 1280 by 720; scale it down"),

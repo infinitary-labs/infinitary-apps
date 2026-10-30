@@ -6,12 +6,15 @@ import {
   ForgeError,
   type ForgeRepo,
   type ReadWorkflowInput,
+  type WorkflowArtifact,
   type WorkflowJobLine,
   type WorkflowJobList,
   type WorkflowRun,
 } from "../forge";
+import { WORKFLOW_ARTIFACT_MAX_BYTES } from "../forge/workflows";
+import { isUnder, packedBytes, type ZipEntry, zipEntries, zipOf } from "../forge/zipParts";
 import { TaskService } from "../tasks/taskService";
-import { ArtifactFolderError, artifactPath, writeArtifact } from "../workspace/artifacts";
+import { ArtifactFolderError, writeArtifact } from "../workspace/artifacts";
 import type { RepoRegistry } from "../workspace/repoRegistry";
 import {
   failedRunJobs,
@@ -24,15 +27,15 @@ import {
 } from "./runWatch";
 
 /**
- * Writes an artifact into the working copy of a task that runs on another
- * computer, there (`PlacedCopies.writeArtifact`, docs/helper.md "Its
- * working copies"); throws `EEXIST` when a file is already there.
+ * Writes an artifact, or a selection of its files (`part`), into the
+ * working copy of a task that runs on another computer, there
+ * (`PlacedCopies.writeArtifact`, docs/helper.md "Its working copies");
+ * throws `EEXIST` when a file is already there. Answers the path there.
  */
-/** Writes an artifact into a task's working copy on another computer; answers the path there. */
 export type ArtifactElsewhere = (
   taskId: string,
   deviceId: string,
-  artifact: { runId: number; artifactId: number; bytes: Uint8Array },
+  artifact: { runId: number; artifactId: number; bytes: Uint8Array; part?: string },
 ) => Promise<string>;
 
 /** The short read stops naming jobs past this, and says how many it left out. */
@@ -47,6 +50,8 @@ export class WorkflowEvidenceService {
       forgeFor: (repo: ForgeRepo | undefined, fallbackDir?: string) => Forge;
       /** A task on a computer that runs work keeps its working copy there. */
       writeElsewhere?: ArtifactElsewhere;
+      /** Whether that computer writes a selection of an artifact's files (`artifact-parts`). */
+      partsElsewhere?: (deviceId: string) => boolean;
       now?: () => number;
     },
   ) {}
@@ -180,17 +185,61 @@ export class WorkflowEvidenceService {
       const { workflows, cwd, deviceId } = this.context(taskId);
       const runId = integer(input.runId, "runId");
       const artifactId = integer(input.artifactId, "artifactId");
+      const paths = input.files === undefined ? undefined : selection(input.files);
+      if (input.list || paths) {
+        if (!input.list && deviceId && !this.options.partsElsewhere?.(deviceId))
+          throw new ForgeError(
+            "unsupported",
+            "The computer this task runs on needs an update before it can save selected files. Nothing was downloaded.",
+          );
+        if (!workflows.archive)
+          throw new ForgeError(
+            "unsupported",
+            "This project's host cannot list an artifact's files or save selected ones.",
+          );
+        const run = await workflows.run(runId);
+        const { artifact, archive } = await workflows.archive(runId, artifactId);
+        const entries = await zipEntries(archive, WORKFLOW_ARTIFACT_MAX_BYTES);
+        if (input.list) {
+          const offset = integer(input.offset ?? 1, "offset");
+          return formatListing(run, artifact, archive.size, entries, paths, offset);
+        }
+        const chosen = entries.filter((entry) => paths?.some((path) => isUnder(entry.name, path)));
+        if (chosen.length === 0)
+          throw new ForgeError(
+            "not-found",
+            "None of the named files is in the artifact; list it with list true to see its paths.",
+          );
+        const bytes = await zipOf(archive, chosen, WORKFLOW_ARTIFACT_MAX_BYTES);
+        const sha256 = createHash("sha256").update(bytes).digest("hex");
+        const part = sha256.slice(0, 12);
+        const path = await this.write(taskId, cwd, deviceId, { runId, artifactId, bytes, part });
+        return JSON.stringify(
+          {
+            run,
+            artifact,
+            path,
+            bytes: bytes.byteLength,
+            sha256,
+            extracted: false,
+            selected: {
+              files: chosen.filter((entry) => !entry.name.endsWith("/")).length,
+              size: chosen.reduce((sum, entry) => sum + entry.size, 0),
+              paths: (paths ?? []).map((path) => ({
+                path,
+                files: chosen.filter(
+                  (entry) => !entry.name.endsWith("/") && isUnder(entry.name, path),
+                ).length,
+              })),
+            },
+          },
+          null,
+          2,
+        );
+      }
       const run = await workflows.run(runId);
       const { artifact, bytes } = await workflows.download(runId, artifactId);
-      let relativePath = artifactPath(runId, artifactId);
-      try {
-        if (deviceId)
-          relativePath = await this.elsewhere(taskId, deviceId, { runId, artifactId, bytes });
-        else relativePath = await writeArtifact(cwd, runId, artifactId, bytes);
-      } catch (caught) {
-        if (caught instanceof ArtifactFolderError) throw new ForgeError("refused", caught.message);
-        throw caught;
-      }
+      const relativePath = await this.write(taskId, cwd, deviceId, { runId, artifactId, bytes });
       return JSON.stringify(
         {
           run,
@@ -204,6 +253,28 @@ export class WorkflowEvidenceService {
         2,
       );
     });
+  }
+
+  /** Writes the archive, or a selection of it, into the task's working copy, wherever that is. */
+  private async write(
+    taskId: string,
+    cwd: string | null | undefined,
+    deviceId: string | undefined,
+    artifact: { runId: number; artifactId: number; bytes: Uint8Array; part?: string },
+  ): Promise<string> {
+    try {
+      if (deviceId) return await this.elsewhere(taskId, deviceId, artifact);
+      return await writeArtifact(
+        cwd as string,
+        artifact.runId,
+        artifact.artifactId,
+        artifact.bytes,
+        artifact.part,
+      );
+    } catch (caught) {
+      if (caught instanceof ArtifactFolderError) throw new ForgeError("refused", caught.message);
+      throw caught;
+    }
   }
 
   /**
@@ -232,7 +303,7 @@ export class WorkflowEvidenceService {
   private elsewhere(
     taskId: string,
     deviceId: string,
-    artifact: { runId: number; artifactId: number; bytes: Uint8Array },
+    artifact: { runId: number; artifactId: number; bytes: Uint8Array; part?: string },
   ): Promise<string> {
     const write = this.options.writeElsewhere;
     if (!write)
@@ -255,6 +326,61 @@ export class WorkflowEvidenceService {
       return "Cannot read workflow evidence: the working copy or download is unavailable.";
     }
   }
+}
+
+/** The paths a selection names, each a path inside the archive. */
+function selection(files: unknown): string[] {
+  if (
+    !Array.isArray(files) ||
+    files.length === 0 ||
+    files.some((file) => typeof file !== "string" || file.length === 0)
+  )
+    throw new ForgeError("refused", "files must name at least one path inside the archive.");
+  return [...new Set(files as string[])];
+}
+
+/**
+ * The archive's files by path, from `offset`, as many as the answer holds:
+ * a header naming the artifact and how many files there are, one line per
+ * file with what saving it reads and its unpacked size, then where the next
+ * page starts. Folders' own entries are left out; a selection takes them
+ * with their files.
+ */
+function formatListing(
+  run: WorkflowRun,
+  artifact: WorkflowArtifact,
+  archiveBytes: number,
+  entries: ZipEntry[],
+  paths: string[] | undefined,
+  offset: number,
+): string {
+  const files = entries
+    .filter((entry) => !entry.name.endsWith("/"))
+    .filter((entry) => !paths || paths.some((path) => isUnder(entry.name, path)))
+    .sort((a, b) => (a.name < b.name ? -1 : a.name > b.name ? 1 : 0));
+  const header = [
+    `${artifact.name} (artifact ${artifact.id}) from ${run.name} run ${run.id}, version ${run.headSha}`,
+    `archive: ${archiveBytes} bytes; files${paths ? " under the named paths" : ""}: ${files.length}, ${packedBytes(files)} bytes packed`,
+    "each line: packed bytes (what saving it reads), unpacked bytes, path",
+  ];
+  const room = SHORT_READ_MAX_CHARS - header.join("\n").length - 40;
+  const lines: string[] = [];
+  let used = 0;
+  for (const entry of files.slice(offset - 1)) {
+    const line = `${entry.end - entry.start} ${entry.size} ${oneLine(entry.name)}`;
+    if (lines.length > 0 && used + line.length + 1 > room) break;
+    lines.push(line);
+    used += line.length + 1;
+  }
+  const next = offset - 1 + lines.length;
+  const shown =
+    lines.length === 0 ? `no files from ${offset}` : `files ${offset}-${next} of ${files.length}`;
+  return [
+    ...header,
+    shown,
+    ...lines,
+    ...(next < files.length ? [`nextOffset: ${next + 1}`] : []),
+  ].join("\n");
 }
 
 /** The run's name, state, version, link and attempt, then one line per job. */

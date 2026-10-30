@@ -5017,12 +5017,23 @@ export class CrewSupervisor {
    * of pasting the HTML. The choice, answers and thread stay in the brief as
    * words. A card that cannot be saved rides in the brief whole, as before.
    */
-  private async withCardFile(taskId: string, facts: BasisBriefFacts): Promise<BasisBriefFacts> {
+  private async withCardFile(
+    taskId: string,
+    facts: BasisBriefFacts,
+    handoff: "work" | "context" = "work",
+  ): Promise<BasisBriefFacts> {
+    // A finding carries its reports and card, not the origin's implementation.
+    // Strip local refs too: provenance must never invite recovery of unrelated code.
+    if (handoff === "context") {
+      const { branch: _branch, keptRef: _keptRef, startingRef: _startingRef, ...context } = facts;
+      facts = context;
+    }
     const machine = this.machineOf(taskId);
     const machines = this.options.machines;
     const source = facts.taskId ? this.options.tasks.get(facts.taskId) : undefined;
     // A live remote source is authoritative there, never the home's stale copy.
     if (
+      handoff === "work" &&
       source?.deviceId &&
       source.workspaceState === "present" &&
       source.branch &&
@@ -6800,7 +6811,7 @@ export class CrewSupervisor {
           if (basis) base = withoutOriginReadLine(base, origin.key);
           continue;
         }
-        const facts = await this.withCardFile(taskId, this.sourceFacts(origin));
+        const facts = await this.withCardFile(taskId, this.sourceFacts(origin), "context");
         sections.push(basisSectionParts(facts, "origin"));
         // Its findings are in the brief now, so its filing's line telling
         // it to go and read them goes: the origin reaches it once.

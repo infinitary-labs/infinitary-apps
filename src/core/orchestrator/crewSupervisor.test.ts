@@ -29915,3 +29915,277 @@ describe("a started task moves to another computer (INF-1713, real git)", {
     await h.supervisor.disposeAll();
   });
 });
+
+// INF-1964 regression, reproduced in INF-1953. Source: the captain's SSHH-50/51 Backlog report,
+// SSHH-49/48 timeline refusals, INF-1789 event 150648's saved ref.
+// Fresh task database; production writer, start path and panel projection.
+// Session, working-copy acquisition and remote transport are stand-ins.
+describe("finding context is not starting code (INF-1964)", () => {
+  it.each([
+    { label: "cross-project saved origin on worker", remote: true, moved: true, saved: true },
+    { label: "same-project saved origin on worker", remote: true, moved: false, saved: true },
+    {
+      label: "cross-project origin without code on worker",
+      remote: true,
+      moved: true,
+      saved: false,
+    },
+    { label: "cross-project saved origin on home", remote: false, moved: true, saved: true },
+    {
+      label: "cross-project live remote origin",
+      remote: true,
+      moved: true,
+      saved: false,
+      live: true,
+    },
+    {
+      label: "same-project live remote origin",
+      remote: true,
+      moved: false,
+      saved: false,
+      live: true,
+    },
+    {
+      label: "same-project basis retains recovery",
+      remote: true,
+      moved: false,
+      saved: true,
+      recovery: "basis",
+    },
+    {
+      label: "cross-project basis still refuses code",
+      remote: true,
+      moved: true,
+      saved: true,
+      recovery: "basis",
+    },
+    {
+      label: "replacement retains recovery",
+      remote: true,
+      moved: false,
+      saved: true,
+      recovery: "replacement",
+    },
+  ])("$label", async ({ label, remote, moved, saved, live = false, recovery }) => {
+    const { nowGroupOf } = await import("@shared/nowPanel");
+    const crew = fakeCrewmate();
+    const sourceRef = vi.fn(async () => "refs/infinitary/sources/filing-origin");
+    const machine = "875ece86-3e09-4c54-a108-15fafad9b31b";
+    const work = scratchDir("inf1953-worker-");
+    const prepare = vi.fn(async (_machine: string, id: string) => ({
+      cwd: work,
+      branch: `fm/task-${id}`,
+    }));
+    const bringBranchHome = vi.fn(async () => {
+      throw new Error("Provenance must not retrieve source code");
+    });
+    const sourceFile = vi.fn(async (_machine: string, _id: string, name: string, _file: string) =>
+      join(work, name),
+    );
+    const machines = {
+      computers: () => [machine],
+      nameOf: () => "Kun’s Mac mini",
+      placeOf: () => ({ who: "Kun’s Mac mini", where: "on Kun’s Mac mini" }),
+      ready: () => true,
+      signInsOf: async () => null,
+      signInWait: () => undefined,
+      accountOf: () => undefined,
+      cutOffOf: () => undefined,
+      servingAccount: () => undefined,
+      takesCheckDeclarations: () => true,
+      folders: () => ({
+        work,
+        sessions: join(work, "sessions"),
+        evidence: join(work, "evidence"),
+        temp: join(work, "temp"),
+      }),
+      prepare,
+      bringBranchHome,
+      factories: () => ({
+        pi: { backend: "pi", controlProfile: PI_CONTROL_PROFILE, open: async () => crew },
+      }),
+      sourceFile,
+      sourceRef,
+      install: async () => ({ outcome: "skipped" }),
+    } as unknown as CrewMachines;
+    const h = setup(crew, { machines });
+    const { supervisor, tasks, repos, cardStore } = h;
+    const addRepo = async (name: string) => {
+      const path = scratchDir(`inf1953-${name}-`);
+      execFileSync("git", ["-C", path, "init", "--initial-branch=main"], { stdio: "ignore" });
+      // An origin makes the scratch project eligible for a worker; no network call follows.
+      execFileSync(
+        "git",
+        ["-C", path, "remote", "add", "origin", `https://github.com/infinitary-labs/${name}.git`],
+        { stdio: "ignore" },
+      );
+      return (await repos.setup({ kind: "adopt", path, name })).repo;
+    };
+    const inf = await addRepo("infinitary");
+    const ssh = await addRepo("sshhip");
+    const origin = seedTask(tasks, {
+      id: "1189fbc8",
+      title: "Continue: switch the image and push the iOS 27.0 pin",
+      repoId: inf.id,
+      prompt: "p",
+      status: "completed",
+      ...(live ? { deviceId: machine, worktreeDir: "/source/work", branch: "fm/task-source" } : {}),
+      shape: { kind: "chore", deliverable: "change" },
+    });
+    const finding =
+      "The count races detached cleanup; await the probe disconnect before asserting the count.";
+    tasks.recordReport(origin.id, { text: finding });
+    cardStore.upsert({
+      id: "origin-finding",
+      taskId: origin.id,
+      author: "crewmate",
+      priority: 1,
+      title: "Wait for disconnect",
+      meta: "",
+      body: "<p>The probe disconnect must settle before counting.</p>",
+      actions: [],
+      status: "ready",
+      createdAt: Date.now(),
+    });
+    if (!live) tasks.close(origin.id, { status: "done", reason: "merged", actor: "host" });
+    else
+      expect(tasks.get(origin.id)).toMatchObject({ deviceId: machine, workspaceState: "present" });
+    if (saved)
+      tasks.note(origin.id, "working copy removed; saved code reference", {
+        news: false,
+        data: {
+          saved: {
+            ref: "refs/infinitary/kept/1189fbc8",
+            sha: "4b7db06c9dfeb7018e0dd259a5d44fab12e22f1c",
+            dirty: false,
+            unlandedCommits: 5,
+          },
+        },
+      });
+    const filing = tasks.fileFollowup({
+      id: "34d536a9",
+      originId: origin.id,
+      title: "sshhip: guided draft test races the detached disconnect",
+      goal: "Wait for the probe disconnect",
+      why: "The count races detached cleanup",
+      prompt: "Wait for the probe disconnect",
+    }).record;
+    if (moved) tasks.moveToProject(filing.id, tasks.projects.forRepo(ssh.id)!.id, "firstmate");
+    tasks.recordShape(filing.id, { kind: "fix", deliverable: "change" }, null);
+    if (recovery === "basis") {
+      tasks.updateFields(filing.id, { basis: origin.key }, "firstmate");
+      expect(tasks.get(filing.id)?.shape?.basis).toBe(origin.key);
+    }
+    if (recovery === "replacement") tasks.link(origin.id, filing.id, "replaced-by", "firstmate");
+    if (remote)
+      tasks.updateFields(
+        filing.id,
+        { runsOn: { ask: machine, words: "Kun’s Mac mini (This task)" } },
+        "firstmate",
+      );
+    const protocol = new TaskProtocol({
+      tasks,
+      repos,
+      cards: { listOpen: () => [], snapshot: () => [] },
+      startAttempt: (id) => tasks.startAttemptOf(id),
+      broadcastEvent: () => {},
+      emit: () => {},
+    });
+    const stages: string[] = [];
+    const capture = () => {
+      const row = protocol.board().tasks.find((row) => row.id === filing.id)!;
+      const value = `${row.status}/${row.activity ?? "none"}/${row.startAttempt?.phase ?? "none"} => ${nowGroupOf(row)}`;
+      if (stages.at(-1) !== value) stages.push(value);
+    };
+    capture();
+    const detach = tasks.onChange(capture);
+    try {
+      const reply = await supervisor.startQueuedNow(
+        filing.id,
+        "captain",
+        "task-card",
+        undefined,
+        true,
+      );
+      await tick();
+      capture();
+      console.log(
+        JSON.stringify(
+          {
+            label,
+            reply,
+            task: filing.key,
+            project: tasks.get(filing.id)?.repoId,
+            findingDelivered: crew.promptCalls[0]?.includes(finding) ?? false,
+            cardCopies: sourceFile.mock.calls.length,
+            sourceBranchRetrievals: bringBranchHome.mock.calls.length,
+            stages,
+            device: tasks.get(filing.id)?.deviceId,
+            promptCount: crew.promptCalls.length,
+            sourceTransfers: sourceRef.mock.calls.length,
+            gate: tasks.get(filing.id)?.gate,
+            events: tasks
+              .timeline(filing.id)
+              .filter((e) => ["status", "dispatched", "briefed"].includes(e.kind))
+              .map((e) => ({
+                kind: e.kind,
+                text: e.kind === "briefed" ? "brief delivered" : e.text,
+              })),
+          },
+          null,
+          2,
+        ),
+      );
+      expect(tasks.get(filing.id)?.deviceId ?? null).toBe(remote ? machine : null);
+      if (remote)
+        expect(prepare).toHaveBeenCalledWith(
+          machine,
+          filing.id,
+          moved ? ssh.id : inf.id,
+          undefined,
+        );
+      expect(bringBranchHome).not.toHaveBeenCalled();
+      if (recovery === "basis" && moved) {
+        expect(tasks.get(filing.id)?.status).toBe("open");
+        expect(tasks.get(filing.id)?.gate).toMatchObject({
+          reason: "The starting work belongs to a different project.",
+        });
+        expect(sourceRef).not.toHaveBeenCalled();
+        expect(crew.promptCalls).toHaveLength(0);
+        return;
+      }
+      // User intent: a finding in another project must not turn a valid Start into Backlog.
+      expect(tasks.get(filing.id)?.status).toBe("active");
+      const brief = crew.promptCalls[0] ?? "";
+      expect(brief).toContain(finding);
+      expect(brief).toContain(origin.key);
+      expect(sourceFile).toHaveBeenCalledTimes(remote ? (recovery === "replacement" ? 2 : 1) : 0);
+      for (const [, , , file] of sourceFile.mock.calls)
+        expect(readFileSync(file, "utf8")).toBe(
+          "<p>The probe disconnect must settle before counting.</p>",
+        );
+      expect(brief).toContain(`${origin.key}.html`);
+      expect(
+        stages
+          .map((stage) => stage.split(" => ")[1])
+          .filter((group, index, groups) => group !== groups[index - 1]),
+      ).toEqual(["backlog", "queued", "working"]);
+      expect(tasks.replacedPredecessors(filing.id)).toHaveLength(
+        recovery === "replacement" ? 1 : 0,
+      );
+      if (recovery) {
+        expect(sourceRef).toHaveBeenCalledOnce();
+        expect(brief).toContain("refs/infinitary/sources/filing-origin");
+      } else {
+        expect(brief).toContain("Recorded origin");
+        expect(sourceRef).not.toHaveBeenCalled();
+        expect(brief).not.toContain("refs/infinitary/");
+        expect(brief).not.toContain("fm/task-source");
+      }
+    } finally {
+      detach();
+      protocol.dispose();
+      await supervisor.disposeAll();
+    }
+  });
+});

@@ -215,6 +215,8 @@ So is any event whose data marks it `journal: true`, a record a replay reads bac
 At dispatch the named verified basis carries its latest report once, as the answer, and every report before it as history, the full card and its full thread, plus the existing saved choice/answer reader.
 No card or thread tail is cut from the implementation handoff.
 An existing `discovered-from` edge also delivers its origin's recorded findings, explicitly labelled provenance, not accepted scope or a basis routing discount.
+That context includes reports, cards and their media, never the origin's working branch or saved code; a finding moved to another project starts from that project's own code.
+A verified basis or replacement still carries recoverable code, with the same-project check for an actual transfer; an explicit `branch_from` still selects the starting commit.
 A follow-up so handed its origin, as an origin section or as its basis, loses the line its filing wrote telling it to read the origin through `tasks` (`withoutOriginReadLine`), so the origin reaches it once; an answer follow-up gets no section and keeps the line.
 No natural language scan attaches a basis, no self-basis is invented, and same-session prototypes and narrow direct builds remain valid without external sources.
 

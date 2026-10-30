@@ -15,7 +15,10 @@ function rgba(scope: string, token: string): string {
   if (!parts) throw new Error(`Not a direct color: ${token}`);
   return `UIColor(red: ${parts[0]}, green: ${parts[1]}, blue: ${parts[2]}, alpha: ${parts[3]})`;
 }
-const tokens = { background: "bg-0", surface: "bg-2", line: "line-1", text: "fg-1", secondary: "fg-2", accent: "accent", ok: "ok", warning: "warn", danger: "danger", muted: "fg-3", panel: "bg-1", captain: "captain", wire: "wire-accent", wireDim: "wire-dim", wireHot: "wire-hot", hot: "hot" };
+const tokens = { background: "bg-0", surface: "bg-2", line: "line-1", text: "fg-1", secondary: "fg-2", accent: "accent", ok: "ok", warning: "warn", danger: "danger", muted: "fg-3", panel: "bg-1", captain: "captain", wire: "wire-accent", wireDim: "wire-dim", wireHot: "wire-hot", hot: "hot",
+  // INF-1926: the crew summary's brighter hairline, idle marks, quiet bar fill, lit plan dot and intelligence levels.
+  lineStrong: "line-2", idle: "idle", raised: "bg-3", accentDim: "accent-dim",
+  slotPremium: "slot-premium", slotHigh: "slot-high", slotMedium: "slot-medium", slotLow: "slot-low" };
 const geometry = ["spacing.css", "effects.css"].map((file) => readFileSync(join(REPO_ROOT, ".claude/skills/infinitary-design/tokens", file), "utf8")).join("\n");
 const lengths = { space2: "space-2", space3: "space-3", space4: "space-4", space5: "space-5", controlRadius: "radius-m", cardRadius: "radius-l" };
 const metrics = Object.entries(lengths).map(([name, token]) => {

@@ -58,6 +58,30 @@ enum PhoneTheme {
     static let hot = Color(uiColor: UIColor { traits in
         traits.userInterfaceStyle == .light ? UIColor(red: 0.8509803921568627, green: 0.47843137254901963, blue: 0.12156862745098039, alpha: 1) : UIColor(red: 1, green: 0.6352941176470588, blue: 0.3411764705882353, alpha: 1)
     })
+    static let lineStrong = Color(uiColor: UIColor { traits in
+        traits.userInterfaceStyle == .light ? UIColor(red: 0.11764705882352941, green: 0.19607843137254902, blue: 0.35294117647058826, alpha: 0.26) : UIColor(red: 0.5882352941176471, green: 0.7058823529411765, blue: 1, alpha: 0.24)
+    })
+    static let idle = Color(uiColor: UIColor { traits in
+        traits.userInterfaceStyle == .light ? UIColor(red: 0.5450980392156862, green: 0.5882352941176471, blue: 0.6784313725490196, alpha: 1) : UIColor(red: 0.36470588235294116, green: 0.40784313725490196, blue: 0.5176470588235295, alpha: 1)
+    })
+    static let raised = Color(uiColor: UIColor { traits in
+        traits.userInterfaceStyle == .light ? UIColor(red: 0.9058823529411765, green: 0.9254901960784314, blue: 0.9607843137254902, alpha: 1) : UIColor(red: 0.08627450980392157, green: 0.10980392156862745, blue: 0.18823529411764706, alpha: 1)
+    })
+    static let accentDim = Color(uiColor: UIColor { traits in
+        traits.userInterfaceStyle == .light ? UIColor(red: 0.054901960784313725, green: 0.5607843137254902, blue: 0.8156862745098039, alpha: 0.1) : UIColor(red: 0.4980392156862745, green: 0.8627450980392157, blue: 1, alpha: 0.14)
+    })
+    static let slotPremium = Color(uiColor: UIColor { traits in
+        traits.userInterfaceStyle == .light ? UIColor(red: 0.8117647058823529, green: 0.2901960784313726, blue: 0.1803921568627451, alpha: 1) : UIColor(red: 1, green: 0.4196078431372549, blue: 0.3215686274509804, alpha: 1)
+    })
+    static let slotHigh = Color(uiColor: UIColor { traits in
+        traits.userInterfaceStyle == .light ? UIColor(red: 0.8509803921568627, green: 0.47843137254901963, blue: 0.12156862745098039, alpha: 1) : UIColor(red: 1, green: 0.6352941176470588, blue: 0.3411764705882353, alpha: 1)
+    })
+    static let slotMedium = Color(uiColor: UIColor { traits in
+        traits.userInterfaceStyle == .light ? UIColor(red: 0.054901960784313725, green: 0.5607843137254902, blue: 0.8156862745098039, alpha: 1) : UIColor(red: 0.4980392156862745, green: 0.8627450980392157, blue: 1, alpha: 1)
+    })
+    static let slotLow = Color(uiColor: UIColor { traits in
+        traits.userInterfaceStyle == .light ? UIColor(red: 0.5450980392156862, green: 0.5882352941176471, blue: 0.6784313725490196, alpha: 1) : UIColor(red: 0.5411764705882353, green: 0.5764705882352941, blue: 0.6588235294117647, alpha: 1)
+    })
     static func wireBoost(_ scheme: ColorScheme) -> Double { scheme == .light ? 1.4 : 1 }
     static func haloBoost(_ scheme: ColorScheme) -> Double { scheme == .light ? 1.2 : 1.2 }
     /// The card's light top edge: a line this tall inside its top.

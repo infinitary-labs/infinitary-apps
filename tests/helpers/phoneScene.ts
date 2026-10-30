@@ -9,6 +9,9 @@ import { openDatabase } from "@core/storage/db";
 import { DecisionStore } from "@core/storage/decisionStore";
 import { seedTask, type TaskSeed } from "@core/tasks/seedTask";
 import { DEVICE_SETUP_ACTIONS, deviceSetupCardId } from "@shared/deviceSetup";
+import { reasoningWord } from "@shared/reasoning";
+import { taskFactsOf } from "@shared/taskFacts";
+import { taskStatusLabel } from "@shared/taskPresentation";
 import {
   layoutProgram,
   programProgress,
@@ -223,8 +226,46 @@ export function phoneSceneFixture(core: Core, userData: string, ready: () => Pro
             ),
           };
         });
+        const ordinary = crew.filter((id) => !liveParts.includes(id));
+        // INF-1926: the desktop summary's own words for each crewmate whose sheet the phone photographs,
+        // projected from the same task records (CrewSummary: the record's read, the board row's project and blockers).
+        const summaries: Record<string, Record<string, unknown>> = {};
+        for (const id of [ordinary[0], checks, waiting, second, program, remote]) {
+          if (!id) continue;
+          const detail = await core.dispatch("inf:tasks:detail", [id]);
+          const row = board.tasks.find((task) => task.id === id);
+          if (!detail || !row) throw new Error(`The scene has no record for ${id}`);
+          const facts = taskFactsOf(
+            detail,
+            (model) => detail.modelLabel ?? model.slice(model.indexOf("/") + 1),
+          );
+          const current = facts.plan?.items.find((item) => item.state === "current");
+          summaries[id] = {
+            key: facts.key,
+            status: taskStatusLabel(facts.status),
+            task: facts.title,
+            project: [
+              board.projects.find((project) => project.id === row.projectId)?.name,
+              row.place?.where,
+            ]
+              .filter(Boolean)
+              .join(" · "),
+            now: facts.now?.text ?? null,
+            plan: current?.label ?? null,
+            model: facts.model,
+            reasoning: facts.reasoning ? reasoningWord(facts.reasoning) : null,
+            change: facts.delivery?.change
+              ? (facts.delivery.change.label ?? facts.delivery.change.noun)
+              : null,
+            checks: facts.delivery?.checks?.words ?? null,
+            review: facts.delivery?.review?.words ?? null,
+            reason: facts.reason,
+            blocked: row.blockedBy,
+          };
+        }
         return {
           program,
+          summaries,
           desktopLayouts,
           programWords: partsCountWords(progress.finished, liveParts.length, progress.waiting),
           deferredSetup,
@@ -239,7 +280,7 @@ export function phoneSceneFixture(core: Core, userData: string, ready: () => Pro
           job,
           checks,
           crew,
-          ordinary: crew.filter((id) => !liveParts.includes(id)),
+          ordinary,
           computer,
           board,
           computers: await core.dispatch("inf:computers:presence", []),

@@ -99,8 +99,9 @@ An empty stage shows the native first mate and the desktop's crew formations, ho
 The orbits are drawn a little smaller than the desktop's, so eight crewmates fit the narrowest iPhone held upright; glyphs keep their size.
 Crew ride the desktop's growing two-orbit ring with no orbit outlines (`components/mate/Crewmate.prompt.md`).
 Crew retain their published tier, work posture and computer; programs show their live parts and dependency branches, and an unreachable computer shows frozen, unknown activity.
-A crewmate opens a native preview of its work, with Open task leading to the existing task record.
-Shift-Command-C, Browse crew, starts browsing, drawing an accent outline around its viewport; arrow keys pan it, Tab selects and reveals a crewmate, and Space opens that crewmate's preview.
+A crewmate opens its summary in the system's standard sheet: the desktop's crew summary in its words, order and marks at 14 points, with Open task leading to the existing task record.
+The sheet closes the standard way, with no close mark; while it is open the scene stands still and the crewmate wears the desktop's corner brackets.
+Shift-Command-C, Browse crew, starts browsing, drawing an accent outline around its viewport; arrow keys pan it, Tab selects and reveals a crewmate, and Space opens that crewmate's summary.
 The selected crewmate has an accent outline and a selected accessibility value; Escape, editing, a preview or leaving Home ends browsing.
 The native character moves as the Mac's does: idle drifts slowly with eyes that blink and wander, listening breathes as two counter-rotating hexagons, and working speeds up with the ember, shimmer and halo.
 It greets once when the app opens or joins a computer, plays the Mac's full reaction and fidget repertoire, and holds a reply reaction until the real conversational turn finishes.

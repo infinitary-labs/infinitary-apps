@@ -292,10 +292,14 @@ Selection has an accent outline and an accessibility value; Tab brings it into v
 Escape, editing, a preview, a task record, leaving Home or backgrounding stops browsing and releases that responder, so the unmodified commands do not take over other controls.
 Each crewmate retains the published tier, work posture, computer and review identity; programs draw only their live parts, with their actual dependency branches.
 A crewmate whose task is in the phone's Waiting on you group wears the desktop's beacon, the ring that breathes round it, from the same generated numbers (`captain`), and holds it whole at mid light on a still frame (`docs/crew-orbits.md`, INF-1543).
-Crew and computer previews name the work and its state, and Open task uses the existing native task record.
+A crewmate's summary opens in the system's standard sheet (INF-1926): it is the desktop's crew summary in its words, order and marks at 14 points, the board row at once and then the task record's own read, polled each second while it is open.
+`PhoneTaskFacts` in the shared package ports the desktop's facts (`taskFactsOf`, its status, checks and plan), and `PhoneTaskFactsTests` replays the desktop's own readings, recorded by `scripts/generate-phone-scene.ts`.
+The sheet closes the standard way, by a tap beside it, a swipe down or Escape, with no close mark; while it is open the scene stands still where it is, and the crewmate it describes wears the desktop's corner brackets.
+A running part, a blocker, the task a review checks or a part's program shows its own summary in the same sheet, and Open task swaps the sheet for the existing native task record.
+The computer preview names the computer's work and its state.
 A crowded program fan widens up to the desktop's widest spread and then moves its layer outward, keeping the desktop's projected spacing without shrinking the parts.
 A program seen running keeps its ring on each observed computer between stages, without finished, unstarted or remote-placeholder dots.
-Its preview counts finished, running and waiting work, shows their shares and names each running part and computer.
+Its summary counts finished, running and waiting work, shows their shares and names each running part and where it runs.
 The panned extent stays stable while work departs, and cross-computer flights reach the first mate with the desktop's distance-based timing.
 `PhoneSceneViewport` alone owns placement: it centers home on entry or reconnection and preserves the viewed world point as the roster or viewport changes; the scroller's resize anchor does not add another adjustment.
 Initial rosters and reconnects settle in place; an unreachable computer freezes its unknown activity, and hidden scenes discard transient report, steer, failure and usage effects.
@@ -537,7 +541,8 @@ The scene's Command-Shift-C entry command keeps that exact-chord/current-process
 For its unmodified arrows, Tab and Space, the captain-approved contract instead observes app-owned browsing before one actual keypress and verifies the result on screen; BackBoard excludes these commands from its routable registrations.
 There is no native-focus wait, priming input or retry.
 Its touch drags read the target's and the viewport's current frames for each drag's direction and distance, at most eight drags, and a program opens from a tap near its square's corner.
-The scene journey proves rightward panning, leftward return to the same world point, a visible real crewmate selected by Tab and that crewmate's matching preview opened by Space, retaining pictures and an optional keyboard recording.
+The scene journey proves rightward panning, leftward return to the same world point, a visible real crewmate selected by Tab and that crewmate's matching summary opened by Space, retaining pictures and an optional keyboard recording.
+It photographs the summaries of an idle, a working, a waiting, a blocked, a remote and a program crewmate and compares each one's words with the desktop's for the same task, which its fixture projects from the same records (`tests/helpers/phoneScene.ts`).
 Its fixture's crew reach the phone one push at a time, and on the iPad the home's ring fits the screen, so only the other computer's formation gives Right somewhere to pan.
 The journey therefore presses its first key only once the scene has drawn that formation's crewmate and the reviewer, the fixture's last crewmate (INF-1477).
 The registration parser still reads empty modifier groups and normalizes BackBoard's arrow and Tab spellings without treating rejected commands as acknowledgements.

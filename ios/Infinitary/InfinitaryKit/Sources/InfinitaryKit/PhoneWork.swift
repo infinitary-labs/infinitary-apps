@@ -65,6 +65,22 @@ public struct PhoneTask: Decodable, Identifiable, Sendable {
     public let plan: Plan?
     public let place: Place?
     public let blockedBy: [String]
+    /// INF-1926: the rest of what the desktop's crew summary reads (src/shared/taskFacts.ts), each optional so an older
+    /// Mac's rows still decode: the board row's lifecycle facts, then the record's own reading (`.detail`).
+    public let closedReason: String?
+    public let flags: Flags?
+    public struct Flags: Decodable, Sendable { public let blocked: Bool; public let held: Bool }
+    public let children: Children?
+    public struct Children: Decodable, Sendable { public let total: Int; public let closed: Int }
+    public let startNotice: StartNotice?
+    public struct StartNotice: Decodable, Sendable { public let reason: String }
+    public let waitingCardMerges: Bool?
+    public let blockedSince: [String: Double]?
+    public let model: String?
+    public let delivery: Delivery?
+    public let activityLog: [ActivityRow]?
+    public let said: ActionLine?
+    public let reasoning: Reasoning?
     /// INF-1517: a card of this task put aside on the Mac, set only by `PhoneBoard.presenting`, as the Mac's own
     /// `presentTask` (src/shared/taskWaiting.ts) sets it for presentation alone.
     public internal(set) var minimizedCardId: String?
@@ -76,7 +92,7 @@ public struct PhoneTask: Decodable, Identifiable, Sendable {
                  onRequest: startPolicy == "on-request", minimized: minimizedCardId != nil)
     }
     public struct StartAttempt: Decodable, Sendable { public let phase: String }
-    public struct RequiredAction: Decodable, Sendable {}
+    public struct RequiredAction: Decodable, Sendable { public let state: String?; public let result: String? }
     public var state: String {
         if waitingCardId != nil { return "Waiting on you" }
         if status == "done" { return "Done" }
@@ -92,12 +108,63 @@ public struct PhoneTask: Decodable, Identifiable, Sendable {
         default: return "Not started"
         }
     }
-    public struct Place: Decodable, Sendable { public let `where`: String; public let name: String? }
+    public struct Place: Decodable, Sendable {
+        public let `where`: String
+        public let name: String?
+        public let reach: String?
+        public let noNewWork: Bool?
+    }
     public struct Intent: Decodable, Sendable { public let userWords: String }
     public struct Plan: Decodable, Sendable {
         public let items: [Item]
-        public struct Item: Decodable, Sendable { public let label: String; public let state: String }
+        public let at: Double?
+        public struct Item: Decodable, Sendable {
+            public let label: String
+            public let state: String
+            public let short: String?
+            public let since: Double?
+        }
     }
+    /// The change where the project lives, its checks and a review's verdict (src/shared/tasks.ts `taskDeliveryViewSchema`).
+    public struct Delivery: Decodable, Sendable {
+        public let prUrl: String?
+        public let prNumber: Int?
+        public let changeLabel: String?
+        public let headSha: String?
+        public let ci: String?
+        public let ciAt: Double?
+        public let checks: CheckSnapshot?
+        public let ciStartedAt: Double?
+        public let ciFinishedAt: Double?
+        public let runChecks: RunChecks?
+        public let reviewVerdict: String?
+        public let reviewRisk: String?
+        public struct CheckSnapshot: Decodable, Sendable {
+            public let headSha: String
+            public let items: [Item]
+            public let complete: Bool?
+            public let problem: String?
+            public let absenceDeclared: Bool?
+            public struct Item: Decodable, Sendable { public let name: String; public let state: String }
+        }
+        public struct RunChecks: Decodable, Sendable {
+            public let state: String
+            public let startedAt: Double?
+            public let finishedAt: Double?
+            public let at: Double
+        }
+    }
+    /// One row of the record's Activity; `from` is set on a row another task wrote.
+    public struct ActivityRow: Decodable, Sendable {
+        public let at: Double
+        public let kind: String
+        public let text: String
+        public let from: From?
+        public let actions: [ActionLine]?
+        public struct From: Decodable, Sendable { public let id: String; public let key: String }
+    }
+    public struct ActionLine: Decodable, Sendable { public let at: Double; public let text: String }
+    public struct Reasoning: Decodable, Sendable { public let level: String; public let lower: String? }
     public struct Event: Decodable, Identifiable, Sendable {
         public let id: Int
         public let at: Double

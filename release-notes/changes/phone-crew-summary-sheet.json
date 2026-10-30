@@ -1,0 +1,17 @@
+{
+  "entries": [
+    {
+      "id": "phone-crew-summary-sheet",
+      "kind": "improvement",
+      "title": "Crewmate summaries on iPhone and iPad match your Mac",
+      "body": "Tap a crewmate on your phone to open its summary in a sheet. It shows what your Mac's summary shows, in the same words: the status, task, project, what the crewmate is doing now, its plan, model and checks. The scene holds still while the sheet is open, with corner brackets around the crewmate you chose. Swipe the sheet down or tap above it to close it, or open the whole task from it.",
+      "area": "devices",
+      "picture": {
+        "dark": "phone-crew-summary-sheet-dark.webp",
+        "light": "phone-crew-summary-sheet-light.webp",
+        "alt": "A crewmate's summary in a sheet on iPhone: working and waiting for checks, with its task, project, what it is doing now, model, intelligence, pull request and checks, and an Open task button"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

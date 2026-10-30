@@ -63,16 +63,13 @@ struct PhoneCrewScene: View {
             }
             .onChange(of: roster.sequence) { _, _ in
                 if let selectedCrew, !keyboardTargets(roster: roster).contains(where: { $0.id == selectedCrew }) { self.selectedCrew = nil }
-                if let selected = preview {
-                    preview = roster.allTasks.first { $0.id == selected.id && ($0.status == "active" || ($0.program == true && $0.status == "open")) }
-                }
+                // An open summary follows its task's newest row while the task is on the board, whatever its state, since
+                // a key in the summary can show a task that has no glyph.
+                if let selected = preview { preview = roster.allTasks.first { $0.id == selected.id } }
                 if let id = computerPreview, !roster.computers.contains(where: { $0.id == id }) { computerPreview = nil }
             }
             .overlay(alignment: .bottom) {
-                if let preview {
-                    ScrollView { previewCard(preview, roster: roster) }.defaultScrollAnchor(.bottom, for: .alignment).frame(maxWidth: 364, maxHeight: max(44, geometry.size.height - 2 * PhoneTheme.space3))
-                        .padding(PhoneTheme.space3)
-                } else if let id = computerPreview, let computer = roster.computers.first(where: { $0.id == id }) {
+                if let id = computerPreview, let computer = roster.computers.first(where: { $0.id == id }) {
                     ScrollView { computerCard(computer) }.defaultScrollAnchor(.bottom, for: .alignment).frame(maxWidth: 364, maxHeight: max(44, geometry.size.height - 2 * PhoneTheme.space3))
                         .padding(PhoneTheme.space3)
                 }
@@ -84,16 +81,43 @@ struct PhoneCrewScene: View {
         .onChange(of: reduceMotion) { _, _ in syncClock() }
         .onChange(of: messageContext.cardsVisible) { _, _ in if !messageContext.cardsVisible { stopBrowsing() }; syncClock() }
         .onChange(of: record?.id) { _, _ in if record != nil { stopBrowsing() }; syncClock() }
-        .onChange(of: preview?.id) { _, _ in if preview != nil { stopBrowsing() } }
+        .onChange(of: preview?.id) { _, _ in if preview != nil { stopBrowsing() }; syncClock() }
         .onChange(of: computerPreview) { _, _ in if computerPreview != nil { stopBrowsing() } }
         .onReceive(NotificationCenter.default.publisher(for: UITextField.textDidBeginEditingNotification)) { _ in stopBrowsing() }
         .onReceive(NotificationCenter.default.publisher(for: UITextView.textDidBeginEditingNotification)) { _ in stopBrowsing() }
-        .sheet(item: $record, onDismiss: { messageContext.taskID = nil }) { task in
-            NavigationStack {
-                PhoneTaskRecord(session: session, initial: task)
-                    .toolbar { ToolbarItem(placement: .cancellationAction) { Button("Close") { record = nil }.accessibilityIdentifier("close-record") } }
-            }.font(PhoneFont.body).tint(PhoneTheme.accent)
+        // INF-1926: a crewmate's summary is the system's standard sheet; Open task swaps it for the task record.
+        .sheet(item: sheet, onDismiss: { if record == nil { messageContext.taskID = nil } }) { shown in
+            switch shown {
+            case .summary(let task):
+                PhoneCrewSummary(session: session, task: task, roster: roster,
+                                 show: { task in preview = task; previewComputer = PhoneSceneRoster.computerID(task) },
+                                 open: { task in record = task; preview = nil; messageContext.taskID = task.id },
+                                 close: { preview = nil; previewComputer = nil })
+                    .presentationDetents([.medium, .large]).presentationDragIndicator(.visible).phoneSheetSurface()
+                    .tint(PhoneTheme.accent)
+            case .record(let task):
+                NavigationStack {
+                    PhoneTaskRecord(session: session, initial: task)
+                        .toolbar { ToolbarItem(placement: .cancellationAction) { Button("Close") { record = nil }.accessibilityIdentifier("close-record") } }
+                }.font(PhoneFont.body).tint(PhoneTheme.accent)
+            }
         }
+    }
+    private enum Sheet: Identifiable {
+        /// One summary sheet whichever task it shows, so a running part or a blocker replaces the words in place. It carries
+        /// its task, so the sheet keeps its words while it slides away after the preview has closed.
+        case summary(PhoneTask)
+        case record(PhoneTask)
+        var id: String {
+            switch self {
+            case .summary: "summary"
+            case .record(let task): "record-" + task.id
+            }
+        }
+    }
+    private var sheet: Binding<Sheet?> {
+        Binding(get: { record.map(Sheet.record) ?? preview.map(Sheet.summary) },
+                set: { if $0 == nil { record = nil; preview = nil; previewComputer = nil } })
     }
     @ViewBuilder private func keyboardCommands(roster: PhoneSceneRoster, viewport: PhoneSceneViewport) -> some View {
         if visible && messageContext.cardsVisible && phase == .active && record == nil && preview == nil && computerPreview == nil {
@@ -149,7 +173,8 @@ struct PhoneCrewScene: View {
     }
     private func stopBrowsing() { browsing = false; selectedCrew = nil }
     private func syncClock() {
-        let running = visible && messageContext.cardsVisible && record == nil && !reduceMotion && phase == .active
+        // The captain's pick: the scene stands still where it is while a summary is open, so its brackets stay put.
+        let running = visible && messageContext.cardsVisible && record == nil && preview == nil && !reduceMotion && phase == .active
         clock.setRunning(running)
         if running { CharacterCues.shown.add(character); CharacterCues.crews.add(crew) }
         else {
@@ -178,61 +203,6 @@ struct PhoneCrewScene: View {
         }.padding(PhoneTheme.space3).background(PhoneTheme.panel, in: RoundedRectangle(cornerRadius: PhoneTheme.cardRadius))
             .overlay(RoundedRectangle(cornerRadius: PhoneTheme.cardRadius).stroke(PhoneTheme.line))
             .accessibilityElement(children: .contain).accessibilityIdentifier("crew-computer-preview")
-    }
-    private func previewCard(_ task: PhoneTask, roster: PhoneSceneRoster) -> some View {
-        let computer = roster.computers.first { $0.id == (previewComputer ?? PhoneSceneRoster.computerID(task)) }
-        return VStack(alignment: .leading, spacing: PhoneTheme.space2) {
-            HStack {
-                Text(task.key).font(PhoneFont.mono).foregroundStyle(PhoneTheme.secondary)
-                Spacer()
-                Button { preview = nil } label: { Image(systemName: "xmark").frame(width: 44, height: 44) }
-                    .accessibilityLabel("Close task preview").accessibilityIdentifier("close-crew-preview")
-            }
-            Text(task.title).font(PhoneFont.body).foregroundStyle(PhoneTheme.text)
-            Text(computer.map { PhoneSceneRoster.words(task, computer: $0) } ?? task.state).font(PhoneFont.callout).foregroundStyle(PhoneTheme.secondary)
-            if let model = task.modelLabel { Text(model).font(PhoneFont.caption).foregroundStyle(PhoneTheme.secondary) }
-            if let computer { Text(computer.name).font(PhoneFont.caption).foregroundStyle(PhoneTheme.secondary) }
-            if !task.blockedBy.isEmpty { Text("Waiting on " + task.blockedBy.joined(separator: ", ")).font(PhoneFont.caption).foregroundStyle(PhoneTheme.secondary) }
-            if let review = task.reviewOf, let builder = roster.allTasks.first(where: { $0.id == review }) {
-                Text("Reviewing " + builder.key).font(PhoneFont.caption).foregroundStyle(PhoneTheme.secondary)
-            }
-            if task.program == true { programSummary(task, roster: roster) }
-            if let summary = task.outcomeSummary, !summary.isEmpty { Text(summary).font(PhoneFont.caption).foregroundStyle(PhoneTheme.text) }
-            Button("Open task") { record = task; preview = nil; messageContext.taskID = task.id }
-                .buttonStyle(.bordered).accessibilityIdentifier("open-crew-task")
-        }
-        .padding(PhoneTheme.space3).frame(maxWidth: 340, alignment: .leading)
-        .background(PhoneTheme.panel, in: RoundedRectangle(cornerRadius: PhoneTheme.cardRadius))
-        .overlay(RoundedRectangle(cornerRadius: PhoneTheme.cardRadius).stroke(PhoneTheme.line))
-        .accessibilityElement(children: .contain).accessibilityIdentifier("crew-preview")
-    }
-    private func programSummary(_ task: PhoneTask, roster: PhoneSceneRoster) -> some View {
-        let parts = roster.allTasks.filter { $0.parentId == task.id && $0.kind == "work" && $0.reviewOf == nil && $0.status != "dropped" }
-            .sorted { $0.createdAt == $1.createdAt ? $0.key < $1.key : $0.createdAt < $1.createdAt }
-        let finished = parts.filter { $0.status == "done" }.count
-        let running = parts.filter { $0.status == "active" }
-        let waiting = parts.filter { $0.status == "open" }.count
-        return VStack(alignment: .leading, spacing: PhoneTheme.space2) {
-            Text("\(finished) finished, \(running.count) running, \(waiting) waiting").font(PhoneFont.caption)
-                .accessibilityIdentifier("crew-program-counts")
-            GeometryReader { geometry in
-                HStack(spacing: 0) {
-                    Rectangle().fill(PhoneTheme.secondary).frame(width: geometry.size.width * Double(finished) / Double(max(1, parts.count)))
-                    Rectangle().fill(PhoneTheme.accent).frame(width: geometry.size.width * Double(running.count) / Double(max(1, parts.count)))
-                    Rectangle().fill(PhoneTheme.line)
-                }
-            }.frame(height: 4).clipShape(Capsule()).accessibilityHidden(true)
-            if !running.isEmpty { Text("Running").font(PhoneFont.caption).foregroundStyle(PhoneTheme.secondary) }
-            ForEach(running) { part in
-                let computer = roster.computers.first { $0.id == PhoneSceneRoster.computerID(part) }
-                Button { preview = part; previewComputer = computer?.id } label: {
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text(part.key + " · " + part.title).font(PhoneFont.caption).foregroundStyle(PhoneTheme.text)
-                        if let computer { Text(computer.name).font(PhoneFont.caption).foregroundStyle(PhoneTheme.secondary) }
-                    }.frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
-                }.buttonStyle(.plain)
-            }
-        }
     }
 }
 
@@ -284,12 +254,12 @@ struct PhoneSceneFrame: View {
             let touchPoints = frame.glyphs.map(\.point) + frame.marks.map(\.point)
             ForEach(frame.glyphs, id: \.task.id) { glyph in
                 let computer = roster.computers.first { $0.id == PhoneSceneRoster.computerID(glyph.task) }
-                glyphButton(glyph.task, at: glyph.point, near: touchPoints,
+                glyphButton(glyph.task, at: glyph.point, near: touchPoints, reach: glyph.size / 2 + 4,
                             words: computer.map { PhoneSceneRoster.words(glyph.task, computer: $0) } ?? glyph.task.state)
                     .accessibilitySortPriority(Double(roster.tasks.count - (roster.order[glyph.task.id] ?? roster.tasks.count)))
             }
             ForEach(frame.marks) { mark in
-                glyphButton(mark.task, at: mark.point, near: touchPoints, words: "Program, " + String(mark.parts.count) + " running parts", identity: mark.id, computer: mark.computerID)
+                glyphButton(mark.task, at: mark.point, near: touchPoints, reach: CharacterCatalog.shared.program["rootMarkPx"]! + 4, words: "Program, " + String(mark.parts.count) + " running parts", identity: mark.id, computer: mark.computerID)
             }
             if roster.computers.count > 1 {
                 ForEach(roster.computers) { computer in
@@ -303,11 +273,13 @@ struct PhoneSceneFrame: View {
             }
         }
     }
-    private func glyphButton(_ task: PhoneTask, at point: CGPoint, near points: [CGPoint], words: String, identity: String? = nil, computer: String? = nil) -> some View {
+    private func glyphButton(_ task: PhoneTask, at point: CGPoint, near points: [CGPoint], reach: Double, words: String, identity: String? = nil, computer: String? = nil) -> some View {
         let id = identity ?? task.id, location = computer ?? PhoneSceneRoster.computerID(task)
         return Button { preview = task; previewComputer = location; computerPreview = nil } label: {
             RoundedRectangle(cornerRadius: PhoneTheme.controlRadius)
-                .stroke(selection == id || (preview?.id == task.id && previewComputer == location) ? PhoneTheme.accent : .clear, lineWidth: 1.5)
+                .stroke(selection == id ? PhoneTheme.accent : .clear, lineWidth: 1.5)
+                // INF-1926: the crewmate whose summary is open wears the desktop's corner brackets.
+                .overlay { if preview?.id == task.id && previewComputer == location { PhoneCrewBrackets(reach: reach).stroke(PhoneTheme.muted, lineWidth: 1) } }
                 .frame(width: 44, height: 44).contentShape(PhoneTouchCell(center: point, neighbors: points))
         }
         .buttonStyle(.plain)

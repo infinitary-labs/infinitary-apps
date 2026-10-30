@@ -772,13 +772,24 @@ import XCTest
         XCTAssertEqual(waitForPhonePredicate(centered, object: nil, timeout: 10), .completed)
         picture("native-scene-crew-home")
         try await verifyCrewKeyboard(scene, character: character)
+        let summaries = try XCTUnwrap(fixture["summaries"] as? [String: [String: Any]])
         _ = try await home("capture-scene-start")
         revealCrew(local, in: scene)
         tapOnPhone(local, orbiting: true)
         XCTAssertTrue(app.otherElements["crew-preview"].waitForPresence(timeout: 10))
         XCTAssertTrue(app.staticTexts["Check harbour marker 1"].exists)
-        picture("native-scene-task-preview")
-        tapOnPhone(app.buttons["close-crew-preview"])
+        try await verifyCrewSummary(try XCTUnwrap(summaries[firstID]), picture: "native-scene-task-preview")
+        closeCrewSummary()
+        // INF-1926: a working crewmate waiting on its checks, and one waiting on the captain, each in the desktop's words.
+        for (id, name) in [(try XCTUnwrap(fixture["checks"] as? String), "native-scene-working-preview"),
+                           (try XCTUnwrap(fixture["waiting"] as? String), "native-scene-waiting-preview")] {
+            let crewmate = app.buttons["crew-task-" + id]
+            revealCrew(crewmate, in: scene)
+            tapOnPhone(crewmate, orbiting: true)
+            // The working summary is the change's hero picture, so it is kept in both appearances.
+            try await verifyCrewSummary(try XCTUnwrap(summaries[id]), picture: name, themes: name == "native-scene-working-preview")
+            closeCrewSummary()
+        }
         // A different computer remains a formation beside home, never a pager or a smaller version of every glyph.
         revealCrew(remote, in: scene)
         XCTAssertEqual(remote.value as? String, "Activity unknown")
@@ -786,8 +797,8 @@ import XCTest
         _ = try await home("capture-stop")
         tapOnPhone(remote)
         XCTAssertTrue(app.staticTexts["Read the offshore chart"].waitForPresence(timeout: 10))
-        XCTAssertTrue(app.staticTexts["Scene Mac"].exists)
-        picture("native-scene-remote-preview")
+        // The Project row names the other computer the task runs on, as the desktop's does.
+        try await verifyCrewSummary(try XCTUnwrap(summaries[remoteID]), picture: "native-scene-remote-preview")
         tapOnPhone(app.buttons["open-crew-task"])
         XCTAssertTrue(app.staticTexts["task-record-title"].waitForPresence(timeout: 10))
         XCTAssertEqual(app.staticTexts["task-record-title"].label, "Read the offshore chart")
@@ -801,8 +812,14 @@ import XCTest
         tapOnPhone(mark.coordinate(withNormalizedOffset: CGVector(dx: 0.1, dy: 0.1)))
         XCTAssertTrue(app.staticTexts["crew-program-counts"].waitForPresence(timeout: 10))
         XCTAssertEqual(app.staticTexts["crew-program-counts"].label, try XCTUnwrap(fixture["programWords"] as? String))
-        picture("native-scene-program-preview")
-        tapOnPhone(app.buttons["close-crew-preview"])
+        try await verifyCrewSummary(try XCTUnwrap(summaries[programID]), picture: "native-scene-program-preview")
+        // A running part's key shows that part in the same sheet: here the part another part blocks.
+        let secondID = try XCTUnwrap(fixture["second"] as? String), blocked = try XCTUnwrap(summaries[secondID])
+        let part = app.otherElements["crew-preview"].buttons[try XCTUnwrap(blocked["key"] as? String)]
+        XCTAssertTrue(part.waitForPresence(timeout: 10), "The program's Running row lists the blocked part")
+        tapOnPhone(part)
+        try await verifyCrewSummary(blocked, picture: "native-scene-blocked-preview")
+        closeCrewSummary()
         _ = try await home("scene-stage-finished")
         XCTAssertEqual(waitForPhonePredicate(NSPredicate(format: "value == 'Program, 0 running parts'"), object: mark, timeout: 10), .completed, app.debugDescription)
         picture("native-scene-between-program-stages")
@@ -851,7 +868,53 @@ import XCTest
         XCTAssertTrue(preview.staticTexts[selectedTitle].exists, "The preview belongs to the crewmate selected by Tab")
         picture("native-scene-keyboard-preview")
         _ = try await home("capture-stop")
-        tapOnPhone(app.buttons["close-crew-preview"])
+        closeCrewSummary()
+    }
+
+    /// INF-1926: the open summary says what the desktop's summary says for the same task, the fixture's `summaries`
+    /// (tests/helpers/phoneScene.ts). The record's read fills Now; until it answers the row is held open, blank.
+    private func verifyCrewSummary(_ want: [String: Any], picture name: String, themes: Bool = false) async throws {
+        let preview = app.otherElements["crew-preview"]
+        XCTAssertTrue(preview.waitForPresence(timeout: 10), "\(name): the summary sheet opens")
+        let task = preview.staticTexts["crew-summary-task"]
+        XCTAssertEqual(waitForPhonePredicate(NSPredicate(format: "label == %@", try XCTUnwrap(want["task"] as? String)), object: task, timeout: 10),
+                       .completed, "\(name): the sheet shows the chosen task, not \(task.label)")
+        if let now = want["now"] as? String {
+            let shown = preview.staticTexts["crew-summary-now"]
+            XCTAssertEqual(waitForPhonePredicate(NSPredicate(format: "label == %@", now), object: shown, timeout: 10), .completed,
+                           "\(name): Now reads \(shown.label), the desktop reads \(now)")
+        }
+        for (field, id) in [("status", "crew-summary-status"), ("project", "crew-summary-project"), ("plan", "crew-summary-plan"),
+                            ("model", "crew-summary-model"), ("reasoning", "crew-summary-reasoning"), ("change", "crew-summary-change"),
+                            ("review", "crew-summary-review"), ("reason", "crew-summary-reason")] {
+            let shown = preview.staticTexts[id]
+            if let words = want[field] as? String, !words.isEmpty {
+                XCTAssertEqual(shown.label, words, "\(name): \(field) as the desktop says it")
+            } else {
+                XCTAssertFalse(shown.exists, "\(name): the desktop shows no \(field)")
+            }
+        }
+        // The checks' words are followed by how long they have run, which moves with the clock.
+        if let checks = want["checks"] as? String {
+            let shown = preview.staticTexts["crew-summary-checks"].label
+            XCTAssertTrue(shown.hasPrefix(checks), "\(name): checks read \(shown), the desktop reads \(checks)")
+        } else {
+            XCTAssertFalse(preview.staticTexts["crew-summary-checks"].exists, "\(name): the desktop shows no checks")
+        }
+        for key in want["blocked"] as? [String] ?? [] {
+            XCTAssertTrue(preview.otherElements["crew-summary-blocked"].descendants(matching: .any)[key].exists,
+                          "\(name): Blocked by names \(key)")
+        }
+        if themes { try await appearances(name, showing: task) } else { picture(name) }
+    }
+
+    /// INF-1926, the captain's "standard sheet interaction": a tap above the sheet closes it, with no close mark.
+    private func closeCrewSummary() {
+        let preview = app.otherElements["crew-preview"], window = app.windows.firstMatch
+        waitForSteadyTarget(preview)
+        let screen = window.frame, top = (screen.minY + max(screen.minY, preview.frame.minY - 48)) / 2
+        tapOnPhone(window.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: (top - screen.minY) / screen.height)))
+        XCTAssertTrue(preview.waitForAbsence(timeout: 10), "The crew summary stayed open: \(app.debugDescription)")
     }
 
     // INF-1399: isHittable also accepts a sliver of a clipped 44-point target, and a touch XCTest then

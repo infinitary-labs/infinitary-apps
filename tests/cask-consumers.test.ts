@@ -18,6 +18,7 @@ import { runInstallerCommand } from "../scripts/installer-command";
 import {
   installerHomebrewEnvironment,
   prepareInstallerHomebrew,
+  trustInstallerTap,
 } from "../scripts/installer-homebrew";
 import {
   homebrewInstallationReceipt,
@@ -420,6 +421,39 @@ describe.skipIf(!homebrew)("the casks under a real Homebrew, in scratch state", 
       "Homebrew prerequisite: cold metadata read refused; the prepared local source is readable and an existing tap is preserved.",
     );
   });
+
+  // INF-1906, release run 40977317374: the signed installer check reads each disposable
+  // cask's download path before installing it, which Homebrew 6 refuses from an untrusted
+  // tap. Run the check's own trust step in its own environment, with or without `brew trust`.
+  it.each(versions)(
+    "Homebrew %s lets the signed installer check read its casks before installing them",
+    (version) => {
+      const world = scratchWorld(homebrew as string, version);
+      // Trusted while the tap is still empty, as the check trusts before writing its casks.
+      world.brewOk("tap", TAP, world.tap);
+      const brew = join(world.prefix, "bin/brew");
+      const env = installerHomebrewEnvironment(world.env, world.dir);
+      const run = (
+        command: string,
+        args: string[],
+        options: { env: NodeJS.ProcessEnv; timeout: number },
+      ) => runInstallerCommand(command, args, env, options);
+      const casks = Object.values(CASK_TOKENS).map((token) => `${TAP}/${token}`);
+      const trusts = existsSync(join(world.prefix, "Library/Homebrew/cmd/trust.rb"));
+      expect(trustInstallerTap(brew, env, run, TAP)).toBe(trusts);
+      expect(world.publish("stable", "0.1.25").status).toBe(0);
+      world.updateTap();
+      for (const cask of casks) {
+        expect(runInstallerCommand(brew, ["--cache", "--cask", cask], env)).toContain(
+          env.HOMEBREW_CACHE,
+        );
+      }
+      console.info(
+        `Homebrew ${version}: ${trusts ? `trusted ${TAP} while empty` : "has no trust command"}; read ${casks.join(" and ")} download paths`,
+      );
+    },
+    180_000,
+  );
 
   // INF-643 captain approval: replace the source-text ban on xattr with the safety fact
   // it intended. Execute the generated hooks through real Homebrew on quarantined fixture

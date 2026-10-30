@@ -33,3 +33,22 @@ export function prepareInstallerHomebrew(
   const commit = run("/usr/bin/git", ["-C", repository, "rev-parse", "HEAD"], options);
   return { repository, commit };
 }
+
+/**
+ * Trust the disposable tap before the check reads its casks' download paths.
+ * Homebrew 6 refuses to load a cask from an untrusted tap (docs.brew.sh/Tap-Trust; release
+ * run 40977317374), and 6.0.0 cannot trust single casks of a tap cloned from a local path,
+ * so the whole disposable tap is trusted. A Homebrew without the `trust` command loads
+ * tapped casks as before. The trust store follows HOME, so it stays in the check's scratch home.
+ */
+export function trustInstallerTap(
+  brewPath: string,
+  env: NodeJS.ProcessEnv,
+  run: (command: string, args: string[], options: { env: NodeJS.ProcessEnv; timeout: number }) => string,
+  tap: string,
+): boolean {
+  const options = { env, timeout: 180_000 };
+  if (!run(brewPath, ["commands", "--quiet"], options).split("\n").includes("trust")) return false;
+  run(brewPath, ["trust", "--tap", tap], options);
+  return true;
+}

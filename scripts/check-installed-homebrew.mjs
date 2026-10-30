@@ -4,7 +4,7 @@ import { dirname, join } from "node:path";
 
 import { assertInstallerEnvironment } from "./installer-environment.ts";
 import { verifyInstallerTicket } from "./installer-ticket.ts";
-import { installerHomebrewEnvironment } from "./installer-homebrew.ts";
+import { installerHomebrewEnvironment, trustInstallerTap } from "./installer-homebrew.ts";
 
 // Called only inside the installed probe's disposable Mac and scratch HOME.
 // The generated casks and signed ZIPs are real; only their cache and tap are local.
@@ -54,6 +54,10 @@ export async function checkInstalledHomebrew(world) {
     run("/usr/bin/git", ["-C", source, "add", "."]);
     run("/usr/bin/git", ["-C", source, "-c", "user.name=Installer verification", "-c", "user.email=installer@example.invalid", "commit", "-m", "test: prepare disposable cask verification"]);
     brew(["tap", tap.tap, source]);
+    checkpoint(`Homebrew trust for ${tap.tap}`);
+    record(`Homebrew trust for ${tap.tap}`, trustInstallerTap(brewPath, brewEnv, run, tap.tap)
+      ? "This Homebrew has tap trust; the scratch home trusts only the disposable tap."
+      : "This Homebrew has no trust command and loads the tapped casks without one.");
     const checkout = brew(["--repository", tap.tap]).split("\n").at(-1);
     mkdirSync(join(checkout, "Casks"), { recursive: true });
     try {

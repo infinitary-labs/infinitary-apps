@@ -398,6 +398,7 @@ The saved-work handover must finish with both copies intact, the original retire
 The proof exercises fresh copies, alpha-to-alpha with unchanged numeric bundle versions, alpha-to-promoted-stable-to-next-alpha, stable-to-stable, no-downgrade switching, cancellation, corrupt bytes, invalid signatures, permissions, read-only images and the saved-work handover from Firstmate 3000 to Infinitary.
 It temporarily removes Homebrew's standard entrypoints on each disposable machine for the native-update checks, then restores them for signed Homebrew installation and upgrade checks.
 `scripts/check-installed-homebrew.mjs` runs generated Stable and Alpha casks from both supported taps against the signed ZIPs, using disposable local taps and cached artifacts.
+Homebrew 6 refuses to load casks from an untrusted tap, so where Homebrew has the `trust` command the check trusts each disposable tap, whole, in the scratch home's trust store before reading its casks; an older Homebrew loads them without trust.
 It checks quarantine, the per-copy receipt, signature and notarization after installation and upgrade; the running Homebrew app must show its own command and refuse native replacement.
 Failed fixture commands retain their exit status, signal and standard error or, when that is empty, standard output.
 The build job validates each stapled ticket with Apple once; installed checks then require the installed `Contents/CodeResources` to exist and match the fixture ZIP's ticket bytes, alongside the signature and Gatekeeper checks.

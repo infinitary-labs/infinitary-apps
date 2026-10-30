@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "installer-homebrew-tap-trust",
+      "reason": "Trust the signed installer check's disposable Homebrew tap where Homebrew requires tap trust; internal release verification with no app-facing change."
+    }
+  ]
+}

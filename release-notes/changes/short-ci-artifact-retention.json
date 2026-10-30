@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "short-ci-artifact-retention",
+      "reason": "Internal CI storage: keep large workflow artifacts for three days without changing app behavior."
+    }
+  ]
+}

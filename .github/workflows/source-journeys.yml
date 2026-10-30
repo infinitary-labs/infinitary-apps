@@ -203,7 +203,7 @@ jobs:
             Application Support/firstmate/playwright-report/source-results.json
             Application Support/firstmate/test-results/
           if-no-files-found: ignore
-          retention-days: 14
+          retention-days: 3
       - name: Keep the run-alone result
         if: always() && matrix.lane == 'alone'
         uses: actions/upload-artifact@v4

@@ -26,6 +26,16 @@ They run even on a computer in CI mode, so the repeat command alone carries `INF
 
 `journeys.yml`, `phone.yml` and `ci.yml` add no repeat stage.
 
+## Actions artifact retention
+
+Large, short-lived uploads use explicit three-day retention: `phone-results`, `phone-pictures`, `phone-logs`, `linux-packages` and the `source-desktop-*` family, including overflow-parallel journeys.
+This keeps recent diagnostic evidence and same-run package handoffs without accumulating weeks of bundles and binaries.
+Upload names, contents and conditions stay unchanged; phone result bundles still upload only on failure or a recording request.
+Download diagnostic evidence or export a recording within those three days if a task needs to keep it longer.
+Phone logs also carry the full gate's `part-times.json`; if no unexpired passing full gate supplies times, the existing chooser runs every affected part instead of dropping coverage.
+Published release assets are independent of Actions artifact retention, but a release resuming after its Linux packages expire must rebuild them.
+Retention applies to new uploads only; existing artifacts keep their expiry dates, and repository storage still depends on upload volume and other artifact families.
+
 ## Windows feasibility observations
 
 The opt-in hosted Windows investigation is `docs/windows-feasibility.md`.

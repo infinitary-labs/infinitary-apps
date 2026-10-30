@@ -505,6 +505,7 @@ Minutes after boot Photos runs a background migration of its library whose actio
 So when Photos has not taken the photo 30 seconds on the load clock after the gate added it, the gate restarts Photos once, adds the photo again, and lets the part start once Photos has opened its shared-with-you library again, within two minutes.
 The gate keeps that wait's own log output, with Photos' calls and the scheduler's take-ups, in the device's `photos-stream.log`, and when the wait fails it also keeps the simulator's app and Photos log since boot with its command logs; a failed wait fails every part on that device that chooses a photo, and the device's other parts still run.
 The phone workflow's `evidence_run` request exports native-scene attachments from an existing run that kept `phone-results`, a failed or recording one, on the Xcode host, without building or starting a simulator.
+Request the export before that artifact's three-day retention expires (`docs/testing.md`, "Actions artifact retention").
 It keeps the selected images, timing readings and scene recordings in a small artifact separately from the complete result bundles.
 Add `--demo`, with FFmpeg installed, to keep real-speed reconnect, card, character, scene-panning and task-start recordings with their posters beside the test results.
 A manual phone workflow request with `recording` enabled passes `--raw-demo` through `PHONE_RECORDING=1`, including the virtual-Mac route; ordinary checks do not record.

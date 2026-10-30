@@ -314,7 +314,7 @@ jobs:
             ${{ runner.temp }}/phone/**/*.log
             ${{ runner.temp }}/phone/part-times.json
           if-no-files-found: ignore
-          retention-days: 14
+          retention-days: 3
       # INF-1062: the pictures alone, exported from each result bundle with the names the
       # journeys gave them, so a crewmate reads the gate's pictures within the app's artifact
       # limit; phone-results, with every bundle whole, has outgrown it.
@@ -336,7 +336,7 @@ jobs:
           name: phone-pictures
           path: ${{ runner.temp }}/phone-pictures
           if-no-files-found: ignore
-          retention-days: 14
+          retention-days: 3
       # INF-1343 (the captain's "Upload the 530 MB phone results only when a check fails"): the whole
       # result bundles are for diagnosing a failure; a recording run keeps them for its clips, which
       # the evidence_run export reads. The logs and pictures above stay on every run.
@@ -347,7 +347,7 @@ jobs:
           name: phone-results
           path: ${{ runner.temp }}/phone/
           if-no-files-found: ignore
-          retention-days: 14
+          retention-days: 3
   # INF-1066: result bundles can exceed the workflow reader's download bound.
   # Export selected evidence on the Xcode host without a simulator, build, sign-in or signing.
   scene-evidence:

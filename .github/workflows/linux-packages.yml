@@ -132,7 +132,7 @@ jobs:
           name: linux-packages
           path: linux-packages/
           if-no-files-found: error
-          retention-days: 30
+          retention-days: 3
 
   check:
     name: check (${{ matrix.system }}${{ matrix.image && format(' {0}', matrix.image) || '' }})

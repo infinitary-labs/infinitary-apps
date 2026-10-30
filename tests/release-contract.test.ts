@@ -4733,7 +4733,8 @@ describe("the Linux packages", () => {
     const upload = workflow.jobs.build?.steps.find((step) =>
       step.uses?.startsWith("actions/upload-artifact"),
     );
-    expect(upload?.with).toMatchObject({ name: "linux-packages", "retention-days": 30 });
+    // INF-1838: keep the same-run package handoff, not weeks of large binaries.
+    expect(upload?.with).toMatchObject({ name: "linux-packages", "retention-days": 3 });
     const systems = (workflow.jobs.check?.strategy?.matrix.include ?? []).map(
       (entry) => `${entry.system} ${entry.image ?? entry.runner}`,
     );

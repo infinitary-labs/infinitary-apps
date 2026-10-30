@@ -123,7 +123,8 @@ The switch lists `alpha` and `stable`; releases of either channel also update th
 
 - **One source commit.**
   The `channel` input is `stable` - the workflow's default - or `alpha`, and both are requested from main, so the workflow file is always main's.
-  The `resolve` job (Linux, no secret) runs `scripts/resolve-release.sh` from the workflow's own commit, in a clone with every branch and tag, and pins the source commit first.
+  The `resolve` job (Linux, no secret) provisions Node 24 before running `scripts/resolve-release.sh` from the workflow's own commit, in a clone with every branch and tag, and pins the source commit first.
+  Both the resolver and its source-destination check need Node on the job's search path; a gate runner's action runtime alone does not provide it.
   For an alpha it is the `candidate` ("Cutting an alpha"); for a stable, the `promote`d alpha's own commit ("Promoting an alpha").
   The verify lanes, the installer proof, the signing job and the source tag use exactly it, and the targets file records it.
 - **One candidate.**

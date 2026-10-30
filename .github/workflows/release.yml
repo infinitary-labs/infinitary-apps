@@ -118,7 +118,7 @@ jobs:
   # The release's one source commit and its names, before anything builds:
   # the candidate for an alpha, the promoted alpha's own commit for a stable.
   # Every later job checks out exactly this commit. The resolver runs from the
-  # workflow's own commit and reads the rest from git. No secret, no install.
+  # workflow's own commit and reads the rest from git. No secret or dependency install.
   resolve:
     name: Resolve the source commit and version
     # The PC's gate label (docs/testing.md, DOP-157): its runners take only gate jobs.
@@ -151,6 +151,11 @@ jobs:
         with:
           persist-credentials: false
           fetch-depth: 0
+
+      # Gate runners need Node on PATH for the resolver and destination reader.
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
 
       - name: Resolve the release
         id: resolve

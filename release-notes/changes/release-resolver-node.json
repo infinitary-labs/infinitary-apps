@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "release-resolver-node",
+      "reason": "Provision Node for the release resolver on Linux gate runners; internal release infrastructure with no app-facing change."
+    }
+  ]
+}

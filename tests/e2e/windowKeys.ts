@@ -303,10 +303,19 @@ export async function untilFocused(target: Locator): Promise<void> {
  * press takes its turn behind any other input to the page (`takeTurn`,
  * tests/e2e/inputQueue.ts).
  */
-export async function focusOn(target: Locator): Promise<void> {
+export async function focusOn(
+  target: Locator,
+  options?: FocusOptions & { focusVisible?: boolean },
+): Promise<void> {
   await takeTurn(target.page(), async () => {
     await untilFocusable(target);
-    await target.focus();
+    // Pointer activation in a hidden frame must not inherit keyboard
+    // modality from scripted focus (INF-1951's sequential Start journey).
+    if (options) {
+      await target.evaluate((node, focus) => (node as HTMLElement).focus(focus), options);
+    } else {
+      await target.focus();
+    }
     await focusLanded(target);
   });
 }

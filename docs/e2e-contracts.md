@@ -125,6 +125,8 @@ A key goes wherever the window's focus is.
 `focus()` returns before focus has moved: into a frame of its own it lands a moment later, and a key pressed in between goes to whatever still held it.
 Two clicks, or a click and a key, that overlap on one page can swallow one while both report success, because Playwright keeps one hit-target check per page.
 So `focusOn(target)` and `pressKey(target, key)` (`tests/e2e/windowKeys.ts`) focus the target, wait until it holds the window's focus (`untilFocused`), and press; `typeInto` already did the same for words.
+For a pointer activation dispatched inside a hidden frame, `focusOn(target, { focusVisible: false, preventScroll: true })` preserves pointer modality without revealing the target; the journey then dispatches its in-frame click.
+Hover alone does not change Chromium's focus-visible modality, so scripted default focus is not evidence of pointer focus.
 A `fill` moves focus the same way, so a window key a journey presses after filling a field inside a frame (`pressWindowKey`) waits on `focusOn(field)` first: a key that reaches the window before it hears focus moved finds the window's focus where it was before, and command search opened then gives focus back there (INF-1132).
 `focus()` on an inert element does nothing, and the stage keeps a card inert until it appears, as a task record does until its body draws (`docs/renderer.md`), so both first wait until neither the target nor a frame around it is inert.
 They take their turn on the page's one input queue (`takeTurn`, `tests/e2e/inputQueue.ts`), the queue `expandDock` and `clickInBody` use, so a dock expanded in the background never overlaps them.

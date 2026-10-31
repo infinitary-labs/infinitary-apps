@@ -390,13 +390,17 @@ export default function TasksPanel({ reads, point, view, asks, rail, tasks }: Pa
   const stop = rovingKey(navItems, lastStop);
   // A stop F6 lands on shows the ring: the key was the app's, not this page's.
   // So does the one focus follows to from a row that showed it.
-  const focusStop = (key: string | null, ring = false) => {
+  const focusStop = (
+    key: string | null,
+    ring = false,
+    options: FocusOptions & { focusVisible?: boolean } = {},
+  ) => {
     if (key === null) return;
     const stopElement = groupsRef.current?.querySelector<HTMLElement>(
       `[data-now-nav="${CSS.escape(key)}"]`,
     );
-    if (stopElement && ring) focusWithRing(stopElement);
-    else stopElement?.focus();
+    if (stopElement && ring) focusWithRing(stopElement, options);
+    else stopElement?.focus(options);
   };
 
   // The rows as just drawn. A row focus rested on that left the page - its
@@ -416,7 +420,13 @@ export default function TasksPanel({ reads, point, view, asks, rail, tasks }: Pa
         const at = peeked.current;
         quiet.current = !(at?.keyboard && at.task.id === was.task.id);
         try {
-          focusStop(stop, was.ring);
+          // Preserve modality through both Starting and Working: default
+          // focus can turn pointer focus into keyboard focus on the first
+          // handoff, making the second reveal the task and lose the backlog.
+          focusStop(stop, was.ring, {
+            preventScroll: !was.ring,
+            focusVisible: was.ring,
+          });
         } finally {
           quiet.current = false;
         }

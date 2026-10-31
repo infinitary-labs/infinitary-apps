@@ -337,7 +337,8 @@ A list is one Tab stop, and the arrows move through it, as lists do on a Mac.
   In the Tasks search, ↓ goes to the first match, and Esc empties its words, then closes it; Close search, the next stop after the field, closes it too, and closed from the keyboard, focus goes to the list's stop.
   A row the keyboard rests on opens its summary beside it, as the pointer's rest does (`point.peekTask`), and Esc or leaving the row lets it go; a row's name carries its status, and the summary shows that status, the full title and the project.
   That summary goes with its row as the row moves, into another group too, and a summary Esc closed stays closed.
-  A focused row scrolls into view in the panel, across the frame.
+  Keyboard navigation and keyboard focus recovery reveal the row in the panel, across the frame.
+  After a pointer Start, focus follows the task without scrolling the panel away from the remaining backlog rows.
 - The task board's tiles and rows (`docs/task-board.md`, "Keys") are one stop, the selected tile or else the first: ↑ and ↓ move within a lane and onto its other pages, Home and End to the lane's real ends, ← and → to the nearest drawn tile in the next column that has one, ↓ from Waiting on you's last row into the first column and ↑ from a lane's top back to it; Enter opens the tile's task as a click does, Space opens its ⋯ menu (a RowMenu whose kebab is out of the Tab order, focus back on the tile when it closes), and ↓ in its Find goes to the tiles.
   The tile the keyboard rests on opens its summary beside it, and Esc closes the summary, then clears Find, then hides the board.
 - The Activity list is one stop: the arrows and the page keys scroll it, and while it has the keyboard's focus every line reads in full.

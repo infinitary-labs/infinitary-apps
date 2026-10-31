@@ -59,4 +59,66 @@ import XCTest
             }
         }
     }
+
+    /// INF-2039: the native scene check taps an orbiting crewmate where XCTest read it a moment before the touch lands.
+    /// A warp speeds the home crew up until a trailing crewmate takes that point, so the check holds the tap until
+    /// PhoneOrbitPace reads every home crewmate riding its orbit at its own pace. Read from the scene's own motion every
+    /// tenth of a second, as the check polls: a tap aimed whenever the crew pass still lands on its crewmate, and
+    /// without the watch some tap in each warp would open a neighbour. No reading shows a warp that has not yet moved
+    /// anyone, so an aim read before the warp moved any crewmate by a point is the one kind the watch cannot hold.
+    func testAnOrbitingTapWaitsOutEveryWarp() throws {
+        let roster = try roster(home: 32, remote: 1)
+        let pace = PhoneOrbitPace(planes: CharacterCatalog.shared.planes.map {
+            .init(speedDegPerSec: $0.speedDegPerSec, inclination: $0.inclination, node: $0.node)
+        })
+        let center = CGPoint(x: roster.homeX, y: roster.height / 2)
+        // The failing run's tap: XCTest read crew-20's frame 0.12 s before it synthesized the touch.
+        let delay = 0.12, fps = 60.0
+        for variant in [CharacterMachine.Fidget.tunnel, .sphere, .corkscrew] {
+            let motion = PhoneSceneMotion(), plain = PhoneSceneMotion()
+            let seconds = CharacterCatalog.shared.fidgets[variant.rawValue]! / 1000
+            // Idle orbit first, then the warp, then its release home.
+            let idle = 3.0, end = idle + seconds + 2
+            var frames: [PhoneSceneMotion.Frame] = [], unmoved: [Bool] = []
+            for step in 0...Int(end * fps) {
+                let now = Double(step) / fps, et = (now - idle) / seconds
+                var pose = CharacterPose(mode: .idle, milliseconds: now * 1000)
+                if et >= 0 && et < 1 { pose = CharacterPose(mode: .fidget, progress: et, variant: variant, milliseconds: now * 1000) }
+                let frame = motion.frame(roster: roster, now: now, settled: false, warp: CharacterWarp.frame(pose, coreR: 280 * 0.27))
+                let alone = Dictionary(uniqueKeysWithValues: plain.frame(roster: roster, now: now, settled: false).glyphs.map { ($0.task.id, $0.point) })
+                frames.append(frame)
+                unmoved.append(frame.glyphs.allSatisfy { glyph in alone[glyph.task.id].map { hypot(glyph.point.x - $0.x, glyph.point.y - $0.y) <= 1 } ?? false })
+            }
+            func lands(aimedAt step: Int, on id: String) throws -> Bool {
+                let aim = try XCTUnwrap(frames[step].glyphs.first { $0.task.id == id }).point
+                let later = frames[step + Int(delay * fps)].glyphs
+                let target = try XCTUnwrap(later.first { $0.task.id == id }).point
+                let reach = hypot(aim.x - target.x, aim.y - target.y)
+                // PhoneTouchCell: the 44-point square about the crewmate, less whatever lies nearer another crewmate.
+                return abs(aim.x - target.x) <= 22 && abs(aim.y - target.y) <= 22
+                    && later.allSatisfy { $0.task.id == id || hypot(aim.x - $0.point.x, aim.y - $0.point.y) >= reach }
+            }
+            var crew = PhoneOrbitPace.Crew(pace: pace)
+            var passed = 0, held = 0, missed = 0, unseen = 0
+            for step in stride(from: 0, to: frames.count - Int(delay * fps), by: Int(fps / 10)) {
+                let home = frames[step].glyphs.filter { $0.task.executionDeviceId == nil }
+                let time = Double(step) / fps
+                let atPace = crew.read(Dictionary(uniqueKeysWithValues: home.map { ($0.task.id, $0.point) }), center: center,
+                                       time: time, target: try XCTUnwrap(home.first).task.id)
+                if time >= PhoneOrbitPace.window && time < idle {
+                    XCTAssertTrue(atPace, "\(variant): at \(time) s the crew orbit at their own pace, \(crew.unsteady)")
+                }
+                for glyph in home {
+                    let landed = try lands(aimedAt: step, on: glyph.task.id)
+                    if !landed { missed += 1 }
+                    guard atPace else { held += 1; continue }
+                    passed += 1
+                    if !landed && unmoved[step] { unseen += 1; continue }
+                    XCTAssertTrue(landed, "\(variant): the crew passed the watch at \(time) s, but a tap aimed at \(glyph.task.id) opens another crewmate")
+                }
+            }
+            XCTAssertGreaterThan(missed, 0, "\(variant): without the watch, a tap in the warp opens a neighbour")
+            print("INF-2039 \(variant): \(passed) aims at pace, \(held) held, \(missed) that would open another crewmate, \(unseen) aimed before the warp moved anyone")
+        }
+    }
 }

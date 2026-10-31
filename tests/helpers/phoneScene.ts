@@ -18,6 +18,7 @@ import {
   programsOf,
   runningParts,
 } from "../../src/renderer/src/character/crew/constellation";
+import { CROWDED_PLANES } from "../../src/renderer/src/character/crew/orbitalPlanes";
 import { partsCountWords } from "../../src/renderer/src/character/crew/programWords";
 import { MOCK_MODEL_ID, MOCK_PROVIDER_ID } from "../e2e/mockProvider";
 import { seedDelivery } from "./taskDelivery";
@@ -124,6 +125,8 @@ export function phoneSceneFixture(core: Core, userData: string, ready: () => Pro
         const crew = [first, second, ...parallel];
         // Cross both desktop orbits, retaining every glyph at its readable size.
         for (let i = 0; i < 21; i++) crew.push(add(`crew-${i}`, `Check harbour marker ${i + 1}`));
+        // INF-2039: the crew that ride the home orbits themselves, never a program's ring.
+        const orbiting = crew.slice(2 + parallel.length);
         // INF-1543: one crewmate waits on the captain's decision, so the scene draws its beacon.
         // The card is put aside: a card on the stack takes the phone's stage in place of the scene.
         const waiting = crew[crew.length - 1] as string;
@@ -268,6 +271,13 @@ export function phoneSceneFixture(core: Core, userData: string, ready: () => Pro
           summaries,
           desktopLayouts,
           programWords: partsCountWords(progress.finished, liveParts.length, progress.waiting),
+          orbiting,
+          // INF-2039: the orbits' own turns, tilts and nodes, from which an orbiting crewmate's tap reads its pace.
+          orbitPlanes: CROWDED_PLANES.map(({ speedDegPerSec, inclination, node }) => ({
+            speedDegPerSec,
+            inclination,
+            node,
+          })),
           deferredSetup,
           first,
           second,

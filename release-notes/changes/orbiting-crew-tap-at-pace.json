@@ -1,0 +1,8 @@
+{
+  "exclusions": [
+    {
+      "id": "orbiting-crew-tap-at-pace",
+      "reason": "Test only: the iPhone and iPad crew scene check now waits to tap an orbiting crewmate until every orbiting crewmate moves at its orbit's own pace, since the first mate's warp fidget sped the crew up enough for a neighbour to take the tap. No shipped behavior changed."
+    }
+  ]
+}

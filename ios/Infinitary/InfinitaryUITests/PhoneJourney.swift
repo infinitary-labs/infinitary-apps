@@ -773,9 +773,13 @@ import XCTest
         picture("native-scene-crew-home")
         try await verifyCrewKeyboard(scene, character: character)
         let summaries = try XCTUnwrap(fixture["summaries"] as? [String: [String: Any]])
+        let pace = PhoneOrbitPace(planes: try XCTUnwrap(fixture["orbitPlanes"] as? [[String: Double]]).map {
+            .init(speedDegPerSec: try XCTUnwrap($0["speedDegPerSec"]), inclination: try XCTUnwrap($0["inclination"]), node: try XCTUnwrap($0["node"]))
+        })
+        let orbiting = Set(try XCTUnwrap(fixture["orbiting"] as? [String]).map { "crew-task-" + $0 })
         _ = try await home("capture-scene-start")
         revealCrew(local, in: scene)
-        tapOnPhone(local, orbiting: true)
+        tapOrbitingCrew(local, in: scene, orbiting: orbiting, pace: pace)
         XCTAssertTrue(app.otherElements["crew-preview"].waitForPresence(timeout: 10))
         XCTAssertTrue(app.staticTexts["Check harbour marker 1"].exists)
         try await verifyCrewSummary(try XCTUnwrap(summaries[firstID]), picture: "native-scene-task-preview")
@@ -785,7 +789,7 @@ import XCTest
                            (try XCTUnwrap(fixture["waiting"] as? String), "native-scene-waiting-preview")] {
             let crewmate = app.buttons["crew-task-" + id]
             revealCrew(crewmate, in: scene)
-            tapOnPhone(crewmate, orbiting: true)
+            tapOrbitingCrew(crewmate, in: scene, orbiting: orbiting, pace: pace)
             // The working summary is the change's hero picture, so it is kept in both appearances.
             try await verifyCrewSummary(try XCTUnwrap(summaries[id]), picture: name, themes: name == "native-scene-working-preview")
             closeCrewSummary()
@@ -959,6 +963,33 @@ import XCTest
             start.press(forDuration: 0.05, thenDragTo: end, withVelocity: .slow, thenHoldForDuration: 0.3)
         }
         XCTAssertTrue(crewReadyToTap(element.isHittable, frame: element.frame, in: scene.frame), "Continuous panning must bring the whole crewmate inside the scene before tapping")
+    }
+
+    /// INF-2039: the first mate's warp fidget speeds the home crew up five to eleven times, and a crewmate trailing the
+    /// target then reaches the point the tap aimed at before the touch lands, and opens its own sheet. So an orbiting
+    /// crewmate's tap waits until every orbiting crewmate (`orbiting`, by identifier) rides one of the orbits about the
+    /// first mate, their center, no faster than that orbit's own pace, then taps it at once. One snapshot of the scene
+    /// reads them all together.
+    private func tapOrbitingCrew(_ crewmate: XCUIElement, in scene: XCUIElement, orbiting: Set<String>, pace: PhoneOrbitPace) {
+        var crew = PhoneOrbitPace.Crew(pace: pace)
+        let atPace = NSPredicate { _, _ in
+            guard let snapshot = try? scene.snapshot() else { return false }
+            var points: [String: CGPoint] = [:], center: CGPoint?
+            var pending = [snapshot]
+            while let next = pending.popLast() {
+                let mid = CGPoint(x: next.frame.midX, y: next.frame.midY)
+                if next.identifier == "phone-character" { center = mid }
+                if orbiting.contains(next.identifier) { points[next.identifier] = mid }
+                pending += next.children
+            }
+            guard let center else { return false }
+            return crew.read(points, center: center, time: ProcessInfo.processInfo.systemUptime, target: crewmate.identifier)
+        }
+        // A warp lasts six seconds and lets the crew go home over its release.
+        XCTAssertEqual(waitForPhonePredicate(atPace, object: crewmate, timeout: 20), .completed,
+                       "The crew never rode their orbits at pace to tap \(crewmate): each orbit's last turn, allowance and drift \(crew.unsteady)")
+        print("INF-2039 orbiting tap at pace: \(crewmate.identifier) with \(crew.watches.count) crewmates read")
+        tapOnPhone(crewmate, orbiting: true)
     }
 
     /// INF-64 piece 4: a phone answers at the real home, not a local stand-in; opaque scripts cannot gain native effects.

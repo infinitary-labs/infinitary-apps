@@ -879,13 +879,16 @@ export class CardStore {
    * How many messages every card with a thread holds, and its newest - the
    * one query the Firstmate's context section is rendered from, so it never
    * walks the table card by card. Newest thread first, capped by `limit`,
-   * because the section that reads it is bounded anyway.
+   * because the section that reads it is bounded anyway. Only threads with
+   * a message since `since` are counted, sought by time, so the read does
+   * not walk every thread in the record.
    */
   threadSummaries(since: number, limit = 8): ThreadSummary[] {
     const rows = this.db
       .prepare(
         `SELECT card_id, COUNT(*) AS count, MAX(id) AS last_id FROM card_messages
-         GROUP BY card_id HAVING MAX(at) >= ? ORDER BY MAX(at) DESC LIMIT ?`,
+         WHERE card_id IN (SELECT card_id FROM card_messages WHERE at >= ?)
+         GROUP BY card_id ORDER BY MAX(at) DESC LIMIT ?`,
       )
       .all(since, limit) as { card_id: string; count: number; last_id: number }[];
     return rows.flatMap((row) => {

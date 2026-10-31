@@ -1444,7 +1444,11 @@ export class TaskStore {
     return oldestFirst(this.read(rows));
   }
 
-  /** Every descendant, deepest last (a recursive walk down parent_id). */
+  /**
+   * Every descendant, deepest last (a recursive walk down parent_id). The
+   * CROSS JOIN keeps SQLite reading the tree first and seeking each record,
+   * where it would otherwise walk every task to match the tree.
+   */
   listDescendants(id: string): TaskRecord[] {
     const rows = this.db
       .prepare(
@@ -1454,7 +1458,7 @@ export class TaskStore {
            SELECT t.id, tree.depth + 1 FROM tasks t JOIN tree ON t.parent_id = tree.id
            WHERE tree.depth < 64
          )
-         SELECT records.* FROM ${this.readTable()} records JOIN tree ON records.id = tree.id
+         SELECT records.* FROM tree CROSS JOIN ${this.readTable()} records ON records.id = tree.id
          ORDER BY tree.depth, records.created_at, records.seq`,
       )
       .all(id) as Row[];

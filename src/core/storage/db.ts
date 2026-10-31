@@ -2160,12 +2160,26 @@ function migrate(db: AppDatabase, throughVersion?: number): void {
   // event one seeks the tasks a message or a card names (`taskIdsWithRef`,
   // `latestTaskForRef`), which the open messages read before and after
   // every first mate turn, instead of walking every task event (INF-2059).
+  // The rest keep a read the statement check found walking a growing table
+  // from doing so (docs/testing.md, "The statement check"): the deferred
+  // reference from a task to its specification, checked on each
+  // specification write; the answer-delivery check's messages by state, and
+  // the newest message, read around each first mate turn; recently resolved
+  // cards and recent card threads, read into each turn's context.
   if (through === DATABASE_VERSION)
     db.exec(`
       CREATE INDEX IF NOT EXISTS usage_events_account_at ON usage_events (account_id, at);
       CREATE INDEX IF NOT EXISTS tasks_status ON tasks (status);
       CREATE INDEX IF NOT EXISTS tasks_closed_at ON tasks (closed_at);
       CREATE INDEX IF NOT EXISTS task_events_ref ON task_events (kind, ref) WHERE ref IS NOT NULL;
+      CREATE INDEX IF NOT EXISTS tasks_specification ON tasks (specification_id);
+      CREATE INDEX IF NOT EXISTS captain_asks_at ON captain_asks (at);
+      CREATE INDEX IF NOT EXISTS captain_asks_turn ON captain_asks (turn_state, at);
+      CREATE INDEX IF NOT EXISTS captain_asks_delivery ON captain_asks (delivery, at);
+      CREATE INDEX IF NOT EXISTS captain_asks_continues ON captain_asks (continues, at);
+      CREATE INDEX IF NOT EXISTS captain_asks_unanswered ON captain_asks (followed, answered_at, at);
+      CREATE INDEX IF NOT EXISTS cards_resolved_at ON cards (resolved_at);
+      CREATE INDEX IF NOT EXISTS card_messages_at ON card_messages (at);
     `);
   // An edit to views.ts reaches an existing database without a migration of
   // its own: the views are derived, so a drift is re-created, never altered.

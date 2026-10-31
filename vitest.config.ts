@@ -150,6 +150,7 @@ export default defineConfig({
           isolate: false,
           setupFiles: [
             "./tests/helpers/pureProject.ts",
+            "./tests/helpers/statementCheck.ts",
             "./tests/helpers/scratchDirCleanup.ts",
             "./tests/helpers/waitWindow.ts",
           ],
@@ -162,7 +163,11 @@ export default defineConfig({
           maxWorkers: Math.max(2, os.availableParallelism() - 1),
           include: isolatedUnit,
           isolate: true,
-          setupFiles: ["./tests/helpers/scratchDirCleanup.ts", "./tests/helpers/waitWindow.ts"],
+          setupFiles: [
+            "./tests/helpers/statementCheck.ts",
+            "./tests/helpers/scratchDirCleanup.ts",
+            "./tests/helpers/waitWindow.ts",
+          ],
         },
       },
       {
@@ -175,7 +180,11 @@ export default defineConfig({
             (path) => /\.test\.tsx?$/.test(path) && !PROBE_FILES.includes(path),
           ),
           isolate: true,
-          setupFiles: ["./tests/helpers/scratchDirCleanup.ts", "./tests/helpers/waitWindow.ts"],
+          setupFiles: [
+            "./tests/helpers/statementCheck.ts",
+            "./tests/helpers/scratchDirCleanup.ts",
+            "./tests/helpers/waitWindow.ts",
+          ],
           // Real git, pnpm and child processes: eight on Mac, four elsewhere, after the
           // in-memory cohorts finish, so the suite is not its own load
           // generator. Each file states its own budget; the default stays 5 s.
@@ -189,7 +198,11 @@ export default defineConfig({
           name: "probe",
           include: [...PROBE_FILES],
           isolate: true,
-          setupFiles: ["./tests/helpers/scratchDirCleanup.ts", "./tests/helpers/waitWindow.ts"],
+          setupFiles: [
+            "./tests/helpers/statementCheck.ts",
+            "./tests/helpers/scratchDirCleanup.ts",
+            "./tests/helpers/waitWindow.ts",
+          ],
           // The integration cohort's workers, in a group of their own after it,
           // so a whole run never loads the host with both at once.
           maxWorkers: process.platform === "darwin" ? 8 : 4,

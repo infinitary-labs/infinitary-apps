@@ -67,6 +67,29 @@ For an explicit fresh check, run `pnpm typecheck --force`; to remove saved resul
 A rollback restores the old command and removes the three root `tsconfig.*.tsbuildinfo` files before checking; it changes no app data or panel output.
 This command is a batch check, not an editor, language-server or watch-mode migration.
 
+## The statement check
+
+Five main thread freezes (INF-703, INF-940, INF-1348, INF-1956, INF-2059) were synchronous SQLite whose cost grew with the saved record while the tests used a few rows.
+A plan is what grows with the record, so the statement check reads plans (INF-2061).
+`tests/helpers/statementCheck.ts` is a setup file of the `unit`, `unit-isolated`, `integration` and `probe` projects.
+It records every statement the app's own code prepares while a test file runs: the first caller under `src/` that is not a test, so a test's own statements and a helper's are left out.
+When the file ends, it plans each one with `EXPLAIN QUERY PLAN` against a freshly migrated database (the app's record, or the knowledge collection when only that schema compiles it), with every parameter bound as NULL.
+The file fails on a walk the ledger does not explain: a `SCAN` of a growing table, read through a view's alias too, and a temporary b-tree in a statement that makes one.
+A search through an index, a temporary b-tree over the rows an index sought, and a virtual table's own index are not walks.
+
+`tests/helpers/statementWalks.ts` is the ledger, in three parts:
+
+- `BOUNDED_TABLES` names each table that does not grow with the record and the code that trims it; every other table grows, a new one included.
+- `ONE_TIME_CALLERS` names code whose statements run once per record, such as the migrations, the folder move and the D-13 purge; a statement prepared under one of them is not planned.
+- `WALKS` holds each allowed walk by its statement's text, the walks its plan makes and why the walk is acceptable.
+
+The ledger only shrinks.
+A statement whose plan no longer makes its ledgered walks fails the check, and `tests/statement-check.test.ts` plans every entry, so a fixed walk leaves the ledger in the same pull request.
+A new entry is a move its pull request explains, as a moved replay number is; the usual answer to a new walk is an index or a query that seeks.
+An optional query index goes in `migrate`'s index block in `src/core/storage/db.ts`, with no migration version.
+The check sees only the statements the tests prepare, and it reads no time: a walk of a small table and a slow file read are outside it.
+`INFINITARY_STATEMENT_CENSUS=<folder>` writes each test file's planned statements there as JSON, for a review of every walk at once.
+
 ## E2E scheduling and launch diagnostics
 
 The renderer and application lanes (`tests/e2e/lanes.ts`, `playwright.config.ts`) share at most `min(10, availableParallelism())` workers.

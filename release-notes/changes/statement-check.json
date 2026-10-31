@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "statement-check",
+      "reason": "Internal: the unit and integration tests now plan every SQL statement the app prepares and fail on an unexplained whole-table walk; five reads the check found now seek through an index instead, with the same results and no measured change a person notices on a record of today's size."
+    }
+  ]
+}

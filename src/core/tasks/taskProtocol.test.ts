@@ -1056,6 +1056,58 @@ describe("the task protocol (task-system P3)", () => {
     expect(long.rows).toEqual(short.rows);
   });
 
+  // INF-2070: the board names what replaced each dropped row it shows, and
+  // read each one's whole timeline to find a stronger-model move, so opening
+  // it on a record the captain's size held the main thread about 300 ms.
+  it("names what replaced each dropped row without reading its history, however long (INF-2070)", () => {
+    const shown = (history: number) => {
+      const f = setup();
+      for (const id of ["carrier", "stronger", "carried", "rejected", "dropped"])
+        f.tasks.create({ id, title: `Task ${id}`, prompt: "p", repoId: "r1" });
+      const keyOf = (id: string) => f.tasks.get(id)?.key ?? id;
+      for (const id of ["carried", "rejected", "dropped"])
+        for (let i = 0; i < history; i++) f.tasks.noteProgress(id, `Checked part ${i}.`);
+      // Another task carries one on; a stronger model takes over another, as
+      // CrewSupervisor.applyEscalation writes it; the third is just dropped.
+      f.tasks.dropWithChildren("carried", {
+        reason: "moved to its carrier",
+        actor: "firstmate",
+        replacedBy: "carrier",
+      });
+      f.tasks.recordEscalation({
+        from: { id: "rejected", key: keyOf("rejected") },
+        to: { id: "stronger", key: keyOf("stronger") },
+        attempt: 1,
+        tier: "premium",
+      });
+      f.tasks.close("rejected", {
+        status: "dropped",
+        reason: "superseded",
+        actor: "captain",
+        feed: false,
+        data: { escalated_to: keyOf("stronger") },
+      });
+      f.tasks.dropWithChildren("dropped", { reason: "not needed", actor: "captain" });
+      const rows = rowsRead(f.db, () => f.protocol.board());
+      const replacedBy = Object.fromEntries(
+        f.protocol
+          .board()
+          .tasks.filter((task) => ["carried", "rejected", "dropped"].includes(task.id))
+          .map((task) => [task.id, task.replacedBy ?? null]),
+      );
+      return {
+        rows,
+        replacedBy,
+        expected: { carried: keyOf("carrier"), rejected: keyOf("stronger"), dropped: null },
+      };
+    };
+    const short = shown(0);
+    const long = shown(200);
+    expect(short.replacedBy).toEqual(short.expected);
+    expect(long.replacedBy).toEqual(long.expected);
+    expect(long.rows).toBe(short.rows);
+  });
+
   // INF-999: INF-778's summary read Blocked by INF-886 from a recorded wait
   // after the captain's words had released it, while the crewmate's own
   // reader named nothing. The captain chose "Blocked by only for a hold".

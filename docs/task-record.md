@@ -451,6 +451,7 @@ It closes with status `done` and reason `superseded`, an existing closing reason
 The close is refused for the task itself, a task under it, a dropped task, a task already carried on by another, and while a decision card of the old task waits on the captain.
 The record's closed line follows the last task of the replacement chain (`TaskService.carriedOn`): `Carried on by SCR-6` while it runs, `Done through SCR-6` once it is done, and `Carried on by SCR-6, which was dropped` if it drops later.
 The task view publishes `replacedBy` on such a done row as it does on a dropped one.
+The board reads it for every row it shows at once (`TaskService.replacementsOf`): the `replaced-by` links, then the stronger-model moves through the event reference index, never a task's timeline.
 When the task carrying the work closed first, its outcome was held back while the old task was open in the same message, so the old task's close places that outcome once, where it would have gone.
 Its crewmate goes home on the ring as any done task's does.
 An event another task reads is exempt from timeline compaction, so the row it makes there never folds away.

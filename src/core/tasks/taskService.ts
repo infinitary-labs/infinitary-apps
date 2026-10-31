@@ -1791,12 +1791,42 @@ export class TaskService {
 
   /** The task that replaced this one, including the older stronger-model lineage. */
   replacementOf(id: string): string | undefined {
-    const link = this.links.listFrom(id, "replaced-by")[0];
-    if (link) return this.store.get(link.toId)?.key || link.toId;
-    const retry = this.timeline(id).findLast(
-      (event) => typeof event.data?.escalated_to === "string",
+    return this.replacementsOf([id]).get(id);
+  }
+
+  /**
+   * The task that replaced each of these (`replacementOf`), read for all of
+   * them at once: their `replaced-by` links, then the stronger-model moves
+   * for the rest. A stronger-model move always writes its `escalated` row
+   * (`recordEscalation`) before the superseded close repeats `escalated_to`,
+   * so that row names the replacement without reading the task's timeline,
+   * which grows with its history (INF-2070).
+   */
+  replacementsOf(ids: readonly string[]): Map<string, string> {
+    const found = new Map<string, string>();
+    if (ids.length === 0) return found;
+    const wanted = new Set(ids);
+    const carriers = new Map<string, string>();
+    for (const link of this.links.listTouching(ids)) {
+      if (link.type !== "replaced-by" || !wanted.has(link.fromId) || carriers.has(link.fromId))
+        continue;
+      carriers.set(link.fromId, link.toId);
+    }
+    const keys = new Map(
+      this.store.getMany([...new Set(carriers.values())]).map((row) => [row.id, row.key]),
     );
-    return retry?.data?.escalated_to as string | undefined;
+    let escalated: Map<string, string> | undefined;
+    for (const id of ids) {
+      const carrier = carriers.get(id);
+      if (carrier) {
+        found.set(id, keys.get(carrier) || carrier);
+        continue;
+      }
+      escalated ??= this.events.escalatedTo();
+      const successor = escalated.get(id);
+      if (successor) found.set(id, successor);
+    }
+    return found;
   }
 
   /**

@@ -255,6 +255,26 @@ export class TaskEventStore {
     return rows.map((row) => row.task_id);
   }
 
+  /**
+   * Each task a stronger-model move replaced, with the task that carries its
+   * work on (`escalated_to` on the task's newest `escalated` row). It seeks the
+   * `escalated` rows by kind and ref (`task_events_ref`), so the work grows
+   * with the record's stronger-model moves, never with any task's history:
+   * the board asks it for every dropped row it shows (INF-2070).
+   */
+  escalatedTo(): Map<string, string> {
+    const rows = this.db
+      .prepare(
+        `SELECT task_id, json_extract(data_json, '$.escalated_to') AS successor FROM task_events
+         WHERE kind = ? AND ref IS NOT NULL
+         AND CASE WHEN json_valid(data_json) THEN json_type(data_json, '$.escalated_to') END = 'text'
+         ORDER BY at, id`,
+      )
+      .all("escalated") as { task_id: string; successor: string }[];
+    // Oldest first, so a task's newest move is the one kept.
+    return new Map(rows.map((row) => [row.task_id, row.successor]));
+  }
+
   /** The refs of a task's events of `kind`, oldest first. */
   refsOf(taskId: string, kind: TaskEventKind): string[] {
     const rows = this.db

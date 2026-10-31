@@ -641,9 +641,7 @@ export class TaskProtocol {
             }
           : {}),
         closedReason: record.closedReason,
-        ...(record.status === "dropped" || record.closedReason === "superseded"
-          ? { replacedBy: this.options.tasks.replacementOf(record.id) }
-          : {}),
+        ...(replaced(record) ? { replacedBy: this.options.tasks.replacementOf(record.id) } : {}),
         seq: change.seq,
       });
     }
@@ -719,12 +717,16 @@ export class TaskProtocol {
       if (!known.has(link.toId)) ends.add(link.toId);
     }
     const all = [...rows, ...tasks.getMany([...ends])];
-    return this.graphOf(all, links, tasks.childCounts(ids));
+    // What replaced each dropped row, read for all of them at once; one at
+    // a time, each read its task's whole timeline (INF-2070).
+    const replacedBy = tasks.replacementsOf(rows.filter(replaced).map((record) => record.id));
+    return this.graphOf(all, links, replacedBy, tasks.childCounts(ids));
   }
 
   private graphOf(
     all: readonly TaskRecord[],
     links: TaskLink[],
+    replacedBy: Map<string, string>,
     childCounts?: Map<string, { total: number; closed: number }>,
   ): Graph {
     const byId = new Map(all.map((record) => [record.id, record]));
@@ -790,6 +792,7 @@ export class TaskProtocol {
       decisionCards,
       durableDecisions,
       openCardIds,
+      replacedBy,
     };
   }
 
@@ -885,9 +888,7 @@ export class TaskProtocol {
       activity: record.activity,
       workPosture: posture,
       closedReason: record.closedReason,
-      ...(record.status === "dropped" || record.closedReason === "superseded"
-        ? { replacedBy: this.options.tasks.replacementOf(record.id) }
-        : {}),
+      ...(replaced(record) ? { replacedBy: graph.replacedBy.get(record.id) } : {}),
       startPolicy: record.startPolicy,
       queueWait: startAttempt
         ? undefined
@@ -1019,7 +1020,14 @@ type Graph = {
   decisionCards: Map<string, Card>;
   openCardIds: Set<string>;
   durableDecisions: Set<string>;
+  /** What carries each dropped or superseded row's work on (`TaskService.replacementsOf`). */
+  replacedBy: Map<string, string>;
 };
+
+/** A row whose view names what replaced it: dropped work, or work superseded. */
+function replaced(record: TaskRecord): boolean {
+  return record.status === "dropped" || record.closedReason === "superseded";
+}
 
 /**
  * The reasoning the crewmate's session opened at (`TaskDetail.reasoning`,

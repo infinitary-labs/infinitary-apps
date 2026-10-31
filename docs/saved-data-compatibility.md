@@ -266,6 +266,7 @@ An older build reads the table as before and keeps the indexes up to date on its
 
 The optional `task_events_ref` index on `(kind, ref)`, over the events that carry a reference, is installed on opening the current schema, without a migration version or changed table shape.
 It lets the reads of the tasks a message or a card names (`TaskEventStore.taskIdsWithRef`, `latestTaskForRef`) seek their rows instead of walking every task event, which the first mate's open messages do before and after each of its turns (INF-2059).
+The stronger-model moves (`TaskEventStore.escalatedTo`) are sought the same way, so the Tasks board names what replaced each dropped row without reading that task's timeline (INF-2070).
 An older build opens the same database, reads the table as before and keeps the index up to date on its own writes.
 
 ## Retired task fields

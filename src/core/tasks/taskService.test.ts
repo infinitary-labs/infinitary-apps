@@ -2,7 +2,7 @@ import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { waitStall } from "@shared/recovery";
 import { describe, expect, it } from "vitest";
-import { freshDatabase } from "../../../tests/helpers/database";
+import { freshDatabase, rowsRead } from "../../../tests/helpers/database";
 import { noSurfaceProof } from "../../../tests/helpers/liveValidation";
 import { scratchDir } from "../../../tests/helpers/scratchDirs";
 import { seedDelivery } from "../../../tests/helpers/taskDelivery";
@@ -33,6 +33,45 @@ function setup() {
 }
 
 const intent = { goal: "Ship it", userWords: "please ship it" };
+
+// INF-2006: the computer resource feed asks whether work exists on every
+// two-second tick and every task change; composing the whole history to
+// answer it stalled the window for about 50 ms per read at 4,813 tasks.
+describe("whether any task holds a status", () => {
+  it("answers from one row, however long the closed history, and follows each status change", () => {
+    const { db, tasks } = setup();
+    for (let i = 0; i < 50; i++) {
+      seedTask(tasks, {
+        id: `old-${i}`,
+        title: `Earlier work ${i}`,
+        repoId: "r1",
+        status: "queued",
+      });
+      tasks.close(`old-${i}`, { status: "done", reason: "settled", actor: "host" });
+    }
+    seedTask(tasks, { id: "waiting", title: "Queued work", repoId: "r1", status: "queued" });
+    const active = () => tasks.list().some((task) => task.status === "active");
+    expect(tasks.hasStatus("active")).toBe(false);
+    expect(active()).toBe(false);
+    expect(tasks.hasStatus("open")).toBe(true);
+
+    seedTask(tasks, {
+      id: "held",
+      title: "Held work",
+      repoId: "r1",
+      status: "running",
+      worktreeDir: "/wt/h",
+    });
+    expect(tasks.hasStatus("active")).toBe(true);
+    expect(active()).toBe(true);
+    expect(rowsRead(db, () => tasks.hasStatus("active"))).toBe(1);
+    expect(rowsRead(db, () => active())).toBeGreaterThan(50);
+
+    tasks.close("held", { status: "done", reason: "settled", actor: "host" });
+    expect(tasks.hasStatus("active")).toBe(false);
+    expect(active()).toBe(false);
+  });
+});
 
 describe("starting dropped work again", () => {
   it("copies project/repository and priority while publishing the replacement and live waits atomically", () => {

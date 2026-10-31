@@ -1395,6 +1395,13 @@ export class TaskStore {
     }));
   }
 
+  /** Whether any row holds this status, answered without reading or composing one. */
+  hasStatus(status: TaskStatus): boolean {
+    return (
+      prepared(this.db, "SELECT 1 FROM tasks WHERE status = ? LIMIT 1").get(status) !== undefined
+    );
+  }
+
   /** How many rows of this kind hold this status, counted without reading them. */
   count(status: TaskStatus, kind: TaskKind): number {
     const row = prepared(

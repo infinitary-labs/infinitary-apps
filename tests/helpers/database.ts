@@ -37,3 +37,30 @@ export function recordNewerMigration(db: Database.Database): void {
   };
   db.prepare("INSERT INTO schema_migrations (version) VALUES (?)").run(newest + 1);
 }
+
+/** How many rows the reads in `read` took from the database, counted where SQLite hands them over. */
+export function rowsRead(db: Database.Database, read: () => void): number {
+  const statement = Object.getPrototypeOf(db.prepare("SELECT 1")) as {
+    all: (...args: unknown[]) => unknown[];
+    get: (...args: unknown[]) => unknown;
+  };
+  const { all, get } = statement;
+  let rows = 0;
+  statement.all = function (this: unknown, ...args: unknown[]) {
+    const found = all.apply(this, args);
+    rows += found.length;
+    return found;
+  };
+  statement.get = function (this: unknown, ...args: unknown[]) {
+    const found = get.apply(this, args);
+    if (found !== undefined) rows += 1;
+    return found;
+  };
+  try {
+    read();
+  } finally {
+    statement.all = all;
+    statement.get = get;
+  }
+  return rows;
+}

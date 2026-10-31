@@ -1060,6 +1060,11 @@ export class TaskService {
     return this.store.listClosedSearchFields();
   }
 
+  /** Whether any row holds this status, answered without reading or composing one. */
+  hasStatus(status: TaskStatus): boolean {
+    return this.store.hasStatus(status);
+  }
+
   /** How many rows of this kind hold this status, counted without reading them. */
   count(status: TaskStatus, kind: TaskKind): number {
     return this.store.count(status, kind);

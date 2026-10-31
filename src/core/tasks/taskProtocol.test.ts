@@ -18,6 +18,7 @@ import {
 } from "@shared/tasks";
 import type { WorkPosture } from "@shared/workPosture";
 import { describe, expect, it } from "vitest";
+import { rowsRead } from "../../../tests/helpers/database";
 import { seedDelivery } from "../../../tests/helpers/taskDelivery";
 import { modelReasonOf } from "../routing/modelReason";
 import { servedSlots } from "../routing/router";
@@ -41,33 +42,6 @@ import { type TaskChange, TaskService, TIMELINE_CAP } from "./taskService";
  */
 
 const DAY = 24 * 60 * 60 * 1000;
-
-/** How many rows the reads in `read` took from the database, counted where SQLite hands them over. */
-function rowsRead(db: ReturnType<typeof openInMemoryDatabase>, read: () => void): number {
-  const statement = Object.getPrototypeOf(db.prepare("SELECT 1")) as {
-    all: (...args: unknown[]) => unknown[];
-    get: (...args: unknown[]) => unknown;
-  };
-  const { all, get } = statement;
-  let rows = 0;
-  statement.all = function (this: unknown, ...args: unknown[]) {
-    const found = all.apply(this, args);
-    rows += found.length;
-    return found;
-  };
-  statement.get = function (this: unknown, ...args: unknown[]) {
-    const found = get.apply(this, args);
-    if (found !== undefined) rows += 1;
-    return found;
-  };
-  try {
-    read();
-  } finally {
-    statement.all = all;
-    statement.get = get;
-  }
-  return rows;
-}
 
 function setup(
   options: {

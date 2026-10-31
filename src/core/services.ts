@@ -1550,7 +1550,9 @@ export async function createServices(
         tasksStop();
       };
     },
-    working: () => loadLine.active || tasks.list().some((task) => task.status === "active"),
+    // Asked on every resource tick and task change, so it never composes the
+    // whole task history to learn whether one task is active.
+    working: () => loadLine.active || tasks.hasStatus("active"),
     load: (computerId) => computerLoads.read(computerId),
     refreshLoad: (computerId) => computerLoads.refresh(computerId),
     onContact: (listener) => workDevices.onWorkDevice(listener),

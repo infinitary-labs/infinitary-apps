@@ -1,8 +1,10 @@
 import { readFileSync } from "node:fs";
 import { createRequire } from "node:module";
+import { matchesGlob } from "node:path";
 import { data, Evaluator, Lexer, Parser } from "@actions/expressions";
 import { describe, expect, it } from "vitest";
 import { GENERATED_CONTRACT, phoneDecision } from "../scripts/affected-phone";
+import { PHONE_PARTS } from "../scripts/phone-test-plan";
 import { DEVICE_GATES, NATIVE_JOB } from "../scripts/replaced-phone-runs";
 
 // INF-79 / INF-136: the captain requested a Mac mini lane for phone/shared-contract PRs.
@@ -618,10 +620,63 @@ describe("a failing phone check", () => {
         expect(kept(failed)).toEqual(
           expect.arrayContaining([
             "Keep the small native command logs",
+            "Keep the simulator logs as their own artifact",
             "Keep the pictures as their own artifact",
           ]),
         );
     }
+  });
+  // INF-2053: a full gate's twelve live simulator logs, 1.5 to 17 MB each packed, took
+  // phone-logs to 86 to 94 MB, past the app's 64 MiB artifact download, while every other
+  // file in it came to 1.5 MiB. Each upload's paths are read as upload-artifact reads them,
+  // every line a glob and a leading ! leaving out what it matches, against files real gates
+  // kept: a failed full gate's (run 41145496442) and two failed parts' log readings (run 40937645392).
+  it("keeps each part's simulator log in its own artifact and every other log with the small ones", () => {
+    const temp = "/runner/temp";
+    const uploaded = (name: string, files: string[]) => {
+      const step = (workflow.jobs[NATIVE_JOB].steps as (Step & { with?: Plain })[]).find(
+        (each) => each.with?.name === name,
+      );
+      const lines = String(step?.with?.path)
+        .split("\n")
+        .map((line) => line.trim().replace(/\$\{\{\s*runner\.temp\s*\}\}/g, temp))
+        .filter(Boolean);
+      const left = lines.filter((line) => line.startsWith("!")).map((line) => line.slice(1));
+      const taken = lines.filter((line) => !line.startsWith("!"));
+      return files
+        .filter((file) => taken.some((glob) => matchesGlob(`${temp}/phone/${file}`, glob)))
+        .filter((file) => !left.some((glob) => matchesGlob(`${temp}/phone/${file}`, glob)));
+    };
+    const simulatorLogs = (["iphone", "ipad"] as const).flatMap((device) =>
+      PHONE_PARTS.map((part) => `${device}/${part.name}/simulator-live.log`),
+    );
+    const commandLogs = [
+      "1-xcrun.log",
+      "2-node.log",
+      "6-swift.log",
+      "8-xcodebuild.log",
+      "101-plutil.log",
+      "ipad/photos-stream.log",
+      "iphone/photos-stream.log",
+      "ipad/cards/1-plutil.log",
+      "ipad/cards/14-xcodebuild.log",
+      "iphone/rest/13-xcodebuild.log",
+      "iphone/relaunch/46-xcodebuild.log",
+      "iphone/talk/keyboard-timeout-capture.log",
+      // What the app and the simulator's system logged, read after a part failed.
+      "iphone/talk/71-xcrun.log",
+      "iphone/talk/72-xcrun.log",
+      "ipad/rest/phone.xcresult/Staging/1_Test/Diagnostics/InfinitaryUITests-71653F01-C0E0-418C-AAA9-959D2FAC473C-Configuration-Test Scheme Action-Iteration-1/scheduling.log",
+    ];
+    const files = [
+      ...commandLogs,
+      ...simulatorLogs,
+      "part-times.json",
+      "ipad/rest/phone.xcresult/Info.plist",
+    ];
+    expect(uploaded("phone-logs", files)).toEqual([...commandLogs, "part-times.json"]);
+    expect(uploaded("phone-simulator-logs", files)).toEqual(simulatorLogs);
+    expect(simulatorLogs).toHaveLength(12);
   });
 });
 

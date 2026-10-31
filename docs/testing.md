@@ -28,7 +28,7 @@ They run even on a computer in CI mode, so the repeat command alone carries `INF
 
 ## Actions artifact retention
 
-Large, short-lived uploads use explicit three-day retention: `phone-results`, `phone-pictures`, `phone-logs`, `linux-packages` and the `source-desktop-*` family, including overflow-parallel journeys.
+Large, short-lived uploads use explicit three-day retention: `phone-results`, `phone-pictures`, `phone-logs`, `phone-simulator-logs`, `linux-packages` and the `source-desktop-*` family, including overflow-parallel journeys.
 This keeps recent diagnostic evidence and same-run package handoffs without accumulating weeks of bundles and binaries.
 Upload names, contents and conditions stay unchanged; phone result bundles still upload only on failure or a recording request.
 Download diagnostic evidence or export a recording within those three days if a task needs to keep it longer.
@@ -290,6 +290,7 @@ Its Linux chooser reads the complete git comparison; an unreadable comparison se
 The `native-phone` job runs the disposable `scripts/test-phone.ts --both` gate on `MAC_RUNNER`, with `mini-mac` as its fallback label, never a paid hosted Mac.
 When the job fails, or a run on request records, it keeps native result bundles, logs, published-client results and connection readings in the `phone-results` artifact.
 The same command logs also live in the smaller `phone-logs` artifact, independently of the result bundles.
+Each part's live simulator log lives in `phone-simulator-logs`, never in `phone-logs`, which keeps `phone-logs` within the app's 64 MiB artifact download.
 The pictures the journeys took live in the small `phone-pictures` artifact, exported from the result bundles by device and part.
 Unrelated pull requests have an explicitly skipped native job; a failure on either device fails the job, and on a pull request the first failed part stops the other parts.
 A newer push cancels its pull request's older phone runs whose native job has not started its device gate (`scripts/replaced-phone-runs.ts`), so it never waits behind them.

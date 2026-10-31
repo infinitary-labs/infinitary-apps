@@ -305,6 +305,9 @@ jobs:
       # Keep diagnostics independently of screenshot-heavy xcresult bundles,
       # so a failed gate can be diagnosed within the workflow reader's limits.
       # A full gate's part times ride along for the pull requests' chooser (INF-827).
+      # INF-2053: each part's live simulator log (tests/helpers/phoneLogs.ts) runs to tens of
+      # megabytes, and a full gate's twelve took these logs past the app's 64 MiB artifact
+      # download; they are kept whole in an artifact of their own below.
       - name: Keep the small native command logs
         if: always()
         uses: actions/upload-artifact@v4
@@ -313,6 +316,15 @@ jobs:
           path: |
             ${{ runner.temp }}/phone/**/*.log
             ${{ runner.temp }}/phone/part-times.json
+            !${{ runner.temp }}/phone/**/simulator-live.log
+          if-no-files-found: ignore
+          retention-days: 3
+      - name: Keep the simulator logs as their own artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: phone-simulator-logs
+          path: ${{ runner.temp }}/phone/**/simulator-live.log
           if-no-files-found: ignore
           retention-days: 3
       # INF-1062: the pictures alone, exported from each result bundle with the names the

@@ -5360,8 +5360,10 @@ export class CrewSupervisor {
 
   /**
    * A program's script ended (INF-799 piece 2). Parts it never waited for
-   * are dropped. A returned value is its typed result - checked against
-   * the program's own result shape when it declared one - recorded as its
+   * are dropped; a task filed under it that is not one of its parts is not
+   * the script's, and keeps running (INF-2037). A returned value is its
+   * typed result - checked against the program's own result shape when it
+   * declared one - recorded as its
    * report, and the program closes done. Its branch is only the part its
    * script names by label in the returned object's `branch`, whose saved
    * work a shipping task branches from; a script that names none - or an
@@ -5372,7 +5374,7 @@ export class CrewSupervisor {
   private async finishProgram(program: TaskRecord, end: ProgramEnd): Promise<void> {
     const tasks = this.options.tasks;
     for (const part of tasks.children(program.id)) {
-      if (TaskService.isClosed(part)) continue;
+      if (TaskService.isClosed(part) || !part.shape?.program_part) continue;
       await this.settle.closeTask(part.id, {
         status: "dropped",
         reason: "superseded",
@@ -7663,9 +7665,11 @@ export class CrewSupervisor {
         ...(review ? { review } : {}),
       },
     };
-    // A program's part answering its call is the program's to read (INF-799).
+    // A program's part answering its call is the program's to read (INF-799);
+    // one that names a check-back says its work still runs (INF-2037).
     const programPart =
       this.programs.awaits(task.id) &&
+      !declared?.checkBack &&
       (declared?.result !== undefined ||
         (!record?.shape?.result_schema && !declared?.wait && !declared?.needsFirstmate));
     if (this.bypassesSupervision(task.id) && !programPart) {
@@ -13131,8 +13135,9 @@ export class CrewSupervisor {
    * A report's typed result against its task's declared shape (INF-799
    * piece 1): a result that does not fit, or none where a shape stands, is
    * refused naming the first failing field, so the crewmate reports again.
-   * A report that hands the turn to the captain or the first mate is taken
-   * without one. A task with no shape keeps whatever object it was given.
+   * A report that hands the turn to the captain or the first mate, or names
+   * a check-back on work still running (INF-2037), is taken without one. A
+   * task with no shape keeps whatever object it was given.
    */
   private checkResult(
     task: TaskRuntime,
@@ -13142,9 +13147,10 @@ export class CrewSupervisor {
     const result = declared?.result;
     if (!schema) return result;
     if (result === undefined) {
-      if (declared?.wait || declared?.needsFirstmate?.trim()) return undefined;
+      if (declared?.wait || declared?.needsFirstmate?.trim() || declared?.checkBack)
+        return undefined;
       throw new Error(
-        "Report refused: result is missing. Your task declares a result shape (your brief prints it): pass result, a JSON object that fits it, or declare waiting_on_captain or needs_firstmate.",
+        "Report refused: result is missing. Your task declares a result shape (your brief prints it): pass result, a JSON object that fits it, or declare waiting_on_captain, needs_firstmate or check_back.",
       );
     }
     const refusal = resultRefusal(schema, result);

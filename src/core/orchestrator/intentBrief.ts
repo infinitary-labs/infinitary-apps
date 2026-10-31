@@ -646,7 +646,7 @@ export function renderProgramPartSection(program: { key: string; title: string }
   return [
     `Program part: this task is one part of the program ${program.key} "${program.title}", which the host runs; your report's result is what the program reads next, and nobody else is woken by it.`,
     "Commit what you change on your branch - a later part may start from your last commit - but push nothing, open no pull request and show no completion card: this part delivers its branch and its result, and the program closes it once it has read your report, keeping your work.",
-    "Run the checks that prove your part works. Show a card only when the captain must decide something before you can go on, and then report with waiting_on_captain.",
+    "Run the checks that prove your part works; while one still runs, a report with check_back is progress the program does not read. Show a card only when the captain must decide something before you can go on, and then report with waiting_on_captain.",
   ].join(" ");
 }
 

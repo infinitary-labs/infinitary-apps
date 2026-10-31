@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "id": "program-end-keeps-other-tasks",
+      "kind": "fix",
+      "area": "tasks",
+      "title": "A finished program no longer stops other tasks filed under it",
+      "body": "When a program finished, it also stopped every other task your first mate had filed under it, even work that was still going. Now it closes only its own parts. A part that says its checks are still running also stays open until it has its answer, so a loop no longer ends early on an unfinished round.",
+      "noPicture": "This changes which tasks close when a program ends, not a view or control.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

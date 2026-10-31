@@ -339,15 +339,15 @@ class RunningProgram {
 
   /**
    * Whether the part's last report answers its call, by the report sort's
-   * own rule: a result when it declared a shape, else a report that hands
-   * the turn to no one.
+   * own rule: none that names a check-back, whose work still runs; a result
+   * when it declared a shape, else a report that hands the turn to no one.
    */
   private answered(part: TaskRecord): boolean {
     const last = this.host.tasks
       .timeline(part.id)
       .filter((event) => event.kind === "report")
       .at(-1)?.data;
-    if (!last) return false;
+    if (!last || last.checkBack !== undefined) return false;
     if (part.shape?.result_schema) return last.result !== undefined;
     return last.waitingOnCaptain === undefined && last.needsFirstmate === undefined;
   }

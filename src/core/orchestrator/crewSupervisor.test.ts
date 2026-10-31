@@ -178,7 +178,7 @@ import { legacyStateOf, seedTask } from "../tasks/seedTask";
 import { recentFeed, SETTLE_FOLD, taskFeedLine } from "../tasks/taskFeed";
 import { TaskProtocol } from "../tasks/taskProtocol";
 import { queryTasks } from "../tasks/taskQuery";
-import { TaskService, TIMELINE_CAP } from "../tasks/taskService";
+import { type ReportDeclaration, TaskService, TIMELINE_CAP } from "../tasks/taskService";
 import { ForgeAuthRequiredError } from "../workspace/forgeAuth";
 import { git } from "../workspace/git";
 import { packWork, unpackWork } from "../workspace/workMove";
@@ -29128,6 +29128,68 @@ describe("programs (INF-799 piece 2)", () => {
     await tick();
     expect(spawns.count).toBe(1);
     expect(h.ops.filter((line) => line.includes(`the program on task ${h.program.key}`))).toHaveLength(1);
+  });
+
+  // INF-2037: a user's loop program ended and dropped two tasks the first
+  // mate had filed under it, which were not its parts.
+  it("drops only its own parts at its end, leaving a task filed under it running", async () => {
+    const h = await programHarness(`return await task("Cap the meter.");`, 1);
+    const part = await h.part(0);
+    const { taskId: other } = await h.supervisor.commission({
+      title: "Write the gauge's docs",
+      intent: intentOf("Document the gauge."),
+      parent: h.program.key,
+    });
+    expect(h.tasks.get(other)).toMatchObject({ parentId: h.program.id, status: "active" });
+    await h.report(0, "Capped the meter.");
+    await vi.waitFor(() => expect(h.tasks.get(h.program.id)?.status).toBe("done"), PROGRAM_WAIT);
+    expect(h.tasks.get(part.id)?.status).toBe("done");
+    expect(h.tasks.get(other)?.status).toBe("active");
+    expect(h.tasks.timeline(other).map((event) => event.text).join(" ")).not.toContain(
+      "its program ended",
+    );
+  });
+
+  // INF-2037: the user's last loop round reported that its checks were still
+  // running, with a check-back, and the app took that report as its answer.
+  it("reads a part's check-back report as progress, and its later report as the answer", async () => {
+    const ROUND = {
+      type: "object",
+      required: ["done"],
+      properties: { done: { type: "boolean" } },
+    };
+    const h = await programHarness(
+      `return await task("Run the meter's checks.", { schema: ${JSON.stringify(ROUND)} });`,
+      1,
+    );
+    const part = await h.part(0);
+    const crewmate = h.sessions[0] as FakeCrewmate;
+    /** The app wakes the part's crewmate, which reports, and its turn ends. */
+    const turn = async (text: string, declared: ReportDeclaration) => {
+      const prompts = crewmate.promptCalls.length;
+      await h.supervisor.steerCrewmate(part.id, "The app woke you: look at the meter's checks.");
+      await vi.waitFor(() => expect(crewmate.promptCalls.length).toBeGreaterThan(prompts));
+      await h.specs[0]?.onReport?.(text, undefined, declared);
+      crewmate.emit({ type: "turn_end", taskId: part.id });
+      crewmate.finishPrompt();
+      await tick();
+    };
+    const checkBack = { minutes: 10, waitingFor: "the meter's checks" };
+    // A part with a result shape sends its progress without a result.
+    await h.specs[0]?.onReport?.("The checks are still running.", undefined, { checkBack });
+    crewmate.emit({ type: "turn_end", taskId: part.id });
+    crewmate.finishPrompt();
+    await tick();
+    expect(h.tasks.get(part.id)?.status).toBe("active");
+    expect(h.tasks.get(h.program.id)?.status).toBe("open");
+    // A result beside a check-back is still progress: the work is not over.
+    await turn("Still running.", { result: { done: false }, checkBack });
+    expect(h.tasks.get(part.id)?.status).toBe("active");
+    expect(h.sorts.filter((sort) => sort.taskId === part.id)).toHaveLength(2);
+    expect(h.sorts.map((sort) => sort.rule)).not.toContain("program-part");
+    await turn("The checks passed.", { result: { done: true } });
+    await vi.waitFor(() => expect(h.tasks.get(h.program.id)?.status).toBe("done"), PROGRAM_WAIT);
+    expect(h.tasks.latestResult(h.program.id)?.value).toEqual({ done: true });
   });
 
   /** A one-part program whose part's crewmate could not open, so the part is back in the queue. */

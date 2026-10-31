@@ -77,6 +77,7 @@ The ledger records a non-premium script choice as R11; the existing closed set o
 
 A part's report that carries the answer its program waits for sorts as row 2b, `program-part` (`docs/report-sort.md`): no wake, and the host closes the part done, answered, its working copy retired with its work saved on its kept ref.
 A part that hands its turn to the captain or to the first mate sorts as any other report.
+A part's report that names a `check_back` is progress, not its answer, even beside a result: its own work still runs, so the program reads nothing and the part stays open (INF-2037); a part with a result shape may send it without a result.
 A part dropped by anyone answers `null`.
 
 ## Activity and the task board
@@ -106,7 +107,7 @@ On the captain's words it raises the bound with `update_task program_bound`, whi
 
 ## The end
 
-When the script returns, the parts it never waited for are dropped, and the returned value is the program's typed result - checked against the program's own `result_schema` when it declared one - recorded as its report; the program closes done.
+When the script returns, the parts it never waited for are dropped - only its parts: a task the first mate filed under the program that is not one of its parts keeps running - and the returned value is the program's typed result - checked against the program's own `result_schema` when it declared one - recorded as its report; the program closes done.
 Its branch is only the part its script names by label in the returned object's `branch`, such as `return { branch: "cap", ... }`: a shipping task names that part in `branch_from` to start at its saved work.
 A script that returns no `branch`, or an empty one (`null` or `""`), leaves nothing to ship and keeps its result, and the `program-ended` wake says so; the host never picks a part for it.
 A thrown error, a result that does not fit, or a non-empty `branch` naming no part that finished done closes the program dropped as failed, with the reason.

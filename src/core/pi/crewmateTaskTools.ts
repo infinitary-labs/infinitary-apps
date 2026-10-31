@@ -284,7 +284,7 @@ export const REPORT_TOOL = crewmateTool({
         {
           additionalProperties: true,
           description:
-            "Your task's typed result, a JSON object, when your brief gives a result shape: it must fit that shape, and the host refuses a report without it or with a field that does not fit, naming the first failing field, so report again with it fixed. A report with waiting_on_captain or needs_firstmate may omit it. The next task reads it as data, so put the answer itself here and keep text the plain account.",
+            "Your task's typed result, a JSON object, when your brief gives a result shape: it must fit that shape, and the host refuses a report without it or with a field that does not fit, naming the first failing field, so report again with it fixed. A report with waiting_on_captain, needs_firstmate or check_back may omit it. The next task reads it as data, so put the answer itself here and keep text the plain account.",
         },
       ),
     ),

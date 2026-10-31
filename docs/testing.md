@@ -22,7 +22,7 @@ They run even on a computer in CI mode, so the repeat command alone carries `INF
 
 - a journey: `INFINITARY_CHECKS=local pnpm exec playwright test <file> --repeat-each 10 --retries 0`, with `--no-deps` for a `renderer` or `application` spec;
 - a unit test file: ten `pnpm exec vitest run <file>` runs in a row, since Vitest has no repeat flag;
-- a phone part: three `INFINITARY_CHECKS=local pnpm test:phone --both --part <part>` runs in a row.
+- a phone part: three `INFINITARY_CHECKS=local pnpm test:phone --both --part <part>` runs in a row, stopping the loop on the first nonzero exit (`|| exit $?`); local phone gates stop at their first failed part by default and return their place after cleanup (`docs/ios.md`).
 
 `journeys.yml`, `phone.yml` and `ci.yml` add no repeat stage.
 

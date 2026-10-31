@@ -1,0 +1,8 @@
+{
+  "exclusions": [
+    {
+      "id": "phone-repeat-fail-fast",
+      "reason": "Local phone verification stops at its first failed part and returns its load-line place after cleanup; this changes the project's test script, not the app."
+    }
+  ]
+}

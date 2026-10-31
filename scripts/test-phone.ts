@@ -21,7 +21,7 @@ import { keepPhoneFailureLogs, runPhoneLog } from "./phone-failure-logs.ts";
 import { GATE_SIMULATOR, removePhoneLeftovers, SCRATCH_PREFIX } from "./phone-leftovers.ts";
 import { phoneRecording } from "./phone-recording.ts";
 import { phoneSimulator, phoneXcode } from "./phone-simulator.ts";
-import { PHONE_PARTS, type PhoneDevice, partSelection, phoneAnimationWaits, phoneExecutionArguments, phoneJobs, runDeviceLanes, testHomeKeys } from "./phone-test-plan.ts";
+import { PHONE_PARTS, type PhoneDevice, partSelection, phoneAnimationWaits, phoneExecutionArguments, phoneJobs, phoneStopsEarly, runDeviceLanes, testHomeKeys } from "./phone-test-plan.ts";
 
 // INF-800: with CI mode on, the phone check runs only through CI (docs/testing.md).
 const refusal = ciModeRefusal("phone");
@@ -41,9 +41,8 @@ const { values } = parseArgs({ options: {
   both: { type: "boolean", default: false },
   // INF-662 piece 2: the journey's parts to run (all of them unless named), and how many devices at once.
   part: { type: "string", multiple: true },
-  // INF-1343 (the captain's "Stop a failing pull request check at its first failed part"): the first
-  // failed part ends the parts still running and starts no other; a pull request's check sets it.
-  "stop-early": { type: "boolean", default: process.env.INFINITARY_PHONE_STOP_EARLY === "1" },
+  // Local repeats stop at their first failed part; CI chooses fail-fast or full discovery explicitly.
+  "stop-early": { type: "boolean", default: phoneStopsEarly(process.env) },
   simulators: { type: "string", default: "6" },
   // One part on one device: its test plan from the gate's build, and the simulator the gate started for it.
   xctestrun: { type: "string" },

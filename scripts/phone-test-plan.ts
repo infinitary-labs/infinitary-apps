@@ -2,6 +2,15 @@
 // test home. Xcode writes the scheme's PHONE_TEST_HOME, empty, into each test target's
 // environment in the built test plan (.xctestrun, format 1: one key per target).
 
+/** INF-2014's accepted fail-fast repeats: local gates stop at their first failed part so shell
+ * repeat loops return their place promptly. CI keeps full discovery unless explicitly requested;
+ * the same explicit 0 preserves deliberate full-discovery local runs. */
+export function phoneStopsEarly(env: Record<string, string | undefined>): boolean {
+  return env.INFINITARY_PHONE_STOP_EARLY === undefined
+    ? !env.CI
+    : env.INFINITARY_PHONE_STOP_EARLY === "1";
+}
+
 /** The plutil key paths of every test target's PHONE_TEST_HOME in a built test plan, read as JSON. */
 export function testHomeKeys(plan: Record<string, unknown>): string[] {
   const keys = Object.entries(plan).filter(([, target]) => {

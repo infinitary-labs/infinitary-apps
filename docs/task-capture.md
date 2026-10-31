@@ -15,7 +15,9 @@ A task of its own exists only for a genuinely standalone one-off, and only when 
 
 1. `inf:converse` opens a `captain_asks` row before the first mate turn runs (`TaskService.openAsk`, policy in `src/core/orchestrator/askCapture.ts`).
    The hint is the task the open card points at: an explicit `taskId` on the turn (the P4 record card), else the visible card's `taskId`, else the decision row a visible first mate decision card carries.
-2. The first mate's tool calls attach the current ask to the task they act on, with `attached_via = tool:<name>`:
+2. The first mate's attributing tools accept `ask_id`: a message this turn has read, or the empty string for operational work unrelated to a captain message.
+   Omission uses the latest read message for ordinary direct-request calls.
+   The host pins that selection for the action's whole asynchronous execution (`withAskAttribution` and `AskCapture.withAsk`), including pictures and complete text files carried in a brief, and attaches only that selected ask with `attached_via = tool:<name>`:
    - `spawn_crewmate` -> the new task; `steer_crewmate`, `interrupt_crewmate`, `settle_task`, `update_task` (including `start_now`) -> the named task.
    - `emit_card` with `task_id` -> that task: a note is an `answered` event carrying the body, a decision a `card_raised` event whose resolution `act()`/`close()` record as `card_resolved`.
    - `emit_card` decision without `task_id` -> a new `decision` task, open, captain gate `ref = card id`, living exactly as long as the card is on the stack: the captain's choice closes it `done/answered`, a dismiss `dropped/cancelled`, a `close_card` `dropped/superseded`, and the sweep closes one whose card is gone anyway `dropped/superseded`.
@@ -35,7 +37,8 @@ A task of its own exists only for a genuinely standalone one-off, and only when 
    Their tool calls still write the task-side records.
 
 Turn scope is the asks whose inputs the backend witnessed with `input_read`: Pi when the user message enters context, Claude at its acknowledgement.
-A captain steer opens its ask immediately, but in-flight tools keep attaching to the previously read ask until the steer is read.
+A captain steer opens its ask immediately, but an in-flight action keeps its selected source even when the steer is read.
+New actions can name any message this turn has read; unrelated operational actions select no message rather than inheriting the turn's captain words.
 An unread ask stays open without a task attachment or reply from the earlier turn, and its parked captain turn supplies its own read witness later.
 Only a turn end that names an ask closes it (`AskCapture.endTurn` takes the asks it ends), so nothing else files a message before the turn that reads it.
 
@@ -143,13 +146,13 @@ The `tasks` query by key lists them by name and copy (`pictures`).
 The crewmate that takes the task is briefed with them (`CrewSupervisor.briefPictures`): the task's own pictures, then those of the work its brief carries forward - its basis, the task it was discovered or escalated from, the attempt it replaces - each picture once by digest.
 As many as one message may carry (`TURN_IMAGES_MAX`) ride the first turn as images; the brief's pictures section, right under the captain's words, names every copy by its path in the task’s `temp/handover/` folder on the computer running it, says how many did not fit, and counts a copy that is gone instead of sending its name as if it were there.
 The brief's inbox row keeps the riding copies (`attachments-kept`), so a retried or re-presented first turn carries them again (`docs/inbox.md`, "Pictures ride the row by reference").
-`spawn_crewmate` hands the current message's pictures to the brief directly, because the brief goes out before the message attaches to the new task; a planned task reads them from its record whenever it starts, after a relaunch too.
+`spawn_crewmate` hands the action's selected message's pictures to the brief directly, because the brief goes out before the message attaches to the new task; a planned task reads them from its record whenever it starts, after a relaunch too.
 Supported text attachments also keep typed references to their complete overflow copies (name, path, size and digest) on the ask, alongside the picture references in `images_json`.
-A task reads those references from its asks and the same source tasks at dispatch; an immediate spawn also receives the current ask’s references before capture attaches it.
+A task reads those references from its asks and the same source tasks at dispatch; an immediate spawn also receives the selected ask’s references before capture attaches it.
 Both pictures and complete text files go through the existing verified hand-over writer here or the source-file order there, with private file permissions and digest-qualified names.
 A remote computer that cannot receive handed files refuses the start with an update request; a missing or changed text copy refuses the start rather than supplying only its preview.
 No helper task is filed, and unsupported files that the composer enters as ordinary path text are not attachments and are not copied.
-A `steer_crewmate` carries the current message's pictures with the first mate's guidance, kept on its row the same way; a copy that is gone leaves the guidance to go as words, since they are the first mate's own.
+A `steer_crewmate` carries the action's selected message's pictures with the first mate's guidance, kept on its row the same way; a copy that is gone leaves the guidance to go as words, since they are the first mate's own.
 A reply under a crewmate's card already goes straight to that crewmate with its copies (`docs/card-threads.md`), and a reply under a first mate card is a captain message like any other.
 
 ## What capture does not do
@@ -161,11 +164,11 @@ An open first mate decision card does not light the rail: the strip counts worki
 
 Moved verbatim from `AGENTS.md` on 2026-09-24; `AGENTS.md` keeps a one-line pointer to each.
 
-- Capture (task-system P1, design section 6, captain decision D1 - "attach first"; `docs/task-capture.md`): every `inf:converse` opens a `captain_asks` row BEFORE the turn runs (`src/core/orchestrator/askCapture.ts` over `TaskService.openAsk`); the first mate's tools attach it to the task they act on (`attached_via = tool:<name>`), and `AskCapture.endTurn` files whatever is still loose - on the hinted task (the open card's task, or the turn's `taskId`), else as a standalone `question` task in Scratch (`host:fallback`; the share of these is the attribution metric).
+- Capture (task-system P1, design section 6, captain decision D1 - "attach first"; `docs/task-capture.md`): every `inf:converse` opens a `captain_asks` row BEFORE the turn runs (`src/core/orchestrator/askCapture.ts` over `TaskService.openAsk`); the first mate's tools select the read message they address through `ask_id` (empty for unrelated operational work) and attach it to the task they act on (`attached_via = tool:<name>`), and `AskCapture.endTurn` files whatever is still loose - on the hinted task (the open card's task, or the turn's `taskId`), else as a standalone `question` task in Scratch (`host:fallback`; the share of these is the attribution metric).
   `emit_card` needs `task_id` or `standalone: true` for a note (lint refusal), a task-less decision files an open `decision` task keyed by its card id (the choice, a dismissal or a close_card closes it; nothing parks it), and the operate tools file `operation` tasks through one helper.
   `[fm-op]` wakes open no ask.
   Never add a second ask writer, and never let a first mate card with `task_id` count as the crewmate's card (`cardEmitter` in `crewSupervisor.ts` reads the emitter off the id: `card-fm-` vs `card-<taskId>-`).
 
 Catalog changes, including project settings, file their operation once in the core dispatcher.
-`appActionRecorded` attaches a first mate turn’s ask to that operation; `filingOperations` does not wrap them.
+`appActionRecorded` attaches the action's selected ask to that operation; `filingOperations` does not wrap them.
 Theme, panel arrangement and panel instructions (a `direction` scoped to the personal workspace) use `app_change`; removal stays in `personalize`.

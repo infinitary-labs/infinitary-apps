@@ -1,3 +1,4 @@
+import { AsyncLocalStorage } from "node:async_hooks";
 import { randomUUID } from "node:crypto";
 import type { AttachmentRef } from "@shared/attachments";
 import type { MessageFile } from "../overflow";
@@ -8,10 +9,11 @@ import type { TaskService } from "../tasks/taskService";
 /**
  * The capture guarantee (task-system design section 6, captain requirement
  * 1 and decision D1): every captain ask lands in a task. The row is opened
- * before the Firstmate turn runs; the agent's own tool calls attach it to
- * the task they act on (attach first - an ask about existing work lands on
- * that work); and at turn end the HOST attaches whatever is still loose:
- * to the hinted task when the open card pointed at one, else as a
+ * before the Firstmate turn runs; the agent's own tool calls select the
+ * message they address per action, or no message for unrelated operational
+ * work (attach first - an ask about existing work lands on that work).
+ * At turn end the HOST attaches whatever is still loose: to the hinted
+ * task when the open card pointed at one, else as a
  * standalone question task filed closed. Failed turns file too, apart from
  * a message whose words go back on the lane for a retry.
  *
@@ -73,8 +75,9 @@ export function askTitle(text: string, images: AskImage[] = []): string {
 }
 
 export class AskCapture {
-  /** The ask the in-flight tool calls attach to. */
+  /** The latest read ask, used only when an action omits its own selection. */
   private currentAskId: string | undefined;
+  private readonly actionAsk = new AsyncLocalStorage<{ askId: string | undefined }>();
 
   /**
    * `onAttach` hears every tool attribution, with or without an ask - a
@@ -121,8 +124,15 @@ export class AskCapture {
     this.currentAskId = askId;
   }
 
+  /** Pin an action's declared source through awaits, without changing another action's source. */
+  withAsk<T>(askId: string | undefined, action: () => T): T {
+    return this.actionAsk.run({ askId }, action);
+  }
+
   current(): AskRecord | undefined {
-    return this.currentAskId ? this.tasks.getAsk(this.currentAskId) : undefined;
+    const scope = this.actionAsk.getStore();
+    const askId = scope ? scope.askId : this.currentAskId;
+    return askId ? this.tasks.getAsk(askId) : undefined;
   }
 
   /** The copies of the current message's pictures: what a tool acting on it carries along. */
@@ -137,15 +147,15 @@ export class AskCapture {
   }
 
   /**
-   * A tool acted on a task: the current ask is about it. No-op on an
-   * operational wake (no ask) or an unknown task - the tool's own error
+   * Attach the action's selected ask, not merely the latest message in its turn.
+   * No-op for unrelated operational work or an unknown task - the tool's own error
    * already said so.
    */
   attach(taskId: string, tool: string): boolean {
     this.onAttach?.(taskId, tool);
-    if (!this.currentAskId) return false;
-    if (!this.tasks.get(taskId)) return false;
-    return this.tasks.attachAsk(this.currentAskId, taskId, `tool:${tool}` as AskAttachedVia);
+    const ask = this.current();
+    if (!ask || !this.tasks.get(taskId)) return false;
+    return this.tasks.attachAsk(ask.id, taskId, `tool:${tool}` as AskAttachedVia);
   }
 
   /**

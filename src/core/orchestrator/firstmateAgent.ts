@@ -141,6 +141,7 @@ import {
   type DeliveryRefusal,
 } from "./answerDelivery";
 import { AnswerDeliveryCheck } from "./answerDeliveryCheck";
+import { withAskAttribution } from "./askAttribution";
 import { AskCapture } from "./askCapture";
 import {
   cardEmitter,
@@ -2931,15 +2932,16 @@ export class FirstmateAgent {
     ];
     // The one retry only shows an answer: every work-changing tool answers
     // with a refusal as text, the way a graph refusal does.
-    return tools.map((tool): typeof tool =>
-      ANSWER_ONLY_REFUSED_TOOLS.has(tool.name)
-        ? {
-            ...tool,
-            run: async (params: Parameters<typeof tool.run>[0]) =>
-              this.delivery.outputOnly ? { text: ANSWER_ONLY_REFUSAL } : tool.run(params),
-          }
-        : tool,
-    );
+    return tools.map((tool) => {
+      const attributed = withAskAttribution(tool, this.asks, (id) => this.readThisTurn.has(id));
+      return {
+        ...attributed,
+        run: (params: Parameters<typeof tool.run>[0], signal?: AbortSignal) =>
+          ANSWER_ONLY_REFUSED_TOOLS.has(tool.name) && this.delivery.outputOnly
+            ? Promise.resolve({ text: ANSWER_ONLY_REFUSAL })
+            : attributed.run(params, signal),
+      };
+    });
   }
 
   /**

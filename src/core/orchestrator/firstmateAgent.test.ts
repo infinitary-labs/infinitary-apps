@@ -5977,6 +5977,74 @@ function toolsOf(specs: SessionSpec[]): Map<string, ToolHandle> {
  * the real agent over a scripted session, the real TaskService and SQLite.
  */
 describe("FirstmateAgent capture", () => {
+  // INF-2010: the captain reported INF-1956 quoting unrelated prototype work.
+  // Recorded calls: spawn the replacement, file prototype work, interrupt its
+  // predecessor, then link the replacement. The read message is only about
+  // prototypes; operational calls must carry their own attribution decision.
+  it("keeps a mixed-turn measurement card on its own request through the served tools", async () => {
+    const panelWords =
+      "a few problems with the tasks panel in my current build: 1) it sometimes scrolls itself up. this is very disruptive when i'm trying to use the \"start\" button on hovering each row. what i want is i can click start on one row, then move to another row and click start there too. but because the panel scrolls it self, it makes that difficult; 2) scrolling through the task panel is still very laggy. we recently did a performance optimization for it, but not sure if it solves this or is it just not in my build yet; 3) when i started SSHH-50 and SSHH-51, for a brief moment they went back into the backlog section, and then went into working again by themselves. somethings' wrong with the lifecycle there.";
+    const prototypeWords =
+      "the \"you asked\" section is helpful, but it's current UI looks odd. something about its font type doesn't feel quite right. have opus prototype a few different treatment for me to decide";
+    const { agent, session, specs, tasks, supervisor } = setup({
+      seedTasks: [
+        { id: "panel", title: "Fix tasks panel problems", status: "idle" },
+        { id: "prior", title: "Measure task list latency", parentId: "panel", status: "idle" },
+      ],
+    });
+    tasks.openAsk({ id: "panel-ask", text: panelWords });
+    tasks.attachAsk("panel-ask", "panel", "tool:create_task");
+    tasks.closeAsk("panel-ask", "closed");
+    await agent.converse(prototypeWords);
+    const tools = toolsOf(specs);
+    await tools.get("spawn_crewmate")?.execute("measure", {
+      title: "Measure visible-app latency",
+      goal: "Measure scrolling and typing in the visible app.",
+      user_words: panelWords,
+      parent: "panel",
+      at_time: new Date(Date.now() + 60_000).toISOString(),
+      ask_id: "",
+    });
+    const measurement = tasks.list().find((task) => task.title === "Measure visible-app latency");
+    expect(measurement).toBeDefined();
+    await tools.get("create_task")?.execute("prototype", {
+      title: 'Restyle the "You asked" line',
+      goal: "Prototype several treatments for the captain to choose.",
+      user_words: prototypeWords,
+    });
+    const prototype = tasks.list().find((task) => task.title === 'Restyle the "You asked" line');
+    expect(prototype).toBeDefined();
+    await tools.get("interrupt_crewmate")?.execute("interrupt", {
+      task_id: "prior",
+      mode: "cancel",
+      closing_sentence: "The measurement moves to its replacement.",
+      ask_id: "",
+    });
+    await tools.get("link_tasks")?.execute("replace", {
+      from: "prior",
+      to: measurement?.id,
+      type: "replaced-by",
+      ask_id: "",
+    });
+    await tools.get("emit_card")?.execute("findings", {
+      title: "Visible-app latency findings",
+      task_id: measurement?.id,
+      body: "<p>The hidden test does not establish the visible lag’s cause.</p>",
+      ask_id: "",
+    });
+    const card = supervisor
+      .cardsSnapshot()
+      .find((card) => card.title === "Visible-app latency findings");
+    expect(card?.asked?.text).toBe(panelWords);
+    expect(tasks.askAbout("prior")?.text).toBe(panelWords);
+    expect(tasks.askAbout(prototype?.id ?? "")?.text).toBe(prototypeWords);
+    const request = tasks.listAsks().find((ask) => ask.text === prototypeWords);
+    expect(request?.taskId).toBe(prototype?.id);
+    session.emitTurnEnd("Recorded both independent outcomes.");
+    session.resolveNextPrompt();
+    await tick();
+  });
+
   it("opens an ask per captain turn and lands a task_id note on that task as an answer", async () => {
     const { agent, session, specs, tasks } = setup({
       seedTasks: [{ id: "t1", title: "Add pagination", status: "running" }],

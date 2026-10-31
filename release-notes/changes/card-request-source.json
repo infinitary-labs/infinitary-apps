@@ -1,0 +1,18 @@
+{
+  "entries": [
+    {
+      "id": "card-request-source",
+      "kind": "fix",
+      "area": "cards",
+      "title": "Cards keep the request for their own task",
+      "body": "When your first mate handles a new request alongside other work, it can keep that request off unrelated tasks and their cards.",
+      "picture": {
+        "dark": "card-request-source-dark.webp",
+        "light": "card-request-source-light.webp",
+        "alt": "A latency findings card quotes the request about tasks-panel scrolling rather than an unrelated request about type."
+      },
+      "provenance": { "origin": "change", "covers": [] }
+    }
+  ],
+  "exclusions": []
+}

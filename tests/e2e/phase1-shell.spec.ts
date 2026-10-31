@@ -1,6 +1,7 @@
 import { expect, test } from "@playwright/test";
 import { reportSummary } from "../../src/shared/feed";
 import { scratchDir } from "../helpers/scratchDirs";
+import { waitForFirstmateIdle } from "./crew";
 import { DICTATION_KEY } from "./dictation";
 import { type LaunchedApp, launchApp } from "./launch";
 import { writeMockClaudeClient } from "./mockClaudeClient";
@@ -90,6 +91,11 @@ for (const theme of themes) {
 
     test("submitting a prompt heats Firstmate only while it spawns", async () => {
       const { page } = launched;
+      // The app opens with a 2.1 s greet, and a submit during an emote waits
+      // for it to end, so a short turn can finish before working ever shows
+      // (INF-2045: run alone, this test submitted mid-greet and missed it).
+      // Start from idle so the submit heats the first mate at once.
+      await waitForFirstmateIdle(page);
       const input = promptInput(page);
       await input.click();
       await input.fill("commission a crewmate: refactor the auth middleware");

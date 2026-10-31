@@ -125,6 +125,10 @@ A round is one message of the captain's and the reply line kept beside it.
   The newest round sits nearest the input and the older round above it at 50% opacity.
   The captain's words sit on the right in a soft grey bubble (`--fg-1` mixed at 8%, corners 11, 11, 4 and 11 px, padding 2 px by 10 px), `--text-sm` in `--fg-1` on a 22 px row, at most 75% of the width; a message that was only pictures reads "A picture".
   The first mate's reply sits 2 px below on the left, plain `--text-sm` in `--fg-1` on a 20 px row, after the first mate's mark, the app's 14 px hexagon in `--accent`, 8 px before the words, at most 80% of the width.
+  Newest ordinary words rest at 75% `--fg-2` mixed with 25% `--fg-3`, and the newest bubble rests at 4% `--fg-1` over transparent (INF-1968, the captain’s C selection).
+  Hovering anywhere in the message lane or focusing either reply immediately restores newest ordinary words to `--fg-1` and the newest bubble to 8%; leaving both restores the quiet treatment, with no animation or timer.
+  The mark stays cyan (`--accent`) in both states, as the captain requested; composer focus alone does not brighten the lane.
+  Older colors and their 50% opacity, working dots, Working… and problem colors do not change.
   Neither carries quotation marks.
   Each line is one line, cut with an ellipsis; resting on a cut line shows its whole text.
   The captain's words are not a control: a click does nothing, Tab passes over them, and they draw no underline or focus ring.
@@ -155,15 +159,13 @@ A round is one message of the captain's and the reply line kept beside it.
 - **What stays.**
   A message sent becomes the newest round at once (`user_turn`), the round it follows becomes the older one, and the round before that leaves; one sent while the first mate is busy keeps the working dots.
   The older round comes back as the older round on a new message even after it dissolved.
-  A completed newest reply starts 15 seconds of visible reading time, then only the older round dissolves in place over `--dur-slow` (700 ms), with no movement; the newest round stays until the next message.
-  The count starts only once that reply is on screen and the first mate is idle.
-  It pauses while the window is inactive, the message area is hidden (Settings, or a maximized card), or the pointer or a text selection is on the lines.
-  Working, a queued receipt, an unanswered message, a problem, and a line with no eligibility stay until the next message.
-  Eligibility is a typed fact on the reply (`completed` or `queued`), never a reading of its words; a line saved before that fact is unknown and stays.
-  A new reply starts a fresh 15 seconds even when the words repeat.
-  Background work does not restart that count or bring a dissolved older round back.
+  Becoming the second-to-last round starts 15 seconds of visible reading time, then only that older round dissolves in place over `--dur-slow` (700 ms), with no movement; the newest round stays until the next message.
+  The clock belongs to the older round’s arrival, not the newest reply’s completion or eligibility: work, a queued receipt, an unanswered newest message or a newest problem neither delays nor restarts it.
+  It pauses while the window is inactive, the older round is hidden (Settings or any stack entry), or the pointer, a text selection or reply focus is on the lines.
   Each window keeps its own remaining time across those temporary hides.
-  A relaunch shows the two saved rounds again and, for a known completed reply, starts a fresh 15 seconds.
+  A new message starts a fresh 15 seconds for the round that has just become second-to-last, even when its words repeat.
+  A new reply or background work does not restart that count or bring a dissolved older round back.
+  A relaunch shows the two saved rounds again and starts a fresh 15 seconds for the older round.
   Dissolving never clears a saved message or reply line, and it does not move the input: the older round's room stays reserved and empty, with no link and no dim text.
   Reduced motion cuts the dissolve to an instant and does not shorten the 15 seconds.
   Fading does not move focus, change the draft, or read the reply out again.
@@ -175,7 +177,7 @@ A round is one message of the captain's and the reply line kept beside it.
   Its body is the reply as the first mate wrote it, line breaks kept and nothing read as formatting; a reply saved before the words were kept, a typed line and a problem show the line itself, a problem in `--danger`.
   It has the Note chip and no buttons or reply row; the × or Esc closes it.
   There is one reply note: opening it again brings it to the front with the reply whose line was pressed, and it stays until it is closed, even after a new message.
-  Opening it does not change the fade.
+  Opening it hides the older round and pauses its clock; closing it resumes the remaining reading time.
   Open the first mate's reply (`firstmate.reply`, `docs/keyboard.md`) opens it from command search while a reply is saved, after the line has faded too, and comes home from Settings first.
 - **Motion.**
   A new round rises 6 px into place over `--dur-med`, the rounds that stay glide up to their new places over `--dur-med`, the newest eases to the older round's strength, and the round pushed out leaves over `--dur-fast`; the working words leave over `--dur-fast` and the reply rises 4 px in over `--dur-med`.

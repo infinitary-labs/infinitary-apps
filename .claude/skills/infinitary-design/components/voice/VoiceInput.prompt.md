@@ -46,6 +46,9 @@ The last turn (captain's Approve and build on FI3-1089's plan: dots, "Working…
 A round is the captain's words and the reply under them; the newest round sits nearest the input, and the older round 10 px above it at 50% opacity.
 The captain's words sit on the right in a soft grey bubble: `--fg-1` mixed at 8%, corners 11, 11, 4 and 11 px, padding 2 px by 10 px, `--text-sm` in `--fg-1` on a 22 px row, at most 75% of the width.
 2 px below, the reply sits on the left as plain `--text-sm` in `--fg-1` on a 20 px row, at most 80% of the width, after the first mate's mark: the app's 14 px hexagon in `--accent`, 8 px before the words.
+On desktop, newest ordinary words rest at 75% `--fg-2` mixed with 25% `--fg-3`, with a 4% `--fg-1` bubble over transparent (INF-1968’s C, the captain’s Approve and build).
+Hovering the message lane or focusing a reply immediately restores newest ordinary words to `--fg-1` and the bubble to 8%, with no animation or timer; leaving both restores rest, and composer focus alone does not brighten it.
+The captain’s written-in choice keeps the mark cyan (`--accent`) at rest and while reading; older-round colors and opacity, working dots, Working… and problem colors stay unchanged.
 A round is 44 px; the lane is 108 px with two rounds and 54 px with one.
 No quotation marks: the side says who said it.
 A message of pictures alone reads "A picture".
@@ -55,10 +58,12 @@ While the first mate works, three 4 px `--hot` dots (ember, the working color a 
 A message with no reply yet shows the dots and "Working…" in `--fg-3` in its reply's place; a failed turn's words are `--danger`.
 While a card is up only the newest round shows.
 A new round rises 6 px into place over `--dur-med`, the rounds that stay glide up over `--dur-med`, the newest eases to the older round's strength, and the round pushed out leaves over `--dur-fast`; the working words leave over `--dur-fast` and the reply rises 4 px in over `--dur-med`; under reduced motion every move is a cut and the dots stand still.
-A completed newest reply starts 15 seconds of visible reading time, then only the older round dissolves in place over `--dur-slow`, with no movement; the newest stays until the next message, and reduced motion cuts that dissolve to an instant and does not shorten the 15 seconds.
-The count pauses while the window is inactive, the message area is hidden, or the pointer or a selection rests on the lines, and a problem, a queued receipt, an unanswered message or an unknown line keeps the older round until the next message.
+On desktop, becoming second-to-last starts the older round’s 15 seconds of visible reading time, independent of the newest reply or work, then only the older round dissolves in place over `--dur-slow`; the newest stays until the next message.
+The count pauses while the window is inactive, the older round is hidden by Settings or any stack entry, or the pointer, a selection or reply focus rests on the lines.
+A new message resets the clock for its newly older round; a newest reply or work does not reset it, and reduced motion cuts the dissolve to an instant without shortening the 15 seconds.
+Phone keeps its existing completed-reply clock and appearance.
 After the dissolve the older round's room stays empty, so the input does not move, and there is no control to bring it back; the next message brings the round before it back as the older round.
-A relaunch shows the two saved rounds again and starts a fresh 15 seconds for a known completed reply.
+A relaunch shows the two saved rounds again and starts a fresh 15 seconds for the older round on desktop, or for a known completed reply on phone.
 The captain's words are not a control: the pointer stays an arrow, a click does nothing, Tab passes over them, and they draw no underline or focus ring; resting on a cut line shows its whole text.
 Each reply line, the older one included, is a button with no chrome of its own (INF-1102's plan, the captain's Approve and build): it takes the pointer, a Tab stop and the focus ring, and a click, Enter or Space opens that whole reply as a note at the front of the stack, titled with its message in quotation marks, its words as the first mate wrote them; × or Esc closes it (`docs/composer.md` "The reply note").
 

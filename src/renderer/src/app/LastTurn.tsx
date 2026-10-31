@@ -7,6 +7,7 @@ import {
   getFade,
   markReplyAnnounced,
   replyAnnounced,
+  replyAnnouncementKey,
   subscribeFade,
   syncFade,
 } from "./lastTurnFade";
@@ -24,9 +25,9 @@ import "./lastTurn.css";
  *
  * While the Firstmate works, three ember dots follow the newest reply's
  * words; a message with no reply yet shows the dots and "Working…" in its
- * place. Working never hides a reply. A completed newest reply starts 15
- * seconds of visible reading time (./lastTurnFade), after which only the
- * older round dissolves; the newest stays until the next message. Each
+ * place. Working never hides a reply. Becoming the older round starts 15
+ * seconds of visible reading time (./lastTurnFade), after which only that
+ * round dissolves, even during work; the newest stays until the next message. Each
  * reply line is a button that opens that reply whole as a note
  * (./ReplyNote, docs/composer.md "The reply note"); the captain's words
  * are plain text. Resting on a cut line shows its whole text and pauses
@@ -272,6 +273,7 @@ export function LastTurn() {
   const [outgoing, setOutgoing] = useState<Outgoing | null>(null);
   const [hovering, setHovering] = useState(false);
   const [selecting, setSelecting] = useState(false);
+  const [focused, setFocused] = useState(false);
   const [awake, setAwake] = useState(windowAwake);
   const [covered, setCovered] = useState(messageCovered);
   const shownRef = useRef<{ rounds: Shown[]; seq: number } | null>(null);
@@ -281,8 +283,10 @@ export function LastTurn() {
   const rootRef = useRef<HTMLDivElement>(null);
   /** The reply this mount read out, so a later render does not clear the live region. */
   const spoken = useRef<string | null>(null);
-  const key = fadeKey(turn, replySeq);
-  const readable = view === "home" && !busy && !hovering && !selecting && awake && !covered;
+  const key = fadeKey(turn, seq);
+  const announcement = replyAnnouncementKey(turn, replySeq);
+  const readable =
+    view === "home" && !cardUp && !hovering && !selecting && !focused && awake && !covered;
 
   // The clock lives outside this component, so Settings unmounting it only pauses.
   useEffect(() => {
@@ -290,7 +294,8 @@ export function LastTurn() {
     return () => syncFade(key, false);
   }, [key, readable]);
 
-  if (key && spoken.current !== key && !replyAnnounced(key)) spoken.current = key;
+  if (announcement && spoken.current !== announcement && !replyAnnounced(announcement))
+    spoken.current = announcement;
 
   useEffect(() => {
     if (fade.phase === "hidden") {
@@ -300,12 +305,12 @@ export function LastTurn() {
   }, [fade.phase]);
 
   useEffect(() => {
-    if (!key) return;
+    if (!announcement) return;
     // After this mount sticks. A strict-mode remount cancels the mark, so the
     // reply is still read out; a later return from Settings is not.
-    const id = window.setTimeout(() => markReplyAnnounced(key), 0);
+    const id = window.setTimeout(() => markReplyAnnounced(announcement), 0);
     return () => window.clearTimeout(id);
-  }, [key]);
+  }, [announcement]);
 
   useEffect(() => {
     const refreshAwake = () => setAwake(windowAwake());
@@ -386,6 +391,8 @@ export function LastTurn() {
       ref={rootRef}
       onPointerEnter={() => setHovering(true)}
       onPointerLeave={() => setHovering(false)}
+      onFocusCapture={() => setFocused(true)}
+      onBlurCapture={(event) => setFocused(event.currentTarget.contains(event.relatedTarget))}
     >
       {outgoing && !rounds.some((round) => round.key === outgoing.key) && (
         <div data-round={outgoing.key} data-outgoing="" style={{ top: outgoing.top }}>
@@ -400,7 +407,7 @@ export function LastTurn() {
               busy={busy}
               older={shown.older}
               fading={shown.older && fading}
-              announce={!shown.older && spoken.current === key}
+              announce={!shown.older && spoken.current === announcement}
             />
           </div>
         ),

@@ -113,6 +113,8 @@
     "src/renderer/src/cards/cardBodyWords.ts",
     "src/renderer/src/app/firstRunGateWords.ts",
     "src/renderer/src/app/lastTurnWords.ts",
+    // The last-turn journey reads the reading interval from its clock owner.
+    "src/renderer/src/app/lastTurnFade.ts",
     "src/renderer/src/personal/panelBoundaryWords.ts",
     "src/renderer/src/plugins/panelTasks.ts",
     "src/panels/knowledge/words.ts",

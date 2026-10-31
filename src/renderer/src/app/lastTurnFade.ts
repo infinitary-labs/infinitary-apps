@@ -6,7 +6,7 @@ import type { LastTurn } from "@shared/lastTurn";
  * Settings unmounts the pair and only pauses this clock.
  */
 
-/** Visible reading time before a completed reply fades. The captain's choice. */
+/** Visible reading time after a round becomes second-to-last. The captain's choice. */
 export const READING_MS = 15_000;
 
 export type FadePhase = "shown" | "fading" | "hidden";
@@ -79,11 +79,13 @@ function pause(): void {
   emit({ ...snapshot, remainingMs });
 }
 
-/**
- * The reply this window may fade, or null when the line must stay.
- * A new reply sequence starts a fresh interval even when the words repeat.
- */
-export function fadeKey(turn: LastTurn | null, replySeq: number): string | null {
+/** The older round's arrival, independent of the newest reply or its work. */
+export function fadeKey(turn: LastTurn | null, turnSeq: number): string | null {
+  return turn?.previous ? `${turnSeq}` : null;
+}
+
+/** The completed newest reply to announce, kept separate from the older-round clock. */
+export function replyAnnouncementKey(turn: LastTurn | null, replySeq: number): string | null {
   const reply = turn?.reply;
   if (!reply || reply.problem || reply.eligibility !== "completed") return null;
   return `${replySeq}\u0000${reply.text}`;
@@ -108,7 +110,7 @@ export function getFade(): FadeSnapshot {
 }
 
 /**
- * Keep the clock with the reply on screen. A new key starts 15 seconds.
+ * Keep the clock with the older round on screen. A new key starts 15 seconds.
  * `readable` false pauses the count and never restarts a fade already begun.
  * Unmounting calls this with `readable` false so Settings keeps the remainder.
  */

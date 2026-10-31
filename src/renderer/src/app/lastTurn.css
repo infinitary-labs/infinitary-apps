@@ -120,6 +120,25 @@
   border-radius: 11px 11px 4px 11px;
   background: color-mix(in srgb, var(--fg-1) 8%, transparent);
 }
+/* INF-1968's C: newest ordinary words stay quiet until the lane is read.
+   Only colors change, immediately; the cyan mark and older round stay as they were. */
+[data-last-turn-pair]:not([data-older]) {
+  --last-turn-words: color-mix(in srgb, var(--fg-2) 75%, var(--fg-3));
+  --last-turn-bubble: color-mix(in srgb, var(--fg-1) 4%, transparent);
+}
+[data-last-turn]:hover [data-last-turn-pair]:not([data-older]),
+[data-last-turn]:has(button[data-last-turn-bubble]:focus) [data-last-turn-pair]:not([data-older]) {
+  --last-turn-words: var(--fg-1);
+  --last-turn-bubble: color-mix(in srgb, var(--fg-1) 8%, transparent);
+}
+[data-last-turn-pair]:not([data-older]) [data-last-turn-bubble="you"],
+[data-last-turn-pair]:not([data-older]) [data-last-turn-bubble][data-state="reply"] {
+  color: var(--last-turn-words);
+}
+[data-last-turn-pair]:not([data-older]) [data-last-turn-bubble="you"] {
+  background: var(--last-turn-bubble);
+}
+
 /* The reply line as a button: the same line of type, with the pointer. */
 button[data-last-turn-bubble] {
   margin: 0;

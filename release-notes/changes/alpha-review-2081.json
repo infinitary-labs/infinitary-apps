@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "alpha-review-2081",
+      "reason": "Release review only: pin the published record of alpha 0.6.2-alpha.45 so the next alpha's notes check passes. No product or test changes."
+    }
+  ]
+}

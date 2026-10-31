@@ -37,6 +37,8 @@ export type AskChain = {
   /** When the newest message of the chain was sent. */
   newestAt: number;
   work: TaskRecord[];
+  /** The tasks of `work` the first mate's own tools attached the chain's messages to. */
+  acted: ReadonlySet<string>;
 };
 
 /**
@@ -107,12 +109,14 @@ export class AskEnding {
     const root = ask.continues ? (this.host.tasks.getAsk(ask.continues) ?? ask) : ask;
     const members = this.host.tasks.askMembers(root.id);
     const ids = members.map((member) => member.id);
+    const { work, acted } = this.host.tasks.askCoverage(ids);
     return {
       root,
       members,
       ids,
       newestAt: Math.max(...members.map((member) => member.at)),
-      work: this.host.tasks.askWork(ids),
+      work,
+      acted,
     };
   }
 
@@ -196,9 +200,9 @@ export class AskEnding {
    * (its card or panel), which nobody acted on since, is not its work.
    */
   ownWork(chain: AskChain): TaskRecord[] {
-    const acted = this.host.tasks.askActedOn(chain.ids);
     return chain.work.filter(
-      (task) => acted.has(task.id) || Math.max(task.createdAt, task.startedAt ?? 0) > chain.root.at,
+      (task) =>
+        chain.acted.has(task.id) || Math.max(task.createdAt, task.startedAt ?? 0) > chain.root.at,
     );
   }
 

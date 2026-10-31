@@ -1,7 +1,8 @@
 import type { Card } from "@shared/cards";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { freshDatabase } from "../../../tests/helpers/database";
 import { FIRSTMATE_RECIPIENT, InboxStore } from "../storage/inboxStore";
+import { TaskEventStore } from "../storage/taskEventStore";
 import { seedTask } from "../tasks/seedTask";
 import { TaskService } from "../tasks/taskService";
 import { ANSWER_MISSING_REF, AnswerDeliveryCheck } from "./answerDeliveryCheck";
@@ -220,5 +221,33 @@ describe("the answer-delivery check across a restart", () => {
     f.boot().endTurn({ asks: ["m1"], held: false, unread: [] });
     expect(f.tasks.getAsk("m1")?.delivery).toBe("pending");
     expect(f.retryRows()).toEqual([]);
+  });
+
+  // INF-2059 (the captain: "every several seconds it freezes for a few
+  // seconds"): the sweep after each turn read each message's tasks twice,
+  // once for its chain and again for its state.
+  it("looks up each covered message's tasks once when the sweep reads every open chain", () => {
+    const f = fixture();
+    seedTask(f.tasks, { id: "panels", title: "Build personal panels", status: "running" });
+    seedTask(f.tasks, { id: "meter", title: "Fix the meter", status: "running" });
+    const covered = (id: string, taskId: string) => {
+      f.ask(id);
+      f.tasks.attachAsk(id, taskId, "tool:spawn_crewmate");
+      f.tasks.closeAsk(id, "closed");
+      f.tasks.setAskDelivery(id, "covered");
+    };
+    covered("m1", "panels");
+    covered("m2", "panels");
+    covered("m3", "meter");
+    const lookups = vi.spyOn(TaskEventStore.prototype, "taskIdsWithRef");
+    try {
+      f.boot().sweep();
+      expect(lookups.mock.calls.map(([, askId]) => askId).sort()).toEqual(["m1", "m2", "m3"]);
+    } finally {
+      lookups.mockRestore();
+    }
+    // Their work still runs: nothing is retried or noticed.
+    expect(f.retryRows()).toEqual([]);
+    expect(f.notices).toEqual([]);
   });
 });

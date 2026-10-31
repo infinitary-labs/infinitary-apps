@@ -262,6 +262,12 @@ The optional `tasks_status` index on `status` and `tasks_closed_at` index on `cl
 They let the crew's status reads and the Tasks board read the live set and the last week without scanning a long record's older closed rows.
 An older build reads the table as before and keeps the indexes up to date on its own writes.
 
+## Task event reference index
+
+The optional `task_events_ref` index on `(kind, ref)`, over the events that carry a reference, is installed on opening the current schema, without a migration version or changed table shape.
+It lets the reads of the tasks a message or a card names (`TaskEventStore.taskIdsWithRef`, `latestTaskForRef`) seek their rows instead of walking every task event, which the first mate's open messages do before and after each of its turns (INF-2059).
+An older build opens the same database, reads the table as before and keeps the index up to date on its own writes.
+
 ## Retired task fields
 
 A work shape's `knowledge_access` and the delivery facts' `landedAt` are retired (INF-1288 piece 3): the first has granted nothing since every crewmate's knowledge became equal, and nothing read the second.

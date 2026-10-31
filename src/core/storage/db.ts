@@ -2156,12 +2156,16 @@ function migrate(db: AppDatabase, throughVersion?: number): void {
   });
   // An optional query index adds no saved-data format or migration version.
   // The task ones keep a read of the live set, or of what closed this week,
-  // from scanning a long record's closed rows on every crew event.
+  // from scanning a long record's closed rows on every crew event. The
+  // event one seeks the tasks a message or a card names (`taskIdsWithRef`,
+  // `latestTaskForRef`), which the open messages read before and after
+  // every first mate turn, instead of walking every task event (INF-2059).
   if (through === DATABASE_VERSION)
     db.exec(`
       CREATE INDEX IF NOT EXISTS usage_events_account_at ON usage_events (account_id, at);
       CREATE INDEX IF NOT EXISTS tasks_status ON tasks (status);
       CREATE INDEX IF NOT EXISTS tasks_closed_at ON tasks (closed_at);
+      CREATE INDEX IF NOT EXISTS task_events_ref ON task_events (kind, ref) WHERE ref IS NOT NULL;
     `);
   // An edit to views.ts reaches an existing database without a migration of
   // its own: the views are derived, so a drift is re-created, never altered.

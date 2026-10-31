@@ -103,8 +103,8 @@ The host reads only typed facts: the saved message, the task graph, the cards an
 What piece 2's migration adds to `captain_asks`: `followed` (every message saved from then on), `continues`, `answer_card_id` with `accepted_at`, `answered_at` and `crewmate_asked_at`.
 
 - **Its work.**
-  The tasks the message attached to, and every task that carries their work on: parts, builds on a plan (`basis`), retries, branches taken from them, replacements (`replaced-by`) and a stronger model (`escalated_to`), walked by `TaskService.askWork`.
-  The message's own work is the part of it the first mate's tools acted on for the message (`TaskService.askActedOn`), and anything filed or started after it; a task the message only pointed at, such as the card it was typed under, which nobody acted on since, is not working on it.
+  The tasks the message attached to, and every task that carries their work on: parts, builds on a plan (`basis`), retries, branches taken from them, replacements (`replaced-by`) and a stronger model (`escalated_to`), walked by `TaskService.askCoverage`, which reads each message's tasks once for the whole chain.
+  The message's own work is the part of it the first mate's tools acted on for the message (`acted` on the same read), and anything filed or started after it; a task the message only pointed at, such as the card it was typed under, which nobody acted on since, is not working on it.
 - **Joining.**
   A message about open work of an earlier message that has not ended joins it (`continues`), set once when it first attaches; the earliest is the root, and the root with every message that joined it ends together.
   An answer once recorded never moves: work linked afterwards belongs to the newer message.

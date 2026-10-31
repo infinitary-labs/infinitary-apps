@@ -1,6 +1,7 @@
 import type { Card } from "@shared/cards";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { freshDatabase } from "../../../tests/helpers/database";
+import { TaskEventStore } from "../storage/taskEventStore";
 import { seedTask } from "../tasks/seedTask";
 import { TaskService } from "../tasks/taskService";
 import { AskEnding } from "./askEnding";
@@ -242,5 +243,41 @@ describe("how a captain's message ends", () => {
     f.work("runner", "Rebuild the runner image");
     expect(f.ending.closingPlace("runner")).toEqual({ kind: "unasked" });
     expect(f.ending.crewmateStep("runner")).toBeUndefined();
+  });
+
+  // INF-2059 (the captain: "every several seconds it freezes for a few
+  // seconds"): the context build read each message's tasks three times,
+  // once for its work and twice more for what the first mate acted on.
+  it("looks up each open message's tasks once while every chain's state and own work are read", () => {
+    const f = fixture();
+    f.work("panels", "Build personal panels");
+    f.work("meter", "Fix the meter");
+    f.message("m1", "build the personal panels", "panels");
+    f.message("m2", "and give them a title", "panels", "tool:steer_crewmate");
+    f.message("m3", "fix the meter", "meter");
+    f.message("m4", "the meter is late again", "meter", "tool:steer_crewmate");
+    f.message("m5", "check the meter on the phone too", "meter", "tool:steer_crewmate");
+    const lookups = vi.spyOn(TaskEventStore.prototype, "taskIdsWithRef");
+    try {
+      const chains = f.ending.openChains();
+      const read = chains.map((chain) => ({
+        ids: chain.ids,
+        state: f.ending.state(chain),
+        own: f.ending.ownWork(chain).map((task) => task.id),
+      }));
+      expect(read).toEqual([
+        { ids: ["m1", "m2"], state: { kind: "working" }, own: ["panels"] },
+        { ids: ["m3", "m4", "m5"], state: { kind: "working" }, own: ["meter"] },
+      ]);
+      expect(lookups.mock.calls.map(([, askId]) => askId).sort()).toEqual([
+        "m1",
+        "m2",
+        "m3",
+        "m4",
+        "m5",
+      ]);
+    } finally {
+      lookups.mockRestore();
+    }
   });
 });

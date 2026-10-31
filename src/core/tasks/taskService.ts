@@ -1322,12 +1322,38 @@ export class TaskService {
    * replacement, a stronger model, a retry or a branch taken from one.
    * With `before`, work filed after that time is left out, apart from a
    * task a message attached to itself: work linked after a message was
-   * answered belongs to the newer message.
+   * answered belongs to the newer message. `acted` is the part of that
+   * work the first mate's own tools attached these messages to: work it
+   * filed, started, steered or settled for them - never the host's
+   * fallback to the task a message pointed at. Both come from one lookup
+   * per message, because the open messages are read before and after
+   * every first mate turn and each lookup reads the task events (INF-2059).
    */
-  askWork(askIds: readonly string[], before?: number): TaskRecord[] {
+  askCoverage(
+    askIds: readonly string[],
+    before?: number,
+  ): { work: TaskRecord[]; acted: Set<string> } {
+    const ids = new Set(askIds);
+    const attached = [
+      ...new Set(askIds.flatMap((askId) => this.events.taskIdsWithRef("ask", askId))),
+    ];
+    const acted = new Set(
+      attached.filter((taskId) =>
+        this.events
+          .listFor(taskId)
+          .some(
+            (event) =>
+              event.kind === "ask" &&
+              event.ref !== null &&
+              ids.has(event.ref) &&
+              typeof event.data?.via === "string" &&
+              event.data.via.startsWith("tool:"),
+          ),
+      ),
+    );
     const found = new Map<string, TaskRecord>();
-    const queue = askIds.flatMap((askId) => this.events.taskIdsWithRef("ask", askId));
-    const seeds = new Set(queue);
+    const queue = [...attached];
+    const seeds = new Set(attached);
     while (queue.length > 0) {
       const id = queue.shift() as string;
       if (found.has(id)) continue;
@@ -1337,33 +1363,7 @@ export class TaskService {
       found.set(id, record);
       queue.push(...this.workAfter(record));
     }
-    return [...found.values()];
-  }
-
-  /**
-   * The tasks the first mate's own tools attached these messages to: work
-   * it filed, started, steered or settled for them - never the host's
-   * fallback to the task a message pointed at.
-   */
-  askActedOn(askIds: readonly string[]): Set<string> {
-    const ids = new Set(askIds);
-    const acted = new Set<string>();
-    for (const askId of askIds) {
-      for (const taskId of this.events.taskIdsWithRef("ask", askId)) {
-        const tool = this.events
-          .listFor(taskId)
-          .some(
-            (event) =>
-              event.kind === "ask" &&
-              event.ref !== null &&
-              ids.has(event.ref) &&
-              typeof event.data?.via === "string" &&
-              event.data.via.startsWith("tool:"),
-          );
-        if (tool) acted.add(taskId);
-      }
-    }
-    return acted;
+    return { work: [...found.values()], acted };
   }
 
   /** The tasks that carry a task's work on: its parts, what builds on it and its handovers. */
@@ -1407,7 +1407,7 @@ export class TaskService {
    * The captain's messages whose work includes this task, newest first:
    * those attached to it or to the work it came from. A message answered
    * before the task was filed is left out unless it attached to the task
-   * itself (`askWork`'s rule, from the other side).
+   * itself (`askCoverage`'s rule, from the other side).
    */
   asksAbove(id: string): AskRecord[] {
     const seen = new Set<string>();

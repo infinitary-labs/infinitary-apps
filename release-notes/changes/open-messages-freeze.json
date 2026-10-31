@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "id": "open-messages-freeze",
+      "kind": "fix",
+      "area": "firstmate",
+      "title": "No more freezes around your first mate's replies",
+      "body": "Before and after each reply, your first mate checks which of your messages are still open. With a long history and several open messages, that check read the whole task history for every message, several times over, and the app stopped answering for several seconds with a spinning cursor. It now looks each message up directly, once.",
+      "noPicture": "This removes time the window spends busy; nothing on screen changes.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

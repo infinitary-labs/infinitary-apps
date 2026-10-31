@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "id": "phone-card-after-returning",
+      "kind": "fix",
+      "title": "A card opens after you come back to Infinitary on an iPhone or iPad",
+      "body": "When you came back to Infinitary on a busy iPhone or iPad, a card you had opened could show \"This card stopped responding\" before it had started. Infinitary now waits until the card has started before it checks it. A card that really stops answering still offers Retry.",
+      "area": "devices",
+      "noPicture": "The fix removes a wrong message; the card itself looks as it did before.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

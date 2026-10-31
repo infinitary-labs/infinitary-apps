@@ -12,6 +12,7 @@ import {
   observePhoneKeyboard,
   PHONE_DISPLAY_REQUEST_BUDGET_MS,
   PHONE_HARDWARE_KEYBOARD_STATE,
+  PHONE_TOUCH_REQUEST_BUDGET_MS,
   PhoneDisplayChanges,
   PhoneKeyRegistrations,
   PhonePickerPreviews,
@@ -1150,6 +1151,56 @@ describe("a display witness the live log dropped (INF-1799)", () => {
       reason: expect.stringContaining("the app did not read UICTContentSizeCategoryL"),
     });
     expect(answered?.at).toBeLessThan(journeyRequestEnds);
+    expect(kept.kill).toHaveBeenCalled();
+    clock.stop();
+    await observer.close();
+  });
+});
+
+// INF-2076: phone run 41129165054's iPad cards part, the join link field's tap, which the runner began at this time
+// in that virtual Mac's UTC and asked about 6.9 seconds later. Its live log held none of the tap's backboardd lines,
+// its kept log took over a minute to read, and the runner's own outcome request ended at its 10-minute cap before the
+// home's unknown reached it. INF-1927's untouched-main run 41006083356 failed the same way after the card pager's tap.
+const joinLinkTapBegan = Date.parse("2026-10-30T23:13:59.839Z");
+const joinLinkAsked = Date.parse("2026-10-30T23:14:06.750Z");
+
+describe("a tap's outcome on a host too starved to read its witness (INF-2076)", () => {
+  const clockKey = Symbol.for("infinitary.loadClock");
+  afterEach(() => {
+    delete (globalThis as { [clockKey]?: unknown })[clockKey];
+  });
+
+  it("answers unknown before the runner's outcome request ends, so the runner reads it and taps nothing more", async () => {
+    vi.useFakeTimers({ now: joinLinkAsked });
+    // That run's runner counted less than its request's 40 seconds of load time in 600 seconds of wall time, and the
+    // home's 30-second witness had not answered by then either. The worst case: the home's load clock counts nothing,
+    // as a stalled process's does, so only the wall caps end its waits.
+    const clock = startLoadClock(
+      () => Date.now(),
+      () => Number.POSITIVE_INFINITY,
+    );
+    (globalThis as { [clockKey]?: unknown })[clockKey] = clock;
+    const stream = logChild("stream");
+    const kept = logChild("hangs");
+    spawn.mockReturnValueOnce(stream).mockReturnValueOnce(kept);
+    const observer = await observePhoneKeyboard({
+      simulator: "4B7F0C2E-3D1A-4E8B-9F6C-2A5D8E1B7C30",
+      env: {},
+      evidence: scratchDir("phone-touch-starved-"),
+      children: new Set<ChildProcess>(),
+    });
+    // The home reads the tap once the runner's request reaches it, so that request ends no later than this.
+    const asked = Date.now();
+    const runnerRequestEnds = asked + waitCap(PHONE_TOUCH_REQUEST_BUDGET_MS);
+    const read = observer.touch(joinLinkTapBegan).then((outcome) => ({ outcome, at: Date.now() }));
+    await vi.advanceTimersByTimeAsync(runnerRequestEnds - Date.now());
+    const answered = await Promise.race([read, Promise.resolve(undefined)]);
+    expect(answered?.outcome).toEqual({
+      outcome: "unknown",
+      reason:
+        "No touch screen witness since 2026-10-30T23:13:59.839Z; the simulator's kept log could not be read: it took over 60 seconds",
+    });
+    expect(answered?.at).toBeLessThan(runnerRequestEnds);
     expect(kept.kill).toHaveBeenCalled();
     clock.stop();
     await observer.close();

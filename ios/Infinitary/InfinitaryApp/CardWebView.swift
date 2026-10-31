@@ -235,6 +235,7 @@ import SwiftUI
         case "pong": watch.bodyAnswered(Int(payload["seq"].numeric ?? 0)); replyHandler(true, nil)
         case "mac-only": notice = "Do this on \(session.mac.name)."; replyHandler(true, nil)
         case "mounted":
+            watch.pageMounted()
             if part == .body { facts = payload["facts"].text; preview = payload["preview"] == .bool(true) }
             replyHandler(true, nil)
         case "link":
@@ -315,23 +316,32 @@ struct CardWatchdog {
     private var answered = 0
     private var missed = 0
     private var born = false
+    private var running = false
 
     mutating func look(shown: Bool) -> Look {
         guard shown else { missed = 0; return .wait }
-        // A stall is a card that answered nothing since the last look; a slow answer is still an answer.
-        if heard >= sent || heard > answered { missed = 0 } else { missed += 1 }
-        answered = heard
-        if missed >= 3 { return .stalled }
+        // INF-2076: a loaded page that has run nothing yet is WebKit still starting it, as a page still loading is. On a
+        // busy iPad the page waited 7.9 seconds for WebKit's own GPU process before it ran the card's mount or a ping.
+        if running {
+            // A stall is a card that answered nothing since the last look; a slow answer is still an answer.
+            if heard >= sent || heard > answered { missed = 0 } else { missed += 1 }
+            answered = heard
+            if missed >= 3 { return .stalled }
+        }
         sent += 1
         return .ping(sent)
     }
 
+    /// The page ran the card's mount, which tells the host before it builds the body, so from here a card that stops
+    /// answering is the card's own, a body whose script loops as it loads included.
+    mutating func pageMounted() { running = true }
+
     /// Until the body's frame can answer, the card's page answers each ping for it. A body still loading on a busy device
     /// is never counted, and one that wedges as it loads stops its page answering too, since the frame runs on its page's thread.
-    mutating func pageAnswered(_ seq: Int) { if !born { heard = max(heard, seq) } }
+    mutating func pageAnswered(_ seq: Int) { running = true; if !born { heard = max(heard, seq) } }
 
     /// The body's bridge is listening. Its first word answers every ping before it; from here only its own pongs count.
-    mutating func bodyReady() { born = true; heard = sent }
+    mutating func bodyReady() { running = true; born = true; heard = sent }
 
     mutating func bodyAnswered(_ seq: Int) { heard = max(heard, seq) }
 }

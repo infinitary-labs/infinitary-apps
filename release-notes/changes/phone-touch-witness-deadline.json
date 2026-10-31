@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "phone-touch-witness-deadline",
+      "reason": "Internal tests: the phone check's runner answers a tap's unknown outcome before the native test's own request for it ends on a starved host; nothing in the app changes."
+    }
+  ]
+}

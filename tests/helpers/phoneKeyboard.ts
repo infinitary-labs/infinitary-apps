@@ -189,8 +189,11 @@ export class PhoneTouchOutcomes {
     for (const notify of this.listeners) notify();
   }
 
-  /** The outcome of the tap the runner began at `since`, on its own clock in milliseconds. */
-  outcome(since: number): Promise<PhoneTouchOutcome> {
+  /**
+   * The outcome of the tap the runner began at `since`, on its own clock in milliseconds, answered by `until` on the
+   * wall clock at the latest.
+   */
+  outcome(since: number, until = phoneTouchDeadline()): Promise<PhoneTouchOutcome> {
     return new Promise((resolve) => {
       let settled = false;
       let recoveryFailure = "";
@@ -199,6 +202,7 @@ export class PhoneTouchOutcomes {
         if (settled) return;
         settled = true;
         deadline.cancel();
+        clearTimeout(wall);
         this.listeners.delete(check);
         recovery.abort();
         resolve(result);
@@ -226,15 +230,14 @@ export class PhoneTouchOutcomes {
         const ignored = this.ignored.get(sender);
         if (ignored) finish({ outcome: "discarded", sender, timestamp, proof: ignored });
       };
-      // A failure deadline, not a delay: without a witness the runner sends no second tap.
-      const deadline = budgetTimer(
-        () =>
-          finish({
-            outcome: "unknown",
-            reason: `No touch screen witness since ${new Date(since).toISOString()}${recoveryFailure}`,
-          }),
-        30_000,
-      );
+      // Failure deadlines, not delays: without a witness the runner sends no second tap.
+      const unknown = () =>
+        finish({
+          outcome: "unknown",
+          reason: `No touch screen witness since ${new Date(since).toISOString()}${recoveryFailure}`,
+        });
+      const deadline = budgetTimer(unknown, 30_000);
+      const wall = setTimeout(unknown, Math.max(0, until - Date.now()));
       this.listeners.add(check);
       check();
       // INF-1917: the completed pager tap's contact was in log show but absent from log stream.
@@ -356,6 +359,19 @@ const PHONE_DISPLAY_RECOVERY_CAP_MS = 60_000;
  */
 export function phoneDisplayDeadline(start = Date.now()): number {
   return start + waitCap(PHONE_DISPLAY_REQUEST_BUDGET_MS) - 2 * PHONE_DISPLAY_RECOVERY_CAP_MS;
+}
+
+/** The budget of the runner's request for a tap's outcome, `askPhoneHome` in PhoneKeys.swift; its wall cap is waitCap's. */
+export const PHONE_TOUCH_REQUEST_BUDGET_MS = 40_000;
+
+/**
+ * INF-2076: when the witness of a tap whose outcome the runner asked for at `start` stops waiting. The witness's
+ * 30-second load budget and the runner's request both capped at 10 minutes, so on a starved host the runner's
+ * request, sent first, ended before the home's unknown reached it, and the tap failed with no answer. The kept-log
+ * read runs inside the wait, so only one minute is left, as for a display request, for the request's way there and back.
+ */
+export function phoneTouchDeadline(start = Date.now()): number {
+  return start + waitCap(PHONE_TOUCH_REQUEST_BUDGET_MS) - PHONE_DISPLAY_RECOVERY_CAP_MS;
 }
 
 /**

@@ -189,6 +189,7 @@ A native watchdog removes a body that stops answering without removing its nativ
 The watchdog counts only while the body is on screen, loaded and in front, since WebKit pauses a card behind another tab or in the background, and any answer since its last look counts, however slow.
 Its pings go to the body, which can answer only once its frame's bridge says ready; until then the card's page answers each ping for it (`CardWatchdog`).
 So a body still loading on a busy device is never counted, while one whose script loops as it loads stops its page answering too, since the frame runs on its page's thread.
+It also counts only once the page has run something, the card's mount or an answer, since a loaded page can still wait seconds for WebKit's own processes to start before it runs anything; the mount tells the host before it builds the body, so a body that loops from its first moment is still counted (INF-2076).
 A native collection timeout also releases a waiting footer or reply when the web process cannot run its own timer.
 `CardAssets` serves bundled fonts and minted picture, project-font and recording names through the pinned connection; it never opens an arbitrary URL or filesystem path.
 It asks through `ReadOnlySession.read`, which waits until the computer is in reach and asks again after a reconnect, so a card drawn from the first cards read, before the other first reads answer, still gets its pictures.
@@ -567,6 +568,7 @@ The same backboardd subscription also carries touch screen attachments, touching
 The tap stays synchronous for its callers: the helper asks the test home off the main actor and turns the run loop until the answer arrives, so each tap also waits for its backboardd line to reach the test home.
 If the live stream has no witness for the completed tap, the home reads the owned simulator's kept log once, through the same witness reader, alongside the live subscription (INF-1917).
 That read starts inside the original outcome wait rather than after its deadline, adds no time or tap, and is cancelled when the outcome settles or the observer closes.
+The witness also answers by the runner's request cap less one minute for the way there and back (`phoneTouchDeadline`), so on a host too starved for its load-clock budget to end first, the runner still reads the unknown before its own request ends (INF-2076).
 A failed read or an accessory screen without a contact or ignored-touch line remains unknown, never permission for another tap.
 A built-in touch screen was delivered, and so was a screen whose own contact backboardd reports touching, since iOS 27.0 attaches every XCTest screen as an accessory and still delivers its touches, naming the screen on each contact line.
 Any other screen whose touches backboardd reports ignoring was discarded; only that proof sends one more tap, and two ignored taps fail the part.

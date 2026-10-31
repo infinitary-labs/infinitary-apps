@@ -16,7 +16,13 @@ import { type LaunchedApp, launchApp } from "./launch";
 import { resizeWindow } from "./layout";
 import { MOCK_PROVIDER_ID, mockModelsJson } from "./mockProvider";
 import { regionShot } from "./pictures";
-import { homeReading } from "./placementCpu";
+import {
+  computerReading,
+  holdCpuBusy,
+  homeReading,
+  replayedCpu,
+  replayHelperCpuAvailable,
+} from "./placementCpu";
 import { promptInput } from "./prompt";
 import { served } from "./providerRequest";
 import { expandDock, expectRecordBody, expectRecordSized, pressRow, recordFrame } from "./rails";
@@ -30,8 +36,10 @@ const GROK = starterFor("xai", "medium");
 
 const runs: HelperRun[] = [];
 const apps: LaunchedApp[] = [];
+const restores: (() => void)[] = [];
 test.afterEach(async () => {
   await Promise.all(runs.splice(0).map((run) => run.stop()));
+  for (const restore of restores.splice(0)) restore();
   await catalogRefreshesSettled();
   for (const app of apps.splice(0)) await app.close();
 });
@@ -117,6 +125,14 @@ async function homeAndComputer() {
   });
   apps.push(app);
   const { page } = app;
+  // Both users read this one physical computer. Under a full parallel run
+  // its real processor stays busy, and Automatic rightly waits for room, so
+  // replay INF-1129's recorded available counters in the app and the helper.
+  await (await holdCpuBusy(app))();
+  await expect
+    .poll(() => homeReading(app), { timeout: 90_000 })
+    .toMatchObject({ status: "fresh", observation: { cpu: replayedCpu("available") } });
+  restores.push(replayHelperCpuAvailable());
   const invite = await page.evaluate(() => window.infinitary.devices.invite({ kind: "work" }));
   const dataDir = scratchDir("infinitary-e2e-computer-");
   // The computer is signed in to the same Grok key, its model answering at the stand-in.
@@ -152,6 +168,10 @@ async function homeAndComputer() {
   await expect
     .poll(() => started.run.state().contact, { timeout: FIRST_CONTACT_TIMEOUT_MS })
     .toBe("in-reach");
+  // The helper's own reading is the replay too, not the runner's load.
+  await expect
+    .poll(() => computerReading(app, joined.grant.deviceId), { timeout: 90_000 })
+    .toMatchObject({ status: "fresh", observation: { cpu: replayedCpu("available") } });
   return { app, page, deviceId: joined.grant.deviceId, dataDir };
 }
 

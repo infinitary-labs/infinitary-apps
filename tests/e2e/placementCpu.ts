@@ -51,10 +51,15 @@ export function replayedCpu(phase: Phase) {
 
 /** Read the real feed through its published read, also renewing sampling demand. */
 export function homeReading(app: LaunchedApp) {
-  return app.page.evaluate(async () => {
+  return computerReading(app, null);
+}
+
+/** The same feed's reading for one computer: `null` is the home, else a paired device. */
+export function computerReading(app: LaunchedApp, computerId: string | null) {
+  return app.page.evaluate(async (computerId) => {
     const view = await window.infinitary.plugins.read("computers.resources", {});
-    return view.computers.find((row) => row.computerId === null)?.reading;
-  });
+    return view.computers.find((row) => row.computerId === computerId)?.reading;
+  }, computerId);
 }
 
 /**
@@ -96,4 +101,36 @@ export async function holdCpuBusy(app: LaunchedApp): Promise<() => Promise<void>
     app.app.evaluate(() => {
       (globalThis as unknown as ReplayScope).placementCpuReplay.phase = "available";
     });
+}
+
+/**
+ * The same recorded "available" counters for an in-process helper, which
+ * samples this test process's own `node:os` (`startHelper`), so a journey
+ * that compares the home with such a helper reads neither from the runner's
+ * actual load. Call before the helper starts; the returned function restores
+ * the real counters.
+ */
+export function replayHelperCpuAvailable(): () => void {
+  const os = process.getBuiltinModule("node:os");
+  const real = os.cpus;
+  const counters: CpuInfo[] = WINDOWS.available.map(() => ({
+    model: "Recorded CPU",
+    speed: 0,
+    times: { user: 0, nice: 0, sys: 0, idle: 0, irq: 0 },
+  }));
+  const fields = ["user", "nice", "sys", "idle", "irq"] as const;
+  os.cpus = () =>
+    counters.map((cpu, index) => {
+      const delta = WINDOWS.available[index];
+      if (!delta) throw new Error("The CPU replay lost a processor");
+      for (const [fieldIndex, field] of fields.entries())
+        cpu.times[field] += delta[fieldIndex] ?? 0;
+      return { ...cpu, times: { ...cpu.times } };
+    });
+  const sync = () => process.getBuiltinModule("node:module").syncBuiltinESMExports();
+  sync();
+  return () => {
+    os.cpus = real;
+    sync();
+  };
 }

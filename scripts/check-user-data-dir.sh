@@ -29,15 +29,59 @@ EXECUTABLE="$APP_DIR/Contents/MacOS/$(/usr/libexec/PlistBuddy -c "Print :CFBundl
 FAKE_HOME="$(cd "$(mktemp -d "${TMPDIR:-/tmp}/infinitary-user-data-check.XXXXXX")" && pwd -P)"
 APP_SUPPORT="$FAKE_HOME/Library/Application Support"
 
+# The app starts in a process group of its own (job control on for its
+# start alone), so its Chromium helpers and the children its core spawns can
+# be found and stopped with it.
+set -m
 HOME="$FAKE_HOME" CFFIXED_USER_HOME="$FAKE_HOME" "$EXECUTABLE" &
 APP_PID=$!
+set +m
+
+# Whether a process is still running: a child of this script that has
+# exited stays a zombie until it is reaped, and a zombie writes nothing.
+running() {
+  local state
+  state="$(ps -o stat= -p "$1" 2>/dev/null)" && [[ "$state" != Z* ]]
+}
+
+# Every process still running that can write into the throwaway home: the
+# app's group, and any process that names the home in its arguments, as each
+# helper names userData, or in its environment, as every process the app
+# started inherits its HOME, whatever group or session it is in. The match
+# runs in this shell, where the home is no exported variable, so neither it
+# nor ps names the home itself.
+home_writers() {
+  local pid group state rest
+  while read -r pid group state rest; do
+    if [[ "$state" != Z* && ("$group" == "$APP_PID" || "$rest" == *"$FAKE_HOME"*) ]]; then
+      echo "$pid"
+    fi
+  done < <(ps -axwwEo pid=,pgid=,stat=,command=)
+}
+
+# INF-2110, as INF-1768 in check-app-launch.sh: removing the home while
+# anything still writes into it fails with "Directory not empty" after the
+# gate has passed. So the app is asked to quit and given its own lifecycle's
+# time, whatever is left is stopped outright and reaped, and the home is
+# removed only once nothing can write into it.
 cleanup() {
   kill "$APP_PID" 2>/dev/null || true
-  for _ in 1 2 3 4 5; do
-    kill -0 "$APP_PID" 2>/dev/null || break
-    sleep 1
+  for _ in $(seq 1 100); do
+    running "$APP_PID" || break
+    sleep 0.1
   done
-  kill -9 "$APP_PID" 2>/dev/null || true
+  local writers
+  for _ in $(seq 1 50); do
+    writers="$(home_writers)"
+    [[ -n "$writers" ]] || break
+    # shellcheck disable=SC2086 # one process id per word
+    kill -9 $writers 2>/dev/null || true
+    sleep 0.1
+  done
+  wait "$APP_PID" 2>/dev/null || true
+  writers="$(home_writers)"
+  [[ -z "$writers" ]] \
+    || fail "process(es) ${writers//$'\n'/ } still run with the throwaway home $FAKE_HOME after SIGKILL, so the home is left in place"
   rm -rf "$FAKE_HOME"
 }
 trap cleanup EXIT

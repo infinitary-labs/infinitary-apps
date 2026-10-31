@@ -3854,63 +3854,18 @@ describe("the signed channel workflow", () => {
       // started that were still writing into it ("Directory not empty").
       // The stand-in is Electron's own process tree with the app's quit
       // shape and a child that outlives it (tests/fixtures/launch-gate-app).
-      const fixture = join(root, "tests", "fixtures", "launch-gate-app");
-      const version: string = JSON.parse(
-        readFileSync(join(fixture, "package.json"), "utf8"),
-      ).version;
-      const app = join(scratchDir("infinitary-launch-gate-"), "Infinitary.app");
-      cpSync(join(dirname(electronBinary()), "..", ".."), app, {
-        recursive: true,
-        verbatimSymlinks: true,
-        mode: constants.COPYFILE_FICLONE,
-      });
-      cpSync(fixture, join(app, "Contents", "Resources", "app"), { recursive: true });
-      const core = version.split("-")[0];
-      execFileSync("/usr/libexec/PlistBuddy", [
-        "-c",
-        `Set :CFBundleShortVersionString ${core}`,
-        "-c",
-        `Set :CFBundleVersion ${core}`,
-        join(app, "Contents", "Info.plist"),
-      ]);
+      const { app, version } = launchGateApp();
       const profiles = scratchDir("infinitary-launch-gate-profiles-");
       const home = scratchDir("infinitary-launch-gate-home-");
       const witness = scratchDir("infinitary-launch-gate-witness-");
-      const gate = await new Promise<{ status: number | null; stdout: string; stderr: string }>(
-        (resolve, reject) => {
-          const run = spawn(join(root, "scripts", "check-app-launch.sh"), [app, version], {
-            env: {
-              ...process.env,
-              TMPDIR: profiles,
-              HOME: home,
-              CFFIXED_USER_HOME: home,
-              LAUNCH_GATE_WITNESS: witness,
-            },
-          });
-          let stdout = "";
-          let stderr = "";
-          run.stdout.on("data", (chunk) => {
-            stdout += chunk;
-          });
-          run.stderr.on("data", (chunk) => {
-            stderr += chunk;
-          });
-          run.on("error", reject);
-          run.on("close", (status) => resolve({ status, stdout, stderr }));
-        },
-      );
-      const running = readdirSync(witness)
-        .map((name) => Number(readFileSync(join(witness, name), "utf8")))
-        .filter((pid) => {
-          try {
-            process.kill(pid, 0);
-            return true;
-          } catch {
-            return false;
-          }
-        });
-      // Whatever the gate left running stops here, so a failure leaves nothing behind.
-      for (const pid of running) process.kill(pid, "SIGKILL");
+      const gate = await runGate(join(root, "scripts", "check-app-launch.sh"), [app, version], {
+        ...process.env,
+        TMPDIR: profiles,
+        HOME: home,
+        CFFIXED_USER_HOME: home,
+        LAUNCH_GATE_WITNESS: witness,
+      });
+      const running = stopLeftovers(witness);
       expect(readdirSync(witness).sort()).toEqual(["app.pid", "child.pid"]);
       expect(gate.status, gate.stderr).toBe(0);
       expect(gate.stdout).toContain(`the running app reports ${version}`);
@@ -3918,7 +3873,106 @@ describe("the signed channel workflow", () => {
       expect(readdirSync(profiles)).toEqual([]);
     },
   );
+
+  it.skipIf(process.platform !== "darwin")(
+    "stops the app and every process it started before removing the data-folder check's home",
+    { timeout: 50_000 },
+    async () => {
+      // INF-2110: alpha 0.6.2-alpha.46's Mac lane failed after the
+      // data-folder check printed OK, when removing its throwaway home raced
+      // processes the app had started that were still writing into it
+      // ("Directory not empty"). Besides the launch gate's child, the
+      // stand-in starts one in a session of its own that names the home only
+      // in its environment, as the core starts the login shell.
+      const { app } = launchGateApp();
+      const homes = scratchDir("infinitary-data-folder-homes-");
+      const witness = scratchDir("infinitary-data-folder-witness-");
+      const check = await runGate(
+        join(root, "scripts", "check-user-data-dir.sh"),
+        [app, "launch-gate-app"],
+        {
+          ...process.env,
+          TMPDIR: homes,
+          LAUNCH_GATE_WITNESS: witness,
+          LAUNCH_GATE_DETACHED_CHILD: "1",
+        },
+      );
+      const running = stopLeftovers(witness);
+      expect(readdirSync(witness).sort()).toEqual(["app.pid", "child.pid", "detached.pid"]);
+      expect(check.status, check.stderr).toBe(0);
+      expect(check.stdout).toContain("Infinitary.app opens <appData>/launch-gate-app");
+      expect(running).toEqual([]);
+      expect(readdirSync(homes)).toEqual([]);
+    },
+  );
 });
+
+/**
+ * The release gates' stand-in app (tests/fixtures/launch-gate-app) in a
+ * packaged app's shape: Electron's own bundle with the fixture as its app,
+ * both bundle version fields its version's numeric core.
+ */
+function launchGateApp(): { app: string; version: string } {
+  const fixture = join(root, "tests", "fixtures", "launch-gate-app");
+  const version: string = JSON.parse(readFileSync(join(fixture, "package.json"), "utf8")).version;
+  const app = join(scratchDir("infinitary-launch-gate-"), "Infinitary.app");
+  cpSync(join(dirname(electronBinary()), "..", ".."), app, {
+    recursive: true,
+    verbatimSymlinks: true,
+    mode: constants.COPYFILE_FICLONE,
+  });
+  cpSync(fixture, join(app, "Contents", "Resources", "app"), { recursive: true });
+  const core = version.split("-")[0];
+  execFileSync("/usr/libexec/PlistBuddy", [
+    "-c",
+    `Set :CFBundleShortVersionString ${core}`,
+    "-c",
+    `Set :CFBundleVersion ${core}`,
+    join(app, "Contents", "Info.plist"),
+  ]);
+  return { app, version };
+}
+
+/** A release gate's run to its end, with what it printed. */
+function runGate(
+  script: string,
+  args: string[],
+  env: NodeJS.ProcessEnv,
+): Promise<{ status: number | null; stdout: string; stderr: string }> {
+  return new Promise((resolve, reject) => {
+    const run = spawn(script, args, { env });
+    let stdout = "";
+    let stderr = "";
+    run.stdout.on("data", (chunk) => {
+      stdout += chunk;
+    });
+    run.stderr.on("data", (chunk) => {
+      stderr += chunk;
+    });
+    run.on("error", reject);
+    run.on("close", (status) => resolve({ status, stdout, stderr }));
+  });
+}
+
+/**
+ * The stand-in's processes a gate left running, by the process ids they
+ * wrote into the witness folder. Each is stopped here, so a failure leaves
+ * nothing behind.
+ */
+function stopLeftovers(witness: string): number[] {
+  const running = readdirSync(witness)
+    .map((name) => Number(readFileSync(join(witness, name), "utf8")))
+    .filter((pid) => {
+      try {
+        process.kill(pid, 0);
+        return true;
+      } catch {
+        return false;
+      }
+    });
+  for (const pid of running) process.kill(pid, "SIGKILL");
+  return running;
+}
 
 /** A valid checksum: the generator refuses anything but 64 lowercase hex digits. */
 const CASK_SHA256 = "ab".repeat(32);

@@ -938,6 +938,7 @@ Moved verbatim from `AGENTS.md` on 2026-09-24; `AGENTS.md` keeps a one-line poin
   `INFINITARY_USER_DATA_DIR` still wins on an unpackaged run and Chromium's `--user-data-dir` (the release launch gate's throwaway profile) is never overridden.
   Every setting reads `INFINITARY_<NAME>` before `FM3000_<NAME>` (`src/shared/envSettings.ts`), so the Infinitary name wins where both are set.
   Proof is behavioral: `tests/e2e/user-data-folder.spec.ts` for the unpackaged run, `scripts/check-user-data-dir.sh` for a built bundle (the dev bundle in `verify.yml`, the signed release in `release.yml`).
+  That check boots the bundle in a process group of its own under a throwaway home, and removes the home only once the app, its group and every process naming the home in its arguments or environment have stopped (INF-2110).
   On macOS a test pins the app's home with `CFFIXED_USER_HOME` - `HOME` alone does not move Electron's appData - and never boots into the real folders.
   Nothing migrates data between the two.
   Infinitary's folders are `infinitary` and `infinitary-dev`, and an app with Infinitary's spelling moves the older folder of its flavor into its own once, before anything opens it (`docs/saved-data-compatibility.md`, "The one-time move"); Firstmate 3000's own folders never move.

@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "id": "routing-preview-freeze",
+      "kind": "fix",
+      "area": "tasks",
+      "title": "Fewer pauses while tasks wait to start",
+      "body": "Choosing a model for a waiting task no longer reads your finished work again for every account and model. On a computer with a long history this could stop the app from responding to typing and clicks for a few seconds at a time.",
+      "noPicture": "This shortens work the app does in the background; nothing on screen changes.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

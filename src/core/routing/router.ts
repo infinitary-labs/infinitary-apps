@@ -17,7 +17,7 @@ import {
   PROMPT_CONTEXT_HEADROOM_TOKENS,
 } from "./capability";
 import type { ModelSlots } from "./modelSlots";
-import type { PlacedWorkScores, RankedModel } from "./placedWork";
+import type { PlacedWorkData, PlacedWorkScores, RankedModel } from "./placedWork";
 import { tierFor } from "./policy";
 import {
   fallbackRank,
@@ -138,7 +138,11 @@ export class Router {
        * The account of this Mac a crewmate on that model would bind now
        * (`AccountSelector.crewAccount`): the model is ranked by its reading.
        */
-      crewAccount?: (piProviderId: string, model: string) => string | undefined;
+      crewAccount?: (
+        piProviderId: string,
+        model: string,
+        placed?: PlacedWorkData,
+      ) => string | undefined;
     },
   ) {}
 
@@ -241,7 +245,8 @@ export class Router {
           pool.modelAccounts?.get(servedModelKey(model)) ??
           pool.accounts?.get(servedProviderOf(model.provider))
       : crewAccount
-        ? (model: CatalogModelView) => crewAccount(servedProviderOf(model.provider), model.id)
+        ? (model: CatalogModelView, placed?: PlacedWorkData) =>
+            crewAccount(servedProviderOf(model.provider), model.id, placed)
         : undefined;
     const catalog =
       this.options.placedWork?.catalog(

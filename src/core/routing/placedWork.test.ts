@@ -499,6 +499,53 @@ describe("INF-443 learned placed-work ranking", () => {
     w.db.close();
   });
 
+  // INF-2056 (the captain's app froze for seconds every few seconds): one
+  // preview read the finished tasks again for every account of every model.
+  it("reads placed and finished work once per routing preview, however many accounts and models", () => {
+    const w = world();
+    w.learn();
+    w.seed("running", "mini");
+    w.route("running");
+    const models = [GROK, { ...GROK, id: "grok-4.3" }, { ...GROK, id: "grok-4.1" }];
+    const rows = [row("grok", "home-grok", 84), row("grok", "mini-grok", 19)];
+    const catalog = buildModelsCatalog(models, rows, new Date(AT).toISOString(), AT);
+    const accounts = new AccountSelector({
+      decisions: w.decisions,
+      placedWork: w.scores,
+      quota: { latest: () => snapshot(AT, rows) },
+      flagshipAccountId: () => null,
+      pool: {
+        list: () =>
+          ["home-grok", "mini-grok"].map((id) => ({
+            id,
+            providerId: "xai",
+            label: id,
+            enabled: true,
+          })),
+        connectedSync: () => true,
+        withheldReason: () => undefined,
+        pinnedAccount: () => undefined,
+        markSelected: () => {},
+      },
+    });
+    const router = new Router({
+      settings: w.settings,
+      decisions: w.decisions,
+      placedWork: w.scores,
+      quota: { latestModels: () => catalog, latest: () => snapshot(AT, rows) } as QuotaService,
+      availableModels: () => models,
+      crewAccount: (provider, model, placed) => accounts.crewAccount(provider, model, placed),
+    });
+    const reads = w.scores as unknown as { work(): unknown; finished(now: number): unknown };
+    const work = vi.spyOn(reads, "work");
+    const finished = vi.spyOn(reads, "finished");
+    const preview = router.preview("Build", { kind: "implement", basis_verified: true });
+    expect(preview?.result.choice?.provider).toBe("xai");
+    expect(finished).toHaveBeenCalledTimes(1);
+    expect(work).toHaveBeenCalledTimes(1);
+    w.db.close();
+  });
+
   // INF-1714: the model is ranked by the account that will serve it, so the
   // model ranking and the account binding read the same reading.
   it("ranks a model by the account bound to serve it, and saves which one", () => {

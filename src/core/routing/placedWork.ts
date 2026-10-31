@@ -9,6 +9,7 @@ import {
 import { effectiveFromProvider, limitingResetOf, scopeAppliesToModel } from "../quota/catalog";
 import type { AppDatabase } from "../storage/db";
 import type { SettingsStore } from "../storage/settingsStore";
+import { prepared } from "../storage/statements";
 
 export type ChargeFact = {
   accountId: string;
@@ -49,6 +50,13 @@ type Work = {
   closed: number | null;
   status: string;
 };
+type Sample = { provider: string; model: string; level: string; cost: number };
+/**
+ * The placed and finished work one routing evaluation scores every account
+ * against, read once: the finished read is the slow one, and reading it
+ * again per account of every model froze the main process (INF-2056).
+ */
+export type PlacedWorkData = { work: Work[]; samples: Sample[] };
 
 /** INF-443: prices are learned locally; only ranking, never the meter, is adjusted. */
 export class PlacedWorkScores {
@@ -111,11 +119,10 @@ export class PlacedWorkScores {
       const total = totals.get(key) ?? { drop: 0, dollars: 0 };
       total.drop += Math.max(0, cycle.initial - remaining);
       // Includes the first mate's own calls, but only this sign-in's same-time usage.
-      const costs = this.db
-        .prepare(
-          "SELECT model, SUM(cost) AS cost FROM usage_events WHERE account_id = ? AND at > ? AND at <= ? AND cost > 0 GROUP BY model",
-        )
-        .all(cycle.row.accountId, cycle.start, cycle.at) as {
+      const costs = prepared(
+        this.db,
+        "SELECT model, SUM(cost) AS cost FROM usage_events WHERE account_id = ? AND at > ? AND at <= ? AND cost > 0 GROUP BY model",
+      ).all(cycle.row.accountId, cycle.start, cycle.at) as {
         model: string | null;
         cost: number;
       }[];
@@ -147,39 +154,36 @@ export class PlacedWorkScores {
 
   /** Read the newest committed route, including an Automatic start not yet attached. */
   private work(): Work[] {
-    return this.db
-      .prepare(`SELECT t.id, COALESCE(x.account_id, json_extract(d.facts_json, '$.accountId')) AS account, x.device_id AS device,
+    return prepared(
+      this.db,
+      `SELECT t.id, COALESCE(x.account_id, json_extract(d.facts_json, '$.accountId')) AS account, x.device_id AS device,
       d.provider, d.model, COALESCE(d.served, d.bucket) AS level, d.at,
       t.closed_at AS closed, t.status
       FROM tasks t JOIN decisions d ON d.task_id = t.id AND d.kind = 'routing'
       LEFT JOIN task_execution x ON x.task_id = t.id
       WHERE d.id = (SELECT MAX(n.id) FROM decisions n WHERE n.task_id = t.id AND n.kind = 'routing')
-      AND d.model IS NOT NULL`)
-      .all() as Work[];
+      AND d.model IS NOT NULL`,
+    ).all() as Work[];
   }
 
-  private finished(now: number) {
-    const samples = this.db
-      .prepare(`SELECT d.provider, d.model, COALESCE(d.served, d.bucket) AS level, SUM(u.cost) AS cost
+  private finished(now: number): Sample[] {
+    return prepared(
+      this.db,
+      `SELECT d.provider, d.model, COALESCE(d.served, d.bucket) AS level, SUM(u.cost) AS cost
       FROM tasks t JOIN decisions d ON d.task_id = t.id AND d.kind = 'routing'
       JOIN usage_events u ON u.task_id = t.id
       WHERE t.status = 'done' AND t.closed_at >= ? AND t.closed_at <= ?
       AND d.id = (SELECT MAX(n.id) FROM decisions n WHERE n.task_id = t.id AND n.kind = 'routing')
-      GROUP BY t.id HAVING COUNT(u.cost) = COUNT(*) AND SUM(u.cost) > 0`)
-      .all(now - 14 * 86400000, now) as {
-      provider: string;
-      model: string;
-      level: string;
-      cost: number;
-    }[];
-    return samples;
+      GROUP BY t.id HAVING COUNT(u.cost) = COUNT(*) AND SUM(u.cost) > 0`,
+    ).all(now - 14 * 86400000, now) as Sample[];
   }
 
-  private expected(
-    work: Work,
-    samples: ReturnType<PlacedWorkScores["finished"]>,
-    logged: number,
-  ): number | undefined {
+  /** The work to score against at `now`; one evaluation reads it once. */
+  data(now: number): PlacedWorkData {
+    return { work: this.work(), samples: this.finished(now) };
+  }
+
+  private expected(work: Work, samples: Sample[], logged: number): number | undefined {
     const provider = samples.filter((s) => s.provider === work.provider);
     for (const group of [
       provider.filter((s) => s.model === work.model && s.level === work.level),
@@ -199,7 +203,7 @@ export class PlacedWorkScores {
     row: QuotaProviderView,
     now: number,
     model?: string,
-    data = { work: this.work(), samples: this.finished(now) },
+    data: PlacedWorkData = this.data(now),
   ): {
     spendPriority?: number;
     lastsThroughReset?: boolean;
@@ -240,11 +244,10 @@ export class PlacedWorkScores {
             ![...scoped.keys()].some((scope) => scopeAppliesToModel(scope, work.model))
           )
             continue;
-          const sums = this.db
-            .prepare(
-              "SELECT SUM(cost) AS logged, SUM(CASE WHEN at <= ? THEN cost ELSE 0 END) AS metered FROM usage_events WHERE task_id = ? AND cost > 0",
-            )
-            .get(reading.at, work.id) as { logged: number | null; metered: number | null };
+          const sums = prepared(
+            this.db,
+            "SELECT SUM(cost) AS logged, SUM(CASE WHEN at <= ? THEN cost ELSE 0 END) AS metered FROM usage_events WHERE task_id = ? AND cost > 0",
+          ).get(reading.at, work.id) as { logged: number | null; metered: number | null };
           const logged = sums.logged ?? 0;
           const expected =
             work.closed !== null ? logged : this.expected(work, data.samples, logged);
@@ -294,15 +297,16 @@ export class PlacedWorkScores {
    * Each model's crew ranking facts from one account's reading: the account
    * `bound` names for it when that account has a reading - the one that will
    * serve it, so the model is ranked by the account it runs on - else the
-   * best account by the crew bands.
+   * best account by the crew bands. `bound` is handed the work read for
+   * this evaluation, so naming the account reads it no second time.
    */
   catalog(
     catalog: CatalogModelView[],
     rows: QuotaProviderView[],
     now: number,
-    bound?: (model: CatalogModelView) => string | undefined,
+    bound?: (model: CatalogModelView, data: PlacedWorkData) => string | undefined,
   ): RankedModel[] {
-    const data = { work: this.work(), samples: this.finished(now) };
+    const data = this.data(now);
     return catalog.map((model) => {
       const candidates = rows
         .filter((row) => row.provider === model.provider)
@@ -318,7 +322,7 @@ export class PlacedWorkScores {
         return (b.raw.effectivePercentRemaining ?? -1) - (a.raw.effectivePercentRemaining ?? -1);
       });
       // Only a choice among accounts asks which one would serve.
-      const boundId = candidates.length > 1 ? bound?.(model) : undefined;
+      const boundId = candidates.length > 1 ? bound?.(model, data) : undefined;
       const best =
         (boundId ? candidates.find((c) => c.row.accountId === boundId) : undefined) ??
         candidates[0];

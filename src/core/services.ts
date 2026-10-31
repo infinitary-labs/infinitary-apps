@@ -1352,7 +1352,7 @@ export async function createServices(
     slots,
     capabilityFor,
     withheldModels: () => vault.withheldModels(),
-    crewAccount: (provider, model) => accounts.crewAccount(provider, model),
+    crewAccount: (provider, model, placed) => accounts.crewAccount(provider, model, placed),
   });
   /**
    * A plan-window reading a Claude client pushed - a crewmate's, the

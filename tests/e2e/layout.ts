@@ -192,17 +192,21 @@ export type WindowSize = { width: number; height: number };
 
 /** The narrowest window the app allows, read off the window itself. */
 export function minimumWindowSize(app: ElectronApplication): Promise<WindowSize> {
-  return app.evaluate(({ BrowserWindow }) => {
-    const [window] = BrowserWindow.getAllWindows();
-    if (!window) throw new Error("App window missing");
-    const [minimumWidth = 0, minimumHeight = 0] = window.getMinimumSize();
-    const [outerWidth = 0, outerHeight = 0] = window.getSize();
-    const [contentWidth = 0, contentHeight = 0] = window.getContentSize();
-    return {
-      width: minimumWidth - (outerWidth - contentWidth),
-      height: minimumHeight - (outerHeight - contentHeight),
-    };
-  });
+  // It only reads, so `readInMain` may ask again when its answer is lost to a
+  // garbage collection in a busy main process.
+  return readInMain(() =>
+    app.evaluate(({ BrowserWindow }) => {
+      const [window] = BrowserWindow.getAllWindows();
+      if (!window) throw new Error("App window missing");
+      const [minimumWidth = 0, minimumHeight = 0] = window.getMinimumSize();
+      const [outerWidth = 0, outerHeight = 0] = window.getSize();
+      const [contentWidth = 0, contentHeight = 0] = window.getContentSize();
+      return {
+        width: minimumWidth - (outerWidth - contentWidth),
+        height: minimumHeight - (outerHeight - contentHeight),
+      };
+    }),
+  );
 }
 
 /**

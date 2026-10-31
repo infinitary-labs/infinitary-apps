@@ -11,7 +11,10 @@
         "light": "validation-gap-checklist-light.webp",
         "alt": "A decision lists four checks that cannot run as checkbox rows under Check all, with two ticked, above Accept the checked gaps and Keep all held."
       },
-      "provenance": { "origin": "change" }
+      "provenance": {
+        "origin": "change"
+      },
+      "highlight": 1
     }
   ],
   "exclusions": []

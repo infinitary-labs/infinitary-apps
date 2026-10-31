@@ -5,7 +5,7 @@
       "kind": "improvement",
       "area": "cards",
       "title": "A merge card says when a failed check fails on main too",
-      "body": "When a check fails on your pull request and main's newest run of that check failed too, the merge card goes up at once. Under its checks it names that check and says main fails it as well, so the failure is outside the change. You choose on the card: merge anyway now, or wait for main's fix, which the app watches. Otherwise a merge card waits until the pull request's own checks pass. In a project that runs no checks, the crewmate's word that there are none now registers, so the card reads no checks and your merge click goes through.",
+      "body": "Merge cards identify checks that also fail on main, so you can choose whether to merge or wait for a fix. Other merge cards wait until checks pass. Projects with no checks can still offer their merge card after the crewmate confirms that none are registered.",
       "picture": {
         "dark": "failed-check-outside-change-dark.webp",
         "light": "failed-check-outside-change-light.webp",

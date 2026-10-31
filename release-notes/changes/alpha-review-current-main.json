@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "alpha-review-current-main",
+      "reason": "Release review only: review the newly merged notes, rank the validation checklist, queued-check recovery and immediate review as highlights, and describe review behavior without internal record terminology."
+    }
+  ]
+}

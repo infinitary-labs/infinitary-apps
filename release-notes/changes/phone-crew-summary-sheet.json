@@ -11,7 +11,9 @@
         "light": "phone-crew-summary-sheet-light.webp",
         "alt": "A crewmate's summary in a sheet on iPhone: working and waiting for checks, with its task, project, what it is doing now, model, intelligence, pull request and checks, and an Open task button"
       },
-      "provenance": { "origin": "change" }
+      "provenance": {
+        "origin": "change"
+      }
     }
   ]
 }

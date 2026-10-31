@@ -9,6 +9,7 @@ import {
 import type { PlacementRequirements, PlacementSystem } from "@shared/placement";
 import type { recoveryWay, StallFact, WorkWait } from "@shared/recovery";
 import type { EffectiveTaskPolicies } from "@shared/taskPolicies";
+import type { FreezeLine } from "../freeze/freezeRecorder";
 import type { PressureTaskShare } from "../placed/resourcePressure";
 import {
   ABANDON,
@@ -343,6 +344,20 @@ export type WakeFacts =
       other?: { cpuCores?: number; residentBytes: number; processCount: number };
       processCount?: number;
       swapUsedBytes?: number;
+    }
+  | {
+      /**
+       * The freeze recorder saw the app's main thread stall (INF-2066,
+       * docs/freeze-recorder.md), and the captain's project list holds
+       * Infinitary's own source, where a fix goes. Once per call path.
+       */
+      kind: "freeze-recorded";
+      project: { id: string; name: string };
+      at: string;
+      wallMs: number;
+      cpuMs: number;
+      frames: FreezeLine["frames"];
+      uncertain?: NonNullable<FreezeLine["uncertain"]>;
     }
   | { kind: "validation-question-stale"; card: string; reason: string }
   | {
@@ -1937,6 +1952,22 @@ function scheduledSource(facts: Extract<WakeFacts, { kind: "scheduled" }>): stri
 export const CAREFUL_NOTICE =
   "Careful means an independent review before the merge. Commit any remaining work on your branch and report under the five headings without pushing. When the captain pressed Review carefully on your merge card, the app started the review of the version that card offered; otherwise the first mate starts the review of your committed version. A pull request already open stays as it is until the review passes: no push and no new story. When the first mate relays a pass on the version already pushed, emit the completion card again as soon as its checks read passed. After fixes, push once to the same pull request after the pass, and emit the completion card when the fresh checks pass.";
 
+/** Why a recorded freeze's names may not be where its time went. */
+const FREEZE_UNCERTAIN_WORDS: Record<NonNullable<FreezeLine["uncertain"]>, string> = {
+  waited:
+    "These names are uncertain: the main thread spent under half the stall on its own processor, so it was likely waiting on something outside JavaScript, such as another program or a file, and the names may come from code that ran after the wait.",
+  late: "These names are uncertain: they were read only after the stall had ended, so they may come from code that ran later.",
+};
+
+/** A recorded main thread freeze, as the first mate hears it once per call path. */
+function renderFreezeRecorded(facts: Extract<WakeFacts, { kind: "freeze-recorded" }>): string {
+  const path = facts.frames.length
+    ? `Its call path, innermost first: ${facts.frames.map((frame) => `${frame.name} (${frame.file}:${frame.line}:${frame.column})`).join(" <- ")}.`
+    : "The recorder could not read its call path.";
+  const uncertain = facts.uncertain ? ` ${FREEZE_UNCERTAIN_WORDS[facts.uncertain]}` : "";
+  return `[fm-op] the freeze recorder saw this app's main thread, which handles the captain's clicks and keys, stop answering for ${facts.wallMs} ms at ${facts.at}; ${facts.cpuMs} ms of that was the main thread's own processor time. ${path}${uncertain} The app's own source is the captain's project "${facts.project.name}" (repo_id ${facts.project.id}). Judge from the duration and the call path whether it is worth a fix; if it is, tell the captain once in plain words and offer a fix task in that project on a decision card, carrying these facts into its brief. File or start nothing before their choice. You hear this once for this call path.`;
+}
+
 /** Typed legacy count notices remain readable, but no longer ask the agents to enforce a hold. */
 function retiredCountHold(task: WakeTask): string {
   return `[fm-op] An earlier version recorded a count hold on task ${task.id} "${task.title}". Repair, re-review and rerun count holds are retired. This record places no hold and grants no authorization. Read current facts and judge the next action from your delivery guidance.`;
@@ -1946,6 +1977,8 @@ function renderFacts(facts: WakeFacts, wake: Pick<WakeEnvelope, "ways" | "text">
   switch (facts.kind) {
     case "resource-pressure":
       return `[fm-op] ${facts.label} reports ${facts.pressure} memory pressure. Nothing was killed, paused or slowed. In response to this notice, do not kill, pause or slow running work; judge these facts and steer future work instead. Current resource facts: ${JSON.stringify(facts)}. Task use is attributed only to known process trees; everything else is unclaimed, resident bytes may count shared pages more than once, and missing facts are unknown.`;
+    case "freeze-recorded":
+      return renderFreezeRecorded(facts);
     case "validation-question-stale":
       return `The captain tried to answer validation question ${facts.card}, but nothing was approved: ${facts.reason} Its unusable actions were removed. Record a fresh request with a new identity and revise that same card for the current facts; do not repeat an unknown effect.`;
     case "task-policies-changed":

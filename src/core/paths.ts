@@ -39,6 +39,11 @@ export type AppPaths = {
    */
   webSignInsDir: string;
   /**
+   * The freeze recorder's bounded record (docs/freeze-recorder.md): one
+   * JSON line per main thread stall, written only by its watchdog thread.
+   */
+  freezeRecordPath: string;
+  /**
    * The task channel's keys (docs/axi-commands.md, "The channel"): 0700,
    * one 0600 file per task granted a command, emptied each time the app
    * opens and closes the channel, written only by `AxiChannel`.
@@ -134,6 +139,7 @@ export function appPathsFor(userData: string): AppPaths {
     integrationsDir: join(userData, "integrations"),
     devicesDir: join(userData, "devices"),
     webSignInsDir: join(userData, "web-sign-ins"),
+    freezeRecordPath: join(userData, "freezes.jsonl"),
     taskChannelDir: join(userData, "task-channel"),
     phoneDoorDir: join(userData, PHONE_DOOR_FOLDER),
     piAgentDir: join(userData, "pi-agent"),

@@ -121,6 +121,12 @@ import { GitHubForge, githubApiBaseFor } from "./forge/providers/github/githubFo
 import { readGitLabOpenChanges } from "./forge/providers/gitlab/changes";
 import { gitlabApiBaseFor } from "./forge/providers/gitlab/client";
 import { GitLabForge } from "./forge/providers/gitlab/gitlabForge";
+import {
+  FreezeRecorder,
+  freezeWake,
+  infinitaryProject,
+  isFreezeRecorderEnabled,
+} from "./freeze/freezeRecorder";
 import { appLauncher } from "./helper/launcher";
 import { bootedAt } from "./helper/lock";
 import type { HostCapabilities } from "./host";
@@ -423,6 +429,8 @@ export type CoreServices = {
    * timeline; null where there is no privacy log to read.
    */
   privacyWatch: AppDataWatch | null;
+  /** The freeze recorder (docs/freeze-recorder.md); null outside an alpha build. Stopped at dispose. */
+  freezeRecorder: FreezeRecorder | null;
   /**
    * This Mac's own SSH connection to each computer it added by its address
    * (docs/devices.md, "Through the home's SSH"): the shell starts it once it
@@ -3047,6 +3055,23 @@ export async function createServices(
   });
   observePressure = (view) => resourcePressure.observe(view);
   observePressure(computerResourceFeed.snapshot());
+  // The freeze recorder (docs/freeze-recorder.md), in alpha builds only: each
+  // main thread stall goes to its record, and to the first mate only when the
+  // captain's projects hold Infinitary's own source, where a fix goes.
+  const freezeRecorder = isFreezeRecorderEnabled({
+    packaged: host.app.packaged,
+    version: host.app.version,
+    env: process.env,
+  })
+    ? new FreezeRecorder({
+        recordPath: paths.freezeRecordPath,
+        onFreeze: (line) => {
+          const project = infinitaryProject(repos.list());
+          if (project) notifyFirstmate(freezeWake(line, project), "scheduled");
+        },
+      })
+    : null;
+  freezeRecorder?.start();
   holdSeat = (accountId) => firstmate.holdSeatFor(accountId);
   scheduler.start(ticker);
   // Words from outside go from saved conversations once past their days,
@@ -3510,6 +3535,7 @@ export async function createServices(
     homeAnnouncement,
     ...(phoneDoor ? { phoneDoor } : {}),
     privacyWatch,
+    freezeRecorder,
     sshConnections,
     workDevices,
     computerResources,

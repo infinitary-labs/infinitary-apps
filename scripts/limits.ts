@@ -87,6 +87,11 @@ export const LIMITS: Record<string, Record<string, LimitEntry>> = {
   "src/core/devices/ssh.ts": {
     SOCKET_PATH_LIMIT: outside("refused in words: folder too deep for a socket; it lives under /tmp"),
   },
+  "src/core/freeze/freezeRecorder.ts": {
+    RECORD_MAX_LINES: physical(
+      "the oldest lines drop so the file on disk stays small; the newest stalls are kept",
+    ),
+  },
   "src/core/forge/api.ts": {
     API_REQUEST_MAX_BYTES: physical("refused in words naming 256 KiB; send a smaller body"),
     API_RESPONSE_MAX_BYTES: physical("refused in words naming 256 KiB; ask a smaller page with per_page"),

@@ -102,6 +102,7 @@ export async function startCore(given: HostCapabilities, options: CoreOptions = 
       services.homeAnnouncement.dispose();
       services.phoneDoor?.close();
       services.privacyWatch?.dispose();
+      services.freezeRecorder?.stop();
       // A clean quit is not a crash, however early it comes (Step 5).
       services.launchWatch.dispose();
       // Stop the Diagnostics retry and let an event already on the wire finish.

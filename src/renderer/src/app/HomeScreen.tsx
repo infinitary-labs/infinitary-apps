@@ -131,6 +131,7 @@ import { Firstmate } from "../character/Firstmate";
 import { setCharacterPaintHidden } from "../character/paintHidden";
 import { Button, CardStack, ResponseCard, VoiceInput } from "../design";
 import { type CardSize, CardSizeContext } from "../design/cards/CardSize";
+import { CardPeeks } from "../design/cards/CardStack";
 import { PictureViewer, type ViewerDemo } from "../design/cards/PictureViewer";
 import { CARD_MAX_HEIGHT, cardFloor } from "../design/cards/ResponseCard";
 import { RiskChart, riskBodyInset, riskChartBox } from "../design/cards/RiskChart";
@@ -1200,8 +1201,6 @@ function CardLayer({ onEmptied }: { onEmptied: () => void }) {
           unreadAfter={unread.after}
           width="100%"
           envelopeHeight={CARD_MAX_HEIGHT}
-          // A maximized card stands alone: the cards behind it show only on its pager.
-          peekStyle={maximized ? { display: "none" } : undefined}
           onPrev={() => page(-1)}
           onNext={() => page(1)}
           prevKeys={prevKeys}
@@ -1268,6 +1267,13 @@ function CardLayer({ onEmptied }: { onEmptied: () => void }) {
                   initial={id === bootCardId}
                   style={style}
                 >
+                  {/* The decoration is part of this drawing, not the pager's
+                      envelope. A pending body and a departing card carry their
+                      peeks through exactly the same opacity and lifetime. */}
+                  <CardPeeks
+                    count={shown.length}
+                    style={maximized ? { display: "none" } : undefined}
+                  />
                   {/* Always provided, so a prepared entry promoted in place keeps its tree. */}
                   <CardSizeContext.Provider value={isShown ? cardSize : null}>
                     <EntrySurface

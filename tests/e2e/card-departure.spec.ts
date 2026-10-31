@@ -36,6 +36,9 @@ for (const action of [
         '<p>The next preview is ready.</p><script>document.documentElement.dataset.preview = "ready";</script>',
         2,
       ],
+      // INF-1961: three cards leave a decorative peek after Close. Two
+      // cards alone cannot expose the border-first presentation defect.
+      ["last", "The final note", "<p>One more note waits behind the preview.</p>", 3],
     ] as const) {
       cards.upsert({
         id,
@@ -85,12 +88,33 @@ for (const action of [
       await page.reload();
       await expect(shownCard(page, CHOSEN_PLAN)).toBeVisible();
       await page.evaluate((title) => {
-        const probe = { held: false, gone: false };
+        const probe = { held: false, gone: false, brighterPeek: false };
         (window as typeof window & { departureProbe: typeof probe }).departureProbe = probe;
+        const opacity = (element: Element) => {
+          let value = 1;
+          for (let el: Element | null = element; el; el = el.parentElement) {
+            const style = getComputedStyle(el);
+            if (style.display === "none" || style.visibility === "hidden") return 0;
+            value *= Number(style.opacity);
+          }
+          return value;
+        };
         const tick = () => {
           const chosen = document.querySelector(`[data-response-card][aria-label="${title}"]`);
           if (!chosen) probe.gone = true;
           if (chosen && document.querySelector("[data-stage-shield]")) probe.held = true;
+          // INF-1961's natural recording exposed peeks even before outgoing
+          // opacity reached zero. Decoration cannot outshine every drawing.
+          const surface = Math.max(
+            0,
+            ...Array.from(document.querySelectorAll("[data-stage-entry]"), opacity),
+          );
+          if (
+            Array.from(document.querySelectorAll("[data-card-peek]"), opacity).some(
+              (value) => value > surface,
+            )
+          )
+            probe.brighterPeek = true;
           if (!probe.gone) requestAnimationFrame(tick);
         };
         requestAnimationFrame(tick);
@@ -136,11 +160,14 @@ for (const action of [
         .toBe(true);
       const probe = await page.evaluate(
         () =>
-          (window as typeof window & { departureProbe: { held: boolean; gone: boolean } })
-            .departureProbe,
+          (
+            window as typeof window & {
+              departureProbe: { held: boolean; gone: boolean; brighterPeek: boolean };
+            }
+          ).departureProbe,
       );
       const stack = await page.evaluate(() => window.infinitary.cards.list());
-      expect(stack.map((card) => card.id)).toEqual(["next"]);
+      expect(stack.map((card) => card.id)).toEqual(["next", "last"]);
       if (evidence) {
         mkdirSync(evidence, { recursive: true });
         await page
@@ -154,13 +181,39 @@ for (const action of [
       // A closed card is gone before the blocked successor draws. No empty
       // successor chrome replaces it while that frame still cannot load.
       expect(probe.held, "a closed card must not wait on the successor's drawing").toBe(false);
+      expect(probe.brighterPeek, "peeks must depart with the fading card, not outshine it").toBe(
+        false,
+      );
       await expect(shownEntry(page)).toHaveCSS("opacity", "0");
+      // Captain's border-first report (INF-1961): no decorative surface may
+      // remain painted after the dismissed drawing retires, while the next
+      // body is still held. Read effective opacity through its real parents.
+      expect(
+        await page.locator("[data-card-peek]").evaluateAll(
+          (peeks) =>
+            peeks.filter((peek) => {
+              for (let el: Element | null = peek; el; el = el.parentElement) {
+                const style = getComputedStyle(el);
+                if (
+                  style.display === "none" ||
+                  style.visibility === "hidden" ||
+                  Number(style.opacity) === 0
+                )
+                  return false;
+              }
+              return true;
+            }).length,
+        ),
+        "No standalone border before the successor draws",
+      ).toBe(0);
       await app.evaluate(() =>
         (
           globalThis as typeof globalThis & { departureMount: { release: () => void } }
         ).departureMount.release(),
       );
       await expect(shownCard(page, NEXT_PREVIEW)).toBeVisible();
+      // Peeks return with the drawn card; permanently hiding them is not a fix.
+      await expect(shownEntry(page).locator("[data-card-peek]")).toBeVisible();
       await expect(cardBody(page, NEXT_PREVIEW).locator("[data-preview]")).toHaveAttribute(
         "data-preview",
         "ready",

@@ -45,7 +45,6 @@ export type CardStackProps = {
   nextKeys?: { keys?: string | undefined; "aria-keyshortcuts"?: string | undefined };
   width?: number | string;
   children?: React.ReactNode;
-  peekStyle?: React.CSSProperties;
   style?: React.CSSProperties;
   /** Stage-only maximum envelope; the pager never follows measured shell height. */
   envelopeHeight?: string;
@@ -62,20 +61,9 @@ export function CardStack({
   nextKeys,
   width = CARD_STACK_WIDTH,
   children,
-  peekStyle,
   style,
   envelopeHeight,
 }: CardStackProps) {
-  const peekBase: React.CSSProperties = {
-    position: "absolute",
-    background: "var(--acrylic-bg)",
-    backdropFilter: "var(--acrylic-blur)",
-    WebkitBackdropFilter: "var(--acrylic-blur)",
-    border: "1px solid var(--acrylic-border)",
-    borderBottom: "none",
-    borderRadius: "var(--radius-l) var(--radius-l) 0 0",
-    height: 14,
-  };
   const unread = unreadBefore + unreadAfter;
   return (
     <div
@@ -91,30 +79,6 @@ export function CardStack({
           transform: envelopeHeight ? "translateY(-50%)" : undefined,
         }}
       >
-        {count > 2 && (
-          <div
-            data-card-peek=""
-            style={{
-              ...peekBase,
-              left: 2 * CARD_PEEK_STEP,
-              right: 2 * CARD_PEEK_STEP,
-              top: -2 * CARD_PEEK_STEP,
-              ...peekStyle,
-            }}
-          />
-        )}
-        {count > 1 && (
-          <div
-            data-card-peek=""
-            style={{
-              ...peekBase,
-              left: CARD_PEEK_STEP,
-              right: CARD_PEEK_STEP,
-              top: -CARD_PEEK_STEP,
-              ...peekStyle,
-            }}
-          />
-        )}
         <div style={{ position: "relative" }}>{children}</div>
       </div>
       {count > 1 && (
@@ -190,6 +154,50 @@ export function CardStack({
         </div>
       )}
     </div>
+  );
+}
+
+/** Decorative depth belongs inside the entry drawing, so it shares that
+ * drawing's readiness, opacity and departure instead of outliving it.
+ */
+export function CardPeeks({ count, style }: { count: number; style?: React.CSSProperties }) {
+  const peekBase: React.CSSProperties = {
+    position: "absolute",
+    background: "var(--acrylic-bg)",
+    backdropFilter: "var(--acrylic-blur)",
+    WebkitBackdropFilter: "var(--acrylic-blur)",
+    border: "1px solid var(--acrylic-border)",
+    borderBottom: "none",
+    borderRadius: "var(--radius-l) var(--radius-l) 0 0",
+    height: 14,
+  };
+  return (
+    <>
+      {count > 2 && (
+        <div
+          data-card-peek=""
+          style={{
+            ...peekBase,
+            left: 2 * CARD_PEEK_STEP,
+            right: 2 * CARD_PEEK_STEP,
+            top: -2 * CARD_PEEK_STEP,
+            ...style,
+          }}
+        />
+      )}
+      {count > 1 && (
+        <div
+          data-card-peek=""
+          style={{
+            ...peekBase,
+            left: CARD_PEEK_STEP,
+            right: CARD_PEEK_STEP,
+            top: -CARD_PEEK_STEP,
+            ...style,
+          }}
+        />
+      )}
+    </>
   );
 }
 

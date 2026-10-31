@@ -1,6 +1,6 @@
 Wraps the one visible ResponseCard; ghost edges peek above when more cards wait, with prev/next + "2 / 5".
 ```jsx
-<CardStack index={i} count={5} unreadBefore={0} unreadAfter={1} onPrev={p} onNext={n}><ResponseCard …/></CardStack>
+<CardStack index={i} count={5} unreadBefore={0} unreadAfter={1} onPrev={p} onNext={n}><div style={{position: 'relative'}}><CardPeeks count={5}/><ResponseCard …/></div></CardStack>
 ```
 The default stack width is 800px; each card keeps its own width while paging.
 The arrows' labels carry the keys that page the same way from anywhere in the window (`prevKeys`, `nextKeys`: `⇧⌘[` and `⇧⌘]`).
@@ -57,6 +57,8 @@ Only the shown entry supplies the turn hint.
 Any entry hides the character, crew and labels over `--dur-slow`, snapping under reduced motion; all loops keep running.
 
 Peeks use the same solid surface at full opacity: depth comes from their offset and hairline, not transparency.
+Each entry drawing owns its peeks, so they share its readiness, fade, movement and retirement; the pager's envelope paints no separate decoration.
+A closed drawing drops away immediately with its peeks even when its successor cannot draw yet.
 
 Cards sort by priority, oldest first within each band.
 Whenever the shown card leaves (close, Put aside, closing action, merge, withdrawal or task closure), reveal the first unread card in that order, else the first card - the captain's FI3-711 rule; a reply moves nothing.

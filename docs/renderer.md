@@ -119,6 +119,8 @@ Any other destination mounts afresh.
 Paging and replacements retain the leaving drawing while the selected card gets ready, with a shield taking clicks meant for the held drawing.
 A card that leaves the stack starts its drop immediately, independently of the next body’s readiness; choices, confirmed closes and withdrawals share this path.
 An unready successor stays invisible and unavailable to interaction until its body draws or its wait ends (below), then fades in; retiring a departed drawing never reveals empty chrome.
+Decorative peeks belong inside each entry drawing (`CardPeeks`), sharing its opacity, transform and lifetime; the stack envelope owns only placement and the pager, never a separately painted border.
+The incoming drawing owns the peeks' one-place lift, so a pending successor cannot leave them visible after a departure.
 The selected card is ready when its current document drew at its width (`FrameController.onDrawn`), or shows a usable error or Retry.
 A drawing reported while the frame is briefly at another width, as when a card's first height flashes a scrollbar on Linux, waits and counts once the frame is back at that width; a newer report or a new document replaces it (`cards/drawnAtWidth.ts`).
 A wait that never becomes ready ends after the frame watchdog's budget, counted from the selection, and the entry appears as it is, never counted as ready: a paging or replacement hold, and a successor whose departed drawing has already dropped away.

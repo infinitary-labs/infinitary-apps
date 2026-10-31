@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "id": "card-peek-presentation",
+      "kind": "fix",
+      "title": "Closing a card no longer leaves a border standing alone",
+      "body": "The stack edges now leave with the card you close and appear with the next card when it is ready. Close still takes effect immediately.",
+      "area": "cards",
+      "noPicture": "This change concerns the timing of dismissal and reveal; a still release picture cannot demonstrate the transition.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

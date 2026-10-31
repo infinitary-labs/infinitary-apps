@@ -163,8 +163,7 @@ export function playIncoming(
         ),
       ),
     );
-    const slot = incoming.closest("[data-card-slot]");
-    for (const peek of slot?.querySelectorAll<HTMLElement>(":scope > [data-card-peek]") ?? [])
+    for (const peek of incoming.querySelectorAll<HTMLElement>(":scope > [data-card-peek]"))
       running.push(
         whenDone(
           peek.animate([{ transform: `translateY(${-CARD_PEEK_STEP}px)` }, { transform: "none" }], {

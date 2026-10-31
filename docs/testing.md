@@ -903,6 +903,10 @@ Chromium splits the helper's command-prefix path at spaces, so the helper is sep
 The Playwright launcher explicitly enables Chromium sandboxing.
 Each job keeps the machine-readable result and any failed journey evidence; the job that runs `source-start` also keeps a 1280 by 800 Linux window picture.
 Ordinary Linux source jobs additionally keep a separate `journey-timing-Linux-<suffix>-<lane>-<shard>` artifact for 14 days, without changing those evidence bundles.
+The timing exporter comes from a separate sparse checkout pinned to `github.workflow_sha`, not the candidate's `inputs.ref`; these local reusable workflows share their caller's commit.
+An older reviewed candidate need not contain the helper, and a branch moving after dispatch cannot replace the exporter.
+The export command still runs in the candidate's directory and reads its report and git revision, without copying tooling into or modifying that checkout.
+`tests/journey-timing-workflow.test.ts` exercises the workflow's checkout inputs and export command with separate candidate and workflow commits, including failed and missing reports.
 `scripts/journey-timing.ts` projects the existing Playwright JSON into `journey-timing.json`: schema version, run and attempt, checked-out revision, platform and architecture, suite/lane/shard, requested and observed selected files, configured and actual workers, outcomes and per-file/project attempt intervals and work.
 Paths retain their directory identity, including styles files under `tests/renderer`; repeated attempts keep their retry and worker identity, without logs, steps, pictures or attachment paths.
 `elapsedMs` spans the first executed attempt's start through the last one's end in that file/project group, including intervening gaps; `workMs` sums non-skipped attempts and is not wall time.

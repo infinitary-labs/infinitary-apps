@@ -200,11 +200,24 @@ jobs:
         run: node scripts/untagged-skips.ts playwright-report/source-results.json
       # Run-alone owns a separate per-selection report; do not mistake its last
       # child process for the complete job. Ordinary lanes use their existing JSON.
+      # Local reusable workflows share their caller's commit. Keep the exporter
+      # at that immutable workflow revision, separate from inputs.ref: a reviewed
+      # release candidate can predate this helper. Its cwd and report stay the
+      # candidate's, so paths and TIMING_REVISION still describe the tested code.
+      - name: Checkout the workflow's timing exporter
+        if: always() && runner.os == 'Linux' && matrix.lane != 'alone'
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.workflow_sha }}
+          path: workflow-timing
+          sparse-checkout: scripts/journey-timing.ts
+          sparse-checkout-cone-mode: false
+          persist-credentials: false
       - name: Export compact Linux timing
         if: always() && runner.os == 'Linux' && matrix.lane != 'alone'
         run: |
           export TIMING_REVISION="$(git rev-parse HEAD)"
-          node scripts/journey-timing.ts playwright-report/source-results.json "$RUNNER_TEMP/journey-timing.json"
+          node "$GITHUB_WORKSPACE/workflow-timing/scripts/journey-timing.ts" playwright-report/source-results.json "$RUNNER_TEMP/journey-timing.json"
         env:
           SUITE: ${{ inputs.suite }}
           FILES: ${{ inputs.files }}

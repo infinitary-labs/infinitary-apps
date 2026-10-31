@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "pinned-candidate-timing",
+      "reason": "Internal workflow repair: export journey timings with workflow-owned tooling even when a reviewed release candidate predates the helper. No application behavior changes."
+    }
+  ]
+}

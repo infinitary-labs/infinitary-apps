@@ -24,6 +24,7 @@ import { openInMemoryDatabase } from "../storage/db";
 import { SettingsStore } from "../storage/settingsStore";
 import { AccountVault } from "./accountVault";
 import { CustomApiError } from "./customApiPolicy";
+import { COMPACTED_PICTURES_NOTICE } from "./customPictureContext";
 import { catalogRefreshesSettled } from "./modelRuntime";
 import { usageFromMessage } from "./piEvents";
 import { createPiSessionFactory } from "./session";
@@ -875,6 +876,7 @@ it.each(["openai-completions", "openai-responses"] as const)(
   async (protocol) => {
     const api = await fixture();
     const world = vault();
+    api.pictures();
     const draft = world.vault.customPrepare(input(api.baseUrl, protocol));
     await world.vault.customCheck(draft.draftId ?? "", "operator-model");
     const account = await world.vault.customSave(draft.draftId ?? "", false);
@@ -909,6 +911,10 @@ it.each(["openai-completions", "openai-responses"] as const)(
     session.subscribe((event) => events.push(event));
     const db = openInMemoryDatabase();
     try {
+      // INF-1996: a real compaction drops this early picture, not silent per-request trimming.
+      await session.prompt("Inspect the earlier crop.", [
+        { data: customPicture(32, 24), mimeType: "image/png" },
+      ]);
       api.tools();
       await session.prompt("Synthetic tool work");
       expect(echoed).toEqual(["session-value"]);
@@ -919,6 +925,13 @@ it.each(["openai-completions", "openai-responses"] as const)(
         (event) => event.type === "tool_end" && event.callId === "synthetic-session:compaction",
       );
       expect(compaction).toContainEqual(expect.objectContaining({ isError: false }));
+      const activeWire = JSON.stringify(api.requests.at(-1)?.body);
+      expect(activeWire).toContain(COMPACTED_PICTURES_NOTICE);
+      expect(activeWire).not.toContain("data:image/png;base64,");
+      const pictureRecord = session.recordPath();
+      if (!pictureRecord) throw new Error("Picture session record is missing");
+      const savedRecord = readFileSync(pictureRecord, "utf8");
+      expect(savedRecord).toContain('"type":"image"');
       const slots = new ModelSlots({
         settings: new SettingsStore(db),
         accounts: () => [
@@ -999,6 +1012,41 @@ it.each(["openai-completions", "openai-responses"] as const)(
         expect(request.body).not.toHaveProperty("session_id");
         if (protocol === "openai-responses") expect(request.body.store).toBe(false);
       }
+      const resume = session.resume();
+      session.dispose();
+      await session.closed();
+      api.answer("Continue the comparison.");
+      const resumed = await factory.open({
+        machine: "local",
+        owner: "picture-resume",
+        cwd: world.paths.userData,
+        binding: { backend: "pi", accountId: account.id, runtime },
+        model,
+        thinking: { level: "high" },
+        instructions: { base: "Synthetic session instruction" },
+        builtins: "none",
+        tools: [],
+        shape: {
+          turns: "rolling",
+          record: { dir: join(world.paths.userData, "sessions"), resume },
+        },
+      });
+      try {
+        await resumed.prompt("Continue after reopening.");
+        expect(JSON.stringify(api.requests.at(-1)?.body)).toContain(COMPACTED_PICTURES_NOTICE);
+      } finally {
+        resumed.dispose();
+      }
+      console.info(
+        "CUSTOM_PICTURE_FACTORY_COMPACTION",
+        JSON.stringify({
+          protocol,
+          activePictures: 0,
+          notice: COMPACTED_PICTURES_NOTICE,
+          savedPicture: true,
+          resumedNotice: true,
+        }),
+      );
       const evidence = {
         protocol,
         echoed,
@@ -1522,7 +1570,7 @@ it("ends a saved connection's fresh check when it is disconnected meanwhile", as
 });
 
 it.each(["openai-completions", "openai-responses"] as const)(
-  "a proven %s model receives attachments and only the newest two tool-picture results across five rounds",
+  "a proven %s model receives attachments and all tool-picture results across five rounds",
   async (protocol) => {
     const api = await fixture();
     api.pictures();
@@ -1575,18 +1623,16 @@ it.each(["openai-completions", "openai-responses"] as const)(
       const reply = await runtime.completeSimple(model, { messages });
       expect(reply.stopReason).toBe("stop");
       const sent = JSON.stringify(api.requests.at(-1)?.body);
-      expect(sent.split("data:image/png;base64,").length - 1).toBe(1 + 2 * Math.min(round, 2));
-      expect(sent.split("(tool image omitted: model does not support images)").length - 1).toBe(
-        Math.max(round - 2, 0),
-      );
+      expect(sent.split("data:image/png;base64,").length - 1).toBe(1 + 2 * round);
+      expect(sent.split("(tool image omitted: model does not support images)").length - 1).toBe(0);
       console.log(
         "CUSTOM_PICTURE_ROUND",
         JSON.stringify({
           protocol,
           round,
           requestBytes: Buffer.byteLength(sent),
-          pictures: 1 + 2 * Math.min(round, 2),
-          olderNotes: Math.max(round - 2, 0),
+          pictures: 1 + 2 * round,
+          olderNotes: 0,
           reply: reply.stopReason,
         }),
       );

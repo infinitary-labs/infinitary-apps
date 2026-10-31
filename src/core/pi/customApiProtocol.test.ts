@@ -1,8 +1,14 @@
+import { createHash } from "node:crypto";
 import { createServer, type IncomingMessage, type Server, type ServerResponse } from "node:http";
 import { join } from "node:path";
 import { type AssistantMessage, type Message, Type } from "@earendil-works/pi-ai";
 import { normalizeContext } from "@earendil-works/pi-ai/utils/transcript";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import {
+  beginAnthropicStream,
+  finishAnthropicStream,
+  writeAnthropicText,
+} from "../../../tests/helpers/anthropicDialect";
 import {
   chatFrame,
   customChatCall,
@@ -1052,3 +1058,99 @@ function assistant(
     },
   };
 }
+
+// INF-1996, accepted pictures=keep: three-picture comparisons must not rewrite prior requests.
+it.each(["openai-completions", "openai-responses", "anthropic-messages"] as const)(
+  "%s retains pictures and the serialized history across interleaved rereads",
+  async (protocol) => {
+    const payloads: Record<string, unknown>[] = [];
+    const base = await fixture(async (req, res) => {
+      payloads.push(await bodyOf(req));
+      if (protocol === "anthropic-messages") {
+        beginAnthropicStream(res, 30, payloads.length);
+        writeAnthropicText(res, 0, "Compare the retained pictures.");
+        finishAnthropicStream(res, "end_turn", 8);
+      } else {
+        sendCustomStream(
+          res,
+          (protocol === "openai-completions" ? customChatText : customResponsesText)(
+            "Compare the retained pictures.",
+          ),
+        );
+      }
+    });
+    const transport = client(base);
+    const images = [customPicture(24, 16), customPicture(32, 20), customPicture(40, 24)].map(
+      (data) => ({ type: "image" as const, data, mimeType: "image/png" }),
+    );
+    const picture = (index: number) => {
+      const content = images[index];
+      if (!content) throw new Error("Picture fixture is missing");
+      return content;
+    };
+    const messages: Message[] = [
+      {
+        role: "user",
+        content: [{ type: "text", text: "Compare these three crops." }, picture(0)],
+        timestamp: 0,
+      },
+    ];
+    let prior: unknown[] = [];
+    for (const [round, crop] of [0, 1, 2, 0, 2, 1].entries()) {
+      const id = `read_${round}`;
+      messages.push(
+        assistant(protocol, [
+          { type: "toolCall", id, name: "read", arguments: { path: `crop-${crop}.png` } },
+        ]),
+        {
+          role: "toolResult",
+          toolCallId: id,
+          toolName: "read",
+          content: [
+            { type: "text", text: `Crop ${crop}` },
+            picture(crop),
+            picture((crop + 1) % images.length),
+          ],
+          isError: false,
+          timestamp: round,
+        },
+      );
+      const original = JSON.stringify(messages);
+      const reply = await generateCustomApi(transport, {
+        ...generation(protocol),
+        readsPictures: true,
+        context: normalizeContext({ messages }),
+      });
+      expect(reply.stopReason).toBe("stop");
+      expect(JSON.stringify(messages)).toBe(original);
+      const payload = payloads.at(-1);
+      if (!payload) throw new Error("Outgoing picture payload is missing");
+      // Pi moves Anthropic's cache-control marker; content preceding it must not change.
+      const history = JSON.parse(
+        JSON.stringify(payload.messages ?? payload.input, (key, value) =>
+          key === "cache_control" ? undefined : value,
+        ),
+      ) as unknown[];
+      const serialized = JSON.stringify(history);
+      const pictures =
+        protocol === "anthropic-messages"
+          ? serialized.split('"type":"image"').length - 1
+          : serialized.split("data:image/png;base64,").length - 1;
+      console.info(
+        "CUSTOM_PICTURE_HISTORY",
+        JSON.stringify({
+          protocol,
+          round: round + 1,
+          pictures,
+          expected: 1 + 2 * (round + 1),
+          priorStable: JSON.stringify(history.slice(0, prior.length)) === JSON.stringify(prior),
+          digest: createHash("sha256").update(serialized).digest("hex"),
+        }),
+      );
+      expect(pictures).toBe(1 + 2 * (round + 1));
+      expect(serialized).not.toContain("tool image omitted");
+      expect(history.slice(0, prior.length)).toEqual(prior);
+      prior = history;
+    }
+  },
+);

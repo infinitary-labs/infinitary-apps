@@ -197,9 +197,9 @@ The connection sends them on every request it makes - the model list, all check 
 
 ## Protocol and storage profile
 
-Both protocols use text, pictures on models whose check proved picture input, ordinary function calls, plain system instructions, locally paired tool results and completed terminal replies.
+All three protocols use text, pictures on models whose check proved picture input, ordinary function calls, plain system instructions, locally paired tool results and completed terminal replies.
 Pi builds requests directly from its transcript and reads complete assistant messages and events, including thinking signatures, tool arguments, error flags and cache usage.
-The wrapper retains paired-history checks, safe names, checked input/output limits and the two most recent tool pictures without rewriting the saved transcript.
+The wrapper retains paired-history checks, safe names, checked input/output limits and all pictures in the current uncompacted conversation without rewriting the saved transcript.
 Chat requests usage and a terminal finish reason; Responses keeps the checked output cap.
 A narrow payload policy enforces storage consent and refuses remote continuation, background requests and service-tier changes.
 The connection transport remains the only sender and ignores Pi's URL, headers and availability marker except for validating the expected operation.
@@ -227,8 +227,13 @@ Kept turns are a quarter of the remaining history room, and never more than Pi's
 The reserve is sized so the summary is that quarter, and never more than Pi's default of 16,384.
 The refusal is worded as a context overflow Pi recognizes, so a rolling session compacts and retries the refused turn once instead of failing it, and the refused attempt never reaches the captain as a failed turn.
 Only a request the server still refuses after that compaction, or a trimmed reply whose retry fails the same way, is shown.
-Only the newest two tool results that carry pictures send them; older ones keep their text and one omission note, without changing the saved transcript.
-Pi sends the retained pictures through its own Chat and Responses builders, and writes the omission note for a text-only model.
+Pictures stay in every request until Pi's normal compaction removes their messages; a new read does not change earlier picture or text content.
+Pi sends them through its own Chat, Responses and Messages builders, and writes its capability omission note only for a text-only model.
+When compaction omits picture-bearing entries, the custom rolling session annotates the active compaction summary with an accurate loss notice: a text summary does not retain visual detail, and needed pictures must be reopened.
+The annotation is derived from Pi's saved boundary and original entries, so resume and later compactions retain the notice without editing original session records.
+It is cached per active summary rather than rescanning the saved conversation on every request.
+Compaction can rebuild the affected prompt cache; unchanged requests between those boundaries preserve prior content, excluding the provider's normal moving cache-control marker.
+Retaining pictures increases request size; the transport's encoded-picture allowance and existing request protections still apply.
 A picture-reading model also accepts pictures the captain attaches.
 
 Pi parses the event stream.

@@ -49,6 +49,7 @@ import {
 } from "../session/session";
 import { PI_CONTROL_PROFILE } from "./controlProfile";
 import { speedRuntime } from "./crewSpeed";
+import { customPictureContext } from "./customPictureContext";
 
 export { PI_CONTROL_PROFILE } from "./controlProfile";
 
@@ -406,6 +407,15 @@ class PiRollingSession implements ModelSession {
     // goes with it, ahead of the steers Pi holds (INF-1746 R43). Every other
     // steer keeps Pi's order.
     const agent = session.agent;
+    if (agent?.convertToLlm) {
+      const convert = agent.convertToLlm;
+      const pictures = customPictureContext(session.sessionManager);
+      agent.convertToLlm = (messages) =>
+        convert.call(
+          agent,
+          isCustomApiProvider(session.model?.provider ?? "") ? pictures(messages) : messages,
+        );
+    }
     const prepare = agent?.prepareNextTurnWithContext;
     if (agent && prepare)
       agent.prepareNextTurnWithContext = async (turn, signal) => {

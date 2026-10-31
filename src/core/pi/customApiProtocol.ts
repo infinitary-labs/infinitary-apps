@@ -59,7 +59,6 @@ export async function generateCustomApi(
   onEvent?: (event: AssistantMessageEvent) => void,
 ): Promise<AssistantMessage> {
   try {
-    input = { ...input, context: recentCustomPictures(input.context) };
     assertCustomGeneration(input);
     if (signal?.aborted) throw new CustomApiError("cancelled");
     return await readCustomApiWithPi(transport, input, signal, onEvent);
@@ -137,28 +136,4 @@ export function customPictures(
       ? []
       : message.content.filter((part): part is ImageContent => part.type === "image"),
   );
-}
-
-/** Preserve the transcript; only the request projection drops old tool pictures. */
-function recentCustomPictures(context: TranscriptContext): TranscriptContext {
-  let kept = 0;
-  const messages = [...context.messages]
-    .reverse()
-    .map((message) => {
-      if (
-        message.role !== "toolResult" ||
-        !message.content.some((part) => part.type === "image") ||
-        ++kept <= 2
-      )
-        return message;
-      return {
-        ...message,
-        content: [
-          ...message.content.filter((part) => part.type !== "image"),
-          { type: "text" as const, text: "(tool image omitted: model does not support images)" },
-        ],
-      };
-    })
-    .reverse();
-  return { ...context, messages };
 }

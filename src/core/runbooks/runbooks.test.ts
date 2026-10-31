@@ -30,7 +30,7 @@ function fixture() {
 describe("runbooks over existing prompt and skill doors", () => {
   it("starts every bundled runbook on and persists an individual switch without taking programs away", () => {
     const { db, books } = fixture();
-    expect(books.list()).toHaveLength(7);
+    expect(books.list()).toHaveLength(8);
     expect(books.list().every((book) => book.enabled)).toBe(true);
     const before = books.firstmate();
     books.set("sequences", false);
@@ -143,6 +143,41 @@ describe("runbooks over existing prompt and skill doors", () => {
     books.set("testing", false);
     expect(books.crew(code).text).not.toContain(passage);
   });
+  it("serves each care its own sections from one manifest with several selectors (INF-1876)", () => {
+    // Intent: the host knows the three care names as typed facts; what each
+    // asks is the care runbook's. Default and Careful share the Default
+    // section, Careful adds its own, Quick has its own sentence, and a task
+    // with no care is served none.
+    const { books, db } = fixture();
+    const section = (file: string) =>
+      (JSON.parse(readFileSync(join(root, `care/${file}`), "utf8")) as string).trim();
+    for (const backend of ["pi", "claude"]) {
+      const quick = books.crewSections({ ...code, backend, care: "quick" });
+      expect(quick).toContain(section("quick.json"));
+      expect(quick).not.toContain(section("default.json"));
+      expect(quick).not.toContain(section("careful.json"));
+      const standard = books.crewSections({ ...code, backend, care: "standard" });
+      expect(standard).toContain(section("default.json"));
+      expect(standard).not.toContain(section("quick.json"));
+      expect(standard).not.toContain(section("careful.json"));
+      const careful = books.crewSections({ ...code, backend, care: "reviewed" });
+      expect(careful).toContain(section("default.json"));
+      expect(careful).toContain(section("careful.json"));
+      expect(careful.indexOf(section("default.json"))).toBeLessThan(
+        careful.indexOf(section("careful.json")),
+      );
+      const none = books.crewSections({ ...code, backend, care: "none" });
+      for (const file of ["quick.json", "default.json", "careful.json"])
+        expect(none).not.toContain(section(file));
+    }
+    // The skill travels with the runbook, and the first mate reads its guide.
+    expect(books.crew(code).skills.map((skill) => skill.name)).toContain("careful-change");
+    expect(books.firstmate().text).toContain("# Care levels");
+    books.set("care", false);
+    const off = new Runbooks(root, new SettingsStore(db));
+    expect(off.crew({ ...code, care: "reviewed" }).text).not.toContain(section("careful.json"));
+    expect(off.crew(code).skills.map((skill) => skill.name)).not.toContain("careful-change");
+  });
   it("serves delivery judgment only to direct-pr crew, and its switch removes it", () => {
     const { books, db } = fixture();
     const passage = (
@@ -226,7 +261,8 @@ describe("runbooks over existing prompt and skill doors", () => {
       readFileSync(join(root, "lessons/skills/lessons/parts/quiz.html"), "utf8"),
     );
     books.set("lessons", false);
-    expect(books.crew(code).skills).toEqual([]);
+    // A skill rides its runbook, not a care: the care runbook's stays.
+    expect(books.crew(code).skills.map((skill) => skill.name)).toEqual(["careful-change"]);
   });
   it("puts only the matched section in the actual crew preset on both backends", () => {
     const { books } = fixture();

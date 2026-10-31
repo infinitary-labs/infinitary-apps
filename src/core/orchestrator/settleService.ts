@@ -7,7 +7,6 @@ import type { FmEvent } from "@shared/events";
 import type { FolderNoticed, FolderRefreshRefusal } from "@shared/folderRefresh";
 import { forgePlace, hasChangeRequests } from "@shared/forge";
 import { fixedHoldWords, overridePasses, softHoldWords, withoutHoldWords } from "@shared/holds";
-import { acceptedValidation } from "@shared/liveValidation";
 import type { MergeRelationship, MergeReview } from "@shared/mergeReview";
 import { plainProblem, type TypedFailure } from "@shared/plainProblem";
 import type { RepoDelivery } from "@shared/repos";
@@ -17,7 +16,6 @@ import { effectiveTaskPolicies } from "@shared/taskPolicies";
 import type { TaskDeliveryMode } from "@shared/tasks";
 import { MERGE_WORDS } from "@shared/vocabulary";
 import { type ForgePull, forgeLocationOf, signInRefusal } from "../forge";
-import { CAREFUL_LIVE_VALIDATION } from "../prompts/liveValidation";
 import { FIRSTMATE_RECIPIENT, type InboxStore } from "../storage/inboxStore";
 import type {
   MergeAuthorization,
@@ -53,7 +51,6 @@ import {
   wakesFirstmate,
 } from "./mergeAuthorization";
 import type { MergeGuard, MergeStop, PrOutcome } from "./prCi";
-import { reviewCoversHead } from "./reviewCarry";
 import {
   type ClosedWithoutClick,
   cannotMergeText,
@@ -621,29 +618,6 @@ export class SettleService {
           (wait && !waitIsPassed)
         )
           return `another decision or hold still needs attention. ${softHoldWords("decisions", "firstmate")}`;
-      }
-      const reviewed = this.policiesOf(record)?.rigor.value === "reviewed";
-      const proof = acceptedValidation(record.delivery?.liveValidation, head);
-      if (
-        reviewed &&
-        !(reviewCoversHead(record.delivery, head) && head) &&
-        !overridePasses(record.delivery, "review", at)
-      )
-        return `the current version needs an independent review: ${proof.reason} ${softHoldWords("review", "firstmate")}`;
-      const proofPassed = overridePasses(record.delivery, "live-proof", at);
-      if (reviewed && !(head && proof.ready) && !proofPassed)
-        return `the current version needs an independent review: ${proof.reason} ${softHoldWords("live-proof", "firstmate")}`;
-      if (reviewed && !proofPassed) {
-        if (
-          !this.host.verifyValidationEvidence &&
-          record.delivery?.liveValidation?.runs.at(-1)?.evidence.length
-        )
-          return "kept proof cannot be verified here";
-        try {
-          this.host.verifyValidationEvidence?.(taskId);
-        } catch {
-          return "kept proof changed or is missing; restore it or record and review new proof";
-        }
       }
       this.sentMerges.add(taskId);
       return undefined;
@@ -1809,26 +1783,7 @@ export class SettleService {
   ): Promise<string> {
     const result = await this.settleTaskGuarded(taskId, mode, confirm, actor, proceedWithOpen);
     this.recordRefusal(taskId, mode, result);
-    return result.text + this.missingValidationBrief(taskId, mode, result);
-  }
-
-  private missingValidationBrief(
-    taskId: string,
-    mode: "merge-pr" | "land" | "discard",
-    result: SettleOutcome,
-  ): string {
-    const record = this.host.tasks.get(taskId);
-    return mode !== "discard" &&
-      !result.ok &&
-      record &&
-      this.policiesOf(record)?.rigor.value === "reviewed" &&
-      !acceptedValidation(
-        record.delivery?.liveValidation,
-        record.delivery?.headSha ?? record.delivery?.validationHead,
-      ).ready &&
-      !this.host.tasks.briefContains(taskId, CAREFUL_LIVE_VALIDATION)
-      ? `\n\nRelay this missing contract to the builder, even if its completion card is already up; other holds still apply: ${CAREFUL_LIVE_VALIDATION}`
-      : "";
+    return result.text;
   }
 
   /**
@@ -1852,7 +1807,7 @@ export class SettleService {
     );
     this.recordRefusal(taskId, mode, result);
     return {
-      text: result.text + this.missingValidationBrief(taskId, mode, result),
+      text: result.text,
       ...(result.refusal ? { refusal: result.refusal } : {}),
     };
   }
@@ -2549,24 +2504,15 @@ export class SettleService {
       this.host.assessRepair?.(record.id);
       return { wait: "evidence" };
     }
-    const head = candidateHead(authorization);
-    if (
-      this.policiesOf(record)?.rigor.value === "reviewed" &&
-      ((!reviewCoversHead(record.delivery, head) &&
-        !overridePasses(record.delivery, "review", head)) ||
-        (!acceptedValidation(record.delivery?.liveValidation, head).ready &&
-          !overridePasses(record.delivery, "live-proof", head)))
-    ) {
-      return { wait: "review" };
-    }
     return undefined;
   }
 
   /**
-   * Store the approved head's change reading on the approval (INF-416 G).
-   * The click is the moment that version enters the record. A later kept
-   * merge compares this stored fact and does not read the branch again.
-   * An unreadable commit stores nothing.
+   * Store the approved head's change reading on the approval (INF-416 G)
+   * when a review was recorded on the task. The click is the moment that
+   * version enters the record. A later kept merge compares this stored
+   * fact and does not read the branch again. An unreadable commit stores
+   * nothing.
    */
   private async storeApprovalReading(
     taskId: string,
@@ -2574,7 +2520,7 @@ export class SettleService {
   ): Promise<void> {
     if (authorization.changeReading) return;
     const record = this.host.tasks.get(taskId);
-    if (!record || this.policiesOf(record)?.rigor.value !== "reviewed") return;
+    if (!record?.delivery?.reviewVerdict) return;
     const read = this.host.workspace.reviewChangeReading;
     if (typeof read !== "function") return;
     try {
@@ -2600,7 +2546,7 @@ export class SettleService {
         versionReadings: { ...delivery?.versionReadings, [authorization.approvedHead]: reading },
       });
     } catch {
-      // An unreadable version stores nothing. Coverage then waits on review.
+      // An unreadable version stores nothing: the pass does not carry to it.
     }
   }
 
@@ -2733,7 +2679,7 @@ export class SettleService {
     this.settleLine(taskId, keptFeedLine(wait, place, currentCheckStatus(record?.delivery)));
     this.wakeOnSettle(taskId, title, "merge-pr (kept)", {
       ...result,
-      text: `${result.text}\n\n${keptNote(wait, head, place, currentCheckStatus(record?.delivery))}${wait === "review" && record ? ` ${acceptedValidation(record.delivery?.liveValidation, head).reason}${this.host.tasks.briefContains(record.id, CAREFUL_LIVE_VALIDATION) ? "" : ` Relay this missing contract to the builder: ${CAREFUL_LIVE_VALIDATION}`}` : ""}`,
+      text: `${result.text}\n\n${keptNote(wait, head, place, currentCheckStatus(record?.delivery))}`,
     });
   }
 
@@ -2935,7 +2881,7 @@ export class SettleService {
     if (result.ok && mode !== "discard" && !this.freesWorkAwaitingStart(taskId)) return;
     this.wakeOnSettle(taskId, title, confirm ? `${mode} (confirmed)` : mode, {
       ...result,
-      text: result.text + this.missingValidationBrief(taskId, mode, result),
+      text: result.text,
     });
   }
 

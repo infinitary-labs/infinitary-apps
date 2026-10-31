@@ -19,6 +19,12 @@ export type RunbookFacts = {
 };
 export const namingRuleSchema = z.strictObject({ pattern: z.string(), message: z.string() });
 export type NamingRule = z.infer<typeof namingRuleSchema>;
+/** One crew section: a text file, served when the task's facts match its selector. */
+export const runbookSectionSchema = z.strictObject({
+  file: z.string(),
+  when: runbookMatchSchema.optional(),
+});
+export type RunbookSection = z.infer<typeof runbookSectionSchema>;
 export const runbookManifestSchema = z.strictObject({
   id: z.string().regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/),
   name: z.string().min(1),
@@ -27,7 +33,7 @@ export const runbookManifestSchema = z.strictObject({
   version: z.string().min(1).optional(),
   panels: z.array(z.string()).optional(),
   firstmate: z.string().optional(),
-  crew: z.strictObject({ file: z.string(), when: runbookMatchSchema.optional() }).optional(),
+  crew: z.union([runbookSectionSchema, z.array(runbookSectionSchema)]).optional(),
   skills: z.string().optional(),
   parts: z.string().optional(),
   projects: z.array(z.string()).optional(),
@@ -44,6 +50,12 @@ export const runbookViewSchema = z.strictObject({
 });
 export type RunbookView = z.infer<typeof runbookViewSchema>;
 export const runbookStateSchema = z.record(z.string(), z.boolean());
+
+/** A manifest's crew sections in order: one section, or several each with its own selector. */
+export function crewSectionsOf(manifest: Pick<RunbookManifest, "crew">): RunbookSection[] {
+  if (!manifest.crew) return [];
+  return Array.isArray(manifest.crew) ? manifest.crew : [manifest.crew];
+}
 
 /** An absent selector is unrestricted; an empty selector deliberately matches nothing. */
 export function runbookMatches(

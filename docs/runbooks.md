@@ -1,7 +1,7 @@
 # Runbooks
 
 A runbook is a folder of guidance, not a program runtime and not a skill.
-Its `runbook.json` may name a first-mate section, a crew section, a skills folder and HTML parts or pictures.
+Its `runbook.json` may name a first-mate section, one crew section or several each with its own selector, a skills folder and HTML parts or pictures.
 A section is plain text, either a Markdown file or a JSON string; JSON strings let the bundled defaults share one source with both the app build and plain-Node consumers.
 Skills inside it use the Agent Skills format and are read on demand.
 The host does not decide which subject an ask belongs to.
@@ -75,6 +75,7 @@ The kinds selected by the testing runbook are data: plan, reproduce, implement, 
 Research, retrieval, review and the personal workspace receive none of that section.
 A runbook's optional projects list restricts its crew reach by project id.
 Its skills remain available on demand throughout that reach, independently of the narrower crew-section selectors.
+A manifest with several crew sections serves each one whose selector the facts match, in manifest order, so one runbook says one thing at Quick and another at Careful.
 
 The first mate declares the kind on spawn or create, and the task records `firstmate:declared` as its source.
 A declaration uses the existing answer/change kind branches from INF-1441; the read-only fact still decides what the task delivers.
@@ -99,13 +100,17 @@ Lessons holds its first-mate section and the lesson skill with its tested card p
 Its guide points to the workspace-owned `personal-panel/parts/lesson/` template; executable panel source is not inside the runbook's guidance skill.
 It declares ongoing work and a requested intelligence rather than a special task kind.
 Testing rules supplies only its selected crew sections.
+Care levels holds what each of the three care names asks (`resources/runbooks/care`): the host records Quick, Default and Careful as typed facts and selects by them, and holds nothing else on a name.
+Its Default section, served at Default and Careful, carries the procedure before a pull request, the evidence-first validation and the five report headings; its Quick section says nothing beyond the project's gate and green checks is required; its Careful section points at the `careful-change` skill, which holds the independent review's order - commit, report, no push or card until the review passed - the care notice for work already built and the live validation contract; and its first-mate guide says when to commission the review, how to relay findings and when to steer the push and the card.
+With no runbook reader present, the crewmate prompt serves the same bundled sections itself (`careGuideFor`, `src/core/pi/piResources.ts`), so a crewmate on a work computer or in a test is told the same.
+Turning it off leaves the names on the record and serves no procedure for them.
 Commit and PR naming supplies guidance and the data convention read by the existing commit-range, story-title and forge title checks.
 Turning naming off drops that check's convention, but a project's own instructions and release tooling are unchanged.
 
 Runbook guidance may decide author choices on the cards it describes, such as voice, length, layout, opening and button names.
 The fixed card shape, merge authorization, consent, delivery and care facts remain core.
 Delivery judgment supplies only direct-pr crewmates with the checks, repair, readiness and stopping guidance.
-Its switch removes those judgments from new crew prompts without changing check facts, merge authorization, consent or the fixed care procedure.
+Its switch removes those judgments from new crew prompts without changing check facts, merge authorization, consent or the care names on the record.
 The host tools carry check facts and record declarations; the runbook holds the judgments, including the default repair and rerun counts.
 The panel-building runbook was not selected, so those skills and the design skill stay workspace-owned.
 
@@ -113,7 +118,7 @@ The panel-building runbook was not selected, so those skills and the design skil
 
 `src/core/runbooks/runbooks.test.ts` drives real bundle manifests, persisted switches, typed reach, naming and staged skill parts.
 `tests/e2e/runbooks.spec.ts` switches Common workflows by keyboard, relaunches, and asks the first mate to turn it back on through the shared catalog.
-The fixed-context test measures the core separately from runbook guidance.
+The fixed-context test measures the core with the bundled care, testing and delivery sections the prompt serves itself when no runbook reader is present, the same text the built-ins hold.
 The existing lesson and workflow journeys cover the guidance's consumers.
 The replay gate and the signed-in evaluations serve the bundled runbooks through their shared isolated host (`scripts/replay/isolatedHost.ts`), as a fresh app does; `tests/eval-host-runbooks.test.ts` holds that for the evaluations.
 

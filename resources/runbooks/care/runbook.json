@@ -1,0 +1,34 @@
+{
+  "id": "care",
+  "name": "Care levels",
+  "description": "What each care level asks of a change: Quick, Default and Careful.",
+  "firstmate": "guide.md",
+  "crew": [
+    {
+      "file": "quick.json",
+      "when": {
+        "care": [
+          "quick"
+        ]
+      }
+    },
+    {
+      "file": "default.json",
+      "when": {
+        "care": [
+          "standard",
+          "reviewed"
+        ]
+      }
+    },
+    {
+      "file": "careful.json",
+      "when": {
+        "care": [
+          "reviewed"
+        ]
+      }
+    }
+  ],
+  "skills": "skills"
+}

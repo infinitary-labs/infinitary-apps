@@ -2,13 +2,13 @@ import { execFileSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import { mkdir, readFile, realpath, rename, rm, stat, writeFile } from "node:fs/promises";
 import { createServer } from "node:http";
-import { isAbsolute, join, relative, resolve, sep } from "node:path";
+import { dirname, isAbsolute, join, relative, resolve, sep } from "node:path";
+import { fileURLToPath } from "node:url";
 import { z } from "zod";
 import { hostEnv } from "../../src/core/hostEnv";
 import { RIGOR_SAFETY } from "../../src/core/prompts/validationResources";
 import { keepValidationEvidence } from "../../src/core/pi/validationEvidence";
 import { renderReviewBrief } from "../../src/core/orchestrator/intentBrief";
-import { CAREFUL_LIVE_VALIDATION } from "../../src/core/prompts/liveValidation";
 import { recordValidation } from "../../src/core/tasks/liveValidation";
 import {
   emptyValidation,
@@ -108,7 +108,15 @@ export async function prepareCarefulRun(
   if (!isAbsolute(output) || below.split(sep)[0] !== "..")
     throw new Error("Use an absolute new output folder outside the working copy.");
   await mkdir(out, { recursive: false });
-  const instructions = `${RIGOR_SAFETY}\n\n${CAREFUL_LIVE_VALIDATION}`;
+  // The Careful contract the care runbook's skill serves to a Careful builder (INF-1868, piece 5).
+  const careful = await readFile(
+    resolve(
+      dirname(fileURLToPath(import.meta.url)),
+      "../../resources/runbooks/care/skills/careful-change/SKILL.md",
+    ),
+    "utf8",
+  );
+  const instructions = `${RIGOR_SAFETY}\n\n${careful}`;
   const sheet = {
     head,
     family,

@@ -329,6 +329,14 @@ A task closed before this release gets no change and is read as before.
 An older build refuses the profile, because its migration history names a migration it does not know ("Before services start").
 A record export carries the task's delivery facts as before and no change row, and an import projects the change from them again.
 
+## The review's edge
+
+Migration 107 removes the `blocks` edge the host recorded from each review it raised onto that review's builder, live or closed, and nothing else: a `blocks_me` filing, a required action's prerequisite and a wait the first mate recorded keep their rows and their marks.
+The host no longer holds a builder's merge on its review (INF-1876): whether a merge waits for the verdict is the care runbook's guidance, and the parent edge stays the one stored review-to-builder join.
+A builder whose review was open at the upgrade is read as waiting on nothing, and its completion card is refused only by what still holds it.
+An older build refuses the profile, because its migration history names a migration it does not know ("Before services start").
+Nothing reverses it: the edge was the retired hold's own record, and the review's verdicts stay on the builder's timeline.
+
 ## Linux automatic startup capability
 
 The work folder's optional `automatic-startup.json` records the last Linux setup outcome with its own versioned schema.

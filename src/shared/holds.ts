@@ -27,16 +27,6 @@ export const HOLDS = {
     restsOn: "record",
     name: "the open decisions",
   },
-  review: {
-    level: "soft",
-    restsOn: "record",
-    name: "the review",
-  },
-  "live-proof": {
-    level: "soft",
-    restsOn: "record",
-    name: "live proof",
-  },
   waits: {
     level: "soft",
     restsOn: "record",
@@ -247,13 +237,9 @@ export function overrideTakenBackWords(override: Pick<HoldOverride, "holds">): s
   return `The captain took back their standing override on this task: ${holdNames(override.holds)} hold again, and their earlier words no longer stand in for your consent asks.`;
 }
 
-/** The facts strip's override cell: each hold his words pass, the live proof as going without it. */
+/** The facts strip's override cell: each hold his words pass; a hold a later version retired keeps its place. */
 export function overrideCellWords(holds: readonly OverridableHold[]): string {
-  return holds
-    .map((kind) =>
-      kind === "live-proof" ? "without live proof" : (HOLDS[kind]?.name ?? "retired hold"),
-    )
-    .join(" · ");
+  return holds.map((kind) => HOLDS[kind]?.name ?? "retired hold").join(" · ");
 }
 
 /**
@@ -288,9 +274,12 @@ export function overrideRefusal(kinds: readonly HoldKind[]): string | undefined 
   const held = [...new Set(kinds)].filter((kind) => !isOverridable(kind));
   if (held.length === 0) return undefined;
   const sentences = held.map((kind) =>
-    HOLDS[kind].level === "fixed"
-      ? fixedHoldWords(kind as FixedHold)
-      : softHoldWords(kind as Exclude<HoldKind, FixedHold>, "firstmate"),
+    // A hold a later version retired, named from an older record or habit.
+    !HOLDS[kind]
+      ? `${kind} is a retired hold: nothing holds on it now, so leave it out.`
+      : HOLDS[kind].level === "fixed"
+        ? fixedHoldWords(kind as FixedHold)
+        : softHoldWords(kind as Exclude<HoldKind, FixedHold>, "firstmate"),
   );
   return `Override refused: nothing was recorded. ${sentences.join(" ")}`;
 }

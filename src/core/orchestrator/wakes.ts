@@ -53,7 +53,6 @@ import type { ReviewVerdict } from "@shared/rigor";
 import type { ServedOrigin } from "@shared/servedFrame";
 import { SAVED_SIGN_IN_FAILED_WORDS, UNKNOWN_OUTCOME_WORDS } from "@shared/taskBrowser";
 import { browserCommand } from "../browser/commandWords";
-import { CAREFUL_LIVE_VALIDATION } from "../prompts/liveValidation";
 import type { LeftOut, LeftOutReason } from "../routing/placementEngine";
 import type { InboxRow, WAKE_ENVELOPE_VERSION } from "../storage/inboxStore";
 import type { CardRefusal } from "../storage/taskStore";
@@ -70,6 +69,10 @@ import type { SeatPauseClass } from "./seat";
 import type { SeatDigestTurn } from "./seatDigest";
 
 /** The ladder's nudge: finish, or say what blocks you (rung 1, and the stall card's Continue). */
+/** The policy notice's heading over the runbook sections the new facts select that the crewmate's instructions did not carry (INF-1876). */
+export const POLICY_GUIDANCE_HEADING =
+  "Guidance the new facts select, which your instructions did not carry:";
+
 export const IDLE_NUDGE_TEXT =
   "You stopped with nothing running and nothing up for the captain to decide. Either finish - report under the five headings and emit your completion card - or say what blocks you.";
 
@@ -271,32 +274,23 @@ export type ReviewVerdictFacts = {
   /** The typed findings the verdict rests on, one line each (INF-1875). */
   findings?: string[];
   cards: WakeCard[];
-  /**
-   * The builder's brief carries the reviewed fix rules (it was dispatched
-   * reviewed). Absent - care raised after the brief, or a row an older
-   * build queued - the next step names the rules for the steer.
-   */
-  briefed?: boolean;
-  liveValidationBriefed?: boolean;
-  validationReason?: string;
   /** What was decided so far on the reviewed change, oldest first (INF-993). */
   history?: ReviewHistoryEntry[];
 };
 
 /**
- * The reviewed tier's later steps, served where each arises (FI3-566 cut
- * C), the way `CHECK_DIAGNOSIS_NEXT` rides a failed check: the core keeps
- * when to commission a review and that every steer carries the captain's
- * latest decision; the builder's brief keeps how to fix a finding.
+ * A review's later steps, served where each arises (FI3-566 cut C), the
+ * way `CHECK_DIAGNOSIS_NEXT` rides a failed check: the core keeps when to
+ * commission a review and that every steer carries the captain's latest
+ * decision; the findings wake keeps how to fix a finding, since a review
+ * happens at any care and no brief carries the rules.
  */
 export const REVIEWER_IDLE_NEXT =
   "Steer a reviewer only to re-review at a new head, evidence revision or validation state its builder reports (including a captain-granted gap exception or a new effect request) - an idle reviewer needs no stand-by and no status.";
 
 /** What a findings or blocked verdict asks of the Firstmate next. */
-export function reviewFindingsNext(briefed: boolean): string {
-  const relay = briefed
-    ? "Steer the builder with every auto-fix finding verbatim; its brief says how to fix them."
-    : `Steer the builder with every auto-fix finding verbatim, prefixed with - ${REVIEW_FIX_RULES}.`;
+export function reviewFindingsNext(): string {
+  const relay = `Steer the builder with every auto-fix finding verbatim, prefixed with - ${REVIEW_FIX_RULES}.`;
   return `${relay} Info findings never block and need no steer. Decide an ask-user finding yourself when the user's own words already settle it; the rest are ONE decision card per round on the builder's task, with the step you would take as its default. Pass review_task_id naming this review. Start the title with Review of the builder's key; name the change in the first line. For each finding, show its number, severity, file and reviewed version above the reviewer's verbatim words. ${REVIEWER_IDLE_NEXT}`;
 }
 
@@ -364,6 +358,12 @@ export type WakeFacts =
       kind: "task-policies-changed";
       task: { id: string; key: string; title: string };
       policies: EffectiveTaskPolicies;
+      /**
+       * The runbook sections the new facts select that the old ones did
+       * not (INF-1868, piece 5): a crewmate's instructions were served at
+       * its dispatch, so the notice carries what the change adds.
+       */
+      guidance?: string[];
     }
   | {
       /**
@@ -1945,13 +1945,6 @@ function scheduledSource(facts: Extract<WakeFacts, { kind: "scheduled" }>): stri
   return rule + project;
 }
 
-/**
- * What Careful asks of work already built when care rises to it (INF-562):
- * the reviewed procedure for a change that may already have a pull request.
- */
-export const CAREFUL_NOTICE =
-  "Careful means an independent review before the merge. Commit any remaining work on your branch and report under the five headings without pushing. When the captain pressed Review carefully on your merge card, the app started the review of the version that card offered; otherwise the first mate starts the review of your committed version. A pull request already open stays as it is until the review passes: no push and no new story. When the first mate relays a pass on the version already pushed, emit the completion card again as soon as its checks read passed. After fixes, push once to the same pull request after the pass, and emit the completion card when the fresh checks pass.";
-
 /** Why a recorded freeze's names may not be where its time went. */
 const FREEZE_UNCERTAIN_WORDS: Record<NonNullable<FreezeLine["uncertain"]>, string> = {
   waited:
@@ -1982,7 +1975,7 @@ function renderFacts(facts: WakeFacts, wake: Pick<WakeEnvelope, "ways" | "text">
     case "validation-question-stale":
       return `The captain tried to answer validation question ${facts.card}, but nothing was approved: ${facts.reason} Its unusable actions were removed. Record a fresh request with a new identity and revise that same card for the current facts; do not repeat an unknown effect.`;
     case "task-policies-changed":
-      return `Current policies for ${facts.task.key || facts.task.id}: ${JSON.stringify(facts.policies)}. These replace earlier delivery/care/merging instructions, not scope.${facts.policies.rigor.value === "reviewed" ? ` Careful contract: ${CAREFUL_LIVE_VALIDATION}` : ""} Keep working without restarting; never start queued work from this notice. Before the next push or merge, perform any validation/review the new care requires. Retain published work, the existing pull request, evidence, repair counts and all unrelated holds. A lower care removes only policy-owned requirements. Explicit self-merging permission can release an already-ready result: the first mate rechecks every requirement and uses the existing settle path, without another approval click. It grants no permission past other decisions, explicit withdrawal holds, dependencies, caps or failed checks. Ask-first cancels unsent merges; a merge already sent cannot be stopped. Read the current record before acting.${facts.policies.rigor.value === "reviewed" ? ` ${CAREFUL_NOTICE}` : ""}`;
+      return `Current policies for ${facts.task.key || facts.task.id}: ${JSON.stringify(facts.policies)}. These replace earlier delivery/care/merging instructions, not scope. Keep working without restarting; never start queued work from this notice. Before the next push or merge, perform any validation/review the new care requires. Retain published work, the existing pull request, evidence, repair counts and all unrelated holds. A lower care removes only policy-owned requirements. Explicit self-merging permission can release an already-ready result: the first mate rechecks every requirement and uses the existing settle path, without another approval click. It grants no permission past other decisions, explicit withdrawal holds, dependencies, caps or failed checks. Ask-first cancels unsent merges; a merge already sent cannot be stopped. Read the current record before acting.${facts.guidance?.length ? `\n\n${POLICY_GUIDANCE_HEADING}\n\n${facts.guidance.join("\n\n")}` : ""}`;
     case "task-override-changed":
       return facts.withdrawn
         ? overrideTakenBackWords(facts.override)
@@ -2081,7 +2074,7 @@ function renderFacts(facts: WakeFacts, wake: Pick<WakeEnvelope, "ways" | "text">
       const risk = facts.risk
         ? `risk ${facts.risk}${facts.riskNote ? `: ${facts.riskNote}` : ""}`
         : "risk unstated";
-      return `[fm-op] the review of task ${facts.task.id} "${facts.task.title}" passed at ${facts.head ? facts.head.slice(0, 7) : "an unrecorded head"} (${risk}); the hold is released and review task ${facts.reviewKey} is closed. ${facts.crewmate}'s report: ${facts.excerpt} ${REVIEW_PASSED_NEXT}`;
+      return `[fm-op] the review of task ${facts.task.id} "${facts.task.title}" passed at ${facts.head ? facts.head.slice(0, 7) : "an unrecorded head"} (${risk}); review task ${facts.reviewKey} is closed. ${facts.crewmate}'s report: ${facts.excerpt} ${REVIEW_PASSED_NEXT}`;
     }
     case "task-failed":
       return `[fm-op] task ${facts.task.id} "${facts.task.title}" failed: ${facts.error}`;
@@ -2455,7 +2448,7 @@ function unknownWake(facts: unknown, ways: HoldWay[] | undefined): string {
  * review cap rides a findings one without them: its own words name the way.
  */
 function renderReviewVerdict(facts: ReviewVerdictFacts, next = true): string {
-  return `[fm-op] ${facts.crewmate} reported on review task ${facts.task.id} "${facts.task.title}" - the review of task ${facts.builder.id} "${facts.builder.title}" - with verdict ${facts.verdict}: ${facts.excerpt}${facts.findings?.length ? `\nFindings:\n${facts.findings.map((line) => `- ${line}`).join("\n")}` : ""}${facts.validationReason ? ` The host held the reported pass: ${facts.validationReason} Steer the builder to address this reason, then re-review the changed validation state.` : ""}${facts.history?.length ? `\n${renderReviewHistory(facts.history)}\n` : ""}${cardsText(facts.cards)}${facts.liveValidationBriefed === false ? ` Relay the missing Careful contract to the builder: ${CAREFUL_LIVE_VALIDATION}` : ""}${next ? ` ${reviewFindingsNext(facts.briefed === true)}` : ""}`;
+  return `[fm-op] ${facts.crewmate} reported on review task ${facts.task.id} "${facts.task.title}" - the review of task ${facts.builder.id} "${facts.builder.title}" - with verdict ${facts.verdict}: ${facts.excerpt}${facts.findings?.length ? `\nFindings:\n${facts.findings.map((line) => `- ${line}`).join("\n")}` : ""}${facts.history?.length ? `\n${renderReviewHistory(facts.history)}\n` : ""}${cardsText(facts.cards)}${next ? ` ${reviewFindingsNext()}` : ""}`;
 }
 
 /** A builder report's open review, and the re-review it may ask for. */

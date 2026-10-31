@@ -70,7 +70,7 @@ test.beforeEach(async () => {
   seedGitHubSignIn(userDataDir);
   // The repository's standing rigor (phase 3, migration 36): standard, so
   // the unclassified spawn's high tier does not make the task reviewed and
-  // the completion card is the lint's to refuse, not the review hold's.
+  // the completion card is the lint's to refuse.
   const db = openDatabase(userDataDir);
   db.prepare(
     "INSERT INTO repos (id, path, name, added_at, setup_kind, origin, delivery, autonomy, rigor) VALUES (?, ?, ?, ?, 'clone', ?, 'direct-pr', 0, 'standard')",

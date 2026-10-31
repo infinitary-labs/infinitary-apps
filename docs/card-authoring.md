@@ -237,7 +237,7 @@ The task's final report needs no tool: its record shows a sandboxed body with pl
 
 ## A refused completion card
 
-A crewmate's completion card - any card it emits that declares a settle effect - can be refused on its way up: its checks have not passed (`CrewSupervisor.pendingCiGate`), the CI cap holds it, a reviewed task's review has not passed, the shape lint above, or the card tool's own checks on its size, id, pictures and risk.
+A crewmate's completion card - any card it emits that declares a settle effect - can be refused on its way up: its checks have not passed (`CrewSupervisor.pendingCiGate`), the shape lint above, or the card tool's own checks on its size, id, pictures and risk.
 A revision of the completion card already on the stack is the one exception to the checks: it goes up while they run, and its merge waits for them (`docs/delivery-rigor.md`, "A kept merge approval").
 The crewmate reads the refusal as the tool's error text, and the card never reaches the stage.
 FI3-401 is why that is not enough: on PR #549 the gate refused a card a second after the crewmate asked, the crewmate still reported "Completion card emitted", and the first mate relayed the card and later explained its absence with a mechanism that does not exist.

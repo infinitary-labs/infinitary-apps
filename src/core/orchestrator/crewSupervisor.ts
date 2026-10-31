@@ -120,9 +120,7 @@ import type {
   ValidationPermission,
 } from "@shared/liveValidation";
 import {
-  acceptedValidation,
   keptValidationInputSchema,
-  LIVE_VALIDATION_WORDS,
   VALIDATION_GAPS_FIELD,
   validationAssignment,
   validationPair,
@@ -187,6 +185,7 @@ import {
   type WorkShape,
   type WorkShapeAsk,
 } from "@shared/routingPolicy";
+import type { RunbookFacts } from "@shared/runbooks";
 import type { ServedWakeOrigin } from "@shared/servedFrame";
 import {
   attachmentStanding,
@@ -287,7 +286,6 @@ import type { CrewMachines } from "../placed/placedSessions";
 import { askJson } from "../program/programAsk";
 import { type ProgramEnd, type ProgramPartAsk, ProgramRunner } from "../program/programRunner";
 import { programRefusal } from "../program/programScript";
-import { CAREFUL_LIVE_VALIDATION } from "../prompts/liveValidation";
 import { CLASSIFY_TIMEOUT_MS } from "../routing/decisionKindClassifier";
 import {
   KIND_SOURCE,
@@ -406,6 +404,7 @@ import { CheckWatcher, type WatchedReading } from "./checkWatch";
 import { ciFactOf } from "./ciFact";
 import {
   type CrewmateComputers,
+  type CrewmateProcedureFacts,
   type CrewmateRestart,
   type CrewmateSpec,
   crewmateProcedureFor,
@@ -474,7 +473,6 @@ import type { MergeGuard, PrCiOverall, PrOutcome } from "./prCi";
 import { implausibleReport } from "./reportPlausibility";
 import { type IdleRule, type ReportSortRule, sortReport } from "./reportSort";
 import { skipRulesStrip, writeAskStrip } from "./requestStrips";
-import { reviewCoversHead } from "./reviewCarry";
 import { earlierHistory, reviewHistory } from "./reviewHistory";
 import { type RunReading, RunWatcher } from "./runWatch";
 import { describeStatus, isRoutineMergeCard, SettleService, type TaskClose } from "./settleService";
@@ -1056,6 +1054,8 @@ type TaskRuntime = {
   /** The conversational handle (`<PROJECT_KEY>-<seq>`), for card chrome; falls back to `id`. */
   key: string;
   crewmate: string;
+  /** The backend serving the open conversation, a fact the runbook selectors read. */
+  backend?: string;
   workspace?: TaskWorkspace;
   session?: ModelSession;
   /** Why the current conversation opened, including ids minted on its first turn. */
@@ -3188,7 +3188,8 @@ export class CrewSupervisor {
   }): Promise<{ taskId: string; crewmate: string; model?: NamedModel }> {
     assertDeliverableConstraints(input.intent, input.shape?.in_folder === true);
     // An independent review (delivery rigor phase 2) is its own commission:
-    // the host briefs it from the record and holds the builder's merge.
+    // the host briefs it from the record and holds nothing on the builder
+    // (INF-1876).
     if (input.shape?.review_of?.trim()) {
       if (input.shape.in_folder)
         throw new Error(`${NOTHING_SPAWNED} A review reads its builder's branch; omit in_folder.`);
@@ -3475,17 +3476,15 @@ export class CrewSupervisor {
   }
 
   /**
-   * Commission the independent reviewer of a reviewed task's change
-   * (delivery rigor phase 2; review-before-PR since the captain's
-   * 2026-09-19 ruling). Every refusal is a loud tool error before a row
-   * exists: the builder must be crewmate work that is still open, must
-   * ship at the reviewed tier, must have reported, must have commits on
-   * its branch to read, and must not already have a review open. The
-   * review runs BEFORE the pull request, the way the no-mistakes pipeline
-   * orders it: the reviewer reads the builder's branch at its current
-   * head (worktrees share the repository's refs, so the diff against the
-   * default branch is the change), fix rounds land as local commits, and
-   * the push, PR and CI come after the pass. An existing PR never hides a
+   * Commission the independent reviewer of a task's change (delivery rigor
+   * phase 2; a review at any care since INF-1875). Every refusal is a loud
+   * tool error before a row exists: the builder must be crewmate work that
+   * is still open, must have reported, must have commits on its branch to
+   * read, and must not already have a review open. The reviewer reads the
+   * builder's branch at its current head (worktrees share the repository's
+   * refs, so the diff against the default branch is the change); whether
+   * the push, PR and CI wait for the pass is the care guidance's, which
+   * the builder follows. An existing PR never hides a
    * newer builder version; an unreadable current branch holds the review.
    * The reviewer is a fresh crewmate on the
    * builder's repository, briefed by the host with the fixed review text,
@@ -3601,11 +3600,9 @@ export class CrewSupervisor {
       ...(passedHead ? { passedHead } : {}),
       validationAssignment: validationAssignment(builder.delivery?.liveValidation, headSha),
     });
-    // The hold: the review blocks the builder's close until it is done.
-    // The parent edge deliberately does not carry it - a child out of the
-    // close gate holds nothing, and the blocks rule has no
-    // `proceed_with_open` override.
-    this.options.tasks.link(taskId, builder.id, "blocks", "host", true);
+    // No hold: the parent edge is the one join, a child out of the close
+    // gate holds nothing, and whether a merge waits for the verdict is the
+    // care runbook's guidance, never a host edge (INF-1876).
     this.options.tasks.recordChangeEvidence(
       builder.id,
       {},
@@ -4294,23 +4291,16 @@ export class CrewSupervisor {
       });
   }
 
-  /**
-   * Whether a task's events skip supervision (delivery rigor phase 2): a
-   * task shipping at the reviewed tier, or a review task itself.
-   */
+  /** Whether a task's events skip supervision: a review task itself. */
   private bypassesSupervision(taskId: string): boolean {
-    const shape = this.options.tasks.get(taskId)?.shape;
-    return (
-      this.policiesOf(this.options.tasks.get(taskId))?.rigor.value === "reviewed" ||
-      shape?.kind === "review"
-    );
+    return this.options.tasks.get(taskId)?.shape?.kind === "review";
   }
 
   /**
    * Where a task stands with its independent review, for crew_status and
-   * the context block: the reviewer's own row names the builder; a reviewed
-   * builder is awaiting a review, has one open, has a verdict short of a
-   * pass, or has passed.
+   * the context block: the reviewer's own row names the builder; a builder
+   * has a review open, a verdict short of a pass, or a pass. A care name
+   * says nothing here: what each care asks is the care runbook's.
    */
   private reviewState(record: TaskRecord): string | undefined {
     const shape = record.shape;
@@ -4320,13 +4310,12 @@ export class CrewSupervisor {
         ? `assesses ${builder?.key || record.parentId}'s repair`
         : `reviews ${builder?.key || record.parentId}`;
     }
-    // A review happens at any care (INF-1875); only Careful awaits one.
+    // A review happens at any care (INF-1875).
     const verdict = record.delivery?.reviewVerdict;
     if (verdict === "pass") return "review passed";
     const open = this.openReviewOf(record.id);
     if (open) return `review open (${open.key || open.id})`;
-    if (verdict) return `review: ${verdict}`;
-    return this.policiesOf(record)?.rigor.value === "reviewed" ? "awaiting review" : undefined;
+    return verdict ? `review: ${verdict}` : undefined;
   }
 
   /** The personal workspace as a repo (Step 4), or a loud refusal when this build has none. */
@@ -6026,19 +6015,12 @@ export class CrewSupervisor {
       // Every crewmate is told the captain's computers and which one it runs on (INF-992).
       ...this.computersFor(crewmate.machineId),
     };
+    task.backend = binding.backend;
     let runbookSkills: SessionSpec["runbookSkills"];
     if (this.options.runbooks) {
-      const record = this.options.tasks.get(task.id);
-      const repo = record?.repoId ? this.options.repos.get(record.repoId) : undefined;
-      const facts = {
-        kind: record?.shape?.kind ?? "unclear",
-        place: repo?.kind === "personal" ? ("personal" as const) : ("project" as const),
-        delivery: briefed.procedure.delivery,
-        care: briefed.procedure.rigor,
-        backend: binding.backend,
-        ...(record?.repoId ? { project: record.repoId } : {}),
-      };
-      const served = this.options.runbooks.crew(facts);
+      const served = this.options.runbooks.crew(
+        this.runbookFacts(task.id, briefed.procedure, binding.backend),
+      );
       Object.assign(briefed, {
         runbookText: crewRunbookText(served),
       });
@@ -6933,6 +6915,54 @@ export class CrewSupervisor {
     );
   }
 
+  /**
+   * The closed facts the runbook selectors read for a task (docs/runbooks.md,
+   * "Typed crew reach"): its kind, place, delivery, care, backend and project.
+   */
+  private runbookFacts(
+    taskId: string,
+    procedure: CrewmateProcedureFacts,
+    backend: string,
+  ): RunbookFacts {
+    const record = this.options.tasks.get(taskId);
+    const repo = record?.repoId ? this.options.repos.get(record.repoId) : undefined;
+    return {
+      kind: record?.shape?.kind ?? "unclear",
+      place: repo?.kind === "personal" ? "personal" : "project",
+      delivery: procedure.delivery,
+      care: procedure.rigor,
+      backend,
+      ...(record?.repoId ? { project: record.repoId } : {}),
+    };
+  }
+
+  /**
+   * The runbook sections the changed policies select that the earlier ones
+   * did not (INF-1868, piece 5): a crewmate's instructions were served at
+   * its dispatch, so the policy notice carries what the change adds, such
+   * as what Careful asks when care rises to it. An unknown backend reads
+   * the sections no backend selector restricts.
+   */
+  private addedGuidance(
+    taskId: string,
+    before: EffectiveTaskPolicies | null | undefined,
+    policies: EffectiveTaskPolicies,
+  ): string[] {
+    if (!this.options.runbooks) return [];
+    const backend = this.tasks.get(taskId)?.backend ?? "";
+    const now = this.options.runbooks.crewSections(
+      this.runbookFacts(taskId, crewmateProcedureFor(policies), backend),
+    );
+    const earlier = new Set(
+      before
+        ? this.options.runbooks.crewSections(
+            this.runbookFacts(taskId, crewmateProcedureFor(before), backend),
+          )
+        : now,
+    );
+    return now.filter((section) => !earlier.has(section));
+  }
+
   /** Called after the atomic record edit; never dispatches or restarts work. */
   policiesChanged(
     taskId: string,
@@ -6942,11 +6972,13 @@ export class CrewSupervisor {
     const record = this.options.tasks.get(taskId);
     const policies = this.policiesOf(record);
     if (!record || !policies) return "";
+    const guidance = this.addedGuidance(taskId, before, policies);
     const wake: TypedWake = {
       facts: {
         kind: "task-policies-changed",
         task: { id: taskId, key: record.key, title: record.title },
         policies,
+        ...(guidance.length > 0 ? { guidance } : {}),
       },
     };
     this.options.inbox.enqueueSteerOnce(taskId, {
@@ -7517,7 +7549,7 @@ export class CrewSupervisor {
     } else if (report && this.options.tasks.get(task.id)?.shape?.kind === "review") {
       // A reviewer's report settles its review (INF-1875): the typed review
       // record the turn reported is the verdict, recorded on the builder,
-      // and a pass closes the review - which is what releases the hold.
+      // and a pass closes the review.
       void this.settleReview(task, report, turnReview);
     } else if (report && saved) {
       void saved.then((committed) => {
@@ -7684,6 +7716,7 @@ export class CrewSupervisor {
       needsFirstmate: needsFirstmate !== undefined,
       recovery: stall !== undefined || recoveryWays !== undefined,
       waitedOn: waiting.length > 0,
+      reviewReread: review !== undefined,
       programPart,
       // A session that is gone cannot prove anything either; the record
       // keeps that the host could not tell, and the report still wakes.
@@ -7737,17 +7770,16 @@ export class CrewSupervisor {
    * verdict, its findings and risk ride along, and nothing is read off the
    * report's words. A report with no typed record, or one at another head,
    * records nothing and spends no round: a reviewer's acknowledgment is not
-   * a review, and the merge stays held regardless. Info findings never
+   * a review, and the review stays open regardless. Info findings never
    * block (the no-mistakes rule), so they ride a clear review; the record
-   * itself refuses a contradiction. At Careful a clear review whose live
-   * proof is not accepted is recorded blocked with the reason.
+   * itself refuses a contradiction, and the code judgment is the verdict
+   * as typed at every care.
    * The verdict lands on the BUILDER's delivery facts as a `review`
    * timeline event, the risk beside CI and never a hold (Q4). A pass
    * closes the review task done - the one feed line is the builder's own
-   * "review passed" event, the close itself is silent - which releases
-   * the `blocks` hold on the builder's push, PR and merge; the wake to
-   * the Firstmate then refs the builder, because the next move is on it
-   * and a wake naming a closed task would be purged with it. Findings and
+   * "review passed" event, the close itself is silent; the wake to the
+   * Firstmate then refs the builder, because the next move is on it and
+   * a wake naming a closed task would be purged with it. Findings and
    * blocked leave the reviewer idle and steerable for a re-review, and
    * the wake refs the review task.
    */
@@ -7810,29 +7842,10 @@ export class CrewSupervisor {
       );
       return;
     }
-    const proof = builder.delivery?.liveValidation;
-    const assigned = review.delivery?.validationAssignment;
-    const acceptance = acceptedValidation(proof, sha);
-    const validationReason = !acceptance.ready
-      ? acceptance.reason
-      : !assigned ||
-          assigned.revision !== validationRevision(proof) ||
-          assigned.scenarioRevision !== proof?.scenarioRevision ||
-          (assigned.stateRevision !== undefined &&
-            assigned.stateRevision !== validationStateRevision(proof))
-        ? "The validation facts changed after assignment; re-review the current validation state, even at the same head."
-        : undefined;
-    // Careful reads the live proof beside the code: a clear code judgment
-    // whose proof is not accepted is recorded blocked with the reason, so
-    // the review stays open for the proof's re-review at the same head.
-    // Below Careful nothing reads the proof, and the code judgment is the
-    // verdict as typed.
-    const declared = REVIEW_VERDICT_OF_CODE[typed.code];
-    const blockedReason =
-      declared === "pass" && this.policiesOf(builder)?.rigor.value === "reviewed"
-        ? validationReason
-        : undefined;
-    const verdict = blockedReason ? "blocked" : declared;
+    // The typed code judgment is the verdict as typed, at every care: the
+    // live proof beside it is a typed fact the record keeps and the
+    // reviewer reads, never a hold the host converts a pass into.
+    const verdict = REVIEW_VERDICT_OF_CODE[typed.code];
     const findings = (typed.findings ?? []).map(renderFinding);
     const risk = typed.risk?.level;
     const riskNote = typed.risk?.why;
@@ -7896,12 +7909,9 @@ export class CrewSupervisor {
     // The verdict is recorded without a host-owned review allowance.
     this.options.tasks.recordChangeEvidence(builder.id, facts, {
       kind: "review",
-      text: `review ${verdict} at ${shortSha}, ${riskText}${blockedReason ? ` - ${blockedReason}` : ""}`,
+      text: `review ${verdict} at ${shortSha}, ${riskText}`,
       feed: false,
-      data: {
-        reviewTaskId: task.id,
-        ...(blockedReason ? { validationReason: blockedReason } : {}),
-      },
+      data: { reviewTaskId: task.id },
     });
     const history = earlierHistory(
       reviewHistory(this.options.tasks, this.options.tasks.get(builder.id) ?? builder),
@@ -7915,13 +7925,6 @@ export class CrewSupervisor {
       excerpt,
       ...(findings.length > 0 ? { findings } : {}),
       cards: this.cards.shownCards(task.id),
-      // The reviewed brief carries the fix rules; a builder dispatched at
-      // another care never read them, so the wake names them for its steer.
-      briefed: builder.shape?.rigor === "reviewed",
-      ...(this.options.tasks.briefContains(builder.id, CAREFUL_LIVE_VALIDATION)
-        ? {}
-        : { liveValidationBriefed: false }),
-      ...(blockedReason ? { validationReason: blockedReason } : {}),
       ...(history.length > 0 ? { history } : {}),
     };
     this.hooks.notifyOp({ facts: verdictFacts }, "crewmate-report", task.id);
@@ -10092,13 +10095,12 @@ export class CrewSupervisor {
       );
     }
     const before = this.options.tasks.get(task.id);
-    const carefulMerge =
+    const reviewedMerge =
       before?.delivery?.reviewVerdict === "pass" &&
-      this.policiesOf(before)?.rigor.value === "reviewed" &&
       input.actions.some((action) => settleEffectOf(action)?.mode === "merge");
-    if (!checkedHead && (input.validationDecision || carefulMerge)) {
-      // INF-994: a validation question is kept at every care level; only
-      // Careful's merge reads what it answers.
+    if (!checkedHead && (input.validationDecision || reviewedMerge)) {
+      // INF-994: a validation question is kept at every care level, and a
+      // merge offered after a passed review reads the version it answers.
       if (!before) throw new Error("The task no longer exists.");
       return this.validationHead(before).then(async (head) => {
         const current = this.options.tasks.get(task.id);
@@ -10157,7 +10159,7 @@ export class CrewSupervisor {
               },
             );
         }
-        if (carefulMerge) {
+        if (reviewedMerge) {
           const proof = current.delivery?.liveValidation?.runs.at(-1);
           if (proof)
             await verifyKeptValidationEvidence(
@@ -10221,30 +10223,6 @@ export class CrewSupervisor {
       );
     if (input.requiredActions !== undefined)
       this.options.tasks.validateRequiredActions(task.id, input.requiredActions);
-    const reviewHead = checkedHead ?? record?.delivery?.headSha ?? record?.delivery?.validationHead;
-    // The review and its live proof are two soft holds: the captain's
-    // override passes either, and the card follows the hold.
-    const reviewHeld =
-      record !== undefined &&
-      !reviewCoversHead(record.delivery, reviewHead) &&
-      !overridePasses(record.delivery, "review", reviewHead);
-    const proofHeld =
-      record !== undefined &&
-      !acceptedValidation(record.delivery?.liveValidation, reviewHead).ready &&
-      !overridePasses(record.delivery, "live-proof", reviewHead);
-    if (
-      record &&
-      this.policiesOf(record)?.rigor.value === "reviewed" &&
-      (reviewHeld || proofHeld) &&
-      (input.actions ?? []).some((action) => settleEffectOf(action)?.mode === "merge")
-    ) {
-      const review = this.reviewState(record) ?? "awaiting review";
-      throw new CardRefusedError(
-        `Card refused: this task ships at the reviewed tier and its review has not passed yet (${review}). ${acceptedValidation(record.delivery?.liveValidation, reviewHead).reason} Report under the five headings with report instead; the first mate tells you when to emit the completion card.${this.options.tasks.briefContains(record.id, CAREFUL_LIVE_VALIDATION) ? "" : ` This contract was missing from your brief: ${CAREFUL_LIVE_VALIDATION}`} ${softHoldWords(reviewHeld ? "review" : "live-proof", "crewmate")}`,
-        "review",
-        `its review has not passed yet (${review})`,
-      );
-    }
     // A merge the blocks rule would refuse on the click is refused here
     // instead: only Firstmate can clear the wait, so the card would be a
     // button that cannot work. (Open children stay a click-time decision:
@@ -11579,13 +11557,10 @@ export class CrewSupervisor {
         );
       } else if (this.openReviewOf(record.id)) {
         cell("review", "Review", `${statusDot("running")}open`);
-      } else if (this.policiesOf(record)?.rigor.value === "reviewed") {
-        cell("review", "Review", `${statusDot("idle")}awaiting`);
       }
     }
     // The captain's standing override (docs/delivery-rigor.md, "The
     // holds"): what his words passed, with his words and how long on rest.
-    // A merge that went without the review or its live proof says so here.
     // One for an earlier version passes nothing now, so it shows nothing.
     const override = standingOverride(record.delivery, record.delivery?.headSha);
     if (override) {
@@ -11593,7 +11568,7 @@ export class CrewSupervisor {
         "override",
         "Override",
         `${statusDot("warn")}${escapeCardText(overrideCellWords(override.holds))}`,
-        `${overrideWords(override)}${override.holds.includes("live-proof") ? `. ${LIVE_VALIDATION_WORDS.exception}.` : ""}`,
+        overrideWords(override),
       );
     }
     return `${SETTLE_FACTS_OPEN}${cells.join("")}</div>`;
@@ -12834,11 +12809,10 @@ export class CrewSupervisor {
     const builder = this.reviewBuilderOf(record);
     const owner = builder ?? record;
     // INF-994: records are kept at every care level, so a raise to Careful
-    // mid-task keeps them; only Careful's merge reads them. A review's
-    // record is the verdict on any change (INF-1875), however it delivers.
+    // mid-task keeps them. A review's record is the verdict on any change
+    // (INF-1875), however it delivers.
     if (input.kind !== "review" && this.taskDelivery(owner.id) !== "direct-pr")
       throw new Error("Live validation belongs to a change delivered through a pull request.");
-    const care = this.policiesOf(owner)?.rigor.value;
     // A review's record binds to the head its turn was assigned (INF-1875):
     // the version under review, read when the turn began, never the
     // builder's branch as it stands now.
@@ -12886,10 +12860,6 @@ export class CrewSupervisor {
     if (input.kind === "review") task.turnReview = input;
     const { validation: _validation, ...declaration } = declared;
     const revision = validationRevision(this.options.tasks.get(owner.id)?.delivery?.liveValidation);
-    const counts =
-      care === "reviewed" || input.kind === "review"
-        ? ""
-        : ` Nothing reads it at ${CARE_WORDS[care ?? "standard"]} care; it counts if this task becomes Careful.${input.kind === "request" && input.request.kind === "gap" ? " A gap has nothing to waive below Careful, so ask the captain nothing about it." : ""}`;
     if (
       input.kind !== "run" &&
       input.kind !== "review" &&
@@ -12897,8 +12867,8 @@ export class CrewSupervisor {
       !declaration.wait &&
       !declaration.finished
     )
-      return `Validation ${input.kind} recorded at evidence revision ${revision}.${counts} This records facts, not a finished-work report or permission. Continue the task; report when the first mate must act.`;
-    return `${this.recordExplicitReport(task, text, summary, declaration)} Validation recorded at evidence revision ${revision}.${counts}`;
+      return `Validation ${input.kind} recorded at evidence revision ${revision}. This records facts, not a finished-work report or permission. Continue the task; report when the first mate must act.`;
+    return `${this.recordExplicitReport(task, text, summary, declaration)} Validation recorded at evidence revision ${revision}.`;
   }
 
   /**

@@ -1,5 +1,4 @@
 import { describe, expect, it } from "vitest";
-import { renderRigorSection } from "../src/core/orchestrator/intentBrief";
 import { REVIEW_NEW_HEAD_NEXT, renderWake, type WakeFacts } from "../src/core/orchestrator/wakes";
 import { SEQUENCES_SEED } from "../src/core/personal/sequencesSkill";
 import {
@@ -111,7 +110,7 @@ describe("the Firstmate's fixed context (contract v4.59)", () => {
  * Where a rule the trim removed from one text is still said. `rule` names
  * what the removed sentence governed; `home` is the text it is still served
  * in - the Firstmate's fixed context, the wake it arises on, the refusal
- * that answers the call breaking it, or the builder's reviewed brief - and
+ * that answers the call breaking it - and
  * `says` the words that carry it there.
  */
 type Home =
@@ -120,14 +119,13 @@ type Home =
   | "replies"
   | "handoff"
   | "sequences"
-  | "reviewed brief"
   | { wake: keyof typeof WAKES }
   | { refusal: keyof typeof REFUSALS }
   | { tool: string; parameter?: string };
 
 const BUILDER = { id: "t1", title: "Fix the pin" };
 const REVIEW = { id: "r1", title: "Review: Fix the pin" };
-const verdictFacts = (briefed: boolean): WakeFacts => ({
+const verdictFacts = (): WakeFacts => ({
   kind: "review-verdict",
   task: REVIEW,
   builder: BUILDER,
@@ -135,13 +133,11 @@ const verdictFacts = (briefed: boolean): WakeFacts => ({
   verdict: "findings",
   excerpt: "verdict: findings",
   cards: [],
-  briefed,
 });
 
 /** The wakes a ledger rule lives on, as the host serves them (FI3-566 cut C, INF-490). */
 const WAKES = {
-  findings: verdictFacts(true),
-  "findings, brief predates the care": verdictFacts(false),
+  findings: verdictFacts(),
   "builder report": {
     kind: "report",
     task: BUILDER,
@@ -195,11 +191,18 @@ const REFUSALS = {
 };
 
 const LEDGER: { rule: string; home: Home; says: string }[] = [
-  // FI3-566 cut C moves the reviewed-work steps out of the core.
+  // FI3-566 cut C moves the reviewed-work steps out of the core; INF-1876
+  // makes the review an operation at any care, what each care asks the care
+  // runbook's.
   {
-    rule: "a review is commissioned once the builder reports its work committed",
+    rule: "a review is commissioned when the builder's report or the captain asks for one",
     home: "core",
-    says: "when the builder reports its work committed, spawn_crewmate with review_of naming that task and the user's words",
+    says: "when a builder's report or the captain asks for one, spawn_crewmate with review_of naming that task and the user's words",
+  },
+  {
+    rule: "what each care asks is the care guidance's, never a hold of the host's",
+    home: "core",
+    says: "what each care asks is the care guidance's, never a hold of the host's",
   },
   {
     rule: "every fix and review steer carries the captain's latest decision",
@@ -207,19 +210,9 @@ const LEDGER: { rule: string; home: Home; says: string }[] = [
     says: "Carry the latest captain decision into every fix and review steer; a genuinely new, materially different problem is still reviewable.",
   },
   {
-    rule: "the builder fixes findings by the fixer preamble",
-    home: "reviewed brief",
-    says: "To fix them, double-check each finding is legitimate before changing code, identify all sibling sites of the broken invariant, repair the whole defect class with one small correction rather than new machinery, retrace normal callers, never resolve a finding by reverting the author's intentional change, never implement a finding the captain declined or undo a fix the captain chose merely to satisfy an earlier goal, and verify each is resolved.",
-  },
-  {
-    rule: "every auto-fix finding reaches the builder verbatim",
+    rule: "every auto-fix finding reaches the builder verbatim, with the fixer preamble",
     home: { wake: "findings" },
-    says: "Steer the builder with every auto-fix finding verbatim; its brief says how to fix them.",
-  },
-  {
-    rule: "a builder not briefed reviewed hears the fixer preamble with the findings",
-    home: { wake: "findings, brief predates the care" },
-    says: "Steer the builder with every auto-fix finding verbatim, prefixed with - double-check each finding is legitimate before changing code",
+    says: "Steer the builder with every auto-fix finding verbatim, prefixed with - double-check each finding is legitimate before changing code, identify all sibling sites of the broken invariant, repair the whole defect class with one small correction rather than new machinery, retrace normal callers, never resolve a finding by reverting the author's intentional change, never implement a finding the captain declined or undo a fix the captain chose merely to satisfy an earlier goal, and verify each is resolved.",
   },
   {
     rule: "info findings never block",
@@ -716,7 +709,6 @@ describe("every rule the trim took out of one text is still served (contract v4.
       if (home === "replies") return CARD_REPLY;
       if (home === "handoff") return FIRSTMATE_HANDOFF;
       if (home === "sequences") return SEQUENCES_SEED;
-      if (home === "reviewed brief") return renderRigorSection("reviewed");
       if ("wake" in home) return renderWake({ facts: WAKES[home.wake] });
       if ("refusal" in home) return REFUSALS[home.refusal];
       const tool = served.find((candidate) => candidate.name === home.tool);

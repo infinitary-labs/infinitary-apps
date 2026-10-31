@@ -1,7 +1,7 @@
 import { execFileSync } from "node:child_process";
 import { readFileSync } from "node:fs";
 import { expect, test } from "@playwright/test";
-import { CAREFUL_NOTICE } from "../../src/core/orchestrator/wakes";
+import { POLICY_GUIDANCE_HEADING } from "../../src/core/orchestrator/wakes";
 import { openDatabase } from "../../src/core/storage/db";
 import { reportSummary } from "../../src/shared/feed";
 import type { TaskView } from "../../src/shared/tasks";
@@ -45,7 +45,7 @@ import { pressWindowKey, untilWindowCommands } from "./windowKeys";
  * request was never touched.
  *
  * Real: the repository, the working copies, the care edit, the card path,
- * the review brief and hold, the verdict. Stand-ins: the models (the mock
+ * the review brief, the verdict. Stand-ins: the models (the mock
  * provider) and GitHub (`./githubStub.ts`).
  */
 
@@ -152,18 +152,19 @@ test("a Default pull request's merge card is made Careful by ⌘2, reviewed, and
   expect(edit).toMatchObject({ actor: "captain" });
   expect(edit?.text).toContain("from the merge card");
 
-  // 3. The crewmate started with the care notice ahead of the choice, and
-  //    reported without pushing.
+  // 3. The crewmate started with the care notice, carrying the Careful
+  //    guidance the raise selects, ahead of the choice, and reported
+  //    without pushing.
   await expect(
     reportLine(page, builder.key).filter({ hasText: reportSummary(MOCK_CAREFUL_BUILDER_REPORT) }),
   ).toBeVisible({ timeout: 30_000 });
   // The notice and the choice reached the crewmate on the same turn, the
   // notice first.
   const started = (mockProvider?.requestBodies() ?? []).find((body) =>
-    body.includes(CAREFUL_NOTICE),
+    body.includes(POLICY_GUIDANCE_HEADING),
   );
   expect(started).toBeDefined();
-  expect(started?.indexOf(CAREFUL_NOTICE)).toBeLessThan(
+  expect(started?.indexOf(POLICY_GUIDANCE_HEADING)).toBeLessThan(
     started?.lastIndexOf(REVIEW_CAREFULLY_WORDS) ?? -1,
   );
 

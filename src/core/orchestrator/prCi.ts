@@ -290,17 +290,16 @@ export class PrCiService {
    * reading says nothing about the head the card is about now.
    */
   /**
-   * INF-1793: whether Careful's records complete no-mistakes' steps at a version - review and
-   * document from a Careful review that passed there (its brief also judges the documents),
-   * test from live validation that review accepted. A captain's override completes none.
+   * INF-1793: whether the task's records complete no-mistakes' steps at a version - review and
+   * document from an independent review that passed there (its brief also judges the documents),
+   * test from live validation that review accepted. The care's name decides nothing: a review
+   * happens at any care (INF-1875). A captain's override completes none.
    */
   private attestsAt(taskId: string): (head: string) => boolean {
     return (head) => {
       const current = this.options.tasks.get(taskId);
       if (!current) return false;
-      const repo = current.repoId ? this.options.repos.get(current.repoId) : undefined;
       return (
-        effectiveTaskPolicies(current, repo)?.rigor.value === "reviewed" &&
         reviewCoversHead(current.delivery, head) &&
         acceptedValidation(current.delivery?.liveValidation, head).ready
       );
@@ -1699,9 +1698,12 @@ export class PrCiService {
         )
       )
         return "The earlier prerequisite publication has an unknown outcome. Reconcile it before another publication; a missing result does not prove it failed.";
-      if (policy.rigor.value === "reviewed") {
-        // Read where the range was checked: the project's folder, where a
-        // branch from another computer came home.
+      // A task with a review or a live-validation record carries it to the
+      // version being opened, at any care: the care's name holds nothing
+      // here, and a task with neither record has nothing to read. The
+      // version is read where the range was checked: the project's folder,
+      // where a branch from another computer came home.
+      if (current.delivery?.reviewVerdict || current.delivery?.liveValidation) {
         const head = existing?.headSha ?? (await git(dir, ["rev-parse", branch]));
         await carryPassedReview({
           tasks: this.options.tasks,
@@ -1710,7 +1712,6 @@ export class PrCiService {
           repoDir: dir,
           head,
         });
-        const covered = this.options.tasks.get(taskId);
         validationHead = head;
         this.options.tasks.recordChangeEvidence(taskId, { validationHead: head });
         const early =
@@ -1732,24 +1733,6 @@ export class PrCiService {
           early.request.publication.branch === branch
         )
           prerequisite = early.request.id;
-        // The review and its live proof are soft holds the captain's
-        // override passes, each on its own.
-        const reviewHeld =
-          !reviewCoversHead(covered?.delivery, head) &&
-          !overridePasses(covered?.delivery, "review", head);
-        const proofPassed = overridePasses(covered?.delivery, "live-proof", head);
-        const proofHeld =
-          !acceptedValidation(covered?.delivery?.liveValidation, head).ready && !proofPassed;
-        if (!prerequisite && (reviewHeld || proofHeld))
-          return `Cannot open the change: the current version needs an independent review before the next push or pull request. ${softHoldWords(reviewHeld ? "review" : "live-proof", "crewmate")}`;
-        if (!prerequisite && !proofPassed) {
-          if (
-            !this.options.verifyValidationEvidence &&
-            current.delivery?.liveValidation?.runs.at(-1)?.evidence.length
-          )
-            return "Cannot open the change: kept proof cannot be verified here.";
-          await this.options.verifyValidationEvidence?.(taskId);
-        }
       }
       const presentations = this.options.presentations;
       if (!existing && presentations && forge.attachments) {
@@ -1795,25 +1778,7 @@ export class PrCiService {
           throw new Error(
             "The publication changed; nothing was sent. Read its current version and permission.",
           );
-        if (!prerequisite) {
-          const proofPassed = overridePasses(latest?.delivery, "live-proof", head);
-          if (
-            (!reviewCoversHead(latest?.delivery, head) &&
-              !overridePasses(latest?.delivery, "review", head)) ||
-            (!acceptedValidation(latest?.delivery?.liveValidation, head).ready && !proofPassed)
-          )
-            throw new Error(
-              "The current proof or review changed before publication; nothing was sent.",
-            );
-          if (proofPassed) return;
-          if (
-            !this.options.verifyValidationEvidence &&
-            latest?.delivery?.liveValidation?.runs.at(-1)?.evidence.length
-          )
-            throw new Error("Kept proof cannot be verified here; nothing was sent.");
-          this.options.verifyValidationEvidence?.(taskId);
-          return;
-        }
+        if (!prerequisite) return;
         // The transition rechecks the current approval, code clearance and
         // scenario. For saved stories this runs after their preflight, before
         // any attachment leaves the computer, not before a possibly long read.
@@ -2536,13 +2501,7 @@ export class PrCiService {
       if (hasChangeRequests(forge.kind))
         requireConventional(change.title ?? "", "pull request title", this.options.namingRule?.());
       const fresh = this.options.tasks.get(taskId) ?? record;
-      const policy = fresh
-        ? effectiveTaskPolicies(
-            fresh,
-            fresh.repoId ? this.options.repos.get(fresh.repoId) : undefined,
-          )
-        : null;
-      if (fresh && policy?.rigor.value === "reviewed") {
+      if (fresh) {
         await carryPassedReview({
           tasks: this.options.tasks,
           taskId,

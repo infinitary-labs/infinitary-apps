@@ -88,9 +88,9 @@ export type CrewStatusEntry = {
    */
   ci?: CiReadingFact;
   /**
-   * Where the independent review stands, on a reviewed task or a review
-   * task: `awaiting review`, `review open (<key>)`, `review: findings`,
-   * `review passed`, or `reviews <key>` on the reviewer's own row.
+   * Where the independent review stands, on a task with a review or a
+   * review task: `review open (<key>)`, `review: findings`, `review passed`,
+   * or `reviews <key>` on the reviewer's own row. Absent with no review.
    */
   review?: string;
   /**

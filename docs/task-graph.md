@@ -14,7 +14,7 @@ P0 made a task a durable record, P1 made every captain ask land on one; P2 gives
   A parent may carry a crewmate or be a pure container - a planned row that never dispatches on its own.
   **Discovery is not containment**: a follow-up a crewmate files is never a child of the task it was found on (see "Follow-ups are not children" below).
 - **Links** (`task_links`, primary key `(from, to, type)`): `blocks` - `to` is not ready until `from` closes successfully (`done`; dropped never clears).
-  A `holds_merge` mark on that edge, set only by a must-merge-first filing, the host's review, or a required action's prerequisite, is what holds `to`'s close while `from` is still live work.
+  A `holds_merge` mark on that edge, set only by a must-merge-first filing or a required action's prerequisite, is what holds `to`'s close while `from` is still live work.
   `related` is informational; `discovered-from` - `from` was found while doing `to`, provenance with no effect on readiness or closing; `replaced-by` - `to` does `from`'s work now (a drop, a takeover or a fresh task), with no effect on readiness or closing either.
   Each link reads on both ends, and the links decide which tasks read another's milestones (`docs/task-record.md`, "Whom an event concerns").
   A `blocks` edge that would close a cycle is refused at insert (`TaskGraphRefusal`, surfaced as tool text): the walk follows `blocks` edges outward from `to` and must not reach `from`.
@@ -81,8 +81,9 @@ A detached follow-up must stay findable, so its origin is shown wherever the par
 
 A parent closes only when every child is closed (`TaskService.closeRefusal` names the open children by key) - except delivery machinery: a child the HOST commissioned as part of delivering its parent (a `host:*` kind_source: the independent review, and the independent assessment of a kept merge's undecided repair; `TaskService.isDeliveryChild`) carries no intent of its own, so it never holds the parent's close, keeps the parent the host gave it (`setParent` refuses), and is retired by the supervisor whenever the parent closes, in any direction (`docs/delivery-rigor.md`, the reviewed sequence).
 The parent edge is the only stored review-to-builder join: which review a builder's verdict came from is read off it (`TaskService.verdictReviewOf`), never cached on the builder.
+The host records no `blocks` edge from a review onto its builder (INF-1876): whether a merge waits for the verdict is the care runbook's guidance, and the edge an earlier release recorded is removed at the upgrade (`docs/saved-data-compatibility.md`, "The review's edge").
 A task also does not close while something it waits on is still live work - open or active (`TaskService.blockerRefusal`, over `blockersHoldingClose`): that is what `blocks_me` promises, and blocks edges otherwise gate dispatch alone, which says nothing about work already under way.
-That wait is a soft hold (`waits`, and `review` for the host's review child): the captain's recorded override passes it, and a close refused on it says so (`docs/delivery-rigor.md`, "The holds").
+That wait is a soft hold (`waits`): the captain's recorded override passes it, and a close refused on it says so (`docs/delivery-rigor.md`, "The holds").
 A **dropped** blocker clears a close, and only a close - for readiness it is a wait that can never end and the first mate answers the dead-gate wake, but that wake names open rows only, so an active task held by a dropped blocker would strand with no way out.
 A `discard` abandons the work rather than completing it, so a wait never forbids it; only containment does (`SettleService.closeGateRefusal`).
 A crewmate's merge card is refused at emit time while that same rule would refuse the click (`CrewSupervisor.addCrewmateCard`; open children stay a click-time choice because the captain can override them).

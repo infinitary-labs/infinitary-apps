@@ -1,6 +1,6 @@
 import { lstatSync, readdirSync, readFileSync } from "node:fs";
 import { extname, join, relative, resolve, sep } from "node:path";
-import { type RunbookManifest, runbookManifestSchema } from "../../shared/runbooks";
+import { crewSectionsOf, type RunbookManifest, runbookManifestSchema } from "../../shared/runbooks";
 
 /** A declared path names a real child, never an absolute path or an escape. */
 export function runbookPath(root: string, file: string): string {
@@ -76,7 +76,10 @@ export function checkRunbookFiles(
     if (file && !lstatSync(reference(file)).isDirectory())
       throw new Error("Runbook skills and parts must be folders.");
   }
-  for (const file of [manifest.firstmate, manifest.crew?.file]) {
+  for (const file of [
+    manifest.firstmate,
+    ...crewSectionsOf(manifest).map((section) => section.file),
+  ]) {
     if (!file) continue;
     const path = reference(file);
     if (!lstatSync(path).isFile()) throw new Error("A runbook section must be a text file.");

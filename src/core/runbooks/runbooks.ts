@@ -12,6 +12,7 @@ import {
 import { mkdir, rm, writeFile } from "node:fs/promises";
 import { dirname, join, relative, resolve, sep } from "node:path";
 import {
+  crewSectionsOf,
   type NamingRule,
   type RunbookFacts,
   type RunbookManifest,
@@ -147,15 +148,17 @@ export class Runbooks {
       .join("\n\n");
     return { text, sha: createHash("sha256").update(text).digest("hex") };
   }
+  /** The crew sections the facts select, in runbook then manifest order. */
+  crewSections(facts: RunbookFacts): string[] {
+    return this.active(facts.project).flatMap((entry) =>
+      crewSectionsOf(entry.manifest)
+        .filter((section) => runbookMatches(section.when, facts))
+        .map((section) => this.read(entry, section.file)),
+    );
+  }
   crew(facts: RunbookFacts): { text: string; skills: RunbookSkillFiles[]; sha: string } {
     const active = this.active(facts.project);
-    const text = active
-      .flatMap((entry) =>
-        entry.manifest.crew && runbookMatches(entry.manifest.crew.when, facts)
-          ? [this.read(entry, entry.manifest.crew.file)]
-          : [],
-      )
-      .join("\n\n");
+    const text = this.crewSections(facts).join("\n\n");
     const roots = active.flatMap((entry) =>
       entry.manifest.skills ? [this.path(entry, entry.manifest.skills)] : [],
     );

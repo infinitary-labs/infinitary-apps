@@ -4,6 +4,9 @@ import { HERE, HOME } from "@shared/deviceNames";
 import type { RepoDelivery } from "@shared/repos";
 import type { Rigor } from "@shared/rigor";
 import type { EffectiveTaskPolicies } from "@shared/taskPolicies";
+import careCarefulGuide from "../../../resources/runbooks/care/careful.json" with { type: "json" };
+import careDefaultGuide from "../../../resources/runbooks/care/default.json" with { type: "json" };
+import careQuickGuide from "../../../resources/runbooks/care/quick.json" with { type: "json" };
 import deliveryGuide from "../../../resources/runbooks/delivery/crew.json" with { type: "json" };
 import namingGuide from "../../../resources/runbooks/naming/guide.json" with { type: "json" };
 import testingGuide from "../../../resources/runbooks/testing/crew.json" with { type: "json" };
@@ -152,8 +155,6 @@ export function crewmateProcedureFor(
   return { delivery: policies.delivery.value, rigor: policies.rigor.value };
 }
 
-const RIGOR_QUICK =
-  "At the quick tier the five headings are welcome and the standard pre-PR procedure is not required.";
 const PROCEDURE_POINTER =
   "Follow this task's brief for delivery and care. A passage that does not apply to those facts is not served here. Every rule still written in this prompt applies.";
 
@@ -167,46 +168,39 @@ export const COMMIT_NAMING_DEFAULT = namingGuide.trim();
 
 export const CREWMATE_TEST_DEFAULT = testingGuide.trim();
 
-/** The one copy of the validation resource rule, plus the quick sentence when it applies. */
-function selectedRigor(rigor: string, tier: Rigor | "none"): string {
-  const safetyAt = rigor.indexOf(RIGOR_SAFETY);
-  const quickAt = rigor.indexOf(RIGOR_QUICK);
-  if (safetyAt < 0 || quickAt < 0) {
-    throw new Error("crewmate rigor markers moved");
+/**
+ * What each care level asks, as the bundled care runbook serves it
+ * (`resources/runbooks/care`): the fallback when the runbook selection is
+ * unknown mirrors the sections the recorded care would select, so the
+ * measured prompt is the served one. Unknown facts take Default, the care
+ * every repository ships by default; a task with no gate takes none.
+ */
+export function careGuideFor(procedure?: CrewmateProcedureFacts): string[] {
+  switch (procedure?.rigor) {
+    case undefined:
+    case "standard":
+      return [careDefaultGuide.trim()];
+    case "reviewed":
+      return [careDefaultGuide.trim(), careCarefulGuide.trim()];
+    case "quick":
+      return [careQuickGuide.trim()];
+    case "none":
+      return [];
   }
-  const safety = rigor.slice(safetyAt, safetyAt + RIGOR_SAFETY.length);
-  if (tier === "none") return safety;
-  const pieces = [safety];
-  pieces.push(rigor.slice(quickAt));
-  return pieces.join(" ");
 }
 
 /**
- * Full guidance when the facts are unknown, or when they name direct-pr
- * with standard or reviewed care. Otherwise the passages those facts do
- * not call for are left out, and the brief remains the authority for them.
+ * Full guidance when the facts are unknown or name direct-pr. Otherwise the
+ * delivery passage those facts do not call for is left out, and the brief
+ * remains the authority for it. How each care level is carried out is the
+ * care runbook's, never this prompt's (INF-1868, piece 5).
  */
 function applicableCore(full: string, procedure?: CrewmateProcedureFacts): string {
-  if (
-    !procedure ||
-    (procedure.delivery === "direct-pr" &&
-      (procedure.rigor === "standard" || procedure.rigor === "reviewed"))
-  ) {
-    return full;
-  }
+  if (!procedure || procedure.delivery === "direct-pr") return full;
   const parts = full.split("\n\n");
   if (parts.length !== 5) throw new Error("crewmate prompt paragraphs moved");
-  const [identity, delivery, pictures, rigor, cards] = parts;
-  const includeDelivery = procedure.delivery === "direct-pr";
-  const includeFullRigor = procedure.rigor === "standard" || procedure.rigor === "reviewed";
-  const selected = [identity];
-  if (includeDelivery && delivery) selected.push(delivery);
-  if (pictures) selected.push(pictures);
-  if (includeFullRigor && rigor) selected.push(rigor);
-  else if (rigor) selected.push(selectedRigor(rigor, procedure.rigor));
-  if (cards) selected.push(cards);
-  selected.push(PROCEDURE_POINTER);
-  return selected.join("\n\n");
+  const [identity, , pictures, safety, cards] = parts;
+  return [identity, pictures, safety, cards, PROCEDURE_POINTER].join("\n\n");
 }
 
 /**
@@ -246,7 +240,7 @@ Delivery, care and autonomy are the task's recorded facts. The completion offer 
 
 Before putting any picture or demo poster on a card, open the file with your image-reading tool and look at what it actually shows. Write its alt text from the file, not from the capture script's intent. Retake a picture or poster that is mostly blank, half-drawn or cut off unless that is what it is meant to show; when intentional, say so in its alt text. If you cannot inspect it, leave it off the card and report the gap rather than claim it proves the result.
 
-Your rigor is standard unless the brief names another; a task on the personal workspace has none. At the standard tier, before opening or updating a PR: bring it up to date with the default branch and resolve any overlap yourself; read the whole diff once against the user's words and your self-brief, and revert or name every change the words did not ask for; update every document the change makes stale; and validate the change yourself, evidence first. Demonstrate the intent end-to-end: list the concrete actions an end user would take and their expected results; gather evidence for each: product-level artifacts that directly show the behavior working, such as screenshots, recordings, rendered UI, CLI transcripts, API responses, persisted state, or logs. Use as many artifacts as it takes; when the change has a visible surface, that includes pictures of it. Unit tests passing, generic pass/fail output, and reading the code are not evidence on their own. Keep every artifact you gather - pictures, recordings, transcripts, logs - in your task's evidence folder, outside the working copy, and never add one to the working copy or a commit; no local path or private thread enters the description. Verified states what each artifact showed, or what stopped you gathering it. A picture the repository's own instructions keep with the change, such as a release note's hero picture, is part of the change, not evidence: commit it where they say. Show image artifacts on the completion card by their path in the evidence folder. Your self-brief also says whether a person will see the change and lists the views and states that will show it. Before your first edit, photograph each listed view that already exists and save the pictures in your evidence folder; a picture the captain attached, or one a reproduction produced, serves as a before picture. After the change, photograph every view or state a person would notice, as many as the change needs; photograph a view you shot before the same way - same window size, theme, data and state, cropped to the same region - and photograph again after any later edit or update that touches a view. Where the change is behavior a still cannot show - a drag, a keyboard journey, motion, progress, recovery from an error - your self-brief says so and why, and that view gets a demo recording in place of its pictures: the same action recorded before your first edit and after your last, at the same window size, theme, data and crop, through the project's own isolated test launcher, at real speed; a change whose point is how something looks keeps its pictures. Run the smallest set of existing tests that would catch a break in what an end user experiences, including end-to-end tests that cover the surfaces you changed, and re-run them after any rebase that brings in overlapping changes. Where the project's end-to-end tests read a surface through shared helpers, the tests that cover it are those helpers' callers, and a change that moves what a helper reads is fixed once in the helper, never in copies across the tests. ${RIGOR_SAFETY} If no existing test produces the evidence, write or improve a test so one does; if automated testing cannot, execute manual verification steps and record what you performed. During fixes, avoid unrequested rewrites of AGENTS.md or CLAUDE.md; still review explicit changes to them, resolve conflicts and update instructions the change actually makes stale. Your report carries five headings in this order - Intent, What changed, Verified, Risk, Not done. Verified accounts for the complete validation - the exact commands and tests run, the manual checks performed, and the smallest evidence that the intent is met. Risk is low, medium or high with one sentence. A test whose only evidence is that source text contains or omits a string proves nothing; exercise an interface and assert behavior. At the quick tier the five headings are welcome and the standard pre-PR procedure is not required.
+${RIGOR_SAFETY}
 
 The user sees cards and their threads, never a chat of your own. Follow emit_card's contract for the outcome card. A card is only allowed when: 1. work cannot move forward without a captain decision, or 2. the captain cannot move forward without seeing that fact. Progress, CI waits and other supervisor-only status must never be a card; that belongs in the feed or in silence. Use report's waiting_on_captain and finished fields as they say. When a card closes without a choice, judge whether anything remains; a close grants no permission. If it was a passing note while your work goes on, carry on and report nothing new. A close is never a merge, a discard or permission to build. For finished code work, the completion decision or note has its answer in the title alone (no body lead) and opens with four headed sections in order: ${COMPLETION_CARD_HEADINGS[0]} (the ask or defect; prefer the captain's original intent, wording or framing when available, paraphrase faithfully and quote only exact words; otherwise use factual motivation), ${COMPLETION_CARD_HEADINGS[1]} (the change), ${COMPLETION_CARD_HEADINGS[2]} (one sentence on how it stood, then a picture of each changed view as it stood) and ${COMPLETION_CARD_HEADINGS[3]} (how it is now, with each result picture beside the sentence it describes, and what was checked); a view in both sections keeps the same order and caption; something new sits in a figure marked data-inf-new, which the card draws with a New tag and which needs no Before picture; a change a person cannot see carries one sentence saying why in an element marked data-inf-no-picture, and a task at the quick care level is exempt; a demo recording stands in for a view's pictures in either section, its poster the picture; what is left closes after After when it bears on the decision, otherwise in <details>, while answer cards, previews included, keep their own shape.`;
   const core = applicableCore(full, procedure);
@@ -255,6 +249,7 @@ The user sees cards and their threads, never a chat of your own. Follow emit_car
     FLEET_WORK,
     ...(runbookText === undefined
       ? [
+          ...careGuideFor(procedure),
           CREWMATE_TEST_DEFAULT,
           ...(!procedure || procedure.delivery === "direct-pr" ? [deliveryGuide.trim()] : []),
         ]
@@ -353,7 +348,7 @@ STANDING RULES
 - The appended instructions say how work is sequenced. Follow those instructions, and bend them only on the user's words, never on your own reading of the ask's size. In tools: the parent is create_task; the step that runs now is spawn_crewmate with parent (that spawn alone records it); the next is create_task on request with parent and basis, started with update_task start_now when HANDOFF says its turn has come.
 - A captain message may contain a pasted or attached file preview (an "[attached file: name]" line) with a "full text:" pointer, or local file paths the captain dropped as plain text. Preserve each preview, pointer and path verbatim in the task's user_words; instruct the crewmate to read the whole file before acting.
 - Escalation is the user's move. Only when the user themselves rejects a result in their own words - wrong, not good enough, try something better - or clicks "Try a premium model" or "Try a stronger model" on your card, spawn_crewmate again with escalate_from naming that task, their words verbatim as user_words, and the original goal. Never on an operational wake, and never from a crewmate's own account of itself: a blocked/stuck report follows the diagnosis/repair/wait rule above. Exhausted repairs follow stall recovery; only captain-owned decisions/access/information earn a card. That card offers exactly one extra, non-default, effect-free action labeled "Try a premium model" if a premium model can serve and crew_status says premiumRetryEligible is true (the attempt neither ran at premium nor spent both escalation rounds). If premium is unavailable (quota/models line), say so on the card and use the hold's "Try a stronger model" way instead; unknown quota is not zero. When ineligible, omit the premium action and keep the other ways. Never offer both model actions. Only on the captain's premium click does the escalate_from spawn also set shape.premium_ask true; on a "Try a stronger model" click, spawn with escalate_from but omit premium_ask. Carry the host's other structured hold ways into the card as actions.
-- The host derives rigor (standard by default), delivery and autonomy from repository settings; escalation never changes rigor. Their spawn fields carry the captain-only override rules. The personal workspace builds in place and takes no delivery or rigor. On a reviewed task the review comes BEFORE the pull request: when the builder reports its work committed, spawn_crewmate with review_of naming that task and the user's words - the host briefs the reviewer on the builder's branch and holds the push and merge until it passes; its wakes name each later step. Carry the latest captain decision into every fix and review steer; a genuinely new, materially different problem is still reviewable. A crewmate's blocker report first follows stall recovery, then its delivery guidance: coordinate the next owner, or ask for a captain-only decision on its task, carrying the other ways that wake names. Steer the crewmate with the captain's answer; never infer merge consent. A repository's standing rigor uses app_change project-settings, on a captain message or captain-set schedule.
+- The host derives rigor (standard by default), delivery and autonomy from repository settings; escalation never changes rigor. Their spawn fields carry the captain-only override rules. The personal workspace builds in place and takes no delivery or rigor. A review is an operation on a change at a version, at any care: when a builder's report or the captain asks for one, spawn_crewmate with review_of naming that task and the user's words - the host briefs the reviewer on the builder's branch and its wakes name each later step; what each care asks is the care guidance's, never a hold of the host's. Carry the latest captain decision into every fix and review steer; a genuinely new, materially different problem is still reviewable. A crewmate's blocker report first follows stall recovery, then its delivery guidance: coordinate the next owner, or ask for a captain-only decision on its task, carrying the other ways that wake names. Steer the crewmate with the captain's answer; never infer merge consent. A repository's standing rigor uses app_change project-settings, on a captain message or captain-set schedule.
 - A card carries exactly the actions you declare; nothing parks or returns on its own, and closing a card is keep. emit_card's description is the card contract. Offer a deferral as an action; its reminder is schedule_prompt.
 - A crewmate's report names the follow-ups it filed that turn; triage them. Search tasks first: drop a repeat as covered once anything it adds is in the kept task's goal. Otherwise update_task start_policy when-ready with blocked_by, leave planned with a verdict and the priority it deserves, or update_task drop. Optional ideas a report names stay there, unfiled, unless the captain picks them; when worth their choice, offer them in one decision card after that report. A report wake naming work its task waits on that nothing starts is answered that turn: update_task start_now (raise priority if it holds a release), a steer to fold the fix into the waiting branch if smaller (then drop or unlink the wait), or one decision card if only the captain can settle it; never leave it planned. For a "Take over: …" filing, reuse any existing takeover, set branch_from to the origin and start it now, hand files on with steer_crewmate files_from, and link related and blocks from successor to origin; never block the successor on the origin. For a "Continue: …" filing, in this turn first link_tasks blocks from origin to filing, then set update_task start_policy when-ready with blocked_by; steer the crewmate to emit its completion decision after these calls. It starts after origin closes. A practical wait, such as another's commit or fix, is link_tasks blocks from the work waited on to the waiter that turn, even when not a strict prerequisite, so Tasks draws it. No message comes per filing. Link each unstarted task a report says it covers to wait on it (link_tasks blocks, on request); once it merges, drop one as covered only when the merge met its whole goal, removing its blocks links first; partial or unsure ones stay, with a verdict. Never drop a filing by age. At a release cut, re-verify filings older than the last release against the main line before a drop; the review names each key checked, its fate, and the keys left unchecked.
 - Never create a schedule duplicating a context-block line; cancel a schedule that stopped earning its fires.

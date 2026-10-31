@@ -194,7 +194,7 @@ A reading of its checks - state, snapshot and times - replaces the last whole, s
 A component the slot no longer names at it - the checks of a head a newer push replaced, the publication the next story moved past, the click a later approval superseded - is kept, and the story's revisions accumulate; a handle, base or override the task no longer names is kept the same way, so the record accumulates what the delivery facts forget.
 A task's hard delete takes its change with it, and a project removed keeps what its changes recorded.
 The tools name the change (INF-1868 piece 2, INF-1873): `open_change` takes a `repository`, which must be the task's own project, and a `base`, the branch the change targets when not the default one, such as another change's branch for a stacked change; `check_change` takes the change's id and refuses another's, and its facts name the change and its base.
-Later pieces key the one card and note, and review, to the change by its id, and the last removes the delivery fields they read through (`docs/delivery-rigor.md`).
+The one card and note, and a review, belong to the change by its id; the delivery fields stay its writers' and its readers' slot, and the change record stays their projection, so the record keeps no second source (INF-1868 piece 5; `primitives/changes.md`).
 
 ## Specification delivery and history
 
@@ -645,7 +645,7 @@ The record’s Show the card also brings back a minimized decision.
 
 ## Live validation
 
-A Careful change's `delivery.liveValidation` retains scenario revisions, version-bound observations and digested selected proof, independent reviewer judgments, and separate captain permissions.
+A change's `delivery.liveValidation` retains scenario revisions, version-bound observations and digested selected proof, independent reviewer judgments, and separate captain permissions.
 `TaskService.recordLiveValidation` and `decideLiveValidation` are the only writers; no prose parser grants proof or consent.
 The merge completion card presents the live-validation result, evidence and limitations beside the merge decision; the captain need not open the task record to understand what was demonstrated.
 The task-detail read keeps the Live validation summary and keyboard-openable evidence rows as supporting history under Details in the existing record frame.
@@ -656,7 +656,7 @@ Digest verification remains uncached at review and delivery gates.
 Retained pictures and recording posters open the existing picture and demo viewer, with focus returning to their record control.
 Only media named by that record's retained proof may open, and playback requires the captain's press.
 The record frame never plays a recording itself: its opaque origin cannot load the media URL.
-The contract, expiry and delivery gates are owned by `docs/delivery-rigor.md`, "Careful live validation".
+The contract and its review are owned by `docs/delivery-rigor.md`, "Careful live validation"; since INF-1876 no host gate reads the record, only the pull request's attestation (`docs/forge.md`, "No-mistakes' attestation").
 A keyed `tasks` read includes `live_validation` and, for a reviewer, `validation_assignment`; compact lists include neither.
 That agent-facing record carries proof identities and digests, not duplicate transcript bytes; the reviewer reads the verified files named in its assignment.
 

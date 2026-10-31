@@ -146,7 +146,7 @@ import {
 } from "../storage/taskStore";
 import { compactBrief, expandBrief, reportHash } from "./briefReceipt";
 import { baselineStands } from "./dependencyWaits";
-import { holdingWaits, holdKindOf } from "./holdingWaits";
+import { holdingWaits } from "./holdingWaits";
 import { decideValidation, recordValidation } from "./liveValidation";
 import { latestResultOf, type ReportEntry, reportEntryOf, type TaskResult } from "./reportEntry";
 import type { TaskExportBundle } from "./taskExport";
@@ -1203,15 +1203,6 @@ export class TaskService {
     });
   }
 
-  /** Whether the pinned served brief actually contained a particular contract. */
-  briefContains(id: string, text: string): boolean {
-    return this.timeline(id).some(
-      (event) =>
-        event.kind === "briefed" &&
-        this.servedBrief(event).replace(/\s+/g, " ").includes(text.replace(/\s+/g, " ")),
-    );
-  }
-
   /** The tasks that must close before this one is ready. */
   blockers(id: string): TaskRecord[] {
     return this.links
@@ -2028,8 +2019,8 @@ export class TaskService {
    */
   closeRefusal(id: string): SettleRefusal | undefined {
     // Delivery machinery (a host-commissioned child, e.g. the review) never
-    // holds its parent's close: the blocks rule is the review's one hold,
-    // and the supervisor retires such children with the parent's close.
+    // holds its parent's close: the supervisor retires such children with
+    // the parent's close.
     const open = this.openChildren(id).filter((child) => !TaskService.isDeliveryChild(child));
     if (open.length === 0) return undefined;
     const task = settleRef(this.store.get(id), id);
@@ -2074,7 +2065,7 @@ export class TaskService {
   /**
    * The blockers that still hold this task's close; empty when none do.
    * Only a marked edge holds the close (INF-416 piece E): a `blocks_me`
-   * filing, the host's review edge, or a required action's prerequisite.
+   * filing or a required action's prerequisite.
    * A recorded wait keeps the edge, and the start, and holds nothing here.
    */
   blockersHoldingClose(id: string): TaskRecord[] {
@@ -2120,14 +2111,11 @@ export class TaskService {
    * under way. Returns the refusal naming the blockers and the ways out.
    */
   blockerRefusal(id: string): SettleRefusal | undefined {
-    // The captain's override passes a must-merge-first wait (`waits`), and
-    // the host's review edge with the review itself (`review`).
+    // The captain's override passes a must-merge-first wait (`waits`).
     const record = this.store.get(id);
     const delivery = record?.delivery;
-    const holding = this.blockersHoldingClose(id).filter(
-      (blocker) =>
-        !record || !overridePasses(delivery, holdKindOf(record, blocker), delivery?.headSha),
-    );
+    const passed = record !== undefined && overridePasses(delivery, "waits", delivery?.headSha);
+    const holding = passed ? [] : this.blockersHoldingClose(id);
     if (holding.length === 0) return undefined;
     const task = settleRef(this.store.get(id), id);
     const blockers = holding.map((blocker) => settleRef(blocker, blocker.id));
@@ -2144,17 +2132,7 @@ export class TaskService {
         args: { from: blocker.key, to: task.key, type: "blocks", remove: true },
       });
     }
-    // The task's own review holds in review vocabulary: the honest doors
-    // are a verdict or removing the hold - and removing it (or discarding)
-    // retires the review with the close, so no orphan either way.
-    const review = holding.length === 1 ? holding[0] : undefined;
-    const text =
-      review &&
-      review.parentId === id &&
-      TaskService.isDeliveryChild(review) &&
-      review.shape?.kind === "review"
-        ? `Cannot close ${task.key} while its review ${refName(settleRef(review, review.id))} is still open: wait for the verdict, steer a re-review at the current head, or remove the hold with link_tasks remove (closing ${task.key} then retires the review with it).`
-        : `Cannot close ${task.key} while ${holding.length === 1 ? "it waits on" : `it waits on ${holding.length} tasks`}: ${names}. Merge ${them} first, drop ${them} if the work is not wanted, or remove the wait with link_tasks remove.`;
+    const text = `Cannot close ${task.key} while ${holding.length === 1 ? "it waits on" : `it waits on ${holding.length} tasks`}: ${names}. Merge ${them} first, drop ${them} if the work is not wanted, or remove the wait with link_tasks remove.`;
     return { refused: "waits-on", task, tasks: blockers, ways, text };
   }
 
@@ -2560,17 +2538,6 @@ export class TaskService {
           );
         }
         if (next.rigor.requested !== next.rigor.value) changes.push(POLICY_CARE_BOUND);
-        // Only the host-owned review edge follows care; unrelated blockers stay.
-        for (const child of this.children(id)) {
-          if (
-            child.shape?.kind !== "review" ||
-            !TaskService.isDeliveryChild(child) ||
-            TaskService.isClosed(child)
-          )
-            continue;
-          if (next.rigor.value === "reviewed") this.link(child.id, id, "blocks", actor, true);
-          else this.unlink(child.id, id, "blocks", actor);
-        }
         // Cancel pending attempts in this same transaction. The revision also
         // invalidates attempts already reading asynchronous checks.
         const cancel =

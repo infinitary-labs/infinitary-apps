@@ -606,8 +606,6 @@ export function keptFeedLine(wait: MergeWait, place: string, checks?: string): s
       return checks === "red"
         ? `Your merge waits for a fix: its checks failed. A fix brings a new version with fresh checks: when it changed the work, its crewmate asks you again on a new card; otherwise your merge runs once they pass.`
         : `Your merge waits: ${MERGE_CHECKS_HOLD_REASON}. Your approval is kept. If a fix changes the work, its crewmate asks you again; otherwise the merge runs when its checks pass.`;
-    case "review":
-      return `Cannot merge yet: its review has not passed on this change. ${kept} and runs once it does.`;
     case "cap":
       return `Cannot merge yet: it is waiting for your answer about its repair attempts. ${kept} for after that.`;
     case "protected":
@@ -646,8 +644,6 @@ export function keptNote(wait: MergeWait, head: string, place: string, checks?: 
       return checks === "red"
         ? `${kept} For ${head}, the checks failed and the merge waits for a fix. The crewmate reads failed logs and fixes the cause; a changed version is declared as a repair. ${declare}`
         : `${kept} For ${head}, ${MERGE_CHECKS_HOLD_REASON}. The crewmate reads missing results; the merge runs when its checks pass. ${declare}`;
-    case "review":
-      return `${kept} This task ships at the reviewed tier and its review has not passed for this change (${head}): commission the review; the host merges once it passes.`;
     case "cap":
       return `${kept} A round cap holds the task: the captain's answer to the cap comes first, then the host merges.`;
     case "protected":
@@ -669,9 +665,6 @@ export function keptNote(wait: MergeWait, head: string, place: string, checks?: 
 
 /** Waits the tick reads again on its own, and how soon. */
 const TIMED_WAITS: Partial<Record<MergeWait, number>> = {
-  // A review passing, a blocker closing or GitHub's rules clearing wakes
-  // nothing on the task, so the tick looks again.
-  review: 5 * 60_000,
   // An independent assessment that stopped without answering, or ran past
   // its bound, wakes nothing either (FI3-663).
   evidence: 10 * 60_000,
@@ -705,7 +698,6 @@ export function wakesFirstmate(wait: MergeWait): boolean {
   return (
     wait === "conflict" ||
     wait === "repair" ||
-    wait === "review" ||
     wait === "refused" ||
     wait === "sign-in" ||
     wait === "protected" ||

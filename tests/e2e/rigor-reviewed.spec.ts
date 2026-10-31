@@ -19,12 +19,7 @@ import { cardBody } from "./frames";
 import { type GitHubStub, seedGitHubSignIn, seedRepo, startGitHubStub } from "./githubStub";
 import { type LaunchedApp, launchApp } from "./launch";
 import { resizeWindow } from "./layout";
-import {
-  FM_SYSTEM_MARKER,
-  MERGE_PROMPT_MARKER,
-  REVIEWED_TIER_PROMPT_MARKER,
-  SPAWN_PROMPT_MARKER,
-} from "./mockProvider";
+import { FM_SYSTEM_MARKER, REVIEWED_TIER_PROMPT_MARKER, SPAWN_PROMPT_MARKER } from "./mockProvider";
 import { regionShot } from "./pictures";
 import { seedHostedOrigins } from "./projectSeed";
 import { promptInput } from "./prompt";
@@ -64,16 +59,15 @@ import { setThemeViaSettings } from "./theme";
  * reads the builder's committed branch head, which this journey keeps
  * equal to the recorded pull request head - `crewSupervisor.test.ts` covers
  * a recorded head that has fallen behind); the Firstmate checks CI and spawns the reviewer
- * with `review_of`; the host briefs the reviewer read-only and holds the
- * builder's merge on a `blocks` edge; the reviewer's findings reach the
- * Firstmate directly (never supervision) and become one steer and one
- * decision card; a merge asked for while the review is open is refused;
- * repeated re-reviews return findings without a host round allowance;
- * a later re-review passes, which closes the review task, releases the hold
- * and is one feed line; the completion card shows the review and merges.
+ * with `review_of`; the host briefs the reviewer read-only and holds
+ * nothing on the builder for it (INF-1876); the reviewer's findings reach
+ * the Firstmate directly (never supervision) and become one steer and one
+ * decision card; repeated re-reviews return findings without a host round
+ * allowance; a later re-review passes, which closes the review task and is
+ * one feed line; the completion card shows the review and merges.
  *
  * Real: the repository, task working copies, care derivation, review brief,
- * blocks hold, the typed verdict, card path and settle. Stand-ins: models (the mock
+ * the typed verdict, card path and settle. Stand-ins: models (the mock
  * provider IS the scripted shape of each session) and GitHub, a local
  * stand-in the app reads through its own sign-in, which answers the change,
  * its checks and the merge the way GitHub's API would (`./githubStub.ts`).
@@ -154,22 +148,6 @@ async function boardRow(
 }
 
 /**
- * The Firstmate turns that answered the captain's ask carrying `marker`: a
- * turn counts once a tool result came back (one naming `naming`, when
- * given). `seen` is the count before the ask is sent.
- */
-function answeredTurns(marker: string, naming?: string) {
-  const count = () =>
-    (launched.mockProvider?.requestBodies() ?? []).filter((body) => {
-      if (!body.includes(FM_SYSTEM_MARKER)) return false;
-      const turn = latestServedTurn(body);
-      if (!turn?.segments.some((segment) => segment.body.includes(marker))) return false;
-      return turn.toolResults.some((result) => naming === undefined || result.includes(naming));
-    }).length;
-  return { seen: count(), count };
-}
-
-/**
  * Every wake the Firstmate was served across the run, as the host framed
  * it: each request's newest input, segment by segment.
  */
@@ -218,7 +196,7 @@ test.afterAll(async () => {
   await github.close();
 });
 
-test("a reviewed task is held by its reviewer until the review passes, then merges with the review on its card", async () => {
+test("a reviewed task's review passes before its completion card, which merges with the review on it", async () => {
   const { page, mockProvider } = launched;
   const input = promptInput(page);
   await resizeWindow(launched.app, page, { width: 1280, height: 900 });
@@ -259,7 +237,7 @@ test("a reviewed task is held by its reviewer until the review passes, then merg
     .poll(() => page.evaluate((id) => window.infinitary.tasks.detail(id), builder.id))
     .toMatchObject({
       status: "active",
-      blockedBy: [review.key],
+      blockedBy: [],
       delivery: expect.objectContaining({
         prUrl: "https://github.com/o/meterlab/pull/55",
         headSha: HEAD_SHA,
@@ -314,19 +292,13 @@ test("a reviewed task is held by its reviewer until the review passes, then merg
   });
   expect(firstReviewState.assignment).toBeDefined();
 
-  // 5. The hold: a merge asked for while the review is open is refused by
-  //    the blocks edge, and nothing was merged. The refusal's words are
-  //    crewSupervisor.test.ts's; here the turn has its answer and the task
-  //    stays held.
-  const merge = answeredTurns(`${MERGE_PROMPT_MARKER}${BUILDER_TITLE}`);
-  await input.click();
-  await input.fill(`${MERGE_PROMPT_MARKER}${BUILDER_TITLE}`);
-  await input.press("Enter");
-  await expect.poll(merge.count, { timeout: 30_000 }).toBeGreaterThan(merge.seen);
+  // 5. No hold: the review holds nothing on the builder (INF-1876), so the
+  //    task waits on nothing while the review is open, and nothing was
+  //    merged - the merge is the captain's click on the completion card.
   expect(github.merges()).toEqual([]);
   await expect
     .poll(() => page.evaluate((id) => window.infinitary.tasks.detail(id), builder.id))
-    .toMatchObject({ status: "active", closedReason: null });
+    .toMatchObject({ status: "active", closedReason: null, blockedBy: [] });
 
   // Accepted INF-1177: repeated review facts never create a host round allowance.
   const detail = () => page.evaluate((id) => window.infinitary.tasks.detail(id), builder.id);
@@ -450,7 +422,7 @@ test("a reviewed task is held by its reviewer until the review passes, then merg
     wakes.some(
       (wake) =>
         wake.includes(`reported on review task ${review.id}`) &&
-        wake.endsWith(reviewFindingsNext(true)),
+        wake.endsWith(reviewFindingsNext()),
     ),
   ).toBe(true);
   expect(

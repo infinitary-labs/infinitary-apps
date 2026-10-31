@@ -163,8 +163,6 @@ export type MergeWait =
   | "evidence"
   /** The checks on the candidate head have not all passed. */
   | "checks"
-  /** A reviewed task's review has not passed for this change. */
-  | "review"
   /** A round cap on the task holds it until the captain answers. */
   | "cap"
   /** GitHub holds the merge: a required review or another rule on the branch. */
@@ -1455,9 +1453,9 @@ export class TaskStore {
 
   /** A parent's direct children, oldest first. */
   listChildren(parentId: string): TaskRecord[] {
-    const rows = this.db
-      .prepare(`SELECT * FROM ${this.readTable()} WHERE parent_id = ?`)
-      .all(parentId) as Row[];
+    const rows = prepared(this.db, `SELECT * FROM ${this.readTable()} WHERE parent_id = ?`).all(
+      parentId,
+    ) as Row[];
     return oldestFirst(this.read(rows));
   }
 

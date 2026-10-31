@@ -159,7 +159,7 @@ Closing the review closes the reviewer's task, so the reviewer takes its existin
 Its offset eases out on the springs over the fall, so it leaves from the seat it was drawn at and glides to its normal path; reduced motion settles at once.
 Restart seeds the same relationship from the live board, and two reviews of one builder do not cancel each other when one ends: the other keeps circling.
 `CrewOrbit.withReviewCues` turns each live review into a satellite cue beside the recorded waits.
-The host holds the builder's merge on its review as a recorded wait; the orbit layer drops that one edge, so the builder never orbits its own reviewer or points an arrow at it (the Tasks list and its gutter still show the wait).
+The host records no edge from a review onto its builder (INF-1876), so the builder never orbits its own reviewer or points an arrow at it; the orbit layer drops such an edge all the same, the way an earlier release recorded one.
 A real dependency keeps its place, and reviewers and waiting crewmates of one builder share up to three seats.
 More than three, a builder that is itself a satellite, a reviewer not yet on its orbit, or a builder past the scene reach keeps the reviewer on its slot; near the scene's edge the circle shrinks instead ("Waiting on another crewmate" below).
 Circling or on its slot, the reviewer draws an arrow to the builder at all times, the way a waiting crewmate does ("Waiting on another crewmate" below), in the working ember (`--wire-hot`) rather than the gray (captain, INF-556: "for a reviewer relationship, it should use the orange color that we use as active").

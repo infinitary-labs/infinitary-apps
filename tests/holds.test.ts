@@ -2,7 +2,14 @@ import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 import { citationsIn, holdProblems } from "../scripts/holds";
-import { fixedHoldWords, HOLDS, softHoldWords, withoutHoldWords } from "../src/shared/holds";
+import {
+  fixedHoldWords,
+  HOLDS,
+  type HoldKind,
+  overrideRefusal,
+  softHoldWords,
+  withoutHoldWords,
+} from "../src/shared/holds";
 
 /**
  * INF-242's plan, move 3 of INF-484 (INF-473): "a hold outside the registry
@@ -67,18 +74,23 @@ describe("the holds registry check", () => {
   it("refuses an entry no site cites", () => {
     const problems = holdProblems(
       HOLDS,
-      sites.filter((site) => !site.path.endsWith("/review.ts")),
+      sites.filter((site) => !site.path.endsWith("/decisions.ts")),
       docs,
     );
-    expect(problems).toEqual([expect.stringContaining('"review" has no site')]);
+    expect(problems).toEqual([expect.stringContaining('"decisions" has no site')]);
   });
 
   it("refuses a docs table out of step with the registry", () => {
-    const drifted = docs.replace("| `review` | soft | record |", "| `review` | fixed | record |");
+    const drifted = docs.replace(
+      "| `decisions` | soft | record |",
+      "| `decisions` | fixed | record |",
+    );
     expect(holdProblems(HOLDS, sites, drifted)).toEqual([
-      expect.stringContaining('"review" reads fixed, record; the registry holds it soft, record'),
+      expect.stringContaining(
+        '"decisions" reads fixed, record; the registry holds it soft, record',
+      ),
     ]);
-    const missing = docs.replace(/^\| `review` \|.*\n/m, "");
+    const missing = docs.replace(/^\| `decisions` \|.*\n/m, "");
     expect(holdProblems(HOLDS, sites, missing)).toEqual([
       expect.stringContaining('"The holds" table lists'),
     ]);
@@ -87,11 +99,11 @@ describe("the holds registry check", () => {
   it("reads the kind from its argument, the branches of a choice and not what it compares", () => {
     const text = `!overridePasses(
           delivery,
-          blocker.shape?.kind === "review" ? "review" : "waits",
+          blocker.shape?.kind === "review" ? "parts" : "waits",
           delivery?.headSha,
         )`;
     expect(citationsIn("src/core/tasks/taskService.ts", text).map((site) => site.kind)).toEqual([
-      "review",
+      "parts",
       "waits",
     ]);
     expect(
@@ -104,9 +116,22 @@ describe("the holds registry check", () => {
 });
 
 /** His line leaves the agents' sentences out (the vocabulary: no tool names on his surface). */
+describe("an override naming a retired hold", () => {
+  it("is refused in words that name the retired hold, never a crash (INF-1876)", () => {
+    // A release before INF-1876 wrote the review and live-proof holds; an
+    // older record or habit may still name one.
+    const refusal = overrideRefusal(["checks", "review" as HoldKind, "live-proof" as HoldKind]);
+    expect(refusal).toContain(
+      "review is a retired hold: nothing holds on it now, so leave it out.",
+    );
+    expect(refusal).toContain("live-proof is a retired hold");
+    expect(overrideRefusal(["checks", "waits"])).toBeUndefined();
+  });
+});
+
 describe("a line the captain reads", () => {
   it("takes out every hold sentence and nothing else", () => {
-    const text = `Cannot merge: the current version needs an independent review. ${softHoldWords("review", "firstmate")}`;
+    const text = `Cannot merge: the current version needs an independent review. ${softHoldWords("checks", "firstmate")}`;
     expect(withoutHoldWords(text)).toBe(
       "Cannot merge: the current version needs an independent review.",
     );

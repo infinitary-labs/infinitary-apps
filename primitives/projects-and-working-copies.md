@@ -102,5 +102,5 @@ Kept work stays on its hidden ref, outside `refs/heads`, never named on a surfac
 - [Fleet management](../docs/fleet.md): "Asking the first mate to add a project", "Choosing a task key", "Changing a project", "Notes".
 - [The forge seam](../docs/forge.md): "What it is", "The app's own sign-in (PR 1.2)", "The green rule", "The fence".
 - [Architecture](../docs/architecture.md) §4 "Process and security model" (crewmate isolation) and §7 "Work substrate and persistence".
-- [Delivery rigor](../docs/delivery-rigor.md): "The three tiers", "How a task's tier is derived".
+- [Delivery rigor](../docs/delivery-rigor.md): "The three care names", "How a task's care is derived".
 - [The task record](../docs/task-record.md): "Notes" (fleet hygiene); [running work for another Mac](../docs/helper.md): "Its working copies".

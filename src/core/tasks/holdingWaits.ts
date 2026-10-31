@@ -35,26 +35,12 @@ export function holdingWaits(input: {
   if (record.status !== "active") return [];
   const delivery = record.delivery;
   const held = live.filter((blocker) =>
-    holdsMerge(blocker)
-      ? !overridePasses(delivery, holdKindOf(record, blocker), delivery?.headSha)
-      : idleOnWaits,
+    holdsMerge(blocker) ? !overridePasses(delivery, "waits", delivery?.headSha) : idleOnWaits,
   );
   const baseline = standingDependencyWaits(tasks, delivery)
     .map((wait) => wait.task)
     .filter((task) => isLive(task) && !isDeliveryChild(task));
   return [...new Map([...held, ...baseline].map((task) => [task.id, task])).values()];
-}
-
-/**
- * Which hold an override passes for this blocker: the host's review edge
- * passes with the review itself, every other marked edge with the waits.
- */
-export function holdKindOf(record: TaskRecord, blocker: TaskRecord): "review" | "waits" {
-  return blocker.parentId === record.id &&
-    isDeliveryChild(blocker) &&
-    blocker.shape?.kind === "review"
-    ? "review"
-    : "waits";
 }
 
 const isLive = (task: TaskRecord) => task.status === "open" || task.status === "active";

@@ -3,10 +3,11 @@
 The user-facing care labels are Quick (stored `quick`), Default (stored `standard`), and Careful (stored `reviewed`).
 These names do not alter the gates, review, fallback, or persisted values.
 
-This document is the tier model's one home: what each tier asks of a crewmate, how a task's tier is derived, what the evidence contract is, how the reviewed tier runs, and what the host holds as a record.
+This document is the care model's one home: the three care names the host records, how a task's care is derived, what the evidence contract is, how a review runs, and what the host holds as a record.
+What each care asks of a crewmate is the Care levels runbook's (`resources/runbooks/care`), served by the care's name and held by nothing of the host's (INF-1876, the captain: "the host only knows the three names as typed fact - a metadata. how to execute each care level becomes something the runbooks cover").
 
 Rigor derives from the user's words and the repository's configured rigor alone (captain rulings, 2026-09-19): standard is every project's standing value, never the intelligence tier or an escalation.
-The review runs before the pull request, on the builder's branch.
+Careful's guidance orders the review before the pull request, on the builder's branch; the host holds neither the push nor the merge on it.
 A verdict-less reviewer report records nothing and spends no round.
 Info-only findings derive a pass.
 Declined findings converge through the review history the app writes into every reviewer turn ("The review history").
@@ -22,9 +23,9 @@ Every crewmate's coding session receives the working copy's own instruction file
 `projectResources.ts` reads the first available root instruction file (`AGENTS.md`, otherwise `CLAUDE.md`) and discovers skills directly under `.claude/skills` and `.agents/skills`, from the working copy alone.
 Pi serves the instruction file through its resource loader's `agentsFiles` and exposes the project skills through its skill loader; Claude stages the project skills as a local plugin and appends the project instructions to its prompt (`piResourceLoader.ts`, `claudeProjectResources.ts`, `claude/session.ts`).
 These are project resources, not the person's machine-wide instructions, skills, or agent configuration; Claude's empty `settingSources` does not prevent the app from supplying the working copy's own resources.
-The prompt states the standard tier's procedure in full when care is standard, reviewed, or not yet known.
-A task whose typed delivery and care say a passage does not apply is not served that passage, on either model backend and on a task that runs on another computer.
-Unknown facts keep the full text.
+The prompt's core carries the consent rule and the facts every crewmate needs; the Care levels runbook's sections follow by the care's name - its Default section when care is standard or reviewed, its Careful section beside that when care is reviewed, and its Quick sentence when care is quick (`resources/runbooks/care/runbook.json`, `docs/runbooks.md`).
+A task whose typed delivery and care say a section does not apply is not served that section, on either model backend and on a task that runs on another computer.
+Unknown facts are served the Default section and the delivery judgment.
 The resource readers supply the project-specific instructions and skills.
 
 ## When a goal's premise is untrue
@@ -39,7 +40,7 @@ This is the agent's scope judgment and the captain's consent, not a host-side in
 
 ## What delivery takes, confirmed first
 
-Every crewmate, at every tier and on every backend, confirms before its first edit that it can deliver and prove its work (FI3-356, from FI3-343's delivery audit).
+Every crewmate, at every care and on every backend, confirms before its first edit that it can deliver and prove its work (FI3-356, from FI3-343's delivery audit).
 A builder in that audit, its implementation done, still waited for a reader of its evidence to be built.
 So the crewmate prompt (`buildCrewmateSystemPrompt`) asks the crewmate to name what delivery and evidence will take: pushing, opening the pull request and reading its checks when the work ships through one, and whatever its evidence needs, such as a reader of workflow logs or artifacts, a test runner or launcher, an account or a device.
 It confirms each with the cheapest call that changes nothing (the tool is in its session, `git push --dry-run` or a read where the project lives answers, the runner reports its version), closes the gaps it can itself, and plans only evidence it can gather.
@@ -51,7 +52,7 @@ The host's own dispatch-time sign-in hold still runs first (`docs/forge.md`, "Di
 
 ## The default rule on tests
 
-Every crewmate, at every tier, delivery and backend, is served one passage on how tests are written and repaired (`CREWMATE_TEST_DEFAULT` in `src/core/pi/piResources.ts`, from FI3-1756's approved plan).
+Every crewmate, at every care, delivery and backend, is served one passage on how tests are written and repaired (`CREWMATE_TEST_DEFAULT` in `src/core/pi/piResources.ts`, from FI3-1756's approved plan).
 It names six words a test meets - intent, fixture, failure, layer, owner and gate - so a test is written only for a stated intent: the user's ask, a standing ruling, or a bug being fixed.
 It gives four rules for an existing test: a failure is a bug report first; a test the product outgrew on purpose is re-typed only for a stated intent and otherwise deleted; an intermittent failure is fixed at its owner with no retry or sleep; and a repaired test meets the same six words as a new one.
 It adds the captain's direction on a change's own tests (INF-840): a test whose own code the change adds or edits - a journey file, a device test function, a unit test file, never only a helper, scenario or runner it uses - is never a suspected flake.
@@ -64,40 +65,27 @@ A new end-to-end journey follows the passage like any other test, with no ask, a
 The passage decides the rest.
 The brief's `tests-required` constraint asks for tests of the task's stated intent, in the passage's sense (`src/core/orchestrator/intentBrief.ts`).
 
-## The three tiers
+## The three care names
 
-| Tier | What it asks | Default for |
-|---|---|---|
-| **quick** | green CI; the five headings are welcome, nothing more is required | only when asked for: the captain's words (`rigor_ask`) or a repository configured `quick` |
-| **standard** | the fixed pre-PR procedure, evidence-first validation, the evidence contract, the test-quality rule, three CI rounds then a blocker report | every project, explicitly set as its standing value |
-| **reviewed** | standard, then an independent read-only review of the branch BEFORE the pull request; the push and merge are held until the review passes, and the reviewer runs on a different provider than the builder when one can serve | only when asked for: the captain's words (`rigor_ask`) or a repository configured `reviewed` |
+| Care | Stored | What its guidance asks | Default for |
+|---|---|---|---|
+| **Quick** | `quick` | green checks; the five headings are welcome, nothing more is required (`resources/runbooks/care/quick.json`) | only when asked for: the captain's words (`rigor_ask`) or a repository configured `quick` |
+| **Default** | `standard` | the pre-PR procedure, evidence-first validation, the evidence contract and the test-quality rule (`resources/runbooks/care/default.json`) | every project, explicitly set as its standing value |
+| **Careful** | `reviewed` | Default, then the careful-change skill: an independent review of the committed version and live proof it accepted before the push, the pull request and the completion card, with the first mate saying when to push and when to emit the card (`resources/runbooks/care/careful.json` and its `skills/careful-change`) | only when asked for: the captain's words (`rigor_ask`) or a repository configured `reviewed` |
 
-The middle tier is **standard**, not "checked" (captain's call): it is what a careful engineer does by default, not an extra step layered on.
+The middle care is **Default** (stored `standard`), not "checked" (captain's call): it is what a careful engineer does by default, not an extra step layered on.
+The host knows the three names as a typed fact on the record: it selects guidance by them (`Runbooks.crewSections`), shows them on the fact strip, in `crew_status` and in the brief's one care line (`renderRigorSection`), and holds nothing by them - no review hold, no live-proof hold, no refusal of an early card (INF-1876).
+Two host rules still read the name as a fact: a Quick task is exempt from the completion card's picture check, and the delivery judgment is served only to direct-pr work.
+The review and live proof Careful's guidance orders are recorded when they happen, and the host reads those records only to attest a pull request (`docs/forge.md`, "No-mistakes' attestation") and to show them beside the checks.
 
-### The standard tier's procedure
+### What Default asks
 
-Before opening or updating a PR the crewmate:
-
-1. rebases onto the default branch and resolves any conflict itself, and never combines its commits itself, since a pull request is squashed when it merges: a `git reset --soft` onto a default branch another working copy has moved keeps the older files, and merging it undoes the newer work (PR #913);
-2. validates the change itself, evidence first (the no-mistakes evidence instructions, ported): understand the user intent and demonstrate it working end-to-end the way an end user would actually experience it.
-   Show that the intent is met with evidence.
-   Turn the intent into the few concrete things an end user would do and the result each should produce, and gather evidence for each one: product-level artifacts that directly show the behavior working, such as screenshots, recordings, rendered UI, CLI transcripts, API responses, persisted state, or logs.
-   Use as many artifacts as it takes; when the change has a visible surface, that includes pictures of it.
-   Where the change is behavior a still cannot show - a drag, a keyboard journey, motion, progress, recovery from an error - the self-brief says so and why, and that view gets a demo recording in place of its pictures: the same action before the first edit and after the last, at the same window size, theme, data and crop, through the project's own isolated test launcher (this project's `startDemo`, `docs/testing.md` "Recording a demo"), shown on the card as `figure[data-inf-demo]` with its poster (`docs/card-authoring.md`, "Demo recordings").
-   Unit tests passing, generic pass/fail output, and reading the code are not evidence on their own.
-   Keep every artifact in the task's evidence folder (`userData/crewmates/<taskId>/evidence/`, named in the crewmate's instructions), outside the working copy, and never commit or push one as project content.
-   Future github.com pull requests and gitlab.com merge requests upload only selected, inspected, publishable pictures and recordings through their saved story (`docs/forge.md`, "Saved change stories"); existing PRs and other hosts keep evidence in prose, with no local paths.
-   Bulk working material whose destination the crewmate chooses, such as downloads, unpacked copies, throwaway environments and test-run output, goes in the task's temporary folder beside it, which the app removes when the task closes; evidence keeps its week (`docs/task-retention.md`).
-   A picture the repository's own instructions keep with the change - this project's release-note hero pair (`docs/release-notes.md` "Hero pictures") - is part of the change, not evidence, and is committed where they say.
-   Show image artifacts on the completion card by their path in that folder, and in Verified say in words what each artifact shows, or what stopped you gathering it.
-   Run the smallest set of existing tests that would catch a break in what an end user experiences, including end-to-end tests that cover the surfaces you changed, and re-run them after any rebase that brings in overlapping changes.
-   Where the project's end-to-end tests read a surface through shared helpers, the tests that cover it are those helpers' callers, and a change that moves what a helper reads is fixed once in the helper.
-   If you can't run a test you judge relevant, say which one and why rather than dropping it quietly (captain's wording, 2026-09-24).
-   When no existing test produces the evidence, write or improve a test so one does, under the default rule on tests above; when automated testing cannot, execute manual verification steps and record what you performed;
-3. reads the whole diff once against the user's words and its own self-brief, and reverts or names every change the words did not ask for;
-4. updates every document the change makes stale.
-
-Then it reports under the evidence contract below.
+The Default section (`resources/runbooks/care/default.json`) is the procedure's one text, and `src/core/pi/piResources.test.ts` pins where it is served.
+Before opening or updating a pull request it has the crewmate bring its branch up to date and resolve overlap itself, read the whole diff once against the user's words and its self-brief and revert or name every change the words did not ask for, update every document the change makes stale, and validate the change itself, evidence first: the intent demonstrated end to end as an end user would experience it, product-level artifacts for each concrete thing an end user would do, pictures and demo recordings of each visible view before the first edit and after the last, kept in the task's evidence folder and never committed, the smallest set of existing tests that would catch a break in what an end user experiences, and a test written or improved under the default rule on tests when none produces evidence.
+It never combines its commits itself, since a pull request is squashed when it merges: a `git reset --soft` onto a default branch another working copy has moved keeps the older files, and merging it undoes the newer work (PR #913); the prompt's core says so at every care.
+A picture the repository's own instructions keep with the change - this project's release-note hero pair (`docs/release-notes.md` "Hero pictures") - is part of the change, not evidence, and is committed where they say.
+Bulk working material goes in the task's temporary folder beside the evidence folder, which the app removes when the task closes; evidence keeps its week (`docs/task-retention.md`).
+The section then has the crewmate report under the evidence contract below.
 Future github.com pull requests, gitlab.com merge requests and their completion cards use one saved story; legacy PRs and other hosts retain the five-heading PR description.
 Version-2 saved stories use Why, What changed, Before and after, and Checked, with commands and unfinished work folded (`docs/forge.md`, "Saved change stories").
 Both surfaces use the same conventional title; code versions stay in typed data, never rendered prose, by author instruction rather than a refusal check.
@@ -129,7 +117,7 @@ Unknown allows one outstanding evidenced investigation gap; resolve it through a
 Only an exhausted repair allowance or a real decision/access/information only the captain can supply warrants a question.
 Every current check must still pass before completion.
 
-Validation on every tier may use whatever it truly needs, preferring disposable data/accounts, isolated app homes, local instances or workspace-local tools when they prove the same boundary.
+Validation at every care may use whatever it truly needs, preferring disposable data/accounts, isolated app homes, local instances or workspace-local tools when they prove the same boundary.
 Before sensitive or costly access, the crewmate asks on a card naming the resource, check and possible cost or changes: sign-ins/accounts, allowance or money, real data/production, keychain/signing or credential access, and anything others see.
 The crewmate asks each consent for the rest of the task and says so in the ask: one approval covers what it named, as the ask described it, for every later check, run or version of the task (INF-1540); a sign-in is used through its owning app or program.
 Another sign-in or unrelated sensitive or costly resource needs consent of its own.
@@ -140,10 +128,10 @@ Name attempted workarounds if still blocked.
 A supplied verification plan is a proposal, not proof or the user's intent: assess its expected outcomes and artifacts independently against the project gate.
 During fixes, avoid unrequested rewrites of `AGENTS.md`/`CLAUDE.md`, while still reviewing explicit edits, resolving conflicts and updating instructions made stale by the change.
 
-The test-quality rule travels with the tier: a test whose only evidence is that source text contains or omits a string proves nothing; exercise an interface and assert behavior.
+The test-quality rule travels with the Default section: a test whose only evidence is that source text contains or omits a string proves nothing; exercise an interface and assert behavior.
 The prompt pins in `piResources.test.ts` are the one sanctioned exception, because the prompt IS the interface being shipped.
 
-## How a task's tier is derived
+## How a task's care is derived
 
 The host derives it for each current reading (`effectiveTaskPolicies` over `rigorFor` in `src/shared/rigor.ts`, pure and fixture-tested like `tierFor`), from facts it holds.
 The order is fixed and short (captain rulings, 2026-09-19); the first rule that applies wins.
@@ -151,7 +139,7 @@ The order is fixed and short (captain rulings, 2026-09-19); the first rule that 
 0. **A gate at all.**
    Rigor exists only where a CHANGE lands through a gate (`RigorInput.gated`, Tasks A and B of the crew-posture rationalization, 2026-09-20).
    Three tasks are ungated: one whose deliverable is an ANSWER ships nothing at all (`WorkShape.deliverable`, below), one on the personal workspace builds in place - there is no branch to review and no pull request to hold - and a review task reads a change rather than shipping one.
-   For each, `rigorFor` answers no tier at all rather than a quick one, the brief writes no `Rigor:` line, and nothing is stamped on the shape.
+   For each, `rigorFor` answers no care at all rather than a quick one, the brief's care line reads none, and nothing is stamped on the shape.
 1. **The captain's ask.**
    The user said in words how careful to be, and the first mate passed it as `rigor_ask` at creation or `rigor` on `update_task` for open work; a live edit supersedes the original ask, while `project` explicitly resets it.
 2. **The repository's own rigor.**
@@ -171,7 +159,7 @@ Folder work is an operation; read-only beside operation or folder work is refuse
 Everything else is a change; no feature-specific kind overrides the typed deliverable.
 For work the first mate commissioned, the classifier's kind only routes, never decides the deliverable (INF-990 friction 7: a build whose goal asked for a preview first was classified a plan, so its brief said answer only and the captain's choice on the preview closed it).
 A plan is its own answer step since contract v4.6 (`docs/sequences.md`), so the retired `plan-first` constraint - which a stored intent may still name - changes nothing here.
-No agent judges it, the same way none judges the tier or the rigor.
+No agent judges it, the same way none judges the model tier or the care.
 
 An operation is not classified: R12 requests medium after a named model, premium, escalation and a program’s declared intelligence.
 Its brief says the effect is the deliverable: make it, check it took, commit and push nothing, open no pull request, and stop and report if code must change.
@@ -183,7 +171,7 @@ The existing settle owner records `done/finished` and the evidence, checks outst
 Merge and land are refused; dismissal of a note is never proof of the effect.
 
 An answer task is told so, in the one place the visual-density audit measured as the channel every model family obeys - the brief.
-It gets no `Delivery:` line, no rigor section, and `renderAnswerShapeSection` says the rest as facts about the task: its card is the deliverable, its worktree is a laboratory that is discarded when the task closes, and it commits nothing, pushes nothing, and opens no pull request.
+It gets no `Delivery:` line, a care line reading none, and `renderAnswerShapeSection` says the rest as facts about the task: its card is the deliverable, its worktree is a laboratory that is discarded when the task closes, and it commits nothing, pushes nothing, and opens no pull request.
 The host does not only ask: `settle_task merge-pr` and `land` are refused on it, a card carrying a settle effect is refused at the card boundary the way the personal workspace's is, and its worktree is removed whatever it holds with nothing saved first (every other closed task's unlanded work is saved on a hidden kept ref before its tree goes) - the record's own `deliverable` is what says the worktree was scratch.
 The kinds nest under it (`KINDS_BY_DELIVERABLE`, INF-1430): the classifier is told the deliverable the host derived and offered only that branch's kinds - `retrieval`, `research`, `plan` and `reproduce` for an answer, `implement`, `fix` and `chore` for a change - so an answer is never sorted into a change kind or the reverse.
 A crewmate's follow-up has no intent, so nobody declared it: for it alone the classifier is offered every kind and its kind decides, an answer-branch kind being an answer.
@@ -197,11 +185,11 @@ A card its crewmate declared `continues`, such as a consent before it uses somet
 The captain's close control reaches the crewmate instead (FI3-435), which reports `finished` once the captain has read it, and the first mate closes the row with `settle_task answered`.
 The findings travel to a builder through `basis`: when `spawn_crewmate` names a verified basis, `renderBasisSection` carries that task's captain words and its report into the builder's brief, and names the file its card body is saved to whole (`docs/sequences.md`); any agent can read them back with the `tasks` query by key.
 
-One bound sits under the order, mechanical rather than judged: reviewed ships a pull request after its review passes, so a reviewed answer someone asked for on a local-only posture ships standard instead, the most care that posture can take, with the reason saying why.
+One bound sits under the order, mechanical rather than judged: Careful's guidance ships a pull request after its review passes, so Careful asked for on a local-only posture ships Default instead, the most care that posture can take, with the reason saying why.
 
 The dispatch answer is stamped on `WorkShape.rigor` as provenance, while `effectiveTaskPolicies` supplies current care to `crew_status`, crew context, completion facts, briefs and guards.
 The task detail keeps dispatch `rigor` and publishes current `policies` separately; Details displays the latter.
-The brief names current care through `renderRigorSection`, and later durable policy notices supersede the brief without changing its scope.
+The brief names current care through `renderRigorSection` - the name and a pointer to the care guidance served with the instructions, nothing of what it asks - and a later policy notice carries the sections the new facts select that the brief did not (`POLICY_GUIDANCE_HEADING`, `wakes.ts`), superseding the brief without changing its scope.
 A queued row is told the rigor of the moment it starts.
 The kind classifier never sees the section - it runs on the intent before the mint - and a row dispatched before phase 2 reads as `quick`, which is what the replay gate and the corpus export treat a recorded spawn as.
 
@@ -223,9 +211,9 @@ Each accepted edit advances a revision; asynchronous merge attempts compare it a
 GitHub unattended merges also check draft, conflicts, head and review readiness at that boundary.
 Once a merge has been sent it cannot be recalled; the first mate says so, and any retry reads the new policy.
 Changing delivery keeps commits, published work and the original pull request linked; switching back reuses that identity when possible and never silently closes it or falls back on missing access.
-Higher care requires missing validation or review before the next push or merge, including a pull request already opened; the reviewed gate requires a pass for this change.
+Higher care holds nothing by itself: the notice on the task's lane carries the care sections the new facts select that the crewmate's instructions did not - the Careful section on a rise to Careful - and the crewmate follows them before its next push or card.
 A rise in care, however the captain asked for it, takes that task's merge card down, so no Merge offered at the old care is left to fail; the crewmate brings a new one after the work the new care needs.
-Lower care removes only a host review's policy-owned blocking edge; review history, failed checks, repair counts and other holds stay.
+Lower care removes nothing from the record: review history, failed checks, declarations and the host's holds stay.
 Queued or waiting work does not start merely because a policy changed, and active crews receive the notice through the existing inbox rather than restarting.
 `tests/e2e/task-policies.spec.ts` exercises keyboard edits, sources, Activity, reset/restart and an already-ready result under passing and failed checks; the supervisor and workspace tests cover the asynchronous cancellation boundaries.
 
@@ -238,8 +226,8 @@ The captain's click closes the card and mints no merge approval.
 It sets care to Careful through `TaskService.updateFields` with the captain as the actor and "from the merge card" in Activity and the feed, then the choice reaches the crewmate like any choice on its card, which starts it with the care notice ahead of it.
 A body's script cannot press it.
 The pull request stays as it is: nothing is pushed, closed or marked as a draft, and its checks reading stays.
-The click also starts the review of the version the card offered (INF-1875): the app commissions it on the task's committed branch head as soon as the care is on the record, a child of the task holding its merge like any review, and notes it on the task's timeline; a review it cannot start it names in the feed, and the first mate then starts one as on any Careful task.
-The care notice tells the crewmate to commit, report without pushing and wait for that review.
+The click also starts the review of the version the card offered (INF-1875): the app commissions it on the task's committed branch head as soon as the care is on the record, a child of the task like any review, and notes it on the task's timeline; a review it cannot start it names in the feed, and the first mate then starts one as on any Careful task.
+The care notice carries the Careful section, which has the crewmate commit, report without pushing and wait for that review.
 The reviewer's brief adds the merge card the captain read, saved whole beside the builder's source cards (quoted in the brief when the work runs on another computer), with its risk chart as lines.
 A pass on the version already pushed brings a new merge card once its checks read passed, with no push; after fixes the crewmate pushes once to the same pull request after the pass.
 The new card reads Care Careful and the review's verdict, with no Review carefully button.
@@ -247,7 +235,7 @@ Review and repair stopping decisions belong to agent guidance, and asking the fi
 
 ## The evidence contract
 
-A standard-tier report, and a legacy PR body or one on a host without saved stories, carry five headings, in this order:
+A Default or Careful report, and a legacy PR body or one on a host without saved stories, carry five headings, in this order:
 
 | Heading | What it holds |
 |---|---|
@@ -262,27 +250,27 @@ The completion card is not a third copy of it (captain lock 3, 2026-09-19).
 Contract v4.37 gives finished code-work completion decisions and notes a loose outline: **Why**, **What changed**, **Before**, **After**, in order, with no body lead; the title alone carries the answer.
 Before is one sentence on how it stood, then a picture of each changed view as it stood, taken before the first edit; each result picture and the verification sit in After, as many pictures as the change needs (contract v4.69).
 A demo recording stands in for a view's pictures in either section, its poster the picture the check counts.
-The standard tier's self-brief lists the views and states a person will see; the quick tier is exempt from the picture check.
+The Default section's self-brief lists the views and states a person will see; a Quick task is exempt from the picture check, one of the two host rules that read the care's name.
 What is left closes after After when decision-relevant, otherwise in details, not a fifth heading.
 The crewmate's standing instructions carry one sentence; its card boundary refuses a declared settle-merge decision missing an ordered heading, but notes follow the instruction alone.
 Answer cards, previews included, keep their own shape.
 The report's five headings and rigor numbers are unchanged.
-The host appends the project, crewmate model, effective care tier, PR link, CI state and its own holds itself (`CrewSupervisor.settleFacts`, contract v2.0 ruling D4; the labeled fact strip since v2.7), so the body never repeats those either.
+The host appends the project, crewmate model, effective care, PR link, CI state and its own holds itself (`CrewSupervisor.settleFacts`, contract v2.0 ruling D4; the labeled fact strip since v2.7), so the body never repeats those either.
 
-`tests/e2e/rigor-standard.spec.ts` is the binding test: a crewmate commissioned through the real app on a real Pi session is served the prompt for its own delivery and care, which names its tier, and reports under the five headings, and a completion card with the four-heading outline publishes through the real emit -> lint -> CI gate -> frame path with the host's own buttons on it; a missing heading is refused and the corrected card publishes, with no answer line before Why.
+`tests/e2e/rigor-standard.spec.ts` is the binding test: a crewmate commissioned through the real app on a real Pi session is served the prompt for its own delivery and care, which names its care, and reports under the five headings, and a completion card with the four-heading outline publishes through the real emit -> lint -> CI gate -> frame path with the host's own buttons on it; a missing heading is refused and the corrected card publishes, with no answer line before Why.
 
 PR-8 stands (board decision): a project that runs no checks (a PR that reports zero checks where none are coming) is green when the report's Verified names the local gate that ran on the final commit; checks that have not started yet read pending (`docs/forge.md`).
 
-## The reviewed sequence
+## The review
 
-A task derived as reviewed ends with an independent reviewer whose task holds the merge until it passes.
-The review runs BEFORE the pull request (the no-mistakes ordering, captain-approved 2026-09-19), so fix rounds are local commits rather than push + CI cycles.
-The host owns the derivation, the reviewer's brief and the hold; the first mate owns the routing of findings, by instruction (contract v3.5).
-Since FI3-566 (cut C) those instructions sit where each step arises, the way `CHECK_DIAGNOSIS_NEXT` rides a failed check: the first mate's core says when to commission the review and to carry the captain's latest decision into every fix and review steer, the builder's reviewed brief says how to fix a finding, and each review wake names the step it asks for (`wakes.ts`).
+A review is an independent read of a change at a version, commissioned on request at any care (INF-1875).
+Careful's guidance (`resources/runbooks/care/careful.json` and its careful-change skill) orders it BEFORE the pull request (the no-mistakes ordering, captain-approved 2026-09-19), so fix rounds are local commits rather than push + CI cycles; the host holds neither the push nor the merge on it (INF-1876): a review task is its builder's child and carries no `blocks` edge onto it.
+The host owns the derivation, the reviewer's brief and the typed record; the first mate owns the routing of findings, by instruction (contract v3.5).
+Since FI3-566 (cut C) those instructions sit where each step arises, the way `CHECK_DIAGNOSIS_NEXT` rides a failed check: the first mate's core says when to commission a review and to carry the captain's latest decision into every fix and review steer, each review wake names the step it asks for, and the findings wake carries how to fix a finding (`REVIEW_FIX_RULES`, `wakes.ts`).
 
-1. **The builder finishes locally and emits no card.**
-   It commits its work on its branch, reports under the five headings, and does not push, open a PR, or emit a completion card - its brief's rigor line says so, and also how to fix the findings the first mate relays (`REVIEW_FIX_RULES`, the ported fixer preamble); a completion card with a merge effect emitted before the review passed is refused at the boundary (`CrewSupervisor.addCrewmateCard`), naming where the review stands.
-   The report reaches the first mate directly: a reviewed task's events, and a review task's, skip the whose-turn sort's sorting (`routeCrewEvent`).
+1. **A Careful builder finishes locally and emits no card.**
+   The Careful section has it commit its work on its branch, report under the five headings with `needs_firstmate` asking for the review, and neither push, open a PR nor emit a completion card until the first mate says so; the host refuses none of those by the care's name, so an early card is the first mate's to question, not the host's to refuse (`resources/runbooks/care/guide.md`).
+   Its report reaches the first mate through the whose-turn sort like any builder's; only a review task's own events skip the sort (`routeCrewEvent`).
 2. **A review is started** - by the first mate's `spawn_crewmate` with `review_of` naming the builder and the user's original words (no new tool, the count stays 24), or by the app itself when the captain presses Review carefully on a merge card ("Raising care from a merge card").
    A review is an operation on a change at a version (INF-1875): any crewmate work with commits on its branch can be reviewed on request, at any care, before or after its pull request; the care names are metadata the record carries, and what each asks for is runbook guidance.
    The host refuses it as text only when the builder is not crewmate work or is closed, has no commits on its branch (`WorkspaceService.branchHead`), or already has a review open; a builder that has not reported yet is reviewed against its branch, and its brief says the report is still to come.
@@ -300,21 +288,21 @@ Since FI3-566 (cut C) those instructions sit where each step arises, the way `CH
    The review task records that version as `passedHead`, so each later turn of that review, a re-review after findings included, keeps the same scope.
    The builder's committed head must be available on the builder's computer before the reviewer can start at that commit.
    A bounded follow-up coverage turn is not implied.
-   It also judges whether the documents are current: a document the change makes stale and leaves unchanged is a finding, and its pass stands as the change's documentation check, which no-mistakes' attestation on a Careful pull request counts (`docs/forge.md`, "No-mistakes' attestation on a Careful pull request").
+   It also judges whether the documents are current: a document the change makes stale and leaves unchanged is a finding, and its pass stands as the change's documentation check, which no-mistakes' attestation counts (`docs/forge.md`, "No-mistakes' attestation").
    It is read-only by instruction - change nothing, commit nothing, push nothing, run no tests: the builder's Verified section and the builder's evidence folder (named in the brief) are the test record; evidence is never committed.
-   Its shape is `kind: review`, established by the host (`kind_source: host:review`, never the classifier) and routed like research (high); its title is `Review: <builder title>`, its parent the BUILDER itself - the one stored review-to-builder join since the `review_of` fold (captain-approved 2026-09-19; `review_of` survives only as the spawn ask) - and a `blocks` edge from it onto the builder is the hold: the builder's close is refused while the review is live, by the existing blocks-at-close rule.
+   Its shape is `kind: review`, established by the host (`kind_source: host:review`, never the classifier) and routed like research (high); its title is `Review: <builder title>`, its parent the BUILDER itself - the one stored review-to-builder join since the `review_of` fold (captain-approved 2026-09-19; `review_of` survives only as the spawn ask) - and no `blocks` edge onto the builder (INF-1876): the host holds nothing on a review, and whether a merge waits for the verdict is the care runbook's guidance.
    The `host:*` kind_source makes the review delivery machinery: it never counts in the children-open close gate, its parent is fixed, and every builder close in any direction retires a live review with it (superseded, silent), so a reviewer never outlives its builder.
 4. **The verdict is the typed review record** (INF-1875).
    The reviewer reports it on `report.validation` with kind `review` at the head and evidence revision its turn was assigned (`validationReviewSchema`): `code` clear, findings or blocked; `findings`, one typed entry each - id, severity (error / warning / info), file and line, one sentence of text, and an action: auto-fix, ask-user or no-op (`reviewFindingSchema`); and `risk` low, medium or high with one sentence why.
    The host reads nothing off the report's words: the code judgment is the verdict (`REVIEW_VERDICT_OF_CODE` - clear is a pass), the record refuses one that contradicts itself (clear code beside a finding that blocks, or code findings none of which block; `recordValidation`), and info findings ride a clear review because info never blocks (`findingsBlock` - blocking is an error or warning severity, or an ask-user action at any severity).
-   A report with no typed review record, or one naming another head than the assigned commit, records nothing and spends no round - a reviewer's acknowledgment ("standing by") is not a verdict, and the hold stands regardless, so it still fails toward the human.
-   At Careful a clear code judgment whose live proof is not accepted at the assigned head and evidence is recorded blocked with the reason, so the review stays open for the proof's re-review at the same head; below Careful nothing reads the proof and the code judgment is the verdict as typed.
+   A report with no typed review record, or one naming another head than the assigned commit, records nothing and spends no round - a reviewer's acknowledgment ("standing by") is not a verdict, and the review stays open, so it still fails toward the human.
+   The code judgment is the verdict as typed at every care; the reviewer's live-proof judgment is its own typed record beside it ("Careful live validation" below), which Careful's guidance has the reviewer give and the first mate read, and which the host reads only to attest the pull request.
    The verdict, the head read, the change reading taken at assignment and the risk land on the builder's delivery facts (`reviewVerdict`, `reviewSha`, `reviewChange`, `reviewRisk`, `reviewRiskNote`, `reviewedAt`) as a `review` timeline event whose data also names the review task; which review a builder's verdict came from is otherwise read off the parent edge (`TaskService.verdictReviewOf`).
    The typed findings stay on the live-validation record, the findings wake carries them one line each, and the change record's version carries them with the verdict (`ChangeReview.findings`, `docs/task-record.md`).
-   A pass holds for a later version whose stored change reading matches the review's reading.
+   A pass carries to a later version whose stored change reading matches the review's reading, for the attestation and the record; no merge is held on it (INF-1876).
    The approved head's reading is stored when the captain approves, and each repair's reading is stored when that repair is recorded, in the read that already brought the branch home.
    Opening the pull request still carries a version that has no stored reading yet, by reading it once and storing that reading, and a quiet timeline line records that carry.
-   The kept merge compares the stored readings and does not read the branch again.
+   The kept merge reads no review; its story refresh compares the stored readings for the attestation and does not read the branch again.
    A carry recorded before the reading was stored with the version still covers its head.
    The reading keeps one neighboring line and drops where the lines sit.
    A main edit right next to the change asks for a fresh review, because that neighbor is part of the reading.
@@ -325,20 +313,20 @@ Since FI3-566 (cut C) those instructions sit where each step arises, the way `CH
    A pass recorded before the reading was stored carries the same way when its reviewed commit is still on this Mac and the task is not placed.
 5. **Findings and blocked leave the reviewer idle and steerable.**
    The findings wake names the first mate's next steps (`reviewFindingsNext`), and so does a blocked one; the findings wake carries the review judgment.
-   The first mate steers the builder with every auto-fix finding verbatim; the builder's reviewed brief carries the ported fixer preamble - double-check legitimacy, identify sibling sites of a broken invariant, repair the defect class with one small correction rather than new machinery, retrace normal callers, and verify resolution without reverting intentional changes.
-   A builder whose care rose to reviewed after its brief never read it, so its findings wake (`briefed` false, from the builder's dispatch rigor) has the first mate prefix the preamble to the steer.
+   The first mate steers the builder with every auto-fix finding verbatim, prefixed with the ported fixer preamble every findings wake carries (`REVIEW_FIX_RULES`): double-check legitimacy, identify sibling sites of a broken invariant, repair the defect class with one small correction rather than new machinery, retrace normal callers, and verify resolution without reverting intentional changes.
+   No brief carries the preamble, so a builder whose care rose after its brief was written reads it the same way (INF-1876).
    The captain's latest decision governs subsequent fixes and reviews: a declined finding is not implemented and a chosen fix is not undone merely because earlier wording differed.
    Genuinely new problems remain reviewable.
    Info findings never block and need no steer.
    It decides an ask-user finding itself when the user's own words already settle it; the rest are ONE decision card per round on the builder's task, listing them verbatim with the step it would take as the default.
    The builder's next report names its open review, that review's last verdict and the head it read (`review` on the `report` wake).
    When that report brings a new head, evidence revision or validation state, the first mate steers the reviewer to re-review those assigned facts without retyping the captain's declined findings, which the review history carries - and it never steers the reviewer otherwise: an idle reviewer needs no stand-by and no status, which the findings wake and a reviewer's verdict-less report also say.
-6. **A pass closes the review task** (done / finished, the host's actor), which releases the hold.
+6. **A pass closes the review task** (done / finished, the host's actor), which releases the builder's close.
    The one feed line is the builder's own event - `review passed at <sha>, risk <level>: <note> - <builder title>` - and the review's close is silent.
    The wake to the first mate refs the builder, whose move is next, and names it: a steer to push, open the PR and drive CI green; then with autonomy on, `settle_task merge-pr`, otherwise the builder's completion card is the decision.
    The completion card carries the review beside CI in the host's facts strip (a Review cell: `passed
    <sha> · risk <level>` with the note on the cell's title; `open` while
-   one is live, `awaiting` before one exists).
+   one is live).
 
 **Risk never holds (Q4).**
 The reviewer's risk is recorded on the builder and rendered beside CI; autonomy on is consent to merge at any risk, so a green reviewed PR on an autonomy-on repository merges like any other, and the first mate settles after a pass without reading it.
@@ -352,11 +340,11 @@ The host never decides which answer settles which finding; the reviewer and the 
 Because the brief is written again on every reviewer turn, the history survives the reviewer's conversation being summarized, and the first mate never retypes declined findings into a re-review steer.
 It adds no size limit.
 
-Where the review stands is on every surface the fleet already has: `crew_status` and the context block's crew lines carry `rigor` and the review state (`awaiting review`, `review open (<key>)`, `review: findings`, `review passed`, and `reviews <key>` on the reviewer's own row), the task detail carries `rigor` and the review facts in `delivery`, and Details shows current Care separately from Delivery, with the verdict and its risk beside CI.
+Where the review stands is on every surface the fleet already has: `crew_status` and the context block's crew lines carry `rigor` and the review state (`review open (<key>)`, `review: findings`, `review passed`, and `reviews <key>` on the reviewer's own row), the task detail carries `rigor` and the review facts in `delivery`, and Details shows current Care separately from Delivery, with the verdict and its risk beside CI.
 Nothing new reaches a user surface: no card kind, no setting, no control.
 
-`tests/e2e/rigor-reviewed.spec.ts` is the binding test: through the real app on real Pi sessions with a local GitHub stand-in the app reads through its own sign-in (`tests/e2e/githubStub.ts`), a direct-pr task derived reviewed reports green with no card, the first mate checks CI and spawns `review_of`, the findings become one steer and one decision card, a merge asked for while the review is open is refused, the re-review's pass is one feed line that releases the hold, and the completion card renders the review beside CI and merges.
-`crewSupervisor.test.ts` covers the refusals, the hold, the verdicts, the sort bypass and the facts each review wake carries; `wakes.test.ts` the next steps each review wake words; `tests/firstmate-fixed-context.test.ts` that every step the core gave up is still served where it arises; `rigor.test.ts` the derivation order, the typed finding and the blocking rule; `intentBrief.test.ts` the rigor section and the review brief.
+`tests/e2e/rigor-reviewed.spec.ts` is the binding test: through the real app on real Pi sessions with a local GitHub stand-in the app reads through its own sign-in (`tests/e2e/githubStub.ts`), a direct-pr task derived Careful reports green with no card, the first mate checks CI and spawns `review_of`, the findings become one steer and one decision card, a merge asked for while the review is open is refused, the re-review's pass is one feed line that releases the builder's close, and the completion card renders the review beside CI and merges.
+`crewSupervisor.test.ts` covers the verdicts, the review record across care edits, the sort and the facts each review wake carries; `wakes.test.ts` the next steps each review wake words; `tests/firstmate-fixed-context.test.ts` that every step the core gave up is still served where it arises; `rigor.test.ts` the derivation order, the typed finding and the blocking rule; `intentBrief.test.ts` the care line and the review brief.
 
 ## The record and its holds (phase 3)
 
@@ -387,7 +375,7 @@ Normal check replies carry current facts and unresolved repair identities, not t
 A settlement declaration identifies its repair, version, outcome and evidence; a raw reading cannot silently settle or supersede it.
 The durable record keeps declarations and older repair history, but legacy count and cap fields no longer hold a task or produce a count on its card.
 Review findings still record the reviewer's verdict and evidence; they do not accumulate a host-owned allowance.
-The five report headings, the independent review and the live-validation requirements remain.
+The five report headings remain the report's; the review and live validation are what Careful's guidance asks, recorded when they happen and held by nothing of the host's.
 
 **The autonomy hold.**
 Autonomy - who merges a task's green work - now has the shape delivery and rigor have (contract v3.9, captain ruling F7 A of 2026-09-20: "this should actually be the same - repo default, per-task ask allowed").
@@ -395,10 +383,10 @@ The repository's `autonomy` column is the default, the first mate relays the cap
 The ask is read by PRESENCE, so `autonomy_ask: false` - "ask me before merging this one" on an autonomous repository - is an ask, not a silence.
 The mint stamps the effective value on `WorkShape.autonomy` the quiet way rigor is stamped, as provenance; every reader that decides anything derives it live from the record instead, so turning a repository autonomous reaches work already in flight.
 
-It is a host-enforced merge rule, beside the unpassed review and v3.8's answer task, and the only one that had been prompt-only: with autonomy off, `settleTaskOnce` refuses a `merge-pr` or `land` whose actor is the first mate and settles nothing, returning the structured `autonomy-off` `SettleRefusal` (WI-12).
+It is a host-enforced merge rule, beside v3.8's answer task, and the only one that had been prompt-only: with autonomy off, `settleTaskOnce` refuses a `merge-pr` or `land` whose actor is the first mate and settles nothing, returning the structured `autonomy-off` `SettleRefusal` (WI-12).
 Its one way out is not a tool the first mate can run - it is the button already in front of the captain, so the refusal names the open completion card's own merge action by card and action id (a `SettleWay` variant that carries a `card` rather than a `tool`), and says whose card is owed when none is up.
 The captain's click arrives as `actor: "captain"` and this rule never reads it.
-Three rows take no autonomy at all, for the reason they take no rigor - there is no merge to hold: a task on the personal workspace (it builds in place), an **answer** task (it commits nothing, and v3.8's deliverable hold refuses its merge whoever asks, so that refusal speaks first), and a task with **no repository** - the default workspace - because the hold enforces a REPOSITORY's standing answer and there is none to enforce there.
+Three rows take no autonomy at all, for the reason they take no care - there is no merge to hold: a task on the personal workspace (it builds in place), an **answer** task (it commits nothing, and v3.8's deliverable hold refuses its merge whoever asks, so that refusal speaks first), and a task with **no repository** - the default workspace - because the hold enforces a REPOSITORY's standing answer and there is none to enforce there.
 `crew_status` and the context crew lines carry it per task; the fact strip has no autonomy cell, and a task that merges on its own says so in its story note's merge line.
 
 **A kept merge approval (FI3-304).**
@@ -414,7 +402,7 @@ The captain's merge click on a completion card or an ordinary `request_merge` ca
   A new completion or requested-merge card supersedes any standing approval: the crewmate is asking again.
 - **The approval.**
   The captain's chrome click mints `delivery.mergeAuthorization` (version 1) in the card resolution's own transaction (`CardService.resolve`'s `alongside`): a fresh id and a generation, the card, lifecycle, offer, action and gesture ids, the GitHub repository, pull request and branch, squash, the approved head and an empty repair lineage.
-  On a reviewed task that click also stores the approved head's change reading on the approval, so a later kept merge compares it without reading the branch.
+  That click also stores the approved head's change reading on the approval, so the story refresh at a repaired version compares it for the attestation without reading the branch.
   It is minted only on a GitHub direct-pr task for an offer with a baseline on the pull request the task still names.
   A first mate completion card, a seeded completion card, a plain Git host or an ambiguous baseline mints nothing: that click is one attempt, as before.
   An ordinary `request_merge` card instead pins the stored review it names: the exact host, project, pull request, source branch, destination and reviewed head (INF-1246).
@@ -498,8 +486,6 @@ Which level a hold takes is a judgment by the four questions above, made by its 
 |---|---|---|---|---|
 | `asks-first` | soft | consent | a first mate merge while autonomy is off | the captain's click on the completion card, or the override |
 | `decisions` | soft | record | a first mate merge while another decision on the task is open | the override |
-| `review` | soft | record | a Careful change's pull request and merge until a review passed at this version | the override |
-| `live-proof` | soft | record | a Careful change's pull request and merge until live proof was accepted at this version | the override |
 | `waits` | soft | record | a close or completion card while a wait on other work stands | the override |
 | `parts` | soft | record | a close while the task's planned parts are open | `proceed_with_open`, or the override |
 | `checks` | soft | record | a completion card or merge while the checks failed or are running | Merge anyway on the completion card, or the override |
@@ -538,7 +524,7 @@ Empty `holds` takes it back, and a new declaration replaces the old one.
 The row is a `note` event on the timeline with one feed line, quoting the captain's words and naming the holds and how long; a new event kind would be a contract major.
 Each site reads it with `overridePasses(delivery, kind, head)`: a task-long override always passes, and a version-long one passes only at the version it covers, so a new version brings the hold back.
 The captain's merge click reads the same record, since the settle boundary is one function for the captain's click and the first mate's merge.
-The completion card's fact strip shows an Override cell naming the holds the captain's words pass, and says the merge goes without live proof when live proof is one of them.
+The completion card's fact strip shows an Override cell naming the holds the captain's words pass.
 The first mate's task line in its context and `crew_status` show the standing override: what it passes, for how long, and, in `crew_status`, the captain's words.
 Every crewmate turn on the task is served the standing words: the brief carries them when the work starts with one standing, and each new override, or its withdrawal, is a `task-override-changed` notice on the task's lane that rides the next turn, on this computer or another, and starts none of its own.
 The crewmate reads them as its consent for what they reach among its own consent asks (`RIGOR_SAFETY`), such as the captain's plan's allowance, and judges which those are; keychain or signing access, writes outside the project and browser handoffs still ask.
@@ -598,26 +584,26 @@ The merge validates the published and PR heads without waking the work computer 
 Moved verbatim from `AGENTS.md` on 2026-09-24; `AGENTS.md` keeps a one-line pointer to each.
 
 - Delivery direct-pr (captain rule): a crewmate that opens a PR must babysit CI (`check_change`, through the app's own sign-in) until every check on the head SHA is green before the final report; the local evidence is the standard tier's (the Standing CI rule in `docs/testing.md`), not the full suite; the first mate must not present any land/merge/accept decision while CI is red or running.
-- Delivery rigor (captain-approved tiers, 2026-09-19; `docs/delivery-rigor.md` is the one home): three tiers - quick, standard, reviewed - and PHASE 1 is instruction only.
-  Standard is EVERY repository's default (captain ruling 2026-09-19; a task with no gate to land through takes no tier at all), stated in the crewmate prompt (`buildCrewmateSystemPrompt`, every backend) when care is standard, reviewed, or unknown, and in the first mate's rigor rule, which relays the user's words on care as `rigor_ask`.
-  A known quick task is served the quick sentence and, when delivery is a pull request, the check diagnosis.
+- Delivery care (captain-approved 2026-09-19; `docs/delivery-rigor.md` is the one home): three care names - quick, standard, reviewed, shown as Quick, Default and Careful - and what each asks is the Care levels runbook's (INF-1876).
+  Standard is EVERY repository's default (captain ruling 2026-09-19; a task with no gate to land through takes no tier at all), whose Default section the crewmate prompt serves (`buildCrewmateSystemPrompt`, every backend) when care is standard, reviewed, or unknown, while the first mate's care rule relays the user's words on care as `rigor_ask`.
+  A known quick task is served the Quick section and, when delivery is a pull request, the delivery judgment.
   A task with no gate is not served the direct-pr passage.
   A crewmate's session carries the working copy's AGENTS.md (or its CLAUDE.md where it has none) and lists its project skills on every backend (`src/core/session/projectResources.ts`), and the prompt sends it FIRST to the instructions its session does not carry (CONTRIBUTING.md, a CLAUDE.md beside the AGENTS.md, and any file they point to), AGENTS.md, CLAUDE.md and CONTRIBUTING.md in that order of authority.
-  At standard it rebases, reads its diff against the user's words, updates stale docs, validates the change itself evidence-first (the ported no-mistakes evidence instructions: demonstrate the intent end-to-end as an end user would experience it; evidence for each concrete thing an end user would do, as many product-level artifacts as it takes, and unit tests, pass/fail output or reading the code are not evidence on their own; the smallest set of existing tests that would catch a break in what an end user experiences, end-to-end tests over the changed surfaces included and re-run after an overlapping rebase, a relevant test that cannot run named rather than dropped, a test written or improved under the default rule on tests when none produces evidence, and recorded manual checks when automated testing cannot), and reports and writes its PR body under five headings in order - Intent, What changed, Verified, Risk, Not done; the crewmate records evidence-backed check judgments, with stopping decisions in its delivery guidance rather than a host counter.
-  `tests/e2e/rigor-standard.spec.ts` is the binding test for the standard tier.
-- The reviewed tier (delivery rigor phase 2; `docs/delivery-rigor.md` "The reviewed sequence"): the HOST derives the rigor at the single brief mint (`rigorFor` in `src/shared/rigor.ts`, revised by the captain 2026-09-19 - the captain's `rigor_ask`, then the repository's own `repos.rigor` column, then STANDARD, full stop; neither the intelligence tier nor an escalation moves it - rejecting a result routes a stronger model, never more ceremony; a task with no gate to land through - one whose deliverable is an ANSWER, a review task, or one on the personal workspace - takes NO tier at all (`RigorInput.gated`), and reviewed on a local-only posture ships standard because reviewed ships a PR), stamps it on `WorkShape.rigor` (quiet, like the kind) and appends `renderRigorSection` after the classifier ran; a pre-phase-2 row and a recorded replay spawn read as `quick`.
-  `spawn_crewmate review_of` (tool count stays 24) commissions the reviewer: host-briefed (`renderReviewBrief`, read-only by instruction), shape `kind: review` / `kind_source: host:review` (never classifiable, routed like research), titled `Review: <builder>`, its PARENT the builder itself - the one stored review-to-builder join since the `review_of` shape-field fold (captain-approved 2026-09-19; `review_of` survives only as the spawn ask) - and a `blocks` edge reviewer -> builder IS the merge hold - refused as text on a branch with no commits, closed or non-crewmate work, or a review already open; since INF-1875 a review is an operation on a change at a version, at any care and reported or not, and Review carefully on a merge card has the app start one itself.
-  A `host:*` kind_source makes the row DELIVERY MACHINERY (`TaskService.isDeliveryChild`): it never counts in the children-open close gate (so a builder settle shows one refusal, in review vocabulary, and `proceed_with_open` never speaks for it), its parent is fixed (`setParent` refuses), and EVERY builder close - discard, drop, supersede, merge, failed turn - retires its live review with it (`SettleService.retireDeliveryChildren`: closed dropped/superseded, silent, runtime aborted, worktree gone), so a reviewer never outlives its builder.
-  The review runs BEFORE the pull request (the no-mistakes ordering, captain-approved 2026-09-19): the reviewer reads the builder's branch at its head (worktrees share refs; `WorkspaceService.branchHead`), fix rounds land as local commits, and the push, PR and CI come after the pass - a builder with a pull request already on record is still reviewed at its committed branch head, not that pull request's recorded head.
-  A reviewed task's events and a review task's bypass the whose-turn sort and go straight to the first mate.
+  At Default its section has it rebase, read its diff against the user's words, update stale docs, validate the change itself evidence-first (the ported no-mistakes evidence instructions: demonstrate the intent end-to-end as an end user would experience it; evidence for each concrete thing an end user would do, as many product-level artifacts as it takes, and unit tests, pass/fail output or reading the code are not evidence on their own; the smallest set of existing tests that would catch a break in what an end user experiences, end-to-end tests over the changed surfaces included and re-run after an overlapping rebase, a relevant test that cannot run named rather than dropped, a test written or improved under the default rule on tests when none produces evidence, and recorded manual checks when automated testing cannot), and report and write its PR body under five headings in order - Intent, What changed, Verified, Risk, Not done; the crewmate records evidence-backed check judgments, with stopping decisions in its delivery guidance rather than a host counter.
+  `tests/e2e/rigor-standard.spec.ts` is the binding test for Default.
+- Careful (delivery rigor phase 2; `docs/delivery-rigor.md` "The review"): the HOST derives the rigor at the single brief mint (`rigorFor` in `src/shared/rigor.ts`, revised by the captain 2026-09-19 - the captain's `rigor_ask`, then the repository's own `repos.rigor` column, then STANDARD, full stop; neither the intelligence tier nor an escalation moves it - rejecting a result routes a stronger model, never more ceremony; a task with no gate to land through - one whose deliverable is an ANSWER, a review task, or one on the personal workspace - takes NO tier at all (`RigorInput.gated`), and reviewed on a local-only posture ships standard because reviewed ships a PR), stamps it on `WorkShape.rigor` (quiet, like the kind) and appends `renderRigorSection` after the classifier ran; a pre-phase-2 row and a recorded replay spawn read as `quick`.
+  `spawn_crewmate review_of` (tool count stays 24) commissions the reviewer: host-briefed (`renderReviewBrief`, read-only by instruction), shape `kind: review` / `kind_source: host:review` (never classifiable, routed like research), titled `Review: <builder>`, its PARENT the builder itself - the one stored review-to-builder join since the `review_of` shape-field fold (captain-approved 2026-09-19; `review_of` survives only as the spawn ask) - and a `blocks` edge reviewer -> builder holds the builder's close while the review is live - refused as text on a branch with no commits, closed or non-crewmate work, or a review already open; since INF-1875 a review is an operation on a change at a version, at any care and reported or not, and Review carefully on a merge card has the app start one itself.
+  A `host:*` kind_source makes the row DELIVERY MACHINERY (`TaskService.isDeliveryChild`): it never counts in the children-open close gate (so `proceed_with_open` never speaks for it and an open review refuses no settle), its parent is fixed (`setParent` refuses), and EVERY builder close - discard, drop, supersede, merge, failed turn - retires its live review with it (`SettleService.retireDeliveryChildren`: closed dropped/superseded, silent, runtime aborted, worktree gone), so a reviewer never outlives its builder.
+  Careful's guidance orders the review BEFORE the pull request (the no-mistakes ordering, captain-approved 2026-09-19): the reviewer reads the builder's branch at its head (worktrees share refs; `WorkspaceService.branchHead`), fix rounds land as local commits, and the push, PR and CI come after the pass on the first mate's word - a builder with a pull request already on record is still reviewed at its committed branch head, not that pull request's recorded head.
+  A review task's events bypass the whose-turn sort and go straight to the first mate; a Careful builder's are sorted like any other's, with two typed witnesses a review adds (`docs/report-sort.md`): its findings or blocked verdict wakes the first mate above a card on the captain's screen (row 0c), and the open review keeps the idle ladder from nudging the builder while the reviewer reads.
   The verdict is the typed review record on the reviewer's `report.validation` (INF-1875; `validationReviewSchema`: `code` clear/findings/blocked, typed `findings` with severity and action, `risk` with its why), mapped by `REVIEW_VERDICT_OF_CODE`; nothing is parsed off the report's words.
-  A report with no typed record records nothing and spends no round - a reviewer's acknowledgment is not a verdict (the phantom rounds of 2026-09-19), and the merge stays held regardless; the record refuses a review that contradicts its findings, so info findings ride a clear review and never block (the no-mistakes rule; blocking = error/warning severity or an ask-user action, `findingsBlock`).
+  A report with no typed record records nothing and spends no round - a reviewer's acknowledgment is not a verdict (the phantom rounds of 2026-09-19), and no pass is recorded regardless; the record refuses a review that contradicts its findings, so info findings ride a clear review and never block (the no-mistakes rule; blocking = error/warning severity or an ask-user action, `findingsBlock`).
   Findings/blocked leave the reviewer idle and steerable, a pass records verdict, head and risk on the BUILDER's delivery facts as a feed-worthy `review` event, closes the review task silently (done/finished) and wakes the first mate with the builder as ref.
-  Risk never holds (Q4); a completion card with a merge effect before the pass is refused; `settleFacts`, `crewStatus` and the context crew lines carry `rigor` and the review state.
-  The first mate routes findings by instruction only (contract v3.5): auto-fix findings are relayed verbatim and fixed by the ported fixer preamble (double-check legitimacy, smallest root-cause fix, never revert intent), ask-user findings are ONE decision card per round, declined findings ride the review history the app writes and are never re-reported, and a reviewer is steered only to re-review at a named new head, evidence revision or validation state - never to stand by; since FI3-566 the preamble is in the builder's reviewed brief and the other steps ride the review wakes ("The reviewed sequence").
+  Risk never holds (Q4); no host hold reads the care's name (INF-1876); `settleFacts`, `crewStatus` and the context crew lines carry `rigor` and the review state.
+  The first mate routes findings by instruction only (contract v3.5): auto-fix findings are relayed verbatim and fixed by the ported fixer preamble (double-check legitimacy, smallest root-cause fix, never revert intent), ask-user findings are ONE decision card per round, declined findings ride the review history the app writes and are never re-reported, and a reviewer is steered only to re-review at a named new head, evidence revision or validation state - never to stand by; since FI3-566 the steps ride the review wakes, and since INF-1876 the preamble rides every findings wake ("The review").
   `tests/e2e/rigor-reviewed.spec.ts` is the binding test.
-- The tier as a record, with host holds (delivery rigor phase 3; `docs/delivery-rigor.md` "The record and its holds"): a repository's standing rigor is `repos.rigor` (migration 36; null = derive), set by talking through `app_change project-settings` with `changes.rigor` of `quick`, `standard`, `reviewed`, or `default` (`configure_repo` is retired) or Settings → Projects - the `project settings` feed line names the care only when set.
-  The evidence contract was linted at the crewmate card boundary (`lintCrewmateCard` with the task's rigor) until contract v3.6 removed that rule and the rigor option with it (captain lock 3: the card was the third copy of a record the report and the PR body already carried); the five headings stay REQUIRED in the report and the PR body, and the task's holds (the personal workspace, an unpassed review, a missing crew readiness declaration) still speak before the shape rules.
+- The care as a record (delivery rigor phase 3; `docs/delivery-rigor.md` "The record and its holds"): a repository's standing rigor is `repos.rigor` (migration 36; null = derive), set by talking through `app_change project-settings` with `changes.rigor` of `quick`, `standard`, `reviewed`, or `default` (`configure_repo` is retired) or Settings → Projects - the `project settings` feed line names the care only when set.
+  The evidence contract was linted at the crewmate card boundary (`lintCrewmateCard` with the task's rigor) until contract v3.6 removed that rule and the rigor option with it (captain lock 3: the card was the third copy of a record the report and the PR body already carried); the five headings stay REQUIRED in the report and the PR body, and the task's holds (the personal workspace, the checks) still speak before the shape rules.
   Reviewer placement (Q5): `Router.decide` takes `avoidProvider` on a review task - the builder's provider off its newest `routing_decisions` row (`Router.servedProvider`) - prefers another signed-in provider at the same tier, falls back with the reason recorded, never descends a tier, and records rule `R9`; the replay scorer keys on `kind_source`, so the new rule id needs no tolerance there.
   Observe's crewmate header renders rigor, review verdict/risk and the reviewed builder; the C5 join carries `review_of`/`review_verdict`/`review_risk`, null on a pre-phase-2 database.
   Contract v3.4 names the cap wake as the same decision card as a crewmate's own three-round blocker and the steer after the answer as what reopens the rounds; v3.5 is the no-mistakes alignment above; `PROTOCOL_VERSION` 1.15.0 since contract v3.8 (the `read-only` constraint in the intent vocabulary and `deliverable` on the task detail, over v3.7's `RepoView.kind`, narrowed delivery enum and `TaskDelivery.mode: in-place`).
@@ -634,9 +620,8 @@ Moved verbatim from `AGENTS.md` on 2026-09-24; `AGENTS.md` keeps a one-line poin
 
 Careful change work uses the builder to gather proof, with first-mate coordination when needed, and its existing independent review as the judge of coverage and proof (captain's accepted INF-125 plan, implemented by INF-100).
 Quick, Default, answer-only and personal-workspace work, and the local-delivery fallback keep their existing rules.
-A change delivered through a pull request keeps its validation records and validation questions at every care level, so a raise to Careful mid-task keeps them; only Careful's gates read them (captain's INF-994 direction A).
-Below Careful, the `report` answer says nothing reads the record yet and that it counts if the task becomes Careful.
-The shared `CAREFUL_LIVE_VALIDATION` brief reaches both model families, on this computer or a work computer.
+A change delivered through a pull request keeps its validation records and validation questions at every care, so a raise to Careful mid-task keeps them; the host holds nothing on them, and Careful's guidance is what reads them (captain's INF-994 direction A; INF-1876).
+The careful-change skill (`resources/runbooks/care/skills/careful-change/SKILL.md`) carries the contract to both model families, on this computer or a work computer, staged as a runbook skill.
 A reviewer runs neither the product nor the tests: it reads the captain's words, the whole changed-file checklist, the scenario record and the kept proof.
 
 Before editing, the builder records `report.validation` with `kind: plan`.
@@ -695,10 +680,9 @@ A new commit, including a check repair or an update from the default branch, nee
 The existing code-review carry still covers an unchanged change; an unavoidable update reviews only its code difference, not the whole change again.
 New evidence at the same commit also needs review, without a dummy commit.
 The findings allowance counts distinct version-and-evidence pairs; repeating a report spends no round, and a captain-authorized reset clears those counted pairs with the existing counter.
-Opening a pull request, offering completion, merge preflight and a kept merge approval all require the current accepted pair.
-Raising care on open work applies that requirement; lowering care removes only this hold.
-A held review reports the proof-acceptance reason in its timeline and wake.
-The first mate relays the complete Careful contract when the pinned served brief lacks it, including upgraded in-flight builders and work already offered for completion.
+The current accepted pair is what Careful's guidance asks for before the push, the pull request and the completion card; the host reads it only to attest the pull request (`docs/forge.md`, "No-mistakes' attestation").
+Raising care on open work serves the Careful section in the policy notice; lowering care removes nothing from the record.
+A reviewer's live-proof judgment stands beside its code verdict in the typed record, and the first mate relays what it says.
 Required checks, their repair allowance, autonomy and separate merge consent are unchanged.
 
 ### Visible validation effects

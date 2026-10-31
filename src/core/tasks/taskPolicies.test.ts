@@ -150,7 +150,7 @@ describe("live task policies", () => {
     expect(tasks.policiesOf(current(tasks, task.id))?.autonomy.value).toBe(true);
   });
 
-  it("removes only a host review's policy-owned edge, preserving its history, caps and other blockers", () => {
+  it("leaves the graph alone on a care change: a host review holds no close at any care", () => {
     const { tasks } = setup();
     const task = seedTask(tasks, {
       id: "builder",
@@ -173,7 +173,6 @@ describe("live task policies", () => {
       repoId: "project",
       status: "idle",
     });
-    tasks.link(review.id, task.id, "blocks", "host");
     tasks.link(dependency.id, task.id, "blocks", "firstmate");
     seedDelivery(tasks, task.id, {
       reviewVerdict: "findings",
@@ -183,10 +182,17 @@ describe("live task policies", () => {
       ciRounds: 3,
       ciCapAt: 124,
     });
-    tasks.updateFields(task.id, { policies: { rigor: "quick" } }, "firstmate");
-    // The review edge goes. A recorded wait stays on the graph and holds no close.
-    expect(tasks.blockers(task.id).map((row) => row.id)).toEqual([dependency.id]);
-    expect(tasks.blockersHoldingClose(task.id)).toEqual([]);
+    // The parent edge is the review's one join (INF-1876): a care change
+    // adds no edge and removes none, the recorded wait stays and holds no
+    // close, and the record keeps its history.
+    for (const rigor of ["quick", "reviewed", "standard"] as const) {
+      tasks.updateFields(task.id, { policies: { rigor } }, "firstmate");
+      expect(tasks.policiesOf(current(tasks, task.id))?.rigor.value).toBe(rigor);
+      expect(tasks.blockers(task.id).map((row) => row.id)).toEqual([dependency.id]);
+      expect(tasks.blockersHoldingClose(task.id)).toEqual([]);
+      expect(tasks.get(review.id)?.parentId).toBe(task.id);
+      expect(tasks.blockerRefusal(task.id)).toBeUndefined();
+    }
     expect(tasks.get(task.id)?.delivery).toMatchObject({
       reviewVerdict: "findings",
       reviewRounds: 3,
@@ -195,14 +201,6 @@ describe("live task policies", () => {
       ciRounds: 3,
       ciCapAt: 124,
     });
-    tasks.updateFields(task.id, { policies: { rigor: "reviewed" } }, "firstmate");
-    expect(tasks.blockersHoldingClose(task.id).map((row) => row.id)).toEqual([review.id]);
-    expect(
-      tasks
-        .blockers(task.id)
-        .map((row) => row.id)
-        .sort(),
-    ).toEqual([dependency.id, review.id].sort());
   });
 
   it("refuses closed and inapplicable work atomically and freezes closed policy history", () => {

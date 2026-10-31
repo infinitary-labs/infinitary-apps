@@ -10,7 +10,7 @@ import {
   isAnswerKind,
   type WorkKind,
 } from "@shared/routingPolicy";
-import { CAREFUL_LIVE_VALIDATION } from "../prompts/liveValidation";
+import { CARE_WORDS } from "@shared/vocabulary";
 import { RESULT_WORDS, resultText } from "../tasks/taskResult";
 import { type ReviewHistoryEntry, renderReviewHistory } from "./reviewHistory";
 
@@ -403,34 +403,22 @@ export function withoutOriginReadLine(brief: string, originKey: string): string 
 
 /**
  * How a builder fixes a reviewer's findings (the ported no-mistakes fixer
- * preamble, contract v3.5). The reviewed brief carries it, so the
- * Firstmate relays findings verbatim without restating it; a findings wake
- * on a builder whose brief predates its reviewed care still names it for
- * the steer (`wakes.ts`).
+ * preamble, contract v3.5). The findings wake names it for the steer
+ * (`wakes.ts`): a review happens at any care, so no brief carries it.
  */
 export const REVIEW_FIX_RULES =
   "double-check each finding is legitimate before changing code, identify all sibling sites of the broken invariant, repair the whole defect class with one small correction rather than new machinery, retrace normal callers, never resolve a finding by reverting the author's intentional change, never implement a finding the captain declined or undo a fix the captain chose merely to satisfy an earlier goal, and verify each is resolved";
 
 /**
- * The one line the brief carries about how carefully the work ships
- * (delivery rigor phase 2, `docs/delivery-rigor.md`). The host derives the
- * tier (`src/shared/rigor.ts`) and appends this at the single brief mint,
- * after the classifier has run - the kind is never sorted on it. The
- * crewmate prompt states what each tier asks; this names which one applies.
- * On the reviewed tier it also says what changes at the end: no completion
- * card until the Firstmate says so, because an independent reviewer reads
- * the branch first and the merge is held until it passes - and how to fix
- * the findings the Firstmate relays.
+ * The one line the brief carries about how carefully the work ships: the
+ * care's name, a typed fact the host derives (`src/shared/rigor.ts`) and
+ * appends at the single brief mint, after the classifier has run - the kind
+ * is never sorted on it. What each care asks is the care runbook's, served
+ * with the crewmate's instructions (INF-1868, piece 5); the host holds
+ * nothing on the name.
  */
 export function renderRigorSection(rigor: Rigor): string {
-  switch (rigor) {
-    case "quick":
-      return "Rigor: quick - the repository's own gate and green CI; the five headings are welcome, nothing more is required.";
-    case "standard":
-      return "Rigor: standard - the fixed pre-PR procedure, the five headings on the report, three CI rounds then a blocker report.";
-    case "reviewed":
-      return `Rigor: reviewed - the review comes BEFORE the pull request: when your work is done, commit it on your branch, report under the five headings, and do not push, open a PR, or emit a completion card yet. An independent reviewer reads your branch; the first mate relays its findings as steers and your fixes land as local commits. To fix them, ${REVIEW_FIX_RULES}. After the review passes, push, open the PR, drive CI green, and the first mate tells you when to emit the completion card. A passed review holds when a later version is the same change; any edit asks a fresh review. ${CAREFUL_LIVE_VALIDATION.replaceAll("\n", " ")}`;
-  }
+  return `Care: ${CARE_WORDS[rigor]} (${rigor}) - what it asks is in the care guidance served with your instructions.`;
 }
 
 /**
@@ -479,7 +467,7 @@ export function renderOperationShapeSection(): string {
     "Operation shape: the effect is the deliverable. Make the effect named in the goal and check that it took. Commit nothing, push nothing, open no pull request, and stop and report if code must change.",
     "The captain's words authorize only the effects the goal names. Keychain and signing access, writes outside this task's own project, payments and browser handoffs still ask under their existing consent rules; anything beyond the named effects asks too.",
     "Your own project's writes go at once. You have no pull request tools and no completion decision. Show what took effect on a factual note with no settle action, then report the result and its evidence; the first mate closes it done and finished from that evidence. A note stays until the captain closes it, but its dismissal is not proof of success.",
-    "Rigor: none - this task delivers an effect, not code through a gate.",
+    "Care: none - this task delivers an effect, not code through a gate.",
   ].join("\n");
 }
 
@@ -591,7 +579,7 @@ function answerShape(internalStep: boolean): string {
       "Show a card, as any crewmate does, when the captain must decide or see something before the next step can start; it then opens with the answer in a sentence and draws it, with a figure for each part of the explanation, and their replies come to you there, not through the first mate.",
       ANSWER_CONTINUES_CARD,
       "When the captain's replies change the answer, report it again in full - the final agreed version, with their tweaks and anything decided on the card - before they choose.",
-      "Rigor: none - this task ships nothing.",
+      "Care: none - this task ships nothing.",
       "Your worktree is a laboratory: install, run, and edit there freely to find the answer, but commit nothing, push nothing, and open no pull request. Nothing in it ships; it is discarded when this task closes, and anything worth keeping goes in your report.",
       "Your report is what survives this task; the first mate closes it once the next step has started, unless a card of yours is waiting on the captain.",
     ].join(" ");
@@ -605,7 +593,7 @@ function answerShape(internalStep: boolean): string {
     ANSWER_MARK_WORDS,
     "Your report stays the short factual account; the card is where the answer is shown.",
     "Your report is also the answer this task keeps, and work built on it starts from it: when the captain's replies change the answer, report it again in full - the final agreed version, with their tweaks and anything decided on the card - before they choose.",
-    "Rigor: none - this task ships nothing; the card is the deliverable.",
+    "Care: none - this task ships nothing; the card is the deliverable.",
     "Your worktree is a laboratory: install, run, and edit there freely to find the answer, but commit nothing, push nothing, and open no pull request. Nothing in it ships; it is discarded when this task closes, and anything worth keeping - paths, commands, a reproduction, a sketch of a fix - goes in the card.",
     "The card and your report are the only things that survive this task.",
   ];
@@ -1227,7 +1215,7 @@ export function renderReviewBrief(
     "",
     ...(facts.history?.length ? [renderReviewHistory(facts.history), ""] : []),
     ...(facts.override ? [reviewerOverrideWords(facts.override), ""] : []),
-    "Careful live validation: independently compare the scenario set with the captain's words; an omitted required scenario is a finding. Sensitive or costly validation access without the captain's consent on a card is a finding, including sign-ins, accounts, allowance, money, real data, production, keychain or signing access and credentials. One approval covers what it named for the rest of the task; do not demand another approval of the same thing for each check, run or version. A check approval is kept by the check's id while the check declares the same resources and cost per run: a run that used more or cost more than its check declares is a finding. A captain-accepted gap is kept by the check's id until that check fails or leaves the list; when a check's words changed under the same id, judge whether it still claims the same thing, and a widened claim under the same id is a finding. Separate persistent-effect approvals still apply. Run nothing. Read the kept evidence, not a mutable original. The same typed review carries the live-proof judgment: coverage complete/missing with its reason and omitted scenarios, the exact effect ids whose code and lasting effects you inspected, verdict go/no-go/inconclusive/no-surface and your reason. With no live-validation record assigned below (null), coverage is missing, the verdict inconclusive and the reason says no live validation was planned at this care; nothing reads them below Careful. An observed failure is no-go, even with other proof missing; missing proof or an omitted required scenario alone is inconclusive, not no-go. Code findings and the live-proof verdict are separate. Code clearance is not final proof acceptance or permission. Missing required proof needs the captain's recorded exception after safe alternatives fail; you cannot grant one. No-surface is only for nothing to run, never missing access. An evidence-only change needs a fresh review. Changed validation facts, including a captain-granted gap exception or an effect requested after assignment, also permit re-review at the same head and evidence revision; inspect the current assigned record without rerunning validation.",
+    "Careful live validation: independently compare the scenario set with the captain's words; an omitted required scenario is a finding. Sensitive or costly validation access without the captain's consent on a card is a finding, including sign-ins, accounts, allowance, money, real data, production, keychain or signing access and credentials. One approval covers what it named for the rest of the task; do not demand another approval of the same thing for each check, run or version. A check approval is kept by the check's id while the check declares the same resources and cost per run: a run that used more or cost more than its check declares is a finding. A captain-accepted gap is kept by the check's id until that check fails or leaves the list; when a check's words changed under the same id, judge whether it still claims the same thing, and a widened claim under the same id is a finding. Separate persistent-effect approvals still apply. Run nothing. Read the kept evidence, not a mutable original. The same typed review carries the live-proof judgment: coverage complete/missing with its reason and omitted scenarios, the exact effect ids whose code and lasting effects you inspected, verdict go/no-go/inconclusive/no-surface and your reason. With no live-validation record assigned below (null), coverage is missing, the verdict inconclusive and the reason says no live validation was planned for this change; whether that holds the change is the care guidance's and the first mate's, never the host's. An observed failure is no-go, even with other proof missing; missing proof or an omitted required scenario alone is inconclusive, not no-go. Code findings and the live-proof verdict are separate. Code clearance is not final proof acceptance or permission. Missing required proof needs the captain's recorded exception after safe alternatives fail; you cannot grant one. No-surface is only for nothing to run, never missing access. An evidence-only change needs a fresh review. Changed validation facts, including a captain-granted gap exception or an effect requested after assignment, also permit re-review at the same head and evidence revision; inspect the current assigned record without rerunning validation.",
     `Assigned live-validation record: ${JSON.stringify(facts.validation ?? null)}`,
     `Read these kept proof files on this computer: ${JSON.stringify(facts.proofFiles ?? [])}`,
     "",

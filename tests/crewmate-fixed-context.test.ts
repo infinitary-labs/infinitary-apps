@@ -135,6 +135,18 @@ const LEDGER: { rule: string; home: Home; says: string }[] = [
     home: "prompt",
     says: "report a sign-in or access only the captain can give as a blocker",
   },
+  // INF-1876 trimmed the delivery judgment to what only it says: these two
+  // rules it dropped are on the tools whose use they govern.
+  {
+    rule: "work that needs this merge first is a Continue filing, linked before the completion decision",
+    home: { tool: "file_followup" },
+    says: "For work needing your merge first, use a title beginning Continue:, say why, report it, end that turn without a card, and wait for the first mate to link it before your completion decision.",
+  },
+  {
+    rule: "no intermediate card of the crewmate's merges the pull request; only the completion decision can",
+    home: { tool: "emit_card" },
+    says: "No settle effects on intermediate questions; reuse an open outcome card's id.",
+  },
 ];
 
 describe("the crewmate's fixed context (INF-416 piece J)", () => {

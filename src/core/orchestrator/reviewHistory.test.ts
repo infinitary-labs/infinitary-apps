@@ -257,7 +257,6 @@ describe("the review history the app writes (INF-993)", () => {
         verdict: "findings",
         excerpt: `verdict: findings ${F7}`,
         cards: [],
-        briefed: true,
         history,
       },
     });

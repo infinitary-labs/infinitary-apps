@@ -3,7 +3,6 @@ import { writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it, vi } from "vitest";
 import { freshDatabase } from "../../../tests/helpers/database";
-import { noSurfaceProof } from "../../../tests/helpers/liveValidation";
 import { scratchDir } from "../../../tests/helpers/scratchDirs";
 import { seedDelivery } from "../../../tests/helpers/taskDelivery";
 import type { InboxStore } from "../storage/inboxStore";
@@ -170,20 +169,10 @@ describe("a kept merge carries a passed review across a pure update", () => {
   it("does not read the branch when the stored readings match", async () => {
     // INF-416 G: a kept merge brought up to date compares the reading stored
     // with the repair. A branch read would fail once the checkout is gone.
+    // The host holds nothing on the review's verdict (INF-1876): the kept
+    // merge goes on to its checks, and the pass carries by the stored fact.
     const { tasks, host, updated, dir, merged } = await reviewedUpdate();
     execFileSync("rm", ["-rf", join(dir, ".git")]);
-    // INF-125: unchanged code clearance alone is not current proof. This
-    // non-running a.txt change still needs an explicit no-surface judgment.
-    await host.runMergeAuthorization("review01");
-    expect(merged()).toBe(false);
-    expect(tasks.get("review01")?.delivery?.mergeAuthorization?.waiting?.on).toBe("review");
-    seedDelivery(tasks, "review01", {
-      liveValidation: noSurfaceProof(
-        updated,
-        "fixture-reviewer",
-        "This lifecycle fixture changes only a.txt; it has no running product.",
-      ),
-    });
     await host.runMergeAuthorization("review01");
     const delivery = tasks.get("review01")?.delivery;
     expect(delivery?.reviewCarrySha).toBeUndefined();
@@ -193,8 +182,10 @@ describe("a kept merge carries a passed review across a pure update", () => {
     expect(delivery?.mergeAuthorization?.waiting?.on).toBe("checks");
   });
 
-  it("still waits on review when the stored reading does not match", async () => {
-    const { tasks, host, dir, merged } = await reviewedUpdate();
+  it("records that the pass does not cover the head when the stored reading does not match, and holds nothing on it", async () => {
+    // Whether a merge waits for the review's verdict is the care runbook's
+    // guidance to the crew (INF-1876); the host keeps the typed fact only.
+    const { tasks, host, updated, dir, merged } = await reviewedUpdate();
     execFileSync("rm", ["-rf", join(dir, ".git")]);
     const current = tasks.get("review01")?.delivery;
     const step = current?.mergeAuthorization?.lineage[0];
@@ -207,9 +198,11 @@ describe("a kept merge carries a passed review across a pure update", () => {
       },
     });
     await host.runMergeAuthorization("review01");
-    expect(merged()).toBe(false);
-    expect(tasks.get("review01")?.delivery?.reviewCarrySha).toBeUndefined();
-    expect(tasks.get("review01")?.delivery?.mergeAuthorization?.waiting?.on).toBe("review");
+    const delivery = tasks.get("review01")?.delivery;
+    expect(delivery?.reviewCarrySha).toBeUndefined();
+    expect(reviewCoversHead(delivery, updated)).toBe(false);
+    expect(merged()).toBe(true);
+    expect(delivery?.mergeAuthorization?.waiting?.on).toBe("checks");
   });
 
   it("stores the repaired head's reading when the repair is accepted", () => {

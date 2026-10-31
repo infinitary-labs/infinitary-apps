@@ -239,43 +239,28 @@ describe("renderIntentBrief", () => {
   });
 });
 
-describe("renderRigorSection (delivery rigor phase 2)", () => {
-  it("names each tier in one line, and only the reviewed line withholds the completion card", () => {
+describe("renderRigorSection (INF-1876: the care is a name)", () => {
+  it("names the care in one line and leaves what it asks to the care guidance", () => {
     const quick = renderRigorSection("quick");
     const standard = renderRigorSection("standard");
     const reviewed = renderRigorSection("reviewed");
     for (const line of [quick, standard, reviewed]) {
-      expect(line.startsWith("Rigor: ")).toBe(true);
+      expect(line.startsWith("Care: ")).toBe(true);
       expect(line).not.toContain("\n");
+      expect(line).toContain("what it asks is in the care guidance served with your instructions");
+      // No procedure, no reviewer and no fix rules: the care runbook holds them.
+      expect(line).not.toContain("reviewer");
+      expect(line).not.toContain(REVIEW_FIX_RULES);
     }
     expect(quick).toBe(
-      "Rigor: quick - the repository's own gate and green CI; the five headings are welcome, nothing more is required.",
+      "Care: Quick (quick) - what it asks is in the care guidance served with your instructions.",
     );
     expect(standard).toBe(
-      "Rigor: standard - the fixed pre-PR procedure, the five headings on the report, three CI rounds then a blocker report.",
+      "Care: Default (standard) - what it asks is in the care guidance served with your instructions.",
     );
-    // The reviewed line orders the sequence: review BEFORE the pull
-    // request (captain ruling, 2026-09-19), no card until Firstmate says
-    // so.
-    expect(reviewed).toContain("the review comes BEFORE the pull request");
-    expect(reviewed).toContain("do not push, open a PR, or emit a completion card yet");
-    expect(reviewed).toContain("An independent reviewer reads your branch");
-    expect(reviewed).toContain(
-      "After the review passes, push, open the PR, drive CI green, and the first mate tells you when to emit the completion card.",
+    expect(reviewed).toBe(
+      "Care: Careful (reviewed) - what it asks is in the care guidance served with your instructions.",
     );
-    // INF-148: a passed review holds across a pure update onto newer main.
-    expect(reviewed).toContain(
-      "A passed review holds when a later version is the same change; any edit asks a fresh review.",
-    );
-    // How to fix a relayed finding is the builder's own rule (FI3-566 cut
-    // C), so the Firstmate relays findings verbatim without restating it.
-    expect(reviewed).toContain(
-      "the first mate relays its findings as steers and your fixes land as local commits. To fix them, double-check each finding is legitimate before changing code, identify all sibling sites of the broken invariant, repair the whole defect class with one small correction rather than new machinery, retrace normal callers, never resolve a finding by reverting the author's intentional change, never implement a finding the captain declined or undo a fix the captain chose merely to satisfy an earlier goal, and verify each is resolved. After the review passes",
-    );
-    expect(quick).not.toContain("reviewer");
-    expect(standard).not.toContain("reviewer");
-    expect(quick).not.toContain(REVIEW_FIX_RULES);
-    expect(standard).not.toContain(REVIEW_FIX_RULES);
   });
 });
 
@@ -582,9 +567,7 @@ describe("the answer-shape section (contract v3.6, captain lock 2; Task B)", () 
 
   it("tells an answer task it ships nothing and its worktree is scratch", () => {
     const section = renderAnswerShapeSection();
-    expect(section).toContain(
-      "Rigor: none - this task ships nothing; the card is the deliverable.",
-    );
+    expect(section).toContain("Care: none - this task ships nothing; the card is the deliverable.");
     expect(section).toContain("Your worktree is a laboratory");
     expect(section).toContain("commit nothing, push nothing, and open no pull request");
     expect(section).toContain("The card and your report are the only things that survive");
@@ -629,7 +612,7 @@ describe("the answer shape of a step the Firstmate declared (docs/sequences.md)"
     expect(step).toContain(
       "Show a card, as any crewmate does, when the captain must decide or see something",
     );
-    expect(step).toContain("Rigor: none - this task ships nothing.");
+    expect(step).toContain("Care: none - this task ships nothing.");
     expect(step).not.toContain("it lands as one card");
     // The captain's own ask - anything not declared a step - keeps the card.
     for (const asked of [renderAnswerShapeSection(false), renderAnswerShapeSection()]) {

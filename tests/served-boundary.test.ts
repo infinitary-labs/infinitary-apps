@@ -63,7 +63,6 @@ const WAKES: WakeFacts[] = [
     verdict: "findings",
     excerpt: "verdict: findings",
     cards: [],
-    briefed: true,
   },
   { kind: "captain-start", task: { ...BUILDER, key: "FI3-8" }, move: "start", at: 0 },
   { kind: "ci-cap", task: BUILDER, rounds: 3, cap: 3, head: "0123456789ab" },

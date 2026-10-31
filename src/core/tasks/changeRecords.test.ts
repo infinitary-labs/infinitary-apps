@@ -142,7 +142,7 @@ const KEPT_DELIVERY: Partial<TaskDelivery> = {
   mergeReviews: [KEPT_REVIEW],
   override: {
     words: "Merge it even though the review is late.",
-    holds: ["review"],
+    holds: ["waits"],
     until: "version",
     head: REPAIRED,
     at: 5_400,

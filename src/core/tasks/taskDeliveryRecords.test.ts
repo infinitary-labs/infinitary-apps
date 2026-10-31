@@ -174,7 +174,7 @@ function olderProfile() {
     override: {
       at: 4_800,
       words: "Merge it even though the review is late.",
-      holds: ["review"],
+      holds: ["waits"],
       head: REPAIRED,
     } as unknown as TaskDelivery["override"],
     liveValidation: LIVE_VALIDATION,

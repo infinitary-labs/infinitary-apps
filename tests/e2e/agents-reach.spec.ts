@@ -16,7 +16,6 @@ import {
   standingOverrideWords,
   withoutHoldWords,
 } from "../../src/shared/holds";
-import { LIVE_VALIDATION_WORDS } from "../../src/shared/liveValidation";
 import type { TaskView } from "../../src/shared/tasks";
 import { CHECK_WORDS, MERGE_WORDS } from "../../src/shared/vocabulary";
 import { scratchDir } from "../helpers/scratchDirs";
@@ -366,11 +365,8 @@ test("the captain's words pass a soft hold once on the record, a fixed limit ref
     await showCard(page, REACH_STOP_CARD_TITLE);
     const facts = factsStrip(cardBody(page, REACH_STOP_CARD_TITLE));
     await expect(facts.override).toHaveText(overrideCellWords(REACH_STOP_HOLDS));
-    // His words ride the cell's title; passing the live proof is the exception it names.
-    await expect(facts.cell("override")).toHaveAttribute(
-      "title",
-      `${rows[0]?.text}. ${LIVE_VALIDATION_WORDS.exception}.`,
-    );
+    // His words ride the cell's title.
+    await expect(facts.cell("override")).toHaveAttribute("title", rows[0]?.text ?? "");
     await regionShot(shownCard(page, REACH_STOP_CARD_TITLE), out("1-completion-card-override.png"));
 
     // The captain's merge: at the version the reviewer last read, with no

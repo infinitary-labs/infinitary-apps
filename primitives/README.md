@@ -40,6 +40,7 @@ Lessons, a mail integration, a guided way of working and a particular panel are 
 | [Live reads](live-reads.md) | Expose current app facts without a second source of truth. |
 | [Panels](panels.md) | Compose persistent views of app or personal data. |
 | [Projects and working copies](projects-and-working-copies.md) | Bind work to its files and its delivery rules. |
+| [Changes](changes.md) | Keep one typed record of a change's versions, their facts and the consent given, read by its id. |
 
 ## Execution foundations
 

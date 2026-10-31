@@ -193,7 +193,7 @@ export type IdleLadderHost = {
   openCards(): Iterable<Card>;
   /** The task's open cards whose captain reply waits on their author, oldest first. */
   threadsAwaitingAuthor(taskId: string): WakeNote[];
-  /** The reviewed lane and review tasks bypass supervision. */
+  /** A review task bypasses supervision; its builder is sorted like any task (INF-1876). */
   bypassesSupervision(taskId: string): boolean;
   notifyOp(wake: TypedWake, origin: ServedWakeOrigin, taskId?: string): void;
   premiumCanServe?: () => boolean;
@@ -317,7 +317,19 @@ export class IdleLadder {
       accountHeld: record ? this.cutOffHolds(record) : false,
       outOfReach: this.host.outOfReach?.(taskId) === true,
       ...(record ? this.waitWitnesses(record) : { waitsOnUnstarted: false }),
+      reviewOpen: record ? this.reviewOpen(record) : false,
     };
+  }
+
+  /**
+   * A review the host raised on the task is still live (INF-1876): its
+   * builder waits on the verdict or close, which reach it through the
+   * Firstmate. The ladder alone reads it; the sort reads the verdict.
+   */
+  private reviewOpen(record: TaskRecord): boolean {
+    return this.host.tasks
+      .children(record.id)
+      .some((child) => TaskService.isDeliveryChild(child) && !TaskService.isClosed(child));
   }
 
   /**
@@ -595,7 +607,7 @@ export class IdleLadder {
   reconcileIdleTask(taskId: string, now: number): void {
     let record = this.host.tasks.get(taskId);
     if (!record || TaskService.isClosed(record) || record.kind !== "work") return;
-    // The reviewed lane and review tasks bypass supervision, as the sort does.
+    // A review task bypasses supervision, as the sort does.
     if (this.host.bypassesSupervision(taskId)) return;
     this.checkStillDown(record, now);
     const runtime = this.host.runtime(taskId);

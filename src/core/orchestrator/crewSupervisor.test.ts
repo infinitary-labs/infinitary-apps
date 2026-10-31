@@ -1,4 +1,5 @@
 import { seedDelivery } from "../../../tests/helpers/taskDelivery";
+import careCarefulGuide from "../../../resources/runbooks/care/careful.json" with { type: "json" };
 import { execFileSync } from "node:child_process";
 import { createHash, randomUUID } from "node:crypto";
 import {
@@ -84,7 +85,6 @@ import { queueStartedRefusal } from "@shared/taskQueue";
 import { threadWait } from "@shared/threadWait";
 import type { IntegrationAsk } from "@shared/writeAsk";
 import {
-  CARE_WORDS,
   CHECK_WORDS,
   changeLinesWords,
   MERGE_AFTER_FIXING_WORDS,
@@ -145,6 +145,7 @@ import { createModelRuntime } from "../pi/modelRuntime";
 import type { ModelRuntime } from "../pi/types";
 import { piSessionEvents } from "../pi/piEvents";
 import { CREWMATE_BROWSER_LINE, crewmateComputersNote } from "../pi/piResources";
+import { Runbooks } from "../runbooks/runbooks";
 import { createPiSessionFactory, holdingRecoverableAttempt } from "../pi/session";
 import type { AutomaticPlacement } from "../placed/automaticPlacement";
 import type { CrewMachines } from "../placed/placedSessions";
@@ -154,7 +155,6 @@ import {
   SAVE_AND_DEFER,
   START_THE_NEXT_STEP,
 } from "../prompts/cardContract";
-import { CAREFUL_LIVE_VALIDATION } from "../prompts/liveValidation";
 import { Router } from "../routing/router";
 import type { QuotaService } from "../quota/quotaService";
 import { DecisionStore } from "../storage/decisionStore";
@@ -227,7 +227,6 @@ import { closingNoteTitle, droppedLine, pendingMergeLine } from "./settleWords";
 import { Ticker } from "./ticker";
 import { renderReviewHistory } from "./reviewHistory";
 import {
-  CAREFUL_NOTICE,
   ciCapWake,
   GUIDANCE_MARK_WORDS,
   IDLE_ANSWER_NUDGE_TEXT,
@@ -235,6 +234,7 @@ import {
   isCardClosedSteer,
   idleNoteNudgeText,
   RESTART_REPLAY_NOTE,
+  POLICY_GUIDANCE_HEADING,
   REVIEW_NEW_HEAD_NEXT,
   REVIEW_PASSED_NEXT,
   REVIEWER_IDLE_NEXT,
@@ -423,6 +423,8 @@ type SetupExtras = {
   githubWrite?: CrewSupervisorOptions["githubWrite"];
   sendTakenIntegrationAsk?: CrewSupervisorOptions["sendTakenIntegrationAsk"];
   checkCi?: CrewSupervisorOptions["checkCi"];
+  /** The bundled runbooks, when a test reads the guidance the task's facts select. */
+  runbooks?: CrewSupervisorOptions["runbooks"];
   readCheckWatch?: CrewSupervisorOptions["readCheckWatch"];
   readMainChecks?: CrewSupervisorOptions["readMainChecks"];
   /** The home's knowledge, over this setup's projects. */
@@ -644,6 +646,7 @@ function setup(crewmate: FakeCrewmate, extras: SetupExtras = {}) {
       ? { sendTakenIntegrationAsk: extras.sendTakenIntegrationAsk }
       : {}),
     ...(extras.checkCi ? { checkCi: extras.checkCi } : {}),
+    ...(extras.runbooks ? { runbooks: extras.runbooks } : {}),
     ...(extras.openChange ? { openChange: extras.openChange } : {}),
     ...(extras.completionPresentation
       ? { completionPresentation: extras.completionPresentation }
@@ -815,6 +818,13 @@ function syncCardId(id: string | Promise<string | undefined> | undefined): strin
   }
   return id;
 }
+
+/** The bundled runbooks, read as the app serves them, with every switch on. */
+const bundledRunbooks = () =>
+  new Runbooks(join(dirname(fileURLToPath(import.meta.url)), "../../../resources/runbooks"), {
+    getRunbookStates: () => ({}),
+    setRunbookStates: () => {},
+  });
 
 describe("CrewSupervisor", () => {
   it("streams a commissioned turn without a task card and leaves the task idle and steerable", async () => {
@@ -4350,7 +4360,13 @@ describe("CrewSupervisor", () => {
      * the real check service, the real click, a GitHub stand-in.
      */
     async function approved(
-      where: { kind?: "github" | "gitlab"; referenced?: boolean; internalStep?: boolean } = {},
+      where: {
+        kind?: "github" | "gitlab";
+        referenced?: boolean;
+        internalStep?: boolean;
+        /** Serve the bundled runbooks, so a care edit's notice carries the guidance it selects. */
+        guidance?: boolean;
+      } = {},
     ) {
       const forge = new KeptForge(where.kind);
       if (where.referenced) forge.referencedBranch = "fm/task-earlier";
@@ -4372,6 +4388,7 @@ describe("CrewSupervisor", () => {
         readPull: (id, prNumber) => service().pullState(id, prNumber),
         openChange: (id, input) => service().open(id, input),
         checkChange: (id, input) => service().checkForCrew(id, input),
+        ...(where.guidance ? { runbooks: bundledRunbooks() } : {}),
       });
       prCi = new PrCiService({
         tasks: harness.tasks,
@@ -4876,7 +4893,7 @@ describe("CrewSupervisor", () => {
      * request's merge card offers Review carefully beside Merge.
      */
     it("Review carefully on a merge card makes the task Careful from the captain, starts its crewmate and starts the review of the version the card offered", async () => {
-      const h = await approved();
+      const h = await approved({ guidance: true });
       // The branch has the committed version the card offered.
       vi.mocked(h.workspace.branchHead).mockResolvedValue(APPROVED);
       const careful = h.card.actions.find((action) => action.care);
@@ -4908,19 +4925,22 @@ describe("CrewSupervisor", () => {
       // The care notice and the choice start the idle crewmate together.
       await vi.waitFor(() => expect(h.crewmate.promptCalls.length).toBeGreaterThan(turns));
       const turn = h.crewmate.promptCalls.slice(turns).join("\n");
-      expect(turn).toContain(CAREFUL_NOTICE);
+      // The raise's notice carries the Careful guidance the task's new facts
+      // select, which its instructions did not carry (INF-1876).
+      expect(turn).toContain(POLICY_GUIDANCE_HEADING);
+      expect(turn).toContain(careCarefulGuide.trim());
       expect(turn).toContain(REVIEW_CAREFULLY_WORDS);
       expect(h.forge.merges).toEqual([]);
       // The app started the review of that version (INF-1875): a review
-      // child of the task holding its merge, briefed with the card the
-      // captain read, and a line on the task's timeline saying so.
+      // child of the task that holds nothing on it, briefed with the card
+      // the captain read, and a line on the task's timeline saying so.
       await vi.waitFor(() => expect(h.reviewer.promptCalls).toHaveLength(1));
       const review = h.tasks
         .listLive()
         .find((task) => task.shape?.kind === "review" && task.parentId === h.taskId);
       expect(review).toMatchObject({ title: "Review: Ship the meter", status: "active" });
       expect(review?.delivery?.headSha).toBe(APPROVED);
-      expect(h.tasks.blockersHoldingClose(h.taskId).map((row) => row.id)).toEqual([review?.id]);
+      expect(h.tasks.blockersHoldingClose(h.taskId)).toEqual([]);
       const brief = h.reviewer.promptCalls[0] ?? "";
       expect(brief).toContain(`Review branch fm/task-${h.taskId} at head ${APPROVED}`);
       expect(brief).toContain("Ready to merge");
@@ -5042,27 +5062,25 @@ describe("CrewSupervisor", () => {
       expect(h.forge.merges).toEqual([APPROVED]);
     });
 
-    it("higher care on an existing pull request requires an exact-version review, while lower care preserves the record", async () => {
+    // INF-1876: the host records the care's name and holds nothing on it;
+    // what Careful asks reaches the crew through the care guidance.
+    it("a care edit on an existing pull request holds no merge by itself, and the review record survives every edit", async () => {
       const h = await approved();
       editPolicies(h, { autonomy: true, rigor: "reviewed" });
-      expect((await h.supervisor.settleTaskDetailed(h.taskId, "merge-pr")).text).toContain(
-        "independent review",
-      );
       seedDelivery(h.tasks, h.taskId, {
         reviewVerdict: "pass",
         reviewSha: "older",
         reviewRounds: 2,
       });
-      expect((await h.supervisor.settleTaskDetailed(h.taskId, "merge-pr")).text).toContain(
-        "independent review",
-      );
       editPolicies(h, { rigor: "quick" });
+      editPolicies(h, { rigor: "reviewed" });
       expect(h.tasks.get(h.taskId)?.delivery).toMatchObject({
         reviewVerdict: "pass",
         reviewSha: "older",
         reviewRounds: 2,
         prNumber: 7,
       });
+      expect(h.supervisor.crewStatus(h.taskId)[0]?.review).toBe("review passed");
       await h.supervisor.settleTaskDetailed(h.taskId, "merge-pr");
       expect(h.forge.merges).toEqual([APPROVED]);
     });
@@ -5075,30 +5093,33 @@ describe("CrewSupervisor", () => {
      * version, a fix pushed after it, and his "the review covered it".
      */
     describe("the captain's override (INF-473)", () => {
-      const words = "The review covered it; merge it.";
-      const reviewedAtOlder = async () => {
+      const words = "That failed check is the nightly's; merge it.";
+      // The checks failed at the approved version (INF-1876: the review and
+      // its live proof are no longer holds of the host's, so the checks are
+      // the soft hold his words pass here).
+      const failedChecks = async () => {
         const h = await approved();
-        editPolicies(h, { autonomy: true, rigor: "reviewed" });
-        seedDelivery(h.tasks, h.taskId, { reviewVerdict: "pass", reviewSha: "older" });
+        editPolicies(h, { autonomy: true });
+        h.forge.states = ["failure"];
         return h;
       };
 
-      it("passes the review and live proof at the version his words cover, and a newer version brings them back", async () => {
-        const h = await reviewedAtOlder();
+      it("passes the checks at the version his words cover, and a newer version brings them back", async () => {
+        const h = await failedChecks();
         expect((await h.supervisor.settleTaskDetailed(h.taskId, "merge-pr")).text).toContain(
-          softHoldWords("review", "firstmate"),
+          softHoldWords("checks", "firstmate"),
         );
         expect(
           h.supervisor.declareOverride(h.taskId, {
             words,
-            holds: ["review", "live-proof"],
+            holds: ["checks"],
             until: "version",
           }).ok,
         ).toBe(true);
         // The version is a head of the pull request the task named then (INF-1884 R2).
         expect(h.tasks.get(h.taskId)?.delivery?.override).toMatchObject({
           words,
-          holds: ["review", "live-proof"],
+          holds: ["checks"],
           until: "version",
           head: APPROVED,
           prNumber: 7,
@@ -5108,7 +5129,7 @@ describe("CrewSupervisor", () => {
         // A fix pushed after his words is a version they did not cover.
         h.forge.headSha = "fixed0004";
         expect((await h.supervisor.settleTaskDetailed(h.taskId, "merge-pr")).text).toContain(
-          "independent review",
+          softHoldWords("checks", "firstmate"),
         );
         expect(h.forge.merges).toEqual([]);
         h.forge.headSha = APPROVED;
@@ -5122,42 +5143,34 @@ describe("CrewSupervisor", () => {
        * turn; the task status read shows what they pass and for how long.
        */
       it("serves his standing words to the crewmate's next turn and crew status, and that he took them back", async () => {
-        const h = await reviewedAtOlder();
+        const h = await failedChecks();
         const notices = () =>
           h.inbox
             .allFor(h.taskId)
             .filter((row) => row.facts?.kind === "task-override-changed")
             .map(renderWake);
-        h.supervisor.declareOverride(h.taskId, { words, holds: ["review"], until: "task" });
+        h.supervisor.declareOverride(h.taskId, { words, holds: ["checks"], until: "task" });
         expect(notices()).toEqual([
-          standingOverrideWords({ words, holds: ["review"], until: "task" }),
+          standingOverrideWords({ words, holds: ["checks"], until: "task" }),
         ]);
         expect(h.supervisor.crewStatus(h.taskId)[0]?.override).toEqual({
-          passes: "the review for the rest of this task",
+          passes: "the checks for the rest of this task",
           words,
         });
         h.supervisor.withdrawOverride(h.taskId);
-        expect(notices().at(-1)).toBe(overrideTakenBackWords({ holds: ["review"] }));
+        expect(notices().at(-1)).toBe(overrideTakenBackWords({ holds: ["checks"] }));
         expect(h.supervisor.crewStatus(h.taskId)[0]?.override).toBeUndefined();
       });
 
       it("passes them at every later version when his words cover the task's life, until he takes them back", async () => {
-        const h = await reviewedAtOlder();
-        h.supervisor.declareOverride(h.taskId, {
-          words,
-          holds: ["review", "live-proof"],
-          until: "task",
-        });
+        const h = await failedChecks();
+        h.supervisor.declareOverride(h.taskId, { words, holds: ["checks"], until: "task" });
         h.supervisor.withdrawOverride(h.taskId);
         expect(h.tasks.get(h.taskId)?.delivery?.override).toBeUndefined();
         expect((await h.supervisor.settleTaskDetailed(h.taskId, "merge-pr")).text).toContain(
-          "independent review",
+          softHoldWords("checks", "firstmate"),
         );
-        h.supervisor.declareOverride(h.taskId, {
-          words,
-          holds: ["review", "live-proof"],
-          until: "task",
-        });
+        h.supervisor.declareOverride(h.taskId, { words, holds: ["checks"], until: "task" });
         h.forge.headSha = "fixed0004";
         await h.supervisor.settleTaskDetailed(h.taskId, "merge-pr");
         expect(h.forge.merges).toEqual(["fixed0004"]);
@@ -5167,10 +5180,7 @@ describe("CrewSupervisor", () => {
           const holds = overrideHoldsFrom(event.data ? JSON.stringify(event.data) : null);
           return holds ? [holds] : [];
         });
-        expect(declared).toEqual([
-          ["review", "live-proof"],
-          ["review", "live-proof"],
-        ]);
+        expect(declared).toEqual([["checks"], ["checks"]]);
       });
 
       it("merges his kept click held on failed checks once his words pass the checks, and his feed carries no hold sentence", async () => {
@@ -5561,13 +5571,13 @@ describe("CrewSupervisor", () => {
             )?.[0];
         expect(strip()).toBeUndefined();
         h.supervisor.declareOverride(h.taskId, {
-          words: "Merge it without live proof; I tried it myself.",
-          holds: ["live-proof", "checks"],
+          words: "Merge it past the waits; I tried it myself.",
+          holds: ["waits", "checks"],
           until: "version",
         });
-        await vi.waitFor(() => expect(strip()).toContain("without live proof · the checks"));
+        await vi.waitFor(() => expect(strip()).toContain("the waits · the checks"));
         expect(strip()).toContain(
-          'title="Your words pass live proof and the checks for this version: &quot;Merge it without live proof; I tried it myself.&quot;. Proceeding without live proof."',
+          'title="Your words pass the waits and the checks for this version: &quot;Merge it past the waits; I tried it myself.&quot;"',
         );
         // A newer version is one his words did not cover.
         seedDelivery(h.tasks, h.taskId, { headSha: "fixed0004" });
@@ -5579,7 +5589,7 @@ describe("CrewSupervisor", () => {
         seedTask(tasks, { id: "no-head", title: "Ship the fix", status: "idle" });
         const declared = supervisor.declareOverride("no-head", {
           words,
-          holds: ["review"],
+          holds: ["checks"],
           until: "version",
         });
         expect(declared.ok).toBe(false);
@@ -12689,7 +12699,7 @@ describe("the whose-turn rule at the report's call site (S7c, R4.8)", () => {
     expect(reportWakes(ops)).toHaveLength(2);
   });
 
-  it("leaves the reviewed lane alone: it wakes the Firstmate and records nothing", async () => {
+  it("sorts a Careful builder's report like any other: the care's name skips nothing (INF-1876)", async () => {
     const crewmate = fakeCrewmate();
     const reviewer = fakeCrewmate();
     const { supervisor, repos, ops, sorts } = setup(crewmate, { crewmates: [reviewer] });
@@ -12703,7 +12713,10 @@ describe("the whose-turn rule at the report's call site (S7c, R4.8)", () => {
     await tick();
     await report(crewmate, taskId, "Branch pushed.");
     expect(reportWakes(ops)).toHaveLength(1);
-    expect(sorts).toEqual([]);
+    // The report is sorted from its typed state as a Default one is; what
+    // Careful asks of the report is the care guidance's, which has the
+    // builder say what the first mate must do.
+    expect(sorts).toEqual([{ taskId, verdict: "captain", rule: "stopped" }]);
   });
 
   // FI3-710 (grounded on FI3-703): a captain decision only the Firstmate can
@@ -15715,7 +15728,7 @@ describe("the idle ladder (idle crew recovery, docs/report-sort.md)", () => {
     expect(reconcile).toHaveBeenCalledTimes(1);
   });
 
-  it("a closed task and the reviewed lane are never read", async () => {
+  it("a closed task is never read", async () => {
     const closed = await stopped();
     await closed.supervisor.settleTask(closed.taskId, "discard", true);
     await closed.at(minutes(200));
@@ -19428,7 +19441,7 @@ describe("CrewSupervisor personal workspace (Step 4)", () => {
     // and no Rigor line, and leads the workspace facts with the in-place
     // sentence the posture used to carry.
     expect(brief).not.toContain("Delivery:");
-    expect(brief).not.toContain("Rigor:");
+    expect(brief).not.toContain("Care:");
     expect(brief).toContain("You build in place: this task carries no delivery posture");
     expect(brief).toContain(`Workspace: ${h.workspaceDir}`);
     expect(brief).toContain('Surfaces now: open-prs "Open PRs" (right rail)');
@@ -19817,12 +19830,15 @@ describe("the reviewed tier (delivery rigor phase 2)", () => {
   }
 
   // INF-994, the captain's direction A: "Keep validation records at every care
-  // level; only Careful's merge reads them".
-  it("INF-994: a Default-care plan is kept, and a raise to Careful still holds the merge for a run and a review", async () => {
+  // level"; since INF-1876 what a care asks of them is the care guidance's,
+  // served on the raise, never a hold the host reads from the name.
+  it("INF-994: a Default-care plan is kept across a raise to Careful, whose notice carries the Careful guidance", async () => {
     const repo = directPrRepo();
     try {
       const builder = fakeCrewmate();
-      const { supervisor, tasks, repos, workspace, specs } = setup(builder);
+      const { supervisor, tasks, repos, workspace, specs, inbox } = setup(builder, {
+        runbooks: bundledRunbooks(),
+      });
       const { repo: view } = await repos.setup({ kind: "adopt", path: repo.dir, name: repo.name });
       repos.configure(view.id, { delivery: "direct-pr" });
       const { taskId } = await supervisor.commission({
@@ -19858,9 +19874,10 @@ describe("the reviewed tier (delivery rigor phase 2)", () => {
           ],
         },
       });
-      expect(receipt).toContain(
-        `Nothing reads it at ${CARE_WORDS.standard} care; it counts if this task becomes Careful.`,
-      );
+      // The receipt says what was recorded and no longer says who reads it:
+      // what a care asks of the record is the care guidance's.
+      expect(receipt).toContain("Validation plan recorded at evidence revision 0.");
+      expect(receipt).not.toContain("Nothing reads it");
       expect(record().delivery?.liveValidation?.scenarios.map((s) => s.id)).toEqual(["count-press"]);
       const before = policies();
       tasks.updateFields(taskId, { policies: { rigor: "reviewed" } }, "captain");
@@ -19868,6 +19885,18 @@ describe("the reviewed tier (delivery rigor phase 2)", () => {
       expect(policies()?.rigor.value).toBe("reviewed");
       expect(record().delivery?.liveValidation?.scenarios.map((s) => s.id)).toEqual(["count-press"]);
       expect(acceptedValidation(record().delivery?.liveValidation, head).ready).toBe(false);
+      // The notice carries the Careful section the new care selects and the
+      // Default one did not; the Default section the crewmate already has is
+      // not repeated. The builder's turn is in flight, so the row is handed
+      // to it at once and sits in flight awaiting its ack.
+      await tick();
+      const notice = [...inbox.allFor(taskId), ...inbox.inFlight(taskId)]
+        .filter((row) => row.facts?.kind === "task-policies-changed")
+        .map(renderWake)
+        .at(-1);
+      expect(notice).toContain(POLICY_GUIDANCE_HEADING);
+      expect(notice).toContain(careCarefulGuide.trim());
+      expect(notice).not.toContain("# Default care");
     } finally {
       repo.dispose();
     }
@@ -20075,7 +20104,12 @@ describe("the reviewed tier (delivery rigor phase 2)", () => {
       ).rejects.toThrow("once");
       const restored = new TaskService({ db });
       expect(restored.get(taskId)?.delivery?.liveValidation?.permissions[0]?.state).toBe("unknown");
-      expect(restored.get(taskId)?.delivery?.reviewVerdict).toBe("blocked");
+      // The reviewer's typed code judgment is the verdict as typed (INF-1876):
+      // its inconclusive live-proof judgment stands beside it in the record.
+      expect(restored.get(taskId)?.delivery?.reviewVerdict).toBe("pass");
+      expect(
+        restored.get(taskId)?.delivery?.liveValidation?.reviews.at(-1)?.verdict,
+      ).toBe("inconclusive");
       console.log(
         "INF-125 shared-effect boundary",
         JSON.stringify({
@@ -20094,8 +20128,9 @@ describe("the reviewed tier (delivery rigor phase 2)", () => {
     try {
       const builder = fakeCrewmate();
       const reviewer = fakeCrewmate();
+      const reReviewer = fakeCrewmate();
       const { supervisor, tasks, repos, workspace, specs, ops, events, cards } = setup(builder, {
-        crewmates: [reviewer],
+        crewmates: [reviewer, reReviewer],
       });
       const { repo: view } = await repos.setup({ kind: "adopt", path: repo.dir, name: repo.name });
       repos.configure(view.id, { delivery: "direct-pr" });
@@ -20229,7 +20264,10 @@ describe("the reviewed tier (delivery rigor phase 2)", () => {
       expect(tasks.get(taskId)?.delivery?.liveValidation?.permissions[0]?.state).toBe("requested");
       expect(() => supervisor.act(cardId, "accept", "frame")).toThrow(CardChoiceUnavailableError);
       expect(tasks.get(taskId)?.delivery?.liveValidation?.permissions[0]?.state).toBe("requested");
-      // INF-203 F2/F3: a reviewed gap is blocked until the captain answers; no duplicate run is needed.
+      // The gap waits for the captain's answer; the review beside it records
+      // the typed code judgment as the verdict (INF-1876): clear is a pass,
+      // and the inconclusive live proof is a fact the record keeps and the
+      // reviewer reads, never a hold the host turns the pass into.
       const { taskId: reviewId } = await supervisor.commission({
         title: "Review",
         intent: intentOf("Review device proof."),
@@ -20250,14 +20288,12 @@ describe("the reviewed tier (delivery rigor phase 2)", () => {
       };
       await specs[1]!.onReport!("verdict: pass\nrisk: low", undefined, { validation: judgment });
       await reportTurn(reviewer, reviewId, "verdict: pass\nrisk: low");
-      expect(tasks.get(taskId)?.delivery?.reviewVerdict).toBe("blocked");
-      const blocked = tasks.timeline(taskId).findLast((event) => event.kind === "review");
-      expect(blocked?.data?.validationReason).toContain("Required proof is missing");
-      expect(blocked?.text).toContain("Required proof is missing");
-      expect(ops.findLast((text) => text.includes("with verdict blocked"))).toContain(
-        String(blocked?.data?.validationReason),
-      );
-      expect(tasks.briefContains(taskId, CAREFUL_LIVE_VALIDATION)).toBe(true);
+      expect(tasks.get(taskId)?.delivery?.reviewVerdict).toBe("pass");
+      expect(tasks.get(reviewId)?.status).toBe("done");
+      const passed = tasks.timeline(taskId).findLast((event) => event.kind === "review");
+      expect(passed?.text).toContain("review passed at");
+      expect(passed?.data).not.toHaveProperty("validationReason");
+      expect(ops.some((text) => text.includes("with verdict blocked"))).toBe(false);
       supervisor.act(cardId, "accept", "chrome");
       const validation = tasks.get(taskId)?.delivery?.liveValidation;
       expect(validation?.permissions[0]?.state).toBe("approved");
@@ -20269,22 +20305,25 @@ describe("the reviewed tier (delivery rigor phase 2)", () => {
         taskId,
         "The captain granted the recorded exception; re-review this validation state.",
       );
+      // A re-review of the granted exception is a new review at the same
+      // head and evidence revision, assigned the current validation state.
       const priorState = tasks.get(reviewId)?.delivery?.validationAssignment?.stateRevision;
-      await supervisor.steerCrewmate(
-        reviewId,
-        "Re-review the captain-granted gap exception at this same head and evidence revision.",
-      );
+      const { taskId: reReviewId } = await supervisor.commission({
+        title: "Review",
+        intent: intentOf("Re-review the captain-granted gap exception."),
+        shape: { review_of: taskId },
+      });
       await tick();
-      expect(tasks.get(reviewId)?.delivery?.validationAssignment).toMatchObject({
+      expect(tasks.get(reReviewId)?.delivery?.validationAssignment).toMatchObject({
         head,
         revision: 1,
       });
-      expect(tasks.get(reviewId)?.delivery?.validationAssignment?.stateRevision).not.toBe(
+      expect(tasks.get(reReviewId)?.delivery?.validationAssignment?.stateRevision).not.toBe(
         priorState,
       );
-      await specs[1]!.onReport!("verdict: pass\nrisk: low", undefined, { validation: judgment });
-      await reportTurn(reviewer, reviewId, "verdict: pass\nrisk: low");
-      expect(tasks.get(reviewId)?.status).toBe("done");
+      await specs[2]!.onReport!("verdict: pass\nrisk: low", undefined, { validation: judgment });
+      await reportTurn(reReviewer, reReviewId, "verdict: pass\nrisk: low");
+      expect(tasks.get(reReviewId)?.status).toBe("done");
       expect(tasks.get(taskId)?.delivery?.reviewVerdict).toBe("pass");
       expect(tasks.get(taskId)?.delivery?.liveValidation?.runs).toHaveLength(1);
       seedDelivery(tasks, taskId, {
@@ -20558,11 +20597,13 @@ describe("the reviewed tier (delivery rigor phase 2)", () => {
     }
   });
 
-  it("INF-203 F3: an older Careful builder already reporting completion receives the missing contract at merge and review", async () => {
+  // INF-1876: the host holds no merge on live validation; what Careful asks
+  // of an older builder reaches it through the care guidance, not a hold.
+  it("INF-203 F3: an older Careful builder with a passed review and green checks merges; no host hold asks it for live validation", async () => {
     const repo = directPrRepo();
     try {
       const reviewer = fakeCrewmate();
-      const { supervisor, tasks, repos, workspace, ops, specs } = setup(reviewer, {
+      const { supervisor, tasks, repos, workspace } = setup(reviewer, {
         mergePullRequest: async (_task, _guard, boundary) => {
           const reason = boundary?.beforeDispatch(HEAD);
           return { ok: !reason, text: reason ?? "Merged" };
@@ -20601,26 +20642,9 @@ describe("the reviewed tier (delivery rigor phase 2)", () => {
         false,
         "captain",
       );
-      expect(held.text).toContain("needs live validation");
-      expect(held.text).toContain(CAREFUL_LIVE_VALIDATION);
-      expect(tasks.get("legacy-careful")).toMatchObject({ status: "active", activity: "idle" });
-      const { taskId: reviewId } = await supervisor.commission({
-        title: "Review",
-        intent: intentOf("Fix the meter carefully."),
-        shape: { review_of: "legacy-careful" },
-      });
-      await tick();
-      await reviewTurn({ tasks, specs }, reviewer, 0, reviewId, "The code is clear.", {
-        code: "clear",
-        risk: { level: "low", why: "one file." },
-      });
-      const note = tasks.timeline("legacy-careful").findLast((event) => event.kind === "review");
-      expect(note?.data?.validationReason).toBe(
-        "This version needs live validation of the current scenarios.",
-      );
-      expect(ops.findLast((text) => text.includes("with verdict blocked"))).toContain(
-        CAREFUL_LIVE_VALIDATION,
-      );
+      expect(held.text).not.toContain("live validation");
+      expect(held.text).toContain("Merged");
+      expect(tasks.get("legacy-careful")).toMatchObject({ status: "done", closedReason: "merged" });
     } finally {
       repo.dispose();
     }
@@ -20698,14 +20722,19 @@ describe("the reviewed tier (delivery rigor phase 2)", () => {
         },
       );
       expect(tasks.get(taskId)?.delivery?.liveValidation?.runs.at(-1)?.revision).toBe(2);
-      await expect(
-        specs[0]!.onCard!({
-          title: "The fixture is explained",
-          body: completionBody("<p>The empty fixture has no product.</p>"),
-          requiredActions: [],
-          actions: [{ id: "merge", default: true, effect: SETTLE_MERGE }],
-        }),
-      ).rejects.toThrow(/review|proof|validation/i);
+      // The revised proof is a recorded fact the reviewer reads, never a hold
+      // the host puts on the card (INF-1876): the review accepted revision 1,
+      // the record says so, and the card goes up.
+      const cardId = await specs[0]!.onCard!({
+        title: "The fixture is explained",
+        body: completionBody("<p>The empty fixture has no product.</p>"),
+        requiredActions: [],
+        actions: [{ id: "merge", default: true, effect: SETTLE_MERGE }],
+      });
+      expect(cardId).toBeTruthy();
+      expect(acceptedValidation(tasks.get(taskId)?.delivery?.liveValidation, head).ready).toBe(
+        false,
+      );
       expect(tasks.get(taskId)?.delivery?.reviewSha).toBe(head);
       expect(tasks.get(taskId)?.delivery?.reviewRounds).toBeUndefined();
     } finally {
@@ -20740,13 +20769,13 @@ describe("the reviewed tier (delivery rigor phase 2)", () => {
       await tick();
       expect(tasks.get(taskId)?.shape).toMatchObject({ kind: "implement", rigor: "standard" });
       const brief = crewmate.promptCalls[0] ?? "";
-      expect(brief).toContain("Rigor: standard - the fixed pre-PR procedure");
+      expect(brief).toContain(renderRigorSection("standard"));
       // The rigor is appended at the mint, after the classifier ran on the
       // work's own facts: none of what it saw names a rigor, and the
       // record's stored brief is the template without the section.
       expect(asked).toHaveLength(1);
-      expect(JSON.stringify(asked[0])).not.toContain("Rigor:");
-      expect(tasks.get(taskId)?.prompt).not.toContain("Rigor:");
+      expect(JSON.stringify(asked[0])).not.toContain("Care:");
+      expect(tasks.get(taskId)?.prompt).not.toContain("Care:");
       expect(supervisor.crewStatus(taskId)[0]).toMatchObject({ rigor: "standard" });
       // Reviewed is only ever asked for - the user's words or the repo's
       // configured rigor - and its brief orders review before the PR.
@@ -20758,13 +20787,9 @@ describe("the reviewed tier (delivery rigor phase 2)", () => {
       });
       await tick();
       expect(tasks.get(askedFor.taskId)?.shape?.rigor).toBe("reviewed");
-      expect(crewmate.promptCalls[1]).toContain(
-        "Rigor: reviewed - the review comes BEFORE the pull request",
-      );
-      expect(supervisor.crewStatus(askedFor.taskId)[0]).toMatchObject({
-        rigor: "reviewed",
-        review: "awaiting review",
-      });
+      expect(crewmate.promptCalls[1]).toContain(renderRigorSection("reviewed"));
+      expect(supervisor.crewStatus(askedFor.taskId)[0]).toMatchObject({ rigor: "reviewed" });
+      expect(supervisor.crewStatus(askedFor.taskId)[0]?.review).toBeUndefined();
     } finally {
       repo.dispose();
     }
@@ -20792,7 +20817,7 @@ describe("the reviewed tier (delivery rigor phase 2)", () => {
       });
       await tick();
       expect(tasks.get(asked.taskId)?.shape).toMatchObject({ rigor_ask: "quick", rigor: "quick" });
-      expect(builder.promptCalls[0]).toContain("Rigor: quick - ");
+      expect(builder.promptCalls[0]).toContain(renderRigorSection("quick"));
       expect(sessionSpecs[0]?.thinking).toMatchObject({ level: "xhigh", quick: true });
 
       // The repository's standing rigor - the column set by talking (phase
@@ -20807,7 +20832,7 @@ describe("the reviewed tier (delivery rigor phase 2)", () => {
       expect(tasks.get(fromRepo.taskId)?.shape?.rigor).toBe("reviewed");
       expect(sessionSpecs[1]?.thinking).toMatchObject({ level: "xhigh" });
       expect(sessionSpecs[1]?.thinking.quick).toBeUndefined();
-      expect(noted.promptCalls[0]).toContain("Rigor: reviewed - ");
+      expect(noted.promptCalls[0]).toContain(renderRigorSection("reviewed"));
       // A repo note is no longer a convention: nothing reads it.
       repos.configure(view.id, { rigor: null });
 
@@ -20816,7 +20841,7 @@ describe("the reviewed tier (delivery rigor phase 2)", () => {
       const scratch = await supervisor.commission({ title: "Scratch", intent: intentOf("poke") });
       await tick();
       expect(tasks.get(scratch.taskId)?.shape?.rigor).toBe("standard");
-      expect(local.promptCalls[0]).toContain("Rigor: standard - ");
+      expect(local.promptCalls[0]).toContain(renderRigorSection("standard"));
     } finally {
       repo.dispose();
     }
@@ -20857,7 +20882,7 @@ describe("the reviewed tier (delivery rigor phase 2)", () => {
         kind: "fix",
         rigor: "standard",
       });
-      expect(followupCrewmate.promptCalls[0]).toContain("Rigor: standard - ");
+      expect(followupCrewmate.promptCalls[0]).toContain(renderRigorSection("standard"));
 
       // The repository's standing rigor reaches a follow-up too.
       repos.configure(view.id, { rigor: "reviewed" });
@@ -20906,14 +20931,17 @@ describe("the reviewed tier (delivery rigor phase 2)", () => {
       kind_source: "legacy-judgment",
       rigor: "quick",
     });
-    expect(legacyCrewmate.promptCalls[0]).toContain("Rigor: quick - ");
+    expect(legacyCrewmate.promptCalls[0]).toContain(renderRigorSection("quick"));
     await supervisor.startQueuedNow("t-followup");
     await tick();
     expect(tasks.get("t-followup")?.shape?.rigor).toBe("standard");
-    expect(followupCrewmate.promptCalls[0]).toContain("Rigor: standard - ");
+    expect(followupCrewmate.promptCalls[0]).toContain(renderRigorSection("standard"));
   });
 
-  it("sends a reviewed task's report straight to the Firstmate, past the whose-turn sort", async () => {
+  // INF-1876: a care name decides nothing in the host, the sort included; a
+  // Careful builder asks for its review with needs_firstmate (the care
+  // guidance), which the sort reads as it reads any report.
+  it("sorts a Careful builder's report like any other; only a review's own report skips the whose-turn sort", async () => {
     const repo = directPrRepo();
     try {
       const crewmate = fakeCrewmate();
@@ -20930,7 +20958,7 @@ describe("the reviewed tier (delivery rigor phase 2)", () => {
       });
       await tick();
       await reportTurn(crewmate, taskId, BUILDER_REPORT);
-      expect(sorts).toEqual([]);
+      expect(sorts.map((sort) => sort.taskId)).toEqual([taskId]);
       expect(ops.filter((line) => line.includes(`reported on task ${taskId}`))).toHaveLength(1);
     } finally {
       repo.dispose();
@@ -21001,7 +21029,7 @@ describe("the reviewed tier (delivery rigor phase 2)", () => {
       expect(quickReviewer.promptCalls[0]).toContain(
         `Review branch fm/task-${quick.taskId} at head ${HEAD}`,
       );
-      expect(quickReviewer.promptCalls[0]).not.toContain("Rigor:");
+      expect(quickReviewer.promptCalls[0]).not.toContain("Care:");
       // The two builders and their two reviewers: four crewmates in all.
       expect(supervisor.crewStatus()).toHaveLength(4);
     } finally {
@@ -21209,7 +21237,7 @@ describe("the reviewed tier (delivery rigor phase 2)", () => {
     }
   });
 
-  it("runs the review: host brief, blocks hold, findings idle, pass closes and releases the merge", async () => {
+  it("runs the review: host brief, no hold, findings idle, pass closes the review", async () => {
     const repo = directPrRepo();
     try {
       const builder = fakeCrewmate();
@@ -21218,11 +21246,14 @@ describe("the reviewed tier (delivery rigor phase 2)", () => {
         ok: true,
         text: "Change #55 is in on GitHub.",
       }));
-      const { supervisor, tasks, repos, ops, inbox, specs, cards, workspace } = setup(builder, {
-        routedModel: { provider: "openai-codex", id: "gpt-5.5" },
-        crewmates: [reviewer],
-        mergePullRequest,
-      });
+      const { supervisor, tasks, repos, ops, inbox, specs, cards, workspace, sorts } = setup(
+        builder,
+        {
+          routedModel: { provider: "openai-codex", id: "gpt-5.5" },
+          crewmates: [reviewer],
+          mergePullRequest,
+        },
+      );
       const { repo: view } = await repos.setup({ kind: "adopt", path: repo.dir, name: repo.name });
       repos.configure(view.id, { delivery: "direct-pr" });
       const { taskId: builderId } = await supervisor.commission({
@@ -21242,9 +21273,10 @@ describe("the reviewed tier (delivery rigor phase 2)", () => {
       // builder's branch at its committed head.
       vi.mocked(workspace.branchHead).mockResolvedValue(HEAD);
 
-      // A completion card before the review is refused at the boundary.
-      // Its body carries the evidence contract (phase 3), so once the review
-      // passes the same card publishes.
+      // No host hold reads the care's name (INF-1876): a completion card
+      // before the review is the crew's own judgment, which the care guidance
+      // carries. Its body carries the evidence contract (phase 3), so once
+      // the review passes the same card publishes.
       const premature = () =>
         (specs[0] as CrewmateSpec).onCard?.({
           requiredActions: [],
@@ -21263,9 +21295,6 @@ describe("the reviewed tier (delivery rigor phase 2)", () => {
             { id: "discard", label: "Discard", danger: true, effect: SETTLE_DISCARD },
           ],
         });
-      expect(premature).toThrow(
-        /ships at the reviewed tier and its review has not passed yet \(awaiting review\)/,
-      );
 
       // The reviewer: host-briefed, read-only by brief, kind review by the host.
       const { taskId: reviewId } = await supervisor.commission({
@@ -21307,10 +21336,10 @@ describe("the reviewed tier (delivery rigor phase 2)", () => {
       expect(brief).toContain(`The builder's report:\n${BUILDER_REPORT}`);
       expect(brief).toContain("make the meter test stop flaking");
       // No rigor section on a review: it ships nothing.
-      expect(brief).not.toContain("Rigor:");
+      expect(brief).not.toContain("Care:");
       expect(review?.shape?.rigor).toBeUndefined();
-      // The hold: the review blocks the builder's close.
-      expect(tasks.blockersHoldingClose(builderId).map((row) => row.id)).toEqual([reviewId]);
+      // No hold: the review carries no edge onto the builder (INF-1876).
+      expect(tasks.blockersHoldingClose(builderId)).toEqual([]);
       // No cache of the join on the builder: the parent edge is the one.
       const opened = tasks.get(builderId);
       expect(opened?.delivery).not.toHaveProperty("reviewTaskId");
@@ -21319,13 +21348,20 @@ describe("the reviewed tier (delivery rigor phase 2)", () => {
       expect(supervisor.crewStatus(reviewId)[0]?.review).toBe(
         `reviews ${tasks.get(builderId)?.key}`,
       );
-      // One refusal, in review vocabulary: the review is a delivery child
-      // and never counts in the children-open gate, so the blocks rule is
-      // the single door and it has no proceed_with_open.
-      expect(await supervisor.settleTask(builderId, "merge-pr")).toMatch(
-        /Cannot merge: Cannot close .* while its review .*Review: Fix the meter test.* is still open/,
-      );
+      // No refusal of the host's: the review is a delivery child, never
+      // counted in the children-open gate, and holds no close of its own.
+      expect(tasks.blockerRefusal(builderId)).toBeUndefined();
       expect(mergePullRequest).not.toHaveBeenCalled();
+      // The builder is idle while its reviewer reads: the open review is a
+      // witness the ladder alone reads (INF-1876), so however long the
+      // review takes, no nudge reaches the builder and no idle wake the
+      // Firstmate - the verdict is what moves it.
+      const promptsBeforeReview = builder.promptCalls.length;
+      supervisor.reconcileIdle(Date.now() + 200 * 60_000);
+      await tick();
+      expect(builder.promptCalls).toHaveLength(promptsBeforeReview);
+      expect(sorts.filter((sort) => sort.rule.startsWith("idle"))).toEqual([]);
+      expect(ops.filter((line) => line.includes("has been idle for"))).toEqual([]);
 
       // Findings: recorded on the builder, the reviewer idle and steerable,
       // the wake to the Firstmate direct - supervision never sees it.
@@ -21364,32 +21400,60 @@ describe("the reviewed tier (delivery rigor phase 2)", () => {
       expect(findingsWake).toContain(`reported on review task ${reviewId}`);
       expect(findingsWake).toContain(`the review of task ${builderId} "Fix the meter test"`);
       expect(findingsWake).toContain("F1 error src/meter.test.ts:12");
-      // What comes next rides the wake (FI3-566 cut C): the builder was
-      // briefed reviewed, so its brief holds the fix rules and the auto-fix
-      // finding is relayed verbatim.
-      expect(findingsWake?.endsWith(` ${reviewFindingsNext(true)}`)).toBe(true);
+      // What comes next rides the wake (FI3-566 cut C; INF-1876): the fix
+      // rules and the auto-fix finding, relayed verbatim; the brief names
+      // the care and nothing of what it asks.
+      expect(findingsWake?.endsWith(` ${reviewFindingsNext()}`)).toBe(true);
       expect(builder.promptCalls[0]).toContain(renderRigorSection("reviewed"));
       expect(inbox.allFor("supervision")).toHaveLength(0);
       expect(supervisor.crewStatus(builderId)[0]?.review).toBe(`review open (${review?.key})`);
-      expect(await supervisor.settleTask(builderId, "merge-pr")).toContain("Cannot merge");
+      expect(tasks.blockerRefusal(builderId)).toBeUndefined();
 
       // The builder's fix report names its open review, the verdict and
       // head it last read, and the re-review a new head asks for; the typed
       // review is a live-validation record, so the evidence and state
-      // revisions it read ride the report too (INF-1875).
+      // revisions it read ride the report too (INF-1875). It is sorted like
+      // any report (INF-1876): the Firstmate's finding card on the builder
+      // is a decision on the captain's screen, and the open review's
+      // verdict still wakes the Firstmate above it, who alone steers the
+      // reviewer to the new head.
       await supervisor.steerCrewmate(
         builderId,
         "F1 error src/meter.test.ts:12 the flush is awaited after the read - auto-fix",
       );
       await tick();
+      (specs[0] as CrewmateSpec).onCard?.({
+        title: "Keep the Later copy?",
+        body: "<p>F2 warning src/meter.ts:40: the copy says Later.</p><p>Keep it or change it.</p>",
+        actions: [
+          { id: "keep", label: "Keep the copy", default: true },
+          { id: "change", label: "Change it" },
+        ],
+      });
+      await tick();
+      const findingCard = supervisor
+        .cardsSnapshot()
+        .find((entry) => entry.title === "Keep the Later copy?");
+      expect(findingCard).toBeDefined();
       const beforeFix = ops.length;
       await reportTurn(builder, builderId, "Moved the await before the read; committed 89abcde.");
+      expect(sorts.at(-1)).toEqual({ taskId: builderId, verdict: "captain", rule: "review-reread" });
       expect(ops.slice(beforeFix)).toEqual([
-        `[fm-op] crewmate 1 reported on task ${builderId} "Fix the meter test": Moved the await before the read; committed 89abcde. Its open review ${review?.key} last returned findings at 0123456. It read evidence revision 0; the builder now has revision 0. Its assigned validation state is 0; the builder now has state 0. ${REVIEW_NEW_HEAD_NEXT}`,
+        `[fm-op] crewmate 1 reported on task ${builderId} "Fix the meter test": Moved the await before the read; committed 89abcde. Its card on the captain's screen: ${findingCard?.id} (decision) "Keep the Later copy?". Its open review ${review?.key} last returned findings at 0123456. It read evidence revision 0; the builder now has revision 0. Its assigned validation state is 0; the builder now has state 0. ${REVIEW_NEW_HEAD_NEXT}`,
       ]);
+      // The click returns to the builder as a message, and that turn ends
+      // quietly: the builder is idle again while the reviewer re-reads.
+      supervisor.act(findingCard?.id ?? "", "keep");
+      await tick();
+      expect(builder.promptCalls.at(-1)).toBe(
+        'Card "Keep the Later copy?": the user chose "Keep the copy" (keep).',
+      );
+      builder.emit({ type: "turn_end", taskId: builderId });
+      builder.finishPrompt();
+      await tick();
 
       // A re-review at the new head: the reviewer is steered like any idle
-      // crewmate, and its pass closes the review and releases the hold.
+      // crewmate, and its pass closes the review.
       await supervisor.steerCrewmate(reviewId, `re-review at head ${HEAD}`);
       await tick();
       expect(reviewer.promptCalls.at(-1)).toContain("re-review at head");
@@ -21436,7 +21500,7 @@ describe("the reviewed tier (delivery rigor phase 2)", () => {
       expect(passWake).toContain(
         `the review of task ${builderId} "Fix the meter test" passed at 0123456 (risk low: one test file changed.)`,
       );
-      expect(passWake).toContain("the hold is released");
+      expect(passWake).toContain(`review task ${tasks.get(reviewId)?.key} is closed`);
       expect(passWake?.endsWith(` ${REVIEW_PASSED_NEXT}`)).toBe(true);
       expect(supervisor.crewStatus(builderId)[0]?.review).toBe("review passed");
       expect(tasks.blockersHoldingClose(builderId)).toEqual([]);
@@ -21469,7 +21533,7 @@ describe("the reviewed tier (delivery rigor phase 2)", () => {
     }
   });
 
-  it("INF-125 and INF-148: a completion keeps unchanged code clearance but needs the current proof", async () => {
+  it("INF-125 and INF-148: a completion keeps unchanged code clearance, and the proof's version is a recorded fact (INF-1876)", async () => {
     const repo = directPrRepo();
     try {
       const builder = fakeCrewmate();
@@ -21532,13 +21596,16 @@ describe("the reviewed tier (delivery rigor phase 2)", () => {
           ),
           actions: [{ id: "merge", default: true, effect: SETTLE_MERGE }],
         });
-      await expect(offer()).rejects.toThrow("This version needs live validation");
-      seedDelivery(tasks, taskId, { liveValidation: noSurfaceProof(updated) });
+      // The proof stands at the reviewed version, not the offered one: the
+      // record says so, and the card goes up; nothing of the host's holds it.
       const cardId = await offer();
       await tick();
       expect(cards().map((card) => card.id)).toContain(cardId);
       expect(tasks.get(taskId)?.delivery?.reviewSha).toBe(reviewed);
       expect(tasks.get(taskId)?.delivery?.validationHead).toBe(updated);
+      expect(acceptedValidation(tasks.get(taskId)?.delivery?.liveValidation, updated).ready).toBe(
+        false,
+      );
     } finally {
       repo.dispose();
     }
@@ -21687,9 +21754,9 @@ describe("the reviewed tier (delivery rigor phase 2)", () => {
       const reviewKey = tasks.get(reviewId)?.key;
       expect(ops.slice(before)).toEqual([
         `[fm-op] crewmate 2 reported on review task ${reviewId} "Review: Fix the meter test" - the review of task ${builderId} "Fix the meter test" - with no typed review record, so no verdict was recorded: Standing by for the new head, nothing to say yet. ${REVIEWER_IDLE_NEXT}`,
-        `[fm-op] crewmate 2 reported on review task ${reviewId} "Review: Fix the meter test" - the review of task ${builderId} "Fix the meter test" - with verdict findings: The test is racy.\nFindings:\n- F1 error src/meter.test.ts:12 racy - auto-fix Its card on the captain's screen: card-${reviewId}-1 (note) "A finding to look at". ${reviewFindingsNext(true)}`,
-        `[fm-op] crewmate 2 reported on review task ${reviewId} "Review: Fix the meter test" - the review of task ${builderId} "Fix the meter test" - with verdict blocked: no access to the branch\n${renderReviewHistory([{ kind: "round", at: 0, review: reviewKey ?? "", verdict: "findings", head: HEAD, findings: ["F1 error src/meter.test.ts:12 racy - auto-fix"] }])}\n Its card on the captain's screen: card-${reviewId}-1 (note) "A finding to look at". ${reviewFindingsNext(true)}`,
-        `[fm-op] the review of task ${builderId} "Fix the meter test" passed at 0123456 (risk unstated); the hold is released and review task ${reviewKey} is closed. crewmate 2's report: A note only. ${REVIEW_PASSED_NEXT}`,
+        `[fm-op] crewmate 2 reported on review task ${reviewId} "Review: Fix the meter test" - the review of task ${builderId} "Fix the meter test" - with verdict findings: The test is racy.\nFindings:\n- F1 error src/meter.test.ts:12 racy - auto-fix Its card on the captain's screen: card-${reviewId}-1 (note) "A finding to look at". ${reviewFindingsNext()}`,
+        `[fm-op] crewmate 2 reported on review task ${reviewId} "Review: Fix the meter test" - the review of task ${builderId} "Fix the meter test" - with verdict blocked: no access to the branch\n${renderReviewHistory([{ kind: "round", at: 0, review: reviewKey ?? "", verdict: "findings", head: HEAD, findings: ["F1 error src/meter.test.ts:12 racy - auto-fix"] }])}\n Its card on the captain's screen: card-${reviewId}-1 (note) "A finding to look at". ${reviewFindingsNext()}`,
+        `[fm-op] the review of task ${builderId} "Fix the meter test" passed at 0123456 (risk unstated); review task ${reviewKey} is closed. crewmate 2's report: A note only. ${REVIEW_PASSED_NEXT}`,
       ]);
       const { taskId: r2 } = await supervisor.commission({
         title: "Review",
@@ -21715,7 +21782,7 @@ describe("the reviewed tier (delivery rigor phase 2)", () => {
         risk: { level: "low", why: "small." },
       });
       expect(ops.slice(b2)).toEqual([
-        `[fm-op] the review of task ${builderId} "Fix the meter test" passed at 0123456 (risk low: small.); the hold is released and review task ${tasks.get(r2)?.key} is closed. crewmate 3's report: No findings. ${REVIEW_PASSED_NEXT}`,
+        `[fm-op] the review of task ${builderId} "Fix the meter test" passed at 0123456 (risk low: small.); review task ${tasks.get(r2)?.key} is closed. crewmate 3's report: No findings. ${REVIEW_PASSED_NEXT}`,
       ]);
     } finally {
       repo.dispose();
@@ -21812,9 +21879,9 @@ describe("the reviewed tier (delivery rigor phase 2)", () => {
       const wake = ops.find((line) => line.includes("with no typed review record"));
       expect(wake).toContain("no verdict was recorded");
       expect(ops.find((line) => line.includes("with verdict"))).toBeUndefined();
-      // The merge stays held regardless: failing toward the human costs
-      // no round, not the hold.
-      expect(tasks.blockersHoldingClose(builderId).map((row) => row.id)).toEqual([reviewId]);
+      // Nothing to hold: failing toward the human costs no round, and the
+      // review stays open.
+      expect(tasks.blockersHoldingClose(builderId)).toEqual([]);
       expect(supervisor.crewStatus(builderId)[0]?.review).toBe(
         `review open (${tasks.get(reviewId)?.key})`,
       );
@@ -21869,7 +21936,7 @@ describe("the reviewed tier (delivery rigor phase 2)", () => {
     }
   });
 
-  it("names the fix rules on the findings wake when the builder's care rose after its brief", async () => {
+  it("names the fix rules on every findings wake: no brief carries them (INF-1876)", async () => {
     const repo = directPrRepo();
     try {
       const builder = fakeCrewmate();
@@ -21886,7 +21953,7 @@ describe("the reviewed tier (delivery rigor phase 2)", () => {
         repoId: view.id,
       });
       await tick();
-      // Briefed at standard care: the brief holds no fix rules.
+      // Briefed at Default care: no brief holds the fix rules.
       expect(builder.promptCalls[0]).toContain(renderRigorSection("standard"));
       expect(builder.promptCalls[0]).not.toContain(REVIEW_FIX_RULES);
       await reportTurn(builder, builderId, BUILDER_REPORT);
@@ -21905,8 +21972,8 @@ describe("the reviewed tier (delivery rigor phase 2)", () => {
         risk: { level: "medium", why: "one line moves." },
       });
       const wake = ops.find((line) => line.includes("with verdict findings"));
-      expect(wake?.endsWith(` ${reviewFindingsNext(false)}`)).toBe(true);
-      expect(reviewFindingsNext(false)).toContain(`prefixed with - ${REVIEW_FIX_RULES}.`);
+      expect(wake?.endsWith(` ${reviewFindingsNext()}`)).toBe(true);
+      expect(reviewFindingsNext()).toContain(`prefixed with - ${REVIEW_FIX_RULES}.`);
     } finally {
       repo.dispose();
     }
@@ -22175,9 +22242,9 @@ describe("the deliverable axis (Task B)", () => {
     // The three facts an answer task is told, and the two lines it is not.
     expect(brief).toContain("this task's deliverable is an answer, not a change");
     expect(brief).toContain("commit nothing, push nothing, and open no pull request");
-    expect(brief).toContain("Rigor: none - this task ships nothing");
+    expect(brief).toContain("Care: none - this task ships nothing");
     expect(brief).not.toContain("Delivery: ");
-    expect(brief).not.toContain("Rigor: standard");
+    expect(brief).not.toContain("Care: Default");
     // And no rigor is stamped either: the record says it ships nothing.
     expect(tasks.get(taskId)?.shape?.rigor).toBeUndefined();
   });
@@ -22778,9 +22845,9 @@ describe("the deliverable axis (Task B)", () => {
     expect(shape).toMatchObject({ kind: "research", deliverable: "answer" });
     // No posture it cannot act on, and the answer's shape in its place.
     expect(brief).not.toContain("Delivery: ");
-    expect(brief).not.toContain("Rigor: standard");
+    expect(brief).not.toContain("Care: Default");
     expect(brief).toContain("this task's deliverable is an answer, not a change");
-    expect(brief).toContain("Rigor: none - this task ships nothing");
+    expect(brief).toContain("Care: none - this task ships nothing");
     // An answer gets no origin section, so it keeps the line telling it to read the origin.
     expect(brief).toContain("Read the origin's report and card with the tasks query");
     expect(brief).not.toContain("Recorded origin ");
@@ -22794,7 +22861,7 @@ describe("the deliverable axis (Task B)", () => {
     const { shape, brief, spec } = await filedFollowup("fix");
     expect(shape).toMatchObject({ kind: "fix", deliverable: "change", rigor: "standard" });
     expect(brief).toContain("Delivery: direct-pr");
-    expect(brief).toContain("Rigor: standard");
+    expect(brief).toContain("Care: Default (standard)");
     expect(brief).not.toContain("deliverable is an answer");
     // A change is handed its origin's findings, so its origin reaches it
     // once: the section, without the filing's line telling it to go and read them.

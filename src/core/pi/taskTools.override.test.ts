@@ -84,13 +84,13 @@ describe("update_task override", () => {
 
   it("still records the soft holds an override passes", async () => {
     for (const { runtime, text, delegate } of await onBothRuntimes({
-      holds: ["review", "live-proof"],
+      holds: ["waits", "checks"],
       until: "task",
     })) {
       expect(text, runtime).toBe("Recorded the captain's override on SCR-3.");
       expect(delegate.override, runtime).toHaveBeenCalledWith({
         task: "SCR-3",
-        holds: ["review", "live-proof"],
+        holds: ["waits", "checks"],
         until: "task",
       });
     }

@@ -22,6 +22,7 @@ In order; the order IS the rule.
 | 0 | An open card currently waits for its author's answer (`cards.awaiting = answer`) | the crewmate's | no wake | `rule:thread-unanswered` |
 | 0a | The report declared `needs_firstmate`: a captain decision only the first mate can carry out (FI3-710) | the first mate's | wake, with what it must do | `rule:needs-firstmate` |
 | 0b | Started work waits on this task through a recorded wait: a `blocks` link from it with no must-merge-first mark (INF-735) | the first mate's, which passes on what that work waits for | wake, naming that work | `rule:waited-on` |
+| 0c | The task's open review last returned findings or blocked (INF-1876): a typed verdict on the task, whose re-review waits for the head, evidence revision or validation state this report may bring | the first mate's, which alone steers the reviewer | wake, naming the review and what it read | `rule:review-reread` |
 | 1 | An open **decision** card for the task, a wait on the captain its crewmate declared in its report while a card of the task is on the captain's screen (FI3-435), or work its crewmate declared finished while a card of its own is still on the captain's screen (INF-731) | the captain's | no wake | `rule:captain-card` |
 | 1a | The report declared its work finished: the captain has read its outcome and nothing is left (FI3-435) | the first mate's, which closes the task | wake | `rule:finished` |
 | 2 | The report filed follow-ups this turn | the first mate's | wake | `rule:filed-followups` |
@@ -99,7 +100,7 @@ A request beside it (`needs_firstmate`) still wakes at row 0a, so a reply that n
 **A wait on work nobody has started is the first mate's turn** (FI3-671, captain-approved 2026-10-03).
 Two typed waits stand on a task.
 A `baseline-blocked` diagnosis at its change's current head, while the checks are not green, names its `dependencyTask` (`standingDependencyWaits` in `src/core/tasks/dependencyWaits.ts`: derived, never stored, so a new head or a passing reading ends the wait by itself).
-A marked `blocks` edge from a task that has not closed holds its close (`blockersHoldingClose`: a `blocks_me` filing, the host's review, or a required action's prerequisite).
+A marked `blocks` edge from a task that has not closed holds its close (`blockersHoldingClose`: a `blocks_me` filing or a required action's prerequisite).
 A link the first mate records holds the start only.
 When the named task is open and the ready sweep will not start it - on request, held, or waiting on blockers of its own (`TaskService.awaitsStart`) - only the first mate or the captain can begin that work, so a report from the waiting task wakes the first mate on any backend, naming that work - which a moving witness would otherwise hold quiet.
 An open named task that cannot start until its own blockers close stands for those blockers (the wait chain, INF-1428, the captain's Approve and build on INF-1670's piece 2): its blockers are read the same way, so a chain that ends in work underway is a wait on work underway, and a chain that ends in work nobody has started names that work.
@@ -138,6 +139,7 @@ So there are four in-process witnesses to "will this crewmate move again with no
 **One witness set, one gatherer** (the primitives review's F10, captain- approved 2026-09-26).
 The sort and the idle ladder read the same typed facts, gathered once by `IdleLadder.witnesses`: cards by task (any open card with actions on it, or the card its `captain` gate names - never an id pattern), guidance as anything its lane will still deliver including a row waiting out the honest retry's backoff (`InboxStore.hasDeliverable`), a job only inside its bound (`JOB_BOUND_MS`), the captured settle, and the gate.
 A `captain` gate is the captain's turn while the card it names is up and the first mate's while none is - never the crewmate's - and a wait its crewmate declared is the captain's while any card of the task is up, the first mate's while none is; an `at-time` gate is a wait (moving).
+A review the host raised on the task that is still live is a witness the ladder alone reads (`reviewOpen`, INF-1876): its builder waits on the verdict or close, which reach it through the first mate, so the ladder neither nudges nor wakes while the reviewer reads, and the report's sort reads a findings verdict as row 0c instead.
 The next witness is added once.
 
 **Whether those four are COMPLETE is a property of the backend**, and it is declared, not guessed: `ControlProfile.backgroundWork` (`src/core/session/session.ts`).
@@ -148,9 +150,8 @@ Such a backend's own count of its background work stands in for the job list whe
 What is left at row 6 is a crewmate that stopped as far as the host can see, and that report wakes the first mate as row 5's does (INF-11): a blocker only the captain can clear, reported with no card up, reaches the first mate at once on every backend, since the host never reads the words that say so.
 Not knowing is kept on the record, as the rule's name, and never makes a report quiet.
 
-The reviewed lane is untouched (delivery rigor phase 2): a reviewed-tier task's events and a review task's go straight to the first mate, which owns the routing of findings by instruction.
-Those were never sorted, so they record nothing here either.
-That lane carries most report wakes today and deserves its own look before the rule is applied to it (R4.5).
+A review task's events go straight to the first mate, which owns the routing of findings by instruction (delivery rigor phase 2): they are never sorted, so they record nothing here either.
+Its builder's report is sorted like any other's, at every care (INF-1876): the host holds no lane by a care's name, and the one fact a review adds is row 0c, the open review's findings or blocked verdict, which wakes the first mate above a card on the captain's screen because only the first mate can steer the reviewer to the head the report brings.
 An independent repair assessment's report is not sorted at all: it is the host's own verdict on a kept merge (FI3-663, `docs/delivery-rigor.md`), and the host reads it and closes the assessment.
 
 ## Self-resolving work waits
@@ -343,7 +344,7 @@ Moved verbatim from `AGENTS.md` on 2026-09-24; `AGENTS.md` keeps a one-line poin
   Observability is DECLARED, not guessed - `ControlProfile.backgroundWork` is `host` for Pi (its crewmate's bash is the host's own tool, so a job is in the registry and its exit is a lane row) and `client` for Claude, as it is for a task whose transport is gone.
   The stall check it once armed was replaced by the idle ladder (2026-09-26, "The idle ladder" above): one reconciler over every idle record, on a durable clock.
   Every sort is one `supervision_outcomes` row through the `recordSort` seam with `model = "rule:<id>"` where the retired model's name sat - verdicts stay `routine | captain`, so C3, C2, G1 and the replay scorer keep reading one ledger - and the wake rides the store's transaction.
-  The reviewed lane still bypasses it entirely and records nothing.
+  A review task still bypasses it entirely and records nothing; its builder is sorted like any task, with its open review's verdict one more witness (INF-1876).
   No user surface: a report is ONE feed line, its own.
   RETIRED with the model: `SupervisionAgent`, `supervisionSession.ts`, `buildSupervisionSystemPrompt`, `createSupervisionTools`, the rolling transcript, the supervision lane, the `supervision_note` event, and the per-task claims (`claimForSupervision`, the claim-queued lane parking, `steerForSupervision`, the bounded settle/interrupt wait) - never bring back a "try again in a moment" refusal.
   Observe no longer lists the retired session; its historical files and exporters remain.

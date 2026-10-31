@@ -519,7 +519,7 @@ The crewmate declares only `flake` or `settled` with its version and evidence us
 Older ready/red declarations remain history and grant no authority; the old current cache is ignored without rewriting that history.
 A settled declaration names a recorded repair and its outcome; raw check reads never settle, void or supersede repairs.
 The host places no repair, review-round or rerun count hold.
-The delivery guidance remains in the crewmate prompt until the delivery runbook is available.
+The delivery judgment is the delivery runbook's (`resources/runbooks/delivery`) and what each care asks is the care runbook's (`resources/runbooks/care`); the crewmate's core prompt carries the consent rule and the facts alone (`docs/runbooks.md`, "Built-ins").
 
 The merge boundary still checks the captain's authorization or standing autonomy, the exact approved change and version, GitHub's rules and mergeability, and the send-once result.
 The sign-in, consent and unknown-outcome boundaries are unchanged.
@@ -794,14 +794,14 @@ That text begins as `projectText`; the merge preserves a footer the person later
 Both ordinary and rules-skipping merges use that summary, never the rendered story's markers, escapes, tables, evidence URLs or risk chart; legacy descriptions keep their existing delivery.
 A merge the override passes squashes under the description's own words around this task's story region instead, any footer included, since the story may describe an older version.
 
-### No-mistakes' attestation on a Careful pull request
+### No-mistakes' attestation
 
-Careful counts as no-mistakes (INF-1793, the captain: "it's my intended design to have infinitary's careful rigor be counted as no-mistakes in those PR enforcements").
-A Careful task's github.com story ends its own region with no-mistakes' signature line and v1 pipeline attestation (`src/core/forge/pipelineAttestation.ts`), the markers byte for byte as no-mistakes writes them, so its `require-no-mistakes` check passes the pull request.
-The attestation names the story's version, which is the pull request's commit, and marks review, test and document completed, with a `producer` field the check ignores, then one line naming Infinitary's Careful care.
-The host writes it only when Careful's records cover that version, read when the region is written (`attestsAt`, `src/core/orchestrator/prCi.ts`): a Careful review that passed there gives review and document, since the reviewer's brief also judges the documents, and live validation that review accepted gives test.
-A captain's override of the review or live-proof hold completes neither step, and Quick and Default stories, GitLab and older descriptions carry neither line.
-A push moves the pull request past the attested version, so the check fails until the story is published again at the new version once Careful's review of the update passed; the refresh before a kept merge of an accepted repair reads the records the same way.
+A passed independent review with live proof it accepted counts as no-mistakes (INF-1793, the captain: "it's my intended design to have infinitary's careful rigor be counted as no-mistakes in those PR enforcements"), whatever the care's name (INF-1876).
+A github.com story whose records cover its version ends its own region with no-mistakes' signature line and v1 pipeline attestation (`src/core/forge/pipelineAttestation.ts`), the markers byte for byte as no-mistakes writes them, so its `require-no-mistakes` check passes the pull request.
+The attestation names the story's version, which is the pull request's commit, and marks review, test and document completed, with a `producer` field the check ignores, then one line naming Infinitary's independent review and the live validation it accepted.
+The host writes it only when the records cover that version, read when the region is written (`attestsAt`, `src/core/orchestrator/prCi.ts`): a review that passed there gives review and document, since the reviewer's brief also judges the documents, and live validation that review accepted gives test; Careful's guidance is what asks for both, and the host holds nothing on them.
+A captain's override completes neither step, and a story with no such records, GitLab and older descriptions carry neither line.
+A push moves the pull request past the attested version, so the check fails until the story is published again at the new version once a review of the update passed; the refresh before a kept merge of an accepted repair reads the records the same way.
 Every live attestation prefix outside the region, in project text or a person's words, is made inert the way no-mistakes does, so the check reads only the app's.
 
 `stageChangePresentation` reuses the card media reader and retains exact validated files in the task's card-media folder, outside its working copy and temporary folder.

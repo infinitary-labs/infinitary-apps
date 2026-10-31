@@ -25,6 +25,11 @@
  *     work waits for - a finding, an answer - and only the Firstmate can
  *     judge it and pass it on, while the task's close, which ends the wait
  *     by itself, may be days away. A typed link, never a reading of words.
+ *  0c. The task's open review last returned findings or blocked
+ *     (INF-1876): wake, whatever card is up or still moves. The report may
+ *     bring the new head, evidence revision or validation state that
+ *     re-review needs, and only the Firstmate steers the reviewer; the
+ *     verdict is a typed record on the task, never a reading of words.
  *  1. An open DECISION card for the task: the CAPTAIN's turn. No wake; the
  *     report is already a feed line and the click returns to its author.
  *     A note never holds the turn on its own (R4.8 question 1 - a crewmate
@@ -101,6 +106,7 @@ export type ReportSortRule =
   | "needs-firstmate"
   | "recovery"
   | "waited-on"
+  | "review-reread"
   | "captain-card"
   | "finished"
   | "filed-followups"
@@ -240,6 +246,15 @@ export type Witnesses = {
    * into one steer on its lane.
    */
   waitsOnUnderway?: boolean;
+  /**
+   * A review the host raised on the task is still live - a delivery child
+   * (`TaskService.isDeliveryChild`, INF-1876). The idle ladder alone reads
+   * it: its builder waits on that verdict or close, which reach it through
+   * the Firstmate, so nothing nudges it while the reviewer reads. The
+   * report's sort reads a findings verdict as `reviewReread` instead, and a
+   * report while the reviewer still reads sorts as any other.
+   */
+  reviewOpen?: boolean;
 };
 
 export type ReportSortFacts = Witnesses & {
@@ -257,6 +272,13 @@ export type ReportSortFacts = Witnesses & {
    * waits for.
    */
   waitedOn?: boolean;
+  /**
+   * The task's open review last returned findings or blocked and waits for
+   * the next head, evidence revision or validation state its builder
+   * reports (`CrewSupervisor.reviewToReread`, INF-1876): only the Firstmate
+   * steers the reviewer.
+   */
+  reviewReread?: boolean;
   /**
    * Whether every way this crewmate's work continues is visible to the
    * host (`ControlProfile.backgroundWork === "host"`). False for a
@@ -307,6 +329,15 @@ export function sortReport(facts: ReportSortFacts): ReportSortResult {
       wake: true,
       reason:
         "started work waits on this task through the first mate's link; the first mate reads the report for it.",
+    };
+  }
+  if (facts.reviewReread) {
+    return {
+      rule: "review-reread",
+      verdict: "captain",
+      wake: true,
+      reason:
+        "its open review returned findings and waits for what this report brings; the first mate steers the reviewer.",
     };
   }
   if (facts.decisionCardOpen || facts.finishedCardUp) {
@@ -460,7 +491,8 @@ function stillMoving(witnesses: Witnesses): boolean {
  *  - `captain`: a card with actions is up, or its crewmate declared its
  *    work finished - with a card of its own still up, or with none once
  *    the Firstmate acted on it - nothing fires.
- *  - `moving`: it will move on its own - nothing fires.
+ *  - `moving`: it will move on its own, or waits on a review the host
+ *    raised on it (INF-1876) - nothing fires.
  *  - `owed`: held for the captain with no card up - the Firstmate's turn,
  *    so the ladder's wakes and its card apply and its nudge never does.
  *    Before a cut-off on its account, which holds only the crewmate's turn.
@@ -484,7 +516,7 @@ export function idleTurn(witnesses: Witnesses): IdleTurn {
   if (witnesses.askedFirstmate && !witnesses.threadAwaitingAuthor) return "asked";
   if (witnesses.decisionCardOpen || witnesses.finishedCardUp || witnesses.finishedNoCard)
     return "captain";
-  if (stillMoving(witnesses)) return "moving";
+  if (stillMoving(witnesses) || witnesses.reviewOpen) return "moving";
   if (witnesses.captainGateOwed) return "owed";
   if (witnesses.accountHeld || witnesses.outOfReach) return "moving";
   return "nobody";

@@ -317,7 +317,9 @@ describe("PrCiService", () => {
         title: "fix: validate the isolated fixture",
         body: "The branch has no running product.",
       };
-      expect(await service.open(task.id, input)).toContain("independent review");
+      // Since INF-1876 the host holds no pull request on live proof: whether
+      // to open one before the proof is the care guidance's. The prerequisite
+      // publication below is still the way a draft opens for the proof.
       expect(forge.drafts).toEqual([]);
       const scenario = {
         id: "draft",
@@ -2969,14 +2971,15 @@ describe("a passed review covers the same change", () => {
     expect(opened).not.toContain("needs an independent review");
   });
 
-  it("refuses a different head the app cannot read", async () => {
+  it("opens a different head the app cannot read, carrying no review to it (INF-1876)", async () => {
     const { tasks, repos, service } = setup();
     await insertDirectPrTask(tasks, repos);
     repos.configure(tasks.get("ab12cd34")?.repoId as string, { rigor: "reviewed" });
     seedDelivery(tasks, "ab12cd34", { reviewVerdict: "pass", reviewSha: "older" });
-    expect(await service.open("ab12cd34", { title: "fix: ship it", body: "Why" })).toContain(
-      "the current version needs an independent review",
-    );
+    // The host holds no pull request on a review; the care guidance does.
+    const opened = await service.open("ab12cd34", { title: "fix: ship it", body: "Why" });
+    expect(opened).not.toContain("needs an independent review");
+    expect(tasks.get("ab12cd34")?.delivery?.reviewCarrySha).toBeUndefined();
   });
 
   it("opens and merges a pure update, and refuses an edited line", async () => {
@@ -3513,9 +3516,11 @@ describe("shared story delivery boundaries", () => {
     expect(at.update).toHaveBeenCalledTimes(1);
   });
 
-  // INF-125 and INF-497: changing surrounding words must retain the same final proof gate.
+  // INF-125 and INF-497 had the final proof gate recheck here; since INF-1876
+  // no host gate reads the proof, at any care: the open goes on and the
+  // changed proof stays a recorded fact the reviewer reads.
   it.each(["story", "surroundings"] as const)(
-    "INF-125: rechecks current proof after %s preflight",
+    "publishes after %s preflight at any care; a changed proof is a recorded fact, not a hold (INF-1876)",
     async (mode) => {
       const at = await saved();
       at.tasks.setDevice("ab12cd34", null);
@@ -3545,16 +3550,20 @@ describe("shared story delivery boundaries", () => {
             ? { around: { from: "", to: "Keep the current reviewed proof." } }
             : {}),
         }),
-      ).toContain("The current proof or review changed before publication");
-      expect(at.update).not.toHaveBeenCalled();
-      expect(at.tasks.changePresentation("ab12cd34")?.published?.revision).toBe(1);
+      ).toContain("pull request #23");
+      expect(at.update).toHaveBeenCalledTimes(1);
+      expect(at.tasks.changePresentation("ab12cd34")?.published?.revision).toBe(
+        mode === "story" ? 2 : 1,
+      );
+      expect(at.tasks.get("ab12cd34")?.delivery?.liveValidation?.reviews).toEqual([]);
     },
   );
 
   // INF-1793, the captain: "it's my intended design to have infinitary's careful rigor be counted
-  // as no-mistakes in those PR enforcements". Default care writes neither line.
+  // as no-mistakes in those PR enforcements". Since INF-1876 the records decide, not the care's
+  // name: a passed review and accepted live proof at the version write the lines at any care.
   it.each(["reviewed", "standard"] as const)(
-    "INF-1793: a %s story carries no-mistakes' attestation only from Careful's records",
+    "INF-1793: a %s story carries no-mistakes' attestation from the review and live proof at its version",
     async (rigor) => {
       const at = await saved();
       at.tasks.setDevice("ab12cd34", null);
@@ -3572,11 +3581,6 @@ describe("shared story delivery boundaries", () => {
       await at.service.open("ab12cd34", { title, presentation: 2 });
       const body = at.forge.change?.body ?? "";
       expect(at.tasks.changePresentation("ab12cd34")?.published?.revision).toBe(2);
-      if (rigor === "standard") {
-        expect(body).not.toContain(NO_MISTAKES_SIGNATURE);
-        expect(body).not.toContain(NO_MISTAKES_ATTESTATION_PREFIX);
-        return;
-      }
       expect(body).toContain(NO_MISTAKES_SIGNATURE);
       const start =
         body.indexOf(NO_MISTAKES_ATTESTATION_PREFIX) + NO_MISTAKES_ATTESTATION_PREFIX.length;

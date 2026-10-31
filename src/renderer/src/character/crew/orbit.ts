@@ -1754,8 +1754,9 @@ export class CrewOrbit {
   private withReviewCues(): Map<string, CenterCue> {
     const cues = new Map(this.dependencies);
     const live = (id: string) => this.crew.get(id)?.phase === "orbiting";
-    // The review's own merge hold on the builder is the reviewer's circle seen
-    // from the other side: the builder never orbits or tethers to its reviewer.
+    // A wait recorded from a reviewer onto its builder (an earlier release's
+    // review hold, INF-1876) is the reviewer's circle seen from the other
+    // side: the builder never orbits or tethers to its reviewer.
     for (const [reviewer, builder] of this.reviews) {
       const hold = cues.get(builder);
       if (hold?.blockerId !== reviewer && !hold?.arrows.includes(reviewer)) continue;

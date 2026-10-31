@@ -295,10 +295,10 @@ export class WorkspaceService {
 
   /**
    * The commit a task's branch stands at, or null when the branch is gone.
-   * Host bookkeeping, not a gate: the reviewed tier's brief names the head
-   * an independent reviewer reads (the review runs BEFORE the pull request
-   * since the captain's 2026-09-19 ruling, so there is no PR head to name),
-   * and a re-review counts a round only when this moved.
+   * Host bookkeeping, not a gate: the reviewer's brief names the head an
+   * independent reviewer reads (a review reads the builder's branch, which
+   * may have no pull request yet), and a re-review counts a round only when
+   * this moved.
    */
   async branchHead(repoDir: string, branch: string): Promise<string | null> {
     try {

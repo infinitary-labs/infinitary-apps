@@ -1523,13 +1523,15 @@ function seedDeliveryReads(userDataDir: string, project: ChartProject) {
         activatedAt: Date.now() - 20 * 60_000,
         completedAt: Date.now() - 10 * 60_000,
       },
+      // An override on the review hold, as a release before INF-1876
+      // retired that hold wrote it: the record keeps it and names it retired.
       override: {
         words: "Merge it, the review is late.",
         holds: ["review"],
         until: "version",
         head: merged.head,
         at: Date.now() - 36 * 60_000,
-      } as TaskDelivery["override"],
+      } as unknown as TaskDelivery["override"],
       liveValidation: {
         stateRevision: 2,
         scenarioRevision: 1,

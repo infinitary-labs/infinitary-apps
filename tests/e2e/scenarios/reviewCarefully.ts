@@ -27,7 +27,7 @@ import {
  * (INF-1875); the mock reviewer passes a brief that names the card the
  * captain read; told the review passed, the crewmate emits its completion
  * card again. A journey names it before `reviewedTier`, whose first mate
- * relays the pass that releases the hold.
+ * relays the pass.
  */
 
 export const MOCK_CAREFUL_CARD_TITLE = "The meter reads on time, ready to merge";

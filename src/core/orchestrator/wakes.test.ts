@@ -407,7 +407,7 @@ describe("renderWake", () => {
   it("words each reviewed-tier step on the wake it arises on (FI3-566 cut C)", () => {
     const task = { id: "t1", title: "Fix the pin" };
     const review = { id: "r1", title: "Review: Fix the pin" };
-    const verdict = (extra: { verdict?: "findings" | "blocked"; briefed?: boolean } = {}) =>
+    const verdict = (extra: { verdict?: "findings" | "blocked" } = {}) =>
       renderWake({
         facts: {
           kind: "review-verdict",
@@ -417,14 +417,14 @@ describe("renderWake", () => {
           verdict: extra.verdict ?? "findings",
           excerpt: "verdict: findings F1 racy - auto-fix F2 copy - ask-user",
           cards: [],
-          ...(extra.briefed === undefined ? {} : { briefed: extra.briefed }),
         },
       });
-    // A builder briefed reviewed holds the fix rules: the findings are
-    // relayed verbatim, ask-user ones decided or carded, the reviewer left idle.
+    // The findings are relayed verbatim with the fix rules, ask-user ones
+    // decided or carded, the reviewer left idle. Since INF-1876 the wake
+    // reads no care: what a builder was briefed is the care runbook's.
     // INF-203 F2: changed proof facts also justify re-review, without a dummy commit.
-    expect(verdict({ briefed: true })).toBe(
-      "[fm-op] crewmate 2 reported on review task r1 \"Review: Fix the pin\" - the review of task t1 \"Fix the pin\" - with verdict findings: verdict: findings F1 racy - auto-fix F2 copy - ask-user Steer the builder with every auto-fix finding verbatim; its brief says how to fix them. Info findings never block and need no steer. Decide an ask-user finding yourself when the user's own words already settle it; the rest are ONE decision card per round on the builder's task, with the step you would take as its default. Pass review_task_id naming this review. Start the title with Review of the builder's key; name the change in the first line. For each finding, show its number, severity, file and reviewed version above the reviewer's verbatim words. Steer a reviewer only to re-review at a new head, evidence revision or validation state its builder reports (including a captain-granted gap exception or a new effect request) - an idle reviewer needs no stand-by and no status.",
+    expect(verdict()).toBe(
+      `[fm-op] crewmate 2 reported on review task r1 "Review: Fix the pin" - the review of task t1 "Fix the pin" - with verdict findings: verdict: findings F1 racy - auto-fix F2 copy - ask-user Steer the builder with every auto-fix finding verbatim, prefixed with - ${REVIEW_FIX_RULES}. Info findings never block and need no steer. Decide an ask-user finding yourself when the user's own words already settle it; the rest are ONE decision card per round on the builder's task, with the step you would take as its default. Pass review_task_id naming this review. Start the title with Review of the builder's key; name the change in the first line. For each finding, show its number, severity, file and reviewed version above the reviewer's verbatim words. Steer a reviewer only to re-review at a new head, evidence revision or validation state its builder reports (including a captain-granted gap exception or a new effect request) - an idle reviewer needs no stand-by and no status.`,
     );
     // The typed findings ride the wake as lines after the excerpt (INF-1875).
     expect(
@@ -441,21 +441,15 @@ describe("renderWake", () => {
             "F2 warning src/y.ts:40 copy - ask-user",
           ],
           cards: [],
-          briefed: true,
         },
       }),
     ).toContain(
       "with verdict findings: Two findings.\nFindings:\n- F1 error src/x.ts:12 racy - auto-fix\n- F2 warning src/y.ts:40 copy - ask-user Steer the builder with every auto-fix finding verbatim",
     );
-    expect(renderRigorSection("reviewed")).toContain(REVIEW_FIX_RULES);
-    expect(verdict({ verdict: "blocked", briefed: true }).endsWith(reviewFindingsNext(true))).toBe(
-      true,
-    );
-    // A builder whose care rose after its brief, or a row an older build
-    // queued, never read the rules: the steer carries them.
-    expect(verdict({ briefed: false }).endsWith(reviewFindingsNext(false))).toBe(true);
-    expect(verdict()).toBe(verdict({ briefed: false }));
-    expect(reviewFindingsNext(false)).toContain(
+    expect(renderRigorSection("reviewed")).not.toContain(REVIEW_FIX_RULES);
+    expect(verdict({ verdict: "blocked" }).endsWith(reviewFindingsNext())).toBe(true);
+    // No brief carries the rules any more: every findings steer does.
+    expect(reviewFindingsNext()).toContain(
       `Steer the builder with every auto-fix finding verbatim, prefixed with - ${REVIEW_FIX_RULES}.`,
     );
     // A builder's report names its open review and the re-review a new head asks for.
@@ -511,7 +505,7 @@ describe("renderWake", () => {
         },
       }),
     ).toBe(
-      '[fm-op] the review of task t1 "Fix the pin" passed at 0123456 (risk low); the hold is released and review task FI3-9 is closed. crewmate 2\'s report: verdict: pass Steer the builder to push, open the PR and drive CI green; its PR report is then handled like any other.',
+      '[fm-op] the review of task t1 "Fix the pin" passed at 0123456 (risk low); review task FI3-9 is closed. crewmate 2\'s report: verdict: pass Steer the builder to push, open the PR and drive CI green; its PR report is then handled like any other.',
     );
     expect(REVIEW_PASSED_NEXT).toBe(
       "Steer the builder to push, open the PR and drive CI green; its PR report is then handled like any other.",

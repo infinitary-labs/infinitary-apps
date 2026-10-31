@@ -45,10 +45,14 @@ import {
 
 /** The captain's words on the capped review (ring 4's own quote). */
 export const REACH_STOP_WORDS = "stop the review and merge it";
-/** The soft holds the first mate reads those words to pass, for this version. */
-export const REACH_STOP_HOLDS: OverridableHold[] = ["review", "live-proof", "checks"];
+/**
+ * The soft holds the first mate reads those words to pass, for this version:
+ * the checks alone, since the review and its live proof are the crew's
+ * judgment and no hold of the host's (INF-1876).
+ */
+export const REACH_STOP_HOLDS: OverridableHold[] = ["checks"];
 export const REACH_STOP_STEER =
-  "The captain said stop the review and merge it: his words pass the review, its live proof and the checks at this version. Emit your completion card now; no re-review.";
+  "The captain said stop the review and merge it: his words pass the checks at this version, and end the review. Emit your completion card now; no re-review.";
 export const REACH_STOP_CARD_TITLE = "The meter fix merges at the reviewed version";
 const REACH_STOP_REPORT =
   "Emitted the completion card at the reviewed version on the captain's words; no re-review asked.";
@@ -426,7 +430,7 @@ function crewmateMove({ body, hasToolResults }: ScenarioRequest): ScenarioAnswer
             title: REACH_AUDIT_CARD_TITLE,
             body:
               "<p>The week added no limit, hold or served sentence that decides for the agent.</p>" +
-              "<p>Your words passed one hold each: the review, its live proof, the checks and asking first.</p>",
+              "<p>Your words passed one hold each: the checks and asking first.</p>",
             actions: [
               { id: "keep", label: "Keep the holds as they are", default: true },
               { id: "review-holds", label: "Review the holds" },

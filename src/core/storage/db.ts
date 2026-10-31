@@ -1184,6 +1184,11 @@ const MIGRATIONS: readonly Migration[] = [
   // where they were and every reader reads them there. Dropping the two
   // tables reverses it.
   migrateChanges,
+  // INF-1876: the host holds nothing on a builder for its review, so the
+  // `blocks` edge every host review carried onto its builder goes; the
+  // parent edge stays the one join. Nothing reverses it: the edge was the
+  // retired hold's own record.
+  retireReviewEdges,
 ];
 
 /** The current database format, derived from the embedded migration ledger. */
@@ -1192,8 +1197,34 @@ export const DATABASE_VERSION = MIGRATIONS.length;
 /** The migration that made the change record (INF-1868 piece 1). */
 export const CHANGES_VERSION = MIGRATIONS.indexOf(migrateChanges) + 1;
 
+/** The migration that removed the host's review edges (INF-1876). */
+export const REVIEW_EDGES_VERSION = MIGRATIONS.indexOf(retireReviewEdges) + 1;
+
 export const CARD_ANSWERER_MIGRATION_VERSION = MIGRATIONS.indexOf(addCardAnswerer) + 1;
 export const PLUGIN_KIND_MIGRATION_VERSION = MIGRATIONS.indexOf(addPluginKind) + 1;
+
+/**
+ * Migration 107 (INF-1876): the `blocks` edge the host recorded from each
+ * review it raised onto that review's builder goes, live or closed, and
+ * nothing else - a `blocks_me` filing, a required action's prerequisite
+ * and a wait the first mate recorded keep their rows and marks
+ * (`docs/saved-data-compatibility.md`, "The review's edge").
+ */
+function retireReviewEdges(db: AppDatabase): void {
+  // The shape's routing fields live in `task_routing_requests` (the
+  // `task_records` view is dropped while a migration runs).
+  db.exec(`
+    DELETE FROM task_links
+    WHERE type = 'blocks' AND actor = 'host'
+      AND EXISTS (
+        SELECT 1 FROM tasks
+        JOIN task_routing_requests AS routing ON routing.task_id = tasks.id
+        WHERE tasks.id = task_links.from_id
+          AND tasks.parent_id = task_links.to_id
+          AND json_extract(routing.value_json, '$.kind_source') = 'host:review'
+      )
+  `);
+}
 
 function addCardAnswerer(db: AppDatabase): void {
   addColumn(db, "cards", "answered_by", "TEXT");

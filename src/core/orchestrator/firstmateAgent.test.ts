@@ -9200,7 +9200,7 @@ describe("the captain's override", () => {
         .get("update_task")
         ?.execute("override", {
           task: "ab12",
-          override: { holds: ["review", "live-proof"], until: "task" },
+          override: { holds: ["waits", "checks"], until: "task" },
         });
     // An operational turn first: a wake, with no words of his.
     f.agent.notifyOp(
@@ -9230,7 +9230,7 @@ describe("the captain's override", () => {
     expect(JSON.stringify(await declare())).toContain("Recorded the captain's override");
     expect(f.tasks.get("ab12")?.delivery?.override).toMatchObject({
       words,
-      holds: ["review", "live-proof"],
+      holds: ["waits", "checks"],
       until: "task",
     });
     await finish();
@@ -9440,10 +9440,10 @@ describe("the captain's override, from a click, a thread or words typed mid-turn
     await f.finish();
     f.report("the review is the one hold left.");
     await drained(f.session, 3);
-    expect(await f.declare({ holds: ["review"], until: "task", from: "card-fm-review" })).toContain(
+    expect(await f.declare({ holds: ["checks"], until: "task", from: "card-fm-review" })).toContain(
       "Recorded the captain's override",
     );
-    expect(f.recorded()).toMatchObject({ words: reply, holds: ["review"] });
+    expect(f.recorded()).toMatchObject({ words: reply, holds: ["checks"] });
     await f.finish();
     f.agent.dispose();
     f.db.close();
@@ -9483,12 +9483,12 @@ describe("the captain's override, from a click, a thread or words typed mid-turn
     );
     await f.finish();
     // A later report names a hold his sentence also reaches: the same words, no second ask.
-    f.report("the review still holds the merge.");
+    f.report("a wait on another task still holds the merge.");
     await drained(f.session, 3);
     expect(
-      await f.declare({ holds: ["checks", "review"], until: "task", from: "standing" }),
+      await f.declare({ holds: ["checks", "waits"], until: "task", from: "standing" }),
     ).toContain("Recorded the captain's override");
-    expect(f.recorded()).toMatchObject({ words, holds: ["checks", "review"], until: "task" });
+    expect(f.recorded()).toMatchObject({ words, holds: ["checks", "waits"], until: "task" });
     await f.finish();
     f.agent.dispose();
     f.db.close();

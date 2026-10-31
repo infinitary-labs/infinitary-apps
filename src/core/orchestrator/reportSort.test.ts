@@ -59,6 +59,7 @@ describe("sortReport", () => {
     ["captainGateOwed", "captain-gate"],
     ["needsFirstmate", "needs-firstmate"],
     ["waitedOn", "waited-on"],
+    ["reviewReread", "review-reread"],
     ["finished", "finished"],
     ["filedFollowups", "filed-followups"],
     ["waitsOnUnstarted", "waits-unstarted"],
@@ -138,6 +139,22 @@ describe("sortReport", () => {
         workObservable: true,
       }),
       rule: "waited-on",
+      verdict: "captain",
+      wake: true,
+    },
+    {
+      // INF-1876: the review's findings verdict is a typed record on the
+      // task, and only the Firstmate steers the reviewer to the head the
+      // report brings - whatever card is up or still moves.
+      name: "0c. the task's open review returned findings: wake, whatever card is up",
+      facts: facts({
+        reviewReread: true,
+        decisionCardOpen: true,
+        checksWatched: true,
+        jobsRunning: true,
+        workObservable: true,
+      }),
+      rule: "review-reread",
       verdict: "captain",
       wake: true,
     },
@@ -360,6 +377,46 @@ describe("sortReport", () => {
     expect(sortReport(facts({ waitedOn: true, needsFirstmate: true })).rule).toBe(
       "needs-firstmate",
     );
+  });
+
+  // INF-1876: a review the host raised on the task is work it waits on, for
+  // the ladder alone: an idle builder is never nudged while its reviewer
+  // reads, and its report sorts as any other until a verdict is recorded.
+  it("an open review is a moving witness for the idle ladder, never for the report's sort", () => {
+    expect(idleTurn(facts({ reviewOpen: true }))).toBe("moving");
+    expect(idleTurn(facts({ reviewOpen: true, decisionCardOpen: true }))).toBe("captain");
+    expect(idleTurn(facts({ reviewOpen: true, askedFirstmate: true }))).toBe("asked");
+    expect(sortReport(facts({ reviewOpen: true, workObservable: true })).rule).toBe("stopped");
+  });
+
+  // INF-1876: a builder's report while its review's finding card is on the
+  // captain's screen still reaches the Firstmate, who alone steers the
+  // reviewer to the head it brings; the captain's unanswered reply, the
+  // crewmate's own ask and a recorded wait keep their places above it.
+  it("an open review's findings outrank every quiet row but the three above it", () => {
+    for (const quiet of [
+      "decisionCardOpen",
+      "finishedCardUp",
+      "jobsRunning",
+      "deliverable",
+      "pendingSettle",
+      "timedWait",
+      "checksWatched",
+      "waitsOnUnderway",
+      "accountHeld",
+      "outOfReach",
+    ] as const) {
+      expect(sortReport(facts({ reviewReread: true, [quiet]: true })).rule, quiet).toBe(
+        "review-reread",
+      );
+    }
+    expect(sortReport(facts({ reviewReread: true, threadAwaitingAuthor: true })).rule).toBe(
+      "thread-unanswered",
+    );
+    expect(sortReport(facts({ reviewReread: true, needsFirstmate: true })).rule).toBe(
+      "needs-firstmate",
+    );
+    expect(sortReport(facts({ reviewReread: true, waitedOn: true })).rule).toBe("waited-on");
   });
 
   // INF-799 piece 2, the captain's Approve and build on "Plan task-graph

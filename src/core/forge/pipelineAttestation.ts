@@ -13,7 +13,7 @@ const ATTESTATION_CLOSING = " -->";
 /** no-mistakes' own escape: readable, but no longer the prefix its check scans for first. */
 const ESCAPED_PREFIX = "<!-- no-mistakes-pipeline-attestation\\:v1 ";
 
-/** The three steps the check requires, each completed from Careful's records at `head`. */
+/** The three steps the check requires, each completed from the review and live-proof records at `head`, whatever the care's name (INF-1876). */
 export function pipelineAttestationSection(head: string): string {
   const attestation = {
     head_sha: head,
@@ -24,7 +24,7 @@ export function pipelineAttestationSection(head: string): string {
     "## Pipeline",
     NO_MISTAKES_SIGNATURE,
     `${NO_MISTAKES_ATTESTATION_PREFIX}${JSON.stringify(attestation)}${ATTESTATION_CLOSING}`,
-    "Infinitary's Careful care checked this version: an independent review that also judged the documents, and live validation the review accepted.",
+    "Infinitary checked this version: an independent review that also judged the documents, and live validation the review accepted.",
   ].join("\n\n");
 }
 

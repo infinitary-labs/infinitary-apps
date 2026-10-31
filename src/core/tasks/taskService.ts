@@ -1050,6 +1050,11 @@ export class TaskService {
     return this.store.listByStatus("open", "active");
   }
 
+  /** Every row holding a computer move, open or closed, oldest first, read without the rest. */
+  listWithComputerMove(): TaskRecord[] {
+    return this.store.listWithComputerMove();
+  }
+
   /** The live set and every row closed at or after `since`, oldest first. */
   listLiveOrClosedSince(since: number): TaskRecord[] {
     return this.store.listLiveOrClosedSince(since);

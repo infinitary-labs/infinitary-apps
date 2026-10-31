@@ -2165,7 +2165,9 @@ function migrate(db: AppDatabase, throughVersion?: number): void {
   // reference from a task to its specification, checked on each
   // specification write; the answer-delivery check's messages by state, and
   // the newest message, read around each first mate turn; recently resolved
-  // cards and recent card threads, read into each turn's context.
+  // cards and recent card threads, read into each turn's context; and the
+  // tasks holding a computer move, which the ready sweep seeks each minute
+  // instead of reading every task (docs/testing.md, "The scale check").
   if (through === DATABASE_VERSION)
     db.exec(`
       CREATE INDEX IF NOT EXISTS usage_events_account_at ON usage_events (account_id, at);
@@ -2180,6 +2182,8 @@ function migrate(db: AppDatabase, throughVersion?: number): void {
       CREATE INDEX IF NOT EXISTS captain_asks_unanswered ON captain_asks (followed, answered_at, at);
       CREATE INDEX IF NOT EXISTS cards_resolved_at ON cards (resolved_at);
       CREATE INDEX IF NOT EXISTS card_messages_at ON card_messages (at);
+      CREATE INDEX IF NOT EXISTS task_placement_requests_computer_move
+        ON task_placement_requests (json_type(value_json, '$.computer_move'));
     `);
   // An edit to views.ts reaches an existing database without a migration of
   // its own: the views are derived, so a drift is re-created, never altered.

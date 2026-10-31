@@ -464,7 +464,8 @@
         "!tests/universal-file-types.test.ts",
         "!tests/run-evidence-playwright.test.ts",
         "!tests/e2e/scenarios/mergeShell.test.ts",
-        "!src/core/freeze/freezeRecorder.integration.test.ts"
+        "!src/core/freeze/freezeRecorder.integration.test.ts",
+        "!tests/scale-check.test.ts"
       ],
       "plugins": ["./tests/lint/unit-cohort.grit"]
     }

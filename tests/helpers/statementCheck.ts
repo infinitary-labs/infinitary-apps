@@ -39,6 +39,23 @@ if (!holder[CENSUS]) {
 census.file = new Map();
 
 /**
+ * Runs a fixture's bulk seeding without recording what it prepares. Reading
+ * each prepare's caller costs a stack trace, and a fixture that seeds a
+ * record of the captain's size through the app's writers prepares hundreds
+ * of thousands of times; those writers' statements are recorded and planned
+ * by the files that test them (`tests/scale-check.test.ts`).
+ */
+export function outsideCensus<T>(work: () => T): T {
+  const planning = census.planning;
+  census.planning = true;
+  try {
+    return work();
+  } finally {
+    census.planning = planning;
+  }
+}
+
+/**
  * The first caller outside better-sqlite3 and this file, when it is the
  * app's own code: a test's own statements, and a helper's, are not the app's.
  * A statement prepared under one of ONE_TIME_CALLERS runs once per saved

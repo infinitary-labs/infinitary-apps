@@ -1395,6 +1395,23 @@ export class TaskStore {
     }));
   }
 
+  /**
+   * Every row holding a computer move, open or closed, oldest first, sought
+   * through `task_placement_requests_computer_move` without reading the rows
+   * that hold none: the ready sweep asks each minute, and a long record is
+   * mostly closed rows (docs/testing.md, "The scale check").
+   */
+  listWithComputerMove(): TaskRecord[] {
+    if (!this.shapes.exists()) return this.list().filter((record) => record.shape?.computer_move);
+    const ids = prepared(
+      this.db,
+      "SELECT task_id FROM task_placement_requests WHERE json_type(value_json, '$.computer_move') = 'object'",
+    )
+      .pluck()
+      .all() as string[];
+    return this.getMany(ids);
+  }
+
   /** Whether any row holds this status, answered without reading or composing one. */
   hasStatus(status: TaskStatus): boolean {
     return (

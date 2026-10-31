@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "scale-check",
+      "reason": "Internal: a new test counts the statements and rows four repeated main thread reads make, and fails when four times the closed history changes them; the one read it found growing, the ready sweep's check for a computer move, now seeks the tasks holding one instead of reading every task each minute with the same results."
+    }
+  ]
+}

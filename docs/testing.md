@@ -90,6 +90,18 @@ An optional query index goes in `migrate`'s index block in `src/core/storage/db.
 The check sees only the statements the tests prepare, and it reads no time: a walk of a small table and a slow file read are outside it.
 `INFINITARY_STATEMENT_CENSUS=<folder>` writes each test file's planned statements there as JSON, for a review of every walk at once.
 
+## The scale check
+
+The statement check reads plans; a read that seeks through an index can still read more rows every time the record grows, as the task board did before INF-703, the minute pass before INF-1348 and a read every two seconds before INF-1956.
+`tests/scale-check.test.ts` counts that work for the reads the app repeats on its main thread: a first mate turn's context build, the answer-delivery sweep, one minute pass (the crew's watchdog checks and the work presentation refresh, registered as `services.ts` registers them) and a task board update (INF-2061, built as INF-2069).
+It seeds a record sized from the captain's readings: 3,400 closed tasks with about 47 events each (160,094 events in INF-2059's reading), their cards, threads and answered messages, beside running work with 33 open messages in 13 chains.
+It runs each read once, then counts each statement the read runs and the rows it returns, reads again to show the counts repeat, adds three times the closed history and counts again.
+It fails when any statement's runs or rows moved, naming the statement, both counts and the app code that ran it.
+The answer is a read that seeks only the rows it needs, never a bigger number in the test.
+It counts work, never time (captain's B1), and a walk that returns no rows is the statement check's to catch.
+It sees only the reads it drives; a new read the app repeats on its main thread joins it.
+The fixture seeds through `outsideCensus` (`tests/helpers/statementCheck.ts`), so the statement check does not read a stack for each of the seeding's prepares; the reads it measures are still recorded and planned.
+
 ## E2E scheduling and launch diagnostics
 
 The renderer and application lanes (`tests/e2e/lanes.ts`, `playwright.config.ts`) share at most `min(10, availableParallelism())` workers.

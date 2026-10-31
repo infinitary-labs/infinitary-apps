@@ -9031,8 +9031,8 @@ export class CrewSupervisor {
       else await this.undoMovedDestination(record.id);
     }
     // A task closed meanwhile moves no further; what its move left goes with its close.
-    for (const record of this.options.tasks.list()) {
-      if (!record.shape?.computer_move || !TaskService.isClosed(record)) continue;
+    for (const record of this.options.tasks.listWithComputerMove()) {
+      if (!TaskService.isClosed(record)) continue;
       if (this.computerMoving.has(record.id)) continue;
       this.options.tasks.setComputerMove(record.id, null);
     }
@@ -12375,8 +12375,7 @@ export class CrewSupervisor {
   private async sweepReady(now: number): Promise<void> {
     this.cards.fileMissingHostCardTasks();
     // Only a sweep with a move to drive yields here, so one with none keeps its order.
-    if (this.options.tasks.list().some((record) => record.shape?.computer_move))
-      await this.driveComputerMoves();
+    if (this.options.tasks.listWithComputerMove().length > 0) await this.driveComputerMoves();
     for (const record of this.options.tasks.listOpen()) {
       const action = record.delivery?.captainAction;
       if (

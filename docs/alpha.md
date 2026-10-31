@@ -175,7 +175,7 @@ The switch lists `alpha` and `stable`; releases of either channel also update th
   The signing job runs on the real Mac through the source record and the checked disk image, then hands off and frees it.
   Its handoff is one uncompressed Actions artifact per attempt: the recorded zip, the finalized Linux files and, when one was built, the checked disk image, with a manifest of the run, attempt, workflow revision, source, channel, version, download mode, and each file's size and checksum.
   It never carries the app, the workspace, a credential or the environment; the artifact's id and the manifest's checksum are the signing job's outputs.
-  The `publish` job starts only after the signing job succeeded, in one disposable virtual Mac from the placement service's existing pool (`mini-mac-virtual`); it waits for a free place and never falls back to the real Mac.
+  The `publish` job starts only after the signing job succeeded, in one disposable virtual Mac from the placement service's existing pool (`mini-mac-virtual`, or `RELEASE_VIRTUAL_MAC_RUNNER` once set; `docs/testing.md`, "A release's own queues"); it waits for a free place and never falls back to the real Mac.
   Before any effect it validates the handoff: the manifest is the recorded one, names this run, an attempt no later than this one, this workflow revision and this release, and the files are exactly those it lists, byte for byte.
   Then it records the disk image and runs every later step in its existing order: the record's fetch-back, Cloudflare, Homebrew, the casks, the old-cask switch and the feeds, or a rehearsal's tap and feed rehearsals.
   Every Mac check there - signature, Gatekeeper, launch and version, the disk image against the zip - still runs, never replaced by a checksum; the job holds no Apple signing material, and each destination's credential stays on its own steps.
@@ -360,7 +360,7 @@ Keep the Homebrew casks publishing alongside direct installers; neither a shared
 ## The update check
 
 Every alpha, a rehearsal included, proves on Apple silicon that the version alpha subscribers have now updates to it (INF-1900, the captain's direction D).
-`.github/workflows/mac-update.yml` runs `scripts/check-update-from-alpha.mjs` in a placement-service virtual Mac (`mini-mac-virtual`).
+`.github/workflows/mac-update.yml` runs `scripts/check-update-from-alpha.mjs` in a placement-service virtual Mac (`mini-mac-virtual`, or a publishing release's `RELEASE_VIRTUAL_MAC_RUNNER` once set; `docs/testing.md`, "A release's own queues").
 Intel is a best-effort side effect of the universal build: no release runs a hosted Mac for it (the captain, INF-1900).
 It reads the published alpha feed, `feeds/alpha-mac.yml`, for the version alpha subscribers have now, which is a promoted stable right after a promotion.
 It downloads that version's public disk image, checks it against its published checksum and copies the app into `/Applications` the way a person installs it, with its direct-installation receipt.

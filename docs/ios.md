@@ -404,7 +404,7 @@ The captain's one-time Apple setup is:
 4. Keep the three existing repository secrets set to a team key authorized for the app and Xcode automatic signing.
    The private-key secret contains base64 of the downloaded `.p8` file, never a value pasted into a task or a command argument.
 
-After preflight, the existing disposable iPhone and iPad gates run on `REAL_MAC_RUNNER` when it is set, otherwise on `MAC_RUNNER`, falling back only to `mini-mac`.
+After preflight, the existing disposable iPhone and iPad gates run on `REAL_MAC_RUNNER` when it is set, otherwise on `MAC_RUNNER`, falling back only to `mini-mac`; `RELEASE_REAL_MAC_RUNNER`, when set, comes first (`docs/testing.md`, "A release's own queues").
 Xcode signs the upload with the captain's certificates, so the job asks for the real Mac, never a virtual one (`docs/testing.md`, "The real Mac's place").
 Either failure prevents archive and upload; iPad still runs after an iPhone failure unless cancelled.
 The release job waits in a line of its own, `ios-testflight`, apart from the phone checks; its device gates and release command run directly without excluding desktop checks.

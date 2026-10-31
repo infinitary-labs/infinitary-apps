@@ -59,8 +59,10 @@ jobs:
     environment: ios-release
     # INF-603: Xcode signs the upload with the captain's certificates on
     # the real Mac, so it asks for the real Mac, never a virtual one, once
-    # the switch sets REAL_MAC_RUNNER (docs/testing.md, "The real Mac's place").
-    runs-on: ${{ vars.REAL_MAC_RUNNER || vars.MAC_RUNNER || 'mini-mac' }}
+    # the switch sets REAL_MAC_RUNNER (docs/testing.md, "The real Mac's place"),
+    # and the real Mac's release queue once RELEASE_REAL_MAC_RUNNER is set
+    # (docs/testing.md, "A release's own queues"). Only a release runs this job.
+    runs-on: ${{ vars.RELEASE_REAL_MAC_RUNNER || vars.REAL_MAC_RUNNER || vars.MAC_RUNNER || 'mini-mac' }}
     # TestFlight uploads keep a line of their own, apart from the phone checks'
     # (INF-989), without excluding desktop checks.
     concurrency:

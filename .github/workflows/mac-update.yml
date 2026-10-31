@@ -33,6 +33,11 @@ on:
         required: false
         type: string
         default: ''
+      runner:
+        description: A publishing release's virtual-Mac queue; empty keeps mini-mac-virtual
+        required: false
+        type: string
+        default: ''
 
 permissions:
   contents: read
@@ -41,7 +46,7 @@ permissions:
 jobs:
   update:
     name: Apple silicon
-    runs-on: mini-mac-virtual
+    runs-on: ${{ inputs.runner || 'mini-mac-virtual' }}
     timeout-minutes: 45
     steps:
       - uses: actions/checkout@v4

@@ -841,6 +841,22 @@ The phone check reads that label from `VIRTUAL_MAC_RUNNER` when the variable is 
 The other Mac jobs read `MAC_RUNNER` alone and may run in any place, a virtual one or the real Mac's.
 `tests/release-contract.test.ts` holds which jobs ask for the real Mac.
 
+### A release's own queues
+
+A publishing release's Mac jobs can ask for release-only queues, which the placement service starts before every other waiting Mac job (DOP-178).
+The queues share the existing places and add no capacity; they keep a release from waiting behind phone checks, main repairs and borrowed virtual Macs.
+Three repository variables name them, one per place kind:
+
+- `RELEASE_MAC_RUNNER`, any place: `verify.yml`'s Mac lane, passed as its `mac_runner` input.
+- `RELEASE_REAL_MAC_RUNNER`, the real Mac: `release.yml`'s signing job and `ios-release.yml`'s TestFlight job.
+- `RELEASE_VIRTUAL_MAC_RUNNER`, a virtual Mac: both `mac-update.yml` calls, passed as its `runner` input, and `release.yml`'s publication job.
+
+`release.yml` reads them only when its resolved `dry_run` is `false`: a publishing run's own verification and update rehearsal take the release queues, and every job of a dry run stays on the ordinary labels.
+The TestFlight job runs only for a release, so it reads its variable whenever it is set.
+Each unset variable keeps that job on today's label, the ones "The real Mac's place" names.
+The queues are runner-up pools; set all three only after runner-up serves them, so no queued release waits on a label nothing serves.
+`tests/release-contract.test.ts` holds where each job starts with the variables set, unset and in a dry run.
+
 ### The runner's microphone access
 
 The journeys open Chromium's fake microphone, but coreaudiod still asks macOS for microphone access on behalf of the responsible process, which in a virtual Mac is the lane's guest agent, not the app.

@@ -2769,7 +2769,12 @@ describe("the signed channel workflow", () => {
   it("publishes only after the signing job succeeded, in one virtual Mac, from its handoff", () => {
     const publish = jobOf(release, "publish");
     expect(publish.needs).toEqual(["resolve", "release", "update"]);
-    expect(publish["runs-on"]).toBe("mini-mac-virtual");
+    expect(
+      workflowValue(publish["runs-on"] ?? "", {
+        needs: { resolve: { outputs: { dry_run: "false" } } },
+        vars: {},
+      }),
+    ).toBe("mini-mac-virtual");
     for (const result of ["success", "failure", "cancelled", "skipped"]) {
       for (const cancelled of [false, true]) {
         // INF-1900: an alpha publishes only after its update check passed on
@@ -3961,12 +3966,103 @@ describe("the jobs that ask for the real Mac", () => {
     ["release.yml", "release", "macos-15"],
     ["ios-release.yml", "testflight", "mini-mac"],
   ])("%s's %s job runs where it did until the switch sets the label", (file, id, fallback) => {
-    const runner = (vars: Record<string, string>) => workflowValue(runsOn(file, id), { vars });
+    const runner = (vars: Record<string, string>) =>
+      workflowValue(runsOn(file, id), {
+        vars,
+        needs: { resolve: { outputs: { dry_run: "false" } } },
+      });
     expect(runner({})).toBe(fallback);
     expect(runner({ MAC_RUNNER: "mini-mac" })).toBe("mini-mac");
     expect(runner({ MAC_RUNNER: "mini-mac-any", REAL_MAC_RUNNER: "mini-mac-real" })).toBe(
       "mini-mac-real",
     );
+  });
+});
+
+/**
+ * DOP-178's approved plan ("Have the placement service start a release's Mac
+ * jobs before other waiting jobs"): a publishing run's Mac jobs ask for the
+ * placement service's release-only queues through RELEASE_MAC_RUNNER,
+ * RELEASE_REAL_MAC_RUNNER and RELEASE_VIRTUAL_MAC_RUNNER. Each keeps its
+ * place kind - signing real, update and publication virtual, verification
+ * any - and a dry run or an unset variable keeps today's label.
+ */
+describe("a release's own queues", () => {
+  type Job = { "runs-on"?: string; uses?: string; with?: Record<string, string> };
+  const release = (loadYamlFile(".github/workflows/release.yml") as { jobs: Record<string, Job> })
+    .jobs;
+  const testflight = (
+    loadYamlFile(".github/workflows/ios-release.yml") as { jobs: Record<string, Job> }
+  ).jobs.testflight;
+  const verifyLane = (loadYamlFile(".github/workflows/verify.yml") as { jobs: Record<string, Job> })
+    .jobs.lane;
+  const update = (loadYamlFile(".github/workflows/mac-update.yml") as { jobs: Record<string, Job> })
+    .jobs.update;
+  const queues = {
+    RELEASE_MAC_RUNNER: "mini-mac-release-any",
+    RELEASE_REAL_MAC_RUNNER: "mini-mac-release-real",
+    RELEASE_VIRTUAL_MAC_RUNNER: "mini-mac-release-virtual",
+  };
+  const ordinary = {
+    MAC_RUNNER: "mini-mac-any",
+    REAL_MAC_RUNNER: "mini-mac-real",
+    VIRTUAL_MAC_RUNNER: "mini-mac-virtual",
+  };
+  /** Where each of a release run's Mac jobs starts, through its caller's inputs. */
+  const placed = (dryRun: "true" | "false", vars: Record<string, string>) => {
+    const needs = { resolve: { outputs: { dry_run: dryRun } } };
+    const passed = (id: string, input: string) =>
+      workflowValue(release[id]?.with?.[input] ?? "", { needs, vars });
+    const updateIn = (id: string) =>
+      workflowValue(update?.["runs-on"] ?? "", { inputs: { runner: passed(id, "runner") } });
+    return {
+      verify: workflowValue(verifyLane?.["runs-on"] ?? "", {
+        matrix: { lane: "mac" },
+        inputs: { mac_runner: passed("verify", "mac_runner") },
+        vars,
+      }),
+      rehearse: updateIn("rehearse"),
+      sign: workflowValue(release.release?.["runs-on"] ?? "", { needs, vars }),
+      update: updateIn("update"),
+      publish: workflowValue(release.publish?.["runs-on"] ?? "", { needs, vars }),
+    };
+  };
+
+  it("sends a publishing run's Mac jobs to the release queues of their place kind", () => {
+    expect(placed("false", { ...ordinary, ...queues })).toEqual({
+      verify: "mini-mac-release-any",
+      rehearse: "mini-mac-release-virtual",
+      sign: "mini-mac-release-real",
+      update: "mini-mac-release-virtual",
+      publish: "mini-mac-release-virtual",
+    });
+    expect(workflowValue(testflight?.["runs-on"] ?? "", { vars: { ...ordinary, ...queues } })).toBe(
+      "mini-mac-release-real",
+    );
+  });
+
+  it("keeps a dry run on the ordinary queues, so a rehearsal never takes a release's place", () => {
+    expect(placed("true", { ...ordinary, ...queues })).toEqual({
+      verify: "mini-mac-any",
+      rehearse: "mini-mac-virtual",
+      sign: "mini-mac-real",
+      update: "mini-mac-virtual",
+      publish: "mini-mac-virtual",
+    });
+  });
+
+  it("keeps today's routing while the release variables are unset", () => {
+    const today = {
+      verify: "mini-mac-any",
+      rehearse: "mini-mac-virtual",
+      sign: "mini-mac-real",
+      update: "mini-mac-virtual",
+      publish: "mini-mac-virtual",
+    };
+    expect(placed("false", ordinary)).toEqual(today);
+    expect(placed("true", ordinary)).toEqual(today);
+    expect(workflowValue(testflight?.["runs-on"] ?? "", { vars: ordinary })).toBe("mini-mac-real");
+    expect(placed("false", {})).toEqual({ ...today, verify: "macos-15", sign: "macos-15" });
   });
 });
 
@@ -4011,7 +4107,7 @@ it("sends every Linux job to LINUX_RUNNER, and hosted Ubuntu when it is unset", 
           : [{}];
       for (const entry of entries) {
         const runner = (vars: Record<string, string>) =>
-          evaluate(job["runs-on"] ?? "", { vars, matrix: entry, inputs: {} });
+          evaluate(job["runs-on"] ?? "", { vars, matrix: entry, inputs: {}, needs: {} });
         const hosted = runner({});
         if (typeof hosted !== "string" || !hosted.startsWith("ubuntu-")) continue;
         const name = `${file}:${id} ${JSON.stringify(entry)}`;
@@ -4262,9 +4358,13 @@ it("runs the update check on Apple silicon only, rehearsing before signing and u
   const { jobs } = loadYamlFile(".github/workflows/mac-update.yml") as {
     jobs: Record<string, { name: string; "runs-on": string; strategy?: unknown }>;
   };
-  expect(Object.values(jobs).map((job) => [job.name, job["runs-on"], job.strategy])).toEqual([
-    ["Apple silicon", "mini-mac-virtual", undefined],
-  ]);
+  expect(
+    Object.values(jobs).map((job) => [
+      job.name,
+      workflowValue(job["runs-on"], { inputs: {} }),
+      job.strategy,
+    ]),
+  ).toEqual([["Apple silicon", "mini-mac-virtual", undefined]]);
   const release = loadYamlFile(".github/workflows/release.yml") as {
     jobs: Record<
       "rehearse" | "update",

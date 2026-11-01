@@ -2027,7 +2027,9 @@ export async function createServices(
           write: (taskId, input, through) => githubGateway.write(taskId, input, through, true),
           readAsSeat: (input) => githubGateway.readAsSeat(input),
           writeAsSeat: (input) => githubGateway.writeAsSeat(input),
+          readForLook: (input) => githubGateway.readForLook(input),
         },
+        now: ticker.now,
       }),
       ...(["gitlab", "github-enterprise"] as const).map((kind) =>
         forgeHostIntegration(kind, {
@@ -2037,6 +2039,7 @@ export async function createServices(
             write: (taskId, input) => githubGateway.write(taskId, input, { host }, true),
             readAsSeat: (input) => githubGateway.readAsSeat(input, host),
             writeAsSeat: (input) => githubGateway.writeAsSeat(input, host),
+            readForLook: (input) => githubGateway.readForLook(input, host),
           }),
         }),
       ),

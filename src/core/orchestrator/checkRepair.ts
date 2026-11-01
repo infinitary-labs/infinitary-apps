@@ -150,6 +150,39 @@ export function declareCheckAction(
   };
 }
 
+/**
+ * check_change on a task that makes an effect and ships no change (an
+ * operation): it has no pull request to read or merge, so it records only
+ * a diagnosis of a workflow run it read, its one reserved failed-job rerun,
+ * or a flake declaration, on the same repair ledger a change's are
+ * (docs/delivery-rigor.md, "A run with no pull request").
+ */
+export function declareRunCheck(
+  tasks: TaskService,
+  taskId: string,
+  input: CheckChangeInput,
+  at: number,
+): string {
+  const other = (
+    [
+      "change",
+      "pull",
+      "skipRules",
+      "absentChecks",
+      "repair",
+      "conflictRepair",
+      "captainGuidance",
+    ] as const
+  ).filter((field) => input[field] !== undefined);
+  if (other.length)
+    return `check_change refused: this task makes an effect and ships no change, so it records only a diagnosis, a rerun or a flake declaration of a run you read, not ${other.join(", ")}.`;
+  if (!input.diagnosis && !input.rerun && !input.declaration)
+    return "check_change here reads nothing: this task has no pull request. Read a run with read_workflow, then record its diagnosis, reserve its rerun with rerun, or declare a flake.";
+  if (input.declaration && input.declaration.verdict !== "flake")
+    return "check_change refused: this task has no repair to settle; declare only a flake.";
+  return declareCheckAction(tasks, taskId, input, at).text;
+}
+
 /** Retain raw failure observations without settling repairs or spending an allowance. */
 export function observeCheckRepair(
   delivery: TaskDelivery | null | undefined,

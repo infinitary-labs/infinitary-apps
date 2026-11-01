@@ -4,6 +4,7 @@ import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 import { scratchDir } from "../../../../../tests/helpers/scratchDirs";
 import { seedDelivery } from "../../../../../tests/helpers/taskDelivery";
+import { declareRunCheck } from "../../../orchestrator/checkRepair";
 import { GithubGatewayService } from "../../../orchestrator/githubGateway";
 import { PrCiService } from "../../../orchestrator/prCi";
 import { RunWatcher } from "../../../orchestrator/runWatch";
@@ -104,7 +105,7 @@ afterEach(async () => {
 });
 
 /** GitHub as the run stood: `answer` moves the run and its latest jobs between reads. */
-async function setup(delivery: "direct-pr" | "local-only" = "direct-pr") {
+async function setup(delivery: "direct-pr" | "local-only" = "direct-pr", operation = false) {
   let answer = { run: run(1, true), jobs: ATTEMPT_1 };
   const sent: string[] = [];
   const server = createServer(async (req, res) => {
@@ -162,6 +163,9 @@ async function setup(delivery: "direct-pr" | "local-only" = "direct-pr") {
     status: "running",
     worktreeDir: dir,
     branch: "fm/task-438d43ea",
+    ...(operation
+      ? { shape: { kind: "unclear" as const, deliverable: "operation" as const } }
+      : {}),
   });
   const repos = new RepoRegistry(db, join(dir, "fleet"));
   const evidence = new WorkflowEvidenceService({
@@ -190,8 +194,12 @@ async function setup(delivery: "direct-pr" | "local-only" = "direct-pr") {
   const readWorkflow = bindTool(READ_WORKFLOW_TOOL, {
     onReadWorkflow: (input) => evidence.read("proof", input),
   });
+  // An operation's session binds check_change to the run's own record (INF-2146).
   const checkChange = bindTool(CHECK_CHANGE_TOOL, {
-    onCheckChange: (input) => prCi.checkForCrew("proof", input),
+    onCheckChange: async (input) =>
+      operation
+        ? declareRunCheck(tasks, "proof", input ?? {}, clock())
+        : prCi.checkForCrew("proof", input),
   });
   const githubWrite = bindTool(GITHUB_WRITE_TOOL, {
     onGithubWrite: (input) => gateway.write("proof", input),
@@ -273,6 +281,27 @@ describe("a workflow run read without a pull request (INF-688)", () => {
       );
     },
   );
+
+  // INF-2146 piece 2: alpha 44's fix tasks were operations, whose sessions had no
+  // check_change, so their one flake rerun of a red full run was never reserved.
+  it("takes an operation's diagnosis and one reserved rerun, dated by that job's rerun", async () => {
+    const f = await setup("direct-pr", true);
+    await f.readWorkflow(RUN_ID);
+    expect(await f.checkChange({ diagnosis: FLAKE })).toBe("Diagnosis recorded with evidence.");
+    expect(await f.checkChange({ rerun: RESERVE })).toBe(
+      "Crew check declaration recorded with evidence. No merge was authorized.",
+    );
+    expect(f.ledger()?.rerun).toEqual({ ...RESERVE, runId: RUN_ID });
+    expect(await f.githubWrite(`${PROJECT}/actions/jobs/${LINUX_CHECKS}/rerun`)).toContain(
+      '"status": 201',
+    );
+    expect(f.ledger()?.rerun?.startedAt).toBe(Date.parse("2026-10-20T23:44:00Z"));
+    // It has no pull request to read, review or repair.
+    expect(await f.checkChange({ pull: 12 })).toContain(
+      "check_change refused: this task makes an effect and ships no change",
+    );
+    expect(await f.checkChange({})).toContain("this task has no pull request");
+  });
 
   it("records an evidenced diagnosis without deciding its attribution (INF-1177)", async () => {
     const f = await setup();

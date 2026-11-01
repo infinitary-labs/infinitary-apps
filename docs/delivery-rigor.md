@@ -101,6 +101,7 @@ An evidenced suspected flake may reserve **one failed-job rerun per task allowan
 A suspected flake is only ever a test whose own code the change does not add or edit: `check_change` takes `changedTest`, the crewmate's typed answer, and refuses a suspected-flake diagnosis unless it is false (INF-840).
 A failure in the change's own test is its own regression, or baseline-blocked with untouched-main evidence for a test it edits.
 A repeated reservation is refused, including after restart.
+An operation, which ships no change and has no pull request, holds the same `check_change` for a workflow run it read: it records the diagnosis, reserves the one rerun and declares a flake there, and refuses a pull request reading, review or repair (`declareRunCheck`, INF-2146).
 If it fails again, investigate or reclassify with evidence, never rerun in a loop.
 A confirmed baseline failure needs untouched-main reproduction evidence and a separately owned task id.
 The first mate coordinates its dependency.

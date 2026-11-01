@@ -60,13 +60,24 @@ export type IntegrationEventSpec = {
   description: string;
   /** How often, in minutes, a listening rule looks. */
   every: number;
-  /** Closed string filters the kind accepts, drawn by the shared event editor. */
-  filters?: readonly { name: string; label: string; defaultValue?: string }[];
+  /**
+   * Closed string filters the kind accepts, drawn by the shared event
+   * editor; a rule must name a `required` one, since the kind cannot look without it.
+   */
+  filters?: readonly IntegrationEventFilter[];
   /**
    * The kind says when something arrives (the inbox's drop), so a rule
    * finds its place the moment it listens and the next arrival fires it.
    */
   atOnce?: boolean;
+};
+
+/** One filter field an event declares. */
+export type IntegrationEventFilter = {
+  name: string;
+  label: string;
+  defaultValue?: string;
+  required?: true;
 };
 
 /** One thing that happened, by the place's own id, in one line. */

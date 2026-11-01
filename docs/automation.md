@@ -177,3 +177,5 @@ The shared rule editor labels each field with the integration's words and keeps 
 The first mate passes the same fields through `schedule_prompt`'s optional `event_filter`; discovery lists them only on request.
 The scheduler refuses undeclared fields, preserves the selected values on save and edit, and passes them to every look.
 Google Calendar declares `calendar`, an id read through `list_calendars`; an empty value uses the primary calendar.
+A field the event marks `required` must be named: the scheduler refuses a rule that leaves it empty.
+GitHub's run events declare `repository` (required), `workflow` and `branch` (`docs/integrations.md`, "GitHub's events").

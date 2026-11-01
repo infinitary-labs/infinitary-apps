@@ -404,6 +404,7 @@ import {
   type ThreadOwed,
 } from "./cardService";
 import { escapeCardText } from "./cardText";
+import { declareRunCheck } from "./checkRepair";
 import { checkVerdicts } from "./checkVerdicts";
 import { CheckWatcher, type WatchedReading } from "./checkWatch";
 import { ciFactOf } from "./ciFact";
@@ -6572,6 +6573,14 @@ export class CrewSupervisor {
             onOpenChange: (input: import("@shared/changePresentation").OpenChangeInput) =>
               openChange(task.id, input),
             onCheckChange: (input?: CheckChangeInput) => checkChange(task.id, input),
+          }
+        : {}),
+      // An operation reads and reruns workflow runs with no pull request: its
+      // check_change records the diagnosis and reserves the rerun (INF-2146).
+      ...(this.deliverableOf(this.options.tasks.get(task.id)) === "operation"
+        ? {
+            onCheckChange: async (input?: CheckChangeInput) =>
+              declareRunCheck(this.options.tasks, task.id, input ?? {}, this.now()),
           }
         : {}),
       ...(readWorkflow

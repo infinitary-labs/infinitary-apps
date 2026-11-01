@@ -51,7 +51,8 @@ export type ListenedEvent = {
   label: string;
   /** How often to look, in ticks. */
   every: number;
-  filters?: readonly { name: string; label: string; defaultValue?: string }[];
+  /** A `required` one must be named, since the integration cannot look without it. */
+  filters?: readonly { name: string; label: string; defaultValue?: string; required?: true }[];
   /** The integration says when something arrives, so a rule finds its place as soon as it listens. */
   atOnce?: boolean;
 };
@@ -954,6 +955,10 @@ export class Scheduler {
       )
     )
       throw new Error("This event does not declare that filter.");
+    const missing = found.filters?.find(
+      (field) => field.required && !spec.filter?.[field.name]?.trim(),
+    );
+    if (missing) throw new Error(`Name the ${missing.label} for this event.`);
     return {
       spec: {
         kind: "event",

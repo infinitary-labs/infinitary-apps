@@ -68,5 +68,10 @@ export function forgeHostIntegration(
       await binding(id).remove?.(id);
     },
     call: (id, action, input, caller) => binding(id).call(id, action, input, caller),
+    look: async (id, event, cursor, filter) => {
+      const look = binding(id).look;
+      if (!look) throw new Error("This host tells no events.");
+      return look(id, event, cursor, filter);
+    },
   };
 }

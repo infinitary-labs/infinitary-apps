@@ -69,6 +69,13 @@ type Target = {
 /** Whose allowance the first mate's own calls count against: it has no task. */
 const SEAT_CALLS = "seat:firstmate";
 
+/**
+ * An Automation rule's look (`readForLook`): the host's own read on its
+ * tick, as the run watch's is, so it spends no caller's allowance; the
+ * event's cadence bounds how often it reads.
+ */
+const LOOK_CALLS = "look:automation";
+
 /** The host's address a forge with none of its own stands for. */
 const GITHUB_HOST = "github.com";
 
@@ -133,6 +140,20 @@ export class GithubGatewayService {
     return this.answerWith(
       () => this.accountTarget(host),
       ({ api }) => this.readOn(SEAT_CALLS, api, input),
+    );
+  }
+
+  /**
+   * An Automation rule's look at GitHub's events through the same sign-in
+   * (docs/integrations.md, "GitHub's events"): a read, under the same shape
+   * checks and answer cap, that throws when it cannot read, so the rule
+   * keeps its place and waits.
+   */
+  readForLook(input: GithubReadInput, host?: string): Promise<string> {
+    return this.answerWith(
+      () => this.accountTarget(host),
+      ({ api }) => this.readOn(LOOK_CALLS, api, input),
+      true,
     );
   }
 
@@ -683,6 +704,7 @@ export class GithubGatewayService {
 
   /** One call of the task's budget, or the refusal once it is spent. */
   private spend(taskId: string, api: ForgeApi): void {
+    if (taskId === LOOK_CALLS) return;
     const used = this.calls.get(taskId) ?? 0;
     if (used >= API_CALLS_PER_TASK) {
       throw new ForgeError(

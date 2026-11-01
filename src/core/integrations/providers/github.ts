@@ -3,6 +3,7 @@ import { INTEGRATION_KIND_NAMES, INTEGRATIONS_SIGN_IN_HOST } from "@shared/integ
 import { z } from "zod";
 import type { GithubReadInput, GithubWriteInput } from "../../forge";
 import type { IntegrationActionSpec, IntegrationBinding } from "../binding";
+import { GITHUB_RUN_EVENTS, lookForRuns } from "./githubRuns";
 
 /**
  * GitHub as an integration (docs/integrations.md, "GitHub"): the app's own
@@ -26,6 +27,11 @@ export type GithubIntegrationGateway = {
    * (INF-1108): its calls count as the seat's own, under the same guards.
    */
   writeAsSeat: (input: GithubWriteInput) => Promise<string>;
+  /**
+   * An Automation rule's look at GitHub's events (`readForLook`), which
+   * throws when it cannot read; without it the binding tells no events.
+   */
+  readForLook?: (input: GithubReadInput) => Promise<string>;
 };
 
 export type GithubIntegrationOptions = {
@@ -36,6 +42,7 @@ export type GithubIntegrationOptions = {
     signOut: (host: string) => void;
   };
   gateway: GithubIntegrationGateway;
+  now?: () => number;
 };
 
 const pathSchema = z.string().min(1).max(2048);
@@ -86,14 +93,34 @@ export function githubIntegration(
           : "POST, PATCH, PUT or DELETE one relative GitLab REST API path, with body as JSON text. The integration approval rule decides when it runs. Merges and default-branch moves require the merge card."
         : action.description.replaceAll("GitHub", label),
   }));
+  // GitHub's own runs API: GitLab's pipelines are not these events.
+  const readForLook = label === "GitLab" ? undefined : options.gateway.readForLook;
   return {
     kind: "github",
     identity: { id, name },
     connections: () => {
       const health = options.signIns.stateOf(host);
       if (health === undefined) return [];
-      return [{ id, account: options.signIns.loginOf(host), health, actions }];
+      return [
+        {
+          id,
+          account: options.signIns.loginOf(host),
+          health,
+          actions,
+          ...(readForLook ? { events: GITHUB_RUN_EVENTS } : {}),
+        },
+      ];
     },
+    ...(readForLook
+      ? {
+          look: (
+            _id: string,
+            event: string,
+            cursor: string | null,
+            filter?: Record<string, string>,
+          ) => lookForRuns(readForLook, event, cursor, filter, (options.now ?? Date.now)()),
+        }
+      : {}),
     check: () => options.signIns.checkNow(host),
     remove: () => options.signIns.signOut(host),
     call: async (_id, action, input, caller) => {

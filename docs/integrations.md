@@ -51,8 +51,9 @@ Events are per connection, since an MCP server's differ from server to server.
 Its binding's `look` answers what arrived since a cursor and the cursor to look from next; with no cursor it answers where now is and nothing else, and a cursor it lost answers `resynced`.
 Each item is its id there and the kind's one-line typed summary, never its body.
 Automation reads these to fire a rule (`docs/automation.md`, "Events"); `show` lists them, and the integrations view carries them for the When choice.
-GitHub declares none.
+GitHub declares two, about its workflow runs ("GitHub's events").
 An event may declare closed string filter fields (`filters`), with a name, label and optional default value; discovery lists them, the shared Automation editor draws them, and the saved rule passes only declared fields back to the binding.
+A field marked `required` is one the binding cannot look without, such as GitHub's repository: the Scheduler refuses a rule that leaves it empty, and discovery says so.
 
 ## A stand-in
 
@@ -127,6 +128,19 @@ Its two actions are the gateway's two calls through that sign-in, whatever the c
 The integration service owns approval for both calls, while the gateway still enforces its API limits and refuses merges and default-branch changes.
 The first mate's calls go through the same sign-in as its seat's own (`GithubGatewayService.readAsSeat` and `writeAsSeat`), count against its seat's allowance, and its write keeps the same merge and default-branch refusals.
 Pull requests, checks and merges stay the forge's and the project's.
+
+## GitHub's events
+
+GitHub's row tells two events about GitHub Actions runs (`providers/githubRuns.ts`): "A workflow run fails" (`workflow_run_failed`) and "A workflow run finishes" (`workflow_run_finished`).
+Each takes three filters: the repository as owner/name, which is required; the workflow, by its name, its file or its file without `.yml`, empty for every one; and the branch, empty for every one.
+A GitHub Enterprise row tells the same two; GitLab's tells none.
+A rule looks every two minutes through the app's GitHub sign-in (`GithubGatewayService.readForLook`), the host's own read on its tick as the run watch's is, so it spends no task's or the first mate's call allowance; a look that cannot read throws, and the rule keeps its place.
+Its cursor is the moment it listens from: each look lists the repository's runs created since then, and the cursor moves to the oldest matching run still going, so a run is read again until it is told, or else to the newest run listed.
+A run that fails is told once by its id, at its first failed job while it still runs or when it ends failed, timed out or unable to start; a run that finishes is told once when it ends, whatever its conclusion.
+Runs from a fork are left out.
+Each item's summary carries the run's typed facts from GitHub's answers: its id, workflow and file, repository, branch, event, attempt and version, its state or conclusion, each failed job with its first failed step, the newest passing run of the same workflow on the same branch with its version when this one did not pass, and its page.
+It never carries a commit message.
+What happens next is the rule's own words: the app names no workflow, branch, repair or revert of any project.
 
 ## MCP servers
 
@@ -313,6 +327,7 @@ The Google case of the same number keeps an ask through a renewal and a sign-in 
 `src/core/integrations/providers/google/googleIntegration.test.ts` signs in to a stand-in Google (`tests/helpers/googleStandIn.ts`, answering in Google's documented shapes) through the loopback with PKCE and every permission: a sign-in that carries no accept of Google's notice opens no page and asks Google nothing (INF-949), a declined or partial consent keeps nothing, a sign-in while an MCP server is named Google is refused before the browser opens, a cancel ends the wait, reads run, a message written to steer an agent reaches the crewmate and the first mate fenced as data from outside with the marks it forged broken, and its summary is fenced in a rule's list (INF-951), an HTML-only message full of markup that never closes reads as its words, a label, a draft and a send are kept as asks that run once on the click, a send Gmail took before the connection dropped or it failed is unknown and never sent again, the history cursor tells what arrived and resyncs on a 404 or another mailbox, a 429's Retry-After holds every request, the access renews before it runs out and after a refusal, Google refusing the lasting key asks for a new sign-in, removal revokes, and no key reaches the view, discovery or the facts file.
 `tests/e2e/integrations-google.spec.ts` signs in from the Google chip by keys against the stand-in, through Google's notice, which takes the focus, reads what it uses and where it goes, and opens nothing until its accept or after its Cancel, and has a message arriving fire a rule to the first mate, its sender and subject fenced as data from outside.
 `src/core/integrations/savedOutsideData.test.ts` reads Gmail through the stand-in into a crewmate's and the first mate's saved conversations, Pi's and the Claude client's, and has a note take its place after 30 days or on a delete, a working conversation's once it pauses, with a rule's run and its waiting message (INF-952).
+`src/core/forge/providers/github/workflowRunEvents.test.ts` drives a rule on GitHub's run events through the real Scheduler, integrations service, binding and gateway against a stand-in GitHub that answers with this project's verify runs: a red run is told once at its first failed job with its facts and the newest passing version, a run from before the rule, another workflow, another branch, a passing run and a fork's are not, a finished run is told once it ends while an older one still going holds the cursor, a rule with no repository is refused, and looks spend none of the first mate's allowance.
 `src/core/orchestrator/schedulerEvents.test.ts` fires Automation from the stand-in's events, and `tests/e2e/automation-events.spec.ts` saves an event rule by keys and reads the one first mate turn three items make.
 
 The Calendar cases in `googleIntegration.test.ts` exercise all six actions, single-consent access to both APIs, exact once-only write asks, disabled and invalid calls, unknown write outcomes, renewal, rate backoff, paged sync, revision ids, cancellation, calendar selection and 410 recovery against `tests/helpers/calendarStandIn.ts` through the same local Google sign-in.

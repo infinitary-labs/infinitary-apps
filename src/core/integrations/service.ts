@@ -25,6 +25,7 @@ import {
   type IntegrationBinding,
   type IntegrationCaller,
   type IntegrationConnection,
+  type IntegrationEventFilter,
   type IntegrationLook,
   IntegrationOutcomeUnknown,
 } from "./binding";
@@ -144,7 +145,7 @@ export type IntegrationListen = {
   label: string;
   /** How often the app looks, in the tick's minutes. */
   every: number;
-  filters?: readonly { name: string; label: string; defaultValue?: string }[];
+  filters?: readonly IntegrationEventFilter[];
   atOnce?: boolean;
 };
 
@@ -1032,7 +1033,17 @@ Do not repeat this call; read ${name} to check what happened first.`
               name: spec.name,
               label: spec.label,
               every: spec.every,
-              ...(spec.filters ? { filters: [...spec.filters] } : {}),
+              ...(spec.filters
+                ? {
+                    filters: spec.filters.map((field) => ({
+                      name: field.name,
+                      label: field.label,
+                      ...(field.defaultValue !== undefined
+                        ? { defaultValue: field.defaultValue }
+                        : {}),
+                    })),
+                  }
+                : {}),
             })),
           }
         : {}),

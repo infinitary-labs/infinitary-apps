@@ -11746,6 +11746,47 @@ describe("the sign-in where a project lives", () => {
     expect(specs[0]?.onReadWorkflow).toBeDefined();
     expect(specs[0]?.onDownloadArtifact).toBeDefined();
   });
+
+  // INF-2146 piece 2: an operation that reads a red workflow run reserves its one
+  // rerun on its own record, as alpha 44's fix tasks could not.
+  it("gives an operation check_change for a run's diagnosis and rerun, never its pull request reading", async () => {
+    const crewmate = fakeCrewmate();
+    const checkChange = vi.fn(async () => "pull request reading");
+    const { supervisor, specs, tasks } = setup(crewmate, {
+      openChange: vi.fn(async () => "opened"),
+      checkChange,
+      readWorkflow: vi.fn(async () => "workflow log"),
+    });
+    const { taskId } = await supervisor.commission({
+      title: "Rerun the nightly full check's failed Linux journeys",
+      intent: {
+        goal: "rerun the failed journeys of run 40862271620",
+        userWords: "rerun the failed linux journeys on last night's full check",
+        constraints: [{ kind: "operation" }],
+      },
+    });
+    await tick();
+    const head = "41163dc192c032c622880d19e1ecc3759cf276ad";
+    const check = "linux-e2e / journeys (desktop 3/4)";
+    // What read_workflow kept of verify run 77's second attempt.
+    tasks.recordChangeEvidence(taskId, {
+      ciRepair: {
+        failures: [{ headSha: head, checks: ["mac", check] }],
+        runs: [{ runId: 40862271620, headSha: head, attempt: 2, failed: ["mac", check] }],
+        diagnoses: [],
+        repairs: [],
+      },
+    });
+    const spec = specs[0];
+    expect(spec?.onOpenChange).toBeUndefined();
+    const rerun = { headSha: head, check, evidence: "One rerun of the timed-out journeys shard" };
+    expect(await spec?.onCheckChange?.({ rerun })).toBe(
+      "Crew check declaration recorded with evidence. No merge was authorized.",
+    );
+    expect(tasks.get(taskId)?.delivery?.ciRepair?.rerun).toEqual({ ...rerun, runId: 40862271620 });
+    expect(await spec?.onCheckChange?.({ pull: 4 })).toContain("ships no change");
+    expect(checkChange).not.toHaveBeenCalled();
+  });
 });
 
 describe("crew report answer ownership", () => {

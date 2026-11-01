@@ -939,6 +939,45 @@ describe("a display change's witness (INF-1785)", () => {
     expect(saves).toBe(1);
   });
 
+  // INF-2052: PR #757's rerun spent nine minutes of the iPad's join part on the witness of a size it already had.
+  it("sets a text size the part already asked for once more and answers unchanged without waiting for a witness", async () => {
+    let saves = 0;
+    const confirm = vi.fn((_since: number) => new Promise<never>(() => {}));
+    await expect(
+      changePhoneTextSize(
+        "large",
+        async () => {
+          saves += 1;
+        },
+        confirm,
+        "large",
+      ),
+    ).resolves.toEqual([{ outcome: "unchanged" }]);
+    expect(saves).toBe(1);
+    expect(confirm).not.toHaveBeenCalled();
+    // A new size still waits for its witness: the iPad's real save of the largest size, on a clock set to its asking.
+    vi.useFakeTimers();
+    vi.setSystemTime(ipadLargestAsked);
+    const displays = new PhoneDisplayChanges();
+    const witnessed = vi.fn((since: number) => displays.textSize(since, "extra-extra-extra-large"));
+    const changed = changePhoneTextSize(
+      "extra-extra-extra-large",
+      async () => {
+        for (const record of [ipadReadLargest, ipadLargestSaved]) displays.receive(record);
+      },
+      witnessed,
+      "large",
+    );
+    await expect(changed).resolves.toEqual([
+      {
+        outcome: "applied",
+        timestamp: ipadReadLargest.timestamp,
+        proof: ipadReadLargest.eventMessage,
+      },
+    ]);
+    expect(witnessed).toHaveBeenCalledTimes(1);
+  });
+
   it("answers display changes from the same renewed subscription as the chords", async () => {
     const evidence = scratchDir("phone-keyboard-display-");
     const stdout = new PassThrough();

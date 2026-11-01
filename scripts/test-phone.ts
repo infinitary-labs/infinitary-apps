@@ -24,7 +24,7 @@ import { GATE_SIMULATOR, removePhoneLeftovers, SCRATCH_PREFIX } from "./phone-le
 import { phoneRecording } from "./phone-recording.ts";
 import { startPhoneGuestObserver } from "./phone-guest-observer.ts";
 import { phoneSimulator, phoneXcode } from "./phone-simulator.ts";
-import { PHONE_PARTS, type PhoneDevice, partSelection, phoneAnimationWaits, phoneExecutionArguments, phoneJobs, phoneStopsEarly, runDeviceLanes, testHomeKeys } from "./phone-test-plan.ts";
+import { devicePhotos, PHONE_PARTS, type PhoneDevice, partSelection, phoneAnimationWaits, phoneExecutionArguments, phoneJobs, phoneStopsEarly, runDeviceLanes, testHomeKeys } from "./phone-test-plan.ts";
 
 // INF-800: with CI mode on, the phone check runs only through CI (docs/testing.md).
 const refusal = ciModeRefusal("phone");
@@ -141,6 +141,8 @@ let recordingLog = "";
 const recordings: { name: string; raw: string }[] = [];
 // INF-1785: the appearance this part last asked for; its gate set light before the part began.
 let askedAppearance: "light" | "dark" = "light";
+// INF-2052: the text size this part last asked for; its gate set large before the part began.
+let askedTextSize: PhoneTextSize = "large";
 // An appearance SpringBoard misses leaves no line to prove it, so it is confirmed and never set again. Its witness
 // runs while the text size changes, and every witness of one display control answers by `until` (INF-1799), so its
 // unknown reaches the journey before the journey's own request ends.
@@ -190,10 +192,12 @@ const recording = {
     if (!simulator || !keyboard) throw new Error("No owned simulator display observer exists");
     const [owned, observer] = [simulator, keyboard];
     const size: PhoneTextSize = large ? "extra-extra-extra-large" : "large";
+    const asked = askedTextSize;
+    askedTextSize = size;
     const textSize = await changePhoneTextSize(size,
       () => run("xcrun", ["simctl", "ui", owned, "content_size", size]),
-      (since) => observer.textSize(since, size, until));
-    for (const outcome of textSize) if (outcome.outcome !== "applied") console.log(`Text size ${size}: ${JSON.stringify(outcome)}`);
+      (since) => observer.textSize(since, size, until), asked);
+    for (const outcome of textSize) if (outcome.outcome !== "applied" && outcome.outcome !== "unchanged") console.log(`Text size ${size}: ${JSON.stringify(outcome)}`);
     return { appearance: await confirmed, textSize };
   },
   appearance: async (theme: "dark" | "light"): Promise<PhoneDisplayReport> => ({ appearance: await (await changeAppearance(theme, phoneDisplayDeadline())).confirmed }),
@@ -248,7 +252,7 @@ const packageCache = process.env.INFINITARY_PHONE_PACKAGE_CACHE || join(root, "s
 // other, each as its own gate with its own test home and a clean app. Do not borrow or erase a developer's
 // simulator.
 const ownedSimulators = new Set<string>();
-type Lane = { device: PhoneDevice; owned: string; booted: Date; photos?: Promise<void> };
+type Lane = { device: PhoneDevice; owned: string; booted: Date; photos?: ReturnType<typeof devicePhotos> };
 const startSimulator = async (device: PhoneDevice): Promise<Lane> => {
   const catalog = JSON.parse(await run("xcrun", ["simctl", "list", "--json"]));
   const { kind, runtime } = phoneSimulator(catalog, device);
@@ -285,9 +289,10 @@ const readyForPart = async (lane: Lane, name: string) => {
     // INF-1265's run 40260276185: Xcode shut a device down after a failed part, and the parts after it failed to start.
     console.log(`${name}: the simulator was ${state} after the previous part; booting it again`);
     lane.booted = new Date();
-    // Photos opens its library again after the boot; a part that chooses a photo waits for it again.
-    lane.photos = undefined;
+    // Photos opens its library again after the boot; a part that chooses a photo waits for it, and its photo, again.
+    lane.photos?.restarted();
     await run("xcrun", ["simctl", "bootstatus", owned, "-b"]);
+    lane.photos?.watched().catch(() => {});
   }
   const apps = await installedApps(owned);
   for (const bundle of [phoneBundle, runnerBundle]) if (apps[bundle]) await run("xcrun", ["simctl", "uninstall", owned, bundle]);
@@ -300,15 +305,15 @@ const readyForPart = async (lane: Lane, name: string) => {
 };
 // The library photo a part that chooses a photo picks.
 const LIBRARY_PHOTO = "release-notes/pictures/activity-settles-setting-runs-light.png";
-// A device's Photos is made ready once, from the device's start beside its first part: the wait for Photos to
-// open its library since boot, then the library photo. INF-1170: the photo goes in once Photos is ready, so a
-// restart of Photos never cuts its import short; INF-1438: and again after the restart that frees a photo
-// Photos' background migration held. A part that chooses a photo waits for the whole of it.
-const photosReady = (lane: Lane, stopping: AbortSignal) => lane.photos ??= (async () => {
-  await photosOpened({ device: lane.owned, booting: lane.booted, stopping, env,
-    evidence: values.both ? join(evidence, lane.device) : evidence, children, run, failureLog: SIMULATOR_LOG });
-  await libraryPhotoAdded({ device: lane.owned, picture: join(REPO_ROOT, LIBRARY_PHOTO), run });
-})();
+// A device's Photos is made ready once: from the device's start beside its first part, the wait for Photos to open
+// its library since boot; then, before the device's first part that chooses a photo, the library photo (INF-2052,
+// `devicePhotos`). INF-1170: the photo goes in once Photos is ready, so a restart of Photos never cuts its import
+// short; INF-1438: and again after the restart that frees a photo Photos' background migration held. A part that
+// chooses a photo waits for both.
+const lanePhotos = (lane: Lane, stopping: AbortSignal) => devicePhotos(
+  () => photosOpened({ device: lane.owned, booting: lane.booted, stopping, env,
+    evidence: values.both ? join(evidence, lane.device) : evidence, children, run, failureLog: SIMULATOR_LOG }),
+  () => libraryPhotoAdded({ device: lane.owned, picture: join(REPO_ROOT, LIBRARY_PHOTO), run }));
 // Builds once for any simulator, then runs each device's parts in order on the one simulator it starts
 // for that device, each part as its own gate from that build with its own test home, the devices side
 // by side, at most --simulators of them at once.
@@ -349,7 +354,7 @@ const everyPartOn = async (starting: Map<PhoneDevice, Promise<Lane>>) => {
     console.log(`${name}: began at ${new Date(began).toISOString()}`);
     try {
       await readyForPart(lane, name);
-      if (!values.waits && PHONE_PARTS.find((each) => each.name === part)?.photos) await photosReady(lane, stopping);
+      if (lane.photos && PHONE_PARTS.find((each) => each.name === part)?.photos) await lane.photos.ready();
     } catch (error) {
       console.log(`${name}: ${(error as Error).message}`);
       console.log(`${name}: ${stopping.aborted ? "stopped after another part failed" : "failed before its tests"} after ${minutes()} minutes`);
@@ -380,9 +385,12 @@ const everyPartOn = async (starting: Map<PhoneDevice, Promise<Lane>>) => {
       const lane = await (starting.get(device) ?? startSimulator(device)).catch((error: Error) => {
         throw new Error(`${device}: its simulator could not start, so none of its parts ran: ${error.message}`);
       });
-      // Photos gets ready beside the device's first part; the device's first part that chooses a photo hears how it went.
-      if (!values.waits && jobs.some((job) => job.device === device && PHONE_PARTS.find((each) => each.name === job.part)?.photos))
-        photosReady(lane, stopping).catch(() => {});
+      // The wait for Photos begins beside the device's first part; the device's first part that chooses a photo hears
+      // how it went, and adds the photo.
+      if (!values.waits && jobs.some((job) => job.device === device && PHONE_PARTS.find((each) => each.name === job.part)?.photos)) {
+        lane.photos = lanePhotos(lane, stopping);
+        lane.photos.watched().catch(() => {});
+      }
       return lane;
     },
     run: gate,

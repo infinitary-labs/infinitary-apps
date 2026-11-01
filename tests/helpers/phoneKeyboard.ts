@@ -326,10 +326,11 @@ export class PhonePickerPreviews {
 export type PhoneDisplayOutcome =
   | { outcome: "applied" | "missed"; timestamp: string; proof: string }
   | { outcome: "unknown"; reason: string };
-/** What one display change did: its appearance, unchanged when the part already asked for it, and each text size save. */
+/** What one display change did: its appearance and its text size, each unchanged when the part already asked for it,
+ * and each text size save. */
 export type PhoneDisplayReport = {
   appearance: PhoneDisplayOutcome | { outcome: "unchanged" };
-  textSize?: PhoneDisplayOutcome[];
+  textSize?: (PhoneDisplayOutcome | { outcome: "unchanged" })[];
 };
 /** The simulator's names for the type sizes the journeys set, and the category its own log names for each. */
 export const PHONE_TEXT_SIZES = {
@@ -521,12 +522,20 @@ export class PhoneDisplayChanges {
 /**
  * INF-1785: sets the text size, and once more only when the app's own read proves it missed the first save; the
  * simulator posts a save to the app again even when the size is unchanged. Two proven misses fail the part.
+ * INF-2052: a size the part already asked for (`asked`) is set again and answered unchanged with no witness, since
+ * nothing changes for the app to read: on a freshly started iPad no line of such a save reached the runner, and its
+ * witness waited nine minutes of the part for one.
  */
 export async function changePhoneTextSize(
   size: PhoneTextSize,
   write: () => Promise<unknown>,
   confirm: (since: number) => Promise<PhoneDisplayOutcome>,
-): Promise<PhoneDisplayOutcome[]> {
+  asked?: PhoneTextSize,
+): Promise<(PhoneDisplayOutcome | { outcome: "unchanged" })[]> {
+  if (size === asked) {
+    await write();
+    return [{ outcome: "unchanged" }];
+  }
   const outcomes: PhoneDisplayOutcome[] = [];
   do {
     // The runner's and the simulator's records share this Mac's clock; the save logs after this.

@@ -117,7 +117,7 @@ jobs:
       queue: max
       cancel-in-progress: false
     # Retain the job limit for setup, checks, cleanup and evidence upload.
-    # Commands run directly; the device gate has its own 60-minute limit on every route.
+    # Commands run directly; the device gate has its own 90-minute limit on every route.
     timeout-minutes: 165
     env:
       PHONE_VIRTUAL_MAC: ${{ vars.PHONE_VIRTUAL_MAC }}
@@ -289,9 +289,13 @@ jobs:
       # and the fixed virtual Mac switch run every part.
       # INF-1343: on a pull request the first failed part stops the others, so a failing check frees
       # its Mac at once; a run on request runs every part to its end for the chooser's part times.
+      # INF-2052 (the captain's choice "Raise the limit for running the parts from 60 to 90 minutes"):
+      # a full check with the Mac mini to itself passed in 59 minutes before INF-2052's other changes;
+      # two full checks at once, one per virtual Mac, starved each other past their parts' 20-minute
+      # allowances, one of them past these 90 minutes too (runs 41236951239 and 41236954773).
       - id: both
         name: Read and recover on iPhone and iPad at once
-        timeout-minutes: 60
+        timeout-minutes: 90
         if: ${{ steps.scope.outputs.gate == 'true' && steps.start.outputs.replaced != 'true' }}
         run: |
           parts=(); for part in $PHONE_PARTS; do parts+=(--part "$part"); done

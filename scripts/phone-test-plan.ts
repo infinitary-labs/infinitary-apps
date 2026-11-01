@@ -23,22 +23,26 @@ export function testHomeKeys(plan: Record<string, unknown>): string[] {
 
 // INF-662 piece 2 (the captain's "Both at once, journey in parts"): the phone journey is seven
 // tests, and each runs alone from its own test home and a clean app on its device's one simulator
-// (INF-1438), the devices side by side. The order is the start order, longest first as measured
-// on Oct 19 and 20: join and recover 4.2 minutes, talk and tasks 3.7, cards 2.3, the character and
-// past choices 0.7. INF-1878: INF-1735's 20 relaunch pairs took about 11 of the talk part's 20 minutes
-// on the loaded Mac mini of run 40937645392, so they are a part of their own beside it.
+// (INF-1438), the devices side by side. The order is each device's start order. INF-1878: INF-1735's
+// 20 relaunch pairs took about 11 of the talk part's 20 minutes on the loaded Mac mini of run
+// 40937645392, so they are a part of their own beside it.
 // INF-804: `photos` marks a part that chooses a library photo; the gate waits for its device's Photos
 // to open its shared-with-you library first, since Photos hands over no chosen photo before then.
+// INF-2052: the parts that choose a photo run last, so their device's library photo goes in after the
+// device's other parts; a photo added during Photos' background migration held the first part's app
+// install on each device for 1 to 13 minutes in runs 41045215266, 41145496442 and 41146815994, and a
+// photo added last can still be held (536 seconds before the iPhone's talk in run 41247888712), but
+// it holds no part before it.
 export const PHONE_JOURNEY = "InfinitaryUITests/PhoneJourney";
 export const PHONE_PARTS = [
   { name: "join", test: "testJoinAndRecover", photos: false },
-  { name: "talk", test: "testTalkAndTasks", photos: true },
   { name: "relaunch", test: "testRelaunchThenTasks", photos: false },
   { name: "cards", test: "testCards", photos: false },
   // INF-1183: joining a home by its address, against the Mac's own sshd beside the test home.
   { name: "address", test: "testJoinByAddress", photos: false },
   // INF-2095: the pager pick journey launches fresh, so it needs a simulator no other journey joined first.
   { name: "pick", test: "testMenuPickSurvivesAWorkspaceRedraw", photos: false },
+  { name: "talk", test: "testTalkAndTasks", photos: true },
   // The last part runs every test no other part names: the app-hosted tests and any new one that
   // needs no fresh app, since its simulator already holds the character journey's join.
   { name: "rest", test: "testCharacterAndPastChoices", photos: true },
@@ -47,11 +51,14 @@ export type PhonePart = (typeof PHONE_PARTS)[number]["name"];
 export type PhoneDevice = "iphone" | "ipad";
 
 /** INF-1083: ordinary XCTest must still stop a stuck test, not wait for the job limit.
- * Twenty minutes bounds each ordinary test while the outer gate keeps its own sixty-minute cap.
+ * Twenty minutes bounds each ordinary test while the outer gate keeps its own ninety-minute cap.
  * Quiet grading keeps Xcode's original allowances. Neither mode disables its timeouts.
+ * INF-2052 (the captain's choice "Also stop Xcode collecting diagnostics after a failed part"): after a failed test
+ * Xcode waited 600 seconds for the simulator's diagnostics and timed out with none, in each failed part of run
+ * 41196507458; the gate keeps its own failure logs.
  */
 export function phoneExecutionArguments(grades: boolean): string[] {
-  return ["-test-timeouts-enabled", "YES", ...(grades ? [] : [
+  return ["-test-timeouts-enabled", "YES", "-collect-test-diagnostics", "never", ...(grades ? [] : [
     "-default-test-execution-time-allowance", "1200",
     "-maximum-test-execution-time-allowance", "1200",
   ])];
@@ -90,6 +97,24 @@ export function phoneJobs(devices: PhoneDevice[], parts: readonly string[] = PHO
   const order: PhoneDevice[] = ["ipad", "iphone"];
   return PHONE_PARTS.filter((part) => parts.includes(part.name))
     .flatMap((part) => order.filter((device) => devices.includes(device)).map((device) => ({ device, part: part.name })));
+}
+
+/** INF-2052: a device's Photos, made ready in two stages. `watched` begins the wait for Photos to open its library
+ * once, when the device starts, since that wait reads the library's opening since boot and ends at a ceiling after
+ * boot. `ready` adds the library photo once, after that wait, only when the device's first part that chooses a photo
+ * asks, and every later part that chooses one hears the same outcome. `restarted` forgets both, for a device that
+ * started again; its next `watched` waits from the new start. */
+export function devicePhotos(watch: () => Promise<void>, add: () => Promise<void>) {
+  let watching: Promise<void> | undefined;
+  let adding: Promise<void> | undefined;
+  const watched = () => (watching ??= watch());
+  return {
+    watched,
+    ready: () => (adding ??= watched().then(add)),
+    restarted: () => {
+      watching = adding = undefined;
+    },
+  };
 }
 
 /** Runs each job once, at most `slots` at a time, in order; one job's failure stops none of the others,

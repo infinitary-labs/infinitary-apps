@@ -1,6 +1,7 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import {
+  devicePhotos,
   PHONE_PARTS,
   partSelection,
   phoneAnimationWaits,
@@ -64,12 +65,11 @@ describe("the phone journey's parts", () => {
     expect(partsRunning("InfinitaryUITests/PhoneJourney/testSomethingNew")).toEqual(["rest"]);
     expect(partsRunning("InfinitaryUITests/PhoneSettingsJourney/testSettings")).toEqual(["rest"]);
   });
-  it("starts each part on the iPad, then the iPhone, longest part first", () => {
+  // INF-2052: the parts that choose a photo run last on each device, so a held library photo holds no part before them.
+  it("starts each part on the iPad, then the iPhone, the parts that choose a photo last", () => {
     expect(phoneJobs(["iphone", "ipad"]).map(({ device, part }) => `${device} ${part}`)).toEqual([
       "ipad join",
       "iphone join",
-      "ipad talk",
-      "iphone talk",
       "ipad relaunch",
       "iphone relaunch",
       "ipad cards",
@@ -78,9 +78,14 @@ describe("the phone journey's parts", () => {
       "iphone address",
       "ipad pick",
       "iphone pick",
+      "ipad talk",
+      "iphone talk",
       "ipad rest",
       "iphone rest",
     ]);
+    const photos = (part: string) => PHONE_PARTS.find((each) => each.name === part)!.photos;
+    const order = phoneJobs(["iphone"]).map(({ part }) => photos(part));
+    expect(order).toEqual([...order].sort((a, b) => Number(a) - Number(b)));
     expect(phoneJobs(["iphone"], ["cards"])).toEqual([{ device: "iphone", part: "cards" }]);
     expect(() => phoneJobs(["iphone"], ["everything"])).toThrow(
       /No phone journey part is named everything/,
@@ -126,8 +131,8 @@ describe("running the parts side by side", () => {
       },
       ({ failed }) => failed,
     );
-    expect(started).toEqual(["ipad join", "iphone join", "ipad talk"]);
-    expect(stopped.sort()).toEqual(["ipad join", "ipad talk"]);
+    expect(started).toEqual(["ipad join", "iphone join", "ipad relaunch"]);
+    expect(stopped.sort()).toEqual(["ipad join", "ipad relaunch"]);
     expect(outcomes.filter(Boolean).map((outcome) => outcome!.name)).toEqual(started);
     expect(outcomes.slice(started.length)).toEqual(jobs.slice(started.length).map(() => undefined));
   });
@@ -261,17 +266,96 @@ describe("running each device's parts on one started device", () => {
 });
 
 // INF-1083: timeouts stay on in both modes; grading keeps Xcode's own allowances.
+// INF-2052: a photo added during Photos' background migration held the first part's app install for 1 to 13 minutes.
+describe("a device's Photos in two stages", () => {
+  const stages = () => {
+    const steps: string[] = [];
+    let opened!: () => void;
+    const photos = devicePhotos(
+      () => {
+        steps.push("watch");
+        return new Promise<void>((resolve) => {
+          opened = resolve;
+        });
+      },
+      async () => {
+        steps.push("add");
+      },
+    );
+    return { steps, photos, opened: () => opened() };
+  };
+
+  it("waits for Photos from the device's start and adds the photo only when a part that chooses one asks", async () => {
+    const { steps, photos, opened } = stages();
+    const watching = photos.watched();
+    expect(photos.watched()).toBe(watching);
+    opened();
+    await watching;
+    expect(steps).toEqual(["watch"]);
+    await photos.ready();
+    await photos.ready();
+    expect(steps).toEqual(["watch", "add"]);
+  });
+
+  it("adds the photo only after Photos has opened its library, and once for every part that asks", async () => {
+    const { steps, photos, opened } = stages();
+    const first = photos.ready();
+    expect(photos.ready()).toBe(first);
+    await new Promise((resolve) => setImmediate(resolve));
+    expect(steps).toEqual(["watch"]);
+    opened();
+    await first;
+    expect(steps).toEqual(["watch", "add"]);
+  });
+
+  it("tells every part that chooses a photo when Photos never opened, and adds nothing", async () => {
+    const steps: string[] = [];
+    const photos = devicePhotos(
+      async () => {
+        throw new Error("Photos had not opened");
+      },
+      async () => {
+        steps.push("add");
+      },
+    );
+    photos.watched().catch(() => {});
+    await expect(photos.ready()).rejects.toThrow("Photos had not opened");
+    await expect(photos.ready()).rejects.toThrow("Photos had not opened");
+    expect(steps).toEqual([]);
+  });
+
+  it("waits and adds again for a device that started again", async () => {
+    const { steps, photos, opened } = stages();
+    const before = photos.watched();
+    opened();
+    await photos.ready();
+    photos.restarted();
+    const after = photos.watched();
+    expect(after).not.toBe(before);
+    opened();
+    await photos.ready();
+    expect(steps).toEqual(["watch", "add", "watch", "add"]);
+  });
+});
+
 describe("the native test's outer deadline", () => {
-  it("gives ordinary tests 1200 seconds and leaves graded allowances to Xcode", () => {
+  it("gives ordinary tests 1200 seconds, leaves graded allowances to Xcode, and collects no diagnostics", () => {
     expect(phoneExecutionArguments(false)).toEqual([
       "-test-timeouts-enabled",
       "YES",
+      "-collect-test-diagnostics",
+      "never",
       "-default-test-execution-time-allowance",
       "1200",
       "-maximum-test-execution-time-allowance",
       "1200",
     ]);
-    expect(phoneExecutionArguments(true)).toEqual(["-test-timeouts-enabled", "YES"]);
+    expect(phoneExecutionArguments(true)).toEqual([
+      "-test-timeouts-enabled",
+      "YES",
+      "-collect-test-diagnostics",
+      "never",
+    ]);
   });
 });
 

@@ -323,7 +323,7 @@ Each part's live simulator log lives in `phone-simulator-logs`, never in `phone-
 The pictures the journeys took live in the small `phone-pictures` artifact, exported from the result bundles by device and part.
 A failure on either device fails the job, and on a pull request the first failed part stops the other parts.
 A newer push cancels its pull request's older phone runs whose native job has not started its device gate (`scripts/replaced-phone-runs.ts`), so it never waits behind them.
-That gate checks and builds once, starts one simulator per device, and runs the phone journey's seven parts on each, fourteen in all, one after the other on their device's simulator with the two devices side by side, each part with its own test home and a clean app (`docs/ios.md`, "Disposable verification").
+That gate checks and builds once, starts one simulator per device, and runs the phone journey's seven parts on each, fourteen in all, one after the other on their device's simulator with the two devices side by side, the parts that choose a photo last, each part with its own test home and a clean app (`docs/ios.md`, "Disposable verification").
 
 ### The phone parts a pull request runs
 
@@ -342,7 +342,7 @@ Unlike the desktop journey workflow, a device gate that already started finishes
 A manual rerun of a replaced version stops before its gate.
 So does a run whose pull request merged or closed while it waited in the phone line, so it never holds that line for a device gate; the nightly check of `main` checks what merged.
 On the Mac mini's own runners, native jobs share `mac-mini-phone` across pull requests, with `queue: max` and `cancel-in-progress: false` at the job level; up to 100 phone jobs can wait without newer jobs replacing them.
-A job on the `phone` kind's queue or the virtual-Mac label (`VIRTUAL_MAC_RUNNER`) takes a group of its own, so phone checks run side by side in the virtual places (`docs/ios.md`, "A phone check the placement service puts in a virtual Mac").
+A job on the `phone` kind's queue or the virtual-Mac label (`VIRTUAL_MAC_RUNNER`) takes a group of its own, so phone checks run side by side in the virtual places; the Mac mini has one, so there they run one at a time (`docs/ios.md`, "A phone check the placement service puts in a virtual Mac").
 Desktop journey jobs from different pull requests remain parallel.
 Desktop journeys and native phone gates run directly, without a command lease, so real and virtual Macs can check concurrently.
 The phone workflow keeps its configured concurrency groups; they do not exclude desktop checks or a local phone command.
@@ -495,7 +495,7 @@ It does not repeat the release's other stages: the run-alone pass, the replay ga
 A newer push to the same pull request cancels the older run, because the Mac mini is one machine.
 `tests/affected-journeys.test.ts` pins the selection and `tests/release-contract.test.ts` the workflow's shape.
 
-The native phone gate uses the same clock and cap through `PhoneWaits.swift`, with 1200-second ordinary XCTest allowances and a 60-minute gate limit on every route; graded native runs retain Xcode's own allowances and wall-clock waits (`docs/ios.md`, "Disposable verification").
+The native phone gate uses the same clock and cap through `PhoneWaits.swift`, with 1200-second ordinary XCTest allowances and a 90-minute gate limit on every route; graded native runs retain Xcode's own allowances and wall-clock waits (`docs/ios.md`, "Disposable verification").
 Its on-demand `parts`, `starve` and `perf` inputs select native parts and reproduce twelve-second stalls without changing assertions or app deadlines.
 
 ### Journeys on request
@@ -897,7 +897,7 @@ The signed installer's build and Apple-silicon checks, the release's Apple-silic
 The publication job holds no Apple signing material: it publishes and checks the files the signing job handed over once the disk image passed its check (`docs/alpha.md`, "Signing on the real Mac, publication in a virtual Mac").
 The signing job runs while the release's checks run (`docs/alpha.md`, "Signing while the checks run"), so it holds the real Mac during the release's Mac lane, which then takes a virtual place or waits.
 These checks require throwaway guests for their signing, trust changes or writes to `/Applications`; the signed installer's Intel check, run only on request, stays on a disposable hosted Mac (`docs/alpha.md`, "Isolated signed verification").
-The phone check reads its `phone` kind's queue, or that label from `VIRTUAL_MAC_RUNNER` when the variable is set, so it starts on the next free virtual place, beside any other phone check (`docs/ios.md`, "A phone check the placement service puts in a virtual Mac").
+The phone check reads its `phone` kind's queue, or that label from `VIRTUAL_MAC_RUNNER` when the variable is set, so it starts on the next free virtual place; the Mac mini has one, so there it starts after any other phone check (`docs/ios.md`, "A phone check the placement service puts in a virtual Mac").
 The other Mac jobs read their kind's queue or `MAC_RUNNER` and may run in any place, a virtual one or the real Mac's.
 `tests/release-contract.test.ts` holds which jobs ask for the real Mac.
 

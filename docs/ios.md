@@ -553,7 +553,11 @@ When the scheduler has not taken up a call 30 seconds on the load clock after Ph
 Neither changes the ceiling.
 The gate adds the library photo once Photos has opened the library, once per device, so a restart of Photos never cuts the photo's import short.
 Minutes after boot Photos runs a background migration of its library whose actions wait on services the simulator lacks, until the simulator's scheduler ends the migration ten to sixteen minutes later, and a photo added meanwhile waits as long (INF-1438).
+A photo the migration holds also holds the next app install on that simulator, which cost the first part on each device 1 to 13 minutes when the photo went in beside it (INF-2052).
+So the parts that choose a photo run last on each device, and the gate adds the photo just before the device's first of them, so a held photo holds no part before it.
+Photos can still hold that photo: for 9 minutes on the iPhone in a full check with the Mac mini to itself, and for 5 and 10 minutes beside a second full check (INF-2052).
 So when Photos has not taken the photo 30 seconds on the load clock after the gate added it, the gate restarts Photos once, adds the photo again, and lets the part start once Photos has opened its shared-with-you library again, within two minutes.
+On a busy virtual Mac the load clock stretches those 30 seconds toward its ten-minute wall cap, so the restart may not come before Photos takes the photo (INF-2052).
 The gate keeps that wait's own log output, with Photos' calls and the scheduler's take-ups, in the device's `photos-stream.log`, and when the wait fails it also keeps the simulator's app and Photos log since boot with its command logs; a failed wait fails every part on that device that chooses a photo, and the device's other parts still run.
 The phone workflow's `evidence_run` request exports native-scene attachments from an existing run that kept `phone-results`, a failed or recording one, on the Xcode host, without building or starting a simulator.
 Request the export before that artifact's three-day retention expires (`docs/testing.md`, "Actions artifact retention").
@@ -648,6 +652,8 @@ A missing line or a stopped observer is unknown and sets nothing more.
 A live log stream can drop a line the simulator's kept log holds, so before a witness answers unknown the runner reads the kept log since the change for it (INF-1799).
 Every witness of one display request stops waiting at the journey's request cap less two minutes, one for that read and one for the request's way there and back (`phoneDisplayDeadline`), so the journey always hears the unknown before its own request ends.
 An appearance SpringBoard misses leaves no line, and the simulator writes nothing when asked for the appearance it already has, so the runner sets each appearance once and prints one it could not confirm.
+A text size the part already asked for changes nothing for the app to read, so the runner sets it again and answers unchanged without a witness (INF-2052).
+On a freshly started iPad no line of such a save reached the runner, and its witness waited nine minutes of the part for one.
 SpringBoard can apply an appearance minutes late, as it applied light 250 seconds after the request in run 40792658138, so the appearance witness waits for its line until `phoneDisplayDeadline` alone, with no shorter load-clock budget (INF-1786, the captain's "Wait for SpringBoard's own line, up to the request's 8-minute limit").
 The journey's display requests carry a budget as long as their 10-minute cap (`displayBudget`, `PHONE_DISPLAY_REQUEST_BUDGET_MS`), so a request's load clock never ends it before the runner answers.
 A turn of the device waits until a target the turn carries elsewhere has left its old frame and holds still in its new place (`turnPhone`), since until the app turns that target holds still where it was.
@@ -722,7 +728,10 @@ Before the gate starts any phone work, `scripts/phone-activity.ts` publishes a p
 Each invocation owns one uniquely named JSON file containing only `schemaVersion: 1`, its `pid` and `processStartedAt`, the normalized `LC_ALL=C TZ=UTC /bin/ps -o lstart=` reading for that PID.
 The supervisor stays alive through teardown and removes only its own file after cleanup; this is activity reporting, with no lock, admission wait, heartbeat or age expiry.
 The paired reader is dotfiles-private's `hosts/PHONE_ACTIVITY.md` contract and idle-reboot watchdog; producer and reader must merge together before the lock removals are complete.
-The device gate has a 60-minute step limit on every route: the real Mac, the fixed virtual-Mac switch and a placed virtual Mac.
+The device gate has a 90-minute step limit on every route: the real Mac, the fixed virtual-Mac switch and a placed virtual Mac.
+The limit leaves room for every part on both devices on a virtual Mac with the Mac mini to itself (INF-2052, the captain's choice to raise it from 60 minutes).
+Two full checks at once, one on each of the Mac mini's virtual Macs, starve each other: their parts ran past XCTest's 20-minute allowance, and one check ran past the 90 minutes too (INF-2052).
+Xcode collects no diagnostics after a failed test (`-collect-test-diagnostics never`), since its collection held each failed part for ten minutes and the gate keeps its own failure logs (INF-2052).
 The native job retains its 165-minute job limit for setup, checks, cleanup and evidence upload, without command-admission waits.
 Neither device's failure is ignored: their parts run side by side and any failing fails the gate; on a pull request the first failed part stops the rest.
 This pull-request lane neither signs a physical-device build nor publishes one; `ios-release.yml` runs the same native gates before its separately dispatched TestFlight upload.
@@ -764,7 +773,8 @@ Leave `PHONE_VIRTUAL_MAC` unset with the placement service: a job already inside
 
 The `phone` kind's queue in `MAC_QUEUES`, which `native-phone` reads first, or the repository variable `VIRTUAL_MAC_RUNNER`, which it reads before `MAC_RUNNER`, names a virtual-only queue such as the service's `mini-mac-virtual`, so the phone check never takes the real Mac's place (INF-897).
 GitHub hands a scale set's new runner whichever of that set's waiting jobs it picks, not the one the service started it for, so in the scale set the other Mac jobs share, the service's choice does not hold.
-On that queue each phone check takes a concurrency group of its own, so phone checks no longer wait in one line: each waits only for a free virtual place, and both virtual places can run phone checks at once (the captain's choice on INF-989: "let both virtual Macs run phone checks at once by ending the one-at-a-time line").
+On that queue each phone check takes a concurrency group of its own, so phone checks no longer wait in one line: each waits only for a free virtual place, and two virtual places can run phone checks at once (the captain's choice on INF-989: "let both virtual Macs run phone checks at once by ending the one-at-a-time line").
+The Mac mini gives that queue one virtual place (DOP-213, the captain's "i would just remove one mini-vm slot"), because two full checks at once starved each other there (INF-2052), so on the Mac mini a phone check waits for the one before it.
 The real Mac never takes that label, so a phone check never takes its place.
 A runner the service starts for one phone check may take another waiting phone check, or that rarer check in the same set; either is a job that asked for a virtual Mac.
 The service gives a free virtual place first to the oldest job that asks for a virtual Mac (`Plan` in dotfiles-private's `pkgs/fm-placer/schedule.go`), so a released phone check starts on the next free virtual place instead of behind every Mac job already waiting.

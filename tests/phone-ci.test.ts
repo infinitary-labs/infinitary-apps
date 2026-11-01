@@ -418,12 +418,13 @@ describe("the native pull-request gate", () => {
     expect(gates).toEqual([BOTH]);
     expect(DEVICE_GATES).toEqual([IPHONE, IPAD, BOTH]);
   });
-  // INF-1083 / INF-1072: the gate, not just its lease, ends on every route.
-  it("caps every route at sixty minutes while preserving the 165-minute job", () => {
+  // INF-1083 / INF-1072: the gate, not just its lease, ends on every route. INF-2052: the captain raised its
+  // limit from 60 to 90 minutes for every part on both devices; alone, a full check passed in 59.
+  it("caps every route at ninety minutes while preserving the 165-minute job", () => {
     for (const route of [OFF, IN_TURN, TOGETHER]) {
       const gates = stepsThatRun(route).filter(isGate);
       expect(gates).toHaveLength(1);
-      expect(gates[0]?.["timeout-minutes"]).toBe(60);
+      expect(gates[0]?.["timeout-minutes"]).toBe(90);
     }
     expect(workflow.jobs[NATIVE_JOB]["timeout-minutes"]).toBe(165);
   });

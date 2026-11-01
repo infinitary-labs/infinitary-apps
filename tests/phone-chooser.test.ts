@@ -56,11 +56,11 @@ describe("the phone check's parts on a pull request", () => {
       ["cards", 1, true],
       ["rest", 2, false],
       ["join", 2, false],
-      ["talk", 2, false],
-      // A part main has no time for yet costs the slowest measured one.
+      // A part main has no time for yet costs the slowest measured one, talk; equal costs keep the start order.
       ["relaunch", 2, false],
       ["address", 2, false],
       ["pick", 2, false],
+      ["talk", 2, false],
     ]);
     expect(placed.find((part) => !part.kept)?.reason).toMatch(/nightly check of main/);
   });

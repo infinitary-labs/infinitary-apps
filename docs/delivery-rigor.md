@@ -57,7 +57,7 @@ It names six words a test meets - intent, fixture, failure, layer, owner and gat
 It gives four rules for an existing test: a failure is a bug report first; a test the product outgrew on purpose is re-typed only for a stated intent and otherwise deleted; an intermittent failure is fixed at its owner with no retry or sleep; and a repaired test meets the same six words as a new one.
 It adds the captain's direction on a change's own tests (INF-840): a test whose own code the change adds or edits - a journey file, a device test function, a unit test file, never only a helper, scenario or runner it uses - is never a suspected flake.
 Before its completion card, the crewmate runs only those tests on the computer it works on, ten times in a row for unit tests and end-to-end tests and three times on each device for device tests, with no retries, and reports the passes.
-No pull request check repeats them.
+The host adds no pull request check that repeats them; a project's own rule may move them to one, as this project's `ci.yml` does for unit test files (`docs/testing.md`, "This project's rulings on tests").
 The passage is the one copy of its words.
 It is a default, not a mandate: its last sentence lets the project's own rule on tests win, read from the instructions the crewmate already treats as its gate ("Why instruction first").
 This project keeps no testing policy of its own beyond one ruling, weakening or deleting a test only on the captain's approval (`docs/testing.md`, "This project's rulings on tests").

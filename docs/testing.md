@@ -18,13 +18,16 @@ This project adds four rulings of the captain, which win over that default:
 
 The crew's default rule has the change's own tests repeated before the completion card (INF-840): ten runs for a journey file or unit test file the change adds or edits, and three on each device for a phone part whose UI test code it edits (the chooser's distance 0, "The phone parts a pull request runs").
 The captain's ruling puts those repeats on the Mac and only for those tests: "locally on mac only. only run affected tests".
-They run even on a computer in CI mode, so the repeat command alone carries `INFINITARY_CHECKS=local` ("Where the heavy checks run"):
+A later ruling moves a unit test file's repeats to Linux CI (INF-2074's ci-gate fix: "Run a change's typecheck, lint and ten unit-file repeats on Linux CI instead of the Mac mini's line, since unit tests need no Mac").
+Journey and phone part repeats run even on a computer in CI mode, so the repeat command alone carries `INFINITARY_CHECKS=local` ("Where the heavy checks run"):
 
 - a journey: `INFINITARY_CHECKS=local pnpm exec playwright test <file> --repeat-each 10 --retries 0`, with `--no-deps` for a `renderer` or `application` spec;
-- a unit test file: ten `pnpm exec vitest run <file>` runs in a row, since Vitest has no repeat flag;
+- a unit test file: `ci.yml`'s `unit-repeats` job runs every Vitest file the pull request adds or edits ten times in a row with no retries, stopping at the first failed round (`pnpm test:repeats`, `scripts/unit-repeats.ts`); its summary names the files, and a pull request whose check passed needs no local repeat;
+- a unit test file on `scripts/mac-unit-tests.ts`, which needs a Mac: ten `pnpm exec vitest run <file>` runs in a row on the Mac, since Vitest has no repeat flag and the Linux job leaves it out;
 - a phone part: three `INFINITARY_CHECKS=local pnpm test:phone --both --part <part>` runs in a row, stopping the loop on the first nonzero exit (`|| exit $?`); local phone gates stop at their first failed part by default and return their place after cleanup (`docs/ios.md`).
 
-`journeys.yml`, `phone.yml` and `ci.yml` add no repeat stage.
+`journeys.yml` and `phone.yml` add no repeat stage.
+A push to main repeats nothing, since its pull request already did; a `ci.yml` run started on a branch repeats what the branch edits since `origin/main`.
 
 ## Actions artifact retention
 
@@ -145,13 +148,14 @@ A run that fails or stalls under load is diagnosed from its own logs and fixed i
 Moved verbatim from `AGENTS.md` on 2026-09-24; `AGENTS.md` keeps a one-line pointer to each.
 
 - Local gate before every push: `pnpm typecheck && pnpm check && pnpm lint:adherence`, plus the relevant existing e2e specs that cover what you changed (the `renderer` and `application` lanes in `tests/e2e/lanes.ts` name the serial `desktop` lane as their teardown, so run one of their specs alone with `--no-deps` or it runs the whole desktop lane).
+  On a computer in CI mode the typecheck and the lint run in the pull request's `typecheck-lint-build` check instead ("Where the heavy checks run").
   Run the existing unit and integration tests a change can break by path, `pnpm test <path>...` (a bare file path finds its cohort, `docs/test-cohorts.md`), and the probes it reaches with `pnpm test:probes`.
   `pnpm exec vitest related --run <files>` is not that selection: it follows the whole transitive import graph, so a widely shared module reaches a large part of the suite (`src/shared/rigor.ts` reached 140 of 344 test files, 2026-09-30).
   The full unit suite (`pnpm test`) runs across `ci.yml`'s jobs on every PR and every push to main, its probes only where the change reaches them, and the full e2e suite (`pnpm build && pnpm exec playwright test`) is the release verify's job (next bullet); the full unit suite is not a per-push obligation.
   The full e2e suite runs only in CI, never locally during development or release preparation.
   The adherence lint runs the design skill's `_adherence.oxlintrc.json` through ESLint FlatCompat (current oxlint cannot execute its selector rules); its raw-px/hex rules are warn-level by the skill's own design.
-- Standing CI rule (PR 8; CI shape revised by captain decision B, 2026-09-15, scout `fm3000-ci-release-only-s1`; split across machines by the captain's direction on FI3-1204, 2026-10-07; probes moved off every push by FI3-1756's plan, 2026-10-14): the PR checks are `ci.yml`'s five Linux jobs on all pull requests, including the release's own notes pull request, and pushes to main.
-  `typecheck-lint-build` runs typecheck, biome, eslint adherence and build; `unit-tests` runs the in-memory cohorts (`pure`, `unit`, `unit-isolated`); `integration-tests (1/2)` and `(2/2)` run the integration cohort in vitest's own `--shard` halves, which split the files by a hash of their paths; `probe-tests` runs only the probes whose paths the change edits (`docs/test-cohorts.md`, "Probes") and passes with none.
+- Standing CI rule (PR 8; CI shape revised by captain decision B, 2026-09-15, scout `fm3000-ci-release-only-s1`; split across machines by the captain's direction on FI3-1204, 2026-10-07; probes moved off every push by FI3-1756's plan, 2026-10-14): the PR checks are `ci.yml`'s six Linux jobs on all pull requests, including the release's own notes pull request, and pushes to main.
+  `typecheck-lint-build` runs typecheck, biome, eslint adherence and build; `unit-tests` runs the in-memory cohorts (`pure`, `unit`, `unit-isolated`); `integration-tests (1/2)` and `(2/2)` run the integration cohort in vitest's own `--shard` halves, which split the files by a hash of their paths; `probe-tests` runs only the probes whose paths the change edits (`docs/test-cohorts.md`, "Probes") and passes with none; `unit-repeats` runs each Vitest file the change adds or edits ten times in a row and passes with none ("This project's rulings on tests").
   The hosted runner has two processors and a personal account is offered no larger one, so the jobs run side by side; together they run `verify.yml`'s `linux-checks` lane, which runs every probe, and `tests/release-contract.test.ts` holds every vitest project to one job or to shards that cover it, the probe project to its chooser.
   Every job runs on the label the repository variable `LINUX_RUNNER` names, the placement service's `shell-pc-linux` places (a fresh two-processor VM per job on the Windows PC, five at once), and on GitHub's hosted `ubuntu-latest` when the variable is unset; `tests/release-contract.test.ts` evaluates each job's runner both ways.
   The shell PC job image supplies Node 24 and a pre-filled pnpm store, so `ci.yml` disables setup-node's pnpm cache when `LINUX_RUNNER` is set; hosted jobs keep caching.
@@ -231,17 +235,21 @@ Unit tests are unchanged.
 
 Anyone building Infinitary runs every check on their own computer by default.
 A computer opts into CI mode with one git setting, `git config --global infinitary.checks ci` (INF-800, the captain's approval: "Only the heavy checks: journeys, the phone check and the replay gate").
-In CI mode the three heavy checks refuse to start outside CI and name their route on request instead (`scripts/checks-mode.ts`):
+INF-2074's ci-gate fix adds the typecheck and the lint ("Run a change's typecheck, lint and ten unit-file repeats on Linux CI instead of the Mac mini's line, since unit tests need no Mac").
+In CI mode these checks refuse to start outside CI and name their route on request instead (`scripts/checks-mode.ts`):
 
 | Check | Command that refuses | Its route in CI mode |
 | --- | --- | --- |
 | Journeys | `pnpm exec playwright test` naming a committed journey (`playwright.config.ts`) | a pull request runs the journeys its change reaches; on request, `journeys.yml` with the `files` it names ("Journeys on request") |
 | The phone check | `pnpm test:phone` and `scripts/test-phone.ts` | `phone.yml` on request ("The phone check on request") |
 | The replay gate | `pnpm replay:gate` | `replay.yml` on request (`docs/replay-harness.md`, "The gate") |
+| The typecheck | `pnpm typecheck` | the pull request's `typecheck-lint-build` check; before a pull request, `ci.yml` on request |
+| The lint | `pnpm check`, `pnpm lint` and `pnpm lint:adherence` | the pull request's `typecheck-lint-build` check; before a pull request, `ci.yml` on request |
 
 Crewmates start each route the way they start a full verification: `github_write` to `POST /repos/{owner}/{repo}/actions/workflows/<workflow>/dispatches` with `{"ref":"<branch>"}` and the route's inputs (`docs/forge.md`, "Verification workflow requests").
 An accepted request is not a passing check: find the run, confirm its version, then read it.
-Typecheck, lint and the unit tests stay local in both modes, and they already run on every pull request.
+The pull request's own `typecheck-lint-build` check stands in for a local typecheck and lint, so only `ci.yml` started on a branch with no pull request adds Linux work for them.
+A single unit test run stays local in both modes; a change's ten unit-file repeats run in `ci.yml`'s `unit-repeats` job ("This project's rulings on tests").
 Pictures and demos for a card stay local too: they are evidence, not checks.
 A throwaway picture or demo script is never committed, so the journey guard lets it run; an existing spec cannot take pictures in CI mode.
 Inside CI (`CI` is set) the heavy checks always run, because the Mac mini's runners run as the same user and read the same git settings.

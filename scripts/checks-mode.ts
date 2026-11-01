@@ -5,19 +5,24 @@ import { fileURLToPath } from "node:url";
 /**
  * Where this computer runs the heavy checks (docs/testing.md, "Where the
  * heavy checks run"; INF-800, the captain's approval: "Only the heavy checks:
- * journeys, the phone check and the replay gate").
+ * journeys, the phone check and the replay gate"; INF-2074's ci-gate fix
+ * added the typecheck and lint: "Run a change's typecheck, lint and ten
+ * unit-file repeats on Linux CI instead of the Mac mini's line").
  *
  * Local by default, so anyone building Infinitary checks on their own
  * computer. `git config --global infinitary.checks ci` sends the journeys,
- * the phone check and the replay gate through CI instead: each refuses
- * outside CI and names its route on request. Inside CI (`CI` is set) they
+ * the phone check, the replay gate, the typecheck and the lint through CI
+ * instead: each refuses outside CI and names its route on request. Inside CI (`CI` is set) they
  * always run, because the Mac mini's runners read the same user's git
  * settings. `INFINITARY_CHECKS` overrides the git setting for one run.
  */
 export type ChecksMode = "local" | "ci";
-export type HeavyCheck = "journeys" | "phone" | "replay-gate";
+export type HeavyCheck = "journeys" | "phone" | "replay-gate" | "typecheck" | "lint";
 
 const DISPATCHES = "POST /repos/{owner}/{repo}/actions/workflows";
+const PULL_REQUEST_CHECKS =
+  "push your branch: its pull request's typecheck-lint-build check runs it. " +
+  `Before a pull request exists, start ci.yml on your branch: ${DISPATCHES}/ci.yml/dispatches with {"ref":"<branch>"}.`;
 const ROUTES: Record<HeavyCheck, { name: string; route: string }> = {
   journeys: {
     name: "A committed journey",
@@ -34,6 +39,8 @@ const ROUTES: Record<HeavyCheck, { name: string; route: string }> = {
     name: "The replay gate",
     route: `start replay.yml on your branch: ${DISPATCHES}/replay.yml/dispatches with {"ref":"<branch>"}.`,
   },
+  typecheck: { name: "The typecheck", route: PULL_REQUEST_CHECKS },
+  lint: { name: "The lint", route: PULL_REQUEST_CHECKS },
 };
 
 export function checksMode(env: NodeJS.ProcessEnv = process.env, cwd = process.cwd()): ChecksMode {

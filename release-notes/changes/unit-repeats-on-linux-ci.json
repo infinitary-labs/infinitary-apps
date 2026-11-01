@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "unit-repeats-on-linux-ci",
+      "reason": "Internal: how the project checks its own changes. A change's typecheck, lint and ten unit-file repeats run in Linux CI instead of the Mac mini's local check line; the app is unchanged."
+    }
+  ]
+}

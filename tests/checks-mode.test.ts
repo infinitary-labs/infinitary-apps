@@ -9,8 +9,11 @@ import { scratchDir } from "./helpers/scratchDirs";
  * phone check and the replay gate". Anyone building Infinitary runs them on
  * their own computer; the git setting infinitary.checks = ci sends them
  * through CI, and inside CI they always run (docs/testing.md, "Where the
- * heavy checks run"). Each case runs the real command a person types, with a
- * scratch home whose git settings stand in for the person's own.
+ * heavy checks run"). INF-2074's ci-gate fix, the captain's checked words:
+ * "Run a change's typecheck, lint and ten unit-file repeats on Linux CI
+ * instead of the Mac mini's line, since unit tests need no Mac" added the
+ * typecheck and the lint. Each case runs the real command a person types,
+ * with a scratch home whose git settings stand in for the person's own.
  */
 const scripts = JSON.parse(readFileSync("package.json", "utf8")).scripts as Record<string, string>;
 
@@ -36,7 +39,7 @@ function computer(setting?: string) {
 describe("where the heavy checks run", () => {
   it("runs them here by default", () => {
     const { run } = computer();
-    for (const check of ["journeys", "phone", "replay-gate"]) {
+    for (const check of ["journeys", "phone", "replay-gate", "typecheck", "lint"]) {
       const result = run(`node scripts/checks-mode.ts ${check}`);
       expect(result.status, result.stderr).toBe(0);
     }
@@ -55,6 +58,18 @@ describe("where the heavy checks run", () => {
     expect(existsSync(join(home, "replay-report.json"))).toBe(false);
   });
 
+  // Each refuses in its first command, so neither the checker nor a lint starts.
+  it("refuses the typecheck and every lint outside CI with the setting on, naming the pull request's check", () => {
+    const { run } = computer("ci");
+    for (const script of ["typecheck", "check", "lint", "lint:adherence"]) {
+      const result = run(scripts[script] ?? "");
+      expect(result.status, script).toBe(1);
+      expect(result.stderr, script).toContain("typecheck-lint-build");
+      expect(result.stderr, script).toContain("ci.yml/dispatches");
+      expect(result.stdout + result.stderr, script).not.toMatch(/Checked \d+ files|tsrs/);
+    }
+  });
+
   // The real runner boots in about a second.
   it("refuses a committed journey outside CI with the setting on, before setup", () => {
     const { run } = computer("ci");
@@ -68,7 +83,7 @@ describe("where the heavy checks run", () => {
 
   it("always runs them inside CI, where the runners read the same git settings", () => {
     const { run } = computer("ci");
-    for (const check of ["journeys", "phone", "replay-gate"]) {
+    for (const check of ["journeys", "phone", "replay-gate", "typecheck", "lint"]) {
       const result = run(`node scripts/checks-mode.ts ${check}`, { CI: "true" });
       expect(result.status, result.stderr).toBe(0);
     }

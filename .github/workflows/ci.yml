@@ -136,3 +136,30 @@ jobs:
         timeout-minutes: 30
         env:
           BASE: ${{ github.event_name == 'pull_request' && format('origin/{0}', github.base_ref) || github.event.before }}
+
+  # A change's unit-file repeats (docs/testing.md, "This project's rulings
+  # on tests"; INF-2074's ci-gate fix): each Vitest file the change adds or
+  # edits runs ten times in a row with no retries, here on Linux instead of
+  # the Mac mini's load line. Files on scripts/mac-unit-tests.ts need a Mac,
+  # so their repeats stay there. A push to main repeats nothing, since its
+  # pull request already did; the job passes with no file to repeat.
+  unit-repeats:
+    runs-on: ${{ vars.LINUX_RUNNER || 'ubuntu-latest' }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: ${{ !vars.LINUX_RUNNER && 'pnpm' || '' }}
+      - uses: ./.github/actions/node-headers
+      - run: pnpm install --frozen-lockfile
+        # Scope Node headers to this install, never to Electron rebuilds.
+        env:
+          NPM_PACKAGE_CONFIG_NODE_GYP_NODEDIR: ${{ env.INFINITARY_NODE_HEADERS }}
+      - run: pnpm test:repeats --base "$BASE"
+        timeout-minutes: 30
+        env:
+          BASE: ${{ github.event_name == 'pull_request' && format('origin/{0}', github.base_ref) || github.event_name == 'workflow_dispatch' && 'origin/main' || '' }}

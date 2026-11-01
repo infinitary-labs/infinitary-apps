@@ -2628,7 +2628,8 @@ describe("the signed channel workflow", () => {
     expect(runner("mac")).toBe("macos-15");
     // What each lane runs, by its own step conditions on a passing run: the
     // linux-checks lane is exactly the PR gate, every probe included where
-    // the PR gate runs only those a change reaches; the mac lane the full suite.
+    // the PR gate runs only those a change reaches, and the full suite where
+    // the PR gate repeats a change's own test files; the mac lane the full suite.
     const runsIn = (name: string) =>
       (lane.steps ?? [])
         .filter(
@@ -2647,7 +2648,7 @@ describe("the signed channel workflow", () => {
         )
         .map((candidate) => candidate.run);
     const prGate = ciJobs().flatMap(({ runs }) =>
-      runs.map((run) => (/^pnpm test(:probes)? /.test(run) ? "pnpm test" : run)),
+      runs.map((run) => (/^pnpm test(:probes|:repeats)? /.test(run) ? "pnpm test" : run)),
     );
     expect(runsIn("linux-checks").toSorted()).toEqual([...new Set(prGate)].toSorted());
     expect(runsIn("mac")).toEqual(

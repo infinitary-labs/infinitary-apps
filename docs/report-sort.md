@@ -21,6 +21,7 @@ In order; the order IS the rule.
 |---|---|---|---|---|
 | 0 | An open card currently waits for its author's answer (`cards.awaiting = answer`) | the crewmate's | no wake | `rule:thread-unanswered` |
 | 0a | The report declared `needs_firstmate`: a captain decision only the first mate can carry out (FI3-710) | the first mate's | wake, with what it must do | `rule:needs-firstmate` |
+| 0s | The task has started and went back to the backlog (INF-2062, `docs/task-board.md` "A started task in the backlog"), and the report declares neither finished work nor follow-ups it filed | nobody's: it waits for a Start | no wake | `rule:in-backlog` |
 | 0b | Started work waits on this task through a recorded wait: a `blocks` link from it with no must-merge-first mark (INF-735) | the first mate's, which passes on what that work waits for | wake, naming that work | `rule:waited-on` |
 | 0c | The task's open review last returned findings or blocked (INF-1876): a typed verdict on the task, whose re-review waits for the head, evidence revision or validation state this report may bring | the first mate's, which alone steers the reviewer | wake, naming the review and what it read | `rule:review-reread` |
 | 1 | An open **decision** card for the task, a wait on the captain its crewmate declared in its report while a card of the task is on the captain's screen (FI3-435), or work its crewmate declared finished while a card of its own is still on the captain's screen (INF-731) | the captain's | no wake | `rule:captain-card` |
@@ -217,6 +218,7 @@ The tick, every idle boundary and the boot sweep call `CrewSupervisor.reconcileI
 The order is the rule's own:
 
 1. Closed: nothing.
+   A started task in the backlog (INF-2062, `inBacklog`): the captain's turn, nothing, whatever else stands - it waits for a Start, so it gets no nudge, no wake, no card and no stall line however long it stays.
 2. An open card currently waits for its author's answer **and nothing is deliverable on its lane**, no cut-off holds its account, and its computer is not out of reach: nobody's turn.
    Before the card check, as row 0 outranks row 1 above - a reply hides its card on the captain's screen while the core keeps it open, so the card no longer holds the turn, and a reply that can no longer be delivered is a stranded task, not the crewmate's turn.
 3. Its crewmate's last report asked the first mate to act (`needs_firstmate`), and the first mate has not acted on the task since (`askedFirstmate`, FI3-714): the first mate's turn, whatever card is up and whatever still moves, as row 0a outranks them in the sort - and after an unanswered captain reply, which the crewmate answers first.

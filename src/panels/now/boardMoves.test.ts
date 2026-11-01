@@ -11,6 +11,7 @@ import {
   boardMoveOf,
   dropAskOf,
   moveContextOf,
+  STARTED_BACKLOG_TEXT,
 } from "./boardMoves";
 import { type BoardLane, boardLaneOf } from "./boardTiles";
 
@@ -121,14 +122,10 @@ describe("the task board's moves", () => {
     expect(move(waiting, "working").kind).toBe("refused");
   });
 
-  it("never takes a drop on Waiting on you, never moves started work back, and a lane's own drop changes nothing", () => {
+  it("never takes a drop on Waiting on you, never queues started work, and a lane's own drop changes nothing", () => {
     for (const row of [backlog, queued, working]) {
       expect(move(row, "waiting")).toMatchObject({ kind: "refused" });
     }
-    expect(move(working, "backlog")).toMatchObject({
-      kind: "refused",
-      text: expect.stringContaining("already started"),
-    });
     expect(move(working, "queued").kind).toBe("refused");
     expect(move(backlog, "backlog").kind).toBe("none");
     expect(move(working, "working").kind).toBe("none");
@@ -139,6 +136,29 @@ describe("the task board's moves", () => {
         text: "Answer its card first. Moving it cannot dismiss that decision.",
       });
     }
+  });
+
+  // INF-2062: the captain moves a started task back to the backlog, and Start picks it up again.
+  it("moves started work to Backlog at once, keeping its work, and asks before starting it again", () => {
+    expect(move(working, "backlog")).toEqual({
+      kind: "now",
+      op: "unqueue-task",
+      text: STARTED_BACKLOG_TEXT,
+      done: "FI3-12 moved to Backlog. Its work is kept; Start picks it up.",
+    });
+    const parked = task({ ...working, activity: "idle", backlogSince: 9 });
+    expect(lane(parked)).toBe("backlog");
+    expect(move(parked, "working")).toMatchObject({
+      kind: "ask",
+      op: "start-task",
+      sentence: expect.stringContaining("same conversation"),
+    });
+    expect(move(parked, "queued")).toMatchObject({
+      kind: "refused",
+      text: "It has already started. Start picks it up from the backlog.",
+    });
+    expect(move(parked, "backlog").kind).toBe("none");
+    expect(labels(boardMenuOf(parked, "backlog", NO_CARD))).not.toContain("Back to backlog");
   });
 
   it("reads its completion card off the row: a waiting card that settles with a merge", () => {
@@ -252,14 +272,17 @@ describe("a tile's ⋯ menu", () => {
       "---",
       "Drop task",
     ]);
+    // INF-2062: started work offers Back to backlog, which keeps its work.
     expect(labels(boardMenuOf(interrupted, "working", NO_CARD))).toEqual([
       "Open record",
       "Continue",
+      "Back to backlog",
       "---",
       "Drop task",
     ]);
     expect(labels(boardMenuOf(working, "working", NO_CARD))).toEqual([
       "Open record",
+      "Back to backlog",
       "---",
       "Drop task",
     ]);

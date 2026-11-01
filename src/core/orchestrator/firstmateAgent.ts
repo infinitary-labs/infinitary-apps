@@ -3127,6 +3127,12 @@ export class FirstmateAgent {
               record.kind === "work" && record.status === "active"
                 ? input.model?.trim()
                 : undefined;
+            // on-request on started work moves it back to the backlog (INF-2062):
+            // its turn stops and its work stays, after the other edits land.
+            const toBacklog =
+              record.kind === "work" &&
+              record.status === "active" &&
+              input.startPolicy === "on-request";
             // A typed hand-off is checked as a new task's is (INF-799); empty clears it.
             const handOff = (() => {
               if (input.resultSchema === undefined && input.branchFrom === undefined) return {};
@@ -3178,7 +3184,9 @@ export class FirstmateAgent {
               ...(input.direction ? { direction: input.direction } : {}),
               ...(input.goal !== undefined ? { goal: input.goal.trim() || null } : {}),
               ...(input.priority !== undefined ? { priority: input.priority } : {}),
-              ...(input.startPolicy ? { startPolicy: input.startPolicy } : {}),
+              ...(input.startPolicy && record.status !== "active"
+                ? { startPolicy: input.startPolicy }
+                : {}),
               ...(input.verdict !== undefined
                 ? { verdict: input.verdict?.trim().slice(0, 280) || null }
                 : {}),
@@ -3219,6 +3227,20 @@ export class FirstmateAgent {
             const move = moveTo
               ? supervisor.requestMove(record.id, { by: "firstmate", model: moveTo })
               : undefined;
+            const backlog = toBacklog
+              ? supervisor.moveToBacklog(
+                  record.id,
+                  { actor: "firstmate", via: "tool", decision: null },
+                  input.reason,
+                )
+              : undefined;
+            if (backlog?.ok)
+              this.noteDelivery({
+                outcome: "action",
+                kind: "work",
+                tool: "update_task",
+                ref: record.id,
+              });
             if (move?.ok)
               this.noteDelivery({
                 outcome: "action",
@@ -3228,7 +3250,8 @@ export class FirstmateAgent {
               });
             if (changes.length === 0) {
               if (move && !move.ok) throw new TaskGraphRefusal(move.text);
-              if (move) return move.text;
+              if (backlog && !backlog.ok) throw new TaskGraphRefusal(backlog.text);
+              if (move || backlog) return [move?.text, backlog?.text].filter(Boolean).join(" ");
               return `${record.key || record.id} is unchanged.`;
             }
             const updated = tasks.get(record.id) ?? record;
@@ -3259,7 +3282,7 @@ export class FirstmateAgent {
               supervisor.graphChanged();
             }
             const now = tasks.get(record.id);
-            return `Updated ${now?.key || record.id}: ${changes.join(", ")}.${policyNote ? ` ${policyNote}` : ""}${move ? ` ${move.text}` : ""}`;
+            return `Updated ${now?.key || record.id}: ${changes.join(", ")}.${policyNote ? ` ${policyNote}` : ""}${move ? ` ${move.text}` : ""}${backlog ? ` ${backlog.text}` : ""}`;
           })();
           return { text, ok: true };
         } catch (caught) {

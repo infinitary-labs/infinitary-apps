@@ -568,6 +568,35 @@ describe("sortReport", () => {
   });
 });
 
+describe("sortReport on a started task in the backlog (INF-2062)", () => {
+  it("wakes nobody for a repeated wait, a moving job or a plain report", () => {
+    for (const over of [
+      {},
+      { timedWait: true },
+      { jobsRunning: true },
+      { captainGateOwed: true },
+    ]) {
+      expect(sortReport(facts({ inBacklog: true, ...over }))).toMatchObject({
+        rule: "in-backlog",
+        verdict: "routine",
+        wake: false,
+      });
+    }
+  });
+
+  it("still wakes the first mate for needs_firstmate, finished work and filed follow-ups", () => {
+    expect(sortReport(facts({ inBacklog: true, needsFirstmate: true }))).toMatchObject({
+      rule: "needs-firstmate",
+      wake: true,
+    });
+    for (const over of [{ finished: true }, { filedFollowups: true }]) {
+      const sorted = sortReport(facts({ inBacklog: true, ...over }));
+      expect(sorted.rule).not.toBe("in-backlog");
+      expect(sorted.wake).toBe(true);
+    }
+  });
+});
+
 describe("idleTurn: the same witnesses, read the same way, for an idle crewmate", () => {
   const QUIET: Witnesses = {
     threadAwaitingAuthor: false,
@@ -582,6 +611,14 @@ describe("idleTurn: the same witnesses, read the same way, for an idle crewmate"
     waitsOnUnstarted: false,
   };
   const idle = (over: Partial<Witnesses>): IdleTurn => idleTurn({ ...QUIET, ...over });
+
+  // INF-2062: a started task in the backlog waits for a Start, so the ladder fires nothing for it.
+  it("leaves a started task in the backlog to the captain, whatever else stands", () => {
+    expect(idle({ inBacklog: true })).toBe("captain");
+    expect(idle({ inBacklog: true, captainGateOwed: true, threadAwaitingAuthor: true })).toBe(
+      "captain",
+    );
+  });
 
   it("answers in the sort's order", () => {
     expect(idle({})).toBe("nobody");

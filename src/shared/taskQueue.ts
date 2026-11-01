@@ -5,10 +5,14 @@ import type { TaskView } from "./tasks";
  * "Moves"): never-started work changes its start policy on the captain's
  * word, `inf:task:run`'s `queue-task` (when ready: it starts by itself once
  * nothing holds it) and `unqueue-task` (on request: it waits for the captain's word).
- * The task service is the one guard: work that has started, or a parent
- * whose parts do the work, is refused as text and nothing is written. A
- * move changes the start policy alone - never priority, order, project,
- * parent or dependencies - and its timeline entry says so in the captain's words.
+ * Started work goes back to the backlog too (INF-2062): its turn stops, its
+ * work is kept, nothing the host sends wakes it, and Start picks it up in
+ * the same conversation. Queue it is refused for started work.
+ * The task service is the one guard: a parent whose parts do the work, or
+ * closed work, is refused as text and nothing is written. A move changes
+ * the start policy or the backlog wait alone - never priority, order,
+ * project, parent or dependencies - and its timeline entry says so in the
+ * captain's words.
  */
 
 /** The start policy each move writes. */
@@ -21,6 +25,21 @@ export const QUEUE_POLICY: Record<"queue-task" | "unqueue-task", TaskView["start
 export const QUEUED_ACTIVITY = "You queued this task. It starts by itself when nothing holds it.";
 export const UNQUEUED_ACTIVITY = "You moved this task back to the backlog. It waits for your word.";
 
+/**
+ * The record's Activity line when started work goes back to the backlog
+ * (INF-2062): who moved it, that its work stays, and the one sentence why.
+ */
+export function backlogActivity(actor: "captain" | "firstmate", reason?: string): string {
+  const who = actor === "captain" ? "You" : "Your first mate";
+  const why = reason?.trim() ? ` ${reason.trim().replace(/[.!?]*$/, ".")}` : "";
+  return `${who} moved this started task back to the backlog. Its work is kept, and it waits for your word.${why}`;
+}
+
+/** The record's Activity line when Start picks a started task up from the backlog. */
+export function leftBacklogActivity(actor: "captain" | "firstmate"): string {
+  return `${actor === "captain" ? "You" : "Your first mate"} started this task again from the backlog. Its crewmate carries on in the same conversation.`;
+}
+
 export function queueMissingRefusal(key: string): string {
   return `Cannot move ${key}: that task is not here.`;
 }
@@ -31,6 +50,11 @@ export function queueClosedRefusal(key: string): string {
 
 export function queueStartedRefusal(key: string): string {
   return `Cannot move ${key}: it has already started.`;
+}
+
+/** Queue it on started work: only Start picks a started task up again (INF-2062). */
+export function queueStartedBacklogRefusal(key: string): string {
+  return `Cannot queue ${key}: it has already started. Start picks it up from the backlog.`;
 }
 
 export function queuePartsRefusal(key: string): string {

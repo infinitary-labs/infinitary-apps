@@ -22,7 +22,8 @@ import type { TaskView } from "./tasks";
  *               policy when-ready), blocked or held included, and a task
  *               that is starting until its crewmate begins.
  * - `backlog` - open work that waits for the captain's word (start policy
- *               on-request), blocked or held included.
+ *               on-request), blocked or held included, and started work
+ *               that went back to the backlog (INF-2062) with its work kept.
  * - `landed`  - done work within the board's recent window.
  *
  * Deliberately outside the panel: dropped rows (history, one detail read
@@ -62,7 +63,8 @@ export type NowGroupInput = Pick<
   | "startPolicy"
   | "startAttempt"
   | "activity"
->;
+> &
+  Partial<Pick<TaskView, "backlogSince">>;
 
 export function nowGroupOf(task: NowGroupInput): NowGroup | null {
   if (task.minimizedCardId) return "waiting";
@@ -86,7 +88,11 @@ export function nowGroupOf(task: NowGroupInput): NowGroup | null {
     case "done":
       return task.kind === "work" || task.requiredAction ? "landed" : null;
     case "active":
-      return task.waitingCardId ? "waiting" : "working";
+      return task.waitingCardId
+        ? "waiting"
+        : task.backlogSince !== undefined
+          ? "backlog"
+          : "working";
     case "open":
       if (task.waitingCardId) return "waiting";
       return task.startPolicy === "on-request" ? "backlog" : "queued";

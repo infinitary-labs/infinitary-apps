@@ -95,17 +95,27 @@ export function taskMovesOf(task: TaskMovesInput): TaskMoves | undefined {
         ? no("It has started. Stopping it drops it and keeps a copy of its work.")
         : no("It cannot be dropped from here.");
 
+  // Started work goes back to the backlog with its work kept, and only Start picks it up (INF-2062).
+  const underway = task.status === "active";
+  const inBacklog = underway && task.backlogSince !== undefined;
   const queueGuard: TaskMoveAllowance | null = starting
     ? heldStart
-    : !unstarted
-      ? started
-      : parts
-        ? no("Its parts do the work. Move a part instead.")
-        : null;
+    : underway
+      ? null
+      : !unstarted
+        ? started
+        : parts
+          ? no("Its parts do the work. Move a part instead.")
+          : null;
   const queue =
-    queueGuard ?? (task.startPolicy === "when-ready" ? no("It is already queued.") : OK);
-  const unqueue =
-    queueGuard ?? (task.startPolicy === "on-request" ? no("It already waits for your word.") : OK);
+    queueGuard ??
+    (underway
+      ? no("It has already started. Start picks it up from the backlog.")
+      : task.startPolicy === "when-ready"
+        ? no("It is already queued.")
+        : OK);
+  const waitsForWord = underway ? inBacklog : task.startPolicy === "on-request";
+  const unqueue = queueGuard ?? (waitsForWord ? no("It already waits for your word.") : OK);
 
   return {
     "start-task": start,

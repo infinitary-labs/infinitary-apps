@@ -27,6 +27,14 @@ const active = (overrides: Partial<RecordBarInput> = {}) =>
   task({ status: "active", activity: "idle", startedAt: 5, ...overrides });
 
 describe("the record's action bar, from typed state only", () => {
+  // INF-2062: a started task back in the backlog offers Start, whatever it waits on.
+  it("offers Start on started work back in the backlog, never blocked", () => {
+    expect(recordBarOf(active({ backlogSince: 9, ...blockedOn("FI3-6") }))).toEqual({
+      end: "stop-task",
+      next: "start",
+      blocked: false,
+    });
+  });
   it("gives every open status the bar as drawn: Drop task, then its one next step", () => {
     const bars = {
       planned: recordBarOf(task()),

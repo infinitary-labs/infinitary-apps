@@ -7446,6 +7446,47 @@ describe("the graph tools at the Firstmate boundary (task-system P2)", () => {
     expect(tasks.get(piece.id)?.status).toBe("open");
   });
 
+  // INF-2062: the captain asked that pausing a task moves it back to the backlog, never a steer to stay idle.
+  it("moves started work back to the backlog with update_task start_policy on-request, and start_now picks it up", async () => {
+    const { agent, specs, tasks, supervisor } = setup();
+    await agent.converse("pause the color work");
+    const tools = piToolsOf(specs[0]?.tools ?? []) as unknown as GraphTool[];
+    const text = async (name: string, params: Record<string, unknown>) => {
+      const tool = tools.find((entry) => entry.name === name);
+      if (!tool) throw new Error(`missing ${name}`);
+      return (await tool.execute("c", params, undefined, undefined, {})).content[0]?.text ?? "";
+    };
+    await text("create_task", { title: "Color audit", goal: "Audit", user_words: "audit" });
+    expect(await text("update_task", { task: "SCR-1", start_now: true })).toContain(
+      "Started SCR-1",
+    );
+    const started = tasks.byKey("SCR-1");
+    if (started?.status !== "active") throw new Error("The task did not start");
+    const moving = vi.spyOn(supervisor, "moveToBacklog");
+
+    const answer = await text("update_task", {
+      task: "SCR-1",
+      start_policy: "on-request",
+      reason: "The captain asked to pause it.",
+    });
+    expect(answer).toContain("back to the backlog");
+    expect(moving).toHaveBeenCalledWith(
+      started.id,
+      { actor: "firstmate", via: "tool", decision: null },
+      "The captain asked to pause it.",
+    );
+    expect(tasks.get(started.id)).toMatchObject({ status: "active" });
+    expect(tasks.get(started.id)?.backlogSince).toEqual(expect.any(Number));
+    expect(await text("update_task", { task: "SCR-1", start_policy: "on-request" })).toContain(
+      "already waits in the backlog",
+    );
+
+    expect(await text("update_task", { task: "SCR-1", start_now: true })).toContain(
+      'Started SCR-1 "Color audit" again from the backlog',
+    );
+    expect(tasks.get(started.id)?.backlogSince).toBeNull();
+  });
+
   it("names the filed wait while an independent when-ready task starts immediately", async () => {
     const { agent, specs, tasks, supervisor } = setup();
     await agent.converse("fix the meter");

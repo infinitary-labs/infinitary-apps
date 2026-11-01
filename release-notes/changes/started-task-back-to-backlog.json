@@ -1,0 +1,18 @@
+{
+  "entries": [
+    {
+      "id": "started-task-back-to-backlog",
+      "kind": "feature",
+      "area": "tasks",
+      "title": "Pause a started task by moving it back to the backlog",
+      "body": "A task that has already started can now go back to the backlog from its menu on the task board, or when you ask your first mate to pause it. Its crewmate stops, and its working copy, conversation and pull request are kept. Nothing wakes it while it waits there. Start picks it up again in the same conversation, with anything that arrived while it waited.",
+      "picture": {
+        "dark": "started-task-back-to-backlog-dark.webp",
+        "light": "started-task-back-to-backlog-light.webp",
+        "alt": "The task board's Backlog list with a started task marked Started, its work waiting for your Start, beside two tasks that have not started"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

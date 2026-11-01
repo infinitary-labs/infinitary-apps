@@ -10,7 +10,8 @@ import { conversationOf } from "./taskSessionStore";
  * token the backend resumes from and, where that token belongs to a
  * recorded conversation, that conversation's key; the computer and account
  * the crewmate runs on; the placement committed for it; the idle clock and
- * the recovery ladder's rung; a manual start that did not begin; and what
+ * the recovery ladder's rung; a manual start that did not begin; when a
+ * started task went back to the backlog (INF-2062); and what
  * the current turn's report declared about whose turn follows it. A record
  * still reads every one of them where it read them before, so no reader
  * changes. Only TaskStore writes this table, beneath TaskService.
@@ -27,6 +28,12 @@ export type TaskExecution = {
   recoveryCount: number;
   recoveryAt: number | null;
   startNotice: string | null;
+  /**
+   * When this started task went back to the backlog (INF-2062,
+   * `TaskService.setQueued`): it waits there for a Start, its work kept,
+   * and nothing the host sends wakes it. Null while it is not there.
+   */
+  backlogSince: number | null;
   /** The current turn's declarations, under the delivery fields a record reads them as. */
   turn: Record<string, unknown> | null;
 };
@@ -55,6 +62,7 @@ export const EXECUTION_COLUMNS = {
   recoveryCount: "recovery_count",
   recoveryAt: "recovery_at",
   startNotice: "start_notice",
+  backlogSince: "backlog_since",
 } as const;
 export type ExecutionField = keyof typeof EXECUTION_COLUMNS;
 
@@ -70,6 +78,7 @@ type Row = {
   recovery_count: number;
   recovery_at: number | null;
   start_notice: string | null;
+  backlog_since?: number | null;
   turn_json: string | null;
 };
 
@@ -84,6 +93,7 @@ export const NO_EXECUTION: TaskExecution = {
   recoveryCount: 0,
   recoveryAt: null,
   startNotice: null,
+  backlogSince: null,
   turn: null,
 };
 
@@ -108,6 +118,7 @@ function fromRow(row: Row): TaskExecution {
     recoveryCount: row.recovery_count ?? 0,
     recoveryAt: row.recovery_at,
     startNotice: row.start_notice,
+    backlogSince: row.backlog_since ?? null,
     turn: parseObject<Record<string, unknown>>(row.turn_json),
   };
 }

@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { type TaskStatusInput, taskStatusLabel, taskStatusOf } from "./taskPresentation";
+import {
+  STARTED_BACKLOG_REASON,
+  type TaskStatusInput,
+  taskStatusLabel,
+  taskStatusOf,
+} from "./taskPresentation";
 
 const base: TaskStatusInput = {
   status: "open",
@@ -12,6 +17,12 @@ const base: TaskStatusInput = {
 };
 const read = (changes: Partial<TaskStatusInput>) => taskStatusOf({ ...base, ...changes });
 describe("one task status", () => {
+  // INF-2062: started work back in the backlog reads as Backlog, marked started, since it went.
+  it("reads started work in the backlog as Backlog, marked started, with its wait", () => {
+    const parked = read({ status: "active", activity: "idle", backlogSince: 9 });
+    expect(parked).toMatchObject({ mark: "backlog", word: "Backlog", since: 9 });
+    expect(taskStatusLabel(parked)).toBe(`Backlog · ${STARTED_BACKLOG_REASON}`);
+  });
   it.each([
     [{}, "backlog", "Backlog"],
     [{ startPolicy: "when-ready" }, "queued", "Queued"],

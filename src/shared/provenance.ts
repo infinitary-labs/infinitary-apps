@@ -191,5 +191,10 @@ export const interruptEventDataSchema = z.object({
    * made it on his click or key (docs/ui-plugins.md, "A panel's cards").
    */
   panel: z.string().optional(),
+  /**
+   * The stop that moving a started task back to the backlog made (INF-2062):
+   * part of that move, never a Stop click of its own.
+   */
+  backlog: z.literal(true).optional(),
 });
 export type InterruptEventData = z.infer<typeof interruptEventDataSchema>;

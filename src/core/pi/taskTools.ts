@@ -55,6 +55,8 @@ export type TaskToolsDelegate = {
     parent?: string;
     project?: string;
     startPolicy?: TaskStartPolicy;
+    /** Why started work goes back to the backlog (start_policy on-request, INF-2062). */
+    reason?: string;
     /** Prerequisites to add. Already-linked ones stay; none are removed. */
     declaredBlockers?: string[];
     verdict?: string | null;
@@ -251,7 +253,10 @@ export function createTaskTools(delegate: TaskToolsDelegate) {
       priority: PRIORITY,
       // What each policy means is said once, on create_task's start_policy.
       start_policy: Type.Optional(
-        stringEnum(START_POLICY_VALUES, { description: "As create_task's start_policy" }),
+        stringEnum(START_POLICY_VALUES, {
+          description:
+            "As create_task's start_policy. on-request on started work moves it back to the backlog: its turn stops, its work stays, nothing wakes it until start_now picks it up. When the captain asks to pause a task, do this with a reason; never steer it to stay idle.",
+        }),
       ),
       // What [] declares is said once, on create_task's blocked_by.
       blocked_by: Type.Optional(
@@ -365,7 +370,7 @@ export function createTaskTools(delegate: TaskToolsDelegate) {
       reason: Type.Optional(
         Type.String({
           description:
-            "Why it is dropped (required with drop); for work another task did or holds, covered by its key",
+            "Why it is dropped (required with drop); for work another task did or holds, covered by its key. With start_policy on-request on started work, why it goes back to the backlog",
         }),
       ),
       confirm: Type.Optional(
@@ -477,6 +482,7 @@ export function createTaskTools(delegate: TaskToolsDelegate) {
         ...(params.parent !== undefined ? { parent: params.parent } : {}),
         ...(params.project !== undefined ? { project: params.project } : {}),
         ...(params.start_policy ? { startPolicy: params.start_policy } : {}),
+        ...(params.start_policy && params.reason?.trim() ? { reason: params.reason.trim() } : {}),
         ...(params.blocked_by !== undefined ? { declaredBlockers: params.blocked_by } : {}),
         ...(params.verdict !== undefined ? { verdict: params.verdict } : {}),
       };

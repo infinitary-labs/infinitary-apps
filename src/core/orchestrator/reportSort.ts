@@ -110,6 +110,7 @@ export type ReportSortRule =
   | "captain-card"
   | "finished"
   | "filed-followups"
+  | "in-backlog"
   | "waits-unstarted"
   | "program-part"
   | "still-moving"
@@ -255,6 +256,14 @@ export type Witnesses = {
    * report while the reviewer still reads sorts as any other.
    */
   reviewOpen?: boolean;
+  /**
+   * The task has started and went back to the backlog (INF-2062;
+   * `TaskRecord.backlogSince`): it waits for a Start, so it is nobody's
+   * turn to move it. The idle ladder never nudges, wakes or raises a card
+   * for it, and its report wakes the first mate only to act on it, to close
+   * it or to triage what it filed.
+   */
+  inBacklog?: boolean;
 };
 
 export type ReportSortFacts = Witnesses & {
@@ -320,6 +329,17 @@ export function sortReport(facts: ReportSortFacts): ReportSortResult {
       wake: true,
       reason:
         "the crewmate declared that the first mate must act on its report; the first mate's turn.",
+    };
+  }
+  // A started task in the backlog waits for a Start: only finished work and
+  // filed follow-ups still reach the first mate (INF-2062).
+  if (facts.inBacklog && !facts.finished && !facts.filedFollowups) {
+    return {
+      rule: "in-backlog",
+      verdict: "routine",
+      wake: false,
+      reason:
+        "it waits in the backlog; only a Start picks it up, so nobody needs to act on it now.",
     };
   }
   if (facts.waitedOn) {
@@ -497,10 +517,15 @@ function stillMoving(witnesses: Witnesses): boolean {
  *    so the ladder's wakes and its card apply and its nudge never does.
  *    Before a cut-off on its account, which holds only the crewmate's turn.
  *  - `nobody`: the ladder climbs from its nudge.
+ *
+ * A started task in the backlog (INF-2062) is the captain's before
+ * anything else: it waits for the captain's Start or the first mate's, so nothing
+ * fires, whatever else stands.
  */
 export type IdleTurn = "thread" | "asked" | "captain" | "moving" | "owed" | "nobody";
 
 export function idleTurn(witnesses: Witnesses): IdleTurn {
+  if (witnesses.inBacklog) return "captain";
   // A lane its account holds cannot answer either way: a nudge would only
   // wait on the lane, and the account's wakes already speak for it.
   if (

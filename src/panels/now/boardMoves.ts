@@ -28,11 +28,14 @@ type DropEffects = NonNullable<PanelTaskDetail["dropEffects"]>;
  * ends a drop takes is the row's own say (`moves`, from the record's rule).
  *
  * - Backlog takes never-started work at once: it waits for the captain's
- *   word again, its blockers and holds kept.
+ *   word again, its blockers and holds kept. It takes started work at once
+ *   too (INF-2062): its turn stops, its work stays, and nothing wakes it
+ *   until Start, which asks once and picks it up in the same conversation.
  * - Queued takes never-started work with no parts: at once while a blocker
  *   or hold stands, and after asking once when it could start at once.
  * - Working is the record's Start: it asks once, and refuses blocked, held,
- *   parent, queued, started and closed work.
+ *   parent, queued, started and closed work, except started work in the
+ *   backlog, which it picks up again.
  * - Waiting on you is never a target: only a ready decision
  *   puts a task there.
  * - Done brings the task's completion card forward while one is up; the
@@ -165,11 +168,9 @@ export function boardMoveOf(
   if (from === "queued" && taskStatusOf(task).mark === "starting") {
     return { kind: "refused", text: "It is starting." };
   }
+  if (task.status === "active") return startedMoveOf(task, from, target);
   if (from === "working" || !isUnstartedWork(task)) {
-    return {
-      kind: "refused",
-      text: "It has already started. Moving it would not pause its crewmate.",
-    };
+    return { kind: "refused", text: "It has already started." };
   }
   const blocked = blockedOf(task);
   const waitsOn = keyList(task.blockedBy);
@@ -243,6 +244,43 @@ export function boardMoveOf(
   };
 }
 
+/**
+ * Started work (INF-2062): Backlog stops its turn and keeps its work, at
+ * once; from the backlog, Working is Start, which asks once. Queued never
+ * takes started work.
+ */
+function startedMoveOf(task: PanelTaskRow, from: BoardLane, target: BoardColumn): BoardMove {
+  const key = task.key;
+  if (target === "backlog") {
+    return task.moves?.["unqueue-task"].ok === false
+      ? { kind: "refused", text: task.moves["unqueue-task"].text }
+      : {
+          kind: "now",
+          op: "unqueue-task",
+          text: STARTED_BACKLOG_TEXT,
+          done: `${key} moved to Backlog. Its work is kept; Start picks it up.`,
+        };
+  }
+  if (target === "working" && from === "backlog") {
+    return {
+      kind: "ask",
+      op: "start-task",
+      sentence: `Start ${key} again? Its crewmate carries on in the same conversation and spends your plan's allowance.`,
+      confirm: START_LABEL,
+    };
+  }
+  return {
+    kind: "refused",
+    text:
+      from === "backlog"
+        ? "It has already started. Start picks it up from the backlog."
+        : "It has already started.",
+  };
+}
+
+/** What Back to backlog does to started work, before and as it moves. */
+export const STARTED_BACKLOG_TEXT = "Its turn stops and its work stays. It waits for your Start.";
+
 /** The Drop task tray: the record's own Drop task, which asks once. */
 function dropMoveOf(task: PanelTaskRow): BoardMove {
   if (openParts(task)) {
@@ -307,7 +345,7 @@ export function boardDoneText(key: string, op: PanelTaskMove): string {
     case "queue-task":
       return `${key} is queued. It may start at once.`;
     case "unqueue-task":
-      return `${key} moved to Backlog. It waits for your word; its blockers and holds stay.`;
+      return `${key} moved to Backlog. It waits for your word; its work, blockers and holds stay.`;
     case "start-again":
       return `${key} started again as a new task.`;
     case "start-task":
@@ -339,7 +377,8 @@ export type BoardMenuEntry =
  * A tile's ⋯ menu, the pointer's and the keyboard's way to do what a drag
  * does: Open record; Show the card while a decision waits; Continue on
  * interrupted work; Queue it or Back to backlog and Start now on open work;
- * then Drop task, last, in danger. An entry that cannot run stays listed,
+ * Back to backlog on started work, and Start now on started work in the
+ * backlog (INF-2062); then Drop task, last, in danger. An entry that cannot run stays listed,
  * dim, with its reason. Done and Dropped tiles have no menu.
  */
 export function boardMenuOf(
@@ -357,6 +396,16 @@ export function boardMenuOf(
       id: "continue",
       label: "Continue",
       detail: "Picks the work up where it stopped",
+    });
+  }
+  if (lane === "working" && task.status === "active") {
+    const move = boardMoveOf(task, lane, "backlog", context);
+    entries.push({
+      id: "unqueue",
+      label: UNQUEUE_LABEL,
+      detail: move.kind === "refused" ? move.text : "Stops its turn, keeps its work · at once",
+      disabled: move.kind === "refused",
+      target: "backlog",
     });
   }
   if (lane === "backlog" || lane === "queued") {

@@ -82,6 +82,13 @@ It stays due one grace after its cut attempt began, so the next launch's sweep d
 - **What it costs.**
   A turn that itself takes the app down is replayed at every launch, since a cut never spends a try; the three tries still bound every refusal.
 
+## A lane of a started task in the backlog
+
+A started task that went back to the backlog (INF-2062; `docs/task-board.md`, "A started task in the backlog") keeps its lane until Start (`CrewSupervisor.inBacklog`).
+The host's own rows - a job's result, a check's, a timed wait's end, a closed dependency, a cut turn's carry-on - wait there: a host steer answers `recorded-held`, the sweep skips the lane, and the reopen does not announce or carry its turn on.
+A steer the captain or the first mate sends still goes out, as a turn that opens with a line that the task waits in the backlog, and carries what waited with it.
+Start delivers what waited, with one line that the task left the backlog, in the same conversation.
+
 ## A lane on a withheld account
 
 The cut-off contract on crew lanes (W1 S8; `docs/quota.md`, "Typed cut-offs"): a typed cut-off is a fact on the account, and a crewmate on a cut-off login waits without spending model turns until a fact changes.

@@ -65,11 +65,14 @@ import {
   type TaskPolicyEdits,
 } from "@shared/taskPolicies";
 import {
+  backlogActivity,
+  leftBacklogActivity,
   QUEUE_POLICY,
   QUEUED_ACTIVITY,
   queueClosedRefusal,
   queueMissingRefusal,
   queuePartsRefusal,
+  queueStartedBacklogRefusal,
   queueStartedRefusal,
   UNQUEUED_ACTIVITY,
 } from "@shared/taskQueue";
@@ -556,6 +559,9 @@ function taskCardOp(event: TaskEvent): TaskLifecycleOp | undefined {
   switch (event.kind) {
     case "note":
       if (typeof data.startAgain === "string") return "start-again";
+      // A started task's move into the backlog and out of it (INF-2062).
+      if (data.backlog === "entered") return "unqueue-task";
+      if (data.backlog === "left") return "start-task";
       return data.startPolicy === QUEUE_POLICY["queue-task"]
         ? "queue-task"
         : data.startPolicy === QUEUE_POLICY["unqueue-task"]
@@ -564,7 +570,7 @@ function taskCardOp(event: TaskEvent): TaskLifecycleOp | undefined {
     case "steered":
       return "continue-task";
     case "interrupted":
-      return data.effect === "aborted-turn" || data.effect === "abort-failed"
+      return data.effect === "aborted-turn" || data.effect === "abort-failed" || data.backlog
         ? undefined
         : "stop-task";
     case "status":
@@ -2973,16 +2979,57 @@ export class TaskService {
    * start policy is the one field it writes - blockers, holds, priority,
    * order, project and parent stay - with one timeline entry in the
    * captain's words. `changed` is false when the row already had it.
+   *
+   * Started work goes back to the backlog as well (INF-2062): its running
+   * work records when (`backlogSince`) and its idle ladder starts over, so
+   * nothing the host sends wakes it until Start (`leaveBacklog`). Its
+   * working copy, conversation, change and jobs stay. Stopping its turn is
+   * the caller's (`CrewSupervisor.moveToBacklog`). Queue it on started work
+   * is refused: only Start picks it up again.
    */
   setQueued(
     id: string,
     op: keyof typeof QUEUE_POLICY,
-    input: { actor: TaskEventActor; via?: typeof TASK_CARD_VIA; panel?: string },
+    input: {
+      actor: TaskEventActor;
+      via?: typeof TASK_CARD_VIA;
+      panel?: string;
+      /** One sentence on why started work went back to the backlog. */
+      reason?: string;
+    },
   ): { ok: true; changed: boolean } | { ok: false; text: string } {
     const run = this.write((): { ok: true; changed: boolean } | { ok: false; text: string } => {
       const record = this.store.get(id);
       if (!record) return { ok: false, text: queueMissingRefusal(id) };
       const key = record.key || record.id;
+      if (record.kind === "work" && record.status === "active") {
+        if (op === "queue-task") return { ok: false, text: queueStartedBacklogRefusal(key) };
+        if (record.backlogSince != null) return { ok: true, changed: false };
+        const at = this.now();
+        this.patch(id, {
+          backlogSince: at,
+          recoveryRung: 0,
+          recoveryCount: 0,
+          recoveryAt: null,
+          updatedAt: at,
+        });
+        this.addEvent({
+          taskId: id,
+          at,
+          actor: input.actor,
+          kind: "note",
+          text: backlogActivity(input.actor === "captain" ? "captain" : "firstmate", input.reason),
+          data: {
+            backlog: "entered",
+            ...(input.reason ? { reason: input.reason } : {}),
+            ...(input.via ? { via: input.via } : {}),
+            ...(input.panel ? { panel: input.panel } : {}),
+            news: true,
+          },
+          feed: false,
+        });
+        return { ok: true, changed: true };
+      }
       if (record.kind !== "work" || record.status !== "open") {
         return { ok: false, text: queueClosedRefusal(key) };
       }
@@ -3013,6 +3060,40 @@ export class TaskService {
         feed: false,
       });
       return { ok: true, changed: true };
+    });
+    return run();
+  }
+
+  /**
+   * Start on a started task in the backlog (INF-2062): it leaves the
+   * backlog, its idle clock starts now, and the caller delivers what waited
+   * on its lane. False when it was not in the backlog.
+   */
+  leaveBacklog(
+    id: string,
+    input: { actor: TaskEventActor; via?: typeof TASK_CARD_VIA; panel?: string },
+  ): boolean {
+    const run = this.write((): boolean => {
+      const record = this.store.get(id);
+      if (record?.status !== "active" || record.backlogSince == null) return false;
+      const at = this.now();
+      this.patch(id, { backlogSince: null, idleSince: at, updatedAt: at });
+      this.addEvent({
+        taskId: id,
+        at,
+        actor: input.actor,
+        kind: "note",
+        text: leftBacklogActivity(input.actor === "captain" ? "captain" : "firstmate"),
+        data: {
+          backlog: "left",
+          waited: at - record.backlogSince,
+          ...(input.via ? { via: input.via } : {}),
+          ...(input.panel ? { panel: input.panel } : {}),
+          news: true,
+        },
+        feed: false,
+      });
+      return true;
     });
     return run();
   }
@@ -4079,6 +4160,7 @@ export class TaskService {
         via: input.via,
         decision: input.decision,
         ...(input.panel ? { panel: input.panel } : {}),
+        ...(input.backlog ? { backlog: true as const } : {}),
       };
       return this.addEvent({
         taskId: id,

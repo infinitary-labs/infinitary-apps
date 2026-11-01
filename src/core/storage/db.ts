@@ -1192,6 +1192,11 @@ const MIGRATIONS: readonly Migration[] = [
   retireReviewEdges,
   // Incremental completed-operation observations; TaskService is the writer.
   REPETITION_TABLES,
+  // INF-2062: when a started task went back to the backlog, on its running
+  // work's row. Null on every existing row, which is not in the backlog.
+  // Written only by `TaskService`. No published view reads the column.
+  // Additive and reversible: dropping the column undoes it.
+  (db) => addColumn(db, "task_execution", "backlog_since", "INTEGER"),
 ];
 
 /** The current database format, derived from the embedded migration ledger. */

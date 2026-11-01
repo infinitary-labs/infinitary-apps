@@ -229,6 +229,11 @@ export type PanelTaskRow = {
   blockedSince?: Record<string, number>;
   /** The home’s dated start-wait line, also read by the first mate. */
   queueWait?: { line: string; since?: number };
+  /**
+   * Started work that went back to the backlog: when it went. It waits for
+   * Start with its work kept. Absent otherwise, and on an older home.
+   */
+  backlogSince?: number;
   /** Its parts: how many, and how many are closed. */
   children: { total: number; closed: number };
   /** Reachable shown ready decision, null on hidden/working/closed tasks. */

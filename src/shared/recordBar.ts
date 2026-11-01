@@ -17,7 +17,8 @@ import { type ComputerMoveView, isUnstartedWork, type TaskView } from "./tasks";
  *   row: the Firstmate's own decision and operation rows, and work returned
  *   to the queue after it started.
  * - `next`: `start` on open work that waits for the captain's word - on
- *   request, held or not - with no parts (`blocked`, and disabled, while
+ *   request, held or not - and on started work back in the backlog
+ *   (INF-2062), with no parts (`blocked`, and disabled, while
  *   something it waits on is still open; blocked work offers it whatever its
  *   policy), `continue` on Interrupted work, `show-card` while a decision
  *   card waits (`end_while_waiting`: the end slot stays), else null -
@@ -74,9 +75,12 @@ export function recordBarOf(task: RecordBarInput): RecordBar | null {
         : null;
   const { mark } = taskStatusOf(task);
   const parent = task.status === "open" && task.children.total > 0;
-  const blocked = task.blockedBy.length > 0 || task.flags.blocked;
+  // Start picks started work up from the backlog whatever it waits on: its crewmate goes on waiting.
+  const backlog = task.status === "active" && task.backlogSince !== undefined;
+  const blocked = !backlog && (task.blockedBy.length > 0 || task.flags.blocked);
   const startable =
-    task.status === "open" && !parent && (task.startPolicy === "on-request" || blocked);
+    backlog ||
+    (task.status === "open" && !parent && (task.startPolicy === "on-request" || blocked));
   const next: RecordBarNext | null =
     mark === "waiting"
       ? task.waitingCardId || (task.requiredAction && task.requiredAction.state !== "blocked")

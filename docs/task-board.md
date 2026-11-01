@@ -108,18 +108,30 @@ Each move is one of the panel API's moves (`tasks.run`, the Tasks folder asks fo
 A move counts only from the captain's own click or key in the board's page, and lands on the task's record as the captain's, from the task card, as the record's own buttons' moves do: the app's own panels name no panel.
 
 - Backlog, or Back to backlog on the menu, takes never-started work at once: `unqueue-task`, its blockers and holds kept.
+  It takes started work at once too, from Working or Back to backlog on a Working tile's menu (INF-2062): its turn stops, its work stays, and nothing wakes it until Start ("A started task in the backlog").
 - Queued, or Queue it on a Backlog row's menu, takes never-started work with no parts: `queue-task`, at once while a blocker or hold stands, and after asking once when it could start at once.
 - Working, or Start now on a Backlog row's menu, is the record's Start (`start-task`): it asks once, and refuses blocked, held, parent, queued, started and closed work.
+  Started work in the backlog is the exception: Start asks once and picks it up again.
 - Waiting on you is never a target: only a reachable ready decision puts a task there.
 - Done · 7d is not a column on the Board, so it takes no drop.
   Show the card, on a waiting tile's menu, brings the task's waiting card forward, its completion card included; the card's own button merges, the board never does.
 - The Drop task tray, in the foot only while a tile is in the air, is the record's Drop task: `drop-task` on never-started work with the effects its record lists (`dropAskOf`, from `tasks.detail`), `stop-task` once started, whichever the row's `moves` allow; it asks once in the record's words and refuses open parts.
 - A waiting tile goes nowhere but Drop task; Done and Dropped tiles never move; a drop on a tile's own lane changes nothing.
 
-Queue and unqueue are new operations for never-started work only.
-`TaskService.setQueued` is their one guard, at write time: work that has started, a parent whose parts do the work, and closed work are refused as text, and nothing is written.
+Queue is an operation for never-started work only; unqueue takes started work as well.
+`TaskService.setQueued` is their one guard, at write time: a parent whose parts do the work, closed work, and Queue it on started work are refused as text, and nothing is written.
 The start policy is the one field it writes, with one timeline entry in the captain's words and `via: "task-card"`, so the first mate's next context block lists it as it lists the captain's Start and Drop task (`docs/inbox.md`).
 A queued task that nothing holds starts on the ready sweep the move runs.
+
+### A started task in the backlog
+
+Back to backlog on started work (INF-2062), from the board or the first mate's `update_task` `start_policy` on-request with a reason, runs `CrewSupervisor.moveToBacklog`.
+The task stays active: `TaskService.setQueued` records when it went (`backlogSince`, on its running work's row) and who moved it with one sentence why, and its idle ladder starts over.
+Its running turn stops and a kept merge approval ends, as an interrupt does; its working copy, branch, conversation, pull request and background jobs stay.
+While it waits there, the host's own rows - a job's end, a check's result, a timed wait's end, a closed dependency - wait on its lane, the idle ladder never nudges, wakes or raises a card for it, a report wakes the first mate only to act on it, to close it or to triage what it filed, and a reopen does not carry its turn on.
+Words the captain or the first mate send still reach it, with a line that it waits in the backlog and stays there; that turn carries whatever waited on its lane with it.
+Start, from the board, the record or `start_now`, takes it out (`TaskService.leaveBacklog`) and delivers what waited, with one line that it left the backlog, in the same conversation.
+The board lists it under Backlog, its status "Started", with how long it has waited; `crew_status` lists it with status `backlog`.
 
 A drag works as the Models board's does (`useTileDrag`): a press becomes a drag after 5 px, a ghost of the tile follows the pointer while the tile stays at 40%, Esc lets go and writes nothing, and the body scrolls while the pointer rests near one of its edges.
 While a tile is in the air, each lane that takes it is tinted, the one under the pointer has an accent hairline, and one that refuses has a warn hairline, with its reason on the live line.
@@ -129,7 +141,7 @@ Nothing is written before the confirm; Cancel or Esc puts the tile back.
 A live change to the task while it asks cancels the move, and the live line says so; the host checks the row again at write time all the same.
 Focus then goes at once to the task where the view draws it now, or else to the row now nearest where it stood, never later to its tile in a view drawn next.
 
-The ⋯ menu, on a tile's hover or focus, offers what a drag does: Open record (`point.openRecord`); Show the card while a decision waits; Continue on interrupted work; Queue it or Back to backlog and Start now on open work, each with a sub-line saying what it does; then Drop task, last, in danger (`boardMenuOf`).
+The ⋯ menu, on a tile's hover or focus, offers what a drag does: Open record (`point.openRecord`); Show the card while a decision waits; Continue on interrupted work; Back to backlog on started work; Queue it or Back to backlog and Start now on open work and on started work in the backlog, each with a sub-line saying what it does; then Drop task, last, in danger (`boardMenuOf`).
 An entry that cannot run stays listed, dim, with its reason under it, and each one does exactly what the matching drop does, its confirmation included.
 
 The live line under the foot (`role="status"`) says what each move did or why it was refused.

@@ -8,6 +8,7 @@ import { ensureRepoProject } from "../../src/core/storage/projectStore";
 import { seedTask } from "../../src/core/tasks/seedTask";
 import { TaskService } from "../../src/core/tasks/taskService";
 import { dropConfirmLead, dropWaitingLine } from "../../src/shared/recordDrop";
+import { STARTED_BACKLOG_REASON } from "../../src/shared/taskPresentation";
 import type { TaskDetail } from "../../src/shared/tasks";
 import { scratchDir } from "../helpers/scratchDirs";
 import { launchApp } from "./launch";
@@ -294,6 +295,39 @@ test("the task board moves tasks by drag and by menu, asking on the tile and wri
       expect((await detail(page, "blocked")).status).toBe("open");
       expect((await detail(page, "parent")).status).toBe("open");
       await toBoard();
+    });
+
+    // INF-2062: the captain approved letting a started task go back to the backlog with its work kept.
+    await test.step("a started tile goes back to the Backlog by its menu at once, keeps its work, and Start brings it back after asking once", async () => {
+      const before = await detail(page, "started");
+      await pressKey(boardTile(page, "FM3K-8"), "Space");
+      const menu = boardMenu(page, "FM3K-8");
+      await expect(menu.menu).toBeVisible();
+      await pressInBoard(menu.entry("unqueue"));
+      await expect.poll(async () => (await detail(page, "started")).backlogSince).toBeDefined();
+      const parked = await detail(page, "started");
+      expect([parked.status, parked.startedAt]).toEqual(["active", before.startedAt]);
+      await expect(boardLive(page)).toHaveAttribute("data-board-live", "said");
+      // The Backlog list shows it, marked started; Queue it is refused there.
+      await pressInBoard(boardViewTab(page, "backlog"));
+      await expect.poll(() => laneKeys(page, "backlog")).toContain("FM3K-8");
+      await expect(boardTile(page, "FM3K-8")).toContainText(STARTED_BACKLOG_REASON);
+      await expect(boardTile(page, "FM3K-8").locator("[data-board-wait-since]")).toBeVisible();
+      await pressKey(boardTile(page, "FM3K-8"), "Space");
+      await expect(boardMenu(page, "FM3K-8").entry("queue")).toHaveAttribute(
+        "aria-disabled",
+        "true",
+      );
+      await pressInBoard(boardMenu(page, "FM3K-8").entry("start"));
+      const asking = boardConfirm(page, "FM3K-8");
+      await expect(asking.card).toHaveAttribute("data-board-confirm", "start-task");
+      expect((await detail(page, "started")).backlogSince).toBeDefined();
+      await pressInBoard(asking.go);
+      await expect.poll(async () => (await detail(page, "started")).backlogSince).toBeUndefined();
+      expect((await detail(page, "started")).status).toBe("active");
+      await expect.poll(() => laneKeys(page, "backlog")).not.toContain("FM3K-8");
+      await toBoard();
+      await expect(boardTile(page, "FM3K-8")).toHaveAttribute("data-board-lane", "working");
     });
 
     await test.step("Start now from a Backlog row's menu runs the record's Start after asking once", async () => {

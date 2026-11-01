@@ -393,6 +393,11 @@ export const taskViewSchema = z.object({
   startNotice: startNoticeSchema.optional(),
   /** One dated start wait, shared with the first mate. Absent after starting. */
   queueWait: z.object({ line: z.string(), since: z.number().optional() }).optional(),
+  /**
+   * Started work that went back to the backlog (INF-2062): when it went.
+   * It waits there for Start with its work kept. Absent otherwise, and on an older home.
+   */
+  backlogSince: z.number().optional(),
   createdAt: z.number(),
   updatedAt: z.number(),
   startedAt: z.number().nullable(),

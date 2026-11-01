@@ -622,6 +622,12 @@ export type TaskRecord = {
    * Null once retried or resolved, and on rows written before the column.
    */
   startNotice?: string | null;
+  /**
+   * When this started task went back to the backlog (INF-2062): it waits
+   * for a Start with its work kept, and nothing the host sends wakes it.
+   * Null while it is not there; only `task_execution` holds it.
+   */
+  backlogSince?: number | null;
 };
 
 /** What a search of closed work reads of each row (`TaskStore.listClosedSearchFields`). */
@@ -762,6 +768,7 @@ function composed(
     recoveryCount: execution.recoveryCount,
     recoveryAt: execution.recoveryAt,
     startNotice: execution.startNotice,
+    backlogSince: execution.backlogSince,
     delivery: withTurn(record.delivery, execution.turn),
   };
 }
@@ -893,6 +900,7 @@ const PATCH_COLUMNS = {
   captainOpenedAt: "captain_opened_at",
   verdict: "verdict",
   startNotice: "start_notice",
+  backlogSince: "backlog_since",
 } as const;
 
 type PatchField = keyof typeof PATCH_COLUMNS;

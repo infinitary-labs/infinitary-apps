@@ -211,7 +211,11 @@ import {
   type TaskRunsOn,
   taskPolicyEditsSchema,
 } from "@shared/taskPolicies";
-import { queueMissingRefusal, queueStartedRefusal } from "@shared/taskQueue";
+import {
+  queueMissingRefusal,
+  queueStartedBacklogRefusal,
+  queueStartedRefusal,
+} from "@shared/taskQueue";
 import type { MoveDestination, MoveOptions, TaskPlace, TaskView } from "@shared/tasks";
 import {
   CARE_WORDS,
@@ -1033,6 +1037,8 @@ export type InterruptSource = {
   decision: string | null;
   /** The panel the captain moved it from, by its title (a panel's Drop task on started work). */
   panel?: string;
+  /** The stop is part of a move back to the backlog (INF-2062), not a Stop of its own. */
+  backlog?: true;
 };
 
 /**
@@ -1365,6 +1371,18 @@ const OWN_LANE_KINDS: ReadonlySet<string> = new Set([
  * the feed (`feedOnce`, `recentFeed`; INF-1137).
  */
 export const QUEUED_GUIDANCE_LINE = "Delivered guidance that waited for its turn to end";
+
+/**
+ * What a started task in the backlog hears with words sent to it (INF-2062):
+ * it answers them and stays there, since only a Start picks it up again.
+ */
+export const BACKLOG_STEER_LINE =
+  "This task waits in the backlog: answer what follows, then stop and wait. Do not carry on with the work until it is started again.";
+
+/** The one line a Start puts before what waited on a started task's lane in the backlog. */
+export function backlogLeftLine(actor: "captain" | "firstmate"): string {
+  return `This task left the backlog: ${actor === "captain" ? "the captain" : "the first mate"} started it again. Carry on from where you stopped, with anything that waited on this task while it was there.`;
+}
 const QUEUED_GUIDANCE_FOLD = "queued-guidance";
 
 /** The idle ladder's rule ids: its wakes are the host's own, never a report's. */
@@ -1917,6 +1935,17 @@ export class CrewSupervisor {
    * runs work is out of reach, or back and not yet caught up, is held the
    * same way (`outOfReach`).
    */
+  /**
+   * A started task went back to the backlog (INF-2062; `TaskRecord.backlogSince`):
+   * the host's own rows wait on its lane until a Start, and nothing the
+   * idle ladder or a report's sort reads wakes it. Words the captain or the
+   * first mate send still reach it (`deliverPendingToTask`'s `sent`).
+   */
+  private inBacklog(taskId: string): boolean {
+    const record = this.options.tasks.get(taskId);
+    return record?.status === "active" && record.backlogSince != null;
+  }
+
   private laneHeld(taskId: string): boolean {
     const record = this.options.tasks.get(taskId);
     // A move to another computer starts no new turn until it has moved, its
@@ -8052,9 +8081,16 @@ export class CrewSupervisor {
    * newest (`QUEUED_GUIDANCE_FOLD`, INF-1137). Rows are marked in-flight
    * here and acknowledged at the turn's end (runTurn -> turnComplete).
    */
-  private deliverPendingToTask(task: TaskRuntime, options: { announce?: boolean } = {}): void {
+  private deliverPendingToTask(
+    task: TaskRuntime,
+    options: { announce?: boolean; sent?: boolean } = {},
+  ): void {
     if (task.cancelled || !task.session || task.state !== "idle") return;
     if (this.laneHeld(task.id)) return;
+    // A started task in the backlog (INF-2062) takes a turn only for words
+    // the captain or the first mate sent, told it stays there.
+    const backlog = this.inBacklog(task.id);
+    if (backlog && !options.sent) return;
     const rows = this.deliverableRows(task.id, this.now());
     if (rows.length === 0) return;
     const pictures = this.rowPictures(task.id, rows);
@@ -8067,7 +8103,13 @@ export class CrewSupervisor {
       });
     }
     const ids = this.deliverRows(task.id, rows);
-    void this.runTurn(task, laneTurnText(rows), ids, pictures.images);
+    const text = laneTurnText(rows);
+    void this.runTurn(
+      task,
+      backlog ? `${BACKLOG_STEER_LINE}\n\n${text}` : text,
+      ids,
+      pictures.images,
+    );
   }
 
   /**
@@ -8224,6 +8266,9 @@ export class CrewSupervisor {
     // mark as its row is recorded, and the mark rides the message, so the
     // crewmate can declare only guidance it read (FI3-662).
     const guidance = isCaptainGuidance(given, body);
+    // The host's own steer - a timed wait's end, a closed dependency, a
+    // check's result - waits on a started task's lane in the backlog.
+    const sentByHost = given.actor === "supervisor";
     const enqueue = (): number => {
       if (this.restartObservations.has(taskId)) {
         this.recordRestartOutcome(
@@ -8271,13 +8316,13 @@ export class CrewSupervisor {
         }
       }
       const pending = enqueue();
-      if (this.laneHeld(taskId)) {
-        // Kept on the lane until the account serves again.
+      if (this.laneHeld(taskId) || (sentByHost && this.inBacklog(taskId))) {
+        // Kept on the lane until the account serves again, or the task leaves the backlog.
         this.recordSteer(taskId, message, source, "recorded-held", pending);
         return "recorded-held";
       }
       this.recordSteer(taskId, message, source, "mid-turn", pending);
-      this.deliverPendingToTask(task);
+      this.deliverPendingToTask(task, { sent: true });
       return "mid-turn";
     }
     const record = this.options.tasks.get(taskId);
@@ -8294,14 +8339,14 @@ export class CrewSupervisor {
     }
     if (this.retiredProviderOf(taskId)) throw new Error(retiredResumeText(taskId));
     const resumeId = enqueue();
-    if (this.laneHeld(taskId)) {
+    if (this.laneHeld(taskId) || (sentByHost && this.inBacklog(taskId))) {
       this.recordSteer(taskId, message, source, "recorded-held", resumeId);
       return "recorded-held";
     }
     try {
       const resumed = await this.resumeTask(record.id);
       this.recordSteer(taskId, message, source, "mid-turn", resumeId);
-      this.deliverPendingToTask(resumed);
+      this.deliverPendingToTask(resumed, { sent: true });
       return "mid-turn";
     } catch {
       // The row is durable; the tick sweep retries the resume.
@@ -9744,6 +9789,7 @@ export class CrewSupervisor {
         decision: source.decision,
         error,
         ...(source.panel ? { panel: source.panel } : {}),
+        ...(source.backlog ? { backlog: true as const } : {}),
       });
     } catch (caught) {
       console.warn("[crew] interrupt capture failed:", caught);
@@ -9820,9 +9866,15 @@ export class CrewSupervisor {
               this.options.tasks.linksTo(record.id),
               this.options.tasks.children(record.id),
             );
+        // A started task in the backlog (INF-2062) waits for start_now, with how long it has.
+        const backlog =
+          record.status === "active" && record.backlogSince != null
+            ? `started, in the backlog ${formatDurationShort(Math.max(0, this.now() - record.backlogSince))}; start_now picks it up`
+            : undefined;
         const gate = starting
           ? undefined
-          : (queueWait?.line ??
+          : (backlog ??
+            queueWait?.line ??
             (record.status === "open"
               ? record.gate
                 ? gateText(record.gate)
@@ -9855,13 +9907,15 @@ export class CrewSupervisor {
           taskId: record.id,
           key: record.key,
           title: record.title,
-          status: runtime
-            ? runtime.state === "idle"
-              ? "idle"
-              : "running"
-            : record.status === "open"
-              ? "queued"
-              : (record.activity ?? "idle"),
+          status: backlog
+            ? "backlog"
+            : runtime
+              ? runtime.state === "idle"
+                ? "idle"
+                : "running"
+              : record.status === "open"
+                ? "queued"
+                : (record.activity ?? "idle"),
           ...(runtime ? { crewmate: runtime.crewmate } : {}),
           repoName: repo?.name ?? "default workspace",
           branch: record.branch,
@@ -11863,8 +11917,9 @@ export class CrewSupervisor {
     const record = this.options.tasks.get(taskId);
     if (record && TaskService.isResumable(record) && record.sessionFile) {
       this.options.inbox.enqueue(taskId, result);
-      // A held lane keeps it until its account serves again.
-      if (this.laneHeld(taskId)) return;
+      // A held lane keeps it until its account serves again, or until a
+      // started task in the backlog is started again.
+      if (this.laneHeld(taskId) || this.inBacklog(taskId)) return;
       void this.resumeTask(taskId)
         .then((resumed) => this.deliverPendingToTask(resumed))
         .catch(() => {
@@ -11933,6 +11988,8 @@ export class CrewSupervisor {
       if (recipient === FIRSTMATE_RECIPIENT || recipient === SUPERVISION_RECIPIENT) continue;
       const record = this.options.tasks.get(recipient);
       if (!record || TaskService.isClosed(record)) continue;
+      // A started task in the backlog does not carry on (INF-2062).
+      if (record.backlogSince != null) continue;
       const cut = this.options.inbox
         .allFor(recipient)
         .some((row) => row.cuts > 0 || row.facts?.kind === "turn-resumed");
@@ -12013,6 +12070,8 @@ export class CrewSupervisor {
   private async sweepTaskLane(taskId: string, now: number): Promise<void> {
     const spent = this.options.inbox.spent(taskId, INBOX_ATTEMPT_MAX);
     if (spent.length > 0) this.escalateTaskGuidance(taskId, spent);
+    // A started task in the backlog keeps its lane until a Start (INF-2062).
+    if (this.inBacklog(taskId)) return;
     if (this.restartObservations.has(taskId) && this.laneHeld(taskId))
       this.recordRestartOutcome(
         taskId,
@@ -13674,6 +13733,13 @@ export class CrewSupervisor {
   ): Promise<string> {
     const record = this.resolveTaskRef(taskRef, "task");
     const handle = `${record.key || record.id} "${record.title}"`;
+    if (record.status === "active" && record.backlogSince != null)
+      return this.startFromBacklog(
+        record,
+        audience === "captain" ? "captain" : "firstmate",
+        from,
+        panel,
+      );
     const refused = this.startRefusal(record, audience);
     if (refused) return refused;
     // The captain's Start goes to the Firstmate first, so his standing
@@ -15234,8 +15300,20 @@ export class CrewSupervisor {
     const record = this.options.tasks.get(taskId);
     const key = record?.key || taskId;
     if (!record) return queueMissingRefusal(key);
-    if (this.starting.has(taskId) || this.pendingStarts.has(taskId) || this.tasks.has(taskId))
+    if (this.starting.has(taskId) || this.pendingStarts.has(taskId))
       return queueStartedRefusal(key);
+    // Started work goes back to the backlog with its work kept (INF-2062).
+    if (record.kind === "work" && record.status === "active") {
+      if (op === "queue-task") return queueStartedBacklogRefusal(key);
+      const moved = this.moveToBacklog(taskId, {
+        actor: "captain",
+        via: TASK_CARD_VIA,
+        decision: null,
+        ...(panel ? { panel } : {}),
+      });
+      return moved.ok ? undefined : moved.text;
+    }
+    if (this.tasks.has(taskId)) return queueStartedRefusal(key);
     const result = this.options.tasks.setQueued(taskId, op, {
       actor: "captain",
       via: TASK_CARD_VIA,
@@ -15254,6 +15332,81 @@ export class CrewSupervisor {
     }
     this.graphChanged();
     return undefined;
+  }
+
+  /**
+   * A started task goes back to the backlog (INF-2062; docs/task-board.md,
+   * "Moves"): the task board's Back to backlog, and update_task
+   * start_policy on-request on started work. Its running turn stops and a
+   * kept merge approval ends, as an interrupt does; its working copy,
+   * branch, conversation, change and jobs stay. Nothing the host sends
+   * wakes it there, and Start picks it up in the same conversation
+   * (`startFromBacklog`).
+   */
+  moveToBacklog(
+    taskId: string,
+    source: InterruptSource,
+    reason?: string,
+  ): { ok: boolean; text: string } {
+    const record = this.options.tasks.get(taskId);
+    if (!record) return { ok: false, text: queueMissingRefusal(taskId) };
+    const handle = `${record.key || record.id} "${record.title}"`;
+    const result = this.options.tasks.setQueued(taskId, "unqueue-task", {
+      actor: source.actor,
+      ...(source.via === TASK_CARD_VIA ? { via: TASK_CARD_VIA } : {}),
+      ...(source.panel ? { panel: source.panel } : {}),
+      ...(reason?.trim() ? { reason: reason.trim() } : {}),
+    });
+    if (!result.ok) return result;
+    if (!result.changed) return { ok: true, text: `${handle} already waits in the backlog.` };
+    void this.interruptCrewmate(taskId, "interrupt", { ...source, backlog: true }).catch(
+      (caught: unknown) => {
+        console.warn("[crew] the backlog move could not stop the turn:", caught);
+      },
+    );
+    this.broadcastCrewCounts();
+    this.graphChanged();
+    return {
+      ok: true,
+      text: `Moved ${handle} back to the backlog: its turn stops and its work stays. Nothing wakes it until update_task start_now or the captain's Start.`,
+    };
+  }
+
+  /**
+   * Start on a started task in the backlog (INF-2062): it leaves the
+   * backlog, and its crewmate hears everything that waited on its lane,
+   * with one line that it left, in the same conversation.
+   */
+  private startFromBacklog(
+    record: TaskRecord,
+    actor: "captain" | "firstmate",
+    from?: typeof TASK_CARD_VIA,
+    panel?: string,
+  ): string {
+    const handle = `${record.key || record.id} "${record.title}"`;
+    const left = this.options.tasks.leaveBacklog(record.id, {
+      actor,
+      ...(from ? { via: from } : {}),
+      ...(panel ? { panel } : {}),
+    });
+    if (!left) return `${handle} is not in the backlog.`;
+    this.announceReach(record.id);
+    this.options.inbox.enqueue(record.id, backlogLeftLine(actor));
+    const task = this.tasks.get(record.id);
+    if (task?.session && !task.cancelled) {
+      this.deliverPendingToTask(task);
+    } else {
+      const now = this.options.tasks.get(record.id);
+      if (now && TaskService.isResumable(now) && now.sessionFile && !this.laneHeld(record.id))
+        void this.resumeTask(record.id)
+          .then((resumed) => this.deliverPendingToTask(resumed))
+          .catch(() => {
+            // The row is durable; the tick sweep retries the resume.
+          });
+    }
+    this.broadcastCrewCounts();
+    this.graphChanged();
+    return `Started ${handle} again from the backlog. Its crewmate carries on in the same conversation.`;
   }
 
   /**
@@ -15431,6 +15584,10 @@ export class CrewSupervisor {
     panel?: string,
   ): string | undefined {
     const record = this.options.tasks.get(taskId);
+    if (record?.status === "active" && record.backlogSince != null) {
+      this.startFromBacklog(record, "captain", from, panel);
+      return undefined;
+    }
     const refused = record ? this.startRefusal(record, "captain") : undefined;
     if (refused) {
       this.options.broadcastEvent({ type: "firstmate_note", text: refused, taskId });

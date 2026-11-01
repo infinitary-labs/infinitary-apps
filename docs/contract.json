@@ -27375,6 +27375,9 @@
                     "line"
                   ]
                 },
+                "backlogSince": {
+                  "type": "number"
+                },
                 "createdAt": {
                   "type": "number"
                 },
@@ -28800,6 +28803,9 @@
             "required": [
               "line"
             ]
+          },
+          "backlogSince": {
+            "type": "number"
           },
           "createdAt": {
             "type": "number"
@@ -33134,6 +33140,9 @@
               "required": [
                 "line"
               ]
+            },
+            "backlogSince": {
+              "type": "number"
             },
             "createdAt": {
               "type": "number"
@@ -55284,6 +55293,9 @@
                     "line"
                   ]
                 },
+                "backlogSince": {
+                  "type": "number"
+                },
                 "createdAt": {
                   "type": "number"
                 },
@@ -56709,6 +56721,9 @@
                   "required": [
                     "line"
                   ]
+                },
+                "backlogSince": {
+                  "type": "number"
                 },
                 "createdAt": {
                   "type": "number"

@@ -40,6 +40,13 @@ function task(overrides: Partial<TaskView> = {}): TaskView {
 const needsYou = { blocked: false, held: false, needsYou: true, ready: false };
 
 describe("nowGroupOf", () => {
+  // INF-2062: started work back in the backlog sits in Backlog until a card waits on the captain.
+  it("puts started work that went back to the backlog in Backlog, unless its card waits", () => {
+    const parked = task({ status: "active", activity: "idle", startedAt: 5, backlogSince: 9 });
+    expect(nowGroupOf(parked)).toBe("backlog");
+    expect(nowGroupOf({ ...parked, waitingCardId: "card-1" })).toBe("waiting");
+    expect(nowGroupOf({ ...parked, backlogSince: undefined })).toBe("working");
+  });
   it("INF-476 puts minimized notes on their own task row, including done work, without changing its operational waiting", () => {
     const note: Card = {
       id: "launch-note",

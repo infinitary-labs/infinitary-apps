@@ -81,7 +81,7 @@ import {
 } from "@shared/taskBrowser";
 import { effectiveTaskPolicies } from "@shared/taskPolicies";
 import { formatDurationShort } from "@shared/quotaSignals";
-import { queueStartedRefusal } from "@shared/taskQueue";
+import { queueStartedBacklogRefusal } from "@shared/taskQueue";
 import { threadWait } from "@shared/threadWait";
 import type { IntegrationAsk } from "@shared/writeAsk";
 import {
@@ -200,6 +200,8 @@ import {
 } from "./crewSession";
 import {
   type AccountAttachment,
+  BACKLOG_STEER_LINE,
+  backlogLeftLine,
   CardChoiceUnavailableError,
   COMPLETION_REVISED_WHILE_RUNNING,
   CrewSupervisor,
@@ -5935,6 +5937,18 @@ describe("CrewSupervisor", () => {
       expect(again.forge.merges).toEqual([]);
     });
 
+    // INF-2062: moving a started task back to the backlog ends a kept approval, as an interrupt does.
+    it("a move back to the backlog revokes it with a hold", async () => {
+      const harness = await kept();
+      await harness.supervisor.steerCrewmate(harness.taskId, "bring it up to date");
+      expect(harness.supervisor.runTaskOp(harness.taskId, "unqueue-task")).toBeUndefined();
+      await vi.waitFor(() =>
+        expect(harness.authorization()).toMatchObject({ status: "revoked", holds: true }),
+      );
+      expect(harness.tasks.get(harness.taskId)?.backlogSince).not.toBeNull();
+      expect(harness.forge.merges).toEqual([]);
+    });
+
     it("the captain's withdrawal takes it back with a hold, and only his new click merges", async () => {
       const harness = await kept();
       expect(harness.supervisor.withdrawMergeApproval(harness.taskId)).toMatchObject({ ok: true });
@@ -9817,12 +9831,18 @@ describe("the task graph (R1)", () => {
     await tick();
     expect(tasks.get(later.id)?.status).toBe("active");
     expect(sessions.open).toHaveBeenCalledTimes(1);
-    // Once started, neither move is accepted, and nothing is written.
-    expect(supervisor.runTaskOp(later.id, "unqueue-task")).toBe(queueStartedRefusal(later.key));
+    // Once started, Queue it is refused and writes nothing; Back to backlog
+    // keeps it started with its work and parks it (INF-2062).
+    expect(supervisor.runTaskOp(later.id, "queue-task")).toBe(
+      queueStartedBacklogRefusal(later.key),
+    );
     expect(tasks.get(later.id)?.startPolicy).toBe("when-ready");
+    expect(supervisor.runTaskOp(later.id, "unqueue-task")).toBeUndefined();
+    expect(tasks.get(later.id)).toMatchObject({ status: "active", backlogSince: expect.any(Number) });
     // The clicks are the captain's on the history. Queueing work nothing
     // holds is a Start, so it records one and needs no ready-sweep note.
     expect(tasks.taskCardClicksSince(0).map(({ taskId, op }) => ({ taskId, op }))).toEqual([
+      { taskId: later.id, op: "unqueue-task" },
       { taskId: later.id, op: "start-task" },
       { taskId: later.id, op: "queue-task" },
       { taskId: waits.id, op: "unqueue-task" },
@@ -15767,6 +15787,144 @@ describe("the idle ladder (idle crew recovery, docs/report-sort.md)", () => {
       [reported.id, "idle-nudge"],
     ]);
     expect(ops).toEqual([]);
+  });
+
+  // INF-2062: the captain approved letting a started task go back to the backlog, keeping its work.
+  describe("a started task in the backlog (INF-2062)", () => {
+    /** Ticks across three hours, each past every rung's clock and backoff. */
+    async function threeHours(harness: Awaited<ReturnType<typeof stopped>>) {
+      for (let pass = 1; pass <= 9; pass += 1) {
+        hostNow += minutes(20);
+        harness.supervisor.reconcileIdle(hostNow);
+        await harness.supervisor.sweepInbox(hostNow);
+        await tick();
+      }
+    }
+
+    it("stops its turn, wakes nothing for three hours, holds a job result and starts again with it", async () => {
+      const h = await stopped();
+      await h.supervisor.steerCrewmate(h.taskId, "Carry on with step two.", "captain");
+      await tick();
+      expect(h.tasks.get(h.taskId)?.activity).toBe("running");
+      const work = h.tasks.get(h.taskId);
+      // The board's Back to backlog: the turn stops, the task stays started.
+      expect(h.supervisor.runTaskOp(h.taskId, "unqueue-task")).toBeUndefined();
+      await tick();
+      h.crewmate.failPrompt("aborted");
+      await tick();
+      const moved = h.tasks.get(h.taskId);
+      expect(moved).toMatchObject({ status: "active", backlogSince: hostNow });
+      // Its working copy, branch and conversation stay.
+      expect([moved?.worktreeDir, moved?.branch, moved?.sessionFile]).toEqual([
+        work?.worktreeDir,
+        work?.branch,
+        work?.sessionFile,
+      ]);
+      expect(
+        h.tasks
+          .timeline(h.taskId)
+          .filter((event) => event.kind === "interrupted")
+          .map((event) => event.actor),
+      ).toContain("captain");
+      expect(h.supervisor.crewStatus(h.taskId)[0]).toMatchObject({
+        status: "backlog",
+        gate: expect.stringContaining("started, in the backlog"),
+      });
+
+      const prompts = h.crewmate.promptCalls.length;
+      h.ops.length = 0;
+      await threeHours(h);
+      expect(idleWakes(h.ops)).toEqual([]);
+      expect(h.ops).toEqual([]);
+      expect(h.cards().filter((card) => card.taskId === h.taskId)).toEqual([]);
+      expect(h.crewmate.promptCalls).toHaveLength(prompts);
+
+      // A job that ends while it waits stays on its lane.
+      h.supervisor.deliverJobResult(h.taskId, '[job] background job j1 finished: "make" exited 0');
+      await threeHours(h);
+      expect(h.crewmate.promptCalls).toHaveLength(prompts);
+      expect(h.ops).toEqual([]);
+
+      // The captain's Start carries it on in the same conversation, the job result after one line.
+      expect(h.supervisor.runTaskOp(h.taskId, "start-task")).toBeUndefined();
+      await tick();
+      expect(h.crewmate.promptCalls).toHaveLength(prompts + 1);
+      const resumed = h.crewmate.promptCalls.at(-1) ?? "";
+      expect(resumed).toContain(backlogLeftLine("captain"));
+      expect(resumed).toContain("exited 0");
+      expect(h.tasks.get(h.taskId)?.backlogSince).toBeNull();
+      // The first mate reads the two clicks as the captain made them, never as a Stop.
+      expect(
+        h.tasks
+          .taskCardClicksSince(0)
+          .filter((click) => click.taskId === h.taskId)
+          .map((click) => click.op),
+      ).toEqual(["start-task", "unqueue-task"]);
+    });
+
+    it("answers a steer the first mate sends, with the backlog line, and stays in the backlog", async () => {
+      const h = await stopped();
+      const moved = h.supervisor.moveToBacklog(
+        h.taskId,
+        { actor: "firstmate", via: "tool", decision: null },
+        "The captain asked to pause it.",
+      );
+      expect(moved).toMatchObject({ ok: true, text: expect.stringContaining("back to the backlog") });
+      await tick();
+      expect(h.tasks.timeline(h.taskId).some((event) => event.data?.reason === "The captain asked to pause it.")).toBe(true);
+      await h.supervisor.steerCrewmate(h.taskId, "What is left to do?", "firstmate");
+      await tick();
+      const answered = h.crewmate.promptCalls.at(-1) ?? "";
+      expect(answered.startsWith(BACKLOG_STEER_LINE)).toBe(true);
+      expect(answered).toContain("What is left to do?");
+      await endTurn(h.crewmate, h.taskId, "Step two is left.");
+      expect(h.tasks.get(h.taskId)?.backlogSince).not.toBeNull();
+      // A repeated report of the same wait wakes nobody.
+      h.ops.length = 0;
+      await threeHours(h);
+      expect(h.ops).toEqual([]);
+    });
+
+    it("is not carried on after a restart, and its held job result waits", async () => {
+      const h = await stopped();
+      h.supervisor.moveToBacklog(h.taskId, { actor: "captain", via: "task-card", decision: null });
+      await tick();
+      // A job result that waits on its lane is not a reason to carry it on at boot.
+      h.supervisor.deliverJobResult(h.taskId, '[job] background job j1 finished: "make" exited 0');
+      await tick();
+      await h.supervisor.disposeAll();
+      const ops: string[] = [];
+      const createCrewmate = vi.fn(async () => h.crewmate);
+      const fresh = new CrewSupervisor({
+        now: hostClock,
+        ...crewSessions(h.paths, createCrewmate),
+        workspace: h.workspace,
+        repos: new RepoRegistry(h.db, h.paths.fleetDir),
+        tasks: new TaskService({ db: h.db, strict: true, now: hostClock }),
+        cardStore: new CardStore(h.db),
+        inbox: new InboxStore(h.db, { now: hostClock }),
+        paths: h.paths,
+        recordSort: (input) => input.effect?.(),
+        broadcastEvent: () => {},
+        broadcastCards: () => {},
+      });
+      wakesThroughInbox({ supervisor: fresh, inbox: h.inbox, ops });
+      const prompts = h.crewmate.promptCalls.length;
+      fresh.announceCarryOn();
+      for (let pass = 1; pass <= 9; pass += 1) {
+        hostNow += minutes(20);
+        fresh.reconcileIdle(hostNow);
+        await fresh.sweepInbox(hostNow);
+        await tick();
+      }
+      expect(createCrewmate).not.toHaveBeenCalled();
+      expect(h.crewmate.promptCalls).toHaveLength(prompts);
+      expect(ops).toEqual([]);
+      expect(h.inbox.allFor(h.taskId).map((row) => row.text)).toContain(
+        '[job] background job j1 finished: "make" exited 0',
+      );
+      fresh.disposeAll();
+    });
   });
 
   describe("the cut-off on crew lanes (W1 S8, docs/inbox.md)", () => {

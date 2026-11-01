@@ -1,9 +1,12 @@
 import { DROP_REVIEW_STALE, dropReviewKeys, NO_LONGER_WANTED } from "@shared/recordDrop";
 import {
+  backlogActivity,
+  leftBacklogActivity,
   QUEUED_ACTIVITY,
   queueClosedRefusal,
   queueMissingRefusal,
   queuePartsRefusal,
+  queueStartedBacklogRefusal,
   queueStartedRefusal,
   UNQUEUED_ACTIVITY,
 } from "@shared/taskQueue";
@@ -520,6 +523,65 @@ describe("the task graph (task-system P2)", () => {
         text: queueMissingRefusal("nowhere"),
       });
     });
+  });
+
+  // INF-2062: a started task goes back to the backlog with its work kept, and Start takes it out.
+  it("moves started work to the backlog and back out, keeping its run and noting who and why", () => {
+    const { tasks, work, tick } = setup();
+    const started = work("started", { startPolicy: "on-request" });
+    expect(tasks.claimForDispatch(started.id)).toBe(true);
+    tasks.recordRecovery(started.id, { rung: 2, count: 3, at: 900 });
+    const before = tasks.get(started.id);
+    expect(before?.status).toBe("active");
+    tick(10);
+    expect(
+      tasks.setQueued(started.id, "unqueue-task", {
+        actor: "captain",
+        via: "task-card",
+        reason: "Pause it until the design settles.",
+      }),
+    ).toEqual({ ok: true, changed: true });
+    const parked = tasks.get(started.id);
+    expect(parked).toMatchObject({
+      status: "active",
+      backlogSince: 1_010,
+      recoveryRung: 0,
+      recoveryCount: 0,
+      recoveryAt: null,
+      startedAt: before?.startedAt,
+      assignee: before?.assignee,
+    });
+    expect(tasks.timeline(started.id).at(-1)).toMatchObject({
+      actor: "captain",
+      kind: "note",
+      text: backlogActivity("captain", "Pause it until the design settles."),
+      data: { backlog: "entered", reason: "Pause it until the design settles.", via: "task-card" },
+    });
+    // Again writes nothing, and Queue it is refused: only Start picks it up.
+    const entries = tasks.timeline(started.id).length;
+    expect(tasks.setQueued(started.id, "unqueue-task", { actor: "firstmate" })).toEqual({
+      ok: true,
+      changed: false,
+    });
+    expect(tasks.setQueued(started.id, "queue-task", { actor: "captain" })).toEqual({
+      ok: false,
+      text: queueStartedBacklogRefusal(started.key),
+    });
+    expect(tasks.timeline(started.id)).toHaveLength(entries);
+
+    tick(50);
+    expect(tasks.leaveBacklog(started.id, { actor: "firstmate" })).toBe(true);
+    expect(tasks.get(started.id)).toMatchObject({
+      status: "active",
+      backlogSince: null,
+      idleSince: 1_060,
+    });
+    expect(tasks.timeline(started.id).at(-1)).toMatchObject({
+      actor: "firstmate",
+      text: leftBacklogActivity("firstmate"),
+      data: { backlog: "left", waited: 50 },
+    });
+    expect(tasks.leaveBacklog(started.id, { actor: "firstmate" })).toBe(false);
   });
 
   describe("fields, follow-ups and progress", () => {

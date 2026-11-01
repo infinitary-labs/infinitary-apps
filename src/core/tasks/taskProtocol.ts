@@ -1224,6 +1224,9 @@ export class TaskProtocol {
       ...(cardMerges(waitingCard) ? { waitingCardMerges: true as const } : {}),
       ...(captainWait ? { captainWait } : {}),
       ...startMarksOf(record, startAttempt),
+      ...(record.status === "active" && record.backlogSince != null
+        ? { backlogSince: record.backlogSince }
+        : {}),
       createdAt: record.createdAt,
       updatedAt: record.updatedAt,
       startedAt: record.startedAt,

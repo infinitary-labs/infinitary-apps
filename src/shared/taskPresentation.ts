@@ -58,9 +58,17 @@ export type TaskStatusInput = Pick<
   | "startNotice"
   | "place"
 > &
-  Partial<Pick<TaskView, "blockedBy" | "blockedSince" | "waitingCardMerges" | "queueWait">> & {
+  Partial<
+    Pick<
+      TaskView,
+      "blockedBy" | "blockedSince" | "waitingCardMerges" | "queueWait" | "backlogSince"
+    >
+  > & {
     closedReason: string | null;
   };
+
+/** The reason beside Backlog on started work that went back there (INF-2062). */
+export const STARTED_BACKLOG_REASON = "Started · its work waits for your Start";
 
 const words: Record<TaskStatus, string> = {
   backlog: "Backlog",
@@ -137,6 +145,10 @@ export function taskStatusOf(task: TaskStatusInput): TaskStatusReading {
     (task.status === "active" && task.activity === "starting")
   ) {
     return reading("starting", "");
+  }
+  // Started work back in the backlog (INF-2062): Backlog, marked started, since it went.
+  if (task.status === "active" && task.backlogSince !== undefined) {
+    return { ...reading("backlog", STARTED_BACKLOG_REASON), since: task.backlogSince };
   }
   if (task.startNotice && (task.status === "open" || task.status === "active")) {
     const mark = task.startPolicy === "on-request" ? "backlog" : "queued";

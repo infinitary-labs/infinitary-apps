@@ -61,14 +61,30 @@ describe("taskMovesOf", () => {
     });
   });
 
-  it("lets started work stop, and interrupted work continue", () => {
+  // INF-2062: started work can also go back to the backlog, keeping its work.
+  it("lets started work stop or go back to the backlog, and interrupted work continue", () => {
     const working = task({ status: "active", activity: "running", startedAt: 5 });
-    expect(allowed(working)).toEqual(["stop-task"]);
+    expect(allowed(working)).toEqual(["stop-task", "unqueue-task"]);
     expect(taskMovesOf(working)?.["drop-task"]).toMatchObject({ ok: false });
     expect(allowed(task({ status: "active", activity: "interrupted", startedAt: 5 }))).toEqual([
       "stop-task",
       "continue-task",
+      "unqueue-task",
     ]);
+  });
+
+  // INF-2062: a started task back in the backlog waits for Start, and only Start picks it up.
+  it("lets started work in the backlog start again or stop, and refuses queueing it", () => {
+    const parked = task({ status: "active", activity: "idle", startedAt: 5, backlogSince: 9 });
+    expect(allowed(parked)).toEqual(["start-task", "stop-task"]);
+    expect(taskMovesOf(parked)?.["unqueue-task"]).toEqual({
+      ok: false,
+      text: "It already waits for your word.",
+    });
+    expect(taskMovesOf(parked)?.["queue-task"]).toEqual({
+      ok: false,
+      text: "It has already started. Start picks it up from the backlog.",
+    });
   });
 
   it("keeps a parent's parts as the work, and refuses its drop while they are open", () => {

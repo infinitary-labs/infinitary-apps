@@ -318,6 +318,7 @@ export class IdleLadder {
       outOfReach: this.host.outOfReach?.(taskId) === true,
       ...(record ? this.waitWitnesses(record) : { waitsOnUnstarted: false }),
       reviewOpen: record ? this.reviewOpen(record) : false,
+      inBacklog: record?.status === "active" && record.backlogSince != null,
     };
   }
 
@@ -655,6 +656,8 @@ export class IdleLadder {
   /** The same stall as the time it began and its wakes (INF-1712). */
   stalledSince(record: TaskRecord, now: number): { since: number; wakes: number } | undefined {
     if (record.idleSince == null || record.recoveryAt == null) return undefined;
+    // A started task in the backlog waits for a Start; it is not stalled (INF-2062).
+    if (record.backlogSince != null) return undefined;
     const runtime = this.host.runtime(record.id);
     if (runtime && runtime.state !== "idle") return undefined;
     // A request the Firstmate left unanswered stalls it once the ladder has

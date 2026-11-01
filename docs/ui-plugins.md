@@ -322,7 +322,7 @@ Activity points from each recorded line and from the task keys on its lines (FI3
 
 **The board push is the read's value.**
 `tasks.board` now declares `valueFromPush: "inf:tasks"` (`src/shared/reads.ts`): the executor hands the pushed board to every subscriber as it lands, with no second coalescing window and no round trip, and drops a read still in flight from before it as stale (`executor.test.ts`).
-The push is the snapshot the core rebuilt from SQLite after the commit, equal to a fresh read by construction (`taskProtocol.test.ts`), so the shortcut is exact.
+The push is the board the core brought up to date after the commit, equal to a fresh read by construction (`taskProtocol.test.ts`), so the shortcut is exact.
 For the same reason every subscriber of the board shares one held value: a hover summary that opens on each row, or a Tasks panel remounted on the way back from Settings, takes the board the window already holds instead of asking the core to rebuild it (INF-1860).
 It crosses the preload bridge once per push, as text (`tasks.onBoardJson`), and is parsed once and shared, deep-frozen, by every subscriber (`src/renderer/src/plugins/reads/sharedPush.ts`): contextBridge copies an object into the page value by value on the renderer's main thread - the thread that draws the character - and a copy per subscriber of a few-hundred-row board cost 3-11 ms a push, several pushes per crewmate spawn or dispose (character-jank scout, 2026-09-22; a string crossing cut it 78-86%).
 Measured on the captain's MacBook against the mock provider: a row paints 36-56 ms after the core's write (`now:lag`, from the row's own `updatedAt` to its paint; the 40 ms board coalescing window is most of it), one paint of the groups under 1 ms.

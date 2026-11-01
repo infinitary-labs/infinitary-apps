@@ -8,8 +8,9 @@ This document is what keeps that durable record honest at scale: what is bounded
 ## What is bounded
 
 - **The board push** (`inf:tasks`) is the live set - open, active, closed within seven days, plus the parents of shown rows - never history.
-  Above the measured trigger (500 rows on the board, or a snapshot over 256 KB of JSON; `BOARD_DELTA_TRIGGER` in `src/shared/tasks.ts`) the core pushes `inf:tasks:delta` instead: the difference between the snapshot it just rebuilt from SQLite and the one it last pushed, on the same `seq`.
+  Above the measured trigger (500 rows on the board, or a snapshot over 256 KB of JSON; `BOARD_DELTA_TRIGGER` in `src/shared/tasks.ts`) the core pushes `inf:tasks:delta` instead: the difference between the board it just brought up to date and the one it last pushed, on the same `seq`.
   The delta is a diff of two snapshots (`diffTaskBoards`), never a replay of the writer's bookkeeping, so a derived change with no write of its own (a blocker closing, a card leaving the stack) crosses like any other, and `applyTaskBoardDelta(prev, diff(prev, next))` equals `next` by construction (`src/shared/tasks.test.ts`, 200 seeded pairs; `taskProtocol.test.ts` over the real writer).
+  A row the change did not reach is the same object on both boards (`docs/task-record.md`, the row cache), and the diff knows it by identity without serializing it, so the diff too costs the rows rebuilt and not the board.
   A client whose board does not carry the delta's `baseSeq` has missed a push and resyncs from `inf:tasks:board`; the read executor does exactly that (`deltaFromPush` in `src/shared/reads.ts`).
   The first push, and the first push after rows vanish (a purge, a failed spawn's discard), are snapshots: a delta needs a base.
   Dev and e2e can lower the row trigger with `INFINITARY_TASK_DELTA_ROWS`; a packaged build always measures against the design's.

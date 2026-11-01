@@ -74,34 +74,50 @@ function setup(
   const pushes: { channel: CorePushChannel; payload: unknown }[] = [];
   const changes: TaskChange[] = [];
   tasks.onChange((change) => changes.push(change));
-  const protocol = new TaskProtocol({
+  const protocolOptions = {
     tasks,
     workPosture: options.workPosture,
     ...(options.place ? { place: options.place } : {}),
     repos: {
-      get: (id) =>
+      get: (id: string) =>
         id === "r1"
           ? { name: "nimbus-api", delivery: "direct-pr" as const, autonomy: true }
           : undefined,
     },
     cards: { listOpen: () => cards, snapshot: () => cards },
-    tiers: (taskIds) => servedSlots(new DecisionStore(db), taskIds),
-    modelReason: (record) =>
+    tiers: (taskIds: readonly string[]) => servedSlots(new DecisionStore(db), taskIds),
+    modelReason: (record: import("../storage/taskStore").TaskRecord) =>
       modelReasonOf(record, {
         decisions: new DecisionStore(db),
         pins: () => [],
         keyOf: (ref) => tasks.resolve(ref)?.key || undefined,
       }),
-    broadcastEvent: (event) => events.push(event),
-    emit: <C extends CorePushChannel>(channel: C, payload: PushPayload<C>) => {
-      pushes.push({ channel, payload });
-    },
     now: () => now,
     coalesceMs: 0,
     ...(options.deltaTrigger ? { deltaTrigger: options.deltaTrigger } : {}),
     ...(options.modelLabel ? { modelLabel: options.modelLabel } : {}),
     ...(options.actions ? { actions: options.actions } : {}),
+  };
+  const protocol = new TaskProtocol({
+    ...protocolOptions,
+    broadcastEvent: (event) => events.push(event),
+    emit: <C extends CorePushChannel>(channel: C, payload: PushPayload<C>) => {
+      pushes.push({ channel, payload });
+    },
   });
+  /** The board a protocol that kept nothing builds from the same record and cards (INF-2078). */
+  const fresh = () => {
+    const other = new TaskProtocol({
+      ...protocolOptions,
+      broadcastEvent: () => {},
+      emit: () => {},
+    });
+    try {
+      return other.board();
+    } finally {
+      other.dispose();
+    }
+  };
   const boards = () =>
     pushes.filter((push) => push.channel === "inf:tasks").map((push) => push.payload as TaskBoard);
   const deltas = () =>
@@ -125,6 +141,7 @@ function setup(
     boards,
     deltas,
     carried,
+    fresh,
     settle,
     tick: (ms = 1) => (now += ms),
     clock: () => now,
@@ -1106,6 +1123,304 @@ describe("the task protocol (task-system P3)", () => {
     expect(short.replacedBy).toEqual(short.expected);
     expect(long.replacedBy).toEqual(long.expected);
     expect(long.rows).toBe(short.rows);
+  });
+
+  // INF-2078: every crew event pushes the board, and building every shown
+  // row from SQLite on each push cost about 175 ms on the captain's record.
+  // The board now keeps the rows a change did not reach. What it keeps must
+  // be what a build from nothing shows, through every shape of write and
+  // through the facts that move with no write of the row.
+  it("keeps the rows a change did not reach and equals a board built from nothing, through every shape of write (INF-2078)", () => {
+    let posture: WorkPosture = { state: "idle", reason: "captain" };
+    const f = setup({
+      workPosture: (record) =>
+        record.status === "active" ? posture : { state: "idle", reason: "inactive" },
+    });
+    const { tasks, protocol, cards, fresh, tick } = f;
+    const same = (what: string) => {
+      const board = protocol.board();
+      expect(board, what).toEqual(fresh());
+      return board;
+    };
+    const create = (id: string, extra: Record<string, unknown> = {}) =>
+      tasks.create({ id, title: `Task ${id}`, prompt: "p", repoId: "r1", ...extra });
+    // A parent awaiting the go, with a part; a blocker and what it blocks; a
+    // filing on its origin; an active row waiting on the owner of a baseline
+    // failure; a dropped row its carrier replaced; and a row nothing reaches.
+    create("parent", { startPolicy: "on-request" });
+    create("part", { parentId: "parent", startPolicy: "on-request" });
+    create("blocker");
+    create("blocked", { blockedBy: ["blocker"] });
+    create("origin");
+    tasks.fileFollowup({
+      id: "filed",
+      originId: "origin",
+      title: "Follow-up",
+      goal: "g",
+      why: "found while working",
+      prompt: "p",
+    });
+    create("owner");
+    create("waiting", { status: "active" });
+    const baseline = (dependencyTask: string) =>
+      seedDelivery(tasks, "waiting", {
+        headSha: "head-1",
+        ci: "red",
+        ciRepair: {
+          failures: [{ headSha: "head-1", checks: ["linux-checks"] }],
+          diagnoses: [
+            {
+              headSha: "head-1",
+              check: "linux-checks",
+              classification: "baseline-blocked",
+              evidence: "fails on untouched main",
+              dependencyTask,
+              at: 1,
+            },
+          ],
+          repairs: [],
+        },
+      });
+    baseline("owner");
+    create("carrier");
+    create("carried");
+    tasks.dropWithChildren("carried", {
+      reason: "moved to its carrier",
+      actor: "firstmate",
+      replacedBy: "carrier",
+    });
+    create("gated");
+    create("untouched");
+    const first = same("the first read");
+    const row = (id: string) => protocol.board().tasks.find((task) => task.id === id);
+    const keyOf = (id: string) => tasks.get(id)?.key ?? id;
+    const scratch = tasks.projects.scratch().id;
+
+    const steps: [string, () => void][] = [
+      ["a title", () => tasks.updateFields("parent", { title: "Parent renamed" }, "firstmate")],
+      [
+        "a part closing: its parent's counts",
+        () => tasks.close("part", { status: "done", reason: "settled", actor: "host" }),
+      ],
+      ["a part added", () => create("part-2", { parentId: "parent", startPolicy: "on-request" })],
+      [
+        "a blocker closing: what it blocked",
+        () =>
+          tasks.close("blocker", {
+            status: "done",
+            reason: "landed",
+            actor: "captain",
+            delivery: { landedMode: "fast-forward" },
+          }),
+      ],
+      ["an edge added", () => tasks.link("owner", "blocked", "blocks", "firstmate")],
+      ["an edge removed", () => tasks.unlink("owner", "blocked", "blocks", "firstmate")],
+      [
+        "an origin's key moving: the filing found on it",
+        () => tasks.moveToProject("origin", scratch, "firstmate"),
+      ],
+      [
+        "a carrier's key moving: the row it replaced",
+        () => tasks.moveToProject("carrier", scratch, "firstmate"),
+      ],
+      [
+        "a baseline owner closing: the active row waiting on it",
+        () => tasks.close("owner", { status: "done", reason: "merged", actor: "captain" }),
+      ],
+      ["a baseline wait naming another row", () => baseline("blocked")],
+      [
+        "a decision card raised, with no write of its row",
+        () =>
+          cards.push({
+            id: "card-blocked",
+            taskId: "blocked",
+            author: "firstmate",
+            priority: 1,
+            title: "Which way?",
+            meta: "",
+            body: "",
+            actions: [{ id: "this-way", label: "This way", default: true }],
+            status: "ready",
+            createdAt: 1,
+          }),
+      ],
+      [
+        "a gate's card going up, with no write of its row",
+        () => {
+          tasks.setGate("gated", { kind: "captain", ref: "card-gate" });
+          cards.push({
+            id: "card-gate",
+            author: "firstmate",
+            priority: 1,
+            title: "Merge it?",
+            meta: "",
+            body: "",
+            actions: [{ id: "merge", label: "Merge", default: true }],
+            status: "ready",
+            createdAt: 1,
+          });
+        },
+      ],
+      ["the cards resolved, with no write of their rows", () => cards.splice(0, cards.length)],
+      [
+        "a posture moving with no write of the row",
+        () => {
+          posture = { state: "active", reason: "turn" };
+          tasks.invalidatePresentation();
+        },
+      ],
+      [
+        "the second part closing: its parent's wait dates from it",
+        () => tasks.close("part-2", { status: "done", reason: "settled", actor: "host" }),
+      ],
+      [
+        "closed rows aging out of the window: a part's parent reads the parts left",
+        () => {
+          tasks.close("blocked", { status: "done", reason: "settled", actor: "host" });
+          tick(BOARD_RECENT_MS + 1);
+          tasks.noteProgress("waiting", "Still here.");
+        },
+      ],
+      [
+        "an old row shown while its card is minimized",
+        () =>
+          cards.push({
+            id: "card-old",
+            taskId: "blocked",
+            author: "firstmate",
+            priority: 1,
+            title: "Done",
+            meta: "",
+            body: "",
+            actions: [],
+            status: "ready",
+            createdAt: 1,
+            minimized: true,
+          }),
+      ],
+      ["the minimized card gone", () => cards.splice(0, cards.length)],
+      ["a row discarded", () => tasks.discardFailedSpawn("gated")],
+      ["a row deleted with its edges", () => tasks.discardFailedSpawn("carrier")],
+    ];
+    const seen = new Set<string>();
+    for (const [what, step] of steps) {
+      tick();
+      step();
+      const board = same(what);
+      seen.add(JSON.stringify(board.tasks.map((task) => task.id).sort()));
+    }
+    // The reads that moved what a kept neighbor shows, as a reader sees them.
+    expect(row("filed")?.foundOn).toBe(keyOf("origin"));
+    expect(keyOf("origin").startsWith("SCR-")).toBe(true);
+    expect(row("carried")).toBeUndefined();
+    expect(row("waiting")).toMatchObject({ blockedBy: [], workPosture: posture });
+    expect(row("blocked")).toBeUndefined();
+    expect(row("gated")).toBeUndefined();
+    // Its parts closed and aged out, the parent's wait dates from its own creation again.
+    expect(row("parent")).toMatchObject({
+      children: { total: 2, closed: 2 },
+      queueWait: { since: tasks.get("parent")?.createdAt },
+    });
+    // Membership moved on the way: rows entered, aged out, were shown for a card and left.
+    expect(seen.size).toBeGreaterThan(3);
+    // The row nothing reached is the row the first read built, by identity.
+    expect(protocol.board().tasks.find((task) => task.id === "untouched")).toBe(
+      first.tasks.find((task) => task.id === "untouched"),
+    );
+    // A purge rebuilds from nothing.
+    tasks.purge();
+    expect(same("after a purge").tasks).toEqual([]);
+  });
+
+  it("builds only the rows a change reached and reads the same rows however many the board holds (INF-2078)", () => {
+    const seeded = (size: number) => {
+      const built: string[] = [];
+      const f = setup({
+        workPosture: (record) => {
+          built.push(record.id);
+          return { state: "idle", reason: "captain" };
+        },
+      });
+      // The captain's board, scaled: a parent with parts every fifth row,
+      // a blocks edge every tenth, and a filing every seventh.
+      for (let i = 0; i < size; i += 1) {
+        const id = `t-${i}`;
+        f.tasks.create({
+          id,
+          title: id,
+          prompt: "p",
+          repoId: "r1",
+          ...(i % 5 === 4 ? { parentId: `t-${i - 1}`, startPolicy: "on-request" as const } : {}),
+          ...(i % 10 === 3 && i > 11 ? { blockedBy: [`t-${i - 11}`] } : {}),
+        });
+        if (i % 7 === 6)
+          f.tasks.fileFollowup({
+            id: `filed-${i}`,
+            originId: id,
+            title: `Follow-up ${i}`,
+            goal: "g",
+            why: "found while working",
+            prompt: "p",
+          });
+      }
+      f.protocol.board();
+      // The board's own work after a change: the rows it reads and the views it builds.
+      const measure = (change: () => void) => {
+        change();
+        built.length = 0;
+        const rows = rowsRead(f.db, () => f.protocol.board());
+        return { rows, built: [...built].sort() };
+      };
+      const measured = {
+        progress: measure(() => f.tasks.noteProgress("t-25", "Checked a part.")),
+        title: measure(() => f.tasks.updateFields("t-20", { title: "Renamed" }, "firstmate")),
+        close: measure(() =>
+          f.tasks.close("t-22", { status: "done", reason: "landed", actor: "captain" }),
+        ),
+        link: measure(() => f.tasks.link("t-30", "t-40", "blocks", "firstmate")),
+      };
+      expect(f.protocol.board()).toEqual(f.fresh());
+      return measured;
+    };
+    const small = seeded(60);
+    const large = seeded(240);
+    // A progress note on a row with no edge rebuilds that row alone; a write
+    // of an origin rebuilds it and the filing found on it; a close its row
+    // and what it blocked; a new edge its two ends.
+    expect(small.progress.built).toEqual(["t-25"]);
+    expect(small.title.built).toEqual(["filed-20", "t-20"]);
+    expect(small.close.built).toEqual(["t-22", "t-33"]);
+    expect(small.link.built).toEqual(["t-30", "t-40"]);
+    for (const shape of ["progress", "title", "close", "link"] as const) {
+      expect(large[shape].built, shape).toEqual(small[shape].built);
+      expect(large[shape].rows, shape).toBe(small[shape].rows);
+    }
+  });
+
+  // The scale check (tests/scale-check.test.ts, INF-2061) adds closed work
+  // from before the board's window after the first read and expects the
+  // board update to run the same statements: a row its write left closed
+  // outside the window, which no shown row holds, is ruled out with no read.
+  it("reads none of the closed history written outside the board's window to bring the board up to date (INF-2061, INF-2078)", () => {
+    const updated = (history: number) => {
+      const f = setup();
+      for (let i = 0; i < 3; i += 1)
+        f.tasks.create({ id: `live-${i}`, title: `Live ${i}`, prompt: "p", repoId: "r1" });
+      f.protocol.board();
+      for (let i = 0; i < history; i += 1) {
+        f.tasks.create({ id: `old-${i}`, title: `Old ${i}`, prompt: "p", repoId: "r1" });
+        f.tasks.close(`old-${i}`, { status: "done", reason: "settled", actor: "host" });
+      }
+      f.tick(BOARD_RECENT_MS + 1);
+      const rows = rowsRead(f.db, () => f.protocol.board());
+      const board = f.protocol.board();
+      expect(board).toEqual(f.fresh());
+      return { rows, ids: board.tasks.map((task) => task.id).sort() };
+    };
+    const few = updated(20);
+    const many = updated(200);
+    expect(many.ids).toEqual(["live-0", "live-1", "live-2"]);
+    expect(many.rows).toBe(few.rows);
   });
 
   // INF-999: INF-778's summary read Blocked by INF-886 from a recorded wait

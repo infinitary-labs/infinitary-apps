@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "id": "task-board-row-cache",
+      "kind": "fix",
+      "area": "tasks",
+      "title": "The window keeps up with the crew on a long history",
+      "body": "Each time a crewmate noted progress or a task changed, the app rebuilt the whole task board from your record. With thousands of tasks behind you, that paused the window for a moment every time, and typing in the message box could wait on it. The board now updates only the tasks a change reached and keeps the rest as they were.",
+      "noPicture": "This removes time the window spends busy; nothing on screen changes.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

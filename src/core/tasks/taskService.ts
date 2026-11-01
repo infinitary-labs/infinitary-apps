@@ -251,6 +251,12 @@ export type TaskChange = {
    * it changes nothing a status reads, so it asks for no further pass.
    */
   republish?: true;
+  /**
+   * A derived presentation changed with no row written
+   * (`invalidatePresentation`): a reader that keeps rows between changes
+   * reads every row's live facts again.
+   */
+  presentation?: true;
 };
 
 export type TaskChangeListener = (change: TaskChange) => void;
@@ -5690,6 +5696,7 @@ export class TaskService {
           removed: [...pending.removed],
           reset: pending.reset,
           ...(pending.republish ? { republish: true as const } : {}),
+          ...(pending.presentation ? { presentation: true as const } : {}),
         };
         for (const listener of this.listeners) {
           try {

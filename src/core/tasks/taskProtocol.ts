@@ -61,13 +61,26 @@ import type { TaskTimeline } from "./taskTimeline";
  * turns TaskService's committed changes into pushes.
  *
  * Every view is built from SQLite and live host facts at read time - flags
- * derived, never stored (principle 4); nothing here caches a row. The emitter listens on
+ * derived, never stored (principle 4). The emitter listens on
  * `TaskService.onChange`, which fires after the commit: each inserted
  * timeline event becomes a `task_event` FmEvent (its text authored as the
  * feed line, `src/core/tasks/taskFeed.ts`), each touched row a
- * `task_changed`, and the whole board is rebuilt and pushed on `inf:tasks`
- * once per coalescing window, like `inf:cards`. A client that misses a push
- * resyncs from `inf:tasks:board`; `seq` tells it which is newer.
+ * `task_changed`, and the board is pushed on `inf:tasks` once per
+ * coalescing window, like `inf:cards`. A client that misses a push resyncs
+ * from `inf:tasks:board`; `seq` tells it which is newer.
+ *
+ * The board keeps what its last build read (`BoardCache`; INF-2078, the row
+ * cache): one change rebuilds only the rows it reached - the rows the
+ * writer touched, the rows at the other ends of their edges, their parents,
+ * the active rows whose standing waits name them, and any row whose card
+ * facts moved - and every other row keeps the view it had, so a change
+ * costs the rows it reached, not the board. A rebuilt row is still derived
+ * from SQLite and the live host facts at that read; a kept row's view is
+ * the same object, which is how `diffTaskBoards` knows it did not move. A
+ * host fact that moved with no row written (`TaskChange.presentation`) has
+ * every row's live facts read again, and the rows they moved on rebuilt; a
+ * purge or an import rebuilds everything. The cached board equals a build
+ * from nothing (`taskProtocol.test.ts` pins it after every shape of write).
  *
  * The board is the LIVE set (open, active, closed within BOARD_RECENT_MS,
  * and the parents of those); history stays in the database and is read one
@@ -75,7 +88,7 @@ import type { TaskTimeline } from "./taskTimeline";
  *
  * Above the measured trigger (P5, design section 9.1: a snapshot over
  * 256 KB or a live set over 500 rows) the push becomes `inf:tasks:delta`:
- * the snapshot is still rebuilt from SQLite after the commit, but only its
+ * the snapshot is still brought up to date after the commit, but only its
  * difference from the last push crosses, on the same `seq`. The delta is
  * a DIFF of two snapshots, never a replay of the writer's bookkeeping, so
  * a derived change (a blocker closing, a card leaving the stack) travels
@@ -231,6 +244,19 @@ export class TaskProtocol {
   private readonly postures = new Map<string, string>();
   /** Each record's status as last emitted, so task_changed can say what it moved from. */
   private readonly statuses = new Map<string, TaskStatus>();
+  /** What the last board was built from; absent until the first read. */
+  private cache: BoardCache | undefined;
+  /**
+   * The rows written or removed since the cache was last brought up to
+   * date, each as its last write left it (a removed row has none): the
+   * record `onChange` read to say what changed, kept so the next read can
+   * rule out a row closed outside the board's window without reading it.
+   */
+  private readonly touched = new Map<string, TaskRecord | undefined>();
+  /** The next read builds the board from nothing: the first read, or rows vanished wholesale. */
+  private rebuildAll = true;
+  /** A host fact moved with no row written: the next read reads every row's live facts again. */
+  private recheckFacts = false;
 
   constructor(private readonly options: TaskProtocolOptions) {
     this.now = options.now ?? (() => Date.now());
@@ -289,56 +315,36 @@ export class TaskProtocol {
   // ---- reads --------------------------------------------------------------
 
   board(): TaskBoard {
-    const { tasks } = this.options;
     const now = this.now();
     const cutoff = now - BOARD_RECENT_MS;
-    const minimizedTasks = [
-      ...new Set(
-        this.options.cards
-          .snapshot()
-          .filter((card) => card.minimized && card.taskId)
-          .map((card) => card.taskId as string),
-      ),
-    ];
-    // Only the rows the board shows are read: the live set, the last
-    // week's closed work and any minimized card's task. A long record is
-    // mostly closed rows from before that, and a crew event pushes the
-    // board, so reading them all stalled the main process (INF-703).
-    const shown = new Map<string, TaskRecord>();
-    for (const record of tasks.listLiveOrClosedSince(cutoff)) shown.set(record.id, record);
-    for (const record of tasks.getMany(minimizedTasks.filter((id) => !shown.has(id))))
-      shown.set(record.id, record);
-    // Parents of shown rows ride along, however old, so a child is never
-    // orphaned on the board; the walk is bounded by the hierarchy cap.
-    for (const record of [...shown.values()]) {
-      let parentId = record.parentId;
-      let depth = 0;
-      while (parentId && !shown.has(parentId) && depth < 64) {
-        const parent = tasks.get(parentId);
-        if (!parent) break;
-        shown.set(parent.id, parent);
-        parentId = parent.parentId;
-        depth += 1;
-      }
+    const minimized = new Set<string>();
+    for (const card of this.options.cards.snapshot())
+      if (card.minimized && card.taskId) minimized.add(card.taskId);
+    const cache =
+      this.cache && !this.rebuildAll
+        ? this.refresh(this.cache, cutoff, minimized)
+        : this.rebuild(cutoff, minimized);
+    this.cache = cache;
+    this.rebuildAll = false;
+    this.recheckFacts = false;
+    this.touched.clear();
+    const rows: TaskRecord[] = [];
+    for (const id of cache.shown) {
+      const record = cache.records.get(id);
+      if (record) rows.push(record);
     }
-    const rows = [...shown.values()];
-    const graph = this.graphFor(rows);
-    const tiers = this.tiersOf(rows);
-    const views = rows.map((record) => this.viewOf(record, graph, tiers));
-    const viewed = new Map(views.map((view) => [view.id, view]));
-    const links: TaskLinkView[] = graph.links
-      .filter((link) => shown.has(link.fromId) && shown.has(link.toId))
-      .map((link) => ({ fromId: link.fromId, toId: link.toId, type: link.type }));
     // Canonical order (the shared rule), so a client's applied delta and
     // this snapshot are equal as arrays.
     return {
-      seq: tasks.boardSeq(),
+      seq: this.options.tasks.boardSeq(),
       at: now,
       // The shown rows hold every row a count reads: live work and work
       // done within the window.
-      projects: this.projectViews(rows, graph, now, viewed),
-      tasks: sortBoardTasks(views),
-      links: sortBoardLinks(links),
+      projects: this.projectViews(rows, cache.graph, now, {
+        get: (id) => cache.views.get(id)?.view,
+      }),
+      tasks: cache.tasks,
+      links: cache.linkViews,
     };
   }
 
@@ -654,6 +660,10 @@ export class TaskProtocol {
       this.postures.clear();
     }
     if (change.reset || change.removed.length > 0) this.rebase = true;
+    for (const id of change.taskIds) this.touched.set(id, recordOf(id));
+    for (const id of change.removed) this.touched.set(id, undefined);
+    if (change.reset) this.rebuildAll = true;
+    if (change.presentation) this.recheckFacts = true;
     this.schedulePush();
   }
 
@@ -697,6 +707,293 @@ export class TaskProtocol {
     this.rebase = false;
   }
 
+  // ---- the row cache (INF-2078) --------------------------------------------
+
+  /**
+   * The board from nothing: the first read, and the read after rows
+   * vanished wholesale. Only the rows the board shows are read: the live
+   * set, the last week's closed work and any minimized card's task. A long
+   * record is mostly closed rows from before that, and a crew event pushes
+   * the board, so reading them all stalled the main process (INF-703).
+   */
+  private rebuild(cutoff: number, minimized: ReadonlySet<string>): BoardCache {
+    const { tasks } = this.options;
+    const records = new Map<string, TaskRecord>();
+    for (const record of tasks.listLiveOrClosedSince(cutoff)) records.set(record.id, record);
+    for (const record of tasks.getMany([...minimized].filter((id) => !records.has(id))))
+      records.set(record.id, record);
+    const shown = this.shownOf(records, cutoff, minimized);
+    const ids = [...shown];
+    const links = new Map<string, TaskLink>();
+    for (const link of tasks.linksTouching(ids)) links.set(edgeKey(link), link);
+    this.readEnds(records, shown, links);
+    const childCounts = tasks.childCounts(ids);
+    const rows = ids.map((id) => records.get(id) as TaskRecord);
+    // What replaced each dropped row, read for all of them at once; one at
+    // a time, each read its task's whole timeline (INF-2070).
+    const replacedBy = tasks.replacementsOf(rows.filter(replaced).map((record) => record.id));
+    const graph = this.graphOf([...records.values()], [...links.values()], replacedBy, childCounts);
+    const tiers = this.tiersOf(rows);
+    const views = new Map<string, CachedView>();
+    for (const record of rows) views.set(record.id, this.cachedView(record, graph, tiers));
+    return {
+      records,
+      shown,
+      links,
+      childCounts,
+      replacedBy,
+      graph,
+      views,
+      tasks: sortBoardTasks([...views.values()].map((cached) => cached.view)),
+      ...this.linkViewsOf(links, shown),
+    };
+  }
+
+  /**
+   * The board brought up to date with the rows written since the last
+   * read. It rebuilds the rows a change reached: the touched rows, the rows
+   * that entered the board, the shown rows at the other ends of a touched
+   * row's edges (its blockers, what it blocks, its origin, its
+   * replacement), a touched row's parents (their counts and parts), the
+   * active rows whose standing waits name a touched row, and any row whose
+   * card facts moved. After a host fact moved with no row written, every
+   * row's live facts are read again and the rows they moved on are rebuilt
+   * too. Every other row keeps its view, and a touched row closed before
+   * the board's window that no shown row holds is ruled out from the
+   * record its write left, with no read.
+   */
+  private refresh(cache: BoardCache, cutoff: number, minimized: ReadonlySet<string>): BoardCache {
+    const { tasks } = this.options;
+    const { records, links } = cache;
+    // The touched rows the board can reach: those in hand (shown, or at the
+    // other end of a shown row's edge) and those their last write left
+    // live, closed within the window or minimized. A row closed before the
+    // window that no shown row holds stays off the board whatever was
+    // written to it, so the record its write left rules it out and it is
+    // never read: closed history written since the last read costs the
+    // update nothing (the scale check, INF-2061).
+    const reaches = (record: TaskRecord) =>
+      !TaskService.isClosed(record) || (record.closedAt ?? 0) >= cutoff || minimized.has(record.id);
+    const touched = [...this.touched]
+      .filter(([id, written]) => records.has(id) || (written !== undefined && reaches(written)))
+      .map(([id]) => id);
+    // The touched rows as they stand now; a row the writer deleted leaves.
+    const before = new Map<string, TaskRecord | undefined>();
+    const fresh = new Map(tasks.getMany(touched).map((record) => [record.id, record]));
+    for (const id of touched) {
+      before.set(id, records.get(id));
+      const record = fresh.get(id);
+      if (record) records.set(id, record);
+      else records.delete(id);
+    }
+    for (const record of tasks.getMany([...minimized].filter((id) => !records.has(id))))
+      records.set(record.id, record);
+    const shown = this.shownOf(records, cutoff, minimized);
+    const entered = [...shown].filter((id) => !cache.shown.has(id));
+    const left = [...cache.shown].filter((id) => !shown.has(id));
+    // The parents to count and rebuild: the parents a touched row had or
+    // has (a row ruled out above included: its parent counts it), the
+    // entered rows, and the parents of the rows that entered or left,
+    // since a parent's start wait reads the parts in hand.
+    const parents = new Set<string>(entered);
+    for (const id of [...entered, ...left]) {
+      const parentId = records.get(id)?.parentId;
+      if (parentId) parents.add(parentId);
+    }
+    for (const [id, written] of this.touched) {
+      const was = before.get(id)?.parentId;
+      const is = (records.get(id) ?? written)?.parentId;
+      if (was) parents.add(was);
+      if (is) parents.add(is);
+    }
+    // The edges around the touched and entered rows, read again, and the
+    // rows at the other ends of a touched row's edges, before and after.
+    const reread = new Set([...touched, ...entered]);
+    const neighbors = new Set<string>();
+    const around = (link: TaskLink) => {
+      if (!this.touched.has(link.fromId) && !this.touched.has(link.toId)) return;
+      neighbors.add(link.fromId);
+      neighbors.add(link.toId);
+    };
+    for (const [key, link] of links) {
+      if (!reread.has(link.fromId) && !reread.has(link.toId)) continue;
+      links.delete(key);
+      around(link);
+    }
+    for (const link of tasks.linksTouching([...reread])) {
+      links.set(edgeKey(link), link);
+      around(link);
+    }
+    for (const [key, link] of links)
+      if (!shown.has(link.fromId) && !shown.has(link.toId)) links.delete(key);
+    this.readEnds(records, shown, links);
+    const counted = [...parents].filter((id) => shown.has(id));
+    const counts = tasks.childCounts(counted);
+    for (const id of counted) {
+      const count = counts.get(id);
+      if (count) cache.childCounts.set(id, count);
+      else cache.childCounts.delete(id);
+    }
+    for (const id of left) cache.childCounts.delete(id);
+    const rebuild = new Set<string>(counted);
+    for (const id of touched) if (shown.has(id)) rebuild.add(id);
+    for (const id of neighbors) if (shown.has(id)) rebuild.add(id);
+    if (touched.length > 0) {
+      for (const id of shown) {
+        const record = records.get(id);
+        const diagnoses = record?.delivery?.ciRepair?.diagnoses;
+        if (record?.status !== "active" || !diagnoses) continue;
+        if (diagnoses.some((d) => d.dependencyTask && this.touched.has(d.dependencyTask)))
+          rebuild.add(id);
+      }
+    }
+    // What replaced the rebuilt dropped rows.
+    const replacedIds = [...rebuild].filter((id) => replaced(records.get(id) as TaskRecord));
+    const replacements = tasks.replacementsOf(replacedIds);
+    for (const id of replacedIds) {
+      const replacement = replacements.get(id);
+      if (replacement) cache.replacedBy.set(id, replacement);
+      else cache.replacedBy.delete(id);
+    }
+    for (const id of left) cache.replacedBy.delete(id);
+    const graph = this.graphOf(
+      [...records.values()],
+      [...links.values()],
+      cache.replacedBy,
+      cache.childCounts,
+    );
+    // The kept rows whose card facts moved, or whose live facts moved after a host fact did.
+    for (const id of shown) {
+      if (rebuild.has(id)) continue;
+      const cached = cache.views.get(id);
+      const record = records.get(id) as TaskRecord;
+      if (
+        !cached ||
+        cached.cards !== cardFactsOf(record, graph) ||
+        (this.recheckFacts && cached.facts !== factsKey(this.liveFacts(record)))
+      )
+        rebuild.add(id);
+    }
+    for (const id of left) cache.views.delete(id);
+    const rebuilt = [...rebuild].map((id) => records.get(id) as TaskRecord);
+    const tiers = this.tiersOf(rebuilt);
+    for (const record of rebuilt) cache.views.set(record.id, this.cachedView(record, graph, tiers));
+    // The rows in order: a changed membership sorts again; otherwise each
+    // rebuilt view takes its row's place, and a board nothing reached
+    // keeps its array.
+    let rows = cache.tasks;
+    if (entered.length > 0 || left.length > 0)
+      rows = sortBoardTasks([...cache.views.values()].map((cached) => cached.view));
+    else if (rebuild.size > 0)
+      rows = cache.tasks.map((view) => cache.views.get(view.id)?.view ?? view);
+    return { ...cache, shown, graph, tasks: rows, ...this.linkViewsOf(links, shown, cache) };
+  }
+
+  /**
+   * The rows the board shows, from the records in hand: the live set, the
+   * week's closed work and any minimized card's task, and the parents of
+   * each of those, however old, so a child is never orphaned on the board.
+   * A parent not in hand is read; the walk is bounded by the hierarchy cap.
+   */
+  private shownOf(
+    records: Map<string, TaskRecord>,
+    cutoff: number,
+    minimized: ReadonlySet<string>,
+  ): Set<string> {
+    const shown = new Set<string>();
+    for (const record of records.values()) {
+      if (
+        !TaskService.isClosed(record) ||
+        (record.closedAt ?? 0) >= cutoff ||
+        minimized.has(record.id)
+      )
+        shown.add(record.id);
+    }
+    for (const id of [...shown]) {
+      let parentId = records.get(id)?.parentId;
+      let depth = 0;
+      while (parentId && !shown.has(parentId) && depth < 64) {
+        let parent = records.get(parentId);
+        if (!parent) {
+          parent = this.options.tasks.get(parentId);
+          if (!parent) break;
+          records.set(parent.id, parent);
+        }
+        shown.add(parent.id);
+        parentId = parent.parentId;
+        depth += 1;
+      }
+    }
+    return shown;
+  }
+
+  /**
+   * The rows at the other ends of the shown rows' edges, read when not in
+   * hand (a view reads its blockers and its origin); a row no edge or row
+   * needs leaves.
+   */
+  private readEnds(
+    records: Map<string, TaskRecord>,
+    shown: ReadonlySet<string>,
+    links: ReadonlyMap<string, TaskLink>,
+  ): void {
+    const ends = new Set<string>();
+    for (const link of links.values()) {
+      if (!shown.has(link.fromId)) ends.add(link.fromId);
+      if (!shown.has(link.toId)) ends.add(link.toId);
+    }
+    for (const record of this.options.tasks.getMany([...ends].filter((id) => !records.has(id))))
+      records.set(record.id, record);
+    for (const id of [...records.keys()]) if (!shown.has(id) && !ends.has(id)) records.delete(id);
+  }
+
+  private cachedView(
+    record: TaskRecord,
+    graph: Graph,
+    tiers: ReadonlyMap<string, Slot>,
+  ): CachedView {
+    const facts = this.liveFacts(record);
+    return {
+      view: this.viewOf(record, graph, tiers, facts),
+      facts: factsKey(facts),
+      cards: cardFactsOf(record, graph),
+    };
+  }
+
+  /** The host's own facts a view reads, which no write of the row reports. */
+  private liveFacts(record: TaskRecord): LiveFacts {
+    return {
+      repo: record.repoId ? this.options.repos.get(record.repoId) : undefined,
+      posture: this.options.workPosture?.(record),
+      place: this.options.place?.(record),
+      computerMove: record.kind === "work" ? this.options.computerMove?.(record) : undefined,
+      startAttempt:
+        this.options.startAttempt?.(record.id) ?? this.options.tasks.startAttemptOf(record.id),
+    };
+  }
+
+  /** The edges across shown rows in canonical order; the last array while the set is the same. */
+  private linkViewsOf(
+    links: ReadonlyMap<string, TaskLink>,
+    shown: ReadonlySet<string>,
+    previous?: Pick<BoardCache, "linkViews" | "linkKeys">,
+  ): Pick<BoardCache, "linkViews" | "linkKeys"> {
+    const linkKeys = new Set<string>();
+    const views: TaskLinkView[] = [];
+    for (const [key, link] of links) {
+      if (!shown.has(link.fromId) || !shown.has(link.toId)) continue;
+      linkKeys.add(key);
+      views.push({ fromId: link.fromId, toId: link.toId, type: link.type });
+    }
+    if (
+      previous &&
+      previous.linkKeys.size === linkKeys.size &&
+      [...linkKeys].every((key) => previous.linkKeys.has(key))
+    )
+      return { linkViews: previous.linkViews, linkKeys: previous.linkKeys };
+    return { linkViews: sortBoardLinks(views), linkKeys };
+  }
+
   // ---- view building ------------------------------------------------------
 
   /**
@@ -730,6 +1027,10 @@ export class TaskProtocol {
     childCounts?: Map<string, { total: number; closed: number }>,
   ): Graph {
     const byId = new Map(all.map((record) => [record.id, record]));
+    // Each row's children among these rows, in their order: the parts a
+    // start wait reads, found once rather than by a walk of every row per view.
+    const parts = new Map<string, TaskRecord[]>();
+    for (const record of all) if (record.parentId) push(parts, record.parentId, record);
     const blockersOf = new Map<string, TaskRecord[]>();
     const blockingOf = new Map<string, TaskRecord[]>();
     const mergeHolds = new Set<string>();
@@ -783,6 +1084,7 @@ export class TaskProtocol {
     }
     return {
       byId,
+      parts,
       links,
       blockersOf,
       blockingOf,
@@ -806,11 +1108,12 @@ export class TaskProtocol {
     record: TaskRecord,
     graph: Graph,
     tiers: ReadonlyMap<string, Slot> = new Map(),
+    facts: LiveFacts = this.liveFacts(record),
   ): TaskView {
     const blockers = graph.blockersOf.get(record.id) ?? [];
     const waiting = blockers.filter((blocker) => !TaskService.blockerCleared(blocker));
     const liveBlockers = blockers.filter(TaskService.blockerHoldsClose);
-    const posture = this.options.workPosture?.(record);
+    const { repo, posture, place, startAttempt, computerMove } = facts;
     // Blocked by names only the waits that hold the task now, by the one
     // rule the tasks reader shares (./holdingWaits.ts, INF-999). Dropped
     // edges remain in the graph and still gate STARTING, but closed work is
@@ -860,15 +1163,10 @@ export class TaskProtocol {
         gateCard !== null ||
         (open && record.gate?.kind === "captain") ||
         deadBlocker);
-    const repo = record.repoId ? this.options.repos.get(record.repoId) : undefined;
     // The private closure snapshot is served through Details' policies,
     // not added to the board's published delivery contract.
     const delivery = record.delivery ? { ...record.delivery } : null;
     if (delivery) delete delivery.closedPolicies;
-    const place = this.options.place?.(record);
-    const startAttempt =
-      this.options.startAttempt?.(record.id) ?? this.options.tasks.startAttemptOf(record.id);
-    const computerMove = record.kind === "work" ? this.options.computerMove?.(record) : undefined;
     return withMoves({
       id: record.id,
       key: record.key,
@@ -892,14 +1190,7 @@ export class TaskProtocol {
       startPolicy: record.startPolicy,
       queueWait: startAttempt
         ? undefined
-        : queueWaitOf(
-            record,
-            blockers,
-            graph.links,
-            (graph.children.get(record.id)?.total ?? 0) > 0
-              ? [...graph.byId.values()].filter((part) => part.parentId === record.id)
-              : [],
-          ),
+        : queueWaitOf(record, blockers, graph.links, graph.parts.get(record.id) ?? []),
       flags: {
         blocked,
         held,
@@ -946,7 +1237,7 @@ export class TaskProtocol {
     all: readonly TaskRecord[],
     graph: Graph,
     now: number,
-    viewed: ReadonlyMap<string, TaskView> = new Map(),
+    viewed: { get(id: string): TaskView | undefined } = new Map(),
   ): ProjectView[] {
     const cutoff = now - BOARD_RECENT_MS;
     const counts = new Map<string, ProjectView["counts"]>();
@@ -1008,8 +1299,77 @@ export class TaskProtocol {
   }
 }
 
+/** The host's own facts a view reads, which no write of the row reports. */
+type LiveFacts = {
+  repo: ReturnType<TaskProtocolOptions["repos"]["get"]>;
+  posture: WorkPosture | undefined;
+  place: TaskPlace | undefined;
+  computerMove: Pick<TaskView, "movable" | "computerMove"> | undefined;
+  startAttempt: { phase: "preparing" | "checking"; since: number } | undefined;
+};
+
+/** A shown row's view, with the live facts and card facts it was built from. */
+type CachedView = { view: TaskView; facts: string; cards: string };
+
+/**
+ * What the last board was built from, kept between reads so one change
+ * rebuilds only the rows it reached (INF-2078, the row cache).
+ */
+type BoardCache = {
+  /** Every record the board reads: the shown rows and the rows at the other ends of their edges. */
+  records: Map<string, TaskRecord>;
+  /** The rows on the board. */
+  shown: Set<string>;
+  /** The edges touching a shown row, by `edgeKey`. */
+  links: Map<string, TaskLink>;
+  /** Each shown parent's child counts (`TaskService.childCounts`). */
+  childCounts: Map<string, { total: number; closed: number }>;
+  /** What replaced each shown dropped or superseded row (`TaskService.replacementsOf`). */
+  replacedBy: Map<string, string>;
+  /** The graph around the shown rows, as the last read built it. */
+  graph: Graph;
+  /** Each shown row's view. */
+  views: Map<string, CachedView>;
+  /** The rows in canonical order, as the last board carried them. */
+  tasks: TaskView[];
+  /** The edges across shown rows in canonical order, and their keys. */
+  linkViews: TaskLinkView[];
+  linkKeys: Set<string>;
+};
+
+function factsKey(facts: LiveFacts): string {
+  return JSON.stringify([
+    facts.repo?.name,
+    facts.posture,
+    facts.place,
+    facts.computerMove,
+    facts.startAttempt,
+  ]);
+}
+
+/**
+ * The card facts a view reads: the decision card it waits on and whether
+ * that card merges, a durable decision on it, and whether its gate's card
+ * is up. Read from the cards at each read, so a card raised or resolved
+ * with no write of the row still rebuilds it.
+ */
+function cardFactsOf(record: TaskRecord, graph: Graph): string {
+  const card = TaskService.isClosed(record) ? undefined : graph.decisionCards.get(record.id);
+  const gateUp =
+    record.gate?.kind === "captain" && record.gate.ref
+      ? graph.openCardIds.has(record.gate.ref)
+      : false;
+  return `${card?.id ?? ""}\0${card ? cardMerges(card) : false}\0${graph.durableDecisions.has(record.id)}\0${gateUp}`;
+}
+
+function edgeKey(link: TaskLink): string {
+  return `${link.fromId} ${link.toId} ${link.type}`;
+}
+
 type Graph = {
   byId: Map<string, TaskRecord>;
+  /** Each row's children among `byId`, in the rows' order: the parts a start wait reads. */
+  parts: Map<string, TaskRecord[]>;
   links: TaskLink[];
   blockersOf: Map<string, TaskRecord[]>;
   blockingOf: Map<string, TaskRecord[]>;

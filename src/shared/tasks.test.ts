@@ -172,6 +172,38 @@ describe("the board delta (task-system P5)", () => {
     expect(delta.seq).toBe(2);
   });
 
+  // INF-2078: the core keeps a row's view between pushes, so a row the
+  // change did not reach is the same object on both boards, and the diff
+  // of a 3,400-row board must not pay to serialize every row to learn that.
+  it("knows a row kept by identity without reading it, and the edges by their array", () => {
+    const serialized: string[] = [];
+    const watched = (id: string, createdAt: number) =>
+      Object.defineProperty(view(id, createdAt), "toJSON", {
+        value(this: TaskView) {
+          serialized.push(this.id);
+          return { ...this };
+        },
+        enumerable: false,
+      });
+    const a = watched("a", 1);
+    const b = watched("b", 2);
+    const links: TaskLinkView[] = [{ fromId: "a", toId: "b", type: "blocks" }];
+    const prev = board(1, [a, b], links, 2);
+    // The same row objects and the same edge array: nothing moved, nothing read.
+    const kept = diffTaskBoards(prev, { ...board(2, [a, b], [], 2), links });
+    expect(kept.upserts).toEqual([]);
+    expect(kept.links).toEqual({ added: [], removed: [] });
+    expect(serialized).toEqual([]);
+    // A rebuilt row is compared, and only it; an edge array built again
+    // with the same edges adds and removes nothing.
+    const next = board(3, [a, { ...view("b", 2), title: "B two" }], [...links], 2);
+    const moved = diffTaskBoards(prev, next);
+    expect(moved.upserts.map((task) => task.id)).toEqual(["b"]);
+    expect(moved.links).toEqual({ added: [], removed: [] });
+    expect(serialized).toEqual(["b"]);
+    expect(applyTaskBoardDelta(prev, moved)).toEqual(next);
+  });
+
   it("returns the board unchanged for a stale delta and null on a gap", () => {
     const prev = board(5, [view("a", 1)], [], 1);
     const next = board(6, [view("a", 1), view("b", 2)], [], 2);

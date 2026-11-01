@@ -777,19 +777,31 @@ export function sortBoardLinks(links: readonly TaskLinkView[]): TaskLinkView[] {
  * `applyTaskBoardDelta(prev, diffTaskBoards(prev, next))` deep-equals
  * `next` (pinned in tasks.test.ts). A row is upserted when its serialized
  * view differs, so a derived-flag change with no write of its own (a
- * blocker closing, a card leaving the stack) travels like any other.
+ * blocker closing, a card leaving the stack) travels like any other. A row
+ * that is the same object on both boards is the same row, compared without
+ * serializing it, and so is the edge array: a core that keeps an untouched
+ * row's view between pushes (`TaskProtocol`'s row cache) pays here for the
+ * rows it rebuilt, not for the board.
  */
 export function diffTaskBoards(prev: TaskBoard, next: TaskBoard): TaskBoardDelta {
-  const before = new Map(prev.tasks.map((task) => [task.id, JSON.stringify(task)]));
+  const before = new Map(prev.tasks.map((task) => [task.id, task]));
   const upserts: TaskView[] = [];
   const seen = new Set<string>();
   for (const task of next.tasks) {
     seen.add(task.id);
-    if (before.get(task.id) !== JSON.stringify(task)) upserts.push(task);
+    const was = before.get(task.id);
+    if (was === task) continue;
+    if (was === undefined || JSON.stringify(was) !== JSON.stringify(task)) upserts.push(task);
   }
   const removed = prev.tasks.filter((task) => !seen.has(task.id)).map((task) => task.id);
-  const prevLinks = new Map(prev.links.map((link) => [linkKey(link), link]));
-  const nextLinks = new Map(next.links.map((link) => [linkKey(link), link]));
+  let added: TaskLinkView[] = [];
+  let removedLinks: TaskLinkView[] = [];
+  if (prev.links !== next.links) {
+    const prevLinks = new Map(prev.links.map((link) => [linkKey(link), link]));
+    const nextLinks = new Map(next.links.map((link) => [linkKey(link), link]));
+    added = [...nextLinks.values()].filter((link) => !prevLinks.has(linkKey(link)));
+    removedLinks = [...prevLinks.values()].filter((link) => !nextLinks.has(linkKey(link)));
+  }
   return {
     baseSeq: prev.seq,
     seq: next.seq,
@@ -797,10 +809,7 @@ export function diffTaskBoards(prev: TaskBoard, next: TaskBoard): TaskBoardDelta
     upserts,
     removed,
     projects: next.projects,
-    links: {
-      added: [...nextLinks.values()].filter((link) => !prevLinks.has(linkKey(link))),
-      removed: [...prevLinks.values()].filter((link) => !nextLinks.has(linkKey(link))),
-    },
+    links: { added, removed: removedLinks },
   };
 }
 

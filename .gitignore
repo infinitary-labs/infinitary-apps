@@ -21,6 +21,6 @@ src/renderer/src/generated/
 /.bench/
 /tests/fixtures/run-evidence/test-results/
 # Native development output; simulator evidence stays outside the project.
-ios/**/.build/
+.build/
 ios/**/DerivedData/
 ios/**/xcuserdata/

@@ -5107,6 +5107,45 @@ describe("the Linux packages", () => {
     expect(/^ {4}homepage = "([^"]*)";$/m.exec(recipes.nix)?.[1]).toBe(HOMEPAGE);
   });
 
+  // INF-2163's retention change, which the captain started: a passing
+  // journey run keeps only its result file and demos, and a failed phone
+  // check keeps its result bundles 1 day, a recording run 3.
+  it("keeps a passing journey run's result and demos, and a failed phone check's bundles 1 day", () => {
+    type Step = { if?: string; uses?: string; with?: Record<string, unknown> };
+    const source = loadYamlFile(".github/workflows/source-journeys.yml") as {
+      jobs: { "source-desktop": { steps: Step[] } };
+    };
+    const uploads = source.jobs["source-desktop"].steps.filter((step) =>
+      String(step.with?.name ?? "").startsWith("source-desktop-"),
+    );
+    const kept = (outcome: string) =>
+      uploads
+        .filter((step) => workflowValue(step.if ?? "", { steps: { journeys: { outcome } } }))
+        .map((step) => String(step.with?.path).trim().split("\n"));
+    expect(kept("success")).toEqual([
+      [
+        "Application Support/firstmate/playwright-report/source-results.json",
+        "Application Support/firstmate/test-results/runs/*/*/demo/",
+      ],
+    ]);
+    for (const outcome of ["failure", "cancelled", "skipped"]) {
+      expect(kept(outcome)).toHaveLength(1);
+      expect(kept(outcome)[0]).toContain("Application Support/firstmate/test-results/");
+    }
+    const phone = loadYamlFile(".github/workflows/phone.yml") as {
+      jobs: Record<string, { steps?: Step[] }>;
+    };
+    const bundles = Object.values(phone.jobs)
+      .flatMap((job) => job.steps ?? [])
+      .find(
+        (step) =>
+          step.uses?.startsWith("actions/upload-artifact") && step.with?.name === "phone-results",
+      );
+    const days = (recording: boolean) =>
+      workflowValue(String(bundles?.with?.["retention-days"]), { inputs: { recording } });
+    expect([days(false), days(true)]).toEqual([1, 3]);
+  });
+
   it("checks each package on a clean copy of its system and keeps the files on the run alone", () => {
     const workflow = loadYamlFile(".github/workflows/linux-packages.yml") as {
       permissions: Record<string, string>;
@@ -5125,7 +5164,11 @@ describe("the Linux packages", () => {
       step.uses?.startsWith("actions/upload-artifact"),
     );
     // INF-1838: keep the same-run package handoff, not weeks of large binaries.
-    expect(upload?.with).toMatchObject({ name: "linux-packages", "retention-days": 3 });
+    // INF-2163's retention change: a pull request's packages 1 day, a release's 3.
+    expect(upload?.with?.name).toBe("linux-packages");
+    const kept = (event_name: string) =>
+      workflowValue(String(upload?.with?.["retention-days"]), { github: { event_name } });
+    expect(["pull_request", "workflow_dispatch", "push"].map(kept)).toEqual([1, 3, 3]);
     const systems = (workflow.jobs.check?.strategy?.matrix.include ?? []).map(
       (entry) => `${entry.system} ${entry.image ?? entry.runner}`,
     );

@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "ci-artifact-retention",
+      "reason": "Internal CI: shorter retention for the project's own Actions artifacts and smaller uploads from passing journey runs; nothing in the app changes."
+    }
+  ]
+}

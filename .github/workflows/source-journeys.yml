@@ -233,8 +233,11 @@ jobs:
           path: ${{ runner.temp }}/journey-timing.json
           if-no-files-found: ignore
           retention-days: 14
+      # A run whose journeys did not pass keeps the window and everything the
+      # journeys left; a passing run keeps only its result file and any
+      # recorded demo, under the same name.
       - name: Keep the Linux window and the journeys' results
-        if: always()
+        if: always() && steps.journeys.outcome != 'success'
         uses: actions/upload-artifact@v4
         with:
           name: source-desktop-${{ runner.os }}${{ (inputs.suite == 'full' || inputs.suite == 'alone') && format('-{0}-{1}', matrix.lane, matrix.shard) || format('-{0}-{1}', inputs.artifact-suffix, matrix.lane) }}
@@ -242,6 +245,16 @@ jobs:
             ${{ runner.temp }}/source-desktop-evidence/
             Application Support/firstmate/playwright-report/source-results.json
             Application Support/firstmate/test-results/
+          if-no-files-found: ignore
+          retention-days: 3
+      - name: Keep a passing run's result and demos
+        if: always() && steps.journeys.outcome == 'success'
+        uses: actions/upload-artifact@v4
+        with:
+          name: source-desktop-${{ runner.os }}${{ (inputs.suite == 'full' || inputs.suite == 'alone') && format('-{0}-{1}', matrix.lane, matrix.shard) || format('-{0}-{1}', inputs.artifact-suffix, matrix.lane) }}
+          path: |
+            Application Support/firstmate/playwright-report/source-results.json
+            Application Support/firstmate/test-results/runs/*/*/demo/
           if-no-files-found: ignore
           retention-days: 3
       - name: Keep the run-alone result

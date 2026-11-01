@@ -373,7 +373,8 @@ jobs:
           retention-days: 3
       # INF-1343 (the captain's "Upload the 530 MB phone results only when a check fails"): the whole
       # result bundles are for diagnosing a failure; a recording run keeps them for its clips, which
-      # the evidence_run export reads. The logs and pictures above stay on every run.
+      # the evidence_run export reads. The logs and pictures above stay on every run. A failure's
+      # bundles are kept 1 day, a recording run's 3 days for its export.
       - name: Keep native results and connection readings
         if: failure() || inputs.recording
         uses: actions/upload-artifact@v4
@@ -381,7 +382,7 @@ jobs:
           name: phone-results
           path: ${{ runner.temp }}/phone/
           if-no-files-found: ignore
-          retention-days: 3
+          retention-days: ${{ inputs.recording && 3 || 1 }}
   # INF-1066: result bundles can exceed the workflow reader's download bound.
   # Export selected evidence on the Xcode host without a simulator, build, sign-in or signing.
   scene-evidence:

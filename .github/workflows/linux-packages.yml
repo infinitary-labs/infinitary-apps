@@ -132,7 +132,9 @@ jobs:
           name: linux-packages
           path: linux-packages/
           if-no-files-found: error
-          retention-days: 3
+          # A pull request's packages serve only its own run; a release's
+          # stay 3 days for a release that resumes.
+          retention-days: ${{ github.event_name == 'pull_request' && 1 || 3 }}
 
   check:
     name: check (${{ matrix.system }}${{ matrix.image && format(' {0}', matrix.image) || '' }})

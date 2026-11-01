@@ -32,8 +32,12 @@ A push to main repeats nothing, since its pull request already did; a `ci.yml` r
 ## Actions artifact retention
 
 Large, short-lived uploads use explicit three-day retention: `phone-results`, `phone-pictures`, `phone-logs`, `phone-simulator-logs`, `linux-packages` and the `source-desktop-*` family, including overflow-parallel journeys.
+Two of them are shorter: a pull request's `linux-packages` are kept 1 day, and `phone-results` from a failed phone check 1 day, while a recording run's stay 3 days for its export.
 This keeps recent diagnostic evidence and same-run package handoffs without accumulating weeks of bundles and binaries.
-Upload names, contents and conditions stay unchanged; phone result bundles still upload only on failure or a recording request.
+Phone result bundles upload only on failure or a recording request.
+A `source-desktop-*` upload from a run whose journeys passed holds only `source-results.json` and any recorded demo; a run that did not pass keeps the window and everything under `test-results/`.
+A failed run's `journeys-failures` and `e2e-failures` are kept 7 days.
+The repository's default for an upload that names no retention is 14 days.
 Download diagnostic evidence or export a recording within those three days if a task needs to keep it longer.
 Phone logs also carry the full gate's `part-times.json`; if no unexpired passing full gate supplies times, the existing chooser runs every affected part instead of dropping coverage.
 Published release assets are independent of Actions artifact retention, but a release resuming after its Linux packages expire must rebuild them.
@@ -785,7 +789,7 @@ The affected-journey selector retains that journey for changes to the core Mac c
   Playwright takes the picture and the snapshot as the app closes - inside the test, or in `afterAll` as it retires the worker after the failure - so a journey that shares one app across its file gets them too.
   The picture costs about 100 ms per app close and is dropped when the test passed.
 - **`e2e-demos`** is every demo a journey recorded (`testInfo.outputPath("demo")`, "Recording a demo" above), kept whenever the suite ran, passed or failed, so a requested demo can be watched from the run's page.
-- All four are kept 14 days.
+- `e2e-failures` is kept 7 days, the others 14 days.
   None can fail the job, and none runs when a stage the suite needs kept it from starting.
 - **`e2e-alone-mac`** is the run-alone pass's directory for the Mac-only tests ("Each test owns its prerequisites", above): `alone-results.json`, with every test it ran, how each ended and its first error, and each test's output, beside the trace and picture of each that failed; kept whenever the pass ran.
 - **Every stage reports**: each stage waits only on the stages it needs, never on every stage before it (INF-663).

@@ -763,3 +763,78 @@ function parseLines(raw: string): JsonRecord[] {
     return entry ? [entry] : [];
   });
 }
+
+/**
+ * Visit only newly appended whole source lines. Unlike SessionFollower this
+ * cursor path never retains or returns accumulated conversation history.
+ * The callback commits its end offset with the observations it derives.
+ */
+export type SessionDeltaTail = { offset: number; pieces: Buffer[] };
+
+export function readSessionDelta(
+  path: string,
+  offset: number,
+  visit: (entry: JsonRecord, end: number) => void,
+  tail?: SessionDeltaTail,
+): { lines: number; bytes: number } {
+  if (!existsSync(path)) return { lines: 0, bytes: 0 };
+  const size = statSync(path).size;
+  if (size < offset) throw new Error("The observed conversation no longer extends its checkpoint");
+  const fd = openSync(path, "r");
+  const startOffset = tail?.offset ?? offset;
+  let position = startOffset;
+  let lines = 0;
+  const pieces: Buffer[] = tail?.pieces ?? [];
+  try {
+    while (position < size) {
+      const buffer = Buffer.allocUnsafe(Math.min(64 * 1024, size - position));
+      const count = readSync(fd, buffer, 0, buffer.length, position);
+      if (count === 0) break;
+      let start = 0;
+      for (let index = 0; index < count; index += 1) {
+        if (buffer[index] !== 10) continue;
+        pieces.push(buffer.subarray(start, index));
+        const text = Buffer.concat(pieces).toString("utf8");
+        pieces.length = 0;
+        const entry: unknown = text.trim() ? JSON.parse(text) : {};
+        if (!entry || typeof entry !== "object" || Array.isArray(entry))
+          throw new Error("The observed conversation contains an invalid source line");
+        visit(entry as JsonRecord, position + index + 1);
+        lines += 1;
+        start = index + 1;
+      }
+      if (start < count) pieces.push(buffer.subarray(start, count));
+      position += count;
+    }
+    if (tail) tail.offset = position;
+    return { lines, bytes: position - startOffset };
+  } catch (error) {
+    if (tail) {
+      tail.offset = offset;
+      tail.pieces = [];
+    }
+    throw error;
+  } finally {
+    closeSync(fd);
+  }
+}
+
+/** First activation skips completed history, but never starts inside a partial source line. */
+export function sessionCompleteOffset(path: string): number {
+  if (!existsSync(path)) return 0;
+  let end = statSync(path).size;
+  const fd = openSync(path, "r");
+  try {
+    while (end > 0) {
+      const start = Math.max(0, end - 64 * 1024);
+      const bytes = Buffer.allocUnsafe(end - start);
+      const count = readSync(fd, bytes, 0, bytes.length, start);
+      const newline = bytes.subarray(0, count).lastIndexOf(10);
+      if (newline >= 0) return start + newline + 1;
+      end = start;
+    }
+    return 0;
+  } finally {
+    closeSync(fd);
+  }
+}

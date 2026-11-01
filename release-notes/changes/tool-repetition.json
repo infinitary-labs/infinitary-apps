@@ -1,0 +1,14 @@
+{
+  "entries": [
+    {
+      "id": "tool-repetition",
+      "kind": "fix",
+      "area": "crewmates",
+      "title": "The first mate notices repeated results",
+      "body": "When a crewmate gets the same result three times for the same operation, your first mate can check whether it is still useful and guide it. Long conversations do not need to be reread to spot the repetition.",
+      "noPicture": "This changes internal first-mate notification and judgment rather than adding a screen or control.",
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

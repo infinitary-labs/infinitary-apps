@@ -3,6 +3,7 @@ import type { CrewSpeed, SpeedSelection } from "@shared/crewSpeed";
 import type { FmEvent } from "@shared/events";
 import type { Reasoning } from "@shared/reasoning";
 import type { SourceIdentity } from "@shared/selfSource";
+import type { ToolObservation } from "@shared/toolCompletion";
 import type { RunbookSkillFiles } from "../../shared/runbooks";
 import type { ServedInstructions, ServedState } from "../orchestrator/seat";
 import type { ModelRuntime } from "../pi/types";
@@ -268,6 +269,7 @@ export type SessionEvent =
       job?: BackgroundJobName;
     }
   | FmEvent
+  | ToolObservation
   /** One model turn closed, with its closing words when it said any. */
   | { type: "turn_closed"; text?: string }
   /** A model request began: the watched request clock starts over. */

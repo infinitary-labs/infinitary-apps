@@ -21,6 +21,7 @@ import { TaskDeliveryStore } from "./taskDeliveryStore";
 import { splitTurn } from "./taskExecutionStore";
 import { splitPolicies } from "./taskPolicyStore";
 import { migrateTaskRecordRetirement } from "./taskRecordProjection";
+import { REPETITION_TABLES } from "./taskRepetitionStore";
 import { conversationOf } from "./taskSessionStore";
 import type { TaskDelivery } from "./taskStore";
 import {
@@ -1189,6 +1190,8 @@ const MIGRATIONS: readonly Migration[] = [
   // parent edge stays the one join. Nothing reverses it: the edge was the
   // retired hold's own record.
   retireReviewEdges,
+  // Incremental completed-operation observations; TaskService is the writer.
+  REPETITION_TABLES,
 ];
 
 /** The current database format, derived from the embedded migration ledger. */
@@ -1199,6 +1202,9 @@ export const CHANGES_VERSION = MIGRATIONS.indexOf(migrateChanges) + 1;
 
 /** The migration that removed the host's review edges (INF-1876). */
 export const REVIEW_EDGES_VERSION = MIGRATIONS.indexOf(retireReviewEdges) + 1;
+
+/** The incremental completed-operation state (INF-1998). */
+export const TOOL_REPETITION_VERSION = MIGRATIONS.indexOf(REPETITION_TABLES) + 1;
 
 export const CARD_ANSWERER_MIGRATION_VERSION = MIGRATIONS.indexOf(addCardAnswerer) + 1;
 export const PLUGIN_KIND_MIGRATION_VERSION = MIGRATIONS.indexOf(addPluginKind) + 1;

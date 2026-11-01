@@ -303,6 +303,7 @@ import {
 } from "../routing/router";
 import { isDowngrade } from "../routing/routingEngine";
 import { crewRunbookText, type Runbooks } from "../runbooks/runbooks";
+import { followCompletions } from "../session/followCompletions";
 import {
   type BackgroundJobName,
   type ClientBackgroundTask,
@@ -726,6 +727,10 @@ export type CrewSupervisorOptions = {
    * Absent = no account is ever held.
    */
   serveability?: AccountServeability;
+  /** The latest available ledger reading, without aggregating historical rows. */
+  latestUsage?: (
+    taskId: string,
+  ) => ReturnType<import("../storage/usageStore").UsageStore["latestForTask"]>;
   /** Records per-turn usage for burn tracking (D-18), per account. */
   recordUsage?: (input: {
     taskId: string;
@@ -3146,8 +3151,12 @@ export class CrewSupervisor {
    * REPORT does not come through here: `sortReport` answers whose turn it
    * is first (`reportSort.ts`).
    */
-  private routeCrewEvent(taskId: string, wake: TypedWake, origin: ServedWakeOrigin): void {
-    this.hooks.notifyOp(wake, origin, taskId);
+  private routeCrewEvent(
+    taskId: string,
+    wake: TypedWake,
+    origin: ServedWakeOrigin,
+  ): number | null | void {
+    return this.hooks.notifyOp(wake, origin, taskId);
   }
 
   /**
@@ -6340,60 +6349,85 @@ export class CrewSupervisor {
     task.clientJobsSince = undefined;
     task.clientJob = undefined;
     task.clientTasks.clear();
-    return session.subscribe((event) => {
-      if (
-        !task.paused &&
-        (event.type === "input_read" ||
-          event.type === "request_started" ||
-          event.type === "continuation_started")
-      )
-        this.recordRestartOutcome(task.id, "resumed");
-      if (event.type === "turn_failed" && !task.paused)
-        this.recordRestartOutcome(task.id, "stopped", event.error);
-      if (event.type === "background_work_changed") {
-        task.clientJobs = event.count;
-        task.clientJobsSince =
-          (event.count ?? 0) > 0 ? (task.clientJobsSince ?? this.now()) : undefined;
-        task.clientJob = (event.count ?? 0) > 0 ? event.job : undefined;
-        if (event.count === undefined) this.clientEnded(task);
-        else if (event.tasks) this.keepClientTasks(task, event.tasks);
-        this.broadcastCrewCounts();
-        return;
-      }
-      if (event.type === "continuation_started") {
-        this.startAutonomousTurn(task, laneRowsOf(event.order));
-        return;
-      }
-      if (event.type === "continuation_ended") {
-        this.endAutonomousTurn(task, event.error, event.cutOff);
-        return;
-      }
-      if (event.type === "model_served") {
-        this.recordServedModel(task, event);
-        return;
-      }
-      if (event.type === "turn_closed") {
-        // A turn's closing words, as its session read them, are its report
-        // candidate (WI-1), and a turn that closed on none leaves none. Pi
-        // ends a turn per model message, so they match what it streamed;
-        // Claude ends one per prompt and closes on the client's final
-        // assistant text, so the text its earlier messages streamed ahead
-        // of their tool calls - a self-brief, a note to itself - never
-        // stands in for a report.
-        task.turnReport = event.text?.trim() ? event.text : undefined;
-        return;
-      }
-      // A turn its computer's update cut is paused, never failed: its end
-      // carries it on (`turnComplete`), and the feed says no failure.
-      if (event.type === "turn_failed" && task.paused) {
-        task.lastTurnError ??= event.error;
-        return;
-      }
-      if (!isBroadcastEvent(event)) return;
-      this.noteTaskActivity(task);
-      this.applyEvent(task, event);
-      this.options.broadcastEvent(enrichEvent(task, event));
-    });
+    return followCompletions(
+      session,
+      (event) => {
+        if (event.type === "tool_observation") {
+          this.options.tasks.observeTool(task.id, event, (notice) => {
+            const queued = this.routeCrewEvent(
+              task.id,
+              {
+                once: notice.identity,
+                facts: {
+                  kind: "possible-repetition",
+                  task: { id: task.id, title: task.title },
+                  notice,
+                  usage: this.options.latestUsage?.(task.id) ?? null,
+                },
+              },
+              "agent",
+            );
+            if (queued === undefined) throw new Error("The first mate inbox is not attached yet");
+          });
+          return;
+        }
+        if (
+          !task.paused &&
+          (event.type === "input_read" ||
+            event.type === "request_started" ||
+            event.type === "continuation_started")
+        )
+          this.recordRestartOutcome(task.id, "resumed");
+        if (event.type === "turn_failed" && !task.paused)
+          this.recordRestartOutcome(task.id, "stopped", event.error);
+        if (event.type === "background_work_changed") {
+          task.clientJobs = event.count;
+          task.clientJobsSince =
+            (event.count ?? 0) > 0 ? (task.clientJobsSince ?? this.now()) : undefined;
+          task.clientJob = (event.count ?? 0) > 0 ? event.job : undefined;
+          if (event.count === undefined) this.clientEnded(task);
+          else if (event.tasks) this.keepClientTasks(task, event.tasks);
+          this.broadcastCrewCounts();
+          return;
+        }
+        if (event.type === "continuation_started") {
+          this.startAutonomousTurn(task, laneRowsOf(event.order));
+          return;
+        }
+        if (event.type === "continuation_ended") {
+          this.endAutonomousTurn(task, event.error, event.cutOff);
+          return;
+        }
+        if (event.type === "model_served") {
+          this.recordServedModel(task, event);
+          return;
+        }
+        if (event.type === "turn_closed") {
+          // A turn's closing words, as its session read them, are its report
+          // candidate (WI-1), and a turn that closed on none leaves none. Pi
+          // ends a turn per model message, so they match what it streamed;
+          // Claude ends one per prompt and closes on the client's final
+          // assistant text, so the text its earlier messages streamed ahead
+          // of their tool calls - a self-brief, a note to itself - never
+          // stands in for a report.
+          task.turnReport = event.text?.trim() ? event.text : undefined;
+          return;
+        }
+        // A turn its computer's update cut is paused, never failed: its end
+        // carries it on (`turnComplete`), and the feed says no failure.
+        if (event.type === "turn_failed" && task.paused) {
+          task.lastTurnError ??= event.error;
+          return;
+        }
+        if (!isBroadcastEvent(event)) return;
+        this.noteTaskActivity(task);
+        this.applyEvent(task, event);
+        this.options.broadcastEvent(enrichEvent(task, event));
+      },
+      this.now,
+      this.machineOf(task.id) === LOCAL_MACHINE_ID,
+      join(this.options.paths.crewmatesDir, task.id, "completions.sqlite"),
+    );
   }
 
   /**
@@ -15771,7 +15805,8 @@ function isBroadcastEvent(event: SessionEvent): event is FmEvent {
     event.type !== "continuation_started" &&
     event.type !== "continuation_ended" &&
     event.type !== "input_read" &&
-    event.type !== "model_served"
+    event.type !== "model_served" &&
+    event.type !== "tool_observation"
   );
 }
 

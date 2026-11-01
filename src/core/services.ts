@@ -2406,6 +2406,7 @@ export async function createServices(
       },
     },
     recordUsage,
+    latestUsage: (taskId) => usageStore.latestForTask(taskId),
     paths,
     now: ticker.now,
     onWatchdogTick: (now) => {

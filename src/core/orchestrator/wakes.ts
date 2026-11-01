@@ -9,6 +9,7 @@ import {
 import type { PlacementRequirements, PlacementSystem } from "@shared/placement";
 import type { recoveryWay, StallFact, WorkWait } from "@shared/recovery";
 import type { EffectiveTaskPolicies } from "@shared/taskPolicies";
+import type { RepetitionNotice } from "@shared/toolCompletion";
 import type { FreezeLine } from "../freeze/freezeRecorder";
 import type { PressureTaskShare } from "../placed/resourcePressure";
 import {
@@ -67,6 +68,9 @@ import { type NamedModel, namedModelWords } from "./namedModel";
 import { type ReviewHistoryEntry, renderReviewHistory } from "./reviewHistory";
 import type { SeatPauseClass } from "./seat";
 import type { SeatDigestTurn } from "./seatDigest";
+
+/** The event's words, shared with journeys that observe its delivery. */
+export const POSSIBLE_REPETITION_OPENING = "[fm-op] Possible repetition on task ";
 
 /** The ladder's nudge: finish, or say what blocks you (rung 1, and the stall card's Continue). */
 /** The policy notice's heading over the runbook sections the new facts select that the crewmate's instructions did not carry (INF-1876). */
@@ -329,6 +333,12 @@ export function waitingCardWords(cards: readonly WakeNote[]): string {
  * a fact the host read, never a sentence. A new wake adds its kind here.
  */
 export type WakeFacts =
+  | {
+      kind: "possible-repetition";
+      task: WakeTask;
+      notice: RepetitionNotice;
+      usage: ReturnType<import("../storage/usageStore").UsageStore["latestForTask"]>;
+    }
   | {
       kind: "resource-pressure";
       computerId: string | null;
@@ -2091,6 +2101,8 @@ function renderFacts(facts: WakeFacts, wake: Pick<WakeEnvelope, "ways" | "text">
       })}`;
     case "guidance-set-aside":
       return `[fm-op] guidance for task ${facts.task.id} "${facts.task.title}" could not be delivered after ${facts.attempts} attempts and was set aside: ${facts.excerpt}. You can interrupt the task or spawn a follow-up.`;
+    case "possible-repetition":
+      return `${POSSIBLE_REPETITION_OPENING}${facts.task.id} "${facts.task.title}": ${facts.notice.toolName} returned identical content and error status ${facts.notice.count} times for the same arguments. First/latest call references: ${JSON.stringify({ first: facts.notice.first, latest: facts.notice.latest })}. Elapsed: ${Math.max(0, facts.notice.latest.at - facts.notice.first.at)} ms. Latest available usage reading (not a total): ${JSON.stringify(facts.usage)}. Missing fields and cost are unknown, not zero. Inspect the task. Repeated tests, rereads and polling may be useful. Judge against the original task before steering or interrupting within its scope. This observation is not a loop verdict or an automatic stop.`;
     case "quiet":
       return `[fm-op] ${facts.crewmate} on task ${facts.task.id} "${facts.task.title}" has produced no events for ${facts.minutes} minutes; it may be stuck. You can steer or interrupt it.`;
     case "long-turn":

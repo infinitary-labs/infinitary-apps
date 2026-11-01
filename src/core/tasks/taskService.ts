@@ -76,6 +76,7 @@ import {
 import { type FirstReleaseReport, firstReleaseReportSchema } from "@shared/taskRelease";
 import type { DropEffects } from "@shared/tasks";
 import { isUnstartedWork } from "@shared/tasks";
+import type { RepetitionNotice, ToolObservation } from "@shared/toolCompletion";
 import { CARE_WORDS } from "@shared/vocabulary";
 import type { HandoverFile } from "@shared/work";
 import {
@@ -129,6 +130,7 @@ import {
   type TaskReferenceKind,
   type TaskReferenceStore,
 } from "../storage/taskReferenceStore";
+import { TaskRepetitionStore } from "../storage/taskRepetitionStore";
 import { conversationOf, type TaskSession, TaskSessionStore } from "../storage/taskSessionStore";
 import {
   type CardRefusal,
@@ -990,6 +992,15 @@ export class TaskService {
     return () => {
       this.listeners.delete(listener);
     };
+  }
+
+  /** Owner-only completion facts; enqueue shares this transaction's database. */
+  observeTool(
+    id: string,
+    event: ToolObservation,
+    enqueue: (notice: RepetitionNotice) => void,
+  ): void {
+    new TaskRepetitionStore(this.db).consume(id, event, enqueue);
   }
 
   /** Publish derived host facts without rewriting activity or its idle clock. */

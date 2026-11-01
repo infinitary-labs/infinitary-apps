@@ -31,6 +31,7 @@ import {
   taskBrowserSizeSchema,
 } from "./taskBrowser";
 import { firstReleaseReportSchema } from "./taskRelease";
+import { toolObservationSchema } from "./toolCompletion";
 
 /**
  * A crewmate's conversation held on a computer that runs work (piece 8,
@@ -230,6 +231,7 @@ export type PlacedSpec = z.infer<typeof placedSpecSchema>;
  * mid-turn.
  */
 export const placedEventSchema = z.union([
+  toolObservationSchema,
   fmEventSchema,
   z.discriminatedUnion("type", [
     z.object({

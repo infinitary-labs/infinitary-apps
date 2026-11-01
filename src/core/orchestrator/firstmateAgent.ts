@@ -4875,7 +4875,8 @@ export class FirstmateAgent {
       event.type === "request_started" ||
       event.type === "continuation_started" ||
       event.type === "continuation_ended" ||
-      event.type === "model_served"
+      event.type === "model_served" ||
+      event.type === "tool_observation"
     ) {
       return;
     }

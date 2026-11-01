@@ -509,6 +509,23 @@ export class UsageStore {
     };
   }
 
+  /** Latest available ledger reading, not a lifetime total or an inferred price. */
+  latestForTask(taskId: string): {
+    at: number;
+    input: number | null;
+    output: number | null;
+    cache_read: number | null;
+    cache_write: number | null;
+    cost: number | null;
+  } | null {
+    return (
+      (this.db
+        .prepare(`SELECT at, input, output, cache_read, cache_write, cost
+      FROM usage_events WHERE task_id = ? ORDER BY at DESC, id DESC LIMIT 1`)
+        .get(taskId) as ReturnType<UsageStore["latestForTask"]>) ?? null
+    );
+  }
+
   /**
    * Every task's usage summed in one query (or one task's), so a caller that
    * polls a whole list never pays a query per task.

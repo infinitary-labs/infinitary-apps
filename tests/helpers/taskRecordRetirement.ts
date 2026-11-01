@@ -1,4 +1,8 @@
-import { openInMemoryDatabase, TASK_RECORD_RETIREMENT_VERSION } from "../../src/core/storage/db";
+import {
+  openInMemoryDatabase,
+  TASK_RECORD_RETIREMENT_VERSION,
+  TOOL_REPETITION_VERSION,
+} from "../../src/core/storage/db";
 import { SHAPE_RECORD_TABLES } from "../../src/core/storage/taskOwnedShapeStore";
 import { RETIRED_TASK_COLUMNS } from "../../src/core/storage/taskRecordProjection";
 
@@ -39,6 +43,9 @@ export function taskRecordRetirementReverseSql(): string {
       DROP TABLE task_session_observations;
       DROP INDEX task_events_identity;
       ALTER TABLE task_events DROP COLUMN identity;
+      DROP TABLE IF EXISTS task_repetition_cursors;
+      DROP TABLE IF EXISTS task_repetitions;
+      DELETE FROM schema_migrations WHERE version = ${TOOL_REPETITION_VERSION};
       DROP TABLE tasks;
       ${schema};
       INSERT INTO tasks (${columns.map(({ name }) => name).join(",")}) SELECT * FROM retired_task_rows;

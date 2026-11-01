@@ -113,3 +113,4 @@ Dropped work starts again as a fresh task joined by `replaced-by` (`TaskService.
 - [Task graph](../docs/task-graph.md): "The graph", "The ready query", "Gates on active rows", "Follow-ups are not children", "The close rules", "Tools".
 - [Sequences](../docs/sequences.md): "The decision", "The host pieces it runs on (all generic)".
 - [Architecture](../docs/architecture.md) §19 "The task system"; [task retention](../docs/task-retention.md); [the whose-turn rule](../docs/report-sort.md).
+- [Completed-operation repetition](../docs/tool-repetition.md): incremental exact completion observations, indexed task state and once-named lifecycle notices.

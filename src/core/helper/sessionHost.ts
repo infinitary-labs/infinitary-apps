@@ -57,6 +57,7 @@ import type { MediaProbe, TypefaceProbe } from "../pi/cardImages";
 import { CREWMATE_TOOLS } from "../pi/crewmateTaskTools";
 import { verifyKeptValidationEvidenceSync } from "../pi/validationEvidence";
 import { type SelfSourceFacts, sourceContext } from "../selfSource/resolve";
+import { followCompletions } from "../session/followCompletions";
 import {
   type ClientBackgroundTask,
   LOCAL_MACHINE_ID,
@@ -932,24 +933,30 @@ export class SessionHost {
       held.backend = binding.backend;
       held.account = this.options.accounts?.of(binding);
       held.renewal = session.takeRenewal();
-      held.unsubscribe = session.subscribe((event) => {
-        // Context-scoped first-mate facts are local to their session owner;
-        // a placed crewmate has no snapshot to invalidate at home.
-        if (event.type === "context_compacted") return;
-        // A cut-off is a fact about the account that served the turn: this
-        // computer's own, kept in its own store and never the home's.
-        if (event.type === "turn_failed" && event.cutOff && held.account)
-          this.options.accounts?.noteCutOff(held.account, event.cutOff);
-        if (event.type === "background_work_changed") {
-          // The home hears the count, as before; the tasks stay here.
-          this.record(held, { type: "background_work_changed", count: event.count });
-          // A client that ended (`count` unknown) took what it ran with it.
-          if (event.count === undefined) this.clientEnded(held);
-          else this.keepClientTasks(held, event.tasks ?? []);
-          return;
-        }
-        this.record(held, event);
-      });
+      held.unsubscribe = followCompletions(
+        session,
+        (event) => {
+          // Context-scoped first-mate facts are local to their session owner;
+          // a placed crewmate has no snapshot to invalidate at home.
+          if (event.type === "context_compacted") return;
+          // A cut-off is a fact about the account that served the turn: this
+          // computer's own, kept in its own store and never the home's.
+          if (event.type === "turn_failed" && event.cutOff && held.account)
+            this.options.accounts?.noteCutOff(held.account, event.cutOff);
+          if (event.type === "background_work_changed") {
+            // The home hears the count, as before; the tasks stay here.
+            this.record(held, { type: "background_work_changed", count: event.count });
+            // A client that ended (`count` unknown) took what it ran with it.
+            if (event.count === undefined) this.clientEnded(held);
+            else this.keepClientTasks(held, event.tasks ?? []);
+            return;
+          }
+          this.record(held, event);
+        },
+        this.now,
+        listsChange(this.options.homeChanges?.(), contractChange("tool-observations")),
+        join(folders.root, "completions.sqlite"),
+      );
       this.recordJobs(held, true);
     })();
     held.opening = opening;

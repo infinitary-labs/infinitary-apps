@@ -1,6 +1,6 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
-import type { ResourceObservation } from "@shared/resources";
+import { RESOURCE_MAX_AGE_MS, type ResourceObservation } from "@shared/resources";
 import { afterEach, describe, expect, it } from "vitest";
 import { scratchDir } from "../../../tests/helpers/scratchDirs";
 import { LoadLine } from "./loadLine";
@@ -43,18 +43,17 @@ function addWork(rows: ProcessReading[], cores: number, elapsedMs: number) {
 }
 function setup() {
   const rows: ProcessReading[] = identities.map((row) => ({ ...row }));
+  const clock = { now: 0 };
   const line = new LoadLine({
     stateFile: join(scratchDir("cpu-line-"), "holds.json"),
-    now: () => 0,
+    now: () => clock.now,
     processes: async () => rows,
     groupExists: () => true,
   });
   lines.push(line);
-  const claim = (index: number, cpu = 4) =>
-    line
-      .forTask("same-task")
-      .claim({ pid: rowAt(rows, index).pid, demand: { cpu, memoryBytes: 1024 ** 3 } });
-  return { line, rows, claim };
+  const claim = (index: number, cpu = 4, memoryBytes = 1024 ** 3) =>
+    line.forTask("same-task").claim({ pid: rowAt(rows, index).pid, demand: { cpu, memoryBytes } });
+  return { line, rows, claim, clock };
 }
 
 // INF-1978: an unavailable OS reading is not evidence that a waiting group ended.
@@ -117,17 +116,61 @@ describe("queued identity checks", () => {
 });
 
 describe("accepted counted-once admission", () => {
-  it("starts a lone run at zero idle but still requires fresh memory and normal pressure", async () => {
-    const { line, claim } = setup();
-    expect((await claim(0)).state).toBe("waiting");
-    line.observe({ ...reading, memory: { ...reading.memory, memoryPressure: "warning" } }, null);
+  // Re-typed for INF-2165 direction A (captain approved): a lone run is judged
+  // against installed memory less the margin, not today's free reading, but
+  // still needs a fresh reading and normal pressure.
+  it("starts a lone run at zero idle and no free memory, but still requires a fresh reading and normal pressure", async () => {
+    const { line, claim, clock } = setup();
+    expect((await claim(0)).reason).toBe("unavailable");
+    const empty = { ...reading, memory: { ...reading.memory, availableBytes: 0 } };
+    line.observe({ ...empty, memory: { ...empty.memory, memoryPressure: "warning" } }, null);
     expect(line.snapshot().runs[0]?.reason).toBe("pressure");
-    line.observe({ ...reading, memory: { ...reading.memory, availableBytes: 0 } }, null);
-    expect(line.snapshot().runs[0]?.state).toBe("waiting");
-    line.observe(reading, null);
+    line.observe({ ...empty, memory: { ...empty.memory, memoryPressure: "critical" } }, null);
+    expect(line.snapshot().runs[0]?.reason).toBe("pressure");
+    // A reading taken longer ago than the freshness allowance starts nothing.
+    clock.now = RESOURCE_MAX_AGE_MS + 1;
+    line.observe(empty, null, 0);
+    expect(line.snapshot().runs[0]).toMatchObject({ state: "waiting", reason: "unavailable" });
+    line.observe(empty, null, clock.now);
     expect(line.snapshot().runs[0]?.state).toBe("running");
     expect((await claim(1)).state).toBe("waiting");
     console.info("Lone-run proof", JSON.stringify(line.snapshot()));
+  });
+
+  // INF-2165's worked case: the MacBook's 24 GB with 5.4 GB free admits a lone 4 GB run.
+  // An ask above installed memory less the 10 percent margin still waits alone.
+  it("judges a lone run's memory ask against installed memory less the margin", async () => {
+    const { line, claim } = setup();
+    const macBook = { ...reading, memory: { ...reading.memory, availableBytes: 5.4 * 1024 ** 3 } };
+    line.observe(macBook, null);
+    expect((await claim(0, 4, 4 * 1024 ** 3)).state).toBe("running");
+    const other = setup();
+    other.line.observe(reading, null);
+    const total = reading.memory.totalBytes;
+    const tooBig = Math.floor(total * 0.9) + 1;
+    expect(await other.claim(0, 1, tooBig)).toMatchObject({ state: "waiting", reason: "capacity" });
+    console.info("Installed-memory proof", JSON.stringify(other.line.snapshot()));
+  });
+
+  // INF-2165's worked case: a 4 GB run using its 4 GB with 4.0 GB free admits a 1 GB run,
+  // because the reading already lacks the running group's resident memory.
+  it("counts a running run's memory once, and reserves an unmeasured run's declaration", async () => {
+    const { line, rows, claim } = setup();
+    line.observe(reading, rows);
+    expect((await claim(0, 1, 4 * 1024 ** 3)).state).toBe("running");
+    // Idle processors leave room, so only memory decides the second run.
+    const four = {
+      ...reading,
+      cpu: { ...reading.cpu, idleFraction: 1 },
+      memory: { ...reading.memory, availableBytes: 4 * 1024 ** 3 },
+    };
+    // No process table: nothing measured, so nothing is added back and the 1 GB run waits.
+    line.observe(four, null);
+    expect(await claim(1, 1)).toMatchObject({ state: "waiting", reason: "capacity" });
+    rows[0] = { ...rowAt(rows, 0), residentBytes: 4 * 1024 ** 3 };
+    line.observe(four, rows);
+    expect(line.snapshot().runs[1]?.state).toBe("running");
+    console.info("Memory counted-once proof", JSON.stringify(line.snapshot()));
   });
 
   it("admits the second run in the worked case, then leaves a third waiting", async () => {

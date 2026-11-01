@@ -12,7 +12,7 @@ import { z } from "zod";
 import { memoryUsedBytes } from "./memoryUsed";
 import { type ProcessReading, processResources, readProcesses } from "./processResources";
 import { processRoots } from "./processRoots";
-import { resourceCapacity } from "./resourceCapacity";
+import { memoryMarginBytes, resourceCapacity } from "./resourceCapacity";
 import type { ProcessWindow } from "./resourceSampler";
 
 const heldSchema = z.object({
@@ -54,6 +54,7 @@ export class LoadLine {
   private timer: ReturnType<typeof setInterval> | undefined;
   private latest: { observation: ResourceObservation; at: number } | undefined;
   private measured = new Map<string, number>();
+  private measuredMemory = new Map<string, number>();
   private failure: unknown;
   private stopped = false;
 
@@ -111,15 +112,24 @@ export class LoadLine {
         );
       }
       this.measured.clear();
-      if (processes && window && observation.status === "sampled") {
+      this.measuredMemory.clear();
+      if (processes && observation.status === "sampled") {
         const owners = new Map(
           processes.flatMap((row) => {
             const held = this.held.find((held) => held.pid === row.group);
             return held ? [[row.pid, held.id] as const] : [];
           }),
         );
-        const use = processResources(window.first, processes, owners, window.elapsedMs);
-        if (use.status === "sampled") {
+        // Resident memory is a reading of this table alone; processor use needs a window.
+        for (const row of processes) {
+          const id = owners.get(row.pid);
+          if (id)
+            this.measuredMemory.set(id, (this.measuredMemory.get(id) ?? 0) + row.residentBytes);
+        }
+        const use = window
+          ? processResources(window.first, processes, owners, window.elapsedMs)
+          : undefined;
+        if (use?.status === "sampled") {
           for (const run of use.tasks)
             if (run.cpuCores !== undefined) this.measured.set(run.taskId, run.cpuCores);
         }
@@ -299,9 +309,18 @@ export class LoadLine {
         // Restore observed use before applying the same placement margin, then
         // reserve the larger of declared and measured use exactly once.
         remaining.cpu += measured * 0.8 - Math.max(held.demand.cpu, measured);
-        remaining.memoryBytes -= held.demand.memoryBytes;
+        // The memory reading already lacks a running group's resident memory: add
+        // it back, then reserve the larger of declared and resident once (INF-2165).
+        // An unmeasured group reserves its declaration with nothing added back.
+        const resident = this.measuredMemory.get(held.id) ?? 0;
+        remaining.memoryBytes += resident - Math.max(held.demand.memoryBytes, resident);
       }
     }
+    // With nothing running, the front run's memory ask is judged against installed
+    // memory less the same margin, not today's free reading (INF-2165 direction A).
+    // Pressure and a fresh reading still gate it through capacity().
+    const total = this.observation()?.value.memory.totalBytes ?? 0;
+    const installed = Math.max(0, Math.floor(total - memoryMarginBytes(total)));
     let earlier = false;
     const next = this.held.map((held): Held => {
       if (held.state === "running") return held;
@@ -309,8 +328,9 @@ export class LoadLine {
       const fits =
         !earlier &&
         remaining !== null &&
-        (running === 0 || held.demand.cpu <= remaining.cpu) &&
-        held.demand.memoryBytes <= remaining.memoryBytes;
+        (running === 0
+          ? held.demand.memoryBytes <= installed
+          : held.demand.cpu <= remaining.cpu && held.demand.memoryBytes <= remaining.memoryBytes);
       if (!overridden && !fits) {
         earlier = true;
         return held;

@@ -6,6 +6,7 @@ import {
   type Page,
 } from "@playwright/test";
 import { takeTurn } from "./inputQueue";
+import { readInMain } from "./mainProcess";
 
 /** A modifier Electron's `sendInputEvent` takes. */
 export type WindowKeyModifier = "meta" | "control" | "alt" | "shift";
@@ -45,6 +46,9 @@ function systemModifiers(modifiers: readonly WindowKeyModifier[]): WindowKeyModi
   return [...new Set(modifiers.map((modifier) => (modifier === "meta" ? "control" : modifier)))];
 }
 
+/** The presses this worker has made, so each has its own number (`pressWindowKey`). */
+let presses = 0;
+
 /**
  * Presses a key in the app's window the way Electron delivers one: through
  * `before-input-event` in the main process, then the page. Playwright's own
@@ -57,18 +61,27 @@ export async function pressWindowKey(
   keyCode: string,
   modifiers: readonly WindowKeyModifier[] = [],
 ): Promise<void> {
-  await app.evaluate(
-    ({ BrowserWindow }, key) => {
+  // A busy main process can lose an evaluation to a garbage collection
+  // (`readInMain`). The press marks its number there as it sends the key, so
+  // asking again sends nothing when the key went and sends it when it did
+  // not: the key goes once either way.
+  const press = { number: ++presses, keyCode, modifiers: systemModifiers(modifiers) };
+  await readInMain(() =>
+    app.evaluate(({ BrowserWindow }, key) => {
+      const marks = globalThis as { windowKeysSent?: Set<number> };
+      marks.windowKeysSent ??= new Set();
+      const sent = marks.windowKeysSent;
+      if (sent.has(key.number)) return;
       // The app's own window: a task's hidden browser pages are windows too.
       const windows = BrowserWindow.getAllWindows();
       const contents = (
         windows.find((win) => win.webContents.getURL().startsWith("file:")) ?? windows[0]
       )?.webContents;
       if (!contents) throw new Error("App window missing");
+      sent.add(key.number);
       contents.sendInputEvent({ type: "keyDown", keyCode: key.keyCode, modifiers: key.modifiers });
       contents.sendInputEvent({ type: "keyUp", keyCode: key.keyCode, modifiers: key.modifiers });
-    },
-    { keyCode, modifiers: systemModifiers(modifiers) },
+    }, press),
   );
 }
 

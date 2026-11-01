@@ -12,6 +12,7 @@ import { HAS_APP_MENU } from "./desktop";
 import { cardBody, cardBodyElement } from "./frames";
 import { type LaunchedApp, launchApp } from "./launch";
 import { intersects, minimumWindowSize, type Rect, resizeWindow, settled, within } from "./layout";
+import { readInMain } from "./mainProcess";
 import { APP_CATALOG_PROMPT_MARKER, SPAWN_PROMPT_MARKER } from "./mockProvider";
 import { pastePictures, promptInput } from "./prompt";
 import { feedLineOf, newestFeedLine } from "./rails";
@@ -45,6 +46,15 @@ async function capture(launched: LaunchedApp, name: string) {
   await writeFile(test.info().outputPath(name), Buffer.from(png, "base64"));
 }
 
+// It only reads, so `readInMain` may ask again when a busy main process loses
+// its answer to a garbage collection.
+const zoomFactor = (app: ElectronApplication) =>
+  readInMain(() =>
+    app.evaluate(({ BrowserWindow }) =>
+      BrowserWindow.getAllWindows()[0]?.webContents.getZoomFactor(),
+    ),
+  );
+
 for (const size of UI_SIZES) {
   test(`Size ${size}% scales the window and gives a regular card room`, async () => {
     const launched = await launchApp({
@@ -57,13 +67,7 @@ for (const size of UI_SIZES) {
       await page.getByRole("button", { name: "Settings", exact: true }).click();
       await page.getByRole("tab", { name: "Appearance", exact: true }).click();
       await page.getByRole("radio", { name: `${size}%`, exact: true }).check();
-      await expect
-        .poll(() =>
-          app.evaluate(({ BrowserWindow }) =>
-            BrowserWindow.getAllWindows()[0]?.webContents.getZoomFactor(),
-          ),
-        )
-        .toBe(size / 100);
+      await expect.poll(() => zoomFactor(app)).toBe(size / 100);
       await expect(page.getByRole("radio", { name: `${size}%`, exact: true })).toBeChecked();
       await capture(launched, `appearance-${size}.png`);
       const restore = await resizeWindow(app, page, await minimumWindowSize(app));
@@ -180,11 +184,6 @@ function captainSizeLine(page: Page, size: UiSize): Locator {
     )
     .reduce((either, line) => either.or(line));
 }
-
-const zoomFactor = (app: ElectronApplication) =>
-  app.evaluate(({ BrowserWindow }) =>
-    BrowserWindow.getAllWindows()[0]?.webContents.getZoomFactor(),
-  );
 
 test("shortcuts, menu, picker and restart share the saved size", {
   tag: MAC_ONLY_TAG,

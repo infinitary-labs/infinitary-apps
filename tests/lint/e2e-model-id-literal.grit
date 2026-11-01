@@ -14,6 +14,7 @@ or {
   JsRegexLiteralExpression() as $literal,
   JsLiteralMemberName() as $literal
 } where {
+  $literal <: includes "-",
   $literal <: r"(?is).*\b(?:claude-(?:fable|opus|sonnet|haiku)-\d|gpt-\d|grok-\d|gemini-\d|kimi-k\d).*",
   $filename <: r".*tests/e2e/.*",
   not $filename <: r".*tests/e2e/(?:model-lists|decision-models|phase5-model-catalog)\.spec\.ts",

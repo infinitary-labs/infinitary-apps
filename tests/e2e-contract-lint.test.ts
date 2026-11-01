@@ -31,10 +31,17 @@ const RULES = {
   bareFocus: "A bare focus() returns before focus has landed",
   textLookup: "A page-wide lookup by typed words or a card's title",
   regionLookup: "A region found by its name across the page or the stage",
+  msBudget: "A duration budget in an end-to-end spec",
 } as const;
 type Rule = keyof typeof RULES;
 
-/** One fixture line and the rule it should trip, or null when it keeps the contract. */
+/**
+ * One fixture line and the rule it should trip, or null when it keeps the
+ * contract. The lines near each rule's edge hold INF-2138's faster rules to
+ * what the rules caught before: a plain-text check runs ahead of each
+ * pattern, so a line holding that text but not the pattern stays clean, and
+ * a line the pattern takes is still refused.
+ */
 const FIXTURE: readonly (readonly [string, Rule | null])[] = [
   ['document.querySelector("input");', "bareTag"],
   ['document.querySelectorAll("svg circle");', "bareTag"],
@@ -44,6 +51,7 @@ const FIXTURE: readonly (readonly [string, Rule | null])[] = [
   ['frame.locator("[data-card] .fm-body", { hasText: "x" });', "classSelector"],
   ["page.locator('[title=\"goes in on git.example.test\"]');", null],
   ["page.locator('[data-fact=\"care\"]');", null],
+  ["page.locator('[data-path=\"a.b\"]');", null],
   ["expect(fit.stage).toEqual({ x: 300, right: 660, width: 360 });", "rect"],
   ["expect(g.stage).toEqual({ x: railWidth, width: g.innerWidth - railWidth });", null],
   ['expect(g.rails[1]).toMatchObject({ side: "right", width: 0 });', null],
@@ -68,6 +76,8 @@ const FIXTURE: readonly (readonly [string, Rule | null])[] = [
   ['node.getAttribute("data-stage-rate");', "layoutState"],
   ['node.getAttribute("data-side-panel-size");', "layoutState"],
   ['page.locator("[data-side-panel=now]");', null],
+  ["expect(elapsed).toBeLessThan(SETTLE_MS);", "msBudget"],
+  ["expect(rows).toBeLessThan(MAX_ROWS);", null],
   ["await expectClearOf(page, summary, tile);", null],
   ["expect(within(box, container)).toEqual([]);", null],
   ["expect(new Set(seen).size).toBe(BACKLOG);", null],
@@ -76,11 +86,16 @@ const FIXTURE: readonly (readonly [string, Rule | null])[] = [
   ["expect(count).toBe(20);", null],
   ["expect(status).toBe(200);", null],
   ["const delta = Math.abs(red - blue);", null],
+  ["expect(box.width).toBe(1_000);", "length"],
+  ["expect(toolbar.left).toBe(-24);", "length"],
+  ['await expect(rail).toHaveCSS("width", "auto");', null],
 
   ['export const SEAT = { provider: "anthropic-claude", id: "claude-sonnet-5-5" };', "modelId"],
   ['await expect(page.getByRole("button", { name: /gpt-5\\.5/ })).toBeVisible();', "modelId"],
   ["const row = `openai-codex/gpt-6-sol`;", "modelId"],
   ['const stubs = ["claude-stub", "grok-live-token", "mock-1"];', null],
+  ['const id = "Claude-Opus-5-5";', "modelId"],
+  ['const hint = "gpt-five";', null],
   ['await expect(feedLine(page, "meterlab ship · reported: done")).toBeVisible();', "feedProse"],
   ["await expect(feedLine(page, /meterlab ship · reported: Intent:/)).toBeVisible();", "feedProse"],
   // biome-ignore lint/suspicious/noTemplateCurlyInString: the fixture's own template literal, as source text.
@@ -104,6 +119,8 @@ const FIXTURE: readonly (readonly [string, Rule | null])[] = [
   ['writeFileSync(`test-results/custom-api/${protocol}-wire.json`, "{}");', "evidencePath"],
   ['mkdirSync(join("test-results", "screens"), { recursive: true });', "evidencePath"],
   ['await page.screenshot({ path: test.info().outputPath("autonomy-on-card.png") });', null],
+  ['await page.screenshot({ path: "./test-results/card.png" });', "evidencePath"],
+  ['const kept = "artifacts/test-results/card.png";', null],
   ['await page.keyboard.type("history");', "typedKeys"],
   ['await app.page.keyboard.insertText("look:\\n```ts");', "typedKeys"],
   ['await keyboard.type("sam@example.com");', "typedKeys"],
@@ -119,12 +136,15 @@ const FIXTURE: readonly (readonly [string, Rule | null])[] = [
   ["await waitForFirstmateIdle(page);", null],
   ['await askFirstmate(page, "hello there");', null],
   ['const character = page.getByRole("img", { name: /^First mate - / });', null],
+  ['const label = "Firstmate - working";', "pose"],
+  ['const heading = "First mate - Idle";', null],
   ["const frame = page.frameLocator(selector);", "frameDoor"],
   ["const body = scope.contentFrame();", "frameDoor"],
   ["const element = page.locator('iframe[title=\"Observe\"]');", "frameDoor"],
   // biome-ignore lint/suspicious/noTemplateCurlyInString: the fixture's own template literal, as source text.
   ["const panel = page.locator(`${PANEL} iframe`);", "frameDoor"],
   ['const body = cardBody(page, "Observe");', null],
+  ['const hooks = page.locator("[data-iframes]");', null],
   ["const element = frameIn(panel);", null],
   ["await target.focus();", "bareFocus"],
   ["await page.getByRole('button').focus();", "bareFocus"],

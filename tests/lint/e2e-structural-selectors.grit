@@ -10,27 +10,31 @@
 
 language js
 
-or {
-  `$target.$query($selector)` where {
-    $query <: or {
-      `querySelector`,
-      `querySelectorAll`
+`$target.$query($selector, $...)` as $whole where {
+  or {
+    and {
+      $query <: or {
+        "querySelector",
+        "querySelectorAll"
+      },
+      $whole <: `$bareTarget.$bareQuery($bare)`,
+      $bare <: r"^(?:[\"'`][a-z][a-z0-9-]*(?:\s*[ >+~,]\s*[a-z][a-z0-9-]*)*[\"'`])$",
+      $filename <: r".*tests/e2e/.*",
+      register_diagnostic(span=$bare, message="A bare-tag query takes whichever element of that tag comes first, so it silently moves when the page grows another. Find it by a data-* hook, a name or a role (docs/testing.md, the e2e assertion contract).", severity="error")
     },
-    $selector <: r"^(?:[\"'`][a-z][a-z0-9-]*(?:\s*[ >+~,]\s*[a-z][a-z0-9-]*)*[\"'`])$",
-    $filename <: r".*tests/e2e/.*",
-    register_diagnostic(span=$selector, message="A bare-tag query takes whichever element of that tag comes first, so it silently moves when the page grows another. Find it by a data-* hook, a name or a role (docs/testing.md, the e2e assertion contract).", severity="error")
-  },
-  `$target.$query($selector, $...)` where {
-    $query <: or {
-      `locator`,
-      `querySelector`,
-      `querySelectorAll`,
-      `closest`,
-      `matches`,
-      `waitForSelector`
-    },
-    $selector <: r"(?s)^(?:[\"'`](?:[^\[\"'`.]|\[[^\]]*\])*\.[A-Za-z_-].*[\"'`])$",
-    $filename <: r".*tests/e2e/.*",
-    register_diagnostic(span=$selector, message="A class names a look, not a fact, and a restyle renames it. Find the element by a data-* hook or a role (docs/testing.md, the e2e assertion contract).", severity="error")
+    and {
+      $query <: or {
+        "locator",
+        "querySelector",
+        "querySelectorAll",
+        "closest",
+        "matches",
+        "waitForSelector"
+      },
+      $selector <: includes ".",
+      $selector <: r"(?s)^(?:[\"'`](?:[^\[\"'`.]|\[[^\]]*\])*\.[A-Za-z_-].*[\"'`])$",
+      $filename <: r".*tests/e2e/.*",
+      register_diagnostic(span=$selector, message="A class names a look, not a fact, and a restyle renames it. Find the element by a data-* hook or a role (docs/testing.md, the e2e assertion contract).", severity="error")
+    }
   }
 }

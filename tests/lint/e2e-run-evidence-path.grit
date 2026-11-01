@@ -11,6 +11,7 @@ or {
   JsStringLiteralExpression() as $literal,
   JsTemplateExpression() as $literal
 } where {
+  $literal <: includes "test-results",
   $literal <: r"(?s)[\"'`](?:\./)?test-results(?:[\"'`]|/.*)",
   $filename <: r".*tests/e2e/.*",
   not $filename <: r".*tests/e2e/runEvidence\.ts",

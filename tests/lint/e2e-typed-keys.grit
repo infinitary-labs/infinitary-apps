@@ -13,8 +13,8 @@ language js
 
 `$keyboard.$method($...)` where {
   $method <: or {
-    `type`,
-    `insertText`
+    "type",
+    "insertText"
   },
   $keyboard <: r"(?s)^(?:.*\.)?keyboard$",
   $filename <: r".*tests/e2e/.*",

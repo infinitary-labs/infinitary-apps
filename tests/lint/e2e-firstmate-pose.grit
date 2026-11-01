@@ -15,6 +15,10 @@ or {
   JsTemplateExpression() as $literal,
   JsRegexLiteralExpression() as $literal
 } where {
+  $literal <: or {
+    includes "First mate - ",
+    includes "Firstmate - "
+  },
   $literal <: r"(?s).*(?:First mate|Firstmate) - (?:[a-z]|\$\{).*",
   $filename <: r".*tests/e2e/.*",
   not $filename <: r".*tests/e2e/(?:crew\.ts|crew-idle-helper\.spec\.ts|phase1-shell\.spec\.ts)",

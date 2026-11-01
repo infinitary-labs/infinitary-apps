@@ -8,7 +8,12 @@ or {
   JsTemplateExpression() as $hook,
   JsRegexLiteralExpression() as $hook
 } where {
-  $hook <: r"(?s).*(?:data-rails-folded|data-card-width|data-stage-rate|data-side-panel-size).*",
+  $hook <: or {
+    includes "data-rails-folded",
+    includes "data-card-width",
+    includes "data-stage-rate",
+    includes "data-side-panel-size"
+  },
   $filename <: r".*tests/e2e/.*",
   register_diagnostic(span=$hook, message="A layout-state hook repeats a rendering decision, not a user result. Exercise the control or check containment and overlap through tests/e2e/layout.ts; exact layout belongs in focused tests (docs/testing.md, the e2e assertion contract).", severity="error")
 }

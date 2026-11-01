@@ -15,8 +15,8 @@ language js
 or {
   `$target.$method($...)` where {
     $method <: or {
-      `frameLocator`,
-      `contentFrame`
+      "frameLocator",
+      "contentFrame"
     },
     $filename <: r".*tests/e2e/[^/]*\.spec\.ts",
     register_diagnostic(span=$method, message="A frame is read through the door in tests/e2e/frames.ts (cardBody, panelBody, bodyIn, shownCardFrame, recordFrame, ...), which selects it only once its page has drawn; a spec that names frameLocator or contentFrame reads the empty first document (docs/e2e-contracts.md, Frames are read through the door).", severity="error")
@@ -25,6 +25,7 @@ or {
     JsStringLiteralExpression() as $literal,
     JsTemplateExpression() as $literal
   } where {
+    $literal <: includes "iframe",
     $literal <: r"(?s).*\biframe\b.*",
     $filename <: r".*tests/e2e/[^/]*\.spec\.ts",
     register_diagnostic(span=$literal, message="A frame is read through the door in tests/e2e/frames.ts, never by an iframe selector in a spec: its helpers select a frame only once its page has drawn (docs/e2e-contracts.md, Frames are read through the door).", severity="error")

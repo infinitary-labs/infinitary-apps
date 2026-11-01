@@ -9,8 +9,8 @@ name: linux-packages
 #
 # It runs on demand and on a pull request that changes how the packages are
 # made, for the captain to try, and inside every release (release.yml), at
-# the release's version from its one source commit: there the signing job
-# publishes exactly the files this run checked.
+# the release's version from its one source commit: there the publication
+# job records and publishes exactly the files this run checked.
 
 on:
   workflow_dispatch:

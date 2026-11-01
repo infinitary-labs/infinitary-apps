@@ -20,17 +20,23 @@ name: release
 # Every release carries Linux too (docs/linux-packages.md): the linux job
 # builds the Ubuntu and Fedora packages, the AppImage and each channel's Arch
 # recipe and Nix package at the release's version from the same source
-# commit, and checks each on a clean copy of its system; the signing job
-# records exactly those files beside the zip, and the publication job
-# publishes them, fetches them back like the zip, and writes the builds file
-# keyed by system and chip in the same tap commit (docs/alpha.md "Builds by
-# system and chip").
+# commit, and checks each on a clean copy of its system; the publication job
+# records exactly those files beside the zip, publishes them, fetches them
+# back like the zip, and writes the builds file keyed by system and chip in
+# the same tap commit (docs/alpha.md "Builds by system and chip").
+#
+# Signing while the checks run (INF-2074's sign-early; docs/alpha.md): the
+# signing job waits only for the notes, the phone and the update rehearsal,
+# then builds, signs and notarizes while the verify lanes and the Linux
+# packages are still checked. Its token reads and never writes, so nothing
+# is recorded or published before every check passed: the update check and
+# the publication job wait for all of them.
 #
 # Signing on the real Mac, publication in a virtual Mac (INF-1716;
 # docs/alpha.md): the signing job ends once the disk image passes its check
-# and hands its checked files to the publish job, which validates them and
-# runs every later publication step and download check in one disposable
-# virtual Mac, with no Apple signing material.
+# and hands its checked files to the publish job, which validates them,
+# records them, and runs every later publication step and download check in
+# one disposable virtual Mac, with no Apple signing material.
 #
 # The old-cask switch (docs/alpha.md "The old-cask switch"): for each channel
 # packaging/old-cask-switch.json lists - alpha since the rename's step 13,
@@ -325,8 +331,9 @@ jobs:
           if-no-files-found: error
           retention-days: 7
 
-  # An alpha must pass every lane before signing. A stable omits the reusable
-  # workflow, relying on its alpha's run (no green skipped lanes).
+  # An alpha must pass every lane before anything is recorded or published;
+  # the signing job runs beside it. A stable omits the reusable workflow,
+  # relying on its alpha's run (no green skipped lanes).
   verify:
     if: ${{ needs.resolve.outputs.verify_required == 'true' }}
     needs: [resolve, notes]
@@ -342,8 +349,8 @@ jobs:
   # The Linux packages of this release (docs/linux-packages.md), for both
   # channels, a stable promotion included: built at the release's version
   # from its one source commit, with the notes job's catalog, and installed
-  # and opened on a clean copy of each system before anything signs. Its
-  # run keeps them as the linux-packages artifact the signing job publishes.
+  # and opened on a clean copy of each system before anything publishes. Its
+  # run keeps them as the linux-packages artifact the publication job records.
   linux:
     needs: [resolve, notes]
     uses: ./.github/workflows/linux-packages.yml
@@ -398,18 +405,28 @@ jobs:
       runner: ${{ needs.resolve.outputs.dry_run == 'false' && vars.RELEASE_VIRTUAL_MAC_RUNNER || '' }}
 
   release:
-    # A plain name: a job skipped behind a red verify shows its name
+    # A plain name: a job skipped behind a red check shows its name
     # unevaluated. The run's summary says the channel, the version and
     # whether it was a dry run.
-    name: Build, sign, notarize, and record (a dry run records nothing)
-    needs: [resolve, notes, verify, linux, rehearse, phone]
-    if: ${{ always() && !cancelled() && needs.resolve.result == 'success' && needs.notes.result == 'success' && needs.linux.result == 'success' && needs.phone.result == 'success' && ((needs.resolve.outputs.verify_required == 'true' && needs.verify.result == 'success' && needs.rehearse.result == 'success') || (needs.resolve.outputs.verify_required == 'false' && needs.verify.result == 'skipped' && needs.rehearse.result == 'skipped')) }}
+    name: Build, sign and notarize while the checks run
+    # Sign early (INF-2074, the captain's checked fix: "Build and sign an
+    # alpha while its checks run, and publish only after they pass"): it
+    # waits for the notes it packages, the phone (INF-1649) and the update
+    # rehearsal (INF-1900), never for the verify lanes or the Linux packages.
+    needs: [resolve, notes, rehearse, phone]
+    if: ${{ always() && !cancelled() && needs.resolve.result == 'success' && needs.notes.result == 'success' && needs.phone.result == 'success' && ((needs.resolve.outputs.verify_required == 'true' && needs.rehearse.result == 'success') || (needs.resolve.outputs.verify_required == 'false' && needs.rehearse.result == 'skipped')) }}
     # INF-603: it signs with the captain's Developer ID certificate, so it
     # asks for the real Mac, never a virtual one, once the switch sets
     # REAL_MAC_RUNNER (docs/testing.md, "The real Mac's place"). A publishing
     # run takes the real Mac's release queue once RELEASE_REAL_MAC_RUNNER is set.
     runs-on: ${{ needs.resolve.outputs.dry_run == 'false' && vars.RELEASE_REAL_MAC_RUNNER || vars.REAL_MAC_RUNNER || vars.MAC_RUNNER || 'macos-15' }}
     timeout-minutes: 90
+    # It runs before the checks pass, so its token only reads: it can find
+    # what the record already holds, never write a tag, a release or an
+    # asset. The publication job records once every check passed.
+    permissions:
+      contents: read
+      actions: read
     # What the publication job reads: the checked files' artifact, its
     # manifest's checksum, the zip's checksum and whether downloads are direct.
     outputs:
@@ -483,8 +500,8 @@ jobs:
             exit 1
           fi
 
-      # The checks already ran in verify's lanes (or the promoted alpha's), which
-      # this job waits for: it starts at the build.
+      # The checks run in verify's lanes (or ran in the promoted alpha's) beside
+      # this job, and publication waits for them: it starts at the build.
       - name: Require an updater-capable source
         id: capability
         run: node -e 'const p=require("./package.json"); if(!p.dependencies?.["electron-updater"] || !require("node:fs").existsSync("packaging/app-update.yml")) throw new Error("This source predates the in-app Mac updater; verify and publish a new alpha first.");'
@@ -694,94 +711,54 @@ jobs:
           SHA256="$(awk '{print $1}' "$dist_zip.sha256")"
           echo "sha256=$SHA256" >> "$GITHUB_OUTPUT"
 
-      # The Linux packages the linux job built and checked, from this run.
-      - name: Fetch the Linux packages
-        uses: actions/download-artifact@v4
-        with:
-          name: linux-packages
-          path: ${{ runner.temp }}/linux-packages
-
-      # The release's Linux files as they publish (docs/alpha.md "Builds by
-      # system and chip"): the three packages, each channel's Arch recipe and
-      # Nix package rendered from the Ubuntu package, SHA256SUMS, and the
-      # manifest the tap writer reads. Rendering is repeatable, so the
-      # recipes are the ones the linux job checked.
-      - name: Prepare the Linux files
-        id: linux-files
-        env:
-          RECIPE_HOST: ${{ (needs.resolve.outputs.dry_run == 'true' || steps.visibility.outputs.direct == 'true') && 'downloads' || 'tap' }}
-        run: |
-          set -euo pipefail
-          rm -rf "$RUNNER_TEMP/linux-release"
-          node scripts/linux-recipes.ts release --version "$VERSION" \
-            --packages "$RUNNER_TEMP/linux-packages" --out "$RUNNER_TEMP/linux-release"
-          cat "$RUNNER_TEMP/linux-release/SHA256SUMS"
-
-      # Publication. Published bytes never change: a release that already
-      # carries this version's zip - a retry, whose rebuild never reproduces
-      # the same bytes - keeps it. The private release is the record: its
-      # tag must name the source commit, and its zip, if already there,
-      # becomes the artifact every later step publishes and verifies. The
-      # public copy must match it byte for byte (scripts/publish-release-asset.sh).
-      - name: Record immutable release artifacts
-        id: private
+      # Published bytes never change: a release that already carries this
+      # version's zip - a retry after publication recorded it, whose rebuild
+      # never reproduces the same bytes - keeps it, so its disk image and the
+      # handoff carry that zip, never this attempt's rebuild. This only reads
+      # the record, whose tag must name the source commit; the publication job
+      # records, and refuses a record that changed since this read.
+      - name: Read what the record already holds
+        id: recorded
         if: ${{ needs.resolve.outputs.dry_run == 'false' }}
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          RECIPE_HOST: ${{ steps.visibility.outputs.direct == 'true' && 'downloads' || 'tap' }}
-          TITLE: infinitary ${{ needs.resolve.outputs.version }}
-          TARGET: ${{ needs.resolve.outputs.source_commit }}
-          LATEST: ${{ needs.resolve.outputs.prerelease == 'true' && 'false' || '' }}
         run: |
           set -euo pipefail
-          WORK="$RUNNER_TEMP/private-release"
+          WORK="$RUNNER_TEMP/recorded"
           rm -rf "$WORK" && mkdir -p "$WORK"
-          export WORK NOTES_FILE="$WORK/notes.md"
+          if ! ASSETS="$(gh release view "$TAG_NAME" --repo "$GITHUB_REPOSITORY" --json assets --jq '.assets[].name')"; then
+            echo "No release records $TAG_NAME yet: this attempt's zip is the one to record."
+            exit 0
+          fi
+          if ! grep -qxF -- "$ZIP_NAME" <<<"$ASSETS"; then
+            echo "$TAG_NAME records no $ZIP_NAME yet: this attempt's zip is the one to record."
+            exit 0
+          fi
+          TAG_COMMIT="$(gh api "repos/$GITHUB_REPOSITORY/commits/$TAG_NAME" --jq .sha)"
+          if [[ "$TAG_COMMIT" != "$SOURCE_COMMIT" ]]; then
+            echo "::error title=The record names another commit::$GITHUB_REPOSITORY's tag $TAG_NAME names $TAG_COMMIT, not this release's source $SOURCE_COMMIT." >&2
+            exit 1
+          fi
+          gh release download "$TAG_NAME" --repo "$GITHUB_REPOSITORY" --pattern "$ZIP_NAME" --dir "$WORK"
+          SHA256="$(shasum -a 256 "$WORK/$ZIP_NAME" | awk '{print $1}')"
+          echo "$TAG_NAME already records $ZIP_NAME (sha256 $SHA256): it is the zip this release hands over."
           {
-            cat packaging/alpha-notice.txt
-            printf '\nOn Mac, open the disk image and drag Infinitary into Applications. Open that copy, then choose Stable or Alpha in Settings → General. Use Update and restart for later versions; Homebrew is not needed.\n'
-            printf '\nHomebrew installation remains supported. Homebrew copies keep updating through Homebrew; disk-image copies use in-app updates. See docs/mac-installation.md to switch installation methods while keeping saved work.\n'
-            printf '\nLinux downloads and the universal ZIP for paired computers are included below. Check downloads against their checksum files.\n'
-          } > "$NOTES_FILE"
-          # The stable's record keeps these (docs/release-notes.md "Who writes what").
-          [[ -z "$HIGHLIGHTS" ]] || printf '\nHighlights picked, lead first: %s\n' "$HIGHLIGHTS" >> "$NOTES_FILE"
-          [[ -z "$PROMOTED_FROM" ]] || printf '\nPromoted from alpha %s: the same code, rebuilt as stable.\n' "$PROMOTED_FROM" >> "$NOTES_FILE"
-          printf '\nBuilt from source commit %s.\n' "$SOURCE_COMMIT" >> "$NOTES_FILE"
-          scripts/publish-release-asset.sh adopt "$GITHUB_REPOSITORY" "$TAG_NAME" "$dist_zip"
-          # The Linux files beside the zip. Each package already published - a
-          # retry - is adopted, as the zip is; the recipes and SHA256SUMS are
-          # then rendered again from exactly the Ubuntu package published, so
-          # they name its bytes, and must match any copy already there.
-          LINUX="$RUNNER_TEMP/linux-release"
-          ADOPTED="$WORK/linux-packages"
-          mkdir -p "$ADOPTED"
-          for ENDING in .deb .rpm .AppImage; do
-            FILE="$(find "$LINUX" -maxdepth 1 -name "*$ENDING" | head -n 1)"
-            NAME="$(basename "$FILE")"
-            GITHUB_OUTPUT="$WORK/$NAME.out" WORK="$WORK/$NAME" \
-              scripts/publish-release-asset.sh adopt "$GITHUB_REPOSITORY" "$TAG_NAME" "$FILE"
-            cp "$(sed -n 's/^zip=//p' "$WORK/$NAME.out")" "$ADOPTED/$NAME"
-          done
-          rm -rf "$LINUX"
-          node scripts/linux-recipes.ts release --version "$VERSION" --packages "$ADOPTED" --out "$LINUX" >/dev/null
-          while IFS= read -r NAME; do
-            case "$NAME" in *.deb | *.rpm | *.AppImage) continue ;; esac
-            GITHUB_OUTPUT="$WORK/$NAME.out" WORK="$WORK/$NAME" \
-              scripts/publish-release-asset.sh match "$GITHUB_REPOSITORY" "$TAG_NAME" "$LINUX/$NAME"
-          done < "$LINUX/assets.txt"
+            echo "zip=$WORK/$ZIP_NAME"
+            echo "sha256=$SHA256"
+          } >> "$GITHUB_OUTPUT"
 
       - name: Build, sign, notarize and check the disk image
         id: dmg
         if: ${{ needs.resolve.outputs.dry_run == 'true' || steps.visibility.outputs.direct == 'true' }}
         env:
-          ADOPTED_ZIP: ${{ steps.private.outputs.zip }}
+          RECORDED_ZIP: ${{ steps.recorded.outputs.zip }}
           CSC_KEYCHAIN: ${{ steps.developer_id_cert.outputs.keychain_path }}
           APPLE_API_KEY: ${{ steps.asc-key.outputs.key_path }}
           APPLE_API_KEY_ID: ${{ secrets.APP_STORE_CONNECT_KEY_ID }}
           APPLE_API_ISSUER: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
         run: |
           set -euo pipefail
-          FINAL_ZIP="${ADOPTED_ZIP:-$dist_zip}"
+          FINAL_ZIP="${RECORDED_ZIP:-$dist_zip}"
           FINAL="$RUNNER_TEMP/dmg-source"
           mkdir -p "$FINAL"
           ditto -x -k "$FINAL_ZIP" "$FINAL"
@@ -796,15 +773,16 @@ jobs:
 
       # The handoff (INF-1716): the signing job ends at the checked disk image,
       # and the publication job finishes in a virtual Mac. It hands over only
-      # what publication reads - the recorded zip, the finalized Linux files
-      # and, when one was built, the checked disk image - with a manifest
-      # binding them to this run, attempt, workflow revision and release.
-      # Never the unpacked app, the workspace, a credential or the environment.
+      # what publication reads - the zip to record and, when one was built,
+      # the checked disk image - with a manifest binding them to this run,
+      # attempt, workflow revision and release. The Linux files come to
+      # publication from the linux job, which may still run here. Never the
+      # unpacked app, the workspace, a credential or the environment.
       - name: Prepare the checked files for publication
         id: handoff
         env:
-          RECORDED_ZIP: ${{ steps.private.outputs.zip }}
-          RECORDED_SHA256: ${{ steps.private.outputs.sha256 }}
+          RECORDED_ZIP: ${{ steps.recorded.outputs.zip }}
+          RECORDED_SHA256: ${{ steps.recorded.outputs.sha256 }}
           CHECKED_SHA256: ${{ steps.checksum.outputs.sha256 }}
           CHECKED_DMG: ${{ steps.dmg.outputs.path }}
           DIRECT: ${{ steps.visibility.outputs.direct }}
@@ -815,16 +793,17 @@ jobs:
         run: |
           node --input-type=module <<'JS'
           import { createHash } from 'node:crypto';
-          import { appendFileSync, copyFileSync, lstatSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+          import { appendFileSync, copyFileSync, lstatSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
           import { basename, join } from 'node:path';
           const env = process.env;
           const out = join(env.RUNNER_TEMP, 'handoff');
           rmSync(out, { recursive: true, force: true });
           const dryRun = env.DRY_RUN === 'true';
           const direct = env.DIRECT === 'true';
-          // A rehearsal records nothing: its zip is the one the zip gate checked.
-          const zip = dryRun ? env.dist_zip : env.RECORDED_ZIP;
-          const sha256 = dryRun ? env.CHECKED_SHA256 : env.RECORDED_SHA256;
+          // The zip an earlier attempt recorded, or else this attempt's, which
+          // the zip gate checked; a rehearsal reads no record.
+          const zip = env.RECORDED_ZIP || env.dist_zip;
+          const sha256 = env.RECORDED_ZIP ? env.RECORDED_SHA256 : env.CHECKED_SHA256;
           const files = [];
           const place = (folder, from) => {
             if (!lstatSync(from).isFile()) throw new Error(`Not a regular file: ${from}`);
@@ -833,11 +812,9 @@ jobs:
             copyFileSync(from, join(out, folder, basename(from)));
             files.push({ path: `${folder}/${basename(from)}`, size: bytes.length, sha256: createHash('sha256').update(bytes).digest('hex') });
           };
-          if (!zip || basename(zip) !== env.ZIP_NAME) throw new Error(`No recorded ${env.ZIP_NAME} to hand off`);
+          if (!zip || basename(zip) !== env.ZIP_NAME) throw new Error(`No checked ${env.ZIP_NAME} to hand off`);
           place('zip', zip);
-          if (files[0].sha256 !== sha256) throw new Error('The zip to hand off is not the recorded zip');
-          const linux = join(env.RUNNER_TEMP, 'linux-release');
-          for (const name of readdirSync(linux).sort()) place('linux', join(linux, name));
+          if (files[0].sha256 !== sha256) throw new Error('The zip to hand off is not the checked or recorded zip');
           if (dryRun || direct) {
             if (!env.CHECKED_DMG || basename(env.CHECKED_DMG) !== env.DMG_NAME) throw new Error(`No checked ${env.DMG_NAME} to hand off`);
             place('dmg', env.CHECKED_DMG);
@@ -873,9 +850,7 @@ jobs:
         if: always()
         continue-on-error: true
         env:
-          LANES: ${{ needs.resolve.outputs.verify_required == 'true' && 'linux-checks, linux-e2e, mac' || 'none' }}
-          OMITTED: ${{ needs.resolve.outputs.verify_required == 'true' && 'none' || 'linux-checks, linux-e2e and mac; inherited from the published alpha, not passed in this run' }}
-          SHA256: ${{ steps.private.outputs.sha256 || steps.checksum.outputs.sha256 }}
+          SHA256: ${{ steps.recorded.outputs.sha256 || steps.checksum.outputs.sha256 }}
           HANDOFF: artifact ${{ steps.handoff-upload.outputs.artifact-id || 'none' }}, manifest sha256 ${{ steps.handoff.outputs.manifest || 'none' }}
           GATES: >-
             visibility=${{ steps.visibility.outcome }} capability=${{ steps.capability.outcome }}
@@ -885,8 +860,7 @@ jobs:
             launch=${{ steps.launch.outcome }} data-folder=${{ steps.data-folder.outcome }}
             work-mode=${{ steps.work-mode.outcome }} notarize=${{ steps.notarize.outcome }}
             zip=${{ steps.zip.outcome }} checksum=${{ steps.checksum.outcome }}
-            linux-files=${{ steps.linux-files.outcome }}
-            recorded=${{ steps.private.outcome }} dmg=${{ steps.dmg.outcome }}
+            read-record=${{ steps.recorded.outcome }} dmg=${{ steps.dmg.outcome }}
             handoff=${{ steps.handoff.outcome }} handoff-upload=${{ steps.handoff-upload.outcome }}
         run: |
           APP="dist/mac-universal/$APP_NAME"
@@ -894,20 +868,14 @@ jobs:
           {
             echo "### Release: $CHANNEL $VERSION from \`$SOURCE_COMMIT\`"
             [[ "$DRY_RUN" != true ]] || echo 'Dry run: no tag, release, cask or public feed was published.'
-            echo "Verify lanes: $LANES. Omitted: $OMITTED."
+            echo 'Signed while the checks ran: nothing here is recorded or published until every check passed.'
             [[ -z "$ALPHA_RUN" ]] || echo "Inherited alpha verification: $PROMOTED_FROM — $ALPHA_RUN"
             [[ -z "$HIGHLIGHTS" ]] || echo "Highlights picked, lead first: $HIGHLIGHTS"
             echo "Version identities: CFBundleShortVersionString $(field CFBundleShortVersionString), CFBundleVersion $(field CFBundleVersion); $(cat "$RUNNER_TEMP/launch-gate.txt" 2>/dev/null || echo 'the launch gate did not run')."
             for stage in $GATES; do echo "- ${stage%%=*}: ${stage#*=}"; done
-            echo 'A skipped stage did not pass in this run. Publication and its download checks follow in the publication job, from the handoff below.'
+            echo 'A skipped stage did not pass in this run. The record, publication and their download checks follow in the publication job, from the handoff below.'
             echo "The handoff to publication: $HANDOFF."
             echo "sha256 of the zip: \`${SHA256:-none}\`"
-            if [[ -f "$RUNNER_TEMP/linux-release/SHA256SUMS" ]]; then
-              echo 'Linux files checked on clean copies of their systems:'
-              echo '```'
-              cat "$RUNNER_TEMP/linux-release/SHA256SUMS"
-              echo '```'
-            fi
           } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Remove the signing keychain
@@ -915,16 +883,16 @@ jobs:
         continue-on-error: true
         run: node scripts/with-search-list-lock.mjs -- security delete-keychain "${{ steps.developer_id_cert.outputs.keychain_path }}" || true
 
-  # The update check (INF-1900; docs/alpha.md, "The update check"): after
-  # the signing job hands off, a disposable Apple silicon Mac installs what
-  # alpha subscribers have now, and this release's own signed zip must
-  # replace it through a local alpha feed, restart it as the new version and
-  # keep its saved work. Publication waits for it. It builds, signs
-  # and sends nothing; a stable inherits its alpha's.
+  # The update check (INF-1900; docs/alpha.md, "The update check"): once
+  # every check passed and the signing job handed off, a disposable Apple
+  # silicon Mac installs what alpha subscribers have now, and this release's
+  # own signed zip must replace it through a local alpha feed, restart it as
+  # the new version and keep its saved work. Publication waits for it. It
+  # builds, signs and sends nothing; a stable inherits its alpha's.
   update:
     name: Update from the last published alpha
-    needs: [resolve, release]
-    if: ${{ always() && !cancelled() && needs.resolve.outputs.verify_required == 'true' && needs.release.result == 'success' }}
+    needs: [resolve, notes, verify, linux, rehearse, phone, release]
+    if: ${{ always() && !cancelled() && needs.resolve.outputs.verify_required == 'true' && needs.resolve.result == 'success' && needs.notes.result == 'success' && needs.verify.result == 'success' && needs.linux.result == 'success' && needs.rehearse.result == 'success' && needs.phone.result == 'success' && needs.release.result == 'success' }}
     uses: ./.github/workflows/mac-update.yml
     with:
       ref: ${{ needs.resolve.outputs.source_commit }}
@@ -934,22 +902,25 @@ jobs:
       zip_sha256: ${{ needs.release.outputs.sha256 }}
       runner: ${{ needs.resolve.outputs.dry_run == 'false' && vars.RELEASE_VIRTUAL_MAC_RUNNER || '' }}
 
-  # Publication and the download checks after it (INF-1716), in one
-  # disposable virtual Mac from the placement service's existing pool, so the
-  # real Mac is free once the disk image passes its check. It waits for a
-  # free place when both are busy; it never falls back to the real Mac. It
-  # holds no Apple signing material: the files it publishes were signed,
-  # notarized and checked by the signing job, which hands them over in a
-  # manifest this job validates before any effect. Every Mac check that
-  # follows - signature, Gatekeeper, launch and version, the disk image
-  # against the zip - still runs here, never replaced by a checksum.
-  # Rerunning only this job reuses the signing job's handoff, from whichever
-  # attempt produced it; rerunning the signing job hands over anew, and the
-  # record's immutable adoption still decides which bytes publish.
+  # The record, publication and the download checks after them (INF-1716),
+  # in one disposable virtual Mac from the placement service's existing
+  # pool, so the real Mac is free once the disk image passes its check. It
+  # starts only once every check passed (INF-2074's sign-early: the signing
+  # job ran beside them and wrote nothing). It waits for a free place when
+  # both are busy; it never falls back to the real Mac. It holds no Apple
+  # signing material: the files it publishes were signed, notarized and
+  # checked by the signing job, which hands them over in a manifest this job
+  # validates before any effect, and the Linux files are the linux job's.
+  # Every Mac check that follows - signature, Gatekeeper, launch and version,
+  # the disk image against the zip - still runs here, never replaced by a
+  # checksum. Rerunning only this job reuses the signing job's handoff, from
+  # whichever attempt produced it; rerunning the signing job hands over
+  # anew, and the record's immutable adoption still decides which bytes
+  # publish.
   publish:
-    name: Publish and check the downloads (a dry run publishes nothing)
-    needs: [resolve, release, update]
-    if: ${{ always() && !cancelled() && needs.resolve.result == 'success' && needs.release.result == 'success' && ((needs.resolve.outputs.verify_required == 'true' && needs.update.result == 'success') || (needs.resolve.outputs.verify_required == 'false' && needs.update.result == 'skipped')) }}
+    name: Record, publish and check the downloads (a dry run records nothing)
+    needs: [resolve, notes, verify, linux, rehearse, phone, release, update]
+    if: ${{ always() && !cancelled() && needs.resolve.result == 'success' && needs.notes.result == 'success' && needs.linux.result == 'success' && needs.phone.result == 'success' && needs.release.result == 'success' && ((needs.resolve.outputs.verify_required == 'true' && needs.verify.result == 'success' && needs.rehearse.result == 'success' && needs.update.result == 'success') || (needs.resolve.outputs.verify_required == 'false' && needs.verify.result == 'skipped' && needs.rehearse.result == 'skipped' && needs.update.result == 'skipped')) }}
     # A publishing run takes the virtual release queue once
     # RELEASE_VIRTUAL_MAC_RUNNER is set (docs/testing.md, "A release's own queues").
     runs-on: ${{ needs.resolve.outputs.dry_run == 'false' && vars.RELEASE_VIRTUAL_MAC_RUNNER || 'mini-mac-virtual' }}
@@ -1074,35 +1045,116 @@ jobs:
           const extra = found.filter((path) => !wanted.includes(path));
           if (missing.length || extra.length || new Set(listed).size !== listed.length) fail(`missing ${JSON.stringify(missing)}, extra ${JSON.stringify(extra)}`);
           for (const file of manifest.files) {
-            if (!/^(zip|dmg|linux)\/[A-Za-z0-9][A-Za-z0-9._+-]*$/.test(file.path)) fail(`${file.path} is not a handoff path`);
+            if (!/^(zip|dmg)\/[A-Za-z0-9][A-Za-z0-9._+-]*$/.test(file.path)) fail(`${file.path} is not a handoff path`);
             const bytes = readFileSync(join(from, file.path));
             if (bytes.length !== file.size || hash(bytes) !== file.sha256) fail(`${file.path} is not the file the signing job checked`);
           }
           const inFolder = (folder) => listed.filter((path) => path.startsWith(`${folder}/`)).map((path) => path.slice(folder.length + 1));
           const [zip] = inFolder('zip');
           if (inFolder('zip').length !== 1 || zip !== env.ZIP_NAME) fail(`it holds ${JSON.stringify(inFolder('zip'))}, not ${env.ZIP_NAME}`);
-          if (manifest.files.find((file) => file.path === `zip/${zip}`).sha256 !== env.ZIP_SHA256) fail('its zip is not the recorded zip');
+          if (manifest.files.find((file) => file.path === `zip/${zip}`).sha256 !== env.ZIP_SHA256) fail('its zip is not the one the signing job checked');
           const dmg = inFolder('dmg');
           const wantsDmg = expected.dryRun || expected.direct;
           if (JSON.stringify(dmg) !== JSON.stringify(wantsDmg ? [env.DMG_NAME] : [])) fail(`it holds disk images ${JSON.stringify(dmg)}`);
-          const linux = inFolder('linux');
-          if (!linux.includes('assets.txt')) fail('it holds no Linux asset list');
-          for (const name of ['manifest.json', 'SHA256SUMS', ...readFileSync(join(from, 'linux', 'assets.txt'), 'utf8').trim().split('\n')]) {
-            if (!linux.includes(name)) fail(`it holds no Linux ${name}`);
-          }
           const files = join(env.RUNNER_TEMP, 'handoff');
-          const linuxRelease = join(env.RUNNER_TEMP, 'linux-release');
-          for (const dir of [files, linuxRelease]) {
-            rmSync(dir, { recursive: true, force: true });
-            mkdirSync(dir, { recursive: true });
-          }
+          rmSync(files, { recursive: true, force: true });
+          mkdirSync(files, { recursive: true });
           renameSync(join(from, 'zip', env.ZIP_NAME), join(files, env.ZIP_NAME));
           if (wantsDmg) renameSync(join(from, 'dmg', env.DMG_NAME), join(files, env.DMG_NAME));
-          for (const name of linux) renameSync(join(from, 'linux', name), join(linuxRelease, name));
           rmSync(from, { recursive: true, force: true });
           appendFileSync(env.GITHUB_OUTPUT, `zip=${join(files, env.ZIP_NAME)}\ndmg=${wantsDmg ? join(files, env.DMG_NAME) : ''}\nattempt=${manifest.attempt}\n`);
           console.log(`Accepted ${listed.length} files from attempt ${manifest.attempt}, manifest sha256 ${env.MANIFEST_SHA256}`);
           JS
+
+      # The Linux packages the linux job built and checked, from this run;
+      # every check passed before this job started.
+      - name: Fetch the Linux packages
+        uses: actions/download-artifact@v4
+        with:
+          name: linux-packages
+          path: ${{ runner.temp }}/linux-packages
+
+      # The release's Linux files as they publish (docs/alpha.md "Builds by
+      # system and chip"): the three packages, each channel's Arch recipe and
+      # Nix package rendered from the Ubuntu package, SHA256SUMS, and the
+      # manifest the tap writer reads. Rendering is repeatable, so the
+      # recipes are the ones the linux job checked.
+      - name: Prepare the Linux files
+        id: linux-files
+        env:
+          RECIPE_HOST: ${{ (needs.resolve.outputs.dry_run == 'true' || needs.release.outputs.direct == 'true') && 'downloads' || 'tap' }}
+        run: |
+          set -euo pipefail
+          rm -rf "$RUNNER_TEMP/linux-release"
+          node scripts/linux-recipes.ts release --version "$VERSION" \
+            --packages "$RUNNER_TEMP/linux-packages" --out "$RUNNER_TEMP/linux-release"
+          cat "$RUNNER_TEMP/linux-release/SHA256SUMS"
+
+      # The record, the first effect, only once every check passed.
+      # Published bytes never change: a release that already carries this
+      # version's zip - a retry, whose rebuild never reproduces the same
+      # bytes - keeps it. The private release is the record: its tag must
+      # name the source commit, and its zip, if already there, is the
+      # artifact every later step publishes and verifies. The signing job
+      # read the record before it built the disk image and handed over that
+      # zip, so adoption here must name the same bytes; a record that changed
+      # since - another run of this version - fails here before anything
+      # publishes. The public copy must match it byte for byte
+      # (scripts/publish-release-asset.sh).
+      - name: Record immutable release artifacts
+        id: private
+        if: ${{ needs.resolve.outputs.dry_run == 'false' }}
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          RECIPE_HOST: ${{ needs.release.outputs.direct == 'true' && 'downloads' || 'tap' }}
+          ARTIFACT: ${{ steps.handoff-check.outputs.zip }}
+          ARTIFACT_SHA256: ${{ needs.release.outputs.sha256 }}
+          TITLE: infinitary ${{ needs.resolve.outputs.version }}
+          TARGET: ${{ needs.resolve.outputs.source_commit }}
+          LATEST: ${{ needs.resolve.outputs.prerelease == 'true' && 'false' || '' }}
+        run: |
+          set -euo pipefail
+          WORK="$RUNNER_TEMP/private-release"
+          rm -rf "$WORK" && mkdir -p "$WORK"
+          export WORK NOTES_FILE="$WORK/notes.md"
+          {
+            cat packaging/alpha-notice.txt
+            printf '\nOn Mac, open the disk image and drag Infinitary into Applications. Open that copy, then choose Stable or Alpha in Settings → General. Use Update and restart for later versions; Homebrew is not needed.\n'
+            printf '\nHomebrew installation remains supported. Homebrew copies keep updating through Homebrew; disk-image copies use in-app updates. See docs/mac-installation.md to switch installation methods while keeping saved work.\n'
+            printf '\nLinux downloads and the universal ZIP for paired computers are included below. Check downloads against their checksum files.\n'
+          } > "$NOTES_FILE"
+          # The stable's record keeps these (docs/release-notes.md "Who writes what").
+          [[ -z "$HIGHLIGHTS" ]] || printf '\nHighlights picked, lead first: %s\n' "$HIGHLIGHTS" >> "$NOTES_FILE"
+          [[ -z "$PROMOTED_FROM" ]] || printf '\nPromoted from alpha %s: the same code, rebuilt as stable.\n' "$PROMOTED_FROM" >> "$NOTES_FILE"
+          printf '\nBuilt from source commit %s.\n' "$SOURCE_COMMIT" >> "$NOTES_FILE"
+          GITHUB_OUTPUT="$WORK/zip.out" scripts/publish-release-asset.sh adopt "$GITHUB_REPOSITORY" "$TAG_NAME" "$ARTIFACT"
+          RECORDED_SHA="$(sed -n 's/^sha256=//p' "$WORK/zip.out")"
+          [[ "$RECORDED_SHA" == "$ARTIFACT_SHA256" ]] || {
+            echo "::error title=The record changed since signing::$TAG_NAME records $ZIP_NAME with sha256 $RECORDED_SHA, not the $ARTIFACT_SHA256 the signing job handed over. Another run of this version recorded it after the signing job read the record; dispatch again to sign from it." >&2
+            exit 1
+          }
+          cat "$WORK/zip.out" >> "$GITHUB_OUTPUT"
+          # The Linux files beside the zip. Each package already published - a
+          # retry - is adopted, as the zip is; the recipes and SHA256SUMS are
+          # then rendered again from exactly the Ubuntu package published, so
+          # they name its bytes, and must match any copy already there.
+          LINUX="$RUNNER_TEMP/linux-release"
+          ADOPTED="$WORK/linux-packages"
+          mkdir -p "$ADOPTED"
+          for ENDING in .deb .rpm .AppImage; do
+            FILE="$(find "$LINUX" -maxdepth 1 -name "*$ENDING" | head -n 1)"
+            NAME="$(basename "$FILE")"
+            GITHUB_OUTPUT="$WORK/$NAME.out" WORK="$WORK/$NAME" \
+              scripts/publish-release-asset.sh adopt "$GITHUB_REPOSITORY" "$TAG_NAME" "$FILE"
+            cp "$(sed -n 's/^zip=//p' "$WORK/$NAME.out")" "$ADOPTED/$NAME"
+          done
+          rm -rf "$LINUX"
+          node scripts/linux-recipes.ts release --version "$VERSION" --packages "$ADOPTED" --out "$LINUX" >/dev/null
+          while IFS= read -r NAME; do
+            case "$NAME" in *.deb | *.rpm | *.AppImage) continue ;; esac
+            GITHUB_OUTPUT="$WORK/$NAME.out" WORK="$WORK/$NAME" \
+              scripts/publish-release-asset.sh match "$GITHUB_REPOSITORY" "$TAG_NAME" "$LINUX/$NAME"
+          done < "$LINUX/assets.txt"
 
       - name: Record the immutable disk image
         id: recorded-dmg
@@ -1445,11 +1497,14 @@ jobs:
         if: always()
         continue-on-error: true
         env:
+          LANES: ${{ needs.resolve.outputs.verify_required == 'true' && 'linux-checks, linux-e2e, mac' || 'none' }}
+          OMITTED: ${{ needs.resolve.outputs.verify_required == 'true' && 'none' || 'linux-checks, linux-e2e and mac; inherited from the published alpha, not passed in this run' }}
           SHA256: ${{ needs.release.outputs.sha256 }}
           HANDOFF: artifact ${{ needs.release.outputs.handoff_id || 'none' }}, manifest sha256 ${{ needs.release.outputs.handoff_manifest || 'none' }}, from attempt ${{ steps.handoff-check.outputs.attempt || 'unread' }}
           GATES: >-
             handoff-check=${{ steps.handoff-check.outcome }}
-            recorded-dmg=${{ steps.recorded-dmg.outcome }}
+            linux-files=${{ steps.linux-files.outcome }}
+            recorded=${{ steps.private.outcome }} recorded-dmg=${{ steps.recorded-dmg.outcome }}
             recorded-fetch-back=${{ steps.private-fetch-back.outcome }}
             public=${{ steps.public.outcome }} public-fetch-back=${{ steps.public-fetch-back.outcome }}
             homebrew-public=${{ steps.homebrew-public.outcome }} homebrew-fetch-back=${{ steps.homebrew-fetch-back.outcome }}
@@ -1461,9 +1516,17 @@ jobs:
           {
             echo "### Publication: $CHANNEL $VERSION from \`$SOURCE_COMMIT\`"
             [[ "$DRY_RUN" != true ]] || echo 'Dry run: no tag, release, cask or public feed was published.'
+            echo "Verify lanes passed before anything was recorded: $LANES. Omitted: $OMITTED."
+            [[ -z "$ALPHA_RUN" ]] || echo "Inherited alpha verification: $PROMOTED_FROM — $ALPHA_RUN"
             echo "The signing job's handoff: $HANDOFF."
             for stage in $GATES; do echo "- ${stage%%=*}: ${stage#*=}"; done
             echo 'A skipped stage did not pass in this run. Homebrew casks and direct-install feeds each advance only after their downloads verify.'
             echo "sha256 of the zip: \`${SHA256:-none}\`"
+            if [[ -f "$RUNNER_TEMP/linux-release/SHA256SUMS" ]]; then
+              echo 'Linux files checked on clean copies of their systems:'
+              echo '```'
+              cat "$RUNNER_TEMP/linux-release/SHA256SUMS"
+              echo '```'
+            fi
           } >> "$GITHUB_STEP_SUMMARY"
 

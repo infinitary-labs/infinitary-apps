@@ -73,7 +73,7 @@ jobs:
           artifact-ids: ${{ inputs.handoff_id }}
           path: ${{ runner.temp }}/handoff-download
           merge-multiple: true
-      - name: Check it is the zip the signing job recorded
+      - name: Check it is the zip the signing job handed over
         id: zip
         if: ${{ inputs.handoff_id != '' }}
         env:

@@ -153,12 +153,11 @@ The switch lists `alpha` and `stable`; releases of either channel also update th
   Every launch runs the workflow's own copy of the gate and its probe: the signing job puts them in place of the source's once the app is packaged, and the publication job and the old-cask check before they launch anything, so a stable promoting an older alpha launches through the current gate while its app stays the alpha's.
 - **Linux in every release.**
   The `linux` job calls `linux-packages.yml` at the release's version on its one source commit, with the notes job's catalog, for both channels, a stable promotion included: it builds the Linux packages and installs and opens each on a clean copy of its system (`docs/linux-packages.md`) while verify runs.
-  The signing job waits for it, lays out the Linux files (`linux-files`) and records them in the source record beside the zip, adopting any package a retry finds already published.
-  The publication job publishes them inside the same publication steps as the zip: the public release must match the record byte for byte, and both fetch-backs - the public one without a credential - compare every file and its sidecar before the feed commit writes the builds file.
+  The publication job waits for it, lays out the Linux files (`linux-files`) from its artifact and records them in the source record beside the zip, adopting any package a retry finds already published.
+  It publishes them inside the same publication steps as the zip: the public release must match the record byte for byte, and both fetch-backs - the public one without a credential - compare every file and its sidecar before the feed commit writes the builds file.
 - **Full alpha checks, inherited stable checks (FI3-482).**
   Every alpha, including a rehearsal, runs verify.yml's `linux-checks`, `linux-e2e` and `mac` lanes: Linux typecheck, lint, adherence lint, unit tests and build; every Playwright journey on Linux, in shards (`docs/testing.md`, "The Linux source desktop"); macOS unit tests, every Playwright journey, the installed Claude client check, the replay gate, and the development package with its signature, data-folder and bundled-git checks.
-  The release also runs the update check (`mac-update.yml`, "The update check" below) on Apple silicon: its rehearsal before signing, and the real update from the signing job's handoff before publication.
-  Signing for publication waits for the check lanes and the rehearsal; publication waits for the update.
+  The release also runs the update check (`mac-update.yml`, "The update check" below) on Apple silicon: its rehearsal before signing, and the real update from the signing job's handoff, once every check passed, before publication.
   There is no Linux-only bypass.
   Performance grading stays on request (`verify.yml -f perf=true`).
   A stable omits verify and inherits its alpha's checks: the resolve job reads the published alpha's release run, found by its run number (the alpha's suffix), because a run dispatched from main records main's commit rather than the candidate it built.
@@ -171,13 +170,19 @@ The switch lists `alpha` and `stable`; releases of either channel also update th
   An API error stops resolution rather than inventing assurance.
   The signing job is the same for both channels and repeats none of the lanes' checks: it checks public-download visibility and updater capability, then builds, performs Developer ID signing, signed-app, launch and data-folder gates, notarization and stapling, the distribution zip's Gatekeeper and launch gates and checksum.
   Stable rebuilds new bytes, so all publication and fetch-back gates stay.
+- **Signing while the checks run (INF-2074).**
+  The signing job waits only for the notes it packages, the phone check and the update rehearsal; it builds, signs and notarizes while the verify lanes and the Linux packages are still checked.
+  Its token only reads: it records, uploads and publishes nothing, so a failed check leaves no tag, release or public file behind.
+  The update check and the publication job wait for every check, the verify lanes and the Linux packages included; recording is publication's first effect.
+  A stable has no lanes to wait for, so its signing starts at once as before.
+  The signing job holds the real Mac while the release's Mac lane runs, so that lane takes a virtual place or waits for the real Mac (`docs/testing.md`, "The real Mac's place").
 - **Signing on the real Mac, publication in a virtual Mac (INF-1716).**
-  The signing job runs on the real Mac through the source record and the checked disk image, then hands off and frees it.
-  Its handoff is one uncompressed Actions artifact per attempt: the recorded zip, the finalized Linux files and, when one was built, the checked disk image, with a manifest of the run, attempt, workflow revision, source, channel, version, download mode, and each file's size and checksum.
-  It never carries the app, the workspace, a credential or the environment; the artifact's id and the manifest's checksum are the signing job's outputs.
-  The `publish` job starts only after the signing job succeeded, in one disposable virtual Mac from the placement service's existing pool (`mini-mac-virtual`, or `RELEASE_VIRTUAL_MAC_RUNNER` once set; `docs/testing.md`, "A release's own queues"); it waits for a free place and never falls back to the real Mac.
-  Before any effect it validates the handoff: the manifest is the recorded one, names this run, an attempt no later than this one, this workflow revision and this release, and the files are exactly those it lists, byte for byte.
-  Then it records the disk image and runs every later step in its existing order: the record's fetch-back, Cloudflare, Homebrew, the casks, the old-cask switch and the feeds, or a rehearsal's tap and feed rehearsals.
+  The signing job runs on the real Mac through the checked disk image, then hands off and frees it.
+  Its handoff is one uncompressed Actions artifact per attempt: the zip to record and, when one was built, the checked disk image, with a manifest of the run, attempt, workflow revision, source, channel, version, download mode, and each file's size and checksum.
+  It never carries the app, the workspace, a credential or the environment, nor the Linux files, which come from the linux job; the artifact's id and the manifest's checksum are the signing job's outputs.
+  The `publish` job starts only after the signing job and every check succeeded, in one disposable virtual Mac from the placement service's existing pool (`mini-mac-virtual`, or `RELEASE_VIRTUAL_MAC_RUNNER` once set; `docs/testing.md`, "A release's own queues"); it waits for a free place and never falls back to the real Mac.
+  Before any effect it validates the handoff: the manifest is the one the signing job wrote, names this run, an attempt no later than this one, this workflow revision and this release, and the files are exactly those it lists, byte for byte.
+  Then it lays out the Linux files, records the zip and the Linux files in the source record, records the disk image and runs every later step in its existing order: the record's fetch-back, Cloudflare, Homebrew, the casks, the old-cask switch and the feeds, or a rehearsal's tap and feed rehearsals.
   Every Mac check there - signature, Gatekeeper, launch and version, the disk image against the zip - still runs, never replaced by a checksum; the job holds no Apple signing material, and each destination's credential stays on its own steps.
   Rerunning only the publication job reuses the signing job's handoff from whichever attempt produced it; rerunning the signing job hands off anew, and the record's immutable adoption still decides which bytes publish.
   The handoff code lives in the workflow itself, so an older alpha promoted to stable needs none of it in its source.
@@ -195,14 +200,15 @@ The switch lists `alpha` and `stable`; releases of either channel also update th
   Full e2e runs are CI-only, including release preparation; request an additional run for any branch on GitHub's Actions page, or through `github_write` for the ref the crewmate's task needs (`docs/forge.md`, "Verification workflow requests").
   Locally, run only affected spec files (with `--no-deps` for renderer/application specs).
 - **Failed alpha checks.**
-  Nothing publishes.
+  Nothing is recorded or published: the signing job may have finished, but its signed files stay only in the run's handoff artifact, which expires after seven days.
   Automatic journey retries stay zero.
   When an outdated test fails, the release crewmate gets it fixed on main, brings its review branch up to date with main, and cuts a fresh alpha from the new candidate without asking again.
   Only when the failing journey passes alone on the same commit may the failed checks be manually re-run once, keeping the alpha's version; if they still fail, diagnose rather than retry again.
   No urgent-alpha bypass.
 - **Published bytes never change** (`scripts/publish-release-asset.sh`).
   The source release is the record: its tag must name the source commit.
-  A retry adopts an already-published ZIP, then builds its disk image from that ZIP's finalized, stapled app rather than the retry's rebuilt app.
+  A retry adopts an already-published ZIP: its signing job reads the record before the disk image, builds the image from that ZIP's finalized, stapled app rather than the retry's rebuilt app, and hands that ZIP over.
+  The publication job's record must then name the same bytes; a record another run of the version changed since that read fails before anything publishes, and a fresh dispatch signs from it.
   An already-published disk image is adopted too, and its contained app must match the ZIP exactly.
   The Cloudflare copy must match the private source record byte for byte.
   Nothing uploads with `--clobber`; a missing sidecar is added, a present one must agree.
@@ -369,8 +375,8 @@ It then serves a local copy of the alpha feed that offers the release, under the
 - **The rehearsal**, the `rehearse` job, starts with the release and needs no signed copy.
   The installed app must trust the local feed and offer the release without downloading anything, on Alpha.
   Signing waits for it, so a broken update check stops the release before anything is signed.
-- **The update**, the `update` job, runs after the signing job, from its handoff, and publication waits for it.
-  The handoff's zip must be the one the signing job recorded.
+- **The update**, the `update` job, runs after the signing job and every check, from its handoff, and publication waits for it.
+  The handoff's zip must be the one the signing job handed over.
   A real streaming turn through a local custom connection is running when the installed app takes the update; the release's own signed zip must replace it natively, the app must restart on its own as the new version on Alpha, with a valid signature and its direct receipt.
   The live reply must stop before the replacement, and the captain's message and a personal draft must survive.
 

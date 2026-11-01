@@ -14066,6 +14066,41 @@ describe("the idle ladder (idle crew recovery, docs/report-sort.md)", () => {
       expect(h.sorts.filter(({ rule }) => rule === "idle-card")).toHaveLength(1);
     });
 
+    // Source: INF-2133, the captain's direction B, "no change. background
+    // sleep already has some UI showing it. this should be nothing special":
+    // a crewmate waiting for time is told to start a background sleep, and
+    // the sleep owns the check-back like any running job.
+    it("INF-2133: a check-back with nothing running is told to start a background sleep, which then owns the wait", async () => {
+      let sleeping = false;
+      const h = await stopped({ hasRunningJobs: () => sleeping });
+      await h.supervisor.steerCrewmate(h.taskId, "Look at the release again in half an hour.");
+      await tick();
+      const receipt = h.specs[0]?.onReport?.("The release is not out yet.", undefined, {
+        checkBack: { minutes: 30, waitingFor: "the release to publish" },
+      });
+      expect(receipt).not.toContain("the app wakes you");
+      expect(receipt).toContain("start a background sleep for that long before this turn ends");
+      // The crewmate starts the sleep after its report, before its turn ends.
+      sleeping = true;
+      await endTurn(h.crewmate, h.taskId);
+      const reportedAt = hostNow;
+      expect(h.ops.some((op) => op.includes('"kind":"wait-without-owner"'))).toBe(false);
+      expect(h.sorts.at(-1)?.rule).not.toBe("stopped");
+      expect(h.tasks.get(h.taskId)?.gate).toEqual({
+        kind: "at-time",
+        until: reportedAt + minutes(30),
+        reason: "the release to publish",
+      });
+      // A second check-back while the sleep runs keeps today's reply.
+      await h.supervisor.steerCrewmate(h.taskId, "Any change?");
+      await tick();
+      expect(
+        h.specs[0]?.onReport?.("Still waiting.", undefined, {
+          checkBack: { minutes: 20, waitingFor: "the release to publish" },
+        }),
+      ).toContain("the app wakes you in 20m");
+    });
+
     it("INF-1554 F3: keeps a running job as owner across unchanged work-wait reports", async () => {
       const h = await stopped({ hasRunningJobs: () => true });
       const wait = {

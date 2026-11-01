@@ -13026,8 +13026,17 @@ export class CrewSupervisor {
     }
     if (linked) receipt.push(linked);
     if (declaration?.checkBack) {
+      const minutes = formatDurationShort(declaration.checkBack.minutes * 60_000);
+      // A check-back owns a wait only while a job runs (INF-1644 R1); with
+      // nothing running, a crewmate waiting for time starts a background
+      // sleep, which the app counts as its job and whose end wakes it (INF-2133).
+      const running =
+        this.options.hasRunningJobs?.(task.id) === true ||
+        this.clientJobStart(task.id) !== undefined;
       receipt.push(
-        `When this turn ends, the app wakes you in ${formatDurationShort(declaration.checkBack.minutes * 60_000)} with your running job's facts, unless a turn starts before then.`,
+        running
+          ? `When this turn ends, the app wakes you in ${minutes} with your running job's facts, unless a turn starts before then.`
+          : `Nothing of yours is running, so this check-back alone wakes nothing and the task reads as stopped when this turn ends. To wait ${minutes} for time to pass, start a background sleep for that long before this turn ends: it counts as your running job, and its end wakes you.`,
       );
     }
     if (declaration?.needsFirstmate) {

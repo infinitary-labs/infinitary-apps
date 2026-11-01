@@ -170,6 +170,7 @@ Row 4r sits after every owner the table reads: an open captain card, a running j
 A row above it that wakes the first mate on its own, such as the gate's row 4, carries the same stall facts on its wake.
 A timer is not an owner: a check-back whose claimed job is not running holds nothing (`IdleLadder.unownedTimer`).
 The sort, the ladder's witnesses and the timer's end read that one rule, so its timed gate is out of row 3, the ladder climbs past it, and its end neither steers the crewmate nor restarts the idle episode; the ladder's own nudge is the look again.
+A crewmate that waits for time to pass starts a background sleep, which counts as its running job and whose end wakes it; the report tool's `check_back` words and the report's reply to a check-back with nothing running tell it so.
 
 These observations live on the task's existing timeline, so a restart retains the comparison.
 Reports retain work waits and recovery findings on their durable entries, not a second store.

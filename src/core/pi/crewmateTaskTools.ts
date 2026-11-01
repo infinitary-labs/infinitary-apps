@@ -238,7 +238,7 @@ export const REPORT_TOOL = crewmateTool({
         { minutes: Type.Number(), waiting_for: Type.String() },
         {
           description:
-            "Your job still runs as your turn ends: minutes until you look again, and what it does. The app wakes you then.",
+            "Your job still runs as your turn ends: minutes until you look again, and what it does. The app wakes you then. To wait for time alone, start a background sleep first.",
         },
       ),
     ),

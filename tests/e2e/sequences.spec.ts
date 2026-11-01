@@ -468,6 +468,8 @@ test("a single-place change declares its plan skip: one running task, no parent"
   const added = (await board(page)).filter((task) => !before.includes(task.id));
   expect(added.map((task) => task.title)).toEqual([SEQ_SMALL.implement]);
   await pressRow(page, implement.key);
+  await expect(recordCard(page)).toHaveAttribute("data-task-record", implement.id);
+  await expectRecordBody(page);
   const record = recordFrame(page);
   await record
     .locator('[data-record-section="words"] > summary')

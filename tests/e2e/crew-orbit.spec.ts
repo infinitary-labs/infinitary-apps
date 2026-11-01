@@ -156,13 +156,15 @@ test("a cancelled crewmate leaves the ring", async () => {
     )
     .toMatchObject({ status: "dropped", closedReason: "cancelled" });
   await expect.poll(() => crewCounts(page)).toMatchObject({ working: 0, idle: 0 });
-  await expect.poll(() => ringSize(page), { timeout: 15_000 }).toBe(0);
   // The first mate's closing note goes up (INF-547), and the ring is not
-  // painted behind a card: close it to see the ring again.
+  // painted behind a card: its places and pixels keep the last frame drawn
+  // before the card came up, which a slow machine may draw before the drop
+  // reaches it. Close the note, then read the ring once it is painted again.
   const note = closingNoteTitle(key, "dropped");
   await showCard(page, note);
   await runFromSearch(launched.app, page, "cards.close");
   await expectNoCard(page, note);
+  await expect.poll(() => ringSize(page)).toBe(0);
   await expect.poll(async () => (await paint(page)).count, { timeout: 5_000 }).toBe(0);
   await evidence(page, "cancelled");
 });

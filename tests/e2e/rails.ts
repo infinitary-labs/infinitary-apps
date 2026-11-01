@@ -136,7 +136,10 @@ export function nowRow(page: Page, key: string): Locator {
  * panel's page the window's focus - opening a task counts only from his own
  * click or key in it (`point.openTask`) - and lands on the row. The press is
  * dispatched in the page itself, since Chromium hands a hidden window's
- * native click to a sandboxed frame unreliably.
+ * native click to a sandboxed frame unreliably. The page finds the row and
+ * presses it in one go: a row that moves to another group is drawn anew
+ * there (a queued task's row moves to Working once its crewmate begins),
+ * and a press on the row as it was drawn before lands on nothing.
  *
  * A card that folds the side panels puts them out of sight and out of
  * reach, so the press first gives them back with the card's edge tab where
@@ -152,8 +155,16 @@ export async function pressRow(page: Page, key: string): Promise<void> {
   await expandDock(page, "now");
   const tasks = dockFrameElement(page, "now");
   await expect(tasks).toBeVisible();
+  await nowRow(page, key).waitFor({ state: "attached" });
   await tasks.focus();
-  await nowRow(page, key).evaluate((row) => (row as HTMLElement).click());
+  const pressed = await nowFrame(page)
+    .locator(":root")
+    .evaluate((root, selector) => {
+      const row = root.querySelector<HTMLElement>(selector);
+      row?.click();
+      return row !== null;
+    }, nowRowSelector(key));
+  expect(pressed, `the Tasks row ${key} is drawn to press`).toBe(true);
 }
 
 /**

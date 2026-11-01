@@ -233,6 +233,13 @@ describe("the native pull-request gate", () => {
     "scripts/phone-simulator.ts",
     // INF-1645: a new pin must start the device gate on the pinned simulator.
     "scripts/phone-pin.json",
+    // INF-1936 / INF-2185: an edit to one new runner-side diagnostic still reaches its native consumer.
+    "scripts/phone-guest-observer.ts",
+    "tests/helpers/phoneWebStacks.ts",
+    "tests/helpers/phoneGuestLaunches.ts",
+    "tests/helpers/phoneLauncherLog.ts",
+    "tests/helpers/phoneLookupWait.ts",
+    "tests/helpers/phoneProxyLaunches.ts",
   ])("runs the actual workflow condition when %s changes", (path) => {
     expect(eligible(phoneDecision([path]).run)).toBe("true");
   });

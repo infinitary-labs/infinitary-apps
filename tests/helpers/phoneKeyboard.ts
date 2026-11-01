@@ -4,6 +4,7 @@ import { basename, join } from "node:path";
 import { createInterface } from "node:readline";
 import { pipeline } from "node:stream/promises";
 import { createGzip } from "node:zlib";
+import { keepPhoneDiagnostic } from "../../scripts/phone-checks.ts";
 
 import { budgetTimer, waitCap } from "./budgets.ts";
 import { logTime } from "./phonePhotos.ts";
@@ -804,7 +805,7 @@ async function openPhoneKeyboardStream(options: PhoneKeyboardOptions, append: bo
       });
     });
   } catch (error) {
-    await close();
+    await keepPhoneDiagnostic("Keyboard observer startup cleanup", close);
     throw error;
   }
   return {

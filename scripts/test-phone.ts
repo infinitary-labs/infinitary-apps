@@ -6,9 +6,11 @@ import { dirname, join, resolve } from "node:path";
 import { createInterface } from "node:readline";
 import { parseArgs } from "node:util";
 import { budgetTimer, GRADES_BUDGETS, startPhoneLoadClock } from "../tests/helpers/budgets.ts";
+import { phoneGuestJourneyFinished } from "../tests/helpers/phoneGuestLaunches.ts";
 import { observePhoneLog } from "../tests/helpers/phoneLogs.ts";
-import { capturePhoneKeyboardTimeout } from "../tests/helpers/phoneStacks.ts";
+import { capturePhoneKeyboardTimeout, phoneLaunchOwner, phoneLaunchProcesses, phoneProcessTable, phoneRenderProcesses } from "../tests/helpers/phoneStacks.ts";
 import { phoneWebContentStartup } from "../tests/helpers/phoneWebContent.ts";
+import { capturePhoneWebStacks } from "../tests/helpers/phoneWebStacks.ts";
 import { libraryPhotoAdded, photosOpened } from "../tests/helpers/phonePhotos.ts";
 import { changePhoneTextSize, hardwareKeyboardArguments, observePhoneKeyboard, type PhoneChord, type PhoneDisplayReport, type PhoneTextSize, phoneApplicationPid, phoneDisplayDeadline, withPhoneHardwareKeyboard } from "../tests/helpers/phoneKeyboard.ts";
 import { removeScratchDirs, scratchDir } from "../tests/helpers/scratchDirs.ts";
@@ -16,10 +18,11 @@ import { ciModeRefusal } from "./checks-mode.ts";
 import { openModuleRunner, REPO_ROOT } from "./moduleRunner.ts";
 import { takeHeavyRunPlace } from "./heavy-run-place.ts";
 import { startPhoneActivity } from "./phone-activity.ts";
-import { runEveryCheck } from "./phone-checks.ts";
+import { finishPhoneCheck, keepPhoneDiagnostic, runEveryCheck } from "./phone-checks.ts";
 import { keepPhoneFailureLogs, runPhoneLog } from "./phone-failure-logs.ts";
 import { GATE_SIMULATOR, removePhoneLeftovers, SCRATCH_PREFIX } from "./phone-leftovers.ts";
 import { phoneRecording } from "./phone-recording.ts";
+import { startPhoneGuestObserver } from "./phone-guest-observer.ts";
 import { phoneSimulator, phoneXcode } from "./phone-simulator.ts";
 import { PHONE_PARTS, type PhoneDevice, partSelection, phoneAnimationWaits, phoneExecutionArguments, phoneJobs, phoneStopsEarly, runDeviceLanes, testHomeKeys } from "./phone-test-plan.ts";
 
@@ -37,6 +40,7 @@ const { values } = parseArgs({ options: {
   "raw-demo": { type: "boolean", default: process.env.PHONE_RECORDING === "1" },
   waits: { type: "boolean", default: process.env.INFINITARY_PHONE_WAITS_ONLY === "1" },
   starve: { type: "boolean", default: process.env.INFINITARY_STARVE_CHECK === "1" },
+  "guest-observer": { type: "boolean", default: process.env.INFINITARY_PHONE_GUEST_OBSERVER === "1" },
   // INF-662 piece 1: check and build once, then the iPhone and the iPad side by side.
   both: { type: "boolean", default: false },
   // INF-662 piece 2: the journey's parts to run (all of them unless named), and how many devices at once.
@@ -89,16 +93,21 @@ for (const signal of ["SIGINT", "SIGTERM"] as const) process.once(signal, () => 
   for (const child of children) child.kill("SIGTERM");
 });
 // A cleanup command, such as deleting a simulator the gate started, still runs after an interruption.
-const run = async (command: string, args: string[], cleanup = false) => {
+const run = async (command: string, args: string[], cleanup = false, onLine?: (line: string) => void) => {
   if (interrupted && !cleaningUp && !cleanup) throw new Error("The native gate was interrupted");
   const child = spawn(command, args, { cwd: REPO_ROOT, env, stdio: ["ignore", "pipe", "pipe"] });
   children.add(child);
   let output = "";
   child.stdout.on("data", (part) => { output += part; });
   child.stderr.on("data", (part) => { output += part; });
+  const readers = onLine ? [child.stdout, child.stderr].map((input) => {
+    const reader = createInterface({ input });
+    reader.on("line", onLine);
+    return reader;
+  }) : [];
   const status = await new Promise<number | null>((resolveExit, reject) => {
     child.once("error", reject); child.once("close", resolveExit);
-  }).finally(() => children.delete(child));
+  }).finally(() => { children.delete(child); for (const reader of readers) reader.close(); });
   const log = join(evidence, `${++number}-${command.replaceAll("/", "-")}.log`);
   writeFileSync(log, output);
   if (status !== 0) throw Object.assign(new Error(`${command} failed (${status}); see ${log}`), { output });
@@ -124,6 +133,8 @@ const SYSTEM_LOG = '(process IN {"SpringBoard", "backboardd", "AccessibilityUISe
 let keyboard: Awaited<ReturnType<typeof observePhoneKeyboard>> | undefined;
 let simulatorLog: Awaited<ReturnType<typeof observePhoneLog>> | undefined;
 let timeoutStack: ReturnType<typeof capturePhoneKeyboardTimeout> | undefined;
+let webStacks: ReturnType<typeof capturePhoneWebStacks> | undefined;
+let guestObserver: Awaited<ReturnType<typeof startPhoneGuestObserver>> | undefined;
 let recorder: ChildProcess | undefined;
 let recorded: Promise<void> | undefined;
 let recordingLog = "";
@@ -345,7 +356,8 @@ const everyPartOn = async (starting: Map<PhoneDevice, Promise<Lane>>) => {
       return ended(stopping.aborted ? "stopped" : "failed");
     }
     const command = [process.execPath, "scripts/test-phone.ts", ...(device === "ipad" ? ["--ipad"] : []),
-      ...demo.childArgs, ...(values.waits ? ["--waits"] : []), "--part", part, "--evidence", folder(device, part),
+      ...demo.childArgs, ...(values.waits ? ["--waits"] : []), ...(values["guest-observer"] ? ["--guest-observer"] : []),
+      "--part", part, "--evidence", folder(device, part),
       "--xctestrun", join(products, plan), "--simulator", lane.owned];
     if (values.starve) command.unshift("python3", "scripts/starve-check.py", "--timeout", "3600", "--stall-seconds", "12", "--");
     const child = spawn(command[0]!, command.slice(1), { cwd: REPO_ROOT, env, stdio: ["ignore", "pipe", "pipe"] });
@@ -422,21 +434,74 @@ const onePart = async () => {
     });
   }
   const webContent = phoneWebContentStartup();
+  // INF-1936 / INF-1941: discover ownership before the journey. A simulator
+  // command issued during the stall can queue behind that same blocked launch.
+  const processes = async (pids: number[]) => phoneProcessTable(await run("/bin/ps", ["-p", pids.join(","), "-o", "pid=,ppid=,lstart=,comm="]));
+  try {
+    const services = await run("xcrun", ["simctl", "spawn", owned, "launchctl", "list"]);
+    const owner = await phoneLaunchOwner(owned, services, processes);
+    writeFileSync(join(evidence, "web-stack-owner.log"), JSON.stringify({ discoveredAt: new Date().toISOString(), owner }, null, 2));
+    if (values["guest-observer"] && values.part![0] === "cards") {
+      const execution = phoneExecutionArguments(false);
+      guestObserver = await startPhoneGuestObserver({ owner, env, evidence: join(evidence, "guest-observer"),
+        sampleSeconds: Number(execution[execution.indexOf("-maximum-test-execution-time-allowance") + 1]),
+      }, children);
+    } else webStacks = capturePhoneWebStacks({ evidence, capture: async (app, destination, extensions) => {
+      const phases: string[] = [];
+      const record = (message: string) => {
+        phases.push(`${new Date().toISOString()} ${message}`);
+        writeFileSync(`${destination}-phases.log`, phases.join("\n") + "\n");
+      };
+      record("Host process lookup began.");
+      const { targets, unavailable } = extensions.length
+        ? await phoneRenderProcesses(owner, app, extensions, processes)
+        : { targets: await phoneLaunchProcesses(owner, app, processes), unavailable: [] };
+      record("Host process lookup ended; owned process identities match.");
+      for (const reason of unavailable) record(reason);
+      writeFileSync(`${destination}-targets.log`, JSON.stringify({ simulator: owned, extensions, targets, unavailable }, null, 2));
+      await Promise.allSettled(targets.map(async ({ pid, executable }) => {
+        record(`Sample began for PID ${pid}.`);
+        try {
+          await run("/usr/bin/sample", [String(pid), "1", "1", "-mayDie", "-file", `${destination}-${pid}.log`]);
+          record(`Sample ended for PID ${pid}.`);
+        } catch (error) {
+          record(`Sample failed for PID ${pid}: ${String(error)}`);
+          writeFileSync(`${destination}-${pid}-error.log`, `${executable}: ${String(error)}\n`);
+        }
+      }));
+    } });
+  } catch (problem) {
+    console.log(`WebKit stack ownership could not be established: ${String(problem)}`);
+    // This explicit investigation asks for observation before the journey; do not
+    // spend it on an unobserved journey if that prerequisite could not start.
+    if (values["guest-observer"]) throw problem;
+  }
   simulatorLog = await observePhoneLog({ device: owned, env, evidence, children,
     predicate: `(${SIMULATOR_LOG}) OR (${SYSTEM_LOG})`, onLine: (line) => {
       timeoutStack?.receive(line);
       webContent.receive(line);
+      webStacks?.receive(line);
     } });
   const testing = new Date();
   let output = "";
-  await run("xcodebuild", ["-xctestrun", plan, ...destination, ...partSelection(values.part![0]!, values.waits),
-    ...phoneExecutionArguments(GRADES_BUDGETS), "test-without-building"])
-    .then((log) => { output = log; })
-    .finally(async () => { await recording.stop(); await demo.finish(recordings, evidence); })
-    .catch(async (error: Error & { output?: string }) => {
+  await finishPhoneCheck(run("xcodebuild", ["-xctestrun", plan, ...destination, ...partSelection(values.part![0]!, values.waits),
+    ...phoneExecutionArguments(GRADES_BUDGETS), "test-without-building"], false, guestObserver ? (line) => {
+      if (phoneGuestJourneyFinished(line)) guestObserver?.stop();
+    } : undefined)
+    .then((log) => { output = log; }, (error: Error & { output?: string }) => {
       output = error.output ?? "";
+      throw error;
+    }), async () => {
+      // End the diagnostic at the journey boundary, not after post-failure log collection.
+      await keepPhoneDiagnostic("Guest observer", () => guestObserver?.close()); guestObserver = undefined;
+      await keepPhoneDiagnostic("Recording", () => recording.stop());
+      // A requested clip/poster is a deliverable, not an optional diagnostic.
+      await demo.finish(recordings, evidence);
+    })
+    .catch(async (error: Error) => {
       // The CI job log names why a part failed; its results archive is often too large to fetch.
-      for (const line of (error.output ?? "").split("\n").filter((each) => / error: |Test Case .* failed|^Phone wait failed:/.test(each)).slice(0, 20))
+      // Keep native output even when the error came from recording finalization.
+      for (const line of output.split("\n").filter((each) => / error: |Test Case .* failed|^Phone wait failed:/.test(each)).slice(0, 20))
         console.log(line);
       console.log("The pre-failure simulator log is kept in simulator-live.log, even if XCTest tore its domain down.");
       await keepPhoneFailureLogs({ device: owned, testing, appPredicate: SIMULATOR_LOG, systemPredicate: SYSTEM_LOG,
@@ -479,18 +544,15 @@ try {
 } finally {
   cleaningUp = true;
   try {
-    try {
+    await keepPhoneDiagnostic("Home observations", () => {
       if (fixture) writeFileSync(join(evidence, "home-observations.json"), JSON.stringify(fixture.observations(), null, 2));
-    } finally {
-      try { await recording.stop(); }
-      finally {
-        try { await keyboard?.close(); }
-        finally {
-          try { await simulatorLog?.close(); }
-          finally { await timeoutStack?.close(); }
-        }
-      }
-    }
+    });
+    await keepPhoneDiagnostic("Recording", () => recording.stop());
+    await keepPhoneDiagnostic("Keyboard observer", () => keyboard?.close());
+    await keepPhoneDiagnostic("Simulator log", () => simulatorLog?.close());
+    await keepPhoneDiagnostic("Keyboard timeout stack", () => timeoutStack?.close());
+    await keepPhoneDiagnostic("WebKit stacks", () => webStacks?.close());
+    await keepPhoneDiagnostic("Guest observer", () => guestObserver?.close());
   } finally {
     try { await fixture?.close(); }
     finally {

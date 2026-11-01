@@ -7,6 +7,7 @@ import { PassThrough } from "node:stream";
 import { finished, pipeline } from "node:stream/promises";
 import { logTime } from "../tests/helpers/phonePhotos.ts";
 import type { phoneWebContentStartup } from "../tests/helpers/phoneWebContent.ts";
+import { keepPhoneDiagnostic } from "./phone-checks.ts";
 
 /** INF-1885: log show can exceed V8's largest string. Keep both pipes on disk with
  * backpressure, and join the child and writer even when collection fails. */
@@ -86,11 +87,12 @@ export async function keepPhoneFailureLogs({ device, testing, appPredicate, syst
       report(`The simulator's ${name} could not be kept or read: ${problem instanceof Error ? problem.message : String(problem)}`);
     }
   }
-  // Join the live reader before taking its final snapshot, even if log show failed.
-  try {
-    await closeLive();
+  // INF-1936 / INF-2185: join the live reader before the snapshot, but a failed
+  // diagnostic close must not hide that snapshot or replace the native failure.
+  await keepPhoneDiagnostic("Simulator log", closeLive, report);
+  await keepPhoneDiagnostic("WebContent startup evidence", async () => {
     const startup = webContent.report();
     report(startup);
     await writeFile(join(evidence, "webcontent-startup.log"), startup + "\n");
-  } catch (problem) { report(`WebContent startup evidence could not be kept: ${String(problem)}`); }
+  }, report);
 }

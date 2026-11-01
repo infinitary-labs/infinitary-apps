@@ -41,6 +41,10 @@ on:
         required: false
         type: boolean
         default: false
+      guest_observer:
+        description: "Observe the cards launch in a separate guest process without changing the journey"
+        type: boolean
+        default: false
       evidence_run:
         description: "Export native scene attachments from an existing phone run without starting simulators"
         required: false
@@ -298,6 +302,7 @@ jobs:
           INFINITARY_STARVE_CHECK: ${{ inputs.starve && '1' || '0' }}
           INFINITARY_PERF_BUDGETS: ${{ inputs.perf && '1' || '0' }}
           PHONE_RECORDING: ${{ inputs.recording && '1' || '' }}
+          INFINITARY_PHONE_GUEST_OBSERVER: ${{ inputs.guest_observer && '1' || '0' }}
           INFINITARY_PHONE_STOP_EARLY: ${{ github.event_name == 'pull_request' && '1' || '0' }}
           INFINITARY_PHONE_PACKAGE_CACHE: ${{ runner.temp }}/swift-packages
       - name: Save the Swift packages for pull requests

@@ -18,6 +18,9 @@ const INPUTS = [
   // INF-1066: native geometry generation and the scene journey's real home fixture.
   "scripts/generate-phone-scene.ts", "tests/helpers/phoneScene.ts", "scripts/phone-recording.ts",
   "tests/helpers/phoneLogs.ts", "tests/helpers/phoneStacks.ts", "tests/helpers/phoneWebContent.ts",
+  // INF-1936 / INF-2185: edits to the runner's diagnostics must select their simulator consumer too.
+  "scripts/phone-guest-observer.ts", "tests/helpers/phoneWebStacks.ts", "tests/helpers/phoneGuestLaunches.ts",
+  "tests/helpers/phoneLauncherLog.ts", "tests/helpers/phoneLookupWait.ts", "tests/helpers/phoneProxyLaunches.ts",
   // INF-662: each device's own test home in the one build's test plan.
   "scripts/phone-test-plan.ts",
 ] as const;

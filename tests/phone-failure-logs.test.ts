@@ -1,7 +1,14 @@
 import { constants } from "node:buffer";
 import type { ChildProcess } from "node:child_process";
 import { createHash } from "node:crypto";
-import { createReadStream, mkdirSync, readFileSync, rmSync, statSync } from "node:fs";
+import {
+  createReadStream,
+  mkdirSync,
+  readFileSync,
+  rmSync,
+  statSync,
+  writeFileSync,
+} from "node:fs";
 import { join, resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 import { phoneDecision } from "../scripts/affected-phone";
@@ -169,8 +176,11 @@ describe("failed phone parts keep logs without whole-output strings (INF-1885)",
     expect(reports.at(-1)).toMatch(/^WebContent startup evidence could not be kept:/);
   });
 
-  it("reports live-reader failure without replacing the caller's original failure", async () => {
-    const { options, reports, run } = fixture();
+  // INF-1936 / INF-2185: the collector, not its caller's wrapper, owns independent diagnostic cleanup.
+  it("keeps the startup snapshot after live-reader failure without replacing the native failure", async () => {
+    const { evidence, options, reports, run } = fixture();
+    const closeTarget = join(evidence, "live-reader.log");
+    mkdirSync(closeTarget);
     const failure = new Error("The original xcodebuild test failure");
     const finish = async () => {
       try {
@@ -178,7 +188,7 @@ describe("failed phone parts keep logs without whole-output strings (INF-1885)",
           ...options,
           keepLog: async (_args, log) => run(log),
           closeLive: async () => {
-            throw new Error("live reader failed");
+            writeFileSync(closeTarget, "evidence");
           },
         });
         throw failure;
@@ -187,9 +197,13 @@ describe("failed phone parts keep logs without whole-output strings (INF-1885)",
       }
     };
     await expect(finish()).rejects.toBe(failure);
-    expect(reports.at(-2)).toBe(
-      "WebContent startup evidence could not be kept: Error: live reader failed",
+    const notice = reports.find((message) =>
+      message.startsWith("Simulator log could not be kept:"),
     );
+    expect(notice).toContain("Error: EISDIR");
+    const startup = readFileSync(join(evidence, "webcontent-startup.log"), "utf8");
+    expect(startup).toBe(options.webContent.report() + "\n");
+    expect(reports.indexOf(notice!)).toBeLessThan(reports.indexOf(startup.trimEnd()));
     expect(reports.at(-1)).toBe("outer cleanup finished");
   });
 });

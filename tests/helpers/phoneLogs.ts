@@ -2,6 +2,7 @@ import { type ChildProcess, spawn } from "node:child_process";
 import { createWriteStream } from "node:fs";
 import { join } from "node:path";
 import { createInterface } from "node:readline";
+import { keepPhoneDiagnostic } from "../../scripts/phone-checks.ts";
 import { budgetTimer } from "./budgets.ts";
 
 /** INF-1122: keep the owned simulator's log before XCTest can tear its domain down.
@@ -99,7 +100,7 @@ export async function observePhoneLog({
     });
     return { close };
   } catch (error) {
-    await close();
+    await keepPhoneDiagnostic("Simulator log startup cleanup", close);
     throw error;
   }
 }

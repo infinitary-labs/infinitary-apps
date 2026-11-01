@@ -495,6 +495,46 @@ The app log's startup witnesses are read back one line at a time.
 A collection or read failure is reported without hiding the next log, the live-reader join, or the original test failure.
 A missing launch completion stays unknown, and an earlier launch does not establish the cause of a later card failure; these readings identify startup delays without claiming CPU load, concurrent simulators or a runtime defect caused them.
 No diagnostic changes the failed status, retries an action or extends a wait.
+The startup investigation also samples the owned simulator's app, RunningBoard and its `launchd_sim` parent once when a WebKit launch has neither a captured PID reply nor a running-state reading after ten seconds, and once on an actual rendering-backend unresponsive message (INF-1936).
+RunningBoard's calculated state and SpringBoard's received state cancel pending launch captures, including when the state arrives before its request.
+On a rendering fault the probe also samples the named WebContent process and GPU processes whose native launch or running-state readings identify the same app.
+It verifies their simulator parent, executable, birth time relative to the native reading and stable host identity; an absent, replaced or unowned child is recorded and excluded without preventing the other samples.
+These are diagnostic observation points, not readiness conditions: a missing reply may be a dropped log, and no sample establishes a cause without inspecting its stacks.
+The probe discovers the simulator's manager and launcher before the journey, accepting the host's bare `launchd_sim` name as well as its full path (INF-1941).
+At capture time it reads only host process metadata, checking saved process identities and the app's parent and simulator path, so the lookup cannot queue a command behind the stalled simulator launch.
+It retains separate receipt, trigger, ownership-lookup and sample times, never elevates access, records sampling failures without retrying, and joins the samples before deleting the simulator.
+For an explicitly requested launch investigation, `phone.yml`'s `guest_observer` input replaces the cards part's ordinary fault probe with `scripts/phone-guest-observer.ts`, a separate guest process started before XCTest; it changes no product or test code.
+The observer verifies the existing simulator owner and uses the verified launcher's open descriptors to identify its actual writable regular log file.
+It accepts a file within that simulator's recorded log directory or directly within the observed `com.apple.CoreSimulator.SimDevice.<owned UUID>` directory; it never guesses or searches for a filename.
+The canonical directory must retain the owned directory's name and contain the canonical file path.
+Before XCTest it opens that file without following a symlink and verifies its device and inode; missing, ambiguous, changed or unreadable evidence stops the investigation before the journey, without elevated access.
+It preserves the owned log through the native result or the existing capture allowance, whichever comes first; observed rotation, replacement or truncation is recorded as incomplete evidence, not followed into another file.
+It also attaches both RunningBoard and its verified `launchd_sim` parent before the journey, and waits for both samplers to report readiness before XCTest may start.
+Its narrow native stream runs independently of the high-volume log reader and includes the verified launcher's own log records if the simulator stream supplies them; absent records do not establish a healthy launcher.
+Both samplers use the existing ordinary XCTest allowance and 100 ms interval, without extending a test wait or resolving a new process at fault time.
+The observer retains request, creation and PID-response readings by app and request identity, even when creation or response arrives before its request.
+Neither creation nor a delayed response stops the prestarted samples; they remain open for later delays until the native result or their unchanged existing allowance.
+A missing response remains unknown; the native cards result stops the observer before xcodebuild's later diagnostic collection, with runner cleanup and the existing sample duration as backstops.
+The first owned WebContent request starts one host-only lookup, with wall and monotonic readings for the spawn call and return, spawn event, first output, exit, close, and asynchronous command-log write start and end.
+Each helper's output lines also carry receipt times, separating sampling messages from later symbol processing.
+If that same owned lookup child still has no output after the existing ten-second diagnostic threshold, the observer records the stalled lookup's PID once, without another process lookup or retry.
+It does not sample that child: macOS's `ps` is setuid, so an unprivileged sampler cannot inspect it.
+The proposed guest-wide kernel capture would cover the stalled lookup too; that capture is not implemented or authorized, and there is no separate elevated lookup sampler.
+Any output, exit, spawn failure or native-result shutdown cancels an unspent lookup observation; cleanup joins an already-started observation.
+`guest-observer/events.log` keeps those readings and each matched launch beside the narrow native log and sample reports; successful commands with empty call graphs remain missing evidence.
+Both reports aggregate their observed intervals, so their stacks must be compared with the request, creation, response and sampling times rather than attributed to one call without that comparison.
+The owned launcher-file reader also delivers complete appended lines, never its initial historical snapshot, to the proxy-child diagnostic.
+A direct-file watch and a directory watch notify the same serialized, identity-checked reader; neither follows a replacement or starts another reader.
+Each nonempty read records its notification source, byte range and delivered-line counts, distinguishing live deliveries from the final read during shutdown.
+The close record keeps both watches' notification counts and total versus live line deliveries, so a complete saved file alone is never proof of live recording.
+A WebContent or GPU spawn record identifies its app, request UUID and child PID; after the existing ten-second threshold without a terminal record, the observer attempts one five-second sample at 100 ms intervals for that child.
+Host process metadata must confirm the owned app, manager, launcher, child parent, native spawn second and executable, then confirm their identities again before sampling.
+The child may still be `xpcproxy_sim` or may already have executed its intended WebContent/GPU target while the launcher has not reported running; the recorded executable distinguishes those cases.
+Missing, replaced or changed identities produce an evidence gap without a retry, and a terminal record arriving during the lookup cancels an unspent sample.
+The native result, a file-capture error or the original observation allowance cancels pending proxy captures; shutdown and the allowance also interrupt started proxy samples, and cleanup joins the lookups and samplers.
+The observer is opt-in, starts no retry, changes no test allowance or assertion, and joins its children and evidence writers before simulator deletion.
+A failure while finishing diagnostics is reported without replacing the native result or its output, and remaining diagnostics still finish.
+Required observer setup still fails when observation cannot start, and simulator, fixture and runner teardown retain their own failure handling.
 In the talk part, the first actual UIKit keyboard-queue timeout triggers a one-second stack sample after the runner confirms that PID still belongs to its own simulator's app.
 It retains `keyboard-timeout-stack.log` and the capture outcome, joins the sampler before deleting the simulator, and never retries a capture or changes the photo-selection, tap or focus assertions.
 A run without that fault records that no reproduction or stack capture is claimed.
@@ -520,6 +560,9 @@ It keeps the selected images, timing readings and scene recordings in a small ar
 Add `--demo`, with FFmpeg installed, to keep real-speed reconnect, card, character, scene-panning and task-start recordings with their posters beside the test results.
 A manual phone workflow request with `recording` enabled passes `--raw-demo` through `PHONE_RECORDING=1`, including the virtual-Mac route; ordinary checks do not record.
 That mode keeps the simulator’s original silent H.264 capture as `*-raw.mp4` and needs no encoder on the test Mac.
+Requested raw clips, encoded clips and posters are deliverables, not optional diagnostics: a finalization error fails a part whose native test passed.
+If the native test already failed, its failure and output take precedence, and the runner reports any recording finalization error without replacing them.
+Diagnostic shutdown and recording-log failures still do not prevent the recording finalizer from running.
 Convert those captures to the card’s bounded H.264 format and inspect their posters on the evidence reader’s computer before publication; `--demo` still performs that conversion where FFmpeg is installed.
 The reconnect recording crops the top of the phone view around the connection state and card; the card recordings keep the full native view.
 An encoded demo retains real speed and holds the final frame for five seconds, within a fifteen-second cap; a raw capture preserves the complete recorded interaction.

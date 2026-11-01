@@ -1,0 +1,8 @@
+{
+  "exclusions": [
+    {
+      "id": "phone-web-startup-investigation",
+      "reason": "Internal phone-check diagnostics and regression coverage; no app behavior changes."
+    }
+  ]
+}

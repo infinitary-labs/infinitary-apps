@@ -1,11 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { renderWake } from "../orchestrator/wakes";
-import {
-  type FreezeLine,
-  freezeWake,
-  infinitaryProject,
-  isFreezeRecorderEnabled,
-} from "./freezeRecorder";
+import { type FreezeLine, freezeWake, infinitaryProject } from "./freezeRecorder";
+import { isFreezeRecorderEnabled } from "./watchdog";
 
 // INF-2066: the captain's answer on INF-2061's first mate question, "activate
 // it only in alpha builds, and offer a fix task only if the canonical

@@ -121,12 +121,8 @@ import { GitHubForge, githubApiBaseFor } from "./forge/providers/github/githubFo
 import { readGitLabOpenChanges } from "./forge/providers/gitlab/changes";
 import { gitlabApiBaseFor } from "./forge/providers/gitlab/client";
 import { GitLabForge } from "./forge/providers/gitlab/gitlabForge";
-import {
-  FreezeRecorder,
-  freezeWake,
-  infinitaryProject,
-  isFreezeRecorderEnabled,
-} from "./freeze/freezeRecorder";
+import { FreezeRecorder, freezeWake, infinitaryProject } from "./freeze/freezeRecorder";
+import { isFreezeRecorderEnabled } from "./freeze/watchdog";
 import { appLauncher } from "./helper/launcher";
 import { bootedAt } from "./helper/lock";
 import type { HostCapabilities } from "./host";

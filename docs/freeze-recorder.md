@@ -1,7 +1,7 @@
 # The freeze recorder
 
 The freeze recorder notices when the app's main thread, which handles the captain's clicks and keys and runs the core, stops answering, and records where it was (INF-2061's plan, built as INF-2066).
-Its code is `src/core/freeze/freezeRecorder.ts`.
+Its code is `src/core/freeze/freezeRecorder.ts`, and its watchdog's is `src/core/freeze/watchdog.ts`.
 
 ## When it runs
 
@@ -18,8 +18,18 @@ A gap the watchdog's own timer also slept through is the whole computer pausing,
 
 The watchdog keeps the inspector's debugger enabled from the start.
 Enabled only after a stall, a wait's pause landed in code that ran after the wait (INF-2061's lab).
-In Electron 43.4.0's main process, enabling it ahead left busy code and JSON parsing as fast as before and cost about 10 microseconds for each script the main thread compiled.
+In Electron 43.4.0's main process, enabling it ahead left busy code and JSON parsing as fast as before.
 A `debugger` statement the main thread reaches while it is enabled is resumed at once.
+
+## At startup
+
+Enabling the debugger reads every script the main thread has loaded so far, all at once on the main thread: it hashes each script's source and counts its lines.
+Each script loaded after that is read as it loads.
+Enabled when the core started the recorder, it read the app's whole main process, 33 MB of source in 2,880 scripts, and held the main thread for 386 ms of its own processor time on a Mac and 537 to 638 ms on the Linux runners, one stall with no names (INF-2071).
+So the app's main entry (`src/main/index.ts`) arms the watchdog before it loads the app's own code (`armWatchdog`), where the debugger reads only the few scripts loaded so far, and waits until it is on; the main thread answers the watchdog while it waits.
+The rest is read script by script as the app's code loads, before the recorder starts.
+The recorder takes that watchdog when the core starts it (`takeWatchdog`), so a stall from its first heartbeat is named.
+A core started with nothing armed, such as one in plain Node, starts a watchdog without waiting: its debugger comes on while the recorder already watches, so the cost of enabling it is recorded as a stall rather than hidden before the record starts.
 
 ## The record
 

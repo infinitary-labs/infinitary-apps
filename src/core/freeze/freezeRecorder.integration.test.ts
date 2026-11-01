@@ -1,5 +1,6 @@
 import { readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
+import { runInThisContext } from "node:vm";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { scratchDir } from "../../../tests/helpers/scratchDirs";
 import {
@@ -10,13 +11,15 @@ import {
   HEARTBEAT_MS,
   RECORD_MAX_LINES,
 } from "./freezeRecorder";
+import { armWatchdog } from "./watchdog";
 
 // INF-2066, INF-2061's approved plan: "A test holds the main thread in a
 // named function and finds that function in the record." It reads the
 // record's lines and their order, never a wall-clock budget.
 
 // Each case holds the main thread 800 ms on the real clock; its fastest
-// measured run is 1.1 s (docs/test-cohorts.md, "Budgets").
+// measured run is 1.1 s, and 1.4 s for the case that first loads 30 MB of
+// source (docs/test-cohorts.md, "Budgets").
 vi.setConfig({ testTimeout: 10_000 });
 
 let recorder: FreezeRecorder | undefined;
@@ -29,10 +32,12 @@ afterEach(() => {
  * Starts a recorder on a scratch record. `stall` holds the main thread and
  * answers the line recorded for it: the first one that began no earlier than
  * the heartbeat before the stall, so a stall the test runner itself caused
- * while starting is not taken for it.
+ * while starting is not taken for it. `settle: false` leaves out the wait
+ * for the watchdog's debugger, for a stall that begins as the recorder starts.
  */
 async function startRecorder(
   recordPath: string,
+  { settle = true }: { settle?: boolean } = {},
 ): Promise<{ stall: (hold: () => void) => Promise<FreezeLine> }> {
   const lines: FreezeLine[] = [];
   const waiters: (() => void)[] = [];
@@ -45,7 +50,7 @@ async function startRecorder(
   });
   recorder.start();
   // The watchdog needs a heartbeat or two before it can tell a missed one.
-  await new Promise((done) => setTimeout(done, FREEZE_THRESHOLD_MS * 3));
+  if (settle) await new Promise((done) => setTimeout(done, FREEZE_THRESHOLD_MS * 3));
   return {
     stall: async (hold) => {
       const since = Date.now() - HEARTBEAT_MS * 2;
@@ -78,6 +83,27 @@ function renderOpenMessages(ms: number): number {
   return walkEveryRow(ms);
 }
 
+/** The code `loadAppSizedCode` loaded, kept loaded as the app's modules stay. */
+let appCode: unknown[] = [];
+afterEach(() => {
+  appCode = [];
+});
+
+/**
+ * Loads as much source as the app's main process holds - 30 MB in 2,000
+ * scripts, beside its 33 MB in 2,880 (INF-2071) - each a script of its own
+ * named functions. Enabling the debugger after this reads all of it at once.
+ */
+function loadAppSizedCode(): void {
+  for (let script = 0; script < 2_000; script += 1) {
+    let source = "";
+    for (let each = 0; source.length < 15_000; each += 1) {
+      source += `function part${script}_${each}(a, b) { let sum = 0; for (let k = 0; k < a; k += 1) sum += (k * ${each}) % (b + 1); return sum; }\n`;
+    }
+    appCode.push(runInThisContext(`(() => { ${source} return part${script}_0; })()`));
+  }
+}
+
 describe("the freeze recorder", () => {
   it("records a main thread stall with the function that held it, innermost first", async () => {
     const recordPath = join(scratchDir("infinitary-freeze-busy-"), "freezes.jsonl");
@@ -95,6 +121,24 @@ describe("the freeze recorder", () => {
     // wall time it fills depends on the computer's load: a shared runner
     // that preempts the busy loop can leave it under half, marked waited.
     expect(seen.cpuMs).toBeGreaterThan(0);
+    expect(readRecord(recordPath)).toContainEqual(seen);
+  });
+
+  it("names a stall as the recorder starts, armed before the app's own code loaded", async () => {
+    // INF-2071: the app's entry arms the watchdog before the app's code
+    // loads, and the core starts the recorder on it later. Its debugger is
+    // on by then, so a stall from the recorder's first heartbeat is named.
+    // Enabled only as the recorder started, it read all that code then and
+    // left the stall that began with it unnamed.
+    armWatchdog();
+    loadAppSizedCode();
+    const recordPath = join(scratchDir("infinitary-freeze-armed-"), "freezes.jsonl");
+    const { stall } = await startRecorder(recordPath, { settle: false });
+    const seen = await stall(() => renderOpenMessages(FREEZE_THRESHOLD_MS * 8));
+
+    const names = seen.frames.map((frame) => frame.name);
+    expect(names).toContain("walkEveryRow");
+    expect(names.indexOf("walkEveryRow")).toBeLessThan(names.indexOf("renderOpenMessages"));
     expect(readRecord(recordPath)).toContainEqual(seen);
   });
 

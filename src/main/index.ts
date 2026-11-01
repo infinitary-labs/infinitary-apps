@@ -1,5 +1,6 @@
 import { dirname } from "node:path";
 import { fileURLToPath } from "node:url";
+import { armWatchdog, isFreezeRecorderEnabled } from "../core/freeze/watchdog";
 import { hostPlatform } from "../core/platform";
 import { linkCommand, runLinkCommand } from "./linkCommand";
 import { hasNoScreen, NO_SCREEN_WORDS } from "./noScreen";
@@ -61,6 +62,17 @@ async function commandDataDir(): Promise<string> {
   return choice.kind === "switch" ? app.getPath("userData") : choice.dir;
 }
 
+/**
+ * Arms the freeze recorder's watchdog where this build runs the recorder,
+ * before the app's own code loads, so enabling its debugger reads only the
+ * few scripts loaded so far (docs/freeze-recorder.md, "At startup").
+ */
+async function armFreezeRecorder(): Promise<void> {
+  const { app } = await import("electron");
+  const build = { packaged: app.isPackaged, version: app.getVersion(), env: process.env };
+  if (isFreezeRecorderEnabled(build)) armWatchdog();
+}
+
 if (work) {
   const { prepareWorkMode, runWorkMode } = await import("./work");
   // On Linux with no display, the work mode's own starts here, before
@@ -91,6 +103,7 @@ if (work) {
 } else if (run) {
   // Started by a command with no window (./runCommand.ts, docs/run.md): the
   // app's own start, which on Linux awaits a display of its own first.
+  await armFreezeRecorder();
   const { startApp } = await import("./app");
   await startApp(dirname(fileURLToPath(import.meta.url)), { args: run });
 } else if (hasNoScreen(hostPlatform(), process.env, process.argv)) {
@@ -98,6 +111,7 @@ if (work) {
   process.stderr.write(`${NO_SCREEN_WORDS.join("\n")}\n`);
   process.exit(1);
 } else {
+  await armFreezeRecorder();
   const { startApp } = await import("./app");
   await startApp(dirname(fileURLToPath(import.meta.url)));
 }

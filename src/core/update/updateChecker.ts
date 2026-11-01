@@ -1,6 +1,6 @@
 import { settingFrom } from "@shared/envSettings";
 import type { UpdateChannel, UpdateInstallResult, UpdateStatus } from "@shared/update";
-import { UPDATE_PROBLEMS } from "@shared/updateWords";
+import { UPDATE_NOTICES, UPDATE_PROBLEMS } from "@shared/updateWords";
 import type { HostAppInfo } from "../host";
 import { hostEnv } from "../hostEnv";
 import { thisDeviceSystem } from "../platform";
@@ -57,6 +57,11 @@ const REQUEST_HEADERS = { "User-Agent": "infinitary" };
 export type UpdateChecker = {
   /** Returns the cached status for the installed channel, refreshing once it goes stale. */
   getStatus: () => Promise<UpdateStatus>;
+  /**
+   * A check the person asked for: reads the release source now, past the
+   * saved answer, joining one already reading. A failure says so, never "no update".
+   */
+  checkNow: () => Promise<UpdateStatus>;
   /** Saves this app's subscription and invalidates the previous channel's pending work. */
   setChannel?: (channel: UpdateChannel) => Promise<UpdateStatus>;
   /** Opens the offered version's release page (or the channel's release list). */
@@ -256,36 +261,88 @@ export function createUpdateChecker(options: CreateUpdateCheckerOptions): Update
     return target ? { version: target.version, url: target.releaseUrl } : null;
   }
 
+  /** What a successful read says when nothing newer is offered. */
+  const noticeFor = (offer: Offer | null): Pick<UpdateStatus, "notice"> => {
+    if (offer && isNewerVersion(offer.version, options.currentVersion)) return {};
+    return {
+      notice: !offer
+        ? UPDATE_NOTICES.none
+        : isNewerVersion(options.currentVersion, offer.version)
+          ? UPDATE_NOTICES.ahead
+          : UPDATE_NOTICES.latest,
+    };
+  };
+
+  // One read per channel and tap at a time: a pressed check joins the quiet one.
+  const reading = new Map<string, Promise<UpdateStatus>>();
+  function read(channel: UpdateChannel, tap: TapNames): Promise<UpdateStatus> {
+    const key = keyOf(channel, tap);
+    const running = reading.get(key);
+    if (running) return running;
+    attemptedAt.set(key, now());
+    const next = (async () => {
+      try {
+        const offer = await readOffer(channel, tap);
+        const status = { ...statusFor(channel, tap, offer), ...noticeFor(offer) };
+        lastGood.set(key, status);
+        lastOffer.set(key, offer);
+        return status;
+      } finally {
+        reading.delete(key);
+      }
+    })();
+    reading.set(key, next);
+    return next;
+  }
+
+  /** The dev affordance's offer, or null to read the release source. */
+  function simulated(channel: UpdateChannel, tap: TapNames): UpdateStatus | null {
+    if (!options.simulateUpdate) return null;
+    return {
+      ...statusFor(channel, tap, null),
+      latestVersion: simulatedNext(options.currentVersion, channel),
+      updateAvailable: true,
+      releaseUrl: releasesPageFor(channel, tap),
+    };
+  }
+
   async function getStatus(): Promise<UpdateStatus> {
     const channel = options.channel();
     // Linux has no casks: an installation there always reads this build's own tap.
     const tap = linux ? TAP : tapNow();
-    if (options.simulateUpdate) {
-      return {
-        ...statusFor(channel, tap, null),
-        latestVersion: simulatedNext(options.currentVersion, channel),
-        updateAvailable: true,
-        releaseUrl: releasesPageFor(channel, tap),
-      };
-    }
+    const fake = simulated(channel, tap);
+    if (fake) return fake;
     const key = keyOf(channel, tap);
-    const timestamp = now();
     const good = lastGood.get(key);
     const attempted = attemptedAt.get(key);
-    if (good && attempted !== undefined && timestamp - attempted < intervalMs) return good;
-    attemptedAt.set(key, timestamp);
+    if (good && attempted !== undefined && now() - attempted < intervalMs) return good;
     if (!fetchImpl) return good ?? statusFor(channel, tap, null);
     try {
-      const offer = await readOffer(channel, tap);
-      const status = statusFor(channel, tap, offer);
-      lastGood.set(key, status);
-      lastOffer.set(key, offer);
-      return status;
+      return await read(channel, tap);
     } catch {
       // Update checks are best-effort. Keep the last good status if we have
       // one, otherwise report "no update" so the shell never shows a false
       // positive. Only successes cache: a failure retries on the next ask.
       return good ?? statusFor(channel, tap, null);
+    }
+  }
+
+  async function checkNow(): Promise<UpdateStatus> {
+    const channel = options.channel();
+    const tap = linux ? TAP : tapNow();
+    const fake = simulated(channel, tap);
+    if (fake) return fake;
+    const good = lastGood.get(keyOf(channel, tap));
+    const failed = (): UpdateStatus => {
+      // The last good offer stays; its "up to date" line does not.
+      const { notice, ...known } = good ?? statusFor(channel, tap, null);
+      return { ...known, phase: "error", problem: UPDATE_PROBLEMS.checkFailed };
+    };
+    if (!fetchImpl) return failed();
+    try {
+      return await read(channel, tap);
+    } catch {
+      return failed();
     }
   }
 
@@ -326,7 +383,7 @@ export function createUpdateChecker(options: CreateUpdateCheckerOptions): Update
     }
   }
 
-  return { getStatus, openReleasePage, install };
+  return { getStatus, checkNow, openReleasePage, install };
 }
 
 export type InstalledUpdateCheckerOptions = {
@@ -381,6 +438,7 @@ export function createInstalledUpdateChecker(
     };
     return {
       getStatus: async () => status,
+      checkNow: async () => status,
       openReleasePage: async () => {
         await options.openExternal(releaseSource.releasesUrl);
       },

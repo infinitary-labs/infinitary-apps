@@ -22768,6 +22768,102 @@
         ]
       }
     },
+    "inf:update:check": {
+      "effect": "read",
+      "reach": "home",
+      "request": {
+        "type": "array",
+        "maxItems": 0
+      },
+      "response": {
+        "type": "object",
+        "properties": {
+          "currentVersion": {
+            "type": "string"
+          },
+          "channel": {
+            "type": "string",
+            "enum": [
+              "stable",
+              "alpha"
+            ]
+          },
+          "latestVersion": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "updateAvailable": {
+            "type": "boolean"
+          },
+          "releaseUrl": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "upgradeCommand": {
+            "type": "string"
+          },
+          "install": {
+            "type": "object",
+            "properties": {
+              "asksPassword": {
+                "type": "boolean"
+              },
+              "restarts": {
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "asksPassword"
+            ]
+          },
+          "channelChoice": {
+            "type": "boolean"
+          },
+          "phase": {
+            "type": "string",
+            "enum": [
+              "idle",
+              "checking",
+              "downloading",
+              "installing",
+              "ready",
+              "error"
+            ]
+          },
+          "percent": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 100
+          },
+          "problem": {
+            "type": "string"
+          },
+          "notice": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "currentVersion",
+          "channel",
+          "latestVersion",
+          "updateAvailable",
+          "releaseUrl",
+          "upgradeCommand"
+        ]
+      }
+    },
     "inf:update:channel": {
       "effect": "change",
       "reach": "home",

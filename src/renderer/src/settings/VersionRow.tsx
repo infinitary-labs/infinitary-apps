@@ -6,6 +6,7 @@ import { useShellStore } from "../app/store";
 import { Button } from "../design";
 import { focusWithRing } from "../design/focus";
 import { SettingRow } from "./settingRows";
+import { UpdateCheckButton, UpdateCheckLine } from "./UpdateCheck";
 import "./version.css";
 
 /**
@@ -15,6 +16,8 @@ import "./version.css";
  * it was shown, through the same door as What's new in the Help menu.
  * The list is one Tab stop, and ↑, ↓, Home
  * and End move through it (docs/keyboard.md, "Lists and Settings").
+ * Check for updates sits in its control, with the update line under the
+ * version (UpdateCheck.tsx).
  */
 
 const capitalized = (text: string) => `${text.charAt(0).toUpperCase()}${text.slice(1)}`;
@@ -68,11 +71,23 @@ function NoteRow({
 }
 
 export function VersionRow() {
-  return <VersionRowView releaseNotes={useShellStore((s) => s.releaseNotes)} />;
+  return (
+    <VersionRowView
+      releaseNotes={useShellStore((s) => s.releaseNotes)}
+      update={{ line: <UpdateCheckLine />, control: <UpdateCheckButton /> }}
+    />
+  );
 }
 
 /** The row for the notes as read; null while they are still being read. */
-export function VersionRowView({ releaseNotes }: { releaseNotes: ReleaseNotesView | null }) {
+export function VersionRowView({
+  releaseNotes,
+  update,
+}: {
+  releaseNotes: ReleaseNotesView | null;
+  /** The update line and Check for updates, read from the update store. */
+  update?: { line: React.ReactNode; control: React.ReactNode };
+}) {
   const [expanded, setExpanded] = useState(false);
   const allNotes = releaseNotes?.notes ?? [];
   const notes = expanded ? allNotes : allNotes.slice(0, 3);
@@ -111,44 +126,47 @@ export function VersionRowView({ releaseNotes }: { releaseNotes: ReleaseNotesVie
           : "Reading the version…"
       }
       detail={
-        notes.length > 0 && (
-          <>
-            <ul
-              id={listId}
-              ref={list}
-              aria-label="Release notes"
-              className="fm-version-notes"
-              onKeyDown={onKeyDown}
-            >
-              {notes.map((note, index) => (
-                <NoteRow
-                  key={note.version}
-                  note={note}
-                  stop={index === at}
-                  onFocus={() => setStop(index)}
-                />
-              ))}
-            </ul>
-            {!expanded && allNotes.length > 3 && (
-              <Button
-                variant="ghost"
-                size="sm"
-                data-release-notes-more=""
-                aria-controls={listId}
-                aria-expanded={false}
-                style={{ marginTop: "var(--space-3)", paddingInline: 0 }}
-                onClick={() => {
-                  setStop(3);
-                  setExpanded(true);
-                }}
+        <>
+          {update?.line}
+          {notes.length > 0 && (
+            <>
+              <ul
+                id={listId}
+                ref={list}
+                aria-label="Release notes"
+                className="fm-version-notes"
+                onKeyDown={onKeyDown}
               >
-                Show more
-              </Button>
-            )}
-          </>
-        )
+                {notes.map((note, index) => (
+                  <NoteRow
+                    key={note.version}
+                    note={note}
+                    stop={index === at}
+                    onFocus={() => setStop(index)}
+                  />
+                ))}
+              </ul>
+              {!expanded && allNotes.length > 3 && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  data-release-notes-more=""
+                  aria-controls={listId}
+                  aria-expanded={false}
+                  style={{ marginTop: "var(--space-3)", paddingInline: 0 }}
+                  onClick={() => {
+                    setStop(3);
+                    setExpanded(true);
+                  }}
+                >
+                  Show more
+                </Button>
+              )}
+            </>
+          )}
+        </>
       }
-      control={null}
+      control={update?.control ?? null}
     />
   );
 }

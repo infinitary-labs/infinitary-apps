@@ -446,6 +446,7 @@ const api: FirstmateApi = {
   },
   update: {
     status: () => invoke("inf:update:status"),
+    check: () => invoke("inf:update:check"),
     setChannel: (channel) =>
       readableRequest("inf:update:channel", () => invoke("inf:update:channel", channel)),
     openReleasePage: () => invoke("inf:update:open-release"),

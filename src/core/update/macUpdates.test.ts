@@ -3,6 +3,7 @@ import { join } from "node:path";
 import { describe, expect, it, vi } from "vitest";
 import { scratchDir } from "../../../tests/helpers/scratchDirs";
 import type { UpdateChannel } from "../../shared/update";
+import { UPDATE_NOTICES, UPDATE_PROBLEMS } from "../../shared/updateWords";
 import {
   DIRECT_MAC_INSTALLATION,
   homebrewInstallationReceipt,
@@ -333,6 +334,56 @@ describe("INF-640 Mac update consent and channel ownership", () => {
 });
 
 // Captain's revised INF-643: keep Homebrew installation and updates alongside disk images.
+// INF-2073, the captain's direction A: Check for updates in Settings reads the feed now.
+describe("a pressed check on a direct Mac copy", () => {
+  it("reads the feed again within four hours and finds the new release", async () => {
+    const f = fixture("0.5.0-alpha.10");
+    expect(await f.checker.getStatus()).toMatchObject({
+      updateAvailable: false,
+      notice: UPDATE_NOTICES.latest,
+    });
+    f.driver.check.mockImplementation(async () => offer("0.5.0-alpha.11"));
+    expect((await f.checker.getStatus()).updateAvailable).toBe(false);
+    expect(await f.checker.checkNow()).toMatchObject({
+      latestVersion: "0.5.0-alpha.11",
+      updateAvailable: true,
+      phase: "idle",
+    });
+    expect(f.driver.check).toHaveBeenCalledTimes(2);
+    expect(f.driver.download).not.toHaveBeenCalled();
+  });
+
+  it("joins a reading check, reports a failure, and leaves a consented update alone", async () => {
+    const f = fixture();
+    const reading = deferred<MacUpdateOffer | null>();
+    f.driver.check.mockImplementation(() => reading.promise);
+    const first = f.checker.checkNow();
+    const second = f.checker.checkNow();
+    reading.resolve(offer("0.5.0-alpha.10"));
+    expect(await second).toEqual(await first);
+    expect(f.driver.check).toHaveBeenCalledTimes(1);
+
+    f.driver.check.mockRejectedValueOnce(new Error("offline"));
+    expect(await f.checker.checkNow()).toMatchObject({
+      phase: "error",
+      problem: UPDATE_PROBLEMS.checkFailed,
+      updateAvailable: false,
+    });
+
+    f.driver.check.mockImplementation(async () => offer("0.5.0-alpha.10"));
+    await f.checker.checkNow();
+    const downloading = deferred<void>();
+    f.driver.download.mockImplementation(() => downloading.promise);
+    const installing = f.checker.install();
+    await vi.waitFor(() => expect(f.driver.download).toHaveBeenCalled());
+    const calls = f.driver.check.mock.calls.length;
+    expect((await f.checker.checkNow()).phase).toBe("downloading");
+    expect(f.driver.check).toHaveBeenCalledTimes(calls);
+    downloading.resolve();
+    await installing;
+  });
+});
+
 describe("per-copy Mac installation routing", () => {
   for (const tap of [INFINITARY_TAP, FIRSTMATE_TAP]) {
     it.each(["stable", "alpha"] as const)(

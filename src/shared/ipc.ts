@@ -2056,6 +2056,16 @@ export const invokeContract = {
     request: z.tuple([]),
     response: updateStatusSchema,
   },
+  // Check for updates in Settings: reads the release source now, past the
+  // saved answer, and says when it could not (docs/alpha.md "Update channels").
+  // An app controlling another computer checks its own, never the other's.
+  "inf:update:check": {
+    effect: "read",
+    surface: "core",
+    reach: "home",
+    request: z.tuple([]),
+    response: updateStatusSchema,
+  },
   "inf:update:channel": {
     effect: "change",
     surface: "core",
@@ -3149,6 +3159,7 @@ export const RUN_HOME_ONLY_CHANNELS: ReadonlySet<CoreInvokeChannel> = new Set<Co
   "inf:presence:get",
   "inf:presence:set",
   "inf:update:status",
+  "inf:update:check",
   "inf:update:channel",
   "inf:update:open-release",
   "inf:update:install",
@@ -3766,6 +3777,8 @@ export type FirstmateApi = {
   };
   update: {
     status: () => Promise<UpdateStatus>;
+    /** Check for updates: the release source now, past the saved answer. */
+    check: () => Promise<UpdateStatus>;
     setChannel: (channel: UpdateChannel) => Promise<UpdateStatus>;
     openReleasePage: () => Promise<{ ok: true }>;
     install: () => Promise<UpdateInstallResult>;

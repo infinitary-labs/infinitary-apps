@@ -6,6 +6,19 @@ export const UPDATE_WORDS = {
   downloading: "Downloading…",
   installing: "Installing…",
   progress: "Download progress",
+  check: "Check for updates",
+  checkingButton: "Checking…",
+  checking: "Checking for updates…",
+  show: "Show update",
+} as const;
+
+/** What the last check found, on the Version row in Settings (docs/alpha.md "Update channels"). */
+export const UPDATE_NOTICES = {
+  none: "No release is available on this channel yet.",
+  ahead:
+    "This copy is ahead of this channel. It will wait for a newer release, without downgrading.",
+  latest: "You have the latest release on this channel.",
+  available: (version: string) => `Version ${version} is available.`,
 } as const;
 
 export const UPDATE_PROBLEMS = {
@@ -17,4 +30,5 @@ export const UPDATE_PROBLEMS = {
     "Infinitary cannot replace this copy. Ask an administrator to install the new disk image, keeping your saved work.",
   staged:
     "The update is ready, but Infinitary could not finish restarting. Try restarting again after your running work stops.",
+  checkFailed: "Updates could not be checked. Try again, or open the releases page.",
 } as const;

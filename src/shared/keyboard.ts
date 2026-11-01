@@ -424,6 +424,16 @@ export const KEYBOARD_COMMANDS = {
     keys: [],
     searchWords: ["update", "restart", "stable", "alpha"],
   },
+  // INF-2073: Settings → General's Check for updates, chosen by name; a person may give it a key.
+  "updates.check": {
+    label: "Check for updates",
+    scope: "window",
+    runs: "shell",
+    repeat: false,
+    risk: "navigate",
+    keys: [],
+    searchWords: ["update", "version", "release", "new"],
+  },
   // The newest release note again (docs/release-notes.md "Reading a note
   // again"): chosen by name, and from the Help menu's What's New, like
   // Keyboard settings; a person may give it a key.

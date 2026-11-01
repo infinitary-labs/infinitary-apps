@@ -659,6 +659,7 @@ export function createCoreDispatcher(options: CoreDispatcherOptions): CoreDispat
     },
 
     "inf:update:status": () => services.updateChecker.getStatus(),
+    "inf:update:check": () => services.updateChecker.checkNow(),
     "inf:update:channel": (channel) => {
       if (!services.updateChecker.setChannel)
         throw new Error("This installation does not support changing its update channel here.");

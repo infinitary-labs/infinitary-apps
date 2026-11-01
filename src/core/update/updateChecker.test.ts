@@ -1,6 +1,7 @@
 import { writeFileSync } from "node:fs";
 import { join } from "node:path";
 import type { UpdateChannel } from "@shared/update";
+import { UPDATE_NOTICES, UPDATE_PROBLEMS } from "@shared/updateWords";
 import { describe, expect, it, vi } from "vitest";
 import { scratchDir } from "../../../tests/helpers/scratchDirs";
 import {
@@ -130,6 +131,8 @@ describe("channel-aware update notices", () => {
       updateAvailable: false,
       releaseUrl: target("0.1.25").releaseUrl,
       upgradeCommand: upgradeCommandFor("stable"),
+      // INF-2073: the Version row in Settings says what a read found.
+      notice: UPDATE_NOTICES.latest,
     });
     // Even running an alpha build, a stable subscription never moves back.
     expect(
@@ -168,6 +171,7 @@ describe("channel-aware update notices", () => {
       updateAvailable: false,
       releaseUrl: null,
       upgradeCommand: upgradeCommandFor("alpha"),
+      notice: UPDATE_NOTICES.none,
     });
     // No guess from the release history.
     expect(requests).toEqual([TARGETS_URL]);
@@ -221,6 +225,7 @@ describe("before the targets file exists", () => {
       updateAvailable: false,
       releaseUrl: null,
       upgradeCommand: upgradeCommandFor("alpha"),
+      notice: UPDATE_NOTICES.none,
     });
     expect(requests).toEqual([TARGETS_URL]);
     await updates.openReleasePage();
@@ -299,6 +304,85 @@ describe("failures never invent an update", () => {
       updateAvailable: true,
     });
     expect(fetchImpl).toHaveBeenCalledTimes(3);
+  });
+});
+
+// INF-2073, the captain's direction A: Check for updates in Settings reads the source now.
+describe("a pressed check", () => {
+  it("reads past the saved answer, replaces it, and says what it found", async () => {
+    let time = 0;
+    const { fetchImpl, replies } = tap({ targets: targets({ stable: target("0.1.30") }) });
+    const updates = checker("0.1.30", "stable", fetchImpl, { now: () => time });
+    expect(await updates.getStatus()).toMatchObject({
+      updateAvailable: false,
+      notice: UPDATE_NOTICES.latest,
+    });
+    // Within the interval the quiet check keeps its answer; a press does not.
+    time = 500;
+    replies.targets = targets({ stable: target("0.1.31") });
+    expect((await updates.getStatus()).updateAvailable).toBe(false);
+    const found = await updates.checkNow();
+    expect(found).toMatchObject({ latestVersion: "0.1.31", updateAvailable: true });
+    expect(found.notice).toBeUndefined();
+    expect(fetchImpl).toHaveBeenCalledTimes(2);
+    // The quiet check now answers what the press found.
+    expect(await updates.getStatus()).toEqual(found);
+    expect(fetchImpl).toHaveBeenCalledTimes(2);
+  });
+
+  it("names an ahead copy and a channel with no release", async () => {
+    const ahead = tap({ targets: targets({ stable: target("0.1.29") }) });
+    expect(await checker("0.1.30", "stable", ahead.fetchImpl).checkNow()).toMatchObject({
+      updateAvailable: false,
+      notice: UPDATE_NOTICES.ahead,
+    });
+    const none = tap({ targets: targets({ stable: target("0.1.29") }) });
+    expect(await checker("0.1.30-alpha.1", "alpha", none.fetchImpl).checkNow()).toMatchObject({
+      latestVersion: null,
+      notice: UPDATE_NOTICES.none,
+    });
+  });
+
+  it("says a failed read could not check, never that the copy is up to date", async () => {
+    let time = 0;
+    const { fetchImpl, replies } = tap({ targets: targets({ stable: target("0.1.31") }) });
+    const updates = checker("0.1.30", "stable", fetchImpl, { now: () => time });
+    expect((await updates.getStatus()).updateAvailable).toBe(true);
+    time = 500;
+    replies.targets = new Error("offline");
+    const failed = await updates.checkNow();
+    // The known offer stays; the failure is said.
+    expect(failed).toMatchObject({
+      latestVersion: "0.1.31",
+      updateAvailable: true,
+      phase: "error",
+      problem: UPDATE_PROBLEMS.checkFailed,
+    });
+    const fresh = tap({ targets: { status: 500 } });
+    const never = await checker("0.1.30", "stable", fresh.fetchImpl).checkNow();
+    expect(never).toMatchObject({ phase: "error", problem: UPDATE_PROBLEMS.checkFailed });
+    expect(never.notice).toBeUndefined();
+    // The quiet check stays silent on failure.
+    expect((await checker("0.1.30", "stable", fresh.fetchImpl).getStatus()).phase).toBeUndefined();
+  });
+
+  it("joins a check already reading", async () => {
+    let release!: () => void;
+    const gate = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    const fetchImpl = vi.fn(async () => {
+      await gate;
+      return new Response(JSON.stringify(targets({ stable: target("0.1.31") }).body));
+    }) as unknown as typeof fetch;
+    const updates = checker("0.1.30", "stable", fetchImpl);
+    const first = updates.checkNow();
+    const second = updates.checkNow();
+    const quiet = updates.getStatus();
+    release();
+    expect(await second).toEqual(await first);
+    expect(await quiet).toEqual(await first);
+    expect(fetchImpl).toHaveBeenCalledTimes(1);
   });
 });
 

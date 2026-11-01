@@ -25,7 +25,7 @@ import { available, modalOpen } from "./focusRecovery";
 import { projectFocus } from "./projectFocus";
 import { enterCard, moveToRegion } from "./regions";
 import { isHeldEntry, type ShellState, useShellStore } from "./store";
-import { setUpdateNoticeOpen, useUpdateState } from "./updateState";
+import { checkForUpdates, checksUpdates, setUpdateNoticeOpen, useUpdateState } from "./updateState";
 import { markWindowKeys } from "./windowKeysMark";
 
 /**
@@ -255,6 +255,11 @@ const SHELL_COMMANDS: Readonly<Record<ShellCommandId, () => void>> = {
   "settings.keyboard": () =>
     openSettingsAt("keyboard", KEYBOARD_SEARCH, (search) => search.focus({ preventScroll: true })),
   "updates.show": () => setUpdateNoticeOpen(true),
+  // Settings → General, with focus on Check for updates, which it presses.
+  "updates.check": () => {
+    openSettingsAt("general", UPDATE_CHECK);
+    void checkForUpdates();
+  },
   "whats-new.show": () => showReleaseNote(null),
   "firstmate.reply": () => {
     const s = useShellStore.getState();
@@ -313,6 +318,9 @@ function openSettingsAt(
   );
 }
 
+/** The Version row's Check for updates (UpdateCheck.tsx). */
+const UPDATE_CHECK = "[data-update-check]";
+
 /** Settings → Automation, with focus on New automation. */
 function openAutomation(): void {
   openSettingsAt("automation", "[data-automation-new]");
@@ -344,6 +352,7 @@ function windowFacts(): WindowFacts {
       return !!id && moveComputerButton(id) !== null;
     })(),
     updateAvailable: useUpdateState.getState().status?.updateAvailable ?? false,
+    checksUpdates: checksUpdates(useUpdateState.getState().status),
     computers: { page: crewOrbit().page, pages: crewOrbit().pages },
     projectFocus: { shown: projectFocus.state().shown, focus: projectFocus.state().focus },
     panelCommand: (id, recording) => panelCommandRefusal(pluginHost, id, recording),

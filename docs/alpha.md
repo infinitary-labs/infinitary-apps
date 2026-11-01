@@ -52,7 +52,10 @@ The host enables native replacement only for an installed release Mac, not a dev
   If shutdown fails after staging, the ready state preserves the staged update and retries restart without downloading or staging it again.
 - **Settings and controlling views.**
   Settings → General places keyboard-accessible Stable and Alpha choices next to Version.
-  A Mac controlling another Mac changes its own installed app's subscription, never the remote computer's.
+  The Version row's Check for updates reads the release source now on every copy whose installation the app knows, past the 4-hour saved answer, and joins a check already reading (`checkNow`, `inf:update:check`); command search's Check for updates opens it and presses it.
+  Its line says what the check found: the latest release, a copy ahead of its channel, no release yet, the version available with Show update opening the update notice, or that updates could not be checked.
+  A failed press never says the copy is up to date, while the quiet hourly check stays silent on failure; the button is unavailable while an update downloads, installs or waits for a restart.
+  A Mac controlling another Mac changes and checks its own installed app, never the remote computer's.
   The release indicator and Settings share one renderer status store.
 
 ## Builds by system and chip

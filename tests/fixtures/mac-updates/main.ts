@@ -22,6 +22,9 @@ export function install(
     downloads: 0,
     installations: 0,
     failRestart: false,
+    /** The feed cannot be read. */
+    failCheck: false,
+    checks: 0,
     opened: [] as string[],
     progress: (_: number) => {},
     finish: () => {},
@@ -63,6 +66,8 @@ export function install(
     macDriver: {
       installation,
       check: async (channel) => {
+        state.checks++;
+        if (state.failCheck) throw new Error("The feed could not be read.");
         const version = state.targets[channel];
         return version ? { version, releaseUrl: releaseSource.releaseUrl(version) } : null;
       },
@@ -90,12 +95,14 @@ export function install(
   });
   for (const name of [
     "inf:update:status",
+    "inf:update:check",
     "inf:update:channel",
     "inf:update:install",
     "inf:update:open-release",
   ])
     ipcMain.removeHandler(name);
   ipcMain.handle("inf:update:status", () => checker.getStatus());
+  ipcMain.handle("inf:update:check", () => checker.checkNow());
   ipcMain.handle("inf:update:channel", (_, channel) => checker.setChannel?.(channel));
   ipcMain.handle("inf:update:install", () => checker.install());
   ipcMain.handle("inf:update:open-release", () => checker.openReleasePage());

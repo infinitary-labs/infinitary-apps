@@ -70,6 +70,8 @@ export type WindowFacts = {
   /** The top bar's project pill: whether it shows, and the focus that holds (docs/project-focus.md). */
   projectFocus?: { shown: boolean; focus: string | null };
   updateAvailable?: boolean;
+  /** Check for updates is on the Version row (UpdateCheck.tsx). */
+  checksUpdates?: boolean;
   /**
    * Why a panel's command cannot run now beyond what holds every key
    * (docs/keyboard.md, "A panel's commands"), from its panel as it stands.
@@ -281,6 +283,9 @@ const REFUSALS: Readonly<
   "settings.keyboard": () => null,
   // From anywhere, Settings included: it goes home to the note.
   "updates.show": (_s, facts) => (facts.updateAvailable ? null : "No update is available"),
+  // From anywhere, Settings included: it goes to General and checks there.
+  "updates.check": (_s, facts) =>
+    facts.checksUpdates ? null : "Infinitary could not confirm how this copy was installed",
   "whats-new.show": (s) =>
     s.releaseNotes && s.releaseNotes.notes.length > 0 ? null : "No release notes yet",
   // From anywhere, Settings included: it goes home to the note.

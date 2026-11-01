@@ -1,6 +1,7 @@
 import { mkdirSync, renameSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import type { UpdateChannel, UpdateInstallResult, UpdateStatus } from "@shared/update";
+import { UPDATE_NOTICES, UPDATE_PROBLEMS } from "@shared/updateWords";
 import type { MacInstallation } from "./macInstallation";
 import { isAlphaVersion, isNewerVersion, isStableVersion } from "./semver";
 import { readUpdateMarker, resolveUpdateChannel, UPDATE_CHANNEL_MARKER } from "./updateChannels";
@@ -74,10 +75,10 @@ export function createMacUpdateChecker(options: {
       ...(phase === "idle" && !available
         ? {
             notice: !offer
-              ? "No release is available on this channel yet."
+              ? UPDATE_NOTICES.none
               : isNewerVersion(options.currentVersion, offer.version)
-                ? "This copy is ahead of this channel. It will wait for a newer release, without downgrading."
-                : "You have the latest release on this channel.",
+                ? UPDATE_NOTICES.ahead
+                : UPDATE_NOTICES.latest,
           }
         : {}),
     };
@@ -118,7 +119,7 @@ export function createMacUpdateChecker(options: {
         if (reading === generation) {
           offer = null;
           phase = "error";
-          problem = "Updates could not be checked. Try again, or open the releases page.";
+          problem = UPDATE_PROBLEMS.checkFailed;
         }
       } finally {
         if (reading === generation) checking = undefined;
@@ -126,6 +127,14 @@ export function createMacUpdateChecker(options: {
       return status();
     });
     return checking;
+  }
+
+  // A pressed check reads the feed now, past the saved answer; it joins one
+  // already reading and leaves a consented update alone.
+  async function checkNow(): Promise<UpdateStatus> {
+    if (phase === "downloading" || phase === "installing" || phase === "ready") return status();
+    if (!checking) checkedAt = undefined;
+    return getStatus();
   }
 
   async function setChannel(next: UpdateChannel): Promise<UpdateStatus> {
@@ -200,6 +209,7 @@ export function createMacUpdateChecker(options: {
 
   return {
     getStatus,
+    checkNow,
     setChannel,
     install,
     openReleasePage: async () => {

@@ -83,6 +83,7 @@ const OWN_LOOK = new Set<CoreInvokeChannel>([
 /** Channels about the app installed on this Mac: its update notice and release page. */
 const OWN_APP = new Set<CoreInvokeChannel>([
   "inf:update:status",
+  "inf:update:check",
   "inf:update:channel",
   "inf:update:open-release",
   "inf:update:install",
@@ -356,6 +357,8 @@ export class ViewBackend {
       }
       case "inf:update:status":
         return this.options.updates.getStatus();
+      case "inf:update:check":
+        return this.options.updates.checkNow();
       case "inf:update:open-release":
         await this.options.updates.openReleasePage();
         return { ok: true };

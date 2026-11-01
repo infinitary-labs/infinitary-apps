@@ -1,15 +1,19 @@
 import type { UpdateChannel, UpdateStatus } from "@shared/update";
+import { UPDATE_PROBLEMS } from "@shared/updateWords";
 import { create } from "zustand";
 
 type State = {
   status: UpdateStatus | null;
   busy: boolean;
+  /** A pressed Check for updates is reading. */
+  checking: boolean;
   problem: string | null;
   noticeOpen: boolean;
 };
 export const useUpdateState = create<State>(() => ({
   status: null,
   busy: false,
+  checking: false,
   problem: null,
   noticeOpen: false,
 }));
@@ -18,6 +22,10 @@ export function setUpdateNoticeOpen(next: boolean | ((open: boolean) => boolean)
     noticeOpen: typeof next === "function" ? next(state.noticeOpen) : next,
   }));
 }
+/** A copy whose installation the app could not confirm keeps its explanation, with no check. */
+export const checksUpdates = (status: UpdateStatus | null): boolean =>
+  status?.problem !== UPDATE_PROBLEMS.unknownInstallation;
+
 let reading = 0;
 let subscription = 0;
 
@@ -29,6 +37,34 @@ export async function refreshUpdateStatus(): Promise<void> {
   } catch {
     /* An unanswered check never invents an offer. */
   }
+}
+
+let pressed: Promise<void> | null = null;
+
+/** Check for updates: a second press joins the check already reading. */
+export function checkForUpdates(): Promise<void> {
+  if (pressed) return pressed;
+  useUpdateState.setState({ checking: true });
+  pressed = (async () => {
+    const own = ++reading;
+    try {
+      const status = await window.infinitary.update.check();
+      if (own === reading) useUpdateState.setState({ status });
+    } catch {
+      // An unanswered check never invents an offer, nor says the copy is up to date.
+      const previous = useUpdateState.getState().status;
+      if (own === reading && previous) {
+        const { notice, ...known } = previous;
+        useUpdateState.setState({
+          status: { ...known, phase: "error", problem: UPDATE_PROBLEMS.checkFailed },
+        });
+      }
+    } finally {
+      pressed = null;
+      useUpdateState.setState({ checking: false });
+    }
+  })();
+  return pressed;
 }
 
 export async function chooseUpdateChannel(channel: UpdateChannel): Promise<void> {

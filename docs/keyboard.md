@@ -100,6 +100,7 @@ Every reader takes the installed map ("The installed map"), never the catalog's 
 | `task.move-computer`, Move the task to another computer | window, run by the shell page | none: chosen by name (computer, Mac, machine, device and record find it too); presses the shown record's Move to a computer, which opens its picker |
 | `settings.open`, Open Settings | window, run by the shell page | ⌘, |
 | `settings.keyboard`, Open Keyboard settings | window, run by the shell page | none: chosen by name, or Keyboard Settings… in the app menu |
+| `updates.check`, Check for updates | window, run by the shell page | none: chosen by name (update, version, release and new find it too) |
 | `whats-new.show`, Show what's new | window, run by the shell page | none: chosen by name (release, notes, changes and version find it too), or What’s New in the Help menu |
 | `firstmate.reply`, Open the first mate's reply | window, run by the shell page | none: chosen by name (answer, message, note and last find it too), or a click, Enter or Space on the reply line |
 | `settings.usage`, Open Usage | window, run by the shell page | none: chosen by name (tokens, models, cost and dollars find it too) |
@@ -281,6 +282,8 @@ The main process's own commands, the size keys, are never refused by the page.
   The app menu's Settings… item shows its key and tells the page the same command when clicked.
 - `settings.keyboard`, Open Keyboard settings, opens Settings at its Keyboard tab, with the caret in the tab's search; it works from Settings too.
   The app menu's Keyboard Settings… item tells the page the same command.
+- `updates.check`, Check for updates, opens Settings at General with focus on the Version row's Check for updates and presses it, reading the release source now (`docs/alpha.md`, "Update channels"); it works from Settings too.
+  It refuses on a copy whose installation the app could not confirm, which has no button.
 - `whats-new.show`, Show what's new, goes home and asks the core's What's new door for the newest release note that listed changes: an open note comes to the front of the stack, a closed one comes back read-only (`showReleaseNote`, `docs/release-notes.md` "Reading a note again").
   It works from Settings too, and refuses until a note was shown ("No release notes yet").
   The Help menu's What’s New in Infinitary tells the page the same command.

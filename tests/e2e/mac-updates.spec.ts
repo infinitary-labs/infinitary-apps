@@ -1,14 +1,14 @@
 import { expect, test } from "@playwright/test";
 import { homebrewInstallationReceipt } from "../../src/core/update/macInstallation";
 import { INFINITARY_TAP, upgradeCommandFor } from "../../src/core/update/updateChannels";
-import { UPDATE_PROBLEMS, UPDATE_WORDS } from "../../src/shared/updateWords";
+import { UPDATE_NOTICES, UPDATE_PROBLEMS, UPDATE_WORDS } from "../../src/shared/updateWords";
 import { startDemo } from "./demo";
 import { launchApp } from "./launch";
 import { resizeWindow } from "./layout";
 import { arrangeMacUpdates } from "./macUpdateFixture";
 import { heroShot, regionShot } from "./pictures";
 import { setThemeViaSettings } from "./theme";
-import { pressKey, runFromSearch } from "./windowKeys";
+import { pressKey, runFromSearch, untilFocused } from "./windowKeys";
 
 // INF-640: keyboard channel selection, persisted membership and consent/progress/error UI.
 // Fixture: real source app/controller, isolated HOME/userData and native effects stood in.
@@ -275,6 +275,61 @@ test("unknown installation ownership explains the refusal without offering repla
         test.info().outputPath(`unknown-installation-${theme}.png`),
       );
     }
+  } finally {
+    await launched.close();
+  }
+});
+
+// INF-2073, the captain's direction A: Check for updates in Settings → General and command search,
+// reading the feed past the 4-hour saved answer. The feed and native effects are stood in.
+// Completion: the line's words and the update notice, with nothing downloaded.
+test("Check for updates finds a release published within the same four hours, by keys", async () => {
+  const launched = await launchApp({ withMockProvider: true });
+  try {
+    const { app, page } = launched;
+    await resizeWindow(app, page, { width: 1280, height: 800 });
+    await arrangeMacUpdates(launched, "0.1.30", { stable: "0.1.30" });
+    // Command search opens Settings → General, focuses the button and presses it.
+    await runFromSearch(app, page, "updates.check");
+    const version = page.locator('[data-setting="version"]');
+    const button = version.getByRole("button", { name: UPDATE_WORDS.check, exact: true });
+    const line = version.locator("[data-update-line]");
+    await expect(line).toHaveText(UPDATE_NOTICES.latest);
+    await untilFocused(button);
+    expect(await button.evaluate((element) => element.matches(":focus-visible"))).toBe(true);
+    // Tab reaches it: away and back again.
+    await page.keyboard.press("Shift+Tab");
+    await expect(button).not.toBeFocused();
+    await page.keyboard.press("Tab");
+    await expect(button).toBeFocused();
+    const checks = await app.evaluate(() => globalThis.__macUpdateFixture.checks);
+
+    // A release published since: the saved answer still says up to date...
+    await app.evaluate(() => {
+      globalThis.__macUpdateFixture.targets.stable = "0.1.31";
+    });
+    expect(await page.evaluate(() => window.infinitary.update.status())).toMatchObject({
+      updateAvailable: false,
+    });
+    // ...and a press reads the feed now.
+    await pressKey(button, "Enter");
+    await expect(line).toHaveText(new RegExp(UPDATE_NOTICES.available("0.1.31")));
+    expect(await app.evaluate(() => globalThis.__macUpdateFixture.checks)).toBe(checks + 1);
+    await expect(page.getByRole("button", { name: "Update available: 0.1.31" })).toBeVisible();
+    await regionShot(version.locator(".."), test.info().outputPath("check-found-dark.png"));
+    // Show update opens the update notice; installing still waits for its own click.
+    await pressKey(line.getByRole("button", { name: UPDATE_WORDS.show }), "Enter");
+    const panel = page.locator("[data-update-channel]");
+    await expect(panel.getByRole("button", { name: UPDATE_WORDS.restart })).toBeVisible();
+    expect(await app.evaluate(() => globalThis.__macUpdateFixture.downloads)).toBe(0);
+
+    // A press that cannot read the feed says so, never that the copy is up to date.
+    await app.evaluate(() => {
+      globalThis.__macUpdateFixture.failCheck = true;
+    });
+    await pressKey(button, "Enter");
+    await expect(line).toHaveText(UPDATE_PROBLEMS.checkFailed);
+    await regionShot(version.locator(".."), test.info().outputPath("check-failed-dark.png"));
   } finally {
     await launched.close();
   }

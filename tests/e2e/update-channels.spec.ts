@@ -12,8 +12,10 @@ import {
 import { UPDATE_THIS_MAC } from "../../src/renderer/src/devices/viewWords";
 import { PROTOCOL_MAJORS_BEHIND, PROTOCOL_VERSION } from "../../src/shared/ipc";
 import type { UpdateChannel, UpdateStatus } from "../../src/shared/update";
+import { UPDATE_NOTICES, UPDATE_PROBLEMS, UPDATE_WORDS } from "../../src/shared/updateWords";
 import { scratchDir } from "../helpers/scratchDirs";
 import { type LaunchedApp, launchApp } from "./launch";
+import { pressKey, runFromSearch } from "./windowKeys";
 
 /**
  * Channel-aware update notices (docs/alpha.md "Update channels"): the
@@ -232,4 +234,35 @@ test("a Mac controlling a newer Firstmate on another Mac is offered its own upda
     await air?.close();
     await pro.close();
   }
+});
+
+// INF-2073, the captain's direction A: Check for updates on a copy that reads the targets file
+// (Homebrew, Linux and runs from source), past the 4-hour saved answer.
+test("Check for updates reads the targets file again within four hours, and says when it cannot", async () => {
+  tap = await startTap();
+  tap.reply.targets = published({ stable: target("0.1.30") });
+  const userDataDir = scratchDir("fm-update-check-");
+  writeInstallerMarker(userDataDir, "stable");
+  const { app, page } = await launchInstalled(userDataDir, "0.1.30");
+  await runFromSearch(app, page, "updates.check");
+  const version = page.locator('[data-setting="version"]');
+  const button = version.getByRole("button", { name: UPDATE_WORDS.check, exact: true });
+  const line = version.locator("[data-update-line]");
+  await expect(line).toHaveText(UPDATE_NOTICES.latest);
+  await expect(button).toBeFocused();
+  // Published since: the saved answer holds, and a press reads the file now.
+  tap.reply.targets = published({ stable: target("0.1.31") });
+  expect(await updateStatus(page)).toMatchObject({ updateAvailable: false });
+  await pressKey(button, "Enter");
+  await expect(line).toHaveText(new RegExp(UPDATE_NOTICES.available("0.1.31")));
+  await expect(page.getByRole("button", { name: "Update available: 0.1.31" })).toBeVisible();
+  await pressKey(line.getByRole("button", { name: UPDATE_WORDS.show }), "Enter");
+  await expect(
+    page.locator("[data-update-channel]").getByText(upgradeCommandFor("stable"), { exact: true }),
+  ).toBeVisible();
+  // A refused read says so; it never says the copy is up to date.
+  tap.reply.targets = { status: 500 };
+  await pressKey(button, "Enter");
+  await expect(line).toHaveText(UPDATE_PROBLEMS.checkFailed);
+  await expect(page.getByRole("button", { name: "Update available: 0.1.31" })).toBeVisible();
 });

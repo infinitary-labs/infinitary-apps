@@ -111,8 +111,8 @@ The fixture seeds through `outsideCensus` (`tests/helpers/statementCheck.ts`), s
 
 ## E2E scheduling and launch diagnostics
 
-The renderer and application lanes (`tests/e2e/lanes.ts`, `playwright.config.ts`) share at most `min(10, availableParallelism())` workers.
-The full Mac check (`verify.yml`) gives them half the processor (`--workers=50%`), because both Mac runner slots share one processor: with all of it, app launches starved past `firstWindow`'s 30 s while the other slot ran journeys too.
+The renderer and application lanes (`tests/e2e/lanes.ts`, `playwright.config.ts`) share at most `min(10, cores)` workers, where cores are the job's size when the Mac mini's placement service names one and the whole machine otherwise (`scripts/job-cores.ts`, "Each Mac job's kind and size").
+The full Mac check (`verify.yml`) gives them half those cores, because both Mac runner slots share one processor: with all of it, app launches starved past `firstWindow`'s 30 s while the other slot ran journeys too.
 Desktop is the one-worker lane and runs last, even after a failure.
 The lanes load only `*.spec.ts` files (`testMatch` in `playwright.config.ts`); a vitest `*.test.ts` beside them, such as a scenario's own test, runs in vitest's cohorts and never in Playwright.
 New spec files start in desktop.
@@ -315,7 +315,7 @@ Setup the device gates never run does not select it: the chooser itself, the rep
 Changes to general shared modules, connection/device code, packages or the lockfile alone do not select the native gate.
 The chooser runs inside the `native-phone` job on the Mac, so no Linux job stands before it (INF-2125); it reads the comparison of the pull request's merge commit with its first parent, the base branch, and an unreadable comparison selects the gate rather than silently skipping it.
 When the chooser selects no gate, as for a change only to the generated contract's version line, the job ends before it installs anything.
-The `native-phone` job runs the disposable `scripts/test-phone.ts --both` gate on `MAC_RUNNER`, with `mini-mac` as its fallback label, never a paid hosted Mac.
+The `native-phone` job runs the disposable `scripts/test-phone.ts --both` gate on the `phone` kind's queue, `VIRTUAL_MAC_RUNNER` or `MAC_RUNNER` ("Each Mac job's kind and size"), with `mini-mac` as its fallback label, never a paid hosted Mac.
 When the job fails, or a run on request records, it keeps native result bundles, logs, published-client results and connection readings in the `phone-results` artifact.
 The same command logs also live in the smaller `phone-logs` artifact, independently of the result bundles.
 Each part's live simulator log lives in `phone-simulator-logs`, never in `phone-logs`, which keeps `phone-logs` within the app's 64 MiB artifact download.
@@ -341,7 +341,7 @@ Unlike the desktop journey workflow, a device gate that already started finishes
 A manual rerun of a replaced version stops before its gate.
 So does a run whose pull request merged or closed while it waited in the phone line, so it never holds that line for a device gate; the nightly check of `main` checks what merged.
 On the Mac mini's own runners, native jobs share `mac-mini-phone` across pull requests, with `queue: max` and `cancel-in-progress: false` at the job level; up to 100 phone jobs can wait without newer jobs replacing them.
-A job on the virtual-Mac label (`VIRTUAL_MAC_RUNNER`) takes a group of its own, so phone checks run side by side in the virtual places (`docs/ios.md`, "A phone check the placement service puts in a virtual Mac").
+A job on the `phone` kind's queue or the virtual-Mac label (`VIRTUAL_MAC_RUNNER`) takes a group of its own, so phone checks run side by side in the virtual places (`docs/ios.md`, "A phone check the placement service puts in a virtual Mac").
 Desktop journey jobs from different pull requests remain parallel.
 Desktop journeys and native phone gates run directly, without a command lease, so real and virtual Macs can check concurrently.
 The phone workflow keeps its configured concurrency groups; they do not exclude desktop checks or a local phone command.
@@ -381,7 +381,7 @@ It asks for that list without each run's pull requests, which it never reads: wo
 It reads each passing run's artifact list and keeps paging past runs without usable `e2e-results`, including installer-only verifications.
 If no passing run has usable results, the chooser fails rather than silently dropping journeys; run full verification to supply fresh timings.
 An artifact-list error or a failed download still fails the chooser.
-`scripts/journey-budget.ts` places every chosen file on Linux, and on the Mac mini (the `MAC_RUNNER` label) only the chosen files that hold a test tagged `MAC_ONLY_TAG`, whose `affected-journeys` job runs only those tests (`--grep @mac-only`), as "Tests that need a Mac" says.
+`scripts/journey-budget.ts` places every chosen file on Linux, and on the Mac mini (the `journeys` kind's queue or the `MAC_RUNNER` label) only the chosen files that hold a test tagged `MAC_ONLY_TAG`, whose `affected-journeys` job runs only those tests (`--grep @mac-only`), as "Tests that need a Mac" says.
 A file with a tagged test runs on both: its tagged tests on the Mac, and its other tests on Linux, where its tagged tests skip or run their shared steps.
 A tagged test is never sent to Linux alone.
 `linux-overflow` packs the chosen files into six-minute groups separately for parallel and desktop files, on Linux machines running beside the Mac.
@@ -780,7 +780,7 @@ The recipe:
 
 ## Signed Mac installation and updates
 
-`verify.yml` with `installer_only=true` runs `mac-installer.yml` with its build and Apple-silicon checks on the placement service's `mini-mac-virtual` virtual-only label and Intel on `macos-15-intel`, using the selected ref and existing release credentials without publishing anything.
+`verify.yml` with `installer_only=true` runs `mac-installer.yml` with its build and Apple-silicon checks on the `build` and `light` kinds' queues, or the placement service's `mini-mac-virtual` virtual-only label where those have none, and Intel on `macos-15-intel`, using the selected ref and existing release credentials without publishing anything.
 Its scratch signing home, real notarized binaries, native replacements, saved-work checks and failure cases are described in `docs/alpha.md`, "Isolated signed verification".
 A release no longer runs it: each alpha runs the update check instead, and a pull request that changes the update path runs this check on request (`docs/alpha.md`, "The update check").
 The local `mac-updates.spec.ts` journey owns channel selection, update consent, progress, restart recovery and keyboard access, with native effects replaced; it does not prove signed installation.
@@ -853,33 +853,52 @@ It shares that disk's folder read-only and imports the runtime inside the guest;
 The guest's imported runtime remains in the image, while the source disk stays untouched on the build Mac.
 The build also fails when the image holds any code-signing identity, so nothing that signs as the captain is ever in a clone.
 
+### Each Mac job's kind and size
+
+Every job that runs on a Mac names its kind, and the repository variable `MAC_QUEUES` maps each kind to the label of its queue, as JSON such as `{"check":"mini-mac-check","phone":"mini-mac-phone"}`.
+The Mac mini's placement service (runner-up) gives each queue a size in cores and memory and decides which jobs run side by side, so a heavy job waits for room rather than share the Mac mini with another heavy one.
+GitHub picks which of a queue's waiting jobs a new runner takes, so one queue holds one kind and one size.
+A kind the variable leaves out, and an unset or empty variable, keep the label the job asked for before, so the variable changes nothing until it names a kind.
+Name a kind only once runner-up serves its queue, so no job waits on a label nothing serves.
+Each job reads `fromJSON(vars.MAC_QUEUES || '{}').<kind>` before its old label.
+
+| Kind | Jobs | Its queue places it |
+| --- | --- | --- |
+| `check` | `verify.yml`'s Mac lane, the full Mac check | anywhere |
+| `journeys` | `journeys.yml`'s `affected-journeys` | anywhere |
+| `phone` | `phone.yml`'s `native-phone` | in a virtual Mac only |
+| `testflight` | `ios-release.yml`'s `testflight`, which runs the phone gates and then signs | on the real Mac |
+| `build` | `mac-installer.yml`'s `build` | in a virtual Mac only |
+| `sign` | `release.yml`'s signing job | on the real Mac |
+| `light` | `mac-installer.yml`'s Apple-silicon checks, `mac-update.yml`'s update checks, `release.yml`'s `publish`, `republish-casks.yml` and `phone.yml`'s `scene-evidence` | in a virtual Mac only |
+| `release_check`, `release_sign`, `release_light` | the same jobs as `check`, `sign` and `light`, in a publishing release | as their ordinary kind |
+
+A publishing release asks first for its own kinds, whose queues the placement service starts before every other waiting Mac job (DOP-178); each falls back to its ordinary kind and then to the old label.
+Those queues share the same places and add no capacity; they keep a release from waiting behind phone checks, main repairs and borrowed virtual Macs.
+The TestFlight job runs only for a release, so its `testflight` kind has no release twin, and the placement service ranks its queue the same way.
+A dry run asks for the ordinary kinds, so a rehearsal never takes a release's place in line.
+`release.yml` hands `release_check` to `verify.yml` as its `mac_runner` input and `release_light` to `mac-update.yml` as its `runner` input, and `verify.yml`'s Mac lane reads its kind only when that input is empty.
+The signed installer's Intel check stays on `macos-15-intel` and takes no kind.
+`tests/release-contract.test.ts` ("each Mac job's kind") evaluates every Mac job with the variable set, unset and for a publishing release, and refuses a Mac job without a kind.
+
+Where the placement service names a job's size, it sets `RUNNER_UP_CORES` to the job's cores.
+A virtual Mac is made that size, but a job on the real Mac shares the processor with the jobs beside it, and macOS cannot hold a group of programs to a share, so the job's own test workers keep to it (`scripts/job-cores.ts`).
+The full Mac check runs half that many Playwright workers, at least one, the same share of the job it took of the whole machine before ("E2E scheduling and launch diagnostics").
+Playwright's own limit (`playwright.config.ts`), vitest's unit cohorts and the integration cohort on macOS (`docs/test-cohorts.md`) count the same cores.
+With no size named, each counts the whole machine, as before.
+A virtual Mac's size bounds it but guarantees it nothing, because its cores are the Mac mini's own, so the service keeps the sizes of what runs together within what the Mac mini has for jobs.
+
 ### The real Mac's place
 
-A job that signs with the captain's Apple certificates asks for the real Mac through the repository variable `REAL_MAC_RUNNER`: `release.yml`'s signing job and `ios-release.yml`'s TestFlight job.
-Each reads `${{ vars.REAL_MAC_RUNNER || vars.MAC_RUNNER || <its fallback> }}`, so until the switch sets `REAL_MAC_RUNNER` it runs where it ran before.
-The signed installer's build and Apple-silicon checks, the release's Apple-silicon update check and `release.yml`'s publication job ask for a virtual Mac by the placement service's `mini-mac-virtual` label.
+A job that signs with the captain's Apple certificates asks for the real Mac: `release.yml`'s signing job, by the `sign` kind, and `ios-release.yml`'s TestFlight job, by the `testflight` kind.
+Where its kind has no queue, each reads `${{ vars.REAL_MAC_RUNNER || vars.MAC_RUNNER || <its fallback> }}`, so until the switch sets `REAL_MAC_RUNNER` it runs where it ran before.
+The signed installer's build and Apple-silicon checks, the release's Apple-silicon update check and `release.yml`'s publication job ask for a virtual Mac by the `build` and `light` kinds, or by the placement service's `mini-mac-virtual` label where those have no queue.
 The publication job holds no Apple signing material: it publishes and checks the files the signing job handed over once the disk image passed its check (`docs/alpha.md`, "Signing on the real Mac, publication in a virtual Mac").
 The signing job runs while the release's checks run (`docs/alpha.md`, "Signing while the checks run"), so it holds the real Mac during the release's Mac lane, which then takes a virtual place or waits.
 These checks require throwaway guests for their signing, trust changes or writes to `/Applications`; the signed installer's Intel check, run only on request, stays on a disposable hosted Mac (`docs/alpha.md`, "Isolated signed verification").
-The phone check reads that label from `VIRTUAL_MAC_RUNNER` when the variable is set, so it starts on the next free virtual place, beside any other phone check (`docs/ios.md`, "A phone check the placement service puts in a virtual Mac").
-The other Mac jobs read `MAC_RUNNER` alone and may run in any place, a virtual one or the real Mac's.
+The phone check reads its `phone` kind's queue, or that label from `VIRTUAL_MAC_RUNNER` when the variable is set, so it starts on the next free virtual place, beside any other phone check (`docs/ios.md`, "A phone check the placement service puts in a virtual Mac").
+The other Mac jobs read their kind's queue or `MAC_RUNNER` and may run in any place, a virtual one or the real Mac's.
 `tests/release-contract.test.ts` holds which jobs ask for the real Mac.
-
-### A release's own queues
-
-A publishing release's Mac jobs can ask for release-only queues, which the placement service starts before every other waiting Mac job (DOP-178).
-The queues share the existing places and add no capacity; they keep a release from waiting behind phone checks, main repairs and borrowed virtual Macs.
-Three repository variables name them, one per place kind:
-
-- `RELEASE_MAC_RUNNER`, any place: `verify.yml`'s Mac lane, passed as its `mac_runner` input.
-- `RELEASE_REAL_MAC_RUNNER`, the real Mac: `release.yml`'s signing job and `ios-release.yml`'s TestFlight job.
-- `RELEASE_VIRTUAL_MAC_RUNNER`, a virtual Mac: both `mac-update.yml` calls, passed as its `runner` input, and `release.yml`'s publication job.
-
-`release.yml` reads them only when its resolved `dry_run` is `false`: a publishing run's own verification and update rehearsal take the release queues, and every job of a dry run stays on the ordinary labels.
-The TestFlight job runs only for a release, so it reads its variable whenever it is set.
-Each unset variable keeps that job on today's label, the ones "The real Mac's place" names.
-The queues are runner-up pools; set all three only after runner-up serves them, so no queued release waits on a label nothing serves.
-`tests/release-contract.test.ts` holds where each job starts with the variables set, unset and in a dry run.
 
 ### The runner's microphone access
 

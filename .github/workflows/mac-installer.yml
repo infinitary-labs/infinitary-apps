@@ -25,8 +25,9 @@ jobs:
   build:
     if: ${{ inputs.reuse == '' }}
     name: Build signed verification copies
-    # DOP-42: request a disposable guest, with the kernel guard still required below.
-    runs-on: mini-mac-virtual
+    # DOP-42: request a disposable guest, with the kernel guard still required below;
+    # the build kind's virtual-only queue once MAC_QUEUES names it.
+    runs-on: ${{ fromJSON(vars.MAC_QUEUES || '{}').build || 'mini-mac-virtual' }}
     timeout-minutes: 180
     env:
       SIGN_IDENTITY: "Developer ID Application: Kun Chen (9T2J7MNUP9)"
@@ -93,7 +94,7 @@ jobs:
         # A one-chip recheck leaves the other Mac type out of the run rather than skipping it green.
         # Runner and name follow the chip: an include entry for an absent chip would add it back.
         chip: ${{ fromJSON(inputs.chip == 'arm64' && '["arm64"]' || inputs.chip == 'x64' && '["x64"]' || '["arm64","x64"]') }}
-    runs-on: ${{ matrix.chip == 'arm64' && 'mini-mac-virtual' || 'macos-15-intel' }}
+    runs-on: ${{ matrix.chip == 'arm64' && (fromJSON(vars.MAC_QUEUES || '{}').light || 'mini-mac-virtual') || 'macos-15-intel' }}
     timeout-minutes: 60
     steps:
       - uses: actions/checkout@v4

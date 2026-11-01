@@ -183,7 +183,7 @@ The switch lists `alpha` and `stable`; releases of either channel also update th
   The signing job runs on the real Mac through the checked disk image, then hands off and frees it.
   Its handoff is one uncompressed Actions artifact per attempt: the zip to record and, when one was built, the checked disk image, with a manifest of the run, attempt, workflow revision, source, channel, version, download mode, and each file's size and checksum.
   It never carries the app, the workspace, a credential or the environment, nor the Linux files, which come from the linux job; the artifact's id and the manifest's checksum are the signing job's outputs.
-  The `publish` job starts only after the signing job and every check succeeded, in one disposable virtual Mac from the placement service's existing pool (`mini-mac-virtual`, or `RELEASE_VIRTUAL_MAC_RUNNER` once set; `docs/testing.md`, "A release's own queues"); it waits for a free place and never falls back to the real Mac.
+  The `publish` job starts only after the signing job and every check succeeded, in one disposable virtual Mac from the placement service, on the `release_light` or `light` kind's queue or its `mini-mac-virtual` pool (`docs/testing.md`, "Each Mac job's kind and size"); it waits for a free place and never falls back to the real Mac.
   Before any effect it validates the handoff: the manifest is the one the signing job wrote, names this run, an attempt no later than this one, this workflow revision and this release, and the files are exactly those it lists, byte for byte.
   Then it lays out the Linux files, records the zip and the Linux files in the source record, records the disk image and runs every later step in its existing order: the record's fetch-back, Cloudflare, Homebrew, the casks, the old-cask switch and the feeds, or a rehearsal's tap and feed rehearsals.
   Every Mac check there - signature, Gatekeeper, launch and version, the disk image against the zip - still runs, never replaced by a checksum; the job holds no Apple signing material, and each destination's credential stays on its own steps.
@@ -369,7 +369,7 @@ Keep the Homebrew casks publishing alongside direct installers; neither a shared
 ## The update check
 
 Every alpha, a rehearsal included, proves on Apple silicon that the version alpha subscribers have now updates to it (INF-1900, the captain's direction D).
-`.github/workflows/mac-update.yml` runs `scripts/check-update-from-alpha.mjs` in a placement-service virtual Mac (`mini-mac-virtual`, or a publishing release's `RELEASE_VIRTUAL_MAC_RUNNER` once set; `docs/testing.md`, "A release's own queues").
+`.github/workflows/mac-update.yml` runs `scripts/check-update-from-alpha.mjs` in a placement-service virtual Mac, on the `release_light` kind's queue in a publishing release, otherwise the `light` kind's or `mini-mac-virtual` (`docs/testing.md`, "Each Mac job's kind and size").
 Intel is a best-effort side effect of the universal build: no release runs a hosted Mac for it (the captain, INF-1900).
 It reads the published alpha feed, `feeds/alpha-mac.yml`, for the version alpha subscribers have now, which is a promoted stable right after a promotion.
 It downloads that version's public disk image, checks it against its published checksum and copies the app into `/Applications` the way a person installs it, with its direct-installation receipt.
@@ -394,7 +394,7 @@ The update check covers only the path from the current alpha to the release; cha
 ## Isolated signed verification
 
 `verify.yml` with `installer_only=true` invokes `mac-installer.yml` for the requested ref and runs no personal-Mac signing job.
-The build and Apple-silicon checks request the placement service's `mini-mac-virtual` virtual-only label; Intel remains on `macos-15-intel`.
+The build and Apple-silicon checks request the `build` and `light` kinds' queues, or the placement service's `mini-mac-virtual` virtual-only label where those have none; Intel remains on `macos-15-intel`.
 `installer_chip` (`both` by default, or `arm64` or `x64`) drops the other Mac type's installed checks from the run for a one-chip recheck; a release passes none and checks both.
 The workflow uses existing Apple credentials only in disposable Actions Macs, under a scratch signing home, and publishes nothing.
 Before installation, signing or trust changes, `scripts/installer-environment.ts` refuses local execution and requires the kernel's virtual-machine reading on a self-hosted runner; the physical Mac cannot substitute for a guest.

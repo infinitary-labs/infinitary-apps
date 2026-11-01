@@ -96,7 +96,9 @@ jobs:
     # No journey or full check shares that scale set, so the runner the service
     # starts for it takes it, and the service gives it the next free virtual place
     # (docs/ios.md, "A phone check the placement service puts in a virtual Mac").
-    runs-on: ${{ vars.PHONE_VIRTUAL_MAC && 'mini-mac-vm' || inputs.mac_runner || vars.VIRTUAL_MAC_RUNNER || vars.MAC_RUNNER || 'mini-mac' }}
+    # The phone kind in MAC_QUEUES, a virtual-only queue, comes before
+    # VIRTUAL_MAC_RUNNER (docs/testing.md, "Each Mac job's kind and size").
+    runs-on: ${{ vars.PHONE_VIRTUAL_MAC && 'mini-mac-vm' || inputs.mac_runner || fromJSON(vars.MAC_QUEUES || '{}').phone || vars.VIRTUAL_MAC_RUNNER || vars.MAC_RUNNER || 'mini-mac' }}
     # Reading the pull request's latest version and cancelling this run, if replaced, and
     # main's newest passing check of every part for its part times (INF-827).
     permissions:
@@ -111,7 +113,7 @@ jobs:
     # label. On the Mac mini's runners, and with PHONE_VIRTUAL_MAC's one fixed
     # clone, the shared mac-mini-phone line keeps one phone check at a time.
     concurrency:
-      group: ${{ !inputs.mac_runner && vars.VIRTUAL_MAC_RUNNER && !vars.PHONE_VIRTUAL_MAC && format('phone-{0}-{1}', github.run_id, github.run_attempt) || 'mac-mini-phone' }}
+      group: ${{ !inputs.mac_runner && (fromJSON(vars.MAC_QUEUES || '{}').phone || vars.VIRTUAL_MAC_RUNNER) && !vars.PHONE_VIRTUAL_MAC && format('phone-{0}-{1}', github.run_id, github.run_attempt) || 'mac-mini-phone' }}
       queue: max
       cancel-in-progress: false
     # Retain the job limit for setup, checks, cleanup and evidence upload.
@@ -280,7 +282,7 @@ jobs:
       # INF-662: one gate checks and builds once, then runs the iPhone and the iPad side by
       # side, each device on one simulator it starts once (INF-1438) and each part on its own
       # test home; either failing fails it.
-      # A placed virtual Mac uses two simulators for its 6 cores and 16 GB.
+      # A placed virtual Mac uses two simulators for its 4 cores and 16 GB.
       # Real and virtual Mac checks may run concurrently without a command lease.
       # INF-827: on a pull request the Mac mini's and a placed virtual Mac's gate run only the
       # parts the chooser kept. Affected requests use directly reached parts; default requests
@@ -379,7 +381,7 @@ jobs:
   # Export selected evidence on the Xcode host without a simulator, build, sign-in or signing.
   scene-evidence:
     if: inputs.evidence_run != ''
-    runs-on: ${{ vars.MAC_RUNNER || 'mini-mac' }}
+    runs-on: ${{ fromJSON(vars.MAC_QUEUES || '{}').light || vars.MAC_RUNNER || 'mini-mac' }}
     permissions:
       actions: read
       contents: read

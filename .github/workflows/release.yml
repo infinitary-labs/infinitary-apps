@@ -341,10 +341,10 @@ jobs:
     with:
       ref: ${{ needs.resolve.outputs.source_commit }}
       profile: ${{ needs.resolve.outputs.channel }}
-      # A publishing run's Mac lane takes the release queue once
-      # RELEASE_MAC_RUNNER is set (docs/testing.md, "A release's own queues");
-      # a dry run and an unset variable keep MAC_RUNNER.
-      mac_runner: ${{ needs.resolve.outputs.dry_run == 'false' && vars.RELEASE_MAC_RUNNER || '' }}
+      # A publishing run's Mac lane takes the release_check queue once
+      # MAC_QUEUES names it (docs/testing.md, "Each Mac job's kind and size");
+      # a dry run takes the check kind's, as any other full Mac check.
+      mac_runner: ${{ needs.resolve.outputs.dry_run == 'false' && fromJSON(vars.MAC_QUEUES || '{}').release_check || '' }}
 
   # The Linux packages of this release (docs/linux-packages.md), for both
   # channels, a stable promotion included: built at the release's version
@@ -402,7 +402,7 @@ jobs:
     with:
       ref: ${{ needs.resolve.outputs.source_commit }}
       version: ${{ needs.resolve.outputs.version }}
-      runner: ${{ needs.resolve.outputs.dry_run == 'false' && vars.RELEASE_VIRTUAL_MAC_RUNNER || '' }}
+      runner: ${{ needs.resolve.outputs.dry_run == 'false' && fromJSON(vars.MAC_QUEUES || '{}').release_light || '' }}
 
   release:
     # A plain name: a job skipped behind a red check shows its name
@@ -417,9 +417,10 @@ jobs:
     if: ${{ always() && !cancelled() && needs.resolve.result == 'success' && needs.notes.result == 'success' && needs.phone.result == 'success' && ((needs.resolve.outputs.verify_required == 'true' && needs.rehearse.result == 'success') || (needs.resolve.outputs.verify_required == 'false' && needs.rehearse.result == 'skipped')) }}
     # INF-603: it signs with the captain's Developer ID certificate, so it
     # asks for the real Mac, never a virtual one, once the switch sets
-    # REAL_MAC_RUNNER (docs/testing.md, "The real Mac's place"). A publishing
-    # run takes the real Mac's release queue once RELEASE_REAL_MAC_RUNNER is set.
-    runs-on: ${{ needs.resolve.outputs.dry_run == 'false' && vars.RELEASE_REAL_MAC_RUNNER || vars.REAL_MAC_RUNNER || vars.MAC_RUNNER || 'macos-15' }}
+    # REAL_MAC_RUNNER (docs/testing.md, "The real Mac's place"), or the sign
+    # kind's queue there once MAC_QUEUES names it: release_sign for a
+    # publishing run (docs/testing.md, "Each Mac job's kind and size").
+    runs-on: ${{ needs.resolve.outputs.dry_run == 'false' && fromJSON(vars.MAC_QUEUES || '{}').release_sign || fromJSON(vars.MAC_QUEUES || '{}').sign || vars.REAL_MAC_RUNNER || vars.MAC_RUNNER || 'macos-15' }}
     timeout-minutes: 90
     # It runs before the checks pass, so its token only reads: it can find
     # what the record already holds, never write a tag, a release or an
@@ -900,7 +901,7 @@ jobs:
       handoff_id: ${{ needs.release.outputs.handoff_id }}
       zip_name: ${{ needs.resolve.outputs.zip_name }}
       zip_sha256: ${{ needs.release.outputs.sha256 }}
-      runner: ${{ needs.resolve.outputs.dry_run == 'false' && vars.RELEASE_VIRTUAL_MAC_RUNNER || '' }}
+      runner: ${{ needs.resolve.outputs.dry_run == 'false' && fromJSON(vars.MAC_QUEUES || '{}').release_light || '' }}
 
   # The record, publication and the download checks after them (INF-1716),
   # in one disposable virtual Mac from the placement service's existing
@@ -921,9 +922,9 @@ jobs:
     name: Record, publish and check the downloads (a dry run records nothing)
     needs: [resolve, notes, verify, linux, rehearse, phone, release, update]
     if: ${{ always() && !cancelled() && needs.resolve.result == 'success' && needs.notes.result == 'success' && needs.linux.result == 'success' && needs.phone.result == 'success' && needs.release.result == 'success' && ((needs.resolve.outputs.verify_required == 'true' && needs.verify.result == 'success' && needs.rehearse.result == 'success' && needs.update.result == 'success') || (needs.resolve.outputs.verify_required == 'false' && needs.verify.result == 'skipped' && needs.rehearse.result == 'skipped' && needs.update.result == 'skipped')) }}
-    # A publishing run takes the virtual release queue once
-    # RELEASE_VIRTUAL_MAC_RUNNER is set (docs/testing.md, "A release's own queues").
-    runs-on: ${{ needs.resolve.outputs.dry_run == 'false' && vars.RELEASE_VIRTUAL_MAC_RUNNER || 'mini-mac-virtual' }}
+    # The light kind's virtual-only queue once MAC_QUEUES names it, and
+    # release_light for a publishing run (docs/testing.md, "Each Mac job's kind and size").
+    runs-on: ${{ needs.resolve.outputs.dry_run == 'false' && fromJSON(vars.MAC_QUEUES || '{}').release_light || fromJSON(vars.MAC_QUEUES || '{}').light || 'mini-mac-virtual' }}
     timeout-minutes: 90
     permissions:
       contents: write

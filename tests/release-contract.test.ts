@@ -15,6 +15,7 @@ import {
   writeFileSync,
 } from "node:fs";
 import { createRequire } from "node:module";
+import { availableParallelism } from "node:os";
 import { dirname, join } from "node:path";
 import { data, Evaluator, Lexer, Parser } from "@actions/expressions";
 import type { PlaywrightTestConfig } from "@playwright/test";
@@ -63,6 +64,9 @@ vi.setConfig({ testTimeout: 10_000 });
 
 const root = join(__dirname, "..");
 const read = (path: string) => readFileSync(join(root, path), "utf8");
+/** verify.yml's full Mac e2e command: half the job's cores (scripts/job-cores.ts). */
+const VERIFY_E2E_RUN =
+  'cores="$(node scripts/job-cores.ts)"\npnpm exec playwright test --workers=$(( cores > 1 ? cores / 2 : 1 )) $ONLY\n';
 const require = createRequire(import.meta.url);
 
 /** YAML parser electron-builder uses for electron-builder.yml. */
@@ -748,7 +752,7 @@ describe("local packaging identity (electron-builder.dev.yml)", () => {
     expect(release.jobs.verify.with ?? {}).not.toHaveProperty("all_journeys");
     const steps = verify.jobs.lane.steps;
     const e2e = steps.find((step) => step.id === "e2e");
-    expect(e2e?.run).toBe("pnpm exec playwright test --workers=50% $ONLY");
+    expect(e2e?.run).toBe(VERIFY_E2E_RUN);
     const verifyOnly = (all_journeys: boolean) =>
       workflowString(e2e?.env?.ONLY ?? "", { inputs: { all_journeys } });
     expect(verifyOnly(false)).toBe(`--grep ${MAC_ONLY_TAG}`);
@@ -1265,8 +1269,8 @@ describe("local packaging identity (electron-builder.dev.yml)", () => {
     };
     const steps = verify.jobs.lane.steps;
     const e2e = steps.findIndex((step) => step.id === "e2e");
-    // Half the processor: both Mac runner slots share it (INF-741).
-    expect(steps[e2e]?.run).toBe("pnpm exec playwright test --workers=50% $ONLY");
+    // Half the job's cores: the Mac's runner slots share its processor (INF-741, INF-2112).
+    expect(steps[e2e]?.run).toBe(VERIFY_E2E_RUN);
     const result = steps[e2e]?.env?.PLAYWRIGHT_JSON_OUTPUT_FILE ?? "";
     expect(result).not.toBe("");
     const upload = (path: string) =>
@@ -2676,7 +2680,7 @@ describe("the signed channel workflow", () => {
       expect.arrayContaining([
         'mac_tests="$(node scripts/mac-unit-tests.ts)"\npnpm test $mac_tests\n',
         "pnpm build",
-        "pnpm exec playwright test --workers=50% $ONLY",
+        VERIFY_E2E_RUN,
         "pnpm replay:gate",
       ]),
     );
@@ -4268,10 +4272,10 @@ describe("the jobs that ask for the real Mac", () => {
 /**
  * DOP-178's approved plan ("Have the placement service start a release's Mac
  * jobs before other waiting jobs"): a publishing run's Mac jobs ask for the
- * placement service's release-only queues through RELEASE_MAC_RUNNER,
- * RELEASE_REAL_MAC_RUNNER and RELEASE_VIRTUAL_MAC_RUNNER. Each keeps its
- * place kind - signing real, update and publication virtual, verification
- * any - and a dry run or an unset variable keeps today's label.
+ * placement service's release-only queues, which MAC_QUEUES names as the
+ * release_check, release_sign and release_light kinds (INF-2112). Each keeps
+ * its place - signing real, update and publication virtual, verification
+ * any - and a dry run or an unset kind keeps today's label.
  */
 describe("a release's own queues", () => {
   type Job = { "runs-on"?: string; uses?: string; with?: Record<string, string> };
@@ -4284,23 +4288,24 @@ describe("a release's own queues", () => {
     .jobs.lane;
   const update = (loadYamlFile(".github/workflows/mac-update.yml") as { jobs: Record<string, Job> })
     .jobs.update;
-  const queues = {
-    RELEASE_MAC_RUNNER: "mini-mac-release-any",
-    RELEASE_REAL_MAC_RUNNER: "mini-mac-release-real",
-    RELEASE_VIRTUAL_MAC_RUNNER: "mini-mac-release-virtual",
+  const releaseKinds = {
+    release_check: "mini-mac-release-any",
+    release_sign: "mini-mac-release-real",
+    release_light: "mini-mac-release-virtual",
   };
   const ordinary = {
     MAC_RUNNER: "mini-mac-any",
     REAL_MAC_RUNNER: "mini-mac-real",
     VIRTUAL_MAC_RUNNER: "mini-mac-virtual",
   };
+  const queues = { MAC_QUEUES: JSON.stringify(releaseKinds) };
   /** Where each of a release run's Mac jobs starts, through its caller's inputs. */
   const placed = (dryRun: "true" | "false", vars: Record<string, string>) => {
     const needs = { resolve: { outputs: { dry_run: dryRun } } };
     const passed = (id: string, input: string) =>
       workflowValue(release[id]?.with?.[input] ?? "", { needs, vars });
     const updateIn = (id: string) =>
-      workflowValue(update?.["runs-on"] ?? "", { inputs: { runner: passed(id, "runner") } });
+      workflowValue(update?.["runs-on"] ?? "", { inputs: { runner: passed(id, "runner") }, vars });
     return {
       verify: workflowValue(verifyLane?.["runs-on"] ?? "", {
         matrix: { lane: "mac" },
@@ -4322,8 +4327,12 @@ describe("a release's own queues", () => {
       update: "mini-mac-release-virtual",
       publish: "mini-mac-release-virtual",
     });
-    expect(workflowValue(testflight?.["runs-on"] ?? "", { vars: { ...ordinary, ...queues } })).toBe(
-      "mini-mac-release-real",
+    // TestFlight runs only for a release, so its own kind is its release queue.
+    const named = {
+      MAC_QUEUES: JSON.stringify({ ...releaseKinds, testflight: "mini-mac-testflight" }),
+    };
+    expect(workflowValue(testflight?.["runs-on"] ?? "", { vars: { ...ordinary, ...named } })).toBe(
+      "mini-mac-testflight",
     );
   });
 
@@ -4337,7 +4346,7 @@ describe("a release's own queues", () => {
     });
   });
 
-  it("keeps today's routing while the release variables are unset", () => {
+  it("keeps today's routing while the release kinds are unset", () => {
     const today = {
       verify: "mini-mac-any",
       rehearse: "mini-mac-virtual",
@@ -4349,6 +4358,163 @@ describe("a release's own queues", () => {
     expect(placed("true", ordinary)).toEqual(today);
     expect(workflowValue(testflight?.["runs-on"] ?? "", { vars: ordinary })).toBe("mini-mac-real");
     expect(placed("false", {})).toEqual({ ...today, verify: "macos-15", sign: "macos-15" });
+    // With only the ordinary kinds named, a publishing run goes where a dry run goes.
+    const plain = {
+      MAC_QUEUES: JSON.stringify({
+        check: "mini-mac-check",
+        sign: "mini-mac-sign",
+        light: "mini-mac-light",
+      }),
+    };
+    const ordinaryKinds = {
+      verify: "mini-mac-check",
+      rehearse: "mini-mac-light",
+      sign: "mini-mac-sign",
+      update: "mini-mac-light",
+      publish: "mini-mac-light",
+    };
+    expect(placed("false", { ...ordinary, ...plain })).toEqual(ordinaryKinds);
+    expect(placed("true", { ...ordinary, ...plain })).toEqual(ordinaryKinds);
+  });
+});
+
+/**
+ * INF-2112, the captain's approved design ("design a way for the user to
+ * configure how much resource each type of job needs, and runner-up
+ * coordinates which ones can go in parallel vs not"): each kind of Mac job
+ * asks for the queue the MAC_QUEUES variable names for it, so the placement
+ * service can hold each kind to its size. A publishing release asks for the
+ * release kinds first. An unset kind keeps the job where it ran before.
+ */
+describe("each Mac job's kind", () => {
+  type Job = {
+    "runs-on"?: string;
+    with?: Record<string, string>;
+    strategy?: { matrix?: Record<string, unknown> };
+    steps?: { id?: string; run?: string }[];
+  };
+  const jobs = (file: string) =>
+    (loadYamlFile(`.github/workflows/${file}`) as { jobs: Record<string, Job> }).jobs;
+  const queues = {
+    check: "q-check",
+    journeys: "q-journeys",
+    phone: "q-phone",
+    testflight: "q-testflight",
+    build: "q-build",
+    sign: "q-sign",
+    light: "q-light",
+    release_check: "q-release-check",
+    release_sign: "q-release-sign",
+    release_light: "q-release-light",
+  };
+  const today = {
+    MAC_RUNNER: "mini-mac-any",
+    REAL_MAC_RUNNER: "mini-mac-real",
+    VIRTUAL_MAC_RUNNER: "mini-mac-virtual",
+  };
+  const publishing = (dryRun: boolean) => ({ resolve: { outputs: { dry_run: String(dryRun) } } });
+
+  it.each([
+    ["verify.yml", "lane", { matrix: { lane: "mac" }, inputs: {} }, "check", "mini-mac-any"],
+    ["journeys.yml", "affected-journeys", { inputs: {} }, "journeys", "mini-mac-any"],
+    ["phone.yml", "native-phone", { inputs: {} }, "phone", "mini-mac-virtual"],
+    ["phone.yml", "scene-evidence", {}, "light", "mini-mac-any"],
+    ["ios-release.yml", "testflight", {}, "testflight", "mini-mac-real"],
+    ["mac-installer.yml", "build", {}, "build", "mini-mac-virtual"],
+    ["mac-installer.yml", "installed", { matrix: { chip: "arm64" } }, "light", "mini-mac-virtual"],
+    ["mac-update.yml", "update", { inputs: {} }, "light", "mini-mac-virtual"],
+    ["republish-casks.yml", "republish", { inputs: {} }, "light", "mini-mac-any"],
+    ["release.yml", "release", { needs: publishing(true) }, "sign", "mini-mac-real"],
+    ["release.yml", "publish", { needs: publishing(true) }, "light", "mini-mac-virtual"],
+  ] as const)(
+    "%s's %s job asks for the %s kind's queue, else where it ran before",
+    (file, id, contexts, kind, before) => {
+      const runner = (vars: Record<string, string>) =>
+        workflowValue(jobs(file)[id]?.["runs-on"] ?? "", { ...contexts, vars });
+      expect(runner({ ...today, MAC_QUEUES: JSON.stringify(queues) })).toBe(queues[kind]);
+      expect(runner({ ...today, MAC_QUEUES: JSON.stringify({ [kind]: "" }) })).toBe(before);
+      expect(runner(today)).toBe(before);
+    },
+  );
+
+  it("keeps the Intel installer check on its hosted Mac", () => {
+    const runner = workflowValue(jobs("mac-installer.yml").installed?.["runs-on"] ?? "", {
+      matrix: { chip: "x64" },
+      vars: { MAC_QUEUES: JSON.stringify(queues) },
+    });
+    expect(runner).toBe("macos-15-intel");
+  });
+
+  it("leaves no Mac job without a kind", () => {
+    const labels = new Set(Object.values(queues));
+    const macJobs: string[] = [];
+    for (const file of readdirSync(join(root, ".github/workflows"))) {
+      if (!file.endsWith(".yml")) continue;
+      for (const [id, job] of Object.entries(jobs(file))) {
+        if (!job["runs-on"]) continue;
+        // Each value of a one-key matrix, such as verify's lanes or the installer's chips.
+        const [key, values] = Object.entries(job.strategy?.matrix ?? {})[0] ?? [];
+        const listed =
+          typeof values === "string" && values.includes("${{")
+            ? workflowValue(values, { inputs: {} })
+            : values;
+        const entries =
+          key && Array.isArray(listed) ? listed.map((value) => ({ [key]: value })) : [{}];
+        for (const matrix of entries) {
+          const runner = (vars: Record<string, string>) =>
+            workflowString(job["runs-on"] ?? "", {
+              vars,
+              matrix,
+              inputs: {},
+              needs: publishing(true),
+            });
+          const before = runner(today);
+          if (typeof before !== "string" || !/^(mini-mac|macos-15$)/.test(before)) continue;
+          macJobs.push(`${file}:${id}`);
+          expect(
+            labels.has(String(runner({ ...today, MAC_QUEUES: JSON.stringify(queues) }))),
+            `${file}:${id} ${JSON.stringify(matrix)}`,
+          ).toBe(true);
+        }
+      }
+    }
+    expect(macJobs.length).toBeGreaterThanOrEqual(11);
+  });
+
+  it("gives the full Mac check's journeys half the job's cores, its size when the placement service names one", () => {
+    const run = jobs("verify.yml").lane?.steps?.find((step) => step.id === "e2e")?.run ?? "";
+    const dir = scratchDir("infinitary-job-cores-");
+    const bin = join(dir, "bin");
+    mkdirSync(bin);
+    const log = join(dir, "pnpm.log");
+    writeFileSync(join(bin, "pnpm"), '#!/bin/sh\nprintf "%s\\n" "$*" >> "$COMMAND_LOG"\n');
+    chmodSync(join(bin, "pnpm"), 0o755);
+    const workers = (cores?: string) => {
+      writeFileSync(log, "");
+      const { RUNNER_UP_CORES: _unset, ...env } = process.env;
+      const result = spawnSync("bash", ["--noprofile", "--norc", "-e", "-c", run], {
+        cwd: root,
+        env: {
+          ...env,
+          PATH: `${bin}:${process.env.PATH}`,
+          COMMAND_LOG: log,
+          ONLY: "",
+          ...(cores === undefined ? {} : { RUNNER_UP_CORES: cores }),
+        },
+        encoding: "utf8",
+      });
+      expect(result.status, result.stderr).toBe(0);
+      return readFileSync(log, "utf8").trim();
+    };
+    expect(workers("12")).toBe("exec playwright test --workers=6");
+    expect(workers("1")).toBe("exec playwright test --workers=1");
+    // No size named: half this machine, as `--workers=50%` gave.
+    expect(workers()).toBe(
+      `exec playwright test --workers=${Math.max(1, Math.floor(availableParallelism() / 2))}`,
+    );
+    expect(workers("not a number")).toBe(
+      `exec playwright test --workers=${Math.max(1, Math.floor(availableParallelism() / 2))}`,
+    );
   });
 });
 
@@ -4646,7 +4812,7 @@ it("runs the update check on Apple silicon only, rehearsing before signing and u
   expect(
     Object.values(jobs).map((job) => [
       job.name,
-      workflowValue(job["runs-on"], { inputs: {} }),
+      workflowValue(job["runs-on"], { inputs: {}, vars: {} }),
       job.strategy,
     ]),
   ).toEqual([["Apple silicon", "mini-mac-virtual", undefined]]);

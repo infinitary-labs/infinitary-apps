@@ -19,10 +19,10 @@ The PR checks (`ci.yml`) run the same projects on separate machines: `unit-tests
 | --- | --- | --- |
 | `pure` | `src/shared/**/*.test.ts` | Shared contracts and math. One module cache (`isolate: false`) with per-test guards against mutated globals (`tests/helpers/pureProject.ts`). In memory, like `unit`. |
 | `unit` | every other test file not listed as integration | Most files share loaded code (`isolate: false`) with the same process-state leak guard as `pure`; the module-mocking, environment/global-mutating or SDK-loading files run as `unit-isolated` with `isolate: true` (the explicit list in `vitest.config.ts`). Both use vitest's 5 s default. May not start a child process, drive real git or sleep on a real clock. |
-| `integration` | the list below | Real git, pnpm, a shell, a stub executable or the installed Claude client. Eight workers on macOS, four elsewhere, in a group that starts after `pure` and `unit` finish, so the suite does not load the host it measures. Each file carries a budget sized to its measured work. |
+| `integration` | the list below | Real git, pnpm, a shell, a stub executable or the installed Claude client. Eight workers on macOS, or the job's size when the Mac mini's placement service names a smaller one, four elsewhere, in a group that starts after `pure` and `unit` finish, so the suite does not load the host it measures. Each file carries a budget sized to its measured work. |
 | `probe` | the files of the list below that `PROBE_FILES` names | Integration files that can fail with no code change ("Probes" below). The same workers and budgets as `integration`, in a group that starts after it finishes. |
 
-`pure`, `unit` and `unit-isolated` each use `Math.max(2, os.availableParallelism() - 1)` workers: the two-CPU hosted runner uses both CPUs, and a larger machine still reserves one CPU.
+`pure`, `unit` and `unit-isolated` each use `Math.max(2, cores - 1)` workers, where cores are the job's size when the placement service names one and the machine's otherwise (`scripts/job-cores.ts`): the two-CPU hosted runner uses both CPUs, and a larger machine still reserves one CPU.
 The guard checks environment names and clock/timer identities after each test and after file teardown; it fails rather than silently repairing a leak.
 Module mocks, stubbed globals/environment, and the Claude SDK's import-time `NoDefaultCurrentDirectoryInExePath` write belong in `unit-isolated`, never on an environment allowlist.
 New unit files default to guarded sharing; add state-mutating files to the isolated list.

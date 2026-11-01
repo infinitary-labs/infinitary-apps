@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "mac-job-kinds",
+      "reason": "CI only: each Mac job asks for its kind's queue through one repository setting, and the project's own checks size their test workers to the job's cores; nothing in the app changes."
+    }
+  ]
+}

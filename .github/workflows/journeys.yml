@@ -208,7 +208,7 @@ jobs:
     # The implicit success() skips on chooser failure; zero skips by this
     # job's own condition, so its check passes without taking a Mac runner.
     if: needs.choose-journeys.outputs.count != '0'
-    runs-on: ${{ inputs.mac_runner || vars.MAC_RUNNER || 'macos-15' }}
+    runs-on: ${{ inputs.mac_runner || fromJSON(vars.MAC_QUEUES || '{}').journeys || vars.MAC_RUNNER || 'macos-15' }}
     # Every crewmate works under "Application Support", and so does this job
     # (verify.yml): a check that only fails from a path with a space fails
     # here, not only in a working copy.

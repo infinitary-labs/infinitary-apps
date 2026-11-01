@@ -1,10 +1,10 @@
 import { spawnSync } from "node:child_process";
 import { existsSync } from "node:fs";
-import { availableParallelism } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { defineConfig } from "@playwright/test";
 import { ciModeRefusal } from "./scripts/checks-mode.ts";
+import { jobCores } from "./scripts/job-cores.ts";
 // Each worker reloads this config, so each starts the load clock its waits run on (INF-1083).
 import "./tests/helpers/budgets";
 import { E2E_MAX_WORKERS, E2E_PROJECTS } from "./tests/e2e/lanes";
@@ -100,8 +100,9 @@ export default defineConfig({
   // One private TMPDIR per run, required empty at the end (runTempRoot.ts).
   globalSetup: "./tests/e2e/globalSetup.ts",
   outputDir: run,
-  // Bound parallel app processes to the host allowance; native work stays serial.
-  workers: Math.min(E2E_MAX_WORKERS, availableParallelism()),
+  // Bound parallel app processes to the host allowance, the job's size where it
+  // has one (scripts/job-cores.ts); native work stays serial.
+  workers: Math.min(E2E_MAX_WORKERS, jobCores()),
   projects: E2E_PROJECTS,
   reporter: [
     // The console reporter Playwright picks on its own: dots on CI, a line per test here.

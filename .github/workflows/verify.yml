@@ -21,10 +21,11 @@ name: verify
 #
 # Deliberately no pull_request, push or schedule trigger (captain's call):
 # the per-PR mac job was 98% of a ~$200/month bill. The mac lane's runner
-# label still comes from the MAC_RUNNER repository variable so a self-hosted
-# runner can take it over without a workflow change. A pull request runs no
-# journeys (INF-2139); journeys.yml runs the ones a branch names on request:
-# the whole suite stays here.
+# label comes from the check kind in the MAC_QUEUES repository variable,
+# else MAC_RUNNER, so a self-hosted runner can take it over without a
+# workflow change (docs/testing.md, "Each Mac job's kind and size"). A pull
+# request runs no journeys (INF-2139); journeys.yml runs the ones a branch
+# names on request: the whole suite stays here.
 
 on:
   workflow_call:
@@ -140,7 +141,7 @@ jobs:
       fail-fast: false
       matrix:
         lane: ${{ fromJSON('["linux-checks","mac"]') }}
-    runs-on: ${{ matrix.lane == 'mac' && (inputs.mac_runner || vars.MAC_RUNNER || 'macos-15') || vars.LINUX_RUNNER || 'ubuntu-latest' }}
+    runs-on: ${{ matrix.lane == 'mac' && (inputs.mac_runner || fromJSON(vars.MAC_QUEUES || '{}').check || vars.MAC_RUNNER || 'macos-15') || vars.LINUX_RUNNER || 'ubuntu-latest' }}
     # Every crewmate works under "Application Support". The gate here does
     # too, so a check that only fails from a path with a space fails here
     # instead of only in a working copy (FI3-152).
@@ -248,15 +249,18 @@ jobs:
       # since linux-e2e runs every other one (docs/principles.md, 2026-10-28).
       # A local run keeps its JSON result in its own run directory
       # (tests/e2e/runEvidence.ts); this one names the fixed path kept below.
-      # Both Mac runner slots share one processor, so the parallel lanes take
-      # half of it: with every processor, launches starved while the other
+      # The parallel lanes take half the job's cores: its size when the
+      # placement service names one, else this Mac's, so a job beside it keeps
+      # its share. With every processor, launches starved while the other
       # slot ran journeys too (docs/testing.md, "E2E scheduling").
       - id: e2e
         if: ${{ !cancelled() && matrix.lane == 'mac' && steps.build.outcome == 'success' && steps.dev-signing.outcome == 'success' && steps.recorder.outcome == 'success' }}
         # The run ends at 150 minutes and the command at 180 (INF-1083, the
         # captain's check limits); a stuck wait ends sooner, at its own cap.
         timeout-minutes: 180
-        run: pnpm exec playwright test --workers=50% $ONLY
+        run: |
+          cores="$(node scripts/job-cores.ts)"
+          pnpm exec playwright test --workers=$(( cores > 1 ? cores / 2 : 1 )) $ONLY
         env:
           ONLY: ${{ !inputs.all_journeys && '--grep @mac-only' || '' }}
           INFINITARY_E2E_RUN_MINUTES: 150

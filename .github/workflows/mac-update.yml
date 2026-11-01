@@ -34,7 +34,7 @@ on:
         type: string
         default: ''
       runner:
-        description: A publishing release's virtual-Mac queue; empty keeps mini-mac-virtual
+        description: A publishing release's light queue; empty takes the light kind's queue
         required: false
         type: string
         default: ''
@@ -46,7 +46,9 @@ permissions:
 jobs:
   update:
     name: Apple silicon
-    runs-on: ${{ inputs.runner || 'mini-mac-virtual' }}
+    # A publishing release's light queue, else the light kind's
+    # (docs/testing.md, "Each Mac job's kind and size").
+    runs-on: ${{ inputs.runner || fromJSON(vars.MAC_QUEUES || '{}').light || 'mini-mac-virtual' }}
     timeout-minutes: 45
     steps:
       - uses: actions/checkout@v4

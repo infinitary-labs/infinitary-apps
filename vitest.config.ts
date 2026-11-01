@@ -1,8 +1,8 @@
 import { readFileSync } from "node:fs";
-import os from "node:os";
 import { resolve } from "node:path";
 import { defineConfig } from "vitest/config";
 import { PROBE_FILES } from "./scripts/affected-probes.ts";
+import { jobCores } from "./scripts/job-cores.ts";
 
 /**
  * The integration cohort (captain's A1, docs/test-cohorts.md) is the list of
@@ -130,7 +130,7 @@ export default defineConfig({
         extends: true,
         test: {
           name: "pure",
-          maxWorkers: Math.max(2, os.availableParallelism() - 1),
+          maxWorkers: Math.max(2, jobCores() - 1),
           include: ["src/shared/**/*.test.ts"],
           isolate: false,
           setupFiles: [
@@ -144,7 +144,7 @@ export default defineConfig({
         extends: true,
         test: {
           name: "unit",
-          maxWorkers: Math.max(2, os.availableParallelism() - 1),
+          maxWorkers: Math.max(2, jobCores() - 1),
           include: ["src/**/*.test.{ts,tsx}", "tests/**/*.test.{ts,tsx}"],
           exclude: ["src/shared/**/*.test.ts", ...integration, ...isolatedUnit],
           isolate: false,
@@ -160,7 +160,7 @@ export default defineConfig({
         extends: true,
         test: {
           name: "unit-isolated",
-          maxWorkers: Math.max(2, os.availableParallelism() - 1),
+          maxWorkers: Math.max(2, jobCores() - 1),
           include: isolatedUnit,
           isolate: true,
           setupFiles: [
@@ -185,10 +185,11 @@ export default defineConfig({
             "./tests/helpers/scratchDirCleanup.ts",
             "./tests/helpers/waitWindow.ts",
           ],
-          // Real git, pnpm and child processes: eight on Mac, four elsewhere, after the
+          // Real git, pnpm and child processes: eight on Mac, or fewer for a job
+          // sized smaller (scripts/job-cores.ts), four elsewhere, after the
           // in-memory cohorts finish, so the suite is not its own load
           // generator. Each file states its own budget; the default stays 5 s.
-          maxWorkers: process.platform === "darwin" ? 8 : 4,
+          maxWorkers: process.platform === "darwin" ? Math.min(8, jobCores(process.env, 8)) : 4,
           sequence: { groupOrder: 1 },
         },
       },
@@ -205,7 +206,7 @@ export default defineConfig({
           ],
           // The integration cohort's workers, in a group of their own after it,
           // so a whole run never loads the host with both at once.
-          maxWorkers: process.platform === "darwin" ? 8 : 4,
+          maxWorkers: process.platform === "darwin" ? Math.min(8, jobCores(process.env, 8)) : 4,
           sequence: { groupOrder: 2 },
         },
       },

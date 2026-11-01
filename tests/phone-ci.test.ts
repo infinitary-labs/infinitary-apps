@@ -347,8 +347,17 @@ describe("the native pull-request gate", () => {
         vars: { VIRTUAL_MAC_RUNNER: "mini-mac-virtual", MAC_RUNNER: "mini-mac-any" },
         shared: false,
       },
+      // INF-2112: the phone kind's virtual-only queue, side by side as well.
+      {
+        vars: { MAC_QUEUES: '{"phone":"mini-mac-phone"}', MAC_RUNNER: "mini-mac-any" },
+        shared: false,
+      },
       // The Mac mini's own runners keep the shared phone queue.
       { vars: { MAC_RUNNER: "mini-mac-any" }, shared: true },
+      {
+        vars: { MAC_QUEUES: '{"check":"mini-mac-check"}', MAC_RUNNER: "mini-mac-any" },
+        shared: true,
+      },
       { vars: {}, shared: true },
       // PHONE_VIRTUAL_MAC reuses one fixed clone, whatever the other variables say.
       {

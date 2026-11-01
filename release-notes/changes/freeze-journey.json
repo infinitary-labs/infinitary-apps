@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "freeze-journey",
+      "reason": "A pull request check, a journey on a record the size of the captain's that fails on a main thread freeze, and a lint against synchronous waits on another program, with no app behavior change."
+    }
+  ]
+}

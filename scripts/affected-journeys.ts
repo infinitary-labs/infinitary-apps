@@ -44,7 +44,9 @@ import { callsMethod, changedMessages, PRELOAD } from "./window-messages.ts";
  *    `src/` serves, and the change alters what it reads: a pattern of its
  *    own with a word of four or more letters matches differently, or a tool
  *    its stand-in scripts by name (one most journeys do not script) appears
- *    a different number of times. Only strings of two or more words count.
+ *    a different number of times. Only strings of two or more words count;
+ * 11. it is the freeze journey and the change edits code the main process
+ *    runs, other than a unit test (`FREEZE_JOURNEY`).
  *
  * A fragment inside a longer quote, a hook name inside a longer token, and a
  * sentence held only by the stand-in do not select every journey that reaches
@@ -101,6 +103,28 @@ const FALLBACKS = [
     specs: ["automatic-placement.spec.ts"],
   },
 ] as const;
+
+/**
+ * The freeze journey (INF-2061's plan; docs/freeze-recorder.md, "Before a
+ * change merges"): any code the main process runs can hold its main thread
+ * on a long record with no hook, symbol or words changing, so a change to it
+ * runs the journey. It is its own rule, beside the fallbacks, because it
+ * reaches nearly every change and the fallbacks' replayed merges predate it.
+ */
+export const FREEZE_JOURNEY = {
+  paths: ["src/core/", "src/main/", "src/shared/"],
+  spec: `${E2E}/main-thread-freeze.spec.ts`,
+} as const;
+
+/** Why the change runs the freeze journey, or undefined when it touches no main-process code. */
+export function freezeJourneyReason(changed: readonly string[]): string | undefined {
+  const reaches = changed.filter(
+    (file) => FREEZE_JOURNEY.paths.some((path) => file.startsWith(path)) && !/\.test\.tsx?$/.test(file),
+  );
+  if (reaches.length === 0) return undefined;
+  const named = reaches.slice(0, 3).join(", ");
+  return `edits code the main process runs: ${named}${reaches.length > 3 ? ` and ${reaches.length - 3} more` : ""}`;
+}
 
 /**
  * The journeys the change's commits name in their `Journeys:` trailers, as
@@ -698,7 +722,10 @@ export function affected(base: string, head: string): Reasons {
   const declared = declaredJourneys(
     git(["log", "--format=%(trailers:key=Journeys,valueonly)", `${base}..${head}`]),
   );
-  return select({ changed, sourceDiff, specs, read, readBefore, declared });
+  const reasons = select({ changed, sourceDiff, specs, read, readBefore, declared });
+  const freeze = freezeJourneyReason(changed);
+  if (freeze) reasons.set(FREEZE_JOURNEY.spec, [...(reasons.get(FREEZE_JOURNEY.spec) ?? []), freeze]);
+  return reasons;
 }
 
 /**

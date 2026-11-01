@@ -3,6 +3,8 @@ import { describe, expect, it } from "vitest";
 import {
   closureOf,
   declaredJourneys,
+  FREEZE_JOURNEY,
+  freezeJourneyReason,
   holdsHook,
   holdsPhrase,
   importsOf,
@@ -779,5 +781,36 @@ describe("words the core serves that a stand-in reads (INF-1255)", () => {
     const header = repair.sourceDiff.slice(0, repair.sourceDiff.indexOf("@@"));
     const value = `${header}@@ -9653 +9653 @@\n-        return "checked";\n+        return "check_change";\n`;
     expect(chosen({ ...repair, sourceDiff: value })).toEqual({});
+  });
+});
+
+// INF-2061's approved plan: the freeze journey "runs on Linux on every pull
+// request that changes" the code the main process runs. The changed files are
+// the real ones of INF-2060's fix and of a window-only change.
+describe("the freeze journey (INF-2061)", () => {
+  it("runs on a change to code the main process runs, naming what it edits", () => {
+    expect(existsSync(FREEZE_JOURNEY.spec)).toBe(true);
+    expect(
+      freezeJourneyReason([
+        "docs/task-capture.md",
+        "src/core/orchestrator/askEnding.test.ts",
+        "src/core/orchestrator/askEnding.ts",
+        "src/core/storage/db.ts",
+        "src/core/tasks/taskService.ts",
+      ]),
+    ).toBe(
+      "edits code the main process runs: src/core/orchestrator/askEnding.ts, src/core/storage/db.ts, src/core/tasks/taskService.ts",
+    );
+    expect(freezeJourneyReason(["src/main/host/macInstallation.ts"])).toMatch(/macInstallation/);
+  });
+
+  it("does not run on a change to the window, the docs or only unit tests", () => {
+    expect(
+      freezeJourneyReason([
+        "src/renderer/src/app/HomeScreen.tsx",
+        "docs/task-board.md",
+        "src/core/orchestrator/askEnding.test.ts",
+      ]),
+    ).toBeUndefined();
   });
 });

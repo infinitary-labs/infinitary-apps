@@ -6,7 +6,7 @@ Its code is `src/core/freeze/freezeRecorder.ts`, and its watchdog's is `src/core
 ## When it runs
 
 It runs in an alpha build and nowhere else, which is the captain's answer on INF-2061: "activate it only in alpha builds".
-A run that sets `INFINITARY_FREEZE_RECORDER=1` turns it on too, so an end-to-end journey can read the record of an unpackaged build.
+A run that sets `INFINITARY_FREEZE_RECORDER=1` turns it on too, so the freeze journey can read the record of an unpackaged build ("Before a change merges").
 The latency check reads it while the captain types and scrolls on a record the captain's size (`docs/testing.md`, "The latency check").
 A stable build and an ordinary development run never start it.
 
@@ -55,6 +55,22 @@ When one of the captain's projects lives at Infinitary's own source on GitHub (`
 The captain's answer on INF-2061 asked for exactly this: "offer a fix task only if the canonical infinitary github repo is a project in the project list".
 The wake gives the facts and leaves the judgment to the first mate: whether the freeze is worth a fix, and if so a decision card offering a fix task in that project.
 With no such project the line stays in the record only.
+
+## Before a change merges
+
+The freeze journey (`tests/e2e/main-thread-freeze.spec.ts`, INF-2061's plan, built as INF-2068) runs the actual app with the recorder on, on a record the captain's size: 160,094 task events, 3,400 tasks and 33 open messages in 13 chains, each a reading of the captain's own record (`tests/e2e/captainSizedRecord.ts`).
+It drives the work that repeats: first mate turns, which read the open messages before and after each, the task board, typing, and five minute passes with the answer-delivery sweep.
+It fails, naming the call path, on any recorded stall of 250 ms or more of the main thread's own processor time (`cpuMs`).
+It grades processor time, never wall time, so a busy test computer that stretches a stall does not fail it.
+Every run prints and annotates its busiest stall, so a change that brings the app nearer the line shows before it crosses it.
+The journey chooser selects it for every change that edits code the main process runs (`docs/testing.md`, "Journeys on the pull request", rule 11).
+A pull request no longer starts journeys, so a crewmate whose change it selects runs it on request before the merge card (`docs/testing.md`, "Journeys on request"), and it runs on Linux in every full check.
+
+A wait on another program spends almost no processor time, so the journey records it without failing it.
+The wait check (`scripts/main-thread-waits.ts`, in `pnpm check`) covers it instead: it refuses `execSync`, `execFileSync` and `spawnSync` in `src/main`, `src/core` and `src/shared`, except a file listed in `LISTED_WAITS` with its reason.
+A listed file that no longer calls one leaves the list.
+
+The journey sees only the work it drives, and only stalls of 50 ms or more, the recorder's threshold.
 
 ## Not covered
 

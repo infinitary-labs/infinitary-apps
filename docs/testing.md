@@ -182,6 +182,7 @@ Moved verbatim from `AGENTS.md` on 2026-09-24; `AGENTS.md` keeps a one-line poin
   Log the events the behavior promises in one ordered list on the page, count what a paint built (`rail-panels.spec.ts`), wait on the event that follows the one you need, or drive a unit test's timers on a fake clock (`jobManager.test.ts`, `piAccountBackend.test.ts`).
   A fake clock that also advances with real time (`shouldAdvanceTime`) can fire a timer before the test does, so a step that fires the next timer while real work runs holds the clock still with `vi.setTimerTickMode("manual")` (`sessionHost.test.ts`, INF-435).
   A journey that waits on one of the app's own passes - a redelivery after a restart, a check's reread, a placement sweep - spreads `SHORT_TICK` (`tests/e2e/launch.ts`) into its launch `env` rather than waiting out the app's one-minute tick: it names a two-second period in `INFINITARY_TICK_PERIOD_MS` (`docs/architecture.md`, "One clock"), which a packaged build ignores.
+  The main thread's own processor time is work, not a wall-clock window: a busy host stretches a stall's wall time but not the work the main thread did in it, so the freeze journey (`tests/e2e/main-thread-freeze.spec.ts`) grades its 250 ms line wherever it runs (`docs/freeze-recorder.md`, "Before a change merges").
   A budgeted duration goes through `tests/e2e/perf.ts` (`measured`, or `graded` for a bar with a 95th percentile and a maximum, tests tagged `@perf`): printed and annotated every run, graded only by `verify.yml`'s on-demand `perf` input on a quiet host, the same run that holds vitest's tests to their budgets (`docs/test-cohorts.md`, "Budgets"); the Biome plugin `tests/lint/e2e-no-ms-budgets.grit` refuses `toBeLessThan(X_MS)` anywhere else in `tests/e2e`.
 - Test temp directories: a test makes one only through `scratchDir(prefix)` (`tests/helpers/scratchDirs.ts`), removed after the vitest file or as the Playwright worker exits - never at module scope or in a Playwright `describe` body, which run in the runner (refused there).
   Both runners point TMPDIR at one private per-run root (`tests/helpers/runTempRoot.ts`, from each global setup) and FAIL the run naming whatever is still in it; `tests/run-temp-root.test.ts` drives that guard through a real vitest run.
@@ -428,7 +429,10 @@ Twenty-one failing sites in five days were certain breaks after an intentional p
 10. a spec, or a helper most journeys do not import, that reads words a string of `src/` serves, when the change alters what it reads.
     It reads them with a regular expression of its own holding a word of four or more letters, or its stand-in scripts a tool by name, as `name: "check_change"`, that most journeys do not script.
     Only quoted strings of two or more words on the diff's lines count; a comment, and a one-word value of the code such as `"checked"`, serve nothing.
-    The rule compares the pattern's matches, or the tool's mentions, on the removed and added strings of each file, so words that only moved choose nothing.
+    The rule compares the pattern's matches, or the tool's mentions, on the removed and added strings of each file, so words that only moved choose nothing;
+11. the freeze journey (`main-thread-freeze.spec.ts`), when the change edits code the main process runs, under `src/core/`, `src/main/` or `src/shared/`, other than a unit test (`FREEZE_JOURNEY`).
+    Any such code can hold the main thread on a long record with no hook, symbol or words changing (`docs/freeze-recorder.md`, "Before a change merges").
+    It is its own rule beside the fallback table, because it reaches nearly every change and the fallback table's replayed merges predate it.
 
 A journey calls the window's interface directly, such as `window.infinitary.retention.scope()`, so a changed answer breaks it with no hook, sentence or symbol of its own changing.
 `knowledge-gate.spec.ts` compares that answer whole, so a new field in it breaks the journey (INF-1136).

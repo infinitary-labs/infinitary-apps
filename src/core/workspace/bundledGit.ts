@@ -12,7 +12,8 @@ import { isExecutable } from "../userBin";
  * a Dock launch that sees none of the person's - still clones, commits and
  * sends up a change. Every host git runs it (`git.ts`), and a crewmate's
  * shell finds it first on its search path through the one-file directory
- * `resources/git-bin/` (`hostEnv.ts`).
+ * `git-bin/` (`hostEnv.ts`), whose `git` is the compiled launcher
+ * `scripts/git-launcher.c`.
  *
  * That git is built to be told where its parts are, so each run carries
  * the environment dugite's `setupEnvironment` gives it (its programs, its
@@ -29,7 +30,8 @@ export type BundledGitApp = {
 /**
  * Where this build keeps the app's git for `arch`, and the directory whose
  * only file is the `git` a crewmate's shell runs: next to the archive in a
- * packaged app, the checkout's `vendor/` and `resources/` otherwise.
+ * packaged app, the checkout's `vendor/` otherwise, where `pnpm install`
+ * built that launcher (`scripts/build-git-launcher.ts`).
  */
 export function bundledGitLocation(
   app: BundledGitApp,
@@ -42,14 +44,15 @@ export function bundledGitLocation(
       }
     : {
         dir: join(app.appDir, "vendor", "git", `darwin-${arch}`),
-        shimDir: join(app.appDir, "resources", "git-bin"),
+        shimDir: join(app.appDir, "vendor", "git-bin"),
       };
 }
 
 /**
  * The app's git for this build, or nothing: then every git is the one the
  * search path finds, as before phase 2. An unpackaged checkout that has
- * not vendored the trees (any platform but macOS) runs the system git, and
+ * not vendored the trees (any platform but macOS), or a Mac checkout with
+ * no developer tools to build the launcher, runs the system git, and
  * `INFINITARY_SYSTEM_GIT=1` asks for that on purpose, for a test; a packaged
  * app ignores the variable.
  */

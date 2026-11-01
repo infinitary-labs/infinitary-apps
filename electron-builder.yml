@@ -94,8 +94,10 @@ extraResources:
   - from: vendor/git
     to: git
   # The one-file directory that puts that git first on a crewmate's search
-  # path (src/core/hostEnv.ts).
-  - from: resources/git-bin
+  # path (src/core/hostEnv.ts): scripts/git-launcher.c, compiled for both
+  # chips in one file by scripts/build-git-launcher.ts (postinstall), so the
+  # universal merge takes it as it is.
+  - from: vendor/git-bin
     to: git-bin
   # The task commands' launcher (docs/axi-commands.md): one shell script and
   # its infinitary-<tool>-axi links, put first on the search path of a task's shell

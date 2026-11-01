@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "id": "git-launcher-compiled",
+      "kind": "fix",
+      "area": "crewmates",
+      "title": "Crewmates' git no longer takes a little system memory with every call",
+      "body": "On macOS 26, each git command a crewmate's tools ran kept about 1 KB of system memory until the Mac restarted. The app's git now starts in a way that keeps none, and it starts a little faster too.",
+      "noPicture": "The change is in how the app's git starts; no view or control changes.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

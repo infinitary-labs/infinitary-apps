@@ -189,7 +189,7 @@ A file whose slowest test fits the 5 s default under the rule carries none.
 | `tests/mockClaudeClient.test.ts` | the e2e Claude stub and a recording client, a shell | 5 s default |
 | `src/core/personal/sequencesSkill.test.ts` | real git, at the run's own priority | 5 s default |
 | `src/core/personal/liveWorkspace.test.ts` | real git, at the run's own priority | 5 s default |
-| `src/core/workspace/git.test.ts` | the app's own git and a stand-in, a shell | 5 s default |
+| `src/core/workspace/git.test.ts` | the app's own git and a stand-in, its launcher built with the C compiler, a shell | 5 s default |
 | `src/core/utilityQos.test.ts` | taskpolicy children | 5 s default |
 | `src/core/orchestrator/firstmateAgent.test.ts` | real git, at the run's own priority | 5 s default |
 | `tests/ensure-electron-installed.test.ts` | node | 5 s default |

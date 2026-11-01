@@ -1,7 +1,8 @@
 import { spawnSync } from "node:child_process";
 import { chmodSync, existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { delimiter, join } from "node:path";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, beforeAll, describe, expect, it } from "vitest";
+import { compileGitLauncher } from "../../../scripts/build-git-launcher";
 import { scratchDir } from "../../../tests/helpers/scratchDirs";
 import { configureBundledGit, hostEnv } from "../hostEnv";
 import { type BundledGitApp, bundledGitLocation, resolveBundledGit } from "./bundledGit";
@@ -10,12 +11,18 @@ import { git } from "./git";
 /**
  * The app's own git (git integration phase 2, `docs/forge.md` "The app's
  * own git"): every host git runs it when the build carries it, a
- * crewmate's shell finds it first on its search path through
- * `resources/git-bin/git`, and a checkout without it runs the system git.
+ * crewmate's shell finds it first on its search path through the compiled
+ * launcher `scripts/git-launcher.c`, and a checkout without it runs the
+ * system git.
  */
 
 const REPO_ROOT = join(__dirname, "../../..");
-const SHIM = join(REPO_ROOT, "resources", "git-bin", "git");
+/** The launcher, built from its source for this machine once per file. */
+let SHIM = "";
+beforeAll(() => {
+  SHIM = join(scratchDir("infinitary-git-launcher-"), "git");
+  compileGitLauncher(SHIM, { universal: false });
+});
 /** The three variables the app's git is told where its parts are with. */
 const PARTS = ["GIT_EXEC_PATH", "GIT_TEMPLATE_DIR", "GIT_CONFIG_SYSTEM"] as const;
 

@@ -29,6 +29,9 @@
 // configures; a person who set LFS up has their own on the search path,
 // and the app's git still finds it there.
 //
+// It also builds the launcher a crewmate's shell runs that git through,
+// vendor/git-bin/git (scripts/build-git-launcher.ts).
+//
 // Elsewhere than macOS this does nothing: a Linux package requires the
 // system's git (docs/linux-packages.md, "Git"), and an unpackaged checkout
 // without the trees runs the system git.
@@ -52,6 +55,7 @@ import { dirname, join } from "node:path";
 import { Readable } from "node:stream";
 import { pipeline } from "node:stream/promises";
 import { fileURLToPath } from "node:url";
+import { ensureGitLauncher } from "./build-git-launcher.ts";
 import { cloneOrCopy } from "./clone-or-copy.ts";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
@@ -199,4 +203,15 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
     );
     process.exit(1);
   });
+  // The launcher a crewmate's shell finds that git through (scripts/build-git-launcher.ts).
+  try {
+    ensureGitLauncher();
+  } catch (error) {
+    const reason = error instanceof Error ? error.message : String(error);
+    console.error(
+      `[infinitary] the app's git launcher could not be built (${reason}). ` +
+        "A packaged build cannot ship without it - re-run `pnpm install`.",
+    );
+    process.exit(1);
+  }
 }

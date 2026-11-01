@@ -2,7 +2,9 @@
 # check-bundled-git.sh - the app's own git in a built bundle (git integration
 # phase 2, docs/forge.md "The app's own git"): both architectures' trees, and
 # the one-file directory that puts that git first on a crewmate's search
-# path. The tree for the machine running the check must answer
+# path, whose launcher must be a compiled program for both chips, never a
+# script (INF-2173: macOS 26 keeps a kernel buffer for each script a
+# script-started tool runs). The tree for the machine running the check must answer
 # `git --version` through that directory with an empty environment - no
 # search path at all - the way a crewmate's shell runs it; the other is
 # checked for its architecture. Prints the version on success.
@@ -24,6 +26,9 @@ APP_DIR="${APP_DIR%/}"
 GIT_SHIM="$APP_DIR/Contents/Resources/git-bin/git"
 [[ -x "$GIT_SHIM" ]] \
   || fail "the app's git directory (Contents/Resources/git-bin/git) is missing or not executable"
+GIT_SHIM_KIND="$(file -b "$GIT_SHIM")"
+[[ "$GIT_SHIM_KIND" == *Mach-O*universal*arm64* && "$GIT_SHIM_KIND" == *x86_64* ]] \
+  || fail "the app's git launcher (Contents/Resources/git-bin/git) is not a program for both arm64 and x86_64: $GIT_SHIM_KIND"
 case "$(uname -m)" in
   arm64) HOST_GIT_ARCH=arm64 ;;
   *) HOST_GIT_ARCH=x64 ;;

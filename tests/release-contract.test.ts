@@ -443,8 +443,12 @@ describe("electron-builder configuration", () => {
       (entry) => ({ from: entry.from, to: entry.to }),
     );
     expect(entries).toContainEqual({ from: "vendor/git", to: "git" });
-    expect(entries).toContainEqual({ from: "resources/git-bin", to: "git-bin" });
-    expect(statSync(join(root, "resources/git-bin/git")).mode & 0o111).toBe(0o111);
+    expect(entries).toContainEqual({ from: "vendor/git-bin", to: "git-bin" });
+    if (process.platform === "darwin") {
+      // `pnpm install` built the launcher there, an executable for both chips
+      // (scripts/build-git-launcher.ts).
+      expect(statSync(join(root, "vendor/git-bin/git")).mode & 0o111).toBe(0o111);
+    }
     const pattern = macX64ArchFiles(parsed);
     const matches = universalMinimatch();
     expect(ARCHES).toEqual(["arm64", "x64"]);
@@ -1694,7 +1698,7 @@ function plantAppGit(contents: string): void {
   }
   const shimDir = join(contents, "Resources", "git-bin");
   mkdirSync(shimDir, { recursive: true });
-  writeFileSync(join(shimDir, "git"), readFileSync(join(root, "resources", "git-bin", "git")));
+  writeFileSync(join(shimDir, "git"), readFileSync(join(root, "vendor", "git-bin", "git")));
   chmodSync(join(shimDir, "git"), 0o755);
 }
 
@@ -1788,12 +1792,12 @@ describe("verify-app single-arch allowance is mac.x64ArchFiles", () => {
     spawnSync(join(root, "scripts", "verify-app.sh"), [app], { encoding: "utf8" });
 
   it.skipIf(!darwin)(
-    "passes a universal bundle carrying koffi's single-arch addons and the app's two gits",
+    "passes a universal bundle carrying koffi's single-arch addons, the app's two gits and their two-chip launcher",
     () => {
       const result = verifyApp(fixtureApp());
       expect(result.stderr).toBe("");
       expect(result.status).toBe(0);
-      expect(result.stdout).toContain("5 Mach-O files, 4 single-arch under mac.x64ArchFiles");
+      expect(result.stdout).toContain("6 Mach-O files, 4 single-arch under mac.x64ArchFiles");
       expect(result.stdout).toMatch(/, git version \d+\.\d+\.\d+\)$/m);
     },
   );
@@ -1829,6 +1833,23 @@ describe("verify-app single-arch allowance is mac.x64ArchFiles", () => {
       "the app's git directory (Contents/Resources/git-bin/git) is missing or not executable",
     );
   });
+
+  it.skipIf(!darwin)(
+    "fails a bundle whose git launcher is a script, not a program for both chips",
+    () => {
+      // INF-2173: macOS 26 keeps a kernel buffer for every #! script a
+      // script-started tool runs, so the launcher ships compiled.
+      const app = fixtureApp();
+      const launcher = join(app, "Contents/Resources/git-bin/git");
+      writeFileSync(launcher, '#!/bin/sh\nexec "$INFINITARY_GIT_DIR/bin/git" "$@"\n');
+      chmodSync(launcher, 0o755);
+      const result = verifyApp(app);
+      expect(result.status).toBe(1);
+      expect(result.stderr).toContain(
+        "the app's git launcher (Contents/Resources/git-bin/git) is not a program for both arm64 and x86_64",
+      );
+    },
+  );
 
   it.skipIf(!darwin)(
     "fails a single-arch Mach-O outside mac.x64ArchFiles, naming it, with no broken-pipe noise",

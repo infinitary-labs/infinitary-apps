@@ -310,7 +310,7 @@ export function withTaskShell(
  * The process environment with the git environment and `extra` laid over
  * it, and the host search path. Every spawn site in the core builds its
  * child's environment here. `INFINITARY_GIT_DIR` tells the app's `git` on the
- * search path (`resources/git-bin/git`) which tree to run.
+ * search path (`git-bin/git`, `scripts/git-launcher.c`) which tree to run.
  */
 export function hostEnv(extra: NodeJS.ProcessEnv = {}): NodeJS.ProcessEnv {
   // An app started from a Pi shell inherits that shell's limit and id. A

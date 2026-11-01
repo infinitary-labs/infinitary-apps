@@ -178,7 +178,7 @@ Moved verbatim from `AGENTS.md` on 2026-09-24; `AGENTS.md` keeps a one-line poin
   Log the events the behavior promises in one ordered list on the page, count what a paint built (`rail-panels.spec.ts`), wait on the event that follows the one you need, or drive a unit test's timers on a fake clock (`jobManager.test.ts`, `piAccountBackend.test.ts`).
   A fake clock that also advances with real time (`shouldAdvanceTime`) can fire a timer before the test does, so a step that fires the next timer while real work runs holds the clock still with `vi.setTimerTickMode("manual")` (`sessionHost.test.ts`, INF-435).
   A journey that waits on one of the app's own passes - a redelivery after a restart, a check's reread, a placement sweep - spreads `SHORT_TICK` (`tests/e2e/launch.ts`) into its launch `env` rather than waiting out the app's one-minute tick: it names a two-second period in `INFINITARY_TICK_PERIOD_MS` (`docs/architecture.md`, "One clock"), which a packaged build ignores.
-  A budgeted duration goes through `tests/e2e/perf.ts` (`measured`, tests tagged `@perf`): printed and annotated every run, graded only by `verify.yml`'s on-demand `perf` input on a quiet host, the same run that holds vitest's tests to their budgets (`docs/test-cohorts.md`, "Budgets"); the Biome plugin `tests/lint/e2e-no-ms-budgets.grit` refuses `toBeLessThan(X_MS)` anywhere else in `tests/e2e`.
+  A budgeted duration goes through `tests/e2e/perf.ts` (`measured`, or `graded` for a bar with a 95th percentile and a maximum, tests tagged `@perf`): printed and annotated every run, graded only by `verify.yml`'s on-demand `perf` input on a quiet host, the same run that holds vitest's tests to their budgets (`docs/test-cohorts.md`, "Budgets"); the Biome plugin `tests/lint/e2e-no-ms-budgets.grit` refuses `toBeLessThan(X_MS)` anywhere else in `tests/e2e`.
 - Test temp directories: a test makes one only through `scratchDir(prefix)` (`tests/helpers/scratchDirs.ts`), removed after the vitest file or as the Playwright worker exits - never at module scope or in a Playwright `describe` body, which run in the runner (refused there).
   Both runners point TMPDIR at one private per-run root (`tests/helpers/runTempRoot.ts`, from each global setup) and FAIL the run naming whatever is still in it; `tests/run-temp-root.test.ts` drives that guard through a real vitest run.
   Each global setup also drops the variables of the session that started the run (`tests/helpers/runnerSession.ts`: `CLAUDECODE`, `AI_AGENT`, `CLAUDE_*` and `ANTHROPIC_*`), so a run from a Claude crewmate starts its workers, apps and boxed Claude clients the way CI does; a test that wants one names it in the environment it builds.
@@ -911,6 +911,21 @@ Budgets are soft (`tests/e2e/perf.ts`), so one run reports every miss.
 Release-key handling is one sample of a React re-render at sixfold throttling and is noisy on a loaded host; judge it over several runs.
 The Chromium traces include actual key dispatch markers and are kept with the run; missing markers fail instead of making a whole trace look like post-release work.
 Set `INFINITARY_VOICE_HOLD_MS=60000` to check release after a minute of real capture, where the synchronous clip work used to grow with length.
+
+## The latency check
+
+`tests/e2e/latency.check.spec.ts` is INF-2078's latency measure, the one INF-1359 and INF-1361 run on their cards: the actual app on a record the captain's size (`tests/e2e/captainSizedRecord.ts`) with the freeze recorder on, six stand-in crewmates each writing a progress line a second (`tests/e2e/scenarios/writingCrew.ts`), while the captain types a question one key at a time and then scrolls the Tasks list with its landed work open.
+It is a perf check (`PERF_TAG`) that skips unless `INFINITARY_PERF_BUDGETS=1` on a Mac, so it runs on request: `journeys.yml` with `files` naming it and `perf` on, or `verify.yml` with `perf` on.
+Locally, run `pnpm build`, then `INFINITARY_PERF_BUDGETS=1 pnpm exec playwright test tests/e2e/latency.check.spec.ts --no-deps` on a quiet Mac.
+It grades the plan's bar, each a soft hold (`graded` in `tests/e2e/perf.ts`), so one run reports every miss:
+
+- no main thread stall of 50 ms or more while typing or scrolling, read from the freeze recorder's record (`docs/freeze-recorder.md`);
+- a key press round trip under 17 ms at its 95th percentile, timed from the test's press to the window's page done with it, which holds the driver's own dispatch of a few milliseconds and the app's main thread, where a stall holds every key;
+- Tasks list frames under 20 ms at their 95th percentile and under 50 ms at most, with under one in twenty dropped (over 25 ms), read by the Tasks panel's own animation frames while the list scrolls a step a frame and the crew's changes arrive;
+- each list redraw under 4 ms and the core's cost per change under 5 ms, read from a Chromium trace of a quiet stretch with only the crew writing, as the top-level tasks of the Tasks panel's main thread and of the app's main thread; a task that bundles several writes counts once.
+
+Every run prints each measure as a `[perf]` line, and writes `latency.json`, each stall in words and the trace into the run's own directory.
+The app ticks at its own period, so a minute pass may or may not fall in a stretch; judge a measure near its bar over several runs.
 
 ## The Linux source desktop
 

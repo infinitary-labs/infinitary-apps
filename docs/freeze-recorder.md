@@ -7,12 +7,13 @@ Its code is `src/core/freeze/freezeRecorder.ts`, and its watchdog's is `src/core
 
 It runs in an alpha build and nowhere else, which is the captain's answer on INF-2061: "activate it only in alpha builds".
 A run that sets `INFINITARY_FREEZE_RECORDER=1` turns it on too, so an end-to-end journey can read the record of an unpackaged build.
+The latency check reads it while the captain types and scrolls on a record the captain's size (`docs/testing.md`, "The latency check").
 A stable build and an ordinary development run never start it.
 
 ## How it notices a freeze
 
-The main thread sends a heartbeat every 50 ms (`HEARTBEAT_MS`) to a watchdog on its own worker thread, each carrying `process.threadCpuUsage()`.
-When no heartbeat has come for 100 ms (`FREEZE_THRESHOLD_MS`), the watchdog pauses the main thread once through the inspector (`inspector.Session.connectToMainThread()`), reads its call frames and resumes it.
+The main thread sends a heartbeat every 10 ms (`HEARTBEAT_MS`) to a watchdog on its own worker thread, each carrying `process.threadCpuUsage()`.
+When no heartbeat has come for 50 ms (`FREEZE_THRESHOLD_MS`, INF-2078's plan: the stall a person feels while typing or scrolling), the watchdog pauses the main thread once through the inspector (`inspector.Session.connectToMainThread()`), reads its call frames and resumes it.
 The line is written when the stall ends, when the next heartbeat brings the processor time the main thread spent during it.
 A gap the watchdog's own timer also slept through is the whole computer pausing, such as sleep, and is not recorded.
 

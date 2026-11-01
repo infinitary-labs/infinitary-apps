@@ -14,10 +14,16 @@ import { takeWatchdog } from "./watchdog";
  * arguments, values or text.
  */
 
-/** The main thread's heartbeat to the watchdog. */
-export const HEARTBEAT_MS = 50;
-/** A main thread silent this long is frozen: INF-2061's plan, under every freeze it found. */
-export const FREEZE_THRESHOLD_MS = 100;
+/**
+ * The main thread's heartbeat to the watchdog: a fifth of the line, so a
+ * stall at the line is told from one missed beat.
+ */
+export const HEARTBEAT_MS = 10;
+/**
+ * A main thread silent this long is frozen: INF-2078's plan, the stall a
+ * person feels as a missed frame or two while typing or scrolling.
+ */
+export const FREEZE_THRESHOLD_MS = 50;
 /** The record keeps the newest lines; older ones drop, so it never grows past this. */
 export const RECORD_MAX_LINES = 500;
 

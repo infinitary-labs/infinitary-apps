@@ -41,3 +41,33 @@ export function measured(name: string, values: number[], budgetMs: number): void
     expect.soft(max(values), `${name} against its ${budgetMs} ms budget`).toBeLessThan(budgetMs);
   }
 }
+
+/**
+ * `measured` for a bar with more than one bound (INF-2078's plan, the
+ * latency check): report `values` under `name`, in `unit`, and on a perf
+ * run hold their 95th percentile under `bar.p95` and their maximum under
+ * `bar.max`, each a soft hold as `measured`'s is.
+ */
+export function graded(
+  name: string,
+  values: number[],
+  bar: { p95?: number; max?: number },
+  unit = "ms",
+): void {
+  const bounds = [
+    ...(bar.p95 === undefined ? [] : [`p95<${bar.p95}`]),
+    ...(bar.max === undefined ? [] : [`max<${bar.max}`]),
+  ].join(" ");
+  const line = `n=${values.length} p95=${p95(values).toFixed(2)}${unit} max=${max(values).toFixed(2)}${unit} bar=${bounds}`;
+  test.info().annotations.push({ type: name, description: line });
+  console.log(`[perf] ${name} ${line}`);
+  if (!GRADES_BUDGETS) return;
+  if (bar.p95 !== undefined)
+    expect
+      .soft(p95(values), `${name} p95 against its ${bar.p95} ${unit} bar`)
+      .toBeLessThan(bar.p95);
+  if (bar.max !== undefined)
+    expect
+      .soft(max(values), `${name} max against its ${bar.max} ${unit} bar`)
+      .toBeLessThan(bar.max);
+}

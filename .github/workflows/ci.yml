@@ -1,22 +1,9 @@
 name: ci
 
-# The PR checks (captain decision B, 2026-09-15, scout
-# fm3000-ci-release-only-s1): everything that runs on Linux. The
-# macOS work - the full Playwright e2e suite, the universal package smoke,
-# the replay gate - lives in verify.yml's mac lane and runs inside every
-# alpha and on demand, never per PR or per push: that job was 98% of a
-# ~$200/month bill. A pull request runs no journeys and no phone check
-# (INF-2139): journeys.yml and phone.yml run on request.
-# The local green gate (AGENTS.md) is the e2e gate before a push. It runs
-# only the unit tests relevant to the change, so these jobs' tests are
-# where the full unit suite runs on every PR.
-# Several machines at once (FI3-1204, captain's direction 2026-10-07): the
-# hosted runner has two processors and no larger one is on offer, so the
-# commands one job used to run in a row are split across jobs. Together
-# they run exactly verify.yml's linux-checks lane: every vitest project, the
-# integration project in shards that cover it, and the probes a change
-# reaches, where linux-checks runs them all (FI3-1756's plan, approved by
-# the captain on 2026-10-14).
+# Pull requests retain typecheck, lint, build, affected probes and changed-test
+# repetitions. Full unit and integration sweeps run on main and on request,
+# never on pull requests (INF-2224, captain: "Move both to main").
+# Releases keep the full suite in verify.yml, including every probe.
 # Which Linux machines (INI-9's plan, approved by the captain): every job
 # runs on the label the repository variable LINUX_RUNNER names - the
 # placement service's shell-pc-linux, a fresh VM per job on the Windows PC,
@@ -35,10 +22,8 @@ concurrency:
   group: ci-${{ github.ref }}
   cancel-in-progress: true
 
-# Every pull request, a release's notes and record included, runs these
-# jobs unconditionally: every Linux gate must run. A job skipped by its own
-# condition would satisfy both GitHub and the app's green rule, so the probe
-# job picks its probes inside its one test step and passes with none.
+# The retained PR jobs run on every pull request, including release notes.
+# Full sweeps are explicitly excluded from pull requests at the job boundary.
 # Each test step ends at 30 minutes (INF-1083, the captain's choice for unit
 # tests): a stuck test or wait ends sooner, by its own cap of at most 10
 # minutes (docs/test-cohorts.md, "Budgets"), and these steps take about two.
@@ -68,6 +53,7 @@ jobs:
 
   # The in-memory cohorts (docs/test-cohorts.md).
   unit-tests:
+    if: github.event_name != 'pull_request'
     runs-on: ${{ vars.LINUX_RUNNER || 'ubuntu-latest' }}
     steps:
       - uses: actions/checkout@v4
@@ -88,6 +74,7 @@ jobs:
   # file's path), on machines of their own so nothing else loads the host
   # its budgets measure. Each shard reports even when the other fails.
   integration-tests:
+    if: github.event_name != 'pull_request'
     name: integration-tests (${{ matrix.shard }}/${{ strategy.job-total }})
     strategy:
       fail-fast: false

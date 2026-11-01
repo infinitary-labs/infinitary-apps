@@ -118,7 +118,7 @@ jobs:
       ref: ${{ inputs.ref || github.ref }}
       suite: full
   # The profile's lanes, as one matrix: an omitted lane is absent from the
-  # run, never a skipped job that reads as green. linux-checks is the PR
+  # run, never a skipped job that reads as green. linux-checks is the main
   # checks' commands in one job; mac is the full macOS verification. Each step names
   # the lane it belongs to.
   installer:
@@ -202,7 +202,7 @@ jobs:
       # red stage leaves every independent stage's result on the run, and the
       # job still ends red on any failure, which keeps release.yml from signing.
       #
-      # linux-checks: the commands of ci.yml's PR jobs, in one job on hosted Linux.
+      # linux-checks: the commands of ci.yml's main jobs, in one job on hosted Linux.
       # Its `pnpm test` runs every probe (docs/test-cohorts.md, "Probes"),
       # where the PR jobs run only the probes a change reaches. Each needs only
       # the install; its build is the shared one below.
@@ -214,7 +214,7 @@ jobs:
         run: pnpm lint:adherence
       - if: ${{ !cancelled() && matrix.lane == 'linux-checks' && steps.install.outcome == 'success' }}
         run: pnpm test
-        # Every probe as well as the PR checks' tests; a stuck one ends by its own cap (ci.yml says why).
+        # Every probe as well as the full unit and integration sweeps; a stuck one ends by its own cap (ci.yml says why).
         timeout-minutes: 60
         env:
           # Test time limits run on the load clock, and on the wall clock only on a graded run (docs/test-cohorts.md, "Budgets").

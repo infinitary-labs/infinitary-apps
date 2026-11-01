@@ -1011,13 +1011,14 @@ describe("local packaging identity (electron-builder.dev.yml)", () => {
   );
 
   /**
-   * FI3-262: a successful verify run cannot replace a skipped PR check.
+   * FI3-262 retains the real PR gates; INF-2224 moves only full sweeps to main.
    * Exercise the actual job condition with GitHub's expression evaluator,
    * including a release's own notes pull request, rather than looking for a
    * string. No upstream jobs: the implicit success() condition is true here.
    */
   it.each([
     ["main push", "push", "", "refs/heads/main"],
+    ["requested full sweep", "workflow_dispatch", "", "refs/heads/fm/task-ci-contract"],
     ["ordinary proposal", "pull_request", "fm/task-ci-contract", "refs/pull/42/merge"],
     ["release notes and record", "pull_request", "fm/task-release-alpha", "refs/pull/471/merge"],
   ])("runs the real Linux gate for %s", (_name, eventName, headRef, ref) => {
@@ -1039,7 +1040,10 @@ describe("local packaging identity (electron-builder.dev.yml)", () => {
       const expression = (job.if ?? "true").replace(/^\$\{\{\s*|\s*\}\}$/g, "");
       const ast = new Parser(new Lexer(expression).lex().tokens, ["github"], []).parse();
       const eligible = new Evaluator(ast, new data.Dictionary({ key: "github", value: github }));
-      expect(eligible.evaluate().coerceString(), id).toBe("true");
+      const fullSweep = id === "unit-tests" || id === "integration-tests";
+      expect(eligible.evaluate().coerceString(), id).toBe(
+        fullSweep && eventName === "pull_request" ? "false" : "true",
+      );
       // A no-op success would not solve the problem: keep the real gate and
       // fail on any gate step's failure, without introducing step-level skips.
       // INI-9's plan: every job runs where LINUX_RUNNER sends it, the
@@ -1085,13 +1089,13 @@ describe("local packaging identity (electron-builder.dev.yml)", () => {
   });
 
   /**
-   * FI3-1204: the PR gate runs its tests on several machines at once, and
+   * FI3-1204 / INF-2224: main runs full sweeps on several machines at once, and
    * split it must still run every test: each vitest project in exactly one
    * job, or in shards of one count that together cover it. The probe project
    * is the one exception (FI3-1756's plan): one job runs it through its
    * chooser, only the probes whose paths the change edits.
    */
-  it("runs every vitest project once across the PR jobs, a sharded one in shards that cover it", () => {
+  it("runs every vitest project once across the main jobs, a sharded one in shards that cover it", () => {
     const projects = (vitestConfig.test?.projects ?? []).map((project) => {
       const name =
         typeof project === "object" && "test" in project ? project.test?.name : undefined;

@@ -160,7 +160,7 @@ Provider-reported allowance meters are unchanged.
 | Check | Where it runs |
 | --- | --- |
 | `claudeModelProbe.test.ts` | where Claude Code is installed and signed in: the mac lane of `verify.yml`, developer Macs |
-| `piCatalogCheck.test.ts` - the **hermetic** Pi check over the pinned catalog through the real runtime factory | every PR (`ci.yml`'s `unit-tests`) |
+| `piCatalogCheck.test.ts` - the **hermetic** Pi check over the pinned catalog through the real runtime factory | main and releases (`ci.yml`'s `unit-tests` and `verify.yml`) |
 | `piCatalogProbe.test.ts` - the live pi.dev overlay | macOS only (the verify job and developer Macs), skipped when pi.dev does not answer |
 
 Answering a failure is a one-line data edit:

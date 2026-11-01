@@ -13,7 +13,7 @@ Linux keeps the unfiltered `pnpm test`, including every probe: no unit file move
 When adding a case that needs macOS, add its file to that list; the scratch Keychain probes retain their existing opt-in gates.
 `tests/release-contract.test.ts` uses real Vitest file discovery to check the Mac selection, its cohort assignments and its inclusion in the complete Linux suite.
 
-The PR checks (`ci.yml`) run the same projects on separate machines: `unit-tests` runs `pure`, `unit` and `unit-isolated`, each `integration-tests` job runs one `--shard` of `integration`, and `probe-tests` runs only the files of `probe` the change reaches ("Probes" below, `docs/testing.md`).
+Main pushes and requested runs (`ci.yml`) run the same projects on separate machines; PRs omit the full unit and integration sweeps (INF-2224): `unit-tests` runs `pure`, `unit` and `unit-isolated`, each `integration-tests` job runs one `--shard` of `integration`, and `probe-tests` runs only the files of `probe` the change reaches ("Probes" below, `docs/testing.md`).
 
 | Project | Files | Rule |
 | --- | --- | --- |

@@ -356,7 +356,7 @@ An affected request with no reached parts skips the native job; the summary and 
 Explicit `parts` still overrides automatic selection for diagnostic runs.
 Neither route starts a release, TestFlight or App Store step.
 It has no pull request, so `scripts/replaced-phone-runs.ts` cancels nothing and never stops its gate.
-No part on either device stops another, and inside the gate a failed generator check or Swift package test no longer skips the simulator tests (`scripts/phone-checks.ts`); every failure is reported and fails the job.
+No part on either device stops another, and inside the gate a failed Swift package test no longer skips the simulator tests (`scripts/phone-checks.ts`); every failure is reported and fails the job.
 For an isolated overlap proof, its optional `mac_runner` input selects a runner for that request only, as `verify.yml` does; shared runner variables stay unchanged.
 An explicit runner uses the shared `mac-mini-phone` queue; the fixed `PHONE_VIRTUAL_MAC` switch, when set, still takes precedence.
 Without that input, it takes the same line and runner as a pull request's phone check: its own fresh virtual Mac on the virtual-Mac label, otherwise the `mac-mini-phone` queue, without excluding desktop checks.

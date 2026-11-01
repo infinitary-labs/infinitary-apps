@@ -247,6 +247,17 @@ jobs:
           HOME="$install_home" CFFIXED_USER_HOME="$install_home" \
             INFINITARY_LOCAL_CODESIGN_DIR="$install_home/local-codesign" \
             pnpm install --frozen-lockfile --store-dir "$store"
+      # INF-2125 piece 3: the Swift packages' repositories, which the package tests and the app build
+      # fetch. Only main saves them, since a pull request reads its base branch's saves and never another
+      # pull request's (INF-724); a changed lockfile restores main's newest and fetches the rest.
+      - id: swift-packages
+        name: Restore main's Swift packages
+        if: ${{ !vars.PHONE_VIRTUAL_MAC }}
+        uses: actions/cache/restore@v4
+        with:
+          path: ${{ runner.temp }}/swift-packages
+          key: swift-packages-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('Application Support/firstmate/ios/Infinitary/InfinitaryKit/Package.resolved', 'Application Support/firstmate/ios/Infinitary/Infinitary.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved') }}
+          restore-keys: swift-packages-${{ runner.os }}-${{ runner.arch }}-
       # The clone has no simulator until a device gate starts, and the last step
       # deletes it however the job ends, a replaced version's included.
       - id: vm
@@ -272,7 +283,7 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ github.token }}
       # test-phone owns a fresh HOME, real fixture and simulators, and disables signing.
-      # It checks generated files, Swift trust, native recovery and the published client.
+      # It checks Swift trust, native recovery and the published client; pnpm check checks generated files.
       # INF-662: one gate checks and builds once, then runs the iPhone and the iPad side by
       # side, each device on one simulator it starts once (INF-1438) and each part on its own
       # test home; either failing fails it.
@@ -299,6 +310,15 @@ jobs:
           INFINITARY_PERF_BUDGETS: ${{ inputs.perf && '1' || '0' }}
           PHONE_RECORDING: ${{ inputs.recording && '1' || '' }}
           INFINITARY_PHONE_STOP_EARLY: ${{ github.event_name == 'pull_request' && '1' || '0' }}
+          INFINITARY_PHONE_PACKAGE_CACHE: ${{ runner.temp }}/swift-packages
+      - name: Save the Swift packages for pull requests
+        # The gate fetched them once it started, passing or failing; a save that fails never fails main's check.
+        if: ${{ always() && !vars.PHONE_VIRTUAL_MAC && github.ref == 'refs/heads/main' && steps.swift-packages.outputs.cache-hit != 'true' && (steps.both.outcome == 'success' || steps.both.outcome == 'failure') }}
+        continue-on-error: true
+        uses: actions/cache/save@v4
+        with:
+          path: ${{ runner.temp }}/swift-packages
+          key: ${{ steps.swift-packages.outputs.cache-primary-key }}
       - name: Delete the virtual Mac
         if: ${{ always() && steps.vm.outcome != 'skipped' }}
         run: scripts/virtual-mac/phone.sh delete

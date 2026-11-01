@@ -229,6 +229,9 @@ const recording = {
 let fixture: Awaited<ReturnType<typeof import("../tests/helpers/phoneHome").startPhoneHome>> | undefined;
 const project = ["-project", "ios/Infinitary/Infinitary.xcodeproj", "-scheme", "Infinitary",
   "-xcconfig", "ios/Infinitary/SimulatorTests.xcconfig"];
+// INF-2125 piece 3: the Swift packages' fetched repositories, which the package tests and Xcode share. CI keeps
+// them outside the gate's scratch folder, restored from the nightly check of main; otherwise they stay in it.
+const packageCache = process.env.INFINITARY_PHONE_PACKAGE_CACHE || join(root, "swift-packages");
 // INF-1438 (the captain's "Start each simulated device once per phone check, not once per part"): the gate
 // owns one simulator per device, from create to delete, and runs the device's parts on it one after the
 // other, each as its own gate with its own test home and a clean app. Do not borrow or erase a developer's
@@ -300,8 +303,20 @@ const photosReady = (lane: Lane, stopping: AbortSignal) => lane.photos ??= (asyn
 // by side, at most --simulators of them at once.
 const everyPart = async () => {
   phoneXcode(await run("xcodebuild", ["-version"]));
-  await run("xcodebuild", [...project, "-destination", "generic/platform=iOS Simulator",
-    "-derivedDataPath", join(root, "DerivedData"), `ARCHS=${process.arch === "x64" ? "x86_64" : "arm64"}`, "build-for-testing"]);
+  // INF-2125 piece 3: the simulators the first lanes use start while Xcode builds, so their first parts
+  // begin as the build ends; a lane past --simulators starts its own when a place frees.
+  const starting = new Map([...new Set(jobs.map((job) => job.device))].slice(0, simulators)
+    .map((device) => [device, startSimulator(device)] as const));
+  // A start that fails is heard by its lane's open, and every start settles before the gate's cleanup.
+  for (const started of starting.values()) started.catch(() => {});
+  try { await everyPartOn(starting); }
+  finally { await Promise.allSettled(starting.values()); }
+};
+const everyPartOn = async (starting: Map<PhoneDevice, Promise<Lane>>) => {
+  const building = Date.now();
+  await run("xcodebuild", [...project, "-destination", "generic/platform=iOS Simulator", "-derivedDataPath", join(root, "DerivedData"),
+    "-packageCachePath", packageCache, `ARCHS=${process.arch === "x64" ? "x86_64" : "arm64"}`, "build-for-testing"]);
+  console.log(`Built the app for testing in ${((Date.now() - building) / 60_000).toFixed(1)} minutes`);
   const products = join(root, "DerivedData", "Build", "Products");
   const plans = readdirSync(products).filter((name) => name.endsWith(".xctestrun"));
   const [plan] = plans;
@@ -350,7 +365,7 @@ const everyPart = async () => {
   // Any part failing fails the gate; with --stop-early the first failure stops the rest.
   const outcomes = await runDeviceLanes(jobs, simulators, {
     open: async (device, stopping) => {
-      const lane = await startSimulator(device).catch((error: Error) => {
+      const lane = await (starting.get(device) ?? startSimulator(device)).catch((error: Error) => {
         throw new Error(`${device}: its simulator could not start, so none of its parts ran: ${error.message}`);
       });
       // Photos gets ready beside the device's first part; the device's first part that chooses a photo hears how it went.
@@ -446,14 +461,14 @@ try {
     // INF-1596: a killed run never deleted its simulator or scratch folder; neither stops this gate.
     await removePhoneLeftovers(run, env).catch((error: Error) =>
       console.log(`Leftovers of earlier phone checks were not removed: ${error.message}`));
-    // A failed check here is reported, and the simulator tests still run (INF-663).
+    // A failed check here is reported, and the simulator tests still run (INF-663). INF-2125 piece 3: the
+    // generated files' checks are `pnpm check`'s, which every pull request runs on Linux.
+    const testing = Date.now();
     failures = await runEveryCheck([
-      () => run("node", ["scripts/generate-phone-contract.ts", "--check"]),
-      () => run("node", ["scripts/generate-phone-theme.ts", "--check"]),
-      () => run("node", ["scripts/generate-phone-scene.ts", "--check"]),
-      () => run("node", ["scripts/generate-phone-cards.ts", "--check"]),
-      () => run("swift", ["test", "--package-path", "ios/Infinitary/InfinitaryKit", "--scratch-path", join(root, "swift-build")]),
+      () => run("swift", ["test", "--package-path", "ios/Infinitary/InfinitaryKit", "--scratch-path", join(root, "swift-build"),
+        "--cache-path", packageCache]),
     ], () => interrupted);
+    console.log(`Ran the Swift package tests in ${((Date.now() - testing) / 60_000).toFixed(1)} minutes`);
     for (const failure of failures) console.log(`::error::${failure}`);
   }
   await (values.xctestrun ? onePart() : everyPart());

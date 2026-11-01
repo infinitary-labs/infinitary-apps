@@ -152,30 +152,38 @@ function condition(step: Step): string {
     : `success() && (${written})`;
 }
 
+const PULL_REQUEST = { event_name: "pull_request", ref: "refs/pull/1/merge" };
 // The native job's steps that run, in order, for a value of the switch, with every
-// step succeeding (or the job failed, when `failed`) and each replacement check reading `replaced`.
+// step succeeding (or the job failed, when `failed`) and each replacement check reading `replaced`;
+// `outputs` gives a step's other outputs by its id.
 function stepsThatRun(
   virtualMac: string,
   replaced = "false",
   failed = false,
   inputs: Plain = {},
+  github: Plain = PULL_REQUEST,
+  outputs: Record<string, Plain> = {},
 ): Step[] {
   const seen: Plain = {};
   const ran: Step[] = [];
   for (const step of workflow.jobs[NATIVE_JOB].steps as Step[]) {
     const runs = holds(
       condition(step),
-      { steps: seen, vars: { PHONE_VIRTUAL_MAC: virtualMac }, inputs },
+      { steps: seen, vars: { PHONE_VIRTUAL_MAC: virtualMac }, inputs, github },
       { failed },
     );
     const reading = runs && step.run?.includes("stop-if-replaced") ? replaced : "";
     if (step.id)
-      seen[step.id] = { outcome: runs ? "success" : "skipped", outputs: { replaced: reading } };
+      seen[step.id] = {
+        outcome: runs ? "success" : "skipped",
+        outputs: { replaced: reading, ...(runs ? outputs[step.id] : {}) },
+      };
     if (runs) ran.push(step);
   }
   return ran;
 }
 const RESULTS = "Keep native results and connection readings";
+const SAVE_PACKAGES = "Save the Swift packages for pull requests";
 const names = (steps: Step[]) => steps.map((step) => step.name ?? step.uses ?? "");
 const isGate = (step: Step) => DEVICE_GATES.includes(step.name ?? "");
 
@@ -463,7 +471,9 @@ describe("the native pull-request gate", () => {
   it("runs today's steps on the Mac mini while the virtual Mac switch is off", () => {
     const all = names(workflow.jobs[NATIVE_JOB].steps);
     expect(names(stepsThatRun(OFF))).toEqual(
-      all.filter((name) => !VIRTUAL_MAC_STEPS.includes(name) && name !== RESULTS),
+      all.filter(
+        (name) => !VIRTUAL_MAC_STEPS.includes(name) && name !== RESULTS && name !== SAVE_PACKAGES,
+      ),
     );
     // INF-662 piece 1: one gate checks and builds once
     // and runs both devices side by side; the switch, when set, sends it to the virtual Mac.
@@ -593,6 +603,57 @@ describe("the native pull-request gate", () => {
           "node scripts/replaced-phone-runs.ts stop-if-replaced",
         );
     }
+  });
+});
+
+// INF-2125 piece 3 (the captain's "i want to get to a state where each PR's phone check finishes very
+// quickly", approved plan: "reuse main's SwiftPM package cache"): a pull request reads the Swift packages
+// main saved, and only main saves them, since a pull request's own save no other run reads (INF-724).
+describe("the phone check's Swift packages", () => {
+  const steps = workflow.jobs[NATIVE_JOB].steps as (Step & { with?: Plain })[];
+  const restore = steps.find((step) => step.id === "swift-packages")!;
+  const save = steps.find((step) => step.name === SAVE_PACKAGES)!;
+  const MAIN = { event_name: "workflow_dispatch", ref: "refs/heads/main" };
+  const BRANCH = { event_name: "workflow_dispatch", ref: "refs/heads/fm/task-1" };
+  const ran = (github: Plain, hit = "", virtualMac = OFF) =>
+    names(
+      stepsThatRun(virtualMac, "false", false, {}, github, {
+        "swift-packages": { "cache-hit": hit },
+      }),
+    );
+  it("restores into the folder the gate reads, and saves that folder under the restore's own key", () => {
+    const gate = steps.find(isGate)!;
+    expect(gate.env?.INFINITARY_PHONE_PACKAGE_CACHE).toBe(restore.with?.path);
+    expect(save.with?.path).toBe(restore.with?.path);
+    expect(save.with?.key).toBe("${{ steps.swift-packages.outputs.cache-primary-key }}");
+    expect(String(restore.with?.key).startsWith(String(restore.with?.["restore-keys"]))).toBe(true);
+  });
+  it("restores on every route on this Mac, and saves only from main when nothing matched", () => {
+    for (const github of [PULL_REQUEST, MAIN, BRANCH]) expect(ran(github)).toContain(restore.name);
+    expect(ran(PULL_REQUEST)).not.toContain(SAVE_PACKAGES);
+    expect(ran(BRANCH)).not.toContain(SAVE_PACKAGES);
+    expect(ran(MAIN)).toContain(SAVE_PACKAGES);
+    // A failed gate fetched the packages too; an exact match has nothing new to save.
+    const failedGate = {
+      both: { outcome: "failure" },
+      "swift-packages": { outputs: { "cache-hit": "" } },
+    };
+    expect(
+      holds(
+        condition(save),
+        { steps: failedGate, vars: { PHONE_VIRTUAL_MAC: OFF }, github: MAIN },
+        { failed: true },
+      ),
+    ).toBe(true);
+    expect(ran(MAIN, "true")).not.toContain(SAVE_PACKAGES);
+    // A replaced version never started its gate, so it fetched nothing.
+    expect(names(stepsThatRun(OFF, "true", false, {}, MAIN))).not.toContain(SAVE_PACKAGES);
+  });
+  it("neither restores nor saves when the gate runs inside the virtual Mac's clone", () => {
+    for (const github of [PULL_REQUEST, MAIN])
+      expect(ran(github, "", TOGETHER).filter((name) => name.includes("Swift packages"))).toEqual(
+        [],
+      );
   });
 });
 

@@ -461,6 +461,10 @@ It reads the process list itself, never through the command log the evidence kee
 A part's results are in its own folder, inside the device's folder with `--both`, and `--part` runs only the named parts.
 A `--both` run of every part writes each part's minutes on each device to `part-times.json` in the evidence folder, which a pull request's phone check reads to keep within its budget.
 The build is `xcodebuild build-for-testing` for any simulator, and each part runs `test-without-building` from a copy of the built test plan that names its own test home and selects its tests.
+The simulators of the devices that run side by side start while that build runs, so the first parts begin as it ends; a device past `--simulators` starts its own when a place frees (INF-2125).
+The Swift package tests and the build share one folder of fetched package repositories, so the build fetches nothing the package tests already did.
+It is `INFINITARY_PHONE_PACKAGE_CACHE` when set, otherwise inside the gate's scratch folder.
+`phone.yml` sets it outside that folder and restores it from the newest save of `main`, matched on both package lockfiles; only a run of `main` with no exact match saves it, since a pull request reads its base branch's saves and never another pull request's.
 Any part failing fails the gate.
 Local runs stop at their first failed part by default, so a failed repeat ends after cleanup and returns its load-line place rather than running the remaining parts (INF-2014).
 With this default or `--stop-early`, which a pull request's phone check sets through `INFINITARY_PHONE_STOP_EARLY=1`, the first failed part ends the part still running on the other device, as an interrupted part does, and starts no other; every started simulator is still deleted, and the gate names the failed, stopped and unstarted parts and writes no `part-times.json`.
@@ -647,7 +651,8 @@ Shared modules, connection/device code, general packages and the lockfile alone 
 Every pull request still checks on Linux that the generated file is current, through `pnpm check` (`node scripts/generate-phone-contract.ts --check`).
 Its Linux chooser reads the full git comparison with `scripts/affected-phone.ts`; an unreadable comparison runs the gate, and an unrelated change explicitly skips the native job.
 A default run on request (`workflow_dispatch`, such as the nightly check of `main`) skips the chooser and runs every part on both devices, then keeps each part's minutes as `part-times.json` in `phone-logs`; it has no pull request, so nothing replaces or cancels it, and it starts no release step (`docs/testing.md`, "The phone check on request").
-Inside a gate, a failed generator check or Swift package test is reported and the simulator tests still run (`scripts/phone-checks.ts`).
+Inside a gate, a failed Swift package test is reported and the simulator tests still run (`scripts/phone-checks.ts`).
+The gate does not check the generated Swift files: `pnpm check` does on every pull request, on Linux.
 The native job uses `VIRTUAL_MAC_RUNNER` when it is set, otherwise `MAC_RUNNER`, falling back to the `mini-mac` label rather than a paid hosted Mac, and retains result bundles, logs and connection readings as `phone-results` when the job fails or a run on request records; a passing check uploads none of its result bundles, about 530 MB.
 It also uploads command logs separately as `phone-logs`, so an Xcode failure can be read without downloading screenshot-heavy result bundles.
 Each part's live simulator log goes to `phone-simulator-logs` instead, on every run: one part's log can pass 100 MB, and a full gate's twelve would take `phone-logs` past the app's 64 MiB artifact download (INF-2053).

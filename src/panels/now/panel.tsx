@@ -25,6 +25,7 @@ import {
 } from "react";
 import { groupNavKey, nowNavItems, nowNavMove, rovingKey, rowNavKey } from "./nav";
 import styles from "./panel.css";
+import { reconcileBoard } from "./reconcile";
 import {
   earlierRowsOf,
   failedStartCount,
@@ -41,8 +42,8 @@ import {
   projectNameOf,
   rowStartOf,
   rowsOf,
+  rowTrailing,
   summaryOf,
-  trailingOf,
   wordOf,
 } from "./rows";
 
@@ -110,6 +111,14 @@ import {
  * newest row's own write time to its paint, for a write after this page
  * was born). tests/e2e/now-panel.spec.ts reads them.
  */
+
+/**
+ * The rows the paint in progress built (INF-2105): reset as the panel
+ * renders, counted by each row that renders, and carried on the paint's
+ * `now:render` measure as `detail.rows`, so a journey reads the work a
+ * change caused rather than its duration alone.
+ */
+let paintedRows = 0;
 
 export default function TasksPanel({ reads, point, view, asks, rail, tasks }: PanelProps) {
   const [board, setBoard] = useState<PanelTaskBoard | null>(null);
@@ -212,8 +221,13 @@ export default function TasksPanel({ reads, point, view, asks, rail, tasks }: Pa
     return () => document.removeEventListener("keydown", onKey);
   }, [peek]);
 
-  // The board the app pushed, as it lands.
-  useEffect(() => reads.subscribe("tasks.board", setBoard), [reads]);
+  // The board the app pushed, as it lands, reconciled against the one held:
+  // a row the change never touched keeps its object, so its memoized paint
+  // holds, and a push that moves nothing listed is no new board at all.
+  useEffect(
+    () => reads.subscribe("tasks.board", (next) => setBoard((held) => reconcileBoard(held, next))),
+    [reads],
+  );
 
   // On its rail once the board holds an ask's record or a row it lists,
   // saying why not to a command that would open it; collapsed, it says how
@@ -247,12 +261,20 @@ export default function TasksPanel({ reads, point, view, asks, rail, tasks }: Pa
     if (earlier.length > 0) next.set("earlier", earlier);
     return next;
   }, [board, query, project, found, typed]);
-  if (board) performance.mark("now:render:start");
+  if (board) {
+    performance.mark("now:render:start");
+    paintedRows = 0;
+  }
 
-  // One paint of the groups, measured when it lands; the lag from the app's
-  // write is measured only for a write after this page was born.
+  // One paint of the groups, measured when it lands, with the rows it built;
+  // the lag from the app's write is measured only for a write after this
+  // page was born.
   useLayoutEffect(() => {
-    if (board) performance.measure("now:render", "now:render:start");
+    if (!board) return;
+    performance.measure("now:render", {
+      start: "now:render:start",
+      detail: { rows: paintedRows },
+    });
   });
   useLayoutEffect(() => {
     if (!board) return;
@@ -266,24 +288,46 @@ export default function TasksPanel({ reads, point, view, asks, rail, tasks }: Pa
     if (newest > newestSeen.current) newestSeen.current = newest;
   }, [board]);
 
+  const listed = useMemo(
+    () => [...rows.values()].flatMap((group) => group.map((row) => row.task)),
+    [rows],
+  );
+  // The rows a dependency line needs placed: the two ends of each listed
+  // blocked-by pair. Only they are measured, never the list (INF-2105).
+  const edgeEnds = useMemo(() => {
+    const idByKey = new Map(listed.map((task) => [task.key, task.id]));
+    const ends = new Set<string>();
+    for (const task of listed) {
+      for (const key of task.blockedBy) {
+        const blocker = idByKey.get(key);
+        if (blocker === undefined) continue;
+        ends.add(task.id);
+        ends.add(blocker);
+      }
+    }
+    return ends;
+  }, [listed]);
+
   // Position and inspection have different lifetimes. Only a changed list
   // or its layout measures rows; hovering reuses those positions, including
   // when inspection exposes an overflow dependency lane.
-  // biome-ignore lint/correctness/useExhaustiveDependencies: rows and expanded describe the DOM whose positions the observer reads
+  // biome-ignore lint/correctness/useExhaustiveDependencies: the edge ends and the expanded groups describe the DOM whose positions the observer reads
   useLayoutEffect(() => {
     const root = groupsRef.current;
     if (!root) return;
     const measure = () => {
       const next = new Map<string, number>();
-      const rootBox = root.getBoundingClientRect();
-      for (const row of root.querySelectorAll<HTMLElement>("[data-now-row]")) {
-        const id = row.dataset.nowRow;
-        if (!id) continue;
-        const box = row.getBoundingClientRect();
-        // Folded and filtered rows are absent. A row not yet laid out
-        // waits for the resize observer, which stays attached across hovers.
-        if (box.height < 1) continue;
-        next.set(id, Math.round(box.top - rootBox.top + box.height / 2));
+      if (edgeEnds.size > 0) {
+        const rootBox = root.getBoundingClientRect();
+        for (const row of root.querySelectorAll<HTMLElement>("[data-now-row]")) {
+          const id = row.dataset.nowRow;
+          if (!id || !edgeEnds.has(id)) continue;
+          const box = row.getBoundingClientRect();
+          // Folded and filtered rows are absent. A row not yet laid out
+          // waits for the resize observer, which stays attached across hovers.
+          if (box.height < 1) continue;
+          next.set(id, Math.round(box.top - rootBox.top + box.height / 2));
+        }
       }
       setPlaced((current) =>
         current.size === next.size && [...next].every(([id, y]) => current.get(id) === y)
@@ -301,11 +345,7 @@ export default function TasksPanel({ reads, point, view, asks, rail, tasks }: Pa
       observer.disconnect();
       root.removeEventListener("animationend", measure);
     };
-  }, [rows, expanded]);
-  const listed = useMemo(
-    () => [...rows.values()].flatMap((group) => group.map((row) => row.task)),
-    [rows],
-  );
+  }, [edgeEnds, expanded]);
   const inspectedId = restedId ?? view.litTaskId;
   const edges = useMemo(
     () =>
@@ -760,7 +800,7 @@ export function Group({
                 group={group}
                 task={task}
                 depth={depth}
-                board={board}
+                projectName={projectNameOf(board, task)}
                 singleProject={singleProject}
                 selected={selectedTaskIds.includes(task.id)}
                 lit={litTaskId === task.id}
@@ -785,12 +825,16 @@ export function Group({
   );
 }
 
-/** Only rows whose data, highlight, selection or Tab stop changed paint again. */
+/**
+ * Only rows whose data, highlight, selection or Tab stop changed paint
+ * again: every input is a value or a stable callback, and the task object
+ * holds across pushes that never touched it (./reconcile.ts).
+ */
 const Row = memo(function Row({
   group,
   task,
   depth,
-  board,
+  projectName,
   singleProject,
   selected,
   lit,
@@ -811,7 +855,8 @@ const Row = memo(function Row({
   group: PanelGroup;
   task: PanelTaskRow;
   depth: number;
-  board: PanelTaskBoard;
+  /** The project's display name, for the row's label; shown after the title unless one project is meant. */
+  projectName: string;
   singleProject: boolean;
   selected: boolean;
   lit: boolean;
@@ -831,11 +876,12 @@ const Row = memo(function Row({
   onStart?: (task: PanelTaskRow) => void;
   onFocusStart?: (start: HTMLElement, row: HTMLElement, task: PanelTaskRow) => void;
 }) {
+  paintedRows += 1;
   const word = wordOf(task);
-  const trailing = trailingOf(board, task, singleProject);
+  const trailing = rowTrailing(task, singleProject ? "" : projectName);
   const place = task.place ? ` · ${task.place.where}` : "";
   const waiting = task.blockedBy.length > 0 ? ` · Blocked by ${task.blockedBy.join(", ")}` : "";
-  const label = `${task.key} · ${task.title} · ${projectNameOf(board, task)}${place} · ${taskStatusLabel(taskStatusOf(task))}${waiting}`;
+  const label = `${task.key} · ${task.title} · ${projectName}${place} · ${taskStatusLabel(taskStatusOf(task))}${waiting}`;
   const row = (
     <button
       type="button"

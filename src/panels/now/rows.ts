@@ -121,16 +121,49 @@ export function trailingOf(
   board: PanelTaskBoard,
   task: PanelTaskRow,
   singleProject = hasSingleRegisteredRepoProject(board),
-): { name: string; place: string; outOfReach: boolean; connecting: boolean; reach: string } {
+): RowTrailing {
+  return rowTrailing(task, singleProject ? "" : projectNameOf(board, task));
+}
+
+export type RowTrailing = {
+  name: string;
+  place: string;
+  outOfReach: boolean;
+  connecting: boolean;
+  reach: string;
+};
+
+/**
+ * The trailing chrome from the project's name the row shows ("" where only
+ * one project could be meant): what a row's paint reads, so a row takes the
+ * name as a value and paints again only when it or the task changed.
+ */
+export function rowTrailing(task: PanelTaskRow, name: string): RowTrailing {
   const connecting = task.place?.reach === "connecting";
   return {
-    name: singleProject ? "" : projectNameOf(board, task),
+    name,
     place: task.place?.where ?? "",
     // The row says why its computer cannot take work now: out of reach, or connecting.
     outOfReach: task.place?.reach !== undefined && task.place.reach !== "in-reach",
     connecting,
     reach: connecting ? "connecting" : task.place?.noNewWork ? "takes no new work" : "out of reach",
   };
+}
+
+/**
+ * The groups of a board, read once per board: the panel reads them for its
+ * rows, its project chips and the newest listed write on every push, and
+ * a push's board holds its identity until the next change (INF-2105).
+ */
+const groupsByBoard = new WeakMap<PanelTaskBoard, ReadonlyMap<string, NowGroup | null>>();
+
+function groupsOf(board: PanelTaskBoard): ReadonlyMap<string, NowGroup | null> {
+  let groups = groupsByBoard.get(board);
+  if (!groups) {
+    groups = nowGroupsOf(board);
+    groupsByBoard.set(board, groups);
+  }
+  return groups;
 }
 
 function matches(task: PanelTaskRow, filter: NowFilter): boolean {
@@ -145,7 +178,7 @@ function matches(task: PanelTaskRow, filter: NowFilter): boolean {
  * child placed under its parent when both are in the same group.
  */
 export function rowsOf(board: PanelTaskBoard, filter: NowFilter): Map<NowGroup, NowRow[]> {
-  const taskGroups = nowGroupsOf(board);
+  const taskGroups = groupsOf(board);
   const byGroup = new Map<NowGroup, PanelTaskRow[]>();
   const groupById = new Map<string, NowGroup>();
   for (const task of board.tasks) {
@@ -218,7 +251,7 @@ export type ProjectChip = { id: string | null; key: string };
  * projects with rows, and only when more than one has any.
  */
 export function projectChipsOf(board: PanelTaskBoard): ProjectChip[] {
-  const groups = nowGroupsOf(board);
+  const groups = groupsOf(board);
   const withRows = new Set(
     board.tasks.filter((task) => groups.get(task.id) != null).map((task) => task.projectId),
   );
@@ -229,7 +262,7 @@ export function projectChipsOf(board: PanelTaskBoard): ProjectChip[] {
 
 /** The newest write among the rows the panel lists, for the lag measure. */
 export function newestListedWrite(board: PanelTaskBoard): number {
-  const groups = nowGroupsOf(board);
+  const groups = groupsOf(board);
   let newest = 0;
   for (const task of board.tasks) {
     if (groups.get(task.id) != null && task.updatedAt > newest) newest = task.updatedAt;

@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "id": "tasks-list-changes-in-place",
+      "kind": "improvement",
+      "area": "tasks",
+      "title": "The Tasks list takes a change in place",
+      "body": "When a task changes, the Tasks list now redraws only the rows that change and measures only the rows a dependency line needs, so a long list stays smooth while your crew works. Every row stays in the page.",
+      "noPicture": "The list looks the same before and after; the change is how much work each redraw does.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { macPagesFromVmStat, macPressureFromSysctl, withMacMemoryFacts } from "./resourceMemory";
+import {
+  macPagesFromVmStat,
+  macPressureFromSysctl,
+  memoryPressureStandIn,
+  withMacMemoryFacts,
+} from "./resourceMemory";
 
 /**
  * INF-213: the 4:10:05 PM vm_stat of this MacBook, page size 16 KiB as vm_stat
@@ -40,5 +45,20 @@ describe("macOS memory facts from the real 4:10:05 PM reading", () => {
         memoryPressure: "normal",
       }).inactiveBytes,
     ).toBe(553_134 * 16_384);
+  });
+});
+
+// Intent: INF-2108. A journey on a loaded Mac reads the level its launch
+// stands in, never that Mac's own, which woke its first mate mid-test.
+describe("a stood-in memory pressure level", () => {
+  it("replaces macOS's level in a development run, and never in a packaged build", () => {
+    const env = { INFINITARY_MEMORY_PRESSURE: "normal" };
+    expect(memoryPressureStandIn(env, false)).toBe("normal");
+    expect(memoryPressureStandIn({ INFINITARY_MEMORY_PRESSURE: " warning\n" }, false)).toBe(
+      "warning",
+    );
+    expect(memoryPressureStandIn(env, true)).toBeUndefined();
+    expect(memoryPressureStandIn({}, false)).toBeUndefined();
+    expect(memoryPressureStandIn({ INFINITARY_MEMORY_PRESSURE: "2" }, false)).toBeUndefined();
   });
 });

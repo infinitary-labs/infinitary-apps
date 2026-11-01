@@ -445,6 +445,11 @@ export function hermeticEnv(input: {
     // unless the spec names its own, so no test reads this Mac's own
     // privacy log (docs/macos-privacy.md).
     INFINITARY_PRIVACY_LOG: "/usr/bin/true",
+    // macOS's memory pressure is the spec's, never this Mac's own
+    // (src/main/host/resourceMemory.ts): a loaded runner's pressure wakes
+    // the first mate, which with no signed-in model puts up a sign-in card
+    // the journey never asked for. A spec names another level in `env`.
+    INFINITARY_MEMORY_PRESSURE: "normal",
     // No GitHub CLI unless the spec names its own stand-in, so no test finds
     // or asks the one installed on this Mac (docs/forge.md, "GitHub CLI's sign-in").
     INFINITARY_GITHUB_CLI: "none",

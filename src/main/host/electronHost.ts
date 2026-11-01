@@ -12,7 +12,7 @@ import { createKeychainUnlocker } from "./keychainUnlock";
 import { createMacUpdateDriver } from "./macUpdates";
 import { captureDockedPanel } from "./panelCapture";
 import { createProgramProcessSpawner } from "./programProcess";
-import { readResourceMemory } from "./resourceMemory";
+import { memoryPressureStandIn, readResourceMemory } from "./resourceMemory";
 import { createSqlProcessSpawner } from "./sqlProcess";
 import { createTaskBrowserHost } from "./taskBrowser";
 
@@ -192,7 +192,7 @@ export function createElectronHost(options: ElectronHostOptions = {}): HostCapab
     capture: { capturePanel: captureDockedPanel },
     mediaProbe: createMediaProbe(),
     typefaceProbe: createTypefaceProbe(),
-    resourceMemory: readResourceMemory,
+    resourceMemory: () => readResourceMemory(memoryPressureStandIn(process.env, app.isPackaged)),
     // A page the captain holds that asks for a file gets it from the app's own
     // picker, a sheet over the app's window, never one on the page's hidden
     // window (docs/task-browser.md, "A page that asks for a file").

@@ -11,7 +11,7 @@ import { hostPlatform } from "../core/platform";
 import { readSelfSource } from "../core/selfSource/resolve";
 import { registerFrameScheme } from "./frames/frameScheme";
 import { createAxiProcessSpawner } from "./host/axiProcess";
-import { readResourceMemory } from "./host/resourceMemory";
+import { memoryPressureStandIn, readResourceMemory } from "./host/resourceMemory";
 import { createTaskBrowserHost } from "./host/taskBrowser";
 import { createMediaProbe, createTypefaceProbe } from "./mediaProbe";
 import { startOwnDisplay } from "./ownDisplay";
@@ -193,7 +193,7 @@ export function runWorkMode(args: readonly string[], mainDir: string): void {
     probeMedia: createMediaProbe(),
     // A preview's project font loads in one the same way (./mediaProbe.ts).
     probeTypeface: createTypefaceProbe(),
-    resourceMemory: readResourceMemory,
+    resourceMemory: () => readResourceMemory(memoryPressureStandIn(process.env, app.isPackaged)),
     // Each task's own browser runs here, in hidden windows of its own, and
     // its crewmate reaches it through this computer's own task channel
     // (docs/task-browser.md, "On another computer").

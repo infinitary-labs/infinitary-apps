@@ -304,6 +304,7 @@ Moved verbatim from `AGENTS.md` on 2026-09-24; `AGENTS.md` keeps a one-line poin
   Together they put speech in the helper on every computer the suite runs on, so dictation is offered under a virtual screen on Linux arm64 too, whose library lists no graphics provider and would leave the answer to the window's own adapter.
   A spec names `absent` in `env` to see dictation hide, and a check with the real model on disk passes `useAppVoiceHelper` to run the app's own helper on this computer's library (`voice-freeze.check`).
   A voice journey presses the dictation key and reads its words through `tests/e2e/dictation.ts`: right ⌥ on a Mac and right Ctrl on Linux, from `desktopConventions`.
+  `INFINITARY_MEMORY_PRESSURE=normal` stands in macOS's memory pressure level, so a loaded Mac running the suite never wakes a journey's first mate about its own memory, which with no signed-in model puts up a sign-in card the journey never asked for (INF-2108); a spec names another level in `env`.
   Quota fixtures ride `INFINITARY_QUOTA_FIXTURE_DIR`.
   A seeded Grok API key's allowance read goes to a local port nothing listens on (`INFINITARY_GROK_KEY_URL`), never to xAI; a spec that serves that read names its own stub in `env` (`quota-live-sensor.spec.ts`, `docs/quota.md`).
   Each home's connection stays on loopback at a port kept per userData (`INFINITARY_CONNECTION_LOOPBACK_PORT`, `docs/devices.md`), so a relaunched home is where its devices left it, and no test listens on the Mac's own network or on the port a real app holds.

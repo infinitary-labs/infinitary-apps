@@ -401,6 +401,7 @@ The shared feed samples every two seconds while a task is active or a local decl
 - The desktop host supplies memory facts in bytes through `HostCapabilities.resourceMemory`; work mode supplies the same adapter (`src/main/host/resourceMemory.ts`).
   Linux supplies `MemAvailable` separately from free memory.
   On macOS, the adapter supplies free, purgeable and file-backed memory from Electron, and inactive memory, speculative memory and macOS's pressure level from a fresh `vm_stat` and `kern.memorystatus_vm_pressure_level` read with each sample.
+  A development or end-to-end run stands in the pressure level with `INFINITARY_MEMORY_PRESSURE` (`normal`, `warning` or `critical`) in place of that read; a packaged build always reads macOS.
   The sampler awaits that read.
   A failed system read omits those facts and keeps Electron's.
   The sampler does not add the Mac figures or claim they are Linux's available-memory estimate.

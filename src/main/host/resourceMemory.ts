@@ -3,8 +3,10 @@ import { readFile } from "node:fs/promises";
 import { promisify } from "node:util";
 import { hostEnv } from "@core/hostEnv";
 import { hostPlatform } from "@core/platform";
+import { settingFrom } from "@shared/envSettings";
 import {
   type MacMemoryPressure,
+  macMemoryPressureSchema,
   type ResourceMemory,
   validResourceMemory,
 } from "@shared/resources";
@@ -44,6 +46,22 @@ export function macPressureFromSysctl(text: string): MacMemoryPressure | null {
   if (value === 2) return "warning";
   if (Number.isInteger(value) && value > 0) return "critical";
   return null;
+}
+
+/**
+ * The pressure level a development or end-to-end run stands in for macOS's
+ * with INFINITARY_MEMORY_PRESSURE (`normal`, `warning` or `critical`), as it
+ * does the microphone's answer: the computer running a test is not the one
+ * the test describes, and its own load would otherwise wake the app's first
+ * mate partway through. A packaged build always reads macOS.
+ */
+export function memoryPressureStandIn(
+  env: Readonly<Record<string, string | undefined>>,
+  packaged: boolean,
+): MacMemoryPressure | undefined {
+  if (packaged) return undefined;
+  const standIn = macMemoryPressureSchema.safeParse(settingFrom(env, "MEMORY_PRESSURE")?.trim());
+  return standIn.success ? standIn.data : undefined;
 }
 
 /** `vm.swapusage` reports occupancy independently of installed memory. */
@@ -107,16 +125,21 @@ async function readText(file: string, args: string[]): Promise<string | null> {
   }
 }
 
-/** Fresh inactive pages and pressure. A miss is omitted facts, never a failed sample. */
-export async function readMacMemoryFacts(): Promise<MacMemoryFacts | null> {
+/**
+ * Fresh inactive pages and pressure. A miss is omitted facts, never a failed
+ * sample. A stood-in `pressure` (`memoryPressureStandIn`) replaces macOS's.
+ */
+export async function readMacMemoryFacts(
+  pressure?: MacMemoryPressure,
+): Promise<MacMemoryFacts | null> {
   if (hostPlatform() !== "darwin") return null;
   const [pagesText, pressureText, swapText] = await Promise.all([
     readText("/usr/bin/vm_stat", []),
-    readText("/usr/sbin/sysctl", ["-n", "kern.memorystatus_vm_pressure_level"]),
+    pressure ? null : readText("/usr/sbin/sysctl", ["-n", "kern.memorystatus_vm_pressure_level"]),
     readText("/usr/sbin/sysctl", ["-n", "vm.swapusage"]),
   ]);
   const pages = pagesText ? macPagesFromVmStat(pagesText) : null;
-  const memoryPressure = pressureText ? macPressureFromSysctl(pressureText) : null;
+  const memoryPressure = pressure ?? (pressureText ? macPressureFromSysctl(pressureText) : null);
   const swapUsedBytes = swapText ? macSwapFromSysctl(swapText) : undefined;
   if (!pages && !memoryPressure && swapUsedBytes === undefined) return null;
   return {
@@ -126,8 +149,13 @@ export async function readMacMemoryFacts(): Promise<MacMemoryFacts | null> {
   };
 }
 
-/** Electron reports KiB, not bytes. Keep unlike OS estimates unlike. */
-export async function readResourceMemory(): Promise<ResourceMemory | null> {
+/**
+ * Electron reports KiB, not bytes. Keep unlike OS estimates unlike. A
+ * stood-in `pressure` replaces macOS's level (`memoryPressureStandIn`).
+ */
+export async function readResourceMemory(
+  pressure?: MacMemoryPressure,
+): Promise<ResourceMemory | null> {
   const platform = hostPlatform();
   if (platform !== "darwin" && platform !== "linux") return null;
   try {
@@ -144,7 +172,7 @@ export async function readResourceMemory(): Promise<ResourceMemory | null> {
       const swapUsedBytes = await readLinuxSwap();
       return { ...reading, ...(swapUsedBytes === undefined ? {} : { swapUsedBytes }) };
     }
-    return withMacMemoryFacts(reading, await readMacMemoryFacts());
+    return withMacMemoryFacts(reading, await readMacMemoryFacts(pressure));
   } catch {
     return null;
   }

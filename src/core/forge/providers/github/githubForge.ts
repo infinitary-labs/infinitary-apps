@@ -14,8 +14,10 @@ import {
   type ReleaseUpload,
 } from "../../api";
 import {
+  allowanceResetOf,
   checkTimes,
   type Forge,
+  ForgeAllowanceSpent,
   type ForgeChange,
   type ForgeCheck,
   type ForgeCheckState,
@@ -449,7 +451,12 @@ export class GitHubForge implements Forge {
       )) as { total_count?: number; workflow_runs?: SuiteRunJson[] };
     } catch (caught) {
       // F25: a passing network error is not a lasting refusal, with or without cancellations.
-      if (isSignInForgeFailure(caught) || isTransientForgeFailure(caught)) throw caught;
+      if (
+        isSignInForgeFailure(caught) ||
+        isTransientForgeFailure(caught) ||
+        allowanceResetOf(caught) !== undefined
+      )
+        throw caught;
       const why = caught instanceof Error ? caught.message : String(caught);
       problem =
         caught instanceof ForgeError && caught.failure === "permission"
@@ -1265,9 +1272,13 @@ function failureOf(response: Response, method: string, path: string, text: strin
   }
   const what = `GitHub answered ${response.status} to ${method} ${path.split("?")[0]}${said ? `: ${said}` : ""}`;
   if (response.status === 401) return new ForgeError("sign-in", what);
-  if (response.status === 403) {
+  if (response.status === 403 || response.status === 429) {
     const spent = response.headers.get("x-ratelimit-remaining") === "0";
-    return new ForgeError("permission", spent ? `${what} (the hourly allowance is spent)` : what);
+    const reset = Number(response.headers.get("x-ratelimit-reset"));
+    if (spent && Number.isFinite(reset) && reset > 0)
+      return new ForgeAllowanceSpent(reset * 1000, `${what} (the hourly allowance is spent)`);
+    if (response.status === 403)
+      return new ForgeError("permission", spent ? `${what} (the hourly allowance is spent)` : what);
   }
   if (response.status === 404) return new ForgeError("not-found", what);
   if ([502, 503, 504].includes(response.status)) return new ForgeError("transient", what);

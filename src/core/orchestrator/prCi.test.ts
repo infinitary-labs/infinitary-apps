@@ -15,6 +15,7 @@ import { seedDelivery } from "../../../tests/helpers/taskDelivery";
 import {
   AttachmentUploadError,
   type Forge,
+  ForgeAllowanceSpent,
   type ForgeChange,
   type ForgeCheck,
   type ForgeCheckState,
@@ -1945,6 +1946,44 @@ ${said}`);
         wakes,
       }),
     );
+  });
+
+  // INF-2149: a spent hourly allowance ended every watch as unreadable and woke every crewmate,
+  // so each reset began with a burst of re-armed watches. The watch now waits for GitHub's reset.
+  it("keeps a watch standing through a spent allowance and reads again at GitHub's reset", async () => {
+    const { tasks, repos, service, forge } = setup();
+    await insertDirectPrTask(tasks, repos);
+    forge.states = ["pending"];
+    await service.checkForCrew("ab12cd34");
+    const before = tasks.get("ab12cd34")!.delivery!.ciWatch!;
+    const resetAt = before.nextAt + 20 * 60_000;
+    forge.fail.checks = new ForgeAllowanceSpent(
+      resetAt,
+      "GitHub answered 403 to GET /repos/o/r/commits/ab/check-runs: API rate limit exceeded for user ID 3233006. (the hourly allowance is spent)",
+    );
+    const wakes: unknown[] = [];
+    const watcher = new CheckWatcher({
+      tasks,
+      inbox: { woken: () => false },
+      read: (id) => service.readWatched(id),
+      steer: async (_id, wake) => {
+        wakes.push(wake);
+      },
+    });
+    await watcher.poll(before.nextAt);
+    const waiting = tasks.get("ab12cd34")!.delivery!.ciWatch!;
+    expect(waiting).toMatchObject({ head: before.head, since: before.since, nextAt: resetAt });
+    expect(wakes).toEqual([]);
+    const reads = () => forge.calls.filter((call) => call.startsWith("checks")).length;
+    const readsWhileSpent = reads();
+    await watcher.poll(resetAt - 1);
+    expect(reads()).toBe(readsWhileSpent);
+    forge.fail.checks = undefined;
+    forge.states = ["success"];
+    await watcher.poll(resetAt);
+    expect(tasks.get("ab12cd34")?.delivery?.ci).toBe("green");
+    expect(wakes).toHaveLength(1);
+    expect(wakes[0]).toMatchObject({ facts: { outcome: "finished" } });
   });
 
   // INF-1555 F14: partial facts retain the refusal rather than looking complete or endlessly running.

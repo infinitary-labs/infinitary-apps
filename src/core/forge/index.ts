@@ -64,8 +64,10 @@ export type {
   ForgeSkipMerge,
 } from "./forge";
 export {
+  allowanceResetOf,
   changeTitle,
   describeCheckState,
+  ForgeAllowanceSpent,
   ForgeError,
   ForgeWriteError,
   isRedCheckState,
@@ -99,6 +101,7 @@ export {
 } from "./presentation";
 export type { RemoteHost } from "./projects";
 export { remoteProjectsText } from "./projects";
+export { conditionalGets } from "./providers/github/conditionalGets";
 export { gitlabReleaseFileCalls } from "./providers/gitlab/api";
 export { GITLAB_PRIVATE_MEDIA_REFUSAL } from "./providers/gitlab/attachments";
 export type { LocatedReleaseFile } from "./releaseFile";
@@ -129,11 +132,14 @@ export { ForgeSignInStore, ForgeSignIns } from "./signIns";
 export function forgeSignInProviders(options: {
   packaged: boolean;
   env?: NodeJS.ProcessEnv;
+  /** GitHub's reads, conditional where the app keeps them (`conditionalGets`). */
+  githubFetch?: typeof fetch;
 }): ForgeSignInProvider[] {
   return [
     createGitHubSignIn({
       oauthBaseUrl: githubOAuthBaseUrl(options),
       apiBaseUrl: githubApiBaseUrl(options),
+      ...(options.githubFetch ? { fetch: options.githubFetch } : {}),
     }),
   ];
 }
@@ -149,9 +155,14 @@ export function forgeSignInProviders(options: {
 export function forgeSignInServers(options: {
   packaged: boolean;
   env?: NodeJS.ProcessEnv;
+  /** GitHub's reads, conditional where the app keeps them (`conditionalGets`). */
+  githubFetch?: typeof fetch;
 }): ForgeServer[] {
   return [
-    createGitHubServer({ apiBaseFor: (host) => githubApiBaseFor(host, options) }),
+    createGitHubServer({
+      apiBaseFor: (host) => githubApiBaseFor(host, options),
+      ...(options.githubFetch ? { fetch: options.githubFetch } : {}),
+    }),
     createGitLabServer({
       apiBaseFor: (host) => gitlabApiBaseFor(host, options),
       oauthBaseFor: (host) => gitlabOAuthBaseFor(host, options),

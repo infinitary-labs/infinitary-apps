@@ -26,6 +26,7 @@ import { NEVER_SENT_AGAIN } from "@shared/writeAsk";
 import type { NamingRule } from "../../shared/runbooks";
 import {
   AttachmentUploadError,
+  allowanceResetOf,
   changeTitle,
   describeCheckState,
   type Forge,
@@ -1485,10 +1486,13 @@ export class PrCiService {
           signIn: true,
         };
       }
+      // A spent allowance is a wait until the host's reset (INF-2149).
+      const retryAt = allowanceResetOf(caught);
       return {
         kind: "failed",
-        transient: isTransientForgeFailure(caught),
+        transient: isTransientForgeFailure(caught) || retryAt !== undefined,
         problem: caught instanceof Error ? caught.message : String(caught),
+        ...(retryAt !== undefined ? { retryAt } : {}),
       };
     }
   }
@@ -1562,7 +1566,12 @@ export class PrCiService {
       };
     } catch (caught) {
       console.warn("[crew] could not read the default branch's checks:", caught);
-      return { kind: "failed", problem: caught instanceof Error ? caught.message : String(caught) };
+      const retryAt = allowanceResetOf(caught);
+      return {
+        kind: "failed",
+        problem: caught instanceof Error ? caught.message : String(caught),
+        ...(retryAt !== undefined ? { retryAt } : {}),
+      };
     }
   }
 

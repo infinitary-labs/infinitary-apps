@@ -1,3 +1,4 @@
+import { allowanceResetOf } from "../forge";
 import type { InboxStore } from "../storage/inboxStore";
 import type { CiWatch, TaskRecord } from "../storage/taskStore";
 import { TaskService } from "../tasks/taskService";
@@ -104,6 +105,11 @@ export type WatchedReading =
       transient: boolean;
       problem: string;
       signIn?: boolean;
+      /**
+       * The host's allowance is spent and comes back at this time (epoch
+       * ms): the watch keeps standing and reads again then (INF-2149).
+       */
+      retryAt?: number;
       observationId?: string;
     };
 
@@ -174,7 +180,15 @@ export class CheckWatcher {
     this.refreshAfter.set(record.id, now);
     try {
       if (record.delivery?.prNumber !== undefined && this.host.reconcileMerged) {
-        if (await this.host.reconcileMerged(record.id)) return;
+        try {
+          if (await this.host.reconcileMerged(record.id)) return;
+        } catch (caught) {
+          // A spent allowance: every read waits for the host's reset (INF-2149).
+          const resetAt = allowanceResetOf(caught);
+          if (resetAt === undefined) throw caught;
+          this.waitForAllowance(record.id, resetAt, now);
+          return;
+        }
       }
       const after = this.host.tasks.get(record.id);
       if (!after || TaskService.isClosed(after)) return;
@@ -190,6 +204,10 @@ export class CheckWatcher {
     const read = await this.host.read(taskId);
     const after = this.host.tasks.get(taskId);
     if (!after || TaskService.isClosed(after) || after.delivery?.ciWatch) return;
+    if (read.kind === "failed" && read.retryAt !== undefined) {
+      this.waitForAllowance(taskId, read.retryAt, now);
+      return;
+    }
     // A new push whose checks are running gets the existing bounded watch.
     if (read.kind === "pending" && read.head !== head) {
       this.host.tasks.recordChangeEvidence(taskId, {
@@ -273,10 +291,12 @@ export class CheckWatcher {
     try {
       read = await this.host.read(taskId);
     } catch (caught) {
+      const retryAt = allowanceResetOf(caught);
       read = {
         kind: "failed",
         transient: true,
         problem: caught instanceof Error ? caught.message : String(caught),
+        ...(retryAt !== undefined ? { retryAt } : {}),
       };
     }
     // The task closed while the read was out: nothing wakes a closed task.
@@ -326,7 +346,8 @@ export class CheckWatcher {
         return this.end(taskId, current, { outcome: "gone" });
       case "failed":
         // A host hiccup is not a verdict: read again, inside the bound.
-        if (read.transient && inBound) return this.readAgain(taskId, watch, current, now);
+        if (read.transient && inBound)
+          return this.readAgain(taskId, watch, current, now, read.retryAt);
         return this.end(
           taskId,
           current,
@@ -383,7 +404,13 @@ export class CheckWatcher {
    * a replacement that is neither that watch nor the one being written
    * keeps the replacement.
    */
-  private readAgain(taskId: string, started: CiWatch, watch: CiWatch, now: number): void {
+  private readAgain(
+    taskId: string,
+    started: CiWatch,
+    watch: CiWatch,
+    now: number,
+    notBefore = 0,
+  ): void {
     const standing = this.watchOf(taskId);
     if (!standing) return;
     const same = (a: CiWatch) => a.head === standing.head && a.since === standing.since;
@@ -394,9 +421,25 @@ export class CheckWatcher {
         ...watch,
         ...(watch.failureSeen || (sameHead && standing.failureSeen) ? { failureSeen: true } : {}),
         tries: watch.tries + 1,
-        nextAt: now + checkWatchDelay(watch.tries + 1),
+        nextAt: Math.max(now + checkWatchDelay(watch.tries + 1), notBefore),
       },
     });
+  }
+
+  /**
+   * The host's allowance is spent until `resetAt`: a standing watch keeps
+   * standing and its next read waits for the reset; a quiet refresh waits
+   * the same. Nothing wakes the crewmate for a wait (INF-2149).
+   */
+  private waitForAllowance(taskId: string, resetAt: number, now: number): void {
+    const watch = this.watchOf(taskId);
+    if (watch) {
+      this.host.tasks.recordChangeEvidence(taskId, {
+        ciWatch: { ...watch, nextAt: Math.max(watch.nextAt, resetAt) },
+      });
+      return;
+    }
+    this.refreshAfter.set(taskId, Math.max(now, resetAt - CHECK_REFRESH_MS));
   }
 
   /**

@@ -100,6 +100,10 @@ export const LIMITS: Record<string, Record<string, LimitEntry>> = {
   "src/core/forge/providers/github/attachments.ts": {
     RESPONSE_LIMIT: physical("upload said uncertain; a deliberate retry after the orphan is checked"),
   },
+  "src/core/forge/providers/github/conditionalGets.ts": {
+    KEPT_ANSWER_MAX_BYTES: physical("not kept; that read is answered in full each time, nothing refused"),
+    KEPT_ANSWERS_MAX_BYTES: physical("the oldest kept answer is forgotten; its next read is answered in full"),
+  },
   "src/core/forge/providers/github/githubForge.ts": {
     MAX_RULE_PAGES: physical("refused in words: more rules than the app reads; no way past it"),
     MAX_CHECK_PAGES: physical("one pending item stands for the rest; never reads green, no way past"),

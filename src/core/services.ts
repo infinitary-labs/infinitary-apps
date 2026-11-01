@@ -103,6 +103,7 @@ import { SshConnections } from "./devices/sshConnections";
 import type { CoreEventSink } from "./events";
 import { FirstRunService, finishedCrewmates, hasFinishedTask, hasPriorActivity } from "./firstRun";
 import {
+  conditionalGets,
   createForgeResolver,
   type Forge,
   type ForgeBindings,
@@ -582,14 +583,17 @@ export async function createServices(
   // for one until a listing, a private clone or a proposed change needs
   // it. The dev/e2e endpoint overrides are read only by an unpackaged app.
   const forgeEndpoints = { packaged: host.app.packaged };
+  // Every GitHub read the app makes, through one store of answers GitHub
+  // tagged: an unchanged answer is a 304 that spends no allowance (INF-2149).
+  const githubReads = conditionalGets();
   let onForgeHealth: (change: ForgeHealthChange) => void = () => {};
   // The integrations read the github.com sign-in: each change to it is one of theirs.
   let integrationsChanged: () => void = () => {};
   let onForgeRenewed: (forgeHost: string) => void = () => {};
   const forgeSignIns = new ForgeSignIns({
     store: new ForgeSignInStore(paths.forgesDir),
-    providers: forgeSignInProviders(forgeEndpoints),
-    servers: forgeSignInServers(forgeEndpoints),
+    providers: forgeSignInProviders({ ...forgeEndpoints, githubFetch: githubReads }),
+    servers: forgeSignInServers({ ...forgeEndpoints, githubFetch: githubReads }),
     projectHosts: () =>
       repos
         .list()
@@ -618,6 +622,7 @@ export async function createServices(
   const githubForge = (location: ForgeLocation) => {
     const forgeHost = location.host ?? GITHUB_COM;
     return new GitHubForge(location, {
+      fetch: githubReads,
       namingRule: () => runbooks.naming(),
       token: () => forgeSignIns.token(forgeHost),
       apiBaseUrl: githubApiBaseFor(forgeHost, forgeEndpoints),

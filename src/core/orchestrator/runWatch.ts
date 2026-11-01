@@ -1,5 +1,11 @@
 import type { RunChecks } from "@shared/tasks";
-import { ForgeError, type WorkflowJobLine, type WorkflowJobList, type WorkflowRun } from "../forge";
+import {
+  allowanceResetOf,
+  ForgeError,
+  type WorkflowJobLine,
+  type WorkflowJobList,
+  type WorkflowRun,
+} from "../forge";
 import type { InboxStore } from "../storage/inboxStore";
 import type { RunWatch } from "../storage/taskStore";
 import { TaskService } from "../tasks/taskService";
@@ -129,9 +135,17 @@ export class RunWatcher {
         read = await this.host.read(taskId, watch.runId);
       } catch (caught) {
         if (!this.current(taskId, watch)) return;
-        const transient = !(caught instanceof ForgeError) || caught.failure === "transient";
+        // A spent allowance is a wait until the host's reset, not a verdict (INF-2149).
+        const resetAt = allowanceResetOf(caught);
+        const transient =
+          !(caught instanceof ForgeError) ||
+          caught.failure === "transient" ||
+          resetAt !== undefined;
         if (transient && now - watch.since < RUN_WATCH_BOUND_MS) {
-          this.update(taskId, watch, { ...watch, nextAt: now + RUN_WATCH_TICK_MS });
+          this.update(taskId, watch, {
+            ...watch,
+            nextAt: Math.max(now + RUN_WATCH_TICK_MS, resetAt ?? 0),
+          });
           return;
         }
         await this.end(taskId, watch, {

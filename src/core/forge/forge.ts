@@ -246,6 +246,29 @@ export class ForgeWriteError extends ForgeError {
   }
 }
 
+/**
+ * The host refused because the sign-in's hourly allowance is spent (a 403
+ * or 429 with no calls left), with the time the host said it resets: a wait
+ * on a fact the host gave, not a verdict on what was asked. Its failure
+ * stays `permission`, so a write is never retried as if nothing happened;
+ * a timed read waits until `resetAt` and reads again (INF-2149).
+ */
+export class ForgeAllowanceSpent extends ForgeError {
+  constructor(
+    /** When the host said the allowance comes back, in epoch milliseconds. */
+    readonly resetAt: number,
+    message: string,
+  ) {
+    super("permission", message);
+    this.name = "ForgeAllowanceSpent";
+  }
+}
+
+/** When a spent allowance comes back, if that is why the host refused; otherwise undefined. */
+export function allowanceResetOf(caught: unknown): number | undefined {
+  return caught instanceof ForgeAllowanceSpent ? caught.resetAt : undefined;
+}
+
 /** A change's own title, without the `Draft: ` marker GitLab keeps in a draft's title. */
 export function changeTitle(kind: ForgeKind, change: ForgeChange): string | undefined {
   return kind === "gitlab" && change.draft ? change.title?.replace(/^Draft: /, "") : change.title;

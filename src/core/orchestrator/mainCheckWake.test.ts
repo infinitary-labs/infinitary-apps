@@ -105,6 +105,29 @@ function setup() {
 }
 
 describe("a main failure's wake (INF-833 Fix 4)", () => {
+  // INF-2149: on a spent hourly allowance the read waits for GitHub's reset, not the usual pause.
+  it("reads the default branch again only at the reset GitHub named for a spent allowance", async () => {
+    const { db, answer, poll, reads } = setup();
+    try {
+      const at = 1_700_000_060_000;
+      const resetAt = at + 20 * 60_000;
+      answer({
+        kind: "failed",
+        problem:
+          "GitHub answered 403 to GET /repos/o/r/commits/main/check-runs (the hourly allowance is spent)",
+        retryAt: resetAt,
+      });
+      await poll(at);
+      await poll(at + CHECK_WATCH_SLOW_MS);
+      await poll(resetAt - 1);
+      expect(reads).toHaveLength(1);
+      await poll(resetAt);
+      expect(reads).toHaveLength(2);
+    } finally {
+      db.close();
+    }
+  });
+
   // INF-1555 F14 and captain F5: explain a refused list on each task, never invent a final wake.
   it.each(["read", "failed"] as const)(
     "records a %s refusal reason once per waiting task without a non-final wake",

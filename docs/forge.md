@@ -615,6 +615,7 @@ The design follows the firstmate repo's PR poll: a watcher that is not a model, 
   The first is `first-failure`, naming each red check, while others are still running.
   A read that first sees a failure and also sees the checks finished sends only the end wake.
   The end wake carries the finished check states without a passing verdict; `timed-out`, still running after `CHECK_WATCH_BOUND_MS` (two hours); `gone` (no open change for the branch); `unreadable` (a sign-in, permission or other refusal; a transient failure reads again inside the bound).
+  A spent hourly allowance is not a refusal: the watch keeps standing, wakes nobody, and reads again at the reset GitHub named (`ForgeAllowanceSpent.resetAt`, INF-2149); the quiet refresh and the merge read wait the same.
   Each wake is named by the watch and the event (`check-watch:<head>:<since>:failure` or `:end`), and the inbox records the name with the row it queues (`InboxStore.enqueueSteerOnce`), so a restart between the wake and the clear never sends it again.
   A wake recorded before the early wake existed, named `check-watch:<head>:<since>`, still counts as the end wake.
   The watch relays failure states without deciding readiness; the fact reader retains any explicit allowed-to-fail metadata.
@@ -632,7 +633,7 @@ Each waiting task hears one `main-check-passed` steer per check and commit, thro
 The inbox records `main-check-passed:<check>:<sha>`, so a restart does not send that commit's wake twice, and a later commit that passes does.
 The named task's close still resumes the crewmate if the run has not passed.
 A host without `branchChecks` — a plain Git host, and GitLab until it can read a branch's checks apart from a merge request — keeps that close as the only resume.
-A failed read waits out the check watch's slow pause and wakes nobody.
+A failed read waits out the check watch's slow pause and wakes nobody; on a spent hourly allowance it waits until the reset GitHub named, when that is later.
 The same branch reading answers a crewmate's own failed check at once: a reading of the task's pull request that finds a check red records the default branch's newest run of it as evidence ("Check facts and crew judgment", INF-1915 fix 1), so the diagnosis a `baseline-blocked` classification needs starts from a typed fact rather than a second read.
 
 ## The checks cell's time
@@ -667,7 +668,7 @@ If the first failure reading also sees the run ended, only the end wake goes.
 GitLab jobs marked `allow_failure` do not send an early wake; GitHub exposes no such flag in its jobs API, and a continue-on-error job reported successful is not a failure.
 The watch never guesses allowed failure from a job's name.
 The end names passed, failed or cancelled; a run still going at three hours, a gone run or an unreadable run sends an end wake too.
-A typed transient host failure reads again within the bound; a sign-in or permission refusal ends the watch immediately.
+A typed transient host failure reads again within the bound, and a spent hourly allowance reads again at its reset, also within the bound; a sign-in or other permission refusal ends the watch immediately.
 An incomplete jobs list is named on a failure wake rather than claiming every failed job was seen.
 
 Wakes use `run-watch:<runId>:<since>:failure|end`, recorded by the durable inbox's ordinary once mechanism.
@@ -708,9 +709,18 @@ Diagnoses and evidenced rerun decisions are declarations, not requests for a hos
 A baseline-blocked diagnosis still names a separately owned dependency, whose closure and default-branch check observations can wake its crewmate.
 Repair settlement always comes from the crew's explicit declaration, including before a pull request opens or after it moves to a newer version.
 
+## Conditional reads
+
+Every GitHub read the app makes goes through one store of the answers GitHub tagged (`conditionalGets` in `src/core/forge/providers/github/conditionalGets.ts`, INF-2149): the forge's own reads, the workflow reads, the gateway's `github_read` and the sign-in's health read.
+The store keeps each signed-in JSON GET's `ETag` and answer, sends the tag as `If-None-Match` on the next read of the same address by the same sign-in, and replays the kept answer as a 200 when GitHub answers 304, with the 304's own headers, so the allowance left is the current one.
+GitHub does not count a signed-in 304 against the hourly allowance, so a watch that finds nothing changed spends nothing, and how often anything is read does not change.
+The key is the address, the `Accept` and API version headers, and a hash of the sign-in, so one sign-in never reads another's answer.
+It keeps nothing for a write, a ranged or unsigned read, a redirect, or an answer that is not JSON, and forgets the oldest answer past its byte bound (`KEPT_ANSWERS_MAX_BYTES`).
+The app builds a new client for each call, so the store lives in `services.ts`, one for the run.
+
 ## Failures are typed
 
-A forge throws `ForgeError` with a `failure`: `transient` (a 502/503/504 or the host unreachable - `PrCiService.merge` retries these quietly, and nothing else), `sign-in` (a 401), `permission` (a 403, never retried; a spent hourly allowance says so), `not-found`, `refused` (a stale head, a default branch that moved on, branch protection), `unsupported`.
+A forge throws `ForgeError` with a `failure`: `transient` (a 502/503/504 or the host unreachable - `PrCiService.merge` retries these quietly, and nothing else), `sign-in` (a 401), `permission` (a 403, never retried; a spent hourly allowance, a 403 or 429 with no calls left, is a `ForgeAllowanceSpent` carrying the reset time, which the timed reads wait for), `not-found`, `refused` (a stale head, a default branch that moved on, branch protection), `unsupported`.
 The raw words stay on the error for the record and `plainProblem`; the kind is what code decides on.
 
 ## Who reads it

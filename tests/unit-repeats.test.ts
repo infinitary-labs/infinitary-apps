@@ -1,6 +1,6 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { MAC_UNIT_FILES } from "../scripts/mac-unit-tests.ts";
-import { selectRepeats } from "../scripts/unit-repeats.ts";
+import { REPEATS, repetitionArgs, runRepetitions, selectRepeats } from "../scripts/unit-repeats.ts";
 
 /**
  * INF-2074's ci-gate fix, the captain's checked words: "Run a change's
@@ -32,6 +32,77 @@ describe("a change's unit-file repeats on Linux", () => {
       "tests/checks-mode.test.ts",
     ]);
     expect(selection.onMac).toEqual([macOnly]);
+  });
+
+  // INF-2203, separated from INF-1109: its 37-file workload reached round ten
+  // but exceeded the CI deadline. Keep every file, ten fresh rounds and retry 0.
+  it.each([undefined, "1/2", "2/2"])(
+    "passes every candidate and the chosen shard %s to Vitest without retries",
+    (shard) => {
+      const files = [
+        "src/core/orchestrator/crewSupervisor.test.ts",
+        "src/core/placed/placedSessions.test.ts",
+      ];
+      expect(repetitionArgs(files, shard)).toEqual([
+        "exec",
+        "vitest",
+        "run",
+        "--retry",
+        "0",
+        ...(shard === undefined ? [] : ["--shard", shard]),
+        ...files,
+      ]);
+    },
+  );
+
+  it("keeps a one-file change on the first shard without allowing missing tests", () => {
+    const files = ["src/core/helper/sessionHost.test.ts"];
+    expect(repetitionArgs(files, "1/2")).toEqual(repetitionArgs(files));
+    expect(repetitionArgs(files, "2/2")).toBeUndefined();
+  });
+
+  it.each(["", "0/2", "3/2", "1/0", "1/2/3"])(
+    "refuses the invalid shard %s instead of silently dropping repetitions",
+    (shard) => {
+      expect(() => repetitionArgs(["tests/unit-repeats.test.ts"], shard)).toThrow(
+        "Invalid repetition shard",
+      );
+    },
+  );
+
+  it.each(["1/2", "2/2"])("invokes a fresh complete round ten times for shard %s", (shard) => {
+    const files = [
+      "src/core/orchestrator/crewSupervisor.test.ts",
+      "src/core/placed/placedSessions.test.ts",
+    ];
+    const run = vi.fn((_args: string[]) => 0);
+    const report = vi.fn();
+    expect(runRepetitions(files, shard, run, report)).toBe(0);
+    expect(run).toHaveBeenCalledTimes(REPEATS);
+    for (const [args] of run.mock.calls) expect(args).toEqual(repetitionArgs(files, shard));
+    expect(report).toHaveBeenLastCalledWith([`All ${REPEATS} rounds passed.`]);
+  });
+
+  it.each([1, null])("stops at a failed or interrupted round (%s), never retrying it", (status) => {
+    const run = vi
+      .fn<(_args: string[]) => number | null>()
+      .mockReturnValueOnce(0)
+      .mockReturnValue(status);
+    const report = vi.fn();
+    expect(runRepetitions(["tests/unit-repeats.test.ts"], "1/2", run, report)).toBe(1);
+    expect(run).toHaveBeenCalledTimes(2);
+    expect(report).toHaveBeenLastCalledWith([
+      `Round 2 of ${REPEATS} failed; later rounds did not run.`,
+    ]);
+  });
+
+  it("invokes nothing for an empty selection or the unused shard of a lone file", () => {
+    const run = vi.fn((_args: string[]) => 0);
+    const report = vi.fn();
+    expect(runRepetitions([], "1/2", run, report)).toBe(0);
+    expect(runRepetitions(["tests/unit-repeats.test.ts"], "2/2", run, report)).toBe(0);
+    expect(run).not.toHaveBeenCalled();
+    expect(report).toHaveBeenLastCalledWith(["Shard 2/2 owns no selected test files."]);
   });
 
   it("repeats nothing when the change edits no test file", () => {

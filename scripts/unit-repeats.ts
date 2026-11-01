@@ -11,13 +11,15 @@ import { MAC_UNIT_FILES } from "./mac-unit-tests.ts";
  * words: "Run a change's typecheck, lint and ten unit-file repeats on Linux
  * CI instead of the Mac mini's line, since unit tests need no Mac").
  *
- *   node scripts/unit-repeats.ts [--base <ref>] [--head <ref>] [--run]
+ *   node scripts/unit-repeats.ts [--base <ref>] [--head <ref>] [--shard <index/count>] [--run]
  *
  * prints the Vitest files the change adds or edits since its merge base with
  * `--base`, and the Mac-only ones (`scripts/mac-unit-tests.ts`) whose repeats
- * stay on a Mac. `--run` (`pnpm test:repeats`, ci.yml's `unit-repeats` job)
+ * stay on a Mac. `--run` (`pnpm test:repeats`, ci.yml's `unit-repeats` shards)
  * runs them ten times in a row with no retries, stopping at the first failed
- * round, and says so in the job summary when there is one. An empty `--base`
+ * round, and says so in the job summary when there is one. `--shard` delegates
+ * the same file split to Vitest on every round; together the shards cover
+ * every selected file without extending a step's deadline. An empty `--base`
  * repeats nothing: a push to main was repeated on its pull request. A base
  * that cannot be read fails, since the job cannot tell what the change edits.
  */
@@ -44,12 +46,58 @@ export function selectRepeats(
   };
 }
 
-function summaryLines(base: string, { repeat, onMac }: Selection): string[] {
+/** Keep every round on Vitest's own shard, with the complete candidate set. */
+export function repetitionArgs(files: readonly string[], shard?: string): string[] | undefined {
+  let split: string[] = [];
+  if (shard !== undefined) {
+    const parts = /^([1-9]\d*)\/([1-9]\d*)$/.exec(shard);
+    const index = Number(parts?.[1]);
+    const total = Number(parts?.[2]);
+    if (!Number.isSafeInteger(index) || !Number.isSafeInteger(total) || index > total)
+      throw new Error(`Invalid repetition shard: ${shard}`);
+    // Vitest refuses more shards than files. Empty shards own no work; the
+    // others use the available file count, without passWithNoTests hiding a
+    // real selection error in a nonempty shard.
+    const count = Math.min(total, files.length);
+    if (index > count) return undefined;
+    if (count > 1) split = ["--shard", `${index}/${count}`];
+  }
+  return ["exec", "vitest", "run", "--retry", "0", ...split, ...files];
+}
+
+/** Ten fresh invocations, never a retry; any failed or interrupted round ends this shard. */
+export function runRepetitions(
+  files: readonly string[],
+  shard: string | undefined,
+  run: (args: string[]) => number | null,
+  report: (lines: string[]) => void,
+): number {
+  if (files.length === 0) return 0;
+  const command = repetitionArgs(files, shard);
+  if (command === undefined) {
+    report([`Shard ${shard} owns no selected test files.`]);
+    return 0;
+  }
+  for (let round = 1; round <= REPEATS; round++) {
+    report([`Round ${round} of ${REPEATS}`]);
+    const status = run(command);
+    if (status !== 0) {
+      report([`Round ${round} of ${REPEATS} failed; later rounds did not run.`]);
+      return status ?? 1;
+    }
+  }
+  report([`All ${REPEATS} rounds passed.`]);
+  return 0;
+}
+
+function summaryLines(base: string, { repeat, onMac }: Selection, shard?: string): string[] {
   const lines =
     repeat.length === 0
       ? [`No Vitest file this change adds or edits since ${base} runs on Linux.`]
       : [
-          `These files run ${REPEATS} times in a row, since ${base}:`,
+          shard === undefined
+            ? `These files run ${REPEATS} times in a row, since ${base}:`
+            : `Vitest shard ${shard} runs ${REPEATS} times in a row from these candidates, since ${base}; together the shards cover every file:`,
           ...repeat.map((file) => `- \`${file}\``),
         ];
   if (onMac.length > 0)
@@ -87,21 +135,15 @@ function main(): void {
     return;
   }
   const selection = selectRepeats(changed);
-  report(summaryLines(base, selection));
+  const shard = args.includes("--shard") ? value("--shard", "") : undefined;
+  report(summaryLines(base, selection, shard));
   if (!args.includes("--run") || selection.repeat.length === 0) return;
-  for (let round = 1; round <= REPEATS; round++) {
-    console.log(`\nRound ${round} of ${REPEATS}`);
-    const run = spawnSync("pnpm", ["exec", "vitest", "run", "--retry", "0", ...selection.repeat], {
-      cwd: ROOT,
-      stdio: "inherit",
-    });
-    if (run.status !== 0) {
-      report([`Round ${round} of ${REPEATS} failed; later rounds did not run.`]);
-      process.exitCode = run.status ?? 1;
-      return;
-    }
-  }
-  report([`All ${REPEATS} rounds passed.`]);
+  process.exitCode = runRepetitions(
+    selection.repeat,
+    shard,
+    (command) => spawnSync("pnpm", command, { cwd: ROOT, stdio: "inherit" }).status,
+    report,
+  );
 }
 
 if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) main();

@@ -322,11 +322,11 @@ Each part's live simulator log lives in `phone-simulator-logs`, never in `phone-
 The pictures the journeys took live in the small `phone-pictures` artifact, exported from the result bundles by device and part.
 A failure on either device fails the job, and on a pull request the first failed part stops the other parts.
 A newer push cancels its pull request's older phone runs whose native job has not started its device gate (`scripts/replaced-phone-runs.ts`), so it never waits behind them.
-That gate checks and builds once, starts one simulator per device, and runs the phone journey's six parts on each, twelve in all, one after the other on their device's simulator with the two devices side by side, each part with its own test home and a clean app (`docs/ios.md`, "Disposable verification").
+That gate checks and builds once, starts one simulator per device, and runs the phone journey's seven parts on each, fourteen in all, one after the other on their device's simulator with the two devices side by side, each part with its own test home and a clean app (`docs/ios.md`, "Disposable verification").
 
 ### The phone parts a pull request runs
 
-On a pull request the gate runs only the closest of the journey's six parts within a six-minute budget, as the Mac journeys do ("Journeys on the pull request"), and the nightly check of `main` runs every part.
+On a pull request the gate runs only the closest of the journey's seven parts within a six-minute budget, as the Mac journeys do ("Journeys on the pull request"), and the nightly check of `main` runs every part.
 The chooser (`scripts/affected-phone.ts`) gives each part a distance: 0 when the change edits UI test code the part runs, 1 when it edits a file in the part's owner table (`PART_OWNERS`), and 2 for any other phone input.
 It reads a UI test change by its functions: each changed line counts for the test functions around it, added lines in the new version and removed ones in the old, and each part reaches its test and every function it calls by name.
 The rest part also starts from every test no other part names, and a change to the app-hosted tests puts it at 0.

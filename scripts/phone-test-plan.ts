@@ -21,7 +21,7 @@ export function testHomeKeys(plan: Record<string, unknown>): string[] {
   return keys;
 }
 
-// INF-662 piece 2 (the captain's "Both at once, journey in parts"): the phone journey is six
+// INF-662 piece 2 (the captain's "Both at once, journey in parts"): the phone journey is seven
 // tests, and each runs alone from its own test home and a clean app on its device's one simulator
 // (INF-1438), the devices side by side. The order is the start order, longest first as measured
 // on Oct 19 and 20: join and recover 4.2 minutes, talk and tasks 3.7, cards 2.3, the character and
@@ -37,7 +37,10 @@ export const PHONE_PARTS = [
   { name: "cards", test: "testCards", photos: false },
   // INF-1183: joining a home by its address, against the Mac's own sshd beside the test home.
   { name: "address", test: "testJoinByAddress", photos: false },
-  // The last part runs every test no other part names: the app-hosted tests and any new one.
+  // INF-2095: the pager pick journey launches fresh, so it needs a simulator no other journey joined first.
+  { name: "pick", test: "testMenuPickSurvivesAWorkspaceRedraw", photos: false },
+  // The last part runs every test no other part names: the app-hosted tests and any new one that
+  // needs no fresh app, since its simulator already holds the character journey's join.
   { name: "rest", test: "testCharacterAndPastChoices", photos: true },
 ] as const;
 export type PhonePart = (typeof PHONE_PARTS)[number]["name"];

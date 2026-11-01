@@ -116,6 +116,11 @@ struct PhoneWorkspace<Stage: View, Tasks: View, Composer: View>: View {
             try? await Task.sleep(for: .seconds(5))
             if session.notice == notice { session.notice = nil }
         }
+        // INF-2095: the isolated phone gate's menu tap probe, in a simulator build with its switch only.
+        .overlay(alignment: .topLeading) {
+            if let probe = PhoneMenuTapProbe.shared { PhoneMenuTapProbeReading(probe: probe).id(probe.redraws) }
+        }
+        .task { PhoneMenuTapProbe.shared?.install(session) }
         .environment(messageContext)
         // The first reading is the layout the workspace opens in, so the bar starts there.
         .onChange(of: wide, initial: true) { old, wide in if old == wide { wideBar = wide } else { settle(wide) } }

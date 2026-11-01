@@ -13,6 +13,7 @@ struct PhoneCards: View {
     @State private var sent = 0
     /// INF-1524, the captain's yes on iPad only: the card takes the stage's whole width, as the Mac's maximize does.
     @State private var maximized = false
+    @State private var pagerMenu = PhoneCardPager()
     private var card: PhoneCard? { past ?? session.stack.first(where: { $0.id == selected }) ?? session.stack.first }
 
     var body: some View {
@@ -37,7 +38,8 @@ struct PhoneCards: View {
                     .frame(maxWidth: .infinity, maxHeight: .infinity).padding(.vertical, PhoneTheme.space5)
             }
             // INF-589 item 11: with no card to page, the pager hides. INF-1517: cards put aside wait in Tasks, as on the Mac.
-            if !session.stack.isEmpty { pager }
+            // INF-2095: the pager shows once its menu holds the stack, so it never draws a count its menu lacks.
+            if !session.stack.isEmpty && !pagerMenu.items.isEmpty { pager }
         }
         .padding(.horizontal, PhoneTheme.space4).frame(maxWidth: card == nil || maximized ? .infinity : PhoneColumn.width).frame(maxWidth: .infinity)
         .background(PhoneTheme.background)
@@ -57,6 +59,12 @@ struct PhoneCards: View {
             if let past, ids.contains(past.id) { self.past = nil }
         }
         .onChange(of: messageContext.restoring) { _, _ in showRestored(session.stack.map(\.id)) }
+        // INF-2095: the pager's menu takes its cards and label here, and only when either changes.
+        .onChange(of: session.stack.map { PhoneCardPager.Item(id: $0.id, title: $0.title) }, initial: true) { _, items in
+            pagerMenu.pick = { id in selected = id; past = nil }
+            pagerMenu.show(items, label: pagerLabel)
+        }
+        .onChange(of: pagerLabel, initial: true) { _, label in pagerMenu.show(pagerMenu.items, label: label) }
         .onChange(of: session.showCardID, initial: true) { _, id in
             guard let id else { return }
             if session.stack.contains(where: { $0.id == id }) { selected = id; past = nil }
@@ -68,15 +76,7 @@ struct PhoneCards: View {
         HStack(spacing: PhoneTheme.space2) {
             Button { page(-1) } label: { Label("Previous card", systemImage: "chevron.left").labelStyle(.iconOnly).frame(minWidth: 44, minHeight: 44) }
                 .disabled(!canPagePrevious).accessibilityIdentifier("previous-card")
-            Menu {
-                ForEach(session.stack) { item in
-                    Button(item.title) { selected = item.id; past = nil }
-                }
-            } label: {
-                Text(past != nil ? "Past card" : "\(index + 1) of \(session.stack.count)")
-                    .font(.custom("JetBrainsMono-Regular", size: 12, relativeTo: .caption))
-                    .frame(minWidth: 44, minHeight: 44)
-            }.accessibilityIdentifier("card-pager")
+            PhoneCardPagerMenu(pager: pagerMenu)
             Button { page(1) } label: {
                 Label("Next card", systemImage: "chevron.right").labelStyle(.iconOnly).frame(minWidth: 44, minHeight: 44)
                     .overlay(alignment: .topTrailing) {
@@ -98,6 +98,7 @@ struct PhoneCards: View {
                 .frame(width: 0, height: 0)
         }
     }
+    private var pagerLabel: String { past != nil ? "Past card" : "\(index + 1) of \(session.stack.count)" }
     /// The cards on the stack not yet read, besides the one shown.
     private var fresh: [PhoneCard] {
         session.stack.filter { $0.id != card?.id && !session.seenCards.contains($0.offerID ?? $0.id) }
@@ -113,6 +114,42 @@ struct PhoneCards: View {
     private func page(_ delta: Int) {
         let next = index + delta
         if session.stack.indices.contains(next) { selected = session.stack[next].id; past = nil }
+    }
+}
+
+/// INF-2095: what the pager's menu shows, which only a change to the stack's cards or to the pager's own label alters.
+/// An inline menu re-ran its content on every redraw of the cards view, as on every workspace redraw, such as a reply
+/// notice clearing on its own; with the menu open, UIKit then sometimes rebuilt it under a quick tap, which lost the pick
+/// and left the menu open. An equatable menu view did not help: SwiftUI still ran its body on the cards view's redraws
+/// with equal inputs. The menu view holds only this object, so the cards view's redraws pass it nothing new, and it
+/// redraws when what it reads here changes. A change to the stack itself still reaches the open menu.
+@MainActor @Observable final class PhoneCardPager {
+    struct Item: Identifiable, Equatable { let id: String; let title: String }
+    private(set) var items: [Item] = []
+    private(set) var label = ""
+    /// The cards view's pick, which reads nothing the menu draws.
+    @ObservationIgnored var pick: (String) -> Void = { _ in }
+
+    func show(_ items: [Item], label: String) {
+        if self.items != items { self.items = items }
+        if self.label != label { self.label = label }
+    }
+}
+
+private struct PhoneCardPagerMenu: View {
+    let pager: PhoneCardPager
+
+    var body: some View {
+        Menu {
+            let _ = PhoneMenuTapProbe.shared?.menuBuilt()
+            ForEach(pager.items) { item in
+                Button(item.title) { PhoneMenuTapProbe.shared?.picked(); pager.pick(item.id) }
+            }
+        } label: {
+            Text(pager.label)
+                .font(.custom("JetBrainsMono-Regular", size: 12, relativeTo: .caption))
+                .frame(minWidth: 44, minHeight: 44)
+        }.accessibilityIdentifier("card-pager")
     }
 }
 

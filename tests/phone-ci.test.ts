@@ -726,7 +726,7 @@ describe("a failing phone check", () => {
         );
     }
   });
-  // INF-2053: a full gate's twelve live simulator logs, 1.5 to 17 MB each packed, took
+  // INF-2053: a full gate's live simulator logs, one per part and device, 1.5 to 17 MB each packed, took
   // phone-logs to 86 to 94 MB, past the app's 64 MiB artifact download, while every other
   // file in it came to 1.5 MiB. Each upload's paths are read as upload-artifact reads them,
   // every line a glob and a leading ! leaving out what it matches, against files real gates
@@ -776,7 +776,7 @@ describe("a failing phone check", () => {
     ];
     expect(uploaded("phone-logs", files)).toEqual([...commandLogs, "part-times.json"]);
     expect(uploaded("phone-simulator-logs", files)).toEqual(simulatorLogs);
-    expect(simulatorLogs).toHaveLength(12);
+    expect(simulatorLogs).toHaveLength(PHONE_PARTS.length * 2);
   });
 });
 

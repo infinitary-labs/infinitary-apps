@@ -76,6 +76,8 @@ describe("the phone journey's parts", () => {
       "iphone cards",
       "ipad address",
       "iphone address",
+      "ipad pick",
+      "iphone pick",
       "ipad rest",
       "iphone rest",
     ]);

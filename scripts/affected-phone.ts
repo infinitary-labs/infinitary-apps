@@ -95,6 +95,8 @@ export const PART_OWNERS: Record<PhonePart, readonly string[]> = {
     "ios/Infinitary/InfinitaryKit/Sources/InfinitaryKit/PhoneSSHKey.swift",
     "ios/Infinitary/InfinitaryApp/PhoneAddressSheet.swift",
   ],
+  // INF-2095: the pager's menu and the test hook its journey reads.
+  pick: ["ios/Infinitary/InfinitaryApp/PhoneCards.swift", "ios/Infinitary/InfinitaryApp/PhoneMenuTapProbe.swift"],
   rest: ["ios/Infinitary/InfinitaryApp/PhoneCharacter.swift"],
 };
 

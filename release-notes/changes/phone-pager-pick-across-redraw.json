@@ -1,0 +1,14 @@
+{
+  "entries": [
+    {
+      "id": "phone-pager-pick-across-redraw",
+      "kind": "fix",
+      "title": "A card you pick from the list on iPhone and iPad opens every time",
+      "body": "On iPhone and iPad, picking a card from the list under the stage could leave the list open and the card unchanged, when a reply notice cleared at the moment of your tap. The card you pick now opens, whatever else on the screen changes as you tap.",
+      "area": "cards",
+      "noPicture": "The list and the card look the same; the fix only keeps a pick from being lost when the screen redraws within a moment of the tap.",
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

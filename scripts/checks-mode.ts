@@ -29,11 +29,11 @@ const ROUTES: Record<HeavyCheck, { name: string; route: string }> = {
     route:
       `start journeys.yml on your branch: ${DISPATCHES}/journeys.yml/dispatches with ` +
       `{"ref":"<branch>","inputs":{"files":"<journey> <journey>"}}. ` +
-      "A pull request runs the journeys its change reaches on its own.",
+      "A pull request does not run them (INF-2139); `node scripts/affected-journeys.ts --base origin/main` lists the journeys your change reaches.",
   },
   phone: {
     name: "The phone check",
-    route: `start phone.yml on your branch: ${DISPATCHES}/phone.yml/dispatches with {"ref":"<branch>","inputs":{"affected":"true"}}. Omit affected for every part.`,
+    route: `start phone.yml on your branch: ${DISPATCHES}/phone.yml/dispatches with {"ref":"<branch>","inputs":{"affected":"true"}}. Omit affected for every part. A pull request does not run it (INF-2139).`,
   },
   "replay-gate": {
     name: "The replay gate",

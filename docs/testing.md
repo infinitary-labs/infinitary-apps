@@ -198,7 +198,6 @@ Where each journey runs:
 
 | Run | Linux | Mac |
 | --- | --- | --- |
-| A pull request (`journeys.yml`) | every chosen journey | the chosen journeys' tagged tests |
 | A request for journeys (`journeys.yml`) | every named journey | their tagged tests, or every test with `mac_all` |
 | A requested full check (`verify.yml`) | every journey | every tagged test, or every journey with `all_journeys` |
 | The nightly full check and every alpha (`verify.yml`) | every journey | every journey |
@@ -240,7 +239,7 @@ In CI mode these checks refuse to start outside CI and name their route on reque
 
 | Check | Command that refuses | Its route in CI mode |
 | --- | --- | --- |
-| Journeys | `pnpm exec playwright test` naming a committed journey (`playwright.config.ts`) | a pull request runs the journeys its change reaches; on request, `journeys.yml` with the `files` it names ("Journeys on request") |
+| Journeys | `pnpm exec playwright test` naming a committed journey (`playwright.config.ts`) | `journeys.yml` on request with the `files` it names ("Journeys on request"); a pull request runs none |
 | The phone check | `pnpm test:phone` and `scripts/test-phone.ts` | `phone.yml` on request ("The phone check on request") |
 | The replay gate | `pnpm replay:gate` | `replay.yml` on request (`docs/replay-harness.md`, "The gate") |
 | The typecheck | `pnpm typecheck` | the pull request's `typecheck-lint-build` check; before a pull request, `ci.yml` on request |
@@ -301,6 +300,8 @@ Priority never interrupts running work, and capacity, test gates and merge conse
 
 ## Native phone checks on the pull request
 
+A pull request no longer starts `phone.yml` (INF-2139, captain: "let's pull journeys and phone checks off PRs now"): a crewmate whose change selects the gate requests it on its branch ("The phone check on request").
+The pull request selection below stays in `phone.yml` for the continuous run on `main` that replaces it.
 `phone.yml` selects the iPhone and iPad gate for `ios/`, the phone-card generator, the phone-contract generator with its shape guard, and the gate's own setup (`scripts/affected-phone.ts`).
 A change to the generated phone contract that touches only its `public static let version` line, a first-number change included, does not select it; `pnpm check` still verifies the file is current on every pull request.
 The setup inputs are `phone.yml`, `scripts/test-phone.ts`, `tests/helpers/phoneHome.ts`, `tests/helpers/phoneKeyboard.ts`, the activity writer `scripts/phone-activity.ts`, the leftover sweep `scripts/phone-leftovers.ts`, the check runner `scripts/phone-checks.ts`, the simulator selector `scripts/phone-simulator.ts` and its pin `scripts/phone-pin.json`, and the test plan helper `scripts/phone-test-plan.ts`.
@@ -363,6 +364,8 @@ Without that input, it takes the same line and runner as a pull request's phone 
 
 ## Journeys on the pull request
 
+A pull request no longer starts `journeys.yml` (INF-2139, captain: "let's pull journeys and phone checks off PRs now"): a crewmate runs the journeys its change reaches itself, which `node scripts/affected-journeys.ts --base origin/main` lists, locally or, in CI mode, by requesting them ("Journeys on request").
+The pull request selection below stays in `journeys.yml`, `linux-source` included, for the continuous run on `main` that replaces it.
 A pull request gets `journeys.yml`'s Linux `choose-journeys` check, which installs the locked tools, selects the journey files and writes the reasons and placement in its summary.
 The chooser downloads `e2e-results` from the newest successful `verify.yml` run that has an unexpired artifact of that name and sums each journey file's measured Mac durations.
 Only a run of every journey keeps that artifact, so a requested check of the tagged tests alone never becomes the journeys' times.
@@ -912,7 +915,7 @@ Set `INFINITARY_VOICE_HOLD_MS=60000` to check release after a minute of real cap
 ## The Linux source desktop
 
 `source-journeys.yml` builds the checkout and runs journeys on the app built from source on Ubuntu 24.04 x64 (`LINUX_RUNNER`, hosted when unset), under Xvfb on a 2560 by 1600 virtual screen with Chromium's sandbox enabled.
-`journeys.yml` calls it as `linux-source` on every pull request with the starter journeys, split onto two machines by the existing parallel and serial desktop lanes: `source-start`, `phase0-guardrails`, `answer-delivery` and `claude-crew-turn`, the keyboard journeys `keyboard-routing` and `keyboard-regions`, which press Ctrl where a Mac presses ⌘ (`docs/keyboard.md`, "Keys on each system"), the task browser's journeys (`task-browser`, `task-browser-actions`, `task-browser-diagnostics` and `task-browser-booking`), the device journeys (`devices`) unconditionally, without a second selector, and the voice journeys (`phase6-voice`, `voice-prompt-focus` and `repro-voice-press`), which hold right Ctrl, with a stand-in graphics card and a stand-in voice helper (`docs/e2e-contracts.md`); the real card check is the captain's on each Linux alpha (`docs/architecture.md` section 8, "Where speech runs").
+`journeys.yml` calls it as `linux-source` on a pull request's run, which no pull request starts now ("Journeys on the pull request"), with the starter journeys, split onto two machines by the existing parallel and serial desktop lanes: `source-start`, `phase0-guardrails`, `answer-delivery` and `claude-crew-turn`, the keyboard journeys `keyboard-routing` and `keyboard-regions`, which press Ctrl where a Mac presses ⌘ (`docs/keyboard.md`, "Keys on each system"), the task browser's journeys (`task-browser`, `task-browser-actions`, `task-browser-diagnostics` and `task-browser-booking`), the device journeys (`devices`) unconditionally, without a second selector, and the voice journeys (`phase6-voice`, `voice-prompt-focus` and `repro-voice-press`), which hold right Ctrl, with a stand-in graphics card and a stand-in voice helper (`docs/e2e-contracts.md`); the real card check is the captain's on each Linux alpha (`docs/architecture.md` section 8, "Where speech runs").
 `verify.yml` calls it as `linux-e2e` with `suite: full`: every journey in the suite, before every alpha and on demand, in eight jobs, and the run-alone pass in four more isolated jobs.
 Four take a quarter each of the parallel lanes (`styles`, `renderer` and `application`) and four a quarter each of the serial `desktop` lane, each run with `--no-deps` so neither lane waits as the other's teardown and the desktop lane still runs alone on its machine; a job is named for its share, such as `journeys (desktop 2/4)`.
 The four `journeys (run alone N/4)` jobs divide the run-alone pass’s ordered listing by round-robin position with `--shard N/4`; together they cover every later file:line/lane selection once, without splitting tests that share a line.

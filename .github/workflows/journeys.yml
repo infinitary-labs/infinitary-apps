@@ -8,9 +8,11 @@ name: journeys
 # nightly full check and every alpha still run the full Mac suite.
 # INF-800: on request, the journeys a branch names, placed the same way
 # (docs/testing.md, "Journeys on request").
+# INF-2139 (captain: "let's pull journeys and phone checks off PRs now"): a
+# pull request no longer starts this workflow; its pull_request branches stay
+# for the continuous run on main that replaces it.
 
 on:
-  pull_request:
   workflow_dispatch:
     inputs:
       mac_runner:

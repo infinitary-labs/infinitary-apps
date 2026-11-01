@@ -660,14 +660,13 @@ describe("local packaging identity (electron-builder.dev.yml)", () => {
     expect(verify).toContain("vars.MAC_RUNNER || 'macos-15'");
   });
 
-  it("runs only the affected journeys on a pull request, on the Mac mini", () => {
+  it("runs the named journeys only on request, never on a pull request, on the Mac mini", () => {
     const journeys = loadYamlFile(".github/workflows/journeys.yml") as {
-      on: { pull_request: unknown; push?: unknown; schedule?: unknown };
+      on: Record<string, unknown>;
       jobs: Record<string, { "runs-on": string; steps: Step[] }>;
     };
-    expect(journeys.on).toHaveProperty("pull_request", null);
-    expect(journeys.on).not.toHaveProperty("schedule");
-    expect(journeys.on).not.toHaveProperty("push");
+    // INF-2139 (captain: "let's pull journeys and phone checks off PRs now").
+    expect(Object.keys(journeys.on)).toEqual(["workflow_dispatch"]);
     const job = journeys.jobs["affected-journeys"];
     // INF-869: run the virtual side on an isolated label without changing shared vars.
     const runner = (requested: string, configured: string) =>

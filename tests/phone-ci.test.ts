@@ -401,9 +401,9 @@ describe("the native pull-request gate", () => {
     expect(gateStarts(BOTH, "", "")).toBe("true");
     expect(gateStarts(BOTH, "", "true")).toBe("false");
   });
-  it("receives every pull request and selects the Mac mini without a paid fallback", () => {
-    expect(workflow.on.pull_request).toBeNull();
-    expect(Object.keys(workflow.on)).toEqual(["pull_request", "workflow_dispatch"]);
+  it("runs only on request, never on a pull request, and selects the Mac mini without a paid fallback", () => {
+    // INF-2139 (captain: "let's pull journeys and phone checks off PRs now").
+    expect(Object.keys(workflow.on)).toEqual(["workflow_dispatch"]);
     expect(workflow.on.workflow_dispatch.inputs).toMatchObject({
       parts: { type: "string" },
       starve: { type: "boolean", default: false },

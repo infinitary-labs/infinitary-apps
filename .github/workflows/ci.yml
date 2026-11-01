@@ -5,9 +5,8 @@ name: ci
 # macOS work - the full Playwright e2e suite, the universal package smoke,
 # the replay gate - lives in verify.yml's mac lane and runs inside every
 # alpha and on demand, never per PR or per push: that job was 98% of a
-# ~$200/month bill. The one Mac check a pull request does get is
-# journeys.yml's: only the journey files the change can break, on the Mac
-# mini (FI3-1305).
+# ~$200/month bill. A pull request runs no journeys and no phone check
+# (INF-2139): journeys.yml and phone.yml run on request.
 # The local green gate (AGENTS.md) is the e2e gate before a push. It runs
 # only the unit tests relevant to the change, so these jobs' tests are
 # where the full unit suite runs on every PR.

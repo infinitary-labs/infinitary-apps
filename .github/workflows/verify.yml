@@ -22,9 +22,9 @@ name: verify
 # Deliberately no pull_request, push or schedule trigger (captain's call):
 # the per-PR mac job was 98% of a ~$200/month bill. The mac lane's runner
 # label still comes from the MAC_RUNNER repository variable so a self-hosted
-# runner can take it over without a workflow change. A pull request gets the
-# journeys its change can break from journeys.yml instead, on that runner
-# (FI3-1305): the whole suite stays here.
+# runner can take it over without a workflow change. A pull request runs no
+# journeys (INF-2139); journeys.yml runs the ones a branch names on request:
+# the whole suite stays here.
 
 on:
   workflow_call:

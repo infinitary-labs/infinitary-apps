@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "pr-heavy-checks-off",
+      "reason": "Project CI only: pull requests stop running the journey and phone workflows, which still run on request, nightly and for every alpha and release; the app does not change."
+    }
+  ]
+}

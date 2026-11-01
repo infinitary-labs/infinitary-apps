@@ -4,8 +4,10 @@ name: phone
 # Keep an explicit skipped job on unrelated PRs instead of a path-filtered missing check.
 # INF-663 (captain: "add a nightly phone check"): a request on a branch, such as the
 # nightly check of main, runs both device gates whatever changed, with no release step.
+# INF-2139 (captain: "let's pull journeys and phone checks off PRs now"): a pull
+# request no longer starts this workflow; its pull_request branches stay for the
+# continuous run on main that replaces it.
 on:
-  pull_request:
   workflow_dispatch:
     inputs:
       mac_runner:

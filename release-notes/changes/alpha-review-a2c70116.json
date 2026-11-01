@@ -1,0 +1,14 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "e2e-minimum-window-size-retry",
+      "reason": "Test only: an end-to-end journey asks the window's minimum size again when the answer is lost to a garbage collection. Nothing in the app changes.",
+      "covers": ["50a5e5f341a496042a925a0110de5970a4b310d1"]
+    },
+    {
+      "id": "alpha-review-a2c70116",
+      "reason": "Release review only: ranks the quieter recent messages, the alpha freeze recorder and starting backlog tasks without losing your place as highlights, and adds an exclusion for one test-only change. Nothing in the app changes."
+    }
+  ]
+}

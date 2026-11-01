@@ -3,6 +3,7 @@
     {
       "id": "quiet-last-turn",
       "kind": "improvement",
+      "highlight": 1,
       "area": "message-box",
       "title": "Recent messages stay quiet until you read them",
       "body": "On desktop, your newest message and your first mate’s reply are softer above the message box. Move the pointer over the messages or focus a reply to brighten them; the first mate’s mark stays cyan. The second-to-last round now starts its fifteen-second fade clock when it becomes second-to-last, even while your first mate works on the newest message.",
@@ -11,7 +12,9 @@
         "light": "quiet-last-turn-light.webp",
         "alt": "The newest message and reply sit quietly above the desktop message box, with the first mate’s cyan mark beside the reply"
       },
-      "provenance": { "origin": "change" }
+      "provenance": {
+        "origin": "change"
+      }
     }
   ],
   "exclusions": []

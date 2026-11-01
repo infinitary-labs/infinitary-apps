@@ -3,11 +3,14 @@
     {
       "id": "tasks-start-keeps-backlog-in-view",
       "kind": "fix",
+      "highlight": 3,
       "area": "tasks",
       "title": "Start tasks without losing your place",
       "body": "Clicking Start on a backlog row no longer pulls the Tasks panel up to the started task. The next row stays in view so you can start another task. Starting with the keyboard still brings the started task into view.",
       "noPicture": "The panel looks unchanged; the fix prevents a scroll jump during Start, which is demonstrated by a recording rather than a still picture.",
-      "provenance": { "origin": "change" }
+      "provenance": {
+        "origin": "change"
+      }
     }
   ],
   "exclusions": []

@@ -12,27 +12,33 @@ const require = createRequire(import.meta.url);
 const yaml = createRequire(require.resolve("electron-builder/package.json"))("js-yaml");
 const workflow = yaml.load(readFileSync(".github/workflows/phone.yml", "utf8"));
 
-// The native job's actual condition, for the chooser's reading on a pull request, or for a run
-// started on request, whose chooser reads nothing.
+// The native job's condition with its gate step's (INF-2125 P1: the job chooses its own parts),
+// for the chooser's reading on a pull request, or for a run started on request, whose chooser
+// reads nothing.
+function gateCondition(): string {
+  const scope = (workflow.jobs["native-phone"].steps as { id?: string; env?: { GATE: string } }[])
+    .find((step) => step.id === "scope")!
+    .env!.GATE.replace(/^\$\{\{\s*|\s*\}\}$/g, "");
+  return `(${workflow.jobs["native-phone"].if}) && (${scope})`;
+}
 function eligible(run: boolean | "", event = "pull_request", evidenceRun = ""): string {
-  const needs = new data.Dictionary({
-    key: "choose-phone",
+  const steps = new data.Dictionary({
+    key: "select",
     value: new data.Dictionary({
       key: "outputs",
       value: new data.Dictionary({ key: "run", value: new data.StringData(String(run)) }),
     }),
   });
   const github = new data.Dictionary({ key: "event_name", value: new data.StringData(event) });
-  const expression = workflow.jobs["native-phone"].if;
   const ast = new Parser(
-    new Lexer(`!!(${expression})`).lex().tokens,
-    ["needs", "github", "inputs"],
+    new Lexer(`!!(${gateCondition()})`).lex().tokens,
+    ["steps", "github", "inputs"],
     [],
   ).parse();
   return new Evaluator(
     ast,
     new data.Dictionary(
-      { key: "needs", value: needs },
+      { key: "steps", value: steps },
       { key: "github", value: github },
       {
         key: "inputs",
@@ -65,6 +71,14 @@ function gateStarts(gate: string, iphone: string, replaced: string): string {
       value: new data.Dictionary({
         key: "outputs",
         value: new data.Dictionary({ key: "replaced", value: new data.StringData(replaced) }),
+      }),
+    },
+    // The chooser kept parts (gateCondition).
+    {
+      key: "scope",
+      value: new data.Dictionary({
+        key: "outputs",
+        value: new data.Dictionary({ key: "gate", value: new data.StringData("true") }),
       }),
     },
   );
@@ -173,10 +187,12 @@ function stepsThatRun(
       { failed },
     );
     const reading = runs && step.run?.includes("stop-if-replaced") ? replaced : "";
+    // The chooser kept parts (gateCondition).
+    const gate = runs && step.id === "scope" ? "true" : "";
     if (step.id)
       seen[step.id] = {
         outcome: runs ? "success" : "skipped",
-        outputs: { replaced: reading, ...(runs ? outputs[step.id] : {}) },
+        outputs: { replaced: reading, gate, ...(runs ? outputs[step.id] : {}) },
       };
     if (runs) ran.push(step);
   }
@@ -184,6 +200,12 @@ function stepsThatRun(
 }
 const RESULTS = "Keep native results and connection readings";
 const SAVE_PACKAGES = "Save the Swift packages for pull requests";
+// The chooser's steps a pull request skips: the simulated search for main's part times finds no
+// run, and only a crewmate's request chooses affected parts.
+const SKIPPED_CHOOSER_STEPS = [
+  "Read that check's part times",
+  "Choose affected parts for a crewmate request",
+];
 const names = (steps: Step[]) => steps.map((step) => step.name ?? step.uses ?? "");
 const isGate = (step: Step) => DEVICE_GATES.includes(step.name ?? "");
 
@@ -472,7 +494,11 @@ describe("the native pull-request gate", () => {
     const all = names(workflow.jobs[NATIVE_JOB].steps);
     expect(names(stepsThatRun(OFF))).toEqual(
       all.filter(
-        (name) => !VIRTUAL_MAC_STEPS.includes(name) && name !== RESULTS && name !== SAVE_PACKAGES,
+        (name) =>
+          !VIRTUAL_MAC_STEPS.includes(name) &&
+          name !== RESULTS &&
+          name !== SAVE_PACKAGES &&
+          !SKIPPED_CHOOSER_STEPS.includes(name),
       ),
     );
     // INF-662 piece 1: one gate checks and builds once
@@ -494,10 +520,7 @@ describe("the native pull-request gate", () => {
     ]);
     // The gate reads the chooser's parts, which a run on request leaves empty.
     expect(stepsThatRun(OFF).find(isGate)?.env?.PHONE_PARTS).toBe(
-      "${{ inputs.parts || needs.choose-phone.outputs.parts }}",
-    );
-    expect(workflow.jobs["choose-phone"].outputs.parts).toBe(
-      "${{ steps.select.outputs.parts || steps.request-select.outputs.parts }}",
+      "${{ inputs.parts || steps.select.outputs.parts || steps.request-select.outputs.parts }}",
     );
     // The gates' shell sees the switch as the repository sets it, empty when unset.
     const shell = workflow.jobs[NATIVE_JOB].env.PHONE_VIRTUAL_MAC.replace(
@@ -696,7 +719,7 @@ describe("a failing phone check", () => {
     const temp = "/runner/temp";
     const uploaded = (name: string, files: string[]) => {
       const step = (workflow.jobs[NATIVE_JOB].steps as (Step & { with?: Plain })[]).find(
-        (each) => each.with?.name === name,
+        (each) => each.uses?.startsWith("actions/upload-artifact") && each.with?.name === name,
       );
       const lines = String(step?.with?.path)
         .split("\n")
@@ -746,7 +769,7 @@ describe("a failing phone check", () => {
 describe("the phone check on request", () => {
   const ON_REQUEST = "workflow_dispatch";
   it("runs the native job whatever changed, while a pull request still asks the chooser", () => {
-    const select = workflow.jobs["choose-phone"].steps.find(
+    const select = workflow.jobs[NATIVE_JOB].steps.find(
       (step: Step) => step.id === "select",
     ) as Step;
     expect(holds(condition(select), { github: { event_name: ON_REQUEST } })).toBe(false);
@@ -780,7 +803,7 @@ describe("the chooser's part times", () => {
     runs: Run[];
     artifacts: Record<string, Artifact[]>;
   };
-  const script = workflow.jobs["choose-phone"].steps.find(
+  const script = workflow.jobs[NATIVE_JOB].steps.find(
     (step: Step & { with?: { script?: string } }) => step.id === "timing-run",
   )?.with?.script as string;
 
@@ -891,7 +914,7 @@ describe("the chooser's part times", () => {
 
 // INF-1258: the captain picked touched parts only for crewmate requests, not PR/nightly gates.
 describe("affected request routing", () => {
-  const steps = workflow.jobs["choose-phone"].steps as Step[];
+  const steps = workflow.jobs[NATIVE_JOB].steps as Step[];
   const request = steps.find((step) => step.id === "request-select")!;
   it("chooses only for opted-in requests, leaving nightly and explicit diagnostics alone", () => {
     for (const [event, affected, parts, expected] of [
@@ -913,7 +936,7 @@ describe("affected request routing", () => {
     const expression = (workflow.jobs[NATIVE_JOB].steps as Step[])
       .find((step) => step.id === "both")!
       .env!.PHONE_PARTS!.replace(/^\$\{\{\s*|\s*\}\}$/g, "");
-    const ast = new Parser(new Lexer(expression).lex().tokens, ["inputs", "needs"], []).parse();
+    const ast = new Parser(new Lexer(expression).lex().tokens, ["inputs", "steps"], []).parse();
     for (const [parts, chosen, expected] of [
       ["", "cards", "cards"],
       ["join", "cards", "join"],
@@ -924,7 +947,7 @@ describe("affected request routing", () => {
           ast,
           toData({
             inputs: { parts: parts! },
-            needs: { "choose-phone": { outputs: { parts: chosen! } } },
+            steps: { "request-select": { outputs: { parts: chosen! } } },
           }),
         )
           .evaluate()
@@ -939,10 +962,13 @@ describe("affected request routing", () => {
       [true, "join", "", true],
     ] as const)
       expect(
-        holds(workflow.jobs[NATIVE_JOB].if, {
+        holds(gateCondition(), {
           github: { event_name: "workflow_dispatch" },
           inputs: { affected, parts },
-          needs: { "choose-phone": { outputs: { run: "", parts: chosen } } },
+          steps: {
+            select: { outputs: { run: "" } },
+            "request-select": { outputs: { parts: chosen } },
+          },
         }),
       ).toBe(expected);
   });

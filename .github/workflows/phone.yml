@@ -80,26 +80,63 @@ jobs:
         run: node scripts/replaced-phone-runs.ts cancel-older
         env:
           GITHUB_TOKEN: ${{ github.token }}
-  choose-phone:
+  native-phone:
+    name: ${{ inputs.evidence_run != '' && 'native-phone-not-requested' || 'native-phone' }}
     if: inputs.evidence_run == ''
-    # The PC's gate label (docs/testing.md, DOP-157): its runners take only gate jobs.
-    runs-on: ${{ vars.LINUX_RUNNER && format('{0}-gate', vars.LINUX_RUNNER) || 'ubuntu-latest' }}
-    # INF-827: reading the newest passing check of main's part times.
+    # No paid hosted-Mac fallback. MAC_RUNNER currently names this Mac mini's label.
+    # INF-524: the repository variable PHONE_VIRTUAL_MAC moves the device gates into
+    # a fresh virtual Mac, through the phone check's own runner, which takes no
+    # Mac mini slot (docs/ios.md, "The phone check in a virtual Mac"). Unset, the
+    # job runs exactly as before.
+    # INF-897: VIRTUAL_MAC_RUNNER names the placement service's virtual-Mac label.
+    # No journey or full check shares that scale set, so the runner the service
+    # starts for it takes it, and the service gives it the next free virtual place
+    # (docs/ios.md, "A phone check the placement service puts in a virtual Mac").
+    runs-on: ${{ vars.PHONE_VIRTUAL_MAC && 'mini-mac-vm' || inputs.mac_runner || vars.VIRTUAL_MAC_RUNNER || vars.MAC_RUNNER || 'mini-mac' }}
+    # Reading the pull request's latest version and cancelling this run, if replaced, and
+    # main's newest passing check of every part for its part times (INF-827).
     permissions:
-      actions: read
+      actions: write
       contents: read
-    outputs:
-      run: ${{ steps.select.outputs.run }}
-      parts: ${{ steps.select.outputs.parts || steps.request-select.outputs.parts }}
+      pull-requests: read
+    # Only phone jobs queue here. Desktop jobs from other PRs remain parallel.
+    # INF-989 (captain: "let both virtual Macs run phone checks at once by ending
+    # the one-at-a-time line"): a job on the placement service's virtual-Mac label
+    # gets its own fresh virtual Mac, so it gets a group of its
+    # own and waits only for a free virtual place. The real Mac never takes that
+    # label. On the Mac mini's runners, and with PHONE_VIRTUAL_MAC's one fixed
+    # clone, the shared mac-mini-phone line keeps one phone check at a time.
+    concurrency:
+      group: ${{ !inputs.mac_runner && vars.VIRTUAL_MAC_RUNNER && !vars.PHONE_VIRTUAL_MAC && format('phone-{0}-{1}', github.run_id, github.run_attempt) || 'mac-mini-phone' }}
+      queue: max
+      cancel-in-progress: false
+    # Retain the job limit for setup, checks, cleanup and evidence upload.
+    # Commands run directly; the device gate has its own 60-minute limit on every route.
+    timeout-minutes: 165
+    env:
+      PHONE_VIRTUAL_MAC: ${{ vars.PHONE_VIRTUAL_MAC }}
     defaults:
       run:
         working-directory: Application Support/firstmate
     steps:
+      - name: Checkout the keep-awake action
+        uses: actions/checkout@v4
+        with:
+          sparse-checkout: .github/actions/keep-mac-awake
+          fetch-depth: 1
+          persist-credentials: false
+      - name: Keep the Mac awake
+        uses: ./.github/actions/keep-mac-awake
+      # INF-2125 P1: this job chooses its own parts, so no PC job stands before it. A pull
+      # request's version is its merge into the base branch, whose first parent is that
+      # branch, so two commits hold the whole comparison; an affected request compares with
+      # its base and reads the whole history.
       - uses: actions/checkout@v4
         with:
           path: Application Support/firstmate
-          fetch-depth: 0
+          fetch-depth: ${{ github.event_name == 'pull_request' && '2' || inputs.affected && '0' || '1' }}
           persist-credentials: false
+      # No package cache on a Mac (journeys.yml says why, INF-724).
       - uses: actions/setup-node@v4
         with:
           node-version: 24
@@ -159,17 +196,13 @@ jobs:
       - id: select
         name: Check the phone gate's inputs and choose its parts
         if: github.event_name == 'pull_request'
-        run: node scripts/affected-phone.ts --base "$BASE_REF" --head HEAD --times "$RUNNER_TEMP/phone-times/part-times.json" --placement "$RUNNER_TEMP/phone-placement.json" >> "$GITHUB_OUTPUT"
-        env:
-          BASE_REF: origin/${{ github.base_ref }}
-          PHONE_VIRTUAL_MAC: ${{ vars.PHONE_VIRTUAL_MAC }}
+        run: node scripts/affected-phone.ts --base HEAD^1 --head HEAD --times "$RUNNER_TEMP/phone-times/part-times.json" --placement "$RUNNER_TEMP/phone-placement.json" >> "$GITHUB_OUTPUT"
       - id: request-select
         name: Choose affected parts for a crewmate request
         if: github.event_name == 'workflow_dispatch' && inputs.affected && !inputs.parts
         run: node scripts/affected-phone.ts --request --base "$BASE_REF" --head HEAD --placement "$RUNNER_TEMP/phone-placement.json" >> "$GITHUB_OUTPUT"
         env:
           BASE_REF: ${{ inputs.base || 'origin/main' }}
-          PHONE_VIRTUAL_MAC: ${{ vars.PHONE_VIRTUAL_MAC }}
       - name: Keep the chosen and left parts
         if: github.event_name == 'pull_request' || inputs.affected
         uses: actions/upload-artifact@v4
@@ -178,70 +211,23 @@ jobs:
           path: ${{ runner.temp }}/phone-placement.json
           if-no-files-found: ignore
           retention-days: 14
-  native-phone:
-    name: ${{ inputs.evidence_run != '' && 'native-phone-not-requested' || 'native-phone' }}
-    needs: choose-phone
-    if: inputs.evidence_run == '' && (github.event_name != 'pull_request' || needs.choose-phone.outputs.run == 'true') && (!inputs.affected || inputs.parts || needs.choose-phone.outputs.parts != '')
-    # No paid hosted-Mac fallback. MAC_RUNNER currently names this Mac mini's label.
-    # INF-524: the repository variable PHONE_VIRTUAL_MAC moves the device gates into
-    # a fresh virtual Mac, through the phone check's own runner, which takes no
-    # Mac mini slot (docs/ios.md, "The phone check in a virtual Mac"). Unset, the
-    # job runs exactly as before.
-    # INF-897: VIRTUAL_MAC_RUNNER names the placement service's virtual-Mac label.
-    # No journey or full check shares that scale set, so the runner the service
-    # starts for it takes it, and the service gives it the next free virtual place
-    # (docs/ios.md, "A phone check the placement service puts in a virtual Mac").
-    runs-on: ${{ vars.PHONE_VIRTUAL_MAC && 'mini-mac-vm' || inputs.mac_runner || vars.VIRTUAL_MAC_RUNNER || vars.MAC_RUNNER || 'mini-mac' }}
-    # Reading the pull request's latest version and cancelling this run, if replaced.
-    permissions:
-      actions: write
-      contents: read
-      pull-requests: read
-    # Only phone jobs queue here. Desktop jobs from other PRs remain parallel.
-    # INF-989 (captain: "let both virtual Macs run phone checks at once by ending
-    # the one-at-a-time line"): a job on the placement service's virtual-Mac label
-    # gets its own fresh virtual Mac, so it gets a group of its
-    # own and waits only for a free virtual place. The real Mac never takes that
-    # label. On the Mac mini's runners, and with PHONE_VIRTUAL_MAC's one fixed
-    # clone, the shared mac-mini-phone line keeps one phone check at a time.
-    concurrency:
-      group: ${{ !inputs.mac_runner && vars.VIRTUAL_MAC_RUNNER && !vars.PHONE_VIRTUAL_MAC && format('phone-{0}-{1}', github.run_id, github.run_attempt) || 'mac-mini-phone' }}
-      queue: max
-      cancel-in-progress: false
-    # Retain the job limit for setup, checks, cleanup and evidence upload.
-    # Commands run directly; the device gate has its own 60-minute limit on every route.
-    timeout-minutes: 165
-    env:
-      PHONE_VIRTUAL_MAC: ${{ vars.PHONE_VIRTUAL_MAC }}
-    defaults:
-      run:
-        working-directory: Application Support/firstmate
-    steps:
-      - name: Checkout the keep-awake action
-        uses: actions/checkout@v4
-        with:
-          sparse-checkout: .github/actions/keep-mac-awake
-          fetch-depth: 1
-          persist-credentials: false
-      - name: Keep the Mac awake
-        uses: ./.github/actions/keep-mac-awake
-      - uses: actions/checkout@v4
-        with:
-          path: Application Support/firstmate
-          persist-credentials: false
+      # INF-2125 P1: with the chooser in this job, a job it keeps no part for ends here: a pull
+      # request whose phone inputs changed only the contract's version line, or an affected
+      # request that touched no part.
+      - id: scope
+        name: Decide whether the device gate runs
+        run: echo "gate=$GATE" >> "$GITHUB_OUTPUT"
+        env:
+          GATE: ${{ (github.event_name != 'pull_request' || steps.select.outputs.run == 'true') && (!inputs.affected || inputs.parts != '' || steps.request-select.outputs.parts != '') }}
       # In the virtual Mac the packages install inside the clone, so this Mac
-      # needs only Node for the replacement checks.
+      # needs only Node for the chooser and the replacement checks.
       - uses: pnpm/action-setup@v4
-        if: ${{ !vars.PHONE_VIRTUAL_MAC }}
+        if: ${{ steps.scope.outputs.gate == 'true' && !vars.PHONE_VIRTUAL_MAC }}
         with:
           dest: ${{ runner.temp }}/setup-pnpm
           package_json_file: Application Support/firstmate/package.json
-      # No package cache on a Mac (journeys.yml says why, INF-724).
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 24
       - name: Install without reading this Mac's signing material
-        if: ${{ !vars.PHONE_VIRTUAL_MAC }}
+        if: ${{ steps.scope.outputs.gate == 'true' && !vars.PHONE_VIRTUAL_MAC }}
         run: |
           store="$(pnpm store path --silent)"
           install_home="$RUNNER_TEMP/phone-install-home"
@@ -254,7 +240,7 @@ jobs:
       # pull request's (INF-724); a changed lockfile restores main's newest and fetches the rest.
       - id: swift-packages
         name: Restore main's Swift packages
-        if: ${{ !vars.PHONE_VIRTUAL_MAC }}
+        if: ${{ steps.scope.outputs.gate == 'true' && !vars.PHONE_VIRTUAL_MAC }}
         uses: actions/cache/restore@v4
         with:
           path: ${{ runner.temp }}/swift-packages
@@ -264,7 +250,7 @@ jobs:
       # deletes it however the job ends, a replaced version's included.
       - id: vm
         name: Start a fresh virtual Mac
-        if: ${{ vars.PHONE_VIRTUAL_MAC }}
+        if: ${{ steps.scope.outputs.gate == 'true' && vars.PHONE_VIRTUAL_MAC }}
         run: |
           if [ -n "$REQUESTED_PARTS" ] || [ "$STARVE" = true ] || [ "$PERF" = true ] || [ "$WAITS" = true ]; then
             echo 'Selected parts, starvation, grading and clock-only proof use the normal or placed runner route'; exit 1
@@ -280,6 +266,7 @@ jobs:
       # stops here (INF-895). A failed reading runs the gate.
       - id: start
         name: Stop before the gates if a newer push replaced this version or the pull request closed
+        if: steps.scope.outputs.gate == 'true'
         continue-on-error: true
         run: node scripts/replaced-phone-runs.ts stop-if-replaced
         env:
@@ -299,14 +286,14 @@ jobs:
       - id: both
         name: Read and recover on iPhone and iPad at once
         timeout-minutes: 60
-        if: ${{ steps.start.outputs.replaced != 'true' }}
+        if: ${{ steps.scope.outputs.gate == 'true' && steps.start.outputs.replaced != 'true' }}
         run: |
           parts=(); for part in $PHONE_PARTS; do parts+=(--part "$part"); done
           if [ -n "$PHONE_VIRTUAL_MAC" ]; then exec scripts/virtual-mac/phone.sh gate iphone ipad; fi
           if [ "$(sysctl -n kern.hv_vmm_present 2> /dev/null)" = 1 ]; then exec node scripts/test-phone.ts --both "${parts[@]}" --simulators 2 --evidence "$RUNNER_TEMP/phone"; fi
           node scripts/test-phone.ts --both "${parts[@]}" --evidence "$RUNNER_TEMP/phone"
         env:
-          PHONE_PARTS: ${{ inputs.parts || needs.choose-phone.outputs.parts }}
+          PHONE_PARTS: ${{ inputs.parts || steps.select.outputs.parts || steps.request-select.outputs.parts }}
           INFINITARY_PHONE_WAITS_ONLY: ${{ inputs.waits && '1' || '0' }}
           INFINITARY_STARVE_CHECK: ${{ inputs.starve && '1' || '0' }}
           INFINITARY_PERF_BUDGETS: ${{ inputs.perf && '1' || '0' }}

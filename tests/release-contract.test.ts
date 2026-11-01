@@ -4357,7 +4357,7 @@ describe("a release's own queues", () => {
  * repository variable LINUX_RUNNER sends it, the PC's shell-pc-linux places,
  * as ci.yml's already did, and on GitHub's hosted Ubuntu when it is unset.
  * The package check's Ubuntu 26.04 leg takes the PC's 26.04 image's label.
- * DOP-157's approved plan (direction A): the gate jobs - the three that open
+ * DOP-157's approved plan (direction A): the gate jobs - the two that open
  * a pull request's phone and journeys runs and the four Linux jobs that open
  * a release - take the PC's gate label, LINUX_RUNNER plus -gate, whose
  * runners take no other job, so a runner started for one runs one.
@@ -4366,7 +4366,6 @@ describe("a release's own queues", () => {
 it("sends every Linux job to LINUX_RUNNER, and hosted Ubuntu when it is unset", () => {
   const gate = [
     "phone.yml:cancel-replaced",
-    "phone.yml:choose-phone",
     "journeys.yml:choose-journeys",
     "release.yml:resolve",
     "release.yml:notes",
@@ -4415,7 +4414,7 @@ it("sends every Linux job to LINUX_RUNNER, and hosted Ubuntu when it is unset", 
     "journeys.yml:choose-journeys",
     "source-journeys.yml:source-desktop",
     "verify.yml:lane",
-    "phone.yml:choose-phone",
+    "phone.yml:cancel-replaced",
     "replay.yml:replay-gate",
     "linux-startup.yml:runtime-facts",
     "linux-packages.yml:build",

@@ -23,8 +23,8 @@ const INPUTS = [
 ] as const;
 // INF-827 (the captain's "skip changes to unused setup"): the device gates never run this
 // chooser, scripts/replaced-phone-runs.ts or scripts/phone-test-home.ts, so they are not inputs.
-// The chooser and the replacement script run on Linux under their own unit tests; the test
-// home is for local work only.
+// The chooser and the replacement script run before the gates and are checked on Linux by their
+// own unit tests; the test home is for local work only.
 // INF-524: the device gates' virtual Mac path, used only while PHONE_VIRTUAL_MAC switches it on.
 const VIRTUAL_MAC = ["scripts/virtual-mac/phone.sh", "scripts/virtual-mac/phone-job.sh", "scripts/virtual-mac/vm.sh"] as const;
 

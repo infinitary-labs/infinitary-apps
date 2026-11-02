@@ -124,6 +124,18 @@ test("hide tasks removes the panel without losing its tasks, and show brings it 
     ),
     contentType: "application/json",
   });
+  // The crewmate this test started builds its panel and reports on its own
+  // clock, and the first mate's turn for that report closes the task. The
+  // stand-in first mate answers a turn that carries both the report and a
+  // captain's ask with the close alone, so the next test's ask would be lost
+  // (INF-2340: main's full check failed the Activity move this way). This
+  // test waits for its own work to close, leaving nothing at work behind it,
+  // and closes the note that close leaves for the captain (INF-1677), so the
+  // next test's no-card check is about what its own ask did.
+  await expect.poll(() => buildingInWorkspace(page), { timeout: 30_000 }).toEqual([]);
+  for (const card of await page.evaluate(() => window.infinitary.cards.list()))
+    await page.evaluate((id) => window.infinitary.cards.close(id), card.id);
+  await expect(page.locator("[data-card-layer]")).toHaveCount(0);
 });
 
 test("move Activity to the right changes its rail without changing collapse or opening a card", async () => {

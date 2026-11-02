@@ -18,6 +18,27 @@ export function journeyArguments(files: readonly string[], extra: readonly strin
   return ["exec", "playwright", "test", "--no-deps", "--retries", "0", "--max-failures", "1", ...extra, ...files];
 }
 
+/** INF-2340 (captain's route "alone-at-author"): the run-alone pass belongs to
+ * the proof of edited journeys, not to main's full check. After every round
+ * passes, the directly edited selected files' later tests each run by
+ * themselves (scripts/e2e-alone.ts, docs/testing.md "Each test owns its
+ * prerequisites"); `--alone-tag` keeps only that tag's tests, as the Mac does.
+ */
+export function aloneArguments(
+  files: readonly string[],
+  changed: readonly string[],
+  options: { out?: string; tag?: string } = {},
+): string[] | undefined {
+  const edited = [...new Set(files)].filter((file) => changed.includes(file));
+  if (edited.length === 0) return undefined;
+  return [
+    "scripts/e2e-alone.ts",
+    ...(options.out ? ["--out", options.out] : []),
+    ...(options.tag ? ["--tag", options.tag] : []),
+    ...edited,
+  ];
+}
+
 export function runJourneyRounds(
   rounds: readonly string[][],
   run: (files: string[], round: number) => number | null,
@@ -72,6 +93,14 @@ function main(): void {
       ])),
       rounds: outcomes,
     }));
+  }
+  const alone = status === 0
+    ? aloneArguments(files, changed, { out: value("--alone-out") || undefined, tag: value("--alone-tag") || undefined })
+    : undefined;
+  if (alone) {
+    console.log(JSON.stringify({ head, platform: process.platform, alone: alone.slice(1) }));
+    process.exitCode = spawnSync(process.execPath, alone, { stdio: "inherit" }).status ?? 1;
+    return;
   }
   process.exitCode = status;
 }

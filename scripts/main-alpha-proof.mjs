@@ -19,7 +19,10 @@ export function verifyMainEvidence(run, jobs, repository, source) {
   const green = (job) => job.status === "completed" && job.conclusion === "success";
   const passed = (name) => jobs.some((job) => job.name === name && green(job));
   const journeys = jobs.filter((job) => job.name.startsWith("verify / linux-e2e / "));
-  const completeJourneys = ["parallel", "desktop", "run alone"].every((lane) => {
+  // INF-2340: the run-alone pass left main's full check for the proof of
+  // edited journeys, so full coverage is the parallel and desktop shards; any
+  // other journey job a run holds must still be green.
+  const completeJourneys = ["parallel", "desktop"].every((lane) => {
     const shards = journeys.filter((job) => job.name.includes(`(${lane} `)).map((job) => {
       const match = / (\d+)\/(\d+)\)$/.exec(job.name);
       return match ? { index: Number(match[1]), total: Number(match[2]) } : null;
@@ -29,7 +32,7 @@ export function verifyMainEvidence(run, jobs, repository, source) {
       new Set(shards.map((shard) => shard?.index)).size === total &&
       shards.every((shard) => shard && shard.total === total && shard.index >= 1 && shard.index <= total);
   });
-  // Full source coverage includes parallel, desktop and fresh-state shards.
+  // Full source coverage is every parallel and desktop shard.
   // All jobs of the successful run must be completed; an optional lane may skip,
   // but none of these full-check owners may be skipped or merely absent.
   if (!passed("verify / linux-checks") || !passed("verify / mac") ||

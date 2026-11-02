@@ -270,7 +270,9 @@ jobs:
         name: Build, then run the chosen journeys
         # --no-deps: the desktop lane is the other lanes' teardown and a
         # teardown project ignores the file filter (docs/testing.md). ONLY
-        # keeps the tests tagged MAC_ONLY_TAG; Linux runs the rest.
+        # keeps the tests tagged MAC_ONLY_TAG; Linux runs the rest. After the
+        # rounds pass, each later test of a directly edited file that shares
+        # one app runs by itself (scripts/journey-runs.ts, INF-2340).
         # The run ends at 75 minutes and the command at 90 (INF-1083, the
         # captain's check limits); a stuck wait ends sooner, at its own cap.
         timeout-minutes: 90
@@ -279,18 +281,28 @@ jobs:
           pnpm build
           if [ "$STARVE" = true ]; then
             # The requested load experiment has its own limit (docs/testing.md, "Journeys on request").
-            python3 scripts/starve-check.py --timeout 900 -- node scripts/journey-runs.ts --base "$BASE" --files "$FILES" -- $ONLY
+            python3 scripts/starve-check.py --timeout 900 -- node scripts/journey-runs.ts --base "$BASE" --files "$FILES" --alone-out playwright-report/alone $ALONE_TAG -- $ONLY
           else
-            node scripts/journey-runs.ts --base "$BASE" --files "$FILES" -- $ONLY
+            node scripts/journey-runs.ts --base "$BASE" --files "$FILES" --alone-out playwright-report/alone $ALONE_TAG -- $ONLY
           fi
         env:
           BASE: ${{ inputs.base || 'origin/main' }}
           ONLY: ${{ !inputs.mac_all && '--grep @mac-only' || '' }}
+          # The edited files' run-alone pass keeps the same tests (INF-2340).
+          ALONE_TAG: ${{ !inputs.mac_all && '--alone-tag @mac-only' || '' }}
           STARVE: ${{ inputs.starve }}
           INFINITARY_E2E_RUN_MINUTES: 75
           INFINITARY_PERF_BUDGETS: ${{ inputs.perf && '1' || '' }}
           FILES: ${{ needs.choose-journeys.outputs.files }}
           PLAYWRIGHT_JSON_OUTPUT_FILE: playwright-report/journeys-results.json
+      - name: Keep the run-alone result
+        if: ${{ always() && steps.e2e.outcome != 'skipped' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-alone-mac
+          path: Application Support/firstmate/playwright-report/alone/
+          if-no-files-found: ignore
+          retention-days: 14
       - name: Keep the failed journeys' evidence
         if: ${{ always() && steps.e2e.outcome == 'failure' }}
         uses: actions/upload-artifact@v4

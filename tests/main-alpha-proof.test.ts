@@ -30,7 +30,9 @@ function completedMain() {
     "phone / native-phone",
     "verify / linux-checks",
     "verify / mac",
-    ...["parallel", "desktop", "run alone"].flatMap((lane) =>
+    // INF-2340 (captain's route "alone-at-author"): main's full check runs no
+    // run-alone shards, so a complete run is the parallel and desktop shards.
+    ...["parallel", "desktop"].flatMap((lane) =>
       [1, 2, 3, 4].map((shard) => `verify / linux-e2e / journeys (${lane} ${shard}/4)`),
     ),
   ];

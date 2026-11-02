@@ -14,7 +14,7 @@ Linux keeps the unfiltered `pnpm test`, including every probe: no unit file move
 When adding a case that needs macOS, add its file to that list; the scratch Keychain probes retain their existing opt-in gates.
 `tests/release-workflows.test.ts` uses real Vitest file discovery to check the Mac selection, its cohort assignments and its inclusion in the complete Linux suite.
 
-Main pushes and requested runs (`ci.yml`) run the same projects on separate machines; PRs omit the full unit, integration and probe sweeps: `unit-tests` runs `pure`, `unit` and `unit-isolated`, each `integration-tests` job runs one `--shard` of `integration`, and `probe-tests` runs every file of `probe` ("Probes" below, `docs/testing.md`).
+Requested runs (`ci.yml`) run the same projects on separate machines, and a push to `main` runs them once in the full check's `linux-checks` lane (`verify.yml`); PRs omit the full unit, integration and probe sweeps: `unit-tests` runs `pure`, `unit` and `unit-isolated`, each `integration-tests` job runs one `--shard` of `integration`, and `probe-tests` runs every file of `probe` ("Probes" below, `docs/testing.md`).
 
 | Project | Files | Rule |
 | --- | --- | --- |
@@ -35,13 +35,13 @@ New unit files default to guarded sharing; add state-mutating files to the isola
 
 A probe is an integration file that can fail with no code change, because it leans on what the runner has: SSH and Remote Login stand-ins, dns-sd, release rehearsals, the connection listener, real Playwright runs, the Claude client against a stand-in API, whole-core command-line runs and a Linux Secret Service.
 Such a file fails on the runner's state as well as on the code, and catches a real problem mostly when its own subject changes (FI3-1756).
-Main pushes and requested runs execute every probe; pull requests omit this job.
+Main's full check and requested runs execute every probe; pull requests omit this job.
 `verify.yml`'s `linux-checks` lane, inside every alpha and on demand, also runs them all.
 
 `scripts/affected-probes.ts` owns the list: `PROBES` groups the probe files by what they reach outside the code, each group with the paths it watches, and `PROBE_FILES` is every file of it.
 The local chooser runs a probe when the change edits the probe itself, a path its group names (a directory ending in `/` matches what is under it), or a path of the lane itself (`LANE`: the chooser, `vitest.config.ts`, the packages and the shared test setup), which runs every probe.
 A base the chooser cannot read runs every probe, and a group naming a path that no longer exists is refused, so a moved subject cannot silently stop its probes running before the release.
-`ci.yml`'s `probe-tests` runs the unfiltered `pnpm test --project probe` on main and on request.
+`ci.yml`'s `probe-tests` runs the unfiltered `pnpm test --project probe` on request, and the full check's `linux-checks` lane runs every probe on main.
 Locally, `pnpm test:probes` runs the probes the working copy's commits reach from `origin/main`, and `node scripts/affected-probes.ts` only lists them.
 
 A probe stays on the integration list below, so the unit fence still exempts it, and `vitest.config.ts` refuses a probe that is not on it.

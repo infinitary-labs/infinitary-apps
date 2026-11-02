@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "main-check-repeats-off",
+      "reason": "CI only: a push to main no longer starts the ordinary Linux jobs the full check repeats, and the run-alone journey pass moves from main's full check to the proof of edited journeys; nothing in the app changes."
+    }
+  ]
+}

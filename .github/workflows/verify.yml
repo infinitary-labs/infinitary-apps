@@ -211,9 +211,9 @@ jobs:
       # red stage leaves every independent stage's result on the run, and the
       # job still ends red on any failure, which keeps release.yml from signing.
       #
-      # linux-checks: the commands of ci.yml's main jobs, in one job on hosted Linux.
-      # Its `pnpm test` runs every probe (docs/test-cohorts.md, "Probes"),
-      # as main's ci.yml does. Each needs only the install; its build is the shared one below.
+      # linux-checks: the commands of ci.yml's jobs, in one job on hosted Linux.
+      # Its `pnpm test` runs every probe (docs/test-cohorts.md, "Probes"), as
+      # ci.yml's requested sweeps do; a push to main runs them only here. Each needs only the install; its build is the shared one below.
       - if: ${{ !cancelled() && matrix.lane == 'linux-checks' && steps.install.outcome == 'success' }}
         run: pnpm typecheck
       - if: ${{ !cancelled() && matrix.lane == 'linux-checks' && steps.install.outcome == 'success' }}
@@ -390,27 +390,6 @@ jobs:
       - id: helper
         if: ${{ !cancelled() && matrix.lane == 'mac' && steps.package.outcome == 'success' }}
         run: scripts/check-helper.sh "dist/mac-universal/Infinitary Dev.app"
-      # The run-alone pass (docs/testing.md "Each test owns its
-      # prerequisites"): each later test of a spec file that shares one app
-      # (test.beforeAll) runs by itself, by file:line, on the build the suite
-      # ran, so a test that leans on what an earlier one made fails here even
-      # when its whole file passes. linux-e2e's `journeys (run alone N/4)` jobs
-      # run the pass over every other test; here it runs the Mac-only ones
-      # (MAC_ONLY_TAG, tests/e2e/tags.ts), which skip on Linux. It runs
-      # whether the suite passed or failed, after every other stage so it
-      # hides none of them, and the summary lists its failures apart from the
-      # suite's.
-      - id: alone
-        if: ${{ !cancelled() && matrix.lane == 'mac' && steps.e2e.outcome != 'skipped' }}
-        run: node scripts/e2e-alone.ts --tag @mac-only --out playwright-report/alone
-      - name: Keep the run-alone result
-        if: ${{ always() && steps.alone.outcome != 'skipped' }}
-        uses: actions/upload-artifact@v4
-        with:
-          name: e2e-alone-mac
-          path: Application Support/firstmate/playwright-report/alone/
-          if-no-files-found: ignore
-          retention-days: 14
       # The run's page says what a red verify needs first (docs/testing.md):
       # the exact commit it checked, the first stage that failed, and the e2e
       # counts, skipped included, with every failure in the order it started
@@ -438,7 +417,6 @@ jobs:
             data-folder=${{ steps.data-folder.outcome }}
             bundled-git=${{ steps.bundled-git.outcome }}
             helper=${{ steps.helper.outcome }}
-            alone=${{ steps.alone.outcome }}
         run: |
           first_failed=none
           for stage in $STAGES; do
@@ -498,20 +476,4 @@ jobs:
           for (const error of report.errors ?? [])
             console.log(`\nOutside any test: ${plain(error.message).split("\n")[0]}`);
           SUMMARY
-            node - <<'ALONE'
-          const fs = require("node:fs");
-          const file = "playwright-report/alone/alone-results.json";
-          if (!fs.existsSync(file)) process.exit(0);
-          const { results } = JSON.parse(fs.readFileSync(file, "utf8"));
-          const failed = results.filter((result) => result.status === "failed");
-          console.log(
-            `\nRun alone: ${results.length - failed.length} passed, ${failed.length} failed, ` +
-              "each a later test of a file that shares one app, selected by itself.",
-          );
-          if (failed.length > 0) {
-            console.log("\nFailed alone (each error is in the e2e-alone-mac artifact):");
-            for (const result of failed)
-              console.log(`- \`${result.file}:${result.line}\` ${result.title} (${result.lane})`);
-          }
-          ALONE
           } | tee -a "$GITHUB_STEP_SUMMARY"

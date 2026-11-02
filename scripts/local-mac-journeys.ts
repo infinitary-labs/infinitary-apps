@@ -29,7 +29,7 @@ function main(): void {
   }
   const build = spawnSync("pnpm", ["build"], { stdio: "inherit" });
   if (build.status !== 0) { process.exitCode = build.status ?? 1; return; }
-  const run = spawnSync(process.execPath, ["scripts/journey-runs.ts", "--base", base ?? "origin/main", "--files", files.join(" "), "--", "--grep", "@mac-only", "--workers", String(LOCAL_JOURNEY_WORKERS)], {
+  const run = spawnSync(process.execPath, ["scripts/journey-runs.ts", "--base", base ?? "origin/main", "--files", files.join(" "), "--alone-tag", "@mac-only", "--", "--grep", "@mac-only", "--workers", String(LOCAL_JOURNEY_WORKERS)], {
     stdio: "inherit",
     env: { ...process.env, INFINITARY_SELECTED_MAC: "1" },
   });

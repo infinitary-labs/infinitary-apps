@@ -23,7 +23,6 @@ import type {
   JSONReportTestResult,
 } from "@playwright/test/reporter";
 import { describe, expect, it, vi } from "vitest";
-import { ALONE_RESULTS } from "../scripts/e2e-alone.ts";
 import { journeyArguments } from "../scripts/journey-runs.ts";
 import { MAC_UNIT_FILES } from "../scripts/mac-unit-tests.ts";
 import { presentationCommitMessage } from "../src/core/forge";
@@ -270,7 +269,9 @@ describe("local packaging identity (electron-builder.dev.yml)", () => {
     expect(runs.join("\n")).not.toMatch(/test:e2e|e2e-alone|replay:gate|electron-builder/);
     // INF-2259 routes the same explicit selection through its round owner.
     expect(
-      runs.some((run) => /journey-runs\.ts --base "\$BASE" --files "\$FILES" -- \$ONLY/.test(run)),
+      runs.some((run) =>
+        /journey-runs\.ts --base "\$BASE" --files "\$FILES" .* -- \$ONLY/.test(run),
+      ),
     ).toBe(true);
     expect(journeyArguments(["tests/e2e/devices.spec.ts"], ["--grep", MAC_ONLY_TAG])).toEqual([
       "exec",
@@ -311,7 +312,7 @@ describe("local packaging identity (electron-builder.dev.yml)", () => {
     expect(only({ files: "window-wash", mac_all: true })).toBe("");
     const commands = (mac?.run ?? "").split("\n").filter((line) => /journey-runs\.ts/.test(line));
     expect(commands).not.toHaveLength(0);
-    for (const command of commands) expect(command).toMatch(/--files "\$FILES" -- \$ONLY$/);
+    for (const command of commands) expect(command).toMatch(/--files "\$FILES" .* -- \$ONLY$/);
     const selected = ["tests/e2e/window-wash.spec.ts"];
     expect(journeyArguments(selected, only({ mac_all: false }).split(" ")).slice(-3)).toEqual([
       "--grep",
@@ -611,18 +612,19 @@ describe("local packaging identity (electron-builder.dev.yml)", () => {
    * string. No upstream jobs: the implicit success() condition is true here.
    */
   it.each([
-    ["main push", "push", "", "refs/heads/main"],
     ["requested full sweep", "workflow_dispatch", "", "refs/heads/fm/task-ci-contract"],
     ["ordinary proposal", "pull_request", "fm/task-ci-contract", "refs/pull/42/merge"],
     ["release notes and record", "pull_request", "fm/task-release-alpha", "refs/pull/471/merge"],
   ])("runs the real Linux gate for %s", (_name, eventName, headRef, ref) => {
     const ci = loadYamlFile(".github/workflows/ci.yml") as {
-      on: { push: { branches: string[] }; pull_request: unknown };
+      on: Record<string, unknown>;
       jobs: Record<string, CiJob>;
     };
     // The event must reach every job, not disappear behind a branch/path filter.
-    expect(ci.on.push.branches).toEqual(["main"]);
     expect(ci.on).toHaveProperty("pull_request", null);
+    // INF-2340 (captain's route "drop-ci-main"): a push to main starts none of
+    // these jobs, since main.yml's full check runs the same commands.
+    expect(Object.keys(ci.on).toSorted()).toEqual(["pull_request", "workflow_dispatch"]);
     const github = new data.Dictionary(
       { key: "event_name", value: new data.StringData(eventName) },
       { key: "head_ref", value: new data.StringData(headRef) },
@@ -727,7 +729,7 @@ describe("local packaging identity (electron-builder.dev.yml)", () => {
    * job, or in shards of one count that together cover it. The captain
    * explicitly includes every probe, not just affected files.
    */
-  it("runs every vitest project once across the main jobs, a sharded one in shards that cover it", () => {
+  it("runs every vitest project once across ci.yml's sweep jobs, a sharded one in shards that cover it", () => {
     const projects = (vitestConfig.test?.projects ?? []).map((project) => {
       const name =
         typeof project === "object" && "test" in project ? project.test?.name : undefined;
@@ -1146,65 +1148,48 @@ describe("local packaging identity (electron-builder.dev.yml)", () => {
 
   /**
    * The run-alone pass (docs/testing.md "Each test owns its prerequisites"):
-   * the mac lane runs each later Mac-only test of a spec file that shares
-   * one app by itself (INF-873: the rest run alone on Linux), on the suite's
-   * build, whether the suite passed or failed and after every other stage,
-   * keeps its result, and the summary lists its failures apart from the
-   * suite's.
+   * each later Mac-only test of an edited spec file that shares one app runs
+   * by itself on the Mac (INF-873: the rest run alone on Linux). INF-2340
+   * (captain's route "alone-at-author") moved it from main's full check to
+   * journeys.yml's proof of edited journeys: the Mac job hands the run-alone
+   * pass the same tag as its rounds and keeps its result, and the full
+   * check's mac lane no longer runs it.
    */
-  it("runs each later Mac-only test of a file that shares one app alone, and lists its failures apart", () => {
+  it("runs each later Mac-only test of an edited file alone with the journeys' proof, not in the full check", () => {
     const verify = loadYamlFile(".github/workflows/verify.yml") as {
       jobs: { lane: { steps: Step[] } };
     };
-    const steps = verify.jobs.lane.steps;
-    const alone = steps.find((step) => step.id === "alone");
-    const [, tag, out] =
-      /^node scripts\/e2e-alone\.ts --tag (\S+) --out (\S+)$/.exec(alone?.run ?? "") ?? [];
-    expect(tag, "the mac lane runs the tests that skip on Linux").toBe(MAC_ONLY_TAG);
+    expect(verify.jobs.lane.steps.some((step) => step.run?.includes("e2e-alone"))).toBe(false);
+    const journeys = loadYamlFile(".github/workflows/journeys.yml") as {
+      jobs: Record<string, { steps: Step[] }>;
+    };
+    const steps = journeys.jobs["affected-journeys"]?.steps ?? [];
+    const e2e = steps.find((step) => step.id === "e2e");
+    const tag = (inputs: Record<string, unknown>) =>
+      workflowString(e2e?.env?.ALONE_TAG ?? "", { inputs });
+    expect(tag({}), "the Mac runs alone the tests that skip on Linux").toBe(
+      `--alone-tag ${MAC_ONLY_TAG}`,
+    );
+    expect(tag({ mac_all: true }), "a request for every journey runs every later test alone").toBe(
+      "",
+    );
+    const commands = (e2e?.run ?? "").split("\n").filter((line) => /journey-runs\.ts/.test(line));
+    expect(commands).not.toHaveLength(0);
+    const outs = commands.map(
+      (command) => /--alone-out (\S+) \$ALONE_TAG -- \$ONLY$/.exec(command)?.[1],
+    );
+    expect(new Set(outs).size).toBe(1);
+    const out = outs[0];
     expect(out, "the pass writes its result where the job keeps it").toBeTruthy();
-    // After every other stage, so a test failing alone hides none of them.
-    expect(steps.flatMap((step) => (step.id ? [step.id] : [])).at(-1)).toBe("alone");
-    const outcomes = ["success", "failure", "skipped"];
-    expect(outcomes.map((e2e) => stepRuns(alone, { e2e }))).toEqual([true, true, false]);
-    expect(stepRuns(alone, { e2e: "success", package: "failure" })).toBe(true);
     const kept = steps.find(
       (step) =>
         step.uses === "actions/upload-artifact@v4" &&
         step.with?.path === `Application Support/firstmate/${out}/`,
     );
-    expect(steps.indexOf(kept as Step)).toBeGreaterThan(steps.indexOf(alone as Step));
-    expect(outcomes.map((outcome) => stepRuns(kept, { e2e: "success", alone: outcome }))).toEqual([
-      true,
-      true,
-      false,
-    ]);
-
-    const summarize = steps.find((step) => step.name === "Summarize");
-    const result = (title: string, line: number, status: "passed" | "failed") => ({
-      file: "rows.spec.ts",
-      line,
-      lane: "application",
-      title,
-      status,
-      seconds: 4,
-      ...(status === "failed" ? { error: "Error: expect(locator).toBeVisible() failed" } : {}),
-    });
-    const { summary } = summarizeRun(
-      summarize,
-      { install: "success", unit: "success", e2e: "success", alone: "failure" },
-      () => ({
-        [`${out}/${ALONE_RESULTS}`]: {
-          results: [
-            result("the rows › moves", 20, "failed"),
-            result("the rows › folds", 30, "passed"),
-          ],
-        },
-      }),
-    );
-    expect(summary).toContain("First failed stage: **alone**.");
-    expect(summary).toContain("Run alone: 1 passed, 1 failed");
-    expect(summary).toContain("- `rows.spec.ts:20` the rows › moves (application)");
-    expect(summary).not.toContain("rows.spec.ts:30");
+    expect(kept?.with?.name).toBe("e2e-alone-mac");
+    expect(
+      ["success", "failure", "skipped"].map((outcome) => stepRuns(kept, { e2e: outcome })),
+    ).toEqual([true, true, false]);
   });
 
   it("holds one job-lifetime macOS sleep assertion for verify and signing", async () => {
@@ -4342,7 +4327,7 @@ describe("the Linux packages", () => {
 describe("budgeted pull-request journey workflow (INF-658)", () => {
   type Job = {
     name: string;
-    strategy: { matrix: { lane: string; shard: string; include: string } };
+    strategy: { matrix: { lane: string; shard: string; include?: string } };
     steps: {
       name?: string;
       run?: string;
@@ -4356,31 +4341,28 @@ describe("budgeted pull-request journey workflow (INF-658)", () => {
   };
   const job = source.jobs["source-desktop"];
   // INF-1417: preserve the ordinary eight jobs and split fresh-state checks four ways.
-  it("splits starters into disjoint lanes and adds four isolated fresh-state jobs to the full alpha", () => {
+  // INF-2340 (captain's route "alone-at-author"): the full suite on main and
+  // in an alpha adds no fresh-state jobs; only a request for them does.
+  it("splits starters into disjoint lanes, the full suite eight ways and a requested fresh-state pass four", () => {
     const lanes = (suite: string, lane = "parallel") =>
       workflowValue(job?.strategy.matrix.lane ?? "", { inputs: { suite, lane } });
     const shards = (suite: string) =>
       workflowValue(job?.strategy.matrix.shard ?? "", { inputs: { suite } });
-    const extra = (suite: string) =>
-      workflowValue(job?.strategy.matrix.include ?? "", { inputs: { suite } });
+    expect(job?.strategy.matrix.include).toBeUndefined();
     expect(lanes("starter")).toEqual(["parallel", "desktop"]);
     expect(shards("starter")).toEqual([1]);
-    expect(extra("starter")).toEqual([]);
     expect(lanes("full")).toEqual(["parallel", "desktop"]);
     expect(shards("full")).toEqual([1, 2, 3, 4]);
-    expect(extra("full")).toEqual([1, 2, 3, 4].map((shard) => ({ lane: "alone", shard })));
     expect(lanes("alone")).toEqual(["alone"]);
     expect(shards("alone")).toEqual([1, 2, 3, 4]);
-    expect(extra("alone")).toEqual([]);
     expect(lanes("affected", "desktop")).toEqual(["desktop"]);
-    expect(extra("affected")).toEqual([]);
     // A release's stable promotion reads every `verify / linux-e2e / …` job by name.
-    const name = (lane: string, shard: number) =>
-      workflowString(job?.name ?? "", { inputs: { suite: "full" }, matrix: { lane, shard } });
-    for (const shard of shards("full") as number[]) {
-      expect(name("alone", shard)).toBe(`journeys (run alone ${shard}/4)`);
+    const name = (suite: string, lane: string, shard: number) =>
+      workflowString(job?.name ?? "", { inputs: { suite }, matrix: { lane, shard } });
+    for (const shard of shards("alone") as number[]) {
+      expect(name("alone", "alone", shard)).toBe(`journeys (run alone ${shard}/4)`);
     }
-    expect(name("desktop", 2)).toBe("journeys (desktop 2/4)");
+    expect(name("full", "desktop", 2)).toBe("journeys (desktop 2/4)");
   });
   it.each(["parallel", "desktop"])(
     "runs the %s starter and overflow files through their lane",
@@ -4430,9 +4412,10 @@ describe("budgeted pull-request journey workflow (INF-658)", () => {
         const call = readFileSync(log, "utf8");
         expect(call.includes("--project=desktop")).toBe(lane === "desktop");
         expect(call.includes("--project=application")).toBe(lane === "parallel");
+        // INF-2340: the affected files' rounds end with their run-alone pass.
         if (suite === "affected")
           expect(call.trim()).toBe(
-            `node scripts/journey-runs.ts --base origin/main --files ${files} -- ${lane === "desktop" ? "--project=desktop" : "--project=renderer --project=application"}`,
+            `node scripts/journey-runs.ts --base origin/main --files ${files} --alone-out playwright-report/alone -- ${lane === "desktop" ? "--project=desktop" : "--project=renderer --project=application"}`,
           );
         else {
           expect(call).toContain("exec playwright test --no-deps");
@@ -4444,7 +4427,8 @@ describe("budgeted pull-request journey workflow (INF-658)", () => {
   );
   // INF-1417: execute each fresh-state share's real shell entry point, both in
   // full verification and the hosted-only proof request, preserving result retention.
-  it.each(["full", "alone"].flatMap((suite) => [1, 2, 3, 4].map((shard) => ({ suite, shard }))))(
+  // INF-2340: only the requested pass runs every spec file alone.
+  it.each([1, 2, 3, 4].map((shard) => ({ suite: "alone", shard })))(
     "runs fresh-state share $shard in $suite and keeps its distinct result",
     ({ suite, shard }) => {
       const dir = scratchDir("infinitary-journey-alone-");
@@ -4487,20 +4471,37 @@ describe("budgeted pull-request journey workflow (INF-658)", () => {
         ) ?? [];
       expect(selected).toBe(`${shard}/4`);
       expect(out, "the job runs the pass alone, over every spec file").toBeTruthy();
+      // Kept on the requested pass's jobs and an affected job's, never a full suite's.
       const onAlone = (step: { if?: string } | undefined) =>
-        workflowValue(step?.if ?? "", { matrix: { lane: "alone" } }) === true &&
-        workflowValue(step?.if ?? "", { matrix: { lane: "desktop" } }) === false;
+        workflowValue(step?.if ?? "", { inputs: { suite }, matrix: { lane: "alone" } }) === true &&
+        workflowValue(step?.if ?? "", {
+          inputs: { suite: "affected" },
+          matrix: { lane: "desktop" },
+        }) === true &&
+        workflowValue(step?.if ?? "", {
+          inputs: { suite: "full" },
+          matrix: { lane: "desktop" },
+        }) === false;
       const kept = job?.steps.find(
         (step) =>
           step.uses === "actions/upload-artifact@v4" &&
           step.with?.path === `Application Support/firstmate/${out}/`,
       );
-      expect(workflowString(kept?.with?.name ?? "", { matrix: { shard } })).toBe(
-        `e2e-alone-${shard}`,
-      );
+      expect(
+        workflowString(kept?.with?.name ?? "", {
+          inputs: { suite },
+          matrix: { lane: "alone", shard },
+        }),
+      ).toBe(`e2e-alone-${shard}`);
+      expect(
+        workflowString(kept?.with?.name ?? "", {
+          inputs: { suite: "affected", "artifact-suffix": "overflow-0" },
+          matrix: { lane: "desktop", shard: 1 },
+        }),
+      ).toBe("e2e-alone-overflow-0-desktop");
       expect(onAlone(kept)).toBe(true);
       const summarize = job?.steps.find((step) => step.run?.includes("--summarize"));
-      expect(summarize?.run).toBe(
+      expect(summarize?.run).toContain(
         `node scripts/e2e-alone.ts --summarize ${out} | tee -a "$GITHUB_STEP_SUMMARY"`,
       );
       expect(onAlone(summarize)).toBe(true);

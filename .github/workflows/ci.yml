@@ -2,8 +2,9 @@ name: ci
 
 # Pull requests retain typecheck, lint and build. Edited unit files run
 # three total rounds locally, never in extra PR repeat jobs. Full unit,
-# integration and probe sweeps run on main and on request, not on PRs.
-# Releases keep the full suite in verify.yml, including every probe.
+# integration and probe sweeps run here only on request, never on PRs.
+# A push to main starts none of these jobs (INF-2340): main.yml's full check
+# runs the same commands in verify.yml's linux-checks lane, every probe included.
 # Which Linux machines (INI-9's plan, approved by the captain): every job
 # runs on the label the repository variable LINUX_RUNNER names - the
 # placement service's shell-pc-linux, a fresh VM per job on the Windows PC,
@@ -14,8 +15,6 @@ name: ci
 on:
   # Linux-only branch validation; edited unit-file rounds belong locally.
   workflow_dispatch:
-  push:
-    branches: [main]
   pull_request:
 
 concurrency:
@@ -103,7 +102,7 @@ jobs:
         timeout-minutes: 30
 
   # Probes can fail with no code change (docs/test-cohorts.md, "Probes").
-  # Run every probe on main and on request, never a changed-path selection.
+  # Run every probe on request, never a changed-path selection.
   probe-tests:
     if: github.event_name != 'pull_request'
     runs-on: ${{ vars.LINUX_RUNNER || 'ubuntu-latest' }}

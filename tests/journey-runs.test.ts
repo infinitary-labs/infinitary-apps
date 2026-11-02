@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { journeyRounds, runJourneyRounds } from "../scripts/journey-runs.ts";
+import { aloneArguments, journeyRounds, runJourneyRounds } from "../scripts/journey-runs.ts";
 
 // INF-2259 approved hybrid process: ordinary selected proof counts as round
 // one, and directly edited selected journey files need only two more.
@@ -33,5 +33,33 @@ describe("selected journey rounds", () => {
   it("does not repeat affected but unedited files or an edited file outside the selection", () => {
     expect(journeyRounds(files, ["tests/e2e/latency.check.spec.ts"])).toEqual([files]);
     expect(journeyRounds([], files)).toEqual([]);
+  });
+});
+
+// INF-2340 (captain's route "alone-at-author"): the run-alone pass moved from
+// main's full check to the proof of edited journeys, over the directly edited
+// selected files only, with the Mac's tag when the rounds keep only its tests.
+describe("the edited journeys' run-alone pass", () => {
+  it("runs alone only the directly edited selected files, where the job keeps the result", () => {
+    expect(
+      aloneArguments(files, [files[1]!, "src/core/devices/computerUpdate.ts"], {
+        out: "playwright-report/alone",
+      }),
+    ).toEqual(["scripts/e2e-alone.ts", "--out", "playwright-report/alone", files[1]]);
+    expect(aloneArguments(files, files, { tag: "@mac-only" })).toEqual([
+      "scripts/e2e-alone.ts",
+      "--tag",
+      "@mac-only",
+      ...files,
+    ]);
+  });
+
+  it("runs nothing alone when no selected journey file was edited", () => {
+    expect(
+      aloneArguments(files, [
+        "src/core/devices/computerUpdate.ts",
+        "tests/e2e/latency.check.spec.ts",
+      ]),
+    ).toBeUndefined();
   });
 });

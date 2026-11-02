@@ -7,6 +7,7 @@ import {
 } from "../orchestrator/answerDelivery";
 import type { MessageFile } from "../overflow";
 import type { AppDatabase } from "./db";
+import { prepared } from "./statements";
 
 /**
  * The capture table (task-system design section 4.5, P1): one row per
@@ -296,6 +297,37 @@ export class AskStore {
       .prepare(`SELECT * FROM captain_asks WHERE ${NOT_ENDED} ORDER BY at, rowid`)
       .all() as Row[];
     return rows.map(fromRow);
+  }
+
+  /**
+   * Complete chains with an unfinished member, in one read. The unfinished
+   * rows select roots, not members: an open turn or an already-ended member
+   * still belongs to its chain and determines the newest message's time.
+   */
+  openChains(): { root: AskRecord; members: AskRecord[] }[] {
+    const rows = prepared(
+      this.db,
+      `WITH unfinished AS (
+         SELECT id, continues FROM captain_asks WHERE ${NOT_ENDED}
+       ), roots AS (
+         SELECT DISTINCT COALESCE(parent.id, unfinished.id) AS id
+         FROM unfinished LEFT JOIN captain_asks parent ON parent.id = unfinished.continues
+       )
+       SELECT roots.id AS root_id, member.* FROM roots
+       JOIN captain_asks member ON member.id = roots.id OR member.continues = roots.id
+       ORDER BY member.at, member.rowid`,
+    ).all() as (Row & { root_id: string })[];
+    const grouped = new Map<string, { root?: AskRecord; members: AskRecord[] }>();
+    for (const row of rows) {
+      const group = grouped.get(row.root_id) ?? { members: [] };
+      const ask = fromRow(row);
+      if (ask.id === row.root_id) group.root = ask;
+      else group.members.push(ask);
+      grouped.set(row.root_id, group);
+    }
+    return [...grouped.values()].flatMap(({ root, members }) =>
+      root ? [{ root, members: [root, ...members] }] : [],
+    );
   }
 
   /** The messages that joined this one's work, oldest first. */

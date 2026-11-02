@@ -139,6 +139,8 @@ At most one closing note: when work closes without the captain's click, `SettleS
 - Otherwise the app's one closing note goes up, marked as the answer.
 - Work no message of the captain's covers, such as work the fleet started, puts up a note only when it merged or released and nothing of the task is on the stack.
 
+Open-chain reads select unfinished roots and their complete membership together through `TaskService.openAskChains`, decoding each message once instead of reloading each root and its members after listing the open messages.
+Open turns and already-ended members remain in those chains, so freshness and pending-delivery checks still read the newest message; each call reads current storage, with no retained chain cache.
 The first mate's turn facts list the open messages (`open_asks`): each one's id, when it was sent, how it stands and the work that still runs for it, newest first and bounded like the task list, with a notice still up counted as unanswered.
 They never repeat the captain's words, which are in its conversation.
 

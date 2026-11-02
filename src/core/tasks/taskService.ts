@@ -1464,6 +1464,11 @@ export class TaskService {
     return this.asks.listNotEnded();
   }
 
+  /** Complete unfinished chains, with each message decoded once for this read. */
+  openAskChains(): { root: AskRecord; members: AskRecord[] }[] {
+    return this.asks.openChains();
+  }
+
   /** A message and every message that joined its work, oldest first. */
   askMembers(rootId: string): AskRecord[] {
     const root = this.asks.get(rootId);

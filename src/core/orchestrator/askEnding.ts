@@ -108,7 +108,10 @@ export class AskEnding {
     const ask = this.host.tasks.getAsk(askId);
     if (!ask) return undefined;
     const root = ask.continues ? (this.host.tasks.getAsk(ask.continues) ?? ask) : ask;
-    const members = this.host.tasks.askMembers(root.id);
+    return this.withCoverage(root, this.host.tasks.askMembers(root.id));
+  }
+
+  private withCoverage(root: AskRecord, members: AskRecord[]): AskChain {
     const ids = members.map((member) => member.id);
     const { work, acted } = this.host.tasks.askCoverage(ids);
     return {
@@ -123,11 +126,9 @@ export class AskEnding {
 
   /** The chains that have not ended, oldest first: one per root. */
   openChains(): AskChain[] {
-    const open = this.host.tasks.listAsksNotEnded();
-    const openIds = new Set(open.map((ask) => ask.id));
-    return open
-      .filter((ask) => ask.continues === null || !openIds.has(ask.continues))
-      .flatMap((ask) => this.chain(ask.id) ?? []);
+    return this.host.tasks
+      .openAskChains()
+      .map(({ root, members }) => this.withCoverage(root, members));
   }
 
   /** The chains whose work includes a task, newest first. */

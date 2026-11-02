@@ -429,6 +429,11 @@ export function taskFact(scope: Locator, fact: TaskFactId): Locator {
   return scope.locator(`[data-task-fact="${fact}"]`);
 }
 
+/** The Checks value, excluding the recorded watch schedules and finished age beside it (INF-2359). */
+export function taskCheckWords(scope: Locator): Locator {
+  return taskFact(scope, "checks").locator("[data-task-fact-checks]");
+}
+
 /**
  * Every shared task fact a surface shows, in its order: each identity with
  * its words, the status as its mark reads it, and each age as the time it

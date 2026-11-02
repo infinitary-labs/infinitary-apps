@@ -41,6 +41,7 @@ import {
   restOnRow,
   rowSummary,
   rowSummaryBody,
+  taskCheckWords,
   taskFact,
   taskKeyLinks,
 } from "./rails";
@@ -209,11 +210,11 @@ for (const kind of ["failed", "empty", "unreadable"] as const) {
         unreadable ? "warn" : empty ? "running" : "failed",
       );
       await expect(rowSummary(app.page).locator('[data-task-fact="crew-verdict"]')).toHaveCount(0);
+      // INF-2359: compare the value, not its sibling watch schedule, on both task surfaces.
+      await expect(taskCheckWords(rowSummary(app.page))).toHaveText(expectedWords);
       if (unreadable) {
-        await expect(taskFact(rowSummary(app.page), "checks")).toContainText(refusal);
-        const bounds = await taskFact(rowSummary(app.page), "checks")
-          .locator("[data-task-fact-checks]")
-          .boundingBox();
+        await expect(taskCheckWords(rowSummary(app.page))).toContainText(refusal);
+        const bounds = await taskCheckWords(rowSummary(app.page)).boundingBox();
         const summaryBounds = await rowSummaryBody(app.page).boundingBox();
         expect(bounds).not.toBeNull();
         expect(summaryBounds).not.toBeNull();
@@ -239,7 +240,18 @@ for (const kind of ["failed", "empty", "unreadable"] as const) {
       await expect(recordCard(app.page)).toBeVisible();
       await expectRecordBody(app.page);
       await expectRecordSized(app.page);
-      await expect(taskFact(recordCard(app.page), "checks")).toHaveText(expectedWords);
+      await expect(taskCheckWords(recordCard(app.page))).toHaveText(expectedWords);
+      // Keep the actual value and separately rendered schedule in passing CI's JSON report too.
+      await test.info().attach("check-facts", {
+        body: JSON.stringify({
+          kind,
+          checks: ledger()?.delivery?.checks,
+          ci: ledger()?.delivery?.ci,
+          value: await taskCheckWords(recordCard(app.page)).innerText(),
+          cell: await taskFact(recordCard(app.page), "checks").innerText(),
+        }),
+        contentType: "application/json",
+      });
       await expect(recordCard(app.page).locator('[data-task-fact="crew-verdict"]')).toHaveCount(0);
       await regionShot(recordCard(app.page), test.info().outputPath("record-after.png"));
       const timeline = recordFrame(app.page).locator('[data-record-section="timeline"]');

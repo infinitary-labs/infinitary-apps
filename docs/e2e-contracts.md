@@ -96,6 +96,7 @@ A journey that drives a page's keys after the stage changed waits for `stagePrep
 Playwright runs every read inside a frame as a user gesture, which gives that frame user activation for about five seconds: a spec that claims a frame cannot take focus, or that the shell gives it focus, reads only from the window until the claim is checked (`tests/e2e/frame-focus.spec.ts`).
 An iframe fires `load` even for a 404, so a served mount's presence is asserted with Electron's `session.fetch`.
 Every spec that reads a feed line or a now-panel row goes through `tests/e2e/rails.ts`.
+The Checks value on a task record or hover summary uses `taskCheckWords`; `taskFact(scope, "checks")` owns the whole cell, including its state dot, finished age and recorded watch schedules.
 Both docks start collapsed, and a collapsed dock's frame runs out of sight, where it never paints: a wait for its next animation frame never returns.
 So `expandDock` is the one awaited expand: the chevron is a toggle, and two overlapping clicks close it again.
 Presses on two docks of one page take turns with each other and with the input helpers (`takeTurn`), because two clicks at once can swallow one while it reports success.

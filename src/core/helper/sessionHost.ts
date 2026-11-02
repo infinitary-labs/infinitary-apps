@@ -269,7 +269,7 @@ type Held = {
   /** The session the open conversation started over from, until a turn of it finishes (`PlacedState.renewal`). */
   renewal: SessionRenewal | undefined;
   opening: Promise<void> | null;
-  unsubscribe: (() => void) | null;
+  unsubscribe: (() => Promise<void>) | null;
   readonly orders: Map<string, unknown>;
   /** Every event after the home's `kept`, in order. */
   outbox: PlacedEventRecord[];
@@ -505,7 +505,7 @@ export class SessionHost {
         this.record(held, { type: "turn_ended", turn, outcome: "interrupted", undelivered: [] });
       }
       this.interruptContinuation(held);
-      held.unsubscribe?.();
+      await held.unsubscribe?.();
       held.unsubscribe = null;
       // The client's background tasks end with it: their rows say this stop
       // killed them, for the next start to tell.
@@ -528,7 +528,7 @@ export class SessionHost {
     const [fields] = request as [{ task: string; orderId?: string }];
     if (channel === "inf:session:copy") {
       const [copy] = request as WorkOrderRequest<"inf:session:copy">;
-      if (copy.refresh) this.held.get(copy.task)?.session?.recordPath({ refresh: true });
+      if (copy.refresh) await this.held.get(copy.task)?.session?.recordPath({ refresh: true });
       return this.options.tasks.copy(copy.task, copy.from) as WorkOrderResponse<C>;
     }
     if (channel === "inf:session:source-file") {
@@ -933,7 +933,7 @@ export class SessionHost {
       held.backend = binding.backend;
       held.account = this.options.accounts?.of(binding);
       held.renewal = session.takeRenewal();
-      held.unsubscribe = followCompletions(
+      held.unsubscribe = await followCompletions(
         session,
         (event) => {
           // Context-scoped first-mate facts are local to their session owner;
@@ -957,6 +957,12 @@ export class SessionHost {
         listsChange(this.options.homeChanges?.(), contractChange("tool-observations")),
         join(folders.root, "completions.sqlite"),
       );
+      if (this.stopped) {
+        await held.unsubscribe();
+        held.unsubscribe = null;
+        session.dispose();
+        throw new Error("This computer is stopping.");
+      }
       this.recordJobs(held, true);
     })();
     held.opening = opening;
@@ -1070,7 +1076,7 @@ export class SessionHost {
   }
 
   private async releaseConversation(held: Held): Promise<void> {
-    held.unsubscribe?.();
+    await held.unsubscribe?.();
     held.unsubscribe = null;
     const session = held.session;
     held.session = null;
@@ -1139,7 +1145,7 @@ export class SessionHost {
     }
     held.state = { ...held.state, closed: true };
     this.writeOut(held);
-    held.unsubscribe?.();
+    await held.unsubscribe?.();
     held.unsubscribe = null;
     const session = held.session;
     held.session = null;

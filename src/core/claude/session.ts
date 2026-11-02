@@ -73,7 +73,7 @@ import {
 import { ClaudeQueryCore, MessageQueue, userMessage } from "./claudeQueryCore";
 import { acquireSessionLease } from "./claudeStoreLease";
 import { claudeToolServer } from "./claudeTaskTools";
-import { locateClaudeTranscript } from "./claudeTranscript";
+import { ClaudeTranscriptLookup } from "./claudeTranscript";
 
 /**
  * Claude's implementation of the one session contract
@@ -932,6 +932,7 @@ class ClaudeRollingSession extends ClaudeQueryCore<SessionEvent> implements Mode
   /** The client's transcript stopped extending the app's copy, and the log says so. */
   private divergedNoted = false;
   private readonly retirement: { promise: Promise<void>; resolve: () => void };
+  private readonly mirrors = new Set<Promise<void>>();
 
   constructor(
     private id: string,
@@ -939,6 +940,7 @@ class ClaudeRollingSession extends ClaudeQueryCore<SessionEvent> implements Mode
     private readonly config: RollingConfig,
     private readonly deps: ClaudeSessionDeps,
     private readonly unregister: () => void,
+    private readonly transcripts: ClaudeTranscriptLookup,
   ) {
     super(spec.owner);
     this.asked = spec.model?.id;
@@ -967,9 +969,17 @@ class ClaudeRollingSession extends ClaudeQueryCore<SessionEvent> implements Mode
   }
 
   /** The app's copy of the client's transcript: the session's durable record. */
-  recordPath(options?: { refresh?: boolean }): string {
-    if (options?.refresh) this.mirror(this.connection?.sessionId ?? this.id);
-    return this.config.store.transcriptPath(this.sessionId);
+  recordPath(): string;
+  recordPath(options: { refresh?: boolean }): string | Promise<string>;
+  recordPath(options?: { refresh?: boolean }): string | Promise<string> {
+    const path = this.config.store.transcriptPath(this.sessionId);
+    if (options?.refresh) {
+      const sessionId = this.connection?.sessionId ?? this.id;
+      const source = this.clientTranscript(sessionId);
+      if (source) this.copyTranscript(sessionId, source);
+      else return this.refreshMirror(sessionId).then(() => path);
+    }
+    return path;
   }
 
   isStreaming(): boolean {
@@ -1234,7 +1244,7 @@ class ClaudeRollingSession extends ClaudeQueryCore<SessionEvent> implements Mode
           return;
         }
         this.close(connection);
-        void connection.done.then(() => resolve());
+        void connection.done.then(() => this.refreshMirror(connection.sessionId)).then(resolve);
       };
       if (this.promptOpen || this.continuing) this.afterSettle.push(end);
       else end();
@@ -1394,7 +1404,8 @@ class ClaudeRollingSession extends ClaudeQueryCore<SessionEvent> implements Mode
       await current.done;
     }
     // Whatever the client wrote since the last boundary, before it runs again.
-    this.mirror();
+    await this.refreshMirror();
+    this.stillServing(generation);
     this.reopen = false;
     const env = this.config.env;
     // The machine's own client (F14), checked at every attachment: refuse
@@ -1513,9 +1524,10 @@ class ClaudeRollingSession extends ClaudeQueryCore<SessionEvent> implements Mode
   private retire(): void {
     if (this.retired) return;
     this.retired = true;
-    this.mirror();
     this.unregister();
-    this.retirement.resolve();
+    void Promise.all(this.mirrors)
+      .then(() => this.refreshMirror())
+      .then(() => this.retirement.resolve());
   }
 
   protected observe(message: unknown, result: ClaudeNormalizeResult): void {
@@ -1874,11 +1886,7 @@ class ClaudeRollingSession extends ClaudeQueryCore<SessionEvent> implements Mode
 
   /** Where the client keeps a session's transcript (this one's by default), or null when it has none. */
   private clientTranscript(sessionId = this.id): string | null {
-    return locateClaudeTranscript({
-      configDir: this.deps.configDir,
-      cwd: this.spec.cwd,
-      sessionId,
-    });
+    return this.transcripts.read(sessionId);
   }
 
   /**
@@ -1886,9 +1894,29 @@ class ClaudeRollingSession extends ClaudeQueryCore<SessionEvent> implements Mode
    * durable record. A client a renewal left behind finishes its own id's copy.
    */
   private mirror(sessionId = this.id): void {
+    const source = this.clientTranscript(sessionId);
+    if (source) this.copyTranscript(sessionId, source);
+    else void this.refreshMirror(sessionId);
+  }
+
+  private refreshMirror(sessionId = this.id): Promise<void> {
+    const refresh = this.transcripts
+      .find(sessionId)
+      .then((source) => {
+        this.copyTranscript(sessionId, source);
+      })
+      .catch((caught: unknown) => {
+        this.note(`the transcript lookup failed: ${String(caught)}`);
+      })
+      .finally(() => this.mirrors.delete(refresh));
+    this.mirrors.add(refresh);
+    return refresh;
+  }
+
+  private copyTranscript(sessionId: string, source: string | null): void {
     const store = this.config.store;
     try {
-      const outcome = store.mirror(sessionId, this.clientTranscript(sessionId));
+      const outcome = store.mirror(sessionId, source);
       // Said once: every tick while the client stays attached finds it again.
       if (outcome.kind === "diverged" && !this.divergedNoted) {
         this.divergedNoted = true;
@@ -2002,10 +2030,8 @@ export function createClaudeSessionFactory(deps: ClaudeSessionDeps): SessionFact
     // resume, so the session starts fresh under a new id rather than failing
     // every attach on a stale one; the app's copy of the old one stays.
     const requested = record.resume?.backend === "claude" ? record.resume.sessionId : undefined;
-    const recorded =
-      requested !== undefined &&
-      locateClaudeTranscript({ configDir: deps.configDir, cwd: spec.cwd, sessionId: requested }) !==
-        null;
+    const transcripts = new ClaudeTranscriptLookup(deps.configDir, spec.cwd);
+    const recorded = requested !== undefined && (await transcripts.find(requested)) !== null;
     if (requested !== undefined && !recorded) {
       noteTo(deps)(`the client has no transcript for session ${requested}; starting fresh`);
     }
@@ -2025,6 +2051,7 @@ export function createClaudeSessionFactory(deps: ClaudeSessionDeps): SessionFact
       },
       deps,
       () => untrack(session),
+      transcripts,
     );
     // Resumed on a changed prompt array, the client would serve the old one.
     if (recorded) {

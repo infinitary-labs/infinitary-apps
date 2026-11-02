@@ -534,10 +534,17 @@ describe("incremental completed-operation repetition", () => {
     writeFileSync(path, "");
     const session = fakeSession({ recordPath: path });
     const seen: ToolObservation[] = [];
-    const stop = followCompletions(
+    let observed!: () => void;
+    const completion = new Promise<void>((resolve) => {
+      observed = resolve;
+    });
+    const stop = await followCompletions(
       session,
       (event) => {
-        if (event.type === "tool_observation") seen.push(event);
+        if (event.type === "tool_observation") {
+          seen.push(event);
+          observed();
+        }
       },
       () => 2000,
     );
@@ -555,10 +562,10 @@ describe("incremental completed-operation repetition", () => {
         toolName: "read",
         isError: false,
       });
-      await Promise.resolve();
+      await completion;
       expect(seen).toHaveLength(1);
       const remote = fakeSession({ recordPath: path });
-      const stopRemote = followCompletions(
+      const stopRemote = await followCompletions(
         remote,
         (event) => {
           if (event.type === "tool_observation") seen.push(event);
@@ -570,12 +577,73 @@ describe("incremental completed-operation repetition", () => {
       if (!observed) throw new Error("The source emitted no compact fact");
       remote.emit(observed);
       await Promise.resolve();
-      stopRemote();
+      await stopRemote();
       expect(seen).toHaveLength(2);
       expect(seen[0]).toEqual(seen[1]);
     } finally {
-      stop();
+      await stop();
     }
+  });
+
+  // INF-2248: asynchronous transcript discovery must neither overlap scans nor lose the final completion.
+  it("drains an in-flight refresh and the final completion before closing its index", async () => {
+    const dir = scratchDir("infinitary-repetition-refresh-");
+    const path = join(dir, "source.jsonl");
+    writeFileSync(path, "");
+    const session = fakeSession({ recordPath: path });
+    let release!: () => void;
+    let entered!: () => void;
+    const waiting = new Promise<void>((resolve) => {
+      entered = resolve;
+    });
+    const ready = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    let hold = false;
+    let active = 0;
+    let peak = 0;
+    function recordPath(): string;
+    function recordPath(options: { refresh?: boolean }): string | Promise<string>;
+    function recordPath(options?: { refresh?: boolean }): string | Promise<string> {
+      if (!options?.refresh || !hold) return path;
+      active++;
+      peak = Math.max(peak, active);
+      entered();
+      return ready.then(() => {
+        active--;
+        return path;
+      });
+    }
+    session.recordPath = recordPath;
+    const seen: ToolObservation[] = [];
+    const stop = await followCompletions(
+      session,
+      (event) => {
+        if (event.type === "tool_observation") seen.push(event);
+      },
+      () => 2000,
+    );
+    hold = true;
+    session.emit({ type: "turn_closed" });
+    await waiting;
+    append(
+      path,
+      ...pi("read", { path: "CONTRIBUTING.md" }, [
+        { type: "text", text: readFileSync("CONTRIBUTING.md", "utf8") },
+      ]),
+    );
+    session.emit({ type: "turn_closed" });
+    let closed = false;
+    const closing = stop().then(() => {
+      closed = true;
+    });
+    await Promise.resolve();
+    expect(closed).toBe(false);
+    release();
+    await closing;
+    expect(peak).toBe(1);
+    expect(seen).toHaveLength(1);
+    expect(stop()).toBe(stop());
   });
 
   it("uses an indexed available usage reading without treating missing cost or tokens as zero", () => {

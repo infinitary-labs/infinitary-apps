@@ -10,26 +10,34 @@ import type { ModelSession, SessionEvent } from "./session";
  * notification, so one microtask reads that appended suffix. Claude refreshes
  * its incremental copy before reading. A failed delivery stays in the outbox.
  */
-export function followCompletions(
+export async function followCompletions(
   session: ModelSession,
   listener: (event: SessionEvent) => void,
   now: () => number,
   local = true,
   journalPath?: string,
-): () => void {
-  if (!local) return session.subscribe(listener);
-  const initial = session.recordPath({ refresh: true });
-  if (!initial) return session.subscribe(listener);
+): Promise<() => Promise<void>> {
+  if (!local) {
+    const unsubscribe = session.subscribe(listener);
+    return async () => unsubscribe();
+  }
+  const initial = await session.recordPath({ refresh: true });
+  if (!initial) {
+    const unsubscribe = session.subscribe(listener);
+    return async () => unsubscribe();
+  }
   const baseline = sessionCompleteOffset(initial);
   const journal = journalPath ?? join(dirname(initial), "completions.sqlite");
   let store: SessionCompletionStore | undefined;
   let recovering = true;
   let scheduled = false;
-  let closed = false;
-  const scan = () => {
-    scheduled = false;
-    if (closed) return;
-    const path = session.recordPath({ refresh: true });
+  let requested = false;
+  let stopped = false;
+  let running = Promise.resolve();
+  let closing: Promise<void> | undefined;
+  const scan = async () => {
+    const refreshing = session.recordPath({ refresh: true });
+    const path = refreshing instanceof Promise ? await refreshing : refreshing;
     if (!path) return;
     // Pi allocates a record's name before creating its file. Do not create
     // directories or indexes for a session that has not written anything.
@@ -44,17 +52,26 @@ export function followCompletions(
     }
     store.scan(path, listener);
   };
-  const safelyScan = () => {
+  const safelyScan = async () => {
     try {
-      scan();
+      await scan();
     } catch (error) {
       console.error("[session] completion observation waits for recovery", error);
     }
   };
+  const drain = async () => {
+    while (requested && !stopped) {
+      requested = false;
+      await safelyScan();
+    }
+    scheduled = false;
+  };
   const schedule = () => {
-    if (scheduled || closed) return;
+    if (stopped) return;
+    requested = true;
+    if (scheduled) return;
     scheduled = true;
-    queueMicrotask(safelyScan);
+    running = Promise.resolve().then(drain);
   };
   const unsubscribe = session.subscribe((event) => {
     listener(event);
@@ -62,9 +79,12 @@ export function followCompletions(
   });
   schedule();
   return () => {
+    if (closing) return closing;
     unsubscribe();
-    safelyScan();
-    closed = true;
-    store?.close();
+    stopped = true;
+    // Finish the in-flight refresh and one last pass before closing its index.
+    // The owner awaits this before deleting a task or closing its database.
+    closing = running.then(safelyScan).finally(() => store?.close());
+    return closing;
   };
 }

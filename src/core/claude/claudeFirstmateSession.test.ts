@@ -82,6 +82,8 @@ type Seat = {
   factory: (spec: SeatTestSpec) => Promise<ModelSession>;
   attachments: ScriptedAttachment[];
   harness: () => ScriptedAttachment;
+  /** The script has received this many inputs, across attachments. */
+  input: (count?: number) => Promise<void>;
   store: SessionRecordStore;
   configDir: string;
   clock: ManualClock;
@@ -106,8 +108,14 @@ function seat(
   const clock = manualClock();
   const readings: Seat["readings"] = [];
   const logs: string[] = [];
+  let inputs = 0;
+  const waiting: { count: number; resolve: () => void }[] = [];
   const scripted = scriptedClaudeQuery({
-    onInput: options.onInput ?? (() => {}),
+    onInput: (message, emit) => {
+      options.onInput?.(message, emit);
+      inputs++;
+      for (const waiter of waiting.filter((waiter) => inputs >= waiter.count)) waiter.resolve();
+    },
     ...(options.onInterrupt ? { onInterrupt: options.onInterrupt } : {}),
     ...(options.ignoresEndOfInput ? { ignoresEndOfInput: true } : {}),
   });
@@ -138,6 +146,10 @@ function seat(
     factory: (spec) => sessions.open(seatSpec({ ...spec, claudeDir })),
     attachments: scripted.attachments,
     harness: scripted.harness,
+    input: (count = 1) =>
+      inputs >= count
+        ? Promise.resolve()
+        : new Promise<void>((resolve) => waiting.push({ count, resolve })),
     store,
     configDir,
     clock,
@@ -228,6 +240,17 @@ function recorder(session: ModelSession): SessionEvent[] {
     if (event.type !== "input_read") events.push(event);
   });
   return events;
+}
+
+/** INF-2248: a bound starts at the observed session event, never at a guessed number of loop turns. */
+function nextEvent(session: ModelSession, type: SessionEvent["type"]): Promise<void> {
+  return new Promise((resolve) => {
+    const unsubscribe = session.subscribe((event) => {
+      if (event.type !== type) return;
+      unsubscribe();
+      resolve();
+    });
+  });
 }
 
 /** Let the session's pump and the scripted client catch up. */
@@ -397,7 +420,7 @@ describe("the Claude seat's attachment", () => {
     });
     const session = await s.factory(spec());
     const prompt = session.prompt("hello");
-    await settle();
+    await s.input(1);
     let detached = false;
     const detach = session.detach?.().then(() => {
       detached = true;
@@ -614,7 +637,7 @@ describe("the Claude seat's turns", () => {
     const prompt = session.prompt("hello").then(() => {
       settled = true;
     });
-    await settle();
+    await s.input(1);
     expect(session.isStreaming()).toBe(true);
     emit?.(say.running);
     emit?.(say.ack(input as SDKUserMessage));
@@ -651,7 +674,7 @@ describe("the Claude seat's turns", () => {
       textSha256: createHash("sha256").update(text).digest("hex"),
     });
     const prompt = session.prompt("hello");
-    await settle();
+    await s.input(1);
     expect(reads).toEqual([]);
     emit?.(say.running);
     emit?.(say.ack(inputs[0] as SDKUserMessage));
@@ -696,7 +719,7 @@ describe("the Claude seat's turns", () => {
     const prompt = session.prompt("hello").then(() => {
       settles += 1;
     });
-    await settle();
+    await s.input(1);
     emit?.(say.running);
     emit?.(say.ack(inputs[0] as SDKUserMessage));
     await session.steer("one more thing");
@@ -745,7 +768,7 @@ describe("the Claude seat's turns", () => {
     });
     const session = await s.factory(spec());
     const prompt = session.prompt("hello");
-    await settle();
+    await s.input(1);
     await session.steer("never read");
     await settle();
     s.harness().end();
@@ -833,7 +856,7 @@ describe("the Claude seat's turns", () => {
     ]);
     hold = true;
     const running = session.prompt("working");
-    await settle();
+    await s.input(2);
     // Mid-turn: ignored, never patched in.
     session.serveInstructions?.({ text: "New rule.", sha: "sha-2" });
     release?.();
@@ -900,11 +923,17 @@ describe("the Claude seat's turns", () => {
 
   it("disposes only after the open turn settles, interrupting it first", async () => {
     let emit: ((message: unknown) => void) | undefined;
+    // INF-2248: attachment discovers transcripts asynchronously; wait for input, not ten loop turns.
+    let received!: () => void;
+    const input = new Promise<void>((resolve) => {
+      received = resolve;
+    });
     const s = seat({
       onInput: (message, send) => {
         emit = send;
         send(say.running);
         send(say.ack(message));
+        received();
       },
       onInterrupt: (send) => {
         send({
@@ -919,7 +948,7 @@ describe("the Claude seat's turns", () => {
     const session = await s.factory(spec());
     const events = recorder(session);
     const prompt = session.prompt("hello");
-    await settle();
+    await input;
     expect(emit).toBeDefined();
     session.dispose();
     expect(s.harness().interrupts()).toBe(1);
@@ -1031,7 +1060,7 @@ describe("the Claude seat's served record", () => {
     const session = await s.factory(spec());
     expect(session.servedState?.()).toBeUndefined();
     const prompt = session.prompt("hello");
-    await settle();
+    await s.input(1);
     emit?.(say.running);
     emit?.(say.ack(inputs[0] as SDKUserMessage));
     await session.steer("and the queue");
@@ -1136,8 +1165,9 @@ describe("the Claude seat's runaway bounds on the host's clock", () => {
     });
     const session = await s.factory(spec({ requestTimeoutMs: 300_000 }));
     const events = recorder(session);
+    const started = nextEvent(session, "request_started");
     const prompt = session.prompt("hello");
-    await settle();
+    await started;
     s.clock.advance(TICK_PERIOD_MS * 4);
     expect(s.harness().interrupts()).toBe(0);
     s.clock.advance(TICK_PERIOD_MS);
@@ -1221,8 +1251,9 @@ describe("the Claude seat's runaway bounds on the host's clock", () => {
       },
     });
     const session = await s.factory(spec({ requestTimeoutMs: 300_000, turnTimeoutMs: 0 }));
+    const started = nextEvent(session, "tool_start");
     const prompt = session.prompt("hello");
-    await settle();
+    await started;
     s.clock.advance(TICK_PERIOD_MS * 10);
     expect(s.harness().interrupts()).toBe(0);
     emit?.(say.toolResult("toolu_1"));
@@ -1251,8 +1282,9 @@ describe("the Claude seat's runaway bounds on the host's clock", () => {
     });
     const session = await s.factory(spec({ turnTimeoutMs: 20 * 60_000 }));
     const events = recorder(session);
+    const started = nextEvent(session, "tool_start");
     const prompt = session.prompt("hello");
-    await settle();
+    await started;
     s.clock.advance(20 * 60_000);
     await prompt;
     expect(events.find((event) => event.type === "turn_failed")).toEqual({
@@ -1274,8 +1306,9 @@ describe("the Claude seat's runaway bounds on the host's clock", () => {
     });
     const session = await s.factory(spec());
     const events = recorder(session);
+    const started = nextEvent(session, "input_read");
     const prompt = session.prompt("hello");
-    await settle();
+    await started;
     let silentFor = 0;
     while (events.length === 0) {
       s.clock.advance(TICK_PERIOD_MS);
@@ -1324,10 +1357,11 @@ describe("the Claude seat's runaway bounds on the host's clock", () => {
     const session = await s.factory(spec({ requestTimeoutMs: 300_000 }));
     const events = recorder(session);
     let settled = false;
+    const started = nextEvent(session, "request_started");
     const prompt = session.prompt("hello").then(() => {
       settled = true;
     });
-    await settle();
+    await started;
     await session.steer("the steer text");
     await settle();
     s.clock.advance(TICK_PERIOD_MS * 5);
@@ -1377,8 +1411,9 @@ describe("the Claude seat's runaway bounds on the host's clock", () => {
     });
     const session = await s.factory(spec({ requestTimeoutMs: 300_000 }));
     const events = recorder(session);
+    const started = nextEvent(session, "request_started");
     const prompt = session.prompt("hello");
-    await settle();
+    await started;
     await session.steer("the steer text");
     await settle();
     s.clock.advance(TICK_PERIOD_MS * 5);
@@ -1417,8 +1452,9 @@ describe("the Claude seat's runaway bounds on the host's clock", () => {
     });
     const session = await s.factory(spec({ requestTimeoutMs: 60_000 }));
     const events = recorder(session);
+    const started = nextEvent(session, "input_read");
     const prompt = session.prompt("hello");
-    await settle();
+    await started;
     s.clock.advance(TICK_PERIOD_MS);
     expect(s.harness().interrupts()).toBe(1);
     s.clock.advance(TICK_PERIOD_MS);
@@ -1430,8 +1466,9 @@ describe("the Claude seat's runaway bounds on the host's clock", () => {
       { type: "turn_closed" },
     ]);
     // The next prompt reattaches, resuming nothing it never recorded.
+    const readAgain = nextEvent(session, "input_read");
     const next = session.prompt("again");
-    await settle();
+    await readAgain;
     expect(s.attachments).toHaveLength(2);
     s.harness().emit(say.result("Aye."));
     s.harness().emit(say.idle);

@@ -302,8 +302,10 @@ export type ModelSession = {
   readonly controlProfile: ControlProfile;
   /** What the owner persists to reattach; undefined for a one-shot. */
   resume(): SessionResume | undefined;
-  /** The app-owned transcript's path, undefined for a one-shot; refresh copies any client-owned tail first. */
-  recordPath(options?: { refresh?: boolean }): string | undefined;
+  /** The app-owned transcript's path, undefined for a one-shot. */
+  recordPath(): string | undefined;
+  /** A refresh finishes discovering and copying the client-owned tail before answering. */
+  recordPath(options: { refresh?: boolean }): string | undefined | Promise<string | undefined>;
   modelRef(): { provider: string; id: string } | undefined;
   modelLabel(): string | undefined;
   isStreaming(): boolean;

@@ -1072,7 +1072,7 @@ type TaskRuntime = {
   session?: ModelSession;
   /** Why the current conversation opened, including ids minted on its first turn. */
   conversationBegan?: string;
-  unsubscribe?: () => void;
+  unsubscribe?: () => Promise<void>;
   clientJobs?: number;
   /** When the client's background work last went from none to some: the job bound's clock. */
   clientJobsSince?: number;
@@ -5883,7 +5883,7 @@ export class CrewSupervisor {
           },
         });
       }
-      task.unsubscribe = this.follow(task, session);
+      task.unsubscribe = await this.follow(task, session);
       // From here every save in the workspace carries the task (the
       // running dot), until the task closes.
       pictures = await this.briefPictures(taskId, spec.attachments ?? [], spec.messageFiles ?? []);
@@ -5912,7 +5912,7 @@ export class CrewSupervisor {
       )
         this.options.tasks.releasePlacement(taskId, record.placement.snapshot.orderId, "ended");
       if (caught instanceof ForgeAuthRequiredError && this.tasks.get(taskId) === task) {
-        task.unsubscribe?.();
+        await task.unsubscribe?.();
         task.session?.dispose();
         this.tasks.delete(taskId);
         this.cards.deleteRowsForTask(taskId);
@@ -5961,7 +5961,7 @@ export class CrewSupervisor {
         // A failed dispatch returns the row to the queue behind a captain
         // gate - never deleted, never hot-retried by the sweep. Do not
         // requeue or delete when this attempt does not own the runtime.
-        task.unsubscribe?.();
+        await task.unsubscribe?.();
         task.session?.dispose();
         this.tasks.delete(taskId);
         this.cards.deleteRowsForTask(taskId);
@@ -6374,12 +6374,12 @@ export class CrewSupervisor {
    * events stop here, and every other event is the task's activity and
    * reaches the feed.
    */
-  private follow(task: TaskRuntime, session: ModelSession): () => void {
+  private async follow(task: TaskRuntime, session: ModelSession): Promise<() => Promise<void>> {
     task.clientJobs = undefined;
     task.clientJobsSince = undefined;
     task.clientJob = undefined;
     task.clientTasks.clear();
-    return followCompletions(
+    const unsubscribe = await followCompletions(
       session,
       (event) => {
         if (event.type === "tool_observation") {
@@ -6458,6 +6458,11 @@ export class CrewSupervisor {
       this.machineOf(task.id) === LOCAL_MACHINE_ID,
       join(this.options.paths.crewmatesDir, task.id, "completions.sqlite"),
     );
+    if (this.tasks.get(task.id) !== task || task.cancelled) {
+      await unsubscribe();
+      throw new Error("The task closed while its transcript was being located.");
+    }
+    return unsubscribe;
   }
 
   /**
@@ -7111,7 +7116,7 @@ export class CrewSupervisor {
 
   /** A spawn that failed before the crewmate ran leaves nothing behind. */
   private async cleanupFailedSpawn(task: TaskRuntime): Promise<void> {
-    task.unsubscribe?.();
+    await task.unsubscribe?.();
     task.session?.dispose();
     this.tasks.delete(task.id);
     this.cards.deleteRowsForTask(task.id);
@@ -8575,7 +8580,7 @@ export class CrewSupervisor {
       throw caught;
     }
     task.session = session;
-    task.unsubscribe = this.follow(task, session);
+    task.unsubscribe = await this.follow(task, session);
     // A moved task's record names the conversation it opened now, so a quit
     // before its first turn ends reopens this one.
     this.recordCrewSession(
@@ -11404,7 +11409,12 @@ export class CrewSupervisor {
         });
       this.releasing.add(released);
     }
-    runtime.unsubscribe?.();
+    const following = runtime.unsubscribe?.();
+    runtime.unsubscribe = undefined;
+    if (following) {
+      const released = following.finally(() => this.releasing.delete(released));
+      this.releasing.add(released);
+    }
     session?.dispose();
   }
 

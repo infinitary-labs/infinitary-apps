@@ -15,6 +15,7 @@ import {
 } from "../../../tests/helpers/scriptedClaudeQuery";
 import { crewmateContractStamp } from "../orchestrator/crewSession";
 import { CREWMATE_TOOLS } from "../pi/crewmateTaskTools";
+import { followCompletions } from "../session/followCompletions";
 import type { SessionEvent } from "../session/session";
 import { type BoundTool, bindTools, type CrewmateToolDelegate } from "../session/tools";
 import { CLAUDE_SEAT_TOOL_SERVER } from "../storage/sessionReader";
@@ -1229,6 +1230,109 @@ describe("the client's own continuations", () => {
 });
 
 describe("the crewmate's record (the session contract's step 6)", () => {
+  it("INF-2248: follows a starting task without blocking discovery and keeps its late transcript completions", async () => {
+    const configDir = scratchDir("infinitary-claude-start-lookup-");
+    const recordDir = scratchDir("infinitary-claude-start-copy-");
+    for (let i = 0; i < 64; i++) {
+      mkdirSync(join(configDir, "projects", `-work-older-task-${i}`), { recursive: true });
+    }
+    const content = readFileSync("CONTRIBUTING.md", "utf8");
+    const transcript =
+      [
+        {
+          type: "assistant",
+          uuid: "read-start",
+          message: {
+            role: "assistant",
+            content: [
+              {
+                type: "tool_use",
+                id: "read",
+                name: "Read",
+                input: { file_path: "CONTRIBUTING.md" },
+              },
+            ],
+          },
+        },
+        {
+          type: "user",
+          uuid: "read-end",
+          message: {
+            role: "user",
+            content: [{ type: "tool_result", tool_use_id: "read", content, is_error: false }],
+          },
+        },
+      ]
+        .map((entry) => JSON.stringify(entry))
+        .join("\n") + "\n";
+    let client = "";
+    const { factory } = scriptedQuery({
+      onInput: (message, emit) => {
+        mkdirSync(dirname(client), { recursive: true });
+        writeFileSync(client, transcript);
+        opens(emit, message);
+        closes(emit, result({ cost: 0.01, input: 10, output: 2 }));
+      },
+    });
+    const session = await scriptedClaudeFactory({ configDir, query: factory }).open(
+      codingSpec({
+        binding: { backend: "claude", accountId: "acct_claude" },
+        cwd: baseSpec.cwd,
+        recordDir,
+      }),
+    );
+    client = join(configDir, "projects", "different-client-encoding", `${session.sessionId}.jsonl`);
+    let responsive = false;
+    const heartbeat = new Promise<void>((resolve) =>
+      setImmediate(() => {
+        responsive = true;
+        resolve();
+      }),
+    );
+    const seen: SessionEvent[] = [];
+    let observed!: () => void;
+    const completion = new Promise<void>((resolve) => {
+      observed = resolve;
+    });
+    const began = performance.now();
+    const cpu = process.threadCpuUsage();
+    const following = followCompletions(
+      session,
+      (event) => {
+        seen.push(event);
+        if (event.type === "tool_observation") observed();
+      },
+      () => 2000,
+    );
+    const returnedMs = performance.now() - began;
+    const stop = await following;
+    try {
+      expect(responsive).toBe(true);
+      await heartbeat;
+      await session.prompt("Read CONTRIBUTING.md.");
+      await completion;
+      expect(readFileSync(session.recordPath() ?? "", "utf8")).toBe(transcript);
+      expect(seen.filter((event) => event.type === "tool_observation")).toHaveLength(1);
+      if (process.env.INFINITARY_TRANSCRIPT_EVIDENCE) {
+        const own = process.threadCpuUsage(cpu);
+        console.log(
+          JSON.stringify({
+            returnedMs,
+            elapsedMs: performance.now() - began,
+            ownCpuMs: (own.user + own.system) / 1000,
+            heartbeatBeforeFollowing: responsive,
+            copiedBytes: Buffer.byteLength(transcript),
+            completions: 1,
+          }),
+        );
+      }
+    } finally {
+      await stop();
+      session.dispose();
+      await session.closed();
+    }
+  });
+
   // INF-40 / review G2: a renewed session may still have its previous client attached.
   it("refreshes the attached client's late tail after its next session ID is renewed", async () => {
     const configDir = scratchDir("infinitary-claude-renewed-client-");
@@ -1265,7 +1369,7 @@ describe("the crewmate's record (the session contract's step 6)", () => {
       expect(session.takeRenewal()).toMatchObject({ from: attached, changed: ["instructions"] });
       expect(harness().closed()).toBe(false);
       appendFileSync(client, line("late"));
-      session.recordPath({ refresh: true });
+      await session.recordPath({ refresh: true });
       expect(readFileSync(copy, "utf8")).toBe(line("first") + line("late"));
     } finally {
       session.dispose();

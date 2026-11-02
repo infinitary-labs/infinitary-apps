@@ -155,6 +155,9 @@ Moved verbatim from `AGENTS.md` on 2026-09-24; `AGENTS.md` keeps a one-line poin
     The client writes its transcript on its own schedule (at `idle` its file can still be empty; the rest lands a moment later, and on exit).
     The session copies it into the app's store (`SessionRecordStore`, `src/core/storage/sessionRecordStore.ts`; the seat's is `userData/firstmate/claude/<id>.jsonl`, byte for byte, never spliced when the client's file stops extending the copy) at every boundary where it can grow: idle, reattach, exit, each host tick while its client is attached, and a copy order's refresh from the home (`docs/helper.md`, "The record's copy").
     A pass reads only what the copy gained (the tail it compares is read in place), and the copy's parsed entries are kept and extended rather than re-read at each turn.
+    Rolling sessions keep discovered client paths; a missing path searches the project folders asynchronously, sharing concurrent discovery and retrying misses when the client writes later.
+    Completion following awaits that discovery before its baseline and each scan, and its owner awaits the final scan before closing the completion index.
+    Known-path copies remain immediate; attachment, explicit refresh and retirement wait for discovery, so a new task never walks all Claude project folders on the main thread.
     Beside it, `<id>.served.jsonl` stamps the contract (version, prompt, instructions, tools shas) and each prompt's acknowledged uuids (`docs/provenance-capture.md`).
     A resume reads the client's own transcript; an id it has none for (a crash before the first turn, or the client's 30-day sweep) starts fresh under a new id, and the app's copy of the old session stays.
     The Settings purge removes that copy with the rest of the first mate's transcripts (`docs/task-retention.md`); the client's own file is not the app's to delete.

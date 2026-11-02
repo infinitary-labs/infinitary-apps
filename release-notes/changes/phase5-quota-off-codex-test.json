@@ -1,0 +1,8 @@
+{
+  "exclusions": [
+    {
+      "id": "phase5-quota-off-codex-test",
+      "reason": "Test-only repair: the Settings model journeys take Codex's medium starter out of every level before pinning and placing an unused model, since GPT-6.1 Terra now starts in medium and no listed Codex model starts unused. Product behavior and existing assertions are unchanged."
+    }
+  ]
+}

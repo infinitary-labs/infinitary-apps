@@ -1,7 +1,7 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { expect, type Page, test } from "@playwright/test";
-import { offeringKey } from "../../src/shared/modelSlots";
+import { type ModelSlotsView, offeringKey } from "../../src/shared/modelSlots";
 import { scratchDir } from "../helpers/scratchDirs";
 import { type LaunchedApp, launchApp } from "./launch";
 import { minimumWindowSize, resizeWindow } from "./layout";
@@ -422,15 +422,29 @@ async function openModels(page: Page) {
 }
 
 /**
- * A Codex model the board lists in no slot, read off the app's own slots
- * view: the row these tests pin, place and turn off, whichever model the
- * catalog serves that day.
+ * A Codex model the board lists in no slot: the row these tests pin, place
+ * and turn off. Every model Codex lists starts in a level now that GPT-6.1
+ * Terra takes medium (STARTER_SLOTS), so each test takes Codex's medium
+ * starter out of every level it sits in, through the call a model's panel
+ * makes, and reads it back off the app's own slots view: whichever model the
+ * starter map names that day.
  */
 async function offCodexModel(page: Page): Promise<{ key: string; label: string }> {
-  const view = await page.evaluate(() => window.infinitary.models.slots());
-  const model = view.models.find((row) => row.provider === "openai-codex" && !row.slots.length);
-  if (!model) throw new Error("No listed Codex model sits in no slot");
-  return { key: offeringKey(model), label: model.label };
+  const id = starterFor("openai-codex", "medium");
+  const codexRow = (view: ModelSlotsView) =>
+    view.models.find((row) => row.provider === "openai-codex" && row.id === id);
+  let view = await page.evaluate(() => window.infinitary.models.slots());
+  const model = codexRow(view);
+  if (!model) throw new Error(`Codex's medium starter ${id} is not listed`);
+  const key = offeringKey(model);
+  for (const level of model.slots) {
+    view = await page.evaluate(
+      ({ offering, slot }) => window.infinitary.models.setSlotMembership(offering, slot, false),
+      { offering: key, slot: level },
+    );
+  }
+  expect(codexRow(view)?.slots).toEqual([]);
+  return { key, label: model.label };
 }
 
 test("model rows are one per offering and pins persist", async () => {

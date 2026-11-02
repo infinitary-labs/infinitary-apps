@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "journeys-without-signing",
+      "reason": "CI-only change: journeys run on Electron's supplied signature and the full check's development-signing proof runs after them, with no app behavior change."
+    }
+  ]
+}

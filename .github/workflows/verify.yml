@@ -199,12 +199,6 @@ jobs:
         if: matrix.lane == 'linux-checks'
         with:
           working-directory: Application Support/firstmate
-      # An install never signs (docs/local-code-signing.md), so the mac lane
-      # signs the dev Electron here, the way `pnpm dev` does on a person's
-      # Mac: e2e runs on it signed, and the codesign stage checks it.
-      - id: dev-signing
-        if: ${{ !cancelled() && matrix.lane == 'mac' && steps.install.outcome == 'success' }}
-        run: pnpm codesign:local
       # Each later stage waits only on the stages it needs, never on every
       # stage before it: !cancelled() lets it run after an unrelated failure,
       # and its inputs' outcomes keep it from running on a broken one. So one
@@ -250,8 +244,14 @@ jobs:
       - id: recorder
         if: ${{ !cancelled() && matrix.lane == 'mac' && steps.install.outcome == 'success' }}
         run: pnpm exec playwright install ffmpeg
-      # The complete desktop suite, on the build above and the signed dev
-      # Electron (`pnpm test:e2e` is the same two commands in one), when
+      # The signature the journeys below run on, read from the binary itself:
+      # Electron's own, never this runner's local development identity. A
+      # report, never a gate.
+      - name: Read the dev Electron's signature
+        if: ${{ !cancelled() && matrix.lane == 'mac' && steps.install.outcome == 'success' }}
+        run: codesign -dvv "$(node -p 'require("electron")')" 2>&1 | grep -E '^(Identifier|Authority|Signature|TeamIdentifier|CDHash)=' || true
+      # The complete desktop suite, on the build above and Electron's supplied
+      # signature (`pnpm test:e2e` is the same two commands in one), when
       # all_journeys is set: every alpha and the run on main. A requested
       # check runs only the tests tagged MAC_ONLY_TAG (tests/e2e/tags.ts),
       # since linux-e2e runs every other one (docs/principles.md, 2026-10-28).
@@ -262,7 +262,7 @@ jobs:
       # its share. With every processor, launches starved while the other
       # slot ran journeys too (docs/testing.md, "E2E scheduling").
       - id: e2e
-        if: ${{ !cancelled() && matrix.lane == 'mac' && steps.build.outcome == 'success' && steps.dev-signing.outcome == 'success' && steps.recorder.outcome == 'success' }}
+        if: ${{ !cancelled() && matrix.lane == 'mac' && steps.build.outcome == 'success' && steps.recorder.outcome == 'success' }}
         # The run ends at 150 minutes and the command at 180 (INF-1083, the
         # captain's check limits); a stuck wait ends sooner, at its own cap.
         timeout-minutes: 180
@@ -355,6 +355,17 @@ jobs:
           name: replay-report
           path: Application Support/firstmate/replay-report.json
           if-no-files-found: ignore
+      # The signing proof, after every stage that launches the dev Electron
+      # (e2e, perf): those are isolated source tests on Electron's
+      # supplied signature, so nothing signs before them and a signing failure
+      # stops none of them (docs/testing.md, "Platform and signing are separate").
+      # An install never signs (docs/local-code-signing.md), so the lane signs
+      # the dev Electron here, the way `pnpm dev` does on a person's Mac; the
+      # package below is its own copy, signed through the same identity, and
+      # the codesign stage checks both. A red signing stage still ends the job red.
+      - id: dev-signing
+        if: ${{ !cancelled() && matrix.lane == 'mac' && steps.install.outcome == 'success' }}
+        run: pnpm codesign:local
       # electron-builder refuses to sign pull-request builds by default, which
       # would skip the one step this smoke exists for: the fuse-flipped
       # binary has to be re-signed or Apple Silicon SIGKILLs it at exec. This
@@ -404,7 +415,6 @@ jobs:
           REQUESTED: ${{ inputs.ref || github.ref }}
           STAGES: >-
             install=${{ steps.install.outcome }}
-            dev-signing=${{ steps.dev-signing.outcome }}
             unit=${{ steps.unit.outcome }}
             build=${{ steps.build.outcome }}
             recorder=${{ steps.recorder.outcome }}
@@ -412,6 +422,7 @@ jobs:
             perf=${{ steps.perf.outcome }}
             claude-client=${{ steps.claude-client.outcome }}
             replay=${{ steps.replay.outcome }}
+            dev-signing=${{ steps.dev-signing.outcome }}
             package=${{ steps.package.outcome }}
             codesign=${{ steps.codesign.outcome }}
             data-folder=${{ steps.data-folder.outcome }}

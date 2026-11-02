@@ -26,7 +26,6 @@ mkdir -p "$WORKING_COPY"
 cd "$WORKING_COPY" || exit 1
 step checkout bash -c "git init -q && git fetch -q '$IN/repo.bundle' HEAD && git checkout -q --detach FETCH_HEAD"
 step install pnpm install --frozen-lockfile
-step sign pnpm codesign:local
 step ffmpeg pnpm exec playwright install ffmpeg
 step build pnpm build
 

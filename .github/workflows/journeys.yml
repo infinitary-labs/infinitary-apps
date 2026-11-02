@@ -258,11 +258,10 @@ jobs:
         with:
           node-version: 24
       - run: pnpm install --frozen-lockfile
-      - id: dev-signing
-        # Native signing proofs keep their explicit route; isolated source tests
-        # use Electron's supplied signature after qualification (docs/testing.md).
-        if: inputs.mac_all == true
-        run: pnpm codesign:local
+      # No development signing: running on the Mac, or running every named
+      # test there (mac_all), never asks for a custom signature. Every journey
+      # is an isolated source test on Electron's supplied signature; the
+      # signing proof is verify.yml's own stage (docs/testing.md).
       # Playwright's window recorder is not part of an install; a journey
       # that records would otherwise fetch it in the middle of its test.
       - run: pnpm exec playwright install ffmpeg

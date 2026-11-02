@@ -1085,13 +1085,13 @@ describe("local packaging identity (electron-builder.dev.yml)", () => {
     const stage = (id: string) => steps.find((step) => step.id === id);
     const ids = steps.flatMap((step) => (step.id ? [step.id] : []));
     const needs: Record<string, string[]> = {
-      "dev-signing": ["install"],
       unit: ["install"],
       build: ["install"],
       recorder: ["install"],
-      e2e: ["build", "dev-signing", "recorder"],
+      e2e: ["build", "recorder"],
       "claude-client": ["install"],
       replay: ["install"],
+      "dev-signing": ["install"],
       package: ["build", "dev-signing"],
       codesign: ["package"],
       "data-folder": ["package"],
@@ -1144,6 +1144,43 @@ describe("local packaging identity (electron-builder.dev.yml)", () => {
     expect(
       steps.filter((step) => step["continue-on-error"]).map((step) => step.name ?? step.id),
     ).toEqual(["Summarize"]);
+  });
+
+  /**
+   * INF-2255 (the captain chose "Build separately" on "Keep main's full
+   * coverage and separate signing proof"): where a check runs and whether it
+   * proves real signing are separate. No journey route signs, whatever it
+   * selects; the full check's signing proof runs after every stage that
+   * launches the dev Electron, stops none of them when it fails, and still
+   * ends the lane red.
+   */
+  it("keeps the journeys off development signing and the full check's signing proof apart from them", () => {
+    const signs = (step: Step) => /\bpnpm codesign:local\b/.test(step.run ?? "");
+    const journeys = loadYamlFile(".github/workflows/journeys.yml") as {
+      jobs: Record<string, { steps?: Step[] }>;
+    };
+    for (const [name, job] of Object.entries(journeys.jobs))
+      expect((job.steps ?? []).filter(signs), `journeys.yml ${name}`).toEqual([]);
+
+    const verify = loadYamlFile(".github/workflows/verify.yml") as {
+      jobs: { lane: { steps: Step[] } };
+    };
+    const steps = verify.jobs.lane.steps;
+    const ids = steps.flatMap((step) => (step.id ? [step.id] : []));
+    expect(steps.filter(signs).map((step) => step.id)).toEqual(["dev-signing"]);
+    // Every stage that launches the dev Electron runs before anything signs it.
+    for (const launches of ["e2e", "perf"])
+      expect(ids.indexOf(launches), launches).toBeLessThan(ids.indexOf("dev-signing"));
+    // A red signing stage stops no journey stage, and skips the signed package's checks.
+    const stage = (id: string) => steps.find((step) => step.id === id);
+    const signingRed = Object.fromEntries(
+      ids.map((id) => [id, id === "dev-signing" ? "failure" : "success"]),
+    );
+    expect(stepRuns(stage("e2e"), signingRed)).toBe(true);
+    expect(stepRuns(stage("package"), signingRed)).toBe(false);
+    // And it still ends the lane red: no signing stage may pass a failure.
+    for (const id of ["dev-signing", "package", "codesign"])
+      expect(stage(id)?.["continue-on-error"], id).toBeUndefined();
   });
 
   /**

@@ -251,6 +251,16 @@ Three checks hold the tag to what a test needs:
 
 `tests/e2e-mac-tag.test.ts` drives the first two on this repository's own journeys and a Linux run's real result.
 
+### Platform and signing are separate
+
+Where a check runs and whether it proves real signing are two separate declarations: a Mac requirement, `mac_all`, `all_journeys` or a full run never implies custom signing.
+Every journey is an isolated source test on disposable data and Electron's supplied signature, on the Mac as on Linux, Mac keyboard behavior included; no journey route runs `pnpm codesign:local` (`journeys.yml`, `scripts/local-mac-journeys.ts`, `scripts/virtual-mac/job.sh`).
+The genuine signing proof is `verify.yml`'s own stages: `dev-signing` signs the dev Electron, `package` builds its own signed copy of the app, and `codesign` and the package checks read the real signatures.
+The mac lane runs that proof after every stage that launches the dev Electron (`e2e`, `perf`), so signing never changes what those journeys ran on, and a failed signing stage stops none of them.
+The lane logs the dev Electron's signature before the suite, read from the binary, and a red signing stage still ends the full check red.
+Logic-only signing tests use the stand-in `security` and `codesign` commands under `tests/fixtures/local-codesign/`.
+`tests/release-workflows.test.ts` holds both: no journey route signs, and the signing stages follow the journeys and fail the lane.
+
 ## When to request full verification
 
 Full Mac verification is not a routine pre-PR or pre-merge gate.
@@ -904,7 +914,7 @@ The affected-journey selector retains that journey for changes to the core Mac c
 - `e2e-failures` is kept 7 days, the others 14 days.
   None can fail the job, and none runs when a stage the suite needs kept it from starting.
 - **Every stage reports**: each stage waits only on the stages it needs, never on every stage before it (INF-663).
-  The unit suite, the client check and the replay gate need the install; the e2e suite needs the build, the signed dev Electron and the recorder; the package smoke needs the build and the signed dev Electron; the four package checks need the package.
+  The unit suite, the client check and the replay gate need the install; the e2e suite needs the build and the recorder, never the signing; the signing stage needs the install, and runs after every journey stage; the package smoke needs the build and the signed dev Electron; the four package checks need the package.
   So a red unit test still leaves the e2e suite's and the package's results on the run, and the linux-checks lane's checks and build each run whatever another of them did.
   The job still ends red on any failure, so `release.yml` still refuses to sign.
 - **The job summary** names the requested ref and the exact commit checked out, the first failed stage, the e2e counts (skipped includes a serial file's tests that did not run), every failure in the order it started and the first one's assertion.

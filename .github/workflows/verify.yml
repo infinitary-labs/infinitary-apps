@@ -40,6 +40,11 @@ on:
         description: Optional isolated Mac runner label for a proof run; unset keeps the project's runner
         required: false
         type: string
+      # Only a call takes it, so a request cannot claim a release's place.
+      linux_runner:
+        description: A publishing release's Linux label (docs/testing.md, "A release's Linux label"); empty keeps LINUX_RUNNER
+        required: false
+        type: string
       profile:
         description: Which lanes run - stable or alpha (both run the full checks)
         required: false
@@ -112,12 +117,14 @@ concurrency:
 jobs:
   # linux-e2e: every Playwright journey on the app built from source on
   # Ubuntu (LINUX_RUNNER, hosted when unset), in shards (docs/testing.md, "The Linux source desktop").
+  # A publishing release passes its own Linux label instead.
   # Journeys that are the Mac's alone skip there and say why.
   linux-e2e:
     if: ${{ !inputs.installer_only && !inputs.installer_reuse }}
     uses: ./.github/workflows/source-journeys.yml
     with:
       ref: ${{ inputs.ref || github.ref }}
+      runner: ${{ inputs.linux_runner }}
       suite: full
   # The profile's lanes, as one matrix: an omitted lane is absent from the
   # run, never a skipped job that reads as green. linux-checks is the main
@@ -143,7 +150,7 @@ jobs:
       fail-fast: false
       matrix:
         lane: ${{ fromJSON('["linux-checks","mac"]') }}
-    runs-on: ${{ matrix.lane == 'mac' && (inputs.mac_runner || fromJSON(vars.MAC_QUEUES || '{}').check || vars.MAC_RUNNER || 'macos-15') || vars.LINUX_RUNNER || 'ubuntu-latest' }}
+    runs-on: ${{ matrix.lane == 'mac' && (inputs.mac_runner || fromJSON(vars.MAC_QUEUES || '{}').check || vars.MAC_RUNNER || 'macos-15') || inputs.linux_runner || vars.LINUX_RUNNER || 'ubuntu-latest' }}
     # Every crewmate works under "Application Support". The gate here does
     # too, so a check that only fails from a path with a space fails here
     # instead of only in a working copy (FI3-152).

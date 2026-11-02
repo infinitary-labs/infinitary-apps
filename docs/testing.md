@@ -168,6 +168,7 @@ Moved verbatim from `AGENTS.md` on 2026-09-24; `AGENTS.md` keeps a one-line poin
   Every other workflow's Linux jobs read the same variable the same way (INF-1720's plan): the journeys' chooser, starters and overflow, `verify.yml`'s Linux lanes, the phone check's replacement job, the replay gate, Linux startup, the Linux packages and the release's Linux helpers; the package check's Ubuntu 26.04 leg takes the variable's label with `-2604`, the PC's 26.04 job image.
   The gate jobs take the variable's label with `-gate` (DOP-157's plan): `phone.yml`'s `cancel-replaced`, `journeys.yml`'s `choose-journeys`, and the four Linux jobs that open a release (`release.yml`'s `resolve`, `notes` and `phone`, `ios-release.yml`'s `resolve`).
   The placement service's runners on that label take only these jobs and go first in the PC's line, so the Mac jobs waiting on them start within minutes; hosted, they run on `ubuntu-latest`.
+  A publishing release's other Linux jobs take `RELEASE_LINUX_RUNNER` instead once it is set ("A release's Linux label").
   Linux dependency installs use `.github/actions/node-headers`, which finds the running Node archive's `include/node` headers and refuses an image missing them; only the install receives that root as `NPM_PACKAGE_CONFIG_NODE_GYP_NODEDIR`.
   Uppercase preserves the setting through pnpm's lifecycle environment filter.
   That setting belongs only to the install, so later Electron rebuilds keep their own headers.
@@ -318,6 +319,26 @@ A red run reaches the crew through the captain's own Automation rule on GitHub's
 The repair fixes forward, and a revert is the last resort, on the captain's click.
 An alpha starts from the mark (`docs/alpha.md`, "Cutting an alpha").
 `tests/release-contract.test.ts` holds the trigger, the queue and both calls.
+
+## A release's Linux label
+
+A publishing release's Linux jobs can ask for a release-only label on the PC, which the placement service starts before every other waiting Linux job but the gate jobs (INF-2111).
+Without it, a release waits behind every pull request's and requested run's Linux job that has waited an hour, since the service ranks those first, and at night most have.
+The label shares the PC's places and adds no capacity.
+A label of its own is what keeps the place: GitHub, not the service, picks which of a label's waiting jobs a runner gets, so a runner started for a release job on the shared label can be given another job instead (DOP-157).
+
+The repository variable `RELEASE_LINUX_RUNNER` names it, such as `shell-pc-linux-release`, and the Ubuntu 26.04 package check takes it with `-2604`, as it takes `LINUX_RUNNER`'s.
+`release.yml` reads it only when its resolved `dry_run` is `false` and passes it to the workflows it calls:
+
+- `verify.yml`'s `linux_runner` input, which its `linux-checks` lane and every `linux-e2e` journey job take;
+- `linux-packages.yml`'s `runner` input, which its build and every package check take.
+
+`ios-release.yml`'s `availability` job takes it after the run uploads a build.
+The gate jobs keep the gate label, which goes first already ("Notes" above).
+A dry run, a requested check and a pull request keep `LINUX_RUNNER`: only a call passes the label, never a request's inputs.
+Unset, every job keeps today's label.
+Set it only while `LINUX_RUNNER` is set, and only after runner-up, the placement service, serves both labels as pools of their own on the PC's places, so a queued release always has a runner to take it.
+`tests/release-contract.test.ts` holds where each job starts with the variable set, unset and in a dry run.
 
 ## Native phone checks on the pull request
 

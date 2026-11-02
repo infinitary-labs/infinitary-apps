@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "release-linux-label",
+      "reason": "CI release work: a publishing release's Linux jobs can ask for a release-only runner label through a new repository variable; unset, nothing changes, and no person notices it in the app."
+    }
+  ]
+}

@@ -4644,6 +4644,15 @@ it("sends every Linux job to LINUX_RUNNER, and hosted Ubuntu when it is unset", 
               ? "shell-pc-linux-2604"
               : "shell-pc-linux",
         );
+        // INF-2111: the release's own Linux label reaches a job only through a
+        // publishing release's call ("a release's Linux label" below).
+        expect(
+          runner({
+            LINUX_RUNNER: "shell-pc-linux",
+            RELEASE_LINUX_RUNNER: "shell-pc-linux-release",
+          }),
+          name,
+        ).toBe(runner({ LINUX_RUNNER: "shell-pc-linux" }));
       }
     }
   }
@@ -4666,6 +4675,141 @@ it("sends every Linux job to LINUX_RUNNER, and hosted Ubuntu when it is unset", 
       linux.some((name) => name.startsWith(`${job} `)),
       job,
     ).toBe(true);
+});
+
+/**
+ * INF-2111, the captain's first speed-up on the alpha of 2026-10-31: "Give
+ * release and nightly jobs first claim on the Linux PC's 5 places, ahead of
+ * pull requests and lab runs." A publishing release's Linux jobs ask for a
+ * release-only label, RELEASE_LINUX_RUNNER, through the workflows it calls,
+ * and its Ubuntu 26.04 package check for that label with -2604. The gate
+ * jobs keep the gate label; a dry run, a request and an unset variable keep
+ * LINUX_RUNNER (docs/testing.md, "A release's Linux label").
+ */
+describe("a release's Linux label", () => {
+  type Job = {
+    "runs-on"?: string;
+    with?: Record<string, string>;
+    strategy?: { matrix?: { include?: Array<Record<string, string>> } };
+  };
+  type Workflow = {
+    on: Record<string, { inputs?: Record<string, unknown> } | null>;
+    jobs: Record<string, Job>;
+  };
+  const workflow = (file: string) => loadYamlFile(`.github/workflows/${file}`) as Workflow;
+  const release = workflow("release.yml").jobs;
+  const verify = workflow("verify.yml").jobs;
+  const journeys = workflow("source-journeys.yml").jobs["source-desktop"];
+  const packages = workflow("linux-packages.yml").jobs;
+  const availability = workflow("ios-release.yml").jobs.availability;
+  const runsOn = (job: Job | undefined, contexts: Record<string, unknown>) =>
+    workflowValue(job?.["runs-on"] ?? "", contexts);
+  const pc = { LINUX_RUNNER: "shell-pc-linux" };
+  const labels = { ...pc, RELEASE_LINUX_RUNNER: "shell-pc-linux-release" };
+  /** Each package check named by its system, on `label`, or `twin` for the Ubuntu 26.04 leg. */
+  const everyCheck = (label: string, twin: string) =>
+    (packages.check?.strategy?.matrix?.include ?? []).map(
+      (matrix) =>
+        `${matrix.system} ${matrix.image ?? matrix.runner}: ${matrix.runner === "ubuntu-26.04" ? twin : label}`,
+    );
+
+  /** Where each of a release run's Linux jobs starts, through its callers' inputs. */
+  const placed = (dryRun: "true" | "false", vars: Record<string, string>) => {
+    const needs = { resolve: { outputs: { dry_run: dryRun } } };
+    const passed = (id: string, input: string) =>
+      workflowValue(release[id]?.with?.[input] ?? "", { needs, vars });
+    const linuxRunner = passed("verify", "linux_runner");
+    const runner = passed("linux", "runner");
+    const journeyRunner = workflowValue(verify["linux-e2e"]?.with?.runner ?? "", {
+      inputs: { linux_runner: linuxRunner },
+    });
+    return {
+      checks: runsOn(verify.lane, {
+        matrix: { lane: "linux-checks" },
+        inputs: { linux_runner: linuxRunner },
+        vars,
+      }),
+      journeys: runsOn(journeys, { inputs: { runner: journeyRunner }, vars }),
+      build: runsOn(packages.build, { inputs: { runner }, vars }),
+      packages: (packages.check?.strategy?.matrix?.include ?? []).map(
+        (matrix) =>
+          `${matrix.system} ${matrix.image ?? matrix.runner}: ${runsOn(packages.check, { matrix, inputs: { runner }, vars })}`,
+      ),
+      gate: ["resolve", "notes", "phone"].map((id) => runsOn(release[id], { vars })),
+    };
+  };
+  const upload = (mode: string, vars: Record<string, string>) =>
+    runsOn(availability, { needs: { resolve: { outputs: { mode } } }, vars });
+  const today = {
+    checks: "shell-pc-linux",
+    journeys: "shell-pc-linux",
+    build: "shell-pc-linux",
+    packages: everyCheck("shell-pc-linux", "shell-pc-linux-2604"),
+    gate: ["shell-pc-linux-gate", "shell-pc-linux-gate", "shell-pc-linux-gate"],
+  };
+
+  it("sends a publishing release's Linux jobs to the release's own label", () => {
+    expect(placed("false", labels)).toEqual({
+      checks: "shell-pc-linux-release",
+      journeys: "shell-pc-linux-release",
+      build: "shell-pc-linux-release",
+      packages: everyCheck("shell-pc-linux-release", "shell-pc-linux-release-2604"),
+      gate: today.gate,
+    });
+    expect(upload("release", labels)).toBe("shell-pc-linux-release");
+    expect(upload("status", labels)).toBe("shell-pc-linux");
+  });
+
+  it("keeps a dry run on LINUX_RUNNER, so a rehearsal never takes a release's place", () => {
+    expect(placed("true", labels)).toEqual(today);
+  });
+
+  it("keeps today's labels while the variable is unset", () => {
+    expect(placed("false", pc)).toEqual(today);
+    expect(placed("true", pc)).toEqual(today);
+    expect(upload("release", pc)).toBe("shell-pc-linux");
+    expect(placed("false", {})).toEqual({
+      checks: "ubuntu-latest",
+      journeys: "ubuntu-24.04",
+      build: "ubuntu-24.04",
+      packages: everyCheck("ubuntu-24.04", "ubuntu-26.04"),
+      gate: ["ubuntu-latest", "ubuntu-latest", "ubuntu-latest"],
+    });
+    expect(upload("release", {})).toBe("ubuntu-latest");
+  });
+
+  it("lets only a publishing release's calls pass the label on, never a request", () => {
+    const passing: string[] = [];
+    for (const file of readdirSync(join(root, ".github/workflows")).filter((name) =>
+      name.endsWith(".yml"),
+    )) {
+      for (const [id, job] of Object.entries(workflow(file).jobs)) {
+        for (const value of [job.with?.runner, job.with?.linux_runner]) {
+          if (!value?.includes("${{")) continue;
+          const contexts = {
+            vars: labels,
+            needs: { resolve: { outputs: { dry_run: "false" } } },
+            inputs: { linux_runner: labels.RELEASE_LINUX_RUNNER },
+          };
+          if (workflowValue(value, contexts) === labels.RELEASE_LINUX_RUNNER)
+            passing.push(`${file}:${id}`);
+        }
+      }
+    }
+    expect(passing.sort()).toEqual([
+      "release.yml:linux",
+      "release.yml:verify",
+      "verify.yml:linux-e2e",
+    ]);
+    // A request names no Linux label of its own.
+    expect(workflow("verify.yml").on.workflow_dispatch?.inputs).not.toHaveProperty("linux_runner");
+    expect(workflow("linux-packages.yml").on.workflow_dispatch?.inputs).not.toHaveProperty(
+      "runner",
+    );
+    expect(workflow("source-journeys.yml").on.workflow_dispatch?.inputs).not.toHaveProperty(
+      "runner",
+    );
+  });
 });
 
 describe("the cask republication workflow", () => {

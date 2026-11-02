@@ -340,6 +340,10 @@ jobs:
     uses: ./.github/workflows/verify.yml
     with:
       ref: ${{ needs.resolve.outputs.source_commit }}
+      # A publishing run's Linux jobs take the release's own Linux label once
+      # RELEASE_LINUX_RUNNER is set (docs/testing.md, "A release's Linux
+      # label"); a dry run and an unset variable keep LINUX_RUNNER.
+      linux_runner: ${{ needs.resolve.outputs.dry_run == 'false' && vars.RELEASE_LINUX_RUNNER || '' }}
       profile: ${{ needs.resolve.outputs.channel }}
       # A publishing run's Mac lane takes the release_check queue once
       # MAC_QUEUES names it (docs/testing.md, "Each Mac job's kind and size");
@@ -351,12 +355,14 @@ jobs:
   # from its one source commit, with the notes job's catalog, and installed
   # and opened on a clean copy of each system before anything publishes. Its
   # run keeps them as the linux-packages artifact the publication job records.
+  # A publishing run's package jobs take the release's Linux label too.
   linux:
     needs: [resolve, notes]
     uses: ./.github/workflows/linux-packages.yml
     with:
       ref: ${{ needs.resolve.outputs.source_commit }}
       version: ${{ needs.resolve.outputs.version }}
+      runner: ${{ needs.resolve.outputs.dry_run == 'false' && vars.RELEASE_LINUX_RUNNER || '' }}
 
   # The phone goes first (INF-1649; docs/alpha.md, "The phone goes first"): an
   # alpha waits for a phone build on TestFlight that keeps changing things on

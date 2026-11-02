@@ -6,7 +6,9 @@ name: Source desktop journeys
 # alpha and on demand (verify.yml). Packaging comes later. Every job runs on
 # the label the repository variable LINUX_RUNNER names, as ci.yml's do, and
 # on GitHub's hosted Ubuntu when it is unset; the PC's job image supplies its
-# own pnpm store, so only hosted jobs restore setup-node's cache.
+# own pnpm store, so only hosted jobs restore setup-node's cache. A publishing
+# release passes its own Linux label as runner (docs/testing.md, "A release's
+# Linux label").
 on:
   # A hosted-only proof of the fresh-state jobs, without Mac or packaging work.
   workflow_dispatch:
@@ -22,6 +24,7 @@ on:
         required: false
         type: string
       runner:
+        description: A publishing release's Linux label; empty keeps LINUX_RUNNER
         required: false
         type: string
       artifact-suffix:

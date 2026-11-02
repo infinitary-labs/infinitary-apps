@@ -145,7 +145,9 @@ jobs:
     # A status-only dispatch makes no Mac job. Failed uploads may have reached Apple:
     # inspect them with check_build, never automatically resubmit the upload.
     if: ${{ !cancelled() && needs.resolve.result == 'success' && (needs.resolve.outputs.mode == 'status' || needs.testflight.result == 'success') }}
-    runs-on: ${{ vars.LINUX_RUNNER || 'ubuntu-latest' }}
+    # After an upload it takes the release's own Linux label once
+    # RELEASE_LINUX_RUNNER is set (docs/testing.md, "A release's Linux label").
+    runs-on: ${{ needs.resolve.outputs.mode == 'release' && vars.RELEASE_LINUX_RUNNER || vars.LINUX_RUNNER || 'ubuntu-latest' }}
     timeout-minutes: 40
     steps:
       - uses: actions/checkout@v4

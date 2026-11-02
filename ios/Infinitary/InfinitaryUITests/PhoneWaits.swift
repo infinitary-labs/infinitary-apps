@@ -65,7 +65,7 @@ struct PhoneSteadyReading<Reading: Equatable> {
 }
 
 /// What a target shows: its frame, and the screen's own pixels inside that frame while it is on the screen.
-private struct PhoneTargetReading: Equatable {
+struct PhoneTargetReading: Equatable {
     let frame: CGRect
     let drawn: Data?
 }
@@ -104,19 +104,23 @@ private struct PhoneTargetReading: Equatable {
     _ = waitForTarget(moved, timeout: 10) { $0.frame != before }
 }
 
+/// One sampler owns native target frames and their on-screen pixels, including the photo recovery observation.
+@MainActor func readPhoneTarget(_ element: XCUIElement) -> PhoneTargetReading? {
+    // The screen's bounds are read again because a turn moves them.
+    let screen = XCUIApplication().frame
+    return (try? element.snapshot()).map { snapshot in
+        PhoneTargetReading(frame: snapshot.frame,
+                           drawn: snapshot.frame.intersects(screen) ? element.screenshot().pngRepresentation : nil)
+    }
+}
+
 /// Reads a load-clock tick apart until the target reads the same twice in a row and `settled` accepts it.
 @MainActor private func waitForTarget(_ element: XCUIElement, timeout: TimeInterval,
                                       until settled: @escaping (PhoneTargetReading) -> Bool) -> PhoneTargetReading? {
     var steady = PhoneSteadyReading<PhoneTargetReading>()
     var last: PhoneTargetReading?
     let held = NSPredicate { _, _ in
-        // The screen's bounds, in the same coordinates as every element's frame, read each time since a turn moves them.
-        let screen = XCUIApplication().frame
-        last = (try? element.snapshot()).map { snapshot in
-            // A target off the screen draws nothing there yet; XCTest scrolls it into view as it taps.
-            PhoneTargetReading(frame: snapshot.frame,
-                               drawn: snapshot.frame.intersects(screen) ? element.screenshot().pngRepresentation : nil)
-        }
+        last = readPhoneTarget(element)
         return steady.read(last) && last.map(settled) == true
     }
     XCTAssertEqual(waitForPhonePredicate(held, object: element, timeout: timeout), .completed,

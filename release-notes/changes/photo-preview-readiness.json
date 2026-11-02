@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "photo-preview-readiness",
+      "reason": "Test-only photo picker readiness observation and native regression coverage; no product behavior changes."
+    }
+  ]
+}

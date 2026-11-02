@@ -640,6 +640,10 @@ On a busy iPhone the photo's lift can reach the photo picker late enough that th
 The picker logs `performAllAnimations for animator: <_UIContextMenuAnimator` as it opens that preview, and the test home answers whether that line followed the tap (`PhonePickerPreviews`).
 The iPad logged the same line and still chose the photo, so the line alone is not proof: the photo pick taps once more only after the photo holds still with no photo chosen and that line read (INF-1477, the captain's "Allow one more photo tap"), and a second press-and-hold fails the part.
 The preview stays open after the lift and hides the photo from the accessibility tree, so when UIKit's element labeled `Preview` is on screen after that line, one tap on the dimmed screen below it closes it before the photo is tapped again (the captain's "Allow the closing tap").
+After that positive picker proof, the optional wait observes selection, a visible preview or a photo whose on-screen frame and readable pixels match twice (`PhonePhotoObservation`, INF-1832).
+Selection and preview outrank a settled photo; missing targets or pixels reset steadiness, and unresolved observations fail at the existing deadline.
+Recovery rechecks selection and preview before authorizing the additional photo tap, so a delayed preview still takes the one closing path.
+The readiness log names the outcome and elapsed wait independently of the whole talk journey.
 Before and after each action XCTest waits for the app's main run loop to idle and for a reply from inside the app saying its animations finished (INF-1541, the captain's "The test code skips Apple's animation wait and checks each target itself").
 On a busy Mac that reply can stop coming, as it did after a rotation in INF-1538, and XCTest then waits 60 seconds before every later action.
 Every journey replaces XCTest's private `-[XCUIApplicationProcess waitForQuiescenceIncludingAnimationsIdle:usingActivity:isPreEvent:]`, which every one of those waits reaches in Xcode 26.4, with one that keeps the run loop wait and never asks for the animation reply, as WebDriverAgent does (`PhoneAnimationWait.swift`).

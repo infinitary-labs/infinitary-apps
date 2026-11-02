@@ -9,9 +9,9 @@ import { fileURLToPath } from "node:url";
  * what the runner has: SSH and Remote Login stand-ins, dns-sd, release
  * rehearsals, the connection listener, real Playwright runs and whole-core
  * command-line runs. They run as vitest's `probe` project, never in the
- * integration shards. A pull request and a push to main run only the probes
- * whose paths the change edits; verify.yml's linux-checks lane runs them all
- * before every alpha and on demand.
+ * integration shards. This local chooser runs only affected probes; CI runs
+ * every probe on main and on request, never on pull requests. The
+ * verify.yml linux-checks lane runs them all before every alpha and on demand.
  *
  *   node scripts/affected-probes.ts [--base <ref>] [--head <ref>] [--run]
  *

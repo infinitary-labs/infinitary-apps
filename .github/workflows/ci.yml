@@ -1,8 +1,8 @@
 name: ci
 
-# Pull requests retain typecheck, lint, build, affected probes and changed-test
-# repetitions. Full unit and integration sweeps run on main and on request,
-# never on pull requests (INF-2224, captain: "Move both to main").
+# Pull requests retain typecheck, lint, build and changed-test repetitions.
+# Full unit, integration and probe sweeps run on main and on request,
+# never on pull requests (captain: "ok move it too but as a separate task").
 # Releases keep the full suite in verify.yml, including every probe.
 # Which Linux machines (INI-9's plan, approved by the captain): every job
 # runs on the label the repository variable LINUX_RUNNER names - the
@@ -96,18 +96,13 @@ jobs:
       - run: pnpm test --project integration --shard=${{ matrix.shard }}/${{ strategy.job-total }}
         timeout-minutes: 30
 
-  # The probes (docs/test-cohorts.md, "Probes"): integration files that can
-  # fail with no code change - SSH and Remote Login stand-ins, dns-sd, release
-  # rehearsals, the connection listener, real Playwright runs. This job runs
-  # only the probes whose paths the change edits, from its merge base with
-  # main on a pull request and from the previous main on a push, and its
-  # summary says which and why. A base it cannot read runs them all.
+  # Probes can fail with no code change (docs/test-cohorts.md, "Probes").
+  # Run every probe on main and on request, never a changed-path selection.
   probe-tests:
+    if: github.event_name != 'pull_request'
     runs-on: ${{ vars.LINUX_RUNNER || 'ubuntu-latest' }}
     steps:
       - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
       - uses: pnpm/action-setup@v4
       - uses: actions/setup-node@v4
         with:
@@ -118,10 +113,8 @@ jobs:
         # Scope Node headers to this install, never to Electron rebuilds.
         env:
           NPM_PACKAGE_CONFIG_NODE_GYP_NODEDIR: ${{ env.INFINITARY_NODE_HEADERS }}
-      - run: pnpm test:probes --base "$BASE"
+      - run: pnpm test --project probe
         timeout-minutes: 30
-        env:
-          BASE: ${{ github.event_name == 'pull_request' && format('origin/{0}', github.base_ref) || github.event.before }}
 
   # A change's unit-file repeats (docs/testing.md, "This project's rulings
   # on tests"; INF-2074's ci-gate fix): each Vitest file the change adds or

@@ -1080,7 +1080,8 @@ describe("local packaging identity (electron-builder.dev.yml)", () => {
   );
 
   /**
-   * FI3-262 retains the real PR gates; INF-2224 moves only full sweeps to main.
+   * Captain: "ok move it too but as a separate task" extends INF-2224
+   * to probes: retain the real PR gates, move all full sweeps to main.
    * Exercise the actual job condition with GitHub's expression evaluator,
    * including a release's own notes pull request, rather than looking for a
    * string. No upstream jobs: the implicit success() condition is true here.
@@ -1109,7 +1110,7 @@ describe("local packaging identity (electron-builder.dev.yml)", () => {
       const expression = (job.if ?? "true").replace(/^\$\{\{\s*|\s*\}\}$/g, "");
       const ast = new Parser(new Lexer(expression).lex().tokens, ["github"], []).parse();
       const eligible = new Evaluator(ast, new data.Dictionary({ key: "github", value: github }));
-      const fullSweep = id === "unit-tests" || id === "integration-tests";
+      const fullSweep = id === "unit-tests" || id === "integration-tests" || id === "probe-tests";
       expect(eligible.evaluate().coerceString(), id).toBe(
         fullSweep && eventName === "pull_request" ? "false" : "true",
       );
@@ -1160,9 +1161,8 @@ describe("local packaging identity (electron-builder.dev.yml)", () => {
   /**
    * FI3-1204 / INF-2224: main runs full sweeps on several machines at once, and
    * split it must still run every test: each vitest project in exactly one
-   * job, or in shards of one count that together cover it. The probe project
-   * is the one exception (FI3-1756's plan): one job runs it through its
-   * chooser, only the probes whose paths the change edits.
+   * job, or in shards of one count that together cover it. The captain
+   * explicitly includes every probe, not just affected files.
    */
   it("runs every vitest project once across the main jobs, a sharded one in shards that cover it", () => {
     const projects = (vitestConfig.test?.projects ?? []).map((project) => {
@@ -1174,16 +1174,10 @@ describe("local packaging identity (electron-builder.dev.yml)", () => {
     expect(projects).toEqual(
       expect.arrayContaining(["pure", "unit", "unit-isolated", "integration", "probe"]),
     );
-    const scripts = JSON.parse(read("package.json")).scripts as Record<string, string>;
-    expect(scripts["test:probes"]).toBe("node scripts/affected-probes.ts --run");
     const shardsOf = new Map<string, string[]>();
     for (const { name, runs } of ciJobs()) {
       for (const run of runs) {
         const [tool, script, ...args] = run.split(/\s+/);
-        if (tool === "pnpm" && script === "test:probes") {
-          shardsOf.set("probe", [...(shardsOf.get("probe") ?? []), "affected"]);
-          continue;
-        }
         if (tool !== "pnpm" || script !== "test") continue;
         const selected: string[] = [];
         let shard = "whole";
@@ -1199,9 +1193,9 @@ describe("local packaging identity (electron-builder.dev.yml)", () => {
       }
     }
     expect([...shardsOf.keys()].toSorted()).toEqual(projects.toSorted());
-    expect(shardsOf.get("probe")).toEqual(["affected"]);
+    expect(shardsOf.get("probe")).toEqual(["whole"]);
     for (const [project, shards] of shardsOf) {
-      const whole = shards.length === 1 && (shards[0] === "whole" || shards[0] === "affected");
+      const whole = shards.length === 1 && shards[0] === "whole";
       const cover = shards.map((_, index) => `${index + 1}/${shards.length}`);
       expect(whole || shards.toSorted().join() === cover.toSorted().join(), project).toBe(true);
     }
@@ -2725,9 +2719,9 @@ describe("the signed channel workflow", () => {
     expect(runner("linux-checks")).toBe("ubuntu-latest");
     expect(runner("mac")).toBe("macos-15");
     // What each lane runs, by its own step conditions on a passing run: the
-    // linux-checks lane is exactly the PR gate, every probe included where
-    // the PR gate runs only those a change reaches, and the full suite where
-    // the PR gate repeats a change's own test files; the mac lane the full suite.
+    // linux-checks lane retains the full main gate, replacing the separate
+    // cohort sweeps and changed-test repetitions with the full suite; the
+    // Mac lane retains its Mac-only selection.
     const runsIn = (name: string) =>
       (lane.steps ?? [])
         .filter(
@@ -2745,10 +2739,10 @@ describe("the signed channel workflow", () => {
               }) === true),
         )
         .map((candidate) => candidate.run);
-    const prGate = ciJobs().flatMap(({ runs }) =>
+    const mainGate = ciJobs().flatMap(({ runs }) =>
       runs.map((run) => (/^pnpm test(:probes|:repeats)? /.test(run) ? "pnpm test" : run)),
     );
-    expect(runsIn("linux-checks").toSorted()).toEqual([...new Set(prGate)].toSorted());
+    expect(runsIn("linux-checks").toSorted()).toEqual([...new Set(mainGate)].toSorted());
     expect(runsIn("mac")).toEqual(
       expect.arrayContaining([
         'mac_tests="$(node scripts/mac-unit-tests.ts)"\npnpm test $mac_tests\n',

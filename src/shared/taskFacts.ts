@@ -23,6 +23,7 @@ import type {
   TaskEventKind,
   TaskView,
 } from "./tasks";
+import type { TaskWait } from "./taskWaits";
 import { CHECK_WORDS, CHECKS_NOT_READ_WORDS, REVIEW_WORDS, RUN_CHECK_WORDS } from "./vocabulary";
 
 /**
@@ -114,6 +115,7 @@ export type TaskModelWhy = {
 };
 
 export type TaskFacts = {
+  waits?: readonly TaskWait[];
   key: string;
   status: TaskStatusReading;
   title: string;
@@ -148,8 +150,10 @@ export type TaskFacts = {
 };
 
 /** The board row, plus what only the record read carries (absent until it answers). */
-export type TaskFactsInput = TaskStatusInput &
-  Pick<TaskView, "key" | "title" | "model" | "tier" | "delivery"> & {
+export type TaskFactsInput = TaskStatusInput & { waits?: readonly TaskWait[] } & Pick<
+    TaskView,
+    "key" | "title" | "model" | "tier" | "delivery"
+  > & {
     activityLog?: readonly TaskActivityRow[];
     said?: TaskActionLine | null;
     plan?: TaskPlan | null;
@@ -190,6 +194,7 @@ function modelWhyOf(
 export function taskFactsOf(task: TaskFactsInput, modelName: (model: string) => string): TaskFacts {
   const model = task.model ? modelName(task.model) : null;
   return {
+    waits: task.waits,
     key: task.key,
     status: taskStatusOf(task),
     title: task.title,

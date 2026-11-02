@@ -90,7 +90,9 @@ function revealIfCollapsed(page: Page, dock: DockId): void {
   });
 }
 
-const dockFrameSelector = (dock: DockId) => `iframe[title="${DOCK_TITLES[dock]}"]`;
+// A board card can also be titled Tasks; a dock read names its owning side panel.
+const dockFrameSelector = (dock: DockId) =>
+  `[data-side-panel="${dock}"] iframe[title="${DOCK_TITLES[dock]}"]`;
 
 /** A dock's frame as an element: it runs while the dock is collapsed, and shows only while it is expanded. */
 export function dockFrameElement(page: Page, dock: DockId): Locator {

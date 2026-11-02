@@ -893,6 +893,9 @@ export async function createServices(
     () => ({});
   let scheduleWorkPresentation = () => {};
   let hearPresentation: (event: FmEvent) => void = () => {};
+  let readWorkWaitFacts:
+    | ((record: TaskRecord) => import("./tasks/taskWaits").TaskWaitFacts)
+    | undefined;
   let readWorkPosture: ((record: TaskRecord) => WorkPosture) | undefined;
   // The run whose line is Activity's newest, with that line's row
   // (`feedRunOf`): the captain's settled run on one setting
@@ -958,6 +961,7 @@ export async function createServices(
     beforePush: () => cardStack?.flushCards(),
     workPosture: (record) =>
       readWorkPosture?.(record) ?? { state: "unknown", reason: "unobserved" },
+    waitFacts: (record) => readWorkWaitFacts?.(record) ?? { job: false, timerOwned: false },
     // Late-bound: each task's own browser is built below, on a host with one.
     browser: (taskId) => browserFactOf(taskId),
     // Late-bound too: what a crewmate did, from its kept session, read below.
@@ -2538,6 +2542,7 @@ export async function createServices(
   closingResolutionOf = (taskId) => supervisor.newestCardResolution(taskId);
   cardStack = supervisor;
   readWorkPosture = (record) => supervisor.workPosture(record);
+  readWorkWaitFacts = (record) => supervisor.workWaitFacts(record);
   const workPresentation = new WorkPresentation({
     tasks,
     protocol: taskProtocol,

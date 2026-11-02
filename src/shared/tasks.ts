@@ -16,6 +16,7 @@ import { deliverableSchema } from "./routingPolicy";
 import { taskBrowserFactSchema } from "./taskBrowser";
 import { taskPlanSchema } from "./taskPlan";
 import { effectiveTaskPoliciesSchema, taskRunsOnSchema } from "./taskPolicies";
+import { taskWaitSchema } from "./taskWaits";
 import { timelineReadingSchema } from "./timeline";
 import { workPostureSchema } from "./workPosture";
 
@@ -321,6 +322,8 @@ export const taskViewSchema = z.object({
   status: taskStatusSchema,
   activity: taskActivitySchema.nullable(),
   workPosture: workPostureSchema.optional(),
+  /** Standing owner facts for permitted desktop wait presentations; absent on older homes. */
+  waits: z.array(taskWaitSchema).optional(),
   closedReason: taskClosedReasonSchema.nullable(),
   startPolicy: z.enum(["when-ready", "on-request"]),
   flags: taskFlagsSchema,

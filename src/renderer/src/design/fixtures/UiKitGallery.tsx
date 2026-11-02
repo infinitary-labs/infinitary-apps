@@ -58,7 +58,7 @@ export const STAGE_ONLY_EXPORTS: readonly string[] = [
  * app's own words for a task's search, a feed line's age and Drop task's
  * question (piece 7), the overflow-title helpers a panel may use, and what
  * an automation rule says, which Settings and the Automation panel share.
- * The blocked-by projection is the same kind of helper: it draws nothing.
+ * The blocked-by and wait projections and the shared minute clock draw nothing themselves.
  */
 export const HELPER_EXPORTS: readonly string[] = [
   "AUTOMATION_STATE_TONES",
@@ -85,8 +85,10 @@ export const HELPER_EXPORTS: readonly string[] = [
   "nowGroupsOf",
   "taskStatusLabel",
   "taskStatusOf",
+  "taskWaitSummary",
   "waitRecordedTime",
   "useInPlaceReveal",
+  "useMinute",
   "textIsHidden",
   "useOverflowTitle",
   "useRestLabel",

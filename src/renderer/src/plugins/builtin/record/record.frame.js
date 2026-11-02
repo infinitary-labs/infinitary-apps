@@ -25,7 +25,15 @@
  * names links to its page, where the host says which words name it. All
  * task-authored strings use textContent, never HTML.
  */
-(function record(/** @type {import("@shared/plugins/bridge").FrameBridgeApi} */ bridge) {
+(function record(
+  /** @type {import("@shared/plugins/bridge").FrameBridgeApi} */ bridge,
+  /** @type {typeof import("@shared/taskWaits").taskWaitText} */ taskWaitText = () => {
+    throw new Error("Task wait formatting was not prepared");
+  },
+  /** @type {typeof import("@shared/taskWaits").recordAttentionWaits} */ recordAttentionWaits = () => {
+    throw new Error("Task wait ownership was not prepared");
+  },
+) {
   /** @typedef {import("@shared/tasks").TaskDetail} Detail */
   /** @typedef {import("@shared/tasks").TaskBoard} Board */
   /** @typedef {import("@shared/tasks").TaskActivityRow} Row */
@@ -537,6 +545,16 @@
       const { total, closed: done } = current.children;
       title = `Its ${total} ${total === 1 ? "part does" : "parts do"} the work`;
       guidance = `${done} closed, ${total - done} still open.`;
+    }
+    const waits = recordAttentionWaits(current);
+    if (waits.length) {
+      const words = waits.map((wait) => taskWaitText(wait, Date.now())).join("; ");
+      if (danger) guidance = `${guidance} ${words}`;
+      else {
+        title = words;
+        if (waits.some((wait) => wait.kind === "start"))
+          guidance = "The recorded start time does not promise that work has resumed.";
+      }
     }
     attentionEl.hidden = !title;
     attentionEl.toggleAttribute("data-urgent", urgent);
@@ -1396,7 +1414,10 @@
   }
 
   // Refresh only the age text, not disclosures or timeline DOM.
-  window.setInterval(paintAges, 60_000);
+  window.setInterval(() => {
+    paintAges();
+    if (detail && readable) paintOverview(detail);
+  }, 60_000);
 
   bridge.subscribe(
     "tasks.detail",
@@ -1453,4 +1474,4 @@
       bridge.action("record-sections", { open }).catch(() => {});
     });
   }
-})(/** @type {any} */ (window).inf);
+})(/** @type {any} */ (window).inf /* shared wait functions */);

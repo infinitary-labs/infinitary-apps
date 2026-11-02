@@ -1,7 +1,7 @@
 import type { RecordFact } from "@shared/recordFacts";
 import type { TaskActivityRow, TaskDetail, TaskEventView } from "@shared/tasks";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import script from "./record.frame.js?raw";
+import { recordScript as script } from "./recordScript";
 
 class Node {
   #text = "";
@@ -1168,4 +1168,47 @@ describe("compact task record frame", () => {
     // The words read as they did: the link is part of the line, nothing more.
     expect((first as Node).flat()).toBe(`5m${opened}`);
   });
+});
+
+// Approved INF-2215 reconciles waits into the existing explanation, preserving errors first.
+it("keeps all standing non-check waits in the attention box and preserves failure guidance", () => {
+  const view = mount();
+  const waits: NonNullable<TaskDetail["waits"]> = [
+    {
+      id: "dependency:web",
+      kind: "dependency",
+      label: "WEB-41",
+      taskKeys: ["WEB-41"],
+      since: now - 60000,
+    },
+    {
+      id: "start",
+      kind: "start",
+      label: "Scheduled start",
+      next: { kind: "start", at: now - 30000 },
+    },
+    {
+      id: "run:42:1",
+      kind: "run",
+      label: "Website checks",
+      next: { kind: "next-read", at: now + 60000 },
+    },
+  ];
+  view.push(
+    task({
+      activity: "interrupted",
+      problem: "The computer disconnected.",
+      blockedBy: ["WEB-41"],
+      waits,
+    }),
+  );
+  const words = view.node("attention-guidance").textContent;
+  expect(view.node("attention-title").textContent).toBe("Work was interrupted");
+  expect(words).toMatch(/^The computer disconnected\./);
+  expect(words).toContain("WEB-41 · time unknown · wait recorded");
+  expect(words).toContain("start time was due");
+  expect(words).not.toContain("Website checks");
+  view.push(task({ blockedBy: ["WEB-41"], waits }));
+  expect(view.node("attention-title").textContent).toContain("WEB-41 · time unknown");
+  expect(view.node("attention-title").textContent).toContain("start time was due");
 });

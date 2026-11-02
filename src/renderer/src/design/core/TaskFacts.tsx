@@ -1,3 +1,7 @@
+import { useMinute } from "./useMinute";
+
+export { useMinute } from "./useMinute";
+
 import { checksFinishedAgo, checksRestWords, checksSpanWords } from "@shared/checksSpan";
 import { FACT_DOT, type FactDotState } from "@shared/factDot";
 import { feedRelativeAge } from "@shared/feed";
@@ -13,21 +17,12 @@ import {
   type TaskPlan,
   type TaskPlanItem,
 } from "@shared/taskPlan";
-import { type ReactNode, useEffect, useState } from "react";
+import { checksWait, taskWaitText } from "@shared/taskWaits";
+import { type ReactNode, useState } from "react";
 import { SlotBadge } from "../quota/SlotBadge";
 import { useOverflowTitle } from "./overflowTitle";
 import { useRestLabel } from "./restLabel";
 import "./taskFacts.css";
-
-/** Repaints short ages each minute; only their text changes. */
-function useMinute(): number {
-  const [now, setNow] = useState(() => Date.now());
-  useEffect(() => {
-    const timer = window.setInterval(() => setNow(Date.now()), 60_000);
-    return () => window.clearInterval(timer);
-  }, []);
-  return now;
-}
 
 /**
  * A short age beside a fact (`2m`): its exact time shows on rest, the
@@ -365,7 +360,7 @@ function PlanList({ plan, now, focusable }: { plan: TaskPlan; now: number; focus
 
 /** Whether the task has anything for its fact strip: a model, or its change, checks or review. */
 export function hasFactStrip(facts: TaskFacts): boolean {
-  return facts.model !== null || facts.delivery !== null;
+  return facts.model !== null || facts.delivery !== null || Boolean(facts.waits?.some(checksWait));
 }
 
 /**
@@ -437,18 +432,28 @@ export function TaskFactStrip({
             )}
           </Cell>
         )}
-        {checks && (
+        {(checks || facts.waits?.some(checksWait)) && (
           <Cell
             label="Checks"
             fact="checks"
-            data-dot={checks.dot}
-            {...(checks.problem ? { "data-check-read-problem": "" } : {})}
+            data-dot={checks?.dot ?? "idle"}
+            {...(facts.waits?.some(checksWait) ? { "data-task-watch-schedules": "" } : {})}
+            {...(checks?.problem ? { "data-check-read-problem": "" } : {})}
           >
-            <FactDot state={checks.dot} />
-            <ChecksWords checks={checks} now={now} focusable={focusable} />
-            {checks.span?.finishedAt != null && (
-              <Age at={checks.span.finishedAt} now={now} focusable={focusable} ago />
+            {checks && (
+              <>
+                <FactDot state={checks.dot} />
+                <ChecksWords checks={checks} now={now} focusable={focusable} />
+                {checks.span?.finishedAt != null && (
+                  <Age at={checks.span.finishedAt} now={now} focusable={focusable} ago />
+                )}
+              </>
             )}
+            {facts.waits?.filter(checksWait).map((wait) => (
+              <span key={wait.id} className="wait-schedule" data-task-watch={wait.id}>
+                {taskWaitText(wait, now)}
+              </span>
+            ))}
           </Cell>
         )}
 

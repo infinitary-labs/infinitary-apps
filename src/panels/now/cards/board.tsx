@@ -18,6 +18,8 @@ import {
   TaskStatusMark,
   taskStatusLabel,
   taskStatusOf,
+  taskWaitSummary,
+  useMinute,
   waitRecordedTime,
 } from "@infinitary/ui";
 import {
@@ -990,9 +992,10 @@ export default function TaskBoardCard({ card, reads, point, tasks, view: windowV
     });
 
   /** A tile's face: its mark and key, its one word, the project, the title and the status. */
-  const face = (task: PanelTaskRow, word: string) => {
+  const face = (task: PanelTaskRow, word: string, row = false) => {
     const reading = taskStatusOf(task);
     const project = projectName(task);
+    const wait = showsKanbanWait(task, row);
     return (
       <>
         <span className="fm-board-tile-head">
@@ -1018,21 +1021,30 @@ export default function TaskBoardCard({ card, reads, point, tasks, view: windowV
         <span
           className="fm-board-tile-status"
           data-board-status=""
+          data-board-structured-wait={wait ? "" : undefined}
           data-board-queue-wait={task.queueWait?.line === reading.reason ? "" : undefined}
           data-board-failed={reading.reason === "Could not start" ? "" : undefined}
         >
-          <span className="fm-board-tile-word-status">{reading.word}</span>
-          {task.program && ` · ${task.children.closed} of ${task.children.total} parts finished`}
-          {reading.reason && ` · ${reading.reason}`}
+          {wait ? (
+            <KanbanWait task={task} word={reading.word} />
+          ) : (
+            <>
+              <span className="fm-board-tile-word-status">{reading.word}</span>
+              {task.program &&
+                ` · ${task.children.closed} of ${task.children.total} parts finished`}
+              {reading.reason && ` · ${reading.reason}`}
+            </>
+          )}
         </span>
-        {task.queueWait &&
+        {!wait &&
+          task.queueWait &&
           (reading.mark === "queued" || reading.mark === "backlog") &&
           reading.reason !== task.queueWait.line && (
             <span className="fm-board-tile-status" data-board-queue-wait="">
               {task.queueWait.line}
             </span>
           )}
-        {reading.since !== undefined && (
+        {!wait && reading.since !== undefined && (
           // When the one wait was recorded, never when work stopped (INF-38).
           <span className="fm-board-tile-since" data-board-wait-since="">
             {`Wait recorded ${waitRecordedTime(reading.since, Date.now())}`}
@@ -1076,7 +1088,8 @@ export default function TaskBoardCard({ card, reads, point, tasks, view: windowV
           data-board-lit={windowView.litTaskId === task.id ? "" : undefined}
           data-board-movable={movable ? "" : undefined}
           tabIndex={stop === task.id ? 0 : -1}
-          aria-label={`${task.key} · ${task.title} · ${project} · ${label}`}
+          aria-label={`${task.key} · ${task.title} · ${project} · ${showsKanbanWait(task, row) ? reading.word : label}`}
+          aria-describedby={showsKanbanWait(task, row) ? `wait-${task.id}` : undefined}
           aria-keyshortcuts={items.length > 0 ? "Space" : undefined}
           onClick={() => {
             if (drag.swallowsClick() || asking) return;
@@ -1124,7 +1137,7 @@ export default function TaskBoardCard({ card, reads, point, tasks, view: windowV
             letGo(event.currentTarget);
           }}
         >
-          {face(task, word)}
+          {face(task, word, row)}
         </button>
         {items.length > 0 && (
           <span className="fm-board-more" data-board-more={task.id}>
@@ -1502,4 +1515,38 @@ export default function TaskBoardCard({ card, reads, point, tasks, view: windowV
 function boxKey(tile: HTMLElement): string {
   const { top, left, width, height } = tile.getBoundingClientRect();
   return [top, left, width, height].map(Math.round).join(",");
+}
+
+/** The existing timed-fact clock invalidates only this tile's time-varying text. */
+function KanbanWait({ task, word }: { task: PanelTaskRow; word: string }) {
+  const now = useMinute();
+  const wait = taskWaitSummary(task.waits ?? [], now);
+  if (!wait) return null;
+  return (
+    <span className="fm-board-wait" data-board-wait="" id={`wait-${task.id}`}>
+      <span className="fm-board-wait-head">
+        <span className="fm-board-tile-word-status">
+          {word}
+          {task.program && ` · ${task.children.closed} of ${task.children.total} parts finished`}
+        </span>
+        <span className="fm-board-wait-names">{` · ${wait.names}`}</span>
+      </span>
+      <span className="fm-board-wait-event">{wait.event}</span>
+    </span>
+  );
+}
+
+function showsKanbanWait(
+  task: PanelTaskRow & { startNotice?: { reason: string } },
+  row: boolean,
+): boolean {
+  const reading = taskStatusOf(task);
+  return (
+    !row &&
+    Boolean(task.waits?.length) &&
+    !reading.outOfReach &&
+    reading.mark !== "starting" &&
+    reading.mark !== "interrupted" &&
+    !task.startNotice
+  );
 }

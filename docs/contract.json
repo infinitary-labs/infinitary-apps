@@ -26621,6 +26621,68 @@
                     "reason"
                   ]
                 },
+                "waits": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "id": {
+                        "type": "string"
+                      },
+                      "kind": {
+                        "type": "string",
+                        "enum": [
+                          "dependency",
+                          "checks",
+                          "run",
+                          "job",
+                          "allowance",
+                          "start",
+                          "decision",
+                          "backlog"
+                        ]
+                      },
+                      "label": {
+                        "type": "string"
+                      },
+                      "taskKeys": {
+                        "type": "array",
+                        "items": {
+                          "type": "string"
+                        }
+                      },
+                      "since": {
+                        "type": "number"
+                      },
+                      "next": {
+                        "type": "object",
+                        "properties": {
+                          "kind": {
+                            "type": "string",
+                            "enum": [
+                              "next-read",
+                              "check-back",
+                              "reset",
+                              "start"
+                            ]
+                          },
+                          "at": {
+                            "type": "number"
+                          }
+                        },
+                        "required": [
+                          "kind",
+                          "at"
+                        ]
+                      }
+                    },
+                    "required": [
+                      "id",
+                      "kind",
+                      "label"
+                    ]
+                  }
+                },
                 "closedReason": {
                   "anyOf": [
                     {
@@ -28049,6 +28111,68 @@
               "state",
               "reason"
             ]
+          },
+          "waits": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string"
+                },
+                "kind": {
+                  "type": "string",
+                  "enum": [
+                    "dependency",
+                    "checks",
+                    "run",
+                    "job",
+                    "allowance",
+                    "start",
+                    "decision",
+                    "backlog"
+                  ]
+                },
+                "label": {
+                  "type": "string"
+                },
+                "taskKeys": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                "since": {
+                  "type": "number"
+                },
+                "next": {
+                  "type": "object",
+                  "properties": {
+                    "kind": {
+                      "type": "string",
+                      "enum": [
+                        "next-read",
+                        "check-back",
+                        "reset",
+                        "start"
+                      ]
+                    },
+                    "at": {
+                      "type": "number"
+                    }
+                  },
+                  "required": [
+                    "kind",
+                    "at"
+                  ]
+                }
+              },
+              "required": [
+                "id",
+                "kind",
+                "label"
+              ]
+            }
           },
           "closedReason": {
             "anyOf": [
@@ -32386,6 +32510,68 @@
                 "state",
                 "reason"
               ]
+            },
+            "waits": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "id": {
+                    "type": "string"
+                  },
+                  "kind": {
+                    "type": "string",
+                    "enum": [
+                      "dependency",
+                      "checks",
+                      "run",
+                      "job",
+                      "allowance",
+                      "start",
+                      "decision",
+                      "backlog"
+                    ]
+                  },
+                  "label": {
+                    "type": "string"
+                  },
+                  "taskKeys": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  },
+                  "since": {
+                    "type": "number"
+                  },
+                  "next": {
+                    "type": "object",
+                    "properties": {
+                      "kind": {
+                        "type": "string",
+                        "enum": [
+                          "next-read",
+                          "check-back",
+                          "reset",
+                          "start"
+                        ]
+                      },
+                      "at": {
+                        "type": "number"
+                      }
+                    },
+                    "required": [
+                      "kind",
+                      "at"
+                    ]
+                  }
+                },
+                "required": [
+                  "id",
+                  "kind",
+                  "label"
+                ]
+              }
             },
             "closedReason": {
               "anyOf": [
@@ -54626,6 +54812,68 @@
                     "reason"
                   ]
                 },
+                "waits": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "id": {
+                        "type": "string"
+                      },
+                      "kind": {
+                        "type": "string",
+                        "enum": [
+                          "dependency",
+                          "checks",
+                          "run",
+                          "job",
+                          "allowance",
+                          "start",
+                          "decision",
+                          "backlog"
+                        ]
+                      },
+                      "label": {
+                        "type": "string"
+                      },
+                      "taskKeys": {
+                        "type": "array",
+                        "items": {
+                          "type": "string"
+                        }
+                      },
+                      "since": {
+                        "type": "number"
+                      },
+                      "next": {
+                        "type": "object",
+                        "properties": {
+                          "kind": {
+                            "type": "string",
+                            "enum": [
+                              "next-read",
+                              "check-back",
+                              "reset",
+                              "start"
+                            ]
+                          },
+                          "at": {
+                            "type": "number"
+                          }
+                        },
+                        "required": [
+                          "kind",
+                          "at"
+                        ]
+                      }
+                    },
+                    "required": [
+                      "id",
+                      "kind",
+                      "label"
+                    ]
+                  }
+                },
                 "closedReason": {
                   "anyOf": [
                     {
@@ -56054,6 +56302,68 @@
                     "state",
                     "reason"
                   ]
+                },
+                "waits": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "id": {
+                        "type": "string"
+                      },
+                      "kind": {
+                        "type": "string",
+                        "enum": [
+                          "dependency",
+                          "checks",
+                          "run",
+                          "job",
+                          "allowance",
+                          "start",
+                          "decision",
+                          "backlog"
+                        ]
+                      },
+                      "label": {
+                        "type": "string"
+                      },
+                      "taskKeys": {
+                        "type": "array",
+                        "items": {
+                          "type": "string"
+                        }
+                      },
+                      "since": {
+                        "type": "number"
+                      },
+                      "next": {
+                        "type": "object",
+                        "properties": {
+                          "kind": {
+                            "type": "string",
+                            "enum": [
+                              "next-read",
+                              "check-back",
+                              "reset",
+                              "start"
+                            ]
+                          },
+                          "at": {
+                            "type": "number"
+                          }
+                        },
+                        "required": [
+                          "kind",
+                          "at"
+                        ]
+                      }
+                    },
+                    "required": [
+                      "id",
+                      "kind",
+                      "label"
+                    ]
+                  }
                 },
                 "closedReason": {
                   "anyOf": [

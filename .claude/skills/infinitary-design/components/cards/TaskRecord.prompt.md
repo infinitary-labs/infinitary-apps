@@ -177,3 +177,12 @@ Resident memory counts shared pages once per process and is not the computer’s
 A declared heavy run adds a separate Run row below Use, in the same fact-row type and mono value, without another panel, meter or control.
 It names the computer, waiting or running, the reason or runs ahead while waiting, and processor and memory amounts explicitly marked declared.
 Unavailable remote run facts say Run status unavailable on that computer, rather than showing the old state as current or implying completion.
+
+## Recorded wait details
+
+Only desktop hover previews and task cards enrich their existing fields with the optional structured wait projection.
+Checks owns every named watch schedule; Blocked by or the existing hold explanation owns dependencies and their recorded dates.
+Remaining check-backs and holds replace the existing header reason; no generic Wait section or extra badge repeats them.
+Suppress a generic reason only when its typed source has another owner in that view; keep failure, interruption and access guidance.
+Unknown end times remain unknown, and a past event says was due rather than resumed.
+The Tasks list and board list rows retain their existing status, words, density and behavior.

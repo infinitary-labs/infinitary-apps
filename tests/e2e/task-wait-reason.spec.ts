@@ -9,6 +9,8 @@ import { openDatabase } from "../../src/core/storage/db";
 import { seedTask } from "../../src/core/tasks/seedTask";
 import { TaskService } from "../../src/core/tasks/taskService";
 import { taskHoldWords } from "../../src/shared/taskHold";
+import { taskStatusLabel, taskStatusOf } from "../../src/shared/taskPresentation";
+import { taskWaitText } from "../../src/shared/taskWaits";
 import { scratchDir } from "../helpers/scratchDirs";
 import { seedDelivery } from "../helpers/taskDelivery";
 import { emberRing } from "./crew";
@@ -28,8 +30,18 @@ import {
   recordFrame,
   rowSummary,
 } from "./rails";
-import { boardEntry, boardsOnStage, hideBoard, openBoardButton } from "./taskBoard";
-import { focusOn } from "./windowKeys";
+import {
+  boardConfirm,
+  boardEntry,
+  boardMenu,
+  boardsOnStage,
+  boardTile,
+  boardViewTab,
+  hideBoard,
+  openBoardButton,
+  pressInBoard,
+} from "./taskBoard";
+import { focusOn, pressKey } from "./windowKeys";
 
 const BLOCKER =
   "The crewmate cannot open a pull request because its session lacks the required tool.";
@@ -233,6 +245,14 @@ test("a cardless wait opens its record with the reported reason, while a real ch
       "data-task-wait",
       "checks",
     );
+    const watch = board.tasks
+      .find((task) => task.id === "checks")
+      ?.waits?.find((wait) => wait.kind === "checks");
+    if (!watch) throw new Error("Missing current check watch");
+    await expect(recordCard(page).locator("[data-task-watch]")).toHaveText(
+      taskWaitText(watch, Date.now()),
+    );
+    await expect(recordCard(page).locator("[data-record-status-reason]")).toHaveCount(0);
     if (dir) await regionShot(recordCard(page), join(dir, "checks-record.png"));
     expect(board.tasks.find((task) => task.id === "checks")?.workPosture).toEqual({
       state: "active",
@@ -285,7 +305,12 @@ test("a queued premium ask held for premium allowance says in its record why it 
     // INF-1605: the queued title is the home's dated wait; the hold still owns its guidance.
     const wait = held.queueWait;
     if (!wait) throw new Error("The held premium ask has no dated queue wait");
-    await expect(frame.locator("[data-record-attention-title]")).toHaveText(wait.line);
+    // INF-2215 replaces the repeated queue reason with the full typed wait and its unknown reset.
+    if (!held.waits?.length) throw new Error("Missing the allowance wait projection");
+    await expect(frame.locator("[data-record-attention-title]")).toHaveText(
+      held.waits.map((wait) => taskWaitText(wait, Date.now())).join("; "),
+    );
+    await expect(nowRow(page, held.key)).toContainText(wait.line);
     await expect(frame.locator("[data-record-attention-guidance]")).toHaveText(words.text);
     const dir = process.env.FM_WAIT_PICTURES;
     if (dir) {
@@ -296,5 +321,144 @@ test("a queued premium ask held for premium allowance says in its record why it 
       await heroShot(app.app, page, { region: recordCard(page), name: "held-task-says-why" });
   } finally {
     await app.close();
+  }
+});
+
+/** INF-2197 item 3 / approved INF-2215: permitted views agree; lists stay unchanged.
+ * Real task/gate/link writers, private HOME, no provider or forge requests.
+ * Completion is DOM text on the three views and a live cleared dependency after a confirmed drop.
+ * Uses only this isolated app, its keyboard and disposable saved tasks.
+ */
+test("grouped waits reconcile into kanban, hover and task card without adding to lists", async () => {
+  const dir = scratchDir("infinitary-wait-views-");
+  const db = openDatabase(dir);
+  const now = Date.now();
+  const tasks = new TaskService({ db, strict: true, now: () => now });
+  seedTask(tasks, {
+    id: "owner",
+    title: "Prepare website update",
+    status: "queued",
+    startPolicy: "on-request",
+  });
+  const worktreeDir = join(dir, "worktree");
+  mkdirSync(worktreeDir, { recursive: true });
+  seedTask(tasks, {
+    id: "waiter",
+    title: "Publish website update",
+    status: "completed",
+    worktreeDir,
+  });
+  tasks.recordReport("waiter", { text: "The website update is ready after its prerequisite." });
+  tasks.link("owner", "waiter", "blocks", "crewmate", true);
+  const tomorrow = new Date(now);
+  tomorrow.setDate(tomorrow.getDate() + 1);
+  tasks.setGate("waiter", { kind: "at-time", until: tomorrow.getTime() });
+  db.close();
+  const launched = await launchApp({ userDataDir: dir, withMockProvider: true });
+  const { app, page } = launched;
+  try {
+    await resizeWindow(app, page, { width: 1440, height: 1000 });
+    const board = await page.evaluate(() => window.infinitary.tasks.board());
+    const owner = board.tasks.find((row) => row.id === "owner");
+    const waiter = board.tasks.find((row) => row.id === "waiter");
+    if (!owner || !waiter) throw new Error("Missing wait fixtures");
+    const dependency = waiter.waits?.find((wait) => wait.kind === "dependency");
+    const start = waiter.waits?.find((wait) => wait.kind === "start");
+    if (!dependency || !start) throw new Error("Missing standing wait sources");
+    const startEvent = taskWaitText(start, Date.now(), false);
+    await expandDock(page, "now");
+    await openGroup(page, "backlog");
+    const list = nowRow(page, owner.key);
+    if (!owner.queueWait) throw new Error("Missing original list reason");
+    await expect(list).toHaveText(`${owner.key} ${owner.title}`);
+    await expect(list).toHaveAttribute(
+      "aria-label",
+      `${owner.key} · ${owner.title} · Scratch · ${taskStatusLabel(taskStatusOf(owner))}`,
+    );
+    await expect(list.locator("[data-board-wait]")).toHaveCount(0);
+    await expect(nowRow(page, waiter.key)).toHaveText(`${waiter.key} ${waiter.title}`);
+    await list.evaluate((element) => {
+      element.setAttribute("data-wait-test-identity", "kept");
+    });
+    await openBoardButton(page).click();
+    const tile = boardTile(page, waiter.key);
+    await expect(tile.locator("[data-board-wait]")).toContainText(owner.key);
+    await expect(tile.locator("[data-board-wait]")).toContainText(startEvent);
+    await focusOn(tile);
+    await expect(rowSummary(page).locator("[data-crew-blocked-wait]")).toContainText(
+      taskWaitText(dependency, Date.now()),
+    );
+    await expect(rowSummary(page).locator("[data-task-fact=status]")).toContainText(
+      taskWaitText(start, Date.now()),
+    );
+    await pressKey(tile, "Enter");
+    await expect(recordCard(page)).toHaveAttribute("data-task-record", waiter.id);
+    await expectRecordBody(page);
+    await expect(recordFrame(page).locator("[data-record-attention-title]")).toContainText(
+      taskWaitText(dependency, Date.now()),
+    );
+    await expect(recordFrame(page).locator("[data-record-attention-title]")).toContainText(
+      taskWaitText(start, Date.now()),
+    );
+    await expect(recordCard(page).locator("[data-record-status-reason]")).toHaveCount(0);
+    await hideRecord(page).click();
+    await expect(list).toHaveAttribute("data-wait-test-identity", "kept");
+    await openBoardButton(page).click();
+    await pressInBoard(boardViewTab(page, "backlog"));
+    await expect(boardTile(page, owner.key)).toContainText(owner.queueWait.line);
+    await expect(boardEntry(page).locator("[data-board-wait]")).toHaveCount(0);
+    await pressKey(boardTile(page, owner.key), "Space");
+    const menu = boardMenu(page, owner.key);
+    await expect(menu.menu).toBeVisible();
+    await pressInBoard(menu.entry("drop"));
+    const confirm = boardConfirm(page, owner.key);
+    await expect(confirm.card).toBeVisible();
+    await pressKey(confirm.go, "Enter");
+    await expect
+      .poll(async () => (await page.evaluate(() => window.infinitary.tasks.detail("owner"))).status)
+      .toBe("dropped");
+    await pressInBoard(boardViewTab(page, "board"));
+    await expect(boardTile(page, waiter.key).locator("[data-board-wait]")).not.toContainText(
+      owner.key,
+    );
+    await expect(boardTile(page, waiter.key).locator("[data-board-wait]")).toContainText(
+      startEvent,
+    );
+    // The approved event survives narrow columns and large text, including its off-today date.
+    await resizeWindow(app, page, { width: 960, height: 1100 });
+    await page.evaluate(async () => {
+      const { appearance } = await window.infinitary.settings.getPreferences();
+      await window.infinitary.settings.setAppearance({ ...appearance, size: 150 });
+    });
+    await expect
+      .poll(() =>
+        app.evaluate(({ BrowserWindow }) =>
+          BrowserWindow.getAllWindows()[0]?.webContents.getZoomFactor(),
+        ),
+      )
+      .toBe(1.5);
+    const narrowTile = boardTile(page, waiter.key);
+    await focusOn(narrowTile);
+    const narrowEvent = narrowTile
+      .locator("[data-board-wait]")
+      .getByText(startEvent, { exact: true });
+    await expect(narrowEvent).toHaveText(startEvent);
+    await expect
+      .poll(() => narrowEvent.evaluate((element) => element.scrollWidth <= element.clientWidth))
+      .toBe(true);
+    await hideBoard(page).click();
+    await expect(boardsOnStage(page)).toHaveCount(0);
+    await expect(nowRow(page, waiter.key)).toHaveText(`${waiter.key} ${waiter.title}`);
+    const after = await page.evaluate(() => window.infinitary.tasks.detail("waiter"));
+    const proof = {
+      before: { waits: waiter.waits, listWords: `${owner.key} ${owner.title}` },
+      after: { waits: after.waits, listWords: await nowRow(page, waiter.key).innerText() },
+    };
+    await test.info().attach("standing waits before and after the confirmed drop", {
+      body: JSON.stringify(proof, null, 2),
+      contentType: "application/json",
+    });
+  } finally {
+    await launched.close();
   }
 });

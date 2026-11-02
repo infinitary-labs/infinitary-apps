@@ -171,7 +171,7 @@
 /* The Board's three columns of work not yet done: Backlog, Queued and Working. */
 .fm-board-columns {
   display: grid;
-  grid-template-columns: repeat(3, minmax(156px, 1fr));
+  grid-template-columns: repeat(3, minmax(min-content, 1fr));
   gap: var(--space-3);
 }
 
@@ -273,10 +273,11 @@
 }
 
 .fm-board-column {
+  box-sizing: border-box;
   display: flex;
   flex-direction: column;
   gap: var(--space-2);
-  min-width: 0;
+  min-width: 156px;
 }
 
 .fm-board-column + .fm-board-column {
@@ -663,4 +664,40 @@
   display: block;
   overflow: visible;
   overflow-wrap: anywhere;
+}
+
+/* Group only kanban names; the recorded event keeps its room at narrow widths. */
+.fm-board-wait {
+  display: block;
+  min-width: 0;
+}
+.fm-board-wait-head {
+  contain: inline-size;
+  display: flex;
+  min-width: 0;
+}
+.fm-board-wait-names {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+  flex: 1;
+}
+.fm-board-wait-event {
+  display: block;
+  white-space: nowrap;
+}
+.fm-board-tile:not([data-board-row]) .fm-board-tile-status[data-board-structured-wait] {
+  -webkit-line-clamp: 2;
+}
+
+/* The dated event, not an unbounded wait name, owns a kanban tile's intrinsic minimum.
+   Keep the existing project-label query inside its full-width head; list rows keep their owner. */
+.fm-board-tile:has([data-board-structured-wait]) {
+  container-type: normal;
+  min-width: min-content;
+}
+.fm-board-tile:has([data-board-structured-wait]) > .fm-board-tile-head {
+  container-type: inline-size;
+  width: 100%;
 }

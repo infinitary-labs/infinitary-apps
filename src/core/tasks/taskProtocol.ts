@@ -54,6 +54,7 @@ import { type ConcernedEventView, condenseActivity, reportHeadline } from "./rec
 import { taskFeedLine } from "./taskFeed";
 import { type TaskChange, TaskService } from "./taskService";
 import type { TaskTimeline } from "./taskTimeline";
+import { type TaskWaitFacts, taskWaitsOf } from "./taskWaits";
 
 /**
  * The task protocol's core side (task-system design section 9, P3): the
@@ -158,6 +159,8 @@ export type TaskProtocolOptions = {
   };
   /** Live host presentation, independent of the persisted turn activity. */
   workPosture?: (record: TaskRecord) => WorkPosture;
+  /** Shared posture-owner facts, not another per-row owner lookup. */
+  waitFacts?: (record: TaskRecord) => TaskWaitFacts;
   /** The task's own browser on this Mac, as the captain reads it (docs/task-browser.md). */
   browser?: (taskId: string) => TaskBrowserFact | undefined;
   /**
@@ -326,7 +329,12 @@ export class TaskProtocol {
       facts.set(record.id, current);
       const workPosture = current.posture;
       read?.(record, workPosture);
-      const posture = JSON.stringify([workPosture, current.place, current.computerMove]);
+      const posture = JSON.stringify([
+        workPosture,
+        current.place,
+        current.computerMove,
+        current.waits,
+      ]);
       if (this.postures.get(record.id) === posture) continue;
       this.postures.set(record.id, posture);
       changed.push(record.id);
@@ -1065,6 +1073,7 @@ export class TaskProtocol {
       () => ({
         repo: record.repoId ? this.options.repos.get(record.repoId) : undefined,
         posture: this.options.workPosture?.(record),
+        waits: this.options.waitFacts?.(record),
         place: this.options.place?.(record),
         computerMove: record.kind === "work" ? this.options.computerMove?.(record) : undefined,
         startAttempt:
@@ -1251,6 +1260,18 @@ export class TaskProtocol {
       tasks: graph.byId,
       baseline,
     });
+    const startHolding =
+      record.status === "open" && waiting.length !== holding.length ? waiting : holding;
+    const waitSince =
+      startHolding === holding
+        ? blockedSince
+        : waitsSince({
+            record,
+            holding: startHolding,
+            links: graph.linksInto.get(record.id) ?? [],
+            tasks: graph.byId,
+            baseline,
+          });
     const open = record.status === "open";
     // An active row shows the blockers that still hold its CLOSE - a
     // marked edge, what a `blocks_me` follow-up files against the task a
@@ -1310,6 +1331,15 @@ export class TaskProtocol {
       status: record.status,
       activity: record.activity,
       workPosture: posture,
+      waits: taskWaitsOf({
+        record,
+        holding: startHolding,
+        since: waitSince,
+        posture,
+        facts: facts.waits,
+        decision:
+          waitingCardId !== null || gateCard !== null || graph.durableDecisions.has(record.id),
+      }),
       closedReason: record.closedReason,
       ...(replaced(record) ? { replacedBy: graph.replacedBy.get(record.id) } : {}),
       startPolicy: record.startPolicy,
@@ -1434,6 +1464,7 @@ export class TaskProtocol {
 
 /** The host's own facts a view reads, which no write of the row reports. */
 type LiveFacts = {
+  waits: TaskWaitFacts | undefined;
   repo: ReturnType<TaskProtocolOptions["repos"]["get"]>;
   posture: WorkPosture | undefined;
   place: TaskPlace | undefined;
@@ -1474,6 +1505,7 @@ function factsKey(facts: LiveFacts): string {
   return JSON.stringify([
     facts.repo?.name,
     facts.posture,
+    facts.waits,
     facts.place,
     facts.computerMove,
     facts.startAttempt,

@@ -36,8 +36,8 @@ import {
 } from "./manifest";
 import observeScript from "./observe/observe.frame.js?raw";
 import observeHtml from "./observe/observe.html?raw";
-import recordScript from "./record/record.frame.js?raw";
 import recordHtml from "./record/record.html?raw";
+import { recordScript } from "./record/recordScript";
 
 /**
  * Binds the built-in manifest to the code that serves it. Called once from

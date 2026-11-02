@@ -47,7 +47,11 @@ A tile is `--bg-1` with a `--line-1` border, `--radius-m`, `--space-2` by `--spa
 
 1. The shared status mark and the key in mono `--fg-2`, then one dim word after a `·`: blocked, held, urgent (top priority, in `--warn`), found on KEY, or part of KEY (a child standing alone in another column than its parent); and, while All projects shows and the tile is at least 200px wide, the project's name in mono `--fg-3` at the right edge.
 2. The title in `--text-base` `--fg-1`, two lines at most.
-3. The status word in `--fg-2` and its reason in `--fg-3`, `--text-sm`, two lines at most and whole on hover or focus; the word alone when the reason would repeat it.
+3. The status word in `--fg-2` and its reason in `--fg-3`, `--text-sm`, two lines at most and whole on hover or focus when no structured wait replaces it.
+   On kanban tiles only, structured waits stay in that two-line area without growing on hover or focus, and replace the generic reason with grouped names and the earliest recorded event, preserving the event before shortening names.
+   The full hover preview and task card keep every cause and its own time, including unknown times and recorded-since dates; tiles add no separate recorded-since row.
+   Kanban columns retain their existing minimum, expanding to the event’s intrinsic width before using the board’s horizontal scroll.
+   List rows keep their existing wording, layout and dated lines.
 
 A tile that can move carries the ⋯ menu (RowMenu's 24px kebab, `--bg-3` behind it) at its top-right corner, shown on hover or focus over the head's right end, and the `grab` cursor; Done and Dropped tiles have neither.
 
@@ -88,4 +92,5 @@ Show the card, on a waiting tile's menu, brings its card forward, a completion c
   An entry that cannot run stays listed, dim, its reason as its sub-line (RowMenu, `RowMenu.prompt.md`).
 - Focus follows an accepted move to the tile's new lane, or the nearest row when the view does not draw it, and comes back to the tile after a refusal or a cancel.
 
-An unstarted task’s dated wait line wraps in full on its tile or list row, without a hover or ellipsis, from the home’s shared wait fact.
+An unstarted task’s dated wait line wraps in full on list rows, without a hover or ellipsis, from the home’s shared wait fact.
+Kanban tiles use the grouped structured wait presentation instead, retaining the lifecycle mark and word.

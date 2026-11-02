@@ -1,5 +1,6 @@
 import { taskStatusLabel, waitRecordedTime } from "@shared/taskPresentation";
-import { TaskFactRows } from "../../design/core/TaskFacts";
+import { type TaskWait, taskWaitStatus, taskWaitText } from "@shared/taskWaits";
+import { TaskFactRows, useMinute } from "../../design/core/TaskFacts";
 import { TaskStatusMark } from "../../design/core/TaskStatusMark";
 import { TaskKey } from "../../design/panel/TaskKey";
 import { openTaskFromKey } from "../../plugins/point/openTask";
@@ -23,7 +24,13 @@ import "./summary.css";
  * wrap in full. How it comes and goes is its holder's (./summaryMotion.ts).
  */
 export function CrewSummary({ taskId, facts }: { taskId: string; facts: CrewFacts }) {
-  const shown = useCrewRecord(taskId, facts);
+  const clock = useMinute();
+  const read = useCrewRecord(taskId, facts);
+  const dependencies = facts.task.waits?.filter((wait) => wait.kind === "dependency");
+  const blocked = dependencies
+    ? dependencies.flatMap((wait) => wait.taskKeys ?? [])
+    : facts.task.blockedBy;
+  const shown = { ...read, status: taskWaitStatus(facts.task, read.status, "hover", clock) };
   // Where another computer runs it, after the project, as its Tasks row says it.
   const project = [useProjectName(facts.task.projectId), facts.task.place?.where]
     .filter(Boolean)
@@ -41,8 +48,8 @@ export function CrewSummary({ taskId, facts }: { taskId: string; facts: CrewFact
       </div>
       {facts.task.reviewOf && <Reviewing builderId={facts.task.reviewOf} />}
       {facts.task.parentId && <PartOf parentId={facts.task.parentId} />}
-      {(facts.task.blockedBy?.length ?? 0) > 0 && (
-        <BlockedBy keys={facts.task.blockedBy} since={facts.task.blockedSince} />
+      {(blocked?.length ?? 0) > 0 && (
+        <BlockedBy keys={blocked} since={facts.task.blockedSince} waits={dependencies} />
       )}
       {facts.task.program && <ProgramParts programId={taskId} />}
       <TaskFactRows
@@ -146,9 +153,11 @@ function ProgramParts({ programId }: { programId: string }) {
 function BlockedBy({
   keys,
   since,
+  waits,
 }: {
   keys: readonly string[];
   since: Readonly<Record<string, number>> | undefined;
+  waits?: readonly TaskWait[];
 }) {
   const tasks = useBoardTasks();
   const now = Date.now();
@@ -158,18 +167,27 @@ function BlockedBy({
       {keys.map((key) => {
         const task = tasks.find((row) => row.key === key);
         const at = since?.[key];
+        const wait = waits?.find((wait) => wait.taskKeys?.includes(key));
         return (
           <span key={key} className="wait" data-crew-blocked-wait={key}>
             {task ? (
               <TaskKey look="quiet" onRest={() => {}} onOpen={() => void openTaskFromKey(task)}>
-                {key}
+                {wait?.label ?? key}
               </TaskKey>
             ) : (
               <span className="key" data-crew-blocked-key="">
-                {key}
+                {wait?.label ?? key}
               </span>
             )}
-            {at !== undefined && (
+            {wait && (
+              <span
+                className="since"
+                data-crew-blocked-since={wait.since !== undefined ? "" : undefined}
+              >
+                {taskWaitText(wait, now).slice(wait.label.length)}
+              </span>
+            )}
+            {!wait && at !== undefined && (
               <span className="since" data-crew-blocked-since="">
                 {` recorded ${waitRecordedTime(at, now)}`}
               </span>

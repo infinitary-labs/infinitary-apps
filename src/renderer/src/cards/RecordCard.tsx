@@ -7,12 +7,13 @@ import { browserDriverOf } from "@shared/taskBrowser";
 import { taskFactsOf } from "@shared/taskFacts";
 import type { TaskDetail } from "@shared/tasks";
 import { presentTask } from "@shared/taskWaiting";
+import { taskWaitStatus } from "@shared/taskWaits";
 import { type ComponentProps, useEffect, useMemo, useRef, useState } from "react";
 import { focusPanelCard } from "../app/shellCommands";
 import { useShellStore } from "../app/store";
 import { useModelNames } from "../app/useModelNames";
 import { ResponseCard } from "../design/cards/ResponseCard";
-import { hasFactStrip, TaskFactRows, TaskFactStrip } from "../design/core/TaskFacts";
+import { hasFactStrip, TaskFactRows, TaskFactStrip, useMinute } from "../design/core/TaskFacts";
 import { TaskResourceUse } from "../design/core/TaskResourceUse";
 import { recordTemplate } from "../plugins/builtin";
 import { BUILTIN_PLUGIN_ID } from "../plugins/builtin/manifest";
@@ -213,6 +214,7 @@ export function RecordCard({
     if (detail?.startAttempt || detail?.status === "active") setOptimisticStart(false);
   }, [detail]);
 
+  const minute = useMinute();
   const [clock, setClock] = useState(() => Date.now());
   useEffect(() => {
     const preparing =
@@ -227,7 +229,11 @@ export function RecordCard({
   // The crew summary's projection of the same read, so both say the same.
   const facts = useMemo(() => {
     if (!shown) return null;
-    const base = taskFactsOf(shown, modelName);
+    const read = taskFactsOf(shown, modelName);
+    const base = {
+      ...read,
+      status: taskWaitStatus(shown, read.status, "record", Math.max(clock, minute)),
+    };
     const since =
       shown.startAttempt?.since ?? (shown.activity === "starting" ? shown.startedAt : null);
     const reason =
@@ -241,7 +247,7 @@ export function RecordCard({
             ? `Could not start. ${shown.startNotice.reason}`
             : base.status.reason;
     return reason === base.status.reason ? base : { ...base, status: { ...base.status, reason } };
-  }, [shown, modelName, clock]);
+  }, [shown, modelName, clock, minute]);
   const openLink = (href: string) => {
     if (isSafeCardHref(href)) void window.infinitary.app.openExternal(href).catch(() => {});
   };

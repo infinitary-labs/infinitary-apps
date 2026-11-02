@@ -16,6 +16,7 @@ import {
   taskStatusOf,
 } from "../../src/shared/taskPresentation";
 import { BOARD_RECENT_MS } from "../../src/shared/tasks";
+import { type TaskWait, taskWaitStatus } from "../../src/shared/taskWaits";
 import {
   crewFormation,
   crewInspecting,
@@ -104,9 +105,9 @@ function readoutOf(reasoning: Reasoning | undefined): {
   };
 }
 
-/** The Tasks dot's words for a task, which the summary repeats. */
-function stateOf(task: TaskStatusInput): string {
-  return taskStatusLabel(taskStatusOf(task));
+/** INF-2215: the hover reconciles waits; the unchanged Tasks dot keeps its own words. */
+function stateOf(task: TaskStatusInput & { waits?: readonly TaskWait[] }): string {
+  return taskStatusLabel(taskWaitStatus(task, taskStatusOf(task), "hover", Date.now()));
 }
 
 /** The summary's facts as it shows them, and whether its state line is cut off. */

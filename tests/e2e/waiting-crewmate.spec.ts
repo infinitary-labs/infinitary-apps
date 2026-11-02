@@ -9,9 +9,9 @@ import {
   dependencyWaitWords,
   taskStatusLabel,
   taskStatusOf,
-  waitRecordedTime,
 } from "../../src/shared/taskPresentation";
 import type { TaskView } from "../../src/shared/tasks";
+import { taskWaitStatus, taskWaitSummary, taskWaitText } from "../../src/shared/taskWaits";
 import { scratchDir } from "../helpers/scratchDirs";
 import { crewFormation } from "./crew";
 import { launchApp } from "./launch";
@@ -143,9 +143,15 @@ test("a started crewmate idle on one blocker circles it past queued work, and it
     await focusOn(waiterRow);
     await expect(rowSummary(page)).toBeVisible();
     const summary = rowSummary(page).locator("[data-crew-summary]");
-    await expect(summary.locator('[data-task-fact="status"]')).toHaveText(taskStatusLabel(reading));
+    await expect(summary.locator('[data-task-fact="status"]')).toHaveText(
+      taskStatusLabel(taskWaitStatus(waiter, reading, "hover", Date.now())),
+    );
+    // Approved INF-2215 keeps the exact recorded date here, with the unknown end time.
+    const dependency = waiter.waits?.find((wait) => wait.kind === "dependency");
+    if (!dependency) throw new Error("Missing the standing dependency wait");
+    expect(dependency.since).toBe(since);
     await expect(summary.locator(`[data-crew-blocked-wait="${blocker.key}"]`)).toHaveText(
-      `${blocker.key} recorded ${waitRecordedTime(since, Date.now())}`,
+      taskWaitText(dependency, Date.now()),
     );
     await pressKey(waiterRow, "Enter");
     await expect(recordCard(page)).toHaveAttribute("data-task-record", "waiter");
@@ -156,10 +162,12 @@ test("a started crewmate idle on one blocker circles it past queued work, and it
     // Section 3: the task board's tile.
     await openBoardButton(page).click();
     const tile = boardTile(page, waiter.key);
-    await expect(tile.locator("[data-board-status]")).toHaveText(taskStatusLabel(reading));
-    await expect(tile.locator("[data-board-wait-since]")).toHaveText(
-      `Wait recorded ${waitRecordedTime(since, Date.now())}`,
-    );
+    const grouped = taskWaitSummary(waiter.waits ?? [], Date.now());
+    if (!grouped) throw new Error("Missing grouped tile wait");
+    await expect(tile.locator("[data-board-status]")).toContainText(reading.word);
+    await expect(tile.locator("[data-board-wait]")).toContainText(grouped.names);
+    await expect(tile.locator("[data-board-wait]")).toContainText(grouped.event);
+    await expect(tile.locator("[data-board-wait-since]")).toHaveCount(0);
     await hideBoard(page).click();
     await expect(boardsOnStage(page)).toHaveCount(0);
     // The board's own Tasks page leaves the stage after its card does.

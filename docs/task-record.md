@@ -705,10 +705,22 @@ The crewmate's `tasks skip` pages row lists beyond the per-read limit; release v
 ## A task waiting to start
 
 Every open work row waiting to start carries `queueWait`, derived by `src/core/tasks/queueWait.ts` from its prerequisites, parts, gate, start policy and recorded placement wait.
-The desktop Tasks panel shows its dated line only in Queued, leaving Backlog compact; the task board, crew summary, native lists and records keep reading the wait fact.
+The desktop Tasks panel shows its dated line only in Queued, leaving Backlog compact; board list rows and native lists keep reading the wait fact.
+Desktop kanban tiles, hover previews and records reconcile the structured wait projection with their existing fields instead of repeating that line.
 The first mate reads the same line as `waiting` in `tasks` and `gate` in crew status.
 An on-request row waits for the first mate’s go; a ready row with no placement reading says it waits for a computer to start it, without claiming that a computer is busy.
 Prerequisites name each task, including a dropped prerequisite that cannot clear the wait.
 Source timestamps survive unrelated edits and restarts: relationships date their own waits, start-policy and gate transitions carry their own stamps, and a placement wait keeps its time while its kind stays the same.
 A historical placement wait or gate with no recorded start time says so rather than guessing from the latest edit.
 The line disappears when work starts, and changes no readiness or dispatch decision.
+
+## Recorded waits
+
+Desktop kanban tiles replace their generic status reason with grouped standing wait names and the earliest recorded event, never a finish estimate.
+The Tasks list and board list rows retain their existing presentation.
+The hover preview and task card reconcile every structured wait into their existing header, Checks and blocker or hold explanation, without another Wait section.
+Checks keeps each named watch and its own next read separate from other runs’ results.
+Dependencies retain their keys and recorded-since dates; missing end times stay unknown.
+Only recorded events carry clock times: next read, check-back, reset or start time.
+Past events say was due, not resumed; Backlog still requires Start.
+Older homes without the optional projection retain the previous presentation.

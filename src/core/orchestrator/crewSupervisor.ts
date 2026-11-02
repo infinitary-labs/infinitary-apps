@@ -511,7 +511,7 @@ import {
   withAttachmentsKept,
   withGuidanceMark,
 } from "./wakes";
-import { deriveWorkPosture } from "./workPosture";
+import { deriveWorkPosture, type PostureFacts } from "./workPosture";
 
 /**
  * The crew supervisor: task lifecycle, event fan-out, and card production.
@@ -1642,6 +1642,7 @@ export class CrewSupervisor {
   /** The idle ladder and the holds: the witnesses, the gate, the caps and the ready sweep. */
   private readonly ladder: IdleLadder;
   private readonly postureFact = Symbol("work posture");
+  private readonly postureInputs = Symbol("work posture inputs");
   private readonly placeFact = Symbol("task place");
   private readonly moveFact = Symbol("computer move facts");
   private readonly ciFact = Symbol("crew check summary");
@@ -14365,7 +14366,22 @@ export class CrewSupervisor {
   }
 
   private readWorkPosture(record: TaskRecord) {
-    return deriveWorkPosture(record, () => {
+    return deriveWorkPosture(record, () => this.workPostureInputs(record));
+  }
+
+  /** The wait view shares the posture snapshot, including facts its precedence hides. */
+  workWaitFacts(record: TaskRecord) {
+    if (record.status !== "active") return { job: false, timerOwned: false };
+    const facts = this.workPostureInputs(record);
+    return {
+      job: facts.liveJobs || (facts.clientJobs ?? 0) > 0,
+      timerOwned: facts.timedWait,
+      ...(facts.hold ? { hold: facts.hold } : {}),
+    };
+  }
+
+  private workPostureInputs(record: TaskRecord): PostureFacts {
+    return this.options.tasks.projectedFact(record, this.postureInputs, () => {
       const runtime = this.tasks.get(record.id);
       const hold = this.holdOf(record);
       return {

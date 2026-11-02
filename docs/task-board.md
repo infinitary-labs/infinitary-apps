@@ -52,7 +52,7 @@ Find reaches a part by its key or title, and each part keeps its full record.
 Ordinary parent/child tasks keep the lane and nesting rules above.
 Lanes sort by priority, then oldest first; Done and Dropped newest first.
 An empty lane says so in its place ("Nothing queued").
-Unstarted tasks name their wait and its recorded time in the status line, from the same `queueWait` the Tasks panel, record and first mate read (`docs/task-record.md`, "A task waiting to start").
+Unstarted list rows name their wait and its recorded time from the shared `queueWait`; kanban tiles use the optional grouped wait projection described below.
 
 Under the app's title row the board has one row of its own: the count of every task in Waiting on you and the four lanes of work, the project chips (All projects, then each project's key, only when two or more projects have tiles), and Find (a task's key or title, for this board alone).
 The chip and Find narrow every lane before it is paged, and every count is the whole narrowed lane's, never only the tiles drawn.
@@ -83,7 +83,9 @@ The search answers at most 50; an answer that long may have been cut before the 
 With no answer in five seconds the list says earlier results are unavailable, never that nothing matches.
 Blank Find asks for nothing earlier, and Earlier matches goes away.
 
-A tile is the shared status mark and the task key, one dim word (blocked, held, urgent at the top priority, found on KEY, part of KEY), the project's name while All projects shows and the tile is at least 200 px wide, the title on two lines at most, and the shared status word with its reason, whole on hover or focus, then `Wait recorded 9:14 AM` under it when a started task waits on one task whose wait has a known time (the design skill's NowPanel, "Naming a wait").
+A tile keeps the shared status mark, task key, dim word, project and two-line title.
+Its existing two-line status area holds the lifecycle word, grouped wait names and the earliest recorded event; full recorded-since dates stay in the hover preview and task card.
+Without the optional structured waits it keeps the previous reason and recorded-since presentation.
 Pressing Start, or dragging a tile to Working, shows it in Queued at once, labeled Starting, and moves it to Working when its crewmate begins.
 A Starting tile in Queued refuses Back to backlog and Start now with "It is starting.".
 Dragging a tile to Queued that nothing holds is a Start.
@@ -170,3 +172,15 @@ When a live change takes the focused tile away - another surface moved its task,
 
 Minimized messages use the same presentation-only waiting rows as Tasks (`docs/task-record.md`, "Minimized cards in Tasks").
 Its waiting section reads Cards waiting for you; a taskless card has only Show the card in its menu, never task moves or a crew summary.
+
+## Recorded waits
+
+Desktop kanban tiles replace their generic status reason with grouped standing wait names and the earliest recorded event, never a finish estimate.
+The Tasks list and board list rows retain their existing presentation.
+Kanban columns keep their existing minimum and expand to the recorded event’s intrinsic width, using horizontal scrolling rather than clipping the time or shrinking text.
+The hover preview and task card reconcile every structured wait into their existing header, Checks and blocker or hold explanation, without another Wait section.
+Checks keeps each named watch and its own next read separate from other runs’ results.
+Dependencies retain their keys and recorded-since dates; missing end times stay unknown.
+Only recorded events carry clock times: next read, check-back, reset or start time.
+Past events say was due, not resumed; Backlog still requires Start.
+Older homes without the optional projection retain the previous presentation.

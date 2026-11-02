@@ -412,3 +412,13 @@
 .fm-task-facts .why-name {
   color: var(--fg-1);
 }
+
+.fm-task-facts .wait-schedule {
+  display: block;
+  flex-basis: 100%;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+.fm-task-facts [data-task-watch-schedules] {
+  flex-wrap: wrap;
+}

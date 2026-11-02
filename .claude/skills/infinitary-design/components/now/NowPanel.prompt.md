@@ -84,7 +84,8 @@ The panel stays read-only: this is a pointing gesture, never a write.
 
 ## Shared task status (FI3-565, direction A, piece 1)
 
-All task rows, crew summary heads and record pills read one status, mark and reason.
+All task rows, crew summary heads and record pills read one lifecycle status and mark.
+Their shared base reason remains unchanged for lists; the permitted desktop details reconcile structured waits as described below.
 A row, a board tile, the summary and the record header do not add a second tooltip for that status, because the words are already shown; a standalone mark still names itself.
 The words are Backlog, Queued, Starting, Working, Idle, Interrupted, Waiting on you, Done and Dropped.
 Starting is the still open cyan ring, used only while a start is being prepared, and it is not Working.
@@ -98,8 +99,8 @@ Keep rows otherwise minimal.
 
 A started crewmate idle on other work names it as its reason: `Idle · Waiting on INF-12`, or `Idle · Waiting on 2 tasks` for several, so no one key stands for the others.
 The Tasks row, which shows no reason, adds the dim word `waiting`; its margin arrow points at what it waits on, and its summary names each one.
-A board tile adds a line under its status, `Wait recorded 9:14 AM`, when it waits on one task and the time that wait was recorded is known; an earlier day puts the date in front.
-The summary's Blocked by row lists every blocker, each with `recorded 9:14 AM` where that time is known.
+A kanban tile uses grouped wait names and the earliest recorded event in its existing status area, with no separate recorded-since line; list rows and older homes keep their previous presentation.
+The summary's Blocked by row lists every standing blocker, its unknown end time and its recorded-since date where known, in the viewing computer's zone.
 The time is when the wait was recorded - the edge's own time or a dated declaration, the earliest when several name one task - never when work stopped; an unknown time is left out, never guessed.
 A ready decision that settles with a merge reads `Waiting on you · Waiting for your merge`, from the typed merge fact alone; other ready decisions keep `A decision card is ready`.
 Paused for access, Background work is unknown and No continuing work keep their own reasons.
@@ -113,7 +114,7 @@ Starting is a still open ring, cyan on the arc and neutral on the rest, with no 
 Shape carries lifecycle, not just color.
 All three surfaces use these same marks without animation.
 Tooltips and accessible labels say the status followed by its reason.
-The summary and record show that reason beside the status; existing posture phrases become reasons, not extra statuses.
+The summary and record show a distinct reason beside the status, omitting a generic wait reason only when its typed source appears in their existing Checks or hold fields; posture phrases never become extra statuses.
 Closed lifecycle wins over old activity; a reachable ready decision wins over activity on live work; evidenced continuing work wins over interruption, otherwise interruption wins over idle.
 Unknown or paused posture stays Idle with an honest reason, never Working.
 Stage geometry and color remain unchanged.
@@ -123,7 +124,7 @@ The action bar follows in a separate piece.
 
 The crew summary and the task record read one set of task facts: status, task, Now, Progress, then the fact strip - model, intelligence, reasoning, the change, its checks, a review - with the model's reason under it, and the browser.
 The summary draws them in that order, leaves the browser out, and adds a Project row under Task from the Tasks row's own project name, followed by where another computer runs it (`website · on Mac mini`).
-The status, the task title and the project wrap in full; the other summary facts stay one line, except a check-read refusal, whose reason wraps inside its cell.
+The status, the task title and the project wrap in full; other summary facts stay one line, except check-read refusals and named watch schedules, which wrap inside Checks.
 The task record draws the same values in the same order, keeps the browser line with Now and Progress, and places the fact strip just above its action bar, after Goal and your words, Activity and Details.
 A smaller surface shows fewer of them, never different ones; the Tasks row stays a mark, key and title.
 
@@ -221,3 +222,12 @@ A focused row scrolls into view, and opens its summary as the pointer's rest doe
 A minimized card keeps its task’s own row under waiting on you, without an added word; even a note on finished work does so.
 A taskless minimized card has a row titled by the card.
 Click or Enter brings back that task’s minimized cards with keyboard focus at the default card size.
+
+## Recorded wait details
+
+Only desktop hover previews and task cards enrich their existing fields with the optional structured wait projection.
+Checks owns every named watch schedule; Blocked by or the existing hold explanation owns dependencies and their recorded dates.
+Remaining check-backs and holds replace the existing header reason; no generic Wait section or extra badge repeats them.
+Suppress a generic reason only when its typed source has another owner in that view; keep failure, interruption and access guidance.
+Unknown end times remain unknown, and a past event says was due rather than resumed.
+The Tasks list and board list rows retain their existing status, words, density and behavior.

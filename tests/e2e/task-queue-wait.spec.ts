@@ -2,6 +2,7 @@ import { expect, test } from "@playwright/test";
 import { openDatabase } from "../../src/core/storage/db";
 import { seedTask } from "../../src/core/tasks/seedTask";
 import { TaskService } from "../../src/core/tasks/taskService";
+import { recordAttentionWaits, taskWaitSummary, taskWaitText } from "../../src/shared/taskWaits";
 import { scratchDir } from "../helpers/scratchDirs";
 import { launchApp } from "./launch";
 import { overflows } from "./layout";
@@ -12,7 +13,8 @@ import { focusOn, pressKey } from "./windowKeys";
 
 /** Nightly product audit finding 4: read what a task waits for without asking why it has not started.
  * Real task records, graph links and local timestamps; the model is the launcher's offline stand-in.
- * Completion is the same dated line in Tasks, the board and its record, reached by keyboard.
+ * INF-2215 retains the Tasks line, groups board waits and reconciles full dates into the record.
+ * Completion is the prerequisite on every surface, with recorded dates in full detail, reached by keyboard.
  * The hermetic desktop launcher owns the only shared resource, its windowless Electron process.
  */
 test("a queued task names its prerequisite and time on every task surface", async () => {
@@ -46,8 +48,8 @@ test("a queued task names its prerequisite and time on every task surface", asyn
     const backlog = nowFrame(page).locator('[data-now-group-header="backlog"]');
     await focusOn(backlog);
     await pressKey(backlog, "Enter");
-    const go = (await page.evaluate((id) => window.infinitary.tasks.detail(id), plan.id)).queueWait
-      ?.line;
+    const planDetail = await page.evaluate((id) => window.infinitary.tasks.detail(id), plan.id);
+    const go = planDetail.queueWait?.line;
     expect(go).toBeTruthy();
     // Captain's card review: Backlog stays compact; only Queued adds the wait line.
     await expect(nowRow(page, plan.key)).toBeVisible();
@@ -61,13 +63,25 @@ test("a queued task names its prerequisite and time on every task surface", asyn
     }
     await focusOn(openBoardButton(page));
     await pressKey(openBoardButton(page), "Enter");
-    await expect(boardTile(page, build.key).locator("[data-board-status]")).toContainText(line);
-    await expect(boardTile(page, plan.key).locator("[data-board-status]")).toContainText(go ?? "");
-    expect(await overflows(boardTile(page, plan.key).locator("[data-board-status]"))).toBe(0);
+    for (const task of [detail, planDetail]) {
+      const summary = taskWaitSummary(task.waits ?? [], Date.now());
+      if (!summary) throw new Error("The queued task has no grouped wait facts");
+      const tile = boardTile(page, task.key);
+      const wait = tile.locator("[data-board-wait]");
+      await expect(wait.getByText(` · ${summary.names}`, { exact: true })).toBeVisible();
+      await expect(wait.getByText(summary.event, { exact: true })).toBeVisible();
+      expect(await overflows(tile.locator("[data-board-status]"))).toBe(0);
+    }
     await focusOn(boardTile(page, build.key));
     await pressKey(boardTile(page, build.key), "Enter");
     await expectRecordBody(page);
-    await expect(recordFrame(page).locator("[data-record-attention-title]")).toHaveText(line);
+    const waits = recordAttentionWaits(detail);
+    expect(waits).toHaveLength(1);
+    expect(waits[0]?.taskKeys).toEqual([plan.key]);
+    expect(waits[0]?.since).toBe(detail.queueWait?.since);
+    await expect(recordFrame(page).locator("[data-record-attention-title]")).toHaveText(
+      waits.map((wait) => taskWaitText(wait, Date.now())).join("; "),
+    );
   } finally {
     await launched.close();
   }

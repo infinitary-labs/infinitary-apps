@@ -206,8 +206,20 @@ declare module "@infinitary/contracts" {
   /** Whether a move is open to a task now, or why not, in the app's words. */
   export type PanelMoveAllowance = { ok: true } | { ok: false; text: string };
 
+  /** A standing wait fact, shared with the task read; never a scheduling instruction. */
+  export type PanelTaskWait = {
+    id: string;
+    kind: "dependency" | "checks" | "run" | "job" | "allowance" | "start" | "decision" | "backlog";
+    label: string;
+    taskKeys?: string[];
+    since?: number;
+    next?: { kind: "next-read" | "check-back" | "reset" | "start"; at: number };
+  };
+
   /** One row of the live task board. */
   export type PanelTaskRow = {
+    /** Optional standing wait projection, never a list-row presentation requirement. */
+    waits?: PanelTaskWait[];
     id: string;
     /** \`<PROJECT_KEY>-<seq>\`, the conversational handle. */
     key: string;

@@ -1536,7 +1536,20 @@ describe("a conversation held on a computer that runs work", () => {
     await at.order("inf:session:prompt", [{ orderId: "rows:5", task: TASK, text: "Go." }]);
     await report.reached;
 
-    await at.restartComputer();
+    // INF-2280: Pi closure waits for callbacks already in flight. Start the
+    // quit while this report is held, observe its durable interrupted end,
+    // then let the callback return so shutdown can finish before restarting.
+    const tasks = new PlacedTasks(at.dataDir);
+    const restarting = at.restartComputer();
+    try {
+      await expect
+        .poll(() => tasks.outbox(TASK, 0).filter((record) => record.event.type === "turn_ended"))
+        .toMatchObject([{ event: { turn: 1, outcome: "interrupted" } }]);
+      expect(at.home.types()).not.toContain("turn_ended");
+    } finally {
+      report.open();
+      await restarting;
+    }
     await at.ended(1);
     expect(at.home.events.at(-1)?.event).toMatchObject({
       type: "turn_ended",
@@ -1553,7 +1566,7 @@ describe("a conversation held on a computer that runs work", () => {
     expect(
       await at.order("inf:session:prompt", [{ orderId: "rows:5", task: TASK, text: "Go." }]),
     ).toEqual({ turn: 1 });
-    report.open();
+    expect(at.home.events.filter((record) => record.event.type === "turn_ended")).toHaveLength(1);
   });
 
   // INF-151: the home's answer to events a stopped run sent can arrive after

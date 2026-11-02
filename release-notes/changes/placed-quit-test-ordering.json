@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "placed-quit-test-ordering",
+      "reason": "Repairs the interrupted-turn test's callback release ordering to match Pi's result-preserving shutdown; no product behavior changes."
+    }
+  ]
+}

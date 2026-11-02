@@ -130,8 +130,10 @@ test("an operation makes its named effect and closes finished from reported evid
       const names = (body.tools ?? []).map(
         (t: { name?: string; function?: { name: string } }) => t.name ?? t.function?.name,
       );
-      for (const name of ["prepare_change", "open_change", "check_change"])
-        expect(names).not.toContain(name);
+      for (const name of ["prepare_change", "open_change"]) expect(names).not.toContain(name);
+      // INF-2253: INF-2146 approved workflow-run diagnoses and rerun reservations,
+      // not publishing or merging; runDiagnosis and settleFolderWork own those refusals.
+      expect(names).toContain("check_change");
       expect(names).toContain("github_write");
     }
     const detail = await launched.page.evaluate(
@@ -153,6 +155,21 @@ test("an operation makes its named effect and closes finished from reported evid
       .toMatchObject({ status: "done", closedReason: "finished" });
     expect(readFileSync(join(repoDir, "service.status"), "utf8")).toBe("ready\n");
     expect(tasks.get(task.id)?.delivery?.prUrl ?? null).toBeNull();
+    await test.info().attach("operation-result", {
+      contentType: "application/json",
+      body: JSON.stringify({
+        serviceState: readFileSync(join(repoDir, "service.status"), "utf8"),
+        deliverable: detail?.deliverable,
+        status: tasks.get(task.id)?.status,
+        closedReason: tasks.get(task.id)?.closedReason,
+        pullRequest: tasks.get(task.id)?.delivery?.prUrl ?? null,
+        workerTools: worker.map((body) =>
+          (body.tools ?? []).map(
+            (t: { name?: string; function?: { name: string } }) => t.name ?? t.function?.name,
+          ),
+        ),
+      }),
+    });
   } finally {
     await launched.close();
     db.close();

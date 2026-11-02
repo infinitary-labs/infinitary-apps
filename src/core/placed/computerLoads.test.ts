@@ -38,8 +38,10 @@ function fixture() {
   const ask = vi.fn(
     async (_device: string, _channel: string, _args: unknown): Promise<unknown> => snapshot,
   );
+  const localReads = vi.fn(() => snapshot);
+  const taskIds = vi.fn(() => snapshot.runs.map((run) => run.taskId));
   const reader = new ComputerLoads({
-    local: { snapshot: () => snapshot, reconsider: () => {} },
+    local: { snapshot: localReads, taskIds, reconsider: () => {} },
     overrides: () => ["captain-approved"],
     work: {
       ask,
@@ -56,6 +58,8 @@ function fixture() {
   return {
     reader,
     ask,
+    localReads,
+    taskIds,
     age: (age: number) => {
       now = age;
     },
@@ -70,6 +74,40 @@ function fixture() {
 }
 
 describe("a computer's declared runs at the home", () => {
+  // INF-2186: crewStatus's job check rebuilt the local declared-run queue per row.
+  it("shares declared-run facts across one roster read without carrying freshness across reads", async () => {
+    const f = fixture();
+    for (let row = 0; row < 40; row += 1) expect(f.reader.hasTask("first", null)).toBe(true);
+    const baseline = f.taskIds.mock.calls.length;
+    f.taskIds.mockClear();
+    await f.reader.refresh("mini");
+    let projected = 0;
+    f.reader.readProjection(() => {
+      for (let row = 0; row < 40; row += 1) {
+        expect(f.reader.hasTask("first", null)).toBe(true);
+        expect(f.reader.hasTask("missing", null)).toBe(false);
+      }
+      projected = f.taskIds.mock.calls.length;
+      expect(f.taskIds).toHaveBeenCalledTimes(1);
+      expect(f.localReads).not.toHaveBeenCalled();
+      expect(f.reader.hasTask("first", "mini")).toBe(true);
+      f.contact("gone");
+      expect(f.reader.hasTask("first", "mini")).toBe(false);
+      expect(f.reader.read("mini")).toEqual({ status: "unknown", ...snapshot });
+    });
+    expect(baseline).toBe(40);
+    f.reader.hasTask("first", null);
+    expect(f.taskIds).toHaveBeenCalledTimes(2);
+    expect(f.localReads).not.toHaveBeenCalled();
+    console.info(
+      JSON.stringify({
+        intent: "INF-2186 running-job checks",
+        baseline,
+        projected,
+        capacitySnapshots: f.localReads.mock.calls.length,
+      }),
+    );
+  });
   it("asks only a computer advertising the change and carries the recorded overrides", async () => {
     const f = fixture();
     expect(f.reader.read("mini")).toBeUndefined();

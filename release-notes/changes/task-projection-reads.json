@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "id": "task-projection-reads",
+      "kind": "fix",
+      "area": "tasks",
+      "title": "Fewer pauses while Tasks refreshes",
+      "body": "The Tasks list and the first mate now share task, wait and computer details instead of repeatedly reading the same information. The window can also keep responding while the app checks its own files before starting work.",
+      "noPicture": "The list and its controls look the same; this removes repeated work during refreshes and task starts.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

@@ -1,4 +1,5 @@
 import { accessSync, constants, readFileSync, realpathSync, statSync } from "node:fs";
+import { access, readFile, realpath, stat } from "node:fs/promises";
 import { isAbsolute, join, relative, sep } from "node:path";
 import type { SourceIdentity } from "@shared/selfSource";
 import { z } from "zod";
@@ -41,6 +42,8 @@ export type SelfSourceFacts = SourceIdentity & {
   reason?: string;
 };
 
+export type SelfSourceReader = () => SelfSourceFacts | Promise<SelfSourceFacts>;
+
 export function readSelfSource(
   location: SelfSourceLocation & { computer: string; version: string },
 ): SelfSourceFacts {
@@ -73,6 +76,54 @@ export function readSelfSource(
       if (!statSync(join(root, file)).isFile())
         throw new Error("An indexed source file is missing.");
       accessSync(join(root, file), constants.R_OK);
+    }
+    return {
+      ...facts,
+      version: location.isPackaged ? map.version : location.version,
+      commit: location.isPackaged ? map.commit : null,
+      availability: "available",
+    };
+  } catch (error) {
+    return { ...facts, reason: error instanceof Error ? error.message : String(error) };
+  }
+}
+
+/**
+ * Fresh validation at a session-opening boundary, with filesystem work off
+ * the main thread. It preserves every path and readability check of the
+ * synchronous reader; it does not cache a success across conversations.
+ */
+export async function readSelfSourceAsync(
+  location: SelfSourceLocation & { computer: string; version: string },
+): Promise<SelfSourceFacts> {
+  const root = resolveSelfSourceDir(location);
+  const index = join(root, "self-map.json");
+  const facts: SelfSourceFacts = {
+    computer: location.computer,
+    version: location.version,
+    commit: null,
+    mutable: !location.isPackaged,
+    root,
+    index,
+    availability: "unavailable",
+  };
+  try {
+    const map = sourceMapSchema.parse(JSON.parse(await readFile(index, "utf8")));
+    if (location.isPackaged) {
+      const outer = sourceMapSchema.parse(
+        JSON.parse(await readFile(join(location.resourcesPath, "self-map.json"), "utf8")),
+      );
+      if (map.version !== location.version || JSON.stringify(map) !== JSON.stringify(outer))
+        throw new Error("The installed app and its source metadata disagree.");
+    }
+    const realRoot = await realpath(root);
+    for (const file of Object.keys(map.modules)) {
+      const path = relative(realRoot, await realpath(join(root, file)));
+      if (isAbsolute(file) || path === ".." || path.startsWith(`..${sep}`) || isAbsolute(path))
+        throw new Error("An indexed file escapes the source folder.");
+      if (!(await stat(join(root, file))).isFile())
+        throw new Error("An indexed source file is missing.");
+      await access(join(root, file), constants.R_OK);
     }
     return {
       ...facts,

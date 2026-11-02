@@ -46,7 +46,7 @@ import type { CoreEventSink } from "../events";
 import type { ProjectRecord } from "../storage/projectStore";
 import type { TaskEvent } from "../storage/taskEventStore";
 import type { TaskLink } from "../storage/taskLinkStore";
-import type { TaskRecord } from "../storage/taskStore";
+import { oldestFirst, type TaskRecord } from "../storage/taskStore";
 import { standingDependencyWaits } from "./dependencyWaits";
 import { holdingWaits, waitsSince } from "./holdingWaits";
 import { queueWaitOf } from "./queueWait";
@@ -242,6 +242,9 @@ export class TaskProtocol {
   private disposed = false;
   /** Each live row's posture and place as last published, so a move in either republishes it. */
   private readonly postures = new Map<string, string>();
+  private publishingPostures: ReadonlyMap<string, WorkPosture | undefined> | undefined;
+  private publishingRecords: readonly TaskRecord[] | undefined;
+  private readingFacts: Map<string, LiveFacts> | undefined;
   /** Each record's status as last emitted, so task_changed can say what it moved from. */
   private readonly statuses = new Map<string, TaskStatus>();
   /** What the last board was built from; absent until the first read. */
@@ -277,12 +280,47 @@ export class TaskProtocol {
   refreshPresentation(
     read?: (record: TaskRecord, posture: WorkPosture | undefined) => void,
   ): boolean {
+    return this.options.tasks.readProjection(() => this.readPresentation(read));
+  }
+
+  private readPresentation(
+    read?: (record: TaskRecord, posture: WorkPosture | undefined) => void,
+  ): boolean {
     if (this.disposed) return false;
+    const seq = this.options.tasks.boardSeq();
+    const records = this.presentationRecords();
+    return this.options.tasks.readProjection(
+      () => this.readPresentationRows(records, seq, read),
+      records,
+    );
+  }
+
+  /** The board already owns these records; pending changes replace or remove them before a push. */
+  private presentationRecords(): TaskRecord[] {
+    const cache = this.cache;
+    if (!cache || this.rebuildAll) return this.options.tasks.listLive();
+    const live = new Map<string, TaskRecord>();
+    const keep = (id: string, record: TaskRecord | undefined) => {
+      if (record && (record.status === "open" || record.status === "active")) live.set(id, record);
+      else live.delete(id);
+    };
+    for (const id of cache.shown) keep(id, cache.records.get(id));
+    for (const [id, record] of this.touched) keep(id, record);
+    return oldestFirst([...live.values()]);
+  }
+
+  private readPresentationRows(
+    records: readonly TaskRecord[],
+    seq: number,
+    read?: (record: TaskRecord, posture: WorkPosture | undefined) => void,
+  ): boolean {
     const changed: string[] = [];
     const live = new Set<string>();
-    for (const record of this.options.tasks.listLive()) {
+    const postures = new Map<string, WorkPosture | undefined>();
+    for (const record of records) {
       live.add(record.id);
       const workPosture = this.options.workPosture?.(record);
+      postures.set(record.id, workPosture);
       read?.(record, workPosture);
       const posture = JSON.stringify([
         workPosture,
@@ -299,7 +337,20 @@ export class TaskProtocol {
       this.postures.delete(id);
       left = true;
     }
-    if (changed.length) this.options.tasks.refreshPresentation(changed);
+    if (changed.length) {
+      // A callback may have written a task. Borrow only the unchanged snapshot.
+      const unchanged = this.options.tasks.boardSeq() === seq;
+      const previousPostures = this.publishingPostures;
+      const previousRecords = this.publishingRecords;
+      this.publishingPostures = unchanged ? postures : undefined;
+      this.publishingRecords = unchanged ? records : undefined;
+      try {
+        this.options.tasks.refreshPresentation(changed);
+      } finally {
+        this.publishingPostures = previousPostures;
+        this.publishingRecords = previousRecords;
+      }
+    }
     return changed.length > 0 || left;
   }
 
@@ -315,15 +366,27 @@ export class TaskProtocol {
   // ---- reads --------------------------------------------------------------
 
   board(): TaskBoard {
+    return this.options.tasks.readProjection(() => {
+      const outer = this.readingFacts;
+      this.readingFacts = new Map();
+      try {
+        return this.buildBoard();
+      } finally {
+        this.readingFacts = outer;
+      }
+    });
+  }
+
+  private buildBoard(): TaskBoard {
     const now = this.now();
     const cutoff = now - BOARD_RECENT_MS;
+    const cards = this.options.cards.snapshot();
     const minimized = new Set<string>();
-    for (const card of this.options.cards.snapshot())
-      if (card.minimized && card.taskId) minimized.add(card.taskId);
+    for (const card of cards) if (card.minimized && card.taskId) minimized.add(card.taskId);
     const cache =
       this.cache && !this.rebuildAll
-        ? this.refresh(this.cache, cutoff, minimized)
-        : this.rebuild(cutoff, minimized);
+        ? this.refresh(this.cache, cutoff, minimized, cards)
+        : this.rebuild(cutoff, minimized, cards);
     this.cache = cache;
     this.rebuildAll = false;
     this.recheckFacts = false;
@@ -607,6 +670,13 @@ export class TaskProtocol {
   // ---- the emitter --------------------------------------------------------
 
   private onChange(change: TaskChange): void {
+    this.options.tasks.readProjection(
+      () => this.readChange(change),
+      change.republish ? (this.publishingRecords ?? []) : [],
+    );
+  }
+
+  private readChange(change: TaskChange): void {
     const { tasks, broadcastEvent } = this.options;
     const records = new Map<string, TaskRecord | undefined>();
     const recordOf = (taskId: string) => {
@@ -638,7 +708,10 @@ export class TaskProtocol {
         status: record.status,
         from,
         activity: record.activity,
-        workPosture: this.options.workPosture?.(record),
+        workPosture:
+          change.republish && this.publishingPostures?.has(taskId)
+            ? this.publishingPostures.get(taskId)
+            : this.options.workPosture?.(record),
         ...(record.kind === "work"
           ? {
               tier: tiers.get(taskId) ?? null,
@@ -716,7 +789,11 @@ export class TaskProtocol {
    * record is mostly closed rows from before that, and a crew event pushes
    * the board, so reading them all stalled the main process (INF-703).
    */
-  private rebuild(cutoff: number, minimized: ReadonlySet<string>): BoardCache {
+  private rebuild(
+    cutoff: number,
+    minimized: ReadonlySet<string>,
+    cards: readonly Card[],
+  ): BoardCache {
     const { tasks } = this.options;
     const records = new Map<string, TaskRecord>();
     for (const record of tasks.listLiveOrClosedSince(cutoff)) records.set(record.id, record);
@@ -732,7 +809,13 @@ export class TaskProtocol {
     // What replaced each dropped row, read for all of them at once; one at
     // a time, each read its task's whole timeline (INF-2070).
     const replacedBy = tasks.replacementsOf(rows.filter(replaced).map((record) => record.id));
-    const graph = this.graphOf([...records.values()], [...links.values()], replacedBy, childCounts);
+    const graph = this.graphOf(
+      [...records.values()],
+      [...links.values()],
+      replacedBy,
+      childCounts,
+      cards,
+    );
     const tiers = this.tiersOf(rows);
     const views = new Map<string, CachedView>();
     for (const record of rows) views.set(record.id, this.cachedView(record, graph, tiers));
@@ -762,7 +845,12 @@ export class TaskProtocol {
    * the board's window that no shown row holds is ruled out from the
    * record its write left, with no read.
    */
-  private refresh(cache: BoardCache, cutoff: number, minimized: ReadonlySet<string>): BoardCache {
+  private refresh(
+    cache: BoardCache,
+    cutoff: number,
+    minimized: ReadonlySet<string>,
+    cards: readonly Card[],
+  ): BoardCache {
     const { tasks } = this.options;
     const { records, links } = cache;
     // The touched rows the board can reach: those in hand (shown, or at the
@@ -861,6 +949,7 @@ export class TaskProtocol {
       [...links.values()],
       cache.replacedBy,
       cache.childCounts,
+      cards,
     );
     // The kept rows whose card facts moved, or whose live facts moved after a host fact did.
     for (const id of shown) {
@@ -962,14 +1051,21 @@ export class TaskProtocol {
 
   /** The host's own facts a view reads, which no write of the row reports. */
   private liveFacts(record: TaskRecord): LiveFacts {
-    return {
-      repo: record.repoId ? this.options.repos.get(record.repoId) : undefined,
-      posture: this.options.workPosture?.(record),
-      place: this.options.place?.(record),
-      computerMove: record.kind === "work" ? this.options.computerMove?.(record) : undefined,
-      startAttempt:
-        this.options.startAttempt?.(record.id) ?? this.options.tasks.startAttemptOf(record.id),
-    };
+    const known = this.readingFacts?.get(record.id);
+    if (known) return known;
+    const facts = this.options.tasks.readProjection(
+      () => ({
+        repo: record.repoId ? this.options.repos.get(record.repoId) : undefined,
+        posture: this.options.workPosture?.(record),
+        place: this.options.place?.(record),
+        computerMove: record.kind === "work" ? this.options.computerMove?.(record) : undefined,
+        startAttempt:
+          this.options.startAttempt?.(record.id) ?? this.options.tasks.startAttemptOf(record.id),
+      }),
+      [record],
+    );
+    this.readingFacts?.set(record.id, facts);
+    return facts;
   }
 
   /** The edges across shown rows in canonical order; the last array while the set is the same. */
@@ -1003,7 +1099,10 @@ export class TaskProtocol {
    * whole live set (a gate, a ready decision and a standing wait name live
    * work), or the rows' own standing waits (`detail`) or none (closed rows).
    */
-  private graphFor(rows: readonly TaskRecord[]): Graph {
+  private graphFor(
+    rows: readonly TaskRecord[],
+    cards: readonly Card[] = this.options.cards.snapshot(),
+  ): Graph {
     const { tasks } = this.options;
     const ids = rows.map((record) => record.id);
     const known = new Set(ids);
@@ -1017,24 +1116,31 @@ export class TaskProtocol {
     // What replaced each dropped row, read for all of them at once; one at
     // a time, each read its task's whole timeline (INF-2070).
     const replacedBy = tasks.replacementsOf(rows.filter(replaced).map((record) => record.id));
-    return this.graphOf(all, links, replacedBy, tasks.childCounts(ids));
+    return this.graphOf(all, links, replacedBy, tasks.childCounts(ids), cards);
   }
 
   private graphOf(
     all: readonly TaskRecord[],
     links: TaskLink[],
     replacedBy: Map<string, string>,
-    childCounts?: Map<string, { total: number; closed: number }>,
+    childCounts: Map<string, { total: number; closed: number }> | undefined,
+    cards: readonly Card[],
   ): Graph {
+    // The graph owns these current records, including the other tasks a posture reads.
+    this.options.tasks.readProjection(() => undefined, all);
     const byId = new Map(all.map((record) => [record.id, record]));
     // Each row's children among these rows, in their order: the parts a
     // start wait reads, found once rather than by a walk of every row per view.
     const parts = new Map<string, TaskRecord[]>();
     for (const record of all) if (record.parentId) push(parts, record.parentId, record);
+    const linksInto = new Map<string, TaskLink[]>();
     const blockersOf = new Map<string, TaskRecord[]>();
     const blockingOf = new Map<string, TaskRecord[]>();
     const mergeHolds = new Set<string>();
     for (const link of links) {
+      const incoming = linksInto.get(link.toId);
+      if (incoming) incoming.push(link);
+      else linksInto.set(link.toId, [link]);
       if (link.type !== "blocks") continue;
       const from = byId.get(link.fromId);
       const to = byId.get(link.toId);
@@ -1074,7 +1180,7 @@ export class TaskProtocol {
     }
     // Snapshot is already in stage priority/newest order. Hidden siblings
     // never mask a reachable ready choice.
-    for (const card of this.options.cards.snapshot()) {
+    for (const card of cards) {
       if (!isReadyDecision(card)) continue;
       const direct = card.taskId ? byId.get(card.taskId) : undefined;
       if (card.taskId && (!direct || TaskService.isClosed(direct))) continue;
@@ -1086,6 +1192,7 @@ export class TaskProtocol {
       byId,
       parts,
       links,
+      linksInto,
       blockersOf,
       blockingOf,
       mergeHolds,
@@ -1114,6 +1221,9 @@ export class TaskProtocol {
     const waiting = blockers.filter((blocker) => !TaskService.blockerCleared(blocker));
     const liveBlockers = blockers.filter(TaskService.blockerHoldsClose);
     const { repo, posture, place, startAttempt, computerMove } = facts;
+    const baseline = TaskService.isClosed(record)
+      ? []
+      : standingDependencyWaits(graph.byId, record.delivery, this.options.tasks);
     // Blocked by names only the waits that hold the task now, by the one
     // rule the tasks reader shares (./holdingWaits.ts, INF-999). Dropped
     // edges remain in the graph and still gate STARTING, but closed work is
@@ -1124,8 +1234,15 @@ export class TaskProtocol {
       holdsMerge: (blocker) => graph.mergeHolds.has(`${record.id}\0${blocker.id}`),
       tasks: graph.byId,
       idleOnWaits: posture?.state === "idle" && posture.reason === "dependency",
+      baseline,
     });
-    const blockedSince = waitsSince({ record, holding, links: graph.links, tasks: graph.byId });
+    const blockedSince = waitsSince({
+      record,
+      holding,
+      links: graph.linksInto.get(record.id) ?? [],
+      tasks: graph.byId,
+      baseline,
+    });
     const open = record.status === "open";
     // An active row shows the blockers that still hold its CLOSE - a
     // marked edge, what a `blocks_me` follow-up files against the task a
@@ -1190,7 +1307,12 @@ export class TaskProtocol {
       startPolicy: record.startPolicy,
       queueWait: startAttempt
         ? undefined
-        : queueWaitOf(record, blockers, graph.links, graph.parts.get(record.id) ?? []),
+        : queueWaitOf(
+            record,
+            blockers,
+            graph.linksInto.get(record.id) ?? [],
+            graph.parts.get(record.id) ?? [],
+          ),
       flags: {
         blocked,
         held,
@@ -1374,6 +1496,8 @@ type Graph = {
   /** Each row's children among `byId`, in the rows' order: the parts a start wait reads. */
   parts: Map<string, TaskRecord[]>;
   links: TaskLink[];
+  /** Row-local edges: wait dates and queue waits never walk the whole board. */
+  linksInto: Map<string, TaskLink[]>;
   blockersOf: Map<string, TaskRecord[]>;
   blockingOf: Map<string, TaskRecord[]>;
   /** `${toId}\0${fromId}` for a blocks edge that holds the close. */

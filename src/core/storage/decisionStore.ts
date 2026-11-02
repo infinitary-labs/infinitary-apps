@@ -3,6 +3,7 @@ import type { SpendBand } from "@shared/quotaSignals";
 import type { WakeFacts } from "../orchestrator/wakes";
 import type { ChargeFact } from "../routing/placedWork";
 import type { AppDatabase } from "./db";
+import { prepared } from "./statements";
 
 /**
  * The one decision ledger (the primitives review, P6; migration 50;
@@ -451,6 +452,22 @@ export class DecisionStore {
       )
       .all(...params) as RoutingRow[];
     return rows.map(fromRoutingRow);
+  }
+
+  /** The board's latest chosen slot facts, seeking once per task rather than reading its history. */
+  latestChosenSlots(
+    taskIds: readonly string[],
+  ): Pick<RoutingDecision, "taskId" | "bucket" | "served">[] {
+    if (taskIds.length === 0) return [];
+    return prepared(
+      this.db,
+      `SELECT latest.task_id AS taskId, latest.bucket, latest.served
+       FROM json_each(?) AS asked CROSS JOIN decisions AS latest
+       WHERE latest.id = (
+         SELECT id FROM decisions WHERE kind = 'routing' AND task_id = asked.value
+           AND provider IS NOT NULL ORDER BY at DESC, id DESC LIMIT 1
+       )`,
+    ).all(JSON.stringify(taskIds)) as Pick<RoutingDecision, "taskId" | "bucket" | "served">[];
   }
 
   /** The task's newest routing decision in the order it was written; undefined when it never routed. */

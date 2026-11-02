@@ -17,6 +17,15 @@ The internal read-only `task_records` view assembles these sources under the old
 The task row no longer has the specification, shape, delivery or superseded execution columns.
 The typed scheduling columns and the existing activity/assignment/outcome indexes remain on the task row; they are not a generic operational payload.
 `TaskService` coordinates all writes in the existing transaction, through named evidence, permission, validation, execution and task operations.
+`TaskService.readProjection` shares composed task records and relationship reads within one synchronous board, presentation, roster or context read.
+The host joins the same projection with settings, project, device, narrowed sign-in and declared-run facts through their existing owners.
+A board's current cached record can seed that read, so its posture witnesses do not decode the record again.
+A presentation refresh borrows current records from the board cache, overlays pending creates, changes and removals, and reuses them in its pure metadata publication only while the task sequence remains unchanged.
+Owner-derived posture, place, ask and dependency facts share the same projection through `TaskService.projectedFact`; each task's fact is derived once for that snapshot.
+The unanswered-request witness seeks the first real first-mate action and child activity times instead of decoding the task's timeline or its children's records.
+Task writes suspend the task and relationship reads and clear them, including derived facts, on success or rollback.
+Completing the synchronous projection drops its shared facts, rather than keeping operational facts across turns.
+Recent supervision outcomes seek the newest sort ids through their ledger index before reading payloads, rather than sorting the retained history.
 The former public `recordDelivery` field bag is private; fixture injection of older mixed records lives only in the test helper.
 
 ## Conversations on a task
@@ -304,7 +313,7 @@ Drop task, Discard, stronger-model retries, provider retries and closed-work ret
 
 Approved specification: FI3-275, direction A, reachable cards, split waiting children.
 Cancellation and terminal session failure retire task cards at closure through `SettleService.closeRecord` (FI3-270); the waiting projection also independently excludes closed tasks.
-`waitingCardId` is the operational ready-decision fact: the first unresolved shown ready decision associated with a live task, with no `awaiting` and nonempty actions, in `CardService.snapshot()` order.
+`waitingCardId` is the operational ready-decision fact: the first unresolved shown ready decision associated with a live task, with no `awaiting` and nonempty actions, in `CardService.taskSnapshot()` order.
 Direct associations and captain-gate references use that same test.
 A ready card behind the foreground card still counts; navigation can focus it.
 A hidden or Working sibling cannot mask another ready decision.
@@ -324,6 +333,15 @@ The record keeps generic attention/hold guidance and the bar's other slots when 
 CardService declares stack changes through `presentationChanged` at its broadcast seam, including pending shown-version revisions, reply holds, close-out, Working/ready, retirement and restoration.
 `TaskService` alone advances `task_board.seq` for that invalidation, without changing task rows, updated/idle/recovery clocks, timeline or feed.
 TaskProtocol delivers the focusable card snapshot before its board snapshot or delta, explicitly, not by relative timer delays.
+Its task-flag read uses the card owner's staged versions and durable open heads, without rebuilding each card's message graph, task title or seen state.
+The board shares one staged-card read between minimized tasks and ready decisions, and indexes incoming links once for wait dates and queue waits.
+A tier read seeks only each requested task's newest routing decision that chose a model, selecting its served slot and legacy bucket without reading the routing history.
+The first mate's roster requests started crew only, so it does not derive computer places or check summaries for unstarted tasks that its backlog counts instead.
+Live review witnesses select open children before composing records, without loading closed review payloads.
+Job membership reads declared command ids through `LoadLine.taskIds`, never a capacity or system-memory snapshot.
+Move eligibility shares the projection and formats a refusal only when an action asks for one; unchanged board views retain their lifecycle moves.
+A device place is shared from the device snapshot once per refresh, and an address change invalidates that snapshot and its places.
+A presentation refresh reuses its derived posture when its synchronous post-commit listener publishes that same fact.
 `tasks.detail` re-reads on either board carrier as well as its own events; project readers refresh too.
 
 The renderer immediately overlays local card availability on board/detail and project waiting counts when it hides a reply, or restores a refused one.

@@ -43,7 +43,6 @@ import {
 } from "@shared/providers";
 import { type QuotaSnapshotView, servedProviderOf } from "@shared/quota";
 import type { ComputerResourcesView } from "@shared/resources";
-import { devicePlace } from "@shared/signIns";
 import { runsForAnotherFirstmate } from "@shared/sshConnection";
 import { BUILTIN_SURFACES } from "@shared/surfaces";
 import type { TaskBrowserFact } from "@shared/taskBrowser";
@@ -245,7 +244,12 @@ import { PlacedWorkScores } from "./routing/placedWork";
 import { quotaGateCleared, quotaGateRefValid } from "./routing/quotaGate";
 import { Router, servedSlots } from "./routing/router";
 import { Runbooks } from "./runbooks/runbooks";
-import { readSelfSource, resolveSelfSourceDir, sourceIdentity } from "./selfSource/resolve";
+import {
+  readSelfSource,
+  readSelfSourceAsync,
+  resolveSelfSourceDir,
+  sourceIdentity,
+} from "./selfSource/resolve";
 import { SessionBinder } from "./session/binding";
 import { BoundsWatcher } from "./session/bounds";
 import { LOCAL_MACHINE_ID, type SessionFactories } from "./session/session";
@@ -750,7 +754,15 @@ export async function createServices(
   });
   // The one task writer (task-system P0): records, keys, timeline. The
   // dev boot assertion is strict off a packaged build.
-  const tasks = new TaskService({ db, repos, strict: !host.app.packaged, now: ticker.now });
+  let readTaskFacts = <T>(read: () => T): T =>
+    settings.readProjection(() => repos.readProjection(read));
+  const tasks = new TaskService({
+    db,
+    repos,
+    strict: !host.app.packaged,
+    now: ticker.now,
+    readFacts: (read) => readTaskFacts(read),
+  });
   const cardStore = new CardStore(db);
   const preferences = new ShellPreferencesService(settings, emit);
   // The two switches (roadmap 1.4, docs/sharing.md): the wire is built here
@@ -925,7 +937,7 @@ export async function createServices(
     : Number.parseInt(settingFrom(process.env, "TASK_DELTA_ROWS") ?? "", 10);
   // Task readers can run during async boot, before the supervisor restores the stack.
   let cardStack:
-    | Pick<CrewSupervisor, "cardsSnapshot" | "flushCards" | "browserReturned">
+    | Pick<CrewSupervisor, "taskCardsSnapshot" | "taskCardHeads" | "flushCards" | "browserReturned">
     | undefined;
   const taskProtocol = new TaskProtocol({
     tasks,
@@ -934,8 +946,8 @@ export async function createServices(
       readKeptValidationEvidence(evidence, crewmateCardPicturesDir(paths, taskId), taskId),
     repos,
     cards: {
-      listOpen: () => cardStore.listOpen(),
-      snapshot: () => cardStack?.cardsSnapshot() ?? [],
+      listOpen: () => cardStack?.taskCardHeads() ?? cardStore.listOpen(),
+      snapshot: () => cardStack?.taskCardsSnapshot() ?? [],
       forTask: (taskId, extraIds) => cardStore.forTask(taskId, extraIds),
     },
     beforePush: () => cardStack?.flushCards(),
@@ -1843,6 +1855,14 @@ export async function createServices(
     protectedIds: (providerId) => slots.protectedIds(providerId),
     reachOf,
   });
+  readTaskFacts = (read) =>
+    settings.readProjection(() =>
+      repos.readProjection(() =>
+        devices.readProjection(() =>
+          deviceSignIns.readProjection(() => computerLoads.readProjection(read)),
+        ),
+      ),
+    );
   computerSignIns.view = () => deviceSignIns.view();
   // Each computer's setup card, made once the supervisor holds the stack.
   let deviceSetup: DeviceSetup | undefined;
@@ -1863,7 +1883,7 @@ export async function createServices(
         .list()
         .filter((device) => deviceRunsWork(device.kind))
         .map((device) => device.id),
-    devicePlace: (deviceId) => devicePlace(devices.list(), deviceId),
+    devicePlace: (deviceId) => devices.placeOf(deviceId),
     projectName: (repoId) => repos.get(repoId)?.name,
     // A placed task's branch and kept work come into its project's own
     // repository here, or this Mac's local workspace for a task with none.
@@ -1911,14 +1931,14 @@ export async function createServices(
     show: (notification) => host.notifications.show(notification),
   });
   const sourceComputer = await ownComputerName({ packaged: host.app.packaged, env: process.env });
-  const source = () =>
-    readSelfSource({
-      isPackaged: host.app.packaged,
-      resourcesPath: host.app.resourcesDir,
-      appPath: host.app.appDir,
-      version: host.app.version,
-      computer: sourceComputer,
-    });
+  const sourceLocation = {
+    isPackaged: host.app.packaged,
+    resourcesPath: host.app.resourcesDir,
+    appPath: host.app.appDir,
+    version: host.app.version,
+    computer: sourceComputer,
+  };
+  const source = () => readSelfSource(sourceLocation);
   const selfSourceDir = resolveSelfSourceDir({
     isPackaged: host.app.packaged,
     resourcesPath: host.app.resourcesDir,
@@ -2377,7 +2397,7 @@ export async function createServices(
     personalResourcesEnabled: () => settings.getPersonalResourcesEnabled(),
     runbooks,
     build: host.app.version,
-    source,
+    source: () => readSelfSourceAsync(sourceLocation),
     sessions: sessionFactories,
     machines: placed,
     takesNoWorkUntilUpdated,
@@ -3025,6 +3045,7 @@ export async function createServices(
     broadcastEvent,
     selfSourceDir,
     selfSourceFacts: source,
+    selfSourceFactsAsync: () => readSelfSourceAsync(sourceLocation),
     noteCutOff,
     // The orchestrator's own burn is tracked under the conversation surface.
     recordUsage: ({ accountId, model, usage }) =>

@@ -2242,11 +2242,21 @@ function migrate(db: AppDatabase, throughVersion?: number): void {
       CREATE INDEX IF NOT EXISTS tasks_status ON tasks (status);
       CREATE INDEX IF NOT EXISTS task_permissions_override
         ON task_permissions (override_json) WHERE override_json IS NOT NULL;
+      CREATE INDEX IF NOT EXISTS tasks_parent_status ON tasks (parent_id, status);
       CREATE INDEX IF NOT EXISTS tasks_closed_at ON tasks (closed_at);
       CREATE INDEX IF NOT EXISTS task_events_ref ON task_events (kind, ref) WHERE ref IS NOT NULL;
       CREATE INDEX IF NOT EXISTS task_events_compaction ON task_events (task_id, at)
         WHERE ${COMPACTION_CANDIDATE};
       CREATE INDEX IF NOT EXISTS task_events_actor_at ON task_events (actor, at DESC, id DESC);
+      CREATE INDEX IF NOT EXISTS decisions_sort_recent ON decisions (kind, id DESC) WHERE kind = 'sort';
+      CREATE INDEX IF NOT EXISTS decisions_chosen_task_at ON decisions (kind, task_id, at DESC, id DESC)
+        WHERE provider IS NOT NULL;
+      CREATE INDEX IF NOT EXISTS task_events_task_kind_at ON task_events (task_id, kind, at DESC, id DESC);
+      CREATE INDEX IF NOT EXISTS task_events_firstmate_action ON task_events (task_id, at, id)
+        WHERE actor = 'firstmate' AND kind <> 'decided';
+      CREATE INDEX IF NOT EXISTS task_events_restart_outcome ON task_events (task_id, at DESC, id DESC)
+        WHERE kind = 'note'
+        AND CASE WHEN json_valid(data_json) THEN json_type(data_json, '$.restartOutcome') END = 'object';
       CREATE INDEX IF NOT EXISTS tasks_specification ON tasks (specification_id);
       CREATE INDEX IF NOT EXISTS captain_asks_at ON captain_asks (at);
       CREATE INDEX IF NOT EXISTS captain_asks_turn ON captain_asks (turn_state, at);

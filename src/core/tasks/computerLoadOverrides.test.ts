@@ -78,7 +78,7 @@ it("sends the persisted overrides in a load round without reading more rows when
   const snapshot = { runs: [] };
   const ask = vi.fn(async () => snapshot);
   const loads = new ComputerLoads({
-    local: { snapshot: () => snapshot, reconsider: () => {} },
+    local: { snapshot: () => snapshot, taskIds: () => [], reconsider: () => {} },
     work: {
       ask,
       inReach: () => true,

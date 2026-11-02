@@ -765,6 +765,8 @@ export type FileDecisionInput = {
 
 export type TaskServiceOptions = {
   db: AppDatabase;
+  /** Share the host's read-only facts alongside one synchronous task projection. */
+  readFacts?<T>(read: () => T): T;
   /** Delivery posture lookup for delivery facts; absent means local-only. */
   repos?: {
     get(id: string): (PolicyRepo & Partial<Pick<RepoView, "name" | "origin">>) | undefined;
@@ -945,6 +947,16 @@ export type ChangeEvidenceUpdate = Partial<
 export class TaskService {
   private readonly db: AppDatabase;
   private readonly store: TaskStore;
+  private projection:
+    | {
+        workAfter: Map<string, string[]>;
+        linksTo: Map<string, TaskLink[]>;
+        linksFrom: Map<string, TaskLink[]>;
+        blockers: Map<string, TaskRecord[]>;
+        activeWaiters: Map<string, TaskRecord[]>;
+        facts: Map<object, Map<symbol, unknown>>;
+      }
+    | undefined;
   private readonly events: TaskEventStore;
   private readonly links: TaskLinkStore;
   private readonly references: TaskReferenceStore;
@@ -1008,7 +1020,7 @@ export class TaskService {
   /** Publish derived host facts without rewriting activity or its idle clock. */
   refreshPresentation(taskIds: readonly string[]): void {
     this.write(() => {
-      for (const id of taskIds) if (this.store.get(id)) this.touch(id);
+      for (const id of taskIds) if (this.store.has(id)) this.touch(id);
       // Its own commit alone is a republish; inside another write it joins that one.
       if (this.depth === 1) this.pending.republish = true;
     })();
@@ -1030,6 +1042,69 @@ export class TaskService {
   }
 
   // ---- reads --------------------------------------------------------------
+
+  /** One synchronous projection shares task reads, never a conversation or turn's writes. */
+  readProjection<T>(read: () => T, known: readonly TaskRecord[] = []): T {
+    const project = () => this.store.readProjection(read, known);
+    const run = () => (this.options.readFacts ? this.options.readFacts(project) : project());
+    if (this.projection) return run();
+    this.projection = {
+      workAfter: new Map(),
+      linksTo: new Map(),
+      linksFrom: new Map(),
+      blockers: new Map(),
+      activeWaiters: new Map(),
+      facts: new Map(),
+    };
+    try {
+      return run();
+    } finally {
+      this.projection = undefined;
+    }
+  }
+
+  /** First first-mate action after a request, including closed successor work. */
+  firstmateActedSince(record: TaskRecord, since: number): number | undefined {
+    let first = this.events.firstFirstmateActAfter(record.id, since);
+    const take = (at: number | null | undefined) => {
+      if (at != null && at > since && (first === undefined || at < first)) first = at;
+    };
+    take(this.store.firstChildActivityAfter(record.id, since));
+    for (const other of this.builtOn(record.id)) {
+      take(other.createdAt);
+      take(other.startedAt);
+    }
+    return first;
+  }
+
+  /** Active work a finding holds, in link order, without composing closed waiter records. */
+  activeWaiters(id: string): TaskRecord[] {
+    const known = this.projection?.activeWaiters.get(id);
+    if (known) return known;
+    const links = this.linksFrom(id).filter((link) => link.type === "blocks" && !link.holdsMerge);
+    const active = new Map(
+      this.store.getActiveMany(links.map((link) => link.toId)).map((record) => [record.id, record]),
+    );
+    const records = links.flatMap((link) => active.get(link.toId) ?? []);
+    this.projection?.activeWaiters.set(id, records);
+    return records;
+  }
+
+  /** A reader's pure derived fact, shared only inside the current synchronous projection. */
+  projectedFact<T>(subject: object, owner: symbol, read: () => T): T {
+    const facts = this.projection?.facts;
+    if (!facts) return read();
+    let readings = facts.get(subject);
+    if (!readings) {
+      readings = new Map();
+      facts.set(subject, readings);
+    }
+    if (readings.has(owner)) return readings.get(owner) as T;
+    const value = read();
+    // A write during the read clears the projection; never repopulate its old facts.
+    if (facts.get(subject) === readings) readings.set(owner, value);
+    return value;
+  }
 
   get(id: string): TaskRecord | undefined {
     return this.store.get(id);
@@ -1108,8 +1183,8 @@ export class TaskService {
   }
 
   /** Latest host-observed recovery fact; no session is opened by this read. */
-  restartObservation(id: string): TaskEvent | undefined {
-    return this.events.latestWithObject(id, "note", "restartOutcome");
+  restartObservation(id: string): Pick<TaskEvent, "at" | "text"> | undefined {
+    return this.events.latestRestartObservation(id);
   }
 
   /** One timeline event by its id, whatever its task; undefined once it is gone. */
@@ -1127,6 +1202,11 @@ export class TaskService {
       .listFor(id)
       .filter((event) => event.kind === "report")
       .map(reportEntryOf);
+  }
+
+  /** Current and previous reports, the two entries the report sorter compares. */
+  lastReportEntries(id: string): ReportEntry[] {
+    return this.events.lastReports(id).map(reportEntryOf);
   }
 
   /**
@@ -1223,9 +1303,16 @@ export class TaskService {
 
   /** The tasks that must close before this one is ready. */
   blockers(id: string): TaskRecord[] {
-    return this.links
-      .listTo(id, "blocks")
-      .flatMap((link) => [this.store.get(link.fromId)].filter((r): r is TaskRecord => !!r));
+    const known = this.projection?.blockers.get(id);
+    if (known) return known;
+    const links = this.projection
+      ? this.linksTo(id).filter((link) => link.type === "blocks")
+      : this.links.listTo(id, "blocks");
+    const blockers = links.flatMap((link) =>
+      [this.store.get(link.fromId)].filter((r): r is TaskRecord => !!r),
+    );
+    this.projection?.blockers.set(id, blockers);
+    return blockers;
   }
 
   /** The tasks waiting on this one. */
@@ -1236,11 +1323,19 @@ export class TaskService {
   }
 
   linksTo(id: string): TaskLink[] {
-    return this.links.listTo(id);
+    const known = this.projection?.linksTo.get(id);
+    if (known) return known;
+    const links = this.links.listTo(id);
+    this.projection?.linksTo.set(id, links);
+    return links;
   }
 
   linksFrom(id: string): TaskLink[] {
-    return this.links.listFrom(id);
+    const known = this.projection?.linksFrom.get(id);
+    if (known) return known;
+    const links = this.links.listFrom(id);
+    this.projection?.linksFrom.set(id, links);
+    return links;
   }
 
   /** Every edge in the graph, for a builder that resolves them in one pass. */
@@ -1347,24 +1442,12 @@ export class TaskService {
     askIds: readonly string[],
     before?: number,
   ): { work: TaskRecord[]; acted: Set<string> } {
-    const ids = new Set(askIds);
-    const attached = [
-      ...new Set(askIds.flatMap((askId) => this.events.taskIdsWithRef("ask", askId))),
-    ];
-    const acted = new Set(
-      attached.filter((taskId) =>
-        this.events
-          .listFor(taskId)
-          .some(
-            (event) =>
-              event.kind === "ask" &&
-              event.ref !== null &&
-              ids.has(event.ref) &&
-              typeof event.data?.via === "string" &&
-              event.data.via.startsWith("tool:"),
-          ),
-      ),
+    const attributions = this.events.askAttributions(askIds);
+    const attached = [...new Set(attributions.map((entry) => entry.taskId))];
+    const authored = new Set(
+      attributions.filter((entry) => entry.via?.startsWith("tool:")).map((entry) => entry.taskId),
     );
+    const acted = new Set(attached.filter((taskId) => authored.has(taskId)));
     const found = new Map<string, TaskRecord>();
     const queue = [...attached];
     const seeds = new Set(attached);
@@ -1382,8 +1465,10 @@ export class TaskService {
 
   /** The tasks that carry a task's work on: its parts, what builds on it and its handovers. */
   private workAfter(record: TaskRecord): string[] {
+    const known = this.projection?.workAfter.get(record.id);
+    if (known) return known;
     const key = record.key || null;
-    return [
+    const next = [
       ...this.store.listChildren(record.id).map((child) => child.id),
       ...this.links.listFrom(record.id, "replaced-by").map((link) => link.toId),
       ...(["basis", "retry-of", "branch-source"] as const).flatMap((kind) =>
@@ -1391,6 +1476,8 @@ export class TaskService {
       ),
       ...this.escalations(record.id, "escalated_to"),
     ];
+    this.projection?.workAfter.set(record.id, next);
+    return next;
   }
 
   /** The tasks a task's work came from: the inverse of `workAfter`. */
@@ -1411,10 +1498,7 @@ export class TaskService {
 
   /** The other attempt a stronger-model move names, on the side `side` records. */
   private escalations(id: string, side: "escalated_to" | "escalated_from"): string[] {
-    return this.events
-      .listFor(id)
-      .filter((event) => event.kind === "escalated" && typeof event.data?.[side] === "string")
-      .flatMap((event) => (event.ref ? [event.ref] : []));
+    return this.events.escalationRefs(id, side);
   }
 
   /**
@@ -1765,7 +1849,7 @@ export class TaskService {
 
   /** Children not yet closed - the ones the parent close rule names. */
   openChildren(id: string): TaskRecord[] {
-    return this.store.listChildren(id).filter((child) => !TaskService.isClosed(child));
+    return this.store.listLiveChildren(id);
   }
 
   /** Every descendant, shallowest first. */
@@ -5743,7 +5827,16 @@ export class TaskService {
    * transaction that throws discards what it collected.
    */
   private write<T>(fn: () => T): () => T {
-    const inner = this.db.transaction(fn);
+    const inner = this.db.transaction(() => {
+      const projection = this.projection;
+      this.projection = undefined;
+      try {
+        return this.store.writeOutsideProjection(fn);
+      } finally {
+        if (projection) for (const reads of Object.values(projection)) reads.clear();
+        this.projection = projection;
+      }
+    });
     return () => {
       if (this.depth > 0) {
         this.depth += 1;

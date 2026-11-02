@@ -686,33 +686,37 @@ export class CardService {
    * window, the notifier, Observe and the tests all read one fact. A card
    * the captain replied under keeps its place (`compareStack`).
    */
-  snapshot(): Card[] {
+  taskSnapshot(): Card[] {
     for (const id of this.changes.keys()) {
       if (!this.cards.has(id)) this.changes.delete(id);
     }
     for (const [id, lifecycleId] of this.asideUntilTurnEnd) {
       if (this.cards.get(id)?.lifecycleId !== lifecycleId) this.asideUntilTurnEnd.delete(id);
     }
+    // Task flags and minimized-card rows need the shown version and order,
+    // not each card's message graph, task title or seen observation.
+    return [...this.cards.values()].map((card) => this.onTheStage(card)).sort(compareStack);
+  }
+
+  /** The stage's full presentation, including task, message and seen facts. */
+  snapshot(): Card[] {
     const asked = new Map<string, CardAsked | undefined>();
-    return [...this.cards.values()]
-      .map((card) => {
-        const staged = this.onTheStage(card);
-        const shown = {
-          ...this.withChanges(staged),
-          ...this.updateState(staged),
-          seen: staged.lifecycleId
-            ? this.host.cardStore.lastSeenOffer(staged.id, staged.lifecycleId) !== undefined
-            : false,
-        };
-        const task = shown.taskId ? this.host.tasks.get(shown.taskId) : undefined;
-        const about = this.askedAbout(shown, asked);
-        return {
-          ...shown,
-          ...(shown.author === "firstmate" && task ? { meta: task.title } : {}),
-          ...(about ? { asked: about } : {}),
-        };
-      })
-      .sort(compareStack);
+    return this.taskSnapshot().map((staged) => {
+      const shown = {
+        ...this.withChanges(staged),
+        ...this.updateState(staged),
+        seen: staged.lifecycleId
+          ? this.host.cardStore.lastSeenOffer(staged.id, staged.lifecycleId) !== undefined
+          : false,
+      };
+      const task = shown.taskId ? this.host.tasks.get(shown.taskId) : undefined;
+      const about = this.askedAbout(shown, asked);
+      return {
+        ...shown,
+        ...(shown.author === "firstmate" && task ? { meta: task.title } : {}),
+        ...(about ? { asked: about } : {}),
+      };
+    });
   }
 
   /** Current-update sightings are independent of lifecycle-wide historical offer sightings. */

@@ -67,6 +67,7 @@ A report without it sorts exactly as before, and the receipt no longer promises 
 A wait the first mate records on started work is a `blocks` link with no must-merge-first mark (`docs/task-graph.md`), and the waiter reads as waiting on work underway, which nothing nudges until that work closes (row 3).
 When the wait is for the work's finding, its close can be days after the finding: PR #184's task waited 2,393 minutes after INF-621 reported what it was held on, because INF-621's report came while its own work still ran and woke no one.
 So a report from a task that such a link holds active work on wakes the first mate on any backend, above a card on the captain's screen and every moving witness (`IdleLadder.heldOn`, `waitedOn` on the facts).
+The sorter shares its synchronous task projection, and the held-work read selects active waiters before composing their records, leaving closed waiters' retained payloads unread.
 Every report wake from that task names the work (`waiting` on the report's facts), and its words tell the first mate what to do: when the report carries what that work waits for, such as a finding or an answer, pass it on with `steer_crewmate` and end the wait with `link_tasks remove`; a wait on the task's merge stays.
 Whether it does is the first mate's judgment; the host reads the link, never the words.
 A must-merge-first mark, a baseline wait and a planned waiter that has not started are waits on the close, so they read as before.
@@ -161,6 +162,7 @@ INF-1550 implements B and C from INF-1540's approved audit, as the captain's ans
 A work wait is a typed report declaration, `work_wait`: `owner`, the `end` fact, the current `observation`, and `cheapestWay` around it.
 Missing ownership or an end produces a stall fact rather than an accepted quiet wait.
 Two successive reports with the same owner, end and observation produce `repeated-wait`.
+The sorter reads only the current and previous normalized report entries through `TaskService.lastReportEntries`; it does not decode unrelated timeline events or older reports.
 A new observation ends that comparison; the host compares declared fields, never report prose.
 A check-back with no observable running job and no work-wait declaration produces `wait-without-owner`.
 Captain waits keep their existing card and gate semantics.

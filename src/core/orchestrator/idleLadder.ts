@@ -260,6 +260,9 @@ export type IdleLadderHost = {
 };
 
 export class IdleLadder {
+  private readonly dependencyFact = Symbol("idle dependency waits");
+  private readonly askFact = Symbol("unanswered first-mate request");
+
   /**
    * The dependency waits whose end this process already tried to steer
    * about: a steer that could not go (no conversation to resume) records
@@ -329,7 +332,7 @@ export class IdleLadder {
    */
   private reviewOpen(record: TaskRecord): boolean {
     return this.host.tasks
-      .children(record.id)
+      .openChildren(record.id)
       .some((child) => TaskService.isDeliveryChild(child) && !TaskService.isClosed(child));
   }
 
@@ -356,10 +359,13 @@ export class IdleLadder {
   private waitWitnesses(
     record: TaskRecord,
   ): Pick<Witnesses, "waitsOnUnstarted" | "waitsOnUnderway"> {
-    const unstarted = this.unstartedWaits(record).length > 0;
+    const waits = uniqueTasks(this.liveWaits(record));
+    const unstarted = waits.some(
+      (task) => this.chainOf(task, new Set([record.id])).unstarted.length > 0,
+    );
     return {
       waitsOnUnstarted: unstarted,
-      waitsOnUnderway: !unstarted && this.underwayWaits(record).length > 0,
+      waitsOnUnderway: !unstarted && waits.length > 0,
     };
   }
 
@@ -370,6 +376,12 @@ export class IdleLadder {
    * task since.
    */
   unansweredAsk(record: TaskRecord): LadderAsk | undefined {
+    return this.host.tasks.projectedFact(record, this.askFact, () =>
+      this.readUnansweredAsk(record),
+    );
+  }
+
+  private readUnansweredAsk(record: TaskRecord): LadderAsk | undefined {
     const ask = this.askOf(record);
     if (!ask) return undefined;
     return this.firstmateActedSince(record, ask.at) === undefined ? ask : undefined;
@@ -401,19 +413,7 @@ export class IdleLadder {
    * effect.
    */
   private firstmateActedSince(record: TaskRecord, since: number): number | undefined {
-    let first: number | undefined;
-    const take = (at: number | null | undefined) => {
-      if (at != null && at > since && (first === undefined || at < first)) first = at;
-    };
-    const tasks = this.host.tasks;
-    for (const event of tasks.timeline(record.id)) {
-      if (event.actor === "firstmate" && event.kind !== "decided") take(event.at);
-    }
-    for (const other of [...tasks.builtOn(record.id), ...tasks.children(record.id)]) {
-      take(other.createdAt);
-      take(other.startedAt);
-    }
-    return first;
+    return this.host.tasks.firstmateActedSince(record, since);
   }
 
   /**
@@ -424,6 +424,12 @@ export class IdleLadder {
    * own verdict moves its builder.
    */
   private dependencyWaits(record: TaskRecord): TaskWait[] {
+    return this.host.tasks.projectedFact(record, this.dependencyFact, () =>
+      this.readDependencyWaits(record),
+    );
+  }
+
+  private readDependencyWaits(record: TaskRecord): TaskWait[] {
     const tasks = this.host.tasks;
     const baseline = standingDependencyWaits(tasks, record.delivery).map(
       (wait): TaskWait => ({ ...wait, kind: "baseline" }),
@@ -504,12 +510,7 @@ export class IdleLadder {
    * are waits on its merge, and its close still ends them.
    */
   heldOn(record: TaskRecord): TaskRecord[] {
-    const tasks = this.host.tasks;
-    return tasks.linksFrom(record.id).flatMap((link) => {
-      if (link.type !== "blocks" || link.holdsMerge) return [];
-      const waiter = tasks.get(link.toId);
-      return waiter?.status === "active" ? [waiter] : [];
-    });
+    return this.host.tasks.activeWaiters(record.id);
   }
 
   /**
@@ -647,8 +648,11 @@ export class IdleLadder {
    * (`stalled 1h 20m · 2 wakes`) once the ladder has acted, while the turn
    * is nobody's - so every captain turn sees it, not only the wake.
    */
-  stalledFact(record: TaskRecord, now: number): string | undefined {
-    const stalled = this.stalledSince(record, now);
+  stalledFact(
+    record: TaskRecord,
+    now: number,
+    stalled = this.stalledSince(record, now),
+  ): string | undefined {
     if (!stalled) return undefined;
     return `stalled ${formatDurationShort(now - stalled.since)} · ${stalled.wakes} wake${stalled.wakes === 1 ? "" : "s"}`;
   }

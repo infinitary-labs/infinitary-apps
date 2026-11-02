@@ -366,6 +366,8 @@ export type FirstmateAgentOptions = {
   /** The Firstmate agent's packaged source tree, named for delegated source tasks. */
   selfSourceDir: string;
   selfSourceFacts?: () => import("../selfSource/resolve").SelfSourceFacts;
+  /** Fresh source checks awaited before a turn, never during synchronous context rendering. */
+  selfSourceFactsAsync?: () => Promise<import("../selfSource/resolve").SelfSourceFacts>;
   /**
    * A typed cut-off the seat's turn observed, recorded on its bound account
    * (`AccountVault.noteCutOff`), the same fact crew turns record.
@@ -966,8 +968,12 @@ export class FirstmateAgent {
     // Built for the session that reads it: admission may replace the
     // session and renewed instructions may start it over, and either makes
     // the next context complete.
+    const sourceFacts = this.options.selfSourceFactsAsync
+      ? await this.options.selfSourceFactsAsync()
+      : undefined;
+    if (this.disposed) return;
     const contextNow = () =>
-      this.contextForTurn(visibleCardId, hintTaskId, aboutCardId, pastCardId, trimmed);
+      this.contextForTurn(visibleCardId, hintTaskId, aboutCardId, pastCardId, trimmed, sourceFacts);
     const userBody = renderWake(captainTurn(trimmed, false));
     const userSegment: ServedSegmentInput = { kind: "user", body: userBody, origin: "captain" };
     const captainOnly = (context: string): ServedInput => ({
@@ -3473,6 +3479,9 @@ export class FirstmateAgent {
     });
   }
 
+  /** Prepared source facts for fold recovery; ordinary turns pass their own fresh reading. */
+  private contextSource: import("../selfSource/resolve").SelfSourceFacts | undefined;
+
   /**
    * The context block an input actually carries (INF-1712): complete for a
    * model context that has not read one, else only the saved facts that
@@ -3486,15 +3495,20 @@ export class FirstmateAgent {
     aboutCardId?: string,
     pastCardId?: string,
     words?: string,
+    sourceFacts = this.contextSource,
   ): string {
+    this.contextSource = sourceFacts;
     const builtAt = Date.now();
-    const parts = this.contextParts(
-      visibleCardId,
-      hintTaskId,
-      aboutCardId,
-      pastCardId,
-      words,
-      this.captainFocus,
+    const parts = this.options.tasks.readProjection(() =>
+      this.contextParts(
+        visibleCardId,
+        hintTaskId,
+        aboutCardId,
+        pastCardId,
+        words,
+        this.captainFocus,
+        sourceFacts,
+      ),
     );
     const rendered = this.contextDelivery.render(parts.saved);
     const recovery = this.foldRecovery;
@@ -3690,13 +3704,15 @@ export class FirstmateAgent {
     words?: string,
     focusedProjectId?: string,
   ): string {
-    const parts = this.contextParts(
-      visibleCardId,
-      hintTaskId,
-      aboutCardId,
-      pastCardId,
-      words,
-      focusedProjectId,
+    const parts = this.options.tasks.readProjection(() =>
+      this.contextParts(
+        visibleCardId,
+        hintTaskId,
+        aboutCardId,
+        pastCardId,
+        words,
+        focusedProjectId,
+      ),
     );
     const { payload } = new ContextDelivery().render(parts.saved);
     return contextText({ delivery: DELIVERY_COMPLETE, ...payload, ...parts.turn });
@@ -3716,6 +3732,7 @@ export class FirstmateAgent {
     pastCardId?: string,
     words?: string,
     focusedProjectId?: string,
+    sourceFacts?: import("../selfSource/resolve").SelfSourceFacts,
   ): { saved: Record<string, ContextSection>; turn: Record<string, unknown> } {
     const repos = this.options.repos.list();
     const schedules = this.options.scheduler?.list() ?? [];
@@ -3872,7 +3889,7 @@ export class FirstmateAgent {
       // The zone CARD_AUTHORING's time rule says times in (FI3-1006).
       captain_time_zone: whole(timeZoneFact(this.now())),
       self_source: whole(this.options.selfSourceDir),
-      self_source_facts: whole(this.options.selfSourceFacts?.() ?? null),
+      self_source_facts: whole(sourceFacts ?? this.options.selfSourceFacts?.() ?? null),
     };
     const turn = {
       // When this input's facts were read: the times above count from it.
@@ -4089,12 +4106,14 @@ export class FirstmateAgent {
   private rosterRows(): { id: string; value: Record<string, unknown> }[] {
     const tasks = this.options.tasks;
     const crew = new Map(
-      this.options.supervisor.crewStatus().map((entry) => [entry.taskId, entry]),
+      this.options.supervisor
+        .crewStatus(undefined, { startedOnly: true })
+        .map((entry) => [entry.taskId, entry]),
     );
     const iso = (at: number) => new Date(at).toISOString();
     return tasks
-      .listLive()
-      .filter((record) => record.status === "active")
+      .listActive()
+      .slice()
       .sort((a, b) => a.priority - b.priority || a.createdAt - b.createdAt)
       .map((record) => {
         const entry = crew.get(record.id);
@@ -4730,6 +4749,10 @@ export class FirstmateAgent {
       return;
     }
     this.clearCoalesceTimer();
+    const sourceFacts = this.options.selfSourceFactsAsync
+      ? await this.options.selfSourceFactsAsync()
+      : undefined;
+    if (this.disposed || this.running) return;
     // A quit that lands while the drain waits ends it before it reads the
     // lane again: the rows stay undelivered for the next boot.
     const session = await this.ensureSession();
@@ -4804,6 +4827,7 @@ export class FirstmateAgent {
         aboutCardId,
         undefined,
         captainWordsOf(batch).join("\n"),
+        sourceFacts,
       ),
       batch,
     );

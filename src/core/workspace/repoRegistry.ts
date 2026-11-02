@@ -121,6 +121,19 @@ function fromRow(row: Row): RepoView {
 }
 
 export class RepoRegistry {
+  private projection: Map<string, RepoView | undefined> | undefined;
+
+  /** Placement and policy facts share each project's row during a synchronous read. */
+  readProjection<T>(read: () => T): T {
+    if (this.projection) return read();
+    this.projection = new Map();
+    try {
+      return read();
+    } finally {
+      this.projection = undefined;
+    }
+  }
+
   /** One project per managed repo (task-system D5), born and archived with the row. */
   private readonly projects: ProjectStore;
   /** Who hears a project's Runs on change (`onRunsOn`). */
@@ -221,15 +234,19 @@ export class RepoRegistry {
       const where = forgeOf(row.origin, known);
       if (where.kind === "git" || where.kind === "none" || !where.host) continue;
       moved += stamp.run(where.kind, where.host, row.id).changes;
+      this.projection?.delete(row.id);
     }
     return moved;
   }
 
   get(id: string): RepoView | undefined {
+    if (this.projection?.has(id)) return this.projection.get(id);
     const row = prepared(this.db, `SELECT ${ROW_COLUMNS} FROM repos WHERE id = ?`).get(id) as
       | Row
       | undefined;
-    return row ? fromRow(row) : undefined;
+    const repo = row ? fromRow(row) : undefined;
+    this.projection?.set(id, repo);
+    return repo;
   }
 
   /** True only while this exact path remains a registered project checkout. */
@@ -347,6 +364,7 @@ export class RepoRegistry {
       delivery: "local-only",
     });
     this.db.prepare("UPDATE repos SET autonomy = 1 WHERE id = ?").run(repo.id);
+    this.projection?.delete(repo.id);
     return { ...repo, autonomy: true };
   }
 
@@ -430,6 +448,7 @@ export class RepoRegistry {
       if (nextLink === oldLink && oldTarget !== undefined) symlinkSync(oldTarget, oldLink);
       throw error;
     }
+    this.projection?.delete(id);
     if (nextLink !== oldLink && oldTarget !== undefined) unlinkSync(oldLink);
     const next = this.get(id) as RepoView;
     if (next.runsOn !== repo.runsOn)
@@ -527,6 +546,7 @@ export class RepoRegistry {
     const here = runsHereOnly(repo);
     if (here && deviceId !== null) throw new Error(`${repo.name}: ${here}`);
     this.db.prepare("UPDATE repos SET runs_on = ? WHERE id = ?").run(deviceId, id);
+    this.projection?.delete(id);
     const next = this.get(id) as RepoView;
     for (const listener of [...this.runsOnListeners]) listener(next);
     return next;
@@ -564,6 +584,7 @@ export class RepoRegistry {
     }
     const drop = this.db.transaction(() => {
       this.db.prepare("DELETE FROM repos WHERE id = ?").run(id);
+      this.projection?.delete(id);
       // The project archives, never deletes: its closed tasks stay readable.
       this.projects.archiveForRepo(id);
     });
@@ -717,6 +738,7 @@ export class RepoRegistry {
       this.projects.ensureForRepo(repo, spec.projectKey);
     });
     insert();
+    this.projection?.delete(repo.id);
     return repo;
   }
 

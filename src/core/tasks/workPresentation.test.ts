@@ -135,13 +135,16 @@ describe("the presentation pass (INF-1073)", () => {
     await f.settled();
     f.reset();
     // A crewmate's turn starts: its record is written and its posture moves.
-    f.postures.set("crew-1", { state: "active", reason: "turn" });
-    f.tasks.setActivity("crew-1", "running");
+    const changedId = "crew-1";
+    f.postures.set(changedId, { state: "active", reason: "turn" });
+    f.tasks.setActivity(changedId, "running");
     await f.settled();
     expect(f.passes()).toBe(1);
-    // The pass reads each live row once; every other read is a published
-    // row's own task_changed (the write, then the republish).
-    expect(f.reads.length).toBe(live + changedEvents(f.events).length);
+    // INF-2186: one read for the write, then each live row exactly once.
+    // Republish reuses that reading; requiring another would restore the freeze.
+    expect([...f.reads].sort()).toEqual(
+      [changedId, ...f.tasks.listLive().map((record) => record.id)].sort(),
+    );
     expect(changedEvents(f.events).length).toBe(2);
     expect(f.events.filter((e) => e.type === "crew_counts")).toEqual([
       { type: "crew_counts", working: 1, idle: 2, queued: 2 },

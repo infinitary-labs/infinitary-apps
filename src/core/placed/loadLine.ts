@@ -191,6 +191,11 @@ export class LoadLine {
     }
   }
 
+  /** Live declared command groups, including ones awaiting admission; no resource sampling. */
+  taskIds(): string[] {
+    return [...new Set(this.held.map((held) => held.taskId))];
+  }
+
   snapshot(): LoadSnapshot {
     this.check();
     const running = this.held.filter((held) => held.state === "running").length;

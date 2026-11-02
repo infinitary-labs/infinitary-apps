@@ -1,7 +1,7 @@
 import { readFileSync, renameSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { RESOURCE_MAX_AGE_MS, type ResourceObservation } from "@shared/resources";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { deferred } from "../../../tests/helpers/deferred";
 import { scratchDir } from "../../../tests/helpers/scratchDirs";
 import { LoadLine } from "./loadLine";
@@ -82,6 +82,21 @@ function setup() {
   };
   return { line, rows, claim, clock, receipt, sample };
 }
+
+// INF-2186: a posture witness needs live command ids, never a capacity sample.
+it("reads declared task ids without checking capacity or sampling resources", async () => {
+  const f = setup();
+  await f.claim(0);
+  const capacity = vi.spyOn(f.line as unknown as { capacity(): unknown }, "capacity");
+  try {
+    for (let row = 0; row < 40; row += 1) expect(f.line.taskIds()).toEqual(["same-task"]);
+    expect(capacity).not.toHaveBeenCalled();
+    f.line.snapshot();
+    expect(capacity).toHaveBeenCalled();
+  } finally {
+    capacity.mockRestore();
+  }
+});
 
 // INF-1978: an unavailable OS reading is not evidence that a waiting group ended.
 // Recorded identities above drive the same public claim boundary as native wrappers.

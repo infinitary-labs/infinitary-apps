@@ -17,7 +17,7 @@ import {
   taskDetailSchema,
 } from "@shared/tasks";
 import type { WorkPosture } from "@shared/workPosture";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { rowsRead } from "../../../tests/helpers/database";
 import { seedDelivery } from "../../../tests/helpers/taskDelivery";
 import { modelReasonOf } from "../routing/modelReason";
@@ -46,7 +46,7 @@ const DAY = 24 * 60 * 60 * 1000;
 function setup(
   options: {
     deltaTrigger?: { rows: number; bytes: number };
-    workPosture?: (record: import("../storage/taskStore").TaskRecord) => WorkPosture;
+    workPosture?: ConstructorParameters<typeof TaskProtocol>[0]["workPosture"];
     place?: (
       record: import("../storage/taskStore").TaskRecord,
     ) => import("@shared/tasks").TaskPlace;
@@ -70,6 +70,7 @@ function setup(
   tasks.projects.ensureForRepo({ id: "r1", name: "nimbus-api" });
   const activity = new ActivityStore(db, () => now);
   const cards: Card[] = [];
+  const snapshot = vi.fn(() => cards);
   const events: FmEvent[] = [];
   const pushes: { channel: CorePushChannel; payload: unknown }[] = [];
   const changes: TaskChange[] = [];
@@ -84,7 +85,7 @@ function setup(
           ? { name: "nimbus-api", delivery: "direct-pr" as const, autonomy: true }
           : undefined,
     },
-    cards: { listOpen: () => cards, snapshot: () => cards },
+    cards: { listOpen: () => cards, snapshot },
     tiers: (taskIds: readonly string[]) => servedSlots(new DecisionStore(db), taskIds),
     modelReason: (record: import("../storage/taskStore").TaskRecord) =>
       modelReasonOf(record, {
@@ -136,6 +137,7 @@ function setup(
     activity,
     protocol,
     cards,
+    snapshot,
     events,
     changes,
     boards,
@@ -149,6 +151,247 @@ function setup(
 }
 
 describe("the task protocol (task-system P3)", () => {
+  // INF-2186: unchanged board reads must not repeat blockerCleared work.
+  it("does not recheck blocker statuses on unchanged board reads, but sees a blocker finish", () => {
+    const f = setup();
+    const cleared = vi.spyOn(TaskService, "blockerCleared");
+    try {
+      const blocker = f.tasks.create({
+        id: "build",
+        title: "Build the task read projection",
+        prompt: "",
+        repoId: "r1",
+      });
+      f.tasks.create({
+        id: "verify",
+        title: "Verify the task board refresh",
+        prompt: "",
+        repoId: "r1",
+        blockedBy: [blocker.id],
+      });
+      cleared.mockClear();
+      const first = f.protocol.board().tasks.find((task) => task.id === "verify");
+      expect(first?.blockedBy).toEqual([blocker.key]);
+      const coldChecks = cleared.mock.calls.length;
+      expect(coldChecks).toBeGreaterThan(0);
+      cleared.mockClear();
+      for (let read = 0; read < 40; read += 1)
+        expect(f.protocol.board().tasks.find((task) => task.id === "verify")).toBe(first);
+      const warmChecks = cleared.mock.calls.length;
+      expect(warmChecks).toBe(0);
+      f.tasks.close(blocker.id, { status: "done", reason: "settled", actor: "host" });
+      expect(f.protocol.board().tasks.find((task) => task.id === "verify")?.blockedBy).toEqual([]);
+      const changedChecks = cleared.mock.calls.length;
+      expect(changedChecks).toBeGreaterThan(0);
+      console.info(
+        JSON.stringify({
+          intent: "INF-2186 blocker status checks",
+          coldChecks,
+          warmChecks,
+          changedChecks,
+        }),
+      );
+    } finally {
+      cleared.mockRestore();
+      f.protocol.dispose();
+      f.db.close();
+    }
+  });
+
+  // INF-2186: the row cache already owns current records; a presentation
+  // pass must not rebuild them from SQLite merely to publish live facts.
+  it("refreshes presentation from cached records including pending creates and closes", () => {
+    const f = setup({ workPosture: () => ({ state: "idle", reason: "captain" }) });
+    try {
+      f.tasks.create({ id: "old", title: "Keep Tasks responsive", prompt: "", repoId: "r1" });
+      seedDelivery(f.tasks, "old", {
+        ci: "red",
+        headSha: "93355db9d04e964513879db74d068a7789cb4c16",
+      });
+      f.protocol.board();
+      const parse = vi.spyOn(JSON, "parse");
+      let parsed: number;
+      try {
+        expect(f.protocol.refreshPresentation()).toBe(true);
+        parsed = parse.mock.calls.length;
+      } finally {
+        parse.mockRestore();
+      }
+      console.info(JSON.stringify({ intent: "INF-2186 cached presentation records", parsed }));
+      expect(parsed).toBe(0);
+      // Consume the first posture publication before measuring an unchanged pass.
+      const first = f.protocol.board();
+      expect(first.tasks[0]?.moves).toBeDefined();
+      const links = vi.spyOn(f.tasks, "linksTouching");
+      try {
+        f.protocol.refreshPresentation();
+        const next = f.protocol.board();
+        const requested = links.mock.calls.flatMap(([ids]) => ids);
+        console.info(
+          JSON.stringify({
+            intent: "INF-2186 warm board links and moves",
+            linkIdsRequested: requested.length,
+          }),
+        );
+        expect(requested).toEqual([]);
+        expect(next.tasks[0]?.moves).toBe(first.tasks[0]?.moves);
+      } finally {
+        links.mockRestore();
+      }
+      f.tasks.create({ id: "new", title: "Verify the change", prompt: "", repoId: "r1" });
+      f.tasks.close("old", { status: "done", reason: "settled", actor: "host" });
+      const seen: string[] = [];
+      f.protocol.refreshPresentation((record) => seen.push(record.id));
+      expect(seen).toEqual(["new"]);
+    } finally {
+      f.protocol.dispose();
+      f.db.close();
+    }
+  });
+
+  // INF-2186: borrowing the cached records must preserve intervening writes.
+  it("does not publish the borrowed presentation snapshot after its callback writes a task", () => {
+    const held: WorkPosture = { state: "idle", reason: "captain" };
+    const f = setup({
+      workPosture: (record) => (record.gate ? held : { state: "idle", reason: "inactive" }),
+    });
+    try {
+      f.tasks.create({ id: "work", title: "Verify the shared read", prompt: "", repoId: "r1" });
+      f.protocol.board();
+      f.protocol.refreshPresentation((record) => {
+        f.tasks.setGate(record.id, { kind: "captain", ref: "completion-choice" });
+      });
+      expect(f.events.filter((event) => event.type === "task_changed").at(-1)?.workPosture).toEqual(
+        held,
+      );
+    } finally {
+      f.protocol.dispose();
+      f.db.close();
+    }
+  });
+
+  // INF-2186: a presentation change rechecks cached rows' live facts, but
+  // witnesses must read the current cached record, not decode it afresh.
+  it("reuses cached task records and derives their posture once during a board recheck", () => {
+    let tasks: TaskService | undefined;
+    let posture: WorkPosture = { state: "idle", reason: "captain" };
+    const readPosture = vi.fn((record: import("../storage/taskStore").TaskRecord) => {
+      if (!tasks) throw new Error("Missing task reader");
+      expect(tasks.get(record.id)).toBe(record);
+      return posture;
+    });
+    const f = setup({ workPosture: readPosture });
+    tasks = f.tasks;
+    try {
+      f.tasks.create({ id: "board", title: "Keep Tasks responsive", prompt: "", repoId: "r1" });
+      seedDelivery(f.tasks, "board", {
+        ci: "red",
+        headSha: "93355db9d04e964513879db74d068a7789cb4c16",
+      });
+      f.protocol.board();
+      posture = { state: "active", reason: "job" };
+      f.tasks.invalidatePresentation();
+      readPosture.mockClear();
+      const fullRows = vi.spyOn(f.tasks, "listLiveOrClosedSince");
+      const parse = vi.spyOn(JSON, "parse");
+      let parsed: number;
+      let fullReads: number;
+      let board: TaskBoard;
+      try {
+        board = f.protocol.board();
+        f.tick(60_000);
+        expect(f.protocol.board().tasks[0]).toBe(board.tasks[0]);
+        parsed = parse.mock.calls.length;
+        fullReads = fullRows.mock.calls.length;
+      } finally {
+        parse.mockRestore();
+        fullRows.mockRestore();
+      }
+      expect(fullReads).toBe(0);
+      expect(board.tasks[0]?.workPosture).toEqual(posture);
+      expect(readPosture).toHaveBeenCalledTimes(1);
+      expect(parsed).toBe(0);
+    } finally {
+      f.protocol.dispose();
+      f.db.close();
+    }
+  });
+
+  // INF-2186: a presentation refresh's synchronous task-change listener
+  // must reuse the posture it just derived, rather than gathering witnesses again.
+  it("derives each row's posture once while publishing a presentation refresh", () => {
+    const posture = vi.fn(() => ({ state: "idle" as const, reason: "captain" as const }));
+    const f = setup({ workPosture: posture });
+    try {
+      for (const id of ["one", "two"])
+        f.tasks.create({ id, title: "Keep Tasks responsive", prompt: "", repoId: "r1" });
+      posture.mockClear();
+      expect(f.protocol.refreshPresentation()).toBe(true);
+      expect(posture).toHaveBeenCalledTimes(f.tasks.listLive().length);
+    } finally {
+      f.protocol.dispose();
+      f.db.close();
+    }
+  });
+
+  // INF-2186: minimized tasks and ready decisions share one staged-card read.
+  it("reads the staged card facts once for a board", () => {
+    const f = setup();
+    try {
+      f.tasks.create({ id: "board", title: "Keep Tasks responsive", prompt: "", repoId: "r1" });
+      f.snapshot.mockClear();
+      expect(f.protocol.board().tasks.map((task) => task.id)).toEqual(["board"]);
+      expect(f.snapshot).toHaveBeenCalledTimes(1);
+    } finally {
+      f.protocol.dispose();
+      f.db.close();
+    }
+  });
+  // INF-2186 / INF-2192: every shown row walked all board links in waitsSince.
+  it("reads each wait edge a bounded number of times when building the board", () => {
+    const measure = (waiting: number) => {
+      const f = setup();
+      try {
+        const baseline = f.tasks.create({
+          id: "baseline",
+          title: "Repair the failing checks",
+          prompt: "",
+          repoId: "r1",
+        });
+        for (let i = 0; i < waiting; i += 1) {
+          const id = `waiting-${i}`;
+          f.tasks.create({ id, title: "Wait for the check repair", prompt: "", repoId: "r1" });
+          f.tasks.link("baseline", id, "blocks", "firstmate");
+        }
+        const links = f.tasks.linksTouching(f.tasks.listLive().map((row) => row.id));
+        let edgeReads = 0;
+        const measured = links.map((link) => ({
+          ...link,
+          get type() {
+            edgeReads += 1;
+            return link.type;
+          },
+        }));
+        vi.spyOn(f.tasks, "linksTouching").mockReturnValue(measured);
+        const board = f.protocol.board();
+        for (const row of board.tasks.filter((row) => row.id !== "baseline")) {
+          expect(row.blockedBy).toEqual([baseline.key]);
+          expect(row.blockedSince).toEqual({ [baseline.key]: f.clock() });
+        }
+        return { edges: links.length, edgeReads, rows: board.tasks.length };
+      } finally {
+        f.protocol.dispose();
+        f.db.close();
+        vi.restoreAllMocks();
+      }
+    };
+    const small = measure(20);
+    const large = measure(40);
+    // Doubling the rows and their edges doubles the work, never quadruples it.
+    // This allows the row cache's linear edge index, not an all-edge walk per row.
+    console.info(JSON.stringify({ intent: "INF-2186 board wait edges", small, large }));
+    expect(large.edgeReads).toBe(small.edgeReads * (large.edges / small.edges));
+  });
   // INF-1348: separating the minute pass into turns must still publish one
   // final board, not let the board timer fire between registrations.
   it("holds an already queued board across sweep turns and sends the final saved state once", async () => {

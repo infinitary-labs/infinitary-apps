@@ -35,6 +35,7 @@ import {
   splitDialAddress,
 } from "@shared/devices";
 import { remoteLoginAddressSchema } from "@shared/remoteLogin";
+import { devicePlace } from "@shared/signIns";
 import { z } from "zod";
 import {
   isThisMachine,
@@ -347,6 +348,11 @@ export class DevicePairing implements PairedDevices {
   private makingOwnKey: Promise<OwnKey> | null = null;
   /** Where each device last reached this Mac. */
   private reachedAt = new Map<string, string>();
+  /** Network classification is a pure property of the literal address, not a per-row probe. */
+  private reachedNetworks = new WeakMap<
+    Entry,
+    { address: string | undefined; network: ReturnType<typeof reachedNetwork> }
+  >();
   /** This computer's name on the local network, such as `kuns-macbook-pro.local`. */
   private networkName: string | null = null;
   /** What each device said it is in its hello. */
@@ -381,9 +387,42 @@ export class DevicePairing implements PairedDevices {
     this.loadOwnKeyPlaced();
   }
 
+  private projection:
+    | { devices?: DeviceView[]; places: Map<string, ReturnType<typeof devicePlace>> }
+    | undefined;
+
+  /** Each device's place is derived once from this refresh's device snapshot. */
+  placeOf(deviceId: string): ReturnType<typeof devicePlace> {
+    const known = this.projection?.places.get(deviceId);
+    if (known) return known;
+    const place = devicePlace(this.list(), deviceId);
+    this.projection?.places.set(deviceId, place);
+    return place;
+  }
+
+  private invalidateProjection(): void {
+    if (!this.projection) return;
+    delete this.projection.devices;
+    this.projection.places.clear();
+  }
+
+  /** Placement and move facts share the same device list during a synchronous read. */
+  readProjection<T>(read: () => T): T {
+    if (this.projection) return read();
+    this.projection = { places: new Map() };
+    try {
+      return read();
+    } finally {
+      this.projection = undefined;
+    }
+  }
+
   /** The devices on the list, oldest first, never with their secrets. */
   list(): DeviceView[] {
-    return this.entries.map((entry) => this.viewOf(entry));
+    if (this.projection?.devices) return this.projection.devices;
+    const devices = this.entries.map((entry) => this.viewOf(entry));
+    if (this.projection) this.projection.devices = devices;
+    return devices;
   }
 
   /**
@@ -1323,8 +1362,13 @@ export class DevicePairing implements PairedDevices {
     const remoteLogin = this.sshRecords.get(entry.id)?.address;
     const said = this.systems.get(entry.id);
     const reached = this.reachedAt.get(entry.id);
-    const where = reached ? splitDialAddress(reached) : null;
-    const reachedOn = where ? reachedNetwork(where.host) : null;
+    let classified = this.reachedNetworks.get(entry);
+    if (!classified || classified.address !== reached) {
+      const where = reached ? splitDialAddress(reached) : null;
+      classified = { address: reached, network: where ? reachedNetwork(where.host) : null };
+      this.reachedNetworks.set(entry, classified);
+    }
+    const reachedOn = classified.network;
     return {
       ...view,
       ...(remoteLogin ? { remoteLogin } : {}),
@@ -1350,6 +1394,7 @@ export class DevicePairing implements PairedDevices {
   private noteReached(deviceId: string, where: string | undefined): void {
     if (!where || this.reachedAt.get(deviceId) === where) return;
     this.reachedAt.set(deviceId, where);
+    this.invalidateProjection();
     try {
       this.saveReached();
     } catch (error) {
@@ -1398,6 +1443,7 @@ export class DevicePairing implements PairedDevices {
   }
 
   private changed(): void {
+    this.invalidateProjection();
     for (const listener of this.listeners) {
       try {
         listener();

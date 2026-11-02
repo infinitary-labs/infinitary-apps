@@ -8,7 +8,7 @@ import type { HostKeychain } from "@core/host";
 import { settingFrom } from "@shared/envSettings";
 import { app } from "electron";
 import { hostPlatform } from "../core/platform";
-import { readSelfSource } from "../core/selfSource/resolve";
+import { readSelfSourceAsync } from "../core/selfSource/resolve";
 import { registerFrameScheme } from "./frames/frameScheme";
 import { createAxiProcessSpawner } from "./host/axiProcess";
 import { memoryPressureStandIn, readResourceMemory } from "./host/resourceMemory";
@@ -161,7 +161,7 @@ export function runWorkMode(args: readonly string[], mainDir: string): void {
   void runCli(args, {
     version: app.getVersion(),
     source: () =>
-      readSelfSource({
+      readSelfSourceAsync({
         isPackaged: app.isPackaged,
         resourcesPath: process.resourcesPath,
         appPath: app.getAppPath(),

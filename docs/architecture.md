@@ -218,6 +218,8 @@ Non-negotiable baseline (enforced by a startup assertion in dev builds):
   The tree is data: nothing executes from it.
   The first mate's context distinguishes its own machine-local path from its source facts (`self_source_facts`); the seat has no write tools and no read tools.
   `selfSource/resolve.ts` reads app-relative source facts anew when a conversation opens, checks both installed maps against the running app version and verifies indexed files are readable within the source root.
+  Session opening and normal first-mate turn preparation await its asynchronous filesystem checks instead of walking every indexed file synchronously on the main thread.
+  Each new read still detects missing, moved or escaping files; no successful validation is kept across conversations or turns.
   Development checkouts are explicitly mutable, with the running version but no frozen source commit claim.
   Every local crewmate receives these facts before its contract is stamped, identically for Pi and Claude.
 - **Crewmate isolation**: production crewmates run Pi's stock tools including `bash`, `edit`, and `write`, with `cwd` set to the task git worktree (`PI_CODING_BUILTINS` in `src/core/pi/session.ts`).

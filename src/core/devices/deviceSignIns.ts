@@ -73,6 +73,19 @@ export type DeviceSignInsOptions = {
 };
 
 export class DeviceSignIns {
+  private projection: Map<ComputerSignIns | null, ComputerSignIns | null> | undefined;
+
+  /** A read of many task rows narrows each computer's answer once. */
+  readProjection<T>(read: () => T): T {
+    if (this.projection) return read();
+    this.projection = new Map();
+    try {
+      return read();
+    } finally {
+      this.projection = undefined;
+    }
+  }
+
   private readonly said = new Map<string, Said>();
   private readonly running = new Map<string, Running>();
   private readonly reading = new Map<string, Promise<void>>();
@@ -321,8 +334,11 @@ export class DeviceSignIns {
 
   /** What a computer said, its Codex and Grok lists narrowed behind this Mac's rail. */
   private narrowed(signIns: ComputerSignIns | null): ComputerSignIns | null {
+    if (this.projection?.has(signIns)) return this.projection.get(signIns) ?? null;
     const protectedIds = this.options.protectedIds;
-    return protectedIds ? narrowServedThere(signIns, protectedIds) : signIns;
+    const narrowed = protectedIds ? narrowServedThere(signIns, protectedIds) : signIns;
+    this.projection?.set(signIns, narrowed);
+    return narrowed;
   }
 
   private contact(contact: WorkDeviceContact): void {
@@ -406,6 +422,7 @@ export class DeviceSignIns {
   }
 
   private push(): void {
+    this.projection?.clear();
     this.options.emit("inf:devices:sign-ins", this.view());
   }
 

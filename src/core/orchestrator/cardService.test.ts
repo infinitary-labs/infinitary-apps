@@ -134,6 +134,41 @@ describe("CardService", () => {
     cards.dispose();
   });
 
+  // INF-2186: graphFor needs staged actions, not a full message-graph rebuild per card.
+  it("serves task flags from the shown card versions without reading their task or message graphs", () => {
+    const { tasks, make } = setup();
+    const cards = make();
+    seedTask(tasks, { id: "board", title: "Keep Tasks responsive", status: "running" });
+    cards.emitCrewmateCard("board", { ...decision, id: "board-choice" }, "m");
+    const get = vi.spyOn(tasks, "get");
+    const about = vi.spyOn(tasks, "askAbout");
+    try {
+      const full = cards.snapshot();
+      expect(get).toHaveBeenCalled();
+      expect(about).toHaveBeenCalled();
+      get.mockClear();
+      about.mockClear();
+      const lean = cards.taskSnapshot();
+      const flags = (rows: Card[]) =>
+        rows.map(({ id, taskId, actions, awaiting, minimized, priority, createdAt }) => ({
+          id,
+          taskId,
+          actions,
+          awaiting,
+          minimized,
+          priority,
+          createdAt,
+        }));
+      expect(flags(lean)).toEqual(flags(full));
+      expect(get).not.toHaveBeenCalled();
+      expect(about).not.toHaveBeenCalled();
+    } finally {
+      get.mockRestore();
+      about.mockRestore();
+      cards.dispose();
+    }
+  });
+
   // INF-1404: the stack must restore unread cards after a reload/restart.
   it("derives seen snapshots from the lifecycle observation, not from arrival or revision", () => {
     const { make } = setup();

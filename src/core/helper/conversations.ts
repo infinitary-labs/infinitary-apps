@@ -156,7 +156,7 @@ export type ComputerBrowserParts = Pick<
 >;
 
 export async function startConversations(options: {
-  source?: () => import("../selfSource/resolve").SelfSourceFacts;
+  source?: import("../selfSource/resolve").SelfSourceReader;
   dataDir: string;
   load?: import("../placed/loadLine").LoadLine;
   ask: (channel: WorkInvokeChannel, args: unknown, signal?: AbortSignal) => Promise<unknown>;

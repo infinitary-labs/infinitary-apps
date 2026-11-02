@@ -330,7 +330,7 @@ describe("how a captain's message ends", () => {
     f.message("m3", "fix the meter", "meter");
     f.message("m4", "the meter is late again", "meter", "tool:steer_crewmate");
     f.message("m5", "check the meter on the phone too", "meter", "tool:steer_crewmate");
-    const lookups = vi.spyOn(TaskEventStore.prototype, "taskIdsWithRef");
+    const lookups = vi.spyOn(TaskEventStore.prototype, "askAttributions");
     try {
       const chains = f.ending.openChains();
       const read = chains.map((chain) => ({
@@ -342,7 +342,7 @@ describe("how a captain's message ends", () => {
         { ids: ["m1", "m2"], state: { kind: "working" }, own: ["panels"] },
         { ids: ["m3", "m4", "m5"], state: { kind: "working" }, own: ["meter"] },
       ]);
-      expect(lookups.mock.calls.map(([, askId]) => askId).sort()).toEqual([
+      expect(lookups.mock.calls.flatMap(([askIds]) => askIds).sort()).toEqual([
         "m1",
         "m2",
         "m3",

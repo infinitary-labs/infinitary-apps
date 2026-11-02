@@ -861,7 +861,7 @@ function fromRow(row: Row): TaskRecord {
  * temporary file, tens of megabytes per read of a long record, on the main
  * thread (INF-940).
  */
-function oldestFirst(records: TaskRecord[]): TaskRecord[] {
+export function oldestFirst(records: TaskRecord[]): TaskRecord[] {
   return records.sort((a, b) => a.createdAt - b.createdAt || a.seq - b.seq);
 }
 
@@ -931,6 +931,37 @@ const CHANGE_PATCH_FIELDS: readonly (keyof TaskPatch)[] = [
 
 export class TaskStore {
   private taskColumns: Set<string> | undefined;
+  private projection:
+    | { records: Map<string, TaskRecord | undefined>; lists: Map<string, TaskRecord[]> }
+    | undefined;
+
+  /** A synchronous derived view composes each task once, including nested readers. */
+  readProjection<T>(read: () => T, known: readonly TaskRecord[] = []): T {
+    const outer = this.projection;
+    this.projection ??= { records: new Map(), lists: new Map() };
+    try {
+      // The board's row-cache owner already has these current records.
+      // Prefer a row this projection read itself when one is present.
+      for (const record of known)
+        if (!this.projection.records.has(record.id)) this.projection.records.set(record.id, record);
+      return read();
+    } finally {
+      if (!outer) this.projection = undefined;
+    }
+  }
+
+  /** Writes see their own current rows, and invalidate any surrounding projection even on rollback. */
+  writeOutsideProjection<T>(write: () => T): T {
+    const projection = this.projection;
+    this.projection = undefined;
+    try {
+      return write();
+    } finally {
+      projection?.records.clear();
+      projection?.lists.clear();
+      this.projection = projection;
+    }
+  }
   /** Read here so a record's shape carries them; written only by TaskService. */
   readonly references: TaskReferenceStore;
   /** A task's running work (INF-1296 piece 3); a record reads it in its own fields. */
@@ -967,8 +998,10 @@ export class TaskStore {
   }
 
   private record(row: Row): TaskRecord {
+    const known = this.projection?.records.get(row.id);
+    if (known) return known;
     const record = fromRow(row);
-    return composed(
+    const result = composed(
       record,
       record.shape ? this.references.list(record.id) : undefined,
       record.shape ? this.policies.get(record.id) : undefined,
@@ -980,10 +1013,12 @@ export class TaskStore {
           }
         : undefined,
     );
+    this.projection?.records.set(row.id, result);
+    return result;
   }
 
   private read(rows: Row[]): TaskRecord[] {
-    const records = rows.map(fromRow);
+    const records = rows.filter((row) => !this.projection?.records.has(row.id)).map(fromRow);
     const shaped = records.filter((record) => record.shape).map((record) => record.id);
     const references = this.references.listFor(shaped);
     const policies = this.policies.listFor(shaped);
@@ -991,7 +1026,7 @@ export class TaskStore {
     const execution = this.execution.listFor(executing ? records.map((record) => record.id) : []);
     const delivering = this.delivery.exists();
     const delivery = this.delivery.listFor(delivering ? records.map((record) => record.id) : []);
-    return records.map((record) =>
+    const composedRecords = records.map((record) =>
       composed(
         record,
         references.get(record.id),
@@ -1005,6 +1040,12 @@ export class TaskStore {
           : undefined,
       ),
     );
+    if (!this.projection) return composedRecords;
+    for (const record of composedRecords) this.projection.records.set(record.id, record);
+    return rows.flatMap((row) => {
+      const record = this.projection?.records.get(row.id);
+      return record ? [record] : [];
+    });
   }
 
   /**
@@ -1339,11 +1380,19 @@ export class TaskStore {
     );
   }
 
+  /** Existence does not compose specifications, delivery or execution records. */
+  has(id: string): boolean {
+    return prepared(this.db, "SELECT 1 FROM tasks WHERE id = ?").get(id) !== undefined;
+  }
+
   get(id: string): TaskRecord | undefined {
+    if (this.projection?.records.has(id)) return this.projection.records.get(id);
     const row = prepared(this.db, `SELECT * FROM ${this.readTable()} WHERE id = ?`).get(id) as
       | Row
       | undefined;
-    return row ? this.record(row) : undefined;
+    const record = row ? this.record(row) : undefined;
+    this.projection?.records.set(id, record);
+    return record;
   }
 
   byKey(key: string): TaskRecord | undefined {
@@ -1361,12 +1410,17 @@ export class TaskStore {
 
   listByStatus(...statuses: TaskStatus[]): TaskRecord[] {
     if (statuses.length === 0) return [];
+    const key = JSON.stringify(statuses);
+    const known = this.projection?.lists.get(key);
+    if (known) return known;
     const marks = statuses.map(() => "?").join(", ");
     const rows = prepared(
       this.db,
       `SELECT * FROM ${this.readTable()} WHERE status IN (${marks})`,
     ).all(...statuses) as Row[];
-    return oldestFirst(this.read(rows));
+    const records = oldestFirst(this.read(rows));
+    this.projection?.lists.set(key, records);
+    return records;
   }
 
   /**
@@ -1471,6 +1525,16 @@ export class TaskStore {
     return oldestFirst(this.read(rows));
   }
 
+  /** Only active rows among these ids; graph readers keep their own edge order. */
+  getActiveMany(ids: readonly string[]): TaskRecord[] {
+    if (ids.length === 0) return [];
+    const rows = prepared(
+      this.db,
+      `SELECT * FROM ${this.readTable()} WHERE id IN (SELECT value FROM json_each(?)) AND status = 'active'`,
+    ).all(JSON.stringify(ids)) as Row[];
+    return this.read(rows);
+  }
+
   /** How many children each of these parents has, and how many of them closed. */
   childCounts(parentIds: readonly string[]): Map<string, { total: number; closed: number }> {
     const counts = new Map<string, { total: number; closed: number }>();
@@ -1486,12 +1550,44 @@ export class TaskStore {
     return counts;
   }
 
+  /** Earliest child creation or start after a request, without composing child records. */
+  firstChildActivityAfter(parentId: string, since: number): number | undefined {
+    const row = prepared(
+      this.db,
+      `SELECT MIN(at) AS at FROM (
+        SELECT created_at AS at FROM ${this.readTable()} WHERE parent_id = ? AND created_at > ?
+        UNION ALL
+        SELECT started_at AS at FROM ${this.readTable()} WHERE parent_id = ? AND started_at > ?
+      )`,
+    ).get(parentId, since, parentId, since) as { at: number | null };
+    return row.at ?? undefined;
+  }
+
+  /** Live children for review witnesses; closed children's payloads are not read. */
+  listLiveChildren(parentId: string): TaskRecord[] {
+    const key = `live-children:${parentId}`;
+    const known = this.projection?.lists.get(key);
+    if (known) return known;
+    const rows = prepared(
+      this.db,
+      `SELECT * FROM ${this.readTable()} WHERE parent_id = ? AND status IN ('open', 'active')`,
+    ).all(parentId) as Row[];
+    const records = oldestFirst(this.read(rows));
+    this.projection?.lists.set(key, records);
+    return records;
+  }
+
   /** A parent's direct children, oldest first. */
   listChildren(parentId: string): TaskRecord[] {
+    const key = `children:${parentId}`;
+    const known = this.projection?.lists.get(key);
+    if (known) return known;
     const rows = prepared(this.db, `SELECT * FROM ${this.readTable()} WHERE parent_id = ?`).all(
       parentId,
     ) as Row[];
-    return oldestFirst(this.read(rows));
+    const records = oldestFirst(this.read(rows));
+    this.projection?.lists.set(key, records);
+    return records;
   }
 
   /**

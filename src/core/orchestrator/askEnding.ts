@@ -126,9 +126,9 @@ export class AskEnding {
 
   /** The chains that have not ended, oldest first: one per root. */
   openChains(): AskChain[] {
-    return this.host.tasks
-      .openAskChains()
-      .map(({ root, members }) => this.withCoverage(root, members));
+    return this.host.tasks.readProjection(() =>
+      this.host.tasks.openAskChains().map(({ root, members }) => this.withCoverage(root, members)),
+    );
   }
 
   /** The chains whose work includes a task, newest first. */

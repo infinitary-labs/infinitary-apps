@@ -6,6 +6,7 @@ import { ACTIONS, actionRefusal } from "@shared/actions";
 import type { AttachmentRef } from "@shared/attachments";
 import type { CutOff } from "@shared/authFailure";
 import { type Card, onStage, replyWithSettings } from "@shared/cards";
+import * as checkReadings from "@shared/checkSnapshot";
 import { HERE } from "@shared/deviceNames";
 import { AUTOMATIC_EMOTE_WORDS } from "@shared/emotes";
 import { type FmEvent, type FmUsage, fmEventSchema } from "@shared/events";
@@ -79,7 +80,7 @@ import type { ModelRuntime } from "../pi/types";
 import type { CrewMachines } from "../placed/placedSessions";
 import { ShellPreferencesService } from "../preferences/shellPreferences";
 import { localTimeZoneName, timeZoneFact } from "../prompts/timeZone";
-import { readSelfSource } from "../selfSource/resolve";
+import { readSelfSource, readSelfSourceAsync } from "../selfSource/resolve";
 import type {
   ModelSession,
   SessionBackend,
@@ -119,6 +120,7 @@ import { idleStallWays } from "./holds";
 import { IN_TURN } from "./openWork";
 import { Scheduler } from "./scheduler";
 import { ALLOWANCE_CHECKING_WORDS, keptMessageWords } from "./seat";
+import * as settleWords from "./settleService";
 import {
   ANSWER_MISSING_OPENING,
   captainTurn,
@@ -377,8 +379,11 @@ function setup(
     computerVersions?: ConstructorParameters<typeof FirstmateAgent>[0]["computerVersions"];
     scheduler?: ConstructorParameters<typeof FirstmateAgent>[0]["scheduler"];
     selfSourceFacts?: ConstructorParameters<typeof FirstmateAgent>[0]["selfSourceFacts"];
+    selfSourceFactsAsync?: ConstructorParameters<typeof FirstmateAgent>[0]["selfSourceFactsAsync"];
+    crewSource?: ConstructorParameters<typeof CrewSupervisor>[0]["source"];
     failCreate?: string;
     onCaptainTurnAccepted?: () => void;
+    onTurnSettled?: ConstructorParameters<typeof FirstmateAgent>[0]["onTurnSettled"];
     availableModels?: () => { provider: string; id: string }[];
     quotaModels?: () => ModelsCatalogView | undefined;
     slotsOf?: (ref: { provider: string; id: string }) => Slot[];
@@ -442,6 +447,7 @@ function setup(
   const crew = fakeSessionFactory();
   const supervisor = new CrewSupervisor({
     sessions: { pi: crew },
+    ...(options.crewSource ? { source: options.crewSource } : {}),
     bind: async (accountId) => fakeBinding(accountId),
     workspace: {
       createTaskWorktree: vi.fn(async (taskId: string, repoDir?: string) => ({
@@ -494,7 +500,10 @@ function setup(
       ...(options.computerVersions ? { computerVersions: options.computerVersions } : {}),
       inbox: new InboxStore(db),
       settings,
-      onTurnSettled: (outcome) => turns.push(outcome),
+      onTurnSettled: (outcome) => {
+        turns.push(outcome);
+        options.onTurnSettled?.(outcome);
+      },
       onCaptainTurnAccepted: options.onCaptainTurnAccepted,
       personalize: {
         preferences,
@@ -525,6 +534,9 @@ function setup(
       broadcastEvent: (event) => events.push(event),
       selfSourceDir,
       ...(options.selfSourceFacts ? { selfSourceFacts: options.selfSourceFacts } : {}),
+      ...(options.selfSourceFactsAsync
+        ? { selfSourceFactsAsync: options.selfSourceFactsAsync }
+        : {}),
       recordUsage: (input) => usages.push(input),
       ...(options.noteCutOff ? { noteCutOff: options.noteCutOff } : {}),
       coalesceMs: options.coalesceMs ?? 0,
@@ -895,8 +907,12 @@ describe("FirstmateAgent", () => {
     // INF-1977 A: the home context distinguishes identity from its local path,
     // and reads fresh facts rather than treating an earlier build as current.
     const installed = sourceInstall(scratchDir("firstmate-source-"));
-    const selfSourceFacts = () => readSelfSource(installed.location);
-    const { agent, session, events, repos, usages, selfSourceDir } = setup({ selfSourceFacts });
+    // INF-2186: turn context awaits fresh asynchronous filesystem validation.
+    const selfSourceFacts = vi.fn(() => readSelfSource(installed.location));
+    const { agent, session, events, repos, usages, selfSourceDir } = setup({
+      selfSourceFacts,
+      selfSourceFactsAsync: () => readSelfSourceAsync(installed.location),
+    });
     await repos.setup({ kind: "adopt", path: process.cwd() });
     await agent.converse("how are we doing on quota?");
     expect(session.prompts).toHaveLength(1);
@@ -906,6 +922,7 @@ describe("FirstmateAgent", () => {
     expect(context.repos[0]).toMatchObject({ repo_id: expect.any(String) });
     expect(context.quota).toBe("codex 62% weekly on_pace");
     expect(context.self_source).toBe(selfSourceDir);
+    expect(selfSourceFacts).not.toHaveBeenCalled();
     expect(context.self_source_facts).toEqual(selfSourceFacts());
     installed.location.version = "a different running version";
     expect(decodeContext(agent.buildContextBlock()).self_source_facts).toMatchObject({
@@ -921,6 +938,228 @@ describe("FirstmateAgent", () => {
     expect(events.find((event) => event.type === "firstmate_note")).toBeUndefined();
     expect(events.at(-1)).toEqual({ type: "firstmate_state", busy: false });
     expect(usages).toHaveLength(1);
+    await agent.converse("read the source facts again");
+    expect(decodeContext(session.prompts[1] as string).self_source_facts).toMatchObject({
+      availability: "unavailable",
+      commit: null,
+    });
+    session.emitTurnEnd("The installed source does not match.");
+    session.resolveNextPrompt();
+    await tick();
+  });
+
+  // INF-2186, captain's 832 ms crew-status check-summary sample.
+  it("summarises a crew check snapshot once per projection and refreshes it after a new reading", async () => {
+    const f = setup({
+      seedTasks: [{ id: "checked", title: "Verify Tasks responsiveness", status: "idle" }],
+    });
+    const headSha = "93355db9d04e964513879db74d068a7789cb4c16";
+    const checks = {
+      headSha,
+      complete: true,
+      absenceDeclared: false,
+      items: [{ name: "unit-tests", state: "failure" as const }],
+    };
+    seedDelivery(f.tasks, "checked", { headSha, ci: "red", ciAt: Date.now(), checks });
+    const summary = vi.spyOn(checkReadings, "currentCheckSummary");
+    try {
+      f.tasks.readProjection(() => {
+        for (let reader = 0; reader < 20; reader += 1)
+          expect(f.supervisor.crewStatus("checked")[0]?.ci?.overall).toBe("red");
+        console.info(
+          JSON.stringify({
+            intent: "INF-2186 crew check summaries",
+            summaries: summary.mock.calls.length,
+          }),
+        );
+        expect(summary).toHaveBeenCalledTimes(1);
+        f.tasks.recordChangeEvidence("checked", {
+          ci: "green",
+          checks: { ...checks, items: [{ name: "unit-tests", state: "success" }] },
+        });
+        expect(f.supervisor.crewStatus("checked")[0]?.ci?.overall).toBe("green");
+        expect(summary).toHaveBeenCalledTimes(2);
+      });
+      expect(f.supervisor.crewStatus("checked")[0]?.ci?.overall).toBe("green");
+      expect(summary).toHaveBeenCalledTimes(3);
+    } finally {
+      summary.mockRestore();
+      f.agent.dispose();
+      await f.supervisor.disposeAll();
+      f.db.close();
+    }
+  });
+
+  // INF-2186, captain's 952 ms moveRefusal/describeStatus board sample.
+  it("derives bulk move eligibility without formatting a refusal for each row", async () => {
+    const f = setup({
+      seedTasks: Array.from({ length: 40 }, (_, index) => ({
+        id: `queued-${index}`,
+        title: `Planned work ${index}`,
+        status: "queued" as const,
+      })),
+    });
+    const words = vi.spyOn(settleWords, "describeStatus");
+    try {
+      f.tasks.readProjection(() => {
+        for (const record of f.tasks.listLive()) {
+          expect(f.supervisor.computerMoveFacts(record)).toEqual({});
+          expect(f.supervisor.computerMoveFacts(record)).toEqual({});
+        }
+      });
+      console.info(
+        JSON.stringify({
+          intent: "INF-2186 bulk move facts",
+          formattedRefusals: words.mock.calls.length,
+        }),
+      );
+      expect(words).not.toHaveBeenCalled();
+      const refused = await f.supervisor.requestComputerMove("queued-0", "Studio Mac", "captain");
+      expect(refused.ok).toBe(false);
+      expect(refused.text.length).toBeGreaterThan(0);
+      expect(words).toHaveBeenCalledTimes(1);
+    } finally {
+      words.mockRestore();
+      f.agent.dispose();
+      await f.supervisor.disposeAll();
+      f.db.close();
+    }
+  });
+
+  // INF-2186, captain's 715 ms taskPlace/taskComputer sample: backlog counts
+  // do not need a queued task's place; only rostered work does.
+  it("computes each rostered task's place once without computing the backlog's places", async () => {
+    const name = "Studio Mac";
+    const machines = {
+      computers: () => ["studio"],
+      nameOf: () => name,
+      placeOf: () => ({ label: name, where: `on ${name}`, who: name }),
+      ready: () => true,
+      accountOf: () => undefined,
+      signInWait: () => undefined,
+      factories: () => undefined,
+      folders: () => undefined,
+    } as unknown as CrewMachines;
+    const f = setup({
+      machines,
+      seedTasks: [
+        { id: "started", title: "Verify Tasks refreshes", status: "idle", deviceId: "studio" },
+        ...Array.from({ length: 40 }, (_, index) => ({
+          id: `queued-${index}`,
+          title: `Prepare follow-up ${index}`,
+          status: "queued" as const,
+          deviceId: "studio",
+        })),
+      ],
+    });
+    const place = vi.spyOn(f.supervisor, "taskPlace");
+    try {
+      const context = decodeContext(f.agent.buildContextBlock());
+      expect(context.crew).toMatchObject([{ task_id: "started", runs_on: name }]);
+      const placed = place.mock.calls.map(([record]) => record.id);
+      console.info(JSON.stringify({ intent: "INF-2186 roster places", placed }));
+      expect(placed).toEqual(["started"]);
+    } finally {
+      place.mockRestore();
+      f.agent.dispose();
+      await f.supervisor.disposeAll();
+      f.db.close();
+    }
+  });
+
+  // INF-2186: the local crew's new async source boundary must respect shutdown too.
+  it("does not open a local crewmate after shutdown during source validation", async () => {
+    const installed = sourceInstall(scratchDir("crew-stop-source-"));
+    const facts = readSelfSource(installed.location);
+    let release = (_facts: typeof facts) => {};
+    const pending = new Promise<typeof facts>((resolve) => {
+      release = resolve;
+    });
+    let reached = () => {};
+    const reading = new Promise<void>((resolve) => {
+      reached = resolve;
+    });
+    const f = setup({
+      crewSource: () => {
+        reached();
+        return pending;
+      },
+    });
+    const commissioning = f.supervisor.commission({
+      title: "Plan the Tasks refresh check",
+      intent: {
+        goal: "Plan how to verify Tasks refreshes",
+        userWords: "Plan how to verify Tasks refreshes",
+      },
+      shape: { kind: "plan" },
+    });
+    const settled = commissioning.then(
+      () => undefined,
+      () => undefined,
+    );
+    try {
+      await Promise.race([
+        reading,
+        commissioning.then(() => {
+          throw new Error("The task did not request its source facts");
+        }),
+      ]);
+      const stopping = f.supervisor.disposeAll();
+      release(facts);
+      await Promise.all([settled, stopping]);
+      console.info(
+        JSON.stringify({
+          intent: "INF-2186 local source shutdown",
+          openedSessions: f.crewSpecs.length,
+        }),
+      );
+      expect(f.crewSpecs).toHaveLength(0);
+    } finally {
+      release(facts);
+      await settled;
+      f.agent.dispose();
+      await f.supervisor.disposeAll();
+      f.db.close();
+    }
+  });
+
+  // INF-2186: an asynchronous source read must not reattach a disposed first mate.
+  it("does not reopen the first mate after shutdown during source validation", async () => {
+    const installed = sourceInstall(scratchDir("firstmate-stop-source-"));
+    const facts = readSelfSource(installed.location);
+    let release = (_facts: typeof facts) => {};
+    const pending = new Promise<typeof facts>((resolve) => {
+      release = resolve;
+    });
+    let reached = () => {};
+    const reading = new Promise<void>((resolve) => {
+      reached = resolve;
+    });
+    const f = setup({
+      selfSourceFactsAsync: () => {
+        reached();
+        return pending;
+      },
+    });
+    const inbox = new InboxStore(f.db);
+    inbox.enqueueWake(FIRSTMATE_RECIPIENT, "The task reported its checks.", "crewmate-report");
+    const drain = f.agent as unknown as { drainInbox(): Promise<void> };
+    const draining = drain.drainInbox();
+    try {
+      await reading;
+      f.agent.dispose();
+      release(facts);
+      await draining;
+      expect(f.specs).toHaveLength(0);
+      expect(f.session.prompts).toHaveLength(0);
+      expect(inbox.pending(FIRSTMATE_RECIPIENT)).toHaveLength(1);
+    } finally {
+      release(facts);
+      await draining;
+      f.agent.dispose();
+      await f.supervisor.disposeAll();
+      f.db.close();
+    }
   });
 
   it("records model-powered tool usage without settling the captain's turn", async () => {
@@ -4820,12 +5059,18 @@ function inputText(message: SDKUserMessage | undefined): string {
 
 describe("the Claude seat under the agent (W1 S6)", () => {
   it("answers a captain turn, recording the client's real resumable id", async () => {
+    // W1 S6: acceptance is not completion; wait for the owner's settled witness.
+    let settled!: () => void;
+    const turnSettled = new Promise<void>((resolve) => {
+      settled = resolve;
+    });
     const clientReady = deferred<void>();
     const seat = claudeSeat(answersEveryPrompt, clientReady.promise);
     const { agent, settings, usages, events, turns } = setup({
       flagship: claudeFlagship(),
       availableModels: () => [CLAUDE_SEAT_MODEL],
       claudeSeat: seat.factory,
+      onTurnSettled: settled,
     });
     await agent.converse("hello");
     // INF-2287: acceptance and a clock tick can both precede the client's
@@ -4834,7 +5079,8 @@ describe("the Claude seat under the agent (W1 S6)", () => {
     expect(seat.scripted.attachments).toHaveLength(0);
     expect(turns).toEqual([]);
     clientReady.resolve();
-    await vi.waitFor(() => expect(turns).toEqual([{ trigger: "captain", failed: false }]));
+    await turnSettled;
+    expect(turns).toEqual([{ trigger: "captain", failed: false }]);
     expect(inputText(seat.scripted.harness().inputs[0])).toContain("hello");
     // The id the agent will resume is the one the client runs under.
     expect(settings.getFirstmateClaudeSession()).toBe(seat.scripted.harness().options.sessionId);
@@ -4857,14 +5103,24 @@ describe("the Claude seat under the agent (W1 S6)", () => {
   });
 
   it("drains a typed wake into a turn on the Claude seat, rendered once", async () => {
+    // W1 S6: both turns must settle before their asynchronous client inputs are read.
+    const settlements: (() => void)[] = [];
+    const firstTurn = new Promise<void>((resolve) => {
+      settlements.push(resolve);
+    });
+    const wakeTurn = new Promise<void>((resolve) => {
+      settlements.push(resolve);
+    });
     const seat = claudeSeat(answersEveryPrompt);
     const { agent, turns } = setup({
       flagship: claudeFlagship(),
       availableModels: () => [CLAUDE_SEAT_MODEL],
       claudeSeat: seat.factory,
+      onTurnSettled: () => settlements.shift()?.(),
     });
     await agent.converse("start work");
-    await vi.waitFor(() => expect(turns).toEqual([{ trigger: "captain", failed: false }]));
+    await firstTurn;
+    expect(turns).toEqual([{ trigger: "captain", failed: false }]);
     const wake: TypedWake = {
       facts: {
         kind: "idle-stall",
@@ -4880,12 +5136,11 @@ describe("the Claude seat under the agent (W1 S6)", () => {
       ways: idleStallWays("ab12"),
     };
     agent.notifyOp(wake, "agent", "ab12");
-    await vi.waitFor(() =>
-      expect(turns).toEqual([
-        { trigger: "captain", failed: false },
-        { trigger: "operation", failed: false },
-      ]),
-    );
+    await wakeTurn;
+    expect(turns).toEqual([
+      { trigger: "captain", failed: false },
+      { trigger: "operation", failed: false },
+    ]);
     const inputs = seat.scripted.harness().inputs;
     expect(inputs).toHaveLength(2);
     expect(inputText(inputs[1])).toContain(renderWake(wake));
@@ -4893,10 +5148,24 @@ describe("the Claude seat under the agent (W1 S6)", () => {
   });
 
   it("re-parks a steer the client never took in as a turn of its own", async () => {
+    // W1 S6: drive each step from the client's input receipt, not a fixed tick.
+    let firstReceived!: () => void;
+    const firstInput = new Promise<void>((resolve) => {
+      firstReceived = resolve;
+    });
+    let steerReceived!: () => void;
+    const steerInput = new Promise<void>((resolve) => {
+      steerReceived = resolve;
+    });
+    let recovered!: () => void;
+    const recoveredInput = new Promise<void>((resolve) => {
+      recovered = resolve;
+    });
     let first: { emit: (message: unknown) => void } | undefined;
     const seat = claudeSeat((message, emit, attachment) => {
       if (attachment > 1) {
         answersEveryPrompt(message, emit);
+        recovered();
         return;
       }
       // The first client takes the prompt in and never answers the steer.
@@ -4904,6 +5173,9 @@ describe("the Claude seat under the agent (W1 S6)", () => {
         first = { emit };
         emit(claudeSays.running);
         emit(claudeSays.ack(message));
+        firstReceived();
+      } else {
+        steerReceived();
       }
     });
     const { agent, turns } = setup({
@@ -4914,12 +5186,15 @@ describe("the Claude seat under the agent (W1 S6)", () => {
     await agent.converse("start work");
     // Steer only once the client has taken the prompt, then exit only once
     // it has received the steer (without acknowledging it).
-    await vi.waitFor(() => expect(seat.scripted.attachments[0]?.inputs).toHaveLength(1));
+    await firstInput;
+    expect(seat.scripted.attachments[0]?.inputs).toHaveLength(1);
     const firstClient = seat.scripted.harness();
     await agent.converse("also this");
-    await vi.waitFor(() => expect(inputText(firstClient.inputs[1])).toContain("also this"));
+    await steerInput;
+    expect(inputText(firstClient.inputs[1])).toContain("also this");
     // The client exits with the steer still in its queue.
     firstClient.end();
+    await recoveredInput;
     await vi.waitFor(() => expect(turns).toHaveLength(2));
     // Not lost: the agent delivers it as a turn of its own, on a new attachment.
     expect(seat.scripted.attachments).toHaveLength(2);

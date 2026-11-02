@@ -1,6 +1,6 @@
 import { overridePasses } from "@shared/holds";
 import type { TaskRecord } from "../storage/taskStore";
-import { standingDependencyWaits } from "./dependencyWaits";
+import { type DependencyWait, standingDependencyWaits } from "./dependencyWaits";
 
 /**
  * What a task's Blocked by names: the waits that hold it now, one rule for
@@ -28,6 +28,8 @@ export function holdingWaits(input: {
   tasks: { get(id: string): TaskRecord | undefined };
   /** Its crewmate is idle on its waits now (work posture idle, reason dependency). */
   idleOnWaits: boolean;
+  /** A projection shares this row's derived baseline waits with its date read. */
+  baseline?: readonly DependencyWait[];
 }): TaskRecord[] {
   const { record, blockers, holdsMerge, tasks, idleOnWaits } = input;
   const live = blockers.filter(isLive);
@@ -37,7 +39,7 @@ export function holdingWaits(input: {
   const held = live.filter((blocker) =>
     holdsMerge(blocker) ? !overridePasses(delivery, "waits", delivery?.headSha) : idleOnWaits,
   );
-  const baseline = standingDependencyWaits(tasks, delivery)
+  const baseline = (input.baseline ?? standingDependencyWaits(tasks, delivery))
     .map((wait) => wait.task)
     .filter((task) => isLive(task) && !isDeliveryChild(task));
   return [...new Map([...held, ...baseline].map((task) => [task.id, task])).values()];
@@ -62,15 +64,18 @@ export function waitsSince(input: {
   /** The graph's edges; only `blocks` edges into this task are read. */
   links: readonly { fromId: string; toId: string; type: string; createdAt: number }[];
   tasks: { get(id: string): TaskRecord | undefined };
+  baseline?: readonly DependencyWait[];
 }): Record<string, number> {
   const { record, holding, links, tasks } = input;
+  if (holding.length === 0) return {};
   const sources = new Map<string, (number | undefined)[]>();
   const add = (id: string, at: number | undefined) =>
     sources.set(id, [...(sources.get(id) ?? []), at]);
   for (const link of links) {
     if (link.type === "blocks" && link.toId === record.id) add(link.fromId, link.createdAt);
   }
-  for (const wait of standingDependencyWaits(tasks, record.delivery)) add(wait.task.id, wait.since);
+  for (const wait of input.baseline ?? standingDependencyWaits(tasks, record.delivery))
+    add(wait.task.id, wait.since);
   const since: Record<string, number> = {};
   for (const blocker of holding) {
     const times = sources.get(blocker.id) ?? [];

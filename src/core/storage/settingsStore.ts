@@ -83,6 +83,26 @@ export type LaunchRecord = z.infer<typeof launchRecordSchema>;
 
 /** Small persisted app settings (KV rows in SQLite). */
 export class SettingsStore {
+  private projection: Map<string, unknown> | undefined;
+
+  /** Share validated settings only for one synchronous derived read. */
+  readProjection<T>(read: () => T): T {
+    if (this.projection) return read();
+    this.projection = new Map();
+    try {
+      return read();
+    } finally {
+      this.projection = undefined;
+    }
+  }
+
+  private projected<T>(key: string, read: () => T): T {
+    if (this.projection?.has(key)) return this.projection.get(key) as T;
+    const value = read();
+    this.projection?.set(key, value);
+    return value;
+  }
+
   /** Learned points per listed-price dollar, keyed by login pool and window (INF-443). */
   getAllowancePrices(): Record<string, number> {
     const parsed = z
@@ -122,6 +142,7 @@ export class SettingsStore {
   }
 
   private set(key: string, value: unknown): void {
+    this.projection?.delete(key);
     this.db
       .prepare(
         "INSERT INTO settings (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value",
@@ -130,8 +151,10 @@ export class SettingsStore {
   }
 
   getRoutingSettings(): RoutingSettings {
-    const parsed = routingSettingsSchema.safeParse(this.get("routing"));
-    return parsed.success ? parsed.data : { dynamicRouting: true, pins: [] };
+    return this.projected("routing", () => {
+      const parsed = routingSettingsSchema.safeParse(this.get("routing"));
+      return parsed.success ? parsed.data : { dynamicRouting: true, pins: [] };
+    });
   }
 
   setRoutingSettings(settings: RoutingSettings): void {
@@ -143,8 +166,10 @@ export class SettingsStore {
    * is off; an offering absent from `seen` has never been seeded.
    */
   getModelSlots(): ModelSlotsState {
-    const parsed = modelSlotsStateSchema.safeParse(this.get("model-slots"));
-    return parsed.success ? parsed.data : { ...EMPTY_MODEL_SLOTS, assignments: {}, seen: [] };
+    return this.projected("model-slots", () => {
+      const parsed = modelSlotsStateSchema.safeParse(this.get("model-slots"));
+      return parsed.success ? parsed.data : { ...EMPTY_MODEL_SLOTS, assignments: {}, seen: [] };
+    });
   }
 
   setModelSlots(state: ModelSlotsState): void {
@@ -403,8 +428,10 @@ export class SettingsStore {
    * default once and persists it here so behavior never silently changes.
    */
   getFirstmateModel(): PiModelRefView | null {
-    const parsed = piModelRefViewSchema.safeParse(this.get("firstmate-model"));
-    return parsed.success ? parsed.data : null;
+    return this.projected("firstmate-model", () => {
+      const parsed = piModelRefViewSchema.safeParse(this.get("firstmate-model"));
+      return parsed.success ? parsed.data : null;
+    });
   }
 
   setFirstmateModel(model: PiModelRefView | null): void {

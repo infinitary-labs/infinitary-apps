@@ -56,7 +56,7 @@ import {
 import type { MediaProbe, TypefaceProbe } from "../pi/cardImages";
 import { CREWMATE_TOOLS } from "../pi/crewmateTaskTools";
 import { verifyKeptValidationEvidenceSync } from "../pi/validationEvidence";
-import { type SelfSourceFacts, sourceContext } from "../selfSource/resolve";
+import { type SelfSourceReader, sourceContext } from "../selfSource/resolve";
 import { followCompletions } from "../session/followCompletions";
 import {
   type ClientBackgroundTask,
@@ -123,7 +123,7 @@ const FIRST_RELEASE_REPORTS = contractChange("first-release-reports");
 const TASK_LIST_SNAPSHOT = contractChange("task-list-snapshot");
 
 export type SessionHostOptions = {
-  source?: () => SelfSourceFacts;
+  source?: SelfSourceReader;
   tasks: PlacedTasks;
   /** Asks the home one work request; asked again after every drop until it answers. */
   ask: (channel: WorkInvokeChannel, args: unknown, signal?: AbortSignal) => Promise<unknown>;
@@ -817,7 +817,8 @@ export class SessionHost {
   private async open(held: Held, spec: PlacedSpec): Promise<PlacedState> {
     if (held.state.closed)
       throw new Error("This task's conversation was closed here, so it opens no more.");
-    const sourceFacts = sourceContext(this.options.source?.(), spec.homeSource);
+    const sourceFacts = sourceContext(await this.options.source?.(), spec.homeSource);
+    if (this.stopped) throw new Error("This computer is stopping.");
     held.speed = spec.speed === true;
     if (held.opening) await held.opening;
     if (held.session) {

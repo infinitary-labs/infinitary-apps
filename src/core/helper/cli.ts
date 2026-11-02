@@ -50,7 +50,7 @@ import { helperWords } from "./words";
  */
 
 export type CliContext = {
-  source?: () => import("../selfSource/resolve").SelfSourceFacts;
+  source?: import("../selfSource/resolve").SelfSourceReader;
   /** The app's own version. */
   version: string;
   /** Where its data lives, and whether it runs from a packaged app. */

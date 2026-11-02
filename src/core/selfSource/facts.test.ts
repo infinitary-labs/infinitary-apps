@@ -10,7 +10,7 @@ import { SessionHost } from "../helper/sessionHost";
 import { crewmateContractStamp, crewmateSessionSpec } from "../orchestrator/crewSession";
 import { appPathsFor } from "../paths";
 import type { SessionSpec } from "../session/session";
-import { readSelfSource, sourceIdentity } from "./resolve";
+import { readSelfSource, readSelfSourceAsync, sourceIdentity } from "./resolve";
 
 function rolling(spec: SessionSpec | undefined) {
   if (!spec || spec.shape.turns !== "rolling")
@@ -146,6 +146,55 @@ describe("each computer's installed source", () => {
     },
   );
 
+  // INF-2186: yielding during source checks must not start a session after shutdown.
+  it("does not open a conversation after the computer stops during source validation", async () => {
+    const dir = scratchDir("source-close-while-reading-");
+    const installed = sourceInstall(join(dir, "work/Resources"));
+    const facts = readSelfSource(installed.location);
+    let release = (_facts: typeof facts) => {};
+    const pendingSource = new Promise<typeof facts>((resolve) => {
+      release = resolve;
+    });
+    let reached = () => {};
+    const reading = new Promise<void>((resolve) => {
+      reached = resolve;
+    });
+    const factory = fakeSessionFactory("pi");
+    const host = new SessionHost({
+      tasks: new PlacedTasks(join(dir, "tasks")),
+      factories: { pi: factory },
+      bind: async () => fakeBinding(),
+      ask: async () => ({}),
+      source: () => {
+        reached();
+        return pendingSource;
+      },
+    });
+    const opening = host.answer("inf:session:open", [
+      {
+        orderId: "open",
+        task: "source-task",
+        spec: {
+          binding: { backend: "pi" },
+          thinking: { level: "off" },
+          tools: [],
+          instructions: "Read the source.",
+        },
+      },
+    ]);
+    const rejected = expect(opening).rejects.toThrow("computer is stopping");
+    try {
+      await reading;
+      await host.close();
+      release(facts);
+      await rejected;
+      expect(factory.specs).toHaveLength(0);
+    } finally {
+      release(facts);
+      await host.close();
+    }
+  });
+
   it.each(["pi", "claude"] as const)(
     "refreshes %s placed facts before stamping on reopen, update and restart",
     async (backend) => {
@@ -161,7 +210,7 @@ describe("each computer's installed source", () => {
           bind: async () =>
             backend === "pi" ? fakeBinding() : { backend, accountId: "test-account" },
           ask: async () => ({}),
-          source: () => readSelfSource(installed.location),
+          source: () => readSelfSourceAsync(installed.location),
         });
       let host = makeHost();
       const spec: PlacedSpec = placedSpecSchema.parse({

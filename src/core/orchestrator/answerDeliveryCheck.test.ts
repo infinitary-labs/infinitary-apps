@@ -239,10 +239,10 @@ describe("the answer-delivery check across a restart", () => {
     covered("m1", "panels");
     covered("m2", "panels");
     covered("m3", "meter");
-    const lookups = vi.spyOn(TaskEventStore.prototype, "taskIdsWithRef");
+    const lookups = vi.spyOn(TaskEventStore.prototype, "askAttributions");
     try {
       f.boot().sweep();
-      expect(lookups.mock.calls.map(([, askId]) => askId).sort()).toEqual(["m1", "m2", "m3"]);
+      expect(lookups.mock.calls.flatMap(([askIds]) => askIds).sort()).toEqual(["m1", "m2", "m3"]);
     } finally {
       lookups.mockRestore();
     }

@@ -13,6 +13,24 @@ const HEAVY_RUN_LINE = contractChange("heavy-run-line");
 
 /** The home's receiver of declared-run facts; it owns no queue on a second computer. */
 export class ComputerLoads {
+  private projection:
+    | Map<string | null, { reading: ComputerLoadReading | undefined; tasks: Set<string> }>
+    | undefined;
+
+  private localTasks: Set<string> | undefined;
+
+  /** One roster or board read shares each computer's declared-run snapshot. */
+  readProjection<T>(read: () => T): T {
+    if (this.projection) return read();
+    this.projection = new Map();
+    try {
+      return read();
+    } finally {
+      this.projection = undefined;
+      this.localTasks = undefined;
+    }
+  }
+
   private readonly held = new Map<string, { snapshot: LoadSnapshot; at: number; known: boolean }>();
   private readonly generations = new Map<string, number>();
   private readonly unsubscribe: () => void;
@@ -22,7 +40,7 @@ export class ComputerLoads {
 
   constructor(
     private readonly options: {
-      local: Pick<LoadLine, "snapshot" | "reconsider">;
+      local: Pick<LoadLine, "snapshot" | "reconsider" | "taskIds">;
       work: Pick<WorkDevices, "ask" | "inReach" | "version" | "onWorkDevice">;
       overrides: (computerId: string) => string[];
       changed?: () => void;
@@ -30,6 +48,7 @@ export class ComputerLoads {
     },
   ) {
     this.unsubscribe = options.work.onWorkDevice(({ deviceId }) => {
+      this.projection?.delete(deviceId);
       this.generations.set(deviceId, (this.generations.get(deviceId) ?? 0) + 1);
       this.asking.delete(deviceId);
       const held = this.held.get(deviceId);
@@ -41,6 +60,16 @@ export class ComputerLoads {
   }
 
   read(computerId: string | null): ComputerLoadReading | undefined {
+    if (this.projection?.has(computerId)) return this.projection.get(computerId)?.reading;
+    const reading = this.readNow(computerId);
+    this.projection?.set(computerId, {
+      reading,
+      tasks: new Set(reading?.status === "fresh" ? reading.runs.map((run) => run.taskId) : []),
+    });
+    return reading;
+  }
+
+  private readNow(computerId: string | null): ComputerLoadReading | undefined {
     if (computerId === null) {
       try {
         this.localSnapshot = this.options.local.snapshot();
@@ -65,7 +94,13 @@ export class ComputerLoads {
   }
 
   hasTask(taskId: string, computerId: string | null): boolean {
+    if (computerId === null) {
+      const tasks = this.localTasks ?? new Set(this.options.local.taskIds());
+      if (this.projection) this.localTasks = tasks;
+      return tasks.has(taskId);
+    }
     const reading = this.read(computerId);
+    if (this.projection) return this.projection.get(computerId)?.tasks.has(taskId) ?? false;
     return reading?.status === "fresh" && reading.runs.some((run) => run.taskId === taskId);
   }
 
@@ -77,6 +112,8 @@ export class ComputerLoads {
   async refresh(computerId: string | null): Promise<void> {
     if (this.stopped) return;
     if (computerId === null) {
+      this.projection?.delete(null);
+      this.localTasks = undefined;
       this.options.local.reconsider();
       return;
     }
@@ -114,6 +151,7 @@ export class ComputerLoads {
       const before = this.held.get(computerId);
       const known = this.now() - at <= RESOURCE_READ_TIMEOUT_MS;
       this.held.set(computerId, { snapshot, at, known });
+      this.projection?.delete(computerId);
       if (before?.known !== known || JSON.stringify(before.snapshot) !== JSON.stringify(snapshot))
         this.options.changed?.();
     } catch {
@@ -121,6 +159,7 @@ export class ComputerLoads {
       const held = this.held.get(computerId);
       if (held?.known) {
         held.known = false;
+        this.projection?.delete(computerId);
         this.options.changed?.();
       }
     } finally {
@@ -132,6 +171,8 @@ export class ComputerLoads {
     this.stopped = true;
     this.asking.clear();
     this.localSnapshot = undefined;
+    this.localTasks = undefined;
+    this.projection?.clear();
     this.unsubscribe();
     this.held.clear();
   }

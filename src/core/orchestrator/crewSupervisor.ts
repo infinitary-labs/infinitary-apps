@@ -687,7 +687,7 @@ export type CrewSupervisorOptions = {
   bind: (accountId: string | undefined, providerId?: string) => Promise<SessionBinding>;
   /** The home's opt-in, carried without its files to whichever Mac opens the session. */
   personalResourcesEnabled?: () => boolean;
-  source?: () => import("../selfSource/resolve").SelfSourceFacts;
+  source?: import("../selfSource/resolve").SelfSourceReader;
   runbooks?: Runbooks;
   /**
    * The crewmate preset. Absent, `crewmateSessionSpec` over the app's paths;
@@ -1599,6 +1599,10 @@ export class CrewSupervisor {
   private hooks: FirstmateHooks = { notifyOp: () => {}, retryConverse: () => {} };
   /** The idle ladder and the holds: the witnesses, the gate, the caps and the ready sweep. */
   private readonly ladder: IdleLadder;
+  private readonly postureFact = Symbol("work posture");
+  private readonly placeFact = Symbol("task place");
+  private readonly moveFact = Symbol("computer move facts");
+  private readonly ciFact = Symbol("crew check summary");
   /** The host's watch on crewmates' checks; absent when no read is wired. */
   private readonly checkWatch: CheckWatcher | undefined;
   /** Wakes baseline waits when the default branch's own run of that check passes. */
@@ -2449,6 +2453,12 @@ export class CrewSupervisor {
    * is out of reach or not yet caught up. Absent for a task this Mac runs.
    */
   taskPlace(record: TaskRecord): TaskPlace | undefined {
+    return this.options.tasks.projectedFact(record, this.placeFact, () =>
+      this.readTaskPlace(record),
+    );
+  }
+
+  private readTaskPlace(record: TaskRecord): TaskPlace | undefined {
     const machines = this.options.machines;
     if (!machines || record.kind !== "work") return undefined;
     const settled = TaskService.isClosed(record) || this.started(record);
@@ -2858,6 +2868,16 @@ export class CrewSupervisor {
 
   cardsSnapshot(): Card[] {
     return this.cards.snapshot();
+  }
+
+  /** Shown card actions for task flags, without rebuilding message or task presentation. */
+  taskCardsSnapshot(): Card[] {
+    return this.cards.taskSnapshot();
+  }
+
+  /** Durable open heads for task holds; a pending shown revision may have different actions. */
+  taskCardHeads(): Card[] {
+    return [...this.cards.values()];
   }
 
   /** The persisted closing offer/action/answers for recovery reads. */
@@ -3680,12 +3700,12 @@ export class CrewSupervisor {
    */
   private openReviewOf(builderId: string): TaskRecord | undefined {
     return this.options.tasks
-      .listLive()
+      .openChildren(builderId)
       .find(
         (record) =>
+          !TaskService.isClosed(record) &&
           record.shape?.kind === "review" &&
-          !isRepairAssessment(record.shape) &&
-          record.parentId === builderId,
+          !isRepairAssessment(record.shape),
       );
   }
 
@@ -6059,7 +6079,7 @@ export class CrewSupervisor {
     }
     const briefed = {
       ...crewmate,
-      ...(this.options.source ? { source: this.options.source() } : {}),
+      ...(this.options.source ? { source: await this.options.source() } : {}),
       procedure: crewmateProcedureFor(this.policiesOf(this.options.tasks.get(task.id))),
       // Every crewmate is told the captain's computers and which one it runs on (INF-992).
       ...this.computersFor(crewmate.machineId),
@@ -6094,6 +6114,7 @@ export class CrewSupervisor {
     }
     spec.personalResources = this.options.personalResourcesEnabled?.() === true;
     if (runbookSkills) spec.runbookSkills = runbookSkills;
+    if (this.disposed) throw new Error("This computer is stopping.");
     const session = await factory.open(spec);
     const unopenable =
       Boolean(crewmate.resumeToken) && spec.shape.turns === "rolling" && !spec.shape.record.resume;
@@ -7724,10 +7745,21 @@ export class CrewSupervisor {
     filed: TaskRuntime["filedThisTurn"],
     declared: ReportDeclaration | undefined,
   ): void {
+    this.options.tasks.readProjection(() =>
+      this.sortReportInProjection(task, report, filed, declared),
+    );
+  }
+
+  private sortReportInProjection(
+    task: TaskRuntime,
+    report: string,
+    filed: TaskRuntime["filedThisTurn"],
+    declared: ReportDeclaration | undefined,
+  ): void {
     const finished = declared?.finished === true;
     const needsFirstmate = declared?.needsFirstmate;
     // Read what the report owner normalized and kept, never the uncapped declaration.
-    const reports = this.options.tasks.reportEntries(task.id);
+    const reports = this.options.tasks.lastReportEntries(task.id);
     const kept = report ? reports.at(-1) : undefined;
     const workWait = kept?.declared.workWait;
     const record = this.options.tasks.get(task.id);
@@ -8979,6 +9011,12 @@ export class CrewSupervisor {
    * move that stands with what still stops a safe pause (`TaskView`).
    */
   computerMoveFacts(record: TaskRecord): Pick<TaskView, "movable" | "computerMove"> {
+    return this.options.tasks.projectedFact(record, this.moveFact, () =>
+      this.readComputerMoveFacts(record),
+    );
+  }
+
+  private readComputerMoveFacts(record: TaskRecord): Pick<TaskView, "movable" | "computerMove"> {
     const move = record.shape?.computer_move;
     if (move) {
       if (move.phase === "undoing") return {};
@@ -8992,7 +9030,7 @@ export class CrewSupervisor {
         },
       };
     }
-    if (this.moveRefusal(record)) return {};
+    if (this.moveBlocker(record)) return {};
     const from = this.computerOf(record);
     const others = [RUNS_ON_THIS_MAC, ...(this.options.machines?.computers() ?? [])].filter(
       (id) => id !== from,
@@ -9013,28 +9051,35 @@ export class CrewSupervisor {
 
   /** Why a task cannot move to another computer at all, or undefined when it can. */
   private moveRefusal(record: TaskRecord): string | undefined {
-    const handle = `${record.key || record.id} "${record.title}"`;
+    return this.moveBlocker(record)?.();
+  }
+
+  /** The bulk view needs eligibility, not a refusal sentence for each row. */
+  private moveBlocker(record: TaskRecord): (() => string) | undefined {
+    const handle = () => `${record.key || record.id} "${record.title}"`;
     if (record.kind !== "work" || record.status !== "active" || TaskService.isClosed(record))
-      return `${handle} is ${describeStatus(record)}; only started work moves to another computer.`;
+      return () =>
+        `${handle()} is ${describeStatus(record)}; only started work moves to another computer.`;
     if (!record.sessionFile || !record.branch)
-      return `${handle} has no working copy of its own to move.`;
+      return () => `${handle()} has no working copy of its own to move.`;
     if (this.isPersonalTask(record.id))
-      return `${handle} builds in your personal workspace, which stays on ${HERE.this}.`;
+      return () => `${handle()} builds in your personal workspace, which stays on ${HERE.this}.`;
     if (record.shape?.in_place)
-      return `${handle} works in its project's own folder, which stays where it is.`;
+      return () => `${handle()} works in its project's own folder, which stays where it is.`;
     if (record.shape?.kind === "review")
-      return `${handle} is a review and follows its builder's computer.`;
+      return () => `${handle()} is a review and follows its builder's computer.`;
     const move = record.shape?.computer_move;
     if (move?.phase === "waiting" || move?.phase === "moving")
-      return `${handle} is already moving to ${this.computerName(move.to)}.`;
-    if (move) return `${handle} is still finishing its last move; try again once it has.`;
+      return () => `${handle()} is already moving to ${this.computerName(move.to)}.`;
+    if (move) return () => `${handle()} is still finishing its last move; try again once it has.`;
     const from = this.computerOf(record);
     const machines = this.options.machines;
     if (from !== RUNS_ON_THIS_MAC && machines?.takesMoves?.(from) !== true)
       // A computer out of reach has no version to read until it is back.
-      return machines?.ready(from, record.id) !== true
-        ? moveOutOfReach(this.computerName(from))
-        : `Infinitary on ${this.computerName(from)} cannot move a started task yet. Update it first.`;
+      return () =>
+        machines?.ready(from, record.id) !== true
+          ? moveOutOfReach(this.computerName(from))
+          : `Infinitary on ${this.computerName(from)} cannot move a started task yet. Update it first.`;
     return undefined;
   }
 
@@ -9882,12 +9927,21 @@ export class CrewSupervisor {
       });
   }
 
-  crewStatus(taskId?: string): CrewStatusEntry[] {
+  crewStatus(taskId?: string, options: { startedOnly?: boolean } = {}): CrewStatusEntry[] {
+    return this.options.tasks.readProjection(() =>
+      this.readCrewStatus(taskId, options.startedOnly),
+    );
+  }
+
+  private readCrewStatus(taskId?: string, startedOnly = false): CrewStatusEntry[] {
     const records = taskId
       ? [this.options.tasks.get(taskId)].flatMap((r) => (r ? [r] : []))
-      : this.options.tasks.listLive();
+      : startedOnly
+        ? this.options.tasks.listActive()
+        : this.options.tasks.listLive();
     // A decision row or a host card's row is its card, not crew work.
     return records
+      .filter((record) => !startedOnly || record.status === "active")
       .filter((record) => record.kind !== "decision" && record.kind !== "operation")
       .filter(
         (record) =>
@@ -9929,11 +9983,16 @@ export class CrewSupervisor {
         const review = this.reviewState(record);
         const thread = this.cards.threadFact(record.id);
         const restart = this.restartFact(record.id);
-        const stalled = this.ladder.stalledFact(record, this.now());
-        const stalledSince = stalled ? this.ladder.stalledSince(record, this.now()) : undefined;
+        const now = this.now();
+        const stalledSince = this.ladder.stalledSince(record, now);
+        const stalled = stalledSince
+          ? this.ladder.stalledFact(record, now, stalledSince)
+          : undefined;
         const timing = this.timingFacts(record);
         const refused = record.delivery?.cardRefusal;
-        const ci = ciFactOf(record.delivery, this.now());
+        const ci = this.options.tasks.projectedFact(record, this.ciFact, () =>
+          ciFactOf(record.delivery, this.now()),
+        );
         const override = standingOverride(record.delivery, record.delivery?.headSha);
         // A personal task carries no delivery: it builds in place, and
         // saying "local-only" here would be a posture the Firstmate could
@@ -14059,6 +14118,12 @@ export class CrewSupervisor {
 
   /** Shared visual answer; deliberately independent of turn control and recovery. */
   workPosture(record: TaskRecord) {
+    return this.options.tasks.projectedFact(record, this.postureFact, () =>
+      this.readWorkPosture(record),
+    );
+  }
+
+  private readWorkPosture(record: TaskRecord) {
     return deriveWorkPosture(record, () => {
       const runtime = this.tasks.get(record.id);
       const hold = this.holdOf(record);

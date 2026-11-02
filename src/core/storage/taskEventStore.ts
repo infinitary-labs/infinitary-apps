@@ -227,6 +227,71 @@ export class TaskEventStore {
     return row ? fromRow(row) : undefined;
   }
 
+  /** The first real first-mate effect after a request, not its decided/read receipt. */
+  firstFirstmateActAfter(taskId: string, since: number): number | undefined {
+    const row = this.db
+      .prepare(
+        `SELECT at FROM task_events WHERE task_id = ? AND actor = 'firstmate'
+       AND kind <> 'decided' AND at > ? ORDER BY at, id LIMIT 1`,
+      )
+      .get(taskId, since) as { at: number } | undefined;
+    return row?.at;
+  }
+
+  /** The report sorter reads only the report it just kept and its predecessor. */
+  lastReports(taskId: string): TaskEvent[] {
+    const rows = this.db
+      .prepare(
+        "SELECT * FROM task_events WHERE task_id = ? AND kind = 'report' ORDER BY at DESC, id DESC LIMIT 2",
+      )
+      .all(taskId) as Row[];
+    return rows.reverse().map(fromRow);
+  }
+
+  /** Ask attribution needs the attached task and typed via, not its whole timeline. */
+  askAttributions(askIds: readonly string[]): { taskId: string; via: string | null }[] {
+    if (askIds.length === 0) return [];
+    return (
+      this.db
+        .prepare(
+          `SELECT events.task_id AS taskId,
+         CASE WHEN json_valid(events.data_json) THEN json_extract(events.data_json, '$.via') END AS via
+         FROM json_each(?) AS asks CROSS JOIN task_events AS events
+         WHERE events.kind = 'ask' AND events.ref = asks.value
+         ORDER BY CAST(asks.key AS INTEGER), events.id`,
+        )
+        .all(JSON.stringify(askIds)) as { taskId: string; via: unknown }[]
+    ).map((row) => ({
+      taskId: row.taskId,
+      via: typeof row.via === "string" ? row.via : null,
+    }));
+  }
+
+  /** The graph's escalation endpoints, without decoding the retained event payload. */
+  escalationRefs(taskId: string, side: "escalated_to" | "escalated_from"): string[] {
+    return (
+      this.db
+        .prepare(
+          `SELECT ref FROM task_events WHERE task_id = ? AND kind = 'escalated'
+         AND ref <> ''
+         AND CASE WHEN json_valid(data_json) THEN json_type(data_json, '$.' || ?) END = 'text'
+         ORDER BY at, id`,
+        )
+        .all(taskId, side) as { ref: string }[]
+    ).map((row) => row.ref);
+  }
+
+  /** The roster needs the restart line, not the note's potentially large JSON payload. */
+  latestRestartObservation(taskId: string): Pick<TaskEvent, "at" | "text"> | undefined {
+    return this.db
+      .prepare(
+        `SELECT at, text FROM task_events WHERE task_id = ? AND kind = 'note'
+         AND CASE WHEN json_valid(data_json) THEN json_type(data_json, '$.restartOutcome') END = 'object'
+         ORDER BY at DESC, id DESC LIMIT 1`,
+      )
+      .get(taskId) as Pick<TaskEvent, "at" | "text"> | undefined;
+  }
+
   /** The newest event of `kind` on a task whose data holds an object under `key`. */
   latestWithObject(taskId: string, kind: TaskEventKind, key: string): TaskEvent | undefined {
     const row = this.db

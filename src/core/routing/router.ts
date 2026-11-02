@@ -499,7 +499,7 @@ export function servedSlots(
   taskIds: readonly string[],
 ): Map<string, Slot> {
   const out = new Map<string, Slot>();
-  for (const row of decisions.routing({ taskIds, chosen: true })) {
+  for (const row of decisions.latestChosenSlots(taskIds)) {
     const slot = slotSchema.safeParse(row.served ?? row.bucket);
     if (slot.success) out.set(row.taskId, slot.data);
     else out.delete(row.taskId);

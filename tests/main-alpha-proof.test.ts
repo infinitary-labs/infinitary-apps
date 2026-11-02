@@ -69,10 +69,25 @@ describe("exact-main alpha verification inheritance", () => {
     "refuses %s in any required full-check owner",
     (conclusion) => {
       const { run, jobs } = completedMain();
+      jobs.find((job) => job.name === "verify / mac")!.conclusion = conclusion;
+      expect(() =>
+        verifyMainEvidence({ ...run, conclusion: "failure" }, jobs, repository, source),
+      ).toThrow("every full-check owner");
+    },
+  );
+
+  // INF-2340's no-phone-gate route, the captain's pick: "Cut alphas without
+  // the phone check until PR #862 and PR #865 land". Main #37 failed its phone
+  // call on the cards part's time allowance; the cut proceeds while every
+  // other owner passed. The restore follow-up deletes this test with the waiver.
+  it.each(["failure", "cancelled", "timed_out"])(
+    "cuts past a %s phone call while every other owner passed",
+    (conclusion) => {
+      const { run, jobs } = completedMain();
       jobs.find((job) => job.name === "phone / native-phone")!.conclusion = conclusion;
-      expect(() => verifyMainEvidence(run, jobs, repository, source)).toThrow(
-        "every full-check owner",
-      );
+      expect(
+        verifyMainEvidence({ ...run, conclusion: "failure" }, jobs, repository, source).source,
+      ).toBe(source);
     },
   );
 
@@ -141,12 +156,19 @@ describe("automatic alpha workflow handoff (INF-2259)", () => {
       steps: { "main-proof": { outputs: { source } } },
     };
     expect(workflowValue(job("resolve").if!, contexts)).toBe(true);
-    expect(
-      workflowValue(job("resolve").if!, {
-        ...contexts,
-        github: { ...contexts.github, event: { workflow_run: { ...run, conclusion: "failure" } } },
-      }),
-    ).toBe(false);
+    // A failed main run reaches the proof step while the phone waiver lasts;
+    // the proof refuses it unless only the phone call failed.
+    for (const [conclusion, starts] of [
+      ["failure", true],
+      ["cancelled", false],
+    ] as const)
+      expect(
+        workflowValue(job("resolve").if!, {
+          ...contexts,
+          github: { ...contexts.github, event: { workflow_run: { ...run, conclusion } } },
+        }),
+        conclusion,
+      ).toBe(starts);
     const proof = job("resolve").steps!.find((step) => step.id === "main-proof")!;
     const env = Object.fromEntries(
       Object.entries(proof.env!).map(([key, value]) => [key, workflowString(value, contexts)]),

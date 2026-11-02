@@ -362,6 +362,7 @@ A red run reaches the crew through the captain's own Automation rule on GitHub's
 The repair fixes forward, and a revert is the last resort, on the captain's click.
 A successful completed main run automatically starts an alpha at that exact source, not a newer main head (`docs/alpha.md`, "Cutting an alpha").
 The alpha reuses its broad checks after reading every required owner and latest per-job result on that exact source; release-specific gates still run.
+Until INF-2101 and INF-2305 merge, a main run whose only failed jobs are the phone check's also starts an alpha (`docs/alpha.md`, "The phone waiver").
 Ordinary CI's main-push trigger remains until a passing replacement full run demonstrates equivalent coverage; removing it is a post-merge continuation, not permission to drop checks early.
 `tests/release-workflows.test.ts` holds the trigger, the queue and both calls.
 

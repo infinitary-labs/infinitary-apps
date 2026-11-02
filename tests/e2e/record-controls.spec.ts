@@ -398,12 +398,30 @@ test("interrupted work reads in danger and offers Continue beside Drop task; Con
   await page.screenshot({ path: test.info().outputPath("record-interrupted.png") });
   await next(page).click();
 
-  // The captain's word reached the crewmate, and it is no longer interrupted.
+  // INF-2314: queued guidance hides Continue before the saved conversation
+  // reopens. Await the actual continuation, not just the changed footer:
+  // the captain's word reached the crewmate, and it is no longer interrupted.
   await expect(footer(page)).toHaveAttribute("data-record-next", "none", { timeout: 30_000 });
   await expectRecordBar(page);
-  const detail = await page.evaluate((id) => window.infinitary.tasks.detail(id), interruptedId);
-  expect(detail.activity).not.toBe("interrupted");
-  expect(detail.events.filter((event) => event.kind === "steered").at(-1)?.actor).toBe("captain");
+  const observations: unknown[] = [];
+  await expect
+    .poll(
+      async () => {
+        const detail = await page.evaluate(
+          (id) => window.infinitary.tasks.detail(id),
+          interruptedId,
+        );
+        const steer = detail.events.filter((event) => event.kind === "steered").at(-1);
+        observations.push({ activity: detail.activity, posture: detail.workPosture, steer });
+        return { interrupted: detail.activity === "interrupted", actor: steer?.actor };
+      },
+      { timeout: 30_000 },
+    )
+    .toEqual({ interrupted: false, actor: "captain" });
+  await test.info().attach("continued-task", {
+    body: JSON.stringify(observations, null, 2),
+    contentType: "application/json",
+  });
   await closeRecord(page);
 });
 

@@ -1,0 +1,8 @@
+{
+  "exclusions": [
+    {
+      "id": "record-continue-journey",
+      "reason": "Test-only repair: await the interrupted task's resumed activity and captain steer together, rather than treating the disappearance of Continue while guidance is queued as proof that its conversation reopened. Product behavior and both existing assertions are unchanged."
+    }
+  ]
+}

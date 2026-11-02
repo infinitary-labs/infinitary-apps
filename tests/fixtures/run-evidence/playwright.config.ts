@@ -1,5 +1,6 @@
 import { join } from "node:path";
 import { defineConfig } from "@playwright/test";
+import { LOCAL_JOURNEY_WORKERS } from "../../../scripts/heavy-run-place";
 import { runDir } from "../../e2e/runEvidence";
 
 // Playwright runs of their own for tests/run-evidence-playwright.test.ts: the
@@ -12,6 +13,6 @@ export default defineConfig({
   testMatch: "*.spec.ts",
   globalSetup: "../../e2e/globalSetup.ts",
   outputDir: run,
-  workers: 2,
+  workers: LOCAL_JOURNEY_WORKERS,
   reporter: [["list"], ["json", { outputFile: join(run, "e2e-results.json") }]],
 });

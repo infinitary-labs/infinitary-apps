@@ -111,7 +111,8 @@ The fixture seeds through `outsideCensus` (`tests/helpers/statementCheck.ts`), s
 
 ## E2E scheduling and launch diagnostics
 
-The renderer and application lanes (`tests/e2e/lanes.ts`, `playwright.config.ts`) share at most `min(10, cores)` workers, where cores are the job's size when the Mac mini's placement service names one and the whole machine otherwise (`scripts/job-cores.ts`, "Each Mac job's kind and size").
+The renderer and application lanes (`tests/e2e/lanes.ts`, `playwright.config.ts`) share two workers locally unless the caller passes `--workers`.
+CI keeps its default of `min(10, cores)` workers, where cores are the job's size when the Mac mini's placement service names one and the whole machine otherwise (`scripts/job-cores.ts`, "Each Mac job's kind and size").
 The full Mac check (`verify.yml`) gives them half those cores, because both Mac runner slots share one processor: with all of it, app launches starved past `firstWindow`'s 30 s while the other slot ran journeys too.
 Desktop is the one-worker lane and runs last, even after a failure.
 The lanes load only `*.spec.ts` files (`testMatch` in `playwright.config.ts`); a vitest `*.test.ts` beside them, such as a scenario's own test, runs in vitest's cohorts and never in Playwright.
@@ -271,7 +272,12 @@ A phone part the gate starts rides the gate's place.
 
 Where the shell has this computer's load line, the run declares its needs there through `infinitary-load-axi run` and holds them until it ends (`docs/heavy-runs.md`).
 The supervisor preserves the gate's input pipe on a separate descriptor before starting background children, including under dash; closing that pipe ends an admitted hold or terminates a still-waiting group.
-A phone gate declares 4 processors and 8192 MiB and a journey run 4 processors and 4096 MiB, the shares the Mac mini's crew places reserve, which include the simulators launchd starts outside the run's process group (INF-1664).
+A phone gate still declares 4 processors and 8192 MiB, the Mac mini crew place's share including simulators launchd starts outside the run's process group (INF-1664); it has not been remeasured.
+A journey run declares its resolved Playwright worker count N as N processors and `1536 * N + 512` MiB: two workers ask 3584 MiB (3.5 GiB), four ask 6656 MiB (6.5 GiB).
+The local default is two workers; an explicit `--workers` count or percentage wins, and CI keeps its own worker count without asking the local line.
+The measured basis (INF-2165) is the summed macOS process-tree footprint sampled about twice a second on the Mac mini: one worker peaked near 1.6 GiB, four at 5.7 GiB, and ten at up to 13.7 GiB during ten-repeat journey runs.
+The declaration rounds that to 1.5 GiB per worker plus 0.5 GiB for the runner.
+Footprint includes compressed pages at full size, while short peaks between samples can be missed; these measurements are not a bound on every journey's possible use.
 The run prints the line's facts while it waits and says when it is admitted.
 A run that ends or dies gives its hold back.
 A run stopped while it still waits leaves the line: a small supervisor outside the run's process group ends the waiting command once the run's end closes its input.

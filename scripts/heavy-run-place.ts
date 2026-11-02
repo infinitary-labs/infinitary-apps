@@ -14,20 +14,26 @@ import { type CrewPlaceKind, takeCrewPlace } from "./crew-place.ts";
  */
 export type HeavyRunPlace = { close(): void };
 
-/** What each kind declares: the shares the Mac mini's crew places reserve for it
- * (dotfiles-private home-manager/mac-home.nix, sized from DOP-113's measured runs).
- */
+/** INF-2165: local journeys default to two workers; CLI overrides are resolved by Playwright. */
+export const LOCAL_JOURNEY_WORKERS = 2;
+
+/** INF-2165's measured basis: 1.5 GiB per worker plus 0.5 GiB for the runner. */
+export function journeyRunNeeds(workers: number) {
+  return { processors: workers, memoryMib: workers * 1536 + 512 };
+}
+
+/** The phone declaration is unchanged; journeys follow their resolved worker count. */
 export const HEAVY_RUN_NEEDS: Record<CrewPlaceKind, { processors: number; memoryMib: number }> = {
   phone: { processors: 4, memoryMib: 8192 },
-  journeys: { processors: 4, memoryMib: 4096 },
+  journeys: journeyRunNeeds(LOCAL_JOURNEY_WORKERS),
 };
 
 /** What a run says about the path it took. */
 export const heavyRunWords = {
-  asking: (kind: CrewPlaceKind) =>
-    `Asking this computer's load line for ${HEAVY_RUN_NEEDS[kind].processors} processors and ${HEAVY_RUN_NEEDS[kind].memoryMib} MiB (${LOAD_COMMAND}).`,
-  admitted: (kind: CrewPlaceKind) =>
-    `Admitted by this computer's load line; holding ${HEAVY_RUN_NEEDS[kind].processors} processors and ${HEAVY_RUN_NEEDS[kind].memoryMib} MiB until this run ends.`,
+  asking: (kind: CrewPlaceKind, needs = HEAVY_RUN_NEEDS[kind]) =>
+    `Asking this computer's load line for ${needs.processors} processors and ${needs.memoryMib} MiB (${LOAD_COMMAND}).`,
+  admitted: (kind: CrewPlaceKind, needs = HEAVY_RUN_NEEDS[kind]) =>
+    `Admitted by this computer's load line; holding ${needs.processors} processors and ${needs.memoryMib} MiB until this run ends.`,
   borrowed: (place: string) => `This run rides borrowed place ${place}; asking neither the load line nor a crew place.`,
   noLine: `${LOAD_COMMAND} is not available in this shell; asking the Mac mini's crew place service instead.`,
 };
@@ -86,11 +92,12 @@ function lineAnswers(command: string, env: NodeJS.ProcessEnv): Promise<boolean> 
 function takeLine(
   command: string,
   kind: CrewPlaceKind,
+  needs: { processors: number; memoryMib: number },
   env: NodeJS.ProcessEnv,
   log: (line: string) => void,
 ): Promise<HeavyRunPlace> {
-  const { processors, memoryMib } = HEAVY_RUN_NEEDS[kind];
-  log(heavyRunWords.asking(kind));
+  const { processors, memoryMib } = needs;
+  log(heavyRunWords.asking(kind, needs));
   const child = spawn(
     "/bin/sh",
     ["-c", SUPERVISE, "sh", command, "run", "--processors", `${processors}`, "--memory-mib", `${memoryMib}`, "--", "/bin/sh", "-c", HOLD],
@@ -107,7 +114,7 @@ function takeLine(
   return new Promise((done, reject) => {
     child.once("error", reject);
     createInterface({ input: child.stdout }).once("line", () => {
-      log(heavyRunWords.admitted(kind));
+      log(heavyRunWords.admitted(kind, needs));
       // From here the gate's own work keeps it alive, and its end ends the hold.
       child.unref();
       for (const stream of [child.stdin, child.stdout, child.stderr]) (stream as unknown as Socket).unref();
@@ -126,7 +133,7 @@ function takeLine(
 export async function takeHeavyRunPlace(
   kind: CrewPlaceKind,
   label: string,
-  options: Parameters<typeof takeCrewPlace>[2] = {},
+  options: Parameters<typeof takeCrewPlace>[2] & { workers?: number } = {},
 ): Promise<HeavyRunPlace> {
   const env = options.env ?? process.env;
   const log = options.log ?? ((line: string) => console.error(line));
@@ -136,7 +143,15 @@ export async function takeHeavyRunPlace(
   }
   if (env.CI) return { close() {} };
   const command = onPath(env);
-  if (command && (await lineAnswers(command, env))) return takeLine(command, kind, env, log);
+  if (command && (await lineAnswers(command, env))) return takeLine(
+    command,
+    kind,
+    kind === "journeys" && options.workers !== undefined
+      ? journeyRunNeeds(options.workers)
+      : HEAVY_RUN_NEEDS[kind],
+    env,
+    log,
+  );
   log(heavyRunWords.noLine);
   return takeCrewPlace(kind, label, { ...options, env, log });
 }

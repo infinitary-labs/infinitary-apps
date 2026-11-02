@@ -24,6 +24,7 @@ export default async function globalSetup(config: FullConfig): Promise<() => Pro
   const runPlace = await takeHeavyRunPlace(
     "journeys",
     `journeys: ${process.argv.slice(2).join(" ")}`,
+    { workers: config.workers },
   );
   // Voice journeys need the runner to open the microphone (tests/e2e/micPreflight.ts).
   await checkMicrophone();

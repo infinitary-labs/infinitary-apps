@@ -4,6 +4,7 @@ import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { defineConfig } from "@playwright/test";
 import { ciModeRefusal } from "./scripts/checks-mode.ts";
+import { LOCAL_JOURNEY_WORKERS } from "./scripts/heavy-run-place.ts";
 import { jobCores } from "./scripts/job-cores.ts";
 // Each worker reloads this config, so each starts the load clock its waits run on (INF-1083).
 import "./tests/helpers/budgets";
@@ -100,9 +101,9 @@ export default defineConfig({
   // One private TMPDIR per run, required empty at the end (runTempRoot.ts).
   globalSetup: "./tests/e2e/globalSetup.ts",
   outputDir: run,
-  // Bound parallel app processes to the host allowance, the job's size where it
-  // has one (scripts/job-cores.ts); native work stays serial.
-  workers: Math.min(E2E_MAX_WORKERS, jobCores()),
+  // Local journeys use the approved default; CI keeps its job-sized allowance.
+  // Native work stays serial, and Playwright resolves explicit CLI overrides.
+  workers: process.env.CI ? Math.min(E2E_MAX_WORKERS, jobCores()) : LOCAL_JOURNEY_WORKERS,
   projects: E2E_PROJECTS,
   reporter: [
     // The console reporter Playwright picks on its own: dots on CI, a line per test here.

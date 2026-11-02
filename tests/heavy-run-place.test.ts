@@ -6,13 +6,20 @@ import { createInterface } from "node:readline";
 import { pathToFileURL } from "node:url";
 import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 import type { CrewPlaceKind } from "../scripts/crew-place";
-import { HEAVY_RUN_NEEDS, heavyRunWords, takeHeavyRunPlace } from "../scripts/heavy-run-place";
+import {
+  HEAVY_RUN_NEEDS,
+  heavyRunWords,
+  journeyRunNeeds,
+  takeHeavyRunPlace,
+} from "../scripts/heavy-run-place";
+import { jobCores } from "../scripts/job-cores";
 import { AXI_ADDRESS_ENV, AXI_KEY_ENV, AXI_VERSION_ENV, AxiChannel } from "../src/core/axi/channel";
 import { hostEnv } from "../src/core/hostEnv";
 import { LoadLine, loadGroupExists } from "../src/core/placed/loadLine";
 import { forkChildProcess } from "../src/core/sql/forkChildProcess";
 import { LOAD_COMMAND } from "../src/shared/load";
 import type { ResourceObservation } from "../src/shared/resources";
+import { E2E_MAX_WORKERS } from "./e2e/lanes";
 import { MIC_PREFLIGHT } from "./e2e/micPreflight";
 import { bundleAxiProcess } from "./helpers/axiProcessBundle";
 import { withoutLoadLine } from "./helpers/noLoadLine";
@@ -132,60 +139,97 @@ function start(command: string, args: string[], env: NodeJS.ProcessEnv, detached
   return { child, output: () => output, exited };
 }
 
+// INF-2165: exercise the actual config through Playwright discovery, without
+// launching apps. The fixture below separately witnesses the resolved demand.
+it.each([
+  { label: "local default", ci: "", args: [], workers: 2 },
+  { label: "local override", ci: "", args: ["--workers=4"], workers: 4 },
+  {
+    label: "CI default",
+    ci: "true",
+    args: [],
+    workers: Math.min(E2E_MAX_WORKERS, jobCores()),
+  },
+])("journey discovery keeps the $label worker count", async ({ ci, args, workers }) => {
+  const run = start(
+    process.execPath,
+    [
+      "node_modules/@playwright/test/cli.js",
+      "test",
+      "tests/e2e/cap-gate.spec.ts",
+      "--list",
+      "--reporter=json",
+      ...args,
+    ],
+    { ...hostEnv(), CI: ci },
+  );
+  expect(await run.exited).toBe(0);
+  expect(JSON.parse(run.output()).config.workers).toBe(workers);
+});
+
 describe("a local heavy run in this computer's load line", () => {
-  it("a local journey run waits with its declared needs before any test starts, then holds them until it ends", async () => {
-    const { line, shell, runs, groupExists } = await computerLine();
-    const fixtures = join(__dirname, "fixtures", "run-evidence");
-    const log = join(scratchDir("infinitary-heavy-journey-"), "started.log");
-    writeFileSync(log, "");
-    const release = join(scratchDir("infinitary-heavy-release-"), "go");
-    const env: NodeJS.ProcessEnv = {
-      ...shell("journeys"),
-      TMPDIR: scratchDir("infinitary-heavy-tmp-"),
-      INFINITARY_FIXTURE_LOG: log,
-      INFINITARY_FIXTURE_RELEASE: release,
-      // Its specs open no microphone (tests/run-evidence-playwright.test.ts).
-      [MIC_PREFLIGHT]: "0",
-    };
-    delete env.INFINITARY_UNIT_TEMP_ROOT_OWNED;
-    delete env.INFINITARY_E2E_RUN;
-    delete env.PLAYWRIGHT_LAST_RUN_OUTPUT_FILE;
-    const cli = join(repoRoot, "node_modules", "@playwright", "test", "cli.js");
-    const run = start(
-      process.execPath,
-      [cli, "test", "--config", join(fixtures, "playwright.config.ts"), "held.spec.ts"],
-      env,
-    );
-    try {
-      // No reading yet: the line keeps the run waiting, and its global setup every test.
-      await expect
-        .poll(runs)
-        .toEqual([{ taskId: "journeys", state: "waiting", demand: declared("journeys") }]);
-      expect(readFileSync(log, "utf8")).toBe("");
-      line.observe(reading, null);
-      await expect.poll(() => readFileSync(log, "utf8")).toBe("held\n");
-      // INF-1700: dash ended the hold at admission. A stale snapshot could pass
-      // until the line checked the group, so witness that real check while the
-      // journey is still waiting for its release file, even on an idle host.
-      groupExists.mockClear();
-      await expect.poll(() => runs().length === 0 || groupExists.mock.calls.length > 0).toBe(true);
-      expect(runs()).toEqual([
-        { taskId: "journeys", state: "running", demand: declared("journeys") },
-      ]);
-      expect(groupExists.mock.results.every(({ value }) => value === true)).toBe(true);
-      writeFileSync(release, "go");
-      expect(await run.exited).toBe(0);
-      await expect.poll(runs).toEqual([]);
-      expect(run.output()).toContain(heavyRunWords.asking("journeys"));
-      expect(run.output()).toContain(heavyRunWords.admitted("journeys"));
-      expect(run.output()).not.toContain(heavyRunWords.noLine);
-    } finally {
-      run.child.kill("SIGKILL");
-      // Only this run's own evidence: another file's fixture runs may still be writing theirs.
-      const printed = /This run's evidence: (.+)\/\n/.exec(run.output())?.[1];
-      if (printed) rmSync(join(repoRoot, printed), { recursive: true, force: true });
-    }
-  });
+  // INF-2165 approved piece 2: default two workers and an explicit count each
+  // declare N processors and 1.5 GiB per worker plus 0.5 GiB before work starts.
+  it.each([
+    { label: "default two", args: [], workers: 2, memoryMib: 3584 },
+    { label: "explicit four", args: ["--workers=4"], workers: 4, memoryMib: 6656 },
+  ])(
+    "a $label worker journey run holds its resolved declaration until it ends",
+    async ({ args, workers, memoryMib }) => {
+      const { line, shell, runs, groupExists } = await computerLine();
+      const fixtures = join(__dirname, "fixtures", "run-evidence");
+      const log = join(scratchDir("infinitary-heavy-journey-"), "started.log");
+      writeFileSync(log, "");
+      const release = join(scratchDir("infinitary-heavy-release-"), "go");
+      const env: NodeJS.ProcessEnv = {
+        ...shell("journeys"),
+        TMPDIR: scratchDir("infinitary-heavy-tmp-"),
+        INFINITARY_FIXTURE_LOG: log,
+        INFINITARY_FIXTURE_RELEASE: release,
+        // Its specs open no microphone (tests/run-evidence-playwright.test.ts).
+        [MIC_PREFLIGHT]: "0",
+      };
+      delete env.INFINITARY_UNIT_TEMP_ROOT_OWNED;
+      delete env.INFINITARY_E2E_RUN;
+      delete env.PLAYWRIGHT_LAST_RUN_OUTPUT_FILE;
+      const cli = join(repoRoot, "node_modules", "@playwright", "test", "cli.js");
+      const run = start(
+        process.execPath,
+        [cli, "test", "--config", join(fixtures, "playwright.config.ts"), "held.spec.ts", ...args],
+        env,
+      );
+      const needs = journeyRunNeeds(workers);
+      expect(needs).toEqual({ processors: workers, memoryMib });
+      const demand = { cpu: workers, memoryBytes: memoryMib * 1024 ** 2 };
+      try {
+        // No reading yet: the line keeps the run waiting, and its global setup every test.
+        await expect.poll(runs).toEqual([{ taskId: "journeys", state: "waiting", demand }]);
+        expect(readFileSync(log, "utf8")).toBe("");
+        line.observe(reading, null);
+        await expect.poll(() => readFileSync(log, "utf8")).toBe("held\n");
+        // INF-1700: dash ended the hold at admission. A stale snapshot could pass
+        // until the line checked the group, so witness that real check while the
+        // journey is still waiting for its release file, even on an idle host.
+        groupExists.mockClear();
+        await expect
+          .poll(() => runs().length === 0 || groupExists.mock.calls.length > 0)
+          .toBe(true);
+        expect(runs()).toEqual([{ taskId: "journeys", state: "running", demand }]);
+        expect(groupExists.mock.results.every(({ value }) => value === true)).toBe(true);
+        writeFileSync(release, "go");
+        expect(await run.exited).toBe(0);
+        await expect.poll(runs).toEqual([]);
+        expect(run.output()).toContain(heavyRunWords.asking("journeys", needs));
+        expect(run.output()).toContain(heavyRunWords.admitted("journeys", needs));
+        expect(run.output()).not.toContain(heavyRunWords.noLine);
+      } finally {
+        run.child.kill("SIGKILL");
+        // Only this run's own evidence: another file's fixture runs may still be writing theirs.
+        const printed = /This run's evidence: (.+)\/\n/.exec(run.output())?.[1];
+        if (printed) rmSync(join(repoRoot, printed), { recursive: true, force: true });
+      }
+    },
+  );
 
   it.runIf(process.platform === "darwin")(
     "a local phone gate asks with its declared needs before it builds anything, and leaves the line when stopped while it waits",

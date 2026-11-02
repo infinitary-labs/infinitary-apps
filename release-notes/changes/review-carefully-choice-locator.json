@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "review-carefully-choice-locator",
+      "reason": "Test-only: the Review carefully journey names the card's choice by its whole name, since the captain's question bubble above it quotes the same words; no product behavior changes."
+    }
+  ]
+}

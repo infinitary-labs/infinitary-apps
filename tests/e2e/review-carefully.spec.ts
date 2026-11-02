@@ -119,7 +119,10 @@ test("a Default pull request's merge card is made Careful by ⌘2, reviewed, and
     new RegExp(`^${REVIEW_CAREFULLY_WORDS}`),
     new RegExp(`^${MERGE_WORDS["merge-pr"]}`),
   ]);
-  await expect(card.getByRole("button", { name: REVIEW_CAREFULLY_WORDS })).toContainText("2");
+  // The choice by its whole name: the captain's question above it quotes
+  // "review carefully", and a short question's bubble is a button too.
+  const reviewChoice = { name: REVIEW_CAREFULLY_WORDS, exact: true };
+  await expect(card.getByRole("button", reviewChoice)).toContainText("2");
   const builderHead = execFileSync(
     "git",
     ["-C", repoDir, "rev-parse", `refs/heads/fm/task-${builder.id}`],
@@ -196,7 +199,7 @@ test("a Default pull request's merge card is made Careful by ⌘2, reviewed, and
   const againFacts = factsStrip(cardBody(page, MOCK_CAREFUL_REVIEWED_CARD_TITLE));
   await expect(againFacts.care).toHaveText(CARE_WORDS.reviewed);
   await expect(againFacts.review).toContainText("risk low");
-  await expect(again.getByRole("button", { name: REVIEW_CAREFULLY_WORDS })).toHaveCount(0);
+  await expect(again.getByRole("button", reviewChoice)).toHaveCount(0);
   await expect(again.getByRole("button", { name: MERGE_WORDS["merge-pr"] })).toBeVisible();
   await again.screenshot({ path: test.info().outputPath("merge-card-after-review.png") });
 

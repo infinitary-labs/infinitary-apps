@@ -990,6 +990,101 @@ describe("FirstmateAgent", () => {
     }
   });
 
+  // INF-2255: the captain's children and threadStat/crewStatus context samples.
+  // Started work needs no queue inputs; its thread facts need no per-card message hydration.
+  it("builds a started roster without unused children or per-card thread hydration", async () => {
+    const started = Array.from({ length: 20 }, (_, index) => `started-${index}`);
+    const f = setup({
+      seedTasks: started.map((id) => ({
+        id,
+        title: `Review active work ${id}`,
+        status: "idle" as const,
+      })),
+      seedCards: started.map((id) =>
+        crewCard(`card-${id}`, id, "Review the result", "<p>The work is ready.</p>"),
+      ),
+    });
+    const store = new CardStore(f.db);
+    for (const id of started) {
+      store.appendMessage({ cardId: `card-${id}`, who: "crewmate", text: "The checks passed." });
+      seedTask(f.tasks, {
+        id: `${id}-part`,
+        title: "Finished earlier part",
+        status: "idle",
+        parentId: id,
+      });
+      f.tasks.close(`${id}-part`, { status: "done", reason: "settled", actor: "host" });
+    }
+    seedTask(f.tasks, { id: "queued-parent", title: "Wait for its part", status: "queued" });
+    seedTask(f.tasks, {
+      id: "queued-part",
+      title: "Build the part",
+      status: "queued",
+      parentId: "queued-parent",
+    });
+    const children = vi.spyOn(f.tasks, "children");
+    const threadStats = vi.spyOn(CardStore.prototype, "threadStat");
+    const threadBatch = vi.spyOn(CardStore.prototype, "threadStats");
+    const messages = vi.spyOn(CardStore.prototype, "messageById");
+    const recentThreads = vi.spyOn(CardStore.prototype, "threadSummaries");
+    try {
+      const context = decodeContext(f.agent.buildContextBlock());
+      expect(new Set(context.crew.map((row) => row.task_id))).toEqual(new Set(started));
+      console.info(
+        JSON.stringify({
+          intent: "INF-2255 combined roster reads",
+          started: started.length,
+          childReads: children.mock.calls.length,
+          perCardThreadReads: threadStats.mock.calls.length,
+          threadBatches: threadBatch.mock.calls.length,
+          hydratedMessages: messages.mock.calls.length,
+          firstThread: context.crew[0]?.thread,
+        }),
+      );
+      expect(children).not.toHaveBeenCalled();
+      for (const row of context.crew)
+        expect(row.thread).toBe("thread: 1 message, last from crewmate");
+      expect(threadStats).not.toHaveBeenCalled();
+      expect(threadBatch).toHaveBeenCalledTimes(1);
+      expect(new Set(threadBatch.mock.calls[0]?.[0])).toEqual(
+        new Set(started.map((id) => `card-${id}`)),
+      );
+      const recentMessages = recentThreads.mock.results.reduce(
+        (count, result) => count + (result.type === "return" ? result.value.length : 0),
+        0,
+      );
+      expect(messages).toHaveBeenCalledTimes(recentMessages);
+      store.appendMessage({
+        cardId: `card-${started[0]}`,
+        who: "captain",
+        text: "What did the checks cover?",
+      });
+      const afterReply = f.supervisor.crewStatus(started[0])[0]?.thread;
+      expect(afterReply).toBe("thread: 2 messages, last from captain");
+      console.info(JSON.stringify({ intent: "INF-2255 roster reply freshness", afterReply }));
+      const queued = f.supervisor.crewStatus("queued-parent")[0];
+      expect(children).toHaveBeenCalledWith("queued-parent");
+      const expected = queueWaitOf(
+        f.tasks.get("queued-parent")!,
+        [],
+        [],
+        f.tasks.children("queued-parent"),
+      );
+      expect(queued?.gate).toBe(expected?.line);
+      f.tasks.close("queued-part", { status: "done", reason: "settled", actor: "host" });
+      expect(f.supervisor.crewStatus("queued-parent")[0]?.gate).not.toBe(queued?.gate);
+    } finally {
+      recentThreads.mockRestore();
+      messages.mockRestore();
+      threadStats.mockRestore();
+      threadBatch.mockRestore();
+      children.mockRestore();
+      f.agent.dispose();
+      await f.supervisor.disposeAll();
+      f.db.close();
+    }
+  });
+
   // INF-2186, captain's 952 ms moveRefusal/describeStatus board sample.
   it("derives bulk move eligibility without formatting a refusal for each row", async () => {
     const f = setup({

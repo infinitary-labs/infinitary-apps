@@ -5,6 +5,7 @@ import {
   onStage,
   SETTLE_FACTS_OPEN,
 } from "@shared/cards";
+import { currentCheckSummary } from "@shared/checkSnapshot";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { scratchDir } from "../../../tests/helpers/scratchDirs";
 import { seedDelivery } from "../../../tests/helpers/taskDelivery";
@@ -241,6 +242,87 @@ describe("CardService", () => {
     // The line is the host's reading, never saved on the card.
     expect(cards.stored(crewCard)).not.toHaveProperty("asked");
     cards.dispose();
+  });
+
+  // INF-2255: a check-watch refresh must derive one current strip per task,
+  // not repeat its recorded checks for both the saved and shown revisions.
+  it("shares settle facts across saved and shown revisions, then sees new checks and time", () => {
+    let now = 1000;
+    const { tasks, make, db } = setup(undefined, () => now);
+    seedTask(tasks, { id: "builder", title: "Keep Tasks responsive", status: "idle" });
+    const headSha = "93355db9d04e964513879db74d068a7789cb4c16";
+    const checks = {
+      headSha,
+      complete: true,
+      absenceDeclared: false,
+      items: [{ name: "unit-tests", state: "failure" as const }],
+    };
+    seedDelivery(tasks, "builder", { headSha, ci: "red", ciAt: now, checks });
+    const facts = vi.fn((taskId: string) => {
+      const delivery = tasks.get(taskId)?.delivery;
+      return `${SETTLE_FACTS_OPEN}${delivery ? currentCheckSummary(delivery)?.words : "unknown"} · observed at ${now}</div>`;
+    });
+    const cards = make(facts);
+    const input = {
+      ...decision,
+      id: "completion",
+      actions: [
+        {
+          id: "merge",
+          label: "Merge",
+          effect: { kind: "settle" as const, mode: "merge" as const },
+        },
+      ],
+    };
+    try {
+      const id = cards.emitCrewmateCard(
+        "builder",
+        { ...input, body: "<p>The shown result.</p>" },
+        "m",
+      );
+      cards.closeOut({ kind: "crewmate", taskId: "builder" }, "idle");
+      cards.emitCrewmateCard("builder", { ...input, body: "<p>The later draft.</p>" }, "m");
+      const savedAndShown = () => [cards.get(id), cards.snapshot().find((card) => card.id === id)];
+      expect(savedAndShown().map((card) => card?.body)).toEqual([
+        expect.stringContaining("The later draft."),
+        expect.stringContaining("The shown result."),
+      ]);
+      facts.mockClear();
+      cards.refreshSettleFacts();
+      console.info(
+        JSON.stringify({
+          intent: "INF-2255 settle refresh",
+          tasks: 1,
+          revisions: 2,
+          factReads: facts.mock.calls.length,
+        }),
+      );
+      expect(facts).toHaveBeenCalledTimes(1);
+      now += 60_000;
+      facts.mockClear();
+      tasks.recordChangeEvidence("builder", {
+        ci: "green",
+        checks: { ...checks, items: [{ name: "unit-tests", state: "success" }] },
+      });
+      expect(facts).toHaveBeenCalledTimes(1);
+      const words = currentCheckSummary(tasks.get("builder")!.delivery!)!.words;
+      for (const card of savedAndShown()) {
+        expect(card?.body).toContain(words);
+        expect(card?.body).toContain(`observed at ${now}`);
+      }
+      now += 60_000;
+      facts.mockClear();
+      cards.refreshSettleFacts();
+      expect(facts).toHaveBeenCalledTimes(1);
+      for (const card of savedAndShown()) expect(card?.body).toContain(`observed at ${now}`);
+      expect(savedAndShown().map((card) => card?.body)).toEqual([
+        expect.stringContaining("The later draft."),
+        expect.stringContaining("The shown result."),
+      ]);
+    } finally {
+      cards.dispose();
+      db.close();
+    }
   });
 
   // INF-63 accepted direction B: attribution comes from the linked review, not body wording.
@@ -1283,6 +1365,69 @@ describe("CardService", () => {
       "host",
       "crewmate",
     ]);
+  });
+
+  // INF-2255: batching the captain's roster threadStat path keeps each task's
+  // open-card counts, the last written message per card, ties and card-only changes.
+  it("groups current open thread metadata without mixing tasks or retaining closed cards", () => {
+    const { tasks, cardStore, make } = setup();
+    for (const id of ["t1", "t2", "other", "empty"])
+      seedTask(tasks, { id, title: `Review ${id}`, status: "idle" });
+    const cards = make();
+    const add = (taskId: string, id: string) =>
+      cards.emitCrewmateCard(taskId, { ...decision, id, title: `Review ${id}` }, "model");
+    const first = add("t1", "first");
+    const second = add("t1", "second");
+    const otherTask = add("t2", "other-task");
+    const unrelated = add("other", "unrelated");
+    const closed = add("t1", "closed");
+    add("empty", "empty");
+    cardStore.appendMessage({
+      cardId: first,
+      who: "crewmate",
+      text: "The checks passed.",
+      at: 1001,
+    });
+    cardStore.appendMessage({ cardId: second, who: "captain", text: "Which checks?", at: 1001 });
+    cardStore.appendMessage({
+      cardId: otherTask,
+      who: "host",
+      text: "The task resumed.",
+      at: 1100,
+    });
+    cardStore.appendMessage({
+      cardId: unrelated,
+      who: "captain",
+      text: "Keep this separate.",
+      at: 1200,
+    });
+    cardStore.appendMessage({
+      cardId: closed,
+      who: "captain",
+      text: "This is answered.",
+      at: 1300,
+    });
+    cards.close(closed, { kind: "crewmate", taskId: "t1" }, "answered elsewhere");
+    tasks.readProjection(() => {
+      expect(cards.threadFacts(["t1", "t2", "empty"])).toEqual(
+        new Map([
+          ["t1", "thread: 2 messages, last from captain"],
+          ["t2", "thread: 1 message, last from host"],
+        ]),
+      );
+      // A later-written message with an older clock still replaces this card's
+      // newest message; another card can then have the latest timestamp.
+      cardStore.appendMessage({
+        cardId: second,
+        who: "host",
+        text: "A saved answer arrived.",
+        at: 1000,
+      });
+      expect(cards.threadFact("t1")).toBe("thread: 3 messages, last from crewmate");
+      cards.close(first, { kind: "crewmate", taskId: "t1" }, "answered elsewhere");
+      expect(cards.threadFact("t1")).toBe("thread: 2 messages, last from host");
+    });
+    expect(cards.threadFacts([]).size).toBe(0);
   });
 
   it("writes a crewmate's thread answer only on its own card, and pushes the thread whole", () => {

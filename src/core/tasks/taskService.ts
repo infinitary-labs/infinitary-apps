@@ -2178,9 +2178,8 @@ export class TaskService {
    */
   blockersHoldingClose(id: string): TaskRecord[] {
     const marked = new Set(
-      this.links
-        .listTo(id, "blocks")
-        .filter((link) => link.holdsMerge)
+      this.linksTo(id)
+        .filter((link) => link.type === "blocks" && link.holdsMerge)
         .map((link) => link.fromId),
     );
     return this.blockers(id).filter(
@@ -2197,9 +2196,8 @@ export class TaskService {
     const record = this.store.get(id);
     if (!record) return [];
     const marked = new Set(
-      this.links
-        .listTo(id, "blocks")
-        .filter((link) => link.holdsMerge)
+      this.linksTo(id)
+        .filter((link) => link.type === "blocks" && link.holdsMerge)
         .map((link) => link.fromId),
     );
     return holdingWaits({

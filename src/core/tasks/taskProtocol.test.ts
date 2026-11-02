@@ -151,6 +151,137 @@ function setup(
 }
 
 describe("the task protocol (task-system P3)", () => {
+  // INF-2255: the retained 41-row measurement found two complete place,
+  // posture and move readings across a presentation refresh and its board.
+  it("shares refreshed facts with its board, but drops them on a new invalidation or task write", () => {
+    let reachable = true;
+    const place = vi.fn(() => ({
+      name: "Studio Mac",
+      where: "on Studio Mac",
+      reach: reachable ? ("in-reach" as const) : ("out-of-reach" as const),
+    }));
+    const posture = vi.fn(
+      (record: import("../storage/taskStore").TaskRecord): WorkPosture =>
+        record.gate ? { state: "idle", reason: "captain" } : { state: "idle", reason: "inactive" },
+    );
+    const f = setup({ place, workPosture: posture });
+    try {
+      f.tasks.create({
+        id: "work",
+        title: "Verify the refreshed task facts",
+        prompt: "",
+        repoId: "r1",
+      });
+      f.protocol.board();
+      place.mockClear();
+      posture.mockClear();
+      f.protocol.refreshPresentation();
+      const first = f.protocol.board();
+      console.info(
+        JSON.stringify({
+          intent: "INF-2255 refresh publication",
+          placeReads: place.mock.calls.length,
+          postureReads: posture.mock.calls.length,
+        }),
+      );
+      expect(place).toHaveBeenCalledTimes(1);
+      expect(posture).toHaveBeenCalledTimes(1);
+      expect(first).toEqual(f.fresh());
+
+      f.protocol.refreshPresentation();
+      reachable = false;
+      f.tasks.invalidatePresentation();
+      expect(f.protocol.board()).toEqual(f.fresh());
+      expect(f.protocol.board().tasks[0]?.place).toEqual(place());
+
+      reachable = true;
+      f.protocol.refreshPresentation();
+      f.tasks.setGate("work", { kind: "captain", ref: "review" });
+      expect(f.protocol.board()).toEqual(f.fresh());
+      expect(f.protocol.board().tasks[0]?.workPosture).toEqual({
+        state: "idle",
+        reason: "captain",
+      });
+    } finally {
+      f.protocol.dispose();
+      f.db.close();
+    }
+  });
+
+  // INF-2255: a nested owner's publication must not inherit the older live facts.
+  it("keeps a nested presentation invalidation fresh during refresh publication", () => {
+    let reachable = true;
+    const place = () => ({
+      name: "Studio Mac",
+      where: "on Studio Mac",
+      reach: reachable ? ("in-reach" as const) : ("out-of-reach" as const),
+    });
+    const f = setup({ place });
+    const decisions = new DecisionStore(f.db);
+    const route = (served: "medium" | "low") =>
+      decisions.recordRouting({
+        taskId: "work",
+        provider: "openai-codex",
+        model: "gpt-6.1-sol",
+        bucket: "high",
+        served,
+        rule: "R8",
+        reasons: ["Serve at the available slot."],
+      });
+    let observed: TaskBoard | undefined;
+    let nested = false;
+    try {
+      f.tasks.create({ id: "work", title: "Keep nested reach current", prompt: "", repoId: "r1" });
+      route("medium");
+      f.protocol.board();
+      const off = f.tasks.onChange((change) => {
+        if (!change.republish || nested) return;
+        nested = true;
+        reachable = false;
+        route("low");
+        f.tasks.refreshPresentation(["work"]);
+        observed = f.protocol.board();
+      });
+      try {
+        f.protocol.refreshPresentation();
+        expect(observed?.tasks[0]?.place?.reach).toBe("out-of-reach");
+        expect(observed?.tasks[0]?.tier).toBe("low");
+        expect(observed).toEqual(f.fresh());
+      } finally {
+        off();
+      }
+    } finally {
+      f.protocol.dispose();
+      f.db.close();
+    }
+  });
+
+  // INF-2255: projects() rebuilt full task views for counts even after a
+  // warm board had already derived exactly those counts.
+  it("serves project counts through the current board without rebuilding unchanged views", () => {
+    const posture = vi.fn((): WorkPosture => ({ state: "idle", reason: "captain" }));
+    const f = setup({ workPosture: posture });
+    try {
+      f.tasks.create({
+        id: "work",
+        title: "Keep project counts current",
+        prompt: "",
+        repoId: "r1",
+      });
+      const first = f.protocol.board();
+      posture.mockClear();
+      expect(f.protocol.projects()).toEqual(first.projects);
+      expect(posture).not.toHaveBeenCalled();
+      f.tasks.close("work", { status: "done", reason: "settled", actor: "host" });
+      expect(f.protocol.projects()).toEqual(f.fresh().projects);
+      f.tick(BOARD_RECENT_MS + 1);
+      expect(f.protocol.projects()).toEqual(f.fresh().projects);
+    } finally {
+      f.protocol.dispose();
+      f.db.close();
+    }
+  });
+
   // INF-2186: unchanged board reads must not repeat blockerCleared work.
   it("does not recheck blocker statuses on unchanged board reads, but sees a blocker finish", () => {
     const f = setup();
@@ -470,16 +601,17 @@ describe("the task protocol (task-system P3)", () => {
     f.tasks.create({ id: "live", title: "Live", prompt: "p", repoId: "r1" });
     await f.settle();
     asked.length = 0;
-    // The walk publishes the live row's posture (its change event reads it again).
+    // The walk derives only the live row, once; publication reuses that fact.
     expect(f.protocol.refreshPresentation()).toBe(true);
-    expect(new Set(asked)).toEqual(new Set(["live"]));
+    expect(asked).toEqual(["live"]);
     asked.length = 0;
     const board = f.protocol.board();
     expect(board.tasks.map((task) => task.id)).toEqual(["live"]);
     const counts = board.projects.find((project) => project.repo?.name === "nimbus-api")?.counts;
     expect(counts).toMatchObject({ open: 1, active: 0, doneRecent: 0, needsYou: 0 });
     expect(f.protocol.projects()).toEqual(board.projects);
-    expect(asked).toEqual(["live", "live"]);
+    // INF-2255: neither the board nor project counts repeats that same reading.
+    expect(asked).toEqual([]);
     // Its close published the row; the next walk answers the move, writing nothing.
     f.tasks.close("live", { status: "done", reason: "settled", actor: "host" });
     await f.settle();
@@ -962,7 +1094,11 @@ describe("the task protocol (task-system P3)", () => {
   });
 
   it("reads each work row's tier off its newest routing decision, the way the orbit paints it", async () => {
-    const { db, tasks, protocol, events, settle, tick } = setup();
+    let working = false;
+    const { db, tasks, protocol, events, settle, tick } = setup({
+      workPosture: () =>
+        working ? { state: "active", reason: "turn" } : { state: "idle", reason: "inactive" },
+    });
     for (const id of ["down", "legacy", "unserved", "never"]) {
       tasks.create({ id, title: id, prompt: "p", repoId: null });
     }
@@ -989,6 +1125,41 @@ describe("the task protocol (task-system P3)", () => {
     route("unserved", 1, null, "low", null);
     route("q", 1, "openai-codex", "high", "high");
 
+    // INF-2255: the captain's routing/servedSlots board sample. A cold board
+    // batches latest slots; unchanged boards read none and never load history.
+    const latest = vi.spyOn(DecisionStore.prototype, "latestChosenSlots");
+    const history = vi.spyOn(DecisionStore.prototype, "routing");
+    try {
+      const cold = protocol.board();
+      const coldCalls = latest.mock.calls.map(([ids]) => [...ids]);
+      latest.mockClear();
+      for (let read = 0; read < 40; read++) expect(protocol.board()).toEqual(cold);
+      const warmCalls = latest.mock.calls.length;
+      latest.mockClear();
+      protocol.refreshPresentation();
+      protocol.board();
+      const refreshCalls = latest.mock.calls.map(([ids]) => [...ids]);
+      console.info(
+        JSON.stringify({
+          intent: "INF-2255 board tiers",
+          coldCalls,
+          warmCalls,
+          refreshCalls,
+          historicalCalls: history.mock.calls.length,
+        }),
+      );
+      expect(coldCalls).toHaveLength(1);
+      expect(new Set(coldCalls.flat())).toEqual(
+        new Set(cold.tasks.filter((task) => task.kind === "work").map((task) => task.id)),
+      );
+      expect(warmCalls).toBe(0);
+      expect(refreshCalls.length).toBeGreaterThan(0);
+      for (const ids of refreshCalls) expect(new Set(ids)).toEqual(new Set(coldCalls[0]));
+      expect(history).not.toHaveBeenCalled();
+    } finally {
+      latest.mockRestore();
+      history.mockRestore();
+    }
     const tierOf = (id: string) => protocol.board().tasks.find((task) => task.id === id)?.tier;
     expect(tierOf("down")).toBe("medium");
     expect(tierOf("legacy")).toBe("premium");
@@ -1007,6 +1178,14 @@ describe("the task protocol (task-system P3)", () => {
     const changed = events.flatMap((event) => (event.type === "task_changed" ? [event] : []));
     expect(changed.find((event) => event.taskId === "down")).toMatchObject({ tier: "medium" });
     expect(changed.find((event) => event.taskId === "q")).not.toHaveProperty("tier");
+    // A routing commit is its own write, before the task's dispatch update.
+    // A queued presentation must not hide that newer served slot.
+    working = true;
+    protocol.refreshPresentation();
+    route("down", 3, "openai-codex", "high", "low");
+    expect(tierOf("down")).toBe("low");
+    tasks.setSessionFile("down", "session-3");
+    expect(tierOf("down")).toBe("low");
   });
 
   it("authors the decommission lines from the close, and a failed close as a task failure", async () => {

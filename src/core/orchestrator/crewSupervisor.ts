@@ -360,7 +360,7 @@ import {
   recordValidation as checkValidationTransition,
   StaleValidationDecisionError,
 } from "../tasks/liveValidation";
-import { queueWaitOf } from "../tasks/queueWait";
+import { hasStartQueueWait, queueWaitOf } from "../tasks/queueWait";
 import { carryOnWords, modelMoveWords, RESTART_RESUMED_WORDS } from "../tasks/recordActivity";
 import {
   builtOnRows,
@@ -10013,22 +10013,22 @@ export class CrewSupervisor {
         ? this.options.tasks.listActive()
         : this.options.tasks.listLive();
     // A decision row or a host card's row is its card, not crew work.
-    return records
+    const crew = records
       .filter((record) => !startedOnly || record.status === "active")
       .filter((record) => record.kind !== "decision" && record.kind !== "operation")
       .filter(
         (record) =>
           this.tasks.has(record.id) || record.status === "open" || record.status === "active",
-      )
-      .map((record) => {
-        const runtime = this.tasks.get(record.id);
-        const repo = record.repoId ? this.options.repos.get(record.repoId) : undefined;
-        const reportText = runtime?.lastCompleteText || record.outcome || "";
-        const lastReport = reportText
-          ? capWithOverflow(reportText, "crew-status-report")
-          : undefined;
-        const starting = this.options.tasks.startAttemptOf(record.id);
-        const queueWait = starting
+      );
+    const threads = this.cards.threadFacts(crew.map((record) => record.id));
+    return crew.map((record) => {
+      const runtime = this.tasks.get(record.id);
+      const repo = record.repoId ? this.options.repos.get(record.repoId) : undefined;
+      const reportText = runtime?.lastCompleteText || record.outcome || "";
+      const lastReport = reportText ? capWithOverflow(reportText, "crew-status-report") : undefined;
+      const starting = this.options.tasks.startAttemptOf(record.id);
+      const queueWait =
+        starting || !hasStartQueueWait(record)
           ? undefined
           : queueWaitOf(
               record,
@@ -10036,114 +10036,112 @@ export class CrewSupervisor {
               this.options.tasks.linksTo(record.id),
               this.options.tasks.children(record.id),
             );
-        // A started task in the backlog (INF-2062) waits for start_now, with how long it has.
-        const backlog =
-          record.status === "active" && record.backlogSince != null
-            ? `started, in the backlog ${formatDurationShort(Math.max(0, this.now() - record.backlogSince))}; start_now picks it up`
-            : undefined;
-        const gate = starting
-          ? undefined
-          : (backlog ??
-            queueWait?.line ??
-            (record.status === "open"
-              ? record.gate
-                ? gateText(record.gate)
-                : (this.waitingOnBlockers(record) ??
-                  (record.startPolicy === "on-request" ? "starts on request" : undefined))
-              : undefined));
-        const computer = this.taskComputer(record);
-        const rigor = this.policiesOf(record)?.rigor.value;
-        const review = this.reviewState(record);
-        const thread = this.cards.threadFact(record.id);
-        const restart = this.restartFact(record.id);
-        const now = this.now();
-        const stalledSince = this.ladder.stalledSince(record, now);
-        const stalled = stalledSince
-          ? this.ladder.stalledFact(record, now, stalledSince)
+      // A started task in the backlog (INF-2062) waits for start_now, with how long it has.
+      const backlog =
+        record.status === "active" && record.backlogSince != null
+          ? `started, in the backlog ${formatDurationShort(Math.max(0, this.now() - record.backlogSince))}; start_now picks it up`
           : undefined;
-        const timing = this.timingFacts(record);
-        const refused = record.delivery?.cardRefusal;
-        const ci = this.options.tasks.projectedFact(record, this.ciFact, () =>
-          ciFactOf(record.delivery, this.now()),
-        );
-        const override = standingOverride(record.delivery, record.delivery?.headSha);
-        // A personal task carries no delivery: it builds in place, and
-        // saying "local-only" here would be a posture the Firstmate could
-        // act on. The brief omits the line for the same reason.
-        const delivery =
-          repo?.kind === "personal" ? undefined : deliveryForRecord(record, repo?.delivery);
-        // Where its proposed change goes, in the person's word for the host
-        // (git integration PR 1.3) - only where one goes somewhere.
-        const goesIn =
-          delivery === "direct-pr" && repo?.host
-            ? forgePlace({ kind: repo.host.kind, host: repo.host.name })
-            : null;
-        return {
-          taskId: record.id,
-          key: record.key,
-          title: record.title,
-          status: backlog
-            ? "backlog"
-            : runtime
-              ? runtime.state === "idle"
-                ? "idle"
-                : "running"
-              : record.status === "open"
-                ? "queued"
-                : (record.activity ?? "idle"),
-          ...(runtime ? { crewmate: runtime.crewmate } : {}),
-          repoName: repo?.name ?? "default workspace",
-          branch: record.branch,
-          ...(gate ? { gate } : {}),
-          ...(computer ? { computer } : {}),
-          ...(lastReport ? { lastReport } : {}),
-          ...(restart ? { restart } : {}),
-          premiumRetryEligible: premiumRetryPossible(record),
-          ...(rigor ? { rigor } : {}),
-          ...(review ? { review } : {}),
-          ...(thread ? { thread } : {}),
-          ...(stalled ? { stalled } : {}),
-          ...timing.words,
-          ...(Object.keys(timing.times).length > 0 || stalledSince
-            ? {
-                times: {
-                  ...timing.times,
-                  ...(stalledSince
-                    ? { stalledSince: stalledSince.since, stalledWakes: stalledSince.wakes }
-                    : {}),
-                },
-              }
-            : {}),
-          ...(override
-            ? {
-                override: {
-                  passes: `${holdNames(override.holds)} ${overrideSpan(override)}`,
-                  words: override.words,
-                },
-              }
-            : {}),
-          ...(refused
-            ? {
-                cardRefused: {
-                  title: refused.title,
-                  at: new Date(refused.at).toISOString(),
-                  reason: refused.reason,
-                  why: refused.why,
-                },
-              }
-            : {}),
-          ...(delivery ? { delivery } : {}),
-          ...(goesIn ? { goesIn } : {}),
-          ...(ci ? { ci } : {}),
-          // Autonomy answers "who merges this", so it is absent wherever
-          // there is no merge: the personal workspace, and an answer task,
-          // which the deliverable hold refuses to merge whoever asks. The
-          // rigor above is absent on the same rows for the same reason.
-          ...(repo?.kind === "personal" || this.deliverableOf(record) !== "change"
-            ? {}
-            : { autonomy: autonomyForRecord(record, repo?.autonomy) }),
-        };
-      });
+      const gate = starting
+        ? undefined
+        : (backlog ??
+          queueWait?.line ??
+          (record.status === "open"
+            ? record.gate
+              ? gateText(record.gate)
+              : (this.waitingOnBlockers(record) ??
+                (record.startPolicy === "on-request" ? "starts on request" : undefined))
+            : undefined));
+      const computer = this.taskComputer(record);
+      const rigor = this.policiesOf(record)?.rigor.value;
+      const review = this.reviewState(record);
+      const thread = threads.get(record.id);
+      const restart = this.restartFact(record.id);
+      const now = this.now();
+      const stalledSince = this.ladder.stalledSince(record, now);
+      const stalled = stalledSince ? this.ladder.stalledFact(record, now, stalledSince) : undefined;
+      const timing = this.timingFacts(record);
+      const refused = record.delivery?.cardRefusal;
+      const ci = this.options.tasks.projectedFact(record, this.ciFact, () =>
+        ciFactOf(record.delivery, this.now()),
+      );
+      const override = standingOverride(record.delivery, record.delivery?.headSha);
+      // A personal task carries no delivery: it builds in place, and
+      // saying "local-only" here would be a posture the Firstmate could
+      // act on. The brief omits the line for the same reason.
+      const delivery =
+        repo?.kind === "personal" ? undefined : deliveryForRecord(record, repo?.delivery);
+      // Where its proposed change goes, in the person's word for the host
+      // (git integration PR 1.3) - only where one goes somewhere.
+      const goesIn =
+        delivery === "direct-pr" && repo?.host
+          ? forgePlace({ kind: repo.host.kind, host: repo.host.name })
+          : null;
+      return {
+        taskId: record.id,
+        key: record.key,
+        title: record.title,
+        status: backlog
+          ? "backlog"
+          : runtime
+            ? runtime.state === "idle"
+              ? "idle"
+              : "running"
+            : record.status === "open"
+              ? "queued"
+              : (record.activity ?? "idle"),
+        ...(runtime ? { crewmate: runtime.crewmate } : {}),
+        repoName: repo?.name ?? "default workspace",
+        branch: record.branch,
+        ...(gate ? { gate } : {}),
+        ...(computer ? { computer } : {}),
+        ...(lastReport ? { lastReport } : {}),
+        ...(restart ? { restart } : {}),
+        premiumRetryEligible: premiumRetryPossible(record),
+        ...(rigor ? { rigor } : {}),
+        ...(review ? { review } : {}),
+        ...(thread ? { thread } : {}),
+        ...(stalled ? { stalled } : {}),
+        ...timing.words,
+        ...(Object.keys(timing.times).length > 0 || stalledSince
+          ? {
+              times: {
+                ...timing.times,
+                ...(stalledSince
+                  ? { stalledSince: stalledSince.since, stalledWakes: stalledSince.wakes }
+                  : {}),
+              },
+            }
+          : {}),
+        ...(override
+          ? {
+              override: {
+                passes: `${holdNames(override.holds)} ${overrideSpan(override)}`,
+                words: override.words,
+              },
+            }
+          : {}),
+        ...(refused
+          ? {
+              cardRefused: {
+                title: refused.title,
+                at: new Date(refused.at).toISOString(),
+                reason: refused.reason,
+                why: refused.why,
+              },
+            }
+          : {}),
+        ...(delivery ? { delivery } : {}),
+        ...(goesIn ? { goesIn } : {}),
+        ...(ci ? { ci } : {}),
+        // Autonomy answers "who merges this", so it is absent wherever
+        // there is no merge: the personal workspace, and an answer task,
+        // which the deliverable hold refuses to merge whoever asks. The
+        // rigor above is absent on the same rows for the same reason.
+        ...(repo?.kind === "personal" || this.deliverableOf(record) !== "change"
+          ? {}
+          : { autonomy: autonomyForRecord(record, repo?.autonomy) }),
+      };
+    });
   }
 
   /**

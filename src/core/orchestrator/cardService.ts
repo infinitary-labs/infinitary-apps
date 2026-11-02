@@ -370,6 +370,14 @@ export class CardService {
    * the fact strip, and the words of the merge it names (INF-23).
    */
   refreshSettleFacts(taskIds?: readonly string[]): void {
+    this.host.tasks.readProjection(() => this.refreshSettleFactsInProjection(taskIds));
+  }
+
+  private refreshSettleFactsInProjection(taskIds?: readonly string[]): void {
+    // The saved and shown revisions carry the same current task facts.
+    // A new owner per pass keeps time wording fresh even in an outer read;
+    // the task projection invalidates both records and facts after a write.
+    const factsOwner = Symbol("settle facts");
     let changed = false;
     const merges = (action: Card["actions"][number]) =>
       action.effect?.kind === "settle" && action.effect.mode === "merge" && !action.passes;
@@ -406,7 +414,10 @@ export class CardService {
     const refreshed = (card: Card): Card => {
       if (!card.taskId || (taskIds && !taskIds.includes(card.taskId))) return card;
       if (!takesFactStrip(card)) return card;
-      const facts = this.host.settleFacts(card.taskId);
+      const taskId = card.taskId;
+      const record = this.host.tasks.get(taskId);
+      const read = () => this.host.settleFacts(taskId);
+      const facts = record ? this.host.tasks.projectedFact(record, factsOwner, read) : read();
       const split = facts ? splitSettleFacts(card.body) : undefined;
       if (!facts || !split) return anyway(relabeled(card));
       const body = split.body.slice(0, split.at) + facts + split.body.slice(split.at);
@@ -1974,17 +1985,32 @@ export class CardService {
    * Firstmate reads the state of a conversation it was never woken for.
    */
   threadFact(taskId: string): string | undefined {
-    let count = 0;
-    let last: CardMessage | undefined;
-    for (const card of this.cards.values()) {
-      if (card.taskId !== taskId) continue;
-      const stat = this.host.cardStore.threadStat(card.id);
-      if (!stat) continue;
-      count += stat.count;
-      if (!last || stat.last.at >= last.at) last = stat.last;
+    return this.threadFacts([taskId]).get(taskId);
+  }
+
+  /** One current roster read: visit the open stack once and fetch only its requested thread metadata. */
+  threadFacts(taskIds: readonly string[]): Map<string, string> {
+    if (taskIds.length === 0) return new Map();
+    const wanted = new Set(taskIds);
+    const cards = [...this.cards.values()].filter((card) => card.taskId && wanted.has(card.taskId));
+    const stats = this.host.cardStore.threadStats(cards.map((card) => card.id));
+    const threads = new Map<string, { count: number; last: Pick<CardMessage, "who" | "at"> }>();
+    for (const card of cards) {
+      const stat = stats.get(card.id);
+      if (!stat || !card.taskId) continue;
+      const thread = threads.get(card.taskId);
+      if (!thread) threads.set(card.taskId, { count: stat.count, last: stat });
+      else {
+        thread.count += stat.count;
+        if (stat.at >= thread.last.at) thread.last = stat;
+      }
     }
-    if (!last || count === 0) return undefined;
-    return `thread: ${count} message${count === 1 ? "" : "s"}, last from ${last.who}`;
+    return new Map(
+      [...threads].map(([taskId, { count, last }]) => [
+        taskId,
+        `thread: ${count} message${count === 1 ? "" : "s"}, last from ${last.who}`,
+      ]),
+    );
   }
 
   /**

@@ -260,7 +260,11 @@ Two bounded facts reach it on whatever turn comes next:
   The line ends `awaiting the author` while an open card holds for its author, `awaiting your answer` when the first mate is the one that answers (its own card, or a note a done task kept), `no answer owed` on an open card without the hold, and `card closed, no answer owed` once the card is resolved.
   So a captain message a withdrawn or reopened card kept reads as owing nothing.
   Bounded exactly like the resolutions (8 lines, 6 h), with the same watermark, so a busy conversation cannot swell the block.
-- **`thread:` on the task's crew line** - `2 messages, last from captain`, from `CardService.threadFact`; `crew_status` carries the same field.
+- **`thread:` on the task's crew line** - `2 messages, last from captain`, from `CardService.threadFacts`; `crew_status` carries the same field.
+  The roster visits the open card stack once and reads counts, last authors and their timestamps in one batch scoped to its tasks, without hydrating message bodies.
+  Each card's last message is the newest written row; equal timestamps across cards keep their existing insertion-order tie behavior.
+  The batch lives for that roster read only, so a new reply or a card closure is visible at the next read even inside one task projection.
+  The separately bounded recent-thread context still reads its full newest messages.
 
 The whose-turn rule gains one fact (`reportSort.ts`): an unanswered captain message in a thread is the CREWMATE's turn, so its report wakes nobody.
 It is branch 0, above the open-card branch, deliberately - the captain has spoken since that card went up, so the card no longer holds the turn.

@@ -122,6 +122,7 @@ On any card carrying a `settle` effect, and on the story note of a task that mer
   When the checks started and when they were last read (`Started 9:01 PM · read 9:13 PM`) and a review's risk note ride the cells' `title` attributes, never lines of their own; the branch is deliberately not shown.
   It is rendered from the task record every time the card is emitted or revised; the host refreshes open strips on task changes and their running times on the shared tick.
   Host fact refreshes update both the shown and staged card without an author revision or thread message, so the card, record and paired view read the same delivery facts.
+  Each refresh shares a task's fact strip across those revisions inside the task-read projection; a task write invalidates it, and the next refresh reads again so time wording stays current.
   The shown strip takes a refresh in place: its frame keeps the one document it was born with and the bridge rewrites only what changed (`markup`, `docs/ui-plugins.md` "Bridge v2"), so a press on its pull request link that the minute's refresh lands in still opens the pull request (FI3-1093).
   A failed reading adds one disclosure per failed check at the offered version, directly under the Checks cell (`checkVerdicts`, `src/core/orchestrator/checkVerdicts.ts`; nightly session audit finding 3).
   Its summary carries the check name and the crewmate's recorded `check_change` classification: Caused by this change, Broken on main too, Suspected intermittent failure, or Cause not established.

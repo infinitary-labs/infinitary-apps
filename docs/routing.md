@@ -203,6 +203,9 @@ That snapshot is historical, never a fresh observation after restart; `docs/help
 
 `PlacedWorkScores` (`src/core/routing/placedWork.ts`, INF-443 piece 3) adjusts the spend-priority score for work already placed, without changing the allowance reading.
 The router uses it for the home and each computer's pool, and account selection uses it too.
+One evaluation's `PlacedWorkData` shares the work and finished samples, allowance prices, per-reading window charges and per-task usage totals across model ranking and account binding.
+The snapshot belongs to that synchronous evaluation; a later preview reads new usage, routes and observations rather than retaining its charges.
+The charge is independent of the candidate model, while each model's effective allowance, raw band and time-to-reset score are still derived separately.
 The settings meters, 0% eligibility check, flagship reserve, pins, requested tier and reset waits still read the unadjusted meter.
 An unpriced allowance takes no charge, as the captain selected in question 7; there is no one-task restriction or shipped starting price.
 

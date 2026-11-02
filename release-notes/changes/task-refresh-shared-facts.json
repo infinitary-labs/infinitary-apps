@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "id": "task-refresh-shared-facts",
+      "kind": "fix",
+      "area": "tasks",
+      "title": "Task updates do less repeated work",
+      "body": "Tasks, project totals and crew summaries avoid repeating the same calculations. Choosing a crewmate, refreshing completion cards and removing expired task files also do less work. Task details and check times stay current.",
+      "noPicture": "The screens look the same; this reduces repeated calculations behind their updates.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

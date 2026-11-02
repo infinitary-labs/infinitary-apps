@@ -4,6 +4,7 @@ import { APP_KEPT_PARTS, removedWords, removeTaskLeftovers } from "./taskLeftove
 export { APP_KEPT_PARTS } from "./taskLeftovers";
 
 import type { AppPaths } from "../paths";
+import type { TaskLink } from "../storage/taskLinkStore";
 import type { TaskRecord } from "../storage/taskStore";
 import { TaskService } from "./taskService";
 
@@ -21,7 +22,7 @@ export const CLOSED_TASK_FILES_KEPT_MS = 7 * 24 * 60 * 60 * 1000;
 
 type TasksReader = Pick<
   TaskService,
-  "get" | "list" | "listLive" | "allLinks" | "resolve" | "note" | "onChange" | "timeline"
+  "get" | "list" | "allLinks" | "note" | "onChange" | "timeline"
 >;
 
 export type ClosedTaskFilesOptions = {
@@ -35,9 +36,13 @@ export type ClosedTaskFilesOptions = {
 };
 
 /** Every upstream task live work builds on, including through closed intermediates. */
-function heldByLiveWork(tasks: Pick<TasksReader, "listLive" | "allLinks" | "resolve">) {
+function heldByLiveWork(records: readonly TaskRecord[], links: readonly TaskLink[]) {
+  // The pass already needs every row to decide which files are due. Share
+  // that snapshot instead of composing each upstream reference again.
+  const byId = new Map(records.map((record) => [record.id, record]));
+  const byKey = new Map(records.map((record) => [record.key, record]));
   const upstream = new Map<string, string[]>();
-  for (const link of tasks.allLinks()) {
+  for (const link of links) {
     const [from, to] =
       link.type === "discovered-from"
         ? [link.fromId, link.toId]
@@ -49,7 +54,7 @@ function heldByLiveWork(tasks: Pick<TasksReader, "listLive" | "allLinks" | "reso
     refs.push(to);
     upstream.set(from, refs);
   }
-  const pending = tasks.listLive();
+  const pending = records.filter((record) => !TaskService.isClosed(record));
   const held = new Set<string>();
   for (const record of pending) {
     if (held.has(record.id)) continue;
@@ -57,7 +62,10 @@ function heldByLiveWork(tasks: Pick<TasksReader, "listLive" | "allLinks" | "reso
     const refs = [...(upstream.get(record.id) ?? [])];
     if (record.shape?.basis) refs.push(record.shape.basis);
     for (const ref of refs) {
-      const ancestor = tasks.resolve(ref);
+      const trimmed = ref.trim();
+      const ancestor = trimmed
+        ? (byId.get(trimmed) ?? byKey.get(trimmed.toUpperCase()))
+        : undefined;
       if (ancestor && !held.has(ancestor.id)) pending.push(ancestor);
     }
   }
@@ -136,8 +144,9 @@ export class ClosedTaskFiles {
   private async pass(): Promise<void> {
     const now = this.options.now();
     this.lastPassAt = now;
-    const held = heldByLiveWork(this.options.tasks);
-    for (const record of this.options.tasks.list()) {
+    const records = this.options.tasks.list();
+    const held = heldByLiveWork(records, this.options.tasks.allLinks());
+    for (const record of records) {
       if (!closedTaskFilesDue(record, held, now)) continue;
       const key = `${record.id}@${record.closedAt}`;
       if (this.cleared.has(key)) continue;

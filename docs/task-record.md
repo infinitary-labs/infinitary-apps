@@ -335,13 +335,18 @@ CardService declares stack changes through `presentationChanged` at its broadcas
 TaskProtocol delivers the focusable card snapshot before its board snapshot or delta, explicitly, not by relative timer delays.
 Its task-flag read uses the card owner's staged versions and durable open heads, without rebuilding each card's message graph, task title or seen state.
 The board shares one staged-card read between minimized tasks and ready decisions, and indexes incoming links once for wait dates and queue waits.
+A queue wait indexes its incoming prerequisite dates once rather than searching the same edges separately for every blocker.
 A tier read seeks only each requested task's newest routing decision that chose a model, selecting its served slot and legacy bucket without reading the routing history.
 The first mate's roster requests started crew only, so it does not derive computer places or check summaries for unstarted tasks that its backlog counts instead.
+Crew status checks the queue-wait owner's applicability before fetching blockers, links or children, so started work reads none of those inputs for an inapplicable start wait.
+Its thread facts use one current batch of open-card counts and last authors for the selected crew, without fetching each message body (`docs/card-threads.md`).
 Live review witnesses select open children before composing records, without loading closed review payloads.
 Job membership reads declared command ids through `LoadLine.taskIds`, never a capacity or system-memory snapshot.
 Move eligibility shares the projection and formats a refusal only when an action asks for one; unchanged board views retain their lifecycle moves.
 A device place is shared from the device snapshot once per refresh, and an address change invalidates that snapshot and its places.
 A presentation refresh reuses its derived posture when its synchronous post-commit listener publishes that same fact.
+The board consumes that publication's already-read posture, place and move facts once at the same task sequence; any intervening task write or another owner's presentation invalidation discards them.
+The standalone projects read uses the current board's project counts, so it does not build each live task's full view again after a board update.
 `tasks.detail` re-reads on either board carrier as well as its own events; project readers refresh too.
 
 The renderer immediately overlays local card availability on board/detail and project waiting counts when it hides a reply, or restores a refused one.

@@ -539,11 +539,56 @@ describe("INF-443 learned placed-work ranking", () => {
     const reads = w.scores as unknown as { work(): unknown; finished(now: number): unknown };
     const work = vi.spyOn(reads, "work");
     const finished = vi.spyOn(reads, "finished");
-    const preview = router.preview("Build", { kind: "implement", basis_verified: true });
-    expect(preview?.result.choice?.provider).toBe("xai");
-    expect(finished).toHaveBeenCalledTimes(1);
-    expect(work).toHaveBeenCalledTimes(1);
-    w.db.close();
+    // INF-2255: one routing preview must not read identical usage totals or
+    // allowance prices again for each model and its account selection.
+    const score = vi.spyOn(w.scores, "score");
+    const prices = vi.spyOn(w.settings, "getAllowancePrices");
+    const statement = Object.getPrototypeOf(w.db.prepare("SELECT 1"));
+    const originalGet = statement.get;
+    const sums = new Map<string, number>();
+    statement.get = function (this: { source: string }, ...args: unknown[]) {
+      if (this.source.includes("SUM(cost) AS logged")) {
+        const key = JSON.stringify(args);
+        sums.set(key, (sums.get(key) ?? 0) + 1);
+      }
+      return originalGet.apply(this, args);
+    };
+    try {
+      const preview = router.preview("Build", { kind: "implement", basis_verified: true });
+      expect(preview?.result.choice?.provider).toBe("xai");
+      expect(finished).toHaveBeenCalledTimes(1);
+      expect(work).toHaveBeenCalledTimes(1);
+      console.info(
+        JSON.stringify({
+          intent: "INF-2255 routing evaluation reads",
+          models: models.length,
+          accounts: rows.length,
+          workReads: work.mock.calls.length,
+          finishedReads: finished.mock.calls.length,
+          scoreCalls: score.mock.calls.length,
+          priceReads: prices.mock.calls.length,
+          usageReads: [...sums.values()].reduce((a, b) => a + b, 0),
+          uniqueUsageReads: sums.size,
+          repeatsPerUsageRead: [...new Set(sums.values())],
+          preview,
+        }),
+      );
+      expect(sums.size).toBe(FINISHED.length + 1);
+      expect([...sums.values()]).toEqual([...sums].map(() => 1));
+      expect(prices).toHaveBeenCalledTimes(1);
+      // A later evaluation sees new usage, rather than reusing this one's charge.
+      const before = preview?.candidates?.[0]?.charge?.windows[0]?.points;
+      w.log("running", Math.max(...FINISHED) + 1, AT + 1);
+      const next = router.preview("Build", { kind: "implement", basis_verified: true });
+      expect(next?.candidates?.[0]?.charge?.windows[0]?.points).toBeGreaterThan(before!);
+    } finally {
+      statement.get = originalGet;
+      score.mockRestore();
+      prices.mockRestore();
+      work.mockRestore();
+      finished.mockRestore();
+      w.db.close();
+    }
   });
 
   // INF-1714: the model is ranked by the account that will serve it, so the

@@ -62,6 +62,7 @@ Open and active tasks are never touched, and neither is anything outside the fol
 
 `ClosedTaskFiles` runs one pass at start-up, once an hour on the shared ticker, each time a task closes, and when a work computer comes back into reach.
 A close can free the tasks it held, and the hourly pass lets a continuously running app cross the week without another close.
+Each pass derives upstream holds and cleanup candidates from one task snapshot, resolving basis ids and case-insensitive keys from that snapshot rather than composing each referenced task again.
 A pass moves each leftover part, in one rename apiece, into one folder under `worktree-trash/`, writes one quiet timeline note saying what went and how many bytes (`removedFiles` and `bytes` in its data), and deletes that folder in the background below the UI (`WorkspaceService.deleteInBackground`).
 A delete a quit cut short finishes in the next start's trash sweep, and a part a quit left unmoved goes in the next pass.
 A link is moved or removed as a link and never followed, and a task folder that is itself a link is left alone.

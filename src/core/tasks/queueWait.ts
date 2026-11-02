@@ -2,6 +2,13 @@ import { providerLabel } from "@shared/modelSlots";
 import type { TaskView } from "@shared/tasks";
 import type { TaskRecord } from "../storage/taskStore";
 
+/** Only unstarted work reads a start wait; callers can avoid fetching its unused inputs. */
+export function hasStartQueueWait(
+  record: Pick<TaskRecord, "status" | "kind" | "activity">,
+): boolean {
+  return record.status === "open" && record.kind === "work" && record.activity !== "starting";
+}
+
 /** A start wait reads typed sources only. No scheduler decision or cached readiness. */
 export function queueWaitOf(
   record: TaskRecord,
@@ -9,8 +16,7 @@ export function queueWaitOf(
   links: readonly { fromId: string; toId: string; type: string; createdAt: number }[],
   parts: readonly TaskRecord[] = [],
 ): TaskView["queueWait"] {
-  if (record.status !== "open" || record.kind !== "work" || record.activity === "starting")
-    return undefined;
+  if (!hasStartQueueWait(record)) return undefined;
   const dated = (reason: string, since?: number): NonNullable<TaskView["queueWait"]> => ({
     line: `${reason} · ${since === undefined ? "start of wait not recorded" : `since ${new Date(since).toLocaleString(undefined, { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })}`}`,
     ...(since === undefined ? {} : { since }),
@@ -18,12 +24,12 @@ export function queueWaitOf(
   // A dropped prerequisite still holds START; name it rather than inventing readiness.
   const holding = blockers.filter((task) => task.status !== "done");
   if (holding.length) {
-    const dates = holding.map(
-      (task) =>
-        links.find(
-          (link) => link.type === "blocks" && link.fromId === task.id && link.toId === record.id,
-        )?.createdAt,
-    );
+    const sinceByBlocker = new Map<string, number>();
+    for (const link of links) {
+      if (link.type === "blocks" && link.toId === record.id && !sinceByBlocker.has(link.fromId))
+        sinceByBlocker.set(link.fromId, link.createdAt);
+    }
+    const dates = holding.map((task) => sinceByBlocker.get(task.id));
     return dated(
       `Waiting for ${holding.map((task) => `${task.key || task.id}${task.status === "dropped" ? " (dropped)" : ""}`).join(", ")}`,
       dates.every((at) => at !== undefined) ? Math.min(...(dates as number[])) : undefined,

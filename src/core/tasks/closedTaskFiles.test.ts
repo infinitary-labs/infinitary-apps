@@ -1,7 +1,7 @@
 import { existsSync, mkdirSync, readdirSync, symlinkSync, writeFileSync } from "node:fs";
 import { rm } from "node:fs/promises";
 import { join } from "node:path";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { scratchDir } from "../../../tests/helpers/scratchDirs";
 import { type AppPaths, appPathsFor } from "../paths";
 import { openInMemoryDatabase } from "../storage/db";
@@ -77,6 +77,52 @@ const removalNotes = (tasks: TaskService, id: string) =>
   tasks.timeline(id).filter((event) => event.data?.removedFiles !== undefined);
 
 describe("a closed task's leftover files", () => {
+  // INF-2255 / INF-2213: every live basis separately resolved and composed
+  // the same earlier task during the periodic retention pass.
+  it("derives shared retention holds from one task snapshot without resolving every reference", async () => {
+    const { paths, tasks, workspace, files, pass, closed } = setup();
+    const plan = closed("shared-plan");
+    const unrelated = closed("unrelated-plan");
+    const builders = Array.from({ length: 40 }, (_, index) =>
+      tasks.create({
+        id: `builder-${index}`,
+        title: `Build accepted piece ${index}`,
+        prompt: "Use the plan's evidence",
+        repoId: null,
+        startPolicy: "on-request",
+        shape: { kind: "implement", basis: ` ${plan.key.toLowerCase()} ` },
+      }),
+    );
+    pass(CLOSED_TASK_FILES_KEPT_MS + 1);
+    const resolve = vi.spyOn(tasks, "resolve");
+    const list = vi.spyOn(tasks, "list");
+    try {
+      await files.sweep();
+      await workspace.deletionsSettled();
+      expect(entries(paths, plan.id)).toContain("evidence");
+      expect(entries(paths, unrelated.id)).toEqual(KEPT);
+      console.info(
+        JSON.stringify({
+          intent: "INF-2255 retention references",
+          builders: builders.length,
+          resolveCalls: resolve.mock.calls.length,
+          fullLists: list.mock.calls.length,
+        }),
+      );
+      expect(list).toHaveBeenCalledTimes(1);
+      expect(resolve).not.toHaveBeenCalled();
+      for (const builder of builders)
+        tasks.close(builder.id, { status: "dropped", reason: "cancelled", actor: "captain" });
+      await files.sweep();
+      await workspace.deletionsSettled();
+      expect(entries(paths, plan.id)).toEqual(KEPT);
+    } finally {
+      resolve.mockRestore();
+      list.mockRestore();
+      await workspace.deletionsSettled();
+    }
+  });
+
   it("go a week after the close, keeping the app's own parts and saying what went", async () => {
     const { paths, tasks, workspace, files, pass, closed } = setup();
     closed("done-a");

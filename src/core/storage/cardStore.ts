@@ -870,6 +870,29 @@ export class CardStore {
     return rows.map(messageOf);
   }
 
+  /** Current counts and last authors for the requested cards, without hydrating message bodies. */
+  threadStats(
+    cardIds: readonly string[],
+  ): Map<string, { count: number; who: CardMessageWho; at: number }> {
+    if (cardIds.length === 0) return new Map();
+    const rows = this.db
+      .prepare(
+        `SELECT latest.card_id AS cardId, latest.who, latest.at,
+        (SELECT COUNT(*) FROM card_messages WHERE card_id = asked.value) AS count
+       FROM json_each(?) AS asked CROSS JOIN card_messages AS latest
+       WHERE latest.id = (
+         SELECT id FROM card_messages WHERE card_id = asked.value ORDER BY id DESC LIMIT 1
+       )`,
+      )
+      .all(JSON.stringify(cardIds)) as {
+      cardId: string;
+      count: number;
+      who: CardMessageWho;
+      at: number;
+    }[];
+    return new Map(rows.map(({ cardId, ...stat }) => [cardId, stat]));
+  }
+
   /** One card's thread, counted, with its newest message; absent when it has none. */
   threadStat(cardId: string): ThreadSummary | undefined {
     const row = this.db

@@ -9,6 +9,35 @@ import { TaskService } from "./taskService";
 // INF-2186: board posture witnesses and roster wait chains repeatedly read
 // and compose the same task records during one synchronous projection.
 describe("task projection reads", () => {
+  // INF-2255: posture's flags and the named waits must share the same
+  // marked incoming edges, not reread them for every witness.
+  it("shares marked blocker reads across posture flags and wait facts, then sees a close", () => {
+    const db = freshDatabase();
+    const tasks = new TaskService({ db });
+    try {
+      seedTask(tasks, { id: "builder", title: "Keep task refreshes responsive", status: "idle" });
+      seedTask(tasks, { id: "fix", title: "Fix the blocking check", status: "idle" });
+      tasks.link("fix", "builder", "blocks", "firstmate", true);
+      tasks.readProjection(() => {
+        tasks.listLive();
+        const builder = tasks.get("builder")!;
+        const rows = rowsRead(db, () => {
+          for (let read = 0; read < 20; read += 1) {
+            expect(tasks.flagsOf(builder).blocked).toBe(true);
+            expect(tasks.waitsHolding(builder.id, true).map((task) => task.id)).toEqual(["fix"]);
+          }
+        });
+        console.info(JSON.stringify({ intent: "INF-2255 marked blockers", reads: 20, rows }));
+        expect(rows).toBe(tasks.linksTo(builder.id).length);
+        tasks.close("fix", { status: "done", reason: "settled", actor: "host" });
+        expect(tasks.flagsOf(builder).blocked).toBe(false);
+        expect(tasks.waitsHolding(builder.id, true)).toEqual([]);
+      });
+    } finally {
+      db.close();
+    }
+  });
+
   // INF-2186, captain's firstmateActedSince/listChildren posture sample.
   it("answers a first-mate request from action times without decoding old timelines or child payloads", () => {
     const db = freshDatabase();

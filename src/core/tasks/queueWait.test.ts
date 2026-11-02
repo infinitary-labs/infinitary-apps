@@ -1,6 +1,7 @@
 import { taskStatusOf } from "@shared/taskPresentation";
 import { describe, expect, it } from "vitest";
 import { openInMemoryDatabase } from "../storage/db";
+import { queueWaitOf } from "./queueWait";
 import { TaskProtocol } from "./taskProtocol";
 import { queryTasks } from "./taskQuery";
 import { TaskService } from "./taskService";
@@ -42,6 +43,52 @@ function fixture() {
 }
 
 describe("queued task wait facts (nightly audit finding 4)", () => {
+  // INF-2255: the captain's queueWaitOf/viewOf board freeze. A task waiting
+  // on many real prerequisites must not search all their edges for each date.
+  it("reads prerequisite dates once while preserving the queue wait and its oldest holding edge", () => {
+    const f = fixture();
+    try {
+      const build = f.create("build", "when-ready");
+      for (let index = 0; index < 40; index++) {
+        const part = f.create(`prerequisite-${index}`);
+        f.tick();
+        f.tasks.link(part.id, build.id, "blocks", "firstmate");
+      }
+      const blockers = f.tasks.blockers(build.id);
+      const links = f.tasks.linksTo(build.id);
+      let visits = 0;
+      const tracked = links.map(
+        (link) =>
+          new Proxy(link, {
+            get(target, key, receiver) {
+              if (key === "type") visits += 1;
+              return Reflect.get(target, key, receiver);
+            },
+          }),
+      );
+      const wait = queueWaitOf(build, blockers, tracked);
+      expect(wait?.since).toBe(Math.min(...links.map((link) => link.createdAt)));
+      for (const blocker of blockers) expect(wait?.line).toContain(blocker.key);
+      expect(f.view(build.id).queueWait).toEqual(wait);
+      console.info(
+        JSON.stringify({
+          intent: "INF-2255 queue wait dates",
+          prerequisites: blockers.length,
+          edgeVisits: visits,
+        }),
+      );
+      expect(visits).toBe(links.length);
+      const first = blockers[0]!;
+      f.tasks.close(first.id, { status: "done", reason: "settled", actor: "host" });
+      expect(f.view(build.id).queueWait?.since).toBe(
+        Math.min(...links.filter((link) => link.fromId !== first.id).map((link) => link.createdAt)),
+      );
+    } finally {
+      f.protocol.dispose();
+      f.db.close();
+    }
+  });
+
   it("shares the first mate’s go and original time across reads, edits and restart", () => {
     const f = fixture();
     try {

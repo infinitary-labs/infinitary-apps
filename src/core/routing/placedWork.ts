@@ -58,10 +58,22 @@ type Sample = { provider: string; model: string; level: string; cost: number };
  */
 export type PlacedWorkData = { work: Work[]; samples: Sample[] };
 
+type UsageTotals = { logged: number | null; metered: number | null };
+type PlacedCharge = Omit<ChargeFact, "baseSpendPriority">;
+type Evaluation = {
+  readings: Reading[];
+  prices: ReturnType<SettingsStore["getAllowancePrices"]>;
+  charges: WeakMap<QuotaProviderView, PlacedCharge | undefined>;
+  usage: Map<number, Map<string, UsageTotals>>;
+  expected: Map<string, number | undefined>;
+};
+
 /** INF-443: prices are learned locally; only ranking, never the meter, is adjusted. */
 export class PlacedWorkScores {
   private readonly readings = new Map<string, Reading>();
   private readonly cycles = new Map<string, Cycle>();
+  /** The work snapshot owns these reads, never a later routing evaluation. */
+  private readonly evaluations = new WeakMap<PlacedWorkData, Evaluation>();
   constructor(
     private readonly db: AppDatabase,
     private readonly settings: SettingsStore,
@@ -214,53 +226,9 @@ export class PlacedWorkScores {
     // The band is the unadjusted reading's: a charge never moves it (INF-1714).
     const band = spendBand(original);
     if (row.status !== "ok" || row.stale || !row.accountId) return { ...original, band };
-    const reading =
-      [...this.readings.values()].find(
-        (r) => r.row.accountId === row.accountId && r.at === row.measuredAt,
-      ) ?? [...this.readings.values()].find((r) => r.row.accountId === row.accountId);
-    if (!reading) return { ...original, band };
-    const prices = this.settings.getAllowancePrices();
-    const works = data.work.filter(
-      (w) =>
-        allowanceProviderOf(w.provider) === row.provider &&
-        (w.account
-          ? [...this.readings.values()].some(
-              (r) => r.row.accountId === w.account && this.login(r.row) === this.login(row),
-            )
-          : [...this.readings.values()]
-              .filter((r) => (w.device ?? "home") === r.source && r.row.provider === row.provider)
-              .slice(0, 1)
-              .some((r) => this.login(r.row) === this.login(row))),
-    );
-    const windows = row.windows.map((window) => {
-      const price = prices[this.priceKey(row, window.id)];
-      let points = 0;
-      if (price !== undefined)
-        for (const work of works) {
-          if (work.closed !== null && reading.at > work.closed) continue;
-          const scoped = classifyProviderWindows(row.provider, [window]).scoped;
-          if (
-            scoped.size &&
-            ![...scoped.keys()].some((scope) => scopeAppliesToModel(scope, work.model))
-          )
-            continue;
-          const sums = prepared(
-            this.db,
-            "SELECT SUM(cost) AS logged, SUM(CASE WHEN at <= ? THEN cost ELSE 0 END) AS metered FROM usage_events WHERE task_id = ? AND cost > 0",
-          ).get(reading.at, work.id) as { logged: number | null; metered: number | null };
-          const logged = sums.logged ?? 0;
-          const expected =
-            work.closed !== null ? logged : this.expected(work, data.samples, logged);
-          if (expected !== undefined) points += Math.max(0, expected - (sums.metered ?? 0)) * price;
-        }
-      return {
-        id: window.id,
-        points,
-        percentRemaining: window.percentRemaining,
-        resetsAtMs: window.resetsAtMs,
-        ...(price !== undefined ? { pointsPerDollar: price } : {}),
-      };
-    });
+    const charge = this.charge(row, data);
+    if (!charge) return { ...original, band };
+    const windows = charge.windows;
     const adjusted = effectiveFromProvider(
       {
         ...row,
@@ -283,14 +251,99 @@ export class PlacedWorkScores {
         ? { lastsThroughReset: adjusted.lastsThroughReset }
         : {}),
       band,
-      charge: {
-        accountId: row.accountId,
-        source: reading.source,
-        measuredAt: reading.at,
-        baseSpendPriority: original.spendPriority,
-        windows,
-      },
+      charge: { ...charge, baseSpendPriority: original.spendPriority },
     };
+  }
+
+  /**
+   * Placed work charges a reading's windows, not the model being ranked.
+   * Catalog ranking and account binding share that charge and each task's
+   * usage totals within their one evaluation (INF-2255). Model-specific
+   * allowance and time-to-reset calculations still run in score.
+   */
+  private charge(row: QuotaProviderView, data: PlacedWorkData): PlacedCharge | undefined {
+    let evaluation = this.evaluations.get(data);
+    if (!evaluation) {
+      evaluation = {
+        readings: [...this.readings.values()],
+        prices: this.settings.getAllowancePrices(),
+        charges: new WeakMap(),
+        usage: new Map(),
+        expected: new Map(),
+      };
+      this.evaluations.set(data, evaluation);
+    }
+    if (evaluation.charges.has(row)) return evaluation.charges.get(row);
+    const { readings, prices } = evaluation;
+    const reading =
+      readings.find((r) => r.row.accountId === row.accountId && r.at === row.measuredAt) ??
+      readings.find((r) => r.row.accountId === row.accountId);
+    if (!reading || !row.accountId) {
+      evaluation.charges.set(row, undefined);
+      return undefined;
+    }
+    const login = this.login(row);
+    const works = data.work.filter(
+      (w) =>
+        allowanceProviderOf(w.provider) === row.provider &&
+        (w.account
+          ? readings.some((r) => r.row.accountId === w.account && this.login(r.row) === login)
+          : readings
+              .filter((r) => (w.device ?? "home") === r.source && r.row.provider === row.provider)
+              .slice(0, 1)
+              .some((r) => this.login(r.row) === login)),
+    );
+    let usage = evaluation.usage.get(reading.at);
+    if (!usage) {
+      usage = new Map();
+      evaluation.usage.set(reading.at, usage);
+    }
+    const windows = row.windows.map((window) => {
+      const price = prices[this.priceKey(row, window.id)];
+      const scoped = classifyProviderWindows(row.provider, [window]).scoped;
+      let points = 0;
+      if (price !== undefined)
+        for (const work of works) {
+          if (work.closed !== null && reading.at > work.closed) continue;
+          if (
+            scoped.size &&
+            ![...scoped.keys()].some((scope) => scopeAppliesToModel(scope, work.model))
+          )
+            continue;
+          let sums = usage.get(work.id);
+          if (!sums) {
+            sums = prepared(
+              this.db,
+              "SELECT SUM(cost) AS logged, SUM(CASE WHEN at <= ? THEN cost ELSE 0 END) AS metered FROM usage_events WHERE task_id = ? AND cost > 0",
+            ).get(reading.at, work.id) as UsageTotals;
+            usage.set(work.id, sums);
+          }
+          if (!evaluation.expected.has(work.id)) {
+            const logged = sums.logged ?? 0;
+            evaluation.expected.set(
+              work.id,
+              work.closed !== null ? logged : this.expected(work, data.samples, logged),
+            );
+          }
+          const expected = evaluation.expected.get(work.id);
+          if (expected !== undefined) points += Math.max(0, expected - (sums.metered ?? 0)) * price;
+        }
+      return {
+        id: window.id,
+        points,
+        percentRemaining: window.percentRemaining,
+        resetsAtMs: window.resetsAtMs,
+        ...(price !== undefined ? { pointsPerDollar: price } : {}),
+      };
+    });
+    const charge = {
+      accountId: row.accountId,
+      source: reading.source,
+      measuredAt: reading.at,
+      windows,
+    };
+    evaluation.charges.set(row, charge);
+    return charge;
   }
 
   /**

@@ -242,8 +242,11 @@ export class TaskProtocol {
   private disposed = false;
   /** Each live row's posture and place as last published, so a move in either republishes it. */
   private readonly postures = new Map<string, string>();
-  private publishingPostures: ReadonlyMap<string, WorkPosture | undefined> | undefined;
-  private publishingRecords: readonly TaskRecord[] | undefined;
+  private publishing:
+    | { seq: number; records: readonly TaskRecord[]; facts: ReadonlyMap<string, LiveFacts> }
+    | undefined;
+  /** Facts this presentation publication just read, for its sequenced board update. */
+  private pendingFacts: { seq: number; values: ReadonlyMap<string, LiveFacts> } | undefined;
   private readingFacts: Map<string, LiveFacts> | undefined;
   /** Each record's status as last emitted, so task_changed can say what it moved from. */
   private readonly statuses = new Map<string, TaskStatus>();
@@ -316,17 +319,14 @@ export class TaskProtocol {
   ): boolean {
     const changed: string[] = [];
     const live = new Set<string>();
-    const postures = new Map<string, WorkPosture | undefined>();
+    const facts = new Map<string, LiveFacts>();
     for (const record of records) {
       live.add(record.id);
-      const workPosture = this.options.workPosture?.(record);
-      postures.set(record.id, workPosture);
+      const current = this.liveFacts(record);
+      facts.set(record.id, current);
+      const workPosture = current.posture;
       read?.(record, workPosture);
-      const posture = JSON.stringify([
-        workPosture,
-        this.options.place?.(record),
-        this.options.computerMove?.(record),
-      ]);
+      const posture = JSON.stringify([workPosture, current.place, current.computerMove]);
       if (this.postures.get(record.id) === posture) continue;
       this.postures.set(record.id, posture);
       changed.push(record.id);
@@ -340,15 +340,12 @@ export class TaskProtocol {
     if (changed.length) {
       // A callback may have written a task. Borrow only the unchanged snapshot.
       const unchanged = this.options.tasks.boardSeq() === seq;
-      const previousPostures = this.publishingPostures;
-      const previousRecords = this.publishingRecords;
-      this.publishingPostures = unchanged ? postures : undefined;
-      this.publishingRecords = unchanged ? records : undefined;
+      const previous = this.publishing;
+      this.publishing = unchanged ? { seq: seq + 1, records, facts } : undefined;
       try {
         this.options.tasks.refreshPresentation(changed);
       } finally {
-        this.publishingPostures = previousPostures;
-        this.publishingRecords = previousRecords;
+        this.publishing = previous;
       }
     }
     return changed.length > 0 || left;
@@ -368,11 +365,15 @@ export class TaskProtocol {
   board(): TaskBoard {
     return this.options.tasks.readProjection(() => {
       const outer = this.readingFacts;
-      this.readingFacts = new Map();
+      const pending = this.pendingFacts;
+      this.readingFacts = new Map(
+        pending?.seq === this.options.tasks.boardSeq() ? pending.values : undefined,
+      );
       try {
         return this.buildBoard();
       } finally {
         this.readingFacts = outer;
+        if (this.pendingFacts === pending) this.pendingFacts = undefined;
       }
     });
   }
@@ -661,23 +662,31 @@ export class TaskProtocol {
   }
 
   projects(): ProjectView[] {
-    const now = this.now();
-    // Live work and work done within the window hold every count.
-    const rows = this.options.tasks.listLiveOrClosedSince(now - BOARD_RECENT_MS);
-    return this.projectViews(rows, this.graphFor(rows), now);
+    // The board already owns the live/recent rows and their current counts.
+    // Reading them here must not rebuild every view for the projects subscriber.
+    return this.board().projects;
   }
 
   // ---- the emitter --------------------------------------------------------
 
   private onChange(change: TaskChange): void {
+    const publication =
+      change.republish &&
+      this.publishing?.seq === change.seq &&
+      change.seq === this.options.tasks.boardSeq()
+        ? this.publishing
+        : undefined;
     this.options.tasks.readProjection(
-      () => this.readChange(change),
-      change.republish ? (this.publishingRecords ?? []) : [],
+      () => this.readChange(change, publication?.facts),
+      publication?.records ?? [],
     );
   }
 
-  private readChange(change: TaskChange): void {
+  private readChange(change: TaskChange, facts?: ReadonlyMap<string, LiveFacts>): void {
     const { tasks, broadcastEvent } = this.options;
+    // Reuse only our own sequenced publication, never a nested publication
+    // or task write from another owner during the same notification.
+    this.pendingFacts = facts ? { seq: change.seq, values: facts } : undefined;
     const records = new Map<string, TaskRecord | undefined>();
     const recordOf = (taskId: string) => {
       if (!records.has(taskId)) records.set(taskId, tasks.get(taskId));
@@ -708,10 +717,9 @@ export class TaskProtocol {
         status: record.status,
         from,
         activity: record.activity,
-        workPosture:
-          change.republish && this.publishingPostures?.has(taskId)
-            ? this.publishingPostures.get(taskId)
-            : this.options.workPosture?.(record),
+        workPosture: facts?.has(taskId)
+          ? facts.get(taskId)?.posture
+          : this.options.workPosture?.(record),
         ...(record.kind === "work"
           ? {
               tier: tiers.get(taskId) ?? null,

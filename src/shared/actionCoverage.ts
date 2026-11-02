@@ -77,6 +77,8 @@ export const ACTION_EXCEPTIONS: Partial<Record<CoreInvokeChannel, string>> = {
   "inf:plugins:fetch": "Panel internal operation",
   "inf:plugins:invoke": "Panel internal operation",
   "inf:plugins:db": "Panel internal operation",
+  "inf:plugins:retry":
+    "The captain's Retry on a panel whose background work the app stopped; it clears that stop and starts the panel again, and nothing is set",
   "inf:plugins:personal:mounts":
     "The window's own answer about which panels it drew, sent whenever it changes; nothing is set",
   "inf:work:card": WORK_REQUEST,

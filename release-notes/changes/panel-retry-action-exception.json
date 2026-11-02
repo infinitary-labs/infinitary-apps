@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "panel-retry-action-exception",
+      "reason": "Names the panel Retry channel in the action-permission inventory as a captain-only click so the existing parity test passes again. No shipped behavior changes."
+    }
+  ]
+}

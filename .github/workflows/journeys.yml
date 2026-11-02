@@ -22,6 +22,15 @@ on:
         description: Journey files to run, by name or path, separated by spaces or commas
         required: true
         type: string
+      platforms:
+        description: Linux portable proof, Mac native proof, or both; omit Mac when already proven locally
+        type: choice
+        options: [linux, mac, both]
+        default: linux
+      base:
+        description: Comparison ref for directly edited journey files, which run three total rounds
+        type: string
+        default: origin/main
       mac_all:
         description: Run every named journey on the Mac too, not only its tests that need a Mac
         type: boolean
@@ -109,10 +118,14 @@ jobs:
               }
               if (run) break;
             }
-            if (!run) throw new Error('No passing verify run supplies journey times');
+            if (!run) {
+              await core.summary.addRaw('No historical timings: schedule every explicitly selected file conservatively.').write();
+              return;
+            }
             core.setOutput('id', run.id);
             await core.summary.addRaw(`Journey times: [passing verify run ${run.id}](${run.html_url})\n`).write();
       - uses: actions/download-artifact@v4
+        if: steps.timing-run.outputs.id != ''
         with:
           name: e2e-results
           run-id: ${{ steps.timing-run.outputs.id }}
@@ -179,10 +192,11 @@ jobs:
           else
             node scripts/affected-journeys.ts --base "origin/${{ github.base_ref }}" --head HEAD --json > "$RUNNER_TEMP/affected.json"
           fi
-          node scripts/journey-budget.ts --selection "$RUNNER_TEMP/affected.json" --timings "$RUNNER_TEMP/journey-times/e2e-results.json" --linux-timings "$RUNNER_TEMP/linux-journey-times" --linux-jobs "$RUNNER_TEMP/linux-journey-jobs.json" $EVERY > "$RUNNER_TEMP/placement.json"
+          node scripts/journey-budget.ts --selection "$RUNNER_TEMP/affected.json" --timings "$RUNNER_TEMP/journey-times/e2e-results.json" --linux-timings "$RUNNER_TEMP/linux-journey-times" --linux-jobs "$RUNNER_TEMP/linux-journey-jobs.json" --platforms "$PLATFORMS" $EVERY > "$RUNNER_TEMP/placement.json"
         env:
           EVENT: ${{ github.event_name }}
           NAMED: ${{ inputs.files }}
+          PLATFORMS: ${{ inputs.platforms || 'linux' }}
           EVERY: ${{ inputs.mac_all && '--every-on-mac' || '' }}
       - uses: actions/upload-artifact@v4
         with:
@@ -199,10 +213,12 @@ jobs:
       matrix: ${{ fromJSON(needs.choose-journeys.outputs.linux) }}
     uses: ./.github/workflows/source-journeys.yml
     with:
+      ref: ${{ github.sha }}
       artifact-suffix: overflow-${{ strategy.job-index }}
       suite: affected
       lane: ${{ matrix.lane }}
       files: ${{ matrix.files }}
+      repeat-base: ${{ inputs.base || 'origin/main' }}
   affected-journeys:
     needs: choose-journeys
     # The implicit success() skips on chooser failure; zero skips by this
@@ -243,6 +259,9 @@ jobs:
           node-version: 24
       - run: pnpm install --frozen-lockfile
       - id: dev-signing
+        # Native signing proofs keep their explicit route; isolated source tests
+        # use Electron's supplied signature after qualification (docs/testing.md).
+        if: inputs.mac_all == true
         run: pnpm codesign:local
       # Playwright's window recorder is not part of an install; a journey
       # that records would otherwise fetch it in the middle of its test.
@@ -260,11 +279,12 @@ jobs:
           pnpm build
           if [ "$STARVE" = true ]; then
             # The requested load experiment has its own limit (docs/testing.md, "Journeys on request").
-            python3 scripts/starve-check.py --timeout 900 -- pnpm exec playwright test --no-deps $ONLY $FILES
+            python3 scripts/starve-check.py --timeout 900 -- node scripts/journey-runs.ts --base "$BASE" --files "$FILES" -- $ONLY
           else
-            pnpm exec playwright test --no-deps $ONLY $FILES
+            node scripts/journey-runs.ts --base "$BASE" --files "$FILES" -- $ONLY
           fi
         env:
+          BASE: ${{ inputs.base || 'origin/main' }}
           ONLY: ${{ !inputs.mac_all && '--grep @mac-only' || '' }}
           STARVE: ${{ inputs.starve }}
           INFINITARY_E2E_RUN_MINUTES: 75

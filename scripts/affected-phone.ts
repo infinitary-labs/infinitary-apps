@@ -370,6 +370,15 @@ export function requestedParts(reasons: readonly string[], reach: PartReach[]): 
   return unknown ? reach : reach.filter((each) => each.distance < 2);
 }
 
+/** INF-2259: ordinary proof is round one. Only a complete live selection moves its
+ * edited-test repeats to CI; proper subsets keep their existing local placement. */
+export function phoneRepeatPlan(parts: readonly PhonePart[], reach: readonly PartReach[]): {
+  full: boolean; repeatParts: PhonePart[];
+} {
+  const full = EVERY.every((part) => parts.includes(part));
+  return { full, repeatParts: full ? EVERY.filter((part) => reach.some((each) => each.part === part && each.distance === 0)) : [] };
+}
+
 function main(): void {
   const { values } = parseArgs({ options: {
     base: { type: "string", default: "origin/main" },
@@ -378,6 +387,8 @@ function main(): void {
     times: { type: "string" },
     placement: { type: "string" },
     request: { type: "boolean", default: false },
+    // Explicit ordinary coverage, including an empty string for every live part.
+    coverage: { type: "string" },
   } });
   const root = fileURLToPath(new URL("..", import.meta.url));
   const git = (args: string[]) => execFileSync("git", args, { cwd: root, encoding: "utf8", stdio: ["ignore", "pipe", "pipe"], maxBuffer: 64 * 1024 * 1024 });
@@ -414,15 +425,26 @@ function main(): void {
         .map((each) => ({ ...each, kept: true, reason: "requested affected parts" }))
       : placeParts(reach, partTimes(values.times ? readFile(values.times) : undefined), { virtualMac });
   }
-  const kept = placement.filter((each) => each.kept).map((each) => each.part);
-  console.log(`run=${decision.run}`);
+  let kept = placement.filter((each) => each.kept).map((each) => each.part);
+  if (values.coverage !== undefined) {
+    const named = values.coverage.split(/\s+/).filter(Boolean);
+    for (const part of named) if (!EVERY.includes(part as PhonePart)) throw new Error(`Unknown phone part: ${part}`);
+    kept = named.length ? EVERY.filter((part) => named.includes(part)) : [...EVERY];
+  }
+  const repeats = phoneRepeatPlan(kept, placement);
+  console.log(`full=${repeats.full}`);
+  console.log(`repeat_parts=${repeats.repeatParts.join(" ")}`);
+  const run = values.coverage === undefined ? decision.run : kept.length > 0;
+  console.log(`run=${run}`);
   console.log(`parts=${kept.join(" ")}`);
-  if (values.placement) writeFileSync(values.placement, `${JSON.stringify({ run: decision.run, inputs: decision.reasons, parts: placement }, null, 2)}\n`);
+  if (values.placement) writeFileSync(values.placement, `${JSON.stringify({ run, inputs: decision.reasons, parts: placement, coverage: kept, repeats }, null, 2)}\n`);
   const row = (each: Placement) =>
     `- ${each.kept ? "Runs" : "Left"}: ${each.part}, distance ${each.distance}, ${each.minutes === undefined ? "no time" : `${each.minutes.toFixed(1)} minutes`}: ${each.reason}; ${each.why}`;
   if (process.env.GITHUB_STEP_SUMMARY) appendFileSync(process.env.GITHUB_STEP_SUMMARY,
     ["### Native phone gate", "",
       ...(decision.run ? decision.reasons.map((reason) => `- ${reason}`) : ["No phone input the gate uses changed beyond the contract version number."]),
+      "", `Ordinary coverage: ${kept.join(" ") || "none"}; complete live selection: ${repeats.full}.`,
+      `Two additional CI passes on each device: ${repeats.repeatParts.join(" ") || "none"}.`,
       "", ...(placement.length ? ["#### Parts", "", ...placement.map(row), ""] : [])].join("\n"));
 }
 

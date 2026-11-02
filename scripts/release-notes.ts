@@ -501,7 +501,7 @@ function check(repo: Repo, flags: Map<string, string | true>): string {
   if (problems.length > 0) throw new Refusal(problems);
 
   if (channel === "alpha") {
-    const reviewed = flags.get("reviewed");
+    const reviewed = flags.get("verified-main") ?? flags.get("reviewed");
     if (typeof reviewed === "string") {
       if (reviewed !== source)
         throw new Refusal([
@@ -531,7 +531,11 @@ function check(repo: Repo, flags: Map<string, string | true>): string {
     )
     .map((tag) => tag.version)
     .sort((a, b) => compareSemver(a, b) ?? 0);
-  if (unpinned.length > 0)
+  // Automatic exact-main cuts keep immutable tags as their source records;
+  // publishedReleases already derives any manifest not committed afterward.
+  // A promotion keeps its alpha source unchanged and uses the same tags.
+  // A manual notes-only candidate still carries reviewed historical pins.
+  if (unpinned.length > 0 && flags.get("verified-main") !== source && !(channel === "stable" && promoted))
     throw new Refusal([
       `${unpinned.length} published release(s) have no record in ${NOTES_DIR}/releases/: ${unpinned.join(", ")}`,
       "Pin each with `node scripts/release-notes.ts manifest --version <v> --write` on the release's branch, commit it, then dispatch again.",

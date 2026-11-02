@@ -2,16 +2,13 @@ import { describe, expect, it, vi } from "vitest";
 import { MAC_UNIT_FILES } from "../scripts/mac-unit-tests.ts";
 import { REPEATS, repetitionArgs, runRepetitions, selectRepeats } from "../scripts/unit-repeats.ts";
 
-/**
- * INF-2074's ci-gate fix, the captain's checked words: "Run a change's
- * typecheck, lint and ten unit-file repeats on Linux CI instead of the Mac
- * mini's line, since unit tests need no Mac". ci.yml's unit-repeats job runs
- * what selectRepeats picks; a file that needs a Mac keeps its repeats there.
- */
-describe("a change's unit-file repeats on Linux", () => {
+/** INF-2259 and the captain's subsequent INF-2273 override: ordinary local
+ * coverage plus two more runs for every edited unit file, including portable
+ * files, without a duplicate PR CI repeat job. */
+describe("a change's local unit-file rounds", () => {
   // A changed list shaped like a real pull request's: product code, docs, a
   // journey, a renamed-away test, a Mac-only test and two ordinary tests.
-  it("picks the Vitest files the change keeps, leaving Mac-only files to a Mac", () => {
+  it("picks every surviving edited Vitest file locally and identifies native prerequisites", () => {
     const macOnly = MAC_UNIT_FILES[0];
     const gone = "tests/removed-in-this-change.test.ts";
     const changed = [
@@ -28,6 +25,7 @@ describe("a change's unit-file repeats on Linux", () => {
     const selection = selectRepeats(changed, (path) => path !== gone);
     expect(selection.repeat).toEqual([
       "src/core/placed/loadLine.test.ts",
+      macOnly,
       "src/renderer/src/cards/CardStack.test.tsx",
       "tests/checks-mode.test.ts",
     ]);
@@ -55,6 +53,16 @@ describe("a change's unit-file repeats on Linux", () => {
     },
   );
 
+  it("uses the declared local worker count without adding another round", () => {
+    const file = "tests/unit-repeats.test.ts";
+    const run = vi.fn((_args: string[]) => 0);
+    expect(runRepetitions([file], undefined, run, () => {}, "2")).toBe(0);
+    expect(run).toHaveBeenCalledTimes(3);
+    for (const [args] of run.mock.calls)
+      expect(args).toEqual(["exec", "vitest", "run", "--retry", "0", "--maxWorkers", "2", file]);
+    expect(() => repetitionArgs([file], undefined, "0")).toThrow("Invalid worker count");
+  });
+
   it("keeps a one-file change on the first shard without allowing missing tests", () => {
     const files = ["src/core/helper/sessionHost.test.ts"];
     expect(repetitionArgs(files, "1/2")).toEqual(repetitionArgs(files));
@@ -70,18 +78,22 @@ describe("a change's unit-file repeats on Linux", () => {
     },
   );
 
-  it.each(["1/2", "2/2"])("invokes a fresh complete round ten times for shard %s", (shard) => {
-    const files = [
-      "src/core/orchestrator/crewSupervisor.test.ts",
-      "src/core/placed/placedSessions.test.ts",
-    ];
-    const run = vi.fn((_args: string[]) => 0);
-    const report = vi.fn();
-    expect(runRepetitions(files, shard, run, report)).toBe(0);
-    expect(run).toHaveBeenCalledTimes(REPEATS);
-    for (const [args] of run.mock.calls) expect(args).toEqual(repetitionArgs(files, shard));
-    expect(report).toHaveBeenLastCalledWith([`All ${REPEATS} rounds passed.`]);
-  });
+  it.each(["1/2", "2/2"])(
+    "includes ordinary coverage in three fresh complete rounds for shard %s",
+    (shard) => {
+      const files = [
+        "src/core/orchestrator/crewSupervisor.test.ts",
+        "src/core/placed/placedSessions.test.ts",
+      ];
+      const run = vi.fn((_args: string[]) => 0);
+      const report = vi.fn();
+      expect(runRepetitions(files, shard, run, report)).toBe(0);
+      // INF-2259 accepted override: ordinary run plus two more, not ten.
+      expect(run).toHaveBeenCalledTimes(3);
+      for (const [args] of run.mock.calls) expect(args).toEqual(repetitionArgs(files, shard));
+      expect(report).toHaveBeenLastCalledWith([`All ${REPEATS} rounds passed.`]);
+    },
+  );
 
   it.each([1, null])("stops at a failed or interrupted round (%s), never retrying it", (status) => {
     const run = vi

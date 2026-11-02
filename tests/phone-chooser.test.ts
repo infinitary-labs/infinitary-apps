@@ -5,6 +5,7 @@ import {
   partReach,
   partTimes,
   phoneDecision,
+  phoneRepeatPlan,
   placeParts,
   requestedParts,
 } from "../scripts/affected-phone";
@@ -134,5 +135,57 @@ describe("affected phone requests", () => {
     const all = PHONE_PARTS.map((part) => part.name);
     expect(request("a7aa5e974")).toEqual(all);
     expect(request("2dbbedc52", true)).toEqual(all);
+  });
+});
+
+// INF-2259's accepted complete-selection route: ordinary proof plus two edited-test
+// passes on each device, using the existing real change fixtures and the live table.
+describe("complete phone selection repeat accounting", () => {
+  const all = PHONE_PARTS.map(({ name }) => name);
+  const reached = (commit: string, unreadable = false) => {
+    const { paths, testDiff, testFiles } = change(commit);
+    return partReach(
+      phoneDecision(paths).reasons,
+      unreadable ? undefined : testDiff,
+      Object.keys(testFiles),
+      (path) => testFiles[path],
+    );
+  };
+
+  it("counts ordinary coverage once and repeats only distance-zero parts", () => {
+    const reach = reached("2dbbedc52");
+    const plan = phoneRepeatPlan([...all].reverse(), reach);
+    expect(plan.full).toBe(true);
+    expect(plan.repeatParts).toEqual(
+      reach.filter(({ distance }) => distance === 0).map(({ part }) => part),
+    );
+    expect(plan.repeatParts.length).toBeGreaterThan(0);
+    expect(plan.repeatParts.length).toBeLessThan(all.length);
+    for (const part of all) {
+      expect(
+        [all, plan.repeatParts, plan.repeatParts].filter((round) => round.includes(part)),
+      ).toHaveLength(reach.find((each) => each.part === part)!.distance === 0 ? 3 : 1);
+    }
+  });
+
+  it("keeps proper subsets on their existing local repeat route", () => {
+    const reach = reached("2dbbedc52");
+    expect(
+      phoneRepeatPlan(
+        reach.filter(({ distance }) => distance === 0).map(({ part }) => part),
+        reach,
+      ),
+    ).toEqual({ full: false, repeatParts: [] });
+  });
+
+  it("retains every-part repetition for unreadable UI changes", () => {
+    expect(phoneRepeatPlan(all, reached("2dbbedc52", true))).toEqual({
+      full: true,
+      repeatParts: all,
+    });
+  });
+
+  it("does not repeat test parts for a shared product input alone", () => {
+    expect(phoneRepeatPlan(all, reached("e3be41f53"))).toEqual({ full: true, repeatParts: [] });
   });
 });

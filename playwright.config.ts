@@ -64,7 +64,9 @@ if (process.argv[2] === "test" && !process.env.CI) {
   // INF-800: with CI mode on, a committed journey runs only through CI
   // (docs/testing.md, "Where the heavy checks run"). A throwaway picture or
   // demo script, which is never committed, still runs here.
-  const refusal = process.argv.includes("--list") ? undefined : ciModeRefusal("journeys");
+  const refusal = process.argv.includes("--list")
+    ? undefined
+    : ciModeRefusal("journeys", process.env, process.cwd(), process.argv.slice(3));
   if (
     refusal &&
     filters.some((arg) => {

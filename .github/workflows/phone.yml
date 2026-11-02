@@ -121,12 +121,16 @@ jobs:
     # Retain the job limit for setup, checks, cleanup and evidence upload.
     # Commands run directly; the device gate has its own 90-minute limit on every route.
     timeout-minutes: 165
+    outputs:
+      repeat_parts: ${{ steps.request-select.outputs.repeat_parts }}
     env:
       PHONE_VIRTUAL_MAC: ${{ vars.PHONE_VIRTUAL_MAC }}
+      PHONE_ROUND: ''
+      PHONE_REPEAT_PARTS: ''
     defaults:
       run:
         working-directory: Application Support/firstmate
-    steps:
+    steps: &phone-steps
       - name: Checkout the keep-awake action
         uses: actions/checkout@v4
         with:
@@ -142,7 +146,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           path: Application Support/firstmate
-          fetch-depth: ${{ github.event_name == 'pull_request' && '2' || inputs.affected && '0' || '1' }}
+          fetch-depth: ${{ github.event_name == 'pull_request' && '2' || github.event_name == 'workflow_dispatch' && '0' || '1' }}
           persist-credentials: false
       # No package cache on a Mac (journeys.yml says why, INF-724).
       - uses: actions/setup-node@v4
@@ -207,12 +211,20 @@ jobs:
         run: node scripts/affected-phone.ts --base HEAD^1 --head HEAD --times "$RUNNER_TEMP/phone-times/part-times.json" --placement "$RUNNER_TEMP/phone-placement.json" >> "$GITHUB_OUTPUT"
       - id: request-select
         name: Choose affected parts for a crewmate request
-        if: github.event_name == 'workflow_dispatch' && inputs.affected && !inputs.parts
-        run: node scripts/affected-phone.ts --request --base "$BASE_REF" --head HEAD --placement "$RUNNER_TEMP/phone-placement.json" >> "$GITHUB_OUTPUT"
+        if: github.event_name == 'workflow_dispatch' && !env.PHONE_REPEAT_PARTS && !inputs.parts && !inputs.waits && inputs.evidence_run == ''
+        run: |
+          coverage=(); if [ "$AFFECTED" != true ] || [ -n "$REQUESTED_PARTS" ]; then coverage=(--coverage "$REQUESTED_PARTS"); fi
+          node scripts/affected-phone.ts --request --base "$BASE_REF" --head HEAD "${coverage[@]}" --placement "$RUNNER_TEMP/phone-placement.json" >> "$GITHUB_OUTPUT"
         env:
           BASE_REF: ${{ inputs.base || 'origin/main' }}
+          AFFECTED: ${{ inputs.affected }}
+          REQUESTED_PARTS: ${{ inputs.parts }}
+      - id: repeat-select
+        name: Reuse the ordinary pass's edited-part selection
+        if: env.PHONE_REPEAT_PARTS != ''
+        run: echo "parts=$PHONE_REPEAT_PARTS" >> "$GITHUB_OUTPUT"
       - name: Keep the chosen and left parts
-        if: github.event_name == 'pull_request' || inputs.affected
+        if: (github.event_name == 'pull_request' || github.event_name == 'workflow_dispatch') && !env.PHONE_ROUND
         uses: actions/upload-artifact@v4
         with:
           name: phone-placement
@@ -226,7 +238,7 @@ jobs:
         name: Decide whether the device gate runs
         run: echo "gate=$GATE" >> "$GITHUB_OUTPUT"
         env:
-          GATE: ${{ (github.event_name != 'pull_request' || steps.select.outputs.run == 'true') && (!inputs.affected || inputs.parts != '' || steps.request-select.outputs.parts != '') }}
+          GATE: ${{ steps.repeat-select.outputs.parts != '' || (github.event_name != 'pull_request' || steps.select.outputs.run == 'true') && (!inputs.affected || inputs.parts != '' || steps.request-select.outputs.parts != '') }}
       # In the virtual Mac the packages install inside the clone, so this Mac
       # needs only Node for the chooser and the replacement checks.
       - uses: pnpm/action-setup@v4
@@ -265,7 +277,7 @@ jobs:
           fi
           scripts/virtual-mac/phone.sh start "$RUNNER_TEMP/phone"
         env:
-          REQUESTED_PARTS: ${{ inputs.parts }}
+          REQUESTED_PARTS: ${{ env.PHONE_REPEAT_PARTS || inputs.parts }}
           STARVE: ${{ inputs.starve }}
           PERF: ${{ inputs.perf }}
           WAITS: ${{ inputs.waits }}
@@ -288,9 +300,10 @@ jobs:
       # Real and virtual Mac checks may run concurrently without a command lease.
       # INF-827: on a pull request the Mac mini's and a placed virtual Mac's gate run only the
       # parts the chooser kept. Affected requests use directly reached parts; default requests
-      # and the fixed virtual Mac switch run every part.
+      # and the fixed virtual Mac switch run every part. Full branch selections count this
+      # as round one, with only edited-test parts in the two following jobs.
       # INF-1343: on a pull request the first failed part stops the others, so a failing check frees
-      # its Mac at once; a run on request runs every part to its end for the chooser's part times.
+      # its Mac at once; full branch selections also stop early. Main retains full discovery.
       # INF-2052 (the captain's choice "Raise the limit for running the parts from 60 to 90 minutes"):
       # a full check with the Mac mini to itself passed in 59 minutes before INF-2052's other changes;
       # two full checks at once, one per virtual Mac, starved each other past their parts' 20-minute
@@ -301,17 +314,19 @@ jobs:
         if: ${{ steps.scope.outputs.gate == 'true' && steps.start.outputs.replaced != 'true' }}
         run: |
           parts=(); for part in $PHONE_PARTS; do parts+=(--part "$part"); done
+          if [ "$PHONE_FULL" = true ] && [ -z "$PHONE_REPEAT_PARTS" ]; then parts=(); fi
           if [ -n "$PHONE_VIRTUAL_MAC" ]; then exec scripts/virtual-mac/phone.sh gate iphone ipad; fi
           if [ "$(sysctl -n kern.hv_vmm_present 2> /dev/null)" = 1 ]; then exec node scripts/test-phone.ts --both "${parts[@]}" --simulators 2 --evidence "$RUNNER_TEMP/phone"; fi
           node scripts/test-phone.ts --both "${parts[@]}" --evidence "$RUNNER_TEMP/phone"
         env:
-          PHONE_PARTS: ${{ inputs.parts || steps.select.outputs.parts || steps.request-select.outputs.parts }}
+          PHONE_FULL: ${{ steps.request-select.outputs.full }}
+          PHONE_PARTS: ${{ steps.repeat-select.outputs.parts || inputs.parts || steps.select.outputs.parts || steps.request-select.outputs.parts }}
           INFINITARY_PHONE_WAITS_ONLY: ${{ inputs.waits && '1' || '0' }}
           INFINITARY_STARVE_CHECK: ${{ inputs.starve && '1' || '0' }}
           INFINITARY_PERF_BUDGETS: ${{ inputs.perf && '1' || '0' }}
           PHONE_RECORDING: ${{ inputs.recording && '1' || '' }}
           INFINITARY_PHONE_GUEST_OBSERVER: ${{ inputs.guest_observer && '1' || '0' }}
-          INFINITARY_PHONE_STOP_EARLY: ${{ github.event_name == 'pull_request' && '1' || '0' }}
+          INFINITARY_PHONE_STOP_EARLY: ${{ (github.event_name == 'pull_request' || steps.request-select.outputs.full == 'true' || steps.repeat-select.outputs.parts != '') && '1' || '0' }}
           INFINITARY_PHONE_PACKAGE_CACHE: ${{ runner.temp }}/swift-packages
       - name: Save the Swift packages for pull requests
         # The gate fetched them once it started, passing or failing; a save that fails never fails main's check.
@@ -331,7 +346,7 @@ jobs:
       # megabytes, and a full gate's twelve took these logs past the app's 64 MiB artifact
       # download; they are kept whole in an artifact of their own below.
       - name: Keep the small native command logs
-        if: always()
+        if: always() && !env.PHONE_ROUND
         uses: actions/upload-artifact@v4
         with:
           name: phone-logs
@@ -342,7 +357,7 @@ jobs:
           if-no-files-found: ignore
           retention-days: 3
       - name: Keep the simulator logs as their own artifact
-        if: always()
+        if: always() && !env.PHONE_ROUND
         uses: actions/upload-artifact@v4
         with:
           name: phone-simulator-logs
@@ -364,7 +379,7 @@ jobs:
               || echo "No pictures exported from $bundle"
           done < <(find "$RUNNER_TEMP/phone" -type d -name phone.xcresult)
       - name: Keep the pictures as their own artifact
-        if: always()
+        if: always() && !env.PHONE_ROUND
         uses: actions/upload-artifact@v4
         with:
           name: phone-pictures
@@ -376,13 +391,85 @@ jobs:
       # the evidence_run export reads. The logs and pictures above stay on every run. A failure's
       # bundles are kept 1 day, a recording run's 3 days for its export.
       - name: Keep native results and connection readings
-        if: failure() || inputs.recording
+        if: (failure() || inputs.recording) && !env.PHONE_ROUND
         uses: actions/upload-artifact@v4
         with:
           name: phone-results
           path: ${{ runner.temp }}/phone/
           if-no-files-found: ignore
           retention-days: ${{ inputs.recording && 3 || 1 }}
+      - name: Keep each additional pass's evidence
+        if: always() && env.PHONE_ROUND != ''
+        uses: actions/upload-artifact@v4
+        with:
+          name: phone-repeat${{ env.PHONE_ROUND }}
+          path: |
+            ${{ runner.temp }}/phone/**/*.log
+            ${{ runner.temp }}/phone/part-times.json
+            ${{ runner.temp }}/phone-pictures/
+            !${{ runner.temp }}/phone/**/simulator-live.log
+          if-no-files-found: ignore
+          retention-days: 3
+      - name: Keep each additional pass's simulator logs
+        if: always() && env.PHONE_ROUND != ''
+        uses: actions/upload-artifact@v4
+        with:
+          name: phone-repeat${{ env.PHONE_ROUND }}-simulator-logs
+          path: ${{ runner.temp }}/phone/**/simulator-live.log
+          if-no-files-found: ignore
+          retention-days: 3
+      - name: Keep each additional pass's failure results
+        if: (failure() || inputs.recording) && env.PHONE_ROUND != ''
+        uses: actions/upload-artifact@v4
+        with:
+          name: phone-repeat${{ env.PHONE_ROUND }}-results
+          path: ${{ runner.temp }}/phone/
+          if-no-files-found: ignore
+          retention-days: ${{ inputs.recording && 3 || 1 }}
+  # INF-2259: one ordinary pass plus two edited-part passes. Each successful
+  # predecessor releases its simulators before the next job starts. No retries.
+  phone-repeat-2:
+    needs: [native-phone]
+    if: needs.native-phone.outputs.repeat_parts != ''
+    runs-on: ${{ vars.PHONE_VIRTUAL_MAC && 'mini-mac-vm' || inputs.mac_runner || fromJSON(vars.MAC_QUEUES || '{}').phone || vars.VIRTUAL_MAC_RUNNER || vars.MAC_RUNNER || 'mini-mac' }}
+    permissions:
+      actions: write
+      contents: read
+      pull-requests: read
+    concurrency:
+      group: ${{ !inputs.mac_runner && (fromJSON(vars.MAC_QUEUES || '{}').phone || vars.VIRTUAL_MAC_RUNNER) && !vars.PHONE_VIRTUAL_MAC && format('phone-{0}-{1}', github.run_id, github.run_attempt) || 'mac-mini-phone' }}
+      queue: max
+      cancel-in-progress: false
+    timeout-minutes: 165
+    env:
+      PHONE_VIRTUAL_MAC: ${{ vars.PHONE_VIRTUAL_MAC }}
+      PHONE_ROUND: '-2'
+      PHONE_REPEAT_PARTS: ${{ needs.native-phone.outputs.repeat_parts }}
+    defaults:
+      run:
+        working-directory: Application Support/firstmate
+    steps: *phone-steps
+  phone-repeat-3:
+    needs: [native-phone, phone-repeat-2]
+    if: needs.native-phone.outputs.repeat_parts != ''
+    runs-on: ${{ vars.PHONE_VIRTUAL_MAC && 'mini-mac-vm' || inputs.mac_runner || fromJSON(vars.MAC_QUEUES || '{}').phone || vars.VIRTUAL_MAC_RUNNER || vars.MAC_RUNNER || 'mini-mac' }}
+    permissions:
+      actions: write
+      contents: read
+      pull-requests: read
+    concurrency:
+      group: ${{ !inputs.mac_runner && (fromJSON(vars.MAC_QUEUES || '{}').phone || vars.VIRTUAL_MAC_RUNNER) && !vars.PHONE_VIRTUAL_MAC && format('phone-{0}-{1}', github.run_id, github.run_attempt) || 'mac-mini-phone' }}
+      queue: max
+      cancel-in-progress: false
+    timeout-minutes: 165
+    env:
+      PHONE_VIRTUAL_MAC: ${{ vars.PHONE_VIRTUAL_MAC }}
+      PHONE_ROUND: '-3'
+      PHONE_REPEAT_PARTS: ${{ needs.native-phone.outputs.repeat_parts }}
+    defaults:
+      run:
+        working-directory: Application Support/firstmate
+    steps: *phone-steps
   # INF-1066: result bundles can exceed the workflow reader's download bound.
   # Export selected evidence on the Xcode host without a simulator, build, sign-in or signing.
   scene-evidence:

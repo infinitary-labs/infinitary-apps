@@ -34,6 +34,10 @@ on:
         description: Space-separated affected journey files
         type: string
         default: ""
+      repeat-base:
+        description: Nonempty for selected development proof; edited files run three total rounds
+        type: string
+        default: ""
       lane:
         description: Lane of affected files (parallel or desktop)
         type: string
@@ -164,9 +168,9 @@ jobs:
           if [ "$RUNNER_OS" = Linux ] && [ "$SUITE" = affected ]; then
             test -n "$FILES"
             if [ "$LANE" = desktop ]; then
-              on_screen pnpm exec playwright test --no-deps --project=desktop $FILES
+              on_screen node scripts/journey-runs.ts --base "$REPEAT_BASE" --files "$FILES" -- --project=desktop
             else
-              on_screen pnpm exec playwright test --no-deps --project=renderer --project=application $FILES
+              on_screen node scripts/journey-runs.ts --base "$REPEAT_BASE" --files "$FILES" -- --project=renderer --project=application
             fi
           elif [ "$RUNNER_OS" = Linux ] && [ "$LANE" = alone ]; then
             on_screen node scripts/e2e-alone.ts --shard "$SHARD/4" --out playwright-report/alone
@@ -189,6 +193,7 @@ jobs:
           INFINITARY_SOURCE_EVIDENCE: ${{ runner.temp }}/source-desktop-evidence
           PLAYWRIGHT_JSON_OUTPUT_FILE: playwright-report/source-results.json
           SUITE: ${{ inputs.suite }}
+          REPEAT_BASE: ${{ inputs.repeat-base || 'origin/main' }}
           FILES: ${{ inputs.files }}
           INFINITARY_E2E_RUN_MINUTES: ${{ inputs.suite == 'affected' && 75 || '' }}
           LANE: ${{ matrix.lane }}

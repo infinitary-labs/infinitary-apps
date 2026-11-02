@@ -1,5 +1,7 @@
 // INF-1258's accepted mac-unit-only option: Linux runs the complete Vitest
-// suite; Mac repeats only files with cases or real readings Linux cannot cover.
+// suite; the full-check Mac lane runs only cases/readings Linux cannot cover.
+// INF-2273 separately requires local rounds for every edited unit file,
+// including portable files; this list does not exclude those local rounds.
 // Keep mixed files whole: their platform-independent cases may run twice, but
 // their Mac-only cases must not disappear. Mock-only macOS tests stay on Linux.
 // This is a reviewed list, not a guess from filenames or test-source strings.

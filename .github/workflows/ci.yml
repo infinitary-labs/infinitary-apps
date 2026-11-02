@@ -1,8 +1,8 @@
 name: ci
 
-# Pull requests retain typecheck, lint, build and changed-test repetitions.
-# Full unit, integration and probe sweeps run on main and on request,
-# never on pull requests (captain: "ok move it too but as a separate task").
+# Pull requests retain typecheck, lint and build. Edited unit files run
+# three total rounds locally, never in extra PR repeat jobs. Full unit,
+# integration and probe sweeps run on main and on request, not on PRs.
 # Releases keep the full suite in verify.yml, including every probe.
 # Which Linux machines (INI-9's plan, approved by the captain): every job
 # runs on the label the repository variable LINUX_RUNNER names - the
@@ -12,7 +12,7 @@ name: ci
 # so only hosted jobs restore setup-node's pnpm cache (DOP-66 fix 1).
 
 on:
-  # Linux-only branch validation, including repeated unit-job proofs.
+  # Linux-only branch validation; edited unit-file rounds belong locally.
   workflow_dispatch:
   push:
     branches: [main]
@@ -115,38 +115,3 @@ jobs:
           NPM_PACKAGE_CONFIG_NODE_GYP_NODEDIR: ${{ env.INFINITARY_NODE_HEADERS }}
       - run: pnpm test --project probe
         timeout-minutes: 30
-
-  # A change's unit-file repeats (docs/testing.md, "This project's rulings
-  # on tests"; INF-2074's ci-gate fix): each Vitest file the change adds or
-  # edits runs ten times in a row with no retries, here on Linux instead of
-  # the Mac mini's load line. Files on scripts/mac-unit-tests.ts need a Mac,
-  # so their repeats stay there. A push to main repeats nothing, since its
-  # pull request already did; each shard passes with no file to repeat.
-  # As with integration-tests, Vitest splits files across two machines.
-  # Every file still runs ten fresh rounds, within the same step deadline.
-  unit-repeats:
-    name: unit-repeats (${{ matrix.shard }}/${{ strategy.job-total }})
-    strategy:
-      fail-fast: false
-      matrix:
-        shard: [1, 2]
-    runs-on: ${{ vars.LINUX_RUNNER || 'ubuntu-latest' }}
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-      - uses: pnpm/action-setup@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 24
-          cache: ${{ !vars.LINUX_RUNNER && 'pnpm' || '' }}
-      - uses: ./.github/actions/node-headers
-      - run: pnpm install --frozen-lockfile
-        # Scope Node headers to this install, never to Electron rebuilds.
-        env:
-          NPM_PACKAGE_CONFIG_NODE_GYP_NODEDIR: ${{ env.INFINITARY_NODE_HEADERS }}
-      - run: pnpm test:repeats --base "$BASE" --shard "$SHARD"
-        timeout-minutes: 30
-        env:
-          SHARD: ${{ matrix.shard }}/${{ strategy.job-total }}
-          BASE: ${{ github.event_name == 'pull_request' && format('origin/{0}', github.base_ref) || github.event_name == 'workflow_dispatch' && 'origin/main' || '' }}

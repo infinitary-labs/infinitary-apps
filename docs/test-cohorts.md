@@ -8,10 +8,11 @@ A test that spawns real work carries a budget sized to that work; an in-memory t
 `pnpm test` runs every project, and so does `verify.yml`'s `linux-checks` lane.
 The full check's Mac unit stage runs only the reviewed files in `scripts/mac-unit-tests.ts`, through the same runner and cohorts.
 Those files contain native Mac cases, Mac-only branches or real Mac readings that Linux cannot cover; mixed files stay whole.
-Mock-only macOS tests need no Mac run.
+Mock-only macOS tests need no additional Mac full-check coverage.
+The captain's INF-2273 exception still requires three total local rounds for every edited unit file, including portable or mock-only files; the native list does not exclude those local rounds.
 Linux keeps the unfiltered `pnpm test`, including every probe: no unit file moves off Linux or disappears from the full check.
 When adding a case that needs macOS, add its file to that list; the scratch Keychain probes retain their existing opt-in gates.
-`tests/release-contract.test.ts` uses real Vitest file discovery to check the Mac selection, its cohort assignments and its inclusion in the complete Linux suite.
+`tests/release-workflows.test.ts` uses real Vitest file discovery to check the Mac selection, its cohort assignments and its inclusion in the complete Linux suite.
 
 Main pushes and requested runs (`ci.yml`) run the same projects on separate machines; PRs omit the full unit, integration and probe sweeps: `unit-tests` runs `pure`, `unit` and `unit-isolated`, each `integration-tests` job runs one `--shard` of `integration`, and `probe-tests` runs every file of `probe` ("Probes" below, `docs/testing.md`).
 
@@ -125,6 +126,7 @@ A file whose slowest test fits the 5 s default under the rule carries none.
 | `src/core/claude/claudeModelProbe.test.ts` | the installed Claude client | 10 s |
 | `tests/replay-captain-session.test.ts` | the replay CLI, git | 60 to 240 s |
 | `tests/release-contract.test.ts` | node, brew, and on a Mac the Electron binary running the release gates' stand-in app (`tests/fixtures/launch-gate-app`) | 10 s default, 50 s on each gate's run of the stand-in (Mac fastest: launch gate 9.5 s, data-folder check 4.7 s), 180 s on brew style |
+| `tests/release-workflows.test.ts` | node, git, shell stand-ins, and real Vitest file discovery; portable workflow contracts, isolated in the integration cohort and absent from the Mac-only file list | 10 s default, 15 s on file discovery |
 | `tests/release-publication.test.ts` | the release workflow's tap and release-asset scripts: real git on a stand-in tap, the publication CLI, a stand-in `gh`, `brew` and `curl` | 50 s |
 | `tests/release-notes.test.ts` | the release-notes gate: real git on scratch repositories with commits and tags, the `scripts/release-notes.ts` CLI | 10 s |
 | `tests/universal-file-types.test.ts` | the system `file` behind a counting stand-in, over Electron's distribution and darwin prebuilds | 15 s (Mac whole file 2.4 s) |

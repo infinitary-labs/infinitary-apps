@@ -6,8 +6,8 @@ import { fileURLToPath } from "node:url";
  * Where this computer runs the heavy checks (docs/testing.md, "Where the
  * heavy checks run"; INF-800, the captain's approval: "Only the heavy checks:
  * journeys, the phone check and the replay gate"; INF-2074's ci-gate fix
- * added the typecheck and lint: "Run a change's typecheck, lint and ten
- * unit-file repeats on Linux CI instead of the Mac mini's line").
+ * added the typecheck and lint. INF-2273 leaves edited unit-file rounds
+ * local for every file; those rounds are not controlled by CI mode.
  *
  * Local by default, so anyone building Infinitary checks on their own
  * computer. `git config --global infinitary.checks ci` sends the journeys,
@@ -67,9 +67,17 @@ export function ciModeRefusal(
   check: HeavyCheck,
   env: NodeJS.ProcessEnv = process.env,
   cwd = process.cwd(),
+  journeyArgs: readonly string[] = [],
 ): string | undefined {
   if (env.CI) return undefined;
   if (checksMode(env, cwd) !== "ci") return undefined;
+  // INF-2259: the project-local native route alone may keep CI mode enabled.
+  // The config separately verifies explicit existing file filters. Admission
+  // covers its build and the nested launcher, which checks the inherited hold.
+  if (check === "journeys" && process.platform === "darwin" &&
+      env.INFINITARY_SELECTED_MAC === "1" && env.INFINITARY_LOAD_HOLD &&
+      journeyArgs.includes("--no-deps") &&
+      journeyArgs[journeyArgs.indexOf("--grep") + 1] === "@mac-only") return undefined;
   const { name, route } = ROUTES[check];
   return (
     `${name} runs through CI on this computer (git config infinitary.checks = ci). ` +

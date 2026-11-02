@@ -7,15 +7,18 @@ name: release
 # release rather than warning.
 #
 # Two channels through one pipeline (docs/alpha.md "The signed channel
-# workflow"), both requested from main. An alpha releases its candidate - the
+# workflow"), from main. Passing rolling-main runs automatically start an
+# alpha at their exact source without duplicating the full check. A manually
+# dispatched alpha releases its candidate - the
 # commit the release crewmate committed its notes review on, main's code plus
 # release-notes/ changes only - named X.Y.Z-alpha.<run number> from the
 # newest stable tag. A stable promotes a published alpha: it builds that
 # alpha's own commit as X.Y.Z, with the highlights the captain picked on a
 # card, and opens no pull request. Both resolve ONE
 # source commit first and verify, package and publish exactly it. Every alpha
-# passes every verification lane; a stable relies on its alpha's successful
-# run, where every lane passed.
+# inherits every verification lane from its exact successful rolling-main
+# source, or runs them when no reusable proof exists. A stable relies on its
+# alpha's successful release and inherited or direct full verification.
 #
 # Every release carries Linux too (docs/linux-packages.md): the linux job
 # builds the Ubuntu and Fedora packages, the AppImage and each channel's Arch
@@ -59,6 +62,10 @@ name: release
 #   gh workflow run release.yml --ref main -f channel=stable -f dry_run=true -f promote=<alpha version> [-f highlights=<id>,<id>,<id>]
 
 on:
+  workflow_run:
+    workflows: [main]
+    types: [completed]
+    branches: [main]
   workflow_dispatch:
     inputs:
       channel:
@@ -71,6 +78,10 @@ on:
         default: stable
       candidate:
         description: Alpha only - the release candidate, the full commit id the release crewmate committed its notes review on (main's code plus release-notes/ changes only; docs/alpha.md). A live alpha refuses without one; a rehearsal may leave it empty to build this commit
+        required: false
+        type: string
+      verified_main_run:
+        description: Alpha recovery only - successful rolling-main run for the exact candidate; reuses broad checks, not release-specific gates
         required: false
         type: string
       promote:
@@ -126,6 +137,7 @@ jobs:
   # Every later job checks out exactly this commit. The resolver runs from the
   # workflow's own commit and reads the rest from git. No secret or dependency install.
   resolve:
+    if: github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success'
     name: Resolve the source commit and version
     # The PC's gate label (docs/testing.md, DOP-157): its runners take only gate jobs.
     runs-on: ${{ vars.LINUX_RUNNER && format('{0}-gate', vars.LINUX_RUNNER) || 'ubuntu-latest' }}
@@ -148,6 +160,8 @@ jobs:
       promoted_from: ${{ steps.resolve.outputs.promoted_from }}
       highlights: ${{ steps.resolve.outputs.highlights }}
       verify_required: ${{ steps.verification.outputs.required }}
+      full_verify_required: ${{ steps.main-proof.outputs.inherited == 'true' && 'false' || steps.verification.outputs.required }}
+      main_run: ${{ steps.main-proof.outputs.url }}
       alpha_run: ${{ steps.verification.outputs.alpha_run }}
       release_repository: ${{ steps.destination.outputs.repository }}
       download_base: ${{ steps.destination.outputs.download_base }}
@@ -163,11 +177,35 @@ jobs:
         with:
           node-version: 24
 
+      - name: Validate completed rolling-main proof
+        id: main-proof
+        if: github.event_name == 'workflow_run' || inputs.verified_main_run != ''
+        uses: actions/github-script@v7
+        env:
+          MAIN_RUN: ${{ github.event.workflow_run.id || inputs.verified_main_run }}
+          SOURCE: ${{ github.event.workflow_run.head_sha || inputs.candidate }}
+          CHANNEL: ${{ github.event_name == 'workflow_run' && 'alpha' || inputs.channel }}
+        with:
+          script: |
+            if (process.env.CHANNEL !== 'alpha') throw new Error('Rolling-main reuse is alpha-only');
+            const {pathToFileURL} = require('node:url');
+            const {verifyMainEvidence} = await import(pathToFileURL(`${process.env.GITHUB_WORKSPACE}/scripts/main-alpha-proof.mjs`).href);
+            const {data: run} = await github.rest.actions.getWorkflowRun({...context.repo, run_id: Number(process.env.MAIN_RUN)});
+            const jobs = await github.paginate(github.rest.actions.listJobsForWorkflowRun, {
+              ...context.repo, run_id: run.id, filter: 'latest', per_page: 100
+            });
+            const proof = verifyMainEvidence(run, jobs, `${context.repo.owner}/${context.repo.repo}`, process.env.SOURCE);
+            core.setOutput('inherited', 'true');
+            core.setOutput('source', proof.source);
+            core.setOutput('url', proof.url);
+            await core.summary.addHeading('Inherited rolling-main verification')
+              .addRaw(`Full checks passed at the exact alpha source in ${proof.url}. They are reused, not repeated. Release-specific gates still run.`).write();
+
       - name: Resolve the release
         id: resolve
         env:
-          CHANNEL: ${{ inputs.channel || 'stable' }}
-          CANDIDATE: ${{ inputs.candidate }}
+          CHANNEL: ${{ github.event_name == 'workflow_run' && 'alpha' || inputs.channel || 'stable' }}
+          CANDIDATE: ${{ steps.main-proof.outputs.source || inputs.candidate }}
           PROMOTE: ${{ inputs.promote }}
           HIGHLIGHTS: ${{ inputs.highlights }}
           DRY_RUN: ${{ inputs.dry_run && 'true' || 'false' }}
@@ -202,6 +240,7 @@ jobs:
         env:
           CHANNEL: ${{ steps.resolve.outputs.channel }}
           PROMOTED_FROM: ${{ steps.resolve.outputs.promoted_from }}
+          SOURCE_COMMIT: ${{ steps.resolve.outputs.source_commit }}
         with:
           script: |
             core.setOutput('required', 'true');
@@ -210,7 +249,7 @@ jobs:
             const alpha = process.env.PROMOTED_FROM;
             const number = alpha.split('-alpha.')[1];
             const runs = await github.paginate(github.rest.actions.listWorkflowRuns, {
-              ...context.repo, workflow_id: 'release.yml', event: 'workflow_dispatch',
+              ...context.repo, workflow_id: 'release.yml',
               branch: 'main', per_page: 100
             });
             const run = runs.find(run => String(run.run_number) === number);
@@ -227,8 +266,27 @@ jobs:
             const shards = jobs.filter(job => job.name.startsWith('verify / linux-e2e / '));
             const linux = shards.length > 0 && shards.every(green);
             if (!passed('verify / linux-checks') || !linux || !passed('verify / mac')) {
-              core.setFailed(`Alpha ${alpha} cannot be promoted: its release run ${run.html_url} did not pass every check lane in its latest attempt.`);
-              return;
+              // Inheritance replaces an omitted broad check, never a failed,
+              // pending or partial direct verification in the alpha release.
+              if (jobs.some(job => job.name.startsWith('verify / ') &&
+                  !(job.status === 'completed' && job.conclusion === 'skipped'))) {
+                core.setFailed(`Alpha ${alpha} cannot be promoted: its release run ${run.html_url} did not pass every check lane in its latest attempt.`);
+                return;
+              }
+              // Automatic alphas inherit exact-source rolling-main proof. They
+              // still need this release's successful update check below.
+              const {pathToFileURL} = require('node:url');
+              const {verifyMainEvidence} = await import(pathToFileURL(`${process.env.GITHUB_WORKSPACE}/scripts/main-alpha-proof.mjs`).href);
+              const candidates = await github.paginate(github.rest.actions.listWorkflowRuns, {
+                ...context.repo, workflow_id: 'main.yml', head_sha: process.env.SOURCE_COMMIT,
+                event: 'push', branch: 'main', per_page: 100
+              });
+              const main = candidates.find(candidate => candidate.status === 'completed' && candidate.conclusion === 'success');
+              if (!main) throw new Error(`Alpha ${alpha} has neither full release verification nor successful exact-source main proof`);
+              const mainJobs = await github.paginate(github.rest.actions.listJobsForWorkflowRun, {
+                ...context.repo, run_id: main.id, filter: 'latest', per_page: 100
+              });
+              verifyMainEvidence(main, mainJobs, `${context.repo.owner}/${context.repo.repo}`, process.env.SOURCE_COMMIT);
             }
             // Its update check on Apple silicon (INF-1900; Intel is best effort), or,
             // for an alpha released before it, the five-copy check on both chips.
@@ -270,36 +328,13 @@ jobs:
         with:
           node-version: 24
 
-      - name: Check the notes cover this release
-        env:
-          CHANNEL: ${{ needs.resolve.outputs.channel }}
-          DRY_RUN: ${{ needs.resolve.outputs.dry_run }}
-          SOURCE_COMMIT: ${{ needs.resolve.outputs.source_commit }}
-          VERSION: ${{ needs.resolve.outputs.version }}
-          PROMOTED_FROM: ${{ needs.resolve.outputs.promoted_from }}
-          CANDIDATE: ${{ inputs.candidate }}
-        run: |
-          set -euo pipefail
-          ARGS=(check --source "$SOURCE_COMMIT" --channel "$CHANNEL" --version "$VERSION")
-          if [[ -n "$PROMOTED_FROM" ]]; then ARGS+=(--promoted-from "$PROMOTED_FROM"); fi
-          # The candidate is the reviewed source.
-          if [[ -n "$CANDIDATE" ]]; then ARGS+=(--reviewed "$CANDIDATE"); fi
-          if [[ "$DRY_RUN" == true ]]; then ARGS+=(--rehearsal); fi
-          node scripts/release-notes.ts "${ARGS[@]}"
-
-      - name: Generate the offline catalog
-        env:
-          SOURCE_COMMIT: ${{ needs.resolve.outputs.source_commit }}
-          VERSION: ${{ needs.resolve.outputs.version }}
-        run: node scripts/release-notes.ts generate --version "$VERSION" --source "$SOURCE_COMMIT" --out "$RUNNER_TEMP/release-notes/release-notes.json"
-
       # A stable's highlights are the captain's picks (docs/alpha.md
       # "Promoting an alpha"): exactly those ranks, every other cleared. The
       # promoted alpha's commit may predate the pick, so it runs from the
       # workflow's own commit; the alpha's own verify-package then proves its
       # app reads the result.
       - name: Check out the workflow's own notes tooling
-        if: ${{ needs.resolve.outputs.highlights != '' }}
+        if: ${{ needs.resolve.outputs.highlights != '' || needs.resolve.outputs.main_run != '' || needs.resolve.outputs.promoted_from != '' }}
         uses: actions/checkout@v4
         with:
           ref: ${{ github.sha }}
@@ -308,6 +343,41 @@ jobs:
           sparse-checkout: |
             scripts
             src/core
+
+      - name: Check the notes cover this release
+        env:
+          CHANNEL: ${{ needs.resolve.outputs.channel }}
+          DRY_RUN: ${{ needs.resolve.outputs.dry_run }}
+          SOURCE_COMMIT: ${{ needs.resolve.outputs.source_commit }}
+          VERSION: ${{ needs.resolve.outputs.version }}
+          PROMOTED_FROM: ${{ needs.resolve.outputs.promoted_from }}
+          CANDIDATE: ${{ needs.resolve.outputs.main_run != '' && needs.resolve.outputs.source_commit || inputs.candidate }}
+          VERIFIED_MAIN: ${{ needs.resolve.outputs.main_run }}
+        run: |
+          set -euo pipefail
+          ARGS=(check --source "$SOURCE_COMMIT" --channel "$CHANNEL" --version "$VERSION")
+          if [[ -n "$PROMOTED_FROM" ]]; then ARGS+=(--promoted-from "$PROMOTED_FROM"); fi
+          # The candidate is the reviewed source.
+          if [[ -n "$VERIFIED_MAIN" ]]; then
+            ARGS+=(--verified-main "$SOURCE_COMMIT")
+          elif [[ -n "$CANDIDATE" ]]; then
+            ARGS+=(--reviewed "$CANDIDATE")
+          fi
+          if [[ "$DRY_RUN" == true ]]; then ARGS+=(--rehearsal); fi
+          TOOL=scripts/release-notes.ts
+          if [[ -n "$VERIFIED_MAIN$PROMOTED_FROM" ]]; then TOOL=.release-tooling/scripts/release-notes.ts; fi
+          node "$TOOL" "${ARGS[@]}" --repo .
+
+      - name: Generate the offline catalog
+        env:
+          SOURCE_COMMIT: ${{ needs.resolve.outputs.source_commit }}
+          VERSION: ${{ needs.resolve.outputs.version }}
+          VERIFIED_MAIN: ${{ needs.resolve.outputs.main_run }}
+          PROMOTED_FROM: ${{ needs.resolve.outputs.promoted_from }}
+        run: |
+          TOOL=scripts/release-notes.ts
+          if [[ -n "$VERIFIED_MAIN$PROMOTED_FROM" ]]; then TOOL=.release-tooling/scripts/release-notes.ts; fi
+          node "$TOOL" generate --repo . --version "$VERSION" --source "$SOURCE_COMMIT" --out "$RUNNER_TEMP/release-notes/release-notes.json"
 
       - name: Write the picked highlights
         if: ${{ needs.resolve.outputs.highlights != '' }}
@@ -335,7 +405,7 @@ jobs:
   # the signing job runs beside it. A stable omits the reusable workflow,
   # relying on its alpha's run (no green skipped lanes).
   verify:
-    if: ${{ needs.resolve.outputs.verify_required == 'true' }}
+    if: ${{ needs.resolve.outputs.full_verify_required == 'true' }}
     needs: [resolve, notes]
     uses: ./.github/workflows/verify.yml
     with:
@@ -899,7 +969,7 @@ jobs:
   update:
     name: Update from the last published alpha
     needs: [resolve, notes, verify, linux, rehearse, phone, release]
-    if: ${{ always() && !cancelled() && needs.resolve.outputs.verify_required == 'true' && needs.resolve.result == 'success' && needs.notes.result == 'success' && needs.verify.result == 'success' && needs.linux.result == 'success' && needs.rehearse.result == 'success' && needs.phone.result == 'success' && needs.release.result == 'success' }}
+    if: ${{ always() && !cancelled() && needs.resolve.outputs.verify_required == 'true' && needs.resolve.result == 'success' && needs.notes.result == 'success' && (needs.verify.result == 'success' || (needs.resolve.outputs.main_run != '' && needs.verify.result == 'skipped')) && needs.linux.result == 'success' && needs.rehearse.result == 'success' && needs.phone.result == 'success' && needs.release.result == 'success' }}
     uses: ./.github/workflows/mac-update.yml
     with:
       ref: ${{ needs.resolve.outputs.source_commit }}
@@ -927,7 +997,7 @@ jobs:
   publish:
     name: Record, publish and check the downloads (a dry run records nothing)
     needs: [resolve, notes, verify, linux, rehearse, phone, release, update]
-    if: ${{ always() && !cancelled() && needs.resolve.result == 'success' && needs.notes.result == 'success' && needs.linux.result == 'success' && needs.phone.result == 'success' && needs.release.result == 'success' && ((needs.resolve.outputs.verify_required == 'true' && needs.verify.result == 'success' && needs.rehearse.result == 'success' && needs.update.result == 'success') || (needs.resolve.outputs.verify_required == 'false' && needs.verify.result == 'skipped' && needs.rehearse.result == 'skipped' && needs.update.result == 'skipped')) }}
+    if: ${{ always() && !cancelled() && needs.resolve.result == 'success' && needs.notes.result == 'success' && needs.linux.result == 'success' && needs.phone.result == 'success' && needs.release.result == 'success' && ((needs.resolve.outputs.verify_required == 'true' && (needs.verify.result == 'success' || (needs.resolve.outputs.main_run != '' && needs.verify.result == 'skipped')) && needs.rehearse.result == 'success' && needs.update.result == 'success') || (needs.resolve.outputs.verify_required == 'false' && needs.verify.result == 'skipped' && needs.rehearse.result == 'skipped' && needs.update.result == 'skipped')) }}
     # The light kind's virtual-only queue once MAC_QUEUES names it, and
     # release_light for a publishing run (docs/testing.md, "Each Mac job's kind and size").
     runs-on: ${{ needs.resolve.outputs.dry_run == 'false' && fromJSON(vars.MAC_QUEUES || '{}').release_light || fromJSON(vars.MAC_QUEUES || '{}').light || 'mini-mac-virtual' }}
@@ -1504,8 +1574,8 @@ jobs:
         if: always()
         continue-on-error: true
         env:
-          LANES: ${{ needs.resolve.outputs.verify_required == 'true' && 'linux-checks, linux-e2e, mac' || 'none' }}
-          OMITTED: ${{ needs.resolve.outputs.verify_required == 'true' && 'none' || 'linux-checks, linux-e2e and mac; inherited from the published alpha, not passed in this run' }}
+          LANES: ${{ needs.resolve.outputs.full_verify_required == 'true' && 'linux-checks, linux-e2e, mac' || 'none' }}
+          OMITTED: ${{ needs.resolve.outputs.main_run != '' && format('linux-checks, linux-e2e and mac; inherited from rolling main {0}, not repeated here', needs.resolve.outputs.main_run) || needs.resolve.outputs.verify_required == 'true' && 'none' || 'linux-checks, linux-e2e and mac; inherited from the published alpha, not passed in this run' }}
           SHA256: ${{ needs.release.outputs.sha256 }}
           HANDOFF: artifact ${{ needs.release.outputs.handoff_id || 'none' }}, manifest sha256 ${{ needs.release.outputs.handoff_manifest || 'none' }}, from attempt ${{ steps.handoff-check.outputs.attempt || 'unread' }}
           GATES: >-

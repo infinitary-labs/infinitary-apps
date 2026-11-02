@@ -31,6 +31,9 @@ if (require('node:path').basename(process.argv[1]) === 'pnpm' && process.argv[2]
 console.log('args:' + JSON.stringify(process.argv.slice(2)));
 console.log('started:' + process.env.CHECK_NAME);
 process.stdin.once('data', () => process.exit(0));
+// INF-2259 adds a runner after the build: releasing the command also releases
+// later workloads inheriting its now-closed input, not just the first stage.
+process.stdin.once('end', () => process.exit(0));
 setInterval(() => {}, 60000);
 `;
   for (const name of ["pnpm", "tart"]) writeFileSync(join(bin, name), workload, { mode: 0o755 });

@@ -93,7 +93,8 @@ INF-1763, asked as "is it actually ok to dedup all the mac journeys that are cov
 It covers every test.
 A test runs on the Mac only when it needs a Mac.
 Linux runs every test it can.
-The Mac runs only the tests that need it, plus every journey in the run on `main` and every alpha.
+The full-check Mac lane runs only the tests that need it, plus every journey in the run on `main`; automatic alphas inherit that exact proof.
+The captain's later INF-2273 ruling makes edited unit-file proof an explicit local exception: every changed unit file gets ordinary coverage plus two more locally, including portable files, without duplicate PR CI repeat jobs.
 A journey that needs a Mac carries `MAC_ONLY_TAG` (`tests/e2e/tags.ts`): it skips on Linux, or it has a step only a Mac runs.
 A unit test that needs a Mac is a file of the reviewed list in `scripts/mac-unit-tests.ts` (`docs/test-cohorts.md`).
 
@@ -101,6 +102,6 @@ Three checks hold the rule for journeys, so it does not wear away:
 
 1. Every Linux journey job fails on a test that skipped there without the tag (`scripts/untagged-skips.ts`).
 2. The `e2e-mac-tag` lint in `pnpm check` refuses an untagged test that reads a Mac fact (`THIS_DESKTOP`, `HAS_APP_MENU` or "darwin") and a tagged test that reads none (`tests/lint/e2eMacTag.ts`).
-3. `tests/release-contract.test.ts` holds the Mac steps of a request for journeys and a requested full check to the tag.
+3. `tests/release-workflows.test.ts` holds the Mac steps of a request for journeys and a requested full check to the tag.
 
 How each check runs is `docs/testing.md`, "Tests that need a Mac".

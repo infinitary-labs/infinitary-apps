@@ -452,6 +452,7 @@
         "!tests/mockClaudeClient.test.ts",
         "!tests/module-runner.test.ts",
         "!tests/release-contract.test.ts",
+        "!tests/release-workflows.test.ts",
         "!tests/release-publication.test.ts",
         "!tests/release-notes.test.ts",
         "!tests/replay-captain-session.test.ts",

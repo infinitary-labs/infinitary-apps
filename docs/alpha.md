@@ -162,10 +162,12 @@ The switch lists `alpha` and `stable`; releases of either channel also update th
   The `channel` input is `stable` - the workflow's default - or `alpha`, and both are requested from main, so the workflow file is always main's.
   The `resolve` job (Linux, no secret) provisions Node 24 before running `scripts/resolve-release.sh` from the workflow's own commit, in a clone with every branch and tag, and pins the source commit first.
   Both the resolver and its source-destination check need Node on the job's search path; a gate runner's action runtime alone does not provide it.
-  For an alpha it is the `candidate` ("Cutting an alpha"); for a stable, the `promote`d alpha's own commit ("Promoting an alpha").
+  For an automatic alpha it is the successful rolling-main run's exact `head_sha`; a manual alpha names its `candidate`, and a stable names the `promote`d alpha's own commit ("Promoting an alpha").
   The verify lanes, the update check, the signing job and the source tag use exactly it, and the targets file records it.
 - **One candidate.**
-  A live alpha refuses to start without a `candidate`, a full commit id that main's history does not have to contain.
+  A successful completed `main` workflow automatically starts an alpha through `workflow_run`, supplying its exact source as the candidate.
+  A manually dispatched live alpha still requires a full candidate commit id.
+  `verified_main_run` is the recovery route for reusing a successful exact-source main run, not an unchecked skip switch.
   The resolver refuses it unless `git diff --name-only $(git merge-base <candidate> origin/main) <candidate>` lies under `release-notes/`: its code is exactly main's at the commit the review started from.
   Merges that land on main meanwhile wait for the next alpha.
   A rehearsal may omit it and build the dispatched commit.
@@ -190,13 +192,16 @@ The switch lists `alpha` and `stable`; releases of either channel also update th
   The publication job waits for it, lays out the Linux files (`linux-files`) from its artifact and records them in the source record beside the zip, adopting any package a retry finds already published.
   It publishes them inside the same publication steps as the zip: the public release must match the record byte for byte, and both fetch-backs - the public one without a credential - compare every file and its sidecar before the feed commit writes the builds file.
 - **Full alpha checks, inherited stable checks (FI3-482).**
-  Every alpha, including a rehearsal, runs verify.yml's `linux-checks`, `linux-e2e` and `mac` lanes: Linux typecheck, lint, adherence lint, unit tests and build; every Playwright journey on Linux, in shards (`docs/testing.md`, "The Linux source desktop"); macOS unit tests, every Playwright journey, the installed Claude client check, the replay gate, and the development package with its signature, data-folder and bundled-git checks.
+  An automatic alpha reuses the completed rolling-main run's `linux-checks`, `linux-e2e` and `mac` lanes without running them again: those lanes cover Linux typecheck, lint, adherence lint, unit tests and build; every Playwright journey on Linux, in shards (`docs/testing.md`, "The Linux source desktop"); macOS unit tests, every Playwright journey, the installed Claude client check, the replay gate, and the development package with its signature, data-folder and bundled-git checks.
   The release also runs the update check (`mac-update.yml`, "The update check" below) on Apple silicon: its rehearsal before signing, and the real update from the signing job's handoff, once every check passed, before publication.
   There is no Linux-only bypass.
   Performance grading stays on request (`verify.yml -f perf=true`).
   A stable omits verify and inherits its alpha's checks: the resolve job reads the published alpha's release run, found by its run number (the alpha's suffix), because a run dispatched from main records main's commit rather than the candidate it built.
   The stable's source is the alpha tag's own commit, so nothing differs from what that run checked.
-  The run must have succeeded with every lane completed successfully in its latest attempt, each Linux journey shard included; otherwise the stable is refused, never verified again on its own.
+  The run must have succeeded with every lane's latest execution completed successfully, each Linux journey shard included, or carry validated exact-source main proof for an automatic alpha.
+  Reuse reads GitHub's run and latest per-job executions, requires the trusted main-push identity, every full-check owner and complete Linux shard sets, and refuses skipped required owners, partial, cancelled, failed or other-source results.
+  A manual alpha without reusable main proof, including a rehearsal, still runs full verification.
+  A stable is refused without its alpha's proof, never verified again on its own.
   A promoted alpha must also have a passing update check on Apple silicon, or, for an alpha released before the update check, passing five-copy signed installer and updater jobs for both architectures.
   An alpha without those results is refused: publish and verify an updater-capable alpha first.
   The resolve and signing summaries name the alpha and link its run, explicitly saying the lanes were omitted, not passed here.
@@ -222,21 +227,22 @@ The switch lists `alpha` and `stable`; releases of either channel also update th
   The handoff code lives in the workflow itself, so an older alpha promoted to stable needs none of it in its source.
 - **Release notes are checked first (`docs/release-notes.md`).**
   The `notes` job runs before `verify` or any signing, on the resolved source with full history.
-  The candidate is the reviewed source: the job hands it to the check, which refuses a live alpha without it.
-  Every published release before this one needs its record in `release-notes/releases/`, except the release being cut and the alpha a stable promotes.
-  Every source change since the previous release needs a note or a reviewed exclusion; the release crewmate adds what is missing to its review commit.
+  Every source change since the previous release needs a note or a reviewed exclusion, reviewed with its change before merge.
+  An automatic alpha validates its exact-main source with `--verified-main`; it makes no new notes commit that would invalidate the inherited full check.
+  The existing published-release reader derives historical manifests from immutable tags when no committed record exists.
+  A manual notes-only candidate keeps its existing reviewed-source and committed-history checks.
   The job generates the offline catalog, the signing job packages it as `Resources/release-notes.json`, and the packaged copy's logical version and source commit are verified before notarization.
   A stable promotion proves `release-notes/` is identical to its alpha's, so promoted stables reuse the alpha's entries and ids; prose corrections need a new alpha.
   Its highlights are the captain's picks, written into the generated catalog by the workflow's own tooling ("Promoting an alpha").
   The publication itself changes nothing in the project, and a rehearsal pins nothing.
 - **No local full e2e run before a cut.**
-  The alpha’s own `verify.yml` Mac and Linux journey lanes are the full end-to-end runs.
+  Rolling main supplies the automatic alpha's full Mac and Linux proof; an alpha without reusable proof runs its own `verify.yml` lanes.
   Full e2e runs are CI-only, including release preparation; request an additional run for any branch on GitHub's Actions page, or through `github_write` for the ref the crewmate's task needs (`docs/forge.md`, "Verification workflow requests").
   Locally, run only affected spec files (with `--no-deps` for renderer/application specs).
 - **Failed alpha checks.**
   Nothing is recorded or published: the signing job may have finished, but its signed files stay only in the run's handoff artifact, which expires after seven days.
   Automatic journey retries stay zero.
-  When an outdated test fails, the release crewmate gets it fixed on main, brings its review branch up to date with main, and cuts a fresh alpha from the new candidate without asking again.
+  When a test fails, the release crewmate gets it fixed on main; its next fully passing rolling run starts the next alpha automatically.
   Only when the failing journey passes alone on the same commit may the failed checks be manually re-run once, keeping the alpha's version; if they still fail, diagnose rather than retry again.
   No urgent-alpha bypass.
 - **Published bytes never change** (`scripts/publish-release-asset.sh`).
@@ -301,32 +307,25 @@ After that setup, a separately authorized alpha proves public fetch-back, both t
 
 ## Cutting an alpha
 
-One release task cuts an alpha from one release candidate, checked once (captain, FI3-1057).
-The release crewmate watches its accepted run with the short read described under "Promoting an alpha".
-An alpha starts from main's green mark, the commit of the newest passing run of `main.yml` (INF-2146, the captain's approved plan: "The newest mark"; `docs/testing.md`, "The continuous run on main"), not from main's newest commit, which the whole suite has not passed yet.
-It never waits for a run of `main.yml` still going and never waits for main's other checks: the release run checks the candidate itself.
+A fully passing rolling `main.yml` run automatically starts an alpha at that exact commit (INF-2259, the captain's accepted override).
+The `workflow_run` completion trigger uses the checked source, not main's newer head, and never dispatches another full check just for the cut.
+Failed, cancelled or incomplete main runs cut nothing; main's waiting-version coalescing and fix-forward process stay unchanged.
 
-1. **Find the mark.**
-   The release crewmate reads the newest passing run of `main.yml` on `main` where the project lives, such as `GET /repos/{owner}/{repo}/actions/workflows/main.yml/runs?branch=main&status=success&per_page=1`, and takes its `head_sha`.
-   With no passing run of `main.yml` at all, it cuts nothing and reports that main has no green mark yet.
-2. **Review.**
-   It reviews the notes on its own branch off the mark (`git switch -c <branch> <the mark's full id>`; `docs/release-notes.md` "Who writes what"), and adds there any missing note, exclusion or published release's record the check asks for.
-   The notes cover the changes up to the mark; a change merged after it waits for the next alpha.
-3. **Commit and push.**
-   It commits the review on that branch and pushes it.
-   That commit is the candidate: the mark's code plus changes under `release-notes/` only.
-   The release run accepts it as it is, since its base on main is the mark and it changes nothing else (`scripts/resolve-release.sh`).
-4. **Dispatch.**
-   `gh workflow run release.yml --ref main -f channel=alpha -f candidate=<the commit's full id>`, once a phone build that keeps changing things on the candidate is on TestFlight ("The phone goes first").
-   Merges that land on main meanwhile wait for the next alpha; nobody re-reads notes or follows main.
-5. **Publish.**
-   The run checks the notes, runs every lane on the candidate, signs and publishes; the source tag `v<version>` names the candidate and keeps it.
-6. **Record.**
-   On the same branch, the crewmate pins the release's record with `node scripts/release-notes.ts manifest --version <v> --write`, which pins the record of past releases again with it, and commits both.
-7. **One pull request.**
-   It opens one pull request that brings the review and the record to main.
+1. **Validate the completed run.**
+   The resolver reads the successful trusted main-push run and every latest per-job execution from GitHub.
+   It requires every full-check owner, all Linux journey shards and both-device phone coverage at exactly the source being released.
+2. **Keep the same source.**
+   The notes check validates committed declarations without a separate notes-review commit.
+   Existing immutable tags supply published manifests through the same ledger reader when they have not been committed afterward.
+   Missing or invalid notes still fail the release; editorial corrections merge normally and wait for their own passing main check.
+3. **Run release-only gates and publish.**
+   Phone availability, Linux package installation, update rehearsal, signing, notarization, actual signed update and public-download checks still run.
+   Only broad `verify.yml` coverage is inherited; a skipped verification call is not reported as a new pass.
+   The source tag `v<version>` names the exact checked commit.
 
-A note the review adds names the change it describes in `covers`, so the note belongs to the same releases after the pull request is squashed onto main.
+For a failed release's recovery, a manual alpha request can name `candidate=<exact source>` and `verified_main_run=<successful main run id>`; the resolver reads and validates that proof again.
+A manual candidate without reusable proof follows the existing full-verification route, including its notes-only candidate and release-specific gates.
+Neither passing main nor automatic publication authorizes merging an unrelated pull request or changing stable's captain-selected highlights.
 
 ## The phone goes first
 
@@ -372,7 +371,7 @@ Read the named job's log on a failure wake; a release run outcome is not a pull 
    `gh workflow run release.yml --ref main -f channel=stable -f promote=<alpha version> -f highlights=<lead>,<second>,<third>` (for example `0.1.31-alpha.40`, and the picked changes' entry ids).
    The resolver refuses unless the alpha has a source tag `v<alpha>`, its numeric core is newer than the latest stable, and it carries a feat, fix or breaking change since that stable.
    It also refuses a live stable without highlights, and highlights that are not one to three different entry ids.
-   The resolve job then refuses unless the alpha's release run passed every lane in its latest attempt ("Full alpha checks, inherited stable checks").
+   The resolve job then refuses unless the alpha's release run has every lane's latest execution passed, or validated exact-source main proof ("Full alpha checks, inherited stable checks").
 3. **Release.**
    The run builds the alpha tag's own commit as the alpha's numeric core, `X.Y.Z`, signs and publishes it, and tags `vX.Y.Z` on that same commit.
    Its notes job writes the picks into the stable's catalog as its only highlights, in order, and clears every other rank (`docs/release-notes.md` "The release check").
@@ -394,7 +393,7 @@ It may leave `highlights` empty to keep the alpha reviews' ranks.
 
 A request for “a release” that names no channel means Alpha; “a stable release” names Stable.
 The workflow's own default remains Stable, so an operator always supplies the intended channel explicitly.
-A routine release changes only its notes in the project and follows the candidate and promotion rules above.
+An automatic alpha changes no project source; a manual release and a stable promotion follow the candidate and promotion rules above.
 When a release review rechecks old crew filings, its report names every checked key, the evidence for its fate, and the keys it left unchecked (`docs/task-graph.md`).
 
 Before activation, the storage owner provisions the bucket, download Worker and domain, verifies conditional writes and unsigned downloads, and supplies the R2 settings through the approved credential recipient.
@@ -535,7 +534,7 @@ The build that showed a given card is in that card's observations (`card_observa
    A separate destination also needs `PUBLIC_RELEASE_TOKEN`; the selected source repository uses its workflow token.
 2. Rehearse the release with `dry_run=true`, which runs the update check.
    Neither verification nor rehearsal publishes a release or changes visibility.
-3. Cut an alpha from its reviewed candidate, or promote a verified updater-capable alpha with the captain's selected highlights.
+3. Let a fully passing rolling-main run cut its exact source as an alpha, or promote a verified updater-capable alpha with the captain's selected highlights.
    Publication verifies both public Mac downloads and every Linux file before advancing feeds.
 
 ## Before the public beta
@@ -555,7 +554,7 @@ An item is done when its result is recorded where it names; it is never ticked h
 - `tests/e2e/mac-updates.spec.ts` drives keyboard selection, restart persistence, progress, recovery, cancellation, Saving work and Update later through the hermetic app.
 - `src/core/orchestrator/crewSupervisor.test.ts` ("saving work before this computer's update") owns the hold, the safe stop, Update later and the carry-on after the restart; `tests/helpers/sessionContract.ts` owns each backend's safe stop.
 - `src/core/update/linuxInstall.test.ts` and `src/core/update/updateChecker.test.ts` own the Linux save before replacement and its Update later.
-- `tests/release-contract.test.ts` evaluates the release workflow's conditions, promotion evidence and no-publication rehearsals.
+- `tests/release-workflows.test.ts` evaluates the release workflow's conditions, promotion evidence and no-publication rehearsals.
 - `tests/e2e/installed-update-work.spec.ts` checks that a fresh app accepts the proof's local connection and message while its real provider stream stays open, then retains the message after stopping.
 - `tests/installed-update-fixtures.test.ts` exercises coherent archive reads across an ordered replacement and the real saved-work mover's retained recovery copy.
 - `scripts/check-update-from-alpha.mjs` updates the published alpha to each release's own signed zip in a disposable Apple silicon virtual Mac.

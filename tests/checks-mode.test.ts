@@ -2,6 +2,7 @@ import { spawnSync } from "node:child_process";
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
+import { ciModeRefusal } from "../scripts/checks-mode.ts";
 import { scratchDir } from "./helpers/scratchDirs";
 
 /**
@@ -9,10 +10,8 @@ import { scratchDir } from "./helpers/scratchDirs";
  * phone check and the replay gate". Anyone building Infinitary runs them on
  * their own computer; the git setting infinitary.checks = ci sends them
  * through CI, and inside CI they always run (docs/testing.md, "Where the
- * heavy checks run"). INF-2074's ci-gate fix, the captain's checked words:
- * "Run a change's typecheck, lint and ten unit-file repeats on Linux CI
- * instead of the Mac mini's line, since unit tests need no Mac" added the
- * typecheck and the lint. Each case runs the real command a person types,
+ * heavy checks run"). INF-2074 added typecheck and lint; INF-2273 leaves
+ * every edited unit file's three total rounds local, outside this setting. Each case runs the real command a person types,
  * with a scratch home whose git settings stand in for the person's own.
  */
 const scripts = JSON.parse(readFileSync("package.json", "utf8")).scripts as Record<string, string>;
@@ -37,6 +36,27 @@ function computer(setting?: string) {
 }
 
 describe("where the heavy checks run", () => {
+  // INF-2259's accepted native exception keeps the global setting and all
+  // unrelated checks unchanged; the real launcher still validates file filters.
+  it("allows only admitted, explicitly Mac-tagged selected journeys in CI mode", () => {
+    const env = {
+      INFINITARY_CHECKS: "ci",
+      INFINITARY_SELECTED_MAC: "1",
+      INFINITARY_LOAD_HOLD: "selected-native-proof",
+    };
+    const args = ["--no-deps", "--grep", "@mac-only", "tests/e2e/devices.spec.ts"];
+    expect(ciModeRefusal("journeys", env, process.cwd(), args) === undefined).toBe(
+      process.platform === "darwin",
+    );
+    expect(
+      ciModeRefusal("journeys", { ...env, INFINITARY_LOAD_HOLD: "" }, process.cwd(), args),
+    ).toContain("journeys.yml");
+    expect(ciModeRefusal("journeys", env, process.cwd(), ["tests/e2e/devices.spec.ts"])).toContain(
+      "journeys.yml",
+    );
+    expect(ciModeRefusal("phone", env, process.cwd(), args)).toContain("phone.yml");
+    expect(ciModeRefusal("typecheck", env, process.cwd(), args)).toContain("typecheck-lint-build");
+  });
   it("runs them here by default", () => {
     const { run } = computer();
     for (const check of ["journeys", "phone", "replay-gate", "typecheck", "lint"]) {

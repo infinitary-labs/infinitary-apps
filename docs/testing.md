@@ -16,18 +16,42 @@ This project adds four rulings of the captain, which win over that default:
 - A phone journey never waits for XCTest's animation reply: it skips that wait and keeps the app's run loop wait, and each tap waits until its own target, and the screen inside it, holds still (INF-1541, "The test code skips Apple's animation wait and checks each target itself"; `docs/ios.md`).
 - A phone part's display change sets the text size once more only when the app's own log proves it read the old size after the simulator saved the new one, and never sets an appearance twice (INF-1785, "Confirm each change from the simulator's log, and set it once more only when the log proves the phone missed it"; `docs/ios.md`).
 
-The change's own tests repeat before the completion card (INF-840): three runs for a journey file and ten for a unit test file, when the change adds or edits it, and three on each device for a phone part whose UI test code it edits (the chooser's distance 0, "The phone parts a pull request runs").
-The captain's ruling puts those repeats on the Mac and only for those tests: "locally on mac only. only run affected tests".
-A later ruling moves a unit test file's repeats to Linux CI (INF-2074's ci-gate fix: "Run a change's typecheck, lint and ten unit-file repeats on Linux CI instead of the Mac mini's line, since unit tests need no Mac").
-Journey and phone part repeats run even on a computer in CI mode, so the repeat command alone carries `INFINITARY_CHECKS=local` ("Where the heavy checks run"):
+Before merge, prove the change with the smallest relevant checks, counted once for the current version and required platform (INF-2259's accepted hybrid process).
+Opening a pull request may start that proof; there is no duplicate complete local pre-push gate when CI owns it.
+The PR's Linux check owns typecheck, lint, adherence and build.
+A small local diagnostic run is allowed, not an additional mandatory gate.
+Passing checks never grants merge permission.
 
-- a journey: `INFINITARY_CHECKS=local pnpm exec playwright test <file> --repeat-each 3 --retries 0`, with `--no-deps` for a `renderer` or `application` spec;
-- a unit test file: `ci.yml`'s two `unit-repeats` shards run every Vitest file the pull request adds or edits ten times in a row with no retries, each stopping at its first failed round (`pnpm test:repeats --shard <index/count>`, `scripts/unit-repeats.ts`); Vitest owns the file split, each summary names its shard and candidate files, and a pull request whose two checks passed needs no local repeat;
-- a unit test file on `scripts/mac-unit-tests.ts`, which needs a Mac: ten `pnpm exec vitest run <file>` runs in a row on the Mac, since Vitest has no repeat flag and the Linux job leaves it out;
-- a phone part: three `INFINITARY_CHECKS=local pnpm test:phone --both --part <part>` runs in a row, stopping the loop on the first nonzero exit (`|| exit $?`); local phone gates stop at their first failed part by default and return their place after cleanup (`docs/ios.md`).
+Edited test files require three total successful runs: ordinary coverage plus two more, never an ordinary run plus three repetitions.
+An affected unedited journey or phone part runs once per required platform or device.
+Failed, skipped, cancelled, incomplete and older-version outcomes are not passing proof.
+A failed or interrupted round stops later repetitions without retries.
+Record the version, selection reasons, files or parts, required platforms or devices, rounds and outcomes in the existing task/check evidence; this adds no host gate or second selector.
 
-`journeys.yml` and `phone.yml` add no repeat stage.
-A push to main repeats nothing, since its pull request already did; a `ci.yml` run started on a branch repeats what the branch edits since `origin/main`.
+- Portable journeys run in Linux CI through `journeys.yml`, with `files`, `platforms=linux` and the comparison `base`.
+  `scripts/journey-runs.ts` runs every selected file once, then only directly edited selected files twice more, retaining every round's report.
+- Selected Mac-required cases run locally through `node scripts/local-mac-journeys.ts <file>... [--base <ref>]`, even while this computer remains in CI mode.
+  The route requires explicit existing files with native cases, filters to `@mac-only`, rebuilds from current source and dependencies, and admits build through cleanup under one declared load.
+  Nested launchers reuse that hold, with the existing two-worker default and measured memory declaration.
+  It uses Electron's supplied signature for isolated source tests, not custom development-signing preparation.
+  Genuine signing, Keychain, microphone and quiet-host performance checks retain their own prerequisites and consent.
+  Mixed files retain Linux coverage and their Mac-required cases: those prove different platform behavior.
+  A check requiring a CI environment uses `platforms=mac` or `both` instead of equivalent local proof, not in addition.
+- Every edited Vitest file runs three total fresh invocations locally, including Linux-eligible files (the captain's INF-2273 override).
+  `pnpm test:repeats --base origin/main --workers <declared workers>` uses the existing changed-path reader and stops at the first failed or interrupted round without retries.
+  Ordinary coverage is included, so do not add a fourth run or duplicate local proof in PR CI.
+  Declare the whole batch's processor and memory needs through the local load path, and bound Vitest workers to that declaration.
+  `scripts/mac-unit-tests.ts` identifies native prerequisites, not an exclusion of portable files from local rounds.
+  A developer without a Mac cannot count skipped native cases as proof.
+- Edited phone parts retain three runs on each device.
+  Complete affected selections get ordinary coverage once and only distance-zero parts twice more through CI; proper subsets retain the selected local repeats, which also satisfy ordinary proof for those parts.
+  Other affected parts run once, and unreadable test changes keep conservative all-parts repetitions.
+  See "The phone check on request" for its exact route and isolation.
+- Replay runs once in Linux CI when relevant; pictures and demos remain local.
+
+A push to main repeats no changed-test proof: its pull request already supplied it.
+A requested branch run compares edited files with `origin/main`, or its explicit `base`.
+Full local journey suites remain prohibited.
 
 ## Actions artifact retention
 
@@ -152,18 +176,20 @@ A run that fails or stalls under load is diagnosed from its own logs and fixed i
 
 Moved verbatim from `AGENTS.md` on 2026-09-24; `AGENTS.md` keeps a one-line pointer to each.
 
-- Local gate before every push: `pnpm typecheck && pnpm check && pnpm lint:adherence`, plus the relevant existing e2e specs that cover what you changed (the `renderer` and `application` lanes in `tests/e2e/lanes.ts` name the serial `desktop` lane as their teardown, so run one of their specs alone with `--no-deps` or it runs the whole desktop lane).
-  On a computer in CI mode the typecheck and the lint run in the pull request's `typecheck-lint-build` check instead ("Where the heavy checks run").
+- The PR's Linux `typecheck-lint-build` check owns typecheck, lint/adherence and build; do not duplicate it as a complete local pre-push gate.
+  Required focused proof may run before or alongside the PR and must finish for its current version before merge.
+  A selected local `renderer` or `application` spec needs `--no-deps`, since its teardown otherwise runs the whole `desktop` lane.
   Run the existing unit and integration tests a change can break by path, `pnpm test <path>...` (a bare file path finds its cohort, `docs/test-cohorts.md`), and the probes it reaches with `pnpm test:probes`.
   `pnpm exec vitest related --run <files>` is not that selection: it follows the whole transitive import graph, so a widely shared module reaches a large part of the suite (`src/shared/rigor.ts` reached 140 of 344 test files, 2026-09-30).
   The full unit, integration and probe suites run across `ci.yml`'s jobs on main and on request, not on PRs; the full e2e suite (`pnpm build && pnpm exec playwright test`) is the release verify's job (next bullet); the full unit suite is not a per-push obligation.
   The full e2e suite runs only in CI, never locally during development or release preparation.
   The adherence lint runs the design skill's `_adherence.oxlintrc.json` through ESLint FlatCompat (current oxlint cannot execute its selector rules); its raw-px/hex rules are warn-level by the skill's own design.
-- Standing CI rule (PR 8; CI shape revised by captain decision B, 2026-09-15, scout `fm3000-ci-release-only-s1`; split across machines by the captain's direction on FI3-1204, 2026-10-07; probes moved off every push by FI3-1756's plan, 2026-10-14): `ci.yml` runs three Linux jobs on all pull requests, including release notes: typecheck/lint/build and two changed-test repetition shards.
-  Main pushes and requested runs also run the full unit and probe sweeps and both integration shards, seven jobs in total; there is no unit/integration selector.
-  `typecheck-lint-build` runs typecheck, biome, eslint adherence and build; `unit-tests` runs the in-memory cohorts (`pure`, `unit`, `unit-isolated`); `integration-tests (1/2)` and `(2/2)` run the integration cohort in vitest's own `--shard` halves, which split the files by a hash of their paths; `probe-tests` runs every probe (`docs/test-cohorts.md`, "Probes"); `unit-repeats (1/2)` and `(2/2)` use the same Vitest sharding to run each changed Vitest file ten times in a row, retaining each step's 30-minute deadline, and pass with none ("This project's rulings on tests").
-  The hosted runner has two processors and a personal account is offered no larger one, so the jobs run side by side; together they run `verify.yml`'s `linux-checks` lane, which runs every probe, and `tests/release-contract.test.ts` holds every vitest project to one job or to shards that cover it, including the full probe project.
-  Every job runs on the label the repository variable `LINUX_RUNNER` names, the placement service's `shell-pc-linux` places (a fresh two-processor VM per job on the Windows PC, five at once), and on GitHub's hosted `ubuntu-latest` when the variable is unset; `tests/release-contract.test.ts` evaluates each job's runner both ways.
+- Standing CI rule (PR 8; CI shape revised by captain decision B, 2026-09-15, scout `fm3000-ci-release-only-s1`; split across machines by the captain's direction on FI3-1204, 2026-10-07; probes moved off every push by FI3-1756's plan, 2026-10-14): `ci.yml` runs one Linux baseline job on all pull requests, including release notes: typecheck/lint/build.
+  The captain's INF-2273 ruling removes both unit-repeat shards; every edited unit file instead gets three total local runs, including portable files.
+  Main pushes and requested runs also run the full unit and probe sweeps and both integration shards, five jobs in total; there is no unit/integration selector.
+  `typecheck-lint-build` runs typecheck, biome, eslint adherence and build; `unit-tests` runs the in-memory cohorts (`pure`, `unit`, `unit-isolated`); `integration-tests (1/2)` and `(2/2)` run the integration cohort in vitest's own `--shard` halves, which split the files by a hash of their paths; `probe-tests` runs every probe (`docs/test-cohorts.md`, "Probes").
+  The hosted runner has two processors and a personal account is offered no larger one, so the jobs run side by side; together they run `verify.yml`'s `linux-checks` lane, which runs every probe, and `tests/release-workflows.test.ts` holds every vitest project to one job or to shards that cover it, including the full probe project.
+  Every job runs on the label the repository variable `LINUX_RUNNER` names, the placement service's `shell-pc-linux` places (a fresh two-processor VM per job on the Windows PC, five at once), and on GitHub's hosted `ubuntu-latest` when the variable is unset; `tests/release-workflows.test.ts` evaluates each job's runner both ways.
   The shell PC job image supplies Node 24 and a pre-filled pnpm store, so `ci.yml` disables setup-node's pnpm cache when `LINUX_RUNNER` is set; hosted jobs keep caching.
   Every other workflow's Linux jobs read the same variable the same way (INF-1720's plan): the journeys' chooser, starters and overflow, `verify.yml`'s Linux lanes, the phone check's replacement job, the replay gate, Linux startup, the Linux packages and the release's Linux helpers; the package check's Ubuntu 26.04 leg takes the variable's label with `-2604`, the PC's 26.04 job image.
   The gate jobs take the variable's label with `-gate` (DOP-157's plan): `phone.yml`'s `cancel-replaced`, `journeys.yml`'s `choose-journeys`, and the four Linux jobs that open a release (`release.yml`'s `resolve`, `notes` and `phone`, `ios-release.yml`'s `resolve`).
@@ -177,9 +203,9 @@ Moved verbatim from `AGENTS.md` on 2026-09-24; `AGENTS.md` keeps a one-line poin
   A new test file joins its cohort's job on its own; a new kind of check joins one of the jobs, never a step with a condition.
   The retained PR jobs have no release-branch exemption: they must actually run to provide the required project verification, even though the generic forge verdict accepts conditional skipped checks.
   CI green means every check on the exact head commit SHA reports status=completed and conclusion=success or skipped (`gh pr checks`); a project that runs no checks reads green with the empty list, but on GitHub an empty list where workflow runs exist or have run for earlier pull requests reads pending ("checks have not started yet"), and so does a pull request's list with none of its own workflow runs on the version yet where the project runs them (`docs/forge.md`, "The green rule").
-  The macOS work - the Playwright e2e suite and the run-alone pass's Mac-only tests, the universal package smoke, the replay gate - is `verify.yml`'s mac lane, in a reusable workflow that `release.yml` calls beside its signing job and before anything publishes (every alpha runs linux-checks, the whole Playwright suite on Linux as `linux-e2e` ("The Linux source desktop" below) and mac; a stable promotion inherits its alpha's successful checks or is refused: `docs/alpha.md` "The signed channel workflow") and that crewmates request on demand through `github_write` (`docs/forge.md`, "Verification workflow requests"); it is deliberately not per PR and has no trigger of its own beyond `main.yml`'s call on every push to `main` (the per-PR mac job was 98% of a ~$200/month bill).
-  An alpha runs every journey on the Mac, and so does the continuous run on `main` (`main.yml`, "The continuous run on main"), which calls it with `all_journeys: true`; any other request runs there only the tests tagged `MAC_ONLY_TAG`, since `linux-e2e` runs every other one ("Tests that need a Mac").
-  Crewmate validation is agent-driven and evidence-first (captain rulings 2026-09-19, the no-mistakes alignment; `docs/delivery-rigor.md`): demonstrate the user intent end-to-end with product-level evidence for each concrete thing an end user would do and relevant existing end-to-end tests covering the surfaces changed, re-run after an overlapping rebase, named under Verified, and a relevant test that cannot run is named, never dropped quietly - the full unit and integration sweeps run on main and in release verification and the full Playwright suite and `pnpm package:mac` are `verify.yml`'s mac lane, with the full suite on Linux beside it (every alpha, and on demand), with full e2e runs only in CI, never locally, and no configured command is mandated anywhere in the rigor pipeline.
+  The macOS work - the Playwright e2e suite and the run-alone pass's Mac-only tests, the universal package smoke, the replay gate - is `verify.yml`'s mac lane, in a reusable workflow that rolling main calls and that `release.yml` calls only without reusable exact-source proof (every alpha requires linux-checks, the whole Playwright suite on Linux as `linux-e2e` ("The Linux source desktop" below) and mac, inherited from passing main or newly run; a stable promotion inherits its alpha's successful checks or is refused: `docs/alpha.md` "The signed channel workflow") and that crewmates request on demand through `github_write` (`docs/forge.md`, "Verification workflow requests"); it is deliberately not per PR and has no trigger of its own beyond `main.yml`'s call on every push to `main` (the per-PR mac job was 98% of a ~$200/month bill).
+  An alpha requires every journey's Mac proof, inherited from exact-source main or newly run; the continuous run on `main` runs them all (`main.yml`, "The continuous run on main"), which calls it with `all_journeys: true`; any other request runs there only the tests tagged `MAC_ONLY_TAG`, since `linux-e2e` runs every other one ("Tests that need a Mac").
+  Crewmate validation is agent-driven and evidence-first (captain rulings 2026-09-19, the no-mistakes alignment; `docs/delivery-rigor.md`): demonstrate the user intent end-to-end with product-level evidence for each concrete thing an end user would do and relevant existing end-to-end tests covering the surfaces changed, re-run after an overlapping rebase, named under Verified, and a relevant test that cannot run is named, never dropped quietly - the full unit and integration sweeps run on main and in release verification and the full Playwright suite and `pnpm package:mac` are `verify.yml`'s mac lane, with the full suite on Linux beside it (rolling main, alphas without reusable proof, and named full-run exceptions), with full e2e runs only in CI, never locally, and no configured command is mandated anywhere in the rigor pipeline.
   Never treat old SHAs as authoritative for the current head.
 - A timing claim in a test is asserted as an ORDER or as WORK, never as a wall-clock window (captain's B1, 2026-09-24: "one clock, budgets measured"): on a host running several suites at once a millisecond budget, a runner-clock interval, or two short real timers racing measure the load.
   Log the events the behavior promises in one ordered list on the page, count what a paint built (`rail-panels.spec.ts`), wait on the event that follows the one you need, or drive a unit test's timers on a fake clock (`jobManager.test.ts`, `piAccountBackend.test.ts`).
@@ -201,14 +227,16 @@ Moved verbatim from `AGENTS.md` on 2026-09-24; `AGENTS.md` keeps a one-line poin
 The captain's principle of 2026-10-28 (`docs/principles.md`): a test runs on the Mac only when it needs a Mac, and Linux runs every test it can.
 A journey needs a Mac when it skips on Linux, or when it has a step only a Mac runs; it then carries `MAC_ONLY_TAG` (`tests/e2e/tags.ts`) in its own details, `test("…", { tag: MAC_ONLY_TAG }, …)`, or a describe's around it, beside its own `test.skip` and reason.
 A unit test that needs a Mac is a file of the reviewed list in `scripts/mac-unit-tests.ts` instead (`docs/test-cohorts.md`).
+The captain's INF-2273 local-round exception covers every edited unit file, including portable files; the native list still governs the full-check Mac lane.
 
 Where each journey runs:
 
 | Run | Linux | Mac |
 | --- | --- | --- |
-| A request for journeys (`journeys.yml`) | every named journey | their tagged tests, or every test with `mac_all` |
+| A request for journeys (`journeys.yml`) | every named journey when `platforms=linux` or `both` | tagged tests when `platforms=mac` or `both`, or every test with `mac_all` |
 | A requested full check (`verify.yml`) | every journey | every tagged test, or every journey with `all_journeys` |
-| The run on `main` (`main.yml`) and every alpha (`verify.yml`) | every journey | every journey |
+| The run on `main` (`main.yml`), inherited by automatic alphas | every journey | every journey |
+| A manual alpha without reusable proof (`verify.yml`) | every journey | every journey |
 
 Three checks hold the tag to what a test needs:
 
@@ -217,9 +245,22 @@ Three checks hold the tag to what a test needs:
 2. The `e2e-mac-tag` lint in `pnpm check` (`tests/lint/e2eMacTag.ts`) refuses an untagged test that reads a Mac fact, and a tagged test that reads none.
    A test reads a Mac fact when its own code, or a `test.skip` or hook of the describe or file around it, names `THIS_DESKTOP` or `HAS_APP_MENU` (`tests/e2e/desktop.ts`) or the platform name "darwin".
    A step only Linux runs, such as a comparison with "linux", needs no Mac, and a helper the test calls is not followed.
-3. `tests/release-contract.test.ts` holds the Mac steps of `journeys.yml` and `verify.yml` to the tag (`--grep @mac-only`), and the untagged-skip step to every Linux journey job.
+3. `tests/release-workflows.test.ts` holds the Mac steps of `journeys.yml` and `verify.yml` to the tag (`--grep @mac-only`), and the untagged-skip step to every Linux journey job.
 
 `tests/e2e-mac-tag.test.ts` drives the first two on this repository's own journeys and a Linux run's real result.
+
+## When to request full verification
+
+Full Mac verification is not a routine pre-PR or pre-merge gate.
+Crewmates almost never request it on task branches because rolling main supplies broad post-merge coverage and automatic alphas reuse that exact proof.
+Broad code changes, extra confidence and a care level alone are not exceptions.
+Keep affected Linux/native checks and their repetitions, replay where relevant, and both phone devices; do not add supplementary signed checks merely because portable code changed or a defect appeared on a Mac.
+
+The exceptions are an alpha candidate lacking reusable exact-source main proof, an evidenced full-run repair or infrastructure qualification that narrower checks cannot prove, coordinated missing-evidence recovery after reading existing runs/artifacts, or an explicit captain full-run request.
+Preserve full Linux/Mac parallel-lane qualification and stable promotion's inherited-alpha rules.
+Record the reason, exact source and why narrower proof is insufficient.
+`mac_all` and `all_journeys` belong only to a named Mac-specific proof or full-run exception, never reassurance.
+Signing consent remains separate.
 
 ## Full e2e runs are CI-only
 
@@ -228,26 +269,28 @@ Run only the affected spec files locally.
 `--list` is allowed because it discovers tests without executing them.
 For `renderer` or `application` specs, add `--no-deps` to avoid pulling in the whole `desktop` lane.
 
-For a full run, start `verify.yml` in GitHub Actions for your branch.
+Only for a named exception under "When to request full verification", start `verify.yml` in GitHub Actions for the required branch or tag.
 Crewmates use `github_write` to POST `/repos/{owner}/{repo}/actions/workflows/verify.yml/dispatches` with `{"ref":"<branch-or-tag>"}` and any workflow inputs their task needs through the app's own GitHub sign-in (`docs/forge.md`, "Verification workflow requests").
 For an isolated Mac proof, pass the optional `mac_runner` input with a temporary runner label; it changes only that invocation's Mac lane, never `MAC_RUNNER` or the Linux jobs.
 The reusable workflow accepts the same input, and leaving it unset keeps the normal project runner and hosted fallback.
 An accepted request is not a passing check: find the run with `github_read`, confirm its version, then read `check_change`.
 CI sets `CI`; do not set it locally to bypass the guard.
-Every alpha's own verification runs the full suite; no local full run precedes a release.
+An automatic alpha inherits the exact passing rolling-main full check; it does not repeat that suite for the cut.
+Release-specific signed-package, update, phone-order and publication gates still run, and no local full run precedes a release.
 The full-suite workload measurement (`scripts/test-workload.ts`) must also run in CI.
 Unit tests are unchanged.
 
 ## Where the heavy checks run
 
-Anyone building Infinitary runs every check on their own computer by default.
+The hybrid owners above decide required proof: portable journeys use Linux CI, every edited unit file has three total local runs, and selected native journeys use the admitted Mac route.
+The setting below governs local command refusal, not a second assignment of every check to one place; without it, commands allow local diagnostics where the project rules permit them.
 A computer opts into CI mode with one git setting, `git config --global infinitary.checks ci` (INF-800, the captain's approval: "Only the heavy checks: journeys, the phone check and the replay gate").
-INF-2074's ci-gate fix adds the typecheck and the lint ("Run a change's typecheck, lint and ten unit-file repeats on Linux CI instead of the Mac mini's line, since unit tests need no Mac").
+INF-2074's ci-gate fix adds the typecheck and the lint; INF-2273 leaves every edited unit file's three total rounds local, outside this setting.
 In CI mode these checks refuse to start outside CI and name their route on request instead (`scripts/checks-mode.ts`):
 
 | Check | Command that refuses | Its route in CI mode |
 | --- | --- | --- |
-| Journeys | `pnpm exec playwright test` naming a committed journey (`playwright.config.ts`) | `journeys.yml` on request with the `files` it names ("Journeys on request"); a pull request runs none |
+| Journeys | `pnpm exec playwright test` naming a committed journey (`playwright.config.ts`) | Portable proof uses `journeys.yml` with `platforms=linux`; the admitted selected-native route above is allowed locally without changing CI mode |
 | The phone check | `pnpm test:phone` and `scripts/test-phone.ts` | `phone.yml` on request ("The phone check on request") |
 | The replay gate | `pnpm replay:gate` | `replay.yml` on request (`docs/replay-harness.md`, "The gate") |
 | The typecheck | `pnpm typecheck` | the pull request's `typecheck-lint-build` check; before a pull request, `ci.yml` on request |
@@ -256,7 +299,7 @@ In CI mode these checks refuse to start outside CI and name their route on reque
 Crewmates start each route the way they start a full verification: `github_write` to `POST /repos/{owner}/{repo}/actions/workflows/<workflow>/dispatches` with `{"ref":"<branch>"}` and the route's inputs (`docs/forge.md`, "Verification workflow requests").
 An accepted request is not a passing check: find the run, confirm its version, then read it.
 The pull request's own `typecheck-lint-build` check stands in for a local typecheck and lint, so only `ci.yml` started on a branch with no pull request adds Linux work for them.
-A single unit test run stays local in both modes; a change's ten unit-file repeats run in `ci.yml`'s `unit-repeats` shards ("This project's rulings on tests").
+Every edited unit file gets three total local runs in both modes ("This project's rulings on tests"); PR CI has no unit-repeat job.
 Pictures and demos for a card stay local too: they are evidence, not checks.
 A throwaway picture or demo script is never committed, so the journey guard lets it run; an existing spec cannot take pictures in CI mode.
 Inside CI (`CI` is set) the heavy checks always run, because the Mac mini's runners run as the same user and read the same git settings.
@@ -317,8 +360,10 @@ A failed run fails on the version it checked, which can be older than `main`'s h
 Merging continues while a run is red.
 A red run reaches the crew through the captain's own Automation rule on GitHub's event "A workflow run fails", filtered to the workflow `main` and the branch `main` (`docs/integrations.md`, "GitHub's events"): its words start one repair crewmate under the main repair direction, or steer the repair already open, and the app's code names no repair (INF-2146).
 The repair fixes forward, and a revert is the last resort, on the captain's click.
-An alpha starts from the mark (`docs/alpha.md`, "Cutting an alpha").
-`tests/release-contract.test.ts` holds the trigger, the queue and both calls.
+A successful completed main run automatically starts an alpha at that exact source, not a newer main head (`docs/alpha.md`, "Cutting an alpha").
+The alpha reuses its broad checks after reading every required owner and latest per-job result on that exact source; release-specific gates still run.
+Ordinary CI's main-push trigger remains until a passing replacement full run demonstrates equivalent coverage; removing it is a post-merge continuation, not permission to drop checks early.
+`tests/release-workflows.test.ts` holds the trigger, the queue and both calls.
 
 ## A release's Linux label
 
@@ -392,16 +437,27 @@ The fixture, simulator identity and unsigned Xcode configuration are described i
 ### The phone check on request
 
 `phone.yml` also runs on request (`workflow_dispatch`): `POST /repos/{owner}/{repo}/actions/workflows/phone.yml/dispatches` with `{"ref":"main","return_run_details":true}`.
-A default run on request skips the chooser and runs every part of the device gate whatever changed, as `main.yml`'s call does.
+A default run on request runs every part of the device gate whatever changed, as `main.yml`'s call does.
+Branch requests also read the chooser for repeat accounting; `main.yml`'s call never repeats.
 For a crewmate checking its own branch, send `{"ref":"<branch>","inputs":{"affected":"true"},"return_run_details":true}` to select touched parts conservatively.
 The optional `base` input defaults to `origin/main`.
 This selection reuses `PART_OWNERS` and the Swift function reach reader, without a timing budget.
 Shared phone inputs, unreadable comparisons or test changes, and the fixed `PHONE_VIRTUAL_MAC` route run every part instead.
 An affected request with no reached parts skips the native job; the summary and `phone-placement` artifact record the selection.
 Explicit `parts` still overrides automatic selection for diagnostic runs.
+The chooser compares ordinary coverage with the complete live part table, independent of order, and keeps `coverage` and `repeats` in `phone-placement`.
+A complete selection runs once in `native-phone`, then distance-zero edited-test parts run twice more, in `phone-repeat-2` and `phone-repeat-3`.
+Unreadable test changes retain all-parts repeats; a product-only shared input does not invent edited tests.
+Each further job depends on successful predecessors, uses the same workflow version, starts fresh isolated runs, and cleans up before returning.
+Each keeps the existing 90-minute gate and 165-minute job deadlines, with no retries and no later pass after a failure, cancellation or skip.
+The ordinary artifacts retain their names; each additional job keeps its own `phone-repeat-2` or `phone-repeat-3` evidence artifact.
+Each additional pass keeps simulator logs separately, and uploads whole result bundles only on failure or recording, with the ordinary retention periods.
+The fixed `PHONE_VIRTUAL_MAC` route refuses selected repeats it cannot honor rather than silently running all parts and reporting selected counts.
+An unavailable CI route leaves missing proof, never an automatic complete local fallback.
 Neither route starts a release, TestFlight or App Store step.
 It has no pull request, so `scripts/replaced-phone-runs.ts` cancels nothing and never stops its gate.
-No part on either device stops another, and inside the gate a failed Swift package test no longer skips the simulator tests (`scripts/phone-checks.ts`); every failure is reported and fails the job.
+Complete branch selections stop at the first failed part; proper-subset requests and main keep full discovery.
+Inside the gate a failed Swift package test no longer skips the simulator tests (`scripts/phone-checks.ts`); every failure is reported and fails the job.
 For an isolated overlap proof, its optional `mac_runner` input selects a runner for that request only, as `verify.yml` does; shared runner variables stay unchanged.
 An explicit runner uses the shared `mac-mini-phone` queue; the fixed `PHONE_VIRTUAL_MAC` switch, when set, still takes precedence.
 Without that input, it takes the same line and runner as a pull request's phone check: its own fresh virtual Mac on the virtual-Mac label, otherwise the `mac-mini-phone` queue, without excluding desktop checks.
@@ -416,11 +472,12 @@ Only a run of every journey keeps that artifact, so a requested check of the tag
 It finds that run in the workflow's plain run list, newest first, never through GitHub's search by result, which has answered no run while passing ones were listed.
 It asks for that list without each run's pull requests, which it never reads: working them out has run past GitHub's time limit and answered 502, and leaving them out drops no run.
 It reads each passing run's artifact list and keeps paging past runs without usable `e2e-results`, including installer-only verifications.
-If no passing run has usable results, the chooser fails rather than silently dropping journeys; run full verification to supply fresh timings.
+If no passing run has usable timings, the chooser still schedules every explicitly selected file conservatively.
+Missing timing artifacts change placement, never selection or the need for a new full run; unreadable selections remain an error.
 An artifact-list error or a failed download still fails the chooser.
 `scripts/journey-budget.ts` places every chosen file on Linux, and on the Mac mini (the `journeys` kind's queue or the `MAC_RUNNER` label) only the chosen files that hold a test tagged `MAC_ONLY_TAG`, whose `affected-journeys` job runs only those tests (`--grep @mac-only`), as "Tests that need a Mac" says.
 A file with a tagged test runs on both: its tagged tests on the Mac, and its other tests on Linux, where its tagged tests skip or run their shared steps.
-A tagged test is never sent to Linux alone.
+A tagged test still needs native proof; a Linux-only request does not claim to provide that proof.
 `linux-overflow` packs the chosen files into six-minute groups separately for parallel and desktop files, on Linux machines running beside the Mac.
 It is at most five jobs, one per Linux place on the PC (`LINUX_PLACES`, INF-1720's plan).
 For modest selections the existing grouping and job count stay unchanged.
@@ -440,9 +497,11 @@ The conservative fallback still gives each lane places by its share of estimated
 A new or previously skipped file uses the slowest measured file in its lane, and the summary lists it as unmeasured.
 Conservative Linux estimates use the plan's observed rates: one Mac minute of parallel work per Linux minute and 0.6 Mac minutes of desktop work.
 A file stays intact, so an indivisible slow file may exceed six minutes; conservative estimates exclude setup, and neither model predicts runner waits or shared-machine slowdown.
-Every selected file runs on Linux exactly once in this placement; the independent Linux starter coverage still runs too.
+Every selected file has ordinary Linux coverage once; only directly edited selected files receive two additional fresh rounds.
+The `platforms` input independently selects Linux, Mac or both, so already completed native proof need not be dispatched again.
+The default is Linux; native proof remains required separately when the selected files need it.
 The chooser keeps its selection and placement as the `journey-placement` artifact.
-The full Mac suite remains part of every alpha's `verify.yml` and of the run on `main`; a break that only a Mac shows in an untagged test first surfaces there.
+The full Mac suite remains in rolling main and in alphas lacking reusable exact-source proof; automatic alphas inherit it; a break that only a Mac shows in an untagged test first surfaces there.
 When the chooser passes with no tagged files, the Mac job skips by its own condition without taking a runner; when the chooser fails, its failed check holds the merge.
 Both success and a job-condition skip satisfy the app's green rule.
 If GitHub branch rules ever require `affected-journeys`, they must require `choose-journeys` too: a job skipped because its prerequisite failed does not itself hold a merge.
@@ -527,9 +586,9 @@ A change to an export every journey imports still runs them all, because that is
 A changed screen file that draws a hook most journeys read, such as `HomeScreen.tsx` with `data-stage-entry`, likewise runs most journeys.
 A model behavior only a few journeys need lives in its own scenario file instead ("A journey's own scenarios"), so an edit to it runs only those journeys.
 The Mac job refuses an empty file list, builds once, then runs the chosen files' tagged tests with `--no-deps`, as a local run does (`docs/testing.md`, "Full e2e runs are CI-only").
-It does not repeat the release's other stages: the run-alone pass, the replay gate, the package smoke and the full suite stay `verify.yml`'s, inside every alpha and on demand.
+It does not repeat the release's other stages: the run-alone pass, the replay gate, the package smoke and the full suite stay `verify.yml`'s, in rolling main, inherited by automatic alphas, and newly run only for alphas without reusable proof or named exceptions.
 A newer push to the same pull request cancels the older run, because the Mac mini is one machine.
-`tests/affected-journeys.test.ts` pins the selection and `tests/release-contract.test.ts` the workflow's shape.
+`tests/affected-journeys.test.ts` pins the selection and `tests/release-workflows.test.ts` the workflow's shape.
 
 The native phone gate uses the same clock and cap through `PhoneWaits.swift`, with 1200-second ordinary XCTest allowances and a 90-minute gate limit on every route; graded native runs retain Xcode's own allowances and wall-clock waits (`docs/ios.md`, "Disposable verification").
 Its on-demand `parts`, `starve` and `perf` inputs select native parts and reproduce twelve-second stalls without changing assertions or app deadlines.
@@ -623,7 +682,7 @@ In the 2026-09 release cuts, side-rails' collapse and settings cases and forge-s
   `verify.yml`'s `linux-e2e` runs it over every spec file across four isolated Linux jobs, `journeys (run alone N/4)` ("The Linux source desktop", below), keeps each share’s result as the `e2e-alone-N` artifact and lists its counts and failures in that job's summary.
   A test that runs only on a Mac carries `MAC_ONLY_TAG` (`tests/e2e/tags.ts`) beside its own `test.skip` and reason: on Linux it is recorded as skipped, and `verify.yml`'s mac lane runs those tests alone (`--tag @mac-only`) after its other stages, whether the suite passed or failed, keeps their result as the `e2e-alone-mac` artifact, and lists their failures apart from the suite's in the job summary ("A red verify's evidence", below).
   A test that skips without the tag, or skips on a Mac, fails the pass, since it never ran alone.
-  `tests/release-contract.test.ts` holds both steps.
+  `tests/release-workflows.test.ts` holds both steps.
   Locally it takes the affected spec files, like a Playwright run: `node scripts/e2e-alone.ts tests/e2e/<file>.spec.ts` after `pnpm build`.
   The renderer and application lanes' tests run four at a time, and the desktop lane's one at a time after them, as in the full run.
 - Vitest cases keep the same rule, selected alone with `pnpm test <file> -t "<name>"`.
@@ -825,7 +884,7 @@ The affected-journey selector retains that journey for changes to the core Mac c
 
 ## A red verify's evidence
 
-`verify.yml` keeps what the e2e run left on the run itself, so a red release is read from its page instead of re-run blind (scout `fm3000-e2e-rigidity-s2`, I5; held by `tests/release-contract.test.ts`):
+`verify.yml` keeps what the e2e run left on the run itself, so a red release is read from its page instead of re-run blind (scout `fm3000-e2e-rigidity-s2`, I5; held by `tests/release-workflows.test.ts`):
 
 - **`e2e-results`** is Playwright's JSON result (the `json` reporter in `playwright.config.ts` beside the unchanged console reporter; verify's e2e step names its path, `playwright-report/e2e-results.json`, through `PLAYWRIGHT_JSON_OUTPUT_FILE`), kept whenever the suite ran.
 - **`e2e-failures`** is, on a failed run, everything under `test-results/` (the run's own directory under `test-results/runs/`, "Per-run e2e evidence" above): each failed journey's `error-context.md` (the error, its call log and the window's accessibility snapshot), `trace.zip` (the runner's steps, errors and sources) and `test-failed-*.png` (the app window), beside whatever the specs wrote.
@@ -916,7 +975,7 @@ The TestFlight job runs only for a release, so its `testflight` kind has no rele
 A dry run asks for the ordinary kinds, so a rehearsal never takes a release's place in line.
 `release.yml` hands `release_check` to `verify.yml` as its `mac_runner` input and `release_light` to `mac-update.yml` as its `runner` input, and `verify.yml`'s Mac lane reads its kind only when that input is empty.
 The signed installer's Intel check stays on `macos-15-intel` and takes no kind.
-`tests/release-contract.test.ts` ("each Mac job's kind") evaluates every Mac job with the variable set, unset and for a publishing release, and refuses a Mac job without a kind.
+`tests/release-workflows.test.ts` ("each Mac job's kind") evaluates every Mac job with the variable set, unset and for a publishing release, and refuses a Mac job without a kind.
 
 Where the placement service names a job's size, it sets `RUNNER_UP_CORES` to the job's cores.
 A virtual Mac is made that size, but a job on the real Mac shares the processor with the jobs beside it, and macOS cannot hold a group of programs to a share, so the job's own test workers keep to it (`scripts/job-cores.ts`).
@@ -935,7 +994,7 @@ The signing job runs while the release's checks run (`docs/alpha.md`, "Signing w
 These checks require throwaway guests for their signing, trust changes or writes to `/Applications`; the signed installer's Intel check, run only on request, stays on a disposable hosted Mac (`docs/alpha.md`, "Isolated signed verification").
 The phone check reads its `phone` kind's queue, or that label from `VIRTUAL_MAC_RUNNER` when the variable is set, so it starts on the next free virtual place; the Mac mini has one, so there it starts after any other phone check (`docs/ios.md`, "A phone check the placement service puts in a virtual Mac").
 The other Mac jobs read their kind's queue or `MAC_RUNNER` and may run in any place, a virtual one or the real Mac's.
-`tests/release-contract.test.ts` holds which jobs ask for the real Mac.
+`tests/release-workflows.test.ts` holds which jobs ask for the real Mac.
 
 ### The runner's microphone access
 
@@ -998,7 +1057,7 @@ The app ticks at its own period, so a minute pass may or may not fall in a stret
 
 `source-journeys.yml` builds the checkout and runs journeys on the app built from source on Ubuntu 24.04 x64 (`LINUX_RUNNER`, hosted when unset), under Xvfb on a 2560 by 1600 virtual screen with Chromium's sandbox enabled.
 `journeys.yml` calls it as `linux-source` on a pull request's run, which no pull request starts now ("Journeys on the pull request"), with the starter journeys, split onto two machines by the existing parallel and serial desktop lanes: `source-start`, `phase0-guardrails`, `answer-delivery` and `claude-crew-turn`, the keyboard journeys `keyboard-routing` and `keyboard-regions`, which press Ctrl where a Mac presses ⌘ (`docs/keyboard.md`, "Keys on each system"), the task browser's journeys (`task-browser`, `task-browser-actions`, `task-browser-diagnostics` and `task-browser-booking`), the device journeys (`devices`) unconditionally, without a second selector, and the voice journeys (`phase6-voice`, `voice-prompt-focus` and `repro-voice-press`), which hold right Ctrl, with a stand-in graphics card and a stand-in voice helper (`docs/e2e-contracts.md`); the real card check is the captain's on each Linux alpha (`docs/architecture.md` section 8, "Where speech runs").
-`verify.yml` calls it as `linux-e2e` with `suite: full`: every journey in the suite, before every alpha and on demand, in eight jobs, and the run-alone pass in four more isolated jobs.
+`verify.yml` calls it as `linux-e2e` with `suite: full`: every journey in the suite, in rolling main and alphas without reusable proof or named full-run exceptions, in eight jobs, and the run-alone pass in four more isolated jobs.
 Four take a quarter each of the parallel lanes (`styles`, `renderer` and `application`) and four a quarter each of the serial `desktop` lane, each run with `--no-deps` so neither lane waits as the other's teardown and the desktop lane still runs alone on its machine; a job is named for its share, such as `journeys (desktop 2/4)`.
 The four `journeys (run alone N/4)` jobs divide the run-alone pass’s ordered listing by round-robin position with `--shard N/4`; together they cover every later file:line/lane selection once, without splitting tests that share a line.
 Each share keeps the existing fresh Playwright process and home for each selection, runs the parallel lanes at the existing local width and then its desktop selections serially, and keeps a distinct `e2e-alone-N` artifact and summary.

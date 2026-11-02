@@ -8,19 +8,20 @@ This page owns that data, who writes it, the checks on it, the version tracking,
 - **The change author** (normally the implementation crewmate) adds a note to the same pull request, in plain language for someone who has never opened a terminal and by the rules in "What a note may say", or an exclusion with a reason for internal work a person does not notice.
   A source change with neither blocks the next alpha.
   The note declares the feature area it belongs to, and a change a person can see keeps its hero picture pair beside the note, or says in one sentence why there is nothing to see ("Hero pictures" below).
-- **The release crewmate** (whoever the first mate assigns to prepare the alpha; not a standing agent) reviews the notes against the actual changes before the alpha is dispatched: accuracy, omissions, repeated descriptions, plain wording, the rules in "What a note may say", and which at most three entries are highlights (`highlight` ranks 1 to 3).
+- **The reviewing crewmate** checks the notes against the actual changes before merge: accuracy, omissions, repeated descriptions, plain wording, the rules in "What a note may say", and any declared highlight ranks.
   A note about internal work becomes an exclusion, and a product the app does not support is written out of the note.
-  When choosing those highlights, prefer a new feature most people will see and use over a bug fix or a niche case few people run into.
-  It looks at the hero pictures of the entries it ranks and re-takes a pair by the same recipe when one does not carry; the lead highlight always has one.
-  It makes its corrections, any missing note or exclusion, and any missing record of a published release (the last stable's rides here) on its own branch off main's green mark, the commit of the newest passing run of `main.yml`, and commits them: that commit, the mark's code plus changes under `release-notes/` only, is the release candidate it dispatches (`docs/alpha.md` "Cutting an alpha").
-  A note it adds names the change it describes in `covers`, so the note keeps its releases once the pull request is squashed onto main.
-  After the private tag exists, that same crewmate pins the release's record with `node scripts/release-notes.ts manifest --version <v> --write` on the same branch, which pins the record of past releases again with it ("A fresh history"), and opens one pull request for the review and the record; it never rewrites a record that is already pinned.
-  A stable's record waits for the next alpha's review commit, because a promotion builds its alpha's commit unchanged, and it keeps the stable's picked highlights (`--highlights`).
-  A rehearsal publishes no tag and pins nothing.
+  Prefer a new feature most people will see and use over a bug fix or a niche case when choosing highlights.
+  Inspect each highlight's hero picture; the lead always has one.
+  An automatic alpha uses the exact fully checked main commit, with no notes-only review commit or follow-up record commit required for publication (`docs/alpha.md`, "Cutting an alpha").
+  The existing published-release reader derives an uncommitted manifest from its immutable source tag; committed records remain immutable and are still validated.
+  Editorial corrections merge as ordinary changes and wait for their own passing main check.
+  A manual notes-only candidate retains its reviewed-source and committed-record requirements.
+  A note added separately names the change it describes in `covers`, so it keeps its releases after squash merge.
+  A stable's optional committed record retains its captain-picked highlights (`--highlights`); a rehearsal publishes no tag and pins nothing.
 - **The captain** picks a stable's highlights on a card when an alpha is promoted (`docs/alpha.md` "Promoting an alpha"): three, lead first, from every change since the last stable, and only a change with a hero picture can lead.
-  The release run writes them into the stable's catalog as its only ranks, so the alpha reviews' ranks reach alpha users alone.
+  The release run writes them into the stable's catalog as its only ranks, so declared alpha ranks reach alpha users alone.
 - **The workflow** checks declarations and packages the prose.
-  It cannot tell whether a note is true or well written; that is the review above.
+  It cannot tell whether a note is true or well written; that is the pre-merge review above.
   The captain is not the copywriter; a stable's highlights are the captain's one editorial choice.
 
 A release whose notes are ready makes no notes-only commit to assemble them.
@@ -88,7 +89,7 @@ The Infinitary rename (step 7 of FI3-1780's plan) starts a new repository from o
   `scripts/resolve-release.sh` numbers from the newest stable tag as always; with none, from the record: the next patch or minor above the newest numeric core either channel published there, so a new repository's restarted run numbers still sort above every archived alpha.
   Every version, either way, must be newer than the record's newest stable and newest alpha ("Versions" in `docs/alpha.md`).
 - **Its tests.**
-  `tests/release-notes.test.ts` "a fresh history" pins, checks, catalogs and records releases on a parentless copy of an archived fixture, and `tests/release-contract.test.ts` "resolving a release" numbers one.
+  `tests/release-notes.test.ts` "a fresh history" pins, checks, catalogs and records releases on a parentless copy of an archived fixture, and `tests/release-workflows.test.ts` "resolving a release" numbers one.
 
 ### Hero pictures
 
@@ -119,7 +120,8 @@ Commits the changelog does not list are covered by one exclusion per release.
 `node scripts/release-notes.ts` (Node type stripping; no install) is the one tool.
 `release.yml`'s `notes` job runs it before `verify` or any signing:
 
-1. `check` validates the ledger (schema, unique ids, references, promotion mappings, each entry's area, kind and hero picture and the picture files, published manifests unchanged, the record of past releases), refuses a published release this one stands on that has no record in `releases/` (except the release being cut and the alpha a stable promotes), refuses an alpha whose candidate (`--reviewed`) is missing or is not the workflow's resolved source (a rehearsal may omit it), and refuses a source change since the previous release that no note or exclusion covers.
+1. `check` validates the ledger (schema, unique ids, references, promotion mappings, each entry's area, kind and hero picture and the picture files, published manifests unchanged, the record of past releases), refuses a published release this one stands on that has no record in `releases/` (except the release being cut and the alpha a stable promotes), refuses an alpha whose candidate (`--reviewed`, or `--verified-main` for exact-main cuts) is missing or is not the workflow's resolved source (a rehearsal may omit it), and refuses a source change since the previous release that no note or exclusion covers.
+   An automatic exact-main check derives uncommitted historical manifests from immutable tags rather than requiring another notes commit.
    A release stands on a source when its commit is in the source's history, or is a candidate - a notes-only commit - off it, so an alpha cut from a candidate is the previous release of the next one.
    A stable promotion instead proves `release-notes/` is identical to its alpha's.
 2. `generate` writes the offline catalog: this release's entries and every published release's membership, and its highlighted entries' hero pairs in `release-notes/pictures/` beside it, each file's sha256 and size in the catalog's `pictures`.

@@ -6,34 +6,28 @@ import { changedPaths } from "./affected-probes.ts";
 import { MAC_UNIT_FILES } from "./mac-unit-tests.ts";
 
 /**
- * A change's unit-file repeats on Linux CI (docs/testing.md, "This
- * project's rulings on tests"; INF-2074's ci-gate fix, the captain's checked
- * words: "Run a change's typecheck, lint and ten unit-file repeats on Linux
- * CI instead of the Mac mini's line, since unit tests need no Mac").
+ * The captain's INF-2273 override to INF-2259: every edited Vitest file
+ * gets its ordinary local run plus two more, including Linux-eligible files.
+ * No PR repeat jobs duplicate that proof. Native files still require a Mac.
  *
- *   node scripts/unit-repeats.ts [--base <ref>] [--head <ref>] [--shard <index/count>] [--run]
+ *   node scripts/unit-repeats.ts [--base <ref>] [--head <ref>] [--workers <n>] [--shard <index/count>] [--run]
  *
- * prints the Vitest files the change adds or edits since its merge base with
- * `--base`, and the Mac-only ones (`scripts/mac-unit-tests.ts`) whose repeats
- * stay on a Mac. `--run` (`pnpm test:repeats`, ci.yml's `unit-repeats` shards)
- * runs them ten times in a row with no retries, stopping at the first failed
- * round, and says so in the job summary when there is one. `--shard` delegates
- * the same file split to Vitest on every round; together the shards cover
- * every selected file without extending a step's deadline. An empty `--base`
- * repeats nothing: a push to main was repeated on its pull request. A base
- * that cannot be read fails, since the job cannot tell what the change edits.
+ * The existing changed-path reader owns selection. Fresh rounds stop at the
+ * first failure or interruption, without retries. An unreadable base fails.
+ * Explicit workers bound a local batch to its caller's load declaration;
+ * optional Vitest sharding divides disjoint local batches, not extra CI gates.
  */
 
 const ROOT = resolve(fileURLToPath(new URL("..", import.meta.url)));
 
-/** How many rounds a change's own test files run in a row (INF-840). */
-export const REPEATS = 10;
+/** INF-2259 accepted override: ordinary coverage plus two more rounds. */
+export const REPEATS = 3;
 
 const VITEST_FILE = /^(src|tests)\/.+\.test\.tsx?$/;
 
 export type Selection = { repeat: string[]; onMac: string[] };
 
-/** The changed Vitest files that still exist, split into Linux repeats and Mac-only ones. */
+/** All edited surviving Vitest files run locally; identify their native prerequisites. */
 export function selectRepeats(
   changed: readonly string[],
   exists: (path: string) => boolean = (path) => existsSync(join(ROOT, path)),
@@ -41,13 +35,14 @@ export function selectRepeats(
   const files = changed.filter((path) => VITEST_FILE.test(path) && exists(path)).toSorted();
   const mac = new Set<string>(MAC_UNIT_FILES);
   return {
-    repeat: files.filter((path) => !mac.has(path)),
+    repeat: files,
     onMac: files.filter((path) => mac.has(path)),
   };
 }
 
 /** Keep every round on Vitest's own shard, with the complete candidate set. */
-export function repetitionArgs(files: readonly string[], shard?: string): string[] | undefined {
+export function repetitionArgs(files: readonly string[], shard?: string, workers?: string): string[] | undefined {
+  if (workers !== undefined && !/^[1-9]\d*$/.test(workers)) throw new Error(`Invalid worker count: ${workers}`);
   let split: string[] = [];
   if (shard !== undefined) {
     const parts = /^([1-9]\d*)\/([1-9]\d*)$/.exec(shard);
@@ -62,18 +57,19 @@ export function repetitionArgs(files: readonly string[], shard?: string): string
     if (index > count) return undefined;
     if (count > 1) split = ["--shard", `${index}/${count}`];
   }
-  return ["exec", "vitest", "run", "--retry", "0", ...split, ...files];
+  return ["exec", "vitest", "run", "--retry", "0", ...(workers === undefined ? [] : ["--maxWorkers", workers]), ...split, ...files];
 }
 
-/** Ten fresh invocations, never a retry; any failed or interrupted round ends this shard. */
+/** Three fresh invocations (ordinary coverage plus two), never a retry; any failed or interrupted round ends this shard. */
 export function runRepetitions(
   files: readonly string[],
   shard: string | undefined,
   run: (args: string[]) => number | null,
   report: (lines: string[]) => void,
+  workers?: string,
 ): number {
   if (files.length === 0) return 0;
-  const command = repetitionArgs(files, shard);
+  const command = repetitionArgs(files, shard, workers);
   if (command === undefined) {
     report([`Shard ${shard} owns no selected test files.`]);
     return 0;
@@ -93,17 +89,17 @@ export function runRepetitions(
 function summaryLines(base: string, { repeat, onMac }: Selection, shard?: string): string[] {
   const lines =
     repeat.length === 0
-      ? [`No Vitest file this change adds or edits since ${base} runs on Linux.`]
+      ? [`No surviving Vitest file this change adds or edits since ${base} needs local rounds.`]
       : [
           shard === undefined
-            ? `These files run ${REPEATS} times in a row, since ${base}:`
-            : `Vitest shard ${shard} runs ${REPEATS} times in a row from these candidates, since ${base}; together the shards cover every file:`,
+            ? `These files run ${REPEATS} total local rounds (ordinary coverage included), since ${base}:`
+            : `Local Vitest shard ${shard} runs ${REPEATS} total rounds from these candidates, since ${base}; together the shards cover every file:`,
           ...repeat.map((file) => `- \`${file}\``),
         ];
   if (onMac.length > 0)
     lines.push(
       "",
-      "These need a Mac (scripts/mac-unit-tests.ts), so their repeats stay on a Mac:",
+      "These included files need a Mac (scripts/mac-unit-tests.ts); they are not excluded from local rounds:",
       ...onMac.map((file) => `- \`${file}\``),
     );
   return lines;
@@ -124,10 +120,6 @@ function main(): void {
         ["### Unit-file repeats", "", ...lines, ""].join("\n"),
       );
   };
-  if (base === "") {
-    report(["A push to main repeats nothing: its pull request ran the repeats."]);
-    return;
-  }
   const changed = changedPaths(base, value("--head", "HEAD"));
   if (changed === undefined) {
     console.error(`The change's base ${base} cannot be read, so its edited test files are unknown.`);
@@ -136,13 +128,17 @@ function main(): void {
   }
   const selection = selectRepeats(changed);
   const shard = args.includes("--shard") ? value("--shard", "") : undefined;
+  const workers = args.includes("--workers") ? value("--workers", "") : undefined;
   report(summaryLines(base, selection, shard));
   if (!args.includes("--run") || selection.repeat.length === 0) return;
+  if (process.platform !== "darwin" && selection.onMac.length > 0)
+    throw new Error("This selected local batch includes native files that need a Mac; do not count skipped native cases as proof.");
   process.exitCode = runRepetitions(
     selection.repeat,
     shard,
     (command) => spawnSync("pnpm", command, { cwd: ROOT, stdio: "inherit" }).status,
     report,
+    workers,
   );
 }
 

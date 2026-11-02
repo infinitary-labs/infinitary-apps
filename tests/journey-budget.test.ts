@@ -38,6 +38,21 @@ const linuxFiles = (result: ReturnType<typeof budget>) =>
   result.linux.flatMap((bin) => bin.files.split(" "));
 
 describe("INF-1763 journey placement", () => {
+  // INF-2259: CI can omit Mac proof already gathered locally, and missing
+  // historical timings may change scheduling but never selected coverage.
+  it("targets either platform independently and keeps every selection without timings", () => {
+    const selection = new Map([
+      ["tests/e2e/devices.spec.ts", ["selected native device checks"]],
+      ["tests/e2e/task-browser.spec.ts", ["selected portable browser checks"]],
+    ]);
+    const linux = budget(selection, new Map(), tagged, false, [], false, "linux");
+    expect(linux.mac).toEqual([]);
+    expect(linuxFiles(linux).toSorted()).toEqual([...selection.keys()].toSorted());
+    expect(linux.unmeasured.toSorted()).toEqual([...selection.keys()].toSorted());
+    const mac = budget(selection, new Map(), tagged, false, [], false, "mac");
+    expect(mac.mac).toEqual(["tests/e2e/devices.spec.ts"]);
+    expect(mac.linux).toEqual([]);
+  });
   it("runs every chosen file on Linux once and only the tagged files on the Mac", () => {
     const result = budget(reasons, times, tagged);
     const all = linuxFiles(result);

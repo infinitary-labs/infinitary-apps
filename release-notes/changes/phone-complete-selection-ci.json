@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "phone-complete-selection-ci",
+      "reason": "Internal development checks: complete phone selections count ordinary CI proof once and repeat only edited-test parts twice more on both devices; no app behavior changes."
+    }
+  ]
+}

@@ -10,7 +10,16 @@ Pull requests from outside are not merged yet: the repository opens with the pub
 
 `AGENTS.md` is the project's own account of how it is built, tested and released, and it applies to people as much as to agents. The short version:
 
-- Before every push, `pnpm typecheck && pnpm check && pnpm lint:adherence` pass (on a computer that sends its checks through CI, the pull request's own check runs them; `docs/testing.md`, "Where the heavy checks run"), along with the relevant existing end-to-end specs that cover what changed. Which tests to write, and how to repair a failing one, follows the crew's default rule on tests (`docs/delivery-rigor.md`, "The default rule on tests"), with one ruling of this project (`docs/testing.md`, "This project's rulings on tests"): weakening, skipping or deleting a test waits for the captain's approval. A new end-to-end journey follows the six-word rule like any other test, with no ask, and its review names the promised result, the data, the completion signal, the platform prerequisites and the shared resources (FI3-1732). The full unit, integration and probe suites run on main (`ci.yml`) and in release verification, not on pull requests; the full `pnpm build && pnpm exec playwright test` runs in `verify.yml` before every alpha and on demand for any branch (`docs/testing.md`). Full end-to-end runs are CI-only, never local development or release preparation; request one through `github_write` as described in `docs/forge.md` ("Verification workflow requests"). Locally, name only affected spec files, with `--no-deps` for renderer/application specs.
+- Before merge, finish the smallest relevant proof for the current version (`docs/testing.md`).
+  The PR's Linux check owns typecheck, lint/adherence and build; opening the PR can start proof and does not require a duplicate complete local gate.
+  Portable journeys use Linux CI; every edited unit file runs three total times locally, including portable files; selected native journeys can run locally through the admitted build-to-cleanup route even in CI mode.
+  An edited test file runs three total rounds, ordinary coverage plus two more; an affected unedited journey runs once per required platform.
+  Phone parts retain three rounds per device when directly edited, with complete selections through CI and proper subsets retaining local repeats.
+  Weakening, skipping or deleting a test still requires the captain's approval.
+  Full local journeys remain prohibited, and full pre-merge verification is exceptional, not a response to breadth, confidence or care alone (`docs/testing.md`, "When to request full verification").
+  Rolling main supplies broad coverage; a fully passing run automatically cuts its exact commit as an alpha without repeating the broad check, retaining release-specific gates.
+  Full unit, integration and probe sweeps remain on main, manual runs and release verification, not PRs.
+  Passing checks never grants merge permission.
 - All UI work follows the design skill under `.claude/skills/infinitary-design/`.
 - Commit subjects and pull request titles use `type(scope): summary` or `type: summary`, optionally with `!` and a `BREAKING CHANGE` footer. Types are `feat`, `fix`, `chore`, `test`, `refactor`, `docs`, and `perf`; scopes are open-ended. Do not call a fix a feature to force a release.
 - A pull request says why it is needed, what changed, what stood before and after, how it was verified, its risks, required actions and unfinished work.

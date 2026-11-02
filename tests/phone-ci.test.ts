@@ -32,13 +32,14 @@ function eligible(run: boolean | "", event = "pull_request", evidenceRun = ""): 
   const github = new data.Dictionary({ key: "event_name", value: new data.StringData(event) });
   const ast = new Parser(
     new Lexer(`!!(${gateCondition()})`).lex().tokens,
-    ["steps", "github", "inputs"],
+    ["steps", "github", "inputs", "env"],
     [],
   ).parse();
   return new Evaluator(
     ast,
     new data.Dictionary(
       { key: "steps", value: steps },
+      { key: "env", value: new data.Dictionary() },
       { key: "github", value: github },
       {
         key: "inputs",
@@ -136,6 +137,7 @@ function holds(
   contexts: Plain,
   status: { failed?: boolean; cancelled?: boolean } = {},
 ): boolean {
+  contexts = { env: {}, steps: {}, inputs: {}, ...contexts };
   const bare = expression.replace(/^\$\{\{\s*|\s*\}\}$/g, "");
   const functions = STATUS.map((name) => ({ name, minArgs: 0, maxArgs: 0 }));
   const values: Record<string, boolean> = {
@@ -183,7 +185,7 @@ function stepsThatRun(
   for (const step of workflow.jobs[NATIVE_JOB].steps as Step[]) {
     const runs = holds(
       condition(step),
-      { steps: seen, vars: { PHONE_VIRTUAL_MAC: virtualMac }, inputs, github },
+      { env: {}, steps: seen, vars: { PHONE_VIRTUAL_MAC: virtualMac }, inputs, github },
       { failed },
     );
     const reading = runs && step.run?.includes("stop-if-replaced") ? replaced : "";
@@ -205,6 +207,10 @@ const SAVE_PACKAGES = "Save the Swift packages for pull requests";
 const SKIPPED_CHOOSER_STEPS = [
   "Read that check's part times",
   "Choose affected parts for a crewmate request",
+  "Reuse the ordinary pass's edited-part selection",
+  "Keep each additional pass's evidence",
+  "Keep each additional pass's simulator logs",
+  "Keep each additional pass's failure results",
 ];
 const names = (steps: Step[]) => steps.map((step) => step.name ?? step.uses ?? "");
 const isGate = (step: Step) => DEVICE_GATES.includes(step.name ?? "");
@@ -529,6 +535,7 @@ describe("the native pull-request gate", () => {
       [
         // INF-827: the parts the chooser kept, none (every part) on a run on request.
         'parts=(); for part in $PHONE_PARTS; do parts+=(--part "$part"); done',
+        'if [ "$PHONE_FULL" = true ] && [ -z "$PHONE_REPEAT_PARTS" ]; then parts=(); fi',
         'if [ -n "$PHONE_VIRTUAL_MAC" ]; then exec scripts/virtual-mac/phone.sh gate iphone ipad; fi',
         // INF-658: a job placed in a virtual Mac uses two simulators.
         'if [ "$(sysctl -n kern.hv_vmm_present 2> /dev/null)" = 1 ]; then exec node scripts/test-phone.ts --both "${parts[@]}" --simulators 2 --evidence "$RUNNER_TEMP/phone"; fi',
@@ -538,7 +545,7 @@ describe("the native pull-request gate", () => {
     ]);
     // The gate reads the chooser's parts, which a run on request leaves empty.
     expect(stepsThatRun(OFF).find(isGate)?.env?.PHONE_PARTS).toBe(
-      "${{ inputs.parts || steps.select.outputs.parts || steps.request-select.outputs.parts }}",
+      "${{ steps.repeat-select.outputs.parts || inputs.parts || steps.select.outputs.parts || steps.request-select.outputs.parts }}",
     );
     // The gates' shell sees the switch as the repository sets it, empty when unset.
     const shell = workflow.jobs[NATIVE_JOB].env.PHONE_VIRTUAL_MAC.replace(
@@ -601,14 +608,9 @@ describe("the native pull-request gate", () => {
         (name) => DEVICE_GATES.includes(name) || VIRTUAL_MAC_STEPS.includes(name),
       ),
     ).toEqual(["Start a fresh virtual Mac", BOTH, "Delete the virtual Mac"]);
-    // The phone switch keeps one fixed clone at a time without excluding desktop checks.
-    expect(
-      stepsThatRun(TOGETHER)
-        .filter(isGate)
-        .map((step) => step.run?.split("\n")[1]),
-    ).toEqual([
-      'if [ -n "$PHONE_VIRTUAL_MAC" ]; then exec scripts/virtual-mac/phone.sh gate iphone ipad; fi',
-    ]);
+    // Executable delegation to that clone, including both device arguments, is
+    // covered in release-workflows.test.ts at its existing integration layer.
+    // This file retains the routing, eligibility and cleanup conditions.
   });
   it("deletes the virtual Mac however the job ends, and never starts one with the switch off", () => {
     const steps = workflow.jobs[NATIVE_JOB].steps as Step[];
@@ -934,11 +936,14 @@ describe("the chooser's part times", () => {
 describe("affected request routing", () => {
   const steps = workflow.jobs[NATIVE_JOB].steps as Step[];
   const request = steps.find((step) => step.id === "request-select")!;
-  it("chooses only for opted-in requests, leaving nightly and explicit diagnostics alone", () => {
+  it("accounts for affected, full and explicit requests without changing main", () => {
     for (const [event, affected, parts, expected] of [
       ["workflow_dispatch", true, "", true],
-      ["workflow_dispatch", false, "", false],
+      ["workflow_dispatch", false, "", true],
+      // INF-2259: explicit diagnostic parts never silently become a complete
+      // verification request, even when they name the whole live part table.
       ["workflow_dispatch", true, "cards", false],
+      ["workflow_dispatch", true, PHONE_PARTS.map((part) => part.name).join(" "), false],
       ["pull_request", false, "", false],
     ] as const) {
       // Boolean inputs must remain BooleanData, not the truthy string "false".
@@ -989,5 +994,52 @@ describe("affected request routing", () => {
           },
         }),
       ).toBe(expected);
+  });
+});
+
+// INF-2259: full ordinary coverage and exactly two further edited-test passes,
+// in fresh sequential jobs at one workflow version, never retries after a failure.
+describe("complete-selection phone CI repeats", () => {
+  const repeats = ["phone-repeat-2", "phone-repeat-3"];
+  const jobRuns = (name: string, parts: string, previous: string[]) => {
+    const job = workflow.jobs[name];
+    return (
+      previous.every((result) => result === "success") &&
+      holds(job.if, {
+        needs: { "native-phone": { outputs: { repeat_parts: parts } } },
+      })
+    );
+  };
+
+  it("starts both additional passes only after successful predecessors", () => {
+    expect(jobRuns(repeats[0]!, "join talk", ["success"])).toBe(true);
+    expect(jobRuns(repeats[1]!, "join talk", ["success", "success"])).toBe(true);
+    for (const result of ["failure", "cancelled", "skipped", "pending"]) {
+      expect(jobRuns(repeats[0]!, "join talk", [result])).toBe(false);
+      expect(jobRuns(repeats[1]!, "join talk", ["success", result])).toBe(false);
+    }
+    for (const name of repeats) expect(jobRuns(name, "", ["success"])).toBe(false);
+    expect(workflow.jobs[repeats[0]!].needs).toEqual(["native-phone"]);
+    expect(workflow.jobs[repeats[1]!].needs).toEqual(["native-phone", "phone-repeat-2"]);
+  });
+
+  it("uses the existing isolated device gate and deadlines for each repeat", () => {
+    for (const name of repeats) {
+      const job = workflow.jobs[name];
+      expect(job.steps).toEqual(workflow.jobs[NATIVE_JOB].steps);
+      expect(job["timeout-minutes"]).toBe(workflow.jobs[NATIVE_JOB]["timeout-minutes"]);
+      expect(job.steps.find((step: Step) => step.id === "both")["timeout-minutes"]).toBe(90);
+      expect(job.env.PHONE_ROUND).not.toBe("");
+      expect(
+        holds(
+          workflow.jobs[NATIVE_JOB].steps.find((step: Step) => step.id === "request-select").if,
+          {
+            github: { event_name: "workflow_dispatch" },
+            env: { PHONE_REPEAT_PARTS: "join talk" },
+            inputs: {},
+          },
+        ),
+      ).toBe(false);
+    }
   });
 });

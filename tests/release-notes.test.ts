@@ -237,6 +237,40 @@ describe("the release check", () => {
     expect(refusal).not.toContain(reviewed.slice(0, 12));
   });
 
+  // INF-2259: an automatic alpha uses exact-main code, without a notes-only
+  // commit that would invalidate its full-check proof. Immutable tags supply
+  // historical manifests through the existing publishedReleases reader.
+  it("checks an exact-main cut against tagged history without requiring a new notes commit", () => {
+    const { f, base } = released();
+    f.commit("feat: alpha change", { "release-notes/changes/a.json": note("alpha-change") });
+    f.tag("1.0.1-alpha.4");
+    const source = f.commit("feat: next", {
+      "release-notes/changes/next.json": note("next-change"),
+    });
+    expect(f.cli("check", "--source", source, "--verified-main", source)).toContain("all covered");
+    expect(() => f.cli("check", "--source", source, "--verified-main", base)).toThrow(
+      /not the workflow's resolved source/,
+    );
+    f.tag("1.0.1-alpha.5");
+    expect(
+      f.cli(
+        "check",
+        "--source",
+        source,
+        "--channel",
+        "stable",
+        "--version",
+        "1.0.1",
+        "--promoted-from",
+        "1.0.1-alpha.5",
+      ),
+    ).toContain("unchanged");
+    const missing = f.commit("feat: undeclared", { "src.txt": "unnoted change" });
+    expect(() => f.cli("check", "--source", missing, "--verified-main", missing)).toThrow(
+      /have no note/,
+    );
+  });
+
   it("refuses a published release with no record, except the release being cut or promoted", () => {
     const { f } = released();
     f.commit("feat: alpha change", { "release-notes/changes/a.json": note("alpha-change") });

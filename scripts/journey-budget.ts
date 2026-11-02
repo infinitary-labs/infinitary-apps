@@ -1,4 +1,4 @@
-import { appendFileSync, readFileSync, readdirSync } from "node:fs";
+import { appendFileSync, existsSync, readFileSync, readdirSync } from "node:fs";
 import { basename, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { z } from "zod";
@@ -316,12 +316,13 @@ export function budget(
   everyOnMac = false,
   observations: LinuxObservation[] = [],
   applyLinux = false,
+  platforms: "linux" | "mac" | "both" = "both",
 ) {
   // New and previously skipped journeys use the slowest measured file in their lane.
   const cost = (file: string) =>
     times.get(file) ||
     Math.max(
-      1,
+      times.size === 0 ? JOURNEY_BUDGET_MS : 1,
       ...[...times].filter(([path]) => laneOf(path) === laneOf(file)).map(([, ms]) => ms),
     );
   const ordered = [...reasons.keys()].sort((a, b) => a.localeCompare(b));
@@ -374,10 +375,10 @@ export function budget(
   }
   const calibrated = calibratedPlacement(linux, observations);
   return {
-    mac,
+    mac: platforms === "linux" ? [] : mac,
     // INF-1987: retain conservative execution when live adoption is unsupported.
     // The calibrated model remains inspectable and explicitly runnable for proofs.
-    linux: applyLinux ? calibrated.linux : linux,
+    linux: platforms === "mac" ? [] : applyLinux ? calibrated.linux : linux,
     timingSource: applyLinux ? calibrated.source : "conservative",
     linuxCandidate: calibrated.linux,
     candidateTimingSource: calibrated.source,
@@ -391,7 +392,13 @@ function main() {
   const reasons = new Map<string, string[]>(
     Object.entries(JSON.parse(readFileSync(value("--selection"), "utf8"))),
   );
-  const times = journeyTimes(JSON.parse(readFileSync(value("--timings"), "utf8")));
+  // Historical timings optimize placement; their absence never removes an explicitly selected file.
+  const times = existsSync(value("--timings"))
+    ? journeyTimes(JSON.parse(readFileSync(value("--timings"), "utf8")))
+    : new Map<string, number>();
+  const platforms = process.argv.includes("--platforms") ? value("--platforms") : "both";
+  if (platforms !== "linux" && platforms !== "mac" && platforms !== "both")
+    throw new Error("Journey platforms must be linux, mac or both.");
   const read = (file: string) => {
     try {
       return readFileSync(file, "utf8");
@@ -408,6 +415,7 @@ function main() {
       ? readLinuxObservations(value("--linux-timings"), value("--linux-jobs"))
       : [],
     process.argv.includes("--apply-linux"),
+    platforms,
   );
   console.log(JSON.stringify(result, null, 2));
   if (process.env.GITHUB_OUTPUT)
@@ -418,7 +426,7 @@ function main() {
   if (process.env.GITHUB_STEP_SUMMARY)
     appendFileSync(
       process.env.GITHUB_STEP_SUMMARY,
-      `### Journey placement\n\nMac: ${result.mac.length} files${process.argv.includes("--every-on-mac") ? ", every test, as requested" : `, only their tests tagged ${MAC_ONLY_TAG}`}.\n\n` +
+      `### Journey placement\n\n${times.size === 0 ? "No historical timings: every selected file is scheduled. Budget-sized placeholders guide binning, not measured durations.\n\n" : ""}Mac: ${result.mac.length} files${process.argv.includes("--every-on-mac") ? ", every test, as requested" : `, only their tests tagged ${MAC_ONLY_TAG}`}.\n\n` +
         result.mac.map((file) => `- Mac: ${file}: ${reasons.get(file)?.join("; ")}`).join("\n") +
         "\n\n" +
         result.linux

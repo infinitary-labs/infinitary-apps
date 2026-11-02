@@ -122,7 +122,7 @@ The dev run's `Electron.app` is signed top-level only, with `--identifier` set t
 The local package is signed inside-out by `@electron/osx-sign` - electron-builder's own signer, reached through electron-builder - with the local identity substituted for the placeholder.
 
 Release builds do not touch any of this.
-`electron-builder.yml` still signs with `Developer ID Application: Kun Chen (9T2J7MNUP9)`, hardened runtime, secure timestamps, notarization, and the two-entitlement allowlist; `tests/release-contract.test.ts` pins all of it.
+`electron-builder.yml` still signs with `Developer ID Application: Kun Chen (9T2J7MNUP9)`, hardened runtime, secure timestamps, notarization, and the two-entitlement allowlist; `tests/release-contract.test.ts` pins the bundle configuration and `tests/release-workflows.test.ts` pins the signing workflow.
 
 ## Setup, and recovery
 
@@ -229,6 +229,6 @@ Moved verbatim from `AGENTS.md` on 2026-09-24; `AGENTS.md` keeps a one-line poin
   `pnpm codesign:verify` is the before/after check; `docs/local-code-signing.md` carries the manual Keychain procedure that signature checks cannot replace.
   Universal merge requires every identical per-arch Mach-O tree in `mac.x64ArchFiles` (`electron-builder.yml`), including koffi's `@koromix/koffi-darwin-{arm64,x64}` addons (the JS package has no `.node`) and the app's two git trees (`Contents/Resources/git/darwin-{arm64,x64}`); omitting one aborts the merge.
   The Claude SDK's platform binaries are not in that list because they are not in the package at all (F14, `docs/claude-client.md`).
-  Release invariants are pinned by `tests/release-contract.test.ts`, and `scripts/verify-app.sh` fails a bundle that carries a Claude client.
+  Release invariants are pinned by `tests/release-contract.test.ts` and `tests/release-workflows.test.ts`, and `scripts/verify-app.sh` fails a bundle that carries a Claude client.
   `mac.x64ArchFiles` is the ONE single-arch list: verify-app asks `scripts/x64-arch-files.mjs`, which matches it as `@electron/universal` does, so never give the gate a list of its own (v0.1.0 failed its signed gate on exactly that drift).
   A release's post-test stages rehearse without publishing via `gh workflow run release.yml --ref main -f channel=<stable|alpha> -f dry_run=true` (`docs/alpha.md`).

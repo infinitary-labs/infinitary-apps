@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "id": "freeze-causal-triage",
+      "kind": "fix",
+      "area": "firstmate",
+      "title": "Freeze reports separate a captured location from a cause",
+      "body": "A freeze report now explains that the captured function names do not prove what caused the pause. Your first mate is told to investigate before choosing a repair and to require comparable before-and-after measurements. The local record also keeps when the capture was requested and received.",
+      "noPicture": "This changes diagnostic facts and guidance, not the appearance of a screen.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

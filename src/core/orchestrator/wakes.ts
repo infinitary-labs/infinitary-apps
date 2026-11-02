@@ -361,6 +361,11 @@ export type WakeFacts =
       wallMs: number | null;
       cpuMs: number | null;
       frames: FreezeLine["frames"];
+      build?: FreezeLine["build"];
+      incidentId?: string;
+      status?: "started" | "completed" | "interrupted";
+      captureRequestedAt?: string;
+      capturedAt?: string;
       uncertain?: NonNullable<FreezeLine["uncertain"]>;
     }
   | { kind: "validation-question-stale"; card: string; reason: string }
@@ -1965,8 +1970,8 @@ const FREEZE_UNCERTAIN_WORDS: Record<NonNullable<FreezeLine["uncertain"]>, strin
 /** A recorded main thread freeze, as the first mate hears it once per installed version. */
 function renderFreezeRecorded(facts: Extract<WakeFacts, { kind: "freeze-recorded" }>): string {
   const path = facts.frames.length
-    ? `Its call path, innermost first: ${facts.frames.map((frame) => `${frame.name} (${frame.file}:${frame.line}:${frame.column})`).join(" <- ")}.`
-    : "The recorder could not read its call path.";
+    ? `One captured JavaScript location, innermost first (not a cause or per-function timing): ${facts.frames.map((frame) => `${frame.name} (${frame.file}:${frame.line}:${frame.column})`).join(" <- ")}.`
+    : "The recorder captured no JavaScript frames; the cause remains unknown.";
   const uncertain = facts.uncertain ? ` ${FREEZE_UNCERTAIN_WORDS[facts.uncertain]}` : "";
   const duration =
     facts.wallMs === null
@@ -1976,7 +1981,10 @@ function renderFreezeRecorded(facts: Extract<WakeFacts, { kind: "freeze-recorded
     facts.cpuMs === null
       ? "its processor time is unknown"
       : `${facts.cpuMs} ms of that was the main thread's own processor time`;
-  return `[fm-op] the freeze recorder saw this app's main thread, which handles the captain's clicks and keys, stop answering for ${duration} at ${facts.at}; ${cpu}. ${path}${uncertain} The app's own source is the captain's project "${facts.project.name}" (repo_id ${facts.project.id}). Judge from the duration and the call path whether it is worth a fix; if it is, tell the captain once in plain words and offer a fix task in that project on a decision card, carrying these facts into its brief. File or start nothing before their choice. You hear one automatic summary per installed app version; later evidence stays in the local record.`;
+  const incident = ` Incident: ${facts.incidentId ?? "not recorded"}; status: ${facts.status ?? "not recorded"}.`;
+  const build = ` Incident build identity: ${facts.build ? JSON.stringify(facts.build) : "not recorded"}.`;
+  const timing = ` Capture requested: ${facts.captureRequestedAt ?? "not recorded"}; captured: ${facts.capturedAt ?? "not recorded"}.`;
+  return `[fm-op] the freeze recorder saw this app's main thread, which handles the captain's clicks and keys, stop answering for ${duration} at ${facts.at}; ${cpu}. ${path}${uncertain}${timing}${build}${incident} The app's own source is the captain's project "${facts.project.name}" (repo_id ${facts.project.id}). Every stack is only a captured location, not a cause: even high processor use and a capture before recovery can name short JavaScript after long native work. Treat any cause as a hypothesis until measured. Judge whether investigation is worthwhile; if it is, tell the captain once in plain words and offer a fix task in that project on a decision card whose first work is diagnosis, not a targeted repair. Carry the incident and build identity, interval measurements, capture request/capture timing and missing evidence into its brief, without inventing unavailable facts. Before choosing a targeted repair, measure the suspected work in the affected context; require causal before/after evidence with comparable workload and instrumentation, not just a faster unrelated snapshot or a changed stack. If the evidence does not establish a cause, report it as unknown rather than substituting another hypothesis. File or start nothing before their choice. You hear one automatic summary per installed app version; later evidence stays in the local record.`;
 }
 
 /** Typed legacy count notices remain readable, but no longer ask the agents to enforce a hold. */

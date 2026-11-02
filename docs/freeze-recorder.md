@@ -43,7 +43,12 @@ New lines have an `incidentId` and a `status`: `started`, `completed` or `interr
 The watchdog atomically replaces a start with its completion under the same identity, retaining one snapshot per incident within the existing line bound.
 At the next recorder start it marks unfinished starts interrupted, recording when it observed the interruption, never inventing an end, duration, processor time or names.
 An interrupted line remains interrupted on later starts.
-A completed line holds when the stall began, its elapsed time between heartbeats (`wallMs`), the main thread's own processor time in it (`cpuMs`) and the call path, innermost first, each frame with its function name, file name, line and column.
+A completed line holds when the stall began, its elapsed time between heartbeats (`wallMs`), the main thread's own processor time in it (`cpuMs`) and one captured JavaScript location, innermost first, each frame with its function name, file name, line and column.
+`captureRequestedAt` records when the watchdog requested the pause and `capturedAt` when it received the paused frames, independently of the ending heartbeat.
+The same started snapshot is updated as capture facts arrive, so interruption retains observed timing without inventing missing measurements.
+Unfinished snapshots retain no frames, as in the incident lifecycle's original contract.
+An old record or a capture never requested or received leaves the corresponding time absent, never inferred.
+`build` preserves the recording computer's existing source identity (version, source commit or unknown, and whether its source is mutable), not the investigating checkout's identity.
 It records no arguments, values or text, and nothing sends it anywhere: Diagnostics sends nothing new.
 
 A line's names can be marked `uncertain`:
@@ -54,6 +59,8 @@ A line's names can be marked `uncertain`:
 On a computer busy enough to take the processor away from the app, busy code can also fall under half and be marked `waited`; the mark then errs toward doubt, never toward trust.
 
 A stall spent inside one long built-in call, such as one JSON parse, is named at its caller, because V8 pauses only when JavaScript runs again, and the innermost name can be the code the caller ran next.
+Every stack is a captured location, not a cause or a duration for any named function, even when processor use is high and capture precedes the ending heartbeat.
+The absence of a `waited` or `late` mark establishes no cause.
 
 ## The first mate's offer
 
@@ -64,8 +71,18 @@ Later incidents remain in the bounded local record without automatic model turns
 A recovered interrupted incident may supply the summary, with missing measurements explicitly unknown.
 Explicit captain questions are independent of this automatic allowance.
 The captain's answer on INF-2061 asked for exactly this: "offer a fix task only if the canonical infinitary github repo is a project in the project list".
-The wake gives the facts and leaves the judgment to the first mate: whether the freeze is worth a fix, and if so a decision card offering a fix task in that project.
+The wake gives the facts and leaves the judgment to the first mate: whether investigation is worthwhile, and if so a decision card offering a fix task whose first work is diagnosis.
+A cause remains a hypothesis until measured in the affected context; a targeted repair requires causal before/after evidence with comparable workload and instrumentation.
+A later fast lookup in a different process or snapshot neither identifies nor excludes the original cause.
+The brief preserves incident/build identity, interval measurements and request/capture timing, explicitly naming missing evidence instead of inventing it.
 With no such project the line stays in the record only.
+
+### Replaying misleading attribution
+
+The deterministic incident replay in `src/core/freeze/freezeRecorder.test.ts` renders the production wake from retained INF-2239/INF-2262 facts.
+It retains the 324 ms interval, 298 ms processor reading and sampled function-name order; unavailable original fields are explicitly absent or marked not retained.
+It checks the captured-location caveat and diagnosis-before-repair guidance without reconstructing the lost raw line or inferring native work as the cause.
+It proves the facts and wording served, not a model's subsequent judgment, and uses no account.
 
 ## Before a change merges
 

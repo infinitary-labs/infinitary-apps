@@ -243,7 +243,7 @@ import { PlacedWorkScores } from "./routing/placedWork";
 import { quotaGateCleared, quotaGateRefValid } from "./routing/quotaGate";
 import { Router, servedSlots } from "./routing/router";
 import { Runbooks } from "./runbooks/runbooks";
-import { readSelfSource, resolveSelfSourceDir } from "./selfSource/resolve";
+import { readSelfSource, resolveSelfSourceDir, sourceIdentity } from "./selfSource/resolve";
 import { SessionBinder } from "./session/binding";
 import { BoundsWatcher } from "./session/bounds";
 import { LOCAL_MACHINE_ID, type SessionFactories } from "./session/session";
@@ -3067,6 +3067,7 @@ export async function createServices(
   })
     ? new FreezeRecorder({
         recordPath: paths.freezeRecordPath,
+        build: sourceIdentity(source()),
         onFreeze: (line) => {
           const project = infinitaryProject(repos.list());
           if (project) notifyFirstmate(freezeWake(line, project, host.app.version), "scheduled");

@@ -1,6 +1,12 @@
 import { describe, expect, it } from "vitest";
+import { knowledgeFreeze } from "../../../tests/fixtures/freeze-triage/incident";
 import { renderWake } from "../orchestrator/wakes";
-import { type FreezeLine, freezeWake, infinitaryProject } from "./freezeRecorder";
+import {
+  type FreezeLine,
+  freezeIncidentSchema,
+  freezeWake,
+  infinitaryProject,
+} from "./freezeRecorder";
 import { isFreezeRecorderEnabled } from "./watchdog";
 
 // INF-2066: the captain's answer on INF-2061's first mate question, "activate
@@ -94,7 +100,7 @@ describe("the first mate's wake about a recorded freeze", () => {
     );
     expect(text).toContain("unknown duration (recording was interrupted)");
     expect(text).toContain("processor time is unknown");
-    expect(text).toContain("could not read its call path");
+    expect(text).toContain("captured no JavaScript frames");
   });
 
   it("says when a wait's names are uncertain", () => {
@@ -102,6 +108,84 @@ describe("the first mate's wake about a recorded freeze", () => {
     expect(renderWake(freezeWake(wait, own, "0.6.2-alpha.44"))).toContain(
       "These names are uncertain",
     );
+  });
+
+  // INF-2262: a busy interval does not time the short JavaScript in its stack.
+  it("reports the retained misleading high-CPU location without assigning its duration to the lookup", () => {
+    const text = renderWake(freezeWake(knowledgeFreeze, own, "0.6.2-alpha.47"));
+    expect(text).toContain(`${knowledgeFreeze.wallMs} ms`);
+    expect(text).toContain(
+      `${knowledgeFreeze.cpuMs} ms of that was the main thread's own processor time`,
+    );
+    expect(text).toContain(
+      knowledgeFreeze.frames
+        .map((frame) => `${frame.name} (${frame.file}:${frame.line}:${frame.column})`)
+        .join(" <- "),
+    );
+    expect(text).toContain("not a cause or per-function timing");
+    expect(text).toContain("even high processor use");
+    expect(text).toContain("first work is diagnosis, not a targeted repair");
+    expect(text).toContain("causal before/after evidence");
+    expect(text).toContain("captured: not recorded");
+    expect(text).toContain("Treat any cause as a hypothesis until measured");
+    expect(text).toContain("comparable workload and instrumentation");
+    expect(text).toContain("report it as unknown rather than substituting another hypothesis");
+    console.info("Retained incident triage replay:", text);
+  });
+
+  it("preserves request/capture readings for late capture and reports unavailable frames honestly", () => {
+    const captureRequestedAt = "2026-10-31T07:12:04.600Z";
+    const capturedAt = "2026-10-31T07:12:05.600Z";
+    const build = {
+      computer: "recording computer",
+      version: "0.6.2-alpha.47",
+      commit: "c1e941529438207bf1cca34c437df3c2e9d80477",
+      mutable: false,
+    };
+    const line = freezeIncidentSchema.parse({
+      ...OPEN_MESSAGES,
+      incidentId: "retained-late-capture",
+      status: "completed",
+      build,
+      captureRequestedAt,
+      capturedAt,
+      uncertain: "late",
+    });
+    const wake = freezeWake(line, own, "0.6.2-alpha.47");
+    expect(wake.facts).toMatchObject({
+      incidentId: line.incidentId,
+      status: line.status,
+      build,
+      captureRequestedAt,
+      capturedAt,
+    });
+    const text = renderWake(wake);
+    expect(text).toContain(`Capture requested: ${captureRequestedAt}; captured: ${capturedAt}`);
+    expect(text).toContain("read only after the stall had ended");
+    expect(text).toContain(JSON.stringify(build));
+    expect(text).toContain(`Incident: ${line.incidentId}; status: ${line.status}`);
+    const interrupted = freezeIncidentSchema.parse({
+      ...line,
+      status: "interrupted",
+      wallMs: undefined,
+      cpuMs: undefined,
+    });
+    const recovered = freezeWake(interrupted, own, "0.6.2-alpha.47");
+    expect(recovered.facts).toMatchObject({
+      incidentId: line.incidentId,
+      status: "interrupted",
+      build,
+      captureRequestedAt,
+      capturedAt,
+      frames: [],
+      wallMs: null,
+      cpuMs: null,
+    });
+    const missing = renderWake(
+      freezeWake({ ...OPEN_MESSAGES, frames: [], captureRequestedAt }, own, "0.6.2-alpha.47"),
+    );
+    expect(missing).toContain("captured no JavaScript frames; the cause remains unknown");
+    expect(missing).toContain("captured: not recorded");
   });
 
   it("uses the approved INF-2205 version-wide identity across different call paths", () => {

@@ -116,12 +116,16 @@ function write(done) {
   const uncertain = cpuMs * 2 < wallMs ? "waited" : done.late ? "late" : undefined;
   const line = { incidentId: done.incidentId, status: "completed", at: done.at,
     completedAt: done.completedAt, wallMs, cpuMs, frames: done.frames || [] };
+  if (record.build) line.build = record.build;
+  if (done.captureRequestedAt !== undefined) line.captureRequestedAt = new Date(done.captureRequestedAt).toISOString();
+  if (done.capturedAt !== undefined) line.capturedAt = new Date(done.capturedAt).toISOString();
   if (uncertain) line.uncertain = uncertain;
   persist(line);
   parentPort.postMessage(line);
 }
 
 session.on("Debugger.paused", (message) => {
+  const capturedAt = Date.now();
   const target = capturing;
   capturing = null;
   const frames = message.params.callFrames.map((frame) => ({
@@ -132,16 +136,28 @@ session.on("Debugger.paused", (message) => {
   }));
   session.post("Debugger.resume");
   if (!target) return;
+  target.capturedAt = capturedAt;
   target.frames = frames;
+  if (target.endedAt === undefined) persistStarted(target);
   if (target.endedAt !== undefined) {
     target.late = true;
     write(target);
   }
 });
 
+function persistStarted(target) {
+  const line = { incidentId: target.incidentId, status: "started", at: target.at };
+  if (record.build) line.build = record.build;
+  if (target.captureRequestedAt !== undefined) line.captureRequestedAt = new Date(target.captureRequestedAt).toISOString();
+  if (target.capturedAt !== undefined) line.capturedAt = new Date(target.capturedAt).toISOString();
+  persist(line);
+}
+
 function capture(target) {
   if (capturing || !enabled) return;
   capturing = target;
+  target.captureRequestedAt = Date.now();
+  persistStarted(target);
   session.post("Debugger.pause");
 }
 
@@ -191,7 +207,7 @@ setInterval(() => {
   stall = { incidentId: randomUUID(), at: new Date(beatWall).toISOString(), startedAt: beatAt, cpuBefore: beatCpu };
   // This write must precede the inspector request: native waits may never
   // answer it, and the whole process may end before another heartbeat.
-  persist({ incidentId: stall.incidentId, status: "started", at: stall.at });
+  persistStarted(stall);
   capture(stall);
 }, watchMs);
 `;

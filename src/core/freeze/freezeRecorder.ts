@@ -1,5 +1,6 @@
 import type { Worker } from "node:worker_threads";
 import { forgeOf } from "@shared/forge";
+import { type SourceIdentity, sourceIdentitySchema } from "@shared/selfSource";
 import { z } from "zod";
 import type { TypedWake } from "../orchestrator/wakes";
 import { takeWatchdog } from "./watchdog";
@@ -47,14 +48,18 @@ export const freezeLineSchema = z.object({
   status: z.literal("completed").optional(),
   completedAt: z.string().optional(),
   at: z.string(),
+  build: sourceIdentitySchema.optional(),
   wallMs: z.number().int().nonnegative(),
   cpuMs: z.number().int().nonnegative(),
   frames: z.array(frameSchema),
+  // Optional for old records and captures that were never requested or received.
+  captureRequestedAt: z.string().optional(),
+  capturedAt: z.string().optional(),
   uncertain: z.enum(["waited", "late"]).optional(),
 });
 export type FreezeLine = z.infer<typeof freezeLineSchema>;
 
-/** An unfinished stall has no measured end, processor time or call path. */
+/** An unfinished stall retains capture timing, but has no measured end, processor time or frames. */
 export const freezeIncidentSchema = z.union([
   freezeLineSchema,
   z.object({
@@ -62,6 +67,9 @@ export const freezeIncidentSchema = z.union([
     status: z.enum(["started", "interrupted"]),
     at: z.string(),
     interruptedAt: z.string().optional(),
+    build: sourceIdentitySchema.optional(),
+    captureRequestedAt: z.string().optional(),
+    capturedAt: z.string().optional(),
   }),
 ]);
 export type FreezeIncident = z.infer<typeof freezeIncidentSchema>;
@@ -106,6 +114,11 @@ export function freezeWake(
       kind: "freeze-recorded",
       project: { id: project.id, name: project.name },
       at: line.at,
+      ...(line.build ? { build: line.build } : {}),
+      ...(line.incidentId ? { incidentId: line.incidentId } : {}),
+      ...(line.status ? { status: line.status } : {}),
+      ...(line.captureRequestedAt ? { captureRequestedAt: line.captureRequestedAt } : {}),
+      ...(line.capturedAt ? { capturedAt: line.capturedAt } : {}),
       wallMs: complete?.wallMs ?? null,
       cpuMs: complete?.cpuMs ?? null,
       frames: complete?.frames ?? [],
@@ -129,6 +142,7 @@ export class FreezeRecorder {
   constructor(
     private readonly options: {
       recordPath: string;
+      build?: SourceIdentity;
       onFreeze: (line: FreezeIncident) => void;
       thresholdMs?: number;
     },
@@ -147,6 +161,7 @@ export class FreezeRecorder {
     worker.postMessage({
       record: {
         path: this.options.recordPath,
+        build: this.options.build,
         thresholdMs: this.options.thresholdMs ?? FREEZE_THRESHOLD_MS,
         maxLines: RECORD_MAX_LINES,
       },

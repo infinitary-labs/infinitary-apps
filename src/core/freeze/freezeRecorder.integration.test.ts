@@ -1,4 +1,5 @@
 import { spawn } from "node:child_process";
+import { pbkdf2Sync } from "node:crypto";
 import { once } from "node:events";
 import { existsSync, readFileSync, watch, writeFileSync } from "node:fs";
 import { join, resolve } from "node:path";
@@ -50,6 +51,12 @@ async function startRecorder(
   const waiters: (() => void)[] = [];
   recorder = new FreezeRecorder({
     recordPath,
+    build: {
+      computer: "disposable recorder process",
+      version: "test",
+      commit: null,
+      mutable: true,
+    },
     onFreeze: (line) => {
       if ("wallMs" in line) lines.push(line);
       for (const wake of waiters.splice(0)) wake();
@@ -128,6 +135,10 @@ describe("the freeze recorder", () => {
     expect(seen.status).toBe("completed");
     expect(seen.incidentId).toBeTruthy();
     expect(seen.completedAt).toBeTruthy();
+    expect(Date.parse(seen.captureRequestedAt ?? "")).toBeGreaterThanOrEqual(Date.parse(seen.at));
+    expect(Date.parse(seen.capturedAt ?? "")).toBeGreaterThanOrEqual(
+      Date.parse(seen.captureRequestedAt ?? ""),
+    );
     expect(readRecord(recordPath)).toContainEqual(seen);
   });
 
@@ -147,6 +158,32 @@ describe("the freeze recorder", () => {
     expect(names).toContain("walkEveryRow");
     expect(names.indexOf("walkEveryRow")).toBeLessThan(names.indexOf("renderOpenMessages"));
     expect(readRecord(recordPath)).toContainEqual(seen);
+  });
+
+  // INF-2262: native CPU work can defer the inspector to subsequent short JS.
+  // The observed location is retained without claiming where V8 must pause.
+  it("retains capture timing through high-CPU native work followed by short JavaScript", async () => {
+    const recordPath = join(scratchDir("infinitary-freeze-native-"), "freezes.jsonl");
+    const { stall } = await startRecorder(recordPath);
+    let result = 0;
+    const seen = await stall(() => {
+      const derived = pbkdf2Sync("disposable input", "disposable salt", 2_000_000, 32, "sha256");
+      result = derived.readUInt8(0);
+    });
+    expect(result).toBeGreaterThanOrEqual(0);
+    expect(seen.cpuMs).toBeGreaterThan(0);
+    expect(Date.parse(seen.captureRequestedAt ?? "")).toBeGreaterThanOrEqual(Date.parse(seen.at));
+    expect(Date.parse(seen.capturedAt ?? "")).toBeGreaterThanOrEqual(
+      Date.parse(seen.captureRequestedAt ?? ""),
+    );
+    expect(seen.build).toEqual({
+      computer: "disposable recorder process",
+      version: "test",
+      commit: null,
+      mutable: true,
+    });
+    expect(readRecord(recordPath)).toContainEqual(seen);
+    console.log("Native work capture (location, not cause):", JSON.stringify(seen));
   });
 
   it("marks a wait's names as uncertain by its low processor time", async () => {
@@ -194,6 +231,9 @@ describe("the freeze recorder", () => {
         incidentId: completed.incidentId,
         at: completed.at,
         status: "started",
+        build: completed.build,
+        ...(start.captureRequestedAt ? { captureRequestedAt: completed.captureRequestedAt } : {}),
+        ...(start.capturedAt ? { capturedAt: completed.capturedAt } : {}),
       });
       expect(readRecord(recordPath)).toContainEqual(completed);
       console.info("Start observed before recovery:", JSON.stringify(start));

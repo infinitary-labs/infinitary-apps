@@ -1,7 +1,16 @@
 import { spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
-import { existsSync, mkdirSync, readFileSync, renameSync, rmSync, writeFileSync } from "node:fs";
-import { dirname, resolve } from "node:path";
+import {
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  renameSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
+import { tmpdir } from "node:os";
+import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
@@ -16,12 +25,20 @@ export function compileLoadSupervisor(out: string, universal = false): void {
   const flags = universal
     ? ["clang", "-arch", "arm64", "-arch", "x86_64", `-mmacosx-version-min=${minimum}`]
     : [];
-  const result = spawnSync(command, [
-    ...flags, "-O2", "-Wall", "-Wextra", "-Werror", "-o", out,
-    resolve(root, "scripts/load-supervisor.c"),
-  ], { encoding: "utf8" });
-  if (result.status !== 0)
-    throw new Error(`Could not build the load supervisor: ${result.error?.message ?? result.stderr}`);
+  // Apple's clang leaves an empty folder in TMPDIR for each chip's compile
+  // and link of a two-chip build, so the compiler gets a temp folder of its
+  // own that goes with it; a test run's temp root must end empty.
+  const scratch = mkdtempSync(join(tmpdir(), "load-supervisor-build-"));
+  try {
+    const result = spawnSync(command, [
+      ...flags, "-O2", "-Wall", "-Wextra", "-Werror", "-o", out,
+      resolve(root, "scripts/load-supervisor.c"),
+    ], { encoding: "utf8", env: { ...process.env, TMPDIR: scratch } });
+    if (result.status !== 0)
+      throw new Error(`Could not build the load supervisor: ${result.error?.message ?? result.stderr}`);
+  } finally {
+    rmSync(scratch, { recursive: true, force: true });
+  }
 }
 
 export function buildLoadSupervisor(): void {

@@ -243,6 +243,7 @@ export function rewriteTimedOutTurn(event: unknown, cut: boolean, errorMessage: 
 
 /** What a second prompt, a steer, or a prompt after dispose is told. */
 const ONE_QUESTION_TEXT = "A one-shot session answers one question.";
+const ENDED_SESSION_TEXT = "This conversation has ended.";
 
 class PiOneShotSession implements ModelSession {
   readonly controlProfile = PI_CONTROL_PROFILE;
@@ -375,11 +376,15 @@ class PiRollingSession implements ModelSession {
   private servedPromptPending = false;
   private lastAssistant: AssistantMessage | undefined;
   private disposed = false;
+  /** Includes host-side prompt preparation before Pi itself becomes busy. */
+  private readonly promptFinishes = new Set<Promise<void>>();
   /** The app's own inputs that go before every queued steer (`steerFirst`). */
   private readonly firstSteers = new WeakSet<object>();
   private markClosed!: () => void;
-  private readonly closedPromise = new Promise<void>((resolve) => {
+  private failClosed!: (error: unknown) => void;
+  private readonly closedPromise = new Promise<void>((resolve, reject) => {
     this.markClosed = resolve;
+    this.failClosed = reject;
   });
 
   constructor(
@@ -496,6 +501,7 @@ class PiRollingSession implements ModelSession {
   }
 
   async prompt(text: string, images?: SessionImage[]): Promise<void> {
+    if (this.disposed) throw new Error(ENDED_SESSION_TEXT);
     refuseUnreadablePictures(this.session.model, images);
     const parts = toImageContents(images);
     this.failure = undefined;
@@ -504,6 +510,11 @@ class PiRollingSession implements ModelSession {
     this.served = [];
     this.servedPromptPending = true;
     this.promptOpen = true;
+    let finished!: () => void;
+    const promptFinished = new Promise<void>((resolve) => {
+      finished = resolve;
+    });
+    this.promptFinishes.add(promptFinished);
     try {
       budgetCustomCompaction(
         this.session,
@@ -552,6 +563,7 @@ class PiRollingSession implements ModelSession {
             );
         }
       }
+      if (this.disposed) throw new Error(ENDED_SESSION_TEXT);
       if (this.failure !== undefined) throw new Error(this.failure);
       await this.session.prompt(text, parts ? { source: "rpc", images: parts } : { source: "rpc" });
       if (this.options.local) {
@@ -576,6 +588,8 @@ class PiRollingSession implements ModelSession {
       }
     } finally {
       this.promptOpen = false;
+      this.promptFinishes.delete(promptFinished);
+      finished();
     }
   }
 
@@ -589,6 +603,7 @@ class PiRollingSession implements ModelSession {
   }
 
   async steer(text: string, images?: SessionImage[]): Promise<void> {
+    if (this.disposed) throw new Error(ENDED_SESSION_TEXT);
     refuseUnreadablePictures(this.session.model, images);
     // Pi 0.99 returns the queued input disposition; callers only need the
     // queueing to finish, not its internal placement decision.
@@ -604,6 +619,7 @@ class PiRollingSession implements ModelSession {
    * a retry start without it.
    */
   async steerFirst(text: string, images?: SessionImage[]): Promise<void> {
+    if (this.disposed) throw new Error(ENDED_SESSION_TEXT);
     refuseUnreadablePictures(this.session.model, images);
     const message = {
       role: "user" as const,
@@ -671,10 +687,17 @@ class PiRollingSession implements ModelSession {
   dispose(): void {
     if (this.disposed) return;
     this.disposed = true;
-    this.promptOpen = false;
-    this.unsubscribeTracking();
-    this.session.dispose();
-    this.markClosed();
+    // abort() waits for Pi's run (including noncancellable callbacks), unlike
+    // dispose(), which immediately disconnects the transcript writer.
+    void this.session
+      .abort()
+      .then(async () => {
+        await Promise.all(this.promptFinishes);
+        this.unsubscribeTracking();
+        this.session.dispose();
+        this.markClosed();
+      })
+      .catch(this.failClosed);
   }
 
   closed(): Promise<void> {

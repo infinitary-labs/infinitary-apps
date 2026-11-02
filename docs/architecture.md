@@ -108,6 +108,9 @@ Pi and Claude are its two implementations, each behind its own fence (`src/core/
 **The roles are presets, not modes**: a small function beside each role's owner fills the spec - `seatSessionSpec` (`src/core/orchestrator/seat.ts`), `crewmateSessionSpec` (`src/core/orchestrator/crewSession.ts`), `questionSessionSpec` (`src/core/decisions/questionSession.ts`) - and a factory never sees a role name.
 What a role owns stays with it (the seat's account and pause ladder, the crewmate's routing and worktree, the question's walk); what is shared is neutral: the account to binding step (`SessionBinder`, `src/core/session/binding.ts`), admission (`admits`), the runaway time bounds on the host's one clock (`BoundsWatcher`, `src/core/session/bounds.ts`), and the one tool spec (`src/core/session/tools.ts`).
 One behavioral suite (`tests/helpers/sessionContract.ts`) runs every role's cases with identical assertions on real Pi, on a scripted Claude client and on the real Claude client boxed against a stub API.
+A rolling Pi session's disposal refuses further input, aborts the run and waits for idle and any host-side prompt preparation before disconnecting its transcript writer and resolving `closed()`.
+An already-running app callback can return after cancellation; its actual result stays in the saved Pi conversation before closure.
+This is a session-lifecycle boundary, not proof that cancelling a native tool or replacing the app is safe.
 
 **The seat seam** (W1 S4, 2026-09-26).
 The agent never talks to a backend: it holds one `ModelSession` opened from the seat preset, which opens no session: it fills the spec with the first mate's prompt, contract stamp and bounds, and the backends only persist what they are handed.

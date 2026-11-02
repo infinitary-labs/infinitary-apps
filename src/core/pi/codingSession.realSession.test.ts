@@ -354,6 +354,17 @@ describe("the Pi coding session's production contract", () => {
     expect(customToolNames(options)).toEqual(["emit_card"]);
   });
 
+  // INF-2223: a failed stop is not proof that a backend released its store.
+  it("rejects closure instead of releasing Pi when stopping fails", async () => {
+    const session = await openCodingSession(spec);
+    const failure = new Error("Pi could not finish stopping.");
+    const releases = piMocks.agentSession.dispose.mock.calls.length;
+    piMocks.agentSession.abort.mockRejectedValueOnce(failure);
+    session.dispose();
+    await expect(session.closed()).rejects.toBe(failure);
+    expect(piMocks.agentSession.dispose.mock.calls).toHaveLength(releases);
+  });
+
   it("lets a custom tool shadow a builtin by name (R2: the event-driven bash)", async () => {
     const runBash = vi.fn(async () => ({ kind: "done" }) as unknown as BashOutcome);
     await openCodingSession({ ...spec, toolNames: ["emit_card"], runBash });

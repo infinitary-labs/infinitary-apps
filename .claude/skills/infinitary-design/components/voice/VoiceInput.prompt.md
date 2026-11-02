@@ -47,8 +47,10 @@ A round is the captain's words and the reply under them; the newest round sits n
 The captain's words sit on the right in a soft grey bubble: `--fg-1` mixed at 8%, corners 11, 11, 4 and 11 px, padding 2 px by 10 px, `--text-sm` in `--fg-1` on a 22 px row, at most 75% of the width.
 2 px below, the reply sits on the left as plain `--text-sm` in `--fg-1` on a 20 px row, at most 80% of the width, after the first mate's mark: the app's 14 px hexagon in `--accent`, 8 px before the words.
 On desktop, newest ordinary words rest at 75% `--fg-2` mixed with 25% `--fg-3`, with a 4% `--fg-1` bubble over transparent (INF-1968’s C, the captain’s Approve and build).
-Hovering the message lane or focusing a reply immediately restores newest ordinary words to `--fg-1` and the bubble to 8%, with no animation or timer; leaving both restores rest, and composer focus alone does not brighten it.
-The captain’s written-in choice keeps the mark cyan (`--accent`) at rest and while reading; older-round colors and opacity, working dots, Working… and problem colors stay unchanged.
+Hovering a round or focusing its reply lights only that round, never its sibling; composer focus alone brightens neither.
+The newest round immediately restores ordinary words to `--fg-1` and the bubble to 8%, with no animation or timer; leaving and blurring restores rest.
+The older round keeps its colors and lifts from 50% to full opacity while hovered or focused, returning to 50% afterwards.
+The captain’s written-in choice keeps the mark cyan (`--accent`) at rest and while reading; working dots, Working… and problem colors stay unchanged.
 A round is 44 px; the lane is 108 px with two rounds and 54 px with one.
 No quotation marks: the side says who said it.
 A message of pictures alone reads "A picture".

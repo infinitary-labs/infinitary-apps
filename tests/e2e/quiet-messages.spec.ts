@@ -23,9 +23,10 @@ async function paint(bubble: Locator) {
   });
 }
 
-// Intent: the captain's C selection on INF-1968, with the written-in cyan-mark
-// override. Fixture: two real turns through the isolated model stand-in. Failure:
-// bright resting type, double-dimmed older type, moving geometry or lost reply
+// Intent: the captain's C selection on INF-1968 and the newer upper-round
+// hover bug report (INF-2217): hover and focus light only their own round.
+// Fixture: two real turns through the isolated model stand-in. Failure:
+// a sibling lighting up, unreadable hovered older type, moving geometry or lost reply
 // reading. This renderer journey owns the painted reading states; the existing
 // last-turn journey owns turn delivery. No native prerequisite or shared account.
 for (const theme of ["dark", "light"] as const) {
@@ -61,7 +62,7 @@ for (const theme of ["dark", "light"] as const) {
       expect(resting.reply.color).not.toBe(primary);
       await expect(olderRound(page)).toHaveCSS("opacity", "0.5");
 
-      await lane.hover();
+      await reply.hover();
       const reading = { you: await paint(you), reply: await paint(reply) };
       expect(reading.reply.color).toBe(primary);
       expect(reading.you.color).toBe(primary);
@@ -72,10 +73,40 @@ for (const theme of ["dark", "light"] as const) {
       expect(await paint(older)).toEqual(olderRest);
       expect(await markColor()).toBe(cyan);
 
+      await you.hover();
+      expect(await paint(reply)).toEqual(reading.reply);
+      expect(await paint(older)).toEqual(olderRest);
+      await expect(olderRound(page)).toHaveCSS("opacity", "0.5");
+
       await page.mouse.move(10, 10);
       await focusOn(reply);
       expect(await paint(reply)).toEqual(reading.reply);
+      expect(await paint(older)).toEqual(olderRest);
+      await expect(olderRound(page)).toHaveCSS("opacity", "0.5");
       expect(await markColor()).toBe(cyan);
+      await focusOn(promptInput(page));
+      expect(await paint(reply)).toEqual(resting.reply);
+      expect(await paint(you)).toEqual(resting.you);
+
+      // INF-2217's live reproduction hit the upper reply but lit the lower one.
+      // Exercise both rows and keyboard focus, preserving each sibling's paint.
+      for (const target of [older, yourBubble(page, "older")]) {
+        await target.hover();
+        expect(await paint(reply)).toEqual(resting.reply);
+        expect(await paint(you)).toEqual(resting.you);
+        await expect(olderRound(page)).toHaveCSS("opacity", "1");
+        expect(await paint(older)).toEqual(olderRest);
+        expect(await markColor()).toBe(cyan);
+      }
+      await page.mouse.move(10, 10);
+      await focusOn(older);
+      await expect(olderRound(page)).toHaveCSS("opacity", "1");
+      expect(await paint(reply)).toEqual(resting.reply);
+      expect(await paint(you)).toEqual(resting.you);
+      await pressKey(older, "Tab");
+      await expect(reply).toBeFocused();
+      expect(await paint(reply)).toEqual(reading.reply);
+      await expect(olderRound(page)).toHaveCSS("opacity", "0.5");
       await focusOn(promptInput(page));
       expect(await paint(reply)).toEqual(resting.reply);
       expect(await paint(you)).toEqual(resting.you);

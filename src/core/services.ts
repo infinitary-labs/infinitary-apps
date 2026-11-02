@@ -1476,11 +1476,7 @@ export async function createServices(
     local: loadLine,
     work: workDevices,
     changed: () => tasks.invalidatePresentation(),
-    overrides: (computerId) =>
-      tasks
-        .list()
-        .filter((task) => task.deviceId === computerId && loadOverridden(task.id))
-        .map((task) => task.id),
+    overrides: (computerId) => tasks.passingOverridesForComputer(computerId, "load-line"),
   });
   // Leave from a Mac that runs work is Remove's, which brings its work here
   // first; bound once Your devices exists (docs/devices.md, "Leave").

@@ -11,7 +11,7 @@ import type { ChangeRecord } from "@shared/change";
 import type { ChangePresentationRecord } from "@shared/changePresentation";
 import { isRepairAssessment } from "@shared/checkRepair";
 import { reportSummary } from "@shared/feed";
-import { fixedHoldWords, overridePasses } from "@shared/holds";
+import { fixedHoldWords, type OverridableHold, overridePasses } from "@shared/holds";
 import type { LastTurn, LastTurnReply } from "@shared/lastTurn";
 import type { KeptValidationInput } from "@shared/liveValidation";
 import type { ReasoningChoice } from "@shared/modelSlots";
@@ -1071,6 +1071,11 @@ export class TaskService {
   /** The live set: everything not closed. */
   listLive(): TaskRecord[] {
     return this.store.listByStatus("open", "active");
+  }
+
+  /** Recorded overrides standing on this computer, read without composing task records. */
+  passingOverridesForComputer(computerId: string, kind: OverridableHold): string[] {
+    return this.store.passingOverridesForComputer(computerId, kind);
   }
 
   /** Every row holding a computer move, open or closed, oldest first, read without the rest. */

@@ -2210,10 +2210,14 @@ function migrate(db: AppDatabase, throughVersion?: number): void {
   // cards and recent card threads, read into each turn's context; and the
   // tasks holding a computer move, which the ready sweep seeks each minute
   // instead of reading every task (docs/testing.md, "The scale check").
+  // The permission index seeks only recorded overrides for each load round,
+  // never the permission-bearing history that has no override.
   if (through === DATABASE_VERSION)
     db.exec(`
       CREATE INDEX IF NOT EXISTS usage_events_account_at ON usage_events (account_id, at);
       CREATE INDEX IF NOT EXISTS tasks_status ON tasks (status);
+      CREATE INDEX IF NOT EXISTS task_permissions_override
+        ON task_permissions (override_json) WHERE override_json IS NOT NULL;
       CREATE INDEX IF NOT EXISTS tasks_closed_at ON tasks (closed_at);
       CREATE INDEX IF NOT EXISTS task_events_ref ON task_events (kind, ref) WHERE ref IS NOT NULL;
       CREATE INDEX IF NOT EXISTS tasks_specification ON tasks (specification_id);

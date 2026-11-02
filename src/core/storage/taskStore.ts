@@ -4,7 +4,7 @@ import type {
   MergeRepairImpact,
 } from "@shared/checkRepair";
 import type { CheckSnapshot, MainCheckEvidence } from "@shared/checkSnapshot";
-import { type HoldOverride, overridePasses } from "@shared/holds";
+import { type HoldOverride, type OverridableHold, overridePasses } from "@shared/holds";
 import type { LiveValidation } from "@shared/liveValidation";
 import type { MergeReview } from "@shared/mergeReview";
 import type { CommittedPlacement } from "@shared/placement";
@@ -1416,6 +1416,30 @@ export class TaskStore {
       .pluck()
       .all() as string[];
     return this.getMany(ids);
+  }
+
+  /** Recorded overrides on this computer, without composing task records or their history.
+   * Closed tasks remain eligible: their declared process groups can still be alive.
+   * CROSS JOIN keeps the sparse override index first, not a walk of execution history.
+   */
+  passingOverridesForComputer(computerId: string, kind: OverridableHold): string[] {
+    const rows = prepared(
+      this.db,
+      `SELECT p.task_id, p.override_json, d.head_sha
+       FROM task_permissions p
+       CROSS JOIN task_execution e ON e.task_id = p.task_id
+       LEFT JOIN task_delivery_evidence d ON d.task_id = p.task_id
+       WHERE p.override_json IS NOT NULL AND e.device_id = ?`,
+    ).all(computerId) as { task_id: string; override_json: string; head_sha: string | null }[];
+    return rows
+      .filter((row) =>
+        overridePasses(
+          { override: parseJson<HoldOverride>(row.override_json) ?? undefined },
+          kind,
+          row.head_sha ?? undefined,
+        ),
+      )
+      .map((row) => row.task_id);
   }
 
   /** Whether any row holds this status, answered without reading or composing one. */

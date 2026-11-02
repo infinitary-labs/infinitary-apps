@@ -178,6 +178,7 @@ import {
   crewmateCardPicturesDir,
   crewmateEvidenceDir,
   crewmateSessionsDir,
+  crewmateTempDir,
 } from "./paths";
 import { carryPanelInstructions } from "./personal/panelInstructions";
 import { PANELS_SAFE_MODE_NOTE } from "./personal/panelLines";
@@ -1955,6 +1956,11 @@ export async function createServices(
     writeElsewhere: (taskId, deviceId, artifact) =>
       placed.copies.writeArtifact(taskId, deviceId, artifact),
     partsElsewhere: (deviceId) => placed.copies.writesArtifactParts(deviceId),
+    evidenceDir: (taskId) => crewmateEvidenceDir(paths, taskId),
+    tempDir: (taskId) => crewmateTempDir(paths, taskId),
+    filesElsewhere: (deviceId) => placed.copies.writesEvidenceFiles(deviceId),
+    fileElsewhere: (taskId, deviceId, name, file) =>
+      placed.copies.writeEvidenceFile(taskId, deviceId, name, file),
   });
   const presentations: ChangePresentations = new ChangePresentations({
     namingRule: () => runbooks.naming(),

@@ -238,6 +238,8 @@ const CHECK_DECLARATIONS = contractChange("check-declarations");
 const MERGE_OFFER_READINESS = contractChange("merge-offer-readiness");
 /** Listing an artifact's files and saving selected ones (`artifact-parts.md`). */
 const ARTIFACT_PARTS = contractChange("artifact-parts");
+/** One streamed member into task evidence, on both computers. */
+const WORKFLOW_EVIDENCE_FILE = contractChange("workflow-evidence-file");
 
 const toolTextSchema = workRequests["inf:work:close-card"].response;
 const integrationAnswerSchema = workRequests["inf:work:use-integration"].response;
@@ -1505,6 +1507,13 @@ export class SessionHost {
         return ask("inf:work:check-change", { input: wire ?? {} }, signal);
       },
       onDownloadArtifact: (input, signal) => {
+        if (
+          input.file !== undefined &&
+          !listsChange(this.options.homeChanges?.(), WORKFLOW_EVIDENCE_FILE)
+        )
+          throw new Error(
+            `Artifact file refused: ${HOME.the} needs an update before it can save a file into task evidence. Nothing was sent.`,
+          );
         if (
           (input.list || input.files !== undefined) &&
           !listsChange(this.options.homeChanges?.(), ARTIFACT_PARTS)

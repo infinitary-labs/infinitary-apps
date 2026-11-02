@@ -1,11 +1,13 @@
 import { createHash } from "node:crypto";
-import { readFileSync, statSync, symlinkSync } from "node:fs";
+import { readdirSync, readFileSync, statSync, symlinkSync } from "node:fs";
 import { createServer, type IncomingMessage, type ServerResponse } from "node:http";
 import type { AddressInfo } from "node:net";
 import { join } from "node:path";
 import { crc32, inflateRawSync } from "node:zlib";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { expectBytesEqual } from "../../../../../tests/helpers/expectBytes";
 import { scratchDir } from "../../../../../tests/helpers/scratchDirs";
+import { PlacedTasks } from "../../../helper/placedTasks";
 import { GithubGatewayService } from "../../../orchestrator/githubGateway";
 import { WorkflowEvidenceService } from "../../../orchestrator/workflowEvidence";
 import {
@@ -13,11 +15,14 @@ import {
   GITHUB_READ_TOOL,
   READ_WORKFLOW_TOOL,
 } from "../../../pi/forgeTools";
+import { sendSourceFile } from "../../../placed/sourceFiles";
+import type { WorkDevices } from "../../../placed/workDevices";
 import { bindTool } from "../../../session/tools";
 import { openInMemoryDatabase } from "../../../storage/db";
 import { seedTask } from "../../../tasks/seedTask";
 import { TaskService } from "../../../tasks/taskService";
 import { RepoRegistry } from "../../../workspace/repoRegistry";
+import { ZIP_FILE_CHUNK_BYTES } from "../../zipFile";
 import { GitHubForge } from "./githubForge";
 
 const HEAD = "a".repeat(40);
@@ -181,7 +186,14 @@ async function fixture(
     worktreeDir: cwd,
   });
   const repos = new RepoRegistry(db, join(cwd, "fleet"));
-  const service = new WorkflowEvidenceService({ tasks, repos, forgeFor: () => forge });
+  const evidence = scratchDir("fm-workflow-files-");
+  const service = new WorkflowEvidenceService({
+    tasks,
+    repos,
+    forgeFor: () => forge,
+    evidenceDir: () => join(evidence, "evidence"),
+    tempDir: () => join(evidence, "temp"),
+  });
   // The listing half of the evidence: runs, jobs and artifacts are github_read's.
   const gateway = new GithubGatewayService({
     tasks,
@@ -199,7 +211,7 @@ async function fixture(
   const download = bindTool(DOWNLOAD_ARTIFACT_TOOL, {
     onDownloadArtifact: (input) => service.download("task-1", input),
   });
-  return { forge, list, read, download, service, tasks, cwd, seen, served, rejected };
+  return { forge, list, read, download, service, tasks, cwd, evidence, seen, served, rejected };
 }
 
 describe("workflow evidence through crewmate tools and the app's sign-in", () => {
@@ -674,5 +686,168 @@ describe("an artifact read in parts through the crewmate tool (INF-1932)", () =>
     const saved = (await download.run({ runId: 10, artifactId: 30, files: ["12-xcrun.log"] })).text;
     expect(saved).toContain("cannot be read in parts");
     expect(() => statSync(join(cwd, ".infinitary-artifacts"))).toThrow();
+  });
+});
+
+// INF-2330: a single recording beyond the buffered ZIP bound must reach task evidence.
+describe("one workflow file streamed into task evidence", () => {
+  it("retrieves a member beyond 64 MiB with bounded ranges and no credentials in storage or its receipt", async () => {
+    const { download, evidence, cwd, seen } = await fixture({ archive: withRecording(SAMPLE) });
+    const receipt = JSON.parse(
+      (await download.run({ runId: 10, artifactId: 30, file: "ipad/join/recording.mov" })).text,
+    );
+    const saved = readFileSync(receipt.path);
+    expect(receipt).toMatchObject({
+      extracted: true,
+      member: "ipad/join/recording.mov",
+      bytes: 65 * 1024 * 1024,
+    });
+    expect(receipt.path.startsWith(join(evidence, "evidence"))).toBe(true);
+    expectBytesEqual(saved, Buffer.alloc(receipt.bytes, 0x2a));
+    expect(receipt.sha256).toBe(createHash("sha256").update(saved).digest("hex"));
+    expect(statSync(receipt.path).mode & 0o777).toBe(0o600);
+    expect(readdirSync(cwd)).toEqual([]);
+    expect(readdirSync(join(evidence, "evidence"))).toHaveLength(1);
+    for (const request of seen.filter((request) => request.path.startsWith("/storage/"))) {
+      expect(request.auth).toBeUndefined();
+      const range = /^bytes=(\d+)-(\d+)$/.exec(request.range ?? "");
+      expect(range).not.toBeNull();
+      expect(Number(range?.[2]) - Number(range?.[1]) + 1).toBeLessThanOrEqual(ZIP_FILE_CHUNK_BYTES);
+    }
+    expect(JSON.stringify(receipt)).not.toMatch(/gho_|signed=/);
+    expect(
+      (await download.run({ runId: 10, artifactId: 30, file: receipt.member })).text,
+    ).toContain("not overwritten");
+  });
+
+  it.each([SAMPLE, SAMPLE_ZIP64])(
+    "unpacks a real deflated phone log, including ZIP64 metadata",
+    async (archive) => {
+      const { download } = await fixture({ archive });
+      const receipt = JSON.parse(
+        (await download.run({ runId: 10, artifactId: 30, file: "ipad/rest/1-plutil.log" })).text,
+      );
+      expectBytesEqual(readFileSync(receipt.path), unzipped(SAMPLE).get(receipt.member) as Buffer);
+    },
+  );
+
+  it("refuses an older work computer before requesting the artifact", async () => {
+    const { forge, tasks, seen, evidence } = await fixture({ archive: SAMPLE });
+    seedTask(tasks, {
+      id: "task-there",
+      title: "Inspect",
+      status: "idle",
+      repoId: "repo-1",
+      deviceId: "mini",
+    });
+    const service = new WorkflowEvidenceService({
+      tasks,
+      repos: { get: () => ({ id: "repo-1", path: "/unused", name: "meter" }) } as never,
+      forgeFor: () => forge,
+      evidenceDir: () => evidence,
+      tempDir: () => evidence,
+      filesElsewhere: () => false,
+    });
+    expect(
+      await service.download("task-there", {
+        runId: 10,
+        artifactId: 30,
+        file: "ipad/rest/1-plutil.log",
+      }),
+    ).toContain("need an update");
+    expect(seen).toEqual([]);
+  });
+
+  it("refuses an ambiguous selection, a missing file and a folder without writing evidence", async () => {
+    const { download, evidence } = await fixture({ archive: SAMPLE });
+    for (const input of [
+      { file: "ipad/rest/1-plutil.log", files: ["ipad/rest"] },
+      { file: "ipad/rest/" },
+      { file: "missing.mp4" },
+    ])
+      expect((await download.run({ runId: 10, artifactId: 30, ...input })).text).toContain(
+        "Cannot read workflow evidence",
+      );
+    expect(readdirSync(evidence)).toEqual([]);
+  });
+
+  it("deletes incomplete output after corrupted content or an interrupted range", async () => {
+    for (const interrupt of [false, true]) {
+      const archive = withRecording(SAMPLE);
+      // Corrupt the member's stored data, without changing its declared checksum.
+      if (!interrupt) {
+        const byte =
+          archive.indexOf(Buffer.from("ipad/join/recording.mov")) +
+          "ipad/join/recording.mov".length +
+          100;
+        archive[byte] = (archive[byte] ?? 0) ^ 1;
+      }
+      const { download, evidence } = await fixture({
+        archive,
+        route: (req, res) => {
+          const range = /^bytes=(\d+)-(\d+)$/.exec(req.headers.range ?? "");
+          if (
+            interrupt &&
+            req.url?.startsWith("/storage/") &&
+            range &&
+            Number(range[1]) >= ZIP_FILE_CHUNK_BYTES &&
+            Number(range[2]) - Number(range[1]) + 1 === ZIP_FILE_CHUNK_BYTES
+          ) {
+            res.writeHead(503);
+            res.end();
+            return true;
+          }
+          return false;
+        },
+      });
+      const result = (
+        await download.run({ runId: 10, artifactId: 30, file: "ipad/join/recording.mov" })
+      ).text;
+      expect(result).toContain("Cannot read workflow evidence");
+      expect(result).not.toMatch(/gho_|signed=/);
+      expect(readdirSync(join(evidence, "evidence"))).toEqual([]);
+    }
+  });
+
+  it("sends the verified file through the existing piece transport to remote task evidence, then removes home staging", async () => {
+    const { forge, tasks, evidence } = await fixture({ archive: SAMPLE });
+    const remote = new PlacedTasks(scratchDir("fm-evidence-receiver-"));
+    const devices = {
+      ask: async (
+        _machine: string,
+        _channel: string,
+        [input]: Parameters<PlacedTasks["sourceFile"]>,
+      ) => remote.sourceFile(input),
+    } as unknown as WorkDevices;
+    seedTask(tasks, {
+      id: "task-there",
+      title: "Inspect",
+      status: "idle",
+      repoId: "repo-1",
+      deviceId: "mini",
+    });
+    const service = new WorkflowEvidenceService({
+      tasks,
+      repos: { get: () => ({ id: "repo-1", path: "/unused", name: "meter" }) } as never,
+      forgeFor: () => forge,
+      evidenceDir: () => join(evidence, "evidence"),
+      tempDir: () => join(evidence, "temp"),
+      filesElsewhere: () => true,
+      fileElsewhere: (task, device, name, file) =>
+        sendSourceFile(devices, device, task, name, file, undefined, true),
+    });
+    const receipt = JSON.parse(
+      await service.download("task-there", {
+        runId: 10,
+        artifactId: 30,
+        file: "ipad/rest/1-plutil.log",
+      }),
+    );
+    expect(receipt.path.startsWith(remote.folders("task-there").evidence)).toBe(true);
+    expectBytesEqual(readFileSync(receipt.path), unzipped(SAMPLE).get(receipt.member) as Buffer);
+    expect(readdirSync(join(evidence, "temp"))).toEqual([]);
+    expect(
+      readdirSync(remote.folders("task-there").temp).filter((name) => name.endsWith(".part")),
+    ).toEqual([]);
   });
 });

@@ -876,21 +876,26 @@ export class GitHubForge implements Forge {
   /**
    * The archive behind `path` read in parts (`ArchiveRanges`): the first
    * part follows the redirects as a whole download does, later parts go
-   * straight to the storage it reached, and every part shares one time
-   * bound. Storage that does not answer a part with exactly those bytes is
-   * refused, never read whole.
+   * straight to the storage it reached, and each part has its own request
+   * bound. A large file may take longer than a single request. Storage that
+   * does not answer a part with exactly those bytes is refused, never read whole.
    */
   private async archiveRanges(path: string, size: number): Promise<ArchiveRanges> {
     const token = await this.options.token();
     if (!token)
       throw new ForgeError("sign-in", notSignedInText(this.place, this.host ?? GITHUB_COM));
-    const signal = AbortSignal.timeout(REQUEST_TIMEOUT_MS);
     let at = { url: new URL(`${this.base}${path}`), authenticated: true };
     const read = (start: number, end: number) =>
       downloadAnswer(async () => {
         if (!Number.isSafeInteger(start) || start < 0 || end > size || start >= end)
           throw new ForgeError("refused", "The archive part asked for is outside the archive.");
-        const reached = await this.signedGet(at, token, path, signal, `bytes=${start}-${end - 1}`);
+        const reached = await this.signedGet(
+          at,
+          token,
+          path,
+          AbortSignal.timeout(REQUEST_TIMEOUT_MS),
+          `bytes=${start}-${end - 1}`,
+        );
         at = { url: reached.url, authenticated: reached.authenticated };
         const { response } = reached;
         if (

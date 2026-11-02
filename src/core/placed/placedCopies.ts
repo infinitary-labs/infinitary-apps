@@ -38,6 +38,8 @@ import type { WorkDevices } from "./workDevices";
 
 /** A selection of an artifact's files, written beside the whole one (`artifact-parts.md`). */
 const ARTIFACT_PARTS = contractChange("artifact-parts");
+/** One streamed member into task evidence, on both computers. */
+const WORKFLOW_EVIDENCE_FILE = contractChange("workflow-evidence-file");
 
 /**
  * The home's side of a task's working copy on a computer that runs work
@@ -597,6 +599,21 @@ export class PlacedCopies {
     const record = this.options.tasks.get(taskId);
     if (record?.workspaceState === "present" && TaskService.isClosed(record))
       this.options.tasks.markWorkspaceRemoved(taskId);
+  }
+
+  writesEvidenceFiles(deviceId: string): boolean {
+    return listsChange(this.options.devices.version(deviceId)?.changes, WORKFLOW_EVIDENCE_FILE);
+  }
+
+  async writeEvidenceFile(
+    taskId: string,
+    deviceId: string,
+    name: string,
+    file: string,
+  ): Promise<string> {
+    if (!this.writesEvidenceFiles(deviceId))
+      throw new Error("That computer needs an update to receive evidence files.");
+    return sendSourceFile(this.options.devices, deviceId, taskId, name, file, undefined, true);
   }
 
   /** Whether that computer writes a selection of an artifact's files beside the whole one. */

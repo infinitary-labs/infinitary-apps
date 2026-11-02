@@ -690,7 +690,7 @@ A task runs in a working copy of its own on the computer that runs it, made from
   Out of reach, this Mac reads what it brought last.
 - **Opening, checking and merging** stay this Mac's, with its own sign-in: a crewmate there calls `open_change`, `check_change` and `download_artifact` as one here does, and the home does each (`inf:work:open-change`, `inf:work:check-change`, `inf:work:download-artifact`).
   `prepare_change` transfers its inspected media to the home through `inf:work:prepare-change`, gated by `CHANGE_PRESENTATIONS_SINCE`; the home retains the story without publishing it (`docs/forge.md`, "Saved change stories").
-  An artifact is downloaded here and written into the working copy there before the tool answers, never into a folder here.
+  A whole or selected archive is downloaded here and written into the working copy there before the tool answers, never kept in a folder here.
   A listing or a selection of its files (`list`, `files`) is asked only of a home that lists `artifact-parts`; the computer refuses it, sending nothing, when its home does not, since an older home would drop the fields and download the whole archive.
   A crewmate there calls `read_workflow` as one here does (`inf:work:read-workflow`), and the home reads the run through the project's own forge: with `runId` alone the short read, whose run watch wakes the crewmate there (`docs/forge.md`, "The run watch"), and with `jobId` that job's log.
 - **Discarding.**
@@ -717,6 +717,14 @@ What it left goes by the rule this Mac's own leftover working copies follow (`do
   The feed says so once each time this Mac starts: "Mac mini keeps a leftover working copy, because its work could not be saved on this computer first: fm/task-a1b2c3d4."
   The next time that computer is back the rule runs again, so a project added here again takes its work.
 - **This Mac's copy of the branch** stays: boot hygiene reports a `fm/task-*` branch no record explains and never deletes one.
+
+### Workflow recordings in task evidence
+
+An exact `download_artifact` file request uses the home's existing forge sign-in, never a credential sent to the computer running work.
+The home streams and verifies the selected member into its task temporary folder, then sends bounded `inf:session:source-file` pieces with `evidence: true` through `PlacedCopies.writeEvidenceFile`.
+`PlacedTasks` publishes the file in its task evidence folder only after the size and SHA-256 match; interrupted pieces remain temporary, corrupt pieces are removed, and existing evidence is never replaced.
+The home removes its staging copy after the transfer attempt.
+Both sides require the `workflow-evidence-file` contract change; the ordinary source-card and hand-over destinations are unchanged.
 
 ## Runs on
 

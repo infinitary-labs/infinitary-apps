@@ -115,6 +115,8 @@ export type ReadWorkflowInput = {
 export type DownloadArtifactInput = {
   runId: number;
   artifactId: number;
+  /** One exact member to unpack into task evidence, streamed rather than held in memory. */
+  file?: string;
   /** Answer the archive's files instead of saving anything. */
   list?: boolean;
   /** Paths inside the archive; a folder's path takes everything under it. */

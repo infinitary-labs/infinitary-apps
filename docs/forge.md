@@ -305,8 +305,18 @@ A short read does keep the run's failed jobs on the repair ledger, so `check_cha
   `download_artifact({ runId, artifactId, files })` reads only the named files' own records, a folder's path taking everything under it, and saves them unchanged as a smaller ZIP at `.infinitary-artifacts/run-<runId>/artifact-<artifactId>-<part>.zip`, `<part>` the first twelve hexadecimal digits of its SHA-256, with the same folder and overwrite rules.
   The answer names how many files each path took; nothing is inflated, and no file is written by an entry's own name.
   The 64 MiB bound counts the selected records, before any of them is read, and the central directory's own size.
-  Each part is a Range request to the signed address the first one reached, all within one 30-second bound, and must come back 206 with a `Content-Range` naming the artifact's size; storage that sends the whole archive instead is refused.
+  Each part is a Range request to the signed address the first one reached, each within its own 30-second request bound, and must come back 206 with a `Content-Range` naming the artifact's size; storage that sends the whole archive instead is refused.
   GitLab answers that its host cannot list an artifact's files, and a split archive is refused.
+- `download_artifact({ runId, artifactId, file })` on GitHub names exactly one non-folder member and streams it directly into the task's evidence folder, without the buffered ZIP's 64 MiB limit.
+  It cannot be combined with `list`, `files` or `offset`; duplicate member names and missing files are refused.
+  Stored and deflated members, including ZIP64, are read in 1 MiB ranges, unpacked incrementally, and checked against the declared unpacked size and CRC before publication.
+  The host chooses a safe name from the run, artifact and member-name digest, retaining only a simple extension; member paths never become filesystem paths.
+  The answer carries the run/version, artifact, original member, absolute evidence path, actual bytes and SHA-256, with `extracted: true`.
+  A partial or corrupt local download is removed; an existing destination, a linked evidence folder or a linked destination is never overwritten.
+  On another computer, the home stages the verified file in task temporary storage and reuses the bounded source-file transport with `evidence: true`; the receiver verifies size and SHA-256 before publishing in evidence, and the home removes staging even after transfer failure.
+  Incomplete receiver pieces stay only in the task's temporary folder until a deliberate resumed transfer or task cleanup; they are never reported as complete evidence.
+  Both computers require `workflow-evidence-file` before this mode starts; older computers get an update refusal, never a fallback to downloading the whole archive.
+  This evidence-only transfer has no total-size cap; other source-file transfers retain their 1 GiB bound, and disk space or an expired signed address can still stop a download.
 - Download redirects are followed manually with a 30-second request bound and at most three redirects.
   The app's sign-in is sent only to the initial GitHub API request, never signed storage; production accepts only HTTPS GitHub-owned storage or Azure Blob storage.
   Neither signed URLs nor sign-in material is returned.

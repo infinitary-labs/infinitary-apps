@@ -1,4 +1,6 @@
 import { createHash } from "node:crypto";
+import { mkdtemp, rm } from "node:fs/promises";
+import { basename, extname, join } from "node:path";
 import { HERE } from "@shared/deviceNames";
 import {
   type DownloadArtifactInput,
@@ -12,7 +14,9 @@ import {
   type WorkflowRun,
 } from "../forge";
 import { WORKFLOW_ARTIFACT_MAX_BYTES } from "../forge/workflows";
+import { zipFile } from "../forge/zipFile";
 import { isUnder, packedBytes, type ZipEntry, zipEntries, zipOf } from "../forge/zipParts";
+import { evidenceDirectory, writeEvidenceFile } from "../tasks/evidenceFile";
 import { TaskService } from "../tasks/taskService";
 import { ArtifactFolderError, writeArtifact } from "../workspace/artifacts";
 import type { RepoRegistry } from "../workspace/repoRegistry";
@@ -52,6 +56,15 @@ export class WorkflowEvidenceService {
       writeElsewhere?: ArtifactElsewhere;
       /** Whether that computer writes a selection of an artifact's files (`artifact-parts`). */
       partsElsewhere?: (deviceId: string) => boolean;
+      evidenceDir?: (taskId: string) => string;
+      tempDir?: (taskId: string) => string;
+      fileElsewhere?: (
+        taskId: string,
+        deviceId: string,
+        name: string,
+        file: string,
+      ) => Promise<string>;
+      filesElsewhere?: (deviceId: string) => boolean;
       now?: () => number;
     },
   ) {}
@@ -185,6 +198,68 @@ export class WorkflowEvidenceService {
       const { workflows, cwd, deviceId } = this.context(taskId);
       const runId = integer(input.runId, "runId");
       const artifactId = integer(input.artifactId, "artifactId");
+      if (input.file !== undefined) {
+        if (
+          !input.file ||
+          input.list !== undefined ||
+          input.files !== undefined ||
+          input.offset !== undefined
+        )
+          throw new ForgeError(
+            "refused",
+            "Use file alone to name one exact file, without list, files or offset.",
+          );
+        if (
+          !this.options.evidenceDir ||
+          !this.options.tempDir ||
+          (deviceId && (!this.options.filesElsewhere?.(deviceId) || !this.options.fileElsewhere))
+        )
+          throw new ForgeError(
+            "unsupported",
+            "The computers running this task need an update before saving a file into task evidence. Nothing was downloaded.",
+          );
+        if (!workflows.archive)
+          throw new ForgeError(
+            "unsupported",
+            "This project's host cannot read a single file from an artifact.",
+          );
+        const run = await workflows.run(runId);
+        const { artifact, archive } = await workflows.archive(runId, artifactId);
+        const entries = await zipEntries(archive, WORKFLOW_ARTIFACT_MAX_BYTES);
+        const matches = entries.filter(
+          (entry) => entry.name === input.file && !entry.name.endsWith("/"),
+        );
+        const entry = matches[0];
+        if (matches.length !== 1 || !entry)
+          throw new ForgeError(
+            "not-found",
+            "file must name exactly one file in the artifact; list it with list true to see its paths.",
+          );
+        const extension = extname(entry.name).slice(1);
+        const name = `workflow-${runId}-${artifactId}-${createHash("sha256").update(entry.name).digest("hex").slice(0, 16)}.${/^[a-zA-Z0-9]{1,16}$/.test(extension) ? extension : "bin"}`;
+        let staging: string | undefined;
+        try {
+          let directory = this.options.evidenceDir(taskId);
+          if (deviceId) {
+            const temp = this.options.tempDir(taskId);
+            await evidenceDirectory(temp);
+            staging = await mkdtemp(join(temp, "workflow-"));
+            directory = staging;
+          }
+          const saved = await writeEvidenceFile(directory, name, zipFile(archive, entry));
+          const path =
+            deviceId && this.options.fileElsewhere
+              ? await this.options.fileElsewhere(taskId, deviceId, basename(saved.path), saved.path)
+              : saved.path;
+          return JSON.stringify(
+            { run, artifact, ...saved, path, extracted: true, member: entry.name },
+            null,
+            2,
+          );
+        } finally {
+          if (staging) await rm(staging, { recursive: true, force: true });
+        }
+      }
       const paths = input.files === undefined ? undefined : selection(input.files);
       if (input.list || paths) {
         if (!input.list && deviceId && !this.options.partsElsewhere?.(deviceId))

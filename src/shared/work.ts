@@ -729,6 +729,8 @@ export const workRequests = {
       input: z.object({
         runId: z.number().int().positive(),
         artifactId: z.number().int().positive(),
+        /** One exact member streamed into task evidence (workflow-evidence-file). */
+        file: z.string().min(1).max(4096).optional(),
         /** The archive's files instead of saving anything (`artifact-parts`). */
         list: z.boolean().optional(),
         /** Paths inside the archive to save, or to narrow a listing to (`artifact-parts`). */
@@ -1047,6 +1049,19 @@ const sourceFileSchema = z.object({
   sha256: z.string().regex(/^[0-9a-f]{64}$/),
 });
 
+const sourceFileFields = {
+  task: placedTaskIdSchema,
+  name: z
+    .string()
+    .regex(/^[A-Za-z0-9_-]+\.[A-Za-z0-9]+$/)
+    .max(200),
+  sha256: z.string().regex(/^[0-9a-f]{64}$/),
+  offset: z.number().int().nonnegative(),
+  data: z.string().max(Math.ceil(PLACED_COPY_CHUNK_BYTES / 3) * 4),
+  /** A file another task handed this one, kept in temporary storage. */
+  into: z.enum(["handover"]).optional(),
+};
+
 /**
  * The orders a home asks a computer that runs work. The computer answers
  * them; the home sends them only to a computer whose welcome says it takes
@@ -1062,26 +1077,23 @@ export const workOrders = {
   "inf:session:source-file": {
     effect: "change",
     request: z.tuple([
-      z.object({
-        task: placedTaskIdSchema,
-        name: z
-          .string()
-          .regex(/^[A-Za-z0-9_-]+\.[A-Za-z0-9]+$/)
-          .max(200),
-        size: z
-          .number()
-          .int()
-          .nonnegative()
-          .max(1024 * 1024 * 1024),
-        sha256: z.string().regex(/^[0-9a-f]{64}$/),
-        offset: z.number().int().nonnegative(),
-        data: z.string().max(Math.ceil(PLACED_COPY_CHUNK_BYTES / 3) * 4),
-        /**
-         * `handover`: a file another task handed this one, kept in its
-         * temporary folder's hand-over folder (`handover-files.md`).
-         */
-        into: z.enum(["handover"]).optional(),
-      }),
+      z.union([
+        // Streaming evidence has no whole-file memory allocation or legacy size bound.
+        z.object({
+          ...sourceFileFields,
+          size: z.number().int().nonnegative(),
+          evidence: z.literal(true),
+        }),
+        z.object({
+          ...sourceFileFields,
+          size: z
+            .number()
+            .int()
+            .nonnegative()
+            .max(1024 * 1024 * 1024),
+          evidence: z.never().optional(),
+        }),
+      ]),
     ]),
     response: z.object({ file: z.string(), complete: z.boolean() }),
   },

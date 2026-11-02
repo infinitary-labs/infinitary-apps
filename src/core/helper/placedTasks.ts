@@ -33,6 +33,7 @@ import {
 import { z } from "zod";
 import type { JobRows } from "../jobs/jobManager";
 import { rm } from "../plainFs";
+import { receiveEvidenceFile } from "../tasks/evidenceFile";
 import { HANDOVER_IN_DIR_NAME } from "../tasks/handoverFiles";
 import { APP_KEPT_PARTS, removeTaskLeftovers } from "../tasks/taskLeftovers";
 import { provisionTaskTemp, removeOwnedTempFolder, type TempRemoval } from "../tasks/taskTemp";
@@ -148,7 +149,7 @@ export class PlacedTasks {
   sourceFile(
     input: WorkOrderRequest<"inf:session:source-file">[0],
   ): Promise<WorkOrderResponse<"inf:session:source-file">> {
-    const key = `${input.task}/${input.into ?? ""}/${input.name}`;
+    const key = `${input.task}/${input.evidence ? "evidence" : (input.into ?? "")}/${input.name}`;
     const run = (this.sourceTransfers.get(key) ?? Promise.resolve())
       .catch(() => {})
       .then(() => this.writeSourceFile(input));
@@ -166,6 +167,7 @@ export class PlacedTasks {
   ): Promise<WorkOrderResponse<"inf:session:source-file">> {
     const [piece] = workOrders["inf:session:source-file"].request.parse([input]);
     const folders = this.ensure(piece.task);
+    if (piece.evidence) return receiveEvidenceFile(folders.evidence, folders.temp, piece);
     // A handed file goes in the temporary folder, so it goes when the task closes.
     const dir =
       piece.into === "handover" ? join(folders.temp, HANDOVER_IN_DIR_NAME) : folders.sourceCards;

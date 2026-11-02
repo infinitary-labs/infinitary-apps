@@ -1479,6 +1479,46 @@ describe("a conversation held on a computer that runs work", () => {
     },
   );
 
+  // INF-2330: an old home must not strip file and download a different archive.
+  it.each([true, false])(
+    "sends an exact workflow file only to a home that understands it (%s)",
+    async (supported) => {
+      const at = await placed({
+        homeChanges: CONTRACT_CHANGES.names.filter(
+          (name) => supported || name !== "workflow-evidence-file",
+        ),
+      });
+      await at.order("inf:session:open", [
+        {
+          orderId: `open:${TASK}:1`,
+          task: TASK,
+          spec: { ...at.spec, tools: [...at.spec.tools, "download_artifact"] },
+        },
+      ]);
+      const input = {
+        runId: 41464279524,
+        artifactId: 13168688886,
+        file: "ipad/rest/77D9D1B4-0109-473B-849C-B88EBF3250C7.mp4",
+      };
+      model([
+        { tools: [{ name: "download_artifact", args: input }] },
+        { text: "Read the recording." },
+      ]);
+      await at.order("inf:session:prompt", [
+        { orderId: "evidence-file", task: TASK, text: "Read the recording." },
+      ]);
+      await at.ended(1);
+      const asked = at.home.effects
+        .filter((effect) => effect.channel === "inf:work:download-artifact")
+        .map((effect) => effect.request.input);
+      expect(asked).toEqual(supported ? [input] : []);
+      if (!supported)
+        expect(JSON.stringify(api.requests.at(-1)?.body?.messages)).toContain(
+          "needs an update before it can save a file into task evidence. Nothing was sent.",
+        );
+    },
+  );
+
   // INF-497: a home before `STORY_AROUND_SINCE` strips around from open_change and
   // would answer as if the words had been changed; the computer refuses first.
   it("refuses to change the words around a story through a home too old to keep the story, sending nothing", async () => {

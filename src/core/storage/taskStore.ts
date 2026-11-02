@@ -639,6 +639,12 @@ export type TaskSearchFields = Pick<
   "id" | "key" | "kind" | "status" | "title" | "goal" | "closedAt"
 >;
 
+/** The work facts ask coverage and its summaries need, without composed payloads. */
+export type TaskCoverageFields = Pick<
+  TaskRecord,
+  "id" | "key" | "title" | "status" | "closedReason" | "createdAt" | "startedAt"
+>;
+
 type Row = {
   id: string;
   key: string | null;
@@ -932,13 +938,17 @@ const CHANGE_PATCH_FIELDS: readonly (keyof TaskPatch)[] = [
 export class TaskStore {
   private taskColumns: Set<string> | undefined;
   private projection:
-    | { records: Map<string, TaskRecord | undefined>; lists: Map<string, TaskRecord[]> }
+    | {
+        records: Map<string, TaskRecord | undefined>;
+        lists: Map<string, TaskRecord[]>;
+        coverage: Map<string, TaskCoverageFields | undefined>;
+      }
     | undefined;
 
   /** A synchronous derived view composes each task once, including nested readers. */
   readProjection<T>(read: () => T, known: readonly TaskRecord[] = []): T {
     const outer = this.projection;
-    this.projection ??= { records: new Map(), lists: new Map() };
+    this.projection ??= { records: new Map(), lists: new Map(), coverage: new Map() };
     try {
       // The board's row-cache owner already has these current records.
       // Prefer a row this projection read itself when one is present.
@@ -959,6 +969,7 @@ export class TaskStore {
     } finally {
       projection?.records.clear();
       projection?.lists.clear();
+      projection?.coverage.clear();
       this.projection = projection;
     }
   }
@@ -1393,6 +1404,41 @@ export class TaskStore {
     const record = row ? this.record(row) : undefined;
     this.projection?.records.set(id, record);
     return record;
+  }
+
+  /** Coverage needs only task-row facts, never shape, delivery or execution payloads. */
+  coverageFields(id: string): TaskCoverageFields | undefined {
+    if (this.projection?.records.has(id)) return this.projection.records.get(id);
+    if (this.projection?.coverage.has(id)) return this.projection.coverage.get(id);
+    const row = prepared(
+      this.db,
+      `SELECT id, key, title, status, closed_reason, created_at, started_at FROM tasks WHERE id = ?`,
+    ).get(id) as
+      | Pick<Row, "id" | "key" | "title" | "status" | "closed_reason" | "created_at" | "started_at">
+      | undefined;
+    const fields = row
+      ? {
+          id: row.id,
+          key: row.key ?? "",
+          title: row.title,
+          status: row.status,
+          closedReason: row.closed_reason,
+          createdAt: row.created_at,
+          startedAt: row.started_at,
+        }
+      : undefined;
+    this.projection?.coverage.set(id, fields);
+    return fields;
+  }
+
+  /** Direct child identities in the same order as listChildren, without their payloads. */
+  childIds(parentId: string): string[] {
+    const rows = prepared(this.db, "SELECT id, created_at, seq FROM tasks WHERE parent_id = ?").all(
+      parentId,
+    ) as Pick<Row, "id" | "created_at" | "seq">[];
+    return rows
+      .sort((a, b) => a.created_at - b.created_at || (a.seq ?? 0) - (b.seq ?? 0))
+      .map((row) => row.id);
   }
 
   byKey(key: string): TaskRecord | undefined {

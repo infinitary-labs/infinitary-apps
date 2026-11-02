@@ -140,6 +140,7 @@ import {
   type PendingSettleIntent,
   type TaskActivity,
   type TaskClosedReason,
+  type TaskCoverageFields,
   type TaskDelivery,
   type TaskGate,
   type TaskKind,
@@ -1441,20 +1442,20 @@ export class TaskService {
   askCoverage(
     askIds: readonly string[],
     before?: number,
-  ): { work: TaskRecord[]; acted: Set<string> } {
+  ): { work: TaskCoverageFields[]; acted: Set<string> } {
     const attributions = this.events.askAttributions(askIds);
     const attached = [...new Set(attributions.map((entry) => entry.taskId))];
     const authored = new Set(
       attributions.filter((entry) => entry.via?.startsWith("tool:")).map((entry) => entry.taskId),
     );
     const acted = new Set(attached.filter((taskId) => authored.has(taskId)));
-    const found = new Map<string, TaskRecord>();
+    const found = new Map<string, TaskCoverageFields>();
     const queue = [...attached];
     const seeds = new Set(attached);
     while (queue.length > 0) {
       const id = queue.shift() as string;
       if (found.has(id)) continue;
-      const record = this.store.get(id);
+      const record = this.store.coverageFields(id);
       if (!record) continue;
       if (before !== undefined && !seeds.has(id) && record.createdAt > before) continue;
       found.set(id, record);
@@ -1464,12 +1465,12 @@ export class TaskService {
   }
 
   /** The tasks that carry a task's work on: its parts, what builds on it and its handovers. */
-  private workAfter(record: TaskRecord): string[] {
+  private workAfter(record: Pick<TaskRecord, "id" | "key">): string[] {
     const known = this.projection?.workAfter.get(record.id);
     if (known) return known;
     const key = record.key || null;
     const next = [
-      ...this.store.listChildren(record.id).map((child) => child.id),
+      ...this.store.childIds(record.id),
       ...this.links.listFrom(record.id, "replaced-by").map((link) => link.toId),
       ...(["basis", "retry-of", "branch-source"] as const).flatMap((kind) =>
         this.references.taskIdsNaming(kind, record.id, key),
@@ -1687,7 +1688,7 @@ export class TaskService {
   }
 
   /** Closed = no longer open or active: done or dropped. */
-  static isClosed(record: TaskRecord): boolean {
+  static isClosed(record: Pick<TaskRecord, "status">): boolean {
     return record.status !== "open" && record.status !== "active";
   }
 

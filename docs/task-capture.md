@@ -105,7 +105,10 @@ What piece 2's migration adds to `captain_asks`: `followed` (every message saved
 - **Its work.**
   The tasks the message attached to, and every task that carries their work on: parts, builds on a plan (`basis`), retries, branches taken from them, replacements (`replaced-by`) and a stronger model (`escalated_to`), walked by `TaskService.askCoverage`, which reads each message's tasks once for the whole chain.
   Attribution and escalation edges are read as typed metadata, without decoding each task's entire timeline.
-  One `openChains` read shares task records and successor edges across its roots; these facts are discarded after the synchronous read and invalidated by task writes.
+  Coverage reads only task identity, title, status, close reason and creation/start times from the task row, and child identities in their existing order, without composing specifications, shapes, execution or delivery payloads.
+  One `openChains` read shares these task fields and successor edges across its roots; these facts are discarded after the synchronous read and invalidated by task writes, including rollback.
+  A cold card dismissal or choice uses the same narrow readers without needing a board read to prime them; acceptance still uses the complete batched message membership.
+  A terminal answer-task choice still reads its own task's shape for eligibility; it does not compose the other covered tasks.
   The message's own work is the part of it the first mate's tools acted on for the message (`acted` on the same read), and anything filed or started after it; a task the message only pointed at, such as the card it was typed under, which nobody acted on since, is not working on it.
 - **Joining.**
   A message about open work of an earlier message that has not ended joins it (`continues`), set once when it first attaches; the earliest is the root, and the root with every message that joined it ends together.

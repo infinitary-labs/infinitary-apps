@@ -1,6 +1,6 @@
 import { type Card, settleEffectOf } from "@shared/cards";
 import type { AskRecord } from "../storage/askStore";
-import type { TaskRecord } from "../storage/taskStore";
+import type { TaskCoverageFields } from "../storage/taskStore";
 import { TaskService } from "../tasks/taskService";
 import { actionTookEffect } from "./answerDelivery";
 import { answerTaskChoice } from "./answerTaskResponse";
@@ -37,7 +37,7 @@ export type AskChain = {
   ids: string[];
   /** When the newest message of the chain was sent. */
   newestAt: number;
-  work: TaskRecord[];
+  work: TaskCoverageFields[];
   /** The tasks of `work` the first mate's own tools attached the chain's messages to. */
   acted: ReadonlySet<string>;
 };
@@ -201,7 +201,7 @@ export class AskEnding {
    * on its card that started work). A task the message only pointed at
    * (its card or panel), which nobody acted on since, is not its work.
    */
-  ownWork(chain: AskChain): TaskRecord[] {
+  ownWork(chain: AskChain): TaskCoverageFields[] {
     return chain.work.filter(
       (task) =>
         chain.acted.has(task.id) || Math.max(task.createdAt, task.startedAt ?? 0) > chain.root.at,

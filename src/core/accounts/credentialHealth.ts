@@ -12,7 +12,7 @@ import { isClientIssueReason } from "@shared/claudeClient";
  *      +--read/probe/parse failure--> degraded(reason) --remedy--> healthy
  *      +--vendor rejection--> renewing --survived--> needs_reauth
  *                                    +--recovered--> healthy
- *   refresh-token lapsed --> needs_reauth
+ *   refresh-token refused --> needs_reauth
  *
  * `unsigned` is the honest empty-store state (first-run, logged out). It is
  * not a failure and not a re-auth: nothing to heal. `renewing` is a
@@ -26,7 +26,7 @@ import { isClientIssueReason } from "@shared/claudeClient";
  *    before anything reaches a surface.
  * 3. Unknown is never absent, and a no-UI / no-interaction failure is
  *    never a "no" / sign-out.
- * 4. Escalate to needs_reauth ONLY from proof: a lapsed refresh token, or a
+ * 4. Escalate to needs_reauth ONLY from proof: a provider-refused refresh token, or a
  *    401 that survived a real renewal.
  * 5. The terminal state is first-class, visible, and one-step recoverable.
  *

@@ -22,6 +22,7 @@ import {
   clearClaudeCredentialCache,
   clearKeychainLock,
   isKeychainLocked,
+  readClaudeCredentialEvidence,
   resolveClaudeQuotaAuthResult,
 } from "./claudeQuota";
 import { resetStoreLeasesForTest } from "./claudeStoreLease";
@@ -238,15 +239,15 @@ describe("ClaudeAuthBackend", () => {
     expect(CLAUDE_LOGIN_UNREADABLE_TEXT).not.toMatch(/harness|keychain|cli|claude code/i);
   });
 
-  it("signs in again over a login whose refresh token has lapsed", async () => {
+  it("signs in again when the saved login is absent and the client confirms it", async () => {
     const client = fakeClient();
     const store = accountDir("lapsed");
     const backend = new ClaudeAuthBackend({
       run: client.run,
       available: () => true,
-      // Local proof the client cannot get itself back: the re-auth is real.
+      // Absence plus the client’s signed-out answer permits a new login.
       evidence: async (dir) =>
-        existsSync(join(dir, "credential")) ? { state: "live" } : { state: "unrenewable" },
+        existsSync(join(dir, "credential")) ? { state: "live" } : { state: "absent" },
       primeKeychain: async () => {},
       configDir: () => store,
     });
@@ -621,13 +622,18 @@ describe("ClaudeAuthBackend", () => {
       configDir: () => store,
     });
     expect(await backend.health(accountRef(store))).toEqual({ state: "unsigned" });
-    const lapsed = new ClaudeAuthBackend({
+    // INF-2317: missing client cannot make a saved refresh date a sign-out.
+    writeFileSync(
+      join(store, ".credentials.json"),
+      JSON.stringify({ claudeAiOauth: { accessToken: "saved", refreshTokenExpiresAt: 1 } }),
+    );
+    const saved = new ClaudeAuthBackend({
       run: unspawnableClient,
       client: async () => ({ state: "missing" }),
-      evidence: async () => ({ state: "unrenewable" }),
+      evidence: (dir) => readClaudeCredentialEvidence(dir, { env: { HOME: store } }),
       configDir: () => store,
     });
-    expect((await lapsed.health(accountRef(store))).state).toBe("needs_reauth");
+    expect((await saved.health(accountRef(store))).state).toBe("degraded");
   });
 
   it("refuses to sign in with no client, in the sentence that says what to do", async () => {
@@ -733,22 +739,27 @@ describe("ClaudeAuthBackend", () => {
     expect(health.reason).toBe("unknown");
   });
 
-  it("asks for a sign-in only when the credential is really gone or past renewal", async () => {
+  it("asks for a sign-in when the credential is really gone", async () => {
     const gone = new ClaudeAuthBackend({
       run: unspawnableClient,
       available: () => true,
       evidence: async () => ({ state: "absent" }),
     });
-    const lapsed = new ClaudeAuthBackend({
+    // INF-2317: a saved credential with an old date remains connected.
+    const store = accountDir("saved-expired-date");
+    writeFileSync(
+      join(store, ".credentials.json"),
+      JSON.stringify({ claudeAiOauth: { accessToken: "saved", refreshTokenExpiresAt: 1 } }),
+    );
+    const saved = new ClaudeAuthBackend({
       run: unspawnableClient,
       available: () => true,
-      evidence: async () => ({ state: "unrenewable" }),
+      evidence: (dir) => readClaudeCredentialEvidence(dir, { env: { HOME: store } }),
+      configDir: () => store,
     });
     const ref = { providerId: CLAUDE_PROVIDER_ID, accountId: "acct_x", dir: accountDir("gone") };
-
     expect((await gone.status(ref)).connected).toBe(false);
-    expect((await lapsed.status(ref)).connected).toBe(false);
-    expect((await lapsed.status(ref)).reason).toBe("unrenewable");
+    expect((await saved.status(ref)).connected).toBe(true);
   });
 
   it("creates the default config directory 0700 if the client has not yet", async () => {

@@ -626,7 +626,8 @@ process.exit(run.status ?? 0);
     );
     app = await launchApp({
       userDataDir,
-      prepareHome: seedClaudeHome("expired-token", Date.now() - 3600_000),
+      // INF-2317: even both saved dates passing must reach rejection and renewal.
+      prepareHome: seedClaudeHome("expired-token", Date.now() - 3600_000, Date.now() - 1000),
       env: {
         INFINITARY_CLAUDE_USAGE_URL: stub.url,
         INFINITARY_CLAUDE_CLI: join(binDir, "renewing-claude.mjs"),
@@ -650,7 +651,8 @@ process.exit(run.status ?? 0);
     expect(claudeRow).toMatchObject({ status: "ok", reason: "renewal_succeeded" });
   });
 
-  test("a lapsed refresh token is needs_reauth: card, CTA, and no vendor call", async () => {
+  test("INF-2317: a passed refresh date still reads the allowance without a sign-in", async () => {
+    // Captain's approved expiry fix: Anthropic, not the saved date, decides.
     const userDataDir = scratchDir("infinitary-e2e-");
     stub = await startStubUsage(["lapsed-token"]);
     seedAccounts(userDataDir);
@@ -662,37 +664,21 @@ process.exit(run.status ?? 0);
         INFINITARY_CLAUDE_CLI: writeMockClaudeClient(join(userDataDir, "bin")),
       },
     });
-
-    await expect
-      .poll(async () =>
-        app?.page.evaluate(async () => {
-          const cards = await window.infinitary.cards.list();
-          return cards.map((card) => ({
-            title: card.title,
-            effects: card.actions.map((action) => action.effect),
-          }));
-        }),
-      )
-      .toContainEqual(
-        expect.objectContaining({
-          title: needsReauthCopy("Claude", "Personal"),
-          // The one-step restore is the host's own effect, carrying the
-          // account (cards/tasks/agents P1: the id is a name).
-          effects: [{ kind: "host", op: "restore-account", arg: "acct_claude_live" }],
-        }),
-      );
-    await expect(app.page.getByRole("button", { name: "Sign in" })).toBeVisible();
-
     await openSubscriptions(app);
     const row = accountRow(app, CLAUDE_PERSONAL);
-    await expect(row.getByText(EMPTY_QUOTA_TEXT.signInAgain)).toBeVisible({
+    await expect(row.getByText(claudeWindowLabel("five_hour"), { exact: true })).toBeVisible({
       timeout: 20_000,
     });
-    await expect(row.getByRole("button", { name: "Sign in" })).toBeVisible();
+    await expect(row.getByText(EMPTY_QUOTA_TEXT.signInAgain)).toHaveCount(0);
+    await expect(row.getByRole("button", { name: "Sign in", exact: true })).toHaveCount(0);
     await expect(row.getByText(CLAUDE_FIRST_RUN_TEXT)).toHaveCount(0);
-    expect(stub.seen).toEqual([]);
-    const claudeRow = readNewestSnapshotRow(userDataDir, "claude");
-    expect(claudeRow).toMatchObject({ status: "auth_required", reason: "refresh_token_lapsed" });
+    expect(stub.seen).toContain("lapsed-token");
+    expect(readNewestSnapshotRow(userDataDir, "claude")).toMatchObject({ status: "ok" });
+    expect(
+      await app.page.evaluate(async () =>
+        (await window.infinitary.cards.list()).map((card) => card.title),
+      ),
+    ).not.toContain(needsReauthCopy("Claude", "Personal"));
   });
 
   test("a vendor that stays down never invents a reading and never claims a sign-out", async () => {

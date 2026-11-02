@@ -207,7 +207,8 @@ async function fetchOneAccount(
   };
   const first = await attempt(account, options, managed, now);
   if (first.status !== "auth_required") return answered(first);
-  // A lapsed refresh token is already the proof: no renewal can replace it.
+  // A provider-refused Pi/Copilot sign-in is already proof. Claude saved
+  // dates never produce this reason.
   if (first.reason === REFRESH_TOKEN_LAPSED) return answered(first);
   if (!auth.renew) return answered(first);
 

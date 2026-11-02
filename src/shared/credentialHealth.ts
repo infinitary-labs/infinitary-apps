@@ -3,10 +3,10 @@
  * only from proof, sticky until a sign-in, and one-step recoverable.
  *
  * `auth_required` on a quota row IS that state. The two proofs that may set
- * it: a lapsed refresh token (`refresh_token_lapsed`) or a vendor rejection
+ * it: a provider-refused refresh token (`refresh_token_lapsed`) or a vendor rejection
  * that survived a real renewal (`rejected_after_renewal`). Nothing else -
  * a transient failure, a no-interactive-session block, an unreadable store -
- * may ever say "sign in again".
+ * may ever say "sign in again". A saved Claude expiry date is not proof.
  *
  * The provider-agnostic framework behind this (health/renew seam, proactive
  * renew at expiresAt-lead, five-rule contract) lives in

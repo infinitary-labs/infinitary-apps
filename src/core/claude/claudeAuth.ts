@@ -3,7 +3,6 @@ import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import type { MachineLoginOutcome } from "@shared/accounts";
 import { CLAUDE_CHIP_INSTALL_NOTE, CLAUDE_CLIENT_MISSING_TEXT } from "@shared/claudeClient";
-import { REFRESH_TOKEN_LAPSED } from "@shared/credentialHealth";
 import { HERE } from "@shared/deviceNames";
 import {
   type AccountBackend,
@@ -280,7 +279,6 @@ export class ClaudeAuthBackend implements AccountBackend {
     const again = await this.evidence(dir);
     if (again.state === "live") return "adopt";
     if (again.state === "unknown") return "refuse";
-    if (again.state === "unrenewable") return "login";
     if (again.state === "absent" && word?.connected === false) return "login";
     return "refuse";
   }
@@ -655,13 +653,6 @@ export class ClaudeAuthBackend implements AccountBackend {
       };
     }
 
-    // A file-only peek of a stale sidecar must not override live Keychain
-    // evidence. A lapsed reading both stores agree on is still needs_reauth.
-    const staleSidecar = evidence.state === "live" && peek?.kind === "unrenewable";
-    if (!staleSidecar && (evidence.state === "unrenewable" || peek?.kind === "unrenewable")) {
-      return { state: "needs_reauth", reason: REFRESH_TOKEN_LAPSED, authType: "oauth" };
-    }
-
     if (evidence.state === "live") {
       const identity = identityOf(evidence.label).identity;
       const expiresAt = peek?.kind === "resolved" ? peek.expiresAt : undefined;
@@ -699,10 +690,7 @@ export class ClaudeAuthBackend implements AccountBackend {
     dir: string,
     fileOnly: boolean,
   ): Promise<
-    | { kind: "resolved"; expiresAt?: number }
-    | { kind: "unrenewable" }
-    | { kind: "blocked"; reason: string }
-    | undefined
+    { kind: "resolved"; expiresAt?: number } | { kind: "blocked"; reason: string } | undefined
   > {
     try {
       const result: ClaudeQuotaAuthResult = await resolveClaudeQuotaAuthResult(dir, {
@@ -715,7 +703,6 @@ export class ClaudeAuthBackend implements AccountBackend {
         ...(fileOnly ? { fileOnly: true } : {}),
         now: this.now,
       });
-      if (result.status === "unrenewable") return { kind: "unrenewable" };
       if (result.status === "resolved") {
         return { kind: "resolved", expiresAt: result.auth.expiresAt };
       }

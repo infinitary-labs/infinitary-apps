@@ -42,12 +42,6 @@ export type ClaudeQuotaAuth = {
   accessToken: string;
   /** Advisory only: the vendor's 401 is the definitive expiry signal. */
   expiresAt?: number;
-  /**
-   * When the refresh token itself lapses. This is the one local fact that
-   * separates "needs renewing" from "really signed out" - an access token
-   * past `expiresAt` is renewable and is NOT a sign-out.
-   */
-  refreshTokenExpiresAt?: number;
 };
 
 /**
@@ -57,10 +51,8 @@ export type ClaudeQuotaAuth = {
  * `unknown` must never be reported as a sign-out.
  */
 export type ClaudeCredentialEvidence =
-  /** A credential is there and still renewable. */
+  /** A credential is there; saved dates cannot prove a sign-out. */
   | { state: "live"; label?: string }
-  /** A credential is there but its refresh token has lapsed: a real re-auth. */
-  | { state: "unrenewable" }
   /** This store holds no credential - what `auth logout` leaves behind. */
   | { state: "absent" }
   /** The store could not be read. Not evidence of anything. */
@@ -69,19 +61,13 @@ export type ClaudeCredentialEvidence =
 /**
  * What `resolveClaudeQuotaAuthResult` established. `locked` is the CL-C
  * case: the item is there, the VALUE read was refused, and the meter must
- * say so rather than look like an empty store. `unrenewable` is local proof
- * the refresh token has lapsed (CD-3): a real re-auth, never a retry.
+ * say so rather than look like an empty store. Saved expiry dates never
+ * establish a sign-out; the vendor or the client must answer.
  */
 export type ClaudeQuotaAuthResult =
   | { status: "resolved"; auth: ClaudeQuotaAuth }
-  | { status: "unrenewable" }
   | { status: "locked"; reason: KeychainValueFailure }
   | { status: "unavailable"; reason?: KeychainValueFailure };
-
-/** Local proof the refresh token itself has lapsed: the client cannot recover. */
-export function isRefreshTokenLapsed(auth: ClaudeQuotaAuth, now: number): boolean {
-  return auth.refreshTokenExpiresAt !== undefined && auth.refreshTokenExpiresAt <= now;
-}
 
 /** errSecItemNotFound as `security(1)` used to report it - residual classifier. */
 const SEC_ITEM_NOT_FOUND_CLI = 44;
@@ -314,12 +300,9 @@ function parseCredentials(raw: string): ClaudeQuotaAuth | undefined {
   const accessToken = typeof record.accessToken === "string" ? record.accessToken : undefined;
   if (!accessToken) return undefined;
   const expiresAt = typeof record.expiresAt === "number" ? record.expiresAt : undefined;
-  const refreshTokenExpiresAt =
-    typeof record.refreshTokenExpiresAt === "number" ? record.refreshTokenExpiresAt : undefined;
   return {
     accessToken,
     ...(expiresAt !== undefined ? { expiresAt } : {}),
-    ...(refreshTokenExpiresAt !== undefined ? { refreshTokenExpiresAt } : {}),
   };
 }
 
@@ -617,18 +600,16 @@ export async function resolveClaudeQuotaAuthResult(
   const fromFile = fileAuth(await readCredentialsFile(configDir));
   // The Keychain read is the one that can raise the macOS ask, so it is only
   // reached when it can change the answer: the file is missing, the file is
-  // KNOWN expired or unrenewable (so it may be the stale sidecar), or the
+  // past its access expiry (so it may be the stale sidecar), or the
   // caller wants the authoritative store (sign-in prime, or the vendor just
   // rejected what we sent).
   const fileMayBeCurrent =
-    fromFile !== undefined &&
-    !isRefreshTokenLapsed(fromFile, at) &&
-    (fromFile.expiresAt === undefined || fromFile.expiresAt > at);
+    fromFile !== undefined && (fromFile.expiresAt === undefined || fromFile.expiresAt > at);
   if (fromFile && fileMayBeCurrent && !options.preferKeychain) {
-    return concludeClaudeAuth(fromFile, at);
+    return { status: "resolved", auth: fromFile };
   }
   if (options.fileOnly) {
-    return fromFile ? concludeClaudeAuth(fromFile, at) : { status: "unavailable" };
+    return fromFile ? { status: "resolved", auth: fromFile } : { status: "unavailable" };
   }
   const fromKeychain = await readKeychain({
     configDir,
@@ -644,8 +625,8 @@ export async function resolveClaudeQuotaAuthResult(
   });
   if (fromKeychain.kind === "locked") {
     // A live sidecar still works; a locked Keychain next to nothing is the
-    // meter failure, not an empty store. A lapsed sidecar is still proof.
-    if (fromFile) return concludeClaudeAuth(fromFile, at);
+    // meter failure, not an empty store. An expired sidecar can still work.
+    if (fromFile) return { status: "resolved", auth: fromFile };
     // A blocked session is not a held lock: the next tick can succeed.
     if (!holdKeychainLock(fromKeychain.reason)) {
       return { status: "unavailable", reason: fromKeychain.reason };
@@ -653,21 +634,11 @@ export async function resolveClaudeQuotaAuthResult(
     return { status: "locked", reason: fromKeychain.reason };
   }
   if (fromKeychain.kind === "absent") {
-    return fromFile ? concludeClaudeAuth(fromFile, at) : { status: "unavailable" };
+    return fromFile ? { status: "resolved", auth: fromFile } : { status: "unavailable" };
   }
-  if (!fromFile) return concludeClaudeAuth(fromKeychain.auth, at);
+  if (!fromFile) return { status: "resolved", auth: fromKeychain.auth };
   const auth =
     (fromKeychain.auth.expiresAt ?? 0) >= (fromFile.expiresAt ?? 0) ? fromKeychain.auth : fromFile;
-  return concludeClaudeAuth(auth, at);
-}
-
-/**
- * A resolved credential whose refresh token has lapsed is local proof of
- * needs_reauth: do not hand it to the vendor and do not treat it as a
- * retryable miss.
- */
-function concludeClaudeAuth(auth: ClaudeQuotaAuth, now: number): ClaudeQuotaAuthResult {
-  if (isRefreshTokenLapsed(auth, now)) return { status: "unrenewable" };
   return { status: "resolved", auth };
 }
 
@@ -898,13 +869,6 @@ async function readAccountIdentity(
   return identity?.label ? { label: identity.label } : undefined;
 }
 
-function evidenceFrom(auth: ClaudeQuotaAuth, now: number): ClaudeCredentialEvidence {
-  // An expired ACCESS token is renewable and says nothing about sign-in; only
-  // a lapsed refresh token means the client can no longer get itself back.
-  if (isRefreshTokenLapsed(auth, now)) return { state: "unrenewable" };
-  return { state: "live" };
-}
-
 /**
  * The default login's stamp (the cut-off contract, docs/quota.md "Typed
  * cut-offs"), from attributes only: which login the account config names
@@ -956,8 +920,8 @@ export async function readClaudeCredentialStamp(
  * "not connected" into a red badge, a sign-in card, and the removal of every
  * one of the provider's models from the routing pool. Absence of evidence
  * gets its own state so it can never be reported as a sign-out. A file that
- * cannot be read is that unknown state, not a miss, and a lapsed file does
- * not hide a present Keychain item.
+ * cannot be read is that unknown state, not a miss.
+ * Neither saved access nor refresh expiry proves a sign-out.
  */
 export async function readClaudeCredentialEvidence(
   configDir: string,
@@ -965,18 +929,11 @@ export async function readClaudeCredentialEvidence(
 ): Promise<ClaudeCredentialEvidence> {
   const keychain = options.keychain ?? absentKeychain;
   const env = options.env ?? process.env;
-  const now = (options.now ?? (() => Date.now()))();
 
   const file = await readCredentialsFile(configDir);
   const identity = readAccountIdentity(configDir, env);
   if (file.kind === "auth") {
-    const evidence = evidenceFrom(file.auth, now);
-    if (evidence.state === "live") return { ...evidence, ...(await identity) };
-    // A lapsed file can be a stale sidecar. The Keychain item, by attribute
-    // only, is the authoritative store; its presence is a live login.
-    const keychainEvidence = await readKeychainEvidence(keychain, env, identity);
-    if (keychainEvidence === "absent") return evidence;
-    return keychainEvidence;
+    return { state: "live", ...(await identity) };
   }
   if (file.kind === "unreadable") {
     const keychainEvidence = await readKeychainEvidence(keychain, env, identity);

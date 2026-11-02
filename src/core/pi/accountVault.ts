@@ -290,7 +290,6 @@ export class AccountVault {
           label: account.label,
           enabled: account.enabled,
           connected: status.connected,
-          ...(status.reason === "unrenewable" ? { needsReauth: true } : {}),
           pinned: this.registry.pins[account.providerId] === account.id,
           createdAt: account.createdAt,
           ...(account.lastConnectedAt ? { lastConnectedAt: account.lastConnectedAt } : {}),

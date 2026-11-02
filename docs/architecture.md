@@ -664,7 +664,7 @@ Spec: `fm3000-claude-meter-stale-refresh-s1` §11.2.
   `CredentialHealth` never carries a secret; a caller that needs the fresh credential re-resolves.
   Claude's delegated ladder lives in `ClaudeAuthBackend.renew`; Pi declares that resolve-is-renewal (`getAuth`); a backend with no unattended mechanism answers `unsupported` (spec §11.3).
   `fetchQuota`'s `auth.renew` is one caller of the same method (the reactive 401 path), not its owner.
-- **Five-rule contract** (`src/core/accounts/credentialHealth.ts`): (1) sign in once - extra grants at connect; (2) self-heal invisibly; (3) unknown is never absent, and a no-UI / no-interaction failure is never a sign-out; (4) `needs_reauth` only from proof (lapsed refresh token, or a 401 that survived a real renewal); (5) the terminal state is first-class, visible, one-step recoverable (CD-3=A card + Subscriptions CTA).
+- **Five-rule contract** (`src/core/accounts/credentialHealth.ts`): (1) sign in once - extra grants at connect; (2) self-heal invisibly; (3) unknown is never absent, and a no-UI / no-interaction failure is never a sign-out; (4) `needs_reauth` only from proof (provider-refused refresh token, or a 401 that survived a real renewal); (5) the terminal state is first-class, visible, one-step recoverable (CD-3=A card + Subscriptions CTA).
 - **Loop.**
   `CredentialHealthService` rides the supervisor's existing 60s tick (`onWatchdogTick`), a fourth rider beside the quiet watchdog, R1 gates, and the inbox ladder.
   Per enabled account: read health, renew at `expiresAt - lead` (10 min) before the vendor 401, bound retries (3), never fabricate healthy on a failed renew.
@@ -903,7 +903,7 @@ Moved verbatim from `AGENTS.md` on 2026-09-24; `AGENTS.md` keeps a one-line poin
   `status()` is a projection of health.
   Pi's `getAuth` is resolve-is-renewal; Claude's delegated ladder lives in `ClaudeAuthBackend.renew`.
   `CredentialHealthService` rides the supervisor's 60s tick and renews at `expiresAt - lead` *before* the vendor 401; `fetchQuota`'s `auth.renew` is the reactive 401 caller of the same method.
-  Five-rule contract in `src/core/accounts/credentialHealth.ts`: sign in once; self-heal invisibly; unknown is never absent and a no-UI failure is never a sign-out; `needs_reauth` only from proof (lapsed refresh or a 401 that survived a real renewal); the terminal state is first-class and one-step recoverable.
+  Five-rule contract in `src/core/accounts/credentialHealth.ts`: sign in once; self-heal invisibly; unknown is never absent and a no-UI failure is never a sign-out; `needs_reauth` only from proof (provider-refused refresh or a 401 that survived a real renewal); the terminal state is first-class and one-step recoverable.
   A renew failure degrades honestly, never fabricates health.
   Do not add a second renewer.
 - Every Pi API touchpoint stays behind `src/core/pi/` (Biome `noRestrictedImports` enforces it).

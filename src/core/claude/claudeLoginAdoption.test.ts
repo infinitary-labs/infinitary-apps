@@ -190,7 +190,7 @@ describe("Claude connect adopts a usable default login", () => {
     ).toEqual({ state: "unknown" });
   });
 
-  it("still starts a sign-in when the refresh token has lapsed in both stores", async () => {
+  it("INF-2317: adopts the saved sign-in despite its passed refresh date", async () => {
     const { dir, env } = home();
     lapsedFile(dir);
     const calls: string[][] = [];
@@ -209,11 +209,11 @@ describe("Claude connect adopts a usable default login", () => {
     };
     expect(
       await readClaudeCredentialEvidence(dir, { keychain: keychain({ kind: "absent" }), env }),
-    ).toEqual({ state: "unrenewable" });
+    ).toEqual({ state: "live" });
 
     await loginOf(backendFor(dir, env, keychain({ kind: "absent" }), run), bridge());
-    expect(calls.some((args) => args[1] === "login")).toBe(true);
-    expect(calls[0]).toEqual(["auth", "status", "--json"]);
+    expect(calls.some((args) => args[1] === "login")).toBe(false);
+    expect(calls).toEqual([]);
   });
 
   it("does not start a sign-in when the store becomes unreadable while it waits", async () => {

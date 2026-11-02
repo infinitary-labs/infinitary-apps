@@ -1018,7 +1018,7 @@ describe("readClaudeCredentialEvidence", () => {
     expect(evidence).toEqual({ state: "live" });
   });
 
-  it("calls a lapsed REFRESH token unrenewable: only that is a real re-auth", async () => {
+  it("INF-2317: ignores a passed refresh date even with expired access", async () => {
     const dir = storeDir();
     writeFileSync(
       join(dir, ".credentials.json"),
@@ -1028,18 +1028,19 @@ describe("readClaudeCredentialEvidence", () => {
     );
     const evidence = await readClaudeCredentialEvidence(dir, {
       keychain: fakeKeychain({ find: { kind: "absent" } }),
+      env: { HOME: dir },
       now: () => 5_000,
     });
-    expect(evidence).toEqual({ state: "unrenewable" });
+    expect(evidence).toEqual({ state: "live" });
     expect(
       await resolveClaudeQuotaAuthResult(dir, {
         keychain: fakeKeychain({}),
         now: () => 5_000,
       }),
-    ).toEqual({ status: "unrenewable" });
+    ).toEqual({ status: "resolved", auth: { accessToken: "tok", expiresAt: 1_000 } });
   });
 
-  it("a still-live access token with a lapsed refresh is unrenewable, not handed to the vendor", async () => {
+  it("INF-2317: resolves live access despite a passed refresh date", async () => {
     const dir = storeDir();
     writeFileSync(
       join(dir, ".credentials.json"),
@@ -1056,10 +1057,37 @@ describe("readClaudeCredentialEvidence", () => {
         keychain: fakeKeychain({}),
         now: () => 5_000,
       }),
-    ).toEqual({ status: "unrenewable" });
+    ).toEqual({ status: "resolved", auth: { accessToken: "tok", expiresAt: 9_000 } });
     expect(
       await resolveClaudeQuotaAuth(dir, { keychain: fakeKeychain({}), now: () => 5_000 }),
-    ).toBeUndefined();
+    ).toEqual({ accessToken: "tok", expiresAt: 9_000 });
+  });
+
+  it("INF-2317: a Keychain-only login with a passed refresh date remains usable", async () => {
+    const { home, dir } = storeWithHomeIdentity("account-1");
+    const keychain = fakeKeychain({
+      read: {
+        kind: "value",
+        value: JSON.stringify({
+          claudeAiOauth: {
+            accessToken: "saved-token",
+            expiresAt: 9_000,
+            refreshTokenExpiresAt: 2_000,
+          },
+        }),
+      },
+    });
+    expect(
+      await resolveClaudeQuotaAuthResult(dir, {
+        keychain,
+        env: { HOME: home, USER: "test" },
+        now: () => 5_000,
+      }),
+    ).toEqual({ status: "resolved", auth: { accessToken: "saved-token", expiresAt: 9_000 } });
+    expect(keychain.reads).toHaveLength(1);
+    expect(await readClaudeCredentialEvidence(dir, { keychain, env: { HOME: home } })).toEqual({
+      state: "live",
+    });
   });
 
   it("reads the Keychain by attribute only - presence, never the value", async () => {

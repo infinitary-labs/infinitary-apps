@@ -64,9 +64,9 @@ Moved verbatim from `AGENTS.md` on 2026-09-24; `AGENTS.md` keeps a one-line poin
     Any future vendored binary needs the same treatment.
   - **The machine's default Claude login is the authority on whether it is signed in, not the client probe.**
     Every way a spawned third-party binary can fail looks identical to `loggedIn: false`, and the vault turns that into a red badge, a sign-in card AND the removal of every one of the provider's models from the routing pool (`availableModelsByAccount` gates non-Pi backends on `connected === true`).
-    So `ClaudeAuthBackend.status` falls back to `readClaudeCredentialEvidence` (`claudeQuota.ts` - file parse in `~/.claude`, else a host Keychain ATTRIBUTE probe of the bare `Claude Code-credentials` item that never spends the one macOS ask): only an absent credential or a lapsed *refresh* token is a sign-out.
-    A file that cannot be read is not absent, and a lapsed file does not hide a present Keychain item.
-    A client that answers signed in is a login, including over that lapsed file.
+    So `ClaudeAuthBackend.status` falls back to `readClaudeCredentialEvidence` (`claudeQuota.ts` - file parse in `~/.claude`, else a host Keychain ATTRIBUTE probe of the bare `Claude Code-credentials` item that never spends the one macOS ask): only an absent credential is a sign-out; saved access and refresh expiry dates never establish one.
+    A file that cannot be read is not absent.
+    A client that answers signed in is a login, including over an expired file.
     Connect asks the client before it treats a lookup miss as a sign-out, on the store lease it already holds, and reads the store again after the wait.
     An expired access token is renewable, and an unreadable store is `unknown`, never a sign-out.
 - **A crewmate's tools come from one spec (primitives P7, contract v4.12).**

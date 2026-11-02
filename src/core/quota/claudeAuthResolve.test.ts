@@ -1,4 +1,3 @@
-import { REFRESH_TOKEN_LAPSED } from "@shared/credentialHealth";
 import { KEYCHAIN_VALUE_FAILURE_DETAIL } from "@shared/quota";
 import { describe, expect, it } from "vitest";
 import { managedFromClaudeAuthResult } from "./claudeAuthResolve";
@@ -13,10 +12,13 @@ describe("managedFromClaudeAuthResult", () => {
     ).toEqual({ managed: { apiKey: "tok", usingOAuth: true } });
   });
 
-  it("a lapsed refresh token is needs_reauth proof, never a retryable miss", () => {
-    expect(managedFromClaudeAuthResult({ status: "unrenewable" })).toEqual({
-      unresolved: { status: "auth_required", windows: [], reason: REFRESH_TOKEN_LAPSED },
-    });
+  it("INF-2317: hands an expired access credential to the sensor, not a local sign-out", () => {
+    expect(
+      managedFromClaudeAuthResult({
+        status: "resolved",
+        auth: { accessToken: "tok", expiresAt: 1 },
+      }),
+    ).toEqual({ managed: { apiKey: "tok", usingOAuth: true } });
   });
 
   it("a Keychain decline stays retryable", () => {

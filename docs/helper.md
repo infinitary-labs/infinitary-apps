@@ -579,6 +579,7 @@ A home opens one for a task whose record names this computer (`task_execution.de
   Its `PlacedSession` (`src/core/placed/placedSession.ts`) drives the conversation by orders and answers what a session answers at once - its model, its record, whether a turn runs - from the state the computer last sent.
   It presents `backgroundWork: "client"`, since that computer's jobs are out of this Mac's sight: its background-work count stands in for the job list, as for Claude here.
   For Pi, the computer's `JobManager.onChange` publishes each open conversation's own running job count through `background_work_changed`, on each count change and whenever the home opens that conversation, including zero when no job runs.
+  That count can reach the home before the computer answers the open; the home then asks for the conversation (`adoptPlaced`), and that ask joins the open already under way rather than opening a second conversation over it (`CrewSupervisor.resumeTask`).
   While the count is above zero it names the conversation's longest-running job, its id and command (`job`), and a change of that job is sent too.
   The home reads that count for the hover, Tasks dot and idle ladder's bounded job witness; Claude keeps reporting its client's own count, never the computer's Pi shell count.
   Its words about the job - the check-back ask, the job bound's wake, a timed wait's end and the crew line - name the command; work no one named, from a computer built before it sends one or a Claude client there, is named by that computer's name, never as a Claude client's.

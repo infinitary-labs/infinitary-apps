@@ -1564,6 +1564,8 @@ export class CrewSupervisor {
   private readonly starting = new Set<string>();
   /** Tasks moving to another provider now (INF-849). */
   private readonly moving = new Set<string>();
+  /** Each task's conversation opening here now (`resumeTask`), which a plain resume joins. */
+  private readonly resuming = new Map<string, Promise<TaskRuntime>>();
   /** Tasks whose move to another computer is being carried out now (`runComputerMove`). */
   private readonly computerMoving = new Set<string>();
   /** Tasks whose moved-off or unfinished copy is being removed now (`retireMovedSource`, `undoMovedDestination`). */
@@ -8461,9 +8463,28 @@ export class CrewSupervisor {
    * conversation when the new backend can reopen it. With `restart`, a new
    * conversation opens instead, told why and where the earlier one is: a
    * task that moved to another computer (docs/helper.md, "Moving a started
-   * task").
+   * task"). A plain resume while the task's conversation is opening joins
+   * that open rather than opening a second conversation over it: a computer
+   * that runs work can ask for the conversation (`adoptPlaced`) before it
+   * has answered the open a move or a wake asked of it.
    */
-  private async resumeTask(
+  private resumeTask(
+    taskId: string,
+    move?: MoveTarget,
+    restart?: CrewmateRestart,
+  ): Promise<TaskRuntime> {
+    const opening = this.resuming.get(taskId);
+    if (opening && !move && !restart) return opening;
+    const resuming = this.openResumed(taskId, move, restart);
+    this.resuming.set(taskId, resuming);
+    const opened = () => {
+      if (this.resuming.get(taskId) === resuming) this.resuming.delete(taskId);
+    };
+    resuming.then(opened, opened);
+    return resuming;
+  }
+
+  private async openResumed(
     taskId: string,
     move?: MoveTarget,
     restart?: CrewmateRestart,

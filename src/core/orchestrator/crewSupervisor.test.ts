@@ -29776,6 +29776,8 @@ describe("a started task moves to another computer (INF-1713, real git)", {
     options: {
       moveIn?: "fail" | "fail-after-copy" | "wait";
       bootFails?: boolean;
+      /** Runs while a conversation opens there, before that computer answers. */
+      opening?: () => void;
       install?: () => Promise<DependencyInstall>;
       retire?: () => Promise<void>;
       browser?: { current: TaskBrowserFact | undefined; withCaptain?: boolean };
@@ -29803,7 +29805,9 @@ describe("a started task moves to another computer (INF-1713, real git)", {
           throw new Error("Kun's Mac mini did not answer in time");
         }
         opened.push(spec);
-        return boots[opened.length - 1] as FakeCrewmate;
+        const boot = boots[opened.length - 1] as FakeCrewmate;
+        options.opening?.();
+        return boot;
       },
     };
     const arrive = deferred<void>();
@@ -30097,6 +30101,33 @@ describe("a started task moves to another computer (INF-1713, real git)", {
     await vi.waitFor(() => expect(h.boots[1]?.promptCalls).toHaveLength(1), REAL_GIT_WAIT);
     expect(h.boots[1]?.promptCalls[0]).toContain("your task moved to Kun's MacBook Air");
     expect(h.boot.promptCalls).toHaveLength(0);
+    await h.supervisor.disposeAll();
+  });
+
+  it("reopens there in the conversation it is opening when that computer's first word asks for it meanwhile", async () => {
+    // INF-2292: task-move.spec.ts stayed retiring with "The task closed
+    // while its transcript was being located." The Mac mini's first record
+    // reached here before its open answered, and `adoptPlaced` opened a
+    // second conversation over the one the move was opening.
+    let adopting: Promise<void> | undefined;
+    const h = await startedHere({
+      opening: () => {
+        adopting ??= h.supervisor.adoptPlaced(h.taskId);
+      },
+    });
+    expect((await h.supervisor.requestComputerMove(h.taskId, MINI, "captain")).ok).toBe(true);
+    h.crewmate.finishPrompt();
+    await vi.waitFor(() => {
+      expect(h.tasks.get(h.taskId)?.deviceId).toBe(MINI);
+      expect(h.tasks.get(h.taskId)?.shape?.computer_move).toBeUndefined();
+    }, REAL_GIT_WAIT);
+    await adopting;
+    // One conversation there, the one the move opened, and it is the task's.
+    expect(h.opened.map((spec) => spec.machine)).toEqual([MINI]);
+    expect(existsSync(h.cwd)).toBe(false);
+    expect(await h.supervisor.steerCrewmate(h.taskId, "Check the header too.")).toBe("mid-turn");
+    await vi.waitFor(() => expect(h.boot.promptCalls).toHaveLength(1), REAL_GIT_WAIT);
+    expect(h.boot.promptCalls[0]).toContain("your task moved to Kun's Mac mini");
     await h.supervisor.disposeAll();
   });
 

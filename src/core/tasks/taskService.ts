@@ -205,16 +205,6 @@ import { liveWaitCycle, waitCycleWords } from "./waitCycles";
 export const TIMELINE_CAP = 500;
 export const TIMELINE_KEEP = 400;
 
-// Specification and receipt evidence must remain retrievable verbatim.
-const COMPACTION_EXEMPT_KINDS = [
-  "decided",
-  "steered",
-  "interrupted",
-  "report",
-  "card_resolved",
-  "briefed",
-] as const;
-
 /** What a `compacted` event carries in `data`. */
 export type CompactedEventData = {
   folded: number;
@@ -5908,15 +5898,11 @@ export class TaskService {
   private compactTimeline(taskId: string): void {
     const count = this.events.countFor(taskId);
     if (count <= TIMELINE_CAP) return;
-    const oldest = this.events.listOldest(
-      taskId,
-      count - TIMELINE_KEEP + 1,
-      COMPACTION_EXEMPT_KINDS,
-    );
+    const oldest = this.events.oldestCompactable(taskId, count - TIMELINE_KEEP + 1);
     const boundary = oldest.at(-1)?.at;
     if (boundary === undefined) return;
-    const upTo = this.events.listUpTo(taskId, boundary, COMPACTION_EXEMPT_KINDS);
-    const compactableCount = this.events.countFor(taskId, COMPACTION_EXEMPT_KINDS);
+    const upTo = this.events.compactableUpTo(taskId, boundary);
+    const compactableCount = this.events.countCompactable(taskId);
     const folded = upTo.length < compactableCount ? upTo : oldest;
     if (folded.length <= 1) return;
     const data: CompactedEventData = { folded: 0, firstAt: boundary, lastAt: boundary, kinds: {} };

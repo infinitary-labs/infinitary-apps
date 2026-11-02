@@ -18,6 +18,7 @@ import {
   UnsupportedSavedDataError,
 } from "./savedDataCompatibility";
 import { TaskDeliveryStore } from "./taskDeliveryStore";
+import { COMPACTION_CANDIDATE } from "./taskEventCompaction";
 import { splitTurn } from "./taskExecutionStore";
 import { splitPolicies } from "./taskPolicyStore";
 import { migrateTaskRecordRetirement } from "./taskRecordProjection";
@@ -2220,6 +2221,8 @@ function migrate(db: AppDatabase, throughVersion?: number): void {
         ON task_permissions (override_json) WHERE override_json IS NOT NULL;
       CREATE INDEX IF NOT EXISTS tasks_closed_at ON tasks (closed_at);
       CREATE INDEX IF NOT EXISTS task_events_ref ON task_events (kind, ref) WHERE ref IS NOT NULL;
+      CREATE INDEX IF NOT EXISTS task_events_compaction ON task_events (task_id, at)
+        WHERE ${COMPACTION_CANDIDATE};
       CREATE INDEX IF NOT EXISTS tasks_specification ON tasks (specification_id);
       CREATE INDEX IF NOT EXISTS captain_asks_at ON captain_asks (at);
       CREATE INDEX IF NOT EXISTS captain_asks_turn ON captain_asks (turn_state, at);

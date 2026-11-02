@@ -1,4 +1,6 @@
 import type { AppDatabase } from "./db";
+import { prepared } from "./statements";
+import { COMPACTION_CANDIDATE } from "./taskEventCompaction";
 import { taskReadTable } from "./taskRecordFields";
 
 /**
@@ -314,30 +316,38 @@ export class TaskEventStore {
     return rows.flatMap((entry) => (typeof entry.row === "number" ? [entry.row] : []));
   }
 
-  countFor(taskId: string, except: readonly TaskEventKind[] = []): number {
-    const row = this.db
-      .prepare(`SELECT COUNT(*) AS n FROM task_events WHERE task_id = ?${exclusion(except)}`)
-      .get(taskId, ...except) as { n: number };
+  // Compaction repeats these completed reads on every over-cap write.
+  // Reuse their statements and SQLite row constructors, never their results.
+  countFor(taskId: string): number {
+    const row = prepared(this.db, "SELECT COUNT(*) AS n FROM task_events WHERE task_id = ?").get(
+      taskId,
+    ) as { n: number };
     return row.n;
   }
 
-  /** The oldest `limit` events of a task, in timeline order. */
-  listOldest(taskId: string, limit: number, except: readonly TaskEventKind[] = []): TaskEvent[] {
-    const rows = this.db
-      .prepare(
-        `SELECT * FROM task_events WHERE task_id = ?${exclusion(except)} ORDER BY at, id LIMIT ?`,
-      )
-      .all(taskId, ...except, limit) as Row[];
+  countCompactable(taskId: string): number {
+    const row = prepared(
+      this.db,
+      `SELECT COUNT(*) AS n FROM task_events WHERE task_id = ? AND ${COMPACTABLE}`,
+    ).get(taskId) as { n: number };
+    return row.n;
+  }
+
+  /** The oldest `limit` compactable events of a task, in timeline order. */
+  oldestCompactable(taskId: string, limit: number): TaskEvent[] {
+    const rows = prepared(
+      this.db,
+      `SELECT * FROM task_events WHERE task_id = ? AND ${COMPACTABLE} ORDER BY at, id LIMIT ?`,
+    ).all(taskId, limit) as Row[];
     return rows.map(fromRow);
   }
 
-  /** Every event of a task at or before `at`, in timeline order. */
-  listUpTo(taskId: string, at: number, except: readonly TaskEventKind[] = []): TaskEvent[] {
-    const rows = this.db
-      .prepare(
-        `SELECT * FROM task_events WHERE task_id = ? AND at <= ?${exclusion(except)} ORDER BY at, id`,
-      )
-      .all(taskId, at, ...except) as Row[];
+  /** Every compactable event at or before `at`, in timeline order. */
+  compactableUpTo(taskId: string, at: number): TaskEvent[] {
+    const rows = prepared(
+      this.db,
+      `SELECT * FROM task_events WHERE task_id = ? AND at <= ? AND ${COMPACTABLE} ORDER BY at, id`,
+    ).all(taskId, at) as Row[];
     return rows.map(fromRow);
   }
 
@@ -434,17 +444,7 @@ export class TaskEventStore {
   }
 }
 
-/**
- * What compaction leaves alone: the kinds it names, and every event another
- * task's Activity reads (a `task_event_concerns` row), which stays verbatim.
- * Only compaction passes `except`.
- */
-/**
- * What compaction leaves alone: the exempt kinds, events another task
- * reads, and events whose data marks them `journal: true` - a record a
- * replay reads back, such as a program's ask answers and its start.
- */
-function exclusion(except: readonly TaskEventKind[]): string {
-  if (except.length === 0) return "";
-  return ` AND kind NOT IN (${except.map(() => "?").join(", ")}) AND id NOT IN (SELECT event_id FROM task_event_concerns) AND CASE WHEN json_valid(data_json) THEN coalesce(json_extract(data_json, '$.journal'), 0) ELSE 0 END != 1`;
-}
+// The partial index excludes provenance and replay journals before a read
+// visits any payload. A candidate another task reads still stays verbatim.
+const COMPACTABLE = `${COMPACTION_CANDIDATE}
+  AND id NOT IN (SELECT event_id FROM task_event_concerns)`;

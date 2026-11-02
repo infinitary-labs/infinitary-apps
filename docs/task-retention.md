@@ -19,6 +19,9 @@ This document is what keeps that durable record honest at scale: what is bounded
   Provenance and specification-receipt events (`decided`, `steered`, `interrupted`, `report`, `card_resolved`, `briefed`) are exempt and retain their full payloads, so an evidence-heavy timeline may exceed the target (`docs/provenance-capture.md`).
   A `briefed` receipt keeps the reports it copied as references to those `report` events, which are exempt too, so it still reads back whole (`docs/task-record.md`).
   Compaction does nothing when folding would not reduce the row count.
+  The partial `task_events_compaction` index omits provenance and replay journals, so trimming seeks ordinary candidates without re-reading retained payloads; events another task reads remain exempt through `task_event_concerns`.
+  The index and readers share their eligibility predicate, and reopening saved data installs the optional index without changing its format.
+  Count and boundary reads reuse completed statements through the per-database `prepared` owner rather than compiling fresh row constructors on every write; each execution still reads the current rows.
   A fold that meets an earlier `compacted` row absorbs its counts, so the head of ordinary history says how much it stands for: `data` carries `folded`, `firstAt`, `lastAt` and a per-kind count.
   Counts are folded, never content summarized (design section 2.4 rejected beads' "memory decay").
   The `compacted` row is stamped at the fold boundary and takes whole milliseconds of compactable history with it, so it sorts before everything it replaced.

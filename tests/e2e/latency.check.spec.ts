@@ -186,7 +186,7 @@ test("typing and scrolling on a record the captain's size, while six crewmates w
   // commissioning six crewmates and the three measured stretches take
   // about another.
   const userDataDir = scratchDir("infinitary-latency-check-");
-  seedCaptainSizedRecord(userDataDir);
+  await seedCaptainSizedRecord(userDataDir);
   const recordPath = appPathsFor(userDataDir).freezeRecordPath;
   const launched = await launchApp({
     userDataDir,

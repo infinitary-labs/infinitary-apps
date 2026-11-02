@@ -69,7 +69,28 @@ test("the main thread never spends 250 ms of its own processor time at once on a
   // a shared runner; the passes and turns take about another.
   test.setTimeout(240_000);
   const userDataDir = scratchDir("infinitary-freeze-journey-");
-  seedCaptainSizedRecord(userDataDir);
+  // The seed hands this worker's event loop a turn between its transactions,
+  // which is when the statements it prepared are freed (WRITES_PER_TURN).
+  // Written in one synchronous call it held them all, several gigabytes, and
+  // the Linux runner killed this worker. A ticker beside it counts the turns
+  // and the worker's largest size, printed on every run.
+  let turns = 0;
+  let largestRss = process.memoryUsage().rss;
+  const startRss = largestRss;
+  const ticker = setInterval(() => {
+    turns += 1;
+    largestRss = Math.max(largestRss, process.memoryUsage().rss);
+  }, 0);
+  try {
+    await seedCaptainSizedRecord(userDataDir);
+  } finally {
+    clearInterval(ticker);
+  }
+  console.log(
+    `[freeze journey] the seed ran over ${turns} turns; the worker grew from ${Math.round(startRss / 2 ** 20)} MiB to at most ${Math.round(largestRss / 2 ** 20)} MiB`,
+  );
+  // A seed that never gives the loop a turn holds every statement again.
+  expect(turns).toBeGreaterThan(0);
   const recordPath = appPathsFor(userDataDir).freezeRecordPath;
   const steps: Step[] = [];
   const step = (doing: string) => steps.push({ at: Date.now(), doing });

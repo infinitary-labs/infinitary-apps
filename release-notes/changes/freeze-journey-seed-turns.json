@@ -1,0 +1,8 @@
+{
+  "exclusions": [
+    {
+      "id": "freeze-journey-seed-turns",
+      "reason": "Test-only repair: the freeze journey's captain-sized record is seeded in transactions that give the test worker's event loop a turn between them, so the worker frees its prepared statements instead of growing to several gigabytes and being killed. Product behavior and the journey's assertions are unchanged; the journey adds a check that the seed turns the loop."
+    }
+  ]
+}

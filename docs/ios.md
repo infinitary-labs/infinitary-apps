@@ -654,6 +654,17 @@ Before and after each action XCTest waits for the app's main run loop to idle an
 On a busy Mac that reply can stop coming, as it did after a rotation in INF-1538, and XCTest then waits 60 seconds before every later action.
 Every journey replaces XCTest's private `-[XCUIApplicationProcess waitForQuiescenceIncludingAnimationsIdle:usingActivity:isPreEvent:]`, which every one of those waits reaches in Xcode 26.4, with one that keeps the run loop wait and never asks for the animation reply, as WebDriverAgent does (`PhoneAnimationWait.swift`).
 A tap checks its own target instead: `tapOnPhone` waits until the target's frame, and the screen's own pixels inside it, read the same twice in a row on the load clock (`waitForSteadyTarget`), except a crewmate orbiting in the scene, which never holds still.
+The shared sampler (`readPhoneTarget`) reads the current application frame and target snapshot once, then crops a full-display screenshot for pixel-aligned, fully visible targets (`phoneTargetPixels`), avoiding the element screenshot's repeated target queries.
+The crop uses the screenshot's declared scale and converts the target to native coordinates before cropping the raw backing and applying its orientation.
+The iPhone's backing can omit the display's last pixel, so dividing pixel width by the application's point width or cropping upright first would read the wrong region.
+The iOS 27 capture callback truncates each scaled extent to test parity: an odd integer supplies integer-minus-one, while an even integer retains the original floating extent; UIKit allocates from that value converted to `Float`, rounded to nearest with ties away from zero.
+Before taking a display picture, the sampler uses the same crop owner to check containment and pixel alignment at the screen's scale in every unmirrored orientation; unsupported target geometry goes straight to the native screenshot.
+This conservative check avoids capturing the display first for clipped or genuinely subpixel targets, without guessing the picture's orientation.
+The captured picture still supplies its own scale, orientation and backing dimensions for the actual crop; unsupported capture metadata retains XCTest's native screenshot rather than approximating its rendering.
+An origin within floating-point representation error of the pixel grid takes the integer crop.
+An unreadable supported crop is a missing observation, never a steady blank target; an off-screen target still supplies no pixels.
+`PhoneTargetPixelsTests` checks recorded native allocation and geometry and compares crops with XCTest's own element pictures on real native controls in portrait, both landscapes and a sheet on both devices.
+It runs in the ordinary rest part, outside the clock-only `PhoneWaitsTests` selection.
 A crewmate orbiting in the scene waits instead until every orbiting crewmate rides its own orbit no faster than that orbit's pace (`PhoneOrbitPace`, INF-2039), since the first mate's warp fidget speeds the crew up until a neighbour reaches the tapped point before the touch lands.
 The frame alone is not enough: UIKit gives a sheet or an alert its final frame as it starts to slide or fade in, and drops a touch until it has arrived.
 A check that a control can be pressed waits the same way before it asks XCTest, since right after the iPad's last card closed, XCTest found no tap point for the reply line when the check asked at once.
@@ -746,11 +757,11 @@ Each invocation owns one uniquely named JSON file containing only `schemaVersion
 The supervisor stays alive through teardown and removes only its own file after cleanup; this is activity reporting, with no lock, admission wait, heartbeat or age expiry.
 The paired reader is dotfiles-private's `hosts/PHONE_ACTIVITY.md` contract and idle-reboot watchdog; producer and reader must merge together before the lock removals are complete.
 The device gate has a 90-minute step limit on every route: the real Mac, the fixed virtual-Mac switch and a placed virtual Mac.
-The limit leaves room for every part on both devices on a virtual Mac with the Mac mini to itself (INF-2052, the captain's choice to raise it from 60 minutes).
+Both sequential and parallel device lanes must finish within that same limit.
 Two full checks at once, one on each of the Mac mini's virtual Macs, starve each other: their parts ran past XCTest's 20-minute allowance, and one check ran past the 90 minutes too (INF-2052).
 Xcode collects no diagnostics after a failed test (`-collect-test-diagnostics never`), since its collection held each failed part for ten minutes and the gate keeps its own failure logs (INF-2052).
 The native job retains its 165-minute job limit for setup, checks, cleanup and evidence upload, without command-admission waits.
-Neither device's failure is ignored: their parts run side by side and any failing fails the gate; on a pull request the first failed part stops the rest.
+Neither device's failure is ignored: both devices run every selected part, whether their lanes run side by side or sequentially, and any failing fails the gate; on a pull request the first failed part stops the rest.
 This pull-request lane neither signs a physical-device build nor publishes one; `ios-release.yml` runs the same native gates before its separately dispatched TestFlight upload.
 Mac-side checks remain the project's normal gate and affected Devices journeys.
 
@@ -773,7 +784,7 @@ The gate step then runs `phone.sh gate iphone ipad`, which runs `scripts/test-ph
 The last step, `phone.sh delete`, stops and deletes the clone however the job ends, a cancelled or replaced run's included.
 The phone workflow does not exclude journeys.
 The `mac-mini-phone` queue is what keeps one phone clone running at a time, so with this variable set every phone check takes that shared line whatever `VIRTUAL_MAC_RUNNER` or the `phone` kind's queue says.
-Whatever its value, the gate is the same one step as on the Mac mini, `Read and recover on iPhone and iPad at once`, right after the replacement check.
+Whatever its value, the gate is the same one step as on the Mac mini, `Read and recover on iPhone and iPad`, right after the replacement check.
 The script prints in UTC when the virtual Mac started and when each device began and ended.
 The image and its base image's download take about 80 GB together in tart's own `~/.tart` on the Mac mini.
 Set the variable only once that runner is registered, finds `tart` on its search path and the image is built; otherwise every phone check waits for the runner or fails at its first step.
@@ -783,9 +794,11 @@ While the variable is set, a crewmate's own `pnpm test:phone` stays on the Mac m
 ### A phone check the placement service puts in a virtual Mac
 
 Once `MAC_RUNNER` names the placement service's label (`docs/testing.md`, "One image for every project"), `native-phone` runs on whichever place the service gives it, usually a fresh virtual Mac of its own.
-The gate step asks macOS whether it runs in a virtual Mac (`sysctl -n kern.hv_vmm_present`); there it runs `scripts/test-phone.ts --both --simulators 2` directly.
-Two simulators at a time match the placement service's virtual Mac of 4 CPUs and 16 GB, as `phone-job.sh` runs them, and INF-621's two complete iPhone and iPad proofs passed in that image.
-On the real Mac's place the gate runs directly too, using the gate's default simulator concurrency.
+The gate step asks macOS whether it runs in a virtual Mac (`sysctl -n kern.hv_vmm_present`); there it runs `scripts/test-phone.ts --both --simulators 1` directly.
+A placed virtual Mac runs one device's whole lane and deletes its simulator before starting the other, keeping concurrent simulators from slowing each other (INF-2101, the captain's "Change the VM default").
+This is the ordinary default for both requests and main's full phone check, not an opt-in proof mode, and changes no test selection or allowance.
+On the real Mac's place the gate runs directly too, using the gate's default simulator concurrency, so the two devices still run side by side.
+The fixed-clone route above remains unchanged.
 Leave `PHONE_VIRTUAL_MAC` unset with the placement service: a job already inside a virtual Mac cannot start another one.
 
 The `phone` kind's queue in `MAC_QUEUES` is `mini-mac-phone`, shared by the Mac mini's virtual place and the rented vBoxx Mac's `vboxx-mac-1-vm` place (DOP-195, INF-2202).

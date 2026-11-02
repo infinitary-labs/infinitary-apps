@@ -97,7 +97,7 @@ function gateStarts(gate: string, iphone: string, replaced: string): string {
   );
   return new Evaluator(ast, contexts, functions).evaluate().coerceString();
 }
-const [IPHONE, IPAD, BOTH] = DEVICE_GATES as [string, string, string];
+const [IPHONE, IPAD, BOTH, LEGACY_BOTH] = DEVICE_GATES as [string, string, string, string];
 
 // INF-524 (the captain's approved plan INF-517): the repository variable that moves the
 // device gates into a virtual Mac. GitHub reads an unset variable as "".
@@ -419,10 +419,10 @@ describe("the native pull-request gate", () => {
         /scripts\/test-phone\.ts|scripts\/virtual-mac\/phone\.sh gate/.test(step.run ?? ""),
       )
       .map((step: { name: string }) => step.name);
-    // INF-662 piece 1: one gate for both devices. The replacement script still knows the
-    // per-device gates, which a pull request's older run of an earlier version shows.
+    // INF-2101: one gate for both devices without claiming overlap. Older runs retain
+    // the per-device names or the combined "at once" name, and still own their cleanup.
     expect(gates).toEqual([BOTH]);
-    expect(DEVICE_GATES).toEqual([IPHONE, IPAD, BOTH]);
+    expect(DEVICE_GATES).toEqual([IPHONE, IPAD, BOTH, LEGACY_BOTH]);
   });
   // INF-1083 / INF-1072: the gate, not just its lease, ends on every route. INF-2052: the captain raised its
   // limit from 60 to 90 minutes for every part on both devices; alone, a full check passed in 59.
@@ -525,8 +525,8 @@ describe("the native pull-request gate", () => {
           !SKIPPED_CHOOSER_STEPS.includes(name),
       ),
     );
-    // INF-662 piece 1: one gate checks and builds once
-    // and runs both devices side by side; the switch, when set, sends it to the virtual Mac.
+    // INF-662 / INF-2101: one gate checks and builds once, serializing only the placed VM.
+    // The switch, when set, keeps the fixed virtual Mac's route unchanged.
     expect(
       stepsThatRun(OFF)
         .filter(isGate)
@@ -537,8 +537,8 @@ describe("the native pull-request gate", () => {
         'parts=(); for part in $PHONE_PARTS; do parts+=(--part "$part"); done',
         'if [ "$PHONE_FULL" = true ] && [ -z "$PHONE_REPEAT_PARTS" ]; then parts=(); fi',
         'if [ -n "$PHONE_VIRTUAL_MAC" ]; then exec scripts/virtual-mac/phone.sh gate iphone ipad; fi',
-        // INF-658: a job placed in a virtual Mac uses two simulators.
-        'if [ "$(sysctl -n kern.hv_vmm_present 2> /dev/null)" = 1 ]; then exec node scripts/test-phone.ts --both "${parts[@]}" --simulators 2 --evidence "$RUNNER_TEMP/phone"; fi',
+        // INF-2101: a job placed in a virtual Mac uses one simulator at a time.
+        'if [ "$(sysctl -n kern.hv_vmm_present 2> /dev/null)" = 1 ]; then exec node scripts/test-phone.ts --both "${parts[@]}" --simulators 1 --evidence "$RUNNER_TEMP/phone"; fi',
         'node scripts/test-phone.ts --both "${parts[@]}" --evidence "$RUNNER_TEMP/phone"',
         "",
       ].join("\n"),
@@ -591,7 +591,7 @@ describe("the native pull-request gate", () => {
         }
     const inTurn = names(stepsThatRun(IN_TURN));
     const together = names(stepsThatRun(TOGETHER));
-    // INF-662 piece 1: every value of the switch runs both devices at once from one build.
+    // INF-662 / INF-2101: both fixed-clone switch values still run both devices at once from one build.
     expect(inTurn).toEqual(together);
     // The packages install inside the clone, never on this Mac.
     for (const ran of [inTurn, together])

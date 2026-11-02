@@ -408,7 +408,8 @@ Each part's live simulator log lives in `phone-simulator-logs`, never in `phone-
 The pictures the journeys took live in the small `phone-pictures` artifact, exported from the result bundles by device and part.
 A failure on either device fails the job, and on a pull request the first failed part stops the other parts.
 A newer push cancels its pull request's older phone runs whose native job has not started its device gate (`scripts/replaced-phone-runs.ts`), so it never waits behind them.
-That gate checks and builds once, starts one simulator per device, and runs the phone journey's seven parts on each, fourteen in all, one after the other on their device's simulator with the two devices side by side, the parts that choose a photo last, each part with its own test home and a clean app (`docs/ios.md`, "Disposable verification").
+That gate checks and builds once, starts one simulator per device, and runs the phone journey's seven parts on each, fourteen in all, one after the other on their device's simulator, the parts that choose a photo last, each part with its own test home and a clean app (`docs/ios.md`, "Disposable verification").
+The placed virtual Mac runs the devices sequentially; the real Mac and fixed-clone route keep them side by side.
 
 ### The phone parts a pull request runs
 
@@ -435,7 +436,9 @@ The native job retains its 165-minute job limit for setup, the device gate, clea
 `pnpm test:phone` checks the configured execution mode, then runs `scripts/test-phone.ts` directly.
 `tests/mac-check-lock.test.ts` executes the workflow and package command strings with held workloads to verify overlap, failure status and cancellation.
 With the repository variable `PHONE_VIRTUAL_MAC` set, the device gate runs in a fresh virtual Mac on its own runner (`docs/ios.md`, "The phone check in a virtual Mac"); `tests/phone-ci.test.ts` evaluates the job's steps both ways, and `tests/virtual-mac-phone.test.ts` runs its scripts against a stand-in tart.
-A job the placement service runs inside a virtual Mac runs both devices side by side, one simulator each; a real-Mac gate uses the device gate's default concurrency, which is the same two.
+A job the placement service runs inside a virtual Mac uses `--simulators 1`, completing and deleting one device before starting the next (INF-2101, the captain's "Change the VM default").
+The real-Mac gate keeps the device gate's default concurrency, which runs its two devices side by side.
+The placed-VM default applies to both requested checks and main's full check, with the same tests, failure propagation and allowances.
 The fixture, simulator identity and unsigned Xcode configuration are described in `docs/ios.md`, "Disposable verification".
 
 ### The phone check on request

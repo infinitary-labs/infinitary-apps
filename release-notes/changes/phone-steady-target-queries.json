@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "phone-steady-target-queries",
+      "reason": "Test-only performance repair: the native phone journey reuses display pixels, and placed-VM phone checks run one device at a time while retaining all frame, pixel, action and timeout checks. App behavior is unchanged."
+    }
+  ]
+}

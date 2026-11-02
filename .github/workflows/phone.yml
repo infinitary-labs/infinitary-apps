@@ -293,10 +293,10 @@ jobs:
           GITHUB_TOKEN: ${{ github.token }}
       # test-phone owns a fresh HOME, real fixture and simulators, and disables signing.
       # It checks Swift trust, native recovery and the published client; pnpm check checks generated files.
-      # INF-662: one gate checks and builds once, then runs the iPhone and the iPad side by
-      # side, each device on one simulator it starts once (INF-1438) and each part on its own
-      # test home; either failing fails it.
-      # A placed virtual Mac uses two simulators for its 4 cores and 16 GB.
+      # INF-662: one gate checks and builds once, each device on one simulator it starts
+      # once (INF-1438) and each part on its own test home; either failing fails it.
+      # INF-2101: a placed virtual Mac runs one device at a time, deleting its simulator
+      # before starting the next. The real Mac and fixed-clone route keep both side by side.
       # Real and virtual Mac checks may run concurrently without a command lease.
       # INF-827: on a pull request the Mac mini's and a placed virtual Mac's gate run only the
       # parts the chooser kept. Affected requests use directly reached parts; default requests
@@ -309,14 +309,14 @@ jobs:
       # two full checks at once, one per virtual Mac, starved each other past their parts' 20-minute
       # allowances, one of them past these 90 minutes too (runs 41236951239 and 41236954773).
       - id: both
-        name: Read and recover on iPhone and iPad at once
+        name: Read and recover on iPhone and iPad
         timeout-minutes: 90
         if: ${{ steps.scope.outputs.gate == 'true' && steps.start.outputs.replaced != 'true' }}
         run: |
           parts=(); for part in $PHONE_PARTS; do parts+=(--part "$part"); done
           if [ "$PHONE_FULL" = true ] && [ -z "$PHONE_REPEAT_PARTS" ]; then parts=(); fi
           if [ -n "$PHONE_VIRTUAL_MAC" ]; then exec scripts/virtual-mac/phone.sh gate iphone ipad; fi
-          if [ "$(sysctl -n kern.hv_vmm_present 2> /dev/null)" = 1 ]; then exec node scripts/test-phone.ts --both "${parts[@]}" --simulators 2 --evidence "$RUNNER_TEMP/phone"; fi
+          if [ "$(sysctl -n kern.hv_vmm_present 2> /dev/null)" = 1 ]; then exec node scripts/test-phone.ts --both "${parts[@]}" --simulators 1 --evidence "$RUNNER_TEMP/phone"; fi
           node scripts/test-phone.ts --both "${parts[@]}" --evidence "$RUNNER_TEMP/phone"
         env:
           PHONE_FULL: ${{ steps.request-select.outputs.full }}

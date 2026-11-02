@@ -3,7 +3,9 @@ import { describe, expect, it } from "vitest";
 import {
   type Api,
   cancelOlderRuns,
+  DEVICE_GATES,
   type Job,
+  NATIVE_JOB,
   type PhoneRun,
   pullRequestRun,
   replacedRunVerdict,
@@ -124,6 +126,28 @@ describe("a replaced phone run", () => {
     expect(verdict.cancel).toBe(cancel);
     expect(verdict.why).toContain(why);
   });
+  // INF-2101: the renamed gate must retain the old combined name's cleanup protection.
+  // Replay the recorded in-progress job with today's gate name and the name used by
+  // Cards run 41477514974; only the display name changes, not its started state.
+  it.each([DEVICE_GATES[2]!, "Read and recover on iPhone and iPad at once"])(
+    "keeps the started combined gate named %s",
+    (name) => {
+      const jobs = asOf(run142, "2026-10-19T06:50:00Z").map((job) =>
+        job.name !== NATIVE_JOB
+          ? job
+          : {
+              ...job,
+              steps: job.steps?.map((step) =>
+                step.name === DEVICE_GATES[0] ? { ...step, name } : step,
+              ),
+            },
+      );
+      expect(replacedRunVerdict(jobs)).toEqual({
+        cancel: false,
+        why: `"${name}" already started and deletes its own simulator`,
+      });
+    },
+  );
   it("is cancelled before its chooser has created the native job", () => {
     expect(replacedRunVerdict(asOf(run142, "2026-10-19T04:12:10Z")).cancel).toBe(true);
   });

@@ -53,7 +53,7 @@ exec ${JSON.stringify(process.execPath)} ${JSON.stringify(join(root, "workload")
   );
   const events: string[] = [];
   const children: { stop(): void; result: Promise<number | null> }[] = [];
-  function launch(name: string, kind: Kind, fail = false) {
+  function launch(name: string, kind: Kind, fail = false, parts = "") {
     const release = kind === "release-phone" || kind === "release-ipad";
     const command =
       kind === "package"
@@ -97,7 +97,7 @@ exec ${JSON.stringify(process.execPath)} ${JSON.stringify(join(root, "workload")
         CHECK_FAIL: fail ? "yes" : "",
         CHECK_VMM: kind === "placed-phone" ? "1" : "0",
         PHONE_VIRTUAL_MAC: kind === "virtual-phone" ? "together" : "",
-        PHONE_PARTS: "",
+        PHONE_PARTS: parts,
       },
       detached: true,
       stdio: ["pipe", "pipe", "pipe"],
@@ -192,16 +192,38 @@ describe.skipIf(process.platform === "win32")("Mac check commands without admiss
         "other-journeys: started:other-journeys",
       ]);
       expect(f.events.some((line) => line.includes("exited"))).toBe(false);
-      if (kind === "placed-phone") {
+      if (kind === "placed-phone" || kind === "phone") {
         const args = JSON.parse((await phone.wait(/^args:/)).slice(5));
         expect(args).toContain("--both");
-        expect(args.slice(args.indexOf("--simulators"), args.indexOf("--simulators") + 2)).toEqual([
-          "--simulators",
-          "2",
-        ]);
+        // INF-2101, the captain's "Change the VM default": serialize the placed VM only.
+        if (kind === "placed-phone")
+          expect(
+            args.slice(args.indexOf("--simulators"), args.indexOf("--simulators") + 2),
+          ).toEqual(["--simulators", "1"]);
+        else expect(args).not.toContain("--simulators");
+        expect(args).not.toContain("--part");
+        console.info("Phone workflow invocation (stand-in workload):", kind, JSON.stringify(args));
       }
       for (const work of [desktop, phone, second]) work.release();
       expect(await Promise.all([desktop.result, phone.result, second.result])).toEqual([0, 0, 0]);
+    } finally {
+      await f.close();
+    }
+  });
+  // INF-2101: changing the VM default preserves requests for named parts, not just full gates.
+  // Run the same real workflow command used above, with the Cards/rest request the sampler reaches.
+  it.each(["phone", "placed-phone"] as const)("preserves selected parts on %s", async (kind) => {
+    const f = fixture();
+    try {
+      const phone = f.launch("selected", kind, false, "cards rest");
+      const args = JSON.parse((await phone.wait(/^args:/)).slice(5)) as string[];
+      expect(args.flatMap((arg, index) => (arg === "--part" ? [args[index + 1]] : []))).toEqual([
+        "cards",
+        "rest",
+      ]);
+      expect(args).toContain("--both");
+      phone.release();
+      expect(await phone.result).toBe(0);
     } finally {
       await f.close();
     }

@@ -137,9 +137,9 @@ jobs:
   # Every later job checks out exactly this commit. The resolver runs from the
   # workflow's own commit and reads the rest from git. No secret or dependency install.
   resolve:
-    # A failed main run starts too while the phone waiver lasts
-    # (scripts/main-alpha-proof.mjs): its proof step refuses unless only the
-    # phone call failed. Restoring the gate drops the failure conclusion here.
+    # A failed main run starts too: an alpha ships the desktop app only, so its
+    # proof (scripts/main-alpha-proof.mjs) never reads main's phone call and
+    # refuses unless only the phone call failed (INF-2353).
     if: github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success' || github.event.workflow_run.conclusion == 'failure'
     name: Resolve the source commit and version
     # The PC's gate label (docs/testing.md, DOP-157): its runners take only gate jobs.

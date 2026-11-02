@@ -309,11 +309,11 @@ After that setup, a separately authorized alpha proves public fetch-back, both t
 
 A fully passing rolling `main.yml` run automatically starts an alpha at that exact commit (INF-2259, the captain's accepted override).
 The `workflow_run` completion trigger uses the checked source, not main's newer head, and never dispatches another full check just for the cut.
-Failed, cancelled or incomplete main runs cut nothing, except a run whose only failed jobs are the phone check's while the phone waiver lasts (below); main's waiting-version coalescing and fix-forward process stay unchanged.
+Failed, cancelled or incomplete main runs cut nothing, except a failed run whose only failed jobs are the phone check's ("An alpha does not wait on the phone check", below); main's waiting-version coalescing and fix-forward process stay unchanged.
 
 1. **Validate the completed run.**
    The resolver reads the successful trusted main-push run and every latest per-job execution from GitHub.
-   It requires every full-check owner, all Linux journey shards and, outside the phone waiver, both-device phone coverage at exactly the source being released.
+   It requires every full-check owner and all Linux journey shards at exactly the source being released, and never reads main's phone jobs.
 2. **Keep the same source.**
    The notes check validates committed declarations without a separate notes-review commit.
    Existing immutable tags supply published manifests through the same ledger reader when they have not been committed afterward.
@@ -323,14 +323,14 @@ Failed, cancelled or incomplete main runs cut nothing, except a run whose only f
    Only broad `verify.yml` coverage is inherited; a skipped verification call is not reported as a new pass.
    The source tag `v<version>` names the exact checked commit.
 
-### The phone waiver
+### An alpha does not wait on the phone check
 
-The captain's pick on INF-2340: "Cut alphas without the phone check until PR #862 and PR #865 land".
-Until INF-2101 (PR #862, the cards part's time allowance) and INF-2305 (PR #865, the Photos preview) merge, `scripts/main-alpha-proof.mjs` ignores the conclusion of every job of main's phone call, and `release.yml`'s resolve job also starts on a failed main run so the proof can judge it.
+An alpha ships the signed desktop app only, so its proof never reads main's phone call (INF-2353, the captain's pick "Drop phone from alpha gate", asked as "alpha is the desktop app, right?").
+`scripts/main-alpha-proof.mjs` leaves out every job whose name starts with the phone call's key, and `release.yml`'s resolve job also starts on a failed main run so the proof can judge it.
 Main's phone check still runs and still turns main's run red; every other full-check owner must still pass.
+The phone's own gates run where the phone ships: `ios-release.yml` runs the iPhone and iPad gates before a TestFlight upload, and the release's phone job still waits for a TestFlight build ("The phone goes first", below).
 A stable promotion stays strict: an alpha cut from a main run whose phone check failed has no successful main run, so it cannot be promoted.
-A failed main run with any other failed job now shows a red release run whose proof step names the refusal.
-Restoring the gate (INF-2352) removes the waiver from the proof script, the resolve job's condition and this section.
+A failed main run with any other failed job shows a red release run whose proof step names the refusal.
 
 For a failed release's recovery, a manual alpha request can name `candidate=<exact source>` and `verified_main_run=<successful main run id>`; the resolver reads and validates that proof again.
 A manual candidate without reusable proof follows the existing full-verification route, including its notes-only candidate and release-specific gates.

@@ -364,7 +364,7 @@ A red run reaches the crew through the captain's own Automation rule on GitHub's
 The repair fixes forward, and a revert is the last resort, on the captain's click.
 A successful completed main run automatically starts an alpha at that exact source, not a newer main head (`docs/alpha.md`, "Cutting an alpha").
 The alpha reuses its broad checks after reading every required owner and latest per-job result on that exact source; release-specific gates still run.
-Until INF-2101 and INF-2305 merge, a main run whose only failed jobs are the phone check's also starts an alpha (`docs/alpha.md`, "The phone waiver").
+An alpha ships the desktop app only, so a main run whose only failed jobs are the phone check's also starts one (`docs/alpha.md`, "An alpha does not wait on the phone check").
 Ordinary CI starts nothing on a push to `main`: the full check's `linux-checks` lane runs the same typecheck, lint, build and every unit, integration and probe test, so the five jobs ran them twice (INF-2340, the captain's route "drop-ci-main").
 The full check runs no run-alone pass either; the proof of edited journeys runs it at author time ("Each test owns its prerequisites").
 `tests/release-workflows.test.ts` holds the trigger, the queue and both calls.

@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "alpha-skips-phone-check",
+      "reason": "Release work: automatic alpha cuts no longer read main's phone check, since an alpha ships only the desktop app, with no change to the app."
+    }
+  ]
+}

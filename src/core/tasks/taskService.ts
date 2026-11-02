@@ -1169,6 +1169,34 @@ export class TaskService {
     return this.store.count(status, kind);
   }
 
+  /** Whether any row is of this kind, answered without reading or composing one. */
+  hasKind(kind: TaskKind): boolean {
+    return this.store.hasKind(kind);
+  }
+
+  /**
+   * Whether a task of the captain's has closed done, answered without
+   * reading or composing one: work, a decision, or a question that answered
+   * one of the captain's messages. A host note - the welcome, a release's
+   * note - answers no message, and an `operation` row is the trail of an
+   * app change, so neither is a task the captain finished.
+   */
+  hasFinishedTask(): boolean {
+    return this.store.hasFinishedTask();
+  }
+
+  /**
+   * How many of the captain's crewmates have finished their tasks, counted
+   * up to `upTo` without reading them (docs/first-launch.md, "The
+   * create-your-own-panel slot"): work a crewmate started that closed done.
+   * A question or decision the Firstmate answered itself had no crewmate,
+   * work closed done before one started was nobody's, and dropped work did
+   * not finish, so none of them counts.
+   */
+  finishedCrewmates(upTo: number): number {
+    return this.store.countFinishedCrewmates(upTo);
+  }
+
   /** These rows, oldest first; an unknown id reads as nothing. */
   getMany(ids: readonly string[]): TaskRecord[] {
     return this.store.getMany(ids);

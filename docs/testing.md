@@ -125,7 +125,7 @@ The check sees only the statements the tests prepare, and it reads no time: a wa
 ## The scale check
 
 The statement check reads plans; a read that seeks through an index can still read more rows every time the record grows, as the task board did before INF-703, the minute pass before INF-1348 and a read every two seconds before INF-1956.
-`tests/scale-check.test.ts` counts that work for the reads the app repeats on its main thread: a first mate turn's context build, the answer-delivery sweep, one minute pass (the crew's watchdog checks and the work presentation refresh, registered as `services.ts` registers them) and a task board update (INF-2061, built as INF-2069).
+`tests/scale-check.test.ts` counts that work for the reads the app repeats on its main thread: a first mate turn's context build, the answer-delivery sweep, one minute pass (the crew's watchdog checks and the work presentation refresh, registered as `services.ts` registers them), a task board update (INF-2061, built as INF-2069) and the first launch's crew facts, read on a first-run record that lacks them as each such launch reads them (INF-2338).
 It seeds a record sized from the captain's readings: 3,400 closed tasks with about 47 events each (160,094 events in INF-2059's reading), their cards, threads and answered messages, beside running work with 33 open messages in 13 chains.
 It runs each read once, then counts each statement the read runs and the rows it returns, reads again to show the counts repeat, adds three times the closed history and counts again.
 It fails when any statement's runs or rows moved, naming the statement, both counts and the app code that ran it.

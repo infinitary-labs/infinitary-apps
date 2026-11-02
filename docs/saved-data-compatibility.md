@@ -258,8 +258,8 @@ The observation intervals themselves are not saved.
 
 ## Task status indexes
 
-The optional `tasks_status` index on `status` and `tasks_closed_at` index on `closed_at` are installed on opening the current schema, without a migration version or changed table shape.
-They let the crew's status reads and the Tasks board read the live set and the last week without scanning a long record's older closed rows.
+The optional `tasks_status` index on `status`, `tasks_kind_status` index on `(kind, status)` and `tasks_closed_at` index on `closed_at` are installed on opening the current schema, without a migration version or changed table shape.
+They let the crew's status reads and the Tasks board read the live set and the last week without scanning a long record's older closed rows, and the first launch's crew facts find one task of a kind without reading every task.
 An older build reads the table as before and keeps the indexes up to date on its own writes.
 
 ## Task event reference index

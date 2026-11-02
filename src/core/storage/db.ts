@@ -2236,10 +2236,13 @@ function migrate(db: AppDatabase, throughVersion?: number): void {
   // never the permission-bearing history that has no override.
   // Captain-click context seeks that actor's recent events, not every
   // crewmate's progress in the same time window (INF-2284).
+  // The first launch's crew facts seek a task by kind and status instead of
+  // composing every task at each boot and task close (INF-2338).
   if (through === DATABASE_VERSION)
     db.exec(`
       CREATE INDEX IF NOT EXISTS usage_events_account_at ON usage_events (account_id, at);
       CREATE INDEX IF NOT EXISTS tasks_status ON tasks (status);
+      CREATE INDEX IF NOT EXISTS tasks_kind_status ON tasks (kind, status);
       CREATE INDEX IF NOT EXISTS task_permissions_override
         ON task_permissions (override_json) WHERE override_json IS NOT NULL;
       CREATE INDEX IF NOT EXISTS tasks_parent_status ON tasks (parent_id, status);

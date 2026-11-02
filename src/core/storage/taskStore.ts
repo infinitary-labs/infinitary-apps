@@ -1552,6 +1552,45 @@ export class TaskStore {
     );
   }
 
+  /** Whether any row is of this kind, answered without reading or composing one. */
+  hasKind(kind: TaskKind): boolean {
+    return prepared(this.db, "SELECT 1 FROM tasks WHERE kind = ? LIMIT 1").get(kind) !== undefined;
+  }
+
+  /**
+   * Whether a row closed done that is not an `operation`, a `question`
+   * counting only when a message of the captain's is attached to it,
+   * answered without reading or composing one (`TaskService.hasFinishedTask`).
+   */
+  hasFinishedTask(): boolean {
+    return (
+      prepared(
+        this.db,
+        `SELECT 1 FROM tasks t
+         WHERE t.status = 'done' AND t.kind <> 'operation'
+           AND (t.kind <> 'question'
+             OR EXISTS (SELECT 1 FROM captain_asks a WHERE a.task_id = t.id))
+         LIMIT 1`,
+      ).get() !== undefined
+    );
+  }
+
+  /**
+   * How many `work` rows a crewmate started closed done, counted up to
+   * `upTo` without reading them (`TaskService.finishedCrewmates`).
+   */
+  countFinishedCrewmates(upTo: number): number {
+    const row = prepared(
+      this.db,
+      `SELECT COUNT(*) AS n FROM (
+         SELECT 1 FROM tasks
+         WHERE kind = 'work' AND status = 'done' AND started_at IS NOT NULL
+         LIMIT ?
+       )`,
+    ).get(upTo) as { n: number };
+    return row.n;
+  }
+
   /** How many rows of this kind hold this status, counted without reading them. */
   count(status: TaskStatus, kind: TaskKind): number {
     const row = prepared(

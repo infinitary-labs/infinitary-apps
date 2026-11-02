@@ -734,6 +734,13 @@ export async function startApp(mainDir: string, run: RunStart | null = null): Pr
       shell.preferences.subscribe((value) => {
         nativeTheme.themeSource = value.appearance.theme;
       });
+      // The core's start and the window's creation, most of it Electron's
+      // own native work, are each a long stretch of the main thread on a
+      // slow processor. Waiting for a timer turn between them runs every
+      // timer that came due during the core's start before the window is
+      // made, not after it; an immediate would run in the same turn as the
+      // input that finished the start, with no timer between (INF-2338).
+      await new Promise<void>((resolve) => setTimeout(resolve, 0));
       const win = createMainWindow(mainDir, rendererSource, frameMounts, shell, hideWindow);
       // Every reader of the window's keys follows each install (docs/keyboard.md):
       // the page through its push, and the app menu, built again.

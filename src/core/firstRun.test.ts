@@ -1,12 +1,6 @@
 import { WELCOME_ANSWER, WELCOME_NOTE, WELCOME_TITLE } from "@shared/welcome";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import {
-  FirstRunService,
-  type FirstRunStep,
-  finishedCrewmates,
-  hasFinishedTask,
-  hasPriorActivity,
-} from "./firstRun";
+import { crewFacts, FirstRunService, type FirstRunStep, hasPriorActivity } from "./firstRun";
 import { CardService } from "./orchestrator/cardService";
 import { CardStore } from "./storage/cardStore";
 import { openInMemoryDatabase } from "./storage/db";
@@ -49,9 +43,7 @@ function setup(initialOpen = true) {
       usable: () => usable,
       hasActivity: () =>
         activity || hasPriorActivity({ tasks, cards: cardStore, repos: { list: () => [] } }),
-      hasCrewHistory: () => tasks.list().some((task) => task.kind === "work"),
-      hasFinishedTask: () => hasFinishedTask(tasks),
-      finishedCrewmates: () => finishedCrewmates(tasks),
+      ...crewFacts(tasks),
       createWelcome: (consume) => {
         cards.addRecordedFirstmateNote(WELCOME_NOTE, consume, {
           replies: false,
@@ -407,6 +399,37 @@ describe("the first finished task (kept for a view on an older version)", () => 
   });
 });
 
+// docs/first-launch.md, "A finished crewmate": the rule the slot's
+// `thirdCrewmateDoneAt` is decided by, now read by a bounded count instead
+// of composing every task (INF-2338).
+describe("the third finished crewmate", () => {
+  it("counts only work a crewmate started that closed done, and records the third once", () => {
+    const f = setup(false);
+    // Work closed before a crewmate started it was nobody's, dropped work
+    // did not finish, and a question the Firstmate answered had no crewmate.
+    seedTask(f.tasks, { id: "unstarted", title: "Closed before it started", status: "queued" });
+    f.tasks.close("unstarted", { status: "done", reason: "finished", actor: "host" });
+    seedTask(f.tasks, { id: "dropped", title: "Gave up", status: "cancelled" });
+    f.tasks.openAsk({ id: "turn-1", text: "what time is it in Tokyo?" });
+    const answer = f.tasks.fileQuestion({ id: "tokyo", title: "Tokyo time", outcome: "9 AM" });
+    f.tasks.attachAsk("turn-1", answer.id, "tool:emit_card");
+    for (const n of [1, 2]) {
+      seedTask(f.tasks, { id: `crew-${n}`, title: `Finished work ${n}`, status: "completed" });
+      f.tasks.close(`crew-${n}`, { status: "done", reason: "merged", actor: "captain" });
+    }
+    expect(f.service().view().thirdCrewmateDoneAt).toBeUndefined();
+    f.tick();
+    seedTask(f.tasks, { id: "crew-3", title: "Finished work 3", status: "completed" });
+    f.tasks.close("crew-3", { status: "done", reason: "merged", actor: "captain" });
+    expect(f.service().view().thirdCrewmateDoneAt).toBe(1001);
+    f.tick();
+    seedTask(f.tasks, { id: "crew-4", title: "Finished work 4", status: "completed" });
+    f.tasks.close("crew-4", { status: "done", reason: "merged", actor: "captain" });
+    expect(f.service().view().thirdCrewmateDoneAt).toBe(1001);
+    f.close();
+  });
+});
+
 function firstRunRecord(view: ReturnType<FirstRunService["view"]>) {
   const { gateOpen: _open, ...record } = view;
   return record;
@@ -429,7 +452,7 @@ describe("a connection's fresh check", () => {
       hasActivity: () => true,
       hasCrewHistory: () => false,
       hasFinishedTask: () => false,
-      finishedCrewmates: () => 0,
+      thirdCrewmateDone: () => false,
       createWelcome: () => {},
     });
     expect(service.view()).toMatchObject({ gateOpen: true, freshCheck });

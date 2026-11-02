@@ -21,10 +21,10 @@ export type FirstRunOptions = {
   hasActivity: () => boolean;
   /** The profile has had a crewmate (a task on the board), so its colors need no teaching. */
   hasCrewHistory: () => boolean;
-  /** A task of the captain's has closed done (`hasFinishedTask`). */
+  /** A task of the captain's has closed done (`TaskService.hasFinishedTask`). */
   hasFinishedTask: () => boolean;
-  /** How many of the captain's crewmates have finished their tasks (`finishedCrewmates`). */
-  finishedCrewmates: () => number;
+  /** Three of the captain's crewmates have finished their tasks (`TaskService.finishedCrewmates`). */
+  thirdCrewmateDone: () => boolean;
   /** Commit the note, completed answer and consume callback in one transaction, then publish. */
   createWelcome: (consume: (cardId: string) => void) => void;
   onStep?: (step: FirstRunStep) => void;
@@ -53,37 +53,26 @@ export function hasPriorActivity(sources: {
   );
 }
 
-/**
- * Whether a task of the captain's has closed done (`firstTaskDoneAt`, kept
- * for a view on an older version): work, a decision, or a question that
- * answered one of the captain's messages. A host note - the welcome, a
- * release's note - answers no message, and an `operation` row is the trail
- * of an app change, so neither is a task the captain finished.
- */
-export function hasFinishedTask(tasks: Pick<TaskService, "list" | "listAsks">): boolean {
-  const answered = new Set(tasks.listAsks().flatMap((ask) => (ask.taskId ? [ask.taskId] : [])));
-  return tasks
-    .list()
-    .some(
-      (task) =>
-        task.status === "done" &&
-        task.kind !== "operation" &&
-        (task.kind !== "question" || answered.has(task.id)),
-    );
-}
+/** The finished crewmates the create-your-own-panel slot waits for (captain, 2026-10-12; docs/first-launch.md). */
+const SLOT_CREWMATES = 3;
 
 /**
- * How many of the captain's crewmates have finished their tasks
- * (docs/first-launch.md "The create-your-own-panel slot"): work a crewmate
- * started that closed done. A question or decision the Firstmate answered
- * itself had no crewmate, work closed done before one started was nobody's,
- * and dropped work did not finish, so none of them counts.
+ * The crew facts the first-run record is decided from, each a seeking read
+ * of the task record: the first read of a record that lacks them runs at
+ * boot, inside the startup stretch, and composing every task there held
+ * the main thread on a long record (INF-2338). Crew history is a `work`
+ * task on the board; `firstTaskDoneAt` (kept for a view on an older
+ * version) waits on a finished task of the captain's; the slot waits on
+ * its third finished crewmate.
  */
-export function finishedCrewmates(tasks: Pick<TaskService, "list">): number {
-  return tasks
-    .list()
-    .filter((task) => task.kind === "work" && task.status === "done" && task.startedAt !== null)
-    .length;
+export function crewFacts(
+  tasks: Pick<TaskService, "hasKind" | "hasFinishedTask" | "finishedCrewmates">,
+): Pick<FirstRunOptions, "hasCrewHistory" | "hasFinishedTask" | "thirdCrewmateDone"> {
+  return {
+    hasCrewHistory: () => tasks.hasKind("work"),
+    hasFinishedTask: () => tasks.hasFinishedTask(),
+    thirdCrewmateDone: () => tasks.finishedCrewmates(SLOT_CREWMATES) >= SLOT_CREWMATES,
+  };
 }
 
 /** Durable once-only delivery, independent of the derived setup gate. */
@@ -123,7 +112,7 @@ export class FirstRunService {
         record = { ...record, firstTaskDoneAt: this.now() };
         this.options.settings.setFirstRun(record);
       }
-      if (record.thirdCrewmateDoneAt === undefined && this.options.finishedCrewmates() >= 3) {
+      if (record.thirdCrewmateDoneAt === undefined && this.options.thirdCrewmateDone()) {
         // The same two moments, for the third crewmate's finished task.
         record = { ...record, thirdCrewmateDoneAt: this.now() };
         this.options.settings.setFirstRun(record);

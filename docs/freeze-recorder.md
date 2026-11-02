@@ -34,6 +34,10 @@ The rest is read script by script as the app's code loads, before the recorder s
 The recorder takes that watchdog when the core starts it (`takeWatchdog`), so a stall from its first heartbeat is named.
 A core started with nothing armed, such as one in plain Node, starts a watchdog without waiting: its debugger comes on while the recorder already watches, so the cost of enabling it is recorded as a stall rather than hidden before the record starts.
 
+Electron's creation of the app's first window is one long native call on a slow processor, which the app cannot divide.
+So the app's start waits for a timer turn between the core's start and the window's creation (`src/main/app.ts`): the timers that came due while the core started run before the window is made, and the two are separate stalls (INF-2338).
+An immediate would not do it: it runs in the same turn as the input that finished the start, with no timer between.
+
 ## The record
 
 The record is `freezes.jsonl` in the app's data folder (`AppPaths.freezeRecordPath`), written only by the watchdog.

@@ -104,7 +104,7 @@ import { RemoteLogin } from "./devices/remoteLogin";
 import { systemSsh } from "./devices/ssh";
 import { SshConnections } from "./devices/sshConnections";
 import type { CoreEventSink } from "./events";
-import { FirstRunService, finishedCrewmates, hasFinishedTask, hasPriorActivity } from "./firstRun";
+import { crewFacts, FirstRunService, hasPriorActivity } from "./firstRun";
 import {
   conditionalGets,
   createForgeResolver,
@@ -3393,9 +3393,7 @@ export async function createServices(
         flagship,
       }),
     hasActivity: () => hasPriorActivity({ tasks, cards: cardStore, repos }),
-    hasCrewHistory: () => tasks.list().some((task) => task.kind === "work"),
-    hasFinishedTask: () => hasFinishedTask(tasks),
-    finishedCrewmates: () => finishedCrewmates(tasks),
+    ...crewFacts(tasks),
     createWelcome: (consume) => {
       // The welcome takes no reply - the message box under it is where to
       // type - and is the regular card its picture was drawn for.

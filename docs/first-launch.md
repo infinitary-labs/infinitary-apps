@@ -184,12 +184,13 @@ The captain's calls of 2026-10-06 (FI3-1124, on a reviewed plan) and 2026-10-12:
   While four typed facts hold (`showsCreatePanelSlot`, `src/shared/createPanelSlot.ts`): three of the captain's crewmates have finished their tasks, their panels are on, no panel of their own exists, and they have not hidden it.
   An installed panel, by someone else, is not one of their own.
 - **A finished crewmate.**
-  Work a crewmate started that closed done, whether merged, landed, answered on its card or built in place (`finishedCrewmates`, `src/core/firstRun.ts`).
+  Work a crewmate started that closed done, whether merged, landed, answered on its card or built in place (`TaskService.finishedCrewmates`, read through `crewFacts` in `src/core/firstRun.ts`).
   A question or decision the first mate answered itself had no crewmate, work closed done before a crewmate started it was nobody's, and dropped work did not finish, so none of them counts; neither does a host note (the welcome, a release's note) or an `operation` row, the trail of an app change.
   `thirdCrewmateDoneAt` joins the first-run record, written once at the first read that finds three and never cleared, so a profile that already has three sees the slot at its next launch.
   A record an earlier version wrote, holding only `firstTaskDoneAt`, shows no slot until the third crewmate finishes.
   The window reads the record again when a task closes done (`task_changed`), so the slot comes without a relaunch.
-  `firstTaskDoneAt`, the first task of the captain's that closed done (`hasFinishedTask`), is still written for a view on an older version, which shows the slot from it.
+  `firstTaskDoneAt`, the first task of the captain's that closed done (`TaskService.hasFinishedTask`), is still written for a view on an older version, which shows the slot from it.
+  Each crew fact is one seeking read of the task record, never a list of every task: a record that lacks them decides them at boot, before the window opens (INF-2338).
 - **The click.**
   The message box starts with "Make me a panel that shows " and the caret after it, focus in the field, through the store's `beginDraft`: words already typed stay after the prefix, and a second click changes no words.
   While the box is held - a recording, the dictation key's pick, the first-launch gate - the click is refused, as Go to the main message is (`mainMessageRefusal`).

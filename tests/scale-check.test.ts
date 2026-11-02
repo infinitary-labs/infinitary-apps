@@ -1,5 +1,6 @@
 import { mkdirSync } from "node:fs";
 import { join } from "node:path";
+import { crewFacts, FirstRunService } from "@core/firstRun";
 import { AnswerDeliveryCheck } from "@core/orchestrator/answerDeliveryCheck";
 import { CrewSupervisor } from "@core/orchestrator/crewSupervisor";
 import { FirstmateAgent } from "@core/orchestrator/firstmateAgent";
@@ -26,8 +27,8 @@ import { outsideCensus } from "./helpers/statementCheck";
 
 // The scale check (INF-2061, direction B, built as INF-2069): the reads the
 // app repeats on its main thread - a first mate turn's context build, the
-// answer-delivery sweep, one minute pass and a task board update - must not
-// grow with closed history. Five main thread freezes (INF-703, INF-940,
+// answer-delivery sweep, one minute pass, a task board update and the first
+// launch's crew facts - must not grow with closed history. Five main thread freezes (INF-703, INF-940,
 // INF-1348, INF-1956, INF-2059) were synchronous SQLite whose cost grew
 // with the saved record while the tests used a few rows. This seeds a
 // record sized from the captain's real readings, counts each read's
@@ -370,6 +371,19 @@ async function buildRecord() {
   });
   supervisor.startWatchdog(ticker);
   ticker.register("work-presentation", TICK_PERIOD_MS, () => presentation.schedule());
+  // The first launch's crew facts as services.ts wires them (INF-2338). A
+  // record that lacks them, as every launch of the freeze journey's freshly
+  // seeded record does, decides them at boot in the startup stretch, and a
+  // fact still false is read again at each task close.
+  const firstRun = new FirstRunService({
+    settings,
+    gateOpen: () => false,
+    usable: () => true,
+    hasActivity: () => true,
+    ...crewFacts(tasks),
+    createWelcome: () => {},
+    now,
+  });
 
   return {
     addClosedHistory: async (count: number) => {
@@ -380,7 +394,7 @@ async function buildRecord() {
     measure: async (): Promise<Record<string, Counts>> => {
       vi.setSystemTime(Date.now() + TICK_PERIOD_MS);
       await settle();
-      return {
+      const counts: Record<string, Counts> = {
         "first mate context": await counted("first mate context", () => {
           agent.buildContextBlock();
         }),
@@ -393,6 +407,12 @@ async function buildRecord() {
           protocol.board();
         }),
       };
+      // A record without the crew facts, read as each such launch reads it.
+      settings.setFirstRun({ welcomedAt: null, firstTurnAt: NOW, welcomeState: "skipped" });
+      counts["first-run crew facts"] = await counted("first-run crew facts", () => {
+        firstRun.reconcile();
+      });
+      return counts;
     },
     dispose: async () => {
       protocol.dispose();

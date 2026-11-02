@@ -76,6 +76,8 @@ export async function connectClient(
   options: {
     cursor?: ConnectionCursor;
     hello?: boolean;
+    /** Additive capabilities this client knows how to read. */
+    changes?: readonly string[];
     /** The contract version the hello speaks; this app's own by default. */
     protocolVersion?: string;
     /** The version of Firstmate the hello says it runs; unsaid by default. */
@@ -162,6 +164,7 @@ export async function connectClient(
       JSON.stringify({
         t: "hello",
         protocolVersion: options.protocolVersion ?? PROTOCOL_VERSION,
+        ...(options.changes ? { changes: options.changes } : {}),
         ...(options.appVersion ? { appVersion: options.appVersion } : {}),
         ...(options.nameOnly ? { nameOnly: true } : {}),
         ...(options.as ? { as: options.as } : {}),

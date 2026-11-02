@@ -21,7 +21,6 @@ import {
   dismissalSuccessor,
   isHeldEntry,
   mainInputHeld,
-  NOTE_COLLAPSE_MS,
   offStack,
   panelCardEntryId,
   reconcileStack,
@@ -119,11 +118,11 @@ describe("stack visibility (WI-18)", () => {
   const state = () => useShellStore.getState();
   const shownId = () => {
     const s = state();
-    return shownCard(s.cards, s.cardIndex, s.collapsedCardIds, s.records)?.id;
+    return shownCard(s.cards, s.cardIndex, offStack(s), s.records)?.id;
   };
   const unread = () => {
     const s = state();
-    return unreadAround(visibleCards(s.cards, s.collapsedCardIds), s.cardIndex, s.unreadCardIds);
+    return unreadAround(visibleCards(s.cards, offStack(s)), s.cardIndex, s.unreadCardIds);
   };
 
   const reset = () => {
@@ -134,8 +133,6 @@ describe("stack visibility (WI-18)", () => {
       records: [],
       cardIndex: 0,
       unreadCardIds: [],
-      collapsedCardIds: [],
-      collapsedDigests: {},
       cardsSeeded: false,
       threads: {},
       closedThreadIds: [],
@@ -176,9 +173,7 @@ describe("stack visibility (WI-18)", () => {
     state().setReplyDraft("choice", "Keep the review beside it.");
     state().applyCards([{ ...choice, minimized: true }, note]);
     expect(
-      visibleStack(state().cards, state().collapsedCardIds, state().records).map(
-        (entry) => entry.id,
-      ),
+      visibleStack(state().cards, offStack(state()), state().records).map((entry) => entry.id),
     ).toEqual(["note"]);
     expect(state().unreadCardIds).not.toContain("choice");
     expect(shownId()).toBe("note");
@@ -739,11 +734,7 @@ describe("stack visibility (WI-18)", () => {
     expect(shownId()).toBe("a");
     expect(state().cardIndex).toBe(0);
     expect(visibleCards(state().cards)).toHaveLength(1);
-    const reconciled = reconcileStack(
-      state(),
-      [{ ...a, awaiting: "answer", sentBackAt: 11 }],
-      Date.now(),
-    );
+    const reconciled = reconcileStack(state(), [{ ...a, awaiting: "answer", sentBackAt: 11 }]);
     expect(reconciled.lostCard).toBe(false);
     expect(reconciled.state.cardIndex).toBe(0);
   });
@@ -768,23 +759,30 @@ describe("stack visibility (WI-18)", () => {
     expect(state().unreadCardIds).toEqual([]);
   });
 
-  it("never collapses a note that waits on its author", () => {
+  // INF-2022: reading, elapsed time and paging never hide a note, including an answered note.
+  it("keeps a note while its author waits and after its answer, through elapsed time and paging", () => {
     vi.useFakeTimers();
     vi.setSystemTime(T0);
-    const shown = ready("shown", { taskId: "t1" });
+    const a = ready("shown", { taskId: "t1" });
     const note = ready("note", { taskId: "t1" });
-    state().applyCards([shown, note]);
-    state().nextCard();
-    state().nextCard();
-    state().prevCard();
-    state().applyCards([shown, { ...note, awaiting: "answer", sentBackAt: 10 }]);
-    state().collapseStaleNotes(T0 + NOTE_COLLAPSE_MS + 1);
-    expect(state().collapsedCardIds).toEqual([]);
-    state().applyCards([shown, { ...note, sentBackAt: 10 }]);
+    state().applyCards([a, note]);
     state().nextCard();
     state().prevCard();
-    state().collapseStaleNotes(T0 + NOTE_COLLAPSE_MS + 1);
-    expect(state().collapsedCardIds).toEqual(["note"]);
+    state().applyCards([a, { ...note, awaiting: "answer", sentBackAt: 10 }]);
+    vi.advanceTimersByTime(15 * 60_000);
+    expect(visibleCards(state().cards, offStack(state())).map((c) => c.id)).toEqual([
+      "shown",
+      "note",
+    ]);
+    state().applyCards([a, { ...note, sentBackAt: 10 }]);
+    vi.advanceTimersByTime(24 * 60 * 60_000);
+    state().nextCard();
+    state().prevCard();
+    expect(visibleCards(state().cards, offStack(state())).map((c) => c.id)).toEqual([
+      "shown",
+      "note",
+    ]);
+    expect(shownId()).toBe("shown");
   });
 
   it("treats the boot stack as already seen", () => {
@@ -847,84 +845,108 @@ describe("stack visibility (WI-18)", () => {
     expect(state().unreadCardIds).toEqual([]);
   });
 
-  it("collapses a seen, aged note on a task into its record and keeps everything else", () => {
+  // INF-2022 / INF-2020: read findings, read a newer sampler, page away, then exceed the old boundary.
+  it("keeps read task notes, taskless notes and decisions after the old boundary and longer waits", () => {
     vi.useFakeTimers();
     vi.setSystemTime(T0);
-    const shown = ready("shown", { taskId: "t1" });
-    const agedNote = ready("aged", { taskId: "t1" });
-    const orphan = ready("orphan");
-    const decision = ready("decision", { actions: DECIDE, taskId: "t1" });
-    state().applyCards([shown, agedNote, orphan, decision]);
-    const before = state().focusRequest;
-    state().collapseStaleNotes(T0 + NOTE_COLLAPSE_MS - 1);
-    expect(state().collapsedCardIds).toEqual([]);
-    state().collapseStaleNotes(T0 + NOTE_COLLAPSE_MS);
-    // The shown note stays while it is shown; a note with no task has no
-    // record to go to; a decision never collapses.
-    expect(state().collapsedCardIds).toEqual(["aged"]);
-    expect(shownId()).toBe("shown");
-    expect(visibleCards(state().cards, state().collapsedCardIds)).toHaveLength(3);
-    expect(state().focusRequest).toBe(before);
-    // Pointing at it brings it back.
-    expect(state().focusCard("aged")).toBe(true);
-    expect(shownId()).toBe("aged");
-    expect(state().collapsedCardIds).toEqual([]);
+    const cards = [
+      ready("findings", { taskId: "t1" }),
+      ready("sampler", { taskId: "t1" }),
+      ready("orphan"),
+      ready("decision", { taskId: "t1", actions: DECIDE }),
+    ];
+    state().applyCards(cards);
+    state().nextCard();
+    state().prevCard();
+    const focusBefore = state().focusRequest;
+    for (const elapsed of [15 * 60_000 - 1, 1, 48 * 60 * 60_000]) {
+      vi.advanceTimersByTime(elapsed);
+      state().applyCards(cards);
+      expect(visibleCards(state().cards, offStack(state()))).toEqual(cards);
+      expect(shownId()).toBe("findings");
+      expect(state().focusRequest).toBe(focusBefore);
+    }
+    expect(state().focusCard("sampler")).toBe(true);
+    expect(shownId()).toBe("sampler");
   });
 
-  it("brings a collapsed note back unread when it is revised in place, and only then (M1)", () => {
-    vi.useFakeTimers();
-    vi.setSystemTime(T0);
-    const a = ready("a", { taskId: "t1" });
-    const b = ready("b", { actions: DECIDE, taskId: "t1" });
+  it("applies shared current-update marks on every snapshot without moving selection or hiding cards", () => {
+    const a = ready("a", { currentUpdateId: "release-a", currentUpdateSeen: false });
+    const b = ready("b", { currentUpdateId: "release-b", currentUpdateSeen: false });
     state().applyCards([a, b]);
+    expect(state().unreadCardIds).toEqual(["a", "b"]);
     state().nextCard();
+    // Selection alone is not a sighting; only the owner's accepted update clears it.
+    expect(state().unreadCardIds).toEqual(["a", "b"]);
+    state().applyCards([{ ...a, currentUpdateSeen: true }, b]);
     expect(shownId()).toBe("b");
-    state().collapseStaleNotes(T0 + NOTE_COLLAPSE_MS + 60_000);
-    expect(state().collapsedCardIds).toEqual(["a"]);
-    takeCharacterNotice();
-
-    // A push that changes nothing about A leaves it collapsed and quiet.
-    vi.setSystemTime(T0 + NOTE_COLLAPSE_MS + 2 * 60_000);
-    state().applyCards([{ ...a, status: "streaming" }, b]);
-    state().applyCards([a, b]);
-    expect(state().collapsedCardIds).toEqual(["a"]);
+    expect(state().unreadCardIds).toEqual(["b"]);
+    state().applyCards([
+      { ...a, currentUpdateSeen: true },
+      { ...b, currentUpdateSeen: true },
+    ]);
     expect(state().unreadCardIds).toEqual([]);
-    expect(takeCharacterNotice()).toBe(false);
-
-    // The emitter revises A under the same id: it is news again.
-    state().applyCards([{ ...a, body: "a, revised" }, b]);
-    expect(state().collapsedCardIds).toEqual([]);
-    expect(visibleCards(state().cards, state().collapsedCardIds)).toHaveLength(2);
-    expect(shownId()).toBe("b");
+    const revised = { ...a, currentUpdateId: "release-a-answer", currentUpdateSeen: false };
+    state().applyCards([revised, { ...b, currentUpdateSeen: true }]);
     expect(state().unreadCardIds).toEqual(["a"]);
-    expect(unread()).toEqual({ before: 1, after: 0 });
     expect(takeCharacterNotice()).toBe(true);
-
-    // Unread, it does not collapse again; seen and aged, it does.
-    state().collapseStaleNotes(T0 + NOTE_COLLAPSE_MS * 3);
-    expect(state().collapsedCardIds).toEqual([]);
-    state().prevCard();
-    state().nextCard();
-    state().collapseStaleNotes(T0 + NOTE_COLLAPSE_MS * 3);
-    expect(state().collapsedCardIds).toEqual(["a"]);
-    // A new title or a new action set counts as a change too.
-    state().applyCards([{ ...a, body: "a, revised", title: "A, retitled" }, b]);
+    state().applyCards([revised, { ...b, currentUpdateSeen: true }]);
     expect(state().unreadCardIds).toEqual(["a"]);
+    expect(takeCharacterNotice()).toBe(false);
+    expect(visibleCards(state().cards)).toHaveLength(2);
+    expect(shownId()).toBe("b");
   });
 
-  it("never collapses a note that is still unread", () => {
+  // INF-2022: a restoration read may finish after a newer owner push; it must not restore old newness.
+  it("keeps a newer seen push when an older restoration snapshot finishes late", async () => {
+    let finish: (cards: Card[]) => void = () => {};
+    const response = new Promise<Card[]>((resolve) => {
+      finish = resolve;
+    });
+    let began: () => void = () => {};
+    const started = new Promise<void>((resolve) => {
+      began = resolve;
+    });
+    const list = vi.fn(() => {
+      began();
+      return response;
+    });
+    vi.stubGlobal("window", {
+      infinitary: { cards: { minimize: async () => ({ ok: true }), list } },
+    });
+    const old = ready("note", {
+      minimized: true,
+      currentUpdateId: "released-note",
+      currentUpdateSeen: false,
+    });
+    state().applyCards([old]);
+    expect(state().focusCard("note")).toBe(true);
+    await started;
+    expect(list).toHaveBeenCalledOnce();
+    const fresh = { ...old, minimized: undefined, currentUpdateSeen: true };
+    state().applyCards([fresh]);
+    finish([{ ...old, minimized: undefined }]);
+    await response;
+    await Promise.resolve();
+    await Promise.resolve();
+    expect(state().cards[0]?.currentUpdateSeen).toBe(true);
+    expect(state().unreadCardIds).toEqual([]);
+  });
+
+  it("keeps an unread note after elapsed time, reading and paging away", () => {
     vi.useFakeTimers();
-    vi.setSystemTime(T0 + NOTE_COLLAPSE_MS * 2);
+    vi.setSystemTime(T0);
     const a = ready("a");
+    const note = ready("late", { taskId: "t1" });
     state().applyCards([a]);
-    state().applyCards([a, ready("late", { taskId: "t1" })]);
+    state().applyCards([a, note]);
     expect(state().unreadCardIds).toEqual(["late"]);
-    state().collapseStaleNotes(T0 + NOTE_COLLAPSE_MS * 3);
-    expect(state().collapsedCardIds).toEqual([]);
+    vi.advanceTimersByTime(60 * 60_000);
     state().nextCard();
     state().prevCard();
-    state().collapseStaleNotes(T0 + NOTE_COLLAPSE_MS * 3);
-    expect(state().collapsedCardIds).toEqual(["late"]);
+    state().applyCards([a, note]);
+    expect(state().unreadCardIds).toEqual([]);
+    expect(visibleCards(state().cards, offStack(state()))).toEqual([a, note]);
     expect(shownId()).toBe("a");
   });
 });
@@ -960,8 +982,6 @@ describe("the project focus holds other projects' cards back (docs/project-focus
       records: [],
       cardIndex: 0,
       unreadCardIds: [],
-      collapsedCardIds: [],
-      collapsedDigests: {},
       heldBackCardIds: [],
       letThroughCardIds: [],
       letThroughFocus: null,
@@ -1038,9 +1058,7 @@ describe("task records on the card stack", () => {
       cardIndex: 0,
       recording: false,
       firstmateBusy: false,
-      collapsedCardIds: [],
       unreadCardIds: [],
-      collapsedDigests: {},
       cardsSeeded: true,
     }),
   );
@@ -1127,9 +1145,7 @@ describe("past cards on the card stack", () => {
       cardIndex: 0,
       recording: false,
       firstmateBusy: false,
-      collapsedCardIds: [],
       unreadCardIds: [],
-      collapsedDigests: {},
       cardsSeeded: true,
     }),
   );
@@ -1222,9 +1238,7 @@ describe("a task's browser view on the card stack (docs/task-browser.md)", () =>
       cardIndex: 0,
       recording: false,
       firstmateBusy: false,
-      collapsedCardIds: [],
       unreadCardIds: [],
-      collapsedDigests: {},
       cardsSeeded: true,
     }),
   );
@@ -2450,7 +2464,6 @@ describe("the last turn above the input (./LastTurn, docs/composer.md)", () => {
     useShellStore.setState({
       cards: [card({ id: "decision", status: "ready", actions: DECIDE })],
       records: [],
-      collapsedCardIds: [],
       cardIndex: 0,
     });
     expect(state().openReplyNote()).toBe(false);
@@ -2504,7 +2517,6 @@ describe("the last turn above the input (./LastTurn, docs/composer.md)", () => {
       recording: false,
       cards: [],
       records: [],
-      collapsedCardIds: [],
     });
     state().submit();
     expect(state().firstRun?.firstTurnAt).toBe(T0);
@@ -2876,9 +2888,7 @@ describe("a panel's cards on the card stack (docs/ui-plugins.md, \"A panel's car
       cardIndex: 0,
       recording: false,
       firstmateBusy: false,
-      collapsedCardIds: [],
       unreadCardIds: [],
-      collapsedDigests: {},
       cardsSeeded: true,
     }),
   );

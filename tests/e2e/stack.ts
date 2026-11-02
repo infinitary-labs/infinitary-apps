@@ -21,6 +21,22 @@ import { takeTurn } from "./inputQueue";
  * app to: these helpers ask for a card by name and for the stack by size.
  */
 
+/**
+ * INF-2022: a drawn foreground update is read only once its owner records it.
+ * A refusal baseline must include that real reading, not race its quiet timeline entry.
+ */
+export async function expectUpdateSeen(page: Page, cardId: string): Promise<void> {
+  await expect
+    .poll(() =>
+      page.evaluate(
+        async (id) =>
+          (await window.infinitary.cards.list()).find((card) => card.id === id)?.currentUpdateSeen,
+        cardId,
+      ),
+    )
+    .toBe(true);
+}
+
 /** The pager of a stack of `count`, whatever position is shown; its words are the stack's own. */
 export const pager = (page: Page, count: number) =>
   page.locator(`[data-card-pager][data-pager-count="${count}"]`);

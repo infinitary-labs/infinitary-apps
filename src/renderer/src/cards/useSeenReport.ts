@@ -1,24 +1,35 @@
+import type { Card } from "@shared/cards";
+import type { FirstmateApi } from "@shared/ipc";
 import { useEffect, useState } from "react";
+import { useShellStore } from "../app/store";
 
 /** Whether the window is in front of the captain: visible, and focused. */
 function windowPresent(): boolean {
   return document.visibilityState === "visible" && document.hasFocus();
 }
 
-/**
- * Tells the core which version of the shown card the captain has in front
- * of them (docs/card-authoring.md "What changed since you looked"): the
- * card on the stage while the window is visible and focused - focus in a
- * card's own frame counts. The core records it once per version and
- * compares the card's next revision with it, so revisions that land while
- * the window is away accumulate.
- */
-export function useSeenReport(cardId: string | undefined, offerId: string | undefined): void {
+/** Choose only a request the home advertised; legacy reports keep their two arguments. */
+export async function reportDrawnUpdate(
+  card: Pick<Card, "id" | "offerId" | "lifecycleId" | "currentUpdateId">,
+  changes: readonly string[] | undefined,
+  reporter: Pick<FirstmateApi["cards"], "seen" | "seenUpdate">,
+): Promise<void> {
+  if (changes?.includes("card-current-update-seen")) {
+    if (card.lifecycleId && card.currentUpdateId)
+      await reporter.seenUpdate(card.id, card.lifecycleId, card.currentUpdateId);
+  } else if (card.offerId) {
+    await reporter.seen(card.id, card.offerId);
+  }
+}
+
+/** Report only the exact released update that actually drew in a foreground view. */
+export function useSeenReport(card: Card | undefined, drawn: boolean): void {
   const [present, setPresent] = useState(windowPresent);
+  const loaded = useShellStore((s) => s.cardsSnapshotLoaded);
+  const mac = useShellStore((s) => s.thisMac);
+  const reachable = mac?.role !== "view" || mac.contact === "in-reach";
   useEffect(() => {
     const update = () => setPresent(windowPresent());
-    // Focus moving into a card's frame blurs the window before the frame
-    // holds it; read again once it has settled.
     let timer: ReturnType<typeof setTimeout> | undefined;
     const settle = () => {
       clearTimeout(timer);
@@ -34,8 +45,27 @@ export function useSeenReport(cardId: string | undefined, offerId: string | unde
       window.removeEventListener("blur", settle);
     };
   }, []);
+  const id = card?.id;
+  const offerId = card?.offerId;
+  const lifecycleId = card?.lifecycleId;
+  const updateId = card?.currentUpdateId;
   useEffect(() => {
-    if (!present || !cardId || !offerId) return;
-    void window.infinitary.cards.seen(cardId, offerId).catch(() => {});
-  }, [present, cardId, offerId]);
+    if (!present || !drawn || !loaded || !reachable || !id || !offerId) return;
+    let cancelled = false;
+    // The healthcheck reaches the owner, not this window's build. Older homes omit changes.
+    void window.infinitary.app
+      .healthcheck()
+      .then(async (home) => {
+        if (cancelled || !windowPresent()) return;
+        await reportDrawnUpdate(
+          { id, offerId, lifecycleId, currentUpdateId: updateId },
+          home.changes,
+          window.infinitary.cards,
+        );
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [present, drawn, loaded, reachable, id, offerId, lifecycleId, updateId]);
 }

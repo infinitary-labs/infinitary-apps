@@ -61,11 +61,12 @@ public struct PhoneNotice: Equatable, Sendable {
     public private(set) var homeVersion: String?
     public var notice: PhoneNotice?
     /// Offers the stage has drawn while the person could see it, kept for this computer's session only.
-    public private(set) var seenCards = Set<String>()
+    private var seenCards = Set<String>()
+    public private(set) var sharedCardSeen = false
     /// The Mac's stage rule: a new card waits for its author's close-out, but a replied-under card stays.
     /// A minimized card leaves the phone's stack and count too (INF-944 item 3).
     public var stack: [PhoneCard] { cards.filter { ($0.awaiting == nil || $0.sentBackAt != nil) && !$0.minimized } }
-    public var unreadCards: Int { stack.filter { !seenCards.contains($0.offerID ?? $0.id) }.count }
+    public var unreadCards: Int { stack.filter { !hasSeen($0) }.count }
     public var canChange: Bool { contact == "in-reach" && access == "full" }
     public var changeRefusal: String? {
         if contact != "in-reach" { return "Your computer is out of reach. Nothing will be sent later." }
@@ -215,10 +216,30 @@ public struct PhoneNotice: Equatable, Sendable {
         wakeReachWaiters()
     }
 
-    /// Reading a card ends the notice about it.
+    /// Updated homes own every current-update mark; the set is only the older-home fallback.
+    public func hasSeen(_ card: PhoneCard) -> Bool {
+        sharedCardSeen ? card.currentUpdateSeen : seenCards.contains(card.offerID ?? card.id)
+    }
+
+    /// Called only after the current pane drew in an active, visible, connected scene.
     public func markSeen(_ card: PhoneCard) {
-        seenCards.insert(card.offerID ?? card.id)
+        guard contact == "in-reach", let current = cards.first(where: { $0.id == card.id }),
+              current.lifecycleID == card.lifecycleID, current.offerID == card.offerID,
+              current.currentUpdateID == card.currentUpdateID else { return }
+        if !sharedCardSeen { seenCards.insert(card.offerID ?? card.id) }
         if notice?.cardID == card.id { notice = nil }
+        let currentGeneration = generation
+        Task {
+            guard currentGeneration == generation, contact == "in-reach",
+                  let newest = cards.first(where: { $0.id == card.id }),
+                  newest.lifecycleID == card.lifecycleID, newest.currentUpdateID == card.currentUpdateID else { return }
+            if sharedCardSeen {
+                guard let lifecycle = card.lifecycleID, let update = card.currentUpdateID else { return }
+                _ = try? await ask(.seenUpdate, [.string(card.id), .string(lifecycle), .string(update)])
+            } else if let offer = card.offerID {
+                _ = try? await ask(.seen, [.string(card.id), .string(offer)])
+            }
+        }
     }
 
     private func observeCards(_ snapshot: [PhoneCard]) {
@@ -236,7 +257,7 @@ public struct PhoneNotice: Equatable, Sendable {
             let enabled = try? await request(.notifications, as: Bool.self)
             guard enabled == true, current == generation, contact == "in-reach" else { return }
             // A new card the stage drew while this question was out is already read.
-            if !reply && seenCards.contains(newest.offerID ?? newest.id) { return }
+            if let current = cards.first(where: { $0.id == newest.id }), (sharedCardSeen || !reply) && hasSeen(current) { return }
             notice = PhoneNotice(cardID: newest.id, title: newest.title, reply: reply)
         }
     }
@@ -417,6 +438,7 @@ public struct PhoneNotice: Equatable, Sendable {
             }
             // A major folds every earlier change name in, so a home from sceneObservationsSince on has them without naming them.
             let homeMajor = ((frame["protocolVersion"] as? String)?.split(separator: ".").first).flatMap { Int($0) } ?? 0
+            sharedCardSeen = (frame["changes"] as? [String] ?? []).contains(PhoneContract.cardCurrentUpdateSeen)
             sceneObservations = homeMajor >= PhoneContract.sceneObservationsSince
                 || (frame["changes"] as? [String] ?? []).contains(PhoneContract.sceneObservations)
             if !sceneObservations { computers = [] }

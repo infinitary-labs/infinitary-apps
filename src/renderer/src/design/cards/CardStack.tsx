@@ -38,6 +38,8 @@ export type CardStackProps = {
   unreadBefore?: number;
   /** Unseen cards after the shown one: a dot on "Next card". */
   unreadAfter?: number;
+  /** The shown update is still unseen until the owner confirms its drawn reading. */
+  unreadCurrent?: boolean;
   onPrev?: () => void;
   onNext?: () => void;
   /** The arrows' key hints: the keys that page the same way from anywhere in the window. */
@@ -55,6 +57,7 @@ export function CardStack({
   count = 1,
   unreadBefore = 0,
   unreadAfter = 0,
+  unreadCurrent = false,
   onPrev,
   onNext,
   prevKeys,
@@ -64,7 +67,7 @@ export function CardStack({
   style,
   envelopeHeight,
 }: CardStackProps) {
-  const unread = unreadBefore + unreadAfter;
+  const unread = unreadBefore + unreadAfter + Number(unreadCurrent);
   return (
     <div
       data-card-envelope={envelopeHeight ? "" : undefined}

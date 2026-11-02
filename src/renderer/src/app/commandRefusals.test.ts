@@ -36,7 +36,6 @@ const HOME: RefusalState = {
   commandSearchOpen: false,
   cards: [card("a"), card("b")],
   cardIndex: 0,
-  collapsedCardIds: [],
   heldBackCardIds: [],
   records: [],
   threads: {},

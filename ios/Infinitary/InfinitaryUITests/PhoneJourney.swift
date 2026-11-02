@@ -630,6 +630,7 @@ import XCTest
         try await launchJoined()
         try await verifyMergeCard()
         try await verifyCards()
+        try await verifySharedSeen()
     }
 
     /// INF-2095: a quick pick on the card pager's menu was lost, with the menu left open, when the reply notice cleared
@@ -1355,6 +1356,42 @@ import XCTest
         XCTAssertTrue(cardHeading(newsTitle).waitForAbsence(timeout: 10))
     }
 
+    /// INF-2022: owner sightings clear native news without selection changes, and phone readings persist at the owner.
+    private func verifySharedSeen() async throws {
+        let fixture = try await home("shared-seen-fixture")
+        let leader = try XCTUnwrap(fixture["leader"] as? String)
+        let target = try XCTUnwrap(fixture["target"] as? String)
+        showCard(leader)
+        XCTAssertTrue(app.buttons["card-new"].waitForPresence(timeout: 10), app.debugDescription)
+        picture("shared-seen-new")
+        _ = try await home("shared-seen-mark")
+        XCTAssertTrue(app.buttons["card-new"].waitForAbsence(timeout: 10), app.debugDescription)
+        XCTAssertTrue(cardHeading(leader).exists, "Reading elsewhere never moves this phone's selection")
+        picture("shared-seen-read-elsewhere")
+        _ = try await home("shared-seen-answer")
+        XCTAssertTrue(app.buttons["card-new"].waitForPresence(timeout: 10), app.debugDescription)
+        showCard(target)
+        let read = try await home("shared-seen-wait")
+        let card = try XCTUnwrap(read["card"] as? [String: Any])
+        XCTAssertEqual(card["currentUpdateSeen"] as? Bool, true)
+        XCTAssertEqual(app.buttons["card-pager"].label, "2 of 2")
+        picture("shared-seen-phone-read")
+        app.terminate(); app.launch()
+        showCard(leader)
+        XCTAssertTrue(app.buttons["card-new"].waitForAbsence(timeout: 10), app.debugDescription)
+        picture("shared-seen-relaunched")
+        // An updated phone against a home without the named change keeps the old request and ordinary actions.
+        _ = try await home("shared-seen-legacy")
+        showCard(target)
+        let fallback = try await home("shared-seen-legacy-wait")
+        let calls = try XCTUnwrap(fallback["calls"] as? [[String: Any]])
+        XCTAssertFalse(calls.contains { $0["channel"] as? String == "inf:cards:seen-update" })
+        waitUntilEnabled(app.buttons["close-card"])
+        reveal(app.buttons["close-card"]); app.buttons["close-card"].tap()
+        XCTAssertTrue(cardHeading(target).waitForAbsence(timeout: 10), app.debugDescription)
+        _ = try await home("shared-seen-current")
+    }
+
     private func verifyCards() async throws {
         try await verifyAskedLine()
         try await verifyCardReadiness()
@@ -1381,7 +1418,7 @@ import XCTest
         let before = try await home("card-state", method: "GET")
         XCTAssertEqual(before["leaks"] as? Int, 0)
         let beforeCalls = try XCTUnwrap(before["calls"] as? [[String: Any]])
-        XCTAssertTrue(beforeCalls.contains { $0["channel"] as? String == "inf:cards:seen" })
+        XCTAssertTrue(beforeCalls.contains { $0["channel"] as? String == "inf:cards:seen-update" })
         let leaveFrame = app.webViews.buttons["Try to leave the card"]
         reveal(leaveFrame); tapOnPhone(leaveFrame)
         // A loaded child cannot navigate away or contact the loopback endpoint; the form journey still works below.

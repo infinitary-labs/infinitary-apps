@@ -313,6 +313,11 @@ function refOf(row: Row): DuplicateCardRef {
   return { id: row.id, title: row.title, resolved: row.resolved_at !== null };
 }
 
+/** One sighting receipt per globally unique release observation, sought by its primary key. */
+export function updateSightingId(updateId: string): string {
+  return `seen-update:${updateId}`;
+}
+
 export class CardStore {
   constructor(private readonly db: AppDatabase) {}
 
@@ -1069,6 +1074,44 @@ export class CardStore {
       JSON.parse(row.payload_json),
     );
     return payload.success ? payload.data : undefined;
+  }
+
+  /** The exact released update of this offer; status pushes and redraws create none. */
+  currentUpdate(cardId: string, lifecycleId: string, offerId: string): string | undefined {
+    const row = this.db
+      .prepare(`SELECT id FROM card_observations
+      WHERE card_id = ? AND lifecycle_id = ? AND offer_id = ? AND kind = 'availability'
+        AND json_extract(payload_json, '$.state') = 'available'
+      ORDER BY seq DESC LIMIT 1`)
+      .get(cardId, lifecycleId, offerId) as { id: string } | undefined;
+    return row?.id;
+  }
+
+  /** Only an exact-update observation proves this released answer was read. */
+  updateSeen(cardId: string, lifecycleId: string, updateId: string): boolean {
+    const seen = this.observationById(updateSightingId(updateId));
+    return (
+      seen?.kind === "seen" &&
+      seen.cardId === cardId &&
+      seen.lifecycleId === lifecycleId &&
+      seen.payload.updateId === updateId
+    );
+  }
+
+  /** A final author answer since the last release, including an unchanged-offer answer. */
+  unreleasedAnswer(cardId: string, lifecycleId: string): boolean {
+    return (
+      this.db
+        .prepare(`SELECT 1 FROM card_observations
+      WHERE card_id = ? AND lifecycle_id = ? AND kind = 'message_ref'
+        AND json_extract(payload_json, '$.who') IN ('firstmate', 'crewmate')
+        AND json_extract(payload_json, '$.interim') IS NOT 1
+        AND seq > COALESCE((SELECT MAX(seq) FROM card_observations
+          WHERE card_id = ? AND lifecycle_id = ? AND kind = 'availability'
+            AND json_extract(payload_json, '$.state') = 'available'), 0)
+      LIMIT 1`)
+        .get(cardId, lifecycleId, cardId, lifecycleId) !== undefined
+    );
   }
 
   /** The offer a lifecycle last had available on the stage, if any. */

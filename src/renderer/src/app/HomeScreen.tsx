@@ -404,7 +404,6 @@ function CardLayer({ onEmptied }: { onEmptied: () => void }) {
   const bootCardId = useShellStore((s) => s.bootCardId);
   const cardIndex = useShellStore((s) => s.cardIndex);
   const unreadCardIds = useShellStore((s) => s.unreadCardIds);
-  const collapsedCardIds = useShellStore((s) => s.collapsedCardIds);
   const heldBackCardIds = useShellStore((s) => s.heldBackCardIds);
   const theme = useShellStore((s) => s.theme);
   const actOnCard = useShellStore((s) => s.actOnCard);
@@ -428,11 +427,11 @@ function CardLayer({ onEmptied }: { onEmptied: () => void }) {
 
   const records = useShellStore((s) => s.records);
   const closeRecord = useShellStore((s) => s.closeRecord);
-  const shown = visibleStack(cards, offStack({ collapsedCardIds, heldBackCardIds }), records);
+  const shown = visibleStack(cards, offStack({ heldBackCardIds }), records);
   const index = Math.min(cardIndex, shown.length - 1);
   const card = shown[index];
-  // A card that landed behind the shown one is marked on the pager until
-  // it is paged to (WI-18); it never takes the shown card's place.
+  // Arrow dots locate other unread cards; the badge also keeps a shown
+  // shared update new until its drawn sighting reaches the owner (INF-2022).
   const unread = unreadAround(shown, index, unreadCardIds);
   // A past card (FI3-579) is read once when its entry comes to the front.
   const pastRead = usePastCard(card?.pastCardId);
@@ -442,7 +441,6 @@ function CardLayer({ onEmptied }: { onEmptied: () => void }) {
   const cardId = card?.id;
   // The version on screen is the one the captain has seen, while the window
   // is in front of them; the card's next revision is compared with it.
-  useSeenReport(isHeldEntry(card) ? undefined : cardId, card?.offerId);
   useEffect(() => {
     if (replyable && cardId) loadThread(cardId);
   }, [replyable, cardId, loadThread]);
@@ -629,9 +627,11 @@ function CardLayer({ onEmptied }: { onEmptied: () => void }) {
     markStage("drawn", { slot, held: true });
   }, []);
   const markBorn = useCallback((slot: string) => markStage("born", { slot }), []);
+  // A beside thread leaves the same body document drawn at the same column width.
+  // Only an in-place thread changes its home; body, theme and width still require their own drawing.
   // The card width comes last, so `drawnDocument` reads the rest.
   const drawKey = (entry: StackEntry, at: EntryView) =>
-    `${theme}:${at.past?.state === "ready" ? at.past.card.body : entry.body}:${at.home}:${at.card}`;
+    `${theme}:${at.past?.state === "ready" ? at.past.card.body : entry.body}:${at.home === "in-place" ? "in-place" : "body"}:${at.card}`;
   const drawingOf = (slot: string, key: string): PreparedDrawing => {
     if (failedSlots.current.has(slot)) return "failed";
     const at = [drawn.current.get(slot), held.current.get(slot)];
@@ -674,6 +674,7 @@ function CardLayer({ onEmptied }: { onEmptied: () => void }) {
     view !== undefined &&
     shownKey !== undefined &&
     drawn.current.get(shownKey) === drawKey(card, view);
+  useSeenReport(isHeldEntry(card) ? undefined : card, shownReady && stage.revealed);
   // A prepared page that drew held comes forward like any prepared card
   // (stageMoves), once it is shown and drew again.
   const shownHeld =
@@ -1200,6 +1201,7 @@ function CardLayer({ onEmptied }: { onEmptied: () => void }) {
           count={shown.length}
           unreadBefore={unread.before}
           unreadAfter={unread.after}
+          unreadCurrent={card !== undefined && unreadCardIds.includes(card.id)}
           width="100%"
           envelopeHeight={CARD_MAX_HEIGHT}
           onPrev={() => page(-1)}

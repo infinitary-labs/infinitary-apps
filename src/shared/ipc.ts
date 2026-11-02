@@ -805,6 +805,8 @@ export const appInfoSchema = z.object({
   protocolVersion: z.string(),
   /** See HOME_CAPABILITIES; open names, so a newer home's list still parses. */
   capabilities: z.array(z.string().min(1).max(64)).max(64),
+  /** Named additive changes, as advertised by the connection welcome. */
+  changes: z.array(z.string()).optional(),
 });
 export type AppInfo = z.infer<typeof appInfoSchema>;
 
@@ -1433,6 +1435,14 @@ export const invokeContract = {
     surface: "core",
     reach: "views",
     request: z.tuple([z.string().max(256), z.string().max(64)]),
+    response: okSchema,
+  },
+  // Exact released-update sightings, additive to the legacy two-argument offer sighting.
+  "inf:cards:seen-update": {
+    effect: "change",
+    surface: "core",
+    reach: "views",
+    request: z.tuple([z.string().max(256), z.string().max(64), z.string().max(64)]),
     response: okSchema,
   },
   // The card's thread (cards-as-threads phase 1): read it once when the
@@ -3581,6 +3591,7 @@ export type FirstmateApi = {
     onCards: (listener: (cards: Card[]) => void) => () => void;
     /** The stage showed the captain this version (offer) of the card. */
     seen: (cardId: string, offerId: string) => Promise<{ ok: true }>;
+    seenUpdate: (cardId: string, lifecycleId: string, updateId: string) => Promise<{ ok: true }>;
     /** The card's thread (cards-as-threads phase 1), oldest message first. */
     thread: (cardId: string) => Promise<CardThread>;
     /** A closed card as the captain last saw it; null while it is open or unknown. */

@@ -42,7 +42,6 @@ beforeEach(() => {
     records: [],
     cardIndex: 0,
     unreadCardIds: [],
-    collapsedCardIds: [],
     view: "home",
   });
   unregister = registerReading();

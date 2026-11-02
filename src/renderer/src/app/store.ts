@@ -301,37 +301,17 @@ export function visibleStack(
 }
 
 /**
- * Stack visibility (WI-18): a note the captain has already seen, raised on
- * a task, collapses out of the stack into its task record once it is this
- * old. The card itself stays open in the core (its answer already lives on
- * the record's timeline); only the stack stops showing it. An unseen note
- * never collapses - a new card is never gone unseen.
- */
-export const NOTE_COLLAPSE_MS = 15 * 60_000;
-/** How often the shell looks for notes that have aged past the threshold. */
-export const NOTE_COLLAPSE_TICK_MS = 60_000;
-
-/**
  * Cards worth showing: on the stage (not awaiting their author's first
  * close-out - the core says which, docs/card-threads.md), not minimized, and
- * not `aside` in this window: collapsed or held back (`offStack`).
+ * not held back by this window's project filter (`offStack`).
  */
 export function visibleCards(cards: Card[], aside: readonly string[] = []): Card[] {
   return cards.filter((card) => onStage(card) && !card.minimized && !aside.includes(card.id));
 }
 
-/**
- * The open cards this window sets aside from its stack (`visibleCards`):
- * seen, aged notes collapsed into their records (WI-18), and the cards the
- * project focus holds back (docs/project-focus.md "The card stack"). Every
- * reading of the stack passes this one list.
- */
-export function offStack(
-  s: Pick<StackState, "collapsedCardIds" | "heldBackCardIds">,
-): readonly string[] {
-  return s.heldBackCardIds.length === 0
-    ? s.collapsedCardIds
-    : [...s.collapsedCardIds, ...s.heldBackCardIds];
+/** Only deliberate local project filtering sets an open card aside in this window. */
+export function offStack(s: Pick<StackState, "heldBackCardIds">): readonly string[] {
+  return s.heldBackCardIds;
 }
 
 /** The card currently on screen, if the stack is non-empty. */
@@ -407,22 +387,10 @@ type StackState = {
   records: OpenRecord[];
   cardIndex: number;
   unreadCardIds: string[];
-  collapsedCardIds: string[];
-  /** Per collapsed id, what the card said when it collapsed (`cardDigest`). */
-  collapsedDigests: Record<string, string>;
   /** Cards the project focus holds back off the stack (docs/project-focus.md). */
   heldBackCardIds: string[];
   cardsSeeded: boolean;
 };
-
-/**
- * What a card says, for telling whether a collapsed card changed since it
- * collapsed: its title, body, and action ids. Streaming state and priority
- * are presentation, not content.
- */
-export function cardDigest(card: Pick<Card, "title" | "body" | "actions">): string {
-  return JSON.stringify([card.title, card.body, card.actions.map((action) => action.id)]);
-}
 
 /** First card, skipping held entries; only those left falls back to the first. */
 function firstCardIndex(shown: StackEntry[]): number {
@@ -475,16 +443,14 @@ function indexKeeping(shown: StackEntry[], active: Card | undefined): number {
   return activeCardIndex >= 0 ? activeCardIndex : firstCardIndex(shown);
 }
 
-/** Whatever is on screen at `cardIndex` has now been seen. */
+/** Legacy and shell-held entries keep local selection marks; shared marks await the owner. */
 function withoutShown(
-  state: Pick<
-    StackState,
-    "cards" | "records" | "collapsedCardIds" | "heldBackCardIds" | "unreadCardIds"
-  >,
+  state: Pick<StackState, "cards" | "records" | "heldBackCardIds" | "unreadCardIds">,
   cardIndex: number,
 ): string[] {
   const card = shownCard(state.cards, cardIndex, offStack(state), state.records);
-  if (!card || !state.unreadCardIds.includes(card.id)) return state.unreadCardIds;
+  if (!card || card.currentUpdateId !== undefined || !state.unreadCardIds.includes(card.id))
+    return state.unreadCardIds;
   return state.unreadCardIds.filter((id) => id !== card.id);
 }
 
@@ -511,42 +477,15 @@ function sameIds(prev: string[], next: string[]): string[] {
   return prev.length === next.length && prev.every((id, i) => id === next[i]) ? prev : next;
 }
 
-/**
- * One reconciliation of the stack against a cards snapshot at `now`: the
- * shown entry stays shown (a new card never steals it), a card that joins
- * the visible stack behind it is unread until it is paged to, and a seen,
- * aged note on a task collapses into its record. A collapsed card whose
- * content changed since it collapsed (an emitter revised it in place, WI-12)
- * is news again: it returns to the stack unread, like an arrival - and so
- * does a card whose author closed out after the captain's reply (the core's
- * `awaiting` cleared). When the shown card leaves, `departureIndex` picks
- * what comes up: the first unread card, else the first card. A reply never
- * moves a card. The first snapshot restores unread from the card owner's
- * durable seen observations, without an arrival pulse or continuity jump.
- * `noticed` counts the cards that just became unread, for the character's
- * notice pulse.
- *
- * `holdsBack` is the project focus (docs/project-focus.md "The card
- * stack"): a card it holds back leaves the stack as a close would, with no
- * notice; one that arrives while held back is unread for when it comes
- * back, and one the focus lets go returns to its place as it was, never as
- * an arrival.
+/** Keep local selection and project holds while applying the owner's current-update seen marks.
+ * Legacy snapshots without that projection retain their window-local unread behavior.
  */
 export function reconcileStack(
   prev: StackState,
   cards: Card[],
-  now: number,
   holdsBack: (card: Card) => boolean = HOLDS_NOTHING,
 ): {
-  state: Pick<
-    StackState,
-    | "cardIndex"
-    | "unreadCardIds"
-    | "collapsedCardIds"
-    | "collapsedDigests"
-    | "heldBackCardIds"
-    | "cardsSeeded"
-  >;
+  state: Pick<StackState, "cardIndex" | "unreadCardIds" | "heldBackCardIds" | "cardsSeeded">;
   noticed: number;
   lostCard: boolean;
 } {
@@ -555,18 +494,13 @@ export function reconcileStack(
   const prevShownIds = visibleStack(prev.cards, offStack(prev), prev.records).map(
     (card) => card.id,
   );
-  // Still collapsed: present, and saying what it said when it collapsed.
-  let collapsed = prev.collapsedCardIds.filter((id) => {
-    const card = byId.get(id);
-    return card !== undefined && prev.collapsedDigests[id] === cardDigest(card);
-  });
   const heldBack = sameIds(
     prev.heldBackCardIds,
-    visibleCards(cards, collapsed)
+    visibleCards(cards)
       .filter(holdsBack)
       .map((card) => card.id),
   );
-  let shown = visibleStack(cards, [...collapsed, ...heldBack], prev.records);
+  const shown = visibleStack(cards, heldBack, prev.records);
   const prevById = new Map(prev.cards.map((card) => [card.id, card]));
   // A card whose author answered its reply is news even if it stayed
   // shown while its author worked.
@@ -588,11 +522,22 @@ export function reconcileStack(
   const initialUnread = prev.cardsSeeded
     ? []
     : cards.filter((card) => card.seen === false).map((card) => card.id);
-  const unseen = [
+  const legacyUnseen = [
     ...[...prev.unreadCardIds, ...initialUnread].filter(
       (id) => shown.some((card) => card.id === id) || heldBack.includes(id),
     ),
     ...[...arrived, ...arrivedBack].filter((id) => !prev.unreadCardIds.includes(id)),
+  ];
+  const shared = new Map(
+    cards.filter((card) => card.currentUpdateId !== undefined).map((card) => [card.id, card]),
+  );
+  const unseen = [
+    ...new Set([
+      ...legacyUnseen.filter((id) => !shared.has(id)),
+      ...cards
+        .filter((card) => card.currentUpdateId !== undefined && card.currentUpdateSeen !== true)
+        .map((card) => card.id),
+    ]),
   ];
   // The shown card left: the first unread card comes up, else the first
   // card (`departureIndex`). Records remain available through paging.
@@ -611,42 +556,29 @@ export function reconcileStack(
   if (forward >= 0) cardIndex = forward;
   const activeCard = shown[cardIndex];
   const activeId = activeCard?.id;
-  const unread = unseen.filter((id) => id !== activeId);
+  const unread = unseen.filter((id) => shared.has(id) || id !== activeId);
 
-  // A note is a card with no actions (one card shape, cards/tasks/agents P1).
-  const aged = shown.filter(
-    (card) =>
-      !isHeldEntry(card) &&
-      card.actions.length === 0 &&
-      card.taskId !== undefined &&
-      card.id !== activeId &&
-      card.awaiting === undefined &&
-      !unread.includes(card.id) &&
-      now - card.createdAt >= NOTE_COLLAPSE_MS,
-  );
-  if (aged.length > 0) {
-    collapsed = [...collapsed, ...aged.map((card) => card.id)];
-    shown = visibleStack(cards, [...collapsed, ...heldBack], prev.records);
-    cardIndex = indexKeeping(shown, activeCard);
-  }
-
-  const collapsedDigests = Object.fromEntries(
-    collapsed.map((id) => [id, prev.collapsedDigests[id] ?? cardDigest(byId.get(id) as Card)]),
-  );
   // Nor is a card waiting on its author's first close-out: still open, only off the stage.
   const waiting = cards.filter((card) => !onStage(card) || card.minimized).map((card) => card.id);
-  const kept = new Set([...shown.map((card) => card.id), ...collapsed, ...heldBack, ...waiting]);
+  const kept = new Set([...shown.map((card) => card.id), ...heldBack, ...waiting]);
   return {
     state: {
       cardIndex,
       unreadCardIds: unread,
-      collapsedCardIds: collapsed,
-      collapsedDigests,
       heldBackCardIds: heldBack,
       cardsSeeded: true,
     },
-    noticed: arrived.filter((id) => unread.includes(id)).length,
-    // A collapse or a hold is not a loss: only a card that really left takes focus back.
+    noticed: prev.cardsSeeded
+      ? shown.filter(
+          (card) =>
+            card.id !== activeId &&
+            unread.includes(card.id) &&
+            (card.currentUpdateId !== undefined
+              ? prevById.get(card.id)?.currentUpdateId !== card.currentUpdateId
+              : arrived.includes(card.id)),
+        ).length
+      : 0,
+    // A project hold is not a loss: only a card that really left takes focus back.
     lostCard: prevShownIds.some((id) => !kept.has(id)),
   };
 }
@@ -698,12 +630,8 @@ export type ShellState = {
   cardFocusTarget: string | null;
   /** The captain's presses counted when the pointing began: one begun since keeps focus where it is. */
   cardFocusPresses: number;
-  /** Cards that joined the stack behind the shown one and were never shown (WI-18). */
+  /** Current-update news from the owner, with local marks only for legacy or shell-held entries. */
   unreadCardIds: string[];
-  /** Seen, aged notes collapsed out of the stack into their task records (WI-18). */
-  collapsedCardIds: string[];
-  /** What each collapsed card said when it collapsed: a change brings it back unread. */
-  collapsedDigests: Record<string, string>;
   /** Cards the project focus holds back off the stack (docs/project-focus.md "The card stack"). */
   heldBackCardIds: string[];
   /** Held-back cards the captain pointed at: on the stack while the focus they were pointed under holds. */
@@ -1057,8 +985,6 @@ export type ShellState = {
   applyCards: (cards: Card[]) => void;
   /** The captain dragged a card's edge; null returns it to the width the host decided. */
   dragCard: (cardId: string, width: number | null) => void;
-  /** Collapses seen notes that have aged past NOTE_COLLAPSE_MS (the shell's tick). */
-  collapseStaleNotes: (now?: number) => void;
   /** Holds back, or lets back, the cards the project focus names as it moves (docs/project-focus.md). */
   applyHold: () => void;
   applyEvent: (event: FmEvent) => void;
@@ -1248,8 +1174,6 @@ export const useShellStore = create<ShellState>()((set, get) => ({
   records: [],
   cardIndex: 0,
   unreadCardIds: [],
-  collapsedCardIds: [],
-  collapsedDigests: {},
   heldBackCardIds: [],
   letThroughCardIds: [],
   letThroughFocus: null,
@@ -1336,9 +1260,14 @@ export const useShellStore = create<ShellState>()((set, get) => ({
     if (isView(before) && isView(thisMac) && thisMac.caughtUp > before.caughtUp) get().resync();
   },
   resync: () => {
+    set({ cardsSnapshotLoaded: false });
+    const stackAtRead = get().cards;
     void window.infinitary.cards
       .list()
-      .then((cards) => get().applyCards(cards))
+      .then((cards) => {
+        if (get().cards === stackAtRead) get().applyCards(cards);
+        set({ cardsSnapshotLoaded: true });
+      })
       .catch(() => {});
     // Every thread this window has read is read again.
     for (const cardId of Object.keys(get().threads))
@@ -1434,7 +1363,6 @@ export const useShellStore = create<ShellState>()((set, get) => ({
         onError: () => {},
       },
     );
-    setInterval(() => get().collapseStaleNotes(), NOTE_COLLAPSE_TICK_MS);
     // The activity feed is not shell state: its rail panel reads it from
     // the core over the read catalog (feed.recent - docs/ui-plugins.md),
     // which is also where its persistence across restarts lives.
@@ -2259,7 +2187,7 @@ export const useShellStore = create<ShellState>()((set, get) => ({
       return {
         records,
         cardIndex: 0,
-        phase: derivePhase(s.recording, s.cards, s.firstmateBusy, s.collapsedCardIds, records),
+        phase: derivePhase(s.recording, s.cards, s.firstmateBusy, offStack(s), records),
       };
     });
     return true;
@@ -2392,9 +2320,13 @@ export const useShellStore = create<ShellState>()((set, get) => ({
       // The shared owner accepts the restore before this window shows it.
       void window.infinitary.cards
         .minimize(cardId, false)
-        .then(() => window.infinitary.cards.list())
-        .then((cards) => {
-          get().applyCards(cards);
+        .then(() => {
+          const stackAtRead = get().cards;
+          return window.infinitary.cards.list().then((cards) => {
+            if (get().cards === stackAtRead) get().applyCards(cards);
+          });
+        })
+        .then(() => {
           get().focusCard(cardId, since);
         })
         .catch((error: unknown) => {
@@ -2402,17 +2334,13 @@ export const useShellStore = create<ShellState>()((set, get) => ({
         });
       return true;
     }
-    // Pointing at a collapsed note brings it back onto the stack, and
-    // pointing at a card the focus holds back lets it through while that
+    // Pointing at a card the focus holds back lets it through while that
     // focus holds (docs/project-focus.md "The card stack").
     const now = get();
-    const collapsedCardIds = now.collapsedCardIds.filter((id) => id !== cardId);
     const heldBackCardIds = now.heldBackCardIds.filter((id) => id !== cardId);
-    const index = visibleStack(
-      now.cards,
-      offStack({ collapsedCardIds, heldBackCardIds }),
-      now.records,
-    ).findIndex((card) => card.id === cardId);
+    const index = visibleStack(now.cards, offStack({ heldBackCardIds }), now.records).findIndex(
+      (card) => card.id === cardId,
+    );
     if (index < 0) return false;
     const letThrough = letThroughUnder(now);
     set((s) => ({
@@ -2420,17 +2348,19 @@ export const useShellStore = create<ShellState>()((set, get) => ({
       cardFocusRequest: s.cardFocusRequest + 1,
       cardFocusTarget: cardId,
       cardFocusPresses: since,
-      collapsedCardIds,
       heldBackCardIds,
       ...(heldBackCardIds.length < s.heldBackCardIds.length
         ? { letThroughCardIds: [...letThrough, cardId], letThroughFocus: heldProjectFocus() }
         : {}),
-      unreadCardIds: s.unreadCardIds.filter((id) => id !== cardId),
+      unreadCardIds: s.unreadCardIds.filter(
+        (id) =>
+          id !== cardId || s.cards.find((card) => card.id === id)?.currentUpdateId !== undefined,
+      ),
       phase: derivePhase(
         s.recording,
         s.cards,
         s.firstmateBusy,
-        offStack({ collapsedCardIds, heldBackCardIds }),
+        offStack({ heldBackCardIds }),
         s.records,
       ),
     }));
@@ -2454,7 +2384,7 @@ export const useShellStore = create<ShellState>()((set, get) => ({
     retainCardReadingPlaces(new Set(cards.map((card) => card.id)));
     let noticed = 0;
     set((s) => {
-      const reconciled = reconcileStack(s, cards, Date.now(), holdOf(s));
+      const reconciled = reconcileStack(s, cards, holdOf(s));
       noticed = reconciled.noticed;
       const present = new Set(cards.map((card) => card.id));
       return {
@@ -2498,28 +2428,13 @@ export const useShellStore = create<ShellState>()((set, get) => ({
         ? { cardDrags: withoutKey(s.cardDrags, cardId) }
         : { cardDrags: { ...s.cardDrags, [cardId]: width } },
     ),
-  collapseStaleNotes: (now = Date.now()) => {
-    set((s) => {
-      const { state } = reconcileStack(s, s.cards, now, holdOf(s));
-      if (
-        state.collapsedCardIds.length === s.collapsedCardIds.length &&
-        state.collapsedCardIds.every((id) => s.collapsedCardIds.includes(id))
-      ) {
-        return {};
-      }
-      return {
-        ...state,
-        phase: derivePhase(s.recording, s.cards, s.firstmateBusy, offStack(state), s.records),
-      };
-    });
-  },
   applyHold: () => {
     set((s) => {
       // Before the first cards snapshot there is no stack to hold.
       if (!s.cardsSeeded) return s;
       const letThrough = letThroughUnder(s);
       const held = { letThroughCardIds: letThrough, letThroughFocus: heldProjectFocus() };
-      const { state, lostCard } = reconcileStack(s, s.cards, Date.now(), holdOf(held));
+      const { state, lostCard } = reconcileStack(s, s.cards, holdOf(held));
       // The focus store speaks on every rest in the pill row: unchanged, nothing is written.
       if (state.heldBackCardIds === s.heldBackCardIds && letThrough === s.letThroughCardIds) {
         return s;

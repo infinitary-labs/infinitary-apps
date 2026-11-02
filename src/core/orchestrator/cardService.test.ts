@@ -1947,6 +1947,112 @@ describe("CardService what changed since the captain looked", () => {
   });
 });
 
+// INF-2022: the owner persists exact released-update sightings, independently of historical offers.
+describe("CardService current-update sightings", () => {
+  beforeEach(() => vi.useFakeTimers());
+  afterEach(() => vi.useRealTimers());
+  it("shares, deduplicates and restores sightings without letting a legacy or stale report clear an answer", () => {
+    const { make, tasks, cardStore, pushes } = setup();
+    seedTask(tasks, { id: "findings", title: "Check latency", status: "idle" });
+    let cards = make();
+    const id = cards.emitCrewmateCard(
+      "findings",
+      { title: "Latency findings", body: "<p>The sampler has finished.</p>", actions: [] },
+      "m",
+    );
+    const head = () => cards.snapshot().find((card) => card.id === id)!;
+    const see = (card: Card) => cards.seenUpdate(id, card.lifecycleId!, card.currentUpdateId!);
+    expect(head().currentUpdateId).toBeUndefined(); // Never publish unfinished cards.
+    cards.closeOut({ kind: "crewmate", taskId: "findings" }, "report");
+    const first = head();
+    expect(first.currentUpdateSeen).toBe(false);
+    cards.seen(id, first.offerId!); // The unchanged legacy request still records offer history.
+    expect(head().seen).toBe(true);
+    expect(head().currentUpdateSeen).toBe(false);
+    see(first);
+    see(first);
+    expect(head().currentUpdateSeen).toBe(true);
+    expect(
+      cardStore
+        .observations(id)
+        .filter((o) => o.kind === "seen" && o.payload.updateId === first.currentUpdateId),
+    ).toHaveLength(1);
+    vi.runOnlyPendingTimers();
+    expect(pushes.at(-1)?.find((card) => card.id === id)?.currentUpdateSeen).toBe(true);
+    cards.addMessage(id, "captain", "Can you confirm the findings?");
+    cards.addMessage(id, "crewmate", "The findings are unchanged.");
+    cards.closeOut({ kind: "crewmate", taskId: "findings" }, "idle");
+    const answer = head();
+    expect(answer.offerId).toBe(first.offerId);
+    expect(answer.body).toBe(first.body);
+    expect(answer.currentUpdateId).not.toBe(first.currentUpdateId);
+    expect(answer.currentUpdateSeen).toBe(false);
+    see(first);
+    cards.seenUpdate(id, "earlier-lifecycle", answer.currentUpdateId!);
+    cards.seen(id, answer.offerId!);
+    expect(head().currentUpdateSeen).toBe(false);
+    see(answer);
+    const answerId = answer.currentUpdateId;
+    cards.closeOut({ kind: "crewmate", taskId: "findings" }, "idle");
+    expect(head().currentUpdateId).toBe(answerId);
+    expect(head().currentUpdateSeen).toBe(true);
+    cards.dispose();
+    cards = make();
+    expect(head().currentUpdateId).toBe(answerId);
+    expect(head().currentUpdateSeen).toBe(true);
+    cards.setMinimized(id, true);
+    expect(head().minimized).toBe(true);
+    cards.setMinimized(id, false);
+    expect(head().currentUpdateSeen).toBe(true);
+    cards.emitCrewmateCard(
+      "findings",
+      { id, title: first.title, body: "<p>The findings now include the queue.</p>", actions: [] },
+      "m",
+    );
+    expect(head().currentUpdateId).toBe(answerId);
+    cards.closeOut({ kind: "crewmate", taskId: "findings" }, "idle");
+    expect(head().currentUpdateId).not.toBe(answerId);
+    expect(head().currentUpdateSeen).toBe(false);
+    cards.dismiss(cards.shown(id)!);
+    cards.dispose();
+  });
+
+  it("releases a final author answer without an outstanding reply, not interim lines or repeated close-outs", () => {
+    const { make } = setup();
+    const cards = make();
+    const id = cards.addFirstmateCard({
+      id: "findings",
+      title: "Latency findings",
+      body: "<p>The sampler has finished.</p>",
+      actions: [],
+    });
+    const initial = cards.snapshot()[0]!;
+    cards.seenUpdate(id, initial.lifecycleId!, initial.currentUpdateId!);
+    cards.addMessage(id, "firstmate", "The same findings also apply on iPad.");
+    expect(cards.snapshot()[0]!.currentUpdateId).toBe(initial.currentUpdateId);
+    cards.closeOut({ kind: "firstmate" }, "turn-end");
+    const answer = cards.snapshot()[0]!;
+    expect(answer.currentUpdateId).not.toBe(initial.currentUpdateId);
+    expect(answer.currentUpdateSeen).toBe(false);
+    cards.closeOut({ kind: "firstmate" }, "turn-end");
+    expect(cards.snapshot()[0]!.currentUpdateId).toBe(answer.currentUpdateId);
+    cards.addMessage(id, "captain", "Please check the remaining samples.");
+    cards.addMessage(
+      id,
+      "firstmate",
+      "I am checking the samples.",
+      undefined,
+      undefined,
+      undefined,
+      true,
+    );
+    cards.closeOut({ kind: "firstmate" }, "turn-end");
+    expect(cards.snapshot()[0]!.awaiting).toBe("answer");
+    expect(cards.snapshot()[0]!.currentUpdateId).toBe(answer.currentUpdateId);
+    cards.dispose();
+  });
+});
+
 describe("CardService past cards", () => {
   beforeEach(() => {
     vi.useFakeTimers();

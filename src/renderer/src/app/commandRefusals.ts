@@ -48,7 +48,6 @@ export type RefusalState = Pick<
   | "commandSearchOpen"
   | "cards"
   | "cardIndex"
-  | "collapsedCardIds"
   | "heldBackCardIds"
   | "records"
   | "threads"

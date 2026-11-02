@@ -52,7 +52,7 @@ struct PhoneCards: View {
             if let marked = session.stack.first(where: { !previousIDs.contains($0.id) && $0.value["holdsPlace"].flag }) {
                 selected = marked.id; past = nil
             } else if selected == nil || !ids.contains(selected!) {
-                selected = session.stack.first(where: { !session.seenCards.contains($0.offerID ?? $0.id) })?.id ?? ids.first
+                selected = session.stack.first(where: { !session.hasSeen($0) })?.id ?? ids.first
             }
             showRestored(ids)
             previousIDs = ids
@@ -80,7 +80,7 @@ struct PhoneCards: View {
             Button { page(1) } label: {
                 Label("Next card", systemImage: "chevron.right").labelStyle(.iconOnly).frame(minWidth: 44, minHeight: 44)
                     .overlay(alignment: .topTrailing) {
-                        if session.stack.dropFirst(index + 1).contains(where: { !session.seenCards.contains($0.offerID ?? $0.id) }) {
+                        if session.stack.dropFirst(index + 1).contains(where: { !session.hasSeen($0) }) {
                             Circle().fill(PhoneTheme.accent).frame(width: 6, height: 6).accessibilityHidden(true)
                         }
                     }
@@ -101,7 +101,7 @@ struct PhoneCards: View {
     private var pagerLabel: String { past != nil ? "Past card" : "\(index + 1) of \(session.stack.count)" }
     /// The cards on the stack not yet read, besides the one shown.
     private var fresh: [PhoneCard] {
-        session.stack.filter { $0.id != card?.id && !session.seenCards.contains($0.offerID ?? $0.id) }
+        session.stack.filter { $0.id != card?.id && !session.hasSeen($0) }
     }
     private var index: Int { session.stack.firstIndex { $0.id == (selected ?? session.stack.first?.id) } ?? 0 }
     private var canPagePrevious: Bool { past == nil && index > 0 }
@@ -368,6 +368,8 @@ private struct PhoneCardPane: View {
         .onChange(of: session.contact) { _, contact in if contact == "in-reach" { readThread(); markSeen() } }
         .onChange(of: phase) { _, phase in if phase == .active { markSeen() } }
         .onChange(of: visible) { _, visible in if visible { markSeen() } }
+        // A same-offer answer keeps the drawn body and local drafts, but reports its new released identity.
+        .onChange(of: card.currentUpdateID) { _, _ in connectHost(); markSeen() }
         // INF-1919: a reply that lands while the face shows lights the latest line and never turns the card.
         .onChange(of: card.isPast || session.threads[card.id] != nil, initial: true) { _, read in
             if read && readCount == nil { readCount = messages.count }
@@ -888,7 +890,6 @@ private struct PhoneCardPane: View {
     private func markSeen() {
         guard !card.isPast, host.drawn, reachable, visible, phase == .active else { return }
         onSeen()
-        if let offer = card.offerID { Task { _ = try? await session.ask(.seen, [.string(card.id), .string(offer)]) } }
     }
     private func readThread() {
         guard !card.isPast, reachable else { return }

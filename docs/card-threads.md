@@ -25,7 +25,7 @@ A line the captain types in a task's Crewmate tab rides the same lane as the cap
 While the captain's kept merge approval stands on the task, the captain's reply, like the captain's line in the Crewmate tab, is guidance that holds that merge until the crewmate declares its impact (`docs/delivery-rigor.md`, "A kept merge approval").
 
 A reply resolves nothing.
-The buttons stay pinned, and a card still leaves the stage on a button, a settle, the captain's close, the author's withdrawal, or a note's seen-collapse - all host code.
+The buttons stay pinned, and a card still leaves the stage on a button, a settle, the captain's close, the author's withdrawal - all host code.
 
 The captain's close of a crewmate's card on a live task reaches that crewmate the same way (FI3-435, captain-approved 2026-10-01): a captain steer stamped `via: "card"` with the card's id, the typed `card-closed` wake ("The captain closed your card ... without choosing.").
 The one exception is an answer task's note marked `answering`: the captain's close of it closes the task, so no wake goes (INF-1732, `docs/card-authoring.md` "An answer task's card is its deliverable").
@@ -345,7 +345,7 @@ Moved verbatim from `AGENTS.md` on 2026-09-24; `AGENTS.md` keeps a one-line poin
 
 - Cards as threads (phase 1, captain-approved 2026-09-20 "cards-as-threads over a decision model - ship it"; the decided design is R4 of `fm3000-card-close-decision-model-s1/report.md`, `docs/card-threads.md` is the one home).
   Every card is the head of a thread between the captain and the card's AUTHOR: what the captain types under a card goes to that author, and the author always answers in the thread; a revision under the same id carries that answer as `reply`, after the host's one `revised: …` line.
-  A reply RESOLVES NOTHING - the buttons stay pinned and a card still leaves on a button, a settle, the captain's close, the author's withdrawal or a note's seen-collapse.
+  A reply RESOLVES NOTHING - the buttons stay pinned and a card still leaves on a button, a settle, the captain's close, the author's withdrawal.
   Sending takes the card off the stage until the author has answered and closed out - its idle, the first mate's turn end - held in the core as `Card.awaiting` ("When a card reaches the stage", 2026-09-27).
   The record is `card_messages` (migration 38, owned by `CardStore` beside `card_revisions`, dying with its card in `deleteForTask`'s transaction) and `CardService.addMessage` is its ONE writer, so no row lands without the `inf:cards:thread` push that paints it; a captain reply on a crewmate's card is a captain STEER to that crewmate - the path a card click already takes - stamped `via: "thread"` with `THREAD_STEER_PREAMBLE` and the captain's words verbatim, delivered fire-and-forget the way a click's round-trip is.
   `CARD_REPLY` (contract v4.2) is the shared contract, stated ONCE the way `CARD_AUTHORING` is and included by every persona (`piResources.test.ts` pins both directions); the crewmate's `reply(card_id, text)` is its prose half on Pi and Claude, and the first mate's tool count stays 24.

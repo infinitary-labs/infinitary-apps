@@ -4,6 +4,16 @@ What a client of the home is written against: `docs/contract.json`, every core r
 A paired view, the helper and a native app read the same file.
 How the connection carries it is `docs/connection.md`; how a device pairs is `docs/devices.md`.
 
+## Shared card sightings
+
+`card-current-update-seen` adds optional `currentUpdateId` and `currentUpdateSeen` snapshot fields and a separate `inf:cards:seen-update(cardId, lifecycleId, updateId)` request.
+The existing two-argument `inf:cards:seen` request and lifecycle-wide `Card.seen` retain their meanings; legacy reports cannot acknowledge an unidentifiable newer answer.
+Updated views use the new request only when the home lists the named change, through the connection welcome or the healthcheck's optional `changes` list.
+An older home keeps the legacy path, and an older phone ignores the new fields.
+Older desktop card decoders are strict, so the connection omits the added snapshot fields for desktops that did not advertise the named change, on list replies, live pushes and replay alike.
+This compatibility projection changes neither permissions nor access; mixed versions compatible under the existing floor retain their ordinary card actions.
+No protocol version or view-floor change is required.
+
 ## The file
 
 `docs/contract.json` is generated, never edited by hand: `pnpm generate:contract` writes it from `src/shared/publishedContract.ts`, which reads `src/shared/ipc.ts`, `src/shared/work.ts` and `src/shared/connection.ts`.

@@ -2983,6 +2983,11 @@ export class CrewSupervisor {
     this.cards.seen(cardId, offerId);
   }
 
+  /** A foreground view drew this exact released update. */
+  cardSeenUpdate(cardId: string, lifecycleId: string, updateId: string): void {
+    this.cards.seenUpdate(cardId, lifecycleId, updateId);
+  }
+
   addCardMessage(cardId: string, who: CardMessageWho, text: string): CardMessage {
     return this.cards.addMessage(cardId, who, text);
   }

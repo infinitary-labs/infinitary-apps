@@ -4,6 +4,7 @@ import { request as httpsRequest } from "node:https";
 import { connect as plainConnect } from "node:net";
 import { join } from "node:path";
 import { connect, createServer as createTlsServer } from "node:tls";
+import { cardSchema } from "@shared/cards";
 import { CONNECTION_CLOSE, PAIR_PATH } from "@shared/connection";
 import { HOME } from "@shared/deviceNames";
 import { type DeviceGrant, type DeviceKind, parsePairingLink } from "@shared/devices";
@@ -624,6 +625,66 @@ describe("the home's connection", () => {
     changed(at.events);
     await back.push((push) => push.seq === cursor.seq + 3);
     expect(back.pushes).toHaveLength(3);
+  });
+
+  // INF-2022: the previous desktop card decoder is strict, so capability projection applies to
+  // list, live pushes and replay; the phone's extensible reader can receive the optional fields.
+  it("keeps old desktop card decoding and actions compatible across lists, pushes and reconnect replay", async () => {
+    const card = cardSchema.parse({
+      id: "card-findings",
+      title: "Latency findings",
+      author: "firstmate",
+      priority: 15,
+      meta: "First mate",
+      body: "<p>The sampler has finished.</p>",
+      actions: [],
+      status: "ready",
+      createdAt: 1000,
+      lifecycleId: "findings-life",
+      offerId: "findings-offer",
+      seen: true,
+      currentUpdateId: "released-answer",
+      currentUpdateSeen: false,
+    });
+    const at = await home({
+      dispatch: (async (channel) => {
+        if (channel === "inf:cards:list") return [card];
+        if (channel === "inf:cards:minimize") return { ok: true };
+        throw new Error("Unexpected request");
+      }) as CoreDispatch,
+    });
+    const grant = await at.join();
+    const old = await connectClient(grant);
+    const newer = await connectClient(grant, { changes: ["card-current-update-seen"] });
+    const phone = await connectClient(grant, { system: { system: "ios" } });
+    const legacyDecoder = cardSchema.omit({ currentUpdateId: true, currentUpdateSeen: true });
+    expect(old.welcome.access).toBe("full");
+    const listed = await old.invoke("inf:cards:list", []);
+    expect(legacyDecoder.parse(listed[0])).toMatchObject({ id: card.id, seen: true });
+    expect(listed[0]?.currentUpdateId).toBeUndefined();
+    expect((await newer.invoke("inf:cards:list", []))[0]?.currentUpdateId).toBe(
+      card.currentUpdateId,
+    );
+    expect((await phone.invoke("inf:cards:list", []))[0]?.currentUpdateId).toBe(
+      card.currentUpdateId,
+    );
+    expect(await old.invoke("inf:cards:minimize", [card.id, true])).toEqual({ ok: true });
+    expect(await phone.invoke("inf:cards:minimize", [card.id, false])).toEqual({ ok: true });
+    at.events.emit("inf:cards", [card]);
+    const oldPush = await old.push((push) => push.channel === "inf:cards");
+    expect(legacyDecoder.parse((oldPush.payload as unknown[])[0])).toMatchObject({ id: card.id });
+    expect((await newer.push((push) => push.channel === "inf:cards")).payload).toEqual([card]);
+    const cursor = old.cursor();
+    await old.close();
+    at.events.emit("inf:cards", [{ ...card, currentUpdateSeen: true }]);
+    const back = await connectClient(grant, { cursor });
+    expect(back.welcome.catchUp).toBe("replay");
+    const replay = await back.push((push) => push.seq > cursor.seq);
+    expect(legacyDecoder.parse((replay.payload as unknown[])[0])).toMatchObject({ id: card.id });
+    expect((replay.payload as { currentUpdateId?: string }[])[0]?.currentUpdateId).toBeUndefined();
+    await back.close();
+    await newer.close();
+    await phone.close();
   });
 
   it("tells a device to reload when its cursor cannot be caught up", async () => {

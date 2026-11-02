@@ -36,7 +36,7 @@ The seven kinds:
 | `message_ref` | a thread line is written | the message id, who wrote it, and for a captain line the offer the captain was looking at |
 | `exit` | a lifecycle ends without an action | dismissed, author withdrawal, host withdrawal, task retired or duplicate |
 | `effect_receipt` | never, in capture 1 | the schema a D4 receipt will use |
-| `seen` | the window showed an offer on the stage, visible and focused - once per offer, only for the version the stage shows | nothing beyond the offer it names; source `stage`, actor `captain` |
+| `seen` | the window showed an offer on the stage, visible and focused - once per offer on the legacy path, or once per exact released update | optional `updateId` identifies a released update; source `stage`, actor `captain` |
 
 ### Lifecycles and offers
 
@@ -49,7 +49,13 @@ Nothing older is invented.
 
 ### What the captain saw
 
-`seen` also supplies the snapshot's optional `seen` fact for its current lifecycle, so the desktop stack can restore unread cards after startup or reload without another read store.
+`seen` supplies the snapshot's legacy lifecycle-wide `seen` fact without changing its meaning.
+An availability observation's identifier supplies `currentUpdateId`; `currentUpdateSeen` is true only after a `seen` observation names that exact identifier.
+A released revision or final author answer gets a new identifier, including an unchanged-body, unchanged-offer answer; status pushes, repeated close-outs and redraws do not.
+`inf:cards:seen-update(cardId, lifecycleId, updateId)` rejects stale lifecycle/update reports, deduplicates accepted sightings and broadcasts the new snapshot.
+The existing `inf:cards:seen(cardId, offerId)` still records historical offers for revision highlights, but cannot acknowledge a released answer without its identifier.
+Older observations with no exact identifier remain untouched and cannot prove the latest answer was read, so an old card can appear new once.
+Sightings never hide cards or change another view's selection; notes have no automatic disappearance rule.
 `seen` is the one kind something on screen reads back: a card's revision is compared with the newest offer seen on its lifecycle, and the difference is the revised line and change bars (`docs/card-authoring.md` "What changed since you looked").
 `availability` says what the stage offered, never that anyone looked; `seen` is the window's word that the captain had it in front of them.
 The export reads past it: the episode schema does not carry it.
@@ -68,7 +74,7 @@ The first mate's call leaves one feed line and operation record; the captain's o
 What's new brings a closed release note forward the same way, broadcasting `past_card_shown` from `inf:release-notes:show` (`docs/release-notes.md` "Reading a note again").
 
 The record's Cards row (FI3-579 piece 1) lists a task's cards through `TaskDetail.cards`: `CardStore.forTask` reads the rows filed under the task plus the card ids its timeline names (`card_raised` / `card_resolved` refs, which reach a first mate decision's card that carries no task id), newest first.
-A closed card reads as the version last seen with `pastCardEndingWords`; an open one, a folded seen note included, reads "On the stage".
+A closed card reads as the version last seen with `pastCardEndingWords`; an open one reads "On the stage".
 A purged card is absent.
 The row's link goes through the one door above for a closed card (`window.infinitary.cards.showPast`) and `focusCard` for an open one.
 The cross on a card writes one feed line on its task, `KEY You closed "<title>"`, from `CrewSupervisor.close`; a card with no record to point at keeps the plain "captain dismissed" line.

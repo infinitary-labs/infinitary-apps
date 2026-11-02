@@ -25,6 +25,7 @@ import {
   cardSurface,
   closeQuestion,
   expectNoCard,
+  expectUpdateSeen,
   pagerAt,
   showCard,
   shownCard,
@@ -169,7 +170,10 @@ test("closing a middle card or hiding a record reveals the oldest card, not the 
     await expect(shownCard(page, HARBOUR_NOTES[0])).toBeVisible();
     // INF-1404: startup cards are unread until visited. This test owns the
     // no-unread fallback, so read the seeded stack before closing its middle.
-    await showCard(page, HARBOUR_NOTES[3]);
+    for (const [index, title] of HARBOUR_NOTES.entries()) {
+      await showCard(page, title);
+      await expectUpdateSeen(page, `harbour-note-${index}`);
+    }
     await showCard(page, HARBOUR_NOTES[0]);
     await expandDock(page, "now");
     await nowFrame(page)
@@ -225,8 +229,12 @@ test("closing a card brings up the first unread card, not the first card, and a 
         .map((card) => card.id);
     const unreadBadge = page.getByRole("status").filter({ hasText: "new" });
     // The later live arrival, not an unvisited startup card, owns unread here.
+    await expect(shownCard(page, READ_NOTE)).toBeVisible();
+    await expectUpdateSeen(page, "seen-first");
     await showCard(page, REPLYING_NOTE);
+    await expectUpdateSeen(page, "replying");
     await showCard(page, CLOSING_NOTE);
+    await expectUpdateSeen(page, "closing");
     await receiveUnreadCard(page);
     await test.step("a close skips the first card for the unread one", async () => {
       await shownEntry(page).getByRole("button", { name: "Close", exact: true }).click();
@@ -244,11 +252,8 @@ test("closing a card brings up the first unread card, not the first card, and a 
       await cardReply(page).send.click();
       await expect(cardReply(page).row).toHaveAttribute("data-card-reply", "replying");
       await expect(shownCard(page, REPLYING_NOTE)).toBeVisible();
-      await expect(page.getByRole("status").filter({ hasText: "1 new" })).toBeVisible();
-      // The reply field keeps the focus for the next reply (FI3-722).
-      await expect(cardReply(page).field).toBeFocused();
-    });
-    await test.step("once its author answered, a close brings up the unread card", async () => {
+      // INF-2022: the final answer releases a new update even without a new body.
+      // Count after that exact update was read, not a glimpse before the author answered.
       await expect
         .poll(
           async () =>
@@ -258,6 +263,12 @@ test("closing a card brings up the first unread card, not the first card, and a 
           { timeout: 30_000 },
         )
         .toBe("answered");
+      await expectUpdateSeen(page, "replying");
+      await expect(page.getByRole("status").filter({ hasText: "1 new" })).toBeVisible();
+      // The reply field keeps the focus for the next reply (FI3-722).
+      await expect(cardReply(page).field).toBeFocused();
+    });
+    await test.step("once its author answered, a close brings up the unread card", async () => {
       await shownEntry(page).getByRole("button", { name: "Close", exact: true }).click();
       await expect(cardReply(page).row).toHaveAttribute("data-card-reply", arrived);
       await expect(unreadBadge).toHaveCount(0);

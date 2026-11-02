@@ -895,8 +895,9 @@ A revised card says what is new to the captain, and the author marks nothing: th
 The visual rules are the design skill's (`components/cards/ResponseCard.prompt.md`, the revised line).
 
 - **Seen.**
-  The window reports the version of the card it shows on the stage while it is visible and focused (`inf:cards:seen`, `useSeenReport`; focus inside a card's own frame counts).
-  `CardService.seen` records it once per offer as a `seen` observation (`docs/card-evidence.md`), and only for the version the stage shows - a late report about a replaced version changes nothing.
+  An updated window reports the exact released update only after its body draws while the window is visible and focused (`inf:cards:seen-update`, `useSeenReport`; focus inside a card's own frame counts).
+  `CardService.seenUpdate` deduplicates the exact identifier, rejects stale reports and broadcasts the shared current-update mark without moving or hiding a card.
+  The same sighting retains its offer for revision comparisons; an older home uses the unchanged two-argument `inf:cards:seen` path and local unread fallback (`docs/card-evidence.md`).
 - **Compared with what.**
   The version on the stage is compared with the newest version seen on the card's lifecycle other than itself.
   Revisions that land while the window is away accumulate into one comparison; seeing the new version does not move it, so the marks stay until the next revision or until the card leaves.

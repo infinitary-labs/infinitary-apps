@@ -59,7 +59,7 @@ How the stack draws it is the design skill's `components/cards/CardStack.prompt.
 - Picking its project or All projects brings a held card back in its place: one that arrived while held comes back marked new, and one the captain had seen comes back seen.
 - A card the captain points at (the first mate shows it, a task key, a record's Show the card) comes to the front without moving the focus, and stays until the focus changes (`focusCard`).
 
-Every reading of the window's stack passes one list of what it sets aside, the collapsed notes and the held cards together (`offStack`).
+Every reading of the window's stack passes its project-held cards through `offStack`; no automatic note-collapse list exists.
 The hold moves with the focus and the board: the stack reads them as each cards snapshot lands and again whenever the focus store speaks (`applyHold`), and writes nothing when the held cards stay the same.
 
 ## Opening and closing the row

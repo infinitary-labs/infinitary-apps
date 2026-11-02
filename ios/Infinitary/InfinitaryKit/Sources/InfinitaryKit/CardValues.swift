@@ -72,6 +72,9 @@ public struct PhoneCard: Decodable, Identifiable, Sendable {
     public var sentBackAt: Double? { value["sentBackAt"].numeric }
     public var body: String { value["body"].text! }
     public var offerID: String? { value["offerId"].text }
+    public var lifecycleID: String? { value["lifecycleId"].text }
+    public var currentUpdateID: String? { value["currentUpdateId"].text }
+    public var currentUpdateSeen: Bool { value["currentUpdateSeen"].flag }
     public var actions: [PhoneJSON] { value["actions"].list }
     /// INF-1610: the captain's message the card is about, which the Mac read from the saved message, never the body.
     public var asked: PhoneAsked? {

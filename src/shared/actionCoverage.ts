@@ -69,6 +69,7 @@ export const ACTION_EXCEPTIONS: Partial<Record<CoreInvokeChannel, string>> = {
   "inf:browser:sign-ins:remove":
     "The captain's own Remove of a saved website sign-in; the first mate never removes one",
   "inf:cards:seen": "View stamp",
+  "inf:cards:seen-update": "View stamp",
   "inf:settings:sharing:viewed": "View stamp",
   "inf:app:first-run:crew-word": "First-run view stamp",
   "inf:plugins:fetch": "Panel internal operation",

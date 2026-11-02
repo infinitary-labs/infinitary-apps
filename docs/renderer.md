@@ -53,7 +53,11 @@ Moved verbatim from `AGENTS.md` on 2026-09-24; `AGENTS.md` keeps a one-line poin
   The composer's growth reaches the stage as the CSS variable `--prompt-rise`, never through the store, and the stage subscribes only to whether there is a draft, so typing never re-renders it (`docs/composer.md`).
   Each key's spin kick is read from the store by the character's own drawing frame (`Firstmate`'s `kick` as a reader), not passed down as a prop (INF-1073).
   `tests/e2e/typing-stage.spec.ts` holds this by count, never by time: the browser's call counters say how often `HomeMate` and `Firstmate` ran while a sentence was typed, so a busy machine cannot fail it.
-  Stack visibility (WI-18) is `reconcileStack` in `src/renderer/src/app/store.ts`: a new card never steals the shown one, lands `unreadCardIds` (pager dot + "N new" badge, design skill `CardStack`) until paged to, and the boot snapshot is not news; a seen note on a task collapses out of the stack after `NOTE_COLLAPSE_MS` (renderer-only - the card stays open in the core, its answer already on the record), and a collapsed card whose title, body or action ids changed since it collapsed (an in-place revision) returns unread like an arrival (`cardDigest`); `tests/e2e/stack-visibility.spec.ts` is the binding test.
+  Stack visibility is `reconcileStack` in `src/renderer/src/app/store.ts`: arrivals keep local selection, project focus holds other projects back, and every snapshot applies the card owner's exact released-update seen marks.
+  Reading, elapsed time and paging never hide notes; only ordinary lifecycle actions remove them.
+  `HomeScreen` reports a sighting after its shown document draws in a foreground window, and reconnect waits for fresh state before reporting again.
+  The pager's new count includes the shown update until the owner acknowledges it; arrow dots still locate only unread updates before and after it.
+  An older home without `card-current-update-seen` keeps the legacy offer request and local unread fallback; `tests/e2e/stack-visibility.spec.ts` and `card-current-seen.spec.ts` cover retention, news and multiple views.
 - The character (captain-approved spec, `firstmate/data/fm3000-character-animation-prototypes-s1/report.md`): `src/renderer/src/character/machine.ts` is an explicit input-reconciled state machine - base states idle|listening|working, one-shot emotes (greet/celebrate/ponder/confused/fidget pool: roll, yawn, orbit, the five sky fidgets, the three 6s warps and a 5.6s pretend black hole), and a `busy` parameter that carries the ember INDEPENDENTLY of state (heat is deliberately not in the state targets - listening mid-turn runs hot and cools in place).
   Attention (voice or text presence) always wins and cuts emotes short; emotes fire only from idle/working and return home through busy.
   A turn starting, or the captain sending a message, never cuts an emote: it plays to its end as the ember eases in, then returns to working, and the sky fidgets' traced figures take the wires' ember too.
@@ -159,6 +163,8 @@ Reduced motion makes every move and the easing cuts.
 A live card, its thread and its one field share one surface (`CardSurface`): a grid whose columns change when the thread opens, closes or moves, while the card, its body document and its scroll surface stay the same elements.
 The field moves between the card, above its buttons, and the thread's foot; its draft and attachments live in the shell by the card's id, and it carries the focus across the move (`ReplyRow`).
 Opening the thread under a lone card therefore keeps what the captain did in the body - a preview's state, an open disclosure, scrolling, drafts and attachments.
+A beside thread preserves the body's drawn witness when its document, theme and column width are unchanged; an in-place thread keeps a separate drawing identity.
+This lets an actually drawn final answer clear its exact-update new mark without paging away and back.
 
 The bridge's per-document identity and `initialize` handshake put theme, width and form state ahead of DOM readiness, fonts and two drawing frames.
 `FrameController.onDrawn` is the reusable first-draw seam for cards and other frame surfaces; birth and provisional/zero resize reports are not drawing.
@@ -222,7 +228,7 @@ The reduced-motion tokens cut in-place drift and details transitions; the existi
 ## Solid cards and task-record stack
 
 FI3-309’s accepted answers replace the gutter pane with shell-held `records` (one per task), projected into `visibleStack` before persisted cards.
-Opening focuses the task at the front immediately; navigation, arrivals, unread tracking and note collapse share the same index.
+Opening focuses the task at the front immediately; navigation, arrivals and unread tracking share the same index.
 Hide/Esc removes only the shown record; stage clicks do nothing.
 `RecordCard` uses `ResponseCard` with the record chrome and lifecycle footer, regular sizing/drag and the ordinary scroller, no thread/reply.
 Tasks pushes all open ids as selected-row view state; record row anchors and pane geometry are retired (a rested row's box rides the separate `peek` gesture for its summary, `docs/crew-orbits.md`).

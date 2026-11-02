@@ -275,6 +275,8 @@ const api: FirstmateApi = {
     close: (cardId, submission) => invoke("inf:cards:close", cardId, submission),
     onCards: (listener) => subscribe("inf:cards", listener),
     seen: (cardId, offerId) => invoke("inf:cards:seen", cardId, offerId),
+    seenUpdate: (cardId, lifecycleId, updateId) =>
+      invoke("inf:cards:seen-update", cardId, lifecycleId, updateId),
     thread: (cardId) => invoke("inf:cards:thread", cardId),
     past: (cardId) => invoke("inf:cards:past", cardId),
     showPast: (cardId) => invoke("inf:cards:show-past", cardId),

@@ -763,6 +763,12 @@
               "minLength": 1,
               "maxLength": 64
             }
+          },
+          "changes": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
           }
         },
         "required": [
@@ -8212,6 +8218,13 @@
             },
             "seen": {
               "type": "boolean"
+            },
+            "currentUpdateId": {
+              "type": "string",
+              "maxLength": 64
+            },
+            "currentUpdateSeen": {
+              "type": "boolean"
             }
           },
           "required": [
@@ -9284,6 +9297,13 @@
               },
               "seen": {
                 "type": "boolean"
+              },
+              "currentUpdateId": {
+                "type": "string",
+                "maxLength": 64
+              },
+              "currentUpdateSeen": {
+                "type": "boolean"
               }
             },
             "required": [
@@ -10031,6 +10051,41 @@
           }
         ],
         "minItems": 2,
+        "items": false
+      },
+      "response": {
+        "type": "object",
+        "properties": {
+          "ok": {
+            "type": "boolean",
+            "const": true
+          }
+        },
+        "required": [
+          "ok"
+        ]
+      }
+    },
+    "inf:cards:seen-update": {
+      "effect": "change",
+      "reach": "views",
+      "request": {
+        "type": "array",
+        "prefixItems": [
+          {
+            "type": "string",
+            "maxLength": 256
+          },
+          {
+            "type": "string",
+            "maxLength": 64
+          },
+          {
+            "type": "string",
+            "maxLength": 64
+          }
+        ],
+        "minItems": 3,
         "items": false
       },
       "response": {
@@ -53499,6 +53554,13 @@
               ]
             },
             "seen": {
+              "type": "boolean"
+            },
+            "currentUpdateId": {
+              "type": "string",
+              "maxLength": 64
+            },
+            "currentUpdateSeen": {
               "type": "boolean"
             }
           },

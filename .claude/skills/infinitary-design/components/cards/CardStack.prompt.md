@@ -11,17 +11,21 @@ Its optional `envelopeHeight` supplies that stage-only envelope.
 A replacement uses its final width immediately, with no width easing.
 
 A new card never steals the shown one - it lands on the stack unseen, and the pager says so: an `--accent` dot (6px, `--radius-pill`, ringed in `--bg-0`) on the arrow that leads to it, and one accent mono Badge "1 new" beside the pager, positioned outside the centred arrow group so the arrows never move under the pointer.
-A reply never moves a card (INF-770): the shown card stays in its place with its thread, and when its author answers it redraws there, marked new only if the captain paged away.
+A reply never moves a card (INF-770): the shown card stays in its place with its thread, and when its author answers it redraws there, with the released update marked new until a foreground view draws it.
 An author leaves `holds_place` unset unless the use case requires continuous attention on the card.
 With that declaration, a newly arriving marked card comes forward even over another card.
 A choice still closes immediately, with no held page or working line; paging away is respected by subsequent revisions and thread answers.
 Cards without the declaration keep the rules above.
-A card counts as seen once it has been the shown card; the dot and the badge leave when nothing unseen remains.
+The exact released update counts as seen only after it actually draws in a foreground view; the owner shares that mark with every updated desktop window, iPhone and iPad.
+A released revision or final author answer is new again, even with the same body and offer; redraws and ordinary pushes are not.
+Selection alone and a prepared successor never count, and reading changes neither membership nor another view's selection.
 No animation on the badge; the page number slides only when an arrow pages, and a change of count is immediate.
 While cards are up the character frame is hidden, so the pager’s dot and count are the notice; loops continue unseen.
 
-Notes are the one kind that step aside on their own: a note already seen, on a task, and older than the stack's threshold collapses out of the stack into its task record (the answer's body is kept there).
-Decisions, results, and prototypes never collapse; an unseen note never does either.
+Notes never hide automatically after reading, elapsed time or paging away.
+Close, Put aside, restoration, author withdrawal and ordinary task lifecycle rules retain their meanings.
+Project filters and selection remain local, while ordinary card status and exact-update seen marks are shared.
+An older home retains legacy local unread behavior; older desktop windows can retain their old hiding rule until updated.
 
 The shown surface (card or card-and-thread pair) fades from 0 to 1, rises `--move-arrive` (12px) and grows from `--scale-arrive` (98%) over `--dur-arrive` (420ms) with `--ease-out` only when it appears on an empty stage.
 Boot's initial card snapshot is static.
@@ -63,7 +67,8 @@ A closed drawing drops away immediately with its peeks even when its successor c
 Cards sort by priority, oldest first within each band.
 Whenever the shown card leaves (close, Put aside, closing action, merge, withdrawal or task closure), reveal the first unread card in that order, else the first card - the captain's FI3-711 rule; a reply moves nothing.
 The initial stack restores unread cards from the card owner's saved seen observations, without an arrival pulse or a continuity jump.
-Paging clears this window's unread mark; the stage reports a look durably when the window is visible and focused.
+Paging alone clears only a legacy window-local mark; an exact-update mark remains until the owner confirms its drawn foreground reading.
+The badge includes the shown update while it remains unread, but arrow dots count only updates before and after it.
 Hiding a record reveals the first card.
 Open task records remain ahead of cards for paging; if only records remain, show the first record.
 An unseen departure moves nothing.

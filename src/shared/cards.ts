@@ -1090,6 +1090,10 @@ export const cardSchema = z.strictObject({
   asked: cardAskedSchema.optional(),
   /** Snapshot-only: the captain has seen an offer in this lifecycle, from card observations. */
   seen: z.boolean().optional(),
+  /** Snapshot-only: the exact released update, distinct from its historical offer. */
+  currentUpdateId: z.string().max(64).optional(),
+  /** An accepted sighting of that exact update, shared by every updated view. */
+  currentUpdateSeen: z.boolean().optional(),
 });
 export type Card = z.infer<typeof cardSchema>;
 
@@ -1119,7 +1123,7 @@ export function cardPresentation(card: Pick<Card, "author" | "actions">): CardPr
  *
  * A reply never closes a card and never resolves a decision: the buttons
  * stay pinned, and a card still leaves the stage on a button, a settle, the
- * captain's close, the author's withdrawal, or a note's seen-collapse - all
+ * captain's close or the author's withdrawal - all
  * host code.
  */
 export const cardMessageWhoSchema = z.enum(["captain", "crewmate", "firstmate", "host"]);
@@ -1638,6 +1642,8 @@ export const cardActionPayloadSchema = z.strictObject({
 export const cardMessageRefPayloadSchema = z.strictObject({
   messageId: z.number().int(),
   who: cardMessageWhoSchema,
+  /** An interim author line does not release a new answer. */
+  interim: z.literal(true).optional(),
   answers: cardAnswersSchema.optional(),
   display: cardDisplaySchema.optional(),
 });
@@ -1674,10 +1680,14 @@ export const cardEffectReceiptPayloadSchema = z.strictObject({
 
 /**
  * The captain had this offer in front of them: the stage showed it while the
- * window was visible and focused. Written once per offer, only for the one
- * the stage shows; what the next revision is compared with (`Card.changes`).
+ * window was visible and focused. Legacy sightings are once per offer; an exact
+ * update sighting also names its released update. Both retain the offer that
+ * the next revision is compared with (`Card.changes`).
  */
-export const cardSeenPayloadSchema = z.strictObject({});
+export const cardSeenPayloadSchema = z.strictObject({
+  /** Absent on legacy offer sightings; those never acknowledge a released update. */
+  updateId: z.string().max(64).optional(),
+});
 
 export const cardObservationPayloadSchemas = {
   offer: cardOfferPayloadSchema,

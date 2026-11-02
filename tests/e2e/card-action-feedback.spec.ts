@@ -16,7 +16,7 @@ import { settled } from "./layout";
 import { pastePictures } from "./prompt";
 import { feedLineOf, taskKey } from "./rails";
 import { assertReadableSettingsFeedback, settingsFeedback } from "./settings";
-import { cardReply, expectNoCard, shownCard } from "./stack";
+import { cardReply, expectNoCard, expectUpdateSeen, shownCard } from "./stack";
 import { setThemeViaSettings } from "./theme";
 
 const REQUEST_REASON = "The request could not be completed.";
@@ -459,6 +459,7 @@ test("a refused choice on a closed task leaves its open card on screen and runs 
   try {
     const { page } = launched;
     await expect(shownCard(page, CLOSED_CHOICE_TITLE)).toBeVisible();
+    await expectUpdateSeen(page, "closed-choice");
     const before = await page.evaluate(() => window.infinitary.tasks.detail("closed"));
     expect(before.waitingCardId).toBeNull();
     await page.getByRole("button", { name: "Open settings", exact: true }).click();
@@ -638,6 +639,7 @@ test("an undeclared choice leaves its card and answer task open, then a declared
     const title = shownCard(page, ANSWER_TITLE);
     const open = page.getByRole("button", { name: "Open settings", exact: true });
     await expect(title).toBeVisible();
+    await expectUpdateSeen(page, "card-undeclared-answer-setting");
     const before = await page.evaluate(async () => ({
       task: await window.infinitary.tasks.detail("undeclared-answer"),
       cards: await window.infinitary.cards.list(),

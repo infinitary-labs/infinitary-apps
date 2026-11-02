@@ -25,6 +25,24 @@ import {
 } from "./ipc";
 
 describe("ipc contract", () => {
+  // INF-2022: adding exact-update acknowledgements must not change the existing two-argument request.
+  it("keeps legacy sighting arguments unchanged while adding a separate exact-update request", () => {
+    expect(parseInvokeRequest("inf:cards:seen", ["card-findings", "offer-findings"])).toEqual([
+      "card-findings",
+      "offer-findings",
+    ]);
+    expect(() =>
+      parseInvokeRequest("inf:cards:seen", ["card-findings", "offer-findings", "update-findings"]),
+    ).toThrow();
+    expect(
+      parseInvokeRequest("inf:cards:seen-update", [
+        "card-findings",
+        "lifecycle-findings",
+        "released-answer",
+      ]),
+    ).toEqual(["card-findings", "lifecycle-findings", "released-answer"]);
+  });
+
   it("accepts a well-formed healthcheck response", () => {
     const parsed = invokeContract["inf:app:healthcheck"].response.parse({
       ok: true,
@@ -310,6 +328,7 @@ describe("ipc contract", () => {
       "inf:cards:picture",
       "inf:cards:reply",
       "inf:cards:seen",
+      "inf:cards:seen-update",
       "inf:cards:show",
       "inf:cards:show-past",
       "inf:cards:thread",

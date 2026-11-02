@@ -58,7 +58,7 @@ import { copyStream, type FarBuild } from "../devices/farBuilds";
 import type { CoreActor, CoreDispatch } from "../dispatcher";
 import type { CoreEventBus } from "../events";
 import { listenAddresses, listenOn } from "./addresses";
-import { CONTRACT_CHANGES } from "./contractChanges";
+import { CONTRACT_CHANGES, contractChange } from "./contractChanges";
 import {
   DEFAULT_JOURNAL_LIMITS,
   EventJournal,
@@ -329,6 +329,9 @@ export type HomeConnection = {
   close(): Promise<void>;
 };
 
+/** The additive card-reading capability, checked against the registered change at module load. */
+const CURRENT_UPDATE_SEEN = contractChange("card-current-update-seen");
+
 type Client = {
   readonly ws: WebSocket;
   readonly device: PairedDevice;
@@ -341,6 +344,8 @@ type Client = {
   spelling: Spelling;
   /** The version of Firstmate its hello said it runs, when it said one. */
   appVersion: string | undefined;
+  /** Older desktop card decoders are strict; only capable desktops receive the added fields. */
+  cardUpdates: boolean;
   access: ContractAccess;
   closing: boolean;
   answeredPing: boolean;
@@ -382,6 +387,19 @@ export function pushFrameIn(entry: JournalEntry, spelling: Spelling): string {
   const head = (name: string) => `{"t":"push","seq":${entry.seq},"channel":${JSON.stringify(name)}`;
   const was = head(entry.channel);
   return entry.frame.startsWith(was) ? head(channel) + entry.frame.slice(was.length) : entry.frame;
+}
+
+/** Keep old desktop strict card decoders working; phones already ignore optional JSON fields. */
+function legacyCardSnapshot(value: unknown): unknown {
+  if (!Array.isArray(value)) return value;
+  return value.map(({ currentUpdateId: _id, currentUpdateSeen: _seen, ...card }) => card);
+}
+
+function cardPushFor(entry: JournalEntry, spelling: Spelling, currentUpdates: boolean): string {
+  const text = pushFrameIn(entry, spelling);
+  if (currentUpdates || entry.channel !== "inf:cards") return text;
+  const frame = JSON.parse(text);
+  return JSON.stringify({ ...frame, payload: legacyCardSnapshot(frame.payload) });
 }
 
 /** What each refusal at `FETCH_APP_PATH` says; none echoes the code. */
@@ -599,7 +617,7 @@ export function startConnection(options: ConnectionOptions): HomeConnection {
         );
         for (const client of clients)
           if (client.welcomed && client.role === "view")
-            send(client, pushFrameIn(entry, client.spelling));
+            send(client, cardPushFor(entry, client.spelling, client.cardUpdates));
       } catch (error) {
         onProblem(`could not send ${channel}: ${(error as Error).message}`);
         journal = new EventJournal(options.journal ?? DEFAULT_JOURNAL_LIMITS);
@@ -621,6 +639,8 @@ export function startConnection(options: ConnectionOptions): HomeConnection {
       client.speaks = hello.protocolVersion;
       client.spelling = spellingFor(readSpellings(hello.spellings), speaks);
       client.appVersion = hello.appVersion;
+      client.cardUpdates =
+        hello.system === "ios" || (hello.changes?.includes(CURRENT_UPDATE_SEEN) ?? false);
       // A view changes things across majors its floor allows; work only on this home's own.
       // A computer viewing from before the floor (its hello says none) reads closed lists
       // strictly, so like work it changes things only on this home's major (INF-1649 review
@@ -662,7 +682,8 @@ export function startConnection(options: ConnectionOptions): HomeConnection {
           ...(homeChanges.length ? { changes: homeChanges } : {}),
         }),
       );
-      for (const entry of missed ?? []) send(client, pushFrameIn(entry, client.spelling));
+      for (const entry of missed ?? [])
+        send(client, cardPushFor(entry, client.spelling, client.cardUpdates));
       client.welcomed = true;
       if (hello.system || hello.chip || hello.automaticStartup)
         devices.noteSystem?.(client.device.id, {
@@ -736,7 +757,12 @@ export function startConnection(options: ConnectionOptions): HomeConnection {
         // desktop adapter stamps, with the contract's reach as the limit, so
         // the words it types are his own words (the captain's pick, FI3-709).
         // A computer that runs work asks as itself, by the pairing it proved.
-        reply({ ok: true, value: await dispatch(channel, frame.args, actor) });
+        const value = await dispatch(channel, frame.args, actor);
+        reply({
+          ok: true,
+          value:
+            channel === "inf:cards:list" && !client.cardUpdates ? legacyCardSnapshot(value) : value,
+        });
       } catch (error) {
         reply({ ok: false, error: error instanceof Error ? error.message : String(error) });
       }
@@ -762,6 +788,7 @@ export function startConnection(options: ConnectionOptions): HomeConnection {
         speaks: "",
         spelling: FIRST_SPELLING,
         appVersion: undefined,
+        cardUpdates: false,
         access: "read",
         closing: false,
         answeredPing: true,

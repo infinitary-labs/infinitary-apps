@@ -48,6 +48,7 @@ import { devicePlace } from "@shared/signIns";
 import type { AppPanelGates } from "@shared/surfaces";
 import { resolveWorkComputer } from "@shared/workComputer";
 import type { RunbookView } from "../shared/runbooks";
+import { CONTRACT_CHANGES } from "./connection/contractChanges";
 import { RemoteLoginRefusedError } from "./devices/remoteLogin";
 import type { CoreEventSink } from "./events";
 import { SignInRequiredError, signInRefusal } from "./forge";
@@ -239,6 +240,7 @@ export function createCoreDispatcher(options: CoreDispatcherOptions): CoreDispat
       platform: host.app.platform,
       protocolVersion: PROTOCOL_VERSION,
       capabilities: [...HOME_CAPABILITIES],
+      changes: [...CONTRACT_CHANGES.names],
     }),
 
     "inf:converse": async (turn) => {
@@ -610,6 +612,11 @@ export function createCoreDispatcher(options: CoreDispatcherOptions): CoreDispat
 
     "inf:cards:seen": (cardId, offerId) => {
       services.supervisor.cardSeen(cardId, offerId);
+      return { ok: true as const };
+    },
+
+    "inf:cards:seen-update": (cardId, lifecycleId, updateId) => {
+      services.supervisor.cardSeenUpdate(cardId, lifecycleId, updateId);
       return { ok: true as const };
     },
 

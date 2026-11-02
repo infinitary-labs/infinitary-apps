@@ -3,6 +3,30 @@ import Testing
 @testable import InfinitaryKit
 
 struct CardValuesTests {
+    /// INF-2022: the native reader is extensible JSON, so optional update fields do not alter legacy body/actions.
+    @Test func optionalUpdateFieldsKeepLegacyCardReading() throws {
+        let value: PhoneJSON = .object([
+            "id": .string("card-findings"), "title": .string("Latency findings"), "author": .string("firstmate"),
+            "body": .string("<p>The sampler has finished.</p>"),
+            "actions": .array([.object(["id": .string("keep"), "label": .string("Keep the findings")])]),
+            "offerId": .string("findings-offer"), "lifecycleId": .string("findings-life"),
+            "seen": .bool(true), "currentUpdateId": .string("released-answer"), "currentUpdateSeen": .bool(false)
+        ])
+        let bytes = try JSONEncoder().encode(value)
+        // The older PhoneCard's decoder used this same PhoneJSON reader and required these five fields.
+        let legacy = try JSONDecoder().decode(PhoneJSON.self, from: bytes)
+        #expect(legacy["id"].text == "card-findings")
+        #expect(legacy["title"].text == "Latency findings")
+        #expect(legacy["author"].text == "firstmate")
+        #expect(legacy["body"] == value["body"])
+        #expect(legacy["actions"] == value["actions"])
+        let current = try JSONDecoder().decode(PhoneCard.self, from: bytes)
+        #expect(current.value["seen"].flag)
+        #expect(!current.currentUpdateSeen)
+        #expect(current.currentUpdateID == "released-answer")
+        #expect(current.actions == legacy["actions"].list)
+    }
+
     /// INF-499 #4: a reply admitted on the phone must fit the computer's UTF-16 budget.
     @Test func replyBudgetMatchesThePublishedWire() {
         let emoji = "😀"

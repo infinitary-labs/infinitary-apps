@@ -59,7 +59,12 @@ import { z } from "zod";
 import { parseStableCardId, resolveFirstmateCardId } from "../pi/cardTool";
 import { decidedCardWidth } from "../pi/cardWidth";
 import type { EmittedCardInput } from "../session/tools";
-import type { CardResolution, CardStore, DuplicateResult } from "../storage/cardStore";
+import {
+  type CardResolution,
+  type CardStore,
+  type DuplicateResult,
+  updateSightingId,
+} from "../storage/cardStore";
 import { TaskService } from "../tasks/taskService";
 import { cardChanges } from "./cardChanges";
 import { resolveRevisionTargets, revisionLinks } from "./cardNavigation";
@@ -333,8 +338,21 @@ export class CardService {
     // reply holds stays off it until its author answers.
     for (const card of [...this.cards.values()]) {
       if (card.awaiting === "close-out") this.release(card, "restart");
-      if (card.awaiting !== "answer" && card.lifecycleId)
+      if (card.awaiting !== "answer" && card.lifecycleId) {
         host.cardStore.releaseRevisions(card.id, card.lifecycleId);
+        if (
+          !card.awaiting &&
+          card.offerId &&
+          !host.cardStore.currentUpdate(card.id, card.lifecycleId, card.offerId)
+        )
+          this.noteStage({ head: card, shown: card }, "restore", { source: "restore" });
+        if (host.cardStore.unreleasedAnswer(card.id, card.lifecycleId))
+          this.noteStage({ head: card, shown: card }, "close-out", {
+            source: "host",
+            closeOut: "restart",
+            answer: true,
+          });
+      }
     }
     this.refreshSettleFacts();
     this.unsubscribeTasks = host.tasks.onChange(({ taskIds }) => this.refreshSettleFacts(taskIds));
@@ -681,6 +699,7 @@ export class CardService {
         const staged = this.onTheStage(card);
         const shown = {
           ...this.withChanges(staged),
+          ...this.updateState(staged),
           seen: staged.lifecycleId
             ? this.host.cardStore.lastSeenOffer(staged.id, staged.lifecycleId) !== undefined
             : false,
@@ -694,6 +713,53 @@ export class CardService {
         };
       })
       .sort(compareStack);
+  }
+
+  /** Current-update sightings are independent of lifecycle-wide historical offer sightings. */
+  private updateState(card: Card): Pick<Card, "currentUpdateId" | "currentUpdateSeen"> {
+    if (!card.lifecycleId || !card.offerId) return {};
+    const store = this.host.cardStore;
+    const currentUpdateId = store.currentUpdate(card.id, card.lifecycleId, card.offerId);
+    return currentUpdateId
+      ? {
+          currentUpdateId,
+          currentUpdateSeen: store.updateSeen(card.id, card.lifecycleId, currentUpdateId),
+        }
+      : {};
+  }
+
+  /** Accept only the released update actually drawn, never an old lifecycle or prepared successor. */
+  seenUpdate(cardId: string, lifecycleId: string, updateId: string): void {
+    const card = this.cards.get(cardId);
+    const shown = card && this.onTheStage(card);
+    if (
+      !shown ||
+      shown.lifecycleId !== lifecycleId ||
+      !shown.offerId ||
+      !onStage(shown) ||
+      shown.minimized
+    )
+      return;
+    const store = this.host.cardStore;
+    if (
+      store.currentUpdate(cardId, lifecycleId, shown.offerId) !== updateId ||
+      store.updateSeen(cardId, lifecycleId, updateId)
+    )
+      return;
+    store.observe({
+      id: updateSightingId(updateId),
+      kind: "seen",
+      cardId,
+      lifecycleId,
+      taskId: shown.taskId,
+      at: this.host.now(),
+      actor: "captain",
+      source: "stage",
+      offerId: shown.offerId,
+      build: this.host.build,
+      payload: { updateId },
+    });
+    this.scheduleBroadcast();
   }
 
   /**
@@ -1295,6 +1361,7 @@ export class CardService {
       actor?: CardObservationActor;
       closeOut?: CloseOut;
       opened?: Opened;
+      answer?: boolean;
     },
   ): void {
     const { head, shown } = view;
@@ -1316,7 +1383,13 @@ export class CardService {
     const store = this.host.cardStore;
     for (const fact of facts) {
       const last = store.lastAvailabilityOf(head.id, lifecycleId, fact.offerId);
-      if (last && last.state === fact.state && last.waitingOn === fact.waitingOn && !opened) {
+      if (
+        last &&
+        last.state === fact.state &&
+        last.waitingOn === fact.waitingOn &&
+        !opened &&
+        !options.answer
+      ) {
         continue;
       }
       const before =
@@ -1476,11 +1549,14 @@ export class CardService {
           released.push(card.id);
         }
       }
+      const answer =
+        card.lifecycleId !== undefined &&
+        this.host.cardStore.unreleasedAnswer(card.id, card.lifecycleId);
       const staged = this.staged.has(card.id);
       // The captain put the card aside while its author's newer write - a
       // revision or an answer - waited here, so he never saw it: it comes
       // back with it, the same as a write on a card already aside (INF-1472).
-      const written = wrote || staged || card.awaiting === "close-out";
+      const written = wrote || staged || answer || card.awaiting === "close-out";
       if (card.minimized && card.awaiting !== "answer" && written) {
         const { minimized: _aside, ...back } = card;
         this.host.cardStore.upsert(back);
@@ -1490,12 +1566,13 @@ export class CardService {
       }
       if (card.awaiting === "close-out") this.release(card, reason);
       else if (card.awaiting === "answer") continue;
-      else if (staged) {
+      else if (staged || answer) {
         // The stage moves from the version it held to the author's newest.
         this.host.cardStore.transaction(() =>
           this.noteStage({ head: card, shown: card }, "close-out", {
             source: "host",
             closeOut: reason,
+            answer,
           }),
         );
       } else continue;
@@ -1737,6 +1814,7 @@ export class CardService {
           payload: {
             messageId: message.id,
             who,
+            ...(interim ? { interim: true as const } : {}),
             ...(answers ? { answers } : {}),
             ...(submission !== undefined
               ? { display: displayOf(readSubmission(submission), about) }

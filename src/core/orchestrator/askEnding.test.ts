@@ -169,6 +169,79 @@ describe("how a captain's message ends", () => {
     expect(f.tasks.getAsk("m1")?.answerCardId).toBe(decision.id);
   });
 
+  // INF-2242: the exception requires the actual terminal answer-task choice,
+  // not merely the same project, a question or a button named Start.
+  it.each([
+    "ready plan",
+    "unrelated ask",
+    "older offer",
+    "pending reply",
+    "continues",
+    "held write",
+    "browser handoff",
+    "build task",
+    "unmarked",
+    "firstmate card",
+    "invalid action",
+    "dismissed decision",
+  ])("limits chosen-plan acceptance: %s", (scenario) => {
+    const f = fixture();
+    f.later();
+    seedTask(f.tasks, {
+      id: "reading",
+      title: "Plan a reading-style feature",
+      status: "running",
+      shape: { kind: "plan", deliverable: scenario === "build task" ? "change" : "answer" },
+    });
+    f.work("other", "Investigate a separate failure");
+    f.message("reading-ask", "How could a reading-style feature work?", "reading");
+    f.message("other-ask", "Why did the build fail?", "other");
+    const card = f.show({
+      id: scenario === "firstmate card" ? "card-fm-reading" : "card-reading-plan",
+      taskId: "reading",
+      author: scenario === "firstmate card" ? "firstmate" : "crewmate",
+      title: "A reading-style plan",
+      answering: scenario === "unmarked" ? undefined : true,
+      asking: true,
+      actions: [{ id: "start", label: "Start", default: true }],
+      ...(scenario === "pending reply" ? { awaiting: "answer" as const } : {}),
+      ...(scenario === "continues" ? { continues: true as const } : {}),
+      ...(scenario === "held write"
+        ? {
+            actions: [
+              {
+                id: "start",
+                label: "Allow",
+                default: true,
+                effect: { kind: "request_write", ask: "held-write" },
+              },
+            ],
+          }
+        : {}),
+    });
+    if (scenario === "browser handoff") {
+      card.attachment = {
+        kind: "browser",
+        label: "Sign in",
+        taskId: "reading",
+        session: "reading-browser",
+        generation: 1,
+        handoff: true,
+      };
+    }
+    if (scenario === "older offer")
+      f.message("clarification", "Also check rights before proposing the design", "reading");
+    f.ending.captainResponded(
+      card,
+      scenario === "dismissed decision" ? "close" : "choice",
+      scenario === "invalid action" ? "not-an-offer" : "start",
+    );
+    expect(f.tasks.getAsk("other-ask")?.answerCardId).toBeNull();
+    expect(f.tasks.getAsk("reading-ask")?.answerCardId).toBe(
+      scenario === "ready plan" || scenario === "unrelated ask" ? card.id : null,
+    );
+  });
+
   it("keeps the message open when the captain's choice started more of its work", () => {
     const f = fixture();
     f.work("plan", "Plan the panels");

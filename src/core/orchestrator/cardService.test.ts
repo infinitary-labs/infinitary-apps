@@ -14,7 +14,7 @@ import { FIRSTMATE_RECIPIENT, InboxStore } from "../storage/inboxStore";
 import { seedTask } from "../tasks/seedTask";
 import { TaskService } from "../tasks/taskService";
 import { revisionNotice } from "./cardChanges";
-import { CardService, FIRSTMATE_CARD_PREFIX } from "./cardService";
+import { CardService, type CardServiceHost, FIRSTMATE_CARD_PREFIX } from "./cardService";
 import { idleTurn, type ReportSortFacts, sortReport } from "./reportSort";
 
 function setup(db = openInMemoryDatabase(), now = () => 1000) {
@@ -23,7 +23,10 @@ function setup(db = openInMemoryDatabase(), now = () => 1000) {
   const gates: string[] = [];
   const pushes: Card[][] = [];
   const threads: CardThread[] = [];
-  const make = (settleFacts: (taskId: string) => string | undefined = () => undefined) =>
+  const make = (
+    settleFacts: (taskId: string) => string | undefined = () => undefined,
+    captainResponded?: CardServiceHost["captainResponded"],
+  ) =>
     new CardService({
       now,
       tasks,
@@ -31,6 +34,7 @@ function setup(db = openInMemoryDatabase(), now = () => 1000) {
       syncCaptainGate: (taskId) => gates.push(taskId),
       noteCapAnswered: () => {},
       closeAnsweredTask: () => false,
+      captainResponded,
       settleFacts,
       followupNotice: () => undefined,
       broadcastCrewCounts: () => {},
@@ -56,6 +60,78 @@ describe("CardService", () => {
   });
   afterEach(() => {
     vi.useRealTimers();
+  });
+
+  // INF-2242: acceptance and the admitted choice must survive or roll back together.
+  it("commits the chosen plan and ask acceptance in one transaction", () => {
+    const { db, tasks, cardStore, make } = setup();
+    seedTask(tasks, {
+      id: "reading",
+      title: "Plan a reading-style feature",
+      status: "running",
+      shape: { kind: "plan", deliverable: "answer" },
+    });
+    tasks.openAsk({ id: "reading-ask", text: "How could a reading-style feature work?" });
+    tasks.attachAsk("reading-ask", "reading", "tool:spawn_crewmate");
+    let interrupt = true;
+    const cards = make(undefined, (card, response, action) => {
+      expect(db.inTransaction).toBe(true);
+      expect({ response, action }).toEqual({ response: "choice", action: "start" });
+      tasks.acceptAnswer(["reading-ask"], card.id);
+      if (interrupt) throw new Error("Interrupted while admitting choice");
+    });
+    const id = cards.emitCrewmateCard(
+      "reading",
+      {
+        title: "Ready reading-style plan",
+        body: "<p>The plan separates style from rights assessment.</p>",
+        answering: true,
+        asking: true,
+        actions: [{ id: "start", label: "Start the next step", default: true }],
+      },
+      "model",
+    );
+    const card = cards.get(id) as Card;
+    const answers = [{ name: "rights", values: ["separate"], changed: true }];
+    expect(() => cards.resolve(card, "start", "start", answers)).toThrow(
+      "Interrupted while admitting choice",
+    );
+    expect(tasks.getAsk("reading-ask")?.acceptedAt).toBeNull();
+    expect(cardStore.chosenAction(id)).toBeUndefined();
+    expect(cards.get(id)).toBeDefined();
+    interrupt = false;
+    cards.resolve(card, "start", "start", answers);
+    expect(tasks.getAsk("reading-ask")?.answerCardId).toBe(id);
+    expect(cardStore.past(id)?.answers).toEqual(answers);
+    expect(cardStore.chosenAction(id)).toBe("start");
+    cards.dispose();
+  });
+
+  // INF-2242: a script firing a declared action is not the captain accepting an answer.
+  it("does not send script actions to ask acceptance", () => {
+    const { make, tasks } = setup();
+    const responded = vi.fn();
+    const cards = make(undefined, responded);
+    seedTask(tasks, {
+      id: "reading",
+      title: "Plan a reading-style feature",
+      status: "running",
+      shape: { kind: "plan", deliverable: "answer" },
+    });
+    const id = cards.emitCrewmateCard(
+      "reading",
+      {
+        title: "Ready reading-style plan",
+        body: "<p>The plan separates style from rights assessment.</p>",
+        answering: true,
+        asking: true,
+        actions: [{ id: "start", label: "Start", default: true }],
+      },
+      "model",
+    );
+    cards.resolve(cards.get(id) as Card, "start", "start", undefined, "crewmate");
+    expect(responded).not.toHaveBeenCalled();
+    cards.dispose();
   });
 
   // INF-1404: the stack must restore unread cards after a reload/restart.

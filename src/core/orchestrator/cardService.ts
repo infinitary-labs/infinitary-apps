@@ -160,7 +160,7 @@ export type CardServiceHost = {
    * The captain chose an action on a card or closed it: the message it may
    * answer hears it (INF-1610, `AskEnding.captainResponded`).
    */
-  captainResponded?: (card: Card, response: "choice" | "close") => void;
+  captainResponded?: (card: Card, response: "choice" | "close", action?: string) => void;
   /** The app build every observation is stamped with (docs/card-evidence.md). */
   build?: string;
 };
@@ -540,10 +540,10 @@ export class CardService {
       );
       observation = this.noteAction(card, action, { closes: true, answers, by, evidence });
       alongside?.();
+      if (by === "captain") this.host.captainResponded?.(card, "choice", action);
     });
     this.cards.delete(card.id);
     this.staged.delete(card.id);
-    if (by === "captain") this.host.captainResponded?.(card, "choice");
     const closedAnswer = this.recordResolution(card, action, by, answers, observation);
     this.scheduleBroadcast();
     return closedAnswer;

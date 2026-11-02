@@ -3,6 +3,7 @@ import type { AskRecord } from "../storage/askStore";
 import type { TaskRecord } from "../storage/taskStore";
 import { TaskService } from "../tasks/taskService";
 import { actionTookEffect } from "./answerDelivery";
+import { answerTaskChoice } from "./answerTaskResponse";
 import { hasMergeLine } from "./settleWords";
 
 /**
@@ -242,14 +243,19 @@ export class AskEnding {
    * The captain responded to a card: a choice, or their close. It is the
    * answer for each open chain it is about, when it was shown since the
    * chain's newest message and no reply of theirs waits under it: their
-   * choice on a decision about its work that is not still asking, or their
-   * close of a note shaped as its answer. A decision closed without a
+   * choice on a decision about its work that is not still asking (or an
+   * explicitly answering terminal answer-task choice), or their close of
+   * a note shaped as its answer. A decision closed without a
    * choice answers nothing.
    */
-  captainResponded(card: Card, response: "choice" | "close"): void {
+  captainResponded(card: Card, response: "choice" | "close", action?: string): void {
     if (card.awaiting === "answer") return;
     if (response === "close" && card.actions.length > 0) return;
-    if (response === "choice" && (card.asking || card.continues)) return;
+    const terminalAnswer =
+      response === "choice" &&
+      card.answering === true &&
+      answerTaskChoice(card, card.taskId ? this.host.tasks.get(card.taskId) : undefined, action);
+    if (response === "choice" && (card.continues || (card.asking && !terminalAnswer))) return;
     for (const chain of this.openChains()) {
       // A choice on any decision about its work answers it; a closed note
       // answers it only when shaped as its answer, not a note along the way.

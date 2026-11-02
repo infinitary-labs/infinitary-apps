@@ -112,6 +112,12 @@ What piece 2's migration adds to `captain_asks`: `followed` (every message saved
   A card about its work that its author marked `answering`, a completion card's merge, the app's merge line on a story note, or a card the first mate showed for the message; it counts only when it was shown since the newest message of the chain.
 - **Accepted.**
   The captain's choice on a decision about its work that is not still asking (`asking`, `continues`), or their close of a note that can answer it, with no reply of theirs waiting under it (`CardService` reports each response through `captainResponded`).
+  An explicitly answering crewmate card on an active answer-deliverable task also counts when its admitted choice qualifies to close that task, even with `asking` set.
+  Ask acceptance and task completion share `taskResultResponse`; continuing cards, held writes, browser handoffs and pending replies do not qualify.
+  The author judges whether the requested result is supplied, including a ready plan that offers further work, rather than a prerequisite question or consent.
+  The host checks attribution, the admitted choice and offer freshness, never card meaning or button wording.
+  CardService saves choice acceptance through TaskService in the resolution transaction before task closure, preserving the original offer and submitted answers.
+  The normal `answer_task_closed` handoff remains pending until the first mate recovers and handles the choice; acceptance alone neither authorizes nor proves later work.
   A decision closed without a choice answers nothing; a reply, a question or a new message keeps the message open.
   Work the choice started keeps the message working until it ends; then the accepted card still answers it.
   The first mate's answer in the thread of the card the message was typed under is accepted; so is a reaction to a message that asks nothing, the first mate's own judgment.

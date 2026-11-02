@@ -1634,8 +1634,8 @@ export class CrewSupervisor {
       presentationChanged: options.presentationChanged,
       ...(options.broadcastThread ? { broadcastThread: options.broadcastThread } : {}),
       ...(options.build ? { build: options.build } : {}),
-      captainResponded: (card, response) => {
-        this.askEnding.captainResponded(card, response);
+      captainResponded: (card, response, action) => {
+        this.askEnding.captainResponded(card, response, action);
         this.hooks.asksMoved?.();
       },
     });

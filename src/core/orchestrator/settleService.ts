@@ -36,6 +36,7 @@ import {
   type TaskWorkspace,
   type WorkspaceService,
 } from "../workspace/workspaceService";
+import { taskResultResponse } from "./answerTaskResponse";
 import type { AskEnding, ClosingPlace } from "./askEnding";
 import { type CardService, cardEmitter } from "./cardService";
 import { escapeCardText } from "./cardText";
@@ -172,15 +173,6 @@ function workspaceOf(record: TaskRecord): TaskWorkspace {
     branch: record.branch,
     repoDir: record.repoDir,
   };
-}
-
-/**
- * A note its author marked as the answer, with no reply of the captain's
- * waiting under it (INF-1732): his close of it answers. A decision closed
- * without a choice answers nothing, and neither does a note along the way.
- */
-function closedAnswerNote(card: Card): boolean {
-  return card.answering === true && card.actions.length === 0 && card.awaiting !== "answer";
 }
 
 /**
@@ -679,26 +671,8 @@ export class SettleService {
    * Interrupt, cancel and `update_task drop` keep their own closes.
    */
   closeAnsweredTask(card: Card, action: string, by: "captain" | "firstmate" | "crewmate"): boolean {
-    if (by !== "captain" || !card.taskId) return false;
-    if (action === "dismissed" && !closedAnswerNote(card)) return false;
-    const record = this.host.tasks.get(card.taskId);
-    if (record?.status !== "active" || record.kind !== "work") return false;
-    // A card that asks to send a kept write is never the answer (FI3-1571
-    // piece 4): its click sends or declines the write, and the task goes on.
-    if (card.actions.some((action) => action.effect?.kind === "request_write")) return false;
-    // Nor is a card its crewmate declared `continues` (INF-1226): something
-    // it goes on from, such as INF-1220's consent "Allow signing on the Mac
-    // mini" before anything was signed. Its choice reaches the crewmate, and
-    // the task goes on.
-    if (card.continues) return false;
-    // Nor is a card that hands the captain its browser (INF-1322): INF-1317's
-    // "Open browser and sign in" closed its read-only check answered, and the
-    // close stopped the browser the captain had just taken. The crewmate goes
-    // on from Return control, or hears any other choice on the card.
-    if (card.attachment?.kind === "browser" && card.attachment.handoff) return false;
-    // Its own crewmate's card, never a Firstmate card that happens to name
-    // the task (`cardEmitter` reads the emitter off the id).
-    if (cardEmitter(card.id, card.taskId) !== "crewmate") return false;
+    const record = card.taskId ? this.host.tasks.get(card.taskId) : undefined;
+    if (!taskResultResponse(card, record, action, by) || !record || !card.taskId) return false;
     const choice = card.actions.find((entry) => entry.id === action);
     // A plain result choice is a receipt, never consent or a merge effect.
     // Change tasks still wait for an explicit answered settle and a clean-work check.

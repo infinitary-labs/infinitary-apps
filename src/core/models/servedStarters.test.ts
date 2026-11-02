@@ -9,17 +9,16 @@ import { createServedStarters, STARTERS_REFRESH_MS } from "./servedStarters";
 
 afterEach(() => putServedStarters(null));
 
-/** The Codex list Pi 1.4.0 serves with pi.dev's October 29 overlay. */
+/** The Codex starters Pi 1.5.0 bundles. */
 const codexIds = ["gpt-6-astra", "gpt-6.1-sol", "gpt-6.1-terra", "gpt-6-luna"];
 
-/** A served file that moves Codex's medium from Sol to Terra and names no other provider. */
+/** A served file that moves Codex's medium back from Terra to Sol and names no other provider. */
 const served: ServedStarters = {
   schema: 1,
   starters: {
     "openai-codex": {
       "gpt-6-astra": ["premium"],
-      "gpt-6.1-sol": ["high"],
-      "gpt-6.1-terra": ["medium"],
+      "gpt-6.1-sol": ["high", "medium"],
       "gpt-6-luna": ["low"],
     },
   },
@@ -78,8 +77,11 @@ describe("the served starter list", () => {
 
     slots.reconcile();
 
-    expect(slots.slotsOf({ provider: "openai-codex", id: "gpt-6.1-terra" })).toEqual(["medium"]);
-    expect(slots.slotsOf({ provider: "openai-codex", id: "gpt-6.1-sol" })).toEqual(["high"]);
+    expect(slots.slotsOf({ provider: "openai-codex", id: "gpt-6.1-sol" })).toEqual([
+      "high",
+      "medium",
+    ]);
+    expect(slots.slotsOf({ provider: "openai-codex", id: "gpt-6.1-terra" })).toEqual([]);
     expect(slots.slotsOf({ provider: "anthropic-claude", id: "claude-opus-5-5" })).toEqual(
       STARTER_SLOTS["anthropic-claude"]?.["claude-opus-5-5"],
     );
@@ -88,22 +90,27 @@ describe("the served starter list", () => {
   it("never rewrites a level an install already saved", async () => {
     const { settings, slots, clock } = setup([account("openai-codex", codexIds)]);
     slots.reconcile();
-    expect(slots.slotsOf({ provider: "openai-codex", id: "gpt-6.1-sol" })).toEqual(
-      STARTER_SLOTS["openai-codex"]?.["gpt-6.1-sol"],
+    expect(slots.slotsOf({ provider: "openai-codex", id: "gpt-6.1-terra" })).toEqual(
+      STARTER_SLOTS["openai-codex"]?.["gpt-6.1-terra"],
     );
     const { fetchImpl } = feed(json(served));
     await createServedStarters({ settings, fetchImpl, now: clock }).refresh();
 
     slots.reconcile();
 
+    expect(slots.slotsOf({ provider: "openai-codex", id: "gpt-6.1-terra" })).toEqual(
+      STARTER_SLOTS["openai-codex"]?.["gpt-6.1-terra"],
+    );
     expect(slots.slotsOf({ provider: "openai-codex", id: "gpt-6.1-sol" })).toEqual(
       STARTER_SLOTS["openai-codex"]?.["gpt-6.1-sol"],
     );
-    expect(slots.slotsOf({ provider: "openai-codex", id: "gpt-6.1-terra" })).toEqual([]);
     // Resetting to the defaults is the person's own way to take the served levels.
     slots.reset("openai-codex");
-    expect(slots.slotsOf({ provider: "openai-codex", id: "gpt-6.1-terra" })).toEqual(["medium"]);
-    expect(slots.slotsOf({ provider: "openai-codex", id: "gpt-6.1-sol" })).toEqual(["high"]);
+    expect(slots.slotsOf({ provider: "openai-codex", id: "gpt-6.1-terra" })).toEqual([]);
+    expect(slots.slotsOf({ provider: "openai-codex", id: "gpt-6.1-sol" })).toEqual([
+      "high",
+      "medium",
+    ]);
   });
 
   it("keeps the last answer through a start with no network", async () => {
@@ -120,7 +127,11 @@ describe("the served starter list", () => {
     slots.reconcile();
 
     expect(offline.calls).toEqual([]);
-    expect(slots.slotsOf({ provider: "openai-codex", id: "gpt-6.1-terra" })).toEqual(["medium"]);
+    expect(slots.slotsOf({ provider: "openai-codex", id: "gpt-6.1-terra" })).toEqual([]);
+    expect(slots.slotsOf({ provider: "openai-codex", id: "gpt-6.1-sol" })).toEqual([
+      "high",
+      "medium",
+    ]);
   });
 
   it("asks again after a day; a failed or unreadable answer keeps the list and a 404 withdraws it", async () => {
@@ -145,13 +156,13 @@ describe("the served starter list", () => {
     for (const unanswered of ["network", "502", "bad slot"]) {
       advance(STARTERS_REFRESH_MS);
       await reader.refresh();
-      expect(terraStarts(), unanswered).toEqual(["medium"]);
+      expect(terraStarts(), unanswered).toEqual([]);
     }
     expect(calls).toHaveLength(4);
 
     await reader.refresh();
     expect(calls).toHaveLength(5);
-    expect(terraStarts()).toEqual([]);
+    expect(terraStarts()).toEqual(STARTER_SLOTS["openai-codex"]?.["gpt-6.1-terra"]);
     expect(slots.slotsOf({ provider: "openai-codex", id: "gpt-6.1-sol" })).toEqual(
       STARTER_SLOTS["openai-codex"]?.["gpt-6.1-sol"],
     );

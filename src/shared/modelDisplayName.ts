@@ -38,6 +38,7 @@ const OPENROUTER_MAKERS: Readonly<Record<string, readonly string[]>> = {
   "nex-agi": ["Nex AGI"],
   nvidia: ["NVIDIA"],
   openrouter: ["OpenRouter"],
+  "particle-ai": ["Particle AI"],
   perceptron: ["Perceptron"],
   poolside: ["Poolside"],
   "prism-ml": ["PrismML"],

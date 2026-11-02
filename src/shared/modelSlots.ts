@@ -109,12 +109,15 @@ export type ServedBaselines = z.infer<typeof servedBaselinesSchema>;
  * (docs/claude-model-probe.md) says the installed client's answer moved.
  */
 export const STARTER_SLOTS: StarterMap = {
-  // GPT-6.1 Sol takes high and medium (2026-09-29). GPT-6 Astra stays
+  // GPT-6.1 Sol takes high (2026-09-29), and GPT-6.1 Terra, which Pi
+  // bundles from 1.5.0, replaces it in medium (captain, 2026-11-02: "it
+  // should replace 6.1 sol in the default medium bucket"). GPT-6 Astra stays
   // premium and GPT-6 Luna stays low. Existing saved picks remain the
   // person's choices; migration 39 only moved earlier GPT-5.6 picks.
   "openai-codex": {
     "gpt-6-astra": ["premium"],
-    "gpt-6.1-sol": ["high", "medium"],
+    "gpt-6.1-sol": ["high"],
+    "gpt-6.1-terra": ["medium"],
     "gpt-6-luna": ["low"],
   },
   // Grok 4.7 is medium on every provider that serves it (captain, 2026-09-23).

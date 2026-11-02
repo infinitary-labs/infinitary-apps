@@ -96,13 +96,16 @@ describe("what a live check fails on", () => {
     ]);
   });
 
-  it("does not hold back Codex Sol: the 6.1 starter must be served", () => {
-    const served = ["gpt-6-astra", "gpt-6-luna", "gpt-6-sol", "gpt-6.1-sol"];
+  it("does not hold back Codex Sol or Terra: the 6.1 starters must be served", () => {
+    const served = ["gpt-6-astra", "gpt-6-luna", "gpt-6-sol", "gpt-6.1-sol", "gpt-6.1-terra"];
     expect(staleDefaults("openai-codex", served)).toEqual([]);
     expect(checkCatalog({ providerId: "openai-codex", served }).failures).toEqual([]);
-    expect(
-      checkCatalog({ providerId: "openai-codex", served: served.slice(0, 3) }).failures,
-    ).toContain('Dead default in STARTER_SLOTS["openai-codex"] (no longer served): gpt-6.1-sol');
+    for (const starter of ["gpt-6.1-sol", "gpt-6.1-terra"]) {
+      const without = served.filter((id) => id !== starter);
+      expect(checkCatalog({ providerId: "openai-codex", served: without }).failures).toContain(
+        `Dead default in STARTER_SLOTS["openai-codex"] (no longer served): ${starter}`,
+      );
+    }
   });
 
   it("names a tracked id the catalog no longer serves", () => {

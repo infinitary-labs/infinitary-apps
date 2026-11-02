@@ -79,9 +79,9 @@ An answer that omits any starter or kept id Pi can serve is treated as unrecogni
 Neither endpoint can be verified from here without the credentials Infinitary never reads, and a filter that could remove a default would break the rule that a read never says a model is gone.
 **The accepted cost:** in-app dead-default detection comes only from the Claude read; the CI check still covers Pi defaults.
 `CODEX_MODELS_CLIENT_VERSION` is pinned beside the Pi SDK version - review the two together.
-Pi 1.4.0 keeps GPT-6.1 Sol and the other Codex starters, so Codex client version 0.159.0 remains the paired list request; the account-list safety rail still applies if a particular account does not serve a starter.
-The pi.dev catalog sends its updated Codex list, with GPT-6.1 Terra, only to Pi 1.3.0 and newer; Terra is listed and placed in no starting level.
-Pi 1.4.0 drops GPT-5.5 and GPT-5.3 Codex Spark from Codex, which Pi reports always fail for ChatGPT accounts.
+Pi 1.5.0 keeps GPT-6.1 Sol and the other Codex starters, so Codex client version 0.159.0 remains the paired list request; the account-list safety rail still applies if a particular account does not serve a starter.
+Pi 1.5.0 bundles GPT-6.1 Terra in its Codex catalog, so Terra starts in medium in place of GPT-6.1 Sol, which keeps high (captain, 2026-11-02: "it should replace 6.1 sol in the default medium bucket").
+Pi's Codex catalog leaves out GPT-5.5 and GPT-5.3 Codex Spark, which Pi reports always fail for ChatGPT accounts.
 Saved slot choices, including GPT-6 Sol, are preserved rather than silently reassigned on upgrade.
 The session adapter discards `AgentSession.steer()`'s queue disposition after awaiting the call.
 

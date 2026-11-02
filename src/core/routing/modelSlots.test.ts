@@ -24,6 +24,7 @@ const codex: AccountModels = {
   models: [
     { provider: "openai-codex", id: "gpt-6-astra" },
     { provider: "openai-codex", id: "gpt-6.1-sol" },
+    { provider: "openai-codex", id: "gpt-6.1-terra" },
     { provider: "openai-codex", id: "gpt-6-sol" },
     { provider: "openai-codex", id: "gpt-6-luna" },
     { provider: "openai-codex", id: "gemini-3.6-flash" },
@@ -122,10 +123,10 @@ describe("ModelSlots.reconcile - first activation only", () => {
     const { slots } = build([codex, grok]);
     expect(slots.reconcile()).toEqual([]);
     expect(slots.slotsOf({ provider: "openai-codex", id: "gpt-6-astra" })).toEqual(["premium"]);
-    expect(slots.slotsOf({ provider: "openai-codex", id: "gpt-6.1-sol" })).toEqual([
-      "high",
-      "medium",
-    ]);
+    // GPT-6.1 Terra replaces Sol in medium (captain, 2026-11-02: "it should
+    // replace 6.1 sol in the default medium bucket").
+    expect(slots.slotsOf({ provider: "openai-codex", id: "gpt-6.1-sol" })).toEqual(["high"]);
+    expect(slots.slotsOf({ provider: "openai-codex", id: "gpt-6.1-terra" })).toEqual(["medium"]);
     expect(slots.slotsOf({ provider: "openai-codex", id: "gpt-6-sol" })).toEqual([]);
     expect(slots.slotsOf({ provider: "openai-codex", id: "gpt-6-luna" })).toEqual(["low"]);
     expect(slots.slotsOf({ provider: "openai-codex", id: "gemini-3.6-flash" })).toEqual([]);
@@ -380,16 +381,14 @@ describe("ModelSlots.reset - both grains", () => {
     const { slots, settings } = build([codex, grok]);
     slots.reconcile();
     slots.setSlotMembership("openai-codex/gpt-6.1-sol", "high", false);
-    slots.setSlotMembership("openai-codex/gpt-6.1-sol", "medium", false);
+    slots.setSlotMembership("openai-codex/gpt-6.1-terra", "medium", false);
     slots.setSlotMembership("openai-codex/gpt-6.1-sol", "low", true);
     slots.setSlotMembership("xai/grok-4.7", "medium", false);
     slots.setSlotMembership("openai-codex/gemini-3.6-flash", "medium", true);
     const seenBefore = settings.getModelSlots().seen.slice();
     slots.reset();
-    expect(slots.slotsOf({ provider: "openai-codex", id: "gpt-6.1-sol" })).toEqual([
-      "high",
-      "medium",
-    ]);
+    expect(slots.slotsOf({ provider: "openai-codex", id: "gpt-6.1-sol" })).toEqual(["high"]);
+    expect(slots.slotsOf({ provider: "openai-codex", id: "gpt-6.1-terra" })).toEqual(["medium"]);
     expect(slots.slotsOf({ provider: "xai", id: "grok-4.7" })).toEqual(["medium"]);
     expect(slots.slotsOf({ provider: "openai-codex", id: "gemini-3.6-flash" })).toEqual([]);
     expect(slots.slotsOf({ provider: "openai-codex", id: "gpt-6-astra" })).toEqual(["premium"]);
@@ -400,6 +399,7 @@ describe("ModelSlots.reset - both grains", () => {
 describe("ModelSlots.routable - the fallback ladder", () => {
   const available = [
     { provider: "openai-codex", id: "gpt-6.1-sol" },
+    { provider: "openai-codex", id: "gpt-6.1-terra" },
     { provider: "openai-codex", id: "gemini-3.6-flash" },
   ];
 
@@ -409,22 +409,22 @@ describe("ModelSlots.routable - the fallback ladder", () => {
     const routable = slots.routable(available);
     expect(routable.models).toEqual([
       { provider: "openai-codex", id: "gpt-6.1-sol", slot: "high" },
-      { provider: "openai-codex", id: "gpt-6.1-sol", slot: "medium" },
+      { provider: "openai-codex", id: "gpt-6.1-terra", slot: "medium" },
     ]);
-    expect(routable.note).toBe("2 of 2 available models have a slot");
+    expect(routable.note).toBe("2 of 3 available models have a slot");
   });
 
   it("falls back to the starter map when NOTHING is slotted", () => {
     const { slots } = build([codex]);
     slots.reconcile();
     slots.setSlotMembership("openai-codex/gpt-6.1-sol", "high", false);
-    slots.setSlotMembership("openai-codex/gpt-6.1-sol", "medium", false);
+    slots.setSlotMembership("openai-codex/gpt-6.1-terra", "medium", false);
     slots.setSlotMembership("openai-codex/gpt-6-astra", "premium", false);
     slots.setSlotMembership("openai-codex/gpt-6-luna", "low", false);
     const routable = slots.routable(available);
     expect(routable.models).toEqual([
       { provider: "openai-codex", id: "gpt-6.1-sol", slot: "high" },
-      { provider: "openai-codex", id: "gpt-6.1-sol", slot: "medium" },
+      { provider: "openai-codex", id: "gpt-6.1-terra", slot: "medium" },
     ]);
     expect(routable.note).toMatch(/using the starter map/);
   });
@@ -472,8 +472,8 @@ describe("ModelSlots.routable - the fallback ladder", () => {
     expect(routable.models).toEqual(
       expect.arrayContaining([
         { provider: "openai-codex", id: "gpt-6.1-sol", slot: "high" },
-        { provider: "openai-codex", id: "gpt-6.1-sol", slot: "medium" },
         { provider: "openai-codex", id: "gpt-6.1-sol", slot: "low" },
+        { provider: "openai-codex", id: "gpt-6.1-terra", slot: "medium" },
       ]),
     );
     expect(routable.models).toHaveLength(3);
@@ -497,7 +497,9 @@ describe("ModelSlots.view", () => {
     const sol = view.models.filter((model) => model.id === "gpt-6.1-sol");
     expect(sol).toHaveLength(1);
     expect(sol[0]?.providerLabel).toBe("Codex");
-    expect(sol[0]?.slots).toEqual(["high", "medium"]);
+    expect(sol[0]?.slots).toEqual(["high"]);
+    const terra = view.models.find((model) => model.id === "gpt-6.1-terra");
+    expect(terra?.slots).toEqual(["medium"]);
     const astra = view.models.find((model) => model.id === "gpt-6-astra");
     expect(astra?.slots).toEqual(["premium"]);
     const flash = view.models.find((model) => model.id === "gemini-3.6-flash");
@@ -514,9 +516,11 @@ describe("ModelSlots.view", () => {
     const { slots } = build([codex, grokLine], catalog);
     slots.reconcile();
     expect(slots.view().models.map((model) => `${model.provider}/${model.id}`)).toEqual([
-      // Codex: the 6.1 generation leads; the older 6 variants follow in
-      // tier order (premium, low), then the gemini family.
+      // Codex: the 6.1 generation leads in tier order (high, medium); the
+      // older 6 variants follow in tier order (premium, low), then the
+      // gemini family.
       "openai-codex/gpt-6.1-sol",
+      "openai-codex/gpt-6.1-terra",
       "openai-codex/gpt-6-astra",
       "openai-codex/gpt-6-luna",
       "openai-codex/gemini-3.6-flash",

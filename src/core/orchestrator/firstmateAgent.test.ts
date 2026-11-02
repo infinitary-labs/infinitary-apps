@@ -31,6 +31,7 @@ import {
   claudeFlagship,
 } from "../../../tests/helpers/claudeFlagship";
 import { freshDatabase as openInMemoryDatabase } from "../../../tests/helpers/database";
+import { deferred } from "../../../tests/helpers/deferred";
 import {
   FAKE_CONTROL_PROFILE,
   fakeBinding,
@@ -4738,22 +4739,27 @@ describe("the seat seam: the factory comes from the binding (W1 S4)", () => {
  */
 function claudeSeat(
   onInput: (message: SDKUserMessage, emit: (message: unknown) => void, attachment: number) => void,
+  clientReady: Promise<void> = Promise.resolve(),
 ) {
   const dir = scratchDir("infinitary-agent-claude-seat-");
   const scripted = scriptedClaudeQuery({
     onInput: (message, emit) => onInput(message, emit, scripted.attachments.length),
   });
   const transcripts = new SessionRecordStore(join(dir, "firstmate", "claude"));
+  const sessions: ModelSession[] = [];
   const factory = createClaudeSessionFactory({
     configDir: join(dir, "claude-config"),
     records: () => transcripts,
     clock: { now: () => Date.now(), register: () => () => {} },
     log: () => {},
     env: () => ({ PATH: "", HOME: dir }),
-    checkClient: async () => ({ state: "ready", executable: "/bin/claude" }),
+    checkClient: async () => {
+      // Let the factory open; only the later client attachment waits.
+      if (sessions.length > 0) await clientReady;
+      return { state: "ready", executable: "/bin/claude" };
+    },
     query: scripted.factory,
   });
-  const sessions: ModelSession[] = [];
   return {
     factory: async (spec: SessionSpec) => {
       const session = await factory.open(spec);
@@ -4814,15 +4820,21 @@ function inputText(message: SDKUserMessage | undefined): string {
 
 describe("the Claude seat under the agent (W1 S6)", () => {
   it("answers a captain turn, recording the client's real resumable id", async () => {
-    const seat = claudeSeat(answersEveryPrompt);
+    const clientReady = deferred<void>();
+    const seat = claudeSeat(answersEveryPrompt, clientReady.promise);
     const { agent, settings, usages, events, turns } = setup({
       flagship: claudeFlagship(),
       availableModels: () => [CLAUDE_SEAT_MODEL],
       claudeSeat: seat.factory,
     });
     await agent.converse("hello");
+    // INF-2287: acceptance and a clock tick can both precede the client's
+    // attachment. Hold that ordering without slowing the real filesystem.
     await tick();
-    expect(turns).toEqual([{ trigger: "captain", failed: false }]);
+    expect(seat.scripted.attachments).toHaveLength(0);
+    expect(turns).toEqual([]);
+    clientReady.resolve();
+    await vi.waitFor(() => expect(turns).toEqual([{ trigger: "captain", failed: false }]));
     expect(inputText(seat.scripted.harness().inputs[0])).toContain("hello");
     // The id the agent will resume is the one the client runs under.
     expect(settings.getFirstmateClaudeSession()).toBe(seat.scripted.harness().options.sessionId);
@@ -4846,13 +4858,13 @@ describe("the Claude seat under the agent (W1 S6)", () => {
 
   it("drains a typed wake into a turn on the Claude seat, rendered once", async () => {
     const seat = claudeSeat(answersEveryPrompt);
-    const { agent } = setup({
+    const { agent, turns } = setup({
       flagship: claudeFlagship(),
       availableModels: () => [CLAUDE_SEAT_MODEL],
       claudeSeat: seat.factory,
     });
     await agent.converse("start work");
-    await tick();
+    await vi.waitFor(() => expect(turns).toEqual([{ trigger: "captain", failed: false }]));
     const wake: TypedWake = {
       facts: {
         kind: "idle-stall",
@@ -4868,7 +4880,12 @@ describe("the Claude seat under the agent (W1 S6)", () => {
       ways: idleStallWays("ab12"),
     };
     agent.notifyOp(wake, "agent", "ab12");
-    await tick();
+    await vi.waitFor(() =>
+      expect(turns).toEqual([
+        { trigger: "captain", failed: false },
+        { trigger: "operation", failed: false },
+      ]),
+    );
     const inputs = seat.scripted.harness().inputs;
     expect(inputs).toHaveLength(2);
     expect(inputText(inputs[1])).toContain(renderWake(wake));
@@ -4889,20 +4906,21 @@ describe("the Claude seat under the agent (W1 S6)", () => {
         emit(claudeSays.ack(message));
       }
     });
-    const { agent } = setup({
+    const { agent, turns } = setup({
       flagship: claudeFlagship(),
       availableModels: () => [CLAUDE_SEAT_MODEL],
       claudeSeat: seat.factory,
     });
-    const turn = agent.converse("start work");
-    await tick();
+    await agent.converse("start work");
+    // Steer only once the client has taken the prompt, then exit only once
+    // it has received the steer (without acknowledging it).
+    await vi.waitFor(() => expect(seat.scripted.attachments[0]?.inputs).toHaveLength(1));
+    const firstClient = seat.scripted.harness();
     await agent.converse("also this");
-    const [firstClient] = seat.scripted.attachments;
-    expect(inputText(firstClient?.inputs[1])).toContain("also this");
+    await vi.waitFor(() => expect(inputText(firstClient.inputs[1])).toContain("also this"));
     // The client exits with the steer still in its queue.
-    firstClient?.end();
-    await turn;
-    await tick();
+    firstClient.end();
+    await vi.waitFor(() => expect(turns).toHaveLength(2));
     // Not lost: the agent delivers it as a turn of its own, on a new attachment.
     expect(seat.scripted.attachments).toHaveLength(2);
     expect(inputText(seat.scripted.harness().inputs[0])).toContain("[user]\nalso this");

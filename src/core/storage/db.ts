@@ -2213,6 +2213,8 @@ function migrate(db: AppDatabase, throughVersion?: number): void {
   // instead of reading every task (docs/testing.md, "The scale check").
   // The permission index seeks only recorded overrides for each load round,
   // never the permission-bearing history that has no override.
+  // Captain-click context seeks that actor's recent events, not every
+  // crewmate's progress in the same time window (INF-2284).
   if (through === DATABASE_VERSION)
     db.exec(`
       CREATE INDEX IF NOT EXISTS usage_events_account_at ON usage_events (account_id, at);
@@ -2223,6 +2225,7 @@ function migrate(db: AppDatabase, throughVersion?: number): void {
       CREATE INDEX IF NOT EXISTS task_events_ref ON task_events (kind, ref) WHERE ref IS NOT NULL;
       CREATE INDEX IF NOT EXISTS task_events_compaction ON task_events (task_id, at)
         WHERE ${COMPACTION_CANDIDATE};
+      CREATE INDEX IF NOT EXISTS task_events_actor_at ON task_events (actor, at DESC, id DESC);
       CREATE INDEX IF NOT EXISTS tasks_specification ON tasks (specification_id);
       CREATE INDEX IF NOT EXISTS captain_asks_at ON captain_asks (at);
       CREATE INDEX IF NOT EXISTS captain_asks_turn ON captain_asks (turn_state, at);

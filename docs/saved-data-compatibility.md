@@ -269,6 +269,13 @@ It lets the reads of the tasks a message or a card names (`TaskEventStore.taskId
 The stronger-model moves (`TaskEventStore.escalatedTo`) are sought the same way, so the Tasks board names what replaced each dropped row without reading that task's timeline (INF-2070).
 An older build opens the same database, reads the table as before and keeps the index up to date on its own writes.
 
+## Task event actor index
+
+The optional `task_events_actor_at` index on `(actor, at DESC, id DESC)` is installed on opening the current schema, without a migration version or changed table shape.
+It lets the first mate's captain-click context seek the captain's recent events instead of walking every actor's events in the same time window (INF-2284).
+The read keeps its existing timestamp boundary, source filter and newest-first order.
+An older build opens the same database and keeps the index up to date on its own writes.
+
 ## Retired task fields
 
 A work shape's `knowledge_access` and the delivery facts' `landedAt` are retired (INF-1288 piece 3): the first has granted nothing since every crewmate's knowledge became equal, and nothing read the second.

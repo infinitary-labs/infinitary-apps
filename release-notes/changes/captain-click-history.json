@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "id": "captain-click-history",
+      "kind": "fix",
+      "area": "firstmate",
+      "title": "Less pausing when the first mate reads your recent task choices",
+      "body": "The first mate now finds your recent task-button choices without reading through the crew's progress from the same period.",
+      "noPicture": "This narrows a database read without changing any screen or control.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

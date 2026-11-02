@@ -401,6 +401,10 @@ for (const held of ["record", "past"] as const) {
     try {
       const { page } = app;
       await expect(shownCard(page, READ_NOTE)).toBeVisible();
+      // INF-2306: only the later arrival is unread. Visibility alone can precede
+      // the first card's foreground reading, so establish it before leaving.
+      await shownCard(page, READ_NOTE).locator("[data-card-title]").click();
+      await expectUpdateSeen(page, "first");
       if (held === "record") {
         await expandDock(page, "now");
         await nowFrame(page)

@@ -23,11 +23,17 @@ The comparison ignores the host's own picture-copy names and the host's fact str
 ### The You asked line
 
 A card about one of the captain's messages carries the "You asked" line under its title and the revised line, `--space-2` below them, so every card about that message, from a plan to a merge, names what the captain asked (INF-1610).
-It reads "You asked · 9:10 AM" in the meta line's voice (`--font-mono` `--text-xs` `--fg-3`), then the captain's words inside quotation marks in `--text-sm` `--fg-2`, the voice of their message above the input; a message that was only pictures reads "A picture" with no marks.
-The time is the captain's local time of day, with the date in front when it was not today, as the revised line writes it.
+It reads "You asked · 9:10 AM" on its own line in the meta line's voice (`--font-mono` `--text-xs` `--fg-3`), then the captain's words without added quotation marks in regular-weight `--font-ui` `--text-sm` `--fg-2` (INF-1958, D Bubble).
+The words sit in the soft grey bubble used above the input: `--fg-1` at 8%, padding 3 px vertically and 10 px horizontally, corners 4/11/11/11 px clockwise from the top left, with `--space-1` between label and bubble.
+The bubble fits its words up to the available width; a message that was only pictures reads "A picture".
+The iPhone and iPad use the same label, unquoted regular-weight words and bubble treatment.
+The time has no leading zero (1:03 PM, not 01:03 PM), on this line and the revised line.
+It is the captain's local time of day, with the date in front when it was not today, as the revised line writes it.
 The app draws the line from the saved message the card's task leads to, never from the card's words, and work handed over to another task keeps the first message.
 A long message never fills the card: folded, its lines run together and are cut after two lines with an ellipsis.
-Only when the words are cut, a Show all control in `--font-mono` `--text-xs` `--accent` sits under them, a Tab stop with the focus ring; it opens the whole message with its paragraphs as written, and Show less folds it again.
+Only when the words are cut, the bubble itself is the control: click or tap it to open the whole message with its paragraphs as written, and again to fold it; no separate Show all or Show less link is drawn (INF-1963).
+On desktop it is a Tab stop with the focus ring, and Enter or Space activates it.
+`QuestionBubble` on desktop and `PhoneQuestionBubble` in the native app own the same treatment for the asked line and conversation questions; callers provide the words and expansion state, keeping their own label and time.
 The line keeps clear of the risk chart as the title does, and a card about no message of the captain's draws none.
 Every card has a top-right close control (IconButton, aria-label Close), with the size control, Maximize card, right before it ("Maximize", below).
 Close dismisses the card; it is not a footer action.

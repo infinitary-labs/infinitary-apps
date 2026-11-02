@@ -950,35 +950,19 @@ private struct PhoneFaceOnly: ViewModifier, Animatable {
     }
 }
 
-/// INF-1610, the Mac's "You asked" line: when the captain sent the message the card is about, and their words.
-/// A long message shows its start, cut after two lines; Show all opens the whole of it, and Show less folds it.
+/// The card's saved question label and time; the shared bubble owns its interaction (INF-1610, INF-1963).
 /// The card holds whether it is open: opening it can move the head into or out of the scroller, a new line.
 private struct PhoneAskedLine: View {
     let asked: PhoneAsked
     @Binding var open: Bool
-    @State private var folded: CGFloat = 0
-    @State private var whole: CGFloat = 0
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 2) {
-            (Text(asked.label()).font(PhoneFont.micro).foregroundStyle(PhoneTheme.muted)
-                + Text("  ") + Text(asked.words(open: open)).font(PhoneFont.caption).foregroundStyle(PhoneTheme.secondary))
-                .lineLimit(open ? nil : 2)
-                .fixedSize(horizontal: false, vertical: true)
-                .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { folded = $0 }
-                .background(alignment: .topLeading) {
-                    // The whole message, unseen, so the line knows whether two lines cut it.
-                    (Text(asked.label()).font(PhoneFont.micro) + Text("  ") + Text(asked.words(open: false)).font(PhoneFont.caption))
-                        .fixedSize(horizontal: false, vertical: true).hidden()
-                        .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { whole = $0 }
-                }
-                .accessibilityIdentifier("card-asked")
-            if open || whole > folded + 1 {
-                Button(open ? "Show less" : "Show all") { open.toggle() }
-                    .font(PhoneFont.micro).foregroundStyle(PhoneTheme.accent)
-                    .frame(minHeight: 44, alignment: .leading).contentShape(Rectangle())
-                    .accessibilityIdentifier("card-asked-toggle")
-            }
+        VStack(alignment: .leading, spacing: 4) {
+            Text(asked.label()).font(PhoneFont.micro).foregroundStyle(PhoneTheme.muted)
+                .accessibilityIdentifier("card-asked-label")
+            PhoneQuestionBubble(text: asked.text, open: $open, identifier: "card-asked-toggle")
         }
+        .accessibilityElement(children: .contain)
+        .accessibilityIdentifier("card-asked")
     }
 }

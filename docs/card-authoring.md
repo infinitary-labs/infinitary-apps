@@ -938,8 +938,10 @@ The visual rules are the design skill's (`components/cards/ResponseCard.prompt.m
   Work handed over to the task - the task it replaced, retried at a stronger model or branched from - keeps the first message, so a later message asking for the move never takes its place.
   A task no message reached reads its parent's, then its basis's; a card about work no message reached has no line.
 - **A long message.**
-  The line shows the start of the message, cut after two lines with an ellipsis, and Show all opens the whole of it with its paragraphs; Show less folds it again.
-  The control appears only when the words are cut.
+  The grey bubble shows the start of the message, cut after two lines with an ellipsis; clicking or tapping the bubble opens the whole of it with its paragraphs, and again folds it.
+  No separate Show all or Show less link is drawn.
+  Only a bubble whose words are cut becomes a control; on desktop it takes Tab focus and Enter or Space.
+  `QuestionBubble` and `PhoneQuestionBubble` own this behavior for the asked line and conversation questions.
   A message with only pictures reads "A picture".
 - **The answering mark.**
   An author declares `answering` on the card that answers the captain's message it is about: the outcome of the work they asked for, or the first mate's own answer.

@@ -39,15 +39,19 @@ public enum PhoneJSON: Codable, Sendable, Equatable {
 }
 
 /// The "You asked" line's message: when the captain sent it and their words, whole (INF-1610).
+/// A question's words, shared by the card's asked line and the conversation's question bubble.
+/// Folded, whitespace runs together; opened, the original paragraphs remain (INF-1963, INF-2219).
+public func phoneQuestionWords(_ text: String, open: Bool) -> String {
+    let words = open ? text.trimmingCharacters(in: .whitespacesAndNewlines)
+        : text.split(whereSeparator: \.isWhitespace).joined(separator: " ")
+    return words.isEmpty ? "A picture" : words
+}
+
 public struct PhoneAsked: Equatable, Sendable {
     public let at: Date
     public let text: String
     /// Folded, the lines of a long message run together; opened, its paragraphs stay as written.
-    public func words(open: Bool) -> String {
-        let words = open ? text.trimmingCharacters(in: .whitespacesAndNewlines)
-            : text.split(whereSeparator: \.isWhitespace).joined(separator: " ")
-        return words.isEmpty ? "A picture" : "\u{201C}\(words)\u{201D}"
-    }
+    public func words(open: Bool) -> String { phoneQuestionWords(text, open: open) }
     /// "You asked · 9:10 AM", with the date in front when it was not today, as the Mac writes it.
     public func label(now: Date = Date(), calendar: Calendar = .current) -> String {
         let time = at.formatted(date: .omitted, time: .shortened)

@@ -1089,24 +1089,31 @@ import XCTest
         XCTAssertEqual(waitForPhonePredicate(NSPredicate(format: "enabled == true"), object: element, timeout: 10), .completed, app.debugDescription)
     }
 
-    /// INF-1610: a card about the captain's message names it under its title, as on the Mac. A long message shows only
-    /// its start, and Show all opens the rest; the card then leaves so the parts after it find the stack as before.
+    /// INF-1610: a card about the captain's message names it under its title, as on the Mac.
+    /// INF-1963: the captain asked to remove Show all and expand on the bubble's own click.
+    /// Tapping the bubble opens the paragraphs and tapping again folds them; no separate link remains.
     private func verifyAskedLine() async throws {
         let asked = try await home("asked-card")
         let title = try XCTUnwrap(asked["title"] as? String)
         showCard(title)
-        let line = app.staticTexts["card-asked"]
+        let line = app.otherElements["card-asked"]
         XCTAssertTrue(line.waitForPresence(timeout: 10), app.debugDescription)
-        XCTAssertTrue(line.label.hasPrefix("You asked · "), line.label)
+        let label = app.staticTexts["card-asked-label"]
+        XCTAssertTrue(label.label.hasPrefix("You asked · "), label.label)
         let toggle = app.buttons["card-asked-toggle"]
         XCTAssertTrue(toggle.waitForPresence(timeout: 10), app.debugDescription)
-        XCTAssertEqual(toggle.label, "Show all")
+        XCTAssertFalse(app.buttons["Show all"].exists, "The bubble replaces the separate link")
         let folded = line.frame.height
         picture("card-asked-folded")
         tapOnPhone(toggle)
-        XCTAssertTrue(app.buttons["Show less"].waitForPresence(timeout: 10), app.debugDescription)
-        XCTAssertGreaterThan(line.frame.height, folded * 2, "Show all opens the whole message")
+        let expanded = NSPredicate { _, _ in line.frame.height > folded * 2 }
+        XCTAssertEqual(waitForPhonePredicate(expanded, object: nil, timeout: 10), .completed, app.debugDescription)
+        XCTAssertGreaterThan(line.frame.height, folded * 2, "The bubble opens the whole message")
+        XCTAssertFalse(app.buttons["Show less"].exists, "The open bubble has no separate fold link")
         picture("card-asked-open")
+        tapOnPhone(toggle)
+        let refolded = NSPredicate { _, _ in abs(line.frame.height - folded) < 1 }
+        XCTAssertEqual(waitForPhonePredicate(refolded, object: nil, timeout: 10), .completed, app.debugDescription)
         tapOnPhone(app.buttons["close-card"])
         XCTAssertTrue(cardHeading(title).waitForAbsence(timeout: 10), app.debugDescription)
     }

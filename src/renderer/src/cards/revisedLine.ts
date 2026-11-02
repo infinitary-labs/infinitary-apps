@@ -30,7 +30,7 @@ function count(n: number, noun: string): string {
 /** The time of day, with the date in front when it was not today. */
 export function clock(at: number, now: number): string {
   const date = new Date(at);
-  const time = date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+  const time = date.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
   if (date.toDateString() === new Date(now).toDateString()) return time;
   return `${date.toLocaleDateString([], { month: "short", day: "numeric" })}, ${time}`;
 }

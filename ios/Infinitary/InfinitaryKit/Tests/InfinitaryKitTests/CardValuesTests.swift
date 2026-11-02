@@ -31,6 +31,7 @@ struct CardValuesTests {
 
     /// INF-1610: the "You asked" line reads the message the Mac sent, folds a long one onto one run of words,
     /// keeps its paragraphs when opened, and names a message of pictures alone.
+    /// INF-1958: the bubble adds no quotation marks.
     @Test func askedLineReadsTheSavedMessage() throws {
         let message = "did something change about how we order the cards in the stack?\n\nkeep minimize as it is."
         let at = Date(timeIntervalSince1970: 1_793_200_200)
@@ -41,8 +42,8 @@ struct CardValuesTests {
         ]))
         let asked = try #require(card.asked)
         #expect(asked.at == at)
-        #expect(asked.words(open: false) == "\u{201C}did something change about how we order the cards in the stack? keep minimize as it is.\u{201D}")
-        #expect(asked.words(open: true) == "\u{201C}\(message)\u{201D}")
+        #expect(asked.words(open: false) == "did something change about how we order the cards in the stack? keep minimize as it is.")
+        #expect(asked.words(open: true) == message)
         #expect(asked.label(now: at).hasPrefix("You asked · "))
         #expect(asked.label(now: at.addingTimeInterval(3 * 86_400)).contains(","))
         #expect(PhoneAsked(at: at, text: " ").words(open: false) == "A picture")

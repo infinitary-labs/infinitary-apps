@@ -320,6 +320,9 @@ The workflow's concurrency group never cancels a run in progress, so GitHub keep
 The newest passing run of `main.yml` is main's green mark: its commit is the newest version the whole suite passed, and no other record names it.
 A failed run fails on the version it checked, which can be older than `main`'s head, so a repair reads that run and the range of commits since the newest passing one.
 Merging continues while a run is red.
+A red run reaches the crew through the captain's own Automation rule on GitHub's event "A workflow run fails", filtered to the workflow `main` and the branch `main` (`docs/integrations.md`, "GitHub's events"): its words start one repair crewmate under the main repair direction, or steer the repair already open, and the app's code names no repair (INF-2146).
+The repair fixes forward, and a revert is the last resort, on the captain's click.
+An alpha starts from the mark (`docs/alpha.md`, "Cutting an alpha").
 `tests/release-contract.test.ts` holds the trigger, the queue and both calls.
 
 ## Native phone checks on the pull request

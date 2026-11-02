@@ -272,21 +272,27 @@ After that setup, a separately authorized alpha proves public fetch-back, both t
 
 One release task cuts an alpha from one release candidate, checked once (captain, FI3-1057).
 The release crewmate watches its accepted run with the short read described under "Promoting an alpha".
-It never waits for main's own checks, which cancel each other as merges land: the release run checks the candidate itself.
+An alpha starts from main's green mark, the commit of the newest passing run of `main.yml` (INF-2146, the captain's approved plan: "The newest mark"; `docs/testing.md`, "The continuous run on main"), not from main's newest commit, which the whole suite has not passed yet.
+It never waits for a run of `main.yml` still going and never waits for main's other checks: the release run checks the candidate itself.
 
-1. **Review.**
-   The release crewmate reviews the notes on its own branch, off main (`docs/release-notes.md` "Who writes what"), and adds there any missing note, exclusion or published release's record the check asks for.
-2. **Commit and push.**
+1. **Find the mark.**
+   The release crewmate reads the newest passing run of `main.yml` on `main` where the project lives, such as `GET /repos/{owner}/{repo}/actions/workflows/main.yml/runs?branch=main&status=success&per_page=1`, and takes its `head_sha`.
+   With no passing run of `main.yml` at all, it cuts nothing and reports that main has no green mark yet.
+2. **Review.**
+   It reviews the notes on its own branch off the mark (`git switch -c <branch> <the mark's full id>`; `docs/release-notes.md` "Who writes what"), and adds there any missing note, exclusion or published release's record the check asks for.
+   The notes cover the changes up to the mark; a change merged after it waits for the next alpha.
+3. **Commit and push.**
    It commits the review on that branch and pushes it.
-   That commit is the candidate: main's code plus changes under `release-notes/` only.
-3. **Dispatch.**
+   That commit is the candidate: the mark's code plus changes under `release-notes/` only.
+   The release run accepts it as it is, since its base on main is the mark and it changes nothing else (`scripts/resolve-release.sh`).
+4. **Dispatch.**
    `gh workflow run release.yml --ref main -f channel=alpha -f candidate=<the commit's full id>`, once a phone build that keeps changing things on the candidate is on TestFlight ("The phone goes first").
    Merges that land on main meanwhile wait for the next alpha; nobody re-reads notes or follows main.
-4. **Publish.**
+5. **Publish.**
    The run checks the notes, runs every lane on the candidate, signs and publishes; the source tag `v<version>` names the candidate and keeps it.
-5. **Record.**
+6. **Record.**
    On the same branch, the crewmate pins the release's record with `node scripts/release-notes.ts manifest --version <v> --write`, which pins the record of past releases again with it, and commits both.
-6. **One pull request.**
+7. **One pull request.**
    It opens one pull request that brings the review and the record to main.
 
 A note the review adds names the change it describes in `covers`, so the note belongs to the same releases after the pull request is squashed onto main.

@@ -788,12 +788,18 @@ Two simulators at a time match the placement service's virtual Mac of 4 CPUs and
 On the real Mac's place the gate runs directly too, using the gate's default simulator concurrency.
 Leave `PHONE_VIRTUAL_MAC` unset with the placement service: a job already inside a virtual Mac cannot start another one.
 
-The `phone` kind's queue in `MAC_QUEUES`, which `native-phone` reads first, or the repository variable `VIRTUAL_MAC_RUNNER`, which it reads before `MAC_RUNNER`, names a virtual-only queue such as the service's `mini-mac-virtual`, so the phone check never takes the real Mac's place (INF-897).
+The `phone` kind's queue in `MAC_QUEUES` is `mini-mac-phone`, shared by the Mac mini's virtual place and the rented vBoxx Mac's `vboxx-mac-1-vm` place (DOP-195, INF-2202).
+The native phone check and its two edited-part repeat jobs read that queue first, then `VIRTUAL_MAC_RUNNER`, then `MAC_RUNNER`; these fallback variables stay unchanged.
+The queue is virtual-only, so phone checks never take the real Mac's place (INF-897).
+The rented place serves only this phone queue, not journeys, signing, publishing, installer checks or borrows.
+`tests/phone-pool-isolation.test.ts` evaluates the workflows with the configured queues and both release modes, allowing only those three native phone-check jobs on `mini-mac-phone` and refusing secret reads in those jobs or their workflow environment.
+This contract covers repository routing, not arbitrary label overrides supplied for an isolated proof run; never point another job's override at the rented phone queue.
+The disposable guest has no captain signing material; its ordinary GitHub job token still permits checkout and result uploads.
 GitHub hands a scale set's new runner whichever of that set's waiting jobs it picks, not the one the service started it for, so in the scale set the other Mac jobs share, the service's choice does not hold.
 On that queue each phone check takes a concurrency group of its own, so phone checks no longer wait in one line: each waits only for a free virtual place, and two virtual places can run phone checks at once (the captain's choice on INF-989: "let both virtual Macs run phone checks at once by ending the one-at-a-time line").
 The Mac mini gives that queue one virtual place (DOP-213, the captain's "i would just remove one mini-vm slot"), because two full checks at once starved each other there (INF-2052), so on the Mac mini a phone check waits for the one before it.
 The real Mac never takes that label, so a phone check never takes its place.
-A runner the service starts for one phone check may take another waiting phone check, or that rarer check in the same set; either is a job that asked for a virtual Mac.
+A runner the service starts on the phone queue may take another waiting native phone check, but no other kind of job shares that queue.
 The placement service, runner-up, gives a free virtual place to the waiting job its order rules put first among the jobs that place can take, the oldest breaking a tie (`order` in dotfiles-private's `home-manager/runner-up-fleet.nix`), so a released phone check waits only behind jobs that can also run in a virtual Mac, never behind a job that needs the real Mac.
 With neither set, the job runs where `MAC_RUNNER` sends it, as before; `tests/phone-ci.test.ts` evaluates the job's runner for each setting.
 

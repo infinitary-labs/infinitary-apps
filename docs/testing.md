@@ -968,7 +968,7 @@ Each job reads `fromJSON(vars.MAC_QUEUES || '{}').<kind>` before its old label.
 | --- | --- | --- |
 | `check` | `verify.yml`'s Mac lane, the full Mac check | anywhere |
 | `journeys` | `journeys.yml`'s `affected-journeys` | anywhere |
-| `phone` | `phone.yml`'s `native-phone` | in a virtual Mac only |
+| `phone` | `phone.yml`'s `native-phone`, `phone-repeat-2` and `phone-repeat-3` | in a virtual Mac only, including the rented phone-only place |
 | `testflight` | `ios-release.yml`'s `testflight`, which runs the phone gates and then signs | on the real Mac |
 | `build` | `mac-installer.yml`'s `build` | in a virtual Mac only |
 | `sign` | `release.yml`'s signing job | on the real Mac |
@@ -982,6 +982,13 @@ A dry run asks for the ordinary kinds, so a rehearsal never takes a release's pl
 `release.yml` hands `release_check` to `verify.yml` as its `mac_runner` input and `release_light` to `mac-update.yml` as its `runner` input, and `verify.yml`'s Mac lane reads its kind only when that input is empty.
 The signed installer's Intel check stays on `macos-15-intel` and takes no kind.
 `tests/release-workflows.test.ts` ("each Mac job's kind") evaluates every Mac job with the variable set, unset and for a publishing release, and refuses a Mac job without a kind.
+The live `phone` mapping is `mini-mac-phone`, shared by the Mac mini's virtual place and the rented vBoxx Mac's `vboxx-mac-1-vm` place (DOP-195, INF-2202).
+The rented place serves only that queue; journeys, signing, publishing, installer checks and borrows stay off it.
+`tests/phone-pool-isolation.test.ts` evaluates workflow runner expressions, including matrix entries and both release modes, against the configured queues.
+It requires exactly the three native phone-check jobs on the phone queue and rejects secret reads in any job resolving there, including inherited workflow environments.
+The ordinary GitHub job token used for checkout and results is not a repository signing or publishing secret.
+Explicit proof-run label overrides remain operator-controlled; do not direct another kind of job to `mini-mac-phone`.
+No change to `VIRTUAL_MAC_RUNNER` is needed: `MAC_QUEUES.phone` takes precedence, and removing the rented place leaves the Mac mini's virtual place serving the same queue.
 
 Where the placement service names a job's size, it sets `RUNNER_UP_CORES` to the job's cores.
 A virtual Mac is made that size, but a job on the real Mac shares the processor with the jobs beside it, and macOS cannot hold a group of programs to a share, so the job's own test workers keep to it (`scripts/job-cores.ts`).

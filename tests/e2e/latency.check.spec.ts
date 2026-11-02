@@ -1,15 +1,12 @@
 // The latency check (INF-2078's approved plan): the actual app on a record
 // the captain's size, six crewmates writing, the captain typing and then
 // scrolling the Tasks list, graded against the plan's bar on a perf run.
-import { createReadStream, existsSync, readFileSync, writeFileSync } from "node:fs";
+import { createReadStream, writeFileSync } from "node:fs";
 import { createInterface } from "node:readline";
 import { type ElectronApplication, expect, type Page, test } from "@playwright/test";
-import {
-  FREEZE_THRESHOLD_MS,
-  type FreezeLine,
-  freezeLineSchema,
-} from "../../src/core/freeze/freezeRecorder";
+import { FREEZE_THRESHOLD_MS, type FreezeIncident } from "../../src/core/freeze/freezeRecorder";
 import { appPathsFor } from "../../src/core/paths";
+import { readFreezes } from "../helpers/freezeRecord";
 import { scratchDir } from "../helpers/scratchDirs";
 import { seedCaptainSizedRecord } from "./captainSizedRecord";
 import { waitForFirstmateIdle } from "./crew";
@@ -59,25 +56,19 @@ test.skip(
   "a perf run on a Mac: INFINITARY_PERF_BUDGETS=1, journeys.yml with perf or verify.yml with perf",
 );
 
-function readFreezes(path: string): FreezeLine[] {
-  if (!existsSync(path)) return [];
-  return readFileSync(path, "utf8")
-    .split("\n")
-    .filter(Boolean)
-    .map((text) => freezeLineSchema.parse(JSON.parse(text)));
-}
-
 /** One stall in words: its wall and processor time, and its call path, innermost first. */
-const described = (line: FreezeLine) =>
-  `${line.wallMs} ms (${line.cpuMs} ms of processor time${line.uncertain ? `, ${line.uncertain}` : ""}): ${
-    line.frames
-      .slice(0, 8)
-      .map((frame) => `${frame.name} (${frame.file}:${frame.line})`)
-      .join(" <- ") || "no call path"
-  }`;
+const described = (line: FreezeIncident) =>
+  !("wallMs" in line)
+    ? `unfinished stall (${line.status}); duration and processor time unknown`
+    : `${line.wallMs} ms (${line.cpuMs} ms of processor time${line.uncertain ? `, ${line.uncertain}` : ""}): ${
+        line.frames
+          .slice(0, 8)
+          .map((frame) => `${frame.name} (${frame.file}:${frame.line})`)
+          .join(" <- ") || "no call path"
+      }`;
 
 type Stretch = { from: number; to: number };
-const within = (line: FreezeLine, stretches: Stretch[]) => {
+const within = (line: FreezeIncident, stretches: Stretch[]) => {
   const at = Date.parse(line.at);
   return stretches.some((stretch) => at >= stretch.from && at <= stretch.to);
 };

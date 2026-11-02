@@ -1,6 +1,7 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { freshDatabase } from "../../../tests/helpers/database";
+import { freezeWake } from "../freeze/freezeRecorder";
 import { idleStallWays } from "../orchestrator/holds";
 import {
   CUT_OFF_ONCE_PREFIX,
@@ -629,6 +630,46 @@ describe("the typed wake envelope (the primitives review, P3)", () => {
         restarted.enqueueWake(FIRSTMATE_RECIPIENT, stillDown(0, 4_000_000), "agent", "t1"),
       ).toBeNull();
       expect(inbox.allFor(FIRSTMATE_RECIPIENT)).toEqual([]);
+    });
+
+    it("allows one alpha freeze summary per installed version after ack, dismissal and restart (INF-2205)", () => {
+      const { db, inbox, clock, now } = setup();
+      const project = { id: "infinitary", name: "Infinitary" };
+      const interrupted = {
+        incidentId: "native-wait",
+        status: "interrupted" as const,
+        at: "2026-10-31T07:12:04.512Z",
+      };
+      const wake = freezeWake(interrupted, project, "0.6.2-alpha.44");
+      const id = inbox.enqueueWake(FIRSTMATE_RECIPIENT, wake, "scheduled");
+      expect(id).not.toBeNull();
+      inbox.markDelivered([id ?? 0]);
+      inbox.ack([id ?? 0]);
+      // Closing an offer has no authority over inbox_once. Intervening captain
+      // activity and time beyond content dedupe likewise cannot reset it.
+      inbox.enqueue(FIRSTMATE_RECIPIENT, "Captain dismissed the freeze offer", "agent");
+      clock.now += INBOX_DEDUPE_WINDOW_MS * 12;
+      const restarted = new InboxStore(db, { now });
+      const another = {
+        at: interrupted.at,
+        wallMs: 1020,
+        cpuMs: 986,
+        frames: [{ name: "taskIdsWithRef", file: "index.js", line: 48213, column: 22 }],
+      };
+      expect(
+        restarted.enqueueWake(
+          FIRSTMATE_RECIPIENT,
+          freezeWake(another, project, "0.6.2-alpha.44"),
+          "scheduled",
+        ),
+      ).toBeNull();
+      expect(
+        restarted.enqueueWake(
+          FIRSTMATE_RECIPIENT,
+          freezeWake(another, project, "0.6.2-alpha.45"),
+          "scheduled",
+        ),
+      ).not.toBeNull();
     });
 
     it("another outage, another job or another task is its own once", () => {

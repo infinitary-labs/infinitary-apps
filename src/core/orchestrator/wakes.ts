@@ -358,8 +358,8 @@ export type WakeFacts =
       kind: "freeze-recorded";
       project: { id: string; name: string };
       at: string;
-      wallMs: number;
-      cpuMs: number;
+      wallMs: number | null;
+      cpuMs: number | null;
       frames: FreezeLine["frames"];
       uncertain?: NonNullable<FreezeLine["uncertain"]>;
     }
@@ -1962,13 +1962,21 @@ const FREEZE_UNCERTAIN_WORDS: Record<NonNullable<FreezeLine["uncertain"]>, strin
   late: "These names are uncertain: they were read only after the stall had ended, so they may come from code that ran later.",
 };
 
-/** A recorded main thread freeze, as the first mate hears it once per call path. */
+/** A recorded main thread freeze, as the first mate hears it once per installed version. */
 function renderFreezeRecorded(facts: Extract<WakeFacts, { kind: "freeze-recorded" }>): string {
   const path = facts.frames.length
     ? `Its call path, innermost first: ${facts.frames.map((frame) => `${frame.name} (${frame.file}:${frame.line}:${frame.column})`).join(" <- ")}.`
     : "The recorder could not read its call path.";
   const uncertain = facts.uncertain ? ` ${FREEZE_UNCERTAIN_WORDS[facts.uncertain]}` : "";
-  return `[fm-op] the freeze recorder saw this app's main thread, which handles the captain's clicks and keys, stop answering for ${facts.wallMs} ms at ${facts.at}; ${facts.cpuMs} ms of that was the main thread's own processor time. ${path}${uncertain} The app's own source is the captain's project "${facts.project.name}" (repo_id ${facts.project.id}). Judge from the duration and the call path whether it is worth a fix; if it is, tell the captain once in plain words and offer a fix task in that project on a decision card, carrying these facts into its brief. File or start nothing before their choice. You hear this once for this call path.`;
+  const duration =
+    facts.wallMs === null
+      ? "an unknown duration (recording was interrupted)"
+      : `${facts.wallMs} ms`;
+  const cpu =
+    facts.cpuMs === null
+      ? "its processor time is unknown"
+      : `${facts.cpuMs} ms of that was the main thread's own processor time`;
+  return `[fm-op] the freeze recorder saw this app's main thread, which handles the captain's clicks and keys, stop answering for ${duration} at ${facts.at}; ${cpu}. ${path}${uncertain} The app's own source is the captain's project "${facts.project.name}" (repo_id ${facts.project.id}). Judge from the duration and the call path whether it is worth a fix; if it is, tell the captain once in plain words and offer a fix task in that project on a decision card, carrying these facts into its brief. File or start nothing before their choice. You hear one automatic summary per installed app version; later evidence stays in the local record.`;
 }
 
 /** Typed legacy count notices remain readable, but no longer ask the agents to enforce a hold. */

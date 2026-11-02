@@ -68,7 +68,7 @@ describe("the first mate's wake about a recorded freeze", () => {
   const own = { id: "infinitary", name: "infinitary" };
 
   it("names the freeze, its call path and the project, and offers a fix task on the captain's choice", () => {
-    const text = renderWake(freezeWake(OPEN_MESSAGES, own));
+    const text = renderWake(freezeWake(OPEN_MESSAGES, own, "0.6.2-alpha.44"));
     expect(text).toContain("1020 ms");
     expect(text).toContain("986 ms of that was the main thread's own processor time");
     expect(text).toContain(
@@ -79,21 +79,44 @@ describe("the first mate's wake about a recorded freeze", () => {
     expect(text).not.toContain("uncertain");
   });
 
-  it("says when a wait's names are uncertain", () => {
-    const wait = { ...OPEN_MESSAGES, cpuMs: 5, uncertain: "waited" as const };
-    expect(renderWake(freezeWake(wait, own))).toContain("These names are uncertain");
+  it("reports interruption without invented duration, CPU time or names (INF-2205)", () => {
+    const text = renderWake(
+      freezeWake(
+        {
+          incidentId: "interrupted-stall",
+          status: "interrupted",
+          at: OPEN_MESSAGES.at,
+          interruptedAt: "2026-10-31T07:14:04.512Z",
+        },
+        own,
+        "0.6.2-alpha.44",
+      ),
+    );
+    expect(text).toContain("unknown duration (recording was interrupted)");
+    expect(text).toContain("processor time is unknown");
+    expect(text).toContain("could not read its call path");
   });
 
-  it("goes out once per call path, so the same freeze recurring is not new", () => {
+  it("says when a wait's names are uncertain", () => {
+    const wait = { ...OPEN_MESSAGES, cpuMs: 5, uncertain: "waited" as const };
+    expect(renderWake(freezeWake(wait, own, "0.6.2-alpha.44"))).toContain(
+      "These names are uncertain",
+    );
+  });
+
+  it("uses the approved INF-2205 version-wide identity across different call paths", () => {
     const again = freezeWake(
       { ...OPEN_MESSAGES, at: "2026-10-31T07:13:04.512Z", wallMs: 1_400 },
       own,
+      "0.6.2-alpha.44",
     );
-    expect(again.once).toBe(freezeWake(OPEN_MESSAGES, own).once);
+    expect(again.once).toBe(freezeWake(OPEN_MESSAGES, own, "0.6.2-alpha.44").once);
     const other = freezeWake(
       { ...OPEN_MESSAGES, frames: [{ name: "hashFile", file: "index.js", line: 9, column: 3 }] },
       own,
+      "0.6.2-alpha.44",
     );
-    expect(other.once).not.toBe(freezeWake(OPEN_MESSAGES, own).once);
+    expect(other.once).toBe(freezeWake(OPEN_MESSAGES, own, "0.6.2-alpha.44").once);
+    expect(other.once).not.toBe(freezeWake(OPEN_MESSAGES, own, "0.6.2-alpha.45").once);
   });
 });

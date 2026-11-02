@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "id": "freeze-incident-evidence",
+      "kind": "fix",
+      "area": "firstmate",
+      "title": "Alpha freeze evidence survives an interrupted recovery",
+      "body": "Alpha builds now record a freeze before waiting for the app to answer again. If the app closes first, the next launch keeps that interruption without guessing how long the freeze lasted. When Infinitary's source is one of your projects, your first mate receives at most one automatic freeze summary per app version. Later evidence stays on your computer.",
+      "noPicture": "The local record and automatic message allowance change, not the appearance of a screen.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

@@ -1,10 +1,17 @@
-import { readFileSync, writeFileSync } from "node:fs";
-import { join } from "node:path";
+import { spawn } from "node:child_process";
+import { once } from "node:events";
+import { existsSync, readFileSync, watch, writeFileSync } from "node:fs";
+import { join, resolve } from "node:path";
 import { runInThisContext } from "node:vm";
+import { Worker } from "node:worker_threads";
+import { build } from "vite";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { readFreezes } from "../../../tests/helpers/freezeRecord";
 import { scratchDir } from "../../../tests/helpers/scratchDirs";
+import { hostEnv } from "../hostEnv";
 import {
   FREEZE_THRESHOLD_MS,
+  type FreezeIncident,
   type FreezeLine,
   FreezeRecorder,
   freezeLineSchema,
@@ -44,7 +51,7 @@ async function startRecorder(
   recorder = new FreezeRecorder({
     recordPath,
     onFreeze: (line) => {
-      lines.push(line);
+      if ("wallMs" in line) lines.push(line);
       for (const wake of waiters.splice(0)) wake();
     },
   });
@@ -65,10 +72,7 @@ async function startRecorder(
 }
 
 function readRecord(recordPath: string): FreezeLine[] {
-  return readFileSync(recordPath, "utf8")
-    .split("\n")
-    .filter(Boolean)
-    .map((text) => freezeLineSchema.parse(JSON.parse(text)));
+  return readFreezes(recordPath).map((line) => freezeLineSchema.parse(line));
 }
 
 /** Busy work on the main thread, the way a long synchronous database walk is. */
@@ -121,6 +125,9 @@ describe("the freeze recorder", () => {
     // wall time it fills depends on the computer's load: a shared runner
     // that preempts the busy loop can leave it under half, marked waited.
     expect(seen.cpuMs).toBeGreaterThan(0);
+    expect(seen.status).toBe("completed");
+    expect(seen.incidentId).toBeTruthy();
+    expect(seen.completedAt).toBeTruthy();
     expect(readRecord(recordPath)).toContainEqual(seen);
   });
 
@@ -153,6 +160,126 @@ describe("the freeze recorder", () => {
     expect(seen.uncertain).toBe("waited");
     expect(seen.cpuMs * 2).toBeLessThan(seen.wallMs);
     expect(readRecord(recordPath)).toContainEqual(seen);
+  });
+
+  it("completes the same incident whose start was visible before recovery (INF-2205)", async () => {
+    const dir = scratchDir("infinitary-freeze-start-");
+    const recordPath = join(dir, "freezes.jsonl");
+    const { stall } = await startRecorder(recordPath);
+    const release = new Int32Array(new SharedArrayBuffer(4));
+    const observer = new Worker(
+      `
+      const { parentPort, workerData } = require("node:worker_threads");
+      const fs = require("node:fs");
+      const watcher = fs.watch(workerData.dir, () => {
+        if (!fs.existsSync(workerData.path)) return;
+        const start = fs.readFileSync(workerData.path, "utf8").split("\\n").filter(Boolean)
+          .map(JSON.parse).find(line => line.status === "started");
+        if (!start) return;
+        watcher.close();
+        parentPort.postMessage(start);
+        Atomics.store(workerData.release, 0, 1);
+        Atomics.notify(workerData.release, 0);
+      });
+      parentPort.postMessage("ready");
+    `,
+      { eval: true, workerData: { dir, path: recordPath, release } },
+    );
+    try {
+      await once(observer, "message");
+      const observed = once(observer, "message");
+      const completed = await stall(() => Atomics.wait(release, 0, 0, 3000));
+      const [start] = await observed;
+      expect(start).toEqual({
+        incidentId: completed.incidentId,
+        at: completed.at,
+        status: "started",
+      });
+      expect(readRecord(recordPath)).toContainEqual(completed);
+      console.info("Start observed before recovery:", JSON.stringify(start));
+      console.info("Same incident completed:", JSON.stringify(completed));
+    } finally {
+      await observer.terminate();
+    }
+  });
+
+  it("retains start before a native wait replies, then interruption after process death (INF-2205)", async () => {
+    // Real recorder in a disposable Node process: no personal app or data.
+    // Reuses the synchronous-wait fixture above, but never releases the wait.
+    const dir = scratchDir("infinitary-freeze-interrupted-");
+    const recordPath = join(dir, "freezes.jsonl");
+    const root = resolve(__dirname, "../../..");
+    await build({
+      configFile: false,
+      logLevel: "silent",
+      root,
+      resolve: { alias: { "@shared": resolve(root, "src/shared") } },
+      ssr: { noExternal: true, target: "node" },
+      build: {
+        ssr: resolve(__dirname, "freezeRecorder.ts"),
+        outDir: dir,
+        emptyOutDir: false,
+        minify: false,
+        target: "node24",
+        rollupOptions: { output: { format: "es", entryFileNames: "recorder.mjs" } },
+      },
+    });
+    const entry = join(dir, "wait.mjs");
+    writeFileSync(
+      entry,
+      `import { FreezeRecorder } from "./recorder.mjs";
+      const recorder = new FreezeRecorder({ recordPath: process.argv[2], onFreeze() {} });
+      recorder.start();
+      setTimeout(() => {
+        console.log("waiting");
+        Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0);
+      }, 300);`,
+    );
+    const child = spawn(process.execPath, [entry, recordPath], {
+      env: hostEnv(),
+      stdio: ["ignore", "pipe", "pipe"],
+    });
+    const ended = once(child, "exit");
+    try {
+      await once(child.stdout, "data");
+      const started = await new Promise<FreezeIncident>((done) => {
+        const check = () => {
+          if (!existsSync(recordPath)) return;
+          const found = readFreezes(recordPath).find((line) => line.status === "started");
+          if (found) {
+            watcher.close();
+            done(found);
+          }
+        };
+        const watcher = watch(dir, check);
+        check();
+      });
+      expect(started).not.toHaveProperty("wallMs");
+      expect(started).not.toHaveProperty("cpuMs");
+      expect(started).not.toHaveProperty("frames");
+      console.info("Before native wait replies:", JSON.stringify(started));
+      child.kill("SIGKILL");
+      await ended;
+      const interrupted = await new Promise<FreezeIncident>((done) => {
+        recorder = new FreezeRecorder({ recordPath, onFreeze: done });
+        recorder.start();
+      });
+      expect(interrupted).toMatchObject({ ...started, status: "interrupted" });
+      expect(interrupted).toHaveProperty("interruptedAt");
+      expect(interrupted).not.toHaveProperty("completedAt");
+      expect(interrupted).not.toHaveProperty("wallMs");
+      expect(interrupted).not.toHaveProperty("cpuMs");
+      const kept = readFileSync(recordPath, "utf8")
+        .trim()
+        .split("\n")
+        .map((line) => JSON.parse(line));
+      expect(kept).toContainEqual(interrupted);
+      expect(kept.filter((line) => line.incidentId === started.incidentId)).toEqual([interrupted]);
+      console.info("After isolated process restart:", JSON.stringify(interrupted));
+    } finally {
+      child.kill("SIGKILL");
+      await ended;
+    }
   });
 
   it("keeps the newest lines and drops the oldest once the record is full", async () => {

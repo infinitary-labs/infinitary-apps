@@ -1,7 +1,7 @@
-import { existsSync, readFileSync } from "node:fs";
 import { expect, type Page, test } from "@playwright/test";
-import { type FreezeLine, freezeLineSchema } from "../../src/core/freeze/freezeRecorder";
+import type { FreezeLine } from "../../src/core/freeze/freezeRecorder";
 import { appPathsFor } from "../../src/core/paths";
+import { readFreezes } from "../helpers/freezeRecord";
 import { scratchDir } from "../helpers/scratchDirs";
 import { seedCaptainSizedRecord } from "./captainSizedRecord";
 import { waitForFirstmateIdle } from "./crew";
@@ -45,14 +45,6 @@ async function say(page: Page, text: string): Promise<void> {
   await input.click();
   await input.fill(text);
   await input.press("Enter");
-}
-
-function readFreezes(path: string): FreezeLine[] {
-  if (!existsSync(path)) return [];
-  return readFileSync(path, "utf8")
-    .split("\n")
-    .filter(Boolean)
-    .map((text) => freezeLineSchema.parse(JSON.parse(text)));
 }
 
 /** What the journey was doing, by when it began each part. */
@@ -107,9 +99,15 @@ test("the main thread never spends 250 ms of its own processor time at once on a
       Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, 400);
     });
     await expect
-      .poll(() => readFreezes(recordPath).filter((line) => line.uncertain === "waited").length, {
-        timeout: 15_000,
-      })
+      .poll(
+        () =>
+          readFreezes(recordPath).filter(
+            (line) => "uncertain" in line && line.uncertain === "waited",
+          ).length,
+        {
+          timeout: 15_000,
+        },
+      )
       .toBeGreaterThan(0);
 
     for (const piece of ["the history", "the open messages", "the board"]) {
@@ -130,7 +128,16 @@ test("the main thread never spends 250 ms of its own processor time at once on a
       .poll(() => passes - after, { timeout: 120_000 })
       .toBeGreaterThanOrEqual(MINUTE_PASSES);
 
-    const record = readFreezes(recordPath);
+    let incidents = readFreezes(recordPath);
+    // INF-2205: wait for the recording to finish, not for a guessed CPU
+    // reading. An interrupted incident cannot count as zero work.
+    await expect
+      .poll(() => {
+        incidents = readFreezes(recordPath);
+        return incidents.filter((line) => !("cpuMs" in line));
+      })
+      .toEqual([]);
+    const record = incidents.filter((line): line is FreezeLine => "cpuMs" in line);
     // The busiest stall, printed on every run, so a change that brings the
     // app nearer the line shows before it crosses it.
     const busiest = record.reduce<FreezeLine | undefined>(

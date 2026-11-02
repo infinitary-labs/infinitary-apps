@@ -8,8 +8,9 @@ import { takeWatchdog } from "./watchdog";
  * The freeze recorder (docs/freeze-recorder.md; INF-2061's plan, built as
  * INF-2066). A watchdog thread beside the app's main thread notices when the
  * main thread misses its heartbeat, asks V8 once for the JavaScript call path
- * the main thread is running, and writes one line per stall to a bounded
- * local record: when, how long between heartbeats, how much of that the main
+ * the main thread is running. It persists a start before replies, then
+ * completes the same incident in a bounded local record: when, how long
+ * between heartbeats, how much of that the main
  * thread's own processor time was, and the function names. It records no
  * arguments, values or text.
  */
@@ -42,6 +43,9 @@ const frameSchema = z.object({
  * were read only after the stall had ended, from code that ran later.
  */
 export const freezeLineSchema = z.object({
+  incidentId: z.string().optional(),
+  status: z.literal("completed").optional(),
+  completedAt: z.string().optional(),
   at: z.string(),
   wallMs: z.number().int().nonnegative(),
   cpuMs: z.number().int().nonnegative(),
@@ -49,6 +53,18 @@ export const freezeLineSchema = z.object({
   uncertain: z.enum(["waited", "late"]).optional(),
 });
 export type FreezeLine = z.infer<typeof freezeLineSchema>;
+
+/** An unfinished stall has no measured end, processor time or call path. */
+export const freezeIncidentSchema = z.union([
+  freezeLineSchema,
+  z.object({
+    incidentId: z.string(),
+    status: z.enum(["started", "interrupted"]),
+    at: z.string(),
+    interruptedAt: z.string().optional(),
+  }),
+]);
+export type FreezeIncident = z.infer<typeof freezeIncidentSchema>;
 
 /** Infinitary's own source, where a fix for a freeze goes. */
 export const INFINITARY_SOURCE = {
@@ -76,25 +92,26 @@ export function infinitaryProject<T extends { id: string; name: string; origin: 
 }
 
 /**
- * The first mate's wake about one recorded freeze, once per call path: the
- * same freeze recurring is not new information.
+ * The alpha recorder's automatic summary, once per installed version through
+ * the durable inbox, independent of call path, restart or dismissal (INF-2205).
  */
-export function freezeWake(line: FreezeLine, project: { id: string; name: string }): TypedWake {
-  const path = line.frames
-    .slice(0, 3)
-    .map((frame) => `${frame.name}@${frame.file}:${frame.line}`)
-    .join("<");
+export function freezeWake(
+  line: FreezeIncident,
+  project: { id: string; name: string },
+  version: string,
+): TypedWake {
+  const complete = "wallMs" in line ? line : undefined;
   return {
     facts: {
       kind: "freeze-recorded",
       project: { id: project.id, name: project.name },
       at: line.at,
-      wallMs: line.wallMs,
-      cpuMs: line.cpuMs,
-      frames: line.frames,
-      ...(line.uncertain ? { uncertain: line.uncertain } : {}),
+      wallMs: complete?.wallMs ?? null,
+      cpuMs: complete?.cpuMs ?? null,
+      frames: complete?.frames ?? [],
+      ...(complete?.uncertain ? { uncertain: complete.uncertain } : {}),
     },
-    once: `freeze-recorded:${path || "unnamed"}`,
+    once: `freeze-recorded:version:${version}`,
   };
 }
 
@@ -112,7 +129,7 @@ export class FreezeRecorder {
   constructor(
     private readonly options: {
       recordPath: string;
-      onFreeze: (line: FreezeLine) => void;
+      onFreeze: (line: FreezeIncident) => void;
       thresholdMs?: number;
     },
   ) {}
@@ -123,7 +140,7 @@ export class FreezeRecorder {
     if (!worker) return;
     this.worker = worker;
     worker.on("message", (message: unknown) => {
-      const line = freezeLineSchema.safeParse(message);
+      const line = freezeIncidentSchema.safeParse(message);
       if (line.success) this.options.onFreeze(line.data);
     });
     worker.on("error", () => this.stop());

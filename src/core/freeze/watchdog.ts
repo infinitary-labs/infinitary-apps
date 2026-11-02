@@ -46,8 +46,8 @@ export function isFreezeRecorderEnabled(build: {
  * thread's heartbeats, each carrying `process.threadCpuUsage()`, and on a
  * missed one pauses the main thread once for its call frames and resumes it.
  * Enabled only after the stall, a wait's pause landed in code that ran after
- * the wait (INF-2061's lab). The line is written when the stall ends, when
- * the next heartbeat brings the processor time it took. A gap the watchdog's
+ * the wait (INF-2061's lab). The incident start is written before asking for names; completion adds the
+ * processor time when the next heartbeat arrives. A gap the watchdog's
  * own timer also slept through is the whole computer pausing, such as
  * sleep, and is no freeze.
  */
@@ -55,6 +55,8 @@ const WATCHDOG_SOURCE = String.raw`
 const { parentPort, workerData } = require("node:worker_threads");
 const inspector = require("node:inspector");
 const fs = require("node:fs");
+const { randomUUID } = require("node:crypto");
+const { performance } = require("node:perf_hooks");
 const { watchMs, lateMs, armed } = workerData;
 
 function sayArmed(state) {
@@ -79,14 +81,30 @@ try {
 }
 
 let record = null;
-let lines = 0;
-let beatAt = Date.now();
+let lines = [];
+let beatAt = performance.now();
+let beatWall = Date.now();
 let beatCpu = null;
-let tickAt = Date.now();
+let tickAt = performance.now();
 let stall = null;
 let capturing = null;
 
 const cpuOf = (usage) => usage.user + usage.system;
+
+// Replace an incident's snapshot atomically: a crash keeps either its start
+// or its final facts, never half a JSON line. Legacy lines retain their shape.
+function persist(line) {
+  const index = line.incidentId ? lines.findIndex((text) => {
+    try { return JSON.parse(text).incidentId === line.incidentId; } catch { return false; }
+  }) : -1;
+  if (index < 0) lines.push(JSON.stringify(line));
+  else lines[index] = JSON.stringify(line);
+  lines = lines.slice(-record.maxLines);
+  try {
+    fs.writeFileSync(record.path + ".next", lines.join("\n") + "\n", { mode: 0o600 });
+    fs.renameSync(record.path + ".next", record.path);
+  } catch {}
+}
 
 function write(done) {
   if (done.written) return;
@@ -96,17 +114,10 @@ function write(done) {
   const wallMs = Math.max(0, Math.round(done.endedAt - done.startedAt));
   const cpuMs = Math.max(0, Math.round((cpuOf(done.cpuAfter) - cpuOf(done.cpuBefore)) / 1000));
   const uncertain = cpuMs * 2 < wallMs ? "waited" : done.late ? "late" : undefined;
-  const line = { at: new Date(done.startedAt).toISOString(), wallMs, cpuMs, frames: done.frames || [] };
+  const line = { incidentId: done.incidentId, status: "completed", at: done.at,
+    completedAt: done.completedAt, wallMs, cpuMs, frames: done.frames || [] };
   if (uncertain) line.uncertain = uncertain;
-  try {
-    fs.appendFileSync(record.path, JSON.stringify(line) + "\n");
-    lines += 1;
-    if (lines > record.maxLines) {
-      const kept = fs.readFileSync(record.path, "utf8").split("\n").filter(Boolean).slice(-record.maxLines);
-      fs.writeFileSync(record.path, kept.join("\n") + "\n");
-      lines = kept.length;
-    }
-  } catch {}
+  persist(line);
   parentPort.postMessage(line);
 }
 
@@ -138,25 +149,37 @@ parentPort.on("message", (message) => {
   if (message.record) {
     record = message.record;
     try {
-      lines = fs.readFileSync(record.path, "utf8").split("\n").filter(Boolean).length;
+      lines = fs.readFileSync(record.path, "utf8").split("\n").filter(Boolean);
     } catch {}
+    // A previous process never reported recovery. The observation is now,
+    // not an invented stall end, duration, CPU reading or call path.
+    for (const text of [...lines]) {
+      let line;
+      try { line = JSON.parse(text); } catch { continue; }
+      if (line.status !== "started" || typeof line.incidentId !== "string") continue;
+      const interrupted = { ...line, status: "interrupted", interruptedAt: new Date().toISOString() };
+      persist(interrupted);
+      parentPort.postMessage(interrupted);
+    }
     return;
   }
-  const now = Date.now();
+  const now = performance.now();
   if (stall) {
     const done = stall;
     stall = null;
     done.endedAt = now;
     done.cpuAfter = message.cpu;
+    done.completedAt = new Date().toISOString();
     if (done.frames || capturing !== done) write(done);
     else done.timer = setTimeout(() => write(done), lateMs);
   }
   beatAt = now;
+  beatWall = Date.now();
   beatCpu = message.cpu;
 });
 
 setInterval(() => {
-  const now = Date.now();
+  const now = performance.now();
   const slept = record !== null && now - tickAt >= record.thresholdMs;
   tickAt = now;
   if (!record) return;
@@ -165,7 +188,10 @@ setInterval(() => {
     return;
   }
   if (stall || beatCpu === null || now - beatAt < record.thresholdMs) return;
-  stall = { startedAt: beatAt, cpuBefore: beatCpu };
+  stall = { incidentId: randomUUID(), at: new Date(beatWall).toISOString(), startedAt: beatAt, cpuBefore: beatCpu };
+  // This write must precede the inspector request: native waits may never
+  // answer it, and the whole process may end before another heartbeat.
+  persist({ incidentId: stall.incidentId, status: "started", at: stall.at });
   capture(stall);
 }, watchMs);
 `;

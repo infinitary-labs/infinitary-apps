@@ -14,7 +14,9 @@ A stable build and an ordinary development run never start it.
 
 The main thread sends a heartbeat every 10 ms (`HEARTBEAT_MS`) to a watchdog on its own worker thread, each carrying `process.threadCpuUsage()`.
 When no heartbeat has come for 50 ms (`FREEZE_THRESHOLD_MS`, INF-2078's plan: the stall a person feels while typing or scrolling), the watchdog pauses the main thread once through the inspector (`inspector.Session.connectToMainThread()`), reads its call frames and resumes it.
-The line is written when the stall ends, when the next heartbeat brings the processor time the main thread spent during it.
+The watchdog persists an incident start before asking the inspector for names or receiving another heartbeat.
+When the next heartbeat arrives, it completes the same incident with the processor time the main thread spent during it.
+Elapsed heartbeat and watchdog times use the monotonic clock; wall time labels the record only.
 A gap the watchdog's own timer also slept through is the whole computer pausing, such as sleep, and is not recorded.
 
 The watchdog keeps the inspector's debugger enabled from the start.
@@ -36,7 +38,12 @@ A core started with nothing armed, such as one in plain Node, starts a watchdog 
 
 The record is `freezes.jsonl` in the app's data folder (`AppPaths.freezeRecordPath`), written only by the watchdog.
 It keeps the newest 500 lines (`RECORD_MAX_LINES`) and drops older ones.
-Each line holds when the stall began, its wall time between heartbeats (`wallMs`), the main thread's own processor time in it (`cpuMs`) and the call path, innermost first, each frame with its function name, file name, line and column.
+Legacy lines remain readable and unchanged.
+New lines have an `incidentId` and a `status`: `started`, `completed` or `interrupted`.
+The watchdog atomically replaces a start with its completion under the same identity, retaining one snapshot per incident within the existing line bound.
+At the next recorder start it marks unfinished starts interrupted, recording when it observed the interruption, never inventing an end, duration, processor time or names.
+An interrupted line remains interrupted on later starts.
+A completed line holds when the stall began, its elapsed time between heartbeats (`wallMs`), the main thread's own processor time in it (`cpuMs`) and the call path, innermost first, each frame with its function name, file name, line and column.
 It records no arguments, values or text, and nothing sends it anywhere: Diagnostics sends nothing new.
 
 A line's names can be marked `uncertain`:
@@ -50,8 +57,12 @@ A stall spent inside one long built-in call, such as one JSON parse, is named at
 
 ## The first mate's offer
 
-Each recorded line is handed to the core.
-When one of the captain's projects lives at Infinitary's own source on GitHub (`INFINITARY_SOURCE`, matched by where the project lives, not its name), the first mate hears a `freeze-recorded` wake, once per call path.
+Each completed or recovered interrupted incident is handed to the core.
+When one of the captain's projects lives at Infinitary's own source on GitHub (`INFINITARY_SOURCE`, matched by where the project lives, not its name), the first mate hears a `freeze-recorded` wake, at most once per installed app version through the durable inbox's once-identity.
+Different call paths, restart, acknowledgement or dismissal do not reset that identity; another installed version has its own allowance.
+Later incidents remain in the bounded local record without automatic model turns.
+A recovered interrupted incident may supply the summary, with missing measurements explicitly unknown.
+Explicit captain questions are independent of this automatic allowance.
 The captain's answer on INF-2061 asked for exactly this: "offer a fix task only if the canonical infinitary github repo is a project in the project list".
 The wake gives the facts and leaves the judgment to the first mate: whether the freeze is worth a fix, and if so a decision card offering a fix task in that project.
 With no such project the line stays in the record only.

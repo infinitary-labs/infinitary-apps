@@ -3069,7 +3069,7 @@ export async function createServices(
         recordPath: paths.freezeRecordPath,
         onFreeze: (line) => {
           const project = infinitaryProject(repos.list());
-          if (project) notifyFirstmate(freezeWake(line, project), "scheduled");
+          if (project) notifyFirstmate(freezeWake(line, project, host.app.version), "scheduled");
         },
       })
     : null;

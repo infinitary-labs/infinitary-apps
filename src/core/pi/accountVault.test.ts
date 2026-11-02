@@ -1,6 +1,7 @@
 import { existsSync, mkdirSync, readFileSync, rmSync, statSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { CLAUDE_CLIENT_MISSING_TEXT } from "@shared/claudeClient";
+import { HERE } from "@shared/deviceNames";
 import type { AuthNotice, AuthPromptView } from "@shared/providers";
 import { CLAUDE_PROVIDER_ID } from "@shared/providers";
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -377,6 +378,58 @@ describe("AccountVault", () => {
    * with a readable window cannot be reported as needing a sign-in - and it
    * keeps its models in the routing pool.
    */
+  it("signs a Claude account in again with Claude's own login, one sign-in at a time (INF-2319)", async () => {
+    const store = scratchDir("infinitary-claude-default-");
+    const credential = join(store, "credential");
+    let logins = 0;
+    let releaseSecond: () => void = () => {};
+    const vault = AccountVault.create(freshPaths(), {
+      backends: [
+        new ClaudeAuthBackend({
+          available: () => true,
+          configDir: () => store,
+          readStore: async () =>
+            existsSync(credential)
+              ? {
+                  state: "present" as const,
+                  auth: { accessToken: readFileSync(credential, "utf8") },
+                  identity: {},
+                }
+              : { state: "absent" as const },
+          run: async (args) => {
+            if (args[1] === "login") {
+              logins += 1;
+              if (logins === 2) {
+                await new Promise<void>((resolve) => {
+                  releaseSecond = resolve;
+                });
+              }
+              writeFileSync(credential, `login-${logins}`);
+              return { code: 0, stdout: "", stderr: "" };
+            }
+            const loggedIn = existsSync(credential);
+            return { code: loggedIn ? 0 : 1, stdout: JSON.stringify({ loggedIn }), stderr: "" };
+          },
+        }),
+      ],
+    });
+    const account = await vault.add(CLAUDE_PROVIDER_ID, "oauth", bridge());
+    expect(logins).toBe(1);
+
+    // The row's Sign in: the saved login is the one Anthropic refused.
+    const signingIn = vault.signIn(account.id, bridge());
+    await vi.waitFor(() => expect(logins).toBe(2));
+    // A second press while that login is open starts no second one.
+    await expect(vault.signIn(account.id, bridge())).rejects.toThrow(
+      `A Claude sign-in is already in progress on ${HERE.this}.`,
+    );
+    releaseSecond();
+    await signingIn;
+    expect(logins).toBe(2);
+    expect(readFileSync(credential, "utf8")).toBe("login-2");
+    expect((await vault.status(account.id)).connected).toBe(true);
+  });
+
   it("keeps a Claude account connected and routable when only its client probe is broken", async () => {
     const store = scratchDir("infinitary-claude-default-");
     const vault = AccountVault.create(freshPaths(), {
@@ -396,7 +449,6 @@ describe("AccountVault", () => {
               return { state: "absent" as const };
             }
           },
-          primeKeychain: async () => {},
           // The client signs in and writes its own credential, exactly as it
           // does where no Keychain is available - and its STATUS read is the
           // thing that cannot run.
@@ -453,7 +505,6 @@ describe("AccountVault", () => {
           available: () => true,
           configDir: () => store,
           readStore: async () => ({ state: "absent" }),
-          primeKeychain: async () => {},
           // A login that stores nothing, and a client that says so.
           run: async () => ({ code: 1, stdout: JSON.stringify({ loggedIn: false }), stderr: "" }),
         }),
@@ -487,7 +538,6 @@ describe("AccountVault", () => {
             auth: { accessToken: "fixture-token" },
             identity: { label: "kun@example.com" },
           }),
-          primeKeychain: async () => {},
           run: async () => ({ code: 0, stdout: JSON.stringify({ loggedIn: true }), stderr: "" }),
         }),
       ],

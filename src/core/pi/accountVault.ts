@@ -514,7 +514,9 @@ export class AccountVault {
    * renewal could not fix, or after a store lost its credential. Same
    * provider flow as `add`, same bridge tagging, but the registry row, its
    * label, its pin and its siblings all stay exactly where they are - only
-   * the store's contents change, and only the harness writes them.
+   * the store's contents change, and only the harness writes them. The
+   * backend hears it is a sign-in again (`again`), so it runs the
+   * provider's own login rather than using the refused one once more.
    */
   async signIn(accountId: string, bridge: AuthInteractionBridge): Promise<void> {
     const account = this.requireAccount(accountId);
@@ -522,24 +524,35 @@ export class AccountVault {
       throw new Error("Review or replace this connection's key in Intelligence.");
     const backend = this.requireBackend(account.providerId);
     const type = account.kind === "api_key" ? "api_key" : "oauth";
-    // The seat is released once the fresh read is in, so its next turn
-    // reads the account as the sign-in left it.
-    const release = await this.options.holdSeat?.(accountId);
+    // Sign in runs the vendor's own login over the one it holds, so a
+    // second press while the first is open would start a second login.
+    const claude = account.providerId === CLAUDE_PROVIDER_ID;
+    if (claude) {
+      if (this.claudeLoginInFlight) {
+        throw new Error(`A Claude sign-in is already in progress on ${HERE.this}.`);
+      }
+      this.claudeLoginInFlight = true;
+    }
+    let release: (() => void) | undefined;
     try {
-      await backend.login({ ...this.refFor(account), type, bridge });
+      // The seat is released once the fresh read is in, so its next turn
+      // reads the account as the sign-in left it.
+      release = await this.options.holdSeat?.(accountId);
+      await backend.login({ ...this.refFor(account), type, bridge, again: true });
       account.lastConnectedAt = Date.now();
       this.registry.accounts = this.registry.accounts.map((entry) =>
         entry.id === accountId ? { ...entry, lastConnectedAt: account.lastConnectedAt } : entry,
       );
       this.saveRegistry();
-      // Reusing the same login rewrites nothing, so a sign-out waiting on a
-      // new write time would survive the sign-in the card offered. The
-      // captain's Sign in is itself the way back. A refusal is not.
+      // A sign-out waiting on a new write time may not see one: a store the
+      // app cannot read now has none to compare. The captain's Sign in is
+      // itself the way back. A refusal is not.
       if (this.cutOff(accountId)?.class === "signed_out") this.clearCutOff(accountId);
       // The next read must see the fresh credential, not the cached rejection.
       await this.status(accountId, { refresh: true });
     } finally {
       release?.();
+      if (claude) this.claudeLoginInFlight = false;
     }
   }
 

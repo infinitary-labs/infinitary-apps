@@ -20,8 +20,9 @@ import { isClientIssueReason } from "@shared/claudeClient";
  * backends report the durable states.
  *
  * Five-rule contract (spec §11.2.3):
- * 1. Sign in once. Any extra grant (Claude's Keychain ACL) is requested at
- *    connect, where a dialog is expected.
+ * 1. Sign in once. Any extra grant (Claude's Keychain ACL) is asked for by
+ *    the allowance reading a connect or sign-in asks for once it ends, where
+ *    a dialog is expected; the sign-in itself asks nothing (INF-2319).
  * 2. Self-heal invisibly. Every failure class has a bounded automatic remedy
  *    before anything reaches a surface.
  * 3. Unknown is never absent, and a no-UI / no-interaction failure is

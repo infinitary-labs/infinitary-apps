@@ -683,7 +683,7 @@ Two things kept turning that into a repeat ask on a Mac whose Claude login lives
   Without the cache every quota tick - five minutes, plus window focus, resume and startup - spent its own VALUE read, so a grant that did not stick bought exactly one measurement and the meter failed again inside the same launch.
   The credential is never persisted, logged, or sent across the preload boundary.
   Two callers deliberately bypass it: a renewal, which must observe the store to detect a change at all, and the file-only health peek, which must stay file-only.
-  A user-initiated read (Retry, sign-in prime) bypasses it too - "look again" is what the click means.
+  A user-initiated read (Retry, or the reading asked for once a sign-in ends) bypasses it too - "look again" is what the click means.
 - **A suppressed dialog is not an absent session.**
   Background reads pass `interactive: false`, so macOS refuses an item Infinitary has not been granted access to with the same status an SSH session gets.
   The classifier cannot tell those apart from the status, but the caller can - it chose - so `interactionFailure` reinterprets it as `keychain_needs_grant` whenever we were the ones who suppressed the dialog.
@@ -717,7 +717,7 @@ A locked login keychain must still offer its unlock dialog on Retry.
   It reports `keychain_locked` without the VALUE read, the one call that could show a dialog if a launch ever latched the other way.
   The reason is never held in `keychainLocks`, so an unlock done anywhere else heals the next tick.
 - **Retry unlocks elsewhere, then reads here.**
-  A user-initiated read (Retry, sign-in prime) on a locked store calls the host's `unlockKeychain`.
+  A user-initiated read (Retry, or the reading asked for once a sign-in ends) on a locked store calls the host's `unlockKeychain`.
   - The Electron host forks `src/main/host/keychainUnlockHelper.ts` as a utility process: its own build entry, `out/main/keychainUnlockHelper.js`.
     The helper's first and only keychain touch is the interactive `SecKeychainUnlock`, so macOS shows its password dialog.
   - Once the store is unlocked, the VALUE read runs in the app as before, and any "Always Allow" grant still lands on Infinitary's identity.

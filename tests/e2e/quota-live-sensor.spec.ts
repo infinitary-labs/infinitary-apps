@@ -773,6 +773,87 @@ process.exit(run.status ?? 0);
     ).not.toContain(needsReauthCopy("Claude", "Personal"));
   });
 
+  // INF-2319, approved slim step 3 ("The button signs in."): Sign in shows
+  // only once Anthropic refused the saved sign-in after a renewal, and it
+  // runs Claude's own login rather than using that sign-in once more.
+  // File-backed on both platforms; a local usage server and an isolated
+  // client and home are its only resources.
+  test("INF-2319: Sign in after Anthropic refuses runs Claude's own login, and the new sign-in reads", async () => {
+    const userDataDir = scratchDir("infinitary-e2e-claude-sign-in-");
+    stub = await startStubUsage(["fresh-token"]);
+    seedAccounts(userDataDir);
+    const binDir = join(userDataDir, "bin");
+    const client = writeMockClaudeClient(binDir);
+    // Anthropic accepts only what Claude's own login writes. The renewal
+    // rewrites the store with another token it still refuses, as a login
+    // Anthropic signed out does.
+    writeFileSync(
+      join(binDir, "refused-claude.mjs"),
+      `#!/usr/bin/env node
+import { readFileSync, writeFileSync } from "node:fs";
+import { join } from "node:path";
+import { spawnSync } from "node:child_process";
+const home = process.env.HOME;
+const dir = process.env.CLAUDE_CONFIG_DIR || (home ? join(home, ".claude") : undefined);
+const args = process.argv.slice(2);
+const file = dir ? join(dir, ".credentials.json") : undefined;
+const current = () => {
+  try {
+    return JSON.parse(readFileSync(file, "utf8")).claudeAiOauth.accessToken;
+  } catch {
+    return undefined;
+  }
+};
+const write = (accessToken) =>
+  writeFileSync(file, JSON.stringify({
+    claudeAiOauth: {
+      accessToken,
+      refreshToken: "stub-refresh-" + accessToken,
+      expiresAt: Date.now() + 3600000,
+      subscriptionType: "max",
+    },
+  }), { mode: 0o600 });
+if (file && args[0] === "doctor" && current() !== "fresh-token") write("refused-" + Date.now());
+if (file && args[0] === "auth" && args[1] === "login") write("fresh-token");
+const run = spawnSync(process.execPath, [${JSON.stringify(client)}, ...args], { stdio: "inherit" });
+process.exit(run.status ?? 0);
+`,
+      { mode: 0o755 },
+    );
+    app = await launchApp({
+      userDataDir,
+      prepareHome: seedClaudeHome("refused-token", Date.now() + 3600_000),
+      env: {
+        INFINITARY_CLAUDE_USAGE_URL: stub.url,
+        INFINITARY_CLAUDE_CLI: join(binDir, "refused-claude.mjs"),
+      },
+    });
+    await openSubscriptions(app);
+    const row = accountRow(app, CLAUDE_PERSONAL);
+    const signIn = row.getByRole("button", { name: "Sign in", exact: true });
+    await expect(row.getByText(EMPTY_QUOTA_TEXT.signInAgain)).toBeVisible({ timeout: 20_000 });
+    expect(stub.seen).toContain("refused-token");
+    const label = (await app.page.evaluate(() => window.infinitary.accounts.list())).find(
+      (account) => account.id === CLAUDE_PERSONAL,
+    )?.label;
+    const cardTitles = async () =>
+      (await app?.page.evaluate(async () =>
+        (await window.infinitary.cards.list()).map((card) => card.title),
+      )) ?? [];
+    expect(await cardTitles()).toContain(needsReauthCopy("Claude", label ?? "account"));
+
+    await focusOn(signIn);
+    await pressKey(signIn, "Enter");
+
+    await expect(row.getByText(claudeWindowLabel("five_hour"), { exact: true })).toBeVisible({
+      timeout: 20_000,
+    });
+    await expect(signIn).toHaveCount(0);
+    await expect(row.getByText(EMPTY_QUOTA_TEXT.signInAgain)).toHaveCount(0);
+    expect(stub.seen).toContain("fresh-token");
+    await expect.poll(cardTitles).not.toContain(needsReauthCopy("Claude", label ?? "account"));
+  });
+
   test("a vendor that stays down never invents a reading and never claims a sign-out", async () => {
     const userDataDir = scratchDir("infinitary-e2e-");
     // Nothing is accepted, and the client renews nothing: every attempt fails.

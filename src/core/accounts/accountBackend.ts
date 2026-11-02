@@ -79,6 +79,13 @@ export type AccountLoginRequest = AccountRef & {
    * before (INF-838). Other providers ignore it.
    */
   enterpriseHost?: string;
+  /**
+   * The account already exists and signs in again (`AccountVault.signIn`):
+   * the login its store holds is the one the provider refused or that went
+   * away, so the provider's own login runs rather than that login being
+   * used once more. Absent on a first connect (`AccountVault.add`).
+   */
+  again?: boolean;
 };
 
 export interface AccountBackend {

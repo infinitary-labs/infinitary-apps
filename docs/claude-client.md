@@ -27,7 +27,11 @@ The client passes the label on to every command it runs, and the account evaluat
 
 `runClaude` uses piped stdin, stdout and stderr, with no terminal or PTY.
 For sign-in, `claudeAuth.ts` lets the client open the browser.
-The app does not open that page again on its own; the person can, and can paste a code the page shows or cancel, and a second sign-in adopts a login the first one already saved.
+The app does not open that page again on its own; the person can, and can paste a code the page shows or cancel, and a second Connect waiting behind the first uses the login the first one saved.
+Connect uses a login already on the computer.
+The row's Sign in shows only once Anthropic refused the saved sign-in, so it runs the client's own login over that sign-in, even when the app cannot read it now, and never uses it once more (INF-2319).
+It counts only a new login: a different credential in the store, or, where the store cannot be read, a clean finish and the client's word that it is signed in.
+A second Sign in while one is open is refused in a sentence, and a sign-in asks macOS nothing itself.
 When that sign-in ends with no reason, the person is told Claude failed, and to run /login in the Claude Code CLI, whose saved login the first mate then uses.
 
 Never let a test or probe start a real Claude sign-in.
@@ -70,6 +74,7 @@ Moved verbatim from `AGENTS.md` on 2026-09-24; `AGENTS.md` keeps a one-line poin
     A file that cannot be read is not absent.
     A client that answers signed in is a login, including over an expired file.
     Connect asks the client before it treats a lookup miss as a sign-out, on the store lease it already holds, and reads the store again after the wait.
+    The row's Sign in over a store that holds or may hold a login runs the client's login without that question, since Anthropic already refused the login there.
     An expired access token is renewable, and an unreadable store is degraded, never a sign-out, even when a client probe reports otherwise.
 - **A crewmate's tools come from one spec (primitives P7, contract v4.12).**
   Every app-owned crewmate tool - `emit_card`, `close_card`, `file_followup`, `note_progress`, `report`, `reply`, `tasks`, `lint_panel`, `place_panel`, `capture_panel`, `open_change`, `check_change`, `read_workflow`, `download_artifact`, `github_read` and `github_write` - is ONE entry (name, description, typebox parameters, run) in `CREWMATE_TOOLS` (`src/core/pi/crewmateTaskTools.ts`; the entry type and the rest of the runtime-neutral spec are `src/core/session/tools.ts`).

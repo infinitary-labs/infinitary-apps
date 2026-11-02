@@ -20,7 +20,6 @@ import {
   keychainServiceFor,
   readClaudeStore,
   renewClaudeQuotaAuth,
-  requestKeychainValueAccess,
 } from "./claudeQuota";
 import { resetStoreLeasesForTest } from "./claudeStoreLease";
 
@@ -397,18 +396,6 @@ describe("readClaudeStore", () => {
     expect(classifyKeychainValueError({ code: -25315, message: "Interaction required." })).toBe(
       "keychain_no_interactive_session",
     );
-  });
-
-  it("requestKeychainValueAccess is the sign-in prime: it asks even when a sidecar exists", async () => {
-    const dir = storeDir();
-    writeFileSync(join(dir, ".credentials.json"), credentialJson("sidecar", 9e15));
-    const keychain = fakeKeychain({
-      read: { kind: "value", value: credentialJson("kc-prime", 9e15) },
-    });
-    const result = await requestKeychainValueAccess(dir, { keychain, env: { USER: "kun" } });
-    expect(result).toMatchObject({ state: "present", auth: { accessToken: "kc-prime" } });
-    expect(keychain.reads).toHaveLength(1);
-    expect(keychain.reads[0]?.interactive).toBe(true);
   });
 
   it("classifies a killed value read as a timeout and a canceled dialog as denied", () => {
@@ -818,7 +805,7 @@ describe("the remembered credential", () => {
     expect(next).toMatchObject({ state: "present", auth: { accessToken: "after" } });
   });
 
-  it("is bypassed by Retry and the sign-in prime, which mean 'look again'", async () => {
+  it("is bypassed by Retry, which means 'look again'", async () => {
     const dir = storeDir();
     const keychain = fakeKeychain({
       find: { kind: "found", modifiedAt: "20260915183000Z" },
@@ -826,7 +813,7 @@ describe("the remembered credential", () => {
     });
     await readClaudeStore(dir, { keychain, now: () => 1000 });
     expect(keychain.reads).toHaveLength(1);
-    await requestKeychainValueAccess(dir, { keychain, now: () => 1000 });
+    await readClaudeStore(dir, { keychain, now: () => 1000, allowPrompt: true });
     expect(keychain.reads).toHaveLength(2);
     expect(keychain.reads[1]?.interactive).toBe(true);
   });

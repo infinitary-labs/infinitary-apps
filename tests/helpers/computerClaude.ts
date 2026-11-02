@@ -44,7 +44,6 @@ export function claudeOnComputer(dataDir: string, how: "made" | "adopted") {
             identity: { accountUuid: "account-a" },
           }
         : { state: "absent" },
-    primeKeychain: async () => {},
     configDir: () => store,
     pasteCode: true,
   });

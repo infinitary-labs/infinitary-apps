@@ -38,10 +38,10 @@ import {
   claudeCredentialStamp,
   clearClaudeCredentialCache,
   clearKeychainLock,
+  credentialMarker,
   defaultClaudeConfigDir,
   readClaudeStore,
   renewClaudeQuotaAuth,
-  requestKeychainValueAccess,
 } from "./claudeQuota";
 import { runExclusiveStoreTask, tryExclusiveStoreTask } from "./claudeStoreLease";
 
@@ -70,12 +70,26 @@ import { runExclusiveStoreTask, tryExclusiveStoreTask } from "./claudeStoreLease
 /**
  * The record a sign-in with a pasted code keeps in the account's own folder:
  * Firstmate made the login on this Mac, and which login it was (the stamp's
- * digest of its account and organisation, never a token). An adopted login
- * has none, so nothing ever signs it out.
+ * digest of its account and organisation, never a token). A login that was
+ * already here when the account connected has none, so nothing ever signs
+ * it out.
  */
 export const MADE_LOGIN_FILE = "made-login.json";
 
 type MadeLogin = { version: 1; login?: string; at: number };
+
+/** What a sign-in decides from the store under its lease (`loginDecision`). */
+type LoginDecision =
+  | { kind: "adopt" }
+  | { kind: "refuse" }
+  | { kind: "login"; before: ClaudeStoreRead };
+
+/** How a sign-in under the store lease ended. */
+type LoginOutcome =
+  | { kind: "adopt" }
+  | { kind: "refuse" }
+  | { kind: "signed_in" }
+  | { kind: "unfinished"; ran: Awaited<ReturnType<RunClaude>> };
 
 /** The record at `file`, or null when there is none or it cannot be read. */
 export function readMadeLogin(file: string): MadeLogin | null {
@@ -130,14 +144,8 @@ export type ClaudeAuthBackendOptions = {
   /** One store reader for health, identity and login ownership; tests inject scratch stores. */
   readStore?: (configDir: string) => Promise<ClaudeStoreRead>;
   /**
-   * Request the Keychain VALUE at sign-in. Production does the real read
-   * through the host capability (which may raise the one macOS ask);
-   * tests inject a no-op or a spy.
-   */
-  primeKeychain?: (configDir: string) => Promise<void>;
-  /**
    * Host Keychain seam. Production passes `host.keychain` so the grant is
-   * Infinitary's. Tests that spy on `primeKeychain` can omit this.
+   * Infinitary's. Tests that inject `readStore` can omit this.
    */
   keychain?: HostKeychain;
   /**
@@ -152,12 +160,13 @@ export type ClaudeAuthBackendOptions = {
   /**
    * Sign in with a code pasted back, and open no browser here: a computer
    * that runs work for another Mac, where a browser would open on a screen
-   * nobody watches (docs/helper.md, "Its own sign-ins"). A login already
-   * here is adopted as ever; with none, the vendor's own login runs with
-   * its browser opener stubbed, its link goes to the bridge, and the code
-   * its page shows comes back as the answer to a prompt, onto the client's
-   * stdin. A lookup miss is confirmed with the client before that sign-in
-   * starts: nobody at that screen would see one replaced.
+   * nobody watches (docs/helper.md, "Its own sign-ins"). A first connect
+   * uses a login already here, as on this Mac; otherwise the vendor's own
+   * login runs with its browser opener stubbed, its link goes to the
+   * bridge, and the code its page shows comes back as the answer to a
+   * prompt, onto the client's stdin. A lookup miss is confirmed with the
+   * client before that sign-in starts: nobody at that screen would see one
+   * replaced.
    */
   pasteCode?: boolean;
 };
@@ -168,7 +177,6 @@ export class ClaudeAuthBackend implements AccountBackend {
   private readonly available: () => boolean;
   private readonly client: () => Promise<ClaudeClientCheck>;
   private readonly readStore: (configDir: string) => Promise<ClaudeStoreRead>;
-  private readonly primeKeychain: (configDir: string) => Promise<void>;
   private readonly configDir: () => string;
   private readonly keychain: HostKeychain;
   private readonly now: () => number;
@@ -190,11 +198,6 @@ export class ClaudeAuthBackend implements AccountBackend {
         ? async () => ({ state: "ready", executable: "injected" })
         : () => checkClaudeClient());
     this.readStore = options.readStore ?? ((dir) => readClaudeStore(dir, { keychain }));
-    this.primeKeychain =
-      options.primeKeychain ??
-      (async (dir) => {
-        await requestKeychainValueAccess(dir, { keychain });
-      });
     this.configDir = options.configDir ?? defaultClaudeConfigDir;
     this.now = options.now ?? Date.now;
     this.leadMs = options.leadMs ?? CREDENTIAL_RENEW_LEAD_MS;
@@ -219,18 +222,26 @@ export class ClaudeAuthBackend implements AccountBackend {
   }
 
   /**
-   * Attach the machine's default Claude login. If it is already signed in,
-   * we adopt it with no browser bounce. A replacement sign-in runs the
-   * vendor's own `claude auth login` with CLAUDE_CONFIG_DIR unset so it
-   * writes the everyday item - not a private Infinitary store.
+   * Attach the machine's default Claude login, or sign it in again.
    *
-   * That replacement starts only from current, consistent evidence that a
-   * new login is needed, decided under the store lease after any wait. A
-   * lookup miss is not a sign-out until the client says it is signed out. A
-   * store we cannot read, or one that becomes unreadable while we wait, is
-   * adopted only on the client's own word that it is signed in, and otherwise
-   * refused in a sentence - a new vendor sign-in replaces the stored login
-   * and can sign out every Claude Code session already running.
+   * A first connect (`AccountVault.add`) uses a login already here, with no
+   * browser bounce. Otherwise it runs the vendor's own `claude auth login`
+   * with CLAUDE_CONFIG_DIR unset, so it writes the everyday item - not a
+   * private Infinitary store. That sign-in starts only from current,
+   * consistent evidence that a new login is needed, decided under the store
+   * lease after any wait. A lookup miss is not a sign-out until the client
+   * says it is signed out. A store we cannot read, or one that becomes
+   * unreadable while we wait, is used only on the client's own word that it
+   * is signed in, and is otherwise refused in a sentence - a new vendor
+   * sign-in replaces the stored login and can sign out every Claude Code
+   * session already running.
+   *
+   * The row's Sign in on an account that exists (`again`) never uses the
+   * login the store holds once more: that is the login Anthropic refused,
+   * so the vendor's own login runs over it, whether or not Infinitary can
+   * read it now (INF-2319). Only a store with nothing in it goes the first
+   * connect's way. The sign-in counts only when the store then holds a
+   * different login (`newLogin`).
    */
   async login(request: AccountLoginRequest): Promise<void> {
     if (request.type !== "oauth") {
@@ -250,22 +261,48 @@ export class ClaudeAuthBackend implements AccountBackend {
   }
 
   /**
-   * Adopt, start a replacement, or refuse, from the store as it is now.
-   * Caller holds the exclusive store lease, so the status read is the
-   * already-held one: a nested lease would defer and look like no answer.
+   * Use the login here, start the vendor's sign-in, or refuse, from the
+   * store as it is now. Caller holds the exclusive store lease, so the
+   * status read is the already-held one: a nested lease would defer and look
+   * like no answer. A sign-in keeps what the store held before it, so its
+   * end can tell a new login from the one that was there.
    */
-  private async replacementDecision(dir: string): Promise<"adopt" | "login" | "refuse"> {
+  private async loginDecision(dir: string, again: boolean): Promise<LoginDecision> {
     const evidence = await this.readStore(dir);
-    if (evidence.state === "present") return "adopt";
+    if (again && evidence.state !== "absent") return { kind: "login", before: evidence };
+    if (evidence.state === "present") return { kind: "adopt" };
     const word = await this.statusNow(dir);
-    if (word?.connected === true) return "adopt";
+    if (word?.connected === true) return { kind: "adopt" };
     // The status read can rewrite the store, and a wait can change what we
     // could not read. Only the reading after that is current.
-    const again = await this.readStore(dir);
-    if (again.state === "present") return "adopt";
-    if (again.state === "unreadable") return "refuse";
-    if (again.state === "absent" && word?.connected === false) return "login";
-    return "refuse";
+    const latest = await this.readStore(dir);
+    if (latest.state === "present") return { kind: "adopt" };
+    if (latest.state === "unreadable") return { kind: "refuse" };
+    if (word?.connected === false) return { kind: "login", before: latest };
+    return { kind: "refuse" };
+  }
+
+  /**
+   * Whether the store holds a new login since `before`, whatever the client
+   * process did. Caller holds the store lease. The login that was there
+   * before is not a new one: on Sign in it is the one Anthropic refused.
+   * Where the store was empty, Claude had said it was signed out, so
+   * anything there now, or Claude's word that it is signed in, is new.
+   * Otherwise a store that cannot tell the two apart counts only on a run
+   * that finished cleanly and the client's own word that it is signed in.
+   */
+  private async newLogin(
+    dir: string,
+    before: ClaudeStoreRead,
+    code?: number | null,
+  ): Promise<boolean> {
+    const after = await this.readStore(dir);
+    if (after.state === "present" && before.state === "present") {
+      return credentialMarker(after.auth) !== credentialMarker(before.auth);
+    }
+    if (before.state === "absent" && after.state !== "absent") return true;
+    if (before.state !== "absent" && code !== 0) return false;
+    return (await this.statusNow(dir))?.connected === true;
   }
 
   /**
@@ -275,11 +312,11 @@ export class ClaudeAuthBackend implements AccountBackend {
    * and cancelling the prompt stops the client. The whole wait, including
    * time spent behind another sign-in, is the one five-minute bound.
    *
-   * A sign-in already waiting re-reads the store once it holds the lease.
-   * If the one in front saved a login, this one adopts it and starts no
-   * second browser login. The vendor sends a failed token exchange to the
+   * A first connect already waiting re-reads the store once it holds the
+   * lease. If the one in front saved a login, this one uses it and starts
+   * no second browser login. The vendor sends a failed token exchange to the
    * same page as success; that page is not the sign-in, and a run that
-   * stops after saving a login is still a saved login.
+   * stops after saving a new login is still a new login.
    */
   private async loginWithBrowser(request: AccountLoginRequest, dir: string): Promise<void> {
     const started = Date.now();
@@ -298,26 +335,22 @@ export class ClaudeAuthBackend implements AccountBackend {
     let asked = false;
     const timedOut = () => new Error("Claude did not respond in time.");
     try {
-      let outcome:
-        | { kind: "adopt" }
-        | { kind: "refuse" }
-        | { kind: "ran"; ran: Awaited<ReturnType<RunClaude>> };
-      try {
-        outcome = await runExclusiveStoreTask(dir, async () => {
-          const remaining = LOGIN_TIMEOUT_MS - (Date.now() - started);
-          if (remaining <= 0) throw timedOut();
-          const decision = await this.replacementDecision(dir);
-          if (decision === "adopt") return { kind: "adopt" as const };
-          if (decision === "refuse") return { kind: "refuse" as const };
-          const left = LOGIN_TIMEOUT_MS - (Date.now() - started);
-          if (left <= 0) throw timedOut();
-          bridge.notify({
-            providerId: request.providerId,
-            accountId: request.accountId,
-            kind: "progress",
-            message: "Opening Claude in your browser to sign in...",
-          });
-          const ran = await this.run(["auth", "login", "--claudeai"], dir, {
+      const outcome = await runExclusiveStoreTask(dir, async (): Promise<LoginOutcome> => {
+        // A login the sign-in in front saved is used even after a long wait;
+        // only a new browser sign-in needs time left.
+        const decision = await this.loginDecision(dir, request.again === true);
+        if (decision.kind !== "login") return decision;
+        const left = LOGIN_TIMEOUT_MS - (Date.now() - started);
+        if (left <= 0) throw timedOut();
+        bridge.notify({
+          providerId: request.providerId,
+          accountId: request.accountId,
+          kind: "progress",
+          message: "Opening Claude in your browser to sign in...",
+        });
+        let ran: Awaited<ReturnType<RunClaude>>;
+        try {
+          ran = await this.run(["auth", "login", "--claudeai"], dir, {
             timeoutMs: left,
             paste,
             onStdout: (chunk) => {
@@ -345,41 +378,25 @@ export class ClaudeAuthBackend implements AccountBackend {
                 .then(pasted, stopped);
             },
           });
-          return { kind: "ran" as const, ran };
-        });
-      } catch (caught) {
-        // A client we stopped may already have saved the login. The store,
-        // not the thrown timer, says whether this sign-in finished.
-        if (await this.savedLogin(request)) {
-          try {
-            await this.primeKeychain(dir);
-          } catch {
-            // The account is connected; the meter will say why usage cannot be read.
-          }
-          return;
+        } catch (caught) {
+          // A client we stopped may already have saved the login. The store,
+          // not the thrown timer, says whether this sign-in finished.
+          if (await this.newLogin(dir, decision.before)) return { kind: "signed_in" };
+          throw caught;
         }
-        throw caught;
-      }
+        // The store is the authority, not the exit code, and not the page the
+        // vendor showed. A failed exchange still redirects there.
+        return (await this.newLogin(dir, decision.before, ran.code))
+          ? { kind: "signed_in" }
+          : { kind: "unfinished", ran };
+      });
       if (outcome.kind === "adopt") {
-        await this.finishAdopted(request, dir);
+        this.finishAdopted(request);
         return;
       }
-      if (outcome.kind === "refuse") {
-        throw new Error(CLAUDE_LOGIN_UNREADABLE_TEXT);
-      }
-      // The store is the authority, not the exit code, and not the page the
-      // vendor showed. A failed exchange still redirects there.
-      if (!(await this.savedLogin(request))) {
-        throw new Error(
-          loginFailure(outcome.ran.stderr, outcome.ran.stdout, CLAUDE_LOGIN_UNFINISHED_TEXT),
-        );
-      }
-      // Sign-in is the moment a permission prompt is expected (D-3). A
-      // refused value read is a meter failure, not a failed sign-in.
-      try {
-        await this.primeKeychain(dir);
-      } catch {
-        // The account is connected; the meter will say why usage cannot be read.
+      if (outcome.kind === "refuse") throw new Error(CLAUDE_LOGIN_UNREADABLE_TEXT);
+      if (outcome.kind === "unfinished") {
+        throw new Error(unfinishedWords(outcome.ran, CLAUDE_LOGIN_UNFINISHED_TEXT));
       }
     } finally {
       bridge.signal?.removeEventListener("abort", stop);
@@ -388,23 +405,13 @@ export class ClaudeAuthBackend implements AccountBackend {
   }
 
   /** The machine login is already here: say so, and do not open a browser. */
-  private async finishAdopted(request: AccountLoginRequest, dir: string): Promise<void> {
+  private finishAdopted(request: AccountLoginRequest): void {
     request.bridge.notify({
       providerId: request.providerId,
       accountId: request.accountId,
       kind: "info",
       message: `Using the Claude login on ${HERE.this}.`,
     });
-    try {
-      await this.primeKeychain(dir);
-    } catch {
-      // The account is connected; the meter will say why usage cannot be read.
-    }
-  }
-
-  /** Whether the store now holds a login, whatever the client process did. */
-  private async savedLogin(request: AccountLoginRequest): Promise<boolean> {
-    return (await this.status(request)).connected;
   }
 
   /**
@@ -434,53 +441,55 @@ export class ClaudeAuthBackend implements AccountBackend {
     let output = "";
     let asked = false;
     try {
-      const outcome = await runExclusiveStoreTask(dir, async () => {
-        const decision = await this.replacementDecision(dir);
-        if (decision === "adopt") return { kind: "adopt" as const };
-        if (decision === "refuse") return { kind: "refuse" as const };
-        const ran = await this.run(["auth", "login", "--claudeai"], dir, {
-          timeoutMs: LOGIN_TIMEOUT_MS,
-          env: { BROWSER: NO_BROWSER },
-          paste,
-          onStdout: (chunk) => {
-            output += chunk;
-            if (asked) return;
-            const link = pasteCodeLink(output);
-            if (!link) return;
-            asked = true;
-            bridge.notify({
-              providerId: request.providerId,
-              accountId: request.accountId,
-              kind: "auth_url",
-              message: "Open the link in your browser and sign in. Then paste the code it shows.",
-              url: link,
-            });
-            bridge
-              .prompt({
-                promptId: randomUUID(),
+      const outcome = await runExclusiveStoreTask(dir, async (): Promise<LoginOutcome> => {
+        const decision = await this.loginDecision(dir, request.again === true);
+        if (decision.kind !== "login") return decision;
+        let ran: Awaited<ReturnType<RunClaude>>;
+        try {
+          ran = await this.run(["auth", "login", "--claudeai"], dir, {
+            timeoutMs: LOGIN_TIMEOUT_MS,
+            env: { BROWSER: NO_BROWSER },
+            paste,
+            onStdout: (chunk) => {
+              output += chunk;
+              if (asked) return;
+              const link = pasteCodeLink(output);
+              if (!link) return;
+              asked = true;
+              bridge.notify({
                 providerId: request.providerId,
                 accountId: request.accountId,
-                kind: "manual_code",
-                message: "Paste the code Claude shows.",
-                placeholder: "paste the code",
-              })
-              .then(pasted, stopped);
-          },
-        });
-        return { kind: "ran" as const, ran };
+                kind: "auth_url",
+                message: "Open the link in your browser and sign in. Then paste the code it shows.",
+                url: link,
+              });
+              bridge
+                .prompt({
+                  promptId: randomUUID(),
+                  providerId: request.providerId,
+                  accountId: request.accountId,
+                  kind: "manual_code",
+                  message: "Paste the code Claude shows.",
+                  placeholder: "paste the code",
+                })
+                .then(pasted, stopped);
+            },
+          });
+        } catch (caught) {
+          if (await this.newLogin(dir, decision.before)) return { kind: "signed_in" };
+          throw caught;
+        }
+        return (await this.newLogin(dir, decision.before, ran.code))
+          ? { kind: "signed_in" }
+          : { kind: "unfinished", ran };
       });
       if (outcome.kind === "adopt") {
-        await this.finishAdopted(request, dir);
+        this.finishAdopted(request);
         return;
       }
-      if (outcome.kind === "refuse") {
-        throw new Error(CLAUDE_LOGIN_UNREADABLE_THERE_TEXT);
-      }
-      const status = await this.status(request);
-      if (!status.connected) {
-        throw new Error(
-          loginFailure(outcome.ran.stderr, outcome.ran.stdout, CLAUDE_LOGIN_UNFINISHED_THERE_TEXT),
-        );
+      if (outcome.kind === "refuse") throw new Error(CLAUDE_LOGIN_UNREADABLE_THERE_TEXT);
+      if (outcome.kind === "unfinished") {
+        throw new Error(unfinishedWords(outcome.ran, CLAUDE_LOGIN_UNFINISHED_THERE_TEXT));
       }
     } finally {
       bridge.signal?.removeEventListener("abort", stop);
@@ -496,11 +505,6 @@ export class ClaudeAuthBackend implements AccountBackend {
       });
     } catch {
       // The account is signed in; only its sign-out will keep the login here.
-    }
-    try {
-      await this.primeKeychain(dir);
-    } catch {
-      // The account is connected; the meter will say why usage cannot be read.
     }
   }
 
@@ -722,6 +726,14 @@ function planLabel(subscriptionType: string): string {
     enterprise: "Enterprise",
   };
   return known[subscriptionType] ?? subscriptionType;
+}
+
+/**
+ * Why a login run left no new login. A run that ended cleanly said what it
+ * did on stdout, which is no reason; only what it wrote as an error is.
+ */
+function unfinishedWords(ran: Awaited<ReturnType<RunClaude>>, text: string): string {
+  return loginFailure(ran.stderr, ran.code === 0 ? "" : ran.stdout, text);
 }
 
 /**

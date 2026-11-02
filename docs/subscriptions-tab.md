@@ -95,7 +95,7 @@ While that computer runs an older Infinitary, the chip stays and reads "update I
 Its Claude chip says "install Claude Code there first" when Claude Code is not there.
 The sign-in runs there and is drawn in the aside under the group, headed "Sign in to Codex on Mac mini": a code to read with Open the link, a code to paste back, the address the browser ends on, or a key, with "It goes to Mac mini once.
 This computer keeps no copy." under a box that takes typing.
-Claude adopts the login already on that computer; with none, the aside is a code to paste back: Claude Code's sign-in link opens here, and the code its page shows goes there once.
+Claude adopts the login already on that computer; with none, or when Sign in again follows Anthropic refusing it, the aside is a code to paste back: Claude Code's sign-in link opens here, and the code its page shows goes there once.
 A browser sign-in whose link sends the browser back to the Mac it opens on (Codex, OpenRouter) asks for the address of the page the browser ends on, which cannot be reached from another Mac; running as another user on this Mac, it says that user finishes the sign-in itself when the browser comes back.
 A computer older than `FORGE_SIGN_INS_SINCE` still ends a Claude sign-in with no login there as "Claude Code signs in on Mac mini itself", and the aside says to log in there once.
 A Claude row shows the allowance that computer read with its own login, or, when macOS there would have to ask first, why it is not read there, with no Retry: that computer never asks on a screen nobody may be at (`docs/helper.md`, "Claude's allowance, never asking").

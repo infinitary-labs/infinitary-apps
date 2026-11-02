@@ -455,7 +455,6 @@ export async function runCli(args: readonly string[], context: CliContext): Prom
       // Claude's client keeps the login (docs/helper.md, "Removed").
       const claude = new ClaudeAuthBackend({
         ...(context.keychain ? { keychain: context.keychain } : {}),
-        primeKeychain: async () => {},
         pasteCode: true,
       });
       const signOutClaude = (record: string) => claude.signOutMadeLogin(record);

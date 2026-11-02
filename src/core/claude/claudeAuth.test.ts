@@ -6,6 +6,7 @@ import { CLAUDE_PROVIDER_ID } from "@shared/providers";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { scratchDir } from "../../../tests/helpers/scratchDirs";
 import { isNonTerminalFailureReason } from "../accounts/credentialHealth";
+import type { HostKeychain } from "../host";
 import type { AuthInteractionBridge } from "../pi/piAuth";
 import {
   CLAUDE_LOGIN_UNFINISHED_TEXT,
@@ -44,13 +45,14 @@ type FakeClient = {
 /**
  * The store as the backend reads it when the client cannot answer: the same
  * marker the fake client writes, classified the way the real store is (a
- * present credential is live; nothing there is a sign-out).
+ * present credential is live; nothing there is a sign-out). The marker's
+ * words stand for the credential, so a new login reads as a new one.
  */
 const fakeStore = async (configDir: string): Promise<ClaudeStoreRead> => {
   const marker = join(configDir, "credential");
-  const present = existsSync(marker) && readFileSync(marker, "utf8").length > 0;
-  return present
-    ? { state: "present" as const, auth: { accessToken: "fixture-token" }, identity: {} }
+  const written = existsSync(marker) ? readFileSync(marker, "utf8") : "";
+  return written.length > 0
+    ? { state: "present" as const, auth: { accessToken: written }, identity: {} }
     : { state: "absent" };
 };
 
@@ -72,7 +74,8 @@ function fakeClient(options: { identity?: { email: string; plan: string } } = {}
         if (client.failLogin) {
           return { code: 1, stdout: "", stderr: "Your organization has SSO enforced." };
         }
-        writeFileSync(marker, "opaque-credential-written-by-the-client");
+        // Every login the client makes is a new credential.
+        writeFileSync(marker, `opaque-credential-written-by-the-client-${client.calls.length}`);
         return { code: 0, stdout: "", stderr: "" };
       }
       if (args[0] === "auth" && args[1] === "logout") {
@@ -129,7 +132,6 @@ describe("ClaudeAuthBackend", () => {
       run: client.run,
       available: () => true,
       readStore: fakeStore,
-      primeKeychain: async () => {},
       configDir: () => store,
     });
     const relay = bridge();
@@ -158,36 +160,46 @@ describe("ClaudeAuthBackend", () => {
     expect(status.identity).toEqual({ label: "kun@example.com", plan: "Max" });
   });
 
-  it("the default sign-in prime is a host-capability VALUE read, interactive so the grant is Infinitary's", async () => {
-    const client = fakeClient();
-    const store = accountDir("host-prime");
-    const reads: { service: string; account?: string; interactive?: boolean }[] = [];
-    const backend = new ClaudeAuthBackend({
-      run: client.run,
-      available: () => true,
-      readStore: fakeStore,
-      configDir: () => store,
-      keychain: {
-        findGenericPassword: async () => ({ kind: "found" }),
-        readGenericPassword: async (query) => {
-          reads.push(query);
-          return {
-            kind: "value",
-            value: JSON.stringify({ claudeAiOauth: { accessToken: "tok" } }),
-          };
-        },
+  it("signs in without asking macOS for the saved sign-in itself (INF-2317)", async () => {
+    // The captain's Sign in raised a password prompt for the saved sign-in
+    // and changed nothing. The sign-in is Claude's own; the read after it is
+    // the allowance read, never part of the sign-in.
+    const store = accountDir("no-ask");
+    writeFileSync(join(store, ".config.json"), "{}");
+    let item = { token: "refused", modifiedAt: "20261101000000Z" };
+    const reads: { interactive?: boolean }[] = [];
+    const keychain: HostKeychain = {
+      findGenericPassword: async () => ({ kind: "found", modifiedAt: item.modifiedAt }),
+      readGenericPassword: async (query) => {
+        reads.push(query);
+        return {
+          kind: "value",
+          value: JSON.stringify({ claudeAiOauth: { accessToken: item.token, expiresAt: 9e15 } }),
+        };
       },
+    };
+    const logins: string[][] = [];
+    const backend = new ClaudeAuthBackend({
+      run: async (args) => {
+        if (args[1] === "login") {
+          logins.push(args);
+          item = { token: "fresh", modifiedAt: "20261102000000Z" };
+          return { code: 0, stdout: "", stderr: "" };
+        }
+        return {
+          code: 0,
+          stdout: JSON.stringify({ loggedIn: true, authMethod: "claude.ai" }),
+          stderr: "",
+        };
+      },
+      available: () => true,
+      configDir: () => store,
+      keychain,
     });
-    await backend.login({
-      providerId: CLAUDE_PROVIDER_ID,
-      accountId: "acct_host_prime",
-      dir: accountDir("host-prime-vault"),
-      type: "oauth",
-      bridge: bridge(),
-    });
-    expect(reads).toHaveLength(1);
-    expect(reads[0]?.service).toBe("Claude Code-credentials");
-    expect(reads[0]?.interactive).toBe(true);
+    await backend.login({ ...accountRef(store), type: "oauth", bridge: bridge(), again: true });
+    expect(logins).toEqual([["auth", "login", "--claudeai"]]);
+    expect(reads.length).toBeGreaterThan(0);
+    expect(reads.filter((read) => read.interactive === true)).toEqual([]);
   });
 
   it("adopts a login already on this Mac without opening a browser", async () => {
@@ -198,7 +210,6 @@ describe("ClaudeAuthBackend", () => {
       run: client.run,
       available: () => true,
       readStore: fakeStore,
-      primeKeychain: async () => {},
       configDir: () => store,
     });
     const relay = bridge();
@@ -222,7 +233,6 @@ describe("ClaudeAuthBackend", () => {
       run: client.run,
       available: () => true,
       readStore: async () => ({ state: "unreadable" }),
-      primeKeychain: async () => {},
       configDir: () => store,
     });
     const relay = bridge();
@@ -252,7 +262,6 @@ describe("ClaudeAuthBackend", () => {
         existsSync(join(dir, "credential"))
           ? { state: "present" as const, auth: { accessToken: "fixture-token" }, identity: {} }
           : { state: "absent" },
-      primeKeychain: async () => {},
       configDir: () => store,
     });
     await backend.login({
@@ -272,7 +281,6 @@ describe("ClaudeAuthBackend", () => {
       run: client.run,
       available: () => true,
       readStore: fakeStore,
-      primeKeychain: async () => {},
       configDir: () => store,
     });
     const relay = bridge();
@@ -299,7 +307,6 @@ describe("ClaudeAuthBackend", () => {
       run: client.run,
       available: () => true,
       readStore: fakeStore,
-      primeKeychain: async () => {},
       configDir: () => store,
     });
     await expect(
@@ -330,7 +337,6 @@ describe("ClaudeAuthBackend", () => {
             : { code: 1, stdout: JSON.stringify({ loggedIn: false }), stderr: "" },
         available: () => true,
         readStore: fakeStore,
-        primeKeychain: async () => {},
         configDir: () => store,
       });
       await expect(
@@ -355,7 +361,6 @@ describe("ClaudeAuthBackend", () => {
           : { code: 1, stdout: JSON.stringify({ loggedIn: false }), stderr: "" },
       available: () => true,
       readStore: fakeStore,
-      primeKeychain: async () => {},
       configDir: () => accountDir("c-ssl"),
     });
     await expect(
@@ -385,7 +390,6 @@ describe("ClaudeAuthBackend", () => {
     const backend = new ClaudeAuthBackend({
       available: () => true,
       readStore: fakeStore,
-      primeKeychain: async () => {},
       configDir: () => store,
       run: async (args, configDir) => {
         if (args[1] === "login") {
@@ -426,7 +430,6 @@ describe("ClaudeAuthBackend", () => {
     const backend = new ClaudeAuthBackend({
       available: () => true,
       readStore: fakeStore,
-      primeKeychain: async () => {},
       configDir: () => store,
       run: async (args, configDir) => {
         if (args[1] === "login") {
@@ -461,7 +464,6 @@ describe("ClaudeAuthBackend", () => {
     const backend = new ClaudeAuthBackend({
       available: () => true,
       readStore: fakeStore,
-      primeKeychain: async () => {},
       configDir: () => store,
       run: async (args, _configDir, options) => {
         if (args[1] !== "login") {
@@ -515,7 +517,6 @@ describe("ClaudeAuthBackend", () => {
       run: client.run,
       available: () => true,
       readStore: fakeStore,
-      primeKeychain: async () => {},
       configDir: () => store,
     });
     const ref = { providerId: CLAUDE_PROVIDER_ID, accountId: "acct_1", dir: accountDir("1") };
@@ -835,7 +836,6 @@ describe("ClaudeAuthBackend", () => {
       run: fakeClient().run,
       available: () => true,
       readStore: fakeStore,
-      primeKeychain: async () => {},
       configDir: () => store,
     });
     await backend.login({
@@ -846,6 +846,144 @@ describe("ClaudeAuthBackend", () => {
       bridge: bridge(),
     });
     expect(statSync(store).mode & 0o777).toBe(0o700);
+  });
+});
+
+/**
+ * The row's Sign in on an account that already exists (INF-2319, the plan
+ * the captain accepted in INF-2308: "The button signs in."). It shows only
+ * after Anthropic refused the saved sign-in, so using that sign-in again
+ * changes nothing: Claude's own login runs over it, and only a new login
+ * counts.
+ */
+describe("ClaudeAuthBackend: the row's Sign in runs Claude's own login", () => {
+  const signInAgain = (backend: ClaudeAuthBackend, store: string, relay = bridge()) =>
+    backend.login({ ...accountRef(store), type: "oauth", bridge: relay, again: true });
+
+  it("runs the login over the refused sign-in and counts the new one", async () => {
+    const client = fakeClient();
+    const store = accountDir("again");
+    writeFileSync(join(store, "credential"), "refused-by-anthropic");
+    const backend = new ClaudeAuthBackend({
+      run: client.run,
+      available: () => true,
+      readStore: fakeStore,
+      configDir: () => store,
+    });
+    const relay = bridge();
+    await signInAgain(backend, store, relay);
+
+    expect(client.calls.filter((call) => call.args[1] === "login")).toHaveLength(1);
+    expect(readFileSync(join(store, "credential"), "utf8")).not.toBe("refused-by-anthropic");
+    const said = relay.notices.map((notice) => notice.message);
+    expect(said).toContain("Opening Claude in your browser to sign in...");
+    expect(said.join(" ")).not.toMatch(/Using the Claude login/);
+  });
+
+  it("says the sign-in did not finish when the refused sign-in is still all there is", async () => {
+    const store = accountDir("again-same");
+    writeFileSync(join(store, "credential"), "refused-by-anthropic");
+    const backend = new ClaudeAuthBackend({
+      // The client ends cleanly and says it is signed in, but saved nothing new.
+      run: async () => ({ code: 0, stdout: JSON.stringify({ loggedIn: true }), stderr: "" }),
+      available: () => true,
+      readStore: fakeStore,
+      configDir: () => store,
+    });
+    await expect(signInAgain(backend, store)).rejects.toMatchObject({
+      message: CLAUDE_LOGIN_UNFINISHED_TEXT,
+    });
+  });
+
+  it("does not count the refused sign-in when the client stops answering", async () => {
+    const store = accountDir("again-timeout");
+    writeFileSync(join(store, "credential"), "refused-by-anthropic");
+    const backend = new ClaudeAuthBackend({
+      run: async (args) => {
+        if (args[1] === "login") throw new Error("Claude did not respond in time.");
+        return { code: 0, stdout: JSON.stringify({ loggedIn: true }), stderr: "" };
+      },
+      available: () => true,
+      readStore: fakeStore,
+      configDir: () => store,
+    });
+    await expect(signInAgain(backend, store)).rejects.toThrow("Claude did not respond in time.");
+  });
+
+  it("counts a new login the client saved before it stopped answering", async () => {
+    const store = accountDir("again-saved");
+    writeFileSync(join(store, "credential"), "refused-by-anthropic");
+    const backend = new ClaudeAuthBackend({
+      run: async (args, configDir) => {
+        if (args[1] === "login") {
+          writeFileSync(join(configDir, "credential"), "saved-before-the-timer");
+          throw new Error("Claude did not respond in time.");
+        }
+        return { code: 0, stdout: JSON.stringify({ loggedIn: true }), stderr: "" };
+      },
+      available: () => true,
+      readStore: fakeStore,
+      configDir: () => store,
+    });
+    await signInAgain(backend, store);
+    expect(readFileSync(join(store, "credential"), "utf8")).toBe("saved-before-the-timer");
+  });
+
+  it("runs the login over a sign-in it cannot read now, and counts it on Claude's word", async () => {
+    // A saved sign-in macOS keeps from this app reads as unreadable in the
+    // background: that is no reason to keep the refused one.
+    const calls: string[][] = [];
+    const run: RunClaude = async (args) => {
+      calls.push(args);
+      return args[1] === "login"
+        ? { code: 0, stdout: "Login successful.", stderr: "" }
+        : { code: 0, stdout: JSON.stringify({ loggedIn: true }), stderr: "" };
+    };
+    const store = accountDir("again-unreadable");
+    const backend = new ClaudeAuthBackend({
+      run,
+      available: () => true,
+      readStore: async () => ({ state: "unreadable", reason: "keychain_needs_grant" }),
+      configDir: () => store,
+    });
+    await signInAgain(backend, store);
+    expect(calls.filter((args) => args[1] === "login")).toHaveLength(1);
+  });
+
+  it("keeps Claude's own words when a login it cannot read afterwards failed", async () => {
+    const store = accountDir("again-unreadable-failed");
+    const backend = new ClaudeAuthBackend({
+      run: async (args) =>
+        args[1] === "login"
+          ? { code: 1, stdout: "", stderr: "Your organization has SSO enforced." }
+          : { code: 0, stdout: JSON.stringify({ loggedIn: true }), stderr: "" },
+      available: () => true,
+      readStore: async () => ({ state: "unreadable", reason: "keychain_needs_grant" }),
+      configDir: () => store,
+    });
+    await expect(signInAgain(backend, store)).rejects.toThrow(
+      "Your organization has SSO enforced.",
+    );
+  });
+
+  it("uses a login Claude says is there when nothing was saved, as a first connect does", async () => {
+    const store = accountDir("again-empty");
+    const calls: string[][] = [];
+    const backend = new ClaudeAuthBackend({
+      run: async (args) => {
+        calls.push(args);
+        return { code: 0, stdout: JSON.stringify({ loggedIn: true }), stderr: "" };
+      },
+      available: () => true,
+      readStore: async () => ({ state: "absent" }),
+      configDir: () => store,
+    });
+    const relay = bridge();
+    await signInAgain(backend, store, relay);
+    expect(calls.filter((args) => args[1] === "login")).toEqual([]);
+    expect(relay.notices.map((notice) => notice.message)).toContain(
+      "Using the Claude login on this computer.",
+    );
   });
 });
 
@@ -906,7 +1044,6 @@ describe("ClaudeAuthBackend on a computer that runs work: a code pasted back", (
       run,
       available: () => true,
       readStore: fakeStore,
-      primeKeychain: async () => {},
       configDir: () => store,
       pasteCode: true,
     });
@@ -964,6 +1101,26 @@ describe("ClaudeAuthBackend on a computer that runs work: a code pasted back", (
     expect(prompts).toEqual([]);
   });
 
+  it("signs in again over the refused sign-in with a pasted code, and records the login it made", async () => {
+    const client = pasteClient();
+    const store = accountDir("paste-again");
+    writeFileSync(join(store, "credential"), "refused-by-anthropic");
+    const vault = accountDir("paste-again-vault");
+    const { relay, prompts } = pasting(async () => "good-code#s1");
+    await computer(store, client.run).login({
+      providerId: CLAUDE_PROVIDER_ID,
+      accountId: "acct_p",
+      dir: vault,
+      type: "oauth",
+      bridge: relay,
+      again: true,
+    });
+    expect(client.seen.logins).toBe(1);
+    expect(client.seen.browser).toBe(NO_BROWSER);
+    expect(prompts).toEqual([expect.objectContaining({ kind: "manual_code" })]);
+    expect(existsSync(join(vault, MADE_LOGIN_FILE))).toBe(true);
+  });
+
   it("adopts a login Claude says is there when the store reads as empty, and asks for nothing", async () => {
     const client = pasteClient({ elsewhere: true });
     const { relay, notices, prompts } = pasting(async () => "unused");
@@ -993,7 +1150,6 @@ describe("ClaudeAuthBackend on a computer that runs work: a code pasted back", (
       run: client.run,
       available: () => true,
       readStore: async () => ({ state: "unreadable" }),
-      primeKeychain: async () => {},
       configDir: () => accountDir("paste-unknown"),
       pasteCode: true,
     });
@@ -1093,7 +1249,6 @@ describe("ClaudeAuthBackend on a computer that runs work: signing out the login 
           identity: existsSync(identity) ? { accountUuid: readFileSync(identity, "utf8") } : {},
         };
       },
-      primeKeychain: async () => {},
       configDir: () => store,
       pasteCode: true,
     });

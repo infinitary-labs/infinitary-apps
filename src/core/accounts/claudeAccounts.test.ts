@@ -87,7 +87,6 @@ function vault() {
           available: () => true,
           configDir: () => store,
           readStore: fileStore,
-          primeKeychain: async () => {},
         }),
       ],
       modelsForAccount: ({ providerId }) =>
@@ -191,7 +190,6 @@ describe("Claude accounts in the vault", () => {
           available: () => true,
           configDir: () => store,
           readStore: async () => ({ state: "absent" }),
-          primeKeychain: async () => {},
         }),
       ],
     });
@@ -208,8 +206,10 @@ describe("Claude accounts in the vault", () => {
  * attribute probe fails - a denied or timed-out read - behind the vault's
  * own entry points: Connect (`add`) and the row's Sign in (`signIn`). A new
  * vendor sign-in replaces the stored login and can sign out every Claude
- * Code session already running on the Mac, so a store Infinitary cannot read
- * must never start one.
+ * Code session already running on the Mac, so Connect never starts one over
+ * a store Infinitary cannot read. The row's Sign in shows only after
+ * Anthropic refused the saved sign-in, so it runs Claude's own login
+ * whether or not the store reads now (INF-2319).
  */
 describe("signing in over a login Infinitary cannot read", () => {
   function unreadableVault(options: { clientSignedIn?: boolean } = {}) {
@@ -245,7 +245,6 @@ describe("signing in over a login Infinitary cannot read", () => {
           available: () => true,
           configDir: () => store,
           keychain,
-          primeKeychain: async () => {},
         }),
       ],
     });
@@ -265,17 +264,16 @@ describe("signing in over a login Infinitary cannot read", () => {
     expect(existsSync(join(paths.accountsDir, CLAUDE_PROVIDER_ID))).toBe(false);
   });
 
-  it("the row's Sign in starts no vendor sign-in over it either", async () => {
+  it("the row's Sign in runs Claude's own login over it, since Anthropic refused that one", async () => {
     const { keychain, subject, vendorSignIns } = unreadableVault();
     // Connected while the store answered; then the read starts failing.
     keychain.presence = { kind: "found" };
     const account = await subject.add(CLAUDE_PROVIDER_ID, "oauth", bridge());
+    expect(vendorSignIns()).toBe(0);
     keychain.presence = { kind: "failed", message: "The Keychain read timed out." };
 
-    await expect(subject.signIn(account.id, bridge())).rejects.toThrow(
-      CLAUDE_LOGIN_UNREADABLE_TEXT,
-    );
-    expect(vendorSignIns()).toBe(0);
+    await subject.signIn(account.id, bridge());
+    expect(vendorSignIns()).toBe(1);
     expect(subject.list(CLAUDE_PROVIDER_ID).map((row) => row.id)).toEqual([account.id]);
   });
 
@@ -313,7 +311,6 @@ describe("status reads against a spawned client", () => {
           available: () => true,
           configDir: () => store,
           readStore: fileStore,
-          primeKeychain: async () => {},
         }),
       ],
     });

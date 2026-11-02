@@ -102,7 +102,6 @@ function backendFor(
     run,
     available: () => true,
     keychain: passwords,
-    primeKeychain: async () => {},
     configDir: () => dir,
     readStore: (configDir) => readClaudeStore(configDir, { keychain: passwords, env }),
   });
@@ -216,6 +215,43 @@ describe("Claude connect adopts a usable default login", () => {
     expect(calls).toEqual([]);
   });
 
+  it("INF-2319: the row's Sign in over that saved sign-in runs Claude's login, and the fresh one counts", async () => {
+    // Connect adopts it (above); the row offers Sign in only once Anthropic
+    // refused it, and using it once more would change nothing.
+    const { dir, env } = home();
+    lapsedFile(dir);
+    const calls: string[][] = [];
+    const run: RunClaude = async (args, configDir) => {
+      calls.push(args);
+      if (args[1] === "login") {
+        writeFileSync(
+          join(configDir, ".credentials.json"),
+          JSON.stringify({
+            claudeAiOauth: { accessToken: "fresh", expiresAt: 9e15, refreshTokenExpiresAt: 9e15 },
+          }),
+        );
+        return { code: 0, stdout: "", stderr: "" };
+      }
+      return { code: 0, stdout: JSON.stringify({ loggedIn: true }), stderr: "" };
+    };
+    const relay = bridge();
+    await backendFor(dir, env, keychain({ kind: "absent" }), run).login({
+      providerId: CLAUDE_PROVIDER_ID,
+      accountId: "acct_adopt",
+      dir: scratchDir("infinitary-claude-adopt-vault-"),
+      type: "oauth",
+      bridge: relay,
+      again: true,
+    });
+    expect(calls).toEqual([["auth", "login", "--claudeai"]]);
+    expect(
+      await readClaudeStore(dir, { keychain: keychain({ kind: "absent" }), env }),
+    ).toMatchObject({ state: "present", auth: { accessToken: "fresh" } });
+    expect(relay.notices.map((notice) => notice.message).join(" ")).not.toMatch(
+      /login on this computer/i,
+    );
+  });
+
   it("does not start a sign-in when the store becomes unreadable while it waits", async () => {
     resetStoreLeasesForTest();
     const { dir } = home();
@@ -229,7 +265,6 @@ describe("Claude connect adopts a usable default login", () => {
     const backend = new ClaudeAuthBackend({
       run: claude.run,
       available: () => true,
-      primeKeychain: async () => {},
       configDir: () => dir,
       readStore: async () => (unreadable ? { state: "unreadable" } : { state: "absent" }),
     });

@@ -530,8 +530,7 @@ export type ReadClaudeStoreOptions = {
   /**
    * Read the Keychain even when the file store answered. The vendor's own
    * 401 is the one signal worth spending the macOS ask on: it is the moment
-   * a sidecar could be masking a live item. Sign-in priming also sets this
-   * so the grant is requested at connect time.
+   * a sidecar could be masking a live item.
    */
   preferKeychain?: boolean;
   /**
@@ -660,22 +659,6 @@ async function readStore(
         ? { written: `keychain:${fromKeychain.modifiedAt}` }
         : {}),
   };
-}
-
-/**
- * Request the Keychain VALUE at connect / sign-in time: the moment a
- * permission prompt is expected. Does not fail the sign-in; a refusal
- * becomes a locked meter the user can retry.
- */
-export async function requestKeychainValueAccess(
-  configDir: string,
-  options: ReadClaudeStoreOptions = {},
-): Promise<ClaudeStoreRead> {
-  return readClaudeStore(configDir, {
-    ...options,
-    allowPrompt: true,
-    preferKeychain: true,
-  });
 }
 
 /**

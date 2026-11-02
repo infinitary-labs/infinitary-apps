@@ -119,13 +119,12 @@ export async function startComputerAccounts(
     modelsPath: join(baseDir, "models.json"),
   });
   const keychain = options.keychain ?? absentKeychain;
-  // Claude on this macOS user's own login: adopted when it is here, and
-  // otherwise signed in with a code pasted back at the home, never a browser
-  // here. A sign-in asks macOS nothing: the allowance read after it is the
-  // same silent read as every other.
+  // Claude on this macOS user's own login: adopted when it is here on a
+  // first connect, and otherwise signed in with a code pasted back at the
+  // home, never a browser here. A sign-in asks macOS nothing: the allowance
+  // read after it is the same silent read as every other.
   const claude = new ClaudeAuthBackend({
     keychain,
-    primeKeychain: async () => {},
     ...options.claude,
     pasteCode: true,
   });

@@ -151,13 +151,16 @@ const LEDGER: { rule: string; home: Home; says: string }[] = [
 
 describe("the crewmate's fixed context (INF-416 piece J)", () => {
   it("stays inside its budget for each runtime and kind of work", () => {
-    const over = RUNTIMES.flatMap((runtime) =>
+    // INF-2286: keep the assembled context readings in the run's evidence,
+    // including the Careful case that outgrew the unchanged boundary.
+    const rows = RUNTIMES.flatMap((runtime) =>
       KINDS.map((kind) => {
         const tokens = fixedTokens(promptFor(runtime, kind));
-        return { label: label(runtime, kind), tokens };
+        return { label: label(runtime, kind), tokens, room: FIXED_CONTEXT_BOUNDARY - tokens };
       }),
-    ).filter((row) => row.tokens > FIXED_CONTEXT_BOUNDARY);
-    expect(over).toEqual([]);
+    );
+    console.info("Crewmate fixed context", { boundary: FIXED_CONTEXT_BOUNDARY, rows });
+    expect(rows.filter((row) => row.tokens > FIXED_CONTEXT_BOUNDARY)).toEqual([]);
   });
 
   it("names each tool's headroom when a description would meet the Claude cap", () => {
@@ -225,23 +228,27 @@ describe("the crewmate's fixed context (INF-416 piece J)", () => {
   });
 
   it("leaves the smallest local window room for the conversation it promises", () => {
-    const systemPrompt = buildCrewmateSystemPrompt("claude");
-    const fits = (tokens: number) =>
-      localInputFits(
-        {
-          systemPrompt,
-          tools,
-          messages: [{ role: "user", content: "x".repeat(tokens * 4), timestamp: 0 }],
-        },
-        OLLAMA_MIN_CONTEXT,
-      );
-    // The app's own pre-send check, beside the largest case (unknown facts,
-    // Claude note): a conversation as large as the boundary still fits.
-    expect(fits(FIXED_CONTEXT_BOUNDARY)).toBe(true);
-    // The check is the real one: it refuses what cannot fit.
-    const room = OLLAMA_MIN_CONTEXT - LOCAL_CONTEXT_RESERVE - fixedTokens(systemPrompt);
-    expect(fits(room)).toBe(true);
-    expect(fits(room + 1)).toBe(false);
+    // INF-2286: unknown care is Default, not the largest prompt. Exercise
+    // the real pre-send guard for every row, including direct-pr/Careful.
+    for (const runtime of RUNTIMES) {
+      for (const kind of KINDS) {
+        const systemPrompt = promptFor(runtime, kind);
+        const fits = (tokens: number) =>
+          localInputFits(
+            {
+              systemPrompt,
+              tools,
+              messages: [{ role: "user", content: "x".repeat(tokens * 4), timestamp: 0 }],
+            },
+            OLLAMA_MIN_CONTEXT,
+          );
+        expect(fits(FIXED_CONTEXT_BOUNDARY), label(runtime, kind)).toBe(true);
+        // The check is the real one: it refuses what cannot fit.
+        const room = OLLAMA_MIN_CONTEXT - LOCAL_CONTEXT_RESERVE - fixedTokens(systemPrompt);
+        expect(fits(room), label(runtime, kind)).toBe(true);
+        expect(fits(room + 1), label(runtime, kind)).toBe(false);
+      }
+    }
   });
 
   it("says each rule the trim took out of the delivery guidance in the home the ledger names", () => {

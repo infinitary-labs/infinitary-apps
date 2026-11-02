@@ -412,7 +412,7 @@ export function seedSignedInClaudeStore(accountDir: string): void {
 
 /**
  * Seed the store's own credential FILE, shaped like the client writes it
- * where no Keychain serves it: what `readClaudeCredentialEvidence` reads
+ * where no Keychain serves it: what `readClaudeStore` reads
  * when no client can be asked. Fake tokens, a far-future expiry.
  */
 export function seedClaudeCredentialFile(accountDir: string): void {

@@ -1,11 +1,11 @@
 import { KEYCHAIN_VALUE_FAILURE_DETAIL, QUOTA_TO_PI_PROVIDER, servedModelKey } from "@shared/quota";
 import { describe, expect, it, vi } from "vitest";
 import { scratchDir } from "../../../tests/helpers/scratchDirs";
-import { clearKeychainLock, resolveClaudeQuotaAuthResult } from "../claude/claudeQuota";
+import { clearKeychainLock, readClaudeStore } from "../claude/claudeQuota";
 import type { HostKeychain } from "../host";
 import { QUOTA_PROVIDERS, type QuotaAuth, type QuotaProviderId } from "./auth";
 import { buildModelsCatalog } from "./catalog";
-import { managedFromClaudeAuthResult } from "./claudeAuthResolve";
+import { managedFromClaudeStore } from "./claudeAuthResolve";
 import { createQuotaFetcher } from "./fetchQuota";
 import { type QuotaHttp, QuotaTransportError } from "./http";
 import { keychainFailureOutcome, type ProviderOutcome } from "./outcome";
@@ -1005,8 +1005,8 @@ describe("Claude Keychain VALUE refusal (CL-C / D-3)", () => {
         },
       ],
       resolve: async (accountId, options) => {
-        const mapped = managedFromClaudeAuthResult(
-          await resolveClaudeQuotaAuthResult(dir, {
+        const mapped = managedFromClaudeStore(
+          await readClaudeStore(dir, {
             keychain,
             env: { USER: "kun" },
             allowPrompt: options?.allowPrompt,
@@ -1061,8 +1061,8 @@ describe("Claude Keychain VALUE refusal (CL-C / D-3)", () => {
         },
       ],
       resolve: async (accountId, options) => {
-        const mapped = managedFromClaudeAuthResult(
-          await resolveClaudeQuotaAuthResult(dir, {
+        const mapped = managedFromClaudeStore(
+          await readClaudeStore(dir, {
             keychain,
             env: { USER: "kun" },
             allowPrompt: options?.allowPrompt,
@@ -1166,6 +1166,7 @@ describe("Claude usage asks", () => {
   it("never serves an answer the previous login got, and drops one that lands after a switch", async () => {
     let at = NOW;
     let login = "login-a";
+    let observedLogin = login;
     let asks = 0;
     let percent = 100;
     let landing: (() => void) | undefined;
@@ -1179,11 +1180,18 @@ describe("Claude usage asks", () => {
       return answer;
     };
     const fetcher = createQuotaFetcher({
-      auth,
+      auth: {
+        ...auth,
+        resolve: async (accountId, options) => {
+          // INF-2318: only the store read, not a separate focus scan, observes the swap.
+          observedLogin = login;
+          return auth.resolve(accountId, options);
+        },
+      },
       http,
       models: () => [],
       now: () => at,
-      loginOf: () => login,
+      loginOf: () => observedLogin,
     });
     const spent = await fetcher("startup");
     expect(spent.snapshot.providers[0]?.windows[0]?.percentRemaining).toBe(0);
@@ -1202,6 +1210,7 @@ describe("Claude usage asks", () => {
     const late = fetcher("interval");
     await vi.waitFor(() => expect(asks).toBe(3));
     login = "login-a";
+    observedLogin = login; // A concurrent health read saw the external swap.
     landing();
     const dropped = await late;
     expect(dropped.snapshot.providers[0]).toMatchObject({ status: "skipped", windows: [] });

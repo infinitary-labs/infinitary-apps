@@ -1,9 +1,5 @@
-import {
-  isKeychainValueFailure,
-  KEYCHAIN_VALUE_FAILURE_DETAIL,
-  type KeychainValueFailure,
-} from "@shared/quota";
-import type { ClaudeQuotaAuthResult } from "../claude/claudeQuota";
+import { KEYCHAIN_VALUE_FAILURE_DETAIL, type KeychainValueFailure } from "@shared/quota";
+import type { ClaudeStoreRead } from "../claude/claudeQuota";
 import type { ManagedAuth } from "./auth";
 import { keychainFailureOutcome, type ProviderOutcome } from "./outcome";
 
@@ -14,20 +10,23 @@ import { keychainFailureOutcome, type ProviderOutcome } from "./outcome";
  * `details` words a Keychain failure: with a Retry on this Mac, and with why
  * it is not read on a computer that runs work.
  */
-export function managedFromClaudeAuthResult(
-  result: ClaudeQuotaAuthResult,
+export function managedFromClaudeStore(
+  result: ClaudeStoreRead,
   details: Record<KeychainValueFailure, string> = KEYCHAIN_VALUE_FAILURE_DETAIL,
 ): {
   managed?: ManagedAuth;
   unresolved?: ProviderOutcome;
 } {
-  if (result.status === "resolved") {
-    return { managed: { apiKey: result.auth.accessToken, usingOAuth: true } };
+  if (result.state === "present") {
+    return {
+      managed: {
+        apiKey: result.auth.accessToken,
+        usingOAuth: true,
+        ...(result.identity.label ? { account: result.identity.label } : {}),
+      },
+    };
   }
-  if (result.status === "locked") {
-    return { unresolved: keychainFailureOutcome(result.reason, details) };
-  }
-  if (result.reason && isKeychainValueFailure(result.reason)) {
+  if (result.state === "unreadable" && result.reason) {
     return { unresolved: keychainFailureOutcome(result.reason, details) };
   }
   return {};

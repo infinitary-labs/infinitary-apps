@@ -15,7 +15,7 @@ import type {
 import { CredentialHealthService } from "../accounts/credentialHealthService";
 import { ClaudeAuthBackend } from "../claude/claudeAuth";
 import { claudeAvailableModels } from "../claude/claudeModels";
-import { resolveClaudeQuotaAuth } from "../claude/claudeQuota";
+import { readClaudeStore } from "../claude/claudeQuota";
 import { appPathsFor } from "../paths";
 import type { AuthInteractionBridge } from "./piAuth";
 
@@ -384,10 +384,14 @@ describe("AccountVault", () => {
         new ClaudeAuthBackend({
           available: () => true,
           configDir: () => store,
-          evidence: async (configDir) => {
+          readStore: async (configDir) => {
             try {
               readFileSync(join(configDir, ".credentials.json"), "utf8");
-              return { state: "live" as const };
+              return {
+                state: "present" as const,
+                auth: { accessToken: "fixture-token" },
+                identity: {},
+              };
             } catch {
               return { state: "absent" as const };
             }
@@ -422,12 +426,12 @@ describe("AccountVault", () => {
     // put live quota bars on a card badged "sign in again".
     expect(vault.binding(account.id)).toEqual({ via: "default-login" });
     expect(
-      await resolveClaudeQuotaAuth(store, {
+      await readClaudeStore(store, {
         keychain: {
           findGenericPassword: async () => ({ kind: "absent" }),
           readGenericPassword: async () => ({ kind: "absent" }),
         },
-      }),
+      }).then((read) => (read.state === "present" ? read.auth : undefined)),
     ).toMatchObject({
       accessToken: "tok",
     });
@@ -448,7 +452,7 @@ describe("AccountVault", () => {
         new ClaudeAuthBackend({
           available: () => true,
           configDir: () => store,
-          evidence: async () => ({ state: "absent" }),
+          readStore: async () => ({ state: "absent" }),
           primeKeychain: async () => {},
           // A login that stores nothing, and a client that says so.
           run: async () => ({ code: 1, stdout: JSON.stringify({ loggedIn: false }), stderr: "" }),
@@ -478,7 +482,11 @@ describe("AccountVault", () => {
           client: async () =>
             installed ? { state: "ready", executable: "/x/claude" } : { state: "missing" },
           configDir: () => store,
-          evidence: async () => ({ state: "live", label: "kun@example.com" }),
+          readStore: async () => ({
+            state: "present",
+            auth: { accessToken: "fixture-token" },
+            identity: { label: "kun@example.com" },
+          }),
           primeKeychain: async () => {},
           run: async () => ({ code: 0, stdout: JSON.stringify({ loggedIn: true }), stderr: "" }),
         }),
@@ -710,7 +718,6 @@ describe("a typed cut-off on the account", () => {
       login: async () => {},
       logout: async () => undefined,
       health: async () => ({ ...facts.health, stamp: { ...facts.stamp } }),
-      loginStamp: async () => facts.stamp.login,
       renew,
       status: async () => statusFromHealth(facts.health),
       binding: () => ({ via: "default-login" }),
@@ -1127,7 +1134,31 @@ describe("a typed cut-off on the account", () => {
   });
 
   // INF-1079: the captain switches Claude's login elsewhere when one runs out.
-  it("hears another login once, on a focus read or a health read, and across a restart", async () => {
+  // INF-2318: the next store reading owns Claude's row, not its old saved label.
+  it("updates Claude's label from health or allowance and keeps it through an unreadable read", async () => {
+    const world = claudeWorld({
+      health: { state: "healthy", authType: "oauth", identity: { label: "alex.one@example.com" } },
+    });
+    const { vault, id } = await signedInClaude(world);
+    await vault.health(id, { refresh: true });
+    expect(vault.get(id)?.label).toBe("alex.one@example.com");
+    // An allowance read carries only the non-secret projection into the vault.
+    vault.noteCredentialRead(
+      id,
+      { login: "login-b", written: "file:2" },
+      { label: "alex.two@example.com" },
+    );
+    expect(vault.get(id)?.label).toBe("alex.two@example.com");
+    world.facts.stamp = {};
+    world.facts.health = { state: "degraded", reason: "unknown" };
+    await vault.health(id, { refresh: true });
+    expect(await vault.views()).toContainEqual(
+      expect.objectContaining({ id, label: "alex.two@example.com", connected: true }),
+    );
+    expect(world.open().get(id)?.label).toBe("alex.two@example.com");
+  });
+
+  it("hears another login once from the unified health read and across a restart", async () => {
     const world = claudeWorld();
     const { vault, id } = await signedInClaude(world);
     await vault.health(id, { refresh: true });
@@ -1136,17 +1167,19 @@ describe("a typed cut-off on the account", () => {
 
     // A read that cannot see the login, or sees the same one, is no change.
     world.facts.stamp = { written: "file:2", client: "2.1.234" };
-    await vault.checkLogins();
+    await vault.health(id, { refresh: true });
     world.facts.stamp = { login: "login-a", written: "file:3", client: "2.1.234" };
-    await vault.checkLogins();
+    await vault.health(id, { refresh: true });
     await vi.waitFor(() => expect(vault.loginSync(id)).toBe("login-a"));
     expect(heard).toEqual([]);
 
-    // Another login, read when the window is focused: what stood on the old
+    // Another login, seen in the next health read: what stood on the old
     // login ends, a spent allowance included.
     vault.noteCutOff(id, { class: "no_headroom", resetsAt: world.facts.now + 3_600_000 });
+    // Let the cut-off's own health read finish before the external swap.
+    await vault.health(id, { refresh: true });
     world.facts.stamp = { login: "login-b", written: "file:4", client: "2.1.234" };
-    await vault.checkLogins();
+    await vault.health(id, { refresh: true });
     await vi.waitFor(() => expect(heard).toEqual([id]));
     expect(vault.cutOff(id)).toBeUndefined();
     expect(vault.loginSync(id)).toBe("login-b");

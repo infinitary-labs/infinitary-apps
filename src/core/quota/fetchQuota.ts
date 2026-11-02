@@ -147,14 +147,6 @@ async function fetchOneAccount(
 ): Promise<QuotaProviderView> {
   const { auth } = options;
   const throttled = account.quotaId === "claude";
-  const login = options.loginOf?.(account.accountId);
-  if (throttled) {
-    const last = claudeAsks.get(account.accountId);
-    // A person's Retry always asks; everything else waits out the interval,
-    // unless the login changed since the last answer.
-    if (last && last.login === login && !allowPrompt && now < last.nextAskAt - ASK_SLACK_MS)
-      return last.view;
-  }
   const base = {
     provider: account.quotaId,
     label: account.providerLabel,
@@ -181,7 +173,18 @@ async function fetchOneAccount(
     managed = undefined;
   }
   if (!managed) return view(auth.unresolved?.(account.accountId) ?? CREDENTIAL_UNAVAILABLE);
+  if (managed.account) base.accountLabel = managed.account;
 
+  // Resolve the store before using a cached allowance: the current login
+  // comes from that same read, without a separate focus-time scan.
+  const login = options.loginOf?.(account.accountId);
+  if (throttled) {
+    const last = claudeAsks.get(account.accountId);
+    // A person's Retry always asks; everything else waits out the interval,
+    // unless the login changed since the last answer.
+    if (last && last.login === login && !allowPrompt && now < last.nextAskAt - ASK_SLACK_MS)
+      return last.view;
+  }
   // From here the vendor is asked, so the answer is what the next refreshes serve.
   const answered = (outcome: ProviderOutcome): QuotaProviderView => {
     // The login changed while the vendor was asked: the answer is the old

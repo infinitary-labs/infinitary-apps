@@ -18,12 +18,12 @@ import {
 } from "./claudeAuth";
 import { NO_BROWSER, type RunClaude } from "./claudeCli";
 import {
-  type ClaudeCredentialEvidence,
+  type ClaudeStoreRead,
+  claudeCredentialStamp,
   clearClaudeCredentialCache,
   clearKeychainLock,
   isKeychainLocked,
-  readClaudeCredentialEvidence,
-  resolveClaudeQuotaAuthResult,
+  readClaudeStore,
 } from "./claudeQuota";
 import { resetStoreLeasesForTest } from "./claudeStoreLease";
 
@@ -46,10 +46,12 @@ type FakeClient = {
  * marker the fake client writes, classified the way the real store is (a
  * present credential is live; nothing there is a sign-out).
  */
-const fakeEvidence = async (configDir: string): Promise<ClaudeCredentialEvidence> => {
+const fakeStore = async (configDir: string): Promise<ClaudeStoreRead> => {
   const marker = join(configDir, "credential");
   const present = existsSync(marker) && readFileSync(marker, "utf8").length > 0;
-  return present ? { state: "live" } : { state: "absent" };
+  return present
+    ? { state: "present" as const, auth: { accessToken: "fixture-token" }, identity: {} }
+    : { state: "absent" };
 };
 
 /** A client that cannot be run at all - the packaged-build failure shape. */
@@ -126,7 +128,7 @@ describe("ClaudeAuthBackend", () => {
     const backend = new ClaudeAuthBackend({
       run: client.run,
       available: () => true,
-      evidence: fakeEvidence,
+      readStore: fakeStore,
       primeKeychain: async () => {},
       configDir: () => store,
     });
@@ -163,7 +165,7 @@ describe("ClaudeAuthBackend", () => {
     const backend = new ClaudeAuthBackend({
       run: client.run,
       available: () => true,
-      evidence: fakeEvidence,
+      readStore: fakeStore,
       configDir: () => store,
       keychain: {
         findGenericPassword: async () => ({ kind: "found" }),
@@ -195,7 +197,7 @@ describe("ClaudeAuthBackend", () => {
     const backend = new ClaudeAuthBackend({
       run: client.run,
       available: () => true,
-      evidence: fakeEvidence,
+      readStore: fakeStore,
       primeKeychain: async () => {},
       configDir: () => store,
     });
@@ -219,7 +221,7 @@ describe("ClaudeAuthBackend", () => {
     const backend = new ClaudeAuthBackend({
       run: client.run,
       available: () => true,
-      evidence: async () => ({ state: "unknown" }),
+      readStore: async () => ({ state: "unreadable" }),
       primeKeychain: async () => {},
       configDir: () => store,
     });
@@ -246,8 +248,10 @@ describe("ClaudeAuthBackend", () => {
       run: client.run,
       available: () => true,
       // Absence plus the client’s signed-out answer permits a new login.
-      evidence: async (dir) =>
-        existsSync(join(dir, "credential")) ? { state: "live" } : { state: "absent" },
+      readStore: async (dir) =>
+        existsSync(join(dir, "credential"))
+          ? { state: "present" as const, auth: { accessToken: "fixture-token" }, identity: {} }
+          : { state: "absent" },
       primeKeychain: async () => {},
       configDir: () => store,
     });
@@ -267,7 +271,7 @@ describe("ClaudeAuthBackend", () => {
     const backend = new ClaudeAuthBackend({
       run: client.run,
       available: () => true,
-      evidence: fakeEvidence,
+      readStore: fakeStore,
       primeKeychain: async () => {},
       configDir: () => store,
     });
@@ -294,7 +298,7 @@ describe("ClaudeAuthBackend", () => {
     const backend = new ClaudeAuthBackend({
       run: client.run,
       available: () => true,
-      evidence: fakeEvidence,
+      readStore: fakeStore,
       primeKeychain: async () => {},
       configDir: () => store,
     });
@@ -325,7 +329,7 @@ describe("ClaudeAuthBackend", () => {
             ? { code: 1, stdout: waited, stderr }
             : { code: 1, stdout: JSON.stringify({ loggedIn: false }), stderr: "" },
         available: () => true,
-        evidence: fakeEvidence,
+        readStore: fakeStore,
         primeKeychain: async () => {},
         configDir: () => store,
       });
@@ -350,7 +354,7 @@ describe("ClaudeAuthBackend", () => {
             }
           : { code: 1, stdout: JSON.stringify({ loggedIn: false }), stderr: "" },
       available: () => true,
-      evidence: fakeEvidence,
+      readStore: fakeStore,
       primeKeychain: async () => {},
       configDir: () => accountDir("c-ssl"),
     });
@@ -380,7 +384,7 @@ describe("ClaudeAuthBackend", () => {
     let logins = 0;
     const backend = new ClaudeAuthBackend({
       available: () => true,
-      evidence: fakeEvidence,
+      readStore: fakeStore,
       primeKeychain: async () => {},
       configDir: () => store,
       run: async (args, configDir) => {
@@ -421,7 +425,7 @@ describe("ClaudeAuthBackend", () => {
     const store = accountDir("timeout-saved");
     const backend = new ClaudeAuthBackend({
       available: () => true,
-      evidence: fakeEvidence,
+      readStore: fakeStore,
       primeKeychain: async () => {},
       configDir: () => store,
       run: async (args, configDir) => {
@@ -456,7 +460,7 @@ describe("ClaudeAuthBackend", () => {
     const relay = bridge();
     const backend = new ClaudeAuthBackend({
       available: () => true,
-      evidence: fakeEvidence,
+      readStore: fakeStore,
       primeKeychain: async () => {},
       configDir: () => store,
       run: async (args, _configDir, options) => {
@@ -490,7 +494,7 @@ describe("ClaudeAuthBackend", () => {
     const backend = new ClaudeAuthBackend({
       run: fakeClient().run,
       available: () => true,
-      evidence: fakeEvidence,
+      readStore: fakeStore,
       configDir: () => accountDir("d"),
     });
     await expect(
@@ -510,7 +514,7 @@ describe("ClaudeAuthBackend", () => {
     const backend = new ClaudeAuthBackend({
       run: client.run,
       available: () => true,
-      evidence: fakeEvidence,
+      readStore: fakeStore,
       primeKeychain: async () => {},
       configDir: () => store,
     });
@@ -528,7 +532,7 @@ describe("ClaudeAuthBackend", () => {
     const backend = new ClaudeAuthBackend({
       run: fakeClient().run,
       available: () => true,
-      evidence: fakeEvidence,
+      readStore: fakeStore,
       configDir: () => accountDir("bind"),
     });
     const dir = accountDir("bind-vault");
@@ -547,7 +551,11 @@ describe("ClaudeAuthBackend", () => {
     const backend = new ClaudeAuthBackend({
       run: unspawnableClient,
       client: async () => ({ state: "missing" }),
-      evidence: async () => ({ state: "live", label: "kun@example.com" }),
+      readStore: async () => ({
+        state: "present",
+        auth: { accessToken: "fixture-token" },
+        identity: { label: "kun@example.com" },
+      }),
       configDir: () => store,
     });
     const health = await backend.health(accountRef(store));
@@ -574,7 +582,11 @@ describe("ClaudeAuthBackend", () => {
         version: "2.1.100",
         floor: "2.1.234",
       }),
-      evidence: async () => ({ state: "live" }),
+      readStore: async () => ({
+        state: "present" as const,
+        auth: { accessToken: "fixture-token" },
+        identity: {},
+      }),
       configDir: () => store,
     });
     const health = await backend.health(accountRef(store));
@@ -589,12 +601,20 @@ describe("ClaudeAuthBackend", () => {
     const backend = new ClaudeAuthBackend({
       run: unspawnableClient,
       client: async () => ({ state: "ready", executable: "/x/claude", version: "2.1.234" }),
-      evidence: async () => ({ state: "live" }),
-      stamp: async () => ({ login: "login-a", written }),
+      readStore: async () => ({
+        state: "present",
+        auth: { accessToken: "fixture-token" },
+        identity: { accountUuid: "account-a" },
+        written,
+      }),
       configDir: () => store,
     });
     expect((await backend.health(accountRef(store))).stamp).toEqual({
-      login: "login-a",
+      login: claudeCredentialStamp({
+        state: "present",
+        auth: { accessToken: "fixture-token" },
+        identity: { accountUuid: "account-a" },
+      }).login,
       written: "file:1",
       client: "2.1.234",
     });
@@ -603,11 +623,15 @@ describe("ClaudeAuthBackend", () => {
     // The stamp is the vault's, never the account view's.
     expect(await backend.status(accountRef(store))).toEqual({ connected: true, authType: "oauth" });
 
-    // A test that injects only the store evidence never reads a real login's stamp.
+    // A test that injects the store read never reaches a real login.
     const unstamped = new ClaudeAuthBackend({
       run: unspawnableClient,
       available: () => true,
-      evidence: async () => ({ state: "live" }),
+      readStore: async () => ({
+        state: "present" as const,
+        auth: { accessToken: "fixture-token" },
+        identity: {},
+      }),
       configDir: () => store,
     });
     expect((await unstamped.health(accountRef(store))).stamp).toBeUndefined();
@@ -618,7 +642,7 @@ describe("ClaudeAuthBackend", () => {
     const backend = new ClaudeAuthBackend({
       run: unspawnableClient,
       client: async () => ({ state: "missing" }),
-      evidence: async () => ({ state: "absent" }),
+      readStore: async () => ({ state: "absent" }),
       configDir: () => store,
     });
     expect(await backend.health(accountRef(store))).toEqual({ state: "unsigned" });
@@ -630,7 +654,7 @@ describe("ClaudeAuthBackend", () => {
     const saved = new ClaudeAuthBackend({
       run: unspawnableClient,
       client: async () => ({ state: "missing" }),
-      evidence: (dir) => readClaudeCredentialEvidence(dir, { env: { HOME: store } }),
+      readStore: (dir) => readClaudeStore(dir, { env: { HOME: store } }),
       configDir: () => store,
     });
     expect((await saved.health(accountRef(store))).state).toBe("degraded");
@@ -641,7 +665,11 @@ describe("ClaudeAuthBackend", () => {
     const backend = new ClaudeAuthBackend({
       run: unspawnableClient,
       client: async () => ({ state: "missing" }),
-      evidence: async () => ({ state: "live" }),
+      readStore: async () => ({
+        state: "present" as const,
+        auth: { accessToken: "fixture-token" },
+        identity: {},
+      }),
       configDir: () => store,
     });
     await expect(
@@ -659,13 +687,13 @@ describe("ClaudeAuthBackend", () => {
     const absent = new ClaudeAuthBackend({
       run: fakeClient().run,
       available: () => false,
-      evidence: fakeEvidence,
+      readStore: fakeStore,
     });
     expect(absent.authTypes()).toEqual([]);
     const present = new ClaudeAuthBackend({
       run: fakeClient().run,
       available: () => true,
-      evidence: fakeEvidence,
+      readStore: fakeStore,
     });
     expect(present.authTypes()).toEqual(["oauth"]);
   });
@@ -684,7 +712,7 @@ describe("ClaudeAuthBackend", () => {
     const backend = new ClaudeAuthBackend({
       run: unspawnableClient,
       available: () => true,
-      evidence: fakeEvidence,
+      readStore: fakeStore,
       configDir: () => dir,
     });
 
@@ -701,7 +729,11 @@ describe("ClaudeAuthBackend", () => {
     const backend = new ClaudeAuthBackend({
       run: unspawnableClient,
       available: () => true,
-      evidence: async () => ({ state: "live", label: "kun@example.com" }),
+      readStore: async () => ({
+        state: "present",
+        auth: { accessToken: "fixture-token" },
+        identity: { label: "kun@example.com" },
+      }),
     });
     const status = await backend.status({
       providerId: CLAUDE_PROVIDER_ID,
@@ -715,11 +747,46 @@ describe("ClaudeAuthBackend", () => {
     });
   });
 
+  // INF-2318: the current config, not a stale client answer or a separate peek, owns identity.
+  it("reads identity, expiry and the refusal stamp from one store result", async () => {
+    const dir = accountDir("one-read");
+    writeFileSync(
+      join(dir, ".credentials.json"),
+      JSON.stringify({ claudeAiOauth: { accessToken: "fixture-token", expiresAt: 9000 } }),
+    );
+    writeFileSync(
+      join(dir, ".claude.json"),
+      JSON.stringify({
+        oauthAccount: { emailAddress: "alex.two@example.com", accountUuid: "account-two" },
+      }),
+    );
+    const readStore = vi.fn((store: string) =>
+      readClaudeStore(store, { env: { HOME: dir }, now: () => 1000 }),
+    );
+    const backend = new ClaudeAuthBackend({
+      run: async () => ({
+        code: 0,
+        stdout: JSON.stringify({ loggedIn: true, email: "alex.one@example.com" }),
+        stderr: "",
+      }),
+      available: () => true,
+      configDir: () => dir,
+      now: () => 1000,
+      readStore,
+    });
+    expect(await backend.health(accountRef(dir))).toMatchObject({
+      identity: { label: "alex.two@example.com" },
+      expiresAt: 9000,
+      stamp: { login: expect.any(String), written: expect.any(String) },
+    });
+    expect(readStore).toHaveBeenCalledExactlyOnceWith(dir);
+  });
+
   it("does not treat an unreadable store as a sign-out either", async () => {
     const backend = new ClaudeAuthBackend({
       run: async () => ({ code: 0, stdout: "not json at all", stderr: "" }),
       available: () => true,
-      evidence: async () => ({ state: "unknown" }),
+      readStore: async () => ({ state: "unreadable" }),
     });
     // Unknown is never absent (rule 3): degraded projects as connected, and
     // must never become needs_reauth.
@@ -743,7 +810,7 @@ describe("ClaudeAuthBackend", () => {
     const gone = new ClaudeAuthBackend({
       run: unspawnableClient,
       available: () => true,
-      evidence: async () => ({ state: "absent" }),
+      readStore: async () => ({ state: "absent" }),
     });
     // INF-2317: a saved credential with an old date remains connected.
     const store = accountDir("saved-expired-date");
@@ -754,7 +821,7 @@ describe("ClaudeAuthBackend", () => {
     const saved = new ClaudeAuthBackend({
       run: unspawnableClient,
       available: () => true,
-      evidence: (dir) => readClaudeCredentialEvidence(dir, { env: { HOME: store } }),
+      readStore: (dir) => readClaudeStore(dir, { env: { HOME: store } }),
       configDir: () => store,
     });
     const ref = { providerId: CLAUDE_PROVIDER_ID, accountId: "acct_x", dir: accountDir("gone") };
@@ -767,7 +834,7 @@ describe("ClaudeAuthBackend", () => {
     const backend = new ClaudeAuthBackend({
       run: fakeClient().run,
       available: () => true,
-      evidence: fakeEvidence,
+      readStore: fakeStore,
       primeKeychain: async () => {},
       configDir: () => store,
     });
@@ -838,7 +905,7 @@ describe("ClaudeAuthBackend on a computer that runs work: a code pasted back", (
     return new ClaudeAuthBackend({
       run,
       available: () => true,
-      evidence: fakeEvidence,
+      readStore: fakeStore,
       primeKeychain: async () => {},
       configDir: () => store,
       pasteCode: true,
@@ -925,7 +992,7 @@ describe("ClaudeAuthBackend on a computer that runs work: a code pasted back", (
     const backend = new ClaudeAuthBackend({
       run: client.run,
       available: () => true,
-      evidence: async () => ({ state: "unknown" }),
+      readStore: async () => ({ state: "unreadable" }),
       primeKeychain: async () => {},
       configDir: () => accountDir("paste-unknown"),
       pasteCode: true,
@@ -1017,10 +1084,14 @@ describe("ClaudeAuthBackend on a computer that runs work: signing out the login 
     return new ClaudeAuthBackend({
       run,
       available: () => true,
-      evidence: fakeEvidence,
-      stamp: async (dir) => {
+      readStore: async (dir) => {
+        const read = await fakeStore(dir);
+        if (read.state !== "present") return read;
         const identity = join(dir, "identity");
-        return existsSync(identity) ? { login: readFileSync(identity, "utf8") } : {};
+        return {
+          ...read,
+          identity: existsSync(identity) ? { accountUuid: readFileSync(identity, "utf8") } : {},
+        };
       },
       primeKeychain: async () => {},
       configDir: () => store,
@@ -1171,7 +1242,6 @@ describe("ClaudeAuthBackend health/renew", () => {
     const backend = new ClaudeAuthBackend({
       run: unspawnableClient,
       available: () => true,
-      evidence: async () => ({ state: "live" }),
       configDir: () => store,
       now: () => now,
       leadMs: 5 * 60_000,
@@ -1195,18 +1265,17 @@ describe("ClaudeAuthBackend health/renew", () => {
     const backend = new ClaudeAuthBackend({
       run: unspawnableClient,
       available: () => false,
-      evidence: async () => ({ state: "live" }),
       configDir: () => store,
       keychain,
     });
     // A quota tick reads the store once and remembers what it found.
-    await resolveClaudeQuotaAuthResult(store, { keychain, now: () => 1000 });
-    await resolveClaudeQuotaAuthResult(store, { keychain, now: () => 2000 });
+    await readClaudeStore(store, { keychain, now: () => 1000 });
+    await readClaudeStore(store, { keychain, now: () => 2000 });
     expect(reads).toBe(1);
 
     await backend.logout(ref(store));
 
-    await resolveClaudeQuotaAuthResult(store, { keychain, now: () => 3000 });
+    await readClaudeStore(store, { keychain, now: () => 3000 });
     expect(reads).toBe(2);
   });
 
@@ -1215,7 +1284,6 @@ describe("ClaudeAuthBackend health/renew", () => {
     const backend = new ClaudeAuthBackend({
       run: unspawnableClient,
       available: () => false,
-      evidence: async () => ({ state: "unknown" }),
       configDir: () => store,
       keychain: {
         findGenericPassword: async () => ({ kind: "found" }),
@@ -1243,7 +1311,6 @@ describe("ClaudeAuthBackend health/renew", () => {
         return { code: 0, stdout: "{}", stderr: "" };
       },
       available: () => true,
-      evidence: async () => ({ state: "live" }),
       configDir: () => store,
     });
     expect(await backend.renew(ref(store), "proactive")).toEqual({ outcome: "renewed" });

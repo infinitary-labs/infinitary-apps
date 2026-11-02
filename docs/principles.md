@@ -9,7 +9,7 @@ Infinitary is the most advanced agent harness, but it aggressively hides that co
 The user interacts with just the main first mate agent and a few settings - nothing else.
 The fewer concepts we expose, the better.
 Accounts, harnesses, crewmate transports, quota routing, and rebinding are machinery; the surfaces a person touches stay calm.
-Concretely: the sign-in flow and the Subscriptions tab never expose the "harness" technicality - they speak only of providers, accounts (labeled by the user), and quota.
+Concretely: the sign-in flow and the Subscriptions tab never expose the "harness" technicality - they speak only of providers, accounts (labeled by the user, except Claude, which follows its current identity), and quota.
 An e2e assertion enforces the wording.
 
 ## Standing product principle (captain, 2026-09-19)

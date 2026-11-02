@@ -32,7 +32,8 @@ export const NO_CLAUDE_LOGIN_USER = "infinitary-e2e-no-claude-login";
 export const CLAUDE_SEAT_ACCOUNT = "acct_claude_seat";
 export const CODEX_SEAT_ACCOUNT = "acct_codex_seat";
 /** The Claude account's label, the name a pause or a move says it by. */
-export const CLAUDE_SEAT_LABEL = "Personal";
+// INF-2318: Claude names its current store identity, not a custom account label.
+export const CLAUDE_SEAT_LABEL = "sailor@example.com";
 
 /** The Claude model the captain picks for Firstmate (Claude's medium slot). */
 export const CLAUDE_SEAT_MODEL = {
@@ -194,7 +195,15 @@ export async function launchClaudeSeat(options: ClaudeSeatLaunch): Promise<Launc
     // this run's user.
     prepareHome: (homeDir) => {
       seedSignedInClaudeStore(claudeDefaultStore(homeDir));
-      if (!relaunch) seedClaudeCredentialFile(claudeDefaultStore(homeDir));
+      if (!relaunch) {
+        seedClaudeCredentialFile(claudeDefaultStore(homeDir));
+        writeFileSync(
+          join(homeDir, ".claude.json"),
+          JSON.stringify({
+            oauthAccount: { emailAddress: CLAUDE_SEAT_LABEL, accountUuid: CLAUDE_SEAT_ACCOUNT },
+          }),
+        );
+      }
       options.prepareHome?.(homeDir);
     },
     env: {

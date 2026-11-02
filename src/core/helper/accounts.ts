@@ -7,9 +7,10 @@ import { CredentialHealthService } from "../accounts/credentialHealthService";
 import { buildProviderViews } from "../accounts/providerViews";
 import { ClaudeAuthBackend } from "../claude/claudeAuth";
 import {
+  claudeCredentialStamp,
   clearKeychainLock,
   defaultClaudeConfigDir,
-  resolveClaudeQuotaAuthResult,
+  readClaudeStore,
 } from "../claude/claudeQuota";
 import { absentKeychain, type HostKeychain } from "../host";
 import { type AccountStoreOptions, createAccountStore } from "../models/accountStore";
@@ -17,7 +18,7 @@ import type { AccountVault } from "../pi/accountVault";
 import { PiAccountBackend } from "../pi/piAccountBackend";
 import { PiAuthService } from "../pi/piAuth";
 import { type ManagedAuth, quotaEntryForPiProvider } from "../quota/auth";
-import { managedFromClaudeAuthResult } from "../quota/claudeAuthResolve";
+import { managedFromClaudeStore } from "../quota/claudeAuthResolve";
 import { createQuotaFetcher } from "../quota/fetchQuota";
 import { createQuotaHttp, type QuotaHttp } from "../quota/http";
 import type { ProviderOutcome } from "../quota/outcome";
@@ -174,10 +175,13 @@ export async function startComputerAccounts(
   const resolveClaude = async (accountId: string): Promise<ManagedAuth | undefined> => {
     const dir = claudeDir();
     clearKeychainLock(dir);
-    const mapped = managedFromClaudeAuthResult(
-      await resolveClaudeQuotaAuthResult(dir, { keychain, allowPrompt: false, persistLock: false }),
-      KEYCHAIN_VALUE_FAILURE_THERE,
+    const read = await readClaudeStore(dir, { keychain, allowPrompt: false, persistLock: false });
+    vault.noteCredentialRead(
+      accountId,
+      claudeCredentialStamp(read),
+      read.state === "present" ? read.identity : undefined,
     );
+    const mapped = managedFromClaudeStore(read, KEYCHAIN_VALUE_FAILURE_THERE);
     if (mapped.unresolved) claudeUnread.set(accountId, mapped.unresolved);
     else claudeUnread.delete(accountId);
     return mapped.managed;
@@ -220,6 +224,7 @@ export async function startComputerAccounts(
     },
     http: options.http ?? createQuotaHttp(),
     models: () => [],
+    loginOf: (accountId) => vault.loginSync(accountId),
     onAccepted: (accountId, windows) => {
       vault.noteAccepted(accountId);
       // More left than when the allowance was refused: credits were added.

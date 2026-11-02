@@ -714,22 +714,31 @@ export class AccountVault {
   }
 
   /**
-   * Read which login each enabled account's store names, from attributes
-   * only - no credential value, no client, nothing that asks for access - so
-   * it can run whenever the person comes back (window focus, a wake). A
-   * changed login is heard at once and its health read fresh.
+   * A fresh credential read (health or allowance) names the current store.
+   * No token crosses this seam. Refusal facts keep their persisted stamps;
+   * Claude's row follows the current identity, not the old saved label.
    */
-  async checkLogins(): Promise<void> {
-    await Promise.all(
-      this.liveAccounts().map(async (account) => {
-        if (!account.enabled) return;
-        const backend = this.backends.get(backendForProvider(account.providerId));
-        if (!backend?.loginStamp) return;
-        const login = await backend.loginStamp(this.refFor(account)).catch(() => undefined);
-        if (this.noteLogin(account.id, login))
-          await this.health(account.id, { refresh: true }).catch(() => undefined);
-      }),
-    );
+  noteCredentialRead(
+    accountId: string,
+    stamp: CredentialStamp | undefined,
+    identity?: { label?: string },
+  ): void {
+    this.settleCutOff(accountId, stamp);
+    if (this.noteLogin(accountId, stamp?.login)) {
+      this.healthReadAt.delete(accountId);
+      this.statusReadAt.delete(accountId);
+    }
+    const account = this.registry.accounts.find((entry) => entry.id === accountId);
+    if (
+      account?.providerId === CLAUDE_PROVIDER_ID &&
+      identity?.label &&
+      account.label !== identity.label
+    ) {
+      account.label = identity.label;
+      this.saveRegistry();
+      this.healthReadAt.delete(accountId);
+      this.statusReadAt.delete(accountId);
+    }
   }
 
   /** The cut-off standing on this account, if any. */
@@ -819,8 +828,7 @@ export class AccountVault {
       }
       // A fresh read is where a changed login or client clears a cut-off.
       if (read) {
-        this.settleCutOff(accountId, health.stamp);
-        this.noteLogin(accountId, health.stamp?.login);
+        this.noteCredentialRead(accountId, health.stamp, health.identity);
       }
       this.lastHealth.set(accountId, health);
       const reported = this.withCutOff(accountId, health);

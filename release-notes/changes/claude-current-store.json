@@ -1,0 +1,17 @@
+{
+  "entries": [
+    {
+      "id": "claude-current-store",
+      "kind": "fix",
+      "title": "Claude shows the account you are using now",
+      "body": "After you switch Claude accounts, the next reading updates its name and allowance together. Claude always uses its current identity instead of a custom name; other subscriptions can still be renamed.",
+      "area": "subscriptions",
+      "picture": {
+        "dark": "claude-current-store-dark.webp",
+        "light": "claude-current-store-light.webp",
+        "alt": "Intelligence settings with Claude’s current account name above its Max plan, beside session and weekly allowance meters."
+      },
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

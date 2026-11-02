@@ -389,6 +389,7 @@ async function joined(
     logouts: 0,
     /** How many times something asked it for its model list. */
     listReads: 0,
+    allowanceReads: [] as string[],
   };
   let held: Promise<HeldSignIns> | undefined;
   // What the computer wrote to its own log.
@@ -403,8 +404,8 @@ async function joined(
     signIns: (start) => {
       held = startSignIns({
         ...start,
-        accounts: (accountsOptions) =>
-          startComputerAccounts({
+        accounts: async (accountsOptions) => {
+          const accounts = await startComputerAccounts({
             ...accountsOptions,
             http: allowance.http,
             clock: false,
@@ -450,12 +451,27 @@ async function joined(
               ...(options.keychain
                 ? {}
                 : {
-                    evidence: async () => ({ state: claude.loggedIn ? "live" : "absent" }),
-                    // Which login the store holds: the one account this script signs in.
-                    stamp: async () => (claude.loggedIn ? { login: "standin-account" } : {}),
+                    readStore: async () =>
+                      claude.loggedIn
+                        ? {
+                            state: "present",
+                            auth: { accessToken: "standin-token" },
+                            identity: { accountUuid: "standin-account" },
+                          }
+                        : { state: "absent" },
                   }),
             },
-          }),
+          });
+          const readAllowance = accounts.readAllowance;
+          return {
+            ...accounts,
+            readAllowance: async (reason) => {
+              const result = await readAllowance(reason);
+              claude.allowanceReads.push(reason);
+              return result;
+            },
+          };
+        },
       });
       return held;
     },
@@ -858,7 +874,9 @@ describe("a computer that runs work signs in to its own subscriptions from its h
     const { accounts } = await world.held();
     const account = accounts.vault.list().find((row) => row.providerId === CLAUDE_PROVIDER_ID);
     if (!account) throw new Error("The computer kept no Claude account.");
-    await accounts.readModels?.(account.id);
+    // The ended message precedes the sign-in's model-list and allowance work.
+    // Keep the lease until that work finishes, not merely until the message arrives.
+    await expect.poll(() => world.claude.allowanceReads.includes("sign-in")).toBe(true);
     expect(world.claude.listReads).toBe(0);
     // The session ends; the next allowance reading asks Claude's client for its list.
     release();

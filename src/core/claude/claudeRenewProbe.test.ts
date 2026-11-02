@@ -13,7 +13,7 @@ import { isAbsolute, join, resolve } from "node:path";
 import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 import { scratchDir } from "../../../tests/helpers/scratchDirs";
 import { NO_BROWSER, resolveClaudeExecutable, runClaude } from "./claudeCli";
-import { CLAUDE_RENEW_COMMANDS, credentialMarker, resolveClaudeQuotaAuth } from "./claudeQuota";
+import { CLAUDE_RENEW_COMMANDS, credentialMarker, readClaudeStore } from "./claudeQuota";
 
 /**
  * Ordinary runs exercise the probe's isolation through a recording client.
@@ -59,7 +59,11 @@ function isolatedProbe(accountDir?: string) {
       },
     });
   const marker = async () =>
-    credentialMarker(await resolveClaudeQuotaAuth(configDir, { bypassCache: true }));
+    credentialMarker(
+      await readClaudeStore(configDir, { bypassCache: true }).then((read) =>
+        read.state === "present" ? read.auth : undefined,
+      ),
+    );
   const assertEmpty = async () => {
     // Check the actual store, not an unrelated scratch directory. On Linux
     // this is the client's credential backend; status also proves signed out.

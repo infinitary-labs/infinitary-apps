@@ -8,7 +8,7 @@ import type { HostKeychain, HostKeychainOutcome, HostKeychainQuery } from "../ho
 import type { AuthInteractionBridge } from "../pi/piAuth";
 import { CLAUDE_LOGIN_UNREADABLE_TEXT, ClaudeAuthBackend } from "./claudeAuth";
 import type { RunClaude } from "./claudeCli";
-import { keychainAccountName, readClaudeCredentialEvidence } from "./claudeQuota";
+import { keychainAccountName, readClaudeStore } from "./claudeQuota";
 import { resetStoreLeasesForTest, runExclusiveStoreTask } from "./claudeStoreLease";
 
 /**
@@ -104,7 +104,7 @@ function backendFor(
     keychain: passwords,
     primeKeychain: async () => {},
     configDir: () => dir,
-    evidence: (configDir) => readClaudeCredentialEvidence(configDir, { keychain: passwords, env }),
+    readStore: (configDir) => readClaudeStore(configDir, { keychain: passwords, env }),
   });
 }
 
@@ -138,8 +138,8 @@ describe("Claude connect adopts a usable default login", () => {
     const relay = bridge();
     const backend = backendFor(dir, env, passwords, claude.run);
 
-    expect(await readClaudeCredentialEvidence(dir, { keychain: passwords, env })).toEqual({
-      state: "live",
+    expect(await readClaudeStore(dir, { keychain: passwords, env })).toMatchObject({
+      state: "present",
     });
     await loginOf(backend, relay);
 
@@ -151,7 +151,7 @@ describe("Claude connect adopts a usable default login", () => {
       true,
     );
     expect(passwords.finds.every((query) => query.account === "kun")).toBe(true);
-    expect(passwords.reads).toBe(0);
+    expect(passwords.reads).toBe(2);
     const health = await backend.health({
       providerId: CLAUDE_PROVIDER_ID,
       accountId: "acct_adopt",
@@ -163,9 +163,9 @@ describe("Claude connect adopts a usable default login", () => {
   it("does not replace a login whose file cannot be read", async () => {
     const { dir, env } = home();
     writeFileSync(join(dir, ".credentials.json"), "{not json");
-    expect(
-      await readClaudeCredentialEvidence(dir, { keychain: keychain({ kind: "absent" }), env }),
-    ).toEqual({ state: "unknown" });
+    expect(await readClaudeStore(dir, { keychain: keychain({ kind: "absent" }), env })).toEqual({
+      state: "unreadable",
+    });
 
     const signedIn = client(true);
     const relay = bridge();
@@ -185,9 +185,9 @@ describe("Claude connect adopts a usable default login", () => {
   it("treats a directory where the credential file should be as unreadable", async () => {
     const { dir, env } = home();
     mkdirSync(join(dir, ".credentials.json"));
-    expect(
-      await readClaudeCredentialEvidence(dir, { keychain: keychain({ kind: "absent" }), env }),
-    ).toEqual({ state: "unknown" });
+    expect(await readClaudeStore(dir, { keychain: keychain({ kind: "absent" }), env })).toEqual({
+      state: "unreadable",
+    });
   });
 
   it("INF-2317: adopts the saved sign-in despite its passed refresh date", async () => {
@@ -208,8 +208,8 @@ describe("Claude connect adopts a usable default login", () => {
       return { code: 1, stdout: JSON.stringify({ loggedIn: false }), stderr: "" };
     };
     expect(
-      await readClaudeCredentialEvidence(dir, { keychain: keychain({ kind: "absent" }), env }),
-    ).toEqual({ state: "live" });
+      await readClaudeStore(dir, { keychain: keychain({ kind: "absent" }), env }),
+    ).toMatchObject({ state: "present" });
 
     await loginOf(backendFor(dir, env, keychain({ kind: "absent" }), run), bridge());
     expect(calls.some((args) => args[1] === "login")).toBe(false);
@@ -231,7 +231,7 @@ describe("Claude connect adopts a usable default login", () => {
       available: () => true,
       primeKeychain: async () => {},
       configDir: () => dir,
-      evidence: async () => (unreadable ? { state: "unknown" } : { state: "absent" }),
+      readStore: async () => (unreadable ? { state: "unreadable" } : { state: "absent" }),
     });
     const pending = loginOf(backend, bridge());
     unreadable = true;

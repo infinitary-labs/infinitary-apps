@@ -1,4 +1,4 @@
-import { mkdirSync, utimesSync, writeFileSync } from "node:fs";
+import { mkdirSync, rmSync, utimesSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { scratchDir } from "../../../tests/helpers/scratchDirs";
@@ -11,18 +11,16 @@ import type {
 import {
   CLAUDE_RENEW_COMMANDS,
   classifyKeychainValueError,
+  claudeCredentialStamp,
   clearClaudeCredentialCache,
   clearKeychainLock,
   defaultClaudeConfigDir,
   isKeychainLocked,
   keychainAccountName,
   keychainServiceFor,
-  readClaudeCredentialEvidence,
-  readClaudeCredentialStamp,
+  readClaudeStore,
   renewClaudeQuotaAuth,
   requestKeychainValueAccess,
-  resolveClaudeQuotaAuth,
-  resolveClaudeQuotaAuthResult,
 } from "./claudeQuota";
 import { resetStoreLeasesForTest } from "./claudeStoreLease";
 
@@ -136,22 +134,22 @@ describe("the client's item under an account other than USER", () => {
     clearClaudeCredentialCache();
   });
 
-  it("reads it as a live login, by attribute only", async () => {
+  it("reads the current login through its found item", async () => {
     const keychain = savedPasswords({ unknown: credentialJson("client-token") });
-    expect(await readClaudeCredentialEvidence(storeDir(), { keychain, env })).toEqual({
-      state: "live",
+    expect(await readClaudeStore(storeDir(), { keychain, env })).toMatchObject({
+      state: "present",
     });
     expect(keychain.finds).toEqual([
       { service: SERVICE, account: "kunchen" },
       { service: SERVICE },
     ]);
-    expect(keychain.reads).toHaveLength(0);
+    expect(keychain.reads).toHaveLength(1);
   });
 
   it("reads that one item's value for the meter, by the account presence found", async () => {
     const keychain = savedPasswords({ unknown: credentialJson("client-token", 4102444800000) });
-    expect(await resolveClaudeQuotaAuthResult(storeDir(), { keychain, env })).toEqual({
-      status: "resolved",
+    expect(await readClaudeStore(storeDir(), { keychain, env })).toMatchObject({
+      state: "present",
       auth: { accessToken: "client-token", expiresAt: 4102444800000 },
     });
     expect(keychain.reads).toEqual([{ service: SERVICE, account: "unknown" }]);
@@ -159,7 +157,9 @@ describe("the client's item under an account other than USER", () => {
 
   it("dates it for the cut-off stamp", async () => {
     const keychain = savedPasswords({ unknown: credentialJson("client-token") });
-    expect(await readClaudeCredentialStamp(storeDir(), { keychain, env })).toEqual({
+    expect(
+      await readClaudeStore(storeDir(), { keychain, env }).then(claudeCredentialStamp),
+    ).toEqual({
       written: "keychain:20261028213000Z",
     });
   });
@@ -169,8 +169,8 @@ describe("the client's item under an account other than USER", () => {
       unknown: credentialJson("other-token"),
       kunchen: credentialJson("user-token"),
     });
-    expect(await resolveClaudeQuotaAuthResult(storeDir(), { keychain, env })).toMatchObject({
-      status: "resolved",
+    expect(await readClaudeStore(storeDir(), { keychain, env })).toMatchObject({
+      state: "present",
       auth: { accessToken: "user-token" },
     });
     expect(keychain.finds).toEqual([{ service: SERVICE, account: "kunchen" }]);
@@ -178,7 +178,7 @@ describe("the client's item under an account other than USER", () => {
   });
 });
 
-describe("resolveClaudeQuotaAuth", () => {
+describe("readClaudeStore", () => {
   beforeEach(() => {
     clearKeychainLock();
     clearClaudeCredentialCache();
@@ -188,7 +188,9 @@ describe("resolveClaudeQuotaAuth", () => {
     const dir = storeDir();
     writeFileSync(join(dir, ".credentials.json"), credentialJson("tok-1"));
     const keychain = fakeKeychain({});
-    const auth = await resolveClaudeQuotaAuth(dir, { keychain });
+    const auth = await readClaudeStore(dir, { keychain }).then((read) =>
+      read.state === "present" ? read.auth : undefined,
+    );
     expect(auth).toEqual({ accessToken: "tok-1" });
     expect(keychain.finds).toHaveLength(0);
     expect(keychain.reads).toHaveLength(0);
@@ -196,7 +198,9 @@ describe("resolveClaudeQuotaAuth", () => {
 
   it("returns nothing for an empty store (no ask, no invention)", async () => {
     const keychain = fakeKeychain({ find: { kind: "absent" } });
-    const auth = await resolveClaudeQuotaAuth(storeDir(), { keychain });
+    const auth = await readClaudeStore(storeDir(), { keychain }).then((read) =>
+      read.state === "present" ? read.auth : undefined,
+    );
     expect(auth).toBeUndefined();
   });
 
@@ -205,7 +209,9 @@ describe("resolveClaudeQuotaAuth", () => {
     const keychain = fakeKeychain({
       read: { kind: "value", value: `${credentialJson("kc-token")}\n` },
     });
-    const auth = await resolveClaudeQuotaAuth(dir, { keychain, env: { USER: "kun" } });
+    const auth = await readClaudeStore(dir, { keychain, env: { USER: "kun" } }).then((read) =>
+      read.state === "present" ? read.auth : undefined,
+    );
     expect(auth).toEqual({ accessToken: "kc-token" });
     expect(keychain.finds).toEqual([{ service: "Claude Code-credentials", account: "kun" }]);
     expect(keychain.reads).toEqual([{ service: "Claude Code-credentials", account: "kun" }]);
@@ -216,8 +222,8 @@ describe("resolveClaudeQuotaAuth", () => {
     const keychain = fakeKeychain({
       read: { kind: "failed", code: -128, message: "User canceled the request." },
     });
-    const result = await resolveClaudeQuotaAuthResult(dir, { keychain, env: { USER: "kun" } });
-    expect(result).toEqual({ status: "locked", reason: "keychain_access_denied" });
+    const result = await readClaudeStore(dir, { keychain, env: { USER: "kun" } });
+    expect(result).toEqual({ state: "unreadable", reason: "keychain_access_denied" });
     expect(isKeychainLocked(dir)).toBe(true);
   });
 
@@ -226,8 +232,16 @@ describe("resolveClaudeQuotaAuth", () => {
     const keychain = fakeKeychain({
       read: { kind: "failed", code: -128, message: "User canceled the request." },
     });
-    expect(await resolveClaudeQuotaAuth(dir, { keychain })).toBeUndefined();
-    expect(await resolveClaudeQuotaAuth(dir, { keychain })).toBeUndefined();
+    expect(
+      await readClaudeStore(dir, { keychain }).then((read) =>
+        read.state === "present" ? read.auth : undefined,
+      ),
+    ).toBeUndefined();
+    expect(
+      await readClaudeStore(dir, { keychain }).then((read) =>
+        read.state === "present" ? read.auth : undefined,
+      ),
+    ).toBeUndefined();
     expect(keychain.reads).toHaveLength(1);
   });
 
@@ -242,25 +256,25 @@ describe("resolveClaudeQuotaAuth", () => {
           ? { kind: "value", value: credentialJson("kc-new-login") }
           : { kind: "failed", code: -128, message: "User canceled the request." },
     });
-    const ask = () => resolveClaudeQuotaAuthResult(dir, { keychain, env: { USER: "kun" } });
-    expect(await ask()).toEqual({ status: "locked", reason: "keychain_access_denied" });
+    const ask = () => readClaudeStore(dir, { keychain, env: { USER: "kun" } });
+    expect(await ask()).toEqual({ state: "unreadable", reason: "keychain_access_denied" });
     // The same store: no second ask until Retry.
-    expect(await ask()).toEqual({ status: "locked", reason: "keychain_access_denied" });
+    expect(await ask()).toEqual({ state: "unreadable", reason: "keychain_access_denied" });
     expect(keychain.reads).toHaveLength(1);
 
     // A swapped login rewrites the item: one background read, never a prompt,
     // and a decline locks the new item until Retry.
     modifiedAt = "2026-10-02T11:57:00Z";
-    expect(await ask()).toEqual({ status: "locked", reason: "keychain_access_denied" });
+    expect(await ask()).toEqual({ state: "unreadable", reason: "keychain_access_denied" });
     expect(keychain.reads).toHaveLength(2);
     expect(keychain.reads[1]?.interactive).toBeUndefined();
-    expect(await ask()).toEqual({ status: "locked", reason: "keychain_access_denied" });
+    expect(await ask()).toEqual({ state: "unreadable", reason: "keychain_access_denied" });
     expect(keychain.reads).toHaveLength(2);
 
     // Another rewrite the client can read: the meter comes back with no Retry.
     modifiedAt = "2026-10-02T11:58:00Z";
     allow = true;
-    expect(await ask()).toEqual({ status: "resolved", auth: { accessToken: "kc-new-login" } });
+    expect(await ask()).toMatchObject({ state: "present", auth: { accessToken: "kc-new-login" } });
     expect(isKeychainLocked(dir)).toBe(false);
   });
 
@@ -273,21 +287,21 @@ describe("resolveClaudeQuotaAuth", () => {
         return { kind: "value", value: credentialJson("kc-retry") };
       },
     });
-    const declined = await resolveClaudeQuotaAuthResult(dir, { keychain, env: { USER: "kun" } });
-    expect(declined).toEqual({ status: "locked", reason: "keychain_access_denied" });
-    expect(await resolveClaudeQuotaAuthResult(dir, { keychain, env: { USER: "kun" } })).toEqual({
-      status: "locked",
+    const declined = await readClaudeStore(dir, { keychain, env: { USER: "kun" } });
+    expect(declined).toEqual({ state: "unreadable", reason: "keychain_access_denied" });
+    expect(await readClaudeStore(dir, { keychain, env: { USER: "kun" } })).toEqual({
+      state: "unreadable",
       reason: "keychain_access_denied",
     });
     expect(keychain.reads).toHaveLength(1);
 
     allow = true;
-    const retried = await resolveClaudeQuotaAuthResult(dir, {
+    const retried = await readClaudeStore(dir, {
       keychain,
       env: { USER: "kun" },
       allowPrompt: true,
     });
-    expect(retried).toEqual({ status: "resolved", auth: { accessToken: "kc-retry" } });
+    expect(retried).toMatchObject({ state: "present", auth: { accessToken: "kc-retry" } });
     expect(keychain.reads).toHaveLength(2);
     expect(keychain.reads[1]?.interactive).toBe(true);
     expect(isKeychainLocked(dir)).toBe(false);
@@ -298,16 +312,16 @@ describe("resolveClaudeQuotaAuth", () => {
     const keychain = fakeKeychain({
       find: { kind: "failed", message: "timed out" },
     });
-    const result = await resolveClaudeQuotaAuthResult(dir, { keychain, env: { USER: "kun" } });
-    expect(result).toEqual({ status: "locked", reason: "keychain_prompt_timeout" });
+    const result = await readClaudeStore(dir, { keychain, env: { USER: "kun" } });
+    expect(result).toEqual({ state: "unreadable", reason: "keychain_prompt_timeout" });
     expect(isKeychainLocked(dir)).toBe(true);
   });
 
   it("an unparseable Keychain value is a read failure, not an empty store", async () => {
     const dir = storeDir();
     const keychain = fakeKeychain({ read: { kind: "value", value: "not-json" } });
-    const result = await resolveClaudeQuotaAuthResult(dir, { keychain, env: { USER: "kun" } });
-    expect(result).toEqual({ status: "locked", reason: "keychain_unreadable" });
+    const result = await readClaudeStore(dir, { keychain, env: { USER: "kun" } });
+    expect(result).toEqual({ state: "unreadable", reason: "keychain_unreadable" });
     expect(isKeychainLocked(dir)).toBe(true);
   });
 
@@ -320,13 +334,13 @@ describe("resolveClaudeQuotaAuth", () => {
         message: "User interaction is not allowed.",
       },
     });
-    const first = await resolveClaudeQuotaAuthResult(dir, { keychain, env: { USER: "kun" } });
+    const first = await readClaudeStore(dir, { keychain, env: { USER: "kun" } });
     expect(first).toEqual({
-      status: "unavailable",
+      state: "unreadable",
       reason: "keychain_no_interactive_session",
     });
     expect(isKeychainLocked(dir)).toBe(false);
-    const second = await resolveClaudeQuotaAuthResult(dir, { keychain, env: { USER: "kun" } });
+    const second = await readClaudeStore(dir, { keychain, env: { USER: "kun" } });
     expect(second).toEqual(first);
     expect(keychain.finds).toHaveLength(2);
   });
@@ -344,18 +358,18 @@ describe("resolveClaudeQuotaAuth", () => {
     });
     // A background read suppresses the dialog itself, so this status means
     // "not granted yet", not "this session has no dialogs".
-    const blocked = await resolveClaudeQuotaAuthResult(dir, { keychain, env: { USER: "kun" } });
+    const blocked = await readClaudeStore(dir, { keychain, env: { USER: "kun" } });
     expect(blocked).toEqual({
-      status: "unavailable",
+      state: "unreadable",
       reason: "keychain_needs_grant",
     });
     expect(isKeychainLocked(dir)).toBe(false);
     allow = true;
-    const retried = await resolveClaudeQuotaAuthResult(dir, {
+    const retried = await readClaudeStore(dir, {
       keychain,
       env: { USER: "kun" },
     });
-    expect(retried).toEqual({ status: "resolved", auth: { accessToken: "kc-session" } });
+    expect(retried).toMatchObject({ state: "present", auth: { accessToken: "kc-session" } });
   });
 
   it("the same status on a read that DID permit the dialog is a real session failure", async () => {
@@ -365,13 +379,13 @@ describe("resolveClaudeQuotaAuth", () => {
     });
     // allowPrompt let the host present a dialog and macOS still could not:
     // this is the SSH / non-Aqua case the "relaunch from the Dock" copy is for.
-    const result = await resolveClaudeQuotaAuthResult(dir, {
+    const result = await readClaudeStore(dir, {
       keychain,
       env: { USER: "kun" },
       allowPrompt: true,
     });
     expect(result).toEqual({
-      status: "unavailable",
+      state: "unreadable",
       reason: "keychain_no_interactive_session",
     });
   });
@@ -392,7 +406,7 @@ describe("resolveClaudeQuotaAuth", () => {
       read: { kind: "value", value: credentialJson("kc-prime", 9e15) },
     });
     const result = await requestKeychainValueAccess(dir, { keychain, env: { USER: "kun" } });
-    expect(result).toMatchObject({ status: "resolved", auth: { accessToken: "kc-prime" } });
+    expect(result).toMatchObject({ state: "present", auth: { accessToken: "kc-prime" } });
     expect(keychain.reads).toHaveLength(1);
     expect(keychain.reads[0]?.interactive).toBe(true);
   });
@@ -423,7 +437,9 @@ describe("resolveClaudeQuotaAuth", () => {
     const keychain = fakeKeychain({
       read: { kind: "value", value: credentialJson("live-keychain", 9e15) },
     });
-    const auth = await resolveClaudeQuotaAuth(dir, { keychain, now: () => 2000 });
+    const auth = await readClaudeStore(dir, { keychain, now: () => 2000 }).then((read) =>
+      read.state === "present" ? read.auth : undefined,
+    );
     expect(auth?.accessToken).toBe("live-keychain");
   });
 
@@ -431,7 +447,9 @@ describe("resolveClaudeQuotaAuth", () => {
     const dir = storeDir();
     writeFileSync(join(dir, ".credentials.json"), credentialJson("only-sidecar", 1000));
     const keychain = fakeKeychain({ find: { kind: "absent" } });
-    const auth = await resolveClaudeQuotaAuth(dir, { keychain, now: () => 2000 });
+    const auth = await readClaudeStore(dir, { keychain, now: () => 2000 }).then((read) =>
+      read.state === "present" ? read.auth : undefined,
+    );
     expect(auth?.accessToken).toBe("only-sidecar");
   });
 
@@ -441,10 +459,14 @@ describe("resolveClaudeQuotaAuth", () => {
     const keychain = fakeKeychain({
       read: { kind: "value", value: credentialJson("kc", 9e15) },
     });
-    await resolveClaudeQuotaAuth(dir, { keychain, now: () => 2000 });
+    await readClaudeStore(dir, { keychain, now: () => 2000 }).then((read) =>
+      read.state === "present" ? read.auth : undefined,
+    );
     expect(keychain.finds).toHaveLength(0);
     expect(keychain.reads).toHaveLength(0);
-    await resolveClaudeQuotaAuth(dir, { keychain, now: () => 2000, preferKeychain: true });
+    await readClaudeStore(dir, { keychain, now: () => 2000, preferKeychain: true }).then((read) =>
+      read.state === "present" ? read.auth : undefined,
+    );
     expect(keychain.reads).toHaveLength(1);
   });
 });
@@ -508,8 +530,8 @@ describe("a locked store", () => {
   it("a background tick reports the lock without the VALUE read or the unlock", async () => {
     const dir = storeDir();
     const { keychain } = lockedStore({ unlock: () => ({ kind: "unlocked" }) });
-    const result = await resolveClaudeQuotaAuthResult(dir, { keychain, env });
-    expect(result).toEqual({ status: "unavailable", reason: "keychain_locked" });
+    const result = await readClaudeStore(dir, { keychain, env });
+    expect(result).toEqual({ state: "unreadable", reason: "keychain_locked" });
     // The VALUE read is the one call that could raise a dialog on a locked
     // store, so a tick never makes it; nor may it ask to unlock.
     expect(keychain.reads).toHaveLength(0);
@@ -520,27 +542,27 @@ describe("a locked store", () => {
   it("is never a held lock: the next tick sees an unlock done elsewhere and recovers", async () => {
     const dir = storeDir();
     const { keychain, state } = lockedStore({});
-    await resolveClaudeQuotaAuthResult(dir, { keychain, env });
+    await readClaudeStore(dir, { keychain, env });
     expect(isKeychainLocked(dir)).toBe(false);
     // The person unlocks the Mac, or another app unlocks the store.
     state.locked = false;
-    const next = await resolveClaudeQuotaAuthResult(dir, { keychain, env });
-    expect(next).toEqual({ status: "resolved", auth: { accessToken: "kc-unlocked" } });
+    const next = await readClaudeStore(dir, { keychain, env });
+    expect(next).toMatchObject({ state: "present", auth: { accessToken: "kc-unlocked" } });
   });
 
   it("Retry asks the host to unlock first, then reads in-app and recovers", async () => {
     const dir = storeDir();
     const { keychain, state } = lockedStore({ unlock: () => ({ kind: "unlocked" }) });
-    expect(await resolveClaudeQuotaAuthResult(dir, { keychain, env })).toEqual({
-      status: "unavailable",
+    expect(await readClaudeStore(dir, { keychain, env })).toEqual({
+      state: "unreadable",
       reason: "keychain_locked",
     });
-    const retried = await resolveClaudeQuotaAuthResult(dir, {
+    const retried = await readClaudeStore(dir, {
       keychain,
       env,
       allowPrompt: true,
     });
-    expect(retried).toEqual({ status: "resolved", auth: { accessToken: "kc-unlocked" } });
+    expect(retried).toMatchObject({ state: "present", auth: { accessToken: "kc-unlocked" } });
     expect(state.locked).toBe(false);
     expect(keychain.unlocks).toEqual([
       { service: "Claude Code-credentials", account: "kun", interactive: true },
@@ -559,12 +581,12 @@ describe("a locked store", () => {
       { kind: "failed", message: "The unlock dialog timed out without an answer." },
     ] satisfies HostKeychainUnlockOutcome[]) {
       const { keychain, state } = lockedStore({ unlock: () => refused });
-      const result = await resolveClaudeQuotaAuthResult(dir, {
+      const result = await readClaudeStore(dir, {
         keychain,
         env,
         allowPrompt: true,
       });
-      expect(result).toEqual({ status: "unavailable", reason: "keychain_locked" });
+      expect(result).toEqual({ state: "unreadable", reason: "keychain_locked" });
       expect(state.locked).toBe(true);
       expect(keychain.reads).toHaveLength(0);
       expect(isKeychainLocked(dir)).toBe(false);
@@ -575,12 +597,12 @@ describe("a locked store", () => {
     const { keychain } = lockedStore({
       unlock: () => ({ kind: "failed", code: -25308, message: "User interaction is not allowed." }),
     });
-    const result = await resolveClaudeQuotaAuthResult(storeDir(), {
+    const result = await readClaudeStore(storeDir(), {
       keychain,
       env,
       allowPrompt: true,
     });
-    expect(result).toEqual({ status: "unavailable", reason: "keychain_no_interactive_session" });
+    expect(result).toEqual({ state: "unreadable", reason: "keychain_no_interactive_session" });
   });
 
   it("an unlock the host could not run at all is not promised to a Retry", async () => {
@@ -591,24 +613,24 @@ describe("a locked store", () => {
         message: "The unlock helper exited (1) without an answer.",
       }),
     });
-    const result = await resolveClaudeQuotaAuthResult(storeDir(), {
+    const result = await readClaudeStore(storeDir(), {
       keychain,
       env,
       allowPrompt: true,
     });
-    expect(result).toEqual({ status: "locked", reason: "keychain_unavailable" });
+    expect(result).toEqual({ state: "unreadable", reason: "keychain_unavailable" });
   });
 
   it("on a host that cannot unlock, a refused in-app read of a locked store is the lock", async () => {
     // No `unlockKeychain`: today's in-process read, and its refusal is named
     // for what it is - never "choose Always Allow", which no dialog offers.
     const { keychain } = lockedStore({});
-    const result = await resolveClaudeQuotaAuthResult(storeDir(), {
+    const result = await readClaudeStore(storeDir(), {
       keychain,
       env,
       allowPrompt: true,
     });
-    expect(result).toEqual({ status: "unavailable", reason: "keychain_locked" });
+    expect(result).toEqual({ state: "unreadable", reason: "keychain_locked" });
     expect(keychain.reads).toHaveLength(1);
     expect(keychain.reads[0]?.interactive).toBe(true);
   });
@@ -619,12 +641,12 @@ describe("a locked store", () => {
       unlock: () => ({ kind: "unlocked" }),
       grant: { kind: "failed", code: -128, message: "User canceled the request." },
     });
-    const result = await resolveClaudeQuotaAuthResult(dir, {
+    const result = await readClaudeStore(dir, {
       keychain,
       env,
       allowPrompt: true,
     });
-    expect(result).toEqual({ status: "locked", reason: "keychain_access_denied" });
+    expect(result).toEqual({ state: "unreadable", reason: "keychain_access_denied" });
     expect(isKeychainLocked(dir)).toBe(true);
   });
 
@@ -639,25 +661,25 @@ describe("a locked store", () => {
           : { kind: "value", value: credentialJson("kc-remembered", 9e15) },
     });
     const options = { keychain, env, now: () => 1000 };
-    await resolveClaudeQuotaAuthResult(dir, options);
+    await readClaudeStore(dir, options);
     // The Mac locks the store; the credential read before it is still current.
     state.locked = true;
-    const tick = await resolveClaudeQuotaAuthResult(dir, { ...options, now: () => 2000 });
-    expect(tick).toEqual({
-      status: "resolved",
+    const tick = await readClaudeStore(dir, { ...options, now: () => 2000 });
+    expect(tick).toMatchObject({
+      state: "present",
       auth: { accessToken: "kc-remembered", expiresAt: 9e15 },
     });
     expect(keychain.reads).toHaveLength(1);
   });
 
-  it("the credential evidence read stays attribute-only on a locked store", async () => {
+  it("the unified read reports a locked store without attempting a value or unlock", async () => {
     const { keychain } = lockedStore({ unlock: () => ({ kind: "unlocked" }) });
     expect(
-      await readClaudeCredentialEvidence(storeDir(), {
+      await readClaudeStore(storeDir(), {
         keychain,
         env: { HOME: "/tmp/infinitary-no-claude-home", USER: "kun" },
       }),
-    ).toEqual({ state: "live" });
+    ).toEqual({ state: "unreadable", reason: "keychain_locked" });
     expect(keychain.reads).toHaveLength(0);
     expect(keychain.unlocks).toHaveLength(0);
   });
@@ -678,44 +700,47 @@ describe("the remembered credential", () => {
       read: { kind: "value", value: credentialJson("kc-once", 9e15) },
     });
     const options = { keychain, env: { HOME: home }, now: () => 1000 };
-    const first = await resolveClaudeQuotaAuthResult(dir, options);
-    expect(first).toMatchObject({ status: "resolved", auth: { accessToken: "kc-once" } });
+    const first = await readClaudeStore(dir, options);
+    expect(first).toMatchObject({ state: "present", auth: { accessToken: "kc-once" } });
     expect(keychain.reads).toHaveLength(1);
 
-    const later = await resolveClaudeQuotaAuthResult(dir, { ...options, now: () => 2000 });
-    expect(later).toMatchObject({ status: "resolved", auth: { accessToken: "kc-once" } });
+    const later = await readClaudeStore(dir, { ...options, now: () => 2000 });
+    expect(later).toMatchObject({ state: "present", auth: { accessToken: "kc-once" } });
     expect(keychain.reads).toHaveLength(1);
   });
 
   it("re-reads after an external store mtime change but not for an unchanged store", async () => {
     const { home, dir } = storeWithHomeIdentity("account-a");
     let stored = credentialJson("kc-a", 9e15);
-    const keychain = fakeKeychain({ read: () => ({ kind: "value", value: stored }) });
+    const keychain = fakeKeychain({
+      find: { kind: "found", modifiedAt: "20260915183000Z" },
+      read: () => ({ kind: "value", value: stored }),
+    });
     const options = { keychain, env: { HOME: home }, now: () => 1_000 };
 
-    await resolveClaudeQuotaAuthResult(dir, options);
+    await readClaudeStore(dir, options);
     expect(keychain.reads).toHaveLength(1);
-    await resolveClaudeQuotaAuthResult(dir, options);
+    await readClaudeStore(dir, options);
     expect(keychain.reads).toHaveLength(1);
 
     // A swap can rewrite the non-secret home-root config without changing the
     // account UUID. Its mtime alone must invalidate the remembered token.
     utimesSync(join(home, ".claude.json"), new Date(2_000), new Date(2_000));
     stored = credentialJson("kc-mtime", 9e15);
-    const afterMtime = await resolveClaudeQuotaAuthResult(dir, options);
-    expect(afterMtime).toMatchObject({ status: "resolved", auth: { accessToken: "kc-mtime" } });
+    const afterMtime = await readClaudeStore(dir, options);
+    expect(afterMtime).toMatchObject({ state: "present", auth: { accessToken: "kc-mtime" } });
     expect(keychain.reads).toHaveLength(2);
 
-    // Conversely, an account rotation must invalidate even if a filesystem
-    // watcher reports the same modification timestamp.
+    // An account rotation rewrites the config; its modification date
+    // invalidates the identity and credential together.
     writeFileSync(
       join(home, ".claude.json"),
       JSON.stringify({ oauthAccount: { accountUuid: "account-b" } }),
     );
-    utimesSync(join(home, ".claude.json"), new Date(2_000), new Date(2_000));
+    utimesSync(join(home, ".claude.json"), new Date(3_000), new Date(3_000));
     stored = credentialJson("kc-uuid", 9e15);
-    const afterUuid = await resolveClaudeQuotaAuthResult(dir, options);
-    expect(afterUuid).toMatchObject({ status: "resolved", auth: { accessToken: "kc-uuid" } });
+    const afterUuid = await readClaudeStore(dir, options);
+    expect(afterUuid).toMatchObject({ state: "present", auth: { accessToken: "kc-uuid" } });
     expect(keychain.reads).toHaveLength(3);
   });
 
@@ -731,42 +756,42 @@ describe("the remembered credential", () => {
     });
     const options = { keychain, env: { HOME: home }, now: () => 1_000 };
 
-    await resolveClaudeQuotaAuthResult(dir, options);
-    await resolveClaudeQuotaAuthResult(dir, options);
+    await readClaudeStore(dir, options);
+    await readClaudeStore(dir, options);
     expect(keychain.reads).toHaveLength(1);
 
     modifiedAt = "20260915183100Z";
     stored = credentialJson("kc-b", 9e15);
-    const rotated = await resolveClaudeQuotaAuthResult(dir, options);
-    expect(rotated).toMatchObject({ status: "resolved", auth: { accessToken: "kc-b" } });
+    const rotated = await readClaudeStore(dir, options);
+    expect(rotated).toMatchObject({ state: "present", auth: { accessToken: "kc-b" } });
     expect(keychain.reads).toHaveLength(2);
   });
 
-  it("stops serving it before it expires, so the store is re-read while it still works", async () => {
+  it("keeps the cached value at access expiry until the modification date changes", async () => {
     const dir = storeDir();
     const expiresAt = 600_000;
     const keychain = fakeKeychain({
       find: { kind: "found", modifiedAt: "20260915183000Z" },
       read: { kind: "value", value: credentialJson("kc-dated", expiresAt) },
     });
-    await resolveClaudeQuotaAuthResult(dir, { keychain, now: () => 1000 });
+    await readClaudeStore(dir, { keychain, now: () => 1000 });
     expect(keychain.reads).toHaveLength(1);
     // Inside the lead: still the current credential.
-    await resolveClaudeQuotaAuthResult(dir, { keychain, now: () => expiresAt - 90_000 });
+    await readClaudeStore(dir, { keychain, now: () => expiresAt - 90_000 });
     expect(keychain.reads).toHaveLength(1);
-    // Within a minute of expiry: read the store again rather than serve it.
-    await resolveClaudeQuotaAuthResult(dir, { keychain, now: () => expiresAt - 30_000 });
-    expect(keychain.reads).toHaveLength(2);
+    // INF-2318: an unchanged modification date, not expiry, owns the cache.
+    await readClaudeStore(dir, { keychain, now: () => expiresAt + 30_000 });
+    expect(keychain.reads).toHaveLength(1);
   });
 
-  it("never remembers a credential it cannot date", async () => {
+  it("never remembers a Keychain item with no modification date", async () => {
     const dir = storeDir();
     const keychain = fakeKeychain({
       read: { kind: "value", value: credentialJson("kc-undated") },
     });
-    await resolveClaudeQuotaAuthResult(dir, { keychain, now: () => 1000 });
-    await resolveClaudeQuotaAuthResult(dir, { keychain, now: () => 2000 });
-    // No expiry means no way to know it is still current: read every time.
+    await readClaudeStore(dir, { keychain, now: () => 1000 });
+    await readClaudeStore(dir, { keychain, now: () => 2000 });
+    // No modification date means every tick must read the item again.
     expect(keychain.reads).toHaveLength(2);
   });
 
@@ -776,7 +801,7 @@ describe("the remembered credential", () => {
     let stored = credentialJson("before", 9e15);
     const keychain = fakeKeychain({ read: () => ({ kind: "value", value: stored }) });
     // Seed memory the way a quota tick would.
-    await resolveClaudeQuotaAuthResult(dir, { keychain, now: () => 1000 });
+    await readClaudeStore(dir, { keychain, now: () => 1000 });
     const result = await renewClaudeQuotaAuth(dir, {
       keychain,
       now: () => 1000,
@@ -789,8 +814,8 @@ describe("the remembered credential", () => {
       auth: expect.objectContaining({ accessToken: "after" }),
     });
     // And what the renewal found is what later ticks see.
-    const next = await resolveClaudeQuotaAuthResult(dir, { keychain, now: () => 1000 });
-    expect(next).toMatchObject({ status: "resolved", auth: { accessToken: "after" } });
+    const next = await readClaudeStore(dir, { keychain, now: () => 1000 });
+    expect(next).toMatchObject({ state: "present", auth: { accessToken: "after" } });
   });
 
   it("is bypassed by Retry and the sign-in prime, which mean 'look again'", async () => {
@@ -799,7 +824,7 @@ describe("the remembered credential", () => {
       find: { kind: "found", modifiedAt: "20260915183000Z" },
       read: { kind: "value", value: credentialJson("kc-asked", 9e15) },
     });
-    await resolveClaudeQuotaAuthResult(dir, { keychain, now: () => 1000 });
+    await readClaudeStore(dir, { keychain, now: () => 1000 });
     expect(keychain.reads).toHaveLength(1);
     await requestKeychainValueAccess(dir, { keychain, now: () => 1000 });
     expect(keychain.reads).toHaveLength(2);
@@ -811,9 +836,9 @@ describe("the remembered credential", () => {
     const keychain = fakeKeychain({
       read: { kind: "failed", code: -25308, message: "User interaction is not allowed." },
     });
-    await resolveClaudeQuotaAuthResult(dir, { keychain, now: () => 1000 });
-    const again = await resolveClaudeQuotaAuthResult(dir, { keychain, now: () => 2000 });
-    expect(again).toEqual({ status: "unavailable", reason: "keychain_needs_grant" });
+    await readClaudeStore(dir, { keychain, now: () => 1000 });
+    const again = await readClaudeStore(dir, { keychain, now: () => 2000 });
+    expect(again).toEqual({ state: "unreadable", reason: "keychain_needs_grant" });
     expect(keychain.reads).toHaveLength(2);
   });
 });
@@ -920,17 +945,17 @@ describe("renewClaudeQuotaAuth", () => {
   });
 });
 
-describe("readClaudeCredentialEvidence", () => {
+describe("readClaudeStore", () => {
   it("reads a live credential from the plain-file store without asking macOS", async () => {
     const dir = storeDir();
     writeFileSync(join(dir, ".credentials.json"), credentialJson("tok"));
     const keychain = fakeKeychain({});
     expect(
-      await readClaudeCredentialEvidence(dir, {
+      await readClaudeStore(dir, {
         keychain,
         env: { HOME: "/tmp/infinitary-no-claude-home" },
       }),
-    ).toEqual({ state: "live" });
+    ).toMatchObject({ state: "present" });
     expect(keychain.finds).toHaveLength(0);
     expect(keychain.reads).toHaveLength(0);
   });
@@ -950,10 +975,10 @@ describe("readClaudeCredentialEvidence", () => {
       JSON.stringify({ oauthAccount: { emailAddress: "kun@example.com" } }),
     );
     expect(
-      await readClaudeCredentialEvidence(dir, { keychain: fakeKeychain({}), env: { HOME: home } }),
-    ).toEqual({
-      state: "live",
-      label: "kun@example.com",
+      await readClaudeStore(dir, { keychain: fakeKeychain({}), env: { HOME: home } }),
+    ).toMatchObject({
+      state: "present",
+      identity: { label: "kun@example.com" },
     });
   });
 
@@ -967,13 +992,13 @@ describe("readClaudeCredentialEvidence", () => {
       JSON.stringify({ oauthAccount: { emailAddress: "configured@example.com" } }),
     );
     expect(
-      await readClaudeCredentialEvidence(dir, {
+      await readClaudeStore(dir, {
         keychain: fakeKeychain({}),
         env: { CLAUDE_CONFIG_DIR: configuredHome, HOME: "/tmp/infinitary-wrong-home" },
       }),
-    ).toEqual({
-      state: "live",
-      label: "configured@example.com",
+    ).toMatchObject({
+      state: "present",
+      identity: { label: "configured@example.com" },
     });
   });
 
@@ -991,10 +1016,10 @@ describe("readClaudeCredentialEvidence", () => {
       JSON.stringify({ oauthAccount: { emailAddress: "legacy@example.com" } }),
     );
     expect(
-      await readClaudeCredentialEvidence(dir, { keychain: fakeKeychain({}), env: { HOME: home } }),
-    ).toEqual({
-      state: "live",
-      label: "legacy@example.com",
+      await readClaudeStore(dir, { keychain: fakeKeychain({}), env: { HOME: home } }),
+    ).toMatchObject({
+      state: "present",
+      identity: { label: "legacy@example.com" },
     });
   });
 
@@ -1010,12 +1035,12 @@ describe("readClaudeCredentialEvidence", () => {
         },
       }),
     );
-    const evidence = await readClaudeCredentialEvidence(dir, {
+    const evidence = await readClaudeStore(dir, {
       keychain: fakeKeychain({}),
       env: { HOME: "/tmp/infinitary-no-claude-home" },
       now: () => 5_000,
     });
-    expect(evidence).toEqual({ state: "live" });
+    expect(evidence).toMatchObject({ state: "present" });
   });
 
   it("INF-2317: ignores a passed refresh date even with expired access", async () => {
@@ -1026,18 +1051,18 @@ describe("readClaudeCredentialEvidence", () => {
         claudeAiOauth: { accessToken: "tok", expiresAt: 1_000, refreshTokenExpiresAt: 2_000 },
       }),
     );
-    const evidence = await readClaudeCredentialEvidence(dir, {
+    const evidence = await readClaudeStore(dir, {
       keychain: fakeKeychain({ find: { kind: "absent" } }),
       env: { HOME: dir },
       now: () => 5_000,
     });
-    expect(evidence).toEqual({ state: "live" });
+    expect(evidence).toMatchObject({ state: "present" });
     expect(
-      await resolveClaudeQuotaAuthResult(dir, {
+      await readClaudeStore(dir, {
         keychain: fakeKeychain({}),
         now: () => 5_000,
       }),
-    ).toEqual({ status: "resolved", auth: { accessToken: "tok", expiresAt: 1_000 } });
+    ).toMatchObject({ state: "present", auth: { accessToken: "tok", expiresAt: 1_000 } });
   });
 
   it("INF-2317: resolves live access despite a passed refresh date", async () => {
@@ -1053,13 +1078,15 @@ describe("readClaudeCredentialEvidence", () => {
       }),
     );
     expect(
-      await resolveClaudeQuotaAuthResult(dir, {
+      await readClaudeStore(dir, {
         keychain: fakeKeychain({}),
         now: () => 5_000,
       }),
-    ).toEqual({ status: "resolved", auth: { accessToken: "tok", expiresAt: 9_000 } });
+    ).toMatchObject({ state: "present", auth: { accessToken: "tok", expiresAt: 9_000 } });
     expect(
-      await resolveClaudeQuotaAuth(dir, { keychain: fakeKeychain({}), now: () => 5_000 }),
+      await readClaudeStore(dir, { keychain: fakeKeychain({}), now: () => 5_000 }).then((read) =>
+        read.state === "present" ? read.auth : undefined,
+      ),
     ).toEqual({ accessToken: "tok", expiresAt: 9_000 });
   });
 
@@ -1078,37 +1105,40 @@ describe("readClaudeCredentialEvidence", () => {
       },
     });
     expect(
-      await resolveClaudeQuotaAuthResult(dir, {
+      await readClaudeStore(dir, {
         keychain,
         env: { HOME: home, USER: "test" },
         now: () => 5_000,
       }),
-    ).toEqual({ status: "resolved", auth: { accessToken: "saved-token", expiresAt: 9_000 } });
+    ).toMatchObject({ state: "present", auth: { accessToken: "saved-token", expiresAt: 9_000 } });
     expect(keychain.reads).toHaveLength(1);
-    expect(await readClaudeCredentialEvidence(dir, { keychain, env: { HOME: home } })).toEqual({
-      state: "live",
+    expect(await readClaudeStore(dir, { keychain, env: { HOME: home } })).toMatchObject({
+      state: "present",
     });
   });
 
-  it("reads the Keychain by attribute only - presence, never the value", async () => {
+  it("reads a Keychain value once for health and allowance", async () => {
     const dir = storeDir();
-    const keychain = fakeKeychain({ find: { kind: "found" } });
+    const keychain = fakeKeychain({
+      find: { kind: "found" },
+      read: { kind: "value", value: credentialJson("current-token") },
+    });
     expect(
-      await readClaudeCredentialEvidence(dir, {
+      await readClaudeStore(dir, {
         keychain,
         env: { HOME: "/tmp/infinitary-no-claude-home", USER: "kun" },
       }),
-    ).toEqual({
-      state: "live",
+    ).toMatchObject({
+      state: "present",
     });
     expect(keychain.finds).toEqual([{ service: "Claude Code-credentials", account: "kun" }]);
-    expect(keychain.reads).toHaveLength(0);
+    expect(keychain.reads).toHaveLength(1);
   });
 
   it("separates a missing item from an unreadable Keychain", async () => {
     const dir = storeDir();
     expect(
-      await readClaudeCredentialEvidence(dir, {
+      await readClaudeStore(dir, {
         keychain: fakeKeychain({ find: { kind: "absent" } }),
       }),
     ).toEqual({ state: "absent" });
@@ -1116,23 +1146,24 @@ describe("readClaudeCredentialEvidence", () => {
     // Not an answer, so not a sign-out: the caller must be told it does not
     // know rather than be handed a false negative.
     expect(
-      await readClaudeCredentialEvidence(dir, {
+      await readClaudeStore(dir, {
         keychain: fakeKeychain({ find: { kind: "failed", message: "timed out" } }),
       }),
-    ).toEqual({ state: "unknown" });
+    ).toEqual({ state: "unreadable", reason: "keychain_prompt_timeout" });
   });
 });
 
 /**
  * The stamp a cut-off is recorded under (W1 S7): which login the store holds
- * and when its credential was last written, from attributes only - never a
- * token value, and never the Keychain VALUE read that spends the macOS ask.
+ * and when its credential was last written, projected from the same store result as health and allowance.
+ * The projection itself never carries a token.
  */
-describe("readClaudeCredentialStamp", () => {
+describe("claudeCredentialStamp", () => {
   function homeWith(oauthAccount: Record<string, string>): { home: string; dir: string } {
     const home = scratchDir("infinitary-claude-stamp-");
     const dir = join(home, ".claude");
     mkdirSync(dir);
+    writeFileSync(join(dir, ".credentials.json"), credentialJson("store-token"));
     writeFileSync(join(home, ".claude.json"), JSON.stringify({ oauthAccount }));
     return { home, dir };
   }
@@ -1142,7 +1173,9 @@ describe("readClaudeCredentialStamp", () => {
     writeFileSync(join(dir, ".credentials.json"), credentialJson("secret-token"));
     utimesSync(join(dir, ".credentials.json"), 1_000, 1_000);
     const keychain = fakeKeychain({});
-    const stamp = await readClaudeCredentialStamp(dir, { keychain, env: { HOME: home } });
+    const stamp = await readClaudeStore(dir, { keychain, env: { HOME: home } }).then(
+      claudeCredentialStamp,
+    );
     expect(stamp.login).toMatch(/^[0-9a-f]{16}$/);
     expect(stamp.written).toBe("file:1000000");
     // Never a token value, and nothing asked of the Keychain.
@@ -1152,7 +1185,9 @@ describe("readClaudeCredentialStamp", () => {
 
     // A renewal rewrites the store: the same login, written again.
     utimesSync(join(dir, ".credentials.json"), 2_000, 2_000);
-    const renewed = await readClaudeCredentialStamp(dir, { keychain, env: { HOME: home } });
+    const renewed = await readClaudeStore(dir, { keychain, env: { HOME: home } }).then(
+      claudeCredentialStamp,
+    );
     expect(renewed).toEqual({ login: stamp.login, written: "file:2000000" });
   });
 
@@ -1161,31 +1196,41 @@ describe("readClaudeCredentialStamp", () => {
     const second = homeWith({ accountUuid: "acct-1", organizationUuid: "org-2" });
     const same = homeWith({ accountUuid: "acct-1", organizationUuid: "org-1" });
     const read = ({ home, dir }: { home: string; dir: string }) =>
-      readClaudeCredentialStamp(dir, { keychain: fakeKeychain({}), env: { HOME: home } });
+      readClaudeStore(dir, { keychain: fakeKeychain({}), env: { HOME: home } }).then(
+        claudeCredentialStamp,
+      );
     const [a, b, c] = await Promise.all([read(first), read(second), read(same)]);
     expect(a.login).toBeDefined();
     expect(b.login).not.toBe(a.login);
     expect(c.login).toBe(a.login);
   });
 
-  it("dates a Keychain store by its item's attribute, never its value", async () => {
+  it("projects the Keychain modification date from the unified result", async () => {
     const { home, dir } = homeWith({ accountUuid: "acct-1" });
-    const keychain = fakeKeychain({ find: { kind: "found", modifiedAt: "20260926120000Z" } });
-    expect(await readClaudeCredentialStamp(dir, { keychain, env: { HOME: home } })).toMatchObject({
+    rmSync(join(dir, ".credentials.json"));
+    const keychain = fakeKeychain({
+      find: { kind: "found", modifiedAt: "20260926120000Z" },
+      read: { kind: "value", value: credentialJson("keychain-token", 9e15) },
+    });
+    expect(
+      await readClaudeStore(dir, { keychain, env: { HOME: home }, preferKeychain: true }).then(
+        claudeCredentialStamp,
+      ),
+    ).toMatchObject({
       written: "keychain:20260926120000Z",
     });
     expect(keychain.finds).toHaveLength(1);
-    expect(keychain.reads).toHaveLength(0);
+    expect(keychain.reads).toHaveLength(1);
   });
 
   it("leaves out what it cannot see rather than guessing", async () => {
     const dir = storeDir();
     const keychain = fakeKeychain({ find: { kind: "failed", code: -1, message: "denied" } });
     expect(
-      await readClaudeCredentialStamp(dir, {
+      await readClaudeStore(dir, {
         keychain,
         env: { HOME: scratchDir("infinitary-claude-nohome-") },
-      }),
+      }).then(claudeCredentialStamp),
     ).toEqual({});
   });
 });

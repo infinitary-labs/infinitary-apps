@@ -64,11 +64,13 @@ Moved verbatim from `AGENTS.md` on 2026-09-24; `AGENTS.md` keeps a one-line poin
     Any future vendored binary needs the same treatment.
   - **The machine's default Claude login is the authority on whether it is signed in, not the client probe.**
     Every way a spawned third-party binary can fail looks identical to `loggedIn: false`, and the vault turns that into a red badge, a sign-in card AND the removal of every one of the provider's models from the routing pool (`availableModelsByAccount` gates non-Pi backends on `connected === true`).
-    So `ClaudeAuthBackend.status` falls back to `readClaudeCredentialEvidence` (`claudeQuota.ts` - file parse in `~/.claude`, else a host Keychain ATTRIBUTE probe of the bare `Claude Code-credentials` item that never spends the one macOS ask): only an absent credential is a sign-out; saved access and refresh expiry dates never establish one.
+    `ClaudeAuthBackend.status` and the allowance use the same `readClaudeStore` result (`claudeQuota.ts`): the file in `~/.claude` or the bare Keychain item `Claude Code-credentials`, with its token, advisory expiry and current config identity.
+    Health reads silently and shares the modification-date cache with allowance; it has no separate evidence, expiry peek or stamp read.
+    Only an absent credential is a sign-out; saved access and refresh expiry dates never establish one.
     A file that cannot be read is not absent.
     A client that answers signed in is a login, including over an expired file.
     Connect asks the client before it treats a lookup miss as a sign-out, on the store lease it already holds, and reads the store again after the wait.
-    An expired access token is renewable, and an unreadable store is `unknown`, never a sign-out.
+    An expired access token is renewable, and an unreadable store is degraded, never a sign-out, even when a client probe reports otherwise.
 - **A crewmate's tools come from one spec (primitives P7, contract v4.12).**
   Every app-owned crewmate tool - `emit_card`, `close_card`, `file_followup`, `note_progress`, `report`, `reply`, `tasks`, `lint_panel`, `place_panel`, `capture_panel`, `open_change`, `check_change`, `read_workflow`, `download_artifact`, `github_read` and `github_write` - is ONE entry (name, description, typebox parameters, run) in `CREWMATE_TOOLS` (`src/core/pi/crewmateTaskTools.ts`; the entry type and the rest of the runtime-neutral spec are `src/core/session/tools.ts`).
   The crewmate preset (`crewmateSessionSpec`) binds the entries to the crewmate's callbacks, and each session generates its own tools from the bound list: Pi's with `piToolsOf` (`src/core/pi/toolSpec.ts`), Claude's tool server with `claudeToolServer` (`src/core/claude/claudeTaskTools.ts`), which turns the same JSON Schema into zod and REFUSES a parameter kind it cannot carry rather than serving a looser schema.

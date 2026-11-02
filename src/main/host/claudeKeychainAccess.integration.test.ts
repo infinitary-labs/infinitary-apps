@@ -1,11 +1,7 @@
 import { execFileSync } from "node:child_process";
 import { chmodSync, copyFileSync, mkdirSync, truncateSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import {
-  clearClaudeCredentialCache,
-  readClaudeCredentialEvidence,
-  resolveClaudeQuotaAuthResult,
-} from "@core/claude/claudeQuota";
+import { clearClaudeCredentialCache, readClaudeStore } from "@core/claude/claudeQuota";
 import { beforeAll, describe, expect, it } from "vitest";
 import { scratchDir } from "../../../tests/helpers/scratchDirs";
 import { readClaudeThroughTrustedTool } from "./claudeKeychainTool";
@@ -223,13 +219,13 @@ describe.runIf(process.platform === "darwin")(
         mkdirSync(configDir);
         clearClaudeCredentialCache(configDir);
         expect(
-          await resolveClaudeQuotaAuthResult(configDir, {
+          await readClaudeStore(configDir, {
             keychain,
             allowPrompt: false,
             env: { USER: ACCOUNT },
           }),
-        ).toEqual({
-          status: "resolved",
+        ).toMatchObject({
+          state: "present",
           auth: { accessToken: TOKEN, expiresAt: expect.any(Number) },
         });
       } finally {
@@ -280,16 +276,16 @@ describe.runIf(process.platform === "darwin")(
         const configDir = join(dir, "claude");
         mkdirSync(configDir);
         const env = { HOME: join(dir, "home"), USER: "kunchen" };
-        expect(await readClaudeCredentialEvidence(configDir, { keychain, env })).toEqual({
-          state: "live",
+        expect(await readClaudeStore(configDir, { keychain, env })).toMatchObject({
+          state: "present",
         });
         clearClaudeCredentialCache(configDir);
         // The direct read is refused as for the client's real item; the
         // Apple tool reads it, pinned to the account presence found.
         expect(
-          await resolveClaudeQuotaAuthResult(configDir, { keychain, allowPrompt: false, env }),
-        ).toEqual({
-          status: "resolved",
+          await readClaudeStore(configDir, { keychain, allowPrompt: false, env }),
+        ).toMatchObject({
+          state: "present",
           auth: { accessToken: TOKEN, expiresAt: expect.any(Number) },
         });
       } finally {

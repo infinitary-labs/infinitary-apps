@@ -15,9 +15,8 @@ import { runRenewalStoreTask, type StoreLeaseResult } from "./claudeStoreLease";
 /**
  * The machine's default Claude login, as Infinitary is allowed to read it
  * (captain CD-1=B): the access token behind the same read-only usage
- * request the client itself makes, and - without touching a token value at
- * all - whether that login still holds a credential
- * (readClaudeCredentialEvidence, the fallback behind a fallible client probe).
+ * request the client itself makes, its advisory expiry and its current
+ * identity in one present/absent/unreadable result.
  *
  * Infinitary never mints or refreshes Anthropic OAuth. It reads what the vendor's
  * own `claude login` maintains: a `.credentials.json` in the default config
@@ -43,31 +42,6 @@ export type ClaudeQuotaAuth = {
   /** Advisory only: the vendor's 401 is the definitive expiry signal. */
   expiresAt?: number;
 };
-
-/**
- * What this account's own store says about its credential, read without ever
- * asking macOS for a value (the file parses, the Keychain answers by
- * attribute). This is the evidence a failed client probe falls back to:
- * `unknown` must never be reported as a sign-out.
- */
-export type ClaudeCredentialEvidence =
-  /** A credential is there; saved dates cannot prove a sign-out. */
-  | { state: "live"; label?: string }
-  /** This store holds no credential - what `auth logout` leaves behind. */
-  | { state: "absent" }
-  /** The store could not be read. Not evidence of anything. */
-  | { state: "unknown" };
-
-/**
- * What `resolveClaudeQuotaAuthResult` established. `locked` is the CL-C
- * case: the item is there, the VALUE read was refused, and the meter must
- * say so rather than look like an empty store. Saved expiry dates never
- * establish a sign-out; the vendor or the client must answer.
- */
-export type ClaudeQuotaAuthResult =
-  | { status: "resolved"; auth: ClaudeQuotaAuth }
-  | { status: "locked"; reason: KeychainValueFailure }
-  | { status: "unavailable"; reason?: KeychainValueFailure };
 
 /** errSecItemNotFound as `security(1)` used to report it - residual classifier. */
 const SEC_ITEM_NOT_FOUND_CLI = 44;
@@ -145,71 +119,65 @@ type ObservedStoreIdentity = {
   configMtimeMs?: number;
   configPath?: string;
   keychainModifiedAt?: string;
+  keychainAccount?: string;
 };
 
 type CredentialCacheEntry = {
   auth: ClaudeQuotaAuth;
-  goodUntil: number;
   storeIdentity: ObservedStoreIdentity;
 };
 
 const credentialCache = new Map<string, CredentialCacheEntry>();
-
-/**
- * Stop serving a remembered credential slightly before it expires, so the
- * store gets re-read while the token it holds is still usable.
- */
-const CREDENTIAL_CACHE_LEAD_MS = 60 * 1000;
+const fileCredentialCache = new Map<string, { modifiedAt: number; auth: ClaudeQuotaAuth }>();
+const identityCache = new Map<string, AccountIdentityRecord>();
+const readsInFlight = new WeakMap<HostKeychain, Map<string, Promise<ClaudeStoreRead>>>();
 
 function sameStoreIdentity(left: ObservedStoreIdentity, right: ObservedStoreIdentity): boolean {
   return (
     left.configPath === right.configPath &&
     left.accountUuid === right.accountUuid &&
     left.configMtimeMs === right.configMtimeMs &&
-    left.keychainModifiedAt === right.keychainModifiedAt
+    left.keychainModifiedAt === right.keychainModifiedAt &&
+    left.keychainAccount === right.keychainAccount
   );
 }
 
 function rememberedCredential(
   configDir: string,
-  now: number,
   storeIdentity: ObservedStoreIdentity | undefined,
 ): ClaudeQuotaAuth | undefined {
   const entry = credentialCache.get(configDir);
   if (!entry) return undefined;
-  if (
-    storeIdentity === undefined ||
-    !sameStoreIdentity(entry.storeIdentity, storeIdentity) ||
-    entry.goodUntil <= now
-  ) {
+  if (storeIdentity === undefined || !sameStoreIdentity(entry.storeIdentity, storeIdentity)) {
     credentialCache.delete(configDir);
     return undefined;
   }
   return entry.auth;
 }
 
-/**
- * A credential without an expiry or observable store metadata is not
- * remembered: serving it later could hide a rotation we have no way to notice.
- * The token expiry bounds the cache, while config or Keychain metadata detects
- * an external rotation before that bound.
- */
+/** A saved expiry is advisory; only a changed store or explicit retry invalidates its value. */
 function rememberCredential(
   configDir: string,
   auth: ClaudeQuotaAuth,
-  now: number,
   storeIdentity: ObservedStoreIdentity | undefined,
 ): void {
-  if (auth.expiresAt === undefined || storeIdentity === undefined) return;
-  const goodUntil = auth.expiresAt - CREDENTIAL_CACHE_LEAD_MS;
-  if (goodUntil <= now) return;
-  credentialCache.set(configDir, { auth, goodUntil, storeIdentity });
+  // Config metadata alone cannot date a credential rotation. A Keychain-only
+  // store must expose the item's modification date before we can cache it.
+  if (storeIdentity?.keychainModifiedAt === undefined) return;
+  credentialCache.set(configDir, { auth, storeIdentity });
 }
 
 /** Forget the remembered credential for a store. Sign-out; tests between cases. */
 export function clearClaudeCredentialCache(configDir?: string): void {
-  if (configDir === undefined) credentialCache.clear();
-  else credentialCache.delete(configDir);
+  if (configDir === undefined) {
+    credentialCache.clear();
+    fileCredentialCache.clear();
+    identityCache.clear();
+  } else {
+    credentialCache.delete(configDir);
+    fileCredentialCache.delete(configDir);
+    identityCache.delete(configDir);
+  }
 }
 
 /**
@@ -308,8 +276,8 @@ function parseCredentials(raw: string): ClaudeQuotaAuth | undefined {
 
 type CredentialsFileRead =
   | { kind: "absent" }
-  | { kind: "unreadable" }
-  | { kind: "auth"; auth: ClaudeQuotaAuth };
+  | { kind: "unreadable"; modifiedAt?: number }
+  | { kind: "auth"; auth: ClaudeQuotaAuth; modifiedAt: number };
 
 function isMissingCredentialsFile(error: unknown): boolean {
   return (error as { code?: unknown } | null)?.code === "ENOENT";
@@ -320,23 +288,39 @@ function isMissingCredentialsFile(error: unknown): boolean {
  * failed. A missing file is a lookup miss. A directory, a permission error,
  * or contents this reader does not understand is unreadable, not missing.
  */
-async function readCredentialsFile(configDir: string): Promise<CredentialsFileRead> {
-  let raw: string;
+async function readCredentialsFile(
+  configDir: string,
+  bypassCache: boolean,
+): Promise<CredentialsFileRead> {
+  const path = join(configDir, ".credentials.json");
+  let modifiedAt: number | undefined;
   try {
-    raw = await readFile(join(configDir, ".credentials.json"), "utf8");
+    const info = await stat(path);
+    if (!info.isFile()) {
+      fileCredentialCache.delete(configDir);
+      return { kind: "unreadable" };
+    }
+    modifiedAt = info.mtimeMs;
+    const cached = fileCredentialCache.get(configDir);
+    if (!bypassCache && cached?.modifiedAt === info.mtimeMs) {
+      return { kind: "auth", ...cached };
+    }
+    fileCredentialCache.delete(configDir);
+    const auth = parseCredentials(await readFile(path, "utf8"));
+    if (!auth) return { kind: "unreadable", modifiedAt };
+    const read = { auth, modifiedAt: info.mtimeMs };
+    fileCredentialCache.set(configDir, read);
+    return { kind: "auth", ...read };
   } catch (error) {
-    return isMissingCredentialsFile(error) ? { kind: "absent" } : { kind: "unreadable" };
+    fileCredentialCache.delete(configDir);
+    return isMissingCredentialsFile(error)
+      ? { kind: "absent" }
+      : { kind: "unreadable", ...(modifiedAt !== undefined ? { modifiedAt } : {}) };
   }
-  const auth = parseCredentials(raw);
-  return auth ? { kind: "auth", auth } : { kind: "unreadable" };
-}
-
-function fileAuth(read: CredentialsFileRead): ClaudeQuotaAuth | undefined {
-  return read.kind === "auth" ? read.auth : undefined;
 }
 
 type KeychainRead =
-  | { kind: "auth"; auth: ClaudeQuotaAuth }
+  | { kind: "auth"; auth: ClaudeQuotaAuth; modifiedAt?: string }
   | { kind: "locked"; reason: KeychainValueFailure }
   | { kind: "absent" };
 
@@ -446,12 +430,11 @@ type KeychainReadOptions = {
   persistLock: boolean;
   /** False when the caller must observe the credential itself (renewal). */
   useCache: boolean;
-  now: number;
+  accountIdentity: AccountIdentityRecord | undefined;
 };
 
 async function readKeychain(options: KeychainReadOptions): Promise<KeychainRead> {
-  const { configDir, keychain, env, allowPrompt, persistLock, useCache, now } = options;
-  const accountIdentity = await readAccountIdentityRecord(configDir, env);
+  const { configDir, keychain, env, allowPrompt, persistLock, useCache, accountIdentity } = options;
   const { presence, account } = await findClaudeKeychainItem(keychain, env);
   const query = {
     service: keychainServiceFor(),
@@ -467,11 +450,15 @@ async function readKeychain(options: KeychainReadOptions): Promise<KeychainRead>
   const keychainModifiedAt = presence.kind === "found" ? presence.modifiedAt : undefined;
   const storeIdentity =
     accountIdentity?.observed || keychainModifiedAt
-      ? { ...accountIdentity?.observed, ...(keychainModifiedAt ? { keychainModifiedAt } : {}) }
+      ? {
+          ...accountIdentity?.observed,
+          keychainAccount: account,
+          ...(keychainModifiedAt ? { keychainModifiedAt } : {}),
+        }
       : undefined;
   if (useCache) {
-    const remembered = rememberedCredential(configDir, now, storeIdentity);
-    if (remembered) return { kind: "auth", auth: remembered };
+    const remembered = rememberedCredential(configDir, storeIdentity);
+    if (remembered) return { kind: "auth", auth: remembered, modifiedAt: keychainModifiedAt };
   }
   const lockedUnder = keychainLockIdentity.get(configDir);
   if (
@@ -526,8 +513,8 @@ async function readKeychain(options: KeychainReadOptions): Promise<KeychainRead>
   clearKeychainLock(configDir);
   const auth = parseCredentials(secret.value.trim());
   if (!auth) return lockFromFailure(configDir, "keychain_unreadable", persistLock, storeIdentity);
-  rememberCredential(configDir, auth, now, storeIdentity);
-  return { kind: "auth", auth };
+  rememberCredential(configDir, auth, storeIdentity);
+  return { kind: "auth", auth, modifiedAt: keychainModifiedAt };
 }
 
 /** Whether this account's Keychain VALUE read is currently locked after a refusal. */
@@ -535,7 +522,7 @@ export function isKeychainLocked(configDir: string): boolean {
   return keychainLocks.has(configDir);
 }
 
-export type ResolveClaudeQuotaAuthOptions = {
+export type ReadClaudeStoreOptions = {
   /** Host Keychain seam. Tests inject a fake; production passes `host.keychain`. */
   keychain?: HostKeychain;
   env?: NodeJS.ProcessEnv;
@@ -555,22 +542,15 @@ export type ResolveClaudeQuotaAuthOptions = {
   allowPrompt?: boolean;
   /**
    * When false, a failed Keychain VALUE read is still classified but does not
-   * write `keychainLocks`. The credential-health peek uses this so a
-   * Subscriptions status poll cannot starve the meter's Retry.
+   * write `keychainLocks`. A computer running work uses this because
+   * nobody may be at that screen to answer a Retry.
    */
   persistLock?: boolean;
   /**
-   * Answer from the file store alone: the Keychain is not touched, so the
-   * credential remembered from it stays remembered. The credential-health
-   * peek uses this on every status poll.
-   */
-  fileOnly?: boolean;
-  /**
    * Observe the store itself rather than the credential we last read from it.
-   * Two callers need this: a renewal, whose whole job is to notice that the
-   * stored credential changed (a remembered copy of the old one would make
-   * every renewal look unchanged), and the file-only health peek, which must
-   * stay file-only. A bypassing read still REFRESHES what is remembered -
+   * A renewal needs this to notice a changed credential even if the item
+   * was rewritten within its modification date's resolution.
+   * A bypassing read still refreshes what is remembered -
    * what it finds is by definition the current credential.
    */
   bypassCache?: boolean;
@@ -588,71 +568,98 @@ export type ResolveClaudeQuotaAuthOptions = {
  * sidecar 2.4 days past expiry next to a live Keychain item. So: whichever
  * store holds the later expiry wins, and the Keychain wins when neither says.
  */
-export async function resolveClaudeQuotaAuthResult(
+/** One read of Claude Code's store, shared by health, identity and allowance. */
+export type ClaudeStoreRead =
+  | { state: "present"; auth: ClaudeQuotaAuth; identity: ClaudeStoreIdentity; written?: string }
+  | { state: "absent" }
+  | { state: "unreadable"; reason?: KeychainValueFailure };
+
+export type ClaudeStoreIdentity = {
+  label?: string;
+  accountUuid?: string;
+  organizationUuid?: string;
+};
+
+export function readClaudeStore(
   configDir: string,
-  options: ResolveClaudeQuotaAuthOptions = {},
-): Promise<ClaudeQuotaAuthResult> {
+  options: ReadClaudeStoreOptions = {},
+): Promise<ClaudeStoreRead> {
   const keychain = options.keychain ?? absentKeychain;
-  const env = options.env ?? process.env;
-  const now = options.now ?? (() => Date.now());
-  const at = now();
-  const allowPrompt = options.allowPrompt === true;
-  const fromFile = fileAuth(await readCredentialsFile(configDir));
-  // The Keychain read is the one that can raise the macOS ask, so it is only
-  // reached when it can change the answer: the file is missing, the file is
-  // past its access expiry (so it may be the stale sidecar), or the
-  // caller wants the authoritative store (sign-in prime, or the vendor just
-  // rejected what we sent).
-  const fileMayBeCurrent =
-    fromFile !== undefined && (fromFile.expiresAt === undefined || fromFile.expiresAt > at);
-  if (fromFile && fileMayBeCurrent && !options.preferKeychain) {
-    return { status: "resolved", auth: fromFile };
+  let pending = readsInFlight.get(keychain);
+  if (!pending) {
+    pending = new Map();
+    readsInFlight.set(keychain, pending);
   }
-  if (options.fileOnly) {
-    return fromFile ? { status: "resolved", auth: fromFile } : { status: "unavailable" };
-  }
-  const fromKeychain = await readKeychain({
+  // An explicit Retry never joins a silent poll; they have different consent.
+  const key = JSON.stringify([
     configDir,
-    keychain,
-    env,
-    allowPrompt,
-    persistLock: options.persistLock !== false,
-    // A user-initiated read means "go and look again", so Retry and the
-    // sign-in prime always reach the store. Only background ticks - the reads
-    // that must not ask - are answered from memory.
-    useCache: options.bypassCache !== true && !allowPrompt,
-    now: at,
-  });
-  if (fromKeychain.kind === "locked") {
-    // A live sidecar still works; a locked Keychain next to nothing is the
-    // meter failure, not an empty store. An expired sidecar can still work.
-    if (fromFile) return { status: "resolved", auth: fromFile };
-    // A blocked session is not a held lock: the next tick can succeed.
-    if (!holdKeychainLock(fromKeychain.reason)) {
-      return { status: "unavailable", reason: fromKeychain.reason };
-    }
-    return { status: "locked", reason: fromKeychain.reason };
-  }
-  if (fromKeychain.kind === "absent") {
-    return fromFile ? { status: "resolved", auth: fromFile } : { status: "unavailable" };
-  }
-  if (!fromFile) return { status: "resolved", auth: fromKeychain.auth };
-  const auth =
-    (fromKeychain.auth.expiresAt ?? 0) >= (fromFile.expiresAt ?? 0) ? fromKeychain.auth : fromFile;
-  return { status: "resolved", auth };
+    (options.env ?? process.env).HOME,
+    (options.env ?? process.env).USER,
+    (options.env ?? process.env).CLAUDE_CONFIG_DIR,
+    options.allowPrompt === true,
+    options.preferKeychain === true,
+    options.bypassCache === true,
+    options.persistLock !== false,
+  ]);
+  const current = pending.get(key);
+  if (current) return current;
+  const read = readStore(configDir, options).finally(() => pending.delete(key));
+  pending.set(key, read);
+  return read;
 }
 
-/**
- * The credential the client itself would consider current, or nothing.
- * Callers that need to tell a Keychain lock from an empty store should use
- * `resolveClaudeQuotaAuthResult`.
- */
-export async function resolveClaudeQuotaAuth(
+async function readStore(
   configDir: string,
-  options: ResolveClaudeQuotaAuthOptions = {},
-): Promise<ClaudeQuotaAuth | undefined> {
-  const result = await resolveClaudeQuotaAuthResult(configDir, options);
-  return result.status === "resolved" ? result.auth : undefined;
+  options: ReadClaudeStoreOptions,
+): Promise<ClaudeStoreRead> {
+  const keychain = options.keychain ?? absentKeychain;
+  const env = options.env ?? process.env;
+  const at = (options.now ?? Date.now)();
+  const allowPrompt = options.allowPrompt === true;
+  const accountIdentity = await readAccountIdentityRecord(configDir, env);
+  const identity = accountIdentity?.identity ?? {};
+  const file = await readCredentialsFile(configDir, options.bypassCache === true || allowPrompt);
+  const presentFile = (): ClaudeStoreRead =>
+    file.kind === "auth"
+      ? { state: "present", auth: file.auth, identity, written: `file:${file.modifiedAt}` }
+      : { state: file.kind };
+  const fromFile = file.kind === "auth" ? file.auth : undefined;
+  const fileMayBeCurrent =
+    fromFile !== undefined && (fromFile.expiresAt === undefined || fromFile.expiresAt > at);
+  if (fileMayBeCurrent && !options.preferKeychain) return presentFile();
+  let fromKeychain: KeychainRead;
+  try {
+    fromKeychain = await readKeychain({
+      configDir,
+      keychain,
+      env,
+      allowPrompt,
+      persistLock: options.persistLock !== false,
+      useCache: options.bypassCache !== true && !allowPrompt,
+      accountIdentity,
+    });
+  } catch (error) {
+    fromKeychain = { kind: "locked", reason: classifyKeychainValueError(error) };
+  }
+  if (fromKeychain.kind === "locked") {
+    return fromFile ? presentFile() : { state: "unreadable", reason: fromKeychain.reason };
+  }
+  if (fromKeychain.kind === "absent") return presentFile();
+  if (fromFile && (fromFile.expiresAt ?? 0) > (fromKeychain.auth.expiresAt ?? 0)) {
+    return presentFile();
+  }
+  return {
+    state: "present",
+    auth: fromKeychain.auth,
+    identity,
+    // Keep the refusal record's existing file-first date when a sidecar
+    // exists; selecting a newer Keychain token alone is not a rewritten store.
+    ...(file.kind !== "absent" && file.modifiedAt !== undefined
+      ? { written: `file:${file.modifiedAt}` }
+      : fromKeychain.modifiedAt
+        ? { written: `keychain:${fromKeychain.modifiedAt}` }
+        : {}),
+  };
 }
 
 /**
@@ -662,9 +669,9 @@ export async function resolveClaudeQuotaAuth(
  */
 export async function requestKeychainValueAccess(
   configDir: string,
-  options: ResolveClaudeQuotaAuthOptions = {},
-): Promise<ClaudeQuotaAuthResult> {
-  return resolveClaudeQuotaAuthResult(configDir, {
+  options: ReadClaudeStoreOptions = {},
+): Promise<ClaudeStoreRead> {
+  return readClaudeStore(configDir, {
     ...options,
     allowPrompt: true,
     preferKeychain: true,
@@ -728,7 +735,7 @@ export type ClaudeRenewOutcome =
   /** There is no credential in this store to renew. */
   | { outcome: "no_credential" };
 
-export type RenewClaudeQuotaAuthOptions = ResolveClaudeQuotaAuthOptions & {
+export type RenewClaudeQuotaAuthOptions = ReadClaudeStoreOptions & {
   /**
    * Run one command of the account's own client under this config root. The
    * client owns the credential; Infinitary never speaks the vendor's OAuth.
@@ -762,20 +769,21 @@ export async function renewClaudeQuotaAuth(
   const commands = options.commands ?? CLAUDE_RENEW_COMMANDS;
   // A renewal has to see the store, not what we last read from it: comparing
   // a remembered credential with itself would report every renewal unchanged.
-  const resolveOpts: ResolveClaudeQuotaAuthOptions = {
+  const resolveOpts: ReadClaudeStoreOptions = {
     ...options,
     preferKeychain: true,
     bypassCache: true,
   };
-  const before = credentialMarker(await resolveClaudeQuotaAuth(configDir, resolveOpts));
+  const first = await readClaudeStore(configDir, resolveOpts);
+  const before = credentialMarker(first.state === "present" ? first.auth : undefined);
   if (before === undefined) return { outcome: "no_credential" };
   const claimed = await claim(configDir, async (): Promise<ClaudeRenewOutcome> => {
     // Another holder may have renewed while we waited for the store. Spending
     // a single-use refresh token again to learn what is already on disk is
     // exactly the race this lease exists to prevent.
-    const current = await resolveClaudeQuotaAuth(configDir, resolveOpts);
-    if (current && credentialMarker(current) !== before) {
-      return { outcome: "renewed", auth: current };
+    const current = await readClaudeStore(configDir, resolveOpts);
+    if (current.state === "present" && credentialMarker(current.auth) !== before) {
+      return { outcome: "renewed", auth: current.auth };
     }
     let ranAny = false;
     for (const args of commands) {
@@ -785,8 +793,8 @@ export async function renewClaudeQuotaAuth(
       } catch {
         continue;
       }
-      const after = await resolveClaudeQuotaAuthResult(configDir, resolveOpts);
-      if (after.status === "resolved") {
+      const after = await readClaudeStore(configDir, resolveOpts);
+      if (after.state === "present") {
         if (credentialMarker(after.auth) !== before)
           return { outcome: "renewed", auth: after.auth };
       } else {
@@ -800,7 +808,7 @@ export async function renewClaudeQuotaAuth(
 }
 
 type AccountIdentityRecord = {
-  identity: { label?: string; accountUuid?: string; organizationUuid?: string };
+  identity: ClaudeStoreIdentity;
   observed: ObservedStoreIdentity;
 };
 
@@ -824,7 +832,16 @@ async function readAccountIdentityRecord(
   }
 
   try {
-    const [raw, info] = await Promise.all([readFile(identityPath, "utf8"), stat(identityPath)]);
+    const info = await stat(identityPath);
+    const cached = identityCache.get(configDir);
+    if (
+      cached?.observed.configPath === identityPath &&
+      cached.observed.configMtimeMs === info.mtimeMs
+    ) {
+      return cached;
+    }
+    identityCache.delete(configDir);
+    const raw = await readFile(identityPath, "utf8");
     const observed: ObservedStoreIdentity = {
       configMtimeMs: info.mtimeMs,
       configPath: identityPath,
@@ -851,117 +868,32 @@ async function readAccountIdentityRecord(
       typeof record.organizationUuid === "string" && record.organizationUuid
         ? { organizationUuid: record.organizationUuid }
         : {};
-    return {
+    const result = {
       identity: { ...email, ...accountUuid, ...organizationUuid },
       observed: { ...observed, ...accountUuid },
     };
+    identityCache.set(configDir, result);
+    return result;
   } catch {
+    identityCache.delete(configDir);
     return undefined;
   }
 }
 
-/** The account's own config identity, for the row that lost its label. */
-async function readAccountIdentity(
-  configDir: string,
-  env: NodeJS.ProcessEnv = process.env,
-): Promise<{ label?: string } | undefined> {
-  const identity = (await readAccountIdentityRecord(configDir, env))?.identity;
-  return identity?.label ? { label: identity.label } : undefined;
-}
-
 /**
- * The default login's stamp (the cut-off contract, docs/quota.md "Typed
- * cut-offs"), from attributes only: which login the account config names
- * (its account and organisation, digested) and when the credential was last
- * written (the plain-file store's modification time, else the Keychain
- * item's). Never a token value, and never the Keychain VALUE, so it spends
- * no macOS ask. A part this read cannot see is left out.
+ * The real-refusal and made-login records keep their existing non-secret
+ * equality key. This is a pure projection of the one read, not another
+ * identity reader or focus-time digest scan; existing records stay valid.
  */
-export async function readClaudeCredentialStamp(
-  configDir: string,
-  options: { keychain?: HostKeychain; env?: NodeJS.ProcessEnv } = {},
-): Promise<CredentialStamp> {
-  const keychain = options.keychain ?? absentKeychain;
-  const env = options.env ?? process.env;
-  const identity = (await readAccountIdentityRecord(configDir, env))?.identity;
+export function claudeCredentialStamp(read: ClaudeStoreRead): CredentialStamp {
+  if (read.state !== "present") return {};
+  const { accountUuid, organizationUuid } = read.identity;
   const login =
-    identity?.accountUuid || identity?.organizationUuid
+    accountUuid || organizationUuid
       ? createHash("sha256")
-          .update(`${identity.accountUuid ?? ""}\n${identity.organizationUuid ?? ""}`)
+          .update(`${accountUuid ?? ""}\n${organizationUuid ?? ""}`)
           .digest("hex")
           .slice(0, 16)
       : undefined;
-  let written: string | undefined;
-  try {
-    const info = await stat(join(configDir, ".credentials.json"));
-    if (info.isFile()) written = `file:${info.mtimeMs}`;
-  } catch {
-    // No plain-file store: the Keychain item is the store.
-  }
-  if (written === undefined) {
-    const presence = await findClaudeKeychainItem(keychain, env)
-      .then((item) => item.presence)
-      .catch(() => undefined);
-    if (presence?.kind === "found" && presence.modifiedAt) {
-      written = `keychain:${presence.modifiedAt}`;
-    }
-  }
-  return { ...(login ? { login } : {}), ...(written ? { written } : {}) };
-}
-
-/**
- * Read what the machine's default Claude login says about its credential,
- * WITHOUT reading a token value: the plain-file store parses locally, and
- * the Keychain answers by attribute (the probe that never raises the macOS
- * ask - that one ask belongs to the quota sensor above, and is not spent here).
- *
- * This exists because the client probe is fallible in ways that look nothing
- * like a sign-out - it is a spawned third-party binary - and the vault turns
- * "not connected" into a red badge, a sign-in card, and the removal of every
- * one of the provider's models from the routing pool. Absence of evidence
- * gets its own state so it can never be reported as a sign-out. A file that
- * cannot be read is that unknown state, not a miss.
- * Neither saved access nor refresh expiry proves a sign-out.
- */
-export async function readClaudeCredentialEvidence(
-  configDir: string,
-  options: { keychain?: HostKeychain; env?: NodeJS.ProcessEnv; now?: () => number } = {},
-): Promise<ClaudeCredentialEvidence> {
-  const keychain = options.keychain ?? absentKeychain;
-  const env = options.env ?? process.env;
-
-  const file = await readCredentialsFile(configDir);
-  const identity = readAccountIdentity(configDir, env);
-  if (file.kind === "auth") {
-    return { state: "live", ...(await identity) };
-  }
-  if (file.kind === "unreadable") {
-    const keychainEvidence = await readKeychainEvidence(keychain, env, identity);
-    // An unreadable file is not a miss. With no Keychain item to adopt, the
-    // store stays unknown so a replacement sign-in cannot start over it.
-    return keychainEvidence === "absent" ? { state: "unknown" } : keychainEvidence;
-  }
-
-  const keychainEvidence = await readKeychainEvidence(keychain, env, identity);
-  return keychainEvidence === "absent" ? { state: "absent" } : keychainEvidence;
-}
-
-/**
- * The default login's Keychain item, by the exact service under whatever
- * account the client keyed it on (findClaudeKeychainItem), never another
- * service and never the value. `"absent"` is a definite miss.
- */
-async function readKeychainEvidence(
-  keychain: HostKeychain,
-  env: NodeJS.ProcessEnv,
-  identity: Promise<{ label?: string } | undefined>,
-): Promise<ClaudeCredentialEvidence | "absent"> {
-  const { presence } = await findClaudeKeychainItem(keychain, env);
-  // Only a definite miss is an absence; anything else (a failed host read,
-  // a timeout, a denied search) is simply unreadable.
-  if (isAbsentOutcome(presence)) return "absent";
-  if (presence.kind === "failed") return { state: "unknown" };
-  // The item is there. Its expiry lives in the value, which reading would
-  // spend the one macOS ask on - presence is the honest answer here.
-  return { state: "live", ...(await identity) };
+  return { ...(login ? { login } : {}), ...(read.written ? { written: read.written } : {}) };
 }

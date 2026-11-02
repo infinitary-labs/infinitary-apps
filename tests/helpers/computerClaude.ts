@@ -36,8 +36,14 @@ export function claudeOnComputer(dataDir: string, how: "made" | "adopted") {
   const backend = new ClaudeAuthBackend({
     run,
     available: () => true,
-    evidence: async () => ({ state: signedIn() ? "live" : "absent" }),
-    stamp: async () => (signedIn() ? { login: "account-a" } : {}),
+    readStore: async () =>
+      signedIn()
+        ? {
+            state: "present",
+            auth: { accessToken: "opaque" },
+            identity: { accountUuid: "account-a" },
+          }
+        : { state: "absent" },
     primeKeychain: async () => {},
     configDir: () => store,
     pasteCode: true,

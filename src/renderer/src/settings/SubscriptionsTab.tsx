@@ -567,7 +567,9 @@ export function AccountRow({
       trailing: <span style={{ color: "var(--accent)", fontFamily: "var(--font-mono)" }}>✱</span>,
       onSelect: onTogglePin,
     },
-    { id: "rename", label: "Rename", onSelect: onStartRename },
+    ...(account.providerId === CLAUDE_PROVIDER_ID
+      ? []
+      : [{ id: "rename", label: "Rename", onSelect: onStartRename }]),
     {
       id: "pause",
       label: account.enabled ? "Pause" : "Resume",
@@ -846,6 +848,8 @@ export function SubscriptionsTab() {
     const interval = setInterval(refresh, 10_000);
     const offSnapshot = window.infinitary.quota.onSnapshot((incoming) => {
       setSnapshot(incoming);
+      // The same reading can discover a changed Claude login and row label.
+      void accountsSave.refresh();
       void slotSave.refresh();
     });
     const offPrompt = window.infinitary.auth.onPrompt((incoming) => {
@@ -864,7 +868,7 @@ export function SubscriptionsTab() {
       offNotice();
       offModels();
     };
-  }, [refresh, routingSave.refresh, slotSave.refresh, personalSave.refresh]);
+  }, [refresh, routingSave.refresh, slotSave.refresh, personalSave.refresh, accountsSave.refresh]);
 
   const saveRouting = (next: RoutingSettings) => {
     void routingSave.save(() => window.infinitary.settings.setRouting(next));

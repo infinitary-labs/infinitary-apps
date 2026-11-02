@@ -16,7 +16,6 @@ import {
 import {
   CREDENTIAL_RENEW_LEAD_MS,
   type CredentialHealth,
-  type CredentialStamp,
   classifyExpiry,
   type RenewalOutcome,
   type RenewReason,
@@ -35,16 +34,14 @@ import {
   runClaude,
 } from "./claudeCli";
 import {
-  type ClaudeCredentialEvidence,
-  type ClaudeQuotaAuthResult,
+  type ClaudeStoreRead,
+  claudeCredentialStamp,
   clearClaudeCredentialCache,
   clearKeychainLock,
   defaultClaudeConfigDir,
-  readClaudeCredentialEvidence,
-  readClaudeCredentialStamp,
+  readClaudeStore,
   renewClaudeQuotaAuth,
   requestKeychainValueAccess,
-  resolveClaudeQuotaAuthResult,
 } from "./claudeQuota";
 import { runExclusiveStoreTask, tryExclusiveStoreTask } from "./claudeStoreLease";
 
@@ -130,14 +127,8 @@ export type ClaudeAuthBackendOptions = {
    * only `available` gets a client that counts as ready.
    */
   client?: () => Promise<ClaudeClientCheck>;
-  /** Injectable for tests; production reads the machine's default login. */
-  evidence?: (configDir: string) => Promise<ClaudeCredentialEvidence>;
-  /**
-   * Injectable for tests; production reads the default login's stamp from
-   * attributes (`readClaudeCredentialStamp`). A test that injects only
-   * `evidence` gets no stamp, so no unit test reads the developer's login.
-   */
-  stamp?: (configDir: string) => Promise<CredentialStamp>;
+  /** One store reader for health, identity and login ownership; tests inject scratch stores. */
+  readStore?: (configDir: string) => Promise<ClaudeStoreRead>;
   /**
    * Request the Keychain VALUE at sign-in. Production does the real read
    * through the host capability (which may raise the one macOS ask);
@@ -176,8 +167,7 @@ export class ClaudeAuthBackend implements AccountBackend {
   private readonly run: RunClaude;
   private readonly available: () => boolean;
   private readonly client: () => Promise<ClaudeClientCheck>;
-  private readonly evidence: (configDir: string) => Promise<ClaudeCredentialEvidence>;
-  private readonly stamp: (configDir: string) => Promise<CredentialStamp>;
+  private readonly readStore: (configDir: string) => Promise<ClaudeStoreRead>;
   private readonly primeKeychain: (configDir: string) => Promise<void>;
   private readonly configDir: () => string;
   private readonly keychain: HostKeychain;
@@ -199,10 +189,7 @@ export class ClaudeAuthBackend implements AccountBackend {
       (options.available
         ? async () => ({ state: "ready", executable: "injected" })
         : () => checkClaudeClient());
-    this.evidence = options.evidence ?? ((dir) => readClaudeCredentialEvidence(dir, { keychain }));
-    this.stamp =
-      options.stamp ??
-      (options.evidence ? async () => ({}) : (dir) => readClaudeCredentialStamp(dir, { keychain }));
+    this.readStore = options.readStore ?? ((dir) => readClaudeStore(dir, { keychain }));
     this.primeKeychain =
       options.primeKeychain ??
       (async (dir) => {
@@ -243,9 +230,7 @@ export class ClaudeAuthBackend implements AccountBackend {
    * store we cannot read, or one that becomes unreadable while we wait, is
    * adopted only on the client's own word that it is signed in, and otherwise
    * refused in a sentence - a new vendor sign-in replaces the stored login
-   * and can sign out every Claude Code session already running. A refresh
-   * token that has lapsed in both stores still starts the sign-in, unless
-   * the client says it is signed in.
+   * and can sign out every Claude Code session already running.
    */
   async login(request: AccountLoginRequest): Promise<void> {
     if (request.type !== "oauth") {
@@ -270,15 +255,15 @@ export class ClaudeAuthBackend implements AccountBackend {
    * already-held one: a nested lease would defer and look like no answer.
    */
   private async replacementDecision(dir: string): Promise<"adopt" | "login" | "refuse"> {
-    const evidence = await this.evidence(dir);
-    if (evidence.state === "live") return "adopt";
+    const evidence = await this.readStore(dir);
+    if (evidence.state === "present") return "adopt";
     const word = await this.statusNow(dir);
     if (word?.connected === true) return "adopt";
     // The status read can rewrite the store, and a wait can change what we
     // could not read. Only the reading after that is current.
-    const again = await this.evidence(dir);
-    if (again.state === "live") return "adopt";
-    if (again.state === "unknown") return "refuse";
+    const again = await this.readStore(dir);
+    if (again.state === "present") return "adopt";
+    if (again.state === "unreadable") return "refuse";
     if (again.state === "absent" && word?.connected === false) return "login";
     return "refuse";
   }
@@ -501,7 +486,9 @@ export class ClaudeAuthBackend implements AccountBackend {
       bridge.signal?.removeEventListener("abort", stop);
       stop();
     }
-    const { login } = await this.stamp(dir).catch((): CredentialStamp => ({}));
+    const { login } = claudeCredentialStamp(
+      await this.readStore(dir).catch((): ClaudeStoreRead => ({ state: "unreadable" })),
+    );
     const made: MadeLogin = { version: 1, ...(login ? { login } : {}), at: this.now() };
     try {
       writeFileSync(join(request.dir, MADE_LOGIN_FILE), `${JSON.stringify(made)}\n`, {
@@ -548,7 +535,9 @@ export class ClaudeAuthBackend implements AccountBackend {
     return runExclusiveStoreTask(dir, async (): Promise<MachineLoginOutcome> => {
       // Gone already: signed out by hand, or by an earlier try.
       if ((await this.statusNow(dir))?.connected === false) return "signed-out";
-      const { login } = await this.stamp(dir).catch((): CredentialStamp => ({}));
+      const { login } = claudeCredentialStamp(
+        await this.readStore(dir).catch((): ClaudeStoreRead => ({ state: "unreadable" })),
+      );
       if (login !== undefined && made.login !== undefined && login !== made.login) return "kept";
       if (login === undefined || made.login === undefined) return "not-signed-out";
       try {
@@ -591,8 +580,8 @@ export class ClaudeAuthBackend implements AccountBackend {
    * fully signed-in Max account rendered "sign in again" next to its own
    * live quota bars with no Claude model left to route to (captain dogfood,
    * 2026-09-01). So when the probe cannot answer, the default store does -
-   * and only a store with no credential, or one whose refresh token has
-   * lapsed, is reported as needing a sign-in.
+   * and only an absent store, never a saved expiry date, is reported as
+   * needing a sign-in.
    *
    * `status()` is a projection of `health()` (spec §11.2.5). Unknown and
    * no-interaction failures stay degraded, never a sign-out.
@@ -600,10 +589,13 @@ export class ClaudeAuthBackend implements AccountBackend {
   async health(_account: AccountRef): Promise<CredentialHealth> {
     void _account;
     const client = await this.client();
-    const credential = await this.credentialHealth(client.state === "ready");
-    // The stamp a cut-off is recorded under: the login and its client, from
-    // attributes only (docs/quota.md "Typed cut-offs").
-    const stored = await this.stamp(this.configDir()).catch((): CredentialStamp => ({}));
+    const dir = this.configDir();
+    const probe = client.state === "ready" ? await this.probe(dir) : undefined;
+    // Read after the probe, which can rewrite the store. Health, expiry,
+    // identity and the real-refusal stamp all come from this same reading.
+    const read = await this.readStore(dir);
+    const credential = this.credentialHealth(read, probe);
+    const stored = claudeCredentialStamp(read);
     const version = client.state === "missing" ? undefined : client.version;
     const stamp = { ...stored, ...(version ? { client: version } : {}) };
     const health = Object.keys(stamp).length > 0 ? { ...credential, stamp } : credential;
@@ -618,62 +610,35 @@ export class ClaudeAuthBackend implements AccountBackend {
     return { ...health, state: "degraded", reason: issue, ...(detail ? { detail } : {}) };
   }
 
-  /** Which login the default store names: the stamp's, from attributes only. */
-  async loginStamp(_account: AccountRef): Promise<string | undefined> {
-    void _account;
-    return (await this.stamp(this.configDir()).catch((): CredentialStamp => ({}))).login;
-  }
-
-  /** The credential's own health, from the client's probe (when one can run) and the store. */
-  private async credentialHealth(probeAllowed: boolean): Promise<CredentialHealth> {
-    const dir = this.configDir();
-    const probe = probeAllowed ? await this.probe(dir) : undefined;
-    const evidence = await this.evidence(dir);
-    // Live: date the token from the file store only, so a status poll never
-    // spends a Keychain VALUE read (that grant is the meter's). Unknown: a
-    // persistLock=false peek classifies a blocked session without locking Retry.
-    const peek =
-      evidence.state === "live" || evidence.state === "unknown"
-        ? await this.peek(dir, evidence.state === "live")
-        : undefined;
-
-    // A signed-in client is the authority, including over a stale file the
-    // evidence read already reconciled or a file-only peek still sees.
-    if (probe?.connected) {
-      const identity =
-        probe.identity ??
-        identityOf(evidence.state === "live" ? evidence.label : undefined).identity;
-      const expiresAt = peek?.kind === "resolved" ? peek.expiresAt : undefined;
-      const state = classifyExpiry(expiresAt, this.now(), this.leadMs);
+  /** A store we cannot read is stale, never evidence that a login went away. */
+  private credentialHealth(read: ClaudeStoreRead, probe?: AccountStatus): CredentialHealth {
+    if (read.state === "present") {
+      // A cached client answer can name the previous login. The current
+      // config owns identity; the client can still supply its plan.
+      const identity = {
+        ...probe?.identity,
+        ...(read.identity.label ? { label: read.identity.label } : {}),
+      };
+      const expiresAt = read.auth.expiresAt;
       return {
-        state,
+        state: classifyExpiry(expiresAt, this.now(), this.leadMs),
         authType: "oauth",
-        ...(identity ? { identity } : {}),
+        ...(Object.keys(identity).length ? { identity } : {}),
         ...(expiresAt !== undefined ? { expiresAt } : {}),
       };
     }
-
-    if (evidence.state === "live") {
-      const identity = identityOf(evidence.label).identity;
-      const expiresAt = peek?.kind === "resolved" ? peek.expiresAt : undefined;
-      const state = classifyExpiry(expiresAt, this.now(), this.leadMs);
-      return {
-        state,
-        authType: "oauth",
-        ...(identity ? { identity } : {}),
-        ...(expiresAt !== undefined ? { expiresAt } : {}),
-      };
+    if (read.state === "unreadable") {
+      return { state: "degraded", reason: read.reason ?? "unknown" };
     }
-
-    if (evidence.state === "unknown") {
-      if (probe && !probe.connected) return { state: "unsigned" };
-      return {
-        state: "degraded",
-        reason: peek?.kind === "blocked" ? peek.reason : "unknown",
-      };
-    }
-
-    return { state: "unsigned" };
+    // Keep the client's signed-in answer when the store lookup missed it.
+    // Login replacement still asks the client under its exclusive lease.
+    return probe?.connected
+      ? {
+          state: "healthy",
+          authType: "oauth",
+          ...(probe.identity ? { identity: probe.identity } : {}),
+        }
+      : { state: "unsigned" };
   }
 
   async status(account: AccountRef): Promise<AccountStatus> {
@@ -681,47 +646,11 @@ export class ClaudeAuthBackend implements AccountBackend {
   }
 
   /**
-   * A no-prompt look at expiry for proactive renewal. Locked / unavailable
-   * must not override a live evidence read: the credential is there, we
-   * just cannot date it this tick (rule 3). `fileOnly` skips the Keychain
-   * VALUE so a live status poll cannot spend the meter's grant.
-   */
-  private async peek(
-    dir: string,
-    fileOnly: boolean,
-  ): Promise<
-    { kind: "resolved"; expiresAt?: number } | { kind: "blocked"; reason: string } | undefined
-  > {
-    try {
-      const result: ClaudeQuotaAuthResult = await resolveClaudeQuotaAuthResult(dir, {
-        keychain: this.keychain,
-        allowPrompt: false,
-        persistLock: false,
-        // A file-only peek stays file-only: it never reads the Keychain, so
-        // the credential the meter remembered from it is left alone instead
-        // of being forgotten by a store that "looks absent".
-        ...(fileOnly ? { fileOnly: true } : {}),
-        now: this.now,
-      });
-      if (result.status === "resolved") {
-        return { kind: "resolved", expiresAt: result.auth.expiresAt };
-      }
-      if (result.status === "locked") return { kind: "blocked", reason: result.reason };
-      if (result.status === "unavailable" && result.reason) {
-        return { kind: "blocked", reason: result.reason };
-      }
-      return undefined;
-    } catch {
-      return undefined;
-    }
-  }
-
-  /**
    * The client's own status read, or nothing if it could not produce one.
    *
    * It goes through the store lease like every other client run, and it
    * DEFERS rather than waits: this is a background poll, and the default
-   * store already answers by attribute (`readClaudeCredentialEvidence`) when
+   * store reader already answers when
    * the probe cannot. Deferring keeps a status poll from queueing behind a
    * renewal, and keeps it from becoming a second refresher of its own.
    */
@@ -782,11 +711,6 @@ function parseJsonStatus(stdout: string): AccountStatus | undefined {
     authType: record.authMethod === "apiKey" ? "api_key" : "oauth",
     ...(identity ? { identity } : {}),
   };
-}
-
-/** The account line's identity, when the store knew one. */
-function identityOf(label: string | undefined): { identity?: { label: string } } {
-  return label ? { identity: { label } } : {};
 }
 
 /** Plan names as the user knows them, not as the API spells them. */

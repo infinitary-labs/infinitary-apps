@@ -4,7 +4,7 @@ import { join } from "node:path";
 import {
   clearClaudeCredentialCache,
   clearKeychainLock,
-  resolveClaudeQuotaAuthResult,
+  readClaudeStore,
 } from "@core/claude/claudeQuota";
 import type { HostKeychain, HostKeychainQuery } from "@core/host";
 import { afterAll, beforeAll, expect, it } from "vitest";
@@ -160,10 +160,10 @@ it.runIf(enabled)(
     const step = async (label: string, allowPrompt: boolean) => {
       clearClaudeCredentialCache(configDir);
       log.push({ step: label, unlockedBefore: unlocked() });
-      const result = await resolveClaudeQuotaAuthResult(configDir, { keychain, env, allowPrompt });
+      const result = await readClaudeStore(configDir, { keychain, env, allowPrompt });
       log.push({
         step: label,
-        result: result.status === "resolved" ? { status: "resolved" } : result,
+        result: result.state === "present" ? { state: "present" } : result,
         unlockedAfter: unlocked(),
       });
       return result;
@@ -172,7 +172,7 @@ it.runIf(enabled)(
     // The startup tick: this process's first touch of the store, silent.
     // It reports the lock without the VALUE read and without asking.
     const tick = await step("background tick, locked", false);
-    expect(tick).toEqual({ status: "unavailable", reason: "keychain_locked" });
+    expect(tick).toEqual({ state: "unreadable", reason: "keychain_locked" });
     expect(keychain.calls).toEqual(["presence"]);
     expect(unlocked()).toBe(false);
 
@@ -198,16 +198,16 @@ it.runIf(enabled)(
     expect(unlockEntry?.outcome.code).not.toBe(DEAD_RETRY);
     if (unlockEntry?.outcome.kind === "unlocked") {
       // Someone typed the password into the dialog.
-      expect(retry.status).toBe("resolved");
+      expect(retry.state).toBe("present");
     } else {
       // Drawn-but-unanswerable (-60008, a locked screen) or cancelled (-128).
-      expect(retry).toEqual({ status: "unavailable", reason: "keychain_locked" });
+      expect(retry).toEqual({ state: "unreadable", reason: "keychain_locked" });
       expect(keychain.calls).toEqual(["presence", "unlock"]);
       // Stand-in for the person typing the password into the dialog.
       security("unlock-keychain", "-p", SCRATCH_PASSWORD, keychainPath);
       keychain.calls.length = 0;
       const recovered = await step("Retry, after the password", true);
-      expect(recovered.status).toBe("resolved");
+      expect(recovered.state).toBe("present");
       // Already unlocked: no second dialog, and the read is Infinitary's own.
       expect(keychain.calls).toEqual(["presence", "value"]);
     }
@@ -217,7 +217,7 @@ it.runIf(enabled)(
     clearKeychainLock(configDir);
     keychain.calls.length = 0;
     const relocked = await step("background tick, locked again", false);
-    expect(relocked).toEqual({ status: "unavailable", reason: "keychain_locked" });
+    expect(relocked).toEqual({ state: "unreadable", reason: "keychain_locked" });
     expect(keychain.calls).toEqual(["presence"]);
   },
   120_000,

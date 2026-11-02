@@ -65,13 +65,16 @@ Moved verbatim from `AGENTS.md` on 2026-09-24; `AGENTS.md` keeps a one-line poin
 
 ## Keeping the Claude reading current
 
-- The account health check reads the file store only (`fileOnly`) and never touches the Keychain, so the sign-in the meter remembered survives it.
-  A fresh Keychain value read happens only after the item's modification time or the account config changes.
+- Health, allowance, identity and login ownership use `readClaudeStore`: one `present`, `absent` or `unreadable` result carrying the access token, advisory expiry and current identity from Claude Code's config.
+  File credentials and the account config are cached by modification date; a Keychain value is cached only when the item reports its modification date, and is invalidated by a changed item or config.
+  Access expiry alone does not discard a cached value, and concurrent equivalent reads share their work.
+  Retry and renewal bypass the value cache; an explicit permission request never joins a silent read.
+  An unreadable result stays stale or degraded, never signed out, and never replaces the last known account label.
 - A read through Apple's tool that fails or runs out of time is `keychain_read_incomplete`: retryable on the next refresh, never held until Retry, and its words never mention Always Allow.
   The single-item read keeps 5 seconds.
   Checking that one item's access rules has no separate limit, because it does not walk the keychain.
 - Claude's usage service is asked at most once per account every five minutes (`CLAUDE_ASK_INTERVAL_MS`), and ten minutes after a 429 whatever its retry-after says.
-  Refreshes between asks (focus, resume) serve the last answer; a person's Retry always asks.
+  Refreshes between asks resolve the store first and serve the last answer only for the same login; a person's Retry always asks.
 
 ## Typed cut-offs
 
@@ -134,7 +137,8 @@ The fact lives on the account's registry row (`cutOff`, additive: a row an older
   Only a `rejected` reading's reset is trusted (rows from before migration 51 held seconds).
   The vault still records `no_headroom` with its reset for the lane and seat phases, and holds none with no reset named, since nothing could clear it.
 - **Clearing, only when a fact changes** (owner Q1 a: never an automatic attempt).
-  Each fact carries the stamp it was seen under (`CredentialStamp`): which login the store holds (a digest of the account and organisation the client's config names), when the credential was last written (the plain-file store's modification time, else the Keychain item's), and the client's version - attributes only, never a token value (`readClaudeCredentialStamp`).
+  Each fact carries the stamp it was seen under (`CredentialStamp`): which login the store holds (a digest of the account and organisation the client's config names), when the credential was last written (the plain-file store's modification time, else the Keychain item's), and the client's version, projected from the shared store result by `claudeCredentialStamp` and never carrying a token.
+  Its existing digest and file-first modification-date format stay compatible with saved refusals and records of pasted-code logins; neither needs a second reader.
   A part the note could not see is adopted from the next read that does, never counted as a change.
   One fact stands at a time, and a cut-off with a looser way back never replaces a stricter one that stands (refused, then signed_out, then no_headroom): a turn already in flight that settles after a refusal cannot hand it to a clock or a routine rewrite.
   Before the first read after a restart, `servesSync` and `withheldReason` answer from the standing fact.
@@ -147,12 +151,14 @@ The fact lives on the account's registry row (`cutOff`, additive: a row an older
     A live credential renews itself routinely, so a rewrite alone is not a changed login here - which also means signing in again to the same account and organisation does not clear a refusal; "Try Claude again" is the way back after a fix that keeps the same login.
 - **A changed login** (INF-1079).
   A person may switch the machine's Claude login outside the app when one runs out, and the account row stays the same, so the vault keeps the login its store last named on the row (`AccountRecord.login`, kept across a restart).
-  Every fresh health read (the account check on the one-minute tick, and the first read after a start) and `AccountVault.checkLogins` - an attribute-only read of the stamp's login (`AccountBackend.loginStamp`), with no credential value, no client and no request for access, run at start, on window focus and on a wake - compare it.
+  Each health or allowance read passes its non-secret projection to `AccountVault.noteCredentialRead`; the vault compares that login and updates Claude's row label from the current identity.
+  There is no separate focus-time identity scan; the next ordinary reading observes a swap.
   The first login seen is adopted and an unreadable one is no change; a different one clears whatever cut-off stood on the account and is heard through `AccountVault.onLoginChange`.
   The composition root then forgets the old login's pushed readings (`PushedQuotaStore.forget`), drops its row from the last snapshot so it is not carried forward (`QuotaService.forgetAccount`), and takes a reading at once (`refresh("account-changed")`, which, like `demand`, chains after a refresh in flight instead of joining it).
   The sensor keeps each Claude answer under the login it was asked with (`createQuotaFetcher`'s `loginOf`): an answer the old login got is never served from the five-minute ledger, and one that lands after the switch is dropped as `skipped`.
   An unchanged login keeps its spacing, its backoff and its genuine refusal.
-  The captain's Recheck allowance (the spent-allowance card, command search, Subscriptions' Refresh) reads the logins first and then refreshes with `demand`, the one reason that may ask for access (`FirstmateAgent.recheckAllowance`).
+  The captain's Recheck allowance (the spent-allowance card, command search, Subscriptions' Refresh) refreshes with `demand`, the one reason that may ask for access (`FirstmateAgent.recheckAllowance`).
+  That same store read supplies the login before the sensor considers a cached answer.
 - **A refusal never renews.**
   `AccountVault.renew` answers `withheld` without asking the backend while a refusal stands; the health tick already skips a degraded account, and the sensor's 401 path reads `withheld` as `renewal_withheld` (not knowing), never a sign-out.
   A lost sign-in may still renew: only a 401 renews, and that is the path to proof.

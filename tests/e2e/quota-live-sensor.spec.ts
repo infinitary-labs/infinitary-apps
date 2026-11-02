@@ -1,4 +1,4 @@
-import { mkdirSync, writeFileSync } from "node:fs";
+import { mkdirSync, utimesSync, writeFileSync } from "node:fs";
 import { createServer, type Server } from "node:http";
 import type { AddressInfo } from "node:net";
 import { join } from "node:path";
@@ -21,18 +21,21 @@ import { catalogEntry } from "../../src/shared/providers";
 import { scratchDir } from "../helpers/scratchDirs";
 import { consumerConfigMessage, grpcWebOkBody } from "../support/grpcWebEncoder";
 import { type LaunchedApp, launchApp } from "./launch";
+import { resizeWindow } from "./layout";
 import { claudeDefaultStore, writeMockClaudeClient } from "./mockClaudeClient";
+import { regionShot } from "./pictures";
+import { focusOn, pressKey } from "./windowKeys";
 
 /**
- * The one e2e that does NOT use the quota fixture seam.
+ * Live-sensor journeys do not use the quota fixture seam.
  *
- * Every other quota spec injects a finished snapshot straight into
+ * Snapshot-based quota specs inject a finished snapshot straight into
  * QuotaService, which means the whole credential-and-request layer -
- * `QuotaAuth.resolve`, `resolveClaudeQuotaAuth`, the provider fetchers, the
+ * `QuotaAuth.resolve`, `readClaudeStore`, the provider fetchers, the
  * delegated renewal, the status vocabulary - had no end-to-end coverage at
  * all. That is how two provider defects reached the captain's Settings twice.
  *
- * So this one runs the REAL `createQuotaFetcher` against a local stub of the
+ * These run the real `createQuotaFetcher` against a local stub of the
  * vendor's usage endpoint, and walks the whole path: resolve the account's own
  * store -> fetch -> parse -> snapshot -> IPC -> render. The only thing
  * redirected is the endpoint's address (a dev/e2e-gated override the packaged
@@ -585,6 +588,95 @@ test.describe("the real quota sensor, end to end", () => {
     await expect(row.getByText(claudeWindowLabel(UNRELEASED_WINDOW))).toHaveCount(0);
     // The request really carried the account's own stored token.
     expect(stub.seen).toContain("live-token");
+  });
+
+  // INF-2318, approved slim step 2: one reading owns the current identity
+  // and an unreadable store is stale, never a sign-out. File-backed on both
+  // platforms; a local usage server and isolated client/home are its only resources.
+  test("a Claude account swap updates the next reading and an unreadable store stays stale", async () => {
+    const userDataDir = scratchDir("infinitary-e2e-claude-swap-");
+    stub = await startStubUsage(["first-token", "second-token"]);
+    seedAccounts(userDataDir);
+    const identity = (home: string, email: string, accountUuid: string, date: number) => {
+      const file = join(home, ".claude.json");
+      writeFileSync(
+        file,
+        JSON.stringify({
+          oauthAccount: { emailAddress: email, accountUuid, organizationUuid: "personal" },
+        }),
+      );
+      utimesSync(file, date, date);
+    };
+    app = await launchApp({
+      userDataDir,
+      prepareHome: (home) => {
+        seedClaudeHome("first-token", Date.now() + 3600_000)(home);
+        identity(home, "alex.one@example.com", "account-one", 1000);
+      },
+      env: {
+        INFINITARY_CLAUDE_USAGE_URL: stub.url,
+        // Deliberately still names the earlier login after the external swap.
+        INFINITARY_CLAUDE_CLI: writeMockClaudeClient(join(userDataDir, "bin"), {
+          email: "alex.one@example.com",
+          plan: "max",
+        }),
+      },
+    });
+    await resizeWindow(app.app, app.page, { width: 1280, height: 800 });
+    await openSubscriptions(app);
+    const row = accountRow(app, CLAUDE_PERSONAL);
+    await expect(row).toContainText("alex.one@example.com");
+    await expect(row).toContainText("70%");
+    expect(stub.seen).toContain("first-token");
+
+    seedClaudeHome("second-token", Date.now() + 3600_000)(app.homeDir);
+    utimesSync(join(claudeDefaultStore(app.homeDir), ".credentials.json"), 2000, 2000);
+    identity(app.homeDir, "alex.two@example.com", "account-two", 2000);
+    const refresh = app.page.getByRole("button", { name: "Refresh", exact: true });
+    await focusOn(refresh);
+    await pressKey(refresh, "Enter");
+    await expect(row).toContainText("alex.two@example.com");
+    await expect(row).not.toContainText("alex.one@example.com");
+    await expect(row).toContainText("70%");
+    expect(stub.seen).toContain("second-token");
+    const current = await app.page.evaluate(() => window.infinitary.accounts.list());
+    expect(current).toContainEqual(
+      expect.objectContaining({
+        id: CLAUDE_PERSONAL,
+        label: "alex.two@example.com",
+        identity: "alex.two@example.com",
+        connected: true,
+      }),
+    );
+    await regionShot(row, test.info().outputPath("claude-current-identity.png"));
+    // The captain chose current identity instead of a name the next read would replace.
+    const actions = row.getByRole("button", { name: "alex.two@example.com actions" });
+    await focusOn(actions);
+    await pressKey(actions, "Enter");
+    const menu = app.page.getByRole("menu");
+    await expect(menu).toBeVisible();
+    await expect(menu.getByRole("menuitem", { name: "Rename", exact: true })).toHaveCount(0);
+    const pause = menu.getByRole("menuitem", { name: "Pause", exact: true });
+    await expect(pause).toBeVisible();
+    await regionShot(menu, test.info().outputPath("claude-menu-current-identity.png"));
+    await pressKey(pause, "Escape");
+    await expect(menu).toHaveCount(0);
+
+    writeFileSync(join(claudeDefaultStore(app.homeDir), ".credentials.json"), "{incomplete");
+    await expect(refresh).toBeEnabled();
+    await focusOn(refresh);
+    await pressKey(refresh, "Enter");
+    await expect
+      .poll(async () =>
+        (await app?.page.evaluate(() => window.infinitary.quota.snapshot()))?.providers.find(
+          (provider) => provider.accountId === CLAUDE_PERSONAL,
+        ),
+      )
+      .toMatchObject({ status: "ok", stale: true, reason: "credential_unavailable" });
+    await expect(row).toContainText("70%");
+    await expect(row).toContainText("alex.two@example.com");
+    await expect(row.getByRole("button", { name: "Sign in", exact: true })).toHaveCount(0);
+    await regionShot(row, test.info().outputPath("claude-unreadable-stale.png"));
   });
 
   test("an expired token recovers through the account's own client, with no sign-in", async () => {

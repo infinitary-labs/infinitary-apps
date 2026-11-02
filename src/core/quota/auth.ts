@@ -14,6 +14,8 @@ export type ManagedAuth = {
   headers?: Record<string, string>;
   baseUrl?: string;
   usingOAuth: boolean;
+  /** Current identity carried by the same store read as the credential, when known. */
+  account?: string;
 };
 
 /** One quota-sensed account: the vault account plus its provider mapping. */

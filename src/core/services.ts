@@ -68,7 +68,11 @@ import { ClaudeAuthBackend } from "./claude/claudeAuth";
 import { primeClaudeExecutable } from "./claude/claudeCli";
 import type { ClaudeRateLimit } from "./claude/claudeEvents";
 import { CLAUDE_MODELS } from "./claude/claudeModels";
-import { defaultClaudeConfigDir, resolveClaudeQuotaAuthResult } from "./claude/claudeQuota";
+import {
+  claudeCredentialStamp,
+  defaultClaudeConfigDir,
+  readClaudeStore,
+} from "./claude/claudeQuota";
 import { claudeReasoningCapabilities } from "./claude/reasoning";
 import { createClaudeSessionFactory } from "./claude/session";
 import { interfacesFromAddresses } from "./connection/addresses";
@@ -222,7 +226,7 @@ import {
 } from "./privacy/appDataWatch";
 import { quotaEntryForPiProvider } from "./quota/auth";
 import { buildModelsCatalog, effectiveFromProvider } from "./quota/catalog";
-import { managedFromClaudeAuthResult } from "./quota/claudeAuthResolve";
+import { managedFromClaudeStore } from "./quota/claudeAuthResolve";
 import { createQuotaFetcher } from "./quota/fetchQuota";
 import { createFixtureRefresh } from "./quota/fixture";
 import { createQuotaHttp } from "./quota/http";
@@ -1075,12 +1079,16 @@ export async function createServices(
     // resolves through its Pi runtime. Infinitary never mints Anthropic OAuth.
     const claudeDir = claudeStoreDir(accountId);
     if (claudeDir !== undefined) {
-      const mapped = managedFromClaudeAuthResult(
-        await resolveClaudeQuotaAuthResult(claudeDir, {
-          keychain: host.keychain,
-          allowPrompt: options?.allowPrompt,
-        }),
+      const read = await readClaudeStore(claudeDir, {
+        keychain: host.keychain,
+        allowPrompt: options?.allowPrompt,
+      });
+      vault.noteCredentialRead(
+        accountId,
+        claudeCredentialStamp(read),
+        read.state === "present" ? read.identity : undefined,
       );
+      const mapped = managedFromClaudeStore(read);
       if (mapped.unresolved) quotaUnresolved.set(accountId, mapped.unresolved);
       else quotaUnresolved.delete(accountId);
       return mapped.managed;
@@ -3028,12 +3036,7 @@ export async function createServices(
       ),
     modelRuntime: auth.modelRuntime,
     flagship,
-    // The captain's recheck reads the login first, so a switched one's
-    // reading is the one taken.
-    recheckAllowance: async () => {
-      await vault.checkLogins();
-      return quota.refresh("demand");
-    },
+    recheckAllowance: () => quota.refresh("demand"),
     // Each backend's seat (W1): the seat preset, opened by the one factory
     // per backend.
     seats: sessionFactories,
@@ -3214,14 +3217,13 @@ export async function createServices(
   // A changed login (the machine's Claude login switched, say): what the old
   // login was refused or read is not this account's any more, so its saved
   // refusals and last reading go and a new reading is taken now
-  // (docs/quota.md "A changed login"). Read once at start, then on the
-  // account check's tick, window focus and wake.
+  // (docs/quota.md "A changed login"). Health and allowance share the
+  // same store reader; there is no separate focus-time identity check.
   vault.onLoginChange((accountId) => {
     pushedQuota.forget(accountId);
     quota.forgetAccount(accountId);
     void quota.refresh("account-changed");
   });
-  void vault.checkLogins();
   // So is one a computer that runs work names on its own sign-ins; its
   // setup card reads them too, and a task waiting for a sign-in there
   // starts now rather than at the next tick.

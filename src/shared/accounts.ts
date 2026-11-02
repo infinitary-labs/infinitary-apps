@@ -21,7 +21,7 @@ export const accountViewSchema = z.object({
   id: z.string(),
   providerId: z.string(),
   kind: credentialKindSchema,
-  /** User-facing label ("Personal", "Work #2"); always editable. */
+  /** User-facing name: Claude follows its current identity; other providers can be renamed. */
   label: z.string(),
   /** Disabled accounts keep their credentials but leave the selection pool. */
   enabled: z.boolean(),

@@ -6,12 +6,7 @@ import { beforeEach, expect, it } from "vitest";
 import { scratchDir } from "../../../tests/helpers/scratchDirs";
 import type { HostKeychain, HostKeychainQuery } from "../host";
 import { ClaudeAuthBackend } from "./claudeAuth";
-import {
-  clearClaudeCredentialCache,
-  clearKeychainLock,
-  readClaudeCredentialEvidence,
-  resolveClaudeQuotaAuthResult,
-} from "./claudeQuota";
+import { clearClaudeCredentialCache, clearKeychainLock, readClaudeStore } from "./claudeQuota";
 
 beforeEach(() => {
   clearKeychainLock();
@@ -47,11 +42,11 @@ it("the 60s account health check leaves the remembered sign-in alone, so the nex
     },
   };
   // As services.ts calls it on every quota refresh.
-  const quotaTick = () => resolveClaudeQuotaAuthResult(dir, { keychain, env });
+  const quotaTick = () => readClaudeStore(dir, { keychain, env });
 
-  expect((await quotaTick()).status).toBe("resolved");
+  expect((await quotaTick()).state).toBe("present");
   expect(reads).toHaveLength(1);
-  expect((await quotaTick()).status).toBe("resolved");
+  expect((await quotaTick()).state).toBe("present");
   expect(reads).toHaveLength(1); // remembered: no second VALUE read
 
   // The supervisor's 60s CredentialHealthService tick reads health().
@@ -59,14 +54,13 @@ it("the 60s account health check leaves the remembered sign-in alone, so the nex
     available: () => true,
     run: () => Promise.reject(new Error("no client in scratch")),
     keychain,
-    evidence: (d) => readClaudeCredentialEvidence(d, { keychain, env }),
-    stamp: async () => ({}),
+    readStore: (d) => readClaudeStore(d, { keychain, env }),
     configDir: () => dir,
   });
   await backend.health({ providerId: CLAUDE_PROVIDER_ID, accountId: "a", dir: home } as never);
   expect(reads).toHaveLength(1); // the health check itself reads no VALUE
 
-  expect((await quotaTick()).status).toBe("resolved");
+  expect((await quotaTick()).state).toBe("present");
   expect(reads).toHaveLength(1); // still remembered: the health check did not wipe it
 });
 
@@ -99,9 +93,9 @@ it("a read through Apple's tool that ran out of time is retried on the next tick
       };
     },
   };
-  const first = await resolveClaudeQuotaAuthResult(dir, { keychain, env });
-  expect(first).toEqual({ status: "unavailable", reason: "keychain_read_incomplete" });
+  const first = await readClaudeStore(dir, { keychain, env });
+  expect(first).toEqual({ state: "unreadable", reason: "keychain_read_incomplete" });
   expect(KEYCHAIN_VALUE_FAILURE_DETAIL.keychain_read_incomplete).not.toMatch(/Always Allow/);
-  expect((await resolveClaudeQuotaAuthResult(dir, { keychain, env })).status).toBe("resolved");
+  expect((await readClaudeStore(dir, { keychain, env })).state).toBe("present");
   expect(attempt).toBe(2);
 });

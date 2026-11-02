@@ -1,4 +1,5 @@
 import { utimesSync, writeFileSync } from "node:fs";
+import { createServer, type Server } from "node:http";
 import { join } from "node:path";
 import { expect, type Page, test } from "@playwright/test";
 import {
@@ -124,12 +125,19 @@ function triedElsewhere(mockProvider: MockProviderServer, words: string): number
 
 let launched: LaunchedApp | undefined;
 let mockProvider: MockProviderServer | undefined;
+let usageServer: Server | undefined;
 
 test.afterEach(async () => {
   await launched?.close();
   launched = undefined;
   await mockProvider?.close();
   mockProvider = undefined;
+  if (usageServer?.listening) {
+    await new Promise<void>((resolve, reject) =>
+      usageServer?.close((error) => (error ? reject(error) : resolve())),
+    );
+  }
+  usageServer = undefined;
 });
 
 test("a refusal pauses the seat on its own card, and Try Claude again answers the kept words", async () => {
@@ -304,15 +312,34 @@ function writeClaudeLogin(homeDir: string, accountUuid: string): void {
 
 // INF-1079, the captain: "it would be great to have a button here to trigger
 // a recheck" after switching Claude accounts elsewhere.
-test("a spent allowance's Recheck allowance, by key, keeps the card on one login, and coming back after a switch answers the kept words once", async () => {
+// INF-2318: the captain replaced the independent focus scan with the next shared store read.
+// This journey must use the real allowance path, not a finished-snapshot fixture.
+test("a spent allowance's Recheck allowance, by key, keeps the card on one login, and a reading after a switch answers the kept words once", async () => {
   const mock = await startMockProvider();
   mockProvider = mock;
   const homeDir = scratchDir("infinitary-home-");
+  let remaining = 80;
+  const resetsAt = new Date(Date.now() + 2 * 3600_000).toISOString();
+  usageServer = createServer((_request, response) => {
+    response.writeHead(200, { "content-type": "application/json" });
+    response.end(
+      JSON.stringify({ five_hour: { utilization: 100 - remaining, resets_at: resetsAt } }),
+    );
+  });
+  await new Promise<void>((resolve) => usageServer?.listen(0, "127.0.0.1", resolve));
+  const address = usageServer.address();
+  if (!address || typeof address === "string")
+    throw new Error("The usage stand-in has no address.");
   launched = await launchClaudeSeat({
     mockProvider: mock,
     homeDir,
     prepareHome: (home) => writeClaudeLogin(home, "account-a"),
+    env: {
+      INFINITARY_QUOTA_FIXTURE_DIR: "",
+      INFINITARY_CLAUDE_USAGE_URL: `http://127.0.0.1:${address.port}/usage`,
+    },
   });
+  remaining = 0;
   const { app, page } = launched;
   mock.cutClaudeSeat({ class: "no_headroom", resetsAt: Date.now() + 2 * 3600_000 });
   const words = `chart the shoals ${ANSWER_PROMPT_MARKER}`;
@@ -344,16 +371,13 @@ test("a spent allowance's Recheck allowance, by key, keeps the card on one login
     expect(tried(mock, words)).toBe(1);
   });
 
-  await test.step("another login: coming back to the window hears it and answers the kept words", async () => {
-    // The captain switched Claude to an account with room, outside the app,
-    // and comes back to the window: macOS tells the window it has focus.
+  await test.step("another login: the next reading hears it and answers the kept words", async () => {
+    // The captain switched Claude to an account with room outside the app,
+    // then asks for its allowance through the same key as before.
     writeClaudeLogin(homeDir, "account-b");
+    remaining = 80;
     mock.cutClaudeSeat(null);
-    await app.evaluate(({ BrowserWindow }) => {
-      BrowserWindow.getAllWindows()
-        .find((win) => win.webContents.getURL().startsWith("file:"))
-        ?.emit("focus");
-    });
+    await pressWindowKey(app, "1", ["meta"]);
     await expect.poll(() => cardTitles(page), { timeout: 45_000 }).toContain(MOCK_ANSWER_TITLE);
     expect(await cardTitles(page)).not.toContain(title);
     expect(tried(mock, words)).toBe(2);

@@ -8,7 +8,7 @@ Infinitary is an Electron desktop app: your own AI studio, a calm first mate and
 
 ## Principles (captain; full text in `docs/principles.md`)
 
-- **Hide the machinery (2026-08-17).** Infinitary is the most advanced agent harness, but it aggressively hides that complexity from the end user. The user interacts with just the main first mate agent and a few settings - nothing else. The fewer concepts we expose, the better. The sign-in flow and the Subscriptions tab never expose the "harness" technicality - they speak only of providers, accounts (labeled by the user), and quota; an e2e assertion enforces the wording.
+- **Hide the machinery (2026-08-17).** Infinitary is the most advanced agent harness, but it aggressively hides that complexity from the end user. The user interacts with just the main first mate agent and a few settings - nothing else. The fewer concepts we expose, the better. The sign-in flow and the Subscriptions tab never expose the "harness" technicality - they speak only of providers, accounts (labeled by the user, except Claude, which follows its current identity), and quota; an e2e assertion enforces the wording.
 - **Subscriptions (2026-09-24):** Supported subscriptions are only those that run through Pi; Claude is the sole exception.
 - **The iOS app adds no feature the desktop app lacks (2026-10-25).** It may adapt how things work and where they appear, but anything new needs a deliberate design decision the captain approves first (`docs/ios.md`).
 - **VoiceOver and accessibility work on the Infinitary iOS app are out of scope for now.** Agents must not reopen this work until the captain asks for accessibility improvement.

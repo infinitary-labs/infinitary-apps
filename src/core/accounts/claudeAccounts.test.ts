@@ -4,7 +4,7 @@ import type { AuthNotice, AuthPromptView } from "@shared/providers";
 import { CLAUDE_PROVIDER_ID } from "@shared/providers";
 import { describe, expect, it, vi } from "vitest";
 import { scratchDir } from "../../../tests/helpers/scratchDirs";
-import type { ClaudeCredentialEvidence } from "../claude/claudeQuota";
+import type { ClaudeStoreRead } from "../claude/claudeQuota";
 import type { HostKeychain, HostKeychainOutcome } from "../host";
 import { appPathsFor } from "../paths";
 import type { AuthInteractionBridge } from "../pi/piAuth";
@@ -65,10 +65,12 @@ const fakeClaudeClient = async (
 };
 
 /** File-only evidence so tests never read the developer's Keychain. */
-const fileEvidence = async (configDir: string): Promise<ClaudeCredentialEvidence> => {
+const fileStore = async (configDir: string): Promise<ClaudeStoreRead> => {
   const marker = join(configDir, "credential");
   const present = existsSync(marker) && readFileSync(marker, "utf8").length > 0;
-  return present ? { state: "live" } : { state: "absent" };
+  return present
+    ? { state: "present" as const, auth: { accessToken: "fixture-token" }, identity: {} }
+    : { state: "absent" };
 };
 
 function vault() {
@@ -84,7 +86,7 @@ function vault() {
           run: fakeClaudeClient,
           available: () => true,
           configDir: () => store,
-          evidence: fileEvidence,
+          readStore: fileStore,
           primeKeychain: async () => {},
         }),
       ],
@@ -188,7 +190,7 @@ describe("Claude accounts in the vault", () => {
               : { code: 1, stdout: "", stderr: "Sign-in was cancelled." },
           available: () => true,
           configDir: () => store,
-          evidence: async () => ({ state: "absent" }),
+          readStore: async () => ({ state: "absent" }),
           primeKeychain: async () => {},
         }),
       ],
@@ -202,7 +204,7 @@ describe("Claude accounts in the vault", () => {
 });
 
 /**
- * The real store read (`readClaudeCredentialEvidence`) over a Keychain whose
+ * The real store read (`readClaudeStore`) over a Keychain whose
  * attribute probe fails - a denied or timed-out read - behind the vault's
  * own entry points: Connect (`add`) and the row's Sign in (`signIn`). A new
  * vendor sign-in replaces the stored login and can sign out every Claude
@@ -217,7 +219,13 @@ describe("signing in over a login Infinitary cannot read", () => {
     const keychain: HostKeychain & { presence: HostKeychainOutcome } = {
       presence: { kind: "failed", code: -25308, message: "User interaction is not allowed." },
       findGenericPassword: async () => keychain.presence,
-      readGenericPassword: async () => keychain.presence,
+      readGenericPassword: async () =>
+        keychain.presence.kind === "found"
+          ? {
+              kind: "value",
+              value: JSON.stringify({ claudeAiOauth: { accessToken: "fixture-token" } }),
+            }
+          : keychain.presence,
     };
     const subject = AccountVault.create(paths, {
       pi: new PiAccountBackend(),
@@ -304,7 +312,7 @@ describe("status reads against a spawned client", () => {
           },
           available: () => true,
           configDir: () => store,
-          evidence: fileEvidence,
+          readStore: fileStore,
           primeKeychain: async () => {},
         }),
       ],

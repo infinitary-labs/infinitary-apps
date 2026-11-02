@@ -3,8 +3,9 @@ import { CardStore } from "../../src/core/storage/cardStore";
 import { openDatabase } from "../../src/core/storage/db";
 import { scratchDir } from "../helpers/scratchDirs";
 import { launchApp } from "./launch";
+import { windowShot } from "./pictures";
 import { readSavedData } from "./savedData";
-import { pagerAt, shownCard, shownEntry, stageAtRest } from "./stack";
+import { expectUpdateSeen, pagerAt, shownCard, shownEntry, stageAtRest } from "./stack";
 
 const titles = [
   "The launch review is ready",
@@ -17,7 +18,8 @@ const titles = [
  * Completion is the unread title on stage, followed by the read-card fallback once none remain.
  */
 for (const reload of [false, true]) {
-  test(`closing a later card selects the unvisited card ${reload ? "after reload" : "at startup"}`, async () => {
+  // biome-ignore lint/correctness/noEmptyPattern: Playwright requires a destructured fixture signature.
+  test(`closing a later card selects the unvisited card ${reload ? "after reload" : "at startup"}`, async ({}, testInfo) => {
     const userDataDir = scratchDir("infinitary-unread-dismissal-");
     const db = openDatabase(userDataDir);
     try {
@@ -42,6 +44,10 @@ for (const reload of [false, true]) {
     try {
       const { page } = launched;
       await expect(shownCard(page, titles[0])).toBeVisible();
+      // INF-2304: visibility alone does not establish the already-read premise.
+      // Focus the hidden window and await the owner's drawn-update sighting before paging away.
+      await shownCard(page, titles[0]).locator("[data-card-title]").click();
+      await expectUpdateSeen(page, "launch-1");
       await page.getByRole("button", { name: "Next card", exact: true }).click();
       await expect(shownCard(page, titles[1])).toBeVisible();
       if (reload) {
@@ -67,8 +73,11 @@ for (const reload of [false, true]) {
       await expect(shownCard(page, titles[2])).toBeVisible();
       await expect(pagerAt(page, 2, 2)).toBeVisible();
       await stageAtRest(page);
+      await windowShot(page, testInfo.outputPath("unvisited-selected.png"));
       await shownEntry(page).getByRole("button", { name: "Close", exact: true }).click();
       await expect(shownCard(page, titles[0])).toBeVisible();
+      await stageAtRest(page);
+      await windowShot(page, testInfo.outputPath("read-card-fallback.png"));
     } finally {
       await launched.close();
     }

@@ -1,0 +1,8 @@
+{
+  "exclusions": [
+    {
+      "id": "card-unread-dismissal-test",
+      "reason": "Test-only repair: establish the first card's shared seen mark before exercising unread dismissal at startup and after reload. Product behavior is unchanged."
+    }
+  ]
+}

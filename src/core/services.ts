@@ -3489,6 +3489,13 @@ export async function createServices(
     ...(host.macUpdates ? { macDriver: host.macUpdates } : {}),
     openExternal: (url) => host.openExternal(url),
     ...(host.relaunch ? { relaunch: host.relaunch } : {}),
+    // This computer's crew saves its running work before an update
+    // replaces the copy (docs/alpha.md, "Saving work before an update").
+    work: {
+      save: (options) => supervisor.saveForUpdate(options),
+      release: () => supervisor.releaseUpdate(),
+      resuming: () => supervisor.resumingAfterUpdate(),
+    },
   });
   return {
     paths,

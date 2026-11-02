@@ -73,6 +73,7 @@ describe("the command catalog", () => {
       "cards.previous-tab",
       "settings.keyboard",
       "updates.show", // INF-640: the update notice is also chosen by name.
+      "updates.later", // INF-2245: Update later is chosen by name while work saves.
       "updates.check", // INF-2073: Check for updates is chosen by name.
       "whats-new.show",
       "firstmate.reply",
@@ -133,6 +134,7 @@ describe("the command catalog", () => {
       "settings.open",
       "settings.keyboard",
       "updates.show",
+      "updates.later",
       "updates.check",
       "whats-new.show",
       "firstmate.reply",

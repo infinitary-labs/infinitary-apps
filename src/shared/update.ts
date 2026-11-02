@@ -8,6 +8,22 @@ import { z } from "zod";
 export const updateChannelSchema = z.enum(["stable", "alpha"]);
 export type UpdateChannel = z.infer<typeof updateChannelSchema>;
 
+/**
+ * What the crew's work is doing around this computer's own update
+ * (docs/alpha.md, "Saving work before an update"): `saving` while running
+ * work stops where nothing is lost, before the copy is replaced; `resuming`
+ * after the restart, until each turn the update stopped has started again.
+ */
+export const updateWorkSchema = z.object({
+  state: z.enum(["saving", "resuming"]),
+  /**
+   * Saving: each task whose running work the update waits for, by its
+   * title. Resuming: each task whose work has not started again.
+   */
+  tasks: z.array(z.string()),
+});
+export type UpdateWork = z.infer<typeof updateWorkSchema>;
+
 export const updateStatusSchema = z.object({
   currentVersion: z.string(),
   /** The subscription the status was read for. */
@@ -40,6 +56,8 @@ export const updateStatusSchema = z.object({
   percent: z.number().min(0).max(100).optional(),
   problem: z.string().optional(),
   notice: z.string().optional(),
+  /** The crew's work around this update, while there is any to save or resume. */
+  work: updateWorkSchema.optional(),
 });
 export type UpdateStatus = z.infer<typeof updateStatusSchema>;
 
@@ -50,6 +68,11 @@ export const updateInstallResultSchema = z.union([
     ok: z.literal(false),
     /** What happened and what to do, in the panel's own words. */
     problem: z.string(),
+    /**
+     * The person chose Update later while work was saved: nothing went
+     * wrong, the update waits and the work carries on.
+     */
+    later: z.literal(true).optional(),
   }),
 ]);
 export type UpdateInstallResult = z.infer<typeof updateInstallResultSchema>;

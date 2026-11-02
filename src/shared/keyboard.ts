@@ -424,6 +424,17 @@ export const KEYBOARD_COMMANDS = {
     keys: [],
     searchWords: ["update", "restart", "stable", "alpha"],
   },
+  // INF-2245: the update notice's Update later, chosen by name while an
+  // update saves the crew's work; a person may give it a key.
+  "updates.later": {
+    label: "Update later",
+    scope: "window",
+    runs: "shell",
+    repeat: false,
+    risk: "navigate",
+    keys: [],
+    searchWords: ["update", "later", "cancel", "saving", "work"],
+  },
   // INF-2073: Settings → General's Check for updates, chosen by name; a person may give it a key.
   "updates.check": {
     label: "Check for updates",

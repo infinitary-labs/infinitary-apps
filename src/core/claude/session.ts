@@ -9,6 +9,7 @@ export { claudeCodingReasoning } from "./reasoning";
 import { createHash, randomUUID } from "node:crypto";
 import { join } from "node:path";
 import {
+  type HookCallback,
   type Options,
   type Query,
   type SDKUserMessage,
@@ -34,12 +35,17 @@ import {
   type ControlProfile,
   LOCAL_MACHINE_ID,
   type ModelSession,
+  type RunningCall,
+  SAFE_STOP_BLOCKED_TEXT,
+  type SafeStopOptions,
+  type SafeStopOutcome,
   type SessionEvent,
   type SessionFactory,
   type SessionImage,
   type SessionRenewal,
   type SessionResume,
   type SessionSpec,
+  StoppedBeforeStartError,
   type ThinkingLevel,
 } from "../session/session";
 import type { BoundTool } from "../session/tools";
@@ -348,6 +354,8 @@ export type ClaudeSessionOptionsInput = {
     session: { resume: string } | { sessionId: string };
     /** A coding session's working copy: its instruction file and staged skills. */
     project?: ClaudeProjectResources;
+    /** Asked before each tool call the client would run: the safe stop's gate (`stopSafely`). */
+    toolGate?: HookCallback;
   };
 };
 
@@ -489,6 +497,7 @@ export function claudeSessionOptions(input: ClaudeSessionOptionsInput): Options 
       ...(coding || thinks ? {} : { thinking: { type: "disabled" as const } }),
       ...(request?.maxModelTurns !== undefined ? { maxTurns: request.maxModelTurns } : {}),
       ...(attachment.model ? { model: attachment.model } : {}),
+      ...(attachment.toolGate ? { hooks: { PreToolUse: [{ hooks: [attachment.toolGate] }] } } : {}),
       ...("resume" in attachment.session
         ? { resume: attachment.session.resume }
         : { sessionId: attachment.session.sessionId }),
@@ -933,6 +942,23 @@ class ClaudeRollingSession extends ClaudeQueryCore<SessionEvent> implements Mode
   private divergedNoted = false;
   private readonly retirement: { promise: Promise<void>; resolve: () => void };
   private readonly mirrors = new Set<Promise<void>>();
+  /** Tool calls the client began (streamed or recorded) with no result yet; a subagent's are its call's. */
+  private readonly executing = new Map<string, RunningCall>();
+  /** The safe stop under way (`stopSafely`): the gate refuses every call while it stands. */
+  private stop:
+    | { promise: Promise<SafeStopOutcome>; cut: boolean; options: SafeStopOptions; end: () => void }
+    | undefined;
+  /** The safe stop's gate, asked by the client before each call it would run. */
+  private readonly toolGate: HookCallback = async () =>
+    this.stop
+      ? {
+          hookSpecificOutput: {
+            hookEventName: "PreToolUse",
+            permissionDecision: "deny",
+            permissionDecisionReason: SAFE_STOP_BLOCKED_TEXT,
+          },
+        }
+      : {};
 
   constructor(
     private id: string,
@@ -1030,6 +1056,12 @@ class ClaudeRollingSession extends ClaudeQueryCore<SessionEvent> implements Mode
     }
     // An abort may have given up on this prompt while the client started.
     if (generation !== this.generation || !this.promptOpen) return;
+    // A safe stop came while the client started: the client never takes
+    // the prompt, whose input goes again.
+    if (this.stop?.cut) {
+      this.finish(new StoppedBeforeStartError());
+      return;
+    }
     this.accepting = true;
     this.push(connection, "prompt", text, images);
     for (const steer of this.early.splice(0)) {
@@ -1164,7 +1196,10 @@ class ClaudeRollingSession extends ClaudeQueryCore<SessionEvent> implements Mode
   steer(text: string, images?: SessionImage[]): Promise<void> {
     if (this.disposing) return Promise.reject(new Error(ENDED_TEXT));
     const connection = this.connection;
-    if (this.accepting && connection) {
+    if (this.stop) {
+      // A stopping turn takes nothing more: the owner has it back at its end.
+      this.held.push(text);
+    } else if (this.accepting && connection) {
       this.push(connection, "steer", text, images);
     } else if (this.promptOpen) {
       // The client is still starting: the steer follows the prompt in.
@@ -1190,6 +1225,98 @@ class ClaudeRollingSession extends ClaudeQueryCore<SessionEvent> implements Mode
       this.cut = { message: failure, at: this.config.clock.now() };
     }
     await this.interrupt();
+  }
+
+  /**
+   * The safe stop (`ModelSession.stopSafely`): the gate refuses every call
+   * the client asks about from now on, the calls it already began finish
+   * and the client records their results, and then the turn is cut. A
+   * steer from now on is held for the owner. With the client's hooks off
+   * (a staged skill turns them off), a call is still waited for once the
+   * client begins it. A second ask joins the first.
+   */
+  stopSafely(options: SafeStopOptions = {}): Promise<SafeStopOutcome> {
+    if (this.stop) return this.stop.promise;
+    if (!this.promptOpen && !this.continuing) return Promise.resolve("stopped");
+    const { signal } = options;
+    if (signal?.aborted) return Promise.resolve("withdrawn");
+    let settle!: (outcome: SafeStopOutcome) => void;
+    const promise = new Promise<SafeStopOutcome>((resolve) => {
+      settle = resolve;
+    });
+    const finish = (outcome: SafeStopOutcome) => {
+      if (this.stop === stop) this.stop = undefined;
+      signal?.removeEventListener("abort", withdraw);
+      settle(outcome);
+    };
+    const withdraw = () => {
+      if (!stop.cut) finish("withdrawn");
+    };
+    const stop = { promise, cut: false, options, end: () => finish("stopped") };
+    this.stop = stop;
+    signal?.addEventListener("abort", withdraw, { once: true });
+    this.checkStop();
+    return promise;
+  }
+
+  /** The safe stop cuts the turn once no call the client began is still running. */
+  private checkStop(): void {
+    const stop = this.stop;
+    if (!stop || stop.cut) return;
+    const calls = [...this.executing.values()];
+    if (calls.length > 0) {
+      stop.options.waiting?.(calls);
+      return;
+    }
+    stop.cut = true;
+    stop.options.waiting?.([]);
+    // A prompt the client has not taken yet ends as it starts (`start`).
+    void this.interrupt();
+  }
+
+  /** What a raw client message says about the calls it runs, for the safe stop. */
+  private trackCalls(message: unknown): void {
+    const record = message as {
+      type?: unknown;
+      parent_tool_use_id?: unknown;
+      message?: { content?: unknown };
+      event?: { type?: unknown; content_block?: { type?: unknown; id?: unknown; name?: unknown } };
+    };
+    // A subagent's own calls run inside its call, which the stop waits for.
+    if (record.parent_tool_use_id) return;
+    const begin = (id: unknown, name: unknown) => {
+      if (typeof id === "string" && !this.executing.has(id))
+        this.executing.set(id, { callId: id, toolName: bareToolName(String(name ?? "")) });
+    };
+    if (record.type === "stream_event" && record.event?.type === "content_block_start") {
+      const block = record.event.content_block;
+      if (block?.type === "tool_use") begin(block.id, block.name);
+      return;
+    }
+    const content = record.message?.content;
+    if (!Array.isArray(content)) return;
+    let ended = false;
+    for (const block of content as {
+      type?: unknown;
+      id?: unknown;
+      name?: unknown;
+      tool_use_id?: unknown;
+    }[]) {
+      if (record.type === "assistant" && block?.type === "tool_use") begin(block.id, block.name);
+      if (
+        record.type === "user" &&
+        block?.type === "tool_result" &&
+        typeof block.tool_use_id === "string"
+      )
+        ended = this.executing.delete(block.tool_use_id) || ended;
+    }
+    if (ended) this.checkStop();
+  }
+
+  /** The turn is over: nothing it began still runs, and a safe stop of it has stopped. */
+  private turnOver(): void {
+    this.executing.clear();
+    this.stop?.end();
   }
 
   /** Interrupt the turn the client runs: a prompt's once it holds it, or a continuation. */
@@ -1442,6 +1569,7 @@ class ClaudeRollingSession extends ClaudeQueryCore<SessionEvent> implements Mode
         ...(this.instructions?.text ? { served: this.instructions.text } : {}),
         session: recorded ? { resume: this.sessionId } : { sessionId: this.sessionId },
         ...(project ? { project } : {}),
+        toolGate: this.toolGate,
       },
     });
     let query: Query;
@@ -1540,6 +1668,7 @@ class ClaudeRollingSession extends ClaudeQueryCore<SessionEvent> implements Mode
       uuid?: unknown;
       event?: { type?: unknown };
     };
+    this.trackCalls(message);
     if (record.type === "system" && record.subtype === "compact_boundary") {
       // Claude's client folds between its own requests; whether more follow
       // is not said.
@@ -1737,6 +1866,7 @@ class ClaudeRollingSession extends ClaudeQueryCore<SessionEvent> implements Mode
         })
         .catch((error: unknown) => this.note(`the served stamp was not written: ${String(error)}`));
     }
+    this.turnOver();
     if (caught === undefined) this.settleTurn();
     else this.rejectTurn(caught);
     for (const after of this.afterSettle.splice(0)) after();
@@ -1781,6 +1911,7 @@ class ClaudeRollingSession extends ClaudeQueryCore<SessionEvent> implements Mode
     this.interruptedAt = undefined;
     this.holdUnacknowledgedSteers();
     this.mirror();
+    this.turnOver();
     this.emit({ type: "continuation_ended", ...(error !== undefined ? { error } : {}) });
     for (const after of this.afterSettle.splice(0)) after();
   }

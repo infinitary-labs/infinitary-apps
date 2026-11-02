@@ -42,7 +42,7 @@ The host enables native replacement only for an installed release Mac, not a dev
   A missing channel feed offers nothing.
   The native library's channel setter enables downgrades, so the adapter explicitly disables them afterward.
 - **Consent before replacement.**
-  Checking never downloads; Update and restart downloads, checks the checksum, stages through native signature verification, awaits core shutdown, and restarts.
+  Checking never downloads; Update and restart downloads, checks the checksum, saves the crew's work ("Saving work before an update" below), stages through native signature verification, awaits core shutdown, and restarts.
   Automatic downloads and automatic installation on quit are disabled.
   The notice shows progress and bounded errors, with a link to the release page for recovery.
   The app refuses updates from a mounted or translocated copy, an unwritable installation, or an unsupported system.
@@ -55,6 +55,7 @@ The host enables native replacement only for an installed release Mac, not a dev
   The Version row's Check for updates reads the release source now on every copy whose installation the app knows, past the 4-hour saved answer, and joins a check already reading (`checkNow`, `inf:update:check`); command search's Check for updates opens it and presses it.
   Its line says what the check found: the latest release, a copy ahead of its channel, no release yet, the version available with Show update opening the update notice, or that updates could not be checked.
   A failed press never says the copy is up to date, while the quiet hourly check stays silent on failure; the button is unavailable while an update downloads, installs or waits for a restart.
+  While an update saves the crew's work the line says Saving work, then Updating, and after the restart Resuming work until every turn the update stopped has started again.
   A Mac controlling another Mac changes and checks its own installed app, never the remote computer's.
   The release indicator and Settings share one renderer status store.
 
@@ -82,20 +83,50 @@ A Linux installation updates through the one update reader (`src/core/update/upd
   An installation whose package Infinitary cannot name is offered the version and its release page, and installs nothing.
 - **A deb or an rpm.**
   The panel offers Install.
-  The app downloads the build into its own data folder, refuses bytes whose SHA-256 is not the published one, and asks the system for the person's password (`pkexec`).
+  The app downloads the build into its own data folder, refuses bytes whose SHA-256 is not the published one, saves the crew's work ("Saving work before an update" below), and asks the system for the person's password (`pkexec`).
   The command that runs then copies the package into a folder only the superuser can write, checks that copy's checksum again, so the bytes it installs are the bytes it checked, and hands it to `apt-get` or `dnf`, which bring anything the package needs.
   The app then writes its channel marker with the version it installed and starts again.
 - **An AppImage.**
-  The panel offers Install; the app downloads the build beside the AppImage it runs from, checks its checksum, replaces the file in one rename and starts the new one, with no password.
+  The panel offers Install; the app downloads the build beside the AppImage it runs from, checks its checksum, saves the crew's work, replaces the file in one rename and starts the new one, with no password.
   An AppImage in a folder the person cannot write is refused in plain words.
 - **Arch, Omarchy and NixOS.**
   Their packages update through their own package manager, so the notice names the command: for Arch and Omarchy, fetch the channel's recipe, check its checksum and `makepkg -si`; for NixOS, `nix-env -iE` with the recipe's address and checksum.
   Each recipe writes its channel marker beside the app, so an alpha installation that takes a stable version stays on alpha.
   The recipes publish on the configured public release; nothing publishes to the Arch User Repository.
 - **When installing cannot finish.**
-  A closed password prompt, a computer with no way to ask, a refused checksum or a stopped installer each say so in the panel, nothing changes, and the panel shows the command that installs the same build by hand, checksum first.
+  A closed password prompt, a computer with no way to ask, a refused checksum or a stopped installer each say so in the panel, nothing changes, the crew's work carries on, and the panel shows the command that installs the same build by hand, checksum first.
 - **Development and tests.**
   Only an unpackaged run reads `INFINITARY_UPDATE_BUILDS_URL` and `INFINITARY_UPDATE_LINUX_PACKAGE` (with `APPIMAGE` for an AppImage), which point the reader at a stand-in download source and stand in for a package; a run from source on Linux without them reads what a Mac reads.
+
+## Saving work before an update
+
+An update of this computer's own copy saves the crew's work here before anything replaces the copy (INF-2245, the stop-and-resume update the captain approved on INF-2223).
+The update asks the crew's work (`CrewWorkForUpdate`, `src/core/update/updateWork.ts`), which `CrewSupervisor.saveForUpdate` answers.
+The Mac updater asks once the download is done and before native installation; the Linux updater asks once the download's checksum is checked and before the password prompt or the AppImage's rename (`beforeReplace`, `src/core/update/linuxInstall.ts`).
+
+- **Nothing new starts.**
+  While the update saves, no crewmate turn on this computer starts: a reply, a steer, a queued task and the next turn of a task wait on their lanes in order (`heldForUpdate`).
+  A turn already on its way to its model is refused before its model takes it (`StoppedBeforeStartError`), and its words stay on its lane.
+- **Running work finishes first.**
+  Each running turn stops safely (`ModelSession.stopSafely`, `src/core/session/session.ts`): a call it already began finishes and its result is kept in the conversation, a call asked for after the stop is refused and tells the model why, and only then is the turn cut.
+  Pi's gate is its `beforeToolCall`; Claude's is a `PreToolUse` hook (`docs/claude-client.md`).
+  A Claude call the client begins with its hooks off, as a staged skill turns them off, is waited for once the client says it began.
+- **No deadline.**
+  The save waits as long as the calls run, and the update panel names each task whose running work it waits for: Waiting for “Release notes” to finish what it is running.
+- **What it records.**
+  Each turn it stops gets one `turn-resumed` lane row, `stopped: "update"` with no computer, written before the stop (`docs/inbox.md`, "A turn a quit or crash cut").
+  Nothing else is copied: the conversation, the task, its files, its approvals and its pause stay with their owners, and an idle or separately paused task gets no row.
+- **Closing.**
+  Once every turn has stopped, the shutdown waits, with no bound, until every conversation's client is gone (`disposeAll`), so each transcript is written before the new copy reads it.
+- **After the restart.**
+  The sweep carries each stopped turn on once from its row, before the words that waited; Settings' Version row says Resuming work until every such row is served (`resumingAfterUpdate`).
+- **Update later.**
+  While the update saves, Update later in the update panel or in command search (`updates.later`, `inf:update:later`) lets the update go: nothing is replaced, a turn still waiting for its calls goes on as if never asked, a turn already stopped carries on from its row, and the words that waited go now, in order.
+  An installation that fails after the save, such as a closed password prompt or a refused signature, lets the work carry on the same way.
+- **What it does not wait for.**
+  A background job is app-lifetime: the shutdown stops it and its row says the quit stopped it (`src/core/jobs/jobManager.ts`), which the crewmate hears after the restart.
+  A turn on another computer goes on there; the connection and Remote Login updates of a computer that runs work still pause its turns the earlier way ("Updating" in `docs/devices.md`).
+  The guarantee starts with the copy that has this code: an update that replaces an older copy stops work the way that copy did.
 
 ## Casks and update targets
 
@@ -521,7 +552,9 @@ An item is done when its result is recorded where it names; it is never ticked h
 - `src/core/update/macUpdates.test.ts` owns subscription persistence, consent, ordering, stale replies, cancellation and staged-restart recovery.
 - `src/main/host/macUpdates.test.ts` owns native configuration, writable-install checks, signature failure and shutdown ordering.
 - `src/core/update/releaseFeeds.test.ts` exercises the actual updater metadata parser, immutable manifests and channel advancement.
-- `tests/e2e/mac-updates.spec.ts` drives keyboard selection, restart persistence, progress, recovery and cancellation through the hermetic app.
+- `tests/e2e/mac-updates.spec.ts` drives keyboard selection, restart persistence, progress, recovery, cancellation, Saving work and Update later through the hermetic app.
+- `src/core/orchestrator/crewSupervisor.test.ts` ("saving work before this computer's update") owns the hold, the safe stop, Update later and the carry-on after the restart; `tests/helpers/sessionContract.ts` owns each backend's safe stop.
+- `src/core/update/linuxInstall.test.ts` and `src/core/update/updateChecker.test.ts` own the Linux save before replacement and its Update later.
 - `tests/release-contract.test.ts` evaluates the release workflow's conditions, promotion evidence and no-publication rehearsals.
 - `tests/e2e/installed-update-work.spec.ts` checks that a fresh app accepts the proof's local connection and message while its real provider stream stays open, then retains the message after stopping.
 - `tests/installed-update-fixtures.test.ts` exercises coherent archive reads across an ordered replacement and the real saved-work mover's retained recovery copy.

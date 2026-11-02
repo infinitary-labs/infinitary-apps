@@ -26,12 +26,14 @@ import { requestTimeoutErrorMessage, turnTimeoutErrorMessage } from "../../src/c
 import {
   LOCAL_MACHINE_ID,
   type ModelSession,
+  SAFE_STOP_BLOCKED_TEXT,
   type SessionBackend,
   type SessionBinding,
   type SessionEvent,
   type SessionFactory,
   type SessionResume,
   type SessionSpec,
+  StoppedBeforeStartError,
 } from "../../src/core/session/session";
 import { type BoundTool, boundTool } from "../../src/core/session/tools";
 import { readSession, type SessionRead } from "../../src/core/storage/sessionReader";
@@ -144,6 +146,12 @@ export type SessionContractHarness = {
   roles?: readonly ContractRole[];
   /** A fresh world per case. */
   world: () => Promise<ContractWorld>;
+  /**
+   * The crewmate's session stops safely (`ModelSession.stopSafely`); a
+   * conversation held on another computer does not yet, and its owner cuts
+   * the turn instead.
+   */
+  stopsSafely?: boolean;
   /** Called after every case. */
   cleanup?: () => Promise<void>;
 };
@@ -436,6 +444,8 @@ export function describeSessionContract(harness: SessionContractHarness): void {
   const describeSeat = serves("seat") ? describe : describe.skip;
   const describeCrewmate = serves("crewmate") ? describe : describe.skip;
   const describeFourth = serves("fourth") ? describe : describe.skip;
+  const describeSafeStop =
+    serves("crewmate") && harness.stopsSafely !== false ? describe : describe.skip;
   describe(`the session contract: ${harness.name}`, () => {
     let world: ContractWorld;
     const opened: ModelSession[] = [];
@@ -1140,6 +1150,211 @@ export function describeSessionContract(harness: SessionContractHarness): void {
         );
       },
     );
+
+    // INF-2245, the captain's approved update plan (INF-2223): an update
+    // stops a crewmate's turn only where nothing it did is lost - a call
+    // already running finishes and keeps its result, then the turn ends,
+    // and the next prompt carries on from the kept result.
+    describeSafeStop("the crewmate's safe stop, for an update", () => {
+      /** Stops the running turn safely; every backend in this suite has the member. */
+      function stopSafely(
+        session: ModelSession,
+        options?: Parameters<NonNullable<ModelSession["stopSafely"]>>[0],
+      ) {
+        const stop = session.stopSafely;
+        if (!stop) throw new Error("This session cannot stop safely.");
+        return stop.call(session, options);
+      }
+
+      it("lets a running call finish and keeps its result, then ends the turn, and the next prompt carries on", async () => {
+        let runs = 0;
+        let release!: () => void;
+        const held = new Promise<void>((resolve) => {
+          release = resolve;
+        });
+        world.answer({ tool: CONTRACT_TOOL, answer: "left" });
+        const session = await open(
+          crewmateOn(world, {
+            tools: [
+              contractTool(async () => {
+                runs += 1;
+                await held;
+              }),
+            ],
+          }),
+        );
+        const events = recorder(session);
+        const prompting = session.prompt(QUESTION);
+        await toolStarted(events);
+        const waits: string[][] = [];
+        const stopping = stopSafely(session, {
+          waiting: (calls) => waits.push(calls.map((call) => call.toolName)),
+        });
+        await vi.waitFor(() => expect(waits.at(-1)).toEqual([CONTRACT_TOOL]));
+        // The stop waits: the call still runs, and the turn with it.
+        expect(session.isStreaming()).toBe(true);
+        release();
+        expect(await stopping).toBe("stopped");
+        await settled(prompting);
+        expect(waits.at(-1)).toEqual([]);
+        expect(runs).toBe(1);
+        expect(toolEvents(events)).toEqual([
+          { start: CONTRACT_TOOL, taskId: CREWMATE_TASK },
+          { end: CONTRACT_TOOL, isError: false },
+        ]);
+        // Cut once the call ended: the model never closed on the answer.
+        expect(closingWords(events)).not.toBe("left");
+        expect(session.isStreaming()).toBe(false);
+        world.answer({ text: "right" });
+        await session.prompt("And now?");
+        const next = world.served().at(-1)?.said ?? "";
+        expect(next).toContain(CONTRACT_TOOL_RESULT);
+        expect(next).toContain("And now?");
+        expect(runs).toBe(1);
+        expect(closingWords(events)).toBe("right");
+      });
+
+      it("ends a turn with no call running at once, and takes the next prompt", async () => {
+        world.answer("hang");
+        const session = await open(crewmateOn(world));
+        const events = recorder(session);
+        const asking = session.prompt(QUESTION);
+        await world.reached();
+        const waits: string[][] = [];
+        expect(
+          await stopSafely(session, {
+            waiting: (calls) => waits.push(calls.map((call) => call.toolName)),
+          }),
+        ).toBe("stopped");
+        await settled(asking);
+        expect(waits).toEqual([[]]);
+        expect(session.isStreaming()).toBe(false);
+        world.answer({ text: "right" });
+        await session.prompt("And now?");
+        expect(world.served().at(-1)?.said).toContain("And now?");
+        expect(closingWords(events)).toBe("right");
+      });
+
+      // INF-2223's approved plan: once the stop stands no new call starts,
+      // and the model that asked for one reads why when its turn carries on.
+      it("never runs a call the model asks for once the stop stands, and tells it why", async () => {
+        let runs = 0;
+        world.answer({ tool: CONTRACT_TOOL, answer: "left" });
+        const session = await open(
+          crewmateOn(world, {
+            tools: [
+              contractTool(async () => {
+                runs += 1;
+              }),
+            ],
+          }),
+        );
+        let stopping: Promise<unknown> | undefined;
+        session.subscribe((event) => {
+          // The stop lands as the model asks for the call, before it runs.
+          if (event.type === "tool_start" && !stopping) stopping = stopSafely(session);
+        });
+        const events = recorder(session);
+        const asking = session.prompt(QUESTION);
+        await vi.waitFor(() => expect(stopping).toBeDefined());
+        expect(await stopping).toBe("stopped");
+        await settled(asking);
+        expect(runs).toBe(0);
+        expect(closingWords(events)).not.toBe("left");
+        expect(session.isStreaming()).toBe(false);
+        world.answer({ text: "right" });
+        await session.prompt("And now?");
+        const next = world.served().at(-1)?.said ?? "";
+        expect(next).toContain(SAFE_STOP_BLOCKED_TEXT);
+        expect(next).not.toContain(CONTRACT_TOOL_RESULT);
+        expect(runs).toBe(0);
+        expect(closingWords(events)).toBe("right");
+      });
+
+      it("runs nothing of a prompt the stop meets as it starts, and either keeps its words or refuses it typed", async () => {
+        let runs = 0;
+        world.answer({ tool: CONTRACT_TOOL, answer: "left" });
+        const session = await open(
+          crewmateOn(world, {
+            tools: [
+              contractTool(() => {
+                runs += 1;
+              }),
+            ],
+          }),
+        );
+        const events = recorder(session);
+        const asking = session.prompt(QUESTION);
+        expect(await stopSafely(session)).toBe("stopped");
+        const refused = await asking.then(
+          () => false,
+          (error: unknown) => {
+            // Its model never took it: the owner sends its words again.
+            expect(error).toBeInstanceOf(StoppedBeforeStartError);
+            return true;
+          },
+        );
+        expect(runs).toBe(0);
+        expect(closingWords(events)).not.toBe("left");
+        expect(session.isStreaming()).toBe(false);
+        world.answer({ text: "right" });
+        await session.prompt("And now?");
+        // A prompt that ended was cut with its words in the conversation,
+        // which the next request carries; a refused one left none behind.
+        const next = world.served().at(-1)?.said ?? "";
+        expect(next).toContain("And now?");
+        expect(next.includes(QUESTION)).toBe(!refused);
+        expect(runs).toBe(0);
+      });
+
+      it("stops nothing on an idle session", async () => {
+        world.answer({ text: "left" });
+        const session = await open(crewmateOn(world));
+        await session.prompt(QUESTION);
+        expect(await stopSafely(session)).toBe("stopped");
+        world.answer({ text: "right" });
+        await session.prompt("And now?");
+        expect(world.served().at(-1)?.said).toContain("And now?");
+      });
+
+      it("withdrawn while it waits, leaves the turn to finish as if never asked", async () => {
+        const gate = gated();
+        world.answer({ tool: CONTRACT_TOOL, answer: "left" });
+        const session = await open(crewmateOn(world, { tools: [gate.tool] }));
+        const events = recorder(session);
+        const prompting = session.prompt(QUESTION);
+        await gate.entered;
+        const later = new AbortController();
+        const stopping = stopSafely(session, { signal: later.signal });
+        later.abort();
+        expect(await stopping).toBe("withdrawn");
+        gate.open();
+        await prompting;
+        expect(closingWords(events)).toBe("left");
+        expect(world.served()[1]?.said).toContain(CONTRACT_TOOL_RESULT);
+        expect(failures(events)).toEqual([]);
+      });
+
+      it("gives a steer that came while it waited back to its owner, in order", async () => {
+        const gate = gated();
+        world.answer({ tool: CONTRACT_TOOL, answer: "left" });
+        const session = await open(crewmateOn(world, { tools: [gate.tool] }));
+        const prompting = session.prompt(QUESTION);
+        await gate.entered;
+        const stopping = stopSafely(session);
+        await session.steer("First, mind the left.");
+        await session.steer("Then the right.");
+        gate.open();
+        expect(await stopping).toBe("stopped");
+        await settled(prompting);
+        expect(session.takeUndeliveredSteers()).toEqual([
+          "First, mind the left.",
+          "Then the right.",
+        ]);
+        expect(session.takeUndeliveredSteers()).toEqual([]);
+        for (const served of world.served()) expect(served.said).not.toContain("mind the left");
+      });
+    });
 
     describeFourth("a fourth preset no role has: one bound tool on a one-shot", () => {
       it("runs the tool and answers, with no edit of the backend, and keeps no record", async () => {

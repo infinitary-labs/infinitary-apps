@@ -84,6 +84,12 @@ describe("why a window command cannot run now", () => {
     );
   });
 
+  // INF-2245: Update later lets an update go only while it saves the crew's work.
+  it("offers Update later only while an update saves work", () => {
+    expect(commandRefusal("updates.later", HOME, { ...CLEAR, savingForUpdate: true })).toBeNull();
+    expect(commandRefusal("updates.later", HOME, CLEAR)).toBe("No update is saving work now");
+  });
+
   it("lets every command run on a home screen with cards, but the arrow past the stack's end", () => {
     for (const id of [
       "commands.search",

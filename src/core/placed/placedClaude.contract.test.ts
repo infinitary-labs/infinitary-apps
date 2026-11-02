@@ -562,6 +562,7 @@ describeSessionContract({
   name: "Claude, scripted, held on a computer that runs work",
   backend: "claude",
   roles: ["crewmate"],
+  stopsSafely: false,
   world: async () => placedContractWorld(await scriptedClaudeWorld()),
   cleanup: async () => {
     await placedContractCleanup();

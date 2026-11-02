@@ -1,0 +1,17 @@
+{
+  "entries": [
+    {
+      "id": "update-saves-crew-work",
+      "kind": "improvement",
+      "title": "An update saves your crew's work first",
+      "body": "Before an update replaces Infinitary on your Mac or Linux computer, each crewmate finishes the command or edit it is running and stops, and nothing new starts. The update panel names each task it waits for, and Update later lets the update go while the work carries on. After the restart, each stopped task carries on where it left off.",
+      "area": "updates",
+      "picture": {
+        "dark": "update-saves-crew-work-dark.webp",
+        "light": "update-saves-crew-work-light.webp",
+        "alt": "The update panel saying it saves work before updating, waiting for the Release notes task to finish what it is running, with an Update later button"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

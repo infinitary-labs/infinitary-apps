@@ -679,6 +679,8 @@ export function createCoreDispatcher(options: CoreDispatcherOptions): CoreDispat
     },
 
     "inf:update:install": () => services.updateChecker.install(),
+    "inf:update:later": () =>
+      services.updateChecker.later?.() ?? services.updateChecker.getStatus(),
 
     "inf:retention:purge": async () => {
       // D-13 + Q4: the purge clears every task, the Firstmate agent's rolling

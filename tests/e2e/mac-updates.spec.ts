@@ -1,14 +1,20 @@
 import { expect, test } from "@playwright/test";
 import { homebrewInstallationReceipt } from "../../src/core/update/macInstallation";
 import { INFINITARY_TAP, upgradeCommandFor } from "../../src/core/update/updateChannels";
-import { UPDATE_NOTICES, UPDATE_PROBLEMS, UPDATE_WORDS } from "../../src/shared/updateWords";
+import {
+  UPDATE_LATER,
+  UPDATE_NOTICES,
+  UPDATE_PROBLEMS,
+  UPDATE_WORDS,
+  UPDATE_WORK_WORDS,
+} from "../../src/shared/updateWords";
 import { startDemo } from "./demo";
 import { launchApp } from "./launch";
 import { resizeWindow } from "./layout";
 import { arrangeMacUpdates } from "./macUpdateFixture";
 import { heroShot, regionShot } from "./pictures";
 import { setThemeViaSettings } from "./theme";
-import { pressKey, runFromSearch, untilFocused } from "./windowKeys";
+import { focusOn, pressKey, runFromSearch, untilFocused } from "./windowKeys";
 
 // INF-640: keyboard channel selection, persisted membership and consent/progress/error UI.
 // Fixture: real source app/controller, isolated HOME/userData and native effects stood in.
@@ -213,6 +219,80 @@ test("a staged update offers a keyboard restart retry and locks channel changes"
     await expect
       .poll(() => app.evaluate(() => globalThis.__macUpdateFixture.installations))
       .toBe(2);
+  } finally {
+    await launched.close();
+  }
+});
+
+// INF-2245 (INF-2223's approved stop-and-resume update): before the copy is
+// replaced, the update saves the crew's work and names whose running work it
+// waits for; Update later, by Tab or by command search, lets it go with
+// nothing installed, and a saved update goes on to Updating.
+// Fixture: the real update controller, IPC, panel and Version row, with the
+// crew's work and native replacement stood in (tests/fixtures/mac-updates).
+// Completion: the stand-in's saves and installations, and the panel's words.
+test("an update saves running work first, and Update later installs nothing, by keys", async () => {
+  const launched = await launchApp({ withMockProvider: true });
+  try {
+    const { page, app } = launched;
+    await resizeWindow(app, page, { width: 1280, height: 800 });
+    await arrangeMacUpdates(launched, "0.1.30", { stable: "0.1.31" });
+    await app.evaluate(() => {
+      globalThis.__macUpdateFixture.holdSave = true;
+      globalThis.__macUpdateFixture.waitingFor = ["Release notes"];
+    });
+    const panel = page.locator("[data-update-channel]");
+    const fixture = <K extends "downloads" | "saves" | "installations">(key: K) =>
+      app.evaluate((_, name) => globalThis.__macUpdateFixture[name], key);
+    /** Opens the panel, presses Restart to update, and lets the download finish. */
+    const update = async (downloads: number) => {
+      if (!(await panel.isVisible())) await runFromSearch(app, page, "updates.show");
+      await pressKey(panel.getByRole("button", { name: UPDATE_WORDS.restart }), "Enter");
+      await expect.poll(() => fixture("downloads")).toBe(downloads);
+      await app.evaluate(() => globalThis.__macUpdateFixture.finish());
+    };
+
+    // Saving work: the panel names the task whose running work it waits for.
+    await update(1);
+    await expect(panel.locator("[data-update-saving]")).toContainText(UPDATE_WORK_WORDS.saving);
+    await expect(panel.locator("[data-update-waiting]")).toHaveText(
+      UPDATE_WORK_WORDS.waitingFor("Release notes"),
+    );
+    await regionShot(panel, test.info().outputPath("update-saving-dark.png"));
+
+    // Update later, reached by Tab from the release page button.
+    await focusOn(panel.getByRole("button", { name: UPDATE_WORDS.release }));
+    await page.keyboard.press("Tab");
+    await untilFocused(panel.getByRole("button", { name: UPDATE_WORDS.later }));
+    await page.keyboard.press("Enter");
+    await expect(panel.locator("[data-update-later-note]")).toHaveText(UPDATE_LATER);
+    await expect(panel.getByRole("button", { name: UPDATE_WORDS.restart })).toBeEnabled();
+    expect(await fixture("installations")).toBe(0);
+    await regionShot(panel, test.info().outputPath("update-later-dark.png"));
+
+    // Update later from command search lets the next save go too.
+    await update(2);
+    await expect(panel.locator("[data-update-waiting]")).toBeVisible();
+    await runFromSearch(app, page, "updates.later");
+    await expect.poll(() => fixture("saves")).toBe(2);
+    await runFromSearch(app, page, "updates.show");
+    await expect(panel.locator("[data-update-later-note]")).toHaveText(UPDATE_LATER);
+    expect(await fixture("installations")).toBe(0);
+
+    // Saved, it updates: the panel and the Version row say so.
+    await update(3);
+    await expect(panel.locator("[data-update-waiting]")).toBeVisible();
+    await app.evaluate(() => globalThis.__macUpdateFixture.saved());
+    await expect.poll(() => fixture("installations")).toBe(1);
+    await expect(panel.locator("[data-update-updating]")).toHaveText(UPDATE_WORK_WORDS.updating);
+    await expect(panel.locator("[data-update-saving]")).toHaveCount(0);
+    await regionShot(panel, test.info().outputPath("update-updating-dark.png"));
+    await page.keyboard.press("Escape");
+    await page.getByRole("button", { name: "Settings", exact: true }).click();
+    await page.getByRole("tab", { name: "General", exact: true }).click();
+    const version = page.locator('[data-setting="version"]').locator("..");
+    await expect(version).toContainText(UPDATE_WORK_WORDS.updating);
+    await regionShot(version, test.info().outputPath("version-updating-dark.png"));
   } finally {
     await launched.close();
   }

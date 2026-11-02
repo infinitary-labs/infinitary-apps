@@ -2101,6 +2101,17 @@ export const invokeContract = {
     request: z.tuple([]),
     response: updateInstallResultSchema,
   },
+  // Update later (docs/alpha.md, "Saving work before an update"): lets an
+  // update go while it saves the crew's work, so nothing is replaced and
+  // the work carries on. An app controlling another computer lets its own
+  // update go, never the other's.
+  "inf:update:later": {
+    effect: "change",
+    surface: "core",
+    reach: "home",
+    request: z.tuple([]),
+    response: updateStatusSchema,
+  },
   // The release notes the app showed, newest first, with the version running
   // now (docs/release-notes.md "Reading a note again"): what Settings lists
   // and what tells the window and the Help menu whether What's new can open one.
@@ -3184,6 +3195,7 @@ export const RUN_HOME_ONLY_CHANNELS: ReadonlySet<CoreInvokeChannel> = new Set<Co
   "inf:update:channel",
   "inf:update:open-release",
   "inf:update:install",
+  "inf:update:later",
 ]);
 
 /**
@@ -3804,6 +3816,8 @@ export type FirstmateApi = {
     setChannel: (channel: UpdateChannel) => Promise<UpdateStatus>;
     openReleasePage: () => Promise<{ ok: true }>;
     install: () => Promise<UpdateInstallResult>;
+    /** Update later: lets an update go while it saves the crew's work. */
+    later: () => Promise<UpdateStatus>;
   };
   /** The release notes the app showed (docs/release-notes.md "Reading a note again"). */
   releaseNotes: {

@@ -131,6 +131,13 @@ function sidecarStamps(dir: string): Record<string, unknown>[] {
     .map(({ kind: _kind, at: _at, ...stamp }) => stamp);
 }
 
+/** A PreToolUse hook as the client calls it: the input, the call's id, and a signal. */
+type PreToolUseHook = (
+  input: Record<string, unknown>,
+  toolUseId: string,
+  options: { signal: AbortSignal },
+) => Promise<unknown>;
+
 /** What each world opened that outlives a case: its stores' stamps, its tool clients. */
 const lingering: { stores: SessionRecordStore[]; mcps: Promise<Client | undefined>[] } = {
   stores: [],
@@ -254,6 +261,47 @@ export async function scriptedClaudeWorld(
    * server and hands the result back. A steer that came during the tool
    * joins the turn after its result, acknowledged as the turn takes it in.
    */
+  /**
+   * The client asks each PreToolUse hook the session gave it before it runs
+   * a call, once the call it streamed has reached the session; a denial's
+   * reason is the call's result, and the call never runs.
+   */
+  const askBeforeCall = async (
+    client: PlayedClient,
+    id: string,
+    name: string,
+  ): Promise<string | undefined> => {
+    const matchers =
+      (client.attachment.options as { hooks?: { PreToolUse?: { hooks: PreToolUseHook[] }[] } })
+        .hooks?.PreToolUse ?? [];
+    if (matchers.length === 0) return undefined;
+    await new Promise((resolve) => setImmediate(resolve));
+    for (const matcher of matchers) {
+      for (const hook of matcher.hooks) {
+        const output = await hook(
+          {
+            hook_event_name: "PreToolUse",
+            session_id: "",
+            transcript_path: "",
+            cwd: "",
+            tool_name: name,
+            tool_input: {},
+            tool_use_id: id,
+          },
+          id,
+          { signal: new AbortController().signal },
+        );
+        const decision = (
+          output as {
+            hookSpecificOutput?: { permissionDecision?: string; permissionDecisionReason?: string };
+          }
+        ).hookSpecificOutput;
+        if (decision?.permissionDecision === "deny") return decision.permissionDecisionReason ?? "";
+      }
+    }
+    return undefined;
+  };
+
   const callTool = async (
     client: PlayedClient,
     turn: NonNullable<PlayedClient["turn"]>,
@@ -277,14 +325,26 @@ export async function scriptedClaudeWorld(
       if (client.turn !== turn || client.attachment.closed()) return;
     }
     record(client, { type: "assistant", message: call });
-    const called = await mcp.callTool({ name: tool, arguments: {} });
+    const refusal = await askBeforeCall(client, id, `${CLAUDE_SEAT_TOOL_PREFIX}${tool}`);
     if (client.turn !== turn || client.attachment.closed()) return;
-    const content = (called.content as { type: string; text?: string }[])
-      .map((block) => block.text ?? "")
-      .join("");
+    let content: string;
+    if (refusal === undefined) {
+      const called = await mcp.callTool({ name: tool, arguments: {} });
+      if (client.turn !== turn || client.attachment.closed()) return;
+      content = (called.content as { type: string; text?: string }[])
+        .map((block) => block.text ?? "")
+        .join("");
+    } else content = refusal;
     const result = {
       role: "user",
-      content: [{ type: "tool_result", tool_use_id: id, content }],
+      content: [
+        {
+          type: "tool_result",
+          tool_use_id: id,
+          content,
+          ...(refusal === undefined ? {} : { is_error: true }),
+        },
+      ],
     };
     record(client, { type: "user", message: result });
     emit({ type: "user", parent_tool_use_id: null, message: result });

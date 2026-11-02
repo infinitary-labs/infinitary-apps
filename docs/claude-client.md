@@ -195,6 +195,7 @@ Moved verbatim from `AGENTS.md` on 2026-09-24; `AGENTS.md` keeps a one-line poin
   It rides the client's flag settings layer, which `settingSources: []` leaves on, so the person's own Claude settings stay unread.
   `claudeAttribution.integration.test.ts` holds it on the client the product would run, with a control that serves both lines once the setting is taken out.
   With a plugin staged the same settings also carry `disableAllHooks: true`, so a hook a skill declares never runs.
+  The safe stop before an update (`stopSafely`; `docs/alpha.md`, "Saving work before an update") is a `PreToolUse` hook on the query (`toolGate`) that refuses each call the client asks about once the stop stands; with the client's hooks off it still waits for each call the client says it began, and cuts the turn once none runs.
   With Global instructions and skills on, each attach also reads this Mac's global instructions and stages its personal skills as a second local plugin named `personal`; project names win, settings sources stay empty, hooks stay disabled and strict MCP stays on (`docs/personal-resources.md`).
   The client resumes a session on the prompt it recorded at its start, so a project instruction file changed mid-task reaches a Claude crewmate's next fresh session, while the skills are staged afresh at every attach.
   A reopened crewmate with changed personal resource digests or opt-in renews its conversation through the existing renewal seam, keeping the old record, so it never resumes with stale personal instructions.

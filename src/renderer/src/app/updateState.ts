@@ -1,5 +1,5 @@
 import type { UpdateChannel, UpdateStatus } from "@shared/update";
-import { UPDATE_PROBLEMS } from "@shared/updateWords";
+import { UPDATE_LATER, UPDATE_PROBLEMS } from "@shared/updateWords";
 import { create } from "zustand";
 
 type State = {
@@ -8,6 +8,8 @@ type State = {
   /** A pressed Check for updates is reading. */
   checking: boolean;
   problem: string | null;
+  /** Update later let the last update go: it waits, and the work carries on. */
+  later: string | null;
   noticeOpen: boolean;
 };
 export const useUpdateState = create<State>(() => ({
@@ -15,6 +17,7 @@ export const useUpdateState = create<State>(() => ({
   busy: false,
   checking: false,
   problem: null,
+  later: null,
   noticeOpen: false,
 }));
 export function setUpdateNoticeOpen(next: boolean | ((open: boolean) => boolean)): void {
@@ -22,6 +25,10 @@ export function setUpdateNoticeOpen(next: boolean | ((open: boolean) => boolean)
     noticeOpen: typeof next === "function" ? next(state.noticeOpen) : next,
   }));
 }
+/** An update is saving the crew's work before it replaces the copy, so it can still wait. */
+export const savingForUpdate = (status: UpdateStatus | null): boolean =>
+  status?.work?.state === "saving";
+
 /** A copy whose installation the app could not confirm keeps its explanation, with no check. */
 export const checksUpdates = (status: UpdateStatus | null): boolean =>
   status?.problem !== UPDATE_PROBLEMS.unknownInstallation;
@@ -106,13 +113,14 @@ export async function chooseUpdateChannel(channel: UpdateChannel): Promise<void>
 
 export async function installOfferedUpdate(): Promise<void> {
   const own = subscription;
-  useUpdateState.setState({ busy: true, problem: null });
+  useUpdateState.setState({ busy: true, problem: null, later: null });
   const timer = setInterval(() => {
     void refreshUpdateStatus();
   }, 250);
   try {
     const result = await window.infinitary.update.install();
-    if (own === subscription && !result.ok) useUpdateState.setState({ problem: result.problem });
+    if (own === subscription && !result.ok)
+      useUpdateState.setState(result.later ? { later: UPDATE_LATER } : { problem: result.problem });
   } catch {
     if (own === subscription)
       useUpdateState.setState({
@@ -124,4 +132,19 @@ export async function installOfferedUpdate(): Promise<void> {
     if (own === subscription) useUpdateState.setState({ busy: false });
     await refreshUpdateStatus();
   }
+}
+
+/**
+ * Update later (docs/alpha.md, "Saving work before an update"): lets an
+ * update go while it saves the crew's work. The pressed install answers
+ * that it waits, and the work carries on.
+ */
+export async function updateLater(): Promise<void> {
+  try {
+    const status = await window.infinitary.update.later();
+    useUpdateState.setState({ status });
+  } catch {
+    // The update goes on; the next reading says where it stands.
+  }
+  await refreshUpdateStatus();
 }

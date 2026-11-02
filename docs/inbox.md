@@ -70,6 +70,7 @@ It stays due one grace after its cut attempt began, so the next launch's sweep d
 - **A turn no row was serving.**
   A quit cuts a Claude client's own continuation with nothing in flight to replay, so the quit leaves a `turn-resumed` row on its lane (`disposeAll`), and the next launch's sweep carries the crewmate on with it: its last turn stopped part way when the app closed, and it checks what took effect before it repeats a step.
   The same row carries on a turn the app paused for an update of the computer it runs on (`docs/devices.md`, "Updating").
+  An update of this computer's own copy writes one before it stops the turn, naming no computer, and leaves the turn's input where it was: the words the turn read are in its conversation, and words its model never took go back on the lane (`docs/alpha.md`, "Saving work before an update").
   It is a turn of its own, served after a renewed conversation's reason and before the rest (`laneTurnText`), and never steered into a running turn (`deliverableRows`).
 - **The launch names the interrupted crew, without claiming recovery before observing it.**
   Before the boot sweep, one feed line names each unfinished task whose lane holds a cut row or a `turn-resumed` row, and a turn still running on another computer (`CrewSupervisor.announceCarryOn`); a launch with none says nothing.

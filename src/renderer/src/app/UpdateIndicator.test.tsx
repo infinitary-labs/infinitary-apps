@@ -1,4 +1,5 @@
 import type { UpdateStatus } from "@shared/update";
+import { UPDATE_LATER, UPDATE_WORDS, UPDATE_WORK_WORDS } from "@shared/updateWords";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 import { UpdatePanel } from "./UpdateIndicator";
@@ -53,5 +54,55 @@ describe("UpdatePanel", () => {
     });
     expect(hookText(markup, "data-update-offered")).toBe("Version 0.1.25 is available");
     expect(hookText(markup, "data-update-installed")).toBe("You have 0.1.25-alpha.42");
+  });
+});
+
+// INF-2245: while the update saves the crew's work, the panel says whose
+// running work it waits for and offers Update later beside the pending install.
+describe("UpdatePanel around the crew's work", () => {
+  const INSTALLABLE: UpdateStatus = { ...ALPHA_OFFER, install: { asksPassword: false } };
+
+  function renderInstall(status: UpdateStatus, extra: { later?: string } = {}): string {
+    return renderToStaticMarkup(
+      <UpdatePanel
+        status={status}
+        onViewRelease={() => {}}
+        onInstall={() => {}}
+        onLater={() => {}}
+        {...(extra.later ? { later: extra.later } : {})}
+      />,
+    ).replace(/<!-- -->/g, "");
+  }
+
+  it("names each task whose running work it waits for, with Update later", () => {
+    const markup = renderInstall({
+      ...INSTALLABLE,
+      phase: "installing",
+      work: { state: "saving", tasks: ["Release notes", "Docs pass"] },
+    });
+    expect(markup).toContain("data-update-saving");
+    expect(markup).toContain(UPDATE_WORK_WORDS.saving);
+    expect(markup.match(/data-update-waiting/g)).toHaveLength(2);
+    expect(markup).toContain(UPDATE_WORK_WORDS.waitingFor("Release notes"));
+    expect(markup).toContain(UPDATE_WORK_WORDS.waitingFor("Docs pass"));
+    expect(markup).toContain("data-update-later");
+    expect(markup).toContain(UPDATE_WORDS.later);
+    expect(markup).not.toContain("data-update-updating");
+  });
+
+  it("says it is updating once the work is saved, with no Update later", () => {
+    const markup = renderInstall({ ...INSTALLABLE, phase: "installing" });
+    expect(markup).toContain("data-update-updating");
+    expect(markup).toContain(UPDATE_WORK_WORDS.updating);
+    expect(markup).not.toContain("data-update-later");
+    expect(markup).not.toContain("data-update-saving");
+  });
+
+  it("says the update waits after Update later, and offers Install again", () => {
+    const markup = renderInstall(INSTALLABLE, { later: UPDATE_LATER });
+    expect(markup).toContain("data-update-later-note");
+    expect(markup).toContain(UPDATE_LATER);
+    expect(markup).toContain("data-update-install");
+    expect(markup).not.toContain("data-update-later=");
   });
 });

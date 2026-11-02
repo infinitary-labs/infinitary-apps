@@ -345,12 +345,54 @@ export type ModelSession = {
   servedState(): ServedState | undefined;
   /** Cuts the running turn; with a failure, the turn reports `turn_failed` with it. */
   abort(failure?: string): Promise<void>;
+  /**
+   * Stops the running turn where nothing it did is lost, for an update
+   * (docs/alpha.md, "Saving work before an update"): once asked, no tool call starts and none is
+   * handed to the client, a call already running finishes and its result
+   * is kept, and only then is the turn cut; a steer no request took stays
+   * the owner's (`takeUndeliveredSteers`). Resolves `stopped` once the turn
+   * has ended, at once when none runs. Aborting `signal` while it waits
+   * withdraws it: the turn carries on as if never asked, and it resolves
+   * `withdrawn`. A session that cannot hold its tools leaves this out and
+   * its owner cuts the turn with `abort`.
+   */
+  stopSafely?(options?: SafeStopOptions): Promise<SafeStopOutcome>;
   /** Lets go of the live client at an idle boundary; the next prompt reattaches. */
   detach(): Promise<void>;
   dispose(): void;
   /** Resolves once the backend's client is gone and its store is free. */
   closed(): Promise<void>;
 };
+
+/** A tool call a safe stop waits on: the call's own id and the tool's name. */
+export type RunningCall = { callId: string; toolName: string };
+
+export type SafeStopOptions = {
+  /** Aborted: the stop is withdrawn while it still waits. */
+  signal?: AbortSignal;
+  /** Each change in the calls the stop still waits on; `[]` once none runs. */
+  waiting?: (calls: readonly RunningCall[]) => void;
+};
+
+export type SafeStopOutcome = "stopped" | "withdrawn";
+
+/**
+ * What a call the safe stop refused says to the model that asked for it,
+ * read when its turn carries on (every backend's gate serves these words).
+ */
+export const SAFE_STOP_BLOCKED_TEXT =
+  "Infinitary stopped this turn to update before this call started, so it did not run. Run it again if it is still needed.";
+
+/**
+ * A prompt a safe stop ended before its model took it: nothing of it
+ * reached the conversation, so its owner sends its input again.
+ */
+export class StoppedBeforeStartError extends Error {
+  constructor() {
+    super("Infinitary stopped this turn to update before it started.");
+    this.name = "StoppedBeforeStartError";
+  }
+}
 
 export type SessionFactory = {
   readonly backend: SessionBackend;

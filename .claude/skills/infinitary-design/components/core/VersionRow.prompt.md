@@ -8,4 +8,8 @@ Under it, the notes the app showed, newest first, as a hairline list at `--text-
 Rows are separated by `--line-1` hairlines, with one above the first and none under the last; a pointer resting on a row turns its words `--accent`.
 The list is one Tab stop, the row focus was last on; ↑ and ↓ move between rows and stop at either end, Home and End go to the ends, and each row draws the focus ring.
 Enter or a click goes home and brings that note forward as the Help menu's What’s New does: to the front of the stack while it is open, read-only once closed.
+While an update needs no answer it adds one `--text-sm --fg-3` line under the version line, in the update's own words (`UPDATE_WORK_WORDS`).
+It says the update is saving work, with running work finishing first, while an update stops the crew's running work before replacing the copy.
+It says the copy is updating while it installs.
+After the restart it says Resuming work, with the count of tasks when more than one, until each task the update stopped has started again.
 Never a version number without its channel, never a download or an update control here (the update arrow keeps those), and never a count of changes.

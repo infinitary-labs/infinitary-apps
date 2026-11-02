@@ -71,6 +71,8 @@ export type WindowFacts = {
   updateAvailable?: boolean;
   /** Check for updates is on the Version row (UpdateCheck.tsx). */
   checksUpdates?: boolean;
+  /** An update is saving the crew's work, so Update later can let it go. */
+  savingForUpdate?: boolean;
   /**
    * Why a panel's command cannot run now beyond what holds every key
    * (docs/keyboard.md, "A panel's commands"), from its panel as it stands.
@@ -282,6 +284,8 @@ const REFUSALS: Readonly<
   "settings.keyboard": () => null,
   // From anywhere, Settings included: it goes home to the note.
   "updates.show": (_s, facts) => (facts.updateAvailable ? null : "No update is available"),
+  // Only while an update saves work: once the copy is replaced, it cannot wait.
+  "updates.later": (_s, facts) => (facts.savingForUpdate ? null : "No update is saving work now"),
   // From anywhere, Settings included: it goes to General and checks there.
   "updates.check": (_s, facts) =>
     facts.checksUpdates ? null : "Infinitary could not confirm how this copy was installed",

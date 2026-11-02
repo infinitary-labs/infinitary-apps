@@ -1,5 +1,10 @@
 import type { UpdateStatus } from "@shared/update";
-import { UPDATE_NOTICES, UPDATE_PROBLEMS, UPDATE_WORDS } from "@shared/updateWords";
+import {
+  UPDATE_NOTICES,
+  UPDATE_PROBLEMS,
+  UPDATE_WORDS,
+  UPDATE_WORK_WORDS,
+} from "@shared/updateWords";
 import { describe, expect, it } from "vitest";
 import { updateLine } from "./UpdateCheck";
 
@@ -44,5 +49,32 @@ describe("the Version row's update line", () => {
 
   it("says nothing of checking while an update downloads", () => {
     expect(updateLine({ ...STATUS, phase: "downloading", updateAvailable: true }, true)).toBeNull();
+  });
+
+  // INF-2245: the crew's work around this computer's update, saved then resumed.
+  it("says the update saves work, then updates, then resumes the work it paused", () => {
+    const offered = {
+      ...STATUS,
+      latestVersion: "0.1.31",
+      updateAvailable: true,
+      notice: undefined,
+    };
+    expect(
+      updateLine(
+        {
+          ...offered,
+          phase: "installing",
+          work: { state: "saving", tasks: ["Release notes"] },
+        },
+        false,
+      ),
+    ).toBe(UPDATE_WORK_WORDS.saving);
+    expect(updateLine({ ...offered, phase: "installing" }, false)).toBe(UPDATE_WORK_WORDS.updating);
+    expect(
+      updateLine(
+        { ...STATUS, work: { state: "resuming", tasks: ["Release notes", "Docs"] } },
+        false,
+      ),
+    ).toBe(UPDATE_WORK_WORDS.resuming(2));
   });
 });

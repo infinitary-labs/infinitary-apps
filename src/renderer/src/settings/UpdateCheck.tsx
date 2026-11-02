@@ -1,5 +1,10 @@
 import type { UpdateStatus } from "@shared/update";
-import { UPDATE_NOTICES, UPDATE_PROBLEMS, UPDATE_WORDS } from "@shared/updateWords";
+import {
+  UPDATE_NOTICES,
+  UPDATE_PROBLEMS,
+  UPDATE_WORDS,
+  UPDATE_WORK_WORDS,
+} from "@shared/updateWords";
 import { useEffect } from "react";
 import { useCommandKeys } from "../app/keyHints";
 import {
@@ -30,8 +35,13 @@ const updating = (status: UpdateStatus) =>
 /** The Version row's update line, or null when it has nothing to say. */
 export function updateLine(status: UpdateStatus | null, checking: boolean): string | null {
   if (!shown(status)) return null;
+  // The crew's work around this computer's own update (docs/alpha.md,
+  // "Saving work before an update"): saved before, resumed after.
+  if (status.work?.state === "saving") return UPDATE_WORK_WORDS.saving;
+  if (status.work?.state === "resuming")
+    return UPDATE_WORK_WORDS.resuming(status.work.tasks.length);
   if (status.phase === "ready") return "Restart to finish updating before changing channels.";
-  if (status.phase === "installing") return "Infinitary is finishing the update.";
+  if (status.phase === "installing") return UPDATE_WORK_WORDS.updating;
   if (updating(status)) return null;
   if (checking || status.phase === "checking") return UPDATE_WORDS.checking;
   if (status.phase === "error") return status.problem ?? UPDATE_PROBLEMS.checkFailed;

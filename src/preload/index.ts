@@ -453,6 +453,7 @@ const api: FirstmateApi = {
       readableRequest("inf:update:channel", () => invoke("inf:update:channel", channel)),
     openReleasePage: () => invoke("inf:update:open-release"),
     install: () => invoke("inf:update:install"),
+    later: () => invoke("inf:update:later"),
   },
   releaseNotes: {
     list: () => invoke("inf:release-notes:list"),

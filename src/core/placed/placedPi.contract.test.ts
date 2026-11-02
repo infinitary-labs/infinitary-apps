@@ -30,6 +30,7 @@ describeSessionContract({
   name: "Pi, real, held on a computer that runs work",
   backend: "pi",
   roles: ["crewmate"],
+  stopsSafely: false,
   world: async () =>
     placedContractWorld(
       await piContractWorld(api, await piStubRuntime(api.url, PI_CONTRACT_MODEL)),

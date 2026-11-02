@@ -1,11 +1,12 @@
 import { mkdirSync, renameSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import type { UpdateChannel, UpdateInstallResult, UpdateStatus } from "@shared/update";
-import { UPDATE_NOTICES, UPDATE_PROBLEMS } from "@shared/updateWords";
+import { UPDATE_LATER, UPDATE_NOTICES, UPDATE_PROBLEMS } from "@shared/updateWords";
 import type { MacInstallation } from "./macInstallation";
 import { isAlphaVersion, isNewerVersion, isStableVersion } from "./semver";
 import { readUpdateMarker, resolveUpdateChannel, UPDATE_CHANNEL_MARKER } from "./updateChannels";
 import type { UpdateChecker } from "./updateChecker";
+import { createUpdateSaving, type UpdateSaving } from "./updateWork";
 
 /** Native effects live in main; channel, version and consent policy live here (INF-640). */
 export type MacUpdateOffer = { version: string; releaseUrl: string };
@@ -21,7 +22,10 @@ export type MacUpdateDriver = {
     progress: (percent: number) => void,
     signal: AbortSignal,
   ) => Promise<void>;
-  /** After consent and download; owns native signature verification and graceful shutdown. */
+  /**
+   * After consent, download and the crew's saved work; owns native
+   * signature verification and graceful shutdown.
+   */
   install: () => Promise<void>;
 };
 
@@ -41,8 +45,11 @@ export function createMacUpdateChecker(options: {
   releasesUrl: string;
   openExternal: (url: string) => void | Promise<void>;
   now?: () => number;
+  /** Saves the crew's work before the copy is replaced (`createUpdateSaving`). */
+  saving?: UpdateSaving;
 }): UpdateChecker {
   const now = options.now ?? Date.now;
+  const saving = options.saving ?? createUpdateSaving(undefined);
   // Adopting an existing subscription is independent of which app a person just copied.
   let channel =
     readUpdateMarker(options.dataRoot)?.channel ??
@@ -60,6 +67,7 @@ export function createMacUpdateChecker(options: {
 
   function status(): UpdateStatus {
     const available = offer !== null && isNewerVersion(offer.version, options.currentVersion);
+    const work = saving.status();
     return {
       currentVersion: options.currentVersion,
       channel,
@@ -81,6 +89,7 @@ export function createMacUpdateChecker(options: {
                 : UPDATE_NOTICES.latest,
           }
         : {}),
+      ...(work ? { work } : {}),
     };
   }
 
@@ -189,7 +198,19 @@ export function createMacUpdateChecker(options: {
       if (consent !== generation || controller.signal.aborted)
         return { ok: false, problem: "The channel changed, so the previous update was cancelled." };
       phase = "installing";
-      await options.driver.install();
+      // The crew's work stops where nothing is lost before the copy is
+      // replaced; Update later lets the update go first.
+      if (!(await saving.save())) {
+        if (consent === generation) phase = alreadyStaged ? "ready" : "idle";
+        return { ok: false, later: true, problem: UPDATE_LATER };
+      }
+      try {
+        await options.driver.install();
+      } catch (error) {
+        // Nothing replaced this copy: the work it stopped carries on.
+        saving.release();
+        throw error;
+      }
       return { ok: true };
     } catch (error) {
       const message = controller.signal.aborted
@@ -212,6 +233,10 @@ export function createMacUpdateChecker(options: {
     checkNow,
     setChannel,
     install,
+    later: async () => {
+      saving.later();
+      return status();
+    },
     openReleasePage: async () => {
       await options.openExternal(offer?.releaseUrl ?? options.releasesUrl);
     },

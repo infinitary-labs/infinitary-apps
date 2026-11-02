@@ -10,6 +10,26 @@ export const UPDATE_WORDS = {
   checkingButton: "Checking…",
   checking: "Checking for updates…",
   show: "Show update",
+  later: "Update later",
+  saving: "Saving work…",
+  updating: "Updating…",
+} as const;
+
+/**
+ * What Update later answers when it let an update go (docs/alpha.md,
+ * "Saving work before an update"): nothing went wrong.
+ */
+export const UPDATE_LATER = "The update waits until you choose it again. Your work carries on.";
+
+/** The crew's work around this computer's own update, in the update notice and on the Version row. */
+export const UPDATE_WORK_WORDS = {
+  saving: "Saving work before the update. Running work finishes first, so nothing is lost.",
+  waitingFor: (task: string) => `Waiting for “${task}” to finish what it is running.`,
+  updating: "Updating. Infinitary checks the new copy and restarts.",
+  resuming: (count: number) =>
+    count === 1
+      ? "Resuming work the update paused."
+      : `Resuming work the update paused, for ${count} tasks.`,
 } as const;
 
 /** What the last check found, on the Version row in Settings (docs/alpha.md "Update channels"). */

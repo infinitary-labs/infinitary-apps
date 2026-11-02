@@ -3,7 +3,7 @@ import { join } from "node:path";
 import { describe, expect, it, vi } from "vitest";
 import { scratchDir } from "../../../tests/helpers/scratchDirs";
 import type { UpdateChannel } from "../../shared/update";
-import { UPDATE_NOTICES, UPDATE_PROBLEMS } from "../../shared/updateWords";
+import { UPDATE_LATER, UPDATE_NOTICES, UPDATE_PROBLEMS } from "../../shared/updateWords";
 import {
   DIRECT_MAC_INSTALLATION,
   homebrewInstallationReceipt,
@@ -28,6 +28,7 @@ import {
   upgradeCommandFor,
 } from "./updateChannels";
 import { createInstalledUpdateChecker } from "./updateChecker";
+import { type CrewWorkForUpdate, createUpdateSaving } from "./updateWork";
 
 // INF-640 accepted plan: consented updates, persistent subscriptions and forward-only logical versions.
 const offer = (version: string): MacUpdateOffer => ({
@@ -43,7 +44,11 @@ function deferred<T>() {
   });
   return { promise, resolve, reject };
 }
-function fixture(version = "0.5.0-alpha.9", dataRoot = scratchDir("inf-mac-updates-")) {
+function fixture(
+  version = "0.5.0-alpha.9",
+  dataRoot = scratchDir("inf-mac-updates-"),
+  work?: CrewWorkForUpdate,
+) {
   const driver = {
     installation: { kind: "direct" as const },
     check: vi.fn<MacUpdateDriver["check"]>(async () => offer("0.5.0-alpha.10")),
@@ -56,8 +61,33 @@ function fixture(version = "0.5.0-alpha.9", dataRoot = scratchDir("inf-mac-updat
     driver,
     releasesUrl: releaseSource.releasesUrl,
     openExternal: vi.fn(),
+    ...(work ? { saving: createUpdateSaving(work) } : {}),
   });
   return { checker, driver, dataRoot };
+}
+
+/**
+ * The crew's work as an update asks it (`CrewWorkForUpdate`): the save
+ * waits on the task the test names until the test finishes it, and the
+ * update's Update later withdraws it, as the crew supervisor does.
+ */
+function crewWork(resuming: string[] = []) {
+  const finished = deferred<void>();
+  const work = {
+    save: vi.fn<CrewWorkForUpdate["save"]>(({ signal, waiting }) => {
+      waiting(["Release notes"]);
+      return new Promise((resolve) => {
+        signal.addEventListener("abort", () => resolve("withdrawn"), { once: true });
+        void finished.promise.then(() => {
+          waiting([]);
+          resolve("saved");
+        });
+      });
+    }),
+    release: vi.fn<CrewWorkForUpdate["release"]>(),
+    resuming: vi.fn<CrewWorkForUpdate["resuming"]>(() => resuming),
+  };
+  return { work, finish: () => finished.resolve() };
 }
 
 describe("INF-640 Mac update consent and channel ownership", () => {
@@ -330,6 +360,68 @@ describe("INF-640 Mac update consent and channel ownership", () => {
     expect(await f.checker.install()).toEqual({ ok: true });
     expect(f.driver.download).toHaveBeenCalledTimes(1);
     expect(f.driver.install).toHaveBeenCalledTimes(2);
+  });
+});
+
+// INF-2245 (INF-2223's approved stop-and-resume update): the crew's work
+// stops where nothing is lost before the copy is replaced, and Update later
+// lets the update go while it waits.
+describe("saving the crew's work before a Mac update", () => {
+  it("saves after the download and before native installation, naming the work it waits for", async () => {
+    const crew = crewWork();
+    const f = fixture(undefined, undefined, crew.work);
+    const installing = f.checker.install();
+    await vi.waitFor(() => expect(crew.work.save).toHaveBeenCalledTimes(1));
+    expect(f.driver.download).toHaveBeenCalledTimes(1);
+    expect(f.driver.install).not.toHaveBeenCalled();
+    expect(await f.checker.getStatus()).toMatchObject({
+      phase: "installing",
+      work: { state: "saving", tasks: ["Release notes"] },
+    });
+    crew.finish();
+    expect(await installing).toEqual({ ok: true });
+    expect(f.driver.install).toHaveBeenCalledTimes(1);
+    // The copy is being replaced: nothing reads as resuming before the restart.
+    expect((await f.checker.getStatus()).work).toBeUndefined();
+    expect(crew.work.release).not.toHaveBeenCalled();
+  });
+
+  it("installs nothing after Update later, and the update can be chosen again", async () => {
+    const crew = crewWork();
+    const f = fixture(undefined, undefined, crew.work);
+    const installing = f.checker.install();
+    await vi.waitFor(() => expect(crew.work.save).toHaveBeenCalledTimes(1));
+    expect((await f.checker.later?.())?.work).toBeUndefined();
+    expect(await installing).toEqual({ ok: false, later: true, problem: UPDATE_LATER });
+    expect(f.driver.install).not.toHaveBeenCalled();
+    expect(await f.checker.getStatus()).toMatchObject({ updateAvailable: true, phase: "idle" });
+    // Chosen again, it saves again and installs.
+    const again = f.checker.install();
+    await vi.waitFor(() => expect(crew.work.save).toHaveBeenCalledTimes(2));
+    crew.finish();
+    expect(await again).toEqual({ ok: true });
+    expect(f.driver.install).toHaveBeenCalledTimes(1);
+  });
+
+  it("lets the saved work carry on when native installation fails", async () => {
+    const crew = crewWork();
+    crew.finish();
+    const f = fixture(undefined, undefined, crew.work);
+    f.driver.install.mockRejectedValueOnce(
+      new MacUpdateReadyProblem("The update is ready. Try restarting again."),
+    );
+    expect((await f.checker.install()).ok).toBe(false);
+    expect(crew.work.release).toHaveBeenCalledTimes(1);
+    expect((await f.checker.getStatus()).phase).toBe("ready");
+  });
+
+  it("shows the work an update paused as resuming after the restart", async () => {
+    const crew = crewWork(["Release notes"]);
+    const f = fixture(undefined, undefined, crew.work);
+    expect((await f.checker.getStatus()).work).toEqual({
+      state: "resuming",
+      tasks: ["Release notes"],
+    });
   });
 });
 

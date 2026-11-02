@@ -7424,6 +7424,192 @@ describe("CrewSupervisor", () => {
       await h.supervisor.disposeAll();
     });
 
+    // INF-2245 (INF-2223's approved stop-and-resume update): this computer's
+    // own update saves its crew's work, and the restart carries it on once.
+    describe("saving work before this computer's update", () => {
+      /**
+       * A crewmate whose session stops safely, as Pi's and Claude's do: it
+       * names the call it still runs, and the test either lets that call
+       * finish (`stopped`, which cuts the turn) or sees the stop withdrawn.
+       */
+      function safelyStoppingCrewmate(options: FakeSessionOptions = {}) {
+        const crewmate = fakeCrewmate(options);
+        const stops: { signal?: AbortSignal; finish: () => void }[] = [];
+        crewmate.stopSafely = (stop) =>
+          new Promise((resolve) => {
+            // No prompt is running yet: nothing to wait for, and the next is refused.
+            if (!crewmate.isStreaming()) {
+              resolve("stopped");
+              return;
+            }
+            stop?.waiting?.([{ callId: "call-1", toolName: "bash" }]);
+            stop?.signal?.addEventListener("abort", () => resolve("withdrawn"), { once: true });
+            stops.push({
+              signal: stop?.signal,
+              finish: () => {
+                stop?.waiting?.([]);
+                resolve("stopped");
+                crewmate.finishPrompt();
+              },
+            });
+          });
+        return Object.assign(crewmate, { stops });
+      }
+
+      const updateRows = (h: ReturnType<typeof setup>, taskId: string) =>
+        h.inbox
+          .allFor(taskId)
+          .filter((row) => row.facts?.kind === "turn-resumed")
+          .map((row) => row.facts);
+
+      it("waits for the running call, holds new words, and carries the turn on after the restart", async () => {
+        let now = 1000;
+        const crewmate = safelyStoppingCrewmate();
+        const h = setup(crewmate, { now: () => now });
+        const { taskId } = await h.supervisor.commission({
+          title: "Release notes",
+          intent: intentOf("write the notes"),
+        });
+        await tick();
+        expect(crewmate.promptCalls).toHaveLength(1);
+        const waiting: string[][] = [];
+        const saving = h.supervisor.saveForUpdate({ waiting: (tasks) => waiting.push(tasks) });
+        expect(waiting.at(-1)).toEqual(["Release notes"]);
+        // The captain's words while it saves wait on the lane, never steered in.
+        expect(await h.supervisor.steerCrewmate(taskId, "Mention the new keys too", "captain")).toBe(
+          "recorded-held",
+        );
+        expect(crewmate.steer).not.toHaveBeenCalled();
+        let saved = false;
+        void saving.then(() => {
+          saved = true;
+        });
+        await tick();
+        expect(saved).toBe(false);
+        // The call it ran finishes, and only then is the turn cut.
+        crewmate.stops[0]?.finish();
+        expect(await saving).toBe("saved");
+        expect(waiting.at(-1)).toEqual([]);
+        expect(updateRows(h, taskId)).toEqual([{ kind: "turn-resumed", stopped: "update" }]);
+        expect(h.supervisor.resumingAfterUpdate()).toEqual(["Release notes"]);
+        // A second ask for the same update joins the first.
+        expect(await h.supervisor.saveForUpdate()).toBe("saved");
+        expect(crewmate.stops).toHaveLength(1);
+
+        await h.supervisor.disposeAll();
+        h.inbox.resetInFlight();
+        const resumed = fakeCrewmate();
+        const fresh = new CrewSupervisor({
+          ...crewSessions(h.paths, vi.fn(async () => resumed)),
+          workspace: h.workspace,
+          repos: h.repos,
+          tasks: new TaskService({ db: h.db, repos: h.repos, strict: true, now: () => now }),
+          cardStore: h.cardStore,
+          inbox: h.inbox,
+          paths: h.paths,
+          now: () => now,
+          broadcastEvent: () => {},
+          broadcastCards: () => {},
+        });
+        now += 100_000;
+        await fresh.sweepInbox(now);
+        await tick();
+        // One turn carries it on, with why it stopped before the words that waited.
+        expect(resumed.promptCalls).toHaveLength(1);
+        const served = resumed.promptCalls[0] ?? "";
+        expect(served).toContain("while Infinitary was updated");
+        expect(served).toContain("Mention the new keys too");
+        expect(served.indexOf("while Infinitary was updated")).toBeLessThan(
+          served.indexOf("Mention the new keys too"),
+        );
+        await fresh.disposeAll();
+      });
+
+      it("lets the turn go on with Update later and steers in what waited", async () => {
+        const crewmate = safelyStoppingCrewmate();
+        const h = setup(crewmate);
+        const { taskId } = await h.supervisor.commission({
+          title: "Release notes",
+          intent: intentOf("write the notes"),
+        });
+        await tick();
+        const later = new AbortController();
+        const saving = h.supervisor.saveForUpdate({ signal: later.signal });
+        await h.supervisor.steerCrewmate(taskId, "Mention the new keys too", "captain");
+        later.abort();
+        expect(await saving).toBe("withdrawn");
+        await tick();
+        // Nothing was cut: the turn runs on, and nothing carries it on later.
+        expect(crewmate.isStreaming()).toBe(true);
+        expect(updateRows(h, taskId)).toEqual([]);
+        expect(h.supervisor.resumingAfterUpdate()).toEqual([]);
+        expect(crewmate.steer).toHaveBeenCalledTimes(1);
+        expect(crewmate.steer.mock.calls[0]?.[0]).toContain("Mention the new keys too");
+        await h.supervisor.disposeAll();
+      });
+
+      it("leaves an idle task as it was and starts nothing until the update is let go", async () => {
+        const crewmate = safelyStoppingCrewmate();
+        const h = setup(crewmate);
+        const { taskId } = await h.supervisor.commission({
+          title: "Release notes",
+          intent: intentOf("write the notes"),
+        });
+        await tick();
+        crewmate.finishPrompt();
+        await tick();
+        expect(await h.supervisor.saveForUpdate()).toBe("saved");
+        // Already idle: no stop, no row that would wake it after the restart.
+        expect(crewmate.stops).toEqual([]);
+        expect(updateRows(h, taskId)).toEqual([]);
+        await h.supervisor.steerCrewmate(taskId, "One more paragraph", "captain");
+        await tick();
+        expect(crewmate.promptCalls).toHaveLength(1);
+        // The update did not replace the copy: what waited goes now.
+        h.supervisor.releaseUpdate();
+        await tick();
+        expect(crewmate.promptCalls).toHaveLength(2);
+        expect(crewmate.promptCalls[1]).toContain("One more paragraph");
+        await h.supervisor.disposeAll();
+      });
+
+      it("sends a turn's words again when the update holds it before its model takes it", async () => {
+        const crewmate = safelyStoppingCrewmate();
+        const h = setup(crewmate);
+        const { taskId } = await h.supervisor.commission({
+          title: "Release notes",
+          intent: intentOf("write the notes"),
+        });
+        await tick();
+        crewmate.finishPrompt();
+        await tick();
+        // Its next turn has begun and not reached its model when the save begins.
+        let saving: Promise<string> | undefined;
+        const setActivity = h.tasks.setActivity.bind(h.tasks);
+        vi.spyOn(h.tasks, "setActivity").mockImplementation((...args) => {
+          const result = setActivity(...args);
+          if (args[0] === taskId && args[1] === "running" && !saving)
+            saving = h.supervisor.saveForUpdate();
+          return result;
+        });
+        await h.supervisor.steerCrewmate(taskId, "One more paragraph", "captain");
+        await tick();
+        expect(saving).toBeDefined();
+        expect(await saving).toBe("saved");
+        await tick();
+        expect(crewmate.promptCalls).toHaveLength(1);
+        expect(updateRows(h, taskId)).toEqual([]);
+        expect(h.inbox.allFor(taskId).map((row) => [row.text, row.deliveredAt])).toEqual([
+          [expect.stringContaining("One more paragraph"), null],
+        ]);
+        h.supervisor.releaseUpdate();
+        await tick();
+        expect(crewmate.promptCalls).toHaveLength(2);
+        expect(crewmate.promptCalls[1]).toContain("One more paragraph");
+        await h.supervisor.disposeAll();
+      });
+    });
+
     // INF-1582 finding 5 also covers a work computer restarting while its home stays open.
     it("records restart recovery without a wake when the work computer reopens", async () => {
       const crewmate = fakeCrewmate();

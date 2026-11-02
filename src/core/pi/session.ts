@@ -39,11 +39,16 @@ import {
   type ContractStamp,
   LOCAL_MACHINE_ID,
   type ModelSession,
+  type RunningCall,
+  SAFE_STOP_BLOCKED_TEXT,
+  type SafeStopOptions,
+  type SafeStopOutcome,
   type SessionEvent,
   type SessionFactory,
   type SessionImage,
   type SessionResume,
   type SessionSpec,
+  StoppedBeforeStartError,
   type TaskShell,
   type ThinkingLevel,
 } from "../session/session";
@@ -380,6 +385,16 @@ class PiRollingSession implements ModelSession {
   private readonly promptFinishes = new Set<Promise<void>>();
   /** The app's own inputs that go before every queued steer (`steerFirst`). */
   private readonly firstSteers = new WeakSet<object>();
+  /** Calls the tool gate let run in this prompt whose result Pi has not recorded yet. */
+  private readonly executing = new Map<string, RunningCall>();
+  /** A tool batch is running: from its first call until its turn ends. */
+  private inToolBatch = false;
+  /** The safe stop under way (`stopSafely`): no tool starts while it stands. */
+  private stop:
+    | { promise: Promise<SafeStopOutcome>; cut: boolean; options: SafeStopOptions }
+    | undefined;
+  /** Steers the safe stop took out of Pi's queue before its cut, for the owner. */
+  private keptSteers: string[] = [];
   private markClosed!: () => void;
   private failClosed!: (error: unknown) => void;
   private readonly closedPromise = new Promise<void>((resolve, reject) => {
@@ -420,6 +435,21 @@ class PiRollingSession implements ModelSession {
           agent,
           isCustomApiProvider(session.model?.provider ?? "") ? pictures(messages) : messages,
         );
+    }
+    // The safe stop's gate (`stopSafely`), after Pi's own check: a call
+    // asked once the stop stands never runs and says why, and a call it
+    // lets run is one the stop waits on.
+    if (agent) {
+      const before = agent.beforeToolCall;
+      agent.beforeToolCall = async (context, signal) => {
+        if (this.stop) return { block: true, reason: SAFE_STOP_BLOCKED_TEXT };
+        const result = await before?.call(agent, context, signal);
+        if (result?.block) return result;
+        if (this.stop) return { block: true, reason: SAFE_STOP_BLOCKED_TEXT };
+        const { id, name } = context.toolCall;
+        this.executing.set(id, { callId: id, toolName: name });
+        return result;
+      };
     }
     const prepare = agent?.prepareNextTurnWithContext;
     if (agent && prepare)
@@ -504,6 +534,7 @@ class PiRollingSession implements ModelSession {
     if (this.disposed) throw new Error(ENDED_SESSION_TEXT);
     refuseUnreadablePictures(this.session.model, images);
     const parts = toImageContents(images);
+    this.keptSteers = [];
     this.failure = undefined;
     this.modelTurns = 0;
     this.lastAssistant = undefined;
@@ -565,6 +596,9 @@ class PiRollingSession implements ModelSession {
       }
       if (this.disposed) throw new Error(ENDED_SESSION_TEXT);
       if (this.failure !== undefined) throw new Error(this.failure);
+      // A safe stop came while the prompt was prepared: Pi never takes it,
+      // and its input goes again.
+      if (this.stop?.cut) throw new StoppedBeforeStartError();
       await this.session.prompt(text, parts ? { source: "rpc", images: parts } : { source: "rpc" });
       if (this.options.local) {
         if (this.failure !== undefined) throw new Error(this.failure);
@@ -588,6 +622,8 @@ class PiRollingSession implements ModelSession {
       }
     } finally {
       this.promptOpen = false;
+      this.executing.clear();
+      this.inToolBatch = false;
       this.promptFinishes.delete(promptFinished);
       finished();
     }
@@ -649,8 +685,10 @@ class PiRollingSession implements ModelSession {
     // A first steer no turn took is the app's own input; its owner sends it
     // again with the next input, so it is dropped here, never handed back.
     if (!this.session.isStreaming) this.takeFirstSteers();
-    if (this.session.isStreaming || this.session.getSteeringMessages().length === 0) return [];
-    return this.session.clearQueue().steering;
+    if (this.session.isStreaming) return [];
+    const kept = this.keptSteers.splice(0);
+    if (this.session.getSteeringMessages().length === 0) return kept;
+    return [...kept, ...this.session.clearQueue().steering];
   }
 
   servedState(): ServedState | undefined {
@@ -681,6 +719,59 @@ class PiRollingSession implements ModelSession {
     return this.session.abort();
   }
 
+  /**
+   * The safe stop (`ModelSession.stopSafely`): the gate refuses every call
+   * from now on, the calls it let run finish and Pi records their results,
+   * the batch's refused calls record why they did not run, and then the
+   * turn is cut - before Pi polls for steers, so the ones it holds stay the
+   * owner's. A second ask joins the first.
+   */
+  stopSafely(options: SafeStopOptions = {}): Promise<SafeStopOutcome> {
+    if (this.stop) return this.stop.promise;
+    const finishes = [...this.promptFinishes];
+    if (finishes.length === 0 && !this.session.isStreaming) return Promise.resolve("stopped");
+    const { signal } = options;
+    if (signal?.aborted) return Promise.resolve("withdrawn");
+    let settle!: (outcome: SafeStopOutcome) => void;
+    const promise = new Promise<SafeStopOutcome>((resolve) => {
+      settle = resolve;
+    });
+    const stop = { promise, cut: false, options };
+    this.stop = stop;
+    const end = (outcome: SafeStopOutcome) => {
+      if (this.stop === stop) this.stop = undefined;
+      signal?.removeEventListener("abort", withdraw);
+      settle(outcome);
+    };
+    const withdraw = () => {
+      if (!stop.cut) end("withdrawn");
+    };
+    signal?.addEventListener("abort", withdraw, { once: true });
+    void Promise.all(finishes)
+      .then(() => this.session.waitForIdle())
+      .then(
+        () => end("stopped"),
+        () => end("stopped"),
+      );
+    this.checkStop();
+    return promise;
+  }
+
+  /** The safe stop cuts the turn once nothing it let run is still running. */
+  private checkStop(): void {
+    const stop = this.stop;
+    if (!stop || stop.cut) return;
+    const calls = [...this.executing.values()];
+    if (calls.length > 0 || this.inToolBatch) {
+      stop.options.waiting?.(calls);
+      return;
+    }
+    stop.cut = true;
+    stop.options.waiting?.([]);
+    this.keptSteers.push(...this.session.clearQueue().steering);
+    void this.abort().catch(() => {});
+  }
+
   /** Nothing is held between turns: an in-process session has no client to let go of. */
   async detach(): Promise<void> {}
 
@@ -706,6 +797,20 @@ class PiRollingSession implements ModelSession {
 
   private onPiEvent(event: unknown): void {
     const type = eventType(event);
+    // A run Pi began after the safe stop's cut is cut too.
+    if (this.stop?.cut && (type === "agent_start" || type === "turn_start"))
+      void this.session.abort().catch(() => {});
+    if (type === "tool_execution_start") this.inToolBatch = true;
+    if (type === "message_end") {
+      const message = (event as { message?: { role?: unknown; toolCallId?: unknown } }).message;
+      if (message?.role === "toolResult" && typeof message.toolCallId === "string") {
+        if (this.executing.delete(message.toolCallId)) this.checkStop();
+      }
+    }
+    if (type === "turn_end" && this.inToolBatch) {
+      this.inToolBatch = false;
+      this.checkStop();
+    }
     if (this.promptOpen && type === "message_end") {
       this.noteServed(event);
       const message = (event as { message?: AssistantMessage }).message;

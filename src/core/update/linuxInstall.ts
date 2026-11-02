@@ -207,7 +207,7 @@ export type LinuxInstallerOptions = {
  */
 export function createLinuxInstaller(
   options: LinuxInstallerOptions,
-): (plan: LinuxInstallPlan) => Promise<void> {
+): (plan: LinuxInstallPlan, beforeReplace?: () => Promise<void>) => Promise<void> {
   const spawnImpl = options.spawnImpl ?? spawn;
 
   async function download(plan: LinuxInstallPlan, file: string): Promise<void> {
@@ -332,7 +332,10 @@ export function createLinuxInstaller(
     await rename(temporary, path);
   }
 
-  return async (plan) => {
+  // `beforeReplace` runs once the download is checked and before anything
+  // is replaced (docs/alpha.md, "Saving work before an update"); a throw
+  // there replaces nothing.
+  return async (plan, beforeReplace) => {
     if (plan.package === "deb" || plan.package === "rpm") {
       const folder = join(options.dataRoot, "updates");
       await rm(folder, { recursive: true, force: true });
@@ -340,6 +343,7 @@ export function createLinuxInstaller(
       const file = join(folder, basename(new URL(plan.download.url).pathname));
       await download(plan, file);
       try {
+        await beforeReplace?.();
         await runPrivileged(file, plan);
       } finally {
         await rm(folder, { recursive: true, force: true });
@@ -361,6 +365,12 @@ export function createLinuxInstaller(
         `.${basename(target)}.${randomBytes(6).toString("hex")}.download`,
       );
       await download(plan, file);
+      try {
+        await beforeReplace?.();
+      } catch (caught) {
+        await rm(file, { force: true });
+        throw caught;
+      }
       try {
         await chmod(file, 0o755);
         await rename(file, target);

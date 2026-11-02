@@ -87,6 +87,7 @@ const OWN_APP = new Set<CoreInvokeChannel>([
   "inf:update:channel",
   "inf:update:open-release",
   "inf:update:install",
+  "inf:update:later",
 ]);
 
 /** The pictures and project fonts this run has shown, by name, up to this many bytes; a name never changes its bytes. */
@@ -364,6 +365,8 @@ export class ViewBackend {
         return { ok: true };
       case "inf:update:install":
         return this.options.updates.install();
+      case "inf:update:later":
+        return this.options.updates.later?.() ?? this.options.updates.getStatus();
       default:
         throw new Error(`${channel} is not ${HERE.this}'s own.`);
     }

@@ -29,6 +29,17 @@ export function install(
     progress: (_: number) => {},
     finish: () => {},
     fail: (_: string) => {},
+    /**
+     * The crew's work as an update saves it (`CrewWorkForUpdate`): with
+     * `holdSave`, the save waits on `waitingFor` until `saved()`, and Update
+     * later withdraws it; otherwise there is no running work to wait for.
+     */
+    holdSave: false,
+    waitingFor: [] as string[],
+    saves: 0,
+    releases: 0,
+    resuming: [] as string[],
+    saved: () => {},
   };
   const installation = parseMacInstallation(receipt);
   const checker = createInstalledUpdateChecker({
@@ -62,6 +73,24 @@ export function install(
       ),
     openExternal: (url) => {
       state.opened.push(url);
+    },
+    work: {
+      save: ({ signal, waiting }) => {
+        state.saves++;
+        if (!state.holdSave) return Promise.resolve("saved");
+        waiting(state.waitingFor);
+        return new Promise((resolve) => {
+          signal.addEventListener("abort", () => resolve("withdrawn"), { once: true });
+          state.saved = () => {
+            waiting([]);
+            resolve("saved");
+          };
+        });
+      },
+      release: () => {
+        state.releases++;
+      },
+      resuming: () => state.resuming,
     },
     macDriver: {
       installation,
@@ -98,6 +127,7 @@ export function install(
     "inf:update:check",
     "inf:update:channel",
     "inf:update:install",
+    "inf:update:later",
     "inf:update:open-release",
   ])
     ipcMain.removeHandler(name);
@@ -105,6 +135,7 @@ export function install(
   ipcMain.handle("inf:update:check", () => checker.checkNow());
   ipcMain.handle("inf:update:channel", (_, channel) => checker.setChannel?.(channel));
   ipcMain.handle("inf:update:install", () => checker.install());
+  ipcMain.handle("inf:update:later", () => checker.later?.() ?? checker.getStatus());
   ipcMain.handle("inf:update:open-release", () => checker.openReleasePage());
   return state;
 }

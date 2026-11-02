@@ -1,10 +1,12 @@
 import { writeFileSync } from "node:fs";
 import { join } from "node:path";
 import type { UpdateChannel } from "@shared/update";
-import { UPDATE_NOTICES, UPDATE_PROBLEMS } from "@shared/updateWords";
+import { UPDATE_LATER, UPDATE_NOTICES, UPDATE_PROBLEMS } from "@shared/updateWords";
 import { describe, expect, it, vi } from "vitest";
 import { scratchDir } from "../../../tests/helpers/scratchDirs";
+import { type LinuxInstallPlan, UpdateInstallProblem } from "./linuxInstall";
 import {
+  buildDownloadUrl,
   buildUpdateTarget,
   FIRSTMATE_TAP,
   targetsUrlOf,
@@ -17,6 +19,7 @@ import {
   createUpdateChecker,
   pickNewestStableRelease,
 } from "./updateChecker";
+import { type CrewWorkForUpdate, createUpdateSaving } from "./updateWork";
 
 const TARGETS_URL =
   "https://raw.githubusercontent.com/infinitary-labs/homebrew-tap/HEAD/infinitary-updates.json";
@@ -491,5 +494,99 @@ describe("the installed app's checker", () => {
       updateAvailable: true,
     });
     expect(requests).toEqual([]);
+  });
+});
+
+// INF-2245 (INF-2223's approved stop-and-resume update): an in-app Linux
+// update saves the crew's work before it replaces the copy, and Update
+// later lets it go with nothing replaced.
+describe("saving the crew's work before an in-app Linux update", () => {
+  const BUILDS = "https://builds.example.invalid/infinitary-builds.json";
+  const download = {
+    url: buildDownloadUrl("0.6.3", "infinitary-0.6.3-linux-amd64.deb"),
+    sha256: "b".repeat(64),
+  };
+  const release = target("0.6.3");
+  const fetchImpl = (async () =>
+    Response.json({
+      schemaVersion: 1,
+      channels: {
+        stable: {
+          version: "0.6.3",
+          releaseUrl: release.releaseUrl,
+          sourceCommit: release.sourceCommit,
+          systems: { linux: { x64: { deb: download } } },
+        },
+      },
+    })) as typeof fetch;
+
+  function linuxUpdate(
+    installLinux: (plan: LinuxInstallPlan, beforeReplace?: () => Promise<void>) => Promise<void>,
+  ) {
+    let finish!: () => void;
+    const finished = new Promise<void>((resolve) => {
+      finish = resolve;
+    });
+    const work = {
+      save: vi.fn<CrewWorkForUpdate["save"]>(({ signal, waiting }) => {
+        waiting(["Release notes"]);
+        return new Promise((resolve) => {
+          signal.addEventListener("abort", () => resolve("withdrawn"), { once: true });
+          void finished.then(() => resolve("saved"));
+        });
+      }),
+      release: vi.fn<CrewWorkForUpdate["release"]>(),
+      resuming: vi.fn<CrewWorkForUpdate["resuming"]>(() => []),
+    };
+    const updates = createUpdateChecker({
+      currentVersion: "0.6.2",
+      channel: () => "stable",
+      linux: { chip: "x64", package: "deb" },
+      buildsUrl: BUILDS,
+      fetchImpl,
+      openExternal: () => {},
+      installLinux,
+      saving: createUpdateSaving(work),
+    });
+    return { updates, work, finish };
+  }
+
+  it("replaces nothing until the work is saved, and nothing at all after Update later", async () => {
+    let replaced = 0;
+    const f = linuxUpdate(async (_plan, beforeReplace) => {
+      await beforeReplace?.();
+      replaced += 1;
+    });
+    expect((await f.updates.getStatus()).install).toBeDefined();
+    const installing = f.updates.install();
+    await vi.waitFor(() => expect(f.work.save).toHaveBeenCalledTimes(1));
+    expect((await f.updates.getStatus()).work).toEqual({
+      state: "saving",
+      tasks: ["Release notes"],
+    });
+    expect((await f.updates.later?.())?.work).toBeUndefined();
+    expect(await installing).toEqual({ ok: false, later: true, problem: UPDATE_LATER });
+    expect(replaced).toBe(0);
+    expect(f.work.release).not.toHaveBeenCalled();
+    // Chosen again, it saves and replaces once.
+    const again = f.updates.install();
+    await vi.waitFor(() => expect(f.work.save).toHaveBeenCalledTimes(2));
+    f.finish();
+    expect(await again).toEqual({ ok: true });
+    expect(replaced).toBe(1);
+  });
+
+  it("lets the saved work carry on when the system's installer refuses", async () => {
+    const f = linuxUpdate(async (_plan, beforeReplace) => {
+      await beforeReplace?.();
+      throw new UpdateInstallProblem("The password prompt was closed, so nothing was installed.");
+    });
+    f.finish();
+    await f.updates.getStatus();
+    expect(await f.updates.install()).toEqual({
+      ok: false,
+      problem: "The password prompt was closed, so nothing was installed.",
+    });
+    expect(f.work.release).toHaveBeenCalledTimes(1);
   });
 });

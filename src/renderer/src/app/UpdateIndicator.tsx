@@ -1,5 +1,5 @@
 import type { UpdateStatus } from "@shared/update";
-import { UPDATE_WORDS } from "@shared/updateWords";
+import { UPDATE_WORDS, UPDATE_WORK_WORDS } from "@shared/updateWords";
 import type React from "react";
 import { useEffect, useRef } from "react";
 import { Button, IconButton, MicroLabel } from "../design";
@@ -10,6 +10,7 @@ import {
   installOfferedUpdate,
   refreshUpdateStatus,
   setUpdateNoticeOpen as setOpen,
+  updateLater,
   useUpdateState,
 } from "./updateState";
 
@@ -29,7 +30,7 @@ const CHANNEL_LABEL: Record<UpdateStatus["channel"], string> = {
  * installs on its own, ever.
  */
 export function UpdateIndicator() {
-  const { status, busy: installing, problem, noticeOpen: open } = useUpdateState();
+  const { status, busy: installing, problem, later, noticeOpen: open } = useUpdateState();
   const updateKeys = useCommandKeys("updates.show");
   const rootRef = useRef<HTMLDivElement>(null);
   const buttonRef = useRef<HTMLButtonElement>(null);
@@ -115,8 +116,12 @@ export function UpdateIndicator() {
           onViewRelease={() => void window.infinitary.update.openReleasePage()}
           installing={installing}
           problem={problem}
+          later={later}
           onInstall={() => {
             void installOfferedUpdate();
+          }}
+          onLater={() => {
+            void updateLater();
           }}
         />
       )}
@@ -150,24 +155,33 @@ function Command({ command }: { command: string }) {
  * beneath it, so an offer reads as new or not at a glance, and how to get
  * it - the channel's selectable upgrade command, or Install where the app
  * installs its own updates, with the command as the way round when
- * installing could not finish.
+ * installing could not finish. While the update saves the crew's work it
+ * says whose running work it waits for and offers Update later
+ * (docs/alpha.md, "Saving work before an update").
  */
 export function UpdatePanel({
   status,
   onViewRelease,
   onInstall,
+  onLater,
   installing = false,
   problem = null,
+  later = null,
   ref,
 }: {
   status: UpdateStatus;
   onViewRelease: () => void;
   onInstall?: () => void;
+  onLater?: () => void;
   installing?: boolean;
   problem?: string | null;
+  /** Update later let the last update go. */
+  later?: string | null;
   ref?: React.Ref<HTMLDivElement>;
 }) {
   const install = status.install && onInstall ? status.install : null;
+  const saving = status.work?.state === "saving" ? status.work : null;
+  const laterKeys = useCommandKeys("updates.later");
   return (
     <div
       ref={ref}
@@ -232,8 +246,44 @@ export function UpdatePanel({
               />
             </div>
           )}
-          {status.phase === "installing" && (
-            <div role="status">Checking the app and preparing to restart…</div>
+          {saving ? (
+            <div
+              role="status"
+              data-update-saving
+              style={{
+                display: "flex",
+                flexDirection: "column",
+                gap: "var(--space-1)",
+                fontSize: "var(--text-sm)",
+                color: "var(--fg-2)",
+              }}
+            >
+              <div>{UPDATE_WORK_WORDS.saving}</div>
+              {saving.tasks.map((task) => (
+                <div key={task} data-update-waiting style={{ color: "var(--fg-3)" }}>
+                  {UPDATE_WORK_WORDS.waitingFor(task)}
+                </div>
+              ))}
+            </div>
+          ) : (
+            status.phase === "installing" && (
+              <div
+                role="status"
+                data-update-updating
+                style={{ fontSize: "var(--text-sm)", color: "var(--fg-2)" }}
+              >
+                {UPDATE_WORK_WORDS.updating}
+              </div>
+            )
+          )}
+          {later && !installing && (
+            <div
+              role="status"
+              data-update-later-note
+              style={{ fontSize: "var(--text-sm)", color: "var(--fg-3)" }}
+            >
+              {later}
+            </div>
           )}
           {(problem || status.problem) && (
             <div
@@ -267,13 +317,24 @@ export function UpdatePanel({
         <Button variant="ghost" size="sm" onClick={onViewRelease}>
           {UPDATE_WORDS.release}
         </Button>
+        {install && saving && onLater && (
+          <Button variant="secondary" size="sm" onClick={onLater} data-update-later {...laterKeys}>
+            {UPDATE_WORDS.later}
+          </Button>
+        )}
         {install && (
           <Button
             size="sm"
             onClick={onInstall}
-            pending={installing}
+            pending={installing || saving !== null}
             pendingLabel={
-              status.phase === "downloading" ? UPDATE_WORDS.downloading : UPDATE_WORDS.installing
+              saving
+                ? UPDATE_WORDS.saving
+                : status.phase === "downloading"
+                  ? UPDATE_WORDS.downloading
+                  : status.phase === "installing"
+                    ? UPDATE_WORDS.updating
+                    : UPDATE_WORDS.installing
             }
             data-update-install
           >

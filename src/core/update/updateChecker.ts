@@ -1,6 +1,6 @@
 import { settingFrom } from "@shared/envSettings";
 import type { UpdateChannel, UpdateInstallResult, UpdateStatus } from "@shared/update";
-import { UPDATE_NOTICES, UPDATE_PROBLEMS } from "@shared/updateWords";
+import { UPDATE_LATER, UPDATE_NOTICES, UPDATE_PROBLEMS } from "@shared/updateWords";
 import type { HostAppInfo } from "../host";
 import { hostEnv } from "../hostEnv";
 import { thisDeviceSystem } from "../platform";
@@ -30,6 +30,12 @@ import {
   targetsUrlOf,
   upgradeCommandFor,
 } from "./updateChannels";
+import {
+  type CrewWorkForUpdate,
+  createUpdateSaving,
+  type UpdateSaving,
+  withUpdateWork,
+} from "./updateWork";
 
 // Direct Mac copies use the consented native updater; Homebrew copies keep reading
 // their cask's target and offer only its Homebrew command. Linux reads public builds.
@@ -71,6 +77,12 @@ export type UpdateChecker = {
    * then starts it; answers only when it could not.
    */
   install: () => Promise<UpdateInstallResult>;
+  /**
+   * Update later (docs/alpha.md, "Saving work before an update"): lets an
+   * update go while it saves the crew's work, so nothing is replaced and
+   * the work carries on; nothing happens once the copy is being replaced.
+   */
+  later?: () => Promise<UpdateStatus>;
 };
 
 export type CreateUpdateCheckerOptions = {
@@ -106,7 +118,9 @@ export type CreateUpdateCheckerOptions = {
   /** The published builds file; the public tap's by default. */
   buildsUrl?: string;
   /** Installs an offered Linux build (`createLinuxInstaller`); absent, nothing installs. */
-  installLinux?: (plan: LinuxInstallPlan) => Promise<void>;
+  installLinux?: (plan: LinuxInstallPlan, beforeReplace?: () => Promise<void>) => Promise<void>;
+  /** Saves the crew's work before an installed build replaces this copy. */
+  saving?: UpdateSaving;
 };
 
 type Offer = { version: string; url: string | null; download?: BuildDownload | null };
@@ -353,6 +367,8 @@ export function createUpdateChecker(options: CreateUpdateCheckerOptions): Update
     );
   }
 
+  const saving = options.saving ?? createUpdateSaving(undefined);
+
   async function install(): Promise<UpdateInstallResult> {
     const status = await getStatus();
     const offer = lastOffer.get(keyOf(status.channel, TAP));
@@ -361,16 +377,28 @@ export function createUpdateChecker(options: CreateUpdateCheckerOptions): Update
     }
     if (installing) return { ok: false, problem: "The update is already installing." };
     installing = true;
+    let later = false;
     try {
-      await options.installLinux({
-        package: linux.package,
-        version: offer.version,
-        channel: status.channel,
-        download: offer.download,
-        ...(linux.appImage ? { appImage: linux.appImage } : {}),
-      });
+      await options.installLinux(
+        {
+          package: linux.package,
+          version: offer.version,
+          channel: status.channel,
+          download: offer.download,
+          ...(linux.appImage ? { appImage: linux.appImage } : {}),
+        },
+        // The crew's work stops where nothing is lost before the copy is replaced.
+        async () => {
+          if (await saving.save()) return;
+          later = true;
+          throw new UpdateInstallProblem(UPDATE_LATER);
+        },
+      );
       return { ok: true };
     } catch (caught) {
+      if (later) return { ok: false, later: true, problem: UPDATE_LATER };
+      // Nothing replaced this copy: the work it stopped carries on.
+      saving.release();
       return {
         ok: false,
         problem:
@@ -383,7 +411,16 @@ export function createUpdateChecker(options: CreateUpdateCheckerOptions): Update
     }
   }
 
-  return { getStatus, checkNow, openReleasePage, install };
+  return {
+    getStatus: async () => withUpdateWork(await getStatus(), saving),
+    checkNow: async () => withUpdateWork(await checkNow(), saving),
+    openReleasePage,
+    install,
+    later: async () => {
+      saving.later();
+      return withUpdateWork(await getStatus(), saving);
+    },
+  };
 }
 
 export type InstalledUpdateCheckerOptions = {
@@ -399,6 +436,12 @@ export type InstalledUpdateCheckerOptions = {
   /** Read for the development stand-ins below; the process's own by default. */
   env?: NodeJS.ProcessEnv;
   fetchImpl?: typeof fetch;
+  /**
+   * The crew's work on this computer, saved before an update replaces the
+   * copy (docs/alpha.md, "Saving work before an update"); an app with no
+   * crew of its own has none.
+   */
+  work?: CrewWorkForUpdate;
 };
 
 /**
@@ -445,6 +488,7 @@ export function createInstalledUpdateChecker(
       install: async () => ({ ok: false, problem: UPDATE_PROBLEMS.unknownInstallation }),
     };
   }
+  const saving = createUpdateSaving(options.work);
   if (options.macDriver && installation?.kind === "direct") {
     return createMacUpdateChecker({
       currentVersion,
@@ -452,6 +496,7 @@ export function createInstalledUpdateChecker(
       driver: options.macDriver,
       releasesUrl: releaseSource.releasesUrl,
       openExternal: options.openExternal,
+      saving,
     });
   }
   // An installed Linux app knows which package it came from; a run from
@@ -501,6 +546,7 @@ export function createInstalledUpdateChecker(
       : {}),
     openExternal: options.openExternal,
     ...(options.fetchImpl ? { fetchImpl: options.fetchImpl } : {}),
+    saving,
     // Dev/source builds are never behind a release, so force the indicator
     // on there to make it visible while developing; e2e opts out.
     simulateUpdate: !app.packaged && settingFrom(env, "SIMULATE_UPDATE") !== "0",

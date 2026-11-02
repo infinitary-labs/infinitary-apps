@@ -9,6 +9,7 @@ import {
 } from "../../src/renderer/src/personal/panelBoundaryWords";
 import { YOUR_PANELS_WORDS } from "../../src/renderer/src/settings/generalWords";
 import { scratchDir } from "../helpers/scratchDirs";
+import { panelBody } from "./frames";
 import { type LaunchedApp, launchApp } from "./launch";
 import { feedLineOf } from "./rails";
 import { settingRow } from "./settings";
@@ -278,7 +279,7 @@ test.describe
             .list()
             .then((s) => s.extensions.find((e) => e.id === "spinner")?.stopped?.reason ?? null),
         );
-      await expect(page.locator('[data-fixture="spinner"]')).toBeVisible();
+      await expect(panelBody(page, "spinner").locator('[data-fixture="spinner"]')).toBeVisible();
       expect(
         await page.evaluate(() => window.infinitary.plugins.invoke("spinner", "ping", null)),
       ).toEqual({ ok: true, result: "pong" });
@@ -307,7 +308,7 @@ test.describe
       );
       await expect(row).toContainText(BACKGROUND_STOPPED_LINE);
       // The panel's own drawing stays, and so does every other panel's work.
-      await expect(page.locator('[data-fixture="spinner"]')).toBeVisible();
+      await expect(panelBody(page, "spinner").locator('[data-fixture="spinner"]')).toBeVisible();
       expect(
         await page.evaluate(() => window.infinitary.plugins.invoke("open-items", "clear", null)),
       ).toMatchObject({ ok: true, result: { filled: 0 } });

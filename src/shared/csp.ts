@@ -27,21 +27,9 @@ export const APP_MODEL_SCHEME = "app-model";
  */
 export const APP_FRAME_SCHEME = "app-frame";
 
-/**
- * The scheme the shell serves PERSONAL extension modules over (talk-to-
- * personalize Step 2, docs/ui-plugins.md "Personal extensions"): compiled
- * panels at `app-plugin://personal/<id>/<hash>/<file>.mjs` and the host
- * shims at `app-plugin://host/<module>.mjs`. It is admitted to script-src
- * and nowhere else, because a personal panel is a module the app's own
- * renderer imports (captain decision Q7: personal code runs in-process,
- * trusted like the crewmate that wrote it). Third-party plugin frames
- * never load from it - their vehicle and its CSP are unchanged.
- */
-export const APP_PLUGIN_SCHEME = "app-plugin";
-
 export const PRODUCTION_CSP =
   "default-src 'none'; " +
-  `script-src 'self' 'wasm-unsafe-eval' '${FRAME_BRIDGE_SHA256}' ${APP_PLUGIN_SCHEME}:; ` +
+  `script-src 'self' 'wasm-unsafe-eval' '${FRAME_BRIDGE_SHA256}'; ` +
   "style-src 'self' 'unsafe-inline'; " +
   `img-src 'self' data: ${APP_FRAME_SCHEME}:; ` +
   `font-src 'self' ${APP_FRAME_SCHEME}:; ` +
@@ -65,8 +53,8 @@ export function buildCsp(dev?: { devServerOrigin: string }): string {
   if (!dev) return PRODUCTION_CSP;
   const wsOrigin = dev.devServerOrigin.replace(/^http/, "ws");
   return PRODUCTION_CSP.replace(
-    `script-src 'self' 'wasm-unsafe-eval' '${FRAME_BRIDGE_SHA256}' ${APP_PLUGIN_SCHEME}:`,
-    `script-src 'self' 'wasm-unsafe-eval' 'unsafe-inline' ${APP_PLUGIN_SCHEME}:`,
+    `script-src 'self' 'wasm-unsafe-eval' '${FRAME_BRIDGE_SHA256}'`,
+    "script-src 'self' 'wasm-unsafe-eval' 'unsafe-inline'",
   ).replace(
     `connect-src 'self' ${APP_MODEL_SCHEME}:`,
     `connect-src 'self' ${APP_MODEL_SCHEME}: ${dev.devServerOrigin} ${wsOrigin}`,

@@ -3,6 +3,7 @@ import { cpSync, mkdirSync } from "node:fs";
 import { join } from "node:path";
 import { expect, type Page, test } from "@playwright/test";
 import { scratchDir } from "../helpers/scratchDirs";
+import { panelBody } from "./frames";
 import { askFirstmate } from "./lastTurn";
 import { type LaunchedApp, launchApp } from "./launch";
 import { measured, PERF_TAG } from "./perf";
@@ -78,6 +79,11 @@ function panel(page: Page) {
   return page.locator('[data-side-panel="token-watch"]');
 }
 
+/** What the panel's own code draws, inside its frame (INF-2205 piece C). */
+function panelPage(page: Page) {
+  return panelBody(page, "token-watch");
+}
+
 /** The Firstmate's newest usage row, read the way the panel reads it. */
 async function newestFirstmateUsage(page: Page): Promise<{ at: number; total: number }> {
   return page.evaluate(async () => {
@@ -102,19 +108,18 @@ function formatTokens(value: number): string {
 
 test(`the token dashboard counts every Firstmate turn, its row painting after the core's write ${PERF_TAG}`, async () => {
   const { page } = launched;
-  const tokens = panel(page);
-  await expect(tokens).toBeVisible({ timeout: 30_000 });
+  await expect(panel(page)).toBeVisible({ timeout: 30_000 });
+  const tokens = panelPage(page);
   await expect(tokens.getByText("Tokens · last hour")).toBeVisible();
 
-  // Every text change the panel paints, stamped on the page's clock - the
-  // same wall clock the core stamps a usage row with.
-  await page.evaluate(() => {
-    const target = document.querySelector('[data-side-panel="token-watch"]');
+  // Every text change the panel paints, stamped on its own page's clock -
+  // the same wall clock the core stamps a usage row with.
+  await tokens.locator("body").evaluate((target) => {
     const paints: { at: number; text: string }[] = [];
     (window as unknown as { __tokenPaints: typeof paints }).__tokenPaints = paints;
     new MutationObserver(() => {
-      paints.push({ at: Date.now(), text: target?.textContent ?? "" });
-    }).observe(target as Node, { subtree: true, childList: true, characterData: true });
+      paints.push({ at: Date.now(), text: target.textContent ?? "" });
+    }).observe(target, { subtree: true, childList: true, characterData: true });
   });
 
   const lags: number[] = [];
@@ -127,13 +132,15 @@ test(`the token dashboard counts every Firstmate turn, its row painting after th
     expect(after.total).toBeGreaterThan(before.total);
     const shown = `${formatTokens(after.total)} tokens`;
     await expect(tokens.getByText(shown, { exact: true })).toBeVisible({ timeout: 10_000 });
-    const paint = await page.evaluate(
-      (text) =>
-        (window as unknown as { __tokenPaints: { at: number; text: string }[] }).__tokenPaints.find(
-          (entry) => entry.text.includes(text),
-        )?.at ?? null,
-      shown,
-    );
+    const paint = await tokens
+      .locator("body")
+      .evaluate(
+        (_body, text) =>
+          (
+            window as unknown as { __tokenPaints: { at: number; text: string }[] }
+          ).__tokenPaints.find((entry) => entry.text.includes(text))?.at ?? null,
+        shown,
+      );
     expect(paint, "the panel painted the new total").not.toBeNull();
     // The order is the claim: the count is painted after the core wrote it.
     expect(paint as number).toBeGreaterThanOrEqual(after.at);
@@ -194,7 +201,7 @@ test("a runaway statement is stopped at the cap, the next query is answered, and
       RUNAWAY,
     ),
   ).toMatchObject({ refused: "sql_timeout" });
-  await expect(panel(page).getByText("Firstmate", { exact: true })).toBeVisible();
+  await expect(panelPage(page).getByText("Firstmate", { exact: true })).toBeVisible();
 
   // A clean quit: the app exits on its own, not by the harness's kill
   // (which would leave a signal, not an exit code).

@@ -13,12 +13,17 @@ import { frameIn, panelBody } from "./frames";
 import { type LaunchedApp, launchApp } from "./launch";
 import { resizeWindow } from "./layout";
 
-import { panelHeaderButton, shownPanelCard, shownPanelCardFrame } from "./panelCards";
+import {
+  panelHeaderButton,
+  shownPanelCard,
+  shownPanelCardBody,
+  shownPanelCardFrame,
+} from "./panelCards";
 import { seedHostedOrigins } from "./projectSeed";
 import { promptInput } from "./prompt";
 import { recordCard } from "./rails";
 import { ADD_PANEL_PROMPT_MARKER, installPanel } from "./scenarios/installPanel";
-import { SHOWN_ENTRY, shownCardFrame } from "./stack";
+import { clickInBody, SHOWN_ENTRY, shownCardFrame } from "./stack";
 import { pressWindowKey } from "./windowKeys";
 
 /**
@@ -31,9 +36,9 @@ import { pressWindowKey } from "./windowKeys";
  * it draws with the app's own task marks and a stylesheet of its own. Once
  * as a panel of his own, once added from elsewhere, walled off, after he
  * agrees to its moves - where a move its code makes while his focus is
- * elsewhere writes nothing. (A panel of his own runs in the window, where
- * the page's user activation is his click or key; plugins/panelTasks.test.ts
- * holds the refusal there.)
+ * elsewhere writes nothing. Both draw in frames of their own (INF-2205
+ * piece C), where a move counts only while the panel's frame holds the
+ * captain's focus; plugins/panelTasks.test.ts holds the refusal.
  */
 
 const PANEL = "task-desk";
@@ -115,7 +120,8 @@ test.describe("a panel of the captain's own works with his tasks", () => {
     test.setTimeout(120_000);
     const { app, page } = launched;
     const panel = page.locator(`[data-side-panel="${PANEL}"]`);
-    const desk = panel.locator("[data-fixture-desk]");
+    // Its body and its card draw in frames of their own (INF-2205 piece C).
+    const desk = panelBody(page, PANEL).locator("[data-fixture-desk]");
 
     await test.step("its own code puts it on its rail and, collapsed, says what it holds while its page runs on", async () => {
       await expect(desk.locator("[data-desk-row]")).toHaveCount(3, { timeout: 30_000 });
@@ -135,6 +141,7 @@ test.describe("a panel of the captain's own works with his tasks", () => {
       await expect(queue).toBeEnabled();
       // A row says why a move is closed to it, from the record's own rule.
       await expect(desk.locator('[data-desk-queue="FM3K-3"]')).toBeDisabled();
+      // e2e-frame-actions: native -- This journey proves a real pointer grants permission to move a task.
       await queue.click();
       await expect.poll(async () => (await detail(page, "alpha")).startPolicy).toBe("when-ready");
       await expect.poll(() => namesThePanel(page, "alpha")).toBe(true);
@@ -147,11 +154,13 @@ test.describe("a panel of the captain's own works with his tasks", () => {
 
     await test.step("resting on a task opens its summary beside it, and a click opens its record, which the panel then marks", async () => {
       const row = desk.locator('[data-desk-open-task="FM3K-2"]');
+      // e2e-frame-actions: native -- This journey proves native pointer routing from the panel to its summary.
       await row.hover();
       await expect(page.locator("[data-point-summary]")).toHaveAttribute(
         "data-point-summary",
         "beta",
       );
+      // e2e-frame-actions: native -- This journey proves a real pointer in the panel opens its task record.
       await row.click();
       await expect(recordCard(page)).toBeVisible();
       await expect(page.locator(SHOWN_ENTRY)).toHaveAttribute("data-stage-entry-id", "record:beta");
@@ -160,7 +169,7 @@ test.describe("a panel of the captain's own works with his tasks", () => {
 
     await test.step("its card keeps its place while the captain pages away, and lets it go on Hide", async () => {
       await panelHeaderButton(page, PANEL, "open").click();
-      const card = shownPanelCard(page, PANEL, "desk");
+      const card = shownPanelCardBody(page, PANEL, "desk");
       const find = card.locator("[data-desk-find]");
       await find.fill("search");
       await expect(card.locator("[data-desk-aim]")).toHaveCount(1);
@@ -172,8 +181,8 @@ test.describe("a panel of the captain's own works with his tasks", () => {
     });
 
     await test.step("a task the card aims at is the turn's hint while the card is shown", async () => {
-      const card = shownPanelCard(page, PANEL, "desk");
-      await card.locator('[data-desk-aim="FM3K-2"]').click();
+      const card = shownPanelCardBody(page, PANEL, "desk");
+      await clickInBody(card.locator('[data-desk-aim="FM3K-2"]'));
       await expect(card.locator('[data-desk-aim="FM3K-2"]')).toHaveAttribute(
         "aria-pressed",
         "true",
@@ -195,7 +204,9 @@ test.describe("a panel of the captain's own works with his tasks", () => {
         .click();
       await expect(shownPanelCard(page, PANEL, "desk")).toHaveCount(0);
       await panelHeaderButton(page, PANEL, "open").click();
-      await expect(shownPanelCard(page, PANEL, "desk").locator("[data-desk-find]")).toHaveValue("");
+      await expect(shownPanelCardBody(page, PANEL, "desk").locator("[data-desk-find]")).toHaveValue(
+        "",
+      );
     });
   });
 });

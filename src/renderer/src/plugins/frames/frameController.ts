@@ -7,6 +7,7 @@ import {
   cardQuestionsSchema,
 } from "@shared/cards";
 import {
+  PERSONAL_STORE_VALUE_MAX_BYTES,
   type PersonalStoreChange,
   type PersonalStoreRequest,
   type PersonalStoreResponse,
@@ -30,7 +31,7 @@ import {
   type HostMessage,
 } from "@shared/plugins/bridge";
 import type { MediatedFetchCall, MediatedFetchResult } from "@shared/plugins/fetch";
-import type { FrameTheme } from "@shared/plugins/frameDocument";
+import { type FrameTheme, PANEL_SERVER_ACTION } from "@shared/plugins/frameDocument";
 import type { ReadGrant } from "@shared/reads";
 import { type ReadExecutor, ReadSubscriptionError } from "../reads/executor";
 import { noteDroppedLinkMessage, noteFrameLink } from "./frameLink";
@@ -193,10 +194,11 @@ export type FrameMountSpec = {
   markup?: string;
   /**
    * The store slice this mount may reach (one plugin vehicle, Phase A item
-   * 4): the extension id the HOST bound, never one the frame names. Absent,
-   * the `store` verb is refused.
+   * 4): the extension id the HOST bound, never one the frame names, and for
+   * a page drawn for a crewmate's build its draft's own slice (`draft`).
+   * Absent, the `store` verb is refused.
    */
-  store?: { extensionId: string };
+  store?: { extensionId: string; draft?: true };
   /**
    * Arms the frame watchdog (WI-16): from `expectDocument` or `ready` on, the
    * controller ticks every FRAME_WATCHDOG_INTERVAL_MS, and a frame that is
@@ -721,6 +723,7 @@ export class FrameController {
     this.stopStoreNotices = this.deps.store.onChange((change) => {
       if (this.disposed || !this.ready) return;
       if (change.extensionId !== this.spec.store?.extensionId) return;
+      if ((change.draft === true) !== (this.spec.store.draft === true)) return;
       this.port.post({ fm: V, type: "store", key: change.key });
     });
   }
@@ -872,6 +875,7 @@ export class FrameController {
     const parsed = personalStoreRequestSchema.safeParse({
       ...rest,
       extensionId: slice.extensionId,
+      ...(slice.draft ? { draft: true } : {}),
     });
     if (!parsed.success) {
       this.refuse(
@@ -949,12 +953,14 @@ export class FrameController {
       this.refuse(asker, "action_not_declared", `"${request.action}" is not a declared action`);
       return;
     }
-    if (request.value !== undefined && byteLength(request.value) > ACTION_VALUE_MAX_BYTES) {
-      this.refuse(
-        asker,
-        "value_too_large",
-        `an action value may be ${ACTION_VALUE_MAX_BYTES} bytes`,
-      );
+    // A call into a panel's background work carries what its `invoke` was
+    // handed, which may be as large as a value its store keeps.
+    const most =
+      request.action === PANEL_SERVER_ACTION
+        ? PERSONAL_STORE_VALUE_MAX_BYTES
+        : ACTION_VALUE_MAX_BYTES;
+    if (request.value !== undefined && byteLength(request.value) > most) {
+      this.refuse(asker, "value_too_large", `an action value may be ${most} bytes`);
       return;
     }
     if (!this.admit(asker)) return;

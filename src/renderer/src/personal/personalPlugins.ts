@@ -16,9 +16,8 @@ import { panelRail } from "../plugins/panelRail";
 import { createPanelSource } from "../plugins/panelSource";
 import { railRefusals, refusalWords } from "../plugins/railRefusals";
 import { FramedPanelBody, type FramedPanelContent, framedCardBody } from "./FramedPanelBody";
+import { framedCodeOf } from "./framedCode";
 import { panelDrafts } from "./PanelDrafts";
-import { personalCardBody } from "./PersonalCardBody";
-import { PersonalPanelBody, type PersonalPanelContent } from "./PersonalPanelBody";
 
 /**
  * Registers every personal extension in the core's snapshot as a plugin of
@@ -42,9 +41,10 @@ import { PersonalPanelBody, type PersonalPanelContent } from "./PersonalPanelBod
  * One snapshot carries both sources (one plugin vehicle, Phase A item 5):
  * the captain's own panels register as `personal-<id>` and read "yours",
  * the ones he added as `installed-<id>` and read the plugin's own name.
- * Both register through the same door with the grants they are served. An
- * added panel's code never runs in this window: its body is a frame in the
- * frame realm (./FramedPanelBody.tsx), served exactly those grants.
+ * Both register through the same door with the grants they are served, and
+ * neither's code runs in this window: each body is a frame in the frame
+ * realm (./FramedPanelBody.tsx), served exactly those grants (INF-2205
+ * piece C).
  *
  * Each panel's cards ride the same registration (docs/ui-plugins.md, "A
  * panel's cards"): its card views, named cards, header buttons and
@@ -70,45 +70,9 @@ type Mounted = {
   setRunning: (running: boolean | null) => void;
 };
 
-/** A panel's compiled code, for its cards: present or not, while it compiles. */
-function codeOf(view: PersonalExtensionView): PersonalPanelContent | null {
-  if (view.source !== "yours" || !view.panel) return null;
-  return {
-    id: view.id,
-    title: view.title,
-    url: view.panel.url,
-    version: view.panel.version,
-    reads: view.reads,
-    sql: view.sql,
-    moves: view.moves,
-    decides: view.ownPresence,
-    ...(view.stopped ? { stopped: view.stopped.reason } : {}),
-  };
-}
-
 /** What the rail draws: the panel's code while its presence rule holds. */
-function contentOf(view: PersonalExtensionView): PersonalPanelContent | null {
-  return view.present ? codeOf(view) : null;
-}
-
-/** An added panel's pinned version, for its cards: present or not, while it is served. */
-function installedCodeOf(view: PersonalExtensionView): FramedPanelContent | null {
-  if (view.source !== "installed" || !view.frame) return null;
-  return {
-    id: view.id,
-    pluginId: `${INSTALLED_PLUGIN_PREFIX}${view.id}`,
-    title: view.title,
-    size: view.size,
-    code: { source: "installed", version: view.frame.version },
-    reads: view.reads,
-    sql: view.sql,
-    moves: view.moves,
-    decides: view.ownPresence,
-  };
-}
-
-function installedContentOf(view: PersonalExtensionView): FramedPanelContent | null {
-  return view.present ? installedCodeOf(view) : null;
+function framedContentOf(view: PersonalExtensionView): FramedPanelContent | null {
+  return view.present ? framedCodeOf(view) : null;
 }
 
 /** The registration-time data; a change here is a re-register. */
@@ -182,9 +146,7 @@ export class PersonalPlugins {
 
   private mount(view: PersonalExtensionView): Mounted | null {
     const installed = view.source === "installed";
-    const content = createPanelSource<PersonalPanelContent>(null);
     const frame = createPanelSource<FramedPanelContent>(null);
-    const code = createPanelSource<PersonalPanelContent>(null);
     const pinned = createPanelSource<FramedPanelContent>(null);
     const running = createPanelSource<boolean>(false);
     const manifest = parsePluginManifest({
@@ -218,21 +180,13 @@ export class PersonalPlugins {
     try {
       unregister = this.host.registerPlugin(manifest, {
         sidePanels: {
-          [view.id]: installed
-            ? sidePanelBinding<FramedPanelContent>({
-                source: frame.source,
-                running: running.source,
-                rail: { decides: view.ownPresence },
-                Body: FramedPanelBody,
-                CardBody: framedCardBody(pinned.source),
-              })
-            : sidePanelBinding<PersonalPanelContent>({
-                source: content.source,
-                running: running.source,
-                rail: { decides: view.ownPresence },
-                Body: PersonalPanelBody,
-                CardBody: personalCardBody(code.source),
-              }),
+          [view.id]: sidePanelBinding<FramedPanelContent>({
+            source: frame.source,
+            running: running.source,
+            rail: { decides: view.ownPresence },
+            Body: FramedPanelBody,
+            CardBody: framedCardBody(pinned.source),
+          }),
         },
       });
     } catch (error) {
@@ -248,10 +202,8 @@ export class PersonalPlugins {
       key: keyOf(view),
       unregister,
       setContent: (next) => {
-        content.set(contentOf(next));
-        frame.set(installedContentOf(next));
-        code.set(codeOf(next));
-        pinned.set(installedCodeOf(next));
+        frame.set(framedContentOf(next));
+        pinned.set(framedCodeOf(next));
       },
       setRunning: running.set,
     };

@@ -26,7 +26,6 @@ function view(overrides: Partial<PersonalExtensionView> & { id: string }): Perso
   return {
     source: "yours",
     by: null,
-    frame: null,
     title: overrides.id,
     placement: { x: "left", y: "top" },
     order: 100,
@@ -37,10 +36,8 @@ function view(overrides: Partial<PersonalExtensionView> & { id: string }): Perso
     running: false,
     reads: [],
     sql: [],
-    panel: {
-      url: `app-plugin://personal/${overrides.id}/0123456789abcdef/panel.mjs`,
-      version: "0123456789abcdef",
-    },
+    panel: null,
+    frame: { version: "0123456789abcdef" },
     server: null,
     cardViews: [],
     cards: {},
@@ -117,6 +114,26 @@ describe("the window's answer about its panels", () => {
     });
   });
 
+  it("names a panel the rail folded or gathered by where it went, even before its frame drew", () => {
+    // INF-711 and INF-2205 piece C: a panel's frame out of sight may not draw
+    // until it is shown again, so its unseen body never reads as loading
+    // (rail-overflow.spec.ts heard "loading" for a folded clock).
+    const host = new PluginHost({ reads: new Set(READ_NAMES) });
+    plugins = new PersonalPlugins(host, () => {});
+    const snapshot: PersonalSnapshot = {
+      extensions: [view({ id: "near" }), view({ id: "far" }), view({ id: "shown" })],
+    };
+    plugins.apply(snapshot);
+    railFolds.note("left", { folded: new Set(["near"]), hidden: new Set(["far"]) });
+    const mounts = answer(host, snapshot);
+    expect(of(mounts, "near")).toMatchObject({ state: "folded", why: null });
+    expect(of(mounts, "far")).toMatchObject({ state: "gathered", why: null });
+    expect(of(mounts, "shown")).toMatchObject({ state: "loading", why: null });
+    // A body that stopped says so wherever it sits.
+    panelBodies.note("near", { version: VERSION, state: "stopped", why: "boom" });
+    expect(of(answer(host, snapshot), "near")).toMatchObject({ state: "stopped", why: "boom" });
+  });
+
   it("says why a registered panel has nothing on its rail, a body stopped, and the layout's hidden and collapsed", () => {
     const host = new PluginHost();
     plugins = new PersonalPlugins(host, () => {});
@@ -126,7 +143,7 @@ describe("the window's answer about its panels", () => {
         view({
           id: "broken",
           present: false,
-          panel: null,
+          frame: null,
           error: { stage: "panel", message: "broken/panel.tsx: Unexpected token" },
           placement: { x: "right", y: "top" },
         }),

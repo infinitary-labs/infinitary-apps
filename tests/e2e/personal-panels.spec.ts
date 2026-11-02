@@ -15,6 +15,7 @@ import { PANEL_STOPPED_LINE } from "../../src/renderer/src/personal/panelBoundar
 import { DEFAULT_PERSONAL_PLACEMENT } from "../../src/shared/personal/manifest";
 import { AUTONOMY_SWITCH_NAME, AUTONOMY_WORDS } from "../../src/shared/vocabulary";
 import { scratchDir } from "../helpers/scratchDirs";
+import { panelBody, readFrameNow } from "./frames";
 import { type LaunchedApp, launchApp } from "./launch";
 import {
   MOCK_PANEL_ID,
@@ -38,6 +39,7 @@ import {
   PERSONAL_REMOVE_PROMPT_MARKER,
   personalPanels,
 } from "./scenarios/personalPanels";
+import { clickInBody } from "./stack";
 import { setThemeViaSettings } from "./theme";
 
 /**
@@ -89,6 +91,8 @@ test.describe("the personal extension host (Step 2)", () => {
   test("a fixture renders on the rail from the app's own components while its presence source holds data, and disappears when it is empty", async () => {
     const { page } = launched;
     const panel = page.locator('[data-side-panel="open-items"]');
+    // Its body draws in a frame of its own (INF-2205 piece C).
+    const body = panelBody(page, "open-items");
     await expect(panel).toHaveCount(0);
 
     const filled = await page.evaluate(() =>
@@ -99,13 +103,13 @@ test.describe("the personal extension host (Step 2)", () => {
     await expect(panel).toBeVisible();
     await expect(panel.locator("header")).toContainText("Open items");
     await expect(panel.locator("[data-side-panel-attribution]")).toHaveText("yours");
-    await expect(panel.locator("[data-fixture-item]")).toHaveCount(3);
-    await expect(panel.getByText("3 open")).toBeVisible();
+    await expect(body.locator("[data-fixture-item]")).toHaveCount(3);
+    await expect(body.getByText("3 open")).toBeVisible();
     // It sits in the right rail, docked at a real width beside the stage.
     await expect(page.locator('[data-rail="right"] [data-side-panel="open-items"]')).toHaveCount(1);
 
     // The panel's own button calls its server action; the store change hides it.
-    await panel.locator("[data-fixture-clear]").click();
+    await clickInBody(body.locator("[data-fixture-clear]"));
     await expect(panel).toHaveCount(0);
     await expect
       .poll(async () => (await snapshot()).extensions.find((e) => e.id === "open-items")?.present)
@@ -115,9 +119,11 @@ test.describe("the personal extension host (Step 2)", () => {
   test("a thrown render shows the quiet line and the rail stays; saving the file on disk reloads it", async () => {
     const { page } = launched;
     const panel = page.locator('[data-side-panel="shaky"]');
+    // Its body, and the quiet line its boundary draws, are in its own frame.
+    const body = panelBody(page, "shaky");
     await expect(panel).toBeVisible();
-    await expect(panel.locator("[data-fixture]")).toHaveText(SHAKY_LINE);
-    await expect(panel.locator("[data-fixture]")).toHaveAttribute("data-fixture-theme", "dark");
+    await expect(body.locator("[data-fixture]")).toHaveText(SHAKY_LINE);
+    await expect(body.locator("[data-fixture]")).toHaveAttribute("data-fixture-theme", "dark");
     await expect(panel.locator("[data-side-panel-running]")).toHaveCount(0);
 
     await page.evaluate(() =>
@@ -128,7 +134,7 @@ test.describe("the personal extension host (Step 2)", () => {
         value: true,
       }),
     );
-    await expect(panel.locator("[data-personal-stopped]")).toHaveText(PANEL_STOPPED_LINE);
+    await expect(body.locator("[data-personal-stopped]")).toHaveText(PANEL_STOPPED_LINE);
     await expect(panel.locator("header")).toContainText("Shaky");
     // The chrome and the rail stay (Activity docks there by default too).
     await expect(page.locator('[data-rail="left"] [data-side-panel="shaky"]')).toHaveCount(1);
@@ -142,10 +148,10 @@ test.describe("the personal extension host (Step 2)", () => {
         .replace('if (explode) throw new Error("shaky panel asked to fail");', "")
         .replace(SHAKY_LINE, SHAKY_REVISED_LINE),
     );
-    await expect(panel.locator("[data-fixture]")).toHaveText(SHAKY_REVISED_LINE, {
+    await expect(body.locator("[data-fixture]")).toHaveText(SHAKY_REVISED_LINE, {
       timeout: 15_000,
     });
-    await expect(panel.locator("[data-personal-stopped]")).toHaveCount(0);
+    await expect(body.locator("[data-personal-stopped]")).toHaveCount(0);
   });
 });
 
@@ -352,38 +358,56 @@ function pngPaint(file: string): { lum: number; contrast: number } {
  * Records, in order, every distinct state of a panel on its rail and of its
  * draft out of sight - whether each is drawn, its mock rows, and the
  * running dot - so a journey can say what the rail drew while a build went
- * on, as an order rather than a moment.
+ * on, as an order rather than a moment. Each body draws in a frame of its
+ * own (INF-2205 piece C), which the window's script cannot read, so the
+ * journey reads the rail, the draft and their bodies itself, one state
+ * after another, until `buildStates` asks.
  */
-async function watchBuild(page: import("@playwright/test").Page, id: string): Promise<void> {
-  await page.evaluate((panelId) => {
-    const target = window as Window & { __fmBuild?: string[] };
-    target.__fmBuild = [];
-    const state = (panel: Element | null) => {
-      if (!panel) return "none";
-      const rows = panel.querySelector("[data-mock-rows]")?.getAttribute("data-mock-rows") ?? "-";
-      return `rows=${rows}${panel.querySelector("[data-side-panel-running]") ? " running" : ""}`;
-    };
-    const record = () => {
-      const rail = document.querySelector(`[data-rail] [data-side-panel="${CSS.escape(panelId)}"]`);
-      const draft = document.querySelector(
-        `[data-panel-draft="${CSS.escape(panelId)}"] [data-side-panel]`,
-      );
-      const now = `rail ${state(rail)} | draft ${state(draft)}`;
-      const states = target.__fmBuild ?? [];
-      if (states[states.length - 1] !== now) states.push(now);
-    };
-    record();
-    new MutationObserver(record).observe(document.body, {
-      subtree: true,
-      childList: true,
-      attributes: true,
-    });
-    window.setInterval(record, 16);
-  }, id);
+const builds = new WeakMap<Page, { states: string[]; stop: () => Promise<void> }>();
+
+async function panelState(page: Page, chrome: string): Promise<string> {
+  // One look, never a wait: a sample that waits for a frame misses a draft
+  // that lives only while its capture runs.
+  const holder = await page.$(chrome);
+  if (!holder) return "none";
+  const rows = await readFrameNow(
+    holder,
+    () => document.querySelector("[data-mock-rows]")?.getAttribute("data-mock-rows") ?? "-",
+    "-",
+  );
+  const running = (await holder.$("[data-side-panel-running]")) !== null;
+  return `rows=${rows}${running ? " running" : ""}`;
 }
 
-async function buildStates(page: import("@playwright/test").Page): Promise<string[]> {
-  return page.evaluate(() => (window as Window & { __fmBuild?: string[] }).__fmBuild ?? []);
+async function watchBuild(page: Page, id: string): Promise<void> {
+  await builds.get(page)?.stop();
+  const states: string[] = [];
+  let stopped = false;
+  const record = async () => {
+    const rail = await panelState(page, `[data-rail] [data-side-panel="${id}"]`);
+    const draft = await panelState(page, `[data-panel-draft="${id}"] [data-side-panel]`);
+    const now = `rail ${rail} | draft ${draft}`;
+    if (states[states.length - 1] !== now) states.push(now);
+  };
+  await record();
+  const loop = (async () => {
+    while (!stopped) await record().catch(() => undefined);
+  })();
+  builds.set(page, {
+    states,
+    stop: async () => {
+      stopped = true;
+      await loop;
+    },
+  });
+}
+
+async function buildStates(page: Page): Promise<string[]> {
+  const build = builds.get(page);
+  if (!build) return [];
+  await build.stop();
+  builds.delete(page);
+  return build.states;
 }
 
 /** Where, in the recorded order, the draft was last drawn: -1 when it never was. */
@@ -447,6 +471,8 @@ test.describe("the build loop: an ask becomes a panel (Step 4)", () => {
   let workspace: string;
 
   const panel = () => live.page.locator(`[data-side-panel="${MOCK_PANEL_ID}"]`);
+  /** The panel's body, drawn in its own frame (INF-2205 piece C). */
+  const body = () => panelBody(live.page, MOCK_PANEL_ID);
   const ask = async (text: string) => {
     const input = promptInput(live.page);
     await input.click();
@@ -493,7 +519,7 @@ test.describe("the build loop: an ask becomes a panel (Step 4)", () => {
       await expect(panel()).toBeVisible({ timeout: 30_000 });
       await expect(panel().locator("header")).toContainText(MOCK_PANEL_TITLE);
       await expect(panel().locator("[data-side-panel-attribution]")).toHaveText("yours");
-      await expect(panel().locator("[data-mock-rows='regular']")).toHaveCount(1);
+      await expect(body().locator("[data-mock-rows='regular']")).toHaveCount(1);
       // It was built apart, then placed (docs/personal-panels.md, "Placed on
       // the rail"): drawn out of sight while the rail had nothing of it, then
       // on the captain's own rail with the running dot before the report, a
@@ -522,10 +548,10 @@ test.describe("the build loop: an ask becomes a panel (Step 4)", () => {
       ).toBe(true);
       // The declared `feed.recent` read reaches the panel: the feed already
       // holds the spawn line, so the count is a real number, never a blank.
-      await expect(panel().getByText("Activity")).toBeVisible();
+      await expect(body().getByText("Activity")).toBeVisible();
       await expect
         .poll(async () =>
-          (await panel().locator("[data-mock-panel] span").allInnerTexts()).some((text) =>
+          (await body().locator("[data-mock-panel] span").allInnerTexts()).some((text) =>
             /^[1-9]\d*$/.test(text.trim()),
           ),
         )
@@ -667,7 +693,7 @@ test.describe("the build loop: an ask becomes a panel (Step 4)", () => {
       ).toBeVisible({ timeout: 45_000 });
       // The report's commit, or git's own words for why there is none.
       expect(await awaitTurnCommit(userDataDir, key)).toEqual({ commit: expect.any(String) });
-      await expect(panel().locator("[data-mock-rows='small']")).toHaveCount(1, { timeout: 30_000 });
+      await expect(body().locator("[data-mock-rows='small']")).toHaveCount(1, { timeout: 30_000 });
       // While the change was built the rail kept the panel as it was, with
       // the running dot, and drew the smaller rows once the crewmate placed
       // them, before the report, a draft no more.

@@ -2,6 +2,7 @@ import { cpSync, mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { expect, test } from "@playwright/test";
 import { scratchDir } from "../helpers/scratchDirs";
+import { panelBody } from "./frames";
 import { type GitHubStub, seedGitHubSignIn, startGitHubStub } from "./githubStub";
 import { type GitLabStub, seedGitLabSignIn, startGitLabStub } from "./gitlabStub";
 import { type LaunchedApp, launchApp } from "./launch";
@@ -145,21 +146,24 @@ test.describe("the fixture extensions the data skills teach", () => {
 
     // Three panels on the app's own reads (quota, the feed, the captain's
     // open proposed changes on GitHub and GitLab), fed by the app itself.
+    // Each panel's own code draws inside its frame (INF-2205 piece C); the
+    // chrome around it is the window's.
     const openPrs = page.locator('[data-side-panel="open-prs"]');
     await expect(openPrs).toBeVisible({ timeout: 30_000 });
-    await expect(openPrs.getByText("Fix provider-qualified spawn model pins")).toBeVisible();
-    await expect(openPrs.getByText("#186")).toBeVisible();
-    await expect(openPrs.getByText("draft")).toBeVisible();
+    const openPrsBody = panelBody(page, "open-prs");
+    await expect(openPrsBody.getByText("Fix provider-qualified spawn model pins")).toBeVisible();
+    await expect(openPrsBody.getByText("#186")).toBeVisible();
+    await expect(openPrsBody.getByText("draft")).toBeVisible();
     // The merge request on GitLab is a row too, under GitLab's own name for it.
-    await expect(openPrs.getByText("Sync the field notes on time")).toBeVisible();
-    await expect(openPrs.getByText("!1", { exact: true })).toBeVisible();
+    await expect(openPrsBody.getByText("Sync the field notes on time")).toBeVisible();
+    await expect(openPrsBody.getByText("!1", { exact: true })).toBeVisible();
     const pictures = process.env.INFINITARY_GITLAB_PICTURES;
     if (pictures) {
       await regionShot(openPrs, join(pictures, "open-changes-panel.png"));
       await heroShot(launched.app, page, { region: openPrs, name: "gitlab-open-changes" });
     }
 
-    const quota = page.locator('[data-side-panel="quota-glance"]');
+    const quota = panelBody(page, "quota-glance");
     await expect(quota.getByText("62%")).toBeVisible();
     // Unknown is never zero, and a carried-forward reading says its age.
     await expect(quota.getByText("–")).toBeVisible();
@@ -170,10 +174,10 @@ test.describe("the fixture extensions the data skills teach", () => {
 
     // A fresh app has no crewmate reports yet: the slice's honest empty
     // state, from the real feed read, never invented lines.
-    const reports = page.locator('[data-side-panel="crew-reports"]');
+    const reports = panelBody(page, "crew-reports");
     await expect(reports.getByText("No reports yet")).toBeVisible();
 
-    const clock = page.locator('[data-side-panel="tokyo-clock"]');
+    const clock = panelBody(page, "tokyo-clock");
     await expect(clock.getByText(/^\d\d:\d\d$/)).toBeVisible();
 
     // The host owns the chrome: the title comes from the manifest and the

@@ -162,11 +162,9 @@ describe("the plugin frame boundary", () => {
     expect(app.get("frame-src")).toEqual(["'self'", "app-frame:"]);
     expect(app.get("font-src")).toEqual(["'self'", "app-frame:"]);
     expect(app.get("script-src")).not.toContain("'unsafe-inline'");
-    // The personal-extension scheme (talk-to-personalize Step 2, decision
-    // Q7) is a script source and nothing else: no fetch, no frame, no font
-    // rides it, and no third-party plugin ever loads from it.
+    // No panel code runs in the window: the old in-window panel scheme is
+    // in no directive, script-src included.
     for (const [directive, sources] of app) {
-      if (directive === "script-src") continue;
       expect(sources, directive).not.toContain("app-plugin:");
     }
     for (const sources of app.values()) {

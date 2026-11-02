@@ -5,7 +5,6 @@ import { builtinModules } from "node:module";
 import { basename, dirname, extname, isAbsolute, join, relative, resolve } from "node:path";
 import { ownHostModule } from "@shared/codeNames";
 import {
-  APP_PLUGIN_SCHEME,
   type HostModuleKey,
   PERSONAL_CONTRACTS_MODULE,
   PERSONAL_HOST_MODULES,
@@ -35,15 +34,13 @@ import ts from "typescript";
  * - nothing else: no npm package, no host path, no file that leaves the
  *   extension directory (through `..` or a symlink), no dynamic `import()`.
  *
- * Host modules are rewritten to the shims the shell serves at
- * `app-plugin://host/<key>.mjs`, each of which default-exports the object
- * the renderer published; a named import becomes a destructuring of it,
- * so the `@infinitary/ui` surface is whatever `src/renderer/src/design/`
- * exports, with no list to maintain (Step 3 adds a component by exporting
- * it). A panel compiled for the frame realm (`realm: "frame"`, one a
- * captain added) has the same imports pointed at the lib the shell serves
- * at `app-frame://lib/`, which default-exports the same namespaces. Local
- * imports keep their relative shape with an `.mjs` extension.
+ * Every panel runs in the frame realm (INF-2205 piece C: the captain's own,
+ * the ones he added and the app's own alike), so host modules are rewritten
+ * to the lib the shell serves at `app-frame://lib/<key>.mjs`, each of which
+ * default-exports a namespace; a named import becomes a destructuring of
+ * it, so the `@infinitary/ui` surface is whatever `src/renderer/src/design/`
+ * exports, with no list to maintain. Local imports keep their relative
+ * shape with an `.mjs` extension.
  *
  * A panel's card views (`cards/<view>.tsx`, docs/ui-plugins.md "A panel's
  * cards") are entries of the same graph: compiled with the panel, under
@@ -72,22 +69,11 @@ export const PERSONAL_ENTRY_FILES: Record<PersonalModuleKind, string> = {
   server: "server.ts",
 };
 
-/**
- * Where a compiled panel will run, which decides only where its host
- * imports point: `window` - the app's own window, the captain's panels -
- * rewrites them to the shims at `app-plugin://host/`; `frame` - the frame
- * realm, a panel he added (one plugin vehicle, Phase A item 4) - to the
- * lib at `app-frame://lib/`. The allowlist is the same for both.
- */
-export type PanelRealm = "window" | "frame";
-
 export type CompileOptions = {
   extensionId: string;
   extensionDir: string;
   kind: PersonalModuleKind;
   cacheRoot: string;
-  /** Default `window`. A server module ignores it. */
-  realm?: PanelRealm;
 };
 
 export type CompiledModule = {
@@ -175,7 +161,7 @@ export async function compilePersonalModule(options: CompileOptions): Promise<Co
     }
   }
   const ordered = [...modules.values()].sort((a, b) => a.relative.localeCompare(b.relative));
-  const hash = contentHash(options.kind, options.realm ?? "window", ordered);
+  const hash = contentHash(options.kind, ordered);
   const outputDir = join(options.cacheRoot, options.extensionId, hash);
   const entryPath = join(outputDir, outputName(relativeInside(extensionRoot, entry)));
   if (!existsSync(entryPath)) {
@@ -239,16 +225,6 @@ export function outputName(sourceRelative: string): string {
   const ext = extname(sourceRelative);
   if (ext === STYLESHEET_EXTENSION) return `${sourceRelative}.mjs`;
   return `${ext ? sourceRelative.slice(0, -ext.length) : sourceRelative}.mjs`;
-}
-
-/** The URL the renderer imports a compiled panel entry from. */
-export function personalModuleUrl(extensionId: string, hash: string, file: string): string {
-  return `${APP_PLUGIN_SCHEME}://personal/${extensionId}/${hash}/${file}`;
-}
-
-/** The URL of a host shim, as the compiler rewrites an admitted host import to. */
-export function hostModuleUrl(key: HostModuleKey): string {
-  return `${APP_PLUGIN_SCHEME}://host/${key}.mjs`;
 }
 
 /**
@@ -386,10 +362,7 @@ async function rewriteImports(input: RewriteInput): Promise<{ output: string; lo
     }
     const importNode = node as ts.ImportDeclaration;
     const local = `__fm_host${hostImportIndex++}`;
-    const url =
-      input.realm === "frame"
-        ? frameLibHostModuleUrl(key as HostModuleKey)
-        : hostModuleUrl(key as HostModuleKey);
+    const url = frameLibHostModuleUrl(key as HostModuleKey);
     const lines = [`import ${local} from ${JSON.stringify(url)};`];
     const clause = importNode.importClause;
     if (clause?.name) lines.push(`const ${clause.name.text} = ${local};`);
@@ -481,17 +454,13 @@ async function realDir(dir: string): Promise<string> {
   }
 }
 
-function contentHash(
-  kind: PersonalModuleKind,
-  realm: PanelRealm,
-  modules: readonly GraphModule[],
-): string {
+function contentHash(kind: PersonalModuleKind, modules: readonly GraphModule[]): string {
   const hash = createHash("sha256");
   hash.update(`${kind}\0`);
-  // The frame realm's output differs only in its host import URLs, so it is
-  // a different version of the same sources; the window's keeps the hash it
-  // always had.
-  if (kind === "panel" && realm === "frame") hash.update("frame\0");
+  // A panel's output points its host imports at the frame realm's lib, so
+  // it is a version of its own, apart from the in-window output a panel of
+  // the captain's had before every panel drew in a frame.
+  if (kind === "panel") hash.update("frame\0");
   for (const module of modules) {
     hash.update(`${module.relative}\0${module.source}\0`);
   }

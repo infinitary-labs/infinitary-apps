@@ -165,9 +165,9 @@ function ownCore() {
       settings: { getDictation: () => ({ enabled: true }) },
       quota: { onWindowFocus: vi.fn(), onResumed: vi.fn() },
       vault: { checkLogins: vi.fn(async () => {}) },
-      personal: { installedPanelDir: () => "/own/panels" },
+      personal: { framePanelDir: () => "/own/panels" },
     },
-    paths: { crewmatesDir: "/own/crewmates", personalCacheDir: "/own/cache" },
+    paths: { crewmatesDir: "/own/crewmates" },
     events: new CoreEventBus(),
     dispatch,
     dispose,
@@ -341,7 +341,7 @@ describe("the app as a view of another Mac", () => {
     expect(air.own.unfollow).toHaveBeenCalledTimes(1);
     expect(air.shell.core()).toBeNull();
     expect(air.shell.dictationEnabled()).toBe(false);
-    expect(air.shell.personalCacheDir()).toBeNull();
+    expect(air.shell.framePanelDir("yours", "notes", "0".repeat(16))).toBeNull();
     await air.until(() => air.view().contact === "in-reach");
     expect(air.view()).toMatchObject({ role: "view", name: "MacBook Pro", address: "127.0.0.1" });
     expect(pro.pairing.list().map((device) => device.name)).toEqual(["MacBook Air"]);

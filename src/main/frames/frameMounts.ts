@@ -99,14 +99,20 @@ export function bytesHash(bytes: Uint8Array): string {
 
 /**
  * Where the registry finds what a panel mount draws (the frame realm): the
- * lib's pins, and the directory holding an added panel's compiled graph -
- * asked of the core, which answers only for a panel it serves at exactly
- * that version, so a mount can never reach a graph the captain did not
- * agree to or one he has since removed.
+ * lib's pins, and the directory holding the compiled graph of one of the
+ * captain's own panels (or its draft) or of one he added - asked of the
+ * core, which answers only for a panel it serves from that source at
+ * exactly that version, so a mount can never reach a graph the captain did
+ * not agree to, one he has since removed, or another source's.
  */
 export type PanelSources = {
   libPins: FrameLibPins;
-  installedPanelDir: (id: string, version: string) => string | null;
+  panelDir: (
+    source: "yours" | "installed",
+    id: string,
+    version: string,
+    draft: boolean,
+  ) => string | null;
 };
 
 type HeldDocument = ServedFrameDocument & {
@@ -118,7 +124,7 @@ type HeldDocument = ServedFrameDocument & {
 const PANEL_FILE_SEGMENT = /^[A-Za-z0-9_.-]+$/;
 
 /**
- * Reads an added panel's compiled graph once, at mount: every `.mjs` under
+ * Reads a panel's compiled graph once, at mount: every `.mjs` under
  * its version directory, by forward-slashed relative path. What the mount
  * serves afterwards is exactly these bytes, hashed into the document's
  * import map - a file written to the cache later reaches no frame.
@@ -268,10 +274,17 @@ export class FrameMountRegistry {
       if (!sources.libPins[file]) throw new PanelMountError(`this build has no "${file}"`);
       module = frameLibUrl(file);
     } else {
-      const dir = sources.installedPanelDir(request.panel.id, request.panel.version);
+      const own = request.panel.source === "personal";
+      const draft = request.panel.source === "personal" && request.panel.draft === true;
+      const dir = sources.panelDir(
+        own ? "yours" : "installed",
+        request.panel.id,
+        request.panel.version,
+        draft,
+      );
       if (!dir) {
         throw new PanelMountError(
-          `"${request.panel.id}" is not an added panel at version ${request.panel.version}`,
+          `"${request.panel.id}" is not ${own ? (draft ? "a panel being built" : "a panel of the captain's") : "an added panel"} at version ${request.panel.version}`,
         );
       }
       files = await readPanelGraph(dir);

@@ -1,3 +1,9 @@
+import {
+  PANEL_BODY_ACTION,
+  PANEL_SERVER_ACTION,
+  type PanelBodySaid,
+} from "@shared/plugins/frameDocument";
+import { z } from "zod";
 import { frameHoldsFocus } from "./frames/frameFocus";
 import { framePanelCardAction, PANEL_CARD_ACTIONS, PANEL_CARD_VIEW_ACTIONS } from "./panelCards";
 import {
@@ -12,13 +18,20 @@ import { frameRailAction, PANEL_RAIL_ACTIONS } from "./panelRail";
 import { frameTasksAction, PANEL_TASKS_ACTIONS, panelTasks } from "./panelTasks";
 
 /**
- * Everything a page of a panel from elsewhere may ask the host, declared
- * from what the panel asked for (docs/ui-plugins.md, "A panel's cards"):
- * the card actions every panel has, `card.keep` on a card's own page, the
- * pointing a panel that reads `tasks.board` gets, the draft and the Settings opening every panel has, `tasks.run` for one the
- * captain agreed may move his tasks, and the rail actions on the panel's
- * own page. The frame's controller refuses any other id, and each handler
- * checks its value like any input from a panel.
+ * Everything a page of a panel may ask the host, declared from what the
+ * panel asked for (docs/ui-plugins.md, "A panel's cards"): the card actions
+ * every panel has, `card.keep` on a card's own page, the pointing a panel
+ * that reads `tasks.board` gets, the draft and the Settings opening every
+ * panel has, `tasks.run` for one the captain agreed may move his tasks, the
+ * rail actions and `panel.body` on the panel's own page, and
+ * `server.invoke` for one with background work of its own. The frame's
+ * controller refuses any other id, and each handler checks its value like
+ * any input from a panel.
+ *
+ * A page drawn for a crewmate's build (`draft`, docs/personal-panels.md
+ * "Built apart") is declared the same actions bound apart: its rail is its
+ * own out-of-sight copy's, its cards reach no stack, and its pointing and
+ * moves never count, since no click or key of the captain's is ever on it.
  */
 export type FramePanelPage = {
   /** The panel; `own` for one of the app's own, which names no panel on a task's record. */
@@ -33,19 +46,52 @@ export type FramePanelPage = {
   moves: boolean;
   /** Its own code decides whether it shows (`presence` `{ "code": true }`). */
   decides: boolean;
+  /** Its background work, which `invoke` reaches; absent for a panel with none. */
+  server?: (action: string, input: unknown) => Promise<unknown>;
+  /** Hears how the panel's body fared on its own page (`panel.body`). */
+  onBody?: (said: PanelBodySaid) => void;
+  /** Drawn for a crewmate's build, out of the captain's sight, under this id. */
+  draft?: { id: string };
 };
+
+/** What `panel.body` takes: the body drew, or stopped and why. */
+const panelBodySaidSchema: z.ZodType<PanelBodySaid> = z.discriminatedUnion("state", [
+  z.strictObject({ state: z.literal("drawn") }),
+  z.strictObject({ state: z.literal("stopped"), why: z.string() }),
+]);
+
+/** What `server.invoke` takes: the action's name, and its input. */
+const serverCallSchema = z.strictObject({
+  action: z.string().min(1).max(64),
+  input: z.unknown().optional(),
+});
+
+/** A draft's cards: what it would put up reaches no stack. */
+async function draftCardAction(id: string, value: unknown): Promise<unknown> {
+  if (id === "cards.emit") {
+    const card = value as { id?: unknown; view?: unknown } | null;
+    return typeof card?.id === "string" ? card.id : String(card?.view ?? "");
+  }
+  if (id === "cards.open") return [];
+  return undefined;
+}
+
+/** A draft is out of the captain's sight: no click or key of the captain's is ever on it. */
+const never = async () => false;
 
 export function framePanelActions(page: FramePanelPage): {
   actions: readonly string[];
   onAction: (id: string, value: unknown) => Promise<unknown>;
 } {
-  const { panel, frame, card } = page;
+  const { panel, frame, card, draft } = page;
   // The captain's own click or key holds this page only while its frame holds the window's focus.
-  const gate = () => frameHoldsFocus(frame);
-  const cardActions = framePanelCardAction(panel.id, frame, card);
+  const gate = draft ? never : () => frameHoldsFocus(frame);
+  const cardActions = draft ? draftCardAction : framePanelCardAction(panel.id, frame, card);
   const points = page.reads.includes("tasks.board");
+  // Where its rail, pointing and moves are kept: its own panel's, or its draft's copy.
+  const drawn = draft?.id ?? panel.id;
   const point = framePointAction(
-    panelPoint(panel.id, {
+    panelPoint(drawn, {
       reads: page.reads,
       ...(card === undefined ? {} : { card }),
       gate,
@@ -53,7 +99,9 @@ export function framePanelActions(page: FramePanelPage): {
     }),
   );
   const tasks = frameTasksAction(panelTasks(panel, gate));
-  const rail = frameRailAction(panel.id, page.decides);
+  const rail = frameRailAction(drawn, page.decides);
+  const { server, onBody } = page;
+  const onPage = card === undefined;
   const actions = [
     ...(card === undefined ? PANEL_CARD_ACTIONS : PANEL_CARD_VIEW_ACTIONS),
     ...(points ? PANEL_POINT_ACTIONS : []),
@@ -61,11 +109,21 @@ export function framePanelActions(page: FramePanelPage): {
     PANEL_DRAFT_ACTION,
     PANEL_OPEN_SETTINGS_ACTION,
     ...(page.moves ? PANEL_TASKS_ACTIONS : []),
-    ...(card === undefined ? PANEL_RAIL_ACTIONS : []),
+    ...(onPage ? PANEL_RAIL_ACTIONS : []),
+    ...(onPage && onBody ? [PANEL_BODY_ACTION] : []),
+    ...(server ? [PANEL_SERVER_ACTION] : []),
   ];
   return {
     actions,
-    onAction: (id, value) => {
+    onAction: async (id, value) => {
+      if (id === PANEL_SERVER_ACTION && server) {
+        const call = serverCallSchema.parse(value);
+        return server(call.action, call.input);
+      }
+      if (id === PANEL_BODY_ACTION && onBody) {
+        onBody(panelBodySaidSchema.parse(value));
+        return undefined;
+      }
       if (id.startsWith("point.")) return point(id, value);
       if (id.startsWith("tasks.")) return tasks(id, value);
       if (id.startsWith("rail.")) return rail(id, value);

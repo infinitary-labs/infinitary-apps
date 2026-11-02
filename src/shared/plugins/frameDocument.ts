@@ -83,10 +83,10 @@ export const cardFrameMountRequestSchema = frameMountBaseSchema.extend({
 
 /**
  * The panel module a panel mount draws (one plugin vehicle, Phase A items 4
- * and 6): one of the app's own panels, compiled into the lib with the
- * bundle, or the compiled version of a panel the captain added, which the
- * shell reads out of the added panels' compile cache - never a path the
- * renderer names. Either way `view` names one of the panel's card views
+ * and 6; INF-2205 piece C): one of the app's own panels, compiled into the
+ * lib with the bundle, or the compiled version of one of the captain's own
+ * panels or of a panel he added, which the shell reads out of its compile
+ * cache - never a path the renderer names. Either way `view` names one of the panel's card views
  * (`cards/<view>.tsx`) instead of its panel: the document draws that card
  * for the stack (docs/ui-plugins.md, "A panel's cards").
  */
@@ -106,6 +106,20 @@ export const panelModuleSchema = z.discriminatedUnion("source", [
      * document draws that card for the stack (docs/ui-plugins.md, "A
      * panel's cards"), from the same compiled graph.
      */
+    view: z.string().regex(PANEL_NAME_PATTERN).optional(),
+  }),
+  z.strictObject({
+    /**
+     * One of the captain's own panels (INF-2205 piece C): drawn here like
+     * any other, never in the app's own window. The shell reads its compiled
+     * graph out of the personal compile cache, asked of the core for exactly
+     * this version - the panel on its rail, or its draft (`draft`) while a
+     * crewmate builds it.
+     */
+    source: z.literal("personal"),
+    id: personalIdSchema,
+    version: z.string().regex(/^[0-9a-f]{16}$/),
+    draft: z.literal(true).optional(),
     view: z.string().regex(PANEL_NAME_PATTERN).optional(),
   }),
 ]);
@@ -136,6 +150,13 @@ export const panelFrameConfigSchema = z.strictObject({
    * `tasks`, whose one action the host declared for this mount alone.
    */
   moves: z.boolean().optional(),
+  /**
+   * The panel may have background work of its own (`server.ts`, the
+   * captain's own panels only): the runtime hands it an `invoke` that asks
+   * the host's `server.invoke` action, which the host declared for this
+   * mount alone. Absent, `invoke` rejects at once.
+   */
+  server: z.boolean().optional(),
 });
 export type PanelFrameConfig = z.infer<typeof panelFrameConfigSchema>;
 
@@ -300,3 +321,24 @@ export function buildPanelDocument(parts: PanelDocumentParts): string {
     "</html>",
   ].join("\n");
 }
+
+/**
+ * The action a page of a panel with background work (`config.server`)
+ * calls its `invoke` through: `{ action, input }`, answered with what the
+ * action returned or refused with its error's words. The host declares it
+ * only on such a page, and runs it through the panel's own background work,
+ * never in the window (INF-2205 piece C).
+ */
+export const PANEL_SERVER_ACTION = "server.invoke";
+
+/**
+ * The action a panel's page on its rail says how its body fared with: drawn,
+ * or stopped and why (`{ state: "drawn" }`, `{ state: "stopped", why }`), for
+ * the window's answer about its panels (docs/personal-panels.md, "Placed on
+ * the rail"). The runtime sends it whatever the panel's source; a page that
+ * was not declared it simply goes unheard.
+ */
+export const PANEL_BODY_ACTION = "panel.body";
+
+/** What a panel's own page says of its body; the window checks it (`panelActions.ts`). */
+export type PanelBodySaid = { state: "drawn" } | { state: "stopped"; why: string };

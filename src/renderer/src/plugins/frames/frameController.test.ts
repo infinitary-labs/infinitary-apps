@@ -1,7 +1,12 @@
-import type { PersonalStoreChange, PersonalStoreRequest } from "@shared/personal/manifest";
+import {
+  PERSONAL_STORE_VALUE_MAX_BYTES,
+  type PersonalStoreChange,
+  type PersonalStoreRequest,
+} from "@shared/personal/manifest";
 import type { HostMessage } from "@shared/plugins/bridge";
 import { FRAME_MAX_IN_FLIGHT, FRAME_MAX_SUBSCRIPTIONS } from "@shared/plugins/bridge";
 import type { MediatedFetchResult } from "@shared/plugins/fetch";
+import { PANEL_SERVER_ACTION } from "@shared/plugins/frameDocument";
 import { describe, expect, it, vi } from "vitest";
 import { type ReadApi, ReadExecutor } from "../reads/executor";
 import {
@@ -327,6 +332,29 @@ describe("FrameController", () => {
     });
     await flush();
     expect(posted.at(-1)).toMatchObject({ id: 3, ok: false, error: { code: "value_too_large" } });
+    expect(onAction).toHaveBeenCalledTimes(1);
+  });
+
+  // INF-2205 piece C: a panel's `invoke` rides the bridge to its background
+  // work, carrying what a store value may hold, never more.
+  it("lets a server call carry as much as a store value, and no more", async () => {
+    const onAction = vi.fn(async () => "done");
+    const { controller, posted } = harness({ actions: [PANEL_SERVER_ACTION], onAction });
+    const call = (id: number, bytes: number) =>
+      controller.receive({
+        fm: 2,
+        type: "request",
+        id,
+        verb: "action",
+        action: PANEL_SERVER_ACTION,
+        value: { action: "save", input: "x".repeat(bytes) },
+      });
+    call(1, 5_000);
+    await flush();
+    expect(posted.at(-1)).toEqual({ fm: 2, type: "response", id: 1, ok: true, result: "done" });
+    call(2, PERSONAL_STORE_VALUE_MAX_BYTES);
+    await flush();
+    expect(posted.at(-1)).toMatchObject({ id: 2, ok: false, error: { code: "value_too_large" } });
     expect(onAction).toHaveBeenCalledTimes(1);
   });
 
@@ -1187,7 +1215,7 @@ describe("a collect's question definitions (docs/card-evidence.md)", () => {
 });
 
 describe("the store verb (the frame realm's PanelProps.store)", () => {
-  function storeHarness(bound: string | null) {
+  function storeHarness(bound: string | null, draft = false) {
     const posted: HostMessage[] = [];
     const requests: PersonalStoreRequest[] = [];
     const listeners: ((change: PersonalStoreChange) => void)[] = [];
@@ -1207,14 +1235,16 @@ describe("the store verb (the frame realm's PanelProps.store)", () => {
         reads: [],
         actions: [],
         onAction: vi.fn(),
-        ...(bound ? { store: { extensionId: bound } } : {}),
+        ...(bound
+          ? { store: { extensionId: bound, ...(draft ? { draft: true as const } : {}) } }
+          : {}),
       },
       "dark",
       { executor: new ReadExecutor(fakeApi()), fetch: vi.fn(), store },
       { post: (message) => posted.push(message) },
     );
-    const change = (extensionId: string, key: string) => {
-      for (const listener of listeners) listener({ extensionId, key });
+    const change = (extensionId: string, key: string, draft?: true) => {
+      for (const listener of listeners) listener({ extensionId, key, ...(draft ? { draft } : {}) });
     };
     return { controller, posted, requests, listeners, change };
   }
@@ -1292,6 +1322,29 @@ describe("the store verb (the frame realm's PanelProps.store)", () => {
     ]);
     controller.dispose();
     expect(listeners).toHaveLength(0);
+  });
+
+  // INF-2205 piece C: a crewmate's build draws its panel in a frame too, and
+  // that page keeps its draft's own store, never the captain's saved one.
+  it("binds a draft's page to its draft slice, both ways", async () => {
+    const draft = storeHarness("meter", true);
+    draft.controller.receive({ fm: 2, type: "ready" });
+    draft.controller.receive({ fm: 2, type: "request", id: 1, verb: "store", op: "get", key: "k" });
+    await flush();
+    expect(draft.requests).toEqual([{ op: "get", extensionId: "meter", key: "k", draft: true }]);
+    draft.change("meter", "saved");
+    draft.change("meter", "drafted", true);
+    expect(draft.posted.filter((message) => message.type === "store")).toEqual([
+      { fm: 2, type: "store", key: "drafted" },
+    ]);
+
+    const saved = storeHarness("meter");
+    saved.controller.receive({ fm: 2, type: "ready" });
+    saved.change("meter", "drafted", true);
+    saved.change("meter", "saved");
+    expect(saved.posted.filter((message) => message.type === "store")).toEqual([
+      { fm: 2, type: "store", key: "saved" },
+    ]);
   });
 });
 

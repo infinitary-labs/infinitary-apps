@@ -1,4 +1,5 @@
 import type { FrameBridgeApi, FrameStoreRequest } from "@shared/plugins/bridge";
+import { PANEL_SERVER_ACTION } from "@shared/plugins/frameDocument";
 import { describe, expect, it, vi } from "vitest";
 import {
   cardData,
@@ -122,6 +123,22 @@ describe("PanelProps in the frame realm", () => {
     const props = framePanelProps({ id: "meter", reads: [], sql: [] }, bridge);
     expect(props.id).toBe("meter");
     await expect(props.invoke("refresh")).rejects.toThrow('"meter" has no server.ts');
+  });
+
+  // INF-2205 piece C: the captain's own panel draws in a frame and reaches
+  // its server.ts through the host, which runs it in the panel's own process.
+  it("asks the host's server.invoke for a panel with background work, answering what it returned", async () => {
+    const { api: bridge } = fakeBridge();
+    vi.mocked(bridge.action)
+      .mockResolvedValueOnce({ rows: 2 })
+      .mockRejectedValueOnce(new Error("stopped"));
+    const props = framePanelProps({ id: "notes", reads: [], sql: [], server: true }, bridge);
+    await expect(props.invoke("count", { since: 1 })).resolves.toEqual({ rows: 2 });
+    await expect(props.invoke("refresh")).rejects.toThrow("stopped");
+    expect(vi.mocked(bridge.action).mock.calls).toEqual([
+      [PANEL_SERVER_ACTION, { action: "count", input: { since: 1 } }],
+      [PANEL_SERVER_ACTION, { action: "refresh" }],
+    ]);
   });
 });
 

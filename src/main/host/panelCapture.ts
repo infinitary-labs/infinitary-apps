@@ -6,6 +6,7 @@ import { appWindows } from "../windows";
 import {
   buildCaptureHtml,
   CAPTURE_WINDOW_BACKGROUND,
+  type CaptureFrame,
   type CaptureTheme,
 } from "./panelCaptureDocument";
 
@@ -26,8 +27,16 @@ const CAPTURE_STABLE_MAX_POLLS = 30;
 
 const captureWindows = new Set<BrowserWindow>();
 
-type Box = { width: number; height: number };
-type Snapshot = { html: string; css: string; width: number; height: number };
+type Box = { width: number; height: number; pending?: boolean };
+/** A framed panel's iframe, by the start of its address and its drawn size. */
+type FramePlace = { prefix: string; width: number; height: number };
+type Snapshot = {
+  html: string;
+  css: string;
+  width: number;
+  height: number;
+  frames: FramePlace[];
+};
 
 function appWindow(): BrowserWindow | null {
   for (const win of appWindows()) {
@@ -42,26 +51,16 @@ function panelMeasureScript(panelId: string): string {
     const el = document.querySelector('[data-side-panel="' + CSS.escape(${id}) + '"]');
     if (!el) return null;
     const box = el.getBoundingClientRect();
-    return { width: box.width, height: box.height };
+    const pending = el.querySelector("[data-frame-mount-pending], iframe[data-frame-mount]:not([data-frame-drawn])") !== null;
+    return { width: box.width, height: box.height, pending };
   })()`;
 }
 
 /**
- * Markup of the docked panel, plus the page CSS with font files inlined so
- * the hidden document does not need to fetch them. Cached on the live page:
- * a capture asks for dark and then light, and the CSS does not change
- * between the two.
+ * Collects a document's CSS with its font files inlined, so the hidden capture
+ * document needs no fetch. Shared by the window and each panel frame.
  */
-function panelSnapshotScript(panelId: string): string {
-  const id = JSON.stringify(panelId);
-  return `(() => {
-    const panelId = ${id};
-    const el = document.querySelector('[data-side-panel="' + CSS.escape(panelId) + '"]');
-    if (!el) return null;
-    const box = el.getBoundingClientRect();
-    const clone = el.cloneNode(true);
-    clone.querySelectorAll("script, iframe, object, embed, link, meta").forEach((node) => node.remove());
-    const html = clone.outerHTML;
+const CSS_COLLECTOR = `
     const inlineFonts = async (css, base) => {
       const urls = new Set();
       for (const match of css.matchAll(/url\\(\\s*(['"]?)([^'")]+)\\1\\s*\\)/g)) {
@@ -108,19 +107,89 @@ function panelSnapshotScript(panelId: string): string {
       window.__fmPanelCaptureCss = chunks.join("\\n");
       return window.__fmPanelCaptureCss;
     };
-    return collectCss().then((css) => ({ html, css, width: box.width, height: box.height }));
+`;
+
+/**
+ * Markup of the docked panel, plus the page CSS with font files inlined so
+ * the hidden document does not need to fetch them. Cached on the live page:
+ * a capture asks for dark and then light, and the CSS does not change
+ * between the two.
+ */
+function panelSnapshotScript(panelId: string): string {
+  const id = JSON.stringify(panelId);
+  return `(() => {
+    const panelId = ${id};
+    const el = document.querySelector('[data-side-panel="' + CSS.escape(panelId) + '"]');
+    if (!el) return null;
+    const box = el.getBoundingClientRect();
+    const clone = el.cloneNode(true);
+    // A framed panel draws in its own process: each of its frames is read
+    // separately and set back in place of this marker.
+    const frames = [];
+    const live = [...el.querySelectorAll("iframe")];
+    clone.querySelectorAll("iframe").forEach((node, i) => {
+      const source = live[i];
+      const src = source ? source.src : "";
+      const at = src.indexOf("://");
+      const end = at < 0 ? -1 : src.indexOf("/", at + 3);
+      if (!source || end < 0) {
+        node.remove();
+        return;
+      }
+      const rect = source.getBoundingClientRect();
+      const marker = document.createElement("div");
+      marker.setAttribute("data-capture-frame", String(frames.length));
+      frames.push({ prefix: src.slice(0, end + 1), width: rect.width, height: rect.height });
+      node.replaceWith(marker);
+    });
+    clone.querySelectorAll("script, object, embed, link, meta").forEach((node) => node.remove());
+    const html = clone.outerHTML;
+${CSS_COLLECTOR}
+    return collectCss().then((css) => ({ html, css, width: box.width, height: box.height, frames }));
   })()`;
+}
+
+/** One panel frame's own CSS and body, read inside that frame. */
+const FRAME_READ_SCRIPT = `(() => {
+${CSS_COLLECTOR}
+  const body = document.body ? document.body.cloneNode(true) : null;
+  if (!body) return null;
+  body.querySelectorAll("script, iframe, object, embed, link, meta").forEach((node) => node.remove());
+  return collectCss().then((css) => ({ css, bodyHtml: body.innerHTML }));
+})()`;
+
+async function readFrames(win: BrowserWindow, places: FramePlace[]): Promise<CaptureFrame[]> {
+  const subtree = win.webContents.mainFrame.framesInSubtree;
+  const frames: CaptureFrame[] = [];
+  for (const place of places) {
+    const frame = subtree.find((candidate) => candidate.url.startsWith(place.prefix));
+    const read = frame
+      ? ((await frame.executeJavaScript(FRAME_READ_SCRIPT, true).catch(() => null)) as {
+          css: string;
+          bodyHtml: string;
+        } | null)
+      : null;
+    frames.push({
+      css: read?.css ?? "",
+      bodyHtml: read?.bodyHtml ?? "",
+      width: place.width,
+      height: place.height,
+    });
+  }
+  return frames;
 }
 
 async function stablePanelBox(win: BrowserWindow, panelId: string): Promise<Box | null> {
   const measure = panelMeasureScript(panelId);
   let box = (await win.webContents.executeJavaScript(measure, true)) as Box | null;
   if (!box || box.width < 1 || box.height < 1) return null;
+  // A framed panel still opening draws nothing yet; a capture waits for it, bounded.
   for (let poll = 0; poll < CAPTURE_STABLE_MAX_POLLS; poll += 1) {
     await new Promise((resolve) => setTimeout(resolve, CAPTURE_STABLE_POLL_MS));
     const next = (await win.webContents.executeJavaScript(measure, true)) as Box | null;
     if (!next || next.width < 1 || next.height < 1) return null;
     const same =
+      !next.pending &&
       Math.round(next.width) === Math.round(box.width) &&
       Math.round(next.height) === Math.round(box.height);
     box = next;
@@ -152,6 +221,7 @@ function captureDocumentDir(): Promise<string> {
 async function renderSnapshot(
   anchor: BrowserWindow,
   snapshot: Snapshot,
+  frames: CaptureFrame[],
   theme: CaptureTheme,
 ): Promise<{ png: Buffer; width: number; height: number }> {
   const width = Math.max(1, Math.round(snapshot.width));
@@ -182,7 +252,14 @@ async function renderSnapshot(
   try {
     await writeFile(
       file,
-      buildCaptureHtml({ css: snapshot.css, panelHtml: snapshot.html, theme, width, height }),
+      buildCaptureHtml({
+        css: snapshot.css,
+        panelHtml: snapshot.html,
+        frames,
+        theme,
+        width,
+        height,
+      }),
       "utf8",
     );
     await shot.loadFile(file);
@@ -213,5 +290,6 @@ export async function captureDockedPanel(input: {
     true,
   )) as Snapshot | null;
   if (!snapshot || snapshot.width < 1 || snapshot.height < 1) return null;
-  return renderSnapshot(win, snapshot, input.theme);
+  const frames = await readFrames(win, snapshot.frames ?? []);
+  return renderSnapshot(win, snapshot, frames, input.theme);
 }

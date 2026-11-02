@@ -1,7 +1,7 @@
 /**
  * What a panel shows when its code stopped drawing - a thrown render, or a
- * module that would not load - in either realm: the app's own window
- * (PersonalPanelBody) and the frame realm (src/renderer/src/frameRealm/).
+ * module that would not load - in the frame realm every panel draws in
+ * (src/renderer/src/frameRealm/).
  * One quiet line in the design system's words for a body that stopped
  * answering; the host's chrome around it stays (`panelBoundary.tsx`).
  */

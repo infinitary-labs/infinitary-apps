@@ -13,9 +13,8 @@ import { UiKitGallery } from "./UiKitGallery";
  * drift from the app.
  *
  * The panel is registered through the ordinary `registerPlugin` door with a
- * Tier-1 body, which is exactly how a personal panel is mounted
- * (`personal/personalPlugins.ts` + `PersonalPanelBody`): same chrome, same
- * body region, same inherited style.
+ * Tier-1 body, the door a personal panel is mounted through
+ * (`personal/personalPlugins.ts`): same chrome, same body region.
  *
  * It is OFF unless this window's own `localStorage` asks for it, which no
  * product path ever writes - nothing here reaches a captain's app.

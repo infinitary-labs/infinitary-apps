@@ -2,10 +2,10 @@
 // (.claude/skills/infinitary-design). The skill owns every visual rule;
 // these ports keep the mock's visual logic identical.
 //
-// This barrel is also the `@infinitary/ui` module a panel imports, in the
-// app's window and in the frame realm (docs/personal-panels.md): every value
-// exported here reaches a panel (personal/hostModules.test.ts pins that), so
-// adding one is adding to the panel library, deliberately.
+// This barrel is also the `@infinitary/ui` module a panel imports in the
+// frame realm (docs/personal-panels.md): every value exported here reaches a
+// panel through the frame lib, so adding one is adding to the panel library,
+// deliberately.
 
 // What an automation rule says, in Settings → Automation and the
 // Automation panel alike (docs/automation.md).

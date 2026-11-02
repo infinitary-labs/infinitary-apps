@@ -147,7 +147,6 @@ export async function compileAppPanels(root: string): Promise<Map<string, Uint8A
         extensionDir: resolve(root, APP_PANELS_DIR, id),
         kind: "panel",
         cacheRoot,
-        realm: "frame",
       });
       for (const file of await filesUnder(compiled.outputDir)) {
         files.set(

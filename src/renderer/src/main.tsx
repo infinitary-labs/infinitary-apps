@@ -4,7 +4,6 @@ import { App } from "./app/App";
 import { hydratePreferences } from "./app/preferences";
 import { countPresses } from "./app/presses";
 import { registerDesignFixtures } from "./design/fixtures";
-import { installHostModules } from "./personal/hostModules";
 import { startPersonalPlugins } from "./personal/personalPlugins";
 import { registerBuiltinPlugin, startGatedPanels } from "./plugins/builtin";
 import { pluginHost } from "./plugins/host";
@@ -22,10 +21,8 @@ countPresses();
 // The app's own UI is the first plugin (docs/ui-plugins.md); it registers
 // before the first render so every registry is populated when read.
 registerBuiltinPlugin(pluginHost);
-// Personal extensions import the app's own React and design library from
-// one global (talk-to-personalize Step 2); publish it before any panel can
-// load, then let the core's snapshot mount them through the same host.
-installHostModules();
+// The core's snapshot mounts the captain's own panels and the ones he
+// added through the same host, each drawn in a frame of its own.
 // The app's own panels that wait on a gate - Knowledge, in an alpha or
 // development build with knowledge to show (docs/knowledge.md) - take a
 // rail's place after the captain's own panels have theirs.

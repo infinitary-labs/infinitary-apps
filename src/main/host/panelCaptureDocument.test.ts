@@ -31,4 +31,36 @@ describe("buildCaptureHtml", () => {
     expect(html.match(/<\/style>/g)).toHaveLength(1);
     expect(html).toContain("<\\/style");
   });
+
+  // INF-2205 piece C: every panel draws in its own frame, so its markup is
+  // not in the window's copy; capture_panel sets each frame's reading back.
+  it("sets each panel frame's own reading back in place, script-free and in the requested theme", () => {
+    const html = buildCaptureHtml({
+      css: "",
+      panelHtml:
+        '<section data-side-panel="clock"><div data-capture-frame="0"></div><div data-capture-frame="1"></div></section>',
+      frames: [
+        {
+          css: "p { color: red }",
+          bodyHtml: '<p title="a&b">Tokyo 9:05 "AM"</p>',
+          width: 279.6,
+          height: 40.2,
+        },
+      ],
+      theme: "light",
+      width: 280,
+      height: 120,
+    });
+    const srcdoc = /<iframe srcdoc="([^"]*)" style="([^"]*)"><\/iframe>/.exec(html);
+    expect(srcdoc?.[2]).toBe("border:0;display:block;width:280px;height:40px");
+    const inner = (srcdoc?.[1] ?? "").replaceAll("&quot;", '"').replaceAll("&amp;", "&");
+    expect(inner).toContain('<html data-theme="light">');
+    expect(inner).toContain('<p title="a&b">Tokyo 9:05 "AM"</p>');
+    expect(inner).toContain("p { color: red }");
+    expect(inner).toContain("default-src 'none'");
+    // A marker with no reading is dropped, never left as an empty box.
+    expect(html).not.toContain("data-capture-frame");
+    expect(html.match(/<iframe/g)).toHaveLength(1);
+    expect(html).not.toContain("<script");
+  });
 });

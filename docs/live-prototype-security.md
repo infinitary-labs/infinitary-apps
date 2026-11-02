@@ -168,6 +168,7 @@ An out-of-reach attempt must add no action after reconnection.
 
 The captain's A1a, reviewed here as the plan requires: a panel the captain ADDED from elsewhere - someone else's code, the first the app runs - is drawn in a sandboxed frame that loads React, the JSX runtime, the design library and a small runtime from the shell, and reaches its data only through the host.
 The app's own Tasks and Activity panels run the same way, as ordinary panel folders on the same API (`docs/ui-plugins.md`, "The app's own panels are ordinary folders"): the main build compiles them into the lib (`builtin/<id>/panel.mjs` and its card views), pinned like every other lib file, and the frame grants them no gesture an added panel could not be granted.
+The captain's own panels draw in the same frame too (INF-2205 piece C): no panel code runs in the app's window, and the app's own policy names no panel script source.
 This is the one frame whose policy names a script SOURCE rather than a hash, so it is reviewed line by line.
 
 The containment definition (`src/shared/plugins/containment.ts`) is:
@@ -185,7 +186,7 @@ So the two sources are paths of the shell's own scheme, answered in-process, and
 1. Server side.
    `app-frame://lib/` answers only a file named in the pins the main build baked in when it built the lib (`scripts/frame-lib.ts` -> `virtual:fm-frame-lib`), and only while that file's bytes still hash to the pin; any other name, a traversal, or drifted bytes is a 404.
    In a packaged app the lib and the pins are both inside the integrity-checked archive.
-   `app-frame://panel-<id>/` answers only the `.mjs` files the registry read and hashed when it mounted that panel - bytes held in memory, so a file written to the cache afterwards reaches no frame - and the registry asks the core for the graph by id and version, which answers only for a panel it serves right now at exactly that version (`PersonalExtensions.installedPanelDir`): never a removed panel's, a stale version, the captain's own panels, or anything while the switch is off.
+   `app-frame://panel-<id>/` answers only the `.mjs` files the registry read and hashed when it mounted that panel - bytes held in memory, so a file written to the cache afterwards reaches no frame - and the registry asks the core for the graph by id and version, which answers only for a panel of the mount's source it serves right now at exactly that version (`PersonalExtensions.framePanelDir`): never a removed panel's, a stale version, an added panel's graph under the captain's name or the other way round, a crewmate's draft unless the mount asked for that draft, or anything while the switch is off.
 2. Client side.
    The document's inline import map (itself admitted by hash) carries `integrity` for every lib file and every one of the mount's files, and the boot script element carries its own; Chromium refuses a module whose bytes differ (verified in Electron 43 during the build).
 
@@ -210,6 +211,12 @@ No `window.infinitary`, no parent DOM, no storage, no network, no top-level navi
 A card view is part of the same pinned graph: `cards/<view>.mjs`, compiled and hashed with the panel at install, mounted at a host of its own exactly as a panel is, with the card's id in its config and its data pushed as view state.
 A panel's own stylesheet is part of it too: `board.css.mjs`, a module whose default export is the file's text, pinned like any other file of the graph; the page puts it in a `<style>` (the policy's `style-src 'unsafe-inline'`), and it loads nothing.
 Only the shown card has a frame, so a panel's cards waiting their turn hold no process and count against no cap.
+
+**What one of the captain's own panels adds.**
+Its frame is declared everything above that its manifest asks for, and two actions more.
+`server.invoke` hands an action's name and input to its own `server.ts` through `inf:plugins:invoke`, which runs in the panel's own process (`PanelRuntimes`); the value is checked like any input and capped at a store value's size, 256 KiB, and a draft's page reaches only its draft's server.
+`panel.body` tells the window whether its body drew or stopped and why, which is only the words `place_panel` reads back.
+A crewmate's draft is bound apart: its own store slice, set by the host from the mount, cards that reach no stack, and no gesture that ever counts.
 
 **Isolation.**
 Each panel mount is its own host, so its own site and renderer process, like a scripted card; a runaway panel wedges only itself.

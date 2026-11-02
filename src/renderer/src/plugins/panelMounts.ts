@@ -99,19 +99,21 @@ function mountOf(panel: SidePanelContribution, facts: MountFacts): PanelMount {
         : "its own code has not put it on its rail yet";
     return { ...base, state: "off", why: cut(why) };
   }
-  // The captain's own panel draws in this window: its body says how it fared.
-  if (kind === "personal") {
-    const body = facts.bodies.get(panel.id);
-    if (!body || body.version !== base.version) return { ...base, state: "loading", why: null };
-    if (body.state === "stopped") return { ...base, state: "stopped", why: cut(body.why) };
-  }
+  // The captain's own panel's page says how its body fared (`panel.body`):
+  // a body that stopped says so wherever it sits.
+  const body = kind === "personal" ? facts.bodies.get(panel.id) : undefined;
+  const current = body !== undefined && body.version === base.version;
+  if (current && body.state === "stopped") return { ...base, state: "stopped", why: cut(body.why) };
   // Room comes after the panel's own word: a rail folds or gathers only a
   // panel it draws, and a header gathered into More is off the rail whatever
-  // its collapse choice.
+  // its collapse choice. A body out of sight is named by where it went, even
+  // one whose frame has not drawn yet: an unseen frame may not draw until it
+  // is shown again.
   const room = facts.room(rail);
   if (room.hidden.has(panel.id)) return { ...base, state: "gathered", why: null };
   if (facts.isCollapsed(panel.id)) return { ...base, state: "collapsed", why: null };
   if (room.folded.has(panel.id)) return { ...base, state: "folded", why: null };
+  if (kind === "personal" && !current) return { ...base, state: "loading", why: null };
   return { ...base, state: "drawn", why: null };
 }
 

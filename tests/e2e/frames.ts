@@ -1,4 +1,4 @@
-import type { FrameLocator, Locator, Page } from "@playwright/test";
+import type { ElementHandle, FrameLocator, Locator, Page } from "@playwright/test";
 import { GESTURE_FOCUS_FRAMES } from "../../src/renderer/src/plugins/frames/gestureFocusFrames";
 
 /**
@@ -115,6 +115,25 @@ export function observeElement(page: Page): Locator {
 /** The Observe panel's page, once drawn. */
 export function observeBody(page: Page): FrameLocator {
   return drawnFrame(page, 'iframe[title="Observe"]');
+}
+
+/**
+ * One look at the frame inside `holder`, drawn or not, never a wait:
+ * `fallback` when it holds no page yet or the read fails, otherwise `read`
+ * run in its page. For a journey that samples states in order, where a wait
+ * would miss one that lasts a moment, and where the frame may never be
+ * marked drawn: a crewmate's draft sits outside the window, where Chromium
+ * runs no animation frame (`railFrame`). A sample of the empty first
+ * document answers `fallback`, and the next sample looks again.
+ */
+export async function readFrameNow<T>(
+  holder: ElementHandle,
+  read: () => T,
+  fallback: T,
+): Promise<T> {
+  const frame = await (await holder.$("iframe"))?.contentFrame();
+  if (!frame) return fallback;
+  return (await frame.evaluate(read).catch(() => fallback)) as T;
 }
 
 /** The iframe element of a side panel, by its id. */

@@ -43,7 +43,6 @@ describe("the app's own panel folders", () => {
         extensionDir: join(PANELS, folder.id),
         kind: "panel",
         cacheRoot,
-        realm: "frame",
       });
       expect(compiled.views, folder.id).toEqual([...folder.views]);
       expect(panelCardsProblem(folder.manifest, compiled.views, folder.id), folder.id).toBeNull();

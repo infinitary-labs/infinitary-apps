@@ -1,6 +1,5 @@
 import { protocol } from "electron";
 import { frameScheme } from "./frames/frameScheme";
-import { pluginScheme } from "./plugins/pluginProtocol";
 import { voiceModelScheme } from "./voice/voiceProtocol";
 
 /**
@@ -16,10 +15,8 @@ import { voiceModelScheme } from "./voice/voiceProtocol";
  *   (docs/architecture.md section 8).
  * - `app-frame:` serves plugin frame documents and the design system's
  *   fonts to those frames (docs/ui-plugins.md, phase 1).
- * - `app-plugin:` serves compiled personal-extension modules and the host
- *   shims they import (talk-to-personalize Step 2).
  */
-export const PRIVILEGED_SCHEMES = [voiceModelScheme, frameScheme, pluginScheme] as const;
+export const PRIVILEGED_SCHEMES = [voiceModelScheme, frameScheme] as const;
 
 export function registerPrivilegedSchemes(): void {
   protocol.registerSchemesAsPrivileged([...PRIVILEGED_SCHEMES]);

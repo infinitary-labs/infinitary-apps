@@ -1,5 +1,6 @@
 import type { PanelAskVia } from "@shared/personal/contracts";
-import type { PanelFrameConfig, PanelModule } from "@shared/plugins/frameDocument";
+import { personalDraftPanelId } from "@shared/personal/manifest";
+import type { PanelBodySaid, PanelFrameConfig, PanelModule } from "@shared/plugins/frameDocument";
 import type { BuiltinFramePanel } from "@shared/plugins/frameLib";
 import type { SidePanelSize } from "@shared/plugins/manifest";
 import type React from "react";
@@ -21,18 +22,22 @@ import { usePanelView } from "../plugins/panelPoint";
 import { panelRail } from "../plugins/panelRail";
 import { FRAME_PANEL_MAX_AUTO_HEIGHT } from "../plugins/Rail";
 import { usePanelCollapsed } from "../plugins/railStore";
+import { BackgroundStopped } from "./BackgroundStopped";
+import { panelBodies } from "./panelBodies";
 import { PanelStoppedLine } from "./panelBoundary";
 
 /**
- * The body of a panel drawn in the FRAME REALM (one plugin vehicle, Phase A
- * item 4; captain's A1a): a sandboxed frame at a host of its own, loading
- * React and the app's components from the shell's pinned lib, and the
- * panel's own compiled code - the app's own panels' from the lib, built
- * with the bundle (docs/ui-plugins.md, "The app's own panels are ordinary
- * folders"); one the captain added from elsewhere from the files the shell
+ * The body of every panel, drawn in the FRAME REALM (one plugin vehicle,
+ * Phase A item 4; captain's A1a; INF-2205 piece C): a sandboxed frame at a
+ * host of its own - so a renderer process of its own - loading React and
+ * the app's components from the shell's pinned lib, and the panel's own
+ * compiled code - the app's own panels' from the lib, built with the bundle
+ * (docs/ui-plugins.md, "The app's own panels are ordinary folders"); the
+ * captain's own, and one he added from elsewhere, from the files the shell
  * read and hashed at mount - with everything it reads host-mediated. One
- * body for both: whoever made a panel decides only where its code comes
- * from, never what it is served.
+ * body for every source: whoever made a panel decides only where its code
+ * comes from and what it was granted, never how it is drawn. No panel's
+ * code runs in the app's own window.
  *
  * What the frame is served is exactly what the panel was granted, as the
  * host holds it: the reads and the views it declared (for one added from
@@ -47,6 +52,15 @@ import { PanelStoppedLine } from "./panelBoundary";
  * showing the counts that page last sent. A collapsed panel, one off its
  * rail, or any frame while the window is hidden is not stopped for missed
  * pings, so it keeps refreshing when it can run again.
+ *
+ * A panel of the captain's own may have background work (`server`), which
+ * its `invoke` reaches through the host; when the app stopped that work
+ * (INF-2205 piece B) the window draws the status and a Retry above the
+ * frame, outside the panel's code. Its page on the rail says how its body
+ * fared (`panel.body`), for the window's answer about its panels. The
+ * version a crewmate is building (`draft`) is drawn by the same body bound
+ * apart: its own store and background work, the rail of its out-of-sight
+ * copy, and cards, asks, pointing and moves that reach nothing.
  */
 export type FramedPanelContent = {
   id: string;
@@ -54,8 +68,11 @@ export type FramedPanelContent = {
   pluginId: string;
   title: string;
   size: SidePanelSize;
-  /** Where its compiled code comes from: the app's own lib, or the version of one added from elsewhere. */
-  code: { source: "builtin" } | { source: "installed"; version: string };
+  /** Where its compiled code comes from: the app's own lib, or the version of one of the captain's or one added from elsewhere. */
+  code:
+    | { source: "builtin" }
+    | { source: "installed"; version: string }
+    | { source: "personal"; version: string };
   /** The reads it was granted; its frame is served these and no other. */
   reads: string[];
   /** The views of the record it was granted (`sql`); its queries reach these and no other. */
@@ -64,6 +81,12 @@ export type FramedPanelContent = {
   moves: boolean;
   /** Its own code decides whether it shows (`presence` `{ "code": true }`). */
   decides: boolean;
+  /** It has background work of its own (`server.ts`), which its `invoke` reaches. */
+  server?: boolean;
+  /** The app stopped its background work (INF-2205 piece B): the window draws why, and Retry. */
+  stopped?: "unresponsive" | "exited";
+  /** The version a crewmate is building, drawn out of sight ("Built apart"). */
+  draft?: true;
 };
 
 /**
@@ -75,22 +98,40 @@ function notePanelStopped(panel: string): void {
   panelRail.summarize(panel, [{ text: PANEL_UNRESPONSIVE_LINE }]);
 }
 
-/** The compiled version a page draws: the lib's own, or an added panel's pinned version. */
+/** The compiled version a page draws: the lib's own, or a pinned version of a panel's graph. */
 function versionOf(content: FramedPanelContent): string {
   return content.code.source === "builtin" ? "builtin" : content.code.version;
 }
 
 /** The module a page of the panel draws: the panel, or one of its card views. */
-function moduleOf(id: string, version: string, view?: string): PanelModule {
+function moduleOf(
+  source: FramedPanelContent["code"]["source"],
+  id: string,
+  version: string,
+  draft: boolean,
+  view?: string,
+): PanelModule {
   const viewed = view === undefined ? {} : { view };
-  return version === "builtin"
-    ? { source: "builtin", id: id as BuiltinFramePanel, ...viewed }
-    : { source: "installed", id, version, ...viewed };
+  if (source === "builtin") return { source, id: id as BuiltinFramePanel, ...viewed };
+  if (source === "installed") return { source, id, version, ...viewed };
+  return { source, id, version, ...(draft ? { draft: true as const } : {}), ...viewed };
 }
 
+/** A call into the panel's background work, which the host runs where that work runs. */
 /** The frame inside `holder`, found when asked: the mount renders it after this does. */
 function useFrameOf(holder: React.RefObject<HTMLDivElement | null>) {
   return useMemo(() => () => holder.current?.querySelector("iframe") ?? null, [holder]);
+}
+
+function serverCall(id: string, draft: boolean) {
+  return async (action: string, input: unknown): Promise<unknown> => {
+    const { plugins } = window.infinitary;
+    const result = draft
+      ? await plugins.invoke(id, action, input, { draft: true })
+      : await plugins.invoke(id, action, input);
+    if (!result.ok) throw new Error(result.error);
+    return result.result;
+  };
 }
 
 /** What one page of the panel may ask the host, declared from what it was granted. */
@@ -101,19 +142,29 @@ function usePage(
 ) {
   const { id, title, moves, decides } = content;
   const own = content.code.source === "builtin";
+  const personal = content.code.source === "personal";
+  const draft = content.draft === true;
+  const server = content.server === true;
+  const version = versionOf(content);
   const reads = content.reads.join(",");
-  return useMemo(
-    () =>
-      framePanelActions({
-        panel: { id, title, own },
-        frame,
-        ...(card === undefined ? {} : { card }),
-        reads: reads ? reads.split(",") : [],
-        moves,
-        decides,
-      }),
-    [id, title, own, frame, card, reads, moves, decides],
-  );
+  return useMemo(() => {
+    // Only the captain's own panel on its rail answers how its body fared.
+    const onBody =
+      personal && !draft && card === undefined
+        ? (said: PanelBodySaid) => panelBodies.note(id, { version, ...said })
+        : undefined;
+    return framePanelActions({
+      panel: { id, title, own },
+      frame,
+      ...(card === undefined ? {} : { card }),
+      reads: reads ? reads.split(",") : [],
+      moves,
+      decides,
+      ...(server ? { server: serverCall(id, draft) } : {}),
+      ...(onBody ? { onBody } : {}),
+      ...(draft ? { draft: { id: personalDraftPanelId(id) } } : {}),
+    });
+  }, [id, title, own, personal, draft, server, version, frame, card, reads, moves, decides]);
 }
 
 /** The frame config's reads and views, and the controller's, from a content's lists. */
@@ -142,13 +193,26 @@ export function FramedPanelBody({ content }: { content: FramedPanelContent }) {
   const version = versionOf(content);
   const grants = useGrants(content);
   const moves = content.moves;
+  const server = content.server === true;
   const source = content.code.source;
+  const draft = content.draft === true;
+  /** Where its rail is kept: its own panel's, or its draft's out-of-sight copy. */
+  const drawn = draft ? personalDraftPanelId(id) : id;
   const panel = useMemo(
     () => ({
-      module: moduleOf(id, version),
-      config: { id, ...grants.config, ...(moves ? { moves } : {}) },
+      module: moduleOf(source, id, version, draft),
+      config: {
+        id,
+        ...grants.config,
+        ...(moves ? { moves } : {}),
+        ...(server ? { server } : {}),
+      },
     }),
-    [id, version, grants, moves],
+    [id, version, source, draft, grants, moves, server],
+  );
+  const store = useMemo(
+    () => ({ extensionId: id, ...(draft ? { draft: true as const } : {}) }),
+    [id, draft],
   );
   const holder = useRef<HTMLDivElement>(null);
   const frame = useFrameOf(holder);
@@ -162,7 +226,7 @@ export function FramedPanelBody({ content }: { content: FramedPanelContent }) {
   // as a click on it would, and the count pushed as view state after the
   // birth tells the document which.
   useEffect(() => {
-    if (!born) return;
+    if (!born || draft) return;
     return onPanelAsk(id, (button, via) => {
       // The press may have just brought the panel out of its collapse, and
       // its page kept running out of sight: its frame takes focus once it shows.
@@ -174,15 +238,16 @@ export function FramedPanelBody({ content }: { content: FramedPanelContent }) {
         }));
       });
     });
-  }, [born, id, frame]);
+  }, [born, draft, id, frame]);
   // F6 into the panel: the window gave its frame focus; the count tells its
   // document to put focus where a person starts in it.
   useEffect(() => {
-    if (!born) return;
+    if (!born || draft) return;
     return onPanelFocus(id, () => setFocus((n) => n + 1));
-  }, [born, id]);
+  }, [born, draft, id]);
   const view = usePanelView(content.reads.includes("tasks.board"));
-  const collapsed = usePanelCollapsed(id);
+  // A draft is never collapsed: there is nothing of the captain's to fold.
+  const collapsed = usePanelCollapsed(id) && !draft;
   const state = useMemo(
     () => ({ asks: asks.counts, askedBy: asks.via, focus, view, collapsed }),
     [asks, focus, view, collapsed],
@@ -191,10 +256,12 @@ export function FramedPanelBody({ content }: { content: FramedPanelContent }) {
     <div
       ref={holder}
       data-framed-panel={id}
+      data-personal-panel={source === "personal" ? id : undefined}
       data-installed-panel={source === "installed" ? id : undefined}
       data-installed-version={source === "installed" ? version : undefined}
       style={{ display: "contents" }}
     >
+      {content.stopped && <BackgroundStopped id={id} draft={draft} reason={content.stopped} />}
       <FrameMount
         title={title}
         panel={panel}
@@ -204,10 +271,19 @@ export function FramedPanelBody({ content }: { content: FramedPanelContent }) {
           grant: grants.grant,
           actions: page.actions,
           onAction: (actionId, value) => page.onAction(actionId, value),
-          store: { extensionId: id },
+          store,
           state,
           onBorn: () => setBorn(true),
-          onUnresponsive: () => notePanelStopped(id),
+          onUnresponsive: () => {
+            notePanelStopped(drawn);
+            if (source === "personal" && !draft) {
+              panelBodies.note(id, {
+                version,
+                state: "stopped",
+                why: PANEL_UNRESPONSIVE_LINE,
+              });
+            }
+          },
         }}
         theme={theme}
         layout={size === "fill" ? "fill" : "auto"}
@@ -257,12 +333,19 @@ function FramedCard({
   const cardId = card.id;
   const cardView = card.view;
   const moves = content.moves;
+  const server = content.server === true;
   const panel = useMemo(
     () => ({
-      module: moduleOf(id, version, cardView),
-      config: { id, ...grants.config, card: { id: cardId }, ...(moves ? { moves } : {}) },
+      module: moduleOf(source, id, version, false, cardView),
+      config: {
+        id,
+        ...grants.config,
+        card: { id: cardId },
+        ...(moves ? { moves } : {}),
+        ...(server ? { server } : {}),
+      },
     }),
-    [id, version, cardView, cardId, grants, moves],
+    [id, version, source, cardView, cardId, grants, moves, server],
   );
   const holder = useRef<HTMLDivElement>(null);
   const frame = useFrameOf(holder);
@@ -282,6 +365,7 @@ function FramedCard({
       ref={holder}
       data-panel-card-page=""
       data-framed-panel={id}
+      data-personal-panel={source === "personal" ? id : undefined}
       data-installed-panel={source === "installed" ? id : undefined}
       data-installed-version={source === "installed" ? version : undefined}
       style={fill ? { height: "100%" } : undefined}

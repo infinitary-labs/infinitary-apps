@@ -37,7 +37,6 @@ import { followWindowCommands, shellCommands } from "./keyboard";
 import { deferCoreDisposal } from "./lifecycle";
 import { answerStartupAsks, STARTUP_ASK_BUTTONS, startupAsks } from "./linuxStartup";
 import { startOwnDisplay } from "./ownDisplay";
-import { handlePluginProtocol } from "./plugins/pluginProtocol";
 import { followRendererRecovery } from "./rendererRecovery";
 import {
   followInstalledProgram,
@@ -668,12 +667,14 @@ export async function startApp(mainDir: string, run: RunStart | null = null): Pr
       }
       // The host serves model files; download policy and the trail run through core dispatch.
       // A panel drawn in the frame realm reads the lib this build made
-      // (out/frame-lib, beside out/main) and, for one the captain added, the
-      // compiled graph the core serves at exactly the version asked for.
+      // (out/frame-lib, beside out/main) and, for one of the captain's own or
+      // one he added, the compiled graph the core serves at exactly the
+      // version asked for.
       const frameMounts = new FrameMountRegistry({
         panels: {
           libPins: frameLibPins,
-          installedPanelDir: (id, version) => shell.installedPanelDir(id, version),
+          panelDir: (source, id, version, draft) =>
+            shell.framePanelDir(source, id, version, draft ? { draft } : {}),
         },
       });
       registerIpc({
@@ -690,7 +691,6 @@ export async function startApp(mainDir: string, run: RunStart | null = null): Pr
         pictures: () => shell.pictures(),
         lib: { dir: join(mainDir, "../frame-lib"), pins: frameLibPins },
       });
-      handlePluginProtocol(() => shell.personalCacheDir());
       // A 5-minute setInterval fires once late after a sleep and then drifts,
       // which is exactly when a reading is most likely to be both wrong and
       // fixable. The shell owns this trigger because only the shell can see the

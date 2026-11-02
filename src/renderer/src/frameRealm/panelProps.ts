@@ -21,7 +21,7 @@ import {
   undeclaredViewsMessage,
 } from "@shared/personal/manifest";
 import type { FrameBridgeApi } from "@shared/plugins/bridge";
-import type { PanelFrameConfig } from "@shared/plugins/frameDocument";
+import { PANEL_SERVER_ACTION, type PanelFrameConfig } from "@shared/plugins/frameDocument";
 
 /**
  * `PanelProps` in the frame realm (one plugin vehicle, Phase A item 4): the
@@ -35,8 +35,11 @@ import type { PanelFrameConfig } from "@shared/plugins/frameDocument";
  *   mistake shows at the call rather than as a quiet refusal.
  * - `store` is the bridge's `store` verb, whose slice the HOST binds to the
  *   mount - the panel names a key, never whose slice.
- * - `invoke` rejects: nothing a panel drawn here brings runs as server code
- *   in the app (A1a, no installed `server.ts` in v1).
+ * - `invoke` asks the host's `server.invoke` action for a panel with
+ *   background work of its own (`config.server`, the captain's own panels):
+ *   the host runs it there, in the panel's own process, and answers what it
+ *   returned or why it failed. Any other panel's `invoke` rejects (A1a, no
+ *   installed `server.ts`).
  * - `cards` puts up, closes and lists the panel's cards on the stack
  *   (docs/ui-plugins.md, "A panel's cards") through the card actions every
  *   panel's mount declares; the host answers `cards.emit` with the card's id.
@@ -56,9 +59,15 @@ export function framePanelProps(
   return {
     id: config.id,
     store: frameStore(bridge),
-    invoke: async () => {
-      throw new Error(`"${config.id}" has no server.ts`);
-    },
+    invoke: config.server
+      ? async <T>(action: string, input?: unknown): Promise<T> =>
+          (await bridge.action(
+            PANEL_SERVER_ACTION,
+            input === undefined ? { action } : { action, input },
+          )) as T
+      : async () => {
+          throw new Error(`"${config.id}" has no server.ts`);
+        },
     reads: frameReads(config, bridge, warn),
     cards: frameCards(bridge),
     asks: frameAsks(bridge),

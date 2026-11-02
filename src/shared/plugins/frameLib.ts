@@ -31,9 +31,8 @@ export const FRAME_LIB_BOOT = "boot.mjs";
 
 /**
  * The host modules a panel may import, as the frame realm serves them. Each
- * default-exports the module's namespace, exactly as the app window's shims
- * do (`app-plugin://host/<key>.mjs`), so one compiled import shape serves
- * both realms.
+ * default-exports the module's namespace, the one shape the compiler's
+ * rewritten host imports destructure.
  */
 export const FRAME_LIB_HOST_MODULES: Readonly<Record<HostModuleKey, string>> = {
   react: "react.mjs",

@@ -15,7 +15,6 @@ function draft(overrides: Partial<PersonalExtensionView> & { id: string }): Pers
   return {
     source: "yours",
     by: null,
-    frame: null,
     title: overrides.id,
     placement: { x: "left", y: "top" },
     order: 100,
@@ -26,10 +25,8 @@ function draft(overrides: Partial<PersonalExtensionView> & { id: string }): Pers
     running: true,
     reads: [],
     sql: [],
-    panel: {
-      url: `app-plugin://personal/${overrides.id}/0123456789abcdef/panel.mjs`,
-      version: "0123456789abcdef",
-    },
+    panel: null,
+    frame: { version: "0123456789abcdef" },
     server: null,
     cardViews: [],
     cards: {},
@@ -51,7 +48,7 @@ describe("PanelDrafts", () => {
     panelDrafts.set([
       draft({ id: "clock", title: "Tokyo clock" }),
       draft({ id: "quiet", present: false }),
-      draft({ id: "broken", panel: null }),
+      draft({ id: "broken", frame: null }),
     ]);
     const html = renderToStaticMarkup(<PanelDrafts />);
     expect(html.match(/data-panel-draft="[^"]+"/g)).toEqual(['data-panel-draft="clock"']);

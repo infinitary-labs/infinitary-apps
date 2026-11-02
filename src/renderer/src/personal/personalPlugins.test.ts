@@ -31,7 +31,6 @@ function view(overrides: Partial<PersonalExtensionView> & { id: string }): Perso
   return {
     source: "yours",
     by: null,
-    frame: null,
     title: overrides.id,
     placement: { x: "right", y: "top" },
     order: 100,
@@ -42,10 +41,8 @@ function view(overrides: Partial<PersonalExtensionView> & { id: string }): Perso
     running: false,
     reads: [],
     sql: [],
-    panel: {
-      url: `app-plugin://personal/${overrides.id}/0123456789abcdef/panel.mjs`,
-      version: "0123456789abcdef",
-    },
+    panel: null,
+    frame: { version: "0123456789abcdef" },
     server: null,
     cardViews: [],
     cards: {},
@@ -74,8 +71,12 @@ describe("PersonalPlugins", () => {
       title: "Tokyo",
       moves: false,
       decides: false,
-      url: "app-plugin://personal/clock/0123456789abcdef/panel.mjs",
-      version: "0123456789abcdef",
+      // Drawn in a frame from its pinned version (INF-2205 piece C), its
+      // server.ts reached through the bridge.
+      pluginId: "personal-clock",
+      code: { source: "personal", version: "0123456789abcdef" },
+      server: true,
+      size: "content",
       reads: [],
       sql: [],
     });
@@ -114,10 +115,7 @@ describe("PersonalPlugins", () => {
     const draft = view({
       id: "clock",
       title: "Tokyo, smaller",
-      panel: {
-        url: "app-plugin://personal/clock/fedcba9876543210/panel.mjs",
-        version: "fedcba9876543210",
-      },
+      frame: { version: "fedcba9876543210" },
     });
     const fresh = view({ id: "fresh" });
     plugins.apply({
@@ -127,7 +125,10 @@ describe("PersonalPlugins", () => {
     // The rail: the same registration and version, with the busy dot. A
     // draft registers nothing, so a new panel is on no rail yet.
     expect(host.sidePanels.list()).toEqual([clock]);
-    expect(clock?.source.get()).toMatchObject({ title: "Tokyo", version: "0123456789abcdef" });
+    expect(clock?.source.get()).toMatchObject({
+      title: "Tokyo",
+      code: { source: "personal", version: "0123456789abcdef" },
+    });
     expect(clock?.running?.get()).toBe(true);
     expect(panelDrafts.get()).toEqual([draft, fresh]);
 

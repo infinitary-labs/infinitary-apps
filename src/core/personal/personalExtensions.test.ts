@@ -127,9 +127,9 @@ describe("PersonalExtensions", () => {
       ]);
       // Written against views this version does not publish: nothing mounts,
       // and the line says why in plain words.
-      expect(newer).toMatchObject({ panel: null, present: false, server: null });
+      expect(newer).toMatchObject({ frame: null, present: false, server: null });
       expect(newer?.error?.message).toContain("written for a newer version of the app");
-      expect(typo?.panel).toBeNull();
+      expect(typo?.frame).toBeNull();
       expect(service.snapshot().extensions.map((e) => e.id)).toEqual([
         "gone",
         "newer",
@@ -166,7 +166,7 @@ describe("PersonalExtensions", () => {
       // Its card view sits beside its panel in the same version.
       expect(
         existsSync(
-          join(h.cacheRoot, "reading", reading?.panel?.version ?? "", "cards", "reader.mjs"),
+          join(h.cacheRoot, "reading", reading?.frame?.version ?? "", "cards", "reader.mjs"),
         ),
       ).toBe(true);
       // A name that points at nothing: the panel still draws, without them.
@@ -208,7 +208,9 @@ describe("PersonalExtensions", () => {
         server: null,
         error: null,
       });
-      expect(prs?.panel?.url).toMatch(/^app-plugin:\/\/personal\/prs\/[0-9a-f]{16}\/panel\.mjs$/);
+      // Drawn in a frame (INF-2205 piece C): the view names a version only.
+      expect(prs?.panel).toBeNull();
+      expect(prs?.frame?.version).toMatch(/^[0-9a-f]{16}$/);
       expect(snapshot.extensions[0]).toMatchObject({
         title: "always",
         present: true,
@@ -240,7 +242,7 @@ describe("PersonalExtensions", () => {
     const service = await PersonalExtensions.start({ ...h, watch: false });
     try {
       const [bad] = service.snapshot().extensions;
-      expect(bad?.panel).toBeNull();
+      expect(bad?.frame).toBeNull();
       expect(bad?.present).toBe(false);
       expect(bad?.error).toEqual({
         stage: "panel",
@@ -296,7 +298,7 @@ describe("PersonalExtensions", () => {
     const service = await PersonalExtensions.start({ ...h, watch: false });
     try {
       const [meter] = service.snapshot().extensions;
-      expect(meter?.panel).toBeNull();
+      expect(meter?.frame).toBeNull();
       expect(meter?.server).toEqual({
         actions: ["fill", "boom"],
         background: [{ id: "sample", everyMs: MIN_BACKGROUND_INTERVAL_MS }],
@@ -356,8 +358,7 @@ describe("PersonalExtensions", () => {
       h.write("clock/panel.tsx", `${PANEL}\n// edited`);
       await service.refresh();
       const edited = service.snapshot().extensions[0];
-      expect(edited?.panel?.version).not.toBe(first?.panel?.version);
-      expect(edited?.panel?.url).not.toBe(first?.panel?.url);
+      expect(edited?.frame?.version).not.toBe(first?.frame?.version);
 
       rmSync(join(h.workspaceDir, "clock"), { recursive: true });
       await service.refresh();
@@ -386,7 +387,7 @@ describe("PersonalExtensions", () => {
       expect(old).toMatchObject({ server: null, error: { stage: "server" } });
       expect(old?.error?.message).toContain('set "api": 2 in manifest.json');
       // The panel itself still draws; only its background work waits for the update.
-      expect(old?.panel).not.toBeNull();
+      expect(old?.frame).not.toBeNull();
       expect(existsSync(marker)).toBe(false);
       expect(h.runtimes.running).toBe(0);
     } finally {
@@ -684,7 +685,7 @@ describe("PersonalExtensions builds apart from the rails", () => {
       await service.refresh();
       h.store.set("clock", "note", "the captain's");
       const before = service.snapshot().extensions[0];
-      expect(before?.panel?.version).toMatch(/^[0-9a-f]{16}$/);
+      expect(before?.frame?.version).toMatch(/^[0-9a-f]{16}$/);
       expect(await service.invoke("clock", "word", null)).toEqual({ ok: true, result: "before" });
 
       service.beginLiveTask("t-live");
@@ -699,11 +700,11 @@ describe("PersonalExtensions builds apart from the rails", () => {
         id: "clock",
         title: "Clock",
         running: true,
-        panel: before?.panel,
+        frame: before?.frame,
       });
       // The draft: the working files, compiled.
       expect(during.drafts?.[0]).toMatchObject({ id: "clock", title: "Clock, smaller" });
-      expect(during.drafts?.[0]?.panel?.version).not.toBe(before?.panel?.version);
+      expect(during.drafts?.[0]?.frame?.version).not.toBe(before?.frame?.version);
       // Each runs its own server.
       expect(await service.invoke("clock", "word", null)).toEqual({ ok: true, result: "before" });
       expect(await service.invoke("clock", "word", null, { draft: true })).toEqual({
@@ -730,24 +731,24 @@ describe("PersonalExtensions builds apart from the rails", () => {
       // A save that does not compile is the draft's to show, never the rails'.
       h.write("clock/panel.tsx", "export default () => <div>");
       await service.refresh();
-      expect(service.snapshot().extensions[0]).toMatchObject({ panel: before?.panel, error: null });
+      expect(service.snapshot().extensions[0]).toMatchObject({ frame: before?.frame, error: null });
       expect(service.snapshot().drafts?.[0]?.error?.stage).toBe("panel");
       expect(await service.lint("clock")).toContain("compile: clock/panel.tsx");
       h.write("clock/panel.tsx", `${PANEL}\n// smaller rows`);
       await service.refresh();
-      const draftVersion = service.snapshot().drafts?.[0]?.panel?.version;
+      const draftVersion = service.snapshot().drafts?.[0]?.frame?.version;
       // Every push while the build went on drew the rails' panel as it was.
       const railVersions = h.pushes
         .filter((push) => push.channel === "inf:plugins:personal")
-        .map((push) => (push.payload as PersonalSnapshot).extensions[0]?.panel?.version);
-      expect(new Set(railVersions)).toEqual(new Set([before?.panel?.version]));
+        .map((push) => (push.payload as PersonalSnapshot).extensions[0]?.frame?.version);
+      expect(new Set(railVersions)).toEqual(new Set([before?.frame?.version]));
 
       // The report's commit: the rails take the version the draft had, and the draft goes.
       h.pushes.length = 0;
       await service.commitTurn("t-live", "The clock rows are smaller.");
       const after = service.snapshot();
       expect(after.extensions[0]).toMatchObject({ title: "Clock, smaller", running: true });
-      expect(after.extensions[0]?.panel?.version).toBe(draftVersion);
+      expect(after.extensions[0]?.frame?.version).toBe(draftVersion);
       expect(after.drafts).toBeUndefined();
       expect(await service.invoke("clock", "word", null)).toEqual({ ok: true, result: "after" });
       expect(await service.invoke("clock", "word", null, { draft: true })).toEqual({
@@ -768,7 +769,7 @@ describe("PersonalExtensions builds apart from the rails", () => {
       ).toThrow(/not being built/);
       const lastRail = h.pushes
         .filter((push) => push.channel === "inf:plugins:personal")
-        .map((push) => (push.payload as PersonalSnapshot).extensions[0]?.panel?.version);
+        .map((push) => (push.payload as PersonalSnapshot).extensions[0]?.frame?.version);
       expect(lastRail.at(-1)).toBe(draftVersion);
     } finally {
       service.dispose();
@@ -830,7 +831,7 @@ describe("PersonalExtensions builds apart from the rails", () => {
       commitAll(h.workspaceDir);
       await service.refresh();
       const committed = Object.fromEntries(
-        service.snapshot().extensions.map((e) => [e.id, e.panel?.version]),
+        service.snapshot().extensions.map((e) => [e.id, e.frame?.version]),
       );
       // Left by a build whose session is gone (the app restarted mid-build):
       // the files name the task, which has not finished.
@@ -841,8 +842,8 @@ describe("PersonalExtensions builds apart from the rails", () => {
       await service.refresh();
       const [clock, hand] = service.snapshot().extensions;
       expect(clock).toMatchObject({ id: "clock", running: true });
-      expect(clock?.panel?.version).toBe(committed.clock);
-      expect(hand?.panel?.version).not.toBe(committed.hand);
+      expect(clock?.frame?.version).toBe(committed.clock);
+      expect(hand?.frame?.version).not.toBe(committed.hand);
       // No session, no draft: nothing reads one.
       expect(service.snapshot().drafts).toBeUndefined();
 
@@ -850,7 +851,7 @@ describe("PersonalExtensions builds apart from the rails", () => {
       h.tasks.close("t-gone", { status: "dropped", reason: "cancelled", actor: "host" });
       await service.refresh();
       expect(service.snapshot().extensions[0]).toMatchObject({ id: "clock", running: false });
-      expect(service.snapshot().extensions[0]?.panel?.version).toBe(committed.clock);
+      expect(service.snapshot().extensions[0]?.frame?.version).toBe(committed.clock);
     } finally {
       service.dispose();
     }
@@ -890,7 +891,7 @@ describe("PersonalExtensions places a build on the rail", () => {
                     {
                       id: view.id,
                       kind: "personal" as const,
-                      version: view.panel?.version ?? null,
+                      version: view.frame?.version ?? null,
                       rail: view.placement.x,
                       ...said,
                     },
@@ -929,7 +930,7 @@ describe("PersonalExtensions places a build on the rail", () => {
       h.write("fresh/panel.tsx", PANEL);
       await service.refresh();
       expect(service.snapshot().extensions).toEqual([]);
-      const draftVersion = service.snapshot().drafts?.[0]?.panel?.version;
+      const draftVersion = service.snapshot().drafts?.[0]?.frame?.version;
       const before = await service.capture("fresh", "t-new");
       expect(before).toMatchObject({ ok: true, photographed: "draft" });
       expect(renderCaptureText(before)).toContain("the captain's rail does not show it yet");
@@ -949,7 +950,7 @@ describe("PersonalExtensions places a build on the rail", () => {
       expect(renderPlaceText(placed)).toContain("The window says it is drawn on the left rail.");
       // On the rail as the working files have it, with the running dot; no draft runs beside it.
       expect(service.snapshot().extensions).toMatchObject([
-        { id: "fresh", running: true, panel: { version: draftVersion } },
+        { id: "fresh", running: true, frame: { version: draftVersion } },
       ]);
       expect(service.snapshot().drafts).toBeUndefined();
       // Nothing was committed: the report still makes the one save point.
@@ -964,8 +965,8 @@ describe("PersonalExtensions places a build on the rail", () => {
       // A save after placing runs apart again; the rail keeps what was placed.
       h.write("fresh/panel.tsx", `${PANEL}\n// smaller rows`);
       await service.refresh();
-      expect(service.snapshot().extensions[0]?.panel?.version).toBe(draftVersion);
-      const newer = service.snapshot().drafts?.[0]?.panel?.version;
+      expect(service.snapshot().extensions[0]?.frame?.version).toBe(draftVersion);
+      const newer = service.snapshot().drafts?.[0]?.frame?.version;
       expect(newer).not.toBe(draftVersion);
       expect(await service.place("t-new", "fresh")).toMatchObject({
         ok: true,
@@ -975,7 +976,7 @@ describe("PersonalExtensions places a build on the rail", () => {
 
       // The report's commit holds it: the rail keeps the same version.
       await service.commitTurn("t-new", "A clock panel.");
-      expect(service.snapshot().extensions[0]?.panel?.version).toBe(newer);
+      expect(service.snapshot().extensions[0]?.frame?.version).toBe(newer);
       expect(service.snapshot().drafts).toBeUndefined();
     } finally {
       service.dispose();
@@ -1012,7 +1013,7 @@ describe("PersonalExtensions places a build on the rail", () => {
       h.write("activity/panel.tsx", PANEL);
       commitAll(h.workspaceDir);
       await service.refresh();
-      const committed = service.snapshot().extensions[0]?.panel?.version;
+      const committed = service.snapshot().extensions[0]?.frame?.version;
       service.beginLiveTask("t-live");
       h.write("activity/panel.tsx", `${PANEL}\n// smaller rows`);
       const placed = await service.place("t-live", "activity");
@@ -1030,12 +1031,12 @@ describe("PersonalExtensions places a build on the rail", () => {
         reason: `"activity" is not on screen: refused: ${why}`,
       });
       expect(captureCalls).toEqual([]);
-      expect(service.snapshot().extensions[0]?.panel?.version).not.toBe(committed);
+      expect(service.snapshot().extensions[0]?.frame?.version).not.toBe(committed);
 
       // The task ended with no report: the rail goes back to the last commit.
       service.endLiveTask("t-live");
       await service.refresh();
-      expect(service.snapshot().extensions[0]?.panel?.version).toBe(committed);
+      expect(service.snapshot().extensions[0]?.frame?.version).toBe(committed);
     } finally {
       service.dispose();
     }
@@ -1202,12 +1203,12 @@ describe("PersonalExtensions and the host-owned switch (Step 5)", () => {
     h.write("clock/panel.tsx", PANEL);
     const service = await PersonalExtensions.start({ ...h, debounceMs: 20, pollMs: 25 });
     try {
-      const first = service.snapshot().extensions[0]?.panel?.version;
+      const first = service.snapshot().extensions[0]?.frame?.version;
       expect(first).toMatch(/^[0-9a-f]{16}$/);
       h.write("clock/panel.tsx", `${PANEL}\n// edited`);
       await vi.waitFor(
         () => {
-          expect(service.snapshot().extensions[0]?.panel?.version).not.toBe(first);
+          expect(service.snapshot().extensions[0]?.frame?.version).not.toBe(first);
         },
         { timeout: 3_000, interval: 20 },
       );

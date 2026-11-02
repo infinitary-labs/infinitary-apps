@@ -45,13 +45,22 @@ function graph(files: Record<string, string>): string {
   return dir;
 }
 
+/**
+ * The core's compiled graphs, keyed `id@version` for an added panel, and
+ * `yours:id@version` (`#draft` for a panel being built) for the captain's own.
+ */
 function sources(
   installed: Record<string, string> = {},
   pins: Record<string, string> = libPins,
 ): PanelSources {
   return {
     libPins: pins,
-    installedPanelDir: (id, version) => installed[`${id}@${version}`] ?? null,
+    panelDir: (source, id, version, draft) =>
+      installed[
+        source === "installed"
+          ? `${id}@${version}`
+          : `yours:${id}@${version}${draft ? "#draft" : ""}`
+      ] ?? null,
   };
 }
 
@@ -199,6 +208,46 @@ describe("a panel mount", () => {
         .sort(),
     );
     expect(mounts.panelFile("b1", "panel.mjs")).toBeUndefined();
+  });
+
+  it("draws one of the captain's own panels, and a draft of it, each only from its own graph (INF-2205 piece C)", async () => {
+    const saved = graph({ "panel.mjs": "export default () => 'saved';" });
+    const draft = graph({ "panel.mjs": "export default () => 'draft';" });
+    const mounts = new FrameMountRegistry({
+      newId: (() => {
+        const ids = ["y1", "y2", "y3", "y4"];
+        return () => ids.shift() ?? "spent";
+      })(),
+      panels: sources({
+        "yours:notes@0123456789abcdef": saved,
+        "yours:notes@0123456789abcdef#draft": draft,
+      }),
+    });
+    const personal = (panel: { version?: string; draft?: true } = {}): PanelMountRequest => ({
+      ...base,
+      kind: "panel",
+      panel: { source: "personal", id: "notes", version: "0123456789abcdef", ...panel },
+      config: { id: "notes", reads: [], sql: [], server: true },
+    });
+    const request = personal();
+    await mounts.mountPanel(request);
+    await mounts.mountPanel(personal({ draft: true }));
+    expect(new TextDecoder().decode(mounts.panelFile("y1", "panel.mjs"))).toContain("saved");
+    expect(new TextDecoder().decode(mounts.panelFile("y2", "panel.mjs"))).toContain("draft");
+    expect(inlineJson(mounts.panelDocument("y1")?.body ?? "", PANEL_CONFIG_ID)).toMatchObject({
+      server: true,
+      module: "app-frame://panel-y1/panel.mjs",
+    });
+    // Another version, or the same id as an added panel, is not served.
+    await expect(mounts.mountPanel(personal({ version: "fedcba9876543210" }))).rejects.toThrow(
+      "is not a panel of the captain's at version fedcba9876543210",
+    );
+    await expect(
+      mounts.mountPanel({
+        ...request,
+        panel: { source: "installed", id: "notes", version: "0123456789abcdef" },
+      }),
+    ).rejects.toThrow("is not an added panel");
   });
 
   it("refuses a panel the core does not serve at that version, a build without the lib, and one past the cap", async () => {

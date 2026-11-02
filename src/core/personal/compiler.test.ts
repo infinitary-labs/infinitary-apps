@@ -59,14 +59,14 @@ describe("compilePersonalModule", () => {
     // destructuring; `All` and `Button` are unused, so the transpile elided
     // them before the rewrite ever saw them.
     expect(panel).toMatch(
-      /import (__fm_host\d) from "app-plugin:\/\/host\/react\.mjs";\nconst React = \1;\nconst \{ useState \} = \1;/,
+      /import (__fm_host\d) from "app-frame:\/\/lib\/react\.mjs";\nconst React = \1;\nconst \{ useState \} = \1;/,
     );
     expect(panel).toMatch(
-      /import (__fm_host\d) from "app-plugin:\/\/host\/ui\.mjs";\nconst \{ Badge: Chip \} = \1;/,
+      /import (__fm_host\d) from "app-frame:\/\/lib\/ui\.mjs";\nconst \{ Badge: Chip \} = \1;/,
     );
     // The automatic JSX runtime's own import is a host import too.
     expect(panel).toMatch(
-      /import (__fm_host\d) from "app-plugin:\/\/host\/jsxRuntime\.mjs";\nconst \{ jsxs: _jsxs \} = \1;/,
+      /import (__fm_host\d) from "app-frame:\/\/lib\/jsx-runtime\.mjs";\nconst \{ jsxs: _jsxs \} = \1;/,
     );
     expect(panel).not.toContain("@firstmate/contracts");
     expect(panel).not.toContain('"react"');
@@ -98,7 +98,7 @@ describe("compilePersonalModule", () => {
     });
     const panel = readFileSync(compiled.entryPath, "utf8");
     expect(panel).toMatch(
-      /import (__fm_host\d) from "app-plugin:\/\/host\/ui\.mjs";\nconst \{ Badge \} = \1;/,
+      /import (__fm_host\d) from "app-frame:\/\/lib\/ui\.mjs";\nconst \{ Badge \} = \1;/,
     );
     expect(panel).not.toContain("@infinitary/");
     // Still type-only under its other name.
@@ -112,10 +112,10 @@ describe("compilePersonalModule", () => {
     ).rejects.toThrow('imports "@infinitary/contracts" as a value');
   });
 
-  it("compiles a panel for the frame realm against the served lib, as a version of its own", async () => {
-    // A panel the captain added runs in the frame realm (one plugin vehicle,
+  it("compiles every panel against the served frame lib, never the window", async () => {
+    // Every panel runs in the frame realm (one plugin vehicle,
     // Phase A item 4): the same allowlist, its host imports pointed at the
-    // lib the shell serves at app-frame://lib/ instead of the window's shims.
+    // lib the shell serves at app-frame://lib/; the window has no shims.
     const { root, cache } = workspace({
       "meter/panel.tsx": [
         'import { useState } from "react";',
@@ -132,23 +132,18 @@ describe("compilePersonalModule", () => {
       kind: "panel" as const,
       cacheRoot: cache,
     };
-    const frame = await compilePersonalModule({ ...options, realm: "frame" });
+    const frame = await compilePersonalModule(options);
     const panel = readFileSync(frame.entryPath, "utf8");
     expect(panel).toMatch(/from "app-frame:\/\/lib\/react\.mjs";\nconst \{ useState \} = /);
     expect(panel).toMatch(/from "app-frame:\/\/lib\/ui\.mjs";\nconst \{ Badge \} = /);
     expect(panel).toMatch(/from "app-frame:\/\/lib\/jsx-runtime\.mjs";/);
     expect(panel).not.toContain("app-plugin:");
-    // The window's compile of the same sources is another version, and keeps
-    // the shims.
-    const window = await compilePersonalModule(options);
-    expect(window.hash).not.toBe(frame.hash);
-    expect(readFileSync(window.entryPath, "utf8")).toContain("app-plugin://host/react.mjs");
-    // The allowlist does not move with the realm.
+    // The allowlist holds for every panel.
     writeFileSync(
       join(root, "meter", "panel.tsx"),
       'import lodash from "lodash";\nexport default lodash;',
     );
-    await expect(compilePersonalModule({ ...options, realm: "frame" })).rejects.toThrow(
+    await expect(compilePersonalModule(options)).rejects.toThrow(
       'imports "lodash", which a panel cannot use',
     );
   });
@@ -321,7 +316,7 @@ describe("a panel's card views (docs/ui-plugins.md, \"A panel's cards\")", () =>
     expect(compiled.views).toEqual(["notes", "weekly-review"]);
     const view = readFileSync(join(compiled.outputDir, "cards", "notes.mjs"), "utf8");
     expect(view).toContain('import { shared } from "../lib/shared.mjs";');
-    expect(view).toMatch(/app-plugin:\/\/host\/ui\.mjs/);
+    expect(view).toMatch(/app-frame:\/\/lib\/ui\.mjs/);
     expect(readFileSync(join(compiled.outputDir, "cards", "weekly-review.mjs"), "utf8")).toContain(
       "Panel",
     );

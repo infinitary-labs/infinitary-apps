@@ -8,6 +8,7 @@ import { homeDialOptions } from "@core/helper/route";
 import type { InBackground } from "@core/helper/words";
 import type { HostNotifications } from "@core/host";
 import type { Core } from "@core/index";
+import type { PersonalExtensions } from "@core/personal/personalExtensions";
 import type { UpdateChecker } from "@core/update/updateChecker";
 import { COMPUTER, HERE } from "@shared/deviceNames";
 import {
@@ -354,14 +355,9 @@ export class Shell {
     return { root: mode?.core.paths.crewmatesDir ?? "" };
   }
 
-  /** The compiled panels the captain added; a view has none. */
-  personalCacheDir(): string | null {
-    return this.core()?.paths.personalCacheDir ?? null;
-  }
-
-  /** An added panel's compiled files, while this Mac holds Firstmate. */
-  installedPanelDir(id: string, version: string): string | null {
-    return this.core()?.services.personal.installedPanelDir(id, version) ?? null;
+  /** A panel's compiled files, its own or one the captain added, while this Mac holds Firstmate; a view has none. */
+  framePanelDir(...args: Parameters<PersonalExtensions["framePanelDir"]>): string | null {
+    return this.core()?.services.personal.framePanelDir(...args) ?? null;
   }
 
   /** Stops whatever this app is running, for a quit. */

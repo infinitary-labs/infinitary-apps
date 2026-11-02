@@ -1,12 +1,15 @@
 import type { PanelProps } from "@shared/personal/contracts";
 import type { FrameBridgeApi } from "@shared/plugins/bridge";
 import {
+  PANEL_BODY_ACTION,
   PANEL_CONFIG_ID,
   PANEL_ROOT_ID,
+  type PanelBodySaid,
   type PanelDocumentConfig,
 } from "@shared/plugins/frameDocument";
-import { type ComponentType, useMemo, useState, useSyncExternalStore } from "react";
+import { type ComponentType, useEffect, useMemo, useState, useSyncExternalStore } from "react";
 import { createRoot } from "react-dom/client";
+import { stoppedWhy } from "../personal/panelBodies";
 import { PanelBoundary, PanelStoppedLine } from "../personal/panelBoundary";
 import { frameBridge } from "./bridge";
 import {
@@ -30,7 +33,9 @@ import {
  *
  * A module that will not import, a default export that is not a component,
  * and a render that throws all end the same way: the quiet line, inside
- * the host's chrome, never a blank frame. The theme follows the bridge's
+ * the host's chrome, never a blank frame. A panel's page on its rail tells
+ * the host how its body fared (`panel.body`): drawn once it committed, or
+ * stopped and why, for the window's answer about its panels. The theme follows the bridge's
  * `onTheme`, so the panel re-renders on a theme change the way an
  * in-process panel does when the shell's theme moves.
  */
@@ -54,13 +59,16 @@ export async function bootPanel(
   const root = createRoot(host);
   let Panel: unknown;
   let config: PanelDocumentConfig | null = null;
+  let why = "its module has no default export to draw";
   try {
     config = readPanelConfig(doc);
     Panel = ((await load(config.module)) as { default?: unknown } | null)?.default;
   } catch (error) {
     console.warn("panel module did not load:", error);
+    why = `its module would not import: ${stoppedWhy(error)}`;
   }
   if (!config || typeof Panel !== "function") {
+    if (config && config.card === undefined) say(bridge, { state: "stopped", why });
     root.render(<PanelStoppedLine card={config?.card !== undefined} />);
     return;
   }
@@ -120,8 +128,14 @@ function FramePanel({
     () => (cardId === null ? frameRail({ collapsed }, bridge) : undefined),
     [cardId, collapsed, bridge],
   );
+  const onRail = cardId === null;
   return (
-    <PanelBoundary card={cardId !== null}>
+    <PanelBoundary
+      card={!onRail}
+      {...(onRail
+        ? { onStop: (error: unknown) => say(bridge, { state: "stopped", why: stoppedWhy(error) }) }
+        : {})}
+    >
       <Panel
         {...props}
         theme={theme}
@@ -129,6 +143,21 @@ function FramePanel({
         {...(card ? { card } : {})}
         {...(rail ? { rail } : {})}
       />
+      {onRail && <Drawn bridge={bridge} />}
     </PanelBoundary>
   );
+}
+
+/**
+ * Says the body drew once it committed: it sits after the panel inside the
+ * boundary, so a throw replaces both before either commits.
+ */
+function Drawn({ bridge }: { bridge: FrameBridgeApi }) {
+  useEffect(() => say(bridge, { state: "drawn" }), [bridge]);
+  return null;
+}
+
+/** Tells the host how the body fared; a page the host did not ask goes unheard. */
+function say(bridge: FrameBridgeApi, said: PanelBodySaid): void {
+  bridge.action(PANEL_BODY_ACTION, said).catch(() => {});
 }

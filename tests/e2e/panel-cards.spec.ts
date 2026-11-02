@@ -4,7 +4,7 @@ import { expect, test } from "@playwright/test";
 import { panelCommandId } from "../../src/shared/keyboard";
 import { scratchDir } from "../helpers/scratchDirs";
 import { keyWords } from "./desktop";
-import { frameIn } from "./frames";
+import { frameIn, panelBody } from "./frames";
 import { type LaunchedApp, launchApp } from "./launch";
 import { resizeWindow } from "./layout";
 
@@ -12,6 +12,7 @@ import {
   panelCardChrome,
   panelHeaderButton,
   shownPanelCard,
+  shownPanelCardBody,
   shownPanelCardFrame,
 } from "./panelCards";
 import { promptInput } from "./prompt";
@@ -58,17 +59,20 @@ test.describe("a panel of the captain's own puts cards on the stack", () => {
   test("by its header button and its key, revised in place, hidden by Hide and Esc, gone with the panel", async () => {
     const { app, page } = launched;
     const panel = page.locator(`[data-side-panel="${PANEL}"]`);
+    // Its body and its cards draw in frames of their own (INF-2205 piece C).
+    const body = panelBody(page, PANEL);
     const open = panelHeaderButton(page, PANEL, "open");
     const reader = shownPanelCard(page, PANEL, "reader");
+    const readerBody = shownPanelCardBody(page, PANEL, "reader");
 
     await test.step("the header button puts its card up at the front, the panel still collapsed", async () => {
-      await expect(panel.locator("[data-fixture]")).toBeVisible({ timeout: 30_000 });
+      await expect(body.locator("[data-fixture]")).toBeVisible({ timeout: 30_000 });
       await panel.getByRole("button", { name: "Collapse Reading list" }).click();
       // Collapsed, its page runs on out of sight and its header says what it holds.
-      await expect(panel.locator("[data-fixture]")).toBeHidden();
+      await expect(body.locator("[data-fixture]")).toBeHidden();
       await expect(panel.locator("[data-panel-summary]")).toHaveText("3 left");
       await open.click();
-      await expect(reader.locator("[data-fixture-reader]")).toHaveAttribute(
+      await expect(readerBody.locator("[data-fixture-reader]")).toHaveAttribute(
         "data-fixture-reader",
         "list",
       );
@@ -85,7 +89,7 @@ test.describe("a panel of the captain's own puts cards on the stack", () => {
 
     await test.step("its command's key puts it up again, with the keyboard's focus in it", async () => {
       await pressWindowKey(app, "j", ["meta"]);
-      await expect(reader.locator("[data-fixture-reader]")).toBeVisible();
+      await expect(readerBody.locator("[data-fixture-reader]")).toBeVisible();
       await expect
         .poll(() =>
           page.evaluate(() =>
@@ -98,18 +102,22 @@ test.describe("a panel of the captain's own puts cards on the stack", () => {
     });
 
     await test.step("a card puts up a card of its own at the front, and the first waits behind", async () => {
-      await reader.locator("[data-fixture-reader-notes]").click();
+      await clickInBody(readerBody.locator("[data-fixture-reader-notes]"));
       const notes = shownPanelCard(page, PANEL, "notes-the-calm-interface");
-      await expect(notes.locator('[data-fixture-notes="The calm interface"]')).toBeVisible();
+      await expect(
+        shownPanelCardBody(page, PANEL, "notes-the-calm-interface").locator(
+          '[data-fixture-notes="The calm interface"]',
+        ),
+      ).toBeVisible();
       await expect(pager(page, 2)).toBeVisible();
       // The panel's own row names the same card: revised in place, no third card.
       await panel.getByRole("button", { name: "Expand Reading list" }).click();
-      await panel.locator('[data-fixture-notes-for="The calm interface"]').click();
+      await clickInBody(body.locator('[data-fixture-notes-for="The calm interface"]'));
       await expect(notes).toBeVisible();
       await expect(pager(page, 2)).toBeVisible();
-      await panel.locator('[data-fixture-notes-for="Notes on focus"]').click();
+      await clickInBody(body.locator('[data-fixture-notes-for="Notes on focus"]'));
       await expect(
-        shownPanelCard(page, PANEL, "notes-notes-on-focus").locator(
+        shownPanelCardBody(page, PANEL, "notes-notes-on-focus").locator(
           '[data-fixture-notes="Notes on focus"]',
         ),
       ).toBeVisible();
@@ -117,9 +125,10 @@ test.describe("a panel of the captain's own puts cards on the stack", () => {
     });
 
     await test.step("Esc a field used keeps the card; Esc nothing used hides it", async () => {
-      const note = shownPanelCard(page, PANEL, "notes-notes-on-focus").locator(
+      const note = shownPanelCardBody(page, PANEL, "notes-notes-on-focus").locator(
         "[data-fixture-note]",
       );
+      await clickInBody(note);
       await note.fill("a thought");
       await note.press("Escape");
       await expect(note).toHaveValue("");
@@ -140,7 +149,8 @@ test.describe("a panel of the captain's own puts cards on the stack", () => {
   test("command search lists its commands under its title, and a press asks the panel itself", async () => {
     const { app, page } = launched;
     const panel = page.locator(`[data-side-panel="${PANEL}"]`);
-    await expect(panel.locator("[data-fixture]")).toBeVisible({ timeout: 30_000 });
+    const body = panelBody(page, PANEL);
+    await expect(body.locator("[data-fixture]")).toBeVisible({ timeout: 30_000 });
 
     await test.step("command search finds them by the panel's title, with the key it gave", async () => {
       const search = commandSearch(page);
@@ -157,10 +167,10 @@ test.describe("a panel of the captain's own puts cards on the stack", () => {
     await test.step("Find a piece brings the collapsed panel out with its search taking the keys", async () => {
       await panel.getByRole("button", { name: "Collapse Reading list" }).click();
       await runFromSearch(app, page, panelCommandId(PANEL, "find"));
-      const field = panel.locator("[data-fixture-search]");
+      const field = body.locator("[data-fixture-search]");
       await expect(field).toBeFocused();
       await typeInto(field, "quiet");
-      await expect(panel.getByRole("button", { name: "Notes" })).toHaveCount(1);
+      await expect(body.getByRole("button", { name: "Notes" })).toHaveCount(1);
     });
 
     await test.step("Keyboard settings lists them for a key of the captain's own", async () => {

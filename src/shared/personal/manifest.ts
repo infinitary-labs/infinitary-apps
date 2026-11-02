@@ -33,9 +33,6 @@ import type {
  * drift from what the host actually accepts.
  */
 
-/** The scheme the shell serves compiled personal modules and the host shims over. */
-export const APP_PLUGIN_SCHEME = "app-plugin";
-
 /**
  * An extension id is its directory name: kebab-case, like a plugin id, and
  * short enough that its plugin id (`personal-<id>`, PERSONAL_PLUGIN_PREFIX)
@@ -153,15 +150,6 @@ export function undeclaredViewsMessage(): string {
  * the compiler reads as this one (`ownHostModule`).
  */
 export const PERSONAL_CONTRACTS_MODULE = "@infinitary/contracts";
-
-/** The global the renderer publishes the host modules on, read by the served shims. */
-export const PERSONAL_HOST_GLOBAL = "__infinitaryHost";
-
-/**
- * The same global under Firstmate 3000's name, published beside it, so a
- * shim served before the Infinitary rename still finds the host modules.
- */
-export const OLDER_PERSONAL_HOST_GLOBAL = "__firstmateHost";
 
 export const storeValueSchema: z.ZodType<StoreValue> = z.lazy(() =>
   z.union([
@@ -362,15 +350,15 @@ export const personalExtensionViewSchema = z.object({
    */
   sql: z.array(sqlViewNameSchema),
   /**
-   * The compiled panel to import in-process, or null when there is none (or
-   * it failed). Always null for an installed plugin: its code never runs in
-   * the app's own window (A1a).
+   * Always null: it named a compiled panel the window imported in-process,
+   * which no panel is any more (INF-2205 piece C). Kept so an older reader
+   * still parses the snapshot; it reads `frame`.
    */
   panel: z.object({ url: z.string(), version: z.string() }).nullable(),
   /**
-   * An installed plugin's compiled panel, for the frame realm that draws it
-   * contained (Phase A item 4): the version of the graph the
-   * frame will load. Null for the captain's own, and for one that failed.
+   * The compiled panel the frame realm draws contained (Phase A item 4;
+   * INF-2205 piece C), whatever its source: the version of the graph the
+   * frame will load. Null when it has no panel, or its panel failed.
    */
   frame: z.object({ version: z.string() }).nullable(),
   /**

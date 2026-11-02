@@ -87,7 +87,7 @@ export type AppPaths = {
    * the repo registry reserves for it.
    */
   personalWorkspaceDir: string;
-  /** Compiled personal-extension modules, content-addressed, served over app-plugin:. */
+  /** Compiled personal-extension modules, content-addressed, served to panel frames. */
   personalCacheDir: string;
   /**
    * The installed plugins (one plugin vehicle, Phase A): one directory per
@@ -100,8 +100,7 @@ export type AppPaths = {
   pluginsStagingDir: string;
   /**
    * An installed panel's compiled graph, content-addressed like the personal
-   * cache but NEVER served over app-plugin: - the in-process scheme is the
-   * captain's own code's alone. The frame realm (Phase A item 4) serves it.
+   * cache. The frame realm (Phase A item 4) serves it, as it does every panel.
    */
   installedCacheDir: string;
   /** The app-managed default local-only repo for repo-less tasks. */

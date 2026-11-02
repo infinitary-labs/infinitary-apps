@@ -27,9 +27,21 @@ export function panelCardChrome(page: Page): {
   };
 }
 
-/** The page of the shown card of a panel from elsewhere, drawn in a frame of its own. */
+/** The page of the shown panel card, whoever made its panel, drawn in a frame of its own. */
 export function shownPanelCardFrame(page: Page): FrameLocator {
   return drawnFrame(page, `${SHOWN_ENTRY} [data-panel-card-page] iframe`);
+}
+
+/**
+ * The page of the shown entry when it is this panel's card, by its panel and
+ * its id there: every panel's card, the captain's own included, draws in a
+ * frame of its own (INF-2205 piece C).
+ */
+export function shownPanelCardBody(page: Page, panel: string, id: string): FrameLocator {
+  return drawnFrame(
+    page,
+    `${SHOWN_ENTRY} [data-panel-card="${panel}/${id}"] [data-panel-card-page] iframe`,
+  );
 }
 
 /** One of the buttons the app draws in a panel's header, by its id in the manifest. */

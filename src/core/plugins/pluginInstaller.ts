@@ -496,7 +496,6 @@ export async function checkPluginTree(
       extensionDir: dir,
       kind: "panel",
       cacheRoot,
-      realm: "frame",
     });
     // Every card, button and command it names is one it has.
     const unnamed = panelCardsProblem(manifest, compiled.views, id);

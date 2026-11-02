@@ -504,25 +504,34 @@ describe("PluginInstaller", () => {
       await h.settled();
       const version = h.installed()[0]?.frame?.version ?? "";
       expect(version).toMatch(/^[0-9a-f]{16}$/);
-      const dir = h.personal.installedPanelDir("token-watch", version);
+      const dir = h.personal.framePanelDir("installed", "token-watch", version);
       expect(dir).toBe(join(h.paths.installedCacheDir, "token-watch", version));
       // Compiled for the frame realm: its host imports name the served lib.
       const entry = readFileSync(join(dir ?? "", "panel.mjs"), "utf8");
       expect(entry).toContain('from "app-frame://lib/jsx-runtime.mjs"');
       expect(entry).not.toContain("app-plugin:");
-      expect(h.personal.installedPanelDir("token-watch", "0000000000000000")).toBeNull();
-      // The captain's own panels run in the app's window, never in a frame.
+      expect(h.personal.framePanelDir("installed", "token-watch", "0000000000000000")).toBeNull();
+      // An added panel is never handed out as one of the captain's own.
+      expect(h.personal.framePanelDir("yours", "token-watch", version)).toBeNull();
+      // The captain's own panels draw in a frame too (INF-2205 piece C), each
+      // under its own source and never as an added one.
       const mine = h.personal.snapshot().extensions.find((view) => view.id === "mine");
-      expect(mine?.frame).toBeNull();
-      expect(h.personal.installedPanelDir("mine", mine?.panel?.version ?? "")).toBeNull();
+      const mineVersion = mine?.frame?.version ?? "";
+      expect(mineVersion).toMatch(/^[0-9a-f]{16}$/);
+      expect(mine?.panel).toBeNull();
+      const mineDir = h.personal.framePanelDir("yours", "mine", mineVersion);
+      expect(mineDir).toBe(join(h.paths.personalCacheDir, "mine", mineVersion));
+      expect(readFileSync(join(mineDir ?? "", "panel.mjs"), "utf8")).toContain("function Panel");
+      expect(h.personal.framePanelDir("installed", "mine", mineVersion)).toBeNull();
       // Off, nothing is handed out; back on, the same version is.
       await h.personal.setEnabled(false);
-      expect(h.personal.installedPanelDir("token-watch", version)).toBeNull();
+      expect(h.personal.framePanelDir("installed", "token-watch", version)).toBeNull();
+      expect(h.personal.framePanelDir("yours", "mine", mineVersion)).toBeNull();
       await h.personal.setEnabled(true);
-      expect(h.personal.installedPanelDir("token-watch", version)).toBe(dir);
+      expect(h.personal.framePanelDir("installed", "token-watch", version)).toBe(dir);
       // Removed, never again.
       await h.installer.uninstall("token-watch");
-      expect(h.personal.installedPanelDir("token-watch", version)).toBeNull();
+      expect(h.personal.framePanelDir("installed", "token-watch", version)).toBeNull();
     } finally {
       h.personal.dispose();
     }
@@ -548,7 +557,7 @@ describe("PluginInstaller", () => {
         cardViews: ["notes"],
         header: [{ id: "open", emits: "notes" }],
       });
-      const dir = h.personal.installedPanelDir("notes", view?.frame?.version ?? "") ?? "";
+      const dir = h.personal.framePanelDir("installed", "notes", view?.frame?.version ?? "") ?? "";
       const card = readFileSync(join(dir, "cards", "notes.mjs"), "utf8");
       expect(card).toContain('from "app-frame://lib/jsx-runtime.mjs"');
     } finally {

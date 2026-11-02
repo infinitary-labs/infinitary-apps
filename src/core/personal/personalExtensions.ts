@@ -60,7 +60,6 @@ import {
   compilePersonalModule,
   PERSONAL_ENTRY_FILES,
   PersonalCompileError,
-  personalModuleUrl,
 } from "./compiler";
 import { errorText } from "./errorText";
 import {
@@ -122,9 +121,7 @@ import { seedPersonalWorkspace } from "./workspace";
  * the captain added (./../plugins/pluginInstaller.ts), and pushes them in
  * the same snapshot, stamped `source: "installed"`. The shape and the door
  * are one; the privilege is the source's. An installed plugin's
- * `server.ts` is never loaded (the tree is refused if it has one), its
- * panel is never handed to the window in-process (`panel` stays null; its
- * compiled graph is drawn by the frame realm, `frame`), and it is served
+ * `server.ts` is never loaded (the tree is refused if it has one), and it is served
  * exactly the capabilities the captain CONSENTED to, read from the record
  * - a tree on disk that asks for anything else mounts nothing. The switch
  * takes both roots back in the same tick, so safe mode does too.
@@ -812,19 +809,32 @@ export class PersonalExtensions {
   }
 
   /**
-   * Where an added panel's compiled graph is, for the shell to serve to its
-   * frame (one plugin vehicle, Phase A item 4) - or null unless the panel is
-   * one the captain added, loaded, drawable and at exactly this version. So
-   * a frame can only ever be handed the code he agreed to, as it stands now:
-   * never a removed panel's, never a stale version, never his own panels'
-   * (those run in the app's window), and nothing while the switch is off.
+   * Where a panel's compiled graph is, for the shell to serve to its frame
+   * (one plugin vehicle, Phase A item 4; INF-2205 piece C) - or null unless
+   * the panel is loaded from that source, drawable and at exactly this
+   * version: one the captain added, or one of his own on its rail or, with
+   * `draft`, as a crewmate is building it. So a frame can only ever be
+   * handed the code that stands now - never a removed panel's, never a
+   * stale version, never one source's code under another's name - and
+   * nothing while the switch is off.
    */
-  installedPanelDir(id: string, version: string): string | null {
-    const entry = this.loaded.get(id);
-    const installed = this.options.installed;
-    if (!this.enabled || !installed || entry?.source !== "installed") return null;
-    if (entry.frameVersion === null || entry.frameVersion !== version) return null;
-    return join(installed.cacheRoot, id, version);
+  framePanelDir(
+    source: PluginSource,
+    id: string,
+    version: string,
+    options: PersonalInvokeOptions = {},
+  ): string | null {
+    if (!this.enabled) return null;
+    if (source === "installed") {
+      const entry = this.loaded.get(id);
+      const installed = this.options.installed;
+      if (options.draft || !installed || entry?.source !== "installed") return null;
+      if (entry.frameVersion === null || entry.frameVersion !== version) return null;
+      return join(installed.cacheRoot, id, version);
+    }
+    const entry = (options.draft ? this.drafts : this.loaded).get(id);
+    if (entry?.source !== "yours" || entry.panel?.hash !== version) return null;
+    return entry.panel.outputDir;
   }
 
   storeRequest(request: PersonalStoreRequest): PersonalStoreResponse {
@@ -1555,13 +1565,14 @@ export class PersonalExtensions {
       running: task?.status === "active",
       reads: (entry.granted.reads ?? []).filter(isPanelRead),
       sql: [...(entry.granted.sql ?? [])],
-      panel: entry.panel
-        ? {
-            url: personalModuleUrl(entry.id, entry.panel.hash, "panel.mjs"),
-            version: entry.panel.hash,
-          }
-        : null,
-      frame: entry.frameVersion ? { version: entry.frameVersion } : null,
+      // Every panel draws in the frame realm (INF-2205 piece C): nothing is
+      // handed to the window to import, whatever its source.
+      panel: null,
+      frame: entry.panel
+        ? { version: entry.panel.hash }
+        : entry.frameVersion
+          ? { version: entry.frameVersion }
+          : null,
       cardViews: drawable ? [...entry.views] : [],
       cards: { ...(entry.manifest.cards ?? {}) },
       header: [...(entry.manifest.header ?? [])],

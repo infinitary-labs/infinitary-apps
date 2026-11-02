@@ -24,7 +24,7 @@ A one-off answer the captain reads once is a card ([cards-and-consent.md](cards-
 - Panel folders: `PersonalExtensions` in [`../src/core/personal/personalExtensions.ts`](../src/core/personal/personalExtensions.ts) seeds, scans, compiles, serves and removes the captain's own panels and installed ones, and pushes one snapshot on `inf:plugins:personal`.
 - The compiler: `compilePersonalModule` and `PersonalCompileError` in [`../src/core/personal/compiler.ts`](../src/core/personal/compiler.ts).
 - The contract a panel is written against: `PanelProps`, `ServerContext` and `PersonalManifest` in [`../src/shared/personal/contracts.ts`](../src/shared/personal/contracts.ts) (type-only; it generates the workspace's `infinitary-env.d.ts`); the manifest schema and `PLUGIN_HOST_SUPPORT` in [`../src/shared/personal/manifest.ts`](../src/shared/personal/manifest.ts).
-- Mounting: `PersonalPlugins` in [`../src/renderer/src/personal/personalPlugins.ts`](../src/renderer/src/personal/personalPlugins.ts) (the captain's own, in the window through `PersonalPanelBody`) and the frame realm in [`../src/renderer/src/frameRealm/`](../src/renderer/src/frameRealm/) (`framePanelProps`), mounted by `FrameMountRegistry.mountPanel`.
+- Mounting: `PersonalPlugins` in [`../src/renderer/src/personal/personalPlugins.ts`](../src/renderer/src/personal/personalPlugins.ts) (every source, in a frame through `FramedPanelBody`) and the frame realm in [`../src/renderer/src/frameRealm/`](../src/renderer/src/frameRealm/) (`framePanelProps`), mounted by `FrameMountRegistry.mountPanel`.
 - The app's own folders: `APP_PANEL_FOLDERS` in [`../src/shared/surfaces.ts`](../src/shared/surfaces.ts).
 - Installing panels and guidance runbooks: `PluginInstaller` and `checkPluginTree` in [`../src/core/plugins/pluginInstaller.ts`](../src/core/plugins/pluginInstaller.ts), with `PluginRecords` the one writer of the `plugins` table.
 - The store: `PersonalStore` over `plugin_kv` in [`../src/core/personal/personalStore.ts`](../src/core/personal/personalStore.ts).
@@ -36,16 +36,16 @@ Registration is atomic: `registerPlugin` refuses any grant the host cannot serve
 Visibility is data, never a verb: a panel's content source returns null while its presence rule is unsatisfied, and `presence: { "code": true }` lets a panel's own code say whether it shows.
 The manifest declares title, placement, order, size, reads, views, store cap, card views, header buttons and commands; the host draws them as its own chrome and attributes the panel ("yours", the maker's name, or nothing for the app's own).
 A personal panel lives in `userData/fleet/personal/<id>/` and is built by a crewmate on a personal task that builds in place ([projects-and-working-copies.md](projects-and-working-copies.md)); the rails keep the last commit while working files run apart as a draft.
-The compiler output is content-addressed, so a new hash is the version, the hot reload and the cache bust on both sides.
+The compiler output is content-addressed, so a new hash is the version, the hot reload (a new frame) and the core's cache bust.
 A captain's own `server.ts` runs in a process of its own, owned by the core's `PanelRuntimes` for every source: actions are callable by name, its store answers asynchronously one ask at a time, background tasks run on its own timers clamped up to `MIN_BACKGROUND_INTERVAL_MS`, a run in flight is skipped rather than overlapped, and a throw is logged with the timer kept.
 A panel whose loop goes silent past `PANEL_SILENCE_MS`, or whose process ends, is stopped alone and stays stopped until the captain's Retry (`docs/personal-panels.md`, "Background work runs apart" and "A stopped panel").
 `personalize remove` takes a panel out in one commit (or uninstalls an installed one), and the `panels` switch and safe mode take back both roots in the same tick.
 
 ## Authority
 
-Personal panels and plugins (`docs/ui-plugins.md`, `docs/personal-panels.md`): one plugin shape; an installed panel runs only in the frame realm; never relax the compiler's import list at display time; the first mate never writes the panels switch.
+Personal panels and plugins (`docs/ui-plugins.md`, `docs/personal-panels.md`): one plugin shape; every panel draws only in the frame realm; never relax the compiler's import list at display time; the first mate never writes the panels switch.
 The trust difference between sources is intentional.
-The captain's own panel draws in the app's window and may have a `server.ts`, trusted like the crewmate that wrote it, which runs in its own process so a hang stops only that panel.
+The captain's own panel draws in a frame of its own like every panel, and may have a `server.ts`, trusted like the crewmate that wrote it, which runs in its own process; a hang in either stops only that panel.
 An installed panel runs only in a sandboxed frame at its own host with a pinned lib, is served only the reads, views, storage and moves the captain consented to on the host's consent card (`card-plugin-<id>`), and a tree holding `server.ts` mounts nothing.
 `net` and `secrets` are refused for every source (`PLUGIN_HOST_SUPPORT`); a mediated fetch or secret grant is not available.
 The compiler is the coherence gate at admission: a panel may import only `react`, the JSX runtimes, `@infinitary/ui`, type-only `@infinitary/contracts` and its own files; a server only `node:*` built-ins and its own files.

@@ -650,11 +650,11 @@ describe("local packaging identity (electron-builder.dev.yml)", () => {
 
   /**
    * Captain decision B (2026-09-15, scout fm3000-ci-release-only-s1): the
-   * full macOS work is paid for at release time and on demand, never per PR
-   * or per push, and never on a schedule. ci.yml is the Linux jobs alone.
-   * Decision B was reversed for pull requests in part on 2026-10-08
-   * (FI3-1305): journeys.yml runs only the journey files a change can break,
-   * on the Mac mini, and never the full suite.
+   * full macOS work is paid for at release time and on demand, never per PR,
+   * and never on a schedule. ci.yml is the Linux jobs alone. Decision B was
+   * reversed for pull requests in part on 2026-10-08 (FI3-1305) and again by
+   * INF-2139, and for main by INF-2146's approved plan (direction B): main.yml
+   * is the one workflow that starts the full check on a push, tested below.
    */
   it("keeps the full macOS work out of PR CI and off any schedule", () => {
     const ci = read(".github/workflows/ci.yml");
@@ -667,6 +667,75 @@ describe("local packaging identity (electron-builder.dev.yml)", () => {
     expect(verify).toContain("pnpm exec playwright test");
     expect(verify).toContain("pnpm replay:gate");
     expect(verify).toContain("vars.MAC_RUNNER || 'macos-15'");
+  });
+
+  /**
+   * INF-2146, the captain's approved plan (direction B, trigger "push", phone
+   * "every-run"): every push to main runs the full check with every journey
+   * on the Mac and the whole phone check, and runs queue instead of
+   * cancelling, so GitHub keeps one running and at most one waiting run.
+   */
+  it("runs the full check and the whole phone check on every push to main, queued and never cancelled", () => {
+    type Call = {
+      uses?: string;
+      with?: Record<string, unknown>;
+      "runs-on"?: string;
+      steps?: Step[];
+    };
+    const main = loadYamlFile(".github/workflows/main.yml") as {
+      on: Record<string, { branches?: string[] }>;
+      concurrency: { group: string; "cancel-in-progress": boolean };
+      jobs: Record<string, Call>;
+    };
+    expect(main.on).toEqual({ push: { branches: ["main"] } });
+    // One group for every run, so a newer push waits instead of starting beside it.
+    expect(main.concurrency.group).not.toContain("${{");
+    expect(main.concurrency["cancel-in-progress"]).toBe(false);
+    // Each job only calls a check, so the run is exactly those checks.
+    expect(Object.values(main.jobs).every((job) => job.uses && !job.steps && !job["runs-on"])).toBe(
+      true,
+    );
+    const calls = Object.values(main.jobs).map((job) => job.uses);
+    expect(calls.sort()).toEqual([
+      "./.github/workflows/phone.yml",
+      "./.github/workflows/verify.yml",
+    ]);
+    const verify = Object.values(main.jobs).find((job) => job.uses?.endsWith("verify.yml"));
+    // The pushed version, with every journey on the Mac and the full lanes.
+    expect(verify?.with).toMatchObject({
+      ref: "${{ github.sha }}",
+      all_journeys: true,
+      profile: "stable",
+    });
+    expect(verify?.with).not.toHaveProperty("installer_only");
+
+    // The phone check takes the call with no inputs and runs every part of both devices.
+    const phone = loadYamlFile(".github/workflows/phone.yml") as {
+      on: Record<string, unknown>;
+      jobs: Record<string, { if?: string; steps: Step[] }>;
+    };
+    expect(Object.keys(phone.on)).toContain("workflow_call");
+    expect(
+      Object.values(main.jobs).find((job) => job.uses?.endsWith("phone.yml"))?.with,
+    ).toBeUndefined();
+    const pushed = { github: { event_name: "push", ref: "refs/heads/main" }, inputs: {}, vars: {} };
+    // Main moved selection into the native job; the same no-input push must still run all parts.
+    const native = phone.jobs["native-phone"];
+    expect(workflowValue(native?.if ?? "", pushed)).toBe(true);
+    const scope = native?.steps.find((step) => step.id === "scope");
+    const selection = {
+      ...pushed,
+      steps: { select: { outputs: {} }, "request-select": { outputs: {} } },
+    };
+    expect(workflowString(scope?.env?.GATE ?? "", selection)).toBe("true");
+    const chosen = {
+      ...selection,
+      steps: { ...selection.steps, scope: { outputs: { gate: "true" } }, start: { outputs: {} } },
+    };
+    const gate = native?.steps.find((step) => step.id === "both");
+    expect(workflowValue(gate?.if ?? "", chosen)).toBe(true);
+    expect(workflowString(gate?.env?.PHONE_PARTS ?? "", chosen)).toBe("");
+    expect(workflowString(gate?.env?.INFINITARY_PHONE_STOP_EARLY ?? "", chosen)).toBe("0");
   });
 
   it("runs the named journeys only on request, never on a pull request, on the Mac mini", () => {

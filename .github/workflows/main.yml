@@ -1,0 +1,38 @@
+name: main
+
+# The continuous run on main (INF-2146, the captain's approved plan, direction
+# B): every push to main starts the full check with every journey on the Mac
+# and, beside it, the whole phone check. It replaces the nightly full check.
+#
+# Runs queue and never cancel: with cancel-in-progress false GitHub keeps the
+# running run, holds at most one waiting run, and drops an older waiting run
+# when a newer push arrives, so a burst of merges is checked once at its
+# newest version. The newest passing run of this workflow is main's green
+# mark (docs/testing.md, "The continuous run on main"); nothing else records it.
+
+on:
+  push:
+    branches: [main]
+
+concurrency:
+  group: main-full-check
+  cancel-in-progress: false
+
+# What the called checks ask for: verify.yml reads runs, and phone.yml's
+# replacement checks read and cancel its own runs.
+permissions:
+  contents: read
+  actions: write
+  pull-requests: read
+
+jobs:
+  # The full check: Linux checks, every Linux journey, and every journey on the Mac.
+  verify:
+    uses: ./.github/workflows/verify.yml
+    with:
+      ref: ${{ github.sha }}
+      profile: stable
+      all_journeys: true
+  # The whole phone check on the Mac mini, every part of the device gate.
+  phone:
+    uses: ./.github/workflows/phone.yml

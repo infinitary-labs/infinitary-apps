@@ -2,12 +2,14 @@ name: phone
 
 # INF-79 / INF-136: the captain's Mac mini checks native changes and their shared contract.
 # Keep an explicit skipped job on unrelated PRs instead of a path-filtered missing check.
-# INF-663 (captain: "add a nightly phone check"): a request on a branch, such as the
-# nightly check of main, runs both device gates whatever changed, with no release step.
+# INF-663 (captain: "add a nightly phone check"): a default request on a branch
+# runs both device gates whatever changed, with no release step.
 # INF-2139 (captain: "let's pull journeys and phone checks off PRs now"): a pull
-# request no longer starts this workflow; its pull_request branches stay for the
-# continuous run on main that replaces it.
+# request no longer starts this workflow; its pull_request branches stay unused.
+# INF-2146: main.yml calls it on every push to main, with no inputs, so the continuous
+# run on main runs every part of both device gates, as a default request does.
 on:
+  workflow_call:
   workflow_dispatch:
     inputs:
       mac_runner:

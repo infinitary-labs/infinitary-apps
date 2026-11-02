@@ -4,7 +4,8 @@ name: verify
 # 2026-09-15; scout fm3000-ci-release-only-s1): the unit gate and the
 # Playwright e2e suite on hosted Linux, then Mac-specific unit files, the e2e
 # suite, the replay gate and the universal package smoke on macOS. It runs
-# inside every alpha before signing, and on demand for any ref:
+# inside every alpha before signing, on every push to main through main.yml
+# (the continuous run on main, INF-2146), and on demand for any ref:
 #
 #   gh workflow run verify.yml --ref <branch|tag|sha>
 #
@@ -19,7 +20,8 @@ name: verify
 # their time limits, which no other run keeps (INF-857, docs/test-cohorts.md
 # "Budgets").
 #
-# Deliberately no pull_request, push or schedule trigger (captain's call):
+# Deliberately no pull_request, push or schedule trigger of its own (captain's call;
+# main.yml is the one caller that runs it on a push):
 # the per-PR mac job was 98% of a ~$200/month bill. The mac lane's runner
 # label comes from the check kind in the MAC_QUEUES repository variable,
 # else MAC_RUNNER, so a self-hosted runner can take it over without a
@@ -92,9 +94,9 @@ on:
         type: boolean
         default: false
       # A requested check runs only the tests that need a Mac there, since
-      # linux-e2e runs every other one; the nightly check sets this.
+      # linux-e2e runs every other one; main.yml's call sets this instead.
       all_journeys:
-        description: Run every journey on the Mac, not only the tests that need a Mac (the nightly check sets this)
+        description: Run every journey on the Mac, not only the tests that need a Mac
         required: false
         type: boolean
         default: false
@@ -244,7 +246,7 @@ jobs:
         run: pnpm exec playwright install ffmpeg
       # The complete desktop suite, on the build above and the signed dev
       # Electron (`pnpm test:e2e` is the same two commands in one), when
-      # all_journeys is set: every alpha and the nightly check. A requested
+      # all_journeys is set: every alpha and the run on main. A requested
       # check runs only the tests tagged MAC_ONLY_TAG (tests/e2e/tags.ts),
       # since linux-e2e runs every other one (docs/principles.md, 2026-10-28).
       # A local run keeps its JSON result in its own run directory

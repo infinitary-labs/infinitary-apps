@@ -408,7 +408,7 @@ On a GitLab project the same two tools reach GitLab's API (below); they keep the
 - **Verification workflow requests reuse the gateway.**
   A crewmate calls `github_write` with `POST /repos/{owner}/{repo}/actions/workflows/{workflow_id}/dispatches` and GitHub's normal JSON body, such as `{"ref":"<branch-or-tag>","inputs":{"profile":"alpha"}}`.
   The caller chooses the workflow, ref and optional inputs its task needs; the host adds no task-branch or input restrictions.
-  In this repository, `verify.yml` on request runs only the tests tagged `MAC_ONLY_TAG` on the Mac; the nightly full check passes `"all_journeys":true` to run every journey there (`docs/testing.md`, "Tests that need a Mac").
+  In this repository, `verify.yml` on request runs only the tests tagged `MAC_ONLY_TAG` on the Mac; a request may pass `"all_journeys":true` to run every journey there, as the continuous run on `main` does (`docs/testing.md`, "Tests that need a Mac").
   Starting, cancelling, enabling, disabling and rerunning workflows are project operations, not account administration.
   A successful response means GitHub accepted the request, not that checks passed; find its run with `github_read`, confirm `head_sha`, then take a short `read_workflow({ runId })` read to watch that run and end the turn.
   Use `check_change` separately for a pull request's checks.

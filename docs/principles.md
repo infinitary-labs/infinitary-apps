@@ -93,7 +93,7 @@ INF-1763, asked as "is it actually ok to dedup all the mac journeys that are cov
 It covers every test.
 A test runs on the Mac only when it needs a Mac.
 Linux runs every test it can.
-The Mac runs only the tests that need it, plus every journey in the nightly full check and every alpha.
+The Mac runs only the tests that need it, plus every journey in the run on `main` and every alpha.
 A journey that needs a Mac carries `MAC_ONLY_TAG` (`tests/e2e/tags.ts`): it skips on Linux, or it has a step only a Mac runs.
 A unit test that needs a Mac is a file of the reviewed list in `scripts/mac-unit-tests.ts` (`docs/test-cohorts.md`).
 

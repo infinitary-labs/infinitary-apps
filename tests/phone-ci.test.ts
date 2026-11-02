@@ -440,9 +440,10 @@ describe("the native pull-request gate", () => {
     expect(gateStarts(BOTH, "", "")).toBe("true");
     expect(gateStarts(BOTH, "", "true")).toBe("false");
   });
-  it("runs only on request, never on a pull request, and selects the Mac mini without a paid fallback", () => {
-    // INF-2139 (captain: "let's pull journeys and phone checks off PRs now").
-    expect(Object.keys(workflow.on)).toEqual(["workflow_dispatch"]);
+  it("runs only on request or main's call, never on a pull request, and selects the Mac mini without a paid fallback", () => {
+    // INF-2139 (captain: "let's pull journeys and phone checks off PRs now"); INF-2146's
+    // approved plan adds the call from main.yml on every push to main.
+    expect(Object.keys(workflow.on)).toEqual(["workflow_call", "workflow_dispatch"]);
     expect(workflow.on.workflow_dispatch.inputs).toMatchObject({
       parts: { type: "string" },
       starve: { type: "boolean", default: false },

@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "main-continuous-run",
+      "reason": "Project CI only: every push to main now runs the full check and the phone check in a new workflow, replacing the nightly full check; the app does not change."
+    }
+  ]
+}

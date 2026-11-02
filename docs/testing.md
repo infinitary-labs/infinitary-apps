@@ -176,8 +176,8 @@ Moved verbatim from `AGENTS.md` on 2026-09-24; `AGENTS.md` keeps a one-line poin
   A new test file joins its cohort's job on its own; a new kind of check joins one of the jobs, never a step with a condition.
   The retained PR jobs have no release-branch exemption: they must actually run to provide the required project verification, even though the generic forge verdict accepts conditional skipped checks.
   CI green means every check on the exact head commit SHA reports status=completed and conclusion=success or skipped (`gh pr checks`); a project that runs no checks reads green with the empty list, but on GitHub an empty list where workflow runs exist or have run for earlier pull requests reads pending ("checks have not started yet"), and so does a pull request's list with none of its own workflow runs on the version yet where the project runs them (`docs/forge.md`, "The green rule").
-  The macOS work - the Playwright e2e suite and the run-alone pass's Mac-only tests, the universal package smoke, the replay gate - is `verify.yml`'s mac lane, in a reusable workflow that `release.yml` calls beside its signing job and before anything publishes (every alpha runs linux-checks, the whole Playwright suite on Linux as `linux-e2e` ("The Linux source desktop" below) and mac; a stable promotion inherits its alpha's successful checks or is refused: `docs/alpha.md` "The signed channel workflow") and that crewmates request on demand through `github_write` (`docs/forge.md`, "Verification workflow requests"); it is deliberately not per PR and has no schedule of its own (the per-PR mac job was 98% of a ~$200/month bill).
-  An alpha runs every journey on the Mac, and so does the nightly full check, which requests it with `all_journeys: true`; any other request runs there only the tests tagged `MAC_ONLY_TAG`, since `linux-e2e` runs every other one ("Tests that need a Mac").
+  The macOS work - the Playwright e2e suite and the run-alone pass's Mac-only tests, the universal package smoke, the replay gate - is `verify.yml`'s mac lane, in a reusable workflow that `release.yml` calls beside its signing job and before anything publishes (every alpha runs linux-checks, the whole Playwright suite on Linux as `linux-e2e` ("The Linux source desktop" below) and mac; a stable promotion inherits its alpha's successful checks or is refused: `docs/alpha.md` "The signed channel workflow") and that crewmates request on demand through `github_write` (`docs/forge.md`, "Verification workflow requests"); it is deliberately not per PR and has no trigger of its own beyond `main.yml`'s call on every push to `main` (the per-PR mac job was 98% of a ~$200/month bill).
+  An alpha runs every journey on the Mac, and so does the continuous run on `main` (`main.yml`, "The continuous run on main"), which calls it with `all_journeys: true`; any other request runs there only the tests tagged `MAC_ONLY_TAG`, since `linux-e2e` runs every other one ("Tests that need a Mac").
   Crewmate validation is agent-driven and evidence-first (captain rulings 2026-09-19, the no-mistakes alignment; `docs/delivery-rigor.md`): demonstrate the user intent end-to-end with product-level evidence for each concrete thing an end user would do and relevant existing end-to-end tests covering the surfaces changed, re-run after an overlapping rebase, named under Verified, and a relevant test that cannot run is named, never dropped quietly - the full unit and integration sweeps run on main and in release verification and the full Playwright suite and `pnpm package:mac` are `verify.yml`'s mac lane, with the full suite on Linux beside it (every alpha, and on demand), with full e2e runs only in CI, never locally, and no configured command is mandated anywhere in the rigor pipeline.
   Never treat old SHAs as authoritative for the current head.
 - A timing claim in a test is asserted as an ORDER or as WORK, never as a wall-clock window (captain's B1, 2026-09-24: "one clock, budgets measured"): on a host running several suites at once a millisecond budget, a runner-clock interval, or two short real timers racing measure the load.
@@ -207,7 +207,7 @@ Where each journey runs:
 | --- | --- | --- |
 | A request for journeys (`journeys.yml`) | every named journey | their tagged tests, or every test with `mac_all` |
 | A requested full check (`verify.yml`) | every journey | every tagged test, or every journey with `all_journeys` |
-| The nightly full check and every alpha (`verify.yml`) | every journey | every journey |
+| The run on `main` (`main.yml`) and every alpha (`verify.yml`) | every journey | every journey |
 
 Three checks hold the tag to what a test needs:
 
@@ -310,10 +310,22 @@ A crewmate that repairs a failing main follows these steps:
 
 Priority never interrupts running work, and capacity, test gates and merge consent are unchanged.
 
+## The continuous run on main
+
+Every push to `main` starts `main.yml` (INF-2146, the captain's approved plan, direction B), which calls the full check and the phone check side by side.
+The full check is `verify.yml` with `all_journeys: true`: the Linux checks, every journey on Linux and every journey on the Mac.
+The phone check is `phone.yml` through its `workflow_call` trigger with no inputs, so it runs every part of both device gates, as a default request does.
+It replaces the nightly full check, which requested the same two workflows on `main` once a night.
+The workflow's concurrency group never cancels a run in progress, so GitHub keeps the running run and at most one waiting run; a newer push replaces the waiting one, and a burst of merges is checked once at its newest version.
+The newest passing run of `main.yml` is main's green mark: its commit is the newest version the whole suite passed, and no other record names it.
+A failed run fails on the version it checked, which can be older than `main`'s head, so a repair reads that run and the range of commits since the newest passing one.
+Merging continues while a run is red.
+`tests/release-contract.test.ts` holds the trigger, the queue and both calls.
+
 ## Native phone checks on the pull request
 
 A pull request no longer starts `phone.yml` (INF-2139, captain: "let's pull journeys and phone checks off PRs now"): a crewmate whose change selects the gate requests it on its branch ("The phone check on request").
-The pull request selection below stays in `phone.yml` for the continuous run on `main` that replaces it.
+The pull request selection below stays in `phone.yml`, unused; the continuous run on `main` runs every part ("The continuous run on main").
 `phone.yml` selects the iPhone and iPad gate for `ios/`, the phone-card generator, the phone-contract generator with its shape guard, and the gate's own setup (`scripts/affected-phone.ts`).
 A change to the generated phone contract that touches only its `public static let version` line, a first-number change included, does not select it; `pnpm check` still verifies the file is current on every pull request.
 The setup inputs are `phone.yml`, `scripts/test-phone.ts`, `tests/helpers/phoneHome.ts`, `tests/helpers/phoneKeyboard.ts`, the activity writer `scripts/phone-activity.ts`, the leftover sweep `scripts/phone-leftovers.ts`, the check runner `scripts/phone-checks.ts`, the simulator selector `scripts/phone-simulator.ts` and its pin `scripts/phone-pin.json`, and the test plan helper `scripts/phone-test-plan.ts`.
@@ -333,7 +345,7 @@ That gate checks and builds once, starts one simulator per device, and runs the 
 
 ### The phone parts a pull request runs
 
-On a pull request the gate runs only the closest of the journey's seven parts within a six-minute budget, as the Mac journeys do ("Journeys on the pull request"), and the nightly check of `main` runs every part.
+On a pull request the gate runs only the closest of the journey's seven parts within a six-minute budget, as the Mac journeys do ("Journeys on the pull request"), and the run on `main` runs every part.
 The chooser (`scripts/affected-phone.ts`) gives each part a distance: 0 when the change edits UI test code the part runs, 1 when it edits a file in the part's owner table (`PART_OWNERS`), and 2 for any other phone input.
 It reads a UI test change by its functions: each changed line counts for the test functions around it, added lines in the new version and removed ones in the old, and each part reaches its test and every function it calls by name.
 The rest part also starts from every test no other part names, and a change to the app-hosted tests puts it at 0.
@@ -342,11 +354,11 @@ It keeps the closest part, every part at 0 even past the budget, and any other w
 A part's minutes are its longer device's time in the newest passing on-request check of `main` whose `phone-logs` artifact holds `part-times.json`, which only a full gate writes; a passing check of some parts is passed over for an older full one.
 With none readable, or with `PHONE_VIRTUAL_MAC` set, every part the change reaches runs.
 The job summary names each kept and left part with its distance, minutes and reason, and the `phone-placement` artifact keeps the same as JSON.
-A part the pull request leaves is checked after it merges, by the nightly check of `main`; an author who wants every part first runs the phone check on request on their branch.
+A part the pull request leaves is checked after it merges, by the run on `main`; an author who wants every part first runs the phone check on request on their branch.
 `tests/phone-chooser.test.ts` replays real changes merged to `main` through the chooser.
 Unlike the desktop journey workflow, a device gate that already started finishes and deletes the simulator it started for each device.
 A manual rerun of a replaced version stops before its gate.
-So does a run whose pull request merged or closed while it waited in the phone line, so it never holds that line for a device gate; the nightly check of `main` checks what merged.
+So does a run whose pull request merged or closed while it waited in the phone line, so it never holds that line for a device gate; the run on `main` checks what merged.
 On the Mac mini's own runners, native jobs share `mac-mini-phone` across pull requests, with `queue: max` and `cancel-in-progress: false` at the job level; up to 100 phone jobs can wait without newer jobs replacing them.
 A job on the `phone` kind's queue or the virtual-Mac label (`VIRTUAL_MAC_RUNNER`) takes a group of its own, so phone checks run side by side in the virtual places; the Mac mini has one, so there they run one at a time (`docs/ios.md`, "A phone check the placement service puts in a virtual Mac").
 Desktop journey jobs from different pull requests remain parallel.
@@ -361,8 +373,8 @@ The fixture, simulator identity and unsigned Xcode configuration are described i
 
 ### The phone check on request
 
-`phone.yml` also runs on request (`workflow_dispatch`), such as the nightly check of `main`: `POST /repos/{owner}/{repo}/actions/workflows/phone.yml/dispatches` with `{"ref":"main","return_run_details":true}`.
-A default run on request skips the chooser and runs every part of the device gate whatever changed; the nightly request stays on this default.
+`phone.yml` also runs on request (`workflow_dispatch`): `POST /repos/{owner}/{repo}/actions/workflows/phone.yml/dispatches` with `{"ref":"main","return_run_details":true}`.
+A default run on request skips the chooser and runs every part of the device gate whatever changed, as `main.yml`'s call does.
 For a crewmate checking its own branch, send `{"ref":"<branch>","inputs":{"affected":"true"},"return_run_details":true}` to select touched parts conservatively.
 The optional `base` input defaults to `origin/main`.
 This selection reuses `PART_OWNERS` and the Swift function reach reader, without a timing budget.
@@ -412,7 +424,7 @@ Conservative Linux estimates use the plan's observed rates: one Mac minute of pa
 A file stays intact, so an indivisible slow file may exceed six minutes; conservative estimates exclude setup, and neither model predicts runner waits or shared-machine slowdown.
 Every selected file runs on Linux exactly once in this placement; the independent Linux starter coverage still runs too.
 The chooser keeps its selection and placement as the `journey-placement` artifact.
-The full Mac suite remains part of every alpha's `verify.yml` and of the nightly full check; a break that only a Mac shows in an untagged test first surfaces there.
+The full Mac suite remains part of every alpha's `verify.yml` and of the run on `main`; a break that only a Mac shows in an untagged test first surfaces there.
 When the chooser passes with no tagged files, the Mac job skips by its own condition without taking a runner; when the chooser fails, its failed check holds the merge.
 Both success and a job-condition skip satisfy the app's green rule.
 If GitHub branch rules ever require `affected-journeys`, they must require `choose-journeys` too: a job skipped because its prerequisite failed does not itself hold a merge.

@@ -1,6 +1,6 @@
 import { type ChildProcessWithoutNullStreams, spawn } from "node:child_process";
 import { once } from "node:events";
-import { mkdirSync, realpathSync, renameSync } from "node:fs";
+import { cpSync, mkdirSync, readFileSync, realpathSync, renameSync } from "node:fs";
 import { createConnection } from "node:net";
 import { join, resolve } from "node:path";
 import { RESOURCE_MAX_AGE_MS, type ResourceObservation } from "@shared/resources";
@@ -12,7 +12,7 @@ import { AxiChannel, type TaskShell } from "../axi/channel";
 import { hostEnv } from "../hostEnv";
 import { forkChildProcess } from "../sql/forkChildProcess";
 import { ComputerLoads } from "./computerLoads";
-import { LoadLine } from "./loadLine";
+import { LoadLine, type LoadReceipt } from "./loadLine";
 import { ProcessAttribution, readProcesses } from "./processResources";
 import { processRoots } from "./processRoots";
 import { ResourceSampler } from "./resourceSampler";
@@ -54,6 +54,7 @@ function run(
   dir: string,
   argv: string[],
   demand = { processors: "4", memoryMiB: "4096" },
+  launcher = join(bin, "infinitary-load-axi"),
 ): {
   child: ChildProcessWithoutNullStreams;
   output: () => string;
@@ -61,7 +62,7 @@ function run(
   ended: Promise<number | null>;
 } {
   const child = spawn(
-    join(bin, "infinitary-load-axi"),
+    launcher,
     ["run", "--processors", demand.processors, "--memory-mib", demand.memoryMiB, "--", ...argv],
     {
       cwd: dir,
@@ -278,6 +279,7 @@ describe("the declared heavy-run line through its native command", () => {
         channel.grant("timeout", {
           load: {
             read: load.read,
+            receipt: load.receipt,
             claim: (input) => {
               identities.push(input.pid);
               const work = load.claim(input);
@@ -529,8 +531,8 @@ describe("the declared heavy-run line through its native command", () => {
       const sampler = new ResourceSampler({
         memory: () => reading.memory,
         processes: readProcesses,
-        observed: (observation, processes, started, window) =>
-          line.observe(observation, processes, started, window),
+        observed: (observation, processes, started, window, cpuWindow) =>
+          line.observe(observation, processes, started, window, cpuWindow),
       });
       expect((await sampler.read()).status).toBe("sampled");
       expect(await waiting.ended).not.toBe(0);
@@ -542,6 +544,263 @@ describe("the declared heavy-run line through its native command", () => {
       await waiting.ended;
     }
   });
+
+  // INF-2228 approved plan: a lost receipt acknowledgment never re-enters
+  // admission/launch. Real native children and event barriers own the ordering.
+  it("retries only a saved receipt, starts once, and admits later work after a covering interval", async () => {
+    const dir = scratchDir("infinitary-load-receipt-");
+    const stateFile = join(dir, "load.json");
+    const saved = deferred<void>();
+    const repeated = deferred<void>();
+    const late = deferred<void>();
+    let now = 0;
+    const line = new LoadLine({ stateFile, now: () => now });
+    lines.push(line);
+    line.observe(reading, null);
+    const load = line.forTask("receipt");
+    const receipts: LoadReceipt[] = [];
+    let claims = 0;
+    let spawns = 0;
+    const native = forkChildProcess(entry);
+    const channel = await AxiChannel.open({
+      spawner: {
+        spawn: () => {
+          // The second command is the first receipt. Only its own existing
+          // command deadline advances; native payload and cadence clocks stay real.
+          if (++spawns === 2) vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
+          return native.spawn();
+        },
+      },
+      binDir: bin,
+      version: "9.9.9-test",
+      keysDir: join(dir, "keys"),
+    });
+    channels.push(channel);
+    const first = run(
+      channel.grant("receipt", {
+        load: {
+          read: load.read,
+          claim: (input) => {
+            claims++;
+            return load.claim(input);
+          },
+          receipt: async (input, permitted) => {
+            receipts.push(input);
+            await load.receipt(input, permitted);
+            if (receipts.length === 1) {
+              saved.resolve();
+              await late.promise;
+            } else repeated.resolve();
+          },
+        },
+      }),
+      dir,
+      [
+        process.execPath,
+        "-e",
+        "console.log('one payload');process.stdin.resume();process.stdin.on('end',()=>process.exit(7))",
+      ],
+      { processors: "8", memoryMiB: "256" },
+    );
+    let second: ReturnType<typeof run> | undefined;
+    let third: ReturnType<typeof run> | undefined;
+    try {
+      await saved.promise;
+      const durable = JSON.parse(readFileSync(stateFile, "utf8"))[0];
+      expect(durable.launch).toEqual({ pid: receipts[0]?.payload, started: receipts[0]?.started });
+      vi.advanceTimersToNextTimer();
+      vi.useRealTimers();
+      await repeated.promise;
+      late.resolve();
+      expect(receipts).toHaveLength(2);
+      expect(receipts[1]).toEqual(receipts[0]);
+      expect(claims).toBe(1);
+      await expect.poll(first.output).toBe("one payload\n");
+      second = run(
+        channel.grant("after-coverage", { load: line.forTask("after-coverage") }),
+        dir,
+        [
+          process.execPath,
+          "-e",
+          "console.log('later payload');process.stdin.resume();process.stdin.on('end',()=>process.exit(0))",
+        ],
+        { processors: "4", memoryMiB: "256" },
+      );
+      await expect.poll(() => line.snapshot().runs[1]?.state).toBe("waiting");
+      expect(second.output()).toBe("");
+      now = 251;
+      line.observe({ ...reading, sequence: 2 }, null, now, undefined, {
+        epoch: reading.epoch,
+        start: 1,
+        end: now,
+      });
+      await expect.poll(second.output).toBe("later payload\n");
+      // Replay a real fully-busy state; admitted programs keep running while
+      // new ordinary work has no CPU headroom. No real CPU saturation is induced.
+      now = 502;
+      line.observe(
+        { ...reading, sequence: 3, cpu: { ...reading.cpu, idleFraction: 0 } },
+        null,
+        now,
+        undefined,
+        { epoch: reading.epoch, start: 252, end: now },
+      );
+      third = run(
+        channel.grant("burst", { load: line.forTask("burst") }),
+        dir,
+        [process.execPath, "-e", "console.log('post-burst payload')"],
+        { processors: "1", memoryMiB: "256" },
+      );
+      await expect.poll(() => line.snapshot().runs[2]?.state).toBe("waiting");
+      expect(third.output()).toBe("");
+      expect(first.child.exitCode).toBeNull();
+      expect(second.child.exitCode).toBeNull();
+      first.child.stdin.end();
+      second.child.stdin.end();
+      expect(await first.ended).toBe(7);
+      expect(await second.ended).toBe(0);
+      expect(await third.ended).toBe(0);
+      await expect.poll(() => line.snapshot().runs).toEqual([]);
+      console.info(
+        "Verified-launch admission proof",
+        JSON.stringify({
+          claims,
+          receipts,
+          first: first.output(),
+          second: second.output(),
+          third: third.output(),
+          durableLaunch: durable.launch,
+          remaining: line.snapshot(),
+        }),
+      );
+    } finally {
+      vi.useRealTimers();
+      late.resolve();
+      first.child.stdin.end();
+      second?.child.stdin.end();
+      await first.ended;
+      if (second) await second.ended;
+      channel.close();
+      if (third) await third.ended;
+    }
+  });
+
+  it("ends receipt pursuit with a short-lived payload, without retaining its streams or reviving an ended group", async () => {
+    const dir = scratchDir("infinitary-load-short-receipt-");
+    const entered = deferred<LoadReceipt>();
+    const release = deferred<void>();
+    const line = new LoadLine({ stateFile: join(dir, "load.json") });
+    lines.push(line);
+    line.observe(reading, null);
+    const load = line.forTask("short");
+    let calls = 0;
+    const results: Promise<void>[] = [];
+    const channel = await AxiChannel.open({
+      spawner: forkChildProcess(entry),
+      binDir: bin,
+      version: "9.9.9-test",
+      keysDir: join(dir, "keys"),
+    });
+    channels.push(channel);
+    const taskLoad = {
+      ...load,
+      receipt: (input: LoadReceipt, permitted?: () => boolean) => {
+        calls++;
+        entered.resolve(input);
+        const work = release.promise.then(() => load.receipt(input, permitted));
+        results.push(work);
+        return work;
+      },
+    };
+    const payload = run(channel.grant("short", { load: taskLoad }), dir, [
+      process.execPath,
+      "-e",
+      "console.log('short payload');process.stdin.resume();process.stdin.on('end',()=>process.exit(3))",
+    ]);
+    try {
+      const identity = await entered.promise;
+      payload.child.stdin.end();
+      expect(await payload.ended).toBe(3);
+      await expect
+        .poll(async () => (await readProcesses())?.some((row) => row.group === identity.pid))
+        .toBe(false);
+      release.resolve();
+      await expect(results[0]).rejects.toThrow("living admitted group");
+      expect(calls).toBe(1);
+      expect(payload.output()).toBe("short payload\n");
+      console.info(
+        "Canceled receipt pursuit proof",
+        JSON.stringify({ identity, calls, output: payload.output(), exit: 3 }),
+      );
+    } finally {
+      release.resolve();
+      payload.child.stdin.end();
+      await Promise.allSettled(results);
+      channel.close();
+      await payload.ended;
+    }
+  });
+
+  it.each(["SIGINT", "SIGTERM"] as const)(
+    "preserves a payload's %s handling through the native supervisor",
+    async (signal) => {
+      const dir = scratchDir("infinitary-load-signal-");
+      // The packaged layout has no source-tree fallback. This exercises the
+      // compiled helper that a person receives, without packaging or signing.
+      const packaged = join(dir, "resources");
+      const packagedBin = join(packaged, "axi-bin");
+      cpSync(bin, packagedBin, { recursive: true });
+      mkdirSync(join(packaged, "load-bin"));
+      cpSync(
+        resolve(bin, "../../vendor/load-bin/infinitary-load-supervisor"),
+        join(packaged, "load-bin/infinitary-load-supervisor"),
+      );
+      const verified = deferred<LoadReceipt>();
+      const line = new LoadLine({ stateFile: join(dir, "load.json") });
+      lines.push(line);
+      line.observe(reading, null);
+      const load = line.forTask("signal");
+      const channel = await AxiChannel.open({
+        spawner: forkChildProcess(entry),
+        binDir: packagedBin,
+        version: "9.9.9-test",
+        keysDir: join(dir, "keys"),
+      });
+      channels.push(channel);
+      const program = `process.on('${signal}',()=>{console.log('handled ${signal}');process.exit(23)});console.log('ready');process.stdin.resume()`;
+      const shell = channel.grant("signal", {
+        load: {
+          ...load,
+          receipt: async (input, permitted) => {
+            await load.receipt(input, permitted);
+            verified.resolve(input);
+          },
+        },
+      });
+      const payload = run(
+        { ...shell, env: { ...shell.env, TZ: "Pacific/Honolulu", LC_ALL: "C" } },
+        dir,
+        [process.execPath, "-e", program],
+        undefined,
+        join(packagedBin, "infinitary-load-axi"),
+      );
+      try {
+        const identity = await verified.promise;
+        await expect.poll(payload.output).toContain("ready");
+        process.kill(identity.pid, signal); // the disposable supervisor, not the entire group
+        expect(await payload.ended).toBe(23);
+        expect(payload.output()).toBe(`ready\nhandled ${signal}\n`);
+        console.info(
+          "Native signal proof",
+          JSON.stringify({ signal, output: payload.output(), exit: 23 }),
+        );
+      } finally {
+        payload.child.stdin.end();
+        channel.close();
+        await payload.ended;
+      }
+    },
+  );
 
   it("reuses a nested hold, refuses a larger nested demand, and obeys only a recorded override", async () => {
     const dir = scratchDir("infinitary-load-nested-");

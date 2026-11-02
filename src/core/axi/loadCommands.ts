@@ -2,16 +2,16 @@ import { LOAD_COMMAND, loadDemandSchema } from "@shared/load";
 import { RESOURCE_REFRESH_MS } from "@shared/resources";
 import { encode } from "@toon-format/toon";
 import { AxiError } from "axi-sdk-js";
-import type { LoadClaim } from "../placed/loadLine";
+import type { LoadClaim, LoadReceipt } from "../placed/loadLine";
 import type { TaskAxiCli } from "./cli";
 import type { ChannelReply, IntegrationChannelAnswer } from "./protocol";
 
-export type LoadOp = "load.claim" | "load.read";
+export type LoadOp = "load.claim" | "load.read" | "load.receipt";
 export type LoadConnection = {
   call: (
     command: string,
     op: LoadOp,
-    input: LoadClaim | Record<string, never>,
+    input: LoadClaim | LoadReceipt | Record<string, never>,
   ) => Promise<ChannelReply<IntegrationChannelAnswer>>;
 };
 
@@ -36,10 +36,44 @@ export function loadAxi(
     home: async (connection) =>
       `${output(await connection.call("load", "load.read", {}))}${encode({ help: [`Use ${LOAD_COMMAND} run --processors <number> --memory-mib <number> -- <program> [arguments]`, "The caller declares the whole run's needs, including processes it starts outside its tree."] })}\n`,
     commands: {
+      receipt: {
+        usage: "receipt --hold <hold> --pid <supervisor> --payload <child> --started <birth>",
+        description: "Verify this hold's one payload launch. Repeating it never launches work.",
+        flags: { "--hold": "value", "--pid": "value", "--payload": "value", "--started": "value" },
+        run: async (args, connection) => {
+          const pid = Number(args.flags["--pid"]);
+          const payload = Number(args.flags["--payload"]);
+          const hold = args.flags["--hold"];
+          const started = args.flags["--started"];
+          if (
+            args.positional.length ||
+            !Number.isSafeInteger(pid) ||
+            pid <= 0 ||
+            !Number.isSafeInteger(payload) ||
+            payload <= 0 ||
+            typeof hold !== "string" ||
+            !hold ||
+            typeof started !== "string" ||
+            !started
+          )
+            throw new AxiError(
+              "Name the hold and both live process identities.",
+              "VALIDATION_ERROR",
+            );
+          return output(
+            await connection.call(`receipt:${hold}:${pid}:${payload}:${started}`, "load.receipt", {
+              hold,
+              pid,
+              payload,
+              started,
+            }),
+          );
+        },
+      },
       run: {
         usage: "run --processors <number> --memory-mib <number> -- <program> [arguments]",
         description:
-          "Wait in this computer's line, then run the program with its original input, output, environment and exit status. The whole process group holds its declared capacity until it exits.",
+          "Wait in this computer's line, then run the program with its original input, output, environment and exit status. Processors stay reserved until a complete reading covers verified launch; memory growth stays reserved until the group exits.",
         flags: { "--processors": "value", "--memory-mib": "value" },
         run: async () => {
           throw new AxiError(
@@ -70,7 +104,7 @@ export function loadAxi(
               "VALIDATION_ERROR",
             );
           const parent = args.flags["--parent"];
-          const reply = await connection.call("claim", "load.claim", {
+          const reply = await connection.call(`claim:${pid}:${parent ?? ""}`, "load.claim", {
             pid,
             demand: parsed.data,
             ...(typeof parent === "string" ? { parent } : {}),

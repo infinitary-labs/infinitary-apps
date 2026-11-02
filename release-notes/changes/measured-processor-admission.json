@@ -1,0 +1,14 @@
+{
+  "entries": [
+    {
+      "id": "measured-processor-admission",
+      "kind": "feature",
+      "area": "tasks",
+      "title": "Quiet background runs leave room for more work",
+      "body": "After confirming a background program has started and measuring processor load again, Infinitary uses measured load to admit more work. Memory reservations and arrival order stay unchanged. Later processor bursts can still slow running work.",
+      "noPicture": "This changes background admission accounting, not the task record's appearance.",
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

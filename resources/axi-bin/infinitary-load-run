@@ -3,6 +3,67 @@
 # the task channel: the admitted group execs the caller's original argv here.
 # Bash's job-control group works without a terminal on macOS and Linux.
 
+# The receipt worker never creates the payload. Its supervisor cancels it when
+# that payload finishes, including a pending request or cadence wait.
+if [ "${1:-}" = _receipt ]; then
+  hold=$2; leader=$3; payload=$4
+  launcher=${0%/*}/infinitary-load-axi
+  request=
+  answerFile=
+  canceled=
+  finish_receipt() {
+    trap '' TERM INT HUP
+    if [ -n "$request" ]; then kill "$request" 2>/dev/null; wait "$request" 2>/dev/null; fi
+    [ -z "$answerFile" ] || rm -f "$answerFile"
+    exit 0
+  }
+  cancel_receipt() {
+    canceled=1
+    [ "$request" = starting ] || finish_receipt
+  }
+  trap cancel_receipt TERM INT HUP
+  trap finish_receipt EXIT
+  answerFile=$(mktemp) || exit 1
+  birth=
+  if [ -r "/proc/$payload/stat" ]; then
+    IFS= read -r stat < "/proc/$payload/stat"
+    stat=${stat##*)}
+    set -f
+    fields=($stat)
+    if [ -n "${fields[19]:-}" ]; then birth=linux:${fields[19]}; fi
+  else
+    birth=$(LC_ALL=C TZ=UTC /bin/ps -p "$payload" -o lstart= 2>/dev/null)
+    birth="${birth#"${birth%%[![:space:]]*}"}"
+    birth="${birth%"${birth##*[![:space:]]}"}"
+    [ -z "$birth" ] || birth=utc:$birth
+  fi
+  [ -n "$birth" ] || exit 0
+  while kill -0 "$payload" 2>/dev/null; do
+    request=starting
+    INFINITARY_SHELL_CAP_MS= FM3000_SHELL_CAP_MS= INFINITARY_SHELL_ID= \
+      /bin/sh "$launcher" receipt --hold "$hold" --pid "$leader" --payload "$payload" --started "$birth" >"$answerFile" 2>&1 &
+    request=$!
+    [ -z "$canceled" ] || finish_receipt
+    wait "$request"
+    code=$?
+    request=
+    [ "$code" -ne 0 ] || exit 0
+    failure=; delay=
+    while IFS=' ' read -r key value; do
+      case $key in code:) failure=$value ;; retrySeconds:) delay=$value ;; esac
+    done < "$answerFile"
+    [ "$failure" = RECEIPT_UNAVAILABLE ] || exit 0
+    if [ -n "$delay" ]; then
+      case $delay in *[!0-9]*|0) exit 0 ;; esac
+      request=starting
+      sleep "$delay" & request=$!
+      [ -z "$canceled" ] || finish_receipt
+      wait "$request"; request=
+    fi
+  done
+  exit 0
+fi
+
 invalid() {
   printf 'error: %s\ncode: VALIDATION_ERROR\n' "$1" >&2
   exit 2
@@ -41,8 +102,14 @@ if [ -z "$group" ] && [ -z "${INFINITARY_LOAD_HOLD:-}" ]; then
   /bin/bash "$0" _group run --processors "$cpu" --memory-mib "$memory" -- "$@" <&0 &
   child=$!
   set +m
-  wait "$child"
-  exit $?
+  trap 'kill -INT -- -"$child" 2>/dev/null' INT
+  trap 'kill -TERM -- -"$child" 2>/dev/null' TERM
+  trap 'kill -HUP -- -"$child" 2>/dev/null' HUP
+  while :; do
+    wait "$child"
+    code=$?
+    kill -0 "$child" 2>/dev/null || exit "$code"
+  done
 fi
 
 launcher=${0%/*}/infinitary-load-axi
@@ -85,8 +152,12 @@ while :; do
   case $state in
     running)
       [ -n "$hold" ] || invalid 'The app answered without the run’s hold.'
+      if [ -n "${INFINITARY_LOAD_HOLD:-}" ]; then exec -- "$@"; fi
       export INFINITARY_LOAD_HOLD=$hold
-      exec -- "$@"
+      supervisor=${0%/*}/../load-bin/infinitary-load-supervisor
+      [ -x "$supervisor" ] || supervisor=${0%/*}/../../vendor/load-bin/infinitary-load-supervisor
+      [ -x "$supervisor" ] || invalid 'The native run supervisor is missing; nothing started.'
+      exec "$supervisor" "$0" "$hold" "$@"
       ;;
     waiting)
       if [ "$answer" != "$last" ]; then printf '%s\n' "$answer" >&2; last=$answer; fi

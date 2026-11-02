@@ -1468,8 +1468,8 @@ export async function createServices(
     local: new ResourceSampler({
       memory: host.resourceMemory,
       processes: readProcesses,
-      observed: (observation, processes, started, window) =>
-        loadLine.observe(observation, processes, started, window),
+      observed: (observation, processes, started, window, cpuWindow) =>
+        loadLine.observe(observation, processes, started, window, cpuWindow),
     }),
   });
   const computerLoads = new ComputerLoads({

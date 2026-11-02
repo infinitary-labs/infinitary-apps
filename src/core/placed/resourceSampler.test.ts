@@ -1,7 +1,7 @@
 import type { CpuInfo } from "node:os";
 import type { ResourceMemory } from "@shared/resources";
 import { describe, expect, it } from "vitest";
-import { ResourceSampler } from "./resourceSampler";
+import { type CpuWindow, ResourceSampler } from "./resourceSampler";
 
 /**
  * INF-213: the memory seam is asynchronous because a Mac sample reads vm_stat
@@ -45,7 +45,12 @@ describe("accepted CPU refresh windows", () => {
     let clock = 0;
     let reads = 0;
     const pauses: number[] = [];
+    const intervals: CpuWindow[] = []; // INF-2228: expose actual reused CPU endpoints, not request start.
+
     const sampler = new ResourceSampler({
+      observed: (observation, _processes, _started, _window, cpuWindow) => {
+        if (observation.status === "sampled" && cpuWindow) intervals.push(cpuWindow);
+      },
       memory: () => ({ totalBytes: 8 * 1024 ** 3, freeBytes: 3 * 1024 ** 3 }),
       cpus: () => {
         const n = ++reads;
@@ -77,6 +82,13 @@ describe("accepted CPU refresh windows", () => {
     expect(await sampler.read()).toMatchObject({ status: "sampled", sampleMs: 250 });
     expect(reads).toBe(6);
     expect(pauses).toEqual([250, 250]);
+    expect(intervals.map(({ start, end }) => [start, end])).toEqual([
+      [0, 250],
+      [250, 2000],
+      [2000, 7000],
+      [12001, 12251],
+    ]);
+    expect(new Set(intervals.map(({ epoch }) => epoch)).size).toBe(1);
   });
 
   it("finishes a too-short refresh and refuses reset counters or changed processor counts", async () => {

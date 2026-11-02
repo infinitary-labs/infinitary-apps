@@ -366,7 +366,7 @@ describe("the task channel and the infinitary-browser-axi launcher", () => {
   // INF-2004: curl's documented timeout exit is a lost answer, not a refusal.
   // Inject that transport result at curl's executable seam while running the
   // real launcher; no real task key, network destination or app state is used.
-  it("marks a transport timeout recoverable only for the native load claim", async () => {
+  it("marks transport timeouts recoverable only for native load claims and launch receipts", async () => {
     const dir = scratchDir("infinitary-axi-transport-timeout-");
     const curl = join(dir, "curl");
     writeFileSync(curl, "#!/bin/sh\nexit 28\n", { mode: 0o700 });
@@ -387,6 +387,25 @@ describe("the task channel and the infinitary-browser-axi launcher", () => {
     );
     expect(claim.exitCode).toBe(1);
     expect(decode(claim.stdout)).toMatchObject({ code: "CLAIM_UNAVAILABLE" });
+    // INF-2228: a receipt timeout repeats only receipt bookkeeping, never launch.
+    const receipt = await shell(
+      fixture,
+      [
+        "receipt",
+        "--hold",
+        "saved-hold",
+        "--pid",
+        "1",
+        "--payload",
+        "118",
+        "--started",
+        "Tue Oct 27 11:03:36 2026",
+      ],
+      {},
+      "infinitary-load-axi",
+    );
+    expect(receipt.exitCode).toBe(1);
+    expect(decode(receipt.stdout)).toMatchObject({ code: "RECEIPT_UNAVAILABLE" });
     for (const [name, args] of [
       ["infinitary-load-axi", []],
       ["infinitary-browser-axi", ["click", "@g1:e2"]],

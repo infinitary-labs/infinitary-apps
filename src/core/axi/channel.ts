@@ -16,7 +16,7 @@ import {
   isIntegrationAnswer,
   type TaskIntegrations,
 } from "../integrations";
-import { type LoadClaim, loadWaitWords, type TaskLoad } from "../placed/loadLine";
+import { type LoadClaim, type LoadReceipt, loadWaitWords, type TaskLoad } from "../placed/loadLine";
 import { type Injection, SECRETS_COMMAND, type SecretsCommand } from "../secrets/requests";
 import { ownTaskCommand } from "./names";
 import {
@@ -428,13 +428,17 @@ export class AxiChannel {
   ): Promise<Outcome> {
     // An operation that waits on another computer answers before this is stopped.
     const stopsAt = Date.now() + PROCESS_BOUND_MS;
-    // A claim only identifies/adopts this same living group; it never launches
-    // the payload. Losing its answer must not end the group's queue lifetime.
+    // Claims adopt the same living group; receipts verify its one launch.
+    // Neither creates a payload, so only these typed operations may repeat.
     // Other commands may have effects: an interrupted answer is not retry permission.
     const interrupted = (message: string): Outcome => {
-      if (command.tool !== LOAD_COMMAND || command.argv[0] !== "claim")
+      const operation = command.argv[0];
+      if (command.tool !== LOAD_COMMAND || (operation !== "claim" && operation !== "receipt"))
         return failed(message, "FAILED");
-      const answer = failed(message, "CLAIM_UNAVAILABLE");
+      const answer = failed(
+        message,
+        operation === "claim" ? "CLAIM_UNAVAILABLE" : "RECEIPT_UNAVAILABLE",
+      );
       return {
         ...answer,
         stdout: `${answer.stdout}retrySeconds: ${RESOURCE_REFRESH_MS / 1000}\n`,
@@ -502,11 +506,15 @@ export class AxiChannel {
     stopsAt: number,
   ): Promise<ChannelReply<OpAnswer>> {
     const { tool, deadline } = command;
-    const parked = grant.parked.get(tool);
+    const parkedKey =
+      tool === LOAD_COMMAND && (message.op === "load.claim" || message.op === "load.receipt")
+        ? `${tool}:${message.command}`
+        : tool;
+    const parked = grant.parked.get(parkedKey);
     if (parked) {
       const settled = await within(parked.work, deadline);
       if (settled === TIMEOUT) return { kind: "busy", command: parked.command };
-      if (grant.parked.get(tool) === parked) grant.parked.delete(tool);
+      if (grant.parked.get(parkedKey) === parked) grant.parked.delete(parkedKey);
       return { kind: "earlier", command: parked.command, answer: settled };
     }
     const work: Promise<OpAnswer> =
@@ -525,7 +533,7 @@ export class AxiChannel {
               : this.operate(grant, message);
     const settled = await within(work, deadline);
     if (settled === TIMEOUT) {
-      grant.parked.set(tool, { command: message.command, work });
+      grant.parked.set(parkedKey, { command: message.command, work });
       return { kind: "running", command: message.command };
     }
     return { kind: "answer", answer: settled };
@@ -536,6 +544,13 @@ export class AxiChannel {
     if (!load) return { text: "This task has no load command.", refused: "refused" };
     try {
       if (message.op === "load.read") return { data: load.read() };
+      if (message.op === "load.receipt") {
+        await load.receipt(
+          message.input as LoadReceipt,
+          () => this.grants.get(grant.taskId) === grant,
+        );
+        return { data: { verified: true } };
+      }
       if (message.op !== "load.claim")
         return { text: "That is not a load operation.", refused: "invalid" };
       const run = await load.claim(message.input as LoadClaim);

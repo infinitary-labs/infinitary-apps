@@ -15,6 +15,8 @@ export type ProcessReading = {
   started: string;
   cpuMs?: number;
   residentBytes: number;
+  /** A zombie retains its identity but cannot witness a living payload launch. */
+  exited?: boolean;
 };
 
 /** ps TIME is cumulative, unlike %CPU's lifetime average on a Mac. */
@@ -37,13 +39,16 @@ export function processesFromPs(text: string): ProcessReading[] | null {
     if (!line.trim()) continue;
     const match = /^\s*(\d+)\s+(\d+)\s+(\d+)\s+(\S+)\s+(\d+)\s+(.+?)\s*$/.exec(line);
     if (!match) return null;
+    const birth = match[6] ?? "";
+    const state = /\s+([A-Za-z+<>-]+)$/.exec(birth);
     const row = {
       pid: Number(match[1]),
       parent: Number(match[2]),
       group: Number(match[3]),
       cpuMs: cpuTime(match[4] ?? ""),
       residentBytes: Number(match[5]) * 1024,
-      started: match[6] ?? "",
+      started: state ? birth.slice(0, state.index) : birth,
+      ...(state?.[1]?.includes("Z") || state?.[1]?.includes("X") ? { exited: true } : {}),
     };
     if (
       !Number.isSafeInteger(row.pid) ||
@@ -55,6 +60,26 @@ export function processesFromPs(text: string): ProcessReading[] | null {
     rows.push(row);
   }
   return rows.length ? rows : null;
+}
+
+/** Receipt birth stamps use UTC, independent of the payload shell's timezone.
+ * Keep the existing whole-table birth format unchanged for saved group identities. */
+export async function readReceiptProcess(pid: number): Promise<ProcessReading | undefined> {
+  if (hostPlatform() !== "darwin") return undefined;
+  try {
+    const { stdout } = await exec(
+      "/bin/ps",
+      ["-p", String(pid), "-o", "pid=,ppid=,pgid=,time=,rss=,lstart=,stat="],
+      {
+        env: hostEnv({ LC_ALL: "C", TZ: "UTC" }),
+        encoding: "utf8",
+        timeout: RESOURCE_READ_TIMEOUT_MS,
+      },
+    );
+    return processesFromPs(stdout)?.find((row) => row.pid === pid);
+  } catch {
+    return undefined;
+  }
 }
 
 let linuxClockTicks: Promise<number | undefined> | undefined;
@@ -104,7 +129,7 @@ export async function readProcesses(): Promise<ProcessReading[] | null> {
   try {
     const { stdout } = await exec(
       hostPlatform() === "darwin" ? "/bin/ps" : "ps",
-      ["-axo", "pid=,ppid=,pgid=,time=,rss=,lstart="],
+      ["-axo", "pid=,ppid=,pgid=,time=,rss=,lstart=,stat="],
       {
         env: hostEnv({ LC_ALL: "C" }),
         encoding: "utf8",

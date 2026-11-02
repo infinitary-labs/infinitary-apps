@@ -2,6 +2,7 @@ import { resolve } from "node:path";
 import react from "@vitejs/plugin-react";
 import { defineConfig } from "electron-vite";
 import type { Plugin } from "vite";
+import { buildLoadSupervisor } from "./scripts/build-load-supervisor";
 import { frameLibPlugin } from "./scripts/frame-lib";
 import { contractChangeFiles } from "./src/core/connection/contractChanges";
 import { contractRevisionFiles } from "./src/core/prompts/contractVersion";
@@ -90,7 +91,10 @@ export default defineConfig({
     },
     // The frame realm's lib (scripts/frame-lib.ts): built before main, into
     // out/frame-lib, with every file's pin baked into main.
-    plugins: [frameLibPlugin(__dirname, resolve(__dirname, "out/frame-lib"))],
+    plugins: [
+      { name: "load-supervisor", buildStart: buildLoadSupervisor },
+      frameLibPlugin(__dirname, resolve(__dirname, "out/frame-lib")),
+    ],
   },
   preload: {
     build: {

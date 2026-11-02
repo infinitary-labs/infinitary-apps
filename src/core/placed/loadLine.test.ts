@@ -1,7 +1,8 @@
-import { readFileSync } from "node:fs";
+import { readFileSync, renameSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { RESOURCE_MAX_AGE_MS, type ResourceObservation } from "@shared/resources";
 import { afterEach, describe, expect, it } from "vitest";
+import { deferred } from "../../../tests/helpers/deferred";
 import { scratchDir } from "../../../tests/helpers/scratchDirs";
 import { LoadLine } from "./loadLine";
 import { type ProcessReading, processesFromPs } from "./processResources";
@@ -53,7 +54,33 @@ function setup() {
   lines.push(line);
   const claim = (index: number, cpu = 4, memoryBytes = 1024 ** 3) =>
     line.forTask("same-task").claim({ pid: rowAt(rows, index).pid, demand: { cpu, memoryBytes } });
-  return { line, rows, claim, clock };
+  const receipt = async (hold: string, index = 0) => {
+    const leader = rowAt(rows, index);
+    // Recorded child metadata, placed under the admitted leader for this fixture.
+    const child = rowAt(processesFromPs("1 0 1 2:01.03 23008 Tue Oct 27 11:03:29 2026") ?? [], 0);
+    rows.push({ ...child, group: leader.pid, parent: leader.pid });
+    const input = { hold, pid: leader.pid, payload: child.pid, started: child.started };
+    await line.forTask("same-task").receipt(input);
+    return input;
+  };
+  let sequence = 0;
+  const sample = (start: number, end: number, idle = 9.5 / 14, epoch = reading.epoch) => {
+    clock.now = end;
+    line.observe(
+      {
+        ...reading,
+        epoch,
+        sequence: ++sequence,
+        sampleMs: end - start,
+        cpu: { ...reading.cpu, idleFraction: idle },
+      },
+      rows,
+      end,
+      undefined,
+      { epoch, start, end },
+    );
+  };
+  return { line, rows, claim, clock, receipt, sample };
 }
 
 // INF-1978: an unavailable OS reading is not evidence that a waiting group ended.
@@ -173,35 +200,310 @@ describe("accepted counted-once admission", () => {
     console.info("Memory counted-once proof", JSON.stringify(line.snapshot()));
   });
 
-  it("admits the second run in the worked case, then leaves a third waiting", async () => {
-    const { line, rows, claim } = setup();
+  // INF-2228 approval explicitly replaces this obsolete persistent-CPU policy expectation.
+  it("admits a second busy run after launch coverage, and debits that start on unchanged readings", async () => {
+    const { line, rows, claim, clock, receipt, sample } = setup();
     line.observe(reading, null);
-    await claim(0);
+    const first = await claim(0);
     const window = { first: rows.map((row) => ({ ...row })), elapsedMs: 2000 };
     addWork(rows, 4, window.elapsedMs);
-    line.observe({ ...reading, cpu: { ...reading.cpu, idleFraction: 9.5 / 14 } }, rows, 0, window);
+    clock.now = 1;
+    await receipt(first.id);
+    sample(2, 2002);
     expect((await claim(1)).state).toBe("running");
-    const both = { first: rows.map((row) => ({ ...row })), elapsedMs: 2000 };
-    for (const row of rows) row.cpuMs = (row.cpuMs ?? 0) + 4 * both.elapsedMs;
-    line.observe({ ...reading, cpu: { ...reading.cpu, idleFraction: 5.5 / 14 } }, rows, 0, both);
-    // Add a new process identity by reusing the recorded launchd row from the same capture.
-    rows.push(rowAt(processesFromPs("1 0 1 2:01.03 23008 Tue Oct 27 11:03:29 2026") ?? [], 0));
-    expect((await claim(2)).state).toBe("waiting");
-    console.info("Counted-once proof", JSON.stringify(line.snapshot()));
+    // The next start still costs four processors. A new request cannot spend
+    // that same 7.6-processor budget again via claim, timer or reconsideration.
+    const third = rowAt(rows, 2);
+    rows[2] = { ...third, group: third.pid }; // the same recorded identity is now an independent group
+    // Use a new task identity for the independent run; its claim must remain queued.
+    const input = { pid: third.pid, demand: { cpu: 4, memoryBytes: 1024 ** 3 } };
+    const queued = line.forTask("third");
+    expect((await queued.claim(input)).state).toBe("waiting");
+    line.reconsider();
+    expect((await queued.claim(input)).state).toBe("waiting");
+    console.info(
+      "Measured busy admission and durable startup debit",
+      JSON.stringify(line.snapshot()),
+    );
   });
 
-  it("uses the larger measured share and never restores unknown process use", async () => {
-    const { line, rows, claim } = setup();
+  // INF-2228 approved retyping: group CPU counters no longer create capacity or
+  // a persistent maximum charge. A trustworthy aggregate interval is sufficient.
+  it("uses observed idle without a busy-group add-back or per-group CPU requirement", async () => {
+    const { line, claim, clock, receipt, sample, rows } = setup();
     line.observe(reading, null);
-    await claim(0);
-    const window = { first: rows.map((row) => ({ ...row })), elapsedMs: 2000 };
-    addWork(rows, 8, window.elapsedMs);
-    // 80% of (6 + 8), minus 8 = 3.2: a second four-core run must wait.
-    line.observe({ ...reading, cpu: { ...reading.cpu, idleFraction: 6 / 14 } }, rows, 0, window);
+    const first = await claim(0);
+    clock.now = 1;
+    await receipt(first.id);
+    for (const row of rows) delete row.cpuMs;
+    // Old rule: 80% of (6 + 8), minus 8 = 3.2. New rule: 80% of 6 = 4.8.
+    sample(2, 2002, 6 / 14);
+    expect((await claim(1)).state).toBe("running");
+    console.info("Aggregate-only admission", JSON.stringify(line.snapshot()));
+  });
+});
+
+// Captain's approved INF-2228 plan: startup evidence, interval identity and
+// restart boundaries own CPU coverage; memory and the living-group count do not change.
+describe("verified processor startup coverage", () => {
+  it("keeps a delayed or unconfirmed launch charged through duplicate claims and quiet readings", async () => {
+    const { line, claim, sample } = setup();
+    line.observe(reading, null);
+    const first = await claim(0, 8);
+    sample(1, 2001);
+    expect((await claim(0, 8)).id).toBe(first.id);
     expect((await claim(1)).state).toBe("waiting");
-    // No measured window: reserve the declaration without inventing an add-back.
-    line.observe({ ...reading, cpu: { ...reading.cpu, idleFraction: 9.5 / 14 } }, rows);
+    sample(2001, 4001);
+    line.reconsider();
     expect(line.snapshot().runs[1]?.state).toBe("waiting");
-    console.info("Unknown and over-declaration proof", JSON.stringify(line.snapshot()));
+  });
+
+  it("does not mistake an overlapping interval, reused endpoint or older reply for coverage", async () => {
+    const { line, claim, receipt, clock, sample, rows } = setup();
+    line.observe(reading, null);
+    const first = await claim(0, 8);
+    sample(0, 2000);
+    await receipt(first.id);
+    sample(1000, 3000); // request completed after verification, aggregate began before it
+    expect((await claim(1)).state).toBe("waiting");
+    const repeated = {
+      ...reading,
+      sequence: 99,
+      sampleMs: 500,
+      cpu: { ...reading.cpu, idleFraction: 1 },
+    };
+    line.observe(repeated, rows, clock.now, undefined, {
+      epoch: reading.epoch,
+      start: 2500,
+      end: 3000,
+    });
+    expect(line.snapshot().runs[1]?.state).toBe("waiting");
+    line.observe({ ...repeated, sequence: 1 }, rows, clock.now, undefined, {
+      epoch: reading.epoch,
+      start: 2100,
+      end: 2900,
+    });
+    expect(line.snapshot().runs[1]?.state).toBe("waiting");
+    sample(3000, 5000);
+    expect(line.snapshot().runs[1]?.state).toBe("running");
+    console.info(
+      "Post-launch interval boundary",
+      JSON.stringify({ verifiedAt: 2000, covered: [3000, 5000], runs: line.snapshot().runs }),
+    );
+  });
+
+  it("requires fresh coverage for a new sampler lifetime and refuses stale aggregate capacity", async () => {
+    const { line, claim, receipt, sample, clock, rows } = setup();
+    line.observe(reading, null);
+    const first = await claim(0, 8);
+    await receipt(first.id);
+    sample(1, 2001);
+    const otherEpoch = "773c6625-5bc8-46e5-8a4b-71a4c0554ac3";
+    sample(2001, 4001, 9.5 / 14, otherEpoch); // new lifetime first observed, charge restored
+    expect((await claim(1)).state).toBe("waiting");
+    sample(4002, 6002, 9.5 / 14, otherEpoch);
+    expect(line.snapshot().runs[1]?.state).toBe("running");
+    clock.now += RESOURCE_MAX_AGE_MS + 1;
+    // A late reply from the retired sampler cannot refresh capacity.
+    sample(6002, clock.now, 1);
+    expect(line.snapshot().runs).toHaveLength(2);
+    const third = rowAt(rows, 2);
+    rows[2] = { ...third, group: third.pid };
+    expect(
+      await line
+        .forTask("stale")
+        .claim({ pid: third.pid, demand: { cpu: 1, memoryBytes: 1024 ** 3 } }),
+    ).toMatchObject({ state: "waiting", reason: "unavailable" });
+  });
+
+  it("saves launch evidence before acknowledgment, keeps duplicates stable and refuses mismatched or reused identities", async () => {
+    const { line, claim, receipt, rows } = setup();
+    line.observe(reading, null);
+    const first = await claim(0);
+    const input = await receipt(first.id);
+    const task = line.forTask("same-task");
+    await expect(task.receipt(input)).resolves.toBeUndefined();
+    await expect(line.forTask("other").receipt(input)).rejects.toThrow("living admitted group");
+    await expect(task.receipt({ ...input, hold: "another hold" })).rejects.toThrow(
+      "living admitted group",
+    );
+    await expect(task.receipt({ ...input, started: rowAt(rows, 0).started })).rejects.toThrow(
+      "living admitted group",
+    );
+    await expect(task.receipt(input, () => false)).rejects.toThrow("no longer");
+    rows.pop();
+    await expect(task.receipt(input)).rejects.toThrow("living admitted group");
+    rows.push({ ...rowAt(rows, 1), pid: input.payload, group: input.pid });
+    await expect(task.receipt(input)).rejects.toThrow("living admitted group");
+  });
+
+  it("keeps memory and pressure decisions unchanged after CPU coverage, and counts covered living groups", async () => {
+    const { line, claim, receipt, clock, sample, rows } = setup();
+    line.observe(reading, rows);
+    const first = await claim(0, 8, 4 * 1024 ** 3);
+    await receipt(first.id);
+    sample(1, 2001);
+    const memory = { ...reading.memory, availableBytes: 4 * 1024 ** 3 };
+    const read = {
+      ...reading,
+      sequence: 3,
+      cpu: { ...reading.cpu, idleFraction: 9.5 / 14 },
+      memory,
+    };
+    clock.now = 4002;
+    // Unknown resident memory reserves the full declaration, even after CPU coverage.
+    line.observe(read, null, clock.now, undefined, {
+      epoch: reading.epoch,
+      start: 2002,
+      end: clock.now,
+    });
+    expect((await claim(1, 1)).state).toBe("waiting");
+    rows[0] = { ...rowAt(rows, 0), residentBytes: 4 * 1024 ** 3 };
+    line.observe({ ...read, memory: { ...memory, memoryPressure: "warning" } }, rows);
+    expect(line.snapshot().runs[1]?.reason).toBe("pressure");
+    line.observe(read, rows);
+    expect(line.snapshot().runs[1]?.state).toBe("running");
+    console.info("Unchanged memory after processor coverage", JSON.stringify(line.snapshot()));
+  });
+
+  it("refuses a receipt for an exited payload or a reused supervisor without reviving the hold", async () => {
+    const { line, claim, receipt, rows } = setup();
+    line.observe(reading, rows);
+    const first = await claim(0);
+    const input = await receipt(first.id);
+    const task = line.forTask("same-task");
+    const child = rowAt(rows, 2);
+    rows[2] = { ...child, exited: true };
+    await expect(task.receipt(input)).rejects.toThrow("living admitted group");
+    rows[2] = child;
+    rows[0] = { ...rowAt(rows, 0), started: child.started };
+    await expect(task.receipt(input)).rejects.toThrow("living admitted group");
+    line.observe(reading, rows);
+    await expect(task.receipt(input)).rejects.toThrow("living admitted group");
+    expect(line.snapshot().runs).toEqual([]);
+  });
+
+  it("restores living verified groups with new coverage, while legacy holds retain their declarations", async () => {
+    const dir = scratchDir("startup-restart-");
+    const stateFile = join(dir, "holds.json");
+    let now = 0;
+    const rows = identities.map((row) => ({ ...row }));
+    const options = {
+      stateFile,
+      now: () => now,
+      processes: async () => rows,
+      groupExists: () => true,
+    };
+    let line = new LoadLine(options);
+    lines.push(line);
+    line.observe(reading, rows);
+    const input = { pid: rowAt(rows, 0).pid, demand: { cpu: 8, memoryBytes: 1024 ** 3 } };
+    const first = await line.forTask("restart").claim(input);
+    const child = { ...rowAt(rows, 1), parent: input.pid, group: input.pid };
+    rows[1] = child;
+    await line
+      .forTask("restart")
+      .receipt({ hold: first.id, pid: input.pid, payload: child.pid, started: child.started });
+    const saved = readFileSync(stateFile, "utf8");
+    expect(JSON.parse(saved)[0].launch).toEqual({ pid: child.pid, started: child.started });
+    line.dispose();
+    now = 0; // deliberately a different monotonic origin
+    line = new LoadLine(options);
+    lines.push(line);
+    const nextRow = rowAt(processesFromPs("1 0 1 2:01.03 23008 Tue Oct 27 11:03:29 2026") ?? [], 0);
+    rows.push(nextRow);
+    const next = { pid: nextRow.pid, demand: { cpu: 4, memoryBytes: 1024 ** 3 } };
+    line.observe({ ...reading, cpu: { ...reading.cpu, idleFraction: 9.5 / 14 } }, rows);
+    expect((await line.forTask("next").claim(next)).state).toBe("waiting");
+    now = 2001;
+    line.observe(
+      { ...reading, sampleMs: 2000, sequence: 2, cpu: { ...reading.cpu, idleFraction: 9.5 / 14 } },
+      rows,
+      now,
+      undefined,
+      { epoch: reading.epoch, start: 1, end: now },
+    );
+    expect(line.snapshot().runs[1]?.state).toBe("running");
+    line.dispose();
+    // Older saved shape deliberately has no launch field: never infer it from running state.
+    const legacy = JSON.parse(saved);
+    delete legacy[0].launch;
+    writeFileSync(stateFile, JSON.stringify(legacy));
+    line = new LoadLine(options);
+    lines.push(line);
+    now = 4002;
+    line.observe(
+      { ...reading, sequence: 3, sampleMs: 2000, cpu: { ...reading.cpu, idleFraction: 9.5 / 14 } },
+      rows,
+      now,
+      undefined,
+      { epoch: reading.epoch, start: 2002, end: now },
+    );
+    expect((await line.forTask("next").claim(next)).state).toBe("waiting");
+    console.info("Restart and legacy startup accounting", JSON.stringify(line.snapshot()));
+  });
+
+  it("rechecks revocation after an interrupted live-identity read before saving a receipt", async () => {
+    const stateFile = join(scratchDir("receipt-revocation-"), "holds.json");
+    const entered = deferred<void>();
+    const released = deferred<void>();
+    const rows = identities.map((row) => ({ ...row }));
+    let blocked = false;
+    let permitted = true;
+    const line = new LoadLine({
+      stateFile,
+      groupExists: () => true,
+      processes: async () => {
+        if (blocked) {
+          entered.resolve();
+          await released.promise;
+        }
+        return rows;
+      },
+    });
+    lines.push(line);
+    line.observe(reading, rows);
+    const leader = rowAt(rows, 0);
+    const child = rowAt(rows, 1);
+    const task = line.forTask("revoked");
+    const first = await task.claim({ pid: leader.pid, demand: { cpu: 8, memoryBytes: 1024 ** 3 } });
+    rows[1] = { ...child, group: leader.pid };
+    blocked = true;
+    const receipt = task.receipt(
+      { hold: first.id, pid: leader.pid, payload: child.pid, started: child.started },
+      () => permitted,
+    );
+    await entered.promise;
+    permitted = false;
+    released.resolve();
+    await expect(receipt).rejects.toThrow("no longer");
+    expect(JSON.parse(readFileSync(stateFile, "utf8"))[0].launch).toBeUndefined();
+  });
+
+  it("never acknowledges a receipt whose durable write failed", async () => {
+    const dir = scratchDir("receipt-store-failure-");
+    const parent = join(dir, "state");
+    const stateFile = join(parent, "holds.json");
+    const rows = identities.map((row) => ({ ...row }));
+    const line = new LoadLine({ stateFile, processes: async () => rows, groupExists: () => true });
+    lines.push(line);
+    line.observe(reading, rows);
+    const leader = rowAt(rows, 0);
+    const first = await line
+      .forTask("store")
+      .claim({ pid: leader.pid, demand: { cpu: 8, memoryBytes: 1024 ** 3 } });
+    const child = rowAt(rows, 1);
+    rows[1] = { ...child, group: leader.pid };
+    renameSync(parent, join(dir, "saved"));
+    // Replace the parent folder with a file, using disposable data only.
+    writeFileSync(parent, "not a folder");
+    await expect(
+      line
+        .forTask("store")
+        .receipt({ hold: first.id, pid: leader.pid, payload: child.pid, started: child.started }),
+    ).rejects.toThrow();
+    expect(
+      JSON.parse(readFileSync(join(dir, "saved", "holds.json"), "utf8"))[0].launch,
+    ).toBeUndefined();
   });
 });

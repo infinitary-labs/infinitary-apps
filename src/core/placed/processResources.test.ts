@@ -19,6 +19,14 @@ describe("accepted load plan: explicit task process shares", () => {
     );
   });
 
+  // INF-2228: a retained zombie PID is not evidence of a living payload launch.
+  it("keeps birth identity separate from a recorded exited process state", () => {
+    // Disposable fork retained with waitid(WNOWAIT), captured by this Mac's ps.
+    const row = processesFromPs("81662 81648 81644 0:00.00 0 Sun Nov 1 19:09:50 2026 Z")?.[0];
+    expect(row).toMatchObject({ pid: 81662, started: "Sun Nov 1 19:09:50 2026", exited: true });
+    expect(processesFromPs(PS)?.every((process) => process.exited === undefined)).toBe(true);
+  });
+
   it("attributes each process once, with explicit nested roots overriding an ancestor", () => {
     const rows = processesFromPs(PS)!;
     const attribution = new ProcessAttribution();

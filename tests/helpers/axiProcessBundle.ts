@@ -1,5 +1,6 @@
 import { join, resolve } from "node:path";
 import { build } from "vite";
+import { buildLoadSupervisor } from "../../scripts/build-load-supervisor";
 import { scratchDir } from "./scratchDirs";
 
 /**
@@ -9,6 +10,7 @@ import { scratchDir } from "./scratchDirs";
  * process.
  */
 export async function bundleAxiProcess(): Promise<string> {
+  buildLoadSupervisor();
   const root = resolve(__dirname, "../..");
   const outDir = scratchDir("infinitary-axi-process-");
   await build({

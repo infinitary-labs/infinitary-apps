@@ -79,8 +79,12 @@ Its bare invocation reads the task's declarations.
 Its `run --processors <number> --memory-mib <number> -- <program> [arguments]` path dispatches to the native Bash wrapper before the generic request path, so the program retains the caller's streams and environment.
 The wrapper's `claim` requests carry only its process identity, demand and optional outer hold.
 A claim timeout, command-process startup failure or premature exit does not end the wrapper's group or discard its queue position.
-The common launcher also distinguishes a claim's transport timeout from a channel refusal; only that idempotent claim may repeat after its answer was lost.
+The common launcher also distinguishes a claim's transport timeout from a channel refusal; only that idempotent operation may repeat before launch after its answer was lost.
 The host may still finish a timed-out claim, so recovery always asks with the same identity and requires a fresh admission reply before executing the program.
+A separate `receipt` operation records the exact living payload identity after launch; only that receipt can repeat after launch through `RECEIPT_UNAVAILABLE`.
+The native supervisor keeps the payload in the same group, preserves its streams and signal behavior, and cancels receipt pursuit when it finishes.
+Claim and receipt polling clear the shell cap and shell ID and use separate stable operation identities, never another operation's kept answer.
+Processor reservations end only after verified launch and a complete following aggregate CPU interval; memory growth reservations continue.
 No command table can release a living group or bypass the recorded `load-line` hold.
 The caller's demand, FIFO admission, pressure behavior, nested runs and group lifetime are owned by [Declared heavy runs](heavy-runs.md).
 The project-neutral served instruction has one home in `CREWMATE_LOAD_LINE`; it says what to declare and never names this project's test gates.

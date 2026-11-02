@@ -12,6 +12,8 @@ import {
 import { ProcessAttribution, type ProcessReading, processResources } from "./processResources";
 import { processRoots } from "./processRoots";
 
+export type CpuWindow = { epoch: string; start: number; end: number };
+
 export type ProcessWindow = { first: ProcessReading[]; elapsedMs: number };
 
 export type ResourceSamplerOptions = {
@@ -28,6 +30,7 @@ export type ResourceSamplerOptions = {
     processes: ProcessReading[] | null,
     started: number,
     window?: ProcessWindow,
+    cpuWindow?: CpuWindow,
   ) => void;
 };
 
@@ -39,6 +42,7 @@ export class ResourceSampler {
   private pending: Promise<ResourceObservation> | undefined;
   private lastProcesses: ProcessReading[] | null = null;
   private processWindow: ProcessWindow | undefined;
+  private cpuWindow: CpuWindow | undefined;
   private baseline:
     | { cpus: CpuInfo[]; at: number; processes: ProcessReading[] | null; processAt: number }
     | undefined;
@@ -51,7 +55,13 @@ export class ResourceSampler {
     const started = (this.options.now ?? (() => performance.now()))();
     const pending = this.sample()
       .then((observation) => {
-        this.options.observed?.(observation, this.lastProcesses, started, this.processWindow);
+        this.options.observed?.(
+          observation,
+          this.lastProcesses,
+          started,
+          this.processWindow,
+          this.cpuWindow,
+        );
         return observation;
       })
       .finally(() => {
@@ -64,6 +74,7 @@ export class ResourceSampler {
   private async sample(): Promise<ResourceObservation> {
     this.lastProcesses = null;
     this.processWindow = undefined;
+    this.cpuWindow = undefined;
     const stamp = { epoch: this.epoch, sequence: ++this.sequence };
     const unknown = (reason: "unavailable" | "interrupted"): ResourceObservation => ({
       ...stamp,
@@ -135,6 +146,7 @@ export class ResourceSampler {
         total += cpuTotal;
         idle += after.idle - before.idle;
       }
+      this.cpuWindow = { epoch: this.epoch, start, end: at };
       return {
         ...stamp,
         status: "sampled",

@@ -22,6 +22,8 @@ export const MAC_UNIT_FILES = [
   "src/core/devices/remoteLogin.test.ts",
   "src/core/devices/joinCommand.test.ts",
   "src/core/devices/computerUpdate.test.ts",
+  // Native same-group fork/exec, macOS birth identities and receipt cancellation.
+  "src/core/placed/loadLine.integration.test.ts",
   // The real shell's Mac app-folder lookup (Linux uses AppImage paths).
   "src/core/devices/farSystems.test.ts",
   "tests/starve-check.test.ts",

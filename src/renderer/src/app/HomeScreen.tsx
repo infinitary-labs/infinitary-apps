@@ -43,6 +43,7 @@ import {
   useState,
   useSyncExternalStore,
 } from "react";
+import { createPortal } from "react-dom";
 import { mainDestination } from "../attachments/destinations";
 import { useFileIntake } from "../attachments/useFileIntake";
 import { AskedLine } from "../cards/AskedLine";
@@ -1468,6 +1469,9 @@ function EntrySurface({
   // body's form through it, wherever the reply row sits.
   const collectRef = useRef<CollectAnswers | null>(null);
   const beside = view.home === "beside";
+  // Where the card's choices go while its thread is open: under the field at
+  // the thread's foot, so a choice plainly carries the field's words.
+  const [choicesSlot, setChoicesSlot] = useState<HTMLDivElement | null>(null);
 
   if (entry.pastCardId) {
     const past = view.past?.state === "ready" ? view.past.card : undefined;
@@ -1607,6 +1611,7 @@ function EntrySurface({
           onInteraction={onInteraction}
           inPlaceThread={inPlace}
           threadWorking={working}
+          choicesIn={replyable && beside ? choicesSlot : null}
           style={{ gridColumn: 1, gridRow: beside ? "1 / span 2" : 1 }}
         />
         {beside && !prepared && (
@@ -1629,6 +1634,7 @@ function EntrySurface({
             }}
           >
             <ReplyRow cardId={id} inThread collect={collectHere} />
+            <div data-card-choices-slot="" ref={setChoicesSlot} />
           </div>
         )}
       </CardSurface>
@@ -1906,6 +1912,12 @@ type StackedCardProps = {
   /** The in-place rung: the body becomes the thread behind a segmented control. */
   inPlaceThread?: boolean;
   threadWorking?: boolean;
+  /**
+   * While its thread is open beside it, the place under the thread's field
+   * where its choices go instead of the card's own foot (the captain's
+   * INF-1919 note); its fact strip stays at the card's foot.
+   */
+  choicesIn?: HTMLElement | null;
   onClose: () => void;
   /** The close is asking first: changed picks would go unsent (Q3 A). */
   closeConfirm?: CloseAsk | undefined;
@@ -1939,6 +1951,7 @@ function StackedCard({
   reply,
   inPlaceThread = false,
   threadWorking = false,
+  choicesIn = null,
   onClose,
   closeConfirm,
   onAction,
@@ -2077,13 +2090,16 @@ function StackedCard({
           (group, index, all) => (
             // Each group stays on one row: a narrow card moves the choices
             // down together, never the default alone (design skill
-            // ResponseCard footer rule).
+            // ResponseCard footer rule). Under an open thread's field the
+            // column is too narrow for that, so a group wraps there, the
+            // default staying last at the trailing edge, and no label breaks.
             <div
               key={group.key}
               style={{
                 display: "flex",
                 gap: "var(--space-2)",
-                flexWrap: "nowrap",
+                flexWrap: choicesIn ? "wrap" : "nowrap",
+                justifyContent: "flex-end",
                 minWidth: 0,
                 maxWidth: "100%",
               }}
@@ -2109,11 +2125,11 @@ function StackedCard({
                     keys={choiceKey?.keys}
                     variant={footerVariant(action)}
                     style={{
-                      minWidth: 0,
+                      minWidth: choicesIn ? undefined : 0,
                       maxWidth: "100%",
                       flexShrink: 1,
                       whiteSpace: "normal",
-                      overflowWrap: "anywhere",
+                      overflowWrap: choicesIn ? "break-word" : "anywhere",
                       ...(unanswered && action.default
                         ? {
                             background: "var(--bg-2)",
@@ -2159,132 +2175,151 @@ function StackedCard({
       </>
     ) : undefined;
   return (
-    <ResponseCard
-      kind={chrome}
-      bodyRef={bodyRef}
-      title={card.title}
-      titleWords={<KeyedText text={card.title} own={card.taskId} />}
-      taskKey={task && !bare ? <CardTaskKey task={task} cardId={card.id} /> : undefined}
-      meta={card.author === "firstmate" && task ? task.title : cardMetaWords(card.meta)}
-      reviewFinding={Boolean(card.reviewTaskId)}
-      place={card.place}
-      model={card.model}
-      revised={card.changes ? revisedLine(card.changes) : undefined}
-      asked={card.asked ? <AskedLine asked={card.asked} /> : undefined}
-      width={width}
-      surface={surface}
-      bare={bare}
-      // The surface around the card holds the floor (`CardSurface`).
-      minHeight={surface ? undefined : 0}
-      headExtra={
-        inPlaceThread ? (
-          <ThreadSegments showing={showing} count={messages.length} onShow={setShowing} />
-        ) : undefined
-      }
-      onClose={onClose}
-      closeRef={closeRef}
-      closeRest={closeRestWords(task?.key)}
-      closeAsking={closeConfirm !== undefined}
-      closeAsk={
-        <CloseQuestion
-          ask={closeConfirm}
-          count={unsentAnswers(card, answers, sentAnswers)}
-          wrote={unsentComment(words, sentAnswers)}
-          unanswered={
-            replyUnanswered(card, messages)
-              ? {
-                  author:
-                    card.author === "firstmate"
-                      ? "your first mate"
-                      : (task?.assignee ?? "the crewmate"),
-                  taskKey: task?.key,
-                }
-              : undefined
-          }
-          preview={isPreviewBody(card.body)}
-          trigger={closeRef}
-        />
-      }
-      actions={footer}
-      comment={reply}
-      aside={
-        risk && !showThread
-          ? { node: <RiskChart risk={risk} />, width: riskChartBox().width, ref: asideRef }
-          : undefined
-      }
-      attachment={
-        !bare && (card.attachment || card.requiredActions?.length) ? (
-          <>
-            {card.attachment && <CardAttachment cardId={card.id} attachment={card.attachment} />}
-            {card.requiredActions && <RequiredActions actions={card.requiredActions} />}
-          </>
-        ) : undefined
-      }
-      facts={
-        split && !bare ? (
-          <CardFactsFrame facts={split.facts} theme={theme} title={card.title} width={size} />
-        ) : undefined
-      }
-      style={style}
-    >
-      {error && (
-        <p role="alert" style={{ color: "var(--danger)", fontSize: "var(--text-sm)" }}>
-          <KeyedText text={error} own={card.taskId} />
-        </p>
-      )}
-      {bodyPending ? (
-        <div aria-busy="true" style={{ minHeight: "var(--space-7)" }} />
-      ) : showThread ? (
-        <LiveMessageList card={card} messages={messages} working={threadWorking} />
-      ) : (
-        <HtmlCardBody
-          body={body}
-          ownTaskId={card.taskId}
-          reveal={bodyEntrance.reveal}
-          onDrawn={() => {
-            bodyEntrance.onDrawn();
-            onDrawn?.();
-          }}
-          onInteraction={onInteraction}
-          admit={() => admitted.current}
-          // A prepared body's page is held until the card is shown.
-          active={active}
-          {...(onHeld ? { onHeld } : {})}
-          {...(onBorn ? { onBorn } : {})}
-          theme={theme}
-          title={card.title}
-          // An effect-bearing action is the host chrome's own button and is
-          // never declared to the body's frame (`bridgeActionIds`): a card
-          // script must not be able to merge its own PR at mount.
-          declaredActionIds={bridgeActionIds(card.actions)}
-          width={size}
-          marks={marks}
-          revisionStart={(start) =>
-            split && start > split.at ? start - split.facts.length : start
-          }
-          {...(risk
-            ? { inset: { from: asideRef, until: riskBodyInset(), gap: RISK_CHART_GAP } }
-            : {})}
-          onAction={(actionId, value) =>
-            onAction(actionId, "frame", value, undefined, mountOf(card))
-          }
-          onPicture={onPicture}
-          // A starter's words go to the main message box without sending.
-          onDraft={(text) => {
-            const shell = useShellStore.getState();
-            if (mainMessageRefusal(shell) === null) shell.beginDraft(text);
-          }}
-          form={{
-            fill: () => useShellStore.getState().cardAnswers[card.id]?.answers,
-            onAnswers: (reading) => {
-              if (admitted.current) setCardAnswers(card.id, reading);
-              else heldAnswers.current = reading;
-            },
-          }}
-          collectRef={collectRef}
-        />
-      )}
-    </ResponseCard>
+    <>
+      {choicesIn &&
+        footer &&
+        createPortal(
+          <div
+            data-card-actions=""
+            style={{
+              display: "flex",
+              flexWrap: "wrap",
+              justifyContent: "flex-end",
+              gap: "var(--space-2)",
+              padding: "0 12px 14px",
+            }}
+          >
+            {footer}
+          </div>,
+          choicesIn,
+        )}
+      <ResponseCard
+        kind={chrome}
+        bodyRef={bodyRef}
+        title={card.title}
+        titleWords={<KeyedText text={card.title} own={card.taskId} />}
+        taskKey={task && !bare ? <CardTaskKey task={task} cardId={card.id} /> : undefined}
+        meta={card.author === "firstmate" && task ? task.title : cardMetaWords(card.meta)}
+        reviewFinding={Boolean(card.reviewTaskId)}
+        place={card.place}
+        model={card.model}
+        revised={card.changes ? revisedLine(card.changes) : undefined}
+        asked={card.asked ? <AskedLine asked={card.asked} /> : undefined}
+        width={width}
+        surface={surface}
+        bare={bare}
+        // The surface around the card holds the floor (`CardSurface`).
+        minHeight={surface ? undefined : 0}
+        headExtra={
+          inPlaceThread ? (
+            <ThreadSegments showing={showing} count={messages.length} onShow={setShowing} />
+          ) : undefined
+        }
+        onClose={onClose}
+        closeRef={closeRef}
+        closeRest={closeRestWords(task?.key)}
+        closeAsking={closeConfirm !== undefined}
+        closeAsk={
+          <CloseQuestion
+            ask={closeConfirm}
+            count={unsentAnswers(card, answers, sentAnswers)}
+            wrote={unsentComment(words, sentAnswers)}
+            unanswered={
+              replyUnanswered(card, messages)
+                ? {
+                    author:
+                      card.author === "firstmate"
+                        ? "your first mate"
+                        : (task?.assignee ?? "the crewmate"),
+                    taskKey: task?.key,
+                  }
+                : undefined
+            }
+            preview={isPreviewBody(card.body)}
+            trigger={closeRef}
+          />
+        }
+        actions={choicesIn ? undefined : footer}
+        comment={reply}
+        aside={
+          risk && !showThread
+            ? { node: <RiskChart risk={risk} />, width: riskChartBox().width, ref: asideRef }
+            : undefined
+        }
+        attachment={
+          !bare && (card.attachment || card.requiredActions?.length) ? (
+            <>
+              {card.attachment && <CardAttachment cardId={card.id} attachment={card.attachment} />}
+              {card.requiredActions && <RequiredActions actions={card.requiredActions} />}
+            </>
+          ) : undefined
+        }
+        facts={
+          split && !bare ? (
+            <CardFactsFrame facts={split.facts} theme={theme} title={card.title} width={size} />
+          ) : undefined
+        }
+        style={style}
+      >
+        {error && (
+          <p role="alert" style={{ color: "var(--danger)", fontSize: "var(--text-sm)" }}>
+            <KeyedText text={error} own={card.taskId} />
+          </p>
+        )}
+        {bodyPending ? (
+          <div aria-busy="true" style={{ minHeight: "var(--space-7)" }} />
+        ) : showThread ? (
+          <LiveMessageList card={card} messages={messages} working={threadWorking} />
+        ) : (
+          <HtmlCardBody
+            body={body}
+            ownTaskId={card.taskId}
+            reveal={bodyEntrance.reveal}
+            onDrawn={() => {
+              bodyEntrance.onDrawn();
+              onDrawn?.();
+            }}
+            onInteraction={onInteraction}
+            admit={() => admitted.current}
+            // A prepared body's page is held until the card is shown.
+            active={active}
+            {...(onHeld ? { onHeld } : {})}
+            {...(onBorn ? { onBorn } : {})}
+            theme={theme}
+            title={card.title}
+            // An effect-bearing action is the host chrome's own button and is
+            // never declared to the body's frame (`bridgeActionIds`): a card
+            // script must not be able to merge its own PR at mount.
+            declaredActionIds={bridgeActionIds(card.actions)}
+            width={size}
+            marks={marks}
+            revisionStart={(start) =>
+              split && start > split.at ? start - split.facts.length : start
+            }
+            {...(risk
+              ? { inset: { from: asideRef, until: riskBodyInset(), gap: RISK_CHART_GAP } }
+              : {})}
+            onAction={(actionId, value) =>
+              onAction(actionId, "frame", value, undefined, mountOf(card))
+            }
+            onPicture={onPicture}
+            // A starter's words go to the main message box without sending.
+            onDraft={(text) => {
+              const shell = useShellStore.getState();
+              if (mainMessageRefusal(shell) === null) shell.beginDraft(text);
+            }}
+            form={{
+              fill: () => useShellStore.getState().cardAnswers[card.id]?.answers,
+              onAnswers: (reading) => {
+                if (admitted.current) setCardAnswers(card.id, reading);
+                else heldAnswers.current = reading;
+              },
+            }}
+            collectRef={collectRef}
+          />
+        )}
+      </ResponseCard>
+    </>
   );
 }
 

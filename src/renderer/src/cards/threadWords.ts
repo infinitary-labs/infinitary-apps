@@ -15,3 +15,21 @@ export const THREAD_WORKING = "working";
 export function settingsCountWords(count: number): string {
   return `settings · ${count} ${count === 1 ? "value" : "values"}`;
 }
+
+/** How many messages a thread holds: the collapsed thread's latest line, and the phone's. */
+export function messageCountWords(count: number): string {
+  return `${count} ${count === 1 ? "message" : "messages"}`;
+}
+
+/** The replies that came while the card showed its face: the phone's latest line (INF-1919). */
+export function newCountWords(count: number): string {
+  return `${count} new`;
+}
+
+/** The thread with its count: the in-place rung's segment, and the head of the phone card's back. */
+export function threadCountWords(count: number): string {
+  return `thread · ${count}`;
+}
+
+/** The way back from the thread to the card's face: the in-place rung's segment, and the phone card's back. */
+export const THREAD_CARD = "card";

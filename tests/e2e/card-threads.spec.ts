@@ -308,6 +308,12 @@ test("the thread collapses into its card and opens again, by keys, its controls 
   await expect(cue).toContainText(THREAD_ACK_TEXT);
   await expect(cue).toHaveAccessibleName(/^Show thread, /);
   await expect(reply).toBeFocused();
+  // Folded, the card's choices are back at its own foot.
+  const slot = shownEntry(page).locator("[data-card-reply-slot]");
+  await expect(slot).toHaveCount(0);
+  await expect(
+    shownEntry(page).locator("section [data-card-actions] button").first(),
+  ).toBeVisible();
   await reply.fill("a draft that waits");
 
   // ⌘\ again puts it beside the card, with the draft where it was.
@@ -316,6 +322,14 @@ test("the thread collapses into its card and opens again, by keys, its controls 
   await expect(cue).toHaveCount(0);
   await expect(reply).toHaveValue("a draft that waits");
   await expect(reply).toBeFocused();
+  // The captain's INF-1919 note: with the thread open, the card's choices
+  // stand under the field at its foot, so a choice plainly takes the draft.
+  const choice = slot.locator("[data-card-actions] button").first();
+  await expect(choice).toBeVisible();
+  await expect(shownEntry(page).locator("section [data-card-actions]")).toHaveCount(0);
+  const field = await reply.boundingBox();
+  const under = await choice.boundingBox();
+  expect(under && field && under.y >= field.y + field.height).toBe(true);
 
   // The head's own collapse, pressed with Enter, hands focus to the latest
   // line, and Enter there opens the thread with focus back on the collapse.

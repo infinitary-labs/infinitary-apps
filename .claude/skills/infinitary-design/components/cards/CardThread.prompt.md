@@ -25,7 +25,11 @@ A reply that did not send keeps its draft and file chips.
 The field keeps the focus through a send, by Enter or by Chat, so the next reply is typed straight away; on send the words and chips clear immediately; while the core takes the reply, the empty field stays read-only and never goes disabled.
 Right ⌥ does not record from the reply row.
 
-**The first sent message opens the thread beside the card**, and the field moves to the thread's foot with its own Chat beside the clip, so the card's choices stand alone above the hairline; a click on one still carries the field's words.
+**The first sent message opens the thread beside the card**, and the field moves to the thread's foot with its own Chat beside the clip.
+The card's choices move with it, under the field at the thread's foot, in the same order and grouping, so a click on one plainly carries the field's words (the captain: "move that action buttons to the safe place below the reply input box so it's clear that the reply text will be taken by any of the action buttons").
+The column is narrower than the card, so there a group of choices wraps rather than squeezing its labels: the default stays last at the trailing edge, and a label never breaks inside a word.
+A settle card's fact strip stays at the card's foot, where its row was.
+When the thread collapses, the choices go back under the field at the card's foot.
 The field keeps its draft, chips and focus across the move, and the card body is the same one, never rebuilt: what the captain did in the body (a preview's state, an open disclosure, scrolling) is still there beside the thread.
 A reply never moves the card (INF-770): it stays shown beside its thread whatever waits behind it, the pager and the arrows do not change, and the waiting line says who answers next and the way on.
 Put aside and Close are the only ways a card leaves (`ResponseCard.prompt.md`, "Put aside" and "Close").
@@ -43,7 +47,7 @@ The create-your-own-panel slot reserves it as an expanded panel does, so a wide 
 A maximized card (`ResponseCard.prompt.md`, "Maximize") keeps its open thread as the right column at the same width rule, on a stage that is the whole window, and the card takes the rest; there are no edge tabs while it is maximized.
 Only if the pair still does not fit does the thread go **in place** - a segmented control in the card's head (`card` · `thread · N`) swaps the body for the message list - which needs a stage under 720px and is out of reach at the app's 960px window minimum.
 
-The thread column, top to bottom: a mono micro-label head (`THREAD` alone, `--text-xs`, `.08em` tracking, uppercase, level with the card's head), the message list, and the reply row at its foot.
+The thread column, top to bottom: a mono micro-label head (`THREAD` alone, `--text-xs`, `.08em` tracking, uppercase, level with the card's head), the message list, the reply row, and the card's choices at its foot.
 The head never repeats the card's author, model or close: the card beside it already carries them (the captain: "this thread panel should not repeat the task title and model name and the close button, because the attached card already has all of that"), and the card's own × closes the card and its thread.
 Its one control is **Collapse thread** at the head's right end, a 28px `IconButton` that is never an ×: a 16px rounded square with a panel line on its right and a chevron pointing LEFT, into the card, because the arrow says where the thread goes (Lucide's `panel-right-open` glyph, whose name is the reverse of its meaning here; the captain found arrows the other way round "the opposite of what user would expect").
 Its drawn label reads "Collapse thread" with the command's key (⌘\), and it names every key in `aria-keyshortcuts`.

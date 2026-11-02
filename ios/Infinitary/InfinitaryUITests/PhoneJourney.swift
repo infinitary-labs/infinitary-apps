@@ -1187,11 +1187,15 @@ import XCTest
         picture("merge-risk")
         app.buttons["Done"].tap()
         XCTAssertTrue(blast.waitForAbsence(timeout: 10))
-        // The thread names who wrote each message in the Mac's words.
-        let thread = app.buttons["Thread"]
-        reveal(thread); thread.tap()
+        // The thread names who wrote each message in the Mac's words, on the card's back (INF-1919): its latest line
+        // turns the card over, and Card turns it back to the face, which leaves the back undrawn.
+        let cue = app.buttons["thread-cue"]
+        reveal(cue); tapOnPhone(cue)
         XCTAssertTrue(app.staticTexts[try XCTUnwrap(fixture["threadCrew"] as? String)].waitForPresence(timeout: 10), app.debugDescription)
         picture("merge-thread")
+        tapOnPhone(app.buttons["thread-return"])
+        XCTAssertTrue(app.descendants(matching: .any).matching(identifier: "card-back").firstMatch.waitForAbsence(timeout: 10),
+                      app.debugDescription)
         // Typed words are not lost to a close without a question.
         // On iPhone the merge card's head and foot outgrow its stage, so the whole card scrolls between them.
         let reply = app.textFields["card-reply"]
@@ -1438,13 +1442,33 @@ import XCTest
         XCTAssertTrue(app.staticTexts["Keep the northern entrance clear."].waitForPresence(timeout: 10), app.debugDescription)
         let replied = try await home("card-state", method: "GET")
         let thread = try XCTUnwrap(replied["thread"] as? [String: Any])
-        XCTAssertTrue((thread["messages"] as? [[String: Any]] ?? []).contains {
+        let sent = thread["messages"] as? [[String: Any]] ?? []
+        XCTAssertTrue(sent.contains {
             $0["who"] as? String == "captain" && $0["text"] as? String == "Keep the northern entrance clear."
         })
+        // INF-1919 (the captain's Approve and build): the send turns the card over to its thread, where the reply shows.
+        let back = app.descendants(matching: .any).matching(identifier: "card-back").firstMatch
+        XCTAssertTrue(back.waitForPresence(timeout: 10), app.debugDescription)
+        XCTAssertEqual(app.staticTexts["thread-count"].label, "THREAD · \(sent.count)")
+        picture("card-thread-sent")
+        // Card turns it back; the face's latest line names the reply, and an answer that lands there lights it.
+        tapOnPhone(app.buttons["thread-return"])
+        let cue = app.buttons["thread-cue"]
+        XCTAssertTrue(cue.waitForPresence(timeout: 10), app.debugDescription)
+        XCTAssertTrue(back.waitForAbsence(timeout: 10), "The face hides the back")
         _ = try await home("thread-answer")
+        XCTAssertTrue(waitForPhonePredicate(NSPredicate { _, _ in cue.value as? String == "1 new" }, object: cue, timeout: 10) == .completed,
+                      app.debugDescription)
+        XCTAssertTrue(app.buttons["close-card"].exists, "A landing reply never turns the card")
+        picture("card-thread-unread")
+        tapOnPhone(cue)
         XCTAssertTrue(app.staticTexts["I kept your harbour reply with this chart."].waitForPresence(timeout: 10))
         picture("card-thread")
         _ = try await home("capture-stop")
+        // Command-backslash turns it back, as on the Mac; the line is read now.
+        try await pressPhoneKey("\\", modifiers: .command, in: app)
+        XCTAssertTrue(waitForPhonePredicate(NSPredicate { _, _ in cue.value as? String == "\(sent.count + 1) messages" }, object: cue, timeout: 10) == .completed,
+                      app.debugDescription)
         let browser = app.buttons["card-action-browser"]
         reveal(browser); tapOnPhone(browser)
         XCTAssertTrue(app.staticTexts["Do this on Test Mac mini."].waitForPresence(timeout: 10))

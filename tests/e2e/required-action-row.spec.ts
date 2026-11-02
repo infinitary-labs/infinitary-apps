@@ -20,7 +20,7 @@ import {
   FAILED_ACTION_OUTPUT,
   requiredActionFailure,
 } from "./scenarios/requiredActionFailure";
-import { cardReply, shownCard } from "./stack";
+import { cardReply, shownCard, shownEntry } from "./stack";
 import { focusOn, pressKey } from "./windowKeys";
 
 /**
@@ -139,7 +139,12 @@ test("a failed required action sends its output to the first mate on the same ca
     await expect(
       cardBody(page, ACTION_TITLE).getByText("Your confirmation runs nothing."),
     ).toBeVisible();
-    await expect(card.getByRole("button", { name: /I installed it/ })).toBeVisible();
+    // With the thread open, the card's choices sit under its reply box, outside the card's own surface.
+    await expect(
+      shownEntry(page)
+        .locator("[data-card-reply-slot]")
+        .getByRole("button", { name: /I installed it/ }),
+    ).toBeVisible();
     const tasks = await page.evaluate(() => window.infinitary.tasks.board());
     expect(tasks.tasks.find((task) => task.id === row.id)?.status).toBe("open");
   } finally {

@@ -18,6 +18,7 @@ enum PhoneCardWords {
     static let requiredActionsLead = "After merging, you need to…"
     static let threadWho = ["captain": "you", "crewmate": "crew", "firstmate": "mate", "host": "app"]
     static let threadWorking = "working"
+    static let threadCard = "Card"
     static let driverWords = ["crewmate": "the crewmate is driving", "nobody": "nobody is driving", "waiting": "paused for your help", "taking": "you are taking control", "captain": "you have control"]
     static let stopLineWords = ["captain": "you stopped it", "crewmate": "the crewmate closed it", "idle": "stopped after 30 minutes unused", "gone": "its page stopped working", "task-closed": "stopped when the task closed"]
     static let staleBrowser = "this card's browser has stopped"
@@ -26,6 +27,11 @@ enum PhoneCardWords {
     static func settingsCount(_ count: Int) -> String {
         count == 1 ? "settings · 1 value" : "settings · \(count) values"
     }
+    static func messageCount(_ count: Int) -> String {
+        count == 1 ? "1 message" : "\(count) messages"
+    }
+    static func newCount(_ count: Int) -> String { "\(count) new" }
+    static func threadCount(_ count: Int) -> String { "thread · \(count)" }
     static func closeRest(_ key: String?) -> String {
         guard let key else { return "Close · stays readable in Tasks" }
         return "Close · stays on \(key)'s record"

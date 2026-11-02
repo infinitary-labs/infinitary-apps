@@ -499,11 +499,12 @@ export function ResponseCard({
           {comment}
         </div>
       )}
-      {!bare && actions && (
+      {!bare && (actions || facts) && (
         <div
           // The card's buttons: one of the shown card's places a key goes to
-          // (docs/keyboard.md, "Cards and frames").
-          data-card-actions=""
+          // (docs/keyboard.md, "Cards and frames"). Its fact strip stays here
+          // alone while the buttons stand under an open thread's field.
+          data-card-actions={actions ? "" : undefined}
           style={{
             display: "flex",
             flexShrink: 0,

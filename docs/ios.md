@@ -128,7 +128,7 @@ The stack follows the Mac's stage rule (`onStage` in `src/shared/cards.ts`): a n
 A replied-under card carrying `sentBackAt` keeps its place while its author answers.
 A card minimized on any Mac leaves the phone's stack and count, and waits in Tasks, as on the Mac (INF-1517).
 A tap on its row there sends `inf:cards:minimize` with `false`, which brings it back on every Mac too, and shows it on Home.
-A card is one framed surface that fits the stage: its head stays at the top, its choices stay at its foot, and the body, attachments and thread scroll between them in one native scroller.
+A card is one framed surface that fits the stage: its head stays at the top, its choices stay at its foot, and the body and attachments scroll between them in one native scroller.
 The surface is the Mac's raised card (`PhoneCardSurface`): a solid fill, its thin edge, the light line inside its top and its drop shadows, read from the Mac's `--acrylic-shadow` by `scripts/generate-phone-theme.ts`; the next card's sliver is raised the same way.
 The body's web view never scrolls, zooms or adds insets of its own; it takes its content's height inside that scroller, so there is only one scroll and nothing runs past the card's rounded frame.
 Until the body reports drawn, its web view is a 48-point placeholder that clips the body, so native code keeps the web view one closed accessibility element that takes no taps until it has laid the view out at the body's height.
@@ -166,7 +166,13 @@ Body and footer choices share one native pending gate, and an accepted choice re
 Reply admission counts UTF-16 units against `PhoneLimits.reply`, generated from the published request’s text limit.
 A shown, drawn card reports seen only while the phone is active and the Mac is in reach.
 A reply sends its words, photos and current settings to the card’s author and makes no closing choice.
-The thread shows each message as the Mac's does: who wrote it (you, crew, mate or app) in its color, its time, its words as plain text and a captain's settings folded on one line, then a working line while its author is at work; it opens when a new message arrives.
+A card's thread is on its back (INF-1919, the captain's Approve and build): once it has a message, a latest line at the face's foot, above the field, says who wrote last in their color and the newest words on one line, then `working` with a spinner while the author is at work, the author's replies new since the back last showed with a dot on its chevron, or how many messages there are.
+A tap on the line, or Command-backslash, turns the card over about its upright axis in `--dur-med` (`PhoneTheme.surfaceMove`), a cut under Reduce Motion; Card at the back's head, or Command-backslash again, turns it back.
+The back holds Card, the thread's count, the card's title in one muted line, the messages, and at its foot the same field, with its draft, photos and focus, and the same choices.
+The body's web view stays on the hidden face through the turn, never rebuilt, and the hidden face takes no touches and is out of the accessibility tree.
+A reply that lands while the face shows lights the line and never turns the card; a send from either side turns it to show the new line.
+The thread shows each message as the Mac's does: who wrote it (you, crew, mate or app) in its color, its time, its words as plain text and a captain's settings folded on one line, then a working line while its author is at work.
+The thread's words (the count, `1 new`, Card) are the Mac's own, from `src/renderer/src/cards/threadWords.ts`.
 The body's change bars mark the parts the revised line counts, and the body's task keys open their records.
 A link in the body opens in the device's default browser, and a draft button puts its words at the start of the message box, unsent.
 A crewmate's browser on its card is a strip naming Browser, the page's site and who is driving, read from its task's record; its button names the computer.

@@ -170,6 +170,7 @@ enum PhoneCardWords {
     static let requiredActionsLead = ${text(required.REQUIRED_ACTIONS_LEAD)}
     static let threadWho = ${table(thread.THREAD_WHO_LABELS)}
     static let threadWorking = ${text(thread.THREAD_WORKING)}
+    static let threadCard = ${text(thread.THREAD_CARD.charAt(0).toUpperCase() + thread.THREAD_CARD.slice(1))}
     static let driverWords = ${table(browser.DRIVER_WORDS)}
     static let stopLineWords = ${table(browser.STOP_LINE_WORDS)}
     static let staleBrowser = ${JSON.stringify(browser.STALE_ATTACHMENT_LINE)}
@@ -178,6 +179,11 @@ enum PhoneCardWords {
     static func settingsCount(_ count: Int) -> String {
         count == 1 ? ${text(thread.settingsCountWords(1))} : ${fill(thread.settingsCountWords(7), { 7: "count" })}
     }
+    static func messageCount(_ count: Int) -> String {
+        count == 1 ? ${text(thread.messageCountWords(1))} : ${fill(thread.messageCountWords(7), { 7: "count" })}
+    }
+    static func newCount(_ count: Int) -> String { ${fill(thread.newCountWords(7), { 7: "count" })} }
+    static func threadCount(_ count: Int) -> String { ${fill(thread.threadCountWords(7), { 7: "count" })} }
     static func closeRest(_ key: String?) -> String {
         guard let key else { return ${text(close.closeRestWords(undefined))} }
         return ${fill(close.closeRestWords("KEY-1"), { "KEY-1": "key" })}

@@ -195,6 +195,11 @@ struct PhoneCardThread: View {
     let messages: [PhoneJSON]
     let working: Bool
 
+    /// The color a message's writer is named in: the captain's own, the author's accent, the app's quiet one.
+    static func color(_ who: String) -> Color {
+        who == "captain" ? PhoneTheme.captain : who == "host" ? PhoneTheme.secondary : PhoneTheme.accent
+    }
+
     var body: some View {
         VStack(alignment: .leading, spacing: PhoneTheme.space3) {
             ForEach(Array(messages.enumerated()), id: \.offset) { _, message in
@@ -215,7 +220,7 @@ private struct PhoneThreadMessage: View {
     @State private var settingsOpen = false
 
     private var who: String { message["who"].text ?? "host" }
-    private var color: Color { who == "captain" ? PhoneTheme.captain : who == "host" ? PhoneTheme.secondary : PhoneTheme.accent }
+    private var color: Color { PhoneCardThread.color(who) }
     private var time: String {
         guard let at = message["at"].numeric else { return "" }
         return Date(timeIntervalSince1970: at / 1000).formatted(date: .omitted, time: .shortened)

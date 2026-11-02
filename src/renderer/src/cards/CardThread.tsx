@@ -43,7 +43,14 @@ import type { CollectAnswers } from "./PrototypeBody";
 import { RevisionLinks } from "./RevisionNavigation";
 import { useMessageEntrance, useWorkingEntrance } from "./SurfaceReveal";
 import { KeyedText } from "./TaskKey";
-import { settingsCountWords, THREAD_WHO_LABELS, THREAD_WORKING } from "./threadWords";
+import {
+  messageCountWords,
+  settingsCountWords,
+  THREAD_CARD,
+  THREAD_WHO_LABELS,
+  THREAD_WORKING,
+  threadCountWords,
+} from "./threadWords";
 import { useReplyDoing } from "./useReplyDoing";
 import { type ThreadWaitLine, useThreadWait } from "./useThreadWait";
 import "./cardThread.css";
@@ -615,7 +622,7 @@ export function LatestLine({
   if (!last) return null;
   const waitingText = working ? doing : waiting?.text;
   const who = WHO[last.who];
-  const count = `${messages.length} ${messages.length === 1 ? "message" : "messages"}`;
+  const count = messageCountWords(messages.length);
   return (
     <button
       type="button"
@@ -633,7 +640,7 @@ export function LatestLine({
       >
         {waitingText ?? last.text}
       </span>
-      <span data-thread-cue-state="">{working ? "working" : count}</span>
+      <span data-thread-cue-state="">{working ? THREAD_WORKING : count}</span>
       {openIcon}
     </button>
   );
@@ -998,8 +1005,8 @@ export function ThreadSegments({
   onShow: (which: "card" | "thread") => void;
 }) {
   const options: { key: "card" | "thread"; label: string }[] = [
-    { key: "card", label: "card" },
-    { key: "thread", label: `thread · ${count}` },
+    { key: "card", label: THREAD_CARD },
+    { key: "thread", label: threadCountWords(count) },
   ];
   return (
     <div

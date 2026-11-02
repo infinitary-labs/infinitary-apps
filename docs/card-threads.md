@@ -47,6 +47,7 @@ An author may declare `holds_place` on `emit_card` (`Card.holdsPlace`): each new
 Every choice still closes the card immediately; nothing keeps its page running while its author writes.
 The card's body and scroll stay the same elements as the thread opens: only the surface's columns change.
 Its field moves from above the card's buttons to the thread's foot and keeps the focus through the send and the move, so a second reply is typed straight away (`docs/composer.md`, "The card reply row").
+The card's buttons move with it, under the field: `StackedCard` draws them into the thread column's reply slot (`choicesIn`), so a button plainly carries the field's words, and its keys and Go to the card's buttons still find them there.
 The field is the card's one place to write (`docs/card-authoring.md`, "The card's one field"): Enter or Chat sends its words as the reply, and words left in it when the captain clicks a button go with that choice instead.
 The author's answer redraws it at the close-out - see the next section.
 A refused reply moves nothing and keeps the draft.

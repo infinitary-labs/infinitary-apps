@@ -1,0 +1,18 @@
+{
+  "entries": [
+    {
+      "id": "panel-background-stopped",
+      "kind": "improvement",
+      "title": "A panel whose background work stops responding no longer holds up the app",
+      "body": "What a panel fetches or works out in the background now runs on its own, apart from the app. If it stops responding, Infinitary stops that panel's background work alone, says so above the panel, and keeps it stopped until you press Retry; your other panels keep working. A panel you made before this version that works in the background shows what to change instead, and a crewmate can update it for you.",
+      "area": "other",
+      "picture": {
+        "dark": "panel-background-stopped-dark.webp",
+        "light": "panel-background-stopped-light.webp",
+        "alt": "A panel saying its background work stopped responding, with a Retry button beside the line"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

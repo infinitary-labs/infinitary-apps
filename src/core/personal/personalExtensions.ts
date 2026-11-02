@@ -44,6 +44,13 @@ import {
 } from "@shared/sql";
 import type { CoreEventSink } from "../events";
 import type { HostPanelCapture } from "../host";
+import {
+  type PanelRuntime,
+  type PanelRuntimes,
+  PanelStoppedError,
+  stoppedLine,
+} from "../panels/panelRuntimes";
+import type { PanelRuntimeKind, PanelStop } from "../panels/panelStops";
 import { checkPluginTree } from "../plugins/pluginInstaller";
 import { formatPanelLint, lintPanelSources, type PanelLintFinding } from "../plugins/pluginLint";
 import type { TaskRecord } from "../storage/taskStore";
@@ -55,6 +62,7 @@ import {
   PersonalCompileError,
   personalModuleUrl,
 } from "./compiler";
+import { errorText } from "./errorText";
 import {
   changedExtensionIds,
   committedTrees,
@@ -68,7 +76,6 @@ import {
 } from "./liveWorkspace";
 import { mountLine, mountOf, type PanelMountsHolder } from "./panelMounts";
 import type { PersonalStore } from "./personalStore";
-import { errorText, loadServerHost, type ServerHost } from "./serverHost";
 import { seedPersonalWorkspace } from "./workspace";
 
 /**
@@ -188,6 +195,12 @@ export type PersonalExtensionsOptions = {
   sql?: (request: SqlRequest) => Promise<SqlAnswer>;
   /** The second root: the plugins the captain added (Phase A item 2); absent, none. */
   installed?: InstalledRoot;
+  /**
+   * The one owner of every panel's background work (INF-2205 piece B): a
+   * `server.ts` runs there, in a process of its own, and nowhere else.
+   * Absent, no background module runs and a panel with one says so.
+   */
+  runtimes?: PanelRuntimes;
 };
 
 /** One plugin the captain added, as its record says: its name and what he agreed to. */
@@ -271,8 +284,10 @@ type Loaded = {
   views: string[];
   manifest: PersonalManifest;
   panel: CompiledModule | null;
-  server: ServerHost | null;
+  server: PanelRuntime | null;
   serverHash: string | null;
+  /** The host stopped its background work, and the stop still holds (INF-2205 piece B). */
+  stopped: PanelStop | null;
   error: PersonalError | null;
   /** The store slice its presence reads and its server writes: its id, or its draft's. */
   slice: string;
@@ -291,6 +306,19 @@ const COMMITTED_CACHE = ".committed";
 const PLACE_INDEX = ".place-index";
 /** A draft's store slice is its extension's id and this; `#` is outside every extension id. */
 const DRAFT_SLICE_SUFFIX = "#draft";
+
+/** Which runtime a store slice belongs to: the panel's own, or its draft's. */
+function runtimeOf(slice: string): PanelRuntimeKind {
+  return slice.endsWith(DRAFT_SLICE_SUFFIX) ? "draft" : "live";
+}
+
+/** Why a `server.ts` written for the store that answered at once does not run. */
+export function olderServerApiLine(id: string): string {
+  return (
+    `${id}/server.ts is written for the earlier panel API, where context.db answered at once; ` +
+    `await every context.db call and set "api": 2 in manifest.json`
+  );
+}
 
 function draftSlice(id: string): string {
   return `${id}${DRAFT_SLICE_SUFFIX}`;
@@ -354,6 +382,8 @@ export class PersonalExtensions {
         service.pushIfChanged();
       }),
       options.tasks.onChange(() => service.pushIfChanged()),
+      options.runtimes?.onStop((runtime, stop) => service.stoppedRuntime(runtime, stop)) ??
+        (() => {}),
     );
     return service;
   }
@@ -534,10 +564,12 @@ export class PersonalExtensions {
       await this.refresh();
       const findings = lintPanelSources(sources);
       // The files as they are now: the draft's verdict while one is built.
-      const error = (this.drafts.get(extensionId) ?? this.loaded.get(extensionId))?.error;
+      const entry = this.drafts.get(extensionId) ?? this.loaded.get(extensionId);
+      const error = entry?.error;
       const lines = [
         `${extensionId}: ${formatPanelLint(findings)}`,
         ...(error ? [`compile: ${error.message}`] : []),
+        ...(entry?.stopped ? [`stopped: ${stoppedLine(entry.stopped)}`] : []),
       ];
       sections.push(lines.join("\n"));
     }
@@ -744,6 +776,7 @@ export class PersonalExtensions {
           : `"${extensionId}" is not in the personal workspace`,
       };
     }
+    if (entry.stopped) return { ok: false, error: stoppedLine(entry.stopped) };
     if (!entry.server) {
       return {
         ok: false,
@@ -758,6 +791,24 @@ export class PersonalExtensions {
     } catch (error) {
       return { ok: false, error: errorText(error) };
     }
+  }
+
+  /**
+   * The captain's Retry on a stopped panel (INF-2205 piece B): the stop
+   * goes, and the panel's background work starts again from its current
+   * code. Only a stopped panel of his own is retried.
+   */
+  async retry(extensionId: string, options: PersonalInvokeOptions = {}): Promise<boolean> {
+    const entry = (options.draft ? this.drafts : this.loaded).get(extensionId);
+    if (entry?.source !== "yours" || !entry.stopped || !this.options.runtimes) return false;
+    this.options.runtimes.clear({
+      source: "yours",
+      id: extensionId,
+      runtime: options.draft ? "draft" : "live",
+    });
+    entry.stopped = null;
+    await this.refresh();
+    return true;
   }
 
   /**
@@ -863,6 +914,9 @@ export class PersonalExtensions {
     }
     const dir = join(this.options.workspaceDir, id);
     entry.server?.dispose();
+    for (const runtime of ["live", "draft"] as const) {
+      this.options.runtimes?.clear({ source: "yours", id, runtime });
+    }
     this.loaded.delete(id);
     this.placed.delete(id);
     this.dropDraft(id);
@@ -1220,6 +1274,7 @@ export class PersonalExtensions {
       panel: null,
       server: previous?.server ?? null,
       serverHash: previous?.serverHash ?? null,
+      stopped: null,
       error: null,
       slice,
       builder: null,
@@ -1258,7 +1313,17 @@ export class PersonalExtensions {
       next.manifest = withoutPanelCards(next.manifest);
     }
 
-    if (!retired && (await isFile(join(dir, PERSONAL_ENTRY_FILES.server)))) {
+    const hasServer = !retired && (await isFile(join(dir, PERSONAL_ENTRY_FILES.server)));
+    // Background work answers its store asynchronously (panel API 2): a
+    // module written for the store that answered at once is refused before
+    // it runs, never run with answers it would misread.
+    const olderApi = hasServer && !("error" in manifest) && manifest.manifest.api !== 2;
+    if (hasServer && olderApi) {
+      next.server?.dispose();
+      next.server = null;
+      next.serverHash = null;
+      next.error ??= { stage: "server", message: olderServerApiLine(id) };
+    } else if (hasServer) {
       try {
         const compiled = await compilePersonalModule({
           extensionId: id,
@@ -1270,23 +1335,18 @@ export class PersonalExtensions {
           next.server?.dispose();
           next.server = null;
           next.serverHash = compiled.hash;
-          next.server = await loadServerHost({
-            extensionId: id,
-            entryPath: compiled.entryPath,
-            context: {
-              id,
-              db: this.options.store.forExtension(slice),
-              log: (message) => this.log(`personal ${id}: ${message}`),
-              sql: (text, params) => this.querySql(slice, text, params),
-            },
-          });
+          next.server = await this.startServer(id, slice, compiled.hash, compiled.entryPath);
         }
       } catch (error) {
         next.server?.dispose();
         next.server = null;
-        next.serverHash = null;
-        next.error ??= compileError("server", id, "server.ts", error);
-        this.log(`personal: ${next.error.message}`);
+        if (error instanceof PanelStoppedError) {
+          next.stopped = error.stop;
+        } else {
+          next.serverHash = null;
+          next.error ??= compileError("server", id, "server.ts", error);
+          this.log(`personal: ${next.error.message}`);
+        }
       }
     } else if (next.server) {
       next.server.dispose();
@@ -1323,6 +1383,7 @@ export class PersonalExtensions {
       panel: null,
       server: null,
       serverHash: null,
+      stopped: null,
       error: null,
       slice: plugin.id,
       builder: null,
@@ -1347,6 +1408,45 @@ export class PersonalExtensions {
     }
     if (!this.enabled || this.disposed || generation !== this.generation) return;
     this.loaded.set(plugin.id, next);
+  }
+
+  /**
+   * One panel's `server.ts`, started by the one owner of background work
+   * (INF-2205 piece B) in a process of its own, as this version of the
+   * captain's panel on the rail or as its draft. Its store asks reach its
+   * slice here, through the store's one writer.
+   */
+  private startServer(
+    id: string,
+    slice: string,
+    version: string,
+    entryPath: string,
+  ): Promise<PanelRuntime> {
+    const runtimes = this.options.runtimes;
+    if (!runtimes)
+      return Promise.reject(new Error("this app cannot run a panel's background work"));
+    const store = this.options.store;
+    return runtimes.start({ source: "yours", id, runtime: runtimeOf(slice), version }, entryPath, {
+      store: {
+        get: (key) => store.get(slice, key),
+        set: (key, value) => store.set(slice, key, value),
+        delete: (key) => store.delete(slice, key),
+        list: (prefix) => store.list(slice, prefix),
+      },
+      sql: (text, params) => this.querySql(slice, text, params),
+      log: (message) => this.log(`personal ${id}: ${message}`),
+    });
+  }
+
+  /** A running server the host just stopped: its panel says so and its actions are refused. */
+  private stoppedRuntime(runtime: PanelRuntime, stop: PanelStop): void {
+    for (const entry of [...this.loaded.values(), ...this.drafts.values()]) {
+      if (entry.server !== runtime) continue;
+      entry.server = null;
+      entry.stopped = stop;
+      this.log(`personal: ${entry.id}: ${stoppedLine(stop)}`);
+    }
+    this.pushIfChanged();
   }
 
   /**
@@ -1476,6 +1576,15 @@ export class PersonalExtensions {
           }
         : null,
       error: entry.error,
+      ...(entry.stopped
+        ? {
+            stopped: {
+              reason: entry.stopped.reason,
+              at: entry.stopped.at,
+              version: entry.stopped.version,
+            },
+          }
+        : {}),
     };
   }
 

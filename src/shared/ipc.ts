@@ -2933,6 +2933,16 @@ export const invokeContract = {
     request: z.tuple([personalStoreRequestSchema]),
     response: personalStoreResponseSchema,
   },
+  // The captain's Retry on a panel whose background work the app stopped
+  // (INF-2205 piece B): the stop goes and the panel starts again. False when
+  // nothing of that panel was stopped.
+  "inf:plugins:retry": {
+    effect: "change",
+    surface: "core",
+    reach: "home",
+    request: z.tuple([personalIdSchema, personalInvokeOptionsSchema.optional()]),
+    response: z.boolean(),
+  },
   // The frame vehicle (phase 1): the shell serves a template document over
   // its own scheme and hands back where the iframe loads it from. A host
   // without a desktop frame would answer with its own vehicle.
@@ -3148,6 +3158,7 @@ export const RUN_HOME_ONLY_CHANNELS: ReadonlySet<CoreInvokeChannel> = new Set<Co
   "inf:plugins:personal:mounts",
   "inf:plugins:invoke",
   "inf:plugins:db",
+  "inf:plugins:retry",
   "inf:sql:query",
   "inf:knowledge:enabled",
   "inf:knowledge:collections",
@@ -3959,6 +3970,8 @@ export type FirstmateApi = {
       onSnapshot: (listener: (snapshot: PersonalSnapshot) => void) => () => void;
       /** What the window did with each panel, for `place_panel` and the surfaces list. */
       reportMounts: (mounts: PanelMounts) => Promise<{ ok: true }>;
+      /** The captain's Retry on a panel whose background work the app stopped. */
+      retry: (extensionId: string, options?: PersonalInvokeOptions) => Promise<boolean>;
     };
     invoke: (
       extensionId: string,

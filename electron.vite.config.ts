@@ -77,6 +77,8 @@ export default defineConfig({
           axiProcess: resolve(__dirname, "src/core/axi/axiProcess.ts"),
           // The process that runs one program's script (src/core/program/).
           programProcess: resolve(__dirname, "src/core/program/programProcess.ts"),
+          // The process that runs one panel's background module (src/core/panels/).
+          panelProcess: resolve(__dirname, "src/core/panels/panelProcess.ts"),
         },
       },
     },

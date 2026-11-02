@@ -1,10 +1,22 @@
-import type { ServerStore, StoreEntry, StoreValue } from "@shared/personal/contracts";
+import type { StoreEntry, StoreValue } from "@shared/personal/contracts";
 import {
   PERSONAL_STORE_KEY_MAX_LENGTH,
   PERSONAL_STORE_MAX_BYTES,
   PERSONAL_STORE_VALUE_MAX_BYTES,
 } from "@shared/personal/manifest";
 import type { AppDatabase } from "../storage/db";
+
+/**
+ * One slice of the store, bound and synchronous: what the core answers a
+ * panel's background process with (`PanelRuntimes`), which hands the panel
+ * the asynchronous `ServerStore` over it.
+ */
+export type StoreSlice = {
+  get: (key: string) => StoreValue | undefined;
+  set: (key: string, value: StoreValue) => void;
+  delete: (key: string) => void;
+  list: (prefix?: string) => StoreEntry[];
+};
 
 /**
  * The personal-extension store (talk-to-personalize Step 2): every
@@ -156,8 +168,8 @@ export class PersonalStore {
     };
   }
 
-  /** The server side's view of one slice: synchronous and pre-bound. */
-  forExtension(extensionId: string): ServerStore {
+  /** The core's view of one slice: synchronous and pre-bound. */
+  forExtension(extensionId: string): StoreSlice {
     return {
       get: (key) => this.get(extensionId, key),
       set: (key, value) => this.set(extensionId, key, value),

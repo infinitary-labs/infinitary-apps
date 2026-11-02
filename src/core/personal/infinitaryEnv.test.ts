@@ -51,7 +51,7 @@ describe("infinitary-env.d.ts", () => {
       "/ws/clock/server.ts": [
         'import type { ServerModule } from "@firstmate/contracts";',
         "export const actions: NonNullable<ServerModule['actions']> = {",
-        "  count: (_input, context) => context.db.list().length,",
+        "  count: async (_input, context) => (await context.db.list()).length,",
         "};",
         "export const background: NonNullable<ServerModule['background']> = {",
         '  tick: { everyMs: 60_000, run: (context) => context.db.set("t", Date.now()) },',

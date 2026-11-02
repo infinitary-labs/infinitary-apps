@@ -12,14 +12,14 @@ export const background = {
       try {
         const record = readRecord(JSON.parse(await readFile(RECORD, "utf8")));
         const snapshot = record.sittings.length ? { record, practice: practiceOf(record, localDay()) } : null;
-        if (JSON.stringify(db.get("lesson")) !== JSON.stringify(snapshot))
-          db.set("lesson", snapshot as StoreValue);
+        if (JSON.stringify(await db.get("lesson")) !== JSON.stringify(snapshot))
+          await db.set("lesson", snapshot as StoreValue);
       } catch (error) {
         if ((error as { code?: string }).code === "ENOENT") {
-          db.set("lesson", null);
+          await db.set("lesson", null);
         } else {
           log(`Lesson record could not be read: ${String(error)}`);
-          db.set("lesson", { error: "Progress could not be read. Ask your teacher to check it." });
+          await db.set("lesson", { error: "Progress could not be read. Ask your teacher to check it." });
         }
       }
     },

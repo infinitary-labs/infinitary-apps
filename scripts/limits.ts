@@ -207,6 +207,9 @@ export const LIMITS: Record<string, Record<string, LimitEntry>> = {
   "src/core/overflow.ts": {
     MESSAGE_EXCERPT_LIMIT: physical("spilled whole to a file; the excerpt carries a pointer to it"),
   },
+  "src/core/panels/panelProtocol.ts": {
+    PANEL_MESSAGE_MAX_BYTES: physical("refused in words naming the bound; the panel sends less"),
+  },
   "src/core/personal/sequencesSkill.ts": {
     SEQUENCES_MAX_BYTES: physical("the built-in text serves; a feed line says the file is over 16 KB"),
   },

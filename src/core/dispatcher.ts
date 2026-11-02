@@ -1285,6 +1285,7 @@ export function createCoreDispatcher(options: CoreDispatcherOptions): CoreDispat
     "inf:plugins:invoke": (extensionId, action, input, options) =>
       services.personal.invoke(extensionId, action, input, options),
     "inf:plugins:db": (request) => services.personal.storeRequest(request),
+    "inf:plugins:retry": (extensionId, options) => services.personal.retry(extensionId, options),
   };
 
   /**

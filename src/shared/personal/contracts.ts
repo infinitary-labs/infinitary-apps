@@ -33,12 +33,16 @@ export type PanelStore = {
   subscribe: (listener: (key: string) => void) => () => void;
 };
 
-/** The server side of the same slice: synchronous, in the core. */
+/**
+ * The server side of the same slice (panel API 2): asynchronous, because
+ * `server.ts` runs in a process of its own and each call is answered by the
+ * app. Await every call; a write is kept once its promise resolves.
+ */
 export type ServerStore = {
-  get: (key: string) => StoreValue | undefined;
-  set: (key: string, value: StoreValue) => void;
-  delete: (key: string) => void;
-  list: (prefix?: string) => StoreEntry[];
+  get: (key: string) => Promise<StoreValue | undefined>;
+  set: (key: string, value: StoreValue) => Promise<void>;
+  delete: (key: string) => Promise<void>;
+  list: (prefix?: string) => Promise<StoreEntry[]>;
 };
 
 // --- the panel ----------------------------------------------------------------
@@ -1410,9 +1414,12 @@ export type PluginSecretSlot = {
 export type PersonalManifest = {
   /**
    * The version of the panel API this folder is written for. This app
-   * serves 1, the default; a folder naming another mounts nothing.
+   * serves 1, the default, and 2; a folder naming another mounts nothing.
+   * A `server.ts` runs only under 2, where `context.db` answers
+   * asynchronously from the panel's own process; a panel without one is
+   * the same under either.
    */
-  api?: 1;
+  api?: 1 | 2;
   /**
    * Who a plugin is by, at most 40 characters: the name on the header of a
    * panel the captain added (their own always read "yours"). Required to add one.

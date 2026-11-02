@@ -233,7 +233,9 @@ const secretSlotSchema: z.ZodType<PluginSecretSlot> = z.strictObject({
  */
 export const personalManifestSchema: z.ZodType<PersonalManifest> = z.strictObject({
   api: z
-    .literal(1, "this panel is written for a version of the panel API this app does not serve")
+    .union([z.literal(1), z.literal(2)], {
+      message: "this panel is written for a version of the panel API this app does not serve",
+    })
     .optional(),
   name: z.string().min(1).max(40).optional(),
   version: z
@@ -390,6 +392,20 @@ export const personalExtensionViewSchema = z.object({
     })
     .nullable(),
   error: personalErrorSchema.nullable(),
+  /**
+   * The app stopped its background work (INF-2205 piece B): it went silent
+   * or ended on its own. The stop holds across reloads and restarts until
+   * the captain's Retry; absent while nothing is stopped.
+   */
+  stopped: z
+    .object({
+      reason: z.enum(["unresponsive", "exited"]),
+      /** When it was noticed, ISO wall time. */
+      at: z.string(),
+      /** The code version that was stopped. */
+      version: z.string(),
+    })
+    .optional(),
 });
 export type PersonalExtensionView = z.infer<typeof personalExtensionViewSchema>;
 

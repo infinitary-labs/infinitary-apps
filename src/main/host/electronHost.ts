@@ -11,6 +11,7 @@ import { createDarwinKeychain } from "./darwinKeychain";
 import { createKeychainUnlocker } from "./keychainUnlock";
 import { createMacUpdateDriver } from "./macUpdates";
 import { captureDockedPanel } from "./panelCapture";
+import { createPanelProcessSpawner } from "./panelProcess";
 import { createProgramProcessSpawner } from "./programProcess";
 import { memoryPressureStandIn, readResourceMemory } from "./resourceMemory";
 import { createSqlProcessSpawner } from "./sqlProcess";
@@ -43,6 +44,8 @@ export type ElectronHostOptions = {
   axiProcessPath?: string | undefined;
   /** The built `programProcess` entry: the process that runs one program's script. */
   programProcessPath?: string | undefined;
+  /** The built `panelProcess` entry: the process that runs one panel's background module. */
+  panelProcessPath?: string | undefined;
   /** The Linux autostart entry's name: this run's data folder's name (`startAtLoginFor`). */
   autostartName?: string | undefined;
   /**
@@ -121,6 +124,7 @@ export function createElectronHost(options: ElectronHostOptions = {}): HostCapab
     sqlProcessPath,
     axiProcessPath,
     programProcessPath,
+    panelProcessPath,
     openWindow,
   } = options;
   const startAtLogin = startAtLoginFor(options.autostartName ?? ownAutostartName());
@@ -210,5 +214,6 @@ export function createElectronHost(options: ElectronHostOptions = {}): HostCapab
     ...(programProcessPath
       ? { programProcess: createProgramProcessSpawner(programProcessPath) }
       : {}),
+    ...(panelProcessPath ? { panelProcess: createPanelProcessSpawner(panelProcessPath) } : {}),
   };
 }

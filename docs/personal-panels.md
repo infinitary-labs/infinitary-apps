@@ -217,7 +217,7 @@ The whole flow is `tests/e2e/personal-panels.spec.ts`'s second half, through the
 ## Hardening (Step 5)
 
 Step 5 of the plan (landed 2026-09-18, report section 5.5 and the section 7 Step 5 row) is the last one.
-A personal panel runs as a React module in the renderer and, when it ships a `server.ts`, as a module in the core with the core's privilege - the trust the app already extends to the crewmate that wrote it.
+A personal panel runs as a React module in the renderer and, when it ships a `server.ts`, as a module in a process of its own with the core's privilege - the trust the app already extends to the crewmate that wrote it ("Background work runs apart", below).
 Everything here exists so that trust has a way back.
 
 **The switch is host-owned and it is one row.**
@@ -225,7 +225,7 @@ Everything here exists so that trust has a way back.
 **The first mate never writes it**: `personalize` has no action for it, and its context says where the switch is instead (below), because the switch's whole point is to be reachable when a panel is what went wrong.
 
 **Off is the core's, not the rails'.**
-`PersonalExtensions.setEnabled(false)` disposes every `server.ts` host, forgets every compiled panel, stops the watcher and pushes ONE empty snapshot - which is what unmounts the panels, through the same reconciler a removal goes through.
+`PersonalExtensions.setEnabled(false)` disposes every `server.ts` process, forgets every compiled panel, stops the watcher and pushes ONE empty snapshot - which is what unmounts the panels, through the same reconciler a removal goes through.
 An in-flight rescan cannot push over that empty snapshot, and a rescan that did not change anything is silent, so a dropped or delayed filesystem event cannot emit a stale copy of the panels on the way to off.
 So a background task stops ticking and a server action is unreachable, not merely hidden; the switch takes back the privilege, not the pixels.
 Started off, the service seeds nothing, scans nothing and compiles nothing, and `lint_panel`, `place_panel` and `capture_panel` say so rather than answering blankly.
@@ -255,6 +255,50 @@ The words "extension" and "plugin" still reach no user surface: the control is "
 **The evidence.**
 `tests/e2e/personal-panels-hardening.spec.ts` is the acceptance: the switch unmounts every fixture in exactly one pushed snapshot while the app's own panels stay, and the server action is gone with it (what the first mate's context then says is `personalizeTool.test.ts`'s); then the app is SIGKILLed twice before it settles - what a force quit of a wedged window leaves behind - and the third launch comes up with the panels off, says why in the feed and in Settings, and is one click from back on.
 `safeMode.test.ts` drives the marker directly, `personalExtensions.test.ts` pins the one-tick unmount and the stopped background task, and `observe.frame.test.ts` pins the Panels group.
+
+## Background work runs apart
+
+A panel's background module never runs in the app's own process (INF-2205 piece B, the captain's "separate programs and isolated drawing").
+`PanelRuntimes` (`src/core/panels/panelRuntimes.ts`) is the one owner of every panel's background work, whatever its source: the app's own, the captain's, or one added from elsewhere.
+The source decides only whether a panel may have background work at all and the identity it runs under; how it runs, how it is watched and how it is stopped are the owner's alone.
+Today only the captain's own `server.ts` is admitted: the app's own panels have none, and an added panel's tree is refused with one.
+Each running panel version, on the rail (`live`) or built apart (`draft`), gets one process through `HostCapabilities.panelProcess`: a utility process in the app (`src/main/host/panelProcess.ts`), a Node fork in tests, both running `src/core/panels/panelProcess.ts`.
+The owner lives in the core, so the computer that runs the home owns the background work, with a window or without one (`docs/run.md`).
+A panel with no background module starts no process.
+The process imports the module, keeps its module state between calls, answers actions by name and runs its background tasks on its own timers, clamped up to `MIN_BACKGROUND_INTERVAL_MS`, a run in flight skipped and a throw logged with the timer kept.
+
+**The store answers asynchronously (panel API 2).**
+`context.db` is the same slice as before, through the store's one writer (`PersonalStore`), but each call is a message the core answers, so it returns a promise (`ServerStore`, `src/shared/personal/contracts.ts`).
+One ask is in flight per process: the next waits in the panel's process until the core acknowledged the last, so a panel that fires a thousand writes queues them in its own memory, never in the app's.
+Every message is JSON and at most `PANEL_MESSAGE_MAX_BYTES` (`src/core/panels/panelProtocol.ts`), refused in words past it.
+A runtime that was stopped or replaced is answered nothing, so a late write never lands; a write the core acknowledged stays, whatever happens to the process after.
+A `server.ts` runs only when its manifest says `"api": 2`.
+One written for the store that answered at once is refused before any of it runs, with the line saying what to change (`olderServerApiLine`), and its panel still draws.
+Nothing transforms saved data and nothing runs older code in the app's process: the captain's existing panels are updated by personal-workspace tasks.
+
+**The watch.**
+The process beats every `PANEL_BEAT_MS` (250 ms) from the event loop the panel's code runs on, and starts beating before it imports the module.
+So a module, action or task that never gives its loop back - a loop, a native wait - stops the beats.
+A loop silent for `PANEL_SILENCE_MS` (10 s, forty missed beats) is stopped; a slow `await` keeps beating and never is.
+A gap the owner's own check also slept through - the computer asleep, or the app's own loop held - blames no panel: the watch starts over.
+The deadline is not the freeze recorder's threshold (`docs/freeze-recorder.md`): that one measures the app's own main thread, this one a panel's own process.
+
+## A stopped panel
+
+A stop is written to the record before the process is killed (`PanelStops`, the `panel_stops` table), so an app that ends mid-stop keeps it.
+Its fields follow the freeze record's incident: an `incidentId`, the wall-clock `at` as a label, how long the loop was silent on a monotonic clock, and whether the process was seen to end.
+The owner kills the process, waits `PANEL_KILL_WAIT_MS` for its end, and kills it by its process id when it is still there; `termination` says whether the end was seen.
+A process that ends on its own is stopped the same way, with reason `exited`.
+Every call waiting on it is refused with the stop's words; an unconfirmed outside effect is never replayed.
+
+A stop is keyed by source, panel id, `live` or `draft`, and the code version stopped.
+The live runtime stays stopped at any version: a reload, a restart, a reconnect or the crewmate's next save does not start it.
+Only the captain's Retry (`inf:plugins:retry`) or the panel's removal clears it.
+A draft is stopped only at its version, so the next save is tried apart.
+The snapshot carries `stopped` (why, when, and which version).
+The window draws the host's own line and a Retry above the panel's body (`BackgroundStopped`, `[data-panel-background-stopped]`), outside the panel's code and reached with Tab.
+`lint_panel` says the panel is stopped, and its actions are refused.
+Stopping is targeted: the panel's data, its drawing and every other panel stay; the `panels` switch and safe mode above remain the broad fallback.
 
 ## Panels for others (the plugin author's guide)
 
@@ -320,7 +364,7 @@ Moved verbatim from `AGENTS.md` on 2026-09-24; `AGENTS.md` keeps a one-line poin
   The gallery seam (`design/fixtures/`) is off unless the window's own localStorage carries `infinitary.designFixtures`.
 - Hardening the personal panels (talk-to-personalize Step 5, the last; `docs/personal-panels.md` "Hardening"): the host-owned switch is one preference row, `panels` on `ShellPreferences` (`{ enabled, offReason }`), written ONLY by `ShellPreferencesService.setPersonalPanels` - the Settings control over `inf:settings:panels:set`, and the safe-mode boot.
   The first mate never writes it (`personalize` has no action for it) and its context says where it is instead, because the switch exists for when a panel is what went wrong.
-  Off is the CORE's, never the rails': `PersonalExtensions.setEnabled(false)` disposes every `server.ts` host, forgets every compiled panel, stops the watcher, and pushes ONE empty snapshot - so a background task stops ticking and a server action is unreachable, not merely hidden - and started off the service seeds, scans and compiles nothing; `ShellPreferencesService.subscribe` is the wire, so the preference and the unmount land in the same tick.
+  Off is the CORE's, never the rails': `PersonalExtensions.setEnabled(false)` disposes every `server.ts` process, forgets every compiled panel, stops the watcher, and pushes ONE empty snapshot - so a background task stops ticking and a server action is unreachable, not merely hidden - and started off the service seeds, scans and compiles nothing; `ShellPreferencesService.subscribe` is the wire, so the preference and the unmount land in the same tick.
   Safe mode is a marker, because a crash writes no report (`src/core/personal/safeMode.ts`): every launch writes `pending` into the `launch` settings row before anything a panel could reach and clears it after `EARLY_LAUNCH_MS` (10s) or on a clean quit (`LaunchWatch.dispose`, from `startCore`'s dispose); two launches that never settled and the third writes the switch off with reason `safe-mode`, which is a feed line, the Settings row's words, and a context line - then starts the count over.
   `INFINITARY_EARLY_LAUNCH_MS` widens the window in dev/e2e only.
   The reason always travels (`panelsOffLine`): an off switch with no reason reads as a setting the captain forgot.

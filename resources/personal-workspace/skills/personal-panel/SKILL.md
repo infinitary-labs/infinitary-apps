@@ -35,10 +35,12 @@ An extension is one directory `<id>/` (kebab-case: `open-prs`, `tokyo-clock`) ho
   the host renders as one of the extension's cards on the main card stack (below). A view
   gets the same `PanelProps` plus `card`, the card it draws, and no `rail`.
 - `server.ts` (optional) - exports `actions` (name to handler) and `background` (name to
-  task). It runs in the app's core, with the app's own privilege: use it for anything that
-  reads the machine, runs a command, or fetches.
-- `manifest.json` (optional) - `title`, `placement`, `order`, `size`, `presence`,
-  `cards`, `header`, `commands`, `reads`, `moves`, `origin`; see `PersonalManifest`.
+  task). It runs in a process of its own, beside the app, with the app's own privilege: use
+  it for anything that reads the machine, runs a command, or fetches. It runs only when
+  `manifest.json` says `"api": 2`.
+- `manifest.json` (optional) - `api`, `title`, `placement`, `order`, `size`, `presence`,
+  `cards`, `header`, `commands`, `reads`, `moves`, `origin`; see `PersonalManifest`. A panel
+  with a `server.ts` sets `"api": 2`.
 - a `.css` file (optional) - a stylesheet of its own, imported as text (below).
 - local helper files, used only by this extension.
 
@@ -56,7 +58,8 @@ escape), no dynamic `import()`. A refused file leaves the panel absent until it 
 
 Every extension has its own slice of the app's store, JSON values by key: `store.get`,
 `store.set`, `store.delete`, `store.list(prefix)`, and `store.subscribe` in the panel;
-`context.db` with the same four synchronous methods in `server.ts`. A key is at most 128
+`context.db` with the same four methods in `server.ts`, each returning a promise: `await`
+every call, as in the panel. A write is kept once its promise resolves. A key is at most 128
 characters, a value at most 256 KiB of JSON, a slice at most 1 MiB. Keep secrets out of it.
 
 A panel calls `invoke("name", input)` to run `actions.name(input, context)` in the core and
@@ -64,6 +67,13 @@ get its return value. A background task `{ everyMs, run }` runs on the host's ti
 or not the panel is open; the host clamps anything under 60 seconds up to 60 seconds, never
 overlaps a run with itself, and logs a throw without stopping the timer. The usual pattern:
 the task writes to the store, the panel subscribes to the store.
+
+The app watches `server.ts` from outside. Code that never gives its loop back - a loop that
+cannot end, a blocking wait - for ten seconds, or a process that ends on its own, is
+stopped: its actions are refused, its panel shows that its background work stopped with a
+Retry, and it stays stopped through restarts and through your next save until the captain
+presses Retry. Its store stays as it was. A slow `await` (a fetch, a command) is never
+stopped. When you fix a stopped panel, say so in your report: the captain's Retry starts it.
 
 ## The app's own data, tasks and cards
 
@@ -317,8 +327,8 @@ IS - never for decoration or emphasis.
 Two places, and the skill for the data source you need (`github-prs`, `quota`,
 `tasks-and-feed`, `clock-timer-scratchpad`) says which:
 
-- **Outside the app**: its own `server.ts`, which runs in the core with the
-  app's privilege - run a command, read the machine, fetch. It writes the
+- **Outside the app**: its own `server.ts`, which runs in a process of its own
+  with the app's privilege - run a command, read the machine, fetch. It writes the
   store; the panel renders the store; a background task keeps it fresh on the
   host's timer (never hotter than once a minute).
 - **The app's own data** - quota, the task board, the activity feed - arrives

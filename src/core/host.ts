@@ -482,6 +482,13 @@ export type HostCapabilities = {
    * program cannot be filed.
    */
   readonly programProcess?: HostChildSpawner;
+  /**
+   * Starts the process that runs one panel's background module
+   * (src/core/panels/panelProcess.ts, docs/personal-panels.md "Background
+   * work runs apart"). Electron spawns a utility process; a test forks the
+   * same entry with Node. Absent, no panel's background work runs.
+   */
+  readonly panelProcess?: HostChildSpawner;
 };
 
 /** A child process the core talks to by messages and may kill at any moment. */

@@ -41942,6 +41942,29 @@
                       "type": "null"
                     }
                   ]
+                },
+                "stopped": {
+                  "type": "object",
+                  "properties": {
+                    "reason": {
+                      "type": "string",
+                      "enum": [
+                        "unresponsive",
+                        "exited"
+                      ]
+                    },
+                    "at": {
+                      "type": "string"
+                    },
+                    "version": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "reason",
+                    "at",
+                    "version"
+                  ]
                 }
               },
               "required": [
@@ -42345,6 +42368,29 @@
                     {
                       "type": "null"
                     }
+                  ]
+                },
+                "stopped": {
+                  "type": "object",
+                  "properties": {
+                    "reason": {
+                      "type": "string",
+                      "enum": [
+                        "unresponsive",
+                        "exited"
+                      ]
+                    },
+                    "at": {
+                      "type": "string"
+                    },
+                    "version": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "reason",
+                    "at",
+                    "version"
                   ]
                 }
               },
@@ -42816,6 +42862,35 @@
             ]
           }
         }
+      }
+    },
+    "inf:plugins:retry": {
+      "effect": "change",
+      "reach": "home",
+      "request": {
+        "type": "array",
+        "prefixItems": [
+          {
+            "type": "string",
+            "minLength": 2,
+            "maxLength": 48,
+            "pattern": "^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$"
+          },
+          {
+            "type": "object",
+            "properties": {
+              "draft": {
+                "type": "boolean",
+                "const": true
+              }
+            }
+          }
+        ],
+        "minItems": 1,
+        "items": false
+      },
+      "response": {
+        "type": "boolean"
       }
     },
     "inf:work:card": {
@@ -57497,6 +57572,29 @@
                       "type": "null"
                     }
                   ]
+                },
+                "stopped": {
+                  "type": "object",
+                  "properties": {
+                    "reason": {
+                      "type": "string",
+                      "enum": [
+                        "unresponsive",
+                        "exited"
+                      ]
+                    },
+                    "at": {
+                      "type": "string"
+                    },
+                    "version": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "reason",
+                    "at",
+                    "version"
+                  ]
                 }
               },
               "required": [
@@ -57900,6 +57998,29 @@
                     {
                       "type": "null"
                     }
+                  ]
+                },
+                "stopped": {
+                  "type": "object",
+                  "properties": {
+                    "reason": {
+                      "type": "string",
+                      "enum": [
+                        "unresponsive",
+                        "exited"
+                      ]
+                    },
+                    "at": {
+                      "type": "string"
+                    },
+                    "version": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "reason",
+                    "at",
+                    "version"
                   ]
                 }
               },

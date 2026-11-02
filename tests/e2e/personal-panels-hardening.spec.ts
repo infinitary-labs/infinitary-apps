@@ -1,12 +1,18 @@
-import { cpSync, mkdirSync } from "node:fs";
+import { cpSync, mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { expect, type Page, test } from "@playwright/test";
+import { PANEL_SILENCE_MS } from "../../src/core/panels/panelRuntimes";
 import { PANELS_SAFE_MODE_NOTE } from "../../src/core/personal/panelLines";
+import {
+  BACKGROUND_RETRY,
+  BACKGROUND_STOPPED_LINE,
+} from "../../src/renderer/src/personal/panelBoundaryWords";
 import { YOUR_PANELS_WORDS } from "../../src/renderer/src/settings/generalWords";
 import { scratchDir } from "../helpers/scratchDirs";
 import { type LaunchedApp, launchApp } from "./launch";
 import { feedLineOf } from "./rails";
 import { settingRow } from "./settings";
+import { pressKey } from "./windowKeys";
 
 /**
  * Hardening the personal panels (talk-to-personalize Step 5, plan section
@@ -205,5 +211,115 @@ test.describe
           await next.close();
         }
       });
+    });
+  });
+
+/**
+ * A panel whose background work holds its loop (INF-2205 piece B, the
+ * captain's "Stop only the identified panel; keep the broad fallback").
+ * Promised result: the host stops that one panel's background process, the
+ * window draws its own stopped line and Retry above the panel, another
+ * panel's background work keeps answering, and Retry - pressed from the
+ * keyboard - starts it again. Data: the shared fixtures plus `spinner`, a
+ * panel whose `spin` action never gives its loop back. Completion signal:
+ * the snapshot's `stopped` field, set and then cleared. Platform: any; the
+ * stop waits out the app's own `PANEL_SILENCE_MS`. Shared resources: none
+ * beyond its own launch.
+ */
+test.describe
+  .serial("a panel whose background work stops responding (INF-2205)", () => {
+    let launched: LaunchedApp;
+
+    test.beforeAll(async () => {
+      const userDataDir = scratchDir("infinitary-e2e-panels-stopped-");
+      const workspace = seedFixtures(userDataDir);
+      const spinner = join(workspace, "spinner");
+      mkdirSync(spinner);
+      writeFileSync(
+        join(spinner, "manifest.json"),
+        JSON.stringify({ title: "Spinner", api: 2, placement: { x: "left", y: "top" } }),
+      );
+      writeFileSync(
+        join(spinner, "panel.tsx"),
+        [
+          'import type { PanelProps } from "@infinitary/contracts";',
+          "export default function Panel({ id }: PanelProps) {",
+          "  return <p data-fixture={id} style={{ margin: 0 }}>spinning up</p>;",
+          "}",
+        ].join("\n"),
+      );
+      writeFileSync(
+        join(spinner, "server.ts"),
+        [
+          "export const actions = {",
+          '  ping: () => "pong",',
+          "  spin: () => {",
+          "    for (;;) {}",
+          "  },",
+          "};",
+        ].join("\n"),
+      );
+      launched = await launchApp({ userDataDir, withMockProvider: true });
+      await expect
+        .poll(() => mountedIds(launched), { timeout: 30_000 })
+        .toEqual(["bad", "open-items", "shaky", "spinner"]);
+    });
+
+    test.afterAll(async () => {
+      await launched.close();
+    });
+
+    test("stops only that panel, keeps its sibling answering, and Retry from the keyboard starts it again", async () => {
+      test.setTimeout(PANEL_SILENCE_MS * 6);
+      const { page } = launched;
+      const stoppedOf = () =>
+        page.evaluate(() =>
+          window.infinitary.plugins.personal
+            .list()
+            .then((s) => s.extensions.find((e) => e.id === "spinner")?.stopped?.reason ?? null),
+        );
+      await expect(page.locator('[data-fixture="spinner"]')).toBeVisible();
+      expect(
+        await page.evaluate(() => window.infinitary.plugins.invoke("spinner", "ping", null)),
+      ).toEqual({ ok: true, result: "pong" });
+
+      // The spin is left running in the window while the sibling is asked.
+      await page.evaluate(() => {
+        (window as unknown as { spun: Promise<unknown> }).spun = window.infinitary.plugins.invoke(
+          "spinner",
+          "spin",
+          null,
+        );
+      });
+      expect(
+        await page.evaluate(() => window.infinitary.plugins.invoke("open-items", "fill", ["a"])),
+      ).toMatchObject({ ok: true, result: { filled: 1 } });
+
+      await expect.poll(stoppedOf, { timeout: PANEL_SILENCE_MS * 3 }).toBe("unresponsive");
+      const spun = (await page.evaluate(
+        () => (window as unknown as { spun: Promise<unknown> }).spun,
+      )) as { ok: boolean; error?: string };
+      expect(spun.ok).toBe(false);
+      expect(spun.error).toMatch(/Retry/);
+
+      const row = page.locator(
+        '[data-side-panel="spinner"] [data-panel-background-stopped="spinner"]',
+      );
+      await expect(row).toContainText(BACKGROUND_STOPPED_LINE);
+      // The panel's own drawing stays, and so does every other panel's work.
+      await expect(page.locator('[data-fixture="spinner"]')).toBeVisible();
+      expect(
+        await page.evaluate(() => window.infinitary.plugins.invoke("open-items", "clear", null)),
+      ).toMatchObject({ ok: true, result: { filled: 0 } });
+      expect(
+        await page.evaluate(() => window.infinitary.plugins.invoke("spinner", "ping", null)),
+      ).toMatchObject({ ok: false });
+
+      await pressKey(row.getByRole("button", { name: BACKGROUND_RETRY }), "Enter");
+      await expect.poll(stoppedOf).toBeNull();
+      await expect(row).toHaveCount(0);
+      expect(
+        await page.evaluate(() => window.infinitary.plugins.invoke("spinner", "ping", null)),
+      ).toEqual({ ok: true, result: "pong" });
     });
   });

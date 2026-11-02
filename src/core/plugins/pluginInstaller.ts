@@ -21,10 +21,10 @@ import {
 import { panelCardsProblem } from "@shared/plugins/panelCards";
 import { READ_WORDS, viewWords } from "@shared/vocabulary";
 import { compilePersonalModule, PERSONAL_ENTRY_FILES } from "../personal/compiler";
+import { errorText } from "../personal/errorText";
 import { extensionSources } from "../personal/liveWorkspace";
 import { panelAddedLine, panelUpdatedLine } from "../personal/panelLines";
 import type { PersonalStore } from "../personal/personalStore";
-import { errorText } from "../personal/serverHost";
 import { checkRunbookFiles } from "../runbooks/runbookFiles";
 import type { Runbooks } from "../runbooks/runbooks";
 import { runbookAddedLine, runbookConsentTitle, runbookRemovedLine } from "../runbooks/words";

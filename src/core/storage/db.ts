@@ -1198,6 +1198,27 @@ const MIGRATIONS: readonly Migration[] = [
   // Written only by `TaskService`. No published view reads the column.
   // Additive and reversible: dropping the column undoes it.
   (db) => addColumn(db, "task_execution", "backlog_since", "INTEGER"),
+  // INF-2205 piece B: the panels the host stopped (docs/personal-panels.md,
+  // "A stopped panel"), one row per stopped runtime, keyed by where the
+  // panel came from, its id, live or draft, and the code version stopped,
+  // with the incident that stopped it. `PanelStops` is the only writer; a
+  // row stays until the captain's Retry or the panel's removal. No
+  // published view reads it. Additive and reversible: dropping the table
+  // undoes it.
+  `
+  CREATE TABLE IF NOT EXISTS panel_stops (
+    source TEXT NOT NULL,
+    panel_id TEXT NOT NULL,
+    runtime TEXT NOT NULL,
+    version TEXT NOT NULL,
+    incident_id TEXT NOT NULL,
+    reason TEXT NOT NULL,
+    at TEXT NOT NULL,
+    silent_ms INTEGER,
+    termination TEXT NOT NULL,
+    PRIMARY KEY (source, panel_id, runtime, version)
+  );
+  `,
 ];
 
 /** The current database format, derived from the embedded migration ledger. */

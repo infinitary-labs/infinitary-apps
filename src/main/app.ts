@@ -501,6 +501,7 @@ export async function startApp(mainDir: string, run: RunStart | null = null): Pr
         sqlProcessPath: join(mainDir, "sqlProcess.js"),
         axiProcessPath: join(mainDir, "axiProcess.js"),
         programProcessPath: join(mainDir, "programProcess.js"),
+        panelProcessPath: join(mainDir, "panelProcess.js"),
         ...(desktop.closeToIcon ? { openWindow: () => reopen() } : {}),
       });
       const voiceModel = new VoiceModelService(join(host.app.userDataDir, "models"));

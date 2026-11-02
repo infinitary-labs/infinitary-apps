@@ -37,14 +37,15 @@ Visibility is data, never a verb: a panel's content source returns null while it
 The manifest declares title, placement, order, size, reads, views, store cap, card views, header buttons and commands; the host draws them as its own chrome and attributes the panel ("yours", the maker's name, or nothing for the app's own).
 A personal panel lives in `userData/fleet/personal/<id>/` and is built by a crewmate on a personal task that builds in place ([projects-and-working-copies.md](projects-and-working-copies.md)); the rails keep the last commit while working files run apart as a draft.
 The compiler output is content-addressed, so a new hash is the version, the hot reload and the cache bust on both sides.
-A captain's own `server.ts` is loaded by the core (`loadServerHost`): actions are callable by name, background tasks run on host timers clamped up to `MIN_BACKGROUND_INTERVAL_MS`, a run in flight is skipped rather than overlapped, and a throw is logged with the timer kept.
+A captain's own `server.ts` runs in a process of its own, owned by the core's `PanelRuntimes` for every source: actions are callable by name, its store answers asynchronously one ask at a time, background tasks run on its own timers clamped up to `MIN_BACKGROUND_INTERVAL_MS`, a run in flight is skipped rather than overlapped, and a throw is logged with the timer kept.
+A panel whose loop goes silent past `PANEL_SILENCE_MS`, or whose process ends, is stopped alone and stays stopped until the captain's Retry (`docs/personal-panels.md`, "Background work runs apart" and "A stopped panel").
 `personalize remove` takes a panel out in one commit (or uninstalls an installed one), and the `panels` switch and safe mode take back both roots in the same tick.
 
 ## Authority
 
 Personal panels and plugins (`docs/ui-plugins.md`, `docs/personal-panels.md`): one plugin shape; an installed panel runs only in the frame realm; never relax the compiler's import list at display time; the first mate never writes the panels switch.
 The trust difference between sources is intentional.
-The captain's own panel runs in-process in the app's window and may have a `server.ts`, trusted like the crewmate that wrote it.
+The captain's own panel draws in the app's window and may have a `server.ts`, trusted like the crewmate that wrote it, which runs in its own process so a hang stops only that panel.
 An installed panel runs only in a sandboxed frame at its own host with a pinned lib, is served only the reads, views, storage and moves the captain consented to on the host's consent card (`card-plugin-<id>`), and a tree holding `server.ts` mounts nothing.
 `net` and `secrets` are refused for every source (`PLUGIN_HOST_SUPPORT`); a mediated fetch or secret grant is not available.
 The compiler is the coherence gate at admission: a panel may import only `react`, the JSX runtimes, `@infinitary/ui`, type-only `@infinitary/contracts` and its own files; a server only `node:*` built-ins and its own files.
@@ -83,6 +84,7 @@ The install name check is wider on purpose: every workspace folder name is taken
 
 - [`../src/renderer/src/plugins/host.test.ts`](../src/renderer/src/plugins/host.test.ts) and [`../src/renderer/src/plugins/builtin/index.test.ts`](../src/renderer/src/plugins/builtin/index.test.ts): the one door and the built-in manifest.
 - [`../src/core/personal/compiler.test.ts`](../src/core/personal/compiler.test.ts), [`personalExtensions.test.ts`](../src/core/personal/personalExtensions.test.ts), [`appPanels.test.ts`](../src/core/personal/appPanels.test.ts) and [`infinitaryEnv.test.ts`](../src/core/personal/infinitaryEnv.test.ts).
+- [`../src/core/panels/panelRuntimes.test.ts`](../src/core/panels/panelRuntimes.test.ts) and [`panelRuntimes.integration.test.ts`](../src/core/panels/panelRuntimes.integration.test.ts): the watch on a controlled clock, and the real panel process across every source.
 - [`../src/core/plugins/pluginLint.test.ts`](../src/core/plugins/pluginLint.test.ts), [`personalFixtures.test.ts`](../src/core/plugins/personalFixtures.test.ts) and [`pluginInstaller.test.ts`](../src/core/plugins/pluginInstaller.test.ts).
 - [`../src/shared/plugins/containment.test.ts`](../src/shared/plugins/containment.test.ts) and [`../src/shared/personal/contracts.test.ts`](../src/shared/personal/contracts.test.ts).
 - End to end: [`personal-panels.spec.ts`](../tests/e2e/personal-panels.spec.ts), [`personal-panels-hardening.spec.ts`](../tests/e2e/personal-panels-hardening.spec.ts), [`installed-panels.spec.ts`](../tests/e2e/installed-panels.spec.ts), [`installed-panel-containment.spec.ts`](../tests/e2e/installed-panel-containment.spec.ts), [`panel-cards.spec.ts`](../tests/e2e/panel-cards.spec.ts) and [`side-rails.spec.ts`](../tests/e2e/side-rails.spec.ts).

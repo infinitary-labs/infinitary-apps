@@ -171,6 +171,8 @@ import { TICK_PERIOD_MS, Ticker, tickPeriodFor } from "./orchestrator/ticker";
 import type { TypedWake } from "./orchestrator/wakes";
 import { WorkflowEvidenceService } from "./orchestrator/workflowEvidence";
 import { initOverflowDir } from "./overflow";
+import { PanelRuntimes } from "./panels/panelRuntimes";
+import { PanelStops } from "./panels/panelStops";
 import {
   type AppPaths,
   appPathsFor,
@@ -2117,6 +2119,13 @@ export async function createServices(
     captureDirFor: (taskId) => join(paths.crewmatesDir, taskId, "captures"),
     mounts: panelMounts,
     sql: (request) => sql.query(request),
+    // The one owner of every panel's background work (INF-2205 piece B):
+    // each permitted module in a process of its own, watched from outside,
+    // with its stops kept in the record until the captain's Retry.
+    runtimes: new PanelRuntimes({
+      ...(host.panelProcess ? { spawner: host.panelProcess } : {}),
+      stops: new PanelStops(db),
+    }),
     installed: {
       dir: paths.pluginsDir,
       cacheRoot: paths.installedCacheDir,

@@ -17,6 +17,7 @@ import {
 import type { ReadGrant } from "@shared/reads";
 import { type ComponentType, useEffect, useMemo, useState } from "react";
 import { useShellStore } from "../app/store";
+import { Button } from "../design";
 import { windowGesture } from "../plugins/frames/frameActivation";
 import { onPanelAsk, onPanelFocus, windowPanelCards } from "../plugins/panelCards";
 import { panelPoint, usePanelView } from "../plugins/panelPoint";
@@ -26,6 +27,11 @@ import { usePanelCollapsed } from "../plugins/railStore";
 import { appReadExecutor } from "../plugins/reads/appExecutor";
 import { panelBodies, stoppedWhy } from "./panelBodies";
 import { PanelBoundary, PanelStoppedLine } from "./panelBoundary";
+import {
+  BACKGROUND_EXITED_LINE,
+  BACKGROUND_RETRY,
+  BACKGROUND_STOPPED_LINE,
+} from "./panelBoundaryWords";
 
 /**
  * The Tier-1 body of a personal panel (talk-to-personalize Step 2): imports
@@ -60,6 +66,11 @@ export type PersonalPanelContent = {
    * server, and nothing of the captain's.
    */
   draft?: true;
+  /**
+   * The app stopped its background work (INF-2205 piece B): the host draws
+   * the status and a Retry above the body, outside the panel's own code.
+   */
+  stopped?: "unresponsive" | "exited";
 };
 
 /** Injected for tests; the app imports for real. */
@@ -82,27 +93,81 @@ export function PersonalPanelBody({
   const loaded = useLoadedModule(content.url, content.version, importModule);
   // A draft is out of sight: only the panel on the rail answers for it.
   const onRail = content.draft !== true;
-  if (loaded === null) return null;
+  const stopped = content.stopped ? (
+    <BackgroundStopped id={content.id} draft={!onRail} reason={content.stopped} />
+  ) : null;
+  if (loaded === null) return stopped;
   if ("failed" in loaded) {
     return (
       <>
+        {stopped}
         <PanelStoppedLine />
         {onRail && <BodySaid id={content.id} version={loaded.version} why={loaded.why} />}
       </>
     );
   }
   const { Component } = loaded;
-  const stopped = (error: unknown) =>
+  const threw = (error: unknown) =>
     panelBodies.note(content.id, {
       version: loaded.version,
       state: "stopped",
       why: stoppedWhy(error),
     });
   return (
-    <PanelBoundary key={loaded.version} {...(onRail ? { onStop: stopped } : {})}>
-      <Component {...props} />
-      {onRail && <BodySaid id={content.id} version={loaded.version} why={null} />}
-    </PanelBoundary>
+    <>
+      {stopped}
+      <PanelBoundary key={loaded.version} {...(onRail ? { onStop: threw } : {})}>
+        <Component {...props} />
+        {onRail && <BodySaid id={content.id} version={loaded.version} why={null} />}
+      </PanelBoundary>
+    </>
+  );
+}
+
+/**
+ * The host's own status for a panel whose background work it stopped, and
+ * the Retry that starts it again (INF-2205 piece B). Drawn by the window,
+ * never by the panel's code, so it answers whatever the panel does; the
+ * Retry is a button, reached with Tab like any other.
+ */
+export function BackgroundStopped({
+  id,
+  draft,
+  reason,
+}: {
+  id: string;
+  draft: boolean;
+  reason: "unresponsive" | "exited";
+}) {
+  const [asking, setAsking] = useState(false);
+  return (
+    <div
+      data-panel-background-stopped={id}
+      style={{
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "space-between",
+        gap: "var(--space-3)",
+        marginBottom: "var(--space-2)",
+      }}
+    >
+      <p style={{ margin: 0, color: "var(--fg-3)", fontSize: "var(--text-sm)" }}>
+        {reason === "exited" ? BACKGROUND_EXITED_LINE : BACKGROUND_STOPPED_LINE}
+      </p>
+      <Button
+        variant="secondary"
+        size="sm"
+        disabled={asking}
+        onClick={() => {
+          setAsking(true);
+          void window.infinitary.plugins.personal
+            .retry(id, draft ? { draft: true } : undefined)
+            .finally(() => setAsking(false));
+        }}
+      >
+        {BACKGROUND_RETRY}
+      </Button>
+    </div>
   );
 }
 

@@ -159,8 +159,11 @@ DROP TABLE task_delivery_evidence;
 `;
 /** INF-1868 piece 1's change record, undone: its two tables. */
 const REVERSE_CHANGES = "DROP TABLE IF EXISTS change_versions; DROP TABLE IF EXISTS changes;\n";
+/** INF-2205 piece B's panel stops, undone: its one table. */
+const REVERSE_PANEL_STOPS = "DROP TABLE IF EXISTS panel_stops;\n";
 /** INF-1296 pieces 3 and 4's records, undone, newest first, after the change record over them. */
 const REVERSE_RUNNING_WORK =
+  REVERSE_PANEL_STOPS +
   REVERSE_CHANGES +
   taskRecordRetirementReverseSql() +
   REVERSE_TASK_DELIVERY +

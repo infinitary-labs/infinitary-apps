@@ -1,12 +1,16 @@
 import { execFileSync } from "node:child_process";
 import { existsSync, mkdirSync, readFileSync, realpathSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
+import { fileURLToPath } from "node:url";
 import { MIN_BACKGROUND_INTERVAL_MS, type PersonalSnapshot } from "@shared/personal/manifest";
 import type { PanelMountState } from "@shared/personal/mounts";
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { scratchDir } from "../../../tests/helpers/scratchDirs";
 import type { CoreEventSink } from "../events";
+import { PanelRuntimes } from "../panels/panelRuntimes";
+import { PanelStops } from "../panels/panelStops";
 import { renderCaptureText, renderPlaceText } from "../pi/panelTools";
+import { forkChildProcess } from "../sql/forkChildProcess";
 import { openInMemoryDatabase } from "../storage/db";
 import { seedTask } from "../tasks/seedTask";
 import { TaskService } from "../tasks/taskService";
@@ -27,12 +31,31 @@ vi.mock("../utilityQos", async (importOriginal) =>
  * named; a background task under 60 s is clamped; a task on the extension
  * lights the running dot; an edit is a new version; a removal unmounts.
  */
-async function harness() {
+const PANEL_PROCESS = fileURLToPath(new URL("../panels/panelProcess.ts", import.meta.url));
+const runtimesOpen: PanelRuntimes[] = [];
+afterEach(() => {
+  for (const runtimes of runtimesOpen.splice(0)) runtimes.disposeAll();
+});
+
+/** Resolves once `check` holds, polled on the event loop; the test's budget bounds it. */
+async function until(check: () => boolean): Promise<void> {
+  while (!check()) await new Promise((resolve) => setTimeout(resolve, 20));
+}
+
+async function harness(watch: { silenceMs?: number } = {}) {
   const root = realpathSync(scratchDir("infinitary-personal-svc-"));
   const workspaceDir = join(root, "personal");
   const cacheRoot = join(root, "cache");
   const db = openInMemoryDatabase();
   const store = new PersonalStore(db);
+  // Every server module runs in the real panel process, as in the app (INF-2205 piece B).
+  const runtimes = new PanelRuntimes({
+    spawner: forkChildProcess(PANEL_PROCESS),
+    stops: new PanelStops(db),
+    beatMs: 100,
+    ...(watch.silenceMs ? { silenceMs: watch.silenceMs } : {}),
+  });
+  runtimesOpen.push(runtimes);
   const tasks = new TaskService({ db, strict: true });
   const pushes: { channel: string; payload: unknown }[] = [];
   const emit: CoreEventSink = (channel, payload) => {
@@ -42,7 +65,7 @@ async function harness() {
     mkdirSync(join(workspaceDir, path, ".."), { recursive: true });
     writeFileSync(join(workspaceDir, path), content);
   };
-  return { workspaceDir, cacheRoot, store, tasks, pushes, emit, write };
+  return { workspaceDir, cacheRoot, store, tasks, pushes, emit, write, runtimes, db };
 }
 
 const PANEL =
@@ -73,7 +96,10 @@ describe("PersonalExtensions", () => {
       asked.push(request);
       return { columns: ["n"], rows: [{ n: 2 }], truncated: false, elapsedMs: 1 };
     };
-    h.write("tokens/manifest.json", JSON.stringify({ title: "Tokens", sql: ["v_usage_v1"] }));
+    h.write(
+      "tokens/manifest.json",
+      JSON.stringify({ api: 2, title: "Tokens", sql: ["v_usage_v1"] }),
+    );
     h.write("tokens/panel.tsx", PANEL);
     h.write(
       "tokens/server.ts",
@@ -253,12 +279,13 @@ describe("PersonalExtensions", () => {
 
   it("loads server.ts, clamps a fast background task, answers invoke, and reloads on edit", async () => {
     const h = await harness();
+    h.write("meter/manifest.json", JSON.stringify({ api: 2 }));
     h.write(
       "meter/server.ts",
       [
         'import type { ServerModule } from "@firstmate/contracts";',
         "export const actions: ServerModule['actions'] = {",
-        "  fill: (input, context) => { context.db.set('items', input as never); return 'filled'; },",
+        "  fill: async (input, context) => { await context.db.set('items', input as never); return 'filled'; },",
         "  boom: () => { throw new Error('no'); },",
         "};",
         "export const background: ServerModule['background'] = {",
@@ -275,8 +302,7 @@ describe("PersonalExtensions", () => {
         background: [{ id: "sample", everyMs: MIN_BACKGROUND_INTERVAL_MS }],
       });
       // runOnStart ran the task once through the bound store.
-      await new Promise((resolve) => setTimeout(resolve, 10));
-      expect(h.store.get("meter", "sampled")).toBe(1);
+      await until(() => h.store.get("meter", "sampled") === 1);
       expect(await service.invoke("meter", "fill", [1, 2])).toEqual({ ok: true, result: "filled" });
       expect(h.store.get("meter", "items")).toEqual([1, 2]);
       expect(await service.invoke("meter", "boom", null)).toEqual({ ok: false, error: "no" });
@@ -343,6 +369,89 @@ describe("PersonalExtensions", () => {
       service.dispose();
     }
   });
+  // INF-2205 piece B, the captain's "Update affected panel code, leaving saved
+  // data unchanged": a module written for the store that answered at once is
+  // refused before it runs, never run with answers it would misread.
+  it("refuses a server.ts written for the earlier panel API before any of it runs", async () => {
+    const h = await harness();
+    const marker = join(h.workspaceDir, "..", "imported");
+    h.write("old/panel.tsx", PANEL);
+    h.write(
+      "old/server.ts",
+      `import { writeFileSync } from "node:fs";\nwriteFileSync(${JSON.stringify(marker)}, "ran");\nexport const actions = { n: (_i: unknown, c: { db: { get: (k: string) => unknown } }) => c.db.get("n") };`,
+    );
+    const service = await PersonalExtensions.start({ ...h, watch: false });
+    try {
+      const [old] = service.snapshot().extensions;
+      expect(old).toMatchObject({ server: null, error: { stage: "server" } });
+      expect(old?.error?.message).toContain('set "api": 2 in manifest.json');
+      // The panel itself still draws; only its background work waits for the update.
+      expect(old?.panel).not.toBeNull();
+      expect(existsSync(marker)).toBe(false);
+      expect(h.runtimes.running).toBe(0);
+    } finally {
+      service.dispose();
+    }
+  });
+
+  // INF-2205 piece B, the captain's "Stop only the identified panel; keep the
+  // broad fallback": the stop holds across a restart and a new version until
+  // the captain's Retry, and the panel's data stays.
+  it("stops a server that holds its loop, keeps it stopped across a restart and an edit, and Retry starts it", async () => {
+    const h = await harness({ silenceMs: 1_500 });
+    h.write("spin/manifest.json", JSON.stringify({ api: 2, title: "Spin" }));
+    h.write("spin/panel.tsx", PANEL);
+    h.write(
+      "spin/server.ts",
+      "export const actions = { spin: async (_i: unknown, c: { db: { set: (k: string, v: number) => Promise<void> } }) => { await c.db.set('kept', 1); for (;;) {} }, ping: () => 'v1' };",
+    );
+    h.write("calm/manifest.json", JSON.stringify({ api: 2, title: "Calm" }));
+    h.write("calm/server.ts", "export const actions = { ping: () => 'pong' };");
+    const service = await PersonalExtensions.start({ ...h, watch: false });
+    try {
+      const spun = await service.invoke("spin", "spin", null);
+      expect(spun.ok).toBe(false);
+      await until(() => service.snapshot().extensions.some((e) => e.stopped !== undefined));
+      const spin = service.snapshot().extensions.find((e) => e.id === "spin");
+      expect(spin).toMatchObject({ server: null, stopped: { reason: "unresponsive" } });
+      expect(h.store.get("spin", "kept")).toBe(1);
+      expect(await service.invoke("calm", "ping", null)).toEqual({ ok: true, result: "pong" });
+      expect(await service.invoke("spin", "ping", null)).toMatchObject({
+        ok: false,
+        error: expect.stringContaining("Retry"),
+      });
+      expect(await service.lint("spin")).toContain("stopped:");
+    } finally {
+      service.dispose();
+    }
+
+    // The app starts again on the same record: still stopped, nothing spawned for it.
+    const again = new PanelRuntimes({
+      spawner: forkChildProcess(PANEL_PROCESS),
+      stops: new PanelStops(h.db),
+      beatMs: 100,
+    });
+    runtimesOpen.push(again);
+    const restarted = await PersonalExtensions.start({ ...h, runtimes: again, watch: false });
+    try {
+      const spin = () => restarted.snapshot().extensions.find((e) => e.id === "spin");
+      expect(spin()).toMatchObject({ server: null, stopped: { reason: "unresponsive" } });
+      expect(again.running).toBe(1);
+      // A fix on the rail does not start itself.
+      h.write("spin/server.ts", "export const actions = { ping: () => 'v2' };");
+      await restarted.refresh();
+      expect(spin()?.stopped).toBeDefined();
+      // The captain's Retry.
+      expect(await restarted.retry("spin")).toBe(true);
+      expect(spin()?.stopped).toBeUndefined();
+      expect(await restarted.invoke("spin", "ping", null)).toEqual({ ok: true, result: "v2" });
+      expect(await restarted.retry("calm")).toBe(false);
+    } finally {
+      restarted.dispose();
+    }
+    // It waits out a shortened 1.5 s silence and the kill; its fastest
+    // measured run is 3 s (docs/test-cohorts.md, "Budgets").
+  }, 15_000);
 });
 
 /**
@@ -570,7 +679,7 @@ describe("PersonalExtensions builds apart from the rails", () => {
     try {
       h.write("clock/panel.tsx", PANEL);
       h.write("clock/server.ts", SERVER("before"));
-      h.write("clock/manifest.json", JSON.stringify({ title: "Clock" }));
+      h.write("clock/manifest.json", JSON.stringify({ api: 2, title: "Clock" }));
       commitAll(h.workspaceDir);
       await service.refresh();
       h.store.set("clock", "note", "the captain's");
@@ -581,7 +690,7 @@ describe("PersonalExtensions builds apart from the rails", () => {
       service.beginLiveTask("t-live");
       h.write("clock/panel.tsx", `${PANEL}\n// smaller rows`);
       h.write("clock/server.ts", SERVER("after"));
-      h.write("clock/manifest.json", JSON.stringify({ title: "Clock, smaller" }));
+      h.write("clock/manifest.json", JSON.stringify({ api: 2, title: "Clock, smaller" }));
       h.pushes.length = 0;
       await service.refresh();
       // The rails: the same version and title as before, with the running dot.
@@ -1026,13 +1135,14 @@ describe("PersonalExtensions and the host-owned switch (Step 5)", () => {
   it("off unmounts everything personal in one push and stops the server modules; on brings them back", async () => {
     const h = await harness();
     h.write("prs/panel.tsx", PANEL);
+    h.write("meter/manifest.json", JSON.stringify({ api: 2 }));
     h.write(
       "meter/server.ts",
       [
         "let ticks = 0;",
         "export const actions = { count: () => ticks };",
         "export const background = {",
-        "  sample: { everyMs: 1000, run: (context) => { ticks += 1; context.db.set('ticks', ticks); } },",
+        "  sample: { everyMs: 1000, run: async (context) => { ticks += 1; await context.db.set('ticks', ticks); } },",
         "};",
       ].join("\n"),
     );
@@ -1040,8 +1150,7 @@ describe("PersonalExtensions and the host-owned switch (Step 5)", () => {
     try {
       expect(service.isEnabled).toBe(true);
       expect(service.snapshot().extensions.map((e) => e.id)).toEqual(["meter", "prs"]);
-      await new Promise((resolve) => setTimeout(resolve, 10));
-      expect(h.store.get("meter", "ticks")).toBe(1);
+      await until(() => h.store.get("meter", "ticks") === 1);
 
       h.pushes.length = 0;
       await service.setEnabled(false);

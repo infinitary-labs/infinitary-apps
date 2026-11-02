@@ -2,13 +2,13 @@ import { hostname } from "node:os";
 import type { ServerModule } from "@firstmate/contracts";
 
 export const actions: NonNullable<ServerModule["actions"]> = {
-  fill: (input, context) => {
+  fill: async (input, context) => {
     const items = Array.isArray(input) ? input.map((item) => String(item)) : ["one", "two"];
-    context.db.set("items", items);
+    await context.db.set("items", items);
     return { filled: items.length, host: typeof hostname() };
   },
-  clear: (_input, context) => {
-    context.db.set("items", []);
+  clear: async (_input, context) => {
+    await context.db.set("items", []);
     return { filled: 0 };
   },
 };

@@ -82,6 +82,7 @@ function codeOf(view: PersonalExtensionView): PersonalPanelContent | null {
     sql: view.sql,
     moves: view.moves,
     decides: view.ownPresence,
+    ...(view.stopped ? { stopped: view.stopped.reason } : {}),
   };
 }
 

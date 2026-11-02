@@ -1,4 +1,5 @@
 {
+  "api": 2,
   "title": "Chess",
   "size": "content",
   "reads": ["tasks.board"],

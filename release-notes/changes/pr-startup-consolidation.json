@@ -1,0 +1,8 @@
+{
+  "exclusions": [
+    {
+      "id": "pr-startup-consolidation",
+      "reason": "Internal CI trial: run Linux startup fixtures inside the PR build job without changing the current local repeat policy or main/release coverage. No product behavior changes."
+    }
+  ]
+}

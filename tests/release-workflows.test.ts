@@ -649,7 +649,11 @@ describe("local packaging identity (electron-builder.dev.yml)", () => {
       );
       expect(job["continue-on-error"], id).toBeFalsy();
       expect(
-        job.steps.every((step) => !step.if && !step["continue-on-error"]),
+        job.steps.every(
+          (step) =>
+            !step["continue-on-error"] &&
+            (step.uses === "./.github/actions/linux-startup" || !step.if),
+        ),
         id,
       ).toBe(true);
     }
@@ -666,6 +670,41 @@ describe("local packaging identity (electron-builder.dev.yml)", () => {
       "pnpm lint:adherence",
       "pnpm typecheck",
     ]);
+  });
+
+  // Captain's small consolidation trial: startup still runs after an unrelated
+  // failure, and its two fixture results remain visible without hiding failures.
+  it("keeps PR startup fixtures and reporting eligible after earlier failures", () => {
+    const ci = loadYamlFile(".github/workflows/ci.yml") as { jobs: Record<string, CiJob> };
+    const startup = ci.jobs["typecheck-lint-build"]?.steps.find(
+      (step) => step.uses === "./.github/actions/linux-startup",
+    );
+    expect(startup).toBeDefined();
+    const action = loadYamlFile(".github/actions/linux-startup/action.yml") as {
+      runs: { steps: CiJob["steps"] };
+    };
+    const fixtures = action.runs.steps;
+    expect(fixtures).toHaveLength(3);
+    for (const failed of [false, true]) {
+      for (const cancelled of [false, true]) {
+        const status = { success: !failed && !cancelled, failure: failed, always: true, cancelled };
+        for (const event of ["pull_request", "push", "workflow_dispatch"]) {
+          for (const checkout of ["success", "failure", "skipped"]) {
+            expect(
+              workflowValue(
+                startup?.if ?? "false",
+                { github: { event_name: event }, steps: { checkout: { outcome: checkout } } },
+                status,
+              ),
+            ).toBe(!cancelled && event === "pull_request" && checkout === "success");
+          }
+        }
+        for (const fixture of fixtures) {
+          expect(workflowValue(fixture.if ?? "false", {}, status)).toBe(!cancelled);
+          expect(fixture["continue-on-error"]).toBeFalsy();
+        }
+      }
+    }
   });
 
   // DOP-66 fix 1: the rebuilt shell PC image owns the pnpm store;

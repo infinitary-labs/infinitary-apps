@@ -187,7 +187,7 @@ Moved verbatim from `AGENTS.md` on 2026-09-24; `AGENTS.md` keeps a one-line poin
 - Standing CI rule (PR 8; CI shape revised by captain decision B, 2026-09-15, scout `fm3000-ci-release-only-s1`; split across machines by the captain's direction on FI3-1204, 2026-10-07; probes moved off every push by FI3-1756's plan, 2026-10-14): `ci.yml` runs one Linux baseline job on all pull requests, including release notes: typecheck/lint/build.
   The captain's INF-2273 ruling removes both unit-repeat shards; every edited unit file instead gets three total local runs, including portable files.
   Main pushes and requested runs also run the full unit and probe sweeps and both integration shards, five jobs in total; there is no unit/integration selector.
-  `typecheck-lint-build` runs typecheck, biome, eslint adherence and build; `unit-tests` runs the in-memory cohorts (`pure`, `unit`, `unit-isolated`); `integration-tests (1/2)` and `(2/2)` run the integration cohort in vitest's own `--shard` halves, which split the files by a hash of their paths; `probe-tests` runs every probe (`docs/test-cohorts.md`, "Probes").
+  `typecheck-lint-build` runs typecheck, biome, eslint adherence, build and the Linux automatic startup fixtures on pull requests; `unit-tests` runs the in-memory cohorts (`pure`, `unit`, `unit-isolated`); `integration-tests (1/2)` and `(2/2)` run the integration cohort in vitest's own `--shard` halves, which split the files by a hash of their paths; `probe-tests` runs every probe (`docs/test-cohorts.md`, "Probes").
   The hosted runner has two processors and a personal account is offered no larger one, so the jobs run side by side; together they run `verify.yml`'s `linux-checks` lane, which runs every probe, and `tests/release-workflows.test.ts` holds every vitest project to one job or to shards that cover it, including the full probe project.
   Every job runs on the label the repository variable `LINUX_RUNNER` names, the placement service's `shell-pc-linux` places (a fresh two-processor VM per job on the Windows PC, five at once), and on GitHub's hosted `ubuntu-latest` when the variable is unset; `tests/release-workflows.test.ts` evaluates each job's runner both ways.
   The shell PC job image supplies Node 24 and a pre-filled pnpm store, so `ci.yml` disables setup-node's pnpm cache when `LINUX_RUNNER` is set; hosted jobs keep caching.
@@ -1109,7 +1109,11 @@ The launcher gives each app a throwaway HOME, userData, TMPDIR and XDG configura
 
 ## Linux automatic startup fixtures
 
-`linux-startup.yml` runs the production runtime/session classifier on a disposable Ubuntu machine for pull requests and main: the PC's fresh virtual machine through `LINUX_RUNNER`, or GitHub-hosted Ubuntu when it is unset.
+The PR's `typecheck-lint-build` job runs the production runtime/session classifier through `.github/actions/linux-startup` after its build checks.
+Both startup fixtures and their result summary run even when an earlier check fails, provided checkout succeeded and the job was not cancelled.
+A newer push cancels the PR job, including startup, through `ci.yml`'s existing concurrency rule; startup no longer finishes independently on a superseded PR version.
+`linux-startup.yml` keeps the same action in a separate job on main.
+Both use a disposable Ubuntu machine: the PC's fresh virtual machine through `LINUX_RUNNER`, or GitHub-hosted Ubuntu when it is unset.
 It checks a disposable logged-out user under running systemd, then starts that user's manager for the available case.
 It also checks a plain Ubuntu container with installed systemctl but no running systemd, then an unavailable systemctl.
 The job logs the runtime, commands, statuses and classification, never the user manager's environment values.

@@ -1,7 +1,6 @@
 name: Linux automatic startup
 
 on:
-  pull_request:
   push:
     branches: [main]
 
@@ -19,39 +18,4 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 24
-      - name: Running systemd, logged-out user, and working user manager
-        shell: bash
-        run: |
-          set -euo pipefail
-          test "$(cat /proc/1/comm)" = systemd
-          user=infinitary-startup-fixture
-          sudo useradd --create-home "$user"
-          uid=$(id -u "$user")
-          fixture=$(mktemp -d)
-          chmod 0755 "$fixture"
-          mkdir -p "$fixture/scripts" "$fixture/src/core/helper"
-          cp scripts/check-linux-startup.ts "$fixture/scripts/"
-          cp src/core/helper/linuxStartup.ts "$fixture/src/core/helper/"
-          cleanup() {
-            rm -rf "$fixture"
-            sudo systemctl stop "user@$uid.service" || true
-            sudo loginctl disable-linger "$user" || true
-            sudo userdel --remove "$user" || true
-          }
-          trap cleanup EXIT
-          test "$(loginctl list-sessions --no-legend | awk -v u="$user" '$0 ~ u { print }')" = ""
-          sudo -u "$user" env -u DBUS_SESSION_BUS_ADDRESS XDG_RUNTIME_DIR="/run/user/$uid" "$(command -v node)" "$fixture/scripts/check-linux-startup.ts" at-login
-          sudo loginctl enable-linger "$user"
-          sudo systemctl start "user@$uid.service"
-          sudo -u "$user" env -u DBUS_SESSION_BUS_ADDRESS XDG_RUNTIME_DIR="/run/user/$uid" "$(command -v node)" "$fixture/scripts/check-linux-startup.ts" available
-      - name: Plain Ubuntu container, with and without systemctl
-        shell: bash
-        run: |
-          set -euo pipefail
-          docker run --rm -v "$PWD:/work:ro" -v "$(dirname "$(command -v node)"):/node:ro" -w /work ubuntu:24.04 bash -euc '
-            apt-get update -qq
-            DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends systemd
-            command -v systemctl
-            /node/node scripts/check-linux-startup.ts unavailable
-            PATH=/no-programs /node/node scripts/check-linux-startup.ts unavailable
-          '
+      - uses: ./.github/actions/linux-startup

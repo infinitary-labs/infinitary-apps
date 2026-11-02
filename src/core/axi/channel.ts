@@ -4,6 +4,7 @@ import { createServer, type IncomingMessage, type Server, type ServerResponse } 
 import type { AddressInfo } from "node:net";
 import { join } from "node:path";
 import { LOAD_COMMAND } from "@shared/load";
+import { RESOURCE_REFRESH_MS } from "@shared/resources";
 import { HERE } from "../../shared/deviceNames";
 import { BROWSER_COMMAND } from "../browser/commandWords";
 import type { CrewmateBrowser } from "../browser/taskBrowsers";
@@ -427,12 +428,24 @@ export class AxiChannel {
   ): Promise<Outcome> {
     // An operation that waits on another computer answers before this is stopped.
     const stopsAt = Date.now() + PROCESS_BOUND_MS;
+    // A claim only identifies/adopts this same living group; it never launches
+    // the payload. Losing its answer must not end the group's queue lifetime.
+    // Other commands may have effects: an interrupted answer is not retry permission.
+    const interrupted = (message: string): Outcome => {
+      if (command.tool !== LOAD_COMMAND || command.argv[0] !== "claim")
+        return failed(message, "FAILED");
+      const answer = failed(message, "CLAIM_UNAVAILABLE");
+      return {
+        ...answer,
+        stdout: `${answer.stdout}retrySeconds: ${RESOURCE_REFRESH_MS / 1000}\n`,
+      };
+    };
     return new Promise((resolve) => {
       let child: HostChildProcess;
       try {
         child = this.options.spawner.spawn();
       } catch {
-        resolve(failed(`${HERE.This} could not start the command right now.`, "FAILED"));
+        resolve(interrupted(`${HERE.This} could not start the command right now.`));
         return;
       }
       this.running.add(child);
@@ -446,11 +459,11 @@ export class AxiChannel {
         resolve(outcome);
       };
       const bound = setTimeout(
-        () => finish(failed("The command did not answer in time.", "FAILED")),
+        () => finish(interrupted("The command did not answer in time.")),
         PROCESS_BOUND_MS,
       );
       bound.unref?.();
-      child.onExit(() => finish(failed("The command stopped before it answered.", "FAILED")));
+      child.onExit(() => finish(interrupted("The command stopped before it answered.")));
       child.onMessage((raw) => {
         const message = raw as AxiChildMessage;
         if (message?.type === "done") {

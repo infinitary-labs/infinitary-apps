@@ -1,0 +1,14 @@
+{
+  "entries": [
+    {
+      "id": "queued-run-claim-recovery",
+      "kind": "fix",
+      "area": "tasks",
+      "title": "Queued runs keep their place through a slow response",
+      "body": "A slow or interrupted admission check no longer ends a waiting run. It keeps its place and starts only after a fresh check confirms that it can run.",
+      "noPicture": "This changes background admission recovery, not the task record's appearance; native command transcripts demonstrate the retained queue position.",
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

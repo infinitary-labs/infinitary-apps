@@ -43,6 +43,7 @@ axi-sdk-js writes `process.exitCode` and reads `process.argv`, so each command r
 It runs `runTaskAxiCli` (`src/core/axi/cli.ts`) over the command's table with what the shell passed, its home view naming the path the shell ran it from, and sends back what the command printed and its exit code.
 The table reaches the task's tool only through one call per operation, which the app answers against the tool it granted that task: for the browser, `CrewmateBrowser`'s `navigate`, `inspect`, `act`, `capture`, `close` and `pages`, and never a picture's bytes.
 A command process that has not answered in a minute is stopped.
+An interrupted native load claim returns `CLAIM_UNAVAILABLE` with the existing reading cadence, letting its waiting wrapper keep the same process group and ask again; other commands still fail without retry permission.
 Its output goes to the app alone, never to the app's log.
 
 ## A shell's limit
@@ -77,6 +78,9 @@ The home grants it to local tasks with a command process and to work computers t
 Its bare invocation reads the task's declarations.
 Its `run --processors <number> --memory-mib <number> -- <program> [arguments]` path dispatches to the native Bash wrapper before the generic request path, so the program retains the caller's streams and environment.
 The wrapper's `claim` requests carry only its process identity, demand and optional outer hold.
+A claim timeout, command-process startup failure or premature exit does not end the wrapper's group or discard its queue position.
+The common launcher also distinguishes a claim's transport timeout from a channel refusal; only that idempotent claim may repeat after its answer was lost.
+The host may still finish a timed-out claim, so recovery always asks with the same identity and requires a fresh admission reply before executing the program.
 No command table can release a living group or bypass the recorded `load-line` hold.
 The caller's demand, FIFO admission, pressure behavior, nested runs and group lifetime are owned by [Declared heavy runs](heavy-runs.md).
 The project-neutral served instruction has one home in `CREWMATE_LOAD_LINE`; it says what to declare and never names this project's test gates.

@@ -6,6 +6,7 @@ import { join, resolve } from "node:path";
 import { RESOURCE_MAX_AGE_MS, type ResourceObservation } from "@shared/resources";
 import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 import { bundleAxiProcess } from "../../../tests/helpers/axiProcessBundle";
+import { deferred } from "../../../tests/helpers/deferred";
 import { scratchDir } from "../../../tests/helpers/scratchDirs";
 import { AxiChannel, type TaskShell } from "../axi/channel";
 import { hostEnv } from "../hostEnv";
@@ -43,6 +44,7 @@ beforeAll(async () => {
   entry = await bundleAxiProcess();
 }, 60_000);
 afterEach(() => {
+  vi.useRealTimers();
   for (const channel of channels.splice(0)) channel.close();
   for (const line of lines.splice(0)) line.dispose();
 });
@@ -222,6 +224,133 @@ describe("the declared heavy-run line through its native command", () => {
       await waiting.ended;
     }
   });
+
+  // INF-2004: one timed-out claim must not end the waiting group or lose its place.
+  // Use the real wrapper/channel/process table; delay only one OS-reading completion,
+  // and advance the channel's own deadline rather than waiting a minute under load.
+  it.each(["deadline", "start", "exit"] as const)(
+    "keeps the same queued group after a claim %s interruption and starts only on a fresh answer",
+    async (failure) => {
+      const dir = scratchDir("infinitary-load-claim-timeout-");
+      const delayed = deferred<void>();
+      const entered = deferred<void>();
+      const again = deferred<void>();
+      let slow = false;
+      let interruptProcess = false;
+      let interrupted = false;
+      const line = new LoadLine({
+        stateFile: join(dir, "load.json"),
+        processes: async () => {
+          if (slow) {
+            slow = false;
+            interrupted = true;
+            entered.resolve();
+            await delayed.promise;
+          } else if (interrupted) again.resolve();
+          return readProcesses();
+        },
+      });
+      lines.push(line);
+      line.observe({ ...reading, memory: { ...reading.memory, memoryPressure: "warning" } }, null);
+      const native = forkChildProcess(entry);
+      const channel = await AxiChannel.open({
+        spawner: {
+          spawn: () => {
+            if (!interruptProcess) return native.spawn();
+            interruptProcess = false;
+            interrupted = true;
+            entered.resolve();
+            if (failure === "start") throw new Error("Command process unavailable");
+            const child = native.spawn();
+            // Exit with channel listeners installed, before it can answer.
+            return { ...child, postMessage: () => child.kill() };
+          },
+        },
+        binDir: bin,
+        version: "9.9.9-test",
+        keysDir: join(dir, "keys"),
+      });
+      channels.push(channel);
+      const identities: number[] = [];
+      const load = line.forTask("timeout");
+      const claims: Promise<unknown>[] = [];
+      const waiting = run(
+        channel.grant("timeout", {
+          load: {
+            read: load.read,
+            claim: (input) => {
+              identities.push(input.pid);
+              const work = load.claim(input);
+              claims.push(work);
+              return work;
+            },
+          },
+        }),
+        dir,
+        [process.execPath, "-e", "console.log('requested check started')"],
+      );
+      try {
+        await expect.poll(waiting.errors).toContain("reason: pressure");
+        const before = line.snapshot();
+        if (failure === "deadline") {
+          slow = true;
+          vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
+          await entered.promise;
+          // The sole pending timeout is the command process's bound. Native polling
+          // and the group's lifetime keep their real clocks and identity.
+          vi.advanceTimersToNextTimer();
+          vi.useRealTimers();
+        } else {
+          interruptProcess = true;
+          await entered.promise;
+        }
+        const outcome = await Promise.race([
+          again.promise.then(() => "claimed again"),
+          waiting.ended.then((code) => `wrapper exited ${code}`),
+        ]);
+        console.info(
+          "Interrupted claim before recovery",
+          JSON.stringify({
+            outcome,
+            identities,
+            waiting: waiting.errors(),
+            output: waiting.output(),
+            before,
+            after: line.snapshot(),
+          }),
+        );
+        expect(outcome).toBe("claimed again");
+        expect(waiting.output()).toBe("");
+        expect(line.snapshot()).toEqual(before);
+        expect(new Set(identities).size).toBe(1);
+        // Let the old request finish after its response was lost. It must not
+        // grant execution; the wrapper still needs its own fresh running reply.
+        delayed.resolve();
+        await Promise.all(claims);
+        expect(waiting.output()).toBe("");
+        line.observe(reading, null);
+        expect(await waiting.ended).toBe(0);
+        expect(waiting.output()).toBe("requested check started\n");
+        await expect.poll(() => line.snapshot().runs).toEqual([]);
+        console.info(
+          "Interrupted claim recovery proof",
+          JSON.stringify({
+            identities,
+            hold: before.runs[0]?.id,
+            waiting: waiting.errors(),
+            output: waiting.output(),
+            remaining: line.snapshot(),
+          }),
+        );
+      } finally {
+        vi.useRealTimers();
+        delayed.resolve();
+        await Promise.allSettled(claims);
+        channel.close();
+        await waiting.ended;
+      }
+    },
+  );
 
   it("holds a surviving group after its leader exits and restores that hold after app restart", async () => {
     const dir = scratchDir("infinitary-load-descendant-");

@@ -5,6 +5,7 @@ import { join, resolve } from "node:path";
 import { decode } from "@toon-format/toon";
 import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 import { bundleAxiProcess } from "../../../tests/helpers/axiProcessBundle";
+import { deferred } from "../../../tests/helpers/deferred";
 import { scratchDir } from "../../../tests/helpers/scratchDirs";
 import type { BrowserAnswer, CrewmateBrowser } from "../browser/taskBrowsers";
 import { hostEnv } from "../hostEnv";
@@ -337,6 +338,63 @@ describe("the task channel and the infinitary-browser-axi launcher", () => {
     expect(outcome.exitCode).toBe(0);
     expect(decode(outcome.output)).toMatchObject({ running: "wait" });
     expect(browser.inspect).toHaveBeenCalledTimes(1);
+  });
+
+  // INF-2004: interrupted load claims may repeat, but an effectful command may not.
+  it("keeps a timed-out browser action terminal and never labels it as a repeatable claim", async () => {
+    const channel = await openChannel();
+    const browser = standIn("Sign up");
+    const entered = deferred<void>();
+    const delayed = deferred<BrowserAnswer>();
+    browser.act = vi.fn(() => {
+      entered.resolve();
+      return delayed.promise;
+    });
+    const granted = channel.grant("task-a", { browser });
+    vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
+    const running = shell(granted, ["click", "@g1:e2"]);
+    await entered.promise;
+    vi.advanceTimersToNextTimer();
+    vi.useRealTimers();
+    const answer = await running;
+    expect(answer.exitCode).toBe(1);
+    expect(decode(answer.stdout)).toMatchObject({ code: "FAILED" });
+    delayed.resolve(page("Sign up", "Clicked once."));
+    expect(browser.act).toHaveBeenCalledTimes(1);
+  });
+
+  // INF-2004: curl's documented timeout exit is a lost answer, not a refusal.
+  // Inject that transport result at curl's executable seam while running the
+  // real launcher; no real task key, network destination or app state is used.
+  it("marks a transport timeout recoverable only for the native load claim", async () => {
+    const dir = scratchDir("infinitary-axi-transport-timeout-");
+    const curl = join(dir, "curl");
+    writeFileSync(curl, "#!/bin/sh\nexit 28\n", { mode: 0o700 });
+    const launcher = readFileSync(join(BIN_DIR, "infinitary-axi"), "utf8").replace(
+      "curl=/usr/bin/curl",
+      `curl='${curl.replaceAll("'", "'\"'\"'")}'`,
+    );
+    for (const name of ["infinitary-load-axi", "infinitary-browser-axi"])
+      writeFileSync(join(dir, name), launcher, { mode: 0o700 });
+    const channel = await openChannel();
+    const granted = channel.grant("transport", { browser: standIn("Sign up") });
+    const fixture = { ...granted, path: [dir] };
+    const claim = await shell(
+      fixture,
+      ["claim", "--pid", "1", "--processors", "2", "--memory-mib", "2048"],
+      {},
+      "infinitary-load-axi",
+    );
+    expect(claim.exitCode).toBe(1);
+    expect(decode(claim.stdout)).toMatchObject({ code: "CLAIM_UNAVAILABLE" });
+    for (const [name, args] of [
+      ["infinitary-load-axi", []],
+      ["infinitary-browser-axi", ["click", "@g1:e2"]],
+    ] as const) {
+      const answer = await shell(fixture, [...args], {}, name);
+      expect(answer.exitCode).toBe(1);
+      expect(decode(answer.stdout)).toMatchObject({ code: "NO_CHANNEL" });
+    }
   });
 
   it("counts the shell's limit from when the shell started, while that shell can still answer", async () => {

@@ -47,6 +47,7 @@ fi
 
 launcher=${0%/*}/infinitary-load-axi
 last=
+retryDelay=
 while :; do
   parent=()
   if [ -n "${INFINITARY_LOAD_HOLD:-}" ]; then parent=(--parent "$INFINITARY_LOAD_HOLD"); fi
@@ -55,17 +56,32 @@ while :; do
   answer=$(INFINITARY_SHELL_CAP_MS= FM3000_SHELL_CAP_MS= INFINITARY_SHELL_ID= \
     "$launcher" claim --pid "$$" --processors "$cpu" --memory-mib "$memory" "${parent[@]}" 2>&1)
   code=$?
-  if [ "$code" -ne 0 ]; then printf '%s\n' "$answer" >&2; exit "$code"; fi
   state=
   hold=
   delay=
+  failure=
   while IFS=' ' read -r key value; do
     case $key in
       state:) state=$value ;;
       hold:) hold=$value ;;
       retrySeconds:) delay=$value ;;
+      code:) failure=$value ;;
     esac
   done <<< "$answer"
+  if [ "$code" -ne 0 ]; then
+    # Only the claim's typed interruption is recoverable. Keep this group and
+    # its declaration; a late host reply cannot launch the payload from here.
+    if [ "$failure" != CLAIM_UNAVAILABLE ]; then printf '%s\n' "$answer" >&2; exit "$code"; fi
+    if [ "$answer" != "$last" ]; then printf '%s\n' "$answer" >&2; last=$answer; fi
+    if [ -n "$delay" ]; then retryDelay=$delay; fi
+    # A first transport timeout has already waited out curl's bound and may
+    # not yet have received the app's cadence. Later polls reuse that cadence.
+    if [ -n "$retryDelay" ]; then
+      case $retryDelay in *[!0-9]*|0) invalid 'The app answered without its reading cadence.' ;; esac
+      sleep "$retryDelay"
+    fi
+    continue
+  fi
   case $state in
     running)
       [ -n "$hold" ] || invalid 'The app answered without the run’s hold.'
@@ -75,6 +91,7 @@ while :; do
     waiting)
       if [ "$answer" != "$last" ]; then printf '%s\n' "$answer" >&2; last=$answer; fi
       case $delay in ''|*[!0-9]*|0) invalid 'The app answered without its reading cadence.' ;; esac
+      retryDelay=$delay
       sleep "$delay"
       ;;
     *) invalid 'The app did not answer admission; nothing started.' ;;

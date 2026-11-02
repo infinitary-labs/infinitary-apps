@@ -16,6 +16,11 @@ The caller's program and arguments stay in that shell, never crossing the task c
 After admission the child execs the original program, retaining standard input, output, error, environment and working directory; the outer wrapper returns its exit status.
 The waiting wrapper prints line facts on standard error, leaving the admitted program's standard output intact.
 Short claim requests use the existing two-second cadence and bypass the shell's kept-answer mechanism; the waiting wrapper is itself the shell job.
+A command process that cannot start, exits without answering or reaches its deadline answers an admission claim with the typed `CLAIM_UNAVAILABLE` outcome and the same reading cadence.
+A transport timeout on a claim carries that outcome too; a first transport timeout has already waited out its bound, and later attempts reuse the last cadence received.
+The wrapper keeps the same process group and declaration and asks again, without a limit on how long it can remain queued.
+A lost claim reply may finish on the host later, but neither that reply nor a remembered admission starts the program: the wrapper still requires its own fresh successful admission answer.
+This recovery applies only to admission claims, never to a payload launch or another command's effects; invalid requests, revoked keys, lost channels and owner refusals still end the waiting wrapper.
 If a later process-table reading is unavailable, a previously verified caller with the same task, group and declaration keeps waiting in its existing place instead of treating the missing reading as proof it ended.
 The reply grants no execution until a fresh reading verifies the caller, even if capacity has already admitted its saved hold; that reservation remains counted in the meantime.
 An unreadable first claim, a caller absent from a readable table, a changed declaration and an unverified nested claim still refuse.
@@ -89,6 +94,7 @@ The iPhone and iPad app retains its existing surface and ignores these optional 
 ## Checks
 
 `src/core/placed/loadLine.integration.test.ts` runs real native wrappers through the task channel with a recorded ordinary-use Mac reading and explicitly supplied pressure states.
-It exercises queue order, unchanged streams and exit status, pressure admission, unknown and stale readings, revoked waiters, surviving descendants, restart restoration, failed state writes, nested demands and recorded overrides.
+It exercises queue order, unchanged streams and exit status, pressure admission, unknown and stale readings, interrupted claim commands retaining their identity and hold, revoked waiters, surviving descendants, restart restoration, failed state writes, nested demands and recorded overrides.
+`src/core/axi/channel.test.ts` checks the launcher's transport-timeout classification and that an interrupted non-load action remains terminal rather than gaining retry permission.
 `src/core/placed/processResources.test.ts` exercises declared-group attribution, PID reuse and explicit nested roots using recorded process metadata.
 This project's own local phone gate and journey runs declare their runs through this command (`docs/testing.md`, "A local heavy run's place").

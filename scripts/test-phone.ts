@@ -64,10 +64,9 @@ const devices: PhoneDevice[] = values.both ? ["iphone", "ipad"] : [values.ipad ?
 const jobs = phoneJobs(devices, values.waits ? ["rest"] : values.part ?? PHONE_PARTS.map((part) => part.name));
 const simulators = Number(values.simulators);
 mkdirSync(evidence, { recursive: true });
-// INF-1541 piece 4 and INF-1664: a local gate waits in its computer's load line, or without one in the
-// Mac mini's crew places, never for a quieter Mac; its parts ride the gate's place. CI's job starts at once.
-const runPlace = values.xctestrun ? { close() {} }
-  : await takeHeavyRunPlace("phone", `test:phone ${devices.join(" and ")}: ${jobs.length} part(s)`);
+// INF-1541 piece 4 and INF-1664: a local gate waits in its computer's load line, never for a quieter
+// Mac; its parts ride the gate's place. CI's job, and a shell with no line, start at once (INF-2137).
+const runPlace = values.xctestrun ? { close() {} } : await takeHeavyRunPlace("phone");
 // Capture the account home before the disposable app/test HOME replaces it.
 const invokingHome = userInfo().homedir;
 const root = scratchDir(SCRATCH_PREFIX);

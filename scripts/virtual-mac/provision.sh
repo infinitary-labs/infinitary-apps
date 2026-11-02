@@ -15,7 +15,7 @@ NODE_TAR="$(awk '/darwin-arm64\.tar\.xz$/ { print $2 }' "$WORK/SHASUMS256.txt")"
 curl -fsSL "$NODE_DIST/$NODE_TAR" -o "$WORK/$NODE_TAR"
 (cd "$WORK" && grep " $NODE_TAR\$" SHASUMS256.txt | shasum -a 256 -c -)
 # Fresh clones must start with a complete setup-node cache, not download Node
-# again. fm-placer points the runner at this same path outside its wiped _work.
+# again. runner-up points the runner at this same path outside its wiped _work.
 export RUNNER_TOOL_CACHE="$HOME/tool-cache"
 NODE_HOME="$(/bin/bash "$SHARE/cache-node.sh" "$WORK/$NODE_TAR" "$RUNNER_TOOL_CACHE")"
 rm -rf "$HOME/node"

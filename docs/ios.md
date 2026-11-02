@@ -730,7 +730,7 @@ A job on the `phone` kind's queue or the placement service's virtual-Mac label t
 Desktop jobs from different pull requests have no common job-level concurrency group, so they can run side by side.
 Desktop journeys and native device gates run directly, without a command lease, so real and virtual Mac checks can overlap.
 The `test:phone` package script checks the configured execution mode before running `scripts/test-phone.ts` directly; the gate owns a scratch HOME and disposable simulators.
-A local gate first waits for its place: in this computer's load line where its shell has one, otherwise in the crew place service's one line, and starts at once where neither runs (`docs/testing.md`, "A local heavy run's place").
+A local gate first waits for its place in this computer's load line where its shell has one, and starts at once where it has none (`docs/testing.md`, "A local heavy run's place").
 Before the gate starts any phone work, `scripts/phone-activity.ts` publishes a private, atomic activity record for its supervisor in `IDLE_REBOOT_PHONE_ACTIVITY_DIR`, or the invoking account's real `Library/Caches/infinitary-ci/phone-activity` folder, never the disposable HOME.
 Each invocation owns one uniquely named JSON file containing only `schemaVersion: 1`, its `pid` and `processStartedAt`, the normalized `LC_ALL=C TZ=UTC /bin/ps -o lstart=` reading for that PID.
 The supervisor stays alive through teardown and removes only its own file after cleanup; this is activity reporting, with no lock, admission wait, heartbeat or age expiry.
@@ -749,8 +749,8 @@ Mac-side checks remain the project's normal gate and affected Devices journeys.
 On the Mac mini, a local virtual Mac runs only under `borrow-virtual-mac --label <text> --minutes <n> -- <command>`, borrowing `mini-vm1` or `mini-vm2` beside CI jobs.
 Use `BORROW_MINUTES=45 scripts/virtual-mac/phone.sh run <results folder> iphone ipad` to keep one borrow through startup, the gates and deletion, returning the gate's exit status even on failure.
 Outside CI the script borrows automatically where the command exists, reuses `BORROWED_PLACE` when already borrowed, and starts at once where the command is missing.
-It uses `BORROWED_VM` and the granted size; a run with `BORROWED_PLACE` asks neither the load line nor a crew place and says it rides the borrow.
-Do not add a load-line declaration, crew place or hand-made hold for that virtual Mac.
+It uses `BORROWED_VM` and the granted size; a run with `BORROWED_PLACE` does not ask the load line and says it rides the borrow.
+Do not add a load-line declaration or hand-made hold for that virtual Mac.
 The borrow lasts until the command ends or the later of one hour and the declared minutes.
 Local split `start`/`gate`/`delete` calls require an explicit outer borrow where the command exists; CI's split lifecycle below is unchanged.
 
@@ -784,7 +784,7 @@ On that queue each phone check takes a concurrency group of its own, so phone ch
 The Mac mini gives that queue one virtual place (DOP-213, the captain's "i would just remove one mini-vm slot"), because two full checks at once starved each other there (INF-2052), so on the Mac mini a phone check waits for the one before it.
 The real Mac never takes that label, so a phone check never takes its place.
 A runner the service starts for one phone check may take another waiting phone check, or that rarer check in the same set; either is a job that asked for a virtual Mac.
-The service gives a free virtual place first to the oldest job that asks for a virtual Mac (`Plan` in dotfiles-private's `pkgs/fm-placer/schedule.go`), so a released phone check starts on the next free virtual place instead of behind every Mac job already waiting.
+The placement service, runner-up, gives a free virtual place to the waiting job its order rules put first among the jobs that place can take, the oldest breaking a tie (`order` in dotfiles-private's `home-manager/runner-up-fleet.nix`), so a released phone check waits only behind jobs that can also run in a virtual Mac, never behind a job that needs the real Mac.
 With neither set, the job runs where `MAC_RUNNER` sends it, as before; `tests/phone-ci.test.ts` evaluates the job's runner for each setting.
 
 ## Generated and bundled assets

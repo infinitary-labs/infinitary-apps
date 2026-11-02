@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "heavy-runs-no-crew-place",
+      "reason": "Internal: this project's own local phone gate and journey runs start at once where the shell has no load line, instead of asking the Mac mini's retired crew place service; how the project is developed, nothing a person notices in the app."
+    }
+  ]
+}

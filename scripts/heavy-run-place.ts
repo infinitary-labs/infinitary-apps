@@ -4,15 +4,16 @@ import type { Socket } from "node:net";
 import { delimiter, join } from "node:path";
 import { createInterface } from "node:readline";
 import { LOAD_COMMAND } from "../src/shared/load.ts";
-import { type CrewPlaceKind, takeCrewPlace } from "./crew-place.ts";
 
 /** INF-1621 piece 3 (INF-1664): a local heavy run declares its needs in the
  * load line of the computer it runs on (docs/heavy-runs.md) and holds them
- * until it ends. The captain's "Add the fallback, no alpha needed": a shell
- * whose app has no line asks the Mac mini's crew place service exactly as
- * before (scripts/crew-place.ts). The run says which path it took.
+ * until it ends. A shell whose app has no line starts the run at once, with
+ * no other place to ask (INF-2137). The run says which path it took.
  */
 export type HeavyRunPlace = { close(): void };
+
+/** What runs: a phone gate or a journey run. */
+export type HeavyRunKind = "phone" | "journeys";
 
 /** INF-2165: local journeys default to two workers; CLI overrides are resolved by Playwright. */
 export const LOCAL_JOURNEY_WORKERS = 2;
@@ -23,19 +24,19 @@ export function journeyRunNeeds(workers: number) {
 }
 
 /** The phone declaration is unchanged; journeys follow their resolved worker count. */
-export const HEAVY_RUN_NEEDS: Record<CrewPlaceKind, { processors: number; memoryMib: number }> = {
+export const HEAVY_RUN_NEEDS: Record<HeavyRunKind, { processors: number; memoryMib: number }> = {
   phone: { processors: 4, memoryMib: 8192 },
   journeys: journeyRunNeeds(LOCAL_JOURNEY_WORKERS),
 };
 
 /** What a run says about the path it took. */
 export const heavyRunWords = {
-  asking: (kind: CrewPlaceKind, needs = HEAVY_RUN_NEEDS[kind]) =>
+  asking: (kind: HeavyRunKind, needs = HEAVY_RUN_NEEDS[kind]) =>
     `Asking this computer's load line for ${needs.processors} processors and ${needs.memoryMib} MiB (${LOAD_COMMAND}).`,
-  admitted: (kind: CrewPlaceKind, needs = HEAVY_RUN_NEEDS[kind]) =>
+  admitted: (kind: HeavyRunKind, needs = HEAVY_RUN_NEEDS[kind]) =>
     `Admitted by this computer's load line; holding ${needs.processors} processors and ${needs.memoryMib} MiB until this run ends.`,
-  borrowed: (place: string) => `This run rides borrowed place ${place}; asking neither the load line nor a crew place.`,
-  noLine: `${LOAD_COMMAND} is not available in this shell; asking the Mac mini's crew place service instead.`,
+  borrowed: (place: string) => `This run rides borrowed place ${place}; not asking the load line.`,
+  noLine: `${LOAD_COMMAND} is not available in this shell; starting at once.`,
 };
 
 /** Runs the load command and outlives the gate. However the gate ends, even
@@ -91,7 +92,7 @@ function lineAnswers(command: string, env: NodeJS.ProcessEnv): Promise<boolean> 
 
 function takeLine(
   command: string,
-  kind: CrewPlaceKind,
+  kind: HeavyRunKind,
   needs: { processors: number; memoryMib: number },
   env: NodeJS.ProcessEnv,
   log: (line: string) => void,
@@ -128,12 +129,12 @@ function takeLine(
 }
 
 /** Waits for a place for a local heavy run and holds it until close() or this
- * process ends. In CI the job already holds its runner's place and asks nothing.
+ * process ends. In CI the job already holds its runner's place and asks nothing;
+ * a shell with no line asks nothing either and starts at once.
  */
 export async function takeHeavyRunPlace(
-  kind: CrewPlaceKind,
-  label: string,
-  options: Parameters<typeof takeCrewPlace>[2] & { workers?: number } = {},
+  kind: HeavyRunKind,
+  options: { env?: NodeJS.ProcessEnv; log?: (line: string) => void; workers?: number } = {},
 ): Promise<HeavyRunPlace> {
   const env = options.env ?? process.env;
   const log = options.log ?? ((line: string) => console.error(line));
@@ -153,5 +154,5 @@ export async function takeHeavyRunPlace(
     log,
   );
   log(heavyRunWords.noLine);
-  return takeCrewPlace(kind, label, { ...options, env, log });
+  return { close() {} };
 }

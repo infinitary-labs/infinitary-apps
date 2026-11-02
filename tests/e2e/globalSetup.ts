@@ -8,10 +8,10 @@ import { checkMicrophone } from "./micPreflight";
 import { runDir, tidyRunEvidence } from "./runEvidence";
 
 /**
- * Before any test starts: a place in this computer's load line, or a crew
- * place where the shell has no line (scripts/heavy-run-place.ts), the run's
- * own evidence directory (tests/e2e/runEvidence.ts) and the run's private
- * TMPDIR (tests/helpers/runTempRoot.ts). Workers and every app they launch inherit
+ * Before any test starts: a place in this computer's load line where the
+ * shell has one (scripts/heavy-run-place.ts), the run's own evidence
+ * directory (tests/e2e/runEvidence.ts) and the run's private TMPDIR
+ * (tests/helpers/runTempRoot.ts). Workers and every app they launch inherit
  * the TMPDIR; each worker removes what it made as it exits
  * (tests/helpers/scratchDirs.ts), and the run fails here if anything is left.
  * They inherit nothing of the session that started the run
@@ -19,13 +19,9 @@ import { runDir, tidyRunEvidence } from "./runEvidence";
  */
 export default async function globalSetup(config: FullConfig): Promise<() => Promise<void>> {
   leaveRunnerSession();
-  // INF-1541 piece 4 and INF-1664: a local run waits in its computer's load line, or without one
-  // for a crew place, and holds it to the end; in CI it starts at once.
-  const runPlace = await takeHeavyRunPlace(
-    "journeys",
-    `journeys: ${process.argv.slice(2).join(" ")}`,
-    { workers: config.workers },
-  );
+  // INF-1541 piece 4 and INF-1664: a local run waits in its computer's load line and holds its
+  // place to the end; in CI, or in a shell with no line, it starts at once (INF-2137).
+  const runPlace = await takeHeavyRunPlace("journeys", { workers: config.workers });
   // Voice journeys need the runner to open the microphone (tests/e2e/micPreflight.ts).
   await checkMicrophone();
   const workingCopy = config.configFile ? dirname(config.configFile) : config.rootDir;

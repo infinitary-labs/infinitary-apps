@@ -267,12 +267,12 @@ A value other than `ci` or `local` refuses rather than guess.
 
 A local `pnpm test:phone` gate and every local `playwright test` run, repeats included, take a place before their heavy work: the gate before it builds, a journey run in the e2e global setup before any test starts (`scripts/heavy-run-place.ts`).
 Inside CI the job already holds its runner's place and asks for none.
-With `BORROWED_PLACE` set, the run says it rides that borrowed place and asks neither the load line nor a crew place; the virtual Mac's measured load is not declared again.
+With `BORROWED_PLACE` set, the run says it rides that borrowed place and does not ask the load line; the virtual Mac's measured load is not declared again.
 A phone part the gate starts rides the gate's place.
 
 Where the shell has this computer's load line, the run declares its needs there through `infinitary-load-axi run` and holds them until it ends (`docs/heavy-runs.md`).
 The supervisor preserves the gate's input pipe on a separate descriptor before starting background children, including under dash; closing that pipe ends an admitted hold or terminates a still-waiting group.
-A phone gate still declares 4 processors and 8192 MiB, the Mac mini crew place's share including simulators launchd starts outside the run's process group (INF-1664); it has not been remeasured.
+A phone gate still declares 4 processors and 8192 MiB, sized from DOP-113's measured runs on the Mac mini, which include the simulators launchd starts outside the run's process group (INF-1664); it has not been remeasured.
 A journey run declares its resolved Playwright worker count N as N processors and `1536 * N + 512` MiB: two workers ask 3584 MiB (3.5 GiB), four ask 6656 MiB (6.5 GiB).
 The local default is two workers; an explicit `--workers` count or percentage wins, and CI keeps its own worker count without asking the local line.
 The measured basis (INF-2165) is the summed macOS process-tree footprint sampled about twice a second on the Mac mini: one worker peaked near 1.6 GiB, four at 5.7 GiB, and ten at up to 13.7 GiB during ten-repeat journey runs.
@@ -283,16 +283,10 @@ A run that ends or dies gives its hold back.
 A run stopped while it still waits leaves the line: a small supervisor outside the run's process group ends the waiting command once the run's end closes its input.
 Inside a run its caller already declared, the run rides that hold, and the line refuses it when the outer run declared less.
 
-Where the shell has no line, the run asks the Mac mini's crew place service exactly as before, and says so first (the captain's "Add the fallback, no alpha needed").
+Where the shell has no line, the run says so and starts at once, asking nothing else (INF-2137, the captain's "completely remove fm-placer and any fallback logic now").
 The shell has no line when the command is not on its PATH, the shell has no task channel, or the app gives the task no line, as an app older than the line does.
-The Mac mini is always busy with the fleet's checks, so there a local heavy run waits in the placement service's one line for a crew place rather than for a quieter Mac (INF-1541, the captain's "the mac will always be busy given how many other things our fleet needs to run").
-The client (`scripts/crew-place.ts`) connects to the account's real `Library/Caches/infinitary-ci/crew-places.sock` (`INFINITARY_CREW_PLACE_SOCKET` overrides it), names only what runs (`phone` or `journeys`), prints each place in line it is told, and holds the place while its connection lives, so a run that ends or dies gives it back.
-The service decides what each kind costs and where it ranks beside the checks; the paired contract is dotfiles-private's fm-placer crew socket (DOP-112).
-With no service listening, as on any computer but the Mac mini, the run starts at once.
-A refused request fails the run with the service's reason; a service restart is asked again, and a run it had granted is counted again at once.
 
-`tests/heavy-run-place.test.ts` drives a journey run, the phone gate, a run killed while it holds its place, nested runs and each way a shell has no line through the real task channel and line.
-`tests/crew-place.test.ts` drives the crew place client, a journey run and the phone gate against a stand-in service, from a shell with no line (`tests/helpers/noLoadLine.ts`).
+`tests/heavy-run-place.test.ts` drives a journey run, the phone gate, a run killed while it holds its place, nested runs, and each way a shell has no line starting at once, through the real task channel and line (`tests/helpers/noLoadLine.ts`).
 
 ## A main repair's priority label
 
@@ -834,7 +828,7 @@ The affected-journey selector retains that journey for changes to the core Mac c
 ## A virtual Mac as a runner
 
 On the Mac mini, start a local virtual Mac only under `borrow-virtual-mac --label <text> --minutes <n> -- <command>`.
-It borrows `mini-vm1` or `mini-vm2`, never a crew place; do not add a load-line declaration, crew place or hand-made hold for that virtual Mac.
+It borrows `mini-vm1` or `mini-vm2`; do not add a load-line declaration or hand-made hold for that virtual Mac.
 The borrow owns the whole command's lifetime, ends at completion or the later of one hour and the declared minutes, and cleans up a leftover virtual Mac.
 Outside CI, `image.sh`, `run.sh` and `phone.sh run` enter that command automatically where it exists, using `BORROW_MINUTES` (required there) and optional `BORROW_LABEL`.
 An existing `BORROWED_PLACE` reuses the outer borrow without asking again; scripts use its `BORROWED_VM` name and granted processor and memory size.

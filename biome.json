@@ -437,7 +437,6 @@
         "!tests/local-codesign.test.ts",
         "!tests/mac-check-lock.test.ts",
         "!tests/journey-timing-workflow.test.ts",
-        "!tests/crew-place.test.ts",
         "!tests/heavy-run-place.test.ts",
         "!tests/phone-activity.test.ts",
         "!tests/phone-failure-logs.test.ts",

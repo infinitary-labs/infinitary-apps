@@ -30,6 +30,7 @@ import {
   presentationRegionMarkers,
   readPresentationRegion,
 } from "../forge";
+import { presentationMarkdownText } from "../forge/presentation";
 import { stageChangePresentation } from "../pi/changePresentation";
 import { CardStore } from "../storage/cardStore";
 import { openDatabase } from "../storage/db";
@@ -1565,5 +1566,129 @@ it("recovers an uncertain replacement with edited markers through the same delib
   await expect(at.service.assertPublished(TASK, next, at.forge)).resolves.toEqual({
     ...next,
     squashMessage: at.draft.whatChanged.join("\n\n"),
+  });
+});
+
+// INF-1965: the saved story belongs to every destination, not only native-upload hosts.
+// Existing inspected photographs and the publisher's host readings own the fixture.
+describe("stories without native attachment publication", () => {
+  it.each([
+    ["github", "github.example.com"],
+    ["gitlab", "gitlab.example.com"],
+  ] as const)(
+    "publishes and reads back %s text while retaining the complete card's pictures",
+    async (kind, host) => {
+      const at = await arrange();
+      const destination = {
+        host,
+        format: kind,
+        projectId: 1422452335,
+        fullName: "octo/meterlab",
+        visibility: "private" as const,
+      };
+      const forge: Forge = {
+        ...at.forge,
+        kind,
+        host,
+        attachments: undefined,
+        storyDestination: async () => destination,
+      };
+      const revision = await at.service.prepare(TASK, at.staged, forge);
+      const change = await at.service.publish(TASK, revision, forge, BRANCH, at.draft.title);
+      expect(at.upload).not.toHaveBeenCalled();
+      expect(at.order).toEqual(["open"]);
+      expect(change.body).toContain(presentationMarkdownText(at.draft.why[0] ?? ""));
+      expect(change.body).toContain("this host receives the story's text only");
+      expect(change.body).toContain(at.draft.views[0]?.before[0]?.alt);
+      expect(change.body).not.toMatch(/app-frame:|user-attachments|\/uploads\/|\.webp/);
+      expect(at.tasks.changePresentation(TASK)?.receipts).toEqual([]);
+      const card = await at.service.completion(TASK, revision, HEAD);
+      expect(card.body).toContain("app-frame://images/");
+      expect(card.pictures).toHaveLength(2);
+      expect(card.riskDeclaration).toEqual(risk);
+      expect((await at.service.assertPublished(TASK, change, forge)).squashMessage).toBe(
+        at.draft.whatChanged.join("\n\n"),
+      );
+      // The same identity check protects text: visibility/project changes never silently republish.
+      forge.storyDestination = async () => ({
+        ...destination,
+        projectId: destination.projectId + 1,
+      });
+      await expect(at.service.assertPublished(TASK, change, forge)).rejects.toThrow(
+        "destination or audience changed",
+      );
+    },
+  );
+
+  it("binds a plain branch's retained story without inventing a description or pull request", async () => {
+    const at = await arrange();
+    at.change = { branch: BRANCH, headSha: HEAD, url: null };
+    const forge: Forge = {
+      ...at.forge,
+      kind: "git",
+      attachments: undefined,
+      storyDestination: async () => ({
+        kind: "branch",
+        origin: "https://git.example.test/octo/meterlab.git",
+      }),
+    };
+    const revision = await at.service.prepare(TASK, at.staged, forge);
+    const change = await at.service.publish(TASK, revision, forge, BRANCH, at.draft.title);
+    expect(at.upload).not.toHaveBeenCalled();
+    expect(at.open).not.toHaveBeenCalled();
+    expect(at.update).not.toHaveBeenCalled();
+    expect(change).toEqual({ branch: BRANCH, headSha: HEAD, url: null });
+    expect(at.tasks.changePresentation(TASK)?.published).toBeUndefined();
+    expect(at.tasks.changePresentation(TASK)?.completion).toMatchObject({ revision, head: HEAD });
+    expect((await at.service.completion(TASK, revision, HEAD)).pictures).toHaveLength(2);
+    await expect(
+      at.service.assertPublished(TASK, { ...change, headSha: "b".repeat(40) }, forge),
+    ).rejects.toThrow("current committed version");
+    forge.storyDestination = async () => ({
+      kind: "branch",
+      origin: "https://git.example.test/another/project.git",
+    });
+    await expect(at.service.assertPublished(TASK, change, forge)).rejects.toThrow(
+      "destination or audience changed",
+    );
+  });
+
+  it("prepares and completes local work without a forge, and refuses stale code or missing pictures", async () => {
+    const at = await arrange();
+    const local = { kind: "local", project: "repo-meterlab" } as const;
+    const revision = await at.service.prepare(TASK, at.staged, local);
+    expect(at.tasks.changePresentation(TASK)?.publication).toBeUndefined();
+    expect(at.tasks.changePresentation(TASK)?.receipts).toEqual([]);
+    expect(await at.service.assertLocal(TASK, local)).toBe(HEAD);
+    const card = await at.service.completion(TASK, revision, HEAD);
+    expect(card.pictures).toHaveLength(2);
+    expect(card.riskDeclaration).toEqual(risk);
+    expect(at.order).toEqual([]);
+    await expect(
+      at.service.assertLocal(TASK, { ...local, project: "another-project" }),
+    ).rejects.toThrow("local project changed");
+    at.setHead("b".repeat(40));
+    await expect(at.service.assertLocal(TASK, local)).rejects.toThrow("current committed version");
+    at.setHead(HEAD);
+    const asset = at.tasks.changePresentation(TASK)?.revisions[0]?.assets[0];
+    if (!asset) throw new Error("Missing retained fixture");
+    rmSync(join(at.media, asset.file));
+    await expect(at.service.assertLocal(TASK, local)).rejects.toThrow();
+  });
+
+  it("never downgrades a native host to text when its upload capability disappears", async () => {
+    const at = await arrange();
+    await at.prepare();
+    const destination = await at.forge.attachments!.destination();
+    const forge: Forge = {
+      ...at.forge,
+      attachments: undefined,
+      storyDestination: async () => destination,
+    };
+    await expect(at.service.publish(TASK, 1, forge, BRANCH, at.draft.title)).rejects.toThrow(
+      "Native evidence publication is not available",
+    );
+    expect(at.open).not.toHaveBeenCalled();
+    expect(at.tasks.changePresentation(TASK)?.published).toBeUndefined();
   });
 });

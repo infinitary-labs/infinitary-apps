@@ -148,7 +148,7 @@ On any card carrying a `settle` effect, and on the story note of a task that mer
   This is agent judgment, not a pixel threshold or a host refusal.
   What is left closes after After when it bears on the decision, otherwise in `<details>`, not a fifth heading.
   Answer cards, previews included, keep their own shape.
-  The report keeps its five evidence headings; future github.com pull requests, gitlab.com merge requests and their completion cards share the saved story (`docs/forge.md`, "Saved change stories"), while other hosts and existing PRs keep the five-heading description.
+  The report keeps its five evidence headings; every new branch-based change and its completion card share the saved story (`docs/forge.md`, "Saved change stories"), while an existing PR that predates stories keeps its five-heading description.
   The card never copies the host's strip.
 
 ## The risk chart

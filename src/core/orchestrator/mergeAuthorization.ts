@@ -56,7 +56,9 @@ export function approvableOffer(
   repo: ForgeRepo | undefined,
   delivery: RepoDelivery | undefined,
   card: { cardId: string; offerId?: string | undefined },
-): { baseline: CompletionOffer; host: string; owner: string; name: string } | undefined {
+):
+  | { baseline: CompletionOffer & { prNumber: number }; host: string; owner: string; name: string }
+  | undefined {
   if (!card.offerId || delivery !== "direct-pr" || record.delivery?.checkTarget) return undefined;
   if (!repo || !record.repoId || !hasChangeRequests(repo.host?.kind) || !record.branch)
     return undefined;
@@ -65,8 +67,18 @@ export function approvableOffer(
   const baseline = record.delivery?.completionOffers?.find(
     (offer) => offer.cardId === card.cardId && offer.offerId === card.offerId,
   );
-  if (!baseline || baseline.prNumber !== record.delivery?.prNumber) return undefined;
-  return { baseline, host: location.host, owner: location.owner, name: location.name };
+  if (
+    !baseline ||
+    baseline.prNumber === undefined ||
+    baseline.prNumber !== record.delivery?.prNumber
+  )
+    return undefined;
+  return {
+    baseline: { ...baseline, prNumber: baseline.prNumber },
+    host: location.host,
+    owner: location.owner,
+    name: location.name,
+  };
 }
 
 /** The one head an approval can merge now. */

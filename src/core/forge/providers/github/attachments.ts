@@ -46,6 +46,41 @@ export function githubAttachmentUrl(value: unknown): string | undefined {
     : undefined;
 }
 
+/** One identity/audience reader for stories and their optional native uploads. */
+export function githubStoryDestination(
+  value: unknown,
+  fullName: string,
+  host: string,
+): AttachmentDestination {
+  const result = repositorySchema.safeParse(value);
+  if (!result.success)
+    throw new ForgeError(
+      "refused",
+      "GitHub did not confirm the attachment destination and audience.",
+    );
+  const repo = result.data;
+  if (
+    repo.full_name.toLowerCase() !== fullName.toLowerCase() ||
+    (repo.visibility === "public" && repo.private) ||
+    (repo.visibility === "private" && !repo.private)
+  )
+    throw new ForgeError(
+      "refused",
+      "The attachment destination or audience changed. Prepare the story again.",
+    );
+  if (!(repo.permissions.push || repo.permissions.maintain || repo.permissions.admin))
+    throw new ForgeError(
+      "permission",
+      "Uploading evidence needs write access to this GitHub project.",
+    );
+  return {
+    host,
+    projectId: repo.id,
+    fullName: repo.full_name,
+    visibility: repo.visibility,
+  };
+}
+
 /** Native uploads using only the app's supplied sign-in. No redirect, token fallback or retry. */
 export class GitHubAttachments implements ForgeAttachments {
   constructor(
@@ -63,33 +98,11 @@ export class GitHubAttachments implements ForgeAttachments {
   ) {}
 
   async destination(): Promise<AttachmentDestination> {
-    const result = repositorySchema.safeParse(await this.options.readRepository());
-    if (!result.success)
-      throw new ForgeError(
-        "refused",
-        "GitHub did not confirm the attachment destination and audience.",
-      );
-    const repo = result.data;
-    if (
-      repo.full_name.toLowerCase() !== this.options.fullName.toLowerCase() ||
-      (repo.visibility === "public" && repo.private) ||
-      (repo.visibility === "private" && !repo.private)
-    )
-      throw new ForgeError(
-        "refused",
-        "The attachment destination or audience changed. Prepare the story again.",
-      );
-    if (!(repo.permissions.push || repo.permissions.maintain || repo.permissions.admin))
-      throw new ForgeError(
-        "permission",
-        "Uploading evidence needs write access to this GitHub project.",
-      );
-    return {
-      host: "github.com",
-      projectId: repo.id,
-      fullName: repo.full_name,
-      visibility: repo.visibility,
-    };
+    return githubStoryDestination(
+      await this.options.readRepository(),
+      this.options.fullName,
+      "github.com",
+    );
   }
 
   async upload(

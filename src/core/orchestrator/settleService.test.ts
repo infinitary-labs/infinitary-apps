@@ -341,3 +341,133 @@ describe("a kept merge carries a passed review across a pure update", () => {
     ).toBe(false);
   });
 });
+
+// INF-1965: a plain/local story binds one attempt, including one waiting across restart.
+// The positive land is owned by story-destinations.spec.ts; this layer owns the final refusal.
+describe("a local story at the final dispatch boundary", () => {
+  it.each(["during-validation", "restored-wait"] as const)(
+    "refuses a replacement prepared %s",
+    async (when) => {
+      const db = freshDatabase();
+      const tasks = new TaskService({ db, strict: true });
+      const repos = new RepoRegistry(db, join(scratchDir("infinitary-story-boundary-"), "fleet"));
+      const { repo } = await repos.setup({ kind: "init", name: "meter" });
+      const run = (...args: string[]) =>
+        execFileSync("git", ["-C", repo.path, "-c", "user.name=T", "-c", "user.email=t@l", ...args])
+          .toString()
+          .trim();
+      writeFileSync(join(repo.path, "meter.txt"), "reads on time\n");
+      run("add", "meter.txt");
+      run("commit", "-m", "fix: the meter reads on time");
+      const head = run("rev-parse", "HEAD");
+      const { changePresentationSchema } = await import("@shared/changePresentation");
+      const { RISK_DIMENSIONS } = await import("@shared/cards");
+      const { presentationContentHash } = await import("../forge/presentation");
+      const story = changePresentationSchema.parse({
+        version: 1,
+        taskId: "story-boundary",
+        revision: 1,
+        title: "fix: the meter reads on time",
+        destination: { kind: "local", project: repo.id },
+        base: head,
+        head,
+        why: ["The meter should read on time."],
+        whatChanged: ["The meter reads on time."],
+        before: ["The meter reading lagged."],
+        after: ["The meter reads on time."],
+        views: [],
+        noPicture: "This fixture changes a text file, not a screen.",
+        verification: ["Read the committed meter file."],
+        risk: Object.fromEntries(
+          RISK_DIMENSIONS.map((dimension) => [
+            dimension,
+            { level: "low", why: "One disposable text file." },
+          ]),
+        ),
+        requiredActions: [],
+        unfinished: [],
+        projectText: "",
+        assets: [],
+        pictures: [],
+      });
+      seedTask(tasks, {
+        id: story.taskId,
+        title: story.title,
+        status: "idle",
+        repoId: repo.id,
+        repoDir: repo.path,
+        worktreeDir: repo.path,
+        branch: "main",
+        shape: { kind: "fix", rigor_ask: "quick", delivery_ask: "local-only" },
+      });
+      const statusBefore = tasks.get(story.taskId)?.status;
+      const binding = {
+        revision: story.revision,
+        head,
+        contentHash: presentationContentHash(story),
+      };
+      tasks.updateChangePresentation(story.taskId, () => ({
+        revisions: [story],
+        receipts: [],
+        completion: binding,
+      }));
+      const replace = () => {
+        const newer = {
+          ...story,
+          revision: 2,
+          whatChanged: ["The meter change has a newly reviewed explanation."],
+        };
+        tasks.updateChangePresentation(story.taskId, () => ({
+          revisions: [newer],
+          receipts: [],
+          completion: { revision: 2, head, contentHash: presentationContentHash(newer) },
+        }));
+      };
+      if (when === "restored-wait") {
+        tasks.setPendingSettle(story.taskId, {
+          mode: "land",
+          actor: "captain",
+          requestedAt: 1,
+          proceedWithOpen: false,
+          story: binding,
+        });
+        replace();
+      }
+      const validateLocalStory = vi.fn(async () => {
+        if (when === "during-validation") replace();
+        return head;
+      });
+      let dispatchRefusal: string | undefined;
+      const landTaskWork = vi.fn(
+        async (_task: unknown, beforeDispatch: (head: string) => string | undefined) => {
+          dispatchRefusal = beforeDispatch(head);
+          throw new Error(
+            dispatchRefusal ?? "The fixture reached dispatch without refusing the changed story",
+          );
+        },
+      );
+      // A fresh owner reads the durable pending intent, not an earlier in-memory closure.
+      const service = new SettleService({
+        now: () => 10,
+        tasks,
+        repos,
+        runtimeState: () => undefined,
+        isPersonalTask: () => false,
+        deliverableOf: () => "change",
+        taskDelivery: () => "local-only",
+        taskAutonomy: () => false,
+        validateLocalStory,
+        workspace: { landTaskWork },
+      } as unknown as SettleServiceHost);
+      const outcome = await service.settleTask(story.taskId, "land", undefined, "captain");
+      expect(validateLocalStory).toHaveBeenCalledOnce();
+      expect(landTaskWork).toHaveBeenCalledOnce();
+      expect(dispatchRefusal).toContain(
+        "the current story differs from the completion being merged",
+      );
+      expect(outcome).toContain(dispatchRefusal);
+      expect(tasks.get(story.taskId)?.status).toBe(statusBefore);
+      expect(run("rev-parse", "HEAD")).toBe(head);
+    },
+  );
+});

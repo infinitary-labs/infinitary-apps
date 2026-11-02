@@ -8125,7 +8125,8 @@ describe("a crewmate's own completion card clears the standing CI gate first", (
     },
   );
 
-  it("renders the published story and refuses a click after a newer revision is prepared (INF-92)", async () => {
+  // INF-1965: no request number is invented, and a later story still invalidates the click.
+  it.each(["hosted", "branch", "local"] as const)("renders the %s story and refuses a click after a newer revision is prepared (INF-92, INF-1965)", async (destination) => {
     const crewmate = fakeCrewmate();
     let story: ChangePresentation;
     const head = "5ca2d466ee21f9733827383f23df81f3874e0d10";
@@ -8148,17 +8149,17 @@ describe("a crewmate's own completion card clears the standing CI gate first", (
       shape: { rigor_ask: "quick" },
     });
     await tick();
-    vi.spyOn(supervisor, "taskDelivery").mockReturnValue("direct-pr");
+    vi.spyOn(supervisor, "taskDelivery").mockReturnValue(destination === "local" ? "local-only" : "direct-pr");
     story = {
       version: 1,
       taskId,
       revision: 1,
-      destination: {
+      destination: destination === "hosted" ? {
         host: "github.com",
         projectId: 1,
         fullName: "octo/meter",
         visibility: "private",
-      },
+      } : destination === "branch" ? { kind: "branch", origin: "https://git.example.test/octo/meter.git" } : { kind: "local", project: "repo-meter" },
       title: "The upload survives restart",
       base: head,
       head,
@@ -8176,7 +8177,7 @@ describe("a crewmate's own completion card clears the standing CI gate first", (
       assets: [],
       pictures: [],
     };
-    const region = presentationMarkdown(story, new Map(), "passed");
+    const region = destination === "hosted" ? presentationMarkdown(story, new Map(), "passed") : "";
     const publication = {
       revision: 1,
       head,
@@ -8188,10 +8189,9 @@ describe("a crewmate's own completion card clears the standing CI gate first", (
     tasks.updateChangePresentation(taskId, () => ({
       revisions: [story],
       receipts: [],
-      publication,
-      published: publication,
+      ...(destination === "hosted" ? { publication, published: publication } : { completion: { revision: 1, head, contentHash: "fixture-story-content" } }),
     }));
-    seedDelivery(tasks, taskId, { headSha: head, prNumber: 1, ci: "green" });
+    seedDelivery(tasks, taskId, { ...(destination === "local" ? {} : { headSha: head }), ...(destination === "hosted" ? { prNumber: 1 } : {}), ci: "green" });
     expect(() =>
       specs[0]?.onCard?.({
         title: "A second account",
@@ -8200,6 +8200,7 @@ describe("a crewmate's own completion card clears the standing CI gate first", (
       }),
     ).toThrow(
       // INF-961: the refusal names the way to a story at the pushed version.
+      destination === "local" ? "Use presentation on the completion card so it shows the current committed story, not a second account of the change. This task's newest story is revision 1. After another commit, prepare a new story with prepare_change, then show its revision as presentation; local-only work skips open_change." :
       "Use presentation on the completion card so it shows the current published story, not a second account of the change. This task's newest story is revision 1. After a push since the story was published, prepare a new story revision at the pushed version with prepare_change and publish it with open_change, then show the completion card with the revision prepare_change returns as presentation.",
     );
     const id = await specs[0]?.onCard?.({
@@ -8213,6 +8214,7 @@ describe("a crewmate's own completion card clears the standing CI gate first", (
     expect(card?.title).toBe(story.title);
     expect(splitSettleFacts(card?.body ?? "")?.body).toBe(presentationCardBody(story));
     expect(tasks.get(taskId)?.delivery?.completionOffers?.at(-1)?.presentationRevision).toBe(1);
+    if (destination !== "hosted") expect(tasks.get(taskId)?.delivery?.completionOffers?.at(-1)?.prNumber).toBeUndefined();
     tasks.updateChangePresentation(taskId, (record) => {
       if (!record) throw new Error("Missing story");
       return { ...record, revisions: [...record.revisions, { ...story, revision: 2 }] };

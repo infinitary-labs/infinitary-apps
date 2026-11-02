@@ -53,6 +53,45 @@ const projectSchema = z.object({
   permissions: z.object({ project_access: access, group_access: access }).nullable().optional(),
 });
 
+/** The same project facts guard text publication and optional protected uploads. */
+export function gitlabStoryDestination(
+  value: unknown,
+  fullName: string,
+  host: string,
+): { destination: AttachmentDestination; mediaSignedIn: boolean } {
+  const result = projectSchema.safeParse(value);
+  if (!result.success)
+    throw new ForgeError(
+      "refused",
+      "GitLab did not confirm the attachment destination and audience.",
+    );
+  const project = result.data;
+  if (project.path_with_namespace.toLowerCase() !== fullName.toLowerCase())
+    throw new ForgeError(
+      "refused",
+      "The attachment destination or audience changed. Prepare the story again.",
+    );
+  const levels = [
+    project.permissions?.project_access?.access_level,
+    project.permissions?.group_access?.access_level,
+  ].filter((level): level is number => typeof level === "number");
+  // An inherited role GitLab does not list leaves the decision to GitLab's own answer.
+  if (levels.length > 0 && Math.max(...levels) < DEVELOPER)
+    throw new ForgeError(
+      "permission",
+      "Uploading evidence needs at least the Developer role in this GitLab project.",
+    );
+  return {
+    destination: {
+      host,
+      projectId: project.id,
+      fullName: project.path_with_namespace,
+      visibility: project.visibility,
+    },
+    mediaSignedIn: project.enforce_auth_checks_on_uploads === true,
+  };
+}
+
 /**
  * Native gitlab.com uploads (INF-132): multipart `POST /projects/:id/uploads`
  * with the app's own sign-in, to the numeric project the fresh read confirmed.
@@ -80,37 +119,11 @@ export class GitLabAttachments implements ForgeAttachments {
   }
 
   private async read(): Promise<{ destination: AttachmentDestination; mediaSignedIn: boolean }> {
-    const result = projectSchema.safeParse(await this.options.readProject());
-    if (!result.success)
-      throw new ForgeError(
-        "refused",
-        "GitLab did not confirm the attachment destination and audience.",
-      );
-    const project = result.data;
-    if (project.path_with_namespace.toLowerCase() !== this.options.fullName.toLowerCase())
-      throw new ForgeError(
-        "refused",
-        "The attachment destination or audience changed. Prepare the story again.",
-      );
-    const levels = [
-      project.permissions?.project_access?.access_level,
-      project.permissions?.group_access?.access_level,
-    ].filter((level): level is number => typeof level === "number");
-    // An inherited role GitLab does not list leaves the decision to GitLab's own answer.
-    if (levels.length > 0 && Math.max(...levels) < DEVELOPER)
-      throw new ForgeError(
-        "permission",
-        "Uploading evidence needs at least the Developer role in this GitLab project.",
-      );
-    return {
-      destination: {
-        host: "gitlab.com",
-        projectId: project.id,
-        fullName: project.path_with_namespace,
-        visibility: project.visibility,
-      },
-      mediaSignedIn: project.enforce_auth_checks_on_uploads === true,
-    };
+    return gitlabStoryDestination(
+      await this.options.readProject(),
+      this.options.fullName,
+      "gitlab.com",
+    );
   }
 
   async upload(

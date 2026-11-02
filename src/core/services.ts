@@ -2444,6 +2444,7 @@ export async function createServices(
     prepareChange: (taskId, input) => prCi.preparePresentation(taskId, input),
     openChange: (taskId, input) => prCi.open(taskId, input),
     completionPresentation: (taskId, revision) => prCi.completionPresentation(taskId, revision),
+    validateLocalStory: (taskId) => prCi.validateLocalStory(taskId),
     checkChange: (taskId, input) => prCi.checkForCrew(taskId, input),
     readWorkflow: (taskId, input) => workflowEvidence.read(taskId, input),
     downloadArtifact: (taskId, input) => workflowEvidence.download(taskId, input),

@@ -463,8 +463,8 @@ export class GithubGatewayService {
     route: ApiRoute,
     body: unknown,
   ): void {
-    // Only github.com and gitlab.com forges publish saved stories (INF-132).
-    if (!route.own || !forge.attachments) return;
+    // Every description host uses the story owner, including servers without native uploads.
+    if (!route.own || (!forge.storyDestination && !forge.attachments)) return;
     const record = this.options.tasks.get(taskId);
     if (record?.shape?.deliverable === "answer") return;
     const rest = route.rest
@@ -476,7 +476,7 @@ export class GithubGatewayService {
     if (route.method === "POST" && rest === (gitlab ? "merge_requests" : "pulls"))
       throw new ForgeError(
         "refused",
-        `Use prepare_change and open_change to open this task's ${gitlab ? "merge request" : "pull request"} only after all selected attachments are confirmed.`,
+        `Use prepare_change and open_change to publish this task's saved story with its ${gitlab ? "merge request" : "pull request"}. Native media hosts confirm every selected attachment first.`,
       );
     const ledger = record?.delivery?.presentation;
     const number =

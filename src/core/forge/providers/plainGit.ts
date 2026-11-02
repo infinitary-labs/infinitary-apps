@@ -33,6 +33,19 @@ export class PlainGitForge implements Forge {
     return [];
   }
 
+  async storyDestination() {
+    return {
+      kind: "branch" as const,
+      origin: await this.run(["config", "--get", "remote.origin.url"]),
+    };
+  }
+
+  async branchHead(branch: string): Promise<string> {
+    const change = await this.changeFor(branch);
+    if (!change) throw new ForgeError("not-found", "The pushed branch was not found.");
+    return change.headSha;
+  }
+
   async defaultBranch(): Promise<string> {
     const symref = await this.run(["ls-remote", "--symref", "origin", "HEAD"]);
     const named = /^ref: refs\/heads\/(\S+)\s+HEAD$/m.exec(symref)?.[1];

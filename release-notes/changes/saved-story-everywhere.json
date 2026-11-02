@@ -1,0 +1,18 @@
+{
+  "entries": [
+    {
+      "id": "saved-story-everywhere",
+      "kind": "improvement",
+      "area": "cards",
+      "title": "Consistent change summaries for every project",
+      "body": "Projects on GitHub Enterprise, your own GitLab server, other Git hosts or this computer now share one completion summary. Notes for work that merges on its own show the same explanation, risk chart and merge status.",
+      "picture": {
+        "dark": "saved-story-everywhere-dark.webp",
+        "light": "saved-story-everywhere-light.webp",
+        "alt": "Initial scroll position of a local completion note, with a risk chart at the top right, a Merges on its own notice, and project facts at the bottom"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

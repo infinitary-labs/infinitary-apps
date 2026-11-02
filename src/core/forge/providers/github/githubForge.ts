@@ -37,7 +37,7 @@ import {
 } from "../../forge";
 import { RELEASE_UPLOAD_TIMEOUT_MS } from "../../releaseFile";
 import type { ArchiveRanges } from "../../workflows";
-import { GitHubAttachments } from "./attachments";
+import { GitHubAttachments, githubStoryDestination } from "./attachments";
 import { GitHubWorkflows } from "./workflows";
 
 /**
@@ -249,6 +249,16 @@ export class GitHubForge implements Forge {
       (path, maxBytes) => this.downloadBytes(path, maxBytes),
       (path, size) => this.archiveRanges(path, size),
     );
+  }
+
+  async storyDestination() {
+    const fullName = `${this.location.owner}/${this.location.name}`;
+    const destination = githubStoryDestination(
+      await this.request("GET", this.repoPath()),
+      fullName,
+      this.host ?? GITHUB_COM,
+    );
+    return { ...destination, format: this.kind };
   }
 
   /**

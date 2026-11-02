@@ -20,6 +20,7 @@ import {
   type SkippedRule,
 } from "@shared/mergeReview";
 import { isMergeConflict } from "@shared/plainProblem";
+import type { LocalPresentationDestination } from "@shared/presentationDestination";
 import { deliveryForRecord, type RepoView } from "@shared/repos";
 import { effectiveTaskPolicies } from "@shared/taskPolicies";
 import { NEVER_SENT_AGAIN } from "@shared/writeAsk";
@@ -1586,15 +1587,21 @@ export class PrCiService {
    */
   async preparePresentation(taskId: string, staged: StagedChangePresentation): Promise<string> {
     try {
+      const local = this.localStoryDestination(taskId);
+      if (local) {
+        if (!this.options.presentations) return "Saved change stories are unavailable.";
+        const revision = await this.options.presentations.prepare(taskId, staged, local);
+        return `Prepared presentation ${revision} for ${staged.head}. Nothing was uploaded and no card was shown. This work merges locally: pass presentation: ${revision} to emit_card; no open_change or host sign-in is needed.`;
+      }
       const located = this.locate(taskId, "open");
       if ("said" in located) return located.said;
-      if (!this.options.presentations || !located.forge.attachments)
-        return "Saved change stories are available only for future github.com pull requests and gitlab.com merge requests.";
+      if (!this.options.presentations) return "Saved change stories are unavailable.";
       try {
         // Only a pull request still open for the branch predates saved stories;
         // a recorded one that has closed is forgotten, as for any new task.
         if (
           !located.record.delivery?.presentation &&
+          hasChangeRequests(located.forge.kind) &&
           (await located.forge.changeFor(located.branch))
         )
           return "This pull request predates saved stories and will not be rewritten into one. To replace its description, pass body to open_change.";
@@ -1607,6 +1614,8 @@ export class PrCiService {
           return crewSignInText(this.signInFact(located.forge, located.record.repoId));
         return `Could not prepare the change story: ${caught instanceof Error ? caught.message : String(caught)}`;
       }
+    } catch (caught) {
+      return `Could not prepare the change story: ${caught instanceof Error ? caught.message : String(caught)}`;
     } finally {
       await this.options.presentations?.discardStaged(taskId, staged);
     }
@@ -1654,7 +1663,31 @@ export class PrCiService {
     return git(dir, ["rev-parse", `${record.branch}^{commit}`]);
   }
 
+  /** Delivery, not the presence of an origin, decides whether a story reaches a host. */
+  private localStoryDestination(taskId: string): LocalPresentationDestination | undefined {
+    const record = this.options.tasks.get(taskId);
+    if (!record) throw new Error("The task no longer exists.");
+    const repo = record.repoId ? this.options.repos.get(record.repoId) : undefined;
+    if (record.repoId && !repo) throw new Error("The task's project is no longer registered.");
+    if (deliveryForRecord(record, repo?.delivery) !== "local-only") return undefined;
+    return { kind: "local", project: record.repoId ?? record.repoDir };
+  }
+
+  async validateLocalStory(taskId: string): Promise<string> {
+    const destination = this.localStoryDestination(taskId);
+    if (!destination || !this.options.presentations)
+      throw new Error("The local story cannot be checked.");
+    const head = await this.presentationHead(taskId);
+    if (overridePasses(this.options.tasks.get(taskId)?.delivery, "story", head)) return head;
+    return this.options.presentations.assertLocal(taskId, destination);
+  }
+
   async completionPresentation(taskId: string, revision: number) {
+    if (this.localStoryDestination(taskId)) {
+      if (!this.options.presentations) throw new Error("Saved change stories are unavailable.");
+      const head = await this.validateLocalStory(taskId);
+      return this.options.presentations.completion(taskId, revision, head);
+    }
     const located = this.locate(taskId, "open");
     if ("said" in located) throw new Error(located.said);
     if (!this.options.presentations) throw new Error("Saved change stories are unavailable.");
@@ -1744,7 +1777,7 @@ export class PrCiService {
           prerequisite = early.request.id;
       }
       const presentations = this.options.presentations;
-      if (!existing && presentations && forge.attachments) {
+      if (!existing && presentations && hasChangeRequests(forge.kind)) {
         const merged = await this.mergedBeforeStories(current, forge);
         if (merged) return merged;
       }
@@ -1760,11 +1793,11 @@ export class PrCiService {
         );
       const usesStory =
         presentations &&
-        forge.attachments &&
-        (!existing || current.delivery?.presentation) &&
+        (forge.storyDestination || forge.attachments) &&
+        (!hasChangeRequests(forge.kind) || !existing || current.delivery?.presentation) &&
         !storyPassed;
       if (usesStory && (input.presentation === undefined || input.body !== undefined))
-        return `Prepare the current change story with prepare_change, then pass its presentation revision, not body. Every planned attachment must be confirmed before opening or replacing the pull request. To change only the words around the story on its open pull request, pass around with that revision. If this tool is missing on a work computer, update that computer first; do not bypass it with a raw write. ${softHoldWords("story", "crewmate")}`;
+        return `Prepare the current change story with prepare_change, then pass its presentation revision, not body. Native media hosts confirm every selected attachment before publication; other description hosts receive text only. A plain branch keeps its story on the completion card. To change only the words around a published story, pass around. ${softHoldWords("story", "crewmate")}`;
       if (!usesStory && input.presentation !== undefined)
         return "This host or existing pull request does not use saved change stories. Keep its existing delivery.";
       if (!usesStory && input.around !== undefined)

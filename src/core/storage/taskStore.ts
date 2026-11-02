@@ -91,6 +91,8 @@ export type PendingSettleIntent = {
   actor: "captain" | "firstmate";
   requestedAt: number;
   proceedWithOpen: boolean;
+  /** One branch/local attempt waiting for a turn, not a kept hosted merge approval. */
+  story?: { revision: number; head: string; contentHash?: string };
 };
 
 /**
@@ -109,7 +111,8 @@ export type CompletionOffer = {
   cardId: string;
   offerId: string;
   headSha: string;
-  prNumber: number;
+  /** Absent for a plain branch or local-only work; consent still binds the story and head. */
+  prNumber?: number;
   /** The saved story this offer showed, when it uses one. */
   presentationRevision?: number;
   presentationContentHash?: string;

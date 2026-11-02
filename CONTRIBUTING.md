@@ -14,7 +14,8 @@ Pull requests from outside are not merged yet: the repository opens with the pub
 - All UI work follows the design skill under `.claude/skills/infinitary-design/`.
 - Commit subjects and pull request titles use `type(scope): summary` or `type: summary`, optionally with `!` and a `BREAKING CHANGE` footer. Types are `feat`, `fix`, `chore`, `test`, `refactor`, `docs`, and `perf`; scopes are open-ended. Do not call a fix a feature to force a release.
 - A pull request says why it is needed, what changed, what stood before and after, how it was verified, its risks, required actions and unfinished work.
-  Infinitary-authored future github.com pull requests and gitlab.com merge requests share the completion card's saved story and native attachments (`docs/forge.md`, "Saved change stories"); existing PRs and other hosts keep the five-heading format.
+  Infinitary-authored new pull and merge requests share the completion card's saved story (`docs/forge.md`, "Saved change stories"): public GitHub and GitLab carry native attachments, while other description hosts carry text and keep media on the card.
+  Plain branches and local-only changes keep the same story on their completion card; existing PRs that predate stories keep the five-heading format.
   Evidence files are never committed; release-note hero pictures remain part of the change.
 
 ## Reporting a security issue

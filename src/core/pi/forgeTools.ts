@@ -39,7 +39,7 @@ export const CHECK_CHANGE_TOOL_NAME = "check_change";
 export const OPEN_CHANGE_TOOL_DESCRIPTION = [
   "Offer your task's branch as a pull request on GitHub, a merge request on GitLab, or the pushed branch on a plain Git host.",
   "On GitHub or GitLab, push your branch first (git push); the app's sign-in answers the host for you.",
-  "Every selected attachment must upload before a new pull or merge request opens or an existing story is replaced. A failed or uncertain upload opens no PR, including a draft; report its blocker, never omit evidence or use a fallback.",
+  "On native-media hosts every selected attachment uploads before opening or replacing a story. A failed or uncertain upload opens no PR, including a draft; report its blocker, never omit evidence or use a fallback. Other description hosts publish text only; plain Git retains the story on its card.",
   "When body is the description, it replaces the open description whole; the answer says what the host shows when read back.",
   "A saved story is replaced whole, preserving surrounding text; to change those words, pass around. Held writes are read first. A closed story PR stops publication.",
 ].join(" ");

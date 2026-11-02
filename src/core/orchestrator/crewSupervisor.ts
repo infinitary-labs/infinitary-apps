@@ -52,6 +52,7 @@ import {
   TURN_IMAGES_MAX,
   type TurnImage,
 } from "@shared/cards";
+import { readyPresentation } from "@shared/changePresentation";
 import {
   type CheckChangeInput,
   everyFailureDiagnosed,
@@ -843,6 +844,7 @@ export type CrewSupervisorOptions = {
   ) => Promise<
     Pick<DeclaredCardInput, "title" | "body" | "pictures" | "riskDeclaration" | "requiredActions">
   >;
+  validateLocalStory?: (taskId: string) => Promise<string>;
   checkChange?: (taskId: string, input?: CheckChangeInput) => Promise<string>;
   readWorkflow?: (taskId: string, input: ReadWorkflowInput) => Promise<string>;
   downloadArtifact?: (taskId: string, input: DownloadArtifactInput) => Promise<string>;
@@ -1659,6 +1661,7 @@ export class CrewSupervisor {
       ...(options.machines ? { placed: options.machines } : {}),
       endLiveTask: (taskId) => options.personal?.endLiveTask(taskId),
       ...(options.mergePullRequest ? { mergePullRequest: options.mergePullRequest } : {}),
+      ...(options.validateLocalStory ? { validateLocalStory: options.validateLocalStory } : {}),
       ...(options.mergeReview ? { mergeReview: options.mergeReview } : {}),
       mergeContinued: (taskId, review, outcome) => {
         if (outcome.ok) void this.sweepGates(this.now());
@@ -10147,8 +10150,12 @@ export class CrewSupervisor {
         );
       return this.options.completionPresentation(task.id, revision).then(async (story) => {
         try {
-          const head = this.options.tasks.get(task.id)?.delivery?.presentation?.published?.head;
-          if (!head) throw new Error("The current story has not been published.");
+          const ledger = this.options.tasks.get(task.id)?.delivery?.presentation;
+          const head = ledger?.completion?.head ?? ledger?.published?.head;
+          if (!head)
+            throw new Error(
+              "The current story has not been published or completed for this destination.",
+            );
           const { presentationRevision: _revision, ...rest } = input;
           const shown = offer
             ? story
@@ -10192,8 +10199,9 @@ export class CrewSupervisor {
       // INF-961: the refusal names the way to a current story, which a push
       // after publication needs, so a crewmate never takes its story as lost.
       const newest = ownPresentation.revisions.at(-1)?.revision;
+      const local = this.taskDelivery(task.id) === "local-only";
       throw new Error(
-        `Use presentation on the completion card so it shows the current published story, not a second account of the change. ${newest === undefined ? "" : `This task's newest story is revision ${newest}. `}After a push since the story was published, prepare a new story revision at the pushed version with prepare_change and publish it with open_change, then show the completion card with the revision prepare_change returns as presentation.`,
+        `Use presentation on the completion card so it shows the current ${local ? "committed" : "published"} story, not a second account of the change. ${newest === undefined ? "" : `This task's newest story is revision ${newest}. `}${local ? "After another commit, prepare a new story with prepare_change, then show its revision as presentation; local-only work skips open_change." : "After a push since the story was published, prepare a new story revision at the pushed version with prepare_change and publish it with open_change, then show the completion card with the revision prepare_change returns as presentation."}`,
       );
     }
     const before = this.options.tasks.get(task.id);
@@ -10464,12 +10472,12 @@ export class CrewSupervisor {
         throw new Error("Card refused: this task has closed.");
       }
       if (presentationChecked) {
-        const ledger = current.delivery?.presentation;
+        const ready = readyPresentation(current.delivery?.presentation);
         if (
-          ledger?.revisions.at(-1)?.revision !== presentationChecked.revision ||
-          ledger.publication?.state !== "confirmed" ||
-          ledger.published?.head !== presentationChecked.head ||
-          current.delivery?.headSha !== presentationChecked.head
+          ready?.revision !== presentationChecked.revision ||
+          ready.head !== presentationChecked.head ||
+          (this.taskDelivery(task.id) === "direct-pr" &&
+            current.delivery?.headSha !== presentationChecked.head)
         )
           throw new Error(
             "The story or the checked code changed before the completion card could be shown. Publish the current story first.",
@@ -10516,7 +10524,7 @@ export class CrewSupervisor {
         )
       ) {
         if (card.actions.some((action) => settleEffectOf(action)?.mode === "merge"))
-          this.recordCompletionOffer(task.id, id, checked, presentationChecked?.revision);
+          this.recordCompletionOffer(task.id, id, checked, presentationChecked);
         else
           this.settle.endAuthorization(
             task.id,
@@ -10533,7 +10541,9 @@ export class CrewSupervisor {
                 task.id,
                 card.actions.map((action) => requestMergeEffectOf(action)?.review).find(Boolean) ??
                   "",
-              )?.headSha ?? current.delivery?.headSha,
+              )?.headSha ??
+              presentationChecked?.head ??
+              current.delivery?.headSha,
             actions: card.requiredActions,
           });
         // The task keeps the risk of its newest completion card; one
@@ -10794,14 +10804,21 @@ export class CrewSupervisor {
     taskId: string,
     cardId: string,
     checked: boolean,
-    presentationRevision?: number,
+    presentation?: { revision: number; head: string },
   ): void {
     this.settle.endAuthorization(taskId, "superseded", "its crewmate put up a new completion card");
     const record = this.options.tasks.get(taskId);
     const offerId = this.cards.get(cardId)?.offerId;
-    const head = record?.delivery?.headSha;
+    const head = presentation?.head ?? record?.delivery?.headSha;
     const prNumber = record?.delivery?.prNumber;
-    if (!checked || !record || !offerId || !head || prNumber === undefined) return;
+    if (
+      (!checked && !presentation) ||
+      !record ||
+      !offerId ||
+      !head ||
+      (prNumber === undefined && !presentation)
+    )
+      return;
     const offers = record.delivery?.completionOffers ?? [];
     const same = (offer: { cardId: string; offerId: string }) =>
       offer.cardId === cardId && offer.offerId === offerId;
@@ -10816,11 +10833,12 @@ export class CrewSupervisor {
               cardId,
               offerId,
               headSha: head,
-              prNumber,
-              ...(presentationRevision
+              ...(prNumber === undefined ? {} : { prNumber }),
+              ...(presentation
                 ? {
-                    presentationRevision,
-                    presentationContentHash: record.delivery?.presentation?.published?.contentHash,
+                    presentationRevision: presentation.revision,
+                    presentationContentHash: readyPresentation(record.delivery?.presentation)
+                      ?.contentHash,
                   }
                 : {}),
               at: this.now(),
@@ -14323,15 +14341,15 @@ export class CrewSupervisor {
       effect.mode === "merge" &&
       associated?.delivery?.presentation
     ) {
-      const ledger = associated.delivery.presentation;
+      const ready = readyPresentation(associated.delivery.presentation);
       const offered = associated.delivery.completionOffers?.find(
         (offer) => offer.cardId === card.id && offer.offerId === card.offerId,
       );
       if (
         !offered?.presentationRevision ||
-        offered.presentationRevision !== ledger.revisions.at(-1)?.revision ||
-        ledger.published?.revision !== offered.presentationRevision ||
-        ledger.publication?.state !== "confirmed"
+        offered.presentationRevision !== ready?.revision ||
+        offered.headSha !== ready?.head ||
+        offered.presentationContentHash !== ready?.contentHash
       ) {
         this.cards.showOpenCard(card.id);
         throw new CardChoiceUnavailableError("action-changed");
@@ -14411,7 +14429,8 @@ export class CrewSupervisor {
                 head:
                   effect?.kind === "request_merge"
                     ? this.mergeReviewOf(card.taskId as string, effect.review)?.headSha
-                    : associated?.delivery?.headSha,
+                    : (readyPresentation(associated?.delivery?.presentation)?.head ??
+                      associated?.delivery?.headSha),
               });
             else if (associated?.delivery?.requiredActionOffer)
               this.options.tasks.recordPermissionRecords(card.taskId as string, {

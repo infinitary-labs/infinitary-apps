@@ -86,7 +86,8 @@ It never combines its commits itself, since a pull request is squashed when it m
 A picture the repository's own instructions keep with the change - this project's release-note hero pair (`docs/release-notes.md` "Hero pictures") - is part of the change, not evidence, and is committed where they say.
 Bulk working material goes in the task's temporary folder beside the evidence folder, which the app removes when the task closes; evidence keeps its week (`docs/task-retention.md`).
 The section then has the crewmate report under the evidence contract below.
-Future github.com pull requests, gitlab.com merge requests and their completion cards use one saved story; legacy PRs and other hosts retain the five-heading PR description.
+Every new branch-based change and its completion card use one saved story, including plain Git and local-only delivery; legacy PRs retain the five-heading PR description.
+Public GitHub and GitLab upload selected, inspected, publishable media; other description hosts publish text while keeping media on the completion card and local paths out of the description.
 Version-2 saved stories use Why, What changed, Before and after, and Checked, with commands and unfinished work folded (`docs/forge.md`, "Saved change stories").
 Both surfaces use the same conventional title; code versions stay in typed data, never rendered prose, by author instruction rather than a refusal check.
 Each changed view pairs its Before and After pictures; recordings stack, new views carry the New tag, and empty sections disappear.
@@ -236,7 +237,7 @@ Review and repair stopping decisions belong to agent guidance, and asking the fi
 
 ## The evidence contract
 
-A Default or Careful report, and a legacy PR body or one on a host without saved stories, carry five headings, in this order:
+A Default or Careful report, and a legacy PR body, carry five headings, in this order:
 
 | Heading | What it holds |
 |---|---|

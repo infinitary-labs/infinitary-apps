@@ -398,13 +398,12 @@ type EmitCardParams = Omit<Static<typeof crewmateCardParams>, "actions" | "risk"
  * tools do not restate it.
  */
 export const SAVED_STORY_RULE = [
-  "The saved-story rule, said once: a future github.com pull request or gitlab.com merge request, and its completion card, use the story prepare_change returns.",
-  "Pass that current revision here and to open_change as presentation, not body; supply the saved title on both surfaces, give one settle merge action, and omit body, body_file, risk and required_actions. A task that merges on its own passes it on a note with no actions instead.",
-  "The host uses the saved story after the checks pass.",
-  "Pictures and recordings on it are the selected, inspected, publishable ones, with no local path or private thread.",
-  "A story published before a later push is no longer current: prepare a new revision at the pushed version, keeping its base and title and updating what was checked, and publish it with open_change before the card.",
-  "Existing pull requests, self-hosted GitLab, GitHub Enterprise, plain Git and local-only delivery keep body and the five headings.",
-  "A pull request opened before saved stories and since closed starts a new story; one still open keeps body.",
+  "The saved-story rule, said once: every branch and local-only change uses prepare_change's story.",
+  "Pass the current revision as presentation here and to open_change, using its saved title, one settle merge action and no body, body_file, risk or required_actions. Self-merging tasks use a note without actions.",
+  "Local-only skips open_change: prepare the committed story, then show it. Publish other branches with open_change; the host uses the story after checks pass.",
+  "Public GitHub and GitLab upload selected inspected media; other description hosts publish text, keeping media on the card. Plain Git keeps the story there. Never downgrade a failed upload.",
+  "Keep local paths and private threads out of published text. A later commit needs a newly prepared revision with the same base and title and updated verification; publish where needed before the card.",
+  "A pull request opened before saved stories and since closed starts a new story; one still open keeps body and the five headings.",
 ].join(" ");
 
 const crewmateCardParams = Type.Object({
@@ -623,7 +622,7 @@ async function emitCard(
       params.continues
     )
       throw new Error(
-        "A saved-story completion gives presentation and one settle merge action, or no actions for a note when the task merges on its own, without body, risk, required_actions or browser controls; those facts come from its published version.",
+        "A saved-story completion gives presentation and one settle merge action, or no actions for a note when the task merges on its own, without body, risk, required_actions or browser controls; those facts come from its saved revision.",
       );
     const id = parseStableCardId(params.id);
     const cardId = await options.onCard({
@@ -648,7 +647,7 @@ async function emitCard(
         (action) => action.effect?.kind === "settle" && action.effect.mode === "merge",
       );
     throw new Error(
-      `Card refused: give exactly one of body or body_file.${story ? " A completion card for a saved story gives presentation instead: the newest revision prepare_change returned, published with open_change at the pushed version. After a push since the story was published, prepare a new story revision at the pushed version and publish it with open_change first." : ""}`,
+      `Card refused: give exactly one of body or body_file.${story ? " A saved-story completion gives presentation: the newest revision prepare_change returned at the committed version. Publish it with open_change before the card, except on local-only work, which skips publication. A later commit needs a new revision." : ""}`,
     );
   }
   if (options.firstmate && params.body_file !== undefined) {

@@ -37,7 +37,6 @@ import {
   githubChange,
   MOCK_GITHUB_CHANGE,
   MOCK_GITHUB_CHANGE_CARD_TITLE,
-  MOCK_GITHUB_LEGACY_CHANGE_CARD_TITLE,
 } from "./scenarios/githubChange";
 import { GITLAB_EVIDENCE_MARKER, gitlabEvidence } from "./scenarios/gitlabEvidence";
 import { mergeWriteGuard } from "./scenarios/mergeWriteGuard";
@@ -55,8 +54,7 @@ import { factsStrip, shownCard } from "./stack";
  *
  * On gitlab.com the merge request and its completion card tell one saved
  * story (INF-132): the description is the story's generated region and the
- * squash carries its plain summary; a self-hosted server keeps the body the
- * crewmate wrote.
+ * squash carries its plain summary, including self-hosted servers (INF-1965).
  *
  * A crewmate diagnosing a failed pipeline there lists the version's
  * pipelines and jobs with its API tool, reads the failed job's log and
@@ -195,10 +193,7 @@ for (const host of HOSTS) {
       await send(page, `${SPAWN_PROMPT_MARKER} ${title}`);
 
       // The completion card cleared the checks gate on GitLab's pipeline.
-      const savedStory = host === "gitlab.com";
-      const cardTitle = savedStory
-        ? MOCK_GITHUB_CHANGE_CARD_TITLE
-        : MOCK_GITHUB_LEGACY_CHANGE_CARD_TITLE;
+      const cardTitle = MOCK_GITHUB_CHANGE_CARD_TITLE;
       const card = shownCard(page, cardTitle);
       await expect(card).toBeVisible({ timeout: 45_000 });
       const task = (await page.evaluate(() => window.infinitary.tasks.board())).tasks.find(
@@ -234,24 +229,19 @@ for (const host of HOSTS) {
         }
       }
 
-      // gitlab.com's merge request carries the saved story's generated region;
-      // a server's own host keeps the description the crewmate gave.
+      // INF-1965: both hosts carry the same generated story.
       const description = gitlab.descriptions().get(1) ?? "";
-      if (savedStory) {
-        const { start, end } = presentationRegionMarkers(task.id);
-        expect(description.startsWith(start)).toBe(true);
-        expect(description.endsWith(end)).toBe(true);
-        expect(description).toContain("## Why");
-        expect(description).toContain(presentationMarkdownText(MOCK_GITHUB_STORY.noPicture ?? ""));
-      } else {
-        expect(description).toBe(MOCK_GITHUB_CHANGE.body);
-      }
+      const { start, end } = presentationRegionMarkers(task.id);
+      expect(description.startsWith(start)).toBe(true);
+      expect(description.endsWith(end)).toBe(true);
+      expect(description).toContain("## Why");
+      expect(description).toContain(presentationMarkdownText(MOCK_GITHUB_STORY.noPicture ?? ""));
       if (pictures)
         writeFileSync(join(pictures, `${host}-merge-request-description.md`), description);
 
       // The captain's click: one squash of that merge request at the version
       // the crewmate pushed, under its title and the story's plain summary
-      // (INF-228 F2), or the description it gave on a server's own host.
+      // (INF-228 F2), including a server's own host (INF-1965).
       await page.getByRole("button", { name: MERGE_WORDS["merge-pr"], exact: true }).click();
       await expect(putInLine(page, task.key)).toBeVisible({ timeout: 30_000 });
       expect(gitlab.merges()).toEqual([
@@ -259,9 +249,7 @@ for (const host of HOSTS) {
           iid: 1,
           sha: sentUp,
           squash: true,
-          message: `${MOCK_GITHUB_CHANGE.title}\n\n${
-            savedStory ? presentationCommitMessage(MOCK_GITHUB_STORY) : MOCK_GITHUB_CHANGE.body
-          }`,
+          message: `${MOCK_GITHUB_CHANGE.title}\n\n${presentationCommitMessage(MOCK_GITHUB_STORY)}`,
         },
       ]);
       await expect

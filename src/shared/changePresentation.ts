@@ -1,5 +1,10 @@
 import { z } from "zod";
 import { cardPictureSchema, riskDeclarationSchema } from "./cards";
+import {
+  type HostedPresentationDestination,
+  hostedPresentation,
+  presentationDestinationSchema,
+} from "./presentationDestination";
 import { requiredActionsSchema } from "./requiredActions";
 
 /** INF-132: one explicit story, not a scraper for arbitrary card HTML. */
@@ -91,13 +96,7 @@ const savedPresentationShape = z.strictObject({
   version: z.union([z.literal(1), z.literal(2)]),
   taskId: z.string(),
   revision: z.number().int().positive(),
-  destination: z.strictObject({
-    /** INF-132: future github.com pull requests and gitlab.com merge requests, never a server's own host. */
-    host: z.enum(["github.com", "gitlab.com"]),
-    projectId: z.number().int().positive().safe(),
-    fullName: z.string().min(1),
-    visibility: z.enum(["public", "private", "internal"]),
-  }),
+  destination: presentationDestinationSchema,
   title: z.string(),
   base: head,
   head,
@@ -176,7 +175,7 @@ export type OpenChangeInput = z.infer<typeof openChangeInputSchema>;
 
 /** Durable write states belong to TaskService, not a network retry queue. */
 export type PresentationReceipt = {
-  destination: ChangePresentation["destination"];
+  destination: HostedPresentationDestination;
   digest: string;
   mediaType: PresentationAsset["mediaType"];
   state: "prepared" | "sending" | "confirmed" | "failed" | "uncertain" | "unavailable";
@@ -199,8 +198,15 @@ export type PresentationPublication = {
   retryOpening?: true;
   number?: number;
 };
+/** A branch/local story is retained for completion, never called a published description. */
+export type PresentationCompletion = {
+  revision: number;
+  head: string;
+  contentHash: string;
+};
 export type ChangePresentationRecord = {
   revisions: ChangePresentation[];
+  completion?: PresentationCompletion;
   receipts: PresentationReceipt[];
   publication?: PresentationPublication;
   /** Keep the last complete story during a replacement's uploads or an uncertain write. */
@@ -208,6 +214,20 @@ export type ChangePresentationRecord = {
   /** A person reviewed this exact edit; it is an owned PR, not a confirmed generated story. */
   reconciled?: { number: number; region: string };
 };
+
+/** The complete story's binding, whether its destination keeps a description or only this app does. */
+export function readyPresentation(
+  record: ChangePresentationRecord | undefined,
+): Pick<PresentationPublication, "revision" | "head" | "contentHash"> | undefined {
+  const story = record?.revisions.at(-1);
+  if (!story) return undefined;
+  const ready = hostedPresentation(story.destination)
+    ? record?.publication?.state === "confirmed"
+      ? record.published
+      : undefined
+    : record?.completion;
+  return ready?.revision === story.revision && ready.head === story.head ? ready : undefined;
+}
 
 /** The same typed evidence relationships are checked on the preparing computer and again at home. */
 function evidenceRelations(

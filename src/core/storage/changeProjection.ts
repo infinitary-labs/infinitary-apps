@@ -229,6 +229,7 @@ function headsOf(
     if (review.relationship === "owned" && review.number === delivery.prNumber)
       note(review.headSha, review.at);
   note(delivery.checks?.headSha, delivery.ciAt);
+  note(delivery.presentation?.completion?.head, null);
   note(delivery.presentation?.published?.head, null);
   note(delivery.presentation?.publication?.head, null);
   note(pushed?.head, pushed?.at);

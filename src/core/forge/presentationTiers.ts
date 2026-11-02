@@ -1,5 +1,10 @@
 import { TIERED_STORY_HEADINGS } from "@shared/cardHeadings";
 import type { ChangePresentation, RetainedPresentationMedia } from "@shared/changePresentation";
+import {
+  hostedPresentation,
+  nativePresentationMedia,
+  presentationFormat,
+} from "@shared/presentationDestination";
 import { RISK_DIMENSIONS, RISK_WORDS } from "@shared/risk";
 import {
   presentationHtmlText as html,
@@ -28,25 +33,29 @@ export function tieredPresentationMarkdown(
   story: ChangePresentation,
   urls: ReadonlyMap<string, string>,
 ): string {
-  const host = story.destination.host;
+  if (!hostedPresentation(story.destination))
+    throw new Error("This story has no remote description.");
+  const host = presentationFormat(story.destination);
+  const native = nativePresentationMedia(story.destination);
   const media = (entry: RetainedPresentationMedia, paired: boolean): string => {
     const asset = story.assets.find((candidate) => candidate.id === entry.asset);
+    if (!native) return md(entry.alt);
     const url =
-      host === "github.com"
+      host === "github"
         ? githubAttachmentUrl(urls.get(entry.asset))
         : gitlabAttachmentUrl(urls.get(entry.asset));
     if (!asset || !url) throw new Error("The story has an unconfirmed attachment.");
     if (asset.mediaType === "video/mp4")
-      return host === "github.com" ? `${url}\n\n${md(entry.alt)}` : `![${md(entry.alt)}](${url})`;
+      return host === "github" ? `${url}\n\n${md(entry.alt)}` : `![${md(entry.alt)}](${url})`;
     return paired
       ? `<a href="${url}"><img src="${url}" alt="${html(entry.alt)}" width="320"></a>`
       : `![${md(entry.alt)}](${url})`;
   };
   const views = story.views
     .map((view) => {
-      const paired = view.kind === "changed" && picturesOnly(story, view);
+      const paired = native && view.kind === "changed" && picturesOnly(story, view);
       const adjacentNew =
-        view.kind === "new" && view.layout === "adjacent" && picturesOnly(story, view);
+        native && view.kind === "new" && view.layout === "adjacent" && picturesOnly(story, view);
       const state = (role: "before" | "after") => {
         const cells = view[role].map((entry) => media(entry, paired || adjacentNew));
         return adjacentNew
@@ -96,6 +105,9 @@ export function tieredPresentationMarkdown(
     story.whatChanged.map((line) => `- ${md(line)}`).join("\n"),
     `## ${TIERED_STORY_HEADINGS[2]}`,
     `**Before:** ${story.before.map(md).join(" ")}\n\n**After:** ${story.after.map(md).join(" ")}`,
+    !native && story.views.length
+      ? "Pictures and recordings are retained on the completion card; this host receives the story's text only."
+      : "",
     views,
     story.noPicture ? md(story.noPicture) : "",
     `## ${TIERED_STORY_HEADINGS[3]}`,

@@ -1,5 +1,6 @@
 import { createHash } from "node:crypto";
 import type { ChangePresentation } from "@shared/changePresentation";
+import type { HostedPresentationDestination } from "@shared/presentationDestination";
 import { RISK_DIMENSIONS, type RiskDeclaration } from "@shared/risk";
 import { DomUtils, parseDocument } from "htmlparser2";
 import { describe, expect, it } from "vitest";
@@ -31,10 +32,9 @@ const urls = new Map([
   [video, "https://github.com/user-attachments/assets/48ee7ecf-3f02-410d-acb9-047230ab1966"],
 ]);
 
-function story(
-  kinds: ("picture" | "recording")[],
-  visibility: "public" | "private",
-): ChangePresentation {
+type HostedStory = ChangePresentation & { destination: HostedPresentationDestination };
+
+function story(kinds: ("picture" | "recording")[], visibility: "public" | "private"): HostedStory {
   const entries = kinds.map((kind, index) => ({
     asset: kind === "picture" ? image : video,
     ...(kind === "recording" ? { poster: image } : {}),
@@ -232,7 +232,7 @@ describe("the layout GitLab can actually display", () => {
     [image, "/uploads/66dbcd21ec5d24ed6ea225176098d52b/picture.png"],
     [video, "/uploads/0a1b2c3d4e5f60718293a4b5c6d7e8f9/recording.mp4"],
   ]);
-  const onGitLab = (selected: ChangePresentation): ChangePresentation => ({
+  const onGitLab = (selected: HostedStory): HostedStory => ({
     ...selected,
     destination: {
       host: "gitlab.com",
@@ -317,7 +317,7 @@ describe("the layout GitLab can actually display", () => {
 // INF-467 direction B and the captain's submitted answers: conventional title,
 // no rendered code versions, checked facts with folded commands, paired states.
 describe("version-two stories read in two tiers", () => {
-  function tiered(kinds: ("picture" | "recording")[] = ["picture"]): ChangePresentation {
+  function tiered(kinds: ("picture" | "recording")[] = ["picture"]): HostedStory {
     const selected = story(kinds, "private");
     return {
       ...selected,

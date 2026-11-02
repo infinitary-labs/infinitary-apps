@@ -4,6 +4,7 @@ import type {
   RetainedPresentationMedia,
   StoryAround,
 } from "@shared/changePresentation";
+import { hostedPresentation, presentationFormat } from "@shared/presentationDestination";
 import { RISK_DIMENSIONS, RISK_WORDS } from "@shared/risk";
 import type { AttachmentMediaType } from "./attachments";
 import {
@@ -54,15 +55,14 @@ const NATIVE = {
 } as const;
 
 /** The most characters the host keeps in a whole description. */
-export function presentationBodyLimit(host: ChangePresentation["destination"]["host"]): number {
-  return NATIVE[host].bodyLimit;
+export function presentationBodyLimit(host: string): number {
+  return NATIVE[host === "gitlab" || host === "gitlab.com" ? "gitlab.com" : "github.com"].bodyLimit;
 }
 
 /** An address of a real receipt's length, for sizing a description before any upload. */
-export function presentationSizingUrl(
-  host: ChangePresentation["destination"]["host"],
-  mediaType: AttachmentMediaType,
-): string {
+export function presentationSizingUrl(host: string, mediaType: AttachmentMediaType): string {
+  if (host !== "github.com" && host !== "gitlab.com")
+    throw new Error("This destination has no native attachment route.");
   return NATIVE[host].sizingUrl(mediaType);
 }
 
@@ -86,7 +86,10 @@ function legacyPresentationMarkdown(
   urls: ReadonlyMap<string, string>,
   checks: "pending" | "passed",
 ): string {
-  const native = NATIVE[story.destination.host];
+  if (!hostedPresentation(story.destination))
+    throw new Error("This story has no remote description.");
+  const native =
+    NATIVE[presentationFormat(story.destination) === "gitlab" ? "gitlab.com" : "github.com"];
   const media = (
     entry: RetainedPresentationMedia,
     caption: string,

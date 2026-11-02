@@ -16,7 +16,7 @@ import {
   isFullCommitId,
 } from "../../forge";
 import { gitLabReleaseUpload, nextGitLabPagePath, parseGitLabApiRequest } from "./api";
-import { GitLabAttachments } from "./attachments";
+import { GitLabAttachments, gitlabStoryDestination } from "./attachments";
 import { GITLAB_READ_MAX_BYTES, GitLabClient, type GitLabOptions } from "./client";
 import { GitLabProjects } from "./projects";
 import { GitLabWorkflows } from "./workflows";
@@ -104,7 +104,7 @@ export class GitLabForge implements Forge {
   readonly workflows: GitLabWorkflows;
   /** The gateway's raw call under GitLab's policy for this project. */
   readonly api: ForgeApi;
-  /** Native story uploads (INF-132), on gitlab.com alone: a server's own host keeps its delivery. */
+  /** Native uploads remain gitlab.com-only; other servers publish the story's text. */
   readonly attachments?: GitLabAttachments;
   private readonly client: GitLabClient;
   private readonly projects: GitLabProjects;
@@ -138,6 +138,16 @@ export class GitLabForge implements Forge {
         unauthorized: () => this.client.unauthorized(),
       });
     }
+  }
+
+  async storyDestination() {
+    const fullName = `${this.location.owner}/${this.location.name}`;
+    const { destination } = gitlabStoryDestination(
+      await this.read(this.projectPath()),
+      fullName,
+      this.host,
+    );
+    return { ...destination, format: this.kind };
   }
 
   listProjects(): Promise<ForgeProject[]> {

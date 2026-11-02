@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { existsSync } from "node:fs";
 import { type Card, settleEffectOf } from "@shared/cards";
+import { readyPresentation } from "@shared/changePresentation";
 import { currentCheckStatus } from "@shared/checkSnapshot";
 import { HERE } from "@shared/deviceNames";
 import type { FmEvent } from "@shared/events";
@@ -9,6 +10,7 @@ import { forgePlace, hasChangeRequests } from "@shared/forge";
 import { fixedHoldWords, overridePasses, softHoldWords, withoutHoldWords } from "@shared/holds";
 import type { MergeRelationship, MergeReview } from "@shared/mergeReview";
 import { plainProblem, type TypedFailure } from "@shared/plainProblem";
+import { hostedPresentation } from "@shared/presentationDestination";
 import type { RepoDelivery } from "@shared/repos";
 import { type Deliverable, isFolderWork } from "@shared/routingPolicy";
 import type { ServedWakeOrigin } from "@shared/servedFrame";
@@ -278,6 +280,7 @@ export type SettleServiceHost = {
   };
   /** The personal workspace's running dot ends with the task. */
   endLiveTask(taskId: string): void;
+  validateLocalStory?: (taskId: string) => Promise<string>;
   mergePullRequest?: (
     taskId: string,
     guard?: MergeGuard,
@@ -571,6 +574,10 @@ export class SettleService {
   ) {
     const initial = this.host.tasks.get(taskId);
     const signature = initial ? JSON.stringify(this.policiesOf(initial)) : "";
+    // A waiting attempt keeps the exact story across restart, never recaptures a newer one.
+    const initialStory = initial?.pendingSettle
+      ? initial.pendingSettle.story
+      : readyPresentation(initial?.delivery?.presentation);
     return (head?: string): string | undefined => {
       const record = this.host.tasks.get(taskId);
       if (!record || TaskService.isClosed(record)) return "the task closed";
@@ -588,6 +595,23 @@ export class SettleService {
       if (autonomy) return autonomy.text;
       // The version a version-long override is read at: the one being sent.
       const at = head ?? record.delivery?.headSha;
+      const story = record.delivery?.presentation?.revisions.at(-1);
+      if (
+        story &&
+        !hostedPresentation(story.destination) &&
+        !overridePasses(record.delivery, "story", at)
+      ) {
+        const ready = readyPresentation(record.delivery?.presentation);
+        if (
+          !ready ||
+          !initialStory ||
+          ready.head !== at ||
+          ready.head !== initialStory.head ||
+          ready.revision !== initialStory.revision ||
+          ready.contentHash !== initialStory.contentHash
+        )
+          return `the current story differs from the completion being merged. ${softHoldWords("story", "firstmate")}`;
+      }
       if (actor === "firstmate" && !overridePasses(record.delivery, "decisions", at)) {
         // The first mate's own cards never hold its own merge (INF-242's
         // question 9): a crewmate's question, a write request or a
@@ -742,6 +766,11 @@ export class SettleService {
       if (repo && repoDir && !existsSync(repoDir) && this.host.folderMissing) {
         const text = this.host.folderMissing(repo.id, "land", record);
         return { ok: false, text: `Cannot merge: ${text}`, problem: text };
+      }
+      if (record.delivery?.presentation) {
+        if (!this.host.validateLocalStory)
+          throw new Error("The current local story cannot be checked.");
+        await this.host.validateLocalStory(taskId);
       }
       const { mode } = await this.host.workspace.landTaskWork(
         {
@@ -1874,9 +1903,21 @@ export class SettleService {
     try {
       if (mode === "merge-pr" || mode === "land") {
         const existing = this.host.tasks.get(taskId)?.pendingSettle;
+        const presentation = this.host.tasks.get(taskId)?.delivery?.presentation;
+        const destination = presentation?.revisions.at(-1)?.destination;
+        const story =
+          destination && !hostedPresentation(destination)
+            ? readyPresentation(presentation)
+            : undefined;
         await this.waitForSettleBoundary(
           taskId,
-          existing ?? { mode, actor, requestedAt: this.host.now(), proceedWithOpen },
+          existing ?? {
+            mode,
+            actor,
+            requestedAt: this.host.now(),
+            proceedWithOpen,
+            ...(story ? { story } : {}),
+          },
         );
       }
       return await this.settleTaskOnce(

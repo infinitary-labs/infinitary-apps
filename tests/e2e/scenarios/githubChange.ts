@@ -1,7 +1,6 @@
 import {
   type ChatRequest,
   calledTool,
-  MOCK_STANDARD_CARD_BODY,
   messageText,
   type Scenario,
   toolResults,
@@ -23,7 +22,6 @@ export const MOCK_GITHUB_CHANGE = {
   body: "## Intent\nThe meter reads on time.",
 };
 export const MOCK_GITHUB_CHANGE_CARD_TITLE = MOCK_GITHUB_CHANGE.title;
-export const MOCK_GITHUB_LEGACY_CHANGE_CARD_TITLE = "The meter fix is open as a proposed change";
 
 export const githubChange: Scenario =
   () =>
@@ -43,8 +41,7 @@ export const githubChange: Scenario =
     ].find((reading) =>
       /https:\/\/(?:github|gitlab)[^\s]*\n[0-9a-f]{40}\n[0-9a-f]{40}/.test(reading),
     );
-    // INF-132: github.com and gitlab.com take a saved story; a server's own host keeps its body.
-    const savedStory = /https:\/\/(?:github|gitlab)\.com\//.test(gitReading ?? "");
+    // INF-1965: every description host takes the saved story.
     if (!calledTool(body, "bash"))
       return {
         calls: [
@@ -67,12 +64,8 @@ export const githubChange: Scenario =
           {
             name: "emit_card",
             args: {
-              title: savedStory
-                ? MOCK_GITHUB_CHANGE_CARD_TITLE
-                : MOCK_GITHUB_LEGACY_CHANGE_CARD_TITLE,
-              ...(savedStory
-                ? { presentation: preparedRevision(body) }
-                : { body: MOCK_STANDARD_CARD_BODY }),
+              title: MOCK_GITHUB_CHANGE_CARD_TITLE,
+              presentation: preparedRevision(body),
               actions: [
                 {
                   id: "put-in",
@@ -87,15 +80,13 @@ export const githubChange: Scenario =
         ],
       };
     if (calledTool(body, "open_change")) return { calls: [{ name: "check_change", args: {} }] };
-    if (savedStory && !calledTool(body, "prepare_change"))
+    if (!calledTool(body, "prepare_change"))
       return { calls: [prepareMockStory(MOCK_GITHUB_CHANGE_CARD_TITLE, gitReading)] };
     return {
       calls: [
         {
           name: "open_change",
-          args: savedStory
-            ? { title: MOCK_GITHUB_CHANGE.title, presentation: preparedRevision(body) }
-            : MOCK_GITHUB_CHANGE,
+          args: { title: MOCK_GITHUB_CHANGE.title, presentation: preparedRevision(body) },
         },
       ],
     };

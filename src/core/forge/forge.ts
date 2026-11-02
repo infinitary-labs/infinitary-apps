@@ -1,6 +1,7 @@
 import type { ForgeCheckState } from "@shared/checkSnapshot";
 import type { ForgeKind } from "@shared/forge";
 import type { ForgeProject } from "@shared/forges";
+import type { PresentationDestination } from "@shared/presentationDestination";
 import type { ForgeApi } from "./api";
 import type { ForgeAttachments } from "./attachments";
 import type { ForgeWorkflows } from "./workflows";
@@ -301,6 +302,8 @@ export interface Forge {
   readonly attachments?: ForgeAttachments;
   /** Optional project-scoped JSON gateway; absent on hosts without a REST API. */
   readonly api?: ForgeApi;
+  /** Saved-story identity, also on hosts without native media or a description. */
+  storyDestination?(): Promise<PresentationDestination>;
   /** The person's projects on this host, newest first. */
   listProjects(): Promise<ForgeProject[]>;
   /** Every project the sign-in lists, and whether that was all; absent where the host pages none. */

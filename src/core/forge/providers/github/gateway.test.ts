@@ -6,6 +6,7 @@ import { join } from "node:path";
 import type { ValidationForgeWrite } from "@shared/liveValidation";
 import type { ForgeWriteAsk, IntegrationAsk } from "@shared/writeAsk";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { freshDatabase } from "../../../../../tests/helpers/database";
 import { allowIntegrationReads } from "../../../../../tests/helpers/integrationApprovals";
 import { scratchDir } from "../../../../../tests/helpers/scratchDirs";
 import { seedDelivery } from "../../../../../tests/helpers/taskDelivery";
@@ -24,7 +25,6 @@ import {
 import { writeAskStrip } from "../../../orchestrator/requestStrips";
 import { GITHUB_READ_TOOL, GITHUB_WRITE_TOOL } from "../../../pi/forgeTools";
 import { bindTool } from "../../../session/tools";
-import { openInMemoryDatabase } from "../../../storage/db";
 import { seedTask } from "../../../tasks/seedTask";
 import { TaskService } from "../../../tasks/taskService";
 import { RepoRegistry } from "../../../workspace/repoRegistry";
@@ -324,6 +324,7 @@ type Seen = { method: string; path: string; auth?: string; body: string };
 
 async function fixture(
   options: {
+    host?: string;
     oversize?: boolean;
     signedOut?: boolean;
     dispatchStatus?: number;
@@ -470,7 +471,13 @@ async function fixture(
   });
   const onSignInRejected = vi.fn();
   const forge = new GitHubForge(
-    { kind: "github", host: "github.com", owner: "octo", name: "meter", dir: "/unused" },
+    {
+      kind: "github",
+      host: options.host ?? "github.com",
+      owner: "octo",
+      name: "meter",
+      dir: "/unused",
+    },
     {
       apiBaseUrl: base,
       onSignInRejected,
@@ -478,7 +485,7 @@ async function fixture(
     },
   );
   const dir = scratchDir("fm-gateway-");
-  const db = openInMemoryDatabase();
+  const db = freshDatabase();
   cleanup.push(() => {
     db.close();
   });
@@ -487,7 +494,7 @@ async function fixture(
     dir,
     "meter",
     1,
-    "https://github.com/octo/meter.git",
+    `https://${options.host ?? "github.com"}/octo/meter.git`,
   );
   const tasks = new TaskService({ db, strict: true });
   seedTask(tasks, {
@@ -592,35 +599,38 @@ async function fixture(
 }
 
 describe("the GitHub gateway through crewmate tools and the app's sign-in", () => {
-  // INF-285 F2: equivalent GitHub paths cannot bypass the saved-story barrier.
-  it.each([
-    ["POST", "pulls/"],
-    ["POST", "%70ulls"],
-    ["PATCH", "pulls/36/"],
-    ["PATCH", "pulls/%33%36"],
-    ["PATCH", "issues/36/"],
-    ["PATCH", "issues/%33%36/"],
-    // INF-285 G1: GitHub reads pulls/036 as pull request 36.
-    ["PATCH", "pulls/036"],
-    ["PATCH", "issues/036"],
-  ] as const)("refuses a raw description write through %s %s", async (method, rest) => {
-    const f = await fixture();
-    seedDelivery(f.tasks, "task-1", { prNumber: 36 });
-    f.tasks.updateChangePresentation("task-1", () => ({ revisions: [], receipts: [] }));
-    const result = await f.write.run({
-      method,
-      path: `/repos/octo/meter/${rest}`,
-      body: JSON.stringify({
-        title: "fix: meter",
-        head: "fm/task-1",
-        base: "main",
-        body: "Raw replacement",
-      }),
+  // INF-1965: Enterprise text descriptions have the same owner as native-media stories.
+  describe.each(["github.com", "github.example.com"])("saved descriptions on %s", (host) => {
+    // INF-285 F2: equivalent GitHub paths cannot bypass the saved-story barrier.
+    it.each([
+      ["POST", "pulls/"],
+      ["POST", "%70ulls"],
+      ["PATCH", "pulls/36/"],
+      ["PATCH", "pulls/%33%36"],
+      ["PATCH", "issues/36/"],
+      ["PATCH", "issues/%33%36/"],
+      // INF-285 G1: GitHub reads pulls/036 as pull request 36.
+      ["PATCH", "pulls/036"],
+      ["PATCH", "issues/036"],
+    ] as const)("refuses a raw description write through %s %s", async (method, rest) => {
+      const f = await fixture({ host });
+      seedDelivery(f.tasks, "task-1", { prNumber: 36 });
+      f.tasks.updateChangePresentation("task-1", () => ({ revisions: [], receipts: [] }));
+      const result = await f.write.run({
+        method,
+        path: `/repos/octo/meter/${rest}`,
+        body: JSON.stringify({
+          title: "fix: meter",
+          head: "fm/task-1",
+          base: "main",
+          body: "Raw replacement",
+        }),
+      });
+      expect(result.text).toContain(
+        method === "POST" ? "prepare_change and open_change" : "saved story with open_change",
+      );
+      expect(f.seen).toEqual([]);
     });
-    expect(result.text).toContain(
-      method === "POST" ? "prepare_change and open_change" : "saved story with open_change",
-    );
-    expect(f.seen).toEqual([]);
   });
 
   it("cannot bypass the saved-story publication barrier, while legacy descriptions remain writable (INF-92)", async () => {

@@ -9,8 +9,17 @@ import {
   type PresentationPublication,
   type PresentationReceipt,
   type PresentationRecovery,
+  readyPresentation,
   type StoryAround,
 } from "@shared/changePresentation";
+import {
+  hostedPresentation,
+  type LocalPresentationDestination,
+  nativePresentationMedia,
+  type PresentationDestination,
+  presentationFormat,
+  samePresentationDestination,
+} from "@shared/presentationDestination";
 import type { NamingRule } from "../../shared/runbooks";
 import {
   AttachmentUploadError,
@@ -74,6 +83,15 @@ type PublicationOpening = {
   attests?: (head: string) => boolean;
 };
 
+type PresentationTarget = Forge | LocalPresentationDestination;
+
+async function storyDestination(target: PresentationTarget): Promise<PresentationDestination> {
+  if (target.kind === "local") return target;
+  if (target.storyDestination) return target.storyDestination();
+  if (target.attachments) return target.attachments.destination();
+  throw new Error("The story's destination cannot be read.");
+}
+
 /** Serialization, retained receipts and the all-files-first barrier; never merge authority. */
 export class ChangePresentations {
   private readonly active = new Map<string, ReadonlySet<string>>();
@@ -88,16 +106,18 @@ export class ChangePresentations {
     },
   ) {}
 
-  async prepare(taskId: string, staged: StagedChangePresentation, forge: Forge): Promise<number> {
+  async prepare(
+    taskId: string,
+    staged: StagedChangePresentation,
+    target: PresentationTarget,
+  ): Promise<number> {
     try {
       return await this.serial(
         taskId,
         async () => {
-          if (!forge.attachments)
-            throw new Error("Native evidence publication is not available on this host.");
           if ((await this.options.head(taskId)) !== staged.head)
             throw new Error("The code changed. Prepare a story for the current committed version.");
-          const destination = await forge.attachments.destination();
+          const destination = await storyDestination(target);
           const current = this.options.tasks.changePresentation(taskId);
           if (
             current?.publication &&
@@ -108,7 +128,7 @@ export class ChangePresentations {
           const prior = current?.revisions.at(-1);
           if (
             prior &&
-            (!sameAttachmentDestination(prior.destination, destination) ||
+            (!samePresentationDestination(prior.destination, destination) ||
               prior.base !== staged.base)
           )
             throw new Error(
@@ -140,7 +160,9 @@ export class ChangePresentations {
           }
           await this.save(taskId, (record) => {
             const receipts = [...(record?.receipts ?? [])];
-            for (const asset of this.uploadAssets(story)) {
+            for (const asset of this.nativeAssets(story)) {
+              if (!hostedPresentation(story.destination))
+                throw new Error("An upload needs a host.");
               if (receipts.some((receipt) => receiptMatches(story, asset, receipt))) continue;
               receipts.push({
                 destination: story.destination,
@@ -149,7 +171,20 @@ export class ChangePresentations {
                 state: "prepared",
               });
             }
-            return { ...record, revisions: [...(record?.revisions ?? []), story], receipts };
+            return {
+              ...record,
+              revisions: [...(record?.revisions ?? []), story],
+              receipts,
+              ...(!hostedPresentation(destination) && destination.kind === "local"
+                ? {
+                    completion: {
+                      revision,
+                      head: story.head,
+                      contentHash: presentationContentHash(story),
+                    },
+                  }
+                : {}),
+            };
           });
           return revision;
         },
@@ -210,14 +245,37 @@ export class ChangePresentations {
     const story = this.current(taskId, revision);
     if (story.version === 2 && title !== story.title)
       throw new Error("Use the saved title for the pull request and completion card.");
-    if (!forge.attachments)
+    if (!hostedPresentation(story.destination)) {
+      if (story.destination.kind !== "branch")
+        throw new Error("A local story has no remote publication.");
+      if (around || recovery)
+        throw new Error("A pushed branch has no description to replace or reconcile.");
+      await this.validatePrepared(story, forge, remoteOnly);
+      const existing = await forge.changeFor(branch);
+      if (existing && existing.headSha !== story.head)
+        throw new Error("The pushed branch does not match this story.");
+      opening?.beforePublish?.(story.head);
+      // A placed branch is brought home before publication. Preserve the plain
+      // forge's first push from there; an already-pushed branch needs no write.
+      const change = existing ?? (await forge.openChange({ branch, title, body: "" }));
+      await this.validateCurrent(story, forge, branch, remoteOnly);
+      if (change.headSha !== story.head)
+        throw new Error("The pushed branch does not match this story.");
+      await this.save(taskId, (record) => ({
+        ...this.required(record),
+        completion: { revision, head: story.head, contentHash: presentationContentHash(story) },
+      }));
+      return change;
+    }
+    const destination = story.destination;
+    if (nativePresentationMedia(destination) && !forge.attachments)
       throw new Error("Native evidence publication is not available on this host.");
     const words = hostWords(forge);
     let ledger = this.ledger(taskId);
     if (ledger.publication && ledger.publication.state !== "confirmed") {
       // Recover a prior write by reading, even if a later push moved the code.
       // Its original head stays on the receipt; completion still needs a current story.
-      if (!sameAttachmentDestination(story.destination, await forge.attachments.destination()))
+      if (!samePresentationDestination(destination, await storyDestination(forge)))
         throw new Error("The publication destination or audience changed.");
       const reconciled = await this.reconcile(story, ledger.publication, forge, branch, recovery);
       // A reconciled write is this revision's; words around it still need their own change.
@@ -259,7 +317,7 @@ export class ChangePresentations {
     // the end of the app's own region, read from the records when the region is written.
     const { end: regionEnd } = presentationRegionMarkers(taskId);
     const attested = (rendered: string): string =>
-      story.destination.host === "github.com" &&
+      destination.host === "github.com" &&
       rendered.endsWith(regionEnd) &&
       opening?.attests?.(story.head)
         ? `${rendered.slice(0, -regionEnd.length)}${pipelineAttestationSection(story.head)}\n\n${regionEnd}`
@@ -283,7 +341,7 @@ export class ChangePresentations {
       const body = outside
         ? `${neutralizePipelineAttestation(outside.above)}${region}${neutralizePipelineAttestation(outside.below)}`
         : changed;
-      const limit = presentationBodyLimit(story.destination.host);
+      const limit = presentationBodyLimit(presentationFormat(destination));
       if (Array.from(body).length > limit)
         throw new Error(
           `The complete ${words.change} description exceeds ${words.place}'s ${limit.toLocaleString("en-US")}-character limit. Shorten the story or surrounding text before publishing.`,
@@ -298,9 +356,9 @@ export class ChangePresentations {
             story,
             // Never saved as a receipt or sent: a real receipt's length, for sizing alone.
             new Map(
-              this.uploadAssets(story).map((asset) => [
+              this.nativeAssets(story).map((asset) => [
                 asset.id,
-                presentationSizingUrl(story.destination.host, asset.mediaType),
+                presentationSizingUrl(destination.host, asset.mediaType),
               ]),
             ),
             existing ? checks : "pending",
@@ -310,7 +368,9 @@ export class ChangePresentations {
     );
     opening?.beforePublish?.(story.head);
     const urls = new Map<string, string>();
-    for (const asset of this.uploadAssets(story)) {
+    for (const asset of this.nativeAssets(story)) {
+      if (!forge.attachments)
+        throw new Error("Native evidence publication is not available on this host.");
       let receipt = this.receipt(story, asset);
       if (receipt?.state === "sending" || receipt?.state === "uncertain") {
         this.keepReceipt(story, { ...receipt, state: "uncertain" });
@@ -326,7 +386,7 @@ export class ChangePresentations {
       }
       const bytes = await this.readAsset(story, asset).catch((error: unknown) => {
         this.keepReceipt(story, {
-          destination: story.destination,
+          destination: destination,
           digest: asset.uploadSha256,
           mediaType: asset.mediaType,
           state: "unavailable",
@@ -336,14 +396,14 @@ export class ChangePresentations {
       });
       receipt = {
         ...(receipt?.possibleOrphan ? { possibleOrphan: true } : {}),
-        destination: story.destination,
+        destination: destination,
         digest: asset.uploadSha256,
         mediaType: asset.mediaType,
         state: "sending",
       };
       this.keepReceipt(story, receipt);
       try {
-        const uploaded = await forge.attachments.upload(story.destination, {
+        const uploaded = await forge.attachments.upload(destination, {
           bytes,
           sha256: asset.uploadSha256,
           mediaType: asset.mediaType,
@@ -545,6 +605,16 @@ export class ChangePresentations {
     });
   }
 
+  /** Local completion validates the committed code and retained files without reaching a forge. */
+  async assertLocal(taskId: string, destination: LocalPresentationDestination): Promise<string> {
+    const head = await this.options.head(taskId);
+    const story = this.publishedStory(taskId, head);
+    if (!samePresentationDestination(story.destination, destination))
+      throw new Error("The story's local project changed.");
+    await this.checkRetained(story);
+    return head;
+  }
+
   /**
    * Publication completeness is independent of checks and of permission to
    * merge. A completion offer passes its revision, so a refusal names the way
@@ -558,13 +628,11 @@ export class ChangePresentations {
   ): Promise<ForgeChange> {
     const record = this.ledger(taskId);
     const story = this.publishedStory(taskId, change.headSha, revision);
-    if (!record.published) throw new Error("The current story has not been published.");
-    if (
-      !forge.attachments ||
-      !sameAttachmentDestination(story.destination, await forge.attachments.destination())
-    )
+    if (!samePresentationDestination(story.destination, await storyDestination(forge)))
       throw new Error("The story's destination or audience changed.");
-    for (const asset of this.uploadAssets(story)) {
+    if (!hostedPresentation(story.destination)) return change;
+    if (!record.published) throw new Error("The current story has not been published.");
+    for (const asset of this.nativeAssets(story)) {
       const receipt = this.receipt(story, asset);
       if (receipt?.state !== "confirmed" || !receipt.url)
         throw new Error("The current story is missing a confirmed attachment.");
@@ -655,6 +723,14 @@ export class ChangePresentations {
   private publishedStory(taskId: string, head: string, revision?: number): ChangePresentation {
     const record = this.ledger(taskId);
     const story = record.revisions.at(-1);
+    if (story && !hostedPresentation(story.destination)) {
+      const ready = readyPresentation(record);
+      if (!ready || ready.head !== head || (revision !== undefined && ready.revision !== revision))
+        throw new Error(
+          "The current committed version needs its newest story. Prepare it with prepare_change, and on a pushed branch confirm it with open_change, before showing its completion card or merging.",
+        );
+      return story;
+    }
     if (!story || (!record.published && revision === undefined))
       throw new Error("The current story has not been published.");
     if (
@@ -695,7 +771,8 @@ export class ChangePresentations {
         revisions: next.revisions.filter(
           (story) =>
             story.revision === newest ||
-            story.revision === (next.published?.revision ?? next.publication?.revision),
+            story.revision ===
+              (next.completion?.revision ?? next.published?.revision ?? next.publication?.revision),
         ),
       };
     });
@@ -797,7 +874,8 @@ export class ChangePresentations {
     if (!record) throw new Error("Prepare the change story before opening its pull request.");
     return record;
   }
-  private uploadAssets(story: ChangePresentation): PresentationAsset[] {
+  private nativeAssets(story: ChangePresentation): PresentationAsset[] {
+    if (!nativePresentationMedia(story.destination)) return [];
     const ids = new Set(
       story.views.flatMap((view) => [...view.before, ...view.after].map((entry) => entry.asset)),
     );
@@ -833,16 +911,20 @@ export class ChangePresentations {
     branch: string,
     remoteOnly = false,
   ): Promise<void> {
-    if (!remoteOnly && (await this.options.head(story.taskId)) !== story.head)
-      throw new Error("The code changed after this story was prepared.");
+    await this.validatePrepared(story, forge, remoteOnly);
     if (!forge.branchHead || (await forge.branchHead(branch)) !== story.head)
       throw new Error(
         "The pushed code does not match this story. Push the reviewed version first.",
       );
-    if (
-      !forge.attachments ||
-      !sameAttachmentDestination(story.destination, await forge.attachments.destination())
-    )
+  }
+  private async validatePrepared(
+    story: ChangePresentation,
+    forge: Forge,
+    remoteOnly: boolean,
+  ): Promise<void> {
+    if (!remoteOnly && (await this.options.head(story.taskId)) !== story.head)
+      throw new Error("The code changed after this story was prepared.");
+    if (!samePresentationDestination(story.destination, await storyDestination(forge)))
       throw new Error("The publication destination or audience changed.");
     await this.checkRetained(story);
   }
@@ -912,6 +994,7 @@ function receiptMatches(
   receipt: PresentationReceipt,
 ): boolean {
   return (
+    hostedPresentation(story.destination) &&
     receipt.digest === asset.uploadSha256 &&
     receipt.mediaType === asset.mediaType &&
     sameAttachmentDestination(receipt.destination, story.destination)

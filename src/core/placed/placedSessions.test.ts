@@ -15,6 +15,7 @@ import { createServer, type ServerResponse } from "node:http";
 import type { AddressInfo } from "node:net";
 import { dirname, join, relative, resolve } from "node:path";
 import type { AccountView } from "@shared/accounts";
+import type { ChangePresentationDraft } from "@shared/changePresentation";
 import {
   deviceForgeGateRef,
   deviceForgeSignInCardId,
@@ -2412,18 +2413,19 @@ describe("a task that runs on a computer that runs work", () => {
     const upload = vi.fn(async () => {
       throw new Error("Preparation uploads nothing");
     });
+    const destination = async () => ({
+      host: "github.com",
+      projectId: 1,
+      fullName: "octo/website",
+      visibility: "private" as const,
+    });
     const at = await world(() =>
       Object.assign(project.forge(Buffer.alloc(0)), {
+        kind: "github" as const,
+        host: "github.com",
+        storyDestination: destination,
         changeFor: async () => null,
-        attachments: {
-          destination: async () => ({
-            host: "github.com",
-            projectId: 1,
-            fullName: "octo/website",
-            visibility: "private" as const,
-          }),
-          upload,
-        },
+        attachments: { destination, upload },
       }),
     );
     const home = at.home();
@@ -2521,18 +2523,7 @@ describe("a task that runs on a computer that runs work", () => {
     const home = at.home();
     const { repo } = await adoptHere(home.repos, project.home);
     home.repos.configure(repo.id, { delivery: "direct-pr" });
-    model([
-      { text: "Started on the footer." },
-      { tools: [{ name: "open_change", args: { title: "feat: a blue footer", body: "Intent" } }] },
-      {
-        tools: [
-          { name: "download_artifact", args: { runId: 41, artifactId: 9 } },
-          // INF-1932: only the files it needs, saved beside the whole archive.
-          { name: "download_artifact", args: { runId: 41, artifactId: 9, files: ["ipad/rest/"] } },
-        ],
-      },
-      { text: "Opened, and read the artifact." },
-    ]);
+    model([{ text: "Started on the footer." }]);
     const requests = api.requests.length;
     await at.start("t-copy", "Make the footer blue.", repo.id);
 
@@ -2557,9 +2548,23 @@ describe("a task that runs on a computer that runs work", () => {
     writeFileSync(join(work, "footer.html"), "<footer>blue</footer>\n");
     const tip = await commit(work, "feat: a blue footer");
     writeFileSync(join(work, "notes.txt"), "still thinking\n");
+    // INF-1965 adds the saved-story prerequisite without changing who sends the branch up.
+    const publication: Step[] = [
+      { tools: [{ name: "prepare_change", args: { story: footerStory(project.main, tip) } }] },
+      { tools: [{ name: "open_change", args: { title: "feat: a blue footer", presentation: 1 } }] },
+      {
+        tools: [
+          { name: "download_artifact", args: { runId: 41, artifactId: 9 } },
+          // INF-1932: only the files it needs, saved beside the whole archive.
+          { name: "download_artifact", args: { runId: 41, artifactId: 9, files: ["ipad/rest/"] } },
+        ],
+      },
+      { text: "Opened, and read the artifact." },
+    ];
+    model(publication);
+    const opening = api.requests.length;
     await home.supervisor.steerCrewmate("t-copy", "Open the change.");
-    // The brief's turn, then this one: open_change, download_artifact, its answer.
-    await expect.poll(() => api.requests.length - requests).toBe(4);
+    await expect.poll(() => api.requests.length - opening).toBe(publication.length);
     await expect.poll(() => home.tasks.get("t-copy")?.activity).toBe("idle");
 
     // open_change ran here: the branch came home over the connection, and
@@ -2567,6 +2572,10 @@ describe("a task that runs on a computer that runs work", () => {
     expect(await git(project.home, ["rev-parse", "refs/heads/fm/task-t-copy"])).toBe(tip);
     expect(await git(project.origin, ["rev-parse", "refs/heads/fm/task-t-copy"])).toBe(tip);
     expect(said(api.requests.at(-2))).toContain("Opened the pushed branch fm/task-t-copy");
+    expect(home.tasks.changePresentation("t-copy")?.completion).toMatchObject({
+      revision: 1,
+      head: tip,
+    });
     // download_artifact downloaded here and wrote the file there, never here.
     const written = join(work, ".infinitary-artifacts", "run-41", "artifact-9.zip");
     expect(readFileSync(written).equals(artifact)).toBe(true);
@@ -2861,11 +2870,7 @@ describe("a task that runs on a computer that runs work", () => {
     const at = await world((repo) => project.forge(Buffer.alloc(0), repo?.path));
     const { repo } = await adoptHere(at.home().repos, project.home);
     at.home().repos.configure(repo.id, { delivery: "direct-pr", rigor: "reviewed" });
-    model([
-      { text: "Started on the footer." },
-      { tools: [{ name: "open_change", args: { title: "feat: a blue footer", body: "Intent" } }] },
-      { text: "Opened." },
-    ]);
+    model([{ text: "Started on the footer." }]);
     await at.start("t-moved", "Make the footer blue.", repo.id);
     await expect.poll(() => at.home().tasks.get("t-moved")?.activity).toBe("idle");
     const work = at.folders("t-moved").work;
@@ -2888,13 +2893,23 @@ describe("a task that runs on a computer that runs work", () => {
     // The project and the task's record of it both name the new folder.
     expect(home.repos.get(repo.id)?.path).toBe(moved);
     expect(home.tasks.get("t-moved")?.repoDir).toBe(moved);
+    // INF-1965: the moved project keeps the same saved-story prerequisite as any plain branch.
+    const publication: Step[] = [
+      { tools: [{ name: "prepare_change", args: { story: footerStory(project.main, tip) } }] },
+      { tools: [{ name: "open_change", args: { title: "feat: a blue footer", presentation: 1 } }] },
+      { text: "Opened." },
+    ];
+    model(publication);
     const requests = api.requests.length;
     await home.supervisor.steerCrewmate("t-moved", "Open the change.");
-    // This turn: open_change, then its answer.
-    await expect.poll(() => api.requests.length - requests).toBe(2);
+    await expect.poll(() => api.requests.length - requests).toBe(publication.length);
     await expect.poll(() => home.tasks.get("t-moved")?.activity).toBe("idle");
 
     expect(said(api.requests.at(-1))).toContain("Opened the pushed branch fm/task-t-moved");
+    expect(home.tasks.changePresentation("t-moved")?.completion).toMatchObject({
+      revision: 1,
+      head: tip,
+    });
     // The branch came home into the project's folder and went up from there.
     expect(await git(moved, ["rev-parse", "refs/heads/fm/task-t-moved"])).toBe(tip);
     expect(await git(project.origin, ["rev-parse", "refs/heads/fm/task-t-moved"])).toBe(tip);
@@ -5019,6 +5034,32 @@ async function commit(dir: string, message: string): Promise<string> {
     message,
   ]);
   return git(dir, ["rev-parse", "HEAD"]);
+}
+
+/** INF-1965: the publication fixtures describe their actual committed, unserved footer file. */
+function footerStory(base: string, head: string): ChangePresentationDraft {
+  return {
+    title: "feat: a blue footer",
+    publishable: true,
+    base,
+    head,
+    why: ["The website needs the requested footer."],
+    whatChanged: ["Added the blue footer file."],
+    before: ["The project contained its README alone."],
+    after: ["The committed project includes the footer file."],
+    views: [],
+    noPicture: "This fixture checks unserved branch content, not a running website.",
+    checked: [{ check: "Commit", result: "Git recorded the footer in the task's branch." }],
+    verification: ["Committed footer.html in the work computer's working copy."],
+    risk: Object.fromEntries(
+      RISK_DIMENSIONS.map((dimension) => [
+        dimension,
+        { level: "low", why: "Disposable footer content only." },
+      ]),
+    ) as RiskDeclaration,
+    requiredActions: [],
+    unfinished: [],
+  };
 }
 
 /**

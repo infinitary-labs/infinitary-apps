@@ -28,7 +28,8 @@ Work that ships nothing - an answer, a review the host raised, work in the perso
 
 A change comes into being when its task first carries one - work on a project the app manages, on a branch of its own, not building in place and not raised by the host on another task's change, while the task is open - and `TaskStore` projects it again on every write that can move it.
 Each head the project's host saw makes one version, in order: a check read, an owned merge review, a published story, a merge click and the repairs it was carried to, a completion offer, or an override given for one version.
-A review, a reading of the working copy or a story prepared at a head the host has not seen pushed makes no version; they attach once it is pushed.
+A plain branch's confirmed story and a local story's committed-head completion binding also make a version, without inventing a hosted request or upload.
+A review, a reading of the working copy or an unbound prepared story makes no version; they attach once its head is observed.
 A version once recorded stays, dated when the host first saw it; a reading of the checks replaces the last whole, a review replaces the last whole, and the consent's click, carried approval and override each follow their own newest fact.
 A fact the task no longer names is kept, never erased, so the record accumulates what the delivery facts forget.
 The receipt closes it with the task's closed reason once the change is merged, discarded or closed.
@@ -54,7 +55,7 @@ A reading of a referenced pull request writes into the same slot, and an approva
 
 A database without the tables reads as no change (`ChangeStore.exists`), so migration tests on an older schema change nothing.
 A reading or a version override an older release saved before its writer stamped it is this change's only in a slot that records no referenced pull request; in one that does, the host cannot tell whose it was, and the record leaves it out ([saved-data compatibility](../docs/saved-data-compatibility.md), "The change record").
-A version the host has not seen pushed carries nothing until it is; a reviewer's pass at an unpushed head waits on the record for the push.
+A remote version the host has not seen pushed carries nothing until it is; a reviewer's pass at an unpushed remote head waits on the record for the push.
 
 ## Uses
 

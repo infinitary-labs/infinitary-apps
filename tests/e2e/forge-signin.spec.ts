@@ -78,7 +78,6 @@ import {
   githubChange,
   MOCK_GITHUB_CHANGE,
   MOCK_GITHUB_CHANGE_CARD_TITLE,
-  MOCK_GITHUB_LEGACY_CHANGE_CARD_TITLE,
 } from "./scenarios/githubChange";
 import { mergeWriteGuard } from "./scenarios/mergeWriteGuard";
 import { assertSettingsFits } from "./settings";
@@ -1419,7 +1418,7 @@ test("a GitHub Enterprise host: signed in with a key made there, its projects ar
   // click merges it there.
   const title = `meterlab ${GITHUB_CHANGE_PROMPT_MARKER}`;
   await send(page, `${SPAWN_PROMPT_MARKER} ${title}`);
-  await expect(shownCard(page, MOCK_GITHUB_LEGACY_CHANGE_CARD_TITLE)).toBeVisible({
+  await expect(shownCard(page, MOCK_GITHUB_CHANGE_CARD_TITLE)).toBeVisible({
     timeout: 45_000,
   });
   const board = await page.evaluate(() => window.infinitary.tasks.board());
@@ -1427,7 +1426,7 @@ test("a GitHub Enterprise host: signed in with a key made there, its projects ar
   expect(task).toBeDefined();
   const sentUp = git("-C", bare, "rev-parse", `refs/heads/fm/task-${task?.id}`);
   expect(github.requests()).toContain("POST /api/v3/repos/octo/meterlab/pulls");
-  const facts = factsStrip(cardBody(page, MOCK_GITHUB_LEGACY_CHANGE_CARD_TITLE));
+  const facts = factsStrip(cardBody(page, MOCK_GITHUB_CHANGE_CARD_TITLE));
   await expect(
     facts.change.locator(`a[href="https://${ENTERPRISE}/octo/meterlab/pull/100"]`),
   ).toHaveText("#100");
@@ -1440,7 +1439,8 @@ test("a GitHub Enterprise host: signed in with a key made there, its projects ar
       sha: sentUp,
       method: "squash",
       title: MOCK_GITHUB_CHANGE.title,
-      message: MOCK_GITHUB_CHANGE.body,
+      // INF-1965: Enterprise squashes the saved story's summary, like public GitHub.
+      message: presentationCommitMessage(MOCK_GITHUB_STORY),
     },
   ]);
   expect(github.requests()).toContain("PUT /api/v3/repos/octo/meterlab/pulls/100/merge");

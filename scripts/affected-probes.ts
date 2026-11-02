@@ -1,5 +1,5 @@
 import { execFileSync, spawnSync } from "node:child_process";
-import { appendFileSync, existsSync } from "node:fs";
+import { existsSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -16,8 +16,7 @@ import { fileURLToPath } from "node:url";
  *   node scripts/affected-probes.ts [--base <ref>] [--head <ref>] [--run]
  *
  * prints the probe files, each with why it runs, and exits 0 whether or not
- * any is affected. `--run` (`pnpm test:probes`) also runs them, and says so
- * in the job summary when there is one. A probe runs when the change edits
+ * any is affected. `--run` (`pnpm test:probes`) also runs them. A probe runs when the change edits
  *
  * 1. the probe file itself;
  * 2. a path its row below names: a directory ending in "/" matches what is
@@ -238,9 +237,6 @@ function main(): void {
       : files.map((file) => `- \`${file}\`: ${(reasons.get(file) ?? []).join("; ")}`);
   console.log(lines.join("\n"));
   if (!args.includes("--run")) return;
-  if (process.env.GITHUB_STEP_SUMMARY) {
-    appendFileSync(process.env.GITHUB_STEP_SUMMARY, ["### Probes this change runs", "", ...lines, ""].join("\n"));
-  }
   if (files.length === 0) return;
   const run = spawnSync("pnpm", ["exec", "vitest", "run", "--project", "probe", ...files], {
     cwd: ROOT,

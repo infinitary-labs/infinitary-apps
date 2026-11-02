@@ -213,8 +213,7 @@ jobs:
       #
       # linux-checks: the commands of ci.yml's main jobs, in one job on hosted Linux.
       # Its `pnpm test` runs every probe (docs/test-cohorts.md, "Probes"),
-      # where the PR jobs run only the probes a change reaches. Each needs only
-      # the install; its build is the shared one below.
+      # as main's ci.yml does. Each needs only the install; its build is the shared one below.
       - if: ${{ !cancelled() && matrix.lane == 'linux-checks' && steps.install.outcome == 'success' }}
         run: pnpm typecheck
       - if: ${{ !cancelled() && matrix.lane == 'linux-checks' && steps.install.outcome == 'success' }}

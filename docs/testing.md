@@ -270,7 +270,10 @@ Keep affected Linux/native checks and their repetitions, replay where relevant, 
 
 The exceptions are an alpha candidate lacking reusable exact-source main proof, an evidenced full-run repair or infrastructure qualification that narrower checks cannot prove, coordinated missing-evidence recovery after reading existing runs/artifacts, or an explicit captain full-run request.
 Preserve full Linux/Mac parallel-lane qualification and stable promotion's inherited-alpha rules.
-Record the reason, exact source and why narrower proof is insufficient.
+Record the requesting task, exact source and reason explaining why narrower proof is insufficient.
+Before dispatching, inspect existing same-source checks and artifacts, including running checks, to avoid duplicate work.
+A request for all Linux proof authorizes Linux only, never Mac tests, signing or packaging.
+Use `source-journeys.yml` with `suite: full` for that sweep; Linux-only success is not full-system main or release proof.
 `mac_all` and `all_journeys` belong only to a named Mac-specific proof or full-run exception, never reassurance.
 Signing consent remains separate.
 
@@ -282,7 +285,7 @@ Run only the affected spec files locally.
 For `renderer` or `application` specs, add `--no-deps` to avoid pulling in the whole `desktop` lane.
 
 Only for a named exception under "When to request full verification", start `verify.yml` in GitHub Actions for the required branch or tag.
-Crewmates use `github_write` to POST `/repos/{owner}/{repo}/actions/workflows/verify.yml/dispatches` with `{"ref":"<branch-or-tag>"}` and any workflow inputs their task needs through the app's own GitHub sign-in (`docs/forge.md`, "Verification workflow requests").
+Crewmates use `github_write` to POST `/repos/{owner}/{repo}/actions/workflows/verify.yml/dispatches` with `{"ref":"<workflow-branch>","inputs":{"full_system":true,"ref":"<exact-source-commit>","task":"<task-key>","reason":"<named exception; why narrower proof cannot suffice>"}}` and any other required inputs through the app's own GitHub sign-in (`docs/forge.md`, "Verification workflow requests").
 For an isolated Mac proof, pass the optional `mac_runner` input with a temporary runner label; it changes only that invocation's Mac lane, never `MAC_RUNNER` or the Linux jobs.
 The reusable workflow accepts the same input, and leaving it unset keeps the normal project runner and hosted fallback.
 An accepted request is not a passing check: find the run with `github_read`, confirm its version, then read `check_change`.
@@ -1090,6 +1093,12 @@ A request with `suite: alone` runs the run-alone pass over every spec file inste
 Each share keeps the existing fresh Playwright process and home for each selection, runs the parallel lanes at the existing local width and then its desktop selections serially, and keeps a distinct `e2e-alone-N` artifact and summary.
 The Mac-only tests skip there.
 Request `source-journeys.yml` on a branch with `suite: alone` to check just those four jobs, without the ordinary suite, Mac checks or packaging.
+Its manual `suite: full` route runs the same eight full-suite jobs, including styles, with no Mac tests, signing, packaging or broad unit sweep.
+Pass `ref` as the exact source commit, `task` as the requesting task and `reason` as why the Linux sweep is needed; each job checks its checkout and records these fields before installing or building.
+The dispatch's top-level `ref` selects the workflow definition; `inputs.ref` selects the tested source, and the artifact names, timing identity, test order and failure reporting remain the reusable full route's.
+A manual `verify.yml` request instead requires `full_system: true` plus task, source and reason before expensive jobs can start.
+Both `stable` and `alpha` profiles run full-system checks, not Linux-only checks.
+Installer-only and installer-reuse requests retain their separate route and cannot also select `full_system`; main and release reusable calls need no manual opt-in.
 With `suite: affected`, each job ends with the run-alone pass over its directly edited files and keeps it as `e2e-alone-<suffix>-<lane>`.
 A stable promotion inherits them with the other lanes ("Full alpha checks, inherited stable checks" in `docs/alpha.md`).
 The replay gate and packaging stay on the Mac lane.

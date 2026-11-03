@@ -1961,7 +1961,7 @@ describe("the signed channel workflow", () => {
   });
 
   it("runs each profile's lanes as one matrix, so an omitted lane is absent from the run, never skipped", () => {
-    expect(Object.keys(verify.jobs)).toEqual(["linux-e2e", "installer", "lane"]);
+    expect(Object.keys(verify.jobs)).toEqual(["request", "linux-e2e", "installer", "lane"]);
     expect(verify.jobs["linux-e2e"]).toMatchObject({
       uses: "./.github/workflows/source-journeys.yml",
       with: { ref: "${{ inputs.ref || github.ref }}", suite: "full" },
@@ -4423,8 +4423,12 @@ describe("budgeted pull-request journey workflow (INF-658)", () => {
         step.name?.startsWith("Run the journeys with"),
       )?.run;
       expect(command).toBeDefined();
-      for (const suite of ["starter", "affected"]) {
-        const log = join(dir, `${suite}.log`);
+      for (const { suite, shard } of [
+        { suite: "starter", shard: 1 },
+        { suite: "affected", shard: 1 },
+        ...[1, 2, 3, 4].map((shard) => ({ suite: "full", shard })),
+      ]) {
+        const log = join(dir, `${suite}-${shard}.log`);
         const files =
           lane === "desktop"
             ? "tests/e2e/keyboard-routing.spec.ts"
@@ -4441,7 +4445,7 @@ describe("budgeted pull-request journey workflow (INF-658)", () => {
             LANE: lane,
             FILES: files,
             SCREEN: "2560x1600x24",
-            SHARD: "1",
+            SHARD: String(shard),
           },
           encoding: "utf8",
         });
@@ -4454,7 +4458,12 @@ describe("budgeted pull-request journey workflow (INF-658)", () => {
           expect(call.trim()).toBe(
             `node scripts/journey-runs.ts --base origin/main --files ${files} --alone-out playwright-report/alone -- ${lane === "desktop" ? "--project=desktop" : "--project=renderer --project=application"}`,
           );
-        else {
+        else if (suite === "full") {
+          // INF-2374: keep the full sweep's styles coverage and lane order.
+          expect(call.trim()).toBe(
+            `exec playwright test --no-deps ${lane === "desktop" ? "--project=desktop" : "--project=styles --project=renderer --project=application"} --shard=${shard}/4`,
+          );
+        } else {
           expect(call).toContain("exec playwright test --no-deps");
           expect(call).toContain("tests/e2e/devices.spec.ts");
           expect(call).toContain("tests/e2e/source-start.spec.ts");
@@ -4597,4 +4606,150 @@ it("selects Homebrew/Linux-only before storage setup and refuses partial R2 conf
       expect(readFileSync(output, "utf8")).toBe(`direct=${configuration === "complete"}\n`);
     }
   }
+});
+
+// INF-2374 approved plan: Linux-only full proof must not silently buy full Mac
+// verification. Exercise the actual request shells and Actions expressions.
+describe("explicit manual verification scope (INF-2374)", () => {
+  type Step = { name?: string; run?: string; if?: string; env?: Record<string, string> };
+  type Job = { needs?: string; steps?: Step[]; strategy?: { matrix: Record<string, string> } };
+  type Workflow = {
+    on: Record<string, { inputs: Record<string, { options?: string[] }> }>;
+    jobs: Record<string, Job>;
+  };
+  const verify = loadYamlFile(".github/workflows/verify.yml") as Workflow;
+  const source = loadYamlFile(".github/workflows/source-journeys.yml") as Workflow;
+  const head = execFileSync("git", ["rev-parse", "HEAD"], {
+    env: hostEnv(),
+    encoding: "utf8",
+  }).trim();
+  function runRequest(step: Step, context: Record<string, unknown>) {
+    const dir = scratchDir("infinitary-request-scope-");
+    const summary = join(dir, "summary");
+    const result = spawnSync("bash", ["--noprofile", "--norc", "-e", "-c", step.run ?? ""], {
+      cwd: root,
+      env: {
+        ...hostEnv(),
+        GITHUB_STEP_SUMMARY: summary,
+        ...Object.fromEntries(
+          Object.entries(step.env ?? {}).map(([key, value]) => [
+            key,
+            workflowString(value, context),
+          ]),
+        ),
+      },
+      encoding: "utf8",
+    });
+    return { ...result, summary: existsSync(summary) ? readFileSync(summary, "utf8") : "" };
+  }
+  const request = verify.jobs.request?.steps?.[0];
+  const linuxRequest = source.jobs["source-desktop"]?.steps?.find(
+    (step) => step.name === "Record the manual Linux request",
+  );
+  const github = { event_name: "workflow_dispatch", workflow: "verify", sha: head };
+  const valid = {
+    full_system: true,
+    ref: head,
+    task: "INF-2374",
+    reason: "Qualify changed workflow routing",
+  };
+
+  it("stops absent or contradictory manual selections before dependent work, preserving installer modes", () => {
+    expect(request).toBeDefined();
+    for (const id of ["linux-e2e", "lane", "installer"])
+      expect(verify.jobs[id]?.needs).toBe("request");
+    for (const inputs of [
+      {},
+      { ...valid, full_system: false },
+      { ...valid, task: "" },
+      { ...valid, reason: "" },
+      { ...valid, ref: "main" },
+      { ...valid, ref: "" },
+      { ...valid, installer_only: true },
+      { ...valid, installer_reuse: "reviewed declaration" },
+    ]) {
+      const result = runRequest(request!, { github, inputs });
+      expect(result.status, result.stdout + result.stderr).not.toBe(0);
+      expect(result.summary).toBe("");
+    }
+    for (const inputs of [
+      valid,
+      { installer_only: true },
+      { installer_reuse: "reviewed declaration" },
+      { installer_only: true, installer_reuse: "reviewed declaration" },
+    ]) {
+      const result = runRequest(request!, { github, inputs });
+      expect(result.status, result.stderr).toBe(0);
+      expect(result.summary).toContain(`source=${head}`);
+    }
+    const result = runRequest(request!, { github, inputs: valid });
+    expect(result.summary).toContain(`task=${valid.task} reason=${valid.reason}`);
+  });
+
+  it("leaves main and release reusable callers outside the manual opt-in", () => {
+    for (const workflow of ["main", "release"]) {
+      const caller = loadYamlFile(`.github/workflows/${workflow}.yml`) as Workflow;
+      expect(
+        Object.values(caller.jobs).some(
+          (job) => (job as { uses?: string }).uses === "./.github/workflows/verify.yml",
+        ),
+      ).toBe(true);
+      for (const event_name of ["push", "workflow_dispatch"]) {
+        const result = runRequest(request!, {
+          github: { ...github, workflow, event_name },
+          inputs: {},
+        });
+        expect(result.status, result.stderr).toBe(0);
+      }
+    }
+    // A verify dispatch's reusable Linux child must not be mistaken for a direct Linux request.
+    expect(workflowValue(linuxRequest?.if ?? "", { github })).toBe(false);
+  });
+
+  it("propagates a failed Linux journey command instead of reporting success", () => {
+    const dir = scratchDir("infinitary-full-linux-failure-");
+    const bin = join(dir, "bin");
+    mkdirSync(bin);
+    // The virtual display's child fails as a real failed journey would.
+    writeFileSync(join(bin, "xvfb-run"), "#!/bin/sh\nexit 17\n", { mode: 0o755 });
+    const command = source.jobs["source-desktop"]?.steps?.find((step) =>
+      step.name?.startsWith("Run the journeys with"),
+    )?.run;
+    expect(command).toBeDefined();
+    const result = spawnSync("bash", ["--noprofile", "--norc", "-e", "-c", command!], {
+      env: {
+        ...hostEnv(),
+        PATH: `${bin}:${hostEnv().PATH}`,
+        GITHUB_ENV: join(dir, "env"),
+        RUNNER_OS: "Linux",
+        SUITE: "full",
+        LANE: "parallel",
+        SHARD: "1",
+      },
+      encoding: "utf8",
+    });
+    expect(result.status, result.stderr).toBe(17);
+  });
+
+  it("binds direct Linux full requests to an exact checkout and records task and reason", () => {
+    expect(source.on.workflow_dispatch?.inputs.suite?.options).toEqual(["alone", "full"]);
+    expect(Object.keys(source.jobs)).toEqual(["source-desktop"]);
+    const context = { github: { ...github, workflow: "Source desktop journeys" } };
+    expect(workflowValue(linuxRequest?.if ?? "", context)).toBe(true);
+    for (const inputs of [{ suite: "alone" }, { ...valid, suite: "full" }]) {
+      const result = runRequest(linuxRequest!, { ...context, inputs });
+      expect(result.status, result.stderr).toBe(0);
+      expect(result.summary).toContain(`source=${head}`);
+    }
+    for (const inputs of [
+      { ...valid, ref: "main" },
+      { ...valid, ref: "0".repeat(40) },
+      { ...valid, task: "" },
+      { ...valid, reason: "" },
+    ]) {
+      expect(
+        runRequest(linuxRequest!, { ...context, inputs: { ...inputs, suite: "full" } }).status,
+      ).not.toBe(0);
+    }
+  });
 });

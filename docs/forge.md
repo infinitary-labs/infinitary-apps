@@ -416,7 +416,14 @@ On a GitLab project the same two tools reach GitLab's API (below); they keep the
   `refs/pull/*/head` brings them all, into refs that every working copy of the clone shares.
   `git merge-tree --write-tree --merge-base=<base> <head> <other>` then replays a conflict between two of them with no API call, and a squash merge on the default branch carries its pull request's checked title as its subject.
 - **Verification workflow requests reuse the gateway.**
-  A crewmate calls `github_write` with `POST /repos/{owner}/{repo}/actions/workflows/{workflow_id}/dispatches` and GitHub's normal JSON body, such as `{"ref":"<branch-or-tag>","inputs":{"profile":"alpha"}}`.
+  A crewmate calls `github_write` with `POST /repos/{owner}/{repo}/actions/workflows/{workflow_id}/dispatches` and GitHub's normal JSON body, such as `{"ref":"<workflow-branch>","inputs":{"suite":"full","ref":"<exact-source-commit>","task":"<task-key>","reason":"<why the Linux sweep is needed>"}}` for `source-journeys.yml`.
+  This Linux-only route retains all eight full-suite groups without Mac tests, signing or packaging; `suite: alone` remains the separate fresh-state pass.
+  Before requesting work, read existing same-source checks, including running checks, and reuse applicable evidence rather than duplicate it.
+  A manual `verify.yml` full-system request uses `{"ref":"<workflow-branch>","inputs":{"full_system":true,"ref":"<exact-source-commit>","task":"<task-key>","reason":"<named exception; why narrower proof cannot suffice>"}}`.
+  Both verification profiles include Linux and Mac; `all_journeys: false` narrows Mac journeys, not the broad Mac job, signing or packaging.
+  Without the explicit selection, verification stops before expensive jobs; installer-only/reuse routes remain separate and reject a simultaneous full-system selection.
+  Main and release reusable callers keep full-system coverage without this manual selection.
+  A Linux-only result cannot satisfy their full-system proof, and a request for all Linux tests does not authorize Mac work.
   The caller chooses the workflow, ref and optional inputs its task needs; the host adds no task-branch or input restrictions.
   In this repository, `verify.yml` on request runs only the tests tagged `MAC_ONLY_TAG` on the Mac; a request may pass `"all_journeys":true` to run every journey there, as the continuous run on `main` does (`docs/testing.md`, "Tests that need a Mac").
   Starting, cancelling, enabling, disabling and rerunning workflows are project operations, not account administration.

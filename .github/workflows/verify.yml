@@ -7,7 +7,7 @@ name: verify
 # inside every alpha before signing, on every push to main through main.yml
 # (the continuous run on main, INF-2146), and on demand for any ref:
 #
-#   gh workflow run verify.yml --ref <branch|tag|sha>
+#   See docs/forge.md: manual full-system requests must opt in explicitly.
 #
 # Its lanes follow a profile (docs/alpha.md "The signed channel workflow"):
 # stable and alpha both run the full Linux and Mac lanes. Stable
@@ -58,8 +58,18 @@ on:
         default: true
   workflow_dispatch:
     inputs:
+      full_system:
+        description: Explicitly request full Linux and Mac verification, including signing and packaging (not Linux-only)
+        type: boolean
+        default: false
+      task:
+        description: Requesting task (required for manual full-system verification)
+        type: string
+      reason:
+        description: Named full-run exception and why narrower proof cannot suffice
+        type: string
       ref:
-        description: Branch, tag or SHA to verify (default - the selected ref)
+        description: Exact source commit for full-system; optional branch, tag or SHA for installer checks
         required: false
         type: string
       mac_runner:
@@ -115,11 +125,37 @@ concurrency:
   cancel-in-progress: ${{ github.workflow == 'verify' }}
 
 jobs:
+  request:
+    name: Validate verification selection
+    runs-on: ${{ inputs.linux_runner || vars.LINUX_RUNNER || 'ubuntu-latest' }}
+    steps:
+      - name: Validate and record the manual request
+        env:
+          MANUAL: ${{ github.event_name == 'workflow_dispatch' && github.workflow == 'verify' }}
+          FULL_SYSTEM: ${{ inputs.full_system }}
+          INSTALLER_ONLY: ${{ inputs.installer_only }}
+          INSTALLER_REUSE: ${{ inputs.installer_reuse }}
+          SOURCE: ${{ inputs.ref }}
+          WORKFLOW_SOURCE: ${{ github.sha }}
+          TASK: ${{ inputs.task }}
+          REASON: ${{ inputs.reason }}
+        run: |
+          if [ "$MANUAL" != true ]; then exit 0; fi
+          if [ "$INSTALLER_ONLY" = true ] || [ -n "$INSTALLER_REUSE" ]; then
+            [ "$FULL_SYSTEM" != true ] || { echo 'Choose installer verification or full-system, not both'; exit 1; }
+          else
+            [ "$FULL_SYSTEM" = true ] || { echo 'Select full_system explicitly; use source-journeys.yml for Linux-only proof'; exit 1; }
+            [[ "$SOURCE" =~ ^[0-9a-f]{40}$ ]] && [ -n "$TASK" ] && [ -n "$REASON" ] || {
+              echo 'Full-system requests require an exact source commit, task and reason'; exit 1;
+            }
+          fi
+          printf 'Verification request: full_system=%s installer_only=%s installer_reuse=%s source=%s task=%s reason=%s\n' "$FULL_SYSTEM" "$INSTALLER_ONLY" "$INSTALLER_REUSE" "${SOURCE:-$WORKFLOW_SOURCE}" "$TASK" "$REASON" >> "$GITHUB_STEP_SUMMARY"
   # linux-e2e: every Playwright journey on the app built from source on
   # Ubuntu (LINUX_RUNNER, hosted when unset), in shards (docs/testing.md, "The Linux source desktop").
   # A publishing release passes its own Linux label instead.
   # Journeys that are the Mac's alone skip there and say why.
   linux-e2e:
+    needs: request
     if: ${{ !inputs.installer_only && !inputs.installer_reuse }}
     uses: ./.github/workflows/source-journeys.yml
     with:
@@ -131,6 +167,7 @@ jobs:
   # checks' commands in one job; mac is the full macOS verification. Each step names
   # the lane it belongs to.
   installer:
+    needs: request
     name: Verify signed installer and updater
     if: ${{ inputs.installer_only == true || inputs.installer_reuse != '' }}
     permissions:
@@ -144,6 +181,7 @@ jobs:
     secrets: inherit
 
   lane:
+    needs: request
     if: ${{ !inputs.installer_only && !inputs.installer_reuse }}
     name: ${{ matrix.lane }}
     strategy:

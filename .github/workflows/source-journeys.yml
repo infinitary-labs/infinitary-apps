@@ -12,14 +12,23 @@ name: Source desktop journeys
 # release passes its own Linux label as runner (docs/testing.md, "A release's
 # Linux label").
 on:
-  # A hosted-only proof of the fresh-state jobs, without Mac or packaging work.
+  # Linux-only full-suite or fresh-state proof, without Mac or packaging work.
   workflow_dispatch:
     inputs:
       suite:
-        description: Run the fresh-state checks on isolated hosted machines
+        description: Full eight-shard Linux suite or four fresh-state shards
         type: choice
-        options: [alone]
+        options: [alone, full]
         default: alone
+      ref:
+        description: Exact source commit (required for full); empty uses the selected ref for alone
+        type: string
+      task:
+        description: Requesting task (required for full)
+        type: string
+      reason:
+        description: Why this Linux sweep is needed (required for full)
+        type: string
   workflow_call:
     inputs:
       ref:
@@ -77,6 +86,20 @@ jobs:
           ref: ${{ inputs.ref || github.ref }}
           path: Application Support/firstmate
           fetch-depth: 0
+      - name: Record the manual Linux request
+        if: github.event_name == 'workflow_dispatch' && github.workflow == 'Source desktop journeys'
+        env:
+          SUITE: ${{ inputs.suite }}
+          SOURCE: ${{ inputs.ref }}
+          TASK: ${{ inputs.task }}
+          REASON: ${{ inputs.reason }}
+        run: |
+          if [ "$SUITE" = full ]; then
+            [[ "$SOURCE" =~ ^[0-9a-f]{40}$ ]] && [ "$SOURCE" = "$(git rev-parse HEAD)" ] && [ -n "$TASK" ] && [ -n "$REASON" ] || {
+              echo 'Full Linux requests require an exact source commit, task and reason'; exit 1;
+            }
+          fi
+          printf 'Linux request: suite=%s source=%s task=%s reason=%s\n' "$SUITE" "$(git rev-parse HEAD)" "$TASK" "$REASON" >> "$GITHUB_STEP_SUMMARY"
       - uses: pnpm/action-setup@v4
         with:
           package_json_file: Application Support/firstmate/package.json

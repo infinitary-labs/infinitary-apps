@@ -195,7 +195,7 @@ The switch lists `alpha` and `stable`; releases of either channel also update th
   An automatic alpha reuses the completed rolling-main run's `linux-checks`, `linux-e2e` and `mac` lanes without running them again: those lanes cover Linux typecheck, lint, adherence lint, unit tests and build; every Playwright journey on Linux, in shards (`docs/testing.md`, "The Linux source desktop"); macOS unit tests, every Playwright journey, the installed Claude client check, the replay gate, and the development package with its signature, data-folder and bundled-git checks.
   The release also runs the update check (`mac-update.yml`, "The update check" below) on Apple silicon: its rehearsal before signing, and the real update from the signing job's handoff, once every check passed, before publication.
   There is no Linux-only bypass.
-  Performance grading stays on request (`verify.yml -f perf=true`).
+  Performance grading stays on request (`verify.yml` with explicit `full_system=true`, task/source/reason and `perf=true`; `docs/forge.md`, "Verification workflow requests").
   A stable omits verify and inherits its alpha's checks: the resolve job reads the published alpha's release run, found by its run number (the alpha's suffix), because a run dispatched from main records main's commit rather than the candidate it built.
   The stable's source is the alpha tag's own commit, so nothing differs from what that run checked.
   The run must have succeeded with every lane's latest execution completed successfully, each Linux journey shard included, or carry validated exact-source main proof for an automatic alpha.

@@ -29919,27 +29919,30 @@ describe("a started task moves to another computer (INF-1713, real git)", {
   afterEach(async () => {
     for (const { supervisor, workspace, tasks } of movingFixtures.splice(0)) {
       await supervisor.disposeAll();
-      // Quit is bounded; the fixture is not. Wait for the move's persisted
-      // completion before draining the pool it can still enqueue work on.
-      await movesFinished(tasks);
+      // Quit is bounded. Drain actual move work before its pool, but do not
+      // ask this stopped launch to reopen a durably deferred conversation.
+      await movesFinished(tasks, supervisor);
       await workspace.poolSettled();
       await workspace.deletionsSettled();
     }
   });
-  function movesFinished(tasks: TaskService): Promise<void> {
-    return new Promise<void>((resolve) => {
-      const finished = () =>
-        !tasks.list().some((task) => {
-          const move = task.shape?.computer_move;
-          return move && move.phase !== "waiting";
-        });
-      if (finished()) return resolve();
-      const unsubscribe = tasks.onChange(() => {
-        if (!finished()) return;
-        unsubscribe();
-        resolve();
+  function movesFinished(tasks: TaskService, supervisor: CrewSupervisor): Promise<void> {
+    return vi.waitFor(() => {
+      const unfinished = tasks.list().filter((task) => {
+        const move = task.shape?.computer_move;
+        if (!move || move.phase === "waiting") return false;
+        // A committed move cannot retire its source until it reopens. Once
+        // this launch's operation ends, that record belongs to the next one.
+        // An install still in flight remains busy, even after bounded quit.
+        if (
+          move.phase === "retiring" &&
+          (move.restartFrom !== undefined || move.preparing) &&
+          !supervisor.conversationBusy(task.id)
+        ) return false;
+        return true;
       });
-    });
+      expect(unfinished.map((task) => task.id)).toEqual([]);
+    }, REAL_GIT_WAIT);
   }
   beforeEach(() => {
     vi.useRealTimers();
@@ -30580,7 +30583,10 @@ describe("a started task moves to another computer (INF-1713, real git)", {
     expect(h.moveIn).not.toHaveBeenCalled();
     browser.withCaptain = false;
     await h.supervisor.sweepGates(Date.now());
-    await vi.waitFor(() => expect(h.tasks.get(h.taskId)?.deviceId).toBe(MINI), REAL_GIT_WAIT);
+    await vi.waitFor(() => {
+      expect(h.tasks.get(h.taskId)?.deviceId).toBe(MINI);
+      expect(h.tasks.get(h.taskId)?.shape?.computer_move).toBeUndefined();
+    }, REAL_GIT_WAIT);
     await h.supervisor.disposeAll();
   });
 
@@ -30637,16 +30643,26 @@ describe("a started task moves to another computer (INF-1713, real git)", {
     },
   );
 
-  it("settles retirement before fixture cleanup even after the bounded quit expires", async () => {
-    // INF-1935: a bounded quit is not the fixture's completion barrier.
+  it.each(["reopening", "retiring"] as const)("settles %s before fixture cleanup even after the bounded quit expires", async (phase) => {
+    // INF-1935 / INF-2386: a bounded quit is not the fixture's completion barrier.
     const entered = deferred<void>();
     const release = deferred<void>();
-    const h = await startedHere();
+    const h = await startedHere({
+      ...(phase === "reopening"
+        ? { install: async () => {
+            entered.resolve();
+            await release.promise;
+            return { outcome: "skipped" as const };
+          } }
+        : {}),
+    });
     const workspace = h.realWorkspace as RealWorkspaceService;
     const remove = workspace.removeTaskWorktree.bind(workspace);
     const retirement = vi.spyOn(workspace, "removeTaskWorktree").mockImplementation(async (work) => {
-      entered.resolve();
-      await release.promise;
+      if (phase === "retiring") {
+        entered.resolve();
+        await release.promise;
+      }
       await remove(work);
     });
     expect((await h.supervisor.requestComputerMove(h.taskId, MINI, "captain")).ok).toBe(true);
@@ -30661,11 +30677,15 @@ describe("a started task moves to another computer (INF-1713, real git)", {
       vi.useRealTimers();
     }
     let finished = false;
-    const completion = movesFinished(h.tasks).then(() => {
+    const completion = movesFinished(h.tasks, h.supervisor).then(() => {
       finished = true;
     });
     try {
       expect(h.tasks.get(h.taskId)?.shape?.computer_move?.phase).toBe("retiring");
+      if (phase === "reopening") {
+        expect(h.tasks.get(h.taskId)?.shape?.computer_move?.preparing).toBe(true);
+        expect(h.supervisor.conversationBusy(h.taskId)).toBe(true);
+      }
       await Promise.resolve();
       expect(finished).toBe(false);
     } finally {
@@ -30677,6 +30697,53 @@ describe("a started task moves to another computer (INF-1713, real git)", {
     }
     expect(existsSync(h.cwd)).toBe(false);
     expect(workspace.pooledTrees()).toHaveLength(1);
+  });
+
+  it("settles fixture cleanup after quitting at the destination commit, then reopens only at the next launch", async () => {
+    // INF-2380: the real commit notification permits quit before reopening.
+    // The operation can end while its durable move waits for the next launch.
+    const h = await startedHere();
+    let disposal: Promise<void> | undefined;
+    const stopWatching = h.tasks.onChange(() => {
+      if (h.tasks.get(h.taskId)?.deviceId !== MINI) return;
+      stopWatching();
+      disposal = h.supervisor.disposeAll();
+    });
+    try {
+      expect((await h.supervisor.requestComputerMove(h.taskId, MINI, "captain")).ok).toBe(true);
+      h.crewmate.finishPrompt();
+      await vi.waitFor(() => expect(disposal).toBeDefined(), REAL_GIT_WAIT);
+      await disposal;
+      expect(h.opened).toHaveLength(0);
+      expect(h.tasks.get(h.taskId)?.shape?.computer_move).toMatchObject({
+        phase: "retiring",
+        preparing: true,
+        restartFrom: "s1",
+      });
+      expect(h.supervisor.conversationBusy(h.taskId)).toBe(false);
+      expect(existsSync(h.cwd)).toBe(true);
+      // Exercise the same barrier as afterEach before any next-launch work.
+      await movesFinished(h.tasks, h.supervisor);
+      await (h.realWorkspace as RealWorkspaceService).poolSettled();
+      await (h.realWorkspace as RealWorkspaceService).deletionsSettled();
+      expect(h.opened).toHaveLength(0);
+
+      const { fresh } = relaunched(h);
+      try {
+        await fresh.sweepGates(Date.now());
+        await vi.waitFor(() => {
+          expect(h.tasks.get(h.taskId)?.shape?.computer_move).toBeUndefined();
+          expect(existsSync(h.cwd)).toBe(false);
+        }, REAL_GIT_WAIT);
+        expect(h.opened).toEqual([expect.objectContaining({ machine: MINI })]);
+        expect(JSON.stringify(h.opened[0])).not.toContain("s1.jsonl");
+        expect(readFileSync(join(h.there, "work", "meter.ts"), "utf8")).toBe("export const unit = 'mWh';\n");
+      } finally {
+        await fresh.disposeAll();
+      }
+    } finally {
+      stopWatching();
+    }
   });
 
   it("carries the ignored files the move names to keep", async () => {
@@ -30694,7 +30761,10 @@ describe("a started task moves to another computer (INF-1713, real git)", {
       (await h.supervisor.requestComputerMove(h.taskId, AIR, "firstmate", ["../elsewhere"])).text,
     ).toContain("is already moving");
     h.crewmate.finishPrompt();
-    await vi.waitFor(() => expect(h.tasks.get(h.taskId)?.deviceId).toBe(MINI), REAL_GIT_WAIT);
+    await vi.waitFor(() => {
+      expect(h.tasks.get(h.taskId)?.deviceId).toBe(MINI);
+      expect(h.tasks.get(h.taskId)?.shape?.computer_move).toBeUndefined();
+    }, REAL_GIT_WAIT);
     expect(readFileSync(join(h.there, "work", ".env.local"), "utf8")).toBe("METER_KEY=local\n");
     expect(existsSync(join(h.there, "work", "build", "meter.js"))).toBe(false);
     await h.supervisor.disposeAll();

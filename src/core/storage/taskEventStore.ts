@@ -281,11 +281,18 @@ export class TaskEventStore {
     ).map((row) => row.ref);
   }
 
-  /** The roster needs the restart line, not the note's potentially large JSON payload. */
+  /**
+   * The roster needs the restart line, not the note's potentially large JSON
+   * payload. It reads through the index of restart notes alone: left to
+   * choose, SQLite seeks the task's notes by kind and tests every one of
+   * them, so each running crew row's read grew with its own history
+   * (INF-2341).
+   */
   latestRestartObservation(taskId: string): Pick<TaskEvent, "at" | "text"> | undefined {
     return this.db
       .prepare(
-        `SELECT at, text FROM task_events WHERE task_id = ? AND kind = 'note'
+        `SELECT at, text FROM task_events INDEXED BY task_events_restart_outcome
+         WHERE task_id = ? AND kind = 'note'
          AND CASE WHEN json_valid(data_json) THEN json_type(data_json, '$.restartOutcome') END = 'object'
          ORDER BY at DESC, id DESC LIMIT 1`,
       )

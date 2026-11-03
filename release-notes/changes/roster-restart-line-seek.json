@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "roster-restart-line-seek",
+      "reason": "Internal performance repair: the first mate's crew list reads each running task's restart line through the index of restart notes instead of testing every note the task holds. It took about 33 ms of a 54 ms context build with 60 running tasks of 3,000 events each, under a millisecond after; nothing on screen changes and no pause a person notices goes away."
+    }
+  ]
+}

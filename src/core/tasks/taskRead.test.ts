@@ -355,6 +355,72 @@ describe("task projection reads", () => {
       db.close();
     }
   });
+  // INF-2341: each running crew row of the first mate's context reads its
+  // restart line, and SQLite chose to seek the task's notes by kind and test
+  // every one, so the read grew with the task's own progress notes.
+  it("seeks the latest restart line among restart notes alone, whatever the task's other notes", () => {
+    const db = freshDatabase();
+    let now = Date.now();
+    const tasks = new TaskService({ db, now: () => now });
+    try {
+      seedTask(tasks, { id: "builder", title: "Keep task refreshes responsive", status: "idle" });
+      const reopenedAt = now;
+      tasks.note("builder", "Has not carried on after the app reopened: computer out of reach.", {
+        news: true,
+        data: {
+          journal: true,
+          restartOutcome: { reopenedAt, outcome: "waiting", reason: "computer out of reach" },
+        },
+      });
+      now += 1_000;
+      tasks.note("builder", "Carried on after the app reopened.", {
+        news: true,
+        data: { journal: true, restartOutcome: { reopenedAt, outcome: "resumed" } },
+      });
+      for (let step = 0; step < 200; step += 1) {
+        now += 1_000;
+        tasks.note("builder", `Ran check ${step} of the refresh fix.`, { news: false });
+      }
+      const ran: { source: string; args: unknown[] }[] = [];
+      const statement = Object.getPrototypeOf(db.prepare("SELECT 1")) as {
+        get: (this: { source: string }, ...args: unknown[]) => unknown;
+      };
+      const { get } = statement;
+      statement.get = function (this: { source: string }, ...args: unknown[]) {
+        ran.push({ source: this.source, args });
+        return get.apply(this, args);
+      };
+      let latest: ReturnType<TaskService["restartObservation"]>;
+      try {
+        latest = tasks.restartObservation("builder");
+      } finally {
+        statement.get = get;
+      }
+      expect(latest?.text).toBe("Carried on after the app reopened.");
+      // The index whose rows are the restart notes alone, read from the schema the migration wrote.
+      const restartIndexes = (
+        db
+          .prepare(
+            "SELECT name, sql FROM sqlite_master WHERE type = 'index' AND tbl_name = 'task_events'",
+          )
+          .all() as { name: string; sql: string | null }[]
+      ).filter((index) => index.sql?.includes("$.restartOutcome"));
+      expect(restartIndexes).toHaveLength(1);
+      expect(ran).toHaveLength(1);
+      const [read] = ran;
+      const plan = (
+        db.prepare(`EXPLAIN QUERY PLAN ${read?.source}`).all(...(read?.args ?? [])) as {
+          detail: string;
+        }[]
+      ).map((step) => step.detail);
+      console.info(JSON.stringify({ intent: "INF-2341 restart line", notes: 202, plan }));
+      expect(plan).toEqual([
+        `SEARCH task_events USING INDEX ${restartIndexes[0]?.name} (task_id=?)`,
+      ]);
+    } finally {
+      db.close();
+    }
+  });
   it("shares composed records and live lists within a read, never across a write or a later read", () => {
     const db = freshDatabase();
     const tasks = new TaskService({ db });

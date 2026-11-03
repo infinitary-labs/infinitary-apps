@@ -2274,6 +2274,10 @@ function migrate(db: AppDatabase, throughVersion?: number): void {
   // crewmate's progress in the same time window (INF-2284).
   // The first launch's crew facts seek a task by kind and status instead of
   // composing every task at each boot and task close (INF-2338).
+  // The roster's restart read names the restart-outcome index (INDEXED BY in
+  // `latestRestartObservation`), so a database this block has not reached
+  // refuses that read rather than walking every note of a running task
+  // (INF-2341).
   if (through === DATABASE_VERSION)
     db.exec(`
       CREATE INDEX IF NOT EXISTS usage_events_account_at ON usage_events (account_id, at);

@@ -11,6 +11,7 @@ name: main
 # mark (docs/testing.md, "The continuous run on main"); nothing else records it.
 
 on:
+  workflow_dispatch:
   push:
     branches: [main]
 

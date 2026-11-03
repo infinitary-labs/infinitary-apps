@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "id": "inf-2395",
+      "kind": "fix",
+      "area": "tasks",
+      "title": "Start reaches your first mate without an extra pause",
+      "body": "Pressing Start no longer waits three seconds before an idle first mate can apply your directions and start the task.",
+      "noPicture": "This removes a scheduling delay; the controls and their appearance are unchanged.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

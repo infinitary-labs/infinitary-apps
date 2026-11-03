@@ -4739,13 +4739,14 @@ export class FirstmateAgent {
     if (!oldest) return;
     const waited = now - oldest.createdAt;
     // A captain's words never wait out the window, nor does the one retry
-    // for a message nothing took effect after, nor how his click on a setup
-    // card came out: someone is waiting on it.
+    // for a message nothing took effect after, how his setup click came out,
+    // or a Start held for this turn. A queued task's directions can still batch.
     const waiting = rows.some(
       (row) =>
         row.origin === "captain" ||
         row.facts?.kind === "answer-missing" ||
-        row.facts?.kind === "project-setup",
+        row.facts?.kind === "project-setup" ||
+        (row.facts?.kind === "captain-start" && row.facts.move === "start"),
     );
     if (waited < this.coalesceMs && !waiting) {
       this.scheduleCoalesceDrain(this.coalesceMs - waited);

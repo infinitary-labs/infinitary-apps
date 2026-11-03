@@ -62,6 +62,14 @@ test("sequential pointer Starts keep the backlog in view; keyboard Start reveals
     const scroller = page.locator('[data-side-panel="now"] [data-side-panel-body]');
     const row = (n: number) => frame.locator(`[data-now-row="scroll-${n}"]`);
     const start = (n: number) => frame.locator(`[data-now-start="scroll-${n}"]`);
+    // INF-2395: record the actual dispatch behind each group transition,
+    // not just the drawing that previously remained queued after Start.
+    const started = async (n: number) => {
+      const task = await page.evaluate((id) => window.infinitary.tasks.detail(id), `scroll-${n}`);
+      expect(task.status).toBe("active");
+      expect(task.events.filter((event) => event.kind === "dispatched")).toHaveLength(1);
+      return { id: task.id, status: task.status, group: await nowRowGroup(page, key(task.id)) };
+    };
     const visible = async (n: number) => {
       const bounds = await row(n).boundingBox();
       const viewport = await scroller.boundingBox();
@@ -90,7 +98,9 @@ test("sequential pointer Starts keep the backlog in view; keyboard Start reveals
       await expect.poll(() => nowRowGroup(page, key(`scroll-${n}`))).toBe("working");
       await expect(row(n)).toBeFocused();
       await visible(n + 1);
-      expect(await scroller.evaluate((el) => el.scrollTop)).toBe(before);
+      const after = await scroller.evaluate((el) => el.scrollTop);
+      expect(after).toBe(before);
+      console.log("[pointer Start]", { ...(await started(n)), before, after, nextVisible: n + 1 });
     }
     // The same long-list handoff by keyboard must still reveal its new stop.
     await focusOn(row(37));
@@ -100,6 +110,7 @@ test("sequential pointer Starts keep the backlog in view; keyboard Start reveals
     await expect.poll(() => nowRowGroup(page, key("scroll-37"))).toBe("working");
     await expect(row(37)).toBeFocused();
     await visible(37);
+    console.log("[keyboard Start]", { ...(await started(37)), focusedAndVisible: true });
   } finally {
     await launched.close();
   }

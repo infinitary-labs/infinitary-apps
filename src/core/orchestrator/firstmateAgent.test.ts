@@ -93,7 +93,7 @@ import type {
 import { FIRSTMATE_TOOLS } from "../session/tools";
 import { CardStore } from "../storage/cardStore";
 import type { AccountDecisionInput } from "../storage/decisionStore";
-import { FIRSTMATE_RECIPIENT, InboxStore } from "../storage/inboxStore";
+import { FIRSTMATE_RECIPIENT, InboxStore, WAKE_COALESCE_MS } from "../storage/inboxStore";
 import { ScheduleStore } from "../storage/scheduleStore";
 import { SessionRecordStore } from "../storage/sessionRecordStore";
 import { SettingsStore } from "../storage/settingsStore";
@@ -3435,8 +3435,11 @@ describe("FirstmateAgent", () => {
     await tick();
   });
 
-  it("holds the captain's Start as Starting while Firstmate reads it, then starts it as it is", async () => {
+  it("serves the captain's Start without batching, holds it while Firstmate reads, then starts it as it is", async () => {
+    // INF-2395: a real Start must not spend the operational wake window
+    // before Firstmate can read it. Use the production window, not setup's zero.
     const { session, supervisor, tasks } = setup({
+      coalesceMs: WAKE_COALESCE_MS,
       seedTasks: [
         { id: "t1", title: "Fix the flaky test", status: "queued", startPolicy: "on-request" },
       ],
@@ -3462,7 +3465,9 @@ describe("FirstmateAgent", () => {
   });
 
   it("finishes the held Start when Firstmate starts the task itself", async () => {
+    // INF-2395: the immediate handoff still lets Firstmate own the start.
     const { session, supervisor, tasks } = setup({
+      coalesceMs: WAKE_COALESCE_MS,
       seedTasks: [
         { id: "t1", title: "Fix the flaky test", status: "queued", startPolicy: "on-request" },
       ],
@@ -3470,6 +3475,7 @@ describe("FirstmateAgent", () => {
     supervisor.runTaskOp("t1", "start-task");
     await tick();
     expect(tasks.get("t1")?.status).toBe("open");
+    expect(session.prompts).toHaveLength(1);
     // update_task start_now inside the turn.
     await supervisor.startQueuedNow("t1");
     expect(tasks.get("t1")?.status).toBe("active");
@@ -3481,6 +3487,29 @@ describe("FirstmateAgent", () => {
         .timeline("t1")
         .some((event) => event.text.includes("started without applying your standing directions")),
     ).toBe(false);
+  });
+
+  it("keeps a blocked queue move in the operational batch rather than treating it as a held Start", async () => {
+    // INF-2395: only the captain's held Start bypasses batching; a task
+    // queued behind its prerequisite still carries directions on the usual wake.
+    const { session, supervisor, tasks } = setup({
+      coalesceMs: WAKE_COALESCE_MS,
+      seedTasks: [
+        { id: "fix", title: "Fix the flaky test", status: "queued", startPolicy: "on-request" },
+        { id: "check", title: "Check the repair", status: "queued", startPolicy: "on-request" },
+      ],
+    });
+    tasks.link("fix", "check", "blocks", "host");
+    expect(supervisor.runTaskOp("check", "queue-task")).toBeUndefined();
+    await tick();
+    expect(session.prompts).toHaveLength(0);
+    expect(tasks.startAttemptOf("check")).toBeUndefined();
+    await admissionClock.advance(WAKE_COALESCE_MS);
+    expect(session.prompts).toHaveLength(1);
+    expect(tasks.get("check")?.status).toBe("open");
+    session.emitTurnEnd("Noted.");
+    session.resolveNextPrompt();
+    await tick();
   });
 
   it("lists Start again once with the replacement key in Firstmate's next context", async () => {

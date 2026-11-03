@@ -23,22 +23,26 @@ name: release
 # Every release carries Linux too (docs/linux-packages.md): the linux job
 # builds the Ubuntu and Fedora packages, the AppImage and each channel's Arch
 # recipe and Nix package at the release's version from the same source
-# commit, and checks each on a clean copy of its system; the publication job
-# records exactly those files beside the zip, publishes them, fetches them
-# back like the zip, and writes the builds file keyed by system and chip in
-# the same tap commit (docs/alpha.md "Builds by system and chip").
+# commit, and checks each on a clean copy of its system; the upload job
+# puts exactly those files beside the zip on every place, and the
+# publication job fetches them back like the zip and writes the builds file
+# keyed by system and chip in the same tap commit (docs/alpha.md "Builds by
+# system and chip").
 #
 # Signing while the checks run (INF-2074's sign-early; docs/alpha.md): the
 # signing job waits only for the notes and the phone, then builds, signs and notarizes while the verify lanes and the Linux
 # packages are still checked. Its token reads and never writes, so nothing
 # is recorded or published before every check passed: the update check and
-# the publication job wait for all of them.
+# the upload job wait for all of them.
 #
-# Signing on the real Mac, publication in a virtual Mac (INF-1716;
-# docs/alpha.md): the signing job ends once the disk image passes its check
-# and hands its checked files to the publish job, which validates them,
-# records them, and runs every later publication step and download check in
-# one disposable virtual Mac, with no Apple signing material.
+# Signing on the real Mac, uploads on a hosted machine, checks in a virtual
+# Mac (INF-1716, INF-2498; docs/alpha.md): the signing job ends once the disk
+# image passes its check and hands its checked files to the upload job, which
+# validates them and, on a machine GitHub hosts, uploads them to the record,
+# Cloudflare and both taps at once. The publish job then downloads every
+# copy in one disposable virtual Mac, checks each, and only then switches
+# the casks and feeds. Neither holds Apple signing material, and the
+# virtual Mac uploads nothing.
 #
 # The old-cask switch (docs/alpha.md "The old-cask switch"): for each channel
 # packaging/old-cask-switch.json lists - alpha since the rename's step 13,
@@ -108,8 +112,9 @@ permissions:
 # A dry run has its own group, so a rehearsal can never cancel a real
 # release, and only a newer rehearsal of the same channel and ref replaces
 # it. A real release is never cancelled to start another: each run is its
-# own group, and publications serialize where they meet - at each release's
-# immutable assets and at the tap's push (scripts/publish-tap.sh).
+# own group, and publications serialize where they meet - at the upload job,
+# one run of a version at a time, at each release's immutable assets and at
+# the tap's push (scripts/publish-tap.sh).
 concurrency:
   group: ${{ inputs.dry_run && format('release-dry-run-{0}-{1}', inputs.channel || 'stable', inputs.promote || inputs.candidate || github.ref_name) || format('release-{0}', github.run_id) }}
   cancel-in-progress: ${{ inputs.dry_run == true }}
@@ -475,7 +480,7 @@ jobs:
   # channels, a stable promotion included: built at the release's version
   # from its one source commit, with the notes job's catalog, and installed
   # and opened on a clean copy of each system before anything publishes. Its
-  # run keeps them as the linux-packages artifact the publication job records.
+  # run keeps them as the linux-packages artifact the upload job uploads.
   # A publishing run's package jobs take the release's Linux label too.
   linux:
     needs: [resolve, notes]
@@ -537,11 +542,11 @@ jobs:
     timeout-minutes: 90
     # It runs before the checks pass, so its token only reads: it can find
     # what the record already holds, never write a tag, a release or an
-    # asset. The publication job records once every check passed.
+    # asset. The upload job records once every check passed.
     permissions:
       contents: read
       actions: read
-    # What the publication job reads: the checked files' artifact, its
+    # What the upload job reads: the checked files' artifact, its
     # manifest's checksum, the zip's checksum and whether downloads are direct.
     outputs:
       handoff_id: ${{ steps.handoff-upload.outputs.artifact-id }}
@@ -829,7 +834,7 @@ jobs:
       # version's zip - a retry after publication recorded it, whose rebuild
       # never reproduces the same bytes - keeps it, so its disk image and the
       # handoff carry that zip, never this attempt's rebuild. This only reads
-      # the record, whose tag must name the source commit; the publication job
+      # the record, whose tag must name the source commit; the upload job
       # records, and refuses a record that changed since this read.
       - name: Read what the record already holds
         id: recorded
@@ -886,11 +891,11 @@ jobs:
           echo "path=$DIST_DMG" >> "$GITHUB_OUTPUT"
 
       # The handoff (INF-1716): the signing job ends at the checked disk image,
-      # and the publication job finishes in a virtual Mac. It hands over only
-      # what publication reads - the zip to record and, when one was built,
-      # the checked disk image - with a manifest binding them to this run,
-      # attempt, workflow revision and release. The Linux files come to
-      # publication from the linux job, which may still run here. Never the
+      # and the upload job takes it to every place. It hands over only what
+      # the upload reads - the zip to record and, when one was built, the
+      # checked disk image - with a manifest binding them to this run,
+      # attempt, workflow revision and release. The Linux files come to the
+      # upload from the linux job, which may still run here. Never the
       # unpacked app, the workspace, a credential or the environment.
       - name: Prepare the checked files for publication
         id: handoff
@@ -986,7 +991,7 @@ jobs:
             [[ -z "$HIGHLIGHTS" ]] || echo "Highlights picked, lead first: $HIGHLIGHTS"
             echo "Version identities: CFBundleShortVersionString $(field CFBundleShortVersionString), CFBundleVersion $(field CFBundleVersion); $(cat "$RUNNER_TEMP/launch-gate.txt" 2>/dev/null || echo 'the launch gate did not run')."
             for stage in $GATES; do echo "- ${stage%%=*}: ${stage#*=}"; done
-            echo 'A skipped stage did not pass in this run. The record, publication and their download checks follow in the publication job, from the handoff below.'
+            echo 'A skipped stage did not pass in this run. The record and every upload follow in the upload job, from the handoff below, and the download checks and switches in the publication job.'
             echo "The handoff to publication: $HANDOFF."
             echo "sha256 of the zip: \`${SHA256:-none}\`"
           } >> "$GITHUB_STEP_SUMMARY"
@@ -1015,49 +1020,55 @@ jobs:
       zip_sha256: ${{ needs.release.outputs.sha256 }}
       runner: ${{ needs.resolve.outputs.dry_run == 'false' && fromJSON(vars.MAC_QUEUES || '{}').release_light || '' }}
 
-  # The record, publication and the download checks after them (INF-1716),
-  # in one disposable virtual Mac from the placement service's existing
-  # pool, so the real Mac is free once the disk image passes its check. It
-  # starts only once every check passed (INF-2074's sign-early: the signing
-  # job ran beside them and wrote nothing). It waits for a free place when
-  # both are busy; it never falls back to the real Mac. It holds no Apple
-  # signing material: the files it publishes were signed, notarized and
-  # checked by the signing job, which hands them over in a manifest this job
-  # validates before any effect, and the Linux files are the linux job's.
-  # Every Mac check that follows - signature, Gatekeeper, launch and version,
-  # the disk image against the zip - still runs here, never replaced by a
-  # checksum. Rerunning only this job reuses the signing job's handoff, from
-  # whichever attempt produced it; rerunning the signing job hands over
-  # anew, and the record's immutable adoption still decides which bytes
-  # publish.
-  publish:
-    name: Record, publish and check the downloads (a dry run records nothing)
+  # The uploads (INF-2498's plan, piece 2), once every check passed (INF-2074's
+  # sign-early: the signing job ran beside them and wrote nothing), on a
+  # disposable machine GitHub hosts, so no Mac waits on an upload. It puts
+  # the signing job's checked zip and disk image and the linux job's files on
+  # every place a person downloads from - the record, Cloudflare, the
+  # Homebrew tap and Firstmate 3000's tap - at once. It holds every upload
+  # key (the workflow's token that writes the record, the R2 keys and both
+  # taps' tokens) and no Apple signing material. It validates the handoff
+  # before any effect. Published bytes never change (docs/alpha.md): the
+  # record takes the zip first, alone, so no place can hold a zip the record
+  # lacks, and a retry's signing job, which reads only the record, hands
+  # over the zip every place gets; then every place is read, and a disk
+  # image or Linux package any place already holds - a retry's - is the one
+  # every place gets, or the release fails before any upload when two places
+  # disagree. One upload of a version runs at a time, so two runs of it
+  # never read the places at once. It switches nothing: no cask, update file
+  # or feed moves until the virtual Mac checked every copy. A dry run
+  # validates and lists the files and uploads nothing. Rerunning only this
+  # job reuses the signing job's handoff, from whichever attempt produced it.
+  upload:
+    name: Upload every download to every place at once (a dry run uploads nothing)
     needs: [resolve, notes, verify, linux, phone, release, update]
     if: ${{ always() && !cancelled() && needs.resolve.result == 'success' && needs.notes.result == 'success' && needs.linux.result == 'success' && needs.phone.result == 'success' && needs.release.result == 'success' && ((needs.resolve.outputs.verify_required == 'true' && (needs.verify.result == 'success' || (needs.resolve.outputs.main_run != '' && needs.verify.result == 'skipped')) && needs.update.result == 'success') || (needs.resolve.outputs.verify_required == 'false' && needs.verify.result == 'skipped' && needs.update.result == 'skipped')) }}
-    # The light kind's virtual-only queue once MAC_QUEUES names it, and
-    # release_light for a publishing run (docs/testing.md, "Each Mac job's kind and size").
-    runs-on: ${{ needs.resolve.outputs.dry_run == 'false' && fromJSON(vars.MAC_QUEUES || '{}').release_light || fromJSON(vars.MAC_QUEUES || '{}').light || 'mini-mac-virtual' }}
-    timeout-minutes: 90
+    # A release's Linux jobs run on GitHub's hosted machines (docs/testing.md, "A release's hosted machines").
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    concurrency:
+      group: ${{ format('release-upload-{0}-{1}', needs.resolve.outputs.version, needs.resolve.outputs.dry_run) }}
+      cancel-in-progress: false
     permissions:
       contents: write
       actions: read
+    # What the virtual Mac checks every copy against: each file's name and
+    # sha256, and the handoff attempt they came from.
+    outputs:
+      files: ${{ steps.files.outputs.files }}
+      attempt: ${{ steps.handoff-check.outputs.attempt }}
     env:
       CHANNEL: ${{ needs.resolve.outputs.channel }}
       DRY_RUN: ${{ needs.resolve.outputs.dry_run }}
       SOURCE_COMMIT: ${{ needs.resolve.outputs.source_commit }}
       VERSION: ${{ needs.resolve.outputs.version }}
-      BUNDLE_VERSION: ${{ needs.resolve.outputs.bundle_version }}
       TAG_NAME: ${{ needs.resolve.outputs.tag_name }}
-      PUBLIC_TAG: ${{ needs.resolve.outputs.tag_name }}
-      RELEASE_REPOSITORY: ${{ needs.resolve.outputs.release_repository }}
       DMG_NAME: Infinitary-${{ needs.resolve.outputs.version }}-mac-universal.dmg
       ZIP_NAME: ${{ needs.resolve.outputs.zip_name }}
-      DOWNLOAD_URL: ${{ needs.resolve.outputs.download_base }}releases/${{ needs.resolve.outputs.tag_name }}/${{ needs.resolve.outputs.zip_name }}
       CASK_TOKEN: ${{ needs.resolve.outputs.cask_token }}
       PRERELEASE: ${{ needs.resolve.outputs.prerelease }}
       PROMOTED_FROM: ${{ needs.resolve.outputs.promoted_from }}
       HIGHLIGHTS: ${{ needs.resolve.outputs.highlights }}
-      ALPHA_RUN: ${{ needs.resolve.outputs.alpha_run }}
 
     steps:
       - name: Checkout the source commit
@@ -1066,33 +1077,9 @@ jobs:
           ref: ${{ needs.resolve.outputs.source_commit }}
           persist-credentials: false
 
-      # The workflow's own launch gate, as in the signing job (INF-1768):
-      # every fetch-back launches the app through it. Nothing is packaged here.
-      - name: Check out the workflow's own launch gate
-        uses: actions/checkout@v4
-        with:
-          ref: ${{ github.sha }}
-          path: .release-tooling
-          persist-credentials: false
-          sparse-checkout-cone-mode: false
-          sparse-checkout: |
-            scripts/check-app-launch.sh
-            scripts/app-runtime-version.mjs
-
-      - name: Use the workflow's own launch gate
-        id: publish-launch-gate
-        run: cp .release-tooling/scripts/check-app-launch.sh .release-tooling/scripts/app-runtime-version.mjs scripts/
-
-      - uses: pnpm/action-setup@v4
-        with:
-          dest: ${{ runner.temp }}/setup-pnpm
-
       - uses: actions/setup-node@v4
         with:
           node-version: 24
-
-      - name: Install dependencies
-        run: pnpm install --frozen-lockfile
 
       # By the immutable id the signing job recorded, never by a name a later
       # attempt could reuse. The download's own digest check only warns, so
@@ -1203,23 +1190,19 @@ jobs:
             --packages "$RUNNER_TEMP/linux-packages" --out "$RUNNER_TEMP/linux-release"
           cat "$RUNNER_TEMP/linux-release/SHA256SUMS"
 
-      # The record, the first effect, only once every check passed.
-      # Published bytes never change: a release that already carries this
-      # version's zip - a retry, whose rebuild never reproduces the same
-      # bytes - keeps it. The private release is the record: its tag must
-      # name the source commit, and its zip, if already there, is the
-      # artifact every later step publishes and verifies. The signing job
-      # read the record before it built the disk image and handed over that
-      # zip, so adoption here must name the same bytes; a record that changed
-      # since - another run of this version - fails here before anything
-      # publishes. The public copy must match it byte for byte
-      # (scripts/publish-release-asset.sh).
-      - name: Record immutable release artifacts
+      # The record, the first effect, and only the zip. The private release
+      # is the record: its tag must name the source commit, and its zip, if
+      # already there - a retry, whose rebuild never reproduces the same
+      # bytes - is the artifact every place gets. The signing job read the
+      # record before it built the disk image and handed over that zip, so
+      # adoption here must name the same bytes; a record that changed since -
+      # another run of this version - fails here before anything else
+      # uploads (scripts/publish-release-asset.sh).
+      - name: Record the zip first
         id: private
         if: ${{ needs.resolve.outputs.dry_run == 'false' }}
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          RECIPE_HOST: ${{ needs.release.outputs.direct == 'true' && 'downloads' || 'tap' }}
           ARTIFACT: ${{ steps.handoff-check.outputs.zip }}
           ARTIFACT_SHA256: ${{ needs.release.outputs.sha256 }}
           TITLE: infinitary ${{ needs.resolve.outputs.version }}
@@ -1247,199 +1230,495 @@ jobs:
             exit 1
           }
           cat "$WORK/zip.out" >> "$GITHUB_OUTPUT"
-          # The Linux files beside the zip. Each package already published - a
-          # retry - is adopted, as the zip is; the recipes and SHA256SUMS are
-          # then rendered again from exactly the Ubuntu package published, so
-          # they name its bytes, and must match any copy already there.
-          LINUX="$RUNNER_TEMP/linux-release"
-          ADOPTED="$WORK/linux-packages"
-          mkdir -p "$ADOPTED"
-          for ENDING in .deb .rpm .AppImage; do
-            FILE="$(find "$LINUX" -maxdepth 1 -name "*$ENDING" | head -n 1)"
-            NAME="$(basename "$FILE")"
-            GITHUB_OUTPUT="$WORK/$NAME.out" WORK="$WORK/$NAME" \
-              scripts/publish-release-asset.sh adopt "$GITHUB_REPOSITORY" "$TAG_NAME" "$FILE"
-            cp "$(sed -n 's/^zip=//p' "$WORK/$NAME.out")" "$ADOPTED/$NAME"
-          done
-          rm -rf "$LINUX"
-          node scripts/linux-recipes.ts release --version "$VERSION" --packages "$ADOPTED" --out "$LINUX" >/dev/null
-          while IFS= read -r NAME; do
-            case "$NAME" in *.deb | *.rpm | *.AppImage) continue ;; esac
-            GITHUB_OUTPUT="$WORK/$NAME.out" WORK="$WORK/$NAME" \
-              scripts/publish-release-asset.sh match "$GITHUB_REPOSITORY" "$TAG_NAME" "$LINUX/$NAME"
-          done < "$LINUX/assets.txt"
 
-      - name: Record the immutable disk image
-        id: recorded-dmg
-        if: ${{ needs.resolve.outputs.dry_run == 'false' && needs.release.outputs.direct == 'true' }}
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          ARTIFACT: ${{ steps.handoff-check.outputs.dmg }}
-        run: |
-          WORK="$RUNNER_TEMP/recorded-dmg" scripts/publish-release-asset.sh adopt "$GITHUB_REPOSITORY" "$TAG_NAME" "$ARTIFACT"
-
-      - name: Verify the published artifact
-        id: private-fetch-back
+      # Every place read before any upload, each with its own key, so a retry
+      # keeps published bytes wherever the last attempt stopped: a disk image
+      # or Linux package any place already holds is adopted, and every place
+      # gets exactly it; two places holding different bytes fail the release
+      # here, before anything uploads. The recipes and SHA256SUMS are then
+      # rendered again from exactly the packages adopted, so they name their
+      # bytes. Cloudflare is read through its storage interface, never the
+      # public address, whose cache could keep a missing file's answer.
+      - name: Keep what any place already holds
+        id: adopt
         if: ${{ needs.resolve.outputs.dry_run == 'false' }}
-        # Download exactly what was recorded and re-run the full gate against
-        # it (pi-launcher's philosophy).
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          ARTIFACT_SHA256: ${{ needs.release.outputs.sha256 }}
-        run: |
-          set -euo pipefail
-          DOWNLOAD_DIR="$RUNNER_TEMP/downloaded-verify"
-          rm -rf "$DOWNLOAD_DIR" && mkdir -p "$DOWNLOAD_DIR"
-          gh release download "$TAG_NAME" --pattern "$ZIP_NAME" --pattern "$ZIP_NAME.sha256" --dir "$DOWNLOAD_DIR"
-          (cd "$DOWNLOAD_DIR" && shasum -a 256 -c "$ZIP_NAME.sha256")
-          PUBLISHED_SHA="$(shasum -a 256 "$DOWNLOAD_DIR/$ZIP_NAME" | awk '{print $1}')"
-          [[ "$ARTIFACT_SHA256" == "$PUBLISHED_SHA" ]] || { echo "published sha mismatch" >&2; exit 1; }
-          EXTRACT_DIR="$RUNNER_TEMP/downloaded-extract"
-          rm -rf "$EXTRACT_DIR" && mkdir -p "$EXTRACT_DIR"
-          ditto -x -k "$DOWNLOAD_DIR/$ZIP_NAME" "$EXTRACT_DIR"
-          scripts/verify-app.sh "$EXTRACT_DIR/$APP_NAME" --signed --gatekeeper
-          scripts/check-app-launch.sh "$EXTRACT_DIR/$APP_NAME" "$VERSION"
-          # Every Linux file as recorded: the same bytes the linux job checked
-          # (or the published ones a retry adopted), and its sidecar.
-          LINUX="$RUNNER_TEMP/linux-release"
-          mkdir -p "$DOWNLOAD_DIR/linux"
-          while IFS= read -r NAME; do
-            gh release download "$TAG_NAME" --pattern "$NAME" --pattern "$NAME.sha256" --dir "$DOWNLOAD_DIR/linux"
-            cmp "$DOWNLOAD_DIR/linux/$NAME" "$LINUX/$NAME"
-            (cd "$DOWNLOAD_DIR/linux" && shasum -a 256 -c "$NAME.sha256")
-          done < "$LINUX/assets.txt"
-
-      - name: Publish immutable Cloudflare downloads
-        id: public
-        if: ${{ needs.resolve.outputs.dry_run == 'false' && needs.release.outputs.direct == 'true' }}
-        env:
+          RECORD_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAP_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
+          OLD_TAP_TOKEN: ${{ secrets.OLD_TAP_TOKEN }}
           R2_ENDPOINT: ${{ secrets.R2_ENDPOINT }}
           R2_BUCKET: ${{ vars.R2_BUCKET }}
           R2_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
           R2_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
-          DIST_ZIP: ${{ steps.handoff-check.outputs.zip }}
-          DIST_DMG: ${{ steps.recorded-dmg.outputs.zip }}
+          DIRECT: ${{ needs.release.outputs.direct }}
+          OLD_CASK: ${{ needs.resolve.outputs.old_cask }}
+          PUBLIC_TAG: ${{ needs.resolve.outputs.public_tag }}
+          OLD_PUBLIC_TAG: ${{ needs.resolve.outputs.old_public_tag }}
+          DMG: ${{ steps.handoff-check.outputs.dmg }}
+          RECIPE_HOST: ${{ needs.release.outputs.direct == 'true' && 'downloads' || 'tap' }}
         run: |
-          LINUX_DIRECTORY="$RUNNER_TEMP/linux-release" node scripts/publish-downloads.ts
+          set -euo pipefail
+          LINUX="$RUNNER_TEMP/linux-release"
+          CHOSEN="$RUNNER_TEMP/chosen-files"
+          HELD="$RUNNER_TEMP/held-files"
+          rm -rf "$CHOSEN" "$HELD" && mkdir -p "$CHOSEN" "$HELD"
+          # This attempt's disk image and packages, until a place holds others.
+          [[ "$DIRECT" != true ]] || cp "$DMG" "$CHOSEN/"
+          for ENDING in .deb .rpm .AppImage; do
+            FILE="$(find "$LINUX" -maxdepth 1 -name "*$ENDING" | head -n 1)"
+            cp "$FILE" "$CHOSEN/"
+          done
+          NAMES="$(ls "$CHOSEN")"
+          read_release() {
+            local place="$1" repo="$2" tag="$3" token="$4" assets name
+            mkdir -p "$HELD/$place"
+            if ! assets="$(GH_TOKEN="$token" gh release view "$tag" --repo "$repo" --json assets --jq '.assets[].name' 2>/dev/null)"; then
+              echo "$place has no release $tag yet"
+              return 0
+            fi
+            while IFS= read -r name; do
+              if grep -qxF -- "$name" <<<"$assets"; then
+                GH_TOKEN="$token" gh release download "$tag" --repo "$repo" --pattern "$name" --dir "$HELD/$place"
+              fi
+            done <<<"$NAMES"
+          }
+          read_release record "$GITHUB_REPOSITORY" "$TAG_NAME" "$RECORD_TOKEN"
+          read_release tap "$TAP_REPO" "$PUBLIC_TAG" "$TAP_TOKEN"
+          [[ "$OLD_CASK" != true ]] || read_release old-tap "$OLD_TAP_REPO" "$OLD_PUBLIC_TAG" "$OLD_TAP_TOKEN"
+          if [[ "$DIRECT" == true ]]; then
+            mkdir -p "$HELD/cloudflare"
+            NAMES="$NAMES" OUT="$HELD/cloudflare" node --input-type=module <<'JS'
+          import { createWriteStream } from 'node:fs';
+          import { join, resolve } from 'node:path';
+          import { Readable } from 'node:stream';
+          import { pipeline } from 'node:stream/promises';
+          import { pathToFileURL } from 'node:url';
+          const { ReleaseStorage } = await import(pathToFileURL(resolve('scripts/release-storage.mjs')).href);
+          const storage = ReleaseStorage.fromEnvironment();
+          for (const name of process.env.NAMES.split('\n').filter(Boolean)) {
+            const response = await storage.send('GET', `releases/v${process.env.VERSION}/${name}`);
+            if (response.status === 404) continue;
+            if (!response.ok || !response.body) throw new Error(`Cloudflare read failed (${response.status}): ${name}`);
+            await pipeline(Readable.fromWeb(response.body), createWriteStream(join(process.env.OUT, name)));
+          }
+          JS
+          fi
+          # One set of bytes for each name: a copy a place holds wins over
+          # this attempt's, and every copy held must be the same.
+          DISAGREE=false
+          while IFS= read -r NAME; do
+            KEPT="" KEPT_SHA=""
+            for COPY in "$HELD"/*/"$NAME"; do
+              [[ -f "$COPY" ]] || continue
+              SHA="$(shasum -a 256 "$COPY" | awk '{print $1}')"
+              PLACE="$(basename "$(dirname "$COPY")")"
+              if [[ -z "$KEPT" ]]; then
+                KEPT="$COPY" KEPT_SHA="$SHA"
+                echo "$PLACE already holds $NAME (sha256 $SHA): every place gets it."
+              elif [[ "$SHA" != "$KEPT_SHA" ]]; then
+                echo "::error title=Two places hold different bytes::$PLACE holds $NAME with sha256 $SHA, not the $KEPT_SHA $(basename "$(dirname "$KEPT")") holds. Published bytes never change, so nothing was uploaded." >&2
+                DISAGREE=true
+              fi
+            done
+            [[ -z "$KEPT" ]] || cp "$KEPT" "$CHOSEN/$NAME"
+          done <<<"$NAMES"
+          [[ "$DISAGREE" == false ]] || exit 1
+          PACKAGES="$RUNNER_TEMP/chosen-packages"
+          rm -rf "$PACKAGES" && mkdir -p "$PACKAGES"
+          for ENDING in .deb .rpm .AppImage; do cp "$CHOSEN"/*"$ENDING" "$PACKAGES/"; done
+          rm -rf "$LINUX"
+          node scripts/linux-recipes.ts release --version "$VERSION" --packages "$PACKAGES" --out "$LINUX" >/dev/null
+          CHOSEN_DMG=""
+          [[ "$DIRECT" != true ]] || CHOSEN_DMG="$CHOSEN/$DMG_NAME"
+          echo "dmg=$CHOSEN_DMG" >> "$GITHUB_OUTPUT"
 
-      - name: Verify every public download without a sign-in
+      # Every place at once, each with its own key: the disk image and the
+      # Linux files beside the record's zip; the zip, disk image and Linux
+      # files on Cloudflare (scripts/publish-downloads.ts); and the zip and
+      # Linux files as a release on each tap, where the casks fetch them,
+      # since the product repository is private through the beta gate. Every
+      # copy must be byte-identical to any already there
+      # (scripts/publish-release-asset.sh match, and Cloudflare's
+      # if-none-match). A tap's release notes are the alpha notice, the
+      # channel's install line, the checksum and the source commit; the
+      # taps are shared, so neither release claims a tap's "latest" badge.
+      - name: Upload to every place at once
+        id: upload
+        if: ${{ needs.resolve.outputs.dry_run == 'false' }}
+        env:
+          RECORD_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAP_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
+          OLD_TAP_TOKEN: ${{ secrets.OLD_TAP_TOKEN }}
+          R2_ENDPOINT: ${{ secrets.R2_ENDPOINT }}
+          R2_BUCKET: ${{ vars.R2_BUCKET }}
+          R2_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+          R2_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+          DIRECT: ${{ needs.release.outputs.direct }}
+          OLD_CASK: ${{ needs.resolve.outputs.old_cask }}
+          PUBLIC_TAG: ${{ needs.resolve.outputs.public_tag }}
+          OLD_PUBLIC_TAG: ${{ needs.resolve.outputs.old_public_tag }}
+          ZIP: ${{ steps.private.outputs.zip }}
+          ZIP_SHA256: ${{ steps.private.outputs.sha256 }}
+          DMG: ${{ steps.adopt.outputs.dmg }}
+          TAP_TITLE: Infinitary ${{ needs.resolve.outputs.version }} (private alpha${{ needs.resolve.outputs.channel == 'alpha' && ', alpha channel' || '' }})
+          OLD_TAP_TITLE: Infinitary ${{ needs.resolve.outputs.version }} for Firstmate 3000's ${{ needs.resolve.outputs.channel }} cask
+        run: |
+          set -euo pipefail
+          WORK="$RUNNER_TEMP/uploads"
+          rm -rf "$WORK" && mkdir -p "$WORK"
+          LINUX="$RUNNER_TEMP/linux-release"
+          # One file on one GitHub release, byte for byte or not at all.
+          put() {
+            local dir
+            dir="$WORK/$1/$(basename "$4")"
+            GITHUB_OUTPUT="$dir.out" WORK="$dir" scripts/publish-release-asset.sh match "$2" "$3" "$4"
+          }
+          record() {
+            export GH_TOKEN="$RECORD_TOKEN"
+            [[ -z "$DMG" ]] || put record "$GITHUB_REPOSITORY" "$TAG_NAME" "$DMG"
+            while IFS= read -r NAME; do put record "$GITHUB_REPOSITORY" "$TAG_NAME" "$LINUX/$NAME"; done < "$LINUX/assets.txt"
+          }
+          cloudflare() {
+            DIST_ZIP="$ZIP" DIST_DMG="$DMG" LINUX_DIRECTORY="$LINUX" node scripts/publish-downloads.ts
+          }
+          tap() {
+            export GH_TOKEN="$TAP_TOKEN" TITLE="$TAP_TITLE" TARGET=main LATEST=false NOTES_FILE="$WORK/tap-notes.md"
+            : "${GH_TOKEN:?Missing HOMEBREW_TAP_TOKEN}"
+            {
+              cat packaging/alpha-notice.txt
+              printf '\nInstall or upgrade with Homebrew:\n\n    brew install --cask infinitary-labs/tap/%s\n    brew upgrade --cask %s\n\nsha256 of the universal zip: %s\nBuilt from source commit %s.\n' \
+                "$CASK_TOKEN" "$CASK_TOKEN" "$ZIP_SHA256" "$SOURCE_COMMIT"
+              [[ -z "$PROMOTED_FROM" ]] || printf 'Promoted from alpha %s: the same code, rebuilt as stable.\n' "$PROMOTED_FROM"
+              printf '\nOn Linux (x64), download the file for your system below and check it against SHA256SUMS: the .deb for Ubuntu, the .rpm for Fedora, the .AppImage for any other Linux, the .PKGBUILD for Arch and Omarchy (makepkg -si beside it) and the .nix package for NixOS. Infinitary then updates itself from its update notice.\n'
+            } > "$NOTES_FILE"
+            put tap "$TAP_REPO" "$PUBLIC_TAG" "$ZIP"
+            while IFS= read -r NAME; do put tap "$TAP_REPO" "$PUBLIC_TAG" "$LINUX/$NAME"; done < "$LINUX/assets.txt"
+          }
+          old_tap() {
+            export GH_TOKEN="$OLD_TAP_TOKEN" TITLE="$OLD_TAP_TITLE" TARGET=main LATEST=false NOTES_FILE="$WORK/old-tap-notes.md"
+            : "${GH_TOKEN:?Missing OLD_TAP_TOKEN}"
+            local old_token=firstmate-3000
+            [[ "$CHANNEL" != alpha ]] || old_token=firstmate-3000@alpha
+            {
+              cat packaging/alpha-notice.txt
+              printf '\nFirstmate 3000 is now Infinitary. The usual update installs it, with your saved work:\n\n    brew update && brew upgrade --cask %s\n\nsha256 of the universal zip: %s\nBuilt from source commit %s.\n' \
+                "$old_token" "$ZIP_SHA256" "$SOURCE_COMMIT"
+            } > "$NOTES_FILE"
+            put old_tap "$OLD_TAP_REPO" "$OLD_PUBLIC_TAG" "$ZIP"
+            while IFS= read -r NAME; do put old_tap "$OLD_TAP_REPO" "$OLD_PUBLIC_TAG" "$LINUX/$NAME"; done < "$LINUX/assets.txt"
+          }
+          PLACES="record tap"
+          [[ "$DIRECT" != true ]] || PLACES="$PLACES cloudflare"
+          [[ "$OLD_CASK" != true ]] || PLACES="$PLACES old_tap"
+          for PLACE in $PLACES; do
+            mkdir -p "$WORK/$PLACE"
+            ( "$PLACE" ) > "$WORK/$PLACE.log" 2>&1 &
+            echo "$!" > "$WORK/$PLACE.pid"
+          done
+          FAILED=""
+          for PLACE in $PLACES; do
+            if wait "$(cat "$WORK/$PLACE.pid")"; then RESULT=uploaded; else RESULT=failed; FAILED="$FAILED $PLACE"; fi
+            echo "::group::$PLACE: $RESULT"
+            cat "$WORK/$PLACE.log"
+            echo "::endgroup::"
+          done
+          {
+            echo "places=${PLACES// /, }"
+            echo "seconds=$SECONDS"
+          } >> "$GITHUB_OUTPUT"
+          if [[ -n "$FAILED" ]]; then
+            echo "::error title=An upload failed::${FAILED# } did not take every file; see its group above. A rerun keeps what each place already holds." >&2
+            exit 1
+          fi
+          echo "Uploaded every file to ${PLACES// /, } at once in ${SECONDS}s."
+
+      # What every place now holds - in a dry run, what each would - for the
+      # virtual Mac to check each copy against: every file's name and sha256,
+      # the zip and disk image first, then the Linux files in publishing order.
+      - name: List what every place holds
+        id: files
+        env:
+          ZIP: ${{ steps.private.outputs.zip || steps.handoff-check.outputs.zip }}
+          DMG: ${{ steps.adopt.outputs.dmg || steps.handoff-check.outputs.dmg }}
+        run: |
+          node --input-type=module <<'JS' >> "$GITHUB_OUTPUT"
+          import { createHash } from 'node:crypto';
+          import { createReadStream, readFileSync } from 'node:fs';
+          import { basename, join } from 'node:path';
+          const env = process.env;
+          const linux = join(env.RUNNER_TEMP, 'linux-release');
+          const names = readFileSync(join(linux, 'assets.txt'), 'utf8').trim().split('\n');
+          const paths = [env.ZIP, ...(env.DMG ? [env.DMG] : []), ...names.map((name) => join(linux, name))];
+          const files = {};
+          for (const path of paths) {
+            const hash = createHash('sha256');
+            for await (const bytes of createReadStream(path)) hash.update(bytes);
+            files[basename(path)] = hash.digest('hex');
+          }
+          if (Object.keys(files).length !== paths.length) throw new Error('Two files to publish share a name');
+          for (const [name, sha256] of Object.entries(files)) console.error(`${sha256}  ${name}`);
+          console.log(`files=${JSON.stringify(files)}`);
+          JS
+
+      # A report of typed outcomes, never a gate of its own.
+      - name: Summarize the uploads
+        if: always()
+        continue-on-error: true
+        env:
+          HANDOFF: artifact ${{ needs.release.outputs.handoff_id || 'none' }}, manifest sha256 ${{ needs.release.outputs.handoff_manifest || 'none' }}, from attempt ${{ steps.handoff-check.outputs.attempt || 'unread' }}
+          PLACES: ${{ steps.upload.outputs.places }}
+          UPLOAD_SECONDS: ${{ steps.upload.outputs.seconds }}
+          GATES: >-
+            handoff-check=${{ steps.handoff-check.outcome }}
+            linux-files=${{ steps.linux-files.outcome }}
+            recorded=${{ steps.private.outcome }}
+            adopt=${{ steps.adopt.outcome }}
+            upload=${{ steps.upload.outcome }}
+            files=${{ steps.files.outcome }}
+        run: |
+          {
+            echo "### Uploads: $CHANNEL $VERSION from \`$SOURCE_COMMIT\`"
+            [[ "$DRY_RUN" != true ]] || echo 'Dry run: nothing was uploaded to any place.'
+            echo "The signing job's handoff: $HANDOFF."
+            for stage in $GATES; do echo "- ${stage%%=*}: ${stage#*=}"; done
+            [[ -z "$PLACES" ]] || echo "Uploaded to $PLACES at once in ${UPLOAD_SECONDS}s."
+            echo 'Nothing switched here: the casks, update files and feeds move only once the virtual Mac checked every copy.'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  # The checks and the switches (INF-1716; INF-2498's plan, piece 2), in one
+  # disposable virtual Mac from the placement service's existing pool, so
+  # the real Mac is free once the disk image passes its check. It starts
+  # once the upload job put every file on every place, and uploads nothing:
+  # it downloads each copy from each place - the record with a token that
+  # only reads, Cloudflare and both taps with none, as a person, Homebrew and
+  # the app's updater do - and checks every copy byte for byte against the
+  # upload job's list, and the zip against the one the signing job checked.
+  # Every Mac check runs again on what came back - signature, Gatekeeper,
+  # launch and version, the disk image against the zip - never replaced by
+  # a checksum. Only once every copy passed do the casks, update files and
+  # feeds switch, each step with its own key. It holds no Apple signing
+  # material. It waits for a free place when both are busy; it never falls
+  # back to the real Mac. Rerunning only this job checks and switches again
+  # from the same uploads.
+  publish:
+    name: Check every copy, then switch the casks and feeds (a dry run switches nothing)
+    needs: [resolve, notes, verify, linux, phone, release, update, upload]
+    if: ${{ always() && !cancelled() && needs.upload.result == 'success' && needs.resolve.result == 'success' && needs.notes.result == 'success' && needs.linux.result == 'success' && needs.phone.result == 'success' && needs.release.result == 'success' && ((needs.resolve.outputs.verify_required == 'true' && (needs.verify.result == 'success' || (needs.resolve.outputs.main_run != '' && needs.verify.result == 'skipped')) && needs.update.result == 'success') || (needs.resolve.outputs.verify_required == 'false' && needs.verify.result == 'skipped' && needs.update.result == 'skipped')) }}
+    # The light kind's virtual-only queue once MAC_QUEUES names it, and
+    # release_light for a publishing run (docs/testing.md, "Each Mac job's kind and size").
+    runs-on: ${{ needs.resolve.outputs.dry_run == 'false' && fromJSON(vars.MAC_QUEUES || '{}').release_light || fromJSON(vars.MAC_QUEUES || '{}').light || 'mini-mac-virtual' }}
+    timeout-minutes: 90
+    # Its token only reads: it fetches the record back and writes nothing.
+    permissions:
+      contents: read
+      actions: read
+    env:
+      CHANNEL: ${{ needs.resolve.outputs.channel }}
+      DRY_RUN: ${{ needs.resolve.outputs.dry_run }}
+      SOURCE_COMMIT: ${{ needs.resolve.outputs.source_commit }}
+      VERSION: ${{ needs.resolve.outputs.version }}
+      BUNDLE_VERSION: ${{ needs.resolve.outputs.bundle_version }}
+      TAG_NAME: ${{ needs.resolve.outputs.tag_name }}
+      PUBLIC_TAG: ${{ needs.resolve.outputs.tag_name }}
+      RELEASE_REPOSITORY: ${{ needs.resolve.outputs.release_repository }}
+      DMG_NAME: Infinitary-${{ needs.resolve.outputs.version }}-mac-universal.dmg
+      ZIP_NAME: ${{ needs.resolve.outputs.zip_name }}
+      DOWNLOAD_URL: ${{ needs.resolve.outputs.download_base }}releases/${{ needs.resolve.outputs.tag_name }}/${{ needs.resolve.outputs.zip_name }}
+      CASK_TOKEN: ${{ needs.resolve.outputs.cask_token }}
+      PRERELEASE: ${{ needs.resolve.outputs.prerelease }}
+      PROMOTED_FROM: ${{ needs.resolve.outputs.promoted_from }}
+      HIGHLIGHTS: ${{ needs.resolve.outputs.highlights }}
+      ALPHA_RUN: ${{ needs.resolve.outputs.alpha_run }}
+
+    steps:
+      - name: Checkout the source commit
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.resolve.outputs.source_commit }}
+          persist-credentials: false
+
+      # The workflow's own launch gate, as in the signing job (INF-1768):
+      # every fetch-back launches the app through it. Nothing is packaged here.
+      - name: Check out the workflow's own launch gate
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          path: .release-tooling
+          persist-credentials: false
+          sparse-checkout-cone-mode: false
+          sparse-checkout: |
+            scripts/check-app-launch.sh
+            scripts/app-runtime-version.mjs
+
+      - name: Use the workflow's own launch gate
+        id: publish-launch-gate
+        run: cp .release-tooling/scripts/check-app-launch.sh .release-tooling/scripts/app-runtime-version.mjs scripts/
+
+      - uses: pnpm/action-setup@v4
+        with:
+          dest: ${{ runner.temp }}/setup-pnpm
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      # What every copy must be, before anything is fetched: the upload job's
+      # list of names and checksums, whose zip is the one the signing job
+      # checked and which holds a disk image exactly when one was built.
+      - name: Write down what every copy must be
+        id: expected
+        env:
+          FILES: ${{ needs.upload.outputs.files }}
+          ZIP_SHA256: ${{ needs.release.outputs.sha256 }}
+          DIRECT: ${{ needs.release.outputs.direct }}
+        run: |
+          node --input-type=module <<'JS'
+          import { mkdirSync, writeFileSync } from 'node:fs';
+          import { join } from 'node:path';
+          const env = process.env;
+          const fail = (message) => { throw new Error(`Refusing the upload job's list: ${message}`); };
+          let files;
+          try { files = JSON.parse(env.FILES ?? ''); } catch { fail('it is not a list'); }
+          if (!files || typeof files !== 'object' || Array.isArray(files)) fail('it is not a list');
+          for (const [name, sha256] of Object.entries(files)) {
+            if (!/^[A-Za-z0-9][A-Za-z0-9._+-]*$/.test(name) || /\.sha256$/.test(name)) fail(`${JSON.stringify(name)} is not a file name`);
+            if (!/^[0-9a-f]{64}$/.test(sha256)) fail(`${name}'s checksum is not a sha256`);
+          }
+          if (files[env.ZIP_NAME] !== env.ZIP_SHA256) fail(`its ${env.ZIP_NAME} is ${files[env.ZIP_NAME]}, not the ${env.ZIP_SHA256} the signing job checked`);
+          const wantsDmg = env.DRY_RUN === 'true' || env.DIRECT === 'true';
+          if ((env.DMG_NAME in files) !== wantsDmg) fail(`it ${wantsDmg ? 'lacks' : 'holds'} ${env.DMG_NAME}`);
+          const linux = Object.keys(files).filter((name) => name !== env.ZIP_NAME && name !== env.DMG_NAME);
+          if (!linux.includes('SHA256SUMS')) fail('it holds no Linux files');
+          const dir = join(env.RUNNER_TEMP, 'expected');
+          mkdirSync(dir, { recursive: true });
+          writeFileSync(join(dir, 'files.sha256'), Object.entries(files).map(([name, sha256]) => `${sha256}  ${name}\n`).join(''));
+          writeFileSync(join(dir, 'linux.txt'), linux.map((name) => `${name}\n`).join(''));
+          console.log(`Every copy must be one of ${Object.keys(files).length} files.`);
+          JS
+          cat "$RUNNER_TEMP/expected/files.sha256"
+
+      # The record's copies, fetched back with a token that only reads - the
+      # product repository is private - each checked against its sidecar and
+      # the upload job's list, with the full gate run again on what came back
+      # (pi-launcher's philosophy). The Linux release is laid out from these
+      # copies: the recipes rendered again from the fetched packages must be
+      # the ones fetched, and give the manifest the tap writer and the feeds
+      # read.
+      - name: Fetch back and check the record's copies
+        id: private-fetch-back
+        if: ${{ needs.resolve.outputs.dry_run == 'false' }}
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          RECIPE_HOST: ${{ needs.release.outputs.direct == 'true' && 'downloads' || 'tap' }}
+        run: |
+          set -euo pipefail
+          EXPECTED="$RUNNER_TEMP/expected/files.sha256"
+          DIR="$RUNNER_TEMP/recorded-verify"
+          rm -rf "$DIR" && mkdir -p "$DIR"
+          while read -r _ NAME; do
+            gh release download "$TAG_NAME" --repo "$GITHUB_REPOSITORY" --pattern "$NAME" --pattern "$NAME.sha256" --dir "$DIR"
+            (cd "$DIR" && shasum -a 256 -c "$NAME.sha256")
+            grep -qxF -- "$(cd "$DIR" && shasum -a 256 "$NAME")" "$EXPECTED" \
+              || { echo "::error title=A copy differs::The record's $NAME is not the file the upload job uploaded." >&2; exit 1; }
+          done < "$EXPECTED"
+          EXTRACT_DIR="$RUNNER_TEMP/recorded-extract"
+          rm -rf "$EXTRACT_DIR" && mkdir -p "$EXTRACT_DIR"
+          ditto -x -k "$DIR/$ZIP_NAME" "$EXTRACT_DIR"
+          scripts/verify-app.sh "$EXTRACT_DIR/$APP_NAME" --signed --gatekeeper
+          scripts/check-app-launch.sh "$EXTRACT_DIR/$APP_NAME" "$VERSION"
+          [[ ! -f "$DIR/$DMG_NAME" ]] || scripts/verify-mac-dmg.sh "$DIR/$DMG_NAME" "$DIR/$ZIP_NAME" "$VERSION"
+          PACKAGES="$RUNNER_TEMP/recorded-packages"
+          rm -rf "$PACKAGES" && mkdir -p "$PACKAGES"
+          while IFS= read -r NAME; do
+            case "$NAME" in *.deb | *.rpm | *.AppImage) cp "$DIR/$NAME" "$PACKAGES/" ;; esac
+          done < "$RUNNER_TEMP/expected/linux.txt"
+          LINUX="$RUNNER_TEMP/linux-release"
+          rm -rf "$LINUX"
+          node scripts/linux-recipes.ts release --version "$VERSION" --packages "$PACKAGES" --out "$LINUX" >/dev/null
+          diff "$LINUX/assets.txt" "$RUNNER_TEMP/expected/linux.txt"
+          while IFS= read -r NAME; do cmp "$LINUX/$NAME" "$DIR/$NAME"; done < "$LINUX/assets.txt"
+          echo "fetched back and checked every recorded file: $(wc -l < "$EXPECTED" | tr -d ' ') files"
+
+      - name: Fetch back and check every Cloudflare download without a sign-in
         id: public-fetch-back
         if: ${{ needs.resolve.outputs.dry_run == 'false' && needs.release.outputs.direct == 'true' }}
         # No credential: neither the installer nor the updater requires a GitHub sign-in.
-        # No channel advances until the fetched-back ZIP and DMG both pass their gates.
-        env:
-          ARTIFACT_SHA256: ${{ needs.release.outputs.sha256 }}
         run: |
           set -euo pipefail
+          EXPECTED="$RUNNER_TEMP/expected/files.sha256"
           PUBLIC_DIR="$RUNNER_TEMP/public-verify"
           rm -rf "$PUBLIC_DIR" && mkdir -p "$PUBLIC_DIR"
-          curl -fsSL --retry 5 --retry-delay 15 --retry-all-errors -o "$PUBLIC_DIR/$ZIP_NAME" "$DOWNLOAD_URL"
-          curl -fsSL --retry 5 --retry-delay 15 --retry-all-errors -o "$PUBLIC_DIR/$ZIP_NAME.sha256" "$DOWNLOAD_URL.sha256"
-          (cd "$PUBLIC_DIR" && shasum -a 256 -c "$ZIP_NAME.sha256")
-          PUBLIC_SHA="$(shasum -a 256 "$PUBLIC_DIR/$ZIP_NAME" | awk '{print $1}')"
-          [[ "$ARTIFACT_SHA256" == "$PUBLIC_SHA" ]] || { echo "public sha mismatch" >&2; exit 1; }
+          BASE="${DOWNLOAD_URL%/*}"
+          while read -r _ NAME; do
+            curl -fsSL --retry 5 --retry-delay 15 --retry-all-errors -o "$PUBLIC_DIR/$NAME" "$BASE/$NAME"
+            curl -fsSL --retry 5 --retry-delay 15 --retry-all-errors -o "$PUBLIC_DIR/$NAME.sha256" "$BASE/$NAME.sha256"
+            (cd "$PUBLIC_DIR" && shasum -a 256 -c "$NAME.sha256")
+            grep -qxF -- "$(cd "$PUBLIC_DIR" && shasum -a 256 "$NAME")" "$EXPECTED" \
+              || { echo "::error title=A copy differs::Cloudflare's $NAME is not the file the upload job uploaded." >&2; exit 1; }
+          done < "$EXPECTED"
           EXTRACT_DIR="$RUNNER_TEMP/public-extract"
           rm -rf "$EXTRACT_DIR" && mkdir -p "$EXTRACT_DIR"
           ditto -x -k "$PUBLIC_DIR/$ZIP_NAME" "$EXTRACT_DIR"
           scripts/verify-app.sh "$EXTRACT_DIR/$APP_NAME" --signed --gatekeeper
           scripts/check-app-launch.sh "$EXTRACT_DIR/$APP_NAME" "$VERSION"
-          curl -fsSL --retry 5 --retry-delay 15 --retry-all-errors -o "$PUBLIC_DIR/$DMG_NAME" "${DOWNLOAD_URL%/*}/$DMG_NAME"
-          curl -fsSL --retry 5 --retry-delay 15 --retry-all-errors -o "$PUBLIC_DIR/$DMG_NAME.sha256" "${DOWNLOAD_URL%/*}/$DMG_NAME.sha256"
-          (cd "$PUBLIC_DIR" && shasum -a 256 -c "$DMG_NAME.sha256")
-          cmp "$PUBLIC_DIR/$DMG_NAME" "${{ steps.recorded-dmg.outputs.zip }}"
           scripts/verify-mac-dmg.sh "$PUBLIC_DIR/$DMG_NAME" "$PUBLIC_DIR/$ZIP_NAME" "$VERSION"
-          # Every Linux file as a person downloads it and as the app's update
-          # notice does: the bytes the linux job checked, and their sidecars.
-          LINUX="$RUNNER_TEMP/linux-release"
-          BASE="${DOWNLOAD_URL%/*}"
-          mkdir -p "$PUBLIC_DIR/linux"
-          while IFS= read -r NAME; do
-            curl -fsSL --retry 5 --retry-delay 15 --retry-all-errors -o "$PUBLIC_DIR/linux/$NAME" "$BASE/$NAME"
-            curl -fsSL --retry 5 --retry-delay 15 --retry-all-errors -o "$PUBLIC_DIR/linux/$NAME.sha256" "$BASE/$NAME.sha256"
-            cmp "$PUBLIC_DIR/linux/$NAME" "$LINUX/$NAME"
-            (cd "$PUBLIC_DIR/linux" && shasum -a 256 -c "$NAME.sha256")
-          done < "$LINUX/assets.txt"
-          echo "fetched back every Linux file without a credential: $(wc -l < "$LINUX/assets.txt" | tr -d ' ') files"
+          echo "fetched back every download without a credential: $(wc -l < "$EXPECTED" | tr -d ' ') files"
 
-      - name: Publish the Homebrew release
-        id: homebrew-public
-        if: ${{ needs.resolve.outputs.dry_run == 'false' }}
-        # The product repository is private through the beta gate (roadmap
-        # 1.2), so the artifact the casks fetch is published here, as a
-        # release on the public tap under the app-prefixed tag - an alpha's
-        # a prerelease. The notes are the alpha notice, the channel's install
-        # line, the checksum and the source commit. The tap is shared, so
-        # neither channel claims its "latest" badge: a stable leaves it on
-        # the release it was on. The token is the tap's own
-        # (HOMEBREW_TAP_TOKEN), never GITHUB_TOKEN.
-        env:
-          GH_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
-          PUBLIC_TAG: ${{ needs.resolve.outputs.public_tag }}
-          ARTIFACT: ${{ steps.handoff-check.outputs.zip }}
-          ARTIFACT_SHA256: ${{ needs.release.outputs.sha256 }}
-          DOWNLOAD_URL: ${{ needs.resolve.outputs.download_url }}
-          TITLE: Infinitary ${{ needs.resolve.outputs.version }} (private alpha${{ needs.resolve.outputs.channel == 'alpha' && ', alpha channel' || '' }})
-          TARGET: main
-          LATEST: "false"
-        run: |
-          set -euo pipefail
-          : "${GH_TOKEN:?Missing HOMEBREW_TAP_TOKEN}"
-          WORK="$RUNNER_TEMP/homebrew-release"
-          rm -rf "$WORK" && mkdir -p "$WORK"
-          export WORK NOTES_FILE="$WORK/notes.md"
-          {
-            cat packaging/alpha-notice.txt
-            printf '\nInstall or upgrade with Homebrew:\n\n    brew install --cask infinitary-labs/tap/%s\n    brew upgrade --cask %s\n\nsha256 of the universal zip: %s\nBuilt from source commit %s.\n' \
-              "$CASK_TOKEN" "$CASK_TOKEN" "$ARTIFACT_SHA256" "$SOURCE_COMMIT"
-            [[ -z "$PROMOTED_FROM" ]] || printf 'Promoted from alpha %s: the same code, rebuilt as stable.\n' "$PROMOTED_FROM"
-            printf '\nOn Linux (x64), download the file for your system below and check it against SHA256SUMS: the .deb for Ubuntu, the .rpm for Fedora, the .AppImage for any other Linux, the .PKGBUILD for Arch and Omarchy (makepkg -si beside it) and the .nix package for NixOS. Infinitary then updates itself from its update notice.\n'
-          } > "$NOTES_FILE"
-          scripts/publish-release-asset.sh match "$TAP_REPO" "$PUBLIC_TAG" "$ARTIFACT"
-          # The Linux files, byte for byte the record's.
-          LINUX="$RUNNER_TEMP/linux-release"
-          while IFS= read -r NAME; do
-            GITHUB_OUTPUT="$WORK/$NAME.out" WORK="$WORK/$NAME" \
-              scripts/publish-release-asset.sh match "$TAP_REPO" "$PUBLIC_TAG" "$LINUX/$NAME"
-          done < "$LINUX/assets.txt"
-
-      - name: Verify the public artifact as Homebrew fetches it
+      - name: Fetch back and check the tap's copies as Homebrew fetches them
         id: homebrew-fetch-back
         if: ${{ needs.resolve.outputs.dry_run == 'false' }}
         # No token here, on purpose: this is the unauthenticated GET the cask
         # performs, so a private, missing or altered asset fails the release
         # before the tap learns of it.
         env:
-          ARTIFACT_SHA256: ${{ needs.release.outputs.sha256 }}
           DOWNLOAD_URL: ${{ needs.resolve.outputs.download_url }}
         run: |
           set -euo pipefail
+          EXPECTED="$RUNNER_TEMP/expected/files.sha256"
           PUBLIC_DIR="$RUNNER_TEMP/homebrew-verify"
           rm -rf "$PUBLIC_DIR" && mkdir -p "$PUBLIC_DIR"
-          curl -fsSL --retry 5 --retry-delay 15 --retry-all-errors -o "$PUBLIC_DIR/$ZIP_NAME" "$DOWNLOAD_URL"
-          curl -fsSL --retry 5 --retry-delay 15 --retry-all-errors -o "$PUBLIC_DIR/$ZIP_NAME.sha256" "$DOWNLOAD_URL.sha256"
-          (cd "$PUBLIC_DIR" && shasum -a 256 -c "$ZIP_NAME.sha256")
-          PUBLIC_SHA="$(shasum -a 256 "$PUBLIC_DIR/$ZIP_NAME" | awk '{print $1}')"
-          [[ "$ARTIFACT_SHA256" == "$PUBLIC_SHA" ]] || { echo "public sha mismatch" >&2; exit 1; }
+          BASE="${DOWNLOAD_URL%/*}"
+          while read -r _ NAME; do
+            [[ "$NAME" != "$DMG_NAME" ]] || continue
+            curl -fsSL --retry 5 --retry-delay 15 --retry-all-errors -o "$PUBLIC_DIR/$NAME" "$BASE/$NAME"
+            curl -fsSL --retry 5 --retry-delay 15 --retry-all-errors -o "$PUBLIC_DIR/$NAME.sha256" "$BASE/$NAME.sha256"
+            (cd "$PUBLIC_DIR" && shasum -a 256 -c "$NAME.sha256")
+            grep -qxF -- "$(cd "$PUBLIC_DIR" && shasum -a 256 "$NAME")" "$EXPECTED" \
+              || { echo "::error title=A copy differs::The tap's $NAME is not the file the upload job uploaded." >&2; exit 1; }
+          done < "$EXPECTED"
           EXTRACT_DIR="$RUNNER_TEMP/homebrew-extract"
           rm -rf "$EXTRACT_DIR" && mkdir -p "$EXTRACT_DIR"
           ditto -x -k "$PUBLIC_DIR/$ZIP_NAME" "$EXTRACT_DIR"
           scripts/verify-app.sh "$EXTRACT_DIR/$APP_NAME" --signed --gatekeeper
           scripts/check-app-launch.sh "$EXTRACT_DIR/$APP_NAME" "$VERSION"
-          # Every Linux file as a person downloads it and as the app's update
-          # notice does: the bytes the linux job checked, and their sidecars.
-          LINUX="$RUNNER_TEMP/linux-release"
-          BASE="${DOWNLOAD_URL%/*}"
-          mkdir -p "$PUBLIC_DIR/linux"
-          while IFS= read -r NAME; do
-            curl -fsSL --retry 5 --retry-delay 15 --retry-all-errors -o "$PUBLIC_DIR/linux/$NAME" "$BASE/$NAME"
-            curl -fsSL --retry 5 --retry-delay 15 --retry-all-errors -o "$PUBLIC_DIR/linux/$NAME.sha256" "$BASE/$NAME.sha256"
-            cmp "$PUBLIC_DIR/linux/$NAME" "$LINUX/$NAME"
-            (cd "$PUBLIC_DIR/linux" && shasum -a 256 -c "$NAME.sha256")
-          done < "$LINUX/assets.txt"
-          echo "fetched back every Linux file without a credential: $(wc -l < "$LINUX/assets.txt" | tr -d ' ') files"
+          echo "fetched back every tap file without a credential"
 
-      # Only after the public downloads were fetched back and verified: the
-      # casks of every channel that moves, infinitary-updates.json and
+      - name: Fetch back and check Firstmate 3000's copies as Homebrew fetches them
+        id: old-public-fetch-back
+        if: ${{ needs.resolve.outputs.dry_run == 'false' && needs.resolve.outputs.old_cask == 'true' }}
+        env:
+          OLD_DOWNLOAD_URL: ${{ needs.resolve.outputs.old_download_url }}
+        run: |
+          set -euo pipefail
+          EXPECTED="$RUNNER_TEMP/expected/files.sha256"
+          OLD_DIR="$RUNNER_TEMP/old-public-verify"
+          rm -rf "$OLD_DIR" && mkdir -p "$OLD_DIR"
+          BASE="${OLD_DOWNLOAD_URL%/*}"
+          while read -r _ NAME; do
+            [[ "$NAME" != "$DMG_NAME" ]] || continue
+            curl -fsSL --retry 5 --retry-delay 15 --retry-all-errors -o "$OLD_DIR/$NAME" "$BASE/$NAME"
+            curl -fsSL --retry 5 --retry-delay 15 --retry-all-errors -o "$OLD_DIR/$NAME.sha256" "$BASE/$NAME.sha256"
+            (cd "$OLD_DIR" && shasum -a 256 -c "$NAME.sha256")
+            grep -qxF -- "$(cd "$OLD_DIR" && shasum -a 256 "$NAME")" "$EXPECTED" \
+              || { echo "::error title=A copy differs::Firstmate 3000's $NAME is not the file the upload job uploaded." >&2; exit 1; }
+          done < "$EXPECTED"
+          echo "fetched back every Firstmate 3000 file without a credential"
+
+      # Only after every copy on every place was fetched back and checked:
+      # the casks of every channel that moves, infinitary-updates.json and
       # infinitary-builds.json, in one tap commit, re-read at the push
       # (scripts/publish-tap.sh, scripts/tap-publication.ts). A late, older
       # publication is refused.
@@ -1457,67 +1736,11 @@ jobs:
           TAP_URL="https://github.com/$TAP_REPO.git" WORK="$RUNNER_TEMP/tap-publication" \
             scripts/publish-tap.sh live | tee "$RUNNER_TEMP/tap-result.txt"
 
-      # The old-cask switch, once the tap commit above is pushed: the same
-      # bytes on Firstmate 3000's tap under the tag an installed Firstmate
-      # 3000 accepts, fetched back as Homebrew and that app fetch them, then
-      # Firstmate 3000's cask and update files moved to them in one commit on
-      # that tap. Only for a channel packaging/old-cask-switch.json lists.
-      - name: Publish Infinitary under Firstmate 3000's cask
-        id: old-public
-        if: ${{ needs.resolve.outputs.dry_run == 'false' && needs.resolve.outputs.old_cask == 'true' }}
-        env:
-          GH_TOKEN: ${{ secrets.OLD_TAP_TOKEN }}
-          ARTIFACT: ${{ steps.handoff-check.outputs.zip }}
-          ARTIFACT_SHA256: ${{ needs.release.outputs.sha256 }}
-          DOWNLOAD_URL: ${{ needs.resolve.outputs.download_url }}
-          OLD_PUBLIC_TAG: ${{ needs.resolve.outputs.old_public_tag }}
-          TITLE: Infinitary ${{ needs.resolve.outputs.version }} for Firstmate 3000's ${{ needs.resolve.outputs.channel }} cask
-          TARGET: main
-          LATEST: "false"
-        run: |
-          set -euo pipefail
-          : "${GH_TOKEN:?Missing OLD_TAP_TOKEN}"
-          WORK="$RUNNER_TEMP/old-public-release"
-          rm -rf "$WORK" && mkdir -p "$WORK"
-          export WORK NOTES_FILE="$WORK/notes.md"
-          OLD_TOKEN="$([[ "$CHANNEL" == alpha ]] && echo firstmate-3000@alpha || echo firstmate-3000)"
-          {
-            cat packaging/alpha-notice.txt
-            printf '\nFirstmate 3000 is now Infinitary. The usual update installs it, with your saved work:\n\n    brew update && brew upgrade --cask %s\n\nsha256 of the universal zip: %s\nBuilt from source commit %s.\n' \
-              "$OLD_TOKEN" "$ARTIFACT_SHA256" "$SOURCE_COMMIT"
-          } > "$NOTES_FILE"
-          PRERELEASE="$PRERELEASE" scripts/publish-release-asset.sh match "$OLD_TAP_REPO" "$OLD_PUBLIC_TAG" "$ARTIFACT"
-          LINUX="$RUNNER_TEMP/linux-release"
-          while IFS= read -r NAME; do
-            GITHUB_OUTPUT="$WORK/$NAME.out" WORK="$WORK/$NAME" \
-              scripts/publish-release-asset.sh match "$OLD_TAP_REPO" "$OLD_PUBLIC_TAG" "$LINUX/$NAME"
-          done < "$LINUX/assets.txt"
-
-      - name: Verify Firstmate 3000's download as Homebrew fetches it
-        id: old-public-fetch-back
-        if: ${{ needs.resolve.outputs.dry_run == 'false' && needs.resolve.outputs.old_cask == 'true' }}
-        env:
-          ARTIFACT_SHA256: ${{ needs.release.outputs.sha256 }}
-          DOWNLOAD_URL: ${{ needs.resolve.outputs.download_url }}
-          OLD_DOWNLOAD_URL: ${{ needs.resolve.outputs.old_download_url }}
-        run: |
-          set -euo pipefail
-          OLD_DIR="$RUNNER_TEMP/old-public-verify"
-          rm -rf "$OLD_DIR" && mkdir -p "$OLD_DIR/linux"
-          curl -fsSL --retry 5 --retry-delay 15 --retry-all-errors -o "$OLD_DIR/$ZIP_NAME" "$OLD_DOWNLOAD_URL"
-          curl -fsSL --retry 5 --retry-delay 15 --retry-all-errors -o "$OLD_DIR/$ZIP_NAME.sha256" "$OLD_DOWNLOAD_URL.sha256"
-          (cd "$OLD_DIR" && shasum -a 256 -c "$ZIP_NAME.sha256")
-          [[ "$ARTIFACT_SHA256" == "$(shasum -a 256 "$OLD_DIR/$ZIP_NAME" | awk '{print $1}')" ]] \
-            || { echo "Firstmate 3000's copy is not the published artifact" >&2; exit 1; }
-          LINUX="$RUNNER_TEMP/linux-release"
-          BASE="${OLD_DOWNLOAD_URL%/*}"
-          while IFS= read -r NAME; do
-            curl -fsSL --retry 5 --retry-delay 15 --retry-all-errors -o "$OLD_DIR/linux/$NAME" "$BASE/$NAME"
-            curl -fsSL --retry 5 --retry-delay 15 --retry-all-errors -o "$OLD_DIR/linux/$NAME.sha256" "$BASE/$NAME.sha256"
-            cmp "$OLD_DIR/linux/$NAME" "$LINUX/$NAME"
-            (cd "$OLD_DIR/linux" && shasum -a 256 -c "$NAME.sha256")
-          done < "$LINUX/assets.txt"
-
+      # The old-cask switch, once the tap commit above is pushed: Firstmate
+      # 3000's cask and update files moved, in one commit on that tap, to the
+      # same bytes under the tag an installed Firstmate 3000 accepts, which
+      # were fetched back above as Homebrew and that app fetch them. Only for
+      # a channel packaging/old-cask-switch.json lists.
       - name: Switch Firstmate 3000's cask to Infinitary
         id: old-tap
         if: ${{ needs.resolve.outputs.dry_run == 'false' && needs.resolve.outputs.old_cask == 'true' }}
@@ -1532,6 +1755,59 @@ jobs:
           : "${HOMEBREW_TAP_TOKEN:?Missing OLD_TAP_TOKEN}"
           TAP_URL="https://github.com/$OLD_TAP_REPO.git" WORK="$RUNNER_TEMP/old-tap-publication" \
             scripts/publish-tap.sh live | tee "$RUNNER_TEMP/old-tap-result.txt"
+
+      - name: Advance the verified public feeds atomically
+        id: feeds
+        if: ${{ needs.resolve.outputs.dry_run == 'false' && needs.release.outputs.direct == 'true' }}
+        env:
+          R2_ENDPOINT: ${{ secrets.R2_ENDPOINT }}
+          R2_BUCKET: ${{ vars.R2_BUCKET }}
+          R2_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+          R2_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+        run: |
+          DIST_ZIP="$RUNNER_TEMP/public-verify/$ZIP_NAME" DIST_DMG="$RUNNER_TEMP/public-verify/$DMG_NAME" \
+          LINUX_MANIFEST="$RUNNER_TEMP/linux-release/manifest.json" WORK="$RUNNER_TEMP/release-feeds" \
+            scripts/publish-feeds.sh live
+
+      # A rehearsal's copies are the run's own: the signing job's checked
+      # files and the linux job's packages, each checked against what the
+      # upload job listed, which uploaded nothing.
+      - name: Fetch the checked files
+        if: ${{ needs.resolve.outputs.dry_run == 'true' }}
+        uses: actions/download-artifact@v4
+        with:
+          artifact-ids: ${{ needs.release.outputs.handoff_id }}
+          path: ${{ runner.temp }}/handoff-download
+          merge-multiple: true
+
+      - name: Fetch the Linux packages
+        if: ${{ needs.resolve.outputs.dry_run == 'true' }}
+        uses: actions/download-artifact@v4
+        with:
+          name: linux-packages
+          path: ${{ runner.temp }}/linux-packages
+
+      - name: Check the files a release would upload
+        id: rehearsal-files
+        if: ${{ needs.resolve.outputs.dry_run == 'true' }}
+        env:
+          RECIPE_HOST: downloads
+        run: |
+          set -euo pipefail
+          DIR="$RUNNER_TEMP/rehearsal-files"
+          rm -rf "$DIR" && mkdir -p "$DIR"
+          cp "$RUNNER_TEMP/handoff-download/zip/$ZIP_NAME" "$RUNNER_TEMP/handoff-download/dmg/$DMG_NAME" "$DIR/"
+          LINUX="$RUNNER_TEMP/linux-release"
+          rm -rf "$LINUX"
+          node scripts/linux-recipes.ts release --version "$VERSION" \
+            --packages "$RUNNER_TEMP/linux-packages" --out "$LINUX" >/dev/null
+          diff "$LINUX/assets.txt" "$RUNNER_TEMP/expected/linux.txt"
+          while IFS= read -r NAME; do cp "$LINUX/$NAME" "$DIR/"; done < "$LINUX/assets.txt"
+          (cd "$DIR" && shasum -a 256 -c "$RUNNER_TEMP/expected/files.sha256")
+          {
+            echo "zip=$DIR/$ZIP_NAME"
+            echo "dmg=$DIR/$DMG_NAME"
+          } >> "$GITHUB_OUTPUT"
 
       # The tap commit a real release would make, from the live tap's
       # current state, in a scratch clone read without a credential: the
@@ -1573,24 +1849,11 @@ jobs:
           if-no-files-found: error
           retention-days: 30
 
-      - name: Advance the verified public feeds atomically
-        id: feeds
-        if: ${{ needs.resolve.outputs.dry_run == 'false' && needs.release.outputs.direct == 'true' }}
-        env:
-          R2_ENDPOINT: ${{ secrets.R2_ENDPOINT }}
-          R2_BUCKET: ${{ vars.R2_BUCKET }}
-          R2_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
-          R2_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
-        run: |
-          DIST_ZIP="$RUNNER_TEMP/public-verify/$ZIP_NAME" DIST_DMG="$RUNNER_TEMP/public-verify/$DMG_NAME" \
-          LINUX_MANIFEST="$RUNNER_TEMP/linux-release/manifest.json" WORK="$RUNNER_TEMP/release-feeds" \
-            scripts/publish-feeds.sh live
-
       - name: Rehearse the public feeds without publishing
         id: feed-rehearsal
         if: ${{ needs.resolve.outputs.dry_run == 'true' }}
         run: |
-          DIST_ZIP="${{ steps.handoff-check.outputs.zip }}" DIST_DMG="${{ steps.handoff-check.outputs.dmg }}" \
+          DIST_ZIP="${{ steps.rehearsal-files.outputs.zip }}" DIST_DMG="${{ steps.rehearsal-files.outputs.dmg }}" \
           LINUX_MANIFEST="$RUNNER_TEMP/linux-release/manifest.json" WORK="$RUNNER_TEMP/release-feeds" \
             scripts/publish-feeds.sh rehearsal
 
@@ -1613,18 +1876,19 @@ jobs:
           LANES: ${{ needs.resolve.outputs.full_verify_required == 'true' && 'linux-checks, linux-e2e, mac' || 'none' }}
           OMITTED: ${{ needs.resolve.outputs.main_run != '' && format('linux-checks, linux-e2e and mac; inherited from rolling main {0}, not repeated here', needs.resolve.outputs.main_run) || needs.resolve.outputs.verify_required == 'true' && 'none' || 'linux-checks, linux-e2e and mac; inherited from the published alpha, not passed in this run' }}
           SHA256: ${{ needs.release.outputs.sha256 }}
-          HANDOFF: artifact ${{ needs.release.outputs.handoff_id || 'none' }}, manifest sha256 ${{ needs.release.outputs.handoff_manifest || 'none' }}, from attempt ${{ steps.handoff-check.outputs.attempt || 'unread' }}
+          HANDOFF: artifact ${{ needs.release.outputs.handoff_id || 'none' }}, manifest sha256 ${{ needs.release.outputs.handoff_manifest || 'none' }}, from attempt ${{ needs.upload.outputs.attempt || 'unread' }}
           GATES: >-
-            handoff-check=${{ steps.handoff-check.outcome }}
-            linux-files=${{ steps.linux-files.outcome }}
-            recorded=${{ steps.private.outcome }} recorded-dmg=${{ steps.recorded-dmg.outcome }}
+            uploads=${{ needs.upload.result }}
+            expected=${{ steps.expected.outcome }}
             recorded-fetch-back=${{ steps.private-fetch-back.outcome }}
-            public=${{ steps.public.outcome }} public-fetch-back=${{ steps.public-fetch-back.outcome }}
-            homebrew-public=${{ steps.homebrew-public.outcome }} homebrew-fetch-back=${{ steps.homebrew-fetch-back.outcome }}
-            tap=${{ steps.tap.outcome }} tap-rehearsal=${{ steps.tap-rehearsal.outcome }}
-            old-public=${{ steps.old-public.outcome }} old-public-fetch-back=${{ steps.old-public-fetch-back.outcome }}
-            old-tap=${{ steps.old-tap.outcome }} old-tap-rehearsal=${{ steps.old-tap-rehearsal.outcome }}
-            feeds=${{ steps.feeds.outcome }} rehearsal=${{ steps.feed-rehearsal.outcome }}
+            public-fetch-back=${{ steps.public-fetch-back.outcome }}
+            homebrew-fetch-back=${{ steps.homebrew-fetch-back.outcome }}
+            old-public-fetch-back=${{ steps.old-public-fetch-back.outcome }}
+            tap=${{ steps.tap.outcome }} old-tap=${{ steps.old-tap.outcome }}
+            feeds=${{ steps.feeds.outcome }}
+            rehearsal-files=${{ steps.rehearsal-files.outcome }}
+            tap-rehearsal=${{ steps.tap-rehearsal.outcome }} old-tap-rehearsal=${{ steps.old-tap-rehearsal.outcome }}
+            rehearsal=${{ steps.feed-rehearsal.outcome }}
         run: |
           {
             echo "### Publication: $CHANNEL $VERSION from \`$SOURCE_COMMIT\`"
@@ -1633,7 +1897,7 @@ jobs:
             [[ -z "$ALPHA_RUN" ]] || echo "Inherited alpha verification: $PROMOTED_FROM — $ALPHA_RUN"
             echo "The signing job's handoff: $HANDOFF."
             for stage in $GATES; do echo "- ${stage%%=*}: ${stage#*=}"; done
-            echo 'A skipped stage did not pass in this run. Homebrew casks and direct-install feeds each advance only after their downloads verify.'
+            echo 'A skipped stage did not pass in this run. Homebrew casks and direct-install feeds each advance only after every copy was fetched back and checked.'
             echo "sha256 of the zip: \`${SHA256:-none}\`"
             if [[ -f "$RUNNER_TEMP/linux-release/SHA256SUMS" ]]; then
               echo 'Linux files checked on clean copies of their systems:'
@@ -1642,4 +1906,3 @@ jobs:
               echo '```'
             fi
           } >> "$GITHUB_STEP_SUMMARY"
-

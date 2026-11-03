@@ -13,6 +13,7 @@ import {
 } from "node:fs";
 import { availableParallelism } from "node:os";
 import { dirname, join, posix } from "node:path";
+import { pathToFileURL } from "node:url";
 import { data, Evaluator, Lexer, Parser } from "@actions/expressions";
 import type { PlaywrightTestConfig } from "@playwright/test";
 import type {
@@ -1691,25 +1692,77 @@ describe("signed release workflow", () => {
     expect(
       new Set(expressions.map((expression) => workflowValue(expression, { secrets }))),
     ).toEqual(new Set(Object.values(secrets)));
-    // Storage credentials belong only to the upload/switch recipients, never rehearsal or public fetch-back,
-    // all in the publication job since INF-1716.
-    const publication = (id: string) => {
-      const found = parsed.jobs.publish?.steps?.find((step) => step.id === id);
-      if (!found) throw new Error(`release.yml's publication job has no step "${id}"`);
-      return found;
+  });
+
+  // INF-2498's plan, piece 2 (the captain's hosted-parallel choice): the
+  // signing material stays on the real Mac; the upload keys move to a machine
+  // GitHub hosts, and the virtual Mac keeps only what switching the casks and
+  // feeds writes with, beside a read-only token for fetching the record back.
+  // A step holds a key when its environment hands the key over whole;
+  // no reusable workflow this one calls is handed any.
+  it("pins which machine holds which key", () => {
+    const parsed = loadYamlFile(".github/workflows/release.yml") as {
+      jobs: Record<
+        string,
+        {
+          "runs-on"?: string;
+          uses?: string;
+          secrets?: unknown;
+          permissions?: Record<string, string>;
+          env?: Record<string, string>;
+          steps?: { id?: string; name?: string; env?: Record<string, string> }[];
+        }
+      >;
     };
-    for (const id of ["public", "feeds"]) {
-      const environment = publication(id).env;
-      for (const name of ["R2_ENDPOINT", "R2_ACCESS_KEY_ID", "R2_SECRET_ACCESS_KEY"]) {
-        expect(workflowValue(environment?.[name] ?? "", { secrets })).toBe(secrets[name]);
-      }
+    const holders: Record<string, string[]> = {};
+    for (const [id, job] of Object.entries(parsed.jobs)) {
+      expect(job.secrets, id).toBeUndefined();
+      const hold = (where: string, env: Record<string, string> | undefined) => {
+        for (const value of Object.values(env ?? {})) {
+          const key = /^\$\{\{ secrets\.([A-Z0-9_]+) \}\}$/.exec(value)?.[1];
+          if (key) holders[key] = [...(holders[key] ?? []), where];
+        }
+      };
+      hold(`${id}:(job)`, job.env);
+      for (const step of job.steps ?? []) hold(`${id}:${step.id ?? step.name}`, step.env);
     }
-    for (const id of ["feed-rehearsal", "public-fetch-back"]) {
-      const environment = publication(id).env ?? {};
-      expect(Object.keys(environment)).not.toContain("R2_ENDPOINT");
-      expect(Object.keys(environment)).not.toContain("R2_ACCESS_KEY_ID");
-      expect(Object.keys(environment)).not.toContain("R2_SECRET_ACCESS_KEY");
-    }
+    const phone = "phone:Find a phone build that keeps changing things on this release";
+    expect(holders).toEqual({
+      // The real Mac signs and notarizes; it reads the record and asks
+      // whether the storage keys are set, and uploads with none.
+      MAC_DEVELOPER_ID_CERT_P12: ["release:developer_id_cert"],
+      MAC_DEVELOPER_ID_CERT_PASSWORD: ["release:developer_id_cert"],
+      APP_STORE_CONNECT_KEY_ID: [phone, "release:asc-key", "release:notarize", "release:dmg"],
+      APP_STORE_CONNECT_ISSUER_ID: [phone, "release:asc-key", "release:notarize", "release:dmg"],
+      APP_STORE_CONNECT_API_KEY: [phone, "release:asc-key"],
+      GITHUB_TOKEN: [
+        "release:recorded",
+        "upload:private",
+        "upload:adopt",
+        "upload:upload",
+        "publish:private-fetch-back",
+      ],
+      R2_ENDPOINT: ["release:visibility", "upload:adopt", "upload:upload", "publish:feeds"],
+      R2_ACCESS_KEY_ID: ["upload:adopt", "upload:upload", "publish:feeds"],
+      R2_SECRET_ACCESS_KEY: ["upload:adopt", "upload:upload", "publish:feeds"],
+      HOMEBREW_TAP_TOKEN: ["upload:adopt", "upload:upload", "publish:tap"],
+      OLD_TAP_TOKEN: ["upload:adopt", "upload:upload", "publish:old-tap"],
+    });
+    // The workflow token writes only from the hosted upload job.
+    expect(parsed.jobs.release?.permissions).toEqual({ contents: "read", actions: "read" });
+    expect(parsed.jobs.upload?.permissions).toEqual({ contents: "write", actions: "read" });
+    expect(parsed.jobs.publish?.permissions).toEqual({ contents: "read", actions: "read" });
+    // The uploads run on a machine GitHub hosts, whatever the Mac queues say;
+    // the signing and the checks stay on the Mac kinds the queue test pins.
+    const vars = { MAC_QUEUES: JSON.stringify({ sign: "q-sign", light: "q-light" }) };
+    const runner = (id: string) =>
+      workflowString(parsed.jobs[id]?.["runs-on"] ?? "", {
+        needs: { resolve: { outputs: { dry_run: "true" } } },
+        vars,
+      });
+    expect(runner("upload")).toBe("ubuntu-24.04");
+    expect(runner("release")).toBe("q-sign");
+    expect(runner("publish")).toBe("q-light");
   });
 
   it("runs every gate: verify, launch, notarize, staple, re-download", () => {
@@ -2304,15 +2357,19 @@ describe("the signed channel workflow", () => {
     if (!job) throw new Error(`no job "${id}"`);
     return job;
   };
-  // INF-1716: the signing job ends at the checked disk image, and the
-  // publication job continues from its handoff; a release's operations are
-  // the signing job's steps followed by the publication job's.
+  // INF-1716 and INF-2498's plan, piece 2: the signing job ends at the
+  // checked disk image, the upload job continues from its handoff, and the
+  // publication job checks every copy and switches; a release's operations
+  // are the signing job's steps, then the upload job's, then the
+  // publication job's.
   const signingSteps = jobOf(release, "release").steps ?? [];
+  const uploadSteps = jobOf(release, "upload").steps ?? [];
   const publishSteps = jobOf(release, "publish").steps ?? [];
-  const steps = [...signingSteps, ...publishSteps];
+  const steps = [...signingSteps, ...uploadSteps, ...publishSteps];
   const step = (id: string) => {
     const found = steps.find((candidate) => (candidate.id ?? candidate.name) === id);
-    if (!found) throw new Error(`release.yml's signing and publication jobs have no step "${id}"`);
+    if (!found)
+      throw new Error(`release.yml's signing, upload and publication jobs have no step "${id}"`);
     return found;
   };
   const lane = jobOf(verify, "lane");
@@ -2407,6 +2464,7 @@ describe("the signed channel workflow", () => {
       "phone",
       "release",
       "update",
+      "upload",
       "publish",
     ]);
     const runner = (name: string) =>
@@ -2528,6 +2586,7 @@ describe("the signed channel workflow", () => {
   it("records and publishes only after full verification or explicitly inherited verification, never after a failed lane, and signs while the lanes run", () => {
     const signing = jobOf(release, "release");
     const update = jobOf(release, "update");
+    const upload = jobOf(release, "upload");
     const publish = jobOf(release, "publish");
     expect(signing.needs).toEqual(["resolve", "notes", "phone"]);
     for (const required of ["true", "false", ""]) {
@@ -2543,6 +2602,7 @@ describe("the signed channel workflow", () => {
           phone: { result: "success" },
           release: { result: "success" },
           update: { result: required === "true" ? "success" : "skipped" },
+          upload: { result: "success" },
         };
         const verified =
           (required === "true" && result === "success") ||
@@ -2557,20 +2617,27 @@ describe("the signed channel workflow", () => {
         expect(workflowValue(update.if ?? "", { needs })).toBe(
           required === "true" && result === "success",
         );
+        expect(workflowValue(upload.if ?? "", { needs })).toBe(verified);
         expect(workflowValue(publish.if ?? "", { needs })).toBe(verified);
+        // The checks and switches wait for every upload.
+        for (const uploaded of ["failure", "cancelled", "skipped"])
+          expect(
+            workflowValue(publish.if ?? "", { needs: { ...needs, upload: { result: uploaded } } }),
+          ).toBe(false);
         // Linux packages that did not pass on clean systems hold the update
-        // check and publication, never the signing.
+        // check, the uploads and publication, never the signing.
         for (const linux of ["failure", "cancelled", "skipped"]) {
           const held = { needs: { ...needs, linux: { result: linux } } };
           expect(workflowValue(signing.if ?? "", held)).toBe(
             required === "true" || required === "false",
           );
           expect(workflowValue(update.if ?? "", held)).toBe(false);
+          expect(workflowValue(upload.if ?? "", held)).toBe(false);
           expect(workflowValue(publish.if ?? "", held)).toBe(false);
         }
         // INF-1649: a release with no phone build that keeps changing things on it never signs.
         for (const phone of ["failure", "cancelled", "skipped"]) {
-          for (const job of [signing, update, publish]) {
+          for (const job of [signing, update, upload, publish]) {
             expect(
               workflowValue(job.if ?? "", {
                 needs: { ...needs, phone: { result: phone } },
@@ -2580,7 +2647,7 @@ describe("the signed channel workflow", () => {
         }
         // A release whose notes were not checked never signs, whatever else passed.
         for (const notes of ["failure", "cancelled", "skipped"]) {
-          for (const job of [signing, update, publish]) {
+          for (const job of [signing, update, upload, publish]) {
             expect(
               workflowValue(job.if ?? "", {
                 needs: { ...needs, notes: { result: notes } },
@@ -2598,25 +2665,21 @@ describe("the signed channel workflow", () => {
   });
 
   // INF-1716, the captain's "After the disk-image check": the real Mac signs
-  // through the checked disk image, and one existing virtual Mac publishes
-  // from the signing job's handoff, only once that job succeeded.
-  it("publishes only after the signing job succeeded, in one virtual Mac, from its handoff", () => {
+  // through the checked disk image. INF-2498's plan, piece 2 (the captain's
+  // hosted-parallel choice): a machine GitHub hosts uploads from the signing
+  // job's handoff, only once that job succeeded, and one existing virtual Mac
+  // then checks every copy and switches.
+  it("uploads only after the signing job succeeded, on a hosted machine, then checks and switches in one virtual Mac", () => {
+    const upload = jobOf(release, "upload");
     const publish = jobOf(release, "publish");
-    expect(publish.needs).toEqual([
-      "resolve",
-      "notes",
-      "verify",
-      "linux",
-      "phone",
-      "release",
-      "update",
-    ]);
-    expect(
-      workflowValue(publish["runs-on"] ?? "", {
-        needs: { resolve: { outputs: { dry_run: "false" } } },
-        vars: {},
-      }),
-    ).toBe("mini-mac-virtual");
+    const before = ["resolve", "notes", "verify", "linux", "phone", "release", "update"];
+    expect(upload.needs).toEqual(before);
+    expect(publish.needs).toEqual([...before, "upload"]);
+    for (const dryRun of ["false", "true"]) {
+      const contexts = { needs: { resolve: { outputs: { dry_run: dryRun } } }, vars: {} };
+      expect(workflowString(upload["runs-on"] ?? "", contexts)).toBe("ubuntu-24.04");
+      expect(workflowValue(publish["runs-on"] ?? "", contexts)).toBe("mini-mac-virtual");
+    }
     // Every check passed, or was inherited, as a passing run leaves them.
     const checks = (required: string) => ({
       notes: { result: "success" },
@@ -2644,14 +2707,18 @@ describe("the signed channel workflow", () => {
             release: { result },
             update: { result: update },
           };
+          const status = { success: result === "success", failure: false, always: true, cancelled };
+          const label = `${result}${cancelled ? ", run cancelled" : ""}, verify ${required}, update ${update}`;
+          const uploads = result === "success" && !cancelled && publishes;
+          expect(workflowValue(upload.if ?? "", { needs }, status), label).toBe(uploads);
           expect(
             workflowValue(
               publish.if ?? "",
-              { needs },
-              { success: result === "success", failure: false, always: true, cancelled },
+              { needs: { ...needs, upload: { result: uploads ? "success" : "skipped" } } },
+              status,
             ),
-            `${result}${cancelled ? ", run cancelled" : ""}, verify ${required}, update ${update}`,
-          ).toBe(result === "success" && !cancelled && publishes);
+            label,
+          ).toBe(uploads);
         }
       }
     }
@@ -2678,20 +2745,43 @@ describe("the signed channel workflow", () => {
         ).toBe(required === "true" && result === "success");
       }
     }
-    // Its checkout keeps no credential, and it holds only the access its moves need.
-    expect(publishSteps[0]).toMatchObject({
-      uses: "actions/checkout@v4",
-      with: {
-        // biome-ignore lint/suspicious/noTemplateCurlyInString: the workflow's own expression, matched literally.
-        ref: "${{ needs.resolve.outputs.source_commit }}",
-        "persist-credentials": false,
-      },
-    });
-    expect(publish.permissions).toEqual({ contents: "write", actions: "read" });
+    // Their checkouts keep no credential, and each holds only the access its
+    // moves need: the upload job writes the record, the virtual Mac only reads.
+    for (const first of [uploadSteps[0], publishSteps[0]])
+      expect(first).toMatchObject({
+        uses: "actions/checkout@v4",
+        with: {
+          // biome-ignore lint/suspicious/noTemplateCurlyInString: the workflow's own expression, matched literally.
+          ref: "${{ needs.resolve.outputs.source_commit }}",
+          "persist-credentials": false,
+        },
+      });
+    expect(upload.permissions).toEqual({ contents: "write", actions: "read" });
+    expect(publish.permissions).toEqual({ contents: "read", actions: "read" });
+    // The virtual Mac uploads nothing: its only effects are the switches, and
+    // each comes after every copy was fetched back and checked.
+    const ids = publishSteps.map((candidate) => candidate.id ?? candidate.name ?? "");
+    expect(publishSteps.filter((candidate) => UPLOADS.test(candidate.run ?? ""))).toEqual([]);
+    expect(
+      publishSteps.filter((candidate) => PUBLISHES.test(candidate.run ?? "")).map(({ id }) => id),
+    ).toEqual(["tap", "old-tap", "feeds"]);
+    const lastCheck = Math.max(...ids.flatMap((id, at) => (/fetch-back$/.test(id) ? [at] : [])));
+    expect(lastCheck).toBeLessThan(ids.indexOf("tap"));
+    // One upload of a version at a time, so two runs of it never read the
+    // places at once; a rehearsal never waits behind a release.
+    const group = (version: string, dryRun: string) =>
+      workflowValue((upload as { concurrency?: { group: string } }).concurrency?.group ?? "", {
+        needs: { resolve: { outputs: { version, dry_run: dryRun } } },
+      });
+    expect(group("0.6.2", "false")).toBe(group("0.6.2", "false"));
+    expect(group("0.6.2", "false")).not.toBe(group("0.6.3", "false"));
+    expect(group("0.6.2", "false")).not.toBe(group("0.6.2", "true"));
+    expect(
+      (upload as { concurrency?: Record<string, unknown> }).concurrency?.["cancel-in-progress"],
+    ).toBe(false);
     // The handoff is stored as is, one artifact per producer attempt, and
     // fetched by the immutable id the signing job recorded.
-    const upload = step("handoff-upload");
-    expect(upload).toMatchObject({
+    expect(step("handoff-upload")).toMatchObject({
       uses: "actions/upload-artifact@v4",
       with: {
         // biome-ignore lint/suspicious/noTemplateCurlyInString: the workflow's own expression, matched literally.
@@ -2700,18 +2790,18 @@ describe("the signed channel workflow", () => {
         "if-no-files-found": "error",
       },
     });
-    const fetch = publishSteps.find((candidate) => candidate.name === "Fetch the checked files");
+    const fetch = uploadSteps.find((candidate) => candidate.name === "Fetch the checked files");
     expect(fetch).toMatchObject({
       uses: "actions/download-artifact@v4",
       // biome-ignore lint/suspicious/noTemplateCurlyInString: the workflow's own expression, matched literally.
       with: { "artifact-ids": "${{ needs.release.outputs.handoff_id }}" },
     });
-    expect(publishSteps.indexOf(fetch as Step)).toBeLessThan(
-      publishSteps.indexOf(step("handoff-check")),
+    expect(uploadSteps.indexOf(fetch as Step)).toBeLessThan(
+      uploadSteps.indexOf(step("handoff-check")),
     );
     // Nothing that publishes or holds a publication credential comes before the validation.
-    const checked = publishSteps.indexOf(step("handoff-check"));
-    for (const candidate of publishSteps.slice(0, checked))
+    const checked = uploadSteps.indexOf(step("handoff-check"));
+    for (const candidate of uploadSteps.slice(0, checked))
       expect(
         PUBLISHES.test(candidate.run ?? "") ||
           PUBLICATION_TOKEN.test(JSON.stringify(candidate.env ?? {})),
@@ -2760,11 +2850,24 @@ describe("the signed channel workflow", () => {
       tag_name: `v${version}`,
       zip_name: `Infinitary-${version}-universal.zip`,
       old_cask: "true",
+      prerelease: "true",
+      public_tag: `infinitary-alpha-v${version}`,
+      old_public_tag: `firstmate-3000-alpha-v${version}`,
+      cask_token: "infinitary@alpha",
       ...overrides,
     });
     // The repository the run records in, as GITHUB_REPOSITORY names it.
     const recordRepository = "infinitary-labs/infinitary";
-    const secrets = { GITHUB_TOKEN: "stand-in" };
+    // Stand-in keys: the disposable storage accepts only these.
+    const secrets = {
+      GITHUB_TOKEN: "stand-in",
+      HOMEBREW_TAP_TOKEN: "stand-in-tap",
+      OLD_TAP_TOKEN: "stand-in-old-tap",
+      R2_ENDPOINT: "https://r2.example.test",
+      R2_ACCESS_KEY_ID: "disposable",
+      R2_SECRET_ACCESS_KEY: "disposable-not-a-secret",
+    };
+    const vars = { R2_BUCKET: "installers" };
     const run = (script: string, env: Record<string, string>) =>
       spawnSync("bash", ["--noprofile", "--norc", "-e", "-c", script], {
         cwd: root,
@@ -2902,7 +3005,7 @@ describe("the signed channel workflow", () => {
       };
       const output = join(temp, "output");
       const result = run(step("handoff-check").run ?? "", {
-        ...jobEnv("publish", resolve),
+        ...jobEnv("upload", resolve),
         ...stepEnv(step("handoff-check"), contexts),
         RUNNER_TEMP: temp,
         GITHUB_OUTPUT: output,
@@ -3033,117 +3136,351 @@ describe("the signed channel workflow", () => {
     });
 
     /**
-     * The publication job's own Linux layout and record, after it accepted
-     * the handoff: the linux job's packages, then the record of the zip it
-     * was handed and the Linux files beside it.
+     * The upload job's own steps after it accepted the handoff, in order, as
+     * Actions runs them: each step whose condition holds, with the job's and
+     * its own environment, until one fails or `until` ran. The linux job's
+     * packages are laid out as their artifact download leaves them. The
+     * record and both taps are a stand-in `gh`'s, and Cloudflare is the
+     * disposable storage file the publication command's own test uses.
      */
-    const recordAfterChecks = (
+    const uploadAfterChecks = (
       produced: ReturnType<typeof produce>,
       consumed: ReturnType<typeof consume>,
-      record: ReturnType<typeof standInGh>,
+      places: ReturnType<typeof standInGh>,
+      options: { until?: string; packages?: Record<string, Buffer | string> } = {},
     ) => {
       const temp = consumed.temp;
       const packages = join(temp, "linux-packages");
       mkdirSync(packages);
-      for (const name of [
-        `infinitary-${version}-linux-amd64.deb`,
-        `infinitary-${version}-linux-x86_64.rpm`,
-        `Infinitary-${version}-linux-x86_64.AppImage`,
-      ])
-        writeFileSync(join(packages, name), bytes);
-      const contexts = {
-        needs: { resolve: { outputs: produced.resolve }, release: { outputs: produced.job } },
-        steps: { "handoff-check": { outputs: accepted(consumed) } },
-        secrets,
+      for (const name of linuxPackages)
+        writeFileSync(join(packages, name), options.packages?.[name] ?? bytes);
+      const outputs: Record<string, Record<string, string>> = {
+        "handoff-check": accepted(consumed),
       };
-      const env = {
-        ...jobEnv("publish", produced.resolve),
-        PATH: `${record.bin}:${process.env.PATH}`,
-        RUNNER_TEMP: temp,
-        GITHUB_REPOSITORY: recordRepository,
-      };
-      const linux = run(step("linux-files").run ?? "", {
-        ...env,
-        ...stepEnv(step("linux-files"), contexts),
-        GITHUB_OUTPUT: join(temp, "linux-output"),
-      });
-      expect(linux.status, linux.stderr).toBe(0);
-      const output = join(temp, "record-output");
-      writeFileSync(output, "");
-      const result = run(step("private").run ?? "", {
-        ...env,
-        ...stepEnv(step("private"), contexts),
-        GITHUB_OUTPUT: output,
-      });
-      return { result, outputs: outputsOf(output) };
+      const results: Record<string, ReturnType<typeof run>> = {};
+      for (const candidate of uploadSteps) {
+        const id = candidate.id;
+        if (!id || !candidate.run || id === "handoff-check") continue;
+        const contexts = {
+          needs: { resolve: { outputs: produced.resolve }, release: { outputs: produced.job } },
+          steps: Object.fromEntries(
+            Object.entries(outputs).map(([name, value]) => [name, { outputs: value }]),
+          ),
+          secrets,
+          vars,
+        };
+        if (candidate.if && workflowValue(candidate.if, contexts) !== true) continue;
+        const output = join(temp, `${id}-output`);
+        writeFileSync(output, "");
+        results[id] = run(candidate.run, {
+          ...release.env,
+          ...jobEnv("upload", produced.resolve),
+          ...stepEnv(candidate, contexts),
+          PATH: `${places.bin}:${process.env.PATH}`,
+          RUNNER_TEMP: temp,
+          GITHUB_OUTPUT: output,
+          GITHUB_REPOSITORY: recordRepository,
+          NODE_OPTIONS: `--import=${pathToFileURL(join(root, "tests/helpers/releaseStoragePreload.mjs")).href}`,
+          RELEASE_STORAGE_FIXTURE: storageOf(consumed),
+        });
+        outputs[id] = outputsOf(output);
+        if (results[id].status !== 0 || id === options.until) break;
+      }
+      return { results, outputs };
     };
+    const succeeded = (uploaded: ReturnType<typeof uploadAfterChecks>) => {
+      for (const [id, result] of Object.entries(uploaded.results))
+        expect(result.status, `${id}: ${result.stderr}`).toBe(0);
+      return uploaded.outputs;
+    };
+    /** Cloudflare's objects, by key, as the disposable storage keeps them. */
+    const storageOf = (consumed: ReturnType<typeof consume>) => join(consumed.temp, "storage.json");
+    const cloudflare = (consumed: ReturnType<typeof consume>): Record<string, Buffer> =>
+      existsSync(storageOf(consumed))
+        ? Object.fromEntries(
+            Object.entries(
+              JSON.parse(readFileSync(storageOf(consumed), "utf8")) as Record<
+                string,
+                { bytes: string }
+              >,
+            ).map(([key, value]) => [key, Buffer.from(value.bytes, "base64")]),
+          )
+        : {};
+    const seedCloudflare = (consumed: ReturnType<typeof consume>, files: Record<string, string>) =>
+      writeFileSync(
+        storageOf(consumed),
+        JSON.stringify(
+          Object.fromEntries(
+            Object.entries(files).map(([name, text]) => [
+              `releases/v${version}/${name}`,
+              {
+                bytes: Buffer.from(text).toString("base64"),
+                etag: `"${createHash("sha256").update(text).digest("hex")}"`,
+              },
+            ]),
+          ),
+        ),
+      );
     const tag = `v${version}`;
     const zipName = `Infinitary-${version}-universal.zip`;
+    const dmgName = `Infinitary-${version}-mac-universal.dmg`;
+    const tapTag = `infinitary-alpha-v${version}`;
+    const oldTapTag = `firstmate-3000-alpha-v${version}`;
+    const tapRepository = release.env.TAP_REPO ?? "";
+    const oldTapRepository = release.env.OLD_TAP_REPO ?? "";
+    const deb = `infinitary-${version}-linux-amd64.deb`;
+    const linuxPackages = [
+      deb,
+      `infinitary-${version}-linux-x86_64.rpm`,
+      `Infinitary-${version}-linux-x86_64.AppImage`,
+    ];
+    const shaOf = (bytes: Buffer | string) => createHash("sha256").update(bytes).digest("hex");
+    /** Each published file's bytes on a place, its checksum sidecars aside. */
+    const held = (files: Record<string, string | Buffer> | null) =>
+      Object.fromEntries(
+        Object.entries(files ?? {})
+          .filter(([name]) => !name.endsWith(".sha256"))
+          .map(([name, value]) => [name, shaOf(value)]),
+      );
+    const releaseFiles = (places: ReturnType<typeof standInGh>, repo: string, at: string) =>
+      places.publishedBytes(repo, at);
 
     // INF-2074: the signing job reads the record and writes nothing; the
-    // publication job, which starts only once every check passed, records.
-    it("records the zip it was handed, beside the Linux files, only in the publication job", () => {
-      const record = standInGh(source);
-      const produced = produce({ record });
+    // upload job, which starts only once every check passed, records.
+    // INF-2498's plan, piece 2: it records the zip first, then uploads every
+    // file to the record, Cloudflare and both taps at once.
+    it("records the zip first, then puts every file on every place at once, only in the upload job", () => {
+      const places = standInGh(source);
+      const produced = produce({ record: places });
       // No release yet: the signing job read nothing and created nothing.
-      expect(record.published(recordRepository, tag)).toBeNull();
-      expect(record.calls().filter(([verb, sub]) => verb === "release" && sub !== "view")).toEqual(
+      expect(places.published(recordRepository, tag)).toBeNull();
+      expect(places.calls().filter(([verb, sub]) => verb === "release" && sub !== "view")).toEqual(
         [],
       );
       expect(produced.recorded).toBe(produced.distZip);
       const consumed = consume(produced);
-      const recorded = recordAfterChecks(produced, consumed, record);
-      expect(recorded.result.status, recorded.result.stderr).toBe(0);
-      expect(recorded.outputs).toEqual({
+      const outputs = succeeded(uploadAfterChecks(produced, consumed, places));
+      expect(outputs.private).toEqual({
         zip: consumed.outputs.zip,
         sha256: sha(produced.distZip),
         state: "uploaded",
       });
-      const published = record.published(recordRepository, tag) ?? {};
-      expect(published[`${zipName}.sha256`]).toBe(`${produced.job.sha256}  ${zipName}\n`);
-      expect(Object.keys(published)).toEqual(
-        expect.arrayContaining([
-          `infinitary-${version}-linux-amd64.deb`,
-          `infinitary-${version}-linux-x86_64.rpm`,
-          `Infinitary-${version}-linux-x86_64.AppImage`,
-          "SHA256SUMS",
+      // The list the virtual Mac checks every copy against.
+      const files = JSON.parse(outputs.files?.files ?? "{}") as Record<string, string>;
+      expect(Object.keys(files).slice(0, 2)).toEqual([zipName, dmgName]);
+      expect(files[zipName]).toBe(produced.job.sha256);
+      expect(files[dmgName]).toBe(sha(produced.dmg));
+      expect(Object.keys(files)).toEqual(expect.arrayContaining([...linuxPackages, "SHA256SUMS"]));
+      // Every place holds exactly those bytes: the record and Cloudflare the
+      // disk image too, the taps the zip and the Linux files.
+      const { [dmgName]: _image, ...tapFiles } = files;
+      expect(held(releaseFiles(places, recordRepository, tag))).toEqual(files);
+      expect(held(releaseFiles(places, tapRepository, tapTag))).toEqual(tapFiles);
+      expect(held(releaseFiles(places, oldTapRepository, oldTapTag))).toEqual(tapFiles);
+      const stored = cloudflare(consumed);
+      for (const [name, sha256] of Object.entries(files)) {
+        expect(shaOf(stored[`releases/v${version}/${name}`] ?? ""), name).toBe(sha256);
+        expect(stored[`releases/v${version}/${name}.sha256`]?.toString()).toBe(
+          `${sha256}  ${name}\n`,
+        );
+      }
+      expect(places.published(recordRepository, tag)?.[`${zipName}.sha256`]).toBe(
+        `${produced.job.sha256}  ${zipName}\n`,
+      );
+      // The record took the zip before any other place took anything.
+      const uploads = places
+        .calls()
+        .filter(([verb, sub]) => verb === "release" && sub === "upload")
+        .map((call) => `${call[call.indexOf("--repo") + 1]} ${call.at(-1)?.split("/").pop()}`);
+      expect(uploads[0]).toBe(`${recordRepository} ${zipName}`);
+      expect(outputs.upload?.places).toBe("record, tap, cloudflare, old_tap");
+    });
+
+    // The virtual Mac uploads nothing: it writes down the upload job's list,
+    // whose zip must be the one the signing job checked, then downloads each
+    // of the record's copies and checks it against its sidecar and that list.
+    it("checks each copy the record holds against the upload job's list, on the virtual Mac", () => {
+      const places = standInGh(source);
+      const produced = produce({ record: places });
+      const consumed = consume(produced);
+      const listed = succeeded(uploadAfterChecks(produced, consumed, places)).files?.files ?? "";
+      const files = JSON.parse(listed) as Record<string, string>;
+      const temp = scratchDir("infinitary-handoff-checks-");
+      const check = (id: string, upload: string, script = step(id).run ?? "") => {
+        const contexts = {
+          needs: {
+            resolve: { outputs: produced.resolve },
+            release: { outputs: produced.job },
+            upload: { outputs: { files: upload } },
+          },
+          secrets,
+          vars,
+        };
+        return run(script, {
+          ...release.env,
+          ...jobEnv("publish", produced.resolve),
+          ...stepEnv(step(id), contexts),
+          PATH: `${places.bin}:${process.env.PATH}`,
+          RUNNER_TEMP: temp,
+          GITHUB_OUTPUT: join(temp, `${id}-output`),
+          GITHUB_REPOSITORY: recordRepository,
+        });
+      };
+      const written = check("expected", listed);
+      expect(written.status, written.stderr).toBe(0);
+      expect(readFileSync(join(temp, "expected", "files.sha256"), "utf8")).toBe(
+        Object.entries(files)
+          .map(([name, sha256]) => `${sha256}  ${name}\n`)
+          .join(""),
+      );
+      // A list whose zip is not the signed one is refused before any fetch.
+      const swapped = JSON.stringify({ ...files, [zipName]: shaOf("another zip") });
+      const refused = check("expected", swapped);
+      expect(refused.status).not.toBe(0);
+      expect(refused.stderr).toMatch(/not the [0-9a-f]{64} the signing job checked/);
+      expect(check("expected", listed).status).toBe(0);
+      // The fetch-back's download and checks, up to the app's own gates,
+      // which need the signed app a Mac opens.
+      const fetchBack = step("private-fetch-back").run ?? "";
+      const downloads = fetchBack.slice(0, fetchBack.indexOf("EXTRACT_DIR="));
+      const before = places.calls().length;
+      const fetched = check("private-fetch-back", listed, downloads);
+      expect(fetched.status, fetched.stderr).toBe(0);
+      const back = join(temp, "recorded-verify");
+      for (const [name, sha256] of Object.entries(files))
+        expect(shaOf(readFileSync(join(back, name))), name).toBe(sha256);
+      // It only downloaded: one call per listed file, each of it and its sidecar.
+      expect(places.calls().slice(before)).toEqual(
+        Object.keys(files).map((name) => [
+          "release",
+          "download",
+          tag,
+          "--repo",
+          recordRepository,
+          "--pattern",
+          name,
+          "--pattern",
+          `${name}.sha256`,
+          "--dir",
+          back,
         ]),
+      );
+      // A copy that is not the uploaded file fails the check, even with a
+      // sidecar that matches it.
+      places.seed(recordRepository, tag, source, {
+        [deb]: "swapped",
+        [`${deb}.sha256`]: `${shaOf("swapped")}  ${deb}\n`,
+      });
+      const differs = check("private-fetch-back", listed, downloads);
+      expect(differs.status).not.toBe(0);
+      expect(differs.stderr).toMatch(
+        new RegExp(`The record's ${deb.replaceAll(".", "\\.")} is not the file`),
       );
     });
 
     it("hands over and records the zip a retry's record already holds", () => {
-      const record = standInGh(source);
-      record.seed(recordRepository, tag, source, {
+      const places = standInGh(source);
+      places.seed(recordRepository, tag, source, {
         [zipName]: "published first",
-        [`${zipName}.sha256`]: `${createHash("sha256").update("published first").digest("hex")}  ${zipName}\n`,
+        [`${zipName}.sha256`]: `${shaOf("published first")}  ${zipName}\n`,
       });
-      const produced = produce({ record });
+      const produced = produce({ record: places });
       expect(readFileSync(produced.recorded, "utf8")).toBe("published first");
       expect(produced.job.sha256).toBe(sha(produced.recorded));
-      const recorded = recordAfterChecks(produced, consume(produced), record);
-      expect(recorded.result.status, recorded.result.stderr).toBe(0);
-      expect(recorded.outputs).toMatchObject({ sha256: produced.job.sha256, state: "identical" });
-      expect(record.published(recordRepository, tag)?.[zipName]).toBe("published first");
+      const outputs = succeeded(uploadAfterChecks(produced, consume(produced), places));
+      expect(outputs.private).toMatchObject({ sha256: produced.job.sha256, state: "identical" });
+      expect(places.published(recordRepository, tag)?.[zipName]).toBe("published first");
+      expect(releaseFiles(places, tapRepository, tapTag)?.[zipName]?.toString()).toBe(
+        "published first",
+      );
     });
 
-    it("refuses a record that changed after the signing job read it, before recording anything", () => {
-      const record = standInGh(source);
-      const produced = produce({ record });
+    // Published bytes never change, wherever the last attempt stopped: a
+    // disk image or Linux package any place holds is the one every place
+    // gets, and the recipes beside it are rendered from it.
+    it("keeps the disk image and Linux packages any place already holds on a retry", () => {
+      const places = standInGh(source);
+      places.seed(recordRepository, tag, source, {
+        [zipName]: "published first",
+        [`${zipName}.sha256`]: `${shaOf("published first")}  ${zipName}\n`,
+        [deb]: "deb published first",
+      });
+      places.seed(tapRepository, tapTag, "f".repeat(40), { [deb]: "deb published first" });
+      const produced = produce({ record: places });
+      const consumed = consume(produced);
+      // The last attempt put its disk image on Cloudflare only, then stopped.
+      seedCloudflare(consumed, { [dmgName]: "image published first" });
+      const outputs = succeeded(uploadAfterChecks(produced, consumed, places));
+      const files = JSON.parse(outputs.files?.files ?? "{}") as Record<string, string>;
+      expect(files[dmgName]).toBe(shaOf("image published first"));
+      expect(files[deb]).toBe(shaOf("deb published first"));
+      expect(files[zipName]).toBe(shaOf("published first"));
+      expect(held(releaseFiles(places, recordRepository, tag))[dmgName]).toBe(files[dmgName]);
+      for (const repo of [recordRepository, tapRepository, oldTapRepository]) {
+        const at = repo === recordRepository ? tag : repo === tapRepository ? tapTag : oldTapTag;
+        expect(held(releaseFiles(places, repo, at))[deb], repo).toBe(files[deb]);
+        expect(releaseFiles(places, repo, at)?.SHA256SUMS?.toString(), repo).toContain(
+          `${files[deb]}  ${deb}`,
+        );
+      }
+      expect(shaOf(cloudflare(consumed)[`releases/v${version}/${deb}`] ?? "")).toBe(files[deb]);
+    });
+
+    it("refuses before any upload when two places hold different bytes", () => {
+      const places = standInGh(source);
+      places.seed(recordRepository, tag, source, { [deb]: "deb from one attempt" });
+      places.seed(tapRepository, tapTag, "f".repeat(40), { [deb]: "deb from another" });
+      const produced = produce({ record: places });
+      const consumed = consume(produced);
+      const uploaded = uploadAfterChecks(produced, consumed, places);
+      expect(uploaded.results.adopt?.status).not.toBe(0);
+      expect(uploaded.results.adopt?.stderr).toMatch(/Two places hold different bytes/);
+      expect(uploaded.results.upload).toBeUndefined();
+      // Only the record's zip went first; no other place took anything.
+      expect(Object.keys(places.published(recordRepository, tag) ?? {}).sort()).toEqual(
+        [deb, zipName, `${zipName}.sha256`].sort(),
+      );
+      expect(Object.keys(releaseFiles(places, tapRepository, tapTag) ?? {})).toEqual([deb]);
+      expect(releaseFiles(places, oldTapRepository, oldTapTag)).toBeNull();
+      expect(cloudflare(consumed)).toEqual({});
+    });
+
+    it("uploads nothing and reads no place in a dry run, and lists what a release would upload", () => {
+      const places = standInGh(source);
+      const produced = produce({ dryRun: true });
+      const consumed = consume(produced);
+      const uploaded = uploadAfterChecks(produced, consumed, places);
+      const outputs = succeeded(uploaded);
+      expect(Object.keys(uploaded.results)).toEqual(["linux-files", "files"]);
+      expect(places.calls()).toEqual([]);
+      expect(cloudflare(consumed)).toEqual({});
+      const files = JSON.parse(outputs.files?.files ?? "{}") as Record<string, string>;
+      expect(files[zipName]).toBe(produced.job.sha256);
+      expect(files[dmgName]).toBe(sha(produced.dmg));
+      expect(Object.keys(files)).toEqual(expect.arrayContaining([...linuxPackages, "SHA256SUMS"]));
+    });
+
+    it("refuses a record that changed after the signing job read it, before uploading anything", () => {
+      const places = standInGh(source);
+      const produced = produce({ record: places });
       const consumed = consume(produced);
       // Another run of this version records its own zip while this one is checked.
-      const other = `${createHash("sha256").update("another run").digest("hex")}  ${zipName}\n`;
-      record.seed(recordRepository, tag, source, {
+      const other = `${shaOf("another run")}  ${zipName}\n`;
+      places.seed(recordRepository, tag, source, {
         [zipName]: "another run",
         [`${zipName}.sha256`]: other,
       });
-      const recorded = recordAfterChecks(produced, consumed, record);
-      expect(recorded.result.status).not.toBe(0);
-      expect(recorded.result.stderr).toMatch(/The record changed since signing/);
-      expect(recorded.outputs).toEqual({});
-      expect(record.published(recordRepository, tag)).toEqual({
+      const uploaded = uploadAfterChecks(produced, consumed, places);
+      expect(uploaded.results.private?.status).not.toBe(0);
+      expect(uploaded.results.private?.stderr).toMatch(/The record changed since signing/);
+      expect(uploaded.outputs.private).toEqual({});
+      expect(uploaded.results.adopt).toBeUndefined();
+      expect(places.published(recordRepository, tag)).toEqual({
         [zipName]: "another run",
         [`${zipName}.sha256`]: other,
       });
+      expect(releaseFiles(places, tapRepository, tapTag)).toBeNull();
+      expect(cloudflare(consumed)).toEqual({});
     });
 
     it("refuses to read a record whose tag names another commit", () => {
@@ -3393,10 +3730,12 @@ describe("the signed channel workflow", () => {
     );
     expect(steps[firstSecret]?.name).toBe("Restore App Store Connect API key");
     expect(steps.indexOf(step("build"))).toBeLessThan(firstSecret);
-    // Apple signing material stays in the signing job; publication holds none.
-    expect(JSON.stringify(jobOf(release, "publish"))).not.toMatch(
-      /secrets\.(MAC_DEVELOPER_ID|APP_STORE_CONNECT)|CSC_KEYCHAIN|keychain/,
-    );
+    // Apple signing material stays in the signing job; the uploads and
+    // publication hold none.
+    for (const id of ["upload", "publish"])
+      expect(JSON.stringify(jobOf(release, id)), id).not.toMatch(
+        /secrets\.(MAC_DEVELOPER_ID|APP_STORE_CONNECT)|CSC_KEYCHAIN|keychain/,
+      );
   });
 
   it("checks the release notes before anything verifies or signs, and packages exactly that catalog", () => {
@@ -3611,11 +3950,14 @@ describe("the signed channel workflow", () => {
 
   const PUBLISHES =
     /gh release (create|upload)|publish-release-asset\.sh|publish-(?:tap|feeds)\.sh live|publish-downloads\.ts|git push/;
+  /** What puts a file on a place, as opposed to switching a cask or feed to it. */
+  const UPLOADS = /gh release (create|upload)|publish-release-asset\.sh|publish-downloads\.ts/;
   const PUBLICATION_TOKEN =
     /secrets\.(GITHUB_TOKEN|R2_ACCESS_KEY_ID|R2_SECRET_ACCESS_KEY|HOMEBREW_TAP_TOKEN|OLD_TAP_TOKEN)/;
   /**
    * The steps of a passing run of a channel, live or rehearsed, in order:
-   * the signing job's, then the publication job's when it starts after them.
+   * the signing job's, then the upload job's and the publication job's when
+   * each starts after them.
    */
   const ranSteps = (channel: string, dryRun: boolean, oldCask = false, direct = true) => {
     const needs = {
@@ -3653,8 +3995,17 @@ describe("the signed channel workflow", () => {
             ),
           }) === true,
       );
-    const publishes = workflowValue(jobOf(release, "publish").if ?? "", { needs }) === true;
-    return [...ran(signingSteps), ...(publishes ? ran(publishSteps) : [])];
+    const uploads = workflowValue(jobOf(release, "upload").if ?? "", { needs }) === true;
+    const publishes =
+      uploads &&
+      workflowValue(jobOf(release, "publish").if ?? "", {
+        needs: { ...needs, upload: { result: "success" } },
+      }) === true;
+    return [
+      ...ran(signingSteps),
+      ...(uploads ? ran(uploadSteps) : []),
+      ...(publishes ? ran(publishSteps) : []),
+    ];
   };
 
   it.each(["stable", "alpha"])("rehearses %s's whole profile and publishes nothing", (channel) => {
@@ -3678,6 +4029,11 @@ describe("the signed channel workflow", () => {
         "handoff",
         "handoff-upload",
         "handoff-check",
+        "linux-files",
+        "files",
+        "Summarize the uploads",
+        "expected",
+        "rehearsal-files",
         "tap-rehearsal",
         "old-tap-rehearsal",
         "feed-rehearsal",
@@ -3686,10 +4042,16 @@ describe("the signed channel workflow", () => {
         "Summarize the publication",
       ]),
     );
-    // A rehearsal's feeds are written from the checked image it handed over.
+    // A rehearsal uploads nothing and reads no place.
+    const ids = ran.map((candidate) => candidate.id ?? candidate.name);
+    for (const id of ["private", "adopt", "upload"]) expect(ids).not.toContain(id);
+    expect(ids.filter((id) => /fetch-back$/.test(id ?? ""))).toEqual([]);
+    // A rehearsal's feeds are written from the checked image it handed over,
+    // once the virtual Mac checked it against what the upload job listed.
     expect(step("feed-rehearsal").run).toContain(
-      'DIST_ZIP="${{ steps.handoff-check.outputs.zip }}" DIST_DMG="${{ steps.handoff-check.outputs.dmg }}"',
+      'DIST_ZIP="${{ steps.rehearsal-files.outputs.zip }}" DIST_DMG="${{ steps.rehearsal-files.outputs.dmg }}"',
     );
+    expect(ids.indexOf("rehearsal-files")).toBeLessThan(ids.indexOf("tap-rehearsal"));
     // The feed rehearsal may read a not-yet-public repository, but cannot publish.
     expect(step("feed-rehearsal").run).toContain("scripts/publish-feeds.sh rehearsal");
     // electron-builder never publishes on its own either.
@@ -3704,54 +4066,51 @@ describe("the signed channel workflow", () => {
         const ran = ranSteps(channel, false, false, direct).map(
           (candidate) => candidate.id ?? candidate.name,
         );
+        // INF-2498's plan, piece 2: the record takes the zip first, every
+        // place is read, then every place is uploaded to at once; the virtual
+        // Mac fetches back and checks every copy before any switch.
         const publication = [
           "private",
-          ...(direct ? ["recorded-dmg"] : []),
+          "adopt",
+          "upload",
+          "files",
+          "expected",
           "private-fetch-back",
-          ...(direct ? ["public", "public-fetch-back", "feeds"] : []),
+          ...(direct ? ["public-fetch-back"] : []),
+          "homebrew-fetch-back",
+          "tap",
+          ...(direct ? ["feeds"] : []),
         ];
         expect(
-          ran.filter((id) =>
-            [
-              "private",
-              "recorded-dmg",
-              "private-fetch-back",
-              "public",
-              "public-fetch-back",
-              "feeds",
-            ].includes(id ?? ""),
-          ),
+          ran.filter((id) => publication.includes(id ?? "") || /fetch-back$/.test(id ?? "")),
         ).toEqual(publication);
         expect(ran.indexOf("visibility")).toBeLessThan(ran.indexOf("developer_id_cert"));
         // INF-2074: the signing job reads the record before its image and
-        // records nothing; the publication job records after every check.
+        // records nothing; the upload job records after every check.
         expect(ran.indexOf("recorded")).toBeGreaterThan(ran.indexOf("checksum"));
         expect(ran.indexOf("private")).toBeGreaterThan(ran.indexOf("linux-files"));
         if (direct) {
           expect(ran.indexOf("dmg")).toBeGreaterThan(ran.indexOf("recorded"));
-          expect(ran.indexOf("dmg")).toBeLessThan(ran.indexOf("recorded-dmg"));
+          expect(ran.indexOf("dmg")).toBeLessThan(ran.indexOf("adopt"));
         } else {
           expect(ran).not.toContain("dmg");
         }
-        expect(ran).not.toContain("feed-rehearsal");
-        expect(ran).toEqual(
-          expect.arrayContaining(["homebrew-public", "homebrew-fetch-back", "tap"]),
-        );
-        // The signing job ends after the image and its handoff; publication
-        // starts by validating that handoff, before any effect.
+        for (const rehearsal of ["rehearsal-files", "tap-rehearsal", "feed-rehearsal"])
+          expect(ran).not.toContain(rehearsal);
+        // The signing job ends after the image and its handoff; the upload
+        // job starts by validating that handoff, before any effect.
         expect(ran.indexOf("handoff")).toBeGreaterThan(ran.indexOf(direct ? "dmg" : "recorded"));
         expect(ran.indexOf("handoff-check")).toBeGreaterThan(ran.indexOf("handoff-upload"));
         expect(ran.indexOf("handoff-check")).toBeLessThan(ran.indexOf("private"));
-        expect(ran.indexOf("homebrew-fetch-back")).toBeGreaterThan(ran.indexOf("homebrew-public"));
-        expect(ran.indexOf("tap")).toBeGreaterThan(ran.indexOf("homebrew-fetch-back"));
-        expect(ran).not.toContain("tap-rehearsal");
       }
-      expect(JSON.stringify(step("public-fetch-back").env)).not.toContain("secrets.");
-      // Publication reads the validated handoff's zip, the record's own (INF-1716).
-      expect(step("public").env?.DIST_ZIP).toBe("${{ steps.handoff-check.outputs.zip }}");
-      expect(step("public").env?.DIST_DMG).toBe("${{ steps.recorded-dmg.outputs.zip }}");
-      for (const id of ["private-fetch-back", "public-fetch-back"])
-        expect(step(id).env?.ARTIFACT_SHA256).toBe("${{ needs.release.outputs.sha256 }}");
+      expect(JSON.stringify(step("public-fetch-back").env ?? {})).not.toContain("secrets.");
+      // Every place gets the record's zip and the disk image the places
+      // already hold, or this attempt's; the virtual Mac checks each copy
+      // against the upload job's list and the signing job's zip.
+      expect(step("upload").env?.ZIP).toBe("${{ steps.private.outputs.zip }}");
+      expect(step("upload").env?.DMG).toBe("${{ steps.adopt.outputs.dmg }}");
+      expect(step("expected").env?.FILES).toBe("${{ needs.upload.outputs.files }}");
+      expect(step("expected").env?.ZIP_SHA256).toBe("${{ needs.release.outputs.sha256 }}");
       expect(
         steps
           .filter(
@@ -3764,12 +4123,10 @@ describe("the signed channel workflow", () => {
         "visibility",
         "recorded",
         "private",
-        "recorded-dmg",
+        "adopt",
+        "upload",
         "private-fetch-back",
-        "public",
-        "homebrew-public",
         "tap",
-        "old-public",
         "old-tap",
         "feeds",
       ]);
@@ -3782,12 +4139,13 @@ describe("the signed channel workflow", () => {
       // Revised INF-643: retain both paths, including the already-activated old-cask bridge.
       const inactive = ranSteps(channel, false, false).map((step) => step.id);
       const active = ranSteps(channel, false, true).map((step) => step.id);
-      for (const id of ["old-public", "old-public-fetch-back", "old-tap"]) {
+      for (const id of ["old-public-fetch-back", "old-tap"]) {
         expect(inactive).not.toContain(id);
         expect(active).toContain(id);
       }
-      expect(active.indexOf("old-public-fetch-back")).toBeGreaterThan(active.indexOf("old-public"));
+      expect(active.indexOf("old-public-fetch-back")).toBeGreaterThan(active.indexOf("upload"));
       expect(active.indexOf("old-tap")).toBeGreaterThan(active.indexOf("old-public-fetch-back"));
+      expect(active.indexOf("old-tap")).toBeGreaterThan(active.indexOf("tap"));
       for (const id of ["homebrew-fetch-back", "old-public-fetch-back"])
         expect(JSON.stringify(step(id).env)).not.toContain("secrets.");
       expect(step("tap").env?.DOWNLOAD_URL).toBe("${{ needs.resolve.outputs.download_url }}");
@@ -4167,6 +4525,8 @@ it("sends every Linux job to LINUX_RUNNER, and hosted Ubuntu when it is unset, u
     "release.yml:resolve",
     "release.yml:notes",
     "release.yml:phone",
+    // INF-2498's plan, piece 2: the uploads, on a machine GitHub hosts.
+    "release.yml:upload",
     "ios-release.yml:resolve",
     "ios-release.yml:availability",
     // main.yml is its only caller (INF-2441).
@@ -4359,7 +4719,7 @@ describe("a release's hosted machines", () => {
         (matrix) =>
           `${matrix.system} ${matrix.image ?? matrix.runner}: ${runsOn(packages.check, { matrix, inputs: { hosted }, vars })}`,
       ),
-      own: ["resolve", "notes", "phone"].map((id) => literal(release[id])),
+      own: ["resolve", "notes", "phone", "upload"].map((id) => literal(release[id])),
     };
   };
   const hostedRelease = {
@@ -4368,7 +4728,7 @@ describe("a release's hosted machines", () => {
     journeys: "ubuntu-24.04",
     build: "ubuntu-24.04",
     packages: everyCheck((runner) => runner),
-    own: ["ubuntu-24.04", "ubuntu-24.04", "ubuntu-24.04"],
+    own: ["ubuntu-24.04", "ubuntu-24.04", "ubuntu-24.04", "ubuntu-24.04"],
   };
 
   it("runs every Linux job of a release on GitHub's hosted Ubuntu, publishing or dry run", () => {
@@ -4746,7 +5106,7 @@ describe("the private alpha (roadmap 1.2)", () => {
   it("publishes the selected source's finalized downloads and verifies them without a sign-in", () => {
     const workflow = loadYamlFile(".github/workflows/release.yml") as {
       jobs: Record<
-        "release" | "publish",
+        "release" | "upload" | "publish",
         { env: Record<string, string>; steps: { id?: string; env?: Record<string, string> }[] }
       >;
     };
@@ -4765,10 +5125,13 @@ describe("the private alpha (roadmap 1.2)", () => {
     };
     expect(workflowValue(job.env.PUBLIC_TAG ?? "", context)).toBe("v1.2.3");
     expect(workflowValue(job.env.RELEASE_REPOSITORY ?? "", context)).toBe(releaseSource.repository);
-    // The publication job publishes under the same names (INF-1716).
+    // The upload and publication jobs publish under the same names (INF-1716).
     expect(publication.env).toEqual(job.env);
+    for (const [name, value] of Object.entries(workflow.jobs.upload.env))
+      expect(value, name).toBe(job.env[name]);
+    // Cloudflare's copies are fetched back with no credential at all.
     const publicRead = publication.steps.find((step) => step.id === "public-fetch-back");
-    expect(Object.keys(publicRead?.env ?? {})).toEqual(["ARTIFACT_SHA256"]);
+    expect(publicRead?.env).toBeUndefined();
   });
 });
 
@@ -5656,7 +6019,7 @@ describe("an alpha with nothing new to build", () => {
       Object.entries(skipped).filter(([id, value]) => id !== "resolve" && value !== "skipped"),
     ).toEqual([]);
     const cut = results("false");
-    for (const id of ["notes", "phone", "linux", "release", "update", "publish"])
+    for (const id of ["notes", "phone", "linux", "release", "update", "upload", "publish"])
       expect(cut[id], id).toBe("success");
     // The gate's skip reaches the resolve job's own later steps and outputs.
     expect(release.jobs.resolve?.outputs?.skip).toContain("steps.gate.outputs.skip");

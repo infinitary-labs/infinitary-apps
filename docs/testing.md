@@ -484,7 +484,7 @@ Every Linux job that decides or builds a release, and every Linux job of main's 
 A hosted machine starts at once, so a release never waits in the PC's line behind pull requests and requested runs, and its Linux checks finish sooner than on the PC's two-processor machines.
 The cost is GitHub's per-minute bill for those jobs.
 
-`release.yml`'s own Linux jobs, `resolve`, `notes` and `phone`, name `ubuntu-24.04`, publishing or dry run.
+`release.yml`'s own Linux jobs, `resolve`, `notes`, `phone` and `upload`, name `ubuntu-24.04`, publishing or dry run.
 `release.yml` and `main.yml` pass `hosted: true` to the workflows they call:
 
 - `verify.yml`, whose `request` job, `linux-checks` lane and every `linux-e2e` journey job (`source-journeys.yml`, through the same input) take it;
@@ -1171,7 +1171,7 @@ A virtual Mac's size bounds it but guarantees it nothing, because its cores are 
 A job that signs with the captain's Apple certificates asks for the real Mac: `release.yml`'s signing job, by the `sign` kind, and `ios-release.yml`'s TestFlight job, by the `testflight` kind.
 Where its kind has no queue, each reads `${{ vars.REAL_MAC_RUNNER || vars.MAC_RUNNER || <its fallback> }}`, so until the switch sets `REAL_MAC_RUNNER` it runs where it ran before.
 The signed installer's build and Apple-silicon checks, the release's Apple-silicon update check and `release.yml`'s publication job ask for a virtual Mac by the `build` and `light` kinds, or by the placement service's `mini-mac-virtual` label where those have no queue.
-The publication job holds no Apple signing material: it publishes and checks the files the signing job handed over once the disk image passed its check (`docs/alpha.md`, "Signing on the real Mac, publication in a virtual Mac").
+The publication job holds no Apple signing material and uploads nothing: it fetches back and checks every copy a hosted upload job put in place from the signing job's handoff, then switches the casks and feeds (`docs/alpha.md`, "Signing on the real Mac, uploads on a hosted machine, checks in a virtual Mac").
 The signing job runs while the release's checks run (`docs/alpha.md`, "Signing while the checks run"), so it holds the real Mac during the release's Mac lane, which then takes a virtual place or waits.
 These checks require throwaway guests for their signing, trust changes or writes to `/Applications`; the signed installer's Intel check, run only on request, stays on a disposable hosted Mac (`docs/alpha.md`, "Isolated signed verification").
 The phone check reads its `phone` kind's queue, or that label from `VIRTUAL_MAC_RUNNER` when the variable is set, so it starts on the next free virtual place; the Mac mini has one, so there it starts after any other phone check (`docs/ios.md`, "A phone check the placement service puts in a virtual Mac").

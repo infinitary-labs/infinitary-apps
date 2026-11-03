@@ -366,22 +366,26 @@ describe("automatic alpha workflow handoff (INF-2259)", () => {
       phone: { result: "success" },
       release: { result: "success" },
       update: { result: "success" },
+      upload: { result: "success" },
     };
     expect(workflowValue(job("verify").if!, { needs })).toBe(false);
-    for (const name of ["release", "update", "publish"])
+    for (const name of ["release", "update", "upload", "publish"])
       expect(workflowValue(job(name).if!, { needs }), name).toBe(true);
-    for (const failed of ["notes", "linux", "phone", "release", "update"])
+    for (const name of ["upload", "publish"]) {
+      for (const failed of ["notes", "linux", "phone", "release", "update"])
+        expect(
+          workflowValue(job(name).if!, { needs: { ...needs, [failed]: { result: "failure" } } }),
+          `${name} after a failed ${failed}`,
+        ).toBe(false);
       expect(
-        workflowValue(job("publish").if!, { needs: { ...needs, [failed]: { result: "failure" } } }),
-        failed,
+        workflowValue(job(name).if!, {
+          needs: {
+            ...needs,
+            resolve: { ...needs.resolve, outputs: { ...needs.resolve.outputs, main_run: "" } },
+          },
+        }),
+        name,
       ).toBe(false);
-    expect(
-      workflowValue(job("publish").if!, {
-        needs: {
-          ...needs,
-          resolve: { ...needs.resolve, outputs: { ...needs.resolve.outputs, main_run: "" } },
-        },
-      }),
-    ).toBe(false);
+    }
   });
 });

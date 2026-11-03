@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "hosted-release-uploads",
+      "reason": "Internal release pipeline: a GitHub-hosted job uploads each release's files to every download place at once, and the virtual Mac downloads and checks every copy before switching the casks and feeds; the published app and its downloads are unchanged."
+    }
+  ]
+}

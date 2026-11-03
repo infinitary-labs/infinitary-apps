@@ -133,8 +133,11 @@ if (verb === "view") {
     fs.copyFileSync(file, path.join(dir, path.basename(file)));
   }
 } else if (verb === "download") {
-  if (!assets().includes(flag("--pattern"))) fail("no assets match the file pattern");
-  fs.copyFileSync(path.join(dir, flag("--pattern")), path.join(flag("--dir"), flag("--pattern")));
+  // Every asset any --pattern names, as gh downloads them; none is a failure.
+  const named = args.flatMap((arg, at) => (args[at - 1] === "--pattern" ? [arg] : []));
+  const found = assets().filter((name) => named.includes(name));
+  if (found.length === 0) fail("no assets match the file pattern");
+  for (const name of found) fs.copyFileSync(path.join(dir, name), path.join(flag("--dir"), name));
 } else fail("unexpected gh call: " + args.join(" "));
 `,
   );
@@ -222,6 +225,17 @@ if (verb === "view") {
         )
       : null;
   };
+  /** A release's assets as bytes, for binary files `published` would decode. */
+  const publishedBytes = (repo: string, tag: string) => {
+    const release = join(state, repo.replace("/", "__"), tag);
+    return existsSync(release)
+      ? Object.fromEntries(
+          readdirSync(release)
+            .filter((name) => name !== ".release.json")
+            .map((name) => [name, readFileSync(join(release, name))]),
+        )
+      : null;
+  };
   const created = (repo: string, tag: string) =>
     (
       JSON.parse(
@@ -229,10 +243,12 @@ if (verb === "view") {
       ) as { args: string[] }
     ).args;
   const calls = () =>
-    readFileSync(join(state, "calls.jsonl"), "utf8")
-      .split("\n")
-      .filter(Boolean)
-      .map((line) => JSON.parse(line) as string[]);
+    existsSync(join(state, "calls.jsonl"))
+      ? readFileSync(join(state, "calls.jsonl"), "utf8")
+          .split("\n")
+          .filter(Boolean)
+          .map((line) => JSON.parse(line) as string[])
+      : [];
   /** Runs the stand-in `gh` directly, the way a person at the repository would. */
   const gh = (...args: string[]) =>
     spawnSync(join(bin, "gh"), args, { env: baseEnv(dir), encoding: "utf8" });
@@ -241,5 +257,5 @@ if (verb === "view") {
     const shown = gh("api", `repos/${repo}/releases/latest`, "--jq", '"\\(.id) \\(.tag_name)"');
     return shown.status === 0 ? shown.stdout.trim().split(" ")[1] : null;
   };
-  return { bin, zip, seed, run, published, created, calls, gh, latest };
+  return { bin, zip, seed, run, published, publishedBytes, created, calls, gh, latest };
 }

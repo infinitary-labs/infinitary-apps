@@ -662,12 +662,13 @@ Spec: `fm3000-claude-meter-stale-refresh-s1` §11.2.
   `AccountBackend` gained `health()` and `renew()` (`src/core/accounts/accountBackend.ts`).
   `status()` is a projection of health so the vault's connected badge keeps working.
   `CredentialHealth` never carries a secret; a caller that needs the fresh credential re-resolves.
-  Claude's delegated ladder lives in `ClaudeAuthBackend.renew`; Pi declares that resolve-is-renewal (`getAuth`); a backend with no unattended mechanism answers `unsupported` (spec §11.3).
+  Claude's sessions renew themselves; `ClaudeAuthBackend.renew` only asks the idle client once after vendor rejection, while Pi declares that resolve-is-renewal (`getAuth`); a backend with no unattended mechanism answers `unsupported` (spec §11.3).
   `fetchQuota`'s `auth.renew` is one caller of the same method (the reactive 401 path), not its owner.
 - **Five-rule contract** (`src/core/accounts/credentialHealth.ts`): (1) sign in once - extra grants at connect; (2) self-heal invisibly; (3) unknown is never absent, and a no-UI / no-interaction failure is never a sign-out; (4) `needs_reauth` only from proof (provider-refused refresh token, or a 401 that survived a real renewal); (5) the terminal state is first-class, visible, one-step recoverable (CD-3=A card + Subscriptions CTA).
 - **Loop.**
   `CredentialHealthService` rides the supervisor's existing 60s tick (`onWatchdogTick`), a fourth rider beside the quiet watchdog, R1 gates, and the inbox ladder.
-  Per enabled account: read health, renew at `expiresAt - lead` (10 min) before the vendor 401, bound retries (3), never fabricate healthy on a failed renew.
+  Per enabled account: read health; for a backend that reports expiring, renew at `expiresAt - lead` (10 min), bound retries (3), and never fabricate healthy on a failed renew.
+  Claude reports a readable store as healthy regardless of advisory expiry and makes no proactive renewal or status request on this tick.
   A degraded no-interactive-session block has no in-process remedy and is explicitly not terminal.
 - **Ceilings stay honest.**
   Unifying the seam does not rewrite shipped CD decisions: Claude is still one default login (CD-1=B), Keychain VALUE still rides the host capability (CD-5=B), and the needs_reauth card is still proof-gated (CD-3=A).
@@ -677,12 +678,12 @@ Spec: `fm3000-claude-meter-stale-refresh-s1` §11.2.
 Rule 1 says sign in once, and the Claude Keychain grant is the one extra ask.
 Two things kept turning that into a repeat ask on a Mac whose Claude login lives **only** in the Keychain - no `.credentials.json` sidecar to fall back to, which is the ordinary case.
 
-- **The credential is remembered in memory** (`credentialCache`, `src/core/claude/claudeQuota.ts`), per config root, bounded by its own `expiresAt` and keyed to observable store identity.
+- **The credential is remembered in memory** (`credentialCache`, `src/core/claude/claudeQuota.ts`), per config root, keyed to observable store identity and retained through advisory access expiry.
   The identity is the account UUID plus config-file path and mtime when available, with the Keychain item's modification date covering a Keychain-only login; an external account rotation therefore invalidates the cache without spending a Keychain VALUE read on every unchanged tick.
   Claude Code's account config lookup gives `<config_home>/.config.json` legacy precedence, then uses `(CLAUDE_CONFIG_DIR || HOME)/.claude.json` - not `~/.claude/.claude.json`.
   Without the cache every quota tick - five minutes, plus window focus, resume and startup - spent its own VALUE read, so a grant that did not stick bought exactly one measurement and the meter failed again inside the same launch.
   The credential is never persisted, logged, or sent across the preload boundary.
-  Two callers deliberately bypass it: a renewal, which must observe the store to detect a change at all, and the file-only health peek, which must stay file-only.
+  Health shares the same reader and cache; the one idle status request bypasses the cache before and after running so a rewrite inside the modification date’s resolution remains observable.
   A user-initiated read (Retry, or the reading asked for once a sign-in ends) bypasses it too - "look again" is what the click means.
 - **A suppressed dialog is not an absent session.**
   Background reads pass `interactive: false`, so macOS refuses an item Infinitary has not been granted access to with the same status an SSH session gets.
@@ -773,7 +774,7 @@ Every class reaches the seat through the one admission ladder, the same for a Pi
   Whenever the seat's account serves, any pause card up - one a previous run left too - is taken down.
 - **Nothing is attempted while paused.**
   The drain returns at admission before any prompt; a failed seat turn releases its rows through the honest retry (`releaseAfterProviderFailure`, never before a spent allowance's reset) instead of spending attempts; a cut-off turn that pauses the seat parks the captain's live words and every steer it took in on the inbox as theirs; a cut-off the account does not hold (a spent allowance with no known reset) pauses nothing, so it is an ordinary failure with its card, its words - live and steered - waiting through the honest retry like any failed turn's, never invisible and retried.
-  Once the words are a row, that row is their one copy: the failure card's Retry makes the lane due now rather than re-sending them, and a clean turn takes the card down; and the seat lets go of a client that holds its sign-in's store (`ModelSession.detach`), so the health probe can read it.
+  Once the words are a row, that row is their one copy: the failure card's Retry makes the lane due now rather than re-sending them, and a clean turn takes the card down; and the seat lets go of a client that holds its sign-in's store (`ModelSession.detach`), so an idle rejection can ask the client without racing the seat.
   A sign-in or sign-out holds the seat off the account it rewrites and detaches it at an idle boundary first (`AccountVault`'s `holdSeat`, `FirstmateAgent.holdSeatFor`).
 - **Each kept message says so** (FI3-592).
   A captain message the paused seat keeps - typed in the main input, or a reply under one of its own cards - writes one feed line through `broadcastEvent` and keeps the same words as the message's reply line (`FirstmateAgent.keptReceipt`, words from `keptMessageWords`): that it is saved, the pause's own sentence (`Flagship.pauseSentence`), and the way back that still reaches the captain once the captain has closed the pause card - the class's fact, or another model for the first mate in Settings.
@@ -901,8 +902,8 @@ Moved verbatim from `AGENTS.md` on 2026-09-24; `AGENTS.md` keeps a one-line poin
   Backend admission: `ControlProfile` and `admits` in `src/core/session/session.ts` - the seat preset needs native steer; followup-queue backends serve crewmates only, and each session repeats its factory's profile so the supervisor can decide per task.
 - Credential health (provider-agnostic, `docs/architecture.md` §16.4): `AccountBackend.health()` / `renew()` is the one owner of "keep every account healthy".
   `status()` is a projection of health.
-  Pi's `getAuth` is resolve-is-renewal; Claude's delegated ladder lives in `ClaudeAuthBackend.renew`.
-  `CredentialHealthService` rides the supervisor's 60s tick and renews at `expiresAt - lead` *before* the vendor 401; `fetchQuota`'s `auth.renew` is the reactive 401 caller of the same method.
+  Pi's `getAuth` is resolve-is-renewal; Claude sessions renew themselves, and `ClaudeAuthBackend.renew` asks the client once only after an idle vendor rejection.
+  `CredentialHealthService` rides the supervisor's 60s tick and renews expiring non-Claude credentials at `expiresAt - lead` *before* the vendor 401; `fetchQuota`'s `auth.renew` is the reactive 401 caller of the same method.
   Five-rule contract in `src/core/accounts/credentialHealth.ts`: sign in once; self-heal invisibly; unknown is never absent and a no-UI failure is never a sign-out; `needs_reauth` only from proof (provider-refused refresh or a 401 that survived a real renewal); the terminal state is first-class and one-step recoverable.
   A renew failure degrades honestly, never fabricates health.
   Do not add a second renewer.

@@ -1,0 +1,8 @@
+{
+  "exclusions": [
+    {
+      "id": "claude-session-owned-renewal",
+      "reason": "Internal Claude sign-in simplification: sessions own renewal, health reads the cached store and an idle vendor rejection asks the client once without a command ladder or renewal wait. The existing account row, recovery states and sign-in controls remain unchanged."
+    }
+  ]
+}

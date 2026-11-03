@@ -1,9 +1,8 @@
-import { mkdirSync, utimesSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, utimesSync, writeFileSync } from "node:fs";
 import { createServer, type Server } from "node:http";
 import type { AddressInfo } from "node:net";
 import { join } from "node:path";
 import { expect, test } from "@playwright/test";
-import Database from "better-sqlite3";
 import { claudeWindowLabel } from "../../src/core/quota/providers/claude";
 import { COPILOT_PLAN, COPILOT_PREMIUM_LABEL } from "../../src/core/quota/providers/copilot";
 import {
@@ -17,13 +16,14 @@ import {
   EMPTY_QUOTA_TEXT,
 } from "../../src/renderer/src/settings/subscriptionsWords";
 import { needsReauthCopy } from "../../src/shared/credentialHealth";
-import { catalogEntry } from "../../src/shared/providers";
+import { CLAUDE_PROVIDER_ID, catalogEntry } from "../../src/shared/providers";
 import { scratchDir } from "../helpers/scratchDirs";
 import { consumerConfigMessage, grpcWebOkBody } from "../support/grpcWebEncoder";
 import { type LaunchedApp, launchApp } from "./launch";
 import { resizeWindow } from "./layout";
 import { claudeDefaultStore, writeMockClaudeClient } from "./mockClaudeClient";
 import { regionShot } from "./pictures";
+import { readSavedData } from "./savedData";
 import { focusOn, pressKey } from "./windowKeys";
 
 /**
@@ -509,8 +509,7 @@ function readNewestSnapshotRow(
   userDataDir: string,
   provider: string,
 ): { status: string; reason?: string } | undefined {
-  const db = new Database(join(userDataDir, "firstmate.db"), { readonly: true });
-  try {
+  return readSavedData(userDataDir, (db) => {
     const row = db.prepare("SELECT json FROM quota_snapshots ORDER BY id DESC LIMIT 1").get() as
       | { json: string }
       | undefined;
@@ -519,14 +518,26 @@ function readNewestSnapshotRow(
       providers: { provider: string; status: string; reason?: string }[];
     };
     return snapshot.providers.find((entry) => entry.provider === provider);
-  } finally {
-    db.close();
-  }
+  });
 }
 
 async function openSubscriptions(app: LaunchedApp) {
   await app.page.getByRole("button", { name: "Settings" }).click();
   await app.page.getByRole("tab", { name: "Intelligence" }).click();
+}
+
+/**
+ * INF-2320: an idle-recovery journey owns that prerequisite. This auth-only
+ * stand-in does not answer the model-list protocol. Its settled fallback log
+ * is emitted after the catalog reader releases the store slot; opening the
+ * tab alone does not mean startup has released it.
+ */
+async function untilClaudeCatalogSettles(app: LaunchedApp) {
+  await expect
+    .poll(() => readFileSync(join(app.diagnosticsDir, "main.stderr.log"), "utf8"), {
+      timeout: 20_000,
+    })
+    .toContain(`[models] ${CLAUDE_PROVIDER_ID} model list unavailable`);
 }
 
 /** An account's row in Settings → Intelligence, where its allowance shows. */
@@ -679,28 +690,28 @@ test.describe("the real quota sensor, end to end", () => {
     await regionShot(row, test.info().outputPath("claude-unreadable-stale.png"));
   });
 
-  test("an expired token recovers through the account's own client, with no sign-in", async () => {
+  test("an idle rejected token recovers through the account's own client, with no sign-in", async () => {
     const userDataDir = scratchDir("infinitary-e2e-");
-    // The vendor accepts only what the client will write during renewal.
-    stub = await startStubUsage(["renewed-token"]);
+    // Let startup finish under the saved sign-in, then reject it while idle.
+    stub = await startStubUsage(["expired-token", "renewed-token"]);
     seedAccounts(userDataDir);
     const binDir = join(userDataDir, "bin");
     const client = writeMockClaudeClient(binDir);
-    // The stand-in client renews the way the real one does: it rewrites the
-    // store it owns, and Infinitary never speaks the vendor's OAuth itself. It
-    // renews on `doctor` and not on `auth status`, which also exercises the
-    // ladder: the code does not presume WHICH supported command renews, it
-    // walks them and stops at the one that actually changes the store.
+    // INF-2320: the idle rejection asks status once, not a command ladder.
+    // The stand-in writes its own store on that request, as the installed
+    // client may; the request log proves health did not ask it beforehand.
+    const requests = join(userDataDir, "refresh-requests.jsonl");
     writeFileSync(
       join(binDir, "renewing-claude.mjs"),
       `#!/usr/bin/env node
-import { writeFileSync } from "node:fs";
+import { appendFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { spawnSync } from "node:child_process";
 const home = process.env.HOME;
 const dir = process.env.CLAUDE_CONFIG_DIR || (home ? join(home, ".claude") : undefined);
 const args = process.argv.slice(2);
-if (dir && args[0] === "doctor") {
+if (dir && args[0] === "auth" && args[1] === "status") {
+  appendFileSync(${JSON.stringify(requests)}, JSON.stringify(args) + "\\n");
   writeFileSync(join(dir, ".credentials.json"), JSON.stringify({
     claudeAiOauth: {
       accessToken: "renewed-token",
@@ -728,19 +739,50 @@ process.exit(run.status ?? 0);
     await openSubscriptions(app);
     const row = accountRow(app, CLAUDE_PERSONAL);
 
-    await expect(row.getByText(claudeWindowLabel("five_hour"), { exact: true })).toBeVisible({
-      timeout: 20_000,
-    });
-    // Routine expiry recovered on its own: the rejected token was renewed
-    // through the account's own client and the retry landed.
-    expect(stub.seen).toContain("expired-token");
-    expect(stub.seen).toContain("renewed-token");
-    await expect(row.getByText(EMPTY_QUOTA_TEXT.signInAgain)).toHaveCount(0);
-    // And the recovery left its positive trace in the persisted snapshot -
-    // read here exactly the way a live validation reads it, because an `ok`
-    // row with no marker is indistinguishable from plain network recovery.
-    const claudeRow = readNewestSnapshotRow(userDataDir, "claude");
-    expect(claudeRow).toMatchObject({ status: "ok", reason: "renewal_succeeded" });
+    await expect(row.getByText(claudeWindowLabel("five_hour"), { exact: true })).toBeVisible();
+    await untilClaudeCatalogSettles(app);
+    const beforeRejection = stub.seen.length;
+    stub.accept.delete("expired-token");
+
+    const clientRequests = () =>
+      existsSync(requests)
+        ? readFileSync(requests, "utf8")
+            .trim()
+            .split("\n")
+            .map((line) => JSON.parse(line))
+        : [];
+    try {
+      expect(clientRequests()).toEqual([]);
+      const refresh = app.page.getByRole("button", { name: "Refresh", exact: true });
+      await focusOn(refresh);
+      await pressKey(refresh, "Enter");
+      await expect
+        .poll(() => readNewestSnapshotRow(userDataDir, "claude"))
+        .toMatchObject({
+          status: "ok",
+          reason: "renewal_succeeded",
+        });
+      await expect(row.getByText(claudeWindowLabel("five_hour"), { exact: true })).toBeVisible();
+      // A recovery needs both the rejected request and the accepted replacement.
+      expect(stub.seen).toContain("expired-token");
+      expect(stub.seen).toContain("renewed-token");
+      await expect(row.getByText(EMPTY_QUOTA_TEXT.signInAgain)).toHaveCount(0);
+      expect(clientRequests()).toEqual([["auth", "status", "--json"]]);
+    } finally {
+      // Keep the reason even when the visible allowance never arrives.
+      await test.info().attach("idle-refresh-receipt", {
+        body: JSON.stringify({
+          clientRequests: clientRequests(),
+          requests: stub.seen
+            .slice(beforeRejection)
+            .map((token) =>
+              token === "expired-token" ? "rejected saved sign-in" : "accepted replacement",
+            ),
+          persisted: readNewestSnapshotRow(userDataDir, "claude"),
+        }),
+        contentType: "application/json",
+      });
+    }
   });
 
   test("INF-2317: a passed refresh date still reads the allowance without a sign-in", async () => {
@@ -780,7 +822,7 @@ process.exit(run.status ?? 0);
   // client and home are its only resources.
   test("INF-2319: Sign in after Anthropic refuses runs Claude's own login, and the new sign-in reads", async () => {
     const userDataDir = scratchDir("infinitary-e2e-claude-sign-in-");
-    stub = await startStubUsage(["fresh-token"]);
+    stub = await startStubUsage(["refused-token", "fresh-token"]);
     seedAccounts(userDataDir);
     const binDir = join(userDataDir, "bin");
     const client = writeMockClaudeClient(binDir);
@@ -813,7 +855,7 @@ const write = (accessToken) =>
       subscriptionType: "max",
     },
   }), { mode: 0o600 });
-if (file && args[0] === "doctor" && current() !== "fresh-token") write("refused-" + Date.now());
+if (file && args[0] === "auth" && args[1] === "status" && current() !== "fresh-token") write("refused-" + Date.now());
 if (file && args[0] === "auth" && args[1] === "login") write("fresh-token");
 const run = spawnSync(process.execPath, [${JSON.stringify(client)}, ...args], { stdio: "inherit" });
 process.exit(run.status ?? 0);
@@ -830,6 +872,12 @@ process.exit(run.status ?? 0);
     });
     await openSubscriptions(app);
     const row = accountRow(app, CLAUDE_PERSONAL);
+    await expect(row.getByText(claudeWindowLabel("five_hour"), { exact: true })).toBeVisible();
+    await untilClaudeCatalogSettles(app);
+    stub.accept.delete("refused-token");
+    const refresh = app.page.getByRole("button", { name: "Refresh", exact: true });
+    await focusOn(refresh);
+    await pressKey(refresh, "Enter");
     const signIn = row.getByRole("button", { name: "Sign in", exact: true });
     await expect(row.getByText(EMPTY_QUOTA_TEXT.signInAgain)).toBeVisible({ timeout: 20_000 });
     expect(stub.seen).toContain("refused-token");

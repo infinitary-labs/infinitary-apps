@@ -1054,7 +1054,8 @@ Nothing of the home's sign-ins is sent here, and nothing of these goes to the ho
   This computer's sign-ins whole carry the host it is signed in to, who GitHub says it is and its health, and every host it offers (`forges`), never the sign-in itself.
 - **Allowance and renewal, here alone.**
   This computer reads each account's allowance with its own store every five minutes and after a sign-in, and tells the home its sign-ins whole as `inf:work:sign-ins` after any change.
-  A 401 is renewed here, and proactive renewal runs on this computer's own clock (`CredentialHealthService`); the home holds no store for these accounts, so it cannot renew one.
+  A 401 is handled here, and non-Claude proactive renewal runs on this computer's own clock (`CredentialHealthService`); the home holds no store for these accounts, so it cannot renew one.
+  Claude sessions renew themselves here too; only an idle rejection asks the client once, with no health-tick status poll or renewal wait.
 - **A turn's facts are this computer's.**
   A typed cut-off a conversation here meets - a lost sign-in, a refusal, a spent allowance - is recorded on the account it is bound to, in this computer's own store (`AccountVault.noteCutOff`, through `ownAccounts` in `src/core/helper/conversations.ts`), where its own health reads clear it as the home's clear its own: its minute's read sees a login signed in again here, a good allowance reading or a turn that succeeded on it clears a sign-out, and a spent allowance ends at its reset.
   The home records none of it on its own accounts, so its first mate and crew keep serving from its own subscriptions, and no cut-off on the home's accounts holds a task that runs here either.

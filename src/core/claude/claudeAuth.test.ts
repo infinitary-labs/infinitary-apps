@@ -52,7 +52,18 @@ const fakeStore = async (configDir: string): Promise<ClaudeStoreRead> => {
   const marker = join(configDir, "credential");
   const written = existsSync(marker) ? readFileSync(marker, "utf8") : "";
   return written.length > 0
-    ? { state: "present" as const, auth: { accessToken: written }, identity: {} }
+    ? {
+        state: "present" as const,
+        auth: {
+          accessToken: written,
+          ...(existsSync(join(configDir, "plan"))
+            ? { subscriptionType: readFileSync(join(configDir, "plan"), "utf8") }
+            : {}),
+        },
+        identity: existsSync(join(configDir, "identity-email"))
+          ? { label: readFileSync(join(configDir, "identity-email"), "utf8") }
+          : {},
+      }
     : { state: "absent" };
 };
 
@@ -76,6 +87,10 @@ function fakeClient(options: { identity?: { email: string; plan: string } } = {}
         }
         // Every login the client makes is a new credential.
         writeFileSync(marker, `opaque-credential-written-by-the-client-${client.calls.length}`);
+        if (options.identity) {
+          writeFileSync(join(configDir, "identity-email"), options.identity.email);
+          writeFileSync(join(configDir, "plan"), options.identity.plan);
+        }
         return { code: 0, stdout: "", stderr: "" };
       }
       if (args[0] === "auth" && args[1] === "logout") {
@@ -1386,7 +1401,7 @@ describe("ClaudeAuthBackend health/renew", () => {
       },
     });
 
-  it("classifies a live token inside the lead window as expiring, not needs_reauth", async () => {
+  it("INF-2320: keeps a saved token healthy inside the former proactive lead window", async () => {
     const now = 1_000_000;
     const store = accountDir("expiring");
     writeFileSync(join(store, "credential"), "opaque");
@@ -1399,10 +1414,9 @@ describe("ClaudeAuthBackend health/renew", () => {
       available: () => true,
       configDir: () => store,
       now: () => now,
-      leadMs: 5 * 60_000,
     });
     const health = await backend.health(ref(store));
-    expect(health.state).toBe("expiring");
+    expect(health.state).toBe("healthy");
     expect(health.expiresAt).toBe(now + 60_000);
     expect((await backend.status(ref(store))).connected).toBe(true);
   });
@@ -1468,7 +1482,122 @@ describe("ClaudeAuthBackend health/renew", () => {
       available: () => true,
       configDir: () => store,
     });
-    expect(await backend.renew(ref(store), "proactive")).toEqual({ outcome: "renewed" });
+    expect(await backend.renew(ref(store), "vendor_rejected")).toEqual({ outcome: "renewed" });
+  });
+});
+
+// INF-2320: preserve honest outcomes from the retired ladder at the backend owner.
+describe("the one idle client request", () => {
+  beforeEach(() => {
+    resetStoreLeasesForTest();
+    clearClaudeCredentialCache();
+  });
+  const ref = (dir: string) => ({
+    providerId: CLAUDE_PROVIDER_ID,
+    accountId: "acct_recovery",
+    dir,
+  });
+  const saved = {
+    state: "present" as const,
+    auth: { accessToken: "saved", expiresAt: 1000 },
+    identity: {},
+  };
+
+  it.each(["absent", "unreadable"] as const)(
+    "does not ask a client for a %s store",
+    async (state) => {
+      const run = vi.fn(unspawnableClient);
+      const dir = accountDir("empty-recovery");
+      const backend = new ClaudeAuthBackend({
+        available: () => true,
+        configDir: () => dir,
+        run,
+        readStore: async () => ({ state }),
+      });
+      expect(await backend.renew(ref(dir), "vendor_rejected")).toEqual({
+        outcome: state === "absent" ? "no_credential" : "unreadable",
+      });
+      expect(run).not.toHaveBeenCalled();
+    },
+  );
+
+  it("reports an unreadable post-request store, never an unchanged or renewed one", async () => {
+    const dir = accountDir("unreadable-recovery");
+    let read: ClaudeStoreRead = saved;
+    const backend = new ClaudeAuthBackend({
+      available: () => true,
+      configDir: () => dir,
+      readStore: async () => read,
+      run: async () => {
+        read = { state: "unreadable" };
+        return { code: 0, stdout: "{}", stderr: "" };
+      },
+    });
+    expect(await backend.renew(ref(dir), "vendor_rejected")).toEqual({ outcome: "unreadable" });
+  });
+
+  it("reports a client that cannot run as failed without trying another command", async () => {
+    const dir = accountDir("failed-recovery");
+    const run = vi.fn(unspawnableClient);
+    const backend = new ClaudeAuthBackend({
+      available: () => true,
+      configDir: () => dir,
+      readStore: async () => saved,
+      run,
+    });
+    expect(await backend.renew(ref(dir), "vendor_rejected")).toEqual({ outcome: "failed" });
+    expect(run).toHaveBeenCalledExactlyOnceWith(["auth", "status", "--json"], dir);
+  });
+
+  it("a failed exit with an unchanged store is not a completed refresh", async () => {
+    const dir = accountDir("failed-exit");
+    const backend = new ClaudeAuthBackend({
+      available: () => true,
+      configDir: () => dir,
+      readStore: async () => saved,
+      run: async () => ({ code: 1, stdout: "", stderr: "client failed" }),
+    });
+    expect(await backend.renew(ref(dir), "vendor_rejected")).toEqual({ outcome: "failed" });
+  });
+
+  it("spends at most one refresh for concurrent rejections, with no queue of duplicate requests", async () => {
+    const dir = accountDir("concurrent-recovery");
+    let read: ClaudeStoreRead = saved;
+    let release!: () => void;
+    const wait = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    let started!: () => void;
+    const ready = new Promise<void>((resolve) => {
+      started = resolve;
+    });
+    const run = vi.fn(async () => {
+      started();
+      await wait;
+      read = { ...saved, auth: { accessToken: "fresh" } };
+      return { code: 0, stdout: "{}", stderr: "" };
+    });
+    const backend = new ClaudeAuthBackend({
+      available: () => true,
+      configDir: () => dir,
+      readStore: async () => read,
+      run,
+    });
+    const first = backend.renew(ref(dir), "vendor_rejected");
+    await ready;
+    try {
+      expect(await backend.renew(ref(dir), "vendor_rejected")).toEqual({
+        outcome: "deferred_busy",
+      });
+      expect(await backend.renew(ref(dir), "vendor_rejected")).toEqual({
+        outcome: "deferred_busy",
+      });
+      expect(run).toHaveBeenCalledTimes(1);
+    } finally {
+      release();
+    }
+    expect(await first).toEqual({ outcome: "renewed" });
+    expect(run).toHaveBeenCalledTimes(1);
   });
 });
 

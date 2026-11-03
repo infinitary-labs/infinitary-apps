@@ -12,8 +12,13 @@ import { homedir } from "node:os";
 import { isAbsolute, join, resolve } from "node:path";
 import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 import { scratchDir } from "../../../tests/helpers/scratchDirs";
-import { NO_BROWSER, resolveClaudeExecutable, runClaude } from "./claudeCli";
-import { CLAUDE_RENEW_COMMANDS, credentialMarker, readClaudeStore } from "./claudeQuota";
+import {
+  CLAUDE_AUTH_STATUS_ARGS,
+  NO_BROWSER,
+  resolveClaudeExecutable,
+  runClaude,
+} from "./claudeCli";
+import { credentialMarker, readClaudeStore } from "./claudeQuota";
 
 /**
  * Ordinary runs exercise the probe's isolation through a recording client.
@@ -90,34 +95,25 @@ function throwawayAccountDir(input: string): string {
   return dir;
 }
 
-async function checkLadder(probe: ReturnType<typeof isolatedProbe>) {
-  for (const args of CLAUDE_RENEW_COMMANDS) {
-    // A command waiting for a terminal rejects at the bounded spawn timeout.
-    const result = await probe.run(args);
-    expect(result.code, `${args.join(" ")} did not exit`).not.toBeNull();
-    expect(
-      `${result.stdout}${result.stderr}`.toLowerCase(),
-      `${args.join(" ")} is not a known command`,
-    ).not.toContain("unknown command");
-  }
+async function checkStatus(probe: ReturnType<typeof isolatedProbe>) {
+  const result = await probe.run(CLAUDE_AUTH_STATUS_ARGS);
+  expect(result.code, "status did not exit").not.toBeNull();
+  expect(
+    `${result.stdout}${result.stderr}`.toLowerCase(),
+    "status is not a known command",
+  ).not.toContain("unknown command");
 }
 
 async function measureRenewal(probe: ReturnType<typeof isolatedProbe>) {
-  let marker = await probe.marker();
+  const marker = await probe.marker();
   expect(marker, "the probe directory holds no credential to renew").toBeDefined();
-  const findings: { command: string; changed: boolean }[] = [];
-  for (const args of CLAUDE_RENEW_COMMANDS) {
-    await probe.run(args);
-    const next = await probe.marker();
-    // Deleting or corrupting the credential is not renewal.
-    expect(next, "the client lost its credential rather than renewing it").toBeDefined();
-    findings.push({ command: args.join(" "), changed: next !== marker });
-    marker = next;
-  }
-  return findings;
+  await probe.run(CLAUDE_AUTH_STATUS_ARGS);
+  const next = await probe.marker();
+  expect(next, "the client lost its credential rather than renewing it").toBeDefined();
+  return { command: CLAUDE_AUTH_STATUS_ARGS.join(" "), changed: next !== marker };
 }
 
-describe.skipIf(!probeRequested)("the installed client's delegated-renewal ladder (opt-in)", () => {
+describe.skipIf(!probeRequested)("the installed client's idle refresh request (opt-in)", () => {
   beforeAll(() => {
     if (process.platform !== "linux") {
       throw new Error("Run the renewal probe on disposable Linux with a file-backed Claude store.");
@@ -126,22 +122,22 @@ describe.skipIf(!probeRequested)("the installed client's delegated-renewal ladde
       throw new Error("The requested Claude client is not installed.");
   });
 
-  it("every ladder command is real, non-interactive and harmless against an empty store", async () => {
+  it("the status request is real, non-interactive and harmless against an empty store", async () => {
     const probe = isolatedProbe();
     await probe.assertEmpty();
-    await checkLadder(probe);
+    await checkStatus(probe);
     await probe.assertEmpty();
   }, 240_000);
 
   it.skipIf(!probeDir)(
-    "records which command renews a throwaway expired session",
+    "records whether one status request renews a throwaway expired session",
     async () => {
       const probe = isolatedProbe(throwawayAccountDir(probeDir as string));
       const findings = await measureRenewal(probe);
       // Names and booleans only: no token, marker or store contents. The test
       // runner's output is the record; no unowned file is left in shared temp.
       console.log(JSON.stringify(findings));
-      expect(findings.some((finding) => finding.changed)).toBe(true);
+      expect(findings.changed).toBe(true);
     },
     240_000,
   );
@@ -162,7 +158,7 @@ const dir = process.env.CLAUDE_CONFIG_DIR || path.join(process.env.HOME, '.claud
 const credentials = path.join(dir, '.credentials.json');
 fs.appendFileSync(${JSON.stringify(log)}, JSON.stringify({ args, dir, home: process.env.HOME,
   fixedHome: process.env.CFFIXED_USER_HOME, ambientKey: !!process.env.ANTHROPIC_API_KEY }) + '\\n');
-if (args[0] === 'doctor') {
+if (args.join(' ') === ${JSON.stringify(CLAUDE_AUTH_STATUS_ARGS.join(" "))}) {
   if (${JSON.stringify(effect)} === 'write') {
     fs.mkdirSync(dir, { recursive: true });
     fs.writeFileSync(credentials, JSON.stringify({ claudeAiOauth: { accessToken: 'synthetic-renewed' } }));
@@ -198,16 +194,16 @@ function syntheticAccount() {
 }
 
 describe("the renewal probe's store boundary (recording client only)", () => {
-  it("runs every command in the checked store, never the ambient login", async () => {
+  it("INF-2320: runs the status request in the checked store, never the ambient login", async () => {
     const { defaultDir } = syntheticAccount();
     const calls = recordingClient();
     const probe = isolatedProbe();
     await probe.assertEmpty();
-    await checkLadder(probe);
+    await checkStatus(probe);
     await probe.assertEmpty();
     expect(calls().map((call) => call.args)).toEqual([
       ["auth", "status", "--json"],
-      ...CLAUDE_RENEW_COMMANDS,
+      [...CLAUDE_AUTH_STATUS_ARGS],
       ["auth", "status", "--json"],
     ]);
     for (const call of calls()) {
@@ -226,7 +222,7 @@ describe("the renewal probe's store boundary (recording client only)", () => {
   it("catches a credential written by the child into its actual store", async () => {
     recordingClient("write");
     const probe = isolatedProbe();
-    await checkLadder(probe);
+    await checkStatus(probe);
     await expect(probe.assertEmpty()).rejects.toThrow("the client wrote a credential");
   });
 
@@ -235,10 +231,7 @@ describe("the renewal probe's store boundary (recording client only)", () => {
     const calls = recordingClient("write");
     const probe = isolatedProbe(throwawayAccountDir(account));
     const findings = await measureRenewal(probe);
-    expect(findings).toEqual([
-      { command: "auth status --json", changed: false },
-      { command: "doctor", changed: true },
-    ]);
+    expect(findings).toEqual({ command: CLAUDE_AUTH_STATUS_ARGS.join(" "), changed: true });
     expect(calls().every((call) => call.dir === realpathSync(account))).toBe(true);
     expect(readFileSync(join(defaultDir, ".credentials.json"), "utf8")).toBe(
       "do not read or change this login",

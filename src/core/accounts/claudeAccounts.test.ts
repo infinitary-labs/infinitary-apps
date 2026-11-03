@@ -69,7 +69,11 @@ const fileStore = async (configDir: string): Promise<ClaudeStoreRead> => {
   const marker = join(configDir, "credential");
   const present = existsSync(marker) && readFileSync(marker, "utf8").length > 0;
   return present
-    ? { state: "present" as const, auth: { accessToken: "fixture-token" }, identity: {} }
+    ? {
+        state: "present" as const,
+        auth: { accessToken: "fixture-token", subscriptionType: "max" },
+        identity: { label: "kun@example.com" },
+      }
     : { state: "absent" };
 };
 
@@ -295,8 +299,8 @@ describe("signing in over a login Infinitary cannot read", () => {
   });
 });
 
-describe("status reads against a spawned client", () => {
-  it("caches and single-flights, so a polling tab does not respawn it per tick", async () => {
+describe("status reads from the current store", () => {
+  it("INF-2320: polling and explicit status refresh read the store without a refreshing client", async () => {
     let calls = 0;
     const paths = appPathsFor(scratchDir("infinitary-claude-vault-"));
     const store = scratchDir("infinitary-claude-default-");
@@ -322,8 +326,8 @@ describe("status reads against a spawned client", () => {
     await counting.views();
     expect(calls).toBe(afterAdd);
 
-    // A refresh is still available where the answer has to be current.
+    // Refresh rereads current facts; it is not permission to rotate the credential.
     await counting.status(account.id, { refresh: true });
-    expect(calls).toBe(afterAdd + 1);
+    expect(calls).toBe(afterAdd);
   });
 });

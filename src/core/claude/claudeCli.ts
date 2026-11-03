@@ -31,6 +31,8 @@ import { hostPlatform, hostPlatformProfile } from "../platform";
 
 /** How long a status read may take before we treat the store as unreadable. */
 export const STATUS_TIMEOUT_MS = 20_000;
+/** The client's non-interactive status request; it owns any refresh this causes. */
+export const CLAUDE_AUTH_STATUS_ARGS = ["auth", "status", "--json"] as const;
 /** A login is a human-paced browser flow; give it room, but not forever. */
 export const LOGIN_TIMEOUT_MS = 5 * 60 * 1000;
 /** A `--version` read is instant; anything slower is a wedged binary. */

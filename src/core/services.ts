@@ -1134,7 +1134,7 @@ export async function createServices(
               : undefined),
           /**
            * One caller of AccountBackend.renew (spec §11.2.5): the reactive
-           * 401 path. Proactive renew at expiresAt-lead rides the supervisor
+           * 401 path. Non-Claude proactive renew rides the supervisor
            * tick. Neither path returns a secret; we re-resolve after a
            * successful rotation.
            */
@@ -3338,9 +3338,9 @@ export async function createServices(
     reconcileFirstRun();
   };
   // The runtime catalog reads (docs/model-lists.md): started, never awaited,
-  // and only once the sweep's own status reads are in - each account's
-  // status is then fresh for a while, so a Claude read holding the store
-  // lease cannot make a status probe step aside and read the store instead.
+  // and only once the sweep has refreshed which accounts are connected.
+  // Claude's catalog read takes the store slot; a rejected allowance read
+  // during it defers until the next reading rather than queueing a refresh.
   void sweepAccountLiveness().then(() => {
     reconcileActivation();
     reconcileFirstRun();

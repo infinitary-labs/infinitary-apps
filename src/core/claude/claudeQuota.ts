@@ -10,7 +10,6 @@ import {
   type HostKeychainOutcome,
   type HostKeychainUnlockOutcome,
 } from "../host";
-import { runRenewalStoreTask, type StoreLeaseResult } from "./claudeStoreLease";
 
 /**
  * The machine's default Claude login, as Infinitary is allowed to read it
@@ -41,6 +40,8 @@ export type ClaudeQuotaAuth = {
   accessToken: string;
   /** Advisory only: the vendor's 401 is the definitive expiry signal. */
   expiresAt?: number;
+  /** The plan the client saved, so health need not spawn it just to name the plan. */
+  subscriptionType?: string;
 };
 
 /** errSecItemNotFound as `security(1)` used to report it - residual classifier. */
@@ -271,6 +272,9 @@ function parseCredentials(raw: string): ClaudeQuotaAuth | undefined {
   return {
     accessToken,
     ...(expiresAt !== undefined ? { expiresAt } : {}),
+    ...(typeof record.subscriptionType === "string"
+      ? { subscriptionType: record.subscriptionType }
+      : {}),
   };
 }
 
@@ -672,122 +676,6 @@ export function credentialMarker(auth: ClaudeQuotaAuth | undefined): string | un
   return createHash("sha256")
     .update(`${auth.accessToken}:${auth.expiresAt ?? ""}`)
     .digest("hex");
-}
-
-/**
- * The supported, non-interactive commands of the account's own client that
- * are known to make it look at (and, when needed, rewrite) its own session.
- * Both are documented subcommands of the client; neither starts a
- * session, sends a prompt, or opens a browser.
- *
- * The ladder exists because WHICH of them renews is a property of the vendor's
- * client, not of Infinitary, and it changes between client versions. Rather than
- * presume one, a renewal walks the ladder and stops at the first command that
- * actually changes the stored credential - so the code is correct whichever
- * one does the work, and honest when none of them does.
- */
-export const CLAUDE_RENEW_COMMANDS: readonly (readonly string[])[] = [
-  ["auth", "status", "--json"],
-  ["doctor"],
-];
-
-/** What a delegated renewal actually achieved. */
-export type ClaudeRenewOutcome =
-  /** The store now holds a different credential than before. */
-  | { outcome: "renewed"; auth: ClaudeQuotaAuth }
-  /** Every command ran and the stored credential is unchanged. */
-  | { outcome: "unchanged" }
-  /**
-   * A command ran, then the store could not be read. Not evidence the
-   * credential is the same, and not a sign-out.
-   */
-  | { outcome: "unreadable" }
-  /** No command could run: they all failed or timed out. */
-  | { outcome: "failed" }
-  /**
-   * A live client session owns this store. Standing down is the safe move -
-   * the refresh token behind that session is single use - and the next tick
-   * tries again, so this resolves when the session ends.
-   */
-  | { outcome: "deferred_session" }
-  /**
-   * Another one-shot run held the store for longer than a renewal will wait
-   * (a sign-in in progress, realistically), which makes renewing moot anyway.
-   */
-  | { outcome: "deferred_busy" }
-  /** There is no credential in this store to renew. */
-  | { outcome: "no_credential" };
-
-export type RenewClaudeQuotaAuthOptions = ReadClaudeStoreOptions & {
-  /**
-   * Run one command of the account's own client under this config root. The
-   * client owns the credential; Infinitary never speaks the vendor's OAuth.
-   */
-  run: (configDir: string, args: readonly string[]) => Promise<unknown>;
-  /**
-   * Claim the account's store for the duration. Defaults to the process-wide
-   * lease's RECOVERY acquisition: it waits out an ordinary one-shot run so the
-   * app's own status polling cannot starve its own recovery, and stands down
-   * only for a live session, whose single-use refresh token it must not race.
-   */
-  claim?: <T>(configDir: string, task: () => Promise<T>) => Promise<StoreLeaseResult<T>>;
-  commands?: readonly (readonly string[])[];
-};
-
-/**
- * Ask the account's own client to renew its session, and report what actually
- * happened.
- *
- * This runs only when the vendor has already rejected the stored credential,
- * which is the one signal that is never stale. It never runs while a client
- * session for the same account is live: that session owns the store and the
- * refresh token behind it is single use, so a second refresher is how one
- * holder ends up presenting a spent token.
- */
-export async function renewClaudeQuotaAuth(
-  configDir: string,
-  options: RenewClaudeQuotaAuthOptions,
-): Promise<ClaudeRenewOutcome> {
-  const claim = options.claim ?? runRenewalStoreTask;
-  const commands = options.commands ?? CLAUDE_RENEW_COMMANDS;
-  // A renewal has to see the store, not what we last read from it: comparing
-  // a remembered credential with itself would report every renewal unchanged.
-  const resolveOpts: ReadClaudeStoreOptions = {
-    ...options,
-    preferKeychain: true,
-    bypassCache: true,
-  };
-  const first = await readClaudeStore(configDir, resolveOpts);
-  const before = credentialMarker(first.state === "present" ? first.auth : undefined);
-  if (before === undefined) return { outcome: "no_credential" };
-  const claimed = await claim(configDir, async (): Promise<ClaudeRenewOutcome> => {
-    // Another holder may have renewed while we waited for the store. Spending
-    // a single-use refresh token again to learn what is already on disk is
-    // exactly the race this lease exists to prevent.
-    const current = await readClaudeStore(configDir, resolveOpts);
-    if (current.state === "present" && credentialMarker(current.auth) !== before) {
-      return { outcome: "renewed", auth: current.auth };
-    }
-    let ranAny = false;
-    for (const args of commands) {
-      try {
-        await options.run(configDir, args);
-        ranAny = true;
-      } catch {
-        continue;
-      }
-      const after = await readClaudeStore(configDir, resolveOpts);
-      if (after.state === "present") {
-        if (credentialMarker(after.auth) !== before)
-          return { outcome: "renewed", auth: after.auth };
-      } else {
-        return { outcome: "unreadable" };
-      }
-    }
-    return ranAny ? { outcome: "unchanged" } : { outcome: "failed" };
-  });
-  if (claimed.ran) return claimed.value;
-  return { outcome: claimed.refusal === "session_active" ? "deferred_session" : "deferred_busy" };
 }
 
 type AccountIdentityRecord = {

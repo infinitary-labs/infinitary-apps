@@ -13,15 +13,10 @@ import {
   type LogoutOutcome,
   statusFromHealth,
 } from "../accounts/accountBackend";
-import {
-  CREDENTIAL_RENEW_LEAD_MS,
-  type CredentialHealth,
-  classifyExpiry,
-  type RenewalOutcome,
-  type RenewReason,
-} from "../accounts/credentialHealth";
+import type { CredentialHealth, RenewalOutcome, RenewReason } from "../accounts/credentialHealth";
 import { absentKeychain, type HostKeychain } from "../host";
 import {
+  CLAUDE_AUTH_STATUS_ARGS,
   type ClaudeClientCheck,
   checkClaudeClient,
   claudeClientIssueReason,
@@ -40,8 +35,8 @@ import {
   clearKeychainLock,
   credentialMarker,
   defaultClaudeConfigDir,
+  type ReadClaudeStoreOptions,
   readClaudeStore,
-  renewClaudeQuotaAuth,
 } from "./claudeQuota";
 import { runExclusiveStoreTask, tryExclusiveStoreTask } from "./claudeStoreLease";
 
@@ -142,7 +137,7 @@ export type ClaudeAuthBackendOptions = {
    */
   client?: () => Promise<ClaudeClientCheck>;
   /** One store reader for health, identity and login ownership; tests inject scratch stores. */
-  readStore?: (configDir: string) => Promise<ClaudeStoreRead>;
+  readStore?: (configDir: string, options?: ReadClaudeStoreOptions) => Promise<ClaudeStoreRead>;
   /**
    * Host Keychain seam. Production passes `host.keychain` so the grant is
    * Infinitary's. Tests that inject `readStore` can omit this.
@@ -153,10 +148,8 @@ export type ClaudeAuthBackendOptions = {
    * a throwaway dir so they never touch the developer's login.
    */
   configDir?: () => string;
-  /** Injectable clock for expiry classification; production is `Date.now`. */
+  /** Injectable clock for the pasted-code login record; production is `Date.now`. */
   now?: () => number;
-  /** Proactive-renew lead; tests pass a smaller window. */
-  leadMs?: number;
   /**
    * Sign in with a code pasted back, and open no browser here: a computer
    * that runs work for another Mac, where a browser would open on a screen
@@ -176,16 +169,13 @@ export class ClaudeAuthBackend implements AccountBackend {
   private readonly run: RunClaude;
   private readonly available: () => boolean;
   private readonly client: () => Promise<ClaudeClientCheck>;
-  private readonly readStore: (configDir: string) => Promise<ClaudeStoreRead>;
+  private readonly readStore: NonNullable<ClaudeAuthBackendOptions["readStore"]>;
   private readonly configDir: () => string;
-  private readonly keychain: HostKeychain;
   private readonly now: () => number;
-  private readonly leadMs: number;
   private readonly pasteCode: boolean;
 
   constructor(options: ClaudeAuthBackendOptions = {}) {
     const keychain = options.keychain ?? absentKeychain;
-    this.keychain = keychain;
     this.run = options.run ?? runClaude;
     this.available = options.available ?? (() => resolveClaudeExecutable() !== undefined);
     // An injected `available` is a test's stand-in for the client PROBE, not
@@ -197,10 +187,11 @@ export class ClaudeAuthBackend implements AccountBackend {
       (options.available
         ? async () => ({ state: "ready", executable: "injected" })
         : () => checkClaudeClient());
-    this.readStore = options.readStore ?? ((dir) => readClaudeStore(dir, { keychain }));
+    this.readStore =
+      options.readStore ??
+      ((dir, readOptions) => readClaudeStore(dir, { ...readOptions, keychain }));
     this.configDir = options.configDir ?? defaultClaudeConfigDir;
     this.now = options.now ?? Date.now;
-    this.leadMs = options.leadMs ?? CREDENTIAL_RENEW_LEAD_MS;
     this.pasteCode = options.pasteCode ?? false;
   }
 
@@ -554,51 +545,49 @@ export class ClaudeAuthBackend implements AccountBackend {
   }
 
   /**
-   * Ask the vendor's own client to rotate the session. Home of the
-   * delegated ladder that used to live on the quota fetcher: Infinitary never
-   * speaks Anthropic OAuth, and the outcome never carries a secret.
+   * Sessions own renewal. After a vendor rejection only, ask the idle client
+   * once and observe its store; no proactive refresh, command ladder or wait.
+   * This keeps AccountBackend.renew as the one recovery seam for every provider.
    */
-  async renew(_account: AccountRef, _reason: RenewReason): Promise<RenewalOutcome> {
-    void _account;
-    void _reason;
-    const result = await renewClaudeQuotaAuth(this.configDir(), {
-      run: (configDir, args) => this.run([...args], configDir),
-      keychain: this.keychain,
+  async renew(_account: AccountRef, reason: RenewReason): Promise<RenewalOutcome> {
+    if (reason !== "vendor_rejected") return { outcome: "unsupported" };
+    const dir = this.configDir();
+    const claimed = await tryExclusiveStoreTask(dir, async (): Promise<RenewalOutcome> => {
+      const options = { preferKeychain: true, bypassCache: true };
+      const before = await this.readStore(dir, options);
+      if (before.state !== "present") {
+        return { outcome: before.state === "absent" ? "no_credential" : "unreadable" };
+      }
+      let code: number | null;
+      try {
+        ({ code } = await this.run([...CLAUDE_AUTH_STATUS_ARGS], dir));
+      } catch {
+        return { outcome: "failed" };
+      }
+      const after = await this.readStore(dir, options);
+      if (after.state !== "present") return { outcome: "unreadable" };
+      if (credentialMarker(after.auth) !== credentialMarker(before.auth)) {
+        return { outcome: "renewed" };
+      }
+      return { outcome: code === 0 ? "unchanged" : "failed" };
     });
-    return result.outcome === "renewed" ? { outcome: "renewed" } : { outcome: result.outcome };
+    return claimed.ran
+      ? claimed.value
+      : { outcome: claimed.refusal === "session_active" ? "deferred_session" : "deferred_busy" };
   }
 
   /**
-   * Is the machine's default Claude login still signed in?
-   *
-   * The client's own answer is the fast path and the authority when it
-   * arrives - but it is a spawned third-party binary, and every way it can
-   * fail (missing, unspawnable, slow, output we cannot parse) produces the
-   * same shape as a signed-out store. The vault turns "not connected" into a
-   * red badge, a sign-in card, AND the removal of every one of this
-   * provider's models from the routing pool, so guessing wrong is expensive
-   * in one direction only.
-   *
-   * That is not hypothetical: in a packaged build the vendored client
-   * resolved to a path inside app.asar, where `spawn` cannot reach it, and a
-   * fully signed-in Max account rendered "sign in again" next to its own
-   * live quota bars with no Claude model left to route to (captain dogfood,
-   * 2026-09-01). So when the probe cannot answer, the default store does -
-   * and only an absent store, never a saved expiry date, is reported as
-   * needing a sign-in.
-   *
-   * `status()` is a projection of `health()` (spec §11.2.5). Unknown and
-   * no-interaction failures stay degraded, never a sign-out.
+   * Health reads the default store, never a refreshing client status poll.
+   * Its modification-date cache follows the live client's writes. Saved expiry
+   * remains advisory; only an absent store is unsigned, unreadable is degraded.
    */
   async health(_account: AccountRef): Promise<CredentialHealth> {
     void _account;
     const client = await this.client();
     const dir = this.configDir();
-    const probe = client.state === "ready" ? await this.probe(dir) : undefined;
-    // Read after the probe, which can rewrite the store. Health, expiry,
-    // identity and the real-refusal stamp all come from this same reading.
+    // Health, identity and the real-refusal stamp come from one silent read.
     const read = await this.readStore(dir);
-    const credential = this.credentialHealth(read, probe);
+    const credential = this.credentialHealth(read);
     const stored = claudeCredentialStamp(read);
     const version = client.state === "missing" ? undefined : client.version;
     const stamp = { ...stored, ...(version ? { client: version } : {}) };
@@ -615,33 +604,21 @@ export class ClaudeAuthBackend implements AccountBackend {
   }
 
   /** A store we cannot read is stale, never evidence that a login went away. */
-  private credentialHealth(read: ClaudeStoreRead, probe?: AccountStatus): CredentialHealth {
+  private credentialHealth(read: ClaudeStoreRead): CredentialHealth {
     if (read.state === "present") {
-      // A cached client answer can name the previous login. The current
-      // config owns identity; the client can still supply its plan.
       const identity = {
-        ...probe?.identity,
         ...(read.identity.label ? { label: read.identity.label } : {}),
+        ...(read.auth.subscriptionType ? { plan: planLabel(read.auth.subscriptionType) } : {}),
       };
-      const expiresAt = read.auth.expiresAt;
       return {
-        state: classifyExpiry(expiresAt, this.now(), this.leadMs),
+        state: "healthy",
         authType: "oauth",
         ...(Object.keys(identity).length ? { identity } : {}),
-        ...(expiresAt !== undefined ? { expiresAt } : {}),
+        ...(read.auth.expiresAt !== undefined ? { expiresAt: read.auth.expiresAt } : {}),
       };
     }
-    if (read.state === "unreadable") {
-      return { state: "degraded", reason: read.reason ?? "unknown" };
-    }
-    // Keep the client's signed-in answer when the store lookup missed it.
-    // Login replacement still asks the client under its exclusive lease.
-    return probe?.connected
-      ? {
-          state: "healthy",
-          authType: "oauth",
-          ...(probe.identity ? { identity: probe.identity } : {}),
-        }
+    return read.state === "unreadable"
+      ? { state: "degraded", reason: read.reason ?? "unknown" }
       : { state: "unsigned" };
   }
 
@@ -649,31 +626,10 @@ export class ClaudeAuthBackend implements AccountBackend {
     return statusFromHealth(await this.health(account));
   }
 
-  /**
-   * The client's own status read, or nothing if it could not produce one.
-   *
-   * It goes through the store lease like every other client run, and it
-   * DEFERS rather than waits: this is a background poll, and the default
-   * store reader already answers when
-   * the probe cannot. Deferring keeps a status poll from queueing behind a
-   * renewal, and keeps it from becoming a second refresher of its own.
-   */
-  private async probe(dir: string): Promise<AccountStatus | undefined> {
-    const claimed = await tryExclusiveStoreTask(dir, async () => {
-      try {
-        const result = await this.run(["auth", "status", "--json"], dir);
-        return parseJsonStatus(result.stdout);
-      } catch {
-        return undefined;
-      }
-    });
-    return claimed.ran ? claimed.value : undefined;
-  }
-
   /** The client's own status read, inside a store task already held; nothing when it cannot answer. */
   private async statusNow(dir: string): Promise<AccountStatus | undefined> {
     try {
-      return parseJsonStatus((await this.run(["auth", "status", "--json"], dir)).stdout);
+      return parseJsonStatus((await this.run([...CLAUDE_AUTH_STATUS_ARGS], dir)).stdout);
     } catch {
       return undefined;
     }

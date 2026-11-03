@@ -130,8 +130,9 @@ export function createQuotaFetcher(
 
 /**
  * `fetchQuota`'s `auth.renew` is one caller of `AccountBackend.renew`
- * (the reactive 401 path). Proactive renew at expiresAt-lead rides the
- * supervisor tick via `CredentialHealthService`.
+ * (the reactive 401 path). Non-Claude proactive renew at expiresAt-lead
+ * rides the supervisor tick via `CredentialHealthService`; Claude sessions
+ * renew themselves and only an idle rejection asks their client once.
  *
  * Everything a renewal can honestly report stays distinct. A renewal that ran
  * and changed nothing, one that could not run, and one that stood down for a

@@ -18,7 +18,7 @@ import type { CatalogReader } from "./servedModels";
  * Claude: the installed client's own account-aware catalog
  * (`supportedModels()`), read under the store lease as a one-shot that
  * DEFERS while a crewmate session holds the store - the same courtesy the
- * status probe pays (claudeAuth.ts). A deferred read keeps what is in hand
+ * idle rejection request pays (claudeAuth.ts). A deferred read keeps what is in hand
  * and is retried on the next pass.
  */
 export function claudeListReader(options: {

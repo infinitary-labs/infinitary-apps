@@ -8,13 +8,12 @@ import {
   scriptedClaudeQuery,
   scriptedRecordsFlushed,
 } from "../../../tests/helpers/scriptedClaudeQuery";
-import { renewClaudeQuotaAuth } from "./claudeQuota";
+import { ClaudeAuthBackend } from "./claudeAuth";
 import {
   acquireSessionLease,
   hasActiveSession,
   resetStoreLeasesForTest,
   runExclusiveStoreTask,
-  runRenewalStoreTask,
   tryExclusiveStoreTask,
 } from "./claudeStoreLease";
 
@@ -82,7 +81,9 @@ describe("the Claude store lease", () => {
 
   it("a live crewmate session makes a delegated renewal stand down", async () => {
     const dir = storeDir();
-    const run = vi.fn(async () => {});
+    const run = vi.fn(async () => ({ code: 0, stdout: "{}", stderr: "" }));
+    const backend = new ClaudeAuthBackend({ run, available: () => true, configDir: () => dir });
+    const ref = { providerId: "anthropic-claude", accountId: "acct_claude", dir };
     const session = await crewmateOn(dir, "task-1");
     try {
       // Its client stays attached after the turn, for the work it does on its own.
@@ -90,7 +91,7 @@ describe("the Claude store lease", () => {
       expect(hasActiveSession(dir)).toBe(true);
       // The session owns the store. Renewing now is how one holder ends up
       // presenting a spent single-use refresh token.
-      await expect(renewClaudeQuotaAuth(dir, { run, now: () => 2000 })).resolves.toEqual({
+      await expect(backend.renew(ref, "vendor_rejected")).resolves.toEqual({
         outcome: "deferred_session",
       });
       expect(run).not.toHaveBeenCalled();
@@ -100,7 +101,7 @@ describe("the Claude store lease", () => {
     // The session ended and its client exited: the store is free and renewal may proceed.
     await session.closed();
     expect(hasActiveSession(dir)).toBe(false);
-    await renewClaudeQuotaAuth(dir, { run, now: () => 2000 });
+    await backend.renew(ref, "vendor_rejected");
     expect(run).toHaveBeenCalled();
   });
 
@@ -132,71 +133,29 @@ describe("the Claude store lease", () => {
     const dir = storeDir();
     // Both callers ask at once. Whichever wins holds the store from the moment
     // it decided, so the loser can only ever be refused - never overlap.
-    const [first, second] = await Promise.all([
-      tryExclusiveStoreTask(dir, async () => {
-        await new Promise((resolve) => setTimeout(resolve, 5));
-        return "ran";
-      }),
-      tryExclusiveStoreTask(dir, async () => "ran"),
-    ]);
-    expect([first.ran, second.ran].filter(Boolean)).toHaveLength(1);
-    const refused = [first, second].find((result) => !result.ran);
-    expect(refused).toMatchObject({ ran: false, refusal: "store_busy" });
-  });
-
-  it("a renewal waits out an ordinary one-shot run instead of standing down", async () => {
-    const dir = storeDir();
-    const order: string[] = [];
-    let releaseProbe: (() => void) | undefined;
-    // The status probe, exactly as claudeAuth makes it.
-    const probe = tryExclusiveStoreTask(dir, async () => {
-      order.push("probe:start");
-      await new Promise<void>((resolve) => {
-        releaseProbe = resolve;
+    let release!: () => void;
+    const wait = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    const first = tryExclusiveStoreTask(dir, async () => {
+      await wait;
+      return "ran";
+    });
+    try {
+      expect(await tryExclusiveStoreTask(dir, async () => "ran")).toEqual({
+        ran: false,
+        refusal: "store_busy",
       });
-      order.push("probe:end");
-    });
-    await Promise.resolve();
-    const renewal = runRenewalStoreTask(dir, async () => {
-      order.push("renewal:ran");
-      return "ok";
-    });
-    // The renewal is waiting, not refused: nothing has run yet.
-    await new Promise((resolve) => setTimeout(resolve, 5));
-    expect(order).toEqual(["probe:start"]);
-    releaseProbe?.();
-    await probe;
-    await expect(renewal).resolves.toEqual({ ran: true, value: "ok" });
-    expect(order).toEqual(["probe:start", "probe:end", "renewal:ran"]);
+    } finally {
+      release();
+    }
+    expect(await first).toEqual({ ran: true, value: "ran" });
   });
 
-  it("a renewal gives up waiting rather than stalling a refresh behind a sign-in", async () => {
-    const dir = storeDir();
-    let releaseLogin: (() => void) | undefined;
-    const login = runExclusiveStoreTask(dir, async () => {
-      await new Promise<void>((resolve) => {
-        releaseLogin = resolve;
-      });
-    });
-    await Promise.resolve();
-    const refused = await runRenewalStoreTask(dir, async () => "ran", 10);
-    expect(refused).toEqual({ ran: false, refusal: "store_busy" });
-    releaseLogin?.();
-    await login;
-  });
-
-  it("a renewal still stands down for a live session, however long it waits", async () => {
-    const dir = storeDir();
-    const release = await acquireSessionLease(dir);
-    const refused = await runRenewalStoreTask(dir, async () => "ran");
-    release();
-    expect(refused).toEqual({ ran: false, refusal: "session_active" });
-    // ...and the very next attempt proceeds: standing down is transient.
-    await expect(runRenewalStoreTask(dir, async () => "ran")).resolves.toEqual({
-      ran: true,
-      value: "ran",
-    });
-  });
+  // INF-2320 removes the renewal queue and its timeout. Immediate deferral
+  // while a login owns the slot is exercised through the quota sensor in
+  // renewalScheduling.test.ts; the same-tick claim and live-client lifetime
+  // remain this owner's facts.
 
   it("refuses a one-shot task while a session holds the store, by session and not by guess", async () => {
     const dir = storeDir();

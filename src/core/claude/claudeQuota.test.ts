@@ -1,6 +1,6 @@
 import { mkdirSync, rmSync, utimesSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it } from "vitest";
 import { scratchDir } from "../../../tests/helpers/scratchDirs";
 import type {
   HostKeychain,
@@ -8,8 +8,8 @@ import type {
   HostKeychainQuery,
   HostKeychainUnlockOutcome,
 } from "../host";
+import { ClaudeAuthBackend } from "./claudeAuth";
 import {
-  CLAUDE_RENEW_COMMANDS,
   classifyKeychainValueError,
   claudeCredentialStamp,
   clearClaudeCredentialCache,
@@ -19,7 +19,6 @@ import {
   keychainAccountName,
   keychainServiceFor,
   readClaudeStore,
-  renewClaudeQuotaAuth,
 } from "./claudeQuota";
 import { resetStoreLeasesForTest } from "./claudeStoreLease";
 
@@ -789,17 +788,20 @@ describe("the remembered credential", () => {
     const keychain = fakeKeychain({ read: () => ({ kind: "value", value: stored }) });
     // Seed memory the way a quota tick would.
     await readClaudeStore(dir, { keychain, now: () => 1000 });
-    const result = await renewClaudeQuotaAuth(dir, {
+    const backend = new ClaudeAuthBackend({
       keychain,
-      now: () => 1000,
+      available: () => true,
+      configDir: () => dir,
       run: async () => {
         stored = credentialJson("after", 9e15);
+        return { code: 0, stdout: JSON.stringify({ loggedIn: true }), stderr: "" };
       },
     });
-    expect(result).toMatchObject({
-      outcome: "renewed",
-      auth: expect.objectContaining({ accessToken: "after" }),
-    });
+    const result = await backend.renew(
+      { providerId: "anthropic-claude", accountId: "acct_claude", dir },
+      "vendor_rejected",
+    );
+    expect(result).toEqual({ outcome: "renewed" });
     // And what the renewal found is what later ticks see.
     const next = await readClaudeStore(dir, { keychain, now: () => 1000 });
     expect(next).toMatchObject({ state: "present", auth: { accessToken: "after" } });
@@ -827,108 +829,6 @@ describe("the remembered credential", () => {
     const again = await readClaudeStore(dir, { keychain, now: () => 2000 });
     expect(again).toEqual({ state: "unreadable", reason: "keychain_needs_grant" });
     expect(keychain.reads).toHaveLength(2);
-  });
-});
-
-describe("renewClaudeQuotaAuth", () => {
-  beforeEach(() => {
-    resetStoreLeasesForTest();
-    clearClaudeCredentialCache();
-  });
-
-  it("reports `renewed` only when the stored credential actually changed", async () => {
-    const dir = storeDir();
-    writeFileSync(join(dir, ".credentials.json"), credentialJson("stale", 1000));
-    const run = vi.fn(async (renewDir: string) => {
-      writeFileSync(join(renewDir, ".credentials.json"), credentialJson("fresh", 9e15));
-    });
-    const result = await renewClaudeQuotaAuth(dir, { run, now: () => 2000 });
-    expect(result).toEqual({
-      outcome: "renewed",
-      auth: expect.objectContaining({ accessToken: "fresh" }),
-    });
-    // The first command in the ladder did the work; the second never ran.
-    expect(run).toHaveBeenCalledTimes(1);
-    expect(run).toHaveBeenCalledWith(dir, CLAUDE_RENEW_COMMANDS[0]);
-  });
-
-  it("walks the ladder and stops at the command that renews", async () => {
-    const dir = storeDir();
-    writeFileSync(join(dir, ".credentials.json"), credentialJson("stale", 1000));
-    const run = vi.fn(async (renewDir: string, args: readonly string[]) => {
-      if (args[0] === "doctor") {
-        writeFileSync(join(renewDir, ".credentials.json"), credentialJson("fresh", 9e15));
-      }
-    });
-    const result = await renewClaudeQuotaAuth(dir, { run, now: () => 2000 });
-    expect(result.outcome).toBe("renewed");
-    expect(run.mock.calls.map((call) => call[1])).toEqual([...CLAUDE_RENEW_COMMANDS]);
-  });
-
-  it("reports `unchanged` when every command ran and rewrote nothing", async () => {
-    const dir = storeDir();
-    writeFileSync(join(dir, ".credentials.json"), credentialJson("stale", 1000));
-    const result = await renewClaudeQuotaAuth(dir, { run: async () => {}, now: () => 2000 });
-    expect(result).toEqual({ outcome: "unchanged" });
-  });
-
-  it("reports `unreadable` when a post-rung resolve cannot read the store", async () => {
-    const dir = storeDir();
-    writeFileSync(join(dir, ".credentials.json"), credentialJson("stale", 1000));
-    const keychain = fakeKeychain({ find: { kind: "absent" } });
-    const result = await renewClaudeQuotaAuth(dir, {
-      run: async (renewDir) => {
-        writeFileSync(join(renewDir, ".credentials.json"), "");
-      },
-      keychain,
-      now: () => 2000,
-    });
-    expect(result).toEqual({ outcome: "unreadable" });
-  });
-
-  it("reports `failed` when no command could run at all", async () => {
-    const dir = storeDir();
-    writeFileSync(join(dir, ".credentials.json"), credentialJson("stale", 1000));
-    const result = await renewClaudeQuotaAuth(dir, {
-      run: async () => {
-        throw new Error("Claude is not available on this machine.");
-      },
-      now: () => 2000,
-    });
-    expect(result).toEqual({ outcome: "failed" });
-  });
-
-  it("runs the client once for concurrent renewals of the same account", async () => {
-    const dir = storeDir();
-    writeFileSync(join(dir, ".credentials.json"), credentialJson("stale", 1000));
-    let started = 0;
-    const run = vi.fn(async (renewDir: string) => {
-      started += 1;
-      await new Promise((resolve) => setTimeout(resolve, 10));
-      writeFileSync(join(renewDir, ".credentials.json"), credentialJson(`fresh-${started}`, 9e15));
-    });
-    const results = await Promise.all([
-      renewClaudeQuotaAuth(dir, { run, now: () => 2000 }),
-      renewClaudeQuotaAuth(dir, { run, now: () => 2000 }),
-      renewClaudeQuotaAuth(dir, { run, now: () => 2000 }),
-    ]);
-    // The client ran exactly once: the store's single-use refresh token is
-    // spent at most once however many callers ask at the same moment.
-    expect(started).toBe(1);
-    // Nobody is told the renewal failed or changed nothing - the ones that did
-    // not run waited and then picked up what the winner wrote.
-    expect(results.every((result) => result.outcome === "renewed")).toBe(true);
-  });
-
-  it("reports `no_credential` for an empty store rather than inventing work", async () => {
-    const run = vi.fn(async () => {});
-    const result = await renewClaudeQuotaAuth(storeDir(), {
-      run,
-      keychain: fakeKeychain({ find: { kind: "absent" } }),
-      now: () => 2000,
-    });
-    expect(result).toEqual({ outcome: "no_credential" });
-    expect(run).not.toHaveBeenCalled();
   });
 });
 

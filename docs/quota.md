@@ -10,16 +10,18 @@ Moved verbatim from `AGENTS.md` on 2026-09-24; `AGENTS.md` keeps a one-line poin
 - Quota reliability (captain escalation 2026-09-04, investigation report `fm3000-quota-visibility-diag-s1`).
   The sensor's job is to be honest about what it established, and to recover from routine expiry without a sign-in.
   Four rules that must not regress:
-  - **The vendor's verdict drives reactive renewal; the tick renews first.**
-    A 401 - and only a 401, never a 403, which is also how a WAF refuses - makes `fetchOneAccount` (`src/core/quota/fetchQuota.ts`) ask `AccountBackend.renew` (`vendor_rejected`), then retry once.
-    The same method is what the supervisor tick calls proactively at `expiresAt - lead`.
-    Claude's delegated ladder (`renewClaudeQuotaAuth`) walks supported non-interactive commands and stops at the first that actually CHANGES the stored credential (`docs/claude-renew-probe.md`).
-    Pi accounts declare resolve-is-renewal: `getAuth` already refreshed.
-  - **One owner per credential store, with an ASYMMETRIC priority.**
-    `src/core/claude/claudeStoreLease.ts` is the single answer to "who may spawn the client right now": a crewmate session holds a shared lease for its lifetime and one-shot runs take an exclusive one, with claim and check in the same tick so there is no check-then-spawn window.
-    The priority is the load-bearing part, and it is not symmetric: a **renewal WAITS OUT** an ordinary one-shot run (`runRenewalStoreTask`, bounded) because it is the recovery path, and stands down only for a live SESSION, whose single-use refresh token it must not race; the **status probe gives way** to everything, because its answer already falls back to the account's own store.
-    Making the renewal merely refuse when busy was a real hole - the probe's own polling could stand the app's own recovery down tick after tick, found on a live MacBook tick as `renewal_deferred` and reproduced against the real interfaces in `renewalScheduling.test.ts`.
-    Infinitary owns its sessions, so this is a registry - never a process scan, never a broker.
+  - **The vendor's verdict drives reactive recovery.**
+    A 401 - and only a 401, never a 403, which is also how a WAF refuses - makes `fetchOneAccount` (`src/core/quota/fetchQuota.ts`) ask `AccountBackend.renew` (`vendor_rejected`), then retry once after an observed credential change.
+    Claude sessions renew their own sign-in; health reads the modification-date-cached store without a client status poll or an advance renewal.
+    Only after a rejection, with no live session and the store slot free, `ClaudeAuthBackend.renew` asks `auth status --json` once and rereads the store (`docs/claude-renew-probe.md`).
+    It runs no fallback command and never speaks Anthropic OAuth.
+    Pi accounts keep their existing proactive health policy and resolve-is-renewal: `getAuth` already refreshed.
+  - **One session count and one store slot.**
+    `src/core/claude/claudeStoreLease.ts` counts live clients and owns the slot shared by login, logout, catalog reads and the one idle status request.
+    Claim and check happen in the same tick, so a background request cannot race a live session over its single-use refresh token.
+    A session waits for an occupied slot before attaching; a background request defers immediately while a session or slot is active, without a renewal queue or thirty-second wait.
+    User-initiated login and logout still serialize through the slot, with the seat detached by their existing owner.
+    Infinitary owns its sessions, so this is a registry, never a process scan.
   - **Not knowing is its own state, and so is recovering.**
     `quotaProviderViewSchema` carries `ok | auth_required | rate_limited | unavailable | not_measured` plus a sanitized `reason` code and `measuredAt`.
     `renewal_succeeded` on an `ok` row is the ONE positive trace a renewal leaves - without it an `ok` after a failure is indistinguishable from plain network recovery, so a snapshot could only ever prove recovery had NOT worked; never record it on an ordinary reading that needed no renewal.
@@ -56,7 +58,7 @@ Moved verbatim from `AGENTS.md` on 2026-09-24; `AGENTS.md` keeps a one-line poin
   So the presence probe asks for the `USER` name first, which is the item the client itself reads when both exist, and on a definite miss for the service alone; the value read, the unlock and the Apple tool then name the account that probe found (INF-1798).
   Only a host `absent` outcome (`errSecItemNotFound`, OSStatus -25300) is absence; a thrown presence-probe or an unparseable value is a named `keychain_*` read failure (`locked` / `unavailable` with `detail` and Retry), never an empty store and never `credential_unavailable` with the reason erased.
   `keychain_no_interactive_session` stays out of `keychainLocks` so every tick retries (a relaunch fixes it); a decline still holds until Retry, unless the store changed under it (another login's account config, or a rewritten Keychain item): then one fresh background read is made, never a prompt, and a decline there holds the new store until Retry.
-  A `demand` refresh chains after an in-flight tick so Retry is not swallowed; a post-rung resolve that cannot read the store is `unreadable`, not `unchanged`.
+  A `demand` refresh chains after an in-flight tick so Retry is not swallowed; a post-request resolve that cannot read the store is `unreadable`, not `unchanged`.
   The Keychain VALUE read rides `HostCapabilities.keychain` (CD-5=B: in-process Security.framework first, with the guarded Apple-tool fallback below).
   A sign-in asks macOS nothing itself (`ClaudeAuthBackend.login`, INF-2319); the allowance reading the Subscriptions tab asks for once it ends, a `demand` refresh, is the moment a permission prompt is expected.
   A LOCKED store is `keychain_locked`, never held: macOS fixes a process's unlock-dialog policy at its first touch of the store (the silent startup tick), so a tick skips the VALUE read and a user-initiated read first unlocks through the utility-process helper `src/main/host/keychainUnlockHelper.ts`, then reads in-app (`docs/architecture.md` §16.6; the host sets the interaction flag before EVERY Security call).
@@ -69,7 +71,7 @@ Moved verbatim from `AGENTS.md` on 2026-09-24; `AGENTS.md` keeps a one-line poin
 - Health, allowance, identity and login ownership use `readClaudeStore`: one `present`, `absent` or `unreadable` result carrying the access token, advisory expiry and current identity from Claude Code's config.
   File credentials and the account config are cached by modification date; a Keychain value is cached only when the item reports its modification date, and is invalidated by a changed item or config.
   Access expiry alone does not discard a cached value, and concurrent equivalent reads share their work.
-  Retry and renewal bypass the value cache; an explicit permission request never joins a silent read.
+  Retry and the read around the idle status request bypass the value cache; an explicit permission request never joins a silent read.
   An unreadable result stays stale or degraded, never signed out, and never replaces the last known account label.
 - A read through Apple's tool that fails or runs out of time is `keychain_read_incomplete`: retryable on the next refresh, never held until Retry, and its words never mention Always Allow.
   The single-item read keeps 5 seconds.

@@ -16,7 +16,7 @@ Task attribution and its limitations are owned by `docs/helper.md`, "Running tas
 ## Notes
 
 `claudeEnvFor` unconditionally sets `CLAUDE_CODE_ENTRYPOINT=infinitary`, replacing absent, empty and inherited labels with the app's own identity without mutating the supplied environment.
-The shared environment reaches first mate, crewmate and decision-question sessions, model catalog reads, version checks and direct client runs, including status, sign-in and renewal fallback.
+The shared environment reaches first mate, crewmate and decision-question sessions, model catalog reads, version checks and direct client runs, including sign-in and the one idle status request after rejection.
 Both home and helper conversations use that same session factory.
 This applies the custom-entrypoint workaround discussed in [Claude Code issue 97074](https://github.com/anthropics/claude-code/issues/97074#issuecomment-6426128541); community reports of lower allowance consumption are not an Anthropic guarantee or a measured saving for Infinitary.
 Only new processes receive the identity; running processes and saved conversations are not rewritten, and the person's Claude settings, sign-in and Infinitary's usage calculations stay unchanged.
@@ -69,13 +69,14 @@ Moved verbatim from `AGENTS.md` on 2026-09-24; `AGENTS.md` keeps a one-line poin
   - **The machine's default Claude login is the authority on whether it is signed in, not the client probe.**
     Every way a spawned third-party binary can fail looks identical to `loggedIn: false`, and the vault turns that into a red badge, a sign-in card AND the removal of every one of the provider's models from the routing pool (`availableModelsByAccount` gates non-Pi backends on `connected === true`).
     `ClaudeAuthBackend.status` and the allowance use the same `readClaudeStore` result (`claudeQuota.ts`): the file in `~/.claude` or the bare Keychain item `Claude Code-credentials`, with its token, advisory expiry and current config identity.
-    Health reads silently and shares the modification-date cache with allowance; it has no separate evidence, expiry peek or stamp read.
+    Health reads silently and shares the modification-date cache with allowance; it has no client status poll, proactive renewal, separate evidence, expiry peek or stamp read.
     Only an absent credential is a sign-out; saved access and refresh expiry dates never establish one.
     A file that cannot be read is not absent.
     A client that answers signed in is a login, including over an expired file.
     Connect asks the client before it treats a lookup miss as a sign-out, on the store lease it already holds, and reads the store again after the wait.
     The row's Sign in over a store that holds or may hold a login runs the client's login without that question, since Anthropic already refused the login there.
-    An expired access token is renewable, and an unreadable store is degraded, never a sign-out, even when a client probe reports otherwise.
+    Live sessions renew their own access tokens, and an unreadable store is degraded, never a sign-out.
+    With no live session, an Anthropic rejection asks the client once through `auth status --json`, then rereads; no changed credential means stale, not a claimed recovery.
 - **A crewmate's tools come from one spec (primitives P7, contract v4.12).**
   Every app-owned crewmate tool - `emit_card`, `close_card`, `file_followup`, `note_progress`, `report`, `reply`, `tasks`, `lint_panel`, `place_panel`, `capture_panel`, `open_change`, `check_change`, `read_workflow`, `download_artifact`, `github_read` and `github_write` - is ONE entry (name, description, typebox parameters, run) in `CREWMATE_TOOLS` (`src/core/pi/crewmateTaskTools.ts`; the entry type and the rest of the runtime-neutral spec are `src/core/session/tools.ts`).
   The crewmate preset (`crewmateSessionSpec`) binds the entries to the crewmate's callbacks, and each session generates its own tools from the bound list: Pi's with `piToolsOf` (`src/core/pi/toolSpec.ts`), Claude's tool server with `claudeToolServer` (`src/core/claude/claudeTaskTools.ts`), which turns the same JSON Schema into zod and REFUSES a parameter kind it cannot carry rather than serving a looser schema.
@@ -152,7 +153,7 @@ Moved verbatim from `AGENTS.md` on 2026-09-24; `AGENTS.md` keeps a one-line poin
     `checkClaudeClient` runs at the seat's create and again at every client attach inside it, before that client's store lease is taken, so a client removed between turns fails the turn with its sentence.
   - **The lease** (`acquireSessionLease`) is per client: each attach takes it (waiting out a sign-in in progress) before the client is spawned, and it is handed back when that client has EXITED - not when a dispose returns, because the client writes the last of its transcript as it exits and can refresh its login until then.
     A dispose or a detach ends the client's input and lets it exit on its own; a client still running a tick later is stopped.
-    Between clients nothing is leased, so the status probe and a delegated renewal are not stood down for nothing.
+    Between clients nothing is leased, so an idle rejection can ask the client once.
     An attach can outlive its prompt (the bounds give up on a prompt whose attach still waits behind a sign-in), so after each wait it checks that its prompt is still the open one and spawns nothing otherwise - no orphaned client holds the store behind a later attach, a detach or a dispose.
     Each new client also starts the normalizer over: its usage counts from zero, and nothing the last client pushed classifies its first turn.
     `detach()` (on the session contract) ends the client at an idle boundary - after the open prompt settles, never mid-turn - and resolves once the store is free; the next prompt reattaches and resumes.

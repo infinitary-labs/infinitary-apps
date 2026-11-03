@@ -31,6 +31,8 @@ The app does not open that page again on its own; the person can, and can paste 
 Connect uses a login already on the computer.
 The row's Sign in shows only once Anthropic refused the saved sign-in, so it runs the client's own login over that sign-in, even when the app cannot read it now, and never uses it once more (INF-2319).
 It counts only a new login: a different credential in the store, or, where the store cannot be read, a clean finish and the client's word that it is signed in.
+Both login paths bypass the credential cache when taking the before and after readings under the store lease, including after a status call, so writes within one modification-date tick neither hide a new login nor count a pre-existing credential as one.
+Those reads keep prompting disabled; ordinary health and allowance reads retain their modification-date cache.
 A second Sign in while one is open is refused in a sentence, and a sign-in asks macOS nothing itself.
 When that sign-in ends with no reason, the person is told Claude failed, and to run /login in the Claude Code CLI, whose saved login the first mate then uses.
 

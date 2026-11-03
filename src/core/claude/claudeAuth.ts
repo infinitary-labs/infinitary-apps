@@ -259,14 +259,17 @@ export class ClaudeAuthBackend implements AccountBackend {
    * end can tell a new login from the one that was there.
    */
   private async loginDecision(dir: string, again: boolean): Promise<LoginDecision> {
-    const evidence = await this.readStore(dir);
+    // Login compares actual credentials on both sides of the client's write.
+    // A rewrite can share the previous modification date, so a cached baseline
+    // could count a credential that was already there as a successful sign-in.
+    const evidence = await this.readStore(dir, { bypassCache: true });
     if (again && evidence.state !== "absent") return { kind: "login", before: evidence };
     if (evidence.state === "present") return { kind: "adopt" };
     const word = await this.statusNow(dir);
     if (word?.connected === true) return { kind: "adopt" };
     // The status read can rewrite the store, and a wait can change what we
     // could not read. Only the reading after that is current.
-    const latest = await this.readStore(dir);
+    const latest = await this.readStore(dir, { bypassCache: true });
     if (latest.state === "present") return { kind: "adopt" };
     if (latest.state === "unreadable") return { kind: "refuse" };
     if (word?.connected === false) return { kind: "login", before: latest };
@@ -287,7 +290,9 @@ export class ClaudeAuthBackend implements AccountBackend {
     before: ClaudeStoreRead,
     code?: number | null,
   ): Promise<boolean> {
-    const after = await this.readStore(dir);
+    // The client may have saved within the file or Keychain date's resolution.
+    // Read through the cache without changing the read's prompting consent.
+    const after = await this.readStore(dir, { bypassCache: true });
     if (after.state === "present" && before.state === "present") {
       return credentialMarker(after.auth) !== credentialMarker(before.auth);
     }

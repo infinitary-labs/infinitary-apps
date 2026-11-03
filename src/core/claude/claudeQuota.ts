@@ -551,8 +551,8 @@ export type ReadClaudeStoreOptions = {
   persistLock?: boolean;
   /**
    * Observe the store itself rather than the credential we last read from it.
-   * A renewal needs this to notice a changed credential even if the item
-   * was rewritten within its modification date's resolution.
+   * Login and renewal need this to compare actual credentials even if the
+   * store was rewritten within its modification date's resolution.
    * A bypassing read still refreshes what is remembered -
    * what it finds is by definition the current credential.
    */

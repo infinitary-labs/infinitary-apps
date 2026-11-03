@@ -1,4 +1,4 @@
-import { mkdirSync, writeFileSync } from "node:fs";
+import { mkdirSync, statSync, utimesSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import type { AuthNotice } from "@shared/providers";
 import { CLAUDE_PROVIDER_ID } from "@shared/providers";
@@ -6,7 +6,12 @@ import { describe, expect, it } from "vitest";
 import { scratchDir } from "../../../tests/helpers/scratchDirs";
 import type { HostKeychain, HostKeychainOutcome, HostKeychainQuery } from "../host";
 import type { AuthInteractionBridge } from "../pi/piAuth";
-import { CLAUDE_LOGIN_UNREADABLE_TEXT, ClaudeAuthBackend } from "./claudeAuth";
+import {
+  CLAUDE_LOGIN_UNFINISHED_TEXT,
+  CLAUDE_LOGIN_UNFINISHED_THERE_TEXT,
+  CLAUDE_LOGIN_UNREADABLE_TEXT,
+  ClaudeAuthBackend,
+} from "./claudeAuth";
 import type { RunClaude } from "./claudeCli";
 import { keychainAccountName, readClaudeStore } from "./claudeQuota";
 import { resetStoreLeasesForTest, runExclusiveStoreTask } from "./claudeStoreLease";
@@ -103,7 +108,8 @@ function backendFor(
     available: () => true,
     keychain: passwords,
     configDir: () => dir,
-    readStore: (configDir) => readClaudeStore(configDir, { keychain: passwords, env }),
+    readStore: (configDir, options) =>
+      readClaudeStore(configDir, { ...options, keychain: passwords, env }),
   });
 }
 
@@ -218,8 +224,13 @@ describe("Claude connect adopts a usable default login", () => {
   it("INF-2319: the row's Sign in over that saved sign-in runs Claude's login, and the fresh one counts", async () => {
     // Connect adopts it (above); the row offers Sign in only once Anthropic
     // refused it, and using it once more would change nothing.
+    // INF-2400: reproduce a rewrite within the file date's resolution without
+    // depending on how quickly this host finishes the stand-in login.
     const { dir, env } = home();
     lapsedFile(dir);
+    const file = join(dir, ".credentials.json");
+    const writtenSeconds = 2000;
+    utimesSync(file, writtenSeconds, writtenSeconds);
     const calls: string[][] = [];
     const run: RunClaude = async (args, configDir) => {
       calls.push(args);
@@ -230,6 +241,8 @@ describe("Claude connect adopts a usable default login", () => {
             claudeAiOauth: { accessToken: "fresh", expiresAt: 9e15, refreshTokenExpiresAt: 9e15 },
           }),
         );
+        utimesSync(file, writtenSeconds, writtenSeconds);
+        expect(statSync(file).mtimeMs).toBe(writtenSeconds * 1000);
         return { code: 0, stdout: "", stderr: "" };
       }
       return { code: 0, stdout: JSON.stringify({ loggedIn: true }), stderr: "" };
@@ -249,6 +262,65 @@ describe("Claude connect adopts a usable default login", () => {
     ).toMatchObject({ state: "present", auth: { accessToken: "fresh" } });
     expect(relay.notices.map((notice) => notice.message).join(" ")).not.toMatch(
       /login on this computer/i,
+    );
+  });
+
+  describe.each([false, true])("INF-2400: current login evidence (pasteCode=%s)", (pasteCode) => {
+    it.each([false, true])(
+      "compares the actual Keychain credentials across login when its date stays equal (changed=%s)",
+      async (changed) => {
+        const { dir, env } = home();
+        let token = "cached-before-sign-in";
+        const passwords: HostKeychain = {
+          findGenericPassword: async () => ({
+            kind: "found",
+            account: env.USER,
+            modifiedAt: "20261102190000Z",
+          }),
+          readGenericPassword: async (query) => {
+            expect(query.interactive).not.toBe(true);
+            return {
+              kind: "value",
+              value: JSON.stringify({ claudeAiOauth: { accessToken: token } }),
+            };
+          },
+        };
+        // A background read remembers a credential, then the vendor changes it
+        // within the same modification-date tick, before Sign in takes its lease.
+        await readClaudeStore(dir, { keychain: passwords, env });
+        token = "current-before-sign-in";
+        const calls: string[][] = [];
+        const backend = new ClaudeAuthBackend({
+          available: () => true,
+          configDir: () => dir,
+          pasteCode,
+          readStore: (configDir, options) =>
+            readClaudeStore(configDir, { ...options, keychain: passwords, env }),
+          run: async (args) => {
+            calls.push(args);
+            if (changed) token = "saved-during-sign-in";
+            return { code: 0, stdout: "", stderr: "" };
+          },
+        });
+        const pending = backend.login({
+          providerId: CLAUDE_PROVIDER_ID,
+          accountId: "acct_adopt",
+          dir: scratchDir("infinitary-claude-adopt-vault-"),
+          type: "oauth",
+          bridge: bridge(),
+          again: true,
+        });
+        if (changed) await pending;
+        else
+          await expect(pending).rejects.toThrow(
+            pasteCode ? CLAUDE_LOGIN_UNFINISHED_THERE_TEXT : CLAUDE_LOGIN_UNFINISHED_TEXT,
+          );
+        expect(calls).toEqual([["auth", "login", "--claudeai"]]);
+        expect(await readClaudeStore(dir, { keychain: passwords, env })).toMatchObject({
+          state: "present",
+          auth: { accessToken: token },
+        });
+      },
     );
   });
 

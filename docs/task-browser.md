@@ -20,6 +20,7 @@ One command in its shell, `infinitary-browser-axi`, on Pi and the Claude client 
 - `click`, `hover`, `drag`, `fill` (typing into a field, replacing what it holds, or choosing a list's option), `fillform`, `press` and `scroll` use the page with real input.
 - `upload` gives a page that asked for a file one from the task's working copy ("A page that asks for a file").
 - `screenshot` photographs the visible page, the whole page, or with `--uid` one element's visible part, into the task's evidence folder, where the crewmate opens it with its read tool; once the captain has handed the browser back it needs `--reason` ("A signed-in page").
+- A file a page downloads is saved in the task's evidence folder, and the next answer says where ("A download").
 - `stop` stops the browser, and `closepage` closes only a second page; `pages`, `console` and `network` read the browser's pages and the page's lists.
 
 Beside it, that crewmate's `emit_card` takes `browser_button`, the label of a card's door to the browser ("From a card" below), with `browser_page` when that door opens a page from the task's project ("A page from the project" below), and `browser_handoff` with an action whose effect opens the browser for the captain ("Asking for help" below), which is also how it asks the captain to make a final submission ("A final submission" below); no other crewmate's schema has either.
@@ -196,6 +197,18 @@ A browser on another computer has no picker of the app's: a request there while 
 Printing and the color picker would also put a window of the Mac's on the desktop, and printing holds the whole app until it is answered, so neither opens.
 Before a document's own script runs, the host's fixed script replaces the page's print with one that does nothing and stops a color field's own picker, and tells the host through a binding it removes at once; the crewmate's next answer says the page asked to print or opened a color picker, among its dialogs.
 A list's menu and a date field's calendar put nothing on the desktop, so they are left as they are.
+
+## A download
+
+A file one of the browser's pages downloads - a link the site serves as an attachment, an address that is a file, or a file the page builds itself - is saved in the task's evidence folder under `downloads/`, where the crewmate reads it and hands it on by path in its report, which is the captain's pick on INF-2442's card (INF-1734).
+The host asks the core where each download goes as it starts (`HostBrowserOpen.onDownload`), and the core answers with the name the site suggested, reduced to one name in that folder (no folder parts, no control characters, not hidden), or `download` when it gave none.
+A name already there is never overwritten: the next is `name-2`, `name-3` and so on before its extension, claimed the moment the download starts.
+A finished file is the owner's alone (0600), since it holds whatever the site put in it; one that was cancelled or interrupted is removed, and nothing of it is kept.
+The crewmate's next answer lists each finished file by its path and size and where it came from, or says a download did not finish, and names any still running; an address that turned out to be a file says so in the answer to the `open`.
+The task's timeline gets one line for each finished download.
+A download the captain makes while holding the page is saved and told the same way, since the file is now in the task's folder.
+A download still running when the browser stops is cancelled.
+On a computer that runs work, the file lands in the task's evidence folder there, beside its pictures ("On another computer").
 
 ## A second page
 
@@ -535,7 +548,7 @@ The host makes each page (`src/main/host/taskBrowser.ts`, behind `HostTaskBrowse
   The core alone resizes it (`HostBrowserPage.resize`), and a second page opens at its opener's size.
   The view the captain watches draws pictures of it (above), so the page stays hidden while it is watched.
 - Its site data lives in a partition unique to that open, in memory only, cleared when it closes, its sign-ins with it; its cookies are read, written and removed for the core alone (`HostBrowserCookies`), and so are its page's own local and session storage (`HostPageStorage`), which a saved sign-in is made of ("Saved sign-ins").
-- It is sandboxed with context isolation and web security on, has no preload and so no app bridge, and refuses every permission, device permission and download, and every new window but a second page the core lets in ("A second page").
+- It is sandboxed with context isolation and web security on, has no preload and so no app bridge, and refuses every permission and device permission, and every new window but a second page the core lets in ("A second page"); a download goes only where the core says ("A download").
 - Navigation, redirects and frame navigation are checked against the same policy as requests; loopback is reached directly, and everything else through the browser's connection guard, its session's one proxy ("Where a page may go").
 - It never reloads a page that answers a form that was sent ("A final submission").
 - It draws every dropdown's list in the page, as Chromium's in-page list (`appearance: base-select`): a Mac's own list is a native menu, a window of its own, which closes at once beside a hidden page and is never in the page's pictures.
@@ -564,6 +577,7 @@ These windows are not the app's.
 
 The task's timeline gets one line when its browser opens, with the origin, and one when it stops on its own (half an hour unused, or the page stopped working).
 A picture goes to the task's evidence folder under the name the crewmate gave it, or the first free `page-N.png`, and a card may show it by that path (`docs/card-authoring.md`).
+A download goes to its `downloads/` folder and adds one line to the timeline ("A download").
 
 ## Tests
 

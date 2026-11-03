@@ -60,6 +60,7 @@ async function observeBrowser(evidence: string) {
       allow: ({ url }) =>
         url.startsWith(`${origin}/`) || url === "https://private-probe.invalid/image",
       onRefused: (refusal) => refusals.push(refusal),
+      onDownload: () => undefined,
       onNavigated: () => {},
       onDialog: () => {},
       onFileChooser: () => {},

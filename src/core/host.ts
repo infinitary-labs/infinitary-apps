@@ -254,6 +254,31 @@ export type HostBrowserOpen = HostPageEvents & {
   allow: (request: { url: string; topLevel: boolean }) => boolean;
   proxy: HostBrowserProxy;
   onRefused: (refusal: HostBrowserRefusal) => void;
+  /**
+   * One of the browser's pages started a download (docs/task-browser.md,
+   * "A download"): where the host saves it, or nothing to refuse it. The
+   * host writes the file there and tells `done` once how it ended; a
+   * download still running when the browser goes is cancelled.
+   */
+  onDownload: (offer: HostDownloadOffer) => HostDownloadTarget | undefined;
+};
+
+/**
+ * A download a page started: the address it came from, the file name the
+ * site suggested, and its size when the site said it (0 when unknown).
+ */
+export type HostDownloadOffer = { url: string; name: string; bytes: number };
+
+/** Where the core has the host save a download, and who hears how it ended. */
+export type HostDownloadTarget = {
+  path: string;
+  done: (outcome: HostDownloadOutcome) => void;
+};
+
+/** How a download ended, and the bytes the host had written by then. */
+export type HostDownloadOutcome = {
+  state: "completed" | "cancelled" | "interrupted";
+  bytes: number;
 };
 
 /**

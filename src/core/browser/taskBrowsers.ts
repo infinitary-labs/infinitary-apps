@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
+import { chmodSync, closeSync, mkdirSync, openSync, rmSync } from "node:fs";
 import { mkdir, realpath, stat, writeFile } from "node:fs/promises";
-import { basename, join, resolve, sep } from "node:path";
+import { basename, extname, join, resolve, sep } from "node:path";
 import { HERE } from "@shared/deviceNames";
 import {
   FRESH_LOOK_WORDS,
@@ -26,6 +27,8 @@ import {
   type HostBrowserPage,
   type HostBrowserRefusal,
   type HostBrowserViewport,
+  type HostDownloadOffer,
+  type HostDownloadTarget,
   type HostFileChooser,
   type HostLoadOutcome,
   type HostOriginStorage,
@@ -532,6 +535,15 @@ type Browser = {
   tunnels: Map<string, GuardRefusalKind>;
   dialogs: string[];
   errors: string[];
+  /**
+   * Downloads that ended since the last answer, in the crewmate's words:
+   * told whoever held the page, since the file is now in its folder.
+   */
+  downloads: string[];
+  /** Downloads still running, by the path they are saved at: the name the site gave. */
+  downloading: Map<string, string>;
+  /** A download started since the last load began: an address that was a file, not a page. */
+  downloaded?: boolean;
   /** Windows a page tried to open past the browser's pages, refused. */
   popups: string[];
   /** Certificates, sign-in boxes and client certificates the browser refused. */
@@ -627,6 +639,52 @@ export function siteOf(url: string): string {
   } catch {
     return url;
   }
+}
+
+/** The folder inside a task's evidence folder that its browser's downloads go to. */
+export const DOWNLOADS_DIR = "downloads";
+
+/** Where a download came from, as the crewmate reads it: a blob's own site, or the page itself. */
+function downloadSiteOf(url: string): string {
+  if (url.startsWith("blob:")) return siteOf(url.slice("blob:".length));
+  if (url.startsWith("data:")) return "the page itself";
+  return siteOf(url);
+}
+
+/**
+ * A downloaded file's name: the site's own, as a single name in the folder
+ * (no folder parts, no control characters, not hidden), or `download`.
+ */
+export function downloadFileName(suggested: string): string {
+  const name = basename(suggested.replace(/\\/g, "/"))
+    // biome-ignore lint/suspicious/noControlCharactersInRegex: a site's name may carry them; the file's never does
+    .replace(/[\u0000-\u001f\u007f/:]/g, "_")
+    .replace(/^[.\s]+/, "")
+    .trim();
+  return name.slice(0, 200) || "download";
+}
+
+/** Claim the first free name for a download: `name`, then `name-2`, `name-3`... before its extension. */
+function reserveDownload(dir: string, name: string): string {
+  const ext = extname(name);
+  const stem = ext ? name.slice(0, -ext.length) : name;
+  for (let n = 1; n < 10_000; n += 1) {
+    const path = join(dir, n === 1 ? name : `${stem}-${n}${ext}`);
+    try {
+      closeSync(openSync(path, "wx", 0o600));
+      return path;
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code !== "EEXIST") throw error;
+    }
+  }
+  throw new Error("the downloads folder has no free name left");
+}
+
+/** A file's size in words: bytes, KB or MB. */
+function bytesWords(bytes: number): string {
+  if (bytes < 1024) return `${bytes} bytes`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
 /** An address's origin (`http://127.0.0.1:5173`), or nothing for one with none of its own. */
@@ -1577,7 +1635,7 @@ export class TaskBrowsers {
         );
         if (!outcome.ok && outcome.code === FORM_RESEND) browser.did = "did not resend a form";
         const done = go === "reload" ? "Reloaded the page." : `Went ${go}.`;
-        return this.answer(browser, this.loadLead(browser, outcome, done, entry.page.url()));
+        return this.answer(browser, () => this.loadLead(browser, outcome, done, entry.page.url()));
       });
     }
     const check = checkOpenable(input.url as string);
@@ -1616,7 +1674,7 @@ export class TaskBrowsers {
       if (outcome.ok) await this.applyAutomaticSignIn(taskId, opened);
       return this.answer(
         opened,
-        `${fresh}${this.loadLead(opened, outcome, `Opened ${href}.`, href)}`,
+        () => `${fresh}${this.loadLead(opened, outcome, `Opened ${href}.`, href)}`,
       );
     });
   }
@@ -2120,6 +2178,8 @@ export class TaskBrowsers {
       tunnels: new Map(),
       dialogs: [],
       errors: [],
+      downloads: [],
+      downloading: new Map(),
       popups: [],
       refusals: [],
       pageNotes: [],
@@ -2165,6 +2225,7 @@ export class TaskBrowsers {
           const words = refusalWords(refusal);
           if (!browser.refusals.includes(words)) this.keep(browser, browser.refusals, words);
         },
+        onDownload: (offer) => this.download(taskId, browser, offer),
         ...this.pageEvents(taskId, browser, first),
       });
     } catch {
@@ -2701,6 +2762,10 @@ export class TaskBrowsers {
       browser.refusals.splice(0, browser.refusals.length, ...own);
       return `${host}'s certificate did not verify (${outcome.code}), so the browser did not open it. It never goes past a certificate error; if the task needs this site, say so in your report.`;
     }
+    // A download ends the load it came from, in words of its own (docs/task-browser.md, "A download").
+    if (browser.downloaded) {
+      return "That address is a file to download, not a page, so the page did not change: see the download below.";
+    }
     const tunnel = browser.tunnels.get(hostname);
     if (tunnel) browser.blocked.delete(hostname);
     switch (outcome.code) {
@@ -2996,13 +3061,15 @@ export class TaskBrowsers {
    */
   private async answer(
     browser: Browser,
-    lead: string,
+    leadWords: string | (() => string),
     ask: WindowAsk = TOP,
     action?: { entry: PageEntry; refs: RefBook },
   ): Promise<BrowserAnswer> {
     const notice = this.takeNotice(browser).trim();
     const entry = browser.current;
     const outline = outlinePage(await entry.page.nodes(), entry.refs, this.outlineOptions(browser));
+    // A load's words are read once the page is, so a download it became has started by then.
+    const lead = typeof leadWords === "function" ? leadWords() : leadWords;
     const window = windowOf(outline.lines, ask);
     const samePage = action?.entry === entry && action.refs === entry.refs;
     const head = this.pageHead(browser);
@@ -3089,6 +3156,16 @@ export class TaskBrowsers {
     listed("The browser refused what a site asked of it:", browser.refusals);
     listed("The page showed dialogs, each dismissed:", browser.dialogs);
     listed(
+      "The browser downloaded files into the task's evidence folder, where you can read them and hand them on by path in your report:",
+      browser.downloads,
+    );
+    if (browser.downloading.size > 0) {
+      lines.push(
+        `Still downloading: ${[...browser.downloading.values()].map(quoted).join(", ")}. Read the page again shortly to see where it was saved.`,
+      );
+    }
+    browser.downloaded = false;
+    listed(
       `The page tried to open another page, refused: this browser keeps ${TASK_BROWSER_PAGES_MAX} pages at most. Close one with ${browserCommand("closepage <n>")}, or open the address with ${browserCommand("open <url>")}:`,
       browser.popups,
     );
@@ -3107,6 +3184,70 @@ export class TaskBrowsers {
       browser.dropped = 0;
     }
     return lines;
+  }
+
+  /**
+   * A page started a download (docs/task-browser.md, "A download"): it is
+   * saved in the task's evidence folder under `downloads/`, by the name the
+   * site gave or the first free one beside it, never over another file, and
+   * the crewmate's next answer and the task's timeline say where. A file
+   * may hold whatever the site put in it, so it is kept for the owner only.
+   */
+  private download(
+    taskId: string,
+    browser: Browser,
+    offer: HostDownloadOffer,
+  ): HostDownloadTarget | undefined {
+    const site = downloadSiteOf(offer.url);
+    const dir = join(this.options.evidenceDir(taskId), DOWNLOADS_DIR);
+    let path: string;
+    try {
+      mkdirSync(dir, { recursive: true });
+      path = reserveDownload(dir, downloadFileName(offer.name));
+    } catch {
+      this.keepDownload(
+        browser,
+        `${quoted(clip(offer.name))} from ${site} was not saved: the evidence folder could not take it.`,
+      );
+      return undefined;
+    }
+    browser.downloading.set(path, offer.name);
+    browser.downloaded = true;
+    return {
+      path,
+      done: (outcome) => {
+        browser.downloading.delete(path);
+        if (outcome.state === "completed") {
+          try {
+            chmodSync(path, 0o600);
+          } catch {
+            // A file the host could not finish is not there to keep private.
+          }
+          this.keepDownload(browser, `${path} (${bytesWords(outcome.bytes)}, from ${site})`);
+          this.options.note?.(taskId, `its browser downloaded ${basename(path)} from ${site}`);
+        } else {
+          try {
+            rmSync(path, { force: true });
+          } catch {
+            // Nothing is left to remove.
+          }
+          this.keepDownload(
+            browser,
+            `${quoted(clip(offer.name))} from ${site} did not finish downloading (${outcome.state}); nothing was kept.`,
+          );
+        }
+        if (this.browsers.get(taskId) === browser) this.options.onChange?.(taskId);
+      },
+    };
+  }
+
+  /** A download's line, for whoever drives next: past the kept count it is counted, not kept. */
+  private keepDownload(browser: Browser, text: string): void {
+    if (browser.downloads.length >= NOTICES_KEPT) {
+      browser.dropped += 1;
+      return;
+    }
+    browser.downloads.push(text);
   }
 
   /** Write a picture: under its own name, or the first free `page-N.png`. */

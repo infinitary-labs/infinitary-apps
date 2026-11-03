@@ -3,6 +3,7 @@ import {
   mkdirSync,
   readFileSync,
   realpathSync,
+  statSync,
   symlinkSync,
   writeFileSync,
 } from "node:fs";
@@ -2978,5 +2979,116 @@ describe("a page that asks for a file", () => {
     const text = (await browser.inspect({})).text;
     expect(text).toContain("this browser never prints");
     expect(text).toContain("color picker: this browser never shows one");
+  });
+});
+
+// The captain's pick on INF-2442's card, "Attachments, downloads, large
+// recordings and the other Mac's record reach the hand-over folder", and
+// INF-1734's goal: a file the task's browser downloads, such as an IRS
+// letter, lands where the crewmate can read it and hand it on.
+describe('a page downloads a file (docs/task-browser.md, "A download")', () => {
+  /** The host's part: it writes the file at the core's path, then says how it ended. */
+  function hostSaves(page: FakePage, url: string, name: string, content: string) {
+    const target = page.opened.onDownload({ url, name, bytes: content.length });
+    if (!target) throw new Error("the core refused the download");
+    writeFileSync(target.path, content);
+    target.done({ state: "completed", bytes: content.length });
+    return target.path;
+  }
+
+  it("saves it in the evidence folder under its own name, never over another, and tells the crewmate", async () => {
+    const { browsers, pages, notes, evidence } = harness();
+    const browser = browsers.forTask("t1");
+    await browser.navigate({ url: "http://localhost:5173/" });
+    const page = pages[0] as FakePage;
+    const letter = "%PDF-1.7 Notice CP2000 for tax year 2025";
+    const first = hostSaves(
+      page,
+      "https://www.irs.gov/pub/notices/cp2000.pdf",
+      "cp2000.pdf",
+      letter,
+    );
+    const second = hostSaves(
+      page,
+      "https://www.irs.gov/pub/notices/cp2000.pdf",
+      "cp2000.pdf",
+      "%PDF-1.7 a second copy",
+    );
+    const dir = join(evidence, "t1", "downloads");
+    expect(first).toBe(join(dir, "cp2000.pdf"));
+    expect(second).toBe(join(dir, "cp2000-2.pdf"));
+    expect(readFileSync(first, "utf8")).toBe(letter);
+    expect(statSync(first).mode & 0o777).toBe(0o600);
+    const answer = await browser.inspect({});
+    expect(answer.text).toContain("The browser downloaded files into the task's evidence folder");
+    expect(answer.text).toContain(`- ${first} (${letter.length} bytes, from www.irs.gov)`);
+    expect(answer.text).toContain(`- ${second} (`);
+    expect(notes).toContain("t1: its browser downloaded cp2000.pdf from www.irs.gov");
+    // Said once.
+    expect((await browser.inspect({})).text).not.toContain("downloaded files");
+  });
+
+  it("keeps a site's name inside the folder, and keeps nothing of a download that did not finish", async () => {
+    const { browsers, pages, evidence } = harness();
+    const browser = browsers.forTask("t1");
+    await browser.navigate({ url: "http://localhost:5173/" });
+    const page = pages[0] as FakePage;
+    const dir = join(evidence, "t1", "downloads");
+    const escaping = page.opened.onDownload({
+      url: "http://localhost:5173/export",
+      name: "../../.ssh/authorized_keys",
+      bytes: 0,
+    });
+    expect(escaping?.path).toBe(join(dir, "authorized_keys"));
+    const nameless = page.opened.onDownload({
+      url: "blob:http://localhost:5173/9f2c",
+      name: "",
+      bytes: 0,
+    });
+    expect(nameless?.path).toBe(join(dir, "download"));
+    const running = await browser.inspect({});
+    expect(running.text).toContain('Still downloading: "../../.ssh/authorized_keys", "".');
+    escaping?.done({ state: "interrupted", bytes: 512 });
+    expect(existsSync(join(dir, "authorized_keys"))).toBe(false);
+    const after = await browser.inspect({});
+    expect(after.text).toContain(
+      '"../../.ssh/authorized_keys" from localhost:5173 did not finish downloading (interrupted); nothing was kept.',
+    );
+    expect(after.text).toContain('Still downloading: "".');
+  });
+
+  it("tells the crewmate of a file the captain downloaded while holding the page", async () => {
+    const h = harness();
+    const browser = h.browsers.forTask("t1");
+    await browser.navigate({ url: "http://localhost:5173/" });
+    const handle = { session: h.browsers.session, generation: 1 };
+    await h.browsers.takeControl("t1", handle);
+    const path = hostSaves(
+      h.pages[0] as FakePage,
+      "https://bank.example/statement",
+      "statement-october.pdf",
+      "%PDF-1.4 statement",
+    );
+    await h.browsers.returnControl("t1", handle);
+    expect((await browser.inspect({})).text).toContain(`- ${path} (`);
+  });
+
+  it("answers an address that is a file with the download, not a replaced load", async () => {
+    const { browsers, pages } = harness();
+    const browser = browsers.forTask("t1");
+    await browser.navigate({ url: "http://localhost:5173/" });
+    const page = pages[0] as FakePage;
+    page.pendingLoad = (async () => {
+      hostSaves(
+        page,
+        "http://localhost:5173/report.csv",
+        "report.csv",
+        "date,total\n2026-11-02,4\n",
+      );
+      return { ok: false, code: "ERR_FAILED" } as HostLoadOutcome;
+    })();
+    const answer = await browser.navigate({ url: "http://localhost:5173/report.csv" });
+    expect(answer.text).toContain("That address is a file to download, not a page");
+    expect(answer.text).toContain("downloads/report.csv (");
   });
 });

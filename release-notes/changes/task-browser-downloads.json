@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "id": "task-browser-downloads",
+      "kind": "feature",
+      "area": "crewmates",
+      "title": "A crewmate keeps the files its browser downloads",
+      "body": "When a crewmate's browser downloads a file, such as a letter or an exported table, the file is saved with the task. The crewmate can read it and pass it on to another task, and the task's record notes each download. A file you download while you hold the browser is kept the same way.",
+      "noPicture": "Nothing new appears on screen; the result is a file the crewmate can read and a line on the task's record.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

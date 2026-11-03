@@ -378,7 +378,27 @@ async function openTaskPage(input: HostBrowserOpen): Promise<HostBrowserPage> {
   ses.setPermissionRequestHandler((_contents, _permission, callback) => callback(false));
   ses.setPermissionCheckHandler(() => false);
   ses.setDevicePermissionHandler(() => false);
-  ses.on("will-download", (event) => event.preventDefault());
+  // A download goes where the core says, in the task's evidence folder, or
+  // nowhere (docs/task-browser.md, "A download"); one still running when
+  // the browser goes is cancelled.
+  const downloads = new Set<Electron.DownloadItem>();
+  ses.on("will-download", (event, item) => {
+    const target = input.onDownload({
+      url: item.getURL(),
+      name: item.getFilename(),
+      bytes: Math.max(0, item.getTotalBytes()),
+    });
+    if (!target) {
+      event.preventDefault();
+      return;
+    }
+    item.setSavePath(target.path);
+    downloads.add(item);
+    item.once("done", (_event, state) => {
+      downloads.delete(item);
+      target.done({ state, bytes: item.getReceivedBytes() });
+    });
+  });
   ses.webRequest.onBeforeRequest({ urls: ["<all_urls>"] }, (details, callback) => {
     if (details.resourceType === "mainFrame" && details.webContents) {
       noteDocumentRequest(details.webContents, details.method);
@@ -406,6 +426,7 @@ async function openTaskPage(input: HostBrowserOpen): Promise<HostBrowserPage> {
     if (ended) return;
     ended = true;
     guardSignIns.delete(port);
+    for (const item of [...downloads]) item.cancel();
     ses.webRequest.onBeforeRequest(null);
     void ses.clearStorageData().catch(() => undefined);
     void ses.clearCache().catch(() => undefined);

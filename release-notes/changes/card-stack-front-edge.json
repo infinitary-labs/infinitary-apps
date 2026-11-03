@@ -1,0 +1,19 @@
+{
+  "entries": [
+    {
+      "id": "card-stack-front-edge",
+      "kind": "fix",
+      "area": "cards",
+      "title": "The front card's top edge shows whole again when cards are stacked",
+      "body": "With more than one card waiting, the strips showing the cards behind were drawn over the front card's top edge, hiding its top border and notching its rounded corners. They now sit behind the front card, which keeps its full outline.",
+      "picture": {
+        "dark": "card-stack-front-edge-dark.webp",
+        "light": "card-stack-front-edge-light.webp",
+        "alt": "A stack of three cards: the front card's full top border and rounded corners, with the strips of the two cards behind it showing above"
+      },
+      "provenance": {
+        "origin": "change"
+      }
+    }
+  ]
+}

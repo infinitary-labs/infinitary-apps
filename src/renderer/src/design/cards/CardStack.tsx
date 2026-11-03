@@ -162,6 +162,10 @@ export function CardStack({
 
 /** Decorative depth belongs inside the entry drawing, so it shares that
  * drawing's readiness, opacity and departure instead of outliving it.
+ * Each peek reaches one step into the front card's top edge, and the card
+ * is drawn over it: the peeks paint at `zIndex: -1`, so the entry that
+ * holds them must isolate its painting (`StageEntry`), or they would fall
+ * behind the stage itself.
  */
 export function CardPeeks({ count, style }: { count: number; style?: React.CSSProperties }) {
   const peekBase: React.CSSProperties = {
@@ -173,6 +177,7 @@ export function CardPeeks({ count, style }: { count: number; style?: React.CSSPr
     borderBottom: "none",
     borderRadius: "var(--radius-l) var(--radius-l) 0 0",
     height: 14,
+    zIndex: -1,
   };
   return (
     <>

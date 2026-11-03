@@ -82,7 +82,9 @@ export function StageEntry({
             data-window-region={role === "shown" ? "card" : undefined}
             tabIndex={role === "shown" ? -1 : undefined}
             onKeyDown={role === "shown" ? scrollBodyByKey : undefined}
-            style={style}
+            // Its own painting layer, so the card's peeks (`CardPeeks`) draw
+            // behind the card and in front of the stage.
+            style={{ isolation: "isolate", ...style }}
           >
             {children}
           </div>

@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "inf-2405",
+      "reason": "Internal testing guidance: bring edited tests, helpers and stand-ins to the six words, report outside patterns and retain ask-first deletion; no visible app change."
+    }
+  ]
+}

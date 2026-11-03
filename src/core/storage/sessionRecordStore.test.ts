@@ -229,8 +229,11 @@ describe("the Claude seat's transcript copy", () => {
 
     it("waits for the end of a line the client was still writing, keeping only its own bytes", async () => {
       const { transcripts, source } = setup();
-      const filler = "x".repeat(64 * 1024);
-      writeFileSync(source, `${line({ type: "user", uuid: "u0", filler })}{"type":"assis`);
+      // The first read is sized past Node's pool block, as in "keeps only the
+      // unfinished line's own bytes between reads" above.
+      const filler = "x".repeat(Buffer.poolSize);
+      const written = `${line({ type: "user", uuid: "u0", filler })}{"type":"assis`;
+      writeFileSync(source, written);
       transcripts.mirror(SESSION, source);
       await transcripts.catchUp(SESSION);
       const held = transcripts.index(SESSION);
@@ -238,7 +241,7 @@ describe("the Claude seat's transcript copy", () => {
       // INF-2392: the unfinished line is its own copy, not a view of the whole read.
       const { partial } = held as unknown as { partial: Buffer };
       expect(partial.toString("utf8")).toBe('{"type":"assis');
-      expect(partial.buffer.byteLength).toBeLessThan(filler.length);
+      expect(partial.buffer.byteLength).toBeLessThan(Buffer.byteLength(written));
       appendFileSync(source, `tant","uuid":"u1"}\n${turnLines(2, 1)}`);
       transcripts.mirror(SESSION, source);
       await transcripts.catchUp(SESSION);

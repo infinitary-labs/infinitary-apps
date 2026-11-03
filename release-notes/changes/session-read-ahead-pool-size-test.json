@@ -1,0 +1,8 @@
+{
+  "exclusions": [
+    {
+      "id": "session-read-ahead-pool-size-test",
+      "reason": "Internal: repairs the transcript read-ahead's unit test, which measured Node's shared allocation pool, 64 KiB from Node 24.22, instead of the read itself; nothing in the app changes."
+    }
+  ]
+}

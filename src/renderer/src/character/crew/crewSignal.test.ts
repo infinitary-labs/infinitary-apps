@@ -6,7 +6,13 @@ import { afterEach, describe, expect, it } from "vitest";
 import { FLICKER_TUNING, takeFirstmateFlicker, tokenIntensity } from "../flicker";
 import { simulateReducedMotion } from "../reducedMotion";
 import { ComputerOrbits } from "./computers";
-import { applyCrewDependencies, applyCrewEvent, crewStatusOf, seedCrew } from "./crewSignal";
+import {
+  applyCrewDependencies,
+  applyCrewEvent,
+  crewStatusOf,
+  reconcileCrew,
+  seedCrew,
+} from "./crewSignal";
 import { CrewOrbit, DEFAULT_ORBIT, type OrbitFrame } from "./orbit";
 import { CROWDED_PLANES, planeRadius } from "./orbitalPlanes";
 import { SCENE_HALF_PX, SCENE_REACH_PX } from "./satellites";
@@ -301,6 +307,42 @@ describe("crew orbit wiring", () => {
     // A later write on the closed row changes nothing.
     applyCrewEvent(m, changed({ taskId: "a", status: "done", from: "done" }), 3000);
     expect(m.present()).toEqual([]);
+  });
+
+  // INF-2371: a start refused before its crewmate ran erases the task it was
+  // born with, and the stream says nothing; the ring must not keep a
+  // crewmate with no record behind it.
+  it("lets a crewmate whose record a failed start erased drift away once the board catches up", () => {
+    const m = new ComputerOrbits(0, () => 0.5);
+    m.configure([{ id: "mini", kind: "work", name: "Mac mini", pairedAt: 1, inReach: true }]);
+    seedCrew(m, [view({ id: "kept", executionDeviceId: "mini" })], 0);
+    reconcileCrew(m, { seq: 40, tasks: [view({ id: "kept", executionDeviceId: "mini" })] }, 0);
+    // The record is born active on the Mac mini, then the start is refused.
+    applyCrewEvent(m, changed({ taskId: "refused", seq: 42, executionDeviceId: "mini" }), 10);
+    expect(m.present().sort()).toEqual(["kept", "refused"]);
+    // A board built before the record was born says nothing about it.
+    reconcileCrew(m, { seq: 41, tasks: [view({ id: "kept", executionDeviceId: "mini" })] }, 20);
+    expect(m.present().sort()).toEqual(["kept", "refused"]);
+    // The board after the erase no longer lists it: it drifts away, unreceived.
+    reconcileCrew(m, { seq: 43, tasks: [view({ id: "kept", executionDeviceId: "mini" })] }, 30);
+    const mid = m.update(100);
+    expect(mid.crew.find((c) => c.id === "refused")?.leaveMode).toBe("away");
+    const end = run(m, 116, 30 + DEFAULT_ORBIT.awayMs + 40);
+    expect(end.crew.map((c) => c.id)).toEqual(["kept"]);
+    expect(m.takeCues()).not.toContainEqual({ kind: "receive" });
+  });
+
+  it("drops on a fresh board read a crewmate whose record went while nothing was listening", () => {
+    const m = new CrewOrbit(0);
+    const first = { seq: 7, tasks: [view({ id: "a" }), view({ id: "gone" })] };
+    seedCrew(m, first.tasks, 0);
+    reconcileCrew(m, first, 0);
+    // A view reconnecting reads the board again; "gone" was erased meanwhile.
+    const again = { seq: 9, tasks: [view({ id: "a" })] };
+    seedCrew(m, again.tasks, 1000);
+    reconcileCrew(m, again, 1000);
+    const end = run(m, 1000, 1000 + DEFAULT_ORBIT.awayMs + 40);
+    expect(end.crew.map((c) => c.id)).toEqual(["a"]);
   });
 
   it("turns reports, steers and failed turns into their moments", () => {

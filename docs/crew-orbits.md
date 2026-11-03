@@ -42,6 +42,7 @@ Production uses the first orbit even for a small roster; the historical single-r
 Geometry, radius and angular slots follow the existing springs, so an orbit that widens or shrinks glides there.
 A settled boot roster is placed on its planes immediately, without re-emitting already active crewmates.
 Waits and tasks with parts come from the board the Tasks panel reads (`tasks.board` through the read executor), so above the board's delta trigger (more than 500 rows or 256 KiB) the folded deltas move them as a snapshot does, and a gap reads the board again.
+The same board is the roster's last word: a crewmate it no longer lists as active work drifts away, once the board's `seq` has reached the `task_changed` that sent it out (`reconcileCrew`), so a task a failed start erased, which closes with no event of its own, leaves the ring as it leaves the phone's.
 Reduced motion snaps the formation and lifecycle clips to their settled state.
 
 The first orbit fills to 24 crew; the 25th opens the second orbit inside it, which fills to another 24.

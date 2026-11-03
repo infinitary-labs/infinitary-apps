@@ -2,7 +2,7 @@ import { type CenterNode, centerCues, crewedWaits } from "@shared/dependencyVisu
 import type { FmEvent } from "@shared/events";
 import { nowGroupOf } from "@shared/nowPanel";
 import { FIRSTMATE_SESSION_ID } from "@shared/observe";
-import type { TaskLinkView, TaskView } from "@shared/tasks";
+import type { TaskBoard, TaskLinkView, TaskView } from "@shared/tasks";
 import { requestFirstmateFlicker, tokenIntensity, usageTotal } from "../flicker";
 import { prefersReducedMotion } from "../reducedMotion";
 import { stageNow } from "../stageClock";
@@ -88,6 +88,52 @@ export function applyCrewDependencies(
   model.setPrograms(programsOf(tasks, links), now);
 }
 
+/**
+ * The board sequence each crewmate on the ring was last seen active at, by
+ * orbit: its `task_changed`, or the board that seeded it. A board at or past
+ * that sequence that no longer lists it as active work is the record's own
+ * word that it is gone (`reconcileCrew`); an older board is not.
+ */
+const activeSince = new WeakMap<CrewOrbit, Map<string, number>>();
+
+function seenActive(model: CrewOrbit): Map<string, number> {
+  let seen = activeSince.get(model);
+  if (!seen) {
+    seen = new Map();
+    activeSince.set(model, seen);
+  }
+  return seen;
+}
+
+/**
+ * The ring holds only crew the sequenced board still lists (INF-2371). A
+ * record can go with no close of its own - a start that failed before its
+ * crewmate ran erases the task it was born with - and the stream says
+ * nothing then, so the board the Tasks panel and the phone read is the
+ * roster's last word: a crewmate it no longer lists as active work drifts
+ * away, once the board has caught up with the change that sent it out.
+ */
+export function reconcileCrew(
+  model: CrewOrbit,
+  board: Pick<TaskBoard, "seq" | "tasks">,
+  now: number,
+): void {
+  const seen = seenActive(model);
+  const listed = new Set(board.tasks.filter(inOrbit).map((task) => task.id));
+  for (const id of listed) seen.set(id, Math.max(seen.get(id) ?? board.seq, board.seq));
+  for (const id of model.present()) {
+    if (listed.has(id)) continue;
+    const since = seen.get(id);
+    if (since !== undefined && since > board.seq) continue;
+    seen.delete(id);
+    model.leave(id, "away", now);
+  }
+}
+
+function inOrbit(task: Pick<TaskView, "kind" | "status">): boolean {
+  return task.kind === "work" && task.status === "active";
+}
+
 function leaveModeOf(status: TaskView["status"]): LeaveMode {
   return status === "done" ? "home" : "away";
 }
@@ -106,6 +152,7 @@ export function applyCrewEvent(model: CrewOrbit, event: FmEvent, now: number): v
       // owns the cue, regardless of whether its crewmate is running or idle.
       model.setReview(event.taskId, event.status === "active" ? (event.reviewOf ?? null) : null);
       if (event.status === "active") {
+        seenActive(model).set(event.taskId, event.seq);
         const status = event.workPosture
           ? event.workPosture.state === "active"
             ? "working"
@@ -121,6 +168,7 @@ export function applyCrewEvent(model: CrewOrbit, event: FmEvent, now: number): v
           if (event.tier !== undefined) model.setTier(event.taskId, tier);
         } else model.spawn(event.taskId, status, now, false, tier, wait);
       } else {
+        seenActive(model).delete(event.taskId);
         model.leave(event.taskId, leaveModeOf(event.status), now);
       }
       return;

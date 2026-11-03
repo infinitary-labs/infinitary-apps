@@ -66,6 +66,7 @@ import {
   applyCrewDependencies,
   applyCrewEvent,
   crewOrbit,
+  reconcileCrew,
   seedCrew,
 } from "../character/crew/crewSignal";
 import { requestCharacterEmote, requestCharacterNotice } from "../character/emoteSignal";
@@ -1285,6 +1286,7 @@ export const useShellStore = create<ShellState>()((set, get) => ({
       .board()
       .then((board) => {
         seedCrew(crewOrbit(), board.tasks, stageNow(), board.links);
+        reconcileCrew(crewOrbit(), board, stageNow());
         set({
           crewActivity: Object.fromEntries(
             board.tasks
@@ -1339,6 +1341,7 @@ export const useShellStore = create<ShellState>()((set, get) => ({
       .board()
       .then((board) => {
         seedCrew(crewOrbit(), board.tasks, stageNow(), board.links);
+        reconcileCrew(crewOrbit(), board, stageNow());
         set({
           crewActivity: Object.fromEntries(
             board.tasks
@@ -1349,7 +1352,8 @@ export const useShellStore = create<ShellState>()((set, get) => ({
       })
       .catch(() => {});
     // A new or cleared wait, and a task's parts and their links, arrive on the
-    // sequenced board, not on task_changed. The stage reads the board the
+    // sequenced board, not on task_changed, and so does a record erased with
+    // no close of its own, such as a failed start's (INF-2371). The stage reads the board the
     // Tasks panel reads, which folds the core's deltas above the trigger (P5)
     // and reads again on a gap, so a large board moves the stage too.
     appReadExecutor().subscribe(
@@ -1359,6 +1363,7 @@ export const useShellStore = create<ShellState>()((set, get) => ({
         onValue: (value) => {
           const board = value as TaskBoard;
           applyCrewDependencies(crewOrbit(), board.tasks, board.links, stageNow());
+          reconcileCrew(crewOrbit(), board, stageNow());
         },
         onError: () => {},
       },

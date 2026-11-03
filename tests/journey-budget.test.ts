@@ -10,6 +10,7 @@ import {
   laneOf,
   type ReportSuite,
   readLinuxObservations,
+  SMALL_BIN_MS,
 } from "../scripts/journey-budget.ts";
 import { scratchDir } from "./helpers/scratchDirs.ts";
 import { needsMac } from "./lint/e2eMacTag.ts";
@@ -36,6 +37,14 @@ const tagged = (file: string) => {
 };
 const linuxFiles = (result: ReturnType<typeof budget>) =>
   result.linux.flatMap((bin) => bin.files.split(" "));
+/** The middle of a lane's measured readings, what an unmeasured file costs there (INF-2486 cut D). */
+const middleReading = (lane: "parallel" | "desktop") => {
+  const measured = [...times]
+    .filter(([file, ms]) => ms > 0 && laneOf(file) === lane)
+    .map(([, ms]) => ms)
+    .sort((a, b) => a - b);
+  return measured[Math.floor(measured.length / 2)] ?? 0;
+};
 
 describe("INF-1763 journey placement", () => {
   // INF-2259: CI can omit Mac proof already gathered locally, and missing
@@ -68,11 +77,9 @@ describe("INF-1763 journey placement", () => {
     for (const bin of result.linux) {
       const files = bin.files.split(" ");
       expect(files.every((file) => laneOf(file) === bin.lane)).toBe(true);
-      const slowest = Math.max(
-        ...[...times].filter(([file]) => laneOf(file) === bin.lane).map(([, ms]) => ms),
-      );
       const estimated = files.reduce(
-        (sum, file) => sum + (times.get(file) || slowest) / (bin.lane === "desktop" ? 0.6 : 1),
+        (sum, file) =>
+          sum + (times.get(file) || middleReading(bin.lane)) / (bin.lane === "desktop" ? 0.6 : 1),
         0,
       );
       expect(bin.estimatedMs).toBeCloseTo(estimated);
@@ -139,6 +146,51 @@ describe("INF-1763 journey placement", () => {
     expect(result.linux[0]?.estimatedMs).toBeGreaterThan(0);
   });
 
+  // INF-2486 cut D, approved by the captain: an unmeasured file costs its
+  // lane's middle reading, and a job under two minutes joins its lane's
+  // lightest job, since each job repeats the checkout, install and build.
+  it("places new journeys at their lane's middle reading, not its slowest", () => {
+    // PR #794's three new runbook journeys each took a job of their own.
+    const fresh = [
+      "tests/e2e/new-runbooks.spec.ts",
+      "tests/e2e/new-installed-runbooks.spec.ts",
+      "tests/e2e/new-personal-runbooks.spec.ts",
+    ];
+    for (const file of fresh) expect(laneOf(file)).toBe("desktop");
+    const result = budget(
+      new Map(fresh.map((file) => [file, ["the change edits this journey"]])),
+      times,
+      tagged,
+    );
+    expect(result.unmeasured.toSorted()).toEqual(fresh.toSorted());
+    expect(result.linux).toHaveLength(1);
+    expect(result.linux[0]?.estimatedMs).toBeCloseTo(
+      (fresh.length * middleReading("desktop")) / 0.6,
+    );
+  });
+
+  it("joins a job under two minutes to its lane's lightest job", () => {
+    // Real readings: the first-fit packing alone leaves gitlab-delivery, 1.6
+    // minutes, in a third job, since neither six-minute job has room for it.
+    const picked = [
+      "tests/e2e/task-browser-booking.spec.ts",
+      "tests/e2e/quit-mid-turn.spec.ts",
+      "tests/e2e/forge-signin.spec.ts",
+      "tests/e2e/run-work.spec.ts",
+      "tests/e2e/gitlab-delivery.spec.ts",
+    ];
+    for (const file of picked) expect(laneOf(file)).toBe("parallel");
+    expect(times.get("tests/e2e/gitlab-delivery.spec.ts")).toBeLessThan(SMALL_BIN_MS);
+    const result = budget(
+      new Map(picked.map((file) => [file, ["the change edits this journey"]])),
+      times,
+      tagged,
+    );
+    expect(result.linux).toHaveLength(2);
+    expect(linuxFiles(result).toSorted()).toEqual(picked.toSorted());
+    for (const bin of result.linux) expect(bin.estimatedMs).toBeGreaterThanOrEqual(SMALL_BIN_MS);
+  });
+
   it("reads real passing Playwright durations and refuses an empty timing artifact", () => {
     const report = JSON.parse(
       readFileSync(
@@ -200,9 +252,9 @@ describe("INF-1987 Linux-calibrated placement", () => {
         .flatMap(({ report }) => report.selectedFiles)
         .map((file) => [file, ["captured Linux selection"]]),
     );
-    // An older Mac artifact can lack these selected files. Keep its other real
-    // readings so the existing slowest-lane fallback requires five jobs.
-    const olderMac = new Map([...times].filter(([file]) => !pick.has(file)));
+    // With no Mac artifact at all, each file is placed at the six-minute
+    // budget, so the conservative fallback requires five jobs.
+    const olderMac = new Map<string, number>();
     const original = budget(pick, olderMac, tagged);
     const advisory = budget(pick, olderMac, tagged, false, source);
     const explicit = budget(pick, olderMac, tagged, false, source, true);

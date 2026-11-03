@@ -9,6 +9,12 @@ import type { Reasons } from "./affected-journeys.ts";
 
 // INF-658: the captain chose six minutes of journeys, not a job timeout; it sizes the Linux jobs.
 export const JOURNEY_BUDGET_MS = 6 * 60 * 1000;
+/**
+ * INF-2486 cut D, approved by the captain: a Linux job under two minutes of
+ * journeys joins its lane's lightest other job, since each job repeats the
+ * checkout, install and build before its first test.
+ */
+export const SMALL_BIN_MS = 2 * 60 * 1000;
 /** The PC's self-hosted Linux places, five at once (INF-1720's plan). */
 export const LINUX_PLACES = 5;
 const parallel = new Set([...APPLICATION_SUITES, ...RENDERER_SUITES].map((file) => basename(file)));
@@ -318,13 +324,17 @@ export function budget(
   applyLinux = false,
   platforms: "linux" | "mac" | "both" = "both",
 ) {
-  // New and previously skipped journeys use the slowest measured file in their lane.
+  // New and previously skipped journeys use the middle measured file of their
+  // lane (INF-2486 cut D): the slowest gave each one a job of its own.
+  const middle = (lane: "parallel" | "desktop") => {
+    const measured = [...times]
+      .filter(([path, ms]) => ms > 0 && laneOf(path) === lane)
+      .map(([, ms]) => ms)
+      .sort((a, b) => a - b);
+    return measured[Math.floor(measured.length / 2)];
+  };
   const cost = (file: string) =>
-    times.get(file) ||
-    Math.max(
-      times.size === 0 ? JOURNEY_BUDGET_MS : 1,
-      ...[...times].filter(([path]) => laneOf(path) === laneOf(file)).map(([, ms]) => ms),
-    );
+    times.get(file) || (times.size === 0 ? JOURNEY_BUDGET_MS : (middle(laneOf(file)) ?? 1));
   const ordered = [...reasons.keys()].sort((a, b) => a.localeCompare(b));
   const mac = ordered.filter((file) => everyOnMac || tagged(file));
   // INF-658's measured Linux rates: one Mac minute of parallel work per minute,
@@ -356,7 +366,22 @@ export function budget(
   const lanes = (["parallel", "desktop"] as const).filter((lane) =>
     ordered.some((file) => laneOf(file) === lane),
   );
-  let linux = lanes.flatMap((lane) => pack(lane, Number.POSITIVE_INFINITY));
+  // A job under SMALL_BIN_MS joins its lane's lightest other job.
+  const joinSmall = (bins: Bin[]): Bin[] => {
+    const kept = [...bins];
+    for (const small of bins.toSorted((a, b) => a.estimatedMs - b.estimatedMs)) {
+      if (small.estimatedMs >= SMALL_BIN_MS) continue;
+      const into = kept
+        .filter((bin) => bin !== small && bin.lane === small.lane)
+        .toSorted((a, b) => a.estimatedMs - b.estimatedMs)[0];
+      if (!into) continue;
+      into.files = `${into.files} ${small.files}`;
+      into.estimatedMs += small.estimatedMs;
+      kept.splice(kept.indexOf(small), 1);
+    }
+    return kept;
+  };
+  let linux = lanes.flatMap((lane) => joinSmall(pack(lane, Number.POSITIVE_INFINITY)));
   if (linux.length > LINUX_PLACES) {
     // INF-1720's plan: the journeys run on the PC's Linux places, five at once,
     // so it packs into at most one job per place, each repeating the setup
@@ -442,7 +467,7 @@ function main() {
               `- Candidate ${index + 1} (${bin.lane}): ${(bin.estimatedMs / 60000).toFixed(1)} minutes: ${bin.files}`,
           )
           .join("\n") +
-        `\n\nExecution timing source: ${result.timingSource}. Candidate timing source: ${result.candidateTimingSource}. Calibrated placement is advisory unless explicitly requested for verification. Linux files without comparable readings: ${result.linuxUnmeasured.join(", ") || "none"}.\n\nUnmeasured Mac files (slowest measured lane file used): ${result.unmeasured.join(", ") || "none"}. Linux-calibrated estimates include observed job overhead; conservative estimates exclude setup. Neither estimates runner waits. Indivisible files, and groups past the PC's ${LINUX_PLACES} Linux places, can exceed six minutes.\n`,
+        `\n\nExecution timing source: ${result.timingSource}. Candidate timing source: ${result.candidateTimingSource}. Calibrated placement is advisory unless explicitly requested for verification. Linux files without comparable readings: ${result.linuxUnmeasured.join(", ") || "none"}.\n\nUnmeasured Mac files (middle measured lane file used): ${result.unmeasured.join(", ") || "none"}. Linux-calibrated estimates include observed job overhead; conservative estimates exclude setup. Neither estimates runner waits. Indivisible files, and groups past the PC's ${LINUX_PLACES} Linux places, can exceed six minutes.\n`,
     );
 }
 if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) main();

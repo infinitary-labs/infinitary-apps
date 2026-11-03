@@ -503,6 +503,7 @@ A pull request no longer starts `journeys.yml` (INF-2139, captain: "let's pull j
 Run every listed file when the selection contains at most 40 files; never prune it by hand (INF-2394 measure 2).
 Above 40, request `source-journeys.yml` with `suite: full`, the exact source commit, requesting task and reason: the Linux-only sweep, not full-system verification.
 Selected tagged tests still need their native proof separately.
+Beside a sweep, request those tagged tests alone: `journeys.yml` with the files that hold them and `platforms=mac`, never `linux` or `both`, since the sweep already runs every file on Linux (INF-2486).
 Use `node scripts/affected-journeys.ts --base <base> --head <head> --plan` to read the route and complete list.
 After successful runs, pass all their file names to the same comparison with `--ran "<files>"`; keep its JSON record beside the successful run links in the task evidence.
 The record lists selected and run files and every missing file; missing coverage exits nonzero.
@@ -538,7 +539,8 @@ Automatic execution retains the conservative placement until live evidence suppo
 An explicit `--apply-linux` request on `scripts/journey-budget.ts` runs the candidate for verification; `journeys.yml` does not pass that flag.
 It never hard-codes a three-plus-two split.
 The conservative fallback still gives each lane places by its share of estimated work, at least one, and places a file into its lane's least loaded job, which may exceed six minutes.
-A new or previously skipped file uses the slowest measured file in its lane, and the summary lists it as unmeasured.
+A new or previously skipped file uses the middle measured file in its lane, and the summary lists it as unmeasured (INF-2486).
+While the packing is not bound to the five places, a group under two minutes (`SMALL_BIN_MS`) joins its lane's lightest other group, since each job repeats the checkout, install and build before its first test (INF-2486).
 Conservative Linux estimates use the plan's observed rates: one Mac minute of parallel work per Linux minute and 0.6 Mac minutes of desktop work.
 A file stays intact, so an indivisible slow file may exceed six minutes; conservative estimates exclude setup, and neither model predicts runner waits or shared-machine slowdown.
 Every selected file has ordinary Linux coverage once; only directly edited selected files receive two additional fresh rounds.
@@ -570,12 +572,14 @@ Twenty-one failing sites in five days were certain breaks after an intentional p
     It reads them with a regular expression of its own holding a word of four or more letters, or its stand-in scripts a tool by name, as `name: "check_change"`, that most journeys do not script.
     Only quoted strings of two or more words on the diff's lines count; a comment, and a one-word value of the code such as `"checked"`, serve nothing.
     The rule compares the pattern's matches, or the tool's mentions, on the removed and added strings of each file, so words that only moved choose nothing;
-11. the freeze journey (`main-thread-freeze.spec.ts`), when the change edits code the main process runs, under `src/core/`, `src/main/` or `src/shared/`, other than a unit test (`FREEZE_JOURNEY`).
-    Any such code can hold the main thread on a long record with no hook, symbol or words changing (`docs/freeze-recorder.md`, "Before a change merges").
-    It is its own rule beside the fallback table, because it reaches nearly every change and the fallback table's replayed merges predate it.
+11. the freeze journey (`main-thread-freeze.spec.ts`), when the change edits the freeze recorder (`src/core/freeze/`) or the main process's own start and clock (`src/main/index.ts`, `src/main/app.ts`, `src/core/orchestrator/ticker.ts`), other than a unit test (`FREEZE_JOURNEY`).
+    That code can hold the main thread with no hook, symbol or words changing (`docs/freeze-recorder.md`, "Before a change merges").
+    Other main-process code selects it only through the rules above, and the continuous run on `main` runs it on every push (INF-2486, the captain's cut E).
 12. a spec directly importing a changed product module, even when no symbol changes (relative paths and the `@shared/` and `@core/` aliases).
-    A data file that module imports by relative path, such as a runbook's JSON in `src/core/pi/piResources.ts`, is part of the module's text, so a change to it selects the same specs (INF-2426);
-13. a spec directly importing a stand-in declaring `@journey-area src/path/` in a documentation comment.
+    A data file that module imports by relative path, such as a runbook's JSON in `src/core/pi/piResources.ts`, is part of the module's text, so a change to it selects the same specs (INF-2426).
+    A hub, a module more than 40 journeys import directly (`JOURNEY_SELECTION_CAP`), does not select by import alone, and neither does a hook more than 40 journeys read under rule 6: an edit there would make every change to it a sweep (INF-2486, the captain's cut C).
+    Its readers still follow the other rules, its unit tests and the statement check run on the change, and the continuous run on `main` catches the rest as a main repair;
+13. a spec directly importing a stand-in declaring `@journey-area src/path/` in a documentation comment, for a changed file there other than a unit test, which no journey runs (INF-2486, the captain's cut B).
     A trailing slash means every file under that directory; otherwise the declaration names one exact product file.
     The declaration does not follow the common launcher's imports: nearly every journey reaches that launcher, but only the stand-in's explicit callers exercise its product area.
     `tests/e2e/mockClaudeClient.ts` declares `src/core/claude/` so changes to the real reader select the stand-in's callers;

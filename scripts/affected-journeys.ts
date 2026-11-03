@@ -33,7 +33,8 @@ import { callsMethod, changedMessages, PRELOAD } from "./window-messages.ts";
  *    a string of `src/`; or
  * 6. it, or a helper most journeys do not import, names a hook that a
  *    edited region under `src/renderer/` draws, even when the change adds or
- *    removes none: the region owns what that hook shows; or
+ *    removes none: the region owns what that hook shows. A hub hook, one more
+ *    than `JOURNEY_SELECTION_CAP` journeys read, does not select this way; or
  * 7. it, or a helper most journeys do not import, calls a
  *    `window.infinitary` method, or names a read, whose message between the
  *    window and the core the change edits (./window-messages.ts); or
@@ -46,12 +47,17 @@ import { callsMethod, changedMessages, PRELOAD } from "./window-messages.ts";
  *    own with a word of four or more letters matches differently, or a tool
  *    its stand-in scripts by name (one most journeys do not script) appears
  *    a different number of times. Only strings of two or more words count;
- * 11. it is the freeze journey and the change edits code the main process
- *    runs, other than a unit test (`FREEZE_JOURNEY`).
+ * 11. it is the freeze journey and the change edits the freeze recorder or
+ *    the main process's own start and clock, other than a unit test
+ *    (`FREEZE_JOURNEY`).
  * 12. it directly imports a changed product module, even with unchanged names,
  *     or a product module that imports a changed data file, such as a
- *     runbook's JSON, which is part of that module's text (INF-2426);
- * 13. it imports a helper declaring `@journey-area src/path/` for a changed area.
+ *     runbook's JSON, which is part of that module's text (INF-2426). A hub
+ *     module, one more than `JOURNEY_SELECTION_CAP` journeys import directly,
+ *     does not select by import alone: its readers still follow rules 3 to 10,
+ *     and main's full run catches the rest (INF-2486, cut C);
+ * 13. it imports a helper declaring `@journey-area src/path/` for a changed area,
+ *     other than a unit test there, which no journey runs (INF-2486, cut B).
  *     The journey imports that stand-in directly, not only through the shared launcher.
  *
  * A fragment inside a longer quote, a hook name inside a longer token, and a
@@ -133,24 +139,35 @@ const FALLBACKS = [
 
 /**
  * The freeze journey (INF-2061's plan; docs/freeze-recorder.md, "Before a
- * change merges"): any code the main process runs can hold its main thread
- * on a long record with no hook, symbol or words changing, so a change to it
- * runs the journey. It is its own rule, beside the fallbacks, because it
- * reaches nearly every change and the fallbacks' replayed merges predate it.
+ * change merges"): the recorder and the main process's own start and clock
+ * can hold its main thread with no hook, symbol or words changing, so a
+ * change to them runs the journey. Any other main-process change runs it
+ * through the rules above, and main's full run runs it on every push
+ * (INF-2486, cut E). Paths ending in `/` are folders.
  */
 export const FREEZE_JOURNEY = {
-  paths: ["src/core/", "src/main/", "src/shared/"],
+  paths: [
+    "src/core/freeze/",
+    "src/main/index.ts",
+    "src/main/app.ts",
+    "src/core/orchestrator/ticker.ts",
+  ],
   spec: `${E2E}/main-thread-freeze.spec.ts`,
 } as const;
 
-/** Why the change runs the freeze journey, or undefined when it touches no main-process code. */
+/** A unit test beside the product, which no journey runs. */
+const isUnitTest = (file: string) => /\.test\.tsx?$/.test(file);
+
+/** Why the change runs the freeze journey, or undefined when it touches none of its paths. */
 export function freezeJourneyReason(changed: readonly string[]): string | undefined {
   const reaches = changed.filter(
-    (file) => FREEZE_JOURNEY.paths.some((path) => file.startsWith(path)) && !/\.test\.tsx?$/.test(file),
+    (file) =>
+      FREEZE_JOURNEY.paths.some((path) => (path.endsWith("/") ? file.startsWith(path) : file === path)) &&
+      !isUnitTest(file),
   );
   if (reaches.length === 0) return undefined;
   const named = reaches.slice(0, 3).join(", ");
-  return `edits code the main process runs: ${named}${reaches.length > 3 ? ` and ${reaches.length - 3} more` : ""}`;
+  return `edits the freeze recorder or the main process's start or clock: ${named}${reaches.length > 3 ? ` and ${reaches.length - 3} more` : ""}`;
 }
 
 /**
@@ -595,6 +612,8 @@ export function select({
   const importCache = new Map<string, string[]>();
   const reachOf = new Map<string, string[]>();
   const reachCount = new Map<string, number>();
+  const directOf = new Map<string, string[]>();
+  const readerCount = new Map<string, number>();
   for (const spec of specs) {
     const reach = closureOf(spec, availableRead, importCache);
     reachOf.set(spec, reach);
@@ -602,17 +621,30 @@ export function select({
       if (file.startsWith(`${E2E}/`) && file !== spec)
         reachCount.set(file, (reachCount.get(file) ?? 0) + 1);
     }
+    const direct = importsOf(spec, read(spec) ?? "", (path) => read(path) !== undefined || readBefore?.(path) !== undefined);
+    directOf.set(spec, direct);
+    for (const file of new Set(direct)) readerCount.set(file, (readerCount.get(file) ?? 0) + 1);
   }
+  // INF-2486, cut C: a product module more journeys import than the cap
+  // would make a sweep of any edit to it by import alone.
+  const hub = (file: string) => (readerCount.get(file) ?? 0) > JOURNEY_SELECTION_CAP;
   // A helper most journeys import is the stand-in class: a phrase or a symbol
   // found only there does not select those journeys. An edit to the helper
   // itself still does, below.
   const wide = (file: string) => (reachCount.get(file) ?? 0) > specs.length / 2;
   // A word most journeys already use does not name this change.
-  const narrowOf = (spec: string) =>
-    (reachOf.get(spec) ?? [])
-      .filter((file) => file.startsWith(`${E2E}/`) && (file === spec || !wide(file)))
-      .map((file) => read(file) ?? "")
-      .join("\n");
+  const narrowTexts = new Map<string, string>();
+  const narrowOf = (spec: string) => {
+    let text = narrowTexts.get(spec);
+    if (text === undefined) {
+      text = (reachOf.get(spec) ?? [])
+        .filter((file) => file.startsWith(`${E2E}/`) && (file === spec || !wide(file)))
+        .map((file) => read(file) ?? "")
+        .join("\n");
+      narrowTexts.set(spec, text);
+    }
+    return text;
+  };
   const ordinary = new Map<string, boolean>();
   const isOrdinary = (symbol: string) => {
     let known = ordinary.get(symbol);
@@ -623,6 +655,11 @@ export function select({
     }
     return known;
   };
+  // INF-2486, cut C: a hook more journeys read than the cap, drawn by an
+  // edited region, would make a sweep of any edit there.
+  const hookReaders = new Map<string, number>();
+  for (const hook of new Set([...owned.values()].flatMap((drawn) => [...drawn])))
+    hookReaders.set(hook, specs.filter((spec) => holdsHook(narrowOf(spec), hook)).length);
   // A tool most journeys script names no change to the one that reads it.
   const toolUsers = new Map<string, number>();
   if (served.size > 0)
@@ -637,15 +674,17 @@ export function select({
   for (const spec of specs) {
     if (changedSet.has(spec)) add(spec, "the change edits this journey");
     const reach = reachOf.get(spec) ?? [];
-    for (const file of importsOf(spec, read(spec) ?? "", (path) => read(path) !== undefined || readBefore?.(path) !== undefined)) {
-      if (!isSource(file)) continue;
+    for (const file of directOf.get(spec) ?? []) {
+      if (!isSource(file) || hub(file)) continue;
       if (changedSet.has(file)) add(spec, `directly imports ${file}, which the change edits`);
       const data = dataImportsOf(file, read(file) ?? "").find((path) => changedSet.has(path));
       if (data) add(spec, `directly imports ${file}, which imports ${data}, which the change edits`);
     }
     for (const helper of importsOf(spec, read(spec) ?? "", (path) => read(path) !== undefined).filter((file) => !isSource(file))) {
       for (const area of standInAreas(read(helper) ?? "")) {
-        const hit = changed.find((file) => area.endsWith("/") ? file.startsWith(area) : file === area);
+        const hit = changed.find(
+          (file) => !isUnitTest(file) && (area.endsWith("/") ? file.startsWith(area) : file === area),
+        );
         if (hit) add(spec, `imports stand-in ${helper} for ${area}, which the change edits (${hit})`);
       }
     }
@@ -707,7 +746,12 @@ export function select({
     }
     for (const [file, drawn] of owned) {
       // Only a hook the journey's own text mentions can be one it reads.
-      const reads = [...drawn].find((hook) => narrowText.includes(hook) && holdsHook(narrowText, hook));
+      const reads = [...drawn].find(
+        (hook) =>
+          (hookReaders.get(hook) ?? 0) <= JOURNEY_SELECTION_CAP &&
+          narrowText.includes(hook) &&
+          holdsHook(narrowText, hook),
+      );
       if (reads) add(spec, `reads ${reads}, which ${file} draws`);
     }
     for (const [method, channel] of messages.methods)

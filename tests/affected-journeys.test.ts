@@ -800,32 +800,38 @@ describe("words the core serves that a stand-in reads (INF-1255)", () => {
   });
 });
 
-// INF-2061's approved plan: the freeze journey "runs on Linux on every pull
-// request that changes" the code the main process runs. The changed files are
-// the real ones of INF-2060's fix and of a window-only change.
-describe("the freeze journey (INF-2061)", () => {
-  it("runs on a change to code the main process runs, naming what it edits", () => {
+// INF-2486 cut E, approved by the captain: the freeze journey runs by its own
+// rule only for "freeze or main-loop changes"; main's full run covers the rest.
+// The changed files are the real ones of PR #931 and of INF-2060's fix.
+describe("the freeze journey (INF-2061, INF-2486)", () => {
+  it("runs on a change to the freeze recorder or the main process's start or clock, naming what it edits", () => {
     expect(existsSync(FREEZE_JOURNEY.spec)).toBe(true);
+    for (const path of FREEZE_JOURNEY.paths) expect(existsSync(path)).toBe(true);
     expect(
       freezeJourneyReason([
-        "docs/task-capture.md",
-        "src/core/orchestrator/askEnding.test.ts",
+        "docs/freeze-recorder.md",
+        "src/core/freeze/memoryRecorder.test.ts",
+        "src/core/freeze/freezeRecorder.ts",
+        "src/core/freeze/memoryRecorder.ts",
+        "src/core/paths.ts",
+      ]),
+    ).toBe(
+      "edits the freeze recorder or the main process's start or clock: src/core/freeze/freezeRecorder.ts, src/core/freeze/memoryRecorder.ts",
+    );
+    expect(freezeJourneyReason(["src/core/orchestrator/ticker.ts"])).toMatch(/ticker/);
+    expect(freezeJourneyReason(["src/main/app.ts"])).toMatch(/app\.ts/);
+  });
+
+  it("does not run on other main-process code, the window, the docs or only unit tests", () => {
+    expect(
+      freezeJourneyReason([
         "src/core/orchestrator/askEnding.ts",
         "src/core/storage/db.ts",
         "src/core/tasks/taskService.ts",
-      ]),
-    ).toBe(
-      "edits code the main process runs: src/core/orchestrator/askEnding.ts, src/core/storage/db.ts, src/core/tasks/taskService.ts",
-    );
-    expect(freezeJourneyReason(["src/main/host/macInstallation.ts"])).toMatch(/macInstallation/);
-  });
-
-  it("does not run on a change to the window, the docs or only unit tests", () => {
-    expect(
-      freezeJourneyReason([
+        "src/main/host/macInstallation.ts",
         "src/renderer/src/app/HomeScreen.tsx",
         "docs/task-board.md",
-        "src/core/orchestrator/askEnding.test.ts",
+        "src/core/freeze/freezeRecorder.integration.test.ts",
       ]),
     ).toBeUndefined();
   });
@@ -875,14 +881,18 @@ describe("complete journey selection", () => {
       ).toBe(true);
   });
 
+  /** How many journeys import each product module directly. */
+  const directReaders = (file: string) =>
+    actualSpecs.filter((spec) => importsOf(spec, actualRead(spec) ?? "").includes(file)).length;
+
   it("selects direct product readers without changed symbols, but not transitive product dependencies", () => {
+    const isNarrow = (file: string) =>
+      file.startsWith("src/") && directReaders(file) <= JOURNEY_SELECTION_CAP;
     const reader = actualSpecs.find((spec) =>
-      importsOf(spec, actualRead(spec) ?? "").some((file) => file.startsWith("src/")),
+      importsOf(spec, actualRead(spec) ?? "").some(isNarrow),
     );
     expect(reader).toBeDefined();
-    const product = importsOf(reader ?? "", actualRead(reader ?? "") ?? "").find((file) =>
-      file.startsWith("src/"),
-    );
+    const product = importsOf(reader ?? "", actualRead(reader ?? "") ?? "").find(isNarrow);
     expect(product).toBeDefined();
     const selected = select({
       changed: [product ?? ""],
@@ -916,6 +926,60 @@ describe("complete journey selection", () => {
     expect(selected.get("tests/e2e/rigor-standard.spec.ts")).toEqual([
       `directly imports ${builder}, which imports ${runbook}, which the change edits`,
     ]);
+  });
+
+  // INF-2486 cut C, approved by the captain: "Hub modules and hooks stop
+  // selecting by import alone". db.ts is the module most journeys import,
+  // and FrameMount.tsx draws data-stage-entry, which most journeys read.
+  it("does not select a hub module's importers, or a hub hook's readers, by import alone", () => {
+    const hubModule = "src/core/storage/db.ts";
+    expect(directReaders(hubModule)).toBeGreaterThan(JOURNEY_SELECTION_CAP);
+    const byModule = select({
+      changed: [hubModule],
+      sourceDiff: "",
+      specs: actualSpecs,
+      read: actualRead,
+    });
+    for (const why of [...byModule.values()].flat())
+      expect(why).not.toContain(`directly imports ${hubModule}`);
+
+    const screen = "src/renderer/src/plugins/frames/FrameMount.tsx";
+    const hook = "data-stage-entry";
+    expect(actualRead(screen)).toContain(hook);
+    const readsHook = (reasons: Map<string, string[]>) =>
+      [...reasons.values()].filter((why) => why.some((one) => one.startsWith(`reads ${hook},`)))
+        .length;
+    const byHook = select({
+      changed: [screen],
+      sourceDiff: "",
+      specs: actualSpecs,
+      read: actualRead,
+    });
+    expect(readsHook(byHook)).toBe(0);
+    // Among no more journeys than the cap, the same edit still selects its readers.
+    const imports = new Map<string, string[]>();
+    const some = actualSpecs
+      .filter((spec) =>
+        closureOf(spec, actualRead, imports).some((file) =>
+          holdsHook(actualRead(file) ?? "", hook),
+        ),
+      )
+      .slice(0, JOURNEY_SELECTION_CAP);
+    expect(some).toHaveLength(JOURNEY_SELECTION_CAP);
+    expect(
+      readsHook(select({ changed: [screen], sourceDiff: "", specs: some, read: actualRead })),
+    ).toBeGreaterThan(0);
+  });
+
+  // INF-2486 cut B, approved by the captain: "Unit tests stop selecting
+  // journeys through the stand-in rule". PR #931's claudeSession.test.ts
+  // alone listed every caller of the Claude stand-in.
+  it("does not select a stand-in's callers for a unit test in its declared area", () => {
+    const test = "src/core/claude/claudeSession.test.ts";
+    expect(existsSync(test)).toBe(true);
+    expect(
+      select({ changed: [test], sourceDiff: "", specs: actualSpecs, read: actualRead }).size,
+    ).toBe(0);
   });
 
   it("records omissions at the cap and requires the entire sweep above it", () => {

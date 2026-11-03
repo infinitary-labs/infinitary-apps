@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "journey-selection-cuts",
+      "reason": "Internal: the journey chooser stops selecting journeys for unit tests in a stand-in's area, for hub modules and hooks by import alone, and for the freeze journey outside the recorder and the main process's start and clock; the Linux packer places unmeasured files at their lane's middle time and joins groups under two minutes. Nothing a person sees changes."
+    }
+  ]
+}

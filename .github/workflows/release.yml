@@ -189,19 +189,26 @@ jobs:
       # don't start any new alpha cuts"), or when nothing on the desktop build
       # list (scripts/desktop-build.ts) changed since the previous release.
       # An earlier run counts once its notes job exists: its own gate chose to
-      # cut. Requested alphas, recoveries, rehearsals and stables never skip.
+      # cut. It also skips while the captain has paused the rolling pipeline
+      # (ROLLING_ALPHA_PAUSED, docs/alpha.md "Pausing the rolling pipeline");
+      # a cut already past this step finishes. Requested alphas, recoveries,
+      # rehearsals and stables never skip.
       - name: Skip an alpha with nothing new to build
         id: gate
         if: github.event_name == 'workflow_run'
         uses: actions/github-script@v7
         env:
           SOURCE: ${{ github.event.workflow_run.head_sha }}
+          PAUSED: ${{ vars.ROLLING_ALPHA_PAUSED }}
         with:
           script: |
             const skip = async (reason) => {
               core.setOutput('skip', 'true');
               await core.summary.addHeading('No alpha cut').addRaw(reason).write();
             };
+            if (process.env.PAUSED === 'true') {
+              return skip(`Paused by the captain: the rolling pipeline is paused, so this run cuts no alpha from main's ${process.env.SOURCE}. After Resume, the next merge's check and its alpha carry this version's changes.`);
+            }
             const {data} = await github.rest.actions.listWorkflowRuns({
               ...context.repo, workflow_id: 'release.yml', event: 'workflow_run', per_page: 100
             });

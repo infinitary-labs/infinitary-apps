@@ -5314,6 +5314,7 @@ describe("an alpha with nothing new to build", () => {
     runs: Run[],
     jobs: Record<number, { name: string; conclusion: string | null }[]>,
     desktop: { previous: string | null; changed: string[] },
+    paused = "",
   ) => {
     const script = gate?.with?.script;
     expect(typeof script).toBe("string");
@@ -5328,6 +5329,7 @@ describe("an alpha with nothing new to build", () => {
       write: async () => {},
     };
     const commands: string[][] = [];
+    const reads: string[] = [];
     const childProcess = {
       execFileSync: (_command: string, args: string[]) => {
         commands.push(args);
@@ -5343,6 +5345,7 @@ describe("an alpha with nothing new to build", () => {
         actions: {
           listWorkflowRuns: async (parameters: Record<string, unknown>) => {
             expect(parameters).toMatchObject({ workflow_id: "release.yml", event: "workflow_run" });
+            reads.push("release.yml");
             return { data: { workflow_runs: runs } };
           },
           listJobsForWorkflowRun: async ({ run_id }: { run_id: number }) => jobs[run_id] ?? [],
@@ -5350,7 +5353,13 @@ describe("an alpha with nothing new to build", () => {
       },
     };
     const context = { repo: { owner: "example", repo: "project" }, runNumber: 90 };
-    const fakeProcess = { env: { SOURCE: "29ff10079a", GITHUB_WORKSPACE: "/work" } };
+    // The step's PAUSED is the repository variable it names.
+    const variable = workflowString(gate?.env?.PAUSED ?? "", {
+      vars: { ROLLING_ALPHA_PAUSED: paused },
+    });
+    const fakeProcess = {
+      env: { SOURCE: "29ff10079a", GITHUB_WORKSPACE: "/work", PAUSED: variable },
+    };
     const fakeRequire = (name: string) => {
       expect(name).toBe("node:child_process");
       return childProcess;
@@ -5368,7 +5377,7 @@ describe("an alpha with nothing new to build", () => {
       fakeProcess,
       fakeRequire,
     );
-    return { skip: outputs.skip, summary: summaries.join("\n"), commands };
+    return { skip: outputs.skip, summary: summaries.join("\n"), commands, reads };
   };
   const notesJob = release.jobs.notes?.name as string;
   const url = (n: number) => `https://github.com/example/project/actions/runs/${n}`;
@@ -5420,6 +5429,34 @@ describe("an alpha with nothing new to build", () => {
     expect(quiet.skip).toBe("true");
     expect(quiet.summary).toContain("0.6.2-alpha.81");
     expect((await runGate([], {}, { previous: null, changed: [] })).skip).toBe("false");
+  });
+
+  /**
+   * PERS-51, the captain: "add a "pause/resume" button on the rolling alpha
+   * panel for me to pause/resume the rolling pipeline manually", with manual
+   * alphas still running. ROLLING_ALPHA_PAUSED holds the rolling cut alone.
+   */
+  it("cuts no rolling alpha while the captain has paused the rolling pipeline", async () => {
+    const paused = await runGate(
+      [],
+      {},
+      { previous: "0.6.2-alpha.81", changed: ["src/main/app.ts"] },
+      "true",
+    );
+    expect(paused.skip).toBe("true");
+    expect(paused.summary).toContain("Paused by the captain");
+    expect(paused.summary).toContain("29ff10079a");
+    expect(paused.reads).toEqual([]);
+    expect(paused.commands).toEqual([]);
+    for (const resumed of ["", "false"]) {
+      const result = await runGate(
+        [],
+        {},
+        { previous: "0.6.2-alpha.81", changed: ["src/main/app.ts"] },
+        resumed,
+      );
+      expect(result.skip, resumed).toBe("false");
+    }
   });
 
   /** Every job's result, as Actions decides it: an `if:` without a status function also needs its needs to succeed. */
@@ -5499,9 +5536,10 @@ describe("the next main check waits for the alpha cut", () => {
   const main = loadYamlFile(".github/workflows/main.yml") as { jobs: Record<string, Job> };
   const release = loadYamlFile(".github/workflows/release.yml") as { "run-name": string };
   const wait = loadYamlFile(".github/workflows/alpha-wait.yml") as {
-    jobs: { wait: { steps: { with?: { script?: string } }[] } };
+    jobs: { wait: { steps: { name: string; if?: string; with?: { script?: string } }[] } };
   };
-  const script = wait.jobs.wait.steps[0]?.with?.script ?? "";
+  const [pauseStep, waitStep] = wait.jobs.wait.steps;
+  const script = waitStep?.with?.script ?? "";
   const minute = 60_000;
   /** The name release.yml gives the rolling alpha cut from a main run. */
   const alphaName = (run_number: number) =>
@@ -5517,6 +5555,83 @@ describe("the next main check waits for the alpha cut", () => {
     expect(
       workflowString(release["run-name"], { github: { event_name: "workflow_dispatch" } }),
     ).toBe("release");
+  });
+
+  /**
+   * PERS-51, the captain: "add a "pause/resume" button on the rolling alpha
+   * panel for me to pause/resume the rolling pipeline manually", answered
+   * "Stop now", "the next merge starts a check that covers the pause" and
+   * "Pause holds only the automatic pipeline".
+   */
+  it("cancels a pushed main check while paused, before any check behind the wait starts", async () => {
+    const decide = (event_name: string, paused: string) => ({
+      pause: workflowValue(pauseStep?.if ?? "", {
+        github: { event_name },
+        vars: { ROLLING_ALPHA_PAUSED: paused },
+      }),
+      wait: workflowValue(waitStep?.if ?? "", {
+        github: { event_name },
+        vars: { ROLLING_ALPHA_PAUSED: paused },
+      }),
+    });
+    expect(pauseStep?.name).toBe("Stop while the captain has paused the rolling pipeline");
+    expect(decide("push", "true")).toEqual({ pause: true, wait: false });
+    // Not paused, or a check started by hand: the wait runs as before.
+    for (const [event_name, paused] of [
+      ["push", ""],
+      ["push", "false"],
+      ["workflow_dispatch", "true"],
+    ] as const)
+      expect(decide(event_name, paused), `${event_name} ${paused}`).toEqual({
+        pause: false,
+        wait: true,
+      });
+
+    // The step's own script: it cancels its own run, then never lets the job succeed.
+    const order: string[] = [];
+    const summaries: string[] = [];
+    const summary = {
+      addHeading: (text: string) => {
+        summaries.push(text);
+        return summary;
+      },
+      addRaw: (text: string) => {
+        summaries.push(text);
+        return summary;
+      },
+      write: async () => {},
+    };
+    const context = {
+      repo: { owner: "example", repo: "project" },
+      runId: 41690000001,
+      sha: "9d6f4a248f3b1c1e1c2b8c4a6f1d0e2a3b4c5d6e",
+    };
+    const github = {
+      rest: {
+        actions: {
+          cancelWorkflowRun: async (parameters: Record<string, unknown>) => {
+            order.push(`cancel ${parameters.run_id}`);
+            return {};
+          },
+        },
+      },
+    };
+    const fakeTimeout = (done: () => void, ms: number) => {
+      order.push(`pause ${ms / 60_000} minutes`);
+      done();
+    };
+    const AsyncFunction = Object.getPrototypeOf(async () => {}).constructor;
+    await new AsyncFunction("core", "github", "context", "setTimeout", pauseStep?.with?.script)(
+      { summary, setFailed: (text: string) => order.push(`failed: ${text}`) },
+      github,
+      context,
+      fakeTimeout,
+    );
+    expect(order[0]).toBe(`cancel ${context.runId}`);
+    expect(order[1]).toMatch(/^pause \d+ minutes$/);
+    expect(order[2]).toMatch(/^failed: /);
+    expect(summaries[0]).toBe("Paused by the captain");
+    expect(summaries.join("\n")).toContain(context.sha);
   });
 
   type Run = {

@@ -1,0 +1,8 @@
+{
+  "exclusions": [
+    {
+      "id": "rolling-alpha-pause",
+      "reason": "The release pipeline now reads a repository variable that pauses main's automatic check and its rolling alpha cut, for the captain's own Pause button on the rolling alpha panel. The app itself is unchanged."
+    }
+  ]
+}

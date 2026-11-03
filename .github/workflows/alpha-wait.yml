@@ -12,6 +12,14 @@ name: Wait for the alpha cut
 # hold main's fixes. While it waits, main's concurrency group keeps every new
 # merge in one waiting run. When it did wait and main moved meanwhile, this
 # run cancels itself, so that waiting run checks every merge at once.
+#
+# The captain's pause (PERS-51, the captain: "add a "pause/resume" button on
+# the rolling alpha panel for me to pause/resume the rolling pipeline
+# manually"; docs/alpha.md, "Pausing the rolling pipeline"): while the
+# repository variable ROLLING_ALPHA_PAUSED is true, a main check a push
+# started cancels itself here, before any check behind this job starts. A
+# check started by hand still runs. Resuming re-runs nothing: the next merge's
+# check covers every merge made during the pause.
 on:
   workflow_call:
 
@@ -24,7 +32,18 @@ jobs:
     # GitHub's own limit for a hosted job; the script ends its wait before it.
     timeout-minutes: 360
     steps:
+      - name: Stop while the captain has paused the rolling pipeline
+        if: vars.ROLLING_ALPHA_PAUSED == 'true' && github.event_name == 'push'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            await core.summary.addHeading('Paused by the captain').addRaw(`The rolling pipeline is paused, so this check of ${context.sha} cancels itself. After Resume, the next merge's check covers every merge made meanwhile.`).write();
+            await github.rest.actions.cancelWorkflowRun({...context.repo, run_id: context.runId});
+            // GitHub stops this job within moments; until it does, no check behind it starts.
+            await new Promise((done) => setTimeout(done, 10 * 60_000));
+            core.setFailed('GitHub had not cancelled this paused check after ten minutes.');
       - name: Wait while the previous main check's alpha is cut
+        if: vars.ROLLING_ALPHA_PAUSED != 'true' || github.event_name != 'push'
         uses: actions/github-script@v7
         with:
           script: |

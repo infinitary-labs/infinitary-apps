@@ -391,6 +391,7 @@ No check starts while the previous check's alpha is being cut (INF-2465, the cap
 The run's first job, `alpha-wait.yml`, finds the alpha run cut from the newest earlier main run that passed or failed, by the name `release.yml` gives it ("Alpha from main run N"), and waits until it ends.
 A failed cut ends the wait too, so it never holds main's fixes; an alpha run that never started holds nothing after ten minutes, and the wait ends before GitHub's six-hour job limit.
 While it waits, merges keep queueing in the one waiting run; when main moved meanwhile, the run cancels itself, so the waiting run checks every merge at once.
+While the captain has paused the rolling pipeline, a run a push started cancels itself in that first job, and the next merge after Resume starts the run that covers the pause (`docs/alpha.md`, "Pausing the rolling pipeline").
 The newest passing run of `main.yml` is main's green mark: its commit is the newest version the whole suite passed, and no other record names it.
 A failed run fails on the version it checked, which can be older than `main`'s head, so a repair reads that run and the range of commits since the newest passing one.
 Merging continues while a run is red.

@@ -351,6 +351,28 @@ Manual alpha requests, recoveries, rehearsals and stable promotions never skip.
 Main's next check waits while an alpha is cut, so merges made meanwhile queue and are checked together once the cut ends (`docs/testing.md`, "The continuous run on main").
 Each rolling alpha run is named "Alpha from main run N" after the main run it cuts from, which is how that wait finds it.
 
+### Pausing the rolling pipeline
+
+The captain can pause the automatic pipeline and resume it later (PERS-51, the captain: "add a "pause/resume" button on the rolling alpha panel for me to pause/resume the rolling pipeline manually").
+The pause is the repository variable `ROLLING_ALPHA_PAUSED`: `true` pauses, and any other value or no variable leaves the pipeline running.
+While it is `true`:
+
+1. **Main checks stop.**
+   A main check a push started cancels itself in its first job, `alpha-wait.yml`, before any other check behind it starts, and its summary says "Paused by the captain".
+   A cancelled check never moves main's green mark and never cuts an alpha.
+   A main check started by hand still runs.
+2. **Rolling alphas hold.**
+   The resolve job's first step ends a rolling alpha run green with "Paused by the captain" ("An alpha with nothing new to build", above).
+   An alpha already past that step finishes.
+3. **Everything else carries on.**
+   Merging and pull request checks continue, and manual alphas, recoveries, rehearsals and stable promotions ignore the variable.
+
+GitHub reads a variable only when a job starts, so the variable alone cannot stop a check that is already running.
+Pausing therefore sets the variable and also cancels main's running and waiting checks, the captain's answer "stop now, also cancel the running check".
+The pause lasts until Resume, which clears the variable and re-runs nothing, the captain's answer "the next merge starts a check that covers the pause".
+The next merge's check runs at main's head, so it covers every merge made during the pause, and its alpha carries their notes.
+`tests/release-workflows.test.ts` holds both steps.
+
 ### An alpha does not wait on the phone check
 
 An alpha ships the signed desktop app only (INF-2353, the captain's pick "Drop phone from alpha gate", asked as "alpha is the desktop app, right?"), and main runs no phone check at all (INF-2492, the captain: "remove phone check from main altogether. we run all phone check parts at release").

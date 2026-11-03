@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "pr-job-selection-test",
+      "reason": "Test only: the pull request job selection test now expects the Linux startup fixtures job beside the baseline job."
+    }
+  ]
+}

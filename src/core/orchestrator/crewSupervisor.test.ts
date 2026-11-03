@@ -46,7 +46,9 @@ import { NEEDS_REAUTH_CONSEQUENCE } from "@shared/credentialHealth";
 import { HERE, HOME } from "@shared/deviceNames";
 import type { FmEvent } from "@shared/events";
 import {
+  choiceWords,
   fixedHoldWords,
+  mergeClickRefusal,
   overrideTakenBackWords,
   softHoldWords,
   standingOverrideWords,
@@ -5531,6 +5533,47 @@ describe("CrewSupervisor", () => {
         expect(h.authorization()?.status).toBe("consumed");
         // The conditional click was never turned into a checks waiver.
         expect(h.tasks.get(h.taskId)?.delivery?.override).toBeUndefined();
+      });
+
+      // INF-1966: on DOP-140 the first mate cited the captain's click on
+      // Merge when checks pass as their words passing the checks, and a pull
+      // request with no checks merged with no word of theirs that the checks
+      // need not pass. The click is their approval, kept until the checks
+      // pass; only their own words pass them.
+      it("refuses an override of the checks on his click on Merge when checks pass, and the kept click waits until his own words pass them (INF-1966)", async () => {
+        const h = await approved();
+        h.forge.states = [];
+        await h.declare({});
+        expect(h.tasks.get(h.taskId)?.delivery).toMatchObject({ ci: "pending", checks: { items: [] } });
+        await vi.waitFor(() => expect(mergeLabelOf(h)).toBe(MERGE_WHEN_CHECKS_PASS_WORDS));
+        h.supervisor.act(h.card.id, "merge");
+        await vi.waitFor(() => expect(h.authorization()?.waiting).toMatchObject({ on: "checks" }));
+        // What the first mate cites from the card is his click on its merge.
+        const clicked = choiceWords(MERGE_WHEN_CHECKS_PASS_WORDS, "Ready to merge");
+        expect(h.supervisor.citedCaptainWords(h.taskId, h.card.id)).toEqual({
+          ok: true,
+          words: clicked,
+          mergeClick: true,
+        });
+        expect(
+          h.supervisor.declareOverride(h.taskId, {
+            words: clicked,
+            mergeClick: true,
+            holds: ["checks"],
+            until: "task",
+          }),
+        ).toEqual({ ok: false, text: mergeClickRefusal(clicked) });
+        expect(h.tasks.get(h.taskId)?.delivery?.override).toBeUndefined();
+        await tick();
+        expect(h.forge.sends).toBe(0);
+        expect(h.authorization()?.waiting).toMatchObject({ on: "checks" });
+        // His own words that the checks need not pass do, and his kept click merges.
+        h.supervisor.declareOverride(h.taskId, {
+          words: "This project has no CI; merge it without the checks.",
+          holds: ["checks"],
+          until: "version",
+        });
+        await vi.waitFor(() => expect(h.forge.merges).toEqual([APPROVED]));
       });
 
       it("never holds the first mate's merge on its own card, while a crewmate's question holds it until his words pass it", async () => {

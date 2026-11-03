@@ -104,6 +104,7 @@ import {
   fixedHoldWords,
   type HoldOverride,
   holdNames,
+  mergeClickRefusal,
   type OverridableHold,
   overrideCellWords,
   overridePasses,
@@ -9737,11 +9738,19 @@ export class CrewSupervisor {
    * the task is live, since update_task has already refused a hold the
    * override cannot pass, in that hold's own words (`overrideRefusal`). One
    * override stands at a time: a new one replaces it. Naming a counted limit
-   * reopens it now.
+   * reopens it now. Words that are his click on a merge (`mergeClick`, from
+   * `citedCaptainWords`) are his approval of it, kept until the checks pass,
+   * so they never pass the checks (INF-1966), and the record keeps that
+   * fact for `standing` to carry.
    */
   declareOverride(
     taskId: string,
-    input: { words: string; holds: OverridableHold[]; until: "version" | "task" },
+    input: {
+      words: string;
+      holds: OverridableHold[];
+      until: "version" | "task";
+      mergeClick?: true;
+    },
   ): { ok: boolean; text: string } {
     const record = this.options.tasks.get(taskId);
     if (!record) throw new Error(`Unknown task "${taskId}".`);
@@ -9751,6 +9760,8 @@ export class CrewSupervisor {
     const holds = [...new Set(input.holds)];
     if (holds.length === 0)
       return { ok: false, text: "Name at least one soft hold the captain's words pass." };
+    if (input.mergeClick && holds.includes("checks"))
+      return { ok: false, text: mergeClickRefusal(input.words) };
     const head = record.delivery?.headSha;
     if (input.until === "version" && !head)
       return {
@@ -9767,6 +9778,7 @@ export class CrewSupervisor {
       ...(input.until === "version" && head
         ? { head, ...(prNumber !== undefined ? { prNumber } : {}) }
         : {}),
+      ...(input.mergeClick ? { mergeClick: true as const } : {}),
       at: this.now(),
     };
     this.options.tasks.recordPermissionRecords(
@@ -9848,12 +9860,14 @@ export class CrewSupervisor {
    * Crewmate tab (`crewmate-tab`), read from the steer that carried it; or
    * the words of the override standing on it (`standing`), so one sentence
    * names more holds. The host checks only that the words are his and on
-   * this task, and reads none of them.
+   * this task, and reads none of them. `mergeClick` says the words are his
+   * click on a merge, a typed fact of the card's action or the standing
+   * record, never read from the words (INF-1966).
    */
   citedCaptainWords(
     taskId: string,
     from: string,
-  ): { ok: true; words: string } | { ok: false; text: string } {
+  ): { ok: true; words: string; mergeClick?: true } | { ok: false; text: string } {
     const record = this.options.tasks.get(taskId);
     if (!record) throw new Error(`Unknown task "${taskId}".`);
     const handle = record.key || record.id;
@@ -9861,7 +9875,11 @@ export class CrewSupervisor {
     if (cited === STANDING_WORDS_FROM) {
       const standing = standingOverride(record.delivery, record.delivery?.headSha);
       return standing
-        ? { ok: true, words: standing.words }
+        ? {
+            ok: true,
+            words: standing.words,
+            ...(standing.mergeClick ? { mergeClick: true as const } : {}),
+          }
         : {
             ok: false,
             text: `Override refused: nothing was recorded. No override stands on ${handle} at this version, so there are no recorded words of the captain's to name more holds with.`,
@@ -9896,34 +9914,63 @@ export class CrewSupervisor {
         ok: false,
         text: `Override refused: nothing was recorded. Card "${card.title}" is not on ${handle}, so the captain's words there pass nothing on it.`,
       };
-    const words = this.captainWordsOnCard(cited);
+    const words = this.captainWordsOnCard(card);
     if (!words)
       return {
         ok: false,
         text: `Override refused: nothing was recorded. The record holds no words of the captain's on card "${card.title}": no reply in its thread and no click on its buttons.`,
       };
-    return { ok: true, words };
+    return { ok: true, ...words };
   }
 
   /**
    * The captain's newest words on a card: his reply in its thread, or his
    * click on one of its buttons (`choiceWords`), whichever came last. A
-   * body's own script choosing is never his click.
+   * body's own script choosing is never his click. A click on a merge says
+   * so (`clickApprovesMerge`).
    */
-  private captainWordsOnCard(cardId: string): string | undefined {
-    const reply = this.cards.messages(cardId).findLast((message) => message.who === "captain");
+  private captainWordsOnCard(card: Card): { words: string; mergeClick?: true } | undefined {
+    const reply = this.cards.messages(card.id).findLast((message) => message.who === "captain");
     const typed = reply?.text.trim();
-    const past = this.cards.past(cardId);
+    const past = this.cards.past(card.id);
     const ending = past?.ending;
     const clicked =
       past && ending?.how === "chose" && ending.by === "captain" && ending.label
         ? {
             at: ending.at,
             words: choiceWords(ending.label, past.title, anythingElseOf(past.answers)),
+            ...(this.clickApprovesMerge(card, ending.actionId)
+              ? { mergeClick: true as const }
+              : {}),
           }
         : undefined;
-    if (clicked && (!typed || !reply || clicked.at >= reply.at)) return clicked.words;
-    return typed || undefined;
+    if (clicked && (!typed || !reply || clicked.at >= reply.at)) {
+      const { at: _at, ...words } = clicked;
+      return words;
+    }
+    return typed ? { words: typed } : undefined;
+  }
+
+  /**
+   * Whether the captain's click on this action approved a merge (INF-1966):
+   * the completion card's merge, whose words the app draws from the checks
+   * (`mergeLabel`), or an ordinary request_merge card's - never Merge
+   * anyway, which passes the checks itself, nor a merge past the branch
+   * rules, whose card names each failed check it skips. Read from the
+   * action's declared effect, never from its words.
+   */
+  private clickApprovesMerge(card: Card, actionId: string | undefined): boolean {
+    const action = actionId ? card.actions.find((entry) => entry.id === actionId) : undefined;
+    const effect = action?.effect;
+    if (!action || !effect || action.passes) return false;
+    if (effect.kind === "settle") return effect.mode === "merge";
+    if (effect.kind !== "request_merge") return false;
+    const review = card.taskId
+      ? this.options.tasks
+          .get(card.taskId)
+          ?.delivery?.mergeReviews?.find((item) => item.id === effect.review)
+      : undefined;
+    return !review?.skips;
   }
 
   /** The interrupt request or outcome's timeline event (R2 forward capture). */

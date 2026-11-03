@@ -10,7 +10,7 @@ import * as checkReadings from "@shared/checkSnapshot";
 import { HERE } from "@shared/deviceNames";
 import { AUTOMATIC_EMOTE_WORDS } from "@shared/emotes";
 import { type FmEvent, type FmUsage, fmEventSchema } from "@shared/events";
-import { choiceWords } from "@shared/holds";
+import { choiceWords, mergeClickRefusal } from "@shared/holds";
 import type { KnowledgeDirectionChange, KnowledgeDirectionsArgs } from "@shared/knowledge";
 import type { PersonalSnapshot } from "@shared/personal/manifest";
 import type { PanelMounts } from "@shared/personal/mounts";
@@ -22,6 +22,7 @@ import { remoteLoginWords } from "@shared/remoteLogin";
 import { runsHereOnly } from "@shared/repos";
 import { parseServedInput, type ServedWakeOrigin } from "@shared/servedFrame";
 import { DEFAULT_SHARING } from "@shared/sharing";
+import { MERGE_WHEN_CHECKS_PASS_WORDS } from "@shared/vocabulary";
 import { decode } from "@toon-format/toon";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { z } from "zod";
@@ -9947,6 +9948,52 @@ describe("the captain's override, from a click, a thread or words typed mid-turn
       await f.declare({ holds: ["checks", "waits"], until: "task", from: "standing" }),
     ).toContain("Recorded the captain's override");
     expect(f.recorded()).toMatchObject({ words, holds: ["checks", "waits"], until: "task" });
+    await f.finish();
+    f.agent.dispose();
+    f.db.close();
+  });
+
+  // INF-1966: on DOP-140 the first mate cited the captain's click on Merge
+  // when checks pass as words passing the checks, and the pull request merged
+  // with no word of theirs that the checks need not pass.
+  it("refuses to pass the checks on the captain's click on a merge, also when named again with the standing words (INF-1966)", async () => {
+    const ready = "The meter retry is ready to merge";
+    const f = harness([
+      {
+        ...crewCard("card-ab12", "ab12", ready, "<p>The checks are still running.</p>"),
+        actions: [
+          {
+            id: "merge-pr",
+            label: MERGE_WHEN_CHECKS_PASS_WORDS,
+            default: true,
+            effect: { kind: "settle", mode: "merge" },
+          },
+        ],
+      },
+    ]);
+    f.supervisor.act("card-ab12", "merge-pr");
+    await tick();
+    f.report(`the captain clicked "${MERGE_WHEN_CHECKS_PASS_WORDS}" on card card-ab12`);
+    await drained(f.session, 1);
+    const clicked = choiceWords(MERGE_WHEN_CHECKS_PASS_WORDS, ready);
+    expect(await f.declare({ holds: ["checks"], until: "task", from: "card-ab12" })).toContain(
+      JSON.stringify(mergeClickRefusal(clicked)).slice(1, -1),
+    );
+    expect(f.recorded()).toBeUndefined();
+    // The same click may still pass a hold that is not the checks, and the
+    // record keeps what the words are.
+    expect(await f.declare({ holds: ["waits"], until: "task", from: "card-ab12" })).toContain(
+      "Recorded the captain's override",
+    );
+    expect(f.recorded()).toMatchObject({ words: clicked, holds: ["waits"], mergeClick: true });
+    await f.finish();
+    // Naming the checks later with the words standing is the same click.
+    f.report("the checks still hold the merge.");
+    await drained(f.session, 2);
+    expect(
+      await f.declare({ holds: ["waits", "checks"], until: "task", from: "standing" }),
+    ).toContain("Override refused");
+    expect(f.recorded()).toMatchObject({ words: clicked, holds: ["waits"], mergeClick: true });
     await f.finish();
     f.agent.dispose();
     f.db.close();

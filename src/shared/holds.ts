@@ -147,8 +147,25 @@ export type HoldOverride = {
    * override to that pull request rather than to whatever the task names later.
    */
   prNumber?: number;
+  /**
+   * The words are the captain's click on a merge (INF-1966): the completion
+   * card's merge, Merge when checks pass among its words, or an ordinary
+   * request_merge card's. That click is his approval of the merge, kept
+   * until the checks pass, so these words never pass the checks - neither
+   * when first cited nor when named again with `standing`.
+   */
+  mergeClick?: true;
   at: number;
 };
+
+/**
+ * The refusal of an override that names the checks on the captain's click
+ * on a merge (INF-1966): the click is his approval, which waits for the
+ * checks; only his own words, or his Merge anyway click, pass them.
+ */
+export function mergeClickRefusal(words: string): string {
+  return `Override refused: nothing was recorded. The words cited, "${words}", are the captain's click on a merge: their approval of it, which the app keeps and runs once the checks pass, so the click never passes the checks. Leave the checks out: the merge waits while the crewmate reads them or declares that the pull request has none. Only the captain's own words that the checks need not pass, or their Merge anyway click, pass them.`;
+}
 
 /** The override standing on a task at this version: one for the task's life, or one for this very version. */
 export function standingOverride(

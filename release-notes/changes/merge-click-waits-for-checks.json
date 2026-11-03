@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "id": "merge-click-waits-for-checks",
+      "kind": "fix",
+      "area": "firstmate",
+      "title": "Merge when checks pass always waits for the checks",
+      "body": "Clicking Merge when checks pass approves the merge once the checks pass. Your first mate could take that click as permission to skip the checks, and merge without them. It no longer does: the merge waits for the checks unless you say separately that it should go ahead without them.",
+      "noPicture": "Nothing on screen changes; the fix keeps a waiting merge waiting instead of letting it through.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

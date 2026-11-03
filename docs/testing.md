@@ -439,9 +439,13 @@ The placed vBoxx guest runs the devices sequentially, one simulator at a time.
 On a pull request the gate runs only the closest of the journey's parts within a six-minute budget, as the Mac journeys do ("Journeys on the pull request"), and the run on `main` runs every part.
 The chooser (`scripts/affected-phone.ts`) gives each part a distance: 0 when the change edits UI test code the part runs, 1 when it edits a file in the part's owner table (`PART_OWNERS`), and 2 for any other phone input.
 A part's owned files are its family's, the part's name before its first hyphen, so each short part split from join, talk or cards owns what that part owned (INF-2125).
-It reads a UI test change by its functions: each changed line counts for the test functions around it, added lines in the new version and removed ones in the old, and each part reaches its test and every function it calls by name.
+It reads a UI test change by its declarations: each changed line counts for the functions, supported top-level structs and enums, or literal constants around it, added lines in the new version and removed ones in the old.
+Each part reaches its test and follows identifier references through bodies and signatures, including function values, helper types and constants; a helper type owns its methods.
+The reader keeps string contents for references, including interpolation, so a matching word in a literal can conservatively select extra consumers.
+A setup, teardown or XCTest observation callback reaches every part, as does a changed declaration referenced by code outside the supported declarations.
 The rest part also starts from every test no other part names, and a change to the app-hosted tests puts it at 0.
-A blank or comment-only line counts for nothing; a line outside any function, or a test file it cannot read or parse, counts for every part.
+A blank or comment-only line counts for nothing; an edited line outside a supported declaration, a duplicate declaration name, conditional compilation or a test file it cannot read or parse counts for every part.
+Unsupported declarations, including aliases, computed properties, attributed types and executable global initializers, keep full coverage rather than using a file exemption.
 It keeps the closest part, every part at 0 even past the budget, and any other while the kept minutes stay within `PHONE_BUDGET_MS`; ties go to the shorter part, so a change only to setup the gates use runs the shortest part alone.
 A part's minutes are its longer device's time in the newest passing on-request check of `main` whose `phone-logs` artifact holds `part-times.json`, which only a full gate writes; a passing check of some parts is passed over for an older full one.
 With none readable, every part the change reaches runs.
@@ -471,7 +475,7 @@ A default run on request runs every part of the device gate whatever changed, as
 Branch requests also read the chooser for repeat accounting; `main.yml`'s call never repeats.
 For a crewmate checking its own branch, send `{"ref":"<branch>","inputs":{"affected":"true"},"return_run_details":true}` to select touched parts conservatively.
 The optional `base` input defaults to `origin/main`.
-This selection reuses `PART_OWNERS` and the Swift function reach reader, without a timing budget.
+This selection reuses `PART_OWNERS` and the Swift declaration reach reader, without a timing budget.
 Shared phone inputs and unreadable comparisons or test changes run every part instead.
 An affected request with no reached parts skips the native job; the summary and `phone-placement` artifact record the selection.
 Explicit `parts` still overrides automatic selection for diagnostic runs.

@@ -104,7 +104,7 @@ export const PART_OWNERS: Record<string, readonly string[]> = {
 };
 
 /** Swift source with comments blanked and string contents replaced, keeping every line break. */
-export function blankSwift(source: string): string {
+export function blankSwift(source: string, keepStrings = false, onInvalid?: () => void): string {
   let out = "";
   let at = 0;
   const keep = (text: string, fill: string) => text.replace(/[^\n]/g, fill);
@@ -124,6 +124,7 @@ export function blankSwift(source: string): string {
         else if (source.startsWith("*/", index)) { depth--; index += 2; }
         else index++;
       } while (depth > 0 && index < source.length);
+      if (depth > 0) onInvalid?.();
       out += keep(source.slice(at, index), " ");
       at = index;
     } else if (/^#*"/.test(source.slice(at, at + 8))) {
@@ -136,8 +137,9 @@ export function blankSwift(source: string): string {
         if (!multi && source[index] === "\n") break;
         index += source[index] === "\\" && !hashes ? 2 : 1;
       }
+      if (!source.startsWith(close, index)) onInvalid?.();
       const stop = Math.min(source.length, index + close.length);
-      out += open + keep(source.slice(at + open.length, index), "x") + source.slice(index, stop);
+      out += keepStrings ? source.slice(at, stop) : open + keep(source.slice(at + open.length, index), "x") + source.slice(index, stop);
       at = stop;
     } else {
       out += source[at];
@@ -164,7 +166,6 @@ export function swiftFunctions(source: string): SwiftFunction[] | undefined {
     }
     // A requirement with no body ends at its type's closing brace.
     if (code[index] !== "{") continue;
-    const open = index;
     let depth = 0;
     do {
       if (code[index] === "{") depth++;
@@ -172,9 +173,64 @@ export function swiftFunctions(source: string): SwiftFunction[] | undefined {
       index++;
     } while (depth > 0 && index < code.length);
     if (depth !== 0) return undefined;
-    functions.push({ name: declared[1]!, start: lineAt(declared.index), end: lineAt(index - 1), body: code.slice(open, index) });
+    functions.push({ name: declared[1]!, start: lineAt(declared.index), end: lineAt(index - 1), body: blankSwift(source.slice(declared.index, index), true) });
   }
   return functions;
+}
+
+/** INF-2257: a deliberately small declaration reader, not a Swift name resolver.
+ * Only top-level value types and literal constants have a known lazy owner.
+ * Everything else remains outside a declaration and therefore selects every part when edited.
+ */
+function swiftDeclarations(source: string): SwiftFunction[] | undefined {
+  const functions = swiftFunctions(source);
+  if (!functions) return undefined;
+  let valid = true;
+  const code = blankSwift(source, false, () => { valid = false; });
+  if (!valid) return undefined;
+  if (/^\s*#(?:if|elseif|else|endif)\b/m.test(code)) return undefined;
+  const lines = code.split("\n");
+  const raw = blankSwift(source, true).split("\n");
+  const declarations = [...functions];
+  const types: SwiftFunction[] = [];
+  let depth = 0;
+  for (let at = 0; at < lines.length; at++) {
+    const line = lines[at]!;
+    if (depth === 0) {
+      const type = /^(?:private\s+|fileprivate\s+)?(?:struct|enum)\s+([A-Za-z_]\w*)\b[^{]*\{/.exec(line);
+      const constant = /^(?:private\s+|fileprivate\s+)?let\s+([A-Za-z_]\w*)(?:\s*:\s*[\w.]+)?\s*=\s*(?:true|false|nil|-?\d+(?:\.\d+)?|#*"[^"\n]*"#*)\s*$/.exec(line);
+      const match = type ?? constant;
+      if (match && !lines[at - 1]?.trim().startsWith("@")) {
+        let end = at;
+        if (type) {
+          let braces = 0;
+          do {
+            for (const char of lines[end] ?? "") braces += char === "{" ? 1 : char === "}" ? -1 : 0;
+            end++;
+          } while (braces > 0 && end < lines.length);
+          if (braces !== 0) return undefined;
+          end--;
+        }
+        const body = raw.slice(at, end + 1).join("\n");
+        // Conditional compilation, attributes, interpolation and executable initializers
+        // need more than this reader can prove. Keep their existing full-selection fallback.
+        if (!/^[ \t]*[@#]/m.test(lines.slice(at, end + 1).join("\n")) &&
+          !(constant && /\\#*\(/.test(body))) {
+          const declaration = { name: match[1]!, start: at + 1, end: end + 1, body };
+          declarations.push(declaration);
+          if (type) types.push(declaration);
+        }
+      }
+    }
+    for (const char of line) {
+      depth += char === "{" ? 1 : char === "}" ? -1 : 0;
+      if (depth < 0) return undefined;
+    }
+  }
+  // A helper type owns its methods too; a common method name such as `read` is
+  // not a free function shared with every other type declaring a `read` method.
+  return depth === 0 ? declarations.filter((each) =>
+    !types.some((type) => type !== each && type.start <= each.start && type.end >= each.end)) : undefined;
 }
 
 export type Hunk = { oldStart: number; removed: string[]; newStart: number; added: number };
@@ -225,7 +281,7 @@ const EVERY = names(PHONE_PARTS);
 const owners = (part: string) => PART_OWNERS[partFamily(part)] ?? [];
 
 /**
- * The test functions each part runs, by name, from its test and the calls it makes. The rest
+ * The declarations each part runs, by name, from its test and identifier references. The rest
  * part also starts from every test no other part names.
  */
 export function partFunctions(functions: SwiftFunction[], parts: PartTable = PHONE_PARTS): Map<string, Set<string>> {
@@ -233,16 +289,17 @@ export function partFunctions(functions: SwiftFunction[], parts: PartTable = PHO
   const calls = new Map<string, Set<string>>();
   for (const each of functions) {
     const called = calls.get(each.name) ?? new Set<string>();
-    for (const call of each.body.matchAll(/(?:(?<![.\w])|\bself\.)([A-Za-z_]\w*)\s*\(/g))
+    for (const call of each.body.matchAll(/\b([A-Za-z_]\w*)\b/g))
       if (names.has(call[1]!)) called.add(call[1]!);
     calls.set(each.name, called);
   }
   const named = new Set<string>(parts.slice(0, -1).map((part) => part.test));
   const reached = new Map<string, Set<string>>();
   for (const part of parts) {
-    const roots = part === parts.at(-1)
+    const setup = [...names].filter((name) => /^(?:setUp|tearDown|testCase)/.test(name));
+    const roots = [...setup, ...(part === parts.at(-1)
       ? [part.test, ...[...names].filter((name) => /^test/.test(name) && !named.has(name))]
-      : [part.test];
+      : [part.test])];
     const seen = new Set<string>(roots);
     const frontier = [...roots];
     while (frontier.length) for (const call of calls.get(frontier.pop()!) ?? []) {
@@ -256,7 +313,7 @@ export function partFunctions(functions: SwiftFunction[], parts: PartTable = PHO
 /**
  * How close the change is to each part. `testDiff` is the zero-context diff of the UI tests,
  * `testFiles` every UI test file the change leaves and `read` reads one as the change leaves it.
- * Added lines are read in the new version and removed ones in the old, each with its own calls;
+ * Added lines are read in the new version and removed ones in the old, each with its own references;
  * a file it cannot read or parse counts every part edited.
  */
 export function partReach(
@@ -274,20 +331,41 @@ export function partReach(
   if (tests.length && (!changed || tests.some((path) => !changed.has(path))))
     everyPart("the UI test change could not be read");
   else if (tests.length) {
+    if (!testFiles.length) everyPart("the UI test dependencies could not be enumerated");
     const after = new Map<string, string>();
     for (const path of testFiles) {
       const text = read(path);
       if (text !== undefined) after.set(path, text);
+      else everyPart(`${path} could not be read`);
     }
     const beforeFiles = new Map(after);
     for (const path of tests) {
-      if (!after.has(path) && testFiles.includes(path)) everyPart(`${path} could not be read`);
+      if (!after.has(path) && (testFiles.includes(path) || changed!.get(path)!.some((hunk) => hunk.added > 0))) everyPart(`${path} could not be read`);
       beforeFiles.set(path, before(after.get(path), changed!.get(path)!));
       if (!after.has(path)) after.set(path, "");
     }
     const parse = (files: Map<string, string>) => {
-      const parsed = new Map([...files].map(([path, text]) => [path, swiftFunctions(text)] as const));
-      return [...parsed.values()].every(Boolean) ? { parsed, reached: partFunctions([...parsed.values()].flatMap((each) => each!), parts) } : undefined;
+      const parsed = new Map([...files].map(([path, text]) => [path, swiftDeclarations(text)] as const));
+      if (![...parsed.values()].every(Boolean)) return undefined;
+      const declarations = [...parsed.values()].flatMap((each) => each!);
+      const reached = partFunctions(declarations, parts);
+      const counts = new Map<string, number>();
+      for (const each of declarations) counts.set(each.name, (counts.get(each.name) ?? 0) + 1);
+      // A reference outside any known declaration may run at global setup, not just in a test.
+      const global = new Set<string>();
+      for (const [path, text] of files) for (const [at, line] of blankSwift(text, true).split("\n").entries()) {
+        if (parsed.get(path)!.some((each) => each.start <= at + 1 && each.end >= at + 1)) continue;
+        for (const token of line.matchAll(/\b[A-Za-z_]\w*\b/g)) global.add(token[0]);
+      }
+      const globalReach = new Set(global);
+      const frontier = [...global];
+      while (frontier.length) {
+        const name = frontier.pop()!;
+        for (const each of declarations.filter((each) => each.name === name))
+          for (const token of each.body.matchAll(/\b[A-Za-z_]\w*\b/g))
+            if (!globalReach.has(token[0])) { globalReach.add(token[0]); frontier.push(token[0]); }
+      }
+      return { parsed, reached, counts, globalReach };
     };
     const sides = [parse(after), parse(beforeFiles)] as const;
     if (!sides[0] || !sides[1]) everyPart("a UI test file could not be parsed");
@@ -301,9 +379,13 @@ export function partReach(
         // A blank or comment-only line counts for nothing.
         if (!code[line - 1]?.trim()) continue;
         const around = functions.filter((each) => each.start <= line && each.end >= line);
-        if (!around.length) everyPart(`${path} line ${line}${side === sides[1] ? " (removed)" : ""}, outside any test function`);
-        for (const each of around) for (const part of every)
-          if (side.reached.get(part)!.has(each.name)) edited.get(part)!.add(each.name);
+        if (!around.length) everyPart(`${path} line ${line}${side === sides[1] ? " (removed)" : ""}, outside any supported declaration`);
+        for (const each of around) {
+          if (side.counts.get(each.name)! > 1 || side.globalReach.has(each.name))
+            everyPart(`${each.name}: ambiguous name or global setup reference`);
+          for (const part of every)
+            if (side.reached.get(part)!.has(each.name)) edited.get(part)!.add(each.name);
+        }
       }
     }
   }

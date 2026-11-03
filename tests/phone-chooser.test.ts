@@ -1,6 +1,7 @@
-import { readFileSync } from "node:fs";
+import { readdirSync, readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import {
+  type PartTable,
   PHONE_BUDGET_MS,
   partReach,
   partTimes,
@@ -8,6 +9,7 @@ import {
   phoneRepeatPlan,
   placeParts,
   requestedParts,
+  UI_TESTS,
 } from "../scripts/affected-phone";
 import { PHONE_PARTS } from "../scripts/phone-test-plan";
 
@@ -233,5 +235,259 @@ describe("the short phone parts", () => {
       PHONE_BUDGET_MS,
     );
     expect(requestedParts(reasons, reach).map((part) => part.part)).toEqual(["talk-drafts"]);
+  });
+});
+
+// INF-2257: approved “Narrower selection only; retain local repeats”. These mutations
+// replay declarations and consumers captured from the real UI tests, not invented call graphs.
+describe("declaration-aware phone selection", () => {
+  const fixture = JSON.parse(
+    readFileSync("tests/fixtures/phone-changes/declaration-consumers.json", "utf8"),
+  ) as {
+    testFiles: Record<string, string>;
+    parts: PartTable;
+  };
+  const waits = "ios/Infinitary/InfinitaryUITests/PhoneWaits.swift";
+  const keys = "ios/Infinitary/InfinitaryUITests/PhoneKeys.swift";
+  const all = fixture.parts.map((part) => part.name);
+  const patternParts = fixture.parts
+    .filter((part) => part.name === "cards" || part.name === "rest")
+    .map((part) => part.name);
+  type Edit = { path: string; old: string; next: string };
+  function selection(
+    edits: Edit[],
+    unreadable?: string,
+    source = fixture.testFiles,
+    parts: PartTable = fixture.parts,
+  ) {
+    const files = { ...source };
+    let diff = "";
+    for (const path of new Set(edits.map((edit) => edit.path))) {
+      const original = files[path]!;
+      let next = original;
+      for (const edit of edits.filter((edit) => edit.path === path)) {
+        expect(next.split(edit.old)).toHaveLength(2);
+        next = next.replace(edit.old, edit.next);
+      }
+      files[path] = next;
+      const oldLines = original.split("\n");
+      const newLines = next.split("\n");
+      diff += `diff --git a/${path} b/${path}\n--- a/${path}\n+++ b/${path}\n`;
+      // Independent, line-preserving replacements keep unrelated tests out of the diff.
+      if (oldLines.length === newLines.length) {
+        for (let at = 0; at < oldLines.length; at++)
+          if (oldLines[at] !== newLines[at])
+            diff += `@@ -${at + 1} +${at + 1} @@\n-${oldLines[at]}\n+${newLines[at]}\n`;
+      } else {
+        let start = 0;
+        while (oldLines[start] === newLines[start]) start++;
+        let oldEnd = oldLines.length;
+        let newEnd = newLines.length;
+        while (oldEnd > start && newEnd > start && oldLines[oldEnd - 1] === newLines[newEnd - 1]) {
+          oldEnd--;
+          newEnd--;
+        }
+        diff += `@@ -${start + 1},${oldEnd - start} +${newEnd === start ? start : start + 1},${newEnd - start} @@\n`;
+        diff += oldLines
+          .slice(start, oldEnd)
+          .map((line) => `-${line}\n`)
+          .join("");
+        diff += newLines
+          .slice(start, newEnd)
+          .map((line) => `+${line}\n`)
+          .join("");
+      }
+    }
+    const paths = [...new Set(edits.map((edit) => edit.path))];
+    const reach = partReach(
+      paths,
+      diff,
+      Object.keys(files),
+      (path) => (path === unreadable ? undefined : files[path]),
+      parts,
+    );
+    return requestedParts(paths, reach).map((part) => part.part);
+  }
+  const pattern = fixture.testFiles[waits]!.split("\n").find((line) =>
+    line.startsWith("let phoneAnsweredFormPattern"),
+  )!;
+
+  it("keeps INF-1973 broad because the real photo-readiness change also edits common waits", () => {
+    const recorded = change("declaration-consumers");
+    const reach = partReach(
+      recorded.paths,
+      recorded.testDiff,
+      Object.keys(recorded.testFiles),
+      (path) => recorded.testFiles[path],
+      fixture.parts,
+    );
+    expect(requestedParts(recorded.paths, reach).map((part) => part.part)).toEqual(all);
+    expect(reach.every((part) => part.distance === 0)).toBe(true);
+  });
+
+  it("follows a literal constant through the form helper to Cards and the unnamed tests in Rest", () => {
+    expect(
+      selection([
+        { path: waits, old: pattern, next: pattern.replace("answered", "answered|complete") },
+      ]),
+    ).toEqual(patternParts);
+  });
+
+  it("keeps old consumers when the constant is deleted, and new consumers when it is added", () => {
+    expect(selection([{ path: waits, old: `${pattern}\n`, next: "" }])).toEqual(patternParts);
+    // Reverse the real source snapshot to model an added declaration with existing consumers.
+    const removed = fixture.testFiles[waits]!.replace(`${pattern}\n`, "");
+    const saved = fixture.testFiles[waits]!;
+    fixture.testFiles[waits] = removed;
+    try {
+      const anchor = "@MainActor func waitForAnsweredPhoneForm";
+      expect(selection([{ path: waits, old: anchor, next: `${pattern}\n${anchor}` }])).toEqual(
+        patternParts,
+      );
+    } finally {
+      fixture.testFiles[waits] = saved;
+    }
+  });
+
+  it("unions old and new references when a declaration is renamed", () => {
+    expect(
+      selection([
+        { path: waits, old: "let phoneAnsweredFormPattern", next: "let phoneCompletedFormPattern" },
+        {
+          path: waits,
+          old: '"label MATCHES %@", phoneAnsweredFormPattern',
+          next: '"label MATCHES %@", phoneCompletedFormPattern',
+        },
+      ]),
+    ).toEqual(patternParts);
+  });
+
+  it("narrows real photo enum and struct declarations to their Talk and Rest consumers", () => {
+    const path = "ios/Infinitary/InfinitaryUITests/PhoneComposerJourney.swift";
+    const parts = fixture.parts
+      .filter((part) => part.name === "talk" || part.name === "rest")
+      .map((part) => part.name);
+    expect(
+      selection([
+        {
+          path,
+          old: "enum PhonePhotoOutcome: String { case selected, preview, settled }",
+          next: "enum PhonePhotoOutcome: String { case selected, preview, settled, cancelled }",
+        },
+      ]),
+    ).toEqual(parts);
+    expect(
+      selection([
+        {
+          path,
+          old: "    private var steady = PhoneSteadyReading<PhoneTargetReading>()",
+          next: "    private var steady = PhoneSteadyReading<PhoneTargetReading>() ",
+        },
+      ]),
+    ).toEqual(parts);
+  });
+
+  it("follows type references in signatures and generic uses to the shared target wait", () => {
+    expect(
+      selection([{ path: waits, old: "    let drawn: Data?", next: "    let drawn: Data? " }]),
+    ).toEqual(all);
+    expect(
+      selection([
+        {
+          path: waits,
+          old: "    private var last: Reading?",
+          next: "    private var last: Reading? ",
+        },
+      ]),
+    ).toEqual(all);
+  });
+
+  it("retains full coverage for executable global setup, unsupported declarations and duplicate names", () => {
+    expect(
+      selection([{ path: waits, old: pattern, next: pattern.replace(/= .*/, "= loadPattern()") }]),
+    ).toEqual(all);
+    expect(selection([{ path: waits, old: pattern, next: `${pattern}\n${pattern}` }])).toEqual(all);
+    expect(
+      selection([
+        {
+          path: waits,
+          old: pattern,
+          next: `${pattern}\nlet setupPattern = phoneAnsweredFormPattern`,
+        },
+      ]),
+    ).toEqual(all);
+    expect(
+      selection([{ path: waits, old: pattern, next: `${pattern}\nextension String {}` }]),
+    ).toEqual(all);
+  });
+
+  it("keeps conditional compilation and malformed source conservative", () => {
+    expect(
+      selection([{ path: waits, old: pattern, next: `#if DEBUG\n${pattern}\n#endif` }]),
+    ).toEqual(all);
+    expect(selection([{ path: waits, old: pattern, next: `/* ${pattern}` }])).toEqual(all);
+    expect(
+      selection([
+        {
+          path: waits,
+          old: "struct PhoneSteadyReading<Reading: Equatable> {",
+          next: "struct PhoneSteadyReading<Reading: Equatable> {{",
+        },
+      ]),
+    ).toEqual(all);
+  });
+
+  it("treats XCTest observation callbacks as shared setup, not ordinary Rest-only tests", () => {
+    expect(
+      selection([
+        {
+          path: keys,
+          old: "        guard issue.isFailure else { return }",
+          next: "        guard issue.isFailure else { return } ",
+        },
+      ]),
+    ).toEqual(all);
+  });
+
+  it("retains full coverage when an unchanged dependency is unreadable", () => {
+    expect(selection([{ path: waits, old: pattern, next: `${pattern} ` }], keys)).toEqual(all);
+  });
+
+  it("uses the live short-part table for focused declarations and shared target types", () => {
+    const files = Object.fromEntries(
+      readdirSync(UI_TESTS)
+        .filter((name) => name.endsWith(".swift"))
+        .map((name) => [UI_TESTS + name, readFileSync(UI_TESTS + name, "utf8")]),
+    );
+    const live = (edits: Edit[]) => selection(edits, undefined, files, PHONE_PARTS);
+    const named = (...tests: string[]) =>
+      PHONE_PARTS.filter((part) => tests.includes(part.test)).map((part) => part.name);
+    const pattern = files[waits]!.split("\n").find((line) =>
+      line.startsWith("let phoneAnsweredFormPattern"),
+    )!;
+    expect(live([{ path: waits, old: pattern, next: `${pattern} ` }])).toEqual(
+      named("testCardForm", "testCharacterAndPastChoices"),
+    );
+    const path = UI_TESTS + "PhoneComposerJourney.swift";
+    const outcome = files[path]!.split("\n").find((line) =>
+      line.startsWith("enum PhonePhotoOutcome"),
+    )!;
+    expect(live([{ path, old: outcome, next: `${outcome} ` }])).toEqual(
+      named("testComposeAndSend", "testCharacterAndPastChoices"),
+    );
+    const picker = files[path]!.split("\n").find((line) =>
+      line.includes("func pickPhoneJourneyPhoto("),
+    )!;
+    // Rest calls recoverPhonePhoto directly; only composing calls the picker helper.
+    expect(live([{ path, old: picker, next: `${picker} ` }])).toEqual(named("testComposeAndSend"));
+    expect(
+      live([{ path: waits, old: "    let drawn: Data?", next: "    let drawn: Data? " }]),
+    ).toEqual(PHONE_PARTS.map((part) => part.name));
+  });
+
+  it("keeps edited tests unconditional even when their names have no named part", () => {
+    const path = "ios/Infinitary/InfinitaryUITests/PhoneWaitsTests.swift";
+    const test = fixture.testFiles[path]!.split("\n").find((line) => line.includes("func test"))!;
+    expect(selection([{ path, old: test, next: `${test} ` }])).toEqual(["rest"]);
   });
 });

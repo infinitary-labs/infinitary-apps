@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "phone-declaration-selection",
+      "reason": "Internal: the phone-test chooser follows unambiguous helper types and literal constants to their consumers; device coverage, routing and local repeat requirements are unchanged."
+    }
+  ]
+}

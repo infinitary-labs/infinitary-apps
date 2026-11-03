@@ -307,7 +307,7 @@ type Job = {
   uses?: string;
   needs?: unknown;
   with?: Record<string, unknown>;
-  steps?: { uses?: string; with?: Record<string, unknown> }[];
+  steps?: { uses?: string; with?: Record<string, unknown>; env?: Record<string, string> }[];
 };
 const workflow = (path: string) =>
   loadYamlFile(path) as {
@@ -393,6 +393,48 @@ describe("batch.yml", () => {
       const exempt = String(step.with?.["retry-exempt-status-codes"] ?? "").split(",");
       expect(exempt.map(Number), job).not.toContain(500);
     }
+  });
+
+  // INF-2507, and the captain on INF-2508: "the e2e journey + browser tests
+  // should all run during the sweep batch". The critical path runs on the
+  // composed batch in a job of its own, so it stays in the batch's check
+  // whatever part of the full check the sweep runs; it is the same journey
+  // every pull request runs (ci.yml's call), on the commit the sweep composes.
+  it("runs the critical path on the composed batch, on hosted Linux, in a job of its own", () => {
+    const job = batch.jobs["critical-path"];
+    const sweep = batch.jobs.sweep;
+    const pullRequest = workflow(".github/workflows/ci.yml").jobs["critical-path"];
+    expect(job?.uses).toBe("./.github/workflows/source-journeys.yml");
+    expect(job?.needs).toBe("compose");
+    expect(job?.if).toBe(sweep?.if);
+    expect(job?.with).toMatchObject({
+      ref: sweep?.with?.ref,
+      batch: sweep?.with?.batch,
+      batch_tree: sweep?.with?.batch_tree,
+      hosted: true,
+      suite: pullRequest?.with?.suite,
+      lane: pullRequest?.with?.lane,
+      files: pullRequest?.with?.files,
+    });
+    const journeys = workflow(".github/workflows/source-journeys.yml").jobs["source-desktop"] as {
+      "runs-on": string;
+    };
+    const vars = { LINUX_RUNNER: "shell-pc-linux" };
+    expect(workflowString(journeys["runs-on"], { inputs: job?.with, vars })).toBe("ubuntu-24.04");
+  });
+
+  it("passes a batch only when its sweep and its critical path both passed", () => {
+    const job = batch.jobs.verdict;
+    expect(job?.needs).toEqual(expect.arrayContaining(["sweep", "critical-path"]));
+    const script = job?.steps?.find((step) => step.uses?.startsWith("actions/github-script@"));
+    const swept = (sweep: string, criticalPath: string) =>
+      workflowValue(script?.env?.SWEPT ?? "", {
+        needs: { sweep: { result: sweep }, "critical-path": { result: criticalPath } },
+      });
+    expect(swept("success", "success")).toBe("success");
+    expect(swept("success", "failure")).toBe("failure");
+    expect(swept("failure", "success")).toBe("failure");
+    expect(swept("failure", "failure")).toBe("failure");
   });
 
   it("names its verdict by the swept tree, and a rehearsal never as a verdict", () => {

@@ -223,11 +223,11 @@ Moved verbatim from `AGENTS.md` on 2026-09-24; `AGENTS.md` keeps a one-line poin
   The full unit, integration and probe suites run in the full check's `linux-checks` lane on main and across `ci.yml`'s jobs on request, not on PRs; the full e2e suite (`pnpm build && pnpm exec playwright test`) is the release verify's job (next bullet); the full unit suite is not a per-push obligation.
   The full e2e suite runs only in CI, never locally during development or release preparation.
   The adherence lint runs the design skill's `_adherence.oxlintrc.json` through ESLint FlatCompat (current oxlint cannot execute its selector rules); its raw-px/hex rules are warn-level by the skill's own design.
-- Standing CI rule (PR 8; CI shape revised by captain decision B, 2026-09-15, scout `fm3000-ci-release-only-s1`; split across machines by the captain's direction on FI3-1204, 2026-10-07; probes moved off every push by FI3-1756's plan, 2026-10-14): `ci.yml` runs one Linux baseline job on all pull requests, including release notes: typecheck/lint/build, with the Linux startup fixtures in a job beside it.
+- Standing CI rule (PR 8; CI shape revised by captain decision B, 2026-09-15, scout `fm3000-ci-release-only-s1`; split across machines by the captain's direction on FI3-1204, 2026-10-07; probes moved off every push by FI3-1756's plan, 2026-10-14): `ci.yml` runs one Linux baseline job on all pull requests, including release notes: typecheck/lint/build, with the Linux startup fixtures in a job beside it and the critical-path journey in another ("The critical path").
   The captain's INF-2273 ruling removes both unit-repeat shards; every edited unit file instead gets three total local runs, including portable files.
   Requested runs also run the full unit and probe sweeps and both integration shards, five jobs in total; there is no unit/integration selector.
   A push to `main` starts no `ci.yml` job (INF-2340, the captain's route "drop-ci-main"): the full check's `linux-checks` lane runs the same commands, every probe included ("Main's desktop release check").
-  `typecheck-lint-build` runs typecheck, biome, eslint adherence and build on pull requests, and `linux-startup` runs the Linux automatic startup fixtures beside it; `unit-tests` runs the in-memory cohorts (`pure`, `unit`, `unit-isolated`); `integration-tests (1/2)` and `(2/2)` run the integration cohort in vitest's own `--shard` halves, which split the files by a hash of their paths; `probe-tests` runs every probe (`docs/test-cohorts.md`, "Probes").
+  `typecheck-lint-build` runs typecheck, biome, eslint adherence and build on pull requests, `linux-startup` runs the Linux automatic startup fixtures beside it, and `critical-path` runs the critical-path journey; `unit-tests` runs the in-memory cohorts (`pure`, `unit`, `unit-isolated`); `integration-tests (1/2)` and `(2/2)` run the integration cohort in vitest's own `--shard` halves, which split the files by a hash of their paths; `probe-tests` runs every probe (`docs/test-cohorts.md`, "Probes").
   The hosted runner has two processors and a personal account is offered no larger one, so the jobs run side by side; together they run `verify.yml`'s `linux-checks` lane, which runs every probe, and `tests/release-workflows.test.ts` holds every vitest project to one job or to shards that cover it, including the full probe project.
   Every job runs on the label the repository variable `LINUX_RUNNER` names, the placement service's `shell-pc-linux` places (a fresh two-processor VM per job on the Windows PC, five at once), and on GitHub's hosted `ubuntu-latest` when the variable is unset; `tests/release-workflows.test.ts` evaluates each job's runner both ways.
   The shell PC job image supplies Node 24 and a pre-filled pnpm store, so setup-node restores its pnpm cache only on a GitHub-hosted runner (`runner.environment`); every self-hosted job, wherever a variable sent it, skips it.
@@ -460,7 +460,8 @@ Nothing is pushed: GitHub may refuse a workflow's own credential a push that cha
 
 The sweep is `verify.yml` with every journey and without the phone check, the same full check an alpha reuses.
 Its Linux jobs run on GitHub's hosted machines and its Mac lane on the `release_check` queue ("Each Mac job's kind and size").
-A green sweep marks every change success with the batch's tree.
+Beside it, the `critical-path` job runs the critical path on the same composed commit on GitHub's hosted Linux ("The critical path"), so the batch's check runs it whatever part of the full check the sweep runs (the captain, on INF-2508: "the e2e journey + browser tests should all run during the sweep batch").
+A green sweep with a green critical path marks every change success with the batch's tree.
 A red sweep reruns only its failed jobs, once (the captain: "can we just only rerun failed jobs? if it failed again, treat it as failed by the last PR in the batch and require it to fix the flake").
 The failed attempt's `verdict` job starts a `rerun` run by dispatch, which waits for the attempt to end and reruns its failed jobs and the verdict after them.
 If the rerun passes, the batch passes too, and the job that failed first still gets an owner who fixes its cause.
@@ -581,9 +582,21 @@ Do not use local mini borrows for phone proof.
 The same-source unsigned call from `ios-release.yml` passes its resolved `source_commit`, runs every part without repeats, and must succeed before host signing starts.
 Status-only TestFlight requests start no phone or signing job.
 
+## The critical path
+
+Every pull request runs one journey, the critical path (INF-2480's plan, the captain: "path six-steps (launch, sign in, project, first mate, crewmate card, merge)"; INF-2507): `tests/e2e/critical-path.spec.ts`.
+It walks a fresh install from the gate to a merged change in the real app, one test with a named section per step.
+Those sections are the gate at launch, a key signed in through the gate's own chip, a project started in Settings, a message that starts a crewmate, the crewmate's card, and the merge click that puts its commit on the project's main.
+`ci.yml`'s `critical-path` job runs it through `source-journeys.yml` with `suite: affected` in the desktop lane, on the app built from the pull request's merge commit on the Linux desktop ("The Linux source desktop").
+Its check is `critical-path / source-desktop (desktop)`.
+A pull request that edits the journey runs it three rounds and then alone, as any edited journey (`scripts/journey-runs.ts`); any other pull request runs it once.
+The swept batch runs it again on the composed batch, in `batch.yml`'s own `critical-path` job, and passes only when it passed ("The swept batch").
+Every other journey runs on request ("Journeys on request") and in main's desktop release check, never on a pull request of its own accord.
+A step that breaks fails the pull request, and is repaired at its owner; weakening or deleting the journey is ask-first ("This project's rulings on tests").
+
 ## Journeys on the pull request
 
-A pull request no longer starts `journeys.yml` (INF-2139, captain: "let's pull journeys and phone checks off PRs now"): a crewmate runs the journeys its change reaches itself, which `node scripts/affected-journeys.ts --base origin/main` lists, locally or, in CI mode, by requesting them ("Journeys on request").
+A pull request no longer starts `journeys.yml` (INF-2139, captain: "let's pull journeys and phone checks off PRs now"), and runs only the critical path ("The critical path"): a crewmate runs the journeys its change reaches itself, which `node scripts/affected-journeys.ts --base origin/main` lists, locally or, in CI mode, by requesting them ("Journeys on request").
 Run every listed file when the selection contains at most 40 files; never prune it by hand (INF-2394 measure 2).
 Above 40, request `source-journeys.yml` with `suite: full`, the exact source commit, requesting task and reason: the Linux-only sweep, not full-system verification.
 Selected tagged tests still need their native proof separately.

@@ -18,6 +18,15 @@ export function gitCloneHome(origin: string, local: string): (homeDir: string) =
   return (homeDir) => redirectGitClone(homeDir, origin, local);
 }
 
+/**
+ * A person's own git identity, as their computer has one: git authors a new
+ * project's first commit, a crewmate's commit and a local merge with it.
+ */
+export function gitIdentityHome(name: string, email: string): (homeDir: string) => void {
+  return (homeDir) =>
+    writeFileSync(join(homeDir, ".gitconfig"), `[user]\n\tname = ${name}\n\temail = ${email}\n`);
+}
+
 /** The projects-folder journey chooses an existing folder under its scratch home. */
 export function catalogProjectsHome(homeDir: string): void {
   mkdirSync(join(homeDir, "catalog-projects"));

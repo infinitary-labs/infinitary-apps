@@ -29,7 +29,7 @@ const ROUTES: Record<HeavyCheck, { name: string; route: string }> = {
     route:
       `start journeys.yml on your branch: ${DISPATCHES}/journeys.yml/dispatches with ` +
       `{"ref":"<branch>","inputs":{"files":"<journey> <journey>"}}. ` +
-      "A pull request does not run them (INF-2139); `node scripts/affected-journeys.ts --base origin/main` lists the journeys your change reaches.",
+      "A pull request runs only the critical path (INF-2507), never the others (INF-2139); `node scripts/affected-journeys.ts --base origin/main` lists the journeys your change reaches.",
   },
   phone: {
     name: "The phone check",

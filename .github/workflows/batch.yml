@@ -6,10 +6,11 @@ name: batch
 # change so marked, composes them onto main inside each job, and runs the
 # alpha's full check on the result - every Linux journey on GitHub's hosted
 # machines and every journey on the mini's release check line, without the
-# phone check. A green sweep marks every change success with the batch's
-# tree, and the app merges each one. Main's check then finds its files are
-# the sweep's (main.yml's sort job) and the alpha starts with no check run
-# again (scripts/main-alpha-proof.mjs).
+# phone check, and the critical path in a job of its own (INF-2507). A green
+# sweep with a green critical path marks every change success with the
+# batch's tree, and the app merges each one. Main's check then finds its
+# files are the sweep's (main.yml's sort job) and the alpha starts with no
+# check run again (scripts/main-alpha-proof.mjs).
 #
 # A red sweep reruns only its failed jobs, once (the captain: "can we just
 # only rerun failed jobs? if it failed again, treat it as failed by the last
@@ -215,11 +216,30 @@ jobs:
       hosted: true
       mac_runner: ${{ fromJSON(vars.MAC_QUEUES || '{}').release_check || '' }}
 
+  # The critical path (INF-2507; docs/testing.md, "The critical path") on the
+  # composed batch, in a job of its own, so the swept batch's check runs it
+  # whatever part of the full check the sweep runs (the captain, on INF-2508:
+  # "the e2e journey + browser tests should all run during the sweep batch").
+  # It composes the same commit as every sweep job, on GitHub's hosted Linux.
+  critical-path:
+    needs: compose
+    if: needs.compose.outputs.sweep == 'true'
+    uses: ./.github/workflows/source-journeys.yml
+    with:
+      ref: ${{ needs.compose.outputs.base }}
+      batch: ${{ needs.compose.outputs.heads }}
+      batch_tree: ${{ needs.compose.outputs.tree }}
+      hosted: true
+      suite: affected
+      lane: desktop
+      files: tests/e2e/critical-path.spec.ts
+      artifact-suffix: critical-path
+
   # Writes the sweep's verdict on its changes. Its name carries the batch's
   # tree, which the alpha's proof reads (scripts/main-alpha-proof.mjs); a
   # rehearsal's never reads as a verdict.
   verdict:
-    needs: [compose, sweep]
+    needs: [compose, sweep, critical-path]
     if: ${{ !cancelled() && needs.compose.outputs.sweep == 'true' }}
     name: ${{ inputs.rehearsal != '' && 'rehearsal' || 'verdict' }} (tree ${{ needs.compose.outputs.tree }})
     runs-on: ubuntu-24.04
@@ -230,7 +250,8 @@ jobs:
           sparse-checkout-cone-mode: false
       - uses: actions/github-script@v7
         env:
-          SWEPT: ${{ needs.sweep.result }}
+          # The batch passes only when the sweep and the critical path both did.
+          SWEPT: ${{ needs.sweep.result == 'success' && needs.critical-path.result || needs.sweep.result }}
           TREE: ${{ needs.compose.outputs.tree }}
           MEMBERS: ${{ needs.compose.outputs.members }}
           REHEARSAL: ${{ inputs.rehearsal }}

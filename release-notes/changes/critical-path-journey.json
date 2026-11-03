@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "critical-path-journey",
+      "reason": "Adds the one six-step end-to-end journey every pull request and every swept batch runs, from launch to a merged change, and its checks in the project's own CI; a test and workflow change with no app behavior change."
+    }
+  ]
+}

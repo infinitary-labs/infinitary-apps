@@ -1,6 +1,7 @@
 name: ci
 
-# Pull requests retain typecheck, lint and build. Edited unit files run
+# Pull requests retain typecheck, lint and build, and run the one
+# critical-path journey (INF-2507). Edited unit files run
 # three total rounds locally, never in extra PR repeat jobs. Full unit,
 # integration and probe sweeps run here only on request, never on PRs.
 # A push to main starts none of these jobs (INF-2340): main.yml's full check
@@ -103,6 +104,22 @@ jobs:
       - name: Linux automatic startup
         if: ${{ steps.paths.outputs.run == 'true' }}
         uses: ./.github/actions/linux-startup
+
+  # The critical path (INF-2480's plan, captain: "path six-steps (launch, sign
+  # in, project, first mate, crewmate card, merge)"; INF-2507): the one
+  # journey every pull request runs, the app built from the pull request's
+  # merge commit on the Linux desktop (docs/testing.md, "The critical path").
+  # A change that edits it runs it three rounds and alone, as any edited
+  # journey; every other journey runs on request and in main's desktop
+  # release check.
+  critical-path:
+    if: github.event_name == 'pull_request'
+    uses: ./.github/workflows/source-journeys.yml
+    with:
+      suite: affected
+      lane: desktop
+      files: tests/e2e/critical-path.spec.ts
+      artifact-suffix: critical-path
 
   # The in-memory cohorts and the browser layer (docs/test-cohorts.md).
   unit-tests:

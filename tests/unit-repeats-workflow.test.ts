@@ -19,8 +19,13 @@ describe("PR CI leaves edited-unit rounds to local proof", () => {
   it("selects only the retained baseline jobs for a pull request", () => {
     // INF-2234's independently approved main change also keeps probe sweeps off PRs.
     // DOP-251's plan moves the Linux startup fixtures into a pull request job
-    // of their own beside the baseline; neither runs a unit cohort.
-    expect(selected("pull_request")).toEqual(["linux-startup", "typecheck-lint-build"]);
+    // of their own beside the baseline, and INF-2507 adds the critical-path
+    // journey's call of the source desktop workflow; none runs a unit cohort.
+    expect(selected("pull_request")).toEqual([
+      "critical-path",
+      "linux-startup",
+      "typecheck-lint-build",
+    ]);
   });
 
   it.each(["push", "workflow_dispatch"])(

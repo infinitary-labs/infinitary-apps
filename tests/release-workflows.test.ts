@@ -24,6 +24,7 @@ import type {
 } from "@playwright/test/reporter";
 import { describe, expect, it, vi } from "vitest";
 import { BUILD_SCRIPTS_THAT_SHIP_NOTHING, isDesktopPath } from "../scripts/desktop-build.ts";
+import { laneOf } from "../scripts/journey-budget.ts";
 import { journeyArguments } from "../scripts/journey-runs.ts";
 import { MAC_UNIT_FILES } from "../scripts/mac-unit-tests.ts";
 import { presentationCommitMessage } from "../src/core/forge";
@@ -736,10 +737,7 @@ describe("local packaging identity (electron-builder.dev.yml)", () => {
     ["ordinary proposal", "pull_request", "fm/task-ci-contract", "refs/pull/42/merge"],
     ["release notes and record", "pull_request", "fm/task-release-alpha", "refs/pull/471/merge"],
   ])("runs the real Linux gate for %s", (_name, eventName, headRef, ref) => {
-    const ci = loadYamlFile(".github/workflows/ci.yml") as {
-      on: Record<string, unknown>;
-      jobs: Record<string, CiJob>;
-    };
+    const ci = loadCi();
     // The event must reach every job, not disappear behind a branch/path filter.
     expect(ci.on).toHaveProperty("pull_request", null);
     // INF-2340 (captain's route "drop-ci-main"): a push to main starts none of
@@ -821,6 +819,14 @@ describe("local packaging identity (electron-builder.dev.yml)", () => {
         id,
       ).toBe(true);
     }
+    // INF-2507: the critical path is a pull request's own call of another
+    // workflow, whose machine runs that workflow's steps (tested below).
+    for (const [id, call] of Object.entries(ci.calls)) {
+      expect(call.needs, id).toBeUndefined();
+      expect(workflowValue(call.if ?? "true", { github: { event_name: eventName } }), id).toBe(
+        eventName === "pull_request",
+      );
+    }
     // Every machine installs from the lockfile before it runs anything but a
     // pull request's notes step, plain Node that needs no install and reads
     // the base parent its checkout fetched; a requested full sweep has no
@@ -874,7 +880,7 @@ describe("local packaging identity (electron-builder.dev.yml)", () => {
   // startup kind send it to the PC's PR line; no other kind moves it, and
   // without the kind it stays where LINUX_RUNNER sends it.
   it("keeps PR startup fixtures and reporting eligible after earlier failures", () => {
-    const ci = loadYamlFile(".github/workflows/ci.yml") as { jobs: Record<string, CiJob> };
+    const ci = loadCi();
     const uses = (id: string) =>
       ci.jobs[id]?.steps.some((step) => step.uses === "./.github/actions/linux-startup");
     expect(Object.keys(ci.jobs).filter(uses)).toEqual(["linux-startup"]);
@@ -930,6 +936,84 @@ describe("local packaging identity (electron-builder.dev.yml)", () => {
         }
       }
     }
+  });
+
+  /**
+   * INF-2480's plan (captain: "path six-steps (launch, sign in, project,
+   * first mate, crewmate card, merge)", done when "One desktop journey walks
+   * the chosen path on Linux on every pull request") and INF-2507: every pull
+   * request, and no other start of ci.yml, runs the critical-path journey in
+   * the desktop lane of the source desktop workflow. The called workflow's
+   * own matrix, runner, name, checkout and journeys step are evaluated with
+   * the inputs the call passes; the INF-658 case below runs that step's
+   * command for an affected desktop file.
+   */
+  it("runs the critical-path journey on the Linux desktop for every pull request", () => {
+    const ci = loadCi();
+    expect(Object.keys(ci.calls)).toEqual(["critical-path"]);
+    const call = ci.calls["critical-path"];
+    for (const event of ["pull_request", "push", "workflow_dispatch"])
+      expect(workflowValue(call?.if ?? "true", { github: { event_name: event } }), event).toBe(
+        event === "pull_request",
+      );
+    expect(call?.uses).toBe("./.github/workflows/source-journeys.yml");
+    const files = String(call?.with?.files ?? "").split(" ");
+    expect(files).toEqual(["tests/e2e/critical-path.spec.ts"]);
+    for (const file of files) {
+      expect(existsSync(join(root, file)), file).toBe(true);
+      expect(laneOf(file), file).toBe(call?.with?.lane);
+    }
+    const source = loadYamlFile(".github/workflows/source-journeys.yml") as {
+      on: { workflow_call: { inputs: Record<string, { default?: unknown }> } };
+      jobs: {
+        "source-desktop": {
+          name: string;
+          "runs-on": string;
+          strategy: { matrix: { lane: string; shard: string } };
+          steps: Step[];
+        };
+      };
+    };
+    const declared = source.on.workflow_call.inputs;
+    // Every input the call passes is one the workflow declares, over its defaults.
+    for (const input of Object.keys(call?.with ?? {}))
+      expect(declared, input).toHaveProperty(input);
+    const inputs = {
+      ...Object.fromEntries(
+        Object.entries(declared).map(([key, { default: value }]) => [key, value]),
+      ),
+      ...call?.with,
+    };
+    const job = source.jobs["source-desktop"];
+    expect(workflowValue(job.strategy.matrix.lane, { inputs })).toEqual(["desktop"]);
+    expect(workflowValue(job.strategy.matrix.shard, { inputs })).toEqual([1]);
+    const matrix = { lane: "desktop", shard: 1 };
+    expect(workflowString(job.name, { inputs, matrix })).toBe("source-desktop (desktop)");
+    // Linux, where LINUX_RUNNER sends a pull request's journeys.
+    expect(workflowString(job["runs-on"], { inputs, vars: {} })).toBe("ubuntu-24.04");
+    expect(
+      workflowString(job["runs-on"], { inputs, vars: { LINUX_RUNNER: "shell-pc-linux" } }),
+    ).toBe("shell-pc-linux");
+    // The app is built from the pull request's merge commit.
+    const checkout = job.steps.find((step) => step.uses === "actions/checkout@v4");
+    const merge = "refs/pull/42/merge";
+    expect(workflowString(String(checkout?.with?.ref), { inputs, github: { ref: merge } })).toBe(
+      merge,
+    );
+    // The journeys step's own environment selects the affected desktop files.
+    const step = job.steps.find((candidate) => candidate.id === "journeys");
+    const env = Object.fromEntries(
+      ["SUITE", "LANE", "FILES", "REPEAT_BASE"].map((name) => [
+        name,
+        workflowString(step?.env?.[name] ?? "", { inputs, matrix }),
+      ]),
+    );
+    expect(env).toEqual({
+      SUITE: "affected",
+      LANE: "desktop",
+      FILES: files.join(" "),
+      REPEAT_BASE: "origin/main",
+    });
   });
 
   // DOP-66 fix 1: the rebuilt shell PC image owns the pnpm store;
@@ -1645,6 +1729,31 @@ describe("signed release workflow", () => {
   });
 });
 
+/** A ci.yml job that calls another workflow and starts no machine of its own. */
+type CiCall = { if?: string; needs?: unknown; uses: string; with?: Record<string, unknown> };
+
+/**
+ * ci.yml, its machine jobs apart from the jobs that call another workflow
+ * (INF-2507's critical path), whose machines run that workflow's steps.
+ */
+function loadCi(): {
+  on: Record<string, unknown>;
+  jobs: Record<string, CiJob>;
+  calls: Record<string, CiCall>;
+} {
+  const ci = loadYamlFile(".github/workflows/ci.yml") as {
+    on: Record<string, unknown>;
+    jobs: Record<string, CiJob | CiCall>;
+  };
+  const jobs: Record<string, CiJob> = {};
+  const calls: Record<string, CiCall> = {};
+  for (const [id, job] of Object.entries(ci.jobs)) {
+    if ("uses" in job) calls[id] = job;
+    else jobs[id] = job;
+  }
+  return { on: ci.on, jobs, calls };
+}
+
 type CiJob = {
   name?: string;
   if?: string;
@@ -1666,12 +1775,13 @@ type CiJob = {
  * The machines ci.yml starts for one event: one per job and matrix entry
  * whose condition holds, each with its name and, in order, the commands of
  * the steps whose conditions hold on a passing run, interpolated as GitHub
- * Actions does. A requested full sweep (workflow_dispatch) is the gate
+ * Actions does. A job that calls another workflow runs that workflow's
+ * commands, not ci.yml's, and is left out. A requested full sweep (workflow_dispatch) is the gate
  * main.yml's full check repeats; a pull request adds its own notes and
  * changed-file reader steps.
  */
 function ciJobs(eventName: string): { name: string; runs: string[] }[] {
-  const ci = loadYamlFile(".github/workflows/ci.yml") as { jobs: Record<string, CiJob> };
+  const ci = loadCi();
   const github = { event_name: eventName };
   return Object.entries(ci.jobs).flatMap(([id, job]) => {
     if (job.if !== undefined && workflowValue(job.if, { github }) !== true) return [];
@@ -4345,7 +4455,9 @@ describe("a release's hosted machines", () => {
       }
     }
     expect(passing.sort()).toEqual([
-      // The swept batch's sweep, the alpha's full check (INF-2430's plan, piece 3).
+      // The swept batch's critical path (INF-2507) and its sweep, the alpha's
+      // full check (INF-2430's plan, piece 3).
+      "batch.yml:critical-path",
       "batch.yml:sweep",
       "ios-release.yml:phone",
       "main.yml:verify",

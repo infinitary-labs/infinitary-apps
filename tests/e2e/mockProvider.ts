@@ -1220,10 +1220,13 @@ export async function startMockProvider(
       req.method === "POST" &&
       Boolean(req.url?.includes("/messages")) &&
       !req.url?.includes("/chat/completions");
-    const codexResponses = req.method === "POST" && Boolean(req.url?.includes("/codex/responses"));
+    // The Responses dialect: Codex's client at `/codex/responses`, and a key
+    // provider served over Responses (Grok, `/v1/responses`) at its own path.
+    const responsesDialect =
+      req.method === "POST" && Boolean(req.url?.split("?")[0]?.endsWith("/responses"));
     if (
       req.method === "POST" &&
-      (req.url?.includes("/chat/completions") || anthropicMessages || codexResponses)
+      (req.url?.includes("/chat/completions") || anthropicMessages || responsesDialect)
     ) {
       requestCount += 1;
       const requestNumber = requestCount;
@@ -1265,7 +1268,7 @@ export async function startMockProvider(
           // A crewmate's completion decision carries its risk, as the real
           // tool asks; the Firstmate's cards carry none.
           const calls = isFirstmate ? scripted : scripted.map(withDeclaredRisk);
-          if (codexResponses) {
+          if (responsesDialect) {
             beginResponsesStream(res, requestNumber);
             calls.forEach((call, index) => {
               const item = {
@@ -1365,7 +1368,7 @@ export async function startMockProvider(
         };
 
         const streamText = (text: string) => {
-          if (codexResponses) {
+          if (responsesDialect) {
             beginResponsesStream(res, requestNumber);
             const item = { type: "message", id: `msg_${requestNumber}`, role: "assistant" };
             writeResponsesEvent(res, {
@@ -2250,15 +2253,20 @@ const MOCK_MODEL_LABEL = "Mock model";
  * serves nothing (no key), so the first-launch gate is up; a key pasted
  * through the gate's own chip signs an OpenRouter account in, and that
  * account's runtime - reading the same app-scoped file - sends every turn
- * to the mock. The one hermetic way to connect an account through the UI.
+ * to the mock. The hermetic way to connect an account through the UI.
+ * `provider` names another catalog provider a key signs in the same way,
+ * such as Grok (`xai`), whose models routing may give a crewmate.
  */
 export const MOCK_KEY_PROVIDER_ID = "openrouter";
 
-export function mockProviderOverrideModelsJson(port: number): string {
+export function mockProviderOverrideModelsJson(
+  port: number,
+  provider: string = MOCK_KEY_PROVIDER_ID,
+): string {
   return `${JSON.stringify(
     {
       providers: {
-        [MOCK_KEY_PROVIDER_ID]: { baseUrl: `http://127.0.0.1:${port}/v1` },
+        [provider]: { baseUrl: `http://127.0.0.1:${port}/v1` },
       },
     },
     null,

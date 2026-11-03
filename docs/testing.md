@@ -494,6 +494,15 @@ Without that input, it takes the same line and runner as a pull request's phone 
 ## Journeys on the pull request
 
 A pull request no longer starts `journeys.yml` (INF-2139, captain: "let's pull journeys and phone checks off PRs now"): a crewmate runs the journeys its change reaches itself, which `node scripts/affected-journeys.ts --base origin/main` lists, locally or, in CI mode, by requesting them ("Journeys on request").
+Run every listed file when the selection contains at most 40 files; never prune it by hand (INF-2394 measure 2).
+Above 40, request `source-journeys.yml` with `suite: full`, the exact source commit, requesting task and reason: the Linux-only sweep, not full-system verification.
+Selected tagged tests still need their native proof separately.
+Use `node scripts/affected-journeys.ts --base <base> --head <head> --plan` to read the route and complete list.
+After successful runs, pass all their file names to the same comparison with `--ran "<files>"`; keep its JSON record beside the successful run links in the task evidence.
+The record lists selected and run files and every missing file; missing coverage exits nonzero.
+Above the cap it requires every journey in the sweep, not merely the listed subset.
+The file names supplied to `--ran` are the crewmate's declaration from successful run artifacts, not independent proof of success or of the source version.
+No pull request job is added: the crewmate owns this comparison before offering the change.
 The pull request selection below stays in `journeys.yml`, `linux-source` included, for the continuous run on `main` that replaces it.
 A pull request gets `journeys.yml`'s Linux `choose-journeys` check, which installs the locked tools, selects the journey files and writes the reasons and placement in its summary.
 The chooser downloads `e2e-results` from the newest successful `verify.yml` run that has an unexpired artifact of that name and sums each journey file's measured Mac durations.
@@ -541,7 +550,7 @@ Twenty-one failing sites in five days were certain breaks after an intentional p
 
 1. a spec file the change edits;
 2. a spec whose import closure reaches a changed helper and imports one of its changed exports, directly or through another helper: one under `tests/e2e/`, a shared one elsewhere under `tests/` such as `tests/helpers/`, or a script.
-   The closure stops at a module of `src/`: a product change reaches a journey through rules 3 to 7 and 10 instead, which match words in the spec and its helpers under `tests/e2e/`;
+   The closure stops at a module of `src/`: a product change reaches a journey through rules 3 to 7, 10, 12 and 13 instead, which match words in the spec and its helpers under `tests/e2e/`;
 3. a spec that imports a changed module of `src/shared/` and names a symbol that module's diff adds or removes (a declared property of four or more letters or an export, with at least one capital letter);
 4. a spec, or a helper most journeys do not import, that names a `data-*` hook, as a whole token, that the change adds or removes in `src/`;
 5. a spec, or a helper most journeys do not import, that holds a sentence of two or more words as its own quoted string, one the change adds or removes in a string of `src/`;
@@ -558,6 +567,11 @@ Twenty-one failing sites in five days were certain breaks after an intentional p
 11. the freeze journey (`main-thread-freeze.spec.ts`), when the change edits code the main process runs, under `src/core/`, `src/main/` or `src/shared/`, other than a unit test (`FREEZE_JOURNEY`).
     Any such code can hold the main thread on a long record with no hook, symbol or words changing (`docs/freeze-recorder.md`, "Before a change merges").
     It is its own rule beside the fallback table, because it reaches nearly every change and the fallback table's replayed merges predate it.
+12. a spec directly importing a changed product module, even when no symbol changes (relative paths and the `@shared/` and `@core/` aliases);
+13. a spec directly importing a stand-in declaring `@journey-area src/path/` in a documentation comment.
+    A trailing slash means every file under that directory; otherwise the declaration names one exact product file.
+    The declaration does not follow the common launcher's imports: nearly every journey reaches that launcher, but only the stand-in's explicit callers exercise its product area.
+    `tests/e2e/mockClaudeClient.ts` declares `src/core/claude/` so changes to the real reader select the stand-in's callers;
 
 A journey calls the window's interface directly, such as `window.infinitary.retention.scope()`, so a changed answer breaks it with no hook, sentence or symbol of its own changing.
 `knowledge-gate.spec.ts` compares that answer whole, so a new field in it breaks the journey (INF-1136).

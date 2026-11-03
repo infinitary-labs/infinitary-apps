@@ -4,6 +4,8 @@ import { join } from "node:path";
 import { scratchDir } from "../helpers/scratchDirs";
 
 /**
+ * @journey-area src/core/claude/
+ *
  * A stand-in for Claude's own client, for e2e. It speaks the three commands
  * Infinitary drives - `--version`, `auth login --claudeai` and `auth status
  * --json` - and, when a spec names a listing, the SDK's `initialize`

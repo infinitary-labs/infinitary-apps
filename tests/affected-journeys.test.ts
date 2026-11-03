@@ -8,9 +8,11 @@ import {
   holdsHook,
   holdsPhrase,
   importsOf,
+  JOURNEY_SELECTION_CAP,
   named,
   ownedHooks,
   select,
+  selectionCoverage,
   symbolsOfDiff,
   tokensOfDiff,
 } from "../scripts/affected-journeys.ts";
@@ -181,7 +183,7 @@ describe("which journeys a change affects", () => {
     expect(picked({ changed: ["src/core/forge.ts"], sourceDiff: standIn })).toEqual([]);
   });
 
-  it("follows a changed shared module only when the journey names what changed", () => {
+  it("keeps direct shared-module readers selected even when they do not name the changed export (INF-2394)", () => {
     const renamed = [
       "diff --git a/src/shared/version.ts b/src/shared/version.ts",
       "--- a/src/shared/version.ts",
@@ -198,7 +200,10 @@ describe("which journeys a change affects", () => {
       "+++ b/src/shared/version.ts",
       "+export const BUILD_STAMP = 2;",
     ].join("\n");
-    expect(picked({ changed: ["src/shared/version.ts"], sourceDiff: added })).toEqual([]);
+    expect(picked({ changed: ["src/shared/version.ts"], sourceDiff: added })).toEqual([
+      "tests/e2e/c.spec.ts",
+    ]);
+    expect(symbolsOfDiff(added).get("src/shared/version.ts")).toEqual(new Set(["BUILD_STAMP"]));
     expect(closureOf("tests/e2e/c.spec.ts", read)).toEqual([
       "tests/e2e/c.spec.ts",
       "tests/e2e/launch.ts",
@@ -211,7 +216,12 @@ describe("which journeys a change affects", () => {
       "diff --git a/src/shared/version.ts b/src/shared/version.ts",
       "+  launchApp: true,",
     ].join("\n");
-    expect(picked({ changed: ["src/shared/version.ts"], sourceDiff: ordinary })).toEqual([]);
+    expect(picked({ changed: ["src/shared/version.ts"], sourceDiff: ordinary })).toEqual([
+      "tests/e2e/c.spec.ts",
+    ]);
+    expect(run({ changed: ["src/shared/version.ts"], sourceDiff: ordinary })).toEqual([
+      ["tests/e2e/c.spec.ts", ["directly imports src/shared/version.ts, which the change edits"]],
+    ]);
     const commentAndParameter = [
       "diff --git a/src/shared/events.ts b/src/shared/events.ts",
       "+ * Activity holds: a line written",
@@ -282,7 +292,7 @@ describe("INF-625 motivating runs", () => {
     ["39381269010", "passed", "TaskView"],
     ["39381269010", "cancelled", "TaskView"],
   ])(
-    "does not select a journey for an ordinary word or built-in in run %s",
+    "selects only for the direct import, not an ordinary word or built-in in run %s (INF-2394)",
     (run, word, imported) => {
       const fixture = JSON.parse(
         readFileSync(new URL(`./fixtures/affected-journeys/${run}.json`, import.meta.url), "utf8"),
@@ -296,14 +306,16 @@ describe("INF-625 motivating runs", () => {
         ],
         ["tests/e2e/other.spec.ts", ""],
       ]);
-      expect([
-        ...select({
-          changed: [fixture.module],
-          sourceDiff: fixture.sourceDiff,
-          specs: [journey, "tests/e2e/other.spec.ts"],
-          read: (file) => files.get(file),
-        }).keys(),
-      ]).toEqual([]);
+      const selection = select({
+        changed: [fixture.module],
+        sourceDiff: fixture.sourceDiff,
+        specs: [journey, "tests/e2e/other.spec.ts"],
+        read: (file) => files.get(file),
+      });
+      expect([...selection.keys()]).toEqual([journey]);
+      expect(selection.get(journey)).toEqual([
+        `directly imports ${fixture.module}, which the change edits`,
+      ]);
     },
   );
 
@@ -349,7 +361,10 @@ describe("INF-625 motivating runs", () => {
   it("requires a key or export declaration, not just a referenced camelCase name", () => {
     const diff =
       "diff --git a/src/shared/version.ts b/src/shared/version.ts\n+const x = launchApp();\n+const prose = 'launchApp: true';\n+// export const launchApp = true";
-    expect(picked({ changed: ["src/shared/version.ts"], sourceDiff: diff })).toEqual([]);
+    expect(picked({ changed: ["src/shared/version.ts"], sourceDiff: diff })).toEqual([
+      "tests/e2e/c.spec.ts",
+    ]);
+    expect(symbolsOfDiff(diff).size).toBe(0);
     const declared =
       "diff --git a/src/shared/version.ts b/src/shared/version.ts\n+export const BUILD_STAMP = 2;\n+  buildStamp: z.number(),";
     expect([...(symbolsOfDiff(declared).get("src/shared/version.ts") ?? [])]).toEqual([
@@ -812,5 +827,76 @@ describe("the freeze journey (INF-2061)", () => {
         "src/core/orchestrator/askEnding.test.ts",
       ]),
     ).toBeUndefined();
+  });
+});
+
+// INF-2394 measure 2: meaning changes must select the real stand-in callers and direct readers.
+describe("complete journey selection", () => {
+  const actualSpecs = readdirSync("tests/e2e")
+    .filter((file) => file.endsWith(".spec.ts"))
+    .map((file) => `tests/e2e/${file}`);
+  const actualRead = (file: string) => (existsSync(file) ? readFileSync(file, "utf8") : undefined);
+
+  it("selects every Claude stand-in caller even when no name or hook changes", () => {
+    const callers = actualSpecs.filter((spec) =>
+      importsOf(spec, actualRead(spec) ?? "").includes("tests/e2e/mockClaudeClient.ts"),
+    );
+    expect(callers.length).toBeGreaterThan(0);
+    const selected = select({
+      changed: ["src/core/claude/claudeAuth.ts"],
+      sourceDiff: "",
+      specs: actualSpecs,
+      read: actualRead,
+    });
+    const directReaders = actualSpecs.filter((spec) =>
+      importsOf(spec, actualRead(spec) ?? "").includes("src/core/claude/claudeAuth.ts"),
+    );
+    expect([...selected.keys()].sort()).toEqual(
+      [...new Set([...callers, ...directReaders])].sort(),
+    );
+    for (const spec of callers)
+      expect(
+        selected
+          .get(spec)
+          ?.some((reason) => reason.includes("stand-in tests/e2e/mockClaudeClient.ts")),
+      ).toBe(true);
+  });
+
+  it("selects direct product readers without changed symbols, but not transitive product dependencies", () => {
+    const reader = actualSpecs.find((spec) =>
+      importsOf(spec, actualRead(spec) ?? "").some((file) => file.startsWith("src/")),
+    );
+    expect(reader).toBeDefined();
+    const product = importsOf(reader ?? "", actualRead(reader ?? "") ?? "").find((file) =>
+      file.startsWith("src/"),
+    );
+    expect(product).toBeDefined();
+    const selected = select({
+      changed: [product ?? ""],
+      sourceDiff: "",
+      specs: actualSpecs,
+      read: actualRead,
+    });
+    expect(selected.get(reader ?? "")).toContain(
+      `directly imports ${product}, which the change edits`,
+    );
+    // Product files stay leaves; their dependencies may still be reached independently by other helpers.
+    expect(closureOf(product ?? "", actualRead)).toEqual([product]);
+  });
+
+  it("records omissions at the cap and requires the entire sweep above it", () => {
+    const short = actualSpecs.slice(0, JOURNEY_SELECTION_CAP);
+    expect(selectionCoverage(short, short.slice(1), actualSpecs)).toMatchObject({
+      route: "selected",
+      missing: [short[0]],
+    });
+    expect(selectionCoverage(short, short, actualSpecs).missing).toEqual([]);
+    const long = actualSpecs.slice(0, JOURNEY_SELECTION_CAP + 1);
+    const partial = selectionCoverage(long, long, actualSpecs);
+    expect(partial.route).toBe("linux-sweep");
+    expect(partial.listed).toEqual([...long].sort());
+    expect(partial.run).toEqual([...long].sort());
+    expect(partial.missing).toEqual(actualSpecs.slice(long.length).sort());
+    expect(selectionCoverage(long, actualSpecs, actualSpecs).missing).toEqual([]);
   });
 });

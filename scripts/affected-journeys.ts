@@ -12,6 +12,7 @@ import { callsMethod, changedMessages, PRELOAD } from "./window-messages.ts";
  * after the change merged - surface on the change that caused them.
  *
  *   node scripts/affected-journeys.ts [--base <ref>] [--head <ref>] [--json]
+ *   node scripts/affected-journeys.ts --plan [--ran "<successful run files>"]
  *   node scripts/affected-journeys.ts --named "<journey> <journey>" [--json]
  *
  * prints the spec files, one per line (or a JSON object with the reason for
@@ -24,7 +25,7 @@ import { callsMethod, changedMessages, PRELOAD } from "./window-messages.ts";
  *    one under `tests/e2e/`, a shared one under `tests/` such as
  *    `tests/helpers/`, or a script;
  * 3. it imports a changed module of `src/shared/` and names a symbol that
- *    module's diff adds or removes. Importing the file is not enough;
+ *    module's diff adds or removes (direct imports also match rule 12);
  * 4. it, or a helper most journeys do not import, names a renderer hook
  *    (`data-*`) as a whole token the change adds or removes in `src/`; or
  * 5. it, or a helper most journeys do not import, holds a sentence of two or
@@ -47,6 +48,9 @@ import { callsMethod, changedMessages, PRELOAD } from "./window-messages.ts";
  *    a different number of times. Only strings of two or more words count;
  * 11. it is the freeze journey and the change edits code the main process
  *    runs, other than a unit test (`FREEZE_JOURNEY`).
+ * 12. it directly imports a changed product module, even with unchanged names;
+ * 13. it imports a helper declaring `@journey-area src/path/` for a changed area.
+ *     The journey imports that stand-in directly, not only through the shared launcher.
  *
  * A fragment inside a longer quote, a hook name inside a longer token, and a
  * sentence held only by the stand-in do not select every journey that reaches
@@ -54,6 +58,27 @@ import { callsMethod, changedMessages, PRELOAD } from "./window-messages.ts";
  * journey. The release's full Mac check is `verify.yml` and is not this
  * selection.
  */
+
+/** INF-2394 measure 2: the captain approved 40 as the short-list/sweep split. */
+export const JOURNEY_SELECTION_CAP = 40;
+
+/** Typed coverage declarations on stand-ins; paths are exact files or directory prefixes. */
+export function standInAreas(source: string): string[] {
+  return [...source.matchAll(/^\s*\*?\s*@journey-area (src\/[\w./-]+)\s*$/gm)].map((match) => match[1] ?? "");
+}
+
+/** Record the entire selection against files from successful runs, never a chosen subset. */
+export function selectionCoverage(listed: readonly string[], ran: readonly string[], all: readonly string[]) {
+  const selected = [...new Set(listed)].sort();
+  const executed = [...new Set(ran)].sort();
+  const required = selected.length > JOURNEY_SELECTION_CAP ? [...new Set(all)].sort() : selected;
+  return {
+    route: selected.length > JOURNEY_SELECTION_CAP ? "linux-sweep" : "selected",
+    listed: selected,
+    run: executed,
+    missing: required.filter((file) => !executed.includes(file)),
+  };
+}
 
 const ROOT = resolve(fileURLToPath(new URL("..", import.meta.url)));
 const E2E = "tests/e2e";
@@ -151,10 +176,12 @@ export function importsOf(
   const found: string[] = [];
   const pattern = /(?:from|import)\s*\(?\s*["']([^"']+)["']/g;
   for (const [, specifier] of source.matchAll(pattern)) {
-    if (!specifier || !(specifier.startsWith(".") || specifier.startsWith("@shared/"))) continue;
+    if (!specifier || !(specifier.startsWith(".") || (specifier.startsWith("@shared/") || specifier.startsWith("@core/")))) continue;
     const base = specifier.startsWith("@shared/")
       ? join("src/shared", specifier.slice("@shared/".length))
-      : normalize(join(dirname(file), specifier));
+      : specifier.startsWith("@core/")
+        ? join("src/core", specifier.slice("@core/".length))
+        : normalize(join(dirname(file), specifier));
     for (const candidate of [`${base}.ts`, `${base}.tsx`, join(base, "index.ts"), base]) {
       if (exists(candidate) && /\.tsx?$/.test(candidate)) {
         found.push(candidate);
@@ -594,6 +621,15 @@ export function select({
   for (const spec of specs) {
     if (changedSet.has(spec)) add(spec, "the change edits this journey");
     const reach = reachOf.get(spec) ?? [];
+    for (const file of importsOf(spec, read(spec) ?? "", (path) => read(path) !== undefined || readBefore?.(path) !== undefined))
+      if (isSource(file) && changedSet.has(file))
+        add(spec, `directly imports ${file}, which the change edits`);
+    for (const helper of importsOf(spec, read(spec) ?? "", (path) => read(path) !== undefined).filter((file) => !isSource(file))) {
+      for (const area of standInAreas(read(helper) ?? "")) {
+        const hit = changed.find((file) => area.endsWith("/") ? file.startsWith(area) : file === area);
+        if (hit) add(spec, `imports stand-in ${helper} for ${area}, which the change edits (${hit})`);
+      }
+    }
     for (const file of reach)
       if (
         file !== spec &&
@@ -755,7 +791,12 @@ function main(): void {
     ? named(value("--named", ""))
     : affected(value("--base", "origin/main"), value("--head", "HEAD"));
   const files = [...reasons.keys()].sort();
-  if (args.includes("--json"))
+  if (args.includes("--plan") || args.includes("--ran")) {
+    const ran = args.includes("--ran") ? declaredJourneys(value("--ran", "")) : [];
+    const coverage = selectionCoverage(files, ran, readdirSync(join(ROOT, E2E)).filter((file) => file.endsWith(".spec.ts")).map((file) => `${E2E}/${file}`));
+    console.log(JSON.stringify({ base: value("--base", "origin/main"), head: git(["rev-parse", value("--head", "HEAD")]).trim(), ...coverage }, null, 2));
+    if (args.includes("--ran") && coverage.missing.length) process.exitCode = 1;
+  } else if (args.includes("--json"))
     console.log(JSON.stringify(Object.fromEntries(files.map((file) => [file, reasons.get(file)])), null, 2));
   else for (const file of files) console.log(relative(".", file));
 }

@@ -28,6 +28,7 @@ let launched: LaunchedApp;
 test.beforeAll(async () => {
   launched = await launchApp({ withMockProvider: true });
   // Pre-seed a group-readable auth file: the auth service must clamp it.
+  // e2e-fixture: mutation -- Prove the credential service clamps a group-readable auth file.
   writeFileSync(join(launched.userDataDir, "auth", "auth.json"), "{}\n", { mode: 0o644 });
 });
 

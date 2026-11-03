@@ -505,6 +505,7 @@ for (const host of HOSTS) {
       git("-C", repoDir, "config", "user.email", "test@localhost");
       git("-C", repoDir, "commit", "--allow-empty", "-m", "chore: seed the notes");
       git("-C", repoDir, "worktree", "add", "-b", branch, worktreeDir);
+      // e2e-fixture: input -- Author the real project files this journey commits, preserves or merges.
       writeFileSync(join(worktreeDir, "sync.txt"), "The notes sync on time.\n");
       git("-C", worktreeDir, "add", "sync.txt");
       git("-C", worktreeDir, "commit", "-m", CHANGE.title);

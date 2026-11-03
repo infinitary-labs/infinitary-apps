@@ -1,5 +1,5 @@
 import { execFileSync } from "node:child_process";
-import { existsSync, mkdirSync, writeFileSync } from "node:fs";
+import { existsSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { type ElectronApplication, expect, test } from "@playwright/test";
 import { unlandedWorkText } from "../../src/core/orchestrator/settleWords";
@@ -10,6 +10,7 @@ import { TaskService } from "../../src/core/tasks/taskService";
 import { REQUEST_COPY } from "../../src/preload/readableRequest";
 import { purgedTasksText } from "../../src/renderer/src/settings/generalWords";
 import { scratchDir } from "../helpers/scratchDirs";
+import { seedAccountRegistry, seedAccountStore } from "./accountFixtures";
 import { cardBody } from "./frames";
 import { launchApp } from "./launch";
 import { settled } from "./layout";
@@ -277,23 +278,21 @@ test("account connection and sign-in failures keep readable reasons and retryabl
   const userDataDir = scratchDir("infinitary-settings-accounts-");
   const accountId = "acct_settings_feedback";
   // A truthful disconnected account: the row exists, but no key has been saved.
-  mkdirSync(join(userDataDir, "accounts", "openrouter", accountId), { recursive: true });
-  writeFileSync(
-    join(userDataDir, "accounts", "registry.json"),
-    JSON.stringify({
-      version: 1,
-      accounts: [
-        {
-          id: accountId,
-          providerId: "openrouter",
-          kind: "api_key",
-          label: "Personal",
-          enabled: true,
-          createdAt: 1,
-        },
-      ],
-      pins: {},
-    }),
+  seedAccountStore(userDataDir, "openrouter", accountId, { recursive: true });
+  seedAccountRegistry(
+    userDataDir,
+    [
+      {
+        id: accountId,
+        providerId: "openrouter",
+        kind: "api_key",
+        label: "Personal",
+        enabled: true,
+        createdAt: 1,
+      },
+    ],
+    {},
+    {},
   );
   const launched = await launchApp({ userDataDir });
   try {
@@ -359,6 +358,7 @@ test("a refused discard acknowledges the click and explains why after the card i
   git("-C", repoDir, "config", "user.email", "test@localhost");
   git("-C", repoDir, "commit", "--allow-empty", "-m", "init");
   git("-C", repoDir, "worktree", "add", "-b", "fm/task-feedback", worktreeDir);
+  // e2e-fixture: input -- Author the real project files this journey commits, preserves or merges.
   writeFileSync(join(worktreeDir, "unlanded.txt"), "Keep this work.\n");
   const db = openDatabase(userDataDir);
   const tasks = new TaskService({ db, strict: true });

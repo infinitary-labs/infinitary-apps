@@ -12,6 +12,7 @@ import {
 } from "../../src/renderer/src/settings/addProjectWords";
 import { scratchDir } from "../helpers/scratchDirs";
 import { seedGitHubSignIn, startGitHubStub } from "./githubStub";
+import { redirectGitClone } from "./homeFixtures";
 import { launchApp } from "./launch";
 import { projectRow } from "./projects";
 import { assertReadableSettingsFeedback, assertSettingsFits } from "./settings";
@@ -22,10 +23,7 @@ const evidence = process.env.INFINITARY_TASK_EVIDENCE;
 test("adds folders and new projects in Settings without waking Firstmate, opens duplicates and reports refusals", async () => {
   const home = scratchDir("infinitary-add-local-home-");
   const missing = join(home, "missing-private-project");
-  writeFileSync(
-    join(home, ".gitconfig"),
-    `[url "${missing}"]\n\tinsteadOf = https://github.com/octo/private-notes.git\n`,
-  );
+  redirectGitClone(home, "https://github.com/octo/private-notes.git", missing);
   const launched = await launchApp({
     withMockProvider: true,
     homeDir: home,
@@ -167,10 +165,7 @@ test("lists and adds GitHub repos using the app sign-in, filters and marks added
     "test: initial project",
   );
   // Git's real URL mapping targets a local disposable source, never github.com.
-  writeFileSync(
-    join(home, ".gitconfig"),
-    `[url "${source}"]\n\tinsteadOf = https://github.com/octo/field-notes.git\n`,
-  );
+  redirectGitClone(home, "https://github.com/octo/field-notes.git", source);
   seedGitHubSignIn(userDataDir);
   const github = await startGitHubStub();
   github.setProjects([{ fullName: "octo/field-notes", private: true }, { fullName: "octo/other" }]);
@@ -241,10 +236,7 @@ test("clones a project from a GitHub Enterprise host the app is signed in to, as
     { encoding: "utf8" },
   );
   // Git's real URL mapping targets a local disposable source, never the host.
-  writeFileSync(
-    join(home, ".gitconfig"),
-    `[url "${source}"]\n\tinsteadOf = https://${enterprise}/octo/field-notes.git\n`,
-  );
+  redirectGitClone(home, `https://${enterprise}/octo/field-notes.git`, source);
   seedGitHubSignIn(userDataDir, "ghp_e2e_enterprise_key_0123456789", enterprise);
   const github = await startGitHubStub({ host: enterprise });
   github.setProjects([{ fullName: "octo/field-notes", private: true }, { fullName: "octo/other" }]);

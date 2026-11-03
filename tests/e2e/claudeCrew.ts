@@ -1,8 +1,15 @@
-import { existsSync, mkdirSync, writeFileSync } from "node:fs";
+/**
+ * INF-2394: fixture ownership follows the product reader.
+ * @journey-area src/core/claude/
+ * @journey-area src/core/pi/accountVault.ts
+ */
+
+import { existsSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { expect } from "@playwright/test";
 import type { CatalogModelView } from "../../src/shared/quota";
 import { scratchDir } from "../helpers/scratchDirs";
+import { seedAccountAuth, seedAccountRegistry, seedAccountStore } from "./accountFixtures";
 import { launchSignedInClaude } from "./claudeAccount";
 import { NO_CLAUDE_LOGIN_USER } from "./claudeSeat";
 import type { LaunchedApp, LaunchOptions } from "./launch";
@@ -36,42 +43,43 @@ export const FIRSTMATE_MODEL_KEY = `${MOCK_KEY_PROVIDER_ID}/~openai/gpt-luna-lat
  * (CD-1=B).
  */
 function seedAccounts(userDataDir: string): void {
-  const accountsDir = join(userDataDir, "accounts");
-  mkdirSync(join(accountsDir, "anthropic-claude", CLAUDE_CREW_ACCOUNT), {
+  seedAccountStore(userDataDir, "anthropic-claude", CLAUDE_CREW_ACCOUNT, {
     recursive: true,
     mode: 0o700,
   });
-  const keyStore = join(accountsDir, MOCK_KEY_PROVIDER_ID, FIRSTMATE_ACCOUNT);
-  mkdirSync(keyStore, { recursive: true, mode: 0o700 });
-  writeFileSync(
-    join(keyStore, "auth.json"),
-    JSON.stringify({ [MOCK_KEY_PROVIDER_ID]: { type: "api_key", key: "sk-or-mock-key" } }),
+
+  seedAccountStore(userDataDir, MOCK_KEY_PROVIDER_ID, FIRSTMATE_ACCOUNT, {
+    recursive: true,
+    mode: 0o700,
+  });
+  seedAccountAuth(
+    userDataDir,
+    MOCK_KEY_PROVIDER_ID,
+    FIRSTMATE_ACCOUNT,
+    { [MOCK_KEY_PROVIDER_ID]: { type: "api_key", key: "sk-or-mock-key" } },
     { mode: 0o600 },
   );
-  writeFileSync(
-    join(accountsDir, "registry.json"),
-    JSON.stringify({
-      version: 1,
-      accounts: [
-        {
-          id: FIRSTMATE_ACCOUNT,
-          providerId: MOCK_KEY_PROVIDER_ID,
-          kind: "api_key",
-          label: "Personal",
-          enabled: true,
-          createdAt: Date.parse("2026-08-01T00:00:00Z"),
-        },
-        {
-          id: CLAUDE_CREW_ACCOUNT,
-          providerId: "anthropic-claude",
-          kind: "subscription_oauth",
-          label: "Personal",
-          enabled: true,
-          createdAt: Date.parse("2026-08-02T00:00:00Z"),
-        },
-      ],
-      pins: {},
-    }),
+  seedAccountRegistry(
+    userDataDir,
+    [
+      {
+        id: FIRSTMATE_ACCOUNT,
+        providerId: MOCK_KEY_PROVIDER_ID,
+        kind: "api_key",
+        label: "Personal",
+        enabled: true,
+        createdAt: Date.parse("2026-08-01T00:00:00Z"),
+      },
+      {
+        id: CLAUDE_CREW_ACCOUNT,
+        providerId: "anthropic-claude",
+        kind: "subscription_oauth",
+        label: "Personal",
+        enabled: true,
+        createdAt: Date.parse("2026-08-02T00:00:00Z"),
+      },
+    ],
+    {},
     { mode: 0o600 },
   );
 }

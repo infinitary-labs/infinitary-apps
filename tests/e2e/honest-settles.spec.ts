@@ -56,6 +56,7 @@ function seedRepo(userDataDir: string, taskId: string, options: { commit: boolea
   git("-C", repoDir, "commit", "--allow-empty", "-m", "init");
   git("-C", repoDir, "worktree", "add", "-b", branch, worktreeDir);
   if (options.commit) {
+    // e2e-fixture: input -- Author the real project files this journey commits, preserves or merges.
     writeFileSync(join(worktreeDir, "fix.txt"), "The crewmate's fix.\n");
     git("-C", worktreeDir, "add", "fix.txt");
     git("-C", worktreeDir, "commit", "-m", "fix: the crewmate's fix");

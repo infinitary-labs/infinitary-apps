@@ -35,20 +35,27 @@ test("verified folder work finishes through its owner and preserves the project"
   git("init", "--initial-branch=main", repoDir);
   run("config", "user.name", "Test");
   run("config", "user.email", "test@localhost");
+  // e2e-fixture: input -- Author the real project files this journey commits, preserves or merges.
   writeFileSync(join(repoDir, "draft.txt"), "The captain’s existing draft.\n");
+  // e2e-fixture: input -- Author the real project files this journey commits, preserves or merges.
   writeFileSync(join(repoDir, "notes.txt"), "Existing notes.\n");
   run("add", ".");
   run("commit", "-m", "docs: keep existing draft");
   run("remote", "add", "origin", origin);
   run("push", "-u", "origin", "main");
+  // e2e-fixture: input -- Author the real project files this journey commits, preserves or merges.
   writeFileSync(join(repoDir, "notes.txt"), "Notes set aside for later.\n");
   run("stash", "push", "-m", "Keep the captain’s notes");
+  // e2e-fixture: input -- Author the real project files this journey commits, preserves or merges.
   writeFileSync(join(repoDir, "local.txt"), "Work not pushed yet.\n");
   run("add", "local.txt");
   run("commit", "-m", "docs: retain unpushed work");
+  // e2e-fixture: input -- Author the real project files this journey commits, preserves or merges.
   writeFileSync(join(repoDir, "draft.txt"), "The captain’s staged edits.\n");
   run("add", "draft.txt");
+  // e2e-fixture: input -- Author the real project files this journey commits, preserves or merges.
   writeFileSync(join(repoDir, "draft.txt"), "The captain’s unfinished edits.\n");
+  // e2e-fixture: input -- Author the real project files this journey commits, preserves or merges.
   writeFileSync(join(repoDir, "scratch.txt"), "The captain’s untracked notes.\n");
   const snapshot = () => ({
     files: ["draft.txt", "notes.txt", "local.txt", "scratch.txt"].map((file) => [

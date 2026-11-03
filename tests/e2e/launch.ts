@@ -1,12 +1,5 @@
 import type { ChildProcess } from "node:child_process";
-import {
-  existsSync,
-  mkdirSync,
-  readdirSync,
-  readFileSync,
-  symlinkSync,
-  writeFileSync,
-} from "node:fs";
+import { existsSync, readdirSync, readFileSync, symlinkSync, writeFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 import {
@@ -21,6 +14,7 @@ import { claimedPort } from "../helpers/claimedPort";
 import { standInDnsSd } from "../helpers/dnsSdStandIn";
 import { withoutRunnerSession } from "../helpers/runnerSession";
 import { scratchDir } from "../helpers/scratchDirs";
+import { seedMockModelCatalog } from "./accountFixtures";
 import { launchDiagnostics } from "./launchDiagnostics";
 import { readInMain } from "./mainProcess";
 import { type MockClaudeTurns, writeMockClaudeClient } from "./mockClaudeClient";
@@ -483,11 +477,7 @@ export async function launchApp(options: LaunchOptions = {}): Promise<LaunchedAp
     if (!mockProvider) {
       mockProvider = await startMockProvider({ scenarios: options.scenarios });
     }
-    mkdirSync(join(userDataDir, "auth"), { recursive: true });
-    writeFileSync(
-      join(userDataDir, "auth", "models.json"),
-      (options.modelsJson ?? mockModelsJson)(mockProvider.port),
-    );
+    seedMockModelCatalog(userDataDir, (options.modelsJson ?? mockModelsJson)(mockProvider.port));
   }
 
   if (options.claudeTurns && !mockProvider) {

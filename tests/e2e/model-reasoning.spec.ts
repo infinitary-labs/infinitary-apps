@@ -1,7 +1,8 @@
-import { mkdirSync, writeFileSync } from "node:fs";
+import { writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { expect, test } from "@playwright/test";
 import { scratchDir } from "../helpers/scratchDirs";
+import { seedAccountAuth, seedAccountRegistry, seedAccountStore } from "./accountFixtures";
 import { expectClaudeConnected, launchSignedInClaude } from "./claudeAccount";
 import { launchClaudeCrew } from "./claudeCrew";
 import { resizeWindow } from "./layout";
@@ -17,61 +18,60 @@ const GROK_PERSONAL = "acct_grok1";
 const CLAUDE_PERSONAL = "acct_claude1";
 
 function seedAccounts(userDataDir: string): void {
-  const accountsDir = join(userDataDir, "accounts");
-  const grokDir = join(accountsDir, "xai", GROK_DISABLED);
-  mkdirSync(grokDir, { recursive: true, mode: 0o700 });
-  writeFileSync(
-    join(grokDir, "auth.json"),
-    JSON.stringify({ xai: { type: "api_key", key: "x" } }),
+  seedAccountStore(userDataDir, "xai", GROK_DISABLED, { recursive: true, mode: 0o700 });
+  seedAccountAuth(
+    userDataDir,
+    "xai",
+    GROK_DISABLED,
+    { xai: { type: "api_key", key: "x" } },
     {
       mode: 0o600,
     },
   );
-  const grokOnDir = join(accountsDir, "xai", GROK_PERSONAL);
-  mkdirSync(grokOnDir, { recursive: true, mode: 0o700 });
-  writeFileSync(
-    join(grokOnDir, "auth.json"),
-    JSON.stringify({ xai: { type: "api_key", key: "y" } }),
+
+  seedAccountStore(userDataDir, "xai", GROK_PERSONAL, { recursive: true, mode: 0o700 });
+  seedAccountAuth(
+    userDataDir,
+    "xai",
+    GROK_PERSONAL,
+    { xai: { type: "api_key", key: "y" } },
     { mode: 0o600 },
   );
-  mkdirSync(join(accountsDir, "anthropic-claude", CLAUDE_PERSONAL), {
+  seedAccountStore(userDataDir, "anthropic-claude", CLAUDE_PERSONAL, {
     recursive: true,
     mode: 0o700,
   });
-  writeFileSync(
-    join(accountsDir, "registry.json"),
-    JSON.stringify({
-      version: 1,
-      accounts: [
-        {
-          id: GROK_DISABLED,
-          providerId: "xai",
-          kind: "api_key",
-          label: "Old key",
-          // Signed in, but switched off: it leaves the selection pool, so it
-          // leaves this section too.
-          enabled: false,
-          createdAt: Date.parse("2026-08-01T00:00:00Z"),
-        },
-        {
-          id: CLAUDE_PERSONAL,
-          providerId: "anthropic-claude",
-          kind: "subscription_oauth",
-          label: "Personal Max",
-          enabled: true,
-          createdAt: Date.parse("2026-08-02T00:00:00Z"),
-        },
-        {
-          id: GROK_PERSONAL,
-          providerId: "xai",
-          kind: "api_key",
-          label: "Personal",
-          enabled: true,
-          createdAt: Date.parse("2026-08-03T00:00:00Z"),
-        },
-      ],
-      pins: {},
-    }),
+  seedAccountRegistry(
+    userDataDir,
+    [
+      {
+        id: GROK_DISABLED,
+        providerId: "xai",
+        kind: "api_key",
+        label: "Old key",
+        // Signed in, but switched off: it leaves the selection pool, so it
+        // leaves this section too.
+        enabled: false,
+        createdAt: Date.parse("2026-08-01T00:00:00Z"),
+      },
+      {
+        id: CLAUDE_PERSONAL,
+        providerId: "anthropic-claude",
+        kind: "subscription_oauth",
+        label: "Personal Max",
+        enabled: true,
+        createdAt: Date.parse("2026-08-02T00:00:00Z"),
+      },
+      {
+        id: GROK_PERSONAL,
+        providerId: "xai",
+        kind: "api_key",
+        label: "Personal",
+        enabled: true,
+        createdAt: Date.parse("2026-08-03T00:00:00Z"),
+      },
+    ],
+    {},
     { mode: 0o600 },
   );
 }

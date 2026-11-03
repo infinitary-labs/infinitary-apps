@@ -15,6 +15,7 @@ import { scratchDir } from "../helpers/scratchDirs";
 import { waitForFirstmateIdle } from "./crew";
 import { cardBody } from "./frames";
 import { startGitHubStub } from "./githubStub";
+import { gitCloneHome } from "./homeFixtures";
 import { type LaunchedApp, launchApp } from "./launch";
 import { type MockProviderServer, startMockProvider } from "./mockProvider";
 import { addedProjects, addFromSetupCard, projectRow, projectRowWords } from "./projects";
@@ -243,8 +244,7 @@ test("a refused clone offers Firstmate's sign-in way and opens Projects with a c
   const launched = await launchApp({
     reuseMockProvider: mockProvider,
     env: github.env,
-    prepareHome: (home) =>
-      writeFileSync(join(home, ".gitconfig"), `[url "${missing}"]\n\tinsteadOf = ${origin}\n`),
+    prepareHome: gitCloneHome(origin, missing),
   });
   try {
     const { page } = launched;

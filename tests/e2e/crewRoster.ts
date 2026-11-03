@@ -1,3 +1,9 @@
+/**
+ * INF-2394: fixture ownership follows the product reader.
+ * @journey-area src/core/routing/
+ * @journey-area src/core/storage/decisionStore.ts
+ */
+
 import { mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { catalogRefreshesSettled, createModelRuntime } from "../../src/core/pi/modelRuntime";
@@ -16,6 +22,7 @@ import {
 import type { PlanItem } from "../../src/shared/taskPlan";
 import { scratchDir } from "../helpers/scratchDirs";
 import { seedDelivery } from "../helpers/taskDelivery";
+import { seedAccountAuth, seedAccountRegistry, seedAccountStore } from "./accountFixtures";
 
 type ModelExample = { provider: string; id: string; label: string };
 
@@ -110,29 +117,28 @@ export async function crewRoster(count: number, options: CrewRosterOptions = {})
     if (previous === undefined) delete process.env.PI_OFFLINE;
     else process.env.PI_OFFLINE = previous;
   }
-  const accountDir = join(userDataDir, "accounts", "openrouter", "acct_labels");
-  mkdirSync(accountDir, { recursive: true });
-  writeFileSync(
-    join(accountDir, "auth.json"),
-    JSON.stringify({ openrouter: { type: "api_key", key: "fixture-key" } }),
+
+  seedAccountStore(userDataDir, "openrouter", "acct_labels", { recursive: true });
+  seedAccountAuth(
+    userDataDir,
+    "openrouter",
+    "acct_labels",
+    { openrouter: { type: "api_key", key: "fixture-key" } },
     { mode: 0o600 },
   );
-  writeFileSync(
-    join(userDataDir, "accounts", "registry.json"),
-    JSON.stringify({
-      version: 1,
-      accounts: [
-        {
-          id: "acct_labels",
-          providerId: "openrouter",
-          kind: "api_key",
-          label: "Preview examples",
-          enabled: true,
-          createdAt: Date.now(),
-        },
-      ],
-      pins: {},
-    }),
+  seedAccountRegistry(
+    userDataDir,
+    [
+      {
+        id: "acct_labels",
+        providerId: "openrouter",
+        kind: "api_key",
+        label: "Preview examples",
+        enabled: true,
+        createdAt: Date.now(),
+      },
+    ],
+    {},
     { mode: 0o600 },
   );
   const quotaDir = scratchDir("infinitary-label-quota-");

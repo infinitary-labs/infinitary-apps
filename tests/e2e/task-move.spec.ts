@@ -26,6 +26,7 @@ import { type LaunchedApp, launchApp } from "./launch";
 import { MOCK_PROVIDER_ID, mockModelsJson } from "./mockProvider";
 import { promptInput } from "./prompt";
 import { served } from "./providerRequest";
+import { seedQuotaFixture } from "./quotaFixtures";
 import { expandDock, nowRow, recordBar, recordCard } from "./rails";
 import { HELD_MOVE_TURN_MARKER, heldMoveTurn } from "./scenarios/heldMoveTurn";
 import { starterFor } from "./starters";
@@ -117,16 +118,17 @@ async function homeAndComputer() {
   const userDataDir = scratchDir("infinitary-e2e-task-move-home-");
   seedGrokKey(userDataDir);
   const quota = join(userDataDir, "quota");
-  mkdirSync(quota);
+
   const generatedAt = new Date().toISOString();
-  writeFileSync(join(quota, "snapshot.json"), JSON.stringify({ generatedAt, providers: [] }));
-  writeFileSync(
-    join(quota, "models.json"),
-    JSON.stringify({
+  seedQuotaFixture(
+    quota,
+    { generatedAt, providers: [] },
+    {
       generatedAt,
       models: [{ provider: "grok", id: GROK, label: "Mock Grok", effectivePercentRemaining: 80 }],
-    }),
+    },
   );
+
   const app = await launchApp({
     userDataDir,
     withMockProvider: true,

@@ -1,8 +1,7 @@
-import { writeFileSync } from "node:fs";
-import { join } from "node:path";
 import { expect, test } from "@playwright/test";
-import { plantProgram, writeLoginShellStub } from "../../src/core/loginShellStub";
+import { writeLoginShellStub } from "../../src/core/loginShellStub";
 import { scratchDir } from "../helpers/scratchDirs";
+import { nodeLoginHome } from "./homeFixtures";
 import { type LaunchedApp, launchApp } from "./launch";
 import { SPAWN_PROMPT_MARKER } from "./mockProvider";
 import { promptInput } from "./prompt";
@@ -43,14 +42,7 @@ test.beforeAll(async () => {
   launched = await launchApp({
     withMockProvider: true,
     scenarios: [nodeVersion],
-    prepareHome: (home) => {
-      const nvmBin = join(home, ".nvm", "versions", "node", "v99.0.0", "bin");
-      plantProgram(nvmBin, "node", PLANTED_VERSION);
-      writeFileSync(
-        join(home, ".zshrc"),
-        `echo "Welcome back"\nexport NVM_DIR="$HOME/.nvm"\nPATH="${nvmBin}:$PATH"\n`,
-      );
-    },
+    prepareHome: nodeLoginHome(PLANTED_VERSION),
     env: { PATH: SYSTEM_PATH, SHELL: shell },
   });
 });

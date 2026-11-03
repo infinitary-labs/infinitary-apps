@@ -1,9 +1,10 @@
-import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { expect, type Page, test } from "@playwright/test";
 import { FORGE_SECTION_WORDS } from "../../src/shared/forges";
 import { CODE_STEP_WORDS, COPILOT_PROVIDER_ID } from "../../src/shared/providers";
 import { scratchDir } from "../helpers/scratchDirs";
+import { seedAccountAuth, seedAccountRegistry, seedAccountStore } from "./accountFixtures";
 import { type LaunchedApp, launchApp } from "./launch";
 import { minimumWindowSize, resizeWindow } from "./layout";
 import { windowShot } from "./pictures";
@@ -199,11 +200,13 @@ test("signing in again to a GitHub Enterprise Copilot account asks nothing it al
   const userDataDir = scratchDir("infinitary-copilot-");
   const accountId = "acct_copilot_enterprise";
   const authPath = join(userDataDir, "accounts", COPILOT_PROVIDER_ID, accountId, "auth.json");
-  mkdirSync(join(authPath, ".."), { recursive: true, mode: 0o700 });
+  seedAccountStore(userDataDir, COPILOT_PROVIDER_ID, accountId, { recursive: true, mode: 0o700 });
   // A lapsed sign-in at a GitHub Enterprise address, as Pi keeps one.
-  writeFileSync(
-    authPath,
-    JSON.stringify({
+  seedAccountAuth(
+    userDataDir,
+    COPILOT_PROVIDER_ID,
+    accountId,
+    {
       [COPILOT_PROVIDER_ID]: {
         type: "oauth",
         refresh: "gho_lapsed",
@@ -211,25 +214,22 @@ test("signing in again to a GitHub Enterprise Copilot account asks nothing it al
         expires: 1,
         enterpriseUrl: ENTERPRISE,
       },
-    }),
+    },
     { mode: 0o600 },
   );
-  writeFileSync(
-    join(userDataDir, "accounts", "registry.json"),
-    JSON.stringify({
-      version: 1,
-      accounts: [
-        {
-          id: accountId,
-          providerId: COPILOT_PROVIDER_ID,
-          kind: "subscription_oauth",
-          label: "Work",
-          enabled: true,
-          createdAt: 1,
-        },
-      ],
-      pins: {},
-    }),
+  seedAccountRegistry(
+    userDataDir,
+    [
+      {
+        id: accountId,
+        providerId: COPILOT_PROVIDER_ID,
+        kind: "subscription_oauth",
+        label: "Work",
+        enabled: true,
+        createdAt: 1,
+      },
+    ],
+    {},
     { mode: 0o600 },
   );
   const launched = await launchApp({ userDataDir });

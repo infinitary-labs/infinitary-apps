@@ -1,4 +1,4 @@
-import { existsSync, mkdirSync, readFileSync, utimesSync, writeFileSync } from "node:fs";
+import { existsSync, readFileSync, utimesSync, writeFileSync } from "node:fs";
 import { createServer, type Server } from "node:http";
 import type { AddressInfo } from "node:net";
 import { join } from "node:path";
@@ -19,9 +19,18 @@ import { needsReauthCopy } from "../../src/shared/credentialHealth";
 import { CLAUDE_PROVIDER_ID, catalogEntry } from "../../src/shared/providers";
 import { scratchDir } from "../helpers/scratchDirs";
 import { consumerConfigMessage, grpcWebOkBody } from "../support/grpcWebEncoder";
+import { seedAccountAuth, seedAccountRegistry, seedAccountStore } from "./accountFixtures";
 import { type LaunchedApp, launchApp } from "./launch";
 import { resizeWindow } from "./layout";
-import { claudeDefaultStore, signedInClaudeHome, writeMockClaudeClient } from "./mockClaudeClient";
+import {
+  claudeDefaultStore,
+  claudeHomeWithCredential,
+  quotaIdentityHome,
+  writeClaudeIdentity,
+  writeMockClaudeClient,
+  writeRefusedClaudeClient,
+  writeRenewingClaudeClient,
+} from "./mockClaudeClient";
 import { regionShot } from "./pictures";
 import { readSavedData } from "./savedData";
 import { focusOn, pressKey } from "./windowKeys";
@@ -196,12 +205,12 @@ async function startStubKeyRead(accept: string[]): Promise<StubKeyRead> {
  * without a network round trip because it has not expired, or an API key.
  */
 function seedGrokAccount(userDataDir: string, stored: { accessToken: string } | { key: string }) {
-  const accountsDir = join(userDataDir, "accounts");
-  const dir = join(accountsDir, "xai", GROK_PERSONAL);
-  mkdirSync(dir, { recursive: true, mode: 0o700 });
-  writeFileSync(
-    join(dir, "auth.json"),
-    JSON.stringify({
+  seedAccountStore(userDataDir, "xai", GROK_PERSONAL, { recursive: true, mode: 0o700 });
+  seedAccountAuth(
+    userDataDir,
+    "xai",
+    GROK_PERSONAL,
+    {
       xai:
         "key" in stored
           ? { type: "api_key", key: stored.key }
@@ -211,25 +220,22 @@ function seedGrokAccount(userDataDir: string, stored: { accessToken: string } | 
               refresh: "stub-refresh",
               expires: Date.now() + 30 * 24 * 3600 * 1000,
             },
-    }),
+    },
     { mode: 0o600 },
   );
-  writeFileSync(
-    join(accountsDir, "registry.json"),
-    JSON.stringify({
-      version: 1,
-      accounts: [
-        {
-          id: GROK_PERSONAL,
-          providerId: "xai",
-          kind: "key" in stored ? "api_key" : "subscription_oauth",
-          label: "Personal",
-          enabled: true,
-          createdAt: Date.parse("2026-08-01T00:00:00Z"),
-        },
-      ],
-      pins: {},
-    }),
+  seedAccountRegistry(
+    userDataDir,
+    [
+      {
+        id: GROK_PERSONAL,
+        providerId: "xai",
+        kind: "key" in stored ? "api_key" : "subscription_oauth",
+        label: "Personal",
+        enabled: true,
+        createdAt: Date.parse("2026-08-01T00:00:00Z"),
+      },
+    ],
+    {},
     { mode: 0o600 },
   );
 }
@@ -305,32 +311,29 @@ async function startStubKimi(accept: string[]): Promise<StubKimi> {
  * past is an account stored before Kimi Code came back, its token long lapsed.
  */
 function seedKimiAccount(userDataDir: string, accessToken: string, expires: number) {
-  const accountsDir = join(userDataDir, "accounts");
-  const dir = join(accountsDir, "kimi-coding", KIMI_PERSONAL);
-  mkdirSync(dir, { recursive: true, mode: 0o700 });
-  writeFileSync(
-    join(dir, "auth.json"),
-    JSON.stringify({
+  seedAccountStore(userDataDir, "kimi-coding", KIMI_PERSONAL, { recursive: true, mode: 0o700 });
+  seedAccountAuth(
+    userDataDir,
+    "kimi-coding",
+    KIMI_PERSONAL,
+    {
       "kimi-coding": { type: "oauth", access: accessToken, refresh: "stub-refresh", expires },
-    }),
+    },
     { mode: 0o600 },
   );
-  writeFileSync(
-    join(accountsDir, "registry.json"),
-    JSON.stringify({
-      version: 1,
-      accounts: [
-        {
-          id: KIMI_PERSONAL,
-          providerId: "kimi-coding",
-          kind: "subscription_oauth",
-          label: "Personal",
-          enabled: true,
-          createdAt: Date.parse("2026-08-01T00:00:00Z"),
-        },
-      ],
-      pins: {},
-    }),
+  seedAccountRegistry(
+    userDataDir,
+    [
+      {
+        id: KIMI_PERSONAL,
+        providerId: "kimi-coding",
+        kind: "subscription_oauth",
+        label: "Personal",
+        enabled: true,
+        createdAt: Date.parse("2026-08-01T00:00:00Z"),
+      },
+    ],
+    {},
     { mode: 0o600 },
   );
 }
@@ -404,78 +407,58 @@ async function startStubCopilot(accept: string): Promise<StubCopilot> {
  * unexpired Copilot token, so nothing reaches GitHub to renew it.
  */
 function seedCopilotAccounts(userDataDir: string, signIns: Record<string, string>) {
-  const accountsDir = join(userDataDir, "accounts");
   for (const [id, githubToken] of Object.entries(signIns)) {
-    const dir = join(accountsDir, "github-copilot", id);
-    mkdirSync(dir, { recursive: true, mode: 0o700 });
-    writeFileSync(
-      join(dir, "auth.json"),
-      JSON.stringify({
+    seedAccountStore(userDataDir, "github-copilot", id, { recursive: true, mode: 0o700 });
+    seedAccountAuth(
+      userDataDir,
+      "github-copilot",
+      id,
+      {
         "github-copilot": {
           type: "oauth",
           refresh: githubToken,
           access: "tid=stub;exp=4000000000;proxy-ep=proxy.individual.githubcopilot.com",
           expires: Date.now() + 30 * 24 * 3600 * 1000,
         },
-      }),
+      },
       { mode: 0o600 },
     );
   }
-  writeFileSync(
-    join(accountsDir, "registry.json"),
-    JSON.stringify({
-      version: 1,
-      accounts: Object.keys(signIns).map((id, index) => ({
-        id,
-        providerId: "github-copilot",
-        kind: "subscription_oauth",
-        label: index === 0 ? "Personal" : "Old work",
-        enabled: true,
-        createdAt: Date.parse("2026-08-01T00:00:00Z") + index,
-      })),
-      pins: {},
-    }),
+  seedAccountRegistry(
+    userDataDir,
+    Object.keys(signIns).map((id, index) => ({
+      id,
+      providerId: "github-copilot",
+      kind: "subscription_oauth",
+      label: index === 0 ? "Personal" : "Old work",
+      enabled: true,
+      createdAt: Date.parse("2026-08-01T00:00:00Z") + index,
+    })),
+    {},
     { mode: 0o600 },
   );
 }
 
 function seedAccounts(userDataDir: string) {
-  const accountsDir = join(userDataDir, "accounts");
-  mkdirSync(join(accountsDir, "anthropic-claude", CLAUDE_PERSONAL), {
+  seedAccountStore(userDataDir, "anthropic-claude", CLAUDE_PERSONAL, {
     recursive: true,
     mode: 0o700,
   });
-  writeFileSync(
-    join(accountsDir, "registry.json"),
-    JSON.stringify({
-      version: 1,
-      accounts: [
-        {
-          id: CLAUDE_PERSONAL,
-          providerId: "anthropic-claude",
-          kind: "subscription_oauth",
-          label: "Personal",
-          enabled: true,
-          createdAt: Date.parse("2026-08-01T00:00:00Z"),
-        },
-      ],
-      pins: {},
-    }),
+  seedAccountRegistry(
+    userDataDir,
+    [
+      {
+        id: CLAUDE_PERSONAL,
+        providerId: "anthropic-claude",
+        kind: "subscription_oauth",
+        label: "Personal",
+        enabled: true,
+        createdAt: Date.parse("2026-08-01T00:00:00Z"),
+      },
+    ],
+    {},
     { mode: 0o600 },
   );
-}
-
-function seedClaudeHome(accessToken: string, expiresAt: number, refreshTokenExpiresAt?: number) {
-  return (homeDir: string) =>
-    signedInClaudeHome(homeDir, {
-      credentials: {
-        accessToken,
-        refreshToken: "stub-refresh",
-        expiresAt,
-        refreshTokenExpiresAt: refreshTokenExpiresAt ?? expiresAt + 30 * 24 * 3600 * 1000,
-        subscriptionType: "max",
-      },
-    });
 }
 
 /**
@@ -559,7 +542,7 @@ test.describe("the real quota sensor, end to end", () => {
     seedAccounts(userDataDir);
     app = await launchApp({
       userDataDir,
-      prepareHome: seedClaudeHome("live-token", Date.now() + 3600_000),
+      prepareHome: claudeHomeWithCredential("live-token", Date.now() + 3600_000),
       env: {
         INFINITARY_CLAUDE_USAGE_URL: stub.url,
         INFINITARY_CLAUDE_CLI: writeMockClaudeClient(join(userDataDir, "bin")),
@@ -587,22 +570,15 @@ test.describe("the real quota sensor, end to end", () => {
     const userDataDir = scratchDir("infinitary-e2e-claude-swap-");
     stub = await startStubUsage(["first-token", "second-token"]);
     seedAccounts(userDataDir);
-    const identity = (home: string, email: string, accountUuid: string, date: number) => {
-      const file = join(home, ".claude.json");
-      writeFileSync(
-        file,
-        JSON.stringify({
-          oauthAccount: { emailAddress: email, accountUuid, organizationUuid: "personal" },
-        }),
-      );
-      utimesSync(file, date, date);
-    };
     app = await launchApp({
       userDataDir,
-      prepareHome: (home) => {
-        seedClaudeHome("first-token", Date.now() + 3600_000)(home);
-        identity(home, "alex.one@example.com", "account-one", 1000);
-      },
+      prepareHome: quotaIdentityHome(
+        "first-token",
+        Date.now() + 3600_000,
+        "alex.one@example.com",
+        "account-one",
+        1000,
+      ),
       env: {
         INFINITARY_CLAUDE_USAGE_URL: stub.url,
         // Deliberately still names the earlier login after the external swap.
@@ -619,10 +595,10 @@ test.describe("the real quota sensor, end to end", () => {
     await expect(row).toContainText("70%");
     expect(stub.seen).toContain("first-token");
 
-    seedClaudeHome("second-token", Date.now() + 3600_000)(app.homeDir);
+    claudeHomeWithCredential("second-token", Date.now() + 3600_000)(app.homeDir);
     // e2e-claude-store: mutation -- move the credential stamp backwards to prove every changed stamp refreshes
     utimesSync(join(claudeDefaultStore(app.homeDir), ".credentials.json"), 2000, 2000);
-    identity(app.homeDir, "alex.two@example.com", "account-two", 2000);
+    writeClaudeIdentity(app.homeDir, "account-two", "alex.two@example.com", 2000, "personal");
     const refresh = app.page.getByRole("button", { name: "Refresh", exact: true });
     await focusOn(refresh);
     await pressKey(refresh, "Enter");
@@ -682,36 +658,15 @@ test.describe("the real quota sensor, end to end", () => {
     // The stand-in writes its own store on that request, as the installed
     // client may; the request log proves health did not ask it beforehand.
     const requests = join(userDataDir, "refresh-requests.jsonl");
-    writeFileSync(
-      join(binDir, "renewing-claude.mjs"),
-      `#!/usr/bin/env node
-import { appendFileSync, writeFileSync } from "node:fs";
-import { join } from "node:path";
-import { spawnSync } from "node:child_process";
-const home = process.env.HOME;
-const dir = process.env.CLAUDE_CONFIG_DIR || (home ? join(home, ".claude") : undefined);
-const args = process.argv.slice(2);
-if (dir && args[0] === "auth" && args[1] === "status") {
-  appendFileSync(${JSON.stringify(requests)}, JSON.stringify(args) + "\\n");
-  writeFileSync(join(dir, ".credentials.json"), JSON.stringify({
-    claudeAiOauth: {
-      accessToken: "renewed-token",
-      refreshToken: "stub-refresh-2",
-      expiresAt: Date.now() + 3600000,
-      refreshTokenExpiresAt: Date.now() + 30 * 24 * 3600000,
-      subscriptionType: "max",
-    },
-  }), { mode: 0o600 });
-}
-const run = spawnSync(process.execPath, [${JSON.stringify(client)}, ...args], { stdio: "inherit" });
-process.exit(run.status ?? 0);
-`,
-      { mode: 0o755 },
-    );
+    writeRenewingClaudeClient(binDir, client, requests);
     app = await launchApp({
       userDataDir,
       // INF-2317: even both saved dates passing must reach rejection and renewal.
-      prepareHome: seedClaudeHome("expired-token", Date.now() - 3600_000, Date.now() - 1000),
+      prepareHome: claudeHomeWithCredential(
+        "expired-token",
+        Date.now() - 3600_000,
+        Date.now() - 1000,
+      ),
       env: {
         INFINITARY_CLAUDE_USAGE_URL: stub.url,
         INFINITARY_CLAUDE_CLI: join(binDir, "renewing-claude.mjs"),
@@ -773,7 +728,11 @@ process.exit(run.status ?? 0);
     seedAccounts(userDataDir);
     app = await launchApp({
       userDataDir,
-      prepareHome: seedClaudeHome("lapsed-token", Date.now() + 3600_000, Date.now() - 1000),
+      prepareHome: claudeHomeWithCredential(
+        "lapsed-token",
+        Date.now() + 3600_000,
+        Date.now() - 1000,
+      ),
       env: {
         INFINITARY_CLAUDE_USAGE_URL: stub.url,
         INFINITARY_CLAUDE_CLI: writeMockClaudeClient(join(userDataDir, "bin")),
@@ -810,42 +769,10 @@ process.exit(run.status ?? 0);
     // Anthropic accepts only what Claude's own login writes. The renewal
     // rewrites the store with another token it still refuses, as a login
     // Anthropic signed out does.
-    writeFileSync(
-      join(binDir, "refused-claude.mjs"),
-      `#!/usr/bin/env node
-import { readFileSync, writeFileSync } from "node:fs";
-import { join } from "node:path";
-import { spawnSync } from "node:child_process";
-const home = process.env.HOME;
-const dir = process.env.CLAUDE_CONFIG_DIR || (home ? join(home, ".claude") : undefined);
-const args = process.argv.slice(2);
-const file = dir ? join(dir, ".credentials.json") : undefined;
-const current = () => {
-  try {
-    return JSON.parse(readFileSync(file, "utf8")).claudeAiOauth.accessToken;
-  } catch {
-    return undefined;
-  }
-};
-const write = (accessToken) =>
-  writeFileSync(file, JSON.stringify({
-    claudeAiOauth: {
-      accessToken,
-      refreshToken: "stub-refresh-" + accessToken,
-      expiresAt: Date.now() + 3600000,
-      subscriptionType: "max",
-    },
-  }), { mode: 0o600 });
-if (file && args[0] === "auth" && args[1] === "status" && current() !== "fresh-token") write("refused-" + Date.now());
-if (file && args[0] === "auth" && args[1] === "login") write("fresh-token");
-const run = spawnSync(process.execPath, [${JSON.stringify(client)}, ...args], { stdio: "inherit" });
-process.exit(run.status ?? 0);
-`,
-      { mode: 0o755 },
-    );
+    writeRefusedClaudeClient(binDir, client);
     app = await launchApp({
       userDataDir,
-      prepareHome: seedClaudeHome("refused-token", Date.now() + 3600_000),
+      prepareHome: claudeHomeWithCredential("refused-token", Date.now() + 3600_000),
       env: {
         INFINITARY_CLAUDE_USAGE_URL: stub.url,
         INFINITARY_CLAUDE_CLI: join(binDir, "refused-claude.mjs"),
@@ -890,7 +817,7 @@ process.exit(run.status ?? 0);
     seedAccounts(userDataDir);
     app = await launchApp({
       userDataDir,
-      prepareHome: seedClaudeHome("dead-token", Date.now() + 3600_000),
+      prepareHome: claudeHomeWithCredential("dead-token", Date.now() + 3600_000),
       env: {
         INFINITARY_CLAUDE_USAGE_URL: stub.url,
         INFINITARY_CLAUDE_CLI: writeMockClaudeClient(join(userDataDir, "bin")),

@@ -1,6 +1,4 @@
-import { utimesSync, writeFileSync } from "node:fs";
 import { createServer, type Server } from "node:http";
-import { join } from "node:path";
 import { expect, type Page, test } from "@playwright/test";
 import {
   firstmatePauseTitle,
@@ -28,7 +26,8 @@ import {
 import { cardBody } from "./frames";
 import { bubbleWords, mateBubble, yourBubble } from "./lastTurn";
 import type { LaunchedApp } from "./launch";
-import { claudeDefaultStore, signedInClaudeHome } from "./mockClaudeClient";
+import { claudeIdentityHome, rewrittenClaudeHome, writeClaudeIdentity } from "./mockClaudeClient";
+
 import {
   ANSWER_PROMPT_MARKER,
   MOCK_ANSWER_TITLE,
@@ -243,12 +242,7 @@ test("a lost sign-in pauses the seat, and signing in again on this Mac answers t
     homeDir,
     // The machine's login keeps its credential in the plain-file store, so
     // a new sign-in is a rewrite of it.
-    prepareHome: (home) => {
-      signedInClaudeHome(home);
-      const later = new Date(Date.now() + 60_000);
-      // e2e-claude-store: mutation -- simulate a new login stamp to release the authentication cutoff
-      utimesSync(join(claudeDefaultStore(home), ".credentials.json"), later, later);
-    },
+    prepareHome: rewrittenClaudeHome,
   });
   await expect
     .poll(() => cardTitles(launched?.page as Page), { timeout: 45_000 })
@@ -299,18 +293,6 @@ test("a spent allowance pauses with its reset, asks to move to Codex, and tries 
   expect(tried(mock, words)).toBe(1);
 });
 
-/**
- * Which login the machine's Claude store names, as Claude's own client
- * writes it in the home's account config: switching accounts there rewrites
- * it with another account.
- */
-function writeClaudeLogin(homeDir: string, accountUuid: string): void {
-  writeFileSync(
-    join(homeDir, ".claude.json"),
-    JSON.stringify({ oauthAccount: { accountUuid, emailAddress: "kun@example.com" } }),
-  );
-}
-
 // INF-1079, the captain: "it would be great to have a button here to trigger
 // a recheck" after switching Claude accounts elsewhere.
 // INF-2318: the captain replaced the independent focus scan with the next shared store read.
@@ -334,7 +316,7 @@ test("a spent allowance's Recheck allowance, by key, keeps the card on one login
   launched = await launchClaudeSeat({
     mockProvider: mock,
     homeDir,
-    prepareHome: (home) => writeClaudeLogin(home, "account-a"),
+    prepareHome: claudeIdentityHome("account-a", "kun@example.com"),
     env: {
       INFINITARY_QUOTA_FIXTURE_DIR: "",
       INFINITARY_CLAUDE_USAGE_URL: `http://127.0.0.1:${address.port}/usage`,
@@ -375,7 +357,7 @@ test("a spent allowance's Recheck allowance, by key, keeps the card on one login
   await test.step("another login: the next reading hears it and answers the kept words", async () => {
     // The captain switched Claude to an account with room outside the app,
     // then asks for its allowance through the same key as before.
-    writeClaudeLogin(homeDir, "account-b");
+    writeClaudeIdentity(homeDir, "account-b", "kun@example.com");
     remaining = 80;
     mock.cutClaudeSeat(null);
     await pressWindowKey(app, "1", ["meta"]);

@@ -1,4 +1,3 @@
-import { mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { expect, type Page, test } from "@playwright/test";
 import {
@@ -9,8 +8,13 @@ import {
 } from "../../src/core/routing/modelNews";
 import { CLAUDE_PROVIDER_ID, catalogEntry } from "../../src/shared/providers";
 import { scratchDir } from "../helpers/scratchDirs";
+import { seedAccountRegistry, seedAccountStore } from "./accountFixtures";
 import { expectClaudeConnected, launchSignedInClaude } from "./claudeAccount";
-import { type MockClaudeClientOptions, writeMockClaudeClient } from "./mockClaudeClient";
+import {
+  type MockClaudeClientOptions,
+  writeClaudeModelListing,
+  writeMockClaudeClient,
+} from "./mockClaudeClient";
 import { modelsSection } from "./modelsBoard";
 import { feedLine } from "./rails";
 
@@ -59,28 +63,24 @@ const WITH_SONNET_5_6: Row[] = [
 ];
 
 function seedClaudeAccount(userDataDir: string, enabled = true): void {
-  const accountsDir = join(userDataDir, "accounts");
   // Vault bookkeeping only; the login lives in HOME/.claude (CD-1=B).
-  mkdirSync(join(accountsDir, "anthropic-claude", CLAUDE_ACCOUNT), {
+  seedAccountStore(userDataDir, "anthropic-claude", CLAUDE_ACCOUNT, {
     recursive: true,
     mode: 0o700,
   });
-  writeFileSync(
-    join(accountsDir, "registry.json"),
-    JSON.stringify({
-      version: 1,
-      accounts: [
-        {
-          id: CLAUDE_ACCOUNT,
-          providerId: "anthropic-claude",
-          kind: "subscription_oauth",
-          label: "Personal Max",
-          enabled,
-          createdAt: Date.parse("2026-08-03T00:00:00Z"),
-        },
-      ],
-      pins: {},
-    }),
+  seedAccountRegistry(
+    userDataDir,
+    [
+      {
+        id: CLAUDE_ACCOUNT,
+        providerId: "anthropic-claude",
+        kind: "subscription_oauth",
+        label: "Personal Max",
+        enabled,
+        createdAt: Date.parse("2026-08-03T00:00:00Z"),
+      },
+    ],
+    {},
     { mode: 0o600 },
   );
 }
@@ -122,7 +122,7 @@ test("a catalog read that never answers holds nothing up: the shipped list serve
   const userDataDir = scratchDir("infinitary-e2e-");
   seedClaudeAccount(userDataDir);
   const listing = join(userDataDir, "claude-listing.json");
-  writeFileSync(listing, JSON.stringify(CLAUDE_CURRENT));
+  writeClaudeModelListing(listing, CLAUDE_CURRENT);
   const app = await claudeLaunch(userDataDir, {
     listModelsFile: listing,
     listModelsHangMs: 10 * 60_000,
@@ -164,7 +164,7 @@ test("a Claude account read at runtime: the newest generations, a kept model tha
   seedClaudeAccount(userDataDir);
 
   await test.step("lists each family's newest generation, says so once, and leaves the rest by name", async () => {
-    writeFileSync(listing, JSON.stringify(WITH_SONNET_5_6));
+    writeClaudeModelListing(listing, WITH_SONNET_5_6);
     const app = await claudeLaunch(userDataDir, { listModelsFile: listing });
     try {
       await expectClaudeConnected(app.page, CLAUDE_ACCOUNT);
@@ -210,9 +210,9 @@ test("a Claude account read at runtime: the newest generations, a kept model tha
 
   await test.step("announces once a kept model a later successful read no longer serves", async () => {
     // Claude drops Opus 4.8 between launches; the person had kept it in low.
-    writeFileSync(
+    writeClaudeModelListing(
       listing,
-      JSON.stringify(WITH_SONNET_5_6.filter((row) => row.value !== "claude-opus-4-8")),
+      WITH_SONNET_5_6.filter((row) => row.value !== "claude-opus-4-8"),
     );
     const app = await claudeLaunch(userDataDir, { listModelsFile: listing });
     try {
@@ -229,7 +229,7 @@ test("a Claude account read at runtime: the newest generations, a kept model tha
   });
 
   await test.step("a failed read falls back to the shipped list and says nothing", async () => {
-    writeFileSync(listing, "Authentication required\n");
+    writeClaudeModelListing(listing, "Authentication required\n");
     const app = await claudeLaunch(userDataDir, { listModelsFile: listing });
     try {
       await expectClaudeConnected(app.page, CLAUDE_ACCOUNT);
@@ -264,9 +264,9 @@ test("an older successful catalog cannot remove the runnable Haiku low starter",
   const userDataDir = scratchDir("infinitary-e2e-");
   seedClaudeAccount(userDataDir, false);
   const listing = join(userDataDir, "claude-listing.json");
-  writeFileSync(
+  writeClaudeModelListing(
     listing,
-    JSON.stringify(CLAUDE_CURRENT.filter((row) => row.value !== "claude-haiku-5-5")),
+    CLAUDE_CURRENT.filter((row) => row.value !== "claude-haiku-5-5"),
   );
   const app = await claudeLaunch(userDataDir, { listModelsFile: listing, version: "2.1.290" });
   try {

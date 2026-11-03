@@ -1,8 +1,9 @@
-import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { expect, test } from "@playwright/test";
 import { SettingsStore } from "../../src/core/storage/settingsStore";
 import { PERSONAL_RESOURCES_WORDS } from "../../src/renderer/src/settings/subscriptionsWords";
+import { personalResourcesHome } from "./homeFixtures";
 import { launchApp } from "./launch";
 import { SPAWN_PROMPT_MARKER } from "./mockProvider";
 import { regionShot } from "./pictures";
@@ -18,15 +19,7 @@ const SKILL_NAME = "personal-local-rivets";
 test("a person opts in by keyboard, new crew receives local resources and the choice survives restart", async () => {
   let launched = await launchApp({
     withMockProvider: true,
-    prepareHome: (home) => {
-      writeFileSync(join(home, "AGENTS.md"), PERSONAL_MARKER);
-      const dir = join(home, ".agents", "skills", SKILL_NAME);
-      mkdirSync(dir, { recursive: true });
-      writeFileSync(
-        join(dir, "SKILL.md"),
-        `---\nname: ${SKILL_NAME}\ndescription: Local rivet guidance.\n---\nCount rivets locally.\n`,
-      );
-    },
+    prepareHome: personalResourcesHome(PERSONAL_MARKER, SKILL_NAME),
   });
   const { userDataDir, homeDir } = launched;
   try {

@@ -1,8 +1,9 @@
-import { mkdirSync, writeFileSync } from "node:fs";
+import { writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { expect, test } from "@playwright/test";
 import { KEYCHAIN_VALUE_FAILURE_DETAIL } from "../../src/shared/quota";
 import { scratchDir } from "../helpers/scratchDirs";
+import { seedAccountRegistry, seedAccountStore } from "./accountFixtures";
 import { expectClaudeConnected, launchSignedInClaude } from "./claudeAccount";
 import { writeMockClaudeClient } from "./mockClaudeClient";
 
@@ -16,27 +17,23 @@ import { writeMockClaudeClient } from "./mockClaudeClient";
 const CLAUDE_PERSONAL = "acct_claude_reauth";
 
 function seedClaudeAccount(userDataDir: string) {
-  const accountsDir = join(userDataDir, "accounts");
-  mkdirSync(join(accountsDir, "anthropic-claude", CLAUDE_PERSONAL), {
+  seedAccountStore(userDataDir, "anthropic-claude", CLAUDE_PERSONAL, {
     recursive: true,
     mode: 0o700,
   });
-  writeFileSync(
-    join(accountsDir, "registry.json"),
-    JSON.stringify({
-      version: 1,
-      accounts: [
-        {
-          id: CLAUDE_PERSONAL,
-          providerId: "anthropic-claude",
-          kind: "subscription_oauth",
-          label: "Personal",
-          enabled: true,
-          createdAt: Date.parse("2026-08-01T00:00:00Z"),
-        },
-      ],
-      pins: {},
-    }),
+  seedAccountRegistry(
+    userDataDir,
+    [
+      {
+        id: CLAUDE_PERSONAL,
+        providerId: "anthropic-claude",
+        kind: "subscription_oauth",
+        label: "Personal",
+        enabled: true,
+        createdAt: Date.parse("2026-08-01T00:00:00Z"),
+      },
+    ],
+    {},
     { mode: 0o600 },
   );
 }

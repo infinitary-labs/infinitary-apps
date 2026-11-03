@@ -1,11 +1,10 @@
-import { mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { expect, test } from "@playwright/test";
 import { launchClaudeSeat, say } from "./claudeSeat";
 import { cardBody } from "./frames";
 import type { LaunchedApp } from "./launch";
 import { atRest } from "./layout";
-import { claudeDefaultStore } from "./mockClaudeClient";
+import { uncompactedClaudeHome } from "./mockClaudeClient";
 import {
   ANSWER_PROMPT_MARKER,
   MOCK_ANSWER_TEXT,
@@ -32,13 +31,7 @@ test("Claude answers after a context refusal without asking the captain to Retry
         DISABLE_COMPACT: "1",
         CLAUDE_CODE_AUTO_COMPACT_WINDOW: "1000000",
       },
-      prepareHome: (home) => {
-        const config = claudeDefaultStore(home);
-        // e2e-claude-store: mutation -- disable the client compaction switches to test overflow recovery
-        mkdirSync(config, { recursive: true });
-        // e2e-claude-store: mutation -- disable the client compaction switches to test overflow recovery
-        writeFileSync(join(config, ".claude.json"), JSON.stringify({ autoCompactEnabled: false }));
-      },
+      prepareHome: uncompactedClaudeHome,
     });
     const { page } = launched;
     await say(page, `hello ${ANSWER_PROMPT_MARKER}`);

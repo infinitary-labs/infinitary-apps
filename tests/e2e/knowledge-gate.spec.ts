@@ -242,6 +242,7 @@ test("unreadable directions pause new Firstmate work and leave the collection al
   const userDataDir = scratchDir("infinitary-knowledge-unreadable-");
   const knowledgeDir = join(userDataDir, "knowledge");
   mkdirSync(knowledgeDir, { recursive: true });
+  // e2e-fixture: mutation -- Prove the app refuses a knowledge store overwritten by another writer.
   writeFileSync(join(knowledgeDir, "knowledge.db"), "written by something else");
   const before = folder(knowledgeDir);
   const mockProvider = await startMockProvider({ scenarios: [knowledgeFact] });

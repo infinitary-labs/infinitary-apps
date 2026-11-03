@@ -1,5 +1,4 @@
 import { execFileSync } from "node:child_process";
-import { cpSync, mkdirSync } from "node:fs";
 import { join } from "node:path";
 import { expect, type Page, test } from "@playwright/test";
 import { scratchDir } from "../helpers/scratchDirs";
@@ -7,6 +6,7 @@ import { panelBody } from "./frames";
 import { askFirstmate } from "./lastTurn";
 import { type LaunchedApp, launchApp } from "./launch";
 import { measured, PERF_TAG } from "./perf";
+import { seedPersonalWorkspace } from "./personalFixtures";
 
 /**
  * The captain's token dashboard, end to end (plugin data surface, Phase B):
@@ -37,12 +37,10 @@ let quit = false;
 
 test.beforeAll(async () => {
   const userDataDir = scratchDir("infinitary-e2e-tokens-");
-  const workspace = join(userDataDir, "fleet", "personal");
-  mkdirSync(workspace, { recursive: true });
-  cpSync(
+  seedPersonalWorkspace(
+    userDataDir,
     join(process.cwd(), "tests", "fixtures", "personal-skills", "token-watch"),
-    join(workspace, "token-watch"),
-    { recursive: true },
+    "token-watch",
   );
   launched = await launchApp({ userDataDir, withMockProvider: true });
   await expect

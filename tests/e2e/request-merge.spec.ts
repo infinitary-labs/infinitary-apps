@@ -50,6 +50,7 @@ function seedRepo(userDataDir: string, taskId: string) {
   git("-C", repoDir, "config", "user.email", "test@localhost");
   git("-C", repoDir, "commit", "--allow-empty", "-m", "init");
   git("-C", repoDir, "worktree", "add", "-b", branch, worktreeDir);
+  // e2e-fixture: input -- Author the real project files this journey commits, preserves or merges.
   writeFileSync(join(worktreeDir, "feature.txt"), "The crewmate's work.\n");
   git("-C", worktreeDir, "add", "feature.txt");
   git("-C", worktreeDir, "commit", "-m", "feat: the crewmate's work");

@@ -1,5 +1,5 @@
 import { execFileSync } from "node:child_process";
-import { mkdirSync, writeFileSync } from "node:fs";
+import { writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { expect, type Page, test } from "@playwright/test";
 import type { Card } from "@shared/cards";
@@ -58,6 +58,7 @@ import {
 } from "./scenarios/upgradedTaskRead";
 import { settingsSection } from "./settings";
 import { closeOpenCards } from "./stack";
+import { seedCrewTranscript } from "./transcriptFixtures";
 import { pressKey, runFromSearch, typeInto } from "./windowKeys";
 
 // A profile an older release saved, opened in this build: the upgrade a
@@ -997,11 +998,7 @@ function miniPlacement() {
 function seedRunningWork(userDataDir: string): Record<keyof typeof RUNNING, string> {
   const { db, tasks } = taskWriters(userDataDir);
   const sessionFile = (id: string, name: string) => {
-    const folder = join(userDataDir, "crewmates", id, "sessions");
-    mkdirSync(folder, { recursive: true });
-    const file = join(folder, `${name}.jsonl`);
-    writeFileSync(file, "");
-    return file;
+    return seedCrewTranscript(userDataDir, id, `${name}.jsonl`, []);
   };
   const facts = (file: string) => ({
     file,

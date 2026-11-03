@@ -112,8 +112,16 @@ test("crew model names default on, toggle immediately and survive restart indepe
         .showCrewModelNames,
     ).toBe(false);
     await app.close();
-    for (const name of ["Local Storage", "Session Storage", "IndexedDB", "databases", "WebStorage"])
+    for (const name of [
+      "Local Storage",
+      "Session Storage",
+      "IndexedDB",
+      "databases",
+      "WebStorage",
+    ]) {
+      // e2e-fixture: mutation -- Prove saved crew labels survive loss of window caches or the account catalog.
       rmSync(join(fixture.userDataDir, name), { recursive: true, force: true });
+    }
     app = await launchApp({ ...fixture, withMockProvider: true });
     // Hidden names must not remove the seeded crew. Formation tuning is owned
     // by the orbit tests, not by this restart/persistence journey.
@@ -166,6 +174,7 @@ test("names switched off stay off while the crew grows past eight and back", asy
   const fixture = await roster(count);
   // Only the local mock may serve new turns. The existing isolated idle tasks
   // keep their assigned identities even when their catalog is unavailable.
+  // e2e-fixture: mutation -- Prove saved crew labels survive loss of window caches or the account catalog.
   rmSync(join(fixture.userDataDir, "accounts"), { recursive: true, force: true });
   const app = await launchApp({ ...fixture, withMockProvider: true });
   const title = "Second orbit example";

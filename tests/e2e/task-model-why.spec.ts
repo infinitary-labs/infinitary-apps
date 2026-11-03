@@ -1,4 +1,4 @@
-import { mkdirSync, writeFileSync } from "node:fs";
+import { writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { expect, type Locator, test } from "@playwright/test";
 import { CLAUDE_MODELS } from "../../src/core/claude/claudeModels";
@@ -13,6 +13,7 @@ import { MODEL_WHY_WORDS, modelChoiceLine } from "../../src/shared/modelChoice";
 import { modelReasonLine } from "../../src/shared/modelReason";
 import type { CatalogModelView } from "../../src/shared/quota";
 import { scratchDir } from "../helpers/scratchDirs";
+import { seedAccountAuth, seedAccountRegistry, seedAccountStore } from "./accountFixtures";
 import { launchSignedInClaude } from "./claudeAccount";
 import type { LaunchedApp } from "./launch";
 import { writeMockClaudeClient } from "./mockClaudeClient";
@@ -87,44 +88,45 @@ function seedAccounts(userDataDir: string, fixtureDir: string, now: number): voi
       ],
     }),
   );
-  const accountsDir = join(userDataDir, "accounts");
-  mkdirSync(join(accountsDir, "openai-codex", CODEX_ACCOUNT), { recursive: true });
-  writeFileSync(
-    join(accountsDir, "openai-codex", CODEX_ACCOUNT, "auth.json"),
-    JSON.stringify({
+
+  seedAccountStore(userDataDir, "openai-codex", CODEX_ACCOUNT, { recursive: true });
+  seedAccountAuth(
+    userDataDir,
+    "openai-codex",
+    CODEX_ACCOUNT,
+    {
       "openai-codex": {
         type: "oauth",
         access: "fake",
         refresh: "fake",
         expires: now + 30 * 24 * HOUR,
       },
-    }),
+    },
+    {},
   );
-  mkdirSync(join(accountsDir, "anthropic-claude", CLAUDE_ACCOUNT), { recursive: true });
-  writeFileSync(
-    join(accountsDir, "registry.json"),
-    JSON.stringify({
-      version: 1,
-      accounts: [
-        {
-          id: CLAUDE_ACCOUNT,
-          providerId: "anthropic-claude",
-          kind: "subscription_oauth",
-          label: "Personal",
-          enabled: true,
-          createdAt: 1,
-        },
-        {
-          id: CODEX_ACCOUNT,
-          providerId: "openai-codex",
-          kind: "subscription_oauth",
-          label: "Work",
-          enabled: true,
-          createdAt: 2,
-        },
-      ],
-      pins: {},
-    }),
+  seedAccountStore(userDataDir, "anthropic-claude", CLAUDE_ACCOUNT, { recursive: true });
+  seedAccountRegistry(
+    userDataDir,
+    [
+      {
+        id: CLAUDE_ACCOUNT,
+        providerId: "anthropic-claude",
+        kind: "subscription_oauth",
+        label: "Personal",
+        enabled: true,
+        createdAt: 1,
+      },
+      {
+        id: CODEX_ACCOUNT,
+        providerId: "openai-codex",
+        kind: "subscription_oauth",
+        label: "Work",
+        enabled: true,
+        createdAt: 2,
+      },
+    ],
+    {},
+    {},
   );
 }
 

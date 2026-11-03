@@ -39,6 +39,40 @@ The fifth rule in `scripts/lint-e2e-frames.ts`, `e2e-claude-store-owner`, refuse
 An intentional store mutation, such as a partial credential rewrite, a changed login stamp or a removed client transcript, keeps `// e2e-claude-store: mutation -- <reason>` on the write's line or the preceding line.
 The exception names a mutation the journey proves, never an ordinary sign-in seed.
 
+## Filesystem fixture owners
+
+INF-2394 measure 4 keeps filesystem-shaped stand-ins in imported owners, not in a journey's launch callback or another copy of a saved-file envelope.
+An owner declares the product reader it stands in for with `@journey-area src/path/` in a documentation comment; a trailing slash names a directory and otherwise the path names one file.
+The declaration is the same one the journey selector reads, so moving a product reader also reaches the stand-in's callers.
+`prepareHome` takes an imported declared owner or a call to its factory, including when a journey composes its token, identity or expiry inputs.
+The journey still owns its scenario values, enabled accounts, timestamps, authored messages and expected user result.
+
+| Saved input | Fixture owner |
+| --- | --- |
+| Vault registry, account directories, Pi auth envelopes and the mock model catalog | `tests/e2e/accountFixtures.ts` |
+| Claude tokens, account identity, model-list replies, renewal/login client scripts and client settings | `tests/e2e/mockClaudeClient.ts` |
+| Shell startup, clone redirection and personal home resources | `tests/e2e/homeFixtures.ts` |
+| Finished quota snapshot and model-catalog files | `tests/e2e/quotaFixtures.ts` |
+| Crew session placement and transcript serialization | `tests/e2e/transcriptFixtures.ts` |
+| Personal workspace placement and panel fixtures | `tests/e2e/personalFixtures.ts` |
+| Predecessor/future profile formats, retired stores and installer markers | `tests/e2e/savedDataFixtures.ts` |
+| A paired computer reached from elsewhere | `tests/e2e/deviceFixtures.ts` |
+| Staged card media directories | `tests/e2e/cardFixtures.ts` |
+| Isolated service-manager behavior and retained sign-in sentinels | `tests/e2e/workFixtures.ts` |
+
+The existing fixture helpers for Claude seats, GitHub, GitLab, knowledge, older profiles, project origins, card revisions, usage and crew rosters also declare their product readers.
+`e2e-fixture-owner` in `scripts/lint-e2e-frames.ts` checks journey files and their helpers, not unit files.
+It refuses a home/user-data byte writer, copier, link, rename, deletion or metadata mutation outside a declared owner, and an exported seed/mock helper without an owner declaration.
+It follows imported filesystem aliases, namespace calls and scoped path aliases rooted in the launcher's home/user-data naming contract; it checks a copy's destination and both sides of a rename, never the write's payload.
+Empty directories have no saved-file envelope, and files under explicit `worktrees` or `workspace` path segments are authored project input rather than app-owned saved formats.
+A journey authoring another project input or evidence artifact names that input beside its write with `// e2e-fixture: input -- <reason>`.
+A journey proving an external mutation, such as corrupted data, missing media, changed trust or deleted window caches, keeps `// e2e-fixture: mutation -- <reason>` beside that mutation.
+The narrower Claude mutation annotation also applies; an empty reason or file-wide comment never exempts another write.
+These annotations do not waive assertions or permit an ordinary saved-state seed outside its owner.
+This is a lexical fence, not interprocedural dataflow or a judgment that a test meets the six words.
+The reading pass still checks intent, realistic inputs, a describable failure, layer, ownership and gate.
+`tests/e2e-fixture-owners-lint.test.ts` exercises refusals and ownership, and `tests/e2e-fixture-data.test.ts` drives the account, quota and session readers against the owned output.
+
 ## Reading task state
 
 Construct `TaskService` only while the fixture app is stopped: its constructor performs boot recovery writes, including interrupting active turns.

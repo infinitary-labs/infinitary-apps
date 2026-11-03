@@ -6,11 +6,15 @@ import { readClaudeStore } from "../src/core/claude/claudeQuota";
 import { absentKeychain } from "../src/core/host";
 import {
   claudeDefaultStore,
+  claudeHomeWithCredential,
   MOCK_CLAUDE_API_KEY,
   MOCK_CLAUDE_OAUTH_TOKEN,
   mockClaudeKeychainLookups,
+  quotaIdentityHome,
   signedInClaudeHome,
   writeMockClaudeClient,
+  writeRefusedClaudeClient,
+  writeRenewingClaudeClient,
 } from "./e2e/mockClaudeClient";
 import { scratchDir } from "./helpers/scratchDirs";
 
@@ -152,6 +156,73 @@ describe("a signed-in Claude home", () => {
       env: { HOME: home },
     });
     expect(read).toMatchObject({ state: "present", auth: { accessToken: "renewed-token" } });
+  });
+});
+
+/** INF-2394 measure 4: moved quota stand-ins keep client-owned renewal and identity behavior. */
+describe("owned quota-client fixtures", () => {
+  it("renews through the installed-client protocol and the product reads the replacement token", async () => {
+    const home = scratchDir("infinitary-owned-renewal-");
+    const bin = join(home, "bin");
+    const client = writeMockClaudeClient(bin);
+    const requests = join(home, "refresh-requests.jsonl");
+    quotaIdentityHome(
+      "expired-token",
+      Date.now() - 3600_000,
+      "alex.one@example.com",
+      "account-one",
+      1000,
+    )(home);
+    writeRenewingClaudeClient(bin, client, requests);
+    const status = await runStub(join(bin, "renewing-claude.mjs"), ["auth", "status", "--json"], {
+      HOME: home,
+      PATH: process.env.PATH,
+    });
+    expect(status.code).toBe(0);
+    expect(JSON.parse(status.stdout)).toMatchObject({ loggedIn: true });
+    expect(
+      readFileSync(requests, "utf8")
+        .trim()
+        .split("\n")
+        .map((line) => JSON.parse(line)),
+    ).toEqual([["auth", "status", "--json"]]);
+    const reading = await readClaudeStore(claudeDefaultStore(home), {
+      keychain: absentKeychain,
+      env: { HOME: home },
+    });
+    expect(reading).toMatchObject({
+      state: "present",
+      auth: { accessToken: "renewed-token" },
+      identity: {
+        label: "alex.one@example.com",
+        accountUuid: "account-one",
+        organizationUuid: "personal",
+      },
+    });
+  });
+
+  it("keeps a refused renewal distinct from the new token written by client login", async () => {
+    const home = scratchDir("infinitary-owned-login-");
+    const bin = join(home, "bin");
+    const client = writeMockClaudeClient(bin);
+    claudeHomeWithCredential("refused-token", Date.now() + 3600_000)(home);
+    writeRefusedClaudeClient(bin, client);
+    const wrapper = join(bin, "refused-claude.mjs");
+    const env = { HOME: home, PATH: process.env.PATH };
+    expect((await runStub(wrapper, ["auth", "status", "--json"], env)).code).toBe(0);
+    const rejected = await readClaudeStore(claudeDefaultStore(home), {
+      keychain: absentKeychain,
+      env,
+    });
+    expect(rejected.state).toBe("present");
+    if (rejected.state !== "present")
+      throw new Error("The client's rewritten token must remain readable.");
+    expect(rejected.auth.accessToken).toMatch(/^refused-/);
+    expect(rejected.auth.accessToken).not.toBe("refused-token");
+    expect((await runStub(wrapper, ["auth", "login", "--claudeai"], env)).code).toBe(0);
+    expect(
+      await readClaudeStore(claudeDefaultStore(home), { keychain: absentKeychain, env }),
+    ).toMatchObject({ state: "present", auth: { accessToken: "fresh-token" } });
   });
 });
 

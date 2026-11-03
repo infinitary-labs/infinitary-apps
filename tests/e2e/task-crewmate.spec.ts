@@ -1,4 +1,3 @@
-import { mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { expect, type Page, test } from "@playwright/test";
 import { renderWake, replyWordsSpan, type TypedWake } from "../../src/core/orchestrator/wakes";
@@ -38,6 +37,7 @@ import { expandDock, openGroup, pressRow, recordCard, recordFrame, taskKey } fro
 import { shownCard } from "./stack";
 import { taskTabs } from "./taskBrowser";
 import { setThemeViaSettings } from "./theme";
+import { seedCrewTranscript } from "./transcriptFixtures";
 import { focusOn, pressKey, runFromSearch, typeInto, untilFocused } from "./windowKeys";
 
 /**
@@ -199,12 +199,7 @@ function seededReplay(): string {
   call(9.2, "change", "mcp__infinitary__open_change", { title: CHANGE_TITLE, body: "..." });
   call(10, "report", "mcp__infinitary__report", REPORT);
   for (const id of [REPLAY, UNDERWAY]) {
-    const dir = join(userDataDir, "crewmates", id, "sessions");
-    mkdirSync(dir, { recursive: true });
-    writeFileSync(
-      join(dir, `${SESSION}.jsonl`),
-      `${lines.map((entry) => JSON.stringify(entry)).join("\n")}\n`,
-    );
+    seedCrewTranscript(userDataDir, id, `${SESSION}.jsonl`, lines);
   }
   return userDataDir;
 }

@@ -1,4 +1,4 @@
-import { mkdirSync, writeFileSync } from "node:fs";
+import { writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { expect, type Locator, type Page, test } from "@playwright/test";
 import { NOT_IN_USE, STARTING_LEVELS_SUMMARY } from "../../src/renderer/src/settings/modelsWords";
@@ -10,6 +10,7 @@ import { SLOTS } from "../../src/shared/modelSlots";
 import type { QuotaSnapshotView } from "../../src/shared/quota";
 import { providerScopes } from "../../src/shared/quotaSignals";
 import { scratchDir } from "../helpers/scratchDirs";
+import { seedAccountAuth, seedAccountRegistry, seedAccountStore } from "./accountFixtures";
 import { launchSignedInClaude } from "./claudeAccount";
 import type { LaunchedApp } from "./launch";
 import { writeMockClaudeClient } from "./mockClaudeClient";
@@ -272,14 +273,18 @@ function buildQuotaFixture(now: number): QuotaSnapshotView {
  * signed out and offer the one inline action.
  */
 function seedAccounts(userDataDir: string): void {
-  const accountsDir = join(userDataDir, "accounts");
   const store = (providerId: string, accountId: string, credential?: Record<string, unknown>) => {
-    const dir = join(accountsDir, providerId, accountId);
-    mkdirSync(dir, { recursive: true, mode: 0o700 });
+    seedAccountStore(userDataDir, providerId, accountId, { recursive: true, mode: 0o700 });
     if (credential) {
-      writeFileSync(join(dir, "auth.json"), JSON.stringify({ [providerId]: credential }), {
-        mode: 0o600,
-      });
+      seedAccountAuth(
+        userDataDir,
+        providerId,
+        accountId,
+        { [providerId]: credential },
+        {
+          mode: 0o600,
+        },
+      );
     }
   };
   const farFuture = Date.now() + 30 * 24 * HOUR;
@@ -295,8 +300,11 @@ function seedAccounts(userDataDir: string): void {
   store("xai", ID.copilotPersonal);
   store("xai", ID.grok, oauth(5));
   // Vault bookkeeping dirs still exist; the login itself lives in HOME/.claude.
-  mkdirSync(join(accountsDir, "anthropic-claude", ID.claudeMax), { recursive: true, mode: 0o700 });
-  mkdirSync(join(accountsDir, "anthropic-claude", ID.claudeWork), { recursive: true, mode: 0o700 });
+  seedAccountStore(userDataDir, "anthropic-claude", ID.claudeMax, { recursive: true, mode: 0o700 });
+  seedAccountStore(userDataDir, "anthropic-claude", ID.claudeWork, {
+    recursive: true,
+    mode: 0o700,
+  });
   store("xai", ID.grokTeam, oauth(6));
   store("openrouter", ID.kimi, { type: "api_key", key: "or-limited-key" });
   store("openrouter", ID.openrouter);
@@ -316,24 +324,21 @@ function seedAccounts(userDataDir: string): void {
     createdAt: day(n),
     ...extra,
   });
-  writeFileSync(
-    join(accountsDir, "registry.json"),
-    JSON.stringify({
-      version: 1,
-      accounts: [
-        account(ID.codexPersonal, "openai-codex", "Personal", 0),
-        account(ID.codexWork, "openai-codex", "Work #2", 1),
-        account(ID.codexOld, "openai-codex", "Old team", 2, { enabled: false }),
-        account(ID.copilotPersonal, "xai", "Rejected", 4),
-        account(ID.grok, "xai", "Personal", 5),
-        account(ID.claudeMax, "anthropic-claude", "Personal Max", 6),
-        account(ID.claudeWork, "anthropic-claude", "Work", 7),
-        account(ID.grokTeam, "xai", "Team", 8),
-        account(ID.kimi, "openrouter", "Limited", 9),
-        account(ID.openrouter, "openrouter", "Personal", 10),
-      ],
-      pins: { "openai-codex": ID.codexPersonal },
-    }),
+  seedAccountRegistry(
+    userDataDir,
+    [
+      account(ID.codexPersonal, "openai-codex", "Personal", 0),
+      account(ID.codexWork, "openai-codex", "Work #2", 1),
+      account(ID.codexOld, "openai-codex", "Old team", 2, { enabled: false }),
+      account(ID.copilotPersonal, "xai", "Rejected", 4),
+      account(ID.grok, "xai", "Personal", 5),
+      account(ID.claudeMax, "anthropic-claude", "Personal Max", 6),
+      account(ID.claudeWork, "anthropic-claude", "Work", 7),
+      account(ID.grokTeam, "xai", "Team", 8),
+      account(ID.kimi, "openrouter", "Limited", 9),
+      account(ID.openrouter, "openrouter", "Personal", 10),
+    ],
+    { "openai-codex": ID.codexPersonal },
     { mode: 0o600 },
   );
 }

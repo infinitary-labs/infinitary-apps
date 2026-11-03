@@ -1,4 +1,3 @@
-import { writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { expect, test } from "@playwright/test";
 import { openDatabase } from "../../src/core/storage/db";
@@ -9,6 +8,7 @@ import { scratchDir } from "../helpers/scratchDirs";
 import { observeBody } from "./frames";
 import { launchApp } from "./launch";
 import { resizeWindow } from "./layout";
+import { seedTranscript } from "./transcriptFixtures";
 
 const PLAN_TITLE = "Plan the faster release process";
 const UNKNOWN_TITLE = "Unreported usage";
@@ -19,10 +19,19 @@ const PARTIAL_TITLE = "Partly reported usage";
 test("reads mixed-model task usage independently from the transcript model", async () => {
   const userDataDir = scratchDir("infinitary-observe-accounting-");
   const file = join(userDataDir, "main.jsonl");
-  writeFileSync(
-    file,
-    `${JSON.stringify({ type: "message", id: "reply", timestamp: "2026-10-05T12:00:00Z", message: { role: "assistant", model: "opus", provider: "anthropic-claude", content: [{ type: "text", text: "The plan is ready." }] } })}\n`,
-  );
+  seedTranscript(file, [
+    {
+      type: "message",
+      id: "reply",
+      timestamp: "2026-10-05T12:00:00Z",
+      message: {
+        role: "assistant",
+        model: "opus",
+        provider: "anthropic-claude",
+        content: [{ type: "text", text: "The plan is ready." }],
+      },
+    },
+  ]);
   const db = openDatabase(userDataDir);
   seedTask(new TaskService({ db, strict: true }), {
     id: "plan",

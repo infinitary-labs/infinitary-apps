@@ -1,5 +1,3 @@
-import { cpSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
-import { join } from "node:path";
 import { expect, test } from "@playwright/test";
 import type { PanelMountState } from "@shared/personal/mounts";
 import { surfaceWord } from "../../src/core/personal/panelMounts";
@@ -7,6 +5,7 @@ import { scratchDir } from "../helpers/scratchDirs";
 import { askFirstmate } from "./lastTurn";
 import { type LaunchedApp, launchApp } from "./launch";
 import { expectClearOf, resizeWindow } from "./layout";
+import { seedClockPanels } from "./personalFixtures";
 import { promptInput } from "./prompt";
 import { latestContext } from "./providerRequest";
 import { focusOn, pressKey, pressWindowKey } from "./windowKeys";
@@ -19,29 +18,6 @@ const cities = [
   { title: "New York", zone: "America/New_York" },
 ];
 
-/** The five clocks under the personal folder, four anchored at the top and New York at the foot. */
-function writeClocks(userDataDir: string): void {
-  const workspace = join(userDataDir, "fleet", "personal");
-  for (const [index, city] of cities.entries()) {
-    const dir = join(workspace, `clock-${index}`);
-    mkdirSync(dir, { recursive: true });
-    cpSync("tests/fixtures/personal-skills/tokyo-clock/panel.tsx", join(dir, "panel.tsx"));
-    writeFileSync(
-      join(dir, "panel.tsx"),
-      readFileSync(join(dir, "panel.tsx"), "utf8").replace("Asia/Tokyo", city.zone),
-    );
-    writeFileSync(
-      join(dir, "manifest.json"),
-      JSON.stringify({
-        title: city.title,
-        placement: { x: "left", y: index === 4 ? "bottom" : "top" },
-        order: index,
-        presence: { always: true },
-      }),
-    );
-  }
-}
-
 /**
  * INF-609, accepted direction B and write-move: five genuine personal clock
  * fixtures dock, fold, remain reachable by keys through More, and restore.
@@ -53,7 +29,7 @@ function writeClocks(userDataDir: string): void {
  */
 test("crowded rails fold, own expand pins, and a More pick survives relaunch on either rail", async () => {
   const userDataDir = scratchDir("infinitary-rail-room-");
-  writeClocks(userDataDir);
+  seedClockPanels(userDataDir, cities);
   let launched: LaunchedApp = await launchApp({ userDataDir, withMockProvider: true });
   try {
     const { page, app } = launched;
@@ -170,7 +146,7 @@ test("crowded rails fold, own expand pins, and a More pick survives relaunch on 
  */
 test("the first mate hears which panels a short rail folded for room and which it gathered into More", async () => {
   const userDataDir = scratchDir("infinitary-rail-room-said-");
-  writeClocks(userDataDir);
+  seedClockPanels(userDataDir, cities);
   const launched = await launchApp({ userDataDir, withMockProvider: true });
   try {
     const { page, app, mockProvider } = launched;

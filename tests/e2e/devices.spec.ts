@@ -51,6 +51,7 @@ import {
 } from "../helpers/standInFirstmate";
 import { waitForFirstmateIdle } from "./crew";
 import { startDemo } from "./demo";
+import { seedRemotePairing } from "./deviceFixtures";
 import { FIRST_CONTACT_TIMEOUT_MS } from "./helperContact";
 import { type HelperRun, startHelper } from "./helperRun";
 import { builtAppDir, type LaunchedApp, launchApp } from "./launch";
@@ -1534,6 +1535,7 @@ test("a Mac added by its address is reached over this Mac's own SSH: it comes ba
     if (!host) throw new Error("Nothing was remembered for that address.");
     host.publicKey = "AQID";
     host.line = "ED25519 SHA256:not-this-mac";
+    // e2e-fixture: mutation -- prove a remembered host key mismatch stops the connection
     writeFileSync(trustPath, JSON.stringify(unlike), { mode: 0o600 });
     app = await moveThisMac(app, env);
     await openDevices(app.page);
@@ -1545,6 +1547,7 @@ test("a Mac added by its address is reached over this Mac's own SSH: it comes ba
     ).toBeVisible();
 
     // The remembered key matches again: this Mac starts again and reaches it.
+    // e2e-fixture: mutation -- restore the matching remembered key and prove the connection resumes
     writeFileSync(trustPath, remembered, { mode: 0o600 });
     app = await moveThisMac(app, env);
     await openDevices(app.page);
@@ -1697,16 +1700,7 @@ test("a Mac a command added that macOS holds on the local network: Devices says 
     const { userDataDir, homeDir, mockProvider } = app;
     await app.close();
     const devicesDir = join(userDataDir, "devices");
-    const saved = JSON.parse(readFileSync(join(devicesDir, "devices.json"), "utf8")) as {
-      devices: { id: string; onThisMac?: boolean }[];
-    };
-    for (const entry of saved.devices) if (entry.id === device.id) entry.onThisMac = false;
-    writeFileSync(join(devicesDir, "devices.json"), JSON.stringify(saved), { mode: 0o600 });
-    writeFileSync(
-      join(devicesDir, "reached.json"),
-      JSON.stringify({ version: 1, reached: { [device.id]: "192.168.4.48:47623" } }),
-      { mode: 0o600 },
-    );
+    seedRemotePairing(userDataDir, device.id, "192.168.4.48:47623");
     expect(existsSync(join(devicesDir, "seen.json"))).toBe(false);
     app = await launchApp({
       userDataDir,

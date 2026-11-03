@@ -9,6 +9,7 @@ import { SettingsStore } from "../../src/core/storage/settingsStore";
 import { TaskService } from "../../src/core/tasks/taskService";
 import { KINDS_BY_DELIVERABLE } from "../../src/shared/routingPolicy";
 import { scratchDir } from "../helpers/scratchDirs";
+import { seedAccountAuth, seedAccountRegistry, seedAccountStore } from "./accountFixtures";
 import { seedRepo } from "./githubStub";
 import { launchApp } from "./launch";
 import {
@@ -20,6 +21,7 @@ import {
 } from "./mockProvider";
 import { regionShot } from "./pictures";
 import { promptInput } from "./prompt";
+import { seedQuotaFixture } from "./quotaFixtures";
 import {
   RETRIEVAL_CARD_TITLE,
   RETRIEVAL_SOURCE,
@@ -44,18 +46,16 @@ test("a bounded explanation requests low, reads its source and stays an answer a
   git("commit", "-m", "test: seed release facts");
   const originalHead = git("rev-parse", "HEAD");
   const fixtureDir = join(userDataDir, "quota");
-  mkdirSync(fixtureDir);
-  writeFileSync(
-    join(fixtureDir, "snapshot.json"),
-    JSON.stringify({ generatedAt: new Date().toISOString(), providers: [] }),
-  );
-  writeFileSync(
-    join(fixtureDir, "models.json"),
-    JSON.stringify({
+
+  seedQuotaFixture(
+    fixtureDir,
+    { generatedAt: new Date().toISOString(), providers: [] },
+    {
       generatedAt: new Date().toISOString(),
       models: [{ provider: "grok", id: lookupModel, label: "Mock", effectivePercentRemaining: 80 }],
-    }),
+    },
   );
+
   const env = { INFINITARY_QUOTA_FIXTURE_DIR: fixtureDir };
   const modelsJson = (port: number) => {
     const config = JSON.parse(mockModelsJson(port));
@@ -65,28 +65,29 @@ test("a bounded explanation requests low, reads its source and stays an answer a
     };
     return JSON.stringify(config);
   };
-  const accountDir = join(userDataDir, "accounts", "xai", "acct_lookup");
-  mkdirSync(accountDir, { recursive: true });
-  writeFileSync(
-    join(accountDir, "auth.json"),
-    JSON.stringify({ xai: { type: "api_key", key: "disposable-key" } }),
+
+  seedAccountStore(userDataDir, "xai", "acct_lookup", { recursive: true });
+  seedAccountAuth(
+    userDataDir,
+    "xai",
+    "acct_lookup",
+    { xai: { type: "api_key", key: "disposable-key" } },
+    {},
   );
-  writeFileSync(
-    join(userDataDir, "accounts", "registry.json"),
-    JSON.stringify({
-      version: 1,
-      accounts: [
-        {
-          id: "acct_lookup",
-          providerId: "xai",
-          kind: "api_key",
-          label: "Lookup test",
-          enabled: true,
-          createdAt: 1,
-        },
-      ],
-      pins: {},
-    }),
+  seedAccountRegistry(
+    userDataDir,
+    [
+      {
+        id: "acct_lookup",
+        providerId: "xai",
+        kind: "api_key",
+        label: "Lookup test",
+        enabled: true,
+        createdAt: 1,
+      },
+    ],
+    {},
+    {},
   );
   const db = openDatabase(userDataDir);
   db.prepare(

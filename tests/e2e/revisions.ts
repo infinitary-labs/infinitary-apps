@@ -1,3 +1,7 @@
+/**
+ * INF-2394: fixture ownership follows the product reader.
+ * @journey-area src/core/orchestrator/cardService.ts
+ */
 import type { Page } from "@playwright/test";
 import { CardService } from "../../src/core/orchestrator/cardService";
 import { CardStore } from "../../src/core/storage/cardStore";

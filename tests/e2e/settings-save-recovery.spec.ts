@@ -1,9 +1,10 @@
-import { mkdirSync, writeFileSync } from "node:fs";
+import { writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { expect, type Locator, type Page, test } from "@playwright/test";
 import { DECISION_MODEL_CATALOG } from "../../src/shared/decisions";
 import { offeringKey, STARTER_SLOTS } from "../../src/shared/modelSlots";
 import { scratchDir } from "../helpers/scratchDirs";
+import { seedAccountAuth, seedAccountRegistry, seedAccountStore } from "./accountFixtures";
 import { THIS_DESKTOP } from "./desktop";
 import { launchApp } from "./launch";
 import { alwaysUseSwitch, modelsSection, openModelPanel, setLevelInPanel } from "./modelsBoard";
@@ -135,35 +136,36 @@ function seedIntelligence() {
   const userDataDir = scratchDir("infinitary-settings-saves-");
   const fixtureDir = scratchDir("infinitary-save-quota-");
   const accountId = "acct_save_feedback";
-  const accountDir = join(userDataDir, "accounts", "openai-codex", accountId);
-  mkdirSync(accountDir, { recursive: true });
-  writeFileSync(
-    join(accountDir, "auth.json"),
-    JSON.stringify({
+
+  seedAccountStore(userDataDir, "openai-codex", accountId, { recursive: true });
+  seedAccountAuth(
+    userDataDir,
+    "openai-codex",
+    accountId,
+    {
       "openai-codex": {
         type: "oauth",
         access: "fake-access",
         refresh: "fake-refresh",
         expires: Date.now() + 86400000,
       },
-    }),
+    },
+    {},
   );
-  writeFileSync(
-    join(userDataDir, "accounts", "registry.json"),
-    JSON.stringify({
-      version: 1,
-      accounts: [
-        {
-          id: accountId,
-          providerId: "openai-codex",
-          label: "Personal",
-          kind: "subscription_oauth",
-          enabled: true,
-          createdAt: 1,
-        },
-      ],
-      pins: {},
-    }),
+  seedAccountRegistry(
+    userDataDir,
+    [
+      {
+        id: accountId,
+        providerId: "openai-codex",
+        label: "Personal",
+        kind: "subscription_oauth",
+        enabled: true,
+        createdAt: 1,
+      },
+    ],
+    {},
+    {},
   );
   writeFileSync(
     join(fixtureDir, "snapshot.json"),

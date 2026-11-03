@@ -1,4 +1,3 @@
-import { mkdirSync, writeFileSync } from "node:fs";
 import { totalmem } from "node:os";
 import { join } from "node:path";
 import { expect, test } from "@playwright/test";
@@ -15,6 +14,7 @@ import {
 } from "../../src/shared/placement";
 import type { TaskDetail } from "../../src/shared/tasks";
 import { scratchDir } from "../helpers/scratchDirs";
+import { seedAccountAuth, seedAccountRegistry, seedAccountStore } from "./accountFixtures";
 import { waitForFirstmateIdle } from "./crew";
 import { seedRepo } from "./githubStub";
 import { type LaunchedApp, type LaunchOptions, launchApp, SHORT_TICK } from "./launch";
@@ -23,6 +23,7 @@ import { holdCpuBusy, homeReading, replayedCpu } from "./placementCpu";
 import { seedHostedOrigins } from "./projectSeed";
 import { promptInput } from "./prompt";
 import { providerMessages, served } from "./providerRequest";
+import { seedQuotaFixture } from "./quotaFixtures";
 import { reportLine, taskKey } from "./rails";
 import { readSavedData } from "./savedData";
 import { GIT_STATUS_PROMPT_MARKER, gitStatus, MOCK_GIT_REPORT_PREFIX } from "./scenarios/gitStatus";
@@ -159,38 +160,39 @@ async function startsAfterCpuRelease(
 function seedGrokCrew(userDataDir: string): Pick<LaunchOptions, "env" | "modelsJson"> {
   const model = starterFor("xai", "medium");
   const quota = join(userDataDir, "quota");
-  mkdirSync(quota);
+
   const generatedAt = new Date().toISOString();
-  writeFileSync(join(quota, "snapshot.json"), JSON.stringify({ generatedAt, providers: [] }));
-  writeFileSync(
-    join(quota, "models.json"),
-    JSON.stringify({
+  seedQuotaFixture(
+    quota,
+    { generatedAt, providers: [] },
+    {
       generatedAt,
       models: [{ provider: "grok", id: model, label: "Mock Grok", effectivePercentRemaining: 80 }],
-    }),
+    },
   );
-  const account = join(userDataDir, "accounts", "xai", "acct_crew");
-  mkdirSync(account, { recursive: true });
-  writeFileSync(
-    join(account, "auth.json"),
-    JSON.stringify({ xai: { type: "api_key", key: "disposable-key" } }),
+
+  seedAccountStore(userDataDir, "xai", "acct_crew", { recursive: true });
+  seedAccountAuth(
+    userDataDir,
+    "xai",
+    "acct_crew",
+    { xai: { type: "api_key", key: "disposable-key" } },
+    {},
   );
-  writeFileSync(
-    join(userDataDir, "accounts", "registry.json"),
-    JSON.stringify({
-      version: 1,
-      accounts: [
-        {
-          id: "acct_crew",
-          providerId: "xai",
-          kind: "api_key",
-          label: "Crew",
-          enabled: true,
-          createdAt: 1,
-        },
-      ],
-      pins: {},
-    }),
+  seedAccountRegistry(
+    userDataDir,
+    [
+      {
+        id: "acct_crew",
+        providerId: "xai",
+        kind: "api_key",
+        label: "Crew",
+        enabled: true,
+        createdAt: 1,
+      },
+    ],
+    {},
+    {},
   );
   return {
     env: { INFINITARY_QUOTA_FIXTURE_DIR: quota },

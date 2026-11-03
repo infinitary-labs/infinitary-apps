@@ -1,10 +1,9 @@
-import { mkdirSync, writeFileSync } from "node:fs";
 import { createServer, type Server } from "node:http";
 import type { AddressInfo } from "node:net";
-import { join } from "node:path";
 import { expect, test } from "@playwright/test";
 import type { ServedStarters } from "../../src/shared/modelSlots";
 import { scratchDir } from "../helpers/scratchDirs";
+import { seedAccountAuth, seedAccountRegistry, seedAccountStore } from "./accountFixtures";
 import { launchApp } from "./launch";
 import { modelPill, openModelsBoard } from "./modelsBoard";
 import { readSavedData } from "./savedData";
@@ -25,28 +24,29 @@ import { starterFor } from "./starters";
 const GROK_ACCOUNT = "acct_grok_served";
 
 function seedGrokKey(userDataDir: string): void {
-  const accountsDir = join(userDataDir, "accounts");
-  const dir = join(accountsDir, "xai", GROK_ACCOUNT);
-  mkdirSync(dir, { recursive: true, mode: 0o700 });
-  writeFileSync(join(dir, "auth.json"), JSON.stringify({ xai: { type: "api_key", key: "k" } }), {
-    mode: 0o600,
-  });
-  writeFileSync(
-    join(accountsDir, "registry.json"),
-    JSON.stringify({
-      version: 1,
-      accounts: [
-        {
-          id: GROK_ACCOUNT,
-          providerId: "xai",
-          kind: "api_key",
-          label: "Personal",
-          enabled: true,
-          createdAt: Date.parse("2026-10-29T18:00:00Z"),
-        },
-      ],
-      pins: {},
-    }),
+  seedAccountStore(userDataDir, "xai", GROK_ACCOUNT, { recursive: true, mode: 0o700 });
+  seedAccountAuth(
+    userDataDir,
+    "xai",
+    GROK_ACCOUNT,
+    { xai: { type: "api_key", key: "k" } },
+    {
+      mode: 0o600,
+    },
+  );
+  seedAccountRegistry(
+    userDataDir,
+    [
+      {
+        id: GROK_ACCOUNT,
+        providerId: "xai",
+        kind: "api_key",
+        label: "Personal",
+        enabled: true,
+        createdAt: Date.parse("2026-10-29T18:00:00Z"),
+      },
+    ],
+    {},
     { mode: 0o600 },
   );
 }

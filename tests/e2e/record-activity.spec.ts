@@ -1,4 +1,4 @@
-import { mkdirSync, writeFileSync } from "node:fs";
+import { writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { expect, test } from "@playwright/test";
 import { renderWake, replyWordsSpan, type TypedWake } from "../../src/core/orchestrator/wakes";
@@ -21,6 +21,7 @@ import {
   recordCard,
   recordFrame,
 } from "./rails";
+import { seedCrewTranscript } from "./transcriptFixtures";
 import { pressKey, runFromSearch, untilFocused } from "./windowKeys";
 
 /**
@@ -103,11 +104,14 @@ async function seeded(): Promise<{ userDataDir: string; transcript: string }> {
   );
   // INF-203 F4: show the actual stored readings after bytes leave the delivery row.
   const transcript = JSON.stringify(tasks.timeline(ID).filter((event) => event.kind === "ci"));
+  // e2e-fixture: input -- supply authored proof for the real evidence keeper to retain
   writeFileSync(join(userDataDir, "proof-readings.json"), transcript);
   const poster = join(userDataDir, "proof-poster.png");
   const recording = join(userDataDir, "proof-recording.gif");
   if (!DEMO_POSTER.bytes) throw new Error("The recorded fixture must supply its poster bytes.");
+  // e2e-fixture: input -- supply the real fixture poster to the evidence keeper
   writeFileSync(poster, DEMO_POSTER.bytes);
+  // e2e-fixture: input -- supply the real fixture recording to the evidence keeper
   writeFileSync(recording, GIF_DEMO_RECORDING.bytes);
   tasks.recordLiveValidation(
     ID,
@@ -329,12 +333,8 @@ function seededWithSession(): { userDataDir: string; described: string[] } {
   call(8, "Bash", { command: "for i in 1 2 3; do pnpm e2e; done", description: described[2] });
   call(8.9, "mcp__infinitary__report", { text: "The journey waits for its data now." });
   call(10, "Bash", { command: "git push", description: described[3] });
-  const dir = join(userDataDir, "crewmates", ACTED, "sessions");
-  mkdirSync(dir, { recursive: true });
-  writeFileSync(
-    join(dir, `${SESSION}.jsonl`),
-    `${lines.map((line) => JSON.stringify(line)).join("\n")}\n`,
-  );
+
+  seedCrewTranscript(userDataDir, ACTED, `${SESSION}.jsonl`, lines);
   return { userDataDir, described };
 }
 

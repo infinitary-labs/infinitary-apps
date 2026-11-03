@@ -66,6 +66,7 @@ function seedProject(userDataDir: string): string {
   git("-C", dir, "config", "user.name", "Test");
   git("-C", dir, "config", "user.email", "test@localhost");
   mkdirSync(join(dir, ".github/workflows"), { recursive: true });
+  // e2e-fixture: input -- Author the real project files this journey commits, preserves or merges.
   writeFileSync(
     join(dir, ".github/workflows/verify.yml"),
     "name: verify\non:\n  workflow_dispatch:\njobs:\n  check:\n    runs-on: ubuntu-latest\n    steps:\n      - run: echo verified\n",

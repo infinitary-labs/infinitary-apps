@@ -1,4 +1,4 @@
-import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { expect, test } from "@playwright/test";
 import { openDatabase } from "../../src/core/storage/db";
@@ -6,6 +6,7 @@ import { DecisionStore } from "../../src/core/storage/decisionStore";
 import { SettingsStore } from "../../src/core/storage/settingsStore";
 import { TaskService } from "../../src/core/tasks/taskService";
 import { scratchDir } from "../helpers/scratchDirs";
+import { seedAccountAuth, seedAccountRegistry, seedAccountStore } from "./accountFixtures";
 import { waitForFirstmateIdle } from "./crew";
 import { seedRepo } from "./githubStub";
 import { launchApp } from "./launch";
@@ -16,6 +17,7 @@ import {
   mockModelsJson,
 } from "./mockProvider";
 import { promptInput } from "./prompt";
+import { seedQuotaFixture } from "./quotaFixtures";
 import {
   OPERATION_ASK,
   OPERATION_CLOSE,
@@ -32,20 +34,18 @@ test("an operation makes its named effect and closes finished from reported evid
   const { repoDir } = seedRepo(userDataDir);
   const operationModel = starterFor("xai", "medium");
   const fixtureDir = join(userDataDir, "quota");
-  mkdirSync(fixtureDir);
-  writeFileSync(
-    join(fixtureDir, "snapshot.json"),
-    JSON.stringify({ generatedAt: new Date().toISOString(), providers: [] }),
-  );
-  writeFileSync(
-    join(fixtureDir, "models.json"),
-    JSON.stringify({
+
+  seedQuotaFixture(
+    fixtureDir,
+    { generatedAt: new Date().toISOString(), providers: [] },
+    {
       generatedAt: new Date().toISOString(),
       models: [
         { provider: "grok", id: operationModel, label: "Mock", effectivePercentRemaining: 80 },
       ],
-    }),
+    },
   );
+
   const env = { INFINITARY_QUOTA_FIXTURE_DIR: fixtureDir };
   const modelsJson = (port: number) => {
     const config = JSON.parse(mockModelsJson(port));
@@ -55,28 +55,29 @@ test("an operation makes its named effect and closes finished from reported evid
     };
     return JSON.stringify(config);
   };
-  const accountDir = join(userDataDir, "accounts", "xai", "acct_operation");
-  mkdirSync(accountDir, { recursive: true });
-  writeFileSync(
-    join(accountDir, "auth.json"),
-    JSON.stringify({ xai: { type: "api_key", key: "disposable-key" } }),
+
+  seedAccountStore(userDataDir, "xai", "acct_operation", { recursive: true });
+  seedAccountAuth(
+    userDataDir,
+    "xai",
+    "acct_operation",
+    { xai: { type: "api_key", key: "disposable-key" } },
+    {},
   );
-  writeFileSync(
-    join(userDataDir, "accounts", "registry.json"),
-    JSON.stringify({
-      version: 1,
-      accounts: [
-        {
-          id: "acct_operation",
-          providerId: "xai",
-          kind: "api_key",
-          label: "Operation test",
-          enabled: true,
-          createdAt: 1,
-        },
-      ],
-      pins: {},
-    }),
+  seedAccountRegistry(
+    userDataDir,
+    [
+      {
+        id: "acct_operation",
+        providerId: "xai",
+        kind: "api_key",
+        label: "Operation test",
+        enabled: true,
+        createdAt: 1,
+      },
+    ],
+    {},
+    {},
   );
   const db = openDatabase(userDataDir);
   db.prepare(

@@ -37,16 +37,19 @@ test("a continued pull request shows its checks and merges an unchanged conflict
   const run = (...args: string[]) => git("-C", repoDir, ...args);
   run("config", "user.name", "Test");
   run("config", "user.email", "test@localhost");
+  // e2e-fixture: input -- Author the real project files this journey commits, preserves or merges.
   writeFileSync(join(repoDir, "reading.txt"), "The task reads its own branch.\n");
   run("add", ".");
   run("commit", "-m", "chore: initial reading");
   const branch = "fm/task-earlier";
   run("checkout", "-b", branch);
+  // e2e-fixture: input -- Author the real project files this journey commits, preserves or merges.
   writeFileSync(join(repoDir, "reading.txt"), "The task reads the selected pull request.\n");
   run("add", ".");
   run("commit", "-m", "fix: read the continued pull request");
   const approved = run("rev-parse", "HEAD");
   run("checkout", "main");
+  // e2e-fixture: input -- Author the real project files this journey commits, preserves or merges.
   writeFileSync(join(repoDir, "guide.txt"), "The captain chooses when to merge.\n");
   run("add", ".");
   run("commit", "-m", "docs: describe the merge choice");

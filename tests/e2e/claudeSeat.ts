@@ -1,7 +1,15 @@
-import { mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
+/**
+ * INF-2394: fixture ownership follows the product reader.
+ * @journey-area src/core/claude/
+ * @journey-area src/core/pi/accountVault.ts
+ */
+
+import { readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { expect, type Page } from "@playwright/test";
+import type { AccountRecord } from "../../src/core/pi/accountVault";
 import { scratchDir } from "../helpers/scratchDirs";
+import { seedAccountAuth, seedAccountRegistry, seedAccountStore } from "./accountFixtures";
 import { launchSignedInClaude } from "./claudeAccount";
 import type { LaunchedApp, LaunchOptions } from "./launch";
 import { claudeDefaultStore } from "./mockClaudeClient";
@@ -53,13 +61,12 @@ function fakeCodexToken(): string {
 }
 
 function seedAccounts(userDataDir: string, withCodex: boolean): void {
-  const accountsDir = join(userDataDir, "accounts");
   // Vault bookkeeping only; the login lives in HOME/.claude (CD-1=B).
-  mkdirSync(join(accountsDir, "anthropic-claude", CLAUDE_SEAT_ACCOUNT), {
+  seedAccountStore(userDataDir, "anthropic-claude", CLAUDE_SEAT_ACCOUNT, {
     recursive: true,
     mode: 0o700,
   });
-  const accounts: Record<string, unknown>[] = [
+  const accounts: AccountRecord[] = [
     {
       id: CLAUDE_SEAT_ACCOUNT,
       providerId: "anthropic-claude",
@@ -70,18 +77,22 @@ function seedAccounts(userDataDir: string, withCodex: boolean): void {
     },
   ];
   if (withCodex) {
-    const store = join(accountsDir, "openai-codex", CODEX_SEAT_ACCOUNT);
-    mkdirSync(store, { recursive: true, mode: 0o700 });
-    writeFileSync(
-      join(store, "auth.json"),
-      JSON.stringify({
+    seedAccountStore(userDataDir, "openai-codex", CODEX_SEAT_ACCOUNT, {
+      recursive: true,
+      mode: 0o700,
+    });
+    seedAccountAuth(
+      userDataDir,
+      "openai-codex",
+      CODEX_SEAT_ACCOUNT,
+      {
         "openai-codex": {
           type: "oauth",
           access: fakeCodexToken(),
           refresh: "fake-refresh",
           expires: Date.now() + 30 * 24 * 3600 * 1000,
         },
-      }),
+      },
       { mode: 0o600 },
     );
     accounts.push({
@@ -93,11 +104,7 @@ function seedAccounts(userDataDir: string, withCodex: boolean): void {
       createdAt: Date.parse("2026-08-02T00:00:00Z"),
     });
   }
-  writeFileSync(
-    join(accountsDir, "registry.json"),
-    JSON.stringify({ version: 1, accounts, pins: {} }),
-    { mode: 0o600 },
-  );
+  seedAccountRegistry(userDataDir, accounts, {}, { mode: 0o600 });
 }
 
 /**

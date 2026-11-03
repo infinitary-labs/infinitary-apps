@@ -1,4 +1,4 @@
-import { existsSync, mkdirSync, statSync, writeFileSync } from "node:fs";
+import { existsSync, statSync, writeFileSync } from "node:fs";
 import { createServer, type Server } from "node:http";
 import type { AddressInfo } from "node:net";
 import { join } from "node:path";
@@ -16,6 +16,7 @@ import {
   openRouterDecisionLine,
 } from "../../src/shared/decisions";
 import { scratchDir } from "../helpers/scratchDirs";
+import { seedAccountAuth, seedAccountRegistry, seedAccountStore } from "./accountFixtures";
 import { CLAUDE_SEAT_ACCOUNT, launchClaudeSeat, say } from "./claudeSeat";
 import { type LaunchedApp, launchApp } from "./launch";
 import {
@@ -199,36 +200,37 @@ test.describe("the surface", () => {
 
   /** One signed-in account, so the Models board has models to show. */
   function seedCodexAccount(userDataDir: string): void {
-    const dir = join(userDataDir, "accounts", "openai-codex", "acct_codex_decisions");
-    mkdirSync(dir, { recursive: true, mode: 0o700 });
-    writeFileSync(
-      join(dir, "auth.json"),
-      JSON.stringify({
+    seedAccountStore(userDataDir, "openai-codex", "acct_codex_decisions", {
+      recursive: true,
+      mode: 0o700,
+    });
+    seedAccountAuth(
+      userDataDir,
+      "openai-codex",
+      "acct_codex_decisions",
+      {
         "openai-codex": {
           type: "oauth",
           access: "fake-access",
           refresh: "fake-refresh",
           expires: Date.now() + 30 * 24 * 3600 * 1000,
         },
-      }),
+      },
       { mode: 0o600 },
     );
-    writeFileSync(
-      join(userDataDir, "accounts", "registry.json"),
-      JSON.stringify({
-        version: 1,
-        accounts: [
-          {
-            id: "acct_codex_decisions",
-            providerId: "openai-codex",
-            label: "Personal",
-            kind: "subscription_oauth",
-            createdAt: Date.now(),
-            enabled: true,
-          },
-        ],
-        pins: {},
-      }),
+    seedAccountRegistry(
+      userDataDir,
+      [
+        {
+          id: "acct_codex_decisions",
+          providerId: "openai-codex",
+          label: "Personal",
+          kind: "subscription_oauth",
+          createdAt: Date.now(),
+          enabled: true,
+        },
+      ],
+      {},
       { mode: 0o600 },
     );
   }
@@ -700,29 +702,28 @@ test("OpenRouter selection uses its account, records what served it, remembers c
   local.cost = 0.0000317;
   const userDataDir = scratchDir("infinitary-e2e-openrouter-decisions-");
   const accountId = "acct_openrouter_decisions";
-  const accountDir = join(userDataDir, "accounts", "openrouter", accountId);
-  mkdirSync(accountDir, { recursive: true, mode: 0o700 });
-  writeFileSync(
-    join(accountDir, "auth.json"),
-    JSON.stringify({ openrouter: { type: "api_key", key: "fake-openrouter-decisions" } }),
+
+  seedAccountStore(userDataDir, "openrouter", accountId, { recursive: true, mode: 0o700 });
+  seedAccountAuth(
+    userDataDir,
+    "openrouter",
+    accountId,
+    { openrouter: { type: "api_key", key: "fake-openrouter-decisions" } },
     { mode: 0o600 },
   );
-  writeFileSync(
-    join(userDataDir, "accounts", "registry.json"),
-    JSON.stringify({
-      version: 1,
-      accounts: [
-        {
-          id: accountId,
-          providerId: "openrouter",
-          label: "Personal",
-          kind: "api_key",
-          createdAt: Date.now(),
-          enabled: true,
-        },
-      ],
-      pins: { openrouter: accountId },
-    }),
+  seedAccountRegistry(
+    userDataDir,
+    [
+      {
+        id: accountId,
+        providerId: "openrouter",
+        label: "Personal",
+        kind: "api_key",
+        createdAt: Date.now(),
+        enabled: true,
+      },
+    ],
+    { openrouter: accountId },
     { mode: 0o600 },
   );
   const fixtureDir = scratchDir("infinitary-openrouter-decisions-quota-");

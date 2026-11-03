@@ -277,6 +277,7 @@ test("the demo plays again after the app restarts and from the card once it is c
 
     // A recording that is gone leaves its poster and says so, with nothing to press.
     const dir = join(userDataDir, "crewmates", card.taskId ?? "", "cards");
+    // e2e-fixture: mutation -- remove the saved demo to prove a missing recording is reported
     for (const name of await readdir(dir)) if (name.endsWith(".mp4")) await rm(join(dir, name));
     app = await launchApp({ reuseMockProvider: mockProvider, userDataDir });
     await app.page.evaluate((id) => window.infinitary.cards.showPast(id), card.id);

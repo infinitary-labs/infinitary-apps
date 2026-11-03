@@ -1,11 +1,9 @@
-import { mkdirSync, writeFileSync } from "node:fs";
+import { mkdirSync } from "node:fs";
 import { createServer } from "node:http";
 import type { AddressInfo } from "node:net";
-import { join } from "node:path";
 import { expect, type Page, test } from "@playwright/test";
 import {
   buildUpdateTarget,
-  UPDATE_CHANNEL_MARKER,
   type UpdateTarget,
   upgradeCommandFor,
 } from "../../src/core/update/updateChannels";
@@ -15,6 +13,7 @@ import type { UpdateChannel, UpdateStatus } from "../../src/shared/update";
 import { UPDATE_NOTICES, UPDATE_PROBLEMS, UPDATE_WORDS } from "../../src/shared/updateWords";
 import { scratchDir } from "../helpers/scratchDirs";
 import { type LaunchedApp, launchApp } from "./launch";
+import { writeInstallerMarker } from "./savedDataFixtures";
 import { pressKey, runFromSearch } from "./windowKeys";
 
 /**
@@ -74,14 +73,6 @@ function target(version: string): UpdateTarget {
 
 function published(entries: Partial<Record<UpdateChannel, UpdateTarget>>): Reply {
   return { status: 200, body: { schemaVersion: 1, targets: entries } };
-}
-
-/** What the installer leaves in the data root after installing a channel's cask. */
-function writeInstallerMarker(userDataDir: string, channel: UpdateChannel): void {
-  writeFileSync(
-    join(userDataDir, UPDATE_CHANNEL_MARKER),
-    JSON.stringify({ schemaVersion: 1, channel }),
-  );
 }
 
 let tap: Tap | undefined;

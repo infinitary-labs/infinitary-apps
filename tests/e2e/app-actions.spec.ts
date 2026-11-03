@@ -1,10 +1,11 @@
-import { mkdirSync, writeFileSync } from "node:fs";
-import { join } from "node:path";
+import { writeFileSync } from "node:fs";
 import { expect, test } from "@playwright/test";
 import { ACTIONS } from "@shared/actions";
 import { scratchDir } from "../helpers/scratchDirs";
+import { seedAccountAuth, seedAccountRegistry, seedAccountStore } from "./accountFixtures";
 import { waitForFirstmateIdle } from "./crew";
 import { THIS_DESKTOP } from "./desktop";
+import { catalogProjectsHome } from "./homeFixtures";
 import { askFirstmate } from "./lastTurn";
 import { launchApp } from "./launch";
 import {
@@ -34,7 +35,7 @@ test("captain clicks and Firstmate catalog changes share persisted settings and 
 }, async () => {
   const app = await launchApp({
     withMockProvider: true,
-    prepareHome: (home) => mkdirSync(join(home, "catalog-projects")),
+    prepareHome: catalogProjectsHome,
   });
   try {
     const { page } = app;
@@ -135,28 +136,29 @@ test("Intelligence requests persist and show the same account and routing contro
   // The account's label as seeded, and the one the rename gives it.
   const firstLabel = "Personal";
   const nextLabel = "Work";
-  const dir = join(userDataDir, "accounts", "xai", accountId);
-  mkdirSync(dir, { recursive: true });
-  writeFileSync(
-    join(dir, "auth.json"),
-    JSON.stringify({ xai: { type: "api_key", key: "disposable-key" } }),
+
+  seedAccountStore(userDataDir, "xai", accountId, { recursive: true });
+  seedAccountAuth(
+    userDataDir,
+    "xai",
+    accountId,
+    { xai: { type: "api_key", key: "disposable-key" } },
+    {},
   );
-  writeFileSync(
-    join(userDataDir, "accounts", "registry.json"),
-    JSON.stringify({
-      version: 1,
-      accounts: [
-        {
-          id: accountId,
-          providerId: "xai",
-          kind: "api_key",
-          label: firstLabel,
-          enabled: true,
-          createdAt: 1,
-        },
-      ],
-      pins: {},
-    }),
+  seedAccountRegistry(
+    userDataDir,
+    [
+      {
+        id: accountId,
+        providerId: "xai",
+        kind: "api_key",
+        label: firstLabel,
+        enabled: true,
+        createdAt: 1,
+      },
+    ],
+    {},
+    {},
   );
   const nextModel = "mock-next";
   const app = await launchApp({

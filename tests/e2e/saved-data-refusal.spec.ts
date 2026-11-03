@@ -1,4 +1,4 @@
-import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { expect, test } from "@playwright/test";
 import { openDatabase } from "../../src/core/storage/db";
@@ -11,6 +11,7 @@ import { TaskService } from "../../src/core/tasks/taskService";
 import { recordNewerMigration } from "../helpers/database";
 import { scratchDir } from "../helpers/scratchDirs";
 import { launchApp } from "./launch";
+import { seedProtectedProfile } from "./savedDataFixtures";
 
 for (const reason of ["database", "persisted-format"] as const) {
   test(`${reason} incompatibility visibly protects saved work`, async () => {
@@ -24,15 +25,7 @@ for (const reason of ["database", "persisted-format"] as const) {
     });
     if (reason === "database") recordNewerMigration(db);
     db.close();
-    if (reason === "persisted-format")
-      writeFileSync(
-        join(userDataDir, "saved-data-format.json"),
-        '{"schemaVersion":1,"revision":2}',
-      );
-    mkdirSync(join(userDataDir, "accounts"));
-    writeFileSync(join(userDataDir, "accounts", "sentinel.json"), '{"fake":"do not change"}');
-    mkdirSync(join(userDataDir, "firstmate"));
-    writeFileSync(join(userDataDir, "firstmate", "conversation.jsonl"), "saved conversation\n");
+    seedProtectedProfile(userDataDir, reason === "persisted-format");
     const protectedFiles = [
       "firstmate.db",
       "saved-data-format.json",

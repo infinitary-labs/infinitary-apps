@@ -1,3 +1,7 @@
+/**
+ * INF-2394: fixture ownership follows the product reader.
+ * @journey-area src/core/forge/providers/gitlab/
+ */
 import { createHash } from "node:crypto";
 import { chmodSync, mkdirSync, writeFileSync } from "node:fs";
 import { createServer, type IncomingMessage } from "node:http";

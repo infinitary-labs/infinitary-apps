@@ -1,3 +1,7 @@
+/**
+ * INF-2394: fixture ownership follows the product reader.
+ * @journey-area src/core/claude/
+ */
 import { expect, type Page, test } from "@playwright/test";
 import { type LaunchedApp, type LaunchOptions, launchApp } from "./launch";
 import { signedInClaudeHome } from "./mockClaudeClient";

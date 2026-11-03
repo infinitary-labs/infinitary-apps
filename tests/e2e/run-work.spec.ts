@@ -61,6 +61,11 @@ import {
 } from "./mockProvider";
 import { GIT_STATUS_PROMPT_MARKER, gitStatus, MOCK_GIT_REPORT_PREFIX } from "./scenarios/gitStatus";
 import { MAC_ONLY_TAG } from "./tags";
+import {
+  seedRetainedAccountDirectory,
+  seedRetainedSignInSentinel,
+  writeWorkServiceManager,
+} from "./workFixtures";
 
 /**
  * The app runs work for another Mac's Firstmate with no window
@@ -275,27 +280,7 @@ function user(model?: MockProviderServer) {
   const homeDir = scratchDir("infinitary-run-work-user-");
   const dataDir = join(homeDir, "work");
   if (model) signedInClaudeHome(homeDir);
-  const manager = join(homeDir, SYSTEMD ? "systemctl" : "launchctl");
-  const asked = join(homeDir, "manager.asked");
-  const agentPid = join(homeDir, "agent.pid");
-  // launchd's bootout, and systemd's stop or restart, end the agent's run.
-  const stops = SYSTEMD ? '[ "$2" = stop ] || [ "$2" = restart ]' : '[ "$1" = bootout ]';
-  writeFileSync(
-    manager,
-    [
-      "#!/bin/sh",
-      `printf '%s\\n' "$*" >> ${shellWord(asked)}`,
-      // A loaded agent is active, as launchd's print of it succeeds.
-      ...(SYSTEMD ? ['if [ "$2" = show ]; then echo active; fi'] : []),
-      `if { ${stops}; } && [ -f ${shellWord(agentPid)} ]; then`,
-      `  pid=$(cat ${shellWord(agentPid)}); rm -f ${shellWord(agentPid)}`,
-      `  kill -TERM "$pid" 2>/dev/null`,
-      `  while kill -0 "$pid" 2>/dev/null; do sleep 0.1; done`,
-      "fi",
-      "",
-    ].join("\n"),
-  );
-  chmodSync(manager, 0o755);
+  const { manager, asked, agentPid } = writeWorkServiceManager(homeDir, SYSTEMD);
   return {
     homeDir,
     dataDir,
@@ -743,7 +728,7 @@ test("its home gone for good, a new home's command asks to leave it, and on a ye
   const copies = new WorkingCopies(me.dataDir, { pool: false });
   const { dir } = await copies.prepare("t-unmerged", undefined);
   writeFileSync(join(dir, "only-copy.txt"), "unique uncommitted work\n");
-  mkdirSync(join(me.dataDir, "accounts", "codex"), { recursive: true });
+  seedRetainedAccountDirectory(me.dataDir);
   const first = agent();
   await expect.poll(first.lines).toContain(helperWords.inReach(THIS_MAC, "MacBook Pro")[0]);
   await gone.gone();
@@ -1332,8 +1317,7 @@ test("a Mac a command joined, stranded when the home's address changes, is found
   expect(joined.grant).not.toHaveProperty("via");
   const deviceId = joined.grant.deviceId;
   // A sign-in it made there, which must stay.
-  mkdirSync(join(them.dataDir, "accounts"), { recursive: true });
-  writeFileSync(join(them.dataDir, "accounts", "kept"), "a sign-in\n");
+  seedRetainedSignInSentinel(them.dataDir);
   const running = work(["run"], them.env);
   writeFileSync(them.agentPid, `${running.child.pid}\n`);
   await expect.poll(running.lines).toContain(helperWords.inReach(THIS_MAC, "MacBook Pro")[0]);
@@ -1397,7 +1381,7 @@ test("its home gone for good, a new home adds it by its address: asked once, its
   const copies = new WorkingCopies(me.dataDir, { pool: false });
   const { dir } = await copies.prepare("t-unmerged", undefined);
   writeFileSync(join(dir, "only-copy.txt"), "unique uncommitted work\n");
-  mkdirSync(join(me.dataDir, "accounts", "codex"), { recursive: true });
+  seedRetainedAccountDirectory(me.dataDir);
 
   // The new home adds that Mac by its address over the captain's own SSH.
   const said: string[] = [];
@@ -1561,7 +1545,7 @@ for (const removal of ["from-home", "in-reach"] as const) {
     const keep = await copies.prepare("t-keep", undefined);
     writeFileSync(join(keep.dir, "notes.md"), "unmerged\n");
     const clean = await copies.prepare("t-clean", undefined);
-    mkdirSync(join(me.dataDir, "accounts", "codex"), { recursive: true });
+    seedRetainedAccountDirectory(me.dataDir);
     // Nothing can leave the working copies' own folder, so the clean copy cannot go yet.
     chmodSync(copies.worktreesDir, 0o555);
     try {

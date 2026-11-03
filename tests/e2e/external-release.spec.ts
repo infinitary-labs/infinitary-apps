@@ -29,6 +29,7 @@ test("a verified external release closes reported work, not a dismissed note or 
   git("-C", repoDir, "commit", "--allow-empty", "-m", "init");
   git("-C", repoDir, "worktree", "add", "-b", branch, worktreeDir);
   // The release is committed on main by a separate process, not on this task's branch.
+  // e2e-fixture: input -- Author the real project files this journey commits, preserves or merges.
   writeFileSync(join(repoDir, "release.txt"), "published v1.2.3\n");
   git("-C", repoDir, "add", "release.txt");
   git("-C", repoDir, "commit", "-m", "release: v1.2.3");
@@ -75,6 +76,7 @@ test("a verified external release closes reported work, not a dismissed note or 
       .poll(() => page.evaluate(() => window.infinitary.tasks.detail("released")))
       .toMatchObject({ status: "active" });
 
+    // e2e-fixture: input -- Author the real project files this journey commits, preserves or merges.
     writeFileSync(join(worktreeDir, "pending.txt"), "not released\n");
     const input = promptInput(page);
     await input.fill(`${RELEASE_PROMPT_MARKER}Publish the build`);

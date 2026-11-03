@@ -1,4 +1,4 @@
-import { cpSync, mkdirSync, writeFileSync } from "node:fs";
+import { writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { expect, test } from "@playwright/test";
 import { scratchDir } from "../helpers/scratchDirs";
@@ -6,6 +6,7 @@ import { panelBody } from "./frames";
 import { type GitHubStub, seedGitHubSignIn, startGitHubStub } from "./githubStub";
 import { type GitLabStub, seedGitLabSignIn, startGitLabStub } from "./gitlabStub";
 import { type LaunchedApp, launchApp } from "./launch";
+import { seedPersonalWorkspace } from "./personalFixtures";
 import { heroShot, regionShot } from "./pictures";
 
 /**
@@ -30,14 +31,13 @@ test.describe("the fixture extensions the data skills teach", () => {
     // import the compiler refuses, or a panel shape that will not render,
     // fails here.
     const userDataDir = scratchDir("infinitary-e2e-skills-");
-    const workspace = join(userDataDir, "fleet", "personal");
-    mkdirSync(workspace, { recursive: true });
-    // The `usage` skill's token-watch has a spec of its own
-    // (token-dashboard.spec.ts).
-    cpSync(join(process.cwd(), "tests", "fixtures", "personal-skills"), workspace, {
-      recursive: true,
-      filter: (source) => !source.includes("token-watch"),
-    });
+    // The token-watch fixture has its own journey (token-dashboard.spec.ts).
+    seedPersonalWorkspace(
+      userDataDir,
+      join(process.cwd(), "tests", "fixtures", "personal-skills"),
+      undefined,
+      (source) => !source.includes("token-watch"),
+    );
     // The quota fixture reads the app's OWN quota through the declared
     // `quota.snapshot` read (Step 4), so the app's sensor is pointed at a
     // fixture carrying the three states the honesty rules are about: a real

@@ -1,5 +1,5 @@
 import { execFileSync } from "node:child_process";
-import { existsSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { expect, test } from "@playwright/test";
 import { projectSignInWords } from "../../src/renderer/src/settings/addProjectWords";
@@ -20,6 +20,7 @@ import {
   GITLAB_STUB_PROJECT,
   startGitLabStub,
 } from "./gitlabStub";
+import { redirectGitClone } from "./homeFixtures";
 import { launchApp } from "./launch";
 import { resizeWindow } from "./layout";
 import { heroShot, regionShot } from "./pictures";
@@ -44,10 +45,7 @@ for (const host of ["gitlab.com", "gitlab.example.com"]) {
       "-m",
       "test: initial project",
     ]);
-    writeFileSync(
-      join(home, ".gitconfig"),
-      `[url "${source}"]\n\tinsteadOf = https://${host}/${GITLAB_STUB_PROJECT}.git\n`,
-    );
+    redirectGitClone(home, `https://${host}/${GITLAB_STUB_PROJECT}.git`, source);
     const stub = await startGitLabStub(host);
     const launched = await launchApp({
       homeDir: home,

@@ -1,8 +1,9 @@
-import { mkdirSync, writeFileSync } from "node:fs";
+import { writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { expect, type Page, test } from "@playwright/test";
 import { NO_READER_TEXT, noReaderText } from "../../src/renderer/src/settings/subscriptionsWords";
 import { scratchDir } from "../helpers/scratchDirs";
+import { seedAccountRoot } from "./accountFixtures";
 import { type LaunchedApp, launchApp } from "./launch";
 import { writeMockClaudeClient } from "./mockClaudeClient";
 import { setThemeViaSettings } from "./theme";
@@ -60,7 +61,7 @@ async function connectGrokByApiKey(app: LaunchedApp) {
 test("a newly connected sensed account shows reading…, never the no-reader sentence", async () => {
   const fixtureDir = emptyQuotaFixture();
   const userDataDir = scratchDir("infinitary-e2e-");
-  mkdirSync(join(userDataDir, "accounts"), { recursive: true, mode: 0o700 });
+  seedAccountRoot(userDataDir);
   const app = await launchApp({
     userDataDir,
     env: { ...clients(), INFINITARY_QUOTA_FIXTURE_DIR: fixtureDir },

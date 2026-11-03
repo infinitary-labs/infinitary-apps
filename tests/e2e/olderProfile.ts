@@ -1,3 +1,8 @@
+/**
+ * INF-2394: fixture ownership follows the product reader.
+ * @journey-area src/core/storage/
+ * @journey-area src/core/storage/savedDataCompatibility.ts
+ */
 import { existsSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import type { Card } from "@shared/cards";

@@ -1,4 +1,4 @@
-import { existsSync, mkdirSync, readdirSync, writeFileSync } from "node:fs";
+import { existsSync, readdirSync } from "node:fs";
 import { join } from "node:path";
 import { expect, test } from "@playwright/test";
 import { upgradeCommandFor } from "../../src/core/update/updateChannels";
@@ -8,6 +8,7 @@ import { type LaunchedApp, launchApp } from "./launch";
 import { promptInput } from "./prompt";
 import { reportLine, taskKey } from "./rails";
 import { readSavedData } from "./savedData";
+import { seedRetiredTranscripts } from "./savedDataFixtures";
 
 /**
  * Phase 7 (docs/architecture.md §17): the update indicator with the cask
@@ -61,16 +62,7 @@ test("the purge control removes every task and its data", async () => {
 
   // The mock seat writes Pi files. Plant the Claude copies and a retired
   // supervision transcripts dir the purge must remove with them.
-  const claudeDir = join(userDataDir, "firstmate", "claude");
-  const supervisionDir = join(userDataDir, "supervision", "sessions");
-  mkdirSync(claudeDir, { recursive: true });
-  writeFileSync(join(claudeDir, "seat.jsonl"), "{}\n");
-  writeFileSync(join(claudeDir, "seat.served.jsonl"), "{}\n");
-  mkdirSync(supervisionDir, { recursive: true });
-  writeFileSync(join(supervisionDir, "retired.jsonl"), "{}\n");
-  const supervisionHome = join(userDataDir, "supervision", "home");
-  mkdirSync(supervisionHome, { recursive: true });
-  writeFileSync(join(supervisionHome, "keep.txt"), "stay\n");
+  const { claudeDir, supervisionDir, supervisionHome } = seedRetiredTranscripts(userDataDir);
   const listing = (dir: string): string[] | null =>
     existsSync(dir) ? readdirSync(dir).sort() : null;
   const before = {

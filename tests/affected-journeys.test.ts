@@ -13,6 +13,7 @@ import {
   ownedHooks,
   select,
   selectionCoverage,
+  standInAreas,
   symbolsOfDiff,
   tokensOfDiff,
 } from "../scripts/affected-journeys.ts";
@@ -842,17 +843,29 @@ describe("complete journey selection", () => {
       importsOf(spec, actualRead(spec) ?? "").includes("tests/e2e/mockClaudeClient.ts"),
     );
     expect(callers.length).toBeGreaterThan(0);
+    const product = "src/core/claude/claudeAuth.ts";
+    // INF-2394 measure 4 adds more owners; the exact selection follows their declarations,
+    // not a pin to the one fixture that happened to exist when measure 2 landed.
+    const declaredCallers = actualSpecs.filter((spec) =>
+      importsOf(spec, actualRead(spec) ?? "").some(
+        (helper) =>
+          !helper.startsWith("src/") &&
+          standInAreas(actualRead(helper) ?? "").some((area) =>
+            area.endsWith("/") ? product.startsWith(area) : product === area,
+          ),
+      ),
+    );
     const selected = select({
-      changed: ["src/core/claude/claudeAuth.ts"],
+      changed: [product],
       sourceDiff: "",
       specs: actualSpecs,
       read: actualRead,
     });
     const directReaders = actualSpecs.filter((spec) =>
-      importsOf(spec, actualRead(spec) ?? "").includes("src/core/claude/claudeAuth.ts"),
+      importsOf(spec, actualRead(spec) ?? "").includes(product),
     );
     expect([...selected.keys()].sort()).toEqual(
-      [...new Set([...callers, ...directReaders])].sort(),
+      [...new Set([...declaredCallers, ...directReaders])].sort(),
     );
     for (const spec of callers)
       expect(

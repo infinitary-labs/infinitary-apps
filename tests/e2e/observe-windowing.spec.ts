@@ -1,4 +1,4 @@
-import { readFileSync, writeFileSync } from "node:fs";
+import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { expect, test } from "@playwright/test";
 import { openDatabase } from "../../src/core/storage/db";
@@ -8,29 +8,22 @@ import { TaskService } from "../../src/core/tasks/taskService";
 import { scratchDir } from "../helpers/scratchDirs";
 import { observeBody } from "./frames";
 import { launchApp } from "./launch";
+import { observeTranscriptEntries, seedTranscript } from "./transcriptFixtures";
 
 // Dogfood scale, through the real storage -> IPC -> Tier-2 frame path.
 // Vary heights: a row is never assumed to be one line or one fixed size.
 function transcript(count: number) {
-  return Array.from({ length: count }, (_, i) =>
-    JSON.stringify({
-      type: "message",
-      id: `turn-${i}`,
-      timestamp: new Date(1_790_000_000_000 + i * 1000).toISOString(),
-      message: {
-        role: "user",
-        content: `Transcript row ${i}\n${"A wrapped line of local debugging evidence. ".repeat(i % 13)}`,
-      },
-    }),
-  ).join("\n");
+  return observeTranscriptEntries(count)
+    .map((entry) => JSON.stringify(entry))
+    .join("\n");
 }
 
 test("Observe reaches every row of a long history and crew, and never lists the retired session, even with its file kept", async () => {
   const userDataDir = scratchDir("infinitary-observe-scale-");
   const file = join(userDataDir, "main.jsonl");
   const retired = join(userDataDir, "supervision.jsonl");
-  writeFileSync(file, transcript(6581));
-  writeFileSync(retired, transcript(1));
+  seedTranscript(file, observeTranscriptEntries(6581), false);
+  seedTranscript(retired, observeTranscriptEntries(1), false);
   const db = openDatabase(userDataDir);
   const settings = new SettingsStore(db);
   settings.setFirstmateSessionFile(file);

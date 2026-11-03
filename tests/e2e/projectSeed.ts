@@ -1,3 +1,7 @@
+/**
+ * INF-2394: fixture ownership follows the product reader.
+ * @journey-area src/core/workspace/
+ */
 import { execFileSync } from "node:child_process";
 import { relative, resolve, sep } from "node:path";
 import { hostEnv } from "../../src/core/hostEnv";

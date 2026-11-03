@@ -1,4 +1,3 @@
-import { mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { expect, test } from "@playwright/test";
 import { CardService } from "../../src/core/orchestrator/cardService";
@@ -21,6 +20,7 @@ import { expandDock, openGroup, pressRow, recordFrame } from "./rails";
 import { readSavedData } from "./savedData";
 import { UPGRADED_TIMELINE_PROMPT, upgradedTimelineRead } from "./scenarios/upgradedTimelineRead";
 import { starterFor } from "./starters";
+import { seedCrewTranscript } from "./transcriptFixtures";
 import { pressKey } from "./windowKeys";
 
 const ID = "retained-timeline";
@@ -110,45 +110,39 @@ function olderProfile() {
     declared: { result: { kept: "flush" } },
   });
   const sessions = crewmateSessionsDir(appPathsFor(userDataDir), ID);
-  mkdirSync(sessions, { recursive: true });
   const file = "2026-10-20T16-00-00-000Z_practice.jsonl";
-  writeFileSync(
-    join(sessions, file),
-    [
-      { type: "session", version: 3, id: "practice", cwd: "/work/practice" },
-      {
-        type: "message",
-        message: {
-          role: "assistant",
-          content: [
-            {
-              type: "toolCall",
-              id: "read-release",
-              name: "read",
-              arguments: { path: "/work/practice/release.yml" },
-            },
-          ],
-        },
+  seedCrewTranscript(userDataDir, ID, file, [
+    { type: "session", version: 3, id: "practice", cwd: "/work/practice" },
+    {
+      type: "message",
+      message: {
+        role: "assistant",
+        content: [
+          {
+            type: "toolCall",
+            id: "read-release",
+            name: "read",
+            arguments: { path: "/work/practice/release.yml" },
+          },
+        ],
       },
-      {
-        type: "message",
-        timestamp: new Date(at).toISOString(),
-        message: {
-          role: "assistant",
-          content: [
-            {
-              type: "toolCall",
-              id: "run-check",
-              name: "bash",
-              arguments: { command: "pnpm check", description: "Run the practice release checks" },
-            },
-          ],
-        },
+    },
+    {
+      type: "message",
+      timestamp: new Date(at).toISOString(),
+      message: {
+        role: "assistant",
+        content: [
+          {
+            type: "toolCall",
+            id: "run-check",
+            name: "bash",
+            arguments: { command: "pnpm check", description: "Run the practice release checks" },
+          },
+        ],
       },
-    ]
-      .map((line) => JSON.stringify(line))
-      .join("\n") + "\n",
-  );
+    },
+  ]);
   tasks.setSessionFile(ID, join(sessions, file));
   tasks.close(ID, { status: "done", reason: "finished", actor: "host" });
   tasks.markWorkspaceRemoved(ID);

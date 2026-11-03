@@ -1,4 +1,3 @@
-import { cpSync, mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { expect, type Page, test } from "@playwright/test";
 import { PANEL_SILENCE_MS } from "../../src/core/panels/panelRuntimes";
@@ -11,6 +10,7 @@ import { YOUR_PANELS_WORDS } from "../../src/renderer/src/settings/generalWords"
 import { scratchDir } from "../helpers/scratchDirs";
 import { panelBody } from "./frames";
 import { type LaunchedApp, launchApp } from "./launch";
+import { seedPersonalWorkspace, seedUnresponsivePanel } from "./personalFixtures";
 import { feedLineOf } from "./rails";
 import { settingRow } from "./settings";
 import { pressKey } from "./windowKeys";
@@ -32,10 +32,7 @@ import { pressKey } from "./windowKeys";
 
 /** The three Step 2 fixtures, already exercised by personal-panels.spec.ts. */
 function seedFixtures(userDataDir: string): string {
-  const workspace = join(userDataDir, "fleet", "personal");
-  mkdirSync(workspace, { recursive: true });
-  cpSync(join(process.cwd(), "tests", "fixtures", "personal"), workspace, { recursive: true });
-  return workspace;
+  return seedPersonalWorkspace(userDataDir, join(process.cwd(), "tests", "fixtures", "personal"));
 }
 
 const mountedIds = (app: LaunchedApp) =>
@@ -234,32 +231,7 @@ test.describe
     test.beforeAll(async () => {
       const userDataDir = scratchDir("infinitary-e2e-panels-stopped-");
       const workspace = seedFixtures(userDataDir);
-      const spinner = join(workspace, "spinner");
-      mkdirSync(spinner);
-      writeFileSync(
-        join(spinner, "manifest.json"),
-        JSON.stringify({ title: "Spinner", api: 2, placement: { x: "left", y: "top" } }),
-      );
-      writeFileSync(
-        join(spinner, "panel.tsx"),
-        [
-          'import type { PanelProps } from "@infinitary/contracts";',
-          "export default function Panel({ id }: PanelProps) {",
-          "  return <p data-fixture={id} style={{ margin: 0 }}>spinning up</p>;",
-          "}",
-        ].join("\n"),
-      );
-      writeFileSync(
-        join(spinner, "server.ts"),
-        [
-          "export const actions = {",
-          '  ping: () => "pong",',
-          "  spin: () => {",
-          "    for (;;) {}",
-          "  },",
-          "};",
-        ].join("\n"),
-      );
+      seedUnresponsivePanel(workspace);
       launched = await launchApp({ userDataDir, withMockProvider: true });
       await expect
         .poll(() => mountedIds(launched), { timeout: 30_000 })

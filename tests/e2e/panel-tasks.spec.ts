@@ -12,13 +12,13 @@ import { scratchDir } from "../helpers/scratchDirs";
 import { frameIn, panelBody } from "./frames";
 import { type LaunchedApp, launchApp } from "./launch";
 import { resizeWindow } from "./layout";
-
 import {
   panelHeaderButton,
   shownPanelCard,
   shownPanelCardBody,
   shownPanelCardFrame,
 } from "./panelCards";
+import { seedPersonalWorkspace } from "./personalFixtures";
 import { seedHostedOrigins } from "./projectSeed";
 import { promptInput } from "./prompt";
 import { recordCard } from "./rails";
@@ -105,9 +105,7 @@ test.describe("a panel of the captain's own works with his tasks", () => {
   test.beforeEach(async () => {
     const userDataDir = scratchDir("infinitary-e2e-panel-tasks-");
     seedDesk(userDataDir);
-    const workspace = join(userDataDir, "fleet", "personal");
-    mkdirSync(workspace, { recursive: true });
-    cpSync(FIXTURE, join(workspace, PANEL), { recursive: true });
+    seedPersonalWorkspace(userDataDir, FIXTURE, PANEL);
     launched = await launchApp({ scenarios: [installPanel], userDataDir, withMockProvider: true });
     await resizeWindow(launched.app, launched.page, { width: 1600, height: 900 });
   });

@@ -1,8 +1,9 @@
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { expect, type Page, test } from "@playwright/test";
 import { type ModelSlotsView, offeringKey } from "../../src/shared/modelSlots";
 import { scratchDir } from "../helpers/scratchDirs";
+import { seedAccountAuth, seedAccountRegistry, seedAccountStore } from "./accountFixtures";
 import { expectClaudeConnected, launchSignedInClaude } from "./claudeAccount";
 import type { LaunchedApp } from "./launch";
 import { minimumWindowSize, resizeWindow } from "./layout";
@@ -17,6 +18,7 @@ import {
   removeFromAllLevels,
   setLevelInPanel,
 } from "./modelsBoard";
+import { seedRetiredCursorStore } from "./savedDataFixtures";
 import { settingsSection } from "./settings";
 import { starterFor } from "./starters";
 
@@ -187,17 +189,21 @@ const MODELS_FIXTURE = {
  * everything stays on the throwaway userData dir).
  */
 function seedAccounts(userDataDir: string): void {
-  const accountsDir = join(userDataDir, "accounts");
   const seed = (
     providerId: string,
     accountId: string,
     credential: Record<string, unknown>,
   ): void => {
-    const dir = join(accountsDir, providerId, accountId);
-    mkdirSync(dir, { recursive: true, mode: 0o700 });
-    writeFileSync(join(dir, "auth.json"), JSON.stringify({ [providerId]: credential }), {
-      mode: 0o600,
-    });
+    seedAccountStore(userDataDir, providerId, accountId, { recursive: true, mode: 0o700 });
+    seedAccountAuth(
+      userDataDir,
+      providerId,
+      accountId,
+      { [providerId]: credential },
+      {
+        mode: 0o600,
+      },
+    );
   };
   const farFuture = Date.now() + 30 * 24 * 60 * 60 * 1000;
   seed("openai-codex", CODEX_PERSONAL, {
@@ -215,71 +221,66 @@ function seedAccounts(userDataDir: string): void {
   seed("xai", GROK_PERSONAL, { type: "api_key", key: "xai-fake-key" });
   seed("xai", GROK_TEAM, { type: "api_key", key: "xai-team-key" });
   // Vault bookkeeping only; the login lives in HOME/.claude (CD-1=B).
-  mkdirSync(join(accountsDir, "anthropic-claude", CLAUDE_PERSONAL), {
+  seedAccountStore(userDataDir, "anthropic-claude", CLAUDE_PERSONAL, {
     recursive: true,
     mode: 0o700,
   });
   // What an earlier version left for a Cursor sign-in: the client's own
   // store under the account's directory. Nothing may read or delete it.
-  const cursorStore = join(accountsDir, "cursor", LEFTOVER_CURSOR, ".cursor");
-  mkdirSync(cursorStore, { recursive: true, mode: 0o700 });
-  writeFileSync(join(cursorStore, "auth.json"), '{"accessToken":"left-behind"}', { mode: 0o600 });
-  writeFileSync(
-    join(accountsDir, "registry.json"),
-    JSON.stringify({
-      version: 1,
-      accounts: [
-        {
-          id: CODEX_PERSONAL,
-          providerId: "openai-codex",
-          kind: "subscription_oauth",
-          label: "Personal",
-          enabled: true,
-          createdAt: Date.parse("2026-08-01T00:00:00Z"),
-        },
-        {
-          id: CODEX_WORK,
-          providerId: "openai-codex",
-          kind: "subscription_oauth",
-          label: "Work #2",
-          enabled: true,
-          createdAt: Date.parse("2026-08-02T00:00:00Z"),
-        },
-        {
-          id: GROK_PERSONAL,
-          providerId: "xai",
-          kind: "api_key",
-          label: "Personal",
-          enabled: true,
-          createdAt: Date.parse("2026-08-03T00:00:00Z"),
-        },
-        {
-          id: GROK_TEAM,
-          providerId: "xai",
-          kind: "api_key",
-          label: "Team",
-          enabled: true,
-          createdAt: Date.parse("2026-08-03T12:00:00Z"),
-        },
-        {
-          id: CLAUDE_PERSONAL,
-          providerId: "anthropic-claude",
-          kind: "subscription_oauth",
-          label: "Personal Max",
-          enabled: true,
-          createdAt: Date.parse("2026-08-04T00:00:00Z"),
-        },
-        {
-          id: LEFTOVER_CURSOR,
-          providerId: "cursor",
-          kind: "subscription_oauth",
-          label: LEFTOVER_CURSOR_LABEL,
-          enabled: true,
-          createdAt: Date.parse("2026-08-05T00:00:00Z"),
-        },
-      ],
-      pins: { cursor: LEFTOVER_CURSOR },
-    }),
+  seedRetiredCursorStore(userDataDir, LEFTOVER_CURSOR);
+  seedAccountRegistry(
+    userDataDir,
+    [
+      {
+        id: CODEX_PERSONAL,
+        providerId: "openai-codex",
+        kind: "subscription_oauth",
+        label: "Personal",
+        enabled: true,
+        createdAt: Date.parse("2026-08-01T00:00:00Z"),
+      },
+      {
+        id: CODEX_WORK,
+        providerId: "openai-codex",
+        kind: "subscription_oauth",
+        label: "Work #2",
+        enabled: true,
+        createdAt: Date.parse("2026-08-02T00:00:00Z"),
+      },
+      {
+        id: GROK_PERSONAL,
+        providerId: "xai",
+        kind: "api_key",
+        label: "Personal",
+        enabled: true,
+        createdAt: Date.parse("2026-08-03T00:00:00Z"),
+      },
+      {
+        id: GROK_TEAM,
+        providerId: "xai",
+        kind: "api_key",
+        label: "Team",
+        enabled: true,
+        createdAt: Date.parse("2026-08-03T12:00:00Z"),
+      },
+      {
+        id: CLAUDE_PERSONAL,
+        providerId: "anthropic-claude",
+        kind: "subscription_oauth",
+        label: "Personal Max",
+        enabled: true,
+        createdAt: Date.parse("2026-08-04T00:00:00Z"),
+      },
+      {
+        id: LEFTOVER_CURSOR,
+        providerId: "cursor",
+        kind: "subscription_oauth",
+        label: LEFTOVER_CURSOR_LABEL,
+        enabled: true,
+        createdAt: Date.parse("2026-08-05T00:00:00Z"),
+      },
+    ],
+    { cursor: LEFTOVER_CURSOR },
     { mode: 0o600 },
   );
 }

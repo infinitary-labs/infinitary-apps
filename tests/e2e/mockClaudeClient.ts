@@ -1,4 +1,4 @@
-import { chmodSync, existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { chmodSync, existsSync, mkdirSync, readFileSync, utimesSync, writeFileSync } from "node:fs";
 import { createRequire } from "node:module";
 import { join } from "node:path";
 import { scratchDir } from "../helpers/scratchDirs";
@@ -428,6 +428,77 @@ export function signedInClaudeHome(
   if (!options.preserveCredentials) seedClaudeCredentialFile(store, options.credentials);
 }
 
+/** Caller-supplied expiry readings for the real quota journeys, using the same credential owner. */
+export function claudeHomeWithCredential(
+  accessToken: string,
+  expiresAt: number,
+  refreshTokenExpiresAt?: number,
+) {
+  return (homeDir: string) =>
+    signedInClaudeHome(homeDir, {
+      credentials: {
+        accessToken,
+        refreshToken: "stub-refresh",
+        expiresAt,
+        refreshTokenExpiresAt: refreshTokenExpiresAt ?? expiresAt + 30 * 24 * 3600 * 1000,
+        subscriptionType: "max",
+      },
+    });
+}
+
+/** The client's account config is separate from the token file, exactly as its reader expects. */
+export function writeClaudeIdentity(
+  homeDir: string,
+  accountUuid: string,
+  emailAddress: string,
+  stamp?: number,
+  organizationUuid?: string,
+): void {
+  const file = join(homeDir, ".claude.json");
+  writeFileSync(
+    file,
+    JSON.stringify({
+      oauthAccount: {
+        emailAddress,
+        accountUuid,
+        ...(organizationUuid === undefined ? {} : { organizationUuid }),
+      },
+    }),
+  );
+  if (stamp !== undefined) utimesSync(file, stamp, stamp);
+}
+
+export function claudeIdentityHome(accountUuid: string, emailAddress: string) {
+  return (homeDir: string) => writeClaudeIdentity(homeDir, accountUuid, emailAddress);
+}
+
+/** A new external sign-in rewrites the credential stamp while the app is closed. */
+export function rewrittenClaudeHome(homeDir: string): void {
+  signedInClaudeHome(homeDir);
+  const later = new Date(Date.now() + 60_000);
+  utimesSync(join(claudeDefaultStore(homeDir), ".credentials.json"), later, later);
+}
+
+/** A real client setting, used by the overflow-recovery journey rather than an app shortcut. */
+export function uncompactedClaudeHome(homeDir: string): void {
+  const config = claudeDefaultStore(homeDir);
+  mkdirSync(config, { recursive: true });
+  writeFileSync(join(config, ".claude.json"), JSON.stringify({ autoCompactEnabled: false }));
+}
+
+export function quotaIdentityHome(
+  accessToken: string,
+  expiresAt: number,
+  email: string,
+  accountUuid: string,
+  stamp: number,
+) {
+  return (homeDir: string) => {
+    claudeHomeWithCredential(accessToken, expiresAt)(homeDir);
+    writeClaudeIdentity(homeDir, accountUuid, email, stamp, "personal");
+  };
+}
+
 /** Seed the machine's default Claude store as an already-signed-in one. */
 function seedSignedInClaudeStore(accountDir: string): void {
   mkdirSync(accountDir, { recursive: true, mode: 0o700 });
@@ -456,4 +527,79 @@ function seedClaudeCredentialFile(
     }),
     { mode: 0o600 },
   );
+}
+
+/** The installed client owns this renewal/login rewrite, not the app. */
+export function writeRenewingClaudeClient(dir: string, client: string, requests: string): void {
+  writeFileSync(
+    join(dir, "renewing-claude.mjs"),
+    `#!/usr/bin/env node
+import { appendFileSync, writeFileSync } from "node:fs";
+import { join } from "node:path";
+import { spawnSync } from "node:child_process";
+const home = process.env.HOME;
+const dir = process.env.CLAUDE_CONFIG_DIR || (home ? join(home, ".claude") : undefined);
+const args = process.argv.slice(2);
+if (dir && args[0] === "auth" && args[1] === "status") {
+  appendFileSync(${JSON.stringify(requests)}, JSON.stringify(args) + "\\n");
+  writeFileSync(join(dir, ".credentials.json"), JSON.stringify({
+    claudeAiOauth: {
+      accessToken: "renewed-token",
+      refreshToken: "stub-refresh-2",
+      expiresAt: Date.now() + 3600000,
+      refreshTokenExpiresAt: Date.now() + 30 * 24 * 3600000,
+      subscriptionType: "max",
+    },
+  }), { mode: 0o600 });
+}
+const run = spawnSync(process.execPath, [${JSON.stringify(client)}, ...args], { stdio: "inherit" });
+process.exit(run.status ?? 0);
+`,
+    { mode: 0o755 },
+  );
+}
+
+/** The installed client owns this renewal/login rewrite, not the app. */
+export function writeRefusedClaudeClient(dir: string, client: string): void {
+  writeFileSync(
+    join(dir, "refused-claude.mjs"),
+    `#!/usr/bin/env node
+import { readFileSync, writeFileSync } from "node:fs";
+import { join } from "node:path";
+import { spawnSync } from "node:child_process";
+const home = process.env.HOME;
+const dir = process.env.CLAUDE_CONFIG_DIR || (home ? join(home, ".claude") : undefined);
+const args = process.argv.slice(2);
+const file = dir ? join(dir, ".credentials.json") : undefined;
+const current = () => {
+  try {
+    return JSON.parse(readFileSync(file, "utf8")).claudeAiOauth.accessToken;
+  } catch {
+    return undefined;
+  }
+};
+const write = (accessToken) =>
+  writeFileSync(file, JSON.stringify({
+    claudeAiOauth: {
+      accessToken,
+      refreshToken: "stub-refresh-" + accessToken,
+      expiresAt: Date.now() + 3600000,
+      subscriptionType: "max",
+    },
+  }), { mode: 0o600 });
+if (file && args[0] === "auth" && args[1] === "status" && current() !== "fresh-token") write("refused-" + Date.now());
+if (file && args[0] === "auth" && args[1] === "login") write("fresh-token");
+const run = spawnSync(process.execPath, [${JSON.stringify(client)}, ...args], { stdio: "inherit" });
+process.exit(run.status ?? 0);
+`,
+    { mode: 0o755 },
+  );
+}
+
+/** The initialize handshake reads rows or the client's literal error response from this file. */
+export function writeClaudeModelListing(
+  file: string,
+  rows: readonly { value: string; displayName: string }[] | string,
+): void {
+  writeFileSync(file, typeof rows === "string" ? rows : JSON.stringify(rows));
 }

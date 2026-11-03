@@ -1,5 +1,5 @@
 import { execFileSync } from "node:child_process";
-import { mkdirSync, writeFileSync } from "node:fs";
+import { writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { expect, type Locator, test } from "@playwright/test";
 import { presentationCardBody } from "../../src/core/forge/presentation";
@@ -8,6 +8,7 @@ import { CardStore } from "../../src/core/storage/cardStore";
 import { openDatabase } from "../../src/core/storage/db";
 import type { ChangePresentation } from "../../src/shared/changePresentation";
 import { scratchDir } from "../helpers/scratchDirs";
+import { seedCardMediaDirectory } from "./cardFixtures";
 import { cardBody } from "./frames";
 import { launchApp } from "./launch";
 import { resizeWindow } from "./layout";
@@ -40,8 +41,7 @@ test("a saved story pairs the states of each view and preserves the old drawing"
   for (const version of [1, 2] as const) {
     const userDataDir = scratchDir("infinitary-story-layout-");
     const taskId = "story-layout";
-    const dir = join(userDataDir, "crewmates", taskId, "cards");
-    mkdirSync(dir, { recursive: true });
+    const dir = seedCardMediaDirectory(userDataDir, taskId);
     const { noPicture: _invisible, ...content } = MOCK_GITHUB_STORY;
     const staged = await stageChangePresentation(
       {

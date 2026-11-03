@@ -28,6 +28,7 @@ function wipeWindowProfile(userDataDir: string): string[] {
   for (const name of WINDOW_PROFILE_DIRS) {
     const dir = join(userDataDir, name);
     if (!existsSync(dir)) continue;
+    // e2e-fixture: mutation -- Prove app settings survive removal of the window storage caches.
     rmSync(dir, { recursive: true, force: true });
     removed.push(name);
   }

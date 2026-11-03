@@ -21,6 +21,7 @@ import { settingFrom } from "@shared/envSettings";
 import { platformArgument } from "@shared/platform";
 import { FRAME_FOCUS_BLINK_FEATURE } from "@shared/plugins/containment";
 import type { ReleaseNotesView } from "@shared/releaseTracking";
+import { SMALLEST_WINDOW } from "@shared/smallestWindow";
 import { spellingOfUserDataFolder } from "@shared/userDataFolders";
 import { app, BrowserWindow, dialog, Menu, nativeTheme, powerMonitor, session } from "electron";
 import { hostDesktop, hostPlatform } from "../core/platform";
@@ -115,8 +116,8 @@ function createMainWindow(
   const win = new BrowserWindow({
     width: 1200,
     height: 800,
-    minWidth: 960,
-    minHeight: 640,
+    minWidth: SMALLEST_WINDOW.width,
+    minHeight: SMALLEST_WINDOW.height,
     // A shown macOS window is the system material under the renderer's tint
     // (docs/translucent-window.md); every other window is the opaque void.
     ...material,

@@ -76,7 +76,7 @@ A client outside its window is answered its reads (`effect: "read"`) and sent ev
 A client on an answered major keeps everything it knows whatever its minor, because a minor only adds.
 
 The floor moves only with a major that breaks what views send or read, and then to that major: its file says `Views: break.`, and a major that leaves views working says `Views: keep.` and leaves the floor below it (`src/core/connection/contractChanges.test.ts` holds `VIEW_FLOOR` to the file).
-A new member of an open list does not break views: a view keeps a member it does not know as the list's stand-in (`VIEW_OPEN_LISTS`, `src/shared/openLists.ts`), where the window reads every answer and push (`src/preload/index.ts`), and the phone reads those sets as text.
+A new member of an open list does not break views: a view keeps a member it does not know as the list's stand-in (`VIEW_OPEN_LISTS`, `src/shared/openLists.ts`), where the window reads every answer and push (`src/preload/api.ts`), and the phone reads those sets as text.
 The file publishes the lists and their stand-ins as the version rule's `openLists`, so a client written against the file alone reads them the same way.
 A new member of any other closed set still breaks them.
 A view on an older major than its home misses only what that major's own changes added, and a newer view against an older home asks what the home may not have yet: the home refuses a request it does not answer in words, and ignores a field it does not read.

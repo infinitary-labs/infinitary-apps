@@ -17,7 +17,6 @@ export const RENDERER_SUITES = [
   "still-character.spec.ts",
   "subscriptions-instruments.spec.ts",
   "task-record-height.spec.ts",
-  "typing-stage.spec.ts",
   "ui-kit-panel.spec.ts",
 ].map((file) => `**/${file}`);
 
@@ -176,7 +175,6 @@ export const APPLICATION_SUITES = [
   "quit-mid-turn.spec.ts",
   "rail-overflow.spec.ts",
   "record-activity.spec.ts",
-  "reduced-motion-indicator.spec.ts",
   "region-shot.spec.ts",
   "release-menu.spec.ts",
   "reply-clear.spec.ts",
@@ -211,7 +209,6 @@ export const APPLICATION_SUITES = [
   "sequences-claude.spec.ts",
   "sequences.spec.ts",
   "settings-save-recovery.spec.ts",
-  "settings-width.spec.ts",
   "source-start.spec.ts",
   "stage-reveals.spec.ts",
   "start-again.spec.ts",

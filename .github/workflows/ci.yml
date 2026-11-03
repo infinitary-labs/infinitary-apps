@@ -95,7 +95,7 @@ jobs:
         if: ${{ steps.paths.outputs.run == 'true' }}
         uses: ./.github/actions/linux-startup
 
-  # The in-memory cohorts (docs/test-cohorts.md).
+  # The in-memory cohorts and the browser layer (docs/test-cohorts.md).
   unit-tests:
     if: github.event_name != 'pull_request'
     runs-on: ${{ fromJSON(vars.LINUX_QUEUES || '{}').ci || vars.LINUX_RUNNER || 'ubuntu-latest' }}
@@ -111,7 +111,9 @@ jobs:
         # Scope Node headers to this install, never to Electron rebuilds.
         env:
           NPM_PACKAGE_CONFIG_NODE_GYP_NODEDIR: ${{ env.INFINITARY_NODE_HEADERS }}
-      - run: pnpm test --project pure --project unit --project unit-isolated
+      # The browser layer (docs/testing.md, "The browser layer").
+      - uses: ./.github/actions/browser-chromium
+      - run: pnpm test --project pure --project unit --project unit-isolated --project browser
         timeout-minutes: 30
 
   # The integration cohort, split by vitest's own --shard (a hash of each

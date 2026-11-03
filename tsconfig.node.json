@@ -134,6 +134,8 @@
     // The panel-cards fixtures are panel folders the host compiles at e2e
     // time (tests/e2e/panel-cards.spec.ts, panel-tasks.spec.ts); one brings
     // its own stylesheet, which only a panel's workspace types as text.
-    "tests/fixtures/panel-cards/**/*"
+    "tests/fixtures/panel-cards/**/*",
+    // The browser layer's page side, checked by tsconfig.web.json.
+    "tests/browser/**/*"
   ]
 }

@@ -24,3 +24,6 @@ src/renderer/src/generated/
 .build/
 ios/**/DerivedData/
 ios/**/xcuserdata/
+# The browser layer's failure screenshots (vitest browser mode).
+tests/browser/__screenshots__/
+.vitest-attachments/

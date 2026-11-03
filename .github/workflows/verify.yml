@@ -276,6 +276,11 @@ jobs:
         run: pnpm check
       - if: ${{ !cancelled() && matrix.lane == 'linux-checks' && steps.install.outcome == 'success' }}
         run: pnpm lint:adherence
+      # The browser project's Chromium (docs/testing.md, "The browser layer").
+      - uses: ./Application Support/firstmate/.github/actions/browser-chromium
+        if: ${{ !cancelled() && matrix.lane == 'linux-checks' && steps.install.outcome == 'success' }}
+        with:
+          working-directory: Application Support/firstmate
       - if: ${{ !cancelled() && matrix.lane == 'linux-checks' && steps.install.outcome == 'success' }}
         run: pnpm test
         # Every probe as well as the full unit and integration sweeps; a stuck one ends by its own cap (ci.yml says why).

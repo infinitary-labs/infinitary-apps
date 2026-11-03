@@ -52,7 +52,7 @@ Moved verbatim from `AGENTS.md` on 2026-09-24; `AGENTS.md` keeps a one-line poin
   Streaming card bodies are subscribed only by `CardLayer` in `src/renderer/src/app/HomeScreen.tsx`, so they do not re-render `Firstmate` or `VoiceInput`.
   The composer's growth reaches the stage as the CSS variable `--prompt-rise`, never through the store, and the stage subscribes only to whether there is a draft, so typing never re-renders it (`docs/composer.md`).
   Each key's spin kick is read from the store by the character's own drawing frame (`Firstmate`'s `kick` as a reader), not passed down as a prop (INF-1073).
-  `tests/e2e/typing-stage.spec.ts` holds this by count, never by time: the browser's call counters say how often `HomeMate` and `Firstmate` ran while a sentence was typed, so a busy machine cannot fail it.
+  `tests/browser/typing-stage.test.tsx` holds this by count, never by time: the browser's call counters say how often `HomeMate` and `Firstmate` ran while a sentence was typed, so a busy machine cannot fail it.
   Stack visibility is `reconcileStack` in `src/renderer/src/app/store.ts`: arrivals keep local selection, project focus holds other projects back, and every snapshot applies the card owner's exact released-update seen marks.
   Reading, elapsed time and paging never hide notes; only ordinary lifecycle actions remove them.
   `HomeScreen` reports a sighting after its shown document draws in a foreground window, and reconnect waits for fresh state before reporting again.

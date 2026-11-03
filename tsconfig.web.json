@@ -44,6 +44,17 @@
     "tests/fixtures/personal/**/*.tsx",
     "tests/fixtures/personal-skills/**/*.ts",
     "tests/fixtures/personal-skills/**/*.tsx",
-    "tests/fixtures/frame-realm/**/*.tsx"
+    "tests/fixtures/frame-realm/**/*.tsx",
+    // The browser layer's tests draw the window in a page (docs/testing.md,
+    // "The browser layer"); their Node side is under tests/helpers/.
+    "tests/browser/**/*.ts",
+    "tests/browser/**/*.tsx",
+    "tests/helpers/browserProvided.ts",
+    // The window API and the shell's installed keys, which the browser layer
+    // runs in its page as the preload and main run them.
+    "src/preload/api.ts",
+    "src/preload/pushHub.ts",
+    "src/preload/readableRequest.ts",
+    "src/main/keyboard.ts"
   ]
 }

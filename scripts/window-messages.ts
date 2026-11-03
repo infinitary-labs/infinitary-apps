@@ -20,7 +20,14 @@ import ts from "typescript";
  */
 
 const CONTRACT = "src/shared/ipc.ts";
-export const PRELOAD = "src/preload/index.ts";
+/** Where the window API's methods are written (`createApi`), named in a journey's reason. */
+export const PRELOAD = "src/preload/api.ts";
+/**
+ * The preload's modules that may write the API's methods: `createApi`'s
+ * returned object in ./api.ts, or a `const api` object in the preload itself,
+ * where the API stood before it moved; both sides of a change are read whole.
+ */
+const PRELOAD_FILES = [PRELOAD, "src/preload/index.ts"];
 const READS = "src/shared/reads.ts";
 
 /** The objects whose entries are compared one by one, in their modules. */
@@ -142,10 +149,11 @@ function entriesOf(file: string, text: string, object: string): Map<string, Part
 /**
  * Every method of the preload's `window.infinitary` object, by its path
  * (`retention.scope`), with its code. A property whose value is an object
- * literal is a group of methods, however deep.
+ * literal is a group of methods, however deep. The object is a `const api`
+ * or the one `createApi` returns.
  */
-function windowMethods(text: string): Map<string, Part> {
-  const source = parse(PRELOAD, text);
+function windowMethods(file: string, text: string): Map<string, Part> {
+  const source = parse(file, text);
   const methods = new Map<string, Part>();
   const walk = (object: ts.ObjectLiteralExpression, path: string[]) => {
     for (const property of object.properties) {
@@ -158,6 +166,20 @@ function windowMethods(text: string): Map<string, Part> {
     }
   };
   for (const statement of source.statements) {
+    if (
+      ts.isFunctionDeclaration(statement) &&
+      statement.name?.text === "createApi" &&
+      statement.body
+    ) {
+      for (const inner of statement.body.statements)
+        if (
+          ts.isReturnStatement(inner) &&
+          inner.expression &&
+          ts.isObjectLiteralExpression(inner.expression)
+        )
+          walk(inner.expression, []);
+      continue;
+    }
     if (!ts.isVariableStatement(statement)) continue;
     for (const declaration of statement.declarationList.declarations)
       if (
@@ -210,7 +232,9 @@ export function changedMessages(
   readBefore: Read,
 ): WindowMessages {
   const messages: WindowMessages = { methods: new Map(), reads: new Map() };
-  if (!changed.some((file) => file === CONTRACT || file === READS || file === PRELOAD))
+  if (
+    !changed.some((file) => file === CONTRACT || file === READS || PRELOAD_FILES.includes(file))
+  )
     return messages;
   const sides = (file: string) => [readBefore(file) ?? "", read(file) ?? ""] as const;
   const compare = (
@@ -233,9 +257,10 @@ export function changedMessages(
   const channels = new Set<string>();
   for (const object of CONTAINERS.get(CONTRACT) ?? [])
     for (const channel of compare(CONTRACT, object, contract).keys()) channels.add(channel);
-  const [before, after] = sides(PRELOAD);
-  const old = windowMethods(before);
-  const next = windowMethods(after);
+  const methodsOf = (side: 0 | 1) =>
+    new Map(PRELOAD_FILES.flatMap((file) => [...windowMethods(file, sides(file)[side])]));
+  const old = methodsOf(0);
+  const next = methodsOf(1);
   for (const method of new Set([...old.keys(), ...next.keys()])) {
     const channel = changeOf(old.get(method), next.get(method), new Set(), channels);
     if (channel !== undefined) messages.methods.set(method, channel);

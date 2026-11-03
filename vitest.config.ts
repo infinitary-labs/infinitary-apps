@@ -1,8 +1,12 @@
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
+import react from "@vitejs/plugin-react";
+import { playwright } from "@vitest/browser-playwright";
 import { defineConfig } from "vitest/config";
 import { PROBE_FILES } from "./scripts/affected-probes.ts";
 import { jobCores } from "./scripts/job-cores.ts";
+import { FRAME_FOCUS_BLINK_FEATURE } from "./src/shared/plugins/containment.ts";
+import { browserCommands } from "./tests/helpers/browserCommands.ts";
 
 /**
  * The integration cohort (captain's A1, docs/test-cohorts.md) is the list of
@@ -147,7 +151,7 @@ export default defineConfig({
           name: "unit",
           maxWorkers: Math.max(2, jobCores() - 1),
           include: ["src/**/*.test.{ts,tsx}", "tests/**/*.test.{ts,tsx}"],
-          exclude: ["src/shared/**/*.test.ts", ...integration, ...isolatedUnit],
+          exclude: ["src/shared/**/*.test.ts", "tests/browser/**", ...integration, ...isolatedUnit],
           isolate: false,
           setupFiles: [
             "./tests/helpers/pureProject.ts",
@@ -192,6 +196,41 @@ export default defineConfig({
           // generator. Each file states its own budget; the default stays 5 s.
           maxWorkers: process.platform === "darwin" ? Math.min(8, jobCores(process.env, 8)) : 4,
           sequence: { groupOrder: 1 },
+        },
+      },
+      {
+        // The browser layer (docs/testing.md, "The browser layer"): the
+        // window's React drawn in a real Chromium page, behind the one shared
+        // fake of the window bridge (tests/browser/bridge.ts). Each file is
+        // a fresh page, as each journey was a fresh app.
+        extends: true,
+        plugins: [react()],
+        test: {
+          name: "browser",
+          include: ["tests/browser/**/*.test.{ts,tsx}"],
+          // One Chromium page per file, in a group of its own after the
+          // probes, so a whole run never loads the host with both at once.
+          sequence: { groupOrder: 3 },
+          // The fresh home's answers, read once per run from a real core.
+          globalSetup: [
+            "./tests/helpers/vitestGlobalSetup.ts",
+            "./tests/helpers/browserFreshHome.ts",
+          ],
+          browser: {
+            enabled: true,
+            headless: true,
+            // The window's Chromium runs with Web Share on, which the shell
+            // spends a page's activation through, and with a frame's focus
+            // held to a person's gesture (src/main/app.ts); the test page's
+            // Chromium runs the same.
+            provider: playwright({
+              launchOptions: {
+                args: [`--enable-blink-features=WebShare,${FRAME_FOCUS_BLINK_FEATURE}`],
+              },
+            }),
+            instances: [{ browser: "chromium" }],
+            commands: browserCommands,
+          },
         },
       },
       {

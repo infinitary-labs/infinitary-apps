@@ -14,13 +14,14 @@ Linux keeps the unfiltered `pnpm test`, including every probe: no unit file move
 When adding a case that needs macOS, add its file to that list; the scratch Keychain probes retain their existing opt-in gates.
 `tests/release-workflows.test.ts` uses real Vitest file discovery to check the Mac selection, its cohort assignments and its inclusion in the complete Linux suite.
 
-Requested runs (`ci.yml`) run the same projects on separate machines, and a push to `main` runs them once in the full check's `linux-checks` lane (`verify.yml`); PRs omit the full unit, integration and probe sweeps: `unit-tests` runs `pure`, `unit` and `unit-isolated`, each `integration-tests` job runs one `--shard` of `integration`, and `probe-tests` runs every file of `probe` ("Probes" below, `docs/testing.md`).
+Requested runs (`ci.yml`) run the same projects on separate machines, and a push to `main` runs them once in the full check's `linux-checks` lane (`verify.yml`); PRs omit the full unit, integration and probe sweeps: `unit-tests` runs `pure`, `unit`, `unit-isolated` and `browser`, each `integration-tests` job runs one `--shard` of `integration`, and `probe-tests` runs every file of `probe` ("Probes" below, `docs/testing.md`).
 
 | Project | Files | Rule |
 | --- | --- | --- |
 | `pure` | `src/shared/**/*.test.ts` | Shared contracts and math. One module cache (`isolate: false`) with per-test guards against mutated globals (`tests/helpers/pureProject.ts`). In memory, like `unit`. |
 | `unit` | every other test file not listed as integration | Most files share loaded code (`isolate: false`) with the same process-state leak guard as `pure`; the module-mocking, environment/global-mutating or SDK-loading files run as `unit-isolated` with `isolate: true` (the explicit list in `vitest.config.ts`). Both use vitest's 5 s default. May not start a child process, drive real git or sleep on a real clock. |
 | `integration` | the list below | Real git, pnpm, a shell, a stub executable or the installed Claude client. Eight workers on macOS, or the job's size when the Mac mini's placement service names a smaller one, four elsewhere, in a group that starts after `pure` and `unit` finish, so the suite does not load the host it measures. Each file carries a budget sized to its measured work. |
+| `browser` | `tests/browser/**/*.test.{ts,tsx}` | The window drawn in headless Chromium behind the shared fake bridge (`docs/testing.md`, "The browser layer"). One page per file. Its global setup boots one real core in Node for the fresh home's answers, about two seconds per run. |
 | `probe` | the files of the list below that `PROBE_FILES` names | Integration files that can fail with no code change ("Probes" below). The same workers and budgets as `integration`, in a group that starts after it finishes. |
 
 `pure`, `unit` and `unit-isolated` each use `Math.max(2, cores - 1)` workers, where cores are the job's size when the placement service names one and the machine's otherwise (`scripts/job-cores.ts`): the two-CPU hosted runner uses both CPUs, and a larger machine still reserves one CPU.

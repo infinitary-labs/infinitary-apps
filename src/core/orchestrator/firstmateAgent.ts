@@ -942,6 +942,13 @@ export class FirstmateAgent {
       this.delivery.endTurn({ asks: [ask.id], held: true, unread: [] });
       return;
     }
+    // Source validation can outlive an idle model change or an inbox drain.
+    // Acquire the attachment only after it finishes, as drainInbox does, so
+    // neither a steer nor admission retains a conversation replaced meanwhile.
+    const sourceFacts = this.options.selfSourceFactsAsync
+      ? await this.options.selfSourceFactsAsync()
+      : undefined;
+    if (this.disposed) return;
     const session = await this.ensureSession();
     if (!session && this.pausedAtAttach) {
       // Paused at the attach: the words wait on the inbox like admission's.
@@ -968,10 +975,6 @@ export class FirstmateAgent {
     // Built for the session that reads it: admission may replace the
     // session and renewed instructions may start it over, and either makes
     // the next context complete.
-    const sourceFacts = this.options.selfSourceFactsAsync
-      ? await this.options.selfSourceFactsAsync()
-      : undefined;
-    if (this.disposed) return;
     const contextNow = () =>
       this.contextForTurn(visibleCardId, hintTaskId, aboutCardId, pastCardId, trimmed, sourceFacts);
     const userBody = renderWake(captainTurn(trimmed, false));

@@ -10300,3 +10300,131 @@ describe("INF-1712: a context carries what changed, and a fold reads open work b
     expect(stale).toContain("changed since the earlier part was read");
   });
 });
+
+// The captain's original report changed the model during the old turn, then
+// an automatic drain and the next captain request overlapped. Keep that order
+// with completion signals, not a delay or a retry; both sessions are real Pi.
+it("INF-2373: a delayed captain request uses the replacement after a pending model drain", async () => {
+  vi.useRealTimers();
+  const { mockModelsJson, startMockProvider } = await import("../../../tests/e2e/mockProvider");
+  const { createModelRuntime } = await import("../pi/modelRuntime");
+  const { createPiSessionFactory } = await import("../pi/session");
+  const provider = await startMockProvider();
+  const root = scratchDir("pending-rebind-laboratory-");
+  const models = JSON.parse(mockModelsJson(provider.port));
+  models.providers["fm-mock"].models.push({
+    id: "mock-next",
+    name: "Next mock model",
+    input: ["text", "image"],
+  });
+  const modelsPath = join(root, "models.json");
+  writeFileSync(modelsPath, JSON.stringify(models));
+  const runtime = await createModelRuntime({ authPath: join(root, "auth.json"), modelsPath });
+  const factory = createPiSessionFactory({ agentDir: join(root, "agent") });
+  const installed = sourceInstall(join(root, "source"));
+  const captainReading = deferred<void>();
+  const releaseCaptain = deferred<void>();
+  const firstClosed = deferred<void>();
+  const replacementClosed = deferred<void>();
+  const captainClosed = deferred<void>();
+  const entries: string[] = [];
+  const opened: ModelSession[] = [];
+  let holdNextSourceRead = false;
+  let closed = 0;
+  const f = setup({
+    knowledge: false,
+    availableModels: () => [
+      { provider: "fm-mock", id: "mock-1" },
+      { provider: "fm-mock", id: "mock-next" },
+    ],
+    onTurnSettled: (outcome) => {
+      entries.push(`turn settled ${++closed}: ${outcome.failed ? "failed" : "clean"}`);
+      if (closed === 1) firstClosed.resolve();
+      else if (closed === 2) replacementClosed.resolve();
+      else captainClosed.resolve();
+    },
+    selfSourceFactsAsync: async () => {
+      const hold = holdNextSourceRead;
+      holdNextSourceRead = false;
+      const facts = await readSelfSourceAsync(installed.location);
+      if (hold) {
+        entries.push("routing source read held");
+        captainReading.resolve();
+        await releaseCaptain.promise;
+        entries.push("routing source read released");
+      }
+      return facts;
+    },
+    piSeat: async (spec) => {
+      const session = await factory.open({ ...spec, binding: { backend: "pi", runtime } });
+      const label = `${opened.length}:${session.modelRef()?.id}`;
+      opened.push(session);
+      entries.push(`opened ${label}`);
+      const dispose = session.dispose.bind(session);
+      session.dispose = () => {
+        entries.push(`dispose ${label}`);
+        dispose();
+      };
+      const prompt = session.prompt.bind(session);
+      session.prompt = async (...args) => {
+        entries.push(`prompt ${label}`);
+        try {
+          await prompt(...args);
+        } catch (error) {
+          entries.push(`prompt rejected ${label}: ${String(error)}`);
+          throw error;
+        }
+      };
+      return session;
+    },
+  });
+  let captain: Promise<void> | undefined;
+  try {
+    await f.agent.converse("hello");
+    expect(f.agent.isBusy()).toBe(true);
+    await f.agent.applyModelSetting({ provider: "fm-mock", id: "mock-next" });
+    entries.push("model setting deferred while old turn is busy");
+    await firstClosed.promise;
+    await admissionClock.advance(0);
+    expect(opened).toHaveLength(1);
+    holdNextSourceRead = true;
+    captain = f.agent.converse('catalog change {"action":"routing","value":{"enabled":false}}');
+    await captainReading.promise;
+    // Original traffic has an automatic follow-up on the new model before
+    // the routing failure. A normal inbox wake exercises the same admission.
+    new InboxStore(f.db).enqueueWake(FIRSTMATE_RECIPIENT, "The model setting changed.", "agent");
+    const admission = f.agent as unknown as { drainInbox(): Promise<void> };
+    await admission.drainInbox();
+    await replacementClosed.promise;
+    entries.push("replacement answered before routing source read finishes");
+    releaseCaptain.resolve();
+    await captain;
+    await captainClosed.promise;
+    await admissionClock.advance(0);
+    console.info("CONVERSATION_HANDOFF", JSON.stringify(entries));
+    const card = f.supervisor
+      .cardsSnapshot()
+      .find((card) => card.title === "Your first mate hit a problem");
+    expect(card).toBeUndefined();
+    expect(entries.filter((entry) => entry.startsWith("prompt "))).toEqual([
+      "prompt 0:mock-1",
+      "prompt 1:mock-next",
+      "prompt 1:mock-next",
+    ]);
+    expect(provider.requestBodies().some((body) => body.includes('"model":"mock-next"'))).toBe(
+      true,
+    );
+    expect(
+      provider.requestBodies().some((body) => body.includes('\\"action\\":\\"routing\\"')),
+    ).toBe(true);
+  } finally {
+    releaseCaptain.resolve();
+    await captain;
+    f.agent.dispose();
+    for (const session of opened) session.dispose();
+    await Promise.all(opened.map((session) => session.closed()));
+    await f.supervisor.disposeAll();
+    f.db.close();
+    await provider.close();
+  }
+});

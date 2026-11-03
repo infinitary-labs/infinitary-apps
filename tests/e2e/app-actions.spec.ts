@@ -401,3 +401,88 @@ test("a setting the captain chose on a crewmate's card applies without him typin
     await app.close();
   }
 });
+
+// INF-2373: source validation may outlive an idle model change. Hold only
+// that filesystem completion; the composer, settings, Pi sessions and action
+// executor remain real. No timer or retry decides when the request resumes.
+test("a captain request survives a conversation replacement during source validation", async () => {
+  const nextModel = "mock-next";
+  const app = await launchApp({
+    withMockProvider: true,
+    modelsJson: (port) => {
+      const config = JSON.parse(mockModelsJson(port));
+      config.providers[MOCK_PROVIDER_ID].models.push({
+        id: nextModel,
+        name: "Next mock model",
+        input: ["text", "image"],
+      });
+      return JSON.stringify(config);
+    },
+  });
+  try {
+    const { page } = app;
+    await askFirstmate(
+      page,
+      APP_CATALOG_PROMPT_MARKER +
+        JSON.stringify({
+          action: "notifications",
+          value: { enabled: false },
+        }),
+    );
+    await expect(feedLine(page, ACTIONS.notifications.done({ enabled: false }))).toBeVisible();
+    await waitForFirstmateIdle(page);
+    await app.app.evaluate(() => {
+      const fs = process.getBuiltinModule("node:fs/promises");
+      const original = fs.readFile;
+      const state = { reached: false, release: () => {} };
+      const held = new Promise<void>((resolve) => {
+        state.release = resolve;
+      });
+      (globalThis as unknown as { conversationSourceRead: typeof state }).conversationSourceRead =
+        state;
+      fs.readFile = (async (...args: Parameters<typeof original>) => {
+        const result = await original(...args);
+        if (String(args[0]).endsWith("/self-map.json") && !state.reached) {
+          state.reached = true;
+          await held;
+        }
+        return result;
+      }) as typeof original;
+      process.getBuiltinModule("node:module").syncBuiltinESMExports();
+    });
+    await promptInput(page).fill(
+      APP_CATALOG_PROMPT_MARKER +
+        JSON.stringify({
+          action: "routing",
+          value: { enabled: false },
+        }),
+    );
+    await promptInput(page).press("Enter");
+    await expect
+      .poll(() =>
+        app.app.evaluate(
+          () =>
+            (globalThis as unknown as { conversationSourceRead: { reached: boolean } })
+              .conversationSourceRead.reached,
+        ),
+      )
+      .toBe(true);
+    await page.evaluate(
+      ({ provider, id }) => window.infinitary.settings.setFirstmateModel({ provider, id }),
+      { provider: MOCK_PROVIDER_ID, id: nextModel },
+    );
+    await app.app.evaluate(() =>
+      (
+        globalThis as unknown as { conversationSourceRead: { release(): void } }
+      ).conversationSourceRead.release(),
+    );
+    await expect(feedLine(page, ACTIONS.routing.done({ enabled: false }))).toBeVisible();
+    await waitForFirstmateIdle(page);
+    await expect
+      .poll(() => page.evaluate(() => window.infinitary.settings.getRouting()))
+      .toMatchObject({ dynamicRouting: false });
+    await windowShot(page, test.info().outputPath("conversation-handoff.png"));
+  } finally {
+    await app.close();
+  }
+});

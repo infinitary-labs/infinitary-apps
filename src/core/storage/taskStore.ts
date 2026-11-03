@@ -1620,6 +1620,27 @@ export class TaskStore {
     return this.read(rows);
   }
 
+  /**
+   * The rows among these ids whose status is one of these, unordered; a row in
+   * any other status is never composed (INF-2342). Inside a projection a row it
+   * already holds answers by that row's status, as `get` would.
+   */
+  getAmong(ids: readonly string[], statuses: readonly TaskStatus[]): TaskRecord[] {
+    const known = this.projection?.records;
+    const held = known ? ids.filter((id) => known.has(id)) : [];
+    const unread = known ? ids.filter((id) => !known.has(id)) : ids;
+    const found = held.flatMap((id) => {
+      const record = known?.get(id);
+      return record && statuses.includes(record.status) ? [record] : [];
+    });
+    if (unread.length === 0 || statuses.length === 0) return found;
+    const rows = prepared(
+      this.db,
+      `SELECT * FROM ${this.readTable()} WHERE id IN (SELECT value FROM json_each(?)) AND status IN (SELECT value FROM json_each(?))`,
+    ).all(JSON.stringify(unread), JSON.stringify(statuses)) as Row[];
+    return [...found, ...this.read(rows)];
+  }
+
   /** How many children each of these parents has, and how many of them closed. */
   childCounts(parentIds: readonly string[]): Map<string, { total: number; closed: number }> {
     const counts = new Map<string, { total: number; closed: number }>();

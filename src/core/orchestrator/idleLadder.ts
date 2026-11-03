@@ -261,6 +261,7 @@ export type IdleLadderHost = {
 
 export class IdleLadder {
   private readonly dependencyFact = Symbol("idle dependency waits");
+  private readonly liveWaitFact = Symbol("idle live dependency waits");
   private readonly askFact = Symbol("unanswered first-mate request");
 
   /**
@@ -431,14 +432,19 @@ export class IdleLadder {
 
   private readDependencyWaits(record: TaskRecord): TaskWait[] {
     const tasks = this.host.tasks;
-    const baseline = standingDependencyWaits(tasks, record.delivery).map(
-      (wait): TaskWait => ({ ...wait, kind: "baseline" }),
-    );
     const blocks = tasks.linksTo(record.id).flatMap((link): TaskWait[] => {
       const task = link.type === "blocks" ? tasks.get(link.fromId) : undefined;
       return task ? [{ task, since: link.createdAt, kind: "blocks" }] : [];
     });
-    return [...baseline, ...blocks].filter((wait) => !TaskService.isDeliveryChild(wait.task));
+    return [...this.baselineWaits(record), ...blocks].filter(
+      (wait) => !TaskService.isDeliveryChild(wait.task),
+    );
+  }
+
+  private baselineWaits(record: TaskRecord): TaskWait[] {
+    return standingDependencyWaits(this.host.tasks, record.delivery).map(
+      (wait): TaskWait => ({ ...wait, kind: "baseline" }),
+    );
   }
 
   /**
@@ -474,9 +480,26 @@ export class IdleLadder {
     );
   }
 
-  /** The typed waits whose work is still live. */
+  /**
+   * The typed waits whose work is still live. Every posture read asks this,
+   * so it reads only the live blockers: a long record links many closed
+   * ones into live work, and composing each of them on every read froze the
+   * app (INF-2342, INF-2457). The sweep's resume reads the closed ones
+   * (`endedWaits`).
+   */
   private liveWaits(record: TaskRecord): TaskWait[] {
-    return this.dependencyWaits(record).filter(({ task }) => TaskService.blockerHoldsClose(task));
+    return this.host.tasks.projectedFact(record, this.liveWaitFact, () =>
+      this.readLiveWaits(record),
+    );
+  }
+
+  private readLiveWaits(record: TaskRecord): TaskWait[] {
+    const blocks = this.host.tasks
+      .liveBlocks(record.id)
+      .map(({ link, task }): TaskWait => ({ task, since: link.createdAt, kind: "blocks" }));
+    return [...this.baselineWaits(record), ...blocks].filter(
+      ({ task }) => TaskService.blockerHoldsClose(task) && !TaskService.isDeliveryChild(task),
+    );
   }
 
   /**

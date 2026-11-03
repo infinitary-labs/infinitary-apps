@@ -14678,11 +14678,19 @@ export class CrewSupervisor {
     };
   }
 
+  /**
+   * The crew counts, read as one projection like the presentation pass: each
+   * active row's posture shares the rows, settings and sign-ins the others
+   * read, rather than reading them again per row (INF-2342).
+   */
   crewCounts(): CrewCounts {
-    const tally = crewTally();
-    for (const record of this.options.tasks.listActive())
-      tally.see(record, () => this.workPosture(record));
-    return tally.counts(this.options.tasks);
+    const tasks = this.options.tasks;
+    const active = tasks.listActive();
+    return tasks.readProjection(() => {
+      const tally = crewTally();
+      for (const record of active) tally.see(record, () => this.workPosture(record));
+      return tally.counts(tasks);
+    }, active);
   }
 
   private broadcastCrewCounts(): void {

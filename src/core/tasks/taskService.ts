@@ -79,7 +79,7 @@ import {
 } from "@shared/taskQueue";
 import { type FirstReleaseReport, firstReleaseReportSchema } from "@shared/taskRelease";
 import type { DropEffects } from "@shared/tasks";
-import { isUnstartedWork } from "@shared/tasks";
+import { isUnstartedWork, taskStatusSchema } from "@shared/tasks";
 import type { RepetitionNotice, ToolObservation } from "@shared/toolCompletion";
 import { CARE_WORDS } from "@shared/vocabulary";
 import type { HandoverFile } from "@shared/work";
@@ -277,6 +277,14 @@ function freshPending(): PendingChange {
 }
 
 /** The derived state of an open row (design section 4.1, "derived on open"). */
+/** A `blocks` edge into a task, with the blocker it runs from. */
+export type BlockingEdge = { link: TaskLink; task: TaskRecord };
+
+/** The statuses a blocker predicate holds for, so a read can ask SQLite for only those rows. */
+function statusesWhere(holds: (blocker: Pick<TaskRecord, "status">) => boolean): TaskStatus[] {
+  return taskStatusSchema.options.filter((status) => holds({ status }));
+}
+
 export type TaskFlags = {
   /** An uncleared `blocks` edge points at it. */
   blocked: boolean;
@@ -957,6 +965,7 @@ export class TaskService {
         linksTo: Map<string, TaskLink[]>;
         linksFrom: Map<string, TaskLink[]>;
         blockers: Map<string, TaskRecord[]>;
+        blocksIn: Map<string, BlockingEdge[]>;
         activeWaiters: Map<string, TaskRecord[]>;
         facts: Map<object, Map<symbol, unknown>>;
       }
@@ -1057,6 +1066,7 @@ export class TaskService {
       linksTo: new Map(),
       linksFrom: new Map(),
       blockers: new Map(),
+      blocksIn: new Map(),
       activeWaiters: new Map(),
       facts: new Map(),
     };
@@ -1345,6 +1355,41 @@ export class TaskService {
     );
     this.projection?.blockers.set(id, blockers);
     return blockers;
+  }
+
+  /**
+   * The `blocks` edges into a task whose blocker stands in one of these
+   * statuses, each with that blocker, in edge order. A blocker in any other
+   * status is never read whole: a long record links many closed blockers
+   * into live work, and composing each of them on every posture read froze
+   * the app (INF-2342, INF-2457).
+   */
+  private blocksIn(id: string, statuses: readonly TaskStatus[]): BlockingEdge[] {
+    const key = JSON.stringify([id, statuses]);
+    const known = this.projection?.blocksIn.get(key);
+    if (known) return known;
+    const links = this.projection
+      ? this.linksTo(id).filter((link) => link.type === "blocks")
+      : this.links.listTo(id, "blocks");
+    const found = new Map(
+      this.store
+        .getAmong(
+          links.map((link) => link.fromId),
+          statuses,
+        )
+        .map((task) => [task.id, task]),
+    );
+    const edges = links.flatMap((link): BlockingEdge[] => {
+      const task = found.get(link.fromId);
+      return task ? [{ link, task }] : [];
+    });
+    this.projection?.blocksIn.set(key, edges);
+    return edges;
+  }
+
+  /** The `blocks` edges into a task whose blocker is still live work, each with it, in edge order. */
+  liveBlocks(id: string): BlockingEdge[] {
+    return this.blocksIn(id, statusesWhere(TaskService.blockerHoldsClose));
   }
 
   /** The tasks waiting on this one. */
@@ -1714,7 +1759,7 @@ export class TaskService {
   }
 
   /** A blocker clears its wait only when done; a dropped one can never clear. */
-  static blockerCleared(blocker: TaskRecord): boolean {
+  static blockerCleared(blocker: Pick<TaskRecord, "status">): boolean {
     return blocker.status === "done";
   }
 
@@ -2097,7 +2142,10 @@ export class TaskService {
 
   /** The uncleared blockers of a task. */
   waitingOn(id: string): TaskRecord[] {
-    return this.blockers(id).filter((blocker) => !TaskService.blockerCleared(blocker));
+    return this.blocksIn(
+      id,
+      statusesWhere((blocker) => !TaskService.blockerCleared(blocker)),
+    ).map(({ task }) => task);
   }
 
   /**
@@ -2197,7 +2245,7 @@ export class TaskService {
    * an active origin is not even eligible for that card (`listDeadBlocked`
    * reads open rows), so it would strand with no way out.
    */
-  static blockerHoldsClose(blocker: TaskRecord): boolean {
+  static blockerHoldsClose(blocker: Pick<TaskRecord, "status">): boolean {
     return blocker.status === "open" || blocker.status === "active";
   }
 
@@ -2208,14 +2256,7 @@ export class TaskService {
    * A recorded wait keeps the edge, and the start, and holds nothing here.
    */
   blockersHoldingClose(id: string): TaskRecord[] {
-    const marked = new Set(
-      this.linksTo(id)
-        .filter((link) => link.type === "blocks" && link.holdsMerge)
-        .map((link) => link.fromId),
-    );
-    return this.blockers(id).filter(
-      (blocker) => marked.has(blocker.id) && TaskService.blockerHoldsClose(blocker),
-    );
+    return this.liveBlocks(id).flatMap(({ link, task }) => (link.holdsMerge ? [task] : []));
   }
 
   /**

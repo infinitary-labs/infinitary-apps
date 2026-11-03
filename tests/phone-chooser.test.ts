@@ -22,6 +22,16 @@ const TIMES = JSON.stringify({
   cards: { ipad: 6.6 * 60_000, iphone: 6.5 * 60_000 },
   rest: { ipad: 3.1 * 60_000, iphone: 3.1 * 60_000 },
 });
+// The part table these changes were chosen with: scripts/phone-test-plan.ts's PHONE_PARTS before
+// INF-2125 split join, talk, relaunch and cards into short parts. Each change replays against it.
+const BEFORE_SPLIT = [
+  { name: "join", test: "testJoinAndRecover" },
+  { name: "talk", test: "testTalkAndTasks" },
+  { name: "relaunch", test: "testRelaunchThenTasks" },
+  { name: "cards", test: "testCards" },
+  { name: "address", test: "testJoinByAddress" },
+  { name: "rest", test: "testCharacterAndPastChoices" },
+] as const;
 type Change = { paths: string[]; testDiff: string; testFiles: Record<string, string> };
 const change = (commit: string): Change =>
   JSON.parse(readFileSync(`tests/fixtures/phone-changes/${commit}.json`, "utf8"));
@@ -35,8 +45,9 @@ function choose(commit: string, times: string | null = TIMES, virtualMac = false
     testDiff,
     Object.keys(testFiles),
     (path) => testFiles[path],
+    BEFORE_SPLIT,
   );
-  return placeParts(reach, partTimes(times ?? undefined), { virtualMac });
+  return placeParts(reach, partTimes(times ?? undefined, BEFORE_SPLIT), { virtualMac });
 }
 const kept = (commit: string, times: string | null = TIMES) =>
   choose(commit, times)
@@ -57,11 +68,10 @@ describe("the phone check's parts on a pull request", () => {
       ["cards", 1, true],
       ["rest", 2, false],
       ["join", 2, false],
-      // A part main has no time for yet costs the slowest measured one, talk; equal costs keep the start order.
+      ["talk", 2, false],
+      // A part main has no time for yet costs the slowest measured one.
       ["relaunch", 2, false],
       ["address", 2, false],
-      ["pick", 2, false],
-      ["talk", 2, false],
     ]);
     expect(placed.find((part) => !part.kept)?.reason).toMatch(/nightly check of main/);
   });
@@ -85,7 +95,7 @@ describe("the phone check's parts on a pull request", () => {
 
   it("runs every part the change reaches when no part times can be read", () => {
     for (const times of [null, "", "{}", "not json"]) {
-      expect(kept("e3be41f53", times)).toEqual(PHONE_PARTS.map((part) => part.name).sort());
+      expect(kept("e3be41f53", times)).toEqual(BEFORE_SPLIT.map((part) => part.name).sort());
       expect(choose("e3be41f53", times)![0]!.reason).toMatch(/no part times/);
     }
   });
@@ -95,10 +105,16 @@ describe("the phone check's parts on a pull request", () => {
     const reasons = phoneDecision(paths).reasons;
     const read = (path: string) => testFiles[path];
     for (const reach of [
-      partReach(reasons, undefined, Object.keys(testFiles), read),
-      partReach(reasons, change("2dbbedc52").testDiff, Object.keys(testFiles), () => undefined),
+      partReach(reasons, undefined, Object.keys(testFiles), read, BEFORE_SPLIT),
+      partReach(
+        reasons,
+        change("2dbbedc52").testDiff,
+        Object.keys(testFiles),
+        () => undefined,
+        BEFORE_SPLIT,
+      ),
     ])
-      expect(reach.map((part) => part.distance)).toEqual(PHONE_PARTS.map(() => 0));
+      expect(reach.map((part) => part.distance)).toEqual(BEFORE_SPLIT.map(() => 0));
   });
 
   it("runs the virtual Mac scripts' change, with every part, while the switch is on", () => {
@@ -120,6 +136,7 @@ describe("affected phone requests", () => {
         unreadable ? undefined : testDiff,
         Object.keys(testFiles),
         (path) => testFiles[path],
+        BEFORE_SPLIT,
       ),
     ).map((each) => each.part);
   }
@@ -129,10 +146,10 @@ describe("affected phone requests", () => {
   it("runs every reached part, not just the closest or one fitting a time budget", () => {
     // Replay only the real UI-test hunks: its other product edits include shared style.
     expect(request("2dbbedc52", false, true)).toEqual(["join", "talk"]);
-    expect(request("2dbbedc52")).toEqual(PHONE_PARTS.map((part) => part.name));
+    expect(request("2dbbedc52")).toEqual(BEFORE_SPLIT.map((part) => part.name));
   });
   it("runs all parts for shared gate setup or an unreadable test diff", () => {
-    const all = PHONE_PARTS.map((part) => part.name);
+    const all = BEFORE_SPLIT.map((part) => part.name);
     expect(request("a7aa5e974")).toEqual(all);
     expect(request("2dbbedc52", true)).toEqual(all);
   });
@@ -187,5 +204,34 @@ describe("complete phone selection repeat accounting", () => {
 
   it("does not repeat test parts for a shared product input alone", () => {
     expect(phoneRepeatPlan(all, reached("e3be41f53"))).toEqual({ full: true, repeatParts: [] });
+  });
+});
+
+// INF-2125's direction C (the captain chose "Shared fixes, then short parts", within 10 minutes):
+// an edit to one short test runs that test alone. The change is cd98a3e86, a real edit to the
+// talk-drafts test; the times are the passing parts' per-device milliseconds in this branch's
+// phone run 41271123700 on the Mac mini, Nov 1, before the parking cancelled its last parts.
+const SHORT_TIMES = JSON.stringify({
+  "join-read": { ipad: 386831, iphone: 463806 },
+  "join-activity": { ipad: 132690, iphone: 126059 },
+  "join-away": { ipad: 287296, iphone: 233462 },
+  "talk-compose": { iphone: 337927, ipad: 419948 },
+  "talk-tasks": { iphone: 202058, ipad: 221608 },
+  "talk-drafts": { iphone: 315501, ipad: 318604 },
+  "relaunch-first": { iphone: 346233, ipad: 322559 },
+  "relaunch-second": { iphone: 327092, ipad: 354210 },
+  "cards-merge": { iphone: 173914, ipad: 180185 },
+});
+describe("the short phone parts", () => {
+  const { paths, testDiff, testFiles } = change("cd98a3e86");
+  const reasons = phoneDecision(paths).reasons;
+  const reach = partReach(reasons, testDiff, Object.keys(testFiles), (path) => testFiles[path]);
+  it("runs only the short part whose test changed", () => {
+    const placed = placeParts(reach, partTimes(SHORT_TIMES));
+    expect(placed.filter((part) => part.kept).map((part) => part.part)).toEqual(["talk-drafts"]);
+    expect((placed.find((part) => part.kept)?.minutes ?? Infinity) * 60_000).toBeLessThan(
+      PHONE_BUDGET_MS,
+    );
+    expect(requestedParts(reasons, reach).map((part) => part.part)).toEqual(["talk-drafts"]);
   });
 });

@@ -418,17 +418,18 @@ Each part's live simulator log lives in `phone-simulator-logs`, never in `phone-
 The pictures the journeys took live in the small `phone-pictures` artifact, exported from the result bundles by device and part.
 A failure on either device fails the job, and on a pull request the first failed part stops the other parts.
 A newer push cancels its pull request's older phone runs whose native job has not started its device gate (`scripts/replaced-phone-runs.ts`), so it never waits behind them.
-That gate checks and builds once, starts one simulator per device, and runs the phone journey's seven parts on each, fourteen in all, one after the other on their device's simulator, the parts that choose a photo last, each part with its own test home and a clean app (`docs/ios.md`, "Disposable verification").
+That gate checks and builds once, starts one simulator per device, and runs the phone journey's parts on each, one after the other on their device's simulator, the parts that choose a photo last, each part with its own test home and a clean app (`docs/ios.md`, "Disposable verification").
 The placed virtual Mac runs the devices sequentially; the real Mac and fixed-clone route keep them side by side.
 
 ### The phone parts a pull request runs
 
-On a pull request the gate runs only the closest of the journey's seven parts within a six-minute budget, as the Mac journeys do ("Journeys on the pull request"), and the run on `main` runs every part.
+On a pull request the gate runs only the closest of the journey's parts within a six-minute budget, as the Mac journeys do ("Journeys on the pull request"), and the run on `main` runs every part.
 The chooser (`scripts/affected-phone.ts`) gives each part a distance: 0 when the change edits UI test code the part runs, 1 when it edits a file in the part's owner table (`PART_OWNERS`), and 2 for any other phone input.
+A part's owned files are its family's, the part's name before its first hyphen, so each short part split from join, talk or cards owns what that part owned (INF-2125).
 It reads a UI test change by its functions: each changed line counts for the test functions around it, added lines in the new version and removed ones in the old, and each part reaches its test and every function it calls by name.
 The rest part also starts from every test no other part names, and a change to the app-hosted tests puts it at 0.
 A blank or comment-only line counts for nothing; a line outside any function, or a test file it cannot read or parse, counts for every part.
-It keeps the closest part, every part at 0 even past the budget, and any other while the kept minutes stay within `PHONE_BUDGET_MS`; ties go to the shorter part, so a change only to setup the gates use runs rest.
+It keeps the closest part, every part at 0 even past the budget, and any other while the kept minutes stay within `PHONE_BUDGET_MS`; ties go to the shorter part, so a change only to setup the gates use runs the shortest part alone.
 A part's minutes are its longer device's time in the newest passing on-request check of `main` whose `phone-logs` artifact holds `part-times.json`, which only a full gate writes; a passing check of some parts is passed over for an older full one.
 With none readable, or with `PHONE_VIRTUAL_MAC` set, every part the change reaches runs.
 The job summary names each kept and left part with its distance, minutes and reason, and the `phone-placement` artifact keeps the same as JSON.

@@ -63,11 +63,14 @@ export function phoneGuestLaunches(manager: number) {
   };
 }
 
-/** Stop at the native cards result, before xcodebuild's post-failure diagnostics.
+/** Stop at the observed cards part's native result, before xcodebuild's post-failure diagnostics.
  * This observes XCTest's existing result; it changes neither that result nor its wait.
+ * INF-2125 split the cards part into short ones; each launches its own app, so the observer watches whichever one runs.
  */
-export function phoneGuestJourneyFinished(line: string) {
-  const prefix = `Test Case '-[${PHONE_JOURNEY.replace("/", ".")} ${PHONE_PARTS.find((part) => part.name === "cards")!.test}]' `;
+export function phoneGuestJourneyFinished(line: string, part: string) {
+  const test = PHONE_PARTS.find((candidate) => candidate.name === part)?.test;
+  if (!test) throw new Error(`No phone journey part is named ${part}`);
+  const prefix = `Test Case '-[${PHONE_JOURNEY.replace("/", ".")} ${test}]' `;
   return (
     line.startsWith(prefix) &&
     /^(?:passed|failed) \([\d.]+ seconds\)\.$/.test(line.slice(prefix.length))

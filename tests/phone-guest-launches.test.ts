@@ -78,8 +78,12 @@ describe("INF-1936: preserve the capture through the delayed launch response", (
   });
 
   it("stops on the native cards result, not the earlier assertion output", () => {
-    expect(phoneGuestJourneyFinished(nonterminal)).toBe(false);
-    expect(phoneGuestJourneyFinished(failed)).toBe(true);
-    expect(phoneGuestJourneyFinished(passed)).toBe(true);
+    // INF-2125 split testCards into short cards parts; these readings name the one the observer watches.
+    const merge = (line: string) => line.replace("testCards", "testMergeCard");
+    expect(phoneGuestJourneyFinished(merge(nonterminal), "cards-merge")).toBe(false);
+    expect(phoneGuestJourneyFinished(merge(failed), "cards-merge")).toBe(true);
+    expect(phoneGuestJourneyFinished(merge(passed), "cards-merge")).toBe(true);
+    // Another cards part's result does not stop the watched one's observer.
+    expect(phoneGuestJourneyFinished(merge(passed), "cards-form")).toBe(false);
   });
 });

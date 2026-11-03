@@ -1,5 +1,13 @@
 import { describe, expect, it } from "vitest";
-import { phoneJobs, phoneStopsEarly, runDeviceLanes } from "../scripts/phone-test-plan";
+import {
+  PHONE_PARTS,
+  phoneJobs,
+  phoneStopsEarly,
+  runDeviceLanes,
+} from "../scripts/phone-test-plan";
+
+// The table's first part, the one each lane runs first.
+const first = PHONE_PARTS[0].name;
 
 // INF-2014's accepted choice: "A failed phone repeat gives back its place".
 // Use the gate's actual device/part plan and its existing abort/close interface, without Xcode.
@@ -47,18 +55,18 @@ describe("local phone repeats", () => {
             stopEarly ? ({ outcome }) => outcome === "failed" : undefined,
           );
           if (results.some((result) => result?.outcome === "failed"))
-            throw new Error("The phone gate failed: iphone join");
+            throw new Error(`The phone gate failed: iphone ${first}`);
         } finally {
           events.push(`round ${round}: return place`);
         }
       }
     };
-    await expect(repeat()).rejects.toThrow("The phone gate failed: iphone join");
+    await expect(repeat()).rejects.toThrow(`The phone gate failed: iphone ${first}`);
     console.info("Phone lane API trace (stand-in devices and place):", JSON.stringify(events));
     expect(events).toEqual([
       "round 1: take place",
-      "ipad join",
-      "iphone join",
+      `ipad ${first}`,
+      `iphone ${first}`,
       "ipad: stopped",
       "iphone: deleted",
       "ipad: deleted",
@@ -77,7 +85,7 @@ describe("local phone repeats", () => {
         open: async (device) => device,
         run: async ({ device, part }) => {
           started.push(`${device} ${part}`);
-          return { outcome: part === "join" ? "failed" : "passed" };
+          return { outcome: part === first ? "failed" : "passed" };
         },
         close: async () => {},
       },

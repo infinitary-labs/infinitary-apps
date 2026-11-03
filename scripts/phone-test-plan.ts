@@ -21,11 +21,13 @@ export function testHomeKeys(plan: Record<string, unknown>): string[] {
   return keys;
 }
 
-// INF-662 piece 2 (the captain's "Both at once, journey in parts"): the phone journey is seven
-// tests, and each runs alone from its own test home and a clean app on its device's one simulator
+// INF-662 piece 2 (the captain's "Both at once, journey in parts"): the phone journey is in parts,
+// and each runs alone from its own test home and a clean app on its device's one simulator
 // (INF-1438), the devices side by side. The order is each device's start order. INF-1878: INF-1735's
-// 20 relaunch pairs took about 11 of the talk part's 20 minutes on the loaded Mac mini of run
-// 40937645392, so they are a part of their own beside it.
+// 20 relaunch pairs are parts of their own.
+// INF-2125 direction C (the captain's "Shared fixes, then short parts", so each pull request's phone
+// check finishes quickly): join, talk, cards and relaunch are each split into short tests, named for
+// the part they came from, so a check of the parts a change reaches can run the closest one alone.
 // INF-804: `photos` marks a part that chooses a library photo; the gate waits for its device's Photos
 // to open its shared-with-you library first, since Photos hands over no chosen photo before then.
 // INF-2052: the parts that choose a photo run last, so their device's library photo goes in after the
@@ -35,14 +37,21 @@ export function testHomeKeys(plan: Record<string, unknown>): string[] {
 // it holds no part before it.
 export const PHONE_JOURNEY = "InfinitaryUITests/PhoneJourney";
 export const PHONE_PARTS = [
-  { name: "join", test: "testJoinAndRecover", photos: false },
-  { name: "relaunch", test: "testRelaunchThenTasks", photos: false },
-  { name: "cards", test: "testCards", photos: false },
+  { name: "join-read", test: "testJoinAndRead", photos: false },
+  { name: "join-activity", test: "testActivityAndCatchUp", photos: false },
+  { name: "join-away", test: "testAwayLeaveAndRemoved", photos: false },
+  { name: "talk-tasks", test: "testTasksAndSteer", photos: false },
+  { name: "talk-drafts", test: "testDraftsAcrossHomes", photos: false },
+  { name: "relaunch-first", test: "testRelaunchPairsFirstTen", photos: false },
+  { name: "relaunch-second", test: "testRelaunchPairsSecondTen", photos: false },
+  { name: "cards-merge", test: "testMergeCard", photos: false },
+  { name: "cards-form", test: "testCardForm", photos: false },
+  { name: "cards-media", test: "testCardMediaAndBody", photos: false },
   // INF-1183: joining a home by its address, against the Mac's own sshd beside the test home.
   { name: "address", test: "testJoinByAddress", photos: false },
   // INF-2095: the pager pick journey launches fresh, so it needs a simulator no other journey joined first.
   { name: "pick", test: "testMenuPickSurvivesAWorkspaceRedraw", photos: false },
-  { name: "talk", test: "testTalkAndTasks", photos: true },
+  { name: "talk-compose", test: "testComposeAndSend", photos: true },
   // The last part runs every test no other part names: the app-hosted tests and any new one that
   // needs no fresh app, since its simulator already holds the character journey's join.
   { name: "rest", test: "testCharacterAndPastChoices", photos: true },

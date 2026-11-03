@@ -3,7 +3,7 @@ import { appendFileSync, readdirSync, readFileSync, writeFileSync } from "node:f
 import { join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { parseArgs } from "node:util";
-import { PHONE_PARTS, type PhonePart } from "./phone-test-plan.ts";
+import { PHONE_PARTS } from "./phone-test-plan.ts";
 
 // INF-79 / INF-136: the captain requested the native gate on phone/shared-contract PRs.
 // Include the captain's approved gate setup inputs, not broad shared/core/package changes.
@@ -65,7 +65,10 @@ export function phoneDecision(
 export const UI_TESTS = "ios/Infinitary/InfinitaryUITests/";
 // The app-hosted tests run in the rest part, beside the tests no other part names.
 export const APP_TESTS = "ios/Infinitary/InfinitaryTests/";
-export const PART_OWNERS: Record<PhonePart, readonly string[]> = {
+// INF-2125 direction C: a part's owned files are its family's, the part name before its first hyphen,
+// so each short part split from join, talk, cards or relaunch owns what that part owned.
+export const partFamily = (part: string) => part.split("-")[0]!;
+export const PART_OWNERS: Record<string, readonly string[]> = {
   join: [
     "ios/Infinitary/InfinitaryKit/Sources/InfinitaryKit/JoinLink.swift",
     "ios/Infinitary/InfinitaryKit/Sources/InfinitaryKit/PhoneIdentity.swift",
@@ -212,14 +215,20 @@ export function before(after: string | undefined, hunks: Hunk[]): string {
   return lines.join("\n");
 }
 
-export type PartReach = { part: PhonePart; distance: 0 | 1 | 2; why: string };
-const EVERY = PHONE_PARTS.map((part) => part.name);
+export type PartReach = { part: string; distance: 0 | 1 | 2; why: string };
+/** A part table: each part's name and the test it runs, the last part running every test no other names.
+ * The gate's own is PHONE_PARTS; a recorded change replays against the table of its own time. */
+export type PartTable = readonly { name: string; test: string }[];
+const names = (parts: PartTable) => parts.map((part) => part.name);
+/** The gate's own parts, in order. */
+const EVERY = names(PHONE_PARTS);
+const owners = (part: string) => PART_OWNERS[partFamily(part)] ?? [];
 
 /**
  * The test functions each part runs, by name, from its test and the calls it makes. The rest
  * part also starts from every test no other part names.
  */
-export function partFunctions(functions: SwiftFunction[]): Map<PhonePart, Set<string>> {
+export function partFunctions(functions: SwiftFunction[], parts: PartTable = PHONE_PARTS): Map<string, Set<string>> {
   const names = new Set(functions.map((each) => each.name));
   const calls = new Map<string, Set<string>>();
   for (const each of functions) {
@@ -228,10 +237,10 @@ export function partFunctions(functions: SwiftFunction[]): Map<PhonePart, Set<st
       if (names.has(call[1]!)) called.add(call[1]!);
     calls.set(each.name, called);
   }
-  const named = new Set<string>(PHONE_PARTS.slice(0, -1).map((part) => part.test));
-  const reached = new Map<PhonePart, Set<string>>();
-  for (const part of PHONE_PARTS) {
-    const roots = part.name === "rest"
+  const named = new Set<string>(parts.slice(0, -1).map((part) => part.test));
+  const reached = new Map<string, Set<string>>();
+  for (const part of parts) {
+    const roots = part === parts.at(-1)
       ? [part.test, ...[...names].filter((name) => /^test/.test(name) && !named.has(name))]
       : [part.test];
     const seen = new Set<string>(roots);
@@ -255,9 +264,11 @@ export function partReach(
   testDiff: string | undefined,
   testFiles: readonly string[],
   read: (path: string) => string | undefined,
+  parts: PartTable = PHONE_PARTS,
 ): PartReach[] {
-  const edited = new Map<PhonePart, Set<string>>(EVERY.map((part) => [part, new Set()]));
-  const everyPart = (why: string) => { for (const part of EVERY) edited.get(part)!.add(why); };
+  const every = names(parts);
+  const edited = new Map<string, Set<string>>(every.map((part) => [part, new Set()]));
+  const everyPart = (why: string) => { for (const part of every) edited.get(part)!.add(why); };
   const tests = reasons.filter((path) => path.startsWith(UI_TESTS));
   const changed = testDiff === undefined ? undefined : diffHunks(testDiff);
   if (tests.length && (!changed || tests.some((path) => !changed.has(path))))
@@ -276,7 +287,7 @@ export function partReach(
     }
     const parse = (files: Map<string, string>) => {
       const parsed = new Map([...files].map(([path, text]) => [path, swiftFunctions(text)] as const));
-      return [...parsed.values()].every(Boolean) ? { parsed, reached: partFunctions([...parsed.values()].flatMap((each) => each!)) } : undefined;
+      return [...parsed.values()].every(Boolean) ? { parsed, reached: partFunctions([...parsed.values()].flatMap((each) => each!), parts) } : undefined;
     };
     const sides = [parse(after), parse(beforeFiles)] as const;
     if (!sides[0] || !sides[1]) everyPart("a UI test file could not be parsed");
@@ -291,17 +302,17 @@ export function partReach(
         if (!code[line - 1]?.trim()) continue;
         const around = functions.filter((each) => each.start <= line && each.end >= line);
         if (!around.length) everyPart(`${path} line ${line}${side === sides[1] ? " (removed)" : ""}, outside any test function`);
-        for (const each of around) for (const part of EVERY)
+        for (const each of around) for (const part of every)
           if (side.reached.get(part)!.has(each.name)) edited.get(part)!.add(each.name);
       }
     }
   }
   const appTests = reasons.filter((path) => path.startsWith(APP_TESTS));
-  if (appTests.length) edited.get("rest")!.add(`the app-hosted tests (${appTests.join(", ")})`);
-  return EVERY.map((part): PartReach => {
+  if (appTests.length) edited.get(every.at(-1)!)!.add(`the app-hosted tests (${appTests.join(", ")})`);
+  return every.map((part): PartReach => {
     const own = [...edited.get(part)!];
     if (own.length) return { part, distance: 0, why: `edits test code it runs: ${own.join(", ")}` };
-    const owned = reasons.filter((path) => matches(PART_OWNERS[part], path));
+    const owned = reasons.filter((path) => matches(owners(part), path));
     if (owned.length) return { part, distance: 1, why: `edits a file it owns: ${owned.join(", ")}` };
     return { part, distance: 2, why: `another phone input changed: ${reasons.join(", ")}` };
   });
@@ -312,12 +323,12 @@ export const PHONE_BUDGET_MS = 6 * 60 * 1000;
 export const LEFT_FOR = "the nightly check of main";
 
 /** Each part's longer device time, in milliseconds, from a full gate's part-times.json. */
-export function partTimes(text: string | undefined): Map<PhonePart, number> | undefined {
+export function partTimes(text: string | undefined, parts: PartTable = PHONE_PARTS): Map<string, number> | undefined {
   if (text === undefined) return undefined;
   try {
     const read = JSON.parse(text) as Record<string, Record<string, number>>;
-    const times = new Map<PhonePart, number>();
-    for (const part of EVERY) {
+    const times = new Map<string, number>();
+    for (const part of names(parts)) {
       const devices = Object.values(read[part] ?? {}).filter((ms) => typeof ms === "number" && ms > 0);
       if (devices.length) times.set(part, Math.max(...devices));
     }
@@ -336,16 +347,16 @@ export type Placement = PartReach & { minutes?: number; kept: boolean; reason: s
  */
 export function placeParts(
   reach: PartReach[],
-  times: Map<PhonePart, number> | undefined,
+  times: Map<string, number> | undefined,
   { virtualMac = false }: { virtualMac?: boolean } = {},
 ): Placement[] {
-  const minutes = (part: PhonePart) => times?.get(part) === undefined ? undefined : times.get(part)! / 60_000;
+  const minutes = (part: string) => times?.get(part) === undefined ? undefined : times.get(part)! / 60_000;
   if (!times || virtualMac) {
     const reason = virtualMac ? "the virtual Mac switch runs every part" : "no part times could be read, so every part it reaches runs";
     return reach.map((each) => ({ ...each, minutes: minutes(each.part), kept: true, reason }));
   }
   // A part with no time yet costs the slowest measured one.
-  const cost = (part: PhonePart) => times.get(part) ?? Math.max(...times.values());
+  const cost = (part: string) => times.get(part) ?? Math.max(...times.values());
   const ordered = [...reach].sort((a, b) => a.distance - b.distance || cost(a.part) - cost(b.part));
   let kept = 0;
   return ordered.map((each, index): Placement => {
@@ -366,14 +377,14 @@ export function placeParts(
 export function requestedParts(reasons: readonly string[], reach: PartReach[]): PartReach[] {
   const unknown = reasons.some((path) =>
     !path.startsWith(UI_TESTS) && !path.startsWith(APP_TESTS) &&
-    !EVERY.some((part) => matches(PART_OWNERS[part], path)));
+    !Object.values(PART_OWNERS).some((owned) => matches(owned, path)));
   return unknown ? reach : reach.filter((each) => each.distance < 2);
 }
 
 /** INF-2259: ordinary proof is round one. Only a complete live selection moves its
  * edited-test repeats to CI; proper subsets keep their existing local placement. */
-export function phoneRepeatPlan(parts: readonly PhonePart[], reach: readonly PartReach[]): {
-  full: boolean; repeatParts: PhonePart[];
+export function phoneRepeatPlan(parts: readonly string[], reach: readonly PartReach[]): {
+  full: boolean; repeatParts: string[];
 } {
   const full = EVERY.every((part) => parts.includes(part));
   return { full, repeatParts: full ? EVERY.filter((part) => reach.some((each) => each.part === part && each.distance === 0)) : [] };
@@ -419,7 +430,7 @@ function main(): void {
     } catch { /* No UI tests left: an edited one counts every part. */ }
     // An unreadable comparison counts every part edited.
     const reach = paths ? partReach(decision.reasons, testDiff, testFiles, read)
-      : EVERY.map((part): PartReach => ({ part, distance: 0, why: "the change could not be read" }));
+      : names(PHONE_PARTS).map((part): PartReach => ({ part, distance: 0, why: "the change could not be read" }));
     placement = values.request
       ? (values.request && paths && !virtualMac ? requestedParts(decision.reasons, reach) : reach)
         .map((each) => ({ ...each, kept: true, reason: "requested affected parts" }))
@@ -428,7 +439,7 @@ function main(): void {
   let kept = placement.filter((each) => each.kept).map((each) => each.part);
   if (values.coverage !== undefined) {
     const named = values.coverage.split(/\s+/).filter(Boolean);
-    for (const part of named) if (!EVERY.includes(part as PhonePart)) throw new Error(`Unknown phone part: ${part}`);
+    for (const part of named) if (!EVERY.includes(part)) throw new Error(`Unknown phone part: ${part}`);
     kept = named.length ? EVERY.filter((part) => named.includes(part)) : [...EVERY];
   }
   const repeats = phoneRepeatPlan(kept, placement);

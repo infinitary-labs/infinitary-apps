@@ -47,6 +47,8 @@ const chosen = (selection: string[], test: string) => {
   const only = names("-only-testing:");
   return (only.length === 0 || only.some(named)) && !names("-skip-testing:").some(named);
 };
+// The table's first two parts, which the side-by-side runs below fail and stop on.
+const [first, second] = PHONE_PARTS.map((part) => part.name);
 const partsRunning = (test: string) =>
   PHONE_PARTS.filter((part) => chosen(partSelection(part.name), test)).map((part) => part.name);
 
@@ -65,28 +67,18 @@ describe("the phone journey's parts", () => {
     expect(partsRunning("InfinitaryUITests/PhoneJourney/testSomethingNew")).toEqual(["rest"]);
     expect(partsRunning("InfinitaryUITests/PhoneSettingsJourney/testSettings")).toEqual(["rest"]);
   });
+  // INF-1438: each part in the table's start order, on the slower iPad first.
   // INF-2052: the parts that choose a photo run last on each device, so a held library photo holds no part before them.
   it("starts each part on the iPad, then the iPhone, the parts that choose a photo last", () => {
-    expect(phoneJobs(["iphone", "ipad"]).map(({ device, part }) => `${device} ${part}`)).toEqual([
-      "ipad join",
-      "iphone join",
-      "ipad relaunch",
-      "iphone relaunch",
-      "ipad cards",
-      "iphone cards",
-      "ipad address",
-      "iphone address",
-      "ipad pick",
-      "iphone pick",
-      "ipad talk",
-      "iphone talk",
-      "ipad rest",
-      "iphone rest",
-    ]);
+    expect(phoneJobs(["iphone", "ipad"]).map(({ device, part }) => `${device} ${part}`)).toEqual(
+      PHONE_PARTS.flatMap((part) => [`ipad ${part.name}`, `iphone ${part.name}`]),
+    );
     const photos = (part: string) => PHONE_PARTS.find((each) => each.name === part)!.photos;
     const order = phoneJobs(["iphone"]).map(({ part }) => photos(part));
     expect(order).toEqual([...order].sort((a, b) => Number(a) - Number(b)));
-    expect(phoneJobs(["iphone"], ["cards"])).toEqual([{ device: "iphone", part: "cards" }]);
+    expect(phoneJobs(["iphone"], ["cards-form"])).toEqual([
+      { device: "iphone", part: "cards-form" },
+    ]);
     expect(() => phoneJobs(["iphone"], ["everything"])).toThrow(
       /No phone journey part is named everything/,
     );
@@ -105,10 +97,10 @@ describe("running the parts side by side", () => {
       await new Promise((resolve) => setImmediate(resolve));
       running -= 1;
       ran.push(`${device} ${part}`);
-      if (part === "join") throw new Error(`${device} join failed`);
+      if (part === first) throw new Error(`${device} ${first} failed`);
       return part;
     });
-    await expect(outcome).rejects.toThrow(/join failed/);
+    await expect(outcome).rejects.toThrow(`${first} failed`);
     expect(most).toBe(3);
     expect(ran.sort()).toEqual(jobs.map(({ device, part }) => `${device} ${part}`).sort());
   });
@@ -123,7 +115,7 @@ describe("running the parts side by side", () => {
       async ({ device, part }, stopping) => {
         const name = `${device} ${part}`;
         started.push(name);
-        if (name === "iphone join") return { name, failed: true };
+        if (name === `iphone ${first}`) return { name, failed: true };
         // A running part ends when the gate stops it, as an interrupted part does.
         await new Promise((resolve) => stopping.addEventListener("abort", resolve, { once: true }));
         stopped.push(name);
@@ -131,8 +123,8 @@ describe("running the parts side by side", () => {
       },
       ({ failed }) => failed,
     );
-    expect(started).toEqual(["ipad join", "iphone join", "ipad relaunch"]);
-    expect(stopped.sort()).toEqual(["ipad join", "ipad relaunch"]);
+    expect(started).toEqual([`ipad ${first}`, `iphone ${first}`, `ipad ${second}`]);
+    expect(stopped.sort()).toEqual([`ipad ${first}`, `ipad ${second}`].sort());
     expect(outcomes.filter(Boolean).map((outcome) => outcome!.name)).toEqual(started);
     expect(outcomes.slice(started.length)).toEqual(jobs.slice(started.length).map(() => undefined));
   });
@@ -190,14 +182,14 @@ describe("running each device's parts on one started device", () => {
       run: async (job) => {
         await new Promise((resolve) => setImmediate(resolve));
         ran.push(name(job));
-        if (job.part === "join") throw new Error(`${job.device} join failed`);
+        if (job.part === first) throw new Error(`${job.device} ${first} failed`);
         return name(job);
       },
       close: async () => {
         running -= 1;
       },
     });
-    await expect(outcome).rejects.toThrow(/join failed/);
+    await expect(outcome).rejects.toThrow(`${first} failed`);
     expect(most).toBe(1);
     // One device at a time: the iPad's whole lane, then the iPhone's.
     expect(ran).toEqual(
@@ -217,7 +209,7 @@ describe("running each device's parts on one started device", () => {
         open: async (device) => device,
         run: async (job, _opened, stopping) => {
           started.push(name(job));
-          if (name(job) === "iphone join") return { name: name(job), failed: true };
+          if (name(job) === `iphone ${first}`) return { name: name(job), failed: true };
           // A running part ends when the gate stops it, as an interrupted part does.
           await new Promise((resolve) =>
             stopping.addEventListener("abort", resolve, { once: true }),
@@ -231,8 +223,8 @@ describe("running each device's parts on one started device", () => {
       },
       ({ failed }) => failed,
     );
-    expect(started).toEqual(["ipad join", "iphone join"]);
-    expect(stopped).toEqual(["ipad join"]);
+    expect(started).toEqual([`ipad ${first}`, `iphone ${first}`]);
+    expect(stopped).toEqual([`ipad ${first}`]);
     expect(ended.sort()).toEqual(["ipad", "iphone"]);
     expect(
       outcomes
@@ -245,7 +237,7 @@ describe("running each device's parts on one started device", () => {
   it("leaves a device's parts unstarted when it cannot start, runs the other device's, and ends them all", async () => {
     const ran: string[] = [];
     const ended: string[] = [];
-    const jobs = phoneJobs(["iphone", "ipad"], ["cards", "rest"]);
+    const jobs = phoneJobs(["iphone", "ipad"], ["cards-form", "rest"]);
     const outcome = runDeviceLanes(jobs, 2, {
       open: async (device) => {
         if (device === "ipad") throw new Error("ipad: its simulator could not start");
@@ -260,7 +252,7 @@ describe("running each device's parts on one started device", () => {
       },
     });
     await expect(outcome).rejects.toThrow(/ipad: its simulator could not start/);
-    expect(ran).toEqual(["iphone cards", "iphone rest"]);
+    expect(ran).toEqual(["iphone cards-form", "iphone rest"]);
     expect(ended).toEqual(["iphone"]);
   });
 });
@@ -366,7 +358,7 @@ describe("the native clock proof selection", () => {
       "-only-testing:InfinitaryUITests/PhoneWaitsTests",
     ]);
     expect(partSelection("rest")).toHaveLength(PHONE_PARTS.length - 1);
-    expect(() => partSelection("cards", true)).toThrow(
+    expect(() => partSelection("cards-form", true)).toThrow(
       "Native wait-clock tests belong to the rest part",
     );
   });

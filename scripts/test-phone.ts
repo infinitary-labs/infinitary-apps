@@ -434,7 +434,7 @@ const onePart = async () => {
   const plan = await planFor(values.xctestrun!, fixture.url);
   // INF-1066: keep the talk journey's exact Photos/tap order and waits. Capture once
   // at the actual UIKit fault, while the blocked stack still exists, not on retry.
-  if (values.part![0] === "talk") {
+  if (values.part![0]?.startsWith("talk-")) {
     timeoutStack = capturePhoneKeyboardTimeout({ evidence,
       currentPid: async () => phoneApplicationPid(await run("xcrun", ["simctl", "spawn", owned, "launchctl", "list"]), phoneBundle),
       sample: async (pid, destination) => { await run("/usr/bin/sample", [String(pid), "1", "1", "-mayDie", "-file", destination]); },
@@ -448,7 +448,7 @@ const onePart = async () => {
     const services = await run("xcrun", ["simctl", "spawn", owned, "launchctl", "list"]);
     const owner = await phoneLaunchOwner(owned, services, processes);
     writeFileSync(join(evidence, "web-stack-owner.log"), JSON.stringify({ discoveredAt: new Date().toISOString(), owner }, null, 2));
-    if (values["guest-observer"] && values.part![0] === "cards") {
+    if (values["guest-observer"] && values.part![0]!.startsWith("cards-")) {
       const execution = phoneExecutionArguments(false);
       guestObserver = await startPhoneGuestObserver({ owner, env, evidence: join(evidence, "guest-observer"),
         sampleSeconds: Number(execution[execution.indexOf("-maximum-test-execution-time-allowance") + 1]),
@@ -493,7 +493,7 @@ const onePart = async () => {
   let output = "";
   await finishPhoneCheck(run("xcodebuild", ["-xctestrun", plan, ...destination, ...partSelection(values.part![0]!, values.waits),
     ...phoneExecutionArguments(GRADES_BUDGETS), "test-without-building"], false, guestObserver ? (line) => {
-      if (phoneGuestJourneyFinished(line)) guestObserver?.stop();
+      if (phoneGuestJourneyFinished(line, values.part![0]!)) guestObserver?.stop();
     } : undefined)
     .then((log) => { output = log; }, (error: Error & { output?: string }) => {
       output = error.output ?? "";

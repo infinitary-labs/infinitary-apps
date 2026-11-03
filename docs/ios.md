@@ -462,7 +462,8 @@ Add `--ipad` for the iPad Pro 11-inch (M4); the default uses an iPhone 16.
 The gate refuses any other Xcode before it builds, and `scripts/phone-simulator.ts` refuses a Mac without that runtime, or one whose runtime does not support the device, naming the download that fixes it; it never takes a newer or older runtime in its place.
 Moving to a new pair is one pull request that edits the pin, after the virtual Mac image and every Mac that runs the check have the new pair.
 Add `--both` to run the checks and build once, then the iPhone and the iPad side by side; the evidence folder then holds the shared logs and an `iphone` and an `ipad` folder.
-The native journey is seven tests in `PhoneJourney`, its parts: `join` (join and recover), `talk` (talk and tasks), `relaunch` (relaunch, then Tasks), `cards`, `address` (join by its address), `pick` (a card pager pick across a workspace redraw), and `rest`, which runs the character and past choices with the app-hosted tests and any test no other part names (`scripts/phone-test-plan.ts`).
+The native journey is tests in `PhoneJourney`, one per part (`scripts/phone-test-plan.ts`): three join parts (`join-read`, `join-activity`, `join-away`), three talk parts (`talk-compose`, `talk-tasks`, `talk-drafts`), two relaunch parts (`relaunch-first`, `relaunch-second`), three cards parts (`cards-merge`, `cards-form`, `cards-media`), `address` (join by its address), `pick` (a card pager pick across a workspace redraw), and `rest`, which runs the character and past choices with the app-hosted tests and any test no other part names.
+INF-2125 (the captain's "Shared fixes, then short parts") split the join, talk, relaunch and cards parts into these short ones, so a check of only the parts a change reaches can run the closest alone; every check stays, in the part it belongs to.
 A journey that launches the app fresh takes a part of its own, since the rest part's simulator already holds the character journey's join (INF-2095).
 The gate starts one simulator per device, once, and runs that device's parts on it one after the other, in the order `scripts/phone-test-plan.ts` lists them; each part is its own gate with its own test home and a clean app, and `--simulators` (default 6) sets how many devices run side by side (INF-1438, the captain's "Start each simulated device once per phone check, not once per part").
 Before every part the gate uninstalls the previous part's app and UI test runner, resets the simulator's Keychain and permission answers, sets light appearance and the default type size, detaches the hardware keyboard, and checks the app is gone; a simulator Xcode shut down after a failed part boots again.
@@ -516,7 +517,7 @@ These are diagnostic observation points, not readiness conditions: a missing rep
 The probe discovers the simulator's manager and launcher before the journey, accepting the host's bare `launchd_sim` name as well as its full path (INF-1941).
 At capture time it reads only host process metadata, checking saved process identities and the app's parent and simulator path, so the lookup cannot queue a command behind the stalled simulator launch.
 It retains separate receipt, trigger, ownership-lookup and sample times, never elevates access, records sampling failures without retrying, and joins the samples before deleting the simulator.
-For an explicitly requested launch investigation, `phone.yml`'s `guest_observer` input replaces the cards part's ordinary fault probe with `scripts/phone-guest-observer.ts`, a separate guest process started before XCTest; it changes no product or test code.
+For an explicitly requested launch investigation, `phone.yml`'s `guest_observer` input replaces each cards part's ordinary fault probe with `scripts/phone-guest-observer.ts`, a separate guest process started before XCTest; it changes no product or test code.
 The observer verifies the existing simulator owner and uses the verified launcher's open descriptors to identify its actual writable regular log file.
 It accepts a file within that simulator's recorded log directory or directly within the observed `com.apple.CoreSimulator.SimDevice.<owned UUID>` directory; it never guesses or searches for a filename.
 The canonical directory must retain the owned directory's name and contain the canonical file path.
@@ -548,7 +549,7 @@ The native result, a file-capture error or the original observation allowance ca
 The observer is opt-in, starts no retry, changes no test allowance or assertion, and joins its children and evidence writers before simulator deletion.
 A failure while finishing diagnostics is reported without replacing the native result or its output, and remaining diagnostics still finish.
 Required observer setup still fails when observation cannot start, and simulator, fixture and runner teardown retain their own failure handling.
-In the talk part, the first actual UIKit keyboard-queue timeout triggers a one-second stack sample after the runner confirms that PID still belongs to its own simulator's app.
+In a talk part, the first actual UIKit keyboard-queue timeout triggers a one-second stack sample after the runner confirms that PID still belongs to its own simulator's app.
 It retains `keyboard-timeout-stack.log` and the capture outcome, joins the sampler before deleting the simulator, and never retries a capture or changes the photo-selection, tap or focus assertions.
 A run without that fault records that no reproduction or stack capture is claimed.
 The Cards journey keeps both its accessibility tree and the disposable home's card-state calls when a choice does not dismiss its card.
@@ -589,18 +590,18 @@ It attaches each connection it starts to the core, as the app does, so the core'
 The simulator never ends an app's background time, so the journey sets `INFINITARY_TEST_BACKGROUND_TIME` to the seconds after which the app ends it itself, standing in for iOS; a phone always waits for iOS.
 The simulator-only `INFINITARY_ISOLATED_PHONE_TEST` environment value disables real Bonjour browsing and the network sweep, so an offline fixture never causes attempts against a person's discovered Macs; physical discovery remains a captain check.
 In that mode `INFINITARY_TEST_NEARBY_SSH` (`name|host|port`) names the one stand-in computer Join by its address lists, and `INFINITARY_TEST_SWEEP` (`host:port`, comma-separated) the only addresses its sweep tries.
-`INFINITARY_TEST_RETRIED_CARD_LAG` (seconds) holds a retried card body's drawn height that long before its web view takes it, standing in for a loaded computer; the cards part sets it so its stalled-answer check taps a body that has drawn but not yet grown.
+`INFINITARY_TEST_RETRIED_CARD_LAG` (seconds) holds a retried card body's drawn height that long before its web view takes it, standing in for a loaded computer; every cards part sets it, so the stalled-answer check taps a body that has drawn but not yet grown.
 `INFINITARY_TEST_MENU_TAP_REDRAW` (`1`) has the app redraw its workspace 10 ms into each touch on a menu item, clearing a reply notice when one shows, and count each run of the card pager's menu between that redraw and the pick under `menu-tap-probe`; the pick part's `testMenuPickSurvivesAWorkspaceRedraw` sets it (INF-2095).
 It first verifies the independent published-contract client can join and read the sample card.
-The join part covers a wrong Mac pin, joining, cards and feed, Activity scrolled to its last whole row, identity across relaunch, out-of-reach state, catch-up after a home restart, a short trip to the background that keeps its connection, background/foreground replay after the background time ends, Leave, local Forget and Removed.
+The join parts cover a wrong Mac pin, joining, cards and feed (`join-read`); Activity scrolled to its last whole row, identity across relaunch, out-of-reach state and catch-up after a home restart (`join-activity`); and a short trip to the background that keeps its connection, background/foreground replay after the background time ends, Leave, local Forget and Removed (`join-away`).
 The address part starts the Mac's own `sshd` beside its home (`tests/helpers/sshServer.ts`), run as the test's user with a scratch home folder and every session handed the home's data folder; it checks the home's sshd listed as the stand-in computer, the sweep asked first and reading that sshd's real banner, a tap filling the address and port under the account, Not this one, the fingerprint asked again for a typed address, the key refused, a wrong password's words, then adds the key the phone shows and joins.
 That `sshd` can check no password, so the password that lets the key in is checked by the package tests against an SSH server of their own (`SSHJoinTests`).
-Every other part first joins its own home, and reaches the state the single journey had reached before it: the talk part puts the hero card on the stage and relaunches the app.
-The relaunch part reaches the talk part's state before its relaunch pair: the hero card on the stage, the on-request harbour task and a sent captain ask, so each launch restores a last turn.
-It then runs INF-1735's 20 relaunch pairs: each sets dark and relaunches, then light and relaunches, waits for the requested appearance drawn on the whole screen, and lights Tasks with its list after a single press (`repeatDiscarded: false`).
-The talk part keeps one such pair, for its hero pictures and the Tasks journey after it; the 20 have their own part because they took about 11 of the talk part's 20-minute allowance on a loaded Mac mini (INF-1878).
-The cards part drives forms, staged settings across paging, footer and body choices, the saved answer on the real home, close, threads and replies, pictures, a picture card drawn while the phone is still reaching after a reconnect, completed recording playback, seen, past cards, Mac-only doors and out-of-reach refusal without replay.
-It checks both immediate script stalls and a stall during answer collection, and captures both appearances and the largest standard Dynamic Type size.
+Every other part first joins its own home, and reaches the state its checks read: `join-activity` reads and closes the review finding, `talk-compose` puts the hero card on the stage and relaunches the app, and the cards parts each put their own cards on the stage.
+`talk-tasks`, `talk-drafts` and both relaunch parts reach a restored last turn (`launchWithLastTurn`): the hero card on the stage, the on-request harbour task and a sent captain ask.
+The relaunch parts then run INF-1735's 20 relaunch pairs, ten each: each sets dark and relaunches, then light and relaunches, waits for the requested appearance drawn on the whole screen, and lights Tasks with its list after a single press (`repeatDiscarded: false`).
+`talk-tasks` keeps one such pair, for its hero pictures and the Tasks journey after it; the 20 have their own parts because they took about 11 of the talk part's 20-minute allowance on a loaded Mac mini (INF-1878).
+The cards parts drive forms, staged settings across paging, footer and body choices, the saved answer on the real home, close, threads and replies, pictures, a picture card drawn while the phone is still reaching after a reconnect, completed recording playback, seen, past cards, Mac-only doors and out-of-reach refusal without replay.
+They check both immediate script stalls and a stall during answer collection, and capture both appearances and the largest standard Dynamic Type size.
 A scripted card attempts network access, parent access, direct native messages, injected scripts and a footer effect; the test home records whether any forbidden request reaches it.
 The runner keeps the card interaction recording separately from the reconnect recording when `--demo` is selected.
 
@@ -686,8 +687,8 @@ The journey's display requests carry a budget as long as their 10-minute cap (`d
 A turn of the device waits until a target the turn carries elsewhere has left its old frame and holds still in its new place (`turnPhone`), since until the app turns that target holds still where it was.
 A check that read a dialog's button, a gliding row or a web page's answer right after an action waits for it on the load clock instead.
 If Xcode stops offering that method, or changes what it takes, the journey fails naming it; the gate fails a part whose log never printed "Phone animation wait skipped", and prints how many animation waits XCTest still ran out in each part.
-The talk part checks that Command-Return restores the field's observed empty value and writes exactly one captain message to the real home.
-The talk part exercises details, keyboard dismissal, both card-paging shortcuts and Send as first chords after relaunch, retaining the original button and draft assertions.
+`talk-drafts` checks that Command-Return restores the field's observed empty value and writes exactly one captain message to the real home.
+`talk-drafts` exercises details, keyboard dismissal, both card-paging shortcuts and Send as first chords after relaunch, retaining the original button and draft assertions.
 The composed journey verifies keyboard dismissal and computer details after relaunch without changing its retained-text and retained-photo assertions.
 It also checks that the card and Tasks start and end where the message box does, the reading column.
 The fixture's display controls only change the launcher-owned simulator, never a developer's device or this Mac's appearance.
@@ -697,8 +698,8 @@ A stopped or lost connection clears the busy reading; a home on major 12 or late
 Native keyboard dictation exposes no listening signal: the phone never infers listening from focus or typing, and the listening drawing is not a live conversation state.
 Native hero pictures use the same crop in both themes from the simulator's full-resolution attachments; the desktop-only `heroShot` cannot capture a SwiftUI view.
 
-The talk part chooses a project-owned picture from the disposable photo library, types a message, and checks the real Mac’s captain actor, image bytes and last turn.
-It pulls the task search down, closes it, opens it again by Find a task's key, then searches and starts an on-request task, checks that the real Mac ran it, and interrupts its turn.
+`talk-compose` chooses a project-owned picture from the disposable photo library, types a message, and checks the real Mac’s captain actor, image bytes and last turn.
+`talk-tasks` pulls the task search down, closes it, opens it again by Find a task's key, then searches and starts an on-request task, checks that the real Mac ran it, and interrupts its turn.
 The fixture then gives that real task’s saved workspace and session the Interrupted state used by recovery; the phone continues it and sends a steer that the held mock-provider turn actually reads.
 The fixture uses Pi with the mock provider’s Anthropic message format, matching its held-turn script; no Claude client or provider account is involved.
 It also checks that the foreground notice sits under the top bar and over the iPad's landscape stage, waits on an iPhone on its side while the strip stays in the bar, and opens its own card on Home, retained offline drafts, an unconfirmed response with no automatic repeat, and a future-major home that allows reading but refuses changes.
@@ -735,7 +736,7 @@ Inside a gate, a failed Swift package test is reported and the simulator tests s
 The gate does not check the generated Swift files: `pnpm check` does on every pull request, on Linux.
 The native job uses the `phone` kind's queue (`docs/testing.md`, "Each Mac job's kind and size"), otherwise `VIRTUAL_MAC_RUNNER` when it is set, otherwise `MAC_RUNNER`, falling back to the `mini-mac` label rather than a paid hosted Mac, and retains result bundles, logs and connection readings as `phone-results` when the job fails or a run on request records; a passing check uploads none of its result bundles, about 530 MB.
 It also uploads command logs separately as `phone-logs`, so an Xcode failure can be read without downloading screenshot-heavy result bundles.
-Each part's live simulator log goes to `phone-simulator-logs` instead, on every run: one part's log can pass 100 MB, and a full gate's fourteen would take `phone-logs` past the app's 64 MiB artifact download (INF-2053).
+Each part's live simulator log goes to `phone-simulator-logs` instead, on every run: one part's log can pass 100 MB, and a full gate's would take `phone-logs` past the app's 64 MiB artifact download (INF-2053).
 A third artifact, `phone-pictures`, holds only the pictures the journeys took, exported from the result bundles under `<device>/<part>`, so a crewmate reads them within the app's artifact limit, which `phone-results` has outgrown.
 A failed part adds to its command logs what the app, its card pages and Photos logged on its simulator, and names its failing lines in the job log.
 It also keeps, in a log of its own, what the simulator's system logged from the part's first test: SpringBoard, backboardd, the accessibility server, the keyboard and the test runner, which answer XCUITest's check for interrupting elements.

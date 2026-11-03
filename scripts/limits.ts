@@ -92,6 +92,11 @@ export const LIMITS: Record<string, Record<string, LimitEntry>> = {
       "the oldest lines drop so the file on disk stays small; the newest stalls are kept",
     ),
   },
+  "src/core/freeze/memoryRecorder.ts": {
+    MEMORY_RECORD_MAX_LINES: physical(
+      "the oldest readings drop so the file on disk stays small; the newest week is kept",
+    ),
+  },
   "src/core/forge/api.ts": {
     API_REQUEST_MAX_BYTES: physical("refused in words naming 256 KiB; send a smaller body"),
     API_RESPONSE_MAX_BYTES: physical("refused in words naming 256 KiB; ask a smaller page with per_page"),

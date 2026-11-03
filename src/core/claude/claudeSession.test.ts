@@ -1376,6 +1376,63 @@ describe("the crewmate's record (the session contract's step 6)", () => {
       await session.closed();
     }
   });
+  // INF-2392: the app kept every Claude session's parsed transcript for as
+  // long as it ran; a renewal and an ended session let go of theirs.
+  it("lets go of a session's parsed transcript when it renews and when it ends", async () => {
+    const configDir = scratchDir("infinitary-claude-release-client-");
+    const recordDir = scratchDir("infinitary-claude-release-record-");
+    const instructions = "Count the footer's rivets.";
+    const store = new SessionRecordStore(recordDir);
+    let client = "";
+    const clientOf = (id: string) =>
+      join(configDir, "projects", encodeClaudeProjectDir(baseSpec.cwd), `${id}.jsonl`);
+    const line = (text: string) =>
+      `${JSON.stringify({ type: "user", uuid: text, message: { role: "user", content: text } })}\n`;
+    const { factory } = scriptedQuery({
+      onInput: (message, emit) => {
+        opens(emit, message);
+        appendFileSync(client, line(`turn-${Date.now()}`));
+        closes(emit, result({ cost: 0.01, input: 10, output: 2 }));
+      },
+    });
+    const session = await scriptedClaudeFactory({
+      configDir,
+      query: factory,
+      records: () => store,
+    }).open(
+      codingSpec({
+        binding: { backend: "claude", accountId: "acct_claude" },
+        cwd: baseSpec.cwd,
+        recordDir,
+        instructions,
+        stamp: crewmateContractStamp(instructions, []),
+      }),
+    );
+    const first = session.sessionId;
+    client = clientOf(first);
+    mkdirSync(dirname(client), { recursive: true });
+    try {
+      await session.prompt("Read the footer.");
+      expect(session.servedState()).toBeDefined();
+      expect(store.holdsParsed(first)).toBe(true);
+      session.serveInstructions({ text: "Count the rivets in pairs.", sha: "rivets-in-pairs" });
+      const second = session.sessionId;
+      expect(second).not.toBe(first);
+      expect(store.holdsParsed(first)).toBe(false);
+      // The renewed session's copy is kept on disk and read again on demand.
+      expect(store.entries(first)).toHaveLength(1);
+      store.release(first);
+      client = clientOf(second);
+      await session.prompt("Read the footer again.");
+      expect(session.servedState()).toBeDefined();
+      expect(store.holdsParsed(second)).toBe(true);
+    } finally {
+      session.dispose();
+      await session.closed();
+    }
+    expect(store.holdsParsed(session.sessionId)).toBe(false);
+    expect(store.holdsParsed(first)).toBe(false);
+  });
   it("copies the turn into its task's record, and on each tick the tail the client wrote after it", async () => {
     const configDir = scratchDir("infinitary-claude-coding-record-");
     const recordDir = scratchDir("infinitary-claude-coding-copy-");

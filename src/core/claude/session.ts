@@ -1161,6 +1161,8 @@ class ClaudeRollingSession extends ClaudeQueryCore<SessionEvent> implements Mode
   private renewFor(changed: ("prompt" | "instructions")[]): void {
     const from = this.id;
     this.mirror();
+    // The old id's entries are never read again; its copy on disk stays.
+    this.config.store.release(from);
     this.id = randomUUID();
     this.tookPrompt = false;
     this.reopen = true;
@@ -1655,7 +1657,11 @@ class ClaudeRollingSession extends ClaudeQueryCore<SessionEvent> implements Mode
     this.unregister();
     void Promise.all(this.mirrors)
       .then(() => this.refreshMirror())
-      .then(() => this.retirement.resolve());
+      .then(() => {
+        // The session's record is final: its parsed entries are no longer read.
+        this.config.store.release(this.id);
+        this.retirement.resolve();
+      });
   }
 
   protected observe(message: unknown, result: ClaudeNormalizeResult): void {

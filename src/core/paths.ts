@@ -44,6 +44,11 @@ export type AppPaths = {
    */
   freezeRecordPath: string;
   /**
+   * The freeze recorder's memory reading (docs/freeze-recorder.md, "The
+   * memory reading"): one JSON line per reading of the main process's memory.
+   */
+  memoryRecordPath: string;
+  /**
    * The task channel's keys (docs/axi-commands.md, "The channel"): 0700,
    * one 0600 file per task granted a command, emptied each time the app
    * opens and closes the channel, written only by `AxiChannel`.
@@ -139,6 +144,7 @@ export function appPathsFor(userData: string): AppPaths {
     devicesDir: join(userData, "devices"),
     webSignInsDir: join(userData, "web-sign-ins"),
     freezeRecordPath: join(userData, "freezes.jsonl"),
+    memoryRecordPath: join(userData, "memory.jsonl"),
     taskChannelDir: join(userData, "task-channel"),
     phoneDoorDir: join(userData, PHONE_DOOR_FOLDER),
     piAgentDir: join(userData, "pi-agent"),

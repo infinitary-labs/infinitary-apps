@@ -177,6 +177,13 @@ export function createElectronHost(options: ElectronHostOptions = {}): HostCapab
     mediaProbe: createMediaProbe(),
     typefaceProbe: createTypefaceProbe(),
     resourceMemory: () => readResourceMemory(memoryPressureStandIn(process.env, app.isPackaged)),
+    // Electron's private footprint, in kilobytes: macOS's phys_footprint, which
+    // counts compressed and swapped memory that resident size leaves out.
+    processFootprint: () =>
+      process.getProcessMemoryInfo().then(
+        (info) => (info.private > 0 ? info.private * 1024 : null),
+        () => null,
+      ),
     // A page the captain holds that asks for a file gets it from the app's own
     // picker, a sheet over the app's window, never one on the page's hidden
     // window (docs/task-browser.md, "A page that asks for a file").

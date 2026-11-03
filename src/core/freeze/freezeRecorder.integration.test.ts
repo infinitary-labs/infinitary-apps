@@ -19,6 +19,7 @@ import {
   HEARTBEAT_MS,
   RECORD_MAX_LINES,
 } from "./freezeRecorder";
+import { readMemoryRecord } from "./memoryRecorder";
 import { armWatchdog } from "./watchdog";
 
 // INF-2066, INF-2061's approved plan: "A test holds the main thread in a
@@ -339,5 +340,26 @@ describe("the freeze recorder", () => {
     expect(record).toContainEqual(seen);
     expect(record).not.toContainEqual(old[0]);
     expect(record).toContainEqual(old.at(-1));
+  });
+});
+
+// INF-2392's plan, step 1: the alpha recorder also reads the main process's
+// memory, split between native and JavaScript, from the moment it starts.
+describe("the recorder's memory reading", () => {
+  it("starts with the recorder and takes a reading at once", async () => {
+    const recordPath = join(scratchDir("infinitary-memory-start-"), "memory.jsonl");
+    const footprint = vi.fn(async () => 1024 * 1024 * 1024);
+    recorder = new FreezeRecorder({
+      recordPath: join(scratchDir("infinitary-memory-freeze-"), "freezes.jsonl"),
+      onFreeze: () => {},
+      memory: { recordPath, footprint },
+    });
+    recorder.start();
+    await expect.poll(() => readMemoryRecord(recordPath)).toHaveLength(1);
+    expect(readMemoryRecord(recordPath)[0]).toMatchObject({
+      pid: process.pid,
+      footprintBytes: 1024 * 1024 * 1024,
+    });
+    expect(footprint).toHaveBeenCalledOnce();
   });
 });

@@ -192,7 +192,9 @@ export class SessionRecordStore {
       copy.offset = size;
       const bytes = Buffer.concat([copy.partial, fresh]);
       const end = bytes.lastIndexOf(0x0a);
-      copy.partial = end < 0 ? bytes : bytes.subarray(end + 1);
+      // A copy of the unfinished line, never a view: a view keeps the whole
+      // read alive for as long as the copy is held (INF-2392).
+      copy.partial = end < 0 ? bytes : Buffer.from(bytes.subarray(end + 1));
       if (end >= 0) {
         for (const entry of parseLines(bytes.subarray(0, end).toString("utf8"))) {
           copy.entries.push(entry);
@@ -201,6 +203,21 @@ export class SessionRecordStore {
       }
     }
     return copy;
+  }
+
+  /**
+   * Let go of the session's parsed entries: its session ended, or a renewal
+   * moved it to a new id. The copy on disk stays; a later `index` reads it
+   * again from its start. Without this, every session the app ever read
+   * stayed parsed in memory for as long as the app ran (INF-2392).
+   */
+  release(sessionId: string): void {
+    this.parsed.delete(this.transcriptPath(sessionId));
+  }
+
+  /** Whether the session's entries are held parsed in memory now. */
+  holdsParsed(sessionId: string): boolean {
+    return this.parsed.has(this.transcriptPath(sessionId));
   }
 
   /** Append one sidecar line. */

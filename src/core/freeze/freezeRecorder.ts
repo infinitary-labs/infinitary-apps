@@ -3,6 +3,7 @@ import { forgeOf } from "@shared/forge";
 import { type SourceIdentity, sourceIdentitySchema } from "@shared/selfSource";
 import { z } from "zod";
 import type { TypedWake } from "../orchestrator/wakes";
+import { MemoryRecorder } from "./memoryRecorder";
 import { takeWatchdog } from "./watchdog";
 
 /**
@@ -133,11 +134,13 @@ export function freezeWake(
  * which the app's entry armed before the app's code loaded, hands it the
  * record, beats every `HEARTBEAT_MS` with the main thread's own processor
  * time, and hands each recorded line to `onFreeze`. A watchdog that fails
- * stops the recorder and never the app.
+ * stops the recorder and never the app. With `memory`, it also keeps the
+ * memory reading (`./memoryRecorder.ts`), which needs no watchdog.
  */
 export class FreezeRecorder {
   private worker: Worker | undefined;
   private beat: ReturnType<typeof setInterval> | undefined;
+  private readonly memory: MemoryRecorder | undefined;
 
   constructor(
     private readonly options: {
@@ -145,10 +148,20 @@ export class FreezeRecorder {
       build?: SourceIdentity;
       onFreeze: (line: FreezeIncident) => void;
       thresholdMs?: number;
+      memory?: { recordPath: string; footprint?: () => Promise<number | null> };
     },
-  ) {}
+  ) {
+    this.memory = options.memory
+      ? new MemoryRecorder({
+          recordPath: options.memory.recordPath,
+          ...(options.build ? { build: options.build } : {}),
+          ...(options.memory.footprint ? { footprint: options.memory.footprint } : {}),
+        })
+      : undefined;
+  }
 
   start(): void {
+    this.memory?.start();
     if (this.worker) return;
     const worker = takeWatchdog();
     if (!worker) return;
@@ -173,6 +186,7 @@ export class FreezeRecorder {
   }
 
   stop(): void {
+    this.memory?.stop();
     if (this.beat) clearInterval(this.beat);
     this.beat = undefined;
     const worker = this.worker;

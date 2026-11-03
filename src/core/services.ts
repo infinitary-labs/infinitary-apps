@@ -3112,6 +3112,10 @@ export async function createServices(
     ? new FreezeRecorder({
         recordPath: paths.freezeRecordPath,
         build: sourceIdentity(source()),
+        memory: {
+          recordPath: paths.memoryRecordPath,
+          ...(host.processFootprint ? { footprint: host.processFootprint } : {}),
+        },
         onFreeze: (line) => {
           const project = infinitaryProject(repos.list());
           if (project) notifyFirstmate(freezeWake(line, project, host.app.version), "scheduled");

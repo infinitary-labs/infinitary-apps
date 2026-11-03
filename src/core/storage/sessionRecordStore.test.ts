@@ -95,6 +95,42 @@ describe("the Claude seat's transcript copy", () => {
     ]);
   });
 
+  // INF-2392: the app held every session it ever read parsed in memory for
+  // as long as it ran; a session that ends lets go of its entries.
+  it("lets go of a session's parsed entries, and reads them again from the copy when asked", () => {
+    const { transcripts, source } = setup();
+    writeFileSync(source, `${line({ type: "user", uuid: "a" })}{"type":"assis`);
+    transcripts.mirror(SESSION, source);
+    const before = transcripts.index(SESSION);
+    expect(before.entries).toEqual([{ type: "user", uuid: "a" }]);
+    expect(transcripts.holdsParsed(SESSION)).toBe(true);
+    transcripts.release(SESSION);
+    expect(transcripts.holdsParsed(SESSION)).toBe(false);
+    // The copy on disk stays; a later read parses it from its start, the
+    // unfinished line included once the client completes it.
+    appendFileSync(source, 'tant","uuid":"b"}\n');
+    transcripts.mirror(SESSION, source);
+    const after = transcripts.index(SESSION);
+    expect(after).not.toBe(before);
+    expect(after.entries).toEqual([
+      { type: "user", uuid: "a" },
+      { type: "assistant", uuid: "b" },
+    ]);
+    expect(after.byUuid.get("b")).toEqual({ type: "assistant", uuid: "b" });
+  });
+
+  // INF-2392: the unfinished line was kept as a view of the whole read, so a
+  // session's first read stayed alive for as long as its entries were held.
+  it("keeps only the unfinished line's own bytes between reads", () => {
+    const { transcripts, source } = setup();
+    const filler = "x".repeat(64 * 1024);
+    writeFileSync(source, `${line({ type: "user", uuid: "a", filler })}{"type":"assis`);
+    transcripts.mirror(SESSION, source);
+    const held = transcripts.index(SESSION) as unknown as { partial: Buffer };
+    expect(held.partial.toString("utf8")).toBe('{"type":"assis');
+    expect(held.partial.buffer.byteLength).toBeLessThan(filler.length);
+  });
+
   it("stamps the sidecar beside the copy, oldest first", async () => {
     const { transcripts } = setup();
     await transcripts.stamp(SESSION, {

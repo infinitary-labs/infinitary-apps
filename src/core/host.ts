@@ -456,6 +456,12 @@ export type HostCapabilities = {
   /** Physical memory facts in bytes; absent or unreadable is unknown, never zero. A Mac read awaits the system. */
   readonly resourceMemory?: () => Promise<ResourceMemory | null>;
   /**
+   * This process's physical footprint in bytes, compressed and swapped memory
+   * included (docs/freeze-recorder.md, "The memory reading"); absent or null
+   * is unknown, never zero.
+   */
+  readonly processFootprint?: () => Promise<number | null>;
+  /**
    * Each task's own browser page (docs/task-browser.md). Absent, crewmates
    * have no browser tools.
    */

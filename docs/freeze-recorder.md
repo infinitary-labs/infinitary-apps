@@ -66,6 +66,26 @@ A stall spent inside one long built-in call, such as one JSON parse, is named at
 Every stack is a captured location, not a cause or a duration for any named function, even when processor use is high and capture precedes the ending heartbeat.
 The absence of a `waited` or `late` mark establishes no cause.
 
+## The memory reading
+
+Beside the stalls, the recorder reads the main process's own memory at its start and every five minutes after (`MEMORY_READING_MS`, `src/core/freeze/memoryRecorder.ts`), INF-2392's plan after it found the main process holding 9 GB and could not tell from outside the app what held it.
+The record is `memory.jsonl` in the app's data folder (`AppPaths.memoryRecordPath`), written by the main thread, one JSON line per reading.
+It keeps the newest week of readings (`MEMORY_RECORD_MAX_LINES`) and drops older ones.
+The reading needs no watchdog, so it runs even when the watchdog cannot start.
+
+Each line holds, in bytes:
+
+- `footprintBytes`: the process's physical footprint as the system counts it, compressed and swapped memory included (Electron's private footprint, macOS's `phys_footprint`, what Activity Monitor shows); absent where the host cannot read it, never zero.
+- `rssBytes`: resident memory only, which leaves out what the system compressed or swapped.
+- `heapTotalBytes` and `heapUsedBytes`: the JavaScript heap, and the live part of it.
+- `externalBytes` and `arrayBuffersBytes`: native memory JavaScript objects still hold, such as buffers, and the part of it in array buffers.
+- `mallocedBytes`: memory V8 itself allocated outside its heap.
+
+It also holds when it was read, the process id, the process's uptime in seconds and the recording build's source identity.
+The split (`memorySplit`) reads the JavaScript heap, the native memory JavaScript holds (`externalBytes`), and the native memory nothing in JavaScript holds: the footprint less the other two, unknown when the footprint is.
+A growing third part points at native objects the app's code no longer reaches, and a growing second part at buffers it still does.
+It records no values or text, and nothing sends it anywhere.
+
 ## The first mate's offer
 
 Each completed or recovered interrupted incident is handed to the core.
@@ -108,4 +128,5 @@ The journey sees only the work it drives, and only stalls of 50 ms or more, the 
 ## Not covered
 
 It watches only the app's main thread, not a window's own drawing thread.
+The memory reading reads only the main process, not a window's process, and only where the core runs with its task record; the app running work for another Mac with no window (`docs/helper.md`) takes none.
 The packaged build's fuses turn off the inspector's command-line arguments, not an in-process session; the recorder has not yet been run under them.

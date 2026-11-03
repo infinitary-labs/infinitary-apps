@@ -1,8 +1,14 @@
 name: Linux automatic startup
 
+# Called by main.yml once per main check (INF-2441), never started by a push
+# of its own: the pull request already ran the same fixtures on its version.
 on:
-  push:
-    branches: [main]
+  workflow_call:
+    inputs:
+      ref:
+        description: The commit to check
+        type: string
+        required: true
 
 permissions:
   contents: read
@@ -15,6 +21,8 @@ jobs:
     runs-on: ${{ vars.LINUX_RUNNER || 'ubuntu-latest' }}
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.ref }}
       - uses: actions/setup-node@v4
         with:
           node-version: 24

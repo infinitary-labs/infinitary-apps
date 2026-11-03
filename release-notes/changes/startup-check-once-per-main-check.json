@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "startup-check-once-per-main-check",
+      "reason": "Internal CI change: the Linux startup fixtures run once per main check instead of on every push to main, with no app behavior change."
+    }
+  ]
+}

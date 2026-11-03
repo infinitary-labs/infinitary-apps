@@ -1199,7 +1199,7 @@ The PR's `linux-startup` job in `ci.yml` runs the production runtime/session cla
 Both startup fixtures and their result summary run even when the other fixture fails, unless the job was cancelled.
 The fixtures need systemd and Docker, so the job runs where `LINUX_RUNNER` sends it and never takes a `LINUX_QUEUES` queue.
 A newer push cancels the PR job, including startup, through `ci.yml`'s existing concurrency rule; startup no longer finishes independently on a superseded PR version.
-`linux-startup.yml` keeps the same action in a separate job on main.
+`linux-startup.yml` is a called workflow that runs the same action; `main.yml` calls it once per main check, so a burst of pushes to main is checked once.
 Both use a disposable Ubuntu machine: the PC's fresh virtual machine through `LINUX_RUNNER`, or GitHub-hosted Ubuntu when it is unset.
 It checks a disposable logged-out user under running systemd, then starts that user's manager for the available case.
 It also checks a plain Ubuntu container with installed systemctl but no running systemd, then an unavailable systemctl.

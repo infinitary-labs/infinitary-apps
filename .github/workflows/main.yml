@@ -37,3 +37,8 @@ jobs:
   # The whole phone check on the vBoxx phone queue, every part of the device gate.
   phone:
     uses: ./.github/workflows/phone.yml
+  # The Linux automatic startup fixtures, once per main check, beside it.
+  startup:
+    uses: ./.github/workflows/linux-startup.yml
+    with:
+      ref: ${{ github.sha }}

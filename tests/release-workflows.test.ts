@@ -193,7 +193,9 @@ describe("local packaging identity (electron-builder.dev.yml)", () => {
       true,
     );
     const calls = Object.values(main.jobs).map((job) => job.uses);
+    // INF-2441: the startup fixtures run once per main check, never on a push of their own.
     expect(calls.sort()).toEqual([
+      "./.github/workflows/linux-startup.yml",
       "./.github/workflows/phone.yml",
       "./.github/workflows/verify.yml",
     ]);

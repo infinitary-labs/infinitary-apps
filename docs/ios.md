@@ -325,7 +325,7 @@ The details sheet names the connected view's ability to answer cards, send messa
 
 The message box keeps the captain’s last two messages and the first mate’s replies above its native multiline field, by the Mac's rules and in its Chat layout (`docs/composer.md`, "The last turn"; INF-1517, INF-1771): the captain's words in a grey bubble on the right, each reply beside the first mate's mark on the left, the older round at half strength and only the newest while a card is up.
 The phone sets them as a quiet glance (INF-1846): 15-point rows, one step under the box's 16-point words and one line each, the bubble hugging its words up to three quarters of the column, each reply in the secondary colour on a 24-point row pressable across its width, 4 points within a round and 12 between rounds and above the box.
-While the first mate is busy its line shows three ember dots brightening in turn and Working…; a message that was only photos reads "A picture".
+While the first mate is busy its line shows the mark turned ember and spinning, beside Working… or the reply; a message that was only photos reads "A picture".
 A completed reply fades after 15 seconds on screen over 0.7 seconds, an instant under reduced motion, keeping its room so the input never moves; the count runs only while Home is shown, the app is in front, the phone is upright and the first mate is idle.
 A tap on a reply line opens that whole reply in a half-height sheet, titled by its message, as the Mac's reply note.
 Its component owns messages and photos; the shared shell places it at the foot of Home.

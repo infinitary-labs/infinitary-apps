@@ -917,7 +917,7 @@ With no clip it hands Chromium the page's size the same way, so a whole-window p
 A clip handed to Chromium also briefly crops its drawing surface, which a recording running alongside can catch.
 `heroShot`, `regionShot` and `windowShot` therefore ask Chromium for the whole window as drawn, with no clip, and the first two crop it in the app's own canvas, by the device pixel ratio Chromium reports (the Size's zoom times the screen's scale).
 All three hide the caret as Playwright's `caret: "hide"` does, and `heroShot` also holds motion still as `animations: "disabled"` does.
-After each theme switch it waits for motion that ends, never for motion that does not, as `atRest` does, so a view with something that keeps moving, such as the working dots, still takes its pair, with that motion held at its start.
+After each theme switch it waits for motion that ends, never for motion that does not, as `atRest` does, so a view with something that keeps moving, such as the spinning working mark, still takes its pair, with that motion held at its start.
 `tests/e2e/hero-shot.spec.ts` checks this at every Size by decoding synthetic corner markers in both pictures, and with a marker that pulses without end.
 It shows each theme without saving it: the main process hands the window the captain's saved preferences with that theme, as the core pushes them after a change, and sets the window material to match, then puts the saved theme back.
 Switching through Settings would be the captain's own change, which writes its line in Activity (`docs/orchestrator-contract.md`, "Settled runs"), so a pair of Activity, or of the newest line a collapsed Activity shows, would hold that line in one picture and not the other.

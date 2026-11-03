@@ -42,7 +42,7 @@ The first mate and the card lift by half of it; the card's height cap shrinks by
 The lift eases over `--dur-fast` on `--ease-out`, and nothing moves under reduced motion.
 Per-line growth itself is instant.
 
-The last turn (captain's Approve and build on FI3-1089's plan: dots, "Working…"; drawn as INF-1770's Chat layout, the captain's Approve and build): the captain's last two messages, each with the first mate's reply, in a slot hung 10 px above the input's top edge, so they never move it; nothing else shows there, and the notices stay under the input.
+The last turn (captain's Approve and build on FI3-1089's plan: "Working…", and on INF-2483's plan: the spinning mark; drawn as INF-1770's Chat layout, the captain's Approve and build): the captain's last two messages, each with the first mate's reply, in a slot hung 10 px above the input's top edge, so they never move it; nothing else shows there, and the notices stay under the input.
 A round is the captain's words and the reply under them; the newest round sits nearest the input, and the older round 10 px above it at 50% opacity.
 The captain's words sit on the right in a soft grey bubble: `--fg-1` mixed at 8%, corners 11, 11, 4 and 11 px, padding 2 px by 10 px, `--text-sm` in `--fg-1` on a 22 px row, at most 75% of the width.
 2 px below, the reply sits on the left as plain `--text-sm` in `--fg-1` on a 20 px row, at most 80% of the width, after the first mate's mark: the app's 14 px hexagon in `--accent`, 8 px before the words.
@@ -50,16 +50,17 @@ On desktop, newest ordinary words rest at 75% `--fg-2` mixed with 25% `--fg-3`, 
 Hovering a round or focusing its reply lights only that round, never its sibling; composer focus alone brightens neither.
 The newest round immediately restores ordinary words to `--fg-1` and the bubble to 8%, with no animation or timer; leaving and blurring restores rest.
 The older round keeps its colors and lifts from 50% to full opacity while hovered or focused, returning to 50% afterwards.
-The captain’s written-in choice keeps the mark cyan (`--accent`) at rest and while reading; working dots, Working… and problem colors stay unchanged.
+The captain’s written-in choice keeps the mark cyan (`--accent`) at rest and while reading; the working mark, Working… and problem colors stay unchanged.
 A round is 44 px; the lane is 108 px with two rounds and 54 px with one.
 No quotation marks: the side says who said it.
 A message of pictures alone reads "A picture".
 The reply is the first mate's closing sentence, about 40 characters saying what took effect (INF-772), and the app's own words, such as a card's title or "Started:" with the task's title, when it wrote none.
 Each line is one line, its words cut with an ellipsis.
-While the first mate works, three 4 px `--hot` dots (ember, the working color a busy crewmate and a busy row's dot share), 3 px apart, each brightening in turn over 1.2 s, follow the newest reply's words 8 px after them: working never hides a reply.
-A message with no reply yet shows the dots and "Working…" in `--fg-3` in its reply's place; a failed turn's words are `--danger`.
+While the first mate works, the newest round's mark turns `--hot` (ember, the working color a busy crewmate and a busy row's dot share) over `--dur-fast` and spins one steady turn every 2 s, with no dots (INF-2483's plan, the captain's Approve and build: "simply turn the mark to orange and spin it"): working never hides a reply, and a reply's own mark spins beside its words.
+When work ends the mark eases on to its next resting sixth of a turn over `--dur-med` as it fades back to `--accent`; the older round's mark never spins.
+A message with no reply yet shows the spinning mark and "Working…" in `--fg-3` in its reply's place; a failed turn's words are `--danger`.
 While a card is up only the newest round shows.
-A new round rises 6 px into place over `--dur-med`, the rounds that stay glide up over `--dur-med`, the newest eases to the older round's strength, and the round pushed out leaves over `--dur-fast`; the working words leave over `--dur-fast` and the reply rises 4 px in over `--dur-med`; under reduced motion every move is a cut and the dots stand still.
+A new round rises 6 px into place over `--dur-med`, the rounds that stay glide up over `--dur-med`, the newest eases to the older round's strength, and the round pushed out leaves over `--dur-fast`; the working words leave over `--dur-fast` and the reply rises 4 px in over `--dur-med`; under reduced motion every move is a cut and the working mark turns ember and stands still.
 On desktop, becoming second-to-last starts the older round’s 15 seconds of visible reading time, independent of the newest reply or work, then only the older round dissolves in place over `--dur-slow`; the newest stays until the next message.
 The count pauses while the window is inactive, the older round is hidden by Settings or any stack entry, or the pointer, a selection or reply focus rests on the lines.
 A new message resets the clock for its newly older round; a newest reply or work does not reset it, and reduced motion cuts the dissolve to an instant without shortening the 15 seconds.

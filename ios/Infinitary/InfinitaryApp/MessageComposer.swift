@@ -112,8 +112,8 @@ struct MessageComposer: View {
 
     /// The Mac's last turn (src/renderer/src/app/LastTurn.tsx), drawn as INF-1770's Chat layout: the last two rounds,
     /// each the captain's words in a soft grey bubble on the right and the first mate's reply beside its mark on the
-    /// left, the older round at half strength and only the newest while a card is up. While the first mate works, ember
-    /// dots follow the newest reply, or stand with Working… where no reply is yet. After 15 seconds of a completed
+    /// left, the older round at half strength and only the newest while a card is up. While the first mate works, the
+    /// newest round's mark turns ember and spins (INF-2483), beside its reply or Working…. After 15 seconds of a completed
     /// reply on screen the older round dissolves and keeps its room, so the input never moves. INF-1846 chose "A quiet
     /// glance": 15-point rows, 12 points between rounds and 12 above the box, one line each.
     private func lastTurn(_ turn: PhoneLastTurn) -> some View {
@@ -153,20 +153,16 @@ struct MessageComposer: View {
             }
             if round.reply != nil || busy {
                 HStack(spacing: 8) {
-                    MateMark().frame(width: 16, height: 16)
+                    MateMark(working: busy, still: reduceMotion).frame(width: 16, height: 16)
                     if let reply = round.reply {
                         Button { replyOpen = OpenedReply(round: round) } label: {
-                            HStack(spacing: 8) {
-                                Text(reply.text).foregroundStyle(reply.problem == true ? PhoneTheme.danger : PhoneTheme.secondary)
-                                if busy { WorkingDots(still: reduceMotion) }
-                            }.frame(maxWidth: .infinity, minHeight: 24, alignment: .leading).contentShape(Rectangle())
+                            Text(reply.text).foregroundStyle(reply.problem == true ? PhoneTheme.danger : PhoneTheme.secondary)
+                                .frame(maxWidth: .infinity, minHeight: 24, alignment: .leading).contentShape(Rectangle())
                         }.buttonStyle(.plain).accessibilityHint("Opens the whole reply")
                             .accessibilityIdentifier("\(id)-reply")
                     } else {
-                        HStack(spacing: 6) {
-                            WorkingDots(still: reduceMotion)
-                            Text("Working…").foregroundStyle(PhoneTheme.muted)
-                        }.frame(minHeight: 24).accessibilityElement(children: .combine).accessibilityIdentifier("\(id)-reply")
+                        Text("Working…").foregroundStyle(PhoneTheme.muted)
+                            .frame(minHeight: 24).accessibilityElement(children: .combine).accessibilityIdentifier("\(id)-reply")
                     }
                 }.frame(maxWidth: .infinity, alignment: .leading)
             } else {
@@ -228,30 +224,6 @@ struct MessageComposer: View {
     }
 }
 
-/// The Mac's working dots (lastTurn.css) at the phone's size (INF-1846): three 5-point ember dots 4 points apart, each
-/// brightening in turn over 1.2 s.
-private struct WorkingDots: View {
-    let still: Bool
-    var body: some View {
-        TimelineView(.animation(paused: still)) { clock in
-            HStack(spacing: 4) {
-                ForEach(0..<3, id: \.self) { dot in
-                    Circle().fill(PhoneTheme.hot).frame(width: 5, height: 5)
-                        .opacity(still ? 1 : Self.opacity(clock.date.timeIntervalSinceReferenceDate - Double(dot) * 0.2))
-                }
-            }
-        }.accessibilityHidden(true)
-    }
-
-    /// 0.25 at rest and 1 at 30% of the cycle, eased in and out, as the Mac's keyframes.
-    static func opacity(_ time: Double) -> Double {
-        let phase = (time.truncatingRemainder(dividingBy: 1.2) + 1.2).truncatingRemainder(dividingBy: 1.2) / 1.2
-        guard phase < 0.6 else { return 0.25 }
-        let rise = phase < 0.3 ? phase / 0.3 : (0.6 - phase) / 0.3
-        return 0.25 + 0.75 * (0.5 - cos(rise * .pi) / 2)
-    }
-}
-
 /// The captain's bubble on the right, hugging its words up to three quarters of the width it is offered.
 private struct BubbleColumn: Layout {
     func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {
@@ -276,30 +248,67 @@ private struct OpenedReply: Identifiable {
     let round: PhoneLastRound
 }
 
-/// The first mate's mark beside each reply line: the app's hexagon in accent, as the Mac draws it (lastTurn.css).
+/// The first mate's mark beside each reply line: the app's hexagon in accent, as the Mac draws it (lastTurn.css,
+/// LastTurn.tsx). While the first mate works it turns ember over 0.16 s and spins one steady turn every 2 s (INF-2483's
+/// plan, the captain's Approve and build: "turn the mark to orange and spin it"); when work ends it eases on to its next
+/// resting sixth of a turn over 0.36 s as it fades back to accent. Under reduced motion it turns ember and stands still.
 private struct MateMark: View {
+    let working: Bool
+    let still: Bool
+    /// One whole turn, in seconds: INF-2483's chosen steady turn.
+    static let turn = 2.0
+    @State private var started = Date()
+    @State private var resting = 0.0
+
     var body: some View {
-        Canvas { context, size in
-            let scale = min(size.width, size.height) / 16
-            func hexagon(_ points: [(CGFloat, CGFloat)]) -> Path {
-                var path = Path()
-                path.addLines(points.map { CGPoint(x: $0.0 * scale, y: $0.1 * scale) })
-                path.closeSubpath()
-                return path
+        TimelineView(.animation(paused: !working || still)) { clock in
+            ZStack {
+                MarkHexagon(points: [(8, 1.2), (13.9, 4.6), (13.9, 11.4), (8, 14.8), (2.1, 11.4), (2.1, 4.6)])
+                MarkHexagon(points: [(12, 8), (10, 11.46), (6, 11.46), (4, 8), (6, 4.54), (10, 4.54)]).opacity(0.45)
+                MarkDot()
             }
-            let stroke = StrokeStyle(lineWidth: 1.2 * scale)
-            context.stroke(hexagon([(8, 1.2), (13.9, 4.6), (13.9, 11.4), (8, 14.8), (2.1, 11.4), (2.1, 4.6)]),
-                           with: .color(PhoneTheme.accent), style: stroke)
-            context.stroke(hexagon([(12, 8), (10, 11.46), (6, 11.46), (4, 8), (6, 4.54), (10, 4.54)]),
-                           with: .color(PhoneTheme.accent.opacity(0.45)), style: stroke)
-            let dot = 1.3 * scale
-            context.fill(Path(ellipseIn: CGRect(x: 8 * scale - dot, y: 8 * scale - dot, width: dot * 2, height: dot * 2)),
-                         with: .color(PhoneTheme.accent))
-        }.accessibilityHidden(true)
+            .foregroundStyle(working ? PhoneTheme.hot : PhoneTheme.accent)
+            .rotationEffect(.degrees(working && !still ? angle(at: clock.date) : resting))
+        }
+        .animation(.linear(duration: working ? 0.16 : 0.36), value: working)
+        .onChange(of: working) { was, now in
+            if now { started = Date(); resting = 0; return }
+            guard was, !still else { resting = 0; return }
+            let at = angle(at: Date())
+            resting = at
+            withAnimation(.easeOut(duration: 0.36)) { resting = (at / 60).rounded(.up) * 60 }
+        }
+        .onAppear { started = Date() }
+        .accessibilityHidden(true)
+    }
+
+    private func angle(at date: Date) -> Double {
+        let turns = date.timeIntervalSince(started) / Self.turn
+        return (turns - turns.rounded(.down)) * 360
     }
 }
 
-/// INF-1517, the captain's pick: the reply line opens the whole reply in a half-height sheet, as the Mac's reply note.
+/// A hexagon of the mark as its 1.2-unit outline, its points on the mark's 16-unit grid, drawn at any size.
+private struct MarkHexagon: Shape {
+    let points: [(CGFloat, CGFloat)]
+    func path(in rect: CGRect) -> Path {
+        let scale = min(rect.width, rect.height) / 16
+        var path = Path()
+        path.addLines(points.map { CGPoint(x: rect.minX + $0.0 * scale, y: rect.minY + $0.1 * scale) })
+        path.closeSubpath()
+        return path.strokedPath(StrokeStyle(lineWidth: 1.2 * scale))
+    }
+}
+
+/// The mark's centre dot, 1.3 units of 16 in radius.
+private struct MarkDot: Shape {
+    func path(in rect: CGRect) -> Path {
+        let scale = min(rect.width, rect.height) / 16
+        let dot = 1.3 * scale
+        return Path(ellipseIn: CGRect(x: rect.midX - dot, y: rect.midY - dot, width: dot * 2, height: dot * 2))
+    }
+}
+
 /// Its title is the captain's message in quotation marks; its body the reply as written, a problem in red.
 private struct PhoneReplySheet: View {
     let round: PhoneLastRound

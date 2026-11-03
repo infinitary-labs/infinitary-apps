@@ -23,9 +23,10 @@ import "./lastTurn.css";
  * plain type beside the first mate's mark on the left. The older round sits
  * above at half strength; while a card is up only the newest shows.
  *
- * While the Firstmate works, three ember dots follow the newest reply's
- * words; a message with no reply yet shows the dots and "Working…" in its
- * place. Working never hides a reply. Becoming the older round starts 15
+ * While the Firstmate works, the newest round's mark turns ember and spins
+ * (INF-2483's plan, the captain's Approve and build: "turn the mark to
+ * orange and spin it"); a message with no reply yet shows the spinning mark
+ * and "Working…" in its reply's place. Working never hides a reply. Becoming the older round starts 15
  * seconds of visible reading time (./lastTurnFade), after which only that
  * round dissolves, even during work; the newest stays until the next message. Each
  * reply line is a button that opens that reply whole as a note
@@ -39,12 +40,16 @@ import "./lastTurn.css";
  * leaving, and the working words leaving before the reply rises in.
  */
 
-/** The working words beside the dots: the captain's own word. */
+/** The working words beside the spinning mark: the captain's own word. */
 export const WORKING_WORDS = "Working…";
 /** A message that was only pictures. */
 export const PICTURE_ONLY_WORDS = "A picture";
 /** A leaving round or set of words is gone after --dur-fast. */
 const LEAVE_MS = 160;
+/** One whole turn of the working mark: INF-2483's chosen steady turn at 2.0 s. */
+export const MARK_TURN_MS = 2000;
+/** The hexagon looks the same every sixth of a turn, so it comes to rest on one. */
+const MARK_REST_DEG = 60;
 
 type Mate = { kind: "working" } | { kind: "reply"; text: string; problem: boolean };
 
@@ -61,27 +66,54 @@ function mateKey(mate: Mate | null): string {
   return mate.kind === "working" ? "working" : `reply:${mate.problem}:${mate.text}`;
 }
 
-/** The three ember dots: seen, never read out. */
-function Dots() {
-  return (
-    <span data-last-turn-dots="" aria-hidden="true">
-      <i />
-      <i />
-      <i />
-    </span>
-  );
-}
-
-/** The first mate's mark, the app's hexagon, beside each reply line. */
-function MateMark() {
+/**
+ * The first mate's mark, the app's hexagon, beside each reply line. While
+ * the Firstmate works it turns ember (lastTurn.css) and spins one steady
+ * turn every MARK_TURN_MS; when work ends it eases on to the next resting
+ * sixth of a turn over --dur-med as it fades back to cyan. Under reduced
+ * motion it turns ember and stands still.
+ */
+function MateMark({ working }: { working: boolean }) {
+  const ref = useRef<SVGSVGElement>(null);
+  const spin = useRef<Animation | null>(null);
+  useEffect(() => {
+    const mark = ref.current;
+    if (!mark || typeof mark.animate !== "function") return;
+    if (working) {
+      spin.current?.cancel();
+      if (prefersReducedMotion()) return;
+      spin.current = mark.animate([{ rotate: "0deg" }, { rotate: "360deg" }], {
+        duration: MARK_TURN_MS,
+        iterations: Number.POSITIVE_INFINITY,
+      });
+      return;
+    }
+    const turning = spin.current;
+    spin.current = null;
+    if (!turning) return;
+    const at = (((Number(turning.currentTime) || 0) % MARK_TURN_MS) / MARK_TURN_MS) * 360;
+    turning.cancel();
+    if (prefersReducedMotion()) return;
+    const style = getComputedStyle(mark);
+    mark.animate(
+      [{ rotate: `${at}deg` }, { rotate: `${Math.ceil(at / MARK_REST_DEG) * MARK_REST_DEG}deg` }],
+      {
+        duration: Number.parseFloat(style.getPropertyValue("--dur-med")) || 0,
+        easing: style.getPropertyValue("--ease-out").trim() || "ease-out",
+      },
+    );
+  }, [working]);
+  useEffect(() => () => spin.current?.cancel(), []);
   return (
     <svg
+      ref={ref}
       className="mark"
       viewBox="0 0 16 16"
       fill="none"
       strokeWidth="1.2"
       aria-hidden="true"
       data-last-turn-mark=""
+      data-working={working ? "" : undefined}
     >
       <polygon className="o" points="8,1.2 13.9,4.6 13.9,11.4 8,14.8 2.1,11.4 2.1,4.6" />
       <polygon className="i" points="12,8 10,11.46 6,11.46 4,8 6,4.54 10,4.54" />
@@ -98,7 +130,7 @@ function MateLine({
   older,
 }: {
   target: Mate | null;
-  /** The Firstmate works: dots follow a reply's words. */
+  /** The Firstmate works: the mark spins beside the working words or the reply. */
   busy: boolean;
   announce: boolean;
   older: boolean;
@@ -141,7 +173,7 @@ function MateLine({
       <div className="row mate">
         {shown && (
           <>
-            <MateMark />
+            <MateMark working={busy} />
             <span className="line">
               <Bubble
                 {...(reply
@@ -157,7 +189,6 @@ function MateLine({
                 data-working={busy && reply ? "" : undefined}
                 title={mateFit.title}
               >
-                {shown.kind === "working" && <Dots />}
                 <span
                   // Newer words enter as new text, so the rise replays for each.
                   key={reply ? `reply:${reply.text}` : "working"}
@@ -169,7 +200,6 @@ function MateLine({
                   </span>
                 </span>
               </Bubble>
-              {busy && reply && !leaving && <Dots />}
             </span>
           </>
         )}

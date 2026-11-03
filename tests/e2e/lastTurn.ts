@@ -30,7 +30,8 @@ export function yourBubble(page: Page, round: "newest" | "older" = "newest"): Lo
 /**
  * The Firstmate's bubble in the newest round, or the older one's;
  * `data-state` says whether it is `working`, a `reply` or a `problem`, and
- * `data-working` marks a reply the working dots follow.
+ * `data-working` marks a reply the Firstmate keeps working after, while its
+ * mark (`data-last-turn-mark`) spins.
  */
 export function mateBubble(page: Page, round: "newest" | "older" = "newest"): Locator {
   return page.locator(`${round === "older" ? OLDER : NEWEST} [data-last-turn-bubble="firstmate"]`);

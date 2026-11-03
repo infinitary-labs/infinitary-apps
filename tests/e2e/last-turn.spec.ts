@@ -157,9 +157,11 @@ test("a turn shows your message, the Firstmate working, then its reply, and come
     expect(seen.slice(0, reply), said).toContain("mate:working");
     expect(seen.indexOf("busy:false", reply), said).toBeGreaterThan(reply);
     await expect(bubbleWords(mateBubble(page))).toHaveText(MOCK_FM_DONE_TEXT);
-    // Once the turn is over, no working dots follow the reply.
+    // Once the turn is over, the mark stops spinning (INF-2483).
     await expect(mateBubble(page)).not.toHaveAttribute("data-working");
-    await expect(page.locator("[data-last-turn] [data-last-turn-dots]")).toHaveCount(0);
+    await expect(page.locator("[data-last-turn] [data-last-turn-mark][data-working]")).toHaveCount(
+      0,
+    );
   });
 
   const second = "How is the alpha coming along?";

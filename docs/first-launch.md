@@ -145,7 +145,7 @@ The input's hint follows the record: the gated line while the gate is up; “giv
 ## The first turn
 
 A new user who asks something for the first time sees the character spin and run hot, which reads as activity only once you know it.
-So the first turn shows what every turn shows: the captain's message above the input, and under it the first mate's line with its working dots and "Working…" until its reply takes their place (`docs/composer.md` "The last turn").
+So the first turn shows what every turn shows: the captain's message above the input, and under it the first mate's line with its spinning ember mark and "Working…" until its reply takes their place (`docs/composer.md` "The last turn").
 Nothing is written above the character.
 
 ## The crewmate's state words

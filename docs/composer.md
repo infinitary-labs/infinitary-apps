@@ -117,7 +117,7 @@ The Edit menu's Redo item reaches the page only when the platform has something 
 
 ## The last turn
 
-The captain's last two messages, each with the first mate's reply kept beside it, sit just above the input, and nothing else does (FI3-1089's plan, the captain's Approve and build: the dots, "Working…"; drawn as INF-1770's Chat layout, the captain's Approve and build: "allow last two rounds of messages instead of one round, with the older one fading a bit", "'working' should not block the user from seeing the last message if there is one" and "looks a bit more like chat for familarity").
+The captain's last two messages, each with the first mate's reply kept beside it, sit just above the input, and nothing else does (FI3-1089's plan, the captain's Approve and build: "Working…"; INF-2483's plan, the captain's Approve and build: "turn the mark to orange and spin it"; drawn as INF-1770's Chat layout, the captain's Approve and build: "allow last two rounds of messages instead of one round, with the older one fading a bit", "'working' should not block the user from seeing the last message if there is one" and "looks a bit more like chat for familarity").
 They replace the activity line that used to pass there; the Activity panel keeps every line.
 A round is one message of the captain's and the reply line kept beside it.
 
@@ -130,16 +130,18 @@ A round is one message of the captain's and the reply line kept beside it.
   The newest round restores ordinary words to `--fg-1` and its bubble to 8% immediately; leaving and blurring restores its quiet treatment, with no animation or timer.
   The older round keeps its colors and lifts from 50% to full opacity while hovered or focused, returning to 50% afterwards.
   The mark stays cyan (`--accent`) in both states, as the captain requested; composer focus alone does not brighten either round.
-  Working dots, Working… and problem colors do not change.
+  The working mark, Working… and problem colors do not change.
   Neither carries quotation marks.
   Each line is one line, cut with an ellipsis; resting on a cut line shows its whole text.
   The captain's words are not a control: a click does nothing, Tab passes over them, and they draw no underline or focus ring.
   Each reply line, the older one included, is a button that opens that reply as the reply note (below): it takes the pointer, a Tab stop and the focus ring, and no other chrome; the working words are not a button.
   While a card or another stack entry is up, only the newest round shows, so a card keeps about the room it had with one round.
 - **Working.**
-  While the first mate's busy signal is up (`firstmate_state`), three `--hot` dots, the ember the app uses for work in flight, each brightening in turn, follow the newest reply's words.
-  Working never takes a reply's place: an operational wake leaves the reply on screen with the dots after it.
-  A message with no reply yet shows the dots and "Working…" in `--fg-3` where its reply will go.
+  While the first mate's busy signal is up (`firstmate_state`), the newest round's mark turns `--hot`, the ember the app uses for work in flight, over `--dur-fast` and spins one steady turn every 2 seconds; no dots show.
+  Working never takes a reply's place: an operational wake leaves the reply on screen with its own mark spinning beside it.
+  A message with no reply yet shows the spinning mark and "Working…" in `--fg-3` where its reply will go.
+  When the busy signal falls, the mark eases on to its next resting sixth of a turn over `--dur-med` as it fades back to `--accent`; the older round's mark never spins.
+  The phone draws the same spinning mark (`MessageComposer.swift`); card threads keep their own working words.
   Before its turn has started, and after a turn where nothing took effect, the first mate's line is absent and the captain's words stand alone.
 - **The reply line.**
   The core chooses it at the end of each captain turn that read the newest message (`replyLine`; INF-772's plan, the captain's Approve and build).
@@ -159,7 +161,7 @@ A round is one message of the captain's and the reply line kept beside it.
   The core sends it as `firstmate_reply` before the busy signal falls, so the working words turn straight into it as it arrives, and an operational wake never sends one.
   When the closing words are the line and differ from it, the core keeps them as written beside it (`replyWords`, the reply's optional `words`), line breaks included, for the reply note.
 - **What stays.**
-  A message sent becomes the newest round at once (`user_turn`), the round it follows becomes the older one, and the round before that leaves; one sent while the first mate is busy keeps the working dots.
+  A message sent becomes the newest round at once (`user_turn`), the round it follows becomes the older one, and the round before that leaves; one sent while the first mate is busy keeps the spinning mark.
   The older round comes back as the older round on a new message even after it dissolved.
   Becoming the second-to-last round starts 15 seconds of visible reading time, then only that older round dissolves in place over `--dur-slow` (700 ms), with no movement; the newest round stays until the next message.
   The clock belongs to the older round’s arrival, not the newest reply’s completion or eligibility: work, a queued receipt, an unanswered newest message or a newest problem neither delays nor restarts it.
@@ -183,7 +185,7 @@ A round is one message of the captain's and the reply line kept beside it.
   Open the first mate's reply (`firstmate.reply`, `docs/keyboard.md`) opens it from command search while a reply is saved, after the line has faded too, and comes home from Settings first.
 - **Motion.**
   A new round rises 6 px into place over `--dur-med`, the rounds that stay glide up to their new places over `--dur-med`, the newest eases to the older round's strength, and the round pushed out leaves over `--dur-fast`; the working words leave over `--dur-fast` and the reply rises 4 px in over `--dur-med`.
-  Under reduced motion the durations are zero, so every move is a cut, and the dots stand still.
+  Under reduced motion the durations are zero, so every move is a cut, and the working mark turns ember and stands still.
   A screen reader hears the newest reply once as it arrives, never the working words or the older round.
 - **Room.**
   A round is 44 px tall; the two rounds are 10 px apart and the newest is 10 px above the input's top edge, in the slot hung from that edge, so it never moves the input; the notices stay under the input.

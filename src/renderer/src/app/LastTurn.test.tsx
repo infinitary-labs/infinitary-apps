@@ -13,9 +13,9 @@ type Bubble = {
   state: string | null;
   title: string | null;
   words: string;
-  /** The ember dots show somewhere on the line. */
-  dots: boolean;
-  /** A reply the working dots follow. */
+  /** The mark beside the line spins in ember (INF-2483). */
+  spinning: boolean;
+  /** A reply the Firstmate keeps working after. */
   working: boolean;
 };
 
@@ -33,12 +33,14 @@ function render(
     );
     if (!found) return undefined;
     const [, , open = "", inner = ""] = found;
+    const mark =
+      who === "firstmate" ? html.match(/<svg[^>]*data-last-turn-mark=""[^>]*>/)?.[0] : "";
     const attr = (name: string) => open.match(new RegExp(`${name}="([^"]*)"`))?.[1] ?? null;
     return {
       state: attr("data-state"),
       title: attr("title"),
       words: inner.match(/data-last-turn-words="">([^<]*)</)?.[1] ?? "",
-      dots: inner.includes("data-last-turn-dots"),
+      spinning: mark?.includes("data-working") ?? false,
       working: attr("data-working") !== null,
     };
   };
@@ -46,7 +48,9 @@ function render(
 }
 
 describe("a round of the last turn above the input", () => {
-  it("shows the Firstmate working while it is busy with no reply yet, with the dots and the working words", () => {
+  // INF-2483's plan, the captain's Approve and build: "instead of using dot
+  // dot dot, we should simply turn the mark to orange and spin it".
+  it("shows the Firstmate working while it is busy with no reply yet, with the spinning mark and the working words", () => {
     const { you, mate } = render(
       { you: "How is the alpha coming along?", reply: null },
       { busy: true },
@@ -59,15 +63,15 @@ describe("a round of the last turn above the input", () => {
       state: "working",
       title: WORKING_WORDS,
       words: WORKING_WORDS,
-      dots: true,
+      spinning: true,
       working: false,
     });
   });
 
   // INF-1771, the captain's ask: "'working' should not block the user from
-  // seeing the last message if there is one", built as the approved "three
-  // dots right after the reply's words".
-  it("keeps the reply's words while the Firstmate works, with the dots after them", () => {
+  // seeing the last message if there is one"; INF-2483's chosen answer: "The
+  // reply's own mark turns orange and spins".
+  it("keeps the reply's words while the Firstmate works, with the reply's own mark spinning", () => {
     const { mate } = render(
       { you: "Check the Linux lane", reply: { text: "Noted" } },
       { busy: true },
@@ -76,7 +80,7 @@ describe("a round of the last turn above the input", () => {
       state: "reply",
       title: "Noted",
       words: "Noted",
-      dots: true,
+      spinning: true,
       working: true,
     });
   });
@@ -87,7 +91,7 @@ describe("a round of the last turn above the input", () => {
       state: "reply",
       title: "Noted",
       words: "Noted",
-      dots: false,
+      spinning: false,
       working: false,
     });
     expect(reply.html).toMatch(/role="status"[^>]*>Noted</);
@@ -106,14 +110,14 @@ describe("a round of the last turn above the input", () => {
 
   // INF-1770's plan: the older round is drawn faded, never read out, and the
   // working signal belongs to the newest round alone.
-  it("marks the older round, never reads it out, and keeps the working dots off it", () => {
+  it("marks the older round, never reads it out, and never spins its mark", () => {
     const { html, mate } = render(
       { you: "Remember that I squash", reply: { text: "Noted" } },
       { busy: true, older: true },
     );
     expect(html).toMatch(/^<div[^>]*data-older=""/);
     expect(html).not.toContain('role="status"');
-    expect(mate).toMatchObject({ state: "reply", dots: false, working: false });
+    expect(mate).toMatchObject({ state: "reply", spinning: false, working: false });
   });
 
   // INF-1103, the captain's Approve and build on INF-1102's plan: the reply

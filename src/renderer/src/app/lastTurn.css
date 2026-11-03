@@ -20,7 +20,7 @@
  * in over --dur-med. After its reading time the older round dissolves in
  * place over --dur-slow, with no movement, and the slot stays. Under
  * reduced motion the durations are zero, so every move is a cut, and the
- * dots stand still.
+ * working mark turns ember and stands still.
  */
 
 [data-last-turn] {
@@ -121,7 +121,7 @@
   background: color-mix(in srgb, var(--fg-1) 8%, transparent);
 }
 /* INF-1968's C: newest ordinary words stay quiet until that round is read.
-   Only colors change, immediately; the mark stays cyan. */
+   Only colors change, immediately; the resting mark stays cyan. */
 [data-last-turn-pair]:not([data-older]) {
   --last-turn-words: color-mix(in srgb, var(--fg-2) 75%, var(--fg-3));
   --last-turn-bubble: color-mix(in srgb, var(--fg-1) 4%, transparent);
@@ -158,23 +158,31 @@ button[data-last-turn-bubble] {
   cursor: pointer;
 }
 
-/* The first mate's mark: the app's hexagon in --accent. */
+/* The first mate's mark: the app's hexagon in --accent. While the Firstmate
+   works it turns ember (--hot, the app's working color) over --dur-fast and
+   spins (LastTurn's MateMark); it fades back to cyan over --dur-med. */
 [data-last-turn] .mark {
   flex: none;
   width: 14px;
   height: 14px;
+  color: var(--accent);
+  transition: color var(--dur-med) linear;
+}
+[data-last-turn] .mark[data-working] {
+  color: var(--hot);
+  transition-duration: var(--dur-fast);
 }
 [data-last-turn] .mark .o {
-  stroke: var(--accent);
+  stroke: currentColor;
 }
 [data-last-turn] .mark .i {
-  stroke: var(--accent);
+  stroke: currentColor;
   opacity: 0.45;
 }
 [data-last-turn] .mark .d {
-  fill: var(--accent);
+  fill: currentColor;
 }
-/* The reply and, while the Firstmate works, the dots after its words. */
+/* The reply line beside the mark. */
 [data-last-turn] .line {
   display: inline-flex;
   align-items: center;
@@ -213,43 +221,6 @@ button[data-last-turn-bubble] {
 }
 [data-last-turn-bubble][data-state="problem"] .words {
   color: var(--danger);
-}
-
-/* The working dots: three, in ember (--hot, the app's working color), each brightening in turn. */
-[data-last-turn-dots] {
-  flex: none;
-  display: inline-flex;
-  align-items: center;
-  gap: 3px;
-  color: var(--hot);
-}
-[data-last-turn-dots] i {
-  width: 4px;
-  height: 4px;
-  border-radius: 50%;
-  background: currentColor;
-  animation: last-turn-dot 1.2s ease-in-out infinite;
-}
-[data-last-turn-dots] i:nth-child(2) {
-  animation-delay: 0.2s;
-}
-[data-last-turn-dots] i:nth-child(3) {
-  animation-delay: 0.4s;
-}
-@keyframes last-turn-dot {
-  0%,
-  60%,
-  100% {
-    opacity: 0.25;
-  }
-  30% {
-    opacity: 1;
-  }
-}
-@media (prefers-reduced-motion: reduce) {
-  [data-last-turn-dots] i {
-    animation: none;
-  }
 }
 
 /* The reply's polite status: read, never seen. */

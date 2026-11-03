@@ -1112,6 +1112,68 @@ describe("the Claude seat's served record", () => {
     session.dispose();
   });
 
+  // INF-2408 (the captain: "File a fix for later"): the seat reads its chain
+  // while a turn runs and hashes at the close only what the turn added; the
+  // fingerprint each turn records stays the whole recorded chain's sha256.
+  it("records each turn's prefix as the sha256 of the whole chain the prompt landed on", async () => {
+    const inputs: SDKUserMessage[] = [];
+    let emit: ((message: unknown) => void) | undefined;
+    const s = seat({
+      onInput: (message, send) => {
+        inputs.push(message);
+        emit = send;
+      },
+    });
+    const session = await s.factory(spec());
+    const chainOf = (entries: object[]) => ({
+      messageCount: entries.length,
+      sha256: createHash("sha256").update(JSON.stringify(entries)).digest("hex"),
+    });
+    const root = { type: "user", uuid: "root", parentUuid: null, message: { content: "old" } };
+    const a0 = { type: "assistant", uuid: "a0", parentUuid: "root", message: { content: [] } };
+    const first = session.prompt("hello");
+    await s.input(1);
+    emit?.(say.running);
+    emit?.(say.ack(inputs[0] as SDKUserMessage));
+    const asked = {
+      type: "user",
+      uuid: inputs[0]?.uuid as string,
+      parentUuid: "a0",
+      message: { role: "user", content: "hello" },
+    };
+    const a1 = {
+      type: "assistant",
+      uuid: "a1",
+      parentUuid: asked.uuid,
+      message: { content: [{ type: "text", text: "Aye — résumé." }] },
+    };
+    clientWrites(s, session.sessionId, [root, a0, asked, a1]);
+    emit?.(say.result("Aye."));
+    emit?.(say.idle);
+    await first;
+    expect(session.servedState?.()?.prompt?.prefix).toEqual(chainOf([root, a0]));
+    // The next turn: the seat reads the chain so far while the turn runs.
+    const second = session.prompt("and now");
+    await s.input(2);
+    emit?.(say.running);
+    emit?.(say.ack(inputs[1] as SDKUserMessage));
+    await settle();
+    clientWrites(s, session.sessionId, [
+      {
+        type: "user",
+        uuid: inputs[1]?.uuid as string,
+        parentUuid: "a1",
+        message: { role: "user", content: "and now" },
+      },
+      { type: "assistant", uuid: "a2", parentUuid: inputs[1]?.uuid, message: { content: [] } },
+    ]);
+    emit?.(say.result("Done."));
+    emit?.(say.idle);
+    await second;
+    expect(session.servedState?.()?.prompt?.prefix).toEqual(chainOf([root, a0, asked, a1]));
+    session.dispose();
+  });
+
   it("keeps null locations for a prompt the client never took in", async () => {
     const s = seat({
       onInput: (_message, emit) => {

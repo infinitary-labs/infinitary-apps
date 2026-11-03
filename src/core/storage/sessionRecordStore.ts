@@ -8,7 +8,7 @@ import {
   readSync,
   statSync,
 } from "node:fs";
-import { appendFile } from "node:fs/promises";
+import { appendFile, open } from "node:fs/promises";
 import { join } from "node:path";
 import { sidecarPathOf } from "./sessionReader";
 
@@ -109,6 +109,8 @@ export class SessionRecordStore {
   /** Each sidecar's pending append, so stamps land in call order. */
   private readonly tails = new Map<string, Promise<void>>();
   private readonly parsed = new Map<string, ParsedCopy>();
+  /** Each copy's read in progress (`catchUp`), so two never parse the same lines. */
+  private readonly reading = new Map<string, Promise<void>>();
 
   constructor(private readonly dir: string) {}
 
@@ -172,15 +174,7 @@ export class SessionRecordStore {
    */
   index(sessionId: string): SessionRecordIndex {
     const path = this.transcriptPath(sessionId);
-    const facts = existsSync(path) ? statSync(path) : undefined;
-    const size = facts?.size ?? 0;
-    const ino = facts?.ino ?? 0;
-    let copy = this.parsed.get(path);
-    if (!copy || (copy.offset > 0 && copy.ino !== ino)) {
-      copy = { entries: [], byUuid: new Map(), offset: 0, partial: Buffer.alloc(0), ino };
-      this.parsed.set(path, copy);
-    }
-    copy.ino = ino;
+    const { copy, size } = this.parsedCopy(path);
     if (size > copy.offset) {
       const fd = openSync(path, "r");
       let fresh: Buffer;
@@ -218,6 +212,82 @@ export class SessionRecordStore {
   /** Whether the session's entries are held parsed in memory now. */
   holdsParsed(sessionId: string): boolean {
     return this.parsed.has(this.transcriptPath(sessionId));
+  }
+
+  /**
+   * Read what the copy gained since the last read without holding the main
+   * thread (INF-2408): the bytes are read off it, and their lines are parsed
+   * one per turn of the event loop. Each line parsed moves the copy on by
+   * itself, so an `index` in between carries on from where the read stands.
+   * One read runs per copy at a time; a second waits for it and reads what
+   * came after. It settles once the copy holds every complete line the file
+   * had; a line the client was still writing waits for its end, as in `index`.
+   * A copy let go of while it reads (`release`) stays let go of.
+   */
+  async catchUp(sessionId: string): Promise<void> {
+    const path = this.transcriptPath(sessionId);
+    let held = this.parsed.get(path);
+    for (;;) {
+      const running = this.reading.get(path);
+      if (running) {
+        await running;
+        continue;
+      }
+      if (held && !this.parsed.has(path)) return;
+      const { copy, size } = this.parsedCopy(path);
+      held = copy;
+      const offset = copy.offset;
+      if (size <= offset) return;
+      const read = this.readLines(path, copy, size).finally(() => {
+        if (this.reading.get(path) === read) this.reading.delete(path);
+      });
+      this.reading.set(path, read);
+      await read;
+      // A file that gave no more than it had read before has nothing left to read.
+      if (this.parsed.get(path) === copy && copy.offset === offset) return;
+    }
+  }
+
+  /** One read of the bytes from the copy's offset to `size`, a line per turn of the event loop. */
+  private async readLines(path: string, copy: ParsedCopy, size: number): Promise<void> {
+    const start = copy.offset;
+    const carried = copy.partial;
+    const fresh = await readRange(path, start, size - start);
+    const bytes = Buffer.concat([carried, fresh]);
+    // The read stops wherever anything else read further or started the copy over.
+    const ours = (at: number) => this.parsed.get(path) === copy && copy.offset === at;
+    let from = 0;
+    let at = start;
+    for (let end = bytes.indexOf(0x0a); end >= 0; end = bytes.indexOf(0x0a, from)) {
+      await new Promise<void>((resolve) => setImmediate(resolve));
+      if (!ours(at)) return;
+      for (const entry of parseLines(bytes.subarray(from, end).toString("utf8"))) {
+        copy.entries.push(entry);
+        if (typeof entry.uuid === "string") copy.byUuid.set(entry.uuid, entry);
+      }
+      at = start + end + 1 - carried.length;
+      copy.offset = at;
+      copy.partial = Buffer.alloc(0);
+      from = end + 1;
+    }
+    if (!ours(at)) return;
+    copy.offset = start + fresh.length;
+    // A copy of the unfinished line, never a view of the whole read (INF-2392).
+    copy.partial = Buffer.from(bytes.subarray(from));
+  }
+
+  /** A copy's parsed state, started over when the file was written again whole. */
+  private parsedCopy(path: string): { copy: ParsedCopy; size: number } {
+    const facts = existsSync(path) ? statSync(path) : undefined;
+    const size = facts?.size ?? 0;
+    const ino = facts?.ino ?? 0;
+    let copy = this.parsed.get(path);
+    if (!copy || (copy.offset > 0 && copy.ino !== ino)) {
+      copy = { entries: [], byUuid: new Map(), offset: 0, partial: Buffer.alloc(0), ino };
+      this.parsed.set(path, copy);
+    }
+    copy.ino = ino;
+    return { copy, size };
   }
 
   /** Append one sidecar line. */
@@ -258,6 +328,18 @@ function readAt(fd: number, position: number, length: number): Buffer {
   const buffer = Buffer.alloc(length);
   const read = readSync(fd, buffer, 0, length, position);
   return buffer.subarray(0, read);
+}
+
+/** `length` bytes of a file from `position`, read off the main thread. */
+async function readRange(path: string, position: number, length: number): Promise<Buffer> {
+  const file = await open(path, "r");
+  try {
+    const buffer = Buffer.alloc(length);
+    const { bytesRead } = await file.read(buffer, 0, length, position);
+    return buffer.subarray(0, bytesRead);
+  } finally {
+    await file.close();
+  }
 }
 
 /** The last `span` bytes of a file `size` bytes long, read in place. */

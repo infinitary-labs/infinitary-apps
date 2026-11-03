@@ -80,6 +80,7 @@ import { ClaudeQueryCore, MessageQueue, userMessage } from "./claudeQueryCore";
 import { acquireSessionLease } from "./claudeStoreLease";
 import { claudeToolServer } from "./claudeTaskTools";
 import { ClaudeTranscriptLookup } from "./claudeTranscript";
+import { chainTo, PrefixDigest } from "./prefixDigest";
 
 /**
  * Claude's implementation of the one session contract
@@ -932,6 +933,8 @@ class ClaudeRollingSession extends ClaudeQueryCore<SessionEvent> implements Mode
   private disposing = false;
   /** The last settled prompt's messages, where `servedState` locates them. */
   private served: Pushed[] | undefined;
+  /** The fingerprint of the recorded chain each prompt was appended to, read as it grows. */
+  private readonly prefix = new PrefixDigest();
   /** The session is gone: its client has exited and its store is free. */
   private retired = false;
   /** The session this one started over from, until the owner takes it. */
@@ -1069,6 +1072,31 @@ class ClaudeRollingSession extends ClaudeQueryCore<SessionEvent> implements Mode
     }
     // A dispose that came while the client started ends this turn early too.
     if (this.disposing) void this.interrupt();
+    else void this.readAhead();
+  }
+
+  /**
+   * The seat's turn close reads where its prompt landed (`servedState`), and
+   * the prefix fingerprint covers its whole recorded chain. Once a recorded
+   * session opens and again while each turn runs, the copy is read and the
+   * chain hashed a line at a time, so the close parses and hashes only what
+   * the turn added (INF-2408). A coding session's owner never asks, so it
+   * reads nothing ahead.
+   */
+  async readAhead(): Promise<void> {
+    if (this.spec.builtins === "coding") return;
+    const store = this.config.store;
+    const sessionId = this.sessionId;
+    try {
+      await store.catchUp(sessionId);
+      // A session that ended or moved to a new id let go of this copy's entries.
+      if (sessionId !== this.sessionId || this.retired || !store.holdsParsed(sessionId)) return;
+      const { entries, byUuid } = store.index(sessionId);
+      const leaf = entries.findLast((entry) => typeof entry.uuid === "string");
+      if (leaf) await this.prefix.prime(chainTo(byUuid, leaf.uuid as string));
+    } catch (caught) {
+      this.note(`the transcript could not be read ahead of the turn's end: ${String(caught)}`);
+    }
   }
 
   /** Honored when the spec asked for a per-turn level (WI-13). */
@@ -1163,6 +1191,7 @@ class ClaudeRollingSession extends ClaudeQueryCore<SessionEvent> implements Mode
     this.mirror();
     // The old id's entries are never read again; its copy on disk stays.
     this.config.store.release(from);
+    this.prefix.release();
     this.id = randomUUID();
     this.tookPrompt = false;
     this.reopen = true;
@@ -1660,6 +1689,7 @@ class ClaudeRollingSession extends ClaudeQueryCore<SessionEvent> implements Mode
       .then(() => {
         // The session's record is final: its parsed entries are no longer read.
         this.config.store.release(this.id);
+        this.prefix.release();
         this.retirement.resolve();
       });
   }
@@ -1956,7 +1986,7 @@ class ClaudeRollingSession extends ClaudeQueryCore<SessionEvent> implements Mode
             const { found, ...served } = asServed(first);
             return {
               ...served,
-              prefix: found ? prefixOf(byUuid, served.parentEntryId) : null,
+              prefix: found ? this.prefix.of(chainTo(byUuid, served.parentEntryId)) : null,
             };
           })()
         : null;
@@ -2070,24 +2100,6 @@ class ClaudeRollingSession extends ClaudeQueryCore<SessionEvent> implements Mode
   }
 }
 
-/** The recorded chain a message was appended to, root first, as the client resumes it. */
-function prefixOf(
-  byUuid: ReadonlyMap<string, SessionRecordEntry>,
-  parentId: string | null,
-): { messageCount: number; sha256: string } {
-  const chain: SessionRecordEntry[] = [];
-  const visited = new Set<string>();
-  let id = parentId;
-  while (id && !visited.has(id)) {
-    visited.add(id);
-    const entry = byUuid.get(id);
-    if (!entry) break;
-    chain.unshift(entry);
-    id = typeof entry.parentUuid === "string" ? entry.parentUuid : null;
-  }
-  return { messageCount: chain.length, sha256: sha256(JSON.stringify(chain)) };
-}
-
 function sha256(text: string): string {
   return createHash("sha256").update(text).digest("hex");
 }
@@ -2194,6 +2206,7 @@ export function createClaudeSessionFactory(deps: ClaudeSessionDeps): SessionFact
     if (recorded) {
       session.renewIfChanged();
       session.renewPersonalIfChanged();
+      void session.readAhead();
     }
     await session.stampContract();
     track(clock, session);

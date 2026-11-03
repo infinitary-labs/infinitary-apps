@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "id": "served-prefix-close",
+      "kind": "fix",
+      "area": "firstmate",
+      "title": "No pause when a long first mate conversation finishes a turn",
+      "body": "On Claude, the app no longer stops answering for a moment each time the first mate finishes a turn in a long conversation.",
+      "noPicture": "This removes a pause in the app's own work without changing any screen or control.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

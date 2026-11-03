@@ -112,6 +112,8 @@ Its record is the app's copy of the client's own transcript in the spec's record
   The client's transcript records the prompt as its own entry under that uuid and a steer folded into a running turn as an `attachment` (`queued_command`) whose `source_uuid` is that uuid, so a reader joins the two whenever the copy holds them.
 
 The seat's `servedState()` reads the copy as it stands: the prompt's entry, the entry it follows and the chain before it (the prefix), and each steer's attachment.
+The prefix's sha256 is that of the chain's JSON, `JSON.stringify(chain)`, and the seat keeps it as the chain grows (`PrefixDigest`, `src/core/claude/prefixDigest.ts`): it hashes only the entries added since the last chain it read, and a chain that does not continue that one is read whole again.
+When a recorded session opens and while each turn runs, the seat reads the copy's new lines and hashes its chain one line per turn of the event loop (`SessionRecordStore.catchUp`), so a turn's close parses and hashes only what the turn added and the app's main thread keeps answering.
 The client writes its transcript on its own schedule, so a location it has not written yet is null in the decision record (`prefix` too); the sidecar's uuids still find it later.
 
 The offline readers do exactly that (W1 S11): the one session reader (`src/core/storage/sessionReader.ts`) joins each turn to the contract that served it through the sidecar's uuids - a prompt by its own entry, a folded steer by its attachment's `source_uuid` - never through a location the decision record carried, and hands the session to the replay, the extractor and the corpus export in the Pi dialect (`docs/dispatch-extractor.md`).

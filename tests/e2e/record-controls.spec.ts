@@ -18,6 +18,7 @@ import {
   NO_LONGER_WANTED,
 } from "../../src/shared/recordDrop";
 import type { TaskBoard } from "../../src/shared/tasks";
+import { recordAttentionWaits, taskWaitText } from "../../src/shared/taskWaits";
 import { scratchDir } from "../helpers/scratchDirs";
 import { nextFrame } from "./crew";
 import { type LaunchedApp, launchApp } from "./launch";
@@ -319,6 +320,24 @@ test("Start starts a planned task on request and dismisses its record; Drop task
   const { page } = launched;
   await openRecord(page, "rc-start");
   await expectRecordTaskStatus(page);
+  // INF-2362: Backlog's wait moved from the mark to the attention box,
+  // not out of the record. Keep the full words check at that owner.
+  const planned = await page.evaluate(() => window.infinitary.tasks.detail("rc-start"));
+  const waits = recordAttentionWaits(planned);
+  expect(waits).toHaveLength(1);
+  expect(waits[0]?.kind).toBe("backlog");
+  const attention = recordFrame(page).locator("[data-record-attention-title]");
+  await expect(attention).toHaveText(
+    waits.map((wait) => taskWaitText(wait, Date.now())).join("; "),
+  );
+  await test.info().attach("backlog-wait-ownership", {
+    body: JSON.stringify({
+      waits,
+      attention: await attention.innerText(),
+      mark: await pane(page).locator("[data-task-mark]").getAttribute("aria-label"),
+    }),
+    contentType: "application/json",
+  });
   expect(await expectRecordBar(page)).toMatchObject({ end: "drop-task", next: "start" });
   // Drop task holds the end slot; Start is the next slot's primary that begins the work.
   await expect(end(page)).toHaveAccessibleName(DROP_TASK_LABEL);

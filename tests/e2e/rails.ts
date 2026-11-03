@@ -8,6 +8,7 @@ import type { RecordFact } from "../../src/shared/recordFacts";
 import type { TaskFactId } from "../../src/shared/taskFacts";
 import { taskStatusLabel, taskStatusOf } from "../../src/shared/taskPresentation";
 import type { TaskEventKind } from "../../src/shared/tasks";
+import { recordAttentionWaits, taskWaitStatus, taskWaitText } from "../../src/shared/taskWaits";
 import { nextFrame } from "./crew";
 import { drawnFrame, frameElement, railFrame } from "./frames";
 import { takeTurn } from "./inputQueue";
@@ -652,16 +653,22 @@ export async function expectTaskMark(page: Page, key: string): Promise<void> {
   await expect(nowRow(page, key)).not.toHaveAttribute("title", /.+/);
 }
 
-/** Compare the shown record's lifecycle mark and reason with its current typed task. */
+/** Compare the record's mark and relocated waits with their surface-specific owners. */
 export async function expectRecordTaskStatus(page: Page): Promise<void> {
   const pane = recordCard(page);
   const id = await pane.getAttribute("data-task-record");
   if (!id) throw new Error("No shown task record");
   const task = await page.evaluate((id) => window.infinitary.tasks.detail(id), id);
-  const reading = taskStatusOf(task);
+  // INF-2362: the record moves owned waits to its attention box, unlike a list row.
+  const reading = taskWaitStatus(task, taskStatusOf(task), "record", Date.now());
   await expect(pane.locator("[data-task-mark]")).toHaveAttribute("data-task-mark", reading.mark);
   await expect(pane.locator("[data-task-mark]")).toHaveAttribute(
     "aria-label",
     taskStatusLabel(reading),
   );
+  for (const wait of recordAttentionWaits(task)) {
+    await expect(recordFrame(page).locator("[data-record-attention]")).toContainText(
+      taskWaitText(wait, Date.now()),
+    );
+  }
 }

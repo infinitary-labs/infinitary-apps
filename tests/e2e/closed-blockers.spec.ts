@@ -5,6 +5,7 @@ import { openDatabase } from "../../src/core/storage/db";
 import { seedTask } from "../../src/core/tasks/seedTask";
 import { TaskService } from "../../src/core/tasks/taskService";
 import { RECORD_NEXT_LABELS } from "../../src/shared/recordBar";
+import { recordAttentionWaits, taskWaitText } from "../../src/shared/taskWaits";
 import { scratchDir } from "../helpers/scratchDirs";
 import { type LaunchedApp, launchApp } from "./launch";
 import {
@@ -132,18 +133,34 @@ test("a dropped edge still prevents starting without naming closed work as a liv
   await expect(recordBarButton(page, "next")).toBeDisabled();
   // The body's attention box says why it cannot start yet.
   await expect(recordFrame(page).locator("[data-record-attention]")).toBeVisible();
-  // INF-1605: a dropped prerequisite still blocks START, but is explicitly dropped, not live work.
-  const wait = detail.queueWait;
-  if (!wait) throw new Error("The unstarted task has no dated queue wait");
-  await expect(recordFrame(page).locator("[data-record-attention-title]")).toHaveText(wait.line);
+  // INF-1605 / INF-2363: dropped prerequisites still block Start and retain
+  // their dates. The record owns structured waits; queueWait is the list's
+  // older summary. An unknown END time must not erase a known recorded date.
+  const waits = recordAttentionWaits(detail);
+  const dependencies = waits.filter((wait) => wait.kind === "dependency");
+  expect(dependencies).toHaveLength(2);
+  expect(waits.filter((wait) => wait.kind === "backlog")).toHaveLength(1);
   for (const id of ["merged", "dropped", "discarded"]) {
     const closed = await page.evaluate((taskId) => window.infinitary.tasks.detail(taskId), id);
+    const wait = dependencies.find((entry) => entry.taskKeys?.includes(closed.key));
     if (closed.status === "dropped") {
-      expect(wait.line).toContain(`${closed.key} (dropped)`);
+      expect(wait).toMatchObject({ label: `${closed.key} (dropped)`, since: expect.any(Number) });
+      expect(wait?.since).toBeGreaterThanOrEqual(detail.createdAt);
+      expect(wait?.next).toBeUndefined();
     } else {
-      expect(wait.line).not.toContain(closed.key);
+      expect(wait).toBeUndefined();
     }
   }
+  const title = recordFrame(page).locator("[data-record-attention-title]");
+  await expect(title).toHaveText(waits.map((wait) => taskWaitText(wait, Date.now())).join("; "));
+  await test.info().attach("dropped-prerequisite-waits", {
+    body: JSON.stringify({
+      waits,
+      attention: await title.innerText(),
+      startDisabled: await recordBarButton(page, "next").isDisabled(),
+    }),
+    contentType: "application/json",
+  });
 });
 
 test("an active task with only closed dependencies has no blocker banner", async () => {

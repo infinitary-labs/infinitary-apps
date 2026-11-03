@@ -101,6 +101,8 @@ Playwright runs every read inside a frame as a user gesture, which gives that fr
 An iframe fires `load` even for a 404, so a served mount's presence is asserted with Electron's `session.fetch`.
 Every spec that reads a feed line or a now-panel row goes through `tests/e2e/rails.ts`.
 The Checks value on a task record or hover summary uses `taskCheckWords`; `taskFact(scope, "checks")` owns the whole cell, including its state dot, finished age and recorded watch schedules.
+`expectRecordTaskStatus` reads the record-specific status projection, not the list's status reason, and checks each relocated wait in the record's attention box.
+The native-pointer record fixture reuses the composed template program from the served body's script under its unchanged CSP, not the raw source file that lacks injected shared functions.
 Both docks start collapsed, and a collapsed dock's frame runs out of sight, where it never paints: a wait for its next animation frame never returns.
 So `expandDock` is the one awaited expand: the chevron is a toggle, and two overlapping clicks close it again.
 Presses on two docks of one page take turns with each other and with the input helpers (`takeTurn`), because two clicks at once can swallow one while it reports success.

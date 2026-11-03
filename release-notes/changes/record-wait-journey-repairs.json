@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "record-wait-journey-repairs",
+      "reason": "Repair test fixtures and record-surface assertions after structured waits moved; no product behavior changes."
+    }
+  ]
+}

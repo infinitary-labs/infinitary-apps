@@ -1,4 +1,3 @@
-import { readFileSync } from "node:fs";
 import type { Page } from "@playwright/test";
 import { openDatabase } from "../../src/core/storage/db";
 import { seedTask } from "../../src/core/tasks/seedTask";
@@ -54,9 +53,13 @@ export async function mountPointerRecord(page: Page): Promise<TaskDetail> {
   await openGroup(page, "landed");
   await pressRow(page, detail.key);
   await expectRecordBody(page);
-  const html = await recordFrame(page)
-    .locator("html")
-    .evaluate((node) => node.outerHTML);
+  const frame = recordFrame(page);
+  const html = await frame.locator("html").evaluate((node) => node.outerHTML);
+  // INF-2361: buildFrameDocument puts the composed template program in the
+  // body. Reuse those exact served bytes, including shared wait functions,
+  // under the unchanged CSP; raw record.frame.js is not that program.
+  const script = await frame.locator("body > script").textContent();
+  if (!script) throw new Error("The served record has no template program");
   await page.goto("about:blank");
   await page.setContent(html.replace(/<script\b[^>]*>[\s\S]*?<\/script>/g, ""));
   await page.evaluate(() => {
@@ -75,9 +78,7 @@ export async function mountPointerRecord(page: Page): Promise<TaskDetail> {
       },
     });
   });
-  await page.addScriptTag({
-    content: readFileSync("src/renderer/src/plugins/builtin/record/record.frame.js", "utf8"),
-  });
+  await page.addScriptTag({ content: script });
   await pushPointerRecord(page, detail);
   return detail;
 }

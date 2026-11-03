@@ -19,6 +19,18 @@ test("Activity keeps a native press across live updates, including growing folde
   try {
     const { page } = app;
     const detail = await mountPointerRecord(page);
+    // INF-2361: the fixture must run the served, composed program without
+    // relaxing its policy. A different inline program still cannot execute.
+    const untrustedRan = await page.evaluate(() => {
+      const marker = "__record_pointer_untrusted__";
+      const script = document.createElement("script");
+      script.textContent = `window["${marker}"] = true;`;
+      document.body.appendChild(script);
+      const ran = (window as unknown as Record<string, unknown>)[marker] === true;
+      script.remove();
+      return ran;
+    });
+    expect(untrustedRan).toBe(false);
     const report = page.locator('[data-record-event="report"]');
     const summary = report.locator(":scope > summary");
     const whole = report.locator(":scope > [data-record-whole]");
@@ -99,6 +111,16 @@ test("Activity keeps a native press across live updates, including growing folde
       await untilFocused(summary);
       await page.keyboard.press("Enter");
       await expect(whole).toBeHidden();
+    });
+    await test.info().attach("native-record-press", {
+      body: JSON.stringify({
+        task: detail.key,
+        untrustedRan,
+        closedAfterKeyboard: !(await whole.isVisible()),
+        focused: await summary.evaluate((node) => node.ownerDocument.activeElement === node),
+        report: await summary.innerText(),
+      }),
+      contentType: "application/json",
     });
   } finally {
     await app.close();

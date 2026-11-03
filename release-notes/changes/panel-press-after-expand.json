@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "panel-press-after-expand",
+      "reason": "Internal: the panel task journey waits for the window to draw a panel it just expanded before pressing into it; app behavior is unchanged."
+    }
+  ]
+}

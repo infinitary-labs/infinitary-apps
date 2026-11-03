@@ -9,7 +9,8 @@ import { seedTask } from "../../src/core/tasks/seedTask";
 import { TaskService } from "../../src/core/tasks/taskService";
 import { MOVE_NOT_ASKED } from "../../src/renderer/src/plugins/panelTasks";
 import { scratchDir } from "../helpers/scratchDirs";
-import { frameIn, panelBody } from "./frames";
+import { nextFrame } from "./crew";
+import { frameIn, panelBody, panelElement } from "./frames";
 import { type LaunchedApp, launchApp } from "./launch";
 import { resizeWindow } from "./layout";
 import {
@@ -99,6 +100,24 @@ const detail = (page: Page, id: string) =>
 const namesThePanel = async (page: Page, id: string) =>
   (await detail(page, id)).activityLog.some((row) => row.text.includes(`From the ${TITLE} panel.`));
 
+/**
+ * Waits until the window has drawn a side panel it just expanded, before a
+ * native press into the panel's frame. A collapsed panel's body is out of
+ * the window's drawing, and as it comes back Chromium in the hidden window
+ * can still aim a press by the earlier drawing: the window's own page hears
+ * it, on the panel frame's element, and the panel's page never does
+ * (INF-2439, main run 41614527601). Two frames: the first draws the panel
+ * open, the second starts after it.
+ */
+async function panelDrawnOpen(page: Page, panelId: string): Promise<void> {
+  await expect(page.locator(`[data-side-panel="${panelId}"]`)).not.toHaveAttribute(
+    "data-side-panel-collapsed",
+    "",
+  );
+  await expect(panelElement(page, panelId)).toBeVisible();
+  await nextFrame(page);
+}
+
 test.describe("a panel of the captain's own works with his tasks", () => {
   let launched: LaunchedApp;
 
@@ -139,6 +158,8 @@ test.describe("a panel of the captain's own works with his tasks", () => {
       await expect(queue).toBeEnabled();
       // A row says why a move is closed to it, from the record's own rule.
       await expect(desk.locator('[data-desk-queue="FM3K-3"]')).toBeDisabled();
+      // The panel was expanded a moment ago: the press waits for its drawing.
+      await panelDrawnOpen(page, PANEL);
       // e2e-frame-actions: native -- This journey proves a real pointer grants permission to move a task.
       await queue.click();
       await expect.poll(async () => (await detail(page, "alpha")).startPolicy).toBe("when-ready");

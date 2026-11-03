@@ -4,23 +4,8 @@ import { page, userEvent } from "vitest/browser";
 import { builtinManifest } from "../../src/renderer/src/plugins/builtin/manifest";
 import { fakeBridge } from "./bridge";
 import { freshHome } from "./freshHome";
+import { within } from "./layout";
 import { openWindow } from "./window";
-
-/** Rounding a layout may leave at an edge, in px. */
-const ROUNDING = 0.5;
-
-/** The edges of `inner` that reach past `outer`, each with how far; empty when it lies inside. */
-function escapes(inner: DOMRect, outer: DOMRect): string[] {
-  const escaped: string[] = [];
-  const past = (edge: string, by: number) => {
-    if (by > ROUNDING) escaped.push(`${edge} by ${by.toFixed(1)}px`);
-  };
-  past("left", outer.left - inner.left);
-  past("top", outer.top - inner.top);
-  past("right", inner.right - outer.right);
-  past("bottom", inner.bottom - outer.bottom);
-  return escaped;
-}
 
 test("at the smallest window every Settings section opens and none needs a sideways scroll", async () => {
   await page.viewport(SMALLEST_WINDOW.width, SMALLEST_WINDOW.height);
@@ -39,7 +24,7 @@ test("at the smallest window every Settings section opens and none needs a sidew
     await userEvent.click(tab);
     await expect.element(tab).toHaveAttribute("aria-selected", "true");
     expect(
-      escapes(tab.element().getBoundingClientRect(), screen.getBoundingClientRect()),
+      within(tab.element().getBoundingClientRect(), screen.getBoundingClientRect()),
       `${label}'s tab stays in the window`,
     ).toEqual([]);
     expect(screen.scrollWidth - screen.clientWidth, `${label} has no horizontal scrolling`).toBe(0);

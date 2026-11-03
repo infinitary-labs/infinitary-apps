@@ -1,7 +1,8 @@
 import { expect, test } from "vitest";
 import { cdp, page, userEvent } from "vitest/browser";
 import { fakeBridge } from "./bridge";
-import { freshHome } from "./freshHome";
+import { freshHome, subscribed } from "./freshHome";
+import { messageBox } from "./prompt";
 import { openWindow } from "./window";
 
 /**
@@ -57,22 +58,9 @@ async function stageRuns(act: () => Promise<void>): Promise<Runs> {
   ) as Runs;
 }
 
-/**
- * The message box as the window draws it now, read by its name each time:
- * its hint changes as the window learns how this computer hears dictation,
- * so a locator built from the hint loses it.
- */
-function messageBox(): HTMLTextAreaElement | null {
-  return document.querySelector<HTMLTextAreaElement>('[name="task-prompt"]');
-}
-
 test("typing a sentence in the message box does not render the stage again for each key", async () => {
-  const home = freshHome();
-  const firstRun = home["inf:app:first-run"];
-  if (!firstRun || typeof firstRun === "function")
-    throw new Error("A fresh home answers its first run");
   // A home whose person connected a subscription: the message box is open.
-  await openWindow(fakeBridge({ ...home, "inf:app:first-run": { ...firstRun, gateOpen: false } }));
+  await openWindow(fakeBridge(subscribed(freshHome())));
   await expect.poll(() => messageBox()?.disabled).toBe(false);
   // The stage HomeMate draws, with the character in it.
   await expect.element(page.getByRole("img", { name: /^First mate - / })).toBeVisible();

@@ -28,7 +28,6 @@ export const RENDERER_SUITES = [
  */
 export const APPLICATION_SUITES = [
   // INF-1258: recent journeys with private fixtures; full Mac/Linux qualification.
-  "card-close-flash.spec.ts",
   "copilot-sign-in.spec.ts",
   "crew-board-delta.spec.ts",
   "integrations-inbox.spec.ts",
@@ -45,7 +44,6 @@ export const APPLICATION_SUITES = [
   "task-browser-form-reload.spec.ts",
   "task-browser-sign-ins.spec.ts",
   "task-browser-user-agent.spec.ts",
-  "thread-working-reveal.spec.ts",
   "waiting-crewmate.spec.ts",
 
   "activity-runs.spec.ts",
@@ -77,7 +75,6 @@ export const APPLICATION_SUITES = [
   "card-maximize.spec.ts",
   "card-picture-fit.spec.ts",
   "card-pictures.spec.ts",
-  "card-place.spec.ts",
   "card-questions.spec.ts",
   "card-reading-place.spec.ts",
   "card-resize.spec.ts",
@@ -88,7 +85,6 @@ export const APPLICATION_SUITES = [
   "card-threads.spec.ts",
   "card-viewport-height.spec.ts",
   "check-refresh.spec.ts",
-  "character-warp.spec.ts",
   "claude-seat-overflow.spec.ts",
   "claude-stopped-report.spec.ts",
   "closed-blockers.spec.ts",
@@ -146,7 +142,6 @@ export const APPLICATION_SUITES = [
   "claude-seat-instructions.spec.ts",
   "claude-seat.spec.ts",
   "closing-note.spec.ts",
-  "composer-safety.spec.ts",
   "decision-models.spec.ts",
   "dependency-wait.spec.ts",
   "dev-observe.spec.ts",
@@ -174,7 +169,6 @@ export const APPLICATION_SUITES = [
   "record-activity.spec.ts",
   "region-shot.spec.ts",
   "release-menu.spec.ts",
-  "reply-clear.spec.ts",
   "request-merge.spec.ts",
   "required-action-row.spec.ts",
   "retrieval-routing.spec.ts",

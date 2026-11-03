@@ -20,13 +20,29 @@ import type { CrewStory, FreshHomeAnswers, StoryPush } from "./browserProvided";
  * change that moves an answer reaches the browser tests with no fixture to
  * re-record. After those reads the same core plays the short stories a
  * browser test replays (`CrewStory`), so their readings are real too.
+ *
+ * A seeded home is the same reading of a home that already holds what a
+ * test's story needs - tasks, cards, rules - written through the core's own
+ * stores before its core boots (`readHome` with a seed, asked by a page
+ * through the `seededHome` command, ./browserCommands.ts).
  */
+
+/** What a read with arguments is asked: its channel and the request the window sends. */
+export type HomeRead = [CoreInvokeChannel, unknown[]];
+
+/**
+ * What a seeded home holds before its core boots, written on its throwaway
+ * data folder through the core's own stores, as a journey seeded its
+ * userData before the launch; `input` is what the test passed, the words
+ * and numbers its story reads back.
+ */
+export type HomeSeed = (userDataDir: string, input: never) => void | Promise<void>;
 
 /**
  * The reads with arguments the window sends a fresh home, each with the
  * request it sends: what Usage opens on.
  */
-const ASKED: [CoreInvokeChannel, unknown[]][] = [
+const ASKED: HomeRead[] = [
   ["inf:usage:summary", [DEFAULT_USAGE_QUERY]],
   ["inf:usage:tasks", [{ ...DEFAULT_USAGE_QUERY, limit: USAGE_TASK_PAGE }]],
 ];
@@ -42,7 +58,41 @@ const OFFLINE: Record<string, string> = {
   INFINITARY_UPDATE_RELEASES_URL: "http://127.0.0.1:9/releases",
 };
 
-export default async function setup(project: TestProject): Promise<void> {
+/** The boot under way; one core boots at a time, as it sets the environment it reads. */
+let booting: Promise<unknown> = Promise.resolve();
+
+/** Runs `boot` once every boot asked before it has ended. */
+function inTurn<T>(boot: () => Promise<T>): Promise<T> {
+  const turn = booting.then(boot);
+  booting = turn.catch(() => undefined);
+  return turn;
+}
+
+/**
+ * Boots a real core on a throwaway data folder, after `seed` has written
+ * `input` to it, and reads every core read that takes no arguments plus `asked`, then
+ * stops the core and removes the folder.
+ */
+export async function readHome(
+  seed?: HomeSeed,
+  input?: unknown,
+  asked: HomeRead[] = [],
+): Promise<FreshHomeAnswers> {
+  const write = seed && ((home: string) => seed(home, input as never));
+  const [answers] = await inTurn(() => bootAndRead(write, [...ASKED, ...asked]));
+  return answers;
+}
+
+/**
+ * Boots a core after `seed`, reads it as `readHome` does, then lets `play`
+ * act on the same core before it stops, answering the reads and what `play`
+ * gave back.
+ */
+async function bootAndRead<T>(
+  seed: ((userDataDir: string) => void | Promise<void>) | undefined,
+  asked: HomeRead[],
+  play?: (core: Core) => Promise<T>,
+): Promise<[FreshHomeAnswers, T | undefined]> {
   const saved = Object.fromEntries(Object.keys(OFFLINE).map((name) => [name, process.env[name]]));
   Object.assign(process.env, OFFLINE);
   const home = mkdtempSync(join(tmpdir(), "infinitary-fresh-home-"));
@@ -52,6 +102,7 @@ export default async function setup(project: TestProject): Promise<void> {
       join(home, "resources/self-source/resources/runbooks"),
       { recursive: true },
     );
+    await seed?.(home);
     const core = await startCore({
       app: {
         version: "9.9.9",
@@ -72,7 +123,7 @@ export default async function setup(project: TestProject): Promise<void> {
       keychain: absentKeychain,
     });
     const answers: FreshHomeAnswers = { plain: {}, asked: {} };
-    let crew: CrewStory | undefined;
+    let played: T | undefined;
     try {
       for (const [channel, entry] of Object.entries(invokeContract)) {
         if (entry.surface !== "core" || entry.effect !== "read") continue;
@@ -84,19 +135,18 @@ export default async function setup(project: TestProject): Promise<void> {
           // Work-only reads refuse on a computer that runs no work; a test that needs one answers it.
         }
       }
-      for (const [channel, request] of ASKED) {
+      for (const [channel, request] of asked) {
         const byRequest = answers.asked[channel] ?? {};
         byRequest[JSON.stringify(request)] = await core.dispatch(channel, request as never);
         answers.asked[channel] = byRequest;
       }
-      crew = await crewStory(core);
+      played = await play?.(core);
     } finally {
       await core.dispose();
       await core.services.workspace.poolSettled();
       await core.services.workspace.deletionsSettled();
     }
-    project.provide("freshHome", answers);
-    if (crew) project.provide("crewStory", crew);
+    return [answers, played];
   } finally {
     rmSync(home, { recursive: true, force: true });
     for (const [name, value] of Object.entries(saved)) {
@@ -104,6 +154,12 @@ export default async function setup(project: TestProject): Promise<void> {
       else process.env[name] = value;
     }
   }
+}
+
+export default async function setup(project: TestProject): Promise<void> {
+  const [answers, crew] = await inTurn(() => bootAndRead(undefined, ASKED, crewStory));
+  project.provide("freshHome", answers);
+  if (crew) project.provide("crewStory", crew);
 }
 
 /** The pushes that move the crew ring, as main forwards them to the window. */

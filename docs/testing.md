@@ -110,13 +110,23 @@ A test replaces only the answers its story changes, such as a home whose person 
 After those reads the same core plays the short stories a test replays, each a list of the core's own pushes and the boards between them: `crewStory` sends one crewmate out and cancels it, for the crew ring's files (`tests/browser/crewOrbit.ts`).
 There is no recorded fixture: a core change that moves an answer reaches the browser tests on the next run.
 
+A story that needs a home already holding something - tasks, cards, asked messages - reads a seeded home, `seededHome(input)` (`tests/browser/freshHome.ts`).
+The `seededHome` browser command boots a real core the same way, after the test's own seed module, `tests/helpers/browserHomes/<the test file's name>.ts`, has written the folder through the core's own stores, as a journey seeded its userData before the launch.
+The seed's default export takes the folder and the test's `input`, so the words and numbers the test reads back have one owner, the test; its `asked` lists the reads with arguments the story's screen sends, such as a card's thread.
+`subscribed(home)` is the same home with a subscription connected, so the first-run welcome gives way to the main message box.
+
+The window defines `window.infinitary` once per page, so a file opens one window and holds one test; a journey's tests that each launched the app become one test with named sections, in order.
+A test sizes the page as the journey sized the window: `openSize()` (`tests/browser/window.ts`) is the app's default window, and `page.viewport` any other, such as the smallest.
+Reading a screen goes through the shared readers beside the tests: the card stack's shown card and the answers the core gives its close (`stack.ts`), the main message box and a pasted picture (`prompt.ts`), the stage's characters and crew (`crew.ts`), and boxes compared with each other (`layout.ts`).
+A card body with no script draws in its own frame, as in the app; a frame the shell serves over its own scheme - a scripted card body, a panel, the task record, Now, the task browser - mounts and stays empty in a page.
+
 Browser commands (`tests/helpers/browserCommands.ts`) reach the page itself, such as the media a person's Mac sets, and `evaluateInFrame` reads inside a sandboxed frame, such as a card body, that the page cannot script; `cdp()` from `vitest/browser` reads the browser's own counters.
 A frame program served as text, such as Observe's, draws in a same-origin frame the test builds from the program and the design tokens (`tests/browser/observe-frame.test.ts`).
 The project's Chromium runs with Web Share on, as the window's does.
 Install it once with `pnpm exec playwright install --only-shell chromium`, then run `pnpm exec vitest run --project browser`.
 Every pull request runs the whole browser project in `ci.yml`'s `typecheck-lint-build` check; it takes under a minute.
-`verify.yml`'s `linux-checks` runs every browser file inside `pnpm test`, and `ci.yml`'s requested `unit-tests` sweep runs them beside the in-memory cohorts; all three install Chromium through `.github/actions/browser-chromium`.
-A journey that only draws the window and reads it moves here, and its original is deleted as its twin lands.
+`verify.yml`'s `linux-checks`, a lane of every swept batch's check and of main's, runs every browser file inside `pnpm test`, and `ci.yml`'s requested `unit-tests` sweep runs them beside the in-memory cohorts; all three install Chromium through `.github/actions/browser-chromium`.
+A journey that only draws the window and reads it moves here, and its original is deleted as its twin lands, so the swept batch checks the window through its twin.
 A journey stays when it needs what the browser layer cannot give the page: main or the core at work, a frame served over the app's own scheme, whose body a page cannot load, or a change of display density, which Chromium tells only a top-level page and the test page is a frame.
 
 ## The required typecheck

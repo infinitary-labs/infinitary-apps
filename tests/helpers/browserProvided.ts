@@ -5,14 +5,15 @@ import type { TaskBoard } from "@shared/tasks";
  * What the browser project's Node side gives its pages (docs/testing.md,
  * "The browser layer"): the fresh home's answers and the stories its core
  * played, provided by its global setup (./browserFreshHome.ts), and the
- * commands a page may ask of itself (./browserCommands.ts). Both sides read
- * these types.
+ * commands a page may ask of itself (./browserCommands.ts), a seeded home's
+ * answers among them. Both sides read these types.
  */
 
 /**
- * Each core read channel's answer, as a fresh home gives it: `plain` for
- * reads that take no arguments, `asked` for the reads with arguments the
- * setup names, by channel and then by the request as JSON.
+ * Each core read channel's answer, as a fresh or seeded home gives it:
+ * `plain` for reads that take no arguments, `asked` for the reads with
+ * arguments the setup or seed names, by channel and then by the request as
+ * JSON.
  */
 export type FreshHomeAnswers = {
   plain: Record<string, unknown>;
@@ -58,5 +59,6 @@ declare module "vitest/browser" {
     emulateReducedMotion(reducedMotion: ReducedMotion): Promise<void>;
     evaluateInFrame(name: string, source: string, argument?: unknown): Promise<unknown>;
     clearCookies(): Promise<void>;
+    seededHome(input?: unknown): Promise<FreshHomeAnswers>;
   }
 }

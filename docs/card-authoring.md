@@ -952,7 +952,7 @@ The visual rules are the design skill's (`components/cards/ResponseCard.prompt.m
   The mark is optional and stored as `Card.answering` in `cards.answering`; a revision without it removes it.
   The captain's acceptance of a marked card ends the message's wait on it (`docs/task-capture.md`, "How a message ends").
 
-Tests: `taskService.capture.test.ts` "finds the captain's message a task's cards are about through the task graph", `cardService.test.ts` "puts the captain's message on each card about it", `cardTool.test.ts` "carries the answering mark", `src/renderer/src/cards/askedWords.test.ts`, the journey `tests/e2e/card-asked-line.spec.ts` (a short message whole, a long one in two lines that opens from the keyboard with its paragraphs and folds again), the phone's `CardValuesTests` and `PhoneJourney`'s asked line.
+Tests: `taskService.capture.test.ts` "finds the captain's message a task's cards are about through the task graph", `cardService.test.ts` "puts the captain's message on each card about it", `cardTool.test.ts` "carries the answering mark", `src/renderer/src/cards/askedWords.test.ts`, the browser test `tests/browser/card-asked-line.test.tsx` (a short message whole, a long one in two lines that opens from the keyboard with its paragraphs and folds again), the phone's `CardValuesTests` and `PhoneJourney`'s asked line.
 
 ## Revision links in the thread
 

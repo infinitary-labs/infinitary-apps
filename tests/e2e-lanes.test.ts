@@ -70,7 +70,6 @@ it("collects every spec once, isolates app boundaries and serializes voice, pain
   ];
   const applicationFiles = [
     // INF-1258: the captain asked to move the reviewed recent journeys into parallel.
-    "card-close-flash.spec.ts",
     "copilot-sign-in.spec.ts",
     "crew-board-delta.spec.ts",
     "integrations-inbox.spec.ts",
@@ -87,7 +86,6 @@ it("collects every spec once, isolates app boundaries and serializes voice, pain
     "task-browser-form-reload.spec.ts",
     "task-browser-sign-ins.spec.ts",
     "task-browser-user-agent.spec.ts",
-    "thread-working-reveal.spec.ts",
     "waiting-crewmate.spec.ts",
     "phase0-guardrails.spec.ts",
     "card-containment.spec.ts",

@@ -149,7 +149,7 @@ A running turn shows `working` in its place.
 On a crewmate's card the captain replied under, `working` is followed by what the crewmate did last since the captain's newest line: its task record's Now line (`nowOf`, `docs/task-record.md` "The Now line"), usually the description it gave the command it runs (`useReplyDoing`).
 The thread reads it off `tasks.detail` only while that turn runs, and that read re-reads on each of the crewmate's calls (`tool_start`, `tool_end`), so the line follows the work command by command; before its first doing since the reply, `working` stands alone.
 A collapsed thread's latest line shows the same words in place of the newest message.
-The message list holds its scroll at its foot as a message, the waiting line or `working` arrives, each on its own: on the first mate's card its busy flag lands a render after the captain's reply, so `working` scrolls the list again (INF-1231, `tests/e2e/thread-working-reveal.spec.ts`).
+The message list holds its scroll at its foot as a message, the waiting line or `working` arrives, each on its own: on the first mate's card its busy flag lands a render after the captain's reply, so `working` scrolls the list again (INF-1231, `tests/browser/thread-working-reveal.test.tsx`).
 When the hold ends, the checks finish or the author's turn starts, the posture moves and the line with it, with no thread message; the author's answer - a reply, or the host's `revised:` line
 - ends the wait and the line.
   Every input is persisted (the card's hold, the account's cut-off, the task's check watch), so a restart or a reload shows the same line.

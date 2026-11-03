@@ -1,8 +1,10 @@
 import { DEFAULT_SAVED_KEYMAP } from "@shared/keymap";
 import { frameMountUrl } from "@shared/plugins/frameDocument";
 import { inject } from "vitest";
+import { commands } from "vitest/browser";
 import "../helpers/browserProvided";
 import { InstalledKeymap } from "../../src/main/keyboard";
+import type { FreshHomeAnswers } from "../helpers/browserProvided";
 import type { Answers } from "./bridge";
 
 /**
@@ -13,6 +15,30 @@ import type { Answers } from "./bridge";
  * `fakeBridge` and replaces only the answers its story changes.
  */
 export function freshHome(): Answers {
+  return homeAnswers(inject("freshHome"));
+}
+
+/**
+ * The answers a seeded home gives the window: the core's own, read from a
+ * real core booted on a data folder the test's seed wrote first
+ * (tests/helpers/browserHomes/, named as the test file is) from `input`,
+ * and the desktop shell's, as `freshHome` gives them.
+ */
+export async function seededHome(input?: unknown): Promise<Answers> {
+  return homeAnswers(await commands.seededHome(input));
+}
+
+/**
+ * `home` once its person has connected a subscription: the first-run gate is
+ * closed and the message box is open.
+ */
+export function subscribed(home: Answers): Answers {
+  const firstRun = home["inf:app:first-run"];
+  if (!firstRun || typeof firstRun === "function") throw new Error("The home answers no first run");
+  return { ...home, "inf:app:first-run": { ...firstRun, gateOpen: false } };
+}
+
+function homeAnswers({ plain, asked }: FreshHomeAnswers): Answers {
   // The shell's installed keys, as main holds them for a home that changed none.
   const keymap = new InstalledKeymap({
     keymap: () => ({ saved: DEFAULT_SAVED_KEYMAP, unreadable: false }),
@@ -20,7 +46,6 @@ export function freshHome(): Answers {
     subscribe: () => () => {},
   });
   let mounts = 0;
-  const { plain, asked } = inject("freshHome");
   const askedAnswers = Object.fromEntries(
     Object.entries(asked).map(([channel, byRequest]) => [
       channel,
@@ -28,7 +53,7 @@ export function freshHome(): Answers {
         const key = JSON.stringify(request);
         if (!(key in byRequest))
           throw new Error(
-            `The fresh home read ${channel} only for ${Object.keys(byRequest).join(", ")}, not ${key}; add it to ASKED in tests/helpers/browserFreshHome.ts or answer it in the test`,
+            `The home read ${channel} only for ${Object.keys(byRequest).join(", ")}, not ${key}; add it to ASKED in tests/helpers/browserFreshHome.ts, to the seed's asked, or answer it in the test`,
           );
         return byRequest[key];
       },

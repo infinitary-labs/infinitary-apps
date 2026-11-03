@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "inf-2424",
+      "reason": "Shortens the crewmate testing guidance without changing its rules, restoring the existing fixed-context budget and conversation room; no visible app change."
+    }
+  ]
+}

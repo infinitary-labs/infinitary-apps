@@ -1300,7 +1300,12 @@ describe("the default rule on tests (FI3-1756, the captain's approved plan)", ()
       "A failing test is a bug report first: diagnose the cause before touching its expectation.",
       "A test that fails only because the product changed on purpose is re-typed only when it serves a stated intent, and is otherwise deleted",
       "with no retry or sleep",
-      "A repaired test meets the same six words as a new one, and is deleted when its intent is gone.",
+      // INF-2394 measure 5, the captain's approved fifth ruling (INF-2405),
+      // in the words INF-2424 trimmed to fit the fixed context: a test,
+      // helper or stand-in a change edits, a repaired one included, meets
+      // the six words in that pull request, and deleting still asks.
+      "Bring each test file, helper or stand-in you edit to the six words in the same pull request, moving stand-ins to their owner; deleting a test still asks for the captain's approval.",
+      "Name patterns elsewhere in your report, never fixing or copying them.",
       // INF-840, the captain's direction 2: a change's own test is never a
       // suspected flake, and its crewmate repeats it locally before the card.
       "A test whose own code your change adds or edits is never a suspected flake",

@@ -111,7 +111,7 @@ type Home = "prompt" | { tool: string };
 
 /**
  * The ledger (docs/orchestrator-contract.md, "The fixed-context budget"): a
- * rule the trim took out of the delivery guidance, and the served text that
+ * rule a trim took out of the delivery or testing guidance, and the served text that
  * still says it. INF-1874 paid for the main-fails-too exception this way.
  */
 const LEDGER: { rule: string; home: Home; says: string }[] = [
@@ -146,6 +146,13 @@ const LEDGER: { rule: string; home: Home; says: string }[] = [
     rule: "no intermediate card of the crewmate's merges the pull request; only the completion decision can",
     home: { tool: "emit_card" },
     says: "No settle effects on intermediate questions; reuse an open outcome card's id.",
+  },
+  // INF-2424 trimmed the testing guidance's repair and edited-test rules to
+  // fit this budget: the pin rule both repeated is said once, by the owner word.
+  {
+    rule: "a re-typed or edited test derives each pin from its source",
+    home: "prompt",
+    says: "derive the pin from its source instead of typing it.",
   },
 ];
 

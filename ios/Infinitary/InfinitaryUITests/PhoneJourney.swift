@@ -1612,8 +1612,16 @@ import XCTest
         let chart = try XCTUnwrap(fixture["conversation"] as? String)
         let note = try XCTUnwrap(fixture["note"] as? String)
         // The form test answers the choice card; here it is closed unanswered, so the stage empties as it did there.
+        // The choice card stages its chart when its page loads, and a staged setting always counts as changed
+        // (docs/card-authoring.md), so once the page reports, the close asks before it discards. A close tapped before
+        // that report closed at once, and one tapped after it met the question: wait for the report, then discard.
         showCard(choice)
+        let reported = app.staticTexts.matching(NSPredicate(format: "label MATCHES %@", #"[0-9]+ of [0-9]+ answered · 1 changed"#)).firstMatch
+        XCTAssertTrue(reported.waitForPresence(timeout: 10), app.debugDescription)
         tapOnPhone(app.buttons["close-card"])
+        let question = app.alerts[try XCTUnwrap(fixture["closeTitle"] as? String)]
+        XCTAssertTrue(question.waitForPresence(timeout: 10), app.debugDescription)
+        question.buttons[try XCTUnwrap(fixture["discardAndClose"] as? String)].tap()
         XCTAssertTrue(cardHeading(choice).waitForAbsence(timeout: 10), app.debugDescription)
 
         showCard(chart)
@@ -1661,6 +1669,12 @@ import XCTest
         let send = app.buttons["send-reply"]
         reveal(send); tapOnPhone(send)
         XCTAssertTrue(app.staticTexts["Keep the northern entrance clear."].waitForPresence(timeout: 10), app.debugDescription)
+        // The reply wakes the first mate, whose answer joins this card's thread a turn later. The count is read once that
+        // answer is in, or an answer landing after the read leaves the thread one longer than the count.
+        let back = app.descendants(matching: .any).matching(identifier: "card-back").firstMatch
+        XCTAssertTrue(back.waitForPresence(timeout: 10), app.debugDescription)
+        let answer = try XCTUnwrap(fixture["replyAnswer"] as? String)
+        XCTAssertTrue(back.staticTexts[answer].waitForPresence(timeout: 10), app.debugDescription)
         let replied = try await home("card-state", method: "GET")
         let thread = try XCTUnwrap(replied["thread"] as? [String: Any])
         let sent = thread["messages"] as? [[String: Any]] ?? []
@@ -1668,8 +1682,6 @@ import XCTest
             $0["who"] as? String == "captain" && $0["text"] as? String == "Keep the northern entrance clear."
         })
         // INF-1919 (the captain's Approve and build): the send turns the card over to its thread, where the reply shows.
-        let back = app.descendants(matching: .any).matching(identifier: "card-back").firstMatch
-        XCTAssertTrue(back.waitForPresence(timeout: 10), app.debugDescription)
         XCTAssertEqual(app.staticTexts["thread-count"].label, "THREAD · \(sent.count)")
         picture("card-thread-sent")
         // Card turns it back; the face's latest line names the reply, and an answer that lands there lights it.

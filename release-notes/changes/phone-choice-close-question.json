@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "phone-choice-close-question",
+      "reason": "Internal phone journey repair: the card media journey waits for the choice card's page to report its staged setting before answering the close question, and waits for the first mate's answer to a card reply before counting the thread, instead of racing either."
+    }
+  ]
+}

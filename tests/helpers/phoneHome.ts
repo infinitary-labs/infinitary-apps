@@ -20,6 +20,7 @@ import { RISK_WORDS } from "@shared/risk";
 import { CONTRACT_CHANGES } from "../../src/core/connection/contractChanges";
 import {
   CLOSE_QUESTION_TITLE,
+  DISCARD_AND_CLOSE,
   KEEP_ANSWERING,
 } from "../../src/renderer/src/app/closeQuestionWords";
 import { REQUIRED_ACTIONS_LEAD } from "../../src/renderer/src/cards/requiredActionsWords";
@@ -31,6 +32,7 @@ import {
   FM_SEAT_HOLD_MARKER,
   FM_SEAT_STEER_WORD,
   MOCK_CLAUDE_STEERED_REPORT,
+  MOCK_FM_CHAT_TEXT,
   MOCK_PROVIDER_ID,
   mockModelsJson,
   startMockProvider,
@@ -692,6 +694,9 @@ export async function startPhoneHome(
             choice: "Choose the harbour",
             conversation: "Read the harbour chart",
             note: "The tide note",
+            closeTitle: CLOSE_QUESTION_TITLE,
+            discardAndClose: DISCARD_AND_CLOSE,
+            replyAnswer: MOCK_FM_CHAT_TEXT,
           };
           break;
         }

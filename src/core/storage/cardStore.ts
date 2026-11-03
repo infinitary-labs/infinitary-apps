@@ -659,6 +659,24 @@ export class CardStore {
       .map((x) => x.row);
   }
 
+  /**
+   * A task's cards the captain closed or chose on, as they stand on their
+   * rows (INF-2461): what they already read about the work. A card closed
+   * by its author, the first mate or the host is not theirs. Pure read.
+   */
+  closedByCaptain(taskId: string): Card[] {
+    const ids = (
+      this.db
+        .prepare("SELECT id FROM cards WHERE task_id = ? AND resolved_at IS NOT NULL")
+        .all(taskId) as { id: string }[]
+    ).map((row) => row.id);
+    return ids.flatMap((id) => {
+      if (this.past(id)?.ending.by !== "captain") return [];
+      const card = this.get(id);
+      return card ? [card] : [];
+    });
+  }
+
   /** One card by id, resolved or not. */
   get(cardId: string): Card | undefined {
     const row = this.row(cardId);

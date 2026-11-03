@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "id": "merge-outcome-no-second-note",
+      "kind": "fix",
+      "area": "cards",
+      "title": "A merge no longer adds a second card after you closed its story",
+      "body": "When work merges on its own, you see its story on one card. Once you have closed that card, the merge no longer puts up another card saying it merged. Activity and the task's record still say when it merged.",
+      "noPicture": "The change removes a card that used to appear, so there is no new view to show.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

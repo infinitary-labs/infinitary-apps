@@ -1,5 +1,10 @@
 import { randomUUID } from "node:crypto";
 import { existsSync } from "node:fs";
+import {
+  bodyHeadings,
+  COMPLETION_CARD_HEADINGS,
+  TIERED_STORY_HEADINGS,
+} from "@shared/cardHeadings";
 import { type Card, settleEffectOf } from "@shared/cards";
 import { readyPresentation } from "@shared/changePresentation";
 import { currentCheckStatus } from "@shared/checkSnapshot";
@@ -39,7 +44,7 @@ import {
   type WorkspaceService,
 } from "../workspace/workspaceService";
 import { taskResultResponse } from "./answerTaskResponse";
-import type { AskEnding, ClosingPlace } from "./askEnding";
+import { type AskEnding, answersByShape, type ClosingPlace } from "./askEnding";
 import { type CardService, cardEmitter } from "./cardService";
 import { escapeCardText } from "./cardText";
 import {
@@ -356,6 +361,20 @@ function sameChange(left: TaskRecord, right: TaskRecord): boolean {
 }
 
 /**
+ * A card that told the captain how the work came out: shaped as its outcome
+ * (`answersByShape`), or a crewmate's card opening with a completion
+ * story's headings, read from the markup as the card lint reads them.
+ */
+function toldOutcome(card: Card): boolean {
+  if (answersByShape(card)) return true;
+  if (card.author !== "crewmate") return false;
+  const headings = bodyHeadings(card.body);
+  return [COMPLETION_CARD_HEADINGS, TIERED_STORY_HEADINGS].some((outline) =>
+    outline.every((heading, index) => headings[index] === heading),
+  );
+}
+
+/**
  * A card that holds `settle_task answered`. A crewmate card still up is the
  * captain's to close. A Firstmate note stays through a done close, so it
  * does not hold it. A Firstmate card that still asks something would be
@@ -442,8 +461,9 @@ export class SettleService {
    * - otherwise the first mate's sentence goes up as the app's one closing
    *   note, marked as the answer.
    * Work no message of the captain's covers - work the fleet started on
-   * its own - puts a note up only when code merged or was released, and
-   * only when nothing of the task is still on their stack.
+   * its own - puts a note up only when code merged or was released, only
+   * when nothing of the task is still on their stack, and only when they
+   * never closed its story or completion card.
    */
   private placeOutcome(
     record: TaskRecord,
@@ -480,6 +500,10 @@ export class SettleService {
     const unasked = place.kind === "unasked";
     if (unasked && outcome !== "merged" && outcome !== "released") return;
     if (unasked && [...this.host.cards.values()].some((card) => card.taskId === record.id)) return;
+    // The captain already closed or chose on the task's story or completion
+    // card: that card was its one note, so no second note goes up beside it
+    // (INF-2461, the captain's pick on INF-2442).
+    if (unasked && this.host.cards.closedByCaptain(record.id).some(toldOutcome)) return;
     const closed = this.host.tasks.get(record.id) ?? record;
     const prUrl = closed.delivery?.prUrl;
     const prNumber = closed.delivery?.prNumber;

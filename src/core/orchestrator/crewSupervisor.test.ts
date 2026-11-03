@@ -4838,6 +4838,64 @@ describe("CrewSupervisor", () => {
         ]);
       });
 
+      // INF-2461, the captain's pick on INF-2442: "The card you clicked
+      // carries the merge or drop outcome, with no second note". The audit
+      // found "INF-2359 merged" going up a minute after the captain closed
+      // that task's own story note.
+      it("adds no second note once the captain closed the story note (INF-2461)", async () => {
+        const h = await selfMerging();
+        await repairTurn(h, async () => {
+          await h.specs[0]?.onCard?.({
+            title: "The meter reads on time",
+            body: completionBody("<p>The meter reads on the first paint.</p>"),
+            actions: [],
+          });
+        });
+        const story = h.cards().find((card) => card.title === "The meter reads on time") as Card;
+        // The close reaches the crewmate as its next turn, which ends at once.
+        h.supervisor.close(story.id);
+        await tick();
+        h.crewmate.finishPrompt();
+        await tick();
+        expect(h.cards().some((card) => card.id === story.id)).toBe(false);
+        await h.supervisor.withClosingSentence(h.taskId, SENTENCE, () =>
+          h.supervisor.settleTask(h.taskId, "merge-pr"),
+        );
+        await tick();
+        expect(h.tasks.get(h.taskId)).toMatchObject({ status: "done", closedReason: "merged" });
+        expect(h.forge.merges).toHaveLength(1);
+        expect(left(h)).toEqual([]);
+      });
+
+      // A note along the way told the captain nothing about how the work
+      // came out, so the merge still leaves its one note (INF-2461).
+      it("still puts up the sentence when the captain closed only a note along the way (INF-2461)", async () => {
+        const h = await selfMerging();
+        await repairTurn(h, async () => {
+          await h.specs[0]?.onCard?.({
+            title: "The meter's old reading was a day late",
+            body: "<p>The meter's first paint read yesterday's value.</p>",
+            actions: [],
+          });
+        });
+        const finding = h
+          .cards()
+          .find((card) => card.title === "The meter's old reading was a day late") as Card;
+        h.supervisor.close(finding.id);
+        await tick();
+        h.crewmate.finishPrompt();
+        await tick();
+        await h.supervisor.withClosingSentence(h.taskId, SENTENCE, () =>
+          h.supervisor.settleTask(h.taskId, "merge-pr"),
+        );
+        await tick();
+        const record = h.tasks.get(h.taskId);
+        expect(record).toMatchObject({ status: "done", closedReason: "merged" });
+        expect(left(h)).toEqual([
+          { author: "firstmate", title: closingNoteTitle(record?.key ?? "", "merged"), actions: [] },
+        ]);
+      });
+
       // INF-1467, the captain's answer: "Keep the note for merges and
       // releases; drops, cancels and answers go quiet" - work the first
       // mate marked its own still says when it merged.

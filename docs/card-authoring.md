@@ -763,9 +763,11 @@ Where it goes is one rule, at most one closing note for each of the captain's me
 
 A captain's click carries no sentence, an answer task's close takes none, and a task no crewmate started gets no note.
 Work no message of the captain's covers gets a note only when it merges or releases and nothing of the task is on the stack.
+It gets none once the captain closed or chose on the task's story or completion card, which was its one note (INF-2461, the captain's pick on INF-2442: "The card you clicked carries the merge or drop outcome, with no second note").
+That card is one shaped as the work's outcome (`answersByShape`) or a crewmate card opening with a completion story's headings (`toldOutcome` in `src/core/orchestrator/settleService.ts`); a note along the way the captain closed does not count.
 The captain's words on INF-1467: "tasks the fleet decided to start that the captain didn't ask for should not report to the captain."
 The first mate sets that mark when it starts work the captain did not ask for - a step of a sequence it runs, a helper another task needs, a crewmate's request, or work it starts unasked, including a crewmate's filing it starts (`update_task internal_step`, on open work before it starts); work started by the captain's message, card choice or schedule is theirs.
-A drop, cancel or finish of such work stays on the task's record and in Activity, and a merge or release still leaves its one note, because code reached the project without the captain's click.
+A drop, cancel or finish of such work stays on the task's record and in Activity, and a merge or release still leaves its one note, because code reached the project without the captain's click, unless the captain already closed its story or completion card.
 The crewmate on such a change is told to show the captain a card only for what only they can give - a merge click, a consent, a sign-in - or a note for something it found that they should see (`FLEET_STARTED_CHANGE_WORDS`, `src/core/orchestrator/intentBrief.ts`).
 The note has no actions, so it places no gate and nothing in the whose-turn sort reads it.
 Activity's line for a drop the first mate made reads `Dropped:` and the same sentence (`droppedLine`), and an `update_task` drop's reason is that sentence too.

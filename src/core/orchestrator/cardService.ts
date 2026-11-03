@@ -467,6 +467,11 @@ export class CardService {
     return this.host.cardStore.newestForTask(taskId);
   }
 
+  /** A task's cards the captain closed or chose on (`CardStore.closedByCaptain`). */
+  closedByCaptain(taskId: string): Card[] {
+    return this.host.cardStore.closedByCaptain(taskId);
+  }
+
   /** The crewmate's card the captain answered, never a merge decision: what a basis answered. */
   newestAnswerForTask(taskId: string): Card | undefined {
     return this.host.cardStore.newestAnswerForTask(taskId);

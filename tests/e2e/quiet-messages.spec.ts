@@ -47,11 +47,15 @@ for (const theme of ["dark", "light"] as const) {
       // The core's reply event precedes MateLine replacing its working span.
       // Read the painted reply, not that outgoing working state.
       await expect(reply).toHaveAttribute("data-state", "reply");
-      await Promise.all([atRest(you), atRest(reply), atRest(older)]);
-      const mark = lane.locator(
-        "[data-last-turn-pair]:not([data-older]) [data-last-turn-mark] > polygon:first-child",
-      );
-      const markColor = () => mark.evaluate((element) => getComputedStyle(element).stroke);
+      // When the busy signal falls, which is when askFirstmate returns, the
+      // mark fades from the working ember back to cyan over --dur-med. Its
+      // resting cyan is read only once it no longer works and that fade has
+      // ended, never mid-fade (INF-2521).
+      const mark = lane.locator("[data-last-turn-pair]:not([data-older]) [data-last-turn-mark]");
+      await expect(mark).not.toHaveAttribute("data-working");
+      await Promise.all([atRest(you), atRest(reply), atRest(older), atRest(mark)]);
+      const outline = mark.locator("polygon").first();
+      const markColor = () => outline.evaluate((element) => getComputedStyle(element).stroke);
       await page.mouse.move(10, 10);
       await focusOn(promptInput(page));
       const resting = { you: await paint(you), reply: await paint(reply) };

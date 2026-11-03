@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "id": "retained-task-rows",
+      "kind": "fix",
+      "area": "tasks",
+      "title": "Smoother updates with a long task history",
+      "body": "Typing and scrolling face fewer interruptions when crewmates update a long Tasks list.",
+      "noPicture": "This changes responsiveness during updates, not the appearance of a still view.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

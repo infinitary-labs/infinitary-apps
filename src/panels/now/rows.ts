@@ -107,7 +107,7 @@ export function newFilingCount(rows: readonly NowRow[]): number {
 }
 
 /** The trailing chrome: the project's display name, never the task key. */
-export function projectNameOf(board: PanelTaskBoard, task: PanelTaskRow): string {
+export function projectNameOf(board: Pick<PanelTaskBoard, "projects">, task: PanelTaskRow): string {
   return board.projects.find((project) => project.id === task.projectId)?.name ?? "";
 }
 

@@ -1,6 +1,7 @@
 import type { PanelProject, PanelTaskBoard, PanelTaskRow } from "@infinitary/contracts";
 import { describe, expect, it } from "vitest";
-import { reconcileBoard, sameValue } from "./reconcile";
+import { reconcileBoard, reconcileRows, sameValue } from "./reconcile";
+import { rowsOf } from "./rows";
 
 /**
  * INF-2105, on INF-2078's accepted plan ("every row stays in the page; only
@@ -125,6 +126,69 @@ describe("reconciling a pushed board against the one the panel holds", () => {
     (withBlocker.tasks[2] as PanelTaskRow).blockedBy = ["FI3-12"];
     expect(reconcileBoard(held, withBlocker).tasks[2]).toBe(withBlocker.tasks[2]);
   });
+});
+
+it("keeps an unchanged group's full row list across crew writes (INF-2221)", () => {
+  // The unchanged latency bar and INF-2078's accepted all-rows choice:
+  // changing Working must not rebuild Landed's elements, while changes to
+  // its data, order or membership must still reach the rendered list.
+  const working = task({ activity: "running", status: "active" });
+  const earlier = task({
+    id: "earlier",
+    key: "FI3-13",
+    status: "done",
+    closedReason: "merged",
+    closedAt: 1,
+  });
+  const latest = task({
+    id: "latest",
+    key: "FI3-14",
+    status: "done",
+    closedReason: "merged",
+    closedAt: 2,
+  });
+  const board: PanelTaskBoard = {
+    seq: 1,
+    at: 1,
+    projects: [project()],
+    tasks: [working, earlier, latest],
+  };
+  const filter = { query: "", projectId: null };
+  const held = rowsOf(board, filter);
+  const landed = held.get("landed");
+  expect(landed).toHaveLength(2);
+  expect(reconcileRows(held, rowsOf(board, filter))).toBe(held);
+
+  const nextBoard = {
+    ...board,
+    tasks: [{ ...working, title: "Verify task navigation" }, earlier, latest],
+  };
+  const derived = rowsOf(nextBoard, filter);
+  const expectedRows = structuredClone(derived);
+  const next = reconcileRows(held, derived);
+  expect(next).toEqual(expectedRows);
+  expect(next.get("landed")).toBe(landed);
+  expect(next.get("working")).not.toBe(held.get("working"));
+
+  const reordered = rowsOf({ ...board, tasks: [...board.tasks].reverse() }, filter);
+  const reorderedGroups = [...reordered.keys()];
+  const reorderedResult = reconcileRows(held, reordered);
+  expect([...reorderedResult.keys()]).toEqual(reorderedGroups);
+  expect(reorderedResult.get("landed")).toBe(landed);
+
+  for (const tasks of [
+    [working, { ...earlier, title: "Review task navigation" }, latest],
+    [working, { ...earlier, closedAt: 3 }, latest],
+    [working, earlier],
+    [working],
+  ]) {
+    const expected = rowsOf({ ...board, tasks }, filter);
+    const expectedRows = structuredClone(expected);
+    const result = reconcileRows(held, expected);
+    expect(result).toEqual(expectedRows);
+    expect(result).not.toBe(held);
+    expect(result.get("landed")).not.toBe(landed);
+  }
 });
 
 describe("structural equality over what crosses the bridge", () => {

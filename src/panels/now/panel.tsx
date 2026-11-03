@@ -25,7 +25,7 @@ import {
 } from "react";
 import { groupNavKey, nowNavItems, nowNavMove, rovingKey, rowNavKey } from "./nav";
 import styles from "./panel.css";
-import { reconcileBoard } from "./reconcile";
+import { reconcileBoard, reconcileRows } from "./reconcile";
 import {
   earlierRowsOf,
   failedStartCount,
@@ -250,6 +250,7 @@ export default function TasksPanel({ reads, point, view, asks, rail, tasks }: Pa
   const typed = query.trim();
   // Hover is view state, not new task data. Keep grouping, sorting and the
   // row objects stable until the board or the captain's filter changes.
+  const heldRows = useRef<ReadonlyMap<PanelGroup, NowRow[]>>(new Map());
   const rows = useMemo(() => {
     const next: Map<PanelGroup, NowRow[]> = board
       ? rowsOf(board, { query, projectId: project })
@@ -259,7 +260,8 @@ export default function TasksPanel({ reads, point, view, asks, rail, tasks }: Pa
         ? earlierRowsOf(found.tasks, next, { query, projectId: project })
         : [];
     if (earlier.length > 0) next.set("earlier", earlier);
-    return next;
+    heldRows.current = reconcileRows(heldRows.current, next);
+    return heldRows.current;
   }, [board, query, project, found, typed]);
   if (board) {
     performance.mark("now:render:start");
@@ -747,6 +749,60 @@ export function Group({
   const collapsible = !OPEN_BY_DEFAULT.has(group);
   const reveal = useInPlaceReveal(open);
   const singleProject = hasSingleRegisteredRepoProject(board);
+  const projects = board.projects;
+  // A crew write in another group leaves this group's actual elements
+  // untouched, not just the Row components' memoized paints (INF-2221).
+  const body = useMemo(() => {
+    if (!open) return null;
+    const names = { projects };
+    return rows.map(({ task, depth }) => {
+      const start = group === "backlog" && press !== undefined ? rowStartOf(task) : null;
+      const pressed =
+        press?.taskId === task.id && press.updatedAt === task.updatedAt ? press : null;
+      return (
+        <Row
+          key={task.id}
+          group={group}
+          task={task}
+          depth={depth}
+          projectName={projectNameOf(names, task)}
+          singleProject={singleProject}
+          selected={selectedTaskIds.includes(task.id)}
+          lit={litTaskId === task.id}
+          isStop={stop === rowNavKey(task.id)}
+          onStop={onStop}
+          onOpen={onOpen}
+          onPeek={onPeek}
+          onLeave={onLeave}
+          onFocusRow={onFocusRow}
+          onBlurRow={onBlurRow}
+          startLabel={start?.label}
+          startReason={pressed?.refusal ?? start?.reason ?? null}
+          startBusy={pressed !== null && pressed.refusal === null}
+          onStart={onStart}
+          onFocusStart={onFocusStart}
+        />
+      );
+    });
+  }, [
+    open,
+    rows,
+    group,
+    projects,
+    singleProject,
+    selectedTaskIds,
+    litTaskId,
+    stop,
+    onStop,
+    onOpen,
+    onPeek,
+    onLeave,
+    onFocusRow,
+    onBlurRow,
+    press,
+    onStart,
+    onFocusStart,
+  ]);
   return (
     <div data-now-group={group}>
       <button
@@ -790,35 +846,7 @@ export function Group({
           data-in-place-reveal={reveal ? "drift" : undefined}
           style={{ display: "flex", flexDirection: "column", gap: 2 }}
         >
-          {rows.map(({ task, depth }) => {
-            const start = group === "backlog" && press !== undefined ? rowStartOf(task) : null;
-            const pressed =
-              press?.taskId === task.id && press.updatedAt === task.updatedAt ? press : null;
-            return (
-              <Row
-                key={task.id}
-                group={group}
-                task={task}
-                depth={depth}
-                projectName={projectNameOf(board, task)}
-                singleProject={singleProject}
-                selected={selectedTaskIds.includes(task.id)}
-                lit={litTaskId === task.id}
-                isStop={stop === rowNavKey(task.id)}
-                onStop={onStop}
-                onOpen={onOpen}
-                onPeek={onPeek}
-                onLeave={onLeave}
-                onFocusRow={onFocusRow}
-                onBlurRow={onBlurRow}
-                startLabel={start?.label}
-                startReason={pressed?.refusal ?? start?.reason ?? null}
-                startBusy={pressed !== null && pressed.refusal === null}
-                onStart={onStart}
-                onFocusStart={onFocusStart}
-              />
-            );
-          })}
+          {body}
         </div>
       )}
     </div>

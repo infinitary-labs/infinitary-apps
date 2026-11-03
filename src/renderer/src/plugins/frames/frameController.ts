@@ -32,6 +32,7 @@ import {
 } from "@shared/plugins/bridge";
 import type { MediatedFetchCall, MediatedFetchResult } from "@shared/plugins/fetch";
 import { type FrameTheme, PANEL_SERVER_ACTION } from "@shared/plugins/frameDocument";
+import { transferReadValue } from "@shared/plugins/readTransfer";
 import type { ReadGrant } from "@shared/reads";
 import { type ReadExecutor, ReadSubscriptionError } from "../reads/executor";
 import { noteDroppedLinkMessage, noteFrameLink } from "./frameLink";
@@ -308,6 +309,7 @@ export class FrameController {
   private spec: FrameMountSpec;
   private theme: FrameTheme;
   private ready = false;
+  private reuseReads = false;
   private documentId: string | undefined;
   private retiredDocuments = new Set<string>();
   /** Counts the documents the mount was pointed at, so an answer finds the one that asked. */
@@ -467,6 +469,7 @@ export class FrameController {
         this.dropSubscriptions();
         this.births += 1;
         this.ready = true;
+        this.reuseReads = message.reuseReads === true;
         this.documentId = message.document;
         this.port.post({ fm: V, type: "theme", theme: this.theme });
         if (this.spec.state !== undefined) {
@@ -917,6 +920,7 @@ export class FrameController {
       return;
     }
     const sub = request.sub;
+    let previous: unknown;
     let stop: () => void;
     try {
       stop = this.deps.executor.subscribe(
@@ -924,7 +928,10 @@ export class FrameController {
         request.args,
         {
           onValue: (value) => {
-            if (this.subscriptions.has(sub)) this.port.post({ fm: V, type: "data", sub, value });
+            if (!this.subscriptions.has(sub)) return;
+            const transfer = this.reuseReads ? transferReadValue(previous, value) : { value };
+            previous = value;
+            this.port.post({ fm: V, type: "data", sub, ...transfer });
           },
           onError: (error) => {
             if (this.subscriptions.has(sub)) this.port.post({ fm: V, type: "data", sub, error });

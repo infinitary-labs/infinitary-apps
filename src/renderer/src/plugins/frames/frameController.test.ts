@@ -8,7 +8,7 @@ import { FRAME_MAX_IN_FLIGHT, FRAME_MAX_SUBSCRIPTIONS } from "@shared/plugins/br
 import type { MediatedFetchResult } from "@shared/plugins/fetch";
 import { PANEL_SERVER_ACTION } from "@shared/plugins/frameDocument";
 import { describe, expect, it, vi } from "vitest";
-import { type ReadApi, ReadExecutor } from "../reads/executor";
+import { COALESCE_MS, type ReadApi, ReadExecutor } from "../reads/executor";
 import {
   FRAME_WATCHDOG_INTERVAL_MS,
   FRAME_WATCHDOG_MISSES,
@@ -200,6 +200,53 @@ describe("FrameController", () => {
       ok: false,
       error: { code: "subscription_unknown" },
     });
+  });
+
+  // INF-2221: compact reads only for a document that understands them;
+  // a replacement document must receive its own complete first value.
+  it("negotiates retained read rows per document and resets the base at birth", async () => {
+    vi.useFakeTimers();
+    const firstmate = { id: "firstmate" };
+    const crew = { id: "crewmate:review" };
+    const values = { "observe.sessions": [firstmate] };
+    const api = fakeApi(values);
+    let resync: () => void = () => {};
+    api.onResync = (listener) => {
+      resync = listener;
+      return () => {};
+    };
+    const { controller, posted } = harness({}, undefined, api);
+    const lastValue = () => posted.filter((message) => message.type === "data").at(-1);
+    try {
+      for (const reuseReads of [true, false, true]) {
+        values["observe.sessions"] = [firstmate];
+        controller.receive({ fm: 2, type: "ready", reuseReads });
+        controller.receive({
+          fm: 2,
+          type: "request",
+          id: 1,
+          verb: "subscribe",
+          sub: 7,
+          read: "observe.sessions",
+        });
+        await vi.advanceTimersByTimeAsync(0);
+        expect(lastValue()).toEqual({ fm: 2, type: "data", sub: 7, value: [firstmate] });
+        values["observe.sessions"] = [firstmate, crew];
+        resync();
+        await vi.advanceTimersByTimeAsync(COALESCE_MS);
+        expect(lastValue()).toEqual({
+          fm: 2,
+          type: "data",
+          sub: 7,
+          ...(reuseReads
+            ? { value: [crew], reuse: [{ key: null, indices: [0, -1] }] }
+            : { value: [firstmate, crew] }),
+        });
+      }
+    } finally {
+      controller.dispose();
+      vi.useRealTimers();
+    }
   });
 
   it("runs a frame's sql subscription with the plugin's grant, which the frame cannot widen", async () => {

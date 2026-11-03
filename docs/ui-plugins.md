@@ -207,6 +207,11 @@ No resource refresh writes the task record or the panel store.
 
 The host executes and pushes: `ReadExecutor` (`src/renderer/src/plugins/reads/executor.ts`) validates args, runs the read over `window.infinitary.plugins.read` (the preload maps the name to its channel and validates the response like any invoke), re-runs on each declared invalidation, and coalesces bursts to one read per `COALESCE_MS` with exactly one follow-up for an invalidation that lands mid-read.
 The plugin host serves the catalog as its one capability (`new PluginHost({ reads: READ_NAMES })`) and keeps each plugin's admitted capabilities so a controller can enforce `read_not_declared` per mount.
+Read values are immutable projections: a subscriber receives the complete value, and unchanged rows may retain their identity between deliveries.
+A frame whose `ready` declares `reuseReads` receives unchanged array members by their positions in that subscription's previous value, with only new members crossing the message boundary (`src/shared/plugins/readTransfer.ts`).
+The encoder and the verbatim bridge decoder share that transport owner; they preserve the sender's order and fields without deriving task or read semantics.
+Every subscription and document starts with a full value, errors leave the last successful base intact, and a frame without the capability receives full values as before.
+This compaction is local to the frame carrier; the catalog's core deltas, gap recovery and presentation overlays remain the executor's.
 
 The task reads distinguish ready waiting from durable attention (protocol 1.39.0): `waitingCardId` is a reachable shown ready decision on a live task; project `counts.waitingOnYou` counts those tasks once.
 `flags.needsYou` and `counts.needsYou` remain broader attention, including operational holds.
@@ -730,6 +735,7 @@ Moved verbatim from `AGENTS.md` on 2026-09-24; `AGENTS.md` keeps a one-line poin
   A row's gestures are POINTING, never a mutation: a click is `point.openTask`, which brings a waiting row's decision card to the front or opens the task record, and a rest is `point.peekTask`, which opens the crew summary beside the row the pointer rests on.
   Hover-only view updates reuse the Tasks panel's grouped rows, navigation and measured row positions; memoized row components repaint only changed row inputs.
   A pushed board is reconciled against the one the panel holds (`src/panels/now/reconcile.ts`, INF-2105 on INF-2078's accepted plan): a task or project whose fields read the same keeps its object, so a change paints only the rows it touched, and a push that moves nothing listed paints nothing; every row stays in the page.
+  A group's derived row list also keeps its identity while its tasks, order and nesting stay unchanged, and its body reuses the actual row elements until a row input changes rather than rebuilding them on another group's crew write.
   A changed board, filter or expanded group refreshes the positions, and a retained ResizeObserver follows layout changes; the group's reveal ending refreshes its settled positions too.
   The positions measured are only those a dependency line needs - the ends of each listed blocked-by pair - never the whole list; each paint's `now:render` measure carries the rows it built in its `detail`, which `tests/e2e/now-changes.spec.ts` reads with the rows' rect reads.
   Dependency inspection reads those positions without measuring the list again (`tests/e2e/now-hover.spec.ts`).

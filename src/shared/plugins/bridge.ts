@@ -15,6 +15,7 @@ import { OWN_SPELLING, SPELLINGS } from "../codeNames";
 import { KNOWLEDGE_ID_EXACT, KNOWLEDGE_ID_IN_TEXT } from "../knowledge";
 import { TASK_KEY_EXACT, TASK_KEY_IN_TEXT } from "../taskKeys";
 import { mediatedFetchRequestSchema } from "./fetch";
+import { READ_VALUE_DECODER, type ReadTransfer } from "./readTransfer";
 
 /**
  * Bridge v2: the one app-owned script every plugin frame runs (phase 1 of
@@ -268,6 +269,7 @@ export const FRAME_BRIDGE_SCRIPT = `(function () {
   var nextId = 1;
   var pending = {};
   var subscriptions = {};
+  var receiveReadValue = ${READ_VALUE_DECODER};
   var themeListeners = [];
   var stateListeners = [];
   var storeListeners = [];
@@ -611,7 +613,8 @@ export const FRAME_BRIDGE_SCRIPT = `(function () {
       if (data.error) {
         if (subscription.onError) subscription.onError(bridgeError(data.error.code, data.error.message));
       } else {
-        subscription.onValue(data.value);
+        subscription.value = receiveReadValue(subscription.value, data);
+        subscription.onValue(subscription.value);
       }
     } else if (data.type === "ping") {
       post({ type: "pong", seq: data.seq });
@@ -1708,7 +1711,7 @@ export const FRAME_BRIDGE_SCRIPT = `(function () {
     if (apply(repeatOf, event, [])) return;
     host.postMessage({ fm: VERSION, type: "pressed", document: documentId }, "*");
   }, true);
-  post({ type: "ready" });
+  post({ type: "ready", reuseReads: true });
 })();`;
 
 /**
@@ -1716,7 +1719,7 @@ export const FRAME_BRIDGE_SCRIPT = `(function () {
  * to the script moves it: re-pin it in the same change, or
  * frameBridgeHash.test.ts fails and every frame's CSP blocks the script.
  */
-export const FRAME_BRIDGE_SHA256 = "sha256-EFD9mRfo6DHkDkiWepBICf64MpR7ridi8u9/zV45RVo=";
+export const FRAME_BRIDGE_SHA256 = "sha256-kyKGhteYf8iScLYERPNPWiHDGk1PY0lZ90Dcw46ddKg=";
 
 // --- the envelope, frame -> host -------------------------------------------
 
@@ -1850,7 +1853,12 @@ export const frameMessageSchema = z.discriminatedUnion("type", [
     top: z.number().finite().nonnegative().max(1_000_000).optional(),
     height: z.number().finite().nonnegative().max(1_000_000).optional(),
   }),
-  z.object({ fm: fmMarker, type: z.literal("ready"), document: z.string().optional() }),
+  z.object({
+    fm: fmMarker,
+    type: z.literal("ready"),
+    document: z.string().optional(),
+    reuseReads: z.boolean().optional(),
+  }),
   z.object({ fm: fmMarker, type: z.literal("request"), id: correlationId }).loose(),
   z.object({
     fm: fmMarker,
@@ -1988,7 +1996,7 @@ export type HostMessage =
   | { fm: typeof FRAME_BRIDGE_VERSION; type: "initialize"; document: string; latePictures?: true }
   | (FrameResponse & { ok: true; result?: unknown })
   | (FrameResponse & { ok: false; error: FrameError })
-  | { fm: typeof FRAME_BRIDGE_VERSION; type: "data"; sub: number; value: unknown }
+  | ({ fm: typeof FRAME_BRIDGE_VERSION; type: "data"; sub: number } & ReadTransfer)
   | { fm: typeof FRAME_BRIDGE_VERSION; type: "data"; sub: number; error: FrameError }
   | { fm: typeof FRAME_BRIDGE_VERSION; type: "theme"; theme: "dark" | "light" }
   /** The card is shown: a held page releases its scripts and animations. */

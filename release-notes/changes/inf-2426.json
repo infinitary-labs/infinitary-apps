@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "inf-2426",
+      "reason": "The local unit-test selection now runs the tests that read a runbook's text through the module importing it; development tooling only, no app change."
+    }
+  ]
+}

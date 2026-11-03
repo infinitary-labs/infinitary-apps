@@ -1,9 +1,12 @@
-import { readFileSync, readdirSync } from "node:fs";
-import { dirname, join, normalize, resolve } from "node:path";
+import { existsSync, readFileSync, readdirSync } from "node:fs";
+import { basename, dirname, join, normalize, relative, resolve } from "node:path";
 import ts from "typescript";
 
 /** INF-2394 measure 3: direct edges only, never the importers of an importer. */
 export const VITEST_FILE = /^(src|tests)\/.+\.test\.tsx?$/;
+
+/** What the compiler reads as a module; any other imported file is data. */
+const CODE_FILE = /\.[cm]?[jt]sx?$/;
 
 export function unitFiles(root: string): string[] {
   return ["src", "tests"]
@@ -16,7 +19,16 @@ export function unitFiles(root: string): string[] {
     .sort();
 }
 
-/** Read the compiler aliases, including renderer UI imports; never build a closure. */
+/**
+ * Read the compiler aliases, including renderer UI imports; never build a closure.
+ *
+ * A data file a module imports (a runbook's JSON, a stylesheet read as text)
+ * is part of that module's own text, so a test importing that module directly
+ * reads the data directly too (INF-2426: the crew guidance tests read
+ * resources/runbooks through piResources.ts). That is the one step taken
+ * past the test's own imports, and only through data: a changed module is
+ * never followed to the importers of its importers.
+ */
 export function directUnitReach(
   changed: readonly string[],
   files: readonly string[],
@@ -38,10 +50,65 @@ export function directUnitReach(
   const cache = ts.createModuleResolutionCache(root, (file) => file, options);
   const subjects = new Set(changed.filter((file) => !VITEST_FILE.test(file)));
   if (subjects.size === 0) return [];
+  const data = [...subjects].filter((file) => !CODE_FILE.test(file));
+  const dataNames = [...new Set(data.map((file) => basename(file)))];
   const host: ts.ModuleResolutionHost = {
     ...ts.sys,
     // A deleted module still has direct importers that must run.
     fileExists: (file) => subjects.has(file.slice(root.length + 1)) || ts.sys.fileExists(file),
+  };
+  /** The project file a specifier names, ignoring a bundler query such as `?raw`. */
+  const target = (specifier: string, from: string): string | undefined => {
+    const bare = specifier.replace(/\?.*$/, "");
+    const resolved =
+      ts.resolveModuleName(bare, from, options, host, cache).resolvedModule?.resolvedFileName ??
+      (bare.startsWith(".") ? resolve(dirname(from), bare) : undefined);
+    const file = resolved === undefined ? undefined : relative(root, resolved);
+    return file && !file.startsWith("..") ? file : undefined;
+  };
+  /** Import, re-export, `import()` and `require` specifiers, as written. */
+  const specifiers = (node: ts.Node): string | undefined => {
+    if (
+      (ts.isImportDeclaration(node) || ts.isExportDeclaration(node)) &&
+      node.moduleSpecifier &&
+      ts.isStringLiteral(node.moduleSpecifier)
+    )
+      return node.moduleSpecifier.text;
+    if (
+      ts.isCallExpression(node) &&
+      (node.expression.kind === ts.SyntaxKind.ImportKeyword ||
+        (ts.isIdentifier(node.expression) && node.expression.text === "require"))
+    ) {
+      const specifier = node.arguments[0];
+      if (specifier && ts.isStringLiteral(specifier)) return specifier.text;
+    }
+    return undefined;
+  };
+  const readsData = new Map<string, boolean>();
+  /** Whether a module a test imports imports a changed data file itself. */
+  const importsChangedData = (imported: string): boolean => {
+    // A package never imports a project file.
+    if (data.length === 0 || VITEST_FILE.test(imported) || imported.includes("node_modules/"))
+      return false;
+    const known = readsData.get(imported);
+    if (known !== undefined) return known;
+    const absolute = join(root, imported);
+    const text = CODE_FILE.test(imported) && existsSync(absolute) ? readFileSync(absolute, "utf8") : "";
+    let found = false;
+    if (dataNames.some((name) => text.includes(name))) {
+      const visit = (node: ts.Node): void => {
+        if (found) return;
+        const specifier = specifiers(node);
+        if (specifier !== undefined) {
+          const file = target(specifier, absolute);
+          if (file && data.includes(file)) found = true;
+        }
+        ts.forEachChild(node, visit);
+      };
+      visit(ts.createSourceFile(imported, text, ts.ScriptTarget.Latest, true));
+    }
+    readsData.set(imported, found);
+    return found;
   };
   return files
     .filter((file) => {
@@ -60,35 +127,10 @@ export function directUnitReach(
       };
       const visit = (node: ts.Node): void => {
         if (reached) return;
-        if (
-          (ts.isImportDeclaration(node) || ts.isExportDeclaration(node)) &&
-          node.moduleSpecifier &&
-          ts.isStringLiteral(node.moduleSpecifier)
-        ) {
-          const imported = ts.resolveModuleName(
-            node.moduleSpecifier.text,
-            resolve(root, file),
-            options,
-            host,
-            cache,
-          ).resolvedModule?.resolvedFileName;
-          if (imported && subjects.has(imported.slice(root.length + 1))) reached = true;
-        } else if (
-          ts.isCallExpression(node) &&
-          (node.expression.kind === ts.SyntaxKind.ImportKeyword ||
-            (ts.isIdentifier(node.expression) && node.expression.text === "require"))
-        ) {
-          const specifier = node.arguments[0];
-          if (specifier && ts.isStringLiteral(specifier)) {
-            const imported = ts.resolveModuleName(
-              specifier.text,
-              resolve(root, file),
-              options,
-              host,
-              cache,
-            ).resolvedModule?.resolvedFileName;
-            if (imported && subjects.has(imported.slice(root.length + 1))) reached = true;
-          }
+        const specifier = specifiers(node);
+        if (specifier !== undefined) {
+          const imported = target(specifier, resolve(root, file));
+          if (imported && (subjects.has(imported) || importsChangedData(imported))) reached = true;
         } else if (ts.isStringLiteral(node) || ts.isNoSubstitutionTemplateLiteral(node)) {
           if (pathMatches(node.text)) reached = true;
         } else if (ts.isTemplateExpression(node)) {

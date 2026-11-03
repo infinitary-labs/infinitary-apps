@@ -46,7 +46,8 @@ Record the version, selection reasons, files or parts, required platforms or dev
   `pnpm test:repeats --base origin/main --workers <declared workers>` uses the existing changed-path reader and stops at the first failed or interrupted round without retries.
   Unedited Vitest files that directly import a changed file or reference its literal path run once locally in the same command (INF-2394 measure 3).
   The selector resolves relative imports and the node and renderer compilers' aliases, literal paths relative to the project or test file, joined literal path segments, and template directory prefixes such as workflow readers use.
-  It reads only each test file, never follows imports transitively, and does not execute dynamically computed paths to discover dependencies.
+  A data file a module imports, such as a runbook's JSON in `src/core/pi/piResources.ts` or a stylesheet read as text, is part of that module's text, so a test that imports that module directly reads the data directly too (INF-2426).
+  It reads each test file and, for a changed data file, the modules that test imports; it never follows imports transitively, and does not execute dynamically computed paths to discover dependencies.
   Edited files remain disjoint from that once-only selection; a failed direct-reader round stops the edited-file rounds too.
   Ordinary coverage is included, so do not add a fourth run or duplicate local proof in PR CI.
   Declare the whole batch's processor and memory needs through the local load path, and bound Vitest workers to that declaration.
@@ -567,7 +568,8 @@ Twenty-one failing sites in five days were certain breaks after an intentional p
 11. the freeze journey (`main-thread-freeze.spec.ts`), when the change edits code the main process runs, under `src/core/`, `src/main/` or `src/shared/`, other than a unit test (`FREEZE_JOURNEY`).
     Any such code can hold the main thread on a long record with no hook, symbol or words changing (`docs/freeze-recorder.md`, "Before a change merges").
     It is its own rule beside the fallback table, because it reaches nearly every change and the fallback table's replayed merges predate it.
-12. a spec directly importing a changed product module, even when no symbol changes (relative paths and the `@shared/` and `@core/` aliases);
+12. a spec directly importing a changed product module, even when no symbol changes (relative paths and the `@shared/` and `@core/` aliases).
+    A data file that module imports by relative path, such as a runbook's JSON in `src/core/pi/piResources.ts`, is part of the module's text, so a change to it selects the same specs (INF-2426);
 13. a spec directly importing a stand-in declaring `@journey-area src/path/` in a documentation comment.
     A trailing slash means every file under that directory; otherwise the declaration names one exact product file.
     The declaration does not follow the common launcher's imports: nearly every journey reaches that launcher, but only the stand-in's explicit callers exercise its product area.

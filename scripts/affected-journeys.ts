@@ -1,6 +1,6 @@
 import { execFileSync } from "node:child_process";
 import { existsSync, readdirSync, readFileSync } from "node:fs";
-import { dirname, join, normalize, relative, resolve } from "node:path";
+import { dirname, extname, join, normalize, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { editedScreenText, screenRanges } from "./screen-journeys.ts";
 import { callsMethod, changedMessages, PRELOAD } from "./window-messages.ts";
@@ -48,7 +48,9 @@ import { callsMethod, changedMessages, PRELOAD } from "./window-messages.ts";
  *    a different number of times. Only strings of two or more words count;
  * 11. it is the freeze journey and the change edits code the main process
  *    runs, other than a unit test (`FREEZE_JOURNEY`).
- * 12. it directly imports a changed product module, even with unchanged names;
+ * 12. it directly imports a changed product module, even with unchanged names,
+ *     or a product module that imports a changed data file, such as a
+ *     runbook's JSON, which is part of that module's text (INF-2426);
  * 13. it imports a helper declaring `@journey-area src/path/` for a changed area.
  *     The journey imports that stand-in directly, not only through the shared launcher.
  *
@@ -188,6 +190,20 @@ export function importsOf(
         break;
       }
     }
+  }
+  return found;
+}
+
+/**
+ * The data files a module imports by relative path, such as a runbook's JSON or
+ * a stylesheet read as text; a bundler query such as `?raw` is not part of it.
+ */
+export function dataImportsOf(file: string, source: string): string[] {
+  const found: string[] = [];
+  for (const [, specifier] of source.matchAll(/(?:from|import)\s*\(?\s*["']([^"']+)["']/g)) {
+    const path = specifier?.replace(/\?.*$/, "") ?? "";
+    if (path.startsWith(".") && extname(path) && !/\.[cm]?[jt]sx?$/.test(path))
+      found.push(normalize(join(dirname(file), path)));
   }
   return found;
 }
@@ -621,9 +637,12 @@ export function select({
   for (const spec of specs) {
     if (changedSet.has(spec)) add(spec, "the change edits this journey");
     const reach = reachOf.get(spec) ?? [];
-    for (const file of importsOf(spec, read(spec) ?? "", (path) => read(path) !== undefined || readBefore?.(path) !== undefined))
-      if (isSource(file) && changedSet.has(file))
-        add(spec, `directly imports ${file}, which the change edits`);
+    for (const file of importsOf(spec, read(spec) ?? "", (path) => read(path) !== undefined || readBefore?.(path) !== undefined)) {
+      if (!isSource(file)) continue;
+      if (changedSet.has(file)) add(spec, `directly imports ${file}, which the change edits`);
+      const data = dataImportsOf(file, read(file) ?? "").find((path) => changedSet.has(path));
+      if (data) add(spec, `directly imports ${file}, which imports ${data}, which the change edits`);
+    }
     for (const helper of importsOf(spec, read(spec) ?? "", (path) => read(path) !== undefined).filter((file) => !isSource(file))) {
       for (const area of standInAreas(read(helper) ?? "")) {
         const hit = changed.find((file) => area.endsWith("/") ? file.startsWith(area) : file === area);

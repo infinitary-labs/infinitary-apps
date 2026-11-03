@@ -10,7 +10,8 @@ import { directUnitReach, unitFiles, VITEST_FILE } from "./unit-reach.ts";
  * The captain's INF-2273 override to INF-2259: every edited Vitest file
  * gets its ordinary local run plus two more, including Linux-eligible files.
  * INF-2394 measure 3 adds one local round for unedited direct importers and
- * literal path readers. No transitive reach or added CI jobs. Native files still require a Mac.
+ * literal path readers; a data file counts as part of the module importing it
+ * (INF-2426). No transitive reach or added CI jobs. Native files still require a Mac.
  *
  *   node scripts/unit-repeats.ts [--base <ref>] [--head <ref>] [--workers <n>] [--shard <index/count>] [--run]
  *

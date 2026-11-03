@@ -897,6 +897,27 @@ describe("complete journey selection", () => {
     expect(closureOf(product ?? "", actualRead)).toEqual([product]);
   });
 
+  it("selects the journeys reading a runbook's text through the product module importing it", () => {
+    // INF-2426: b4c11e3fd edited the testing runbook's JSON, which
+    // src/core/pi/piResources.ts imports, and this chooser listed no journey.
+    const runbook = "resources/runbooks/testing/crew.json";
+    const builder = "src/core/pi/piResources.ts";
+    const readers = actualSpecs.filter((spec) =>
+      importsOf(spec, actualRead(spec) ?? "").includes(builder),
+    );
+    expect(readers).toContain("tests/e2e/rigor-standard.spec.ts");
+    const selected = select({
+      changed: [runbook],
+      sourceDiff: "",
+      specs: actualSpecs,
+      read: actualRead,
+    });
+    expect([...selected.keys()].sort()).toEqual(readers.sort());
+    expect(selected.get("tests/e2e/rigor-standard.spec.ts")).toEqual([
+      `directly imports ${builder}, which imports ${runbook}, which the change edits`,
+    ]);
+  });
+
   it("records omissions at the cap and requires the entire sweep above it", () => {
     const short = actualSpecs.slice(0, JOURNEY_SELECTION_CAP);
     expect(selectionCoverage(short, short.slice(1), actualSpecs)).toMatchObject({

@@ -13,6 +13,7 @@ import { scratchDir } from "../helpers/scratchDirs";
 import { type LaunchedApp, launchApp } from "./launch";
 import {
   claudeDefaultStore,
+  seedClaudeCredentialFile,
   seedSignedInClaudeStore,
   writeMockClaudeClient,
 } from "./mockClaudeClient";
@@ -341,6 +342,13 @@ function seedAccounts(userDataDir: string): void {
   );
 }
 
+/** INF-2382: health reads the store itself, not the mock client's status marker. */
+function seedClaudeHome(homeDir: string): void {
+  const store = claudeDefaultStore(homeDir);
+  seedSignedInClaudeStore(store);
+  seedClaudeCredentialFile(store);
+}
+
 function row(page: Page, accountId: string): Locator {
   return page.locator(`[data-account-row="${accountId}"]`);
 }
@@ -360,7 +368,7 @@ test.beforeAll(async () => {
   launched = await launchApp({
     withMockProvider: true,
     userDataDir,
-    prepareHome: (homeDir) => seedSignedInClaudeStore(claudeDefaultStore(homeDir)),
+    prepareHome: seedClaudeHome,
     env: {
       INFINITARY_QUOTA_FIXTURE_DIR: fixtureDir,
       INFINITARY_CLAUDE_CLI: writeMockClaudeClient(scratchDir("infinitary-claude-stub-")),
@@ -419,6 +427,21 @@ test("each row shows the allowance it has, and offers Sign in only where that is
     await expect(meters(accountId)).toHaveCount(0);
     await expect(signIn(accountId)).toBeVisible();
   }
+  await test.info().attach("allowance-rows.json", {
+    body: JSON.stringify(
+      await Promise.all(
+        ACCOUNTS.map(async (accountId) => ({
+          accountId,
+          meters: await meters(accountId).allTextContents(),
+          staleMeters: await meters(accountId).and(page.locator("[data-stale='true']")).count(),
+          signIn: await signIn(accountId).count(),
+        })),
+      ),
+      null,
+      2,
+    ),
+    contentType: "application/json",
+  });
 });
 
 test("the kebab holds the row's actions; rename rides the row", async () => {
@@ -624,7 +647,7 @@ test("Subscriptions renders model-only and incomplete allowance scope projection
   const app = await launchApp({
     withMockProvider: true,
     userDataDir,
-    prepareHome: (homeDir) => seedSignedInClaudeStore(claudeDefaultStore(homeDir)),
+    prepareHome: seedClaudeHome,
     env: {
       INFINITARY_QUOTA_FIXTURE_DIR: fixtureDir,
       INFINITARY_CLAUDE_CLI: writeMockClaudeClient(scratchDir("infinitary-claude-stub-")),

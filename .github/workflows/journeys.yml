@@ -4,13 +4,13 @@ name: journeys
 # 2026-10-28): every chosen journey runs on Linux, at most one job per PC
 # place (INF-1720), and the Mac runs only the chosen tests tagged
 # MAC_ONLY_TAG (tests/e2e/tags.ts). Every Linux job runs on the label
-# LINUX_RUNNER names, as ci.yml's do, hosted Ubuntu when it is unset. The
-# continuous run on main (main.yml) and every alpha still run the full Mac suite.
+# LINUX_RUNNER names, as ci.yml's do, hosted Ubuntu when it is unset. Main's
+# desktop release check (main.yml) and every alpha still run the full Mac suite.
 # INF-800: on request, the journeys a branch names, placed the same way
 # (docs/testing.md, "Journeys on request").
 # INF-2139 (captain: "let's pull journeys and phone checks off PRs now"): a
 # pull request no longer starts this workflow; its pull_request branches stay
-# for the continuous run on main that replaces it.
+# for main's desktop release check that replaces it.
 
 on:
   workflow_dispatch:

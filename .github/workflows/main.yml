@@ -1,8 +1,12 @@
 name: main
 
-# The continuous run on main (INF-2146, the captain's approved plan, direction
+# Main's desktop release check (INF-2146, the captain's approved plan, direction
 # B): every push to main starts the full check with every journey on the Mac.
-# It replaces the nightly full check. Main runs no phone check (INF-2492, the
+# It checks the desktop app's release (INF-2498, the captain: "the main check
+# should be clarified to be specifically about the desktop app's release"): its
+# passing run is what the desktop app's alpha is cut from. The workflow's name,
+# main, and its job names stay, since the Automation rule, the alpha's proof
+# reader and stable promotion read them. It replaces the nightly full check. Main runs no phone check (INF-2492, the
 # captain: "remove phone check from main altogether. we run all phone check
 # parts at release"): ios-release.yml runs every part on iPhone and iPad
 # before each TestFlight upload.
@@ -14,7 +18,7 @@ name: main
 # alpha is cut (alpha-wait.yml), so merges keep queueing until the cut ends,
 # and a run that waited while main moved cancels itself for the waiting one.
 # The newest passing run of this workflow is main's green mark
-# (docs/testing.md, "The continuous run on main"); nothing else records it.
+# (docs/testing.md, "Main's desktop release check"); nothing else records it.
 
 # A push whose every changed file is in the phone app or the docs starts no
 # run (INF-2492, the captain's decision on INF-2498's question 1, "Skip pushes
@@ -111,7 +115,7 @@ jobs:
       profile: stable
       all_journeys: true
       # Main's Linux jobs run on GitHub's hosted machines
-      # (docs/testing.md, "The continuous run on main").
+      # (docs/testing.md, "Main's desktop release check").
       hosted: true
   # The Linux automatic startup fixtures, once per main check, beside it, on
   # GitHub's hosted Ubuntu (linux-startup.yml names it: main is its only caller).

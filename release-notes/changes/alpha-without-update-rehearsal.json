@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "alpha-without-update-rehearsal",
+      "reason": "Release pipeline work: an alpha no longer rehearses its update before signing, since the signed update check after signing repeats every rehearsal check, and main's check is described as the desktop app's release check. The app does not change."
+    }
+  ]
+}

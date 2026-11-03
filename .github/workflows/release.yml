@@ -29,8 +29,7 @@ name: release
 # the same tap commit (docs/alpha.md "Builds by system and chip").
 #
 # Signing while the checks run (INF-2074's sign-early; docs/alpha.md): the
-# signing job waits only for the notes, the phone and the update rehearsal,
-# then builds, signs and notarizes while the verify lanes and the Linux
+# signing job waits only for the notes and the phone, then builds, signs and notarizes while the verify lanes and the Linux
 # packages are still checked. Its token reads and never writes, so nothing
 # is recorded or published before every check passed: the update check and
 # the publication job wait for all of them.
@@ -518,21 +517,6 @@ jobs:
           APP_STORE_CONNECT_API_KEY: ${{ secrets.APP_STORE_CONNECT_API_KEY }}
         run: node scripts/phone-order.ts
 
-  # The update check's rehearsal (INF-1900; docs/alpha.md, "The update
-  # check"): before anything signs, a disposable Apple silicon Mac installs
-  # what alpha subscribers have now and reads this release's offer from a
-  # local alpha feed, so a broken check stops the release before signing. A
-  # stable inherits its alpha's update check. It holds no secret.
-  rehearse:
-    name: Rehearse the update from the last published alpha
-    if: ${{ needs.resolve.outputs.skip != 'true' && needs.resolve.outputs.verify_required == 'true' }}
-    needs: resolve
-    uses: ./.github/workflows/mac-update.yml
-    with:
-      ref: ${{ needs.resolve.outputs.source_commit }}
-      version: ${{ needs.resolve.outputs.version }}
-      runner: ${{ needs.resolve.outputs.dry_run == 'false' && fromJSON(vars.MAC_QUEUES || '{}').release_light || '' }}
-
   release:
     # A plain name: a job skipped behind a red check shows its name
     # unevaluated. The run's summary says the channel, the version and
@@ -540,10 +524,10 @@ jobs:
     name: Build, sign and notarize while the checks run
     # Sign early (INF-2074, the captain's checked fix: "Build and sign an
     # alpha while its checks run, and publish only after they pass"): it
-    # waits for the notes it packages, the phone (INF-1649) and the update
-    # rehearsal (INF-1900), never for the verify lanes or the Linux packages.
-    needs: [resolve, notes, rehearse, phone]
-    if: ${{ always() && !cancelled() && needs.resolve.result == 'success' && needs.notes.result == 'success' && needs.phone.result == 'success' && ((needs.resolve.outputs.verify_required == 'true' && needs.rehearse.result == 'success') || (needs.resolve.outputs.verify_required == 'false' && needs.rehearse.result == 'skipped')) }}
+    # waits for the notes it packages and the phone (INF-1649), never for
+    # the verify lanes or the Linux packages.
+    needs: [resolve, notes, phone]
+    if: ${{ always() && !cancelled() && needs.resolve.result == 'success' && needs.notes.result == 'success' && needs.phone.result == 'success' && (needs.resolve.outputs.verify_required == 'true' || needs.resolve.outputs.verify_required == 'false') }}
     # INF-603: it signs with the captain's Developer ID certificate, so it
     # asks for the real Mac, never a virtual one, once the switch sets
     # REAL_MAC_RUNNER (docs/testing.md, "The real Mac's place"), or the sign
@@ -984,7 +968,6 @@ jobs:
           HANDOFF: artifact ${{ steps.handoff-upload.outputs.artifact-id || 'none' }}, manifest sha256 ${{ steps.handoff.outputs.manifest || 'none' }}
           GATES: >-
             visibility=${{ steps.visibility.outcome }} capability=${{ steps.capability.outcome }}
-            rehearse=${{ needs.rehearse.result }}
             build=${{ steps.build.outcome }} package=${{ steps.package.outcome }}
             packaged-notes=${{ steps.packaged-notes.outcome }} signed-app=${{ steps.signed-app.outcome }}
             launch=${{ steps.launch.outcome }} data-folder=${{ steps.data-folder.outcome }}
@@ -1021,8 +1004,8 @@ jobs:
   # builds, signs and sends nothing; a stable inherits its alpha's.
   update:
     name: Update from the last published alpha
-    needs: [resolve, notes, verify, linux, rehearse, phone, release]
-    if: ${{ always() && !cancelled() && needs.resolve.outputs.verify_required == 'true' && needs.resolve.result == 'success' && needs.notes.result == 'success' && (needs.verify.result == 'success' || (needs.resolve.outputs.main_run != '' && needs.verify.result == 'skipped')) && needs.linux.result == 'success' && needs.rehearse.result == 'success' && needs.phone.result == 'success' && needs.release.result == 'success' }}
+    needs: [resolve, notes, verify, linux, phone, release]
+    if: ${{ always() && !cancelled() && needs.resolve.outputs.verify_required == 'true' && needs.resolve.result == 'success' && needs.notes.result == 'success' && (needs.verify.result == 'success' || (needs.resolve.outputs.main_run != '' && needs.verify.result == 'skipped')) && needs.linux.result == 'success' && needs.phone.result == 'success' && needs.release.result == 'success' }}
     uses: ./.github/workflows/mac-update.yml
     with:
       ref: ${{ needs.resolve.outputs.source_commit }}
@@ -1049,8 +1032,8 @@ jobs:
   # publish.
   publish:
     name: Record, publish and check the downloads (a dry run records nothing)
-    needs: [resolve, notes, verify, linux, rehearse, phone, release, update]
-    if: ${{ always() && !cancelled() && needs.resolve.result == 'success' && needs.notes.result == 'success' && needs.linux.result == 'success' && needs.phone.result == 'success' && needs.release.result == 'success' && ((needs.resolve.outputs.verify_required == 'true' && (needs.verify.result == 'success' || (needs.resolve.outputs.main_run != '' && needs.verify.result == 'skipped')) && needs.rehearse.result == 'success' && needs.update.result == 'success') || (needs.resolve.outputs.verify_required == 'false' && needs.verify.result == 'skipped' && needs.rehearse.result == 'skipped' && needs.update.result == 'skipped')) }}
+    needs: [resolve, notes, verify, linux, phone, release, update]
+    if: ${{ always() && !cancelled() && needs.resolve.result == 'success' && needs.notes.result == 'success' && needs.linux.result == 'success' && needs.phone.result == 'success' && needs.release.result == 'success' && ((needs.resolve.outputs.verify_required == 'true' && (needs.verify.result == 'success' || (needs.resolve.outputs.main_run != '' && needs.verify.result == 'skipped')) && needs.update.result == 'success') || (needs.resolve.outputs.verify_required == 'false' && needs.verify.result == 'skipped' && needs.update.result == 'skipped')) }}
     # The light kind's virtual-only queue once MAC_QUEUES names it, and
     # release_light for a publishing run (docs/testing.md, "Each Mac job's kind and size").
     runs-on: ${{ needs.resolve.outputs.dry_run == 'false' && fromJSON(vars.MAC_QUEUES || '{}').release_light || fromJSON(vars.MAC_QUEUES || '{}').light || 'mini-mac-virtual' }}

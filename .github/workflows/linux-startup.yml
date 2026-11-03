@@ -16,7 +16,7 @@ permissions:
 jobs:
   runtime-facts:
     # main.yml is the only caller, and main's Linux jobs run on GitHub's
-    # hosted Ubuntu (docs/testing.md, "The continuous run on main"), a fresh
+    # hosted Ubuntu (docs/testing.md, "Main's desktop release check"), a fresh
     # machine with systemd and Docker. The pull request's copy in ci.yml
     # keeps LINUX_RUNNER.
     runs-on: ubuntu-24.04

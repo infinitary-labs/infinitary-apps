@@ -2237,7 +2237,6 @@ describe("the signed channel workflow", () => {
       "verify",
       "linux",
       "phone",
-      "rehearse",
       "release",
       "update",
       "publish",
@@ -2356,14 +2355,13 @@ describe("the signed channel workflow", () => {
 
   // INF-2074's sign-early, the captain's checked fix: "Build and sign an
   // alpha while its checks run, and publish only after they pass." The
-  // signing job waits for the notes, the phone and the update rehearsal,
-  // never for a verify lane or the Linux packages; the update check, the
+  // signing job waits for the notes and the phone, never for a verify lane or the Linux packages; the update check, the
   // record and publication wait for every check.
   it("records and publishes only after full verification or explicitly inherited verification, never after a failed lane, and signs while the lanes run", () => {
     const signing = jobOf(release, "release");
     const update = jobOf(release, "update");
     const publish = jobOf(release, "publish");
-    expect(signing.needs).toEqual(["resolve", "notes", "rehearse", "phone"]);
+    expect(signing.needs).toEqual(["resolve", "notes", "phone"]);
     for (const required of ["true", "false", ""]) {
       for (const result of ["success", "failure", "cancelled", "skipped"]) {
         const needs = {
@@ -2374,7 +2372,6 @@ describe("the signed channel workflow", () => {
           notes: { result: "success" },
           verify: { result },
           linux: { result: "success" },
-          rehearse: { result: required === "true" ? "success" : "skipped" },
           phone: { result: "success" },
           release: { result: "success" },
           update: { result: required === "true" ? "success" : "skipped" },
@@ -2402,16 +2399,6 @@ describe("the signed channel workflow", () => {
           );
           expect(workflowValue(update.if ?? "", held)).toBe(false);
           expect(workflowValue(publish.if ?? "", held)).toBe(false);
-        }
-        // INF-1900: a failed update rehearsal stops the release before signing.
-        for (const rehearse of ["failure", "cancelled", ""]) {
-          for (const job of [signing, update, publish]) {
-            expect(
-              workflowValue(job.if ?? "", {
-                needs: { ...needs, rehearse: { result: rehearse } },
-              }),
-            ).toBe(false);
-          }
         }
         // INF-1649: a release with no phone build that keeps changing things on it never signs.
         for (const phone of ["failure", "cancelled", "skipped"]) {
@@ -2452,7 +2439,6 @@ describe("the signed channel workflow", () => {
       "notes",
       "verify",
       "linux",
-      "rehearse",
       "phone",
       "release",
       "update",
@@ -2468,7 +2454,6 @@ describe("the signed channel workflow", () => {
       notes: { result: "success" },
       verify: { result: required === "true" ? "success" : "skipped" },
       linux: { result: "success" },
-      rehearse: { result: required === "true" ? "success" : "skipped" },
       phone: { result: "success" },
     });
     for (const result of ["success", "failure", "cancelled", "skipped"]) {
@@ -2505,15 +2490,7 @@ describe("the signed channel workflow", () => {
     // The update check runs on the signing job's handoff once it and every
     // check succeeded, only where verification is required.
     const update = jobOf(release, "update");
-    expect(update.needs).toEqual([
-      "resolve",
-      "notes",
-      "verify",
-      "linux",
-      "rehearse",
-      "phone",
-      "release",
-    ]);
+    expect(update.needs).toEqual(["resolve", "notes", "verify", "linux", "phone", "release"]);
     for (const required of ["true", "false"]) {
       for (const result of ["success", "failure", "skipped"]) {
         const needs = {
@@ -3034,8 +3011,7 @@ describe("the signed channel workflow", () => {
     );
     expect(signing).toEqual(expect.arrayContaining(["release"]));
     for (const name of signing) expect(waitsFor(name, "phone"), name).toBe(true);
-    // INF-1900: the update check and its rehearsal hold no signing material.
-    expect(signing).not.toContain("rehearse");
+    // INF-1900: the update check holds no signing material.
     expect(signing).not.toContain("update");
   });
 
@@ -3221,7 +3197,7 @@ describe("the signed channel workflow", () => {
     });
     // Nothing verify runs holds a secret.
     expect(call.secrets).toBeUndefined();
-    expect(signing.needs).toEqual(["resolve", "notes", "rehearse", "phone"]);
+    expect(signing.needs).toEqual(["resolve", "notes", "phone"]);
     expect(jobOf(release, "publish").needs).toEqual(expect.arrayContaining(["verify", "linux"]));
     expect(steps[0]).toMatchObject({
       uses: "actions/checkout@v4",
@@ -3488,7 +3464,6 @@ describe("the signed channel workflow", () => {
       notes: { result: "success" },
       verify: { result: "success" },
       linux: { result: "success" },
-      rehearse: { result: "success" },
       phone: { result: "success" },
       // The signing job hands on what its visibility step chose.
       release: { result: "success", outputs: { direct: String(dryRun ? false : direct) } },
@@ -3804,7 +3779,6 @@ describe("a release's own queues", () => {
         inputs: { mac_runner: passed("verify", "mac_runner") },
         vars,
       }),
-      rehearse: updateIn("rehearse"),
       sign: workflowValue(release.release?.["runs-on"] ?? "", { needs, vars }),
       update: updateIn("update"),
       publish: workflowValue(release.publish?.["runs-on"] ?? "", { needs, vars }),
@@ -3814,7 +3788,6 @@ describe("a release's own queues", () => {
   it("sends a publishing run's Mac jobs to the release queues of their place kind", () => {
     expect(placed("false", { ...ordinary, ...queues })).toEqual({
       verify: "mini-mac-release-any",
-      rehearse: "mini-mac-release-virtual",
       sign: "mini-mac-release-real",
       update: "mini-mac-release-virtual",
       publish: "mini-mac-release-virtual",
@@ -3831,7 +3804,6 @@ describe("a release's own queues", () => {
   it("keeps a dry run on the ordinary queues, so a rehearsal never takes a release's place", () => {
     expect(placed("true", { ...ordinary, ...queues })).toEqual({
       verify: "mini-mac-any",
-      rehearse: "mini-mac-virtual",
       sign: "mini-mac-real",
       update: "mini-mac-virtual",
       publish: "mini-mac-virtual",
@@ -3841,7 +3813,6 @@ describe("a release's own queues", () => {
   it("keeps today's routing while the release kinds are unset", () => {
     const today = {
       verify: "mini-mac-any",
-      rehearse: "mini-mac-virtual",
       sign: "mini-mac-real",
       update: "mini-mac-virtual",
       publish: "mini-mac-virtual",
@@ -3860,7 +3831,6 @@ describe("a release's own queues", () => {
     };
     const ordinaryKinds = {
       verify: "mini-mac-check",
-      rehearse: "mini-mac-light",
       sign: "mini-mac-sign",
       update: "mini-mac-light",
       publish: "mini-mac-light",
@@ -4540,10 +4510,10 @@ it("keeps installer verification on the selected disposable runners", () => {
 });
 
 // INF-1900 direction D: the release's update check runs in a disposable
-// Apple silicon Mac, rehearsing before signing and updating after it. The
-// captain: Intel is a best-effort side effect, with no hosted Mac runs. The
-// promotion gate reads its job by this name.
-it("runs the update check on Apple silicon only, rehearsing before signing and updating from the handoff", () => {
+// Apple silicon Mac once the signing job handed off, updating to the
+// release's own signed zip. The captain: Intel is a best-effort side effect,
+// with no hosted Mac runs. The promotion gate reads its job by this name.
+it("runs the update check on Apple silicon only, updating from the signing job's handoff", () => {
   const { jobs } = loadYamlFile(".github/workflows/mac-update.yml") as {
     jobs: Record<string, { name: string; "runs-on": string; strategy?: unknown }>;
   };
@@ -4556,16 +4526,17 @@ it("runs the update check on Apple silicon only, rehearsing before signing and u
   ).toEqual([["Apple silicon", "mini-mac-virtual", undefined]]);
   const release = loadYamlFile(".github/workflows/release.yml") as {
     jobs: Record<
-      "rehearse" | "update",
+      string,
       { name: string; uses?: string; secrets?: unknown; with?: Record<string, string> }
     >;
   };
-  const { rehearse, update } = release.jobs;
-  for (const job of [rehearse, update]) {
-    expect(job.uses).toBe("./.github/workflows/mac-update.yml");
-    expect(job.secrets).toBeUndefined();
-  }
-  expect(rehearse.with?.handoff_id).toBeUndefined();
+  // INF-2499: the update after signing is the release's only update check.
+  const callers = Object.entries(release.jobs).filter(
+    ([, job]) => job.uses === "./.github/workflows/mac-update.yml",
+  );
+  expect(callers.map(([id]) => id)).toEqual(["update"]);
+  const [[, update]] = callers as [[string, (typeof release.jobs)[string]]];
+  expect(update.secrets).toBeUndefined();
   // biome-ignore lint/suspicious/noTemplateCurlyInString: the workflow's own expression, matched literally.
   expect(update.with?.handoff_id).toBe("${{ needs.release.outputs.handoff_id }}");
   // biome-ignore lint/suspicious/noTemplateCurlyInString: the workflow's own expression, matched literally.
@@ -5515,7 +5486,7 @@ describe("an alpha with nothing new to build", () => {
       Object.entries(skipped).filter(([id, value]) => id !== "resolve" && value !== "skipped"),
     ).toEqual([]);
     const cut = results("false");
-    for (const id of ["notes", "phone", "rehearse", "linux", "release", "update", "publish"])
+    for (const id of ["notes", "phone", "linux", "release", "update", "publish"])
       expect(cut[id], id).toBe("success");
     // The gate's skip reaches the resolve job's own later steps and outputs.
     expect(release.jobs.resolve?.outputs?.skip).toContain("steps.gate.outputs.skip");

@@ -15,13 +15,14 @@ import { assertInstallerEnvironment, installerAppEnvironment, installerServerEnv
 
 // INF-1900 direction D: the release's update check. A disposable Mac installs the
 // version alpha subscribers have now, from its public disk image, and updates it
-// through a local copy of the alpha feed. With UPDATE_TARGET_ZIP, the release's own
-// signed zip replaces it; without one, the rehearsal stops at reading the offer.
+// through a local copy of the alpha feed, and the release's own signed zip
+// (UPDATE_TARGET_ZIP) must replace it.
 assertInstallerEnvironment();
 const evidence = resolve(process.env.INSTALLER_EVIDENCE);
 const target = process.env.UPDATE_TARGET_VERSION;
 assert.match(target ?? "", /^\d+\.\d+\.\d+(-alpha\.\d+)?$/, "UPDATE_TARGET_VERSION must name the release's version");
-const targetZip = process.env.UPDATE_TARGET_ZIP ? resolve(process.env.UPDATE_TARGET_ZIP) : undefined;
+assert(process.env.UPDATE_TARGET_ZIP, "UPDATE_TARGET_ZIP must name the release's own signed zip");
+const targetZip = resolve(process.env.UPDATE_TARGET_ZIP);
 const work = join(process.env.RUNNER_TEMP, "update-from-alpha");
 const fixtures = join(work, "feed");
 const home = join(work, "home");
@@ -128,16 +129,11 @@ try {
   assert.equal((await digest(dmg)).sha256, readFileSync(`${dmg}.sha256`, "utf8").split(/\s+/)[0], "The downloaded disk image must match its published checksum");
   record("Published alpha", `${from}, from ${feedUrl}; its disk image matched its published checksum.`);
 
-  // The local feed offers the release. The rehearsal has no signed copy yet: it lists the
-  // release under the published zip's real digest, and reading an offer downloads nothing.
+  // The local feed offers the release's own signed zip.
   const targetName = `Infinitary-${target}-universal.zip`;
   const digests = {};
-  if (targetZip) {
-    copyFileSync(targetZip, join(fixtures, targetName));
-    digests[targetName] = await digest(join(fixtures, targetName));
-  } else {
-    digests[targetName] = { sha512: published.sha512, size: published.files?.[0]?.size };
-  }
+  copyFileSync(targetZip, join(fixtures, targetName));
+  digests[targetName] = await digest(join(fixtures, targetName));
   writeFileSync(join(fixtures, "digests.json"), JSON.stringify(digests, null, 2));
   writeFileSync(control, JSON.stringify({ alpha: target, mode: "normal" }));
 
@@ -192,43 +188,41 @@ try {
   assert(!existsSync(`${control}.download`), "Reading the offer must not download before consent");
   record("Update offer", `The installed ${from} read ${target} from the local alpha feed and downloaded nothing before consent.`);
 
-  if (targetZip) {
-    runningWork = await runningWorkFixture(installedVersion, phase => console.log(`Checking: ${phase}`));
-    await bounded("Preparing active work", () => runningWork.start(page));
-    await expect.poll(() => runningWork.started, { timeout: 60_000 }).toBe(true);
-    // Native replacement closes the transport. A reply is not used as proof of installation.
-    void page.evaluate(() => window.infinitary.update.install()).catch(() => {});
-    const stage = installStageRecorder(evidence, `upgrade-${target}`);
-    let sampling = true;
-    const sampler = (async () => {
-      while (sampling) {
-        let version = null;
-        try { version = installedVersion(); } catch { /* ShipIt may be moving the bundle. */ }
-        stage({ appRunning: spawnSync("/usr/bin/pgrep", ["-f", processPattern]).status === 0, shipItRunning: spawnSync("/usr/bin/pgrep", ["-f", "/ShipIt( |$)"]).status === 0, installedVersion: version, phase: null, problem: null });
-        await new Promise(done => setTimeout(done, 2_000));
-      }
-    })();
-    try { await expect.poll(installedVersion, { timeout: 300_000 }).toBe(target); }
-    catch (error) {
-      if (bundleId) record("Stalled installation ShipIt logs", JSON.stringify(keepShipItLogs(home, bundleId, evidence, "stalled")));
-      throw error;
-    } finally { sampling = false; await sampler; }
-    await expect.poll(() => spawnSync("/usr/bin/pgrep", ["-f", processPattern]).status, { timeout: 60_000 }).toBe(0);
-    record("Native signed replacement", `The installed bundle now contains ${target} and the app restarted on its own.`);
-    await stopApp();
-    page = await launch(); // Reattach the inspection port, which macOS need not preserve on restart.
-    const updated = await status(page);
-    assert.equal(updated.currentVersion, target);
-    assert.equal(updated.channel, "alpha");
-    assert.equal(updated.problem, undefined);
-    assert.equal(run("/usr/bin/xattr", ["-p", ownership.attribute, join(installed, ownership.path)]), ownership.direct);
-    run("/usr/bin/codesign", ["--verify", "--deep", "--strict", installed], { timeout: 300_000 });
-    assert.equal(runningWork.closedAtVersion, from, "The live reply must stop before the replacement");
-    assert(runningWork.messageSurvived(data), "The captain's message must survive the update");
-    assert.equal(readFileSync(draft.path, "utf8"), draft.text, "The personal draft must survive the update");
-    await page.screenshot({ path: join(evidence, "installed-app.png") });
-    record("Saved work after the update", `${target} runs with a valid signature, direct ownership and Alpha; the live reply stopped at ${from}, and the captain's message and the draft survived.`);
-  }
+  runningWork = await runningWorkFixture(installedVersion, phase => console.log(`Checking: ${phase}`));
+  await bounded("Preparing active work", () => runningWork.start(page));
+  await expect.poll(() => runningWork.started, { timeout: 60_000 }).toBe(true);
+  // Native replacement closes the transport. A reply is not used as proof of installation.
+  void page.evaluate(() => window.infinitary.update.install()).catch(() => {});
+  const stage = installStageRecorder(evidence, `upgrade-${target}`);
+  let sampling = true;
+  const sampler = (async () => {
+    while (sampling) {
+      let version = null;
+      try { version = installedVersion(); } catch { /* ShipIt may be moving the bundle. */ }
+      stage({ appRunning: spawnSync("/usr/bin/pgrep", ["-f", processPattern]).status === 0, shipItRunning: spawnSync("/usr/bin/pgrep", ["-f", "/ShipIt( |$)"]).status === 0, installedVersion: version, phase: null, problem: null });
+      await new Promise(done => setTimeout(done, 2_000));
+    }
+  })();
+  try { await expect.poll(installedVersion, { timeout: 300_000 }).toBe(target); }
+  catch (error) {
+    if (bundleId) record("Stalled installation ShipIt logs", JSON.stringify(keepShipItLogs(home, bundleId, evidence, "stalled")));
+    throw error;
+  } finally { sampling = false; await sampler; }
+  await expect.poll(() => spawnSync("/usr/bin/pgrep", ["-f", processPattern]).status, { timeout: 60_000 }).toBe(0);
+  record("Native signed replacement", `The installed bundle now contains ${target} and the app restarted on its own.`);
+  await stopApp();
+  page = await launch(); // Reattach the inspection port, which macOS need not preserve on restart.
+  const updated = await status(page);
+  assert.equal(updated.currentVersion, target);
+  assert.equal(updated.channel, "alpha");
+  assert.equal(updated.problem, undefined);
+  assert.equal(run("/usr/bin/xattr", ["-p", ownership.attribute, join(installed, ownership.path)]), ownership.direct);
+  run("/usr/bin/codesign", ["--verify", "--deep", "--strict", installed], { timeout: 300_000 });
+  assert.equal(runningWork.closedAtVersion, from, "The live reply must stop before the replacement");
+  assert(runningWork.messageSurvived(data), "The captain's message must survive the update");
+  assert.equal(readFileSync(draft.path, "utf8"), draft.text, "The personal draft must survive the update");
+  await page.screenshot({ path: join(evidence, "installed-app.png") });
+  record("Saved work after the update", `${target} runs with a valid signature, direct ownership and Alpha; the live reply stopped at ${from}, and the captain's message and the draft survived.`);
 } catch (error) {
   verificationFailed = true;
   try { record("Verification failure", error.stack ?? String(error)); }

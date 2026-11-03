@@ -3,7 +3,7 @@ name: Wait for the alpha cut
 # Called first by main.yml (INF-2465, the captain: "i want to make it so that
 # the next main check keeps queueing all merges until the alpha is actually
 # cut successfully, not while the alpha cut is still happening";
-# docs/testing.md, "The continuous run on main").
+# docs/testing.md, "Main's desktop release check").
 #
 # The alpha a main check waits for is the one cut from the newest earlier
 # main check that ran (it passed, or failed, which release.yml also reads).

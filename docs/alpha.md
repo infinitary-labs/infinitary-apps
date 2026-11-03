@@ -193,7 +193,7 @@ The switch lists `alpha` and `stable`; releases of either channel also update th
   It publishes them inside the same publication steps as the zip: the public release must match the record byte for byte, and both fetch-backs - the public one without a credential - compare every file and its sidecar before the feed commit writes the builds file.
 - **Full alpha checks, inherited stable checks (FI3-482).**
   An automatic alpha reuses the completed rolling-main run's `linux-checks`, `linux-e2e` and `mac` lanes without running them again: those lanes cover Linux typecheck, lint, adherence lint, unit tests and build; every Playwright journey on Linux, in shards (`docs/testing.md`, "The Linux source desktop"); macOS unit tests, every Playwright journey, the installed Claude client check, the replay gate, and the development package with its signature, data-folder and bundled-git checks.
-  The release also runs the update check (`mac-update.yml`, "The update check" below) on Apple silicon: its rehearsal before signing, and the real update from the signing job's handoff, once every check passed, before publication.
+  The release also runs the update check (`mac-update.yml`, "The update check" below) on Apple silicon: the real update from the signing job's handoff, once every check passed, before publication.
   There is no Linux-only bypass.
   Performance grading stays on request (`verify.yml` with explicit `full_system=true`, task/source/reason and `perf=true`; `docs/forge.md`, "Verification workflow requests").
   A stable omits verify and inherits its alpha's checks: the resolve job reads the published alpha's release run, found by its run number (the alpha's suffix), because a run dispatched from main records main's commit rather than the candidate it built.
@@ -210,7 +210,7 @@ The switch lists `alpha` and `stable`; releases of either channel also update th
   The signing job is the same for both channels and repeats none of the lanes' checks: it checks public-download visibility and updater capability, then builds, performs Developer ID signing, signed-app, launch and data-folder gates, notarization and stapling, the distribution zip's Gatekeeper and launch gates and checksum.
   Stable rebuilds new bytes, so all publication and fetch-back gates stay.
 - **Signing while the checks run (INF-2074).**
-  The signing job waits only for the notes it packages, the phone check and the update rehearsal; it builds, signs and notarizes while the verify lanes and the Linux packages are still checked.
+  The signing job waits only for the notes it packages and the phone check; it builds, signs and notarizes while the verify lanes and the Linux packages are still checked.
   Its token only reads: it records, uploads and publishes nothing, so a failed check leaves no tag, release or public file behind.
   The update check and the publication job wait for every check, the verify lanes and the Linux packages included; recording is publication's first effect.
   A stable has no lanes to wait for, so its signing starts at once as before.
@@ -266,7 +266,7 @@ The switch lists `alpha` and `stable`; releases of either channel also update th
   A concurrent pointer write is refused rather than overwriting the other publication; read the new snapshot before publishing again.
   A release is never cancelled to start another; only a newer rehearsal of the same channel and ref replaces an older rehearsal.
 - **Rehearsals publish nothing.**
-  `-f dry_run=true` runs the channel's full checks, the update check's rehearsal, Linux packaging, signing, notarization, the disk-image gates and the update check itself.
+  `-f dry_run=true` runs the channel's full checks, Linux packaging, signing, notarization, the disk-image gates and the update check itself.
   It computes a local initial feed plan and keeps the metadata as `release-feed-rehearsal`, without instantiating a storage client or reading upload credentials.
   The rehearsal proves the release's metadata construction, not compatibility with a live channel's current target; live publication validates that state before switching.
   No tag, release, cask or feed is published, and no repository visibility changes.
@@ -322,7 +322,7 @@ A failed, cancelled or incomplete main run cuts nothing; main's waiting-version 
    Existing immutable tags supply published manifests through the same ledger reader when they have not been committed afterward.
    Missing or invalid notes still fail the release; editorial corrections merge normally and wait for their own passing main check.
 3. **Run release-only gates and publish.**
-   Phone availability, Linux package installation, update rehearsal, signing, notarization, actual signed update and public-download checks still run.
+   Phone availability, Linux package installation, signing, notarization, actual signed update and public-download checks still run.
    Only broad `verify.yml` coverage is inherited; a skipped verification call is not reported as a new pass.
    The source tag `v<version>` names the exact checked commit.
 
@@ -349,7 +349,7 @@ Main's full check still runs on every merge that changes more than the phone app
 Skipped runs leave gaps in the alpha numbers, which already skip run numbers.
 Manual alpha requests, recoveries, rehearsals and stable promotions never skip.
 
-Main's next check waits while an alpha is cut, so merges made meanwhile queue and are checked together once the cut ends (`docs/testing.md`, "The continuous run on main").
+Main's next check waits while an alpha is cut, so merges made meanwhile queue and are checked together once the cut ends (`docs/testing.md`, "Main's desktop release check").
 Each rolling alpha run is named "Alpha from main run N" after the main run it cuts from, which is how that wait finds it.
 
 ### Pausing the rolling pipeline
@@ -461,24 +461,24 @@ Keep the Homebrew casks publishing alongside direct installers; neither a shared
 
 ## The update check
 
-Every alpha, a rehearsal included, proves on Apple silicon that the version alpha subscribers have now updates to it (INF-1900, the captain's direction D).
+Every alpha, a dry run included, proves on Apple silicon that the version alpha subscribers have now updates to it (INF-1900, the captain's direction D).
 `.github/workflows/mac-update.yml` runs `scripts/check-update-from-alpha.mjs` in a placement-service virtual Mac, on the `release_light` kind's queue in a publishing release, otherwise the `light` kind's or `mini-mac-virtual` (`docs/testing.md`, "Each Mac job's kind and size").
 Intel is a best-effort side effect of the universal build: no release runs a hosted Mac for it (the captain, INF-1900).
 It reads the published alpha feed, `feeds/alpha-mac.yml`, for the version alpha subscribers have now, which is a promoted stable right after a promotion.
 It downloads that version's public disk image, checks it against its published checksum and copies the app into `/Applications` the way a person installs it, with its direct-installation receipt.
 It then serves a local copy of the alpha feed that offers the release, under the same private local root, hosts entry and isolation guard as the five-copy check below; no production override enters either app.
 
-- **The rehearsal**, the `rehearse` job, starts with the release and needs no signed copy.
-  The installed app must trust the local feed and offer the release without downloading anything, on Alpha.
-  Signing waits for it, so a broken update check stops the release before anything is signed.
-- **The update**, the `update` job, runs after the signing job and every check, from its handoff, and publication waits for it.
-  The handoff's zip must be the one the signing job handed over.
-  A real streaming turn through a local custom connection is running when the installed app takes the update; the release's own signed zip must replace it natively, the app must restart on its own as the new version on Alpha, with a valid signature and its direct receipt.
+The `update` job runs after the signing job and every check, from its handoff, and publication waits for it.
+It is the release's only update check: the rehearsal that ran before signing repeated only its first checks, so INF-2498's plan removed it.
+
+- The handoff's zip must be the one the signing job handed over.
+- The installed app must trust the local feed and offer the release on Alpha without downloading anything before consent.
+- A real streaming turn through a local custom connection is running when the installed app takes the update; the release's own signed zip must replace it natively, the app must restart on its own as the new version on Alpha, with a valid signature and its direct receipt.
   The live reply must stop before the replacement, and the captain's message and a personal draft must survive.
 
 The check builds nothing, signs nothing and sends nothing to Apple; its observations are kept as `update-evidence-*` artifacts.
 The saved work is created by the installed published app itself, through its own interface, because an older app refuses a database a newer build wrote.
-A stable inherits its alpha's update check and runs neither job.
+A stable inherits its alpha's update check and does not run it.
 
 The five-copy check below stays available on request and no longer runs in a release.
 A pull request that changes Electron or `electron-updater`, the update code (`src/main/host/macUpdates.ts`, `src/core/update/`), signing or packaging (`electron-builder.yml`, `scripts/build-mac-dmg.sh`, the entitlements) or how the app shuts down runs it before merging, through `verify.yml` with `installer_only=true`.

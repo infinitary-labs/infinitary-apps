@@ -364,21 +364,17 @@ describe("automatic alpha workflow handoff (INF-2259)", () => {
       verify: { result: "skipped" },
       linux: { result: "success" },
       phone: { result: "success" },
-      rehearse: { result: "success" },
       release: { result: "success" },
       update: { result: "success" },
     };
     expect(workflowValue(job("verify").if!, { needs })).toBe(false);
-    for (const name of ["rehearse", "release", "update", "publish"])
+    for (const name of ["release", "update", "publish"])
       expect(workflowValue(job(name).if!, { needs }), name).toBe(true);
-    for (const failed of ["notes", "linux", "phone", "rehearse", "release", "update"])
+    for (const failed of ["notes", "linux", "phone", "release", "update"])
       expect(
         workflowValue(job("publish").if!, { needs: { ...needs, [failed]: { result: "failure" } } }),
         failed,
       ).toBe(false);
-    expect(
-      workflowValue(job("release").if!, { needs: { ...needs, rehearse: { result: "failure" } } }),
-    ).toBe(false);
     expect(
       workflowValue(job("publish").if!, {
         needs: {

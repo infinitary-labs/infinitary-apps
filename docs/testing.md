@@ -221,7 +221,7 @@ Moved verbatim from `AGENTS.md` on 2026-09-24; `AGENTS.md` keeps a one-line poin
 - Standing CI rule (PR 8; CI shape revised by captain decision B, 2026-09-15, scout `fm3000-ci-release-only-s1`; split across machines by the captain's direction on FI3-1204, 2026-10-07; probes moved off every push by FI3-1756's plan, 2026-10-14): `ci.yml` runs one Linux baseline job on all pull requests, including release notes: typecheck/lint/build, with the Linux startup fixtures in a job beside it.
   The captain's INF-2273 ruling removes both unit-repeat shards; every edited unit file instead gets three total local runs, including portable files.
   Requested runs also run the full unit and probe sweeps and both integration shards, five jobs in total; there is no unit/integration selector.
-  A push to `main` starts no `ci.yml` job (INF-2340, the captain's route "drop-ci-main"): the full check's `linux-checks` lane runs the same commands, every probe included ("The continuous run on main").
+  A push to `main` starts no `ci.yml` job (INF-2340, the captain's route "drop-ci-main"): the full check's `linux-checks` lane runs the same commands, every probe included ("Main's desktop release check").
   `typecheck-lint-build` runs typecheck, biome, eslint adherence and build on pull requests, and `linux-startup` runs the Linux automatic startup fixtures beside it; `unit-tests` runs the in-memory cohorts (`pure`, `unit`, `unit-isolated`); `integration-tests (1/2)` and `(2/2)` run the integration cohort in vitest's own `--shard` halves, which split the files by a hash of their paths; `probe-tests` runs every probe (`docs/test-cohorts.md`, "Probes").
   The hosted runner has two processors and a personal account is offered no larger one, so the jobs run side by side; together they run `verify.yml`'s `linux-checks` lane, which runs every probe, and `tests/release-workflows.test.ts` holds every vitest project to one job or to shards that cover it, including the full probe project.
   Every job runs on the label the repository variable `LINUX_RUNNER` names, the placement service's `shell-pc-linux` places (a fresh two-processor VM per job on the Windows PC, five at once), and on GitHub's hosted `ubuntu-latest` when the variable is unset; `tests/release-workflows.test.ts` evaluates each job's runner both ways.
@@ -240,7 +240,7 @@ Moved verbatim from `AGENTS.md` on 2026-09-24; `AGENTS.md` keeps a one-line poin
   The retained PR jobs have no release-branch exemption: they must actually run to provide the required project verification, even though the generic forge verdict accepts conditional skipped checks.
   CI green means every check on the exact head commit SHA reports status=completed and conclusion=success or skipped (`gh pr checks`); a project that runs no checks reads green with the empty list, but on GitHub an empty list where workflow runs exist or have run for earlier pull requests reads pending ("checks have not started yet"), and so does a pull request's list with none of its own workflow runs on the version yet where the project runs them (`docs/forge.md`, "The green rule").
   The macOS work - the Playwright e2e suite, the universal package smoke, the replay gate - is `verify.yml`'s mac lane, in a reusable workflow that rolling main calls and that `release.yml` calls only without reusable exact-source proof (every alpha requires linux-checks, the whole Playwright suite on Linux as `linux-e2e` ("The Linux source desktop" below) and mac, inherited from passing main or newly run; a stable promotion inherits its alpha's successful checks or is refused: `docs/alpha.md` "The signed channel workflow") and that crewmates request on demand through `github_write` (`docs/forge.md`, "Verification workflow requests"); it is deliberately not per PR and has no trigger of its own beyond `main.yml`'s call on every push to `main` (the per-PR mac job was 98% of a ~$200/month bill).
-  An alpha requires every journey's Mac proof, inherited from exact-source main or newly run; the continuous run on `main` runs them all (`main.yml`, "The continuous run on main"), which calls it with `all_journeys: true`; any other request runs there only the tests tagged `MAC_ONLY_TAG`, since `linux-e2e` runs every other one ("Tests that need a Mac").
+  An alpha requires every journey's Mac proof, inherited from exact-source main or newly run; main's desktop release check runs them all (`main.yml`, "Main's desktop release check"), which calls it with `all_journeys: true`; any other request runs there only the tests tagged `MAC_ONLY_TAG`, since `linux-e2e` runs every other one ("Tests that need a Mac").
   Crewmate validation is agent-driven and evidence-first (captain rulings 2026-09-19, the no-mistakes alignment; `docs/delivery-rigor.md`): demonstrate the user intent end-to-end with product-level evidence for each concrete thing an end user would do and relevant existing end-to-end tests covering the surfaces changed, re-run after an overlapping rebase, named under Verified, and a relevant test that cannot run is named, never dropped quietly - the full unit and integration sweeps run on main and in release verification and the full Playwright suite and `pnpm package:mac` are `verify.yml`'s mac lane, with the full suite on Linux beside it (rolling main, alphas without reusable proof, and named full-run exceptions), with full e2e runs only in CI, never locally, and no configured command is mandated anywhere in the rigor pipeline.
   Never treat old SHAs as authoritative for the current head.
 - A timing claim in a test is asserted as an ORDER or as WORK, never as a wall-clock window (captain's B1, 2026-09-24: "one clock, budgets measured"): on a host running several suites at once a millisecond budget, a runner-clock interval, or two short real timers racing measure the load.
@@ -397,8 +397,10 @@ A crewmate that repairs a failing main follows these steps:
 
 Priority never interrupts running work, and capacity, test gates and merge consent are unchanged.
 
-## The continuous run on main
+## Main's desktop release check
 
+Main's check is the desktop app's release check (INF-2498, the captain: "the main check should be clarified to be specifically about the desktop app's release").
+Its passing run is what the desktop app's alpha is cut from; the phone app releases through its own checks (`ios-release.yml`).
 Every push to `main` starts `main.yml` (INF-2146, the captain's approved plan, direction B), which calls the full check.
 Beside it it calls `linux-startup.yml`, the Linux automatic startup fixtures, once per main check (INF-2441).
 A push whose every changed file is in the phone app or the docs starts no run (INF-2492, the captain's decision "Skip pushes that change only the phone app or the docs"): its `paths-ignore` lists `ios/`, `docs/` except the generated `docs/contract.json`, `primitives/` and `release-notes/changes/`, since a change file rides with every change.
@@ -472,7 +474,7 @@ The fleet never cancels a running batch or a running main check unless the capta
 
 ## A release's hosted machines
 
-Every Linux job that decides or builds a release, and every Linux job of the continuous run on `main`, runs on GitHub's hosted `ubuntu-24.04`, whatever `LINUX_RUNNER` says (INF-2430's plan, piece 1).
+Every Linux job that decides or builds a release, and every Linux job of main's desktop release check, runs on GitHub's hosted `ubuntu-24.04`, whatever `LINUX_RUNNER` says (INF-2430's plan, piece 1).
 A hosted machine starts at once, so a release never waits in the PC's line behind pull requests and requested runs, and its Linux checks finish sooner than on the PC's two-processor machines.
 The cost is GitHub's per-minute bill for those jobs.
 
@@ -493,7 +495,7 @@ A requested check and a pull request keep `LINUX_RUNNER`: `hosted` is an input o
 ## Native phone checks on the pull request
 
 A pull request no longer starts `phone.yml` (INF-2139, captain: "let's pull journeys and phone checks off PRs now"): a crewmate whose change selects the gate requests it on its branch ("The phone check on request").
-The pull request selection below stays in `phone.yml`, unused; the phone release runs every part ("The continuous run on main").
+The pull request selection below stays in `phone.yml`, unused; the phone release runs every part ("Main's desktop release check").
 `phone.yml` selects the iPhone and iPad gate for `ios/`, the phone-card generator, the phone-contract generator with its shape guard, and the gate's own setup (`scripts/affected-phone.ts`).
 A change to the generated phone contract that touches only its `public static let version` line, a first-number change included, does not select it; `pnpm check` still verifies the file is current on every pull request.
 The setup inputs are `phone.yml`, `scripts/test-phone.ts`, `tests/helpers/phoneHome.ts`, `tests/helpers/phoneKeyboard.ts`, the activity writer `scripts/phone-activity.ts`, the leftover sweep `scripts/phone-leftovers.ts`, the check runner `scripts/phone-checks.ts`, the simulator selector `scripts/phone-simulator.ts` and its pin `scripts/phone-pin.json`, and the test plan helper `scripts/phone-test-plan.ts`.
@@ -587,7 +589,7 @@ The record lists selected and run files and every missing file; missing coverage
 Above the cap it requires every journey in the sweep, not merely the listed subset.
 The file names supplied to `--ran` are the crewmate's declaration from successful run artifacts, not independent proof of success or of the source version.
 No pull request job is added: the crewmate owns this comparison before offering the change.
-The pull request selection below stays in `journeys.yml`, `linux-source` included, for the continuous run on `main` that replaces it.
+The pull request selection below stays in `journeys.yml`, `linux-source` included, for main's desktop release check that replaces it.
 A pull request gets `journeys.yml`'s Linux `choose-journeys` check, which installs the locked tools, selects the journey files and writes the reasons and placement in its summary.
 The chooser downloads `e2e-results` from the newest successful `verify.yml` run that has an unexpired artifact of that name and sums each journey file's measured Mac durations.
 Only a run of every journey keeps that artifact, so a requested check of the tagged tests alone never becomes the journeys' times.
@@ -651,11 +653,11 @@ Twenty-one failing sites in five days were certain breaks after an intentional p
     The rule compares the pattern's matches, or the tool's mentions, on the removed and added strings of each file, so words that only moved choose nothing;
 11. the freeze journey (`main-thread-freeze.spec.ts`), when the change edits the freeze recorder (`src/core/freeze/`) or the main process's own start and clock (`src/main/index.ts`, `src/main/app.ts`, `src/core/orchestrator/ticker.ts`), other than a unit test (`FREEZE_JOURNEY`).
     That code can hold the main thread with no hook, symbol or words changing (`docs/freeze-recorder.md`, "Before a change merges").
-    Other main-process code selects it only through the rules above, and the continuous run on `main` runs it on every push (INF-2486, the captain's cut E).
+    Other main-process code selects it only through the rules above, and main's desktop release check runs it on every push (INF-2486, the captain's cut E).
 12. a spec directly importing a changed product module, even when no symbol changes (relative paths and the `@shared/` and `@core/` aliases).
     A data file that module imports by relative path, such as a runbook's JSON in `src/core/pi/piResources.ts`, is part of the module's text, so a change to it selects the same specs (INF-2426).
     A hub, a module more than 40 journeys import directly (`JOURNEY_SELECTION_CAP`), does not select by import alone, and neither does a hook more than 40 journeys read under rule 6: an edit there would make every change to it a sweep (INF-2486, the captain's cut C).
-    Its readers still follow the other rules, its unit tests and the statement check run on the change, and the continuous run on `main` catches the rest as a main repair;
+    Its readers still follow the other rules, its unit tests and the statement check run on the change, and main's desktop release check catches the rest as a main repair;
 13. a spec directly importing a stand-in declaring `@journey-area src/path/` in a documentation comment, for a changed file there other than a unit test, which no journey runs (INF-2486, the captain's cut B).
     A trailing slash means every file under that directory; otherwise the declaration names one exact product file.
     The declaration does not follow the common launcher's imports: nearly every journey reaches that launcher, but only the stand-in's explicit callers exercise its product area.

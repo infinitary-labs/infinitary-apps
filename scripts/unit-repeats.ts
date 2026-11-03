@@ -4,11 +4,13 @@ import { join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { changedPaths } from "./affected-probes.ts";
 import { MAC_UNIT_FILES } from "./mac-unit-tests.ts";
+import { directUnitReach, unitFiles, VITEST_FILE } from "./unit-reach.ts";
 
 /**
  * The captain's INF-2273 override to INF-2259: every edited Vitest file
  * gets its ordinary local run plus two more, including Linux-eligible files.
- * No PR repeat jobs duplicate that proof. Native files still require a Mac.
+ * INF-2394 measure 3 adds one local round for unedited direct importers and
+ * literal path readers. No transitive reach or added CI jobs. Native files still require a Mac.
  *
  *   node scripts/unit-repeats.ts [--base <ref>] [--head <ref>] [--workers <n>] [--shard <index/count>] [--run]
  *
@@ -23,9 +25,20 @@ const ROOT = resolve(fileURLToPath(new URL("..", import.meta.url)));
 /** INF-2259 accepted override: ordinary coverage plus two more rounds. */
 export const REPEATS = 3;
 
-const VITEST_FILE = /^(src|tests)\/.+\.test\.tsx?$/;
-
 export type Selection = { repeat: string[]; onMac: string[] };
+export type LocalSelection = Selection & { once: string[] };
+
+/** Edited tests own three rounds; unedited direct readers own just one. */
+export function selectLocalUnits(changed: readonly string[], root = ROOT): LocalSelection {
+  const edited = selectRepeats(changed, (file) => existsSync(join(root, file)));
+  const once = directUnitReach(changed, unitFiles(root), root);
+  const mac = new Set<string>(MAC_UNIT_FILES);
+  return {
+    ...edited,
+    once,
+    onMac: [...edited.onMac, ...once.filter((file) => mac.has(file))].sort(),
+  };
+}
 
 /** All edited surviving Vitest files run locally; identify their native prerequisites. */
 export function selectRepeats(
@@ -41,8 +54,13 @@ export function selectRepeats(
 }
 
 /** Keep every round on Vitest's own shard, with the complete candidate set. */
-export function repetitionArgs(files: readonly string[], shard?: string, workers?: string): string[] | undefined {
-  if (workers !== undefined && !/^[1-9]\d*$/.test(workers)) throw new Error(`Invalid worker count: ${workers}`);
+export function repetitionArgs(
+  files: readonly string[],
+  shard?: string,
+  workers?: string,
+): string[] | undefined {
+  if (workers !== undefined && !/^[1-9]\d*$/.test(workers))
+    throw new Error(`Invalid worker count: ${workers}`);
   let split: string[] = [];
   if (shard !== undefined) {
     const parts = /^([1-9]\d*)\/([1-9]\d*)$/.exec(shard);
@@ -57,7 +75,16 @@ export function repetitionArgs(files: readonly string[], shard?: string, workers
     if (index > count) return undefined;
     if (count > 1) split = ["--shard", `${index}/${count}`];
   }
-  return ["exec", "vitest", "run", "--retry", "0", ...(workers === undefined ? [] : ["--maxWorkers", workers]), ...split, ...files];
+  return [
+    "exec",
+    "vitest",
+    "run",
+    "--retry",
+    "0",
+    ...(workers === undefined ? [] : ["--maxWorkers", workers]),
+    ...split,
+    ...files,
+  ];
 }
 
 /** Three fresh invocations (ordinary coverage plus two), never a retry; any failed or interrupted round ends this shard. */
@@ -86,7 +113,34 @@ export function runRepetitions(
   return 0;
 }
 
-function summaryLines(base: string, { repeat, onMac }: Selection, shard?: string): string[] {
+/** Run affected readers once before the edited-file rounds, stopping on any failure. */
+export function runLocalUnits(
+  selection: LocalSelection,
+  shard: string | undefined,
+  run: (args: string[]) => number | null,
+  report: (lines: string[]) => void,
+  workers?: string,
+): number {
+  if (selection.once.length) {
+    const command = repetitionArgs(selection.once, shard, workers);
+    if (command) {
+      report(["Direct importers and path readers: one local round."]);
+      const status = run(command);
+      if (status !== 0) {
+        report(["Direct-reader round failed; edited-file rounds did not run."]);
+        return status ?? 1;
+      }
+      report(["Direct-reader round passed."]);
+    }
+  }
+  return runRepetitions(selection.repeat, shard, run, report, workers);
+}
+
+function summaryLines(
+  base: string,
+  { repeat, once, onMac }: LocalSelection,
+  shard?: string,
+): string[] {
   const lines =
     repeat.length === 0
       ? [`No surviving Vitest file this change adds or edits since ${base} needs local rounds.`]
@@ -96,6 +150,11 @@ function summaryLines(base: string, { repeat, onMac }: Selection, shard?: string
             : `Local Vitest shard ${shard} runs ${REPEATS} total rounds from these candidates, since ${base}; together the shards cover every file:`,
           ...repeat.map((file) => `- \`${file}\``),
         ];
+  lines.push(
+    "",
+    "Unedited direct importers and literal path readers run once locally (no transitive reach):",
+    ...once.map((file) => `- \`${file}\``),
+  );
   if (onMac.length > 0)
     lines.push(
       "",
@@ -122,19 +181,23 @@ function main(): void {
   };
   const changed = changedPaths(base, value("--head", "HEAD"));
   if (changed === undefined) {
-    console.error(`The change's base ${base} cannot be read, so its edited test files are unknown.`);
+    console.error(
+      `The change's base ${base} cannot be read, so its edited test files are unknown.`,
+    );
     process.exitCode = 1;
     return;
   }
-  const selection = selectRepeats(changed);
+  const selection = selectLocalUnits(changed);
   const shard = args.includes("--shard") ? value("--shard", "") : undefined;
   const workers = args.includes("--workers") ? value("--workers", "") : undefined;
   report(summaryLines(base, selection, shard));
-  if (!args.includes("--run") || selection.repeat.length === 0) return;
+  if (!args.includes("--run") || selection.repeat.length + selection.once.length === 0) return;
   if (process.platform !== "darwin" && selection.onMac.length > 0)
-    throw new Error("This selected local batch includes native files that need a Mac; do not count skipped native cases as proof.");
-  process.exitCode = runRepetitions(
-    selection.repeat,
+    throw new Error(
+      "This selected local batch includes native files that need a Mac; do not count skipped native cases as proof.",
+    );
+  process.exitCode = runLocalUnits(
+    selection,
     shard,
     (command) => spawnSync("pnpm", command, { cwd: ROOT, stdio: "inherit" }).status,
     report,

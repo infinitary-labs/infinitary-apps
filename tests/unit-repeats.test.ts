@@ -1,6 +1,13 @@
 import { describe, expect, it, vi } from "vitest";
 import { MAC_UNIT_FILES } from "../scripts/mac-unit-tests.ts";
-import { REPEATS, repetitionArgs, runRepetitions, selectRepeats } from "../scripts/unit-repeats.ts";
+import {
+  REPEATS,
+  repetitionArgs,
+  runLocalUnits,
+  runRepetitions,
+  selectLocalUnits,
+  selectRepeats,
+} from "../scripts/unit-repeats.ts";
 
 /** INF-2259 and the captain's subsequent INF-2273 override: ordinary local
  * coverage plus two more runs for every edited unit file, including portable
@@ -123,4 +130,44 @@ describe("a change's local unit-file rounds", () => {
       onMac: [],
     });
   });
+});
+
+// INF-2394 measure 3 preserves the edited-file rule and adds disjoint once-only proof.
+describe("direct-reader local execution", () => {
+  const selection = {
+    repeat: ["tests/unit-repeats.test.ts"],
+    once: ["tests/unit-repeats-workflow.test.ts"],
+    onMac: [],
+  };
+
+  it("runs direct readers once and edited tests three times with the same worker bound", () => {
+    const run = vi.fn((_args: string[]) => 0);
+    expect(runLocalUnits(selection, undefined, run, () => {}, "2")).toBe(0);
+    expect(run.mock.calls.map(([args]) => args)).toEqual([
+      repetitionArgs(selection.once, undefined, "2"),
+      ...Array.from({ length: REPEATS }, () => repetitionArgs(selection.repeat, undefined, "2")),
+    ]);
+  });
+
+  it.each([1, null])("stops after a failed or interrupted direct-reader round (%s)", (status) => {
+    const run = vi.fn((_args: string[]) => status);
+    expect(runLocalUnits(selection, undefined, run, () => {})).toBe(1);
+    expect(run).toHaveBeenCalledTimes(1);
+  });
+
+  it("runs a product-only selection once, retaining Vitest sharding", () => {
+    const run = vi.fn((_args: string[]) => 0);
+    const once = ["tests/generate-self-source.test.ts", "tests/phone-order.test.ts"];
+    expect(runLocalUnits({ repeat: [], once, onMac: [] }, "2/2", run, () => {})).toBe(0);
+    expect(run).toHaveBeenCalledExactlyOnceWith(repetitionArgs(once, "2/2"));
+  });
+});
+
+// INF-2394: native prerequisites still apply to unedited direct importers.
+it("identifies native direct readers in the once-only local selection", () => {
+  const native = "src/main/host/darwinFreshAuthentication.test.ts";
+  const selection = selectLocalUnits(["src/main/host/darwinFreshAuthentication.ts"]);
+  expect(selection.once).toContain(native);
+  expect(selection.onMac).toContain(native);
+  expect(selection.repeat).toEqual([]);
 });

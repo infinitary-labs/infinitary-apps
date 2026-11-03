@@ -44,6 +44,10 @@ Record the version, selection reasons, files or parts, required platforms or dev
   A check requiring a CI environment uses `platforms=mac` or `both` instead of equivalent local proof, not in addition.
 - Every edited Vitest file runs three total fresh invocations locally, including Linux-eligible files (the captain's INF-2273 override).
   `pnpm test:repeats --base origin/main --workers <declared workers>` uses the existing changed-path reader and stops at the first failed or interrupted round without retries.
+  Unedited Vitest files that directly import a changed file or reference its literal path run once locally in the same command (INF-2394 measure 3).
+  The selector resolves relative imports and the node and renderer compilers' aliases, literal paths relative to the project or test file, joined literal path segments, and template directory prefixes such as workflow readers use.
+  It reads only each test file, never follows imports transitively, and does not execute dynamically computed paths to discover dependencies.
+  Edited files remain disjoint from that once-only selection; a failed direct-reader round stops the edited-file rounds too.
   Ordinary coverage is included, so do not add a fourth run or duplicate local proof in PR CI.
   Declare the whole batch's processor and memory needs through the local load path, and bound Vitest workers to that declaration.
   `scripts/mac-unit-tests.ts` identifies native prerequisites, not an exclusion of portable files from local rounds.

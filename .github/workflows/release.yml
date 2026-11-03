@@ -243,12 +243,10 @@ jobs:
           script: |
             if (process.env.CHANNEL !== 'alpha') throw new Error('Rolling-main reuse is alpha-only');
             const {pathToFileURL} = require('node:url');
-            const {verifyMainEvidence} = await import(pathToFileURL(`${process.env.GITHUB_WORKSPACE}/scripts/main-alpha-proof.mjs`).href);
+            const {proveMain} = await import(pathToFileURL(`${process.env.GITHUB_WORKSPACE}/scripts/main-alpha-proof.mjs`).href);
             const {data: run} = await github.rest.actions.getWorkflowRun({...context.repo, run_id: Number(process.env.MAIN_RUN)});
-            const jobs = await github.paginate(github.rest.actions.listJobsForWorkflowRun, {
-              ...context.repo, run_id: run.id, filter: 'latest', per_page: 100
-            });
-            const proof = verifyMainEvidence(run, jobs, `${context.repo.owner}/${context.repo.repo}`, process.env.SOURCE);
+            // Main's own full check, or the swept batch a covered push names.
+            const proof = await proveMain(github, context.repo, run, process.env.SOURCE);
             core.setOutput('inherited', 'true');
             core.setOutput('source', proof.source);
             core.setOutput('url', proof.url);
@@ -333,17 +331,14 @@ jobs:
               // Automatic alphas inherit exact-source rolling-main proof. They
               // still need this release's successful update check below.
               const {pathToFileURL} = require('node:url');
-              const {verifyMainEvidence} = await import(pathToFileURL(`${process.env.GITHUB_WORKSPACE}/scripts/main-alpha-proof.mjs`).href);
+              const {proveMain} = await import(pathToFileURL(`${process.env.GITHUB_WORKSPACE}/scripts/main-alpha-proof.mjs`).href);
               const candidates = await github.paginate(github.rest.actions.listWorkflowRuns, {
                 ...context.repo, workflow_id: 'main.yml', head_sha: process.env.SOURCE_COMMIT,
                 event: 'push', branch: 'main', per_page: 100
               });
               const main = candidates.find(candidate => candidate.status === 'completed' && candidate.conclusion === 'success');
               if (!main) throw new Error(`Alpha ${alpha} has neither full release verification nor successful exact-source main proof`);
-              const mainJobs = await github.paginate(github.rest.actions.listJobsForWorkflowRun, {
-                ...context.repo, run_id: main.id, filter: 'latest', per_page: 100
-              });
-              verifyMainEvidence(main, mainJobs, `${context.repo.owner}/${context.repo.repo}`, process.env.SOURCE_COMMIT);
+              await proveMain(github, context.repo, main, process.env.SOURCE_COMMIT);
             }
             // Its update check on Apple silicon (INF-1900; Intel is best effort), or,
             // for an alpha released before it, the five-copy check on both chips.

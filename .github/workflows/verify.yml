@@ -47,6 +47,18 @@ on:
         required: false
         type: boolean
         default: false
+      # Only batch.yml sets these: the swept batch's changes, composed onto ref
+      # in every job (docs/testing.md, "The swept batch").
+      batch:
+        description: The swept batch's changes as number:version words, composed onto ref in every job
+        required: false
+        type: string
+        default: ""
+      batch_tree:
+        description: The tree the composed batch must have
+        required: false
+        type: string
+        default: ""
       profile:
         description: Which lanes run - stable or alpha (both run the full checks)
         required: false
@@ -164,6 +176,8 @@ jobs:
       ref: ${{ inputs.ref || github.ref }}
       hosted: ${{ inputs.hosted == true }}
       suite: full
+      batch: ${{ inputs.batch || '' }}
+      batch_tree: ${{ inputs.batch_tree || '' }}
   # The profile's lanes, as one matrix: an omitted lane is absent from the
   # run, never a skipped job that reads as green. linux-checks is the main
   # checks' commands in one job; mac is the full macOS verification. Each step names
@@ -217,6 +231,14 @@ jobs:
         with:
           ref: ${{ inputs.ref || github.ref }}
           path: Application Support/firstmate
+      # A swept batch's changes, composed onto main the same way in every job.
+      - name: Compose the swept batch
+        if: inputs.batch != ''
+        env:
+          HEADS: ${{ inputs.batch }}
+          TREE: ${{ inputs.batch_tree }}
+        # shellcheck disable=SC2086 # one word per change
+        run: scripts/batch-compose.sh apply "$TREE" $HEADS
       # Its own folder per job: both Mac runner slots run as one user, and
       # setup wipes the default ~/setup-pnpm, pnpm's store included.
       - uses: pnpm/action-setup@v4

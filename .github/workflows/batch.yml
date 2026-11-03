@@ -1,0 +1,262 @@
+name: batch
+
+# The swept batch before main (INF-2430 piece 3; docs/testing.md, "The swept
+# batch"). The captain's merge click marks the approved version with the
+# commit status infinitary/queue, pending; this workflow gathers every
+# change so marked, composes them onto main inside each job, and runs the
+# alpha's full check on the result - every Linux journey on GitHub's hosted
+# machines and every journey on the mini's release check line, without the
+# phone check. A green sweep marks every change success with the batch's
+# tree, and the app merges each one. Main's check then finds its files are
+# the sweep's (main.yml's sort job) and the alpha starts with no check run
+# again (scripts/main-alpha-proof.mjs).
+#
+# A red sweep reruns only its failed jobs, once (the captain: "can we just
+# only rerun failed jobs? if it failed again, treat it as failed by the last
+# PR in the batch and require it to fix the flake"). A second failure marks
+# the batch's last change failed with the failed job's link, and the rest
+# sweep again without it. A by-hand start can send one change back with a
+# reason, or rehearse a batch of named pull requests and mark nothing.
+#
+# The batch's state lives only in infinitary/queue (scripts/batch.mjs). This
+# workflow writes it with its own credential, which starts no workflow, and
+# starts its own next run and its rerun by dispatch. It pushes nothing: the
+# app merges every change with the captain's sign-in.
+
+on:
+  # The app's approval mark. Any other status starts a run that does nothing.
+  status:
+  # A merge, after which the next batch may form.
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      rehearsal:
+        description: Sweep these pull requests (numbers, space-separated) onto main and report, marking nothing
+        type: string
+        default: ""
+      send_back:
+        description: Send this pull request back to its author, with the reason below; nothing sweeps
+        type: string
+        default: ""
+      reason:
+        description: Why the change goes back (with send_back)
+        type: string
+        default: ""
+      rerun:
+        description: Set by the batch itself - the batch run whose failed jobs run once more
+        type: string
+        default: ""
+
+# One batch at a time, and nothing cancels one: GitHub keeps the running
+# batch and the newest waiting start, and every start reads the queue again,
+# so a dropped start loses nothing. A status that is not the queue's, a
+# rehearsal, a send-back and a rerun each stay out of that line.
+concurrency:
+  group: ${{ github.event_name == 'status' && github.event.context != 'infinitary/queue' && format('batch-other-{0}', github.run_id) || inputs.rehearsal != '' && format('batch-rehearsal-{0}', github.run_id) || inputs.send_back != '' && format('batch-send-back-{0}', github.run_id) || inputs.rerun != '' && format('batch-rerun-{0}', inputs.rerun) || 'batch' }}
+  cancel-in-progress: false
+
+# statuses for the queue's marks; actions for the next start and the rerun,
+# and the verify check's reads; pull-requests to list the open changes.
+permissions:
+  contents: read
+  statuses: write
+  actions: write
+  pull-requests: read
+
+jobs:
+  # A by-hand send-back: the change's queue status fails with the reason, and
+  # the next batch leaves it out.
+  send-back:
+    if: github.event_name == 'workflow_dispatch' && inputs.send_back != ''
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          sparse-checkout: scripts/batch.mjs
+          sparse-checkout-cone-mode: false
+      - uses: actions/github-script@v7
+        env:
+          PULL: ${{ inputs.send_back }}
+          REASON: ${{ inputs.reason }}
+        with:
+          script: |
+            const {pathToFileURL} = require('node:url');
+            const batch = await import(pathToFileURL(`${process.env.GITHUB_WORKSPACE}/scripts/batch.mjs`).href);
+            if (!process.env.REASON) throw new Error('A send-back needs a reason.');
+            const {data: pull} = await github.rest.pulls.get({...context.repo, pull_number: Number(process.env.PULL)});
+            await batch.writeStatus(github, context.repo, {
+              head: pull.head.sha, state: 'failure', description: process.env.REASON.slice(0, 140),
+              url: `${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`,
+            });
+
+  # The batch's one rerun: waits for the failed attempt to end, then reruns
+  # only its failed jobs and the verdict after them.
+  rerun:
+    if: github.event_name == 'workflow_dispatch' && inputs.rerun != ''
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/github-script@v7
+        env:
+          RUN: ${{ inputs.rerun }}
+        with:
+          script: |
+            const run_id = Number(process.env.RUN);
+            for (;;) {
+              const {data: run} = await github.rest.actions.getWorkflowRun({...context.repo, run_id});
+              if (run.path !== '.github/workflows/batch.yml') throw new Error(`Run ${run_id} is not a batch run.`);
+              if (run.status === 'completed') {
+                if (run.run_attempt !== 1 || run.conclusion !== 'failure') {
+                  core.notice(`Batch run ${run_id} needs no rerun: attempt ${run.run_attempt}, ${run.conclusion}.`);
+                  return;
+                }
+                await github.rest.actions.reRunWorkflowFailedJobs({...context.repo, run_id});
+                return;
+              }
+              // The failed attempt's verdict asked for this; its run ends seconds later.
+              await new Promise((done) => setTimeout(done, 10_000));
+            }
+
+  # Reads the queue, forms the batch, composes it onto main and marks its changes.
+  compose:
+    if: (github.event_name == 'status' && github.event.context == 'infinitary/queue' && github.event.state == 'pending') || github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && inputs.send_back == '' && inputs.rerun == '')
+    runs-on: ubuntu-24.04
+    outputs:
+      sweep: ${{ steps.mark.outputs.sweep }}
+      base: ${{ steps.compose.outputs.base }}
+      tree: ${{ steps.compose.outputs.tree }}
+      heads: ${{ steps.mark.outputs.heads }}
+      members: ${{ steps.mark.outputs.members }}
+    steps:
+      # Main as it is now; the composition fetches the history it needs.
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+      - id: form
+        uses: actions/github-script@v7
+        env:
+          REHEARSAL: ${{ inputs.rehearsal }}
+        with:
+          script: |
+            const {pathToFileURL} = require('node:url');
+            const batch = await import(pathToFileURL(`${process.env.GITHUB_WORKSPACE}/scripts/batch.mjs`).href);
+            let members;
+            if (process.env.REHEARSAL) {
+              members = [];
+              for (const number of process.env.REHEARSAL.split(/[\s,]+/).filter(Boolean)) {
+                const {data: pull} = await github.rest.pulls.get({...context.repo, pull_number: Number(number)});
+                members.push({number: pull.number, head: pull.head.sha});
+              }
+            } else {
+              const entries = await batch.readOpenQueue(github, context.repo);
+              const plan = batch.formBatch(entries, await batch.readRuns(github, context.repo, entries));
+              core.notice(plan.reason);
+              members = plan.members;
+            }
+            core.setOutput('members', JSON.stringify(members));
+            core.setOutput('heads', batch.headList(members));
+      - id: compose
+        if: steps.form.outputs.heads != ''
+        env:
+          HEADS: ${{ steps.form.outputs.heads }}
+        run: |
+          echo "base=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+          # shellcheck disable=SC2086 # one word per change
+          scripts/batch-compose.sh compose $HEADS | tee "$RUNNER_TEMP/composition"
+          echo "tree=$(sed -n 's/^tree //p' "$RUNNER_TEMP/composition")" >> "$GITHUB_OUTPUT"
+      - id: mark
+        if: steps.form.outputs.heads != ''
+        uses: actions/github-script@v7
+        env:
+          MEMBERS: ${{ steps.form.outputs.members }}
+          REHEARSAL: ${{ inputs.rehearsal }}
+        with:
+          script: |
+            const fs = require('node:fs');
+            const {pathToFileURL} = require('node:url');
+            const batch = await import(pathToFileURL(`${process.env.GITHUB_WORKSPACE}/scripts/batch.mjs`).href);
+            const composed = batch.readComposition(
+              fs.readFileSync(`${process.env.RUNNER_TEMP}/composition`, 'utf8'), JSON.parse(process.env.MEMBERS));
+            const url = `${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`;
+            if (!process.env.REHEARSAL) {
+              for (const member of composed.conflictsMain)
+                await batch.writeStatus(github, context.repo, {...member, state: 'failure', description: 'Conflicts with main: bring the branch up to date', url});
+              for (const member of composed.merged)
+                await batch.writeStatus(github, context.repo, {...member, state: 'pending', description: batch.inBatch(context.runId), url});
+            }
+            for (const member of composed.conflictsBatch)
+              core.notice(`#${member.number} conflicts only with an earlier change here, so it waits for the next batch.`);
+            core.setOutput('sweep', composed.merged.length ? 'true' : 'false');
+            core.setOutput('members', JSON.stringify(composed.merged));
+            core.setOutput('heads', batch.headList(composed.merged));
+
+  # The alpha's full check on the composed batch, without the phone check:
+  # hosted Linux, and the Mac lane on the release check line.
+  sweep:
+    needs: compose
+    if: needs.compose.outputs.sweep == 'true'
+    uses: ./.github/workflows/verify.yml
+    with:
+      ref: ${{ needs.compose.outputs.base }}
+      batch: ${{ needs.compose.outputs.heads }}
+      batch_tree: ${{ needs.compose.outputs.tree }}
+      profile: stable
+      all_journeys: true
+      hosted: true
+      mac_runner: ${{ fromJSON(vars.MAC_QUEUES || '{}').release_check || '' }}
+
+  # Writes the sweep's verdict on its changes. Its name carries the batch's
+  # tree, which the alpha's proof reads (scripts/main-alpha-proof.mjs); a
+  # rehearsal's never reads as a verdict.
+  verdict:
+    needs: [compose, sweep]
+    if: ${{ !cancelled() && needs.compose.outputs.sweep == 'true' }}
+    name: ${{ inputs.rehearsal != '' && 'rehearsal' || 'verdict' }} (tree ${{ needs.compose.outputs.tree }})
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          sparse-checkout: scripts/batch.mjs
+          sparse-checkout-cone-mode: false
+      - uses: actions/github-script@v7
+        env:
+          SWEPT: ${{ needs.sweep.result }}
+          TREE: ${{ needs.compose.outputs.tree }}
+          MEMBERS: ${{ needs.compose.outputs.members }}
+          REHEARSAL: ${{ inputs.rehearsal }}
+        with:
+          script: |
+            const {pathToFileURL} = require('node:url');
+            const batch = await import(pathToFileURL(`${process.env.GITHUB_WORKSPACE}/scripts/batch.mjs`).href);
+            const members = JSON.parse(process.env.MEMBERS);
+            const runUrl = `${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`;
+            const listed = members.map((member) => `#${member.number}`).join(', ');
+            if (process.env.REHEARSAL) {
+              await core.summary.addHeading('Batch rehearsal')
+                .addRaw(`The sweep of ${listed} at tree ${process.env.TREE} ended ${process.env.SWEPT}. Nothing was marked.`).write();
+              return;
+            }
+            const jobs = await github.paginate(github.rest.actions.listJobsForWorkflowRun, {
+              ...context.repo, run_id: context.runId, filter: 'latest', per_page: 100,
+            });
+            const failedJob = jobs.find((job) => job.conclusion === 'failure');
+            const current = new Map();
+            for (const member of members) {
+              const {data: pull} = await github.rest.pulls.get({...context.repo, pull_number: member.number});
+              const statuses = await github.paginate(github.rest.repos.listCommitStatusesForRef, {
+                ...context.repo, ref: pull.head.sha, per_page: 100,
+              });
+              current.set(member.number, {head: pull.head.sha, queue: pull.state === 'open' ? batch.readQueueStatus(statuses) : null});
+            }
+            const plan = batch.verdict({
+              runId: context.runId, runUrl, attempt: Number(process.env.GITHUB_RUN_ATTEMPT),
+              swept: process.env.SWEPT, tree: process.env.TREE, members, current, failedJob,
+            });
+            for (const write of plan.writes) await batch.writeStatus(github, context.repo, write);
+            if (plan.next)
+              await github.rest.actions.createWorkflowDispatch({
+                ...context.repo, workflow_id: 'batch.yml', ref: 'main',
+                inputs: plan.next === 'rerun' ? {rerun: String(context.runId)} : {},
+              });
+            await core.summary.addHeading(`Batch of ${listed}`).addRaw(plan.summary).write();

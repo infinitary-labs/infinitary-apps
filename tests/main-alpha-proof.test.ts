@@ -2,7 +2,11 @@ import { createRequire } from "node:module";
 import { fileURLToPath } from "node:url";
 import { compileFunction, constants } from "node:vm";
 import { describe, expect, it } from "vitest";
-import { verifyMainEvidence } from "../scripts/main-alpha-proof.mjs";
+import {
+  proveMain,
+  verifyBatchEvidence,
+  verifyMainEvidence,
+} from "../scripts/main-alpha-proof.mjs";
 import { loadYamlFile, workflowString, workflowValue } from "./helpers/releaseWorkflows.ts";
 
 // INF-2259 accepted override: a fully passing rolling-main source becomes an
@@ -118,6 +122,143 @@ describe("exact-main alpha verification inheritance", () => {
         source,
       ),
     ).toThrow("rolling-main push");
+  });
+});
+
+// INF-2430 piece 3, the captain's approved plan: "The release run accepts a
+// matching batch as its proof, through scripts/main-alpha-proof.mjs." A main
+// push whose files are exactly a green batch's runs no full check; main.yml
+// names the batch run, and the batch run's verdict job names its tree. The
+// tree is source 6073f48's, from git.
+const tree = "bdb685323ef83592182b68619173bb710f03440f";
+const batchId = 41600000001;
+function coveredMain() {
+  const { run } = completedMain();
+  const names = ["sort", `covered by batch ${batchId}`, "verify", "startup / runtime-facts"];
+  const jobs = names.map((name) => ({
+    name,
+    run_id: run.id,
+    run_attempt: 1,
+    head_sha: source,
+    status: "completed",
+    conclusion: name === "verify" ? "skipped" : "success",
+  }));
+  return { run, jobs };
+}
+function sweptBatch() {
+  const run = {
+    id: batchId,
+    run_attempt: 2,
+    path: ".github/workflows/batch.yml",
+    event: "status",
+    head_branch: "main",
+    head_sha: "aa46269bb969bd40890eb07ace70b28fd00a3de1",
+    status: "completed",
+    conclusion: "success",
+    head_repository: { full_name: repository },
+    repository: { full_name: repository },
+    html_url: `https://github.com/infinitary-labs/infinitary/actions/runs/${batchId}`,
+  };
+  const names = [
+    "compose",
+    "sweep / Validate verification selection",
+    "sweep / linux-checks",
+    "sweep / mac",
+    ...["parallel", "desktop"].flatMap((lane) =>
+      [1, 2, 3, 4].map((shard) => `sweep / linux-e2e / journeys (${lane} ${shard}/4)`),
+    ),
+    `verdict (tree ${tree})`,
+  ];
+  // The rerun's jobs carry its attempt; the rest keep their first.
+  const jobs = names.map((name) => ({
+    name,
+    run_id: run.id,
+    run_attempt: name === "sweep / mac" || name.startsWith("verdict") ? 2 : 1,
+    head_sha: run.head_sha,
+    status: "completed",
+    conclusion: "success",
+  }));
+  return { run, jobs };
+}
+function readings(main = coveredMain(), batch = sweptBatch()) {
+  return {
+    rest: {
+      actions: {
+        listJobsForWorkflowRun: "jobs",
+        getWorkflowRun: async ({ run_id }: { run_id: number }) => {
+          expect(run_id).toBe(batch.run.id);
+          return { data: batch.run };
+        },
+      },
+      git: {
+        getCommit: async ({ commit_sha }: { commit_sha: string }) => {
+          expect(commit_sha).toBe(source);
+          return { data: { sha: source, tree: { sha: tree } } };
+        },
+      },
+    },
+    paginate: async (method: string, parameters: { run_id: number; filter: string }) => {
+      expect(method).toBe("jobs");
+      expect(parameters.filter).toBe("latest");
+      return parameters.run_id === main.run.id ? main.jobs : batch.jobs;
+    },
+  };
+}
+const repo = { owner: "infinitary-labs", repo: "infinitary" };
+
+describe("an alpha from a swept batch", () => {
+  it("accepts a covered main push by its batch run's full check on the same files", async () => {
+    const { run } = coveredMain();
+    expect(await proveMain(readings(), repo, run, source)).toEqual({
+      source,
+      runId: run.id,
+      attempt: run.run_attempt,
+      url: sweptBatch().run.html_url,
+    });
+  });
+
+  it("still proves a full main run by its own check", async () => {
+    const main = completedMain();
+    expect((await proveMain(readings(main), repo, main.run, source)).url).toBe(main.run.html_url);
+  });
+
+  it("refuses a batch that swept other files, a rehearsal, or a failed sweep owner", () => {
+    const { run, jobs } = sweptBatch();
+    expect(verifyBatchEvidence(run, jobs, repository, tree).url).toBe(run.html_url);
+    expect(() => verifyBatchEvidence(run, jobs, repository, "0".repeat(40))).toThrow("other files");
+    const rehearsal = jobs.map((job) =>
+      job.name.startsWith("verdict") ? { ...job, name: `rehearsal (tree ${tree})` } : job,
+    );
+    expect(() => verifyBatchEvidence(run, rehearsal, repository, tree)).toThrow("other files");
+    const red = jobs.map((job) =>
+      job.name === "sweep / mac" ? { ...job, conclusion: "failure" } : job,
+    );
+    expect(() => verifyBatchEvidence(run, red, repository, tree)).toThrow("every full-check owner");
+    expect(() =>
+      verifyBatchEvidence(
+        run,
+        jobs.filter((job) => !job.name.includes("desktop 4/4")),
+        repository,
+        tree,
+      ),
+    ).toThrow("every full-check owner");
+    expect(() =>
+      verifyBatchEvidence({ ...run, path: ".github/workflows/verify.yml" }, jobs, repository, tree),
+    ).toThrow("successful batch run");
+  });
+
+  it("refuses a covered main run with a failed job or at another source", async () => {
+    const main = coveredMain();
+    const failed = {
+      ...main,
+      jobs: main.jobs.map((job) => (job.name === "sort" ? { ...job, conclusion: "failure" } : job)),
+    };
+    await expect(proveMain(readings(failed), repo, failed.run, source)).rejects.toThrow(
+      "every job it ran",
+    );
+    await expect(
+      proveMain(readings(), repo, main.run, "aa46269bb969bd40890eb07ace70b28fd00a3de1"),
+    ).rejects.toThrow("exact source");
   });
 });
 

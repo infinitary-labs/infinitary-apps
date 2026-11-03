@@ -388,7 +388,7 @@ It replaces the nightly full check, which requested it and the phone check on `m
 Main runs no phone check (INF-2492, the captain: "remove phone check from main altogether. we run all phone check parts at release"): `ios-release.yml` calls `phone.yml` at its resolved source before each TestFlight upload, which runs every part on iPhone and iPad.
 The workflow's concurrency group never cancels a run in progress, so GitHub keeps the running run and at most one waiting run; a newer push replaces the waiting one, and a burst of merges is checked once at its newest version.
 No check starts while the previous check's alpha is being cut (INF-2465, the captain: "i want to make it so that the next main check keeps queueing all merges until the alpha is actually cut successfully, not while the alpha cut is still happening").
-The run's first job, `alpha-wait.yml`, finds the alpha run cut from the newest earlier main run that passed or failed, by the name `release.yml` gives it ("Alpha from main run N"), and waits until it ends.
+The run's wait, `alpha-wait.yml`, finds the alpha run cut from the newest earlier main run that passed or failed, by the name `release.yml` gives it ("Alpha from main run N"), and waits until it ends.
 A failed cut ends the wait too, so it never holds main's fixes; an alpha run that never started holds nothing after ten minutes, and the wait ends before GitHub's six-hour job limit.
 While it waits, merges keep queueing in the one waiting run; when main moved meanwhile, the run cancels itself, so the waiting run checks every merge at once.
 While the captain has paused the rolling pipeline, a run a push started cancels itself in that first job, and the next merge after Resume starts the run that covers the pause (`docs/alpha.md`, "Pausing the rolling pipeline").
@@ -404,6 +404,49 @@ Ordinary CI starts nothing on a push to `main`: the full check's `linux-checks` 
 The full check runs no run-alone pass either; the proof of edited journeys runs it at author time ("Each test owns its prerequisites").
 Its Linux jobs run on GitHub's hosted Ubuntu, whatever `LINUX_RUNNER` says, so the run never waits in the PC's line ("A release's hosted machines").
 `tests/release-workflows.test.ts` holds the trigger, the skipped paths against real merges, the queue, the calls and the phone release's call of every part.
+Beside the wait, its `sort` job reads each push against the swept batch ("The swept batch"): a push whose files are exactly a green batch's skips the full check once the wait ends, a push while a green batch is still merging cancels its own run, and every other push gets the full check.
+
+## The swept batch
+
+`batch.yml` checks approved changes together before they reach `main` (INF-2430's plan, piece 3), so a change merges only when it is alpha-ready and the alpha needs no second full check.
+Its whole state is one commit status, `infinitary/queue`, on each approved pull request's current version (`scripts/batch.mjs`):
+
+| Status | Description | Meaning |
+| --- | --- | --- |
+| pending | anything but the batch's own | the captain's merge click approved this version, and it waits for the next batch |
+| pending | `In batch run N` | batch run N is sweeping it |
+| success | `Passed batch run N; tree T` | its batch passed on files `T`, and the app may merge it |
+| failure | a reason | it goes back to its pull request |
+
+The app writes the approval mark; `batch.yml` writes the rest with its own credential, which starts no other workflow.
+It starts on an approval mark, on a push to `main` and by hand, and only one batch runs at a time.
+Its concurrency group never cancels a batch, and every start reads the queue again, so a start GitHub drops loses nothing.
+
+A batch forms only when no green batch is still merging and no batch run still owns a change.
+It takes every waiting change in approval order, from when its approval mark was first written.
+The `compose` job merges each change onto `main` with `scripts/batch-compose.sh`, the way a merge on GitHub combines files, with a fixed author and date.
+A change that conflicts with `main` itself fails with "Conflicts with main"; a change that conflicts only with an earlier change in the batch waits for the next one.
+Every sweep job composes the same commit again from `main` and the same versions, and fails if its tree differs from the one `compose` reported.
+Nothing is pushed: GitHub may refuse a workflow's own credential a push that changes workflow files, and the app merges every change with the captain's sign-in.
+
+The sweep is `verify.yml` with every journey and without the phone check, the same full check an alpha reuses.
+Its Linux jobs run on GitHub's hosted machines and its Mac lane on the `release_check` queue ("Each Mac job's kind and size").
+A green sweep marks every change success with the batch's tree.
+A red sweep reruns only its failed jobs, once (the captain: "can we just only rerun failed jobs? if it failed again, treat it as failed by the last PR in the batch and require it to fix the flake").
+The failed attempt's `verdict` job starts a `rerun` run by dispatch, which waits for the attempt to end and reruns its failed jobs and the verdict after them.
+If the rerun passes, the batch passes too, and the job that failed first still gets an owner who fixes its cause.
+If it fails again, the batch's last change fails with the failed job's link, its crewmate fixes the failure whether or not it is a flake, and the rest wait again for a batch the verdict starts.
+A triage crewmate may instead name another change and send it back by hand.
+A by-hand start with `send_back` and `reason` fails one change's status with that reason.
+A by-hand start with `rehearsal` and pull request numbers sweeps them onto `main` and reports in its summary, marking nothing.
+
+`main.yml`'s `sort` job reads the pushed commit's pull request.
+When that change passed batch run N on exactly the pushed files, the push is covered: a `covered by batch N` job replaces the full check.
+While another change of batch N is still open and green, the push is landing: the run cancels itself, cuts no alpha and leaves no failed run, and the batch's last merge is read in full.
+Anything else gets the full check, a merge outside the queue and a batch merged in an order that changed its files included.
+The alpha's proof follows a covered run to its batch run and reads its full check and its verdict's tree (`scripts/main-alpha-proof.mjs`, `docs/alpha.md` "Cutting an alpha").
+The fleet never cancels a running batch or a running main check unless the captain asks.
+`tests/batch.test.ts` holds the queue's rules and the workflows' triggers, and `tests/batch-compose.test.ts` the composition on real git.
 
 ## A release's hosted machines
 
@@ -419,6 +462,7 @@ The cost is GitHub's per-minute bill for those jobs.
 - `phone.yml`, whose `cancel-replaced` job takes it when `ios-release.yml` calls it.
 
 `linux-startup.yml`'s job and `alpha-wait.yml`'s `wait` name `ubuntu-24.04`, since `main.yml` is their only caller; the wait bills its minutes while an alpha is cut.
+`batch.yml` passes `hosted: true` to its sweep, and its own jobs and `main.yml`'s `sort` and `covered` jobs name `ubuntu-24.04` ("The swept batch").
 
 `ios-release.yml`'s two Linux jobs, `resolve` and `availability`, name `ubuntu-24.04` for every dispatch, since each one checks or releases a phone build.
 A requested check and a pull request keep `LINUX_RUNNER`: `hosted` is an input only a call takes, never a request's.

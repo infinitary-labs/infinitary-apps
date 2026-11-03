@@ -316,6 +316,7 @@ A failed, cancelled or incomplete main run cuts nothing; main's waiting-version 
 1. **Validate the completed run.**
    The resolver reads the completed successful trusted main-push run and every latest per-job execution from GitHub.
    It requires every full-check owner and all Linux journey shards at exactly the source being released.
+   A covered main run, whose files a green swept batch already checked, names that batch run instead; the resolver then reads the batch run's full check and requires its verdict's tree to be the source's tree (`docs/testing.md`, "The swept batch").
 2. **Keep the same source.**
    The notes check validates committed declarations without a separate notes-review commit.
    Existing immutable tags supply published manifests through the same ledger reader when they have not been committed afterward.

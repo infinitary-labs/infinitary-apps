@@ -194,11 +194,17 @@ describe("local packaging identity (electron-builder.dev.yml)", () => {
     // One group for every run, so a newer push waits instead of starting beside it.
     expect(main.concurrency.group).not.toContain("${{");
     expect(main.concurrency["cancel-in-progress"]).toBe(false);
-    // Each job only calls a check, so the run is exactly those checks.
-    expect(Object.values(main.jobs).every((job) => job.uses && !job.steps && !job["runs-on"])).toBe(
-      true,
-    );
-    const calls = Object.values(main.jobs).map((job) => job.uses);
+    // Each job but the swept batch's sort and its covered mark (INF-2430's
+    // plan, piece 3; tests/batch.test.ts holds them) only calls a check, so
+    // a full run is exactly those checks.
+    const own = Object.entries(main.jobs).filter(([, job]) => !job.uses);
+    expect(own.map(([id]) => id).sort()).toEqual(["covered", "sort"]);
+    const calls = Object.values(main.jobs)
+      .filter((job) => job.uses)
+      .map((job) => job.uses);
+    expect(
+      Object.values(main.jobs).every((job) => !job.uses || (!job.steps && !job["runs-on"])),
+    ).toBe(true);
     // INF-2441: the startup fixtures run once per main check, never on a push of their own.
     // INF-2465: the alpha wait comes first, and every check waits for it.
     expect(calls.sort()).toEqual([
@@ -4029,6 +4035,13 @@ it("sends every Linux job to LINUX_RUNNER, and hosted Ubuntu when it is unset, u
     "linux-startup.yml:runtime-facts",
     // INF-2465: main's wait for the alpha cut, which main.yml alone calls.
     "alpha-wait.yml:wait",
+    // The swept batch and main's sort of each push (INF-2430's plan, piece 3).
+    "main.yml:sort",
+    "main.yml:covered",
+    "batch.yml:send-back",
+    "batch.yml:rerun",
+    "batch.yml:compose",
+    "batch.yml:verdict",
   ];
   // DOP-251's plan: each kind is one stage of moving Linux jobs to the Mac
   // mini's Linux guests (docs/testing.md, "Each Linux job's kind").
@@ -4290,7 +4303,7 @@ describe("a release's hosted machines", () => {
     });
   });
 
-  it("lets only main's and a release's calls pass hosted, never a request", () => {
+  it("lets only main's, the swept batch's and a release's calls pass hosted, never a request", () => {
     const passing: string[] = [];
     for (const file of workflows) {
       for (const [id, job] of Object.entries(workflow(file).jobs)) {
@@ -4304,6 +4317,8 @@ describe("a release's hosted machines", () => {
       }
     }
     expect(passing.sort()).toEqual([
+      // The swept batch's sweep, the alpha's full check (INF-2430's plan, piece 3).
+      "batch.yml:sweep",
       "ios-release.yml:phone",
       "main.yml:verify",
       "release.yml:linux",
@@ -5549,8 +5564,11 @@ describe("the next main check waits for the alpha cut", () => {
 
   it("holds every check of a main run behind the wait, and names a requested release plainly", () => {
     expect(main.jobs["alpha-wait"]?.uses).toBe("./.github/workflows/alpha-wait.yml");
+    // The swept batch's sort (INF-2430's plan, piece 3) runs no check: it
+    // only decides whether the full check runs, and ends a landing run at once.
     for (const [id, job] of Object.entries(main.jobs))
-      if (id !== "alpha-wait") expect(job.needs, id).toBe("alpha-wait");
+      if (!["alpha-wait", "sort"].includes(id))
+        expect([job.needs].flat(), id).toContain("alpha-wait");
     expect(alphaName(73)).toBe("Alpha from main run 73");
     expect(
       workflowString(release["run-name"], { github: { event_name: "workflow_dispatch" } }),

@@ -49,9 +49,62 @@ jobs:
   # merges made meanwhile are checked together (alpha-wait.yml says how).
   alpha-wait:
     uses: ./.github/workflows/alpha-wait.yml
+  # Sorts the push first (docs/testing.md, "The swept batch"): files that are
+  # exactly a green batch's are already checked, so the full check is
+  # skipped; a batch partly merged ends this run at once, cutting no alpha
+  # and leaving no failed run; anything else gets the full check.
+  sort:
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+      statuses: read
+      pull-requests: read
+      actions: write
+    outputs:
+      kind: ${{ steps.sort.outputs.kind }}
+      batch: ${{ steps.sort.outputs.batch }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          sparse-checkout: scripts/batch.mjs
+          sparse-checkout-cone-mode: false
+      - id: sort
+        uses: actions/github-script@v7
+        env:
+          TREE: ${{ github.event.head_commit.tree_id }}
+        with:
+          script: |
+            const {pathToFileURL} = require('node:url');
+            const batch = await import(pathToFileURL(`${process.env.GITHUB_WORKSPACE}/scripts/batch.mjs`).href);
+            let sorted = {kind: 'full'};
+            if (context.eventName === 'push' && process.env.TREE) {
+              try {
+                sorted = await batch.readMainPush(github, context.repo, {sha: context.sha, tree: process.env.TREE});
+              } catch (error) {
+                core.warning(`The push could not be sorted, so the full check runs: ${error.message}`);
+              }
+            }
+            core.setOutput('kind', sorted.kind);
+            core.setOutput('batch', String(sorted.run ?? ''));
+            if (sorted.kind === 'landing') {
+              core.notice(`Batch run ${sorted.run} is still merging; its last merge's check reads it.`);
+              await github.rest.actions.cancelWorkflowRun({...context.repo, run_id: context.runId});
+            }
+  # A push whose files are a green batch's. The alpha's proof follows its
+  # name to the batch run (scripts/main-alpha-proof.mjs).
+  covered:
+    needs: [alpha-wait, sort]
+    if: needs.sort.outputs.kind == 'covered'
+    name: covered by batch ${{ needs.sort.outputs.batch }}
+    runs-on: ubuntu-24.04
+    steps:
+      - env:
+          BATCH: ${{ needs.sort.outputs.batch }}
+        run: echo "Batch run $BATCH swept exactly these files."
   # The full check: Linux checks, every Linux journey, and every journey on the Mac.
   verify:
-    needs: alpha-wait
+    needs: [alpha-wait, sort]
+    if: ${{ !cancelled() && needs.sort.outputs.kind != 'covered' && needs.sort.outputs.kind != 'landing' }}
     uses: ./.github/workflows/verify.yml
     with:
       ref: ${{ github.sha }}

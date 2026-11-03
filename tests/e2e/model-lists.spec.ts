@@ -9,15 +9,8 @@ import {
 } from "../../src/core/routing/modelNews";
 import { CLAUDE_PROVIDER_ID, catalogEntry } from "../../src/shared/providers";
 import { scratchDir } from "../helpers/scratchDirs";
-import { expectClaudeConnected } from "./claudeAccount";
-import { launchApp } from "./launch";
-import {
-  claudeDefaultStore,
-  type MockClaudeClientOptions,
-  seedClaudeCredentialFile,
-  seedSignedInClaudeStore,
-  writeMockClaudeClient,
-} from "./mockClaudeClient";
+import { expectClaudeConnected, launchSignedInClaude } from "./claudeAccount";
+import { type MockClaudeClientOptions, writeMockClaudeClient } from "./mockClaudeClient";
 import { modelsSection } from "./modelsBoard";
 import { feedLine } from "./rails";
 
@@ -114,15 +107,9 @@ async function claudeRows(page: Page): Promise<string[]> {
 }
 
 function claudeLaunch(userDataDir: string, options: MockClaudeClientOptions) {
-  return launchApp({
+  return launchSignedInClaude(CLAUDE_ACCOUNT, {
     withMockProvider: true,
     userDataDir,
-    prepareHome: (homeDir) => {
-      const store = claudeDefaultStore(homeDir);
-      seedSignedInClaudeStore(store);
-      // Health reads the credential file, not the stand-in client's marker.
-      seedClaudeCredentialFile(store);
-    },
     env: {
       // Dummy credentials never reach the provider's allowance endpoint.
       INFINITARY_CLAUDE_USAGE_URL: "http://127.0.0.1:9/usage",

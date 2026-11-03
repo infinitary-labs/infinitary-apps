@@ -3,14 +3,8 @@ import { join } from "node:path";
 import { expect, test } from "@playwright/test";
 import { KEYCHAIN_VALUE_FAILURE_DETAIL } from "../../src/shared/quota";
 import { scratchDir } from "../helpers/scratchDirs";
-import { expectClaudeConnected } from "./claudeAccount";
-import { launchApp } from "./launch";
-import {
-  claudeDefaultStore,
-  seedClaudeCredentialFile,
-  seedSignedInClaudeStore,
-  writeMockClaudeClient,
-} from "./mockClaudeClient";
+import { expectClaudeConnected, launchSignedInClaude } from "./claudeAccount";
+import { writeMockClaudeClient } from "./mockClaudeClient";
 
 /**
  * CD-3=A: the terminal needs_reauth state is a card plus the Subscriptions
@@ -89,14 +83,8 @@ test("a locked store says so, offers Retry, and never asks for Always Allow", as
     reason: "keychain_locked",
     detail: KEYCHAIN_VALUE_FAILURE_DETAIL.keychain_locked,
   });
-  const app = await launchApp({
+  const app = await launchSignedInClaude(CLAUDE_PERSONAL, {
     userDataDir,
-    prepareHome: (homeDir) => {
-      const store = claudeDefaultStore(homeDir);
-      seedSignedInClaudeStore(store);
-      // Health reads the credential file, not the stand-in client's marker.
-      seedClaudeCredentialFile(store);
-    },
     env: {
       INFINITARY_QUOTA_FIXTURE_DIR: fixtureDir,
       INFINITARY_CLAUDE_CLI: writeMockClaudeClient(join(userDataDir, "bin")),

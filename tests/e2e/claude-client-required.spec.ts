@@ -15,11 +15,7 @@ import { scratchDir } from "../helpers/scratchDirs";
 import { claudeSeatRequests, launchClaudeSeat, say } from "./claudeSeat";
 import { cardBody } from "./frames";
 import { launchApp } from "./launch";
-import {
-  claudeDefaultStore,
-  seedClaudeCredentialFile,
-  writeMockClaudeClient,
-} from "./mockClaudeClient";
+import { signedInClaudeHome, writeMockClaudeClient } from "./mockClaudeClient";
 import {
   ANSWER_PROMPT_MARKER,
   mockProviderOverrideModelsJson,
@@ -86,7 +82,7 @@ test("a signed-in Claude account on a Mac with no Claude Code is not ready, not 
     withMockProvider: true,
     userDataDir,
     // The machine's own login is on file; only the client is gone.
-    prepareHome: (homeDir) => seedClaudeCredentialFile(claudeDefaultStore(homeDir)),
+    prepareHome: signedInClaudeHome,
     env: { INFINITARY_CLAUDE_CLI: join(userDataDir, "no-such-client") },
   });
   try {
@@ -120,7 +116,7 @@ test("a Claude Code older than the SDK's own is named with both versions", async
   const app = await launchApp({
     withMockProvider: true,
     userDataDir,
-    prepareHome: (homeDir) => seedClaudeCredentialFile(claudeDefaultStore(homeDir)),
+    prepareHome: signedInClaudeHome,
     env: {
       INFINITARY_CLAUDE_CLI: writeMockClaudeClient(join(userDataDir, "old-client"), {
         version: "1.0.0",
@@ -209,7 +205,7 @@ test("with only Claude and no Claude Code, the stage says why the gate is still 
     withMockProvider: true,
     modelsJson: mockProviderOverrideModelsJson,
     userDataDir,
-    prepareHome: (homeDir) => seedClaudeCredentialFile(claudeDefaultStore(homeDir)),
+    prepareHome: signedInClaudeHome,
     env: { INFINITARY_CLAUDE_CLI: join(userDataDir, "no-such-client") },
   });
   try {

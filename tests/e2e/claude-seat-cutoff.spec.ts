@@ -28,7 +28,7 @@ import {
 import { cardBody } from "./frames";
 import { bubbleWords, mateBubble, yourBubble } from "./lastTurn";
 import type { LaunchedApp } from "./launch";
-import { claudeDefaultStore, seedClaudeCredentialFile } from "./mockClaudeClient";
+import { claudeDefaultStore, signedInClaudeHome } from "./mockClaudeClient";
 import {
   ANSWER_PROMPT_MARKER,
   MOCK_ANSWER_TITLE,
@@ -244,8 +244,9 @@ test("a lost sign-in pauses the seat, and signing in again on this Mac answers t
     // The machine's login keeps its credential in the plain-file store, so
     // a new sign-in is a rewrite of it.
     prepareHome: (home) => {
-      seedClaudeCredentialFile(claudeDefaultStore(home));
+      signedInClaudeHome(home);
       const later = new Date(Date.now() + 60_000);
+      // e2e-claude-store: mutation -- simulate a new login stamp to release the authentication cutoff
       utimesSync(join(claudeDefaultStore(home), ".credentials.json"), later, later);
     },
   });

@@ -27,6 +27,18 @@ A real guard that grows stronger then meets the same valid input it meets in use
   A scripted first mate turn that never matches prints the inputs the first mate was served instead, rather than vanishing behind a downstream timeout.
 - A change to a contract a fixture produces or consumes changes the fixture in the same PR, and the fixture's own test and the journeys that use it are among the tests that change runs.
 
+## A signed-in Claude home
+
+INF-2394 measure 1 gives the Claude stand-in one owner for a signed-in home: `signedInClaudeHome` in `tests/e2e/mockClaudeClient.ts` writes both the client's marker and the credential file the product reads.
+A connected-account journey calls `launchSignedInClaude(accountId, options)` in `tests/e2e/claudeAccount.ts`, which prepares the home, runs the journey's remaining preparation, launches and asserts the account through `expectClaudeConnected`.
+The wrapper closes the app if that prerequisite fails.
+A Claude seat relaunch preserves the credential a journey changed instead of replacing it with a fresh sign-in.
+A journey about a missing or outdated client, a login not yet registered in the app, or background work without the window uses `signedInClaudeHome` directly and checks its own readiness or registration outcome.
+A quota journey passes its token and expiry readings to that same owner, never composes a second credential file.
+The fifth rule in `scripts/lint-e2e-frames.ts`, `e2e-claude-store-owner`, refuses component seed calls and filesystem writes under the Claude store in journey files, following destination aliases and imported filesystem aliases.
+An intentional store mutation, such as a partial credential rewrite, a changed login stamp or a removed client transcript, keeps `// e2e-claude-store: mutation -- <reason>` on the write's line or the preceding line.
+The exception names a mutation the journey proves, never an ordinary sign-in seed.
+
 ## Reading task state
 
 Construct `TaskService` only while the fixture app is stopped: its constructor performs boot recovery writes, including interrupting active turns.

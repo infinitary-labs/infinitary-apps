@@ -2,12 +2,9 @@ import { mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { expect, type Page } from "@playwright/test";
 import { scratchDir } from "../helpers/scratchDirs";
-import { type LaunchedApp, type LaunchOptions, launchApp } from "./launch";
-import {
-  claudeDefaultStore,
-  seedClaudeCredentialFile,
-  seedSignedInClaudeStore,
-} from "./mockClaudeClient";
+import { launchSignedInClaude } from "./claudeAccount";
+import type { LaunchedApp, LaunchOptions } from "./launch";
+import { claudeDefaultStore } from "./mockClaudeClient";
 import { FM_SYSTEM_MARKER, MOCK_KEY_PROVIDER_ID, type MockProviderServer } from "./mockProvider";
 import { starterFor } from "./starters";
 
@@ -177,41 +174,43 @@ export async function launchClaudeSeat(options: ClaudeSeatLaunch): Promise<Launc
   const relaunch = options.userDataDir !== undefined;
   const userDataDir = options.userDataDir ?? scratchDir("infinitary-e2e-");
   if (!relaunch) seedAccounts(userDataDir, options.withCodex === true);
-  const launched = await launchApp({
-    reuseMockProvider: options.mockProvider,
-    modelsJson: seatModelsJson,
-    // A dummy subscription token: the client then reads the plan-window
-    // headers a reply carries, the way a person's login does. No retries,
-    // so a refusal is the turn's answer at once.
-    claudeTurns: {
-      credential: "subscription",
-      maxRetries: 0,
-      ...(options.client ? { client: options.client } : {}),
+  const launched = await launchSignedInClaude(
+    CLAUDE_SEAT_ACCOUNT,
+    {
+      reuseMockProvider: options.mockProvider,
+      modelsJson: seatModelsJson,
+      // A dummy subscription token: the client then reads the plan-window
+      // headers a reply carries, the way a person's login does. No retries,
+      // so a refusal is the turn's answer at once.
+      claudeTurns: {
+        credential: "subscription",
+        maxRetries: 0,
+        ...(options.client ? { client: options.client } : {}),
+      },
+      userDataDir,
+      ...(options.homeDir ? { homeDir: options.homeDir } : {}),
+      // Signed in, as the client and the store both say: the store keeps its
+      // credential in the plain file, since the Keychain holds nothing for
+      // this run's user.
+      prepareHome: (homeDir) => {
+        if (!relaunch) {
+          writeFileSync(
+            join(homeDir, ".claude.json"),
+            JSON.stringify({
+              oauthAccount: { emailAddress: CLAUDE_SEAT_LABEL, accountUuid: CLAUDE_SEAT_ACCOUNT },
+            }),
+          );
+        }
+        options.prepareHome?.(homeDir);
+      },
+      env: {
+        USER: NO_CLAUDE_LOGIN_USER,
+        INFINITARY_QUOTA_FIXTURE_DIR: writeQuotaFixture(Date.now(), options.codexPercent ?? 60),
+        ...options.env,
+      },
     },
-    userDataDir,
-    ...(options.homeDir ? { homeDir: options.homeDir } : {}),
-    // Signed in, as the client and the store both say: the store keeps its
-    // credential in the plain file, since the Keychain holds nothing for
-    // this run's user.
-    prepareHome: (homeDir) => {
-      seedSignedInClaudeStore(claudeDefaultStore(homeDir));
-      if (!relaunch) {
-        seedClaudeCredentialFile(claudeDefaultStore(homeDir));
-        writeFileSync(
-          join(homeDir, ".claude.json"),
-          JSON.stringify({
-            oauthAccount: { emailAddress: CLAUDE_SEAT_LABEL, accountUuid: CLAUDE_SEAT_ACCOUNT },
-          }),
-        );
-      }
-      options.prepareHome?.(homeDir);
-    },
-    env: {
-      USER: NO_CLAUDE_LOGIN_USER,
-      INFINITARY_QUOTA_FIXTURE_DIR: writeQuotaFixture(Date.now(), options.codexPercent ?? 60),
-      ...options.env,
-    },
-  });
+    relaunch,
+  );
   if (relaunch) return launched;
   // The captain's pick: nothing moves to Claude on its own.
   await launched.page.evaluate(

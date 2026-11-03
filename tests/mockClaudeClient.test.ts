@@ -2,10 +2,14 @@ import { spawn } from "node:child_process";
 import { existsSync, readFileSync, rmSync, statSync, writeFileSync } from "node:fs";
 import { delimiter, dirname, join } from "node:path";
 import { describe, expect, it } from "vitest";
+import { readClaudeStore } from "../src/core/claude/claudeQuota";
+import { absentKeychain } from "../src/core/host";
 import {
+  claudeDefaultStore,
   MOCK_CLAUDE_API_KEY,
   MOCK_CLAUDE_OAUTH_TOKEN,
   mockClaudeKeychainLookups,
+  signedInClaudeHome,
   writeMockClaudeClient,
 } from "./e2e/mockClaudeClient";
 import { scratchDir } from "./helpers/scratchDirs";
@@ -103,6 +107,53 @@ function setup(
     existsSync(record) ? (JSON.parse(readFileSync(record, "utf8")) as Recorded) : undefined;
   return { dir, home, stub, env, recorded };
 }
+
+/** INF-2394 measure 1: the one seed must satisfy both the client and the product's real store reader. */
+describe("a signed-in Claude home", () => {
+  it("is signed in through both consumers, with private files and no real Keychain", async () => {
+    const home = scratchDir("infinitary-claude-home-");
+    const stub = writeMockClaudeClient(join(home, "bin"));
+    signedInClaudeHome(home);
+    const status = await runStub(stub, ["auth", "status", "--json"], {
+      HOME: home,
+      PATH: process.env.PATH,
+    });
+    expect(status.code).toBe(0);
+    expect(JSON.parse(status.stdout)).toMatchObject({ loggedIn: true });
+    const read = await readClaudeStore(claudeDefaultStore(home), {
+      keychain: absentKeychain,
+      env: { HOME: home },
+    });
+    expect(read).toMatchObject({
+      state: "present",
+      auth: { accessToken: "fake-access", expiresAt: 4_000_000_000_000 },
+    });
+    // The quota reader deliberately does not expose the refresh token; the client owns it.
+    expect(
+      JSON.parse(readFileSync(join(claudeDefaultStore(home), ".credentials.json"), "utf8")),
+    ).toMatchObject({ claudeAiOauth: { refreshToken: "fake-refresh" } });
+    for (const name of ["stub-credential", ".credentials.json"])
+      expect(statSync(join(claudeDefaultStore(home), name)).mode & 0o777).toBe(0o600);
+  });
+
+  it("keeps a journey's renewed credential on a seat relaunch", async () => {
+    const home = scratchDir("infinitary-claude-home-");
+    signedInClaudeHome(home, {
+      credentials: {
+        accessToken: "renewed-token",
+        refreshToken: "renewed-refresh",
+        expiresAt: 4_000_000_000_000,
+        refreshTokenExpiresAt: 4_000_000_000_000,
+      },
+    });
+    signedInClaudeHome(home, { preserveCredentials: true });
+    const read = await readClaudeStore(claudeDefaultStore(home), {
+      keychain: absentKeychain,
+      env: { HOME: home },
+    });
+    expect(read).toMatchObject({ state: "present", auth: { accessToken: "renewed-token" } });
+  });
+});
 
 describe("the e2e Claude stub in turn mode", () => {
   it("shares only executable preparation across concurrent HOME-local boxes", async () => {

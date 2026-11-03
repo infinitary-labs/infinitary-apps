@@ -2,16 +2,10 @@ import { mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { expect, test } from "@playwright/test";
 import { scratchDir } from "../helpers/scratchDirs";
-import { expectClaudeConnected } from "./claudeAccount";
+import { expectClaudeConnected, launchSignedInClaude } from "./claudeAccount";
 import { launchClaudeCrew } from "./claudeCrew";
-import { launchApp } from "./launch";
 import { resizeWindow } from "./layout";
-import {
-  claudeDefaultStore,
-  seedClaudeCredentialFile,
-  seedSignedInClaudeStore,
-  writeMockClaudeClient,
-} from "./mockClaudeClient";
+import { writeMockClaudeClient } from "./mockClaudeClient";
 import { CLAUDE_CREW_PROMPT_MARKER } from "./mockProvider";
 import { levelLane, openModelsBoard } from "./modelsBoard";
 import { regionShot } from "./pictures";
@@ -135,15 +129,9 @@ test("independent model reasoning persists, restores inherited defaults and reco
     INFINITARY_CLAUDE_CLI: writeMockClaudeClient(scratchDir("infinitary-stub-")),
   };
   const launch = () =>
-    launchApp({
+    launchSignedInClaude(CLAUDE_PERSONAL, {
       withMockProvider: true,
       userDataDir,
-      prepareHome: (home) => {
-        const store = claudeDefaultStore(home);
-        seedSignedInClaudeStore(store);
-        // Health reads the credential file, not the stand-in client's marker.
-        seedClaudeCredentialFile(store);
-      },
       env,
     });
   let app = await launch();

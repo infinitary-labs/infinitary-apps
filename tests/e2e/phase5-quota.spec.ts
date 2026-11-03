@@ -3,15 +3,10 @@ import { join } from "node:path";
 import { expect, type Page, test } from "@playwright/test";
 import { type ModelSlotsView, offeringKey } from "../../src/shared/modelSlots";
 import { scratchDir } from "../helpers/scratchDirs";
-import { expectClaudeConnected } from "./claudeAccount";
-import { type LaunchedApp, launchApp } from "./launch";
+import { expectClaudeConnected, launchSignedInClaude } from "./claudeAccount";
+import type { LaunchedApp } from "./launch";
 import { minimumWindowSize, resizeWindow } from "./layout";
-import {
-  claudeDefaultStore,
-  seedClaudeCredentialFile,
-  seedSignedInClaudeStore,
-  writeMockClaudeClient,
-} from "./mockClaudeClient";
+import { writeMockClaudeClient } from "./mockClaudeClient";
 import {
   alwaysUseSwitch,
   closeModelPanel,
@@ -298,15 +293,9 @@ test.beforeAll(async () => {
   const userDataDir = scratchDir("infinitary-e2e-");
   seedAccounts(userDataDir);
   const claudeClient = writeMockClaudeClient(scratchDir("infinitary-claude-stub-"));
-  launched = await launchApp({
+  launched = await launchSignedInClaude(CLAUDE_PERSONAL, {
     withMockProvider: true,
     userDataDir,
-    prepareHome: (homeDir) => {
-      const store = claudeDefaultStore(homeDir);
-      seedSignedInClaudeStore(store);
-      // Health reads the credential file, not the stand-in client's marker.
-      seedClaudeCredentialFile(store);
-    },
     env: {
       INFINITARY_QUOTA_FIXTURE_DIR: fixtureDir,
       INFINITARY_CLAUDE_CLI: claudeClient,

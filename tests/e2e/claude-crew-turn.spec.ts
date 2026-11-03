@@ -225,6 +225,7 @@ test("a Claude crew turn shows its card, takes a mid-turn steer, and remains rea
       .map((dir) => join(projects, dir, `${sessionId}.jsonl`))
       .filter((file) => existsSync(file));
     expect(clientFiles).toHaveLength(1);
+    // e2e-claude-store: mutation -- reproduce the client removing its transcript during its 30-day sweep
     rmSync(clientFiles[0] ?? "");
 
     await page.getByRole("button", { name: "Settings" }).click();

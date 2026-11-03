@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "claude-fixture-owner",
+      "reason": "Test-only INF-2394 measure 1: connected Claude journeys share a signed-in-home owner and prerequisite assertion; the existing end-to-end lint refuses hand-composed seeds and unexplained Claude-store writes. No product behavior or pull-request check changes."
+    }
+  ]
+}

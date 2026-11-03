@@ -21,7 +21,7 @@ import { scratchDir } from "../helpers/scratchDirs";
 import { consumerConfigMessage, grpcWebOkBody } from "../support/grpcWebEncoder";
 import { type LaunchedApp, launchApp } from "./launch";
 import { resizeWindow } from "./layout";
-import { claudeDefaultStore, writeMockClaudeClient } from "./mockClaudeClient";
+import { claudeDefaultStore, signedInClaudeHome, writeMockClaudeClient } from "./mockClaudeClient";
 import { regionShot } from "./pictures";
 import { readSavedData } from "./savedData";
 import { focusOn, pressKey } from "./windowKeys";
@@ -50,30 +50,6 @@ const KIMI_PERSONAL = "acct_kimi_live";
 const UNRELEASED_WINDOW = "nimbus_quill";
 /** The Grok product whose own window the credits stub reports. */
 const GROK_BUILD_PRODUCT = 2;
-
-/** A store the resolver can read with no Keychain and no macOS ask. */
-function seedClaudeCredentialFile(
-  accountDir: string,
-  accessToken: string,
-  expiresAt: number,
-  refreshTokenExpiresAt = expiresAt + 30 * 24 * 3600 * 1000,
-) {
-  mkdirSync(accountDir, { recursive: true, mode: 0o700 });
-  writeFileSync(join(accountDir, "stub-credential"), "stub", { mode: 0o600 });
-  writeFileSync(
-    join(accountDir, ".credentials.json"),
-    JSON.stringify({
-      claudeAiOauth: {
-        accessToken,
-        refreshToken: "stub-refresh",
-        expiresAt,
-        refreshTokenExpiresAt,
-        subscriptionType: "max",
-      },
-    }),
-    { mode: 0o600 },
-  );
-}
 
 type StubUsage = {
   server: Server;
@@ -491,12 +467,15 @@ function seedAccounts(userDataDir: string) {
 
 function seedClaudeHome(accessToken: string, expiresAt: number, refreshTokenExpiresAt?: number) {
   return (homeDir: string) =>
-    seedClaudeCredentialFile(
-      claudeDefaultStore(homeDir),
-      accessToken,
-      expiresAt,
-      refreshTokenExpiresAt ?? expiresAt + 30 * 24 * 3600 * 1000,
-    );
+    signedInClaudeHome(homeDir, {
+      credentials: {
+        accessToken,
+        refreshToken: "stub-refresh",
+        expiresAt,
+        refreshTokenExpiresAt: refreshTokenExpiresAt ?? expiresAt + 30 * 24 * 3600 * 1000,
+        subscriptionType: "max",
+      },
+    });
 }
 
 /**
@@ -641,6 +620,7 @@ test.describe("the real quota sensor, end to end", () => {
     expect(stub.seen).toContain("first-token");
 
     seedClaudeHome("second-token", Date.now() + 3600_000)(app.homeDir);
+    // e2e-claude-store: mutation -- move the credential stamp backwards to prove every changed stamp refreshes
     utimesSync(join(claudeDefaultStore(app.homeDir), ".credentials.json"), 2000, 2000);
     identity(app.homeDir, "alex.two@example.com", "account-two", 2000);
     const refresh = app.page.getByRole("button", { name: "Refresh", exact: true });
@@ -673,6 +653,7 @@ test.describe("the real quota sensor, end to end", () => {
     await pressKey(pause, "Escape");
     await expect(menu).toHaveCount(0);
 
+    // e2e-claude-store: mutation -- reproduce an incomplete credential rewrite, which must not sign out
     writeFileSync(join(claudeDefaultStore(app.homeDir), ".credentials.json"), "{incomplete");
     await expect(refresh).toBeEnabled();
     await focusOn(refresh);

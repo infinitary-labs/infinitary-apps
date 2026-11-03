@@ -49,11 +49,7 @@ import { scratchDir, socketScratchDir } from "../helpers/scratchDirs";
 import { forwardSocket, type SocketForward } from "../helpers/socketForward";
 import { SSH_SERVER_AVAILABLE, type SshServer, startSshServer } from "../helpers/sshServer";
 import { builtAppDir, packagedEntry } from "./launch";
-import {
-  claudeDefaultStore,
-  seedSignedInClaudeStore,
-  writeMockClaudeClient,
-} from "./mockClaudeClient";
+import { signedInClaudeHome, writeMockClaudeClient } from "./mockClaudeClient";
 import {
   CLAUDE_CREW_PROMPT_MARKER,
   CLAUDE_STEER_MARKER,
@@ -278,7 +274,7 @@ function backgroundOf(homeDir: string) {
 function user(model?: MockProviderServer) {
   const homeDir = scratchDir("infinitary-run-work-user-");
   const dataDir = join(homeDir, "work");
-  if (model) seedSignedInClaudeStore(claudeDefaultStore(homeDir));
+  if (model) signedInClaudeHome(homeDir);
   const manager = join(homeDir, SYSTEMD ? "systemctl" : "launchctl");
   const asked = join(homeDir, "manager.asked");
   const agentPid = join(homeDir, "agent.pid");

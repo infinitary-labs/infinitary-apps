@@ -3,14 +3,10 @@ import { join } from "node:path";
 import { expect } from "@playwright/test";
 import type { CatalogModelView } from "../../src/shared/quota";
 import { scratchDir } from "../helpers/scratchDirs";
+import { launchSignedInClaude } from "./claudeAccount";
 import { NO_CLAUDE_LOGIN_USER } from "./claudeSeat";
-import { type LaunchedApp, type LaunchOptions, launchApp } from "./launch";
+import type { LaunchedApp, LaunchOptions } from "./launch";
 import { mainProcessSettled } from "./mainProcess";
-import {
-  claudeDefaultStore,
-  seedClaudeCredentialFile,
-  seedSignedInClaudeStore,
-} from "./mockClaudeClient";
 import { MOCK_KEY_PROVIDER_ID, mockProviderOverrideModelsJson } from "./mockProvider";
 
 /**
@@ -170,7 +166,7 @@ export async function launchClaudeCrew(
   const userDataDir = options.userDataDir ?? scratchDir("infinitary-e2e-");
   const relaunch = existsSync(join(userDataDir, "accounts", "registry.json"));
   if (!relaunch) seedAccounts(userDataDir);
-  const launched = await launchApp({
+  const launched = await launchSignedInClaude(CLAUDE_CREW_ACCOUNT, {
     ...(options.reuseMockProvider
       ? { reuseMockProvider: options.reuseMockProvider }
       : { withMockProvider: true }),
@@ -180,13 +176,6 @@ export async function launchClaudeCrew(
     userDataDir,
     ...(options.homeDir ? { homeDir: options.homeDir } : {}),
     prepareHome: (homeDir) => {
-      seedSignedInClaudeStore(claudeDefaultStore(homeDir));
-      // Signed in, as the client and the store both say, on every platform:
-      // the app's status read falls back to the store's credentials file
-      // while a crewmate's client holds the store, and the Keychain holds
-      // nothing for this run's user. The allowance fixture keeps the quota
-      // sensor from using its fake tokens.
-      seedClaudeCredentialFile(claudeDefaultStore(homeDir));
       options.prepareHome?.(homeDir);
     },
     env: {

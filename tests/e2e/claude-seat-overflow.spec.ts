@@ -34,7 +34,9 @@ test("Claude answers after a context refusal without asking the captain to Retry
       },
       prepareHome: (home) => {
         const config = claudeDefaultStore(home);
+        // e2e-claude-store: mutation -- disable the client compaction switches to test overflow recovery
         mkdirSync(config, { recursive: true });
+        // e2e-claude-store: mutation -- disable the client compaction switches to test overflow recovery
         writeFileSync(join(config, ".claude.json"), JSON.stringify({ autoCompactEnabled: false }));
       },
     });

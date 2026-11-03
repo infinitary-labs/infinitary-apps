@@ -8,14 +8,9 @@ import {
   usedLine,
 } from "../../src/renderer/src/settings/levelDrops";
 import { scratchDir } from "../helpers/scratchDirs";
-import { expectClaudeConnected } from "./claudeAccount";
-import { type LaunchedApp, launchApp } from "./launch";
-import {
-  claudeDefaultStore,
-  seedClaudeCredentialFile,
-  seedSignedInClaudeStore,
-  writeMockClaudeClient,
-} from "./mockClaudeClient";
+import { expectClaudeConnected, launchSignedInClaude } from "./claudeAccount";
+import type { LaunchedApp } from "./launch";
+import { writeMockClaudeClient } from "./mockClaudeClient";
 import {
   alwaysUseSwitch,
   closeModelPanel,
@@ -122,15 +117,9 @@ let launched: LaunchedApp;
 test.beforeAll(async () => {
   const userDataDir = scratchDir("infinitary-e2e-");
   seedAccounts(userDataDir);
-  launched = await launchApp({
+  launched = await launchSignedInClaude(CLAUDE_PERSONAL, {
     withMockProvider: true,
     userDataDir,
-    prepareHome: (homeDir) => {
-      const store = claudeDefaultStore(homeDir);
-      seedSignedInClaudeStore(store);
-      // Health reads the credential file, not the stand-in client's marker.
-      seedClaudeCredentialFile(store);
-    },
     env: {
       // Dummy credentials never reach the provider's allowance endpoint.
       INFINITARY_CLAUDE_USAGE_URL: "http://127.0.0.1:9/usage",

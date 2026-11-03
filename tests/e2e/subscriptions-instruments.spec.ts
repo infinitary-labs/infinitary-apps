@@ -10,13 +10,9 @@ import { SLOTS } from "../../src/shared/modelSlots";
 import type { QuotaSnapshotView } from "../../src/shared/quota";
 import { providerScopes } from "../../src/shared/quotaSignals";
 import { scratchDir } from "../helpers/scratchDirs";
-import { type LaunchedApp, launchApp } from "./launch";
-import {
-  claudeDefaultStore,
-  seedClaudeCredentialFile,
-  seedSignedInClaudeStore,
-  writeMockClaudeClient,
-} from "./mockClaudeClient";
+import { launchSignedInClaude } from "./claudeAccount";
+import type { LaunchedApp } from "./launch";
+import { writeMockClaudeClient } from "./mockClaudeClient";
 import { modelsSection } from "./modelsBoard";
 import { pressKey, pressWindowKey } from "./windowKeys";
 
@@ -342,13 +338,6 @@ function seedAccounts(userDataDir: string): void {
   );
 }
 
-/** INF-2382: health reads the store itself, not the mock client's status marker. */
-function seedClaudeHome(homeDir: string): void {
-  const store = claudeDefaultStore(homeDir);
-  seedSignedInClaudeStore(store);
-  seedClaudeCredentialFile(store);
-}
-
 function row(page: Page, accountId: string): Locator {
   return page.locator(`[data-account-row="${accountId}"]`);
 }
@@ -365,10 +354,9 @@ test.beforeAll(async () => {
   writeFileSync(join(fixtureDir, "snapshot.json"), JSON.stringify(buildQuotaFixture(Date.now())));
   const userDataDir = scratchDir("infinitary-e2e-");
   seedAccounts(userDataDir);
-  launched = await launchApp({
+  launched = await launchSignedInClaude(ID.claudeMax, {
     withMockProvider: true,
     userDataDir,
-    prepareHome: seedClaudeHome,
     env: {
       INFINITARY_QUOTA_FIXTURE_DIR: fixtureDir,
       INFINITARY_CLAUDE_CLI: writeMockClaudeClient(scratchDir("infinitary-claude-stub-")),
@@ -644,10 +632,9 @@ test("Subscriptions renders model-only and incomplete allowance scope projection
   writeFileSync(join(fixtureDir, "snapshot.json"), JSON.stringify(fixture));
   const userDataDir = scratchDir("infinitary-forecast-");
   seedAccounts(userDataDir);
-  const app = await launchApp({
+  const app = await launchSignedInClaude(ID.claudeMax, {
     withMockProvider: true,
     userDataDir,
-    prepareHome: seedClaudeHome,
     env: {
       INFINITARY_QUOTA_FIXTURE_DIR: fixtureDir,
       INFINITARY_CLAUDE_CLI: writeMockClaudeClient(scratchDir("infinitary-claude-stub-")),

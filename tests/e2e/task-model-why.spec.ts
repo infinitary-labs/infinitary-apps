@@ -13,13 +13,9 @@ import { MODEL_WHY_WORDS, modelChoiceLine } from "../../src/shared/modelChoice";
 import { modelReasonLine } from "../../src/shared/modelReason";
 import type { CatalogModelView } from "../../src/shared/quota";
 import { scratchDir } from "../helpers/scratchDirs";
-import { type LaunchedApp, launchApp } from "./launch";
-import {
-  claudeDefaultStore,
-  seedClaudeCredentialFile,
-  seedSignedInClaudeStore,
-  writeMockClaudeClient,
-} from "./mockClaudeClient";
+import { launchSignedInClaude } from "./claudeAccount";
+import type { LaunchedApp } from "./launch";
+import { writeMockClaudeClient } from "./mockClaudeClient";
 import { heroShot, regionShot } from "./pictures";
 import {
   expandDock,
@@ -251,14 +247,8 @@ test("the task record explains why its crewmate got its model, and the hover sum
       INFINITARY_CLAUDE_CLI: writeMockClaudeClient(scratchDir("infinitary-model-why-claude-")),
     },
   };
-  let launched = await launchApp({
+  let launched = await launchSignedInClaude(CLAUDE_ACCOUNT, {
     ...options,
-    prepareHome: (homeDir) => {
-      const store = claudeDefaultStore(homeDir);
-      seedSignedInClaudeStore(store);
-      // INF-2384: health reads the saved credential, not the client's marker.
-      seedClaudeCredentialFile(store);
-    },
   });
   const homeDir = launched.homeDir;
   // Where a picture-taking run keeps its pictures; a gate run takes none.
@@ -345,7 +335,7 @@ test("the task record explains why its crewmate got its model, and the hover sum
     await launched.close();
 
     // A restart reads the same saved choice.
-    launched = await launchApp({ ...options, homeDir });
+    launched = await launchSignedInClaude(CLAUDE_ACCOUNT, { ...options, homeDir });
     await expandDock(launched.page, "now");
     await openGroup(launched.page, "landed");
     why = await openRecord(launched, detail.key);

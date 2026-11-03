@@ -404,8 +404,30 @@ exec ${shellLiteral(process.execPath)} ${shellLiteral(path)} "$@"
   return prepared;
 }
 
+/**
+ * INF-2394 measure 1: one owner for a signed-in throwaway HOME.
+ * The stand-in client reads its marker; the product reads its credential file.
+ * A seat relaunch preserves credentials changed by the journey, like a real home.
+ */
+export type ClaudeHomeCredentials = {
+  accessToken: string;
+  refreshToken: string;
+  expiresAt: number;
+  refreshTokenExpiresAt: number;
+  subscriptionType?: string;
+};
+
+export function signedInClaudeHome(
+  homeDir: string,
+  options: { preserveCredentials?: boolean; credentials?: ClaudeHomeCredentials } = {},
+): void {
+  const store = claudeDefaultStore(homeDir);
+  seedSignedInClaudeStore(store);
+  if (!options.preserveCredentials) seedClaudeCredentialFile(store, options.credentials);
+}
+
 /** Seed the machine's default Claude store as an already-signed-in one. */
-export function seedSignedInClaudeStore(accountDir: string): void {
+function seedSignedInClaudeStore(accountDir: string): void {
   mkdirSync(accountDir, { recursive: true, mode: 0o700 });
   writeFileSync(join(accountDir, "stub-credential"), "stub", { mode: 0o600 });
 }
@@ -415,17 +437,20 @@ export function seedSignedInClaudeStore(accountDir: string): void {
  * where no Keychain serves it: what `readClaudeStore` reads
  * when no client can be asked. Fake tokens, a far-future expiry.
  */
-export function seedClaudeCredentialFile(accountDir: string): void {
+function seedClaudeCredentialFile(
+  accountDir: string,
+  credentials: ClaudeHomeCredentials = {
+    accessToken: "fake-access",
+    refreshToken: "fake-refresh",
+    expiresAt: 4_000_000_000_000,
+    refreshTokenExpiresAt: 4_000_000_000_000,
+  },
+): void {
   mkdirSync(accountDir, { recursive: true, mode: 0o700 });
   writeFileSync(
     join(accountDir, ".credentials.json"),
     JSON.stringify({
-      claudeAiOauth: {
-        accessToken: "fake-access",
-        refreshToken: "fake-refresh",
-        expiresAt: 4_000_000_000_000,
-        refreshTokenExpiresAt: 4_000_000_000_000,
-      },
+      claudeAiOauth: credentials,
     }),
     { mode: 0o600 },
   );

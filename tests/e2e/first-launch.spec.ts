@@ -6,6 +6,7 @@ import { CLAUDE_PROVIDER_ID } from "@shared/providers";
 import { WELCOME_STARTERS, WELCOME_TITLE, WELCOME_WORDS } from "@shared/welcome";
 import { GATE_HOME_TITLE, gateIntro } from "../../src/renderer/src/app/firstRunGateWords";
 import { scratchDir } from "../helpers/scratchDirs";
+import { expectClaudeConnected } from "./claudeAccount";
 import { claudeSeatRequests, NO_CLAUDE_LOGIN_USER, otherSeatRequests } from "./claudeSeat";
 import { DICTATION_KEY, firstRunHintOnThisComputer, hintOnThisComputer } from "./dictation";
 import { committedWelcome, observeWelcomeReadiness, reloadTypingEarly } from "./firstLaunch";
@@ -20,12 +21,7 @@ import {
   resizeWindow,
   within,
 } from "./layout";
-import {
-  claudeDefaultStore,
-  seedClaudeCredentialFile,
-  seedSignedInClaudeStore,
-  writeMockClaudeClient,
-} from "./mockClaudeClient";
+import { signedInClaudeHome, writeMockClaudeClient } from "./mockClaudeClient";
 import {
   ANSWER_PROMPT_MARKER,
   MOCK_ANSWER_TITLE,
@@ -569,10 +565,7 @@ test("a Mac with only Claude: connecting it on the stage closes the gate, and th
     reuseMockProvider: mockProvider,
     modelsJson: mockProviderOverrideModelsJson,
     claudeTurns: { credential: "subscription", maxRetries: 0 },
-    prepareHome: (homeDir) => {
-      seedSignedInClaudeStore(claudeDefaultStore(homeDir));
-      seedClaudeCredentialFile(claudeDefaultStore(homeDir));
-    },
+    prepareHome: signedInClaudeHome,
     env: { USER: NO_CLAUDE_LOGIN_USER, INFINITARY_QUOTA_FIXTURE_DIR: quotaDir },
   });
   try {
@@ -587,6 +580,13 @@ test("a Mac with only Claude: connecting it on the stage closes the gate, and th
     // An immediately arriving card can replace the null-state layer before
     // a test samples the caption's transient fade; assert the ready outcome.
     await expect(gate).toHaveCount(0, { timeout: 30_000 });
+    const connected = await page.evaluate(async () =>
+      (await window.infinitary.accounts.list()).find(
+        (account) => account.providerId === "anthropic-claude",
+      ),
+    );
+    if (!connected) throw new Error("The stage did not register the machine's Claude login");
+    await expectClaudeConnected(page, connected.id);
     const input = page.getByPlaceholder(firstRunHintOnThisComputer());
     await expect(input).toBeEnabled({ timeout: 10_000 });
 

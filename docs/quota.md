@@ -59,9 +59,9 @@ Moved verbatim from `AGENTS.md` on 2026-09-24; `AGENTS.md` keeps a one-line poin
   Only a host `absent` outcome (`errSecItemNotFound`, OSStatus -25300) is absence; a thrown presence-probe or an unparseable value is a named `keychain_*` read failure (`locked` / `unavailable` with `detail` and Retry), never an empty store and never `credential_unavailable` with the reason erased.
   `keychain_no_interactive_session` stays out of `keychainLocks` so every tick retries (a relaunch fixes it); a decline still holds until Retry, unless the store changed under it (another login's account config, or a rewritten Keychain item): then one fresh background read is made, never a prompt, and a decline there holds the new store until Retry.
   A `demand` refresh chains after an in-flight tick so Retry is not swallowed; a post-request resolve that cannot read the store is `unreadable`, not `unchanged`.
-  The Keychain VALUE read rides `HostCapabilities.keychain` (CD-5=B: in-process Security.framework first, with the guarded Apple-tool fallback below).
+  The Keychain VALUE read rides `HostCapabilities.keychain`: guarded Apple-first inside a disposable utility process, the approved INF-2308/INF-2321 amendment to CD-5=B's in-process-first order.
   A sign-in asks macOS nothing itself (`ClaudeAuthBackend.login`, INF-2319); the allowance reading the Subscriptions tab asks for once it ends, a `demand` refresh, is the moment a permission prompt is expected.
-  A LOCKED store is `keychain_locked`, never held: macOS fixes a process's unlock-dialog policy at its first touch of the store (the silent startup tick), so a tick skips the VALUE read and a user-initiated read first unlocks through the utility-process helper `src/main/host/keychainUnlockHelper.ts`, then reads in-app (`docs/architecture.md` §16.6; the host sets the interaction flag before EVERY Security call).
+  A LOCKED store is `keychain_locked`, never held: macOS fixes a process's unlock-dialog policy at its first touch of the store (the silent startup tick), so a tick skips the VALUE read and a user-initiated read first unlocks in a fresh `src/main/host/keychainProcessMain.ts` utility process, then reads in another fresh process (`docs/architecture.md` §16.6; the host sets the interaction flag before EVERY Security call).
   `providers/claude.ts` calls the vendor's OAuth usage endpoint; renewal is delegated to the client, never reimplemented.
   A computer that runs work reads its own Claude login the same way, but never lets macOS ask, holds no refusal and offers no Retry (`docs/helper.md`, "Claude's allowance, never asking").
   Pace vocabulary follows quota-axi: "ahead" = burning faster than the reset clock = the WARN state ("behind" is calm) - the pre-parity UI had this inverted; don't bring that back.
@@ -74,24 +74,26 @@ Moved verbatim from `AGENTS.md` on 2026-09-24; `AGENTS.md` keeps a one-line poin
   Retry and the read around the idle status request bypass the value cache; an explicit permission request never joins a silent read.
   An unreadable result stays stale or degraded, never signed out, and never replaces the last known account label.
 - A read through Apple's tool that fails or runs out of time is `keychain_read_incomplete`: retryable on the next refresh, never held until Retry, and its words never mention Always Allow.
-  The single-item read keeps 5 seconds.
-  Checking that one item's access rules has no separate limit, because it does not walk the keychain.
+  Every silent operation keeps the existing five-second read allowance, including its metadata, access-rule and value work in the child.
+  An explicit interactive operation keeps the existing two-minute dialog allowance; a stalled or failed child never blocks the main thread and is never a false absence.
 - Claude's usage service is asked at most once per account every five minutes (`CLAUDE_ASK_INTERVAL_MS`), and ten minutes after a 429 whatever its retry-after says.
   Refreshes between asks resolve the store first and serve the last answer only for the same login; a person's Retry always asks.
 
 ## Typed cut-offs
 
-On an unlocked Claude item's `-25293` refusal, the host reads that one item's access rules in process (`SecKeychainItemCopyAccess`, `src/main/host/darwinKeychain.ts`).
+Before a Claude value read, the child checks that the store is unlocked and reads that one item's access rules (`SecKeychainItemCopyAccess`, `src/main/host/darwinKeychain.ts`).
 It does not list the other saved passwords, and it does not check each trusted app's signature.
-It reads through `/usr/bin/security` only when that item trusts the tool for decrypt without a password and its partition is `apple-tool:` or absent.
+It tries `/usr/bin/security` before a direct value read only when that item trusts the tool for decrypt without a password and its partition is `apple-tool:` or absent.
 The partition description from `SecACLCopyContents` is a hex-encoded XML plist; the host decodes that known shape and accepts exactly one `apple-tool:` entry, refusing malformed data and any additional team.
-Unknown layouts, other items, locked stores, cancelled dialogs and missing grants fail closed.
+Unknown layouts, other items, locked stores and missing grants never authorize the tool; the native fallback still enforces the caller's interaction flag.
+The captain retained this guard because Apple's reader has no universal no-prompt switch; tool-first by itself is not proof that an arbitrary item cannot ask.
 The value stays in memory, never disk or logs; no ACL or grant changes.
 External rotation is observed on the next uncached read.
-The value read is still `find-generic-password -w` of that one item (`src/main/host/claudeKeychainTool.ts`).
+The value read is `find-generic-password -w` of that one item (`src/main/host/claudeKeychainTool.ts`), with Apple's hexadecimal output decoded for values containing non-printable bytes such as multiline JSON.
 
 The regular macOS integration test (`src/main/host/claudeKeychainAccess.integration.test.ts`) creates its store under a scratch home’s `Library/Keychains/`, so macOS gives the item real partition entries.
-It covers a Claude Code-style item, direct-read refusal, successful credential resolution through the trusted tool, and refusal of `apple-tool:` plus another team without invoking the tool.
+It covers a Claude Code-style item, Apple-first success without direct value access, exact-account resolution through a real child, multiline credentials, and refusal of `apple-tool:` plus another team without invoking the tool.
+It compares the real search list before and after; no real credential or real-item access rule is read or changed.
 The unit fixture uses the hex-encoded plist returned by macOS and rejects malformed layouts and other partitions.
 
 W1 S3, the Claude-seat plan's section 4.2.

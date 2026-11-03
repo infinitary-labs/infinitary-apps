@@ -64,8 +64,8 @@ export default defineConfig({
         input: {
           index: resolve(__dirname, "src/main/index.ts"),
           // Its own entry: it runs in a utility process, never in main
-          // (src/main/host/keychainUnlockHelper.ts).
-          keychainUnlockHelper: resolve(__dirname, "src/main/host/keychainUnlockHelper.ts"),
+          // (src/main/host/keychainProcessMain.ts).
+          keychainProcessMain: resolve(__dirname, "src/main/host/keychainProcessMain.ts"),
           // The query process behind the `sql` read, also a utility process:
           // a runaway statement is stopped by killing it (src/core/sql/).
           sqlProcess: resolve(__dirname, "src/core/sql/sqlProcess.ts"),

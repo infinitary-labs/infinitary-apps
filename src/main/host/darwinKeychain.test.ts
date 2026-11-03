@@ -103,7 +103,7 @@ describe("darwin Keychain host: a locked store", () => {
     expect(createDarwinKeychain(stubApi({})).unlockKeychain).toBeUndefined();
   });
 
-  it("hands the item's store to the helper after a silent presence probe", async () => {
+  it("enables interaction before the fresh unlock process first touches its store", async () => {
     const calls: string[] = [];
     const paths: string[] = [];
     const keychain = createDarwinKeychain(
@@ -118,8 +118,8 @@ describe("darwin Keychain host: a locked store", () => {
       kind: "unlocked",
     });
     expect(paths).toEqual([STORE]);
-    // This process stays silent: the dialog is the helper's to show.
-    expect(calls).toEqual(["interaction:false", "presence", "helper"]);
+    // An explicit unlock owns a fresh process, so its first touch permits its dialog.
+    expect(calls).toEqual(["interaction:true", "presence", "helper"]);
   });
 
   it("never runs the helper for a background caller", async () => {
@@ -154,7 +154,7 @@ describe("darwin Keychain host: a locked store", () => {
     expect(ran).toBe(false);
   });
 
-  it("uses Apple's tool only after the one item's access rules allow it", async () => {
+  it("INF-2321: uses Apple first only after the one item's access rules allow it", async () => {
     const reads: string[] = [];
     const readTrusted = async (account: string, keychainPath: string): Promise<TrustedToolRead> => {
       reads.push(`${account}:${keychainPath}`);
@@ -180,6 +180,7 @@ describe("darwin Keychain host: a locked store", () => {
         ...stubApi({
           read: { status: -25293 },
           presence: { locked: false, keychainPath: STORE },
+          calls: reads,
         }),
         claudeItemTrustsAppleTool: () => true,
       },
@@ -187,7 +188,54 @@ describe("darwin Keychain host: a locked store", () => {
       readTrusted,
     );
     expect(await allowed.readGenericPassword(QUERY)).toEqual({ kind: "value", value: "token" });
-    expect(reads).toEqual([`kun:${STORE}`]);
+    expect(reads).toEqual(["interaction:false", "presence", `kun:${STORE}`]);
+  });
+
+  it("INF-2321: a failed Apple read stays retryable without a direct value read", async () => {
+    const calls: string[] = [];
+    const keychain = createDarwinKeychain(
+      {
+        ...stubApi({ presence: { locked: false, keychainPath: STORE }, calls }),
+        claudeItemTrustsAppleTool: () => true,
+      },
+      undefined,
+      async () => ({ kind: "incomplete" }),
+    );
+    expect(await keychain.readGenericPassword(QUERY)).toMatchObject({
+      kind: "failed",
+      message: "The read did not finish.",
+    });
+    expect(calls).toEqual(["interaction:false", "presence"]);
+  });
+
+  it("INF-2321: locked, unknown and other-service items never reach the Apple reader", async () => {
+    for (const query of [QUERY, { service: "another service", account: "kun" }]) {
+      for (const locked of [true, undefined]) {
+        const interaction: boolean[] = [];
+        let toolReads = 0;
+        const keychain = createDarwinKeychain(
+          {
+            ...stubApi({
+              presence: { ...(locked !== undefined ? { locked } : {}), keychainPath: STORE },
+              interaction,
+              read: { status: -25308 },
+            }),
+            claudeItemTrustsAppleTool: () => true,
+          },
+          undefined,
+          async () => {
+            toolReads++;
+            return { kind: "value", value: "unused" };
+          },
+        );
+        expect(await keychain.readGenericPassword(query)).toMatchObject({
+          kind: "failed",
+          code: -25308,
+        });
+        expect(toolReads).toBe(0);
+        expect(interaction.every((allowed) => !allowed)).toBe(true);
+      }
+    }
   });
 
   it("reports the helper's refusal and a helper that could not answer, never as unlocked", async () => {

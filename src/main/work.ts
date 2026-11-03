@@ -66,16 +66,16 @@ function noteToLog(dataDir: () => string): void {
 
 /**
  * This Mac's saved passwords, where Claude Code keeps its login, read the way
- * the app reads its own (./host/darwinKeychain.ts) and loaded with the first
+ * the app reads its own (./host/keychainProcess.ts) and loaded with the first
  * read, so a computer that never signs in to Claude never loads it. It
  * offers no unlock: nothing here ever lets macOS ask (docs/helper.md, "Its
  * own sign-ins").
  */
-function savedPasswords(): HostKeychain {
+function savedPasswords(mainDir: string): HostKeychain {
   let loaded: Promise<HostKeychain> | undefined;
   const keychain = () =>
-    (loaded ??= import("./host/darwinKeychain").then(({ createDarwinKeychain }) =>
-      createDarwinKeychain(),
+    (loaded ??= import("./host/electronKeychain").then(({ createElectronKeychain }) =>
+      createElectronKeychain(join(mainDir, "keychainProcessMain.js")),
     ));
   return {
     findGenericPassword: async (query) => (await keychain()).findGenericPassword(query),
@@ -187,7 +187,7 @@ export function runWorkMode(args: readonly string[], mainDir: string): void {
     },
     // A run whose data a test isolated reads no saved passwords, so no test
     // ever reads the Claude login of the person running it.
-    ...(hostPlatform() === "darwin" && !isolated ? { keychain: savedPasswords() } : {}),
+    ...(hostPlatform() === "darwin" && !isolated ? { keychain: savedPasswords(mainDir) } : {}),
     // A card's demo recording plays in a hidden window of its own before
     // the card goes to the home, as it does on the home (./mediaProbe.ts).
     probeMedia: createMediaProbe(),

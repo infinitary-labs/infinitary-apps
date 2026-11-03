@@ -7,42 +7,27 @@ import type {
 import { KEYCHAIN_READ_INCOMPLETE_CODE } from "@shared/quota";
 import koffi from "koffi";
 import { hostPlatform } from "../../core/platform";
+import { keychainLockFromFlags } from "../runEnvironment";
 import {
   appleToolMayRead,
   type ClaudeAclEntry,
   readClaudeThroughTrustedTool,
 } from "./claudeKeychainTool";
-import type { KeychainUnlocker } from "./keychainUnlock";
+
+import type { KeychainLockState } from "./keychainProcess";
+
+type KeychainUnlocker = (keychainPath: string) => Promise<number>;
 
 /**
- * In-process macOS Keychain read (CD-5=B).
- *
- * The normal calling process is Firstmate itself. Claude Code's item can
- * have a different partition ACL (`apple-tool:`) even when its decrypt ACL
- * trusts Infinitary: macOS then refuses the direct read after Always Allow. Only
- * for that observed auth failure, an unlocked item whose ACL *already*
- * trusts `/usr/bin/security` is read by that Apple tool instead. The trust
- * check reads that one item's access rules in process. It does not walk the
- * other saved passwords, and it does not check each trusted app's signature.
- * No item ACL is changed and no extra entitlement is requested.
- * `keychain-access-groups` would be the wrong tool.
- *
- * Uses the C-string Keychain Services API (`SecKeychainFindGenericPassword`)
- * so the FFI stays small. Presence passes NULL for the secret and reads only
- * the item's modification-date and account attributes, plus whether the store
- * holding it is locked; the VALUE read is the one that can raise the grant
- * dialog. A query with no account passes NULL for it too, which matches any
- * account of that exact service.
- *
- * The unlock dialog is not this process's to raise. macOS settles, at this
- * process's first touch of a store, whether it may ever show that store's
- * unlock dialog, and the first touch is always the silent startup tick. So
- * `unlockKeychain` hands the store's path to a fresh helper process
- * (`keychainUnlockHelper.ts`) and the VALUE read that follows stays here.
- *
- * The interaction flag is set before EVERY call, the lock-state query
- * included: whichever call touches a store first fixes that store's dialog
- * policy for the life of the process.
+ * Native reader used only inside a disposable Keychain process (and native tests).
+ * INF-2308's full slim supersedes CD-5=B's direct-first order; INF-2321's
+ * captain choice retains the exact-item guard against background prompts.
+ * Metadata and access rules are read silently, then an unlocked Claude item
+ * already trusting Apple's tool is read there first. Other items keep the
+ * native path and its explicit interaction flag. No ACL is changed.
+ * Every production call, including presence and unlock, runs off the main
+ * thread through keychainProcessMain. A fresh unlock process enables dialogs
+ * before its first touch, unlike the old main process's silent first touch.
  */
 
 /** errSecSuccess */
@@ -90,6 +75,8 @@ export type DarwinKeychainApi = {
    * Absent on a stand-in: the tool must not be used.
    */
   claudeItemTrustsAppleTool?: (service: string, account: string) => boolean;
+  unlockKeychain?: (path: string) => number;
+  keychainStatus?: (path: string) => KeychainLockState;
 };
 
 let cached: DarwinKeychainApi | undefined | "missing";
@@ -116,8 +103,8 @@ export function loadDarwinKeychainApi(): DarwinKeychainApi | undefined {
 }
 
 /**
- * `unlocker` runs the unlock helper in a fresh process. Without one the host
- * offers no `unlockKeychain`, and the core keeps today's in-process read.
+ * Called inside the fresh child, never by the Electron main thread.
+ * `unlocker` is the native unlock in that same child; tests may supply a stand-in.
  */
 export function createDarwinKeychain(
   api?: DarwinKeychainApi,
@@ -154,9 +141,9 @@ export function createDarwinKeychain(
     }
     let presence: DarwinPresence;
     try {
-      // Silent, like every presence probe: this process must never become
-      // the one that shows the dialog.
-      loaded.setUserInteractionAllowed(false);
+      // This is a fresh, explicitly interactive unlock process. Its first
+      // touch must permit the unlock dialog; no background call enters here.
+      loaded.setUserInteractionAllowed(true);
       presence = loaded.findGenericPassword(query.service, query.account);
     } catch (caught) {
       return { kind: "failed", message: caught instanceof Error ? caught.message : String(caught) };
@@ -177,45 +164,35 @@ export function createDarwinKeychain(
   return {
     findGenericPassword: async (query) => run(query, false),
     readGenericPassword: async (query) => {
-      const result = run(query, true);
-      // Claude Code's Apple-tool partition can reject our signed app even
-      // when its ordinary decrypt ACL names us. Only an unlocked item and
-      // an auth failure reach the Apple-tool path, and only after that one
-      // item's access rules say the tool may read it. A cancelled dialog, a
-      // locked store, and every other item keep the original result. The
-      // tool is NEVER tried on an unverified ACL, nor for a query that names
-      // no account: the item checked and the item read must be the one item.
       const account = query.account;
-      if (
-        result.kind !== "failed" ||
-        result.code !== -25293 ||
-        query.service !== "Claude Code-credentials" ||
-        account === undefined
-      )
-        return result;
       const loaded = resolveApi();
-      if (!loaded) return result;
-      try {
-        loaded.setUserInteractionAllowed(false);
-        const presence = loaded.findGenericPassword(query.service, account);
-        if (presence.status !== SEC_SUCCESS || presence.locked !== false || !presence.keychainPath)
-          return result;
-        // No stand-in trust check means the tool stays unused. A false
-        // answer is the original refusal, not a read that did not finish.
-        if (loaded.claudeItemTrustsAppleTool?.(query.service, account) !== true) return result;
-        const value = await readTrusted(account, presence.keychainPath);
-        if (value.kind === "value") return value;
-        if (value.kind === "incomplete") {
-          return {
-            kind: "failed",
-            code: KEYCHAIN_READ_INCOMPLETE_CODE,
-            message: "The read did not finish.",
-          };
+      if (loaded && query.service === "Claude Code-credentials" && account !== undefined) {
+        try {
+          loaded.setUserInteractionAllowed(false);
+          const presence = loaded.findGenericPassword(query.service, account);
+          if (presence.status === SEC_ITEM_NOT_FOUND) return { kind: "absent" };
+          if (
+            presence.status === SEC_SUCCESS &&
+            presence.locked === false &&
+            presence.keychainPath &&
+            loaded.claudeItemTrustsAppleTool?.(query.service, account) === true
+          ) {
+            const value = await readTrusted(account, presence.keychainPath);
+            if (value.kind === "value") return value;
+            if (value.kind === "incomplete") {
+              return {
+                kind: "failed",
+                code: KEYCHAIN_READ_INCOMPLETE_CODE,
+                message: "The read did not finish.",
+              };
+            }
+          }
+        } catch {
+          // An unreadable/unknown grant never licenses the tool. The native
+          // fallback still enforces the caller's interaction policy itself.
         }
-        return result;
-      } catch {
-        return result;
       }
+      return run(query, true);
     },
     ...(unlocker ? { unlockKeychain: (query) => unlock(query, unlocker) } : {}),
   };
@@ -330,7 +307,17 @@ function bindSecurityFramework(keychainPath?: string): DarwinKeychainApi {
     "char *",
   ]);
   const cfRelease = coreFoundation.func("CFRelease", "void", ["void *"]);
-  const setInteraction = security.func("SecKeychainSetUserInteractionAllowed", "void", ["uint8"]);
+  const openKeychain = security.func("SecKeychainOpen", "int32", [
+    "const char *",
+    koffi.out(voidPtrPtr),
+  ]);
+  const unlockKeychain = security.func("SecKeychainUnlock", "int32", [
+    "void *",
+    "uint32",
+    "void *",
+    "uint8",
+  ]);
+  const setInteraction = security.func("SecKeychainSetUserInteractionAllowed", "int32", ["uint8"]);
   const copyAccess = security.func("SecKeychainItemCopyAccess", "int32", [
     "void *",
     koffi.out(voidPtrPtr),
@@ -471,10 +458,6 @@ function bindSecurityFramework(keychainPath?: string): DarwinKeychainApi {
   // null searches the default list; a test names one keychain file.
   let keychain: unknown = null;
   if (keychainPath !== undefined) {
-    const openKeychain = security.func("SecKeychainOpen", "int32", [
-      "const char *",
-      koffi.out(voidPtrPtr),
-    ]);
     const opened: [unknown] = [null];
     const status = openKeychain(keychainPath, opened) as number;
     if (status !== SEC_SUCCESS || opened[0] == null) {
@@ -508,6 +491,33 @@ function bindSecurityFramework(keychainPath?: string): DarwinKeychainApi {
   return {
     setUserInteractionAllowed: (allowed) => {
       setInteraction(allowed ? 1 : 0);
+    },
+    keychainStatus: (path) => {
+      if (setInteraction(0) !== SEC_SUCCESS) return "unknown";
+      const opened: [unknown] = [null];
+      const result = openKeychain(path, opened) as number;
+      if (result !== SEC_SUCCESS || opened[0] === null) return "unknown";
+      try {
+        const flags = [0];
+        const status = getKeychainStatus(opened[0], flags) as number;
+        if (status === -25294) return "absent";
+        return status === SEC_SUCCESS ? keychainLockFromFlags(flags[0] ?? 0) : "unknown";
+      } finally {
+        cfRelease(opened[0]);
+      }
+    },
+    unlockKeychain: (path) => {
+      if (!path.startsWith("/") || !/\.keychain(-db)?$/.test(path)) return -50;
+      setInteraction(1);
+      const opened: [unknown] = [null];
+      const status = openKeychain(path, opened) as number;
+      if (status !== SEC_SUCCESS || opened[0] == null) return status || -50;
+      try {
+        // macOS owns the password dialog; no password reaches this process.
+        return unlockKeychain(opened[0], 0, null, 0) as number;
+      } finally {
+        cfRelease(opened[0]);
+      }
     },
     findGenericPassword: (service, account) => {
       const itemRef: [unknown] = [null];

@@ -118,7 +118,9 @@ The load-bearing details:
 | `pnpm dev` | `scripts/prepare-local-codesign.mjs`, from `predev` and `pnpm codesign:local` | only when the dev Electron does not already satisfy `designated-requirement.txt`. That check is `codesign --verify` and does not call `security` against the signing keychain. From `postinstall` the script runs that check alone and never signs |
 | `pnpm package:mac` | `scripts/sign-local-mac.mjs`, wired as electron-builder's `mac.sign` hook | after the universal merge and after the fuse flip, which is the only correct point. The hook passes `keychain` so osx-sign signs with `--keychain`, inside the same search-list window |
 
-The dev run's `Electron.app` is signed top-level only, with `--identifier` set to the dev appId: the Keychain request comes from the main process, which *is* `Electron.app/Contents/MacOS/Electron`, and the nested helpers keep the ad-hoc signatures they arrive with.
+The dev run's `Electron.app` is signed top-level only, with `--identifier` set to the dev appId; the nested helpers keep the ad-hoc signatures they arrive with.
+Keychain work now runs in a utility helper: the ordinary Claude item uses Apple's already-trusted reader, while an explicit native-fallback grant belongs to the helper's identity rather than the main executable's old grant.
+The local main-executable identity check therefore does not prove that a native-fallback grant survives helper rebuilds.
 The local package is signed inside-out by `@electron/osx-sign` - electron-builder's own signer, reached through electron-builder - with the local identity substituted for the placeholder.
 
 Release builds do not touch any of this.
@@ -191,7 +193,7 @@ codesign --verify --strict -R "=$(cat ~/.infinitary/local-codesign/designated-re
 ## Verifying the prompt itself (manual, and required)
 
 This section tests the app's ordinary decrypt ACL grant on a development build.
-Claude Code's separate `apple-tool:` partition can still refuse a direct app read after Always Allow; the host's guarded Apple-tool fallback is documented in [quota.md](quota.md).
+Claude Code's separate `apple-tool:` partition can still refuse a direct app read after Always Allow; the host's guarded Apple-first reader is documented in [quota.md](quota.md).
 Do not treat a matching designated requirement alone as proof that a silent Claude value read will succeed.
 
 The automated checks inspect **signatures**.

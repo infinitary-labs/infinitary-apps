@@ -7,10 +7,15 @@ import {
   readClaudeStore,
 } from "@core/claude/claudeQuota";
 import type { HostKeychain, HostKeychainQuery } from "@core/host";
+import { hostEnv } from "@core/hostEnv";
 import { afterAll, beforeAll, expect, it } from "vitest";
+import {
+  bundleKeychainProcess,
+  scratchKeychainReaderSource,
+} from "../../../tests/helpers/keychainProcessBundle";
 import { scratchDir } from "../../../tests/helpers/scratchDirs";
-import { createDarwinKeychain, openDarwinKeychainApiForTest } from "./darwinKeychain";
-import { createKeychainUnlocker, type UnlockHelperProcess } from "./keychainUnlock";
+import { openDarwinKeychainApiForTest } from "./darwinKeychain";
+import { createProcessKeychain } from "./keychainProcess";
 
 /**
  * The locked-store Retry on the REAL Security.framework path, opt-in:
@@ -24,8 +29,9 @@ import { createKeychainUnlocker, type UnlockHelperProcess } from "./keychainUnlo
  * of whatever HOME it runs under, so every `security` call here runs with
  * HOME at a scratch dir, and the real list is compared before and after.
  *
- * The unlock helper is the app's own file, forked as a plain Node process
- * (the app forks it as an Electron utility process). On a LOCKED screen
+ * The reader and process protocol are the app's own, with every native
+ * query pinned to the disposable store and forked as a plain Node process
+ * (the app uses Electron utility processes). On a LOCKED screen
  * macOS cannot draw the unlock dialog and the helper reports -60008; on an
  * unlocked screen the dialog really appears for the scratch store - type
  * the scratch password below or cancel it, and both pass. What fails is
@@ -38,7 +44,7 @@ const out = process.env.INFINITARY_SCRATCH_KEYCHAIN_OUT;
 const SCRATCH_PASSWORD = "infinitary-scratch";
 const SERVICE = "Claude Code-credentials";
 const ACCOUNT = "infinitary-scratch";
-const HELPER = join(import.meta.dirname, "keychainUnlockHelper.ts");
+let helperPath = "";
 /** errSecAuthFailed: the instant refusal of a process that may not show the dialog. */
 const DEAD_RETRY = -25293;
 
@@ -109,8 +115,9 @@ function recorder(inner: HostKeychain): HostKeychain & { calls: string[] } {
   };
 }
 
-beforeAll(() => {
+beforeAll(async () => {
   if (!enabled) return;
+  helperPath = await bundleKeychainProcess(scratchKeychainReaderSource);
   dir = scratchDir("infinitary-kc-");
   home = join(dir, "home");
   mkdirSync(join(home, "Library", "Preferences"), { recursive: true });
@@ -148,13 +155,19 @@ it.runIf(enabled)(
   "a Retry on a locked store offers the unlock dialog after a silent first touch, and recovers",
   async () => {
     const api = openDarwinKeychainApiForTest(keychainPath);
-    const unlocker = createKeychainUnlocker({
-      helperPath: HELPER,
-      fork: (modulePath, args) =>
-        fork(modulePath, args, { execArgv: [], stdio: "ignore" }) as UnlockHelperProcess,
-      timeoutMs: 60_000,
-    });
-    const keychain = recorder(createDarwinKeychain(api, unlocker));
+    const keychain = recorder(
+      createProcessKeychain({
+        helperPath,
+        allowInteraction: true,
+        fork: (modulePath, args) =>
+          fork(modulePath, args, {
+            execArgv: [],
+            stdio: ["ignore", "ignore", "ignore", "ipc"],
+            env: { ...hostEnv(), HOME: home, TEST_KEYCHAIN_PATH: keychainPath },
+          }),
+        dialogTimeoutMs: 60_000,
+      }),
+    );
     const env = { USER: ACCOUNT };
     const configDir = join(dir, "claude");
     const step = async (label: string, allowPrompt: boolean) => {
@@ -178,6 +191,8 @@ it.runIf(enabled)(
 
     // The dead Retry this fixes, reproduced in THIS process: an in-process
     // interactive read after the silent first touch fails at once.
+    api.setUserInteractionAllowed(false);
+    api.findGenericPassword(SERVICE, ACCOUNT);
     api.setUserInteractionAllowed(true);
     const t0 = Date.now();
     const inProcess = api.readGenericPassword(SERVICE, ACCOUNT);
@@ -208,7 +223,7 @@ it.runIf(enabled)(
       keychain.calls.length = 0;
       const recovered = await step("Retry, after the password", true);
       expect(recovered.state).toBe("present");
-      // Already unlocked: no second dialog, and the read is Infinitary's own.
+      // Already unlocked: no second dialog, and the read uses a fresh reader process.
       expect(keychain.calls).toEqual(["presence", "value"]);
     }
 

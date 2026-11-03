@@ -207,9 +207,12 @@ Non-negotiable baseline (enforced by a startup assertion in dev builds):
   `host` channels are the shell's own (`inf:app:open-external`, folder picking, frames and microphone access, `inf:voice:mic-access`): a different host would answer them itself.
   Each core channel also declares its `reach`: whether a paired view may ask it as well as this Mac's own window (`docs/connection.md`).
   `PROTOCOL_VERSION` and the home's `capabilities` ride `inf:app:healthcheck` so a client can refuse or degrade on a mismatch; every core shape is published as JSON Schema in `docs/contract.json` with the version rule (`docs/contract.md`).
-  Effects the core needs from the shell - the browser, Notification Center, the login item, the dock, voice-model status/download, build identity, the userData root, the Keychain read (CD-5=B), and a task browser's pages - are named once in `HostCapabilities` (`src/core/host.ts`) and composed by the desktop host in `src/main/host/electronHost.ts` and `src/main/app.ts`.
+  Effects the core needs from the shell - the browser, Notification Center, the login item, the dock, voice-model status/download, build identity, the userData root, the host Keychain read, and a task browser's pages - are named once in `HostCapabilities` (`src/core/host.ts`) and composed by the desktop host in `src/main/host/electronHost.ts` and `src/main/app.ts`.
   Policy stays with the caller: the open-external allowlist decides what may be opened, the host only opens it.
-  The Keychain VALUE read is in-process Security.framework via koffi (`src/main/host/darwinKeychain.ts`), so the ACL grant is Infinitary's, requested at sign-in; the core never shells out to `/usr/bin/security`.
+  The Keychain capability runs every native lookup in a disposable utility process (`src/main/host/keychainProcessMain.ts`), including startup lock status, presence, access rules, values and explicit unlocks.
+  INF-2308's approved full slim supersedes CD-5=B's in-process-first reader: an unlocked Claude item uses Apple's tool first when its exact access rules already permit that tool, with Security.framework as the guarded fallback.
+  INF-2321's accepted amendment retains the exact-item permission check; Apple-first alone cannot guarantee a silent background read.
+  The core never shells out to `/usr/bin/security`, and no credential reaches the reader process’s stdout, logs or the renderer.
 - **First mate filesystem jail**: the seat does not roam, and it does not read.
   `seatSessionSpec` (`src/core/orchestrator/seat.ts`) sets `builtins: "none"`; Pi maps that to `noTools: "builtin"` and serves only the spec's typed tools (`openRolling` in `src/core/pi/session.ts`), and the Claude seat passes `tools: []` (`claudeSessionOptions` in `src/core/claude/session.ts`).
   There is no `read`, `grep`, `find`, or `ls`.
@@ -671,7 +674,7 @@ Spec: `fm3000-claude-meter-stale-refresh-s1` §11.2.
   Claude reports a readable store as healthy regardless of advisory expiry and makes no proactive renewal or status request on this tick.
   A degraded no-interactive-session block has no in-process remedy and is explicitly not terminal.
 - **Ceilings stay honest.**
-  Unifying the seam does not rewrite shipped CD decisions: Claude is still one default login (CD-1=B), Keychain VALUE still rides the host capability (CD-5=B), and the needs_reauth card is still proof-gated (CD-3=A).
+  Unifying the seam does not rewrite shipped CD decisions: Claude is still one default login (CD-1=B), Keychain VALUE still rides the host capability (the read order is amended in the host section), and the needs_reauth card is still proof-gated (CD-3=A).
 
 ### 16.5 One macOS grant carries a session (2026-09-14)
 
@@ -703,7 +706,7 @@ A locked login keychain must still offer its unlock dialog on Retry.
 - **The latch.**
   Security.framework settles, per process and per store, whether that process may ever show the store's unlock dialog.
   It settles it at the process's first touch of the store, with the interaction flag as it was at that moment.
-  - Infinitary's first touch is the silent startup tick.
+  - A long-lived reader's first touch is the silent startup tick.
     After it, nothing in-process can raise the unlock dialog again, measured on scratch keychains:
     - the legacy read, and `SecItemCopyMatching` with any `kSecUseAuthenticationUI` or `LAContext`;
     - a reopened handle, or another spelling of the same path;
@@ -717,17 +720,25 @@ A locked login keychain must still offer its unlock dialog on Retry.
 - **A tick never reads a locked store.**
   It reports `keychain_locked` without the VALUE read, the one call that could show a dialog if a launch ever latched the other way.
   The reason is never held in `keychainLocks`, so an unlock done anywhere else heals the next tick.
-- **Retry unlocks elsewhere, then reads here.**
+- **Every operation owns a fresh process.**
   A user-initiated read (Retry, or the reading asked for once a sign-in ends) on a locked store calls the host's `unlockKeychain`.
-  - The Electron host forks `src/main/host/keychainUnlockHelper.ts` as a utility process: its own build entry, `out/main/keychainUnlockHelper.js`.
-    The helper's first and only keychain touch is the interactive `SecKeychainUnlock`, so macOS shows its password dialog.
-  - Once the store is unlocked, the VALUE read runs in the app as before, and any "Always Allow" grant still lands on Infinitary's identity.
-    The helper never reads an item.
-  - A cancelled, unanswered or undrawable dialog stays `keychain_locked`.
-  - The helper must not touch the store silently before it unlocks, or it latches too.
+  - The desktop host and work-computer host fork `src/main/host/keychainProcessMain.ts` as a utility process for each operation.
+    The process doing an explicit unlock enables interaction before its first presence query or store open, then calls `SecKeychainUnlock` for that item's store.
+  - A value read uses a separate fresh process; the usual Claude item uses Apple's already-trusted reader, not an Infinitary grant.
+    An explicit direct-fallback grant belongs to the utility executable's identity, not the main executable's old grant.
+  - The work-computer adapter forces every call silent and exposes no unlock operation.
+    The isolated desktop launcher uses `absentKeychain`, never the person's real store.
+  - Concurrent equivalent operations share their child until it exits; later operations start fresh so a changed item remains observable.
+    A silent operation has the existing five-second read allowance, now including metadata and access-rule work; an interactive operation has the existing two-minute dialog allowance.
+    A crash, malformed answer or killed silent operation is an incomplete read, never absence; a cancelled, unanswered or undrawable unlock stays `keychain_locked`.
+  - The main process receives typed answers over private IPC and never imports the native binding.
+    Windowless startup waits for Electron readiness and uses the same child lifecycle for its account-store lock-bit probe, keeping that metadata query off main too.
+    A timeout kills the child and waits for its exit; if its Apple command is still running, the child terminates and reaps that command before it exits.
+    Values leave the reader only over private IPC, never its command arguments, stdout, logs or a file.
 - **Opt-in native proof.**
   `INFINITARY_SCRATCH_KEYCHAIN_PROBE=1 pnpm vitest run src/main/host/darwinKeychain.scratch.test.ts` creates, locks and deletes its own keychain under a scratch `HOME`, so the user's search list is never edited.
-  It then drives the resolver over the real binding and the real helper.
+  It drives the resolver over the real reader and process protocol, with every child query pinned to that scratch store.
+  The ordinary native integration test proves Apple-first reads and exact-account resolution with disposable stores; the process integration test holds each native-call stand-in blocked while the parent handles another event.
 
 ### 16.7 Sign-ins where projects live (git integration PR 1.2, 2026-09-24)
 
@@ -822,9 +833,9 @@ The two seams between them:
 - **Out**: `core.events` (`src/core/events.ts`), a sink registry.
   Core code hands a typed push payload to `emit` and never learns who is listening; the shell subscribes one sink that fans out to its windows, and the connection, while it listens, subscribes one more that numbers each push once and sends it to every device.
   The task protocol's pushes (`inf:tasks`, and `inf:tasks:delta` above the measured trigger) ride the same registry; a device folds deltas exactly as the renderer's read executor does (`src/shared/tasks.ts`).
-- **Sideways**: `HostCapabilities` (`src/core/host.ts`), the D0 seam - the browser, Notification Center, the login item, the dock, voice-model status/download, build identity, the userData root, and the Keychain read (CD-5=B).
+- **Sideways**: `HostCapabilities` (`src/core/host.ts`), the D0 seam - the browser, Notification Center, the login item, the dock, voice-model status/download, build identity, the userData root, and the host Keychain read.
   Effects only: the host opens whatever URL it is handed, and the open-external allowlist stays with the caller.
-  Darwin Electron implements `keychain` with in-process Security.framework (`src/main/host/darwinKeychain.ts`); a failure classifies honestly in the core, never as a false absence.
+  Darwin Electron implements `keychain` through disposable utility processes (`src/main/host/keychainProcess.ts`); the native binding and guarded Apple-first read stay inside them, and failures classify honestly in the core, never as false absence.
 
 **The environment every child runs with** is the core's, not the host's: `hostEnv()` (`src/core/hostEnv.ts`).
 A Dock- or Finder-launched app inherits launchd's search path (on a stock Mac only `/usr/bin:/bin:/usr/sbin:/sbin`), so the core asks the person's own shell once per process at boot (`captureLoginPath`, awaited in `createServices` before anything can dispatch): `$SHELL -ilc` with the answer read between unique marks, because nvm and most version managers live in the interactive startup file; `-lc` asked beside it as the fallback; the process path alone when both miss (timeout, failure, unreadable output), recorded once as a typed value (`loginPathCapture()`) and one log line.

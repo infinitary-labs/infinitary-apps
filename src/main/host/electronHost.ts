@@ -1,14 +1,13 @@
-import { absentKeychain, type HostCapabilities } from "@core/host";
+import type { HostCapabilities } from "@core/host";
 import { userDataFolderFor } from "@shared/userDataFolders";
-import { app, dialog, Notification, shell, utilityProcess } from "electron";
+import { app, dialog, Notification, shell } from "electron";
 import { hostDesktop, hostPlatform, hostPlatformProfile } from "../../core/platform";
 import { createMediaProbe, createTypefaceProbe } from "../mediaProbe";
 import { packagedFlavor, readPackageJsonAt } from "../userDataDir";
 import { appWindows } from "../windows";
 import { type AutostartEntry, readAutostart, writeAutostart } from "./autostartEntry";
 import { createAxiProcessSpawner } from "./axiProcess";
-import { createDarwinKeychain } from "./darwinKeychain";
-import { createKeychainUnlocker } from "./keychainUnlock";
+import { createDesktopKeychain } from "./electronKeychain";
 import { createMacUpdateDriver } from "./macUpdates";
 import { captureDockedPanel } from "./panelCapture";
 import { createPanelProcessSpawner } from "./panelProcess";
@@ -32,12 +31,8 @@ export type ElectronHostOptions = {
    * rather than pinging the captain's desktop mid-suite.
    */
   isolatedUserDataDir?: string | undefined;
-  /**
-   * The built `keychainUnlockHelper` entry. It runs as a utility process so
-   * a user-initiated Retry can raise the macOS unlock dialog this process
-   * gave up at its first, silent touch of the store (darwinKeychain.ts).
-   */
-  keychainUnlockHelperPath?: string | undefined;
+  /** The built disposable Keychain reader entry; no native access runs in main. */
+  keychainProcessPath?: string | undefined;
   /** The built `sqlProcess` entry: the query process behind the `sql` read. */
   sqlProcessPath?: string | undefined;
   /** The built `axiProcess` entry: the process that runs one task command. */
@@ -120,7 +115,7 @@ export function applyDockVisibility(showInDock: boolean): void {
 export function createElectronHost(options: ElectronHostOptions = {}): HostCapabilities {
   const {
     isolatedUserDataDir,
-    keychainUnlockHelperPath,
+    keychainProcessPath,
     sqlProcessPath,
     axiProcessPath,
     programProcessPath,
@@ -177,22 +172,7 @@ export function createElectronHost(options: ElectronHostOptions = {}): HostCapab
       setStartAtLogin: startAtLogin.set,
       setShowInDock: applyDockVisibility,
     },
-    keychain:
-      hostPlatform() === "darwin"
-        ? createDarwinKeychain(
-            undefined,
-            keychainUnlockHelperPath
-              ? createKeychainUnlocker({
-                  helperPath: keychainUnlockHelperPath,
-                  fork: (modulePath, args) =>
-                    utilityProcess.fork(modulePath, args, {
-                      serviceName: "Infinitary Unlock",
-                      stdio: "ignore",
-                    }),
-                })
-              : undefined,
-          )
-        : absentKeychain,
+    keychain: createDesktopKeychain(keychainProcessPath, Boolean(isolatedUserDataDir)),
     capture: { capturePanel: captureDockedPanel },
     mediaProbe: createMediaProbe(),
     typefaceProbe: createTypefaceProbe(),

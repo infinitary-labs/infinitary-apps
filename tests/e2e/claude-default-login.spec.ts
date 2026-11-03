@@ -9,10 +9,10 @@ import { starterFor } from "./starters";
 
 /**
  * CD-1=B first-run: a missing machine Claude login is a real affordance,
- * not a dead meter or a "sign in again" error. These tests do not click
- * Sign in / Connect - on a Mac that path's reading could reach the bare
- * Keychain item on the host. Login itself is covered by injected-backend
- * unit tests.
+ * not a dead meter or a "sign in again" error. The isolated desktop host
+ * never reaches the person's real Keychain, even on service-only lookup.
+ * These tests own the first-run affordance; pasted-code login is exercised
+ * by the injected-backend tests and device-sign-ins journey.
  */
 
 const CLAUDE_PERSONAL = "acct_claude_firstrun";

@@ -16,7 +16,7 @@ import type { MacUpdateDriver } from "./update/macUpdates";
  * interface is the complete list of effects that are Electron's today and
  * would be a different host's tomorrow: the browser, Notification Center,
  * the login item, the dock, build identity, the userData root, the
- * Keychain read (CD-5=B), and a task's own browser pages. Core code depends on this type; only the shell
+ * host Keychain read, and a task's own browser pages. Core code depends on this type; only the shell
  * implements it (src/main/host/electronHost.ts).
  *
  * Deliberately effects, not policy: `openExternal` opens whatever it is
@@ -64,11 +64,12 @@ export type HostPresence = {
 };
 
 /**
- * A generic-password lookup the host performs in its own security session
- * (CD-5=B). The core never shells out to `/usr/bin/security`: that binary is
- * a second process with its own ACL entry, and it cannot raise a dialog in a
- * non-Aqua session. The GUI app reads through Security.framework so the grant
- * is Infinitary's, requested once at sign-in.
+ * A generic-password lookup through the host's own capability. Darwin runs
+ * metadata, access rules, value reads and unlocks in disposable processes.
+ * The core never shells out to `/usr/bin/security`; the host prefers it only
+ * when the exact item already permits it. Explicit native fallback grants
+ * belong to the utility executable, not the app's main process.
+ * INF-2308/INF-2321 amend CD-5=B's in-process-first order, not this seam.
  *
  * Effects only: the host reports what the framework returned. Classification
  * (locked / absent / no-interactive-session) stays in the core.
@@ -433,7 +434,7 @@ export type HostCapabilities = {
   };
   /**
    * Generic-password Keychain access in the host's own session. Darwin
-   * Electron implements this with Security.framework; every other host
+   * Electron implements this with disposable Keychain processes; every other host
    * returns `absent`.
    */
   readonly keychain: HostKeychain;

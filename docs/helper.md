@@ -1067,9 +1067,10 @@ Nothing of the home's sign-ins is sent here, and nothing of these goes to the ho
   The home books each turn's usage on the account the conversation's state names (`CrewMachines.servingAccount`), or on none when it names none, and its sign-in card for that task says to sign in again on this computer ("on Mac mini").
   A task an earlier build started here may still name one of the home's accounts on its record, and the home reads nothing of that account for it.
 - **Claude's allowance, never asking.**
-  Claude's is read with this macOS user's own login, the way the home reads its own (`docs/quota.md`): its file, else the saved passwords through the app's own reader (`src/main/host/darwinKeychain.ts`), which the work mode loads with the first read (`savedPasswords`, `src/main/work.ts`).
+  Claude's is read with this macOS user's own login, the way the home reads its own (`docs/quota.md`): its file, else the saved passwords through the app's child-process reader (`src/main/host/electronKeychain.ts`), which the work mode loads with the first read (`savedPasswords`, `src/main/work.ts`).
   Nothing here ever lets macOS ask: nobody may be at this screen to answer, and the read would wait on the dialog.
-  So a sign-in asks nothing, every read here passes `allowPrompt: false`, and the work mode offers no unlock.
+  So a sign-in asks nothing, every read here passes `allowPrompt: false`, the child-process adapter forces interaction off, and the work mode offers no unlock.
+  Metadata, the exact-item permission check and the guarded Apple-first value read all run outside the work process, so a slow saved-password answer cannot freeze its connection.
   A read macOS would have to ask about - no permission given here yet, or the saved passwords locked - comes home as the row's reason with words for a computer (`KEYCHAIN_VALUE_FAILURE_THERE`, `src/shared/quota.ts`), and the row offers no Retry.
   Nothing here holds a refusal, so the next read tries again and a permission given here later shows the allowance.
   A run whose data a test isolated with `INFINITARY_HELPER_DATA_DIR` reads no saved passwords, so no test reads the Claude login of the person running it.

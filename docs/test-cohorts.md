@@ -214,6 +214,7 @@ A file whose slowest test fits the 5 s default under the rule carries none.
 | `src/main/host/linuxSecretCustody.test.ts` | a private session bus and gnome-keyring under a scratch HOME, driven from a Node child; on a throwaway GitHub-hosted runner `apt-get` installs them first (Linux only, a probe) | 450 s on the install (Linux hosted runner 90 s); 5 s default for the tests (Linux slowest 0.4 s) |
 | `src/main/host/linuxFreshAuthentication.test.ts` | stand-in `pkcheck` and `pkaction` scripts, and the system's polkit where installed (Linux only) | 5 s default |
 | `src/core/secrets/protected.test.ts` | `/bin/sh` recipients started from private copies, `mkfifo` | 5 s default |
+| `src/main/host/keychainProcess.integration.test.ts` | bundled native-reader orchestration in real child processes, with blocked-call stand-ins | 5 s default |
 | `src/main/host/claudeKeychainAccess.integration.test.ts` | isolated `security` on a throwaway keychain, and an ad-hoc `codesign` of the large app it builds (darwin only) | 5 s default; 15 s on building the app (Mac fastest 2.4 s) |
 | `src/core/devices/remoteLogin.test.ts` | the Mac's own `sshd` on loopback (`tests/helpers/sshServer.ts`, macOS only, skipped without it), ssh, ssh-keygen, tar, curl, openssl | 15 s (Mac slowest per-case fastest 2.1 s); 30 s on the check-line and password tests, and on the Mac's download describe (Mac slowest per-case fastest 5.7 s) |
 | `src/core/devices/relay.test.ts` | a stand-in relay on Node, and on macOS `/usr/bin/nc`, carrying the real connection on loopback | 5 s default |

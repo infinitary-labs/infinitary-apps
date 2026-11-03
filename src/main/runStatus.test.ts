@@ -170,11 +170,17 @@ describe("the status command", () => {
 describe("the Keychain a run reads", () => {
   // INF-1416: started at boot by a system job, the default Keychain was the
   // Mac's System Keychain, unlocked, while the account's own stayed locked.
-  it("reads the account's own login Keychain by its path, and a missing one as absent", async () => {
+  it("reads the account's own path through the host and preserves its status", async () => {
     expect(accountKeychainPath("/Users/fm")).toBe("/Users/fm/Library/Keychains/login.keychain-db");
     const missing = accountKeychainPath(scratchDir("run-keychain-"));
-    expect(await readKeychainLock(missing)).toBe(
-      process.platform === "darwin" ? "absent" : "not-applicable",
-    );
+    const paths: string[] = [];
+    expect(
+      await readKeychainLock(async (path) => {
+        paths.push(path);
+        return "absent";
+      }, missing),
+    ).toBe(process.platform === "darwin" ? "absent" : "not-applicable");
+    expect(paths).toEqual(process.platform === "darwin" ? [missing] : []);
+    // The real missing-file reading now belongs to claudeKeychainAccess.integration.test.ts.
   });
 });

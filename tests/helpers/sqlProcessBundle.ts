@@ -6,7 +6,7 @@ import { scratchDir } from "./scratchDirs";
  * The query process's entry (src/core/sql/sqlProcess.ts) built the way the
  * app builds it - one file, its imports inlined - so a test forks the real
  * thing with plain Node. The app's own build makes it an electron-vite entry
- * beside `keychainUnlockHelper`; a test cannot fork the TypeScript source,
+ * beside `keychainProcessMain`; a test cannot fork the TypeScript source,
  * because Node's type stripping does not resolve the `@shared` aliases.
  */
 export async function bundleSqlProcess(): Promise<string> {

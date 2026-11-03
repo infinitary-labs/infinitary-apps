@@ -55,38 +55,12 @@ export function accountKeychainPath(homeDir: string = userInfo().homedir): strin
  * at all.
  */
 export async function readKeychainLock(
+  read: (path: string) => Promise<RunEnvironment["keychain"]>,
   keychainPath: string = accountKeychainPath(),
 ): Promise<RunEnvironment["keychain"]> {
   if (hostPlatform() !== "darwin") return "not-applicable";
   try {
-    const { default: koffi } = await import("koffi");
-    const security = koffi.load("/System/Library/Frameworks/Security.framework/Security");
-    const cf = koffi.load("/System/Library/Frameworks/CoreFoundation.framework/CoreFoundation");
-    const pointer = koffi.out(koffi.pointer(koffi.pointer("void")));
-    const setInteraction = security.func("SecKeychainSetUserInteractionAllowed", "int32", [
-      "uint8",
-    ]);
-    const getStatus = security.func("SecKeychainGetStatus", "int32", [
-      "void *",
-      koffi.out(koffi.pointer("uint32")),
-    ]);
-    const release = cf.func("CFRelease", "void", ["void *"]);
-    const keychain: [unknown] = [null];
-    if (setInteraction(0) !== 0) return "unknown";
-    // Opening names a file without reading it; its status says whether it is there.
-    const result = security.func("SecKeychainOpen", "int32", ["const char *", pointer])(
-      keychainPath,
-      keychain,
-    );
-    if (result !== 0 || keychain[0] === null) return "unknown";
-    try {
-      const flags = [0];
-      const status = getStatus(keychain[0], flags);
-      if (status === -25294) return "absent"; // errSecNoSuchKeychain
-      return status === 0 ? keychainLockFromFlags(flags[0] ?? 0) : "unknown";
-    } finally {
-      release(keychain[0]);
-    }
+    return await read(keychainPath);
   } catch {
     return "unknown";
   }

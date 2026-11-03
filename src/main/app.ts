@@ -32,6 +32,7 @@ import { FrameMountRegistry } from "./frames/frameMounts";
 import { handleFrameProtocol } from "./frames/frameProtocol";
 import { handOverProfileDir, runHandOver } from "./handOver";
 import { createElectronHost, forgetAutostart, startAtLoginFor } from "./host/electronHost";
+import { readElectronKeychainStatus } from "./host/electronKeychain";
 import { broadcast, registerIpc } from "./ipc";
 import { followWindowCommands, shellCommands } from "./keyboard";
 import { deferCoreDisposal } from "./lifecycle";
@@ -337,7 +338,10 @@ export async function startApp(mainDir: string, run: RunStart | null = null): Pr
       const keychain =
         isolatedUserDataDir || userDataChoice.kind === "switch"
           ? "unknown"
-          : await readKeychainLock();
+          : await readKeychainLock(async (path) => {
+              await app.whenReady();
+              return readElectronKeychainStatus(join(mainDir, "keychainProcessMain.js"), path);
+            });
       const finish = markRunning(
         app.getPath("userData"),
         process.pid,
@@ -496,7 +500,7 @@ export async function startApp(mainDir: string, run: RunStart | null = null): Pr
         ...(userDataChoice.kind === "flavor"
           ? { autostartName: basename(userDataChoice.dir) }
           : {}),
-        keychainUnlockHelperPath: join(mainDir, "keychainUnlockHelper.js"),
+        keychainProcessPath: join(mainDir, "keychainProcessMain.js"),
         sqlProcessPath: join(mainDir, "sqlProcess.js"),
         axiProcessPath: join(mainDir, "axiProcess.js"),
         programProcessPath: join(mainDir, "programProcess.js"),

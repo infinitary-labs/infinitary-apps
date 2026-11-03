@@ -121,6 +121,21 @@ describe("Claude's trusted Apple-tool read", () => {
     ]);
   });
 
+  it("INF-2321: decodes Apple's hexadecimal output for a multiline Claude credential", async () => {
+    const credential = JSON.stringify(
+      { claudeAiOauth: { accessToken: "not-a-real-credential" } },
+      null,
+      2,
+    );
+    expect(
+      await readClaudeThroughTrustedTool(
+        "someone",
+        STORE,
+        async () => `${Buffer.from(credential).toString("hex")}\n`,
+      ),
+    ).toEqual({ kind: "value", value: credential });
+  });
+
   it("reports a tool that ran out of time as incomplete, not refused", async () => {
     const run = async () => {
       throw Object.assign(new Error("Command failed"), { killed: true });

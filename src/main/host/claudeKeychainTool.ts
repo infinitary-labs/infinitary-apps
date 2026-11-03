@@ -1,15 +1,15 @@
-import { execFile } from "node:child_process";
-import { promisify } from "node:util";
 import { Parser } from "htmlparser2";
+import { runKeychainCommand } from "./keychainCommand";
+import { KEYCHAIN_READ_TIMEOUT_MS } from "./keychainProcess";
 
 /**
  * Claude Code's macOS item is created by Apple's security tool. Its legacy
  * decrypt ACL can trust both Infinitary and /usr/bin/security, while its *separate*
  * partition ACL allows only apple-tool:. In that case Security.framework
- * rejects Infinitary even after Always Allow. Read through the already trusted
- * Apple tool instead; NEVER use it for an item whose ACL has not been checked.
+ * can reject Infinitary even after Always Allow. Read through the already trusted
+ * Apple tool first; NEVER use it for an item whose ACL has not been checked.
  *
- * The check is the one item's access rules, read in process by the host
+ * The check is the one item's access rules, read in the disposable Keychain process
  * (`darwinKeychain.ts`). It does not list the other saved passwords and does
  * not check each trusted app's signature: that walk is what ran out of time
  * on a Mac whose passwords trust large apps. Fail closed on an unfamiliar
@@ -22,19 +22,11 @@ const SERVICE = "Claude Code-credentials";
 const MAX_OUTPUT = 64 * 1024;
 
 type Run = (args: string[]) => Promise<string>;
-const execFileAsync = promisify(execFile);
-
-/** The single-item read is quick. A walk of every saved password is not. */
-const READ_TIMEOUT_MS = 5_000;
-
 async function runSecurity(args: string[]): Promise<string> {
-  const { stdout } = await execFileAsync(TOOL, args, {
-    encoding: "utf8",
-    timeout: READ_TIMEOUT_MS,
+  return runKeychainCommand(TOOL, args, {
+    timeoutMs: KEYCHAIN_READ_TIMEOUT_MS,
     maxBuffer: MAX_OUTPUT,
-    windowsHide: true,
   });
-  return stdout;
 }
 
 /** One access-list entry of Claude's item, with no signature verdicts. */
@@ -169,8 +161,8 @@ export type TrustedToolRead =
   | { kind: "incomplete" };
 
 /**
- * Caller must first observe an unlocked store, a direct -25293 refusal, and
- * `appleToolMayRead` on that one item. This reads the value only. It never
+ * Caller must first observe an unlocked store and `appleToolMayRead` on that
+ * one item. This reads the value only. It never
  * lists the keychain.
  */
 export async function readClaudeThroughTrustedTool(
@@ -191,11 +183,16 @@ export async function readClaudeThroughTrustedTool(
       "-w",
       keychainPath,
     ]);
-    // -w appends one newline after the exact item value. No trim: whitespace
-    // inside the credential must remain byte-for-byte intact.
-    return value.endsWith("\n")
-      ? { kind: "value", value: value.slice(0, -1) }
-      : { kind: "refused" };
+    // security -w appends a newline and hex-encodes data containing any
+    // non-printable byte (including a pretty-printed JSON newline).
+    if (!value.endsWith("\n")) return { kind: "refused" };
+    const output = value.slice(0, -1);
+    return {
+      kind: "value",
+      value: /^(?:[\da-f]{2})+$/i.test(output)
+        ? Buffer.from(output, "hex").toString("utf8")
+        : output,
+    };
   } catch {
     return { kind: "incomplete" };
   }

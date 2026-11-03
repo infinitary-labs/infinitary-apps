@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "id": "claude-keychain-off-main",
+      "kind": "fix",
+      "area": "subscriptions",
+      "title": "Claude's saved sign-in no longer holds up the app",
+      "body": "Infinitary keeps responding when macOS is slow to read Claude's saved sign-in. It tries Apple's reader first when that saved item already permits it, while keeping protection against unexpected password prompts during automatic readings.",
+      "noPicture": "This moves saved-password work outside the app's main process; no screen or control changes.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

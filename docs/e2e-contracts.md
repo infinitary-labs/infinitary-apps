@@ -1,5 +1,9 @@
 # Electron fixture contracts
 
+The isolated desktop host binds `HostCapabilities.keychain` to `absentKeychain` before any reader is constructed (`createDesktopKeychain`, `src/main/host/electronKeychain.ts`).
+No journey can discover the real Claude item through service-only fallback, whatever its `USER`; `electronKeychain.test.ts` exercises both lookup forms and refuses any attempted child launch.
+Native Keychain proof instead names a disposable store explicitly in `claudeKeychainAccess.integration.test.ts`.
+
 ## Truthful fixtures
 
 How this project's stand-ins stay truthful (scout `fm3000-e2e-rigidity-s2`, section 7).

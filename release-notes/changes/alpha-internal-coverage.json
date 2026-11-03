@@ -1,0 +1,25 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "manual-main-check-exclusion",
+      "reason": "CI configuration only: adds a manual start trigger for the project's full check on main without changing its push trigger or jobs. Nothing in the shipped app changes.",
+      "covers": ["5f75913aa50e21311477762554a77cbf4a8a7192"]
+    },
+    {
+      "id": "personalize-journey-cleanup-exclusion",
+      "reason": "Test-only: the personalize journey waits for its crewmate to close and clears the resulting note before the next journey asks, preventing shared test state from consuming that ask. Nothing in the shipped app changes.",
+      "covers": ["6ecfa5380164dce78558eac5f6ddf11b7342290f"]
+    },
+    {
+      "id": "desktop-journey-repeat-guidance-exclusion",
+      "reason": "Project testing guidance only: documents three runs for edited desktop journeys and updates the example command, leaving unit-test and phone-part repeat counts unchanged. Nothing in the shipped app changes.",
+      "covers": ["74017cfacc357290055da3984f786d9e23951550"]
+    },
+    {
+      "id": "window-key-evaluation-exclusion",
+      "reason": "Test-only: the window-key helper tracks sent presses so a lost evaluation answer cannot duplicate a keypress, and the window-size journey safely reads zoom again after a lost answer. A unit test covers the helper; nothing in the shipped app changes.",
+      "covers": ["1b87461f551ef72c817a6e545457346dd9460c8d"]
+    }
+  ]
+}

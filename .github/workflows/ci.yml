@@ -32,11 +32,20 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         id: checkout
+        with:
+          # The pull request's merge commit and its base parent, for the notes step.
+          fetch-depth: 2
       - uses: pnpm/action-setup@v4
       - uses: actions/setup-node@v4
         with:
           node-version: 24
           cache: ${{ !vars.LINUX_RUNNER && 'pnpm' || '' }}
+      # A change adds its release note or exclusion and the ledger stays
+      # consistent (docs/release-notes.md "The release check"). Plain Node, no
+      # install, under a second, so a miss fails here instead of at the alpha.
+      - name: Release notes
+        if: ${{ github.event_name == 'pull_request' }}
+        run: node scripts/release-notes.ts change --base HEAD^1
       - uses: ./.github/actions/node-headers
       - run: pnpm install --frozen-lockfile
         # Scope Node headers to this install, never to Electron rebuilds.

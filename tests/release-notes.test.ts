@@ -307,6 +307,46 @@ describe("the release check", () => {
   });
 });
 
+/**
+ * The pull request's own step (ci.yml, `change --base`; INF-2414, the
+ * captain: "why can't we catch release note problems before merge?"): the
+ * alpha's coverage rule for one change, before its squash commit exists.
+ */
+describe("the pull request's notes step", () => {
+  it("refuses a change that adds no note or exclusion, or a malformed note, and passes one that the alpha would cover", () => {
+    const { f, base } = released();
+    f.git("checkout", "-q", "-b", "change");
+    f.commit("test: a change with no declaration", { "src.txt": "1" });
+    expect(() => f.cli("change", "--base", "main")).toThrow(
+      /this change adds no file under release-notes\/changes\/ with a note or an exclusion/,
+    );
+    // Editing a note another change added does not credit this change.
+    f.commit("docs: reword an old note", {
+      "release-notes/changes/init.json": note("first-feature", "A clearer title"),
+    });
+    expect(() => f.cli("change", "--base", "main")).toThrow(/adds no file/);
+    const { area: _area, ...noArea } = note("bad").entries[0] as Record<string, unknown>;
+    f.commit("feat: a note without its area", {
+      "release-notes/changes/bad.json": { entries: [noArea] },
+    });
+    expect(() => f.cli("change", "--base", "main")).toThrow(/area/);
+    f.git("rm", "-q", "release-notes/changes/bad.json");
+    f.commit("test: record the exclusion", {
+      "release-notes/changes/internal-test.json": {
+        exclusions: [{ id: "internal-test", reason: "Tests only." }],
+      },
+    });
+    expect(f.cli("change", "--base", "main")).toContain("release-notes/changes/internal-test.json");
+    // Squashed onto main, the same change passes the alpha's coverage check.
+    f.git("checkout", "-q", "main");
+    f.git("merge", "-q", "--squash", "change");
+    f.git("commit", "-q", "-m", "test: the squashed change");
+    const source = f.git("rev-parse", "HEAD");
+    expect(f.git("merge-base", base, source)).toBe(base);
+    expect(f.cli("check", "--source", source, "--reviewed", source)).toContain("all covered");
+  });
+});
+
 describe("a stable promotion", () => {
   function alphaThenStable() {
     const { f } = released();

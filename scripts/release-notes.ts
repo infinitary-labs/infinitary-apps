@@ -10,8 +10,14 @@
  *     mappings, each entry's area and hero picture (or its reason for none)
  *     and the picture files themselves, and that every committed manifest
  *     still equals what its source commit contains. Exits 1 with every
- *     problem. The pull request runs the git-free part as a unit test
- *     (`ledgerProblems`, tests/release-notes-ledger.test.ts).
+ *     problem. Its git-free part is `ledgerProblems`, which `change` runs.
+ *
+ *   node scripts/release-notes.ts change --base <ref>
+ *     The pull request's own check, under a second, with no install and only
+ *     the base commit fetched: the commits since the merge base of <ref> and
+ *     HEAD add a file under release-notes/changes/ declaring a note or an
+ *     exclusion - the file that credits the change's squash commit at the next
+ *     alpha - and the ledger passes `ledgerProblems`. ci.yml runs it first.
  *
  *   node scripts/release-notes.ts check --source <sha> [--channel alpha|stable]
  *       [--version <v>] [--promoted-from <alpha>] [--reviewed <sha>] [--rehearsal]
@@ -467,6 +473,33 @@ function validate(repo: Repo, loaded: Loaded): string[] {
   return problems;
 }
 
+/**
+ * A change - every commit since `--base`'s merge base with HEAD, squashed as
+ * one at merge - adds a changes file declaring a note or an exclusion, and the
+ * ledger it leaves is consistent. The squash commit is the commit that adds the
+ * file, so this is the alpha's coverage rule for one change, before it merges.
+ */
+function change(repo: Repo, flags: Map<string, string | true>): string {
+  const base = repo.git("merge-base", need(flags, "base"), "HEAD");
+  const added = new Set(
+    repo
+      .git("diff", "--name-only", "--diff-filter=A", base, "HEAD", "--", `${NOTES_DIR}/changes/`)
+      .split("\n")
+      .filter((path) => path.endsWith(".json")),
+  );
+  const problems = ledgerProblems(repo.root);
+  if (problems.length > 0) throw new Refusal(problems);
+  const declared = load(repo).files.filter(
+    (item) => added.has(item.path) && item.file.entries.length + item.file.exclusions.length > 0,
+  );
+  if (declared.length === 0)
+    throw new Refusal([
+      `this change adds no file under ${NOTES_DIR}/changes/ with a note or an exclusion.`,
+      "Add a plain-language note for a change a person notices, or an exclusion with a reason for internal work, in a new file (docs/release-notes.md).",
+    ]);
+  return `this change adds ${declared.map((item) => item.path).join(", ")}, and the release-notes ledger is consistent`;
+}
+
 function previousRelease(
   repo: Repo,
   loaded: Loaded,
@@ -841,6 +874,8 @@ export function run(argv: string[]): string {
       if (problems.length > 0) throw new Refusal(problems);
       return "the release-notes ledger is consistent";
     }
+    case "change":
+      return change(repo, flags);
     case "check":
       return check(repo, flags);
     case "generate":
@@ -855,7 +890,7 @@ export function run(argv: string[]): string {
       return archive(repo, flags);
     default:
       throw new Refusal([
-        "usage: release-notes.ts validate | check | generate | stable-highlights | manifest | verify-package | archive",
+        "usage: release-notes.ts validate | change | check | generate | stable-highlights | manifest | verify-package | archive",
       ]);
   }
 }

@@ -132,7 +132,11 @@ Commits the changelog does not list are covered by one exclusion per release.
    Without `--picks` it lists the changes since the last stable to pick from, for the promotion's card.
 4. `verify-package` runs against the packaged app, before notarization: the catalog is this exact logical version and source commit, and each packaged picture is the file the catalog hashed.
 
-The pull request runs the part of `validate` that needs no git history over the real ledger as a unit test (`tests/release-notes-ledger.test.ts`, through `ledgerProblems`), so a note with no area, a new `maintenance` note, a visible change with neither picture nor reason, a picture over the caps, or a manifest that no longer matches the record of past releases fails on its own pull request rather than at the next alpha.
+Every pull request's first check step runs `node scripts/release-notes.ts change --base HEAD^1` (`ci.yml`, plain Node with no install, under a second).
+It refuses a change whose commits add no file under `release-notes/changes/` declaring a note or an exclusion: a squash merge makes the change one commit, and the commit that adds the file is the one the alpha credits, so this is the alpha's coverage rule applied before merge.
+Editing a note another change added does not count; the change still adds its own file.
+The same step runs the part of `validate` that needs no git history over the real ledger (`ledgerProblems`), so a note with no area, a new `maintenance` note, a visible change with neither picture nor reason, a picture over the caps, or a manifest that no longer matches the record of past releases also fails on its own pull request rather than at the next alpha.
+`tests/release-notes-ledger.test.ts` runs that part again with main's unit tests.
 
 A development or end-to-end build carries a placeholder (`generate --dev`) with an empty pictures folder that never passes `verify-package`; the app reads it as notes unavailable.
 `docs/alpha.md` covers the dispatch inputs and rehearsal.

@@ -242,7 +242,7 @@ The switch lists `alpha` and `stable`; releases of either channel also update th
 - **Failed alpha checks.**
   Nothing is recorded or published: the signing job may have finished, but its signed files stay only in the run's handoff artifact, which expires after seven days.
   Automatic journey retries stay zero.
-  When a test fails, the release crewmate gets it fixed on main; its next fully passing rolling run starts the next alpha automatically.
+  When a test fails, the release crewmate gets it fixed on main; its next rolling run that passes every check except main's phone check starts the next alpha automatically.
   Only when the failing journey passes alone on the same commit may the failed checks be manually re-run once, keeping the alpha's version; if they still fail, diagnose rather than retry again.
   No urgent-alpha bypass.
 - **Published bytes never change** (`scripts/publish-release-asset.sh`).
@@ -307,12 +307,13 @@ After that setup, a separately authorized alpha proves public fetch-back, both t
 
 ## Cutting an alpha
 
-A fully passing rolling `main.yml` run automatically starts an alpha at that exact commit (INF-2259, the captain's accepted override).
+A rolling `main.yml` run that passed every check except main's phone check automatically starts an alpha at that exact commit (INF-2259, the captain's accepted override).
 The `workflow_run` completion trigger uses the checked source, not main's newer head, and never dispatches another full check just for the cut.
-Failed, cancelled or incomplete main runs cut nothing, except a failed run whose only failed jobs are the phone check's ("An alpha does not wait on the phone check", below); main's waiting-version coalescing and fix-forward process stay unchanged.
+The alpha never reads main's phone check, so a run that ended failed only in its phone check still cuts one ("An alpha does not wait on the phone check", below).
+Any other failed, cancelled or incomplete main run cuts nothing; main's waiting-version coalescing and fix-forward process stay unchanged.
 
 1. **Validate the completed run.**
-   The resolver reads the successful trusted main-push run and every latest per-job execution from GitHub.
+   The resolver reads the completed trusted main-push run, successful or failed only in its phone check, and every latest per-job execution from GitHub.
    It requires every full-check owner and all Linux journey shards at exactly the source being released, and never reads main's phone jobs.
 2. **Keep the same source.**
    The notes check validates committed declarations without a separate notes-review commit.
@@ -543,7 +544,7 @@ The build that showed a given card is in that card's observations (`card_observa
    A separate destination also needs `PUBLIC_RELEASE_TOKEN`; the selected source repository uses its workflow token.
 2. Rehearse the release with `dry_run=true`, which runs the update check.
    Neither verification nor rehearsal publishes a release or changes visibility.
-3. Let a fully passing rolling-main run cut its exact source as an alpha, or promote a verified updater-capable alpha with the captain's selected highlights.
+3. Let a rolling-main run that passed every check except main's phone check cut its exact source as an alpha, or promote a verified updater-capable alpha with the captain's selected highlights.
    Publication verifies both public Mac downloads and every Linux file before advancing feeds.
 
 ## Before the public beta

@@ -201,8 +201,13 @@ jobs:
             core.setOutput('inherited', 'true');
             core.setOutput('source', proof.source);
             core.setOutput('url', proof.url);
+            // The proof leaves out main's phone check (INF-2353), so the summary
+            // says which checks it reused and whether the phone check failed.
+            const phone = run.conclusion === 'success'
+              ? 'Its phone check passed too, though an alpha does not read it.'
+              : 'The run ended failed only in its phone check, which an alpha does not read (docs/alpha.md, "An alpha does not wait on the phone check").';
             await core.summary.addHeading('Inherited rolling-main verification')
-              .addRaw(`Full checks passed at the exact alpha source in ${proof.url}. They are reused, not repeated. Release-specific gates still run.`).write();
+              .addRaw(`Every check except main's phone check passed at the exact alpha source in ${proof.url} and is reused, not repeated. ${phone} Release-specific gates still run.`).write();
 
       - name: Resolve the release
         id: resolve

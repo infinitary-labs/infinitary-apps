@@ -7,6 +7,7 @@ import {
   LEGACY_NO_IMPACT,
   MERGE_GUIDANCE_IMPACTS,
 } from "./checkRepair";
+import { crewResponseSchema } from "./crewResponses";
 import { crewSpeedSchema, speedSelectionSchema } from "./crewSpeed";
 import { cutOffSchema, fmEventSchema } from "./events";
 import { keptValidationInputSchema } from "./liveValidation";
@@ -598,6 +599,7 @@ export const workRequests = {
       summary: z.string().optional(),
       declared: z
         .object({
+          responses: z.array(crewResponseSchema).optional(),
           firstRelease: firstReleaseReportSchema.optional(),
           validation: keptValidationInputSchema.optional(),
           workWait: workWaitSchema.optional(),

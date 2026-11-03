@@ -1219,7 +1219,43 @@ const MIGRATIONS: readonly Migration[] = [
     PRIMARY KEY (source, panel_id, runtime, version)
   );
   `,
+  addCrewResponses,
 ];
+
+/** The inbox owns these additive records; worker closure never cascades into them. */
+function addCrewResponses(db: AppDatabase): void {
+  db.exec(`
+    CREATE TABLE response_requests (
+      id TEXT PRIMARY KEY,
+      inbox_id INTEGER NOT NULL UNIQUE,
+      source_session TEXT,
+      source_message TEXT,
+      target_task TEXT NOT NULL,
+      target_session TEXT,
+      body TEXT NOT NULL,
+      card_json TEXT,
+      state TEXT NOT NULL,
+      created_at INTEGER NOT NULL
+    );
+    CREATE INDEX response_requests_target ON response_requests (target_task, state, created_at);
+    CREATE TABLE crew_responses (
+      response_id TEXT PRIMARY KEY,
+      request_id TEXT NOT NULL REFERENCES response_requests(id),
+      contributor_task TEXT NOT NULL,
+      contributor_session TEXT,
+      status TEXT NOT NULL,
+      text TEXT NOT NULL,
+      at INTEGER NOT NULL,
+      wake_id INTEGER NOT NULL UNIQUE,
+      delivered_at INTEGER,
+      handled_at INTEGER
+    );
+    CREATE INDEX crew_responses_request ON crew_responses (request_id, contributor_task, at);
+  `);
+}
+
+/** The response migration's identity, including for exact predecessor-schema fixtures. */
+export const CREW_RESPONSE_VERSION = MIGRATIONS.indexOf(addCrewResponses) + 1;
 
 /** The current database format, derived from the embedded migration ledger. */
 export const DATABASE_VERSION = MIGRATIONS.length;

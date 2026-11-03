@@ -173,7 +173,11 @@ export type CrewDelegate = {
     /** The model the user named beside the one that took the task (FI3-444). */
     model?: NamedModel;
   }>;
-  steerCrewmate(taskId: string, message: string): Promise<SteerDelivery>;
+  steerCrewmate(
+    taskId: string,
+    message: string,
+    response?: import("@shared/crewResponses").ResponsePolicy,
+  ): Promise<SteerDelivery>;
   /**
    * Delivers the files `fromTask`'s reports handed on into `toTask`'s
    * hand-over folder (INF-992); answers the words its steer carries.
@@ -600,10 +604,35 @@ export function createCrewTools(delegate: CrewDelegate) {
     label: "Steer crewmate",
     description:
       "Send guidance, feedback, or a follow-up to a crewmate's running or idle task. " +
-      "The result says when a message was queued for the crewmate's next turn instead.",
+      "The result says when a message was queued for the crewmate's next turn instead. " +
+      "Every message expects a correlated response by default; use response_mode guidance-only only when no answer is needed. Submitted responses wake you immediately, including while work continues. Dispatch briefs and host wakes are unchanged.",
     parameters: Type.Object({
       task_id: Type.String({ description: "The task id from the context block or spawn" }),
       message: Type.String({ description: "What the crewmate should know or do next" }),
+      response_mode: Type.Optional(
+        stringEnum(["expected", "guidance-only"], {
+          description: "Default expected; guidance-only explicitly requires no response.",
+        }),
+      ),
+      response_context: Type.Optional(
+        Type.Object(
+          {
+            card_id: Type.String(),
+            lifecycle: Type.String(),
+            captain_message_id: Type.Integer(),
+          },
+          {
+            description:
+              "Optional exact card lifecycle and captain message this request concerns; routing context, never edit permission.",
+          },
+        ),
+      ),
+      cancel_response_requests: Type.Optional(
+        Type.Array(Type.String(), {
+          description:
+            "Explicitly cancel these pending response requests for this task; closing work does not cancel them.",
+        }),
+      ),
       // Its meaning rides the context block's computers rule (INF-992).
       files_from: Type.Optional(Type.String()),
     }),
@@ -614,6 +643,19 @@ export function createCrewTools(delegate: CrewDelegate) {
       const delivery = await delegate.steerCrewmate(
         params.task_id,
         handed ? `${params.message}\n\n${handed}` : params.message,
+        {
+          mode: params.response_mode ?? "expected",
+          ...(params.response_context
+            ? {
+                card: {
+                  id: params.response_context.card_id,
+                  lifecycle: params.response_context.lifecycle,
+                  messageId: params.response_context.captain_message_id,
+                },
+              }
+            : {}),
+          ...(params.cancel_response_requests ? { cancel: params.cancel_response_requests } : {}),
+        },
       );
       // A queued steer is reported as queued. The crewmate this task runs on
       // cannot take guidance mid-turn, so saying "steered" would tell the

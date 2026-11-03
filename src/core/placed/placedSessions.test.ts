@@ -1526,6 +1526,67 @@ describe("a task that runs on a computer that runs work", () => {
     expect(home.tasks.get("t-idle")?.recoveryRung ?? 0).toBe(0);
   });
 
+  it("INF-2214 keeps a remote requested answer through a home restart and later progress, with one notification", async () => {
+    const at = await world();
+    const slow = gate();
+    model([{ held: slow.held, text: "Still checking the remover." }, { text: "Checks finished." }]);
+    const taskId = "t-path-response";
+    await at.start(taskId, "Find the remover path.");
+    await expect.poll(() => api.openRequests()).toBe(1);
+    await at
+      .home()
+      .supervisor.steerCrewmate(
+        taskId,
+        "What is the full path to setup/shell-pc/shell-pc-job-host-remove.cmd?",
+        "firstmate",
+        { response: { mode: "expected" } },
+      );
+    const request = at.home().inbox.pendingResponses(taskId)[0]!;
+    const text = "C:\\FleetCheckSetup\\shell-pc-job-host-remove.cmd";
+    const submitted = {
+      task: taskId,
+      callId: "path-response",
+      text,
+      declared: {
+        responses: [
+          { requestId: request.id, responseId: "remote-path-answer", status: "answered" as const },
+        ],
+      },
+    };
+    await at.home().placed.answer(at.deviceId, "inf:work:report", submitted);
+    const saved = at.home().inbox.savedResponse("remote-path-answer")!;
+    expect(saved.text).toBe(text);
+    expect(at.home().inbox.get(saved.wakeId)?.facts).toMatchObject({
+      kind: "requested-response",
+      contributorTask: taskId,
+      excerpt: text,
+    });
+    await at.home().placed.answer(at.deviceId, "inf:work:report", {
+      task: taskId,
+      callId: "later-progress",
+      text: "The checks are still running.",
+    });
+    await at.restartHome();
+    await at.inReach(taskId);
+    expect(at.home().inbox.savedResponse("remote-path-answer")).toEqual(saved);
+    await at.home().placed.answer(at.deviceId, "inf:work:report", submitted);
+    expect(
+      at
+        .home()
+        .inbox.allFor("firstmate")
+        .filter((row) => row.facts?.kind === "requested-response"),
+    ).toHaveLength(1);
+    slow.open();
+    await expect.poll(() => at.home().tasks.get(taskId)?.activity).toBe("idle");
+    expect(at.home().inbox.savedResponse("remote-path-answer")?.text).toBe(text);
+    expect(
+      at
+        .home()
+        .inbox.allFor("firstmate")
+        .filter((row) => row.facts?.kind === "response-missing"),
+    ).toEqual([]);
+  });
+
   it("follows a turn a home restart left running there, with no second prompt, and keeps the report it already gave", async () => {
     const at = await world();
     const slow = gate();

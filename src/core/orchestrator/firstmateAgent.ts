@@ -750,11 +750,15 @@ export class FirstmateAgent {
   /** What the running turn did that can be its reply line (./replyLine). */
   private replyFacts: ReplyFacts = {};
   /** Exact inputs waiting for the backend's read witness, in send order. */
-  private pendingReads: { sha: string; asks: string[] }[] = [];
+  private pendingReads: { sha: string; asks: string[]; inboxIds: number[] }[] = [];
   private readThisTurn = new Set<string>();
 
-  private expectRead(text: string, asks: string[]): void {
-    this.pendingReads.push({ sha: createHash("sha256").update(text).digest("hex"), asks });
+  private expectRead(text: string, asks: string[], inboxIds: number[] = []): void {
+    this.pendingReads.push({
+      sha: createHash("sha256").update(text).digest("hex"),
+      asks,
+      inboxIds,
+    });
     this.contextDelivery.expect(text);
   }
 
@@ -2410,11 +2414,17 @@ export class FirstmateAgent {
       },
       // The ask is about the task the captain named, whatever the tool then
       // says about it - a refused settle is still about that task.
-      steerCrewmate: async (taskId, message) => {
+      steerCrewmate: async (taskId, message, response) => {
         this.asks.attach(taskId, "steer_crewmate");
         const delivery = await supervisor.steerCrewmate(taskId, message, "firstmate", {
           via: "tool",
           decision: this.decisions.current() ?? null,
+          response: {
+            mode: response?.mode ?? "expected",
+            sourceSession: this.sessionFile(),
+            ...(response?.card ? { card: response.card } : {}),
+            ...(response?.cancel ? { cancel: response.cancel } : {}),
+          },
           // In a turn that carries the captain's own words, the steer is his
           // guidance: it holds a kept merge until its crewmate declares it (FI3-662).
           captainWords: this.turnOrigin === "captain-turn",
@@ -4316,10 +4326,14 @@ export class FirstmateAgent {
     this.replyFacts = {};
     this.pendingReads = [];
     this.readThisTurn.clear();
-    this.expectRead(input.framed.text, [
-      ...this.delivery.adoptedAsks(),
-      ...(this.turnLiveCaptain?.askId ? [this.turnLiveCaptain.askId] : []),
-    ]);
+    this.expectRead(
+      input.framed.text,
+      [
+        ...this.delivery.adoptedAsks(),
+        ...(this.turnLiveCaptain?.askId ? [this.turnLiveCaptain.askId] : []),
+      ],
+      inboxRows?.map((row) => row.id) ?? [],
+    );
     const localTurn = this.boundLocal;
     this.turnError = undefined;
     this.turnFailureKind = undefined;
@@ -4916,6 +4930,7 @@ export class FirstmateAgent {
       if (!this.running || index < 0) return;
       const [input] = this.pendingReads.splice(index, 1);
       if (!input) return;
+      this.options.inbox.responsesDelivered(input.inboxIds);
       for (const id of input.asks) this.readThisTurn.add(id);
       this.asks.select([...this.readThisTurn].at(-1));
       if (input.asks.includes(this.options.tasks.latestAskId() ?? "")) this.replyFacts = {};

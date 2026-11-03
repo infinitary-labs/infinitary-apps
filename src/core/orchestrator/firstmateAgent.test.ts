@@ -6222,6 +6222,99 @@ describe("Retry on the Firstmate failure card (W1 S9 re-review R1)", () => {
 });
 
 describe("FirstmateAgent durable inbox (design A)", () => {
+  it("INF-2214 delivers a saved answer after busy work and retries handling without duplicating its record", async () => {
+    const f = setup({
+      seedTasks: [
+        {
+          id: "dop208",
+          title: "Find the remover path",
+          status: "idle",
+          sessionFile: "/tmp/dop208.jsonl",
+        },
+      ],
+    });
+    const inbox = new InboxStore(f.db);
+    await f.agent.converse("Find the remover path.");
+    await toolsOf(f.specs).get("steer_crewmate")?.execute("ask-path", {
+      task_id: "dop208",
+      message: "What is the full path to setup/shell-pc/shell-pc-job-host-remove.cmd?",
+    });
+    const request = inbox.pendingResponses("dop208")[0]!;
+    expect(request).toBeDefined();
+    const declaration = {
+      requestId: request.id,
+      responseId: "dop-208-path",
+      status: "answered" as const,
+    };
+    const text = "C:\\FleetCheckSetup\\shell-pc-job-host-remove.cmd";
+    const report = f.crewSpecs[0]?.tools.find((tool) => tool.name === "report");
+    expect(report).toBeDefined();
+    await report!.run({
+      text,
+      responses: [
+        { request_id: request.id, response_id: declaration.responseId, status: "answered" },
+      ],
+    });
+    const saved = inbox.savedResponse(declaration.responseId)!;
+    expect(saved).toMatchObject({ text, contributorTask: "dop208" });
+    await report!.run({ text: "The checks are still running." });
+    f.agent.pokeInbox();
+    expect(f.session.prompts).toHaveLength(1);
+    expect(inbox.savedResponse(declaration.responseId)).toMatchObject({
+      deliveredAt: null,
+      handledAt: null,
+    });
+    // Closing the source lane does not delete the first mate's queued answer.
+    inbox.purgeTask("dop208");
+    f.session.emitTurnEnd("I will look at the answer.");
+    f.session.resolveNextPrompt();
+    await tick();
+    expect(f.session.prompts).toHaveLength(2);
+    expect(f.session.prompts[1]).toContain(text);
+    const delivered = inbox.savedResponse(declaration.responseId)!;
+    expect(delivered.deliveredAt).not.toBeNull();
+    expect(delivered.handledAt).toBeNull();
+    f.session.emitTurnFailed("provider unavailable during handling");
+    f.session.resolveNextPrompt();
+    await tick();
+    expect(inbox.get(saved.wakeId)).toBeDefined();
+    f.db
+      .prepare(
+        "UPDATE inbox SET last_attempt_at = last_attempt_at - 120000, next_attempt_at = next_attempt_at - 120000 WHERE id = ?",
+      )
+      .run(saved.wakeId);
+    f.agent.pokeInbox();
+    await tick();
+    expect(f.session.prompts).toHaveLength(3);
+    expect(f.session.prompts[2]).toContain(text);
+    f.session.emitTurnEnd("Handled the saved path answer.");
+    f.session.resolveNextPrompt();
+    await tick();
+    const handled = inbox.savedResponse(declaration.responseId)!;
+    expect(handled.handledAt).not.toBeNull();
+    expect(inbox.get(saved.wakeId)).toBeUndefined();
+    expect(inbox.submitResponse(declaration, { task: "dop208", session: null }, text)).toEqual(
+      handled,
+    );
+    expect(inbox.allFor(FIRSTMATE_RECIPIENT)).toEqual([]);
+    const evidence = process.env.INFINITARY_RESPONSE_EVIDENCE;
+    if (evidence)
+      writeFileSync(
+        evidence,
+        JSON.stringify(
+          {
+            question: request,
+            submission: saved,
+            delivered,
+            handled,
+            firstMateInputs: f.session.prompts.slice(1),
+          },
+          null,
+          2,
+        ),
+      );
+    f.agent.dispose();
+  });
   it("re-presents an op batch when the consuming turn fails", async () => {
     const { agent, session, db } = setup();
     await agent.converse("start work");

@@ -65,6 +65,7 @@ export type TaskQueryPlace = { computer: string; evidence_folder?: string };
 
 /** What the core's composition supplies beyond the record; each absent says nothing. */
 export type TaskQueryReach = {
+  pendingResponses?: (taskId: string) => import("@shared/crewResponses").ResponseRequest[];
   timeline?: Pick<TaskTimeline, "sources">;
   /** A project's folder on the computer where the first mate lives. */
   projectFolder?: (repoId: string) => string | undefined;
@@ -152,6 +153,8 @@ export type TaskQueryRow = {
   outcome_summary?: string;
   /** Complete report history, chronological, never treated as inferred approval. By-key only. */
   reports?: { event_id: number; text: string }[];
+  /** Durable expectations; ordinary reports do not clear them. By-key only. */
+  response_requests?: import("@shared/crewResponses").ResponseRequest[];
   /** The exact pinned dispatch content, independent of later reports. By-key only. */
   brief?: string;
   /** Saved closing choices/answers from the timeline, not inferred from prose. */
@@ -319,6 +322,9 @@ export function queryTasks(
           ? {
               ...(input.field === "timeline" && reach.timeline
                 ? { timeline: reach.timeline.sources(record.id) }
+                : {}),
+              ...(reach.pendingResponses
+                ? { response_requests: reach.pendingResponses(record.id) }
                 : {}),
               sessions: tasks.sessions(record.id, reach.sessionFolderOf?.(record)),
               ...(record.shape?.escalate_from

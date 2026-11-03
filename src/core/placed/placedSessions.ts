@@ -50,6 +50,7 @@ import {
 import { z } from "zod";
 import { DeviceOutOfReachError, type WorkDeviceContact } from "../connection/connection";
 import { contractChange, listsChange } from "../connection/contractChanges";
+import { CREW_RESPONSES } from "../connection/crewResponses";
 import {
   dueIn,
   dueRule,
@@ -187,6 +188,8 @@ export type CrewMachines = {
    * (`report-result.md`); false while the home cannot tell.
    */
   takesResults?(machine: string): boolean;
+  /** Individually correlated responses, saved immediately at home. */
+  takesResponses?(machine: string): boolean;
   /** The computer understands current check declarations and offer-based readiness. */
   takesCheckDeclarations?(machine: string): boolean;
   /**
@@ -497,6 +500,8 @@ type Placed = {
   chain: Promise<unknown>;
   /** Reports answered since the last kept turn's end, given again to an adopting turn. */
   replays: CallLine[];
+  /** The existing event lane waits for adopting report callbacks to commit. */
+  replaying?: Promise<void>;
   /** It was caught up the last time the lane was let go. */
   released: boolean;
   /** Close was asked of the computer, and answered. */
@@ -617,6 +622,13 @@ export class PlacedSessions implements PlacedWork, CrewMachines {
 
   takesResults(machine: string): boolean {
     return this.takesCurrentWork(machine);
+  }
+
+  takesResponses(machine: string): boolean {
+    return (
+      this.takesCurrentWork(machine) &&
+      listsChange(this.options.devices.version(machine)?.changes, CREW_RESPONSES)
+    );
   }
 
   takesKnowledge(machine: string): boolean {
@@ -1048,7 +1060,9 @@ export class PlacedSessions implements PlacedWork, CrewMachines {
     placed.replays = placed.replays.filter((replay) => replay.after > placed.through);
     if (replays.length > 0)
       session.onceHeard(() => {
-        for (const line of replays) this.replay(session, line);
+        placed.replaying = (async () => {
+          for (const line of replays) await this.replay(session, line);
+        })();
       });
     return session;
   }
@@ -1258,6 +1272,7 @@ export class PlacedSessions implements PlacedWork, CrewMachines {
     if (!records.some((record) => record.seq > placed.through))
       return { through: placed.through, kept: placed.kept };
     const session = await this.live(placed);
+    await placed.replaying;
     for (const record of records) {
       if (record.seq <= placed.through) continue;
       // A gap: the computer sends on from the number after `through`.
@@ -1299,7 +1314,7 @@ export class PlacedSessions implements PlacedWork, CrewMachines {
         this.writeKept(placed);
       }
       for (const line of placed.replays.filter((replay) => replay.after === placed.through))
-        this.replay(session, line);
+        await this.replay(session, line);
     }
     if (!placed.released) this.release(placed.deviceId);
     return { through: placed.through, kept: placed.kept };
@@ -1560,17 +1575,15 @@ export class PlacedSessions implements PlacedWork, CrewMachines {
   }
 
   /** A report a turn gave before this Mac restarted, given to the turn this Mac follows now. */
-  private replay(session: PlacedSession, line: CallLine): void {
+  private async replay(session: PlacedSession, line: CallLine): Promise<void> {
     if (!line.report) return;
     const { text, summary, declared } = line.report;
     try {
-      void Promise.resolve(
-        session.callbacks?.onReport?.(
-          text,
-          summary,
-          declared as Parameters<NonNullable<typeof session.callbacks.onReport>>[2],
-        ),
-      ).catch(() => undefined);
+      await session.callbacks?.onReport?.(
+        text,
+        summary,
+        declared as Parameters<NonNullable<typeof session.callbacks.onReport>>[2],
+      );
     } catch {
       // Refused again now: it was refused or answered then, and the crewmate read that.
     }

@@ -280,6 +280,29 @@ describe("the crewmate tool spec", () => {
     ).toContain("authorizes nothing");
   });
 
+  it("INF-2214 carries individually named responses identically on Pi and Claude", async () => {
+    const declared: unknown[] = [];
+    const delegate = {
+      ...crewmateToolDelegate(),
+      onReport: (_text: string, _summary?: string, declaration?: unknown) => {
+        declared.push(declaration);
+        return "saved and queued";
+      },
+    };
+    const params = {
+      text: "C:\\FleetCheckSetup\\shell-pc-job-host-remove.cmd",
+      responses: [{ request_id: "path-request", response_id: "path-answer", status: "answered" }],
+    };
+    const pi = createCrewmateTools(delegate).find((tool) => tool.name === "report");
+    const claude = claudeCrewmateTools(delegate).find((tool) => tool.name === "report");
+    await runPi(pi as PiTool, params);
+    await runClaude(claude as ClaudeTool, params);
+    const expected = {
+      responses: [{ requestId: "path-request", responseId: "path-answer", status: "answered" }],
+    };
+    expect(declared).toEqual([expected, expected]);
+  });
+
   it("INF-1554 F4: omits empty recovery findings on both runtimes but carries real findings", async () => {
     const declared: Record<string, unknown>[] = [];
     const delegate = {

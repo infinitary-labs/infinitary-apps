@@ -1827,6 +1827,12 @@ class Replay {
       // meant, so the replay exercises today's tool with what the captain
       // actually asked for.
       if (call.name === "spawn_crewmate") recordedShape(args);
+      // These recordings predate correlated response expectations, just as
+      // their spawns predate care. Preserve that recorded contract instead
+      // of inventing questions their fixed model outputs could never answer.
+      // An explicitly recorded response policy is never replaced.
+      if (call.name === "steer_crewmate" && args.response_mode === undefined)
+        args.response_mode = "guidance-only";
       const recorded = call.result;
       let text: string;
       let isError: boolean;

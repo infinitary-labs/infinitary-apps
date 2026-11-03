@@ -67,6 +67,7 @@ import {
   checksSpanWords,
 } from "@shared/checksSpan";
 import { isClientIssueReason } from "@shared/claudeClient";
+import { crewResponseSchema, type ResponsePolicy } from "@shared/crewResponses";
 import { type CrewSpeed, type SpeedSelection, speedNote } from "@shared/crewSpeed";
 import type { CrewSendResult } from "@shared/crewTranscript";
 import { isCustomApiProvider } from "@shared/customApi";
@@ -496,6 +497,8 @@ import {
   laneText,
   laneTurnText,
   outageFailedWake,
+  PENDING_RESPONSES_END,
+  PENDING_RESPONSES_OPENING,
   type ReviewVerdictFacts,
   renderWake,
   replyWordsSpan,
@@ -7247,6 +7250,14 @@ export class CrewSupervisor {
         );
         served += `\n\n${directions}`;
       }
+      // A request already in this prompt's guidance is served there once.
+      // Only other pending requests need the recovery-context snapshot.
+      const servedInboxIds = new Set(ids);
+      const pendingResponses = this.options.inbox
+        .pendingResponses(task.id)
+        .filter((request) => !servedInboxIds.has(request.inboxId));
+      if (pendingResponses.length)
+        served += `${PENDING_RESPONSES_OPENING}${task.key || task.id} after context loss):\n${capWithOverflow(pendingResponses.map((request) => `${request.id}: ${request.body}`).join("\n\n"), "pending-responses")}${PENDING_RESPONSES_END}`;
       const assignment = await this.refreshReview(task);
       if (assignment)
         served += `\n\nCurrent review assignment (supersedes earlier heads):\n${assignment}`;
@@ -7397,7 +7408,13 @@ export class CrewSupervisor {
     if (declared?.files && declared.files.length > 0) {
       const { files, ...rest } = declared;
       return verifyHandoverFiles(crewmateHandoverDir(this.options.paths, task.id), files).then(() =>
-        this.recordReportBody(task, `${text}\n\n${handedFilesLine(task, files)}`, summary, rest),
+        this.recordReportBody(
+          task,
+          `${text}\n\n${handedFilesLine(task, files)}`,
+          summary,
+          rest,
+          text,
+        ),
       );
     }
     return this.recordReportBody(task, text, summary, declared);
@@ -7409,13 +7426,16 @@ export class CrewSupervisor {
     text: string,
     summary?: string,
     declared?: ReportDeclaration,
+    responseText = text,
   ): string | Promise<string> {
     if (declared?.validation)
-      return this.recordValidationReport(task, text, summary, declared).then((receipt) => {
-        this.cards.closeOut({ kind: "crewmate", taskId: task.id }, "report");
-        return receipt;
-      });
-    const receipt = this.recordExplicitReport(task, text, summary, declared);
+      return this.recordValidationReport(task, text, summary, declared, responseText).then(
+        (receipt) => {
+          this.cards.closeOut({ kind: "crewmate", taskId: task.id }, "report");
+          return receipt;
+        },
+      );
+    const receipt = this.recordExplicitReport(task, text, summary, declared, responseText);
     // The report is the crewmate's close-out for its new cards: they reach
     // the stage now. A card the captain already had waits for the turn's
     // end, so it comes back once, with the crewmate's last word (INF-926).
@@ -7545,6 +7565,7 @@ export class CrewSupervisor {
     const outage = this.options.inbox.outage(task.id);
     const unread = new Set(this.undeliveredSteerRows(task));
     const inFlight = task.inFlightInboxIds;
+    const consumed = inFlight.filter((id) => !unread.has(id));
     task.inFlightInboxIds = [];
     if (inFlight.length > 0) {
       if (providerError && !signInFailure) {
@@ -7566,7 +7587,8 @@ export class CrewSupervisor {
         // go back on the lane, due now, and the delivery below serves them
         // as the next turn - the Firstmate's own rule for its steers
         // (`redeliverUndeliveredSteers`).
-        this.options.inbox.ack(inFlight.filter((id) => !unread.has(id)));
+        // Acknowledge below, together with any missing-response obligation,
+        // after the turn's report has its durable reference.
         this.options.inbox.reparkUndelivered(inFlight.filter((id) => unread.has(id)));
       }
     }
@@ -7587,6 +7609,7 @@ export class CrewSupervisor {
     if (report) task.lastCompleteText = report;
     // The record carries the report (task-system P0): crew_status reads the
     // outcome column after a restart, when no runtime remembers it.
+    let reportEventId: number | undefined;
     if (turnError) {
       // A typed backend's provider failure keeps its class for the record,
       // so the feed line reads the class, never the words.
@@ -7600,13 +7623,32 @@ export class CrewSupervisor {
       }
       this.options.tasks.recordTurnFailure(task.id, turnError, typed);
     } else if (report) {
-      this.options.tasks.recordReport(task.id, {
+      reportEventId = this.options.tasks.recordReport(task.id, {
         text: report,
         ...(candidateSummary ? { summary: candidateSummary } : {}),
         ...(declared ? { declared } : {}),
       });
       // A declared wait places the captain gate before the sort reads it.
       if (declared?.wait) this.ladder.syncCaptainGate(task.id, this.now());
+    }
+    if (!providerError && !cutByUpdate && consumed.length) {
+      const missing = this.options.inbox.transaction(() => {
+        // The ordered remote event lane supplies the same completed-turn
+        // boundary. An interrupted, paused or failed turn proves no miss.
+        const ids =
+          !turnError && !options.interrupted && !paused
+            ? this.options.inbox.noteMissingResponses(task.id, consumed, {
+                id: `${task.id}:${task.turnStartedAt}:${consumed.join(",")}`,
+                since: task.turnStartedAt,
+                session: task.session?.recordPath(),
+                reportEventId,
+                ...(report ? { report } : {}),
+              })
+            : [];
+        this.options.inbox.ack(consumed);
+        return ids;
+      });
+      if (missing.length) this.hooks.pokeInbox?.();
     }
     this.options.tasks.setActivity(task.id, "idle");
     this.options.tasks.markIdle(task.id, { providerFailed: providerError !== undefined });
@@ -8353,8 +8395,29 @@ export class CrewSupervisor {
       images?: TurnImage[];
       /** The message's own copies of `images`, kept when it was accepted. */
       attachments?: AttachmentRef[];
+      /** First mate tool messages expect answers; host/captain steers do not. */
+      response?: ResponsePolicy;
     } = {},
   ): Promise<SteerDelivery> {
+    const record = this.options.tasks.get(taskId);
+    if (source.response && actor !== "firstmate")
+      throw new Error("Only a first mate message creates or cancels its response expectations.");
+    if (
+      source.response?.mode === "expected" &&
+      record?.deviceId &&
+      !this.options.machines?.takesResponses?.(record.deviceId)
+    )
+      throw new Error(
+        "Update Infinitary on the work computer before requesting a tracked response. Nothing was sent.",
+      );
+    for (const id of source.response?.cancel ?? []) {
+      const request = this.options.inbox.responseRequest(id);
+      if (request?.state === "answered")
+        throw new Error("An answered request cannot be cancelled. Nothing was sent.");
+      if (request?.targetTask !== taskId)
+        throw new Error(`Response request ${id} does not belong to this task. Nothing was sent.`);
+    }
+    if (source.response?.card) this.checkResponseCard(source.response.card);
     const steer: SteerSource = {
       actor,
       via: source.via ?? "tool",
@@ -8363,7 +8426,14 @@ export class CrewSupervisor {
       ...(source.panel ? { panel: source.panel } : {}),
       ...(source.captainWords ? { captainWords: true } : {}),
     };
-    return this.steerInternal(taskId, message, steer, source.images, source.attachments);
+    return this.steerInternal(
+      taskId,
+      message,
+      steer,
+      source.images,
+      source.attachments,
+      source.response,
+    );
   }
 
   /**
@@ -8377,6 +8447,7 @@ export class CrewSupervisor {
     given: SteerSource,
     images?: TurnImage[],
     attachments?: readonly AttachmentRef[],
+    response?: ResponsePolicy,
   ): Promise<SteerDelivery> {
     let message = renderWake(body);
     // A reply the captain typed under a card: the record reads the captain's words in the message.
@@ -8414,7 +8485,37 @@ export class CrewSupervisor {
         message = renderWake(marked);
         durable = withPictures(marked);
       }
-      return this.enqueueSteer(taskId, durable);
+      return this.options.inbox.transaction(() => {
+        for (const id of response?.cancel ?? []) this.options.inbox.cancelResponse(id);
+        if (response?.cancel?.length) {
+          durable = {
+            facts: {
+              kind: "responses-cancelled",
+              requests: response.cancel,
+              guidance: typeof durable === "string" ? durable : durable.facts,
+            },
+            ...(typeof durable !== "string" && durable.ways ? { ways: durable.ways } : {}),
+          };
+          message = renderWake(durable);
+        }
+        if (response?.mode !== "expected") return this.enqueueSteer(taskId, durable);
+        const requested = this.options.inbox.requestResponse(
+          taskId,
+          renderWake(body),
+          {
+            session: response.sourceSession,
+            message: given.decision,
+            card: response.card,
+            targetSession:
+              this.tasks.get(taskId)?.session?.recordPath() ??
+              this.options.tasks.get(taskId)?.sessionFile,
+          },
+          durable,
+        );
+        durable = requested.body;
+        message = renderWake(durable);
+        return requested.inboxId;
+      });
     };
     const task = this.tasks.get(taskId);
     if (task?.session && !task.cancelled) {
@@ -13303,6 +13404,7 @@ export class CrewSupervisor {
     text: string,
     summary: string | undefined,
     declared: ReportDeclaration,
+    responseText: string,
   ): Promise<string> {
     const input = keptValidationInputSchema.parse(declared.validation);
     const record = this.options.tasks.get(task.id);
@@ -13365,11 +13467,12 @@ export class CrewSupervisor {
       input.kind !== "run" &&
       input.kind !== "review" &&
       !declaration.needsFirstmate &&
+      !declaration.responses?.length &&
       !declaration.wait &&
       !declaration.finished
     )
       return `Validation ${input.kind} recorded at evidence revision ${revision}. This records facts, not a finished-work report or permission. Continue the task; report when the first mate must act.`;
-    return `${this.recordExplicitReport(task, text, summary, declaration)} Validation recorded at evidence revision ${revision}.`;
+    return `${this.recordExplicitReport(task, text, summary, declaration, responseText)} Validation recorded at evidence revision ${revision}.`;
   }
 
   /**
@@ -13387,6 +13490,7 @@ export class CrewSupervisor {
     text: string,
     summary?: string,
     declared?: ReportDeclaration,
+    responseText = text,
   ): string {
     const report = text.trim();
     if (!report) {
@@ -13403,8 +13507,15 @@ export class CrewSupervisor {
     if (declaration?.finished && this.askEnding.crewmateStep(task.id)) {
       throw new Error(CREWMATE_ANSWER_ASK);
     }
-    const { recordedReleases, linked } = this.options.tasks.atomic(
+    const { recordedReleases, linked, responseReceipts } = this.options.tasks.atomic(
       () => ({
+        responseReceipts: (declaration?.responses ?? []).map((response) =>
+          this.options.inbox.submitResponse(
+            response,
+            { task: task.id, session: task.session?.recordPath() ?? null },
+            responseText,
+          ),
+        ),
         recordedReleases: declaration?.firstRelease
           ? this.options.tasks.recordFirstRelease(task.id, declaration.firstRelease)
           : undefined,
@@ -13416,7 +13527,15 @@ export class CrewSupervisor {
     task.explicitSummary = summary?.replace(/\s+/g, " ").trim() || undefined;
     task.explicitDeclared = declaration;
     this.noteTaskActivity(task);
+    if (responseReceipts.length) this.hooks.pokeInbox?.();
     const receipt = ["Reported."];
+    if (responseReceipts.length)
+      receipt.push(
+        ...responseReceipts.map(
+          (response) =>
+            `Saved response ${response.responseId}; first mate notification ${response.handledAt !== null ? "already handled (delivery handling, not correctness)" : response.deliveredAt !== null ? "delivered to its session; handling still pending" : "queued immediately (not yet confirmed delivered or handled)"}. Later reports do not replace it.`,
+        ),
+      );
     if (recordedReleases !== undefined)
       receipt.push(
         `Recorded ${recordedReleases} first-release attribution(s); existing attributions kept unless explicitly corrected.`,
@@ -13475,6 +13594,27 @@ export class CrewSupervisor {
     return receipt.join(" ");
   }
 
+  /** A response's optional captain reference is factual routing, never edit authority. */
+  private checkResponseCard(reference: NonNullable<ResponsePolicy["card"]>): void {
+    const card = this.options.cardStore.get(reference.id);
+    if (
+      !card ||
+      card.lifecycleId !== reference.lifecycle ||
+      !this.options.cardStore
+        .observations(reference.id)
+        .some(
+          (observation) =>
+            observation.lifecycleId === reference.lifecycle &&
+            observation.kind === "message_ref" &&
+            observation.payload.messageId === reference.messageId &&
+            observation.payload.who === "captain",
+        )
+    )
+      throw new Error(
+        "The response reference does not name that card's current lifecycle and captain message. Nothing changed; read the current card before resubmitting.",
+      );
+  }
+
   /** A report's declaration, normalized, or a refusal with the fix (FI3-435, FI3-710). */
   private checkDeclaration(
     task: TaskRuntime,
@@ -13515,7 +13655,14 @@ export class CrewSupervisor {
     const result = this.checkResult(task, declared);
     const checkBack = checkBackOf(declared);
     const waitsOn = this.reportedWaits(task, declared);
+    const responses = declared?.responses?.map((response) => crewResponseSchema.parse(response));
+    for (const response of responses ?? []) {
+      const request = this.options.inbox.responseRequest(response.requestId);
+      if (request?.card && !this.options.inbox.savedResponse(response.responseId))
+        this.checkResponseCard(request.card);
+    }
     const needs = {
+      ...(responses?.length ? { responses } : {}),
       ...(waitsOn ? { waitsOn } : {}),
       ...(workWait ? { workWait } : {}),
       ...(recoveryWays ? { recoveryWays } : {}),
@@ -13626,10 +13773,15 @@ export class CrewSupervisor {
     const result = declared?.result;
     if (!schema) return result;
     if (result === undefined) {
-      if (declared?.wait || declared?.needsFirstmate?.trim() || declared?.checkBack)
+      if (
+        declared?.wait ||
+        declared?.needsFirstmate?.trim() ||
+        declared?.checkBack ||
+        declared?.responses?.length
+      )
         return undefined;
       throw new Error(
-        "Report refused: result is missing. Your task declares a result shape (your brief prints it): pass result, a JSON object that fits it, or declare waiting_on_captain, needs_firstmate or check_back.",
+        "Report refused: result is missing. Your task declares a result shape (your brief prints it): pass result, a JSON object that fits it, or declare waiting_on_captain, needs_firstmate, check_back or a correlated response.",
       );
     }
     const refusal = resultRefusal(schema, result);
@@ -13666,6 +13818,7 @@ export class CrewSupervisor {
   taskQueryReach(): TaskQueryReach {
     return {
       timeline: this.options.taskTimeline,
+      pendingResponses: (taskId) => this.options.inbox.pendingResponses(taskId),
       projectFolder: (repoId) => this.options.repos.get(repoId)?.path,
       sessionFolderOf: (record) => ({
         dir: crewmateSessionsDir(this.options.paths, record.id),

@@ -1,6 +1,8 @@
-import { createHash } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
+import type { CrewResponse, ResponseRequest, SavedCrewResponse } from "@shared/crewResponses";
 import { SERVED_ORIGINS, type ServedOrigin, type ServedWakeOrigin } from "@shared/servedFrame";
 import type { TypedWake, WakeBody, WakeEnvelope } from "../orchestrator/wakes";
+import { capWithOverflow } from "../overflow";
 import type { AppDatabase } from "./db";
 import { prepared } from "./statements";
 
@@ -205,6 +207,62 @@ export type InboxRow = WakeEnvelope & {
   /** Turns serving this row that a quit or crash cut short; each was given its attempt back. */
   cuts: number;
 };
+
+type ResponseRequestRow = {
+  id: string;
+  inbox_id: number;
+  source_session: string | null;
+  source_message: string | null;
+  target_task: string;
+  target_session: string | null;
+  body: string;
+  card_json: string | null;
+  state: ResponseRequest["state"];
+  created_at: number;
+};
+
+function responseRequestOf(row: ResponseRequestRow): ResponseRequest {
+  return {
+    id: row.id,
+    inboxId: row.inbox_id,
+    sourceSession: row.source_session,
+    sourceMessage: row.source_message,
+    targetTask: row.target_task,
+    targetSession: row.target_session,
+    body: row.body,
+    card: row.card_json ? JSON.parse(row.card_json) : null,
+    state: row.state,
+    createdAt: row.created_at,
+  };
+}
+
+type SavedCrewResponseRow = {
+  response_id: string;
+  request_id: string;
+  contributor_task: string;
+  contributor_session: string | null;
+  status: CrewResponse["status"];
+  text: string;
+  at: number;
+  wake_id: number;
+  delivered_at: number | null;
+  handled_at: number | null;
+};
+
+function savedCrewResponseOf(row: SavedCrewResponseRow): SavedCrewResponse {
+  return {
+    responseId: row.response_id,
+    requestId: row.request_id,
+    contributorTask: row.contributor_task,
+    contributorSession: row.contributor_session,
+    status: row.status,
+    text: row.text,
+    at: row.at,
+    wakeId: row.wake_id,
+    deliveredAt: row.delivered_at,
+    handledAt: row.handled_at,
+  };
+}
 
 type Row = {
   id: number;
@@ -487,6 +545,12 @@ export class InboxStore {
     if (ids.length === 0) return;
     const now = this.now();
     this.transaction(() => {
+      for (const id of ids)
+        this.db
+          .prepare(
+            "UPDATE crew_responses SET handled_at = COALESCE(handled_at, ?) WHERE wake_id = ?",
+          )
+          .run(now, id);
       this.db
         .prepare(
           `INSERT INTO inbox_acks (recipient, ref, row_id, content_hash, acked_at)
@@ -839,6 +903,217 @@ export class InboxStore {
     return this.db
       .prepare("DELETE FROM inbox WHERE recipient = ? OR (ref = ? AND recipient IN (?, ?))")
       .run(taskId, taskId, SUPERVISION_RECIPIENT, FIRSTMATE_RECIPIENT).changes;
+  }
+
+  /**
+   * Record a first mate message and its response expectation together, before
+   * any transport attempts it. Its inbox identity is also its source message
+   * when the caller has no recorded first mate decision reference.
+   */
+  requestResponse(
+    taskId: string,
+    body: string,
+    source: {
+      session?: string | null;
+      message?: string | null;
+      targetSession?: string | null;
+      card?: ResponseRequest["card"];
+    } = {},
+    guidance: WakeBody = body,
+  ): { request: ResponseRequest; inboxId: number; body: TypedWake } {
+    return this.transaction(() => {
+      const id = randomUUID();
+      const requestBody = typeof guidance === "string" ? guidance : undefined;
+      const wrapped: TypedWake = {
+        facts: {
+          kind: "response-request",
+          requestId: id,
+          guidance: requestBody ?? (guidance as TypedWake).facts,
+        },
+        ...(typeof guidance !== "string" && guidance.ways ? { ways: guidance.ways } : {}),
+      };
+      const inboxId = this.enqueue(taskId, wrapped);
+      // Keep the original words separately from the durable steer envelope;
+      // the storage owner never imports the orchestration renderer.
+      this.db
+        .prepare(
+          "INSERT INTO response_requests (id, inbox_id, source_session, source_message, target_task, target_session, body, card_json, state, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'pending', ?)",
+        )
+        .run(
+          id,
+          inboxId,
+          source.session ?? null,
+          source.message ?? String(inboxId),
+          taskId,
+          source.targetSession ?? null,
+          body,
+          source.card ? JSON.stringify(source.card) : null,
+          this.now(),
+        );
+      return { request: this.responseRequest(id)!, inboxId, body: wrapped };
+    });
+  }
+
+  responseRequest(id: string): ResponseRequest | undefined {
+    const row = this.db.prepare("SELECT * FROM response_requests WHERE id = ?").get(id) as
+      | ResponseRequestRow
+      | undefined;
+    return row ? responseRequestOf(row) : undefined;
+  }
+
+  pendingResponses(taskId: string): ResponseRequest[] {
+    return (
+      this.db
+        .prepare(
+          "SELECT * FROM response_requests WHERE target_task = ? AND state = 'pending' ORDER BY created_at, rowid",
+        )
+        .all(taskId) as ResponseRequestRow[]
+    ).map(responseRequestOf);
+  }
+
+  /** Cancellation is a sender declaration, never inferred from closing work. */
+  cancelResponse(id: string): void {
+    const request = this.responseRequest(id);
+    if (!request) throw new Error(`Unknown response request ${id}. Nothing changed.`);
+    if (request.state === "answered") throw new Error("An answered request cannot be cancelled.");
+    this.db.prepare("UPDATE response_requests SET state = 'cancelled' WHERE id = ?").run(id);
+  }
+
+  savedResponse(id: string): SavedCrewResponse | undefined {
+    const row = this.db.prepare("SELECT * FROM crew_responses WHERE response_id = ?").get(id) as
+      | SavedCrewResponseRow
+      | undefined;
+    return row ? savedCrewResponseOf(row) : undefined;
+  }
+
+  /**
+   * One answer writer. Exact text, authenticated contributor and first mate
+   * row commit together. No task ref on the wake: purgeTask must not erase it.
+   * The returned row id is a queued fact, never a read/handled claim.
+   */
+  submitResponse(
+    input: CrewResponse,
+    contributor: { task: string; session: string | null },
+    text: string,
+  ): SavedCrewResponse {
+    if (!text.trim()) throw new Error("A response needs its exact answer text.");
+    return this.transaction(() => {
+      const previous = this.savedResponse(input.responseId);
+      if (previous) {
+        if (
+          previous.requestId !== input.requestId ||
+          previous.status !== input.status ||
+          previous.contributorTask !== contributor.task ||
+          previous.text !== text
+        )
+          throw new Error(
+            "That response identity already names different content. Corrected answers need a new response identity.",
+          );
+        return previous;
+      }
+      const request = this.responseRequest(input.requestId);
+      if (!request)
+        throw new Error(`Unknown response request ${input.requestId}. Nothing changed.`);
+      if (request.state === "cancelled")
+        throw new Error("That response request was cancelled. Nothing changed.");
+      const at = this.now();
+      const wakeId = this.enqueue(
+        FIRSTMATE_RECIPIENT,
+        {
+          facts: {
+            kind: "requested-response",
+            requestId: request.id,
+            responseId: input.responseId,
+            taskId: request.targetTask,
+            contributorTask: contributor.task,
+            status: input.status,
+            question: capWithOverflow(request.body, "response-question"),
+            excerpt: capWithOverflow(text, "requested-response"),
+          },
+        },
+        undefined,
+        "crewmate-report",
+      );
+      this.db
+        .prepare(
+          "INSERT INTO crew_responses (response_id, request_id, contributor_task, contributor_session, status, text, at, wake_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+        )
+        .run(
+          input.responseId,
+          input.requestId,
+          contributor.task,
+          contributor.session,
+          input.status,
+          text,
+          at,
+          wakeId,
+        );
+      if (input.status === "answered")
+        this.db
+          .prepare("UPDATE response_requests SET state = 'answered' WHERE id = ?")
+          .run(request.id);
+      return this.savedResponse(input.responseId)!;
+    });
+  }
+
+  /** Backend-confirmed receipt of the exact served input, before clean handling. */
+  responsesDelivered(ids: readonly number[]): void {
+    this.transaction(() => {
+      for (const id of ids)
+        this.db
+          .prepare(
+            "UPDATE crew_responses SET delivered_at = COALESCE(delivered_at, ?) WHERE wake_id = ?",
+          )
+          .run(this.now(), id);
+    });
+  }
+
+  /** Called only after the session gave back its unread suffix and ended clean. */
+  noteMissingResponses(
+    taskId: string,
+    consumedIds: readonly number[],
+    turn: { id: string; since: number; report?: string; session?: string; reportEventId?: number },
+  ): number[] {
+    return this.transaction(() =>
+      consumedIds.flatMap((inboxId) => {
+        const row = this.db
+          .prepare(
+            "SELECT * FROM response_requests WHERE inbox_id = ? AND target_task = ? AND state = 'pending'",
+          )
+          .get(inboxId, taskId) as ResponseRequestRow | undefined;
+        if (!row) return [];
+        const answeredThisTurn = this.db
+          .prepare(
+            "SELECT 1 FROM crew_responses WHERE request_id = ? AND contributor_task = ? AND at >= ? LIMIT 1",
+          )
+          .get(row.id, taskId, turn.since);
+        if (answeredThisTurn) return [];
+        const id = this.enqueueWake(
+          FIRSTMATE_RECIPIENT,
+          {
+            facts: {
+              kind: "response-missing",
+              requestId: row.id,
+              taskId,
+              turnId: turn.id,
+              references: {
+                inboxId,
+                startedAt: turn.since,
+                ...(turn.session ? { session: turn.session } : {}),
+                ...(turn.reportEventId !== undefined ? { reportEventId: turn.reportEventId } : {}),
+              },
+              question: capWithOverflow(responseRequestOf(row).body, "response-question"),
+              ...(turn.report
+                ? { report: capWithOverflow(turn.report, "response-turn-report") }
+                : {}),
+            },
+            once: `response-missing:${row.id}:${turn.id}`,
+          },
+          "agent",
+        );
+        return id === null ? [] : [id];
+      }),
+    );
   }
 
   /** One transaction over the inbox and whatever else shares its database. */

@@ -3,7 +3,11 @@ import { encode } from "@toon-format/toon";
 import { afterEach, describe, expect, it } from "vitest";
 import { BROWSER_COMMAND } from "../src/core/browser/commandWords";
 import { DELIVERY_CHANGES, DELIVERY_COMPLETE } from "../src/core/orchestrator/contextDelivery";
-import { renderWake } from "../src/core/orchestrator/wakes";
+import {
+  PENDING_RESPONSES_END,
+  PENDING_RESPONSES_OPENING,
+  renderWake,
+} from "../src/core/orchestrator/wakes";
 import { createEventBashTool } from "../src/core/pi/bashTool";
 import {
   FM_SYSTEM_MARKER,
@@ -14,7 +18,14 @@ import {
   type ScriptedCall,
   startMockProvider,
 } from "./e2e/mockProvider";
-import { captainCardChoice, latestContext, latestServedTurn } from "./e2e/providerRequest";
+import {
+  captainCardChoice,
+  latestContext,
+  latestServedTurn,
+  providerMessages,
+  scriptedResponseInput,
+} from "./e2e/providerRequest";
+import { CI_REPAIR_MARKER } from "./e2e/scenarios/checkRepair";
 import { CONTEXT_OVERFLOW_PROMPT_MARKER, contextOverflow } from "./e2e/scenarios/contextOverflow";
 import { EMIT_CARDS_PROMPT_MARKER, everyCardKind } from "./e2e/scenarios/everyCardKind";
 import {
@@ -276,6 +287,124 @@ async function firstmateAnswer(messages: unknown[], system = FM_SYSTEM_MARKER) {
     text: deltas.map((delta) => delta.content ?? "").join(""),
   };
 }
+
+// INF-2214: new operational notices quote old assignments, not another command.
+const responseNotice = renderWake({
+  facts: {
+    kind: "response-missing",
+    requestId: "request-remover-path",
+    taskId: "remover-path",
+    turnId: "turn-path",
+    question: "What is the full path to the remover?",
+    report: "The file is shell-pc-job-host-remove.cmd.",
+    references: { inboxId: 1, startedAt: 1, reportEventId: 2 },
+  },
+});
+
+describe("correlated response notices in the scripted model", () => {
+  // The failed check-repair provider transcript served a current read with
+  // an older diagnose instruction inside the pending-request snapshot.
+  it("routes the current worker command without replaying pending commands or dropping following assignment text", async () => {
+    const current = `${CI_REPAIR_MARKER} read`;
+    const older = `${CI_REPAIR_MARKER} diagnose`;
+    const following =
+      "\n\nCurrent review assignment (supersedes earlier heads):\nRead the new version.";
+    const input = `${current}${PENDING_RESPONSES_OPENING}SCR-2 after context loss):\nrequest-previous: ${older}${PENDING_RESPONSES_END}${following}`;
+    let seen: string | undefined;
+    server = await startMockProvider({
+      scenarios: [
+        () =>
+          ({ body }) => {
+            seen = providerMessages(body)
+              .filter((message) => message.role === "user")
+              .at(-1)?.text;
+            return {
+              text: seen?.includes(older)
+                ? "Repeated the old diagnosis."
+                : "Read the current checks.",
+            };
+          },
+      ],
+    });
+    const result = await firstmateAnswer([{ role: "user", content: input }], "Worker task");
+    expect(result.text).toBe("Read the current checks.");
+    expect(seen).toBe(current + following);
+    expect(providerMessages(server.requestBodies()[0]!).at(-1)?.text).toBe(input);
+  });
+
+  it("acknowledges a notice without replaying a scenario and retains the actual input", async () => {
+    let scenarioCalls = 0;
+    server = await startMockProvider({
+      scenarios: [
+        () => () => {
+          scenarioCalls += 1;
+          return { calls: [STEER] };
+        },
+      ],
+    });
+    const input = served([], { kind: "wake", origin: "agent", body: responseNotice });
+    const result = await firstmateAnswer([{ role: "user", content: input }]);
+    expect(result.calls).toEqual([]);
+    expect(result.text).not.toBe("");
+    expect(scenarioCalls).toBe(0);
+    expect(latestServedTurn(server.requestBodies()[0]!)?.segments.at(-1)?.body).toBe(
+      responseNotice,
+    );
+  });
+
+  it.each(["chat", "anthropic", "responses"] as const)(
+    "keeps a concurrent captain request and tool results in %s",
+    (dialect) => {
+      const input = served(
+        [],
+        { kind: "wake", origin: "agent", body: responseNotice },
+        { kind: "user", origin: "captain", body: "Keep the request open." },
+      );
+      const content =
+        dialect === "chat"
+          ? input
+          : [{ type: dialect === "responses" ? "input_text" : "text", text: input }];
+      const messages = [
+        { role: "user", content },
+        ...(dialect === "anthropic"
+          ? [
+              {
+                role: "user",
+                content: [
+                  {
+                    type: "tool_result",
+                    tool_use_id: "read-path",
+                    content: "C:\\FleetCheckSetup\\shell-pc-job-host-remove.cmd",
+                  },
+                ],
+              },
+            ]
+          : dialect === "responses"
+            ? [
+                {
+                  type: "function_call_output",
+                  call_id: "read-path",
+                  output: "C:\\FleetCheckSetup\\shell-pc-job-host-remove.cmd",
+                },
+              ]
+            : [{ role: "tool", content: "C:\\FleetCheckSetup\\shell-pc-job-host-remove.cmd" }]),
+      ];
+      const routed = scriptedResponseInput(
+        JSON.stringify(dialect === "responses" ? { input: messages } : { messages }),
+      );
+      expect(routed.onlyNotices).toBe(false);
+      const turn = latestServedTurn(routed.body)!;
+      expect(turn.segments.filter((part) => part.kind !== "context")).toEqual([
+        expect.objectContaining({
+          kind: "user",
+          origin: "captain",
+          body: "Keep the request open.",
+        }),
+      ]);
+      expect(turn.toolResults).toEqual(["C:\\FleetCheckSetup\\shell-pc-job-host-remove.cmd"]);
+    },
+  );
+});
 
 const TITLE = "Three findings rounds on the meter fix";
 const RETRY = { id: "retry", label: "Retry with the findings" };

@@ -46,6 +46,7 @@ import {
   latestServedTurn,
   providerMessages,
   type ServedTurn,
+  scriptedResponseInput,
 } from "./providerRequest";
 import { starterFor } from "./starters";
 
@@ -1233,14 +1234,16 @@ export async function startMockProvider(
       req.on("end", () => {
         // Codex's client compresses its request body (zstd); read it plain.
         const raw = Buffer.concat(chunks);
-        const body = (
+        const rawBody = (
           req.headers["content-encoding"] === "zstd" ? zstdDecompressSync(raw) : raw
         ).toString("utf8");
-        requestBodies.push(body);
-        for (const record of recorders) record(body);
+        requestBodies.push(rawBody);
+        for (const record of recorders) record(rawBody);
         requestHeaders.push(req.headers);
+        const isFirstmate = rawBody.includes(FM_SYSTEM_MARKER);
+        const scriptedInput = scriptedResponseInput(rawBody, !isFirstmate);
+        const body = scriptedInput.body;
         const wantsStream = body.includes('"stream":true') || body.includes('"stream": true');
-        const isFirstmate = body.includes(FM_SYSTEM_MARKER);
         // The body carries the whole conversation history, so every check
         // scopes to what follows the LATEST user message: markers from old
         // turns must not re-trigger, and tool results count only when this
@@ -1638,6 +1641,12 @@ export async function startMockProvider(
               }
             }
           }
+        }
+        // New response notifications quote prior assignments as context,
+        // not as another scripted action. The raw request remains recorded.
+        if (scriptedInput.onlyNotices) {
+          streamText("Response notification handled.");
+          return;
         }
         // A journey's own scenarios (`docs/testing.md`, "A journey's own
         // scenarios"): asked in the order the journey named them, after the

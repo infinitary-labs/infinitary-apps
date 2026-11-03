@@ -10,6 +10,7 @@ import type {
 import type { ChangeRecord } from "@shared/change";
 import type { ChangePresentationRecord } from "@shared/changePresentation";
 import { isRepairAssessment } from "@shared/checkRepair";
+import type { CrewResponse } from "@shared/crewResponses";
 import { reportSummary } from "@shared/feed";
 import { fixedHoldWords, type OverridableHold, overridePasses } from "@shared/holds";
 import type { LastTurn, LastTurnReply } from "@shared/lastTurn";
@@ -428,6 +429,8 @@ function settleRef(record: TaskRecord | undefined, fallbackId: string): SettleTa
  * can raise it again while the Firstmate leaves it unanswered (FI3-714).
  */
 export type ReportDeclaration = {
+  /** Explicit individually correlated answers, saved immediately by the inbox owner. */
+  responses?: CrewResponse[];
   firstRelease?: FirstReleaseReport;
   workWait?: WorkWait;
   recoveryWays?: KeptRecoveryWay[];
@@ -4075,7 +4078,7 @@ export class TaskService {
       /** What the report declared about whose turn follows it (FI3-435). */
       declared?: ReportDeclaration;
     },
-  ): void {
+  ): number {
     const at = this.now();
     const summary = input.summary?.trim() || reportSummary(input.text) || null;
     const recovery = reportRecoveryOf(input.declared);
@@ -4126,7 +4129,7 @@ export class TaskService {
         ...timed,
         updatedAt: at,
       });
-      this.addEvent({
+      return this.addEvent({
         taskId: id,
         at,
         actor: input.actor ?? "crewmate",
@@ -4148,12 +4151,13 @@ export class TaskService {
             : {}),
           ...(result ? { result } : {}),
           ...(input.declared?.firstRelease ? { firstRelease: input.declared.firstRelease } : {}),
+          ...(input.declared?.responses?.length ? { responses: input.declared.responses } : {}),
           ...(recovery.workWait ? { workWait: recovery.workWait } : {}),
           ...(recovery.recoveryWays ? { recoveryWays: recovery.recoveryWays } : {}),
         },
       });
     });
-    run();
+    return run();
   }
 
   /**

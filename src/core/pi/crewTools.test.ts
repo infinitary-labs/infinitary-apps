@@ -411,7 +411,16 @@ describe("crew tools", () => {
   it("steer routes the data plane and surfaces finished-task errors", async () => {
     const { delegate, byName } = toolset();
     await byName.get("steer_crewmate")?.execute("t1", { task_id: "ab12", message: "go blue" });
-    expect(delegate.steerCrewmate).toHaveBeenCalledWith("ab12", "go blue");
+    expect(delegate.steerCrewmate).toHaveBeenCalledWith("ab12", "go blue", { mode: "expected" });
+    // INF-2214: the captain chose expected by default, with an explicit exception.
+    await byName.get("steer_crewmate")?.execute("t2", {
+      task_id: "ab12",
+      message: "For context only.",
+      response_mode: "guidance-only",
+    });
+    expect(delegate.steerCrewmate).toHaveBeenLastCalledWith("ab12", "For context only.", {
+      mode: "guidance-only",
+    });
 
     const failing = toolset({
       steerCrewmate: vi.fn(async () => {
@@ -438,6 +447,7 @@ describe("crew tools", () => {
     expect(delegate.steerCrewmate).toHaveBeenCalledWith(
       "ab12",
       "Use the W-9 from INF-1.\n\nFiles handed to you from INF-1: /t/temp/handover/a.pdf (2 KB).",
+      { mode: "expected" },
     );
     const refused = toolset({
       handFiles: vi.fn(async () => {

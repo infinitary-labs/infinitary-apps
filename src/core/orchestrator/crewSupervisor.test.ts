@@ -238,6 +238,8 @@ import {
   isCardClosedSteer,
   idleNoteNudgeText,
   RESTART_REPLAY_NOTE,
+  PENDING_RESPONSES_END,
+  PENDING_RESPONSES_OPENING,
   POLICY_GUIDANCE_HEADING,
   REVIEW_NEW_HEAD_NEXT,
   REVIEW_PASSED_NEXT,
@@ -31085,5 +31087,187 @@ describe("finding context is not starting code (INF-1964)", () => {
       protocol.dispose();
       await supervisor.disposeAll();
     }
+  });
+});
+
+// INF-2214 accepted plan, piece 1: the recorded remover answer must be
+// submitted before continuing work can replace the ordinary turn report.
+describe("INF-2214 reliable requested answers", () => {
+  it("queues the full path immediately while background work and the answering turn continue", async () => {
+    const crewmate = fakeCrewmate();
+    const h = setup(crewmate, { hasRunningJobs: () => true });
+    const { taskId } = await h.supervisor.commission({
+      title: "Find remover",
+      intent: intentOf("Find the full path on SHELL-PC"),
+    });
+    await tick();
+    const poke = vi.fn();
+    h.supervisor.setFirstmateHooks({ notifyOp: vi.fn(), retryConverse: vi.fn(), pokeInbox: poke });
+    await h.supervisor.steerCrewmate(
+      taskId,
+      "What is the full path to setup/shell-pc/shell-pc-job-host-remove.cmd?",
+      "firstmate",
+      {
+        response: { mode: "expected", sourceSession: "firstmate-session" },
+      },
+    );
+    const request = h.inbox.pendingResponses(taskId)[0]!;
+    expect(request).toMatchObject({ state: "pending", sourceSession: "firstmate-session" });
+    expect(crewmate.steer.mock.calls[0]?.[0]).toContain(request.id);
+    const text = "C:\\FleetCheckSetup\\shell-pc-job-host-remove.cmd";
+    const declaration = {
+      responses: [
+        { requestId: request.id, responseId: "path-answer", status: "answered" as const },
+      ],
+    };
+    const receipt = await h.specs[0]?.onReport?.(text, undefined, declaration);
+    expect(receipt).toContain("queued immediately");
+    expect(poke).toHaveBeenCalledOnce();
+    expect(h.inbox.allFor(FIRSTMATE_RECIPIENT).map((row) => row.facts)).toEqual([
+      expect.objectContaining({
+        kind: "requested-response",
+        excerpt: text,
+        contributorTask: taskId,
+      }),
+    ]);
+    await h.specs[0]?.onReport?.("The checks are still running.");
+    crewmate.emit({ type: "turn_end", taskId });
+    crewmate.finishPrompt();
+    await tick();
+    expect(h.inbox.savedResponse("path-answer")?.text).toBe(text);
+    expect(h.inbox.allFor(FIRSTMATE_RECIPIENT)).toHaveLength(1);
+    expect(h.inbox.pendingResponses(taskId)).toEqual([]);
+    h.supervisor.disposeAll();
+  });
+
+  it("reports a consumed clean turn's missing answer but not guidance-only or unread tail steers", async () => {
+    const crewmate = fakeCrewmate();
+    const h = setup(crewmate);
+    const { taskId } = await h.supervisor.commission({
+      title: "Find remover",
+      intent: intentOf("Find the full path"),
+    });
+    await tick();
+    await h.supervisor.steerCrewmate(taskId, "Please keep checking.", "firstmate", {
+      response: { mode: "guidance-only" },
+    });
+    expect(h.inbox.pendingResponses(taskId)).toEqual([]);
+    await h.supervisor.steerCrewmate(taskId, "What is its full path?", "firstmate", {
+      response: { mode: "expected" },
+    });
+    const consumed = h.inbox.pendingResponses(taskId)[0]!;
+    crewmate.holdSteers();
+    await h.supervisor.steerCrewmate(taskId, "Did the tests finish?", "firstmate", {
+      response: { mode: "expected" },
+    });
+    const unread = h.inbox.pendingResponses(taskId)[1]!;
+    await h.specs[0]?.onReport?.("The checks are still running.");
+    crewmate.emit({ type: "turn_end", taskId });
+    crewmate.finishPrompt();
+    await tick();
+    expect(h.inbox.allFor(FIRSTMATE_RECIPIENT).map((row) => row.facts)).toEqual([
+      expect.objectContaining({ kind: "response-missing", requestId: consumed.id }),
+    ]);
+    const nextInput = crewmate.promptCalls[1]!;
+    expect(nextInput).toContain(unread.id);
+    // The Claude refusal recovery journey requires kept guidance once.
+    // Serving its current request does not need another copy in context.
+    expect(nextInput.split(unread.body).length - 1).toBe(1);
+    const snapshot = nextInput.slice(nextInput.indexOf(PENDING_RESPONSES_OPENING));
+    expect(snapshot).toContain(consumed.id);
+    expect(snapshot).not.toContain(unread.id);
+    expect(snapshot).toContain(PENDING_RESPONSES_END);
+    expect(h.inbox.pendingResponses(taskId)).toHaveLength(2);
+    h.supervisor.disposeAll();
+  });
+
+  it("keeps card references factual, refuses stale lifecycles, and sends explicit cancellation without new expectations", async () => {
+    const crewmate = fakeCrewmate();
+    const h = setup(crewmate);
+    const { taskId } = await h.supervisor.commission({
+      title: "Find remover",
+      intent: intentOf("Find the full path"),
+    });
+    await tick();
+    const cardId = await h.specs[0]?.onCard?.({
+      id: "path-question",
+      title: "Find the remover",
+      body: "<p>The target path is being checked.</p>",
+      actions: [],
+    });
+    expect(cardId).toBeDefined();
+    const thread = h.supervisor.replyToCard(cardId!, "What is the full path?");
+    const card = h.cardStore.get(cardId!)!;
+    const reference = {
+      id: cardId!,
+      lifecycle: card.lifecycleId!,
+      messageId: thread.messages.findLast((message) => message.who === "captain")!.id,
+    };
+    await h.supervisor.steerCrewmate(taskId, "Answer the path question.", "firstmate", {
+      response: { mode: "expected", card: reference },
+    });
+    const first = h.inbox.pendingResponses(taskId)[0]!;
+    expect(first.card).toEqual(reference);
+    const response = {
+      requestId: first.id,
+      responseId: "card-path-answer",
+      status: "answered" as const,
+    };
+    await h.specs[0]?.onReport?.("The full path is verified.", undefined, {
+      responses: [response],
+    });
+    await h.supervisor.steerCrewmate(taskId, "Verify the result too.", "firstmate", {
+      response: { mode: "expected", card: reference },
+    });
+    const pending = h.inbox.pendingResponses(taskId)[0]!;
+    // The existing card writer records a new lifecycle; the old question
+    // reference cannot silently answer a different reopened card.
+    h.cardStore.upsert({ ...card, lifecycleId: "reopened-lifecycle" });
+    await expect(
+      Promise.resolve().then(() =>
+        h.specs[0]?.onReport?.("A different result.", undefined, {
+          responses: [{ requestId: pending.id, responseId: "stale-answer", status: "answered" }],
+        }),
+      ),
+    ).rejects.toThrow("current lifecycle");
+    expect(h.inbox.savedResponse("stale-answer")).toBeUndefined();
+    // A retransmission of an already saved answer returns the prior result.
+    await h.specs[0]?.onReport?.("The full path is verified.", undefined, {
+      responses: [response],
+    });
+    expect(h.inbox.allFor(FIRSTMATE_RECIPIENT)).toHaveLength(1);
+    await h.supervisor.steerCrewmate(
+      taskId,
+      "That question no longer needs an answer.",
+      "firstmate",
+      { response: { mode: "guidance-only", cancel: [pending.id] } },
+    );
+    expect(h.inbox.pendingResponses(taskId)).toEqual([]);
+    expect(crewmate.steer.mock.calls.at(-1)?.[0]).toContain(
+      `cancelled response requests ${pending.id}`,
+    );
+    h.supervisor.disposeAll();
+  });
+
+  it.each(["provider", "interrupt"] as const)("does not call a %s-cut turn a missing response", async (cut) => {
+    const crewmate = fakeCrewmate();
+    const h = setup(crewmate);
+    const { taskId } = await h.supervisor.commission({
+      title: "Find remover",
+      intent: intentOf("Find the full path"),
+    });
+    await tick();
+    await h.supervisor.steerCrewmate(taskId, "What is its full path?", "firstmate", {
+      response: { mode: "expected" },
+    });
+    if (cut === "provider") crewmate.emit({ type: "turn_failed", taskId, error: "provider unavailable" });
+    else await h.supervisor.interruptCrewmate(taskId, "interrupt");
+    crewmate.finishPrompt();
+    await tick();
+    expect(
+      h.inbox.allFor(FIRSTMATE_RECIPIENT).filter((row) => row.facts?.kind === "response-missing"),
+    ).toEqual([]);
+    expect(h.inbox.pendingResponses(taskId)).toHaveLength(1);
+    h.supervisor.disposeAll();
   });
 });

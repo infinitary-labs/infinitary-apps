@@ -5,7 +5,14 @@ import {
   type ServedSegmentInput,
 } from "@shared/servedFrame";
 import { decode } from "@toon-format/toon";
-import { renderWake, type WakeChoice } from "../../src/core/orchestrator/wakes";
+import {
+  PENDING_RESPONSES_END,
+  PENDING_RESPONSES_OPENING,
+  REQUESTED_RESPONSE_OPENING,
+  RESPONSE_MISSING_OPENING,
+  renderWake,
+  type WakeChoice,
+} from "../../src/core/orchestrator/wakes";
 import { type CheckSnapshot, checkSnapshotSchema } from "../../src/shared/checkSnapshot";
 
 export type ProviderContext = {
@@ -306,4 +313,69 @@ export function checkFactsSnapshot(reading: string): CheckSnapshot | undefined {
     problem: facts.problem ?? undefined,
     absenceDeclared: false,
   });
+}
+
+/**
+ * INF-2214: these generic operational notices acknowledge delivery, not a
+ * new assignment. Preserve the raw provider request for evidence; only the
+ * deterministic stand-in's scenario routing omits their quoted old commands.
+ */
+export function scriptedResponseInput(
+  body: string,
+  worker = false,
+): { body: string; onlyNotices: boolean } {
+  const notice = (segment: ServedSegment) =>
+    segment.kind === "wake" &&
+    [REQUESTED_RESPONSE_OPENING, RESPONSE_MISSING_OPENING].some((opening) =>
+      segment.body.startsWith(opening),
+    );
+  const latest =
+    latestServedTurn(body)?.segments.filter((segment) => segment.kind !== "context") ?? [];
+  const onlyNotices = !worker && latest.length > 0 && latest.every(notice);
+  let changed = false;
+  const text = (value: string): string => {
+    // A worker's snapshot can quote earlier commands. It is context, not
+    // another current instruction. Keep following review-assignment text.
+    let input = value;
+    if (worker) {
+      const start = input.indexOf(PENDING_RESPONSES_OPENING);
+      const end = start < 0 ? -1 : input.indexOf(PENDING_RESPONSES_END, start);
+      if (end >= 0) {
+        input = input.slice(0, start) + input.slice(end + PENDING_RESPONSES_END.length);
+        changed = true;
+      }
+    }
+    const segments = parseServedInput(input);
+    if (!segments?.some(notice)) return input;
+    changed = true;
+    return frameServedInput(
+      segments
+        .filter((segment) => !notice(segment))
+        .map(
+          (segment): ServedSegmentInput =>
+            segment.kind === "context"
+              ? { kind: "context", body: segment.body }
+              : segment.kind === "user"
+                ? { kind: "user", origin: "captain", body: segment.body }
+                : {
+                    kind: "wake",
+                    origin: segment.origin === "captain" ? "agent" : (segment.origin ?? "agent"),
+                    body: segment.body,
+                  },
+        ),
+    ).text;
+  };
+  const request = JSON.parse(body) as { messages?: Item[]; input?: Item[] | string };
+  const items = request.messages ?? (Array.isArray(request.input) ? request.input : []);
+  for (const item of items) {
+    if (item.role !== "user") continue;
+    if (typeof item.content === "string") item.content = text(item.content);
+    else if (Array.isArray(item.content))
+      item.content = (item.content as Part[]).map((part) =>
+        part.type && TEXT_PARTS.has(part.type) && typeof part.text === "string"
+          ? { ...part, text: text(part.text) }
+          : part,
+      );
+  }
+  return { body: changed ? JSON.stringify(request) : body, onlyNotices };
 }

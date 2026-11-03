@@ -37,6 +37,7 @@ import {
 } from "@shared/work";
 import type { CrewmateBrowser } from "../browser/taskBrowsers";
 import { contractChange, listsChange } from "../connection/contractChanges";
+import { CREW_RESPONSES } from "../connection/crewResponses";
 import { WorkRequestAbortedError } from "../devices/homeLink";
 import { PLACED_RELEASE_FILE_REFUSAL } from "../forge";
 import {
@@ -1337,6 +1338,13 @@ export class SessionHost {
         this.withDeadline(
           "inf:work:report",
           async (signal) => {
+            if (
+              declared?.responses?.length &&
+              !listsChange(this.options.homeChanges?.(), CREW_RESPONSES)
+            )
+              throw new Error(
+                "The home cannot save correlated responses yet. Nothing was sent; update Infinitary at home before submitting this answer.",
+              );
             if (
               declared?.firstRelease &&
               !listsChange(this.options.homeChanges?.(), FIRST_RELEASE_REPORTS)

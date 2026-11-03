@@ -129,6 +129,47 @@ The cut-off contract on crew lanes (W1 S8; `docs/quota.md`, "Typed cut-offs"): a
 - **Nothing moves a crewmate on its own.**
   The first mate decides any re-routing with its existing tools (a follow-up on another model).
 
+## Requested crewmate responses
+
+A first mate message sent through `steer_crewmate` expects a response by default (`response_mode: expected`); `guidance-only` explicitly opts out.
+Dispatch briefs, captain messages and host operational wakes retain their existing semantics.
+`InboxStore.requestResponse` commits the original message and its expectation together, before dispatch, retaining request identity, source message and session, target task and session, and original words.
+A delivery failure retains that same inbox row and request identity; it never claims the crewmate read the request.
+An optional `response_context` names an exact card lifecycle and captain message; the host validates that reference on request and answer without granting card-edit authority.
+Pending expectations survive task closure, restart and compaction and remain readable in a by-key `tasks` read as `response_requests`.
+The next host-started turn serves each current request in its guidance once and carries other pending requests in a recovery-context snapshot, selected by inbox identity rather than words.
+The snapshot has an explicit end marker before any refreshed review assignment: earlier requests are context, not another current command, and the complete provider input remains intact.
+The first mate may explicitly cancel named pending requests for that task with `cancel_response_requests`; neither a report nor closing a task silently cancels one.
+The cancellation rides its durable guidance as a typed fact, so the crewmate knows which expectations ended.
+
+`report.responses` explicitly names every request answered, a stable response identity and `answered` or `not-yet-answered` status.
+No ordinary report, next-report ordering, id mentioned in prose, or punctuation implies an answer.
+`InboxStore.submitResponse` is the answer writer: it commits the exact text, authenticated contributor and one typed first mate inbox row together, at the tool call, not the turn's end.
+Multiple references in one report commit together or not at all.
+`not-yet-answered` notifies the first mate and leaves the request pending; a final answer clears only its explicitly named request.
+Retries reuse the response identity and return its saved record; a correction uses a new identity and appends rather than replacing the earlier answer.
+An authenticated contributor may answer a named request for another task; that is no grant to edit its card or execute an effect.
+Long answers stay exact in the database and use the existing overflow owner in served wakes.
+The wake has no task ref, so the originating worker's close cannot purge it.
+Later ordinary reports, still-running jobs and report sorting cannot replace or suppress this row.
+
+Saved, queued, delivered to a session and handled are separate facts.
+A successful submission reports saved and queued, never read or handled.
+`responsesDelivered` records the backend's witness that it read the exact served first mate input; an attempted prompt alone records none.
+The inbox's clean acknowledgement records handling, not correctness or understanding.
+The existing first mate drain, account holds, provider-failure retry and boot recovery deliver these rows at least once; stable response identity prevents duplicate saved answers.
+
+After a successful turn, the supervisor subtracts the session's unread steer suffix before checking consumed response requests.
+A consumed request with no matching response from that turn queues `response-missing` once for that request and turn, retaining the pending expectation and the turn's report as context, not as an inferred answer.
+Its references name the consumed inbox row, report event and session's recorded report/reply calls; queuing that obligation and acknowledging consumed guidance commit together.
+Unconsumed steers, provider failures and interrupted or update-paused turns are not missing-response evidence.
+The remote session's ordered event lane supplies the same completed-turn boundary; an incomplete stream supplies none.
+Adoption and event replay await asynchronous report callbacks before consuming later events, so recovery cannot declare an answer missing while its saved callback is still restoring it.
+The first mate decides whether to wait, request a repost or reassign, without a second queue, grace timer or recovery-count rule.
+`crew-responses` is the named work-contract change: the home refuses tracked steers to an older work computer, and a work computer refuses correlated reports to an older home without dropping their references.
+Both model backends use the same tool schema and writer.
+Shared card answers will use this same writer when card collaboration is implemented; existing card ownership and consent remain unchanged here.
+
 ## Taking back a message
 
 A sender may take back or rewrite a message no turn was handed yet, and never one a turn holds.

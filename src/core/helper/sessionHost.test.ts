@@ -483,6 +483,50 @@ async function placed(
 
 describe("a conversation held on a computer that runs work", () => {
   it.each([true, false])(
+    "INF-2214 preserves response correlation or explicitly refuses an older home (supported: %s)",
+    async (supported) => {
+      const at = await placed({ homeChanges: supported ? ["crew-responses"] : [] });
+      await at.open();
+      model([
+        {
+          tools: [
+            {
+              name: "report",
+              args: {
+                text: "The remover is at the verified target path.",
+                responses: [
+                  { request_id: "path-request", response_id: "path-answer", status: "answered" },
+                ],
+              },
+            },
+          ],
+        },
+        { text: "Response submitted." },
+      ]);
+      await at.order("inf:session:prompt", [
+        { orderId: "path:1", task: TASK, text: "Answer path-request." },
+      ]);
+      await at.ended(1);
+      const reports = at.home.effects.filter((effect) => effect.channel === "inf:work:report");
+      if (supported)
+        expect(reports[0]?.request).toMatchObject({
+          declared: {
+            responses: [
+              { requestId: "path-request", responseId: "path-answer", status: "answered" },
+            ],
+          },
+        });
+      else {
+        expect(reports).toEqual([]);
+        expect(
+          at.home.events.find(
+            (record) => record.event.type === "tool_end" && record.event.toolName === "report",
+          )?.event,
+        ).toMatchObject({ isError: true });
+      }
+    },
+  );
+  it.each([true, false])(
     "forwards first-release facts only to a home that records them (INF-1607; supported: %s)",
     async (supported) => {
       const at = await placed({ homeChanges: supported ? ["first-release-reports"] : [] });

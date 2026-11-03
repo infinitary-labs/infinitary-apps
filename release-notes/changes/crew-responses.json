@@ -1,0 +1,14 @@
+{
+  "entries": [
+    {
+      "id": "crew-responses",
+      "kind": "fix",
+      "title": "Crewmate answers reach the first mate while work continues",
+      "body": "The first mate now tracks responses to its messages unless it explicitly asks for no answer. Submitted answers stay saved through later progress, restarts and task closure. If a crewmate reads a request but finishes its turn without responding, the first mate hears what is missing.",
+      "area": "firstmate",
+      "noPicture": "This repairs durable answer delivery between agents without changing a screen or control.",
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

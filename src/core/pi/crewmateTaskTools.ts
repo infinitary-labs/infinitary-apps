@@ -266,10 +266,23 @@ export const REPORT_TOOL = crewmateTool({
           "True only after the captain closed your outcome card and nothing is left for you: the first mate is woken to close your task. Never with waiting_on_captain.",
       }),
     ),
+    responses: Type.Optional(
+      Type.Array(
+        Type.Object({
+          request_id: Type.String(),
+          response_id: Type.String(),
+          status: stringEnum(["answered", "not-yet-answered"]),
+        }),
+        {
+          description:
+            "Explicit request/response identities: save this exact answer and notify now. Retry reuses response_id; corrections use a new one. Not-yet-answered leaves the request open.",
+        },
+      ),
+    ),
     needs_firstmate: Type.Optional(
       Type.String({
         description:
-          "What the first mate must do, in a few plain words, when only the first mate can carry out a captain decision you relay: a build they approved by reply, a merge, a discard, a stronger model, or unrelated work; also when a validation check needs coordination you cannot perform yourself, or your work needs a file, folder, program or action on another of the captain's computers - name the computer, what is needed and where you need the result. For a relayed decision put their words verbatim and the final specification in text. When this turn ends the first mate is woken for this report, even with your card up or a wait declared, once any reply of theirs under your card has your answer. It asks for attention and authorizes nothing. Never for progress or news.",
+          "Relay captain-approved builds by reply, merges, discards, stronger models or unrelated work, with exact words and final specification. Also coordinate checks you cannot run or work on another computer: name the computer, what is needed and where. Wakes at turn end, even with a card or wait, after any captain reply has your answer. It authorizes nothing. Requested answers use responses; never use this for progress or news.",
       }),
     ),
     files: Type.Optional(
@@ -284,7 +297,7 @@ export const REPORT_TOOL = crewmateTool({
         {
           additionalProperties: true,
           description:
-            "Your task's typed result, a JSON object, when your brief gives a result shape: it must fit that shape, and the host refuses a report without it or with a field that does not fit, naming the first failing field, so report again with it fixed. A report with waiting_on_captain, needs_firstmate or check_back may omit it. The next task reads it as data, so put the answer itself here and keep text the plain account.",
+            "The JSON answer required by your brief's result shape; fix any named invalid field. A waiting_on_captain, needs_firstmate, check_back or responses report may omit it. The next task reads this as data; text stays the plain account.",
         },
       ),
     ),
@@ -298,6 +311,15 @@ export const REPORT_TOOL = crewmateTool({
           params.text,
           params.summary,
           {
+            ...(params.responses?.length
+              ? {
+                  responses: params.responses.map((response) => ({
+                    requestId: response.request_id,
+                    responseId: response.response_id,
+                    status: response.status,
+                  })),
+                }
+              : {}),
             ...(params.first_release ? { firstRelease: params.first_release } : {}),
             ...(params.validation
               ? {

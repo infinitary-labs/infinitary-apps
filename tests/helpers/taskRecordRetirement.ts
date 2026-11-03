@@ -1,4 +1,5 @@
 import {
+  CREW_RESPONSE_VERSION,
   openInMemoryDatabase,
   TASK_RECORD_RETIREMENT_VERSION,
   TOOL_REPETITION_VERSION,
@@ -43,6 +44,9 @@ export function taskRecordRetirementReverseSql(): string {
       DROP TABLE task_session_observations;
       DROP INDEX task_events_identity;
       ALTER TABLE task_events DROP COLUMN identity;
+      DROP TABLE IF EXISTS crew_responses;
+      DROP TABLE IF EXISTS response_requests;
+      DELETE FROM schema_migrations WHERE version = ${CREW_RESPONSE_VERSION};
       DROP TABLE IF EXISTS task_repetition_cursors;
       DROP TABLE IF EXISTS task_repetitions;
       DELETE FROM schema_migrations WHERE version = ${TOOL_REPETITION_VERSION};

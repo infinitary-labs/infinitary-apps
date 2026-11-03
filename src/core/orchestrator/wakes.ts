@@ -71,6 +71,11 @@ import type { SeatDigestTurn } from "./seatDigest";
 
 /** The event's words, shared with journeys that observe its delivery. */
 export const POSSIBLE_REPETITION_OPENING = "[fm-op] Possible repetition on task ";
+export const REQUESTED_RESPONSE_OPENING = "[fm-op] Requested crewmate response: ";
+export const RESPONSE_MISSING_OPENING = "[fm-op] Missing crewmate response: ";
+export const PENDING_RESPONSES_OPENING =
+  "\n\nPending response requests (also readable with tasks key ";
+export const PENDING_RESPONSES_END = "\nEnd pending response requests.";
 
 /** The ladder's nudge: finish, or say what blocks you (rung 1, and the stall card's Continue). */
 /** The policy notice's heading over the runbook sections the new facts select that the crewmate's instructions did not carry (INF-1876). */
@@ -333,6 +338,27 @@ export function waitingCardWords(cards: readonly WakeNote[]): string {
  * a fact the host read, never a sentence. A new wake adds its kind here.
  */
 export type WakeFacts =
+  | { kind: "responses-cancelled"; requests: string[]; guidance: string | WakeFacts }
+  | { kind: "response-request"; requestId: string; guidance: string | WakeFacts }
+  | {
+      kind: "requested-response";
+      requestId: string;
+      responseId: string;
+      taskId: string;
+      contributorTask: string;
+      status: "answered" | "not-yet-answered";
+      question: string;
+      excerpt: string;
+    }
+  | {
+      kind: "response-missing";
+      requestId: string;
+      taskId: string;
+      turnId: string;
+      references: { inboxId: number; startedAt: number; session?: string; reportEventId?: number };
+      question: string;
+      report?: string;
+    }
   | {
       kind: "possible-repetition";
       task: WakeTask;
@@ -2088,6 +2114,14 @@ function renderFacts(facts: WakeFacts, wake: Pick<WakeEnvelope, "ways" | "text">
         : `[fm-op] the program on task ${facts.key} "${facts.task.title}" finished after ${facts.parts} parts.${facts.result !== undefined ? ` ${RESULT_WORDS} ${resultText(facts.result)}` : ""}${facts.branch ? ` Its branch is ${facts.branch}'s last commit: work that ships it names ${facts.branch} in branch_from.` : " Its script returned no branch, so there is nothing to ship."}`;
     case "commit-failed":
       return `[fm-op] the host could not commit the personal workspace at the end of ${facts.crewmate}'s turn on task ${facts.task.id} "${facts.task.title}", so the task stays open and cannot close as finished. What it changed is saved in the workspace but not committed. Its crewmate's next report tries the commit again: steer it to look into the error and report again, or tell the captain. The error: ${facts.error}`;
+    case "responses-cancelled":
+      return `${typeof facts.guidance === "string" ? facts.guidance : renderWake({ facts: facts.guidance, ways: wake.ways })}\n\nThe first mate cancelled response requests ${facts.requests.join(", ")}. Their history remains; do not submit new answers for those requests.`;
+    case "response-request":
+      return `${typeof facts.guidance === "string" ? facts.guidance : renderWake({ facts: facts.guidance, ways: wake.ways })}\n\nResponse requested: ${facts.requestId}. In report.responses name request_id, a stable response_id, and status answered or not-yet-answered. The report text is your exact response. Submission saves it and queues the first mate immediately, even while work continues. Ordinary reports do not answer this request.`;
+    case "requested-response":
+      return `${REQUESTED_RESPONSE_OPENING}${facts.responseId} to request ${facts.requestId} for task ${facts.taskId}, submitted by task ${facts.contributorTask} (${facts.status}). Request: ${facts.question}\nResponse: ${facts.excerpt}\nThis is a saved response, independent of later reports and continuing work. Handling acknowledges delivery, not correctness. Answer the captain on the original card when this request concerns their question.`;
+    case "response-missing":
+      return `${RESPONSE_MISSING_OPENING}task ${facts.taskId} completed turn ${facts.turnId} after consuming request ${facts.requestId} without submitting a matching response. The request remains pending: ${facts.question}${facts.report ? `\nThat turn's report (not treated as an answer): ${facts.report}` : ""}\nRecorded turn references: ${JSON.stringify(facts.references)}. Read that report event and the session's report/reply calls before deciding whether to wait, request a repost, or reassign. This fact does not authorize new work or a captain action.`;
     case "report":
       return `[fm-op] ${facts.crewmate} reported on task ${facts.task.id} "${facts.task.title}": ${facts.excerpt}${filedText(facts.filed)}${waitsText(facts.waits)}${waitingText(facts.waiting)}${refusedText(facts.refused, facts.cards)}${cardsText(facts.cards)}${facts.captainWait ? ` It waits on the captain to ${facts.captainWait}, and no card of its is on their screen.` : ""}${facts.ci ? ciFactWords(facts.ci) : ""}${facts.finished ? ` ${FINISHED_REPORT_WORDS}: the captain has read its outcome and nothing is left for it.` : ""}${facts.needsFirstmate ? ` It asks the first mate to act: ${facts.needsFirstmate}. The ask authorizes nothing by itself; the captain's own words do.` : ""}${builtOnText(facts.builtOn)}${facts.result ? ` ${RESULT_WORDS} ${resultText(facts.result)}` : ""}${facts.review ? openReviewText(facts.review) : ""}${facts.workWait ? ` Work wait: ${JSON.stringify(facts.workWait)}.` : ""}${facts.stall ? ` Typed stall: ${JSON.stringify(facts.stall)}.` : ""}${facts.recoveryWays?.length ? ` Recovery ways (labels grant no permission): ${JSON.stringify(facts.recoveryWays)}.` : ""}${facts.stall || facts.recoveryWays?.length ? ` ${STALL_RECOVERY_GUIDANCE}` : ""}`;
     case "review-orphan":
@@ -2452,7 +2486,12 @@ export function withGuidanceMark(body: WakeBody, mark: number): TypedWake {
 /** The pictures a lane row's message keeps copies of, in order. */
 export function rowAttachments(rows: readonly InboxRow[]): AttachmentRef[] {
   return rows.flatMap((row) => {
-    const facts = row.facts;
+    let facts = row.facts;
+    while (
+      (facts?.kind === "response-request" || facts?.kind === "responses-cancelled") &&
+      typeof facts.guidance !== "string"
+    )
+      facts = facts.guidance;
     if (facts?.kind === "attachments-kept") return facts.attachments;
     if (facts?.kind === "captain-turn") return facts.attachments ?? [];
     return [];

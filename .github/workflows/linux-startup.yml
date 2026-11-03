@@ -15,10 +15,11 @@ permissions:
 
 jobs:
   runtime-facts:
-    # INF-1617 asked for GitHub-hosted fixtures; INF-1720's approved plan
-    # moves them to LINUX_RUNNER (ci.yml says how), whose PC job is also a
-    # fresh virtual machine deleted after the job. Hosted when it is unset.
-    runs-on: ${{ vars.LINUX_RUNNER || 'ubuntu-latest' }}
+    # main.yml is the only caller, and main's Linux jobs run on GitHub's
+    # hosted Ubuntu (docs/testing.md, "The continuous run on main"), a fresh
+    # machine with systemd and Docker. The pull request's copy in ci.yml
+    # keeps LINUX_RUNNER.
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
         with:

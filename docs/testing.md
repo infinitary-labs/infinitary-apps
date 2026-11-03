@@ -206,10 +206,10 @@ Moved verbatim from `AGENTS.md` on 2026-09-24; `AGENTS.md` keeps a one-line poin
   Every job runs on the label the repository variable `LINUX_RUNNER` names, the placement service's `shell-pc-linux` places (a fresh two-processor VM per job on the Windows PC, five at once), and on GitHub's hosted `ubuntu-latest` when the variable is unset; `tests/release-workflows.test.ts` evaluates each job's runner both ways.
   The shell PC job image supplies Node 24 and a pre-filled pnpm store, so setup-node restores its pnpm cache only on a GitHub-hosted runner (`runner.environment`); every self-hosted job, wherever a variable sent it, skips it.
   The repository variable `LINUX_QUEUES` can send a job's kind to another queue before `LINUX_RUNNER` ("Each Linux job's kind").
-  Every other workflow's Linux jobs read the same variable the same way (INF-1720's plan): the journeys' chooser, starters and overflow, `verify.yml`'s Linux lanes, the phone check's replacement job, the replay gate, Linux startup, the Linux packages and the release's Linux helpers; the package check's Ubuntu 26.04 leg takes the variable's label with `-2604`, the PC's 26.04 job image.
-  The gate jobs take the variable's label with `-gate` (DOP-157's plan): `phone.yml`'s `cancel-replaced`, `journeys.yml`'s `choose-journeys`, and the four Linux jobs that open a release (`release.yml`'s `resolve`, `notes` and `phone`, `ios-release.yml`'s `resolve`).
+  Every other workflow's requested and pull request Linux jobs read the same variable the same way (INF-1720's plan): the journeys' chooser, starters and overflow, `verify.yml`'s Linux lanes, the phone check's replacement job, the replay gate, Linux startup and the Linux packages; the package check's Ubuntu 26.04 leg takes the variable's label with `-2604`, the PC's 26.04 job image.
+  The gate jobs a request or pull request starts take the variable's label with `-gate` (DOP-157's plan): `phone.yml`'s `cancel-replaced` and `journeys.yml`'s `choose-journeys`.
   The placement service's runners on that label take only these jobs and go first in the PC's line, so the Mac jobs waiting on them start within minutes; hosted, they run on `ubuntu-latest`.
-  A publishing release's other Linux jobs take `RELEASE_LINUX_RUNNER` instead once it is set ("A release's Linux label").
+  Every Linux job that `main.yml` or a release starts runs on GitHub's hosted Ubuntu instead ("A release's hosted machines").
   Linux dependency installs use `.github/actions/node-headers`, which finds the running Node archive's `include/node` headers and refuses an image missing them; only the install receives that root as `NPM_PACKAGE_CONFIG_NODE_GYP_NODEDIR`.
   Uppercase preserves the setting through pnpm's lifecycle environment filter.
   That setting belongs only to the install, so later Electron rebuilds keep their own headers.
@@ -379,8 +379,9 @@ Priority never interrupts running work, and capacity, test gates and merge conse
 ## The continuous run on main
 
 Every push to `main` starts `main.yml` (INF-2146, the captain's approved plan, direction B), which calls the full check and the phone check side by side.
+Beside them it calls `linux-startup.yml`, the Linux automatic startup fixtures, once per main check (INF-2441).
 The full check is `verify.yml` with `all_journeys: true`: the Linux checks, every journey on Linux and every journey on the Mac.
-The phone check is `phone.yml` through its `workflow_call` trigger with no inputs, so it runs every part of both device gates, as a default request does.
+The phone check is `phone.yml` through its `workflow_call` trigger with only `hosted` set, so it runs every part of both device gates, as a default request does.
 It replaces the nightly full check, which requested the same two workflows on `main` once a night.
 The workflow's concurrency group never cancels a run in progress, so GitHub keeps the running run and at most one waiting run; a newer push replaces the waiting one, and a burst of merges is checked once at its newest version.
 The newest passing run of `main.yml` is main's green mark: its commit is the newest version the whole suite passed, and no other record names it.
@@ -393,27 +394,27 @@ The alpha reuses its broad checks after reading every required owner and latest 
 An alpha ships the desktop app only, so a main run whose only failed jobs are the phone check's also starts one (`docs/alpha.md`, "An alpha does not wait on the phone check").
 Ordinary CI starts nothing on a push to `main`: the full check's `linux-checks` lane runs the same typecheck, lint, build and every unit, integration and probe test, so the five jobs ran them twice (INF-2340, the captain's route "drop-ci-main").
 The full check runs no run-alone pass either; the proof of edited journeys runs it at author time ("Each test owns its prerequisites").
+Its Linux jobs run on GitHub's hosted Ubuntu, whatever `LINUX_RUNNER` says, so the run never waits in the PC's line ("A release's hosted machines").
 `tests/release-workflows.test.ts` holds the trigger, the queue and both calls.
 
-## A release's Linux label
+## A release's hosted machines
 
-A publishing release's Linux jobs can ask for a release-only label on the PC, which the placement service starts before every other waiting Linux job but the gate jobs (INF-2111).
-Without it, a release waits behind every pull request's and requested run's Linux job that has waited an hour, since the service ranks those first, and at night most have.
-The label shares the PC's places and adds no capacity.
-A label of its own is what keeps the place: GitHub, not the service, picks which of a label's waiting jobs a runner gets, so a runner started for a release job on the shared label can be given another job instead (DOP-157).
+Every Linux job that decides or builds a release, and every Linux job of the continuous run on `main`, runs on GitHub's hosted `ubuntu-24.04`, whatever `LINUX_RUNNER` says (INF-2430's plan, piece 1).
+A hosted machine starts at once, so a release never waits in the PC's line behind pull requests and requested runs, and its Linux checks finish sooner than on the PC's two-processor machines.
+The cost is GitHub's per-minute bill for those jobs.
 
-The repository variable `RELEASE_LINUX_RUNNER` names it, such as `shell-pc-linux-release`, and the Ubuntu 26.04 package check takes it with `-2604`, as it takes `LINUX_RUNNER`'s.
-`release.yml` reads it only when its resolved `dry_run` is `false` and passes it to the workflows it calls:
+`release.yml`'s own Linux jobs, `resolve`, `notes` and `phone`, name `ubuntu-24.04`, publishing or dry run.
+`release.yml` and `main.yml` pass `hosted: true` to the workflows they call:
 
-- `verify.yml`'s `linux_runner` input, which its `linux-checks` lane and every `linux-e2e` journey job take;
-- `linux-packages.yml`'s `runner` input, which its build and every package check take.
+- `verify.yml`, whose `request` job, `linux-checks` lane and every `linux-e2e` journey job (`source-journeys.yml`, through the same input) take it;
+- `linux-packages.yml`, whose build and every package check take it, the Ubuntu 26.04 machine check on `ubuntu-26.04`;
+- `phone.yml`, whose `cancel-replaced` job takes it when `main.yml` or `ios-release.yml` calls it.
 
-`ios-release.yml`'s `availability` job takes it after the run uploads a build.
-The gate jobs keep the gate label, which goes first already ("Notes" above).
-A dry run, a requested check and a pull request keep `LINUX_RUNNER`: only a call passes the label, never a request's inputs.
-Unset, every job keeps today's label.
-Set it only while `LINUX_RUNNER` is set, and only after runner-up, the placement service, serves both labels as pools of their own on the PC's places, so a queued release always has a runner to take it.
-`tests/release-contract.test.ts` holds where each job starts with the variable set, unset and in a dry run.
+`linux-startup.yml`'s job names `ubuntu-24.04`, since `main.yml` is its only caller.
+
+`ios-release.yml`'s two Linux jobs, `resolve` and `availability`, name `ubuntu-24.04` for every dispatch, since each one checks or releases a phone build.
+A requested check and a pull request keep `LINUX_RUNNER`: `hosted` is an input only a call takes, never a request's.
+`tests/release-workflows.test.ts` holds where each job starts with `LINUX_RUNNER` set and unset, publishing and in a dry run.
 
 ## Native phone checks on the pull request
 
@@ -1012,7 +1013,7 @@ The build also fails when the image holds any code-signing identity, so nothing 
 ### Each Linux job's kind
 
 DOP-251's plan moves Linux jobs to the Mac mini's Linux guests one stage at a time, so a Linux job that may move names its kind, and the repository variable `LINUX_QUEUES` maps each kind to the label of its queue, as JSON such as `{"light":"fleet-linux","light_gate":"fleet-linux-gate"}`.
-Each such job reads `fromJSON(vars.LINUX_QUEUES || '{}').<kind>` after a publishing release's own label and before `LINUX_RUNNER`.
+Each such job reads `fromJSON(vars.LINUX_QUEUES || '{}').<kind>` after the hosted machine a call from `main.yml` or a release asks for, and before `LINUX_RUNNER` ("A release's hosted machines").
 A kind the variable leaves out, and an unset or empty variable, keep the label the job asked for before, so the variable changes nothing until it names a kind.
 Name a kind only once runner-up serves its queue, so no job waits on a label nothing serves.
 A Linux job with no kind, such as main's startup fixtures, the Linux packages and every release job, never reads the variable.
@@ -1210,7 +1211,7 @@ The fixtures need systemd and Docker, so the job's `startup` kind ("Each Linux j
 Without the kind, the job runs where `LINUX_RUNNER` sends it; main's called `linux-startup.yml` job has no kind and always does.
 A newer push cancels the PR job, including startup, through `ci.yml`'s existing concurrency rule; startup no longer finishes independently on a superseded PR version.
 `linux-startup.yml` is a called workflow that runs the same action; `main.yml` calls it once per main check, so a burst of pushes to main is checked once.
-Both use a disposable Ubuntu machine: the PC's fresh virtual machine through `LINUX_RUNNER`, or GitHub-hosted Ubuntu when it is unset.
+Both use a disposable Ubuntu machine: the PR job the PC's fresh virtual machine through `LINUX_RUNNER`, or GitHub-hosted Ubuntu when it is unset, and main's job GitHub-hosted `ubuntu-24.04` ("A release's hosted machines").
 It checks a disposable logged-out user under running systemd, then starts that user's manager for the available case.
 It also checks a plain Ubuntu container with installed systemctl but no running systemd, then an unavailable systemctl.
 The job logs the runtime, commands, statuses and classification, never the user manager's environment values.

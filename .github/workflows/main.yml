@@ -34,10 +34,16 @@ jobs:
       ref: ${{ github.sha }}
       profile: stable
       all_journeys: true
+      # Main's Linux jobs run on GitHub's hosted machines
+      # (docs/testing.md, "The continuous run on main").
+      hosted: true
   # The whole phone check on the vBoxx phone queue, every part of the device gate.
   phone:
     uses: ./.github/workflows/phone.yml
-  # The Linux automatic startup fixtures, once per main check, beside it.
+    with:
+      hosted: true
+  # The Linux automatic startup fixtures, once per main check, beside it, on
+  # GitHub's hosted Ubuntu (linux-startup.yml names it: main is its only caller).
   startup:
     uses: ./.github/workflows/linux-startup.yml
     with:

@@ -452,7 +452,8 @@ describe("the dispatched workflow's gate", () => {
         workflowValue(String(value), { needs }),
       ]),
     );
-    expect(inputs).toEqual({ source_commit: source });
+    // INF-2430's plan, piece 1: the call also runs its Linux job on GitHub's hosted machines.
+    expect(inputs).toEqual({ source_commit: source, hosted: true });
     expect(phone.on.workflow_call.inputs.source_commit.type).toBe("string");
     const contexts = {
       inputs,

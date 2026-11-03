@@ -116,7 +116,7 @@ It keeps the packages, the two rendered recipes and `SHA256SUMS` as the run's `l
 - the Nix package, built with `nix-build` against nixos-26.05 and run from the Nix store on the runner.
 
 Every job runs on the label the repository variable `LINUX_RUNNER` names, the PC's fresh virtual machines, and the 26.04 machine on that label with `-2604` (`shell-pc-linux-2604`); with the variable unset, each runs on GitHub's hosted Ubuntu of its release (`docs/testing.md`, "Notes").
-Inside a publishing release, every job takes the release's own Linux label, `RELEASE_LINUX_RUNNER`, once it is set (`docs/testing.md`, "A release's Linux label").
+Inside a release, publishing or dry run, every job runs on GitHub's hosted Ubuntu of its entry, whatever `LINUX_RUNNER` says (`docs/testing.md`, "A release's hosted machines").
 
 A container stands in for a clean copy of its system.
 It runs privileged so Chromium can make its sandbox's namespaces, and the runner lifts Ubuntu's restriction on user namespaces for it, as Fedora, Arch and NixOS have none; the Ubuntu machine jobs keep the restriction and the package's own profile.

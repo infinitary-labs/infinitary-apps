@@ -34,10 +34,11 @@ on:
       ref:
         required: false
         type: string
-      runner:
-        description: A publishing release's Linux label; empty keeps LINUX_RUNNER
+      hosted:
+        description: Run on GitHub's hosted Ubuntu, whatever LINUX_RUNNER says (a call from main.yml or release.yml)
         required: false
-        type: string
+        type: boolean
+        default: false
       artifact-suffix:
         type: string
         default: source
@@ -73,7 +74,7 @@ jobs:
       matrix:
         lane: ${{ fromJSON(inputs.suite == 'alone' && '["alone"]' || (inputs.suite != 'affected' && '["parallel", "desktop"]' || format('["{0}"]', inputs.lane))) }}
         shard: ${{ fromJSON((inputs.suite == 'full' || inputs.suite == 'alone') && '[1, 2, 3, 4]' || '[1]') }}
-    runs-on: ${{ inputs.runner || vars.LINUX_RUNNER || 'ubuntu-24.04' }}
+    runs-on: ${{ inputs.hosted && 'ubuntu-24.04' || vars.LINUX_RUNNER || 'ubuntu-24.04' }}
     defaults:
       run:
         working-directory: Application Support/firstmate

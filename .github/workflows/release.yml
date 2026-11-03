@@ -142,8 +142,8 @@ jobs:
     # refuses unless only the phone call failed (INF-2353).
     if: github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success' || github.event.workflow_run.conclusion == 'failure'
     name: Resolve the source commit and version
-    # The PC's gate label (docs/testing.md, DOP-157): its runners take only gate jobs.
-    runs-on: ${{ vars.LINUX_RUNNER && format('{0}-gate', vars.LINUX_RUNNER) || 'ubuntu-latest' }}
+    # A release's Linux jobs run on GitHub's hosted machines (docs/testing.md, "A release's hosted machines").
+    runs-on: ubuntu-24.04
     outputs:
       channel: ${{ steps.resolve.outputs.channel }}
       dry_run: ${{ steps.resolve.outputs.dry_run }}
@@ -322,8 +322,8 @@ jobs:
   notes:
     name: Check the release notes
     needs: resolve
-    # The PC's gate label (docs/testing.md, DOP-157): its runners take only gate jobs.
-    runs-on: ${{ vars.LINUX_RUNNER && format('{0}-gate', vars.LINUX_RUNNER) || 'ubuntu-latest' }}
+    # A release's Linux jobs run on GitHub's hosted machines (docs/testing.md, "A release's hosted machines").
+    runs-on: ubuntu-24.04
     steps:
       - name: Checkout the source commit with its history
         uses: actions/checkout@v4
@@ -418,10 +418,9 @@ jobs:
     uses: ./.github/workflows/verify.yml
     with:
       ref: ${{ needs.resolve.outputs.source_commit }}
-      # A publishing run's Linux jobs take the release's own Linux label once
-      # RELEASE_LINUX_RUNNER is set (docs/testing.md, "A release's Linux
-      # label"); a dry run and an unset variable keep LINUX_RUNNER.
-      linux_runner: ${{ needs.resolve.outputs.dry_run == 'false' && vars.RELEASE_LINUX_RUNNER || '' }}
+      # Publishing or dry run, its Linux jobs run on GitHub's hosted machines
+      # (docs/testing.md, "A release's hosted machines").
+      hosted: true
       profile: ${{ needs.resolve.outputs.channel }}
       # A publishing run's Mac lane takes the release_check queue once
       # MAC_QUEUES names it (docs/testing.md, "Each Mac job's kind and size");
@@ -440,7 +439,7 @@ jobs:
     with:
       ref: ${{ needs.resolve.outputs.source_commit }}
       version: ${{ needs.resolve.outputs.version }}
-      runner: ${{ needs.resolve.outputs.dry_run == 'false' && vars.RELEASE_LINUX_RUNNER || '' }}
+      hosted: true
 
   # The phone goes first (INF-1649; docs/alpha.md, "The phone goes first"): an
   # alpha waits for a phone build on TestFlight that keeps changing things on
@@ -450,8 +449,8 @@ jobs:
   phone:
     name: Wait for the phone
     needs: resolve
-    # The PC's gate label (docs/testing.md, DOP-157): its runners take only gate jobs.
-    runs-on: ${{ vars.LINUX_RUNNER && format('{0}-gate', vars.LINUX_RUNNER) || 'ubuntu-latest' }}
+    # A release's Linux jobs run on GitHub's hosted machines (docs/testing.md, "A release's hosted machines").
+    runs-on: ubuntu-24.04
     timeout-minutes: 10
     steps:
       - name: Checkout every branch and tag

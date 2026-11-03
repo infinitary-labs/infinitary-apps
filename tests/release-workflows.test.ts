@@ -208,17 +208,22 @@ describe("local packaging identity (electron-builder.dev.yml)", () => {
     });
     expect(verify?.with).not.toHaveProperty("installer_only");
 
-    // The phone check takes the call with no inputs and runs every part of both devices.
+    // The phone check takes the call with only the hosted machine named and
+    // runs every part of both devices (INF-2430's plan, piece 1).
     const phone = loadYamlFile(".github/workflows/phone.yml") as {
       on: Record<string, unknown>;
       jobs: Record<string, { if?: string; steps: Step[] }>;
     };
     expect(Object.keys(phone.on)).toContain("workflow_call");
-    expect(
-      Object.values(main.jobs).find((job) => job.uses?.endsWith("phone.yml"))?.with,
-    ).toBeUndefined();
-    const pushed = { github: { event_name: "push", ref: "refs/heads/main" }, inputs: {}, vars: {} };
-    // Main moved selection into the native job; the same no-input push must still run all parts.
+    expect(Object.values(main.jobs).find((job) => job.uses?.endsWith("phone.yml"))?.with).toEqual({
+      hosted: true,
+    });
+    const pushed = {
+      github: { event_name: "push", ref: "refs/heads/main" },
+      inputs: { hosted: true },
+      vars: {},
+    };
+    // Main moved selection into the native job; the same push must still run all parts.
     const native = phone.jobs["native-phone"];
     expect(workflowValue(native?.if ?? "", pushed)).toBe(true);
     const scope = native?.steps.find((step) => step.id === "scope");
@@ -800,6 +805,14 @@ describe("local packaging identity (electron-builder.dev.yml)", () => {
   // Evaluate the real inputs of every Linux job that installs.
   it.each([
     ["hosted Linux", "github-hosted", {}, "pnpm"],
+    // INF-2430's plan, piece 1: main's and a release's Linux jobs run hosted
+    // while LINUX_RUNNER names the PC, and keep the cache.
+    [
+      "hosted Linux while LINUX_RUNNER is set",
+      "github-hosted",
+      { LINUX_RUNNER: "shell-pc-linux" },
+      "pnpm",
+    ],
     ["shell PC", "self-hosted", { LINUX_RUNNER: "shell-pc-linux" }, ""],
     ["a LINUX_QUEUES queue", "self-hosted", { LINUX_QUEUES: '{"ci":"mini-linux"}' }, ""],
   ])("selects the pnpm cache for %s", (_name, environment, vars, expected) => {
@@ -827,6 +840,9 @@ describe("local packaging identity (electron-builder.dev.yml)", () => {
         "ci.yml:probe-tests",
         "replay.yml:replay-gate",
         "verify.yml:lane",
+        "linux-packages.yml:build",
+        "linux-packages.yml:check",
+        "source-journeys.yml:source-desktop",
       ]),
     );
   });
@@ -3889,19 +3905,23 @@ describe("each Mac job's kind", () => {
  * as ci.yml's already did, and on GitHub's hosted Ubuntu when it is unset.
  * The package check's Ubuntu 26.04 leg takes the PC's 26.04 image's label.
  * DOP-157's approved plan (direction A): the gate jobs - the two that open
- * a pull request's phone and journeys runs and the four Linux jobs that open
- * a release - take the PC's gate label, LINUX_RUNNER plus -gate, whose
- * runners take no other job, so a runner started for one runs one.
- * Each job's runner is evaluated both ways, for every matrix entry.
+ * a pull request's phone and journeys runs - take the PC's gate label,
+ * LINUX_RUNNER plus -gate, whose runners take no other job, so a runner
+ * started for one runs one. INF-2430's plan, piece 1: a release's own Linux
+ * jobs run on GitHub's hosted Ubuntu whatever the variable says ("a release's
+ * hosted machines" below). Each job's runner is evaluated both ways, for
+ * every matrix entry, as a request or pull request starts it.
  */
 it("sends every Linux job to LINUX_RUNNER, and hosted Ubuntu when it is unset, unless LINUX_QUEUES names its kind", () => {
-  const gate = [
-    "phone.yml:cancel-replaced",
-    "journeys.yml:choose-journeys",
+  const gate = ["phone.yml:cancel-replaced", "journeys.yml:choose-journeys"];
+  const hostedAlways = [
     "release.yml:resolve",
     "release.yml:notes",
     "release.yml:phone",
     "ios-release.yml:resolve",
+    "ios-release.yml:availability",
+    // main.yml is its only caller (INF-2441).
+    "linux-startup.yml:runtime-facts",
   ];
   // DOP-251's plan: each kind is one stage of moving Linux jobs to the Mac
   // mini's Linux guests (docs/testing.md, "Each Linux job's kind").
@@ -3953,6 +3973,11 @@ it("sends every Linux job to LINUX_RUNNER, and hosted Ubuntu when it is unset, u
         if (typeof hosted !== "string" || !hosted.startsWith("ubuntu-")) continue;
         const name = `${file}:${id} ${JSON.stringify(entry)}`;
         linux.push(name);
+        if (hostedAlways.includes(`${file}:${id}`)) {
+          expect(hosted, name).toBe("ubuntu-24.04");
+          expect(runner({ LINUX_RUNNER: "shell-pc-linux" }), name).toBe("ubuntu-24.04");
+          continue;
+        }
         if (gate.includes(`${file}:${id}`)) expect(hosted, name).toBe("ubuntu-latest");
         expect(runner({ LINUX_RUNNER: "shell-pc-linux" }), name).toBe(
           gate.includes(`${file}:${id}`)
@@ -3961,15 +3986,6 @@ it("sends every Linux job to LINUX_RUNNER, and hosted Ubuntu when it is unset, u
               ? "shell-pc-linux-2604"
               : "shell-pc-linux",
         );
-        // INF-2111: the release's own Linux label reaches a job only through a
-        // publishing release's call ("a release's Linux label" below).
-        expect(
-          runner({
-            LINUX_RUNNER: "shell-pc-linux",
-            RELEASE_LINUX_RUNNER: "shell-pc-linux-release",
-          }),
-          name,
-        ).toBe(runner({ LINUX_RUNNER: "shell-pc-linux" }));
         // DOP-251's plan: LINUX_QUEUES moves a kind's jobs to its queue, and
         // every job of another kind, or none, stays where it was, with or
         // without LINUX_RUNNER. An empty variable changes nothing.
@@ -3998,17 +4014,15 @@ it("sends every Linux job to LINUX_RUNNER, and hosted Ubuntu when it is unset, u
   // The jobs the plan named, so a job the check could not read is not missed.
   for (const job of [
     "ci.yml:unit-tests",
-    "journeys.yml:choose-journeys",
     "source-journeys.yml:source-desktop",
+    "verify.yml:request",
     "verify.yml:lane",
-    "phone.yml:cancel-replaced",
     "replay.yml:replay-gate",
     "linux-startup.yml:runtime-facts",
     "linux-packages.yml:build",
     "linux-packages.yml:check",
-    "release.yml:notes",
-    "ios-release.yml:availability",
     ...gate,
+    ...hostedAlways,
   ])
     expect(
       linux.some((name) => name.startsWith(`${job} `)),
@@ -4017,137 +4031,185 @@ it("sends every Linux job to LINUX_RUNNER, and hosted Ubuntu when it is unset, u
 });
 
 /**
- * INF-2111, the captain's first speed-up on the alpha of 2026-10-31: "Give
- * release and nightly jobs first claim on the Linux PC's 5 places, ahead of
- * pull requests and lab runs." A publishing release's Linux jobs ask for a
- * release-only label, RELEASE_LINUX_RUNNER, through the workflows it calls,
- * and its Ubuntu 26.04 package check for that label with -2604. The gate
- * jobs keep the gate label; a dry run, a request and an unset variable keep
- * LINUX_RUNNER (docs/testing.md, "A release's Linux label").
+ * INF-2430's plan, piece 1 (captain: "move the linux jobs to hosted now"):
+ * every Linux job that main.yml or release.yml starts, publishing or dry run,
+ * runs on GitHub's hosted ubuntu-24.04, and the Ubuntu 26.04 package check on
+ * ubuntu-26.04, whatever LINUX_RUNNER says. Only those two callers pass
+ * hosted; a request and a pull request keep today's labels, and the retired
+ * RELEASE_LINUX_RUNNER moves no job (docs/testing.md, "A release's hosted
+ * machines").
  */
-describe("a release's Linux label", () => {
+describe("a release's hosted machines", () => {
   type Job = {
     "runs-on"?: string;
-    with?: Record<string, string>;
+    uses?: string;
+    with?: Record<string, unknown>;
     strategy?: { matrix?: { include?: Array<Record<string, string>> } };
   };
   type Workflow = {
     on: Record<string, { inputs?: Record<string, unknown> } | null>;
     jobs: Record<string, Job>;
   };
+  const workflows = readdirSync(join(root, ".github/workflows")).filter((name) =>
+    name.endsWith(".yml"),
+  );
   const workflow = (file: string) => loadYamlFile(`.github/workflows/${file}`) as Workflow;
   const release = workflow("release.yml").jobs;
+  const main = workflow("main.yml").jobs;
   const verify = workflow("verify.yml").jobs;
   const journeys = workflow("source-journeys.yml").jobs["source-desktop"];
   const packages = workflow("linux-packages.yml").jobs;
-  const availability = workflow("ios-release.yml").jobs.availability;
+  const phone = workflow("phone.yml").jobs["cancel-replaced"];
+  const ios = workflow("ios-release.yml").jobs;
   const runsOn = (job: Job | undefined, contexts: Record<string, unknown>) =>
     workflowValue(job?.["runs-on"] ?? "", contexts);
+  const literal = (job: Job | undefined) => {
+    const value = job?.["runs-on"] ?? "";
+    return value.includes("${{") ? undefined : value;
+  };
+  /** A caller's `with` value for a called workflow's input, as the call passes it. */
+  const passed = (job: Job | undefined, input: string, contexts: Record<string, unknown>) => {
+    const value = job?.with?.[input];
+    return typeof value === "string" && value.includes("${{")
+      ? workflowValue(value, contexts)
+      : value;
+  };
   const pc = { LINUX_RUNNER: "shell-pc-linux" };
-  const labels = { ...pc, RELEASE_LINUX_RUNNER: "shell-pc-linux-release" };
-  /** Each package check named by its system, on `label`, or `twin` for the Ubuntu 26.04 leg. */
-  const everyCheck = (label: string, twin: string) =>
+  const everyCheck = (label: (runner: string) => string) =>
     (packages.check?.strategy?.matrix?.include ?? []).map(
       (matrix) =>
-        `${matrix.system} ${matrix.image ?? matrix.runner}: ${matrix.runner === "ubuntu-26.04" ? twin : label}`,
+        `${matrix.system} ${matrix.image ?? matrix.runner}: ${label(matrix.runner ?? "")}`,
     );
 
-  /** Where each of a release run's Linux jobs starts, through its callers' inputs. */
-  const placed = (dryRun: "true" | "false", vars: Record<string, string>) => {
-    const needs = { resolve: { outputs: { dry_run: dryRun } } };
-    const passed = (id: string, input: string) =>
-      workflowValue(release[id]?.with?.[input] ?? "", { needs, vars });
-    const linuxRunner = passed("verify", "linux_runner");
-    const runner = passed("linux", "runner");
-    const journeyRunner = workflowValue(verify["linux-e2e"]?.with?.runner ?? "", {
-      inputs: { linux_runner: linuxRunner },
-    });
+  /** Where verify.yml's Linux jobs start when a caller passes `hosted`. */
+  const verified = (hosted: unknown, vars: Record<string, string>) => {
+    const journeysHosted = passed(verify["linux-e2e"], "hosted", { inputs: { hosted } });
     return {
-      checks: runsOn(verify.lane, {
-        matrix: { lane: "linux-checks" },
-        inputs: { linux_runner: linuxRunner },
-        vars,
-      }),
-      journeys: runsOn(journeys, { inputs: { runner: journeyRunner }, vars }),
-      build: runsOn(packages.build, { inputs: { runner }, vars }),
-      packages: (packages.check?.strategy?.matrix?.include ?? []).map(
-        (matrix) =>
-          `${matrix.system} ${matrix.image ?? matrix.runner}: ${runsOn(packages.check, { matrix, inputs: { runner }, vars })}`,
-      ),
-      gate: ["resolve", "notes", "phone"].map((id) => runsOn(release[id], { vars })),
+      request: runsOn(verify.request, { inputs: { hosted }, vars }),
+      checks: runsOn(verify.lane, { matrix: { lane: "linux-checks" }, inputs: { hosted }, vars }),
+      journeys: runsOn(journeys, { inputs: { hosted: journeysHosted }, vars }),
     };
   };
-  const upload = (mode: string, vars: Record<string, string>) =>
-    runsOn(availability, { needs: { resolve: { outputs: { mode } } }, vars });
-  const today = {
-    checks: "shell-pc-linux",
-    journeys: "shell-pc-linux",
-    build: "shell-pc-linux",
-    packages: everyCheck("shell-pc-linux", "shell-pc-linux-2604"),
-    gate: ["shell-pc-linux-gate", "shell-pc-linux-gate", "shell-pc-linux-gate"],
+  /** Where each of a release run's Linux jobs starts, through its calls' inputs. */
+  const placedRelease = (dryRun: "true" | "false", vars: Record<string, string>) => {
+    const needs = { resolve: { outputs: { dry_run: dryRun } } };
+    const hosted = passed(release.linux, "hosted", { needs, vars });
+    return {
+      ...verified(passed(release.verify, "hosted", { needs, vars }), vars),
+      build: runsOn(packages.build, { inputs: { hosted }, vars }),
+      packages: (packages.check?.strategy?.matrix?.include ?? []).map(
+        (matrix) =>
+          `${matrix.system} ${matrix.image ?? matrix.runner}: ${runsOn(packages.check, { matrix, inputs: { hosted }, vars })}`,
+      ),
+      own: ["resolve", "notes", "phone"].map((id) => literal(release[id])),
+    };
+  };
+  const hostedRelease = {
+    request: "ubuntu-24.04",
+    checks: "ubuntu-24.04",
+    journeys: "ubuntu-24.04",
+    build: "ubuntu-24.04",
+    packages: everyCheck((runner) => runner),
+    own: ["ubuntu-24.04", "ubuntu-24.04", "ubuntu-24.04"],
   };
 
-  it("sends a publishing release's Linux jobs to the release's own label", () => {
-    expect(placed("false", labels)).toEqual({
-      checks: "shell-pc-linux-release",
-      journeys: "shell-pc-linux-release",
-      build: "shell-pc-linux-release",
-      packages: everyCheck("shell-pc-linux-release", "shell-pc-linux-release-2604"),
-      gate: today.gate,
+  it("runs every Linux job of a release on GitHub's hosted Ubuntu, publishing or dry run", () => {
+    // The retired release label moves nothing (INF-2111's RELEASE_LINUX_RUNNER).
+    const retired = { ...pc, RELEASE_LINUX_RUNNER: "shell-pc-linux-release" };
+    for (const dryRun of ["false", "true"] as const)
+      for (const vars of [pc, retired, {}])
+        expect(placedRelease(dryRun, vars)).toEqual(hostedRelease);
+    expect(everyCheck((runner) => runner)).toContain("ubuntu-host ubuntu-26.04: ubuntu-26.04");
+    // The phone release's two Linux jobs run hosted for every dispatch.
+    for (const id of ["resolve", "availability"]) expect(literal(ios[id]), id).toBe("ubuntu-24.04");
+    // Its unsigned phone check's Linux job too, through the call's input.
+    for (const vars of [pc, {}])
+      expect(
+        runsOn(phone, { inputs: { hosted: passed(ios.phone, "hosted", { vars }) }, vars }),
+      ).toBe("ubuntu-24.04");
+  });
+
+  it("runs every Linux job of the continuous run on main on GitHub's hosted Ubuntu", () => {
+    const calls = Object.values(main);
+    const call = (file: string) => calls.find((job) => job.uses?.endsWith(`/${file}`));
+    // A LINUX_QUEUES queue naming every kind moves none of them (DOP-251's plan).
+    const queues = {
+      ...pc,
+      LINUX_QUEUES: JSON.stringify({ light: "q", light_gate: "q", checks: "q" }),
+    };
+    for (const vars of [pc, queues, {}]) {
+      expect(verified(passed(call("verify.yml"), "hosted", { vars }), vars)).toEqual({
+        request: "ubuntu-24.04",
+        checks: "ubuntu-24.04",
+        journeys: "ubuntu-24.04",
+      });
+      expect(
+        runsOn(phone, { inputs: { hosted: passed(call("phone.yml"), "hosted", { vars }) }, vars }),
+      ).toBe("ubuntu-24.04");
+    }
+    // The startup fixtures, which main alone calls (INF-2441), name hosted Ubuntu.
+    expect(call("linux-startup.yml")).toBeDefined();
+    expect(literal(workflow("linux-startup.yml").jobs["runtime-facts"])).toBe("ubuntu-24.04");
+    expect(Object.keys(workflow("linux-startup.yml").on)).toEqual(["workflow_call"]);
+  });
+
+  it("keeps a request's Linux jobs on today's labels", () => {
+    // A request passes no hosted input, so its calls see it unset.
+    const requested = (vars: Record<string, string>) => ({
+      ...verified(null, vars),
+      build: runsOn(packages.build, { inputs: {}, vars }),
+      packages: (packages.check?.strategy?.matrix?.include ?? []).map(
+        (matrix) =>
+          `${matrix.system} ${matrix.image ?? matrix.runner}: ${runsOn(packages.check, { matrix, inputs: {}, vars })}`,
+      ),
+      phone: runsOn(phone, { inputs: {}, vars }),
     });
-    expect(upload("release", labels)).toBe("shell-pc-linux-release");
-    expect(upload("status", labels)).toBe("shell-pc-linux");
-  });
-
-  it("keeps a dry run on LINUX_RUNNER, so a rehearsal never takes a release's place", () => {
-    expect(placed("true", labels)).toEqual(today);
-  });
-
-  it("keeps today's labels while the variable is unset", () => {
-    expect(placed("false", pc)).toEqual(today);
-    expect(placed("true", pc)).toEqual(today);
-    expect(upload("release", pc)).toBe("shell-pc-linux");
-    expect(placed("false", {})).toEqual({
+    expect(requested(pc)).toEqual({
+      request: "shell-pc-linux",
+      checks: "shell-pc-linux",
+      journeys: "shell-pc-linux",
+      build: "shell-pc-linux",
+      packages: everyCheck((runner) =>
+        runner === "ubuntu-26.04" ? "shell-pc-linux-2604" : "shell-pc-linux",
+      ),
+      phone: "shell-pc-linux-gate",
+    });
+    expect(requested({})).toEqual({
+      request: "ubuntu-latest",
       checks: "ubuntu-latest",
       journeys: "ubuntu-24.04",
       build: "ubuntu-24.04",
-      packages: everyCheck("ubuntu-24.04", "ubuntu-26.04"),
-      gate: ["ubuntu-latest", "ubuntu-latest", "ubuntu-latest"],
+      packages: everyCheck((runner) => runner),
+      phone: "ubuntu-latest",
     });
-    expect(upload("release", {})).toBe("ubuntu-latest");
   });
 
-  it("lets only a publishing release's calls pass the label on, never a request", () => {
+  it("lets only main's and a release's calls pass hosted, never a request", () => {
     const passing: string[] = [];
-    for (const file of readdirSync(join(root, ".github/workflows")).filter((name) =>
-      name.endsWith(".yml"),
-    )) {
+    for (const file of workflows) {
       for (const [id, job] of Object.entries(workflow(file).jobs)) {
-        for (const value of [job.with?.runner, job.with?.linux_runner]) {
-          if (!value?.includes("${{")) continue;
-          const contexts = {
-            vars: labels,
-            needs: { resolve: { outputs: { dry_run: "false" } } },
-            inputs: { linux_runner: labels.RELEASE_LINUX_RUNNER },
-          };
-          if (workflowValue(value, contexts) === labels.RELEASE_LINUX_RUNNER)
-            passing.push(`${file}:${id}`);
-        }
+        if (job.with?.hosted === undefined) continue;
+        const value = passed(job, "hosted", {
+          vars: pc,
+          needs: { resolve: { outputs: { dry_run: "false" } } },
+          inputs: { hosted: true },
+        });
+        if (value === true) passing.push(`${file}:${id}`);
       }
     }
     expect(passing.sort()).toEqual([
+      "ios-release.yml:phone",
+      "main.yml:phone",
+      "main.yml:verify",
       "release.yml:linux",
       "release.yml:verify",
       "verify.yml:linux-e2e",
     ]);
-    // A request names no Linux label of its own.
-    expect(workflow("verify.yml").on.workflow_dispatch?.inputs).not.toHaveProperty("linux_runner");
-    expect(workflow("linux-packages.yml").on.workflow_dispatch?.inputs).not.toHaveProperty(
-      "runner",
-    );
-    expect(workflow("source-journeys.yml").on.workflow_dispatch?.inputs).not.toHaveProperty(
-      "runner",
-    );
+    // verify.yml passes on only what its own caller passed.
+    expect(passed(verify["linux-e2e"], "hosted", { inputs: {} })).toBe(false);
+    // A request names no hosted input of its own.
+    for (const file of ["verify.yml", "linux-packages.yml", "source-journeys.yml", "phone.yml"])
+      expect(workflow(file).on.workflow_dispatch?.inputs ?? {}, file).not.toHaveProperty("hosted");
   });
 });
 

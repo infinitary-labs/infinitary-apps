@@ -26,8 +26,8 @@ env:
 
 jobs:
   resolve:
-    # The PC's gate label (docs/testing.md, DOP-157): its runners take only gate jobs.
-    runs-on: ${{ vars.LINUX_RUNNER && format('{0}-gate', vars.LINUX_RUNNER) || 'ubuntu-latest' }}
+    # A release's Linux jobs run on GitHub's hosted machines (docs/testing.md, "A release's hosted machines").
+    runs-on: ubuntu-24.04
     timeout-minutes: 5
     outputs:
       version: ${{ steps.resolve.outputs.version }}
@@ -65,6 +65,8 @@ jobs:
       pull-requests: read
     with:
       source_commit: ${{ needs.resolve.outputs.source_commit }}
+      # Its Linux job runs on GitHub's hosted machines (docs/testing.md, "A release's hosted machines").
+      hosted: true
 
   testflight:
     needs: [resolve, phone]
@@ -149,9 +151,8 @@ jobs:
     # A status-only dispatch makes no Mac job. Failed uploads may have reached Apple:
     # inspect them with check_build, never automatically resubmit the upload.
     if: ${{ !cancelled() && needs.resolve.result == 'success' && (needs.resolve.outputs.mode == 'status' || needs.testflight.result == 'success') }}
-    # After an upload it takes the release's own Linux label once
-    # RELEASE_LINUX_RUNNER is set (docs/testing.md, "A release's Linux label").
-    runs-on: ${{ needs.resolve.outputs.mode == 'release' && vars.RELEASE_LINUX_RUNNER || vars.LINUX_RUNNER || 'ubuntu-latest' }}
+    # A release's Linux jobs run on GitHub's hosted machines (docs/testing.md, "A release's hosted machines").
+    runs-on: ubuntu-24.04
     timeout-minutes: 40
     steps:
       - uses: actions/checkout@v4

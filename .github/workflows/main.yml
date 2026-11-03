@@ -34,6 +34,6 @@ jobs:
       ref: ${{ github.sha }}
       profile: stable
       all_journeys: true
-  # The whole phone check on the Mac mini, every part of the device gate.
+  # The whole phone check on the vBoxx phone queue, every part of the device gate.
   phone:
     uses: ./.github/workflows/phone.yml

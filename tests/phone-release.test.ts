@@ -17,6 +17,7 @@ import {
   resolveRelease,
   waitForBuild,
 } from "../scripts/phone-release";
+import { workflowString, workflowValue } from "./helpers/releaseWorkflows";
 
 // INF-64 piece 3 / INF-80: a supplied version reaches TestFlight only after the
 // phone gates; bad inputs, unreadable Apple state and failed uploads never mean delivery.
@@ -341,6 +342,7 @@ describe("Apple readiness and receipt readings", () => {
   });
 });
 
+// Workflow expressions are exercised with the same reader as the release contracts.
 const require = createRequire(import.meta.url);
 const yaml = createRequire(require.resolve("electron-builder/package.json"))("js-yaml");
 const workflow = yaml.load(readFileSync(".github/workflows/ios-release.yml", "utf8"));
@@ -379,13 +381,23 @@ function eligible(
 }
 
 describe("the dispatched workflow's gate", () => {
-  it("runs no signing or upload after either simulator fails or is cancelled", () => {
+  it("runs no host signing after either unsigned device fails or is cancelled (INF-2202)", () => {
     const job = workflow.jobs.testflight;
+    expect(job.needs).toEqual(["resolve", "phone"]);
     const upload = job.steps.find((step: { id?: string }) => step.id === "upload");
-    const ipad = job.steps.find((step: { id?: string }) => step.id === "ipad");
-    // Walk the workflow's actual gate order: checking upload's condition alone
-    // would also pass if someone moved it before the simulator tests.
-    const executeGate = (failed?: string) => {
+    const executeGate = (phone: string, failed?: string) => {
+      const needs = {
+        resolve: { result: "success", outputs: { mode: "release" } },
+        phone: { result: phone },
+      };
+      if (
+        !eligible(
+          job.if,
+          { needs },
+          job.needs.every((id: keyof typeof needs) => needs[id].result === "success"),
+        )
+      )
+        return [];
       const ran: string[] = [];
       const steps: Record<string, { outcome: string }> = {};
       let success = true;
@@ -394,18 +406,18 @@ describe("the dispatched workflow's gate", () => {
           steps[step.id] = { outcome: "skipped" };
           continue;
         }
-        if (["iphone", "ipad", "upload"].includes(step.id)) ran.push(step.id);
+        ran.push(step.id);
         const outcome = step.id === failed ? "failure" : "success";
         steps[step.id] = { outcome };
         if (outcome === "failure" && !step["continue-on-error"]) success = false;
       }
       return ran;
     };
-    expect(executeGate()).toEqual(["iphone", "ipad", "upload"]);
-    expect(executeGate("iphone")).toEqual(["iphone", "ipad"]);
-    expect(executeGate("ipad")).toEqual(["iphone", "ipad"]);
-    // INF-227 F2: reject a partial-job rerun before either exclusive native lease.
-    expect(executeGate("release_request")).toEqual([]);
+    expect(executeGate("success")).toEqual(["release_request", "upload"]);
+    // Either device fails the combined phone job; no failed, skipped, pending or cancelled check signs.
+    for (const result of ["failure", "cancelled", "skipped", "pending"])
+      expect(executeGate(result)).toEqual([]);
+    expect(executeGate("success", "release_request")).toEqual(["release_request"]);
     const setup = job.steps.findIndex(
       (step: { uses?: string }) => step.uses === "actions/setup-node@v4",
     );
@@ -414,19 +426,75 @@ describe("the dispatched workflow's gate", () => {
     expect(job.steps[guard].run).toBe(
       workflow.jobs.resolve.steps.find((step: { id?: string }) => step.id === "resolve").run,
     );
-    expect(eligible(ipad.if, { steps: { iphone: { outcome: "failure" } } }, false)).toBe(true);
-    expect(eligible(ipad.if, { steps: { iphone: { outcome: "success" } } }, false, true)).toBe(
-      false,
-    );
     expect(job["continue-on-error"]).toBeUndefined();
     expect(upload["continue-on-error"]).toBeUndefined();
+  });
+  it("checks the same resolved source in the unsigned workflow without passing signing access (INF-2202)", () => {
+    const call = workflow.jobs.phone;
+    expect(call.needs).toBe("resolve");
+    expect(call.uses).toBe("./.github/workflows/phone.yml");
+    expect(call.secrets).toBeUndefined();
+    expect(call.environment).toBeUndefined();
+    expect(call.permissions).toEqual({
+      actions: "write",
+      contents: "read",
+      "pull-requests": "read",
+    });
+    const phone = yaml.load(readFileSync(call.uses, "utf8"));
+    // A real merged source; a later main ref must not change the checked or signed tree.
+    const source = "3835224557b6764d4455b13c1cee359fbb09b5f1";
+    const needs = {
+      resolve: { result: "success", outputs: { mode: "release", source_commit: source } },
+    };
+    const inputs = Object.fromEntries(
+      Object.entries(call.with).map(([key, value]) => [
+        key,
+        workflowValue(String(value), { needs }),
+      ]),
+    );
+    expect(inputs).toEqual({ source_commit: source });
+    expect(phone.on.workflow_call.inputs.source_commit.type).toBe("string");
+    const contexts = {
+      inputs,
+      github: { sha: source, event_name: "workflow_dispatch", ref: "refs/heads/main" },
+      env: {},
+      steps: {},
+    };
+    for (const id of ["cancel-replaced", "native-phone", "phone-repeat-2", "phone-repeat-3"])
+      for (const step of phone.jobs[id].steps.filter(
+        (step: { uses?: string }) => step.uses === "actions/checkout@v4",
+      ))
+        expect(workflowString(step.with.ref, contexts)).toBe(source);
+    for (const step of workflow.jobs.testflight.steps.filter(
+      (step: { uses?: string }) => step.uses === "actions/checkout@v4",
+    ))
+      expect(workflowString(step.with.ref, { needs })).toBe(source);
+    const native = phone.jobs["native-phone"];
+    expect(eligible(native.if, contexts)).toBe(true);
+    const selection = native.steps.find((step: { id?: string }) => step.id === "request-select");
+    expect(eligible(selection.if, contexts)).toBe(false);
+    const scope = native.steps.find((step: { id?: string }) => step.id === "scope");
+    expect(workflowValue(scope.env.GATE, contexts)).toBe(true);
+    const gate = native.steps.find((step: { id?: string }) => step.id === "both");
+    expect(
+      eligible(gate.if, { ...contexts, steps: { scope: { outputs: { gate: "true" } } } }),
+    ).toBe(true);
+    expect(workflowString(gate.env.PHONE_PARTS, contexts)).toBe("");
+    expect(workflowString(gate.env.INFINITARY_PHONE_STOP_EARLY, contexts)).toBe("0");
+    expect(
+      workflowValue(workflow.jobs.testflight["runs-on"], {
+        vars: { MAC_QUEUES: '{"testflight":"mini-mac-testflight","phone":"mini-mac-phone"}' },
+      }),
+    ).toBe("mini-mac-testflight");
   });
   it("makes a status request read-only, including when the Mac job was skipped", () => {
     const needs = {
       resolve: { result: "success", outputs: { mode: "status" } },
       testflight: { result: "skipped" },
+      phone: { result: "skipped" },
     };
     expect(eligible(workflow.jobs.testflight.if, { needs })).toBe(false);
+    expect(eligible(workflow.jobs.phone.if, { needs })).toBe(false);
     expect(eligible(workflow.jobs.availability.if, { needs }, false)).toBe(true);
     needs.resolve.outputs.mode = "release";
     needs.testflight.result = "failure";

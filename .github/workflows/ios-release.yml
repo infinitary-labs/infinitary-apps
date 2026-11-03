@@ -2,7 +2,7 @@ name: Infinitary to TestFlight
 run-name: Infinitary ${{ inputs.version }}${{ inputs.check_build && format(' — check build {0}', inputs.check_build) || ' — TestFlight' }}
 
 # INF-64 piece 3 / INF-80. Only a deliberate dispatch on merged main releases.
-# Tests and ordinary Xcode automatic signing use the same Mac mini as SSHHIP.
+# Unsigned checks use the vBoxx phone queue; Xcode signing stays on the host.
 # No explicit keychain operations, no certificate cleanup, no automatic retries.
 on:
   workflow_dispatch:
@@ -53,9 +53,22 @@ jobs:
           APP_STORE_CONNECT_API_KEY: ${{ secrets.APP_STORE_CONNECT_API_KEY }}
         run: node scripts/phone-release.ts preflight
 
-  testflight:
+  phone:
     needs: resolve
     if: needs.resolve.outputs.mode == 'release'
+    # The reusable workflow and its checkout use this dispatch's resolved source.
+    # No release environment or signing secrets cross into the disposable guest.
+    uses: ./.github/workflows/phone.yml
+    permissions:
+      actions: write
+      contents: read
+      pull-requests: read
+    with:
+      source_commit: ${{ needs.resolve.outputs.source_commit }}
+
+  testflight:
+    needs: [resolve, phone]
+    if: needs.resolve.outputs.mode == 'release' && needs.phone.result == 'success'
     environment: ios-release
     # INF-603: Xcode signs the upload with the captain's certificates on
     # the real Mac, so it asks for the real Mac, never a virtual one, once
@@ -97,7 +110,7 @@ jobs:
         with:
           node-version: 24
       - id: release_request
-        name: Refuse release-job reruns before installing or testing
+        name: Refuse release-job reruns before installing or signing
         run: node scripts/phone-release.ts resolve
       - name: Install without reading this Mac's signing material
         run: |
@@ -107,14 +120,7 @@ jobs:
           HOME="$install_home" CFFIXED_USER_HOME="$install_home" \
             INFINITARY_LOCAL_CODESIGN_DIR="$install_home/local-codesign" \
             pnpm install --frozen-lockfile --store-dir "$store"
-      - id: iphone
-        name: Read and recover on iPhone
-        run: node scripts/test-phone.ts --evidence "$RUNNER_TEMP/phone/iphone"
-      - id: ipad
-        name: Read and recover on iPad
-        if: ${{ !cancelled() && steps.iphone.outcome != 'skipped' }}
-        run: node scripts/test-phone.ts --ipad --evidence "$RUNNER_TEMP/phone/ipad"
-      # Default success() is deliberate: either device failing means no signing or upload.
+      # The same-source unsigned phone job must pass before this host job starts.
       - id: upload
         name: Archive and upload Infinitary
         env:
@@ -129,14 +135,12 @@ jobs:
           if [[ -n "${PHONE_RELEASE_WORK:-}" && "$PHONE_RELEASE_WORK" == "$RUNNER_TEMP"/infinitary-ios-release.* ]]; then
             rm -rf "$PHONE_RELEASE_WORK"
           fi
-      - name: Keep native results and the non-secret upload receipt
+      - name: Keep the non-secret upload receipt
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: phone-release-${{ needs.resolve.outputs.version }}-${{ needs.resolve.outputs.build_number }}
-          path: |
-            ${{ runner.temp }}/phone/
-            ${{ runner.temp }}/phone-upload.json
+          path: ${{ runner.temp }}/phone-upload.json
           if-no-files-found: ignore
           retention-days: 14
 

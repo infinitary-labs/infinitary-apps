@@ -6,6 +6,7 @@ import { describe, expect, it } from "vitest";
 import { GENERATED_CONTRACT, phoneDecision } from "../scripts/affected-phone";
 import { PHONE_PARTS } from "../scripts/phone-test-plan";
 import { DEVICE_GATES, NATIVE_JOB } from "../scripts/replaced-phone-runs";
+import { workflowString, workflowValue } from "./helpers/releaseWorkflows";
 
 // INF-79 / INF-136: the captain requested a Mac mini lane for phone/shared-contract PRs.
 const require = createRequire(import.meta.url);
@@ -99,8 +100,7 @@ function gateStarts(gate: string, iphone: string, replaced: string): string {
 }
 const [IPHONE, IPAD, BOTH, LEGACY_BOTH] = DEVICE_GATES as [string, string, string, string];
 
-// INF-524 (the captain's approved plan INF-517): the repository variable that moves the
-// device gates into a virtual Mac. GitHub reads an unset variable as "".
+// INF-2202: old switch values must no longer redirect, suppress setup or create clones.
 const OFF = "";
 const IN_TURN = "in-turn";
 const TOGETHER = "together";
@@ -320,80 +320,30 @@ describe("the native pull-request gate", () => {
     expect(eligible(phoneDecision([]).run)).toBe("false");
     expect(eligible(phoneDecision(undefined).run)).toBe("true");
   });
-  it("queues only phone jobs across PRs, leaving desktop PRs independent", () => {
-    // The captain's review-cap choice replaces the former all-jobs queue.
-    // Command overlap belongs to mac-check-lock.test.ts.
-    // INF-989 (captain: "let both virtual Macs run phone checks at once by ending the
-    // one-at-a-time line"): a job on the virtual-Mac label gets a group of its own; the Mac
-    // mini's runners and PHONE_VIRTUAL_MAC's one fixed clone keep the shared line.
+  it("gives every phone run and attempt its own group, without cancelling work (INF-2202)", () => {
     const journeys = yaml.load(readFileSync(".github/workflows/journeys.yml", "utf8"));
-    const native = workflow.jobs["native-phone"].concurrency;
     expect(journeys.jobs["affected-journeys"].concurrency).toBeUndefined();
-    const resolveGroup = (group: string, given: Plain) => {
-      const contexts: Plain = { inputs: {}, ...given };
-      return group.replace(/\$\{\{(.*?)\}\}/g, (_: string, expression: string) => {
-        const ast = new Parser(new Lexer(expression).lex().tokens, Object.keys(contexts), [
-          { name: "format", minArgs: 1, maxArgs: 255 },
-        ]).parse();
-        return new Evaluator(ast, toData(contexts)).evaluate().coerceString();
-      });
-    };
-    // Two pull requests' runs, as GitHub names them.
     const runs = [
       { ref: "refs/pull/79/merge", run_id: "18800000001", run_attempt: "1" },
       { ref: "refs/pull/136/merge", run_id: "18800000002", run_attempt: "1" },
+      { ref: "refs/pull/79/merge", run_id: "18800000001", run_attempt: "2" },
     ];
-    const groups = (vars: Plain) =>
-      runs.map((github) => resolveGroup(native.group, { github, vars }));
-    const desktops = runs.map((github) => resolveGroup(journeys.concurrency.group, { github }));
-    expect(new Set(desktops).size).toBe(runs.length);
-    const lines: { vars: Plain; shared: boolean }[] = [
-      // Today's repository variables: phone checks in the virtual Macs, side by side.
-      {
-        vars: { VIRTUAL_MAC_RUNNER: "mini-mac-virtual", MAC_RUNNER: "mini-mac-any" },
-        shared: false,
-      },
-      // INF-2112: the phone kind's virtual-only queue, side by side as well.
-      {
-        vars: { MAC_QUEUES: '{"phone":"mini-mac-phone"}', MAC_RUNNER: "mini-mac-any" },
-        shared: false,
-      },
-      // The Mac mini's own runners keep the shared phone queue.
-      { vars: { MAC_RUNNER: "mini-mac-any" }, shared: true },
-      {
-        vars: { MAC_QUEUES: '{"check":"mini-mac-check"}', MAC_RUNNER: "mini-mac-any" },
-        shared: true,
-      },
-      { vars: {}, shared: true },
-      // PHONE_VIRTUAL_MAC reuses one fixed clone, whatever the other variables say.
-      {
-        vars: { PHONE_VIRTUAL_MAC: "together", VIRTUAL_MAC_RUNNER: "mini-mac-virtual" },
-        shared: true,
-      },
-      { vars: { PHONE_VIRTUAL_MAC: "together" }, shared: true },
-    ];
-    for (const { vars, shared } of lines) {
-      const phones = groups(vars);
-      for (const group of phones) expect(group).toBeTruthy();
-      expect(new Set(phones).size).toBe(shared ? 1 : runs.length);
-      expect(desktops.some((group) => phones.includes(group))).toBe(false);
+    const vars = { PHONE_VIRTUAL_MAC: TOGETHER, MAC_RUNNER: "mini-mac-any" };
+    for (const id of [NATIVE_JOB, "phone-repeat-2", "phone-repeat-3"]) {
+      const native = workflow.jobs[id].concurrency;
+      const groups = runs.map((github) =>
+        workflowString(native.group, {
+          github,
+          vars,
+          inputs: { mac_runner: "mini-mac-real" },
+        }),
+      );
+      expect(new Set(groups).size).toBe(runs.length);
+      for (const github of runs)
+        expect(groups).not.toContain(workflowString(journeys.concurrency.group, { github }));
+      expect(native.queue).toBe("max");
+      expect(native["cancel-in-progress"]).toBe(false);
     }
-    // A rerun of the same run is a new job, never queued behind its own first attempt.
-    const virtual = { VIRTUAL_MAC_RUNNER: "mini-mac-virtual" };
-    expect(
-      resolveGroup(native.group, { github: { ...runs[0], run_attempt: "2" }, vars: virtual }),
-    ).not.toBe(groups(virtual)[0]);
-    // INF-869: the real-Mac overlap proof selects a runner without changing shared vars.
-    const proofGroups = runs.map((github) =>
-      resolveGroup(native.group, {
-        github,
-        vars: virtual,
-        inputs: { mac_runner: "mini-mac-real" },
-      }),
-    );
-    expect(proofGroups).toEqual(["mac-mini-phone", "mac-mini-phone"]);
-    expect(native.queue).toBe("max");
-    expect(native["cancel-in-progress"]).toBe(false);
   });
   it("keeps TestFlight uploads in a line of their own, apart from the phone checks", () => {
     // INF-989 (captain: "keep TestFlight uploads in their own line").
@@ -446,7 +396,7 @@ describe("the native pull-request gate", () => {
     expect(gateStarts(BOTH, "", "")).toBe("true");
     expect(gateStarts(BOTH, "", "true")).toBe("false");
   });
-  it("runs only on request or main's call, never on a pull request, and selects the Mac mini without a paid fallback", () => {
+  it("runs only on request or a reusable call, never on a pull request", () => {
     // INF-2139 (captain: "let's pull journeys and phone checks off PRs now"); INF-2146's
     // approved plan adds the call from main.yml on every push to main.
     expect(Object.keys(workflow.on)).toEqual(["workflow_call", "workflow_dispatch"]);
@@ -458,25 +408,7 @@ describe("the native pull-request gate", () => {
       evidence_run: { required: false, type: "string" },
       recording: { required: false, type: "boolean", default: false },
     });
-    const expression = workflow.jobs["native-phone"]["runs-on"].replace(/^\$\{\{\s*|\s*\}\}$/g, "");
-    const ast = new Parser(new Lexer(expression).lex().tokens, ["vars", "inputs"], []).parse();
-    for (const configured of ["mini-mac", ""]) {
-      const variables = new data.Dictionary({
-        key: "MAC_RUNNER",
-        value: new data.StringData(configured),
-      });
-      expect(
-        new Evaluator(
-          ast,
-          new data.Dictionary(
-            { key: "vars", value: variables },
-            { key: "inputs", value: new data.Dictionary() },
-          ),
-        )
-          .evaluate()
-          .coerceString(),
-      ).toBe("mini-mac");
-    }
+    expect(workflow.on.workflow_dispatch.inputs.mac_runner).toBeUndefined();
     expect(workflow.jobs["native-phone"]["continue-on-error"]).toBeUndefined();
   });
   // INF-1066: exporting attachments must not supersede a failed native check with a skipped check of the same name.
@@ -514,126 +446,64 @@ describe("the native pull-request gate", () => {
       ).toBe(recording ? "1" : "");
     },
   );
-  it("runs today's steps on the Mac mini while the virtual Mac switch is off", () => {
+  it("runs setup and the direct gate regardless of a stale clone switch (INF-2202)", () => {
     const all = names(workflow.jobs[NATIVE_JOB].steps);
-    expect(names(stepsThatRun(OFF))).toEqual(
-      all.filter(
-        (name) =>
-          !VIRTUAL_MAC_STEPS.includes(name) &&
-          name !== RESULTS &&
-          name !== SAVE_PACKAGES &&
-          !SKIPPED_CHOOSER_STEPS.includes(name),
-      ),
-    );
-    // INF-662 / INF-2101: one gate checks and builds once, serializing only the placed VM.
-    // The switch, when set, keeps the fixed virtual Mac's route unchanged.
-    expect(
-      stepsThatRun(OFF)
-        .filter(isGate)
-        .map((step) => step.run),
-    ).toEqual([
-      [
-        // INF-827: the parts the chooser kept, none (every part) on a run on request.
-        'parts=(); for part in $PHONE_PARTS; do parts+=(--part "$part"); done',
-        'if [ "$PHONE_FULL" = true ] && [ -z "$PHONE_REPEAT_PARTS" ]; then parts=(); fi',
-        'if [ -n "$PHONE_VIRTUAL_MAC" ]; then exec scripts/virtual-mac/phone.sh gate iphone ipad; fi',
-        // INF-2101: a job placed in a virtual Mac uses one simulator at a time.
-        'if [ "$(sysctl -n kern.hv_vmm_present 2> /dev/null)" = 1 ]; then exec node scripts/test-phone.ts --both "${parts[@]}" --simulators 1 --evidence "$RUNNER_TEMP/phone"; fi',
-        'node scripts/test-phone.ts --both "${parts[@]}" --evidence "$RUNNER_TEMP/phone"',
-        "",
-      ].join("\n"),
-    ]);
-    // The gate reads the chooser's parts, which a run on request leaves empty.
-    expect(stepsThatRun(OFF).find(isGate)?.env?.PHONE_PARTS).toBe(
-      "${{ steps.repeat-select.outputs.parts || inputs.parts || steps.select.outputs.parts || steps.request-select.outputs.parts }}",
-    );
-    // The gates' shell sees the switch as the repository sets it, empty when unset.
-    const shell = workflow.jobs[NATIVE_JOB].env.PHONE_VIRTUAL_MAC.replace(
-      /^\$\{\{\s*|\s*\}\}$/g,
-      "",
-    );
-    for (const value of [OFF, IN_TURN, TOGETHER])
-      expect(holds(`(${shell}) == '${value}'`, { vars: { PHONE_VIRTUAL_MAC: value } })).toBe(true);
-  });
-  it("selects the requested real Mac for the overlap proof without changing default variables", () => {
-    // INF-869 requires a real-Mac phone gate beside a virtual-Mac check.
-    const expression = workflow.jobs[NATIVE_JOB]["runs-on"].replace(/^\$\{\{\s*|\s*\}\}$/g, "");
-    expect(
-      holds(`(${expression}) == 'mini-mac-real'`, {
-        vars: { VIRTUAL_MAC_RUNNER: "mini-mac-virtual", MAC_RUNNER: "mini-mac-any" },
-        inputs: { mac_runner: "mini-mac-real" },
-      }),
-    ).toBe(true);
-  });
-  it("runs the device gates in a fresh virtual Mac on its own runner when the switch is on", () => {
-    const expression = workflow.jobs[NATIVE_JOB]["runs-on"];
-    // INF-897: VIRTUAL_MAC_RUNNER puts the job in the placement service's
-    // virtual-Mac scale set, which no journey or full check shares; unset, the job
-    // runs where MAC_RUNNER sends it, as before. The values are the repository's.
-    const runner = (virtualMac: string, virtualRunner: string, macRunner: string) =>
-      [virtualMac && "mini-mac-vm", virtualRunner, macRunner, "mini-mac"].find(Boolean);
-    for (const virtualMac of [OFF, IN_TURN, TOGETHER])
-      for (const virtualRunner of ["", "mini-mac-virtual"])
-        for (const macRunner of ["", "mini-mac", "mini-mac-any"]) {
-          const vars = {
-            PHONE_VIRTUAL_MAC: virtualMac,
-            VIRTUAL_MAC_RUNNER: virtualRunner,
-            MAC_RUNNER: macRunner,
-            REAL_MAC_RUNNER: "mini-mac-real",
-          };
-          for (const label of ["mini-mac", "mini-mac-vm", "mini-mac-any", "mini-mac-virtual"])
-            expect(
-              holds(`(${expression.replace(/^\$\{\{\s*|\s*\}\}$/g, "")}) == '${label}'`, {
-                vars,
-                inputs: {},
-              }),
-            ).toBe(runner(virtualMac, virtualRunner, macRunner) === label);
-        }
-    const inTurn = names(stepsThatRun(IN_TURN));
-    const together = names(stepsThatRun(TOGETHER));
-    // INF-662 / INF-2101: both fixed-clone switch values still run both devices at once from one build.
-    expect(inTurn).toEqual(together);
-    // The packages install inside the clone, never on this Mac.
-    for (const ran of [inTurn, together])
-      expect(ran.filter((name) => name.startsWith("Install") || name.startsWith("pnpm/"))).toEqual(
-        [],
+    for (const route of [OFF, IN_TURN, TOGETHER]) {
+      const ran = stepsThatRun(route);
+      expect(names(ran)).toEqual(
+        all.filter(
+          (name) =>
+            name !== RESULTS && name !== SAVE_PACKAGES && !SKIPPED_CHOOSER_STEPS.includes(name),
+        ),
       );
-    const gatesIn = (ran: string[]) =>
-      ran.slice(
-        ran.indexOf("Start a fresh virtual Mac"),
-        ran.indexOf("Delete the virtual Mac") + 1,
+      expect(names(ran)).toContain("Install without reading this Mac's signing material");
+      expect(ran.filter(isGate)).toHaveLength(1);
+      expect(ran.find(isGate)?.env?.PHONE_PARTS).toBe(
+        "${{ steps.repeat-select.outputs.parts || inputs.parts || steps.select.outputs.parts || steps.request-select.outputs.parts }}",
       );
-    expect(
-      gatesIn(together).filter(
-        (name) => DEVICE_GATES.includes(name) || VIRTUAL_MAC_STEPS.includes(name),
-      ),
-    ).toEqual(["Start a fresh virtual Mac", BOTH, "Delete the virtual Mac"]);
-    // Executable delegation to that clone, including both device arguments, is
-    // covered in release-workflows.test.ts at its existing integration layer.
-    // This file retains the routing, eligibility and cleanup conditions.
-  });
-  it("deletes the virtual Mac however the job ends, and never starts one with the switch off", () => {
-    const steps = workflow.jobs[NATIVE_JOB].steps as Step[];
-    const remove = steps.find((step) => step.name === "Delete the virtual Mac") as Step;
-    expect(remove.run).toBe("scripts/virtual-mac/phone.sh delete");
-    for (const outcome of ["success", "failure", "cancelled"])
-      for (const status of [{}, { failed: true }, { cancelled: true }])
-        expect(holds(condition(remove), { steps: { vm: { outcome } }, vars: {} }, status)).toBe(
-          true,
-        );
-    expect(
-      holds(
-        condition(remove),
-        { steps: { vm: { outcome: "skipped" } }, vars: {} },
-        { failed: true },
-      ),
-    ).toBe(false);
-    // A replaced version's clone is deleted too, and starts no gate.
-    for (const virtualMac of [IN_TURN, TOGETHER]) {
-      const ran = names(stepsThatRun(virtualMac, "true"));
-      expect(ran.filter((name) => DEVICE_GATES.includes(name))).toEqual([]);
-      expect(ran).toContain("Delete the virtual Mac");
     }
+    // The shell execution and both-device arguments belong to release-workflows.test.ts.
+  });
+  it("ignores former runner overrides for every device job (INF-2202)", () => {
+    for (const id of [NATIVE_JOB, "phone-repeat-2", "phone-repeat-3"])
+      for (const mode of [OFF, IN_TURN, TOGETHER])
+        expect(
+          workflowValue(workflow.jobs[id]["runs-on"], {
+            vars: {
+              MAC_QUEUES: JSON.stringify({ phone: "mini-mac-phone" }),
+              PHONE_VIRTUAL_MAC: mode,
+              VIRTUAL_MAC_RUNNER: "mini-mac-virtual",
+              MAC_RUNNER: "mini-mac-any",
+              REAL_MAC_RUNNER: "mini-mac-real",
+            },
+            inputs: { mac_runner: "mini-mac-real" },
+          }),
+        ).toBe("mini-mac-phone");
+  });
+  it("supplies no runnable destination when the phone queue is absent (INF-2202)", () => {
+    for (const id of [NATIVE_JOB, "phone-repeat-2", "phone-repeat-3"]) {
+      const resolve = (mapping: string) =>
+        workflowValue(workflow.jobs[id]["runs-on"], {
+          vars: {
+            MAC_QUEUES: mapping,
+            PHONE_VIRTUAL_MAC: TOGETHER,
+            MAC_RUNNER: "mini-mac-any",
+            VIRTUAL_MAC_RUNNER: "mini-mac-virtual",
+          },
+          inputs: { mac_runner: "mini-mac-real" },
+        });
+      for (const mapping of ["{}", '{"phone":""}']) expect(resolve(mapping)).toBeFalsy();
+      for (const mapping of ["", "not json"]) expect(() => resolve(mapping)).toThrow();
+    }
+  });
+  it("never starts or deletes a fixed clone, including replaced and failed checks (INF-2202)", () => {
+    for (const mode of [OFF, IN_TURN, TOGETHER])
+      for (const failed of [false, true]) {
+        const ran = names(stepsThatRun(mode, "true", failed));
+        expect(ran.filter((name) => VIRTUAL_MAC_STEPS.includes(name))).toEqual([]);
+        expect(ran.filter((name) => DEVICE_GATES.includes(name))).toEqual([]);
+        expect(ran).toContain("Keep the small native command logs");
+      }
   });
   it("reads the latest version right before every device gate, whichever way the switch is set", () => {
     // INF-487: no simulator exists before a gate; the virtual Mac's start creates none.
@@ -692,11 +562,9 @@ describe("the phone check's Swift packages", () => {
     // A replaced version never started its gate, so it fetched nothing.
     expect(names(stepsThatRun(OFF, "true", false, {}, MAIN))).not.toContain(SAVE_PACKAGES);
   });
-  it("neither restores nor saves when the gate runs inside the virtual Mac's clone", () => {
+  it("a stale clone switch cannot suppress the placed guest's package cache (INF-2202)", () => {
     for (const github of [PULL_REQUEST, MAIN])
-      expect(ran(github, "", TOGETHER).filter((name) => name.includes("Swift packages"))).toEqual(
-        [],
-      );
+      expect(ran(github, "", TOGETHER)).toEqual(ran(github));
   });
 });
 

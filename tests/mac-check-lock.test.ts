@@ -11,14 +11,7 @@ import { scratchDir } from "./helpers/scratchDirs";
 // Execute real workflow/package commands, holding only their expensive workload.
 const require = createRequire(import.meta.url);
 const yaml = createRequire(require.resolve("electron-builder/package.json"))("js-yaml");
-type Kind =
-  | "desktop"
-  | "phone"
-  | "package"
-  | "placed-phone"
-  | "virtual-phone"
-  | "release-phone"
-  | "release-ipad";
+type Kind = "desktop" | "phone" | "package" | "placed-phone" | "virtual-phone" | "release-phone";
 function fixture() {
   const root = scratchDir("infinitary-mac-check-");
   const home = join(root, "home");
@@ -54,33 +47,23 @@ exec ${JSON.stringify(process.execPath)} ${JSON.stringify(join(root, "workload")
   const events: string[] = [];
   const children: { stop(): void; result: Promise<number | null> }[] = [];
   function launch(name: string, kind: Kind, fail = false, parts = "") {
-    const release = kind === "release-phone" || kind === "release-ipad";
+    // INF-2202: release checks now call the combined unsigned gate, not host steps.
+    const release = kind === "release-phone";
+    const phoneWorkflow = release
+      ? yaml.load(readFileSync(".github/workflows/ios-release.yml", "utf8")).jobs.phone.uses
+      : ".github/workflows/phone.yml";
     const command =
       kind === "package"
         ? JSON.parse(readFileSync("package.json", "utf8")).scripts["test:phone"]
         : yaml
             .load(
               readFileSync(
-                release
-                  ? ".github/workflows/ios-release.yml"
-                  : kind === "desktop"
-                    ? ".github/workflows/journeys.yml"
-                    : ".github/workflows/phone.yml",
+                kind === "desktop" ? ".github/workflows/journeys.yml" : phoneWorkflow,
                 "utf8",
               ),
             )
-            .jobs[
-              release ? "testflight" : kind === "desktop" ? "affected-journeys" : "native-phone"
-            ].steps.find(
-              (step: { id?: string }) =>
-                step.id ===
-                (release
-                  ? kind === "release-phone"
-                    ? "iphone"
-                    : "ipad"
-                  : kind === "desktop"
-                    ? "e2e"
-                    : "both"),
+            .jobs[kind === "desktop" ? "affected-journeys" : "native-phone"].steps.find(
+              (step: { id?: string }) => step.id === (kind === "desktop" ? "e2e" : "both"),
             ).run;
     const child = spawn("bash", ["-e", "-c", command], {
       cwd: resolve("."),
@@ -170,46 +153,45 @@ exec ${JSON.stringify(process.execPath)} ${JSON.stringify(join(root, "workload")
 }
 
 describe.skipIf(process.platform === "win32")("Mac check commands without admission locks", () => {
-  it.each([
-    "phone",
-    "package",
-    "placed-phone",
-    "virtual-phone",
-    "release-phone",
-    "release-ipad",
-  ] as const)("starts %s beside held journeys without waiting for them to exit", async (kind) => {
-    const f = fixture();
-    try {
-      const desktop = f.launch("journeys", "desktop");
-      await desktop.wait("started:journeys");
-      const phone = f.launch("phone", kind);
-      await phone.wait("started:phone");
-      const second = f.launch("other-journeys", "desktop");
-      await second.wait("started:other-journeys");
-      expect(f.events.filter((line) => line.includes("started:"))).toEqual([
-        "journeys: started:journeys",
-        "phone: started:phone",
-        "other-journeys: started:other-journeys",
-      ]);
-      expect(f.events.some((line) => line.includes("exited"))).toBe(false);
-      if (kind === "placed-phone" || kind === "phone") {
-        const args = JSON.parse((await phone.wait(/^args:/)).slice(5));
-        expect(args).toContain("--both");
-        // INF-2101, the captain's "Change the VM default": serialize the placed VM only.
-        if (kind === "placed-phone")
+  it.each(["phone", "package", "placed-phone", "virtual-phone", "release-phone"] as const)(
+    "starts %s beside held journeys without waiting for them to exit",
+    async (kind) => {
+      const f = fixture();
+      try {
+        const desktop = f.launch("journeys", "desktop");
+        await desktop.wait("started:journeys");
+        const phone = f.launch("phone", kind);
+        await phone.wait("started:phone");
+        const second = f.launch("other-journeys", "desktop");
+        await second.wait("started:other-journeys");
+        expect(f.events.filter((line) => line.includes("started:"))).toEqual([
+          "journeys: started:journeys",
+          "phone: started:phone",
+          "other-journeys: started:other-journeys",
+        ]);
+        expect(f.events.some((line) => line.includes("exited"))).toBe(false);
+        if (kind !== "package") {
+          const args = JSON.parse((await phone.wait(/^args:/)).slice(5));
+          expect(args).toContain("--both");
+          // INF-2202: ordinary and release calls both check both devices in the guest,
+          // even with a stale clone switch or a host-looking sysctl reading.
           expect(
             args.slice(args.indexOf("--simulators"), args.indexOf("--simulators") + 2),
           ).toEqual(["--simulators", "1"]);
-        else expect(args).not.toContain("--simulators");
-        expect(args).not.toContain("--part");
-        console.info("Phone workflow invocation (stand-in workload):", kind, JSON.stringify(args));
+          expect(args).not.toContain("--part");
+          console.info(
+            "Phone workflow invocation (stand-in workload):",
+            kind,
+            JSON.stringify(args),
+          );
+        }
+        for (const work of [desktop, phone, second]) work.release();
+        expect(await Promise.all([desktop.result, phone.result, second.result])).toEqual([0, 0, 0]);
+      } finally {
+        await f.close();
       }
-      for (const work of [desktop, phone, second]) work.release();
-      expect(await Promise.all([desktop.result, phone.result, second.result])).toEqual([0, 0, 0]);
-    } finally {
-      await f.close();
-    }
-  });
+    },
+  );
   // INF-2101: changing the VM default preserves requests for named parts, not just full gates.
   // Run the same real workflow command used above, with the Cards/rest request the sampler reaches.
   it.each(["phone", "placed-phone"] as const)("preserves selected parts on %s", async (kind) => {
@@ -235,7 +217,6 @@ describe.skipIf(process.platform === "win32")("Mac check commands without admiss
     "placed-phone",
     "virtual-phone",
     "release-phone",
-    "release-ipad",
   ] as const)("preserves a failing %s command's status", async (kind) => {
     const f = fixture();
     try {

@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "phone-vboxx-routing",
+      "reason": "Internal CI routing requires the vBoxx phone queue and separates unsigned TestFlight checks from host signing; no app behavior changes."
+    }
+  ]
+}

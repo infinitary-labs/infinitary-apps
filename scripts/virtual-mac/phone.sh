@@ -1,10 +1,9 @@
 #!/bin/bash
-# phone.sh - the phone check's device gates in a fresh virtual Mac cloned
-# from the lane's image (image.sh): phone.yml runs
-# it when the repository variable PHONE_VIRTUAL_MAC is set (docs/ios.md,
-# "The phone check in a virtual Mac"). Its clone has one fixed name, so one
-# phone check runs at a time (phone.yml's mac-mini-phone queue, which this
-# variable keeps): phone checks wait only for each other, never for journeys (the captain's INF-517 answer on INF-79's rule).
+# Legacy fixed-clone lifecycle, retained for existing callers and cleanup.
+# Phone verification now uses phone.yml and MAC_QUEUES.phone on the two vBoxx VMs.
+# Do not use this script or a Mac mini borrow for phone proof. No current workflow
+# calls it; PHONE_VIRTUAL_MAC no longer selects a workflow route (INF-2202).
+# The lifecycle below is kept intact so rollout does not interrupt existing jobs.
 #
 # usage: scripts/virtual-mac/phone.sh run <results folder> <iphone|ipad>...
 #        scripts/virtual-mac/phone.sh start <results folder>
@@ -30,7 +29,8 @@ WORK="${RUNNER_TEMP:-${TMPDIR:-/tmp}}/$NAME"
 source "$ROOT/scripts/virtual-mac/vm.sh"
 
 usage() {
-  echo "usage: scripts/virtual-mac/phone.sh run <results folder> <iphone|ipad>... | start <results folder> | gate <iphone|ipad>... | delete" >&2
+  echo "For phone proof, request phone.yml on the vBoxx phone queue; do not borrow a mini VM." >&2
+  echo "legacy usage: scripts/virtual-mac/phone.sh run <results folder> <iphone|ipad>... | start <results folder> | gate <iphone|ipad>... | delete" >&2
   exit 2
 }
 stamp() { date -u +%Y-%m-%dT%H:%M:%SZ; }
@@ -62,7 +62,7 @@ case "${1:-}" in
   start)
     [ "$#" -eq 2 ] || usage
     if [ -z "${CI:-}" ] && [ -z "${BORROWED_PLACE:-}" ] && command -v borrow-virtual-mac > /dev/null; then
-      echo "Use phone.sh run <results folder> <iphone|ipad>... so the borrow covers start, gates and delete." >&2
+      echo "For phone proof, request phone.yml on the vBoxx phone queue; do not borrow a mini VM." >&2
       exit 2
     fi
     mkdir -p "$2"

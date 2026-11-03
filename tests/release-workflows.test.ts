@@ -3729,7 +3729,6 @@ describe("each Mac job's kind", () => {
   it.each([
     ["verify.yml", "lane", { matrix: { lane: "mac" }, inputs: {} }, "check", "mini-mac-any"],
     ["journeys.yml", "affected-journeys", { inputs: {} }, "journeys", "mini-mac-any"],
-    ["phone.yml", "native-phone", { inputs: {} }, "phone", "mini-mac-virtual"],
     ["phone.yml", "scene-evidence", {}, "light", "mini-mac-any"],
     ["ios-release.yml", "testflight", {}, "testflight", "mini-mac-real"],
     ["mac-installer.yml", "build", {}, "build", "mini-mac-virtual"],
@@ -3780,8 +3779,9 @@ describe("each Mac job's kind", () => {
               inputs: {},
               needs: publishing(true),
             });
-          const before = runner(today);
-          if (typeof before !== "string" || !/^(mini-mac|macos-15$)/.test(before)) continue;
+          const before = runner({ ...today, MAC_QUEUES: "{}" });
+          const configured = runner({ ...today, MAC_QUEUES: JSON.stringify(queues) });
+          if (!/^(mini-mac|macos-15$)/.test(before) && !labels.has(configured)) continue;
           macJobs.push(`${file}:${id}`);
           expect(
             labels.has(String(runner({ ...today, MAC_QUEUES: JSON.stringify(queues) }))),
@@ -3886,7 +3886,13 @@ it("sends every Linux job to LINUX_RUNNER, and hosted Ubuntu when it is unset, u
           : [{}];
       for (const entry of entries) {
         const runner = (vars: Record<string, string>) =>
-          evaluate(job["runs-on"] ?? "", { vars, matrix: entry, inputs: {}, needs: {} });
+          evaluate(job["runs-on"] ?? "", {
+            // INF-2202: phone is required, even while this inventory varies Linux labels.
+            vars: { MAC_QUEUES: '{"phone":"mini-mac-phone"}', ...vars },
+            matrix: entry,
+            inputs: {},
+            needs: {},
+          });
         const hosted = runner({});
         if (typeof hosted !== "string" || !hosted.startsWith("ubuntu-")) continue;
         const name = `${file}:${id} ${JSON.stringify(entry)}`;
@@ -4662,23 +4668,47 @@ describe("budgeted pull-request journey workflow (INF-658)", () => {
   );
 });
 
-// INF-2259 retains virtual-phone delegation after adding full-selection accounting.
-// Execute its shell instead of pinning a line number in the unit routing contract.
-it.each(["in-turn", "together"])(
-  "delegates both devices to the fixed virtual phone clone in %s",
-  (mode) => {
+// INF-2202: execute the actual gate shell with former overrides still present;
+// both devices stay in the placed guest, one simulator at a time, with selection intact.
+it.each([
+  { mode: "in-turn", parts: "cards", full: "true", repeat: "", selected: [] },
+  {
+    mode: "together",
+    parts: "cards",
+    full: "true",
+    repeat: "cards",
+    selected: ["--part", "cards"],
+  },
+  {
+    mode: "",
+    parts: "join talk",
+    full: "false",
+    repeat: "",
+    selected: ["--part", "join", "--part", "talk"],
+  },
+])(
+  "runs both devices directly for $mode/$full/$repeat without a local clone",
+  ({ mode, parts, full, repeat, selected }) => {
     const phone = loadYamlFile(".github/workflows/phone.yml") as {
       jobs: Record<string, { steps: { id?: string; run?: string }[] }>;
     };
     const command = phone.jobs["native-phone"]!.steps.find((step) => step.id === "both")!.run!;
-    expect(
-      recordedWorkflowCall(command, {
-        PHONE_VIRTUAL_MAC: mode,
-        PHONE_PARTS: "",
-        PHONE_FULL: "true",
-        PHONE_REPEAT_PARTS: "",
-      }),
-    ).toEqual(["scripts/virtual-mac/phone.sh", "gate", "iphone", "ipad"]);
+    const call = recordedWorkflowCall(command, {
+      PHONE_VIRTUAL_MAC: mode,
+      PHONE_PARTS: parts,
+      PHONE_FULL: full,
+      PHONE_REPEAT_PARTS: repeat,
+    });
+    expect(call.slice(0, -1)).toEqual([
+      "node",
+      "scripts/test-phone.ts",
+      "--both",
+      ...selected,
+      "--simulators",
+      "1",
+      "--evidence",
+    ]);
+    expect(call.at(-1)).toMatch(/\/phone$/);
   },
 );
 

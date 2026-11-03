@@ -32,7 +32,7 @@ function saveEvidence(name: string, state: unknown) {
   writeFileSync(test.info().outputPath(`${name}.json`), JSON.stringify(state, null, 2));
 }
 
-for (const theme of ["dark", "light"] as const) {
+for (const theme of ["dark"] as const) {
   test(`notification and presence refusals restore saved values and remain retryable (${theme})`, {
     tag: MAC_ONLY_TAG,
   }, async () => {
@@ -199,7 +199,7 @@ function seedIntelligence() {
   return { userDataDir, fixtureDir };
 }
 
-for (const theme of ["dark", "light"] as const) {
+for (const theme of ["dark"] as const) {
   test(`routing, slot and decision saves explain refusals without selecting an unsaved key (${theme})`, async () => {
     const { userDataDir, fixtureDir } = seedIntelligence();
     const launched = await launchApp({

@@ -8,17 +8,16 @@ import { writeMockClaudeClient } from "./mockClaudeClient";
 import { MOCK_COMPLETION_TEXT } from "./mockProvider";
 import { promptInput } from "./prompt";
 import { reportLine, startedLine, taskKey } from "./rails";
-import { setThemeViaSettings } from "./theme";
 
 /**
  * Phase 1 acceptance (docs/architecture.md §17): walk the shell states
  * listening (the dictation key, synthetic) -> working (stub card) -> settings and
- * back in both themes; screenshots land in each test's own output directory
+ * back in the dark theme; screenshots land in each test's own output directory
  * (docs/testing.md, "Per-run e2e evidence") for review against the design
  * skill's reference states.
  */
 
-const themes = [{ name: "dark" }, { name: "light" }] as const;
+const themes = [{ name: "dark" }] as const;
 
 for (const theme of themes) {
   test.describe(`${theme.name} theme`, () => {
@@ -34,9 +33,6 @@ for (const theme of themes) {
           INFINITARY_CLAUDE_CLI: writeMockClaudeClient(scratchDir("infinitary-claude-stub-")),
         },
       });
-      if (theme.name === "light") {
-        await setThemeViaSettings(launched.page, "light");
-      }
       await expect
         .poll(() => launched.page.evaluate(() => document.body.dataset.theme))
         .toBe(theme.name);

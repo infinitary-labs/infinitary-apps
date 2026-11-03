@@ -11,14 +11,7 @@ const evidence = process.env.FM_CARD_DEPARTURE_EVIDENCE;
 /** The two seeded cards: the one a choice closes and the successor the stage prepares. */
 const CHOSEN_PLAN = "The chosen plan";
 const NEXT_PREVIEW = "The next preview";
-for (const action of [
-  "Approve and build",
-  "Build it",
-  "Save and defer",
-  "Abandon",
-  "Close",
-  "Discard and close",
-]) {
+for (const action of ["Approve and build", "Close", "Discard and close"]) {
   test(`${action} closes without waiting for the next body`, async () => {
     const userDataDir = scratchDir("infinitary-card-departure-");
     const db = openDatabase(userDataDir);

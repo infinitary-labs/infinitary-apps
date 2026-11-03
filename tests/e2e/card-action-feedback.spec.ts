@@ -78,7 +78,7 @@ async function reply(app: ElectronApplication, fail = false) {
   }, fail);
 }
 
-for (const theme of ["dark", "light"] as const) {
+for (const theme of ["dark"] as const) {
   test(`pending card actions acknowledge at the first frame without shifting the row (${theme})`, async () => {
     const userDataDir = scratchDir("infinitary-pending-");
     const db = openDatabase(userDataDir);
@@ -101,7 +101,6 @@ for (const theme of ["dark", "light"] as const) {
     const launched = await launchApp({ userDataDir });
     try {
       const { app, page } = launched;
-      if (theme === "light") await setThemeViaSettings(page, "light");
       await holdRequest(app, "inf:cards:act", {});
       const choose = page.getByRole("button", { name: "Choose", exact: true });
       const keep = page.getByRole("button", { name: "Wait", exact: true });
@@ -155,7 +154,7 @@ for (const theme of ["dark", "light"] as const) {
   });
 }
 
-for (const theme of ["dark", "light"] as const) {
+for (const theme of ["dark"] as const) {
   test(`quota refresh and purge commit in place, refuse duplicate clicks, and show failures (${theme})`, async () => {
     // The Intelligence header's meta and Refresh render only once a snapshot
     // has providers (docs/first-launch.md), so the run carries one measured

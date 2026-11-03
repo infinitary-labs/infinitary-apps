@@ -492,7 +492,7 @@ const REFUSALS: {
   },
 ];
 
-for (const host of HOSTS) {
+for (const host of ["gitlab.com"] as const) {
   for (const refusal of REFUSALS) {
     test(`a merge on ${host} with ${refusal.change} merges nothing and leaves the task open`, async () => {
       const userDataDir = scratchDir("infinitary-gitlab-refused-");

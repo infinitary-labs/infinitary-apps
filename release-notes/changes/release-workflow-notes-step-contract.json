@@ -1,0 +1,8 @@
+{
+  "exclusions": [
+    {
+      "id": "release-workflow-notes-step-contract",
+      "reason": "Repairs the workflow contract test so it knows the pull request's release-notes step runs before the install and only on pull requests. Tests only; nothing in the app changes."
+    }
+  ]
+}

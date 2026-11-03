@@ -633,6 +633,13 @@ describe("local packaging identity (electron-builder.dev.yml)", () => {
       { key: "base_ref", value: new data.StringData(eventName === "pull_request" ? "main" : "") },
       { key: "ref", value: new data.StringData(ref) },
     );
+    // INF-2414 (captain: "why can't we catch release note problems before
+    // merge?"): the pull request's notes step (docs/release-notes.md, "The
+    // release check"), the gate's one other step with a condition.
+    const notes = ci.jobs["typecheck-lint-build"]?.steps.find((step) =>
+      step.run?.startsWith("node scripts/release-notes.ts change "),
+    );
+    expect(notes).toBeDefined();
     for (const [id, job] of Object.entries(ci.jobs)) {
       expect(job.needs, id).toBeUndefined();
       const expression = (job.if ?? "true").replace(/^\$\{\{\s*|\s*\}\}$/g, "");
@@ -656,17 +663,27 @@ describe("local packaging identity (electron-builder.dev.yml)", () => {
         job.steps.every(
           (step) =>
             !step["continue-on-error"] &&
-            (step.uses === "./.github/actions/linux-startup" || !step.if),
+            (step.uses === "./.github/actions/linux-startup" || step === notes || !step.if),
         ),
         id,
       ).toBe(true);
     }
-    // Every machine installs from the lockfile before it runs anything, and
-    // the jobs together run each check once; the tests are the next case's.
-    for (const { name, runs } of ciJobs())
-      expect(runs[0], name).toBe("pnpm install --frozen-lockfile");
-    const checks = ciJobs()
-      .flatMap(({ runs }) => runs.slice(1))
+    // Every machine installs from the lockfile before it runs anything but a
+    // pull request's notes step, plain Node that needs no install and reads
+    // the base parent its checkout fetched; a requested full sweep has no
+    // pull request to compare, and release.yml's notes job covers each change
+    // on main. The jobs together run each check once; the tests are the next
+    // case's.
+    const install = "pnpm install --frozen-lockfile";
+    const machines = ciJobs(eventName);
+    for (const { name, runs } of machines)
+      expect(runs.slice(0, runs.indexOf(install) + 1), name).toEqual(
+        eventName === "pull_request" && name === "typecheck-lint-build"
+          ? [notes?.run, install]
+          : [install],
+      );
+    const checks = machines
+      .flatMap(({ runs }) => runs.slice(runs.indexOf(install) + 1))
       .filter((run) => !run.startsWith("pnpm test"));
     expect(checks.toSorted()).toEqual([
       "pnpm build",
@@ -742,7 +759,7 @@ describe("local packaging identity (electron-builder.dev.yml)", () => {
       expect.arrayContaining(["pure", "unit", "unit-isolated", "integration", "probe"]),
     );
     const shardsOf = new Map<string, string[]>();
-    for (const { name, runs } of ciJobs()) {
+    for (const { name, runs } of ciJobs("workflow_dispatch")) {
       for (const run of runs) {
         const [tool, script, ...args] = run.split(/\s+/);
         if (tool !== "pnpm" || script !== "test") continue;
@@ -1405,12 +1422,17 @@ type CiJob = {
 };
 
 /**
- * The PR gate's machines: one per ci.yml job and matrix entry, each with
- * its name and its steps' commands interpolated as GitHub Actions does.
+ * The machines ci.yml starts for one event: one per job and matrix entry
+ * whose condition holds, each with its name and, in order, the commands of
+ * the steps whose conditions hold on a passing run, interpolated as GitHub
+ * Actions does. A requested full sweep (workflow_dispatch) is the gate
+ * main.yml's full check repeats; a pull request adds its own notes step.
  */
-function ciJobs(): { name: string; runs: string[] }[] {
+function ciJobs(eventName: string): { name: string; runs: string[] }[] {
   const ci = loadYamlFile(".github/workflows/ci.yml") as { jobs: Record<string, CiJob> };
+  const github = { event_name: eventName };
   return Object.entries(ci.jobs).flatMap(([id, job]) => {
+    if (job.if !== undefined && workflowValue(job.if, { github }) !== true) return [];
     const matrix = Object.entries(job.strategy?.matrix ?? {});
     if (matrix.some(([, values]) => !Array.isArray(values))) {
       throw new Error(`${id}: only a matrix of plain lists is read here`);
@@ -1427,7 +1449,12 @@ function ciJobs(): { name: string; runs: string[] }[] {
       };
       return {
         name: workflowString(job.name ?? id, contexts),
-        runs: job.steps.flatMap((step) => (step.run ? [workflowString(step.run, contexts)] : [])),
+        runs: job.steps.flatMap((step) =>
+          step.run &&
+          (step.if === undefined || workflowValue(step.if, { github, ...contexts }) === true)
+            ? [workflowString(step.run, contexts)]
+            : [],
+        ),
       };
     });
   });
@@ -2022,7 +2049,9 @@ describe("the signed channel workflow", () => {
               }) === true),
         )
         .map((candidate) => candidate.run);
-    const mainGate = ciJobs().flatMap(({ runs }) =>
+    // The requested full sweep's commands: a pull request's notes step has no
+    // pull request to compare on main.
+    const mainGate = ciJobs("workflow_dispatch").flatMap(({ runs }) =>
       runs.map((run) => (/^pnpm test(:probes|:repeats)? /.test(run) ? "pnpm test" : run)),
     );
     expect(runsIn("linux-checks").toSorted()).toEqual([...new Set(mainGate)].toSorted());

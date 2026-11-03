@@ -187,6 +187,7 @@ A run that fails or stalls under load is diagnosed from its own logs and fixed i
 Moved verbatim from `AGENTS.md` on 2026-09-24; `AGENTS.md` keeps a one-line pointer to each.
 
 - The PR's Linux `typecheck-lint-build` check owns typecheck, lint/adherence and build; do not duplicate it as a complete local pre-push gate.
+  It also runs, once, the unedited unit tests that import or read a changed file (`node scripts/unit-repeats.ts --reach`, from `directUnitReach`), in the `pure`, `unit` and `unit-isolated` cohorts, and never a Mac-listed file (INF-2441).
   Required focused proof may run before or alongside the PR and must finish for its current version before merge.
   A selected local `renderer` or `application` spec needs `--no-deps`, since its teardown otherwise runs the whole `desktop` lane.
   Run the existing unit and integration tests a change can break by path, `pnpm test <path>...` (a bare file path finds its cohort, `docs/test-cohorts.md`), and the probes it reaches with `pnpm test:probes`.

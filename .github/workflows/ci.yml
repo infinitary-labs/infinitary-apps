@@ -62,6 +62,13 @@ jobs:
       - run: pnpm check
       - run: pnpm lint:adherence
       - run: pnpm build
+      # The unit tests that import or read each changed file run once here
+      # (scripts/unit-reach.ts directUnitReach), so a break in a reader the
+      # crewmate skipped fails the pull request, not main's full check.
+      - name: Unit tests that read a changed file
+        if: ${{ github.event_name == 'pull_request' }}
+        run: node scripts/unit-repeats.ts --reach --base HEAD^1 --run
+        timeout-minutes: 30
 
   # The Linux automatic startup fixtures (docs/testing.md), a job of their own
   # so they report even when the build fails. They need systemd and Docker,

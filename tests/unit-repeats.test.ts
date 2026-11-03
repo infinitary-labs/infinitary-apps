@@ -2,9 +2,11 @@ import { describe, expect, it, vi } from "vitest";
 import { MAC_UNIT_FILES } from "../scripts/mac-unit-tests.ts";
 import {
   REPEATS,
+  reachArgs,
   repetitionArgs,
   runLocalUnits,
   runRepetitions,
+  selectLinuxReach,
   selectLocalUnits,
   selectRepeats,
 } from "../scripts/unit-repeats.ts";
@@ -170,4 +172,37 @@ it("identifies native direct readers in the once-only local selection", () => {
   expect(selection.once).toContain(native);
   expect(selection.onMac).toContain(native);
   expect(selection.repeat).toEqual([]);
+});
+
+// INF-2441, the captain's choice: the pull request's build check runs the unit
+// tests that read each changed file. actions.ts is imported by actions.test.ts.
+describe("the pull request's direct-reader round", () => {
+  it("selects the unedited direct readers of a changed file, never a Mac-only one", () => {
+    const files = selectLinuxReach([
+      "src/shared/actions.ts",
+      "src/main/host/darwinFreshAuthentication.ts",
+    ]);
+    expect(files).toContain("src/shared/actions.test.ts");
+    expect(files).not.toContain("src/main/host/darwinFreshAuthentication.test.ts");
+    for (const file of files) expect(MAC_UNIT_FILES).not.toContain(file);
+  });
+
+  it("selects nothing for a change no test reads", () => {
+    expect(selectLinuxReach([["docs", "unread-page.md"].join("/")])).toEqual([]);
+  });
+
+  it("runs once, in the in-memory cohorts only, with no retry", () => {
+    const args = reachArgs(["src/shared/actions.test.ts"]);
+    expect(args).toContain("--passWithNoTests");
+    expect(args.slice(args.indexOf("--retry"), args.indexOf("--retry") + 2)).toEqual([
+      "--retry",
+      "0",
+    ]);
+    expect(args.filter((_, i) => args[i - 1] === "--project")).toEqual([
+      "pure",
+      "unit",
+      "unit-isolated",
+    ]);
+    expect(args.at(-1)).toBe("src/shared/actions.test.ts");
+  });
 });

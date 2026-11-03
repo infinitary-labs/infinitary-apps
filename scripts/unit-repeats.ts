@@ -14,6 +14,7 @@ import { directUnitReach, unitFiles, VITEST_FILE } from "./unit-reach.ts";
  * (INF-2426). No transitive reach or added CI jobs. Native files still require a Mac.
  *
  *   node scripts/unit-repeats.ts [--base <ref>] [--head <ref>] [--workers <n>] [--shard <index/count>] [--run]
+ *   node scripts/unit-repeats.ts --reach [--base <ref>] [--run]   (the pull request's build check)
  *
  * The existing changed-path reader owns selection. Fresh rounds stop at the
  * first failure or interruption, without retries. An unreadable base fails.
@@ -39,6 +40,31 @@ export function selectLocalUnits(changed: readonly string[], root = ROOT): Local
     once,
     onMac: [...edited.onMac, ...once.filter((file) => mac.has(file))].sort(),
   };
+}
+
+/**
+ * The pull request's build check runs the unedited direct readers once, on
+ * Linux, in the in-memory cohorts only: a Mac-listed file stays with the
+ * crewmate's local round and an integration file stays with its own sweep.
+ */
+export const REACH_PROJECTS = ["pure", "unit", "unit-isolated"];
+
+export function selectLinuxReach(changed: readonly string[], root = ROOT): string[] {
+  const mac = new Set<string>(MAC_UNIT_FILES);
+  return directUnitReach(changed, unitFiles(root), root).filter((file) => !mac.has(file));
+}
+
+export function reachArgs(files: readonly string[]): string[] {
+  return [
+    "exec",
+    "vitest",
+    "run",
+    "--retry",
+    "0",
+    "--passWithNoTests",
+    ...REACH_PROJECTS.flatMap((project) => ["--project", project]),
+    ...files,
+  ];
 }
 
 /** All edited surviving Vitest files run locally; identify their native prerequisites. */
@@ -186,6 +212,17 @@ function main(): void {
       `The change's base ${base} cannot be read, so its edited test files are unknown.`,
     );
     process.exitCode = 1;
+    return;
+  }
+  if (args.includes("--reach")) {
+    const files = selectLinuxReach(changed);
+    report([
+      `Unedited direct importers and literal path readers since ${base}, one round in CI:`,
+      ...files.map((file) => `- \`${file}\``),
+    ]);
+    if (!args.includes("--run") || files.length === 0) return;
+    process.exitCode =
+      spawnSync("pnpm", reachArgs(files), { cwd: ROOT, stdio: "inherit" }).status ?? 1;
     return;
   }
   const selection = selectLocalUnits(changed);

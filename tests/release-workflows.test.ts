@@ -637,11 +637,18 @@ describe("local packaging identity (electron-builder.dev.yml)", () => {
     );
     // INF-2414 (captain: "why can't we catch release note problems before
     // merge?"): the pull request's notes step (docs/release-notes.md, "The
-    // release check"), the gate's one other step with a condition.
+    // release check"), one of the gate's two steps with a condition.
     const notes = ci.jobs["typecheck-lint-build"]?.steps.find((step) =>
       step.run?.startsWith("node scripts/release-notes.ts change "),
     );
     expect(notes).toBeDefined();
+    // INF-2441 (captain's choice: "Run the tests that read each changed file
+    // inside the pull request's build check"): the other, the pull request's
+    // round of the unit tests that read a changed file (docs/testing.md).
+    const reach = ci.jobs["typecheck-lint-build"]?.steps.find((step) =>
+      step.run?.startsWith("node scripts/unit-repeats.ts --reach "),
+    );
+    expect(reach).toBeDefined();
     for (const [id, job] of Object.entries(ci.jobs)) {
       expect(job.needs, id).toBeUndefined();
       const expression = (job.if ?? "true").replace(/^\$\{\{\s*|\s*\}\}$/g, "");
@@ -666,7 +673,9 @@ describe("local packaging identity (electron-builder.dev.yml)", () => {
       );
       expect(job["continue-on-error"], id).toBeFalsy();
       expect(
-        job.steps.every((step) => !step["continue-on-error"] && (step === notes || !step.if)),
+        job.steps.every(
+          (step) => !step["continue-on-error"] && (step === notes || step === reach || !step.if),
+        ),
         id,
       ).toBe(true);
     }
@@ -674,7 +683,9 @@ describe("local packaging identity (electron-builder.dev.yml)", () => {
     // pull request's notes step, plain Node that needs no install and reads
     // the base parent its checkout fetched; a requested full sweep has no
     // pull request to compare, and release.yml's notes job covers each change
-    // on main. The jobs together run each check once; the tests are the next
+    // on main. The jobs together run each check once: a pull request runs the
+    // unit tests that read its changed files in the gate, where no unit sweep
+    // runs, and a requested sweep runs none there; the sweeps are the next
     // case's.
     const install = "pnpm install --frozen-lockfile";
     const machines = ciJobs(eventName);
@@ -690,12 +701,15 @@ describe("local packaging identity (electron-builder.dev.yml)", () => {
     const checks = machines
       .flatMap(({ runs }) => runs.slice(runs.indexOf(install) + 1))
       .filter((run) => !run.startsWith("pnpm test"));
-    expect(checks.toSorted()).toEqual([
-      "pnpm build",
-      "pnpm check",
-      "pnpm lint:adherence",
-      "pnpm typecheck",
-    ]);
+    expect(checks.toSorted()).toEqual(
+      [
+        "pnpm build",
+        "pnpm check",
+        "pnpm lint:adherence",
+        "pnpm typecheck",
+        ...(eventName === "pull_request" ? [reach?.run] : []),
+      ].toSorted(),
+    );
   });
 
   // Captain's small consolidation trial: startup still runs after an unrelated
@@ -1466,7 +1480,8 @@ type CiJob = {
  * whose condition holds, each with its name and, in order, the commands of
  * the steps whose conditions hold on a passing run, interpolated as GitHub
  * Actions does. A requested full sweep (workflow_dispatch) is the gate
- * main.yml's full check repeats; a pull request adds its own notes step.
+ * main.yml's full check repeats; a pull request adds its own notes and
+ * changed-file reader steps.
  */
 function ciJobs(eventName: string): { name: string; runs: string[] }[] {
   const ci = loadYamlFile(".github/workflows/ci.yml") as { jobs: Record<string, CiJob> };

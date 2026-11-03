@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "release-workflows-reach-step",
+      "reason": "Internal test: the release workflow test allows the pull request's changed-file reader step."
+    }
+  ]
+}

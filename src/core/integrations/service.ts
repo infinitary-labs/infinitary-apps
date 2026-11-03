@@ -58,7 +58,22 @@ export type IntegrationsServiceOptions = {
    * Which conversation received fenced words, and when (`OutsideReads`):
    * a call's caller, and the first mate for a rule's events.
    */
-  reads?: { note: (reader: string, at: number) => void };
+  reads?: {
+    note: (reader: string, at: number) => void;
+    /** A file from outside a task's call saved, by its kept name, so it goes when due. */
+    saved?: (reader: string, file: string, label: string, at: number) => void;
+  };
+  /**
+   * Saves a file an action delivers (`IntegrationActionSpec.delivers`) into
+   * the calling task's hand-over folder, on whichever computer runs it, and
+   * answers its kept name and path there. `refusal` says why that task
+   * cannot take one now - its computer needs an update - before anything
+   * runs. Absent, such an action is refused.
+   */
+  files?: {
+    refusal: (taskId: string) => string | undefined;
+    save: (taskId: string, name: string, bytes: Buffer) => Promise<{ file: string; path: string }>;
+  };
   now?: () => number;
   /** The whole view, after every change (`inf:integrations`). */
   push?: (view: IntegrationsView) => void;
@@ -344,6 +359,8 @@ export class IntegrationsService {
         text: `${view.name} needs ${missing.join(" and ")} before it can do anything. The captain enters it in Settings → Integrations; never ask for it in a message, a card or a task.`,
         refused: "refused",
       };
+    const noFile = this.fileRefusal(caller, view.name, spec);
+    if (noFile) return { text: noFile, refused: "refused" };
     if (!this.allowed(row, spec))
       return this.keepAsk(caller, row, view.name, spec, parsed.data, reason);
     const { answer } = await this.run(row, view.name, spec.name, parsed.data, caller);
@@ -435,14 +452,12 @@ export class IntegrationsService {
     const parsed = spec.input.safeParse(JSON.parse(ask.input));
     if (!parsed.success)
       return done({ kind: "refused", why: `its input no longer fits ${view.name}'s ${spec.name}` });
+    const caller: IntegrationCaller =
+      ask.by === "firstmate" ? { kind: "firstmate" } : { kind: "task", taskId };
+    const noFile = this.fileRefusal(caller, view.name, spec);
+    if (noFile) return done({ kind: "refused", why: noFile });
     if (choice === "always") this.grant(row, spec, true);
-    const { answer, unknown } = await this.run(
-      row,
-      view.name,
-      spec.name,
-      parsed.data,
-      ask.by === "firstmate" ? { kind: "firstmate" } : { kind: "task", taskId },
-    );
+    const { answer, unknown } = await this.run(row, view.name, spec.name, parsed.data, caller);
     if (unknown) return done({ kind: "unknown", why: answer.text });
     return answer.refused
       ? done({ kind: "refused", why: answer.text })
@@ -476,7 +491,9 @@ export class IntegrationsService {
   ): Promise<{ answer: IntegrationAnswer; unknown?: true }> {
     const redact = (text: string) => this.options.secrets.redact(text);
     try {
-      const answer = await row.binding.call(row.connection.id, action, input, caller);
+      const called = await row.binding.call(row.connection.id, action, input, caller);
+      const { file: delivered, ...answer } = called;
+      if (delivered && !answer.refused) answer.text = await this.saveFile(row, caller, delivered);
       const text = redact(answer.text);
       const label = answer.refused ? undefined : row.binding.fence;
       return {
@@ -496,6 +513,55 @@ Do not repeat this call; read ${name} to check what happened first.`
         ...(error instanceof IntegrationOutcomeUnknown ? { unknown: true as const } : {}),
       };
     }
+  }
+
+  /**
+   * Why an action that delivers a file cannot run for this caller: the
+   * first mate has no folder to save into, and a task's computer may need
+   * an update first. Undefined for every other action.
+   */
+  private fileRefusal(
+    caller: IntegrationCaller,
+    name: string,
+    spec: IntegrationActionSpec,
+  ): string | undefined {
+    if (spec.delivers !== "file") return undefined;
+    if (caller.kind === "firstmate")
+      return `Not run: ${name}'s ${spec.name} saves a file into a task's hand-over folder, so only a crewmate can call it. Start a crewmate whose brief names the call and its reason.`;
+    if (!this.options.files) return `Not run: ${name}'s ${spec.name} cannot save files here.`;
+    const refusal = this.options.files.refusal(caller.taskId);
+    return refusal ? `Not run: ${refusal}` : undefined;
+  }
+
+  /**
+   * Saves a delivered file into the calling task's hand-over folder and
+   * answers what the caller reads in its place: its name, type, size and
+   * path, never its bytes. The file goes when its kind's words do
+   * (`SavedOutsideData`), or with the task's folder at its close.
+   */
+  private async saveFile(
+    row: Row,
+    caller: IntegrationCaller,
+    file: NonNullable<IntegrationAnswer["file"]>,
+  ): Promise<string> {
+    const files = this.options.files;
+    if (caller.kind !== "task" || !files)
+      throw new Error("only a task's crewmate can save a file.");
+    const saved = await files.save(caller.taskId, file.name, file.bytes);
+    const label = row.binding.fence;
+    if (label)
+      this.options.reads?.saved?.(
+        caller.taskId,
+        saved.file,
+        label,
+        (this.options.now ?? Date.now)(),
+      );
+    return JSON.stringify({
+      name: file.name,
+      ...(file.type ? { type: file.type } : {}),
+      size: file.bytes.length,
+      path: saved.path,
+    });
   }
 
   /**

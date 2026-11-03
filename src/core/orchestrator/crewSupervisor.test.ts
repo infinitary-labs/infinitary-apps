@@ -1,7 +1,7 @@
 import { seedDelivery } from "../../../tests/helpers/taskDelivery";
 import careCarefulGuide from "../../../resources/runbooks/care/careful.json" with { type: "json" };
 import { execFileSync } from "node:child_process";
-import { createHash, randomUUID } from "node:crypto";
+import { createHash, randomBytes, randomUUID } from "node:crypto";
 import {
   existsSync,
   mkdirSync,
@@ -24573,6 +24573,32 @@ describe("CrewSupervisor: the card thread", () => {
  * takes it is briefed with them, the brief names the app's own copies, and
  * the brief's row keeps them for a retried or re-presented first turn.
  */
+// INF-2466, the captain's approved plan: a saved Gmail attachment lands "in
+// the task's hand-over folder", which goes when the task closes.
+describe("CrewSupervisor: a file from outside lands in the task's hand-over folder", () => {
+  it("saves it byte for byte and 0600 for a running task here, and refuses a task that is not running", async () => {
+    vi.useRealTimers();
+    const h = setup(fakeCrewmate());
+    const base = { repoId: null, sessionFile: null, accountId: null, createdAt: Date.now() };
+    seedTask(h.tasks, { ...base, id: "t-save", title: "Check the invoice", status: "running" });
+    seedTask(h.tasks, { ...base, id: "t-closed", title: "Dropped", status: "cancelled" });
+    const pdf = randomBytes(48_211);
+
+    const saved = await h.supervisor.saveOutsideFile("t-save", "invoice 2214.pdf", pdf);
+    expect(saved.path).toBe(
+      join(crewmateTempDir(h.paths, "t-save"), "handover", saved.file),
+    );
+    expect(saved.file).toMatch(/^[0-9a-f]{16}-invoice_2214\.pdf$/);
+    expect(readFileSync(saved.path).equals(pdf)).toBe(true);
+    expect(statSync(saved.path).mode & 0o777).toBe(0o600);
+
+    expect(h.supervisor.outsideFileRefusal("t-closed")).toContain("not running");
+    await expect(h.supervisor.saveOutsideFile("t-closed", "invoice.pdf", pdf)).rejects.toThrow(
+      "not running",
+    );
+  });
+});
+
 describe("CrewSupervisor: the captain's pictures ride the crewmate's brief", () => {
   it("briefs a spawned crewmate with its message's pictures, by path, and keeps them on the brief's row", async () => {
     vi.useRealTimers();

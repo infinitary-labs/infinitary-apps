@@ -162,6 +162,11 @@ Once they pass, a note, `[Gmail and Calendar content deleted]`, takes the place 
 Delete Gmail and Calendar content, in Settings → Integrations' Data section, does the same at once for everything read so far (`inf:retention:delete-outside`), and the captain can ask the first mate for it (`delete-outside`).
 Its answer says how many conversations changed, how many are cleaned once their work pauses, and how many on each computer that runs work follow once it is back in reach or Infinitary there is updated (`elsewhere`).
 
+A file from outside saved into a task's hand-over folder, such as a Gmail attachment (`save_attachment`, [Integrations](integrations.md#google)), goes on the same clock: `OutsideReads` keeps its kept name, kind and time per task, and the pass that replaces that task's words removes each due file, or the delete removes it at once.
+On a computer that runs work the pass names the due files in `inf:session:delete-outside`'s `files`, and that computer removes them first, whatever its conversation is doing (`outside-data-files`).
+The task's close removes the folder sooner.
+Words a crewmate read inside such a file are not fenced, so no pass finds them; Google's notice says so.
+
 `SavedOutsideData` (`src/core/integrations/savedOutsideData.ts`) owns both.
 A passage is one fenced span with the reminder lines before and after it that name its fence; a span a shell cut short goes from its opening mark to the end of that text, or from its start to its closing mark (`src/core/storage/outsideDataScrub.ts`).
 Each span is dated by the moment in its own opening mark, so an older answer goes and a newer one beside it stays.

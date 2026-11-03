@@ -437,7 +437,8 @@ export const GOOGLE_DATA_KEPT: Omit<KeptOutsideData, "label"> = {
  * Google's notice: what Infinitary uses from Gmail and Calendar, and where
  * it goes - the person's AI provider, another computer that runs the work,
  * and the saved task records, with how long they keep it and how to delete
- * it sooner (INF-952). Only the person's own provider terms and
+ * it sooner (INF-952), and a saved attachment's stay and its unmarked words
+ * (INF-2466). Only the person's own provider terms and
  * settings decide whether that provider trains on what it receives, while
  * Google forbids its data training AI models, so the notice says both.
  * It also says what the app does against a message written to steer an
@@ -453,7 +454,7 @@ const GOOGLE_NOTICE: IntegrationNotice = {
       items: [
         {
           name: "Gmail",
-          text: "The senders, recipients, subjects, dates, labels and text of your messages, and the names, types and sizes of attachments.",
+          text: "The senders, recipients, subjects, dates, labels and text of your messages, and the names, types and sizes of attachments. A crewmate can save an attachment you approve into its task's folder.",
         },
         {
           name: "Calendar",
@@ -477,7 +478,7 @@ const GOOGLE_NOTICE: IntegrationNotice = {
         },
         {
           name: "Saved task records",
-          text: `What your first mate and crew read stays in their saved conversations for ${GOOGLE_DATA_KEPT.days} days, then a note takes its place. To delete it sooner, here and on the computers that run your work, use ${SAVED_OUTSIDE_DATA_WORDS.title([GOOGLE_DATA_KEPT])} in Settings → Integrations, under Data. What they wrote themselves, in cards, notes and files, stays until you delete the task. Removing Google does not delete any of it. Purge task data deletes every saved task on this computer.`,
+          text: `What your first mate and crew read stays in their saved conversations for ${GOOGLE_DATA_KEPT.days} days, then a note takes its place. To delete it sooner, here and on the computers that run your work, use ${SAVED_OUTSIDE_DATA_WORDS.title([GOOGLE_DATA_KEPT])} in Settings → Integrations, under Data. A saved attachment stays in its task's folder until the task closes or ${GOOGLE_DATA_KEPT.days} days pass, and the same delete removes it sooner. Words a crewmate reads inside a saved file are not marked as information from outside, and stay in its conversation after the ${GOOGLE_DATA_KEPT.days} days. What they wrote themselves, in cards, notes and files, stays until you delete the task. Removing Google does not delete any of it. Purge task data deletes every saved task on this computer.`,
         },
       ],
     },

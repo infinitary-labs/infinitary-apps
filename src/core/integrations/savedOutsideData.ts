@@ -1,9 +1,11 @@
+import { rm } from "node:fs/promises";
+import { join } from "node:path";
 import {
   type KeptOutsideData,
   type OutsideDataDeleted,
   outsideDataDeletedNote,
 } from "@shared/savedOutsideData";
-import { type AppPaths, crewmateSessionsDir } from "../paths";
+import { type AppPaths, crewmateSessionsDir, crewmateTempDir } from "../paths";
 import {
   type LegacyCalls,
   type Scrubbed,
@@ -11,6 +13,7 @@ import {
   scrubValue,
 } from "../storage/outsideDataScrub";
 import type { TaskRecord } from "../storage/taskStore";
+import { HANDOVER_IN_DIR_NAME } from "../tasks/handoverFiles";
 import {
   ClaudeFiles,
   conversationFiles,
@@ -91,9 +94,15 @@ export type SavedOutsideDataOptions = {
   /**
    * A task whose conversation a computer that runs work holds: what is due
    * goes there, by that computer, and from this Mac's copy of its record
-   * (`PlacedSessions.deleteOutside`).
+   * (`PlacedSessions.deleteOutside`), with the files from outside due in
+   * its hand-over folder there, by kept name. Any answer but `gone` or a
+   * later one means that computer removed them.
    */
-  placed: (record: TaskRecord, due: OutsideDue) => Promise<PlacedOutsideVisit>;
+  placed: (
+    record: TaskRecord,
+    due: OutsideDue,
+    files: readonly string[],
+  ) => Promise<PlacedOutsideVisit>;
   /** The rules' runs: their prompts and events, rewritten by their one writer. */
   runs: { rewrite: (scrub: (text: string, at: number) => Scrubbed<string>) => number };
   /** The first mate's messages no turn was handed yet, rewritten by their one writer. */
@@ -223,11 +232,23 @@ export class SavedOutsideData {
     } else {
       const record = this.options.task(reader);
       if (!record) return "gone";
+      // Files from outside saved into its hand-over folder go once their kind's words do.
+      const cutoffs = this.cutoffs();
+      const dueSaved = this.options.reads
+        .filesOf(reader)
+        .filter((entry) => entry.at <= (cutoffs.get(entry.label) ?? cutoff))
+        .map((entry) => entry.file);
       if (record.deviceId) {
         // Its conversation is on the computer that runs it: that computer replaces it there.
-        const there = await this.options.placed(record, due);
+        const there = await this.options.placed(record, due, dueSaved);
+        if (typeof there === "string" && there !== "gone")
+          this.options.reads.removed(reader, dueSaved);
         if (there !== "gone") return there;
         // That computer is no longer on the list, so this Mac's copy is all that is left.
+      } else if (dueSaved.length > 0) {
+        const dir = join(crewmateTempDir(this.options.paths, record.id), HANDOVER_IN_DIR_NAME);
+        for (const file of dueSaved) await rm(join(dir, file), { force: true });
+        this.options.reads.removed(reader, dueSaved);
       }
       files = conversationFiles(
         {

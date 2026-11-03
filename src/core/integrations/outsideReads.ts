@@ -8,8 +8,9 @@ import { z } from "zod";
  * received some - a task's, or the first mate's - the hours in which it did.
  * The pass that replaces due words reads only those conversations, once an
  * hour's words are all due, so it never walks every saved session to find
- * them. It holds no words, only who and when, and the captain's last
- * request to delete everything read before it.
+ * them. It holds no words, only who and when, the files from outside saved
+ * into a task's hand-over folder (by kept name, kind and time), and the
+ * captain's last request to delete everything read before it.
  *
  * One file, `userData/integrations/outside-reads.json`, 0600 in a 0700
  * folder, written whole. An unreadable file reads as empty: what it named
@@ -29,7 +30,17 @@ const fileSchema = z.object({
   deleteBefore: z.number().nullable(),
   /** Each conversation's hours (`at / READ_HOUR_MS`, floored) that hold words not yet replaced. */
   hours: z.record(z.string().min(1).max(64), z.array(z.number().int().nonnegative())),
+  /** Each task's files from outside in its hand-over folder: kept name, its kind's label, and when. */
+  files: z
+    .record(
+      z.string().min(1).max(64),
+      z.array(z.object({ file: z.string().min(1).max(255), label: z.string(), at: z.number() })),
+    )
+    .default({}),
 });
+
+/** One file from outside a task's hand-over folder holds (`OutsideReads.saved`). */
+export type OutsideFile = { file: string; label: string; at: number };
 type LedgerFile = z.infer<typeof fileSchema>;
 
 export class OutsideReads {
@@ -56,11 +67,38 @@ export class OutsideReads {
     this.note(reader, 0);
   }
 
-  /** Every conversation holding an hour whose words were all read by `cutoff`. */
+  /** A file from outside was saved into a task's hand-over folder at `at`. */
+  saved(reader: string, file: string, label: string, at: number): void {
+    const files = (this.state.files[reader] ?? []).filter((entry) => entry.file !== file);
+    this.state.files[reader] = [...files, { file, label, at }];
+    this.write();
+  }
+
+  /** The files from outside a task's hand-over folder holds. */
+  filesOf(reader: string): readonly OutsideFile[] {
+    return this.state.files[reader] ?? [];
+  }
+
+  /** These files are gone from the task's hand-over folder. */
+  removed(reader: string, files: readonly string[]): void {
+    const kept = this.state.files[reader];
+    if (!kept || files.length === 0) return;
+    const left = kept.filter((entry) => !files.includes(entry.file));
+    if (left.length) this.state.files[reader] = left;
+    else delete this.state.files[reader];
+    this.write();
+  }
+
+  /** Every conversation holding an hour whose words were all read by `cutoff`, or a file saved before it. */
   due(cutoff: number): string[] {
-    return Object.entries(this.state.hours)
-      .filter(([, hours]) => hours.some((hour) => (hour + 1) * READ_HOUR_MS <= cutoff))
-      .map(([reader]) => reader);
+    const readers = new Set(
+      Object.entries(this.state.hours)
+        .filter(([, hours]) => hours.some((hour) => (hour + 1) * READ_HOUR_MS <= cutoff))
+        .map(([reader]) => reader),
+    );
+    for (const [reader, files] of Object.entries(this.state.files))
+      if (files.some((entry) => entry.at <= cutoff)) readers.add(reader);
+    return [...readers];
   }
 
   /** The earliest moment in a conversation's due hours, so a pass reads only files written since. */
@@ -82,8 +120,9 @@ export class OutsideReads {
 
   /** A conversation that no longer exists. */
   forget(reader: string): void {
-    if (!(reader in this.state.hours)) return;
+    if (!(reader in this.state.hours) && !(reader in this.state.files)) return;
     delete this.state.hours[reader];
+    delete this.state.files[reader];
     this.write();
   }
 
@@ -101,7 +140,7 @@ export class OutsideReads {
     try {
       return fileSchema.parse(JSON.parse(readFileSync(join(this.root, FILE), "utf8")));
     } catch {
-      return { deleteBefore: null, hours: {} };
+      return { deleteBefore: null, hours: {}, files: {} };
     }
   }
 

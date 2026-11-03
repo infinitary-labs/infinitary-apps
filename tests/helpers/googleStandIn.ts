@@ -54,7 +54,12 @@ export type Arriving = {
   /** Absent, the message is HTML alone, as many newsletters are. */
   text?: string;
   html?: string;
-  attachment?: { name: string; type: string; size: number };
+  /**
+   * Its one attachment: `bytes` are its content (zeros of `size` without
+   * them), and `inline` carries them in the message itself, as Gmail does
+   * for a small part, rather than behind its attachments address.
+   */
+  attachment?: { name: string; type: string; size: number; bytes?: Buffer; inline?: boolean };
   /** Labels besides INBOX and UNREAD. */
   labels?: string[];
 };
@@ -119,6 +124,8 @@ export async function startGoogleStandIn() {
   const drafts: Outgoing[] = [];
   const sent: Outgoing[] = [];
   const messages = new Map<string, Message>();
+  /** Each separately fetched attachment's content, by Gmail's id for it. */
+  const attachments = new Map<string, Buffer>();
   /** Each change to the mailbox: the history id, and the message added to the inbox. */
   const history: { id: number; message: Message }[] = [];
   let historyId = 4_812_331;
@@ -221,6 +228,17 @@ export async function startGoogleStandIn() {
         ...(page.length ? { messages: page.map(({ id, threadId }) => ({ id, threadId })) } : {}),
         ...(from + max < matching.length ? { nextPageToken: String(from + max) } : {}),
         resultSizeEstimate: matching.length,
+      });
+    }
+    const attached = /^\/messages\/([^/]+)\/attachments\/([^/]+)$/.exec(path);
+    if (method === "GET" && attached?.[1] && attached[2]) {
+      const content = messages.has(attached[1]) ? attachments.get(attached[2]) : undefined;
+      if (!content) return json(response, 404, NOT_FOUND);
+      // users.messages.attachments.get answers a MessagePartBody.
+      return json(response, 200, {
+        attachmentId: attached[2],
+        size: content.length,
+        data: content.toString("base64url"),
       });
     }
     const one = /^\/messages\/([^/]+)(\/modify)?$/.exec(path);
@@ -448,6 +466,31 @@ export async function startGoogleStandIn() {
     issued: () => [...live.keys(), ...grants.keys()],
     /** A message arrives in the inbox; answers its id. */
     deliver(arriving: Arriving): string {
+      const attachmentPart = (attachment: NonNullable<Arriving["attachment"]>): Part => {
+        const content = attachment.bytes ?? Buffer.alloc(attachment.size);
+        const headers = [
+          { name: "Content-Type", value: `${attachment.type}; name="${attachment.name}"` },
+          { name: "Content-Disposition", value: `attachment; filename="${attachment.name}"` },
+          { name: "Content-Transfer-Encoding", value: "base64" },
+        ];
+        if (attachment.inline)
+          return {
+            partId: "1",
+            mimeType: attachment.type,
+            filename: attachment.name,
+            headers,
+            body: { size: content.length, data: content.toString("base64url") },
+          };
+        const attachmentId = `ANGjdJ_${hexId()}`;
+        attachments.set(attachmentId, content);
+        return {
+          partId: "1",
+          mimeType: attachment.type,
+          filename: attachment.name,
+          headers,
+          body: { size: content.length, attachmentId },
+        };
+      };
       const id = hexId();
       historyId += 1;
       const date = new Date(Date.UTC(2026, 9, 21, 16, 4, messages.size)).toUTCString();
@@ -489,17 +532,7 @@ export async function startGoogleStandIn() {
           body: { size: 0 },
           parts: [text, html].filter((part): part is Part => part !== undefined),
         },
-        ...(arriving.attachment
-          ? [
-              {
-                partId: "1",
-                mimeType: arriving.attachment.type,
-                filename: arriving.attachment.name,
-                headers: [],
-                body: { size: arriving.attachment.size, attachmentId: `ANGjdJ_${hexId()}` },
-              },
-            ]
-          : []),
+        ...(arriving.attachment ? [attachmentPart(arriving.attachment)] : []),
       ];
       const message: Message = {
         id,

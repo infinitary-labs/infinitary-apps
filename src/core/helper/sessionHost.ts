@@ -1,5 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { closeSync, openSync, readFileSync, readSync } from "node:fs";
+import { rm } from "node:fs/promises";
 import { basename, isAbsolute, join, relative, sep } from "node:path";
 import type { CutOff } from "@shared/authFailure";
 import {
@@ -999,15 +1000,19 @@ export class SessionHost {
    * turns and with nothing of its client's own still running. One open here
    * is let go of first, so no writer holds its files and nothing of them
    * stays in memory, and opened again from them as the home opened it.
+   * The files from outside it names go from the hand-over folder first.
    */
   private async deleteOutside(
     held: Held,
     asked: WorkOrderRequest<"inf:session:delete-outside">[0],
   ): Promise<WorkOrderResponse<"inf:session:delete-outside">> {
     if (held.removed) return { status: "unchanged", files: [] };
+    const folders = this.options.tasks.folders(held.task);
+    // Files from outside in its hand-over folder go first, whatever its conversation is doing.
+    for (const file of asked.files ?? [])
+      await rm(join(folders.temp, HANDOVER_IN_DIR_NAME, file), { force: true });
     if (this.working(held)) return { status: "waiting", files: [] };
     const rule = dueRule(asked.kinds);
-    const folders = this.options.tasks.folders(held.task);
     const token = held.session ? crewmateResumeToken(held.session.resume()) : undefined;
     const claude = this.options.claudeConfigDir?.();
     const files = conversationFiles(

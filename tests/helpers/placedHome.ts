@@ -406,6 +406,11 @@ export function startPlacedHome(options: {
             record: (taskId, askId, outcome) => tasks.recordWriteAskOutcome(taskId, askId, outcome),
           },
           reads: outsideReads,
+          files: {
+            refusal: (taskId): string | undefined => supervisor.outsideFileRefusal(taskId),
+            save: (taskId, name, bytes): Promise<{ file: string; path: string }> =>
+              supervisor.saveOutsideFile(taskId, name, bytes),
+          },
           now,
         })
       : undefined;
@@ -487,7 +492,7 @@ export function startPlacedHome(options: {
               reader === FIRSTMATE_READER || supervisor.releaseConversation(reader),
             held: (reader) => reader !== FIRSTMATE_READER && supervisor.conversationHeld(reader),
           },
-          placed: (record, due) => placed.deleteOutside(record, due),
+          placed: (record, due, files) => placed.deleteOutside(record, due, files),
           runs: { rewrite: () => 0 },
           inbox: { rewrite: (scrub) => inbox.rewritePending(scrub) },
           now,

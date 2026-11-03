@@ -551,6 +551,7 @@ A home opens one for a task whose record names this computer (`task_execution.de
 - **Words from outside.**
   The home asks `inf:session:delete-outside` when the Gmail and Calendar content a conversation here read is past its days, or the captain deletes it (`docs/task-retention.md`, "Words from outside"); a home asks only a computer on the current contract major.
   The order names each kind's label, the moment its words read by then are due, and the note that takes their place, so this computer holds none of the home's rules.
+  Its `files` names the files from outside, such as a saved Gmail attachment, due in the task's hand-over folder here, which this computer removes first, whatever the conversation is doing (`outside-data-files`); the home saves no such file into a task here without that change.
   It reads the conversation's record and this Mac's own Claude client's files for it (`claudeConfigDir`), and answers `waiting` while a turn runs, the conversation opens or carries on by itself, or its client runs work of its own.
   A conversation open here is let go of first, so its files have no writer and nothing of them stays in memory, its due files are written again through a temporary file and one rename, and it opens again with what the home opened it with, from its record (`state`).
   Its answer names each file it changed under the record's folder, which the home copies whole; nothing is remembered, since asked again it finds nothing left to replace.

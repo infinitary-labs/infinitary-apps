@@ -1,6 +1,7 @@
-import { randomUUID } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
 import { existsSync, mkdirSync, writeFileSync } from "node:fs";
-import { rm } from "node:fs/promises";
+import { mkdtemp, rm, writeFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
 import {
   basename,
   dirname,
@@ -6827,18 +6828,8 @@ export class CrewSupervisor {
       throw new Error(
         "Update Infinitary on the work computer before it can receive this message’s attachments.",
       );
-    const deliver = async (path: string, name: string, sha256: string) => {
-      const file = handoverFileName(name, sha256);
-      if (here)
-        return deliverHandoverFile(
-          path,
-          join(crewmateTempDir(this.options.paths, taskId), HANDOVER_IN_DIR_NAME),
-          file,
-        );
-      if (!machines?.sourceFile)
-        throw new Error("The work computer cannot receive this message’s attachments.");
-      return machines.sourceFile(this.machineOf(taskId), taskId, file, path, "handover");
-    };
+    const deliver = async (path: string, name: string, sha256: string) =>
+      (await this.deliverHandover(taskId, path, name, sha256)).path;
     const facts: BriefPictures = { riding: [], more: [], missing: 0 };
     const riding: AttachmentRef[] = [];
     const images: TurnImage[] = [];
@@ -8334,6 +8325,74 @@ export class CrewSupervisor {
    * was the supervision claim's outcome; nothing produces it since S7c
    * retired the claim, and it stays in the vocabulary for the record.)
    */
+  /**
+   * Delivers one file into a task's hand-over folder on the computer it
+   * runs on, verified and 0600, named by its sha256 and its own name
+   * (`handoverFileName`): a copy here, or the source-file order there.
+   * Answers its kept name and its path there.
+   */
+  private async deliverHandover(
+    taskId: string,
+    path: string,
+    name: string,
+    sha256: string,
+  ): Promise<{ file: string; path: string }> {
+    const file = handoverFileName(name, sha256);
+    const machine = this.machineOf(taskId);
+    if (machine === LOCAL_MACHINE_ID)
+      return {
+        file,
+        path: await deliverHandoverFile(
+          path,
+          join(crewmateTempDir(this.options.paths, taskId), HANDOVER_IN_DIR_NAME),
+          file,
+        ),
+      };
+    const machines = this.options.machines;
+    if (!machines?.sourceFile)
+      throw new Error("The work computer cannot receive this message’s attachments.");
+    return { file, path: await machines.sourceFile(machine, taskId, file, path, "handover") };
+  }
+
+  /**
+   * Why a task cannot take a file from outside into its hand-over folder
+   * now (docs/integrations.md, "Google"): it is not running, or its
+   * computer could not remove the file when it is due.
+   */
+  outsideFileRefusal(taskId: string): string | undefined {
+    const record = this.options.tasks.get(taskId);
+    if (!record || record.status !== "active")
+      return "this task is not running, so it has no hand-over folder to save into.";
+    const machine = this.machineOf(taskId);
+    if (machine === LOCAL_MACHINE_ID) return undefined;
+    const machines = this.options.machines;
+    if (machines?.sourceFile && machines.takesOutsideFiles?.(machine)) return undefined;
+    return `update Infinitary on ${machines?.nameOf(machine) ?? `the other ${COMPUTER.one}`} before a file from outside can be saved into this task's folder there.`;
+  }
+
+  /**
+   * Saves a file from outside, such as a Gmail attachment, into a task's
+   * hand-over folder (`IntegrationsServiceOptions.files`): written 0600 in a
+   * private folder of its own, delivered verified, and removed here.
+   */
+  async saveOutsideFile(
+    taskId: string,
+    name: string,
+    bytes: Buffer,
+  ): Promise<{ file: string; path: string }> {
+    const refusal = this.outsideFileRefusal(taskId);
+    if (refusal) throw new Error(refusal);
+    const staging = await mkdtemp(join(tmpdir(), "infinitary-outside-"));
+    try {
+      const path = join(staging, "file");
+      await writeFile(path, bytes, { mode: 0o600 });
+      const sha256 = createHash("sha256").update(bytes).digest("hex");
+      return await this.deliverHandover(taskId, path, name, sha256);
+    } finally {
+      await rm(staging, { recursive: true, force: true });
+    }
+  }
+
   /**
    * Delivers the files a task's reports handed on into another task's
    * hand-over folder on the computer it runs on (INF-992, direction B): a

@@ -1,6 +1,8 @@
-import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { createHash, randomBytes } from "node:crypto";
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { NOTICE_ACCEPTED } from "@shared/integrations";
+import { fencedSpans } from "@shared/outsideData";
 import { outsideDataDeletedNote } from "@shared/savedOutsideData";
 import { afterEach, describe, expect, it } from "vitest";
 import {
@@ -14,12 +16,13 @@ import { scratchDir } from "../../../tests/helpers/scratchDirs";
 import { encodeClaudeProjectDir } from "../claude/claudeTranscript";
 import { Scheduler } from "../orchestrator/scheduler";
 import { renderWake } from "../orchestrator/wakes";
-import { appPathsFor, crewmateSessionsDir } from "../paths";
+import { appPathsFor, crewmateSessionsDir, crewmateTempDir } from "../paths";
 import { createScheduleTools } from "../pi/scheduleTools";
 import { openInMemoryDatabase } from "../storage/db";
 import { FIRSTMATE_RECIPIENT, InboxStore } from "../storage/inboxStore";
 import { ScheduleStore } from "../storage/scheduleStore";
 import { SessionRecordStore } from "../storage/sessionRecordStore";
+import { HANDOVER_IN_DIR_NAME, handoverFileName } from "../tasks/handoverFiles";
 import { seedTask } from "../tasks/seedTask";
 import { TaskService } from "../tasks/taskService";
 import {
@@ -32,6 +35,7 @@ import {
   OutsideReads,
   SavedOutsideData,
 } from ".";
+import type { OutsideDue, PlacedOutsideVisit } from "./savedOutsideData";
 
 /**
  * INF-952: "A person can delete the Gmail and Calendar content Infinitary
@@ -111,6 +115,17 @@ async function world() {
     store: new IntegrationSettingsStore(paths.integrationsDir),
     secrets,
     reads,
+    // A saved attachment lands in the task's hand-over folder, where the crew delivers it on this Mac.
+    files: {
+      refusal: () => undefined,
+      save: async (taskId, name, bytes) => {
+        const file = handoverFileName(name, createHash("sha256").update(bytes).digest("hex"));
+        const folder = join(crewmateTempDir(paths, taskId), HANDOVER_IN_DIR_NAME);
+        mkdirSync(folder, { recursive: true, mode: 0o700 });
+        writeFileSync(join(folder, file), bytes, { mode: 0o600 });
+        return { file, path: join(folder, file) };
+      },
+    },
     now: () => clock.now,
   });
   const service = integrations;
@@ -134,6 +149,19 @@ async function world() {
     },
   });
 
+  // A computer that runs work, as `PlacedSessions.deleteOutside` answers for it.
+  const placed: {
+    calls: { task: string; files: readonly string[] }[];
+    answers: PlacedOutsideVisit[];
+    visit: (task: string, due: OutsideDue, files: readonly string[]) => Promise<PlacedOutsideVisit>;
+  } = {
+    calls: [],
+    answers: [],
+    visit: async (task, _due, files) => {
+      placed.calls.push({ task, files });
+      return placed.answers.shift() ?? "gone";
+    },
+  };
   // The live conversations' owners, as the supervisor and the first mate answer.
   const busy = new Set<string>();
   const released: string[] = [];
@@ -155,13 +183,28 @@ async function world() {
       },
       held: () => false,
     },
-    // No computer runs work for this Mac.
-    placed: async () => "gone",
+    // No computer runs work for this Mac, unless a test names one.
+    placed: (record, due, files) => placed.visit(record.id, due, files),
     runs: { rewrite: (scrub) => store.rewriteRuns(scrub) },
     inbox: { rewrite: (scrub) => inbox.rewritePending(scrub) },
     now: () => clock.now,
     log: () => {},
   });
+
+  /** A crewmate saves the attachment of a message Lena sent; answers the saved file's path. */
+  const crewSaves = async (taskId: string, bytes: Buffer) => {
+    const id = google.deliver({
+      ...LENA,
+      attachment: { name: "invoice-2214.pdf", type: "application/pdf", size: bytes.length, bytes },
+    });
+    const answer = await service
+      .forTask(taskId)
+      .call("Google", "save_attachment", { id, part: "1" }, undefined, "Check the invoice.");
+    const [span] = fencedSpans(answer.text);
+    const path = span ? (JSON.parse(span.words) as { path?: string }).path : undefined;
+    if (!path) throw new Error(`The attachment was not saved: ${answer.text}`);
+    return path;
+  };
 
   /** A message Lena sent, read by a crewmate through its integrations command. */
   const crewReads = async (taskId: string) => {
@@ -233,6 +276,8 @@ async function world() {
     busy,
     released,
     saved,
+    placed,
+    crewSaves,
     crewReads,
     piTurn,
     piFile,
@@ -273,6 +318,54 @@ describe("words from outside in saved conversations", () => {
     const ledger = readFileSync(join(w.paths.integrationsDir, "outside-reads.json"), "utf8");
     expect(ledger).not.toContain("Lena");
     expect(w.reads.due(w.clock.now + 30 * DAY)).toEqual(["task-1"]);
+  });
+
+  // INF-2466, the captain's answer: a saved attachment stays "until day 30 or
+  // the task closes, whichever is first; Delete Gmail and Calendar content
+  // removes it at once".
+  it("remove a saved attachment from the task's hand-over folder after 30 days, and the rest at once on the captain's delete", async () => {
+    const w = await world();
+    const first = await w.crewSaves("task-1", randomBytes(4_096));
+    w.clock.now += 20 * DAY;
+    const second = await w.crewSaves("task-1", randomBytes(2_048));
+    expect(first).toContain(join(crewmateTempDir(w.paths, "task-1"), HANDOVER_IN_DIR_NAME));
+
+    w.clock.now += 9 * DAY;
+    await w.saved.sweep();
+    expect([existsSync(first), existsSync(second)]).toEqual([true, true]);
+
+    w.clock.now += 1 * DAY + 2 * 60 * 60 * 1000;
+    await w.saved.sweep();
+    expect([existsSync(first), existsSync(second)]).toEqual([false, true]);
+    expect(w.reads.filesOf("task-1").map((entry) => entry.file)).toEqual([
+      second.split("/").at(-1),
+    ]);
+
+    await w.saved.deleteNow();
+    expect(existsSync(second)).toBe(false);
+    expect(w.reads.filesOf("task-1")).toEqual([]);
+  });
+
+  it("name a due attachment to the computer that runs its task, and keep it listed until that computer took the order", async () => {
+    const w = await world();
+    seedTask(w.tasks, {
+      id: "task-3",
+      title: "File the invoice there",
+      status: "running",
+      deviceId: "875ece86-3e09-4c54-a108-15fafad9b31b",
+    });
+    const there = (await w.crewSaves("task-3", randomBytes(1_024))).split("/").at(-1);
+    w.clock.now += 31 * DAY;
+    // Not updated yet: it follows on a later pass.
+    w.placed.answers.push({ computer: "Kun's Mac mini", until: "update" }, "unchanged");
+    await w.saved.sweep();
+    expect(w.placed.calls).toEqual([{ task: "task-3", files: [there] }]);
+    expect(w.reads.filesOf("task-3").map((entry) => entry.file)).toEqual([there]);
+
+    w.clock.now += 60_000;
+    await w.saved.sweep();
+    expect(w.placed.calls.at(-1)).toEqual({ task: "task-3", files: [there] });
+    expect(w.reads.filesOf("task-3")).toEqual([]);
   });
 
   it("wait for a crewmate still working, and clean its conversation once it pauses", async () => {

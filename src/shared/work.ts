@@ -1230,6 +1230,11 @@ export const workOrders = {
           }),
         )
         .max(64),
+      /**
+       * Files from outside due in the task's hand-over folder, by kept name,
+       * removed first (`outside-data-files.md`).
+       */
+      files: z.array(z.string().regex(HANDOVER_FILE_NAME)).max(1024).optional(),
     }),
     response: z.object({
       status: z.enum(["changed", "unchanged", "waiting"]),

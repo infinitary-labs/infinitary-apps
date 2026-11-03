@@ -179,7 +179,15 @@ The access renews when it has less than one request's time left, and once more w
 When Gmail answers 429, or 403 for a rate limit, with Retry-After, no request goes to Gmail until then, and a rule's look tries again on its next minute; the sign-in's health stays as it was.
 Removing the row asks Google to revoke the sign-in, as far as Google can be reached, and forgets it here either way.
 
-Gmail's actions (`gmail.ts`) are `search_mail` and `read_message`, which read, `label_message` (removing INBOX archives) and `draft_message`, which change, and `send_message`, which sends; each action follows the per-action rule ("The rules").
+Gmail's actions (`gmail.ts`) are `search_mail`, `read_message` and `save_attachment`, which read, `label_message` (removing INBOX archives) and `draft_message`, which change, and `send_message`, which sends; each action follows the per-action rule ("The rules").
+`read_message` lists each attachment's name, type, size and part, Gmail's `partId`.
+`save_attachment` (INF-2466) takes a message id and a part, reads the message again, and fetches the part's bytes, inline or through Gmail's attachments address, under the same `gmail.modify` sign-in.
+It declares `delivers: "file"`, so only a crewmate may call it: the first mate is refused with words to start a crewmate, before any card.
+The host checks no file name: the approval card shows the exact input and the crewmate's reason, which says which attachment it is and why.
+The service saves the bytes into the calling task's hand-over folder through `IntegrationsServiceOptions.files`, 0600 and named by its sha256 and its own name (`handoverFileName`), on this Mac or through the source-file order on a computer that runs work, and answers only its name, type, size and path, fenced.
+A computer that runs work without `outside-data-files` is refused before the card and told to update, since it could not remove the file when due.
+A saved file stays until the task closes, or until Google's words would go (30 days, or Delete Gmail and Calendar content), whichever is first ([Task retention](task-retention.md#words-from-outside)).
+Words read inside a saved file reach the crewmate unmarked, and Google's notice says so.
 A message read is its plain text, or its HTML read as text in one pass over it, so markup a sender never closes cannot slow the app's own process.
 A message is built as plain-text RFC 2822 with a subject outside ASCII in encoded words, a reply carries its thread and In-Reply-To, and an address or subject with a line break is refused before anything is asked.
 Gmail tells `message_received` ("A message arrives") from its history of messages added to the inbox: the cursor is the history id and the mailbox it belongs to, each item's summary is its sender and subject, and a history id Gmail no longer keeps (404) or a cursor from another mailbox answers `resynced`.
@@ -213,6 +221,8 @@ Before Google's sign-in starts, the app shows Google's notice and waits for the 
 Google's [Workspace user data and developer policy](https://developers.google.com/workspace/workspace-api-user-data-developer-policy) asks for an in-app disclosure of the data used and where it goes, never only in a privacy policy, that immediately precedes the consent request, and for no collection before an affirmative consent.
 The notice's words are `INTEGRATION_NOTICES` in `src/shared/integrations.ts`: what Infinitary uses from Gmail and Calendar, and where it goes, which is the person's AI provider, another computer that runs the work, and the saved task records.
 For the saved task records it says how long what the agents read stays, 30 days, how to delete it sooner, here and on the computers that run the work, in Settings → Integrations under Data, and what stays until the task is deleted: what the agents wrote themselves.
+It says a crewmate can save an approved attachment into its task's folder, that the file stays until the task closes or 30 days pass, and that words read inside it are unmarked and outlast the 30 days (INF-2466).
+People already signed in are not shown the notice again: the new action starts at Asks you, so its first approval card is where they meet it.
 Only the person's agreement and settings with their provider decide whether that provider trains on what it receives, while Google does not allow its data to train AI models, so the notice says both and asks the person to check their provider before connecting.
 The core holds the accept as a fact of the sign-in: `IntegrationsService.signIn` refuses a kind with a notice unless the request carries `{ noticeAccepted: true }`, before any browser opens, before a waiting sign-in ends and before anything is asked of Google.
 The accept covers one sign-in and is never saved, so every way into Google's sign-in shows the notice again: the chip, a row's Sign in again, and a card that opens Google's sign-in.

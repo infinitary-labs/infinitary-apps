@@ -33,6 +33,12 @@ export type IntegrationActionSpec = {
    * checks the input it receives.
    */
   schema?: Record<string, unknown>;
+  /**
+   * The action answers a file the host saves into the calling task's
+   * hand-over folder (`IntegrationAnswer.file`), so only a crewmate may
+   * call it: the first mate has no folder to save into.
+   */
+  delivers?: "file";
 };
 
 /**
@@ -121,6 +127,13 @@ export type IntegrationAnswer = {
    */
   card?: string;
   ran?: "changes" | "sends";
+  /**
+   * A file the action fetched, from an action that `delivers` one: the
+   * service saves it into the calling task's hand-over folder and answers
+   * its name, type, size and path in its place, so its bytes never reach
+   * an agent's words or cross the connection.
+   */
+  file?: { name: string; type?: string; bytes: Buffer };
 };
 
 /**

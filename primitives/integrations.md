@@ -79,6 +79,7 @@ Integration keys still use the temporary bridge below until INF-785 moves its wr
 ## Uses
 
 - Gmail and Calendar through one Google row: every action follows its saved approval state, and `message_received` and `event_changed` fire Automation rules.
+- An action may declare `delivers: "file"` (Gmail's `save_attachment`): it is a crewmate's alone, and the service saves the file it answers into the calling task's hand-over folder, answering only its name, type, size and path; the file goes with its kind's words or the task's close.
 - MCP servers the captain adds by name and command or address: the server's own tool list becomes the actions, read-only tools read, and `resource_changed` tells resource subscriptions.
 - GitHub REST reads and writes through the forge's github.com sign-in for any repository, not only the task's project.
 - A crewmate on a computer that runs work reaching the home's integrations from its shell.

@@ -2111,6 +2111,11 @@ export async function createServices(
       record: (taskId, askId, outcome) => tasks.recordWriteAskOutcome(taskId, askId, outcome),
     },
     reads: outsideReads,
+    // A saved Gmail attachment lands in the calling task's hand-over folder, wherever it runs.
+    files: {
+      refusal: (taskId) => supervisor.outsideFileRefusal(taskId),
+      save: (taskId, name, bytes) => supervisor.saveOutsideFile(taskId, name, bytes),
+    },
     now: ticker.now,
     push: (view) => emit("inf:integrations", view),
   });
@@ -3149,7 +3154,7 @@ export async function createServices(
           : supervisor.conversationHeld(reader),
     },
     // A crewmate on a computer that runs work: replaced there, by that computer.
-    placed: (record, due) => placed.deleteOutside(record, due),
+    placed: (record, due, files) => placed.deleteOutside(record, due, files),
     runs: { rewrite: (scrub) => scheduleStore.rewriteRuns(scrub) },
     inbox: { rewrite: (scrub) => inbox.rewritePending(scrub) },
     now: ticker.now,

@@ -1,4 +1,4 @@
-import { createHash } from "node:crypto";
+import { createHash, randomBytes } from "node:crypto";
 import {
   cpSync,
   existsSync,
@@ -99,7 +99,12 @@ import { crewmateRenewedNote, crewmateRestartText } from "../orchestrator/crewSe
 import { JOB_BOUND_MS } from "../orchestrator/idleLadder";
 import { renderWake, unnamedBackgroundWork } from "../orchestrator/wakes";
 import { initOverflowDir, type MessageFile, withPastedFiles } from "../overflow";
-import { crewmateCardPicturesDir, crewmatePlacedDir, crewmateSessionsDir } from "../paths";
+import {
+  crewmateCardPicturesDir,
+  crewmatePlacedDir,
+  crewmateSessionsDir,
+  crewmateTempDir,
+} from "../paths";
 import type { AccountVault } from "../pi/accountVault";
 import { backgroundJobReceipt } from "../pi/bashWords";
 import { CREWMATE_TOOLS } from "../pi/crewmateTaskTools";
@@ -3893,11 +3898,8 @@ describe("Gmail and Calendar content on a computer that runs work", () => {
     entry = await bundleAxiProcess();
   }, 60_000);
 
-  /**
-   * A crewmate on the computer reads Lena's message through this Mac's
-   * Google sign-in, from its shell there, and its turn ends.
-   */
-  async function readThere(changes?: readonly string[]) {
+  /** A computer that runs work, with this Mac signed in to Google's stand-in and its reads allowed. */
+  async function withGoogle(changes?: readonly string[]) {
     const google = await startGoogleStandIn();
     stops.push(() => google.close());
     const at = await world(undefined, {
@@ -3913,26 +3915,32 @@ describe("Gmail and Calendar content on a computer that runs work", () => {
     await integrations.signIn("google", NOTICE_ACCEPTED);
     // INF-950: content retention starts after the captain has allowed these reads.
     allowIntegrationReads(integrations);
-    const id = google.deliver(LENA);
-    // INF-1534: on a loaded Mac the read can outlast the shell's limit. The
+    return { google, at, home, outsideData };
+  }
+
+  /**
+   * A crewmate on the computer runs one integrations command from its shell
+   * there, through this Mac's Google sign-in, and reports what it heard as
+   * its outcome; answers what it heard.
+   */
+  async function runThere(
+    at: Awaited<ReturnType<typeof world>>,
+    taskId: string,
+    command: string,
+  ): Promise<string> {
+    const home = at.home();
+    // INF-1534: on a loaded Mac the call can outlast the shell's limit. The
     // crewmate then collects its answer as the product tells it to, as the
     // journeys' stand-ins do (INF-1141): after `running` or `BUSY` it runs
     // the bare command, which gets the kept answer, and after a background
     // job's receipt it ends each turn until the job's end, which names the
     // job and carries the command's output. Whatever else it hears is the
-    // answer it reports on, checked below.
+    // answer it reports on, checked by the caller.
     let read: string | undefined;
     let job: string | undefined;
-    const waiting = { text: "Waiting for Lena's message." };
+    const waiting = { text: "Waiting for the answer." };
     model((request, index) => {
-      if (index === 0)
-        return {
-          tools: [
-            shellCommand(
-              `${INTEGRATIONS_COMMAND} call Google read_message '${JSON.stringify({ id })}'`,
-            ),
-          ],
-        };
+      if (index === 0) return { tools: [shellCommand(command)] };
       if (read !== undefined) return { text: "Done." };
       const heard = lastHeard(request);
       if (job !== undefined) {
@@ -3945,12 +3953,25 @@ describe("Gmail and Calendar content on a computer that runs work", () => {
       if (heard.includes(READ_RUNNING) || heard.includes(READ_BUSY))
         return { tools: [shellCommand(INTEGRATIONS_COMMAND)] };
       read = heard;
-      return { text: "Lena sent the October invoice." };
+      return { text: "Lena's message is answered." };
     });
-    await at.start("t-lena", "Answer Lena.");
-    await expect
-      .poll(() => home.tasks.get("t-lena")?.outcome)
-      .toBe("Lena sent the October invoice.");
+    await at.start(taskId, "Answer Lena.");
+    await expect.poll(() => home.tasks.get(taskId)?.outcome).toBe("Lena's message is answered.");
+    return read ?? "";
+  }
+
+  /**
+   * A crewmate on the computer reads Lena's message through this Mac's
+   * Google sign-in, from its shell there, and its turn ends.
+   */
+  async function readThere(changes?: readonly string[]) {
+    const { google, at, home, outsideData } = await withGoogle(changes);
+    const id = google.deliver(LENA);
+    const read = await runThere(
+      at,
+      "t-lena",
+      `${INTEGRATIONS_COMMAND} call Google read_message '${JSON.stringify({ id })}'`,
+    );
     // It read the message there, and its record there and this Mac's copy hold it.
     expect(read).toContain(LENA.subject);
     const there = at.folders("t-lena").sessions;
@@ -3961,6 +3982,62 @@ describe("Gmail and Calendar content on a computer that runs work", () => {
     expect(readFileSync(calls, "utf8")).toContain(LENA.subject);
     return { at, home, outsideData, there, here, calls };
   }
+
+  // INF-2466, the captain's approved plan: a crewmate saves a Gmail
+  // attachment "into the task's hand-over folder, kept until day 30 or the
+  // task closes", and Delete Gmail and Calendar content removes it at once.
+  it("saves an attachment into the task's hand-over folder there byte for byte, and the captain's delete removes it there", async () => {
+    const { google, at, home, outsideData } = await withGoogle();
+    const pdf = randomBytes(48_211);
+    const id = google.deliver({
+      ...LENA,
+      attachment: {
+        name: "invoice-2214.pdf",
+        type: "application/pdf",
+        size: pdf.length,
+        bytes: pdf,
+      },
+    });
+    const heard = await runThere(
+      at,
+      "t-lena",
+      `${INTEGRATIONS_COMMAND} call Google save_attachment '${JSON.stringify({ id, part: "1" })}'`,
+    );
+    const handover = join(at.folders("t-lena").temp, "handover");
+    const [saved] = readdirSync(handover).filter((name) => name.endsWith("invoice-2214.pdf"));
+    const path = join(handover, saved ?? "missing");
+    expect(readFileSync(path).equals(pdf)).toBe(true);
+    expect(statSync(path).mode & 0o777).toBe(0o600);
+    // The crewmate heard its path there, never its bytes.
+    expect(heard).toContain(path);
+    expect(heard).not.toContain(pdf.subarray(0, 64).toString("base64url"));
+    // Nothing of it stays on this Mac.
+    expect(
+      existsSync(join(crewmateTempDir(home.paths, "t-lena"), "handover", saved ?? "missing")),
+    ).toBe(false);
+
+    await outsideData.deleteNow();
+    expect(existsSync(path)).toBe(false);
+  });
+
+  it("refuses to save an attachment on a computer without the change, and asks to update it", async () => {
+    const { google, at, home } = await withGoogle(
+      CONTRACT_CHANGES.names.filter((change) => change !== "outside-data-files"),
+    );
+    const id = google.deliver({
+      ...LENA,
+      attachment: { name: "invoice-2214.pdf", type: "application/pdf", size: 1_024 },
+    });
+    const heard = await runThere(
+      at,
+      "t-lena",
+      `${INTEGRATIONS_COMMAND} call Google save_attachment '${JSON.stringify({ id, part: "1" })}'`,
+    );
+    expect(heard).toContain("update Infinitary on");
+    expect(existsSync(join(at.folders("t-lena").temp, "handover"))).toBe(false);
+    expect(google.seen.some((request) => request.path.includes("/attachments/"))).toBe(false);
+    expect(home.placed.takesOutsideFiles(at.deviceId)).toBe(false);
+  });
 
   it("replaces what it read there and in this Mac's copy on the captain's delete, counts it, and its next turn reads the note", async () => {
     const { at, home, outsideData, there, here, calls } = await readThere();
@@ -3973,7 +4050,7 @@ describe("Gmail and Calendar content on a computer that runs work", () => {
     expect(filesHolding(dirname(here), LENA.subject)).toEqual([]);
     expect(filesHolding(here, NOTE)).not.toEqual([]);
     expect(readFileSync(calls, "utf8")).not.toContain(LENA.subject);
-    expect(filesHolding(here, "Lena sent the October invoice.")).not.toEqual([]);
+    expect(filesHolding(here, "Lena's message is answered.")).not.toEqual([]);
 
     // Its next turn there carries the note, never the message.
     model([{ text: "Lena's invoice is answered." }]);

@@ -1,4 +1,5 @@
-import { existsSync, readFileSync, statSync } from "node:fs";
+import { createHash, randomBytes } from "node:crypto";
+import { existsSync, mkdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { eventsWords } from "@shared/automation";
 import {
@@ -26,6 +27,7 @@ import { createScheduleTools } from "../../../pi/scheduleTools";
 import { openInMemoryDatabase } from "../../../storage/db";
 import { FIRSTMATE_RECIPIENT, InboxStore } from "../../../storage/inboxStore";
 import { ScheduleStore } from "../../../storage/scheduleStore";
+import { handoverFileName } from "../../../tasks/handoverFiles";
 import { seedTask } from "../../../tasks/seedTask";
 import { TaskService } from "../../../tasks/taskService";
 import { atUtilityQos } from "../../../utilityQos";
@@ -39,6 +41,7 @@ import {
   IntegrationSettingsStore,
   IntegrationsService,
   mcpIntegration,
+  OutsideReads,
 } from "../..";
 import { GoogleSignInStore } from "./store";
 
@@ -113,6 +116,10 @@ async function fixture(
     },
   });
   if (!setup) throw new Error("a run that names a client has a Google setup");
+  const reads = new OutsideReads(dir);
+  // The task's hand-over folder, named as the crew names it; a task here may refuse a file.
+  const handover = scratchDir("fm-google-handover-");
+  const refusals = new Map<string, string>();
   let integrations: IntegrationsService | undefined;
   integrations = new IntegrationsService({
     bindings: [
@@ -150,11 +157,22 @@ async function fixture(
       take: (taskId, askId) => tasks.takeWriteAsk(taskId, askId),
       record: (taskId, askId, outcome) => tasks.recordWriteAskOutcome(taskId, askId, outcome),
     },
+    reads,
+    files: {
+      refusal: (taskId) => refusals.get(taskId),
+      save: async (taskId, name, bytes) => {
+        const file = handoverFileName(name, createHash("sha256").update(bytes).digest("hex"));
+        const folder = join(handover, taskId);
+        mkdirSync(folder, { recursive: true, mode: 0o700 });
+        writeFileSync(join(folder, file), bytes, { mode: 0o600 });
+        return { file, path: join(folder, file) };
+      },
+    },
     now: () => clock.now,
     push: (view) => pushed.push(JSON.stringify(view)),
   });
   cleanup.push(() => integrations?.dispose());
-  return { google, dir, tasks, clock, opened, pages, pushed, integrations, db };
+  return { google, dir, tasks, clock, opened, pages, pushed, integrations, db, reads, refusals };
 }
 
 type Fixture = Awaited<ReturnType<typeof fixture>>;
@@ -218,6 +236,8 @@ describe("Google as an integration", () => {
         actions: [
           expect.objectContaining({ name: "search_mail", effect: "reads", rule: "ask" }),
           expect.objectContaining({ name: "read_message", effect: "reads", rule: "ask" }),
+          // INF-2466: saving an attachment starts at Asks you, like every action.
+          expect.objectContaining({ name: "save_attachment", effect: "reads", rule: "ask" }),
           expect.objectContaining({ name: "label_message", effect: "changes", rule: "ask" }),
           expect.objectContaining({ name: "draft_message", effect: "changes", rule: "ask" }),
           expect.objectContaining({ name: "send_message", effect: "sends", rule: "ask" }),
@@ -500,6 +520,142 @@ describe("Google as an integration", () => {
       "To perform the task’s requested action.",
     );
     expect(seat.refused).toBe("refused");
+  });
+
+  // INF-2466, the captain's approved plan: "a Google integration action that
+  // saves a Gmail attachment into the task's hand-over folder", with the
+  // card-name answer "avoid rigid logic. let agents decide what's appropriate".
+  it("saves an attachment the captain approved into the task's folder byte for byte, inline or fetched on its own, answering only its name, type, size and path", async () => {
+    const { google, tasks, integrations, reads } = await signedIn();
+    const pdf = randomBytes(48_211);
+    const fetched = google.deliver({
+      ...ARRIVING,
+      attachment: {
+        name: "invoice-2214.pdf",
+        type: "application/pdf",
+        size: pdf.length,
+        bytes: pdf,
+      },
+    });
+    const notes = Buffer.from("Shot list\nRoof, 6am\n", "utf8");
+    const inline = google.deliver({
+      from: ARRIVING.from,
+      subject: "Shot list",
+      text: "Attached.",
+      attachment: {
+        name: "shot list.txt",
+        type: "text/plain",
+        size: notes.length,
+        inline: true,
+        bytes: notes,
+      },
+    });
+    const crew = integrations.forTask("task-1");
+    const reason = "Read the attached invoice 2214 to check the amount due.";
+
+    // read_message names each attachment's part, which save_attachment takes.
+    const read = parsed(
+      (await crew.call("Google", "read_message", { id: fetched }, undefined, reason)).text,
+    );
+    expect(read.attachments).toEqual([
+      { name: "invoice-2214.pdf", type: "application/pdf", size: pdf.length, part: "1" },
+    ]);
+
+    // At Asks you, the call is kept with its exact input and reason; Gmail is asked nothing.
+    const google_ = integrations.view().integrations[0];
+    integrations.setRule(google_?.id ?? "", "save_attachment", false);
+    const before = google.seen.length;
+    const asked = await crew.call(
+      "Google",
+      "save_attachment",
+      { id: fetched, part: "1" },
+      undefined,
+      reason,
+    );
+    expect(asked.text).toContain("The app raised its approval card");
+    expect(google.seen).toHaveLength(before);
+    const ask = tasks.get("task-1")?.delivery?.writeAsks?.[0];
+    expect(ask).toMatchObject({
+      action: "save_attachment",
+      reason,
+      input: JSON.stringify({ id: fetched, part: "1" }),
+    });
+
+    const sent = await integrations.sendAsk("task-1", ask?.id ?? "");
+    expect(sent.outcome).toEqual({ kind: "ran" });
+    expect(
+      google.seen.some((request) => request.path.startsWith(`/messages/${fetched}/attachments/`)),
+    ).toBe(true);
+    const saved = parsed(sent.answer ?? "");
+    expect(saved).toEqual({
+      name: "invoice-2214.pdf",
+      type: "application/pdf",
+      size: pdf.length,
+      path: expect.stringMatching(/[0-9a-f]{16}-invoice-2214\.pdf$/),
+    });
+    const path = String(saved.path);
+    expect(readFileSync(path).equals(pdf)).toBe(true);
+    expect(statSync(path).mode & 0o777).toBe(0o600);
+    // Its bytes never reach the words an agent reads.
+    expect(sent.answer).not.toContain(pdf.subarray(0, 64).toString("base64url"));
+    // It goes when Google's words do (docs/task-retention.md, "Words from outside").
+    expect(reads.filesOf("task-1")).toEqual([
+      { file: path.split("/").at(-1), label: GOOGLE_DATA_FENCE, at: expect.any(Number) },
+    ]);
+
+    // Always allowed, an inline attachment saves at once, from the message itself.
+    integrations.setRule(google_?.id ?? "", "save_attachment", true);
+    const direct = await crew.call(
+      "Google",
+      "save_attachment",
+      { id: inline, part: "1" },
+      undefined,
+      reason,
+    );
+    expect(direct.refused).toBeUndefined();
+    const inlineSaved = parsed(direct.text);
+    expect(inlineSaved).toMatchObject({
+      name: "shot list.txt",
+      type: "text/plain",
+      size: notes.length,
+    });
+    expect(readFileSync(String(inlineSaved.path)).equals(notes)).toBe(true);
+    expect(reads.filesOf("task-1")).toHaveLength(2);
+  });
+
+  it("refuses a part the message lacks, the first mate, and a task that cannot take a file, before any card", async () => {
+    const { google, tasks, integrations, refusals } = await signedIn();
+    const id = google.deliver(ARRIVING);
+    const reason = "Read the attached invoice.";
+    const wrong = await integrations
+      .forTask("task-1")
+      .call("Google", "save_attachment", { id, part: "7" }, undefined, reason);
+    expect(wrong).toMatchObject({ refused: "invalid" });
+    expect(wrong.text).toContain(`Message ${id} has no part 7`);
+
+    const row = integrations.view().integrations[0];
+    integrations.setRule(row?.id ?? "", "save_attachment", false);
+    const firstmate = await integrations.call(
+      { kind: "firstmate" },
+      "Google",
+      "save_attachment",
+      { id, part: "1" },
+      reason,
+    );
+    expect(firstmate).toMatchObject({ refused: "refused" });
+    expect(firstmate.text).toContain("only a crewmate can call it");
+    expect(firstmate.card).toBeUndefined();
+
+    refusals.set("task-1", "update Infinitary on Kun's Mac mini first.");
+    const older = await integrations
+      .forTask("task-1")
+      .call("Google", "save_attachment", { id, part: "1" }, undefined, reason);
+    expect(older).toMatchObject({
+      refused: "refused",
+      text: "Not run: update Infinitary on Kun's Mac mini first.",
+    });
+    expect(tasks.get("task-1")?.delivery?.writeAsks ?? []).toEqual([]);
+    expect(google.seen.some((request) => request.path.includes("/attachments/"))).toBe(false);
   });
 
   it("reads an HTML-only message as its words in one pass, however its sender wrote the markup", async () => {

@@ -169,6 +169,8 @@ const CHECK_DECLARATIONS = contractChange("check-declarations");
 const MERGE_OFFER_READINESS = contractChange("merge-offer-readiness");
 /** A started task's move to or from that computer (`task-move.md`). */
 const TASK_MOVE = contractChange("task-move");
+/** Files from outside in a task's hand-over folder, removed when due (`outside-data-files.md`). */
+const OUTSIDE_DATA_FILES = contractChange("outside-data-files");
 
 /** What the crew reads of the computers that run work (`CrewSupervisorOptions.machines`). */
 export type CrewMachines = {
@@ -219,6 +221,12 @@ export type CrewMachines = {
    * (`handover-files.md`); false while the home cannot tell.
    */
   takesHandover?(machine: string): boolean;
+  /**
+   * Whether the computer removes files from outside from a task's
+   * hand-over folder when they are due (`outside-data-files.md`); false
+   * while the home cannot tell.
+   */
+  takesOutsideFiles?(machine: string): boolean;
   /** Carry a home ref into the destination repository before naming it in the brief. */
   sourceRef?(
     machine: string,
@@ -670,6 +678,14 @@ export class PlacedSessions implements PlacedWork, CrewMachines {
 
   takesHandover(machine: string): boolean {
     return this.takesCurrentWork(machine);
+  }
+
+  /** Whether the computer removes files from outside when they are due (`outside-data-files.md`). */
+  takesOutsideFiles(machine: string): boolean {
+    return (
+      this.takesCurrentWork(machine) &&
+      listsChange(this.options.devices.version(machine)?.changes, OUTSIDE_DATA_FILES)
+    );
   }
 
   sourceRef(
@@ -1794,11 +1810,16 @@ export class PlacedSessions implements PlacedWork, CrewMachines {
    * conversation's callbacks goes first, whatever that computer can do;
    * then that computer replaces them in its files, and this Mac copies each
    * file of the record it changed whole, with any of this Mac's copy that
-   * still holds some. A computer out of reach, or without the change,
-   * follows on a later pass; one no longer on the list leaves this Mac's
-   * copy to the caller (`gone`).
+   * still holds some. `files` are files from outside due in its hand-over
+   * folder there, which that computer removes first. A computer out of
+   * reach, or without the change, follows on a later pass; one no longer on
+   * the list leaves this Mac's copy to the caller (`gone`).
    */
-  async deleteOutside(record: TaskRecord, due: OutsideDue): Promise<PlacedOutsideVisit> {
+  async deleteOutside(
+    record: TaskRecord,
+    due: OutsideDue,
+    files: readonly string[] = [],
+  ): Promise<PlacedOutsideVisit> {
     const deviceId = record.deviceId;
     if (!deviceId || !this.computers().includes(deviceId)) return "gone";
     const rule = dueRule(due.kinds);
@@ -1809,6 +1830,7 @@ export class PlacedSessions implements PlacedWork, CrewMachines {
     const computer = this.nameOf(deviceId);
     if (!this.options.devices.inReach(deviceId)) return { computer, until: "reach" };
     if (!this.takesCurrentWork(deviceId)) return { computer, until: "update" };
+    if (files.length > 0 && !this.takesOutsideFiles(deviceId)) return { computer, until: "update" };
     let answer: WorkOrderResponse<"inf:session:delete-outside">;
     try {
       answer = workOrders["inf:session:delete-outside"].response.parse(
@@ -1818,6 +1840,7 @@ export class PlacedSessions implements PlacedWork, CrewMachines {
             task: record.id,
             kinds: due.kinds,
             legacy: due.legacy,
+            ...(files.length > 0 ? { files: [...files] } : {}),
           },
         ]),
       );

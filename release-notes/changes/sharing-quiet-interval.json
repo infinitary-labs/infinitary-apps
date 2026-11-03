@@ -1,0 +1,8 @@
+{
+  "exclusions": [
+    {
+      "id": "sharing-quiet-interval",
+      "reason": "Test-only repair of the diagnostics journey's first turn; no product behavior, user interface or pull request check changes."
+    }
+  ]
+}

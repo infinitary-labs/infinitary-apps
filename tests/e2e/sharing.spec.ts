@@ -21,6 +21,7 @@ import { type LaunchedApp, type LaunchOptions, launchApp } from "./launch";
 import { minimumWindowSize, resizeWindow, within } from "./layout";
 import { writeMockClaudeClient } from "./mockClaudeClient";
 import {
+  ANSWER_PROMPT_MARKER,
   FAIL_PROVIDER_PROMPT_MARKER,
   FINISH_PROMPT_MARKER,
   MOCK_KEY_PROVIDER_ID,
@@ -216,8 +217,15 @@ async function send(page: Page, text: string): Promise<void> {
 const QUIET_MS = 1_500;
 const TURN_MS = 45_000;
 
+/** The first install's first turn: a greeting the stand-in answers with a card. */
+const FIRST_TURN = `hello firstmate, ${ANSWER_PROMPT_MARKER}`;
 /** What the person typed in this run: none of it may reach the endpoint. */
-const TYPED = ["hello firstmate", "write a short status note", "sk-first-launch"];
+const TYPED = [
+  "hello firstmate",
+  ANSWER_PROMPT_MARKER,
+  "write a short status note",
+  "sk-first-launch",
+];
 
 // Each test has an endpoint of its own, so the stub holds only what that
 // test's installs sent, and each reads the app version from its own install.
@@ -456,11 +464,15 @@ test.describe("diagnostics: allowlisted events with an anonymous install ID, on 
         await committedWelcome(page);
         await expect.poll(() => names(stub), { timeout: 15_000 }).toContain("ftue_signed_in");
 
-        // The first turn, typed.
+        // The first turn, typed, and answered with a card. Left unanswered it
+        // would earn the answer-missing retry (docs/task-capture.md); that
+        // clean turn, landing after the failed turn below, ends the lane's
+        // outage and runs the failed words again at once (docs/inbox.md, "The
+        // honest retry") - a turn event the viewer's quiet interval then sees.
         const input = page.getByPlaceholder(firstRunHintOnThisComputer());
         await expect(input).toBeEnabled({ timeout: 10_000 });
         await input.click();
-        await input.fill("hello firstmate");
+        await input.fill(FIRST_TURN);
         await input.press("Enter");
         await expect.poll(() => names(stub), { timeout: TURN_MS }).toContain("ftue_first_turn");
         await expect

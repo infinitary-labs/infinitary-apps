@@ -121,14 +121,18 @@ describe("the Claude seat's transcript copy", () => {
 
   // INF-2392: the unfinished line was kept as a view of the whole read, so a
   // session's first read stayed alive for as long as its entries were held.
+  // Node copies a short line into its shared allocation pool, whose block is
+  // `Buffer.poolSize` bytes (64 KiB from Node 24.22, 8 KiB before), so the
+  // first read is larger than that block: only a view of it holds as much.
   it("keeps only the unfinished line's own bytes between reads", () => {
     const { transcripts, source } = setup();
-    const filler = "x".repeat(64 * 1024);
-    writeFileSync(source, `${line({ type: "user", uuid: "a", filler })}{"type":"assis`);
+    const filler = "x".repeat(Buffer.poolSize);
+    const written = `${line({ type: "user", uuid: "a", filler })}{"type":"assis`;
+    writeFileSync(source, written);
     transcripts.mirror(SESSION, source);
     const held = transcripts.index(SESSION) as unknown as { partial: Buffer };
     expect(held.partial.toString("utf8")).toBe('{"type":"assis');
-    expect(held.partial.buffer.byteLength).toBeLessThan(filler.length);
+    expect(held.partial.buffer.byteLength).toBeLessThan(Buffer.byteLength(written));
   });
 
   it("stamps the sidecar beside the copy, oldest first", async () => {

@@ -3,10 +3,12 @@ import { join } from "node:path";
 import { expect, type Page, test } from "@playwright/test";
 import { type ModelSlotsView, offeringKey } from "../../src/shared/modelSlots";
 import { scratchDir } from "../helpers/scratchDirs";
+import { expectClaudeConnected } from "./claudeAccount";
 import { type LaunchedApp, launchApp } from "./launch";
 import { minimumWindowSize, resizeWindow } from "./layout";
 import {
   claudeDefaultStore,
+  seedClaudeCredentialFile,
   seedSignedInClaudeStore,
   writeMockClaudeClient,
 } from "./mockClaudeClient";
@@ -299,7 +301,12 @@ test.beforeAll(async () => {
   launched = await launchApp({
     withMockProvider: true,
     userDataDir,
-    prepareHome: (homeDir) => seedSignedInClaudeStore(claudeDefaultStore(homeDir)),
+    prepareHome: (homeDir) => {
+      const store = claudeDefaultStore(homeDir);
+      seedSignedInClaudeStore(store);
+      // Health reads the credential file, not the stand-in client's marker.
+      seedClaudeCredentialFile(store);
+    },
     env: {
       INFINITARY_QUOTA_FIXTURE_DIR: fixtureDir,
       INFINITARY_CLAUDE_CLI: claudeClient,
@@ -310,6 +317,7 @@ test.beforeAll(async () => {
     (accountId) => window.infinitary.settings.setFirstmateAccount(accountId),
     CODEX_PERSONAL,
   );
+  await expectClaudeConnected(launched.page, CLAUDE_PERSONAL);
   await launched.page.getByRole("button", { name: "Settings" }).click();
   await launched.page.getByRole("tab", { name: "Intelligence" }).click();
 });

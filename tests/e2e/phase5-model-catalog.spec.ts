@@ -8,9 +8,11 @@ import {
   usedLine,
 } from "../../src/renderer/src/settings/levelDrops";
 import { scratchDir } from "../helpers/scratchDirs";
+import { expectClaudeConnected } from "./claudeAccount";
 import { type LaunchedApp, launchApp } from "./launch";
 import {
   claudeDefaultStore,
+  seedClaudeCredentialFile,
   seedSignedInClaudeStore,
   writeMockClaudeClient,
 } from "./mockClaudeClient";
@@ -43,13 +45,12 @@ import { pressKey } from "./windowKeys";
  * with a key; a second Grok account is switched off; Codex was never
  * connected at all. Only the signed-in subscriptions may appear.
  *
- * Nothing in this test reaches the network: the enabled Claude account
- * resolves no usage credential - its stand-in store has no credentials file
- * and no Keychain item exists for a throwaway config root - so the sensor
- * reports auth_required without any HTTP; the Grok key's allowance read
- * goes to the local port launch.ts names for it (`INFINITARY_GROK_KEY_URL`),
- * where nothing listens, and its model list stays offline. The model catalog
- * comes from pi-ai's bundled data (launch.ts sets PI_OFFLINE).
+ * Nothing in this test reaches the provider: Claude's isolated store has a
+ * dummy credential file for the real health read, and its allowance read
+ * goes to the unused loopback port named below. The Grok key's allowance
+ * read goes to the local port launch.ts names (`INFINITARY_GROK_KEY_URL`).
+ * The model catalog comes from the stand-in Claude client and pi-ai's
+ * bundled data (launch.ts sets PI_OFFLINE).
  */
 
 const GROK_DISABLED = "acct_grok_off";
@@ -124,11 +125,19 @@ test.beforeAll(async () => {
   launched = await launchApp({
     withMockProvider: true,
     userDataDir,
-    prepareHome: (homeDir) => seedSignedInClaudeStore(claudeDefaultStore(homeDir)),
+    prepareHome: (homeDir) => {
+      const store = claudeDefaultStore(homeDir);
+      seedSignedInClaudeStore(store);
+      // Health reads the credential file, not the stand-in client's marker.
+      seedClaudeCredentialFile(store);
+    },
     env: {
+      // Dummy credentials never reach the provider's allowance endpoint.
+      INFINITARY_CLAUDE_USAGE_URL: "http://127.0.0.1:9/usage",
       INFINITARY_CLAUDE_CLI: writeMockClaudeClient(scratchDir("infinitary-claude-stub-")),
     },
   });
+  await expectClaudeConnected(launched.page, CLAUDE_PERSONAL);
   await launched.page.getByRole("button", { name: "Settings" }).click();
   await launched.page.getByRole("tab", { name: "Intelligence" }).click();
 });

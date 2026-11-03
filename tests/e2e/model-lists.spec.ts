@@ -9,10 +9,12 @@ import {
 } from "../../src/core/routing/modelNews";
 import { CLAUDE_PROVIDER_ID, catalogEntry } from "../../src/shared/providers";
 import { scratchDir } from "../helpers/scratchDirs";
+import { expectClaudeConnected } from "./claudeAccount";
 import { launchApp } from "./launch";
 import {
   claudeDefaultStore,
   type MockClaudeClientOptions,
+  seedClaudeCredentialFile,
   seedSignedInClaudeStore,
   writeMockClaudeClient,
 } from "./mockClaudeClient";
@@ -115,8 +117,15 @@ function claudeLaunch(userDataDir: string, options: MockClaudeClientOptions) {
   return launchApp({
     withMockProvider: true,
     userDataDir,
-    prepareHome: (homeDir) => seedSignedInClaudeStore(claudeDefaultStore(homeDir)),
+    prepareHome: (homeDir) => {
+      const store = claudeDefaultStore(homeDir);
+      seedSignedInClaudeStore(store);
+      // Health reads the credential file, not the stand-in client's marker.
+      seedClaudeCredentialFile(store);
+    },
     env: {
+      // Dummy credentials never reach the provider's allowance endpoint.
+      INFINITARY_CLAUDE_USAGE_URL: "http://127.0.0.1:9/usage",
       INFINITARY_CLAUDE_CLI: writeMockClaudeClient(join(userDataDir, "claude-stub"), options),
     },
   });
@@ -132,6 +141,7 @@ test("a catalog read that never answers holds nothing up: the shipped list serve
     listModelsHangMs: 10 * 60_000,
   });
   try {
+    await expectClaudeConnected(app.page, CLAUDE_ACCOUNT);
     // The pool answers from the shipped catalog while the read is out: the
     // read hangs for ten minutes, far past this test's own time, so an
     // answer at all is an answer that did not wait for it.
@@ -170,6 +180,7 @@ test("a Claude account read at runtime: the newest generations, a kept model tha
     writeFileSync(listing, JSON.stringify(WITH_SONNET_5_6));
     const app = await claudeLaunch(userDataDir, { listModelsFile: listing });
     try {
+      await expectClaudeConnected(app.page, CLAUDE_ACCOUNT);
       // One line for the new generation once the read lands, and none for
       // the eight older ones.
       await expect(feedLine(app.page, modelAddedNote(CLAUDE, "claude-sonnet-5-6", []))).toBeVisible(
@@ -218,6 +229,7 @@ test("a Claude account read at runtime: the newest generations, a kept model tha
     );
     const app = await claudeLaunch(userDataDir, { listModelsFile: listing });
     try {
+      await expectClaudeConnected(app.page, CLAUDE_ACCOUNT);
       // A model the account no longer serves has no label left to read,
       // so the line names it by id, as the arrival line does.
       await expect(
@@ -233,6 +245,7 @@ test("a Claude account read at runtime: the newest generations, a kept model tha
     writeFileSync(listing, "Authentication required\n");
     const app = await claudeLaunch(userDataDir, { listModelsFile: listing });
     try {
+      await expectClaudeConnected(app.page, CLAUDE_ACCOUNT);
       // A failure is not evidence a model left: no line about Sonnet 5.6,
       // once the read has had time to fail.
       await app.page.waitForTimeout(5_000);
@@ -270,6 +283,7 @@ test("an older successful catalog cannot remove the runnable Haiku low starter",
   );
   const app = await claudeLaunch(userDataDir, { listModelsFile: listing, version: "2.1.290" });
   try {
+    await expectClaudeConnected(app.page, CLAUDE_ACCOUNT);
     // A successful metadata response is not an exhaustive catalog on this client.
     // The fallback remains available for routing.
     const log: string[] = [];

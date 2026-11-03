@@ -1,6 +1,7 @@
 import { mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { expect, type Locator, test } from "@playwright/test";
+import { CLAUDE_MODELS } from "../../src/core/claude/claudeModels";
 import type { QuotaService } from "../../src/core/quota/quotaService";
 import { Router } from "../../src/core/routing/router";
 import { openDatabase } from "../../src/core/storage/db";
@@ -15,6 +16,7 @@ import { scratchDir } from "../helpers/scratchDirs";
 import { type LaunchedApp, launchApp } from "./launch";
 import {
   claudeDefaultStore,
+  seedClaudeCredentialFile,
   seedSignedInClaudeStore,
   writeMockClaudeClient,
 } from "./mockClaudeClient";
@@ -216,6 +218,13 @@ async function readWhy(why: Locator) {
   await expect(rows.first().locator("[data-task-why-name]")).not.toContainText(CLAUDE.id, {
     timeout: 20_000,
   });
+  // INF-2384: the chosen row must resolve to the catalog's friendly name,
+  // not merely to any string that happens to omit the raw id.
+  const name = CLAUDE_MODELS.find((model) => model.id === CLAUDE.id)?.name;
+  expect(name).toBeDefined();
+  await expect(rows.first().locator("[data-task-why-name]")).toHaveText(
+    `${name} · ${MODEL_WHY_WORDS.chosen}`,
+  );
   return {
     open: await why.evaluate((el) => (el as HTMLDetailsElement).open),
     line: await why.locator("[data-task-why-line]").textContent(),
@@ -244,12 +253,37 @@ test("the task record explains why its crewmate got its model, and the hover sum
   };
   let launched = await launchApp({
     ...options,
-    prepareHome: (homeDir) => seedSignedInClaudeStore(claudeDefaultStore(homeDir)),
+    prepareHome: (homeDir) => {
+      const store = claudeDefaultStore(homeDir);
+      seedSignedInClaudeStore(store);
+      // INF-2384: health reads the saved credential, not the client's marker.
+      seedClaudeCredentialFile(store);
+    },
   });
   const homeDir = launched.homeDir;
   // Where a picture-taking run keeps its pictures; a gate run takes none.
   const evidence = process.env.INFINITARY_MODEL_WHY_EVIDENCE;
   try {
+    // INF-2384: this is a connected-account journey. Prove its prerequisite
+    // through the app's own reads, before diagnosing a missing display name.
+    const claude = await launched.page.evaluate(
+      async ({ accountId, modelId }) => {
+        const account = (await window.infinitary.accounts.list()).find(
+          (each) => each.id === accountId,
+        );
+        const slots = await window.infinitary.models.slots();
+        return {
+          connected: account?.connected,
+          models: [...slots.models, ...slots.byName].filter((model) => model.id === modelId),
+        };
+      },
+      { accountId: CLAUDE_ACCOUNT, modelId: CLAUDE.id },
+    );
+    await test.info().attach("claude-model-prerequisite", {
+      body: JSON.stringify(claude, null, 2),
+      contentType: "application/json",
+    });
+    expect(claude.connected).toBe(true);
     const detail = await launched.page.evaluate((id) => window.infinitary.tasks.detail(id), taskId);
     expect(detail.modelChoice).toMatchObject({
       decidedBy: "band",
@@ -306,7 +340,8 @@ test("the task record explains why its crewmate got its model, and the hover sum
 
     // A new reading leaves the explanation as it was decided.
     await launched.page.evaluate(() => window.infinitary.quota.refresh());
-    expect(await readWhy(why)).toEqual(shown);
+    const refreshed = await readWhy(why);
+    expect(refreshed).toEqual(shown);
     await launched.close();
 
     // A restart reads the same saved choice.
@@ -315,7 +350,12 @@ test("the task record explains why its crewmate got its model, and the hover sum
     await openGroup(launched.page, "landed");
     why = await openRecord(launched, detail.key);
     await pressKey(why.locator("summary"), "Enter");
-    expect(await readWhy(why)).toEqual(shown);
+    const restarted = await readWhy(why);
+    expect(restarted).toEqual(shown);
+    await test.info().attach("why-this-model-readings", {
+      body: JSON.stringify({ initial: shown, refreshed, restarted }, null, 2),
+      contentType: "application/json",
+    });
   } finally {
     await launched.close();
   }

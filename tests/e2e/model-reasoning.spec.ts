@@ -2,11 +2,13 @@ import { mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { expect, test } from "@playwright/test";
 import { scratchDir } from "../helpers/scratchDirs";
+import { expectClaudeConnected } from "./claudeAccount";
 import { launchClaudeCrew } from "./claudeCrew";
 import { launchApp } from "./launch";
 import { resizeWindow } from "./layout";
 import {
   claudeDefaultStore,
+  seedClaudeCredentialFile,
   seedSignedInClaudeStore,
   writeMockClaudeClient,
 } from "./mockClaudeClient";
@@ -107,6 +109,7 @@ async function open(app: LaunchedApp) {
  * as long as the test allows.
  */
 async function catalogedOpus(app: LaunchedApp): Promise<SlotModelView> {
+  await expectClaudeConnected(app.page, CLAUDE_PERSONAL);
   const key = offeringKey({ provider: "anthropic-claude", id: claudeStarter("high").id });
   await expect
     .poll(
@@ -127,13 +130,20 @@ test("independent model reasoning persists, restores inherited defaults and reco
   const userDataDir = scratchDir("infinitary-reasoning-");
   seedAccounts(userDataDir);
   const env = {
+    // Dummy credentials never reach the provider's allowance endpoint.
+    INFINITARY_CLAUDE_USAGE_URL: "http://127.0.0.1:9/usage",
     INFINITARY_CLAUDE_CLI: writeMockClaudeClient(scratchDir("infinitary-stub-")),
   };
   const launch = () =>
     launchApp({
       withMockProvider: true,
       userDataDir,
-      prepareHome: (home) => seedSignedInClaudeStore(claudeDefaultStore(home)),
+      prepareHome: (home) => {
+        const store = claudeDefaultStore(home);
+        seedSignedInClaudeStore(store);
+        // Health reads the credential file, not the stand-in client's marker.
+        seedClaudeCredentialFile(store);
+      },
       env,
     });
   let app = await launch();

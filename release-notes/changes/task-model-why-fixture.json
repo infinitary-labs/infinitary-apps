@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "task-model-why-fixture",
+      "reason": "Repairs connected-Claude credential fixtures in model explanation, catalog, reasoning and allowance journeys, records account-health prerequisites and strengthens the friendly-name assertion; product behavior is unchanged."
+    }
+  ]
+}

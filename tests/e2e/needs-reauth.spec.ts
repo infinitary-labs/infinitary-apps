@@ -3,9 +3,11 @@ import { join } from "node:path";
 import { expect, test } from "@playwright/test";
 import { KEYCHAIN_VALUE_FAILURE_DETAIL } from "../../src/shared/quota";
 import { scratchDir } from "../helpers/scratchDirs";
+import { expectClaudeConnected } from "./claudeAccount";
 import { launchApp } from "./launch";
 import {
   claudeDefaultStore,
+  seedClaudeCredentialFile,
   seedSignedInClaudeStore,
   writeMockClaudeClient,
 } from "./mockClaudeClient";
@@ -89,13 +91,19 @@ test("a locked store says so, offers Retry, and never asks for Always Allow", as
   });
   const app = await launchApp({
     userDataDir,
-    prepareHome: (homeDir) => seedSignedInClaudeStore(claudeDefaultStore(homeDir)),
+    prepareHome: (homeDir) => {
+      const store = claudeDefaultStore(homeDir);
+      seedSignedInClaudeStore(store);
+      // Health reads the credential file, not the stand-in client's marker.
+      seedClaudeCredentialFile(store);
+    },
     env: {
       INFINITARY_QUOTA_FIXTURE_DIR: fixtureDir,
       INFINITARY_CLAUDE_CLI: writeMockClaudeClient(join(userDataDir, "bin")),
     },
   });
   try {
+    await expectClaudeConnected(app.page, CLAUDE_PERSONAL);
     await app.page.getByRole("button", { name: "Settings", exact: true }).click();
     await app.page.getByRole("tab", { name: "Intelligence" }).click();
     const row = app.page.locator(`[data-account-row="${CLAUDE_PERSONAL}"]`);

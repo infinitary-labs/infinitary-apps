@@ -485,6 +485,7 @@ const onePart = async () => {
   }
   simulatorLog = await observePhoneLog({ device: owned, env, evidence, children,
     predicate: `(${SIMULATOR_LOG}) OR (${SYSTEM_LOG})`, onLine: (line) => {
+      keyboard?.previewLine(line);
       timeoutStack?.receive(line);
       webContent.receive(line);
       webStacks?.receive(line);

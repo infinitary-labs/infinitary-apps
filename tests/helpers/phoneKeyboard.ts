@@ -277,22 +277,75 @@ export class PhonePickerPreviews {
   private listeners = new Set<() => void>();
   private failure: Error | undefined;
 
-  receive(record: { processImagePath?: string; eventMessage?: string; timestamp?: string }) {
+  private recover: ((since: number, signal: AbortSignal) => Promise<object[]>) | undefined;
+
+  constructor(recover?: (since: number, signal: AbortSignal) => Promise<object[]>) {
+    this.recover = recover;
+  }
+
+  receive(record: {
+    processImagePath?: string;
+    eventMessage?: string;
+    timestamp?: string;
+    subsystem?: string;
+    category?: string;
+  }) {
     if (basename(record.processImagePath ?? "") !== "PhotosPicker") return;
     const message = record.eventMessage ?? "";
-    if (!message.startsWith(PICKER_PREVIEW_LINE)) return;
+    let line = firstLine(message);
+    if (!message.startsWith(PICKER_PREVIEW_LINE)) {
+      // INF-2444: in main run 41627462640's iPhone rest the narrow stream dropped this press's response, and the
+      // virtual Mac's kept log held it only as this placeholder, as it did in every other run INF-2305 traced.
+      // The context menu category logs only while a menu animates, and no menu is open as a press begins, so its
+      // first unreadable record after the press is that response. A readable record must still be the line itself.
+      if (
+        message !== UNREADABLE_SHARED_MESSAGE ||
+        record.subsystem !== PICKER_PREVIEW_SUBSYSTEM ||
+        record.category !== PICKER_PREVIEW_CATEGORY
+      )
+        return;
+      line = `[${PICKER_PREVIEW_SUBSYSTEM}:${PICKER_PREVIEW_CATEGORY}] ${message}`;
+    }
     const at = phoneLogMilliseconds(record.timestamp ?? "");
     if (Number.isNaN(at)) return;
-    this.previews.push({ at, timestamp: record.timestamp ?? "", line: firstLine(message) });
+    this.previews.push({ at, timestamp: record.timestamp ?? "", line });
     for (const notify of this.listeners) notify();
+  }
+
+  /** INF-2305: the owned broad stream can retain a Photos line the narrow stream dropped.
+   * Compact log times use the runner's local zone, as the other consumers of observePhoneLog do.
+   * Decode its header only; receive remains the owner of the process, message and timestamp checks. */
+  receiveLine(line: string) {
+    if (!line.includes(PICKER_PREVIEW_LINE) && !line.includes(`:${PICKER_PREVIEW_CATEGORY}] `))
+      return;
+    const fields =
+      /^(\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}\.\d{3})\s+\S+\s+([^\s[\]]+)\[\d+:[^\]]+\] \[([^\]:]*):([^\]]*)\] (.*)$/.exec(
+        line,
+      );
+    if (!fields?.[1] || !fields[2] || !fields[5]) return;
+    const at = new Date(fields[1].replace(" ", "T"));
+    if (Number.isNaN(at.getTime())) return;
+    this.receive({
+      processImagePath: fields[2],
+      timestamp: at.toISOString().replace("T", " ").replace("Z", "+0000"),
+      subsystem: fields[3],
+      category: fields[4],
+      eventMessage: fields[5],
+    });
   }
 
   /** The picker's first preview of a photo tap the runner began at `since`, on its own clock in milliseconds. */
   preview(since: number): Promise<PhonePickerPreview> {
     return new Promise((resolve) => {
+      let settled = false;
+      let recoveryFailure = "";
+      const recovery = new AbortController();
       const finish = (result: PhonePickerPreview) => {
+        if (settled) return;
+        settled = true;
         deadline.cancel();
         this.listeners.delete(check);
+        recovery.abort();
         resolve(result);
       };
       const check = () => {
@@ -308,12 +361,24 @@ export class PhonePickerPreviews {
         () =>
           finish({
             previewed: false,
-            reason: `No photo picker preview since ${new Date(since).toISOString()}`,
+            reason: `No photo picker preview since ${new Date(since).toISOString()}${recoveryFailure}`,
           }),
         30_000,
       );
       this.listeners.add(check);
       check();
+      // INF-2305: Photos logged the rest part's real preview, but the narrow live stream missed it.
+      // As for touch witnesses, read the owned simulator's kept log once inside the original wait.
+      // Only the same Photos line after this press can answer; no extra touch or longer wait.
+      void Promise.resolve().then(async () => {
+        if (settled || !this.recover) return;
+        try {
+          const records = await this.recover(since, recovery.signal);
+          if (!settled) for (const record of records) this.receive(record);
+        } catch (error) {
+          recoveryFailure = `; the simulator's kept log could not be read: ${(error as Error).message}`;
+        }
+      });
     });
   }
 
@@ -610,6 +675,14 @@ export function phoneApplicationPid(services: string, bundle: string): number {
 
 /** UIKit's context menu line in the photo picker, logged as it handles a press-and-hold's lift. */
 const PICKER_PREVIEW_LINE = "performAllAnimations for animator: <_UIContextMenuAnimator";
+/** The subsystem and category UIKit logs that line under; every Photos response of every run carried them. */
+const PICKER_PREVIEW_SUBSYSTEM = "com.apple.UIKit";
+const PICKER_PREVIEW_CATEGORY = "UICMILifecycle";
+/**
+ * What `log show` writes in place of a message whose format string lives in the simulator's dyld shared cache when
+ * the Mac reading the log lacks that cache's format strings. Process, subsystem, category and time survive.
+ */
+const UNREADABLE_SHARED_MESSAGE = "<compose failure [shared UUID]>";
 
 /** Registration subset of INF-355's observe.sh, limited to the runner's own simulator,
  * INF-1477's touch screen attachments, touching contacts that name their screen and ignored touches
@@ -619,7 +692,8 @@ const PHONE_KEYBOARD_LOG_PREDICATE =
   ' OR composedMessage BEGINSWITH "init: <BKDirectTouchState"' +
   ' OR (composedMessage BEGINSWITH "[" AND composedMessage ENDSWITH "presence: touching")' +
   ' OR composedMessage BEGINSWITH "ignoring digitizer event"))' +
-  ` OR (process == "PhotosPicker" AND composedMessage BEGINSWITH "${PICKER_PREVIEW_LINE}")` +
+  ` OR (process == "PhotosPicker" AND (composedMessage BEGINSWITH "${PICKER_PREVIEW_LINE}"` +
+  ` OR (subsystem == "${PICKER_PREVIEW_SUBSYSTEM}" AND category == "${PICKER_PREVIEW_CATEGORY}")))` +
   ' OR (process == "SpringBoard" AND composedMessage BEGINSWITH "Arbiter changing style from")' +
   ' OR (process == "CoreSimulatorBridge" AND composedMessage BEGINSWITH "Saved CategoryName: per-app = 0")' +
   ` OR (process == "${PHONE_APP_PROCESS}" AND composedMessage BEGINSWITH "Read CategoryName: per-app = 0")`;
@@ -645,6 +719,7 @@ export async function observePhoneKeyboard(options: PhoneKeyboardOptions) {
     wait: (pid: number, chord: PhoneChord) => stream.wait(pid, chord),
     touch: (since: number) => stream.touch(since),
     preview: (since: number) => stream.preview(since),
+    previewLine: (line: string) => stream.previewLine(line),
     appearance: (since: number, style: "light" | "dark", until?: number) =>
       stream.appearance(since, style, until),
     textSize: (since: number, size: PhoneTextSize, until?: number) =>
@@ -710,7 +785,7 @@ function keptPhoneLog(
 async function openPhoneKeyboardStream(options: PhoneKeyboardOptions, append: boolean) {
   const registrations = new PhoneKeyRegistrations();
   const touches = new PhoneTouchOutcomes((since, signal) => keptPhoneLog(options, since, signal));
-  const previews = new PhonePickerPreviews();
+  const previews = new PhonePickerPreviews((since, signal) => keptPhoneLog(options, since, signal));
   const displays = new PhoneDisplayChanges((since) => keptPhoneLog(options, since));
   const child = spawn(
     "xcrun",
@@ -821,6 +896,7 @@ async function openPhoneKeyboardStream(options: PhoneKeyboardOptions, append: bo
     wait: (pid: number, chord: PhoneChord) => registrations.wait(pid, chord),
     touch: (since: number) => touches.outcome(since),
     preview: (since: number) => previews.preview(since),
+    previewLine: (line: string) => previews.receiveLine(line),
     appearance: (since: number, style: "light" | "dark", until?: number) =>
       displays.appearance(since, style, until),
     textSize: (since: number, size: PhoneTextSize, until?: number) =>

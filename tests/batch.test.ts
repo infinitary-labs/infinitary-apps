@@ -307,6 +307,7 @@ type Job = {
   uses?: string;
   needs?: unknown;
   with?: Record<string, unknown>;
+  steps?: { uses?: string; with?: Record<string, unknown> }[];
 };
 const workflow = (path: string) =>
   loadYamlFile(path) as {
@@ -374,6 +375,24 @@ describe("batch.yml", () => {
     };
     expect(workflowString(String(sweep.with!.mac_runner), { vars })).toBe("mini-mac-release");
     expect(Object.values(batch.jobs).some((job) => job.uses?.endsWith("/phone.yml"))).toBe(false);
+  });
+
+  // Main's first batch run, 41723213055, failed its compose step on one dropped
+  // connection while reading an open pull request's statuses: github-script's
+  // client reports a request that got no answer as status 500 "fetch failed",
+  // and with github-script's default of no retries the whole run failed.
+  it("retries a dropped connection in every GitHub call, so one lost answer fails no run", () => {
+    const scripted = Object.entries(batch.jobs).flatMap(([job, { steps = [] }]) =>
+      steps
+        .filter((step) => step.uses?.startsWith("actions/github-script@"))
+        .map((step) => ({ job, step })),
+    );
+    expect(scripted.map(({ job }) => job)).toContain("compose");
+    for (const { job, step } of scripted) {
+      expect(Number(step.with?.retries), job).toBeGreaterThan(0);
+      const exempt = String(step.with?.["retry-exempt-status-codes"] ?? "").split(",");
+      expect(exempt.map(Number), job).not.toContain(500);
+    }
   });
 
   it("names its verdict by the swept tree, and a rehearsal never as a verdict", () => {

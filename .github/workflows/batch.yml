@@ -22,6 +22,11 @@ name: batch
 # workflow writes it with its own credential, which starts no workflow, and
 # starts its own next run and its rerun by dispatch. It pushes nothing: the
 # app merges every change with the captain's sign-in.
+#
+# Every GitHub call here retries a dropped connection or a server error
+# three times (github-script's retries; a dropped connection reaches the
+# script as status 500), so one lost answer fails no run. A repeated write
+# only repeats a status or a start, which the next read takes as it is.
 
 on:
   # The app's approval mark. Any other status starts a run that does nothing.
@@ -80,6 +85,7 @@ jobs:
           PULL: ${{ inputs.send_back }}
           REASON: ${{ inputs.reason }}
         with:
+          retries: 3
           script: |
             const {pathToFileURL} = require('node:url');
             const batch = await import(pathToFileURL(`${process.env.GITHUB_WORKSPACE}/scripts/batch.mjs`).href);
@@ -101,6 +107,7 @@ jobs:
         env:
           RUN: ${{ inputs.rerun }}
         with:
+          retries: 3
           script: |
             const run_id = Number(process.env.RUN);
             for (;;) {
@@ -138,6 +145,7 @@ jobs:
         env:
           REHEARSAL: ${{ inputs.rehearsal }}
         with:
+          retries: 3
           script: |
             const {pathToFileURL} = require('node:url');
             const batch = await import(pathToFileURL(`${process.env.GITHUB_WORKSPACE}/scripts/batch.mjs`).href);
@@ -172,6 +180,7 @@ jobs:
           MEMBERS: ${{ steps.form.outputs.members }}
           REHEARSAL: ${{ inputs.rehearsal }}
         with:
+          retries: 3
           script: |
             const fs = require('node:fs');
             const {pathToFileURL} = require('node:url');
@@ -226,6 +235,7 @@ jobs:
           MEMBERS: ${{ needs.compose.outputs.members }}
           REHEARSAL: ${{ inputs.rehearsal }}
         with:
+          retries: 3
           script: |
             const {pathToFileURL} = require('node:url');
             const batch = await import(pathToFileURL(`${process.env.GITHUB_WORKSPACE}/scripts/batch.mjs`).href);

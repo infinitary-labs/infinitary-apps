@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "batch-retries-dropped-connection",
+      "reason": "The project's own batch check retries a GitHub call that got no answer instead of failing its run; how this repository's checks run, nothing in the app a person notices."
+    }
+  ]
+}

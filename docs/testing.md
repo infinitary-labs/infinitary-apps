@@ -442,6 +442,7 @@ Its whole state is one commit status, `infinitary/queue`, on each approved pull 
 The app writes the approval mark; `batch.yml` writes the rest with its own credential, which starts no other workflow.
 It starts on an approval mark, on a push to `main` and by hand, and only one batch runs at a time.
 Its concurrency group never cancels a batch, and every start reads the queue again, so a start GitHub drops loses nothing.
+Every GitHub call in it retries a dropped connection or a server error three times (github-script's `retries`), so one lost answer fails neither the batch's run nor `main`'s check of it.
 
 A batch forms only when no green batch is still merging and no batch run still owns a change.
 It takes every waiting change in approval order, from when its approval mark was first written.

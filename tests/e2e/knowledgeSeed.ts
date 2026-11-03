@@ -13,10 +13,9 @@ import {
 import { captureFile, sha256 } from "../../src/core/knowledge/sources";
 import { openDatabase } from "../../src/core/storage/db";
 import { type FindingBody, KnowledgeStore } from "../../src/core/storage/knowledgeStore";
-import { ensureRepoProject } from "../../src/core/storage/projectStore";
 import { seedTask } from "../../src/core/tasks/seedTask";
 import { TaskService } from "../../src/core/tasks/taskService";
-import { seedHostedOrigins } from "./projectSeed";
+import { seedHostedOrigins, seedProject } from "./projectSeed";
 
 /**
  * A knowledge collection to browse (docs/knowledge.md, "The browser"),
@@ -111,15 +110,30 @@ export async function seedKnowledge(userDataDir: string): Promise<HarborKnowledg
 
   const db = openDatabase(userDataDir);
   const now = Date.now();
-  const repos = db.prepare(
-    "INSERT INTO repos (id, path, name, added_at, setup_kind, origin, delivery, autonomy) VALUES (?, ?, ?, ?, 'clone', ?, 'direct-pr', 0)",
-  );
-  repos.run(HARBOR.id, harborDir, HARBOR.name, now, "https://github.com/o/harbor.git");
+  seedProject(db, {
+    id: HARBOR.id,
+    path: harborDir,
+    name: HARBOR.name,
+    setupKind: "clone",
+    origin: "https://github.com/o/harbor.git",
+    runsOn: null,
+    delivery: "direct-pr",
+    addedAt: now,
+    key: HARBOR.key,
+  });
   seedHostedOrigins(db, userDataDir);
-  repos.run(WEBSITE.id, websiteDir, WEBSITE.name, now, "https://github.com/o/website.git");
+  seedProject(db, {
+    id: WEBSITE.id,
+    path: websiteDir,
+    name: WEBSITE.name,
+    setupKind: "clone",
+    origin: "https://github.com/o/website.git",
+    runsOn: null,
+    delivery: "direct-pr",
+    addedAt: now,
+    key: WEBSITE.key,
+  });
   seedHostedOrigins(db, userDataDir);
-  ensureRepoProject(db, HARBOR, now, HARBOR.key);
-  ensureRepoProject(db, WEBSITE, now, WEBSITE.key);
   const tasks = new TaskService({ db, strict: true });
   seedTask(tasks, {
     id: "harbor-retry",

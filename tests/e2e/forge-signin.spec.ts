@@ -50,6 +50,7 @@ import { type LaunchedApp, launchApp } from "./launch";
 import { minimumWindowSize, overflows, resizeWindow, within } from "./layout";
 import { SPAWN_PROMPT_MARKER } from "./mockProvider";
 import { heroShot, regionShot } from "./pictures";
+import { seedProject } from "./projectSeed";
 import { addedProjects } from "./projects";
 import { promptInput } from "./prompt";
 import { putInLine } from "./rails";
@@ -181,28 +182,44 @@ async function arrange({
   const ledger = join(userDataDir, "ledger");
   seedGitHubProject(ledger, `https://${host}/octo/ledger.git`);
   const db = openDatabase(userDataDir);
-  const insert = db.prepare(
-    "INSERT INTO repos (id, path, name, added_at, setup_kind, origin, delivery, autonomy, rigor) VALUES (?, ?, ?, ?, 'clone', ?, ?, 0, 'quick')",
-  );
-  insert.run(
-    "repo-meterlab",
-    meterlab,
-    "meterlab",
-    1,
-    `https://${host}/octo/meterlab.git`,
-    "direct-pr",
-  );
+  seedProject(db, {
+    id: "repo-meterlab",
+    path: meterlab,
+    name: "meterlab",
+    setupKind: "clone",
+    origin: `https://${host}/octo/meterlab.git`,
+    runsOn: null,
+    delivery: "direct-pr",
+    rigor: "quick",
+    addedAt: 1,
+  });
   // On GitHub, but the captain keeps it on this Mac.
-  insert.run("repo-ledger", ledger, "ledger", 2, `https://${host}/octo/ledger.git`, "local-only");
+  seedProject(db, {
+    id: "repo-ledger",
+    path: ledger,
+    name: "ledger",
+    setupKind: "clone",
+    origin: `https://${host}/octo/ledger.git`,
+    runsOn: null,
+    delivery: "local-only",
+    rigor: "quick",
+    addedAt: 2,
+  });
   if (keptHere) {
     const notebook = join(userDataDir, "notebook");
     git("init", "--initial-branch=main", notebook);
     git("-C", notebook, "config", "user.name", "Test");
     git("-C", notebook, "config", "user.email", "test@localhost");
     git("-C", notebook, "commit", "--allow-empty", "-m", "init");
-    db.prepare(
-      "INSERT INTO repos (id, path, name, added_at, setup_kind, delivery, autonomy, rigor) VALUES (?, ?, ?, ?, 'clone', 'local-only', 0, 'quick')",
-    ).run("repo-notebook", notebook, "notebook", 3);
+    seedProject(db, {
+      id: "repo-notebook",
+      path: notebook,
+      name: "notebook",
+      setupKind: "clone",
+      delivery: "local-only",
+      rigor: "quick",
+      addedAt: 3,
+    });
   }
   db.close();
   if (signedIn) seedGitHubSignIn(userDataDir);

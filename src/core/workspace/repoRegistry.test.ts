@@ -15,6 +15,7 @@ import {
 import { join } from "node:path";
 import { AUTOMATIC_COMPUTER } from "@shared/placement";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { seedProject } from "../../../tests/e2e/projectSeed";
 import { scratchDir } from "../../../tests/helpers/scratchDirs";
 import { PERSONAL_WORKSPACE_NAME } from "../paths";
 import { openInMemoryDatabase } from "../storage/db";
@@ -539,5 +540,71 @@ describe("RepoRegistry chosen task key", () => {
       );
     }
     expect(existsSync(join(fleetRoot, "third"))).toBe(false);
+  });
+});
+
+/**
+ * INF-2417's "project row by raw SQL" repair: a journey whose tasks name a
+ * fixed project id seeds its project through `seedProject`, which must save
+ * the row and the task project the registry saves when a person adds the
+ * same project. A column the registry starts stamping fails here until the
+ * journeys' seed stamps it too.
+ */
+describe("seedProject, the journeys' project seed", () => {
+  beforeEach(() => {
+    vi.stubEnv("HOME", scratchDir("infinitary-git-home-"));
+    vi.stubEnv("GIT_CONFIG_GLOBAL", "/dev/null");
+    vi.stubEnv("GIT_CONFIG_NOSYSTEM", "1");
+  });
+
+  afterEach(() => {
+    vi.unstubAllEnvs();
+  });
+
+  /** Every saved column but the ones a seed chooses itself: the id, the folder, and when. */
+  function saved(db: ReturnType<typeof openInMemoryDatabase>, id: string) {
+    const {
+      id: _id,
+      path: _path,
+      added_at: _added,
+      ...repo
+    } = db.prepare("SELECT * FROM repos WHERE id = ?").get(id) as Record<string, unknown>;
+    const {
+      id: _project,
+      repo_id: _repo,
+      created_at: _created,
+      ...project
+    } = db.prepare("SELECT * FROM projects WHERE repo_id = ?").get(id) as Record<string, unknown>;
+    return { repo, project };
+  }
+
+  it.each([
+    ["a hosted project", "https://github.com/o/meterlab.git"],
+    ["a project kept on this computer", null],
+  ])("saves %s the way the registry adds it", async (_label, origin) => {
+    const dir = scratchDir("infinitary-seeded-");
+    await git(dir, ["init", "-q", "-b", "main"]);
+    if (origin) await git(dir, ["remote", "add", "origin", origin]);
+    const added = openInMemoryDatabase();
+    const { repo } = await new RepoRegistry(added, scratchDir("infinitary-fleet-")).setup({
+      kind: "adopt",
+      path: dir,
+      name: "meterlab",
+    });
+
+    const seeded = openInMemoryDatabase();
+    const view = seedProject(seeded, {
+      id: "repo-meterlab",
+      name: "meterlab",
+      path: dir,
+      setupKind: "adopt",
+      origin,
+      delivery: repo.delivery,
+    });
+
+    expect(view).toEqual({ ...repo, id: "repo-meterlab" });
+    expect(saved(seeded, "repo-meterlab")).toEqual(saved(added, repo.id));
+    added.close();
+    seeded.close();
   });
 });

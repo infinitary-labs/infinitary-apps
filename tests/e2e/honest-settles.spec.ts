@@ -17,7 +17,7 @@ import { plainProblem } from "../../src/shared/plainProblem";
 import { scratchDir } from "../helpers/scratchDirs";
 import { seedGitHubSignIn, startGitHubStub } from "./githubStub";
 import { launchApp } from "./launch";
-import { seedHostedOrigins } from "./projectSeed";
+import { seedHostedOrigins, seedProject } from "./projectSeed";
 import { projectRow, projectRowWords } from "./projects";
 import { noteLines, statusLine, taskKey } from "./rails";
 import { shownCard } from "./stack";
@@ -100,9 +100,15 @@ test("discarding a task that never opened a pull request asks GitHub nothing and
   const repo = seedRepo(userDataDir, taskId, { commit: false });
   const github = await startGitHubStub();
   const db = openDatabase(userDataDir);
-  db.prepare(
-    "INSERT INTO repos (id, path, name, added_at, setup_kind, origin, delivery, autonomy) VALUES (?, ?, ?, ?, 'clone', ?, 'direct-pr', 0)",
-  ).run("repo-hosted", repo.repoDir, "hosted", Date.now(), "https://github.com/o/hosted.git");
+  seedProject(db, {
+    id: "repo-hosted",
+    path: repo.repoDir,
+    name: "hosted",
+    setupKind: "clone",
+    origin: "https://github.com/o/hosted.git",
+    runsOn: null,
+    delivery: "direct-pr",
+  });
   seedHostedOrigins(db, userDataDir);
   seedTask(new TaskService({ db, strict: true }), {
     id: taskId,
@@ -163,9 +169,15 @@ test("a put-in the project's host refuses reads plainly in the feed, and the raw
   github.headOf(() => repo.headSha);
   seedGitHubSignIn(userDataDir);
   const db = openDatabase(userDataDir);
-  db.prepare(
-    "INSERT INTO repos (id, path, name, added_at, setup_kind, origin, delivery, autonomy) VALUES (?, ?, ?, ?, 'clone', ?, 'direct-pr', 0)",
-  ).run("repo-hosted", repo.repoDir, "hosted", Date.now(), "https://github.com/o/hosted.git");
+  seedProject(db, {
+    id: "repo-hosted",
+    path: repo.repoDir,
+    name: "hosted",
+    setupKind: "clone",
+    origin: "https://github.com/o/hosted.git",
+    runsOn: null,
+    delivery: "direct-pr",
+  });
   seedHostedOrigins(db, userDataDir);
   seedTask(new TaskService({ db, strict: true }), {
     id: taskId,

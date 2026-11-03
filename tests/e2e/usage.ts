@@ -7,7 +7,6 @@ import { mkdirSync } from "node:fs";
 import { join } from "node:path";
 import type { Locator, Page } from "@playwright/test";
 import { openDatabase } from "../../src/core/storage/db";
-import { ensureRepoProject } from "../../src/core/storage/projectStore";
 import { UsageStore } from "../../src/core/storage/usageStore";
 import { seedTask } from "../../src/core/tasks/seedTask";
 import { TaskService } from "../../src/core/tasks/taskService";
@@ -19,6 +18,7 @@ import type {
   UsageTasksQuery,
   UsageUnit,
 } from "../../src/shared/usage";
+import { seedProject } from "./projectSeed";
 import { starterFor } from "./starters";
 
 /**
@@ -144,26 +144,29 @@ export function seedUsageLedger(userDataDir: string): void {
   const db = openDatabase(userDataDir);
   const now = Date.now();
   const HOUR = 3_600_000;
-  const repos = db.prepare(
-    "INSERT INTO repos (id, path, name, added_at, setup_kind, origin, delivery, autonomy) VALUES (?, ?, ?, ?, 'clone', ?, 'direct-pr', 0)",
-  );
-  repos.run(
-    "repo-fm",
-    gitRepo(join(userDataDir, "fm")),
-    "firstmate-3000",
-    now,
-    "https://github.com/o/fm.git",
-  );
-  repos.run(
-    "repo-web",
-    gitRepo(join(userDataDir, "web")),
-    "Website",
-    now,
-    "https://github.com/o/web.git",
-  );
+  seedProject(db, {
+    id: "repo-fm",
+    path: gitRepo(join(userDataDir, "fm")),
+    name: "firstmate-3000",
+    setupKind: "clone",
+    origin: "https://github.com/o/fm.git",
+    runsOn: null,
+    delivery: "direct-pr",
+    addedAt: now,
+    key: "FM3K",
+  });
+  seedProject(db, {
+    id: "repo-web",
+    path: gitRepo(join(userDataDir, "web")),
+    name: "Website",
+    setupKind: "clone",
+    origin: "https://github.com/o/web.git",
+    runsOn: null,
+    delivery: "direct-pr",
+    addedAt: now,
+    key: "WEB",
+  });
   mkdirSync(join(userDataDir, "worktrees"), { recursive: true });
-  ensureRepoProject(db, { id: "repo-fm", name: "firstmate-3000" }, now, "FM3K");
-  ensureRepoProject(db, { id: "repo-web", name: "Website" }, now, "WEB");
   // The oldest task first, five hours apart, the newest an hour ago.
   let clock = now - (SEEDED_TASKS.length * 5 + 1) * HOUR;
   const tasks = new TaskService({ db, strict: true, now: () => clock });

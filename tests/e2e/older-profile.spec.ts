@@ -40,7 +40,7 @@ import {
   setLevelInPanel,
 } from "./modelsBoard";
 import { asSavedByOlderRelease, seedLegacyGithubServer } from "./olderProfile";
-import { seedHostedOrigins } from "./projectSeed";
+import { seedHostedOrigins, seedProject } from "./projectSeed";
 import { promptInput } from "./prompt";
 import { openGroup, pressRow, recordCard, recordFrame } from "./rails";
 import { readSavedData } from "./savedData";
@@ -1350,15 +1350,16 @@ function seedChartProject(userDataDir: string) {
   }
   const db = openDatabase(userDataDir);
   try {
-    db.prepare(
-      "INSERT INTO repos (id, path, name, added_at, setup_kind, origin, delivery, autonomy, rigor) VALUES (?, ?, ?, ?, 'clone', ?, 'direct-pr', 0, 'quick')",
-    ).run(
-      CHART_REPO,
-      repoDir,
-      "chart",
-      Date.now(),
-      `https://${CHART_ORIGIN.host}/${CHART_ORIGIN.owner}/${CHART_ORIGIN.name}.git`,
-    );
+    seedProject(db, {
+      id: CHART_REPO,
+      path: repoDir,
+      name: "chart",
+      setupKind: "clone",
+      origin: `https://${CHART_ORIGIN.host}/${CHART_ORIGIN.owner}/${CHART_ORIGIN.name}.git`,
+      runsOn: null,
+      delivery: "direct-pr",
+      rigor: "quick",
+    });
     seedHostedOrigins(db, userDataDir);
   } finally {
     db.close();

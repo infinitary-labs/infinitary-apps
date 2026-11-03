@@ -3,14 +3,13 @@ import { mkdirSync } from "node:fs";
 import { join } from "node:path";
 import { expect, test } from "@playwright/test";
 import { openDatabase } from "../../src/core/storage/db";
-import { ensureRepoProject } from "../../src/core/storage/projectStore";
 import { seedTask } from "../../src/core/tasks/seedTask";
 import { TaskService } from "../../src/core/tasks/taskService";
 import { nowGroupOf } from "../../src/shared/nowPanel";
 import { scratchDir } from "../helpers/scratchDirs";
 import { launchApp } from "./launch";
 import { resizeWindow } from "./layout";
-import { seedHostedOrigins } from "./projectSeed";
+import { seedHostedOrigins, seedProject } from "./projectSeed";
 import { dockSummaryParts, expandDock, nowFrame } from "./rails";
 
 // Exact count arithmetic belongs to the Tasks folder's rows.test.ts. This
@@ -26,11 +25,18 @@ test("Tasks counts working tasks without counting their contextual tree", async 
   git("-C", repo, "commit", "--allow-empty", "-m", "init");
   const db = openDatabase(userDataDir);
   const now = Date.now();
-  db.prepare(
-    "INSERT INTO repos (id, path, name, added_at, setup_kind, origin, delivery, autonomy) VALUES (?, ?, ?, ?, 'clone', ?, 'direct-pr', 0)",
-  ).run("repo", repo, "Sample project", now, "https://github.com/o/sample.git");
+  seedProject(db, {
+    id: "repo",
+    path: repo,
+    name: "Sample project",
+    setupKind: "clone",
+    origin: "https://github.com/o/sample.git",
+    runsOn: null,
+    delivery: "direct-pr",
+    addedAt: now,
+    key: "FM3K",
+  });
   seedHostedOrigins(db, userDataDir);
-  ensureRepoProject(db, { id: "repo", name: "Sample project" }, now, "FM3K");
   const tasks = new TaskService({ db, strict: true, now: () => now });
   const seed = (value: Parameters<typeof seedTask>[1]) =>
     seedTask(tasks, { repoId: "repo", ...value });

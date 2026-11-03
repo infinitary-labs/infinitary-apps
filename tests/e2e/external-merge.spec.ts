@@ -12,7 +12,7 @@ import { scratchDir } from "../helpers/scratchDirs";
 import { seedDelivery } from "../helpers/taskDelivery";
 import { seedGitHubSignIn, startGitHubStub } from "./githubStub";
 import { launchApp, SHORT_TICK } from "./launch";
-import { seedHostedOrigins } from "./projectSeed";
+import { seedHostedOrigins, seedProject } from "./projectSeed";
 import { readSavedData } from "./savedData";
 import { shownCard } from "./stack";
 
@@ -42,9 +42,15 @@ for (const complete of [true, false]) {
     github.servePull({ number: 71, title: "fix: correct the meter", headSha: head });
     seedGitHubSignIn(root);
     const db = openDatabase(root);
-    db.prepare(
-      "INSERT INTO repos (id, path, name, added_at, setup_kind, origin, delivery, autonomy) VALUES (?, ?, ?, ?, 'adopt', ?, 'direct-pr', 0)",
-    ).run("repo-hosted", repoDir, "Meter", Date.now(), "https://github.com/o/hosted.git");
+    seedProject(db, {
+      id: "repo-hosted",
+      path: repoDir,
+      name: "Meter",
+      setupKind: "adopt",
+      origin: "https://github.com/o/hosted.git",
+      runsOn: null,
+      delivery: "direct-pr",
+    });
     seedHostedOrigins(db, root);
     const tasks = new TaskService({ db, strict: true });
     seedTask(tasks, {

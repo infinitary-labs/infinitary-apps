@@ -20,7 +20,7 @@ import { type LaunchedApp, launchApp } from "./launch";
 import { resizeWindow } from "./layout";
 import { MOCK_CLOSING_SENTENCES, SPAWN_PROMPT_MARKER } from "./mockProvider";
 import { heroShot } from "./pictures";
-import { seedHostedOrigins } from "./projectSeed";
+import { seedHostedOrigins, seedProject } from "./projectSeed";
 import { promptInput } from "./prompt";
 import { served } from "./providerRequest";
 import {
@@ -215,9 +215,16 @@ for (const checks of ["success", "failure"] as const)
     );
     seedGitHubSignIn(userDataDir);
     const db = openDatabase(userDataDir);
-    db.prepare(
-      "INSERT INTO repos (id, path, name, added_at, setup_kind, origin, delivery, autonomy, rigor) VALUES (?, ?, ?, ?, 'clone', ?, 'direct-pr', 0, 'quick')",
-    ).run("repo-meterlab", repoDir, "meterlab", Date.now(), "https://github.com/o/meterlab.git");
+    seedProject(db, {
+      id: "repo-meterlab",
+      path: repoDir,
+      name: "meterlab",
+      setupKind: "clone",
+      origin: "https://github.com/o/meterlab.git",
+      runsOn: null,
+      delivery: "direct-pr",
+      rigor: "quick",
+    });
     seedHostedOrigins(db, userDataDir);
     db.close();
     const app = await launchApp({

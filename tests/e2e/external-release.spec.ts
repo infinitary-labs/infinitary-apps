@@ -8,7 +8,7 @@ import { seedTask } from "../../src/core/tasks/seedTask";
 import { TaskService } from "../../src/core/tasks/taskService";
 import { scratchDir } from "../helpers/scratchDirs";
 import { launchApp } from "./launch";
-import { seedHostedOrigins } from "./projectSeed";
+import { seedHostedOrigins, seedProject } from "./projectSeed";
 import { promptInput } from "./prompt";
 import { nowFrame, pressRow, recordFrame } from "./rails";
 import { externalRelease, RELEASE_PROMPT_MARKER } from "./scenarios/externalRelease";
@@ -34,9 +34,15 @@ test("a verified external release closes reported work, not a dismissed note or 
   git("-C", repoDir, "add", "release.txt");
   git("-C", repoDir, "commit", "-m", "release: v1.2.3");
   const db = openDatabase(userDataDir);
-  db.prepare(
-    "INSERT INTO repos (id, path, name, added_at, setup_kind, origin, delivery, autonomy) VALUES (?, ?, ?, ?, 'clone', ?, 'direct-pr', 0)",
-  ).run("repo-release", repoDir, "r", Date.now(), "https://github.com/o/r.git");
+  seedProject(db, {
+    id: "repo-release",
+    path: repoDir,
+    name: "r",
+    setupKind: "clone",
+    origin: "https://github.com/o/r.git",
+    runsOn: null,
+    delivery: "direct-pr",
+  });
   seedHostedOrigins(db, userDataDir);
   const tasks = new TaskService({ db, strict: true });
   seedTask(tasks, {

@@ -22,7 +22,7 @@ import { type LaunchedApp, launchApp } from "./launch";
 import { recordAppTrace } from "./launchDiagnostics";
 import { SPAWN_PROMPT_MARKER } from "./mockProvider";
 import { regionShot } from "./pictures";
-import { seedHostedOrigins } from "./projectSeed";
+import { seedHostedOrigins, seedProject } from "./projectSeed";
 import { promptInput } from "./prompt";
 import { providerMessages } from "./providerRequest";
 import { dockRegion, expandDock, noteLines, putInLine, taskKey } from "./rails";
@@ -187,9 +187,15 @@ for (const passing of PASSING) {
     github.headOf(() => repo.branchHead());
     seedGitHubSignIn(userDataDir);
     const db = openDatabase(userDataDir);
-    db.prepare(
-      "INSERT INTO repos (id, path, name, added_at, setup_kind, origin, delivery, autonomy) VALUES (?, ?, ?, ?, 'clone', ?, 'direct-pr', 0)",
-    ).run("repo-pr", repo.repoDir, "r", Date.now(), "https://github.com/o/r.git");
+    seedProject(db, {
+      id: "repo-pr",
+      path: repo.repoDir,
+      name: "r",
+      setupKind: "clone",
+      origin: "https://github.com/o/r.git",
+      runsOn: null,
+      delivery: "direct-pr",
+    });
     seedHostedOrigins(db, userDataDir);
     seedTask(new TaskService({ db, strict: true }), {
       id: taskId,
@@ -350,9 +356,15 @@ for (const refusal of REFUSALS) {
     const fact = refusal.arrange(github, repo);
     seedGitHubSignIn(userDataDir);
     const db = openDatabase(userDataDir);
-    db.prepare(
-      "INSERT INTO repos (id, path, name, added_at, setup_kind, origin, delivery, autonomy) VALUES (?, ?, ?, ?, 'clone', ?, 'direct-pr', 0)",
-    ).run("repo-pr", repo.repoDir, "r", Date.now(), "https://github.com/o/r.git");
+    seedProject(db, {
+      id: "repo-pr",
+      path: repo.repoDir,
+      name: "r",
+      setupKind: "clone",
+      origin: "https://github.com/o/r.git",
+      runsOn: null,
+      delivery: "direct-pr",
+    });
     seedHostedOrigins(db, userDataDir);
     seedTask(new TaskService({ db, strict: true }), {
       id: taskId,
@@ -556,9 +568,16 @@ for (const backend of CREW_BACKENDS) {
     const db = openDatabase(userDataDir);
     const tasks = new TaskService({ db });
     const cards = new CardStore(db);
-    db.prepare(
-      "INSERT INTO repos (id, path, name, added_at, setup_kind, origin, delivery, autonomy, rigor) VALUES (?, ?, ?, ?, 'clone', ?, 'direct-pr', 0, 'quick')",
-    ).run("repo-meterlab", repoDir, "meterlab", Date.now(), "https://github.com/o/meterlab.git");
+    seedProject(db, {
+      id: "repo-meterlab",
+      path: repoDir,
+      name: "meterlab",
+      setupKind: "clone",
+      origin: "https://github.com/o/meterlab.git",
+      runsOn: null,
+      delivery: "direct-pr",
+      rigor: "quick",
+    });
     seedHostedOrigins(db, userDataDir);
     const app = await backend.launch(userDataDir, github.env);
     const title = `meterlab ${backend.words}`;
@@ -687,9 +706,16 @@ for (const backend of CREW_BACKENDS) {
     seedGitHubSignIn(userDataDir);
     const db = openDatabase(userDataDir);
     const tasks = new TaskService({ db });
-    db.prepare(
-      "INSERT INTO repos (id, path, name, added_at, setup_kind, origin, delivery, autonomy, rigor) VALUES (?, ?, ?, ?, 'clone', ?, 'direct-pr', 0, 'quick')",
-    ).run("repo-meterlab", repoDir, "meterlab", Date.now(), "https://github.com/o/meterlab.git");
+    seedProject(db, {
+      id: "repo-meterlab",
+      path: repoDir,
+      name: "meterlab",
+      setupKind: "clone",
+      origin: "https://github.com/o/meterlab.git",
+      runsOn: null,
+      delivery: "direct-pr",
+      rigor: "quick",
+    });
     seedHostedOrigins(db, userDataDir);
     const app = await backend.launch(userDataDir, github.env);
     const title = `meterlab ${GUIDED_MERGE_MARKER}${backend.claude ? ` ${KEPT_MERGE_ON_CLAUDE}` : ""}`;

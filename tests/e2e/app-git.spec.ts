@@ -7,6 +7,7 @@ import { openDatabase } from "../../src/core/storage/db";
 import { scratchDir } from "../helpers/scratchDirs";
 import { builtAppDir, type LaunchedApp, launchApp } from "./launch";
 import { SPAWN_PROMPT_MARKER } from "./mockProvider";
+import { seedProject } from "./projectSeed";
 import { promptInput } from "./prompt";
 import { reportLine, taskKey } from "./rails";
 import { GIT_STATUS_PROMPT_MARKER, gitStatus, MOCK_GIT_REPORT_PREFIX } from "./scenarios/gitStatus";
@@ -49,9 +50,14 @@ test.beforeAll(async () => {
   git("-C", project, "config", "user.email", "test@localhost");
   git("-C", project, "commit", "--allow-empty", "-m", "init");
   const db = openDatabase(userDataDir);
-  db.prepare(
-    "INSERT INTO repos (id, path, name, added_at, setup_kind, origin, delivery, autonomy) VALUES (?, ?, ?, ?, ?, ?, ?, 0)",
-  ).run("repo-ledger", project, "ledger", 1, "init", null, "local-only");
+  seedProject(db, {
+    id: "repo-ledger",
+    path: project,
+    name: "ledger",
+    setupKind: "init",
+    delivery: "local-only",
+    addedAt: 1,
+  });
   db.close();
   // The person's shell adds nothing either: its path is the launch's own.
   const { shell } = writeLoginShellStub(scratchDir("infinitary-login-shell-"), {});

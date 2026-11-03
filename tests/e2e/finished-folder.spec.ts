@@ -7,6 +7,7 @@ import { seedTask } from "../../src/core/tasks/seedTask";
 import { TaskService } from "../../src/core/tasks/taskService";
 import { scratchDir } from "../helpers/scratchDirs";
 import { launchApp } from "./launch";
+import { seedProject } from "./projectSeed";
 import { promptInput } from "./prompt";
 import { latestServedTurn } from "./providerRequest";
 import { expectRecordTaskStatus, nowFrame, pressRow, recordBar, recordFrame } from "./rails";
@@ -75,9 +76,13 @@ test("verified folder work finishes through its owner and preserves the project"
   const before = snapshot();
   expect(before.unpushed).toBe("1");
   const db = openDatabase(userDataDir);
-  db.prepare(
-    "INSERT INTO repos (id, path, name, added_at, setup_kind, delivery, autonomy) VALUES (?, ?, ?, ?, 'init', 'local-only', 0)",
-  ).run("folder-repo", repoDir, "Project", Date.now());
+  seedProject(db, {
+    id: "folder-repo",
+    path: repoDir,
+    name: "Project",
+    setupKind: "init",
+    delivery: "local-only",
+  });
   const tasks = new TaskService({ db, strict: true });
   const task = seedTask(tasks, {
     id: "folderwork",

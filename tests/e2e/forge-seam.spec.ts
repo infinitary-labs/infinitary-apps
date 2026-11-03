@@ -15,6 +15,7 @@ import { scratchDir } from "../helpers/scratchDirs";
 import { cardBody } from "./frames";
 import { type LaunchedApp, launchApp } from "./launch";
 import { SPAWN_PROMPT_MARKER } from "./mockProvider";
+import { seedProject } from "./projectSeed";
 import { promptInput } from "./prompt";
 import { putInLine } from "./rails";
 import { MOCK_SENT_UP_CARD_TITLE, SEND_UP_PROMPT_MARKER, sendUp } from "./scenarios/sendUp";
@@ -43,7 +44,7 @@ const ORIGIN = `https://${HOST}/me/plainhost.git`;
 const git = (...args: string[]) => execFileSync("git", args, { stdio: "pipe" }).toString().trim();
 
 /** A folder with one commit on main, optionally on a host. */
-function seedProject(dir: string, origin?: { url: string; bare?: string }) {
+function initFolder(dir: string, origin?: { url: string; bare?: string }) {
   git("init", "--initial-branch=main", dir);
   git("-C", dir, "config", "user.name", "Test");
   git("-C", dir, "config", "user.email", "test@localhost");
@@ -77,7 +78,7 @@ test.beforeAll(async () => {
   bare = join(userDataDir, "host.git");
   git("init", "--bare", "--initial-branch=main", bare);
   const plain = join(userDataDir, "plainhost");
-  seedProject(plain, { url: ORIGIN, bare });
+  initFolder(plain, { url: ORIGIN, bare });
   // INF-1099: the host takes a second longer than the crewmate's shell
   // waits, as a busy Mac does, so the push always finishes as a background
   // job and the card goes up from that job's exit.
@@ -85,37 +86,52 @@ test.beforeAll(async () => {
   writeFileSync(hook, `#!/bin/sh\nsleep ${SYNC_CAP_MS / 1000 + 1}\n`);
   chmodSync(hook, 0o755);
   const onGitHub = join(userDataDir, "meterlab");
-  seedProject(onGitHub, { url: "https://github.com/o/meterlab.git" });
+  initFolder(onGitHub, { url: "https://github.com/o/meterlab.git" });
   const keptLocal = join(userDataDir, "ledger");
-  seedProject(keptLocal, { url: "https://github.com/o/ledger.git" });
+  initFolder(keptLocal, { url: "https://github.com/o/ledger.git" });
   const notes = join(userDataDir, "notes");
-  seedProject(notes);
+  initFolder(notes);
 
   const db = openDatabase(userDataDir);
-  const insert = db.prepare(
-    "INSERT INTO repos (id, path, name, added_at, setup_kind, origin, delivery, autonomy) VALUES (?, ?, ?, ?, ?, ?, ?, 0)",
-  );
-  insert.run("repo-plain", plain, "plainhost", 1, "clone", ORIGIN, "direct-pr");
-  insert.run(
-    "repo-gh",
-    onGitHub,
-    "meterlab",
-    2,
-    "clone",
-    "https://github.com/o/meterlab.git",
-    "direct-pr",
-  );
+  seedProject(db, {
+    id: "repo-plain",
+    path: plain,
+    name: "plainhost",
+    setupKind: "clone",
+    origin: ORIGIN,
+    runsOn: null,
+    delivery: "direct-pr",
+    addedAt: 1,
+  });
+  seedProject(db, {
+    id: "repo-gh",
+    path: onGitHub,
+    name: "meterlab",
+    setupKind: "clone",
+    origin: "https://github.com/o/meterlab.git",
+    runsOn: null,
+    delivery: "direct-pr",
+    addedAt: 2,
+  });
   // On GitHub, but the captain keeps its changes on this Mac.
-  insert.run(
-    "repo-local",
-    keptLocal,
-    "ledger",
-    3,
-    "clone",
-    "https://github.com/o/ledger.git",
-    "local-only",
-  );
-  insert.run("repo-notes", notes, "notes", 4, "init", null, "local-only");
+  seedProject(db, {
+    id: "repo-local",
+    path: keptLocal,
+    name: "ledger",
+    setupKind: "clone",
+    origin: "https://github.com/o/ledger.git",
+    runsOn: null,
+    delivery: "local-only",
+    addedAt: 3,
+  });
+  seedProject(db, {
+    id: "repo-notes",
+    path: notes,
+    name: "notes",
+    setupKind: "init",
+    delivery: "local-only",
+    addedAt: 4,
+  });
   db.close();
   const bin = join(userDataDir, "bin");
   ghLog = writeLoggingGh(bin);

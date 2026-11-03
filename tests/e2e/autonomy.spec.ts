@@ -7,7 +7,7 @@ import { cardBody } from "./frames";
 import { type GitHubStub, seedGitHubSignIn, seedRepo, startGitHubStub } from "./githubStub";
 import { type LaunchedApp, launchApp } from "./launch";
 import { AUTONOMY_ASK_MARKER, MERGE_PROMPT_MARKER, SPAWN_PROMPT_MARKER } from "./mockProvider";
-import { seedHostedOrigins } from "./projectSeed";
+import { seedHostedOrigins, seedProject } from "./projectSeed";
 import { promptInput } from "./prompt";
 import { feedLine, putInLine, taskKey } from "./rails";
 import { AUTONOMY_PROMPT_MARKER, autonomy, MOCK_AUTONOMY_CARD_TITLE } from "./scenarios/autonomy";
@@ -59,9 +59,16 @@ test.beforeEach(async () => {
   // Direct-pr, autonomy OFF (0), rigor quick: the repository asks before
   // landing, which is every repository's default on setup.
   const db = openDatabase(userDataDir);
-  db.prepare(
-    "INSERT INTO repos (id, path, name, added_at, setup_kind, origin, delivery, autonomy, rigor) VALUES (?, ?, ?, ?, 'clone', ?, 'direct-pr', 0, 'quick')",
-  ).run("repo-meterlab", repoDir, REPO_NAME, Date.now(), "https://github.com/o/meterlab.git");
+  seedProject(db, {
+    id: "repo-meterlab",
+    path: repoDir,
+    name: REPO_NAME,
+    setupKind: "clone",
+    origin: "https://github.com/o/meterlab.git",
+    runsOn: null,
+    delivery: "direct-pr",
+    rigor: "quick",
+  });
   seedHostedOrigins(db, userDataDir);
   db.close();
   launched = await launchApp({

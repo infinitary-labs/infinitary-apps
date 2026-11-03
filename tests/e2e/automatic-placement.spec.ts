@@ -20,7 +20,7 @@ import { seedRepo } from "./githubStub";
 import { type LaunchedApp, type LaunchOptions, launchApp, SHORT_TICK } from "./launch";
 import { MOCK_PROVIDER_ID, mockModelsJson, SPAWN_PROMPT_MARKER } from "./mockProvider";
 import { holdCpuBusy, homeReading, replayedCpu } from "./placementCpu";
-import { seedHostedOrigins } from "./projectSeed";
+import { seedHostedOrigins, seedProject } from "./projectSeed";
 import { promptInput } from "./prompt";
 import { providerMessages, served } from "./providerRequest";
 import { seedQuotaFixture } from "./quotaFixtures";
@@ -211,16 +211,16 @@ function seedGrokCrew(userDataDir: string): Pick<LaunchOptions, "env" | "modelsJ
 function seedAutomaticProject(userDataDir: string): void {
   const { repoDir } = seedRepo(userDataDir);
   const db = openDatabase(userDataDir);
-  db.prepare(
-    "INSERT INTO repos (id, path, name, added_at, setup_kind, origin, delivery, autonomy, rigor, runs_on) VALUES (?, ?, ?, ?, 'clone', ?, 'direct-pr', 0, 'quick', ?)",
-  ).run(
-    "repo-ledger",
-    repoDir,
-    PROJECT,
-    Date.now(),
-    `https://github.com/o/${PROJECT}.git`,
-    AUTOMATIC_COMPUTER,
-  );
+  seedProject(db, {
+    id: "repo-ledger",
+    path: repoDir,
+    name: PROJECT,
+    setupKind: "clone",
+    origin: `https://github.com/o/${PROJECT}.git`,
+    delivery: "direct-pr",
+    rigor: "quick",
+    runsOn: AUTOMATIC_COMPUTER,
+  });
   seedHostedOrigins(db, userDataDir);
   db.close();
 }

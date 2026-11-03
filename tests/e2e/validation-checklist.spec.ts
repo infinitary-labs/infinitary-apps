@@ -7,7 +7,7 @@ import { type GitHubStub, seedGitHubSignIn, seedRepo, startGitHubStub } from "./
 import { type LaunchedApp, launchApp } from "./launch";
 import { resizeWindow } from "./layout";
 import { SPAWN_PROMPT_MARKER } from "./mockProvider";
-import { seedHostedOrigins } from "./projectSeed";
+import { seedHostedOrigins, seedProject } from "./projectSeed";
 import { promptInput } from "./prompt";
 import {
   GAP_CHECKLIST_ACCEPT,
@@ -41,9 +41,15 @@ test.beforeAll(async () => {
   github = await startGitHubStub();
   seedGitHubSignIn(userDataDir);
   const db = openDatabase(userDataDir);
-  db.prepare(
-    "INSERT INTO repos (id, path, name, added_at, setup_kind, origin, delivery, autonomy) VALUES (?, ?, ?, ?, 'clone', ?, 'direct-pr', 0)",
-  ).run("repo-meterlab", repo.repoDir, REPO_NAME, Date.now(), "https://github.com/o/meterlab.git");
+  seedProject(db, {
+    id: "repo-meterlab",
+    path: repo.repoDir,
+    name: REPO_NAME,
+    setupKind: "clone",
+    origin: "https://github.com/o/meterlab.git",
+    runsOn: null,
+    delivery: "direct-pr",
+  });
   seedHostedOrigins(db, userDataDir);
   db.close();
   launched = await launchApp({

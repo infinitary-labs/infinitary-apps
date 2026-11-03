@@ -21,7 +21,7 @@ import { type LaunchedApp, launchApp } from "./launch";
 import { resizeWindow } from "./layout";
 import { FM_SYSTEM_MARKER, REVIEWED_TIER_PROMPT_MARKER, SPAWN_PROMPT_MARKER } from "./mockProvider";
 import { regionShot } from "./pictures";
-import { seedHostedOrigins } from "./projectSeed";
+import { seedHostedOrigins, seedProject } from "./projectSeed";
 import { promptInput } from "./prompt";
 import { captainCardChoice, latestServedTurn, providerMessages } from "./providerRequest";
 import { putInLine, reportLine, startedLine, statusLine, taskLine } from "./rails";
@@ -178,9 +178,15 @@ test.beforeAll(async () => {
   github.headOf(branchHead);
   seedGitHubSignIn(userDataDir);
   const db = openDatabase(userDataDir);
-  db.prepare(
-    "INSERT INTO repos (id, path, name, added_at, setup_kind, origin, delivery, autonomy) VALUES (?, ?, ?, ?, 'clone', ?, 'direct-pr', 0)",
-  ).run("repo-meterlab", repo.repoDir, REPO_NAME, Date.now(), "https://github.com/o/meterlab.git");
+  seedProject(db, {
+    id: "repo-meterlab",
+    path: repo.repoDir,
+    name: REPO_NAME,
+    setupKind: "clone",
+    origin: "https://github.com/o/meterlab.git",
+    runsOn: null,
+    delivery: "direct-pr",
+  });
   seedHostedOrigins(db, userDataDir);
   db.close();
   launched = await launchApp({

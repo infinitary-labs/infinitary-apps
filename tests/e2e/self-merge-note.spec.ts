@@ -23,6 +23,7 @@ import {
   SPAWN_PROMPT_MARKER,
 } from "./mockProvider";
 import { heroShot, regionShot } from "./pictures";
+import { seedProject } from "./projectSeed";
 import { promptInput } from "./prompt";
 import {
   MOCK_SELF_MERGE_CHANGE_TITLE,
@@ -57,7 +58,7 @@ test.afterEach(async () => {
 });
 
 /** A project whose origin is on GitHub while every push lands on a bare repository here. */
-function seedProject(userDataDir: string): string {
+function seedMeterlab(userDataDir: string): string {
   const bare = join(userDataDir, "github-meterlab.git");
   git("init", "--bare", "--initial-branch=main", bare);
   const dir = join(userDataDir, "meterlab");
@@ -78,9 +79,18 @@ function seedProject(userDataDir: string): string {
   git("-C", dir, "push", "origin", "HEAD:refs/heads/main");
   // Direct-pr, autonomy ON (1): the project's own setting merges on its own.
   const db = openDatabase(userDataDir);
-  db.prepare(
-    "INSERT INTO repos (id, path, name, added_at, setup_kind, origin, delivery, autonomy, rigor) VALUES (?, ?, ?, ?, 'clone', ?, 'direct-pr', 1, 'quick')",
-  ).run("repo-meterlab", dir, "meterlab", 1, origin);
+  seedProject(db, {
+    id: "repo-meterlab",
+    path: dir,
+    name: "meterlab",
+    setupKind: "clone",
+    origin: origin,
+    runsOn: null,
+    delivery: "direct-pr",
+    autonomy: true,
+    rigor: "quick",
+    addedAt: 1,
+  });
   db.close();
   return bare;
 }
@@ -95,7 +105,7 @@ async function send(text: string): Promise<void> {
 test("a note that merges on its own shows its radar and facts, then says it merged", async () => {
   test.setTimeout(3 * 60_000);
   const userDataDir = scratchDir("infinitary-self-merge-note-");
-  const bare = seedProject(userDataDir);
+  const bare = seedMeterlab(userDataDir);
   seedGitHubSignIn(userDataDir);
   github = await startGitHubStub();
   github.headOf((branch) => git("-C", bare, "rev-parse", `refs/heads/${branch}`));

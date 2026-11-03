@@ -23,7 +23,7 @@ import { launchApp } from "./launch";
 import { resizeWindow } from "./layout";
 import { SPAWN_PROMPT_MARKER } from "./mockProvider";
 import { heroShot, regionShot } from "./pictures";
-import { seedHostedOrigins } from "./projectSeed";
+import { seedHostedOrigins, seedProject } from "./projectSeed";
 import { promptInput } from "./prompt";
 import { expandDock, putInLine, taskKey, taskLine } from "./rails";
 import { skipRules } from "./scenarios/skipRules";
@@ -120,9 +120,15 @@ test("a request_merge of the task's own pull request merges that pull request an
   github.headOf(() => repo.headSha);
   seedGitHubSignIn(userDataDir);
   const db = openDatabase(userDataDir);
-  db.prepare(
-    "INSERT INTO repos (id, path, name, added_at, setup_kind, origin, delivery, autonomy) VALUES (?, ?, ?, ?, 'clone', ?, 'direct-pr', 0)",
-  ).run("repo-pr", repo.repoDir, "r", Date.now(), "https://github.com/o/r.git");
+  seedProject(db, {
+    id: "repo-pr",
+    path: repo.repoDir,
+    name: "r",
+    setupKind: "clone",
+    origin: "https://github.com/o/r.git",
+    runsOn: null,
+    delivery: "direct-pr",
+  });
   seedHostedOrigins(db, userDataDir);
   seedTask(new TaskService({ db, strict: true }), {
     id: taskId,
@@ -205,9 +211,15 @@ test("a request_merge of an adopted pull request merges that pull request and le
   github.priorPullRequestWorkflows(true);
   seedGitHubSignIn(userDataDir);
   const db = openDatabase(userDataDir);
-  db.prepare(
-    "INSERT INTO repos (id, path, name, added_at, setup_kind, origin, delivery, autonomy) VALUES (?, ?, ?, ?, 'clone', ?, 'direct-pr', 0)",
-  ).run("repo-pr", repo.repoDir, "r", Date.now(), "https://github.com/o/r.git");
+  seedProject(db, {
+    id: "repo-pr",
+    path: repo.repoDir,
+    name: "r",
+    setupKind: "clone",
+    origin: "https://github.com/o/r.git",
+    runsOn: null,
+    delivery: "direct-pr",
+  });
   seedHostedOrigins(db, userDataDir);
   seedTask(new TaskService({ db, strict: true }), {
     id: taskId,
@@ -309,9 +321,15 @@ test("a request_merge of an adopted pull request waits while GitHub works out wh
   });
   seedGitHubSignIn(userDataDir);
   const db = openDatabase(userDataDir);
-  db.prepare(
-    "INSERT INTO repos (id, path, name, added_at, setup_kind, origin, delivery, autonomy) VALUES (?, ?, ?, ?, 'clone', ?, 'direct-pr', 0)",
-  ).run("repo-pr", repo.repoDir, "r", Date.now(), "https://github.com/o/r.git");
+  seedProject(db, {
+    id: "repo-pr",
+    path: repo.repoDir,
+    name: "r",
+    setupKind: "clone",
+    origin: "https://github.com/o/r.git",
+    runsOn: null,
+    delivery: "direct-pr",
+  });
   seedHostedOrigins(db, userDataDir);
   seedTask(new TaskService({ db, strict: true }), {
     id: taskId,
@@ -413,9 +431,16 @@ test("a merge that skips the branch rules is prepared by its crewmate, named on 
   github.setRulesets([{ id: 17860669, name: "main", bypass: "always", rules }]);
   seedGitHubSignIn(userDataDir);
   const db = openDatabase(userDataDir);
-  db.prepare(
-    "INSERT INTO repos (id, path, name, added_at, setup_kind, origin, delivery, autonomy, rigor) VALUES (?, ?, ?, ?, 'clone', ?, 'direct-pr', 0, 'quick')",
-  ).run("repo-shipyard", repoDir, "shipyard", Date.now(), "https://github.com/octo/shipyard.git");
+  seedProject(db, {
+    id: "repo-shipyard",
+    path: repoDir,
+    name: "shipyard",
+    setupKind: "clone",
+    origin: "https://github.com/octo/shipyard.git",
+    runsOn: null,
+    delivery: "direct-pr",
+    rigor: "quick",
+  });
   seedHostedOrigins(db, userDataDir);
   db.close();
 

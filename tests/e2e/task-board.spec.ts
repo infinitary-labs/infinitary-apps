@@ -4,13 +4,12 @@ import { join } from "node:path";
 import { expect, test } from "@playwright/test";
 import { CardStore } from "../../src/core/storage/cardStore";
 import { openDatabase } from "../../src/core/storage/db";
-import { ensureRepoProject } from "../../src/core/storage/projectStore";
 import { seedTask } from "../../src/core/tasks/seedTask";
 import { TaskService } from "../../src/core/tasks/taskService";
 import { scratchDir } from "../helpers/scratchDirs";
 import { launchApp } from "./launch";
 import { expectClearOf } from "./layout";
-import { seedHostedOrigins } from "./projectSeed";
+import { seedHostedOrigins, seedProject } from "./projectSeed";
 import { promptInput } from "./prompt";
 import { expandDock, openRowSummary, POINT_SUMMARY, recordCard, rowSummary } from "./rails";
 import { clickInBody, SHOWN_ENTRY, stagePrepared } from "./stack";
@@ -68,27 +67,30 @@ function seedBoard(userDataDir: string): void {
   const db = openDatabase(userDataDir);
   const now = Date.now();
   let clock = now - 60 * 60_000;
-  const repos = db.prepare(
-    "INSERT INTO repos (id, path, name, added_at, setup_kind, origin, delivery, autonomy) VALUES (?, ?, ?, ?, 'clone', ?, 'direct-pr', 0)",
-  );
-  repos.run(
-    "repo-fm",
-    repo(join(userDataDir, "fm")),
-    "firstmate",
-    now,
-    "https://github.com/o/fm.git",
-  );
+  seedProject(db, {
+    id: "repo-fm",
+    path: repo(join(userDataDir, "fm")),
+    name: "firstmate",
+    setupKind: "clone",
+    origin: "https://github.com/o/fm.git",
+    runsOn: null,
+    delivery: "direct-pr",
+    addedAt: now,
+    key: "FM3K",
+  });
   seedHostedOrigins(db, userDataDir);
-  repos.run(
-    "repo-web",
-    repo(join(userDataDir, "web")),
-    "website",
-    now,
-    "https://github.com/o/web.git",
-  );
+  seedProject(db, {
+    id: "repo-web",
+    path: repo(join(userDataDir, "web")),
+    name: "website",
+    setupKind: "clone",
+    origin: "https://github.com/o/web.git",
+    runsOn: null,
+    delivery: "direct-pr",
+    addedAt: now,
+    key: "WEB",
+  });
   seedHostedOrigins(db, userDataDir);
-  ensureRepoProject(db, { id: "repo-fm", name: "firstmate" }, now, "FM3K");
-  ensureRepoProject(db, { id: "repo-web", name: "website" }, now, "WEB");
   const tasks = new TaskService({ db, strict: true, now: () => clock });
   const cards = new CardStore(db);
   const worktree = (id: string) => {

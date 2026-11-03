@@ -14,7 +14,7 @@ import { seedDelivery } from "../helpers/taskDelivery";
 import { waitForFirstmateIdle } from "./crew";
 import { seedGitHubSignIn, startGitHubStub } from "./githubStub";
 import { type LaunchedApp, launchApp } from "./launch";
-import { seedHostedOrigins } from "./projectSeed";
+import { seedHostedOrigins, seedProject } from "./projectSeed";
 import { promptInput } from "./prompt";
 import { served } from "./providerRequest";
 import { expandDock, linkedTaskKeys, nowRow, recordCard, recordFrame } from "./rails";
@@ -51,9 +51,15 @@ function seeded() {
   mkdirSync(originWork, { recursive: true });
 
   const db = openDatabase(userDataDir);
-  db.prepare(
-    "INSERT INTO repos (id, path, name, added_at, setup_kind, origin, delivery, autonomy) VALUES (?, ?, ?, ?, 'clone', ?, 'direct-pr', 0)",
-  ).run("repo-fm", repoDir, "r", Date.now(), "https://github.com/o/r.git");
+  seedProject(db, {
+    id: "repo-fm",
+    path: repoDir,
+    name: "r",
+    setupKind: "clone",
+    origin: "https://github.com/o/r.git",
+    runsOn: null,
+    delivery: "direct-pr",
+  });
   seedHostedOrigins(db, userDataDir);
   const tasks = new TaskService({ db, strict: true });
   const origin = seedTask(tasks, {

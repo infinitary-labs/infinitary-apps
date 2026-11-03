@@ -26,7 +26,7 @@ import { launchApp } from "./launch";
 import { resizeWindow } from "./layout";
 import { SPAWN_PROMPT_MARKER } from "./mockProvider";
 import { heroShot, regionShot } from "./pictures";
-import { seedHostedOrigins } from "./projectSeed";
+import { seedHostedOrigins, seedProject } from "./projectSeed";
 import { addedProjects } from "./projects";
 import { promptInput } from "./prompt";
 import { expandDock, noteLines, putInLine, taskKey } from "./rails";
@@ -75,7 +75,7 @@ const HOSTS = ["gitlab.com", "gitlab.example.com"] as const;
 const originOn = (host: string) => `https://${host}/${GITLAB_STUB_PROJECT}.git`;
 
 /** A direct-pr project on the host whose origin, through git's `insteadOf`, is a bare repository here. */
-function seedProject(userDataDir: string, host: string) {
+function seedNotesProject(userDataDir: string, host: string) {
   const bare = join(userDataDir, "gitlab-field-notes.git");
   git("init", "--bare", "--initial-branch=main", bare);
   const dir = join(userDataDir, "field-notes");
@@ -88,9 +88,17 @@ function seedProject(userDataDir: string, host: string) {
   git("-C", dir, "push", "origin", "HEAD:refs/heads/main");
   git("-C", dir, "fetch", "origin");
   const db = openDatabase(userDataDir);
-  db.prepare(
-    "INSERT INTO repos (id, path, name, added_at, setup_kind, origin, delivery, autonomy, rigor) VALUES (?, ?, ?, ?, 'clone', ?, 'direct-pr', 0, 'quick')",
-  ).run("repo-notes", dir, "field-notes", 1, originOn(host));
+  seedProject(db, {
+    id: "repo-notes",
+    path: dir,
+    name: "field-notes",
+    setupKind: "clone",
+    origin: originOn(host),
+    runsOn: null,
+    delivery: "direct-pr",
+    rigor: "quick",
+    addedAt: 1,
+  });
   seedHostedOrigins(db, userDataDir);
   db.close();
   return { bare, dir };
@@ -110,7 +118,7 @@ async function send(page: Page, text: string) {
 for (const host of HOSTS) {
   test(`a crewmate cannot merge or move the default branch through raw writes on ${host}`, async () => {
     const userDataDir = scratchDir("infinitary-gitlab-guard-");
-    const { bare } = seedProject(userDataDir, host);
+    const { bare } = seedNotesProject(userDataDir, host);
     git("-C", bare, "branch", "topic", "main");
     seedGitLabSignIn(userDataDir, host);
     const gitlab = await startGitLabStub(host);
@@ -171,7 +179,7 @@ for (const host of HOSTS) {
 
   test(`a crewmate opens a merge request on ${host}, its pipeline reads as the checks, and the captain's click squash-merges that version`, async () => {
     const userDataDir = scratchDir("infinitary-gitlab-delivery-");
-    const { bare } = seedProject(userDataDir, host);
+    const { bare } = seedNotesProject(userDataDir, host);
     seedGitLabSignIn(userDataDir, host);
     const gitlab = await startGitLabStub(host);
     gitlab.headOf(headIn(bare));
@@ -276,7 +284,7 @@ for (const host of HOSTS) {
     browserName: _browserName,
   }, testInfo) => {
     const userDataDir = scratchDir("infinitary-gitlab-evidence-");
-    const { bare } = seedProject(userDataDir, host);
+    const { bare } = seedNotesProject(userDataDir, host);
     seedGitLabSignIn(userDataDir, host);
     const gitlab = await startGitLabStub(host);
     // GitLab ran a pipeline for the project's version, whose measurement job
@@ -520,9 +528,15 @@ for (const host of ["gitlab.com"] as const) {
       const fact = refusal.arrange(gitlab, repo);
       seedGitLabSignIn(userDataDir, host);
       const db = openDatabase(userDataDir);
-      db.prepare(
-        "INSERT INTO repos (id, path, name, added_at, setup_kind, origin, delivery, autonomy) VALUES (?, ?, ?, ?, 'clone', ?, 'direct-pr', 0)",
-      ).run("repo-notes", repoDir, "field-notes", Date.now(), originOn(host));
+      seedProject(db, {
+        id: "repo-notes",
+        path: repoDir,
+        name: "field-notes",
+        setupKind: "clone",
+        origin: originOn(host),
+        runsOn: null,
+        delivery: "direct-pr",
+      });
       seedHostedOrigins(db, userDataDir);
       seedTask(new TaskService({ db, strict: true }), {
         id: taskId,

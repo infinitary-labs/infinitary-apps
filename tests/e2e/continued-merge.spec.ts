@@ -10,7 +10,7 @@ import { seedGitHubSignIn, startGitHubStub } from "./githubStub";
 import { launchApp } from "./launch";
 import { SPAWN_PROMPT_MARKER } from "./mockProvider";
 import { regionShot } from "./pictures";
-import { seedHostedOrigins } from "./projectSeed";
+import { seedHostedOrigins, seedProject } from "./projectSeed";
 import { promptInput } from "./prompt";
 import { readSavedData } from "./savedData";
 import {
@@ -69,9 +69,16 @@ test("a continued pull request shows its checks and merges an unchanged conflict
   github.setChecks([{ name: "unit-tests", status: "completed", conclusion: "success" }]);
   seedGitHubSignIn(userDataDir);
   const db = openDatabase(userDataDir);
-  db.prepare(
-    "INSERT INTO repos (id, path, name, added_at, setup_kind, origin, delivery, autonomy, rigor) VALUES (?, ?, ?, ?, 'clone', ?, 'direct-pr', 0, 'quick')",
-  ).run("repo-shipyard", repoDir, "shipyard", Date.now(), "https://github.com/octo/shipyard.git");
+  seedProject(db, {
+    id: "repo-shipyard",
+    path: repoDir,
+    name: "shipyard",
+    setupKind: "clone",
+    origin: "https://github.com/octo/shipyard.git",
+    runsOn: null,
+    delivery: "direct-pr",
+    rigor: "quick",
+  });
   seedHostedOrigins(db, userDataDir);
   db.close();
   const launched = await launchApp({

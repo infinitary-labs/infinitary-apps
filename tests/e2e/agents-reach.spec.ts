@@ -5,7 +5,6 @@ import { expect, test } from "@playwright/test";
 import { hostEnv } from "../../src/core/hostEnv";
 import { SYNC_CAP_MS } from "../../src/core/jobs/jobManager";
 import { openDatabase } from "../../src/core/storage/db";
-import { ensureRepoProject } from "../../src/core/storage/projectStore";
 import { TaskStore } from "../../src/core/storage/taskStore";
 import automationManifest from "../../src/panels/automation/manifest.json" with { type: "json" };
 import { AUTOMATION_STATE_WORDS } from "../../src/shared/automationWords";
@@ -26,7 +25,7 @@ import { type LaunchedApp, launchApp, SHORT_TICK } from "./launch";
 import { resizeWindow } from "./layout";
 import { FM_SYSTEM_MARKER, REVIEWED_TIER_PROMPT_MARKER, SPAWN_PROMPT_MARKER } from "./mockProvider";
 import { regionShot } from "./pictures";
-import { seedHostedOrigins } from "./projectSeed";
+import { seedHostedOrigins, seedProject } from "./projectSeed";
 import { promptInput } from "./prompt";
 import { latestServedTurn, providerMessages } from "./providerRequest";
 import {
@@ -236,19 +235,26 @@ test.beforeAll(async () => {
   github.headOf(branchHead);
   seedGitHubSignIn(userDataDir);
   const db = openDatabase(userDataDir);
-  const insert = db.prepare(
-    "INSERT INTO repos (id, path, name, added_at, setup_kind, origin, delivery, autonomy) VALUES (?, ?, ?, ?, 'clone', ?, 'direct-pr', 0)",
-  );
-  insert.run("repo-meterlab", repoDir, REPO_NAME, Date.now(), "https://github.com/o/meterlab.git");
-  insert.run(
-    "repo-infinitary",
-    auditDir,
-    REACH_AUDIT_PROJECT,
-    Date.now(),
-    "https://github.com/o/infinitary.git",
-  );
+  seedProject(db, {
+    id: "repo-meterlab",
+    path: repoDir,
+    name: REPO_NAME,
+    setupKind: "clone",
+    origin: "https://github.com/o/meterlab.git",
+    runsOn: null,
+    delivery: "direct-pr",
+  });
   // A project an automation rule may name is one the board lists.
-  ensureRepoProject(db, { id: "repo-infinitary", name: REACH_AUDIT_PROJECT }, Date.now(), "INF");
+  seedProject(db, {
+    id: "repo-infinitary",
+    path: auditDir,
+    name: REACH_AUDIT_PROJECT,
+    setupKind: "clone",
+    origin: "https://github.com/o/infinitary.git",
+    runsOn: null,
+    delivery: "direct-pr",
+    key: "INF",
+  });
   seedHostedOrigins(db, userDataDir);
   db.close();
   launched = await launchApp({

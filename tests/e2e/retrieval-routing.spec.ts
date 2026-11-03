@@ -20,6 +20,7 @@ import {
   RETRIEVAL_TASK_ASK,
 } from "./mockProvider";
 import { regionShot } from "./pictures";
+import { seedProject } from "./projectSeed";
 import { promptInput } from "./prompt";
 import { seedQuotaFixture } from "./quotaFixtures";
 import {
@@ -90,9 +91,13 @@ test("a bounded explanation requests low, reads its source and stays an answer a
     {},
   );
   const db = openDatabase(userDataDir);
-  db.prepare(
-    "INSERT INTO repos (id, path, name, added_at, setup_kind, delivery, autonomy) VALUES (?, ?, ?, ?, 'adopt', 'direct-pr', 0)",
-  ).run("repo-meterlab", repoDir, "meterlab", Date.now());
+  seedProject(db, {
+    id: "repo-meterlab",
+    path: repoDir,
+    name: "meterlab",
+    setupKind: "adopt",
+    delivery: "direct-pr",
+  });
   new SettingsStore(db).setModelSlots({
     version: 1,
     assignments: {

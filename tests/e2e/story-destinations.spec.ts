@@ -26,6 +26,7 @@ import {
   SPAWN_PROMPT_MARKER,
 } from "./mockProvider";
 import { heroShot, readyRegion, regionShot } from "./pictures";
+import { seedProject } from "./projectSeed";
 import { promptInput } from "./prompt";
 import { MOCK_GITHUB_STORY } from "./scenarios/changeStory";
 import {
@@ -76,17 +77,18 @@ for (const kind of ["enterprise", "gitlab", "plain", "local"] as const) {
       git("-C", dir, "fetch", "origin");
       const initial = git("-C", bare, "rev-parse", "main");
       const db = openDatabase(userDataDir);
-      db.prepare(
-        "INSERT INTO repos (id, path, name, added_at, setup_kind, origin, delivery, autonomy, rigor) VALUES (?, ?, ?, ?, 'init', ?, ?, ?, 'quick')",
-      ).run(
-        "repo-meterlab",
-        dir,
-        "meterlab",
-        1,
+      seedProject(db, {
+        id: "repo-meterlab",
+        path: dir,
+        name: "meterlab",
+        setupKind: "init",
         origin,
-        kind === "local" ? "local-only" : "direct-pr",
-        note ? 1 : 0,
-      );
+        runsOn: null,
+        delivery: kind === "local" ? "local-only" : "direct-pr",
+        autonomy: note,
+        rigor: "quick",
+        addedAt: 1,
+      });
       db.close();
       const github = kind === "enterprise" ? await startGitHubStub({ host }) : undefined;
       const gitlab = kind === "gitlab" ? await startGitLabStub(host) : undefined;

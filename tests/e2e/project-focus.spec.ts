@@ -4,13 +4,12 @@ import { join } from "node:path";
 import { expect, type Locator, type Page, test } from "@playwright/test";
 import { CardStore } from "../../src/core/storage/cardStore";
 import { openDatabase } from "../../src/core/storage/db";
-import { ensureRepoProject } from "../../src/core/storage/projectStore";
 import { seedTask } from "../../src/core/tasks/seedTask";
 import { TaskService } from "../../src/core/tasks/taskService";
 import { elsewhereWords } from "../../src/shared/projectFocus";
 import { scratchDir } from "../helpers/scratchDirs";
 import { launchApp } from "./launch";
-import { seedHostedOrigins } from "./projectSeed";
+import { seedHostedOrigins, seedProject } from "./projectSeed";
 import { activityFrame, expandDock, nowFrame } from "./rails";
 import { pager, showCard } from "./stack";
 import { pressKey, pressWindowKey, runFromSearch } from "./windowKeys";
@@ -61,20 +60,19 @@ function seed(
 ): void {
   const db = openDatabase(userDataDir);
   const now = Date.now();
-  const repos = db.prepare(
-    "INSERT INTO repos (id, path, name, added_at, setup_kind, origin, delivery, autonomy) VALUES (?, ?, ?, ?, 'clone', ?, 'direct-pr', 0)",
-  );
   for (const project of projects)
-    repos.run(
-      project.repoId,
-      repo(join(userDataDir, project.name)),
-      project.name,
-      now,
-      `https://github.com/o/${project.name}.git`,
-    );
+    seedProject(db, {
+      id: project.repoId,
+      path: repo(join(userDataDir, project.name)),
+      name: project.name,
+      setupKind: "clone",
+      origin: `https://github.com/o/${project.name}.git`,
+      runsOn: null,
+      delivery: "direct-pr",
+      addedAt: now,
+      key: project.key,
+    });
   seedHostedOrigins(db, userDataDir);
-  for (const project of projects)
-    ensureRepoProject(db, { id: project.repoId, name: project.name }, now, project.key);
   const tasks = new TaskService({ db, strict: true });
   const repoIds = new Set<string>(projects.map((project) => project.repoId));
   for (const work of WORK.filter((w) => repoIds.has(w.repoId))) {

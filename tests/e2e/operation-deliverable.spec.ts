@@ -16,6 +16,7 @@ import {
   MOCK_PROVIDER_ID,
   mockModelsJson,
 } from "./mockProvider";
+import { seedProject } from "./projectSeed";
 import { promptInput } from "./prompt";
 import { seedQuotaFixture } from "./quotaFixtures";
 import {
@@ -80,9 +81,13 @@ test("an operation makes its named effect and closes finished from reported evid
     {},
   );
   const db = openDatabase(userDataDir);
-  db.prepare(
-    "INSERT INTO repos (id,path,name,added_at,setup_kind,delivery,autonomy) VALUES (?,?,?,?,'adopt','direct-pr',0)",
-  ).run("repo-meterlab", repoDir, "meterlab", Date.now());
+  seedProject(db, {
+    id: "repo-meterlab",
+    path: repoDir,
+    name: "meterlab",
+    setupKind: "adopt",
+    delivery: "direct-pr",
+  });
   new SettingsStore(db).setModelSlots({
     version: 1,
     assignments: {

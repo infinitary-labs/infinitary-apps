@@ -169,8 +169,10 @@ describe("local packaging identity (electron-builder.dev.yml)", () => {
    * "every-run"): every push to main runs the full check with every journey
    * on the Mac and the whole phone check, and runs queue instead of
    * cancelling, so GitHub keeps one running and at most one waiting run.
+   * INF-2390: PR #897 also permits an input-free manual start; keep both
+   * triggers exact without dropping the push, queue or full-check guarantees.
    */
-  it("runs the full check and the whole phone check on every push to main, queued and never cancelled", () => {
+  it("keeps push and manual starts for the full main check, queued and never cancelled", () => {
     type Call = {
       uses?: string;
       with?: Record<string, unknown>;
@@ -178,11 +180,11 @@ describe("local packaging identity (electron-builder.dev.yml)", () => {
       steps?: Step[];
     };
     const main = loadYamlFile(".github/workflows/main.yml") as {
-      on: Record<string, { branches?: string[] }>;
+      on: Record<string, { branches?: string[] } | null>;
       concurrency: { group: string; "cancel-in-progress": boolean };
       jobs: Record<string, Call>;
     };
-    expect(main.on).toEqual({ push: { branches: ["main"] } });
+    expect(main.on).toEqual({ workflow_dispatch: null, push: { branches: ["main"] } });
     // One group for every run, so a newer push waits instead of starting beside it.
     expect(main.concurrency.group).not.toContain("${{");
     expect(main.concurrency["cancel-in-progress"]).toBe(false);

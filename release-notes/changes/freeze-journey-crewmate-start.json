@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "freeze-journey-crewmate-start",
+      "reason": "The freeze journey now also starts and opens a crewmate on a record the captain's size, so a start that holds the main thread fails before merge; a test and its documentation, with no app behavior change."
+    }
+  ]
+}

@@ -6,8 +6,9 @@ import { scratchDir } from "../helpers/scratchDirs";
 import { seedCaptainSizedRecord } from "./captainSizedRecord";
 import { waitForFirstmateIdle } from "./crew";
 import { launchApp, SHORT_TICK } from "./launch";
-import { REACT_PROMPT_MARKER } from "./mockProvider";
+import { REACT_PROMPT_MARKER, SPAWN_PROMPT_MARKER } from "./mockProvider";
 import { promptInput } from "./prompt";
+import { reportLine, startedLine, taskKey } from "./rails";
 import { boardEntry, openBoardButton } from "./taskBoard";
 import { typeInto } from "./windowKeys";
 
@@ -16,9 +17,10 @@ import { typeInto } from "./windowKeys";
  * INF-2068; docs/freeze-recorder.md, "Before a change merges"). It runs the
  * actual app on a record the captain's size with the freeze recorder on,
  * drives the work that repeats - first mate turns, which read the open
- * messages before and after each, the minute passes with the answer-delivery
- * sweep, the task board and typing - and fails, naming the call path, on any
- * stretch of the main thread's own processor time at or over the line.
+ * messages before and after each, a crewmate's start through its first
+ * report, the minute passes with the answer-delivery sweep, the task board
+ * and typing - and fails, naming the call path, on any stretch of the main
+ * thread's own processor time at or over the line.
  *
  * The line counts processor time, never wall time: a busy test computer
  * stretches a freeze's wall time but not the work the main thread did in it
@@ -66,8 +68,9 @@ const described = (line: FreezeLine, steps: readonly Step[]) =>
 
 test("the main thread never spends 250 ms of its own processor time at once on a record the captain's size", async () => {
   // Seeding 160,094 events through the one writer takes most of a minute on
-  // a shared runner; the passes and turns take about another.
-  test.setTimeout(240_000);
+  // a shared runner; the passes, turns and the crewmate's start take about
+  // another.
+  test.setTimeout(270_000);
   const userDataDir = scratchDir("infinitary-freeze-journey-");
   // The seed hands this worker's event loop a turn between its transactions,
   // which is when the statements it prepared are freed (WRITES_PER_TURN).
@@ -136,6 +139,19 @@ test("the main thread never spends 250 ms of its own processor time at once on a
       await say(page, `${REACT_PROMPT_MARKER}: how is ${piece} going?`);
       await waitForFirstmateIdle(page);
     }
+    // Starting a crewmate and opening it (INF-2297, the captain's "Starting a
+    // task froze the app for half a second"): every start-path stall the
+    // captain's record held - preparing the first turn, the brief's inbox
+    // row, reading the app's source as the crewmate opens and choosing its
+    // model - ran between the first mate's spawn and the crewmate's first
+    // report, which comes after its first turn opened.
+    const started = "Measure how the open messages are going";
+    step("while a crewmate started and opened");
+    await say(page, `${SPAWN_PROMPT_MARKER} ${started}`);
+    const startedKey = await taskKey(page, started);
+    await expect(startedLine(page, startedKey).first()).toBeVisible({ timeout: 30_000 });
+    await expect(reportLine(page, startedKey).first()).toBeVisible({ timeout: 30_000 });
+    await waitForFirstmateIdle(page);
     step("while the task board opened");
     await openBoardButton(page).click();
     await expect(boardEntry(page)).toBeVisible();

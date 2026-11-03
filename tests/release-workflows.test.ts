@@ -715,8 +715,9 @@ describe("local packaging identity (electron-builder.dev.yml)", () => {
   // Captain's small consolidation trial: startup still runs after an unrelated
   // failure, and its two fixture results remain visible without hiding failures.
   // DOP-251's plan moves it out of typecheck-lint-build into a pull request
-  // job of its own, so a failed build cannot stop it, and keeps that job where
-  // LINUX_RUNNER sends it: the fixtures need systemd and Docker.
+  // job of its own, so a failed build cannot stop it. DOP-268's plan lets its
+  // startup kind send it to the PC's PR line; no other kind moves it, and
+  // without the kind it stays where LINUX_RUNNER sends it.
   it("keeps PR startup fixtures and reporting eligible after earlier failures", () => {
     const ci = loadYamlFile(".github/workflows/ci.yml") as { jobs: Record<string, CiJob> };
     const uses = (id: string) =>
@@ -736,6 +737,14 @@ describe("local packaging identity (electron-builder.dev.yml)", () => {
         vars: { LINUX_RUNNER: "shell-pc-linux", LINUX_QUEUES: queues },
       }),
     ).toBe("shell-pc-linux");
+    expect(
+      workflowString(job?.["runs-on"] ?? "", {
+        vars: {
+          LINUX_RUNNER: "shell-pc-linux",
+          LINUX_QUEUES: JSON.stringify({ startup: "shell-pc-linux-pr" }),
+        },
+      }),
+    ).toBe("shell-pc-linux-pr");
     const startup = job?.steps.find((step) => step.uses === "./.github/actions/linux-startup");
     expect(startup).toBeDefined();
     // Every earlier step of its job is a checkout or setup, never a build.
@@ -3881,6 +3890,9 @@ it("sends every Linux job to LINUX_RUNNER, and hosted Ubuntu when it is unset, u
     gate: ["journeys.yml:choose-journeys"],
     checks: ["verify.yml:lane"],
     typecheck: ["ci.yml:typecheck-lint-build"],
+    // DOP-268's plan: the startup fixtures need systemd and Docker, so this
+    // kind names only a PC queue (docs/testing.md, "Linux automatic startup fixtures").
+    startup: ["ci.yml:linux-startup"],
   };
   const queued = new Set<string>();
   type Job = { "runs-on"?: string; strategy?: { matrix?: Record<string, unknown> } };

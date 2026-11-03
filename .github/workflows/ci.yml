@@ -72,11 +72,11 @@ jobs:
 
   # The Linux automatic startup fixtures (docs/testing.md), a job of their own
   # so they report even when the build fails. They need systemd and Docker,
-  # so they stay where LINUX_RUNNER sends them and never take a LINUX_QUEUES
-  # queue (DOP-251's plan).
+  # so their startup kind (DOP-268's plan) may name only a PC queue, such as
+  # the PC's PR line; without it they go where LINUX_RUNNER sends them.
   linux-startup:
     if: github.event_name == 'pull_request'
-    runs-on: ${{ vars.LINUX_RUNNER || 'ubuntu-latest' }}
+    runs-on: ${{ fromJSON(vars.LINUX_QUEUES || '{}').startup || vars.LINUX_RUNNER || 'ubuntu-latest' }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4

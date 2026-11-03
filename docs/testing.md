@@ -1013,7 +1013,7 @@ DOP-251's plan moves Linux jobs to the Mac mini's Linux guests one stage at a ti
 Each such job reads `fromJSON(vars.LINUX_QUEUES || '{}').<kind>` after a publishing release's own label and before `LINUX_RUNNER`.
 A kind the variable leaves out, and an unset or empty variable, keep the label the job asked for before, so the variable changes nothing until it names a kind.
 Name a kind only once runner-up serves its queue, so no job waits on a label nothing serves.
-A Linux job with no kind, such as the startup fixtures, the Linux packages and every release job, never reads the variable.
+A Linux job with no kind, such as main's startup fixtures, the Linux packages and every release job, never reads the variable.
 `tests/release-workflows.test.ts` moves each kind alone and holds every other job where it was.
 
 | Kind | Jobs | Its old label |
@@ -1024,6 +1024,7 @@ A Linux job with no kind, such as the startup fixtures, the Linux packages and e
 | `gate` | `journeys.yml`'s `choose-journeys` | `LINUX_RUNNER` with `-gate` |
 | `checks` | `verify.yml`'s `linux-checks` lane | `LINUX_RUNNER` |
 | `typecheck` | `ci.yml`'s `typecheck-lint-build` | `LINUX_RUNNER` |
+| `startup` | `ci.yml`'s `linux-startup` | `LINUX_RUNNER` |
 
 ### Each Mac job's kind and size
 
@@ -1202,7 +1203,8 @@ The launcher gives each app a throwaway HOME, userData, TMPDIR and XDG configura
 
 The PR's `linux-startup` job in `ci.yml` runs the production runtime/session classifier through `.github/actions/linux-startup`, a job of its own beside `typecheck-lint-build`, so a failed build never stops it.
 Both startup fixtures and their result summary run even when the other fixture fails, unless the job was cancelled.
-The fixtures need systemd and Docker, so the job runs where `LINUX_RUNNER` sends it and never takes a `LINUX_QUEUES` queue.
+The fixtures need systemd and Docker, so the job's `startup` kind ("Each Linux job's kind") may name only a PC queue, such as the PC's PR line `shell-pc-linux-pr` (DOP-268's plan), and never a Mac mini guest's queue.
+Without the kind, the job runs where `LINUX_RUNNER` sends it; main's called `linux-startup.yml` job has no kind and always does.
 A newer push cancels the PR job, including startup, through `ci.yml`'s existing concurrency rule; startup no longer finishes independently on a superseded PR version.
 `linux-startup.yml` is a called workflow that runs the same action; `main.yml` calls it once per main check, so a burst of pushes to main is checked once.
 Both use a disposable Ubuntu machine: the PC's fresh virtual machine through `LINUX_RUNNER`, or GitHub-hosted Ubuntu when it is unset.

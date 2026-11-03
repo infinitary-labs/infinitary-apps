@@ -194,14 +194,15 @@ Moved verbatim from `AGENTS.md` on 2026-09-24; `AGENTS.md` keeps a one-line poin
   The full unit, integration and probe suites run in the full check's `linux-checks` lane on main and across `ci.yml`'s jobs on request, not on PRs; the full e2e suite (`pnpm build && pnpm exec playwright test`) is the release verify's job (next bullet); the full unit suite is not a per-push obligation.
   The full e2e suite runs only in CI, never locally during development or release preparation.
   The adherence lint runs the design skill's `_adherence.oxlintrc.json` through ESLint FlatCompat (current oxlint cannot execute its selector rules); its raw-px/hex rules are warn-level by the skill's own design.
-- Standing CI rule (PR 8; CI shape revised by captain decision B, 2026-09-15, scout `fm3000-ci-release-only-s1`; split across machines by the captain's direction on FI3-1204, 2026-10-07; probes moved off every push by FI3-1756's plan, 2026-10-14): `ci.yml` runs one Linux baseline job on all pull requests, including release notes: typecheck/lint/build.
+- Standing CI rule (PR 8; CI shape revised by captain decision B, 2026-09-15, scout `fm3000-ci-release-only-s1`; split across machines by the captain's direction on FI3-1204, 2026-10-07; probes moved off every push by FI3-1756's plan, 2026-10-14): `ci.yml` runs one Linux baseline job on all pull requests, including release notes: typecheck/lint/build, with the Linux startup fixtures in a job beside it.
   The captain's INF-2273 ruling removes both unit-repeat shards; every edited unit file instead gets three total local runs, including portable files.
   Requested runs also run the full unit and probe sweeps and both integration shards, five jobs in total; there is no unit/integration selector.
   A push to `main` starts no `ci.yml` job (INF-2340, the captain's route "drop-ci-main"): the full check's `linux-checks` lane runs the same commands, every probe included ("The continuous run on main").
-  `typecheck-lint-build` runs typecheck, biome, eslint adherence, build and the Linux automatic startup fixtures on pull requests; `unit-tests` runs the in-memory cohorts (`pure`, `unit`, `unit-isolated`); `integration-tests (1/2)` and `(2/2)` run the integration cohort in vitest's own `--shard` halves, which split the files by a hash of their paths; `probe-tests` runs every probe (`docs/test-cohorts.md`, "Probes").
+  `typecheck-lint-build` runs typecheck, biome, eslint adherence and build on pull requests, and `linux-startup` runs the Linux automatic startup fixtures beside it; `unit-tests` runs the in-memory cohorts (`pure`, `unit`, `unit-isolated`); `integration-tests (1/2)` and `(2/2)` run the integration cohort in vitest's own `--shard` halves, which split the files by a hash of their paths; `probe-tests` runs every probe (`docs/test-cohorts.md`, "Probes").
   The hosted runner has two processors and a personal account is offered no larger one, so the jobs run side by side; together they run `verify.yml`'s `linux-checks` lane, which runs every probe, and `tests/release-workflows.test.ts` holds every vitest project to one job or to shards that cover it, including the full probe project.
   Every job runs on the label the repository variable `LINUX_RUNNER` names, the placement service's `shell-pc-linux` places (a fresh two-processor VM per job on the Windows PC, five at once), and on GitHub's hosted `ubuntu-latest` when the variable is unset; `tests/release-workflows.test.ts` evaluates each job's runner both ways.
-  The shell PC job image supplies Node 24 and a pre-filled pnpm store, so `ci.yml` disables setup-node's pnpm cache when `LINUX_RUNNER` is set; hosted jobs keep caching.
+  The shell PC job image supplies Node 24 and a pre-filled pnpm store, so setup-node restores its pnpm cache only on a GitHub-hosted runner (`runner.environment`); every self-hosted job, wherever a variable sent it, skips it.
+  The repository variable `LINUX_QUEUES` can send a job's kind to another queue before `LINUX_RUNNER` ("Each Linux job's kind").
   Every other workflow's Linux jobs read the same variable the same way (INF-1720's plan): the journeys' chooser, starters and overflow, `verify.yml`'s Linux lanes, the phone check's replacement job, the replay gate, Linux startup, the Linux packages and the release's Linux helpers; the package check's Ubuntu 26.04 leg takes the variable's label with `-2604`, the PC's 26.04 job image.
   The gate jobs take the variable's label with `-gate` (DOP-157's plan): `phone.yml`'s `cancel-replaced`, `journeys.yml`'s `choose-journeys`, and the four Linux jobs that open a release (`release.yml`'s `resolve`, `notes` and `phone`, `ios-release.yml`'s `resolve`).
   The placement service's runners on that label take only these jobs and go first in the PC's line, so the Mac jobs waiting on them start within minutes; hosted, they run on `ubuntu-latest`.
@@ -998,6 +999,24 @@ It shares that disk's folder read-only and imports the runtime inside the guest;
 The guest's imported runtime remains in the image, while the source disk stays untouched on the build Mac.
 The build also fails when the image holds any code-signing identity, so nothing that signs as the captain is ever in a clone.
 
+### Each Linux job's kind
+
+DOP-251's plan moves Linux jobs to the Mac mini's Linux guests one stage at a time, so a Linux job that may move names its kind, and the repository variable `LINUX_QUEUES` maps each kind to the label of its queue, as JSON such as `{"light":"fleet-linux","light_gate":"fleet-linux-gate"}`.
+Each such job reads `fromJSON(vars.LINUX_QUEUES || '{}').<kind>` after a publishing release's own label and before `LINUX_RUNNER`.
+A kind the variable leaves out, and an unset or empty variable, keep the label the job asked for before, so the variable changes nothing until it names a kind.
+Name a kind only once runner-up serves its queue, so no job waits on a label nothing serves.
+A Linux job with no kind, such as the startup fixtures, the Linux packages and every release job, never reads the variable.
+`tests/release-workflows.test.ts` moves each kind alone and holds every other job where it was.
+
+| Kind | Jobs | Its old label |
+| --- | --- | --- |
+| `light` | `verify.yml`'s `request` | `LINUX_RUNNER` |
+| `light_gate` | `phone.yml`'s `cancel-replaced` | `LINUX_RUNNER` with `-gate` |
+| `ci` | `ci.yml`'s `unit-tests`, `integration-tests` and `probe-tests`, and `replay.yml`'s `replay-gate` | `LINUX_RUNNER` |
+| `gate` | `journeys.yml`'s `choose-journeys` | `LINUX_RUNNER` with `-gate` |
+| `checks` | `verify.yml`'s `linux-checks` lane | `LINUX_RUNNER` |
+| `typecheck` | `ci.yml`'s `typecheck-lint-build` | `LINUX_RUNNER` |
+
 ### Each Mac job's kind and size
 
 Every job that runs on a Mac names its kind, and the repository variable `MAC_QUEUES` maps each kind to the label of its queue, as JSON such as `{"check":"mini-mac-check","phone":"mini-mac-phone"}`.
@@ -1172,8 +1191,9 @@ The launcher gives each app a throwaway HOME, userData, TMPDIR and XDG configura
 
 ## Linux automatic startup fixtures
 
-The PR's `typecheck-lint-build` job runs the production runtime/session classifier through `.github/actions/linux-startup` after its build checks.
-Both startup fixtures and their result summary run even when an earlier check fails, provided checkout succeeded and the job was not cancelled.
+The PR's `linux-startup` job in `ci.yml` runs the production runtime/session classifier through `.github/actions/linux-startup`, a job of its own beside `typecheck-lint-build`, so a failed build never stops it.
+Both startup fixtures and their result summary run even when the other fixture fails, unless the job was cancelled.
+The fixtures need systemd and Docker, so the job runs where `LINUX_RUNNER` sends it and never takes a `LINUX_QUEUES` queue.
 A newer push cancels the PR job, including startup, through `ci.yml`'s existing concurrency rule; startup no longer finishes independently on a superseded PR version.
 `linux-startup.yml` keeps the same action in a separate job on main.
 Both use a disposable Ubuntu machine: the PC's fresh virtual machine through `LINUX_RUNNER`, or GitHub-hosted Ubuntu when it is unset.

@@ -18,7 +18,7 @@ concurrency:
 
 jobs:
   replay-gate:
-    runs-on: ${{ vars.LINUX_RUNNER || 'ubuntu-latest' }}
+    runs-on: ${{ fromJSON(vars.LINUX_QUEUES || '{}').ci || vars.LINUX_RUNNER || 'ubuntu-latest' }}
     # The path every crewmate works under (journeys.yml says why).
     defaults:
       run:
@@ -34,7 +34,7 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 24
-          cache: ${{ !vars.LINUX_RUNNER && 'pnpm' || '' }}
+          cache: ${{ runner.environment == 'github-hosted' && 'pnpm' || '' }}
           cache-dependency-path: Application Support/firstmate/pnpm-lock.yaml
       - uses: ./Application Support/firstmate/.github/actions/node-headers
       - run: pnpm install --frozen-lockfile

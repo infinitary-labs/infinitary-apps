@@ -9,8 +9,12 @@ name: ci
 # runs on the label the repository variable LINUX_RUNNER names - the
 # placement service's shell-pc-linux, a fresh VM per job on the Windows PC,
 # five at once - and on GitHub's hosted ubuntu-latest when it is unset.
-# The shell PC image supplies Node 24 and its own pnpm store (DOP-67/68),
-# so only hosted jobs restore setup-node's pnpm cache (DOP-66 fix 1).
+# The repository variable LINUX_QUEUES (DOP-251's plan) can send a job's
+# kind to another queue, such as the Mac mini's Linux guests, before
+# LINUX_RUNNER; a kind it leaves out keeps the label above (docs/testing.md,
+# "Each Linux job's kind"). Self-hosted images supply Node 24 and their own
+# pnpm store (DOP-67/68), so only GitHub-hosted jobs restore setup-node's
+# pnpm cache (DOP-66 fix 1).
 
 on:
   # Linux-only branch validation; edited unit-file rounds belong locally.
@@ -28,10 +32,9 @@ concurrency:
 # minutes (docs/test-cohorts.md, "Budgets"), and these steps take about two.
 jobs:
   typecheck-lint-build:
-    runs-on: ${{ vars.LINUX_RUNNER || 'ubuntu-latest' }}
+    runs-on: ${{ fromJSON(vars.LINUX_QUEUES || '{}').typecheck || vars.LINUX_RUNNER || 'ubuntu-latest' }}
     steps:
       - uses: actions/checkout@v4
-        id: checkout
         with:
           # The pull request's merge commit and its base parent, for the notes step.
           fetch-depth: 2
@@ -39,7 +42,7 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 24
-          cache: ${{ !vars.LINUX_RUNNER && 'pnpm' || '' }}
+          cache: ${{ runner.environment == 'github-hosted' && 'pnpm' || '' }}
       # A change adds its release note or exclusion and the ledger stays
       # consistent (docs/release-notes.md "The release check"). Plain Node, no
       # install, under a second, so a miss fails here instead of at the alpha.
@@ -59,23 +62,33 @@ jobs:
       - run: pnpm check
       - run: pnpm lint:adherence
       - run: pnpm build
-      # Startup needs only checkout and Node, not a successful install/build.
-      # Keep both real fixtures and their summary after any earlier failure.
+
+  # The Linux automatic startup fixtures (docs/testing.md), a job of their own
+  # so they report even when the build fails. They need systemd and Docker,
+  # so they stay where LINUX_RUNNER sends them and never take a LINUX_QUEUES
+  # queue (DOP-251's plan).
+  linux-startup:
+    if: github.event_name == 'pull_request'
+    runs-on: ${{ vars.LINUX_RUNNER || 'ubuntu-latest' }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
       - name: Linux automatic startup
-        if: ${{ !cancelled() && github.event_name == 'pull_request' && steps.checkout.outcome == 'success' }}
         uses: ./.github/actions/linux-startup
 
   # The in-memory cohorts (docs/test-cohorts.md).
   unit-tests:
     if: github.event_name != 'pull_request'
-    runs-on: ${{ vars.LINUX_RUNNER || 'ubuntu-latest' }}
+    runs-on: ${{ fromJSON(vars.LINUX_QUEUES || '{}').ci || vars.LINUX_RUNNER || 'ubuntu-latest' }}
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
       - uses: actions/setup-node@v4
         with:
           node-version: 24
-          cache: ${{ !vars.LINUX_RUNNER && 'pnpm' || '' }}
+          cache: ${{ runner.environment == 'github-hosted' && 'pnpm' || '' }}
       - uses: ./.github/actions/node-headers
       - run: pnpm install --frozen-lockfile
         # Scope Node headers to this install, never to Electron rebuilds.
@@ -94,14 +107,14 @@ jobs:
       fail-fast: false
       matrix:
         shard: [1, 2]
-    runs-on: ${{ vars.LINUX_RUNNER || 'ubuntu-latest' }}
+    runs-on: ${{ fromJSON(vars.LINUX_QUEUES || '{}').ci || vars.LINUX_RUNNER || 'ubuntu-latest' }}
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
       - uses: actions/setup-node@v4
         with:
           node-version: 24
-          cache: ${{ !vars.LINUX_RUNNER && 'pnpm' || '' }}
+          cache: ${{ runner.environment == 'github-hosted' && 'pnpm' || '' }}
       - uses: ./.github/actions/node-headers
       - run: pnpm install --frozen-lockfile
         # Scope Node headers to this install, never to Electron rebuilds.
@@ -114,14 +127,14 @@ jobs:
   # Run every probe on request, never a changed-path selection.
   probe-tests:
     if: github.event_name != 'pull_request'
-    runs-on: ${{ vars.LINUX_RUNNER || 'ubuntu-latest' }}
+    runs-on: ${{ fromJSON(vars.LINUX_QUEUES || '{}').ci || vars.LINUX_RUNNER || 'ubuntu-latest' }}
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
       - uses: actions/setup-node@v4
         with:
           node-version: 24
-          cache: ${{ !vars.LINUX_RUNNER && 'pnpm' || '' }}
+          cache: ${{ runner.environment == 'github-hosted' && 'pnpm' || '' }}
       - uses: ./.github/actions/node-headers
       - run: pnpm install --frozen-lockfile
         # Scope Node headers to this install, never to Electron rebuilds.

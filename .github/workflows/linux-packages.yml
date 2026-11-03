@@ -73,7 +73,7 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 24
-          cache: ${{ !vars.LINUX_RUNNER && 'pnpm' || '' }}
+          cache: ${{ runner.environment == 'github-hosted' && 'pnpm' || '' }}
       # electron-builder makes the Fedora package with the system's rpmbuild.
       - run: sudo apt-get update && sudo apt-get install -y rpm
       - uses: ./.github/actions/node-headers
@@ -169,7 +169,7 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 24
-          cache: ${{ !vars.LINUX_RUNNER && 'pnpm' || '' }}
+          cache: ${{ runner.environment == 'github-hosted' && 'pnpm' || '' }}
       - uses: ./.github/actions/node-headers
       - run: pnpm install --frozen-lockfile
         # Scope Node headers to this install, never to Electron rebuilds.

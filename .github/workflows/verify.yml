@@ -127,7 +127,7 @@ concurrency:
 jobs:
   request:
     name: Validate verification selection
-    runs-on: ${{ inputs.linux_runner || vars.LINUX_RUNNER || 'ubuntu-latest' }}
+    runs-on: ${{ inputs.linux_runner || fromJSON(vars.LINUX_QUEUES || '{}').light || vars.LINUX_RUNNER || 'ubuntu-latest' }}
     steps:
       - name: Validate and record the manual request
         env:
@@ -188,7 +188,7 @@ jobs:
       fail-fast: false
       matrix:
         lane: ${{ fromJSON('["linux-checks","mac"]') }}
-    runs-on: ${{ matrix.lane == 'mac' && (inputs.mac_runner || fromJSON(vars.MAC_QUEUES || '{}').check || vars.MAC_RUNNER || 'macos-15') || inputs.linux_runner || vars.LINUX_RUNNER || 'ubuntu-latest' }}
+    runs-on: ${{ matrix.lane == 'mac' && (inputs.mac_runner || fromJSON(vars.MAC_QUEUES || '{}').check || vars.MAC_RUNNER || 'macos-15') || inputs.linux_runner || fromJSON(vars.LINUX_QUEUES || '{}').checks || vars.LINUX_RUNNER || 'ubuntu-latest' }}
     # Every crewmate works under "Application Support". The gate here does
     # too, so a check that only fails from a path with a space fails here
     # instead of only in a working copy (FI3-152).
@@ -225,7 +225,7 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 24
-          cache: ${{ matrix.lane != 'mac' && !vars.LINUX_RUNNER && 'pnpm' || '' }}
+          cache: ${{ matrix.lane != 'mac' && runner.environment == 'github-hosted' && 'pnpm' || '' }}
           cache-dependency-path: Application Support/firstmate/pnpm-lock.yaml
       - uses: ./Application Support/firstmate/.github/actions/node-headers
       - id: install

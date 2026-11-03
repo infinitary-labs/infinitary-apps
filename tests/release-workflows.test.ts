@@ -646,8 +646,12 @@ describe("local packaging identity (electron-builder.dev.yml)", () => {
       const ast = new Parser(new Lexer(expression).lex().tokens, ["github"], []).parse();
       const eligible = new Evaluator(ast, new data.Dictionary({ key: "github", value: github }));
       const fullSweep = id === "unit-tests" || id === "integration-tests" || id === "probe-tests";
+      // DOP-251's plan: the startup fixtures are a pull request's own job.
+      const pullOnly = id === "linux-startup";
       expect(eligible.evaluate().coerceString(), id).toBe(
-        fullSweep && eventName === "pull_request" ? "false" : "true",
+        (fullSweep && eventName === "pull_request") || (pullOnly && eventName !== "pull_request")
+          ? "false"
+          : "true",
       );
       // A no-op success would not solve the problem: keep the real gate and
       // fail on any gate step's failure, without introducing step-level skips.
@@ -660,11 +664,7 @@ describe("local packaging identity (electron-builder.dev.yml)", () => {
       );
       expect(job["continue-on-error"], id).toBeFalsy();
       expect(
-        job.steps.every(
-          (step) =>
-            !step["continue-on-error"] &&
-            (step.uses === "./.github/actions/linux-startup" || step === notes || !step.if),
-        ),
+        job.steps.every((step) => !step["continue-on-error"] && (step === notes || !step.if)),
         id,
       ).toBe(true);
     }
@@ -676,11 +676,14 @@ describe("local packaging identity (electron-builder.dev.yml)", () => {
     // case's.
     const install = "pnpm install --frozen-lockfile";
     const machines = ciJobs(eventName);
+    // The startup fixtures' job runs only its action, which installs nothing.
     for (const { name, runs } of machines)
       expect(runs.slice(0, runs.indexOf(install) + 1), name).toEqual(
-        eventName === "pull_request" && name === "typecheck-lint-build"
-          ? [notes?.run, install]
-          : [install],
+        name === "linux-startup"
+          ? []
+          : eventName === "pull_request" && name === "typecheck-lint-build"
+            ? [notes?.run, install]
+            : [install],
       );
     const checks = machines
       .flatMap(({ runs }) => runs.slice(runs.indexOf(install) + 1))
@@ -695,12 +698,32 @@ describe("local packaging identity (electron-builder.dev.yml)", () => {
 
   // Captain's small consolidation trial: startup still runs after an unrelated
   // failure, and its two fixture results remain visible without hiding failures.
+  // DOP-251's plan moves it out of typecheck-lint-build into a pull request
+  // job of its own, so a failed build cannot stop it, and keeps that job where
+  // LINUX_RUNNER sends it: the fixtures need systemd and Docker.
   it("keeps PR startup fixtures and reporting eligible after earlier failures", () => {
     const ci = loadYamlFile(".github/workflows/ci.yml") as { jobs: Record<string, CiJob> };
-    const startup = ci.jobs["typecheck-lint-build"]?.steps.find(
-      (step) => step.uses === "./.github/actions/linux-startup",
+    const uses = (id: string) =>
+      ci.jobs[id]?.steps.some((step) => step.uses === "./.github/actions/linux-startup");
+    expect(Object.keys(ci.jobs).filter(uses)).toEqual(["linux-startup"]);
+    const job = ci.jobs["linux-startup"];
+    for (const event of ["pull_request", "push", "workflow_dispatch"])
+      expect(workflowValue(job?.if ?? "true", { github: { event_name: event } }), event).toBe(
+        event === "pull_request",
+      );
+    const queues = JSON.stringify({ typecheck: "q", ci: "q", light: "q", checks: "q" });
+    expect(workflowString(job?.["runs-on"] ?? "", { vars: { LINUX_QUEUES: queues } })).toBe(
+      "ubuntu-latest",
     );
+    expect(
+      workflowString(job?.["runs-on"] ?? "", {
+        vars: { LINUX_RUNNER: "shell-pc-linux", LINUX_QUEUES: queues },
+      }),
+    ).toBe("shell-pc-linux");
+    const startup = job?.steps.find((step) => step.uses === "./.github/actions/linux-startup");
     expect(startup).toBeDefined();
+    // Every earlier step of its job is a checkout or setup, never a build.
+    expect(job?.steps.every((step) => step.run === undefined)).toBe(true);
     const action = loadYamlFile(".github/actions/linux-startup/action.yml") as {
       runs: { steps: CiJob["steps"] };
     };
@@ -709,17 +732,7 @@ describe("local packaging identity (electron-builder.dev.yml)", () => {
     for (const failed of [false, true]) {
       for (const cancelled of [false, true]) {
         const status = { success: !failed && !cancelled, failure: failed, always: true, cancelled };
-        for (const event of ["pull_request", "push", "workflow_dispatch"]) {
-          for (const checkout of ["success", "failure", "skipped"]) {
-            expect(
-              workflowValue(
-                startup?.if ?? "false",
-                { github: { event_name: event }, steps: { checkout: { outcome: checkout } } },
-                status,
-              ),
-            ).toBe(!cancelled && event === "pull_request" && checkout === "success");
-          }
-        }
+        expect(startup?.if).toBeUndefined();
         for (const fixture of fixtures) {
           expect(workflowValue(fixture.if ?? "false", {}, status)).toBe(!cancelled);
           expect(fixture["continue-on-error"]).toBeFalsy();
@@ -729,17 +742,42 @@ describe("local packaging identity (electron-builder.dev.yml)", () => {
   });
 
   // DOP-66 fix 1: the rebuilt shell PC image owns the pnpm store;
-  // hosted runners still need setup-node's cache. Evaluate the real inputs.
+  // hosted runners still need setup-node's cache. DOP-251's plan: a job
+  // LINUX_QUEUES sends to a self-hosted queue, such as the Mac mini's Linux
+  // guests whose image bakes the store, restores no cache even while
+  // LINUX_RUNNER is unset, so the cache follows the machine, not a variable.
+  // Evaluate the real inputs of every Linux job that installs.
   it.each([
-    ["hosted Linux", {}, "pnpm"],
-    ["shell PC", { LINUX_RUNNER: "shell-pc-linux" }, ""],
-  ])("selects the pnpm cache for %s", (_name, vars, expected) => {
-    const ci = loadYamlFile(".github/workflows/ci.yml") as { jobs: Record<string, CiJob> };
-    for (const [id, job] of Object.entries(ci.jobs)) {
-      const setup = job.steps.find((step) => step.uses?.startsWith("actions/setup-node@"));
-      expect(setup, id).toBeDefined();
-      expect(workflowString(setup?.with?.cache ?? "", { vars }), id).toBe(expected);
+    ["hosted Linux", "github-hosted", {}, "pnpm"],
+    ["shell PC", "self-hosted", { LINUX_RUNNER: "shell-pc-linux" }, ""],
+    ["a LINUX_QUEUES queue", "self-hosted", { LINUX_QUEUES: '{"ci":"mini-linux"}' }, ""],
+  ])("selects the pnpm cache for %s", (_name, environment, vars, expected) => {
+    const installs: string[] = [];
+    for (const file of readdirSync(join(root, ".github/workflows")).filter((name) =>
+      name.endsWith(".yml"),
+    )) {
+      const { jobs } = loadYamlFile(`.github/workflows/${file}`) as { jobs: Record<string, CiJob> };
+      for (const [id, job] of Object.entries(jobs)) {
+        if (!job.steps?.some((step) => step.run?.startsWith("pnpm install"))) continue;
+        const setup = job.steps.find((step) => step.uses?.startsWith("actions/setup-node@"));
+        const cache = setup?.with?.cache;
+        // A literal cache belongs to a Mac job, which runs on its own rules.
+        if (typeof cache !== "string" || !cache.includes("${{")) continue;
+        installs.push(`${file}:${id}`);
+        const contexts = { vars, runner: { environment }, matrix: { lane: "linux-checks" } };
+        expect(workflowString(cache, contexts), `${file}:${id}`).toBe(expected);
+      }
     }
+    expect(installs).toEqual(
+      expect.arrayContaining([
+        "ci.yml:typecheck-lint-build",
+        "ci.yml:unit-tests",
+        "ci.yml:integration-tests",
+        "ci.yml:probe-tests",
+        "replay.yml:replay-gate",
+        "verify.yml:lane",
+      ]),
+    );
   });
 
   /**
@@ -3803,7 +3841,7 @@ describe("each Mac job's kind", () => {
  * runners take no other job, so a runner started for one runs one.
  * Each job's runner is evaluated both ways, for every matrix entry.
  */
-it("sends every Linux job to LINUX_RUNNER, and hosted Ubuntu when it is unset", () => {
+it("sends every Linux job to LINUX_RUNNER, and hosted Ubuntu when it is unset, unless LINUX_QUEUES names its kind", () => {
   const gate = [
     "phone.yml:cancel-replaced",
     "journeys.yml:choose-journeys",
@@ -3812,6 +3850,22 @@ it("sends every Linux job to LINUX_RUNNER, and hosted Ubuntu when it is unset", 
     "release.yml:phone",
     "ios-release.yml:resolve",
   ];
+  // DOP-251's plan: each kind is one stage of moving Linux jobs to the Mac
+  // mini's Linux guests (docs/testing.md, "Each Linux job's kind").
+  const queues: Record<string, string[]> = {
+    light: ["verify.yml:request"],
+    light_gate: ["phone.yml:cancel-replaced"],
+    ci: [
+      "ci.yml:unit-tests",
+      "ci.yml:integration-tests",
+      "ci.yml:probe-tests",
+      "replay.yml:replay-gate",
+    ],
+    gate: ["journeys.yml:choose-journeys"],
+    checks: ["verify.yml:lane"],
+    typecheck: ["ci.yml:typecheck-lint-build"],
+  };
+  const queued = new Set<string>();
   type Job = { "runs-on"?: string; strategy?: { matrix?: Record<string, unknown> } };
   const evaluate = (value: string, contexts: Record<string, unknown>) =>
     value.includes("${{") ? workflowValue(value, contexts) : value;
@@ -3854,9 +3908,31 @@ it("sends every Linux job to LINUX_RUNNER, and hosted Ubuntu when it is unset", 
           }),
           name,
         ).toBe(runner({ LINUX_RUNNER: "shell-pc-linux" }));
+        // DOP-251's plan: LINUX_QUEUES moves a kind's jobs to its queue, and
+        // every job of another kind, or none, stays where it was, with or
+        // without LINUX_RUNNER. An empty variable changes nothing.
+        for (const base of [{}, { LINUX_RUNNER: "shell-pc-linux" }] as Record<string, string>[]) {
+          expect(runner({ ...base, LINUX_QUEUES: "{}" }), name).toBe(runner(base));
+          for (const kind of Object.keys(queues)) {
+            const moved = runner({
+              ...base,
+              LINUX_QUEUES: JSON.stringify({ [kind]: `q-${kind}` }),
+            });
+            if (queues[kind]?.includes(`${file}:${id}`)) {
+              expect(moved, name).toBe(`q-${kind}`);
+              queued.add(`${kind} ${file}:${id}`);
+            } else expect(moved, name).toBe(runner(base));
+          }
+        }
       }
     }
   }
+  // Each kind reached every job the plan gave it.
+  expect([...queued].toSorted()).toEqual(
+    Object.entries(queues)
+      .flatMap(([kind, jobs]) => jobs.map((job) => `${kind} ${job}`))
+      .toSorted(),
+  );
   // The jobs the plan named, so a job the check could not read is not missed.
   for (const job of [
     "ci.yml:unit-tests",

@@ -1056,6 +1056,21 @@ export async function startPhoneHome(
           result = { card: read(), calls: structuredClone(cardRequests) };
           break;
         }
+        // INF-2202 run 41590230179: the journey reads a card, then leaves; the home's own mark of that exact update,
+        // not the title on screen, proves the phone read it, so every later fresh stack opens on its first card.
+        case "POST seen-wait": {
+          let title = "";
+          for await (const chunk of request) {
+            title += chunk.toString();
+            if (title.length > 1024) throw new Error("A card title is too long");
+          }
+          const read = () =>
+            core.services.supervisor.cardsSnapshot().find((card) => card.title === title);
+          if (!read()) throw new Error(`No card is titled ${title}`);
+          await until(() => read()?.currentUpdateSeen === true);
+          result = { ok: true };
+          break;
+        }
         case "POST shared-seen-legacy-wait": {
           await until(() =>
             cardRequests.slice(legacySeenFrom).some((call) => call.channel === "inf:cards:seen"),

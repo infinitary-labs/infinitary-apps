@@ -462,6 +462,7 @@ import XCTest
         let shortTripChange = try XCTUnwrap(whileShortlyAway["title"] as? String)
         showCard(shortTripChange)
         XCTAssertTrue(app.staticTexts[shortTripChange].waitForPresence(timeout: 10))
+        _ = try await home("seen-wait", body: shortTripChange) // Read before the long trip, as the replayed card below.
 
         // A longer absence, past the time iOS gives the app in the background, closes the connection;
         // the return keeps the home's epoch and exercises replay, not a reload.
@@ -473,6 +474,10 @@ import XCTest
         showCard(replayed)
         XCTAssertTrue(app.staticTexts[replayed].waitForPresence(timeout: 10))
         XCTAssertEqual(app.staticTexts.matching(NSPredicate(format: "label == %@", replayed)).count, 1)
+        // INF-2202 run 41590230179: the title shows before the card's page draws, and only a drawn page marks it read.
+        // Leave can come first under load; that card then stays unread, and each later rejoin opens on it rather than
+        // on the first card. The home's own mark of this card closes that race before the phone leaves.
+        _ = try await home("seen-wait", body: replayed)
 
         computerDetails()
         tapOnPhone(app.buttons["leave"])

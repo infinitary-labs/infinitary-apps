@@ -1,12 +1,14 @@
 import { cpSync, mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { type CoreInvokeChannel, invokeContract } from "@shared/ipc";
+import { type CoreInvokeChannel, invokeContract, type PushChannel } from "@shared/ipc";
+import type { TaskBoard } from "@shared/tasks";
 import { DEFAULT_USAGE_QUERY, USAGE_TASK_PAGE } from "@shared/usage";
 import type { TestProject } from "vitest/node";
 import { absentKeychain } from "../../src/core/host";
-import { startCore } from "../../src/core/index";
-import type { FreshHomeAnswers } from "./browserProvided";
+import { type Core, startCore } from "../../src/core/index";
+import { seedTask } from "../../src/core/tasks/seedTask";
+import type { CrewStory, FreshHomeAnswers, StoryPush } from "./browserProvided";
 
 /**
  * The fresh home (docs/testing.md, "The browser layer"): once per run, before
@@ -16,7 +18,8 @@ import type { FreshHomeAnswers } from "./browserProvided";
  * fake bridge gives the window by default, so a test draws the window against
  * real readings of a fresh home rather than shapes typed by hand, and a core
  * change that moves an answer reaches the browser tests with no fixture to
- * re-record.
+ * re-record. After those reads the same core plays the short stories a
+ * browser test replays (`CrewStory`), so their readings are real too.
  */
 
 /**
@@ -69,6 +72,7 @@ export default async function setup(project: TestProject): Promise<void> {
       keychain: absentKeychain,
     });
     const answers: FreshHomeAnswers = { plain: {}, asked: {} };
+    let crew: CrewStory | undefined;
     try {
       for (const [channel, entry] of Object.entries(invokeContract)) {
         if (entry.surface !== "core" || entry.effect !== "read") continue;
@@ -85,17 +89,72 @@ export default async function setup(project: TestProject): Promise<void> {
         byRequest[JSON.stringify(request)] = await core.dispatch(channel, request as never);
         answers.asked[channel] = byRequest;
       }
+      crew = await crewStory(core);
     } finally {
       await core.dispose();
       await core.services.workspace.poolSettled();
       await core.services.workspace.deletionsSettled();
     }
     project.provide("freshHome", answers);
+    if (crew) project.provide("crewStory", crew);
   } finally {
     rmSync(home, { recursive: true, force: true });
     for (const [name, value] of Object.entries(saved)) {
       if (value === undefined) delete process.env[name];
       else process.env[name] = value;
     }
+  }
+}
+
+/** The pushes that move the crew ring, as main forwards them to the window. */
+const CREW_PUSHES: readonly PushChannel[] = ["inf:event", "inf:tasks", "inf:tasks:delta"];
+
+/**
+ * One crewmate sent out and then cancelled, played on the fresh home's core:
+ * the board before it, every push the core sends the window as the crewmate
+ * goes out and goes idle, the board then, every push as it is cancelled,
+ * and the board after. Each part waits for the core's own board push,
+ * so the next part's pushes start from the board the window holds.
+ */
+async function crewStory(core: Core): Promise<CrewStory> {
+  const heard: StoryPush[] = [];
+  let onPush = () => {};
+  const detach = core.events.subscribe((channel, payload) => {
+    if (!(CREW_PUSHES as readonly string[]).includes(channel)) return;
+    heard.push({ channel, payload: structuredClone(payload) } as StoryPush);
+    onPush();
+  });
+  /** Settles once the core has pushed the board at `seq` or later. */
+  const pushedUpTo = (seq: number) =>
+    new Promise<void>((done) => {
+      onPush = () => {
+        if (heard.some((push) => push.channel !== "inf:event" && push.payload.seq >= seq)) done();
+      };
+      onPush();
+    });
+  /** The pushes `act` makes the core send, through its board push. */
+  const pushesOf = async (act: () => void): Promise<[StoryPush[], TaskBoard]> => {
+    heard.length = 0;
+    act();
+    const board: TaskBoard = await core.dispatch("inf:tasks:board", []);
+    await pushedUpTo(board.seq);
+    return [[...heard], board];
+  };
+  try {
+    const id = "crew-story";
+    const fresh: TaskBoard = await core.dispatch("inf:tasks:board", []);
+    const [arrive, crewed] = await pushesOf(() =>
+      seedTask(core.services.tasks, {
+        id,
+        title: "write a cancellation probe note",
+        status: "idle",
+      }),
+    );
+    const [cancel, dropped] = await pushesOf(() =>
+      core.services.tasks.close(id, { status: "dropped", reason: "cancelled", actor: "host" }),
+    );
+    return { fresh, arrive, crewed, cancel, dropped };
+  } finally {
+    detach();
   }
 }

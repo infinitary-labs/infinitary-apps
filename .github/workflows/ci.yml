@@ -69,6 +69,15 @@ jobs:
         if: ${{ github.event_name == 'pull_request' }}
         run: node scripts/unit-repeats.ts --reach --base HEAD^1 --run
         timeout-minutes: 30
+      # The browser layer (docs/testing.md, "The browser layer"): every
+      # browser file, about a minute, so a pull request that breaks what the
+      # window draws fails here. A requested sweep runs them in unit-tests.
+      - uses: ./.github/actions/browser-chromium
+        if: ${{ github.event_name == 'pull_request' }}
+      - name: Browser tests
+        if: ${{ github.event_name == 'pull_request' }}
+        run: pnpm test --project browser
+        timeout-minutes: 30
 
   # The Linux automatic startup fixtures (docs/testing.md), a job of their own
   # so they report even when the build fails. They need systemd and Docker,

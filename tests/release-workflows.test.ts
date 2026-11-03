@@ -765,6 +765,17 @@ describe("local packaging identity (electron-builder.dev.yml)", () => {
       step.run?.startsWith("node scripts/unit-repeats.ts --reach "),
     );
     expect(reach).toBeDefined();
+    // INF-2505 (INF-2480's plan, captain: "Approve and build"): a pull
+    // request runs the browser project in its build check, after installing
+    // the Chromium it draws in (docs/testing.md, "The browser layer").
+    const chromium = ci.jobs["typecheck-lint-build"]?.steps.find(
+      (step) => step.uses === "./.github/actions/browser-chromium",
+    );
+    const browser = ci.jobs["typecheck-lint-build"]?.steps.find(
+      (step) => step.run === "pnpm test --project browser",
+    );
+    expect(chromium).toBeDefined();
+    expect(browser).toBeDefined();
     // INF-2486 cut F (captain-approved): the startup fixtures' step runs on
     // its job's changed-path verdict, the one step-level skip outside the gate.
     const paths = ci.jobs["linux-startup"]?.steps.find((step) => step.id === "paths");
@@ -787,7 +798,7 @@ describe("local packaging identity (electron-builder.dev.yml)", () => {
       );
       // A no-op success would not solve the problem: keep the real gate and
       // fail on any gate step's failure, without step-level skips beyond the
-      // gate's two pull request steps and cut F's startup fixtures.
+      // gate's pull request steps and cut F's startup fixtures.
       // INI-9's plan: every job runs where LINUX_RUNNER sends it, the
       // placement service's shell-pc-linux places, and back on GitHub's
       // hosted Linux when the variable is unset.
@@ -800,7 +811,12 @@ describe("local packaging identity (electron-builder.dev.yml)", () => {
         job.steps.every(
           (step) =>
             !step["continue-on-error"] &&
-            (step === notes || step === reach || step === fixtures || !step.if),
+            (step === notes ||
+              step === reach ||
+              step === chromium ||
+              step === browser ||
+              step === fixtures ||
+              !step.if),
         ),
         id,
       ).toBe(true);
@@ -841,6 +857,14 @@ describe("local packaging identity (electron-builder.dev.yml)", () => {
         ...(eventName === "pull_request" ? [reach?.run] : []),
       ].toSorted(),
     );
+    // The browser project runs once: in a pull request's gate, and in a
+    // requested sweep's unit-tests, whose gate runs none.
+    const browserRuns = machines.flatMap(({ name, runs }) =>
+      runs.filter((run) => /^pnpm test .*--project browser\b/.test(run)).map(() => name),
+    );
+    expect(browserRuns).toEqual([
+      eventName === "pull_request" ? "typecheck-lint-build" : "unit-tests",
+    ]);
   });
 
   // Captain's small consolidation trial: startup still runs after an unrelated
@@ -2205,6 +2229,40 @@ describe("the signed channel workflow", () => {
     expect(runner("mac", "", "mini-mac")).toBe("mini-mac");
     expect(runner("mac", "", "")).toBe("macos-15");
     expect(runner("linux-checks", "mini-mac-inf621-proof", "mini-mac")).toBe("ubuntu-latest");
+  });
+
+  // The captain's end state, under INF-2508's card: "the e2e journey +
+  // browser tests should all run during the sweep batch" (INF-2505). The
+  // swept batch's sweep is this full check, whose linux-checks lane installs
+  // the browser layer's Chromium and then runs every vitest project.
+  it("runs every browser file in the swept batch's check", () => {
+    const batch = loadYamlFile(".github/workflows/batch.yml") as Workflow;
+    const sweep = jobOf(batch, "sweep");
+    expect(sweep.uses).toBe("./.github/workflows/verify.yml");
+    const passed = Object.fromEntries(
+      (lane.steps ?? []).flatMap(({ id }) => (id ? [[id, { outcome: "success" }]] : [])),
+    );
+    const ran = (lane.steps ?? []).filter(
+      (candidate) =>
+        candidate.if === undefined ||
+        workflowValue(candidate.if, {
+          matrix: { lane: "linux-checks" },
+          inputs: sweep.with ?? {},
+          steps: passed,
+        }) === true,
+    );
+    expect(lanes(sweep.with?.profile)).toContain("linux-checks");
+    const chromium = ran.findIndex((candidate) =>
+      candidate.uses?.endsWith("/.github/actions/browser-chromium"),
+    );
+    // No project named, so vitest runs every one, the browser layer's among them.
+    const everyProject = ran.findIndex((candidate) => candidate.run === "pnpm test");
+    expect(chromium).toBeGreaterThanOrEqual(0);
+    expect(everyProject).toBeGreaterThan(chromium);
+    const projects = (vitestConfig.test?.projects ?? []).map((project) =>
+      typeof project === "object" && "test" in project ? project.test?.name : undefined,
+    );
+    expect(projects).toContain("browser");
   });
 
   it("runs each profile's lanes as one matrix, so an omitted lane is absent from the run, never skipped", () => {

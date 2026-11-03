@@ -201,8 +201,10 @@ export default defineConfig({
       {
         // The browser layer (docs/testing.md, "The browser layer"): the
         // window's React drawn in a real Chromium page, behind the one shared
-        // fake of the window bridge (tests/browser/bridge.ts). Each file is
-        // a fresh page, as each journey was a fresh app.
+        // fake of the window bridge (tests/browser/bridge.ts). Each file
+        // starts from a fresh page, as each journey was a fresh app: a
+        // session runs its files in one page, so its setup clears what an
+        // earlier file kept (tests/browser/freshPage.ts).
         extends: true,
         plugins: [react()],
         test: {
@@ -216,6 +218,7 @@ export default defineConfig({
             "./tests/helpers/vitestGlobalSetup.ts",
             "./tests/helpers/browserFreshHome.ts",
           ],
+          setupFiles: ["./tests/browser/freshPageSetup.ts"],
           browser: {
             enabled: true,
             headless: true,

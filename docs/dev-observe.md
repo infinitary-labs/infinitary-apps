@@ -228,7 +228,7 @@ Changed rows are keyed, live rows update separately from recorded rows, and the 
 Streaming follows the bottom only while the reader is there; changing sessions resets to the new session's bottom.
 Arrow keys, Home and End reach offscreen sessions; Enter selects.
 Browser find and cross-window text selection only cover mounted rows, not the full history.
-`tests/e2e/observe-windowing.spec.ts` exercises 6,581 turns and 280 crew records through the built app; `observe-frame.spec.ts` exercises live updates, resize, compaction, focus and selection through the real frame program in Chromium.
+`tests/e2e/observe-windowing.spec.ts` exercises 6,581 turns and 280 crew records through the built app; `tests/browser/observe-frame.test.ts` exercises live updates, resize, compaction, focus and selection through the real frame program in the browser layer.
 
 ## Live vs historical
 
@@ -287,5 +287,5 @@ Moved verbatim from `AGENTS.md` on 2026-09-24; `AGENTS.md` keeps a one-line poin
   It groups Main, Crew, Review and personal panel MOUNTS (not sessions).
   The retired supervision session is neither listed nor selectable; its historical files and deterministic outcome ledger are untouched.
   Transcript and session rows are windowed in the existing Tier-2 frame with persistent scrollers, measured heights and reading anchors; unchanged pushes leave DOM alone.
-  `ObserveService.read` caches unchanged main and crew files, uses metadata-only list reads, and yields during parsing; see `tests/e2e/observe-windowing.spec.ts` and `observe-frame.spec.ts`.
+  `ObserveService.read` caches unchanged main and crew files, uses metadata-only list reads, and yields during parsing; see `tests/e2e/observe-windowing.spec.ts` and `tests/browser/observe-frame.test.ts`.
   `task_execution.session_file` is the backend's resume token, not always a path: `src/core/observe/transcriptSource.ts` resolves it per backend (Claude's is the app's copy under the task's `sessions/`, else the client's own JSONL in `~/.claude`, `src/core/claude/claudeTranscript.ts`), and a selected session is never a blank pane - `transcriptNote` says why when nothing can be read.

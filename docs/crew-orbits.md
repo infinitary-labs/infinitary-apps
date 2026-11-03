@@ -273,11 +273,12 @@ The light is the last thing the orbit's frame passes through before it is painte
 
 - `orbitalPlanes.test.ts`: the staged two orbits' geometry and signed rates from the captain's settings, measured travel of rendered frames, the first orbit's growth a notch per arrival, its widening on the springs, depth/radius/bounds, the second orbit's opening at 25 and packing through 96, outward refills, the inner orbit's shrinking and closing, churn, stable survivors, packets/cues and reduced motion.
 - `tests/e2e/crew-planes.spec.ts`: real storage → boot board → 48 crew at the minimum window: all on the stage, clear of the prompt, and a crewmate's summary still opens whole in the window.
-- The `orbit`, `crewSignal`, painter/cue and `crew-orbit.spec.ts` tests exercise the unchanged lifecycle, commissioning, solids, posture and review cues.
-  Each named `crew-orbit.spec.ts` case launches a fresh app; cancellation commissions its own visible idle crewmate before removing it, and reduced motion starts with an empty crew.
-  Its display case moves a reduced-motion ring to a display of twice the density and back with a device-metrics override: each layer keeps one backing pixel per device pixel, and the second visit shows the very picture of the first.
-  Run any case alone with `pnpm exec playwright test tests/e2e/crew-orbit.spec.ts --project=renderer --no-deps --grep '<case title>'`, then run the full file without `--grep` to verify prerequisite ownership.
-  The tests attach fresh board/count/pixel state and lifecycle pictures; the isolation validation and sample captures were local evidence and are not committed.
+- The `orbit`, `crewSignal`, painter/cue and crew ring browser tests exercise the unchanged lifecycle, commissioning, solids, posture and review cues.
+  Each crew ring case in the browser layer (`tests/browser/crew-orbit-*.test.ts`, helpers in `tests/browser/crewOrbit.ts`) opens its own window on a fresh home with no crew, then replays the pushes the core sent as one idle crewmate went out and, for cancellation, as it was dropped (`crewStory`, `docs/testing.md` "The browser layer").
+  Under reduced motion the arriving crewmate holds one still frame across 30 drawing frames.
+  The display case stays a journey, `tests/e2e/crew-orbit.spec.ts`, since Chromium tells only a top-level page that the display density changed: it moves a reduced-motion ring to a display of twice the density and back with a device-metrics override, each layer keeps one backing pixel per device pixel, and the second visit shows the very picture of the first.
+  Run it alone with `pnpm exec playwright test tests/e2e/crew-orbit.spec.ts --project=renderer --no-deps`.
+  The journey attaches fresh board/count/pixel state and lifecycle pictures; sample captures are local evidence and are not committed.
 
 `crew-planes.spec.ts` writes its 48-crew minimum-window picture into the run's own results folder.
 No playground controls or generated card bundle are imported into production.

@@ -96,7 +96,9 @@ Vitest blanks every `.css?raw` import unless the config sets `css: true`.
 ## The browser layer
 
 The `browser` project (`vitest.config.ts`) draws the window's real React in a headless Chromium page, with no Electron, no build and no app launch.
-Each file under `tests/browser/` is a fresh page, as each journey was a fresh app, and opens the window with `openWindow` (`tests/browser/window.ts`), which runs the renderer's own entry.
+Each file under `tests/browser/` starts from a fresh page, as each journey was a fresh app, and opens the window with `openWindow` (`tests/browser/window.ts`), which runs the renderer's own entry.
+Each browser session runs its files one after another in one page of one origin, so the project's setup (`tests/browser/freshPageSetup.ts`) runs `freshPage()` (`tests/browser/freshPage.ts`) before each file: it clears local and session storage and cookies, and sets the motion setting back to the browser's own.
+A test that changes the page in any other way, such as a device-metrics override through `cdp()`, puts it back before it ends.
 The window talks to one shared fake of the bridge, `fakeBridge` (`tests/browser/bridge.ts`), built with the preload's own `createApi` (`src/preload/api.ts`), so the page holds the very API Electron exposes.
 Every request the window sends is read against the published contract's request schema, every answer and push a test gives against its answer or payload schema, and a shape the contract refuses fails the test.
 A request with no answer rejects and is listed in `unanswered`, so a test names every answer the screen it draws needs.
@@ -105,14 +107,17 @@ A test's answers start from the fresh home, `freshHome()` (`tests/browser/freshH
 Once per run, `tests/helpers/browserFreshHome.ts` boots a real core in Node on a throwaway data folder, offline, and reads every core read that takes no arguments, plus the few reads with arguments that `ASKED` names with the request the window sends.
 The desktop shell's own answers come from the shell's code where it runs in a page (the installed keys) and are written beside it otherwise, each still read against the contract.
 A test replaces only the answers its story changes, such as a home whose person connected a subscription.
+After those reads the same core plays the short stories a test replays, each a list of the core's own pushes and the boards between them: `crewStory` sends one crewmate out and cancels it, for the crew ring's files (`tests/browser/crewOrbit.ts`).
 There is no recorded fixture: a core change that moves an answer reaches the browser tests on the next run.
 
-Browser commands (`tests/helpers/browserCommands.ts`) reach the page itself, such as the media a person's Mac sets; `cdp()` from `vitest/browser` reads the browser's own counters.
+Browser commands (`tests/helpers/browserCommands.ts`) reach the page itself, such as the media a person's Mac sets, and `evaluateInFrame` reads inside a sandboxed frame, such as a card body, that the page cannot script; `cdp()` from `vitest/browser` reads the browser's own counters.
+A frame program served as text, such as Observe's, draws in a same-origin frame the test builds from the program and the design tokens (`tests/browser/observe-frame.test.ts`).
 The project's Chromium runs with Web Share on, as the window's does.
 Install it once with `pnpm exec playwright install --only-shell chromium`, then run `pnpm exec vitest run --project browser`.
-`verify.yml`'s `linux-checks` runs every browser file inside `pnpm test`, and `ci.yml`'s requested `unit-tests` sweep runs them beside the in-memory cohorts; both install Chromium through `.github/actions/browser-chromium`.
-A pull request runs no browser file, as it runs no journey, so a crewmate whose change reaches the window runs the browser project locally; it takes under a minute.
+Every pull request runs the whole browser project in `ci.yml`'s `typecheck-lint-build` check; it takes under a minute.
+`verify.yml`'s `linux-checks` runs every browser file inside `pnpm test`, and `ci.yml`'s requested `unit-tests` sweep runs them beside the in-memory cohorts; all three install Chromium through `.github/actions/browser-chromium`.
 A journey that only draws the window and reads it moves here, and its original is deleted as its twin lands.
+A journey stays when it needs what the browser layer cannot give the page: main or the core at work, a frame served over the app's own scheme, whose body a page cannot load, or a change of display density, which Chromium tells only a top-level page and the test page is a frame.
 
 ## The required typecheck
 

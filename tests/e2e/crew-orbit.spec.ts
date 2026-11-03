@@ -1,26 +1,23 @@
 import { writeFileSync } from "node:fs";
 import { expect, type Page, test } from "@playwright/test";
-import { closingNoteTitle } from "../../src/core/orchestrator/settleWords";
 import { crewPlaneCounts, waitForFirstmateIdle } from "./crew";
 import { type LaunchedApp, launchApp } from "./launch";
-import { CANCEL_PROMPT_MARKER, SPAWN_PROMPT_MARKER } from "./mockProvider";
+import { SPAWN_PROMPT_MARKER } from "./mockProvider";
 import { promptInput } from "./prompt";
-import { reportLine, startedLine, statusLine, taskKey } from "./rails";
-import { expectNoCard, showCard } from "./stack";
-import { runFromSearch } from "./windowKeys";
+import { reportLine, startedLine, taskKey } from "./rails";
 
 /**
  * The crew in orbit around the Firstmate (src/renderer/src/character/crew/):
- * a commissioned crewmate is painted on the ring around the character, the
- * ring turns, the ring holds the crew the core counts, a
- * cancelled crewmate leaves the ring, and under reduced motion a crewmate
- * appears settled: across many drawing frames the ring does not move, and a
- * move to a display of another density draws that still ring again at the
- * new sharpness instead of stretching it (FI3-743).
+ * under reduced motion a move to a display of another density draws the
+ * still ring again at the new sharpness instead of stretching it (FI3-743).
  * Everything is read off the real far/near canvases, so it exercises the
  * real wiring, loop, and painter.
- * Each named case owns a fresh app and any crew it needs, including the
- * cancellation case: no predecessor's task or media setting is a fixture.
+ * The ring's other cases run in the browser layer (tests/browser/crew-orbit-*.test.ts);
+ * this one stays a journey because the browser layer's test page is a frame,
+ * and Chromium tells only a top-level page's media queries that the display
+ * density changed, as it tells the window's.
+ * The case owns a fresh app and the crew it needs: no predecessor's task or
+ * media setting is a fixture.
  */
 
 type Paint = {
@@ -135,64 +132,6 @@ test.beforeEach(async () => {
 
 test.afterEach(async () => {
   await launched.close();
-});
-
-test("a cancelled crewmate leaves the ring", async () => {
-  const { page } = launched;
-  const title = "write a cancellation probe note";
-  const key = await commissionIdleCrew(page, title);
-  await expect.poll(async () => (await paint(page)).count, { timeout: 5_000 }).toBeGreaterThan(40);
-  await evidence(page, "before-cancellation");
-
-  await send(page, `${CANCEL_PROMPT_MARKER}${title}`);
-  await expect(statusLine(page, key)).toBeVisible({ timeout: 30_000 });
-  await expect
-    .poll(() =>
-      page.evaluate(
-        async (wanted) =>
-          (await window.infinitary.tasks.board()).tasks.find((task) => task.key === wanted),
-        key,
-      ),
-    )
-    .toMatchObject({ status: "dropped", closedReason: "cancelled" });
-  await expect.poll(() => crewCounts(page)).toMatchObject({ working: 0, idle: 0 });
-  // The first mate's closing note goes up (INF-547), and the ring is not
-  // painted behind a card: its places and pixels keep the last frame drawn
-  // before the card came up, which a slow machine may draw before the drop
-  // reaches it. Close the note, then read the ring once it is painted again.
-  const note = closingNoteTitle(key, "dropped");
-  await showCard(page, note);
-  await runFromSearch(launched.app, page, "cards.close");
-  await expectNoCard(page, note);
-  await expect.poll(() => ringSize(page)).toBe(0);
-  await expect.poll(async () => (await paint(page)).count, { timeout: 5_000 }).toBe(0);
-  await evidence(page, "cancelled");
-});
-
-test("under reduced motion a crewmate appears settled: one still frame", async () => {
-  const { page } = launched;
-  await page.emulateMedia({ reducedMotion: "reduce" });
-  await commissionIdleCrew(page, "write a still note");
-  await expect.poll(async () => (await paint(page)).count, { timeout: 5_000 }).toBeGreaterThan(0);
-  // Counted in drawing frames, not time: across them nothing on the ring moves.
-  const [first, last] = await page.evaluate(
-    () =>
-      new Promise<[string, string]>((resolve) => {
-        const digest = () =>
-          [...document.querySelectorAll<HTMLCanvasElement>("canvas[data-crew-layer]")]
-            .map((canvas) => canvas.toDataURL("image/png"))
-            .join();
-        const first = digest();
-        let frames = 0;
-        const step = () => {
-          if (++frames < 30) requestAnimationFrame(step);
-          else resolve([first, digest()]);
-        };
-        requestAnimationFrame(step);
-      }),
-  );
-  expect(last).toBe(first);
-  await evidence(page, "reduced-motion");
 });
 
 /** How far each crew canvas is from one backing pixel per device pixel: 0 is sharp. */

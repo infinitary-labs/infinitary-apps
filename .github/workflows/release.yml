@@ -61,6 +61,10 @@ name: release
 #   gh workflow run release.yml --ref main -f channel=alpha -f dry_run=true -f candidate=<commit>
 #   gh workflow run release.yml --ref main -f channel=stable -f dry_run=true -f promote=<alpha version> [-f highlights=<id>,<id>,<id>]
 
+# A rolling alpha is named after its main run, so that run's next check can
+# find it and wait while it is cut (alpha-wait.yml).
+run-name: ${{ github.event_name == 'workflow_run' && format('Alpha from main run {0}', github.event.workflow_run.run_number) || 'release' }}
+
 on:
   workflow_run:
     workflows: [main]
@@ -145,6 +149,7 @@ jobs:
     # A release's Linux jobs run on GitHub's hosted machines (docs/testing.md, "A release's hosted machines").
     runs-on: ubuntu-24.04
     outputs:
+      skip: ${{ steps.gate.outputs.skip == 'true' && 'true' || 'false' }}
       channel: ${{ steps.resolve.outputs.channel }}
       dry_run: ${{ steps.resolve.outputs.dry_run }}
       source_commit: ${{ steps.resolve.outputs.source_commit }}
@@ -180,9 +185,51 @@ jobs:
         with:
           node-version: 24
 
+      # An alpha with nothing new to build (docs/alpha.md): a rolling alpha
+      # ends green here, before main's proof is read, while an earlier rolling
+      # alpha is still being cut, whatever either holds (INF-2465, the
+      # captain: "as long as there's one main alpha release still happening,
+      # don't start any new alpha cuts"), or when nothing on the desktop build
+      # list (scripts/desktop-build.ts) changed since the previous release.
+      # An earlier run counts once its notes job exists: its own gate chose to
+      # cut. Requested alphas, recoveries, rehearsals and stables never skip.
+      - name: Skip an alpha with nothing new to build
+        id: gate
+        if: github.event_name == 'workflow_run'
+        uses: actions/github-script@v7
+        env:
+          SOURCE: ${{ github.event.workflow_run.head_sha }}
+        with:
+          script: |
+            const skip = async (reason) => {
+              core.setOutput('skip', 'true');
+              await core.summary.addHeading('No alpha cut').addRaw(reason).write();
+            };
+            const {data} = await github.rest.actions.listWorkflowRuns({
+              ...context.repo, workflow_id: 'release.yml', event: 'workflow_run', per_page: 100
+            });
+            for (const run of data.workflow_runs) {
+              if (run.run_number >= context.runNumber || run.status === 'completed') continue;
+              const jobs = await github.paginate(github.rest.actions.listJobsForWorkflowRun, {
+                ...context.repo, run_id: run.id, filter: 'latest', per_page: 100
+              });
+              if (jobs.some(job => job.name === 'Check the release notes' && job.conclusion !== 'skipped')) {
+                return skip(`An earlier alpha is still being cut in ${run.html_url}, so this run starts no other. The next alpha carries main's changes at ${process.env.SOURCE}.`);
+              }
+            }
+            const {execFileSync} = require('node:child_process');
+            const workspace = process.env.GITHUB_WORKSPACE;
+            const {previous, changed} = JSON.parse(execFileSync('node', [
+              `${workspace}/scripts/release-notes.ts`, 'desktop-changes', '--repo', workspace, '--source', process.env.SOURCE
+            ], {encoding: 'utf8'}));
+            if (previous && changed.length === 0) {
+              return skip(`Nothing the desktop app is built from changed between alpha ${previous} and main's ${process.env.SOURCE}, so this run cuts no alpha. The next alpha with a desktop change carries this version's notes.`);
+            }
+            core.setOutput('skip', 'false');
+
       - name: Validate completed rolling-main proof
         id: main-proof
-        if: github.event_name == 'workflow_run' || inputs.verified_main_run != ''
+        if: steps.gate.outputs.skip != 'true' && (github.event_name == 'workflow_run' || inputs.verified_main_run != '')
         uses: actions/github-script@v7
         env:
           MAIN_RUN: ${{ github.event.workflow_run.id || inputs.verified_main_run }}
@@ -211,6 +258,7 @@ jobs:
 
       - name: Resolve the release
         id: resolve
+        if: steps.gate.outputs.skip != 'true'
         env:
           CHANNEL: ${{ github.event_name == 'workflow_run' && 'alpha' || inputs.channel || 'stable' }}
           CANDIDATE: ${{ steps.main-proof.outputs.source || inputs.candidate }}
@@ -223,6 +271,7 @@ jobs:
 
       - name: Read the source's configured release destination
         id: destination
+        if: steps.gate.outputs.skip != 'true'
         env:
           SOURCE_COMMIT: ${{ steps.resolve.outputs.source_commit }}
         run: |
@@ -244,6 +293,7 @@ jobs:
       # stable's source is the alpha tag's own commit (the resolver above).
       - name: Identify inherited alpha verification
         id: verification
+        if: steps.gate.outputs.skip != 'true'
         uses: actions/github-script@v7
         env:
           CHANNEL: ${{ steps.resolve.outputs.channel }}
@@ -322,6 +372,7 @@ jobs:
   notes:
     name: Check the release notes
     needs: resolve
+    if: ${{ needs.resolve.outputs.skip != 'true' }}
     # A release's Linux jobs run on GitHub's hosted machines (docs/testing.md, "A release's hosted machines").
     runs-on: ubuntu-24.04
     steps:
@@ -449,6 +500,7 @@ jobs:
   phone:
     name: Wait for the phone
     needs: resolve
+    if: ${{ needs.resolve.outputs.skip != 'true' }}
     # A release's Linux jobs run on GitHub's hosted machines (docs/testing.md, "A release's hosted machines").
     runs-on: ubuntu-24.04
     timeout-minutes: 10
@@ -479,7 +531,7 @@ jobs:
   # stable inherits its alpha's update check. It holds no secret.
   rehearse:
     name: Rehearse the update from the last published alpha
-    if: ${{ needs.resolve.outputs.verify_required == 'true' }}
+    if: ${{ needs.resolve.outputs.skip != 'true' && needs.resolve.outputs.verify_required == 'true' }}
     needs: resolve
     uses: ./.github/workflows/mac-update.yml
     with:

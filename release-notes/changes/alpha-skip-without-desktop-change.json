@@ -1,0 +1,8 @@
+{
+  "exclusions": [
+    {
+      "id": "alpha-skip-without-desktop-change",
+      "reason": "The release pipeline now cuts a rolling alpha only when something the desktop app is built from changed since the previous release and no earlier alpha is still being cut, and main's next check waits until the alpha cut ends. The app itself is unchanged."
+    }
+  ]
+}

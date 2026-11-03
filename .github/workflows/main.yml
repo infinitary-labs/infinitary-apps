@@ -4,11 +4,14 @@ name: main
 # B): every push to main starts the full check with every journey on the Mac
 # and, beside it, the whole phone check. It replaces the nightly full check.
 #
-# Runs queue and never cancel: with cancel-in-progress false GitHub keeps the
-# running run, holds at most one waiting run, and drops an older waiting run
-# when a newer push arrives, so a burst of merges is checked once at its
-# newest version. The newest passing run of this workflow is main's green
-# mark (docs/testing.md, "The continuous run on main"); nothing else records it.
+# Runs queue and never cancel one another: with cancel-in-progress false
+# GitHub keeps the running run, holds at most one waiting run, and drops an
+# older waiting run when a newer push arrives, so a burst of merges is checked
+# once at its newest version. Its first job waits while the previous run's
+# alpha is cut (alpha-wait.yml), so merges keep queueing until the cut ends,
+# and a run that waited while main moved cancels itself for the waiting one.
+# The newest passing run of this workflow is main's green mark
+# (docs/testing.md, "The continuous run on main"); nothing else records it.
 
 on:
   workflow_dispatch:
@@ -19,16 +22,22 @@ concurrency:
   group: main-full-check
   cancel-in-progress: false
 
-# What the called checks ask for: verify.yml reads runs, and phone.yml's
-# replacement checks read and cancel its own runs.
+# What the called checks ask for: verify.yml reads runs, phone.yml's
+# replacement checks read and cancel its own runs, and alpha-wait.yml reads
+# release runs and may cancel this run.
 permissions:
   contents: read
   actions: write
   pull-requests: read
 
 jobs:
+  # INF-2465: no check starts while the previous check's alpha is cut, and
+  # merges made meanwhile are checked together (alpha-wait.yml says how).
+  alpha-wait:
+    uses: ./.github/workflows/alpha-wait.yml
   # The full check: Linux checks, every Linux journey, and every journey on the Mac.
   verify:
+    needs: alpha-wait
     uses: ./.github/workflows/verify.yml
     with:
       ref: ${{ github.sha }}
@@ -45,6 +54,7 @@ jobs:
   # The Linux automatic startup fixtures, once per main check, beside it, on
   # GitHub's hosted Ubuntu (linux-startup.yml names it: main is its only caller).
   startup:
+    needs: alpha-wait
     uses: ./.github/workflows/linux-startup.yml
     with:
       ref: ${{ github.sha }}

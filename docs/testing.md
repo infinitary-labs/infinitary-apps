@@ -384,12 +384,17 @@ The full check is `verify.yml` with `all_journeys: true`: the Linux checks, ever
 The phone check is `phone.yml` through its `workflow_call` trigger with only `hosted` set, so it runs every part of both device gates, as a default request does.
 It replaces the nightly full check, which requested the same two workflows on `main` once a night.
 The workflow's concurrency group never cancels a run in progress, so GitHub keeps the running run and at most one waiting run; a newer push replaces the waiting one, and a burst of merges is checked once at its newest version.
+No check starts while the previous check's alpha is being cut (INF-2465, the captain: "i want to make it so that the next main check keeps queueing all merges until the alpha is actually cut successfully, not while the alpha cut is still happening").
+The run's first job, `alpha-wait.yml`, finds the alpha run cut from the newest earlier main run that passed or failed, by the name `release.yml` gives it ("Alpha from main run N"), and waits until it ends.
+A failed cut ends the wait too, so it never holds main's fixes; an alpha run that never started holds nothing after ten minutes, and the wait ends before GitHub's six-hour job limit.
+While it waits, merges keep queueing in the one waiting run; when main moved meanwhile, the run cancels itself, so the waiting run checks every merge at once.
 The newest passing run of `main.yml` is main's green mark: its commit is the newest version the whole suite passed, and no other record names it.
 A failed run fails on the version it checked, which can be older than `main`'s head, so a repair reads that run and the range of commits since the newest passing one.
 Merging continues while a run is red.
 A red run reaches the crew through the captain's own Automation rule on GitHub's event "A workflow run fails", filtered to the workflow `main` and the branch `main` (`docs/integrations.md`, "GitHub's events"): its words start one repair crewmate under the main repair direction, or steer the repair already open, and the app's code names no repair (INF-2146).
 The repair fixes forward, and a revert is the last resort, on the captain's click.
 A successful completed main run automatically starts an alpha at that exact source, not a newer main head (`docs/alpha.md`, "Cutting an alpha").
+That alpha ends green without cutting while an earlier alpha is still being cut, or when nothing the desktop app is built from changed since the previous release (`docs/alpha.md`, "An alpha with nothing new to build").
 The alpha reuses its broad checks after reading every required owner and latest per-job result on that exact source; release-specific gates still run.
 An alpha ships the desktop app only, so a main run whose only failed jobs are the phone check's also starts one (`docs/alpha.md`, "An alpha does not wait on the phone check").
 Ordinary CI starts nothing on a push to `main`: the full check's `linux-checks` lane runs the same typecheck, lint, build and every unit, integration and probe test, so the five jobs ran them twice (INF-2340, the captain's route "drop-ci-main").
@@ -410,7 +415,7 @@ The cost is GitHub's per-minute bill for those jobs.
 - `linux-packages.yml`, whose build and every package check take it, the Ubuntu 26.04 machine check on `ubuntu-26.04`;
 - `phone.yml`, whose `cancel-replaced` job takes it when `main.yml` or `ios-release.yml` calls it.
 
-`linux-startup.yml`'s job names `ubuntu-24.04`, since `main.yml` is its only caller.
+`linux-startup.yml`'s job and `alpha-wait.yml`'s `wait` name `ubuntu-24.04`, since `main.yml` is their only caller; the wait bills its minutes while an alpha is cut.
 
 `ios-release.yml`'s two Linux jobs, `resolve` and `availability`, name `ubuntu-24.04` for every dispatch, since each one checks or releases a phone build.
 A requested check and a pull request keep `LINUX_RUNNER`: `hosted` is an input only a call takes, never a request's.

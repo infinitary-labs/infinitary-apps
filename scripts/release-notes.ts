@@ -28,6 +28,11 @@
  *     since the previous release has a note or a reviewed exclusion. A stable
  *     promotion instead proves its editorial source equals its alpha's.
  *
+ *   node scripts/release-notes.ts desktop-changes --source <sha>
+ *     What a rolling alpha at the source would ship that the previous release
+ *     did not: that release and the changed paths on the desktop build list
+ *     (scripts/desktop-build.ts), as JSON. release.yml's resolve job reads it.
+ *
  *   node scripts/release-notes.ts generate --version <v> --source <sha> --out <file>
  *     The offline catalog one release packages, with its highlights' hero
  *     pictures in release-notes/pictures/ beside it. `generate --dev --out
@@ -98,6 +103,7 @@ import {
   verifyCatalog,
 } from "../src/core/releaseNotes/catalog.ts";
 import { compareSemver, isAlphaVersion, parseSemver } from "../src/core/update/semver.ts";
+import { isDesktopPath } from "./desktop-build.ts";
 
 const NOTES_DIR = "release-notes";
 
@@ -521,6 +527,26 @@ function previousRelease(
   return best;
 }
 
+/**
+ * What a rolling alpha at `source` would ship that the previous release did
+ * not (docs/alpha.md, "An alpha with nothing new to build"): the previous
+ * release by the same rule the notes check uses, and the paths on the desktop
+ * build list (scripts/desktop-build.ts) that changed since it, as JSON. With
+ * no previous release, `previous` is null and the alpha cuts.
+ */
+function desktopChanges(repo: Repo, flags: Map<string, string | true>): string {
+  repo.assertFullHistory();
+  const source = repo.resolve(need(flags, "source"));
+  const previous = previousRelease(repo, load(repo), null, source);
+  const changed = previous
+    ? repo
+        .git("diff", "--name-only", previous.commit, source)
+        .split("\n")
+        .filter((path) => path && isDesktopPath(path))
+    : [];
+  return JSON.stringify({ previous: previous?.version ?? null, changed });
+}
+
 function check(repo: Repo, flags: Map<string, string | true>): string {
   repo.assertFullHistory();
   const source = repo.resolve(need(flags, "source"));
@@ -878,6 +904,8 @@ export function run(argv: string[]): string {
       return change(repo, flags);
     case "check":
       return check(repo, flags);
+    case "desktop-changes":
+      return desktopChanges(repo, flags);
     case "generate":
       return generate(repo, flags);
     case "stable-highlights":
@@ -890,7 +918,7 @@ export function run(argv: string[]): string {
       return archive(repo, flags);
     default:
       throw new Refusal([
-        "usage: release-notes.ts validate | change | check | generate | stable-highlights | manifest | verify-package | archive",
+        "usage: release-notes.ts validate | change | check | desktop-changes | generate | stable-highlights | manifest | verify-package | archive",
       ]);
   }
 }

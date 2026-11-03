@@ -1,0 +1,68 @@
+name: Wait for the alpha cut
+
+# Called first by main.yml (INF-2465, the captain: "i want to make it so that
+# the next main check keeps queueing all merges until the alpha is actually
+# cut successfully, not while the alpha cut is still happening";
+# docs/testing.md, "The continuous run on main").
+#
+# The alpha a main check waits for is the one cut from the newest earlier
+# main check that ran (it passed, or failed, which release.yml also reads).
+# release.yml names each rolling alpha run after its main run, so this finds
+# it by name and waits until it ends, however it ends: a failed cut must not
+# hold main's fixes. While it waits, main's concurrency group keeps every new
+# merge in one waiting run. When it did wait and main moved meanwhile, this
+# run cancels itself, so that waiting run checks every merge at once.
+on:
+  workflow_call:
+
+jobs:
+  wait:
+    name: Wait for the previous main check's alpha cut
+    # Every Linux job main.yml starts runs on GitHub's hosted machines
+    # (docs/testing.md, "A release's hosted machines").
+    runs-on: ubuntu-24.04
+    # GitHub's own limit for a hosted job; the script ends its wait before it.
+    timeout-minutes: 360
+    steps:
+      - name: Wait while the previous main check's alpha is cut
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const minute = 60_000;
+            const pause = (ms) => new Promise((done) => setTimeout(done, ms));
+            const started = Date.now();
+            const {data: me} = await github.rest.actions.getWorkflowRun({...context.repo, run_id: context.runId});
+            const {data: mains} = await github.rest.actions.listWorkflowRuns({
+              ...context.repo, workflow_id: 'main.yml', branch: 'main', event: 'push', status: 'completed', per_page: 100
+            });
+            const previous = mains.workflow_runs
+              .filter((run) => run.run_number < me.run_number && ['success', 'failure'].includes(run.conclusion))
+              .sort((a, b) => b.run_number - a.run_number)[0];
+            if (!previous) return;
+            const title = `Alpha from main run ${previous.run_number}`;
+            let waited = false;
+            for (;;) {
+              const {data} = await github.rest.actions.listWorkflowRuns({
+                ...context.repo, workflow_id: 'release.yml', event: 'workflow_run', per_page: 100
+              });
+              const alpha = data.workflow_runs.find((run) => run.display_title === title);
+              if (alpha?.status === 'completed') {
+                await core.summary.addHeading('Alpha cut ended').addRaw(`${alpha.html_url} ended ${alpha.conclusion} before this check started.`).write();
+                break;
+              }
+              // GitHub starts the alpha run moments after the main check ends;
+              // one that never started, such as before run names, holds nothing.
+              if (!alpha && Date.now() - Date.parse(previous.updated_at) > 10 * minute) break;
+              // Before GitHub's own job limit ends the wait as a failure.
+              if (Date.now() - started > 340 * minute) {
+                await core.summary.addHeading('Alpha cut still running').addRaw(`${alpha?.html_url ?? title} had not ended after the longest wait a job allows, so this check starts.`).write();
+                break;
+              }
+              waited = true;
+              await pause(minute);
+            }
+            if (!waited) return;
+            const {data: branch} = await github.rest.repos.getBranch({...context.repo, branch: 'main'});
+            if (branch.commit.sha === context.sha) return;
+            await core.summary.addHeading('A newer merge waits').addRaw(`Main moved to ${branch.commit.sha} while the alpha was cut, so this check cancels itself and the waiting check covers every merge.`).write();
+            await github.rest.actions.cancelWorkflowRun({...context.repo, run_id: context.runId});

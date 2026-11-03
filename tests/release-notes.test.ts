@@ -819,3 +819,50 @@ describe("a fresh history", () => {
     );
   });
 });
+
+/**
+ * INF-2465 (docs/alpha.md, "An alpha with nothing new to build"): a rolling
+ * alpha reads which paths on the desktop build list changed since the
+ * previous release, found by the notes check's own rule.
+ */
+describe("what a rolling alpha would ship", () => {
+  const changes = (f: Fixture, source: string) =>
+    JSON.parse(f.cli("desktop-changes", "--source", source)) as {
+      previous: string | null;
+      changed: string[];
+    };
+
+  it("lists the desktop paths changed since the previous alpha, never tests, docs or notes", () => {
+    const { f } = released();
+    f.commit("feat: shipped", { "src/app.ts": "1" });
+    f.tag("1.0.1-alpha.3");
+    const quiet = f.commit("test: tests and docs only", {
+      "src/app.test.ts": "t",
+      "tests/journey.spec.ts": "t",
+      "docs/alpha.md": "d",
+      "release-notes/changes/t.json": {
+        exclusions: [{ id: "tests-only-change", reason: "Tests only." }],
+      },
+    });
+    expect(changes(f, quiet)).toEqual({ previous: "1.0.1-alpha.3", changed: [] });
+    const cut = f.commit("fix: an app change", { "src/app.ts": "2", "pnpm-lock.yaml": "l" });
+    expect(changes(f, cut)).toEqual({
+      previous: "1.0.1-alpha.3",
+      changed: ["pnpm-lock.yaml", "src/app.ts"],
+    });
+  });
+
+  it("measures from the last published release, not a failed alpha that left no tag", () => {
+    const { f } = released();
+    // An alpha whose run failed published no tag, so its app change is still unreleased.
+    f.commit("feat: its alpha failed", { "src/app.ts": "1" });
+    const later = f.commit("docs: later", { "docs/alpha.md": "d" });
+    expect(changes(f, later)).toEqual({ previous: "1.0.0", changed: ["src/app.ts"] });
+  });
+
+  it("names no previous release when there is none", () => {
+    const f = new Fixture();
+    const only = f.commit("init", { "src/app.ts": "0" });
+    expect(changes(f, only)).toEqual({ previous: null, changed: [] });
+  });
+});

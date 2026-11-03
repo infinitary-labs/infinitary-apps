@@ -308,6 +308,7 @@ After that setup, a separately authorized alpha proves public fetch-back, both t
 ## Cutting an alpha
 
 A rolling `main.yml` run that passed every check except main's phone check automatically starts an alpha at that exact commit (INF-2259, the captain's accepted override).
+The alpha cuts only when no earlier alpha is still being cut and something the desktop app is built from changed since the previous release ("An alpha with nothing new to build", below).
 The `workflow_run` completion trigger uses the checked source, not main's newer head, and never dispatches another full check just for the cut.
 The alpha never reads main's phone check, so a run that ended failed only in its phone check still cuts one ("An alpha does not wait on the phone check", below).
 Any other failed, cancelled or incomplete main run cuts nothing; main's waiting-version coalescing and fix-forward process stay unchanged.
@@ -323,6 +324,32 @@ Any other failed, cancelled or incomplete main run cuts nothing; main's waiting-
    Phone availability, Linux package installation, update rehearsal, signing, notarization, actual signed update and public-download checks still run.
    Only broad `verify.yml` coverage is inherited; a skipped verification call is not reported as a new pass.
    The source tag `v<version>` names the exact checked commit.
+
+### An alpha with nothing new to build
+
+A rolling alpha cuts only when it has something new to ship (INF-2465, the captain: "make it so that the rolling alpha release pipeline on main only runs when there are desktop app code changes").
+The resolve job's first step decides it, before main's proof is read, and when it skips, the run ends green with a summary saying why and no later job runs.
+It skips in two cases:
+
+1. **An earlier alpha is still being cut.**
+   While an earlier rolling alpha run is still going, no new one cuts, whatever either holds (the captain: "as long as there's one main alpha release still happening, don't start any new alpha cuts. doesn't matter what changes are in each").
+   An earlier run counts once its notes job exists, so a run still deciding whether to skip never stops another.
+2. **Nothing the desktop app is built from changed.**
+   `node scripts/release-notes.ts desktop-changes --source <commit>` finds the previous release by the notes check's own rule and lists the paths that changed since it on the desktop build list, `scripts/desktop-build.ts`.
+   An empty list skips; a source with no previous release cuts.
+
+The list names what the release installs, builds and packages the app and its Linux packages from: `src/` without its test files, `resources/`, `packaging/`, `vendor/`, `store/`, `patches/`, the package and builder configuration, the design skill and the scripts the build runs.
+Tests, the phone, docs, `.github/`, `release-notes/` and every other script never cut an alpha on their own.
+`tests/release-workflows.test.ts` fails when the build starts running a script the list misses, unless `BUILD_SCRIPTS_THAT_SHIP_NOTHING` names it with a reason.
+
+A skipped merge is not lost: the next alpha that cuts carries it, and that alpha's notes check covers its note or exclusion.
+A failed or cancelled alpha publishes no tag, so the next run still finds the change and cuts.
+Main's full check and phone check still run on every merge, and its green mark still moves.
+Skipped runs leave gaps in the alpha numbers, which already skip run numbers.
+Manual alpha requests, recoveries, rehearsals and stable promotions never skip.
+
+Main's next check waits while an alpha is cut, so merges made meanwhile queue and are checked together once the cut ends (`docs/testing.md`, "The continuous run on main").
+Each rolling alpha run is named "Alpha from main run N" after the main run it cuts from, which is how that wait finds it.
 
 ### An alpha does not wait on the phone check
 

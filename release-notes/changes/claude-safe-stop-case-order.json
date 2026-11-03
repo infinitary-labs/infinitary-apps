@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "claude-safe-stop-case-order",
+      "reason": "Tests only: the session contract's safe-stop case now stops once its tool call is running, not when the model asks for it, so a slow client can no longer make the stop refuse the call first."
+    }
+  ]
+}

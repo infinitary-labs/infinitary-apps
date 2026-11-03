@@ -375,9 +375,16 @@ function crewmateOn(
 }
 
 /** A tool that waits at a gate: the turn is provably mid-tool while it holds. */
-function gated(): { tool: BoundTool; entered: Promise<void>; open: () => void } {
+function gated(): {
+  tool: BoundTool;
+  entered: Promise<void>;
+  open: () => void;
+  /** How many times the tool really ran. */
+  runs: () => number;
+} {
   let entered!: () => void;
   let open!: () => void;
+  let runs = 0;
   const enteredPromise = new Promise<void>((resolve) => {
     entered = resolve;
   });
@@ -386,11 +393,13 @@ function gated(): { tool: BoundTool; entered: Promise<void>; open: () => void } 
   });
   return {
     tool: contractTool(async () => {
+      runs += 1;
       entered();
       await gate;
     }),
     entered: enteredPromise,
     open,
+    runs: () => runs,
   };
 }
 
@@ -1167,25 +1176,16 @@ export function describeSessionContract(harness: SessionContractHarness): void {
       }
 
       it("lets a running call finish and keeps its result, then ends the turn, and the next prompt carries on", async () => {
-        let runs = 0;
-        let release!: () => void;
-        const held = new Promise<void>((resolve) => {
-          release = resolve;
-        });
+        const gate = gated();
         world.answer({ tool: CONTRACT_TOOL, answer: "left" });
-        const session = await open(
-          crewmateOn(world, {
-            tools: [
-              contractTool(async () => {
-                runs += 1;
-                await held;
-              }),
-            ],
-          }),
-        );
+        const session = await open(crewmateOn(world, { tools: [gate.tool] }));
         const events = recorder(session);
         const prompting = session.prompt(QUESTION);
-        await toolStarted(events);
+        // The stop lands once the call runs. The model's ask (`tool_start`)
+        // comes before the call runs, and a stop between the two refuses the
+        // call ("never runs a call the model asks for", below), so this case
+        // waits for the run itself.
+        await gate.entered;
         const waits: string[][] = [];
         const stopping = stopSafely(session, {
           waiting: (calls) => waits.push(calls.map((call) => call.toolName)),
@@ -1193,11 +1193,11 @@ export function describeSessionContract(harness: SessionContractHarness): void {
         await vi.waitFor(() => expect(waits.at(-1)).toEqual([CONTRACT_TOOL]));
         // The stop waits: the call still runs, and the turn with it.
         expect(session.isStreaming()).toBe(true);
-        release();
+        gate.open();
         expect(await stopping).toBe("stopped");
         await settled(prompting);
         expect(waits.at(-1)).toEqual([]);
-        expect(runs).toBe(1);
+        expect(gate.runs()).toBe(1);
         expect(toolEvents(events)).toEqual([
           { start: CONTRACT_TOOL, taskId: CREWMATE_TASK },
           { end: CONTRACT_TOOL, isError: false },
@@ -1210,7 +1210,7 @@ export function describeSessionContract(harness: SessionContractHarness): void {
         const next = world.served().at(-1)?.said ?? "";
         expect(next).toContain(CONTRACT_TOOL_RESULT);
         expect(next).toContain("And now?");
-        expect(runs).toBe(1);
+        expect(gate.runs()).toBe(1);
         expect(closingWords(events)).toBe("right");
       });
 

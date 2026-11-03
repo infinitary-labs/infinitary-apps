@@ -6,8 +6,8 @@ name: phone
 # runs both device gates whatever changed, with no release step.
 # INF-2139 (captain: "let's pull journeys and phone checks off PRs now"): a pull
 # request no longer starts this workflow; its pull_request branches stay unused.
-# INF-2146: main.yml calls it on every push to main with only hosted set, so the
-# continuous run on main runs every part of both device gates, as a default request does.
+# INF-2492: main.yml no longer calls it; ios-release.yml calls it at its resolved
+# source, which runs every part of both device gates, as a default request does.
 on:
   workflow_call:
     inputs:
@@ -15,8 +15,8 @@ on:
         description: Exact resolved source for unsigned release checks; empty uses the caller source
         type: string
         default: ''
-      # main.yml sets it, so main's Linux job runs on GitHub's hosted Ubuntu
-      # (docs/testing.md, "The continuous run on main"); a request keeps the gate label.
+      # ios-release.yml sets it, so a release's Linux job runs on GitHub's hosted
+      # Ubuntu (docs/testing.md, "A release's hosted machines"); a request keeps the gate label.
       hosted:
         description: Run the Linux job on GitHub's hosted Ubuntu, whatever LINUX_RUNNER says
         required: false
@@ -75,7 +75,7 @@ permissions:
 jobs:
   cancel-replaced:
     # The PC's gate label (docs/testing.md, DOP-157): its runners take only gate jobs.
-    # Called from main, GitHub's hosted Ubuntu.
+    # Called from a release, GitHub's hosted Ubuntu.
     runs-on: ${{ inputs.hosted && 'ubuntu-24.04' || fromJSON(vars.LINUX_QUEUES || '{}').light_gate || vars.LINUX_RUNNER && format('{0}-gate', vars.LINUX_RUNNER) || 'ubuntu-latest' }}
     permissions:
       actions: write

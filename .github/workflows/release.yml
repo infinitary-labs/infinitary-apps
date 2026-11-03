@@ -141,10 +141,7 @@ jobs:
   # Every later job checks out exactly this commit. The resolver runs from the
   # workflow's own commit and reads the rest from git. No secret or dependency install.
   resolve:
-    # A failed main run starts too: an alpha ships the desktop app only, so its
-    # proof (scripts/main-alpha-proof.mjs) never reads main's phone call and
-    # refuses unless only the phone call failed (INF-2353).
-    if: github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success' || github.event.workflow_run.conclusion == 'failure'
+    if: github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success'
     name: Resolve the source commit and version
     # A release's Linux jobs run on GitHub's hosted machines (docs/testing.md, "A release's hosted machines").
     runs-on: ubuntu-24.04
@@ -248,13 +245,8 @@ jobs:
             core.setOutput('inherited', 'true');
             core.setOutput('source', proof.source);
             core.setOutput('url', proof.url);
-            // The proof leaves out main's phone check (INF-2353), so the summary
-            // says which checks it reused and whether the phone check failed.
-            const phone = run.conclusion === 'success'
-              ? 'Its phone check passed too, though an alpha does not read it.'
-              : 'The run ended failed only in its phone check, which an alpha does not read (docs/alpha.md, "An alpha does not wait on the phone check").';
             await core.summary.addHeading('Inherited rolling-main verification')
-              .addRaw(`Every check except main's phone check passed at the exact alpha source in ${proof.url} and is reused, not repeated. ${phone} Release-specific gates still run.`).write();
+              .addRaw(`Every check of main's full check passed at the exact alpha source in ${proof.url} and is reused, not repeated. Release-specific gates still run.`).write();
 
       - name: Resolve the release
         id: resolve

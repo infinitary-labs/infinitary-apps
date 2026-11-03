@@ -735,10 +735,10 @@ For interactive local development, `node scripts/phone-test-home.ts <output-json
 The output names its control address and scratch root, and is private to that run.
 `phone.yml` runs this same gate with `--both` for changes touching `ios/` or the phone-card or phone-contract generator and the contract shape guard.
 A pull request no longer starts it (INF-2139): a crewmate whose change selects it requests it on its branch with `affected: "true"`.
-Its pull request selection below stays unused; the continuous run on `main` runs every part.
+Its pull request selection below stays unused; the phone release (`ios-release.yml`) runs every part, and main runs no phone check (INF-2492).
 The gate's own setup also selects it: `phone.yml`, `scripts/test-phone.ts`, `tests/helpers/phoneHome.ts`, `tests/helpers/phoneKeyboard.ts`, its activity writer `scripts/phone-activity.ts`, its leftover sweep `scripts/phone-leftovers.ts`, its check runner `scripts/phone-checks.ts` and its test plan helper `scripts/phone-test-plan.ts`.
 Setup the gate never runs does not: `scripts/affected-phone.ts`, `scripts/replaced-phone-runs.ts`, `scripts/phone-test-home.ts`, and the virtual Mac scripts `scripts/virtual-mac/phone.sh`, `phone-job.sh` and `vm.sh`.
-A pull request's gate keeps its six-minute part budget; the continuous run on `main` (`main.yml`) runs every part, while a crewmate's request with `affected: "true"` runs only touched parts and falls back to every part when scope is uncertain (`docs/testing.md`, "The phone parts a pull request runs").
+A pull request's gate keeps its six-minute part budget; the phone release (`ios-release.yml`) runs every part, while a crewmate's request with `affected: "true"` runs only touched parts and falls back to every part when scope is uncertain (`docs/testing.md`, "The phone parts a pull request runs").
 Shared modules, connection/device code, general packages and the lockfile alone do not select it; a changed generated Swift file does, unless it changes only its `public static let version` line, which includes a new first number: the phone and the computer come from the same pull request, so they always agree on it, and `docs/contract.json` alone never selects the gate.
 Every pull request still checks on Linux that the generated file is current, through `pnpm check` (`node scripts/generate-phone-contract.ts --check`).
 The native job runs the chooser, `scripts/affected-phone.ts`, on the Mac before its setup; an unreadable comparison runs the gate, and a change it selects no gate for ends the job there.
@@ -757,7 +757,7 @@ Its `cancel-replaced` job cancels the pull request's older phone runs whose nati
 A device gate that already started is never cancelled; it finishes and deletes the simulator it started for each device.
 No simulator exists right before the gate, so there a replaced version cancels its own run instead of starting the gate; a failed reading of the pull request runs the gate.
 That check also stops a manual rerun of a replaced version, which no newer run cancels, about a minute after it reaches a phone guest.
-It stops the run of a pull request that merged or closed while the run waited in the phone line the same way, so a merged pull request never holds that line for a device gate; the continuous run on `main` checks what merged.
+It stops the run of a pull request that merged or closed while the run waited in the phone line the same way, so a merged pull request never holds that line for a device gate; the next phone release checks what merged.
 Every native phone job takes a per-run, per-attempt concurrency group, with `queue: max` and cancellation disabled.
 Phone checks run side by side, one per free vBoxx virtual place ("A phone check the placement service puts in a virtual Mac").
 Desktop jobs from different pull requests have no common job-level concurrency group, so they can run side by side.

@@ -2,13 +2,14 @@ import { createRequire } from "node:module";
 import { fileURLToPath } from "node:url";
 import { compileFunction, constants } from "node:vm";
 import { describe, expect, it } from "vitest";
-import { PHONE_PREFIX, verifyMainEvidence } from "../scripts/main-alpha-proof.mjs";
+import { verifyMainEvidence } from "../scripts/main-alpha-proof.mjs";
 import { loadYamlFile, workflowString, workflowValue } from "./helpers/releaseWorkflows.ts";
 
 // INF-2259 accepted override: a fully passing rolling-main source becomes an
 // alpha without repeating its broad checks. Names, source and identity follow
-// main run 41366596692's API reading. That live run was NOT passing: tests
-// explicitly drive completed states to exercise the future handoff protocol.
+// main run 41366596692's API reading, less its phone call, which main no
+// longer makes (INF-2492). That live run was NOT passing: tests explicitly
+// drive completed states to exercise the future handoff protocol.
 const source = "6073f484509752eb55ee1b1c85c38b82b4909cc3";
 const repository = "infinitary-labs/infinitary";
 function completedMain() {
@@ -26,8 +27,6 @@ function completedMain() {
     html_url: "https://github.com/infinitary-labs/infinitary/actions/runs/41366596692",
   };
   const names = [
-    "phone / cancel-replaced",
-    "phone / native-phone",
     "verify / linux-checks",
     "verify / mac",
     // INF-2340 (captain's route "alone-at-author"): main's full check runs no
@@ -72,55 +71,21 @@ describe("exact-main alpha verification inheritance", () => {
     (conclusion) => {
       const { run, jobs } = completedMain();
       jobs.find((job) => job.name === "verify / mac")!.conclusion = conclusion;
-      expect(() =>
-        verifyMainEvidence({ ...run, conclusion: "failure" }, jobs, repository, source),
-      ).toThrow("every full-check owner");
+      expect(() => verifyMainEvidence(run, jobs, repository, source)).toThrow(
+        "every full-check owner",
+      );
     },
   );
 
-  // INF-2353, the captain's pick "Drop phone from alpha gate": "alpha is the
-  // desktop app, right? shouldn't the full phone check only run when we try to
-  // release the phone app?". An alpha ships the desktop app only, so main's
-  // phone call never decides a cut: a failed, cancelled or timed-out phone job,
-  // or none at all, leaves the proof to the desktop owners.
-  it.each(["failure", "cancelled", "timed_out", "skipped"])(
-    "cuts past a %s phone call while every desktop owner passed",
-    (conclusion) => {
-      const { run, jobs } = completedMain();
-      for (const job of jobs) if (job.name.startsWith(PHONE_PREFIX)) job.conclusion = conclusion;
-      expect(
-        verifyMainEvidence({ ...run, conclusion: "failure" }, jobs, repository, source).source,
-      ).toBe(source);
-    },
-  );
-
-  it("needs no phone coverage at all", () => {
-    const { run, jobs } = completedMain();
-    const desktop = jobs.filter((job) => !job.name.startsWith(PHONE_PREFIX));
-    expect(desktop.length).toBeLessThan(jobs.length);
-    expect(verifyMainEvidence(run, desktop, repository, source).source).toBe(source);
-  });
-
-  it("still refuses a failed main run whose failure is a desktop owner's, phone failing or not", () => {
+  // INF-2492 (the captain: "remove phone check from main altogether"): main's
+  // run is the desktop check alone, so a run that ended failed has a failed
+  // desktop job and never cuts an alpha.
+  it("refuses a main run that ended failed", () => {
     const { run, jobs } = completedMain();
     jobs.find((job) => job.name.startsWith("verify / linux-e2e / "))!.conclusion = "failure";
     expect(() =>
       verifyMainEvidence({ ...run, conclusion: "failure" }, jobs, repository, source),
-    ).toThrow("every full-check owner");
-    for (const job of jobs) if (job.name.startsWith(PHONE_PREFIX)) job.conclusion = "failure";
-    expect(() =>
-      verifyMainEvidence({ ...run, conclusion: "failure" }, jobs, repository, source),
-    ).toThrow("every full-check owner");
-  });
-
-  it("names the phone call by its job key in main.yml", () => {
-    const main = loadYamlFile(".github/workflows/main.yml") as {
-      jobs: Record<string, { uses?: string }>;
-    };
-    const keys = Object.entries(main.jobs)
-      .filter(([, job]) => job.uses?.endsWith("/phone.yml"))
-      .map(([key]) => `${key} / `);
-    expect(keys).toEqual([PHONE_PREFIX]);
+    ).toThrow("rolling-main push");
   });
 
   it("refuses missing shards, future attempts, different sources and non-main runs", () => {
@@ -188,10 +153,9 @@ describe("automatic alpha workflow handoff (INF-2259)", () => {
       steps: { "main-proof": { outputs: { source } } },
     };
     expect(workflowValue(job("resolve").if!, contexts)).toBe(true);
-    // A failed main run reaches the proof step, which never reads the phone
-    // call (INF-2353) and refuses it unless only the phone call failed.
+    // INF-2492: main runs no phone check, so only a successful main run starts a cut.
     for (const [conclusion, starts] of [
-      ["failure", true],
+      ["failure", false],
       ["cancelled", false],
     ] as const)
       expect(

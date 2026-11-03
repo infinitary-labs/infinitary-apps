@@ -12,7 +12,7 @@ import {
   writeFileSync,
 } from "node:fs";
 import { availableParallelism } from "node:os";
-import { dirname, join } from "node:path";
+import { dirname, join, posix } from "node:path";
 import { data, Evaluator, Lexer, Parser } from "@actions/expressions";
 import type { PlaywrightTestConfig } from "@playwright/test";
 import type {
@@ -166,9 +166,11 @@ describe("local packaging identity (electron-builder.dev.yml)", () => {
   });
 
   /**
-   * INF-2146, the captain's approved plan (direction B, trigger "push", phone
-   * "every-run"): every push to main runs the full check with every journey
-   * on the Mac and the whole phone check, and runs queue instead of
+   * INF-2146, the captain's approved plan (direction B, trigger "push"): every
+   * push to main runs the full check with every journey on the Mac, and
+   * INF-2492 (the captain: "remove phone check from main altogether. we run
+   * all phone check parts at release") takes the phone check off it, so the
+   * phone release runs every part instead. Runs queue instead of
    * cancelling, so GitHub keeps one running and at most one waiting run.
    * INF-2390: PR #897 also permits an input-free manual start; keep both
    * triggers exact without dropping the push, queue or full-check guarantees.
@@ -185,7 +187,10 @@ describe("local packaging identity (electron-builder.dev.yml)", () => {
       concurrency: { group: string; "cancel-in-progress": boolean };
       jobs: Record<string, Call>;
     };
-    expect(main.on).toEqual({ workflow_dispatch: null, push: { branches: ["main"] } });
+    expect(main.on).toEqual({
+      workflow_dispatch: null,
+      push: { branches: ["main"], "paths-ignore": expect.any(Array) },
+    });
     // One group for every run, so a newer push waits instead of starting beside it.
     expect(main.concurrency.group).not.toContain("${{");
     expect(main.concurrency["cancel-in-progress"]).toBe(false);
@@ -199,7 +204,6 @@ describe("local packaging identity (electron-builder.dev.yml)", () => {
     expect(calls.sort()).toEqual([
       "./.github/workflows/alpha-wait.yml",
       "./.github/workflows/linux-startup.yml",
-      "./.github/workflows/phone.yml",
       "./.github/workflows/verify.yml",
     ]);
     const verify = Object.values(main.jobs).find((job) => job.uses?.endsWith("verify.yml"));
@@ -211,27 +215,42 @@ describe("local packaging identity (electron-builder.dev.yml)", () => {
     });
     expect(verify?.with).not.toHaveProperty("installer_only");
 
-    // The phone check takes the call with only the hosted machine named and
-    // runs every part of both devices (INF-2430's plan, piece 1).
+    // The phone release calls the phone check at its resolved source and runs
+    // every part of both devices before a TestFlight upload.
     const phone = loadYamlFile(".github/workflows/phone.yml") as {
       on: Record<string, unknown>;
       jobs: Record<string, { if?: string; steps: Step[] }>;
     };
     expect(Object.keys(phone.on)).toContain("workflow_call");
-    expect(Object.values(main.jobs).find((job) => job.uses?.endsWith("phone.yml"))?.with).toEqual({
+    const phoneRelease = loadYamlFile(".github/workflows/ios-release.yml") as {
+      jobs: Record<
+        string,
+        { uses?: string; needs?: string | string[]; with?: Record<string, string> }
+      >;
+    };
+    const releaseCall = Object.values(phoneRelease.jobs).find((job) =>
+      job.uses?.endsWith("/phone.yml"),
+    );
+    expect(releaseCall?.with).toEqual({
+      source_commit: "${{ needs.resolve.outputs.source_commit }}",
       hosted: true,
     });
-    const pushed = {
-      github: { event_name: "push", ref: "refs/heads/main" },
-      inputs: { hosted: true },
+    expect(phoneRelease.jobs.testflight?.needs).toContain("phone");
+    const source = "6073f484509752eb55ee1b1c85c38b82b4909cc3";
+    const released = {
+      github: { event_name: "workflow_dispatch", ref: "refs/heads/main" },
+      inputs: { source_commit: source, hosted: true },
       vars: {},
+      env: {},
     };
-    // Main moved selection into the native job; the same push must still run all parts.
     const native = phone.jobs["native-phone"];
-    expect(workflowValue(native?.if ?? "", pushed)).toBe(true);
+    expect(workflowValue(native?.if ?? "", released)).toBe(true);
     const scope = native?.steps.find((step) => step.id === "scope");
+    const request = native?.steps.find((step) => step.id === "request-select");
+    // A crewmate's request chooses parts; the release's call never does.
+    expect(workflowValue(request?.if ?? "", released)).toBe(false);
     const selection = {
-      ...pushed,
+      ...released,
       steps: { select: { outputs: {} }, "request-select": { outputs: {} } },
     };
     expect(workflowString(scope?.env?.GATE ?? "", selection)).toBe("true");
@@ -243,6 +262,89 @@ describe("local packaging identity (electron-builder.dev.yml)", () => {
     expect(workflowValue(gate?.if ?? "", chosen)).toBe(true);
     expect(workflowString(gate?.env?.PHONE_PARTS ?? "", chosen)).toBe("");
     expect(workflowString(gate?.env?.INFINITARY_PHONE_STOP_EARLY ?? "", chosen)).toBe("0");
+  });
+
+  /**
+   * INF-2492, the captain's decision on INF-2498's question 1: "Skip pushes
+   * that change only the phone app or the docs". Each case is a real squash
+   * merge on main with its changed files; GitHub skips the push when every
+   * file is ignored, and a later pattern decides over an earlier one.
+   */
+  it.each([
+    [
+      "aff06d7cca82",
+      false,
+      [
+        "ios/Infinitary/InfinitaryTests/PhoneShellTests.swift",
+        "release-notes/changes/phone-tab-strip-frames-test.json",
+      ],
+    ],
+    ["33631c69d01d", false, ["docs/testing.md"]],
+    [
+      "7f11512f6b38",
+      false,
+      [
+        "docs/ios.md",
+        "ios/Infinitary/InfinitaryApp/PhoneWorkspace.swift",
+        "release-notes/changes/ipad-rotation-settles.json",
+      ],
+    ],
+    // Phone check helpers are not the phone app.
+    [
+      "29ff10079",
+      true,
+      [
+        "docs/ios.md",
+        "release-notes/changes/phone-preview-witness-recovery.json",
+        "scripts/test-phone.ts",
+        "tests/helpers/phoneKeyboard.ts",
+        "tests/phone-keyboard.test.ts",
+      ],
+    ],
+    [
+      "cb09252ed",
+      true,
+      [
+        "docs/testing.md",
+        "release-notes/changes/phone-declaration-selection.json",
+        "scripts/affected-phone.ts",
+        "tests/fixtures/phone-changes/declaration-consumers.json",
+        "tests/phone-chooser.test.ts",
+      ],
+    ],
+    [
+      "235b6c4c9",
+      true,
+      [
+        "docs/freeze-recorder.md",
+        "release-notes/changes/freeze-journey-crewmate-start.json",
+        "tests/e2e/main-thread-freeze.spec.ts",
+      ],
+    ],
+    // The generated contract follows the code, so it is not a doc.
+    [
+      "a9895d006, its contract and doc files alone",
+      true,
+      ["docs/contract.json", "docs/inbox.md", "release-notes/changes/crew-responses.json"],
+    ],
+  ] as const)("main's check for merge %s runs: %s", (_merge, runs, files) => {
+    const main = loadYamlFile(".github/workflows/main.yml") as {
+      on: { push: { "paths-ignore": string[] } };
+    };
+    const patterns = main.on.push["paths-ignore"];
+    const ignored = (file: string) =>
+      patterns.reduce(
+        (result, pattern) =>
+          pattern.startsWith("!")
+            ? posix.matchesGlob(file, pattern.slice(1))
+              ? false
+              : result
+            : posix.matchesGlob(file, pattern)
+              ? true
+              : result,
+        false,
+      );
+    expect(!files.every(ignored)).toBe(runs);
   });
 
   it("runs the named journeys only on request, never on a pull request, on the Mac mini", () => {
@@ -4148,10 +4250,9 @@ describe("a release's hosted machines", () => {
         checks: "ubuntu-24.04",
         journeys: "ubuntu-24.04",
       });
-      expect(
-        runsOn(phone, { inputs: { hosted: passed(call("phone.yml"), "hosted", { vars }) }, vars }),
-      ).toBe("ubuntu-24.04");
     }
+    // Main calls no phone check (INF-2492), so it starts no phone Linux job.
+    expect(call("phone.yml")).toBeUndefined();
     // The startup fixtures, which main alone calls (INF-2441), name hosted Ubuntu.
     expect(call("linux-startup.yml")).toBeDefined();
     expect(literal(workflow("linux-startup.yml").jobs["runtime-facts"])).toBe("ubuntu-24.04");
@@ -4204,7 +4305,6 @@ describe("a release's hosted machines", () => {
     }
     expect(passing.sort()).toEqual([
       "ios-release.yml:phone",
-      "main.yml:phone",
       "main.yml:verify",
       "release.yml:linux",
       "release.yml:verify",
@@ -5411,9 +5511,8 @@ describe("the next main check waits for the alpha cut", () => {
 
   it("holds every check of a main run behind the wait, and names a requested release plainly", () => {
     expect(main.jobs["alpha-wait"]?.uses).toBe("./.github/workflows/alpha-wait.yml");
-    // The phone call is INF-2492's to move off main, so it is left as it was.
     for (const [id, job] of Object.entries(main.jobs))
-      if (id !== "alpha-wait" && id !== "phone") expect(job.needs, id).toBe("alpha-wait");
+      if (id !== "alpha-wait") expect(job.needs, id).toBe("alpha-wait");
     expect(alphaName(73)).toBe("Alpha from main run 73");
     expect(
       workflowString(release["run-name"], { github: { event_name: "workflow_dispatch" } }),

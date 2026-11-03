@@ -242,7 +242,7 @@ The switch lists `alpha` and `stable`; releases of either channel also update th
 - **Failed alpha checks.**
   Nothing is recorded or published: the signing job may have finished, but its signed files stay only in the run's handoff artifact, which expires after seven days.
   Automatic journey retries stay zero.
-  When a test fails, the release crewmate gets it fixed on main; its next rolling run that passes every check except main's phone check starts the next alpha automatically.
+  When a test fails, the release crewmate gets it fixed on main; its next rolling run that passes starts the next alpha automatically.
   Only when the failing journey passes alone on the same commit may the failed checks be manually re-run once, keeping the alpha's version; if they still fail, diagnose rather than retry again.
   No urgent-alpha bypass.
 - **Published bytes never change** (`scripts/publish-release-asset.sh`).
@@ -307,15 +307,15 @@ After that setup, a separately authorized alpha proves public fetch-back, both t
 
 ## Cutting an alpha
 
-A rolling `main.yml` run that passed every check except main's phone check automatically starts an alpha at that exact commit (INF-2259, the captain's accepted override).
+A rolling `main.yml` run that passed automatically starts an alpha at that exact commit (INF-2259, the captain's accepted override).
 The alpha cuts only when no earlier alpha is still being cut and something the desktop app is built from changed since the previous release ("An alpha with nothing new to build", below).
 The `workflow_run` completion trigger uses the checked source, not main's newer head, and never dispatches another full check just for the cut.
-The alpha never reads main's phone check, so a run that ended failed only in its phone check still cuts one ("An alpha does not wait on the phone check", below).
-Any other failed, cancelled or incomplete main run cuts nothing; main's waiting-version coalescing and fix-forward process stay unchanged.
+Main runs no phone check ("An alpha does not wait on the phone check", below).
+A failed, cancelled or incomplete main run cuts nothing; main's waiting-version coalescing and fix-forward process stay unchanged.
 
 1. **Validate the completed run.**
-   The resolver reads the completed trusted main-push run, successful or failed only in its phone check, and every latest per-job execution from GitHub.
-   It requires every full-check owner and all Linux journey shards at exactly the source being released, and never reads main's phone jobs.
+   The resolver reads the completed successful trusted main-push run and every latest per-job execution from GitHub.
+   It requires every full-check owner and all Linux journey shards at exactly the source being released.
 2. **Keep the same source.**
    The notes check validates committed declarations without a separate notes-review commit.
    Existing immutable tags supply published manifests through the same ledger reader when they have not been committed afterward.
@@ -344,7 +344,7 @@ Tests, the phone, docs, `.github/`, `release-notes/` and every other script neve
 
 A skipped merge is not lost: the next alpha that cuts carries it, and that alpha's notes check covers its note or exclusion.
 A failed or cancelled alpha publishes no tag, so the next run still finds the change and cuts.
-Main's full check and phone check still run on every merge, and its green mark still moves.
+Main's full check still runs on every merge that changes more than the phone app or the docs, and its green mark still moves.
 Skipped runs leave gaps in the alpha numbers, which already skip run numbers.
 Manual alpha requests, recoveries, rehearsals and stable promotions never skip.
 
@@ -353,12 +353,9 @@ Each rolling alpha run is named "Alpha from main run N" after the main run it cu
 
 ### An alpha does not wait on the phone check
 
-An alpha ships the signed desktop app only, so its proof never reads main's phone call (INF-2353, the captain's pick "Drop phone from alpha gate", asked as "alpha is the desktop app, right?").
-`scripts/main-alpha-proof.mjs` leaves out every job whose name starts with the phone call's key, and `release.yml`'s resolve job also starts on a failed main run so the proof can judge it.
-Main's phone check still runs and still turns main's run red; every other full-check owner must still pass.
-The phone's own gates run where the phone ships: `ios-release.yml` runs the iPhone and iPad gates before a TestFlight upload, and the release's phone job still waits for a TestFlight build ("The phone goes first", below).
-A stable promotion stays strict: an alpha cut from a main run whose phone check failed has no successful main run, so it cannot be promoted.
-A failed main run with any other failed job shows a red release run whose proof step names the refusal.
+An alpha ships the signed desktop app only (INF-2353, the captain's pick "Drop phone from alpha gate", asked as "alpha is the desktop app, right?"), and main runs no phone check at all (INF-2492, the captain: "remove phone check from main altogether. we run all phone check parts at release").
+`scripts/main-alpha-proof.mjs` therefore reads every job of the main run, and `release.yml`'s resolve job starts only on a successful one.
+The phone's own gates run where the phone ships: `ios-release.yml` runs every part on iPhone and iPad before a TestFlight upload, and the release's phone job still waits for a TestFlight build ("The phone goes first", below).
 
 For a failed release's recovery, a manual alpha request can name `candidate=<exact source>` and `verified_main_run=<successful main run id>`; the resolver reads and validates that proof again.
 A manual candidate without reusable proof follows the existing full-verification route, including its notes-only candidate and release-specific gates.
@@ -571,7 +568,7 @@ The build that showed a given card is in that card's observations (`card_observa
    A separate destination also needs `PUBLIC_RELEASE_TOKEN`; the selected source repository uses its workflow token.
 2. Rehearse the release with `dry_run=true`, which runs the update check.
    Neither verification nor rehearsal publishes a release or changes visibility.
-3. Let a rolling-main run that passed every check except main's phone check cut its exact source as an alpha, or promote a verified updater-capable alpha with the captain's selected highlights.
+3. Let a rolling-main run that passed cut its exact source as an alpha, or promote a verified updater-capable alpha with the captain's selected highlights.
    Publication verifies both public Mac downloads and every Linux file before advancing feeds.
 
 ## Before the public beta

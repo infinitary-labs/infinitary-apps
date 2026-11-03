@@ -378,11 +378,14 @@ Priority never interrupts running work, and capacity, test gates and merge conse
 
 ## The continuous run on main
 
-Every push to `main` starts `main.yml` (INF-2146, the captain's approved plan, direction B), which calls the full check and the phone check side by side.
-Beside them it calls `linux-startup.yml`, the Linux automatic startup fixtures, once per main check (INF-2441).
+Every push to `main` starts `main.yml` (INF-2146, the captain's approved plan, direction B), which calls the full check.
+Beside it it calls `linux-startup.yml`, the Linux automatic startup fixtures, once per main check (INF-2441).
+A push whose every changed file is in the phone app or the docs starts no run (INF-2492, the captain's decision "Skip pushes that change only the phone app or the docs"): its `paths-ignore` lists `ios/`, `docs/` except the generated `docs/contract.json`, `primitives/` and `release-notes/changes/`, since a change file rides with every change.
+Phone check helpers in `scripts/` and `tests/helpers/` are not the phone app, so a push that touches them runs.
+A docs break that a unit test reads, such as `tests/reflow-docs.test.ts` or `tests/served-boundary.test.ts`, surfaces at the next push that runs, and a skipped push leaves main's green mark on the older version.
 The full check is `verify.yml` with `all_journeys: true`: the Linux checks, every journey on Linux and every journey on the Mac.
-The phone check is `phone.yml` through its `workflow_call` trigger with only `hosted` set, so it runs every part of both device gates, as a default request does.
-It replaces the nightly full check, which requested the same two workflows on `main` once a night.
+It replaces the nightly full check, which requested it and the phone check on `main` once a night.
+Main runs no phone check (INF-2492, the captain: "remove phone check from main altogether. we run all phone check parts at release"): `ios-release.yml` calls `phone.yml` at its resolved source before each TestFlight upload, which runs every part on iPhone and iPad.
 The workflow's concurrency group never cancels a run in progress, so GitHub keeps the running run and at most one waiting run; a newer push replaces the waiting one, and a burst of merges is checked once at its newest version.
 No check starts while the previous check's alpha is being cut (INF-2465, the captain: "i want to make it so that the next main check keeps queueing all merges until the alpha is actually cut successfully, not while the alpha cut is still happening").
 The run's first job, `alpha-wait.yml`, finds the alpha run cut from the newest earlier main run that passed or failed, by the name `release.yml` gives it ("Alpha from main run N"), and waits until it ends.
@@ -396,11 +399,10 @@ The repair fixes forward, and a revert is the last resort, on the captain's clic
 A successful completed main run automatically starts an alpha at that exact source, not a newer main head (`docs/alpha.md`, "Cutting an alpha").
 That alpha ends green without cutting while an earlier alpha is still being cut, or when nothing the desktop app is built from changed since the previous release (`docs/alpha.md`, "An alpha with nothing new to build").
 The alpha reuses its broad checks after reading every required owner and latest per-job result on that exact source; release-specific gates still run.
-An alpha ships the desktop app only, so a main run whose only failed jobs are the phone check's also starts one (`docs/alpha.md`, "An alpha does not wait on the phone check").
 Ordinary CI starts nothing on a push to `main`: the full check's `linux-checks` lane runs the same typecheck, lint, build and every unit, integration and probe test, so the five jobs ran them twice (INF-2340, the captain's route "drop-ci-main").
 The full check runs no run-alone pass either; the proof of edited journeys runs it at author time ("Each test owns its prerequisites").
 Its Linux jobs run on GitHub's hosted Ubuntu, whatever `LINUX_RUNNER` says, so the run never waits in the PC's line ("A release's hosted machines").
-`tests/release-workflows.test.ts` holds the trigger, the queue and both calls.
+`tests/release-workflows.test.ts` holds the trigger, the skipped paths against real merges, the queue, the calls and the phone release's call of every part.
 
 ## A release's hosted machines
 
@@ -413,7 +415,7 @@ The cost is GitHub's per-minute bill for those jobs.
 
 - `verify.yml`, whose `request` job, `linux-checks` lane and every `linux-e2e` journey job (`source-journeys.yml`, through the same input) take it;
 - `linux-packages.yml`, whose build and every package check take it, the Ubuntu 26.04 machine check on `ubuntu-26.04`;
-- `phone.yml`, whose `cancel-replaced` job takes it when `main.yml` or `ios-release.yml` calls it.
+- `phone.yml`, whose `cancel-replaced` job takes it when `ios-release.yml` calls it.
 
 `linux-startup.yml`'s job and `alpha-wait.yml`'s `wait` name `ubuntu-24.04`, since `main.yml` is their only caller; the wait bills its minutes while an alpha is cut.
 
@@ -424,7 +426,7 @@ A requested check and a pull request keep `LINUX_RUNNER`: `hosted` is an input o
 ## Native phone checks on the pull request
 
 A pull request no longer starts `phone.yml` (INF-2139, captain: "let's pull journeys and phone checks off PRs now"): a crewmate whose change selects the gate requests it on its branch ("The phone check on request").
-The pull request selection below stays in `phone.yml`, unused; the continuous run on `main` runs every part ("The continuous run on main").
+The pull request selection below stays in `phone.yml`, unused; the phone release runs every part ("The continuous run on main").
 `phone.yml` selects the iPhone and iPad gate for `ios/`, the phone-card generator, the phone-contract generator with its shape guard, and the gate's own setup (`scripts/affected-phone.ts`).
 A change to the generated phone contract that touches only its `public static let version` line, a first-number change included, does not select it; `pnpm check` still verifies the file is current on every pull request.
 The setup inputs are `phone.yml`, `scripts/test-phone.ts`, `tests/helpers/phoneHome.ts`, `tests/helpers/phoneKeyboard.ts`, the activity writer `scripts/phone-activity.ts`, the leftover sweep `scripts/phone-leftovers.ts`, the check runner `scripts/phone-checks.ts`, the simulator selector `scripts/phone-simulator.ts` and its pin `scripts/phone-pin.json`, and the test plan helper `scripts/phone-test-plan.ts`.
@@ -459,11 +461,11 @@ It keeps the closest part, every part at 0 even past the budget, and any other w
 A part's minutes are its longer device's time in the newest passing on-request check of `main` whose `phone-logs` artifact holds `part-times.json`, which only a full gate writes; a passing check of some parts is passed over for an older full one.
 With none readable, every part the change reaches runs.
 The job summary names each kept and left part with its distance, minutes and reason, and the `phone-placement` artifact keeps the same as JSON.
-A part the pull request leaves is checked after it merges, by the run on `main`; an author who wants every part first runs the phone check on request on their branch.
+A part the pull request leaves is checked by the next phone release; an author who wants every part first runs the phone check on request on their branch.
 `tests/phone-chooser.test.ts` replays real changes merged to `main` through the chooser.
 Unlike the desktop journey workflow, a device gate that already started finishes and deletes the simulator it started for each device.
 A manual rerun of a replaced version stops before its gate.
-So does a run whose pull request merged or closed while it waited in the phone line, so it never holds that line for a device gate; the run on `main` checks what merged.
+So does a run whose pull request merged or closed while it waited in the phone line, so it never holds that line for a device gate; the next phone release checks what merged.
 Each native phone job uses a group unique to its run and attempt, with `queue: max` and `cancel-in-progress: false`.
 The two vBoxx virtual places run phone checks independently; the mini serves no phone queue (`docs/ios.md`, "A phone check the placement service puts in a virtual Mac").
 Desktop journey jobs from different pull requests remain parallel.

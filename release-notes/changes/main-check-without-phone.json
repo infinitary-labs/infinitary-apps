@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "main-check-without-phone",
+      "reason": "CI work: main's continuous check no longer runs the phone check, which runs in full before each phone release, with no change to the app."
+    }
+  ]
+}

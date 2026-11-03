@@ -397,8 +397,8 @@ describe("the native pull-request gate", () => {
     expect(gateStarts(BOTH, "", "true")).toBe("false");
   });
   it("runs only on request or a reusable call, never on a pull request", () => {
-    // INF-2139 (captain: "let's pull journeys and phone checks off PRs now"); INF-2146's
-    // approved plan adds the call from main.yml on every push to main.
+    // INF-2139 (captain: "let's pull journeys and phone checks off PRs now"); the phone
+    // release calls it, and main no longer does (INF-2492).
     expect(Object.keys(workflow.on)).toEqual(["workflow_call", "workflow_dispatch"]);
     expect(workflow.on.workflow_dispatch.inputs).toMatchObject({
       parts: { type: "string" },

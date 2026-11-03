@@ -26,5 +26,3 @@ export function verifyMainEvidence(
   repository: string,
   source: string,
 ): { source: string; runId: number; attempt: number; url: string };
-/** The job-name prefix of main.yml's phone call, which the alpha proof never reads. */
-export const PHONE_PREFIX: string;

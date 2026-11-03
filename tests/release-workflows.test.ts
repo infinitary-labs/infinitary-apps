@@ -649,6 +649,13 @@ describe("local packaging identity (electron-builder.dev.yml)", () => {
       step.run?.startsWith("node scripts/unit-repeats.ts --reach "),
     );
     expect(reach).toBeDefined();
+    // INF-2486 cut F (captain-approved): the startup fixtures' step runs on
+    // its job's changed-path verdict, the one step-level skip outside the gate.
+    const paths = ci.jobs["linux-startup"]?.steps.find((step) => step.id === "paths");
+    const fixtures = ci.jobs["linux-startup"]?.steps.find(
+      (step) => step.uses === "./.github/actions/linux-startup",
+    );
+    expect(paths?.run).toBe("node scripts/startup-paths.ts --base HEAD^1");
     for (const [id, job] of Object.entries(ci.jobs)) {
       expect(job.needs, id).toBeUndefined();
       const expression = (job.if ?? "true").replace(/^\$\{\{\s*|\s*\}\}$/g, "");
@@ -663,7 +670,8 @@ describe("local packaging identity (electron-builder.dev.yml)", () => {
           : "true",
       );
       // A no-op success would not solve the problem: keep the real gate and
-      // fail on any gate step's failure, without introducing step-level skips.
+      // fail on any gate step's failure, without step-level skips beyond the
+      // gate's two pull request steps and cut F's startup fixtures.
       // INI-9's plan: every job runs where LINUX_RUNNER sends it, the
       // placement service's shell-pc-linux places, and back on GitHub's
       // hosted Linux when the variable is unset.
@@ -674,7 +682,9 @@ describe("local packaging identity (electron-builder.dev.yml)", () => {
       expect(job["continue-on-error"], id).toBeFalsy();
       expect(
         job.steps.every(
-          (step) => !step["continue-on-error"] && (step === notes || step === reach || !step.if),
+          (step) =>
+            !step["continue-on-error"] &&
+            (step === notes || step === reach || step === fixtures || !step.if),
         ),
         id,
       ).toBe(true);
@@ -689,16 +699,21 @@ describe("local packaging identity (electron-builder.dev.yml)", () => {
     // case's.
     const install = "pnpm install --frozen-lockfile";
     const machines = ciJobs(eventName);
-    // The startup fixtures' job runs only its action, which installs nothing.
+    // The startup fixtures' job runs only its plain Node paths step and its
+    // action, and installs nothing.
     for (const { name, runs } of machines)
-      expect(runs.slice(0, runs.indexOf(install) + 1), name).toEqual(
+      expect(
+        name === "linux-startup" ? runs : runs.slice(0, runs.indexOf(install) + 1),
+        name,
+      ).toEqual(
         name === "linux-startup"
-          ? []
+          ? [paths?.run]
           : eventName === "pull_request" && name === "typecheck-lint-build"
             ? [notes?.run, install]
             : [install],
       );
     const checks = machines
+      .filter(({ name }) => name !== "linux-startup")
       .flatMap(({ runs }) => runs.slice(runs.indexOf(install) + 1))
       .filter((run) => !run.startsWith("pnpm test"));
     expect(checks.toSorted()).toEqual(
@@ -747,8 +762,20 @@ describe("local packaging identity (electron-builder.dev.yml)", () => {
     ).toBe("shell-pc-linux-pr");
     const startup = job?.steps.find((step) => step.uses === "./.github/actions/linux-startup");
     expect(startup).toBeDefined();
-    // Every earlier step of its job is a checkout or setup, never a build.
-    expect(job?.steps.every((step) => step.run === undefined)).toBe(true);
+    // Every earlier step of its job is a checkout or setup, never a build,
+    // apart from INF-2486 cut F's plain Node paths step, which reads the
+    // change through the checkout's base parent and decides the fixture step.
+    const paths = job?.steps.find((step) => step.id === "paths");
+    expect(paths?.run).toBe("node scripts/startup-paths.ts --base HEAD^1");
+    expect(paths?.if).toBeUndefined();
+    expect(job?.steps.filter((step) => step.run !== undefined)).toEqual([paths]);
+    const checkout = job?.steps.find((step) => step.uses === "actions/checkout@v4");
+    expect(checkout?.with?.["fetch-depth"]).toBe(2);
+    for (const run of ["true", "false"])
+      expect(
+        workflowValue(startup?.if ?? "true", { steps: { paths: { outputs: { run } } } }),
+        run,
+      ).toBe(run === "true");
     const action = loadYamlFile(".github/actions/linux-startup/action.yml") as {
       runs: { steps: CiJob["steps"] };
     };
@@ -757,7 +784,6 @@ describe("local packaging identity (electron-builder.dev.yml)", () => {
     for (const failed of [false, true]) {
       for (const cancelled of [false, true]) {
         const status = { success: !failed && !cancelled, failure: failed, always: true, cancelled };
-        expect(startup?.if).toBeUndefined();
         for (const fixture of fixtures) {
           expect(workflowValue(fixture.if ?? "false", {}, status)).toBe(!cancelled);
           expect(fixture["continue-on-error"]).toBeFalsy();
@@ -1476,6 +1502,7 @@ type CiJob = {
   "continue-on-error"?: boolean;
   strategy?: { matrix: Record<string, unknown[]> };
   steps: Array<{
+    id?: string;
     run?: string;
     uses?: string;
     with?: Record<string, string>;

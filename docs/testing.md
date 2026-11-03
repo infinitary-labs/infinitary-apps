@@ -1203,6 +1203,7 @@ The launcher gives each app a throwaway HOME, userData, TMPDIR and XDG configura
 
 The PR's `linux-startup` job in `ci.yml` runs the production runtime/session classifier through `.github/actions/linux-startup`, a job of its own beside `typecheck-lint-build`, so a failed build never stops it.
 Both startup fixtures and their result summary run even when the other fixture fails, unless the job was cancelled.
+The job's paths step, `scripts/startup-paths.ts`, reads the change against the merge commit's base parent and skips the fixture step when every changed path is under `docs/`, `primitives/` or `release-notes/`, ends in `.md`, or is a workflow other than `ci.yml` (INF-2486 cut F); the job still reports, and any other path, an empty change or an unreadable diff runs the fixtures.
 The fixtures need systemd and Docker, so the job's `startup` kind ("Each Linux job's kind") may name only a PC queue, such as the PC's PR line `shell-pc-linux-pr` (DOP-268's plan), and never a Mac mini guest's queue.
 Without the kind, the job runs where `LINUX_RUNNER` sends it; main's called `linux-startup.yml` job has no kind and always does.
 A newer push cancels the PR job, including startup, through `ci.yml`'s existing concurrency rule; startup no longer finishes independently on a superseded PR version.

@@ -74,15 +74,25 @@ jobs:
   # so they report even when the build fails. They need systemd and Docker,
   # so their startup kind (DOP-268's plan) may name only a PC queue, such as
   # the PC's PR line; without it they go where LINUX_RUNNER sends them.
+  # INF-2486 cut F: a change whose every path is docs, primitives, Markdown,
+  # release notes or a workflow other than this one skips the fixture step,
+  # and the job still reports (scripts/startup-paths.ts).
   linux-startup:
     if: github.event_name == 'pull_request'
     runs-on: ${{ fromJSON(vars.LINUX_QUEUES || '{}').startup || vars.LINUX_RUNNER || 'ubuntu-latest' }}
     steps:
       - uses: actions/checkout@v4
+        with:
+          # The pull request's merge commit and its base parent, for the paths step.
+          fetch-depth: 2
       - uses: actions/setup-node@v4
         with:
           node-version: 24
+      - name: Startup paths
+        id: paths
+        run: node scripts/startup-paths.ts --base HEAD^1
       - name: Linux automatic startup
+        if: ${{ steps.paths.outputs.run == 'true' }}
         uses: ./.github/actions/linux-startup
 
   # The in-memory cohorts (docs/test-cohorts.md).

@@ -440,6 +440,7 @@ An expired refusal or observation reads stale; no raw history is kept.
 It requests at most one sample per computer per two-second cadence, with the receiver's existing single-flight timeout boundary, and publishes completed readings as whole snapshots.
 Just before it asks for new readings it calls its `onSample` listeners, so what a listener notes there happened before every sample those readings carry; Automatic placement witnesses running tasks there (below, "Automatic starts").
 A contact change immediately publishes the invalidated state; old pending replies cannot fill a new connection's cache.
+A task change publishes only when it starts crew work or moves a computer's declared runs, so a run waiting in the line shows at once while other task writes send nothing (INF-2420).
 A slow computer cannot hold another computer's completed reading back.
 The renderer shares one upstream push subscription and freezes each pushed value before fanning it out to its local readers.
 Read-catalog subscribers renew demand every five seconds; those requests return the shared cache rather than starting their own loops.

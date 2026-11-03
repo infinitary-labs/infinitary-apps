@@ -1,4 +1,5 @@
-import { STARTER_SLOTS } from "@shared/modelSlots";
+import { modelNames } from "@shared/modelDisplayName";
+import { offeringKey, STARTER_SLOTS } from "@shared/modelSlots";
 import type { ModelsCatalogView } from "@shared/quota";
 import { describe, expect, it } from "vitest";
 import { CLAUDE_MODELS } from "../claude/claudeModels";
@@ -577,6 +578,67 @@ describe("ModelSlots.nameOf - the one model-name lookup", () => {
     expect(slots.nameOf({ provider: "openrouter", id: "google/gemini-3-pro-image" })).toBe(
       "Nano Banana Pro",
     );
+  });
+
+  // INF-2420, approved on its card: naming one model built the whole board,
+  // reading every model's speeds and reasoning, on each merge card and steer.
+  it("gives every row the board's own name, reading only that row", () => {
+    const openrouter: AccountModels = {
+      accountId: "acct-or",
+      accountLabel: "router",
+      providerId: "openrouter",
+      models: [
+        {
+          provider: "openrouter",
+          id: "google/gemini-3-pro-image",
+          name: "Google: Nano Banana Pro",
+        },
+        { provider: "openrouter", id: "x-ai/grok-4.7", name: "xAI: Grok 4.7" },
+      ],
+    };
+    const custom: AccountModels = {
+      accountId: "acct-custom",
+      accountLabel: "Studio box",
+      providerId: "fm-custom-4f1c2a9b7d3e5f60",
+      models: [
+        { provider: "fm-custom-4f1c2a9b7d3e5f60", id: "qwen3-coder-30b", name: "Qwen3 Coder 30B" },
+      ],
+    };
+    const side: AccountModels = { ...codex, accountId: "acct-codex-2", accountLabel: "side" };
+    const catalog: ModelsCatalogView = {
+      generatedAt: "now",
+      models: [
+        { provider: "codex", id: "gpt-6.1-sol", label: "GPT-6.1 Sol" },
+        { provider: "codex", id: "gpt-6-sol", label: "GPT-6 Sol" },
+        { provider: "claude", id: "claude-opus-5-5", label: "Opus 5.5" },
+      ],
+    };
+    const asked = { speeds: 0, reasoning: 0, kept: 0 };
+    const accounts = [codex, side, grokLine, claude, openrouter, custom];
+    const slots = new ModelSlots({
+      settings: new SettingsStore(openInMemoryDatabase()),
+      accounts: () => accounts,
+      quotaModels: () => catalog,
+      speeds: () => {
+        asked.speeds++;
+        return () => undefined;
+      },
+      reasoningCapabilities: () => {
+        asked.reasoning++;
+        return undefined;
+      },
+      kept: () => {
+        asked.kept++;
+        return [];
+      },
+    });
+    slots.reconcile();
+    const view = slots.view();
+    const rows = [...view.models, ...view.byName];
+    const boardName = modelNames(rows);
+    Object.assign(asked, { speeds: 0, reasoning: 0, kept: 0 });
+    for (const row of rows) expect(slots.nameOf(row)).toBe(boardName(offeringKey(row)));
+    expect(asked).toEqual({ speeds: 0, reasoning: 0, kept: 0 });
   });
 });
 

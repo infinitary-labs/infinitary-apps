@@ -1,6 +1,6 @@
 import type { CrewSpeed } from "@shared/crewSpeed";
 import { isCustomApiProvider } from "@shared/customApi";
-import { modelNames } from "@shared/modelDisplayName";
+import { modelDisplayName } from "@shared/modelDisplayName";
 import { isTrackedProvider, listedIds } from "@shared/modelListing";
 import {
   allStarterKeys,
@@ -120,6 +120,18 @@ export type ModelSlotsOptions = {
   /** The clock an arrival's "new" mark is stamped and aged on. */
   now?: () => number;
 };
+
+/**
+ * The label a Settings row gives one served model: a custom API model by its
+ * own id, else the quota catalog's label, the runtime's name, or its id.
+ */
+function rowLabel(
+  model: AccountModels["models"][number],
+  catalogLabel: string | undefined,
+): string {
+  if (isCustomApiProvider(model.provider)) return model.id;
+  return catalogLabel ?? model.name ?? model.id;
+}
 
 export class ModelSlots {
   private readonly now: () => number;
@@ -286,19 +298,31 @@ export class ModelSlots {
    * Undefined when the quota catalog does not know the offering.
    */
   labelOf(ref: PiModelRef): string | undefined {
-    return this.catalogByKey().get(offeringKey(ref))?.label;
+    return this.catalogLabelOf(offeringKey(ref));
   }
 
   /**
    * One offering by the name every surface gives it (FI3-565 piece 2): its
-   * Settings row's label, listed or by name, through the one lookup
-   * (`modelNames`) the renderer applies to these same rows, or its bare id
-   * when no account serves it. The record, its Activity, the crew summary
+   * Settings row's label, listed or by name, through `modelDisplayName` as
+   * the renderer's `modelNames` applies it to those same rows, or its bare
+   * id when no account serves it. The record, its Activity, the crew summary
    * and the fact strip never name one model two ways.
+   * It reads only the row that names the model - the first account serving
+   * it, as the board's row is - never the whole board, which reads every
+   * model's speeds and reasoning (INF-2420).
    */
   nameOf(ref: PiModelRef): string {
-    const view = this.view();
-    return modelNames([...view.models, ...view.byName])(offeringKey(ref));
+    const key = offeringKey(ref);
+    for (const account of this.options.accounts()) {
+      const model = account.models.find((served) => offeringKey(served) === key);
+      if (!model) continue;
+      return modelDisplayName({
+        provider: model.provider,
+        id: model.id,
+        label: rowLabel(model, this.catalogLabelOf(key)),
+      });
+    }
+    return parseOfferingKey(key).id;
   }
 
   /**
@@ -454,9 +478,7 @@ export class ModelSlots {
             ? account.accountLabel
             : (catalogEntry(model.provider)?.name ?? model.provider),
           id: model.id,
-          label: isCustomApiProvider(model.provider)
-            ? model.id
-            : (row?.label ?? model.name ?? model.id),
+          label: rowLabel(model, row?.label),
           slots: state.assignments[key] ?? [],
           ...(model.provider === "openai-codex"
             ? {
@@ -563,6 +585,12 @@ export class ModelSlots {
       byKey.set(servedModelKey(model), { label: model.label });
     }
     return byKey;
+  }
+
+  /** One offering's quota-catalog label, the last entry winning as in `catalogByKey`. */
+  private catalogLabelOf(key: string): string | undefined {
+    return this.options.quotaModels()?.models.findLast((model) => servedModelKey(model) === key)
+      ?.label;
   }
 
   /** Lets go of every "new" mark past `NEW_MARK_MS`; whether one went. */

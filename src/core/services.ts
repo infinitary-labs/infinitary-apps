@@ -1574,14 +1574,8 @@ export async function createServices(
           label: deviceLabel(device),
         })),
     ],
-    onComputers: (listener) => {
-      const devicesStop = devices.subscribe(listener);
-      const tasksStop = tasks.onChange(listener);
-      return () => {
-        devicesStop();
-        tasksStop();
-      };
-    },
+    onComputers: (listener) => devices.subscribe(listener),
+    onWork: (listener) => tasks.onChange(() => listener()),
     // Asked on every resource tick and task change, so it never composes the
     // whole task history to learn whether one task is active.
     working: () => loadLine.active || tasks.hasStatus("active"),

@@ -20,6 +20,8 @@ export class ComputerResourceFeed {
   private readonly sampling = new Set<() => void>();
   private readonly stop: (() => void)[];
   private stopped = false;
+  /** The computers and declared runs the last push carried, to tell a task change that moved them. */
+  private published: string | undefined;
 
   constructor(
     private readonly options: {
@@ -27,6 +29,12 @@ export class ComputerResourceFeed {
       /** Home first, then paired work computers; never control-only devices. */
       computers: () => { computerId: string | null; label: string }[];
       onComputers: (listener: () => void) => () => void;
+      /**
+       * Task changes. One can start crew work or move a computer's declared
+       * runs, never the computers list or a resource reading, so it re-sends
+       * only when demand starts or the runs moved (INF-2420).
+       */
+      onWork?: (listener: () => void) => () => void;
       /** ComputerResources invalidates its receiver before this listener runs. */
       onContact: (listener: (contact: { deviceId: string }) => void) => () => void;
       emit: (view: ComputerResourcesView) => void;
@@ -44,12 +52,19 @@ export class ComputerResourceFeed {
       this.refresh();
       if (!this.timer) this.tick();
     };
+    const worked = () => {
+      if (!this.demanded()) return;
+      if (!this.timer) return this.tick();
+      if (workKey(this.snapshot()) !== this.published) this.publish();
+      this.refresh();
+    };
     this.stop = [
       options.onComputers(changed),
       options.onContact(({ deviceId }) => {
         this.started.delete(deviceId);
         changed();
       }),
+      ...(options.onWork ? [options.onWork(worked)] : []),
     ];
     if (options.working?.()) this.tick();
   }
@@ -143,7 +158,9 @@ export class ComputerResourceFeed {
   }
 
   private publish(): void {
-    this.options.emit(this.snapshot());
+    const view = this.snapshot();
+    this.published = workKey(view);
+    this.options.emit(view);
   }
 
   private demanded(): boolean {
@@ -153,4 +170,11 @@ export class ComputerResourceFeed {
   private now(): number {
     return (this.options.now ?? (() => performance.now()))();
   }
+}
+
+/** What a task change can move in a push: the computers and their declared runs, never a reading's age. */
+function workKey(view: ComputerResourcesView): string {
+  return JSON.stringify(
+    view.computers.map(({ computerId, label, load }) => [computerId, label, load ?? null]),
+  );
 }

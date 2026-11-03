@@ -4,7 +4,7 @@ import {
   CREATE_PANEL_SLOT_TITLE,
 } from "@shared/createPanelSlot";
 import type { FmEvent } from "@shared/events";
-import type { PersonalSnapshot } from "@shared/personal/manifest";
+import type { PersonalExtensionView, PersonalSnapshot } from "@shared/personal/manifest";
 import type { PanelMounts } from "@shared/personal/mounts";
 import type { SidePanelPlacement } from "@shared/plugins/manifest";
 import {
@@ -172,6 +172,11 @@ export function panelsOffLine(panels: PersonalPanels): string | null {
   return `the captain's panels are off right now (${because}). Nothing built for them and nothing they added is mounted, and a new one will not show until they are back on. Only the switch in Settings turns them on - you have no tool for it, so say where it is.`;
 }
 
+/** A panel whose `server.ts` the app refused for an older panel API, on its surfaces row (INF-2470). */
+function pausedWords(paused: NonNullable<PersonalExtensionView["paused"]>): string {
+  return `; background work paused: its server.ts is written for panel API ${paused.api} and this app serves ${paused.serves.join(" or ")}${paused.asked ? "; the captain pressed Update panel" : ""}`;
+}
+
 /**
  * The bounded "your surfaces" section of the Firstmate's context block:
  * the theme, every app panel, the personal panels up to a cap, each with
@@ -203,7 +208,11 @@ export function renderSurfacesSection(
           : surface.kind === "installed"
             ? ` (added, by ${surface.by})`
             : "";
-      return `- ${surface.id} "${surface.title}"${mark}: ${where}; ${state}`;
+      const paused =
+        surface.kind === "personal"
+          ? personal.extensions.find((extension) => extension.id === surface.id)?.paused
+          : undefined;
+      return `- ${surface.id} "${surface.title}"${mark}: ${where}; ${state}${paused ? pausedWords(paused) : ""}`;
     }),
     ...(more > 0 ? [`- and ${more} more personal panel${more === 1 ? "" : "s"}`] : []),
     ...(off ? [off] : []),

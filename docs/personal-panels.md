@@ -277,6 +277,19 @@ A `server.ts` runs only when its manifest says `"api": 2`.
 One written for the store that answered at once is refused before any of it runs, with the line saying what to change (`olderServerApiLine`), and its panel still draws.
 Nothing transforms saved data and nothing runs older code in the app's process: the captain's existing panels are updated by personal-workspace tasks.
 
+## A paused panel
+
+A `server.ts` written for a panel API this version no longer serves (`SERVED_PANEL_APIS`) is paused, not stopped (INF-2470).
+The app log gets one line the first time each version of the file's text is refused.
+The snapshot carries `paused`: the API the manifest names (1 when it names none), the APIs served, and whether the captain already asked for the update.
+The window draws the host's own line and an Update panel button above the panel's body (`BackgroundPaused`, `[data-panel-background-paused]`), outside the panel's code and reached with Tab.
+It draws them only on a live panel, never on a draft, and not while a crewmate is building that panel.
+Update panel (`inf:plugins:update`) tells the first mate once, as the `panel-update-asked` wake, and the first mate starts one personal-workspace task to update the panel; a second press, or a press while the panel is being built, tells no one.
+The first mate's surfaces context says which panels are paused.
+The update steps for each older API have one home, the personal-panel skill's "Updating a panel written for an earlier panel API", which the refusal line names.
+When the files are fixed, the next reconcile accepts the file, the line goes and the background work starts, with no Retry.
+Nothing starts an update without the captain's press, and no notice is sent after an app update: the line on the panel is the notice.
+
 **The watch.**
 The process beats every `PANEL_BEAT_MS` (250 ms) from the event loop the panel's code runs on, and starts beating before it imports the module.
 So a module, action or task that never gives its loop back - a loop, a native wait - stops the beats.

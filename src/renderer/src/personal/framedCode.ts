@@ -27,5 +27,7 @@ export function framedCodeOf(view: PersonalExtensionView): FramedPanelContent | 
     // no background work, or one whose work the app stopped, in its words.
     ...(!installed ? { server: true } : {}),
     ...(!installed && view.stopped ? { stopped: view.stopped.reason } : {}),
+    // Paused for an earlier panel API (INF-2470): not while a task builds it.
+    ...(!installed && view.paused && !view.running ? { paused: { asked: view.paused.asked } } : {}),
   };
 }

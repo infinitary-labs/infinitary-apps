@@ -395,6 +395,82 @@ describe("PersonalExtensions", () => {
     }
   });
 
+  // INF-2470, the captain's "Approve and build" on direction A with "Start the
+  // update at once": a refused panel carries the typed fact the window and
+  // the first mate read, the log says so once per code version, Update panel
+  // tells the first mate once, and fixed files clear it with no Retry.
+  it("pauses a panel written for the earlier panel API, asks its update once, and runs it once fixed", async () => {
+    const h = await harness();
+    const logs: string[] = [];
+    const asks: unknown[] = [];
+    const older = [
+      'import type { ServerContext } from "@infinitary/contracts";',
+      "export const actions = {",
+      "  count: (_input: unknown, context: ServerContext) => {",
+      '    const n = (context.db.get("n") as unknown as number | undefined) ?? 0;',
+      '    context.db.set("n", n + 1);',
+      "    return n + 1;",
+      "  },",
+      "};",
+    ].join("\n");
+    h.write("counter/manifest.json", JSON.stringify({ title: "Counter" }));
+    h.write("counter/panel.tsx", PANEL);
+    h.write("counter/server.ts", older);
+    h.store.set("counter", "n", 4);
+    const service = await PersonalExtensions.start({
+      ...h,
+      watch: false,
+      log: (message) => logs.push(message),
+      askUpdate: (ask) => asks.push(ask),
+    });
+    try {
+      const counter = () => service.snapshot().extensions.find((e) => e.id === "counter");
+      expect(counter()?.paused).toEqual({ api: 1, serves: [2], asked: false });
+      expect(counter()?.frame).not.toBeNull();
+      const refusals = () => logs.filter((line) => line.includes("counter/server.ts is written"));
+      expect(refusals()).toHaveLength(1);
+      expect(refusals()[0]).toContain("Updating a panel written for an earlier panel API");
+
+      // The same text refused again is not logged again; a new version of it is.
+      await service.refresh();
+      h.write("counter/panel.tsx", `${PANEL}\n`);
+      await service.refresh();
+      expect(refusals()).toHaveLength(1);
+      h.write("counter/server.ts", `${older}\n// still the earlier API\n`);
+      await service.refresh();
+      expect(refusals()).toHaveLength(2);
+
+      expect(service.askUpdate("counter")).toBe(true);
+      expect(service.askUpdate("counter")).toBe(false);
+      expect(asks).toEqual([{ id: "counter", title: "Counter", api: 1, serves: [2] }]);
+      expect(counter()?.paused?.asked).toBe(true);
+      // A panel that is not paused tells no one.
+      expect(service.askUpdate("absent")).toBe(false);
+
+      h.write(
+        "counter/server.ts",
+        [
+          'import type { ServerContext } from "@infinitary/contracts";',
+          "export const actions = {",
+          "  count: async (_input: unknown, context: ServerContext) => {",
+          '    const n = ((await context.db.get("n")) as number | undefined) ?? 0;',
+          '    await context.db.set("n", n + 1);',
+          "    return n + 1;",
+          "  },",
+          "};",
+        ].join("\n"),
+      );
+      h.write("counter/manifest.json", JSON.stringify({ api: 2, title: "Counter" }));
+      await service.refresh();
+      expect(counter()?.paused).toBeUndefined();
+      expect(counter()?.error).toBeNull();
+      // Its background work runs at once, with no Retry, on the data it kept.
+      expect(await service.invoke("counter", "count", null)).toEqual({ ok: true, result: 5 });
+    } finally {
+      service.dispose();
+    }
+  });
+
   // INF-2205 piece B, the captain's "Stop only the identified panel; keep the
   // broad fallback": the stop holds across a restart and a new version until
   // the captain's Retry, and the panel's data stays.

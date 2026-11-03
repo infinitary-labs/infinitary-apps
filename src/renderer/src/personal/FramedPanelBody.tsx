@@ -22,6 +22,7 @@ import { usePanelView } from "../plugins/panelPoint";
 import { panelRail } from "../plugins/panelRail";
 import { FRAME_PANEL_MAX_AUTO_HEIGHT } from "../plugins/Rail";
 import { usePanelCollapsed } from "../plugins/railStore";
+import { BackgroundPaused } from "./BackgroundPaused";
 import { BackgroundStopped } from "./BackgroundStopped";
 import { panelBodies } from "./panelBodies";
 import { PanelStoppedLine } from "./panelBoundary";
@@ -85,6 +86,11 @@ export type FramedPanelContent = {
   server?: boolean;
   /** The app stopped its background work (INF-2205 piece B): the window draws why, and Retry. */
   stopped?: "unresponsive" | "exited";
+  /**
+   * The app refused its background work for an earlier panel API (INF-2470):
+   * the window draws why, and Update panel; `asked` once the update was asked.
+   */
+  paused?: { asked: boolean };
   /** The version a crewmate is building, drawn out of sight ("Built apart"). */
   draft?: true;
 };
@@ -262,6 +268,7 @@ export function FramedPanelBody({ content }: { content: FramedPanelContent }) {
       style={{ display: "contents" }}
     >
       {content.stopped && <BackgroundStopped id={id} draft={draft} reason={content.stopped} />}
+      {content.paused && !draft && <BackgroundPaused id={id} asked={content.paused.asked} />}
       <FrameMount
         title={title}
         panel={panel}

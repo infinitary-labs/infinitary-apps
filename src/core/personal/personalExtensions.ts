@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import { existsSync, type FSWatcher, realpathSync, watch } from "node:fs";
 import { mkdir, readdir, readFile, rename, rm, stat, writeFile } from "node:fs/promises";
 import { join } from "node:path";
@@ -198,7 +199,26 @@ export type PersonalExtensionsOptions = {
    * Absent, no background module runs and a panel with one says so.
    */
   runtimes?: PanelRuntimes;
+  /**
+   * The captain pressed Update panel on a panel whose background work the
+   * app refused (INF-2470): tell the first mate, which starts the update.
+   * Absent, the press is refused.
+   */
+  askUpdate?: (ask: PanelUpdateAsk) => void;
 };
+
+/** A panel whose `server.ts` the app refused, as the first mate hears the captain asked to update it. */
+export type PanelUpdateAsk = {
+  id: string;
+  title: string;
+  /** The panel API its manifest names. */
+  api: number;
+  /** The panel APIs this version serves. */
+  serves: number[];
+};
+
+/** The panel APIs a `server.ts` may be written for; an older one is refused before it runs. */
+export const SERVED_PANEL_APIS: readonly number[] = [2];
 
 /** One plugin the captain added, as its record says: its name and what he agreed to. */
 export type InstalledPluginEntry = {
@@ -285,6 +305,8 @@ type Loaded = {
   serverHash: string | null;
   /** The host stopped its background work, and the stop still holds (INF-2205 piece B). */
   stopped: PanelStop | null;
+  /** The panel API its refused `server.ts` is written for (INF-2470); null when nothing is refused. */
+  paused: number | null;
   error: PersonalError | null;
   /** The store slice its presence reads and its server writes: its id, or its draft's. */
   slice: string;
@@ -313,7 +335,8 @@ function runtimeOf(slice: string): PanelRuntimeKind {
 export function olderServerApiLine(id: string): string {
   return (
     `${id}/server.ts is written for the earlier panel API, where context.db answered at once; ` +
-    `await every context.db call and set "api": 2 in manifest.json`
+    `await every context.db call and set "api": 2 in manifest.json ` +
+    `(the personal-panel skill, "Updating a panel written for an earlier panel API")`
   );
 }
 
@@ -330,6 +353,10 @@ export class PersonalExtensions {
   private readonly loaded = new Map<string, Loaded>();
   /** The working files of the extensions crewmates are building, run apart ("Built apart"). */
   private readonly drafts = new Map<string, Loaded>();
+  /** Each refused `server.ts` already logged, by id and the hash of its text: one line per code version. */
+  private readonly refusalsLogged = new Set<string>();
+  /** The panels whose Update panel the captain pressed, until their background work is no longer refused. */
+  private readonly updateAsked = new Set<string>();
   private watcher: FSWatcher | null = null;
   private debounce: ReturnType<typeof setTimeout> | null = null;
   private poll: ReturnType<typeof setInterval> | null = null;
@@ -795,6 +822,30 @@ export class PersonalExtensions {
    * goes, and the panel's background work starts again from its current
    * code. Only a stopped panel of his own is retried.
    */
+  /**
+   * The captain's Update panel on a panel whose background work the app
+   * refused (INF-2470): the first mate is told, once, and starts the update.
+   * False, telling no one, when the panel is not refused, is being built,
+   * or was asked already.
+   */
+  askUpdate(extensionId: string): boolean {
+    const entry = this.loaded.get(extensionId);
+    const ask = this.options.askUpdate;
+    if (!ask || entry?.source !== "yours" || entry.paused === null) return false;
+    if (this.updateAsked.has(extensionId) || entry.builder || this.drafts.has(extensionId)) {
+      return false;
+    }
+    this.updateAsked.add(extensionId);
+    ask({
+      id: extensionId,
+      title: entry.manifest.title ?? extensionId,
+      api: entry.paused,
+      serves: [...SERVED_PANEL_APIS],
+    });
+    this.push();
+    return true;
+  }
+
   async retry(extensionId: string, options: PersonalInvokeOptions = {}): Promise<boolean> {
     const entry = (options.draft ? this.drafts : this.loaded).get(extensionId);
     if (entry?.source !== "yours" || !entry.stopped || !this.options.runtimes) return false;
@@ -1238,7 +1289,22 @@ export class PersonalExtensions {
     const next = await this.compileYours(id, dir, id, () => this.loaded.get(id), generation);
     if (!next) return;
     next.builder = builder;
+    if (next.paused === null) this.updateAsked.delete(id);
     this.loaded.set(id, next);
+  }
+
+  /** The app log's line for a refused `server.ts`, the first time each version of its text is refused. */
+  private async logRefusal(id: string, dir: string): Promise<void> {
+    let text: string;
+    try {
+      text = await readFile(join(dir, PERSONAL_ENTRY_FILES.server), "utf8");
+    } catch {
+      return;
+    }
+    const key = `${id}:${createHash("sha256").update(text).digest("hex")}`;
+    if (this.refusalsLogged.has(key)) return;
+    this.refusalsLogged.add(key);
+    this.log(`personal: ${olderServerApiLine(id)}`);
   }
 
   /**
@@ -1285,6 +1351,7 @@ export class PersonalExtensions {
       server: previous?.server ?? null,
       serverHash: previous?.serverHash ?? null,
       stopped: null,
+      paused: null,
       error: null,
       slice,
       builder: null,
@@ -1327,12 +1394,15 @@ export class PersonalExtensions {
     // Background work answers its store asynchronously (panel API 2): a
     // module written for the store that answered at once is refused before
     // it runs, never run with answers it would misread.
-    const olderApi = hasServer && !("error" in manifest) && manifest.manifest.api !== 2;
+    const api = "error" in manifest ? null : (manifest.manifest.api ?? 1);
+    const olderApi = hasServer && api !== null && !SERVED_PANEL_APIS.includes(api);
     if (hasServer && olderApi) {
       next.server?.dispose();
       next.server = null;
       next.serverHash = null;
+      next.paused = api;
       next.error ??= { stage: "server", message: olderServerApiLine(id) };
+      await this.logRefusal(id, dir);
     } else if (hasServer) {
       try {
         const compiled = await compilePersonalModule({
@@ -1394,6 +1464,7 @@ export class PersonalExtensions {
       server: null,
       serverHash: null,
       stopped: null,
+      paused: null,
       error: null,
       slice: plugin.id,
       builder: null,
@@ -1587,6 +1658,15 @@ export class PersonalExtensions {
           }
         : null,
       error: entry.error,
+      ...(entry.paused !== null
+        ? {
+            paused: {
+              api: entry.paused,
+              serves: [...SERVED_PANEL_APIS],
+              asked: this.updateAsked.has(entry.id),
+            },
+          }
+        : {}),
       ...(entry.stopped
         ? {
             stopped: {

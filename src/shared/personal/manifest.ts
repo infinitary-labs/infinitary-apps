@@ -394,6 +394,22 @@ export const personalExtensionViewSchema = z.object({
       version: z.string(),
     })
     .optional(),
+  /**
+   * The app refused its `server.ts` before it ran, because it is written for
+   * a panel API this version no longer serves (INF-2470). The panel still
+   * draws; the window says its background work is paused, with Update panel.
+   * Absent while nothing is refused.
+   */
+  paused: z
+    .object({
+      /** The panel API its manifest names; 1 when it names none. */
+      api: z.number().int().min(1),
+      /** The panel APIs this version serves a `server.ts`. */
+      serves: z.array(z.number().int().min(1)),
+      /** The captain pressed Update panel and the first mate was told, for this code. */
+      asked: z.boolean(),
+    })
+    .optional(),
 });
 export type PersonalExtensionView = z.infer<typeof personalExtensionViewSchema>;
 

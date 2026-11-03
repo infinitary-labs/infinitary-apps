@@ -630,6 +630,7 @@ export function createApi(ipc: BridgeIpc, files: BridgeFiles): FirstmateApi {
         onSnapshot: (listener) => subscribe("inf:plugins:personal", listener),
         reportMounts: (mounts) => invoke("inf:plugins:personal:mounts", mounts),
         retry: (extensionId, options) => invoke("inf:plugins:retry", extensionId, options),
+        update: (extensionId) => invoke("inf:plugins:update", extensionId),
       },
       invoke: (extensionId, action, input, options) =>
         invoke("inf:plugins:invoke", extensionId, action, input, options),

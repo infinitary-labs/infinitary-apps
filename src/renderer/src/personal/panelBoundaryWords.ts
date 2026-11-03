@@ -16,5 +16,14 @@ export const BACKGROUND_STOPPED_LINE = "This panel's background work stopped res
 export const BACKGROUND_EXITED_LINE = "This panel's background work stopped.";
 /** The button beside either line that starts the background work again. */
 export const BACKGROUND_RETRY = "Retry";
+/**
+ * A panel whose background work the app refused before it ran, because it
+ * is written for an earlier panel API (INF-2470): the panel still draws, and
+ * Update panel asks the first mate to update its code.
+ */
+export const BACKGROUND_PAUSED_LINE =
+  "This panel's background work is paused: it was made for an earlier version of the app.";
+/** The button beside it that starts the update. */
+export const BACKGROUND_UPDATE = "Update panel";
 /** The same line for one of a panel's cards on the stack (docs/ui-plugins.md, "A panel's cards"). */
 export const CARD_STOPPED_LINE = "This card stopped drawing.";

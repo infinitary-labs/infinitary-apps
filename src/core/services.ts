@@ -2139,6 +2139,9 @@ export async function createServices(
     knowledge,
     log: (message) => console.warn(`[infinitary] ${message}`),
   });
+  // The captain's Update panel press reaches the first mate (INF-2470);
+  // late-bound because the first mate is built below.
+  let tellPanelUpdate: (wake: TypedWake) => void = () => {};
   const personal = await PersonalExtensions.start({
     workspaceDir: paths.personalWorkspaceDir,
     // The app's own design skill and the authoring skills are seeded from
@@ -2163,6 +2166,18 @@ export async function createServices(
       ...(host.panelProcess ? { spawner: host.panelProcess } : {}),
       stops: new PanelStops(db),
     }),
+    askUpdate: (ask) => {
+      const repoId = repos.personal()?.id;
+      tellPanelUpdate({
+        facts: {
+          kind: "panel-update-asked",
+          panel: { id: ask.id, title: ask.title },
+          api: ask.api,
+          serves: ask.serves,
+          ...(repoId ? { repoId } : {}),
+        },
+      });
+    },
     installed: {
       dir: paths.pluginsDir,
       cacheRoot: paths.installedCacheDir,
@@ -3093,6 +3108,9 @@ export async function createServices(
   });
   firstmateForSeat = firstmate;
   notifyFirstmate = (wake, origin) => firstmate.notifyOp(wake, origin);
+  tellPanelUpdate = (wake) => {
+    firstmate.notifyOp(wake, "agent");
+  };
   const resourcePressure = new ResourcePressure({
     taskKey: (id) => tasks.resolve(id)?.key ?? id,
     notify: (wake) => notifyFirstmate(wake, "scheduled"),

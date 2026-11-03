@@ -394,6 +394,22 @@ export type WakeFacts =
       capturedAt?: string;
       uncertain?: NonNullable<FreezeLine["uncertain"]>;
     }
+  | {
+      /**
+       * The captain pressed Update panel on a panel of theirs whose
+       * `server.ts` the app refuses, because it is written for a panel API
+       * this version no longer serves (INF-2470). Told once per press the
+       * host admits; the first mate starts the update.
+       */
+      kind: "panel-update-asked";
+      panel: { id: string; title: string };
+      /** The panel API its manifest names. */
+      api: number;
+      /** The panel APIs this version serves. */
+      serves: number[];
+      /** The personal workspace's repo id, when it is registered. */
+      repoId?: string;
+    }
   | { kind: "validation-question-stale"; card: string; reason: string }
   | {
       kind: "task-policies-changed";
@@ -2018,12 +2034,25 @@ function retiredCountHold(task: WakeTask): string {
   return `[fm-op] An earlier version recorded a count hold on task ${task.id} "${task.title}". Repair, re-review and rerun count holds are retired. This record places no hold and grants no authorization. Read current facts and judge the next action from your delivery guidance.`;
 }
 
+/** How the first mate hears the captain's Update panel press opens. */
+export const PANEL_UPDATE_ASKED_OPENING = "[fm-op] the captain pressed Update panel on their panel";
+
+/** The captain's Update panel press, as the first mate hears it: start the update now. */
+function renderPanelUpdateAsked(facts: Extract<WakeFacts, { kind: "panel-update-asked" }>): string {
+  const workspace = facts.repoId
+    ? `the personal workspace (repo_id ${facts.repoId})`
+    : "the personal workspace";
+  return `${PANEL_UPDATE_ASKED_OPENING} "${facts.panel.title}" (id ${facts.panel.id}). The app refuses its server.ts before it runs, because it is written for panel API ${facts.api} and this version serves panel API ${facts.serves.join(" or ")}, so its background work is paused; the panel still draws and its saved data is unchanged. Start one task in ${workspace} now, with no card first: its goal is to update that panel's code to the panel API this app serves, keeping what the panel does and its saved data, and its brief names the panel id and the personal-panel skill's "Updating a panel written for an earlier panel API". If a task is already updating this panel, start nothing. The panel's line clears by itself once its code is updated.`;
+}
+
 function renderFacts(facts: WakeFacts, wake: Pick<WakeEnvelope, "ways" | "text">): string {
   switch (facts.kind) {
     case "resource-pressure":
       return `[fm-op] ${facts.label} reports ${facts.pressure} memory pressure. Nothing was killed, paused or slowed. In response to this notice, do not kill, pause or slow running work; judge these facts and steer future work instead. Current resource facts: ${JSON.stringify(facts)}. Task use is attributed only to known process trees; everything else is unclaimed, resident bytes may count shared pages more than once, and missing facts are unknown.`;
     case "freeze-recorded":
       return renderFreezeRecorded(facts);
+    case "panel-update-asked":
+      return renderPanelUpdateAsked(facts);
     case "validation-question-stale":
       return `The captain tried to answer validation question ${facts.card}, but nothing was approved: ${facts.reason} Its unusable actions were removed. Record a fresh request with a new identity and revise that same card for the current facts; do not repeat an unknown effect.`;
     case "task-policies-changed":

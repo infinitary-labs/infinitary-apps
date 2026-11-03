@@ -77,3 +77,63 @@ export function seedUnresponsivePanel(workspace: string): void {
     ].join("\n"),
   );
 }
+
+/**
+ * A panel written before the panel API's store answered asynchronously
+ * (INF-2470): its manifest names no `api`, and its `server.ts` reads
+ * `context.db` as if it answered at once, as such panels were written.
+ * `updateOlderApiPanel` makes the change its update makes: every call
+ * awaited and `"api": 2`.
+ */
+export function seedOlderApiPanel(workspace: string): void {
+  const counter = join(workspace, "counter");
+  mkdirSync(counter);
+  writeFileSync(
+    join(counter, "manifest.json"),
+    JSON.stringify({ title: "Counter", placement: { x: "left", y: "top" } }),
+  );
+  writeFileSync(
+    join(counter, "panel.tsx"),
+    [
+      'import type { PanelProps } from "@infinitary/contracts";',
+      "export default function Panel({ id }: PanelProps) {",
+      "  return <p data-fixture={id} style={{ margin: 0 }}>Counted today</p>;",
+      "}",
+    ].join("\n"),
+  );
+  writeFileSync(
+    join(counter, "server.ts"),
+    [
+      'import type { ServerContext } from "@infinitary/contracts";',
+      "export const actions = {",
+      "  count: (_input: unknown, context: ServerContext) => {",
+      '    const n = (context.db.get("n") as unknown as number | undefined) ?? 0;',
+      '    context.db.set("n", n + 1);',
+      "    return n + 1;",
+      "  },",
+      "};",
+    ].join("\n"),
+  );
+}
+
+/** The older panel as its update leaves it: every store call awaited, written for API 2. */
+export function updateOlderApiPanel(workspace: string): void {
+  const counter = join(workspace, "counter");
+  writeFileSync(
+    join(counter, "server.ts"),
+    [
+      'import type { ServerContext } from "@infinitary/contracts";',
+      "export const actions = {",
+      "  count: async (_input: unknown, context: ServerContext) => {",
+      '    const n = ((await context.db.get("n")) as number | undefined) ?? 0;',
+      '    await context.db.set("n", n + 1);',
+      "    return n + 1;",
+      "  },",
+      "};",
+    ].join("\n"),
+  );
+  writeFileSync(
+    join(counter, "manifest.json"),
+    JSON.stringify({ api: 2, title: "Counter", placement: { x: "left", y: "top" } }),
+  );
+}

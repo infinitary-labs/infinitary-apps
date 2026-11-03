@@ -1288,6 +1288,7 @@ export function createCoreDispatcher(options: CoreDispatcherOptions): CoreDispat
       services.personal.invoke(extensionId, action, input, options),
     "inf:plugins:db": (request) => services.personal.storeRequest(request),
     "inf:plugins:retry": (extensionId, options) => services.personal.retry(extensionId, options),
+    "inf:plugins:update": (extensionId) => services.personal.askUpdate(extensionId),
   };
 
   /**

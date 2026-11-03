@@ -310,6 +310,29 @@ describe("the your-surfaces section", () => {
     );
   });
 
+  // INF-2470: the first mate's surfaces context says which panels are paused,
+  // so it can answer about one without the captain pressing Update panel.
+  it("says which of the captain's panels have their background work paused", () => {
+    const lines = renderSurfacesSection(
+      {
+        appearance: { theme: "dark" },
+        layout: { collapsedPanels: {}, hiddenPanels: {}, placements: {} },
+        panels: { enabled: true, offReason: null },
+      },
+      {
+        extensions: [
+          { ...extension("counter", "Counter"), paused: { api: 1, serves: [2], asked: true } },
+          extension("clock", "Clock"),
+        ],
+      },
+      STABLE,
+    );
+    expect(lines).toContain(
+      '- counter "Counter" (yours): right rail, top; no word from the window; background work paused: its server.ts is written for panel API 1 and this app serves 2; the captain pressed Update panel',
+    );
+    expect(lines).toContain('- clock "Clock" (yours): right rail, top; no word from the window');
+  });
+
   it("derives every surface's effective placement from the layout", () => {
     const surfaces = listSurfaces(
       { collapsedPanels: {}, hiddenPanels: {}, placements: { now: { x: "left", y: "top" } } },

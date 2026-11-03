@@ -42372,6 +42372,32 @@
                     "at",
                     "version"
                   ]
+                },
+                "paused": {
+                  "type": "object",
+                  "properties": {
+                    "api": {
+                      "type": "integer",
+                      "minimum": 1,
+                      "maximum": 9007199254740991
+                    },
+                    "serves": {
+                      "type": "array",
+                      "items": {
+                        "type": "integer",
+                        "minimum": 1,
+                        "maximum": 9007199254740991
+                      }
+                    },
+                    "asked": {
+                      "type": "boolean"
+                    }
+                  },
+                  "required": [
+                    "api",
+                    "serves",
+                    "asked"
+                  ]
                 }
               },
               "required": [
@@ -42798,6 +42824,32 @@
                     "reason",
                     "at",
                     "version"
+                  ]
+                },
+                "paused": {
+                  "type": "object",
+                  "properties": {
+                    "api": {
+                      "type": "integer",
+                      "minimum": 1,
+                      "maximum": 9007199254740991
+                    },
+                    "serves": {
+                      "type": "array",
+                      "items": {
+                        "type": "integer",
+                        "minimum": 1,
+                        "maximum": 9007199254740991
+                      }
+                    },
+                    "asked": {
+                      "type": "boolean"
+                    }
+                  },
+                  "required": [
+                    "api",
+                    "serves",
+                    "asked"
                   ]
                 }
               },
@@ -43291,6 +43343,26 @@
                 "const": true
               }
             }
+          }
+        ],
+        "minItems": 1,
+        "items": false
+      },
+      "response": {
+        "type": "boolean"
+      }
+    },
+    "inf:plugins:update": {
+      "effect": "change",
+      "reach": "home",
+      "request": {
+        "type": "array",
+        "prefixItems": [
+          {
+            "type": "string",
+            "minLength": 2,
+            "maxLength": 48,
+            "pattern": "^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$"
           }
         ],
         "minItems": 1,
@@ -58159,6 +58231,32 @@
                     "at",
                     "version"
                   ]
+                },
+                "paused": {
+                  "type": "object",
+                  "properties": {
+                    "api": {
+                      "type": "integer",
+                      "minimum": 1,
+                      "maximum": 9007199254740991
+                    },
+                    "serves": {
+                      "type": "array",
+                      "items": {
+                        "type": "integer",
+                        "minimum": 1,
+                        "maximum": 9007199254740991
+                      }
+                    },
+                    "asked": {
+                      "type": "boolean"
+                    }
+                  },
+                  "required": [
+                    "api",
+                    "serves",
+                    "asked"
+                  ]
                 }
               },
               "required": [
@@ -58585,6 +58683,32 @@
                     "reason",
                     "at",
                     "version"
+                  ]
+                },
+                "paused": {
+                  "type": "object",
+                  "properties": {
+                    "api": {
+                      "type": "integer",
+                      "minimum": 1,
+                      "maximum": 9007199254740991
+                    },
+                    "serves": {
+                      "type": "array",
+                      "items": {
+                        "type": "integer",
+                        "minimum": 1,
+                        "maximum": 9007199254740991
+                      }
+                    },
+                    "asked": {
+                      "type": "boolean"
+                    }
+                  },
+                  "required": [
+                    "api",
+                    "serves",
+                    "asked"
                   ]
                 }
               },

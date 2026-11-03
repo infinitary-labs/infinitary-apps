@@ -2966,6 +2966,17 @@ export const invokeContract = {
     request: z.tuple([personalIdSchema, personalInvokeOptionsSchema.optional()]),
     response: z.boolean(),
   },
+  // The captain's Update panel on a panel whose background work the app
+  // refused for an older panel API (INF-2470): the first mate is told and
+  // starts the update. False when nothing was told: the panel is not
+  // refused, is being built, or was asked already.
+  "inf:plugins:update": {
+    effect: "change",
+    surface: "core",
+    reach: "home",
+    request: z.tuple([personalIdSchema]),
+    response: z.boolean(),
+  },
   // The frame vehicle (phase 1): the shell serves a template document over
   // its own scheme and hands back where the iframe loads it from. A host
   // without a desktop frame would answer with its own vehicle.
@@ -3182,6 +3193,7 @@ export const RUN_HOME_ONLY_CHANNELS: ReadonlySet<CoreInvokeChannel> = new Set<Co
   "inf:plugins:invoke",
   "inf:plugins:db",
   "inf:plugins:retry",
+  "inf:plugins:update",
   "inf:sql:query",
   "inf:knowledge:enabled",
   "inf:knowledge:collections",
@@ -4000,6 +4012,8 @@ export type FirstmateApi = {
       reportMounts: (mounts: PanelMounts) => Promise<{ ok: true }>;
       /** The captain's Retry on a panel whose background work the app stopped. */
       retry: (extensionId: string, options?: PersonalInvokeOptions) => Promise<boolean>;
+      /** The captain's Update panel on a panel whose background work the app refused. */
+      update: (extensionId: string) => Promise<boolean>;
     };
     invoke: (
       extensionId: string,

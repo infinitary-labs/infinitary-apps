@@ -382,6 +382,22 @@ files, place them on his rail to look, and your report keeps the change. "Make t
 is a change to the panel you already wrote; "put it back" is another. Every
 turn is a commit, so the history is the record.
 
+## Updating a panel written for an earlier panel API
+
+When the app stops serving the panel API a panel's `server.ts` is written for, it refuses
+that file before any of it runs: the panel still draws, its saved data stays as it was, and
+the window says its background work is paused, with an Update panel button for the captain.
+The refusal names this section. Update the code, never the saved data:
+
+- From API 1 (a manifest with no `api`, or `"api": 1`) to API 2: `context.db.get`, `set`,
+  `delete` and `list` now return promises. Make each action, background task and local
+  helper that touches `context.db` `async`, `await` every call, including those in helper
+  files, and set `"api": 2` in `manifest.json`.
+
+Keep what the panel does as it was. Run `lint_panel` and place the panel: once the app
+accepts the file, the line on the panel goes and its background work starts on its own,
+with no Retry.
+
 ## Tested lesson panel
 
 `parts/lesson/` holds the tested subject-panel template the Lessons runbook uses after a finished round.

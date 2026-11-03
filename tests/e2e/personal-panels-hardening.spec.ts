@@ -1,16 +1,26 @@
+import { mkdirSync } from "node:fs";
 import { join } from "node:path";
 import { expect, type Page, test } from "@playwright/test";
+import { PANEL_UPDATE_ASKED_OPENING } from "../../src/core/orchestrator/wakes";
 import { PANEL_SILENCE_MS } from "../../src/core/panels/panelRuntimes";
+import { appPathsFor } from "../../src/core/paths";
 import { PANELS_SAFE_MODE_NOTE } from "../../src/core/personal/panelLines";
 import {
+  BACKGROUND_PAUSED_LINE,
   BACKGROUND_RETRY,
   BACKGROUND_STOPPED_LINE,
+  BACKGROUND_UPDATE,
 } from "../../src/renderer/src/personal/panelBoundaryWords";
 import { YOUR_PANELS_WORDS } from "../../src/renderer/src/settings/generalWords";
 import { scratchDir } from "../helpers/scratchDirs";
 import { panelBody } from "./frames";
 import { type LaunchedApp, launchApp } from "./launch";
-import { seedPersonalWorkspace, seedUnresponsivePanel } from "./personalFixtures";
+import {
+  seedOlderApiPanel,
+  seedPersonalWorkspace,
+  seedUnresponsivePanel,
+  updateOlderApiPanel,
+} from "./personalFixtures";
 import { feedLineOf } from "./rails";
 import { settingRow } from "./settings";
 import { pressKey } from "./windowKeys";
@@ -294,5 +304,74 @@ test.describe
       expect(
         await page.evaluate(() => window.infinitary.plugins.invoke("spinner", "ping", null)),
       ).toEqual({ ok: true, result: "pong" });
+    });
+  });
+
+/**
+ * INF-2470, the captain's "Approve and build" on direction A with "Start the
+ * update at once" and "No, the line on the panel is enough": a panel whose
+ * `server.ts` is written for the earlier panel API says its background work
+ * is paused, Update panel - pressed from the keyboard - tells the first mate
+ * once, and the updated files clear the line and run the work with no Retry.
+ * Data: `counter`, written as panels were before the store answered
+ * asynchronously, with a saved count. Completion signal: the snapshot's
+ * `paused` field, set and then cleared, and the first mate's request carrying
+ * the press. Platform: any. Shared resources: none beyond its own launch.
+ */
+test.describe
+  .serial("a panel written for an earlier panel API (INF-2470)", () => {
+    let launched: LaunchedApp;
+    let workspace: string;
+
+    test.beforeAll(async () => {
+      const userDataDir = scratchDir("infinitary-e2e-panels-paused-");
+      workspace = appPathsFor(userDataDir).personalWorkspaceDir;
+      mkdirSync(workspace, { recursive: true });
+      seedOlderApiPanel(workspace);
+      launched = await launchApp({ userDataDir, withMockProvider: true });
+      await expect.poll(() => mountedIds(launched), { timeout: 30_000 }).toEqual(["counter"]);
+    });
+
+    test.afterAll(async () => {
+      await launched.close();
+    });
+
+    test("says its background work is paused, asks the first mate once, and runs it once updated", async () => {
+      const { page } = launched;
+      const pausedOf = () =>
+        page.evaluate(() =>
+          window.infinitary.plugins.personal
+            .list()
+            .then((s) => s.extensions.find((e) => e.id === "counter")?.paused ?? null),
+        );
+      await expect(panelBody(page, "counter").locator('[data-fixture="counter"]')).toBeVisible();
+      const row = page.locator(
+        '[data-side-panel="counter"] [data-panel-background-paused="counter"]',
+      );
+      await expect(row).toContainText(BACKGROUND_PAUSED_LINE);
+      expect(
+        await page.evaluate(() => window.infinitary.plugins.invoke("counter", "count", null)),
+      ).toMatchObject({ ok: false });
+
+      const update = row.getByRole("button", { name: BACKGROUND_UPDATE });
+      await pressKey(update, "Enter");
+      await expect.poll(pausedOf).toEqual({ api: 1, serves: [2], asked: true });
+      await expect(update).toBeDisabled();
+      const told = () =>
+        (launched.mockProvider?.requestBodies() ?? []).filter(
+          (body) => body.includes(PANEL_UPDATE_ASKED_OPENING) && body.includes("(id counter)"),
+        ).length;
+      await expect.poll(told, { timeout: 30_000 }).toBeGreaterThan(0);
+      // A second ask while the first stands tells no one.
+      expect(await page.evaluate(() => window.infinitary.plugins.personal.update("counter"))).toBe(
+        false,
+      );
+
+      updateOlderApiPanel(workspace);
+      await expect.poll(pausedOf, { timeout: 30_000 }).toBeNull();
+      await expect(row).toHaveCount(0);
+      expect(
+        await page.evaluate(() => window.infinitary.plugins.invoke("counter", "count", null)),
+      ).toEqual({ ok: true, result: 1 });
     });
   });

@@ -276,6 +276,9 @@ const SHELL_COMMANDS: Readonly<Record<ShellCommandId, () => void>> = {
     if (s.view !== "home") s.setView("home");
     s.openReplyNote();
   },
+  "settings.runbooks": () => openSettingsAt("runbooks", "[data-runbooks] button"),
+  "runbooks.open-folder": () =>
+    openSettingsAt("runbooks", "[data-runbooks-open-folder]", (button) => button.click()),
   "settings.usage": openUsage,
   "settings.automation": openAutomation,
   "settings.integrations": openIntegrations,

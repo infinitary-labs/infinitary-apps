@@ -3,6 +3,7 @@ import { join } from "node:path";
 import { expect, test } from "@playwright/test";
 import { resolveClaudeExecutable } from "../../src/core/claude/claudeCli";
 import { seatMovedLine } from "../../src/core/orchestrator/seat";
+import { builtinManifest } from "../../src/renderer/src/plugins/builtin/manifest";
 import { catalogEntry } from "../../src/shared/providers";
 import { runbookManifestSchema } from "../../src/shared/runbooks";
 import { scratchDir } from "../helpers/scratchDirs";
@@ -74,7 +75,12 @@ test("changed instructions start a new conversation on Claude that serves them",
   ).toBe(true);
 
   await pressKey(page.getByRole("button", { name: "Settings", exact: true }), "Enter");
-  await pressKey(page.getByRole("tab", { name: "Intelligence", exact: true }), "Enter");
+  // INF-1988 gives guidance its own Runbooks tab; keep the instruction-renewal journey on that surface.
+  const runbooksTab = builtinManifest.contributes.settingsSections.find(
+    ({ id }) => id === "runbooks",
+  );
+  if (!runbooksTab) throw new Error("The built-in Runbooks tab is missing.");
+  await pressKey(page.getByRole("tab", { name: runbooksTab.label, exact: true }), "Enter");
   const control = settingRow(page, `runbook-${workflows.id}`).getByRole("switch", {
     name: workflows.name,
     exact: true,

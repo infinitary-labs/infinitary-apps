@@ -71,7 +71,8 @@ describe("local direct unit reach", () => {
 
   // INF-2426: b4c11e3fd and 61ba81374 edited the testing runbook's text and
   // broke the crewmate budget and the guidance contract on main, because the
-  // runbook JSON is imported by piResources.ts, never by a test.
+  // runbook text is imported by piResources.ts, never by a test.
+  // INF-1988 moves Testing to Markdown; Care remains a real imported JSON fixture.
   it("selects the tests that read a runbook's text through the module importing it", () => {
     const readers = [
       "tests/crewmate-fixed-context.test.ts",
@@ -79,7 +80,7 @@ describe("local direct unit reach", () => {
       // seat.ts imports piResources.ts: an importer of the importer stays out.
       "src/core/orchestrator/seat.test.ts",
     ];
-    expect(directUnitReach(["resources/runbooks/testing/crew.json"], readers, root)).toEqual([
+    expect(directUnitReach(["resources/runbooks/care/default.json"], readers, root)).toEqual([
       "src/core/pi/piResources.test.ts",
       "tests/crewmate-fixed-context.test.ts",
     ]);

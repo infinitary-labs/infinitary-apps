@@ -50,7 +50,7 @@ test("copy a built-in, edit it in place, replace it and restore it", async ({}, 
     const original = readFileSync(guidePath, "utf8");
     writeFileSync(guidePath, original.replace("# Common workflows", "# My workflows"));
     await at.page.getByRole("button", { name: "Settings", exact: true }).click();
-    await at.page.getByRole("tab", { name: "Intelligence", exact: true }).click();
+    await at.page.getByRole("tab", { name: "Runbooks", exact: true }).click();
     const control = settingRow(at.page, `runbook-${copy.id}`).getByRole("switch");
     await expect(control).toHaveAttribute("aria-checked", "false");
     await pressKey(control, "Space");
@@ -60,7 +60,10 @@ test("copy a built-in, edit it in place, replace it and restore it", async ({}, 
       "false",
     );
     await resizeWindow(at.app, at.page, { width: 1280, height: 900 });
-    await regionShot(at.page.locator("[data-runbooks]"), testInfo.outputPath("runbooks-after.png"));
+    await regionShot(
+      at.page.locator('[data-runbooks-group="yours"]'),
+      testInfo.outputPath("runbooks-after.png"),
+    );
     await at.page.keyboard.press("Escape");
     const line = ACTIONS.runbook.done({
       name: copy.name,

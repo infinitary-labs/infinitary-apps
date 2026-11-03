@@ -7,9 +7,6 @@ import type { EffectiveTaskPolicies } from "@shared/taskPolicies";
 import careCarefulGuide from "../../../resources/runbooks/care/careful.json" with { type: "json" };
 import careDefaultGuide from "../../../resources/runbooks/care/default.json" with { type: "json" };
 import careQuickGuide from "../../../resources/runbooks/care/quick.json" with { type: "json" };
-import deliveryGuide from "../../../resources/runbooks/delivery/crew.json" with { type: "json" };
-import namingGuide from "../../../resources/runbooks/naming/guide.json" with { type: "json" };
-import testingGuide from "../../../resources/runbooks/testing/crew.json" with { type: "json" };
 import { BROWSER_COMMAND } from "../browser/commandWords";
 import { CREWMATE_INTEGRATIONS_LINE } from "../integrations";
 import { renderReferenceImport } from "../knowledge/context";
@@ -22,6 +19,7 @@ import {
 } from "../prompts/cardContract";
 import { FLEET_WORK } from "../prompts/fleetWork";
 import { RIGOR_SAFETY } from "../prompts/validationResources";
+import { deliveryGuide, namingGuide, testingGuide } from "../runbooks/fallback.generated";
 
 export { RIGOR_SAFETY } from "../prompts/validationResources";
 
@@ -328,7 +326,7 @@ EVERY TURN, classify first, then act as one of:
 3. steer - the message concerns work already under way. steer_crewmate with the guidance; no card.
 4. spawn or plan - project work or evidence. spawn_crewmate starts or queues; create_task/update_task/link_tasks follow their declared start rules. No card. Personal asks follow the enabled runbooks.
 5. settle - use settle_task; follow its confirm flow. An idle crewmate stays resumable until you settle it. Close reported finished work that turn (answered for an answer, finished for verified folder work, otherwise its delivery or discard); its crewmate judges whether the captain read it.
-6. operate - fleet and self management: repositories, schedules, notes, and the captain's own surfaces. Do it now with your tools; a card only when something genuinely needs the captain. Personalization is the operate case for the app itself: the theme or a panel's rail, position or visibility is one app_change call (theme or panel); removing a surface is one personalize call, a lasting instruction for the panels built for the captain is one app_change direction scoped to the personal workspace, and the feed line is the whole answer - no card. A new panel, or a change to how one draws, is crewmate work on the personal project, never personalize. A panel or runbook someone else made is one install_plugin call; the host asks the captain on its own card, so author none.
+6. operate - fleet and self management: repositories, schedules, notes, and the captain's own surfaces. Do it now with your tools; a card only when something genuinely needs the captain. Personalization is the operate case for the app itself: the theme or a panel's rail, position or visibility is one app_change call (theme or panel); removing a surface is one personalize call, a lasting instruction for the panels built for the captain is one app_change direction scoped to the personal workspace, and the feed line is the whole answer - no card. A new panel, or a change to how one draws, is crewmate work on the personal project, never personalize. Lasting guidance or a skill for every crewmate is a runbook of your own: send a crewmate to the personal workspace with its runbooks skill; a skill for one project stays in that project, and customizing a built-in starts with app_change runbook-copy. A panel or runbook someone else made is one install_plugin call; the host asks the captain on its own card, so author none.
 A turn may compose more than one of these only when the user asked for more than one thing. An operational wake that needs none of them gets no tool calls and ends with the same short sentence, which nobody reads.
 
 STANDING RULES

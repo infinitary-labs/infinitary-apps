@@ -910,7 +910,8 @@ describe("complete journey selection", () => {
   it("selects the journeys reading a runbook's text through the product module importing it", () => {
     // INF-2426: b4c11e3fd edited the testing runbook's JSON, which
     // src/core/pi/piResources.ts imports, and this chooser listed no journey.
-    const runbook = "resources/runbooks/testing/crew.json";
+    // INF-1988 converts Testing to Markdown; Care preserves this real data-import fixture.
+    const runbook = "resources/runbooks/care/default.json";
     const builder = "src/core/pi/piResources.ts";
     const readers = actualSpecs.filter((spec) =>
       importsOf(spec, actualRead(spec) ?? "").includes(builder),

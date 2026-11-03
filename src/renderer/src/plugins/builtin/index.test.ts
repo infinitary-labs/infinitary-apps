@@ -75,6 +75,7 @@ describe("the built-in plugin", () => {
       ["keyboard", "Keyboard", "wide"],
       ["projects", "Projects", "wide"],
       ["subscriptions", "Intelligence", "wide"],
+      ["runbooks", "Runbooks", "wide"],
       ["usage", "Usage", "wide"],
       ["automation", "Automation", "wide"],
       ["integrations", "Integrations", "wide"],

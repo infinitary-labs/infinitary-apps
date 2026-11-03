@@ -377,6 +377,8 @@ const api: FirstmateApi = {
         invoke("inf:settings:dictation:set", setting),
       ),
     getRunbooks: () => invoke("inf:settings:runbooks:get"),
+    openRunbooksFolder: () => invoke("inf:app:open-runbook-folder", { kind: "personal" }),
+    viewRunbook: (id) => invoke("inf:app:open-runbook-folder", { kind: "builtin", id }),
     setRunbook: (id, enabled) =>
       readableRequest("inf:settings:runbooks:set", () =>
         invoke("inf:settings:runbooks:set", id, enabled),

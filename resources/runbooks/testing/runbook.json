@@ -3,7 +3,7 @@
   "name": "Testing rules",
   "description": "Testing guidance for planning and code changes on a project.",
   "crew": {
-    "file": "crew.json",
+    "file": "crew.md",
     "when": {
       "kind": [
         "plan",

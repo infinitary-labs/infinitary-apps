@@ -77,6 +77,9 @@ describe("the command catalog", () => {
       "updates.check", // INF-2073: Check for updates is chosen by name.
       "whats-new.show",
       "firstmate.reply",
+      // INF-1988: the approved Runbooks tab and folder are chosen by name.
+      "settings.runbooks",
+      "runbooks.open-folder",
       "settings.usage",
       "settings.automation",
       "settings.integrations",
@@ -138,6 +141,9 @@ describe("the command catalog", () => {
       "updates.check",
       "whats-new.show",
       "firstmate.reply",
+      // INF-1988: the shell opens the approved Runbooks tab and folder.
+      "settings.runbooks",
+      "runbooks.open-folder",
       "settings.usage",
       "settings.automation",
       "settings.integrations",

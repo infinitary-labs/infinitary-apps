@@ -6,7 +6,14 @@ import { CHOSEN_FILES_MAX } from "@shared/attachments";
 import { HERE } from "@shared/deviceNames";
 import { CORE_INVOKE_CHANNELS, type PushChannel, type PushPayload } from "@shared/ipc";
 import type { RecognizerClient, RecognizerPlace } from "@shared/voiceRecognizer";
-import { BrowserWindow, dialog, type OpenDialogOptions, type WebContents } from "electron";
+import {
+  app,
+  BrowserWindow,
+  dialog,
+  type OpenDialogOptions,
+  shell as systemShell,
+  type WebContents,
+} from "electron";
 import type { FrameMountRegistry } from "../frames/frameMounts";
 import { recordWindowKeys } from "../keyboard";
 import type { RendererSourceOptions } from "../security/rendererSource";
@@ -109,6 +116,18 @@ export function registerIpc(options: IpcOptions): void {
       console.warn(`[infinitary] link ${url}: not opened, the system could not open it:`, caught);
       throw caught;
     }
+    return { ok: true as const };
+  });
+
+  handleInvoke("inf:app:open-runbook-folder", rendererSource, async (_event, request) => {
+    const core = shell.core();
+    if (!core) throw new Error("Open this folder on the computer where your first mate lives.");
+    const folder =
+      request.kind === "personal"
+        ? core.services.runbooks.personalFolder()
+        : core.services.runbooks.view(request.id, app.getPath("temp"));
+    const error = await systemShell.openPath(folder);
+    if (error) throw new Error("The system could not open this folder. Try again.");
     return { ok: true as const };
   });
 

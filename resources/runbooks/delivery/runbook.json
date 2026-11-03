@@ -3,7 +3,7 @@
   "name": "Delivery judgment",
   "description": "How crewmates judge checks, repairs and readiness to merge.",
   "crew": {
-    "file": "crew.json",
+    "file": "crew.md",
     "when": {
       "delivery": [
         "direct-pr"

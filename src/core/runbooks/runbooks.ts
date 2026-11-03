@@ -1,16 +1,18 @@
 import { createHash } from "node:crypto";
 import {
+  chmodSync,
   cpSync,
   existsSync,
   lstatSync,
   mkdirSync,
+  mkdtempSync,
   readdirSync,
   readFileSync,
   rmSync,
   writeFileSync,
 } from "node:fs";
 import { mkdir, rm, writeFile } from "node:fs/promises";
-import { dirname, join, relative, resolve, sep } from "node:path";
+import { basename, dirname, join, relative, resolve, sep } from "node:path";
 import {
   crewSectionsOf,
   type NamingRule,
@@ -25,7 +27,23 @@ import { skillFolders } from "../session/projectResources";
 import type { SettingsStore } from "../storage/settingsStore";
 import { checkRunbookFiles } from "./runbookFiles";
 
-type Entry = { manifest: RunbookManifest; dir: string };
+type Entry = {
+  manifest: RunbookManifest;
+  dir: string;
+  source: "builtin" | "installed" | "personal";
+};
+
+/** The captain's common-to-niche order, shared by every reader and joined guidance. */
+export const BUILTIN_RUNBOOK_ORDER = [
+  "sequences",
+  "delivery",
+  "testing",
+  "care",
+  "naming",
+  "programs",
+  "casual-projects",
+  "lessons",
+] as const;
 
 /** The selected section and resource fingerprint share one prompt author. */
 export function crewRunbookText(served: { text: string; sha: string }): string {
@@ -48,26 +66,92 @@ export class Runbooks {
         const manifest = runbookManifestSchema.parse(
           JSON.parse(readFileSync(join(dir, "runbook.json"), "utf8")),
         );
-        return { manifest, dir };
+        return { manifest, dir, source: "builtin" as const };
       });
+    const order = new Map<string, number>(BUILTIN_RUNBOOK_ORDER.map((id, index) => [id, index]));
+    for (const { manifest } of this.bundled) {
+      if (!order.has(manifest.id))
+        throw new Error(`Place ${manifest.id} in the built-in runbook order.`);
+    }
+    this.bundled.sort((a, b) => (order.get(a.manifest.id) ?? 0) - (order.get(b.manifest.id) ?? 0));
     if (new Set(this.bundled.map(({ manifest }) => manifest.id)).size !== this.bundled.length)
       throw new Error("Runbook names must be unique.");
   }
   builtins(): RunbookManifest[] {
     return this.bundled.map(({ manifest }) => manifest);
   }
-  private get entries(): Entry[] {
+  private scan(): { entries: Entry[]; unreadable: RunbookView[] } {
     const entries = [...this.bundled];
-    for (const dir of [...this.installed(), ...this.personalFolders()]) {
+    const unreadable: RunbookView[] = [];
+    const folders = [
+      ...this.installed().map((dir) => ({ dir, source: "installed" as const })),
+      ...this.personalFolders().map((dir) => ({ dir, source: "personal" as const })),
+    ];
+    for (const { dir, source } of folders) {
       try {
         const manifest = checkRunbookFiles(dir);
         if (entries.some((entry) => entry.manifest.id === manifest.id)) continue;
-        entries.push({ manifest, dir });
+        entries.push({ manifest, dir, source });
       } catch (error) {
-        console.warn(`Could not read an added runbook: ${String(error)}`);
+        unreadable.push({
+          id: `unreadable:${dir}`,
+          name: basename(dir),
+          description: "This runbook is not available.",
+          enabled: false,
+          path: dir,
+          source,
+          error:
+            error instanceof SyntaxError || (error instanceof Error && error.name === "ZodError")
+              ? "Check runbook.json: its fields could not be read."
+              : error instanceof Error && !("code" in error)
+                ? error.message
+                : "Check that this folder and its runbook.json can be read.",
+        });
       }
     }
-    return entries;
+    return { entries, unreadable };
+  }
+  private get entries(): Entry[] {
+    return this.scan().entries;
+  }
+  /** Only the local host opens folders; a paired view cannot turn a home path into a local one. */
+  personalFolder(): string {
+    if (!this.personalRoot) throw new Error("The personal workspace is not available.");
+    mkdirSync(this.personalRoot, { recursive: true });
+    this.personalFolders(true);
+    return this.personalRoot;
+  }
+  /** View immutable built-ins without exposing the signed bundle to an editor. */
+  view(id: string, temporaryRoot: string): string {
+    const source = this.bundled.find((entry) => entry.manifest.id === id);
+    if (!source) throw new Error("Choose a built-in runbook to view.");
+    const parent = mkdtempSync(join(temporaryRoot, "infinitary-runbook-"));
+    chmodSync(parent, 0o700);
+    const dir = join(parent, source.manifest.id);
+    const copy = (from: string, to: string) => {
+      const stat = lstatSync(from);
+      if (stat.isSymbolicLink()) throw new Error("A built-in runbook must contain plain files.");
+      if (stat.isDirectory()) {
+        mkdirSync(to);
+        for (const name of readdirSync(from)) copy(join(from, name), join(to, name));
+        chmodSync(to, 0o555);
+      } else if (stat.isFile()) {
+        writeFileSync(to, readFileSync(from), { mode: 0o444 });
+      } else throw new Error("A built-in runbook must contain plain files.");
+    };
+    try {
+      copy(source.dir, dir);
+      return dir;
+    } catch (error) {
+      const writable = (path: string) => {
+        if (!existsSync(path) || !lstatSync(path).isDirectory()) return;
+        chmodSync(path, 0o700);
+        for (const name of readdirSync(path)) writable(join(path, name));
+      };
+      writable(parent);
+      rmSync(parent, { recursive: true, force: true });
+      throw error;
+    }
   }
   private personalFolders(strict = false): string[] {
     const root = this.personalRoot;
@@ -112,13 +196,18 @@ export class Runbooks {
   }
   list(): RunbookView[] {
     const states = this.settings.getRunbookStates();
-    return this.entries.map(({ manifest, dir }) => ({
-      id: manifest.id,
-      name: manifest.name,
-      description: manifest.description,
-      enabled: states[manifest.id] !== false,
-      ...(this.personalRoot && dirname(dir) === this.personalRoot ? { path: dir } : {}),
-    }));
+    const { entries, unreadable } = this.scan();
+    return [
+      ...entries.map(({ manifest, dir, source }) => ({
+        id: manifest.id,
+        name: manifest.name,
+        description: manifest.description,
+        enabled: states[manifest.id] !== false,
+        source,
+        ...(source === "personal" ? { path: dir } : {}),
+      })),
+      ...unreadable,
+    ];
   }
   set(id: string, enabled: boolean): RunbookView[] {
     const entry = this.entries.find(({ manifest }) => manifest.id === id);

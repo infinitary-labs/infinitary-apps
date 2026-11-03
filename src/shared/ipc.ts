@@ -2611,6 +2611,18 @@ export const invokeContract = {
     request: z.tuple([z.string().min(1).max(4096)]),
     response: okSchema,
   },
+  // Local folders only, chosen by identity rather than an arbitrary renderer path.
+  "inf:app:open-runbook-folder": {
+    effect: "change",
+    surface: "host",
+    request: z.tuple([
+      z.discriminatedUnion("kind", [
+        z.strictObject({ kind: z.literal("personal") }),
+        z.strictObject({ kind: z.literal("builtin"), id: z.string().min(1) }),
+      ]),
+    ]),
+    response: okSchema,
+  },
   // A window command the main process runs (the size keys), chosen by name
   // in command search (docs/keyboard.md): the same handler its key runs.
   "inf:keyboard:run": {
@@ -3746,6 +3758,8 @@ export type FirstmateApi = {
     getDictation: () => Promise<DictationSettings>;
     setDictation: (setting: DictationSettings) => Promise<DictationSettings>;
     getRunbooks: () => Promise<RunbookView[]>;
+    openRunbooksFolder: () => Promise<{ ok: true }>;
+    viewRunbook: (id: string) => Promise<{ ok: true }>;
     setRunbook: (id: string, enabled: boolean) => Promise<RunbookView[]>;
     getPersonalResources: () => Promise<boolean>;
     setPersonalResources: (enabled: boolean) => Promise<boolean>;

@@ -108,6 +108,7 @@ export const builtinManifest: PluginManifest = parsePluginManifest({
       // group, and only some of that is a subscription. The id, the
       // `open subscriptions` card effect and the e2e ids are unchanged.
       { id: "subscriptions", label: "Intelligence", order: 20, width: "wide" },
+      { id: "runbooks", label: "Runbooks", order: 21, width: "wide" },
       // Recorded model usage across the fleet, in tokens or estimated
       // dollars (docs/usage.md). This Mac's own: a Mac that controls it has none.
       { id: "usage", label: "Usage", order: 22, width: "wide" },

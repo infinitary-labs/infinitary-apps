@@ -47,6 +47,8 @@ export const runbookViewSchema = z.strictObject({
   description: z.string(),
   enabled: z.boolean(),
   path: z.string().optional(),
+  source: z.enum(["builtin", "installed", "personal"]).optional(),
+  error: z.string().optional(),
 });
 export type RunbookView = z.infer<typeof runbookViewSchema>;
 export const runbookStateSchema = z.record(z.string(), z.boolean());

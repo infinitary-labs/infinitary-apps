@@ -35973,6 +35973,17 @@
             },
             "path": {
               "type": "string"
+            },
+            "source": {
+              "type": "string",
+              "enum": [
+                "builtin",
+                "installed",
+                "personal"
+              ]
+            },
+            "error": {
+              "type": "string"
             }
           },
           "required": [
@@ -36023,6 +36034,17 @@
             },
             "path": {
               "type": "string"
+            },
+            "source": {
+              "type": "string",
+              "enum": [
+                "builtin",
+                "installed",
+                "personal"
+              ]
+            },
+            "error": {
+              "type": "string"
             }
           },
           "required": [
@@ -36068,6 +36090,17 @@
               "type": "boolean"
             },
             "path": {
+              "type": "string"
+            },
+            "source": {
+              "type": "string",
+              "enum": [
+                "builtin",
+                "installed",
+                "personal"
+              ]
+            },
+            "error": {
               "type": "string"
             }
           },

@@ -2,7 +2,9 @@
 
 A runbook is a folder of guidance, not a program runtime and not a skill.
 Its `runbook.json` may name a first-mate section, one crew section or several each with its own selector, a skills folder and HTML parts or pictures.
-A section is plain text, either a Markdown file or a JSON string; JSON strings let the bundled defaults share one source with both the app build and plain-Node consumers.
+A section is plain text, either a Markdown file or a JSON string.
+Delivery, Testing and Naming sections are Markdown; `node scripts/generate-runbook-fallback.ts` produces their code fallback for app and plain-Node consumers, and `pnpm check` refuses drift.
+Care levels retains its JSON-string fallbacks, and runbooks other people made may still use JSON strings.
 Skills inside it use the Agent Skills format and are read on demand.
 The host does not decide which subject an ask belongs to.
 
@@ -10,14 +12,23 @@ The host does not decide which subject an ask belongs to.
 
 `Runbooks` in `src/core/runbooks/runbooks.ts` reads the app bundle's `resources/runbooks` root through the existing self-source location, the installer's committed runbook folders and the personal workspace's `runbooks/` folders.
 `SettingsStore` owns the saved on/off map; absent entries are on, so an update's new built-ins start on.
-Settings → Intelligence lists each runbook by its manifest's name and description, with a keyboard-operable switch and save feedback.
+Settings → Runbooks sits immediately after Intelligence and shares its visibility rules.
+Built in lists the bundled runbooks; Yours lists installed and personal ones, including an unreadable folder with its reason and no switch.
+Each valid row has its manifest's name and description, a keyboard-operable switch and save feedback.
+Runbook rows carry optional source and error fields (`src/shared/contract-changes/runbook-sources-and-errors.md`).
+A built-in's View button opens a fresh read-only copy in a private temporary folder, never the signed app's own files.
+Its label on pointer rest or keyboard focus tells the person to ask the first mate to customize it.
+Open folder creates the personal runbooks folder if needed and opens it through a local host request using `shell.openPath`; that request accepts only a built-in identity or the personal folder, never an arbitrary path.
+Only the computer holding the first mate's folders opens them; a controlling computer's folder row instead names that computer.
+Open Runbooks and Open your runbooks folder are commands without default keys.
+Make your own gives short examples of what to ask the first mate, not a hand-written format or an in-app editor.
 The first mate reads the same list and changes it through `app_state` and `app_change runbook`, an asked catalog action.
 The dispatcher owns the attributed feed line, named from the manifest rather than an internal identifier, and does not report unchanged writes as changes.
 The manifest may declare a replacement; enabling it turns the named runbook off in the same saved update.
 Adding a runbook from elsewhere uses the existing installer; personal copies use the same guidance reader and switches.
 
 Enabled first-mate sections go through the appended-instructions door at each idle boundary, with `instructions_sha` over the exact joined text.
-They are joined in list order - bundled folders by name, then added and personal ones - so a section names the runbook that holds a rule it relies on, never a place above or below it.
+They are joined in list order - the shared `BUILTIN_RUNBOOK_ORDER` (Common workflows, Delivery judgment, Testing rules, Care levels, Commit and PR naming, Programs, Casual projects, Lessons), then added and personal ones - so a section names the runbook that holds a rule it relies on, never a place above or below it.
 Runbooks are outside the first mate's hard fixed-context budget; the model's physical context window still applies.
 A switch affects the first mate's next idle boundary and newly opened crew conversations, not a prompt already running.
 No procedure is refused for exceeding the core budget.
@@ -48,6 +59,16 @@ Guidance and skill roots cannot overlap these panel folders.
 The installer tells the first mate where those inert sources will live after consent; adding one later uses that folder through the same installer and its separate panel consent card.
 A panel's installed copy has its own record, grant and lifecycle.
 
+## Making a new runbook
+
+Ask the first mate for lasting guidance or a skill for every crewmate.
+The core operate paragraph routes this to a crewmate on the personal workspace, even when Common workflows is off.
+A skill for only one project stays in that project.
+The workspace's instructions point runbook work at its seeded `runbooks` skill, the one home of the manifest, Markdown sections, selectors, skills and plain-file format.
+`AUTHORING_SKILL_IDS` includes this skill so boot seeds and refreshes it beside the other workspace skills.
+A newly authored folder under the workspace's `runbooks/` is on at the next read, because absent switches are on; there is no extra installer consent for work the captain asked the crewmate to write there.
+Customizing a built-in still starts through the copy action below, which leaves the copy off.
+
 ## Making a built-in yours
 
 Ask the first mate to copy a built-in runbook, with a new name and unused id.
@@ -61,7 +82,7 @@ The global reader validates these plain folders on every read, through the same 
 Unlike an installer snapshot, the personal folder is the served source: edits reach the next idle boundary or new crew conversation without reinstalling.
 The app never rewrites personal copies on startup or update.
 
-Turn the copy on in Settings → Intelligence or ask the first mate.
+Turn the copy on in Settings → Runbooks or ask the first mate.
 The existing replacement switch turns the built-in off in the same saved update and leaves one feed line naming both runbooks.
 The built-in stays available and unchanged; to restore it, turn the copy off and the built-in on.
 Turning the copy off does not automatically restore the built-in, and turning the built-in on does not turn other runbooks off.

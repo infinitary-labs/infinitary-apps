@@ -469,6 +469,24 @@ export const KEYBOARD_COMMANDS = {
     keys: [],
     searchWords: ["answer", "message", "note", "last"],
   },
+  "settings.runbooks": {
+    label: "Open Runbooks",
+    scope: "window",
+    runs: "shell",
+    repeat: false,
+    risk: "navigate",
+    keys: [],
+    searchWords: ["guidance", "skills", "instructions"],
+  },
+  "runbooks.open-folder": {
+    label: "Open your runbooks folder",
+    scope: "window",
+    runs: "shell",
+    repeat: false,
+    risk: "navigate",
+    keys: [],
+    searchWords: ["directory", "guidance", "customize"],
+  },
   // Settings → Usage (docs/usage.md), chosen by name: it has no default key.
   "settings.usage": {
     label: "Open Usage",

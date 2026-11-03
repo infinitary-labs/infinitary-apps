@@ -20,6 +20,7 @@ import { GeneralTab } from "../../settings/GeneralTab";
 import { IntegrationsTab } from "../../settings/IntegrationsTab";
 import { KeyboardTab } from "../../settings/KeyboardTab";
 import { ProjectsTab } from "../../settings/ProjectsTab";
+import { RunbooksTab } from "../../settings/RunbooksTab";
 import { SubscriptionsTab } from "../../settings/SubscriptionsTab";
 import { UsageTab } from "../../settings/UsageTab";
 import { type PanelSource, type PluginBindings, sidePanelBinding } from "../contributions";
@@ -120,6 +121,7 @@ export const builtinBindings: PluginBindings = {
     keyboard: { Component: KeyboardTab, onAView: true },
     projects: { Component: ProjectsTab, onAViewOfACommand: true },
     subscriptions: { Component: SubscriptionsTab, onAViewOfACommand: true },
+    runbooks: { Component: RunbooksTab, onAViewOfACommand: true },
     usage: { Component: UsageTab, onAViewOfACommand: true },
     // On a Mac that controls another, the same rules, which run there (docs/automation.md).
     automation: { Component: AutomationTab, onAView: true },

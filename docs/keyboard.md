@@ -104,6 +104,7 @@ Every reader takes the installed map ("The installed map"), never the catalog's 
 | `updates.check`, Check for updates | window, run by the shell page | none: chosen by name (update, version, release and new find it too) |
 | `whats-new.show`, Show what's new | window, run by the shell page | none: chosen by name (release, notes, changes and version find it too), or What’s New in the Help menu |
 | `firstmate.reply`, Open the first mate's reply | window, run by the shell page | none: chosen by name (answer, message, note and last find it too), or a click, Enter or Space on the reply line |
+| `settings.runbooks`, Open Runbooks; `runbooks.open-folder`, Open your runbooks folder | window, run by the shell page | none: chosen by name |
 | `settings.usage`, Open Usage | window, run by the shell page | none: chosen by name (tokens, models, cost and dollars find it too) |
 | `settings.automation`, Open Automation | window, run by the shell page | none: chosen by name (schedule, recurring, reminder and pause find it too) |
 | `automation.pause-all`, Pause all automations | window, run by the shell page | none: chosen by name (schedule, recurring and stop find it too) |

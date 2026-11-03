@@ -248,6 +248,7 @@ describe("ipc contract", () => {
     expect([...HOST_INVOKE_CHANNELS].sort()).toEqual([
       "inf:app:choose-folder",
       "inf:app:open-external",
+      "inf:app:open-runbook-folder",
       // Pictures of this Mac's task page for this Mac's window, the room its
       // maximized view gives the page, and the captain's own input to it
       // while he has control (docs/task-browser.md).

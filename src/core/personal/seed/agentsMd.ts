@@ -7,7 +7,7 @@
  */
 export const PERSONAL_AGENTS_MD = `# Personal workspace
 
-This folder holds personal panels and records, not standalone games or apps.
+This folder holds personal panels, runbooks and records, not standalone games or apps.
 A game or a standalone app belongs in its own project. That project keeps the setup, planning and delivery the captain submitted. It does not use this folder's rule of no branch and no pull request.
 
 ## Stay inside this workspace
@@ -20,6 +20,7 @@ process walks outside.
 
 Open the one skill your brief names. Do not read every skill under \`.claude/skills/\`.
 A panel task opens \`.claude/skills/personal-panel/SKILL.md\` before it writes or changes a panel. That skill is the one copy of a panel's shape, imports, store, actions, cards and checks. Look up a type you use in \`infinitary-env.d.ts\` next to this file (the \`@infinitary/contracts\` module). Do not read that file from top to bottom.
+A runbook task opens \`.claude/skills/runbooks/SKILL.md\` before writing lasting guidance or a skill for every crewmate.
 The captain's panel instructions arrive as standing directions with each turn; follow them too.
 
 ## What the host still does

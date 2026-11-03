@@ -293,6 +293,9 @@ const REFUSALS: Readonly<
     s.releaseNotes && s.releaseNotes.notes.length > 0 ? null : "No release notes yet",
   // From anywhere, Settings included: it goes home to the note.
   "firstmate.reply": (s) => (s.lastTurn?.reply ? null : "Your first mate has not replied yet"),
+  "settings.runbooks": usageRefusalFor("Runbooks"),
+  "runbooks.open-folder": (s) =>
+    isView(s.thisMac) ? `Your runbooks folder is on ${s.thisMac.name}` : null,
   // Usage is the record of the Mac Firstmate lives on (docs/usage.md).
   "settings.usage": usageRefusal,
   // Automation is the home's own, like Usage: the schedules run on that Mac.

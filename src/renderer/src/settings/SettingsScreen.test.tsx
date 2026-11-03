@@ -51,6 +51,7 @@ describe("Settings column", () => {
         "keyboard",
         "projects",
         "subscriptions",
+        "runbooks", // INF-1988: the approved dedicated Runbooks tab.
         "usage",
         "automation",
         "integrations",

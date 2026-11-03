@@ -49,6 +49,7 @@ export const RETIRED_SKILL_IDS = retiredSkillIds as [string, ...string[]];
 
 /** The authoring skills, at theirs. */
 export const AUTHORING_SKILL_IDS = [
+  "runbooks",
   "personal-panel",
   "github-prs",
   "quota",

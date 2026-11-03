@@ -2,9 +2,9 @@
   "id": "naming",
   "name": "Commit and PR naming",
   "description": "Conventional names for commits and pull requests.",
-  "firstmate": "guide.json",
+  "firstmate": "guide.md",
   "crew": {
-    "file": "guide.json"
+    "file": "guide.md"
   },
   "naming": {
     "pattern": "^(feat|fix|chore|test|refactor|docs|perf)(?:\\([a-z0-9][a-z0-9./-]*\\))?!?: \\S.+$",

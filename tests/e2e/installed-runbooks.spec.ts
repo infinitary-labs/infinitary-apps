@@ -87,7 +87,7 @@ test("add a runbook only on consent, keep its replacement and remove it by talki
       (await at.page.evaluate(() => window.infinitary.plugins.personal.list())).extensions,
     ).toEqual([]);
     await at.page.getByRole("button", { name: "Settings", exact: true }).click();
-    await at.page.getByRole("tab", { name: "Intelligence", exact: true }).click();
+    await at.page.getByRole("tab", { name: "Runbooks", exact: true }).click();
     await expect(settingRow(at.page, `runbook-${manifest.id}`).getByRole("switch")).toHaveAttribute(
       "aria-checked",
       "true",

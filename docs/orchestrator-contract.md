@@ -156,6 +156,8 @@ A rule that the core, a tool description and a parameter each stated is said onc
   The values and the validation are the same on both runtimes; `claudeTaskTools.ts` reads the form.
 - **A shape a zod schema owns is one `zodParameter`** (`src/core/session/tools.ts`), never a spread of `z.toJSONSchema`.
   It leaves out the JSON Schema dialect line and the safe-integer range zod writes beside each integer, which no model acts on.
+  It also leaves out a string's length, an array's item count and an object's closed flag: the tool parses the argument with the same zod schema, which refuses a value past one and names it.
+  A pattern, a number's bound, an enum, a constant and the required fields stay, since a model writes a value from them; a count a model must plan around is said in the parameter's description.
 - **emit_card describes only its top-level parameters.**
   A Claude seat was served no nested description until INF-744, so each nested rule rides `actions` or `CARD_MECHANICS`; `claudeToolSurface.test.ts` holds that no app tool describes a nested parameter.
 

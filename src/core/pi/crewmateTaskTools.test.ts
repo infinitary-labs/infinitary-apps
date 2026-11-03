@@ -426,6 +426,54 @@ describe("the crewmate tool spec", () => {
     expect(declared).toEqual([expected, expected]);
   });
 
+  it("INF-2441: refuses a value past a limit its served schema leaves out, on both runtimes", async () => {
+    // The served form of a zod-owned parameter keeps its shape and leaves the
+    // owner's lengths and item counts out for room; the tool's own parse
+    // still refuses past them, before the host is reached.
+    const delegate = crewmateToolDelegate();
+    const pi = createCrewmateTools(delegate);
+    const claude = claudeCrewmateTools(delegate);
+    const calls = [
+      {
+        tool: "open_change",
+        parameter: "recovery",
+        limit: "retryUploads",
+        params: { title: "fix(cards): keep the footer", recovery: { retryUploads: [] } },
+      },
+      {
+        tool: "report",
+        parameter: "validation",
+        limit: "reason",
+        params: {
+          text: "The plan is recorded.",
+          validation: {
+            kind: "plan",
+            previousRevision: 0,
+            reason: "The whole build log, pasted. ".repeat(160),
+            scenarios: [],
+          },
+        },
+      },
+    ];
+    for (const { tool, parameter, limit, params } of calls) {
+      const schema = pi.find((each) => each.name === tool)?.parameters as {
+        properties: Record<string, unknown>;
+      };
+      expect(JSON.stringify(schema.properties[parameter]), tool).not.toMatch(
+        /"(min|max)(Length|Items)"/,
+      );
+      await expect(
+        runPi(pi.find((each) => each.name === tool) as PiTool, params),
+        `${tool} on Pi`,
+      ).rejects.toThrow(limit);
+      await expect(
+        runClaude(claude.find((each) => each.name === tool) as ClaudeTool, params),
+        `${tool} on Claude`,
+      ).rejects.toThrow(limit);
+    }
+    expect(delegate.calls).toEqual([]);
+  });
+
   it("carries a capture's pictures beside its text on both runtimes", async () => {
     const pi = createCrewmateTools(crewmateToolDelegate()).find(
       (tool) => tool.name === "capture_panel",

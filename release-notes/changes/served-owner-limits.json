@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "served-owner-limits",
+      "reason": "Internal: a zod-owned tool parameter is served without the lengths, item counts and closed-object flags its own parse still refuses, which wins back room in a crewmate's fixed instructions; nothing a person sees changes."
+    }
+  ]
+}

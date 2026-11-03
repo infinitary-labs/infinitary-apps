@@ -481,16 +481,26 @@ export type StringEnum<V extends string> = TUnsafe<V> & {
 };
 
 /**
- * A parameter whose shape a zod schema owns, written as JSON Schema without
- * two things only the generator needs. The dialect line names a whole
- * document, never one parameter inside a tool (the published contract names
- * it once too), and the safe-integer range zod writes beside every integer
- * says no more than `integer` does. Both are words every model reads on every
- * request (INF-718, the crewmate's fixed-context budget).
+ * A parameter whose shape a zod schema owns, written as JSON Schema with its
+ * shape and without what only a validator reads. The dialect line names a
+ * whole document, never one parameter inside a tool (the published contract
+ * names it once too), and the safe-integer range zod writes beside every
+ * integer says no more than `integer` does (INF-718). A string's length, an
+ * array's item count and an object's closed flag are the owner's limits: the
+ * tool parses its argument with that same zod schema, which refuses a value
+ * past one and names it, so the served form leaves them out (INF-2441's
+ * fixed-context room). A pattern, a number's bound, an enum, a constant and
+ * the required fields stay, since a model writes a value from them. Each is
+ * a word every model reads on every request.
  */
 export function zodParameter<T>(schema: z.ZodType, options?: { description?: string }): TUnsafe<T> {
   const json = z.toJSONSchema(schema, {
     override: ({ jsonSchema }) => {
+      delete jsonSchema.minLength;
+      delete jsonSchema.maxLength;
+      delete jsonSchema.minItems;
+      delete jsonSchema.maxItems;
+      if (jsonSchema.additionalProperties === false) delete jsonSchema.additionalProperties;
       if (jsonSchema.type !== "integer") return;
       if (jsonSchema.maximum === Number.MAX_SAFE_INTEGER) delete jsonSchema.maximum;
       if (jsonSchema.minimum === Number.MIN_SAFE_INTEGER) delete jsonSchema.minimum;

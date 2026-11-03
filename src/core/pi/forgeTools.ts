@@ -1,6 +1,7 @@
 import {
   type ChangePresentationDraft,
   changePresentationDraftSchema,
+  openChangeInputSchema,
   type PresentationRecovery,
   presentationRecoverySchema,
   type StoryAround,
@@ -87,8 +88,9 @@ export const SKIP_RULES_DESCRIPTION = [
 /**
  * The story parameter's own words (INF-733): the relationships
  * `evidenceRelations` and `ChangePresentations.prepare` refuse are in no
- * schema, so they are said here, beside the counts and the commit-id pattern
- * the schema also declares, which a Claude seat was not served until INF-744.
+ * schema, so they are said here, beside the commit-id pattern the served
+ * schema also declares and the item counts it leaves to the parse
+ * (`zodParameter`).
  */
 export const PREPARE_CHANGE_STORY_DESCRIPTION = [
   "why holds 1 or 2 short sentences, whatChanged 1 to 5 short bullets, before and after one short sentence each, checked 1 to 6 observed {check, result} facts.",
@@ -163,9 +165,12 @@ export const OPEN_CHANGE_TOOL = crewmateTool({
       }),
     ),
   }),
+  // The served schema leaves the owner's limits out (`zodParameter`); its parse refuses them.
   bind: ({ onOpenChange }) =>
     onOpenChange &&
-    (async (params, signal) => ({ text: await callWithSignal(onOpenChange, [params], signal) })),
+    (async (params, signal) => ({
+      text: await callWithSignal(onOpenChange, [openChangeInputSchema.parse(params)], signal),
+    })),
 });
 
 export const CHECK_CHANGE_TOOL = crewmateTool({

@@ -144,8 +144,10 @@ export type ReplyNote = { you: string; words: string; problem: boolean };
  * whichever of its tabs it shows, one per saved card, one reply note, and
  * any number of each panel's cards, one per card id.
  */
+/** The views of a task's record entry: Info, Cards and Activity share its one frame (INF-2261). */
+export type RecordView = "info" | "cards" | "activity";
 export type OpenRecord =
-  | { taskId: string; from?: EntryFrom }
+  | { taskId: string; from?: EntryFrom; view?: RecordView }
   | { pastCardId: string }
   | { replyNote: ReplyNote }
   | { browserTaskId: string; from?: EntryFrom | BrowserViewFrom }
@@ -168,6 +170,8 @@ export type BrowserViewFrom = EntryFrom & { session: string; generation: number 
 /** A local presentation entry reuses card sizing, paging and reconciliation. */
 export type StackEntry = Card & {
   recordTaskId?: string;
+  /** Which of the record's views it shows: Info, Cards or Activity (INF-2261); absent is Info. */
+  recordView?: RecordView;
   pastCardId?: string;
   replyNote?: ReplyNote;
   browserTaskId?: string;
@@ -264,7 +268,7 @@ export function visibleStack(
       (held): StackEntry => ({
         id: heldEntryId(held),
         ...("taskId" in held
-          ? { recordTaskId: held.taskId }
+          ? { recordTaskId: held.taskId, ...(held.view ? { recordView: held.view } : {}) }
           : "pastCardId" in held
             ? { pastCardId: held.pastCardId }
             : "replyNote" in held
@@ -925,9 +929,10 @@ export type ShellState = {
   /**
    * Opens or focuses one task's front stack entry, from the card `from`
    * names when it was the card's key or its Show Info (docs/task-card-tabs.md,
-   * "From a card").
+   * "From a card"), showing the record's `view`: Info, unless its Cards or
+   * Activity tab was chosen (INF-2261).
    */
-  openRecord: (taskId: string, from?: EntryFrom) => void;
+  openRecord: (taskId: string, from?: EntryFrom, view?: RecordView) => void;
   /** Opens or focuses a closed card's front stack entry, read-only (FI3-579). */
   openPastCard: (cardId: string) => void;
   /**
@@ -2148,10 +2153,10 @@ export const useShellStore = create<ShellState>()((set, get) => ({
     ),
   openThread: (cardId) =>
     set((s) => ({ closedThreadIds: s.closedThreadIds.filter((id) => id !== cardId) })),
-  openRecord: (taskId, from) =>
+  openRecord: (taskId, from, view) =>
     set((s) => {
       const records = [
-        { taskId, ...(from ? { from } : {}) },
+        { taskId, ...(from ? { from } : {}), ...(view && view !== "info" ? { view } : {}) },
         // A task is one entry: its record's tab replaces its other tabs, as
         // the card's tab strip does.
         ...s.records.filter((record) => !isTaskTab(record, taskId)),

@@ -19,6 +19,7 @@ import {
   nowRow,
   openGroup,
   POINT_SUMMARY,
+  recordAttention,
   recordCard,
   recordFact,
   recordFrame,
@@ -28,6 +29,7 @@ import {
   restOnTaskKey,
   rowSummary,
   shownTaskFacts,
+  showRecordTab,
   taskFact,
   taskKeyLinks,
 } from "./rails";
@@ -479,11 +481,13 @@ test("a task's record links every other task's key it shows, and its own stays t
     const body = recordFrame(page);
 
     await test.step("resting on the key it waits on opens that task's summary beside the record", async () => {
-      const waitingOn = linkedTaskKeys(body.locator("[data-record-attention]")).first();
-      await restOnFramedKey(page, waitingOn);
+      // The attention sentence is the window's, at the top of Info (INF-2261).
+      const waitingOn = taskKeyLinks(recordAttention(page)).first();
+      await restOnTaskKey(page, waitingOn);
       await expect(keySummary(page)).toHaveAttribute("data-key-summary", work.format.id);
-      // Off the key inside the record, as a pointer on its way out goes.
-      await body.locator("[data-record-attention-guidance]").dispatchEvent("pointerover");
+      // Off it with the same pointer, as a pointer on its way out goes.
+      const off = { x: 4, y: 400 };
+      await slidePointer(page, off, off, 1);
       await expect(keySummary(page)).toHaveCount(0);
     });
 
@@ -499,15 +503,18 @@ test("a task's record links every other task's key it shows, and its own stays t
     });
 
     await test.step("what it waits on, its parent, what it holds up and its Activity's words link; its own key never", async () => {
-      await clickInBody(body.locator('[data-record-section="details"] > summary'));
+      // The relations are the Info tab's rows of keys, above the goal (INF-2261).
       await expect(recordFact(page, "blocks")).toBeVisible();
-      await expect(linkedTaskKeys(body.locator("[data-record-attention]"))).toHaveText([
-        work.format.key,
-      ]);
+      await expect(taskKeyLinks(recordAttention(page))).toHaveText([work.format.key]);
       // Part of names the parent's key, never its id.
-      await expect(linkedTaskKeys(recordFact(page, "parent"))).toHaveText([work.parent.key]);
-      await expect(linkedTaskKeys(recordFact(page, "blocked-by"))).toHaveText([work.format.key]);
-      await expect(linkedTaskKeys(recordFact(page, "blocks"))).toHaveText([work.summary.key]);
+      await expect(taskKeyLinks(recordFact(page, "parent"))).toHaveText([work.parent.key]);
+      await expect(taskKeyLinks(recordFact(page, "blocked-by"))).toHaveText([work.format.key]);
+      await expect(taskKeyLinks(recordFact(page, "blocks"))).toHaveText([work.summary.key]);
+      await expect(taskKeyLinks(recordCard(page)).filter({ hasText: work.ledger.key })).toHaveCount(
+        0,
+      );
+      await recordCard(page).screenshot({ path: test.info().outputPath("record-key-links.png") });
+      await showRecordTab(page, "activity");
       // Another task's line ends in that task's key, and the report's words name the work it continues as.
       await expect(
         linkedTaskKeys(
@@ -520,12 +527,12 @@ test("a task's record links every other task's key it shows, and its own stays t
         }),
       ).not.toHaveCount(0);
       await expect(linkedTaskKeys(body).filter({ hasText: work.ledger.key })).toHaveCount(0);
-      await recordCard(page).screenshot({ path: test.info().outputPath("record-key-links.png") });
+      await showRecordTab(page, "info");
     });
 
     await test.step("Enter on the key it holds up opens that task's record", async () => {
-      // By keys, as the record's Activity is read: the key is a Tab stop.
-      await pressKey(linkedTaskKeys(recordFact(page, "blocks")), "Enter");
+      // By keys, as the record's rows are read: the key is a Tab stop.
+      await pressKey(taskKeyLinks(recordFact(page, "blocks")), "Enter");
       await expect(recordCard(page)).toHaveAttribute("data-task-record", work.summary.id);
     });
   } finally {

@@ -30,7 +30,7 @@ import "./taskFacts.css";
  * keyboard's focus, which makes the age a Tab stop of its own; its
  * accessible name carries both (docs/keyboard.md, "Facts shown on rest").
  */
-function Age({
+export function Age({
   at,
   now,
   focusable,
@@ -364,24 +364,27 @@ export function hasFactStrip(facts: TaskFacts): boolean {
 }
 
 /**
- * The task's fact strip (FI3-1159, the captain's layout B), the merge
- * card's own shape: one cell per fact, each an uppercase micro label over a
- * one-line value (a check-read refusal wraps within its cell), the cells wrapping whole - the model, its intelligence
- * level and its reasoning (FI3-439), then the change (a link where the
- * host has a page and the surface takes clicks), its checks with how long
- * they have run or took, and a review's verdict - then the footnote saying why
- * that model. The crew summary draws it last, under a hairline; the task
- * record draws it just above its action bar.
+ * The task record's row of facts (INF-2261, the captain's pick: "At the end
+ * of the Info body, under a hairline, scrolling with it"): one cell per fact,
+ * each an uppercase micro label over a one-line value (a check-read refusal
+ * wraps within its cell), the cells wrapping whole. The hover preview's row
+ * comes first with the same labels, dot and state words - the model with
+ * its intelligence badge, then the pull request with its checks as one cell:
+ * the link, the dot, the checks' words with their counts and their time -
+ * then Reasoning, a review's verdict and the cells the record adds after
+ * them (`more`: Delivery, Runs on, Use), then the footnote saying why that
+ * model. A surface with nothing in the row draws nothing.
  */
 export function TaskFactStrip({
   facts,
   onOpenChange,
   focusable = false,
   why = false,
+  more,
 }: {
   facts: TaskFacts;
   /**
-   * Show Why this model under the strip (INF-1714): the full task record
+   * Show Why this model under the cells (INF-1714): the full task record
    * only, never a summary someone points at.
    */
   why?: boolean;
@@ -392,77 +395,96 @@ export function TaskFactStrip({
    * shows its exact time. The summary, which takes neither, leaves it out.
    */
   focusable?: boolean;
+  /** The record's own cells after the shared ones: Delivery, Runs on and Use. */
+  more?: ReactNode;
 }) {
   const now = useMinute();
-  if (!hasFactStrip(facts)) return null;
+  if (!hasFactStrip(facts) && !more) return null;
   const { change, checks, review } = facts.delivery ?? {};
   const changeWords = change ? (change.label ?? change.noun) : "";
+  const watching = facts.waits?.some(checksWait) ?? false;
   return (
     <div className="strip">
       <div className="cells" data-task-fact-strip="">
         {facts.model && (
-          <Cell label="Model" fact="model" title={facts.model}>
-            {facts.model}
-          </Cell>
-        )}
-        {facts.tier && (
-          <Cell label="Intelligence" fact="intelligence" data-slot={facts.tier}>
-            <SlotBadge slot={facts.tier} />
-          </Cell>
+          <div className="cell model">
+            <div className="label" data-task-fact-label="">
+              Model
+            </div>
+            <div className="value">
+              <span data-task-fact="model" title={facts.model}>
+                {facts.model}
+              </span>
+              {facts.tier && (
+                <span data-task-fact="intelligence" data-slot={facts.tier}>
+                  <SlotBadge slot={facts.tier} />
+                </span>
+              )}
+            </div>
+          </div>
         )}
         {facts.reasoning && (
           <Cell label="Reasoning" fact="reasoning" data-level={facts.reasoning.level}>
             {reasoningWord(facts.reasoning)}
           </Cell>
         )}
-        {change && (
-          <Cell label={change.noun} fact="change" title={changeWords}>
-            {change.url && onOpenChange ? (
-              <a
-                href={change.url}
-                onClick={(event) => {
-                  event.preventDefault();
-                  onOpenChange(change.url as string);
-                }}
-              >
-                {changeWords}
-              </a>
-            ) : (
-              changeWords
-            )}
-          </Cell>
+        {(change || checks || watching) && (
+          <div className="cell" data-task-fact-change-cell="">
+            <div className="label" data-task-fact-label="">
+              {change ? change.noun : "Checks"}
+            </div>
+            <div className="value" {...(checks?.problem ? { "data-check-read-problem": "" } : {})}>
+              {change && (
+                <span data-task-fact="change" title={changeWords}>
+                  {change.url && onOpenChange ? (
+                    <a
+                      href={change.url}
+                      onClick={(event) => {
+                        event.preventDefault();
+                        onOpenChange(change.url as string);
+                      }}
+                    >
+                      {changeWords}
+                    </a>
+                  ) : (
+                    changeWords
+                  )}
+                </span>
+              )}
+              {(checks || watching) && (
+                <span
+                  className="state"
+                  data-task-fact="checks"
+                  data-dot={checks?.dot ?? "idle"}
+                  {...(watching ? { "data-task-watch-schedules": "" } : {})}
+                  {...(checks?.problem ? { "data-check-read-problem": "" } : {})}
+                >
+                  {checks && (
+                    <>
+                      <FactDot state={checks.dot} />
+                      <ChecksWords checks={checks} now={now} focusable={focusable} />
+                      {checks.span?.finishedAt != null && (
+                        <Age at={checks.span.finishedAt} now={now} focusable={focusable} ago />
+                      )}
+                    </>
+                  )}
+                  {facts.waits?.filter(checksWait).map((wait) => (
+                    <span key={wait.id} className="wait-schedule" data-task-watch={wait.id}>
+                      {taskWaitText(wait, now)}
+                    </span>
+                  ))}
+                </span>
+              )}
+            </div>
+          </div>
         )}
-        {(checks || facts.waits?.some(checksWait)) && (
-          <Cell
-            label="Checks"
-            fact="checks"
-            data-dot={checks?.dot ?? "idle"}
-            {...(facts.waits?.some(checksWait) ? { "data-task-watch-schedules": "" } : {})}
-            {...(checks?.problem ? { "data-check-read-problem": "" } : {})}
-          >
-            {checks && (
-              <>
-                <FactDot state={checks.dot} />
-                <ChecksWords checks={checks} now={now} focusable={focusable} />
-                {checks.span?.finishedAt != null && (
-                  <Age at={checks.span.finishedAt} now={now} focusable={focusable} ago />
-                )}
-              </>
-            )}
-            {facts.waits?.filter(checksWait).map((wait) => (
-              <span key={wait.id} className="wait-schedule" data-task-watch={wait.id}>
-                {taskWaitText(wait, now)}
-              </span>
-            ))}
-          </Cell>
-        )}
-
         {review && (
           <Cell label="Review" fact="review" data-dot={review.dot}>
             <FactDot state={review.dot} />
             {review.words}
           </Cell>
         )}
+        {more}
       </div>
       {facts.reason && (
         <div className="reason" data-task-fact="reason">
@@ -470,6 +492,30 @@ export function TaskFactStrip({
         </div>
       )}
       {why && facts.why && <ModelWhy why={facts.why} />}
+    </div>
+  );
+}
+
+/** One of the record's own cells (`TaskFactStrip`'s `more`): a micro label over its value. */
+export function RecordCell({
+  label,
+  dim = false,
+  children,
+  ...data
+}: {
+  label: string;
+  /** Dim mono, as Use reads (INF-2261, the captain's pick: "A Use cell beside Runs on, dim mono"). */
+  dim?: boolean;
+  children: ReactNode;
+} & Record<`data-${string}`, string>) {
+  return (
+    <div className={dim ? "cell dim" : "cell"}>
+      <div className="label" data-task-fact-label="">
+        {label}
+      </div>
+      <div className="value" {...data}>
+        {children}
+      </div>
     </div>
   );
 }
@@ -664,13 +710,14 @@ function NowWords({
  * change, its checks and a review, and the footnote - in that order. The
  * crew summary and the task record both draw them from one projection
  * (`taskFactsOf`), so one task reads the same values on both. The record
- * draws the strip itself just above its action bar (`omitStrip`), after
- * Goal and your words, Activity and Details. The task row is the
- * summary's; the record has its title in its chrome. Each value carries
+ * leads with its relations and its goal (`lead`), names its project, and
+ * draws its row of facts itself after the Use cell joins it (`omitStrip`).
+ * The task row is the summary's; the record has its title in its chrome. Each value carries
  * its identity in `data-task-fact`.
  */
 export function TaskFactRows({
   facts,
+  lead,
   withTask = false,
   project,
   planView,
@@ -682,10 +729,16 @@ export function TaskFactRows({
   focusable = false,
 }: {
   facts: TaskFacts;
+  /**
+   * Rows the record draws first (INF-2261): the task's relations as keys,
+   * then its goal with the captain's words folded under it.
+   */
+  lead?: ReactNode;
   withTask?: boolean;
   /**
    * The Tasks row's project name, with where another computer runs the task
-   * ("website · on Mac mini"). The summary shows it under Task; the record does not.
+   * ("website · on Mac mini"), on the summary under Task; on the record the
+   * project's name, under the goal (INF-2261).
    */
   project?: string;
   /**
@@ -693,7 +746,7 @@ export function TaskFactRows({
    * record; absent, the plan is not drawn.
    */
   planView?: "dots" | "list";
-  /** The record draws the fact strip itself, just above the action bar. */
+  /** The record draws its row of facts itself, with its own cells after the shared ones. */
   omitStrip?: boolean;
   /**
    * How much of the strip to draw: every cell (`full`), or the hover
@@ -727,6 +780,7 @@ export function TaskFactRows({
   const current = plan ? planCounts(plan.items).current : null;
   return (
     <div className="fm-task-facts" data-task-facts="">
+      {lead}
       {withTask && (
         <div className="row">
           <div className="label" data-task-fact-label="">
@@ -737,7 +791,7 @@ export function TaskFactRows({
           </div>
         </div>
       )}
-      {withTask && project ? (
+      {project ? (
         <div className="row">
           <div className="label" data-task-fact-label="">
             Project

@@ -9,7 +9,7 @@ import {
   SESSION_REPEAT_REPORT,
   sessionObservationRepeat,
 } from "./scenarios/sessionObservationRepeat";
-import { taskTabs } from "./taskBrowser";
+import { showTabByKeys } from "./taskBrowser";
 import { focusOn, pressKey, typeInto } from "./windowKeys";
 
 /**
@@ -70,9 +70,7 @@ test("a commissioned crewmate starts, reports, and its task is on the board with
   });
   await expect(nowRow(page, key)).toBeVisible();
   await pressRow(page, key);
-  const { tabs, selected } = taskTabs(page);
-  await pressKey(selected, "ArrowRight");
-  await pressKey(tabs.nth(1), "Enter");
+  await showTabByKeys(page, "crewmate");
   const composer = crewComposer(crewmateView(page, detail.id));
   await focusOn(composer);
   await typeInto(composer, SESSION_REPEAT_MARKER);

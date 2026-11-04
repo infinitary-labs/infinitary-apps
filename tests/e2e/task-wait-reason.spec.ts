@@ -27,7 +27,6 @@ import {
   openGroup,
   pressRow,
   recordCard,
-  recordFrame,
   rowSummary,
 } from "./rails";
 import {
@@ -258,13 +257,13 @@ test("a cardless wait opens its record with the reported reason, while a real ch
       state: "active",
       reason: "checks",
     });
-    await expect(recordFrame(page).locator("[data-record-attention]")).toBeHidden();
+    await expect(recordCard(page).locator("[data-record-attention]")).toBeHidden();
     expect(await nowRowGroup(page, key("blocked"))).toBe("working");
     expect(await nowRowGroup(page, key("checks"))).toBe("working");
     expect(await nowRowGroup(page, key("choice"))).toBe("waiting");
     expect(board.projects[0]?.counts.waitingOnYou).toBe(1);
     await pressRow(page, key("blocked"));
-    await expect(recordFrame(page).locator("[data-record-attention-guidance]")).toHaveText(BLOCKER);
+    await expect(recordCard(page).locator("[data-record-attention-guidance]")).toHaveText(BLOCKER);
     await pressRow(page, key("choice"));
     await expect(page.getByRole("button", { name: "Harbour map", exact: true })).toBeVisible();
   } finally {
@@ -301,7 +300,7 @@ test("a queued premium ask held for premium allowance says in its record why it 
     await pressRow(page, held.key);
     await expect(recordCard(page)).toHaveAttribute("data-task-record", "premium");
     const words = taskHoldWords({ kind: "premium" });
-    const frame = recordFrame(page);
+    const frame = recordCard(page);
     // INF-1605: the queued title is the home's dated wait; the hold still owns its guidance.
     const wait = held.queueWait;
     if (!wait) throw new Error("The held premium ask has no dated queue wait");
@@ -396,10 +395,10 @@ test("grouped waits reconcile into kanban and task card, the hover stays short, 
     await pressKey(tile, "Enter");
     await expect(recordCard(page)).toHaveAttribute("data-task-record", waiter.id);
     await expectRecordBody(page);
-    await expect(recordFrame(page).locator("[data-record-attention-title]")).toContainText(
+    await expect(recordCard(page).locator("[data-record-attention-title]")).toContainText(
       taskWaitText(dependency, Date.now()),
     );
-    await expect(recordFrame(page).locator("[data-record-attention-title]")).toContainText(
+    await expect(recordCard(page).locator("[data-record-attention-title]")).toContainText(
       taskWaitText(start, Date.now()),
     );
     await expect(recordCard(page).locator("[data-record-status-reason]")).toHaveCount(0);

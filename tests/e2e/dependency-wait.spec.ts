@@ -17,7 +17,6 @@ import {
   recordBar,
   recordBarButton,
   recordCard,
-  recordFrame,
 } from "./rails";
 import {
   DEPENDENCY_WAIT_MARKER,
@@ -137,7 +136,7 @@ test("a task waiting on work underway stays waiting past every idle rung and res
     expect(steers()).toEqual([]);
     await expandDock(page, "now");
     await openRecord(page, tasks.get(waitingId)?.key ?? "", waitingId);
-    await expect(recordFrame(page).locator("[data-record-attention]")).toContainText(owner.key);
+    await expect(recordCard(page).locator("[data-record-attention]")).toContainText(owner.key);
     // The picture waits for Firstmate's turn to end: a busy character dims the stack.
     await waitForFirstmateIdle(page);
     await page.evaluate(() => document.fonts.ready);
@@ -170,7 +169,7 @@ test("a task waiting on work underway stays waiting past every idle rung and res
       ),
     ).toEqual([]);
     await openRecord(page, tasks.get(waitingId)?.key ?? "", waitingId);
-    await expect(recordFrame(page).locator("[data-record-attention]")).toBeHidden();
+    await expect(recordCard(page).locator("[data-record-attention]")).toBeHidden();
     await waitForFirstmateIdle(page);
     await page.evaluate(() => document.fonts.ready);
     await page.screenshot({ path: evidence("dependency-wait-resumed.png") });

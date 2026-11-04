@@ -35,7 +35,7 @@ import { encodePng } from "./pictureFixtures";
 import { heroShot, regionShot } from "./pictures";
 import { expandDock, openGroup, pressRow, recordCard, recordFrame, taskKey } from "./rails";
 import { shownCard } from "./stack";
-import { taskTabs } from "./taskBrowser";
+import { showTabByKeys, taskTabs } from "./taskBrowser";
 import { setThemeViaSettings } from "./theme";
 import { seedCrewTranscript } from "./transcriptFixtures";
 import { focusOn, pressKey, runFromSearch, typeInto, untilFocused } from "./windowKeys";
@@ -221,11 +221,10 @@ const detailOf = (page: Page, id: string): Promise<TaskDetail> =>
 
 /** From the record, the Crewmate tab by keys: the arrow to it, then Enter. */
 async function crewmateByKeys(page: Page): Promise<void> {
-  const { tabs, selected } = taskTabs(page);
+  const { strip, selected } = taskTabs(page);
   await expect(selected).toHaveText(INFO_TAB_LABEL);
-  await expect(tabs.nth(1)).toHaveText(CREWMATE_TAB_LABEL);
-  await pressKey(selected, "ArrowRight");
-  await pressKey(tabs.nth(1), "Enter");
+  await expect(strip.locator('[data-task-tab="crewmate"]')).toHaveText(CREWMATE_TAB_LABEL);
+  await showTabByKeys(page, "crewmate");
 }
 
 test("a closed task's Crewmate tab replays its crewmate's session: calls, folds, a diff, a picture and its blocks", async () => {

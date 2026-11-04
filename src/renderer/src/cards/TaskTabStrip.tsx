@@ -9,6 +9,7 @@ import {
   type ShownTab,
   shownTabIndex,
   type TaskTab,
+  type TaskTabFacts,
   tabFocusAsked,
   tabFocusDone,
   taskTabsOf,
@@ -18,15 +19,16 @@ import {
 export const TAB_STRIP_HEIGHT = 32;
 
 /**
- * The tab strip under a task card's title (docs/task-card-tabs.md): Info,
- * Crewmate once a crewmate has run the task, then a Browser tab for each
- * page the task's browser holds. One tablist and one Tab stop; the arrows
- * move focus between tabs and Enter or Space picks the focused one. A task
- * with nothing but Info draws nothing.
+ * The tab strip under a task card's title (docs/task-card-tabs.md; INF-2261):
+ * Info, Cards with how many once the task showed one, Activity once it has a
+ * line, Crewmate once a crewmate has run the task, then a Browser tab for
+ * each page the task's browser holds. One tablist and one Tab stop; the
+ * arrows move focus between tabs and Enter or Space picks the focused one. A
+ * task with nothing but Info draws nothing.
  *
- * Picking Info shows the record, Crewmate the crewmate's session and
- * Browser the browser view, which replace each other on the stage as one
- * entry per task. Another page than the browser's current one is the
+ * Info, Cards and Activity are the record's three views; Crewmate shows the
+ * crewmate's session and Browser the browser view, which replace each other
+ * on the stage as one entry per task. Another page than the browser's current one is the
  * controller's to pick, as navigation is: it does nothing while the captain
  * only watches.
  */
@@ -34,19 +36,23 @@ export function TaskTabStrip({
   taskId,
   shown,
   browser,
-  crewmate,
+  facts,
   captain,
 }: {
   taskId: string;
   shown: ShownTab;
   browser: TaskBrowserFact | undefined;
-  /** A crewmate has run the task: it has a Crewmate tab (`hasCrewmateTab`). */
-  crewmate: boolean;
+  /** What decides the task's other tabs (`taskTabFactsOf`). */
+  facts: TaskTabFacts;
   /** The captain holds the browser: he may pick another page. */
   captain: boolean;
 }) {
   const role = useStageRole();
-  const tabs = useMemo(() => taskTabsOf(browser, crewmate), [browser, crewmate]);
+  const { crewmate, cards, activity } = facts;
+  const tabs = useMemo(
+    () => taskTabsOf(browser, { crewmate, cards, activity }),
+    [browser, crewmate, cards, activity],
+  );
   const selected = shownTabIndex(tabs, shown, browser);
   const current = browser?.state === "open" ? (browser.page ?? 1) : 1;
   const enabled = (tab: TaskTab) => tab.kind !== "browser" || tab.page === current || captain;
@@ -152,7 +158,7 @@ export function TaskTabStrip({
             aria-selected={isSelected}
             tabIndex={isSelected ? 0 : -1}
             disabled={disabled}
-            title={tab.label}
+            title={tab.kind === "cards" ? `${tab.label} ${tab.count}` : tab.label}
             data-task-tab={tab.kind}
             data-browser-page-tab={tab.kind === "browser" ? tab.page : undefined}
             // A click with no pointer (Enter, Space) is a key's.
@@ -176,6 +182,19 @@ export function TaskTabStrip({
             }}
           >
             {tab.label}
+            {tab.kind === "cards" && (
+              <span
+                data-task-tab-count=""
+                style={{
+                  marginLeft: "var(--space-1)",
+                  fontFamily: "var(--font-mono)",
+                  fontSize: "var(--text-xs)",
+                  color: "var(--fg-3)",
+                }}
+              >
+                {tab.count}
+              </span>
+            )}
           </button>
         );
       })}

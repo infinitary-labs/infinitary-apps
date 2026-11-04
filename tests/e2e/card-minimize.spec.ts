@@ -24,7 +24,7 @@ import { launchApp } from "./launch";
 import { APP_CATALOG_PROMPT_MARKER } from "./mockProvider";
 import { heroShot, regionShot } from "./pictures";
 import { promptInput } from "./prompt";
-import { expandDock, nowFrame, pressRow, recordCard, recordFrame } from "./rails";
+import { expandDock, nowFrame, pressRow, recordCard, recordFrame, showRecordTab } from "./rails";
 import { cardReply, clickInBody, closeQuestion, showCard, shownCard, shownEntry } from "./stack";
 import { boardCard, boardMenu, boardTile, pressInBoard } from "./taskBoard";
 import { focusOn, pressKey, pressWindowKey, runFromSearch } from "./windowKeys";
@@ -118,7 +118,7 @@ test("minimize preserves the decision and restores it from its own task row", as
       await pressKey(tile, " ");
       await pressInBoard(boardMenu(page, key).entry("open"));
       await expect(recordCard(page)).toBeVisible();
-      await clickInBody(recordFrame(page).locator('[data-record-section="cards"] > summary'));
+      await showRecordTab(page, "cards");
       await expect(recordFrame(page).locator('[data-record-card="minimize-choice"]')).toContainText(
         "Put aside",
       );

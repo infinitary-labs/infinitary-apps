@@ -30,6 +30,28 @@ export function taskTabs(page: Page): { strip: Locator; tabs: Locator; selected:
   };
 }
 
+/**
+ * From the selected tab, the arrows along the strip to one kind of tab, then
+ * Enter (docs/task-card-tabs.md: Info, Cards, Activity, Crewmate, then
+ * Browser, INF-2261). The strip's order is the task's, so the presses are
+ * counted from where that tab sits, never typed.
+ */
+export async function showTabByKeys(page: Page, kind: string): Promise<void> {
+  const { strip, tabs, selected } = taskTabs(page);
+  // The strip draws after the card does: wait for the tab before counting.
+  await expect(strip.locator(`[data-task-tab="${kind}"]`)).toBeVisible();
+  await expect(selected).toHaveCount(1);
+  const kinds = await tabs.evaluateAll((all) =>
+    all.map((tab) => tab.getAttribute("data-task-tab")),
+  );
+  const from = kinds.indexOf(await selected.getAttribute("data-task-tab"));
+  const to = kinds.indexOf(kind);
+  if (from < 0 || to < 0) throw new Error(`No ${kind} tab on the strip: ${kinds.join(", ")}`);
+  for (let at = from; at !== to; at += to > from ? 1 : -1)
+    await pressKey(tabs.nth(at), to > from ? "ArrowRight" : "ArrowLeft");
+  await pressKey(tabs.nth(to), "Enter");
+}
+
 /** The view's live page: how many pictures it drew, and the colour at its centre. */
 export function canvasReading(
   page: Page,

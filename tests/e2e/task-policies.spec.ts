@@ -30,6 +30,7 @@ import {
   recordCard,
   recordFact,
   recordFrame,
+  recordTab,
   taskKey,
 } from "./rails";
 import { AUTONOMY_PROMPT_MARKER, autonomy, MOCK_AUTONOMY_CARD_TITLE } from "./scenarios/autonomy";
@@ -135,13 +136,12 @@ test("keyboard requests change queued policies, show their sources and Activity,
     await expect(recordFact(app.page, "merging")).toContainText(POLICY_MERGING_WORDS.on);
     await expect(recordFact(app.page, "care")).toContainText(CARE_WORDS.reviewed);
     await expect(recordFact(app.page, "care")).toContainText(POLICY_SOURCE_WORDS.task);
-    await runFromSearch(app.app, app.page, "focus.card-body");
-    await tabTo(app, recordFrame(app.page).locator('[data-record-section="timeline"] > summary'));
-    await app.page.keyboard.press("Enter");
+    await pressKey(recordTab(app.page, "activity"), "Enter");
     await expect
       .poll(async () => (await detail()).events.some((event) => event.data?.changes))
       .toBe(true);
     await recordCard(app.page).screenshot({ path: evidence("record-after.png") });
+    await pressKey(recordTab(app.page, "info"), "Enter");
     if (process.env.INFINITARY_POLICY_HERO === "1")
       await heroShot(app.app, app.page, {
         region: recordFrame(app.page).locator('[data-record-section="details"]'),

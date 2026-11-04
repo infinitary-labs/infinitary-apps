@@ -68,7 +68,8 @@ export async function mountPointerRecord(page: Page): Promise<TaskDetail> {
       pushRecord: (value: unknown) => subscriptions["tasks.detail"]?.(value),
       pushRecordBoard: () => subscriptions["tasks.board"]?.({ tasks: [] }),
       inf: {
-        state: { openSections: ["timeline"] },
+        // Activity is its own tab (INF-2261); the window names the view.
+        state: { openSections: [], view: "activity" },
         onState: () => () => {},
         action: async () => {},
         subscribe: (name: string, _args: unknown, callback: (value: unknown) => void) => {

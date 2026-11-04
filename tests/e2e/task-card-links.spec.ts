@@ -2,7 +2,15 @@ import { expect, test } from "@playwright/test";
 import { checksSentence } from "../../src/core/tasks/recordActivity";
 import { crewRoster } from "./crewRoster";
 import { launchApp } from "./launch";
-import { expandDock, expectRecordBody, pressRow, recordCard, recordFrame, taskFact } from "./rails";
+import {
+  expandDock,
+  expectRecordBody,
+  pressRow,
+  recordCard,
+  recordFrame,
+  recordTab,
+  taskFact,
+} from "./rails";
 import { clickInBody } from "./stack";
 import { pressKey } from "./windowKeys";
 
@@ -40,7 +48,7 @@ test("every pull request a task's card names opens it, from the strip, Now and A
     await expect(recordCard(page)).toHaveAttribute("data-task-record", "linked-pr-0");
     await expectRecordBody(page);
 
-    await test.step("the fact strip's pull request opens it on a click", async () => {
+    await test.step("the row of facts' pull request opens it on a click", async () => {
       const strip = recordCard(page).locator("[data-record-strip]");
       await expect(taskFact(strip, "checks")).toHaveAttribute("data-dot", "failed");
       await taskFact(strip, "change").getByRole("link", { name: "#965" }).click();
@@ -56,8 +64,7 @@ test("every pull request a task's card names opens it, from the strip, Now and A
     });
 
     await test.step("an Activity line that names it opens it too", async () => {
-      const activity = recordFrame(page).locator('[data-record-section="timeline"] > summary');
-      await pressKey(activity, "Enter");
+      await pressKey(recordTab(page, "activity"), "Enter");
       const line = recordFrame(page)
         .locator('[data-record-event="pr_opened"] [data-record-change]')
         .first();

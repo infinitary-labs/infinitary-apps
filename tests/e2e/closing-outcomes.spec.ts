@@ -5,7 +5,7 @@ import { scratchDir } from "../helpers/scratchDirs";
 import { type LaunchedApp, launchApp } from "./launch";
 import { resizeWindow } from "./layout";
 import { regionShot } from "./pictures";
-import { expandDock, nowFrame, pressRow, recordFrame } from "./rails";
+import { expandDock, nowFrame, pressRow, recordFrame, recordTab } from "./rails";
 import { pressKey } from "./windowKeys";
 
 async function openClosing(app: LaunchedApp, task: { key: string; title: string }) {
@@ -18,8 +18,7 @@ async function openClosing(app: LaunchedApp, task: { key: string; title: string 
   await nowFrame(app.page).locator("[data-now-query]").fill(task.title);
   await pressRow(app.page, task.key);
   const activity = recordFrame(app.page).locator('[data-record-section="timeline"]');
-  if (!(await activity.evaluate((node) => (node as HTMLDetailsElement).open)))
-    await pressKey(activity.locator(":scope > summary"), "Enter");
+  await pressKey(recordTab(app.page, "activity"), "Enter");
   const closing = activity.locator('[data-record-event="status"]');
   if (!(await closing.evaluate((node) => (node as HTMLDetailsElement).open)))
     await pressKey(closing.locator(":scope > summary"), "Enter");

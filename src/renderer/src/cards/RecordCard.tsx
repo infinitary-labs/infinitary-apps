@@ -8,12 +8,13 @@ import { taskFactsOf } from "@shared/taskFacts";
 import type { TaskDetail } from "@shared/tasks";
 import { presentTask } from "@shared/taskWaiting";
 import { taskWaitStatus } from "@shared/taskWaits";
+import { CARE_WORDS } from "@shared/vocabulary";
 import { type ComponentProps, useEffect, useMemo, useRef, useState } from "react";
 import { focusPanelCard } from "../app/shellCommands";
-import { useShellStore } from "../app/store";
+import { type RecordView, useShellStore } from "../app/store";
 import { useModelNames } from "../app/useModelNames";
 import { ResponseCard } from "../design/cards/ResponseCard";
-import { hasFactStrip, TaskFactRows, TaskFactStrip, useMinute } from "../design/core/TaskFacts";
+import { RecordCell, TaskFactRows, TaskFactStrip, useMinute } from "../design/core/TaskFacts";
 import { TaskResourceUse } from "../design/core/TaskResourceUse";
 import { recordTemplate } from "../plugins/builtin";
 import { BUILTIN_PLUGIN_ID } from "../plugins/builtin/manifest";
@@ -29,13 +30,14 @@ import {
 import { appReadExecutor } from "../plugins/reads/appExecutor";
 import { recordOpenSections, recordReadingPlaceId, useCardReadingPlace } from "./cardReadingPlace";
 import type { HtmlCardBody } from "./PrototypeBody";
+import { RecordAttention, RecordGoal, RecordRelations } from "./RecordHead";
 import { RecordPaneChrome, RecordPaneFooter } from "./RecordPaneChrome";
 import { recordPillToneOf } from "./recordFooter";
 import { useStageRole } from "./SurfaceReveal";
 import { KeyedText } from "./TaskKey";
 import { TaskTabStrip } from "./TaskTabStrip";
 import { taskKeyGesture, useTaskLinks } from "./taskLinks";
-import { hasCrewmateTab } from "./taskTabs";
+import { taskTabFactsOf } from "./taskTabs";
 
 /** The wire-less kind the built-in manifest dresses the record with. */
 export const RECORD_CARD_KIND = "task-record";
@@ -50,7 +52,8 @@ const BODY_ACTIONS: readonly string[] = ["open-card", "record-sections"];
 const KNOWLEDGE_BODY_ACTIONS: readonly string[] = [...BODY_ACTIONS, "open-knowledge"];
 /** Full intrinsic document height; ResponseCard owns the only scroll surface. */
 const MAX_BODY_HEIGHT = Number.POSITIVE_INFINITY;
-const MIN_BODY_HEIGHT = 48;
+/** The frame may be all but empty on Info, where the window draws the body above it. */
+const MIN_BODY_HEIGHT = 1;
 /** How far a row's hover tint reaches past the card's left edge; record.html pads it back. */
 const RECORD_ROW_BLEED_PX = 6;
 /**
@@ -71,6 +74,31 @@ function recordWords(detail: TaskDetail | null, parentKey: string | undefined): 
   };
   walk(detail);
   return words.join("\n");
+}
+
+/** The name the window keeps the fold under the goal by, among the record's remembered rows. */
+const WORDS_SECTION = "words";
+
+const DELIVERY_WORDS: Record<string, string> = {
+  "direct-pr": "Pull request",
+  "queue-pr": "Pull request through your queue",
+  "local-only": "Local merge",
+  "in-place": "Built in place",
+};
+
+/**
+ * The Delivery cell (INF-2261: "Pull request · Default care"): how the work
+ * reaches the project and the care it takes, from the task's live policies,
+ * or what its delivery recorded where it has none. Where each came from is
+ * the More row's.
+ */
+function deliveryWordsOf(detail: TaskDetail): string {
+  const mode = detail.policies?.delivery.value ?? detail.delivery?.mode;
+  const care = detail.policies?.rigor.value ?? detail.rigor;
+  return [
+    ...(mode ? [DELIVERY_WORDS[mode] ?? mode] : []),
+    ...(care ? [`${CARE_WORDS[care] ?? care} care`] : []),
+  ].join(" · ");
 }
 
 /** The key of the task `id` is part of, as its own record says it; undefined until read. */
@@ -94,8 +122,11 @@ export function RecordCard({
   onClose,
   onDrawn,
   onPicture,
+  view = "info",
 }: {
   taskId: string;
+  /** Which of the record's three tabs is shown: Info, Cards or Activity (INF-2261). */
+  view?: RecordView;
   theme: FrameTheme;
   onClose: () => void;
   onDrawn: () => void;
@@ -172,11 +203,14 @@ export function RecordCard({
     }
     if (id === "record-sections") {
       const open = (value as { open?: unknown } | null)?.open;
-      if (Array.isArray(open))
-        recordOpenSections.set(
-          taskId,
-          open.filter((n) => typeof n === "string"),
-        );
+      if (Array.isArray(open)) {
+        // The frame names its own rows; the fold under the goal is the window's.
+        const words = (recordOpenSections.get(taskId) ?? []).filter((n) => n === WORDS_SECTION);
+        recordOpenSections.set(taskId, [
+          ...words,
+          ...open.filter((n): n is string => typeof n === "string" && n !== WORDS_SECTION),
+        ]);
+      }
       return;
     }
     const cardId = (value as { id?: unknown } | null)?.id;
@@ -253,11 +287,19 @@ export function RecordCard({
   };
 
   const bodyRef = useCardReadingPlace(recordReadingPlaceId(taskId));
-  // Read once per record: the frame takes it at birth and reports changes back.
-  const birthState = useMemo(
-    () => ({ openSections: recordOpenSections.get(taskId) ?? [] }),
-    [taskId],
-  );
+  // Read once per record: the frame takes its open rows at birth and reports
+  // changes back; the shown tab follows the record's stack entry.
+  const openAtBirth = useMemo(() => recordOpenSections.get(taskId) ?? [], [taskId]);
+  const frameState = useMemo(() => ({ openSections: openAtBirth, view }), [openAtBirth, view]);
+  const [wordsOpen, setWordsOpen] = useState(() => openAtBirth.includes(WORDS_SECTION));
+  useEffect(() => {
+    setWordsOpen((recordOpenSections.get(taskId) ?? []).includes(WORDS_SECTION));
+  }, [taskId]);
+  const toggleWords = (open: boolean) => {
+    setWordsOpen(open);
+    const rest = (recordOpenSections.get(taskId) ?? []).filter((n) => n !== WORDS_SECTION);
+    recordOpenSections.set(taskId, open ? [WORDS_SECTION, ...rest] : rest);
+  };
   return (
     <ResponseCard
       bodyRef={bodyRef}
@@ -273,9 +315,9 @@ export function RecordCard({
             shown && (
               <TaskTabStrip
                 taskId={taskId}
-                shown="info"
+                shown={view}
                 browser={shown.browser}
-                crewmate={hasCrewmateTab(shown)}
+                facts={taskTabFactsOf(shown)}
                 captain={browserDriverOf(shown, shown.browser) === "captain"}
               />
             )
@@ -285,36 +327,42 @@ export function RecordCard({
       }
       footer={
         shown && (
-          <>
-            {facts && hasFactStrip(facts) && (
-              <div className="fm-task-facts fm-record-strip" data-record-strip="">
-                <TaskFactStrip facts={facts} onOpenChange={openLink} focusable why />
-              </div>
-            )}
-            <RecordPaneFooter
-              bar={recordBarOf(shown)}
-              effects={shown.dropEffects ?? null}
-              taskId={taskId}
-              taskKey={shown.key}
-              revision={shown}
-              onRun={runOp}
-              onShowCard={() => void showCard().catch(() => {})}
-              move={{
-                ...(shown.movable ? { movable: shown.movable } : {}),
-                ...(shown.computerMove ? { computerMove: shown.computerMove } : {}),
-                options: () => window.infinitary.task.moveOptions(taskId),
-                move: (to) => window.infinitary.task.move(taskId, to),
-              }}
-            />
-          </>
+          <RecordPaneFooter
+            bar={recordBarOf(shown)}
+            effects={shown.dropEffects ?? null}
+            taskId={taskId}
+            taskKey={shown.key}
+            revision={shown}
+            onRun={runOp}
+            onShowCard={() => void showCard().catch(() => {})}
+            move={{
+              ...(shown.movable ? { movable: shown.movable } : {}),
+              ...(shown.computerMove ? { computerMove: shown.computerMove } : {}),
+              options: () => window.infinitary.task.moveOptions(taskId),
+              move: (to) => window.infinitary.task.move(taskId, to),
+            }}
+          />
         )
       }
     >
       <div data-record-card={taskId}>
-        {facts && (
+        {/* Info (INF-2261), shaped like the hover preview: the attention
+            sentence, the relations and the goal with the captain's words
+            folded under it, the project, Now, Progress and the browser, then
+            the row of facts under a hairline, Why this model, and the frame's
+            one More row. Cards and Activity are the frame's alone. */}
+        {view === "info" && facts && shown && (
           <div className="fm-record-facts" style={{ marginBottom: "var(--space-3)" }}>
+            <RecordAttention detail={shown} onOpenChange={openLink} />
             <TaskFactRows
               facts={facts}
+              lead={
+                <>
+                  <RecordRelations detail={shown} parentKey={parentKey} />
+                  <RecordGoal detail={shown} open={wordsOpen} onToggle={toggleWords} />
+                </>
+              }
+              {...(shown.repo ? { project: shown.repo.name } : {})}
               planView="list"
               omitStrip
               nowWords={(text) => <KeyedText text={text} own={taskId} />}
@@ -322,7 +370,29 @@ export function RecordCard({
               onOpenBrowser={() => useShellStore.getState().openBrowserView(taskId)}
               focusable
             />
-            <TaskResourceUse taskId={taskId} />
+            <div className="fm-task-facts fm-record-strip" data-record-strip="">
+              <TaskFactStrip
+                facts={facts}
+                onOpenChange={openLink}
+                focusable
+                why
+                more={
+                  <>
+                    {deliveryWordsOf(shown) && (
+                      <RecordCell label="Delivery" data-record-cell="delivery">
+                        {deliveryWordsOf(shown)}
+                      </RecordCell>
+                    )}
+                    {shown.runsOn && (
+                      <RecordCell label="Runs on" data-record-cell="runs-on">
+                        {shown.runsOn.label}
+                      </RecordCell>
+                    )}
+                    <TaskResourceUse taskId={taskId} />
+                  </>
+                }
+              />
+            </div>
           </div>
         )}
         {/* The body frame reaches past the card's edges by the room its rows'
@@ -343,7 +413,7 @@ export function RecordCard({
               reads: pluginHost.declaredReads(BUILTIN_PLUGIN_ID),
               grant: pluginHost.grantOf(BUILTIN_PLUGIN_ID),
               actions: knowledge ? KNOWLEDGE_BODY_ACTIONS : BODY_ACTIONS,
-              state: birthState,
+              state: frameState,
               onDrawn: () => setFrameDrawn(true),
               onAction: (id, value) => void openCard(id, value),
               onLink: openLink,

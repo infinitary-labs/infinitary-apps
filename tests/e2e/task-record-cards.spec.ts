@@ -14,6 +14,7 @@ import {
   pressRow,
   RECORD_FRAME_SELECTOR,
   recordFrame,
+  showRecordTab,
 } from "./rails";
 import { expectNoCard, shownCard } from "./stack";
 
@@ -83,7 +84,7 @@ test("a closed task's record lists its cards newest first and opens one as the r
     await click(nowFrame(page).locator('[data-now-group-header="landed"]'));
     await pressRow(page, task.key);
     const lines = recordFrame(page).locator("[data-record-card]");
-    await click(recordFrame(page).locator('[data-record-section="cards"] > summary'));
+    await showRecordTab(page, "cards");
     await expect(lines).toHaveCount(3);
     await expect(lines.nth(0)).toContainText(titles.note);
     await expect(lines.nth(0)).toContainText(pastEndingWords({ how: "dismissed", at }));
@@ -152,7 +153,7 @@ test("a card still on the stage reads On the stage and its link focuses the live
     await expandDock(page, "now");
     await click(nowFrame(page).locator('[data-now-group-header="backlog"]'));
     await pressRow(page, task.key);
-    await click(recordFrame(page).locator('[data-record-section="cards"] > summary'));
+    await showRecordTab(page, "cards");
     const line = recordFrame(page).locator('[data-record-card="bay-note"]');
     // Its line says the card is on the stage; record.frame.test.ts owns the words it reads.
     await expect(line).toHaveAttribute("data-record-card-state", "open");
@@ -201,8 +202,7 @@ test("the cross on a card writes one line saying where it went, and the record l
     await expandDock(page, "now");
     await click(nowFrame(page).locator('[data-now-group-header="backlog"]'));
     await pressRow(page, task.key);
-    const summary = recordFrame(page).locator('[data-record-section="cards"] > summary');
-    await click(summary);
+    await showRecordTab(page, "cards");
     const line = recordFrame(page).locator('[data-record-card="quay-note"]');
     await expect(line).toContainText(pastEndingWords({ how: "dismissed", at: 0 }));
     // The title is a real, enabled button in the tab order, so Enter or Space presses it

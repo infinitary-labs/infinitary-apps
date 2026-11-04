@@ -7,7 +7,7 @@ import { launchApp } from "../e2e/launch";
 // content-visibility, so an opening body stayed hidden until its fade drew a
 // first frame. State and controls never wait for animation (docs/renderer.md,
 // "In-place reveals"). This exercises the real reveal stylesheet on the
-// record's own template, opening Activity and focusing inside it in one task,
+// record's own template, opening More and focusing inside it in one task,
 // before any frame can draw.
 const styles = ["tokens/effects.css", "tokens/spacing.css", "reveals.css"]
   .map((file) =>
@@ -25,25 +25,31 @@ test("an opened section's controls take focus before its fade draws a frame", as
       readFileSync("src/renderer/src/plugins/builtin/record/record.html", "utf8"),
     );
     await page.addStyleTag({ content: styles });
-    // The record painter shows Activity, and Show earlier once it has earlier rows.
+    // The record painter shows the Info tab's More row and, once the work
+    // declared any, Knowledge used inside it. Activity is its own tab now
+    // (INF-2261), so More is the record's section that opens in place.
     await page
-      .locator('[data-record-content], [data-record-section="timeline"], [data-record-earlier]')
+      .locator(
+        '[data-record-content], [data-record-section="details"], [data-record-section="knowledge"]',
+      )
       .evaluateAll((nodes) => {
         for (const node of nodes) (node as HTMLElement).hidden = false;
       });
     const opened = await page
-      .locator('[data-record-section="timeline"] > summary')
+      .locator('[data-record-section="details"] > summary')
       .evaluate((summary) => {
-        const activity = summary.parentElement as HTMLDetailsElement;
-        const body = () => getComputedStyle(activity, "::details-content");
+        const more = summary.parentElement as HTMLDetailsElement;
+        const body = () => getComputedStyle(more, "::details-content");
         // The closed body's style is what the opening transitions from.
         body().opacity;
         (summary as HTMLElement).click();
-        const earlier = activity.querySelector<HTMLElement>("[data-record-earlier] > summary");
-        earlier?.focus();
+        const inner = more.querySelector<HTMLElement>(
+          '[data-record-section="knowledge"] > summary',
+        );
+        inner?.focus();
         return {
-          open: activity.open,
-          focused: earlier !== null && document.activeElement === earlier,
+          open: more.open,
+          focused: inner !== null && document.activeElement === inner,
           fadesFrom: body().opacity,
         };
       });

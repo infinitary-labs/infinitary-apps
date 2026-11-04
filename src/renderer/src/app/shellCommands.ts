@@ -7,6 +7,7 @@ import {
 } from "@shared/keyboard";
 import { cardTaskOf } from "../cards/cardTask";
 import {
+  isRecordView,
   shownTaskTabs,
   type TabCommand,
   tabKindOf,
@@ -66,7 +67,7 @@ function toTab(command: TabCommand): void {
     const wanted = tabKindOf(command);
     if (!task || !wanted) return;
     const from = { cardId: entry.id };
-    if (wanted === "info") shell.openRecord(task.id, from);
+    if (isRecordView(wanted)) shell.openRecord(task.id, from, wanted);
     else if (wanted === "crewmate") shell.openCrewmateView(task.id, from);
     else shell.openBrowserView(task.id, from);
     return;
@@ -250,6 +251,8 @@ const SHELL_COMMANDS: Readonly<Record<ShellCommandId, () => void>> = {
     ),
   "cards.thread": () => onShownCard((stage) => stage.thread?.()),
   "cards.show-info": () => toTab("cards.show-info"),
+  "cards.show-cards": () => toTab("cards.show-cards"),
+  "cards.show-activity": () => toTab("cards.show-activity"),
   "cards.show-crewmate": () => toTab("cards.show-crewmate"),
   "browser.control": () => toShownPart(browserControlButton, (button) => button.click()),
   // The click itself: the picker opens with focus on its first computer.

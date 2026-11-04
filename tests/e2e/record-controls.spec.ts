@@ -42,6 +42,7 @@ import {
   recordDrawings,
   recordFrame,
   reportLine,
+  showRecordTab,
   taskFact,
   taskKey,
   taskLine,
@@ -310,7 +311,7 @@ test("a blocked planned task offers Start disabled and names what it waits on", 
   await openRecord(page, "rc-blocked");
   expect(await expectRecordBar(page)).toMatchObject({ next: "start", blocked: true });
   await expect(next(page)).toBeDisabled();
-  await expect(recordFrame(page).locator("[data-record-attention]")).toContainText(
+  await expect(recordCard(page).locator("[data-record-attention]")).toContainText(
     keys["rc-first"] as string,
   );
   await closeRecord(page);
@@ -326,7 +327,7 @@ test("Start starts a planned task on request and dismisses its record; Drop task
   const waits = recordAttentionWaits(planned);
   expect(waits).toHaveLength(1);
   expect(waits[0]?.kind).toBe("backlog");
-  const attention = recordFrame(page).locator("[data-record-attention-title]");
+  const attention = recordCard(page).locator("[data-record-attention-title]");
   await expect(attention).toHaveText(
     waits.map((wait) => taskWaitText(wait, Date.now())).join("; "),
   );
@@ -342,7 +343,7 @@ test("Start starts a planned task on request and dismisses its record; Drop task
   // Drop task holds the end slot; Start is the next slot's primary that begins the work.
   await expect(end(page)).toHaveAccessibleName(DROP_TASK_LABEL);
   await expect(next(page)).toHaveAccessibleName(RECORD_NEXT_LABELS.start);
-  await expect(recordFrame(page).locator('[data-record-section="words"]')).toBeVisible();
+  await expect(recordCard(page).locator("[data-record-goal]")).toBeVisible();
   // Tab reaches them in the order shown: Drop task, then Start.
   await pressKey(end(page), "Tab");
   await expect(next(page)).toBeFocused();
@@ -646,10 +647,8 @@ test("Drop task asks once, then hides the record, keeps the task on it and leave
   await reopenDropped(page, "rc-drop");
   await expectRecordTaskStatus(page);
   await expectRecordBar(page);
-  await expect(recordFrame(page).locator("[data-record-context]")).toContainText(NO_LONGER_WANTED);
-  await recordFrame(page)
-    .locator('[data-record-section="timeline"] > summary')
-    .evaluate((el) => (el as HTMLElement).click());
+  await expect(recordCard(page).locator("[data-record-context]")).toContainText(NO_LONGER_WANTED);
+  await showRecordTab(page, "activity");
   await expect(recordFrame(page).locator('[data-record-event="status"]')).toContainText(
     DROPPED_BEFORE_START_ACTIVITY,
   );

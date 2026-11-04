@@ -3,16 +3,16 @@ Its top row is the status pill, the reason beside it, and the task key, then clo
 The pill uses the shared eight-state task mark and word (`components/now/NowPanel`, Shared task status).
 The whole pill tints for Waiting on you (`accent`) or Interrupted/failed Dropped (`danger`); its mark never changes because of tint.
 The key gives way (ellipsis).
-The model is not in the top row: it is a cell of the fact strip below, read the way the crew summary reads it (FI3-565 piece 2).
+The model is not in the top row: it is a cell of the Info tab's row of facts, read the way the crew summary reads it (FI3-565 piece 2).
 
 **Tabs.**
-Once a crewmate has started the task, or while it has a browser, a tab strip sits under the title: `Info` first, selected, then `Crewmate` (`components/cards/TaskCrewmate`), then `Browser · <page title>` for each page (`components/cards/TaskBrowser`, "The tab strip").
+Once a task has more than its Info to show, a tab strip sits under the title in the captain's order (INF-2261, "Info, Cards, Activity, Crewmate, then Browser"): `Info` first, selected, then `Cards` with how many in mono `--fg-3` beside it once the task showed a card, `Activity` with no count once it has a line, `Crewmate` (`components/cards/TaskCrewmate`), then `Browser · <page title>` for each page (`components/cards/TaskBrowser`, "The tab strip").
 It is one tablist and one Tab stop; the arrows, Home and End move between tabs and Enter or Space shows the focused one.
-A task with neither has no strip.
-Info is the body below; the Crewmate tab and a Browser tab each replace this card in the same place on the stack, so a task has one entry.
+A task with nothing but Info has no strip.
+Info, Cards and Activity are the body below, one at a time; the Crewmate tab and a Browser tab each replace this card in the same place on the stack, so a task has one entry.
 
 **One left edge** (FI3-1159, the captain's "the goals, activity, details section headers don't seem to left-align with the 'now' and 'progress'").
-Everything the record draws starts 20px in from the card's edge, where a decision card starts its own: the status pill, the title, the NOW and PROGRESS labels, the plan's marks, the labels of Goal and your words, Cards, Knowledge used, Activity and Details, the Activity lines' ages, the fact strip's labels and Drop task.
+Everything the record draws starts 20px in from the card's edge, where a decision card starts its own: the status pill, the title, the NOW and PROGRESS labels, the plan's marks, the labels of the Info tab's rows and More, the Activity lines' ages, the row of facts' labels and Drop task.
 A row's hover tint and its focus ring reach 6px past that edge on both sides, so the tint never pushes its label in; the body frame reaches out by the same 6px and pads it back.
 It uses the normal ResponseCard surface, height cap, scrolling body, regular width and edge drag, with the stack’s entrance and pager.
 One shell-held entry per task opens at the front and is shown immediately; opening an existing task focuses it there without duplicating it.
@@ -24,8 +24,8 @@ A record opened while its task is starting elsewhere stays open when the crewmat
 Records have no thread or reply row.
 
 **Its footer is the action bar: one shape in every open state; judgment calls stay on cards** (the captain's 4A, 2026-09-28, reversing the 2026-09-09 read-only record; Drop task, FI3-243; one bar, FI3-565 direction A piece 4, with the captain's `end_verb` "Drop task in every state" and `end_while_waiting` "yes"; Drop task at the left edge, FI3-948, the captain's layout B).
-Every open record ends in one row of buttons read only from the task's typed state (`recordBarOf`), under the fact strip, `--space-3` above it: the end slot holds the row's left edge and the next slot its right edge, in every state, so neither button moves when the state changes.
-The row's edges line up with the strip's labels.
+Every open record ends in one row of buttons read only from the task's typed state (`recordBarOf`), under the body, `--space-3` above it: the end slot holds the row's left edge and the next slot its right edge, in every state, so neither button moves when the state changes.
+The row's edges line up with the body's labels.
 The row has no sentence of its own: the reason beside the status pill and the body's attention box already say what happens next (FI3-948, the captain's "A crewmate is working ... feels unnecessary").
 A row with no button draws nothing, and Done records have no bar.
 A Dropped work record has only Start again in its next slot unless a replacement or stronger-model retry superseded it, or it has parts.
@@ -79,52 +79,59 @@ Reply hides and refusal restorations update the open record with the rail.
 No ready choice means existing attention/hold guidance and the bar's other slots, not a decision claim.
 Show the card refreshes the choice before focusing it, never forcing a hidden card onto the stage.
 
-The body leads with the shared task facts (`components/now/NowPanel`, Shared task facts): NOW, the crewmate's own newest doing with its short age (`NowPanel`, Shared task facts), its label in the summary's 66px side column (the line may take up to three lines here); then PROGRESS, the count and the current item of the plan the crewmate reported, its newest list note’s short age at the right edge as on Now, with the whole list under it, always open, finished items past eight behind `Show earlier · N` (FI3-734); then BROWSER, while this computer keeps the task's own browser open or knows why it stopped (`TaskBrowser.prompt.md`): the site in mono, then who is driving (`the crewmate is driving`, `nobody is driving`) or what stopped it (`you stopped it`, `the crewmate closed it`, `stopped after 30 minutes unused`, `its page stopped working`, `stopped when the task closed`), then `Open` as a link that brings the task's browser view to the front, parted by `·`.
+**The Info tab** (INF-2261: the record's overview shaped like the crew summary's hover preview, which stays as it is).
+A failure, an interruption, a hold or a wait keeps its sentence at the top of the body, above the goal: an attention box (danger-tinted, in plain words, for an interrupted or failed task; warn-tinted for a blocker, a dropped dependency, a parent whose parts do the work, a hold or another need).
+A crew filing's reason leads beside it only while the filing is open (queued or in the backlog), and a closed task has one sentence of how it closed (`Merged 46 min ago as pull request #417. The checks passed.`, `Dropped 1 hr ago: <the words it was dropped with>`).
+Then the shared task facts (`components/now/NowPanel`, Shared task facts), their labels in the summary's 66px side column: PART OF, WAITS ON, HOLDS UP and PARTS as rows of keys, each absent when empty; GOAL, the goal whole in `--fg-1`, with the captain's words folded under it, closed, the fold's name counting them (the captain's pick: "Folded under the goal, closed, with their count in the fold's name", `Your 2 messages`); PROJECT; NOW, the crewmate's own newest doing with its short age (the line may take up to three lines here); then PROGRESS, the count and the current item of the plan the crewmate reported, its newest list note’s short age at the right edge as on Now, with the whole list under it, always open, finished items past eight behind `Show earlier · N` (FI3-734); then BROWSER, while this computer keeps the task's own browser open or knows why it stopped (`TaskBrowser.prompt.md`): the site in mono, then who is driving (`the crewmate is driving`, `nobody is driving`) or what stopped it (`you stopped it`, `the crewmate closed it`, `stopped after 30 minutes unused`, `its page stopped working`, `stopped when the task closed`), then `Open` as a link that brings the task's browser view to the front, parted by `·`.
+The title stays the task's one line in the chrome; the goal is never put in its place (the captain: "The title stays its one line about the task").
+The words fold is a quiet caret line in `--fg-3`; open, it holds a filing's "Why it was filed" once the filing is no longer open, why the first mate built without a plan, the captain's words verbatim in a hairline blockquote, and later asks with their short ages.
 The Browser line shows only on the record: the crew summary, a smaller surface, leaves it out.
-Then a crew filing's reason, which leads only while it is open (queued or in the backlog); an attention box when something is wrong or the task waits on something (danger-tinted, in plain words, for an interrupted or failed task; warn-tinted for a blocker, a dropped dependency, a parent whose parts do the work, a hold or another need); and, on a closed task, one sentence of how it closed (`Merged 46 min ago as pull request #417. The checks passed.`, `Dropped 1 hr ago: <the words it was dropped with>`).
 A cardless paused task says “Work is paused” with its latest report summary, or “No reason has been reported yet.” when none exists.
 Queued work a gate holds has never reported, so its box says what the gate waits for and what ends the wait instead, in the words `taskHoldWords` gives (`src/shared/taskHold.ts`): a premium ask or a stronger-model retry waiting for a model at its level with allowance, or a level's allowance, a plan's allowance or a time the first mate set.
 A later dismissed note in Now never hides that report, and continuing checks, jobs or replies show no paused box.
 A declared captain wait alone never prints “Waiting on you”; only a reachable ready decision does.
 What happens next is the status reason's and the attention box's to say, never a sentence of the bar's, and the body has no buttons.
 There is no second newest line: Now is the record's one.
-Then the record, as peer rows that each open on their own, painted like the panel `Disclosure` (micro label, mono count, caret), each absent when empty: Goal and your words (the goal in `--fg-1`, a filing's "Why it was filed" once it is no longer open, the captain's words verbatim in a hairline blockquote, later asks) · Cards (FI3-579 piece 1: every card the task showed, open and past, newest first; see below) · Knowledge used (what the task's work declared it relied on, by the revision it used; see below) · Activity (every event of the timeline in plain words, newest last, short relative ages in mono, the minor ones and what the crewmate did folded under the row they led to, a plain `Show earlier · N` link above when it is longer; see below) · Details (a labeled list: Crewmate `crewmate 21 on GPT-6 Sol`, Project, Branch, Delivery, Merging, Care, and the related work).
-For work with a merge policy, Details shows Delivery (`Pull request` or `Local merge`), Merging (`Asks first` or `Merges on its own`), and Care (`Quick`, `Default`, or `Careful`) in separate rows.
+Then one row of facts under a `--line-1` hairline, the summary's footer row grown by what the record adds (FI3-1159, the captain's layout B, now in the body): MODEL with its intelligence badge beside the name, REASONING, the PULL REQUEST with its checks as one state, REVIEW, DELIVERY (`Pull request · Default care`), RUNS ON, a dim mono USE cell beside it (the captain's pick: "A Use cell beside Runs on, dim mono") and RUN while a heavy run is declared, then the footnote saying why that model (`components/now/NowPanel`, Shared task facts).
+The row scrolls with the body; nothing of it is pinned to the footer.
+The body ends with one closed `More` row, painted like the panel `Disclosure` (micro label, caret), a short dim preview of what it holds beside its name, remembered per task (the captain's pick: "One closed More row at the end of Info, remembered per task"): a labeled list (Crewmate `crewmate 21 on GPT-6 Sol`, Branch, Delivery, Merging, Care, Runs on with their sources), Knowledge used (what the task's work declared it relied on, by the revision it used; see below) and the retained validation evidence.
+**The Cards and Activity tabs.**
+Cards (FI3-579 piece 1: every card the task showed, open and past, newest first; see below) and Activity (every event of the timeline in plain words, newest last, short relative ages in mono, the minor ones and what the crewmate did folded under the row they led to, a plain `Show earlier · N` link above when it is longer; see below) are tabs of their own, each the whole body while shown.
+For work with a merge policy, More shows Delivery (`Pull request` or `Local merge`), Merging (`Asks first` or `Merges on its own`), and Care (`Quick`, `Default`, or `Careful`) in separate rows.
 Each value is followed by its muted source, `This task` or `Project setting`, and the rows end with `Ask your first mate to change these for this task.` while the task is open.
-Once a device that runs work is on the list, Details adds Runs on after Care, for any task that could run elsewhere, answers included (`../devices/RunsOn.prompt.md`): where it started, or where it would start now (`Mac mini`, `Running as Builder`, `This computer`), followed by its muted source, `This task`, `Parent task` or `Project setting`.
+Once a device that runs work is on the list, More adds Runs on after Care, for any task that could run elsewhere, answers included (`../devices/RunsOn.prompt.md`): where it started, or where it would start now (`Mac mini`, `Running as Builder`, `This computer`), followed by its muted source, `This task`, `Parent task` or `Project setting`.
 It is read-only like the others, and the helper line shows under it while the task is open.
 Local merge bounds Careful to Default; the muted explanation retains that Careful was requested for pull requests.
 The values update in place, leaving disclosures and keyboard focus alone; accepted changes appear in Activity and the feed.
 These are read-only facts, not switches: the existing message input is the only editing surface, and the action bar does not change.
 Closed tasks keep their policies as history and omit the helper; answers, reviews and the personal workspace keep their existing no-merge presentation.
 A Careful change presents its live-validation result, evidence and limitations primarily in the merge completion card, beside the decision.
-The task record keeps its retained validation evidence under Details, closed by default, rather than as a prominent section above the record's rows.
+The task record keeps its retained validation evidence under More, closed by default, rather than as a prominent section above the record's rows.
 Its scenario observations can expand there to show the supporting transcript, picture or recording; these are history, not another merge decision.
 
-The fact strip sits just above the action bar, under a `--line-1` hairline, after those rows (FI3-1159, the captain's layout B): MODEL, INTELLIGENCE, REASONING, PULL REQUEST, CHECKS and REVIEW as cells, the merge card's own shape, then the footnote saying why that model (`components/now/NowPanel`, Shared task facts).
-The pull request and its checks are there, beside the model, and nowhere in the body: the body holds the work and its record, the strip where the work lands.
+The pull request and its checks are in the row of facts, beside the model, and nowhere else in the overview: the rows hold the work, the row of facts where the work lands.
 
 **Pull request links** (FI3-1159, the captain's "i feel that should be a consistent experience whenever we render a PR number").
 Every pull request the app names - by its number - is a link to its page wherever the host has one and the surface takes clicks: in the `--accent` color, underlined only while the pointer rests on it, a Tab stop with the focus ring, and a click opens it in the browser.
-On the record that is the strip's PULL REQUEST cell, the words of Now that name the task's pull request (`The checks failed on pull request #965.`), every Activity line that names it - the task's own, a folded one, and a linked task's line naming that task's pull request (`SCR-6, filed by this task, merged pull request #977.`) - and the closing line of a merged task.
+On the record that is the row of facts' PULL REQUEST cell, the words of Now that name the task's pull request (`The checks failed on pull request #965.`), every Activity line that names it - the task's own, a folded one, and a linked task's line naming that task's pull request (`SCR-6, filed by this task, merged pull request #977.`) - and the closing line of a merged task.
 The host says which words of a line name a pull request (`TaskActivityLine.change`); the window reads nothing out of the text, and a number in a crewmate's words that is not one of the task's pull requests stays text.
 The merge card's PULL REQUEST cell is the same link, and so is a pull request number a card's author writes in its body (`ResponseCard.prompt.md`, "Pull request numbers in a body").
 The crew summary never takes the pointer, so its pull request stays plain text; a click on what opened it opens this record.
 Every time reads relative, the absolute time on rest; the ages of Now, Progress and each finished item, and the checks' words and finish age, are Tab stops of their own, and the keyboard's focus shows the absolute time - for the checks, when they started and when they were last read - as the pointer's rest does (readme, "Facts shown on rest").
 So are the body's ages - an Activity or ask line's, a closed task's, a card's - each named by its short age and absolute time, in the same label the body draws in its own page; an Activity line that opens is the stop for its age, and its name reads the age's.
-Inside a row, only Activity's `Show earlier · N` link, the Activity lines that open (below), and the retained validation observations under Details open further.
+Inside a row, only Activity's `Show earlier · N` link, the Activity lines that open (below), and the retained validation observations under More open further.
 
-**The Cards row** (FI3-579 direction A, the captain's 3 "a Cards row on the task's record").
-Its label is `Cards`, with the count in mono, and it sits between Goal and your words and Activity; it is absent when the task never showed a card.
+**The Cards tab** (FI3-579 direction A, the captain's 3 "a Cards row on the task's record"; a tab since INF-2261).
+Its label is `Cards`, with the count in mono, and it sits between Info and Activity; it is absent when the task never showed a card.
 Open, it lists every card the task showed - the open ones and every closed one, those closed with the cross, those withdrawn and those taken down when the task ended - newest first, one line each, in the Activity line's grid: the kind in mono (`Decision` or `Note`), the title as a link in `--accent` (ellipsis, full title on hover), and how it ended in `--text-xs` `--fg-3` with its short age (`You chose Approve and build · 4h`, `Closed without choosing · 2h`, `Withdrawn by its author`, `Taken down when the task ended`).
 A card still open - a folded seen note included - reads `On the stage` and no age, and its link focuses that live card, never a past copy.
 Every closed card's link brings it forward through the shared show-card door, the one the first mate uses, as the read-only past card (`ResponseCard`, Past card); the row writes nothing and shows no button of its own.
-The Cards row is the same body row on closed and open records.
-Enter or Space on the summary opens the row and each link is a tab stop in list order.
+The Cards tab is the same on closed and open records.
+Each link is a tab stop in list order.
 
 **The Knowledge used row** (FI3-1150, the rest of the captain's approved FI3-1110 design; `../knowledge/KnowledgeBrowser`).
 It exists only where the window has the Knowledge browser - a build with knowledge to show - and only once the task's work declared a use.
-Its label is `Knowledge used`, with the count in mono, and it sits between Cards and Activity.
+Its label is `Knowledge used`, with the count in mono, and it sits in More, after the labeled list.
 Open, it says once, in `--text-sm` `--fg-3`, that these are what the work declared it relied on by the revision it used and that opening one records no use; then one entry per line, newest first, each entry and revision once.
 A line is the entry's words as the revision it used said them - a finding's statement, a concept's name - as a link in `--accent` (full words on hover), then in `--text-xs` `--fg-3` what it is and the revisions (`Finding · used revision 1 · current revision 2`, `Concept · used revision 3, the current one`, `· retired since` when it was), then the work's own reason in `--fg-3`.
 A link opens that exact revision in the Knowledge browser's inspector, with how it compares to the current revision first (`KnowledgeBrowser`, The inspector); the record, the use and the entry stay as they were.
@@ -134,13 +141,13 @@ More than twenty end with `And N more.`
 There is no Full report row.
 A report reads in Activity as its one-line summary, and that line opens to the report's whole text, so every report the task gave can be read in full, each beside its own age.
 An answer or an operation's result that no report carries opens the same way from the Activity line that closed the task.
-An answer given on a card opens to the card's words, never its markup: each paragraph, heading and list item on a line of its own, with its drawings and pictures left to the card, which the Cards row opens (FI3-904).
+An answer given on a card opens to the card's words, never its markup: each paragraph, heading and list item on a line of its own, with its drawings and pictures left to the card, which the Cards tab opens (FI3-904).
 Nothing about the task is left out of Activity: a minor event - the update a report restates, a check reading that repeats, a status that does not close the task, the app's bookkeeping - folds under the row it led to, and what no row followed yet folds under the newest row (`docs/task-record.md`, "What Activity holds").
 Activity and agent history read the same normalized timeline: retained card offers, messages and choices, brief receipts and conversation actions sit in the same chronology as the task's events.
 The earlier folded action summaries remain a compatible read; the window shows each action once, as a disclosure from the common timeline.
 Each disclosure opens its exact retained source, including an earlier offer after its card changes, and shows the recorded author without treating a card script as the captain.
 An unknown time reads Undated, and an unavailable source says so rather than substituting newer words.
-Historical content is text, with no buttons that can repeat the action; the Cards row remains the full card detail view.
+Historical content is text, with no buttons that can repeat the action; the Cards tab remains the full card detail view.
 A line with events or actions folded under it ends with their count in mono `--fg-3` (`+3`, read as "3 more") before its caret, and opens to them: each in the Activity grid, its short age in mono and its words in `--fg-3`, events and actions together oldest first, then the whole text, then any that came after the line.
 A retained source still opens when its summary already contains its words, so its recorded author remains reachable.
 A revised brief or recorded conversation leads with a plain sentence, such as "The brief was revised" or "The conversation resumed", rather than serialized fields or an internal opening reason.
@@ -155,7 +162,7 @@ Each line opens on its own and stays open across live updates; Enter or Space on
 
 **Lines from linked tasks** (FI3-1209, FI3-1189's rule 1, "record each fact once, for every task it concerns").
 Activity also holds what happened to the tasks linked to this one - its parts, the tasks it waits for or that wait for it, the follow-ups it filed, a task that replaced one of them - each a plain line of its own in its time, worded from this task's side (`SCR-6, which replaced SCR-3, merged pull request #977.`, `SCR-3, filed by this task, was dropped: SCR-6 replaces it.`, `SCR-4 waits for this task.`).
-The line keeps the Activity grid and ends with `from SCR-6` in mono `--text-xs` `--fg-3`, a link to that task's record: `--accent` and underlined on hover, a focus ring like a Cards row link, a tab stop in list order, and Enter or Space opens the record the way its Tasks row does.
+The line keeps the Activity grid and ends with `from SCR-6` in mono `--text-xs` `--fg-3`, a link to that task's record: `--accent` and underlined on hover, a focus ring like a Cards tab link, a tab stop in list order, and Enter or Space opens the record the way its Tasks row does.
 Nothing folds under such a line, and it never stands as Now.
 
 ```jsx
@@ -170,11 +177,11 @@ Nothing folds under such a line, and it never stands as Now.
 Never persisted as a card, never emitted by an agent, never a feed line: it is a view of the record, opened from a now-panel row and gone when closed.
 In the app the body is a Tier-2 frame template (`src/renderer/src/plugins/builtin/record/`) fed by the `tasks.detail` read, not this JSX; the look is the same.
 
-The task record adds a live Use row after Now and Progress, on the same left edge, in the shared fact-row type.
+The task record adds a live Use cell to its row of facts, beside Runs on, its value in dim mono.
 It shows the computer name, measured processor equivalents, resident memory and attributed process count in mono, without a meter or a color judgment.
 A missing or stale reading says Use unavailable; no matched processes says No processes running for this task.
 Resident memory counts shared pages once per process and is not the computer’s used-memory figure.
-A declared heavy run adds a separate Run row below Use, in the same fact-row type and mono value, without another panel, meter or control.
+A declared heavy run adds a separate Run cell beside Use, in the same cell type and mono value, without another panel, meter or control.
 It names the computer, waiting or running, the reason or runs ahead while waiting, and processor and memory amounts explicitly marked declared.
 Unavailable remote run facts say Run status unavailable on that computer, rather than showing the old state as current or implying completion.
 

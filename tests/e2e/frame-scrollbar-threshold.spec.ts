@@ -65,10 +65,10 @@ test("the task record stops resizing on both sides of a classic scrollbar thresh
     const frame = recordFrame(page);
     const scroller = page.locator(RECORD_SCROLLER);
     await expect(pane).toHaveCSS("opacity", "1");
-    await frame
+    await pane
       .locator('[data-record-section="words"] > summary')
       .evaluate((el) => (el as HTMLElement).click());
-    await expect(frame.locator("[data-record-goal]")).toHaveText(goal);
+    await expect(pane.locator("[data-record-goal]")).toHaveText(goal);
     await frame.locator("body").evaluate(() => document.fonts.ready);
     // INF-1605 adds a dated wait above this goal. Establish the real content's fit,
     // rather than assuming the old fixture height still fits, before crossing its threshold.
@@ -114,7 +114,7 @@ test("the task record stops resizing on both sides of a classic scrollbar thresh
     // A longer disclosure remains readable to its end through the outer
     // scroller; closing it shrinks the record again.
     await resizeWindow(app, page, { width: 1200, height: boundary - 100 });
-    const goalText = frame.locator("[data-record-goal]");
+    const goalText = pane.locator("[data-record-words]");
     await expect
       .poll(async () => {
         await scroller.evaluate((el) => {
@@ -126,7 +126,7 @@ test("the task record stops resizing on both sides of a classic scrollbar thresh
       })
       .toEqual([]);
     await page.screenshot({ path: testInfo.outputPath("record-scrolled.png") });
-    await frame
+    await pane
       .locator('[data-record-section="words"] > summary')
       .evaluate((el) => (el as HTMLElement).click());
     const short = await expectFrameSettles(

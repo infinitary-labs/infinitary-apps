@@ -159,9 +159,9 @@ The asks made at filing (`delivery_ask`, `autonomy_ask`, `rigor_ask`) and the li
 A shape write replaces them with the ones it carries, as the shape column did before them, and a value of another type than its field declares stays in the shape column, where every reader met it before.
 The closed snapshot (`delivery.closedPolicies`) is history, not an input, and stays on the delivery facts.
 The shared `effectiveTaskPolicies` reader supplies the record, task query, crew context, briefs, review gates and final merge guards; the task detail's legacy `rigor` remains dispatch history, and its optional `policies` holds the current values and sources.
-Details shows three read-only rows and `This task` or `Project setting` beside each, followed by the helper inviting a request to the first mate.
+The Info tab's More row shows three read-only rows and `This task` or `Project setting` beside each, followed by the helper inviting a request to the first mate.
 For Automatic work or once a computer that runs work is on the list, a fourth read-only row, Runs on, says where the task runs and whether that came from `This task`, its `Parent task` or the `Project setting` (`TaskDetail.runsOn`; `docs/helper.md`, "A task's own Runs on"); `update_task` `runs_on` changes it before the task starts.
-A local merge bounds Careful to Default without losing the requested care, with an explanation in Details.
+A local merge bounds Careful to Default without losing the requested care, with an explanation in More.
 Queued, interrupted and waiting work stays in place; the existing durable inbox carries policy notices to active and later resumed crews without starting a crew solely for that notice.
 A restart recovers a notice from the committed event if the app quit before enqueueing it.
 Newly closed work snapshots its effective policies beside the closed outcome (`delivery.closedPolicies`), without creating or rewriting a routing shape; policy edits refuse closed tasks, reviews, answers and the personal workspace.
@@ -237,7 +237,7 @@ The project's standing directions are not part of it: every served turn, the fir
 Each report the brief copies off a task's timeline is stored in the receipt as a reference to its event wherever the reference is smaller than the copy (`src/core/tasks/briefReceipt.ts`): a short stand-in naming the event in the text, and its offset, task, event id and the text's hash in `data.reports`.
 Report events are never compacted, so `TaskService.servedBrief` reads the receipt back as served, for the `tasks` query's `brief` and the record's timeline; the hash finds the report again when an export reloads it under a new event id.
 The card is already a file the brief names, so the receipt holds its path; a card that could not be saved rides in the brief, and the receipt, whole.
-`TaskDetail.cards` lists every card the task showed, open and past, newest first, for the record's Cards row (`docs/card-evidence.md` "The past card").
+`TaskDetail.cards` lists every card the task showed, open and past, newest first, for the record's Cards tab (`docs/card-evidence.md` "The past card").
 Successor lookups can recover that pinned content even after source or builder reports change.
 This proves host delivery, not model compliance or how an agent reads an approval; that judgment is `HANDOFF`'s (`docs/card-authoring.md`, "The handoff").
 
@@ -396,7 +396,7 @@ A row carries what folded under it as `folded`, oldest first, and on the record 
 The compatible projection keeps its older folded action summaries; Activity itself reads those actions from the common timeline, without a second displayed copy.
 The timeline itself stays whole on `TaskDetail.events`.
 An answer given on a card is stored as the card's body (`FileQuestionInput`, `recordAnswer`), so `TaskDetail.outcome` reads it as the card's words (`cardWords` in `src/shared/cardWords.ts`), and the line that closed the task opens to those words, never to the markup.
-The `tasks` query keeps the body, and the record's Cards row opens the card itself.
+The `tasks` query keeps the body, and the record's Cards tab opens the card itself.
 
 Every event kind has one place: a `row` of its own, `folded` under the row it led to, or `evidence` the timeline keeps for whoever digs.
 `ACTIVITY_PLACES` is the code copy of this table, so a new kind fails the build until it has a place; `recordActivity.test.ts` holds the two to the same places and checks that condensing leaves out nothing but evidence.
@@ -488,7 +488,7 @@ The task export carries each event's concerns on its line (`concerns`), and an i
 ## Other tasks' keys in the record
 
 Every other task's key the record shows is a link to that task (FI3-1271; the design skill's core rule "Task keys"): resting on it opens that task's summary beside the record, and a click or Enter opens it as its Tasks row does.
-That holds for the Waiting on box, Details' Part of, Waits on and Holds up, the Now line, Activity's lines and the texts they open to, the goal, the captain's words and a refused drop; the record's own key stays text, as do Cards row titles, an Activity line's toggle and Drop task's question.
+That holds for the Waiting on box, the Info tab's Part of, Waits on and Holds up rows, the Now line, Activity's lines and the texts they open to, the goal, the captain's words and a refused drop; the record's own key stays text, as do Cards tab titles, an Activity line's toggle and Drop task's question.
 The window finds which keys name tasks from the record's own read (`recordWords` in `RecordCard.tsx`, then `useTaskLinks`), and the record's frame links them where its text writes them, as a card's body does (`docs/card-authoring.md`, "Task keys").
 Part of names the parent's key, never its id: the frame reads the parent's own record when the board does not list it.
 
@@ -528,17 +528,33 @@ The task card's Crewmate tab reads the same sessions whole, as a transcript, thr
 `condenseActivity` folds each action under the first row recorded at or after it, the row it led to, as the row's `actions`, and what no row followed yet under the newest row; an update a report restates takes what led to it along under the report.
 On the record, a line's count and what it opens to hold its actions and its folded events together, in time order.
 
+## The Info tab
+
+The record's Info tab is shaped like the crew summary a task's circle shows on hover (INF-2261), and the summary itself stays as it was.
+The window draws its overview from the shared task facts (`TaskFactRows`, `TaskFactStrip`, `src/renderer/src/design/core/TaskFacts.tsx`), in this order:
+
+1. The attention sentence, when something is wrong or the task waits: a failure, an interruption, a hold or a wait (`recordAttentionOf`, `src/shared/recordAttention.ts`), with a charted filing's Why and a closed task's one line (`recordClosedLineOf`) beside it (`RecordAttention`, `src/renderer/src/cards/RecordHead.tsx`).
+2. The task's place among other tasks as rows of keys: Part of, Waits on, Holds up and Parts (`RecordRelations`).
+3. The goal, whole, with the captain's words folded under it, closed, the fold's name counting them ("Your 2 messages"); the fold also holds why a crew filing was filed and why the first mate built without a plan (`RecordGoal`, `recordWordsFoldName`).
+   The title stays the task's one line in the chrome.
+4. Project, Now, Progress and the Browser line, as the summary draws them.
+5. One row of facts under a hairline, as the summary's footer row: the model with its intelligence badge, the reasoning, the change with its checks as one cell, the review, Delivery, Runs on, a dim mono Use cell and a Run cell beside it ("Live resource use"), then Why this model.
+6. One closed More row at the end, scrolling with the body: the facts the summary leaves out, with their policy sources, Knowledge used and Live validation; a short dim preview beside its name says what it holds.
+
+The words fold and More are remembered per task while its record stays in the stack, as every record section is (`recordOpenSections`): paging away and back keeps them, and closing the record ends its visit, so reopening starts with both closed.
+Cards and Activity are the record's own tabs (`docs/task-card-tabs.md`): the record's sandboxed body draws them and More, and the window tells it which view to show (`view` in its state, `[data-record-view]` on each part).
+
 ## Live resource use
 
-The record adds a Use row after its shared Now and Progress facts (`TaskResourceUse`), on their same left edge.
+The record adds a dim mono Use cell to its row of facts, beside Runs on (`TaskResourceUse`; INF-2261, the captain's pick: "A Use cell beside Runs on, dim mono").
 It reads the raw shared computer-resource observations, not a second sampler or the personal-panel memory projection.
 Each attributed task share names its computer, measured processor equivalents, resident bytes and process count; RSS can count shared pages more than once and is not unique physical memory.
 An unavailable, stale or older reading stays explicit as Use unavailable; no matching processes in sampled computers says No processes running for this task.
 The row stays live while the record is open, including when a background job continues after the model turn ends, and changes no task status or idle clock.
 The sampler and pressure notices are owned by `docs/helper.md`, "Running tasks’ resource use".
-A separate Run row below Use shows each caller-declared heavy run's computer, waiting or admitted state, and declared processor and memory amounts (`docs/heavy-runs.md`).
+A separate Run cell beside Use shows each caller-declared heavy run's computer, waiting or admitted state, and declared processor and memory amounts (`docs/heavy-runs.md`).
 A waiting run says what it awaits or how many runs are ahead; unavailable remote facts keep the last-known run explicitly unavailable, never completed.
-A declaration is never presented as measured Use, and neither row adds a task state or a control.
+A declaration is never presented as measured Use, and neither cell adds a task state or a control.
 
 ## The Now line
 
@@ -670,7 +686,7 @@ The raw board includes finished tasks while they have minimized cards, however o
 `presentBoard` gives a taskless minimized card one presentation-only row, titled by the card, never a saved task.
 The task board and compact Tasks count use that same projection, and restoring or withdrawing the last minimized card removes that presentation override.
 Click or Enter restores the task’s minimized cards; a task’s existing ready card already opens on a row click through `openTask`.
-The record’s Cards row labels an open minimized card Put aside, and its link brings the live card back.
+The record’s Cards tab labels an open minimized card Put aside, and its link brings the live card back.
 The record’s Show the card also brings back a minimized decision.
 
 ## Live validation
@@ -678,8 +694,8 @@ The record’s Show the card also brings back a minimized decision.
 A change's `delivery.liveValidation` retains scenario revisions, version-bound observations and digested selected proof, independent reviewer judgments, and separate captain permissions.
 `TaskService.recordLiveValidation` and `decideLiveValidation` are the only writers; no prose parser grants proof or consent.
 The merge completion card presents the live-validation result, evidence and limitations beside the merge decision; the captain need not open the task record to understand what was demonstrated.
-The task-detail read keeps the Live validation summary and keyboard-openable evidence rows as supporting history under Details in the existing record frame.
-Details starts closed, so validation does not displace the record's overview and ordinary rows.
+The task-detail read keeps the Live validation summary and keyboard-openable evidence rows as supporting history under the Info tab's More row in the existing record frame.
+More starts closed, so validation does not displace the record's overview and ordinary rows.
 Delivery and timeline rows contain evidence metadata and compact references, never transcript bytes or a repeated copy of the complete validation state.
 The detail reader loads only bounded retained text for presentation, never media bytes or repeated proof hashes.
 Digest verification remains uncached at review and delivery gates.

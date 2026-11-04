@@ -444,6 +444,10 @@ export const REPORT_PROBLEM_DRAFT = "This task's browser has a problem: ";
 
 /** The task card's first tab, the record. */
 export const INFO_TAB_LABEL = "Info";
+/** The Cards tab's label (INF-2261): its count sits beside it in mono. */
+export const CARDS_TAB_LABEL = "Cards";
+/** The Activity tab's label (INF-2261): it shows no count. */
+export const ACTIVITY_TAB_LABEL = "Activity";
 
 /**
  * A browser tab's words on the task card: Browser, then the page's title when

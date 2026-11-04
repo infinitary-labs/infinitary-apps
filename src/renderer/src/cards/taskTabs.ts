@@ -1,36 +1,81 @@
 import { CREWMATE_TAB_LABEL } from "@shared/crewTranscript";
-import { browserTabLabel, INFO_TAB_LABEL, type TaskBrowserFact } from "@shared/taskBrowser";
-import type { TaskView } from "@shared/tasks";
-import { taskEntryFrom, useShellStore } from "../app/store";
+import {
+  ACTIVITY_TAB_LABEL,
+  browserTabLabel,
+  CARDS_TAB_LABEL,
+  INFO_TAB_LABEL,
+  type TaskBrowserFact,
+} from "@shared/taskBrowser";
+import type { TaskDetail, TaskView } from "@shared/tasks";
+import { type RecordView, taskEntryFrom, useShellStore } from "../app/store";
+
+export { ACTIVITY_TAB_LABEL, CARDS_TAB_LABEL };
 
 /**
- * The tabs of a task's card (docs/task-card-tabs.md): Info first, then
- * Crewmate once a crewmate has run it, then one Browser tab per page the
- * task's browser holds, each reading Browser and the page's title. A task
- * with neither has no tabs to switch between.
+ * The tabs of a task's card (docs/task-card-tabs.md; INF-2261, the
+ * captain's tab order): Info first, then Cards with how many once the task
+ * showed one, Activity once it has a line, Crewmate once a crewmate has run
+ * it, then one Browser tab per page the task's browser holds, each reading
+ * Browser and the page's title. A task with nothing but Info has no tabs to
+ * switch between.
  */
 export type TaskTab =
   | { kind: "info"; label: typeof INFO_TAB_LABEL }
+  | { kind: "cards"; label: typeof CARDS_TAB_LABEL; count: number }
+  | { kind: "activity"; label: typeof ACTIVITY_TAB_LABEL }
   | { kind: "crewmate"; label: typeof CREWMATE_TAB_LABEL }
   | { kind: "browser"; label: string; page: number };
 
 /** Which of a task's tabs is the one on the stage. */
 export type ShownTab = TaskTab["kind"];
 
+export type { RecordView };
+
+/** Whether a tab is one of the record's own views, drawn by the record entry. */
+export const isRecordView = (kind: ShownTab): kind is RecordView =>
+  kind === "info" || kind === "cards" || kind === "activity";
+
 export const INFO_TAB: TaskTab = { kind: "info", label: INFO_TAB_LABEL };
+export const ACTIVITY_TAB: TaskTab = { kind: "activity", label: ACTIVITY_TAB_LABEL };
 export const CREWMATE_TAB: TaskTab = { kind: "crewmate", label: CREWMATE_TAB_LABEL };
 
 /** Whether a task has a Crewmate tab: a crewmate has started on it, so it has a session to read. */
 export const hasCrewmateTab = (task: Pick<TaskView, "startedAt">): boolean =>
   task.startedAt !== null;
 
+/** What decides a task's tabs besides its browser: each tab appears once it has something to show. */
+export type TaskTabFacts = {
+  /** A crewmate has run the task (`hasCrewmateTab`). */
+  crewmate: boolean;
+  /** How many cards the task showed, open and past. */
+  cards: number;
+  /** The task's record holds an Activity line. */
+  activity: boolean;
+};
+
+export const NO_TAB_FACTS: TaskTabFacts = { crewmate: false, cards: 0, activity: false };
+
+/** The tab facts a task's record read gives. */
+export function taskTabFactsOf(
+  detail: Pick<TaskDetail, "startedAt" | "cards" | "activityLog" | "timeline">,
+): TaskTabFacts {
+  return {
+    crewmate: hasCrewmateTab(detail),
+    cards: detail.cards.length,
+    activity: detail.activityLog.length > 0 || (detail.timeline?.length ?? 0) > 0,
+  };
+}
+
 /** The tabs a task's card draws, or none while it has nothing but Info to show. */
 export function taskTabsOf(
   browser: TaskBrowserFact | undefined | null,
-  crewmate = false,
+  facts: TaskTabFacts = NO_TAB_FACTS,
 ): TaskTab[] {
-  const head = crewmate ? [INFO_TAB, CREWMATE_TAB] : [INFO_TAB];
-  if (!browser) return crewmate ? head : [];
+  const head: TaskTab[] = [INFO_TAB];
+  if (facts.cards > 0) head.push({ kind: "cards", label: CARDS_TAB_LABEL, count: facts.cards });
+  if (facts.activity) head.push(ACTIVITY_TAB);
+  if (facts.crewmate) head.push(CREWMATE_TAB);
+  if (!browser) return head.length > 1 ? head : [];
   if (browser.state === "stopped") return [...head, { kind: "browser", label: "Browser", page: 1 }];
   const pages = browser.pages && browser.pages.length > 1 ? browser.pages : null;
   if (!pages) return [...head, { kind: "browser", label: browserTabLabel(browser.title), page: 1 }];
@@ -46,7 +91,7 @@ export function taskTabsOf(
   ];
 }
 
-/** The index of the tab shown: Info, Crewmate, or the Browser tab of the browser's current page. */
+/** The index of the tab shown: Info, Cards, Activity, Crewmate, or the Browser tab of the browser's current page. */
 export function shownTabIndex(
   tabs: readonly TaskTab[],
   shown: ShownTab,
@@ -167,10 +212,11 @@ export function goToTab(taskId: string, tab: TaskTab, shown: ShownTab, byKey: bo
   const shell = useShellStore.getState();
   const from = taskEntryFrom(shell, taskId);
   if (byKey && tab.kind !== shown) askTabFocus();
-  if (tab.kind === "info") shell.openRecord(taskId, from);
-  else if (tab.kind === "crewmate") shell.openCrewmateView(taskId, from);
-  else if (shown !== "browser") shell.openBrowserView(taskId, from);
-  else void window.infinitary.browser.input(taskId, { kind: "page", page: tab.page });
+  if (tab.kind === "browser") {
+    if (shown !== "browser") shell.openBrowserView(taskId, from);
+    else void window.infinitary.browser.input(taskId, { kind: "page", page: tab.page });
+  } else if (tab.kind === "crewmate") shell.openCrewmateView(taskId, from);
+  else shell.openRecord(taskId, from, tab.kind);
 }
 
 export function askTabFocus(): void {
@@ -188,6 +234,8 @@ export function tabFocusDone(): void {
 /** The tab commands, which act on the shown task card's strip. */
 export type TabCommand =
   | "cards.show-info"
+  | "cards.show-cards"
+  | "cards.show-activity"
   | "cards.show-crewmate"
   | "cards.show-browser"
   | "cards.next-tab"
@@ -196,6 +244,8 @@ export type TabCommand =
 /** The tab a Show command names; null for Next tab and Previous tab. */
 export function tabKindOf(command: TabCommand): ShownTab | null {
   if (command === "cards.show-info") return "info";
+  if (command === "cards.show-cards") return "cards";
+  if (command === "cards.show-activity") return "activity";
   if (command === "cards.show-crewmate") return "crewmate";
   if (command === "cards.show-browser") return "browser";
   return null;
@@ -213,21 +263,22 @@ export function tabTargetOf(command: TabCommand, handle: TaskTabsHandle): number
   return at < 0 ? null : at;
 }
 
-/** The task whose card is the entry `entry`: its record, browser view or Crewmate tab. */
+/** The task whose card is the entry `entry`: its record (Info, Cards or Activity), browser view or Crewmate tab. */
 export const tabTaskOf = (entry: {
   recordTaskId?: string | undefined;
   browserTaskId?: string | undefined;
   crewmateTaskId?: string | undefined;
 }): string | undefined => entry.recordTaskId ?? entry.browserTaskId ?? entry.crewmateTaskId;
 
-/** Which tab the entry `entry` is: the record, the browser view or the Crewmate tab. */
+/** Which tab the entry `entry` is: the record's view, the browser view or the Crewmate tab. */
 export const tabShownOf = (entry: {
   recordTaskId?: string | undefined;
+  recordView?: RecordView | undefined;
   browserTaskId?: string | undefined;
   crewmateTaskId?: string | undefined;
 }): ShownTab | undefined =>
   entry.recordTaskId
-    ? "info"
+    ? (entry.recordView ?? "info")
     : entry.browserTaskId
       ? "browser"
       : entry.crewmateTaskId

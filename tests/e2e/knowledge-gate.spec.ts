@@ -148,9 +148,10 @@ async function answerAsShown(app: LaunchedApp, taskKey: string, references: numb
   await expect(record).toBeAttached();
   return {
     recordReadsKnowledge: await record.getAttribute("data-knowledge"),
+    // Knowledge used sits in the Info tab's More row (INF-2261): drawn, not hidden.
     knowledgeUsed: await recordFrame(app.page)
       .locator('[data-record-section="knowledge"]')
-      .isVisible(),
+      .evaluate((el) => el.closest("[hidden]") === null),
   };
 }
 

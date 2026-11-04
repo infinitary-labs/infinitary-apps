@@ -9,8 +9,13 @@ import {
 } from "@shared/resources";
 import { useEffect, useState } from "react";
 import { resourcePushes } from "../../plugins/reads/appExecutor";
+import { RecordCell } from "./TaskFacts";
 
-/** Live facts, not a claim that a quiet model session has stopped its work. */
+/**
+ * What the task uses on each computer and the runs it holds in the load
+ * line, as cells of the task record's row of facts. Live facts, not a claim
+ * that a quiet model session has stopped its work.
+ */
 export function TaskResourceUse({ taskId }: { taskId: string }) {
   const [view, setView] = useState<ComputerResourcesView>();
   useEffect(() => {
@@ -60,26 +65,20 @@ export function TaskResourceUse({ taskId }: { taskId: string }) {
       computer.reading.status === "fresh" &&
       computer.reading.observation.processes?.status === "sampled",
   );
+  const use = shares.length ? shares.join("; ") : sampled ? TASK_USE_EMPTY : TASK_USE_UNAVAILABLE;
+  // Cells in the record's row of facts, beside Runs on (INF-2261, the
+  // captain's pick: "A Use cell beside Runs on, dim mono"), and the run the
+  // load line holds for the task beside it.
   return (
-    <div className="fm-task-facts" data-task-resources="">
-      <div className="row">
-        <div className="label" data-task-fact-label="">
-          Use
-        </div>
-        <div className="title" data-task-resource-use="" style={{ fontFamily: "var(--font-mono)" }}>
-          {shares.length ? shares.join("; ") : sampled ? TASK_USE_EMPTY : TASK_USE_UNAVAILABLE}
-        </div>
-      </div>
+    <>
+      <RecordCell label="Use" dim data-task-resource-use="">
+        {use}
+      </RecordCell>
       {runs.length > 0 && (
-        <div className="row">
-          <div className="label" data-task-fact-label="">
-            Run
-          </div>
-          <div className="title" data-task-load="" style={{ fontFamily: "var(--font-mono)" }}>
-            {runs.join("; ")}
-          </div>
-        </div>
+        <RecordCell label="Run" dim data-task-load="">
+          {runs.join("; ")}
+        </RecordCell>
       )}
-    </div>
+    </>
   );
 }

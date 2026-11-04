@@ -17,7 +17,7 @@ import { type LaunchedApp, launchApp } from "./launch";
 import { seedHostedOrigins, seedProject } from "./projectSeed";
 import { promptInput } from "./prompt";
 import { served } from "./providerRequest";
-import { expandDock, linkedTaskKeys, nowRow, recordCard, recordFrame } from "./rails";
+import { expandDock, linkedTaskKeys, nowRow, recordCard, recordFrame, recordTab } from "./rails";
 import { completionAction } from "./stack";
 import { focusOn, pressKey, pressWindowKey, typeInto, untilFocused } from "./windowKeys";
 
@@ -181,7 +181,7 @@ test("a task's record lists its follow-up's drop for a replacement and that repl
     await pressKey(nowRow(page, seed.origin.key), "Enter");
     await expect(recordCard(page)).toHaveAttribute("data-task-record", "origin");
     const body = recordFrame(page);
-    await pressKey(body.locator('[data-record-section="timeline"] > summary'), "Enter");
+    await pressKey(recordTab(page, "activity"), "Enter");
     await expect(body.locator(`[data-record-from="${hang}"]`)).toBeVisible();
     const merged = body.locator(`[data-record-from="${fix}"][data-record-event="merged"]`);
     // The line's key is a link to that task, as every task key in the record is (FI3-1271).
@@ -190,9 +190,10 @@ test("a task's record lists its follow-up's drop for a replacement and that repl
     await untilFocused(key);
     // Work goes on while the captain reads: a push keeps this unchanged
     // line mounted (INF-1140), and its key keeps the keyboard (FI3-1279).
-    // Observe the count's repaint separately from the key's identity: a
-    // retained key alone cannot prove that the update reached the record.
-    const painted = await body.locator("[data-record-activity-count]").evaluateHandle((count) => {
+    // Observe a repaint separately from the key's identity - the More row's
+    // preview, which every push writes anew: a retained key alone cannot
+    // prove that the update reached the record.
+    const painted = await body.locator("[data-record-more-preview]").evaluateHandle((count) => {
       const witness = { changed: false };
       const observer = new MutationObserver(() => {
         witness.changed = true;
@@ -208,7 +209,7 @@ test("a task's record lists its follow-up's drop for a replacement and that repl
     ).toEqual({ opened: true });
     await expect
       .poll(() => painted.evaluate((witness) => witness.changed), {
-        message: "the push reaches the record's Activity count",
+        message: "the push reaches the record",
       })
       .toBe(true);
     expect(await drawn.evaluate((node) => node.isConnected)).toBe(true);

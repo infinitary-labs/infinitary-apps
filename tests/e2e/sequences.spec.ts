@@ -19,7 +19,6 @@ import {
   pressRow,
   recordBarButton,
   recordCard,
-  recordFrame,
   rowAtRest,
   startedLine,
   statusLine,
@@ -470,7 +469,7 @@ test("a single-place change declares its plan skip: one running task, no parent"
   await pressRow(page, implement.key);
   await expect(recordCard(page)).toHaveAttribute("data-task-record", implement.id);
   await expectRecordBody(page);
-  const record = recordFrame(page);
+  const record = recordCard(page);
   await record
     .locator('[data-record-section="words"] > summary')
     .evaluate((el) => (el as HTMLElement).click());

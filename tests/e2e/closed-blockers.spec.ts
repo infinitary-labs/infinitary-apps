@@ -15,7 +15,6 @@ import {
   pressRow,
   recordBarButton,
   recordCard,
-  recordFrame,
 } from "./rails";
 
 /** Current blockers are live work, not the closed edges retained in the task's history. */
@@ -108,14 +107,14 @@ test("an active task names only its open and active blockers", async () => {
   expect(current?.flags.blocked).toBe(false);
   const detail = await page.evaluate(() => window.infinitary.tasks.detail("mixed"));
   expect(detail.blockedBy).toEqual(current?.blockedBy);
-  await expect(recordFrame(page).locator("[data-record-attention]")).toBeVisible();
+  await expect(recordCard(page).locator("[data-record-attention]")).toBeVisible();
   for (const id of ["live-open", "live-active"]) {
-    await expect(recordFrame(page).locator("[data-record-attention]")).toContainText(
+    await expect(recordCard(page).locator("[data-record-attention]")).toContainText(
       key(id) as string,
     );
   }
   for (const id of ["merged", "dropped", "discarded"]) {
-    await expect(recordFrame(page).locator("[data-record-attention]")).not.toContainText(
+    await expect(recordCard(page).locator("[data-record-attention]")).not.toContainText(
       key(id) as string,
     );
   }
@@ -132,7 +131,7 @@ test("a dropped edge still prevents starting without naming closed work as a liv
   await expect(recordBarButton(page, "next")).toHaveAccessibleName(RECORD_NEXT_LABELS.start);
   await expect(recordBarButton(page, "next")).toBeDisabled();
   // The body's attention box says why it cannot start yet.
-  await expect(recordFrame(page).locator("[data-record-attention]")).toBeVisible();
+  await expect(recordCard(page).locator("[data-record-attention]")).toBeVisible();
   // INF-1605 / INF-2363: dropped prerequisites still block Start and retain
   // their dates. The record owns structured waits; queueWait is the list's
   // older summary. An unknown END time must not erase a known recorded date.
@@ -151,7 +150,7 @@ test("a dropped edge still prevents starting without naming closed work as a liv
       expect(wait).toBeUndefined();
     }
   }
-  const title = recordFrame(page).locator("[data-record-attention-title]");
+  const title = recordCard(page).locator("[data-record-attention-title]");
   await expect(title).toHaveText(waits.map((wait) => taskWaitText(wait, Date.now())).join("; "));
   await test.info().attach("dropped-prerequisite-waits", {
     body: JSON.stringify({
@@ -169,7 +168,7 @@ test("an active task with only closed dependencies has no blocker banner", async
   await evidence("closed-blockers");
   const detail = await page.evaluate(() => window.infinitary.tasks.detail("clear"));
   expect(detail).toMatchObject({ blockedBy: [], flags: { blocked: false } });
-  await expect(recordFrame(page).locator("[data-record-attention]")).toBeHidden();
+  await expect(recordCard(page).locator("[data-record-attention]")).toBeHidden();
   if (evidenceDir) {
     mkdirSync(evidenceDir, { recursive: true });
     writeFileSync(join(evidenceDir, "task-detail.json"), JSON.stringify(detail, null, 2));

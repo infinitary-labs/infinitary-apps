@@ -33,7 +33,7 @@ import {
   setLevelInPanel,
 } from "./modelsBoard";
 import { PASTE_PICTURE_PNG_BASE64, pastePictures, promptInput } from "./prompt";
-import { pressRow, recordFrame } from "./rails";
+import { pressRow, recordFrame, showRecordTab } from "./rails";
 import { showCard } from "./stack";
 import { pressKey, typeInto } from "./windowKeys";
 
@@ -324,9 +324,7 @@ for (const protocol of ["openai-completions", "openai-responses"] as const) {
     expect(task?.model).toBe(`${account.providerId}/operator-model`);
     if (!task) throw new Error("The custom crew task is missing");
     await pressRow(page, task.key);
-    await recordFrame(page)
-      .locator('[data-record-section="timeline"] > summary')
-      .evaluate((summary) => (summary as HTMLElement).click());
+    await showRecordTab(page, "activity");
     await recordFrame(page)
       .locator('[data-record-event="report"] > summary')
       .evaluate((summary) => (summary as HTMLElement).click());

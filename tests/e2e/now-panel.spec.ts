@@ -26,6 +26,7 @@ import {
   recordFact,
   recordFrame,
   reportLine,
+  showRecordTab,
   taskFact,
   taskKey,
 } from "./rails";
@@ -198,7 +199,8 @@ test("Tasks panel, record hints, stack navigation, sizing and filings", {
     const row = nowRow(page, "SCR-2");
     await pressRow(page, "SCR-2");
     await expectRecordTaskStatus(page);
-    await expect(recordCard(page).getByText(STATUS_NOTE, { exact: false })).toBeVisible();
+    // The title line; the goal and your words under it quote it too (INF-2261).
+    await expect(recordCard(page).getByText(STATUS_NOTE, { exact: true })).toBeVisible();
     await expect(recordCard(page).getByText("SCR-2", { exact: true })).toBeVisible();
     const task = (await board(page)).tasks.find((task) => task.key === "SCR-2");
 
@@ -219,28 +221,30 @@ test("Tasks panel, record hints, stack navigation, sizing and filings", {
     await expect(careFact).toContainText(CARE_WORDS.quick);
     // Now, the crewmate's own newest doing, leads the record: the report's headline.
     await expect(taskFact(pane, "now")).toHaveText(reportSummary(MOCK_COMPLETION_TEXT));
-    // Each section opens on its own; native disclosure is keyboard accessible
-    // even inside the sandbox.
-    const words = body.locator('[data-record-section="words"] > summary');
+    // The goal shows whole and the captain's words fold under it (INF-2261);
+    // the fold is a native disclosure, keyboard accessible.
+    const words = pane.locator('[data-record-section="words"] > summary');
+    await expect(pane.locator("[data-record-goal]")).toBeVisible();
     await pressKey(words, "Enter");
-    await expect(body.locator("[data-record-goal]")).toBeVisible();
-    await clickInFrame(body.locator('[data-record-section="timeline"] > summary'));
-    // The report's Activity line opens to the whole report (FI3-901).
-    const reportLine = body.locator('[data-record-event="report"] > summary');
-    await clickInFrame(reportLine);
-    await clickInFrame(body.locator('[data-record-section="details"] > summary'));
-    await expect(careFact).toBeVisible();
-    await careFact.evaluate((node) => node.scrollIntoView());
-    await page.screenshot({ path: test.info().outputPath("dark-task-record-care.png") });
-    // The record holds the task's goal, the captain's own words and the whole report.
-    await expect(body.locator("[data-record-goal]")).toContainText(STATUS_NOTE);
-    await expect(body.locator("[data-record-words]")).toHaveText(
+    // The record holds the task's goal and the captain's own words.
+    await expect(pane.locator("[data-record-goal]")).toContainText(STATUS_NOTE);
+    await expect(pane.locator("[data-record-words]")).toHaveText(
       `${SPAWN_PROMPT_MARKER} ${STATUS_NOTE}`,
     );
+    // The report's Activity line, on the Activity tab, opens to the whole report (FI3-901).
+    await showRecordTab(page, "activity");
+    const reportLine = body.locator('[data-record-event="report"] > summary');
+    await clickInFrame(reportLine);
     await expect(reportLine).toContainText(reportSummary(MOCK_COMPLETION_TEXT));
     await expect(body.locator('[data-record-event="report"] > [data-record-whole]')).toHaveText(
       MOCK_COMPLETION_TEXT,
     );
+    // Care and the crewmate are in the More row that ends Info.
+    await showRecordTab(page, "info");
+    await clickInFrame(body.locator('[data-record-section="details"] > summary'));
+    await expect(careFact).toBeVisible();
+    await careFact.evaluate((node) => node.scrollIntoView());
+    await page.screenshot({ path: test.info().outputPath("dark-task-record-care.png") });
     await expect(recordFact(page, "crewmate")).toBeVisible();
 
     // The action bar (the captain's 4A, 2026-09-28; FI3-565 piece 4): an idle
@@ -265,10 +269,10 @@ test("Tasks panel, record hints, stack navigation, sizing and filings", {
     // Keyboard entry keeps the open record as the turn hint; a pointer click
     // outside the pane dismisses it.
     const record = recordFrame(page);
-    // Reopening starts compact, and a live update preserves the rows it opened.
-    await expect(record.locator('[data-record-section="words"]')).not.toHaveAttribute("open", "");
-    await clickInFrame(record.locator('[data-record-section="words"] > summary'));
-    await clickInFrame(record.locator('[data-record-section="timeline"] > summary'));
+    // Reopening starts with the fold closed, and a live update preserves it once opened.
+    const fold = recordCard(page).locator('[data-record-section="words"]');
+    await expect(fold).not.toHaveAttribute("open", "");
+    await pressKey(fold.locator("> summary"), "Enter");
     const input = promptInput(page);
     await input.fill(ASK);
     await input.press("Enter");
@@ -286,16 +290,16 @@ test("Tasks panel, record hints, stack navigation, sizing and filings", {
         { timeout: 20_000 },
       )
       .toContain(ASK);
-    // The record's timeline grew by the ask, live, while the card stayed open
-    // with the sections the captain had opened.
-    await expect(recordFrame(page).locator("[data-record-ask]")).toHaveText(
+    // The captain's words grew by the ask, live, while the card stayed open
+    // with the fold the captain had opened.
+    await expect(recordCard(page).locator("[data-record-ask]")).toHaveText(
       new RegExp(escapeRegExp(ASK)),
       {
         timeout: 10_000,
       },
     );
-    await expect(record.locator('[data-record-section="words"]')).toHaveAttribute("open", "");
-    await expect(record.locator('[data-record-section="timeline"]')).toHaveAttribute("open", "");
+    await expect(fold).toHaveAttribute("open", "");
+    await expect(record.locator("[data-record-content]")).toBeAttached();
     // Now is the crewmate's own newest doing (INF-557; docs/task-record.md,
     // "The Now line"): the captain's ask, the newest row now on the record,
     // stays Activity's, and Now still reads the report's headline.
@@ -598,8 +602,7 @@ test("Tasks panel, record hints, stack navigation, sizing and filings", {
     await pressRow(page, (await row.getAttribute("data-now-key")) ?? "");
     const pane = recordCard(page);
     await expect(pane.getByRole("button", { name: DROP_TASK_LABEL })).toHaveCount(1);
-    const body = recordFrame(page);
-    await expect(body.locator("[data-record-why]")).toHaveText(MOCK_FOLLOWUP_WHY);
+    await expect(pane.locator("[data-record-why]")).toHaveText(MOCK_FOLLOWUP_WHY);
     await expect(header.locator("[data-now-new]")).toHaveCount(0);
     await page.screenshot({ path: test.info().outputPath("quiet-ledger-pane.png") });
   });

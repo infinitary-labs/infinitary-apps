@@ -10,7 +10,7 @@ import { scratchDir } from "../helpers/scratchDirs";
 import { launchApp } from "./launch";
 import { seedHostedOrigins, seedProject } from "./projectSeed";
 import { promptInput } from "./prompt";
-import { nowFrame, pressRow, recordFrame } from "./rails";
+import { nowFrame, pressRow, recordCard } from "./rails";
 import { externalRelease, RELEASE_PROMPT_MARKER } from "./scenarios/externalRelease";
 import { shownCard } from "./stack";
 
@@ -115,7 +115,8 @@ test("a verified external release closes reported work, not a dismissed note or 
     const row = nowFrame(page).locator('[data-now-group="landed"] [data-now-row]');
     await expect(row).toHaveCount(1);
     await pressRow(page, (await row.getAttribute("data-now-key")) ?? "");
-    await expect(recordFrame(page).getByText(/Released/)).toBeVisible();
+    // The closed line leads the Info tab in the card itself (INF-2261).
+    await expect(recordCard(page).getByText(/Released/)).toBeVisible();
     await page.screenshot({
       path: test.info().outputPath("external-release-done.png"),
       animations: "disabled",

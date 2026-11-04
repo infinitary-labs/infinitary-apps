@@ -7,7 +7,7 @@ import { scratchDir } from "../helpers/scratchDirs";
 import { launchApp } from "./launch";
 import { overflows } from "./layout";
 import { regionShot } from "./pictures";
-import { expandDock, expectRecordBody, nowFrame, nowRow, recordFrame } from "./rails";
+import { expandDock, expectRecordBody, nowFrame, nowRow, recordCard } from "./rails";
 import { boardTile, openBoardButton } from "./taskBoard";
 import { focusOn, pressKey } from "./windowKeys";
 
@@ -79,7 +79,7 @@ test("a queued task names its prerequisite and time on every task surface", asyn
     expect(waits).toHaveLength(1);
     expect(waits[0]?.taskKeys).toEqual([plan.key]);
     expect(waits[0]?.since).toBe(detail.queueWait?.since);
-    await expect(recordFrame(page).locator("[data-record-attention-title]")).toHaveText(
+    await expect(recordCard(page).locator("[data-record-attention-title]")).toHaveText(
       waits.map((wait) => taskWaitText(wait, Date.now())).join("; "),
     );
   } finally {

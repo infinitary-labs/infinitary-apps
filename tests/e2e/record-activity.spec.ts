@@ -20,6 +20,7 @@ import {
   pressRow,
   recordCard,
   recordFrame,
+  recordTab,
 } from "./rails";
 import { seedCrewTranscript } from "./transcriptFixtures";
 import { pressKey, runFromSearch, untilFocused } from "./windowKeys";
@@ -204,8 +205,7 @@ test("a record's Activity folds minor events under the row they led to, opened b
     await pressRow(page, detail.key);
     await expect(recordCard(page)).toHaveAttribute("data-task-record", ID);
     const body = recordFrame(page);
-    const activity = body.locator('[data-record-section="timeline"] > summary');
-    await pressKey(activity, "Enter");
+    await pressKey(recordTab(page, "activity"), "Enter");
     const line = body.locator('[data-record-event="report"]');
     const folded = line.locator("[data-record-folded]");
     await expect(line.locator("[data-record-folded-count]")).toBeVisible();
@@ -222,6 +222,8 @@ test("a record's Activity folds minor events under the row they led to, opened b
     const proof = body.locator('[data-validation-scenario="mac-workflow"]');
     const proofSummary = proof.locator(":scope > summary");
     await expect(proof).toBeHidden();
+    // The More row ends the Info tab (INF-2261).
+    await pressKey(recordTab(page, "info"), "Enter");
     await runFromSearch(app.app, page, "focus.card-body");
     await pressKey(details, "Enter");
     await expect(proofSummary).toBeVisible();
@@ -365,7 +367,7 @@ test("a record's Activity folds what the crewmate did under the row it led to, r
     await pressRow(page, detail.key);
     await expect(recordCard(page)).toHaveAttribute("data-task-record", ACTED);
     const body = recordFrame(page);
-    await pressKey(body.locator('[data-record-section="timeline"] > summary'), "Enter");
+    await pressKey(recordTab(page, "activity"), "Enter");
     const line = body.locator('[data-record-event="report"]');
     const actions = line.locator('[data-record-folded="action"]');
     await expect(line.locator("[data-record-folded-count]")).toBeVisible();

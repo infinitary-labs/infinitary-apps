@@ -200,6 +200,11 @@ describe("why a window command cannot run now", () => {
       expect(commandRefusal("cards.show-crewmate", record, CLEAR)).toBe(
         "This card has no such tab",
       );
+      // INF-2261: so do Cards and Activity on a task with neither.
+      expect(commandRefusal("cards.show-cards", record, CLEAR)).toBe("This card has no such tab");
+      expect(commandRefusal("cards.show-activity", record, CLEAR)).toBe(
+        "This card has no such tab",
+      );
       expect(commandRefusal("cards.next-tab", { ...record, view: "settings" }, CLEAR)).toBe(
         "Settings is open",
       );
@@ -214,6 +219,9 @@ describe("why a window command cannot run now", () => {
     try {
       expect(commandRefusal("cards.show-info", HOME, CLEAR)).toBeNull();
       expect(commandRefusal("cards.show-browser", HOME, CLEAR)).toBeNull();
+      // INF-2261: a card about a task is one of its cards and a line of its Activity.
+      expect(commandRefusal("cards.show-cards", HOME, CLEAR)).toBeNull();
+      expect(commandRefusal("cards.show-activity", HOME, CLEAR)).toBeNull();
       // No crewmate has run the task: it has no Crewmate tab to show.
       expect(commandRefusal("cards.show-crewmate", HOME, CLEAR)).toBe("This card has no such tab");
       expect(commandRefusal("cards.show-crewmate", { ...HOME, cardIndex: 1 }, CLEAR)).toBeNull();

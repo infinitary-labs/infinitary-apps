@@ -31,7 +31,7 @@ import {
 import { RecordPaneChrome } from "./RecordPaneChrome";
 import { recordPillToneOf } from "./recordFooter";
 import { TaskTabStrip } from "./TaskTabStrip";
-import { hasCrewmateTab } from "./taskTabs";
+import { taskTabFactsOf } from "./taskTabs";
 
 /**
  * A task's Crewmate tab on the stage (docs/task-card-tabs.md, "The Crewmate
@@ -418,7 +418,7 @@ export function CrewmateView({
               taskId={taskId}
               shown="crewmate"
               browser={detail.browser}
-              crewmate={hasCrewmateTab(detail)}
+              facts={taskTabFactsOf(detail)}
               captain={browserDriverOf(detail, detail.browser) === "captain"}
             />
           )

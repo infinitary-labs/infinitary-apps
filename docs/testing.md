@@ -969,7 +969,7 @@ What a journey asserts, each fact from its one place:
 `tests/renderer/` owns browser checks of exact stylesheet composition, outside the end-to-end journeys above.
 `pnpm test:styles` runs them against Chromium in the hermetic launcher's hidden window after `pnpm build`; the complete CI `pnpm test:e2e` gate includes them.
 `railDocking.spec.ts` exercises the real rail stylesheet with collapsed, expanded and hidden bottom panels on both rails, protecting one bottom group with no extra margins between its shown panels.
-`detailsReveal.spec.ts` opens the record template's Activity under the real reveal stylesheet and focuses inside it in the same task, protecting a body that takes focus before its fade draws a frame.
+`detailsReveal.spec.ts` opens the record template's More row under the real reveal stylesheet and focuses inside it in the same task, protecting a body that takes focus before its fade draws a frame.
 Pictures and a surface reproduction still show whether a visible fix meets the captain's intent.
 
 ## Capturing pictures of a change

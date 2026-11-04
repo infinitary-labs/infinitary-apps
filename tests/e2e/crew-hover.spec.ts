@@ -38,7 +38,7 @@ import {
   openGroup,
   POINT_SUMMARY,
   recordCard,
-  recordFrame,
+  recordTab,
   restOnRow,
   rowAtRest,
   rowSummary,
@@ -253,10 +253,8 @@ test("pointing at a crewmate opens its summary, Escape closes it and clicking op
       await expect(recordCard(page).locator("[data-task-plan-list] [data-plan-label]")).toHaveText(
         PLAN.map((item) => item.label),
       );
-      // The record's own rows still follow the facts.
-      await expect(
-        recordFrame(page).locator('[data-record-section="timeline"] > summary'),
-      ).toBeVisible();
+      // The record's Activity is a tab of its own (INF-2261).
+      await expect(recordTab(page, "activity")).toBeVisible();
       await page.screenshot({ path: test.info().outputPath("crew-hover/record-facts.png") });
 
       // Under the record the crew are not there to point at.

@@ -16,7 +16,7 @@ import { scratchDir } from "../helpers/scratchDirs";
 import { askFirstmate } from "./lastTurn";
 import { type LaunchedApp, launchApp } from "./launch";
 import { sinceLastUser } from "./mockProvider";
-import { expandDock, openGroup, pressRow, recordFrame } from "./rails";
+import { expandDock, openGroup, pressRow, recordFrame, recordTab } from "./rails";
 import { readSavedData } from "./savedData";
 import { UPGRADED_TIMELINE_PROMPT, upgradedTimelineRead } from "./scenarios/upgradedTimelineRead";
 import { starterFor } from "./starters";
@@ -251,7 +251,7 @@ test("existing-user history stays exact, complete and effect-free through upgrad
     await openGroup(app.page, "landed");
     await pressRow(app.page, detail.key);
     const body = recordFrame(app.page);
-    await pressKey(body.locator('[data-record-section="timeline"] > summary'), "Enter");
+    await pressKey(recordTab(app.page, "activity"), "Enter");
     const earlier = body.locator("[data-record-earlier]");
     if (await earlier.isVisible()) await pressKey(earlier.locator(":scope > summary"), "Enter");
     for (const { entry, text, activityRowId } of detail.timeline ?? []) {

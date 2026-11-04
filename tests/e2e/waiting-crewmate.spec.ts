@@ -26,7 +26,6 @@ import {
   recordBar,
   recordBarButton,
   recordCard,
-  recordFrame,
   rowSummary,
 } from "./rails";
 import { BOARD_PANEL, boardsOnStage, boardTile, hideBoard, openBoardButton } from "./taskBoard";
@@ -157,7 +156,7 @@ test("a started crewmate idle on one blocker circles it past queued work, and it
     await pressKey(waiterRow, "Enter");
     await expect(recordCard(page)).toHaveAttribute("data-task-record", "waiter");
     await expectRecordBody(page);
-    await expect(recordFrame(page).locator("[data-record-attention-title]")).toContainText(
+    await expect(recordCard(page).locator("[data-record-attention-title]")).toContainText(
       taskWaitText(dependency, Date.now()),
     );
     await hideRecord(page).click();

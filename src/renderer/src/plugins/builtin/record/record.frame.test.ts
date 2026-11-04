@@ -7,6 +7,7 @@ class Node {
   #text = "";
   hidden = false;
   open = false;
+  dataset: Record<string, string> = {};
   className = "";
   href = "";
   listeners: Record<string, () => void> = {};
@@ -95,7 +96,7 @@ class Node {
   }
 }
 
-function mount(options: { knowledge?: boolean } = {}) {
+function mount(options: { knowledge?: boolean; state?: unknown } = {}) {
   const nodes = new Map<string, Node>();
   const node = (selector: string) => {
     if (!nodes.has(selector)) nodes.set(selector, new Node());
@@ -108,6 +109,7 @@ function mount(options: { knowledge?: boolean } = {}) {
   const others = new Map<string, { callback: (value: unknown) => void; stopped: boolean }>();
   let fail = () => {};
   let tick = () => {};
+  let state = (_value: unknown) => {};
   const action = vi.fn((_id: string) => Promise.resolve());
   new Function("window", "document", script)(
     {
@@ -116,8 +118,11 @@ function mount(options: { knowledge?: boolean } = {}) {
       },
       inf: {
         action,
-        state: null,
-        onState: () => () => {},
+        state: options.state ?? null,
+        onState: (callback: (value: unknown) => void) => {
+          state = callback;
+          return () => {};
+        },
         subscribe: (
           read: string,
           params: { id?: string },
@@ -165,6 +170,10 @@ function mount(options: { knowledge?: boolean } = {}) {
     },
     asked: () => [...others.keys()],
     fail: () => fail(),
+    /** The host's state pushed after birth, as a tab change pushes it. */
+    state: (value: unknown) => state(value),
+    /** The tab the document shows, as its root names it. */
+    view: () => node("[data-record]").dataset.view,
     tick: () => tick(),
     /** Every region the script reached for, to press whatever it listens on. */
     regions: () => [...nodes.values()],
@@ -243,32 +252,7 @@ beforeEach(() => {
 afterEach(() => vi.useRealTimers());
 
 describe("compact task record frame", () => {
-  it("leads with a filing's reason only while it is charted, then keeps it in the record", () => {
-    const view = mount();
-    const filing = {
-      why: "it failed twice while I ran the suite",
-      originKey: "FI3-1",
-      verdict: null,
-    };
-    view.push(task({ status: "open", activity: null, filing }));
-    view.board();
-    expect(view.section("filing").hidden).toBe(false);
-    expect(view.section("filed").hidden).toBe(true);
-    expect(view.node("why").textContent).toBe("it failed twice while I ran the suite");
-    expect(view.node("verdict").textContent).toBe("Your first mate has not said yet.");
-    view.push(task({ filing: { ...filing, verdict: "still real on main" } }));
-    expect(view.section("filing").hidden).toBe(true);
-    expect(view.section("filed").hidden).toBe(false);
-    expect(view.section("words").hidden).toBe(false);
-    expect(view.node("filed-why").textContent).toBe("it failed twice while I ran the suite");
-    expect(view.node("filed-verdict").textContent).toBe("First mate: still real on main");
-    expect(view.node("filed-verdict").hidden).toBe(false);
-    // A closed filing has nothing left to decide: no verdict line.
-    view.push(task({ status: "done", closedReason: "finished", filing }));
-    expect(view.node("filed-verdict").hidden).toBe(true);
-  });
-
-  it("leaves the newest line to the shared facts above it, and says nothing when nothing needs saying", () => {
+  it("leaves the newest line to the shared facts above it, and opens the report from its Activity line", () => {
     const frame = mount();
     frame.push(
       task({
@@ -278,11 +262,18 @@ describe("compact task record frame", () => {
         activityLog: [row("report", "Fixed.")],
       }),
     );
-    // Now is the host's shared fact; the body has no second newest line.
-    expect(frame.node("overview").hidden).toBe(true);
+    // Now is the host's shared fact, and the attention sentence the
+    // window's (INF-2261): the body has no second newest line.
     expect(wholeOf(frame.node("timeline").children[0])).toBe("Fixed. Full evidence.");
-    frame.push(task({ blockedBy: ["DEMO-38"] }));
-    expect(frame.node("overview").hidden).toBe(false);
+  });
+
+  it("shows the tab the host names, Info until it names another (INF-2261)", () => {
+    const frame = mount({ state: { openSections: [], view: "activity" } });
+    expect(frame.view()).toBe("activity");
+    frame.state({ openSections: [], view: "cards" });
+    expect(frame.view()).toBe("cards");
+    frame.state({ openSections: [] });
+    expect(frame.view()).toBe("info");
   });
 
   it("opens every report from its own Activity line, the older one beside its age", () => {
@@ -620,60 +611,6 @@ describe("compact task record frame", () => {
     expect((frame.node("timeline").children[0] as Node).open).toBe(false);
   });
 
-  it("paints an interruption as a danger box in plain words, and leaves a waiting decision to the bar", () => {
-    const frame = mount();
-    frame.push(task({ blockedBy: ["DEMO-38"], waitingCardId: "card" }));
-    expect(frame.node("attention-title").text()).toBe("Waiting on DEMO-38");
-    expect(frame.node("attention").attrs).toHaveProperty("data-urgent");
-    expect(frame.node("attention").attrs).not.toHaveProperty("data-danger");
-    // The decision is the status's and the bar's Show the card, never a body line.
-    expect(frame.node("context").hidden).toBe(true);
-    frame.push(
-      task({
-        activity: "interrupted",
-        events: [event("failed", "hit a problem: WebSocket error")],
-        problem: "The connection dropped - try again.",
-      }),
-    );
-    expect(frame.node("attention-title").text()).toBe("Work was interrupted");
-    expect(frame.node("attention-guidance").text()).toBe("The connection dropped - try again.");
-    expect(frame.node("attention").attrs).toHaveProperty("data-danger");
-    frame.push(
-      task({
-        waitingCardId: "card",
-        flags: { blocked: false, held: true, needsYou: true, ready: false },
-      }),
-    );
-    expect(frame.node("attention").hidden).toBe(true);
-    expect(frame.node("overview").hidden).toBe(true);
-  });
-
-  it("removes the blocker banner when no live blockers remain", () => {
-    const frame = mount();
-    frame.push(task({ blockedBy: ["DEMO-38"] }));
-    expect(frame.node("attention-title").text()).toBe("Waiting on DEMO-38");
-    expect(frame.node("attention-guidance").text()).toBe("This task is blocked by other work.");
-    frame.push(task());
-    expect(frame.node("attention").hidden).toBe(true);
-    expect(frame.node("attention-title").text()).toBe("");
-    expect(frame.node("attention-guidance").text()).toBe("");
-    // A dropped edge still needs a graph decision before STARTING, but it
-    // is not work underway and must not resurrect the blocker banner: the
-    // box says what was dropped and whom to ask (FI3-948).
-    frame.push(
-      task({
-        status: "open",
-        activity: null,
-        flags: { blocked: true, held: false, needsYou: true, ready: false },
-      }),
-    );
-    expect(frame.node("attention-title").text()).toBe("A task it waits on was dropped");
-    expect(frame.node("attention-guidance").text()).toBe(
-      "Ask your first mate about its dependencies before starting.",
-    );
-    expect(frame.node("attention").attrs).not.toHaveProperty("data-urgent");
-  });
-
   it("has no buttons of its own: Show the card is the host bar's", () => {
     const frame = mount();
     for (const detail of [
@@ -687,179 +624,15 @@ describe("compact task record frame", () => {
     expect(frame.action).not.toHaveBeenCalled();
   });
 
-  it("leaves an open task's next step to its status reason, and says what only the body can", () => {
+  it("shows the condensed activity with the start behind a Show earlier link", () => {
     const frame = mount();
     frame.push(
       task({
-        activity: "idle",
-        delivery: { mode: "direct-pr", prNumber: 57, changeLabel: "#57", ci: "pending" },
-      }),
-    );
-    expect(frame.node("context").hidden).toBe(true);
-    expect(frame.node("overview").hidden).toBe(true);
-    frame.push(task({ status: "open", activity: null, startPolicy: "on-request" }));
-    expect(frame.node("context").hidden).toBe(true);
-    frame.push(
-      task({
-        status: "open",
-        activity: null,
-        startPolicy: "on-request",
-        children: { total: 5, closed: 3 },
-      }),
-    );
-    // A parent has no Start: the box says its parts do the work (FI3-948).
-    expect(frame.node("attention-title").text()).toBe("Its 5 parts do the work");
-    expect(frame.node("attention-guidance").text()).toBe("3 closed, 2 still open.");
-    expect(frame.node("context").hidden).toBe(true);
-    frame.push(
-      task({
-        status: "open",
-        activity: null,
-        startPolicy: "on-request",
-        children: { total: 1, closed: 0 },
-      }),
-    );
-    expect(frame.node("attention-title").text()).toBe("Its 1 part does the work");
-    expect(frame.node("attention-guidance").text()).toBe("0 closed, 1 still open.");
-    // A blocked parent keeps its blocker box.
-    frame.push(
-      task({
-        status: "open",
-        activity: null,
-        startPolicy: "on-request",
-        blockedBy: ["DEMO-38"],
-        children: { total: 5, closed: 3 },
-      }),
-    );
-    expect(frame.node("attention-title").text()).toBe("Waiting on DEMO-38");
-    expect(frame.node("context").hidden).toBe(true);
-  });
-
-  it("does not equate needsYou with a decision", () => {
-    const frame = mount();
-    frame.push(task({ flags: { blocked: false, held: true, needsYou: true, ready: false } }));
-    expect(frame.node("attention-title").text()).toBe("Work is paused");
-    // A no-card hold explains itself with the reported blocker, never an ask
-    // to find out what the generic waiting label meant.
-    frame.push(
-      task({
-        activity: "idle",
-        captainWait: true,
-        outcomeSummary: "The session cannot open a pull request: a required tool is missing.",
-        flags: { blocked: false, held: false, needsYou: true, ready: false },
-      }),
-    );
-    expect(frame.node("attention-title").text()).toBe("Work is paused");
-    expect(frame.node("attention-guidance").text()).toBe(
-      "The session cannot open a pull request: a required tool is missing.",
-    );
-    frame.push(task({ flags: { blocked: false, held: true, needsYou: false, ready: false } }));
-    expect(frame.node("attention-title").text()).toBe("Work is paused");
-  });
-
-  it("does not ask the captain while checks continue, and never fabricates a missing reason", () => {
-    const frame = mount();
-    frame.push(
-      task({
-        activity: "idle",
-        captainWait: true,
-        workPosture: { state: "active", reason: "checks" },
-        flags: { blocked: false, held: true, needsYou: true, ready: false },
-        outcomeSummary: "An older blocker.",
-      }),
-    );
-    expect(frame.node("attention").hidden).toBe(true);
-    frame.push(task({ activity: "idle", captainWait: true, outcomeSummary: null }));
-    expect(frame.node("attention-guidance").text()).toBe("No reason has been reported yet.");
-    frame.push(
-      task({ activity: "idle", waitingCardId: "choice", outcomeSummary: "An older blocker." }),
-    );
-    expect(frame.node("attention").hidden).toBe(true);
-  });
-
-  it("closes a put-in on one line, naming the change and its checks once", () => {
-    const frame = mount();
-    frame.push(
-      task({
-        status: "done",
-        activity: null,
-        closedReason: "merged",
-        closedAt: now - 46 * 60_000,
-        closing: { at: now - 46 * 60_000, note: null },
-        waitingCardId: "stale",
-        outcome: "Fixed.",
-        outcomeSummary: "Fixed.",
-        delivery: {
-          mode: "direct-pr",
-          prUrl: "https://github.com/demo/repo/pull/57",
-          prNumber: 57,
-          changeLabel: "#57",
-          ci: "green",
-          ciAt: now - 50 * 60_000,
-        },
-      }),
-    );
-    expect(frame.node("attention").hidden).toBe(true);
-    expect(frame.node("context").flat()).toBe(
-      "Merged 46 min ago as pull request #57. The checks passed.",
-    );
-    // The link is the change's, said once here (the shared facts drop it on close).
-    const link = frame
-      .node("context")
-      .children.find((child) => typeof child !== "string" && child.href);
-    expect(typeof link !== "string" && link?.href).toBe("https://github.com/demo/repo/pull/57");
-  });
-
-  it("reads a dropped task by its recorded note, not as a missing report", () => {
-    const frame = mount();
-    frame.push(
-      task({
-        status: "dropped",
-        activity: null,
-        closedReason: "cancelled",
-        closedAt: now - 3_600_000,
-        closing: { at: now - 3_600_000, note: "Duplicate of FI3-125." },
-      }),
-    );
-    expect(frame.node("context").flat()).toBe("Dropped 1 hr ago: Duplicate of FI3-125.");
-    frame.push(
-      task({
-        status: "dropped",
-        activity: null,
-        closedReason: "failed",
-        problem: "The provider did not accept your sign-in - sign in again.",
-      }),
-    );
-    expect(frame.node("attention-title").text()).toBe("Task failed");
-    expect(frame.node("attention-guidance").text()).toBe(
-      "The provider did not accept your sign-in - sign in again.",
-    );
-  });
-
-  it("shows the condensed activity as a counted row, with the start behind a Show earlier link", () => {
-    const frame = mount();
-    const words = '<script>alert("not HTML")</script>\nKeep this verbatim.';
-    frame.push(
-      task({
-        intent: { goal: "Ship", userWords: words },
-        asks: [
-          {
-            id: "ask",
-            at: now - 300_000,
-            text: "Later request",
-            images: 0,
-            attachedVia: null,
-            turnState: "closed",
-          },
-        ],
         activityLog: Array.from({ length: 12 }, (_, i) =>
           row("progress", `Progress ${i}`, now - 3_600_000 - i),
         ),
       }),
     );
-    expect(frame.node("words").textContent).toBe(words);
-    expect(frame.node("asks").text()).toContain("5m Later request");
-    expect(frame.node("activity-count").text()).toBe("12");
     expect(frame.node("timeline").children).toHaveLength(8);
     expect(frame.node("history").children).toHaveLength(4);
     expect(frame.node("earlier-label").text()).toBe("Show earlier · 4");
@@ -895,7 +668,6 @@ describe("compact task record frame", () => {
       }),
     );
     expect(frame.section("cards").hidden).toBe(false);
-    expect(frame.node("cards-count").text()).toBe("3");
     const lines = frame.node("cards").children as Node[];
     expect(lines.map((line) => line.flat())).toEqual([
       "NoteFolded noteOn the stage",
@@ -996,15 +768,6 @@ describe("compact task record frame", () => {
     expect(frame.node("note").hidden).toBe(true);
   });
 
-  it("keeps Firstmate's declared plan-skip reason in the task record", () => {
-    const frame = mount();
-    frame.push(task({ skippedPlanBecause: "One title; inspect it" }));
-    expect(frame.node("plan-skip").text()).toBe("One title; inspect it");
-    expect(frame.node("plan-skip").hidden).toBe(false);
-    frame.push(task());
-    expect(frame.node("plan-skip").hidden).toBe(true);
-  });
-
   it("paints stable fact identities independently of their displayed labels", () => {
     const frame = mount();
     frame.push(
@@ -1021,10 +784,9 @@ describe("compact task record frame", () => {
         children: { total: 3, closed: 1 },
       }),
     );
-    // Part of names a key, never an id: until the parent's own record says its key, no row.
-    expect(frame.fact("parent")).toBeUndefined();
-    expect(frame.asked()).toEqual(["task-parent"]);
-    expect(frame.other("task-parent", "DEMO-1")?.stopped).toBe(true);
+    // The project and the relations are the Info tab's own rows above this
+    // body (INF-2261), so More reads nothing of the parent.
+    expect(frame.asked()).toEqual([]);
     const pairs = frame.node("facts").children as Node[];
     expect(
       pairs
@@ -1036,14 +798,11 @@ describe("compact task record frame", () => {
         ]),
     ).toEqual([
       ["crewmate", "Crewmate", "crewmate 21 on GPT-6 Sol"],
-      ["project", "Project", "firstmate-3000"],
       ["branch", "Branch", "fm/task-ab12"],
       ["delivery", "Delivery", "As a pull request · care: Default"],
-      ["parent", "Part of", "DEMO-1"],
-      ["blocked-by", "Waits on", "DEMO-38"],
-      ["blocks", "Holds up", "DEMO-43"],
-      ["children", "Parts", "1 of 3 closed"],
     ]);
+    // The closed More row names what it holds beside its label.
+    expect(frame.node("more-preview").text()).toBe("branch · delivery");
     const facts = frame.node("facts").text();
     expect(facts).toContain("Crewmate crewmate 21 on GPT-6 Sol");
     expect(facts).toContain("Branch fm/task-ab12");
@@ -1086,14 +845,6 @@ describe("compact task record frame", () => {
     expect(frame.helper().text()).toBe("");
     frame.push(task());
     expect(frame.fact("runs-on")).toBeUndefined();
-  });
-
-  it("names the parent the board lists by its key, reading nothing more", () => {
-    const frame = mount();
-    frame.board([{ id: "task-parent", key: "DEMO-1" }]);
-    frame.push(task({ parentId: "task-parent" }));
-    expect(frame.fact("parent")?.text()).toBe("DEMO-1");
-    expect(frame.asked()).toEqual([]);
   });
 
   it("ends another task's Activity line in that task's key as words, and asks the host nothing", () => {
@@ -1171,44 +922,3 @@ describe("compact task record frame", () => {
 });
 
 // Approved INF-2215 reconciles waits into the existing explanation, preserving errors first.
-it("keeps all standing non-check waits in the attention box and preserves failure guidance", () => {
-  const view = mount();
-  const waits: NonNullable<TaskDetail["waits"]> = [
-    {
-      id: "dependency:web",
-      kind: "dependency",
-      label: "WEB-41",
-      taskKeys: ["WEB-41"],
-      since: now - 60000,
-    },
-    {
-      id: "start",
-      kind: "start",
-      label: "Scheduled start",
-      next: { kind: "start", at: now - 30000 },
-    },
-    {
-      id: "run:42:1",
-      kind: "run",
-      label: "Website checks",
-      next: { kind: "next-read", at: now + 60000 },
-    },
-  ];
-  view.push(
-    task({
-      activity: "interrupted",
-      problem: "The computer disconnected.",
-      blockedBy: ["WEB-41"],
-      waits,
-    }),
-  );
-  const words = view.node("attention-guidance").textContent;
-  expect(view.node("attention-title").textContent).toBe("Work was interrupted");
-  expect(words).toMatch(/^The computer disconnected\./);
-  expect(words).toContain("WEB-41 · time unknown · wait recorded");
-  expect(words).toContain("start time was due");
-  expect(words).not.toContain("Website checks");
-  view.push(task({ blockedBy: ["WEB-41"], waits }));
-  expect(view.node("attention-title").textContent).toContain("WEB-41 · time unknown");
-  expect(view.node("attention-title").textContent).toContain("start time was due");
-});

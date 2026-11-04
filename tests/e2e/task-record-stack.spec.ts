@@ -61,7 +61,7 @@ test("records page one per task beside the cards, and the character returns when
     await click(nowFrame(page).locator('[data-now-group-header="backlog"]'));
     await pressRow(page, chart.key);
     await expect(recordCard(page)).toHaveAttribute("data-task-record", chart.id);
-    await expect(recordFrame(page).locator("[data-record-goal]")).toHaveText(CHART_GOAL);
+    await expect(recordCard(page).locator("[data-record-goal]")).toHaveText(CHART_GOAL);
     // The record takes the stage: the character underneath can be neither seen nor reached.
     await expect(character).toBeHidden();
     await expect(character).toHaveAttribute("inert", "");
@@ -96,11 +96,14 @@ test("records page one per task beside the cards, and the character returns when
     await expect(recordCard(page)).toHaveAttribute("data-task-record", chart.id);
     // A long record reads to its end in the card's one scroller, never a
     // nested scroll surface inside the body.
-    await click(recordFrame(page).locator('[data-record-section="words"] > summary'));
+    await click(recordCard(page).locator('[data-record-section="words"] > summary'));
     const scroller = recordCard(page).locator("[data-card-body]");
     await expect
       .poll(() => scroller.evaluate((el) => el.scrollHeight - el.clientHeight))
       .toBeGreaterThan(0);
+    // The body frame now ends Info (INF-2261), below the opened words: an
+    // undrawn frame there paints only once scrolled into view.
+    await expectRecordBody(page);
     const longRecord = await recordFrame(page)
       .locator("html")
       .evaluate((el) => ({ document: el.scrollHeight, viewport: innerHeight }));

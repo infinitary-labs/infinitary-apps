@@ -165,11 +165,13 @@ describe("one task's facts on the crew summary and the task record", () => {
       review: "passed · risk low",
     });
     // Every strip cell has its micro label over its value, as the merge card's do.
+    // The Info tab's row (INF-2261) keeps the preview's shape: the model carries
+    // its badge and the change carries its checks, so neither has a cell of its own.
     const labels = (html: string) =>
       [...html.matchAll(/data-task-fact-label="">([^<]+)</g)].map((match) => match[1]);
-    expect(labels(record)).toEqual(
-      expect.arrayContaining(["Model", "Intelligence", "Reasoning", "Pull request", "Checks"]),
-    );
+    expect(labels(record)).toEqual(expect.arrayContaining(["Model", "Reasoning", "Pull request"]));
+    expect(labels(record)).not.toContain("Intelligence");
+    expect(labels(record)).not.toContain("Checks");
     expect(record).toContain('data-fact-dot="running"');
     // The summary draws the plan as one dot per item, the record as the whole list.
     expect(summary.match(/data-plan-item="/g)).toHaveLength(3);

@@ -38,6 +38,7 @@ import {
   putInLine,
   recordCard,
   recordFrame,
+  recordTab,
   reportLine,
   startedLine,
 } from "./rails";
@@ -416,7 +417,7 @@ test("the captain's words pass a soft hold once on the record, a fixed limit ref
     await pressRow(page, builder.key);
     await expect(recordCard(page)).toHaveAttribute("data-task-record", builder.id);
     const record = recordFrame(page);
-    await pressKey(record.locator('[data-record-section="timeline"] > summary'), "Enter");
+    await pressKey(recordTab(page, "activity"), "Enter");
     const overrideLine = record
       .locator('[data-record-event="note"]')
       .filter({ hasText: REACH_STOP_WORDS });

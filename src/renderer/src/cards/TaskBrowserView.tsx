@@ -44,7 +44,7 @@ import { appReadExecutor } from "../plugins/reads/appExecutor";
 import { RecordPaneChrome } from "./RecordPaneChrome";
 import { recordPillToneOf } from "./recordFooter";
 import { TaskTabStrip } from "./TaskTabStrip";
-import { hasCrewmateTab } from "./taskTabs";
+import { NO_TAB_FACTS, taskTabFactsOf } from "./taskTabs";
 
 /**
  * A task's own browser on the stage (docs/task-browser.md, "The view"; the
@@ -723,7 +723,7 @@ export function TaskBrowserView({
             taskId={taskId}
             shown="browser"
             browser={fact}
-            crewmate={detail ? hasCrewmateTab(detail) : false}
+            facts={detail ? taskTabFactsOf(detail) : NO_TAB_FACTS}
             captain={captain}
           />
         }

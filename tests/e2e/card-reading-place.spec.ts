@@ -5,7 +5,7 @@ import { seedTask } from "../../src/core/tasks/seedTask";
 import { TaskService } from "../../src/core/tasks/taskService";
 import { scratchDir } from "../helpers/scratchDirs";
 import { launchApp } from "./launch";
-import { expandDock, nowFrame, pressRow, recordCard, recordFrame } from "./rails";
+import { expandDock, nowFrame, pressRow, recordCard, recordFrame, showRecordTab } from "./rails";
 import { cardScroller, showCard, shownCard, stageAtRest } from "./stack";
 
 const checks = [
@@ -120,7 +120,7 @@ test("paging away from a task record and back keeps its reading place", async ()
       .evaluate((el) => (el as HTMLElement).click());
     await pressRow(page, a.key);
     await expect(recordCard(page)).toHaveAttribute("data-task-record", a.id);
-    await recordFrame(page)
+    await recordCard(page)
       .locator('[data-record-section="words"] > summary')
       .evaluate((el) => (el as HTMLElement).click());
     const scroller = () => recordCard(page).locator("[data-card-body]");
@@ -183,9 +183,7 @@ test("paging away from a past card and back keeps its reading place", async () =
       .locator('[data-now-group-header="landed"]')
       .evaluate((el) => (el as HTMLElement).click());
     await pressRow(page, task.key);
-    await recordFrame(page)
-      .locator('[data-record-section="cards"] > summary')
-      .evaluate((el) => (el as HTMLElement).click());
+    await showRecordTab(page, "cards");
     await recordFrame(page)
       .locator("[data-record-card] button")
       .first()

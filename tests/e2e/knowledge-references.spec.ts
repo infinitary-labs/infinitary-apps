@@ -25,7 +25,7 @@ import { HARBOR, seedKnowledge } from "./knowledgeSeed";
 import { launchApp } from "./launch";
 import { resizeWindow } from "./layout";
 import { promptInput } from "./prompt";
-import { pressRow, recordCard, recordFrame } from "./rails";
+import { openRecordMore, pressRow, recordCard, recordFrame } from "./rails";
 import { clickInBody, SHOWN_ENTRY, showCard, shownCard, shownCardFrame } from "./stack";
 import { focusOn, typeInto, untilFocused } from "./windowKeys";
 
@@ -138,6 +138,8 @@ test("an answer's finding opens the inspector, a task's Knowledge used opens the
       await expect(recordCard(page)).toBeVisible();
       const record = recordFrame(page);
       await expect(record.locator("[data-record]")).toHaveAttribute("data-knowledge", "on");
+      // Knowledge used sits in the Info tab's More row (INF-2261).
+      await openRecordMore(page);
       const knowledge = record.locator('[data-record-section="knowledge"]');
       await expect(knowledge).toBeVisible();
       // Pressed in the frame itself: Chromium drops native clicks into a

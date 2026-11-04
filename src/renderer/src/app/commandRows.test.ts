@@ -98,6 +98,8 @@ describe("command search's list", () => {
         keys: "⌘\\",
         refusal: null,
       },
+      // INF-2261: a task card's Cards tab is a command too ("tab_order: Info, Cards, ...").
+      { id: "cards.show-cards", label: "Show Cards", keys: undefined, refusal: null },
     ]);
   });
 
@@ -120,6 +122,7 @@ describe("command search's list", () => {
       ["cards.minimize", "⇧⌘M"],
       ["cards.maximize", undefined],
       ["cards.thread", "⌘\\"],
+      ["cards.show-cards", undefined],
     ]);
     expect(commandRows("keyboard", () => null, bindings).map((row) => row.label)).toEqual([
       "Open Keyboard settings",

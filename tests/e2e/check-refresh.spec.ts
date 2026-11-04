@@ -42,6 +42,7 @@ import {
   restOnRow,
   rowSummary,
   rowSummaryBody,
+  showRecordTab,
   taskCheckWords,
   taskFact,
   taskKeyLinks,
@@ -259,13 +260,7 @@ for (const kind of ["failed", "empty", "unreadable"] as const) {
       });
       await expect(recordCard(app.page).locator('[data-task-fact="crew-verdict"]')).toHaveCount(0);
       await regionShot(recordCard(app.page), test.info().outputPath("record-after.png"));
-      const timeline = recordFrame(app.page).locator('[data-record-section="timeline"]');
-      if ((await timeline.getAttribute("open")) === null) {
-        await timeline
-          .locator(":scope > summary")
-          .evaluate((element) => (element as HTMLElement).click());
-      }
-      await expect(timeline).toHaveAttribute("open", "");
+      await showRecordTab(app.page, "activity");
       await recordFrame(app.page)
         .getByText(`Checks: ${expectedWords}`, { exact: false })
         .last()

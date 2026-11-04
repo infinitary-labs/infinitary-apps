@@ -12,6 +12,7 @@ import { MAXIMIZE_LABEL, RESTORE_LABEL } from "../../src/renderer/src/design/car
 import { CREWMATE_TAB_LABEL } from "../../src/shared/crewTranscript";
 import { HERE } from "../../src/shared/deviceNames";
 import {
+  ACTIVITY_TAB_LABEL,
   BROWSER_DOOR_LABEL,
   browserTabLabel,
   DRIVER_WORDS,
@@ -572,10 +573,12 @@ test("the captain opens a task's browser from its record and watches the crewmat
       await expect(view(page, task.id)).toHaveAttribute("data-browser-state", "watching");
     });
 
-    await test.step("the card's tabs read Info, Crewmate and Browser with the page's title, and the keys and command search move between them", async () => {
+    await test.step("the card's tabs read Info, Activity, Crewmate and Browser with the page's title, and the keys and command search move between them", async () => {
       const { tabs, selected } = taskTabs(page);
+      // INF-2261: Activity is its own tab between Info and Crewmate.
       await expect(tabs).toHaveText([
         INFO_TAB_LABEL,
+        ACTIVITY_TAB_LABEL,
         CREWMATE_TAB_LABEL,
         browserTabLabel("Sign up"),
       ]);

@@ -1533,6 +1533,7 @@ function EntrySurface({
     return (
       <RecordCard
         taskId={entry.recordTaskId}
+        view={entry.recordView ?? "info"}
         theme={theme}
         onClose={onClose}
         onDrawn={drew}

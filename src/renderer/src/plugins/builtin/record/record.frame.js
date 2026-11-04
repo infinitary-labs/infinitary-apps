@@ -1,12 +1,14 @@
 // @ts-check
 /**
- * Compact task record. The host owns identity/state/close, the shared task
- * facts above this body (Now and Progress - the crew summary's own, FI3-565
- * piece 2), the fact strip just above the action bar (the model, the change
- * and its checks, FI3-1159), and the action bar below it: every button, Show the card
- * included, is the bar's (FI3-565 piece 4), and the bar says nothing of its
- * own (FI3-948). This frame shows what is wrong or what the task waits on
- * first, then the record as peer rows that each open on their own. Its
+ * The task record's three tabs (INF-2261), the shown one named by the host's
+ * `view` state. On Info the host draws the attention sentence, the goal with
+ * the captain's words, the shared task facts (the crew summary's own,
+ * FI3-565 piece 2) and the row of facts above this body, which ends the tab
+ * with one closed More row: the record's remaining facts, Knowledge used and
+ * live validation. Cards lists every card the task showed; Activity is its
+ * timeline. The host owns identity/state/close, the tabs and the action bar:
+ * every button, Show the card included, is the bar's (FI3-565 piece 4), and
+ * the bar says nothing of its own (FI3-948). Its
  * actions are `open-card`, a Cards row link (FI3-579 piece 1); and, where
  * the window has knowledge, `open-knowledge`, a Knowledge used row that
  * opens the revision the work used in the Knowledge browser's inspector
@@ -25,17 +27,8 @@
  * names links to its page, where the host says which words name it. All
  * task-authored strings use textContent, never HTML.
  */
-(function record(
-  /** @type {import("@shared/plugins/bridge").FrameBridgeApi} */ bridge,
-  /** @type {typeof import("@shared/taskWaits").taskWaitText} */ taskWaitText = () => {
-    throw new Error("Task wait formatting was not prepared");
-  },
-  /** @type {typeof import("@shared/taskWaits").recordAttentionWaits} */ recordAttentionWaits = () => {
-    throw new Error("Task wait ownership was not prepared");
-  },
-) {
+(function record(/** @type {import("@shared/plugins/bridge").FrameBridgeApi} */ bridge) {
   /** @typedef {import("@shared/tasks").TaskDetail} Detail */
-  /** @typedef {import("@shared/tasks").TaskBoard} Board */
   /** @typedef {import("@shared/tasks").TaskActivityRow} Row */
   /** @typedef {import("@shared/knowledge").KnowledgeUses} Uses */
 
@@ -50,44 +43,15 @@
   const contentEl = /** @type {HTMLElement} */ (
     must(document.querySelector("[data-record-content]"))
   );
-  const whyEl = must(document.querySelector("[data-record-why]"));
-  const verdictEl = /** @type {HTMLElement} */ (
-    must(document.querySelector("[data-record-verdict]"))
-  );
-  const overviewEl = /** @type {HTMLElement} */ (
-    must(document.querySelector("[data-record-overview]"))
-  );
-  const attentionEl = /** @type {HTMLElement} */ (
-    must(document.querySelector("[data-record-attention]"))
-  );
-  const attentionTitleEl = must(document.querySelector("[data-record-attention-title]"));
-  const guidanceEl = must(document.querySelector("[data-record-attention-guidance]"));
-  const contextEl = /** @type {HTMLElement} */ (
-    must(document.querySelector("[data-record-context]"))
-  );
-  const goalEl = /** @type {HTMLElement} */ (must(document.querySelector("[data-record-goal]")));
-  const filedWhyEl = must(document.querySelector("[data-record-filed-why]"));
-  const filedVerdictEl = /** @type {HTMLElement} */ (
-    must(document.querySelector("[data-record-filed-verdict]"))
-  );
-  const planSkipEl = /** @type {HTMLElement} */ (
-    must(document.querySelector("[data-record-plan-skip]"))
-  );
-  const planSkipSection = /** @type {HTMLElement} */ (
-    must(document.querySelector("[data-record-plan-skip-section]"))
-  );
-  const wordsEl = /** @type {HTMLElement} */ (must(document.querySelector("[data-record-words]")));
-  const asksEl = must(document.querySelector("[data-record-asks]"));
   const cardsEl = must(document.querySelector("[data-record-cards]"));
-  const cardsCountEl = must(document.querySelector("[data-record-cards-count]"));
-  const activityCountEl = must(document.querySelector("[data-record-activity-count]"));
   const earlierEl = /** @type {HTMLElement} */ (
     must(document.querySelector("[data-record-earlier]"))
   );
   const earlierLabelEl = must(document.querySelector("[data-record-earlier-label]"));
   const historyEl = must(document.querySelector("[data-record-history]"));
   const timelineEl = must(document.querySelector("[data-record-timeline]"));
-  const caretEl = must(document.querySelector('[data-record-section="timeline"] .caret'));
+  const caretEl = must(document.querySelector('[data-record-section="details"] .caret'));
+  const morePreviewEl = must(document.querySelector("[data-record-more-preview]"));
   const factsEl = must(document.querySelector("[data-record-facts]"));
   const usesEl = must(document.querySelector("[data-record-knowledge]"));
   const usesCountEl = must(document.querySelector("[data-record-knowledge-count]"));
@@ -98,16 +62,6 @@
 
   /** @type {Detail | null} */
   let detail = null;
-  /** @type {Map<string, string>} */
-  let keyById = new Map();
-  /**
-   * The keys of parents the board does not list, as their own records say
-   * them, so Part of names a key and never an id.
-   * @type {Map<string, string>}
-   */
-  const parentKeys = new Map();
-  /** @type {string | null} */
-  let parentAsked = null;
   /** What the work declared it used, as `knowledge.uses` last answered; null before it does. @type {Uses | null} */
   let uses = null;
   /**
@@ -418,155 +372,6 @@
     }
   }
 
-  /** The change by the label the forge gave it (`#N`, or a pushed branch's name). */
-  function changeLabelOf(/** @type {Detail} */ current) {
-    const facts = current.delivery;
-    return facts?.changeLabel ?? (facts?.prNumber ? `#${facts.prNumber}` : undefined);
-  }
-
-  /** A numbered change is a pull request; anything else the forge named is a branch. */
-  function changeNoun(/** @type {Detail} */ current) {
-    const facts = current.delivery;
-    const label = changeLabelOf(current);
-    return facts?.prNumber || label?.startsWith("#") ? "pull request" : "branch";
-  }
-
-  /**
-   * The change, linked where the host has a page for it.
-   * @param {Detail} current
-   * @param {string} prefix
-   */
-  function changeNode(current, prefix) {
-    const label = changeLabelOf(current);
-    const text = label ? `${prefix} ${label}` : prefix;
-    if (!current.delivery?.prUrl) return span("change", text);
-    const link = document.createElement("a");
-    link.href = current.delivery.prUrl;
-    link.textContent = text;
-    return link;
-  }
-
-  const CLOSE_WORDS = {
-    landed: "Merged",
-    merged: "Merged",
-    released: "Released",
-    answered: "Answered",
-    settled: "Closed",
-    finished: "Finished",
-    cancelled: "Dropped",
-    discarded: "Discarded",
-    failed: "Failed",
-    superseded: "Superseded",
-  };
-
-  /**
-   * How a closed row closed, as one line of nodes: a put-in names its change
-   * and its checks once (A10); a drop carries the words recorded with it (A4).
-   * @param {Detail} current
-   * @returns {(Node | string)[]}
-   */
-  function closedLine(current) {
-    const at = current.closing?.at ?? current.closedAt;
-    const when = span("", "");
-    if (at !== null) aged(when, at, ago);
-    if (current.closedReason === "landed" || current.closedReason === "merged") {
-      const line = /** @type {(Node | string)[]} */ (["Merged ", when]);
-      if (changeLabelOf(current)) line.push(" as ", changeNode(current, changeNoun(current)));
-      line.push(".");
-      if (current.delivery?.ci === "green") line.push(" The checks passed.");
-      return line;
-    }
-    // Work another task carries on closed done (INF-1825): its words say
-    // where that work stands, and the close's time follows them.
-    if (current.status === "done" && current.closedReason === "superseded" && current.closing?.note)
-      return [`${current.closing.note}, closed `, when, "."];
-    const reason = current.closedReason;
-    const word = reason
-      ? (CLOSE_WORDS[reason] ?? reason)
-      : current.status === "done"
-        ? "Done"
-        : "Dropped";
-    const note = current.closing?.note;
-    return [`${word} `, when, note ? `: ${note}` : "."];
-  }
-
-  /**
-   * What needs saying, beside the host's facts and its bar: an attention box
-   * when something is wrong or the task waits on something, and how a
-   * closed task closed. A waiting decision is the bar's Show the card, and
-   * an open task's next step the status reason beside its pill; the bar says
-   * nothing of its own (FI3-948).
-   * @param {Detail} current
-   */
-  function paintOverview(current) {
-    const closed = current.status === "done" || current.status === "dropped";
-    const live = !closed;
-
-    let title = "";
-    let guidance = "";
-    let urgent = false;
-    let danger = false;
-    if (current.closedReason === "failed" || (live && current.activity === "interrupted")) {
-      title = current.closedReason === "failed" ? "Task failed" : "Work was interrupted";
-      guidance = current.problem ?? "Ask your first mate how to continue.";
-      urgent = true;
-      danger = true;
-    } else if (current.queueWait) {
-      title = current.queueWait.line;
-      guidance = current.hold?.text ?? "";
-      urgent = current.flags.blocked;
-    } else if (live && current.blockedBy.length > 0) {
-      title = `Waiting on ${current.blockedBy.join(", ")}`;
-      guidance = "This task is blocked by other work.";
-      urgent = true;
-    } else if (live && current.waitingCardId) {
-      // The status says a decision is waiting, and the bar has Show the card.
-    } else if (current.status === "open" && current.flags.blocked) {
-      // Blocked with no live blocker: what it waited on was dropped, and its
-      // edge still needs Firstmate's decision before it starts
-      // (docs/task-graph.md).
-      title = "A task it waits on was dropped";
-      guidance = "Ask your first mate about its dependencies before starting.";
-    } else if (live && current.workPosture?.state === "active") {
-      // Checks, jobs and replies still move without the captain. A declared
-      // wait or an older report must not turn them into a request for him.
-    } else if (live && current.hold) {
-      // Queued work a gate holds never reported anything: the host words
-      // what the gate waits for and what ends the wait (docs/task-record.md).
-      title = current.hold.title;
-      guidance = current.hold.text;
-    } else if (live && (current.flags.needsYou || current.flags.held || current.captainWait)) {
-      title = "Work is paused";
-      // Reports are authored facts, not a prose classifier. Keep the last
-      // report in view even when a later dismissed note occupies Now.
-      guidance = current.outcomeSummary || "No reason has been reported yet.";
-    } else if (current.status === "open" && current.children.total > 0) {
-      // A parent's parts do the work, so it has no Start (A6).
-      const { total, closed: done } = current.children;
-      title = `Its ${total} ${total === 1 ? "part does" : "parts do"} the work`;
-      guidance = `${done} closed, ${total - done} still open.`;
-    }
-    const waits = recordAttentionWaits(current);
-    if (waits.length) {
-      const words = waits.map((wait) => taskWaitText(wait, Date.now())).join("; ");
-      if (danger) guidance = `${guidance} ${words}`;
-      else {
-        title = words;
-        if (waits.some((wait) => wait.kind === "start"))
-          guidance = "The recorded start time does not promise that work has resumed.";
-      }
-    }
-    attentionEl.hidden = !title;
-    attentionEl.toggleAttribute("data-urgent", urgent);
-    attentionEl.toggleAttribute("data-danger", danger);
-    attentionTitleEl.textContent = title;
-    guidanceEl.textContent = guidance;
-    /** @type {(Node | string)[]} */
-    const context = closed && !title ? closedLine(current) : [];
-    contextEl.replaceChildren(...context);
-    contextEl.hidden = context.length === 0;
-  }
-
   /**
    * A line's words, the pull request they name linked to its page (the
    * design skill's TaskRecord, "Pull request links"): the host says which
@@ -589,7 +394,7 @@
   }
 
   /**
-   * One activity or ask line: its short age (absolute on hover), then the words.
+   * One activity line: its short age (absolute on hover), then the words.
    * @param {string} className
    * @param {number} at
    * @param {string} text
@@ -610,7 +415,6 @@
    * @param {Detail["cards"]} cards
    */
   function paintCards(cards) {
-    cardsCountEl.textContent = String(cards.length);
     cardsEl.replaceChildren(
       ...cards.map((card) => {
         const node = document.createElement("div");
@@ -999,28 +803,6 @@
   }
 
   /**
-   * The key of the task this one is part of: the board's, or for a parent
-   * the board does not list, its own record's, read once.
-   * @param {string} parentId
-   */
-  function parentKeyOf(parentId) {
-    const key = keyById.get(parentId) ?? parentKeys.get(parentId);
-    if (key || parentAsked === parentId) return key;
-    parentAsked = parentId;
-    const read = bridge.subscribe(
-      "tasks.detail",
-      { id: parentId },
-      (/** @type {Detail} */ parent) => {
-        parentKeys.set(parentId, parent.key);
-        read.unsubscribe().catch(() => {});
-        paint();
-      },
-      () => {},
-    );
-    return undefined;
-  }
-
-  /**
    * @param {import("@shared/recordFacts").RecordFact} id
    * @param {string} term
    * @param {string} value
@@ -1046,10 +828,8 @@
       const model = current.modelLabel ? ` on ${current.modelLabel}` : "";
       facts.push(...fact("crewmate", "Crewmate", `${current.assignee}${model}`));
     }
-    if (current.repo) {
-      facts.push(...fact("project", "Project", current.repo.name));
-      if (current.repo.branch) facts.push(...fact("branch", "Branch", current.repo.branch, true));
-    }
+    // The project is the Info tab's own row, above.
+    if (current.repo?.branch) facts.push(...fact("branch", "Branch", current.repo.branch, true));
     const delivery = current.delivery;
     const modeWords = {
       "direct-pr": "As a pull request",
@@ -1136,23 +916,19 @@
         ? ["Ask your first mate to change these for this task."]
         : []),
     ].join(" ");
-    const parentKey = current.parentId ? parentKeyOf(current.parentId) : undefined;
-    if (parentKey) facts.push(...fact("parent", "Part of", parentKey, true));
-    if (current.blockedBy.length > 0)
-      facts.push(...fact("blocked-by", "Waits on", current.blockedBy.join("  "), true));
-    if (current.blocks.length > 0)
-      facts.push(...fact("blocks", "Holds up", current.blocks.join("  "), true));
-    if (current.children.total > 0) {
-      facts.push(
-        ...fact(
-          "children",
-          "Parts",
-          `${current.children.closed} of ${current.children.total} closed`,
-        ),
-      );
-    }
+    // Part of, Waits on, Holds up and Parts are the Info tab's rows of keys, above the goal.
     factsEl.replaceChildren(...facts);
-    section("details", facts.length > 0);
+    const validation = Boolean(current.liveValidation);
+    const used = uses?.state === "ready" ? uses.total : 0;
+    // What the closed More row holds, named beside it.
+    morePreviewEl.textContent = [
+      ...(used > 0 ? [`knowledge ${used}`] : []),
+      ...(validation ? ["live validation"] : []),
+      ...(current.repo?.branch ? ["branch"] : []),
+      ...(current.runsOn?.reason ? ["the computer's choice"] : []),
+      ...(policies || lands.length > 0 ? ["delivery"] : []),
+    ].join(" · ");
+    section("details", facts.length > 0 || used > 0 || validation);
   }
 
   /**
@@ -1293,54 +1069,8 @@
     noteEl.hidden = true;
     contentEl.hidden = false;
 
-    // A crew filing's reason leads only while it is charted, the moment
-    // the captain decides whether it runs; afterwards it is part of the
-    // record (A5). A closed row's verdict has nothing left to decide.
-    const filing = current.filing;
-    const charted = current.status === "open";
-    const closed = current.status === "done" || current.status === "dropped";
-    const why = filing ? filing.why || "No reason was recorded." : "";
-    const verdict = filing?.verdict
-      ? `First mate: ${filing.verdict}`
-      : "Your first mate has not said yet.";
-    section("filing", Boolean(filing) && charted);
-    section("filed", Boolean(filing) && !charted);
-    whyEl.textContent = why;
-    filedWhyEl.textContent = why;
-    verdictEl.textContent = verdict;
-    filedVerdictEl.textContent = verdict;
-    filedVerdictEl.hidden = closed;
-
-    paintOverview(current);
-    overviewEl.hidden = !(Boolean(filing) && charted) && attentionEl.hidden && contextEl.hidden;
-
-    goalEl.textContent = current.goal ?? "";
-    goalEl.hidden = !current.goal;
-    // The captain's words: the intent's verbatim words that started the
-    // task, then every ask attached since, each with its age.
-    const words = current.intent?.userWords ?? "";
-    planSkipEl.textContent = current.skippedPlanBecause ?? "";
-    planSkipEl.hidden = !current.skippedPlanBecause;
-    planSkipSection.hidden = !current.skippedPlanBecause;
-    wordsEl.textContent = words;
-    wordsEl.hidden = words.length === 0;
-    const asks = current.asks.filter((ask) => ask.text !== words);
-    asksEl.replaceChildren(
-      ...asks.map((ask) => {
-        const node = line("ask", ask.at, ask.text);
-        node.setAttribute("data-record-ask", ask.id);
-        return node;
-      }),
-    );
-    section(
-      "words",
-      Boolean(current.goal) ||
-        Boolean(filing && !charted) ||
-        Boolean(current.skippedPlanBecause) ||
-        words.length > 0 ||
-        asks.length > 0,
-    );
-
+    // The filing, the attention sentence, the goal and the captain's words
+    // are the window's, above this body (INF-2261).
     paintValidation(current);
     paintCards(current.cards);
     paintUses();
@@ -1395,7 +1125,6 @@
     const shown = current.timeline ? sourceRows(rows, allNodes, current.timeline) : allNodes;
     const tail = shown.slice(-TIMELINE_TAIL);
     const earlier = shown.length - tail.length;
-    activityCountEl.textContent = String(shown.length);
     earlierEl.hidden = earlier === 0;
     earlierLabelEl.textContent = `Show earlier · ${earlier}`;
     placeActivity(historyEl, shown.slice(0, earlier));
@@ -1419,10 +1148,7 @@
   }
 
   // Refresh only the age text, not disclosures or timeline DOM.
-  window.setInterval(() => {
-    paintAges();
-    if (detail && readable) paintOverview(detail);
-  }, 60_000);
+  window.setInterval(paintAges, 60_000);
 
   bridge.subscribe(
     "tasks.detail",
@@ -1434,10 +1160,6 @@
     },
     () => note("This record could not be read."),
   );
-  bridge.subscribe("tasks.board", {}, (/** @type {Board} */ board) => {
-    keyById = new Map(board.tasks.map((task) => [task.id, task.key]));
-    paint();
-  });
   if (knowledge) {
     bridge.subscribe(
       "knowledge.uses",
@@ -1468,8 +1190,17 @@
       if (open.includes(node.getAttribute("data-record-section"))) node.open = true;
     }
   };
+  /** The shown tab, as the host's state names it (INF-2261). @param {unknown} state */
+  const showView = (state) => {
+    const view = /** @type {{ view?: unknown } | null} */ (state)?.view;
+    root.dataset.view = view === "cards" || view === "activity" ? view : "info";
+  };
+  showView(bridge.state);
   restoreSections(bridge.state);
-  bridge.onState(restoreSections);
+  bridge.onState((state) => {
+    showView(state);
+    restoreSections(state);
+  });
   for (const node of sections) {
     node.addEventListener("toggle", () => {
       restoredSections = true;
@@ -1479,4 +1210,4 @@
       bridge.action("record-sections", { open }).catch(() => {});
     });
   }
-})(/** @type {any} */ (window).inf /* shared wait functions */);
+})(/** @type {any} */ (window).inf);

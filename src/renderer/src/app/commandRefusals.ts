@@ -97,8 +97,10 @@ function cardRefusal(s: RefusalState): string | null {
 const NOT_ABOUT_A_TASK = "This card is not about a task";
 
 /**
- * Show Info, Show Crewmate or Show Browser on a card about a task opens that
- * task's tab in front of the card (INF-358): Info always, Crewmate once a
+ * Show Info, Show Cards, Show Activity, Show Crewmate or Show Browser on a
+ * card about a task opens that task's tab in front of the card (INF-358):
+ * Info, Cards and Activity always - a card about the task is one of its
+ * cards, and showing it was a line of its Activity - Crewmate once a
  * crewmate has run the task, and Browser the task's browser view, which
  * itself says when the task has no browser (the board row the card's task
  * is read from carries no browser fact). Empty when the command may run;
@@ -263,6 +265,8 @@ const REFUSALS: Readonly<
       : "This card has no change links";
   },
   "cards.show-info": (s) => tabRefusal(s, "cards.show-info"),
+  "cards.show-cards": (s) => tabRefusal(s, "cards.show-cards"),
+  "cards.show-activity": (s) => tabRefusal(s, "cards.show-activity"),
   "cards.show-crewmate": (s) => tabRefusal(s, "cards.show-crewmate"),
   "browser.control": (_s, facts) =>
     facts.browserControl ? null : "Show a browser with control available first",

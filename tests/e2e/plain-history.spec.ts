@@ -9,7 +9,7 @@ import { scratchDir } from "../helpers/scratchDirs";
 import { launchApp } from "./launch";
 import { resizeWindow } from "./layout";
 import { regionShot } from "./pictures";
-import { expandDock, nowFrame, pressRow, recordFrame } from "./rails";
+import { expandDock, nowFrame, pressRow, recordFrame, recordTab } from "./rails";
 import { starterFor } from "./starters";
 import { pressKey } from "./windowKeys";
 
@@ -107,7 +107,7 @@ test("plain history and deeper exact sources", async ({}, testInfo) => {
     await nowFrame(app.page).locator("[data-now-query]").fill(task.title);
     await pressRow(app.page, task.key);
     const body = recordFrame(app.page);
-    await pressKey(body.locator('[data-record-section="timeline"] > summary'), "Enter");
+    await pressKey(recordTab(app.page, "activity"), "Enter");
     const earlier = body.locator("[data-record-earlier]");
     if (await earlier.isVisible()) await pressKey(earlier.locator(":scope > summary"), "Enter");
     const recorded = [];

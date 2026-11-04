@@ -417,9 +417,62 @@ export async function expectRecordSized(page: Page): Promise<void> {
     .toBe(true);
 }
 
-/** A detail fact's value, by stable identity rather than its displayed label. */
+/**
+ * The facts the Info tab's window-drawn rows carry above its body frame
+ * (INF-2261): what the task is part of, waits on and holds up, and its parts.
+ */
+const RECORD_ROW_FACTS: readonly RecordFact[] = ["parent", "blocked-by", "blocks", "children"];
+
+/**
+ * A record fact's value, by stable identity rather than its displayed label:
+ * a relation in the Info tab's rows, any other in its More row.
+ */
 export function recordFact(page: Page, fact: RecordFact): Locator {
-  return recordFrame(page).locator(`[data-record-fact="${fact}"]`);
+  const selector = `[data-record-fact="${fact}"]`;
+  return RECORD_ROW_FACTS.includes(fact)
+    ? recordCard(page).locator(selector)
+    : recordFrame(page).locator(selector);
+}
+
+/**
+ * The record's attention sentence (INF-2261): what is wrong or what the task
+ * waits on, at the top of the Info tab, drawn by the window.
+ */
+export function recordAttention(page: Page): Locator {
+  return recordCard(page).locator("[data-record-attention]");
+}
+
+/** One of the record's own tabs (INF-2261): Info, Cards or Activity. */
+export type RecordView = "info" | "cards" | "activity";
+
+/** One of the record's own tabs in its tab strip, to press by keys. */
+export function recordTab(page: Page, view: RecordView | "crewmate"): Locator {
+  return recordCard(page).locator(`[data-task-tab="${view}"]`);
+}
+
+/**
+ * Shows one of the record's own tabs by clicking it in the tab strip, and
+ * waits until its body shows that tab. Info, Cards and Activity are one
+ * document, so a record's frame stays drawn across the switch.
+ */
+export async function showRecordTab(page: Page, view: RecordView): Promise<void> {
+  const tab = recordTab(page, view);
+  await tab.click();
+  await expect(tab).toHaveAttribute("aria-selected", "true");
+  await expect(recordFrame(page).locator(`[data-record][data-view="${view}"]`)).toBeAttached();
+}
+
+/**
+ * Opens the More row that ends the record's Info tab (INF-2261): the
+ * remaining facts, Knowledge used and live validation.
+ */
+export async function openRecordMore(page: Page): Promise<void> {
+  const more = recordFrame(page).locator('[data-record-section="details"]');
+  // Pressed in the frame itself: Chromium drops native clicks into a hidden
+  // window's sandboxed frames.
+  if ((await more.getAttribute("open")) === null)
+    await more.locator("> summary").evaluate((el) => (el as HTMLElement).click());
+  await expect(more).toHaveAttribute("open", "");
 }
 
 /**
@@ -667,8 +720,6 @@ export async function expectRecordTaskStatus(page: Page): Promise<void> {
     taskStatusLabel(reading),
   );
   for (const wait of recordAttentionWaits(task)) {
-    await expect(recordFrame(page).locator("[data-record-attention]")).toContainText(
-      taskWaitText(wait, Date.now()),
-    );
+    await expect(recordAttention(page)).toContainText(taskWaitText(wait, Date.now()));
   }
 }

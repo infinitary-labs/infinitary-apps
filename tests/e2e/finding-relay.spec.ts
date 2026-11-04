@@ -7,7 +7,7 @@ import { scratchDir } from "../helpers/scratchDirs";
 import { waitForFirstmateIdle } from "./crew";
 import { launchApp } from "./launch";
 import { promptInput } from "./prompt";
-import { expandDock, expectRecordBody, pressRow, recordCard, recordFrame } from "./rails";
+import { expandDock, expectRecordBody, pressRow, recordCard } from "./rails";
 import {
   FINDING,
   FINDING_RELAY_PROMPT,
@@ -128,7 +128,7 @@ test("a task held on another's finding carries on when that task reports it with
     await waitForFirstmateIdle(page);
     await expandDock(page, "now");
     await openRecord(page, tasks.get(held)?.key ?? "", held);
-    await expect(recordFrame(page).locator("[data-record-attention]")).toBeHidden();
+    await expect(recordCard(page).locator("[data-record-attention]")).toBeHidden();
     await page.evaluate(() => document.fonts.ready);
     await page.waitForFunction(() =>
       document.getAnimations().every((animation) => animation.playState !== "running"),

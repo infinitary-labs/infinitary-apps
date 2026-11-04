@@ -65,6 +65,7 @@ import {
   type DuplicateResult,
   updateSightingId,
 } from "../storage/cardStore";
+import type { TaskOriginLine } from "../tasks/taskOrigin";
 import { TaskService } from "../tasks/taskService";
 import { cardChanges } from "./cardChanges";
 import { resolveRevisionTargets, revisionLinks } from "./cardNavigation";
@@ -783,18 +784,15 @@ export class CardService {
   }
 
   /**
-   * The captain's message a card is about, for its "You asked" line
-   * (INF-1610): the one its task's graph leads to (`TaskService.askAbout`),
-   * through the task it names or the task it was raised on. `known` holds
-   * each task's answer for one snapshot.
+   * Where a card's work came from, for its line under the title (INF-1610,
+   * INF-2326): the origin its task's graph leads to
+   * (`TaskService.originAbout`), through the task it names or the task it
+   * was raised on. `known` holds each task's answer for one snapshot.
    */
   private askedAbout(card: Card, known: Map<string, CardAsked | undefined>): CardAsked | undefined {
     const taskId = card.taskId ?? this.host.tasks.taskForCard(card.id)?.id;
     if (!taskId) return undefined;
-    if (!known.has(taskId)) {
-      const ask = this.host.tasks.askAbout(taskId);
-      known.set(taskId, ask ? { at: ask.at, text: ask.text } : undefined);
-    }
+    if (!known.has(taskId)) known.set(taskId, cardAskedOf(this.host.tasks.originAbout(taskId)));
     return known.get(taskId);
   }
 
@@ -2945,6 +2943,23 @@ export class CardService {
 }
 
 /** The author of a card as the actor its own writes are stamped with. */
+/** A task's origin line as the card carries it (`cardAskedSchema`). */
+export function cardAskedOf(line: TaskOriginLine | undefined): CardAsked | undefined {
+  if (!line) return undefined;
+  if (line.kind === "from") return { at: line.at, text: line.title, kind: "from", key: line.key };
+  const through = line.through > 0 ? { through: line.through } : {};
+  switch (line.kind) {
+    case "asked":
+      return { at: line.at, text: line.text, ...through };
+    case "said":
+      return { at: line.at, text: line.text, kind: "said", ...through };
+    case "chose":
+      return { at: line.at, text: line.text, kind: "chose", choice: line.choice, ...through };
+    case "automation":
+      return { at: line.at, text: line.name, kind: "automation", ...through };
+  }
+}
+
 function authorActor(card: Pick<Card, "author">): CardObservationActor {
   return card.author;
 }

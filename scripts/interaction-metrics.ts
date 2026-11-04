@@ -72,6 +72,8 @@ export type MetricId =
   | "plain_language_share"
   | "clear_copy_share"
   | "pr_link_share"
+  | "term_explained_share"
+  | "change_effect_share"
   | "approval_handoff_share";
 
 /**
@@ -468,6 +470,30 @@ export const METRICS: readonly MetricDef[] = [
     target: null,
   },
   {
+    id: "term_explained_share",
+    label: "Cards that explain the project's own terms at first use (hand-scored sample)",
+    group: "copy",
+    direction: "higher",
+    modes: [],
+    sep14: {
+      value: 2 / 44,
+      text: "2 of the 44 recorded cards whose open prose uses a project term, read by hand",
+    },
+    target: null,
+  },
+  {
+    id: "change_effect_share",
+    label: "Change cards that say near their start what people will notice (hand-scored sample)",
+    group: "copy",
+    direction: "higher",
+    modes: [],
+    sep14: {
+      value: 22 / 33,
+      text: "22 of the 33 recorded cards about a change, read by hand",
+    },
+    target: null,
+  },
+  {
     id: "rigor_share_quick",
     label: "Dispatches shipped at the quick tier",
     group: "rigor",
@@ -727,6 +753,22 @@ export type PlainLabel = {
    */
   pr_links?: boolean;
   pr_links_note?: string;
+  /**
+   * The fourth reading (INF-2326): true when every term the project coined
+   * that the card's open prose uses is explained in a few plain words at
+   * first use or replaced, false when one is not, absent when it uses none.
+   * `terms_note` names the term.
+   */
+  terms?: boolean;
+  terms_note?: string;
+  /**
+   * The fifth reading (INF-2326): true when a card about a change says near
+   * its start what people using the project will notice, or that only the
+   * build, checks or documents change; false when it does not; absent on a
+   * card about no change. `affects_note` names the opening.
+   */
+  affects?: boolean;
+  affects_note?: string;
 };
 
 /**
@@ -791,6 +833,13 @@ export function parsePlainLabelRows(text: string): PlainLabel[] {
     if (row.pr_links !== undefined && typeof row.pr_links !== "boolean") {
       throw new Error(`plain-language label whose pr_links verdict is not true or false: ${trimmed}`);
     }
+    for (const reading of ["terms", "affects"] as const) {
+      if (row[reading] !== undefined && typeof row[reading] !== "boolean") {
+        throw new Error(
+          `plain-language label whose ${reading} verdict is not true or false: ${trimmed}`,
+        );
+      }
+    }
     if (seen.has(row.key)) throw new Error(`plain-language label filed twice: ${row.key}`);
     seen.add(row.key);
     rows.push(row);
@@ -817,6 +866,24 @@ export function parsePrLinkLabels(text: string): Map<string, boolean> {
   const labels = new Map<string, boolean>();
   for (const row of parsePlainLabelRows(text)) {
     if (row.pr_links !== undefined) labels.set(row.key, row.pr_links);
+  }
+  return labels;
+}
+
+/** The project-term verdicts in the same file: only the cards whose open prose uses one. */
+export function parseTermLabels(text: string): Map<string, boolean> {
+  const labels = new Map<string, boolean>();
+  for (const row of parsePlainLabelRows(text)) {
+    if (row.terms !== undefined) labels.set(row.key, row.terms);
+  }
+  return labels;
+}
+
+/** The change-effect verdicts in the same file: only the cards about a change. */
+export function parseEffectLabels(text: string): Map<string, boolean> {
+  const labels = new Map<string, boolean>();
+  for (const row of parsePlainLabelRows(text)) {
+    if (row.affects !== undefined) labels.set(row.key, row.affects);
   }
   return labels;
 }
@@ -1494,6 +1561,14 @@ export type ObservedCard = PairableCard & {
    * denominator.
    */
   prLinks: boolean | null;
+  /**
+   * The hand-scored project-term label (INF-2326): null when the open prose
+   * uses no term the project coined or no one has read it - out of the
+   * denominator.
+   */
+  terms: boolean | null;
+  /** The hand-scored change-effect label (INF-2326): null on a card about no change. */
+  affects: boolean | null;
 };
 
 export type ObservedQuestion = CaptainQuestion & {
@@ -1641,6 +1716,14 @@ export function scoreSession(observation: SessionObservation): MetricScores {
     pr_link_share: (() => {
       const read = observation.cards.filter((card) => card.prLinks !== null);
       return ratio(read.filter((card) => card.prLinks === true).length, read.length);
+    })(),
+    term_explained_share: (() => {
+      const read = observation.cards.filter((card) => card.terms !== null);
+      return ratio(read.filter((card) => card.terms === true).length, read.length);
+    })(),
+    change_effect_share: (() => {
+      const read = observation.cards.filter((card) => card.affects !== null);
+      return ratio(read.filter((card) => card.affects === true).length, read.length);
     })(),
     mean_card_body_chars: {
       value:

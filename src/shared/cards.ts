@@ -937,13 +937,33 @@ export function cardMetaWords(meta: string): string {
  * model does not have), so a card can only ever be dressed by what it is.
  */
 /**
- * The captain's message a card is about (`Card.asked`): when they sent it
- * and their words, whole. The chrome shows the start and opens the rest on
- * request, so a long message never fills the card.
+ * What a card's line under its title says about where its work came from
+ * (INF-2326, docs/card-authoring.md "The You asked line"), nearest first:
+ * the captain's message that filed or started it (`asked`, also when `kind`
+ * is absent), an automation that filed it, their card click it was filed
+ * from (`chose`), else a message of theirs aimed at that work alone
+ * (`said`), else the nearest task it came from (`from`).
+ */
+export const CARD_ASKED_KINDS = ["asked", "said", "chose", "automation", "from"] as const;
+export type CardAskedKind = (typeof CARD_ASKED_KINDS)[number];
+
+/**
+ * The line's facts (`Card.asked`): when it happened and the words. `text`
+ * is the captain's words, whole, for `asked` and `said`; what they wrote
+ * with a click for `chose`, whose button words are `choice`; the
+ * automation's name, as it was when it ran, for `automation`; and the task's
+ * title for `from`, whose key is `key`. `through` counts the tasks between
+ * the card's task and the one the source sits on. The chrome shows the start
+ * of the captain's words and opens the rest on request, so a long message
+ * never fills the card.
  */
 export const cardAskedSchema = z.strictObject({
   at: z.number(),
   text: z.string(),
+  kind: z.enum(CARD_ASKED_KINDS).optional(),
+  choice: z.string().optional(),
+  key: z.string().optional(),
+  through: z.number().int().positive().optional(),
 });
 export type CardAsked = z.infer<typeof cardAskedSchema>;
 

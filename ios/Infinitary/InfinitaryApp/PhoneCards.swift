@@ -997,6 +997,7 @@ private struct PhoneFaceOnly: ViewModifier, Animatable {
 }
 
 /// The card's saved question label and time; the shared bubble owns its interaction (INF-1610, INF-1963).
+/// INF-2326: the label also says a click, an automation or the task the work came from, as the Mac does.
 /// The card holds whether it is open: opening it can move the head into or out of the scroller, a new line.
 private struct PhoneAskedLine: View {
     let asked: PhoneAsked
@@ -1006,7 +1007,13 @@ private struct PhoneAskedLine: View {
         VStack(alignment: .leading, spacing: 4) {
             Text(asked.label()).font(PhoneFont.micro).foregroundStyle(PhoneTheme.muted)
                 .accessibilityIdentifier("card-asked-label")
-            PhoneQuestionBubble(text: asked.text, open: $open, identifier: "card-asked-toggle")
+            if asked.inBubble {
+                PhoneQuestionBubble(text: asked.shown, open: $open, identifier: "card-asked-toggle")
+            } else if !asked.text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                // INF-2326: an automation's name or a task's title is not the captain's words, so no bubble.
+                Text(asked.text).font(PhoneFont.caption).foregroundStyle(PhoneTheme.secondary)
+                    .accessibilityIdentifier("card-asked-name")
+            }
         }
         .accessibilityElement(children: .contain)
         .accessibilityIdentifier("card-asked")

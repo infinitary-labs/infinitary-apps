@@ -8214,6 +8214,27 @@
                 },
                 "text": {
                   "type": "string"
+                },
+                "kind": {
+                  "type": "string",
+                  "enum": [
+                    "asked",
+                    "said",
+                    "chose",
+                    "automation",
+                    "from"
+                  ]
+                },
+                "choice": {
+                  "type": "string"
+                },
+                "key": {
+                  "type": "string"
+                },
+                "through": {
+                  "type": "integer",
+                  "exclusiveMinimum": 0,
+                  "maximum": 9007199254740991
                 }
               },
               "required": [
@@ -9293,6 +9314,27 @@
                   },
                   "text": {
                     "type": "string"
+                  },
+                  "kind": {
+                    "type": "string",
+                    "enum": [
+                      "asked",
+                      "said",
+                      "chose",
+                      "automation",
+                      "from"
+                    ]
+                  },
+                  "choice": {
+                    "type": "string"
+                  },
+                  "key": {
+                    "type": "string"
+                  },
+                  "through": {
+                    "type": "integer",
+                    "exclusiveMinimum": 0,
+                    "maximum": 9007199254740991
                   }
                 },
                 "required": [
@@ -54384,6 +54426,27 @@
                 },
                 "text": {
                   "type": "string"
+                },
+                "kind": {
+                  "type": "string",
+                  "enum": [
+                    "asked",
+                    "said",
+                    "chose",
+                    "automation",
+                    "from"
+                  ]
+                },
+                "choice": {
+                  "type": "string"
+                },
+                "key": {
+                  "type": "string"
+                },
+                "through": {
+                  "type": "integer",
+                  "exclusiveMinimum": 0,
+                  "maximum": 9007199254740991
                 }
               },
               "required": [

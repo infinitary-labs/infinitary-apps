@@ -142,7 +142,7 @@ describe("CardService", () => {
     seedTask(tasks, { id: "board", title: "Keep Tasks responsive", status: "running" });
     cards.emitCrewmateCard("board", { ...decision, id: "board-choice" }, "m");
     const get = vi.spyOn(tasks, "get");
-    const about = vi.spyOn(tasks, "askAbout");
+    const about = vi.spyOn(tasks, "originAbout");
     try {
       const full = cards.snapshot();
       expect(get).toHaveBeenCalled();

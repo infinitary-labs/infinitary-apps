@@ -47,16 +47,58 @@ public func phoneQuestionWords(_ text: String, open: Bool) -> String {
     return words.isEmpty ? "A picture" : words
 }
 
+/// Where a card's work came from (INF-2326), as the Mac read it: the captain's message that filed or started it,
+/// a message of theirs aimed at that work alone, their click, an automation, or the nearest task it came from.
+public enum PhoneAskedKind: String, Equatable, Sendable {
+    case asked, said, chose, automation, from
+}
+
 public struct PhoneAsked: Equatable, Sendable {
     public let at: Date
     public let text: String
+    public var kind: PhoneAskedKind = .asked
+    /// A click's button words.
+    public var choice: String? = nil
+    /// The nearest task's key, for a line from a task.
+    public var key: String? = nil
+    /// How many tasks the source sits behind; nil on the card's own task.
+    public var through: Int? = nil
+
+    public init(at: Date, text: String, kind: PhoneAskedKind = .asked, choice: String? = nil, key: String? = nil, through: Int? = nil) {
+        self.at = at
+        self.text = text
+        self.kind = kind
+        self.choice = choice
+        self.key = key
+        self.through = through
+    }
+
+    /// The captain's own words sit in the bubble; an automation's name and a task's title sit without it.
+    public var inBubble: Bool { kind != .automation && kind != .from }
+    /// The words the line shows: a click's button words, then what the captain wrote with it.
+    public var shown: String {
+        guard kind == .chose else { return text }
+        let written = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        return written.isEmpty ? (choice ?? "") : "\(choice ?? "") · \(written)"
+    }
     /// Folded, the lines of a long message run together; opened, its paragraphs stay as written.
-    public func words(open: Bool) -> String { phoneQuestionWords(text, open: open) }
-    /// "You asked · 9:10 AM", with the date in front when it was not today, as the Mac writes it.
+    public func words(open: Bool) -> String { phoneQuestionWords(shown, open: open) }
+    /// "You asked · 9:10 AM", with the date in front when it was not today, as the Mac writes it, then
+    /// "· through 3 tasks" when the source is on another task; "From INF-2081" for the nearest task.
     public func label(now: Date = Date(), calendar: Calendar = .current) -> String {
+        if kind == .from { return "From \(key ?? "")" }
+        let name: String
+        switch kind {
+        case .said: name = "You said"
+        case .chose: name = "You chose"
+        case .automation: name = "Run by an automation"
+        default: name = "You asked"
+        }
         let time = at.formatted(date: .omitted, time: .shortened)
-        if calendar.isDate(at, inSameDayAs: now) { return "You asked · \(time)" }
-        return "You asked · \(at.formatted(.dateTime.month(.abbreviated).day())), \(time)"
+        let when = calendar.isDate(at, inSameDayAs: now)
+            ? time : "\(at.formatted(.dateTime.month(.abbreviated).day())), \(time)"
+        let tail = through.map { " · through \($0) \($0 == 1 ? "task" : "tasks")" } ?? ""
+        return "\(name) · \(when)\(tail)"
     }
 }
 
@@ -77,9 +119,15 @@ public struct PhoneCard: Decodable, Identifiable, Sendable {
     public var currentUpdateSeen: Bool { value["currentUpdateSeen"].flag }
     public var actions: [PhoneJSON] { value["actions"].list }
     /// INF-1610: the captain's message the card is about, which the Mac read from the saved message, never the body.
+    /// INF-2326: or the click, automation or task it came from instead.
     public var asked: PhoneAsked? {
-        guard let at = value["asked"]["at"].numeric, let text = value["asked"]["text"].text else { return nil }
-        return PhoneAsked(at: Date(timeIntervalSince1970: at / 1000), text: text)
+        let line = value["asked"]
+        guard let at = line["at"].numeric, let text = line["text"].text else { return nil }
+        return PhoneAsked(
+            at: Date(timeIntervalSince1970: at / 1000), text: text,
+            kind: line["kind"].text.flatMap(PhoneAskedKind.init(rawValue:)) ?? .asked,
+            choice: line["choice"].text, key: line["key"].text,
+            through: line["through"].numeric.map { Int($0) })
     }
     /// INF-1670: the Mac's stuck alert is the host's, and names the first mate as the one who answers it.
     public var takesReplies: Bool {

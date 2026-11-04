@@ -132,7 +132,9 @@ import {
   cardLabelKey,
   parseClearLabels,
   parsePlainLabels,
+  parseEffectLabels,
   parsePrLinkLabels,
+  parseTermLabels,
 } from "../interaction-metrics.ts";
 import {
   emptyTables,
@@ -2658,6 +2660,8 @@ class Replay {
   private plainLabelMap: Map<string, boolean> | null = null;
   private clearLabelMap: Map<string, boolean> | null = null;
   private prLinkLabelMap: Map<string, boolean> | null = null;
+  private termLabelMap: Map<string, boolean> | null = null;
+  private effectLabelMap: Map<string, boolean> | null = null;
 
   /** The hand labels, read once per engine; an unreadable file is a loud failure, never an empty sample. */
   private plainLabels(): Map<string, boolean> {
@@ -2667,6 +2671,8 @@ class Replay {
     this.plainLabelMap = text === null ? new Map() : parsePlainLabels(text);
     this.clearLabelMap = text === null ? new Map() : parseClearLabels(text);
     this.prLinkLabelMap = text === null ? new Map() : parsePrLinkLabels(text);
+    this.termLabelMap = text === null ? new Map() : parseTermLabels(text);
+    this.effectLabelMap = text === null ? new Map() : parseEffectLabels(text);
     return this.plainLabelMap;
   }
 
@@ -2680,6 +2686,12 @@ class Replay {
   private prLinkLabels(): Map<string, boolean> {
     this.plainLabels();
     return this.prLinkLabelMap ?? new Map();
+  }
+
+  /** The project-term and change-effect labels: the fourth and fifth readings. */
+  private wordLabels(): { terms: Map<string, boolean>; affects: Map<string, boolean> } {
+    this.plainLabels();
+    return { terms: this.termLabelMap ?? new Map(), affects: this.effectLabelMap ?? new Map() };
   }
 
   private observeCard(row: TableRow): ObservedCard {
@@ -2725,6 +2737,9 @@ class Replay {
       clear: this.clearLabels().get(cardLabelKey({ title, body })) ?? null,
       // The hand-scored pull request link label, filed in the same row.
       prLinks: this.prLinkLabels().get(cardLabelKey({ title, body })) ?? null,
+      // The hand-scored project-term and change-effect labels, filed in the same row.
+      terms: this.wordLabels().terms.get(cardLabelKey({ title, body })) ?? null,
+      affects: this.wordLabels().affects.get(cardLabelKey({ title, body })) ?? null,
       hasDefault: actions.some((action) => action.default === true),
       fakeSettle: actions.some(
         (action) =>

@@ -29,11 +29,30 @@ const ASK_ID = Type.Optional(
   }),
 );
 
+// These file or start work, so they may name the wake they answer (INF-2326).
+const FILING_TOOLS = new Set(["spawn_crewmate", "create_task"]);
+
+const ORIGIN = Type.Optional(
+  Type.String({
+    description:
+      "When this turn read several automation runs, card choices or crewmate reports and none of the captain's messages: the one this answers, by automation id, card id or reporting task key. The task's cards name it as where the work came from.",
+  }),
+);
+
 // Distribute over the tool union so each name keeps its own argument schema.
 type AttributedTool<Tool> =
   Tool extends BoundTool<infer Name, infer Params>
     ? Params extends TObject
-      ? BoundTool<Name, TObject<Params["properties"] & { ask_id: typeof ASK_ID }>>
+      ? BoundTool<
+          Name,
+          TObject<
+            Params["properties"] & { ask_id: typeof ASK_ID } & (Name extends
+                | "spawn_crewmate"
+                | "create_task"
+                ? { origin: typeof ORIGIN }
+                : unknown)
+          >
+        >
       : never
     : never;
 
@@ -45,20 +64,34 @@ export function withAskAttribution<Tool extends BoundTool>(
 ): AttributedTool<Tool> {
   const parameters = {
     ...tool.parameters,
-    properties: { ...tool.parameters.properties, ask_id: ASK_ID },
+    properties: {
+      ...tool.parameters.properties,
+      ask_id: ASK_ID,
+      ...(FILING_TOOLS.has(tool.name) ? { origin: ORIGIN } : {}),
+    },
   };
   return {
     ...tool,
     parameters: ATTRIBUTING_TOOLS.has(tool.name) ? parameters : tool.parameters,
     run: (params: Parameters<Tool["run"]>[0], signal?: AbortSignal) => {
       if (!ATTRIBUTING_TOOLS.has(tool.name)) return tool.run(params, signal);
-      const { ask_id: declared, ...input } = params as Record<string, unknown>;
+      const { ask_id: declared, ...rest } = params as Record<string, unknown>;
+      const filing = FILING_TOOLS.has(tool.name);
+      const { origin, ...input } = rest;
+      const named = filing ? origin : undefined;
       if (declared !== undefined && typeof declared !== "string")
         throw new Error("ask_id must name a read message, or be empty for unrelated work.");
       if (declared && !witnessed(declared))
         throw new Error("ask_id must name a message this turn has read.");
       const askId = declared === undefined ? capture.current()?.id : declared || undefined;
-      return capture.withAsk(askId, () => tool.run(input, signal));
+      if (named === undefined || named === "")
+        return capture.withAsk(askId, () => tool.run(filing ? input : rest, signal));
+      const answered = typeof named === "string" ? capture.readOrigin(named) : undefined;
+      if (!answered)
+        throw new Error(
+          "origin must name an automation run, card choice or crewmate report this turn has read.",
+        );
+      return capture.withAsk(askId, () => tool.run(input, signal), answered);
     },
   } as unknown as AttributedTool<Tool>;
 }

@@ -157,6 +157,14 @@ import { holdingWaits } from "./holdingWaits";
 import { decideValidation, recordValidation } from "./liveValidation";
 import { latestResultOf, type ReportEntry, reportEntryOf, type TaskResult } from "./reportEntry";
 import type { TaskExportBundle } from "./taskExport";
+import {
+  ORIGIN_NOTE_KEY,
+  originAbout,
+  originNoteText,
+  type SavedOrigin,
+  savedOriginOf,
+  type TaskOriginLine,
+} from "./taskOrigin";
 import { referenceRefusal, type TaskRelationship } from "./taskRelationships";
 import { liveWaitCycle, waitCycleWords } from "./waitCycles";
 
@@ -1468,42 +1476,62 @@ export class TaskService {
   }
 
   /**
-   * The captain's message a task's cards are about (INF-1610, the "You
-   * asked" line): read from the saved messages through the task graph,
-   * never from any card's words. Work handed over to this task - the task
-   * it replaced, retried at a stronger model, or branched from - keeps the
-   * first message, so its own message about the move never takes its
-   * place. Otherwise it is the oldest message attached to the task, and a
-   * task with none - a part, or work built on a plan - reads its parent's,
-   * then its basis's.
+   * Where a task's work came from, for its cards' line (INF-1610, INF-2326;
+   * docs/card-authoring.md "The You asked line"): read from the saved
+   * messages and origins through the task graph, never from any card's
+   * words. The walk is `originAbout` in `taskOrigin.ts`.
    */
-  askAbout(id: string, seen: Set<string> = new Set()): AskRecord | undefined {
-    if (seen.has(id)) return undefined;
-    seen.add(id);
-    const record = this.store.get(id);
-    if (!record) return undefined;
-    const references = this.references.list(id);
-    const handedOver = [
-      ...this.links.listTo(id, "replaced-by").map((link) => link.fromId),
-      ...references
-        .filter((entry) => entry.kind === "retry-of" || entry.kind === "branch-source")
-        .flatMap((entry) => this.referenceTarget(entry)?.id ?? []),
-    ];
-    for (const from of handedOver) {
-      const ask = this.askAbout(from, seen);
-      if (ask) return ask;
-    }
-    const own = this.events.oldestRef(id, "ask");
-    const ask = own ? this.asks.get(own) : undefined;
-    if (ask) return ask;
-    const basis = references.find((entry) => entry.kind === "basis");
-    const above = [record.parentId, basis && this.referenceTarget(basis)?.id];
-    for (const next of above) {
-      if (!next) continue;
-      const found = this.askAbout(next, seen);
-      if (found) return found;
-    }
-    return undefined;
+  originAbout(id: string): TaskOriginLine | undefined {
+    return originAbout(
+      {
+        get: (taskId) => this.store.get(taskId),
+        handedOver: (taskId) => [
+          ...this.links.listTo(taskId, "replaced-by").map((link) => link.fromId),
+          ...this.references
+            .list(taskId)
+            .filter((entry) => entry.kind === "retry-of" || entry.kind === "branch-source")
+            .flatMap((entry) => this.referenceTarget(entry)?.id ?? []),
+        ],
+        basis: (taskId) => {
+          const basis = this.references.list(taskId).find((entry) => entry.kind === "basis");
+          return basis ? this.referenceTarget(basis)?.id : undefined;
+        },
+        followsUp: (taskId) =>
+          this.links.listFrom(taskId, "discovered-from").map((link) => link.toId),
+        events: (taskId) =>
+          this.events
+            .listFor(taskId)
+            .filter((event) => event.kind === "ask" || event.kind === "note"),
+        ask: (askId) => this.asks.get(askId),
+        askReach: (askId) => this.events.taskIdsWithRef("ask", askId).length,
+      },
+      id,
+    );
+  }
+
+  /**
+   * Save where a task's work came from when it was not a message of the
+   * captain's (INF-2326): an automation run, a card click or a crewmate's
+   * report the first mate answered by filing or starting it. The first one
+   * saved stands; a later one adds nothing.
+   */
+  saveOrigin(taskId: string, origin: SavedOrigin): boolean {
+    const run = this.write((): boolean => {
+      this.mustGet(taskId);
+      if (this.events.listFor(taskId).some((event) => savedOriginOf(event))) return false;
+      const reporter = origin.kind === "report" ? this.store.get(origin.taskId) : undefined;
+      this.addEvent({
+        taskId,
+        at: this.now(),
+        actor: "host",
+        kind: "note",
+        text: originNoteText(origin, reporter?.key || reporter?.title),
+        data: { [ORIGIN_NOTE_KEY]: origin },
+        feed: false,
+      });
+      return true;
+    });
+    return run();
   }
 
   /**
@@ -5474,7 +5502,7 @@ export class TaskService {
    * every attachment writes an `ask` event on the task (one ask may be about
    * several tasks), in one transaction. Idempotent per (ask, task).
    */
-  attachAsk(askId: string, taskId: string, via: AskAttachedVia): boolean {
+  attachAsk(askId: string, taskId: string, via: AskAttachedVia, starts?: boolean): boolean {
     const at = this.now();
     const run = this.write((): boolean => {
       const ask = this.asks.get(askId);
@@ -5510,6 +5538,10 @@ export class TaskService {
           askId,
           via,
           first,
+          // Whether this message filed or started the task (INF-2326), when
+          // the caller knows: the line under its cards reads the message
+          // that did (`taskOrigin.ts`, `startedBy`).
+          ...(starts === undefined ? {} : { starts }),
           ...(ask.images.length > 0 ? { images: ask.images.length } : {}),
         },
         ref: askId,

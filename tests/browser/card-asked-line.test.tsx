@@ -1,6 +1,7 @@
 import { expect, test } from "vitest";
 import { page, userEvent } from "vitest/browser";
 import {
+  ASKED_LABELS,
   ASKED_SHOW_ALL,
   ASKED_SHOW_LESS,
   askedLabel,
@@ -20,6 +21,11 @@ import { openSize, openWindow } from "./window";
  * message shows two lines and opens with its paragraphs, then folds again.
  * INF-1963, the captain: "remove the 'show all' link and instead make the bubble expand on click".
  * The bubble itself takes clicks, Enter and Space; a short one is inert.
+ * INF-2326, the captain: "when it comes from an automation, it should just
+ * say it's ran by an automation and name which one" - so work an automation
+ * filed names it without a bubble, work filed from a click shows the button
+ * and what they wrote, and work from a task nobody asked for in words names
+ * that task.
  */
 
 /** A short message of the captain's, answered on one card. */
@@ -33,6 +39,17 @@ const LONG_ASK = [
 ].join("\n\n");
 
 const SHORT_TITLE = "It picks the port the app listens on";
+const AUTOMATION = { name: "Nightly product audit", title: "Three packages have newer versions" };
+const CLICK = {
+  card: "Plan for clearer cards",
+  choice: "File the picked improvements",
+  written: "start them later, not now",
+  title: "Filed the picked card improvements",
+};
+const FROM = {
+  parent: "Cut tonight's alpha and report slow and new failures",
+  title: "The slow journey now waits on its own signal",
+};
 const LONG_TITLE = "Yes: a card you replied under keeps its place";
 
 /** How many lines of text the words element shows. */
@@ -49,12 +66,15 @@ test("a card shows the message it answers, folding a long one to two lines", asy
   const home = await seededHome({
     short: { ask: SHORT_ASK, title: SHORT_TITLE },
     long: { ask: LONG_ASK, title: LONG_TITLE },
+    automation: AUTOMATION,
+    click: CLICK,
+    from: FROM,
   });
   const bridge = fakeBridge(home);
   answerStack(bridge, home);
   await openSize();
   await openWindow(bridge);
-  const label = askedLabel(Date.now()).split(" · ")[0] as string;
+  const label = askedLabel({ at: Date.now() }).split(" · ")[0] as string;
 
   // A short message shows whole, with when it was sent and an inert bubble.
   await shownCard(SHORT_TITLE);
@@ -99,5 +119,36 @@ test("a card shows the message it answers, folding a long one to two lines", asy
   await userEvent.keyboard(" ");
   await expect.poll(() => toggle.getAttribute("aria-expanded")).toBe("false");
   expect(linesShown(words)).toBe(2);
+  const close = () =>
+    userEvent.click(
+      page
+        .elementLocator(shownEntry() as HTMLElement)
+        .getByRole("button", { name: "Close", exact: true }),
+    );
+  await close();
+
+  // Work an automation filed names the automation, with no bubble of words.
+  await shownCard(AUTOMATION.title);
+  expect(inShown("[data-card-asked-label]").textContent).toMatch(
+    new RegExp(`^${ASKED_LABELS.automation} · `),
+  );
+  expect(inShown("[data-card-asked-name]").textContent).toBe(AUTOMATION.name);
+  expect(shownEntry()?.querySelector("[data-question-bubble]")).toBeNull();
+  await close();
+
+  // Work filed from a click shows the button's words and what was written with it.
+  await shownCard(CLICK.title);
+  expect(inShown("[data-card-asked-label]").textContent).toMatch(
+    new RegExp(`^${ASKED_LABELS.chose} · `),
+  );
+  expect(inShown("[data-question-bubble-words]").textContent).toContain(
+    `${CLICK.choice} · ${CLICK.written}`,
+  );
+  await close();
+
+  // Work from a task nobody asked for in words names that task by key and title.
+  await shownCard(FROM.title);
+  expect(inShown("[data-card-asked-label]").textContent).toMatch(/^From [A-Z]+-\d+$/);
+  expect(inShown("[data-card-asked-name]").textContent).toBe(FROM.parent);
   expect([...new Set(bridge.unanswered)]).toEqual([]);
 });

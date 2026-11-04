@@ -99,6 +99,14 @@ The standard's dictionary was not adopted: it has no "pass", "fail", "fix", "now
    No figure of speech: "the third number is higher", not "27 beats 26".
 5. Three or more actions in a row are a numbered list.
 
+**Two rules for a card's words** (INF-2326; `CARD_AUTHORING` carries them to every card author).
+The table covers git, GitHub and the app's own machinery; these two cover every other project's.
+
+1. A project's own term, a name its code or people coined, is explained in a few plain words where a card first uses it, or replaced by those words.
+   "The critical path, the one journey a pull request runs" reads; "the critical path" alone does not.
+2. A card about a change says near its start whether people using the project will notice it, or whether it changes only how the project is built, checked or documented.
+   The completion card's What changed section says this effect first.
+
 **Brand words.**
 Use: your own, craftsmanship, made with care, a record of every task, and studio in a sentence ("your own AI studio"), never as a name.
 Never use: factory, autopilot, replace, 10x, "AI Studio" as a name, or words that make the crew sound small or limited.
@@ -111,6 +119,7 @@ Text only the models read may say "repository" and "remote"; a card still does n
 **Evidence, never a filter.**
 The rule is measured by a hand-scored sample in the replay gate (`tests/fixtures/plain-language/labels.jsonl`, scored by `scripts/interaction-metrics.ts`), not by a banned-word lint: "the checks failed" needs the word "checks", and a word list would fight honest text.
 The five sentence habits are measured the same way, as a second reading of the same cards (`clear_copy_share`), and no lint counts words or hunts for passives.
+The two rules for a card's words are two more readings (`term_explained_share`, `change_effect_share`), and no word list or term finder looks for a project's terms.
 
 Developer-facing commit subjects and pull request titles use conventional `type(scope): summary` or `type: summary` names (types: `feat`, `fix`, `chore`, `test`, `refactor`, `docs`, `perf`; open-ended scope).
 This does not change the captain-facing words above: still say “commit” and “pull request”.

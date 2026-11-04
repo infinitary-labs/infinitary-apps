@@ -6547,11 +6547,113 @@ describe("FirstmateAgent capture", () => {
       .cardsSnapshot()
       .find((card) => card.title === "Visible-app latency findings");
     expect(card?.asked?.text).toBe(panelWords);
-    expect(tasks.askAbout("prior")?.text).toBe(panelWords);
-    expect(tasks.askAbout(prototype?.id ?? "")?.text).toBe(prototypeWords);
+    const quoted = (id: string) => {
+      const line = tasks.originAbout(id);
+      return line && "text" in line ? line.text : undefined;
+    };
+    expect(quoted("prior")).toBe(panelWords);
+    expect(quoted(prototype?.id ?? "")).toBe(prototypeWords);
     const request = tasks.listAsks().find((ask) => ask.text === prototypeWords);
     expect(request?.taskId).toBe(prototype?.id);
     session.emitTurnEnd("Recorded both independent outcomes.");
+    session.resolveNextPrompt();
+    await tick();
+  });
+
+  // INF-2326, the captain: "when it comes from an automation, it should just
+  // say it's ran by an automation and name which one". Work the first mate
+  // files while answering an automation run, a click or a report keeps that
+  // origin; with several read and none named, the host saves none.
+  it("saves the automation run or report a filing answered as the work's origin", async () => {
+    const { agent, session, specs, tasks, db } = setup({
+      seedTasks: [{ id: "audit", title: "Audit tonight's alpha", status: "idle" }],
+    });
+    agent.notifyOp(
+      {
+        facts: {
+          kind: "scheduled",
+          prompt: "check every package for a newer version",
+          catchUp: false,
+          rule: { id: "r-night", name: "Nightly product audit" },
+        },
+      },
+      "scheduled",
+    );
+    await tick();
+    const tools = toolsOf(specs);
+    await tools.get("create_task")?.execute("file", {
+      title: "Check package versions",
+      goal: "Every package is on its newest version.",
+      user_words: "check every package for a newer version",
+    });
+    const filed = tasks.list().find((task) => task.title === "Check package versions");
+    expect(tasks.originAbout(filed?.id ?? "")).toMatchObject({
+      kind: "automation",
+      name: "Nightly product audit",
+      through: 0,
+    });
+    session.emitTurnEnd("Filed the version check.");
+    session.resolveNextPrompt();
+    await tick();
+
+    // Two wakes in one turn: a filing that names neither saves none, an
+    // unread name is refused, and a named report leads on to its task.
+    const inbox = new InboxStore(db);
+    const report = {
+      facts: {
+        kind: "report",
+        task: { id: "audit", title: "Audit tonight's alpha" },
+        crewmate: "crewmate",
+        excerpt: "Two journeys are slow.",
+        filed: [],
+        cards: [],
+      },
+    } as unknown as TypedWake;
+    inbox.enqueueWake(FIRSTMATE_RECIPIENT, report, "crewmate-report", "audit");
+    inbox.enqueueWake(
+      FIRSTMATE_RECIPIENT,
+      {
+        facts: {
+          kind: "scheduled",
+          prompt: "review the queue",
+          catchUp: false,
+          rule: { id: "r-queue", name: "Queue review" },
+        },
+      },
+      "scheduled",
+    );
+    agent.pokeInbox();
+    await tick();
+    await tools.get("create_task")?.execute("unnamed", {
+      title: "Speed up the slow journeys",
+      goal: "Both journeys run in their usual time.",
+      user_words: "Two journeys are slow.",
+    });
+    const unnamed = tasks.list().find((task) => task.title === "Speed up the slow journeys");
+    expect(tasks.timeline(unnamed?.id ?? "").some((event) => event.data?.origin)).toBe(false);
+    await expect(
+      tools.get("create_task")?.execute("unread", {
+        title: "Something else",
+        goal: "Nothing.",
+        user_words: "review the queue",
+        origin: "r-unknown",
+      }),
+    ).rejects.toThrow(/origin must name/);
+    const audit = tasks.get("audit");
+    await tools.get("create_task")?.execute("named", {
+      title: "Read the slow journeys' logs",
+      goal: "The cause of each slow journey is known.",
+      user_words: "Two journeys are slow.",
+      origin: audit?.key,
+    });
+    const named = tasks.list().find((task) => task.title === "Read the slow journeys' logs");
+    expect(tasks.originAbout(named?.id ?? "")).toEqual({
+      kind: "from",
+      at: audit?.createdAt,
+      key: audit?.key,
+      title: "Audit tonight's alpha",
+    });
+    session.emitTurnEnd("Filed the follow-ups.");
     session.resolveNextPrompt();
     await tick();
   });

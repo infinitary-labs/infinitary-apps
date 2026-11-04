@@ -1741,9 +1741,10 @@ describe("buildCrewmateSystemPrompt (contract v2.0: policy only, one note per ba
 it("keeps the full authoring and handoff sources word for word", () => {
   // INF-1177 moves lesson voice into its runbook; fixed card mechanics and runbook precedence stay.
   // INF-2142's approved plan adds the crewmate's sentence keeping clock times out of a change story.
+  // INF-2326's approved plan adds the two rules for a card's words (a project's own term, a change's effect).
   const hash = (text: string) => createHash("sha256").update(text).digest("hex");
   expect(hash(CARD_AUTHORING)).toBe(
-    "9b66a862d6effcc70eed589602e5043a8f361555051b4d022a8912e9e28f8f5f",
+    "2fa430383c677328273ee41833b352894cfdf945b9655411ef83d644d9a548a1",
   );
   // INF-416 piece H drops HANDOFF's restatement of reading the saved plan by key; the core still says it.
   // INF-976 widens the first mate's check before a start to filing, read off the built-on work.

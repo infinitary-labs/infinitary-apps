@@ -41,6 +41,9 @@ The iPhone and iPad use the same label, unquoted regular-weight words and bubble
 The time has no leading zero (1:03 PM, not 01:03 PM), on this line and the revised line.
 It is the captain's local time of day, with the date in front when it was not today, as the revised line writes it.
 The app draws the line from the saved message the card's task leads to, never from the card's words, and work handed over to another task keeps the first message.
+The line says where the card's work came from, nearest first (INF-2326): "You asked" for the captain's message that filed or started it, "You chose" for their card click with the button's words and anything they wrote, "Run by an automation" for an automation, and "You said" for a message of theirs aimed at that work alone.
+Only the captain's own words sit in the bubble: an automation's name, and a task's title under "From INF-2081", sit without it in the same `--font-ui` `--text-sm` `--fg-2`.
+A source on another task adds "· through 3 tasks" to the label, in its voice.
 A long message never fills the card: folded, its lines run together and are cut after two lines with an ellipsis.
 Only when the words are cut, the bubble itself is the control: click or tap it to open the whole message with its paragraphs as written, and again to fold it; no separate Show all or Show less link is drawn (INF-1963).
 On desktop it is a Tab stop with the focus ring, and Enter or Space activates it.

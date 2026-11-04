@@ -78,6 +78,40 @@ struct CardValuesTests {
         #expect(plain.asked == nil)
     }
 
+    /// INF-2326, the captain: "when it comes from an automation, it should just say it's ran by an automation and name
+    /// which one". The phone draws the same five kinds of line as the Mac: an automation and a task by name without a
+    /// bubble, a click with its button's words and what was written, and how many tasks away the source sits.
+    @Test func originLineNamesAutomationsClicksAndTasks() throws {
+        let at = Date(timeIntervalSince1970: 1_793_200_200)
+        let millis = PhoneJSON.number(at.timeIntervalSince1970 * 1000)
+        func line(_ asked: [String: PhoneJSON]) throws -> PhoneAsked {
+            try #require(try PhoneCard(.object([
+                "id": .string("card-origin"), "title": .string("Three packages have newer versions"),
+                "author": .string("firstmate"), "body": .string("<p>None is urgent.</p>"), "actions": .array([]),
+                "asked": .object(asked)
+            ])).asked)
+        }
+        let automation = try line(["at": millis, "text": .string("Nightly product audit"), "kind": .string("automation")])
+        #expect(automation.label(now: at).hasPrefix("Run by an automation · "))
+        #expect(!automation.inBubble)
+        #expect(automation.text == "Nightly product audit")
+        let click = try line([
+            "at": millis, "text": .string("start them later"), "kind": .string("chose"),
+            "choice": .string("File the picked improvements"), "through": .number(2)
+        ])
+        #expect(click.label(now: at).hasPrefix("You chose · "))
+        #expect(click.label(now: at).hasSuffix(" · through 2 tasks"))
+        #expect(click.words(open: false) == "File the picked improvements · start them later")
+        let from = try line([
+            "at": millis, "text": .string("Cut tonight's alpha"), "kind": .string("from"), "key": .string("INF-2081")
+        ])
+        #expect(from.label(now: at) == "From INF-2081")
+        #expect(!from.inBubble)
+        let said = try line(["at": millis, "text": .string("keep the timeout"), "kind": .string("said"), "through": .number(1)])
+        #expect(said.label(now: at).hasPrefix("You said · "))
+        #expect(said.label(now: at).hasSuffix(" · through 1 task"))
+    }
+
     /// INF-499 #2: the actual body-choice receipt has a frame evidence actor, not a captain.
     @Test func frameChoiceNamesItsAuthorWithoutRewritingTheReceipt() throws {
         let card = try PhoneCard(.object([

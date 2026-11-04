@@ -4,6 +4,7 @@ import type { AttachmentRef } from "@shared/attachments";
 import type { MessageFile } from "../overflow";
 import type { AskAttachedVia, AskImage, AskRecord } from "../storage/askStore";
 import type { TaskRecord } from "../storage/taskStore";
+import type { SavedOrigin } from "../tasks/taskOrigin";
 import type { TaskService } from "../tasks/taskService";
 
 /**
@@ -74,10 +75,21 @@ export function askTitle(text: string, images: AskImage[] = []): string {
   return clipped.trim() || flat.slice(0, ASK_TITLE_MAX);
 }
 
+/**
+ * An automation run, card click or crewmate report a turn has read, as the
+ * origin a task it files or starts saves (INF-2326). `refs` are the names
+ * an action may declare it by: the automation's id, the card's id, the
+ * reporting task's id and key.
+ */
+export type TurnOrigin = { origin: SavedOrigin; refs: readonly string[] };
+
 export class AskCapture {
   /** The latest read ask, used only when an action omits its own selection. */
   private currentAskId: string | undefined;
-  private readonly actionAsk = new AsyncLocalStorage<{ askId: string | undefined }>();
+  private readonly actionAsk = new AsyncLocalStorage<{
+    askId: string | undefined;
+    origin?: TurnOrigin | undefined;
+  }>();
 
   /**
    * `onAttach` hears every tool attribution, with or without an ask - a
@@ -87,6 +99,8 @@ export class AskCapture {
   constructor(
     private readonly tasks: TaskService,
     private readonly onAttach?: (taskId: string, tool: string) => void,
+    /** The automation runs, card clicks and reports the running turn has read. */
+    private readonly readOrigins: () => readonly TurnOrigin[] = () => [],
   ) {}
 
   /**
@@ -124,9 +138,31 @@ export class AskCapture {
     this.currentAskId = askId;
   }
 
-  /** Pin an action's declared source through awaits, without changing another action's source. */
-  withAsk<T>(askId: string | undefined, action: () => T): T {
-    return this.actionAsk.run({ askId }, action);
+  /**
+   * Pin an action's declared source through awaits, without changing
+   * another action's source: the message it addresses, and the automation
+   * run, click or report it answers when it named one.
+   */
+  withAsk<T>(askId: string | undefined, action: () => T, origin?: TurnOrigin): T {
+    return this.actionAsk.run({ askId, ...(origin ? { origin } : {}) }, action);
+  }
+
+  /** The read automation run, click or report an action names, or undefined when it names none this turn read. */
+  readOrigin(ref: string): TurnOrigin | undefined {
+    return this.readOrigins().find((entry) => entry.refs.includes(ref));
+  }
+
+  /**
+   * The origin a task filed or started without a message of the captain's
+   * saves: the one the action named, else the one the turn read when it
+   * read exactly one; with several and none named, none (INF-2326: the
+   * first mate names which, and the host never guesses).
+   */
+  private actionOrigin(): SavedOrigin | undefined {
+    const named = this.actionAsk.getStore()?.origin;
+    if (named) return named.origin;
+    const read = this.readOrigins();
+    return read.length === 1 ? read[0]?.origin : undefined;
   }
 
   current(): AskRecord | undefined {
@@ -151,11 +187,18 @@ export class AskCapture {
    * No-op for unrelated operational work or an unknown task - the tool's own error
    * already said so.
    */
-  attach(taskId: string, tool: string): boolean {
+  attach(taskId: string, tool: string, starts?: boolean): boolean {
     this.onAttach?.(taskId, tool);
     const ask = this.current();
-    if (!ask || !this.tasks.get(taskId)) return false;
-    return this.tasks.attachAsk(ask.id, taskId, `tool:${tool}` as AskAttachedVia);
+    if (!this.tasks.get(taskId)) return false;
+    if (!ask) {
+      // Work filed or started with no message of the captain's keeps the
+      // automation run, click or report it answered (INF-2326).
+      const origin = starts ? this.actionOrigin() : undefined;
+      if (origin) this.tasks.saveOrigin(taskId, origin);
+      return false;
+    }
+    return this.tasks.attachAsk(ask.id, taskId, `tool:${tool}` as AskAttachedVia, starts);
   }
 
   /**
@@ -198,7 +241,7 @@ export class AskCapture {
     if (ask.taskId) return undefined;
     const hinted = ask.hintTaskId ? this.tasks.get(ask.hintTaskId) : undefined;
     if (hinted) {
-      this.tasks.attachAsk(ask.id, hinted.id, "host:fallback");
+      this.tasks.attachAsk(ask.id, hinted.id, "host:fallback", false);
       return { askId: ask.id, via: "hint", taskId: hinted.id };
     }
     const outcome = input.failed
@@ -211,7 +254,7 @@ export class AskCapture {
       actor: "host",
       fallback: "question",
     });
-    this.tasks.attachAsk(ask.id, task.id, "host:fallback");
+    this.tasks.attachAsk(ask.id, task.id, "host:fallback", true);
     return { askId: ask.id, via: "question", taskId: task.id };
   }
 }

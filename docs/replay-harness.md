@@ -195,6 +195,13 @@ It carries:
   A card whose body names none carries no `pr_links` and is out of the denominator; the file's header says what counts.
   The committed evenings predate the rule: 5 of the 29 `sep14-real` cards that name one link every number, and none of the cards a replay still shows does, so the baseline starts at 0 on `sep14` and `sep14-real` and is `n/a` elsewhere.
   It is graded `higher`, and it is deliberately not a lint - nothing in the host reads a number out of a body.
+- **The fourth and fifth copy rows** (INF-2326): `term_explained_share` and `change_effect_share`, the same cards read for the two rules for a card's words `CARD_AUTHORING` states.
+  A recorded card whose open prose uses a term the project coined - a name from its code, or one its people made up for an idea - carries `terms`: true when each is explained in a few plain words at first use or replaced, false when one is not, with `terms_note` naming it.
+  A recorded card that offers, plans, proposes or reports a change carries `affects`: true when its title or first few sentences say what people using the project will notice, or that only the build, checks or documents change, with `affects_note` naming the opening.
+  A card without the term or the change carries no verdict for that reading and is out of its denominator; the labels file's header says what counts, and `tests/interaction-metrics.test.ts` fails when a verdict has no note.
+  The committed evenings predate the rules: 2 of the 44 recorded cards that use a project term explain it, and 22 of the 33 cards about a change say their effect early.
+  On the cards each replay shows, `term_explained_share` starts at 0.125 (`sep14`, `sep14-real`) and 0 (`sep04`), and `change_effect_share` at 0 (`sep14`, `sep14-real`); both are `n/a` elsewhere.
+  Both are graded `higher`, and neither is a lint - no word list or term finder reads a body.
 - **Data per metric:** its direction, the measured Sep 14 value, and the captain's target.
   A metric whose `direction` is `either` is **observational**: it is written to the baseline and printed in the report, and the gate never grades it.
   A tier mix that moves toward high is the policy working, not a regression - but the move still has to be explained, which is what having it in the baseline diff buys.

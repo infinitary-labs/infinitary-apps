@@ -142,7 +142,7 @@ import {
 } from "./answerDelivery";
 import { AnswerDeliveryCheck } from "./answerDeliveryCheck";
 import { withAskAttribution } from "./askAttribution";
-import { AskCapture } from "./askCapture";
+import { AskCapture, type TurnOrigin } from "./askCapture";
 import {
   cardEmitter,
   FIRSTMATE_FAILURE_CARD_ID,
@@ -179,6 +179,7 @@ import {
   seatSessionSpec,
 } from "./seat";
 import { appendDigest, digestEntry, digestFor, seatIdentity } from "./seatDigest";
+import { turnOriginOf } from "./turnOrigins";
 import {
   captainTurn,
   drainWakes,
@@ -752,6 +753,10 @@ export class FirstmateAgent {
   /** Exact inputs waiting for the backend's read witness, in send order. */
   private pendingReads: { sha: string; asks: string[]; inboxIds: number[] }[] = [];
   private readThisTurn = new Set<string>();
+  /** The origins the served batch's wakes offer, by inbox row (INF-2326). */
+  private servedOrigins = new Map<number, TurnOrigin>();
+  /** The automation runs, clicks and reports the running turn has read, in reading order. */
+  private originsRead: TurnOrigin[] = [];
 
   private expectRead(text: string, asks: string[], inboxIds: number[] = []): void {
     this.pendingReads.push({
@@ -834,14 +839,18 @@ export class FirstmateAgent {
     const now = options.now;
     this.now = now ? () => now() : () => Date.now();
     this.decisions = new DecisionCapture(options.tasks);
-    this.asks = new AskCapture(options.tasks, (taskId, tool) => {
-      this.decisions.noteTask(taskId);
-      // Most tools attribute after writing. Crew control attributes BEFORE
-      // attempting the action, so those callbacks confirm completion below.
-      if (!["steer_crewmate", "interrupt_crewmate", "settle_task"].includes(tool)) {
-        this.deliveredThisTurn = true;
-      }
-    });
+    this.asks = new AskCapture(
+      options.tasks,
+      (taskId, tool) => {
+        this.decisions.noteTask(taskId);
+        // Most tools attribute after writing. Crew control attributes BEFORE
+        // attempting the action, so those callbacks confirm completion below.
+        if (!["steer_crewmate", "interrupt_crewmate", "settle_task"].includes(tool)) {
+          this.deliveredThisTurn = true;
+        }
+      },
+      () => this.originsRead,
+    );
     this.delivery = new AnswerDeliveryCheck({
       tasks: options.tasks,
       inbox: options.inbox,
@@ -2401,7 +2410,7 @@ export class FirstmateAgent {
           ...(attachments.length > 0 ? { attachments } : {}),
         });
         // Attach first (P1): the ask that caused the spawn is about the new task.
-        this.asks.attach(handle.taskId, "spawn_crewmate");
+        this.asks.attach(handle.taskId, "spawn_crewmate", true);
         const started = this.options.tasks.get(handle.taskId)?.title;
         if (started) this.replyFacts.app = startedReply(started);
         this.noteDelivery({
@@ -2981,7 +2990,7 @@ export class FirstmateAgent {
       } else {
         tasks.recordAnswer(card.taskId, { cardId, title: card.title, body: card.body });
       }
-      this.asks.attach(card.taskId, "emit_card");
+      this.asks.attach(card.taskId, "emit_card", false);
       return;
     }
     if (decision) {
@@ -2989,7 +2998,7 @@ export class FirstmateAgent {
       // hinted task's project, else Scratch.
       const existing = tasks.openDecisionFor(cardId);
       if (existing) {
-        this.asks.attach(existing.id, "emit_card");
+        this.asks.attach(existing.id, "emit_card", false);
         return;
       }
       const hinted = this.asks.hintedTask();
@@ -3000,7 +3009,7 @@ export class FirstmateAgent {
         repoId: hinted?.repoId ?? null,
         ...(hinted ? { projectId: hinted.projectId } : {}),
       });
-      this.asks.attach(row.id, "emit_card");
+      this.asks.attach(row.id, "emit_card", true);
       return;
     }
     // A standalone note: the model asserted the ask is about no other work.
@@ -3012,7 +3021,7 @@ export class FirstmateAgent {
         body: card.body,
         asOutcome: true,
       });
-      this.asks.attach(revised.id, "emit_card");
+      this.asks.attach(revised.id, "emit_card", false);
       return;
     }
     const row = tasks.fileQuestion({
@@ -3021,7 +3030,7 @@ export class FirstmateAgent {
       outcome: card.body,
       cardId,
     });
-    this.asks.attach(row.id, "emit_card");
+    this.asks.attach(row.id, "emit_card", true);
   }
 
   /**
@@ -3052,7 +3061,7 @@ export class FirstmateAgent {
               repoId: described.repoId ?? null,
               ...(described.projectId ? { projectId: described.projectId } : {}),
             });
-            this.asks.attach(row.id, tool.name);
+            this.asks.attach(row.id, tool.name, true);
           } catch (caught) {
             console.warn(`[firstmate] could not file the ${tool.name} operation:`, caught);
           }
@@ -3099,7 +3108,7 @@ export class FirstmateAgent {
             return { taskId: "", key: "", text: caught.message };
           throw caught;
         }
-        this.asks.attach(record.id, "create_task");
+        this.asks.attach(record.id, "create_task", true);
         this.replyFacts.app = `Filed ${record.key}: ${record.title}`;
         this.noteDelivery({
           outcome: "action",
@@ -3419,7 +3428,7 @@ export class FirstmateAgent {
       },
       startNow: async (input) => {
         const record = resolve(input.task);
-        this.asks.attach(record.id, "update_task");
+        this.asks.attach(record.id, "update_task", true);
         const text = await supervisor.startQueuedNow(record.id);
         // A refusal comes back as text; only a task a crewmate now holds took effect.
         if (record.status !== "active" && tasks.get(record.id)?.status === "active") {
@@ -4326,6 +4335,8 @@ export class FirstmateAgent {
     this.replyFacts = {};
     this.pendingReads = [];
     this.readThisTurn.clear();
+    this.originsRead = [];
+    if (!inboxRows) this.servedOrigins.clear();
     this.expectRead(
       input.framed.text,
       [
@@ -4853,6 +4864,12 @@ export class FirstmateAgent {
       batch,
     );
     this.options.inbox.markDelivered(batch.map((row) => row.id));
+    this.servedOrigins = new Map(
+      batch.flatMap((row) => {
+        const origin = turnOriginOf(row, (id) => this.options.tasks.get(id)?.key || undefined);
+        return origin ? [[row.id, origin] as const] : [];
+      }),
+    );
     this.delivery.adopt(batch, (row) => aboutCardIdFromRef(row.ref));
     this.turnAboutCardId = aboutCardId;
     void this.runTurn(
@@ -4932,6 +4949,10 @@ export class FirstmateAgent {
       const [input] = this.pendingReads.splice(index, 1);
       if (!input) return;
       this.options.inbox.responsesDelivered(input.inboxIds);
+      for (const id of input.inboxIds) {
+        const origin = this.servedOrigins.get(id);
+        if (origin) this.originsRead.push(origin);
+      }
       for (const id of input.asks) this.readThisTurn.add(id);
       this.asks.select([...this.readThisTurn].at(-1));
       if (input.asks.includes(this.options.tasks.latestAskId() ?? "")) this.replyFacts = {};

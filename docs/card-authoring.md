@@ -780,6 +780,11 @@ Five sentence habits (contract 4.58, FI3-542): one fact per sentence in at most 
 The design skill's `copy/Vocabulary.prompt.md` ("How a line reads") is their home and says where they came from.
 They are scored by hand on recorded cards (`clear_copy_share`, `docs/replay-harness.md`) and never linted.
 
+Two rules for a card's words (INF-2326): a project's own term, a name its code or people coined, is explained in a few plain words at first use or replaced; a card about a change says near its start whether people using the project will notice it, or whether it changes only how the project is built, checked or documented.
+`CARD_AUTHORING` carries both to every card author, and the completion card's What changed section asks for that effect first.
+The design skill's `copy/Vocabulary.prompt.md` ("Two rules for a card's words") is their home.
+They are scored by hand on recorded cards (`term_explained_share`, `change_effect_share`, `docs/replay-harness.md`); no word list or term finder looks for a project's terms.
+
 A time of day is the captain's local time (FI3-1006): `CARD_AUTHORING` tells both personas that every time they write for the captain, on a card, in a reply or in a report, is in the captain's time zone unless the captain asks for another, converted from UTC and never UTC alone.
 They are told the zone: the first mate's context block carries `captain_time_zone` each turn, and a crewmate's prompt ends with the same fact, named when its session opens.
 It is this Mac's zone with its offset from UTC at that moment, such as `America/Los_Angeles (UTC-07:00)` (`src/core/prompts/timeZone.ts`), so a model need not know the zone's daylight-saving rules.
@@ -932,15 +937,27 @@ Tests: `src/core/orchestrator/cardChanges.test.ts` (parts, matching, the rewrite
 ## The You asked line
 
 Piece 1 of INF-1610 (the captain's Approve and build on the plan for robust answer delivery): every card about one of the captain's messages shows that message under its title, on the desktop and the phone.
+INF-2326 makes the line say where the card's work came from when that was an automation, a click or another task.
 The visual rules are the design skill's (`components/cards/ResponseCard.prompt.md`, "The You asked line").
 
 - **From the saved message, never the card's words.**
-  The snapshot carries `Card.asked`, when the message was sent and its words, which `CardService.snapshot` reads through the card's task (the task it names, or the one it was raised on) with `TaskService.askAbout`.
+  The snapshot carries `Card.asked`, which `CardService.snapshot` reads through the card's task (the task it names, or the one it was raised on) with `TaskService.originAbout` (`src/core/tasks/taskOrigin.ts`).
   It is never saved on the card, and a crewmate's Why, however it is written, changes nothing about the line.
-- **Which message.**
-  The oldest message attached to the task.
-  Work handed over to the task - the task it replaced, retried at a stronger model or branched from - keeps the first message, so a later message asking for the move never takes its place.
-  A task no message reached reads its parent's, then its basis's; a card about work no message reached has no line.
+- **Where the work came from, nearest first (INF-2326).**
+  The walk goes out from the card's task, each task before any task one step further away: the work it took over (the task it replaced, retried at a stronger model or branched from, tried ahead of the task itself), its parent, its plan (basis), and the task it follows up (discovered from, or whose report it was filed after).
+  It stops at the first origin:
+  1. The captain's message that filed or started the task reads "You asked · time" with their words in the grey bubble.
+  2. An automation that filed it reads "Run by an automation · time" with the automation's name and no bubble, never its setup words.
+  3. A card click it was filed from reads "You chose · time" with the button's words and anything the captain wrote with it in the bubble.
+     With no origin anywhere, a message of the captain's aimed at that work alone reads "You said · time"; with nothing of theirs, the line reads "From INF-2081" with that task's title and no bubble.
+     A source on another task adds "· through N tasks" to the label.
+     A message whose only effect on a task was a merge or other settle, an interruption, or a sweep across several tasks it did not file or start is never quoted.
+- **What the app saves.**
+  Each `ask` event says whether its message filed or started the task (`starts`): `spawn_crewmate`, `create_task`, a start through `update_task`, a card or operation the first mate filed for it, and the host's fallback question.
+  An event saved before `starts` counts when `spawn_crewmate` or `create_task` attached it, or when it was the message's first task and a card the first mate filed or the fallback attached it.
+  A task the first mate files or starts while answering an automation run, a card click or a crewmate's report, with no message of the captain's, saves that origin on a `note` event (`TaskService.saveOrigin`): the automation's id and its name as it ran, since a one-time automation leaves Settings and runs are kept only 30 days; the card, the button's words and what was written; or the reporting task, whose own origin the line reads.
+  When one turn read several, the first mate names the one it answers with `origin` on `spawn_crewmate` or `create_task`, and the host refuses a name the turn did not read; with several and none named it saves none.
+  The host never guesses an origin from timing, and tasks filed before the change are not filled in afterwards.
 - **A long message.**
   The grey bubble shows the start of the message, cut after two lines with an ellipsis; clicking or tapping the bubble opens the whole of it with its paragraphs, and again folds it.
   No separate Show all or Show less link is drawn.
@@ -952,7 +969,7 @@ The visual rules are the design skill's (`components/cards/ResponseCard.prompt.m
   The mark is optional and stored as `Card.answering` in `cards.answering`; a revision without it removes it.
   The captain's acceptance of a marked card ends the message's wait on it (`docs/task-capture.md`, "How a message ends").
 
-Tests: `taskService.capture.test.ts` "finds the captain's message a task's cards are about through the task graph", `cardService.test.ts` "puts the captain's message on each card about it", `cardTool.test.ts` "carries the answering mark", `src/renderer/src/cards/askedWords.test.ts`, the browser test `tests/browser/card-asked-line.test.tsx` (a short message whole, a long one in two lines that opens from the keyboard with its paragraphs and folds again), the phone's `CardValuesTests` and `PhoneJourney`'s asked line.
+Tests: `taskService.capture.test.ts` "finds the captain's message a task's cards are about through the task graph", `taskOrigin.test.ts` (one chain per real card INF-2299 replayed), `turnOrigins.test.ts`, `firstmateAgent.test.ts` "saves the automation run or report a filing answered as the work's origin", `cardService.test.ts` "puts the captain's message on each card about it", `cardTool.test.ts` "carries the answering mark", `src/renderer/src/cards/askedWords.test.ts`, the browser test `tests/browser/card-asked-line.test.tsx` (a short message whole, a long one in two lines that opens from the keyboard with its paragraphs and folds again, then an automation, a click and a task), the phone's `CardValuesTests` and `PhoneJourney`'s asked line.
 
 ## Revision links in the thread
 

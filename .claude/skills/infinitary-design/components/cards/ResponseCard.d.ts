@@ -20,9 +20,10 @@ export interface ResponseCardProps {
   revised?: React.ReactNode;
   /**
    * The "You asked" line under the title and the revised line: "You asked · 9:10 AM" in mono xs
-   * fg-3, then the captain's words in quotes, sm fg-2, cut after two lines with a Show all
-   * control that opens the whole message (`ResponseCard.prompt.md`, "The You asked line").
-   * The app draws it from the saved message, never from the card's words.
+   * fg-3, then the captain's words in the grey bubble, sm fg-2, cut after two lines; the bubble
+   * opens the whole message (`ResponseCard.prompt.md`, "The You asked line"). It may instead read
+   * "You chose", "You said", "Run by an automation" with its name, or "From INF-2081" with a task's
+   * title. The app draws it from the saved message or origin, never from the card's words.
    */
   asked?: React.ReactNode;
   /** Footer action row — Button elements. */

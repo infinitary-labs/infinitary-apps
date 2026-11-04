@@ -37,8 +37,10 @@ import {
   parseApprovalLabelRows,
   parseApprovalLabels,
   parseClearLabels,
+  parseEffectLabels,
   parsePlainLabelRows,
   parsePlainLabels,
+  parseTermLabels,
   REVIEW_VERDICTS,
   type ReviewEvent,
   RIGORS,
@@ -75,6 +77,8 @@ function card(overrides: Partial<ObservedCard> & { id: string }): ObservedCard {
     plain: null,
     clear: null,
     prLinks: null,
+    terms: null,
+    affects: null,
     ...overrides,
   };
 }
@@ -404,6 +408,33 @@ describe("the plain-language sample (roadmap 1.5)", () => {
     ).toThrow("clear verdict is not true or false");
   });
 
+  it("scores the two card-word rules apart, each only on the cards it applies to (INF-2326)", () => {
+    // The captain's choice on INF-2326: "Words only: two rules in the card
+    // guidance, measured by the replay check." A card with no project term,
+    // or about no change, is out of that reading's denominator.
+    const scores = scoreSession(
+      observation({
+        cards: [
+          card({ id: "a", terms: true, affects: false }),
+          card({ id: "b", terms: false, affects: null }),
+          card({ id: "c", terms: null, affects: true }),
+          card({ id: "d", terms: false, affects: true }),
+        ],
+      }),
+    );
+    expect(scores.term_explained_share).toEqual({ value: 1 / 3, numerator: 1, denominator: 3 });
+    expect(scores.change_effect_share).toEqual({ value: 2 / 3, numerator: 2, denominator: 3 });
+    const text = [
+      '{"key":"aaaaaaaaaaaa","plain":true,"note":"","terms":false,"terms_note":"closeRecord is not explained"}',
+      '{"key":"bbbbbbbbbbbb","plain":true,"note":"","affects":true,"affects_note":"first sentence"}',
+    ].join("\n");
+    expect([...parseTermLabels(text).entries()]).toEqual([["aaaaaaaaaaaa", false]]);
+    expect([...parseEffectLabels(text).entries()]).toEqual([["bbbbbbbbbbbb", true]]);
+    expect(() =>
+      parseTermLabels('{"key":"aaaaaaaaaaaa","plain":true,"note":"","affects":"yes"}'),
+    ).toThrow("affects verdict is not true or false");
+  });
+
   it("keys a label by the card's own words, so it cannot drift onto another card", () => {
     const key = cardLabelKey({ title: "The checks passed", body: "<p>Ready to put in.</p>" });
     expect(key).toMatch(/^[0-9a-f]{12}$/);
@@ -473,6 +504,9 @@ describe("the plain-language sample (roadmap 1.5)", () => {
     for (const row of rows.filter((entry) => entry.from === undefined)) {
       expect(typeof row.clear, row.key).toBe("boolean");
       if (row.clear === false) expect(row.clear_note?.trim(), row.key).toBeTruthy();
+      // A card-word verdict (INF-2326) names the term or the opening it read.
+      if (row.terms !== undefined) expect(row.terms_note?.trim(), row.key).toBeTruthy();
+      if (row.affects !== undefined) expect(row.affects_note?.trim(), row.key).toBeTruthy();
     }
   });
 });

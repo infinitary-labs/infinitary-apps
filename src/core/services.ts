@@ -120,6 +120,7 @@ import {
   isSignInForgeFailure,
   remoteProjectsText,
 } from "./forge";
+import { forgeHealthNote } from "./forge/healthNote";
 import { readOpenChanges } from "./forge/providers/github/changes";
 import { GitHubForge, githubApiBaseFor } from "./forge/providers/github/githubForge";
 import { readGitLabOpenChanges } from "./forge/providers/gitlab/changes";
@@ -598,6 +599,8 @@ export async function createServices(
   // tagged: an unchanged answer is a 304 that spends no allowance (INF-2149).
   const githubReads = conditionalGets();
   let onForgeHealth: (change: ForgeHealthChange) => void = () => {};
+  const projectsOnForge = (forgeHost: string) =>
+    repos.list().filter((repo) => repo.host?.name === forgeHost).length;
   // The integrations read the github.com sign-in: each change to it is one of theirs.
   let integrationsChanged: () => void = () => {};
   let onForgeRenewed: (forgeHost: string) => void = () => {};
@@ -615,7 +618,7 @@ export async function createServices(
         ),
     // A host now known: its projects stamped plain Git hosts are its kind's.
     onSignedIn: (known) => repos.stampKnownHosts([known]),
-    projectsOn: (forgeHost) => repos.list().filter((repo) => repo.host?.name === forgeHost).length,
+    projectsOn: (forgeHost) => projectsOnForge(forgeHost),
     push: (view) => {
       emit("inf:forges", view);
       integrationsChanged();
@@ -2669,7 +2672,8 @@ export async function createServices(
   // A sign-in where projects live, as the captain meets it (PR 1.2): the one
   // host card when the host refused it - "sign in again", gone the moment
   // the host answers again - and a feed line when the host cannot be
-  // reached. Nothing at all while nothing is signed in.
+  // reached, when a project lives there. Nothing at all while nothing is
+  // signed in.
   onForgeHealth = (change) => {
     const cardId = forgeSignInCardId(change.host);
     if (change.to === "needs_reauth") {
@@ -2684,12 +2688,8 @@ export async function createServices(
       supervisor.clearAuthDecisionCard(cardId);
       if (change.to === "ok") void supervisor.resumeForgeSignInTasks(change.host);
     }
-    if (change.to === "unavailable" && change.from !== "unavailable") {
-      broadcastEvent({
-        type: "firstmate_note",
-        text: `Could not reach ${change.name} - trying again.`,
-      });
-    }
+    const note = forgeHealthNote(change, projectsOnForge(change.host));
+    if (note) broadcastEvent({ type: "firstmate_note", text: note });
   };
   // A short-lived sign-in renewed itself (health stays ok, so no change
   // above fires): a card a git refusal raised for the ended one comes down,

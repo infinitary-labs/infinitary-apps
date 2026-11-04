@@ -33,18 +33,12 @@ export class ResourcePressure {
         processes?.status === "sampled"
           ? processes.tasks.map((task) => ({ ...task, key: this.options.taskKey(task.taskId) }))
           : [];
-      // Activity rows have a two-line display. Keep every task's reading in
-      // its own row instead of hiding later tasks in one truncated sentence.
-      const text = `${label} · Memory pressure ${pressure}${processes?.status === "sampled" ? "" : " · Task use unavailable"}`;
-      this.options.activity({ computerId, label, pressure, text });
-      for (const task of tasks) {
-        this.options.activity({
-          computerId,
-          label,
-          pressure,
-          text: `${task.key} · ${taskResourceWords(task)}`,
-        });
-      }
+      this.options.activity({
+        computerId,
+        label,
+        pressure,
+        text: pressureLine(label, pressure, tasks, processes?.status === "sampled"),
+      });
       this.options.notify({
         facts: {
           kind: "resource-pressure",
@@ -63,6 +57,28 @@ export class ResourcePressure {
       });
     }
   }
+}
+
+/**
+ * One feed line per pressure notice (INF-2299 finding 5): the computer, the
+ * level and the task holding the most memory. Every task's share still goes
+ * to the first mate in the wake.
+ */
+export function pressureLine(
+  label: string,
+  pressure: "warning" | "critical",
+  tasks: PressureTaskShare[],
+  sampled: boolean,
+): string {
+  const heading = `${label} · Memory pressure ${pressure}`;
+  if (!sampled) return `${heading} · Task use unavailable`;
+  const top = tasks.reduce<PressureTaskShare | undefined>(
+    (most, task) => (most && most.residentBytes >= task.residentBytes ? most : task),
+    undefined,
+  );
+  if (!top) return heading;
+  const who = tasks.length === 1 ? top.key : `${top.key} uses the most of ${tasks.length} tasks`;
+  return `${heading} · ${who}: ${taskResourceWords(top)}`;
 }
 
 export type PressureTaskShare = Extract<

@@ -10,11 +10,18 @@ const TASK_SHARES = [{ taskId: "task", processCount: 1, residentBytes: 45040 * 1
 const view = (
   pressure: "normal" | "warning" | "critical",
   sequence: number,
+  tasks: {
+    taskId: string;
+    processCount: number;
+    residentBytes: number;
+    cpuCores?: number;
+  }[] = TASK_SHARES,
+  label = "This computer",
 ): ComputerResourcesView => ({
   computers: [
     {
       computerId: null,
-      label: "This computer",
+      label,
       reading: {
         status: "fresh",
         ageMs: 0,
@@ -32,7 +39,7 @@ const view = (
           processes: {
             status: "sampled",
             processCount: 1,
-            tasks: TASK_SHARES,
+            tasks,
             other: { processCount: 0, residentBytes: 0 },
           },
         },
@@ -74,8 +81,9 @@ describe("accepted load plan pressure notification", () => {
     });
     pressure.observe(view("warning", 3));
     expect(wakes).toHaveLength(1);
-    expect(activity).toHaveLength(1 + TASK_SHARES.length);
-    expect(activity.slice(1).join("\n")).toContain("INF-1629");
+    expect(activity).toEqual([
+      "This computer · Memory pressure warning · INF-1629: Processor use unavailable · 44.0 MB resident · 1 process",
+    ]);
     expect(renderWake(wakes[0]!)).toContain("Nothing was killed, paused or slowed");
     expect(wakes[0]?.facts).toMatchObject({
       kind: "resource-pressure",
@@ -86,5 +94,58 @@ describe("accepted load plan pressure notification", () => {
     pressure.observe(view("warning", 6));
     expect(wakes).toHaveLength(3);
     expect(new Set(wakes.map((wake) => wake.once)).size).toBe(3);
+  });
+});
+
+// INF-2299 finding 5: four warnings wrote 44 feed lines, a heading and one row
+// per task, most of them using nothing. A warning is one line naming the
+// computer and the task holding the most memory; the wake keeps every share.
+describe("a memory warning in the feed", () => {
+  // The Mac mini's 11:32 PM warning from that audit, as the feed showed it.
+  const MB = 1024 ** 2;
+  const shares = [
+    ["INF-2245", 0.01, 225.7, 22],
+    ["INF-2131", 0, 159.4, 1],
+    ["INF-2025", 0.14, 833.8, 30],
+    ["INF-2157", 0, 154.0, 1],
+    ["INF-2271", 0, 9.1, 7],
+    ["INF-2275", 0, 8.1, 7],
+    ["INF-1706", 0, 10.0, 7],
+  ].map(([taskId, cpuCores, mb, processCount]) => ({
+    taskId: taskId as string,
+    cpuCores: cpuCores as number,
+    residentBytes: Math.round((mb as number) * MB),
+    processCount: processCount as number,
+  }));
+
+  it("writes one line naming the computer and the task using the most memory", () => {
+    const wakes: TypedWake[] = [];
+    const activity: string[] = [];
+    const pressure = new ResourcePressure({
+      taskKey: (id) => id,
+      notify: (wake) => wakes.push(wake),
+      activity: (fact) => activity.push(fact.text),
+    });
+    pressure.observe(view("warning", 1, shares, "Kun's Mac mini"));
+    expect(activity).toEqual([
+      "Kun's Mac mini · Memory pressure warning · INF-2025 uses the most of 7 tasks: 0.14 processors · 833.8 MB resident · 30 processes",
+    ]);
+    expect(wakes[0]?.facts).toMatchObject({ kind: "resource-pressure" });
+    expect(wakes[0]?.facts).toHaveProperty("tasks.length", shares.length);
+  });
+
+  it("says task use is unavailable when no processes were sampled", () => {
+    const activity: string[] = [];
+    const pressure = new ResourcePressure({
+      taskKey: (id) => id,
+      notify: () => {},
+      activity: (fact) => activity.push(fact.text),
+    });
+    const unsampled = view("critical", 1);
+    const reading = unsampled.computers[0]?.reading;
+    if (reading?.status === "fresh")
+      delete (reading.observation as { processes?: unknown }).processes;
+    pressure.observe(unsampled);
+    expect(activity).toEqual(["This computer · Memory pressure critical · Task use unavailable"]);
   });
 });

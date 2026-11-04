@@ -109,12 +109,15 @@ function taskBrowserReadingStep(body: string): ScriptedCall[] | undefined {
  * A page too long for one answer (docs/task-browser.md, "Reading a long
  * page"). The marker names the page; the script opens it, finds words in
  * its last section, reads on from the line the first answer's next lines
- * name, scrolls down, and reports what each answer actually showed.
+ * name, scrolls down, photographs the visible page there, and reports what
+ * each answer actually showed.
  */
 export const TASK_BROWSER_LONG_MARKER = "read the long changelog at ";
 export const MOCK_BROWSER_LONG_REPORT_PREFIX = "The long changelog said";
 /** Words only the changelog's last section holds. */
 export const TASK_BROWSER_LONG_LAST_WORDS = "the last release ends here";
+/** The picture of the visible page taken after the scroll (INF-2375). */
+export const MOCK_BROWSER_LONG_PICTURE = "scrolled-changelog";
 
 /** The first outline line an answer shows, from its `outline:` line. */
 function firstShownLine(answer: string | undefined): number | undefined {
@@ -139,8 +142,10 @@ function taskBrowserLongStep(body: string): ScriptedCall[] | undefined {
     case 3:
       return [browser("scroll", "down")];
     case 4:
+      return [browser("screenshot", MOCK_BROWSER_LONG_PICTURE)];
+    case 5:
       return [browser("stop")];
-    case 5: {
+    case 6: {
       const [opened = "", found = "", read = "", scrolled = ""] = answers;
       const facts = [
         /^map\[\d+\]:$/m.test(opened) && opened.includes('region "Release 40"')

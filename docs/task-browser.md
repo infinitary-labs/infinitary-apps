@@ -178,6 +178,7 @@ A page that locks scrolling can still take the bound, because the wheel then nev
 The host also stops a moment after that bound, so a page that replaces its own timer cannot hold the answer.
 A wheel that cannot move the page, because it is already at that edge, is still sent and does not wait the bound.
 An element photograph accepts its page-named ref (`--uid`), or a whole-page photograph `--full-page`, never both.
+A photograph of the visible page starts where the page is scrolled to, never at the document's top, so a scrolled page is never pictured as a blank band above what is on screen (INF-2375); a whole-page photograph starts at the top.
 It scrolls that element into view and crops the photograph to its visible box; a hidden or removed element is refused.
 All photograph guards apply to the whole page even for a crop: a reason is needed after a handback, and hidden typed text anywhere on the page refuses the picture.
 All new actions use the existing serial queue and captain-control refusal, connection policy and ref books.

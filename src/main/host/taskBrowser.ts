@@ -876,9 +876,13 @@ async function drivePage(
       return value ?? { kind: "not-a-list" };
     },
     capture: async ({ fullPage, target }) => {
+      // A clip is in document coordinates, so the visible page starts where
+      // the page is scrolled to, never at the document's top: a clip at
+      // 0,0 of a scrolled page photographs the rows above the view as blank
+      // (INF-2375). A whole page starts at the top.
       let clip = { x: 0, y: 0, width: size.width, height: size.height, scale: 1 };
-      if (target !== undefined) {
-        const box = await boxOf(target);
+      if (target !== undefined || !fullPage) {
+        const box = target === undefined ? { x: 0, y: 0, ...size } : await boxOf(target);
         if (!box) return null;
         const { cssVisualViewport } = await send<{
           cssVisualViewport: { pageX: number; pageY: number };

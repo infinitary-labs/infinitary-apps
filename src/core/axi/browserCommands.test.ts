@@ -230,6 +230,9 @@ describe("infinitary-browser-axi's commands", () => {
     // The payment rule rides the help of each command that presses.
     expect((await run(["click", "--help"])).stdout).toContain(BROWSER_RULES.payment);
     expect((await run(["press", "--help"])).stdout).toContain(BROWSER_RULES.payment);
+    // INF-2375: the click that downloads a site's one-time letter carries
+    // the rule to keep it before the page expires.
+    expect((await run(["click", "--help"])).stdout).toContain(BROWSER_RULES.document);
   });
 
   it("lists pages, console and network as compact rows, and says so when a list is empty", async () => {
@@ -363,6 +366,7 @@ describe("infinitary-browser-axi's commands", () => {
     expect(open.stdout).toContain("title: Sign up");
     expect(open.calls).toEqual([{ command: "snapshot", op: "inspect", input: {} }]);
     expect(open.stdout).toContain(BROWSER_RULES.payment);
+    expect(open.stdout).toContain(BROWSER_RULES.document);
 
     const none = await run([], () => ({
       kind: "answer",
@@ -374,5 +378,6 @@ describe("infinitary-browser-axi's commands", () => {
     expect(none.exitCode).toBe(0);
     expect(none.stdout).toContain("browser: No browser is open for this task.");
     expect(none.stdout).toContain("`infinitary-browser-axi open <url>` opens a page");
+    expect(none.stdout).toContain(BROWSER_RULES.document);
   });
 });

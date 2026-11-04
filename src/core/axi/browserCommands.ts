@@ -40,7 +40,9 @@ const REF_ARG = new RegExp(`^@?\\[?(${REF_PATTERN})\\]?$`, "i");
  * (docs/task-browser.md): the sign-in rule where a page is opened, the
  * payment rule on the home view and in the help of every command that
  * presses, and the signed-in rule on every answer from a browser that may
- * show the captain's account. The prompt line carries the payment rule too.
+ * show the captain's account. The document rule (INF-2375) rides the home
+ * view and the click's help, where a site's one-time letter or receipt is
+ * reached and downloaded. The prompt line carries the payment rule too.
  */
 export const BROWSER_RULES = {
   signIn:
@@ -49,6 +51,8 @@ export const BROWSER_RULES = {
     "Never press the last step of a purchase or booking yourself, such as Pay or Place order: ask the captain on a card with emit_card browser_handoff that reviews it",
   signedIn:
     "This browser may show the captain's account: keep only the results the task needs, never passwords, codes or card numbers; a screenshot needs --reason",
+  document:
+    "A document the task must keep, such as a confirmation letter or receipt: before submitting, read how the site delivers it and name on the review card any choice that loses a mailed copy or later access; once offered, download it at once (it lands in your evidence folder) and open it before other work, since the site's page can expire while the tab stays open; a screenshot does not replace it; if it is lost, report needs_firstmate naming it, even while a card of yours waits",
 } as const;
 
 function invalid(message: string, help: string[] = []): never {
@@ -323,7 +327,7 @@ export const BROWSER_COMMANDS: Record<string, AxiCommand<BrowserConnection>> = {
   ),
   click: command(
     "click @ref",
-    `Click a control by its ref. A click on a link waits for the page it opens. ${BROWSER_RULES.payment}.`,
+    `Click a control by its ref. A click on a link waits for the page it opens. ${BROWSER_RULES.payment}. ${BROWSER_RULES.document}.`,
     async (args, browser) => {
       if (args.positional.length !== 1)
         invalid("click needs one ref", usage("click", "click @ref"));
@@ -537,6 +541,7 @@ async function home(browser: BrowserConnection): Promise<string> {
         `\`${BROWSER_COMMAND} open <url>\` opens a page`,
         BROWSER_RULES.signIn,
         BROWSER_RULES.payment,
+        BROWSER_RULES.document,
       ],
     });
   }
@@ -546,7 +551,12 @@ async function home(browser: BrowserConnection): Promise<string> {
       help: [`Run \`${BROWSER_COMMAND}\` again to read its answer once it finishes`],
     });
   }
-  return renderReply("snapshot", reply, [BROWSER_RULES.signIn, BROWSER_RULES.payment], true);
+  return renderReply(
+    "snapshot",
+    reply,
+    [BROWSER_RULES.signIn, BROWSER_RULES.payment, BROWSER_RULES.document],
+    true,
+  );
 }
 
 /** The whole command, for the command process (`./axiProcess.ts`). */

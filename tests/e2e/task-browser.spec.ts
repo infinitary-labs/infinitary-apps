@@ -49,6 +49,7 @@ import {
   MOCK_BROWSER_BUTTON,
   MOCK_BROWSER_CARD_REPORT,
   MOCK_BROWSER_CARD_TITLE,
+  MOCK_BROWSER_LONG_PICTURE,
   MOCK_BROWSER_LONG_REPORT_PREFIX,
   MOCK_BROWSER_READING_PICTURE,
   MOCK_BROWSER_READING_REPORT_PREFIX,
@@ -195,7 +196,13 @@ const LONG_PARAGRAPH =
   "Every release in this changelog ships the same reminder: back up your work, read the notes before you upgrade, and tell us what broke. The upgrade keeps your settings and your projects where they are, and nothing you saved moves.";
 const LONG_PAGE = `<!doctype html>
 <html>
-  <head><title>Changelog</title></head>
+  <head>
+    <title>Changelog</title>
+    <style>
+      html, body, main { margin: 0; background: white; }
+      h1, nav, section { display: flow-root; margin: 0; padding: 8px 16px; background: #e0f3ff; color: #003366; }
+    </style>
+  </head>
   <body>
     <h1>Changelog</h1>
     <nav aria-label="Versions"><a href="#r1">Newest</a> <a href="#r40">Oldest</a></nav>
@@ -474,6 +481,35 @@ test("a crewmate reads a page too long for one answer by its map, finds words pa
   expect(task.outcome).toContain(
     "a map, folded repeats, found the end, read on, scrolled past the top",
   );
+  // The picture taken after the scroll shows the rows on screen, never the
+  // rows above them as a blank band (INF-2375): every release fills its row
+  // with color, so a row that is white from edge to edge was not drawn.
+  const picture = join(
+    launched.userDataDir,
+    "crewmates",
+    task.id,
+    "evidence",
+    `${MOCK_BROWSER_LONG_PICTURE}.png`,
+  );
+  expect(existsSync(picture)).toBe(true);
+  if (evidence) copyFileSync(picture, join(evidence, "task-browser-scrolled-picture.png"));
+  const rows = await launched.app.evaluate(({ nativeImage }, path) => {
+    const image = nativeImage.createFromPath(path);
+    const { width, height } = image.getSize();
+    const pixels = image.toBitmap();
+    let blank = 0;
+    for (let y = 0; y < height; y += 1) {
+      let drawn = false;
+      for (let x = 0; x < width && !drawn; x += 1) {
+        const at = (y * width + x) * 4;
+        drawn = [0, 1, 2].some((channel) => (pixels[at + channel] ?? 255) < 245);
+      }
+      if (!drawn) blank += 1;
+    }
+    return { height, blank };
+  }, picture);
+  expect(rows.height).toBeGreaterThan(0);
+  expect(rows.blank).toBe(0);
 });
 
 test("the captain opens a task's browser from its record and watches the crewmate drive it", async () => {

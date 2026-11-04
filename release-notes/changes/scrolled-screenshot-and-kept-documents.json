@@ -1,0 +1,19 @@
+{
+  "entries": [
+    {
+      "id": "scrolled-screenshot-shows-the-screen",
+      "kind": "fix",
+      "area": "crewmates",
+      "title": "A crewmate's picture of a scrolled page shows what is on screen",
+      "body": "When a crewmate scrolled down a web page and took a picture, the top of the picture could come out blank. The picture now shows the part of the page that was actually on screen.",
+      "noPicture": "The app's own screens do not change; the fix shows in the pictures a crewmate takes of web pages.",
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": [
+    {
+      "id": "keep-a-sites-document-guidance",
+      "reason": "What the first mate and a crewmate are told about saving a document a website offers once; nothing on screen changes."
+    }
+  ]
+}

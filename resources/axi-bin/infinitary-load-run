@@ -120,8 +120,10 @@ while :; do
   if [ -n "${INFINITARY_LOAD_HOLD:-}" ]; then parent=(--parent "$INFINITARY_LOAD_HOLD"); fi
   # The wrapper itself is the waiting job. Each short request must return its
   # own answer rather than park one for an unrelated command in this task.
+  # /bin/sh starts the launcher rather than its path: macOS 26 keeps a 1 KB
+  # kernel buffer each time a script starts another script by path.
   answer=$(INFINITARY_SHELL_CAP_MS= FM3000_SHELL_CAP_MS= INFINITARY_SHELL_ID= \
-    "$launcher" claim --pid "$$" --processors "$cpu" --memory-mib "$memory" "${parent[@]}" 2>&1)
+    /bin/sh "$launcher" claim --pid "$$" --processors "$cpu" --memory-mib "$memory" "${parent[@]}" 2>&1)
   code=$?
   state=
   hold=

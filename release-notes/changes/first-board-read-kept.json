@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "id": "first-board-read-kept",
+      "kind": "fix",
+      "area": "crewmates",
+      "title": "A crewmate's summary opens even when a card changes as the app starts",
+      "body": "If a card arrived or closed while the app was still loading your tasks, pointing at a crewmate could show no summary until a task changed. The summary now opens as soon as your tasks have loaded.",
+      "noPicture": "The summary looks as it did; the fix is that it now opens where it stayed hidden, which one still picture cannot tell apart from before.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

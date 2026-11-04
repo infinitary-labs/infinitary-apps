@@ -226,6 +226,42 @@ describe("ReadExecutor", () => {
     for (const stop of stops) stop();
   });
 
+  // INF-2526: the card stack changed while the first board read was still on
+  // its way, that read was dropped, and nothing read the board again, so on a
+  // quiet home pointing at a crewmate never opened its summary.
+  it("delivers a first read that answers after the card stack changed, painted for the new stack", async () => {
+    const { fake } = api();
+    const presentation = new Set<() => void>();
+    let stack = "before the change";
+    let resolveRead: (value: unknown) => void = () => {};
+    const read = vi.fn(
+      () =>
+        new Promise((resolve) => {
+          resolveRead = resolve;
+        }),
+    );
+    const values: unknown[] = [];
+    const stop = new ReadExecutor({
+      ...fake,
+      read,
+      present: (_name, value) => ({ ...(value as object), stack }),
+      onPresentation: (listener) => {
+        presentation.add(listener);
+        return () => presentation.delete(listener);
+      },
+    }).subscribe("tasks.board", {}, { onValue: (v) => values.push(v), onError: () => {} });
+    expect(read).toHaveBeenCalledTimes(1);
+    stack = "after the change";
+    for (const listener of presentation) listener();
+    // Nothing is held yet, so nothing is repainted.
+    expect(values).toEqual([]);
+    resolveRead({ seq: 1 });
+    await flush();
+    expect(values).toEqual([{ seq: 1, stack: "after the change" }]);
+    expect(read).toHaveBeenCalledTimes(1);
+    stop();
+  });
+
   // INF-1860: a hover summary that opens on every row, and a Tasks panel
   // remounted on the way back from Settings, each asked the core to rebuild
   // the whole board while the app already held it.

@@ -203,7 +203,11 @@ export class ReadExecutor {
     if (this.api.onPresentation && invalidate.presentation) {
       detach.push(
         this.api.onPresentation(() => {
-          if (disposed) return;
+          // With nothing held there is nothing to repaint, and the first
+          // read still on its way is the only value coming: it lands, and
+          // is presented for the stack as it is then. Dropping it left
+          // every reader empty until a push arrived (INF-2526).
+          if (disposed || !hasValue) return;
           // Repaint held raw data in the same local hide/restore transition.
           // Neither seq nor the delta base changes, and late reads cannot
           // overwrite a newer local projection. Nothing is read again: a
@@ -211,10 +215,8 @@ export class ReadExecutor {
           // its own declared pushes, and a re-read here would rebuild the
           // whole board once per subscriber on every card change.
           epoch += 1;
-          if (hasValue) {
-            const shown = this.api.present?.(readName, current) ?? current;
-            each((listener) => listener.onValue(shown));
-          }
+          const shown = this.api.present?.(readName, current) ?? current;
+          each((listener) => listener.onValue(shown));
         }),
       );
     }

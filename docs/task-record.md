@@ -354,6 +354,7 @@ The standalone projects read uses the current board's project counts, so it does
 The renderer immediately overlays local card availability on board/detail and project waiting counts when it hides a reply, or restores a refused one.
 The read executor retains raw data as its delta base; local presentation does not change seq.
 A presentation change repaints what each reader holds and reads nothing again: a change the core derives from the stack arrives on the board carriers, so a card change never sends each board reader back for the whole board.
+A read that holds nothing yet keeps its first read through a presentation change: that read lands when it answers, presented for the stack as it is then (INF-2526).
 Older snapshots/deltas do not restore a hidden shortcut; gaps re-read.
 In-flight reply pushes stay hidden, and a reply receipt refreshes the stack if a fast author returned before the receipt.
 Task navigation and Show the card refresh the association before focusing it, falling back to the record rather than forcing a hidden card forward.

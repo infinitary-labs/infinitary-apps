@@ -8,6 +8,7 @@ import {
   verifyMainEvidence,
 } from "../scripts/main-alpha-proof.mjs";
 import { runJobNames, type Scenario } from "./helpers/ciJobNames";
+import { loadYamlFile, workflowString } from "./helpers/releaseWorkflows";
 
 // INF-2410's approved scheme (the captain: "i want to distinguish what
 // triggered the job and what they check"; scheme "A. Trigger first"): every
@@ -222,6 +223,23 @@ const SCENARIOS: { file: string; trigger: string; scenario: Scenario }[] = [
 ];
 
 describe("CI job names (INF-2410 scheme A, trigger first)", () => {
+  const workflows = readdirSync(
+    fileURLToPath(new URL("../.github/workflows/", import.meta.url)),
+  ).filter((file) => file.endsWith(".yml"));
+  type Workflow = {
+    on: Record<string, { inputs?: Record<string, { required?: boolean; default?: unknown }> }>;
+    jobs: Record<
+      string,
+      {
+        name?: string;
+        uses?: string;
+        with?: Record<string, unknown>;
+        outputs?: Record<string, string>;
+      }
+    >;
+  };
+  const workflow = (file: string) => loadYamlFile(`.github/workflows/${file}`) as Workflow;
+
   it("covers every workflow", () => {
     const called = new Set([
       "alpha-wait.yml",
@@ -229,10 +247,56 @@ describe("CI job names (INF-2410 scheme A, trigger first)", () => {
       "mac-installer.yml",
       "mac-update.yml",
     ]);
-    const files = readdirSync(
-      fileURLToPath(new URL("../.github/workflows/", import.meta.url)),
-    ).filter((file) => file.endsWith(".yml") && !called.has(file));
+    const files = workflows.filter((file) => !called.has(file));
     expect(new Set(SCENARIOS.map((each) => each.file))).toEqual(new Set(files));
+  });
+
+  // INF-2539's audit: a called workflow's trigger is its caller's to say, on
+  // one path. A workflow only a caller starts requires it, with no fallback
+  // of its own to drift from the caller's; every call passes it.
+  it("takes a called workflow's trigger from its caller alone", () => {
+    const callOnly: string[] = [];
+    for (const file of workflows) {
+      const { on, jobs } = workflow(file);
+      const input = on.workflow_call?.inputs?.trigger;
+      if (input && Object.keys(on).length === 1) {
+        callOnly.push(file);
+        expect(input, file).toMatchObject({ required: true });
+        expect(input.default, file).toBeUndefined();
+      }
+      for (const [id, job] of Object.entries(jobs)) {
+        if (!job.uses) continue;
+        const child = job.uses.replace(/^\.\/\.github\/workflows\//, "");
+        expect(workflow(child).on.workflow_call?.inputs?.trigger, `${file}:${id}`).toBeDefined();
+        expect(job.with?.trigger, `${file}:${id}`).toEqual(expect.any(String));
+      }
+    }
+    expect(callOnly.toSorted()).toEqual([
+      "alpha-wait.yml",
+      "linux-startup.yml",
+      "mac-installer.yml",
+      "mac-update.yml",
+    ]);
+  });
+
+  // A release says what started it once, in its resolve job's `trigger`
+  // output; every later job's name and every workflow it calls read that.
+  it("names a release's later jobs from the resolve job's trigger", () => {
+    const { jobs } = workflow("release.yml");
+    const trigger = (github: Record<string, unknown>, inputs: Record<string, unknown>) =>
+      workflowString(jobs.resolve?.outputs?.trigger ?? "", { github, inputs });
+    expect(trigger({ event_name: "workflow_run" }, {})).toBe("Automatic alpha");
+    expect(trigger({ event_name: "workflow_dispatch" }, { channel: "alpha", dry_run: true })).toBe(
+      "Requested alpha rehearsal",
+    );
+    expect(trigger({ event_name: "workflow_dispatch" }, {})).toBe("Requested stable");
+    const later = { needs: { resolve: { outputs: { trigger: "Any trigger" } } }, inputs: {} };
+    for (const [id, job] of Object.entries(jobs)) {
+      if (id === "resolve") continue;
+      expect(workflowString(job.name ?? id, later), id).toMatch(/^Any trigger · /);
+      if (job.uses)
+        expect(workflowString(String(job.with?.trigger), later), id).toBe("Any trigger");
+    }
   });
 
   it.each(

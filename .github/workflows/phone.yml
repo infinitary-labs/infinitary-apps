@@ -1,11 +1,11 @@
 name: phone
 
 # INF-2202: unsigned phone checks run only on the configured vBoxx phone queue.
-# Keep an explicit skipped job on unrelated PRs instead of a path-filtered missing check.
 # INF-663 (captain: "add a nightly phone check"): a default request on a branch
 # runs both device gates whatever changed, with no release step.
 # INF-2139 (captain: "let's pull journeys and phone checks off PRs now"): a pull
-# request no longer starts this workflow; its pull_request branches stay unused.
+# request no longer starts this workflow, and INF-2539 removed its pull-request
+# paths: the part chooser with its part-times lookup and the replaced-run checks.
 # INF-2492: main.yml no longer calls it; ios-release.yml calls it at its resolved
 # source, which runs every part of both device gates, as a default request does.
 on:
@@ -19,13 +19,6 @@ on:
         description: Exact resolved source for unsigned release checks; empty uses the caller source
         type: string
         default: ''
-      # ios-release.yml sets it, so a release's Linux job runs on GitHub's hosted
-      # Ubuntu (docs/testing.md, "A release's hosted machines"); a request keeps the gate label.
-      hosted:
-        description: Run the Linux job on GitHub's hosted Ubuntu, whatever LINUX_RUNNER says
-        required: false
-        type: boolean
-        default: false
   workflow_dispatch:
     inputs:
       affected:
@@ -68,54 +61,18 @@ on:
 permissions:
   contents: read
 
-# INF-487: no run-level group for the pull request. A run that counts as running
-# while its native job waits for a phone guest would hold the newer version behind
-# it for hours. cancel-replaced cancels the older runs of this pull request whose
-# native job has not started its device gate, and a replaced version ends its own
-# run before that gate, a manual rerun of an older version included. INF-895: so
-# does a run whose pull request merged or closed while it waited in the phone line.
-# A started gate is never cancelled: it deletes its own simulators.
+# INF-487: no run-level group. A run that counts as running while its native
+# job waits for a phone guest would hold every later run behind it for hours;
+# each run and attempt waits only for a free guest.
 
 jobs:
   # Each job's name leads with the caller's trigger (scripts/ci-job-names.mjs).
-  cancel-replaced:
-    name: ${{ format('{0} · Cancel replaced phone runs', inputs.trigger || 'Manual request') }}
-    # The PC's gate label (docs/testing.md, DOP-157): its runners take only gate jobs.
-    # Called from a release, GitHub's hosted Ubuntu.
-    runs-on: ${{ inputs.hosted && 'ubuntu-24.04' || fromJSON(vars.LINUX_QUEUES || '{}').light_gate || vars.LINUX_RUNNER && format('{0}-gate', vars.LINUX_RUNNER) || 'ubuntu-latest' }}
-    permissions:
-      actions: write
-      contents: read
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          ref: ${{ inputs.source_commit || github.sha }}
-          sparse-checkout: |
-            package.json
-            scripts/ci-job-names.mjs
-            scripts/replaced-phone-runs.ts
-          sparse-checkout-cone-mode: false
-          fetch-depth: 1
-          persist-credentials: false
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 24
-      - name: Cancel this pull request's older phone runs
-        run: node scripts/replaced-phone-runs.ts cancel-older
-        env:
-          GITHUB_TOKEN: ${{ github.token }}
   native-phone:
     name: ${{ inputs.evidence_run != '' && 'Manual request · Phone checks not requested' || format(inputs.waits && '{0} · Wait-clock tests (iPhone and iPad)' || '{0} · Phone checks (iPhone and iPad)', inputs.trigger || 'Manual request') }}
     if: inputs.evidence_run == ''
     # Required: no override or local fallback. The fleet serves this label only
     # from the two vBoxx VMs; a missing mapping supplies no runnable destination.
     runs-on: ${{ fromJSON(vars.MAC_QUEUES).phone }}
-    # Reading the pull request's latest version and cancelling this run, if replaced, and
-    # main's newest passing check of every part for its part times (INF-827).
-    permissions:
-      actions: write
-      contents: read
-      pull-requests: read
     # Each run and attempt waits only for a free vBoxx place, not another run's group.
     concurrency:
       group: ${{ format('phone-{0}-{1}', github.run_id, github.run_attempt) }}
@@ -142,77 +99,19 @@ jobs:
           persist-credentials: false
       - name: Keep the Mac awake
         uses: ./.github/actions/keep-mac-awake
-      # INF-2125 P1: this job chooses its own parts, so no PC job stands before it. A pull
-      # request's version is its merge into the base branch, whose first parent is that
-      # branch, so two commits hold the whole comparison; an affected request compares with
-      # its base and reads the whole history.
+      # INF-2125 P1: this job chooses its own parts, so no PC job stands before it. An
+      # affected request compares with its base and reads the whole history; a call checks
+      # out its resolved source alone.
       - uses: actions/checkout@v4
         with:
           ref: ${{ inputs.source_commit || github.sha }}
           path: Application Support/firstmate
-          fetch-depth: ${{ github.event_name == 'pull_request' && '2' || github.event_name == 'workflow_dispatch' && '0' || '1' }}
+          fetch-depth: ${{ github.event_name == 'workflow_dispatch' && '0' || '1' }}
           persist-credentials: false
       # No package cache on a Mac (journeys.yml says why, INF-724).
       - uses: actions/setup-node@v4
         with:
           node-version: 24
-      # INF-827 (the captain's approved INF-828 plan): each part's minutes come from the newest
-      # passing check of main run on request, such as the nightly one. With none readable, the
-      # chooser runs every part the change reaches and says why.
-      # INF-1346: only a full gate writes part-times.json, so a passing check of some parts is
-      # passed over for the newest passing one whose phone-logs holds it.
-      - id: timing-run
-        name: Find the newest passing check of main with part times
-        if: github.event_name == 'pull_request'
-        continue-on-error: true
-        uses: actions/github-script@v7
-        with:
-          script: |
-            // The names in a zip archive, read from its central directory.
-            const names = (zip) => {
-              const end = zip.lastIndexOf(Buffer.from([0x50, 0x4b, 0x05, 0x06]));
-              if (end < 0) return [];
-              const found = [];
-              let at = zip.readUInt32LE(end + 16);
-              for (let entry = 0; entry < zip.readUInt16LE(end + 10) && zip.readUInt32LE(at) === 0x02014b50; entry++) {
-                const length = zip.readUInt16LE(at + 28);
-                found.push(zip.toString('utf8', at + 46, at + 46 + length));
-                at += 46 + length + zip.readUInt16LE(at + 30) + zip.readUInt16LE(at + 32);
-              }
-              return found;
-            };
-            const pages = github.paginate.iterator(github.rest.actions.listWorkflowRuns, {
-              ...context.repo, workflow_id: 'phone.yml', branch: 'main', event: 'workflow_dispatch', per_page: 100
-            });
-            for await (const { data } of pages) {
-              for (const run of data.filter(candidate => candidate.conclusion === 'success')) {
-                const { data: { artifacts } } = await github.rest.actions.listWorkflowRunArtifacts({
-                  ...context.repo, run_id: run.id, name: 'phone-logs'
-                });
-                const logs = artifacts.find(artifact => !artifact.expired);
-                if (!logs) continue;
-                const { data: zip } = await github.rest.actions.downloadArtifact({
-                  ...context.repo, artifact_id: logs.id, archive_format: 'zip'
-                });
-                if (!names(Buffer.from(zip)).includes('part-times.json')) continue;
-                core.setOutput('id', run.id);
-                await core.summary.addRaw(`Part times: [passing phone run ${run.id}](${run.html_url})\n`).write();
-                return;
-              }
-            }
-      - name: Read that check's part times
-        if: steps.timing-run.outputs.id
-        continue-on-error: true
-        uses: actions/download-artifact@v4
-        with:
-          name: phone-logs
-          run-id: ${{ steps.timing-run.outputs.id }}
-          github-token: ${{ github.token }}
-          path: ${{ runner.temp }}/phone-times
-      - id: select
-        name: Check the phone gate's inputs and choose its parts
-        if: github.event_name == 'pull_request'
-        run: node scripts/affected-phone.ts --base HEAD^1 --head HEAD --times "$RUNNER_TEMP/phone-times/part-times.json" --placement "$RUNNER_TEMP/phone-placement.json" >> "$GITHUB_OUTPUT"
       - id: request-select
         name: Choose affected parts for a crewmate request
         if: github.event_name == 'workflow_dispatch' && !inputs.source_commit && !env.PHONE_REPEAT_PARTS && !inputs.parts && !inputs.waits && inputs.evidence_run == ''
@@ -228,21 +127,20 @@ jobs:
         if: env.PHONE_REPEAT_PARTS != ''
         run: echo "parts=$PHONE_REPEAT_PARTS" >> "$GITHUB_OUTPUT"
       - name: Keep the chosen and left parts
-        if: (github.event_name == 'pull_request' || github.event_name == 'workflow_dispatch') && !env.PHONE_ROUND
+        if: github.event_name == 'workflow_dispatch' && !env.PHONE_ROUND
         uses: actions/upload-artifact@v4
         with:
           name: phone-placement
           path: ${{ runner.temp }}/phone-placement.json
           if-no-files-found: ignore
           retention-days: 14
-      # INF-2125 P1: with the chooser in this job, a job it keeps no part for ends here: a pull
-      # request whose phone inputs changed only the contract's version line, or an affected
-      # request that touched no part.
+      # INF-2125 P1: with the chooser in this job, a job it keeps no part for ends here: an
+      # affected request that touched no part.
       - id: scope
         name: Decide whether the device gate runs
         run: echo "gate=$GATE" >> "$GITHUB_OUTPUT"
         env:
-          GATE: ${{ steps.repeat-select.outputs.parts != '' || (github.event_name != 'pull_request' || steps.select.outputs.run == 'true') && (!inputs.affected || inputs.parts != '' || steps.request-select.outputs.parts != '') }}
+          GATE: ${{ steps.repeat-select.outputs.parts != '' || !inputs.affected || inputs.parts != '' || steps.request-select.outputs.parts != '' }}
       # Install directly in the placed guest, never in a nested local clone.
       - uses: pnpm/action-setup@v4
         if: ${{ steps.scope.outputs.gate == 'true' }}
@@ -259,8 +157,8 @@ jobs:
             INFINITARY_LOCAL_CODESIGN_DIR="$install_home/local-codesign" \
             pnpm install --frozen-lockfile --store-dir "$store"
       # INF-2125 piece 3: the Swift packages' repositories, which the package tests and the app build
-      # fetch. Only main saves them, since a pull request reads its base branch's saves and never another
-      # pull request's (INF-724); a changed lockfile restores main's newest and fetches the rest.
+      # fetch. Only main saves them, since a run on a branch reads main's saves and never another
+      # branch's (INF-724); a changed lockfile restores main's newest and fetches the rest.
       - id: swift-packages
         name: Restore main's Swift packages
         if: ${{ steps.scope.outputs.gate == 'true' }}
@@ -269,16 +167,6 @@ jobs:
           path: ${{ runner.temp }}/swift-packages
           key: swift-packages-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('Application Support/firstmate/ios/Infinitary/InfinitaryKit/Package.resolved', 'Application Support/firstmate/ios/Infinitary/Infinitary.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved') }}
           restore-keys: swift-packages-${{ runner.os }}-${{ runner.arch }}-
-      # No simulator exists before a device gate. A rerun of a replaced version, and the
-      # run of a pull request that merged or closed, has no newer run to cancel it, so it
-      # stops here (INF-895). A failed reading runs the gate.
-      - id: start
-        name: Stop before the gates if a newer push replaced this version or the pull request closed
-        if: steps.scope.outputs.gate == 'true'
-        continue-on-error: true
-        run: node scripts/replaced-phone-runs.ts stop-if-replaced
-        env:
-          GITHUB_TOKEN: ${{ github.token }}
       # test-phone owns a fresh HOME, real fixture and simulators, and disables signing.
       # It checks Swift trust, native recovery and the published client; pnpm check checks generated files.
       # INF-662: one gate checks and builds once, each device on one simulator it starts
@@ -286,8 +174,8 @@ jobs:
       # INF-2101: each vBoxx guest runs one device at a time, deleting its simulator
       # before starting the next. Main and release calls run every part; affected
       # requests use reached parts, with edited-test parts in two following jobs.
-      # INF-1343: on a pull request the first failed part stops the others, so a failing check frees
-      # its Mac at once; full branch selections also stop early. Main retains full discovery.
+      # INF-1343: a complete branch selection stops at its first failed part, so a failing check
+      # frees its Mac at once; a proper-subset request and the phone release keep full discovery.
       # INF-2052 (the captain's choice "Raise the limit for running the parts from 60 to 90 minutes"):
       # a full check with the Mac mini to itself passed in 59 minutes before INF-2052's other changes;
       # two full checks at once, one per virtual Mac, starved each other past their parts' 20-minute
@@ -295,22 +183,22 @@ jobs:
       - id: both
         name: Read and recover on iPhone and iPad
         timeout-minutes: 90
-        if: ${{ steps.scope.outputs.gate == 'true' && steps.start.outputs.replaced != 'true' }}
+        if: ${{ steps.scope.outputs.gate == 'true' }}
         run: |
           parts=(); for part in $PHONE_PARTS; do parts+=(--part "$part"); done
           if [ "$PHONE_FULL" = true ] && [ -z "$PHONE_REPEAT_PARTS" ]; then parts=(); fi
           node scripts/test-phone.ts --both "${parts[@]}" --simulators 1 --evidence "$RUNNER_TEMP/phone"
         env:
           PHONE_FULL: ${{ steps.request-select.outputs.full }}
-          PHONE_PARTS: ${{ steps.repeat-select.outputs.parts || inputs.parts || steps.select.outputs.parts || steps.request-select.outputs.parts }}
+          PHONE_PARTS: ${{ steps.repeat-select.outputs.parts || inputs.parts || steps.request-select.outputs.parts }}
           INFINITARY_PHONE_WAITS_ONLY: ${{ inputs.waits && '1' || '0' }}
           INFINITARY_STARVE_CHECK: ${{ inputs.starve && '1' || '0' }}
           INFINITARY_PERF_BUDGETS: ${{ inputs.perf && '1' || '0' }}
           PHONE_RECORDING: ${{ inputs.recording && '1' || '' }}
           INFINITARY_PHONE_GUEST_OBSERVER: ${{ inputs.guest_observer && '1' || '0' }}
-          INFINITARY_PHONE_STOP_EARLY: ${{ (github.event_name == 'pull_request' || steps.request-select.outputs.full == 'true' || steps.repeat-select.outputs.parts != '') && '1' || '0' }}
+          INFINITARY_PHONE_STOP_EARLY: ${{ (steps.request-select.outputs.full == 'true' || steps.repeat-select.outputs.parts != '') && '1' || '0' }}
           INFINITARY_PHONE_PACKAGE_CACHE: ${{ runner.temp }}/swift-packages
-      - name: Save the Swift packages for pull requests
+      - name: Save the Swift packages from main
         # The gate fetched them once it started, passing or failing; a save that fails never fails main's check.
         if: ${{ always() && github.ref == 'refs/heads/main' && steps.swift-packages.outputs.cache-hit != 'true' && (steps.both.outcome == 'success' || steps.both.outcome == 'failure') }}
         continue-on-error: true
@@ -320,7 +208,7 @@ jobs:
           key: ${{ steps.swift-packages.outputs.cache-primary-key }}
       # Keep diagnostics independently of screenshot-heavy xcresult bundles,
       # so a failed gate can be diagnosed within the workflow reader's limits.
-      # A full gate's part times ride along for the pull requests' chooser (INF-827).
+      # A full gate's part times ride along (part-times.json, scripts/test-phone.ts).
       # INF-2053: each part's live simulator log (tests/helpers/phoneLogs.ts) runs to tens of
       # megabytes, and a full gate's twelve took these logs past the app's 64 MiB artifact
       # download; they are kept whole in an artifact of their own below.
@@ -412,10 +300,6 @@ jobs:
     name: ${{ format('{0} · Edited phone tests (iPhone and iPad; round 2/3)', inputs.trigger || 'Manual request') }}
     if: needs.native-phone.outputs.repeat_parts != ''
     runs-on: ${{ fromJSON(vars.MAC_QUEUES).phone }}
-    permissions:
-      actions: write
-      contents: read
-      pull-requests: read
     concurrency:
       group: ${{ format('phone-{0}-{1}', github.run_id, github.run_attempt) }}
       queue: max
@@ -433,10 +317,6 @@ jobs:
     name: ${{ format('{0} · Edited phone tests (iPhone and iPad; round 3/3)', inputs.trigger || 'Manual request') }}
     if: needs.native-phone.outputs.repeat_parts != ''
     runs-on: ${{ fromJSON(vars.MAC_QUEUES).phone }}
-    permissions:
-      actions: write
-      contents: read
-      pull-requests: read
     concurrency:
       group: ${{ format('phone-{0}-{1}', github.run_id, github.run_attempt) }}
       queue: max

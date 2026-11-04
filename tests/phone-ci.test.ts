@@ -6,32 +6,39 @@ import { describe, expect, it } from "vitest";
 import { GENERATED_CONTRACT, phoneDecision } from "../scripts/affected-phone";
 import { legacyJobName } from "../scripts/ci-job-names.mjs";
 import { PHONE_PARTS } from "../scripts/phone-test-plan";
-import { DEVICE_GATES, NATIVE_JOB } from "../scripts/replaced-phone-runs";
 import { workflowString, workflowValue } from "./helpers/releaseWorkflows";
 
-// INF-79 / INF-136: the captain requested a Mac mini lane for phone/shared-contract PRs.
+// INF-79 / INF-136: the captain requested a Mac mini lane for phone changes; since INF-2139 it
+// runs on request and in the phone release, never on a pull request.
 const require = createRequire(import.meta.url);
 const yaml = createRequire(require.resolve("electron-builder/package.json"))("js-yaml");
 const workflow = yaml.load(readFileSync(".github/workflows/phone.yml", "utf8"));
+// The native job, and the one step that runs both device gates (INF-2101).
+const NATIVE_JOB = "native-phone";
+const BOTH = "Read and recover on iPhone and iPad";
 
-// The native job's condition with its gate step's (INF-2125 P1: the job chooses its own parts),
-// for the chooser's reading on a pull request, or for a run started on request, whose chooser
-// reads nothing.
+// The native job's condition with its gate step's (INF-2125 P1: the job chooses its own parts).
 function gateCondition(): string {
   const scope = (workflow.jobs["native-phone"].steps as { id?: string; env?: { GATE: string } }[])
     .find((step) => step.id === "scope")!
     .env!.GATE.replace(/^\$\{\{\s*|\s*\}\}$/g, "");
   return `(${workflow.jobs["native-phone"].if}) && (${scope})`;
 }
-function eligible(run: boolean | "", event = "pull_request", evidenceRun = ""): string {
+// Whether the device gate starts: a default request never consults the chooser (run ""); an
+// affected request keeps parts only when the chooser's decision runs, since
+// scripts/affected-phone.ts writes an empty parts list otherwise.
+function eligible(run: boolean | "", evidenceRun = ""): string {
   const steps = new data.Dictionary({
-    key: "select",
+    key: "request-select",
     value: new data.Dictionary({
       key: "outputs",
-      value: new data.Dictionary({ key: "run", value: new data.StringData(String(run)) }),
+      value: new data.Dictionary({ key: "parts", value: new data.StringData(run ? "rest" : "") }),
     }),
   });
-  const github = new data.Dictionary({ key: "event_name", value: new data.StringData(event) });
+  const github = new data.Dictionary({
+    key: "event_name",
+    value: new data.StringData("workflow_dispatch"),
+  });
   const ast = new Parser(
     new Lexer(`!!(${gateCondition()})`).lex().tokens,
     ["steps", "github", "inputs", "env"],
@@ -45,61 +52,17 @@ function eligible(run: boolean | "", event = "pull_request", evidenceRun = ""): 
       { key: "github", value: github },
       {
         key: "inputs",
-        value: new data.Dictionary({
-          key: "evidence_run",
-          value: new data.StringData(evidenceRun),
-        }),
+        value: new data.Dictionary(
+          { key: "evidence_run", value: new data.StringData(evidenceRun) },
+          { key: "affected", value: new data.BooleanData(run !== "") },
+          { key: "parts", value: new data.StringData("") },
+        ),
       },
     ),
   )
     .evaluate()
     .coerceString();
 }
-
-// INF-487: a device gate's actual condition, given the iPhone gate's outcome and
-// the reading of the replacement check right before the gate, with the virtual Mac
-// switch off.
-function gateStarts(gate: string, iphone: string, replaced: string): string {
-  const steps = workflow.jobs[NATIVE_JOB].steps;
-  const at = steps.findIndex((item: { name: string }) => item.name === gate);
-  const expression = steps[at].if.replace(/^\$\{\{\s*|\s*\}\}$/g, "");
-  const cancelled = { name: "cancelled", minArgs: 0, maxArgs: 0 };
-  const context = new data.Dictionary(
-    {
-      key: "iphone",
-      value: new data.Dictionary({ key: "outcome", value: new data.StringData(iphone) }),
-    },
-    {
-      key: steps[at - 1].id,
-      value: new data.Dictionary({
-        key: "outputs",
-        value: new data.Dictionary({ key: "replaced", value: new data.StringData(replaced) }),
-      }),
-    },
-    // The chooser kept parts (gateCondition).
-    {
-      key: "scope",
-      value: new data.Dictionary({
-        key: "outputs",
-        value: new data.Dictionary({ key: "gate", value: new data.StringData("true") }),
-      }),
-    },
-  );
-  const ast = new Parser(
-    new Lexer(expression).lex().tokens,
-    ["steps", "vars"],
-    [cancelled],
-  ).parse();
-  const functions = new Map([
-    ["cancelled", { ...cancelled, call: () => new data.BooleanData(false) }],
-  ]);
-  const contexts = new data.Dictionary(
-    { key: "steps", value: context },
-    { key: "vars", value: new data.Dictionary() },
-  );
-  return new Evaluator(ast, contexts, functions).evaluate().coerceString();
-}
-const [IPHONE, IPAD, BOTH, LEGACY_BOTH] = DEVICE_GATES as [string, string, string, string];
 
 // INF-2202: old switch values must no longer redirect, suppress setup or create clones.
 const OFF = "";
@@ -169,16 +132,15 @@ function condition(step: Step): string {
     : `success() && (${written})`;
 }
 
-const PULL_REQUEST = { event_name: "pull_request", ref: "refs/pull/1/merge" };
+const BRANCH_REQUEST = { event_name: "workflow_dispatch", ref: "refs/heads/fm/task-1" };
 // The native job's steps that run, in order, for a value of the switch, with every
-// step succeeding (or the job failed, when `failed`) and each replacement check reading `replaced`;
-// `outputs` gives a step's other outputs by its id.
+// step succeeding (or the job failed, when `failed`); `outputs` gives a step's other
+// outputs by its id.
 function stepsThatRun(
   virtualMac: string,
-  replaced = "false",
   failed = false,
   inputs: Plain = {},
-  github: Plain = PULL_REQUEST,
+  github: Plain = BRANCH_REQUEST,
   outputs: Record<string, Plain> = {},
 ): Step[] {
   const seen: Plain = {};
@@ -189,34 +151,31 @@ function stepsThatRun(
       { env: {}, steps: seen, vars: { PHONE_VIRTUAL_MAC: virtualMac }, inputs, github },
       { failed },
     );
-    const reading = runs && step.run?.includes("stop-if-replaced") ? replaced : "";
     // The chooser kept parts (gateCondition).
     const gate = runs && step.id === "scope" ? "true" : "";
     if (step.id)
       seen[step.id] = {
         outcome: runs ? "success" : "skipped",
-        outputs: { replaced: reading, gate, ...(runs ? outputs[step.id] : {}) },
+        outputs: { gate, ...(runs ? outputs[step.id] : {}) },
       };
     if (runs) ran.push(step);
   }
   return ran;
 }
 const RESULTS = "Keep native results and connection readings";
-const SAVE_PACKAGES = "Save the Swift packages for pull requests";
-// The chooser's steps a pull request skips: the simulated search for main's part times finds no
-// run, and only a crewmate's request chooses affected parts.
-const SKIPPED_CHOOSER_STEPS = [
-  "Read that check's part times",
-  "Choose affected parts for a crewmate request",
+const SAVE_PACKAGES = "Save the Swift packages from main";
+// The steps a plain branch request skips: no edited-part pass reuses a selection or keeps its
+// own evidence.
+const SKIPPED_STEPS = [
   "Reuse the ordinary pass's edited-part selection",
   "Keep each additional pass's evidence",
   "Keep each additional pass's simulator logs",
   "Keep each additional pass's failure results",
 ];
 const names = (steps: Step[]) => steps.map((step) => step.name ?? step.uses ?? "");
-const isGate = (step: Step) => DEVICE_GATES.includes(step.name ?? "");
+const isGate = (step: Step) => step.name === BOTH;
 
-describe("the native pull-request gate", () => {
+describe("the native gate on an affected request", () => {
   it.each([
     "ios/Infinitary/InfinitaryApp/PhoneModel.swift",
     "scripts/generate-phone-contract.ts",
@@ -251,12 +210,10 @@ describe("the native pull-request gate", () => {
     expect(eligible(phoneDecision([path]).run)).toBe("true");
   });
   // INF-827 (the captain's "skip changes to unused setup"): the device gates never run the
-  // chooser, the replacement script or the local test home, nor the virtual Mac scripts while
-  // the switch is off.
+  // chooser or the local test home, nor the virtual Mac scripts while the switch is off.
   it.each([
     "scripts/phone-test-home.ts",
     "scripts/affected-phone.ts",
-    "scripts/replaced-phone-runs.ts",
     "scripts/virtual-mac/phone.sh",
     "scripts/virtual-mac/phone-job.sh",
     "scripts/virtual-mac/vm.sh",
@@ -323,6 +280,7 @@ describe("the native pull-request gate", () => {
   });
   it("gives every phone run and attempt its own group, without cancelling work (INF-2202)", () => {
     const journeys = yaml.load(readFileSync(".github/workflows/journeys.yml", "utf8"));
+    expect(journeys.concurrency).toBeUndefined();
     expect(journeys.jobs["affected-journeys"].concurrency).toBeUndefined();
     const runs = [
       { ref: "refs/pull/79/merge", run_id: "18800000001", run_attempt: "1" },
@@ -340,8 +298,6 @@ describe("the native pull-request gate", () => {
         }),
       );
       expect(new Set(groups).size).toBe(runs.length);
-      for (const github of runs)
-        expect(groups).not.toContain(workflowString(journeys.concurrency.group, { github }));
       expect(native.queue).toBe("max");
       expect(native["cancel-in-progress"]).toBe(false);
     }
@@ -356,24 +312,14 @@ describe("the native pull-request gate", () => {
     expect(testflight.queue).toBe("max");
     expect(testflight["cancel-in-progress"]).toBe(false);
   });
-  it("never holds a newer version behind its pull request's older run", () => {
-    // INF-487: a run-level group kept PR #135's current version waiting for hours.
-    expect(workflow.concurrency).toBeUndefined();
-    const cancel = workflow.jobs["cancel-replaced"];
-    expect(cancel.needs).toBeUndefined();
-    expect(cancel.if).toBeUndefined();
-    expect(cancel.steps.at(-1).run).toBe("node scripts/replaced-phone-runs.ts cancel-older");
-  });
-  it("names the native job and its simulator step as the replacement script reads them", () => {
+  it("runs both devices in one gate step", () => {
     const gates = workflow.jobs[NATIVE_JOB].steps
       .filter((step: { run?: string }) =>
         /scripts\/test-phone\.ts|scripts\/virtual-mac\/phone\.sh gate/.test(step.run ?? ""),
       )
       .map((step: { name: string }) => step.name);
-    // INF-2101: one gate for both devices without claiming overlap. Older runs retain
-    // the per-device names or the combined "at once" name, and still own their cleanup.
+    // INF-2101: one gate for both devices without claiming overlap.
     expect(gates).toEqual([BOTH]);
-    expect(DEVICE_GATES).toEqual([IPHONE, IPAD, BOTH, LEGACY_BOTH]);
   });
   // INF-1083 / INF-1072: the gate, not just its lease, ends on every route. INF-2052: the captain raised its
   // limit from 60 to 90 minutes for every part on both devices; alone, a full check passed in 59.
@@ -384,18 +330,6 @@ describe("the native pull-request gate", () => {
       expect(gates[0]?.["timeout-minutes"]).toBe(90);
     }
     expect(workflow.jobs[NATIVE_JOB]["timeout-minutes"]).toBe(165);
-  });
-  it("reads the pull request's latest version right before the device gate", () => {
-    const steps = workflow.jobs[NATIVE_JOB].steps;
-    const at = steps.findIndex((step: { name: string }) => step.name === BOTH);
-    expect(steps[at - 1].run).toBe("node scripts/replaced-phone-runs.ts stop-if-replaced");
-  });
-  it("skips the device gate when a newer push replaced this version, a manual rerun included", () => {
-    // INF-487: a rerun of a replaced version has no newer run to cancel it while it waits.
-    expect(gateStarts(BOTH, "", "false")).toBe("true");
-    // The replacement check failed to read: the gate still runs.
-    expect(gateStarts(BOTH, "", "")).toBe("true");
-    expect(gateStarts(BOTH, "", "true")).toBe("false");
   });
   it("runs only on request or a reusable call, never on a pull request", () => {
     // INF-2139 (captain: "let's pull journeys and phone checks off PRs now"); the phone
@@ -449,14 +383,13 @@ describe("the native pull-request gate", () => {
       const ran = stepsThatRun(route);
       expect(names(ran)).toEqual(
         all.filter(
-          (name) =>
-            name !== RESULTS && name !== SAVE_PACKAGES && !SKIPPED_CHOOSER_STEPS.includes(name),
+          (name) => name !== RESULTS && name !== SAVE_PACKAGES && !SKIPPED_STEPS.includes(name),
         ),
       );
       expect(names(ran)).toContain("Install without reading this Mac's signing material");
       expect(ran.filter(isGate)).toHaveLength(1);
       expect(ran.find(isGate)?.env?.PHONE_PARTS).toBe(
-        "${{ steps.repeat-select.outputs.parts || inputs.parts || steps.select.outputs.parts || steps.request-select.outputs.parts }}",
+        "${{ steps.repeat-select.outputs.parts || inputs.parts || steps.request-select.outputs.parts }}",
       );
     }
     // The shell execution and both-device arguments belong to release-workflows.test.ts.
@@ -493,32 +426,19 @@ describe("the native pull-request gate", () => {
       for (const mapping of ["", "not json"]) expect(() => resolve(mapping)).toThrow();
     }
   });
-  it("never starts or deletes a fixed clone, including replaced and failed checks (INF-2202)", () => {
+  it("never starts or deletes a fixed clone, failed checks included (INF-2202)", () => {
     for (const mode of [OFF, IN_TURN, TOGETHER])
       for (const failed of [false, true]) {
-        const ran = names(stepsThatRun(mode, "true", failed));
+        const ran = names(stepsThatRun(mode, failed));
         expect(ran.filter((name) => VIRTUAL_MAC_STEPS.includes(name))).toEqual([]);
-        expect(ran.filter((name) => DEVICE_GATES.includes(name))).toEqual([]);
         expect(ran).toContain("Keep the small native command logs");
       }
-  });
-  it("reads the latest version right before every device gate, whichever way the switch is set", () => {
-    // INF-487: no simulator exists before a gate; the virtual Mac's start creates none.
-    for (const virtualMac of [OFF, IN_TURN, TOGETHER]) {
-      const ran = stepsThatRun(virtualMac);
-      const gates = ran.filter(isGate);
-      expect(gates.length).toBeGreaterThan(0);
-      for (const gate of gates)
-        expect(ran[ran.indexOf(gate) - 1]?.run).toBe(
-          "node scripts/replaced-phone-runs.ts stop-if-replaced",
-        );
-    }
   });
 });
 
 // INF-2125 piece 3 (the captain's "i want to get to a state where each PR's phone check finishes very
-// quickly", approved plan: "reuse main's SwiftPM package cache"): a pull request reads the Swift packages
-// main saved, and only main saves them, since a pull request's own save no other run reads (INF-724).
+// quickly", approved plan: "reuse main's SwiftPM package cache"): a run on a branch reads the Swift
+// packages main saved, and only main saves them, since a branch's own save no other run reads (INF-724).
 describe("the phone check's Swift packages", () => {
   const steps = workflow.jobs[NATIVE_JOB].steps as (Step & { with?: Plain })[];
   const restore = steps.find((step) => step.id === "swift-packages")!;
@@ -526,11 +446,7 @@ describe("the phone check's Swift packages", () => {
   const MAIN = { event_name: "workflow_dispatch", ref: "refs/heads/main" };
   const BRANCH = { event_name: "workflow_dispatch", ref: "refs/heads/fm/task-1" };
   const ran = (github: Plain, hit = "", virtualMac = OFF) =>
-    names(
-      stepsThatRun(virtualMac, "false", false, {}, github, {
-        "swift-packages": { "cache-hit": hit },
-      }),
-    );
+    names(stepsThatRun(virtualMac, false, {}, github, { "swift-packages": { "cache-hit": hit } }));
   it("restores into the folder the gate reads, and saves that folder under the restore's own key", () => {
     const gate = steps.find(isGate)!;
     expect(gate.env?.INFINITARY_PHONE_PACKAGE_CACHE).toBe(restore.with?.path);
@@ -539,8 +455,7 @@ describe("the phone check's Swift packages", () => {
     expect(String(restore.with?.key).startsWith(String(restore.with?.["restore-keys"]))).toBe(true);
   });
   it("restores on every route on this Mac, and saves only from main when nothing matched", () => {
-    for (const github of [PULL_REQUEST, MAIN, BRANCH]) expect(ran(github)).toContain(restore.name);
-    expect(ran(PULL_REQUEST)).not.toContain(SAVE_PACKAGES);
+    for (const github of [MAIN, BRANCH]) expect(ran(github)).toContain(restore.name);
     expect(ran(BRANCH)).not.toContain(SAVE_PACKAGES);
     expect(ran(MAIN)).toContain(SAVE_PACKAGES);
     // A failed gate fetched the packages too; an exact match has nothing new to save.
@@ -556,31 +471,38 @@ describe("the phone check's Swift packages", () => {
       ),
     ).toBe(true);
     expect(ran(MAIN, "true")).not.toContain(SAVE_PACKAGES);
-    // A replaced version never started its gate, so it fetched nothing.
-    expect(names(stepsThatRun(OFF, "true", false, {}, MAIN))).not.toContain(SAVE_PACKAGES);
   });
   it("a stale clone switch cannot suppress the placed guest's package cache (INF-2202)", () => {
-    for (const github of [PULL_REQUEST, MAIN])
-      expect(ran(github, "", TOGETHER)).toEqual(ran(github));
+    for (const github of [BRANCH, MAIN]) expect(ran(github, "", TOGETHER)).toEqual(ran(github));
   });
 });
 
 // INF-1343 (the captain's "Stop a failing pull request check at its first failed part" and
-// "Upload the 530 MB phone results only when a check fails").
+// "Upload the 530 MB phone results only when a check fails"); since INF-2139 the early stop
+// belongs to a complete branch selection and its edited-part passes.
 describe("a failing phone check", () => {
-  it("stops at its first failed part on a pull request, and runs every part on request", () => {
+  it("stops at its first failed part only for a complete selection or an edited-part pass", () => {
     const gate = stepsThatRun(OFF).find(isGate) as Step;
     const stopEarly = gate.env?.INFINITARY_PHONE_STOP_EARLY?.replace(/^\$\{\{\s*|\s*\}\}$/g, "");
-    for (const [event, value] of [
-      ["pull_request", "1"],
-      ["workflow_dispatch", "0"],
+    for (const [full, repeat, value] of [
+      ["true", "", "1"],
+      ["false", "", "0"],
+      ["", "join", "1"],
+      ["", "", "0"],
     ] as const)
-      expect(holds(`(${stopEarly}) == '${value}'`, { github: { event_name: event } })).toBe(true);
+      expect(
+        holds(`(${stopEarly}) == '${value}'`, {
+          steps: {
+            "request-select": { outputs: { full } },
+            "repeat-select": { outputs: { parts: repeat } },
+          },
+        }),
+      ).toBe(true);
   });
   it("keeps the whole results only when the job failed or recorded, and its logs and pictures always", () => {
     for (const virtualMac of [OFF, TOGETHER]) {
       const kept = (failed: boolean, recording = "") =>
-        names(stepsThatRun(virtualMac, "false", failed, { recording }));
+        names(stepsThatRun(virtualMac, failed, { recording }));
       expect(kept(false)).not.toContain(RESULTS);
       expect(kept(true)).toContain(RESULTS);
       // INF-1066: the evidence export reads a recording run's clips from its results.
@@ -652,149 +574,22 @@ describe("a failing phone check", () => {
 // INF-663 (captain: "add a nightly phone check" on main): a run started on request checks
 // both devices whatever changed, and every gate's failure reaches the run.
 describe("the phone check on request", () => {
-  const ON_REQUEST = "workflow_dispatch";
-  it("runs the native job whatever changed, while a pull request still asks the chooser", () => {
-    const select = workflow.jobs[NATIVE_JOB].steps.find(
-      (step: Step) => step.id === "select",
-    ) as Step;
-    expect(holds(condition(select), { github: { event_name: ON_REQUEST } })).toBe(false);
-    expect(holds(condition(select), { github: { event_name: "pull_request" } })).toBe(true);
-    // The skipped chooser leaves its reading empty.
-    expect(eligible("", ON_REQUEST)).toBe("true");
-    expect(eligible(false, "pull_request")).toBe("false");
+  it("runs every part on a default request, and what the chooser keeps on an affected one", () => {
+    expect(eligible("")).toBe("true");
+    expect(eligible(true)).toBe("true");
+    expect(eligible(false)).toBe("false");
   });
   it("starts the device gate for both devices", () => {
-    // The replacement script answers replaced=false with no pull request (replaced-phone-runs.test.ts).
     // INF-662: one gate runs both devices, and neither stops the other (virtual-mac-phone.test.ts).
     for (const virtualMac of [OFF, IN_TURN, TOGETHER])
-      expect(names(stepsThatRun(virtualMac, "false").filter(isGate))).toEqual([BOTH]);
+      expect(names(stepsThatRun(virtualMac).filter(isGate))).toEqual([BOTH]);
   });
 });
 
 // INF-1066: extracting a saved native scene capture uses Xcode, but starts no new device gate.
 it("exports existing native evidence without starting simulators", () => {
-  expect(eligible("", "workflow_dispatch", "40023566877")).toBe("false");
-  expect(eligible("", "workflow_dispatch")).toBe("true");
-});
-
-// INF-1346: on 2026-10-25 a passing check of main's cards part alone became the newest passing
-// check, and every pull request's chooser read no part times from it and ran every part. The
-// step's own script runs against GitHub's answers and the runs' real phone-logs archives.
-describe("the chooser's part times", () => {
-  type Run = { id: number; conclusion: string | null; html_url: string };
-  type Artifact = { id: number; name: string; expired: boolean; zip?: string };
-  const FIXTURES = "tests/fixtures/phone-runs/2026-10-25";
-  const readings = JSON.parse(readFileSync(`${FIXTURES}/runs.json`, "utf8")) as {
-    runs: Run[];
-    artifacts: Record<string, Artifact[]>;
-  };
-  const script = workflow.jobs[NATIVE_JOB].steps.find(
-    (step: Step & { with?: { script?: string } }) => step.id === "timing-run",
-  )?.with?.script as string;
-
-  async function choose(runs: Run[], artifacts = readings.artifacts) {
-    const outputs: Record<string, string> = {};
-    const summaries: string[] = [];
-    const downloaded: number[] = [];
-    const summary = {
-      addRaw: (text: string) => {
-        summaries.push(text);
-        return summary;
-      },
-      write: async () => {},
-    };
-    const repo = { owner: "infinitary-labs", repo: "infinitary" };
-    // GitHub as it answered: main's runs on request, by page, those that passed if asked.
-    const listWorkflowRuns = async ({
-      per_page = 30,
-      page = 1,
-      status,
-      ...query
-    }: Record<string, unknown>) => {
-      expect(query).toEqual({
-        ...repo,
-        workflow_id: "phone.yml",
-        branch: "main",
-        event: "workflow_dispatch",
-      });
-      const listed = runs.filter((run) => !status || run.conclusion === status);
-      const from = (Number(page) - 1) * Number(per_page);
-      return {
-        data: {
-          total_count: listed.length,
-          workflow_runs: listed.slice(from, from + Number(per_page)),
-        },
-      };
-    };
-    const listWorkflowRunArtifacts = async ({
-      run_id,
-      name,
-    }: {
-      run_id: number;
-      name: string;
-    }) => ({
-      data: {
-        artifacts: (artifacts[String(run_id)] ?? []).filter((artifact) => artifact.name === name),
-      },
-    });
-    const downloadArtifact = async ({ artifact_id }: { artifact_id: number }) => {
-      downloaded.push(artifact_id);
-      const artifact = Object.values(artifacts)
-        .flat()
-        .find((candidate) => candidate.id === artifact_id);
-      const zip = readFileSync(`${FIXTURES}/${artifact?.zip}`);
-      // Octokit hands an archive over as an ArrayBuffer.
-      return { data: zip.buffer.slice(zip.byteOffset, zip.byteOffset + zip.byteLength) };
-    };
-    const iterator = async function* (
-      method: typeof listWorkflowRuns,
-      parameters: Record<string, unknown>,
-    ) {
-      for (let page = 1; ; page++) {
-        const { data } = await method({ ...parameters, page });
-        if (data.workflow_runs.length === 0) return;
-        yield { data: data.workflow_runs };
-      }
-    };
-    const AsyncFunction = Object.getPrototypeOf(async () => {}).constructor;
-    await new AsyncFunction("core", "github", "context", script)(
-      { setOutput: (name: string, value: string) => (outputs[name] = String(value)), summary },
-      {
-        rest: { actions: { listWorkflowRuns, listWorkflowRunArtifacts, downloadArtifact } },
-        paginate: { iterator },
-      },
-      { repo },
-    );
-    return { outputs, summaries, downloaded };
-  }
-
-  it("passes over a check of some parts for the newest passing check with part times", async () => {
-    const [cards, full] = readings.runs;
-    const found = await choose(readings.runs);
-    expect(found.outputs.id).toBe(String(full?.id));
-    expect(found.summaries.join("")).toContain(full?.html_url);
-    // It read the cards check's logs, found no part times there, and read no older run's.
-    expect(found.downloaded).toEqual([
-      readings.artifacts[String(cards?.id)]?.find((artifact) => artifact.name === "phone-logs")?.id,
-      readings.artifacts[String(full?.id)]?.find((artifact) => artifact.name === "phone-logs")?.id,
-    ]);
-  });
-
-  it("skips a failed run and expired logs, and names no run when none has part times", async () => {
-    const [cards, full] = readings.runs as [Run, Run];
-    const failed = { ...full, conclusion: "failure" };
-    expect((await choose([cards, failed])).outputs.id).toBeUndefined();
-    const expired = {
-      ...readings.artifacts,
-      [String(full.id)]: (readings.artifacts[String(full.id)] ?? []).map((artifact) => ({
-        ...artifact,
-        expired: true,
-      })),
-    };
-    const reading = await choose([cards, full], expired);
-    expect(reading.outputs.id).toBeUndefined();
-    expect(reading.summaries).toEqual([]);
-  });
+  expect(eligible("", "40023566877")).toBe("false");
+  expect(eligible("")).toBe("true");
 });
 
 // INF-1258: the captain picked touched parts only for crewmate requests, not PR/nightly gates.
@@ -809,7 +604,6 @@ describe("affected request routing", () => {
       // verification request, even when they name the whole live part table.
       ["workflow_dispatch", true, "cards", false],
       ["workflow_dispatch", true, PHONE_PARTS.map((part) => part.name).join(" "), false],
-      ["pull_request", false, "", false],
     ] as const) {
       // Boolean inputs must remain BooleanData, not the truthy string "false".
       expect(
@@ -853,10 +647,7 @@ describe("affected request routing", () => {
         holds(gateCondition(), {
           github: { event_name: "workflow_dispatch" },
           inputs: { affected, parts },
-          steps: {
-            select: { outputs: { run: "" } },
-            "request-select": { outputs: { parts: chosen } },
-          },
+          steps: { "request-select": { outputs: { parts: chosen } } },
         }),
       ).toBe(expected);
   });

@@ -151,6 +151,12 @@ on:
 # one. Called by a release, verify belongs to that run alone and nothing
 # outside it cancels it - a rehearsal of the same commit must never cancel a
 # live release. (In a called workflow, github.workflow is the caller's name.)
+# The Mac installer lane reads its caller's run through this token
+# (mac-installer.yml, actions: read); nothing here writes.
+permissions:
+  contents: read
+  actions: read
+
 concurrency:
   group: verify-${{ github.workflow == 'verify' && format('{0}-{1}', inputs.ref || github.ref, inputs.profile || 'stable') || github.run_id }}
   cancel-in-progress: ${{ github.workflow == 'verify' }}
@@ -159,7 +165,7 @@ jobs:
   # Each job's name leads with the caller's trigger (scripts/ci-job-names.mjs).
   request:
     name: ${{ format('{0} · Check verification request', inputs.trigger || 'Manual request') }}
-    runs-on: ${{ inputs.hosted && 'ubuntu-24.04' || fromJSON(vars.LINUX_QUEUES || '{}').light || vars.LINUX_RUNNER || 'ubuntu-latest' }}
+    runs-on: ${{ inputs.hosted && 'ubuntu-24.04' || fromJSON(vars.LINUX_QUEUES || '{}').light || vars.LINUX_RUNNER || 'ubuntu-24.04' }}
     steps:
       - name: Validate and record the manual request
         env:
@@ -228,7 +234,7 @@ jobs:
       fail-fast: false
       matrix:
         lane: ${{ fromJSON(inputs.part == 'journeys' && '["mac"]' || '["linux-checks","mac"]') }}
-    runs-on: ${{ matrix.lane == 'mac' && (inputs.mac_runner || fromJSON(vars.MAC_QUEUES || '{}').check || vars.MAC_RUNNER || 'macos-15') || inputs.hosted && 'ubuntu-24.04' || fromJSON(vars.LINUX_QUEUES || '{}').checks || vars.LINUX_RUNNER || 'ubuntu-latest' }}
+    runs-on: ${{ matrix.lane == 'mac' && (inputs.mac_runner || fromJSON(vars.MAC_QUEUES || '{}').check || vars.MAC_RUNNER || 'macos-15') || inputs.hosted && 'ubuntu-24.04' || fromJSON(vars.LINUX_QUEUES || '{}').checks || vars.LINUX_RUNNER || 'ubuntu-24.04' }}
     # Every crewmate works under "Application Support". The gate here does
     # too, so a check that only fails from a path with a space fails here
     # instead of only in a working copy (FI3-152).

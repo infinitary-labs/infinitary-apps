@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "ci-workflow-audit",
+      "reason": "CI work: the project's own workflows are tidied for consistency (one hosted Linux image, one trigger path, token permissions, values through the environment, and the pull-request-only paths nothing started any more removed), with no change to the app."
+    }
+  ]
+}

@@ -1,16 +1,16 @@
 name: Source desktop journeys
 
 # The app built from source on a desktop (docs/testing.md, "The Linux source
-# desktop"): a pull request's starter journeys (journeys.yml), and with suite
-# full every journey in the suite, split across Linux machines, before every
-# alpha and on demand (verify.yml). The run-alone pass runs with the proof of
-# edited journeys (suite affected, scripts/journey-runs.ts), never in the full
-# suite (INF-2340), and over every spec file only on request (suite alone). Packaging comes later. Every job runs on
-# the label the repository variable LINUX_RUNNER names, as ci.yml's do, and
-# on GitHub's hosted Ubuntu when it is unset; the PC's job image supplies its
-# own pnpm store, so only hosted jobs restore setup-node's cache. A publishing
-# release passes its own Linux label as runner (docs/testing.md, "A release's
-# Linux label").
+# desktop"): with suite full every journey in the suite, split across Linux
+# machines, before every alpha and on demand (verify.yml); with suite affected
+# the journeys a change reaches (journeys.yml's request, ci.yml's critical
+# path). The run-alone pass runs with the proof of edited journeys (suite
+# affected, scripts/journey-runs.ts), never in the full suite (INF-2340), and
+# over every spec file only on request (suite alone). Packaging comes later.
+# Every job runs on the label the repository variable LINUX_RUNNER names, as
+# ci.yml's do, and on GitHub's hosted ubuntu-24.04 when it is unset, or on
+# GitHub's hosted machines when the caller asks (hosted); the PC's job image
+# supplies its own pnpm store, so only hosted jobs restore setup-node's cache.
 on:
   # Linux-only full-suite or fresh-state proof, without Mac or packaging work.
   workflow_dispatch:
@@ -72,22 +72,24 @@ on:
         type: string
         default: parallel
       suite:
-        description: starter (two lanes), affected (files in one lane, with edited files' run-alone pass), full (eight journey shards), or alone (four run-alone shards)
-        required: false
+        description: affected (files in one lane, with edited files' run-alone pass), full (eight journey shards), or alone (four run-alone shards)
+        required: true
         type: string
-        default: starter
+
+permissions:
+  contents: read
 
 jobs:
   source-desktop:
-    # Starters split by lane. Affected files keep their lane; the full suite is the parallel
-    # lanes and the serial desktop lane, each split four ways, one job a
+    # Affected files keep their lane; the full suite is the parallel lanes
+    # and the serial desktop lane, each split four ways, one job a
     # share, so a failure names its own part of the suite; the desktop lane
     # still runs alone on its machine (tests/e2e/lanes.ts). A requested
     # run-alone pass over every spec file splits four ways (docs/testing.md
     # "Each test owns its prerequisites"), each share on a machine of its own.
     # The name leads with the caller's trigger (scripts/ci-job-names.mjs); a
     # desktop lane runs one test at a time, so it reads as a serial group.
-    name: ${{ inputs.suite == 'alone' && format('{0} · Fresh-start app journeys (Linux; group {1}/4)', inputs.trigger || 'Manual request', matrix.shard) || inputs.suite == 'full' && format('{0} · App journeys (Linux; {1} group {2}/4)', inputs.trigger || 'Manual request', (matrix.lane == 'desktop' && 'serial' || matrix.lane), matrix.shard) || inputs.suite == 'affected' && format('{0} · Selected app journeys (Linux; {1}{2})', inputs.trigger || 'Manual request', (matrix.lane == 'desktop' && 'serial' || matrix.lane), inputs.part && format('; part {0}', inputs.part) || '') || format('{0} · Starter app journeys (Linux; {1})', inputs.trigger || 'Manual request', (matrix.lane == 'desktop' && 'serial' || matrix.lane)) }}
+    name: ${{ inputs.suite == 'alone' && format('{0} · Fresh-start app journeys (Linux; group {1}/4)', inputs.trigger || 'Manual request', matrix.shard) || inputs.suite == 'full' && format('{0} · App journeys (Linux; {1} group {2}/4)', inputs.trigger || 'Manual request', (matrix.lane == 'desktop' && 'serial' || matrix.lane), matrix.shard) || format('{0} · Selected app journeys (Linux; {1}{2})', inputs.trigger || 'Manual request', (matrix.lane == 'desktop' && 'serial' || matrix.lane), inputs.part && format('; part {0}', inputs.part) || '') }}
     strategy:
       fail-fast: false
       matrix:
@@ -136,7 +138,6 @@ jobs:
           cache: ${{ runner.environment == 'github-hosted' && 'pnpm' || '' }}
           cache-dependency-path: Application Support/firstmate/pnpm-lock.yaml
       - name: Install virtual display and desktop libraries
-        if: runner.os == 'Linux'
         timeout-minutes: 10
         run: sudo apt-get update && sudo apt-get install -y xvfb xdotool libgtk-3-0 libnss3 libasound2t64 libgbm1
       - uses: ./Application Support/firstmate/.github/actions/node-headers
@@ -148,7 +149,6 @@ jobs:
       # sandbox helper. Do that only in this disposable Linux job: a hosted
       # machine, or the PC's fresh virtual machine deleted after the job.
       - name: Configure Electron's sandbox helper
-        if: runner.os == 'Linux'
         run: |
           sandbox="$(node -p 'require("node:path").join(require("node:path").dirname(require("electron")), "chrome-sandbox")')"
           test -f "$sandbox"
@@ -163,24 +163,13 @@ jobs:
           rm "$sandbox"
           test ! -e "$sandbox"
           echo "CHROME_DEVEL_SANDBOX=$helper" >> "$GITHUB_ENV"
-      - name: Choose every resize caller on Mac when its helper changes
-        if: runner.os != 'Linux'
-        run: |
-          : > "$RUNNER_TEMP/resize-callers.txt"
-          if [ -n "$PR_BASE" ] && ! git diff --quiet "$PR_BASE" HEAD -- tests/e2e/layout.ts; then
-            node scripts/journey-callers.ts tests/e2e/layout.ts resizeWindow,minimumWindowSize > "$RUNNER_TEMP/resize-callers.txt"
-            cat "$RUNNER_TEMP/resize-callers.txt"
-          fi
-        env:
-          PR_BASE: ${{ github.event.pull_request.base.sha }}
       - run: pnpm exec playwright install ffmpeg
       - run: pnpm build
-      # Every Linux starter includes devices.spec.ts: device regressions must
-      # surface before merge, even without a changed hook or copied sentence.
-      # Linux also runs the keyboard journeys, pressing Ctrl where a Mac
-      # presses Command (docs/keyboard.md, "Keys on each system"), the task
-      # browser's journeys, and the voice journeys with the stand-in model,
-      # holding right Ctrl (docs/architecture.md section 8, "Where speech runs").
+      # Linux runs every journey it can (docs/testing.md, "Tests that need a
+      # Mac"): the keyboard journeys press Ctrl where a Mac presses Command
+      # (docs/keyboard.md, "Keys on each system"), and the voice journeys hold
+      # right Ctrl with the stand-in model (docs/architecture.md section 8,
+      # "Where speech runs").
       # The full suite is every journey: a parallel job runs its share of the
       # styles, renderer and application lanes, a desktop job its share of
       # the serial desktop lane, each with --no-deps so neither lane waits
@@ -199,10 +188,10 @@ jobs:
       # requested run-alone job runs each later test of every spec file that
       # shares one app by itself (scripts/e2e-alone.ts); the Mac-only ones
       # skip here and run alone in journeys.yml's Mac job.
-      - name: Run the journeys with the sandbox on, and affected resize callers on Mac
+      - name: Run the journeys with the sandbox on
         id: journeys
-        # A pull request's affected journeys end at 75 minutes and their
-        # command at 90 (INF-1083, the captain's check limits, as journeys.yml).
+        # Affected journeys end at 75 minutes and their command at 90
+        # (INF-1083, the captain's check limits, as journeys.yml).
         timeout-minutes: ${{ inputs.suite == 'affected' && 90 || 360 }}
         run: |
           echo "TIMING_TEST_START=$(date +%s)" >> "$GITHUB_ENV"
@@ -217,29 +206,22 @@ jobs:
                 *) echo "The pointer is not on the last pixel at $x,$y: $at" >&2; exit 1 ;;
               esac' on-screen "$@"
           }
-          if [ "$RUNNER_OS" = Linux ] && [ "$SUITE" = affected ]; then
+          if [ "$SUITE" = affected ]; then
             test -n "$FILES"
             if [ "$LANE" = desktop ]; then
               on_screen node scripts/journey-runs.ts --base "$REPEAT_BASE" --files "$FILES" --alone-out playwright-report/alone -- --project=desktop
             else
               on_screen node scripts/journey-runs.ts --base "$REPEAT_BASE" --files "$FILES" --alone-out playwright-report/alone -- --project=renderer --project=application
             fi
-          elif [ "$RUNNER_OS" = Linux ] && [ "$LANE" = alone ]; then
+          elif [ "$LANE" = alone ]; then
             on_screen node scripts/e2e-alone.ts --shard "$SHARD/4" --out playwright-report/alone
-          elif [ "$RUNNER_OS" = Linux ] && [ "$SUITE" = full ] && [ "$LANE" = parallel ]; then
+          elif [ "$SUITE" = full ] && [ "$LANE" = parallel ]; then
             on_screen pnpm exec playwright test --no-deps --project=styles --project=renderer --project=application --shard="$SHARD/4"
-          elif [ "$RUNNER_OS" = Linux ] && [ "$SUITE" = full ] && [ "$LANE" = desktop ]; then
+          elif [ "$SUITE" = full ] && [ "$LANE" = desktop ]; then
             on_screen pnpm exec playwright test --no-deps --project=desktop --shard="$SHARD/4"
-          elif [ "$RUNNER_OS" = Linux ]; then
-            if [ "$LANE" = desktop ]; then
-              projects="--project=desktop"
-            else
-              projects="--project=renderer --project=application"
-            fi
-            on_screen pnpm exec playwright test --no-deps $projects tests/e2e/source-start.spec.ts tests/e2e/phase0-guardrails.spec.ts tests/e2e/answer-delivery.spec.ts tests/e2e/claude-crew-turn.spec.ts tests/e2e/keyboard-routing.spec.ts tests/e2e/keyboard-regions.spec.ts tests/e2e/task-browser.spec.ts tests/e2e/task-browser-actions.spec.ts tests/e2e/task-browser-diagnostics.spec.ts tests/e2e/task-browser-booking.spec.ts tests/e2e/phase6-voice.spec.ts tests/e2e/voice-prompt-focus.spec.ts tests/e2e/repro-voice-press.spec.ts tests/e2e/devices.spec.ts
           else
-            callers="$(cat "$RUNNER_TEMP/resize-callers.txt")"
-            pnpm exec playwright test --no-deps tests/e2e/source-start.spec.ts tests/e2e/phase0-guardrails.spec.ts tests/e2e/answer-delivery.spec.ts tests/e2e/claude-crew-turn.spec.ts $callers
+            echo "No journeys for suite $SUITE in lane $LANE" >&2
+            exit 1
           fi
         env:
           INFINITARY_SOURCE_EVIDENCE: ${{ runner.temp }}/source-desktop-evidence
@@ -252,11 +234,10 @@ jobs:
           SHARD: ${{ matrix.shard }}
           SCREEN: 2560x1600x24
       # Linux runs every test it can (docs/testing.md, "Tests that need a
-      # Mac"): a test that skipped here without MAC_ONLY_TAG runs on no pull
-      # request's Mac either, so the job fails on it, whether its journeys
-      # passed or failed.
+      # Mac"): a test that skipped here without MAC_ONLY_TAG runs on no Mac
+      # either, so the job fails on it, whether its journeys passed or failed.
       - name: Refuse a test that skipped on Linux without the Mac tag
-        if: ${{ !cancelled() && runner.os == 'Linux' && matrix.lane != 'alone' }}
+        if: ${{ !cancelled() && matrix.lane != 'alone' }}
         run: node scripts/untagged-skips.ts playwright-report/source-results.json
       # Run-alone owns a separate per-selection report; do not mistake its last
       # child process for the complete job. Ordinary lanes use their existing JSON.
@@ -265,7 +246,7 @@ jobs:
       # release candidate can predate this helper. Its cwd and report stay the
       # candidate's, so paths and TIMING_REVISION still describe the tested code.
       - name: Checkout the workflow's timing exporter
-        if: always() && runner.os == 'Linux' && matrix.lane != 'alone'
+        if: always() && matrix.lane != 'alone'
         uses: actions/checkout@v4
         with:
           ref: ${{ github.workflow_sha }}
@@ -274,9 +255,10 @@ jobs:
           sparse-checkout-cone-mode: false
           persist-credentials: false
       - name: Export compact Linux timing
-        if: always() && runner.os == 'Linux' && matrix.lane != 'alone'
+        if: always() && matrix.lane != 'alone'
         run: |
-          export TIMING_REVISION="$(git rev-parse HEAD)"
+          TIMING_REVISION="$(git rev-parse HEAD)"
+          export TIMING_REVISION
           node "$GITHUB_WORKSPACE/workflow-timing/scripts/journey-timing.ts" playwright-report/source-results.json "$RUNNER_TEMP/journey-timing.json"
         env:
           SUITE: ${{ inputs.suite }}
@@ -286,7 +268,7 @@ jobs:
           ARTIFACT_SUFFIX: ${{ inputs.artifact-suffix }}
           TEST_OUTCOME: ${{ steps.journeys.outcome }}
       - name: Keep compact Linux timing separately
-        if: always() && runner.os == 'Linux' && matrix.lane != 'alone'
+        if: always() && matrix.lane != 'alone'
         uses: actions/upload-artifact@v4
         with:
           name: journey-timing-${{ runner.os }}-${{ inputs.artifact-suffix }}-${{ matrix.lane }}-${{ matrix.shard }}

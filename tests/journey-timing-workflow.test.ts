@@ -108,7 +108,7 @@ it.each(["success", "failure", "missing"])(
     const latest = save();
     const contexts = {
       github: { ref: latest, workflow_sha: workflow },
-      inputs: { ref: candidate, suite: "starter", files: "", "artifact-suffix": "source" },
+      inputs: { ref: candidate, suite: "full", files: "", "artifact-suffix": "source" },
       runner: { os: "Linux", temp },
       matrix: { lane: "desktop", shard: 1 },
       steps: { journeys: { outcome: outcome === "missing" ? "failure" : outcome } },

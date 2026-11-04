@@ -23,6 +23,7 @@ type Job = {
   uses?: string;
   with?: Record<string, unknown>;
   needs?: string | string[];
+  outputs?: Record<string, unknown>;
   strategy?: { matrix?: unknown };
 };
 
@@ -76,17 +77,37 @@ function evaluated(value: unknown, contexts: Record<string, unknown>): unknown {
     : workflowString(value, contexts);
 }
 
+/**
+ * Each job's outputs that read only the run itself (the event, the inputs and
+ * the variables), under the scenario's own: a release's `resolve` job says
+ * what started it once, and every later job's name reads it from there. An
+ * output that reads a step stays the scenario's to give.
+ */
+function jobOutputs(workflow: Workflow, scenario: Scenario, run: Record<string, unknown>) {
+  const needs: NonNullable<Scenario["needs"]> = {};
+  for (const [id, job] of Object.entries(workflow.jobs)) {
+    const outputs: Record<string, string> = {};
+    for (const [key, value] of Object.entries(job.outputs ?? {})) {
+      try {
+        outputs[key] = workflowString(String(value), run);
+      } catch {
+        // Reads a step: the scenario supplies it or it stays unset.
+      }
+    }
+    const given = scenario.needs?.[id];
+    if (given === undefined && Object.keys(outputs).length === 0) continue;
+    needs[id] = { ...given, outputs: { ...outputs, ...given?.outputs } };
+  }
+  return needs;
+}
+
 /** The full name of every job a run of `file` shows in `scenario`. */
 export function runJobNames(file: string, scenario: Scenario, called = false): string[] {
   const workflow = loadYamlFile(`.github/workflows/${file}`) as unknown as Workflow;
   const event = called ? "workflow_call" : String(scenario.github.event_name);
   const inputs = { ...inputDefaults(workflow, event), ...scenario.inputs };
-  const base = {
-    github: scenario.github,
-    inputs,
-    vars: scenario.vars ?? {},
-    needs: scenario.needs ?? {},
-  };
+  const run = { github: scenario.github, inputs, vars: scenario.vars ?? {} };
+  const base = { ...run, needs: jobOutputs(workflow, scenario, run) };
   return Object.entries(workflow.jobs).flatMap(([id, job]) => {
     const entries = matrixEntries(job, base);
     return entries.flatMap((matrix, index) => {

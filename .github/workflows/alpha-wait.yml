@@ -26,11 +26,16 @@ on:
       trigger:
         description: What started the caller's run, which every job name here leads with (scripts/ci-job-names.mjs)
         type: string
-        default: ''
+        required: true
+
+# The wait lists this workflow's runs, reads the branch and cancels its own run.
+permissions:
+  contents: read
+  actions: write
 
 jobs:
   wait:
-    name: ${{ format('{0} · Wait for the previous main check''s alpha cut', inputs.trigger || 'Main push') }}
+    name: ${{ format('{0} · Wait for the previous main check''s alpha cut', inputs.trigger) }}
     # Every Linux job main.yml starts runs on GitHub's hosted machines
     # (docs/testing.md, "A release's hosted machines").
     runs-on: ubuntu-24.04

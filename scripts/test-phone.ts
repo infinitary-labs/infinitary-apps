@@ -339,8 +339,7 @@ const everyPartOn = async (starting: Map<PhoneDevice, Promise<Lane>>) => {
   // A --both run keeps a folder per device, as piece 1 did; each part writes its own folder in it.
   const folder = (device: PhoneDevice, part: string) => values.both ? join(evidence, device, part) : join(evidence, part);
   if (values.both) for (const device of devices) mkdirSync(join(evidence, device), { recursive: true });
-  // INF-827: each part's minutes on each device, which a pull request's chooser reads from the
-  // newest passing check of main (scripts/affected-phone.ts).
+  // INF-827: each part's minutes on each device, kept as part-times.json in a full gate's logs.
   const times: Record<string, Record<string, number>> = {};
   const gate = async ({ device, part }: { device: PhoneDevice; part: string }, lane: Lane, stopping: AbortSignal) => {
     const name = `${device} ${part}`;

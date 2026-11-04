@@ -63,14 +63,10 @@ jobs:
     name: Requested TestFlight · Phone checks
     uses: ./.github/workflows/phone.yml
     permissions:
-      actions: write
       contents: read
-      pull-requests: read
     with:
       trigger: Requested TestFlight
       source_commit: ${{ needs.resolve.outputs.source_commit }}
-      # Its Linux job runs on GitHub's hosted machines (docs/testing.md, "A release's hosted machines").
-      hosted: true
 
   testflight:
     name: Requested TestFlight · Sign and upload

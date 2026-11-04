@@ -6,7 +6,7 @@ on:
       trigger:
         description: What started the caller's run, which every job name here leads with (scripts/ci-job-names.mjs)
         type: string
-        default: ''
+        required: true
       ref:
         required: true
         type: string
@@ -28,7 +28,7 @@ permissions:
 jobs:
   build:
     if: ${{ inputs.reuse == '' }}
-    name: ${{ format('{0} · Build signed test copies (Mac)', inputs.trigger || 'Manual request') }}
+    name: ${{ format('{0} · Build signed test copies (Mac)', inputs.trigger) }}
     # DOP-42: request a disposable guest, with the kernel guard still required below;
     # the build kind's virtual-only queue once MAC_QUEUES names it.
     runs-on: ${{ fromJSON(vars.MAC_QUEUES || '{}').build || 'mini-mac-virtual' }}
@@ -89,7 +89,7 @@ jobs:
           if-no-files-found: ignore
 
   installed:
-    name: ${{ format('{0} · Install and update (Mac; {1})', inputs.trigger || 'Manual request', matrix.chip == 'arm64' && 'Apple silicon' || 'Intel') }}
+    name: ${{ format('{0} · Install and update (Mac; {1})', inputs.trigger, matrix.chip == 'arm64' && 'Apple silicon' || 'Intel') }}
     needs: build
     if: ${{ !cancelled() && (needs.build.result == 'success' || (inputs.reuse != '' && needs.build.result == 'skipped')) }}
     strategy:

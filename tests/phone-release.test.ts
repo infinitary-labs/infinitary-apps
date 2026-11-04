@@ -435,11 +435,7 @@ describe("the dispatched workflow's gate", () => {
     expect(call.uses).toBe("./.github/workflows/phone.yml");
     expect(call.secrets).toBeUndefined();
     expect(call.environment).toBeUndefined();
-    expect(call.permissions).toEqual({
-      actions: "write",
-      contents: "read",
-      "pull-requests": "read",
-    });
+    expect(call.permissions).toEqual({ contents: "read" });
     const phone = yaml.load(readFileSync(call.uses, "utf8"));
     // A real merged source; a later main ref must not change the checked or signed tree.
     const source = "3835224557b6764d4455b13c1cee359fbb09b5f1";
@@ -452,13 +448,8 @@ describe("the dispatched workflow's gate", () => {
         String(value).includes("${{") ? workflowValue(String(value), { needs }) : value,
       ]),
     );
-    // INF-2430's plan, piece 1: the call also runs its Linux job on GitHub's hosted machines.
     // INF-2410's scheme A: its jobs' names lead with the release's trigger.
-    expect(inputs).toEqual({
-      trigger: "Requested TestFlight",
-      source_commit: source,
-      hosted: true,
-    });
+    expect(inputs).toEqual({ trigger: "Requested TestFlight", source_commit: source });
     expect(phone.on.workflow_call.inputs.source_commit.type).toBe("string");
     const contexts = {
       inputs,
@@ -466,7 +457,7 @@ describe("the dispatched workflow's gate", () => {
       env: {},
       steps: {},
     };
-    for (const id of ["cancel-replaced", "native-phone", "phone-repeat-2", "phone-repeat-3"])
+    for (const id of ["native-phone", "phone-repeat-2", "phone-repeat-3"])
       for (const step of phone.jobs[id].steps.filter(
         (step: { uses?: string }) => step.uses === "actions/checkout@v4",
       ))

@@ -15,7 +15,7 @@ on:
       trigger:
         description: What started the caller's run, which every job name here leads with (scripts/ci-job-names.mjs)
         type: string
-        default: ''
+        required: true
       ref:
         required: true
         type: string
@@ -45,7 +45,7 @@ permissions:
 
 jobs:
   update:
-    name: ${{ format('{0} · Apply published-alpha update (Mac; Apple silicon)', inputs.trigger || 'Manual request') }}
+    name: ${{ format('{0} · Apply published-alpha update (Mac; Apple silicon)', inputs.trigger) }}
     # A publishing release's light queue, else the light kind's
     # (docs/testing.md, "Each Mac job's kind and size").
     runs-on: ${{ inputs.runner || fromJSON(vars.MAC_QUEUES || '{}').light || 'mini-mac-virtual' }}
@@ -79,10 +79,11 @@ jobs:
         env:
           ZIP_NAME: ${{ inputs.zip_name }}
           ZIP_SHA256: ${{ inputs.zip_sha256 }}
+          VERSION: ${{ inputs.version }}
         run: |
           set -euo pipefail
           ZIP="$RUNNER_TEMP/handoff-download/zip/$ZIP_NAME"
-          [[ "$ZIP_NAME" == "Infinitary-${{ inputs.version }}-universal.zip" ]]
+          [[ "$ZIP_NAME" == "Infinitary-$VERSION-universal.zip" ]]
           [[ "$(shasum -a 256 "$ZIP" | awk '{print $1}')" == "$ZIP_SHA256" ]]
           echo "path=$ZIP" >> "$GITHUB_OUTPUT"
       - name: Update the published alpha to this release

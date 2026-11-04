@@ -373,7 +373,7 @@ describe("INF-1987 Linux-calibrated placement", () => {
       run_id: Number(source.job.run),
       run_attempt: Number(source.job.attempt),
       head_sha: source.report.revision,
-      name: "linux-source / source-desktop (desktop)",
+      name: "linux-overflow / source-desktop (desktop)",
       conclusion: "success",
       started_at: new Date(source.job.startedAt).toISOString(),
       completed_at: new Date(source.job.completedAt).toISOString(),

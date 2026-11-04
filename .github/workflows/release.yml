@@ -155,6 +155,9 @@ jobs:
     # A release's Linux jobs run on GitHub's hosted machines (docs/testing.md, "A release's hosted machines").
     runs-on: ubuntu-24.04
     outputs:
+      # What started this release, said once; every later job's name and
+      # every called workflow's trigger read it from here.
+      trigger: ${{ (github.event_name == 'workflow_run' && 'Automatic alpha' || format('Requested {0}{1}', inputs.channel || 'stable', inputs.dry_run && ' rehearsal' || '')) }}
       skip: ${{ steps.gate.outputs.skip == 'true' && 'true' || 'false' }}
       channel: ${{ steps.resolve.outputs.channel }}
       dry_run: ${{ steps.resolve.outputs.dry_run }}
@@ -401,7 +404,7 @@ jobs:
   # file and re-verifies its identity.
   # Declarations only: the workflow cannot judge whether the prose is true.
   notes:
-    name: ${{ format('{0} · Check release notes', (github.event_name == 'workflow_run' && 'Automatic alpha' || format('Requested {0}{1}', inputs.channel || 'stable', inputs.dry_run && ' rehearsal' || ''))) }}
+    name: ${{ format('{0} · Check release notes', needs.resolve.outputs.trigger) }}
     needs: resolve
     if: ${{ needs.resolve.outputs.skip != 'true' }}
     # A release's Linux jobs run on GitHub's hosted machines (docs/testing.md, "A release's hosted machines").
@@ -501,10 +504,10 @@ jobs:
   verify:
     if: ${{ needs.resolve.outputs.verify_required == 'true' && needs.resolve.outputs.main_journeys != 'true' }}
     needs: [resolve, notes]
-    name: ${{ format('{0} · Desktop checks', (github.event_name == 'workflow_run' && 'Automatic alpha' || format('Requested {0}{1}', inputs.channel || 'stable', inputs.dry_run && ' rehearsal' || ''))) }}
+    name: ${{ format('{0} · Desktop checks', needs.resolve.outputs.trigger) }}
     uses: ./.github/workflows/verify.yml
     with:
-      trigger: ${{ (github.event_name == 'workflow_run' && 'Automatic alpha' || format('Requested {0}{1}', inputs.channel || 'stable', inputs.dry_run && ' rehearsal' || '')) }}
+      trigger: ${{ needs.resolve.outputs.trigger }}
       ref: ${{ needs.resolve.outputs.source_commit }}
       part: ${{ needs.resolve.outputs.main_run != '' && 'journeys' || 'all' }}
       # Publishing or dry run, its Linux jobs run on GitHub's hosted machines
@@ -524,10 +527,10 @@ jobs:
   # A publishing run's package jobs take the release's Linux label too.
   linux:
     needs: [resolve, notes]
-    name: ${{ format('{0} · Linux packages', (github.event_name == 'workflow_run' && 'Automatic alpha' || format('Requested {0}{1}', inputs.channel || 'stable', inputs.dry_run && ' rehearsal' || ''))) }}
+    name: ${{ format('{0} · Linux packages', needs.resolve.outputs.trigger) }}
     uses: ./.github/workflows/linux-packages.yml
     with:
-      trigger: ${{ (github.event_name == 'workflow_run' && 'Automatic alpha' || format('Requested {0}{1}', inputs.channel || 'stable', inputs.dry_run && ' rehearsal' || '')) }}
+      trigger: ${{ needs.resolve.outputs.trigger }}
       ref: ${{ needs.resolve.outputs.source_commit }}
       version: ${{ needs.resolve.outputs.version }}
       hosted: true
@@ -538,7 +541,7 @@ jobs:
   # of Infinitary is live there. It runs from the workflow's own commit and
   # reads each contract from git; a rehearsal says what it would wait for.
   phone:
-    name: ${{ format('{0} · Check compatible phone release', (github.event_name == 'workflow_run' && 'Automatic alpha' || format('Requested {0}{1}', inputs.channel || 'stable', inputs.dry_run && ' rehearsal' || ''))) }}
+    name: ${{ format('{0} · Check compatible phone release', needs.resolve.outputs.trigger) }}
     needs: resolve
     if: ${{ needs.resolve.outputs.skip != 'true' }}
     # A release's Linux jobs run on GitHub's hosted machines (docs/testing.md, "A release's hosted machines").
@@ -568,7 +571,7 @@ jobs:
     # A plain name: a job skipped behind a red check shows its name
     # unevaluated. The run's summary says the channel, the version and
     # whether it was a dry run.
-    name: ${{ format('{0} · Build, sign and notarize (Mac)', (github.event_name == 'workflow_run' && 'Automatic alpha' || format('Requested {0}{1}', inputs.channel || 'stable', inputs.dry_run && ' rehearsal' || ''))) }}
+    name: ${{ format('{0} · Build, sign and notarize (Mac)', needs.resolve.outputs.trigger) }}
     # Sign early (INF-2074, the captain's checked fix: "Build and sign an
     # alpha while its checks run, and publish only after they pass"): it
     # waits for the notes it packages and the phone (INF-1649), never for
@@ -603,7 +606,6 @@ jobs:
       VERSION: ${{ needs.resolve.outputs.version }}
       BUNDLE_VERSION: ${{ needs.resolve.outputs.bundle_version }}
       TAG_NAME: ${{ needs.resolve.outputs.tag_name }}
-      PUBLIC_TAG: ${{ needs.resolve.outputs.tag_name }}
       RELEASE_REPOSITORY: ${{ needs.resolve.outputs.release_repository }}
       DMG_NAME: Infinitary-${{ needs.resolve.outputs.version }}-mac-universal.dmg
       ZIP_NAME: ${{ needs.resolve.outputs.zip_name }}
@@ -1041,7 +1043,9 @@ jobs:
       - name: Remove the signing keychain
         if: always()
         continue-on-error: true
-        run: node scripts/with-search-list-lock.mjs -- security delete-keychain "${{ steps.developer_id_cert.outputs.keychain_path }}" || true
+        env:
+          KEYCHAIN_PATH: ${{ steps.developer_id_cert.outputs.keychain_path }}
+        run: node scripts/with-search-list-lock.mjs -- security delete-keychain "$KEYCHAIN_PATH" || true
 
   # The update check (INF-1900; docs/alpha.md, "The update check"): once
   # every check passed and the signing job handed off, a disposable Apple
@@ -1050,12 +1054,12 @@ jobs:
   # the new version and keep its saved work. Publication waits for it. It
   # builds, signs and sends nothing; a stable inherits its alpha's.
   update:
-    name: ${{ format('{0} · Published-alpha update check', (github.event_name == 'workflow_run' && 'Automatic alpha' || format('Requested {0}{1}', inputs.channel || 'stable', inputs.dry_run && ' rehearsal' || ''))) }}
+    name: ${{ format('{0} · Published-alpha update check', needs.resolve.outputs.trigger) }}
     needs: [resolve, notes, verify, linux, phone, release]
     if: ${{ always() && !cancelled() && needs.resolve.outputs.verify_required == 'true' && needs.resolve.result == 'success' && needs.notes.result == 'success' && (needs.verify.result == 'success' || (needs.resolve.outputs.main_journeys == 'true' && needs.verify.result == 'skipped')) && needs.linux.result == 'success' && needs.phone.result == 'success' && needs.release.result == 'success' }}
     uses: ./.github/workflows/mac-update.yml
     with:
-      trigger: ${{ (github.event_name == 'workflow_run' && 'Automatic alpha' || format('Requested {0}{1}', inputs.channel || 'stable', inputs.dry_run && ' rehearsal' || '')) }}
+      trigger: ${{ needs.resolve.outputs.trigger }}
       ref: ${{ needs.resolve.outputs.source_commit }}
       version: ${{ needs.resolve.outputs.version }}
       handoff_id: ${{ needs.release.outputs.handoff_id }}
@@ -1083,7 +1087,7 @@ jobs:
   # validates and lists the files and uploads nothing. Rerunning only this
   # job reuses the signing job's handoff, from whichever attempt produced it.
   upload:
-    name: ${{ format(inputs.dry_run && '{0} · Preview uploads; upload nothing' || '{0} · Upload every download', (github.event_name == 'workflow_run' && 'Automatic alpha' || format('Requested {0}{1}', inputs.channel || 'stable', inputs.dry_run && ' rehearsal' || ''))) }}
+    name: ${{ format(inputs.dry_run && '{0} · Preview uploads; upload nothing' || '{0} · Upload every download', needs.resolve.outputs.trigger) }}
     needs: [resolve, notes, verify, linux, phone, release, update]
     if: ${{ always() && !cancelled() && needs.resolve.result == 'success' && needs.notes.result == 'success' && needs.linux.result == 'success' && needs.phone.result == 'success' && needs.release.result == 'success' && ((needs.resolve.outputs.verify_required == 'true' && (needs.verify.result == 'success' || (needs.resolve.outputs.main_journeys == 'true' && needs.verify.result == 'skipped')) && needs.update.result == 'success') || (needs.resolve.outputs.verify_required == 'false' && needs.verify.result == 'skipped' && needs.update.result == 'skipped')) }}
     # A release's Linux jobs run on GitHub's hosted machines (docs/testing.md, "A release's hosted machines").
@@ -1544,7 +1548,7 @@ jobs:
   # back to the real Mac. Rerunning only this job checks and switches again
   # from the same uploads.
   publish:
-    name: ${{ format(inputs.dry_run && '{0} · Check every copy; switch nothing' || '{0} · Check every copy and switch downloads', (github.event_name == 'workflow_run' && 'Automatic alpha' || format('Requested {0}{1}', inputs.channel || 'stable', inputs.dry_run && ' rehearsal' || ''))) }}
+    name: ${{ format(inputs.dry_run && '{0} · Check every copy; switch nothing' || '{0} · Check every copy and switch downloads', needs.resolve.outputs.trigger) }}
     needs: [resolve, notes, verify, linux, phone, release, update, upload]
     if: ${{ always() && !cancelled() && needs.upload.result == 'success' && needs.resolve.result == 'success' && needs.notes.result == 'success' && needs.linux.result == 'success' && needs.phone.result == 'success' && needs.release.result == 'success' && ((needs.resolve.outputs.verify_required == 'true' && (needs.verify.result == 'success' || (needs.resolve.outputs.main_journeys == 'true' && needs.verify.result == 'skipped')) && needs.update.result == 'success') || (needs.resolve.outputs.verify_required == 'false' && needs.verify.result == 'skipped' && needs.update.result == 'skipped')) }}
     # The light kind's virtual-only queue once MAC_QUEUES names it, and
@@ -1562,7 +1566,6 @@ jobs:
       VERSION: ${{ needs.resolve.outputs.version }}
       BUNDLE_VERSION: ${{ needs.resolve.outputs.bundle_version }}
       TAG_NAME: ${{ needs.resolve.outputs.tag_name }}
-      PUBLIC_TAG: ${{ needs.resolve.outputs.tag_name }}
       RELEASE_REPOSITORY: ${{ needs.resolve.outputs.release_repository }}
       DMG_NAME: Infinitary-${{ needs.resolve.outputs.version }}-mac-universal.dmg
       ZIP_NAME: ${{ needs.resolve.outputs.zip_name }}
@@ -1895,8 +1898,10 @@ jobs:
       - name: Rehearse the public feeds without publishing
         id: feed-rehearsal
         if: ${{ needs.resolve.outputs.dry_run == 'true' }}
+        env:
+          DIST_ZIP: ${{ steps.rehearsal-files.outputs.zip }}
+          DIST_DMG: ${{ steps.rehearsal-files.outputs.dmg }}
         run: |
-          DIST_ZIP="${{ steps.rehearsal-files.outputs.zip }}" DIST_DMG="${{ steps.rehearsal-files.outputs.dmg }}" \
           LINUX_MANIFEST="$RUNNER_TEMP/linux-release/manifest.json" WORK="$RUNNER_TEMP/release-feeds" \
             scripts/publish-feeds.sh rehearsal
 

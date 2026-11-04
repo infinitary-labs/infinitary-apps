@@ -73,7 +73,7 @@ A `source-desktop-*` upload from a run whose journeys passed holds only `source-
 A failed run's `journeys-failures` and `e2e-failures` are kept 7 days.
 The repository's default for an upload that names no retention is 14 days.
 Download diagnostic evidence or export a recording within those three days if a task needs to keep it longer.
-Phone logs also carry the full gate's `part-times.json`; if no unexpired passing full gate supplies times, the existing chooser runs every affected part instead of dropping coverage.
+Phone logs also carry the full gate's `part-times.json`, a record of each part's minutes on each device; no workflow reads it since INF-2539 removed the pull request's part budget.
 Published release assets are independent of Actions artifact retention, but a release resuming after its Linux packages expire must rebuild them.
 Retention applies to new uploads only; existing artifacts keep their expiry dates, and repository storage still depends on upload volume and other artifact families.
 
@@ -239,12 +239,12 @@ Moved verbatim from `AGENTS.md` on 2026-09-24; `AGENTS.md` keeps a one-line poin
   A push to `main` starts no `ci.yml` job (INF-2340, the captain's route "drop-ci-main"): the full check's `linux-checks` lane runs the same commands, every probe included ("Main's desktop release check").
   `typecheck-lint-build` runs typecheck, biome, eslint adherence and build on pull requests, `linux-startup` runs the Linux automatic startup fixtures beside it, and `critical-path` runs the critical-path journey; `unit-tests` runs the in-memory cohorts (`pure`, `unit`, `unit-isolated`); `integration-tests`, shown as integration test groups 1/2 and 2/2, runs the integration cohort in vitest's own `--shard` halves, which split the files by a hash of their paths; `probe-tests` runs every probe (`docs/test-cohorts.md`, "Probes").
   The hosted runner has two processors and a personal account is offered no larger one, so the jobs run side by side; together they run `verify.yml`'s `linux-checks` lane, which runs every probe, and `tests/release-workflows.test.ts` holds every vitest project to one job or to shards that cover it, including the full probe project.
-  Every job runs on the label the repository variable `LINUX_RUNNER` names, the placement service's `shell-pc-linux` places (a fresh two-processor VM per job on the Windows PC, five at once), and on GitHub's hosted `ubuntu-latest` when the variable is unset; `tests/release-workflows.test.ts` evaluates each job's runner both ways.
+  Every job runs on the label the repository variable `LINUX_RUNNER` names, the placement service's `shell-pc-linux` places (a fresh two-processor VM per job on the Windows PC, five at once), and on GitHub's hosted `ubuntu-24.04` when the variable is unset, the one hosted image every workflow falls back to (INF-2539); `tests/release-workflows.test.ts` evaluates each job's runner both ways.
   The shell PC job image supplies Node 24 and a pre-filled pnpm store, so setup-node restores its pnpm cache only on a GitHub-hosted runner (`runner.environment`); every self-hosted job, wherever a variable sent it, skips it.
   The repository variable `LINUX_QUEUES` can send a job's kind to another queue before `LINUX_RUNNER` ("Each Linux job's kind").
-  Every other workflow's requested and pull request Linux jobs read the same variable the same way (INF-1720's plan): the journeys' chooser, starters and overflow, `verify.yml`'s Linux lanes, the phone check's replacement job, the replay gate, Linux startup and the Linux packages; the package check's Ubuntu 26.04 leg takes the variable's label with `-2604`, the PC's 26.04 job image.
-  The gate jobs a request or pull request starts take the variable's label with `-gate` (DOP-157's plan): `phone.yml`'s `cancel-replaced` and `journeys.yml`'s `choose-journeys`.
-  The placement service's runners on that label take only these jobs and go first in the PC's line, so the Mac jobs waiting on them start within minutes; hosted, they run on `ubuntu-latest`.
+  Every other workflow's requested Linux jobs read the same variable the same way (INF-1720's plan): the journeys' chooser and overflow, `verify.yml`'s Linux lanes, the replay gate, Linux startup and the Linux packages; the package check's Ubuntu 26.04 leg takes the variable's label with `-2604`, the PC's 26.04 job image.
+  The gate job a request starts takes the variable's label with `-gate` (DOP-157's plan): `journeys.yml`'s `choose-journeys`.
+  The placement service's runners on that label take only this job and go first in the PC's line, so the Mac job waiting on it starts within minutes; hosted, it runs on `ubuntu-24.04`.
   Every Linux job that `main.yml` or a release starts runs on GitHub's hosted Ubuntu instead ("A release's hosted machines").
   Linux dependency installs use `.github/actions/node-headers`, which finds the running Node archive's `include/node` headers and refuses an image missing them; only the install receives that root as `NPM_PACKAGE_CONFIG_NODE_GYP_NODEDIR`.
   Uppercase preserves the setting through pnpm's lifecycle environment filter.
@@ -293,7 +293,7 @@ Where each journey runs:
 
 Three checks hold the tag to what a test needs:
 
-1. Every Linux journey job, `source-journeys.yml`'s starters, overflow and full shards, fails on a test that skipped there without the tag (`scripts/untagged-skips.ts`), whether its journeys passed or failed.
+1. Every Linux journey job, `source-journeys.yml`'s overflow and full shards, fails on a test that skipped there without the tag (`scripts/untagged-skips.ts`), whether its journeys passed or failed.
    The run-alone pass refuses one itself ("Each test owns its prerequisites" above).
 2. The `e2e-mac-tag` lint in `pnpm check` (`tests/lint/e2eMacTag.ts`) refuses an untagged test that reads a Mac fact, and a tagged test that reads none.
    A test reads a Mac fact when its own code, or a `test.skip` or hook of the describe or file around it, names `THIS_DESKTOP` or `HAS_APP_MENU` (`tests/e2e/desktop.ts`) or the platform name "darwin".
@@ -499,9 +499,11 @@ The fleet never cancels a running batch or a running main check unless the capta
 Every job's name says what started its run and what it checks, in one scheme (INF-2410, the captain: "i want to distinguish what triggered the job and what they check"; scheme "A. Trigger first"): `Trigger · Purpose (platform or device; group or round)`, such as `Main push · App journeys (Linux; serial group 3/4)` or `Pull request · Startup checks (Linux)`.
 The trigger is one of `TRIGGERS` in `scripts/ci-job-names.mjs`: `Pull request`, `Main push`, `Manual request` (a check started by hand, main's included, is never a main push), `Merge batch` (the approval mark, a merge or the batch's own rerun), `Requested batch rehearsal`, `Automatic alpha`, `Requested alpha` or `Requested stable` with ` rehearsal` for a dry run, and `Requested TestFlight` or `Requested TestFlight status`.
 A called workflow takes its caller's trigger through its `trigger` input, so each level of GitHub's full name leads with it: `Main push · Desktop checks / Main push · Linux journeys / Main push · App journeys (Linux; serial group 3/4)`; a runner list that shows only the last level still says what started it.
+A workflow only a caller starts (`alpha-wait.yml`, `linux-startup.yml`, `mac-installer.yml`, `mac-update.yml`) requires that input and keeps no fallback of its own, and a release says its trigger once, in its `resolve` job's `trigger` output, which every later job's name and every workflow it calls read (INF-2539).
 Workflow names and files, job ids, run titles, concurrency groups and artifact names keep their earlier names, so triggers, queues and the readers of `github.workflow` are unchanged.
 A reader that judges a run by its jobs (the alpha's proof, stable promotion, the phone's order and cancellation, installer reuse and journey timing) compares `legacyJobName(name)`, which reads a job named before or after the scheme alike; a name that does not lead with a known trigger on every level stays as it is and never passes for a known job.
 `tests/ci-job-names.test.ts` evaluates every job's name in every workflow for each trigger that can start it and holds each to the scheme.
+`tests/workflow-hygiene.test.ts` holds every workflow to a top-level `permissions` block and every shell step, composite actions included, to reading values through its environment rather than an expression pasted into the script.
 
 ## A release's hosted machines
 
@@ -513,8 +515,7 @@ The cost is GitHub's per-minute bill for those jobs.
 `release.yml` and `main.yml` pass `hosted: true` to the workflows they call:
 
 - `verify.yml`, whose `request` job, `linux-checks` lane and every `linux-e2e` journey job (`source-journeys.yml`, through the same input) take it;
-- `linux-packages.yml`, whose build and every package check take it, the Ubuntu 26.04 machine check on `ubuntu-26.04`;
-- `phone.yml`, whose `cancel-replaced` job takes it when `ios-release.yml` calls it.
+- `linux-packages.yml`, whose build and every package check take it, the Ubuntu 26.04 machine check on `ubuntu-26.04`.
 
 `linux-startup.yml`'s job and `alpha-wait.yml`'s `wait` name `ubuntu-24.04`, since `main.yml` is their only caller; the wait bills its minutes while an alpha is cut.
 `batch.yml` passes `hosted: true` to its sweep, and its own jobs and `main.yml`'s `sort` and `covered` jobs name `ubuntu-24.04` ("The swept batch").
@@ -523,31 +524,30 @@ The cost is GitHub's per-minute bill for those jobs.
 A requested check and a pull request keep `LINUX_RUNNER`: `hosted` is an input only a call takes, never a request's.
 `tests/release-workflows.test.ts` holds where each job starts with `LINUX_RUNNER` set and unset, publishing and in a dry run.
 
-## Native phone checks on the pull request
+## Native phone checks
 
 A pull request no longer starts `phone.yml` (INF-2139, captain: "let's pull journeys and phone checks off PRs now"): a crewmate whose change selects the gate requests it on its branch ("The phone check on request").
-The pull request selection below stays in `phone.yml`, unused; the phone release runs every part ("Main's desktop release check").
-`phone.yml` selects the iPhone and iPad gate for `ios/`, the phone-card generator, the phone-contract generator with its shape guard, and the gate's own setup (`scripts/affected-phone.ts`).
+INF-2539 removed its pull request selection; an affected request chooses parts, and the phone release runs every part ("Main's desktop release check").
+An affected request selects the iPhone and iPad gate for `ios/`, the phone-card generator, the phone-contract generator with its shape guard, and the gate's own setup (`scripts/affected-phone.ts`).
 A change to the generated phone contract that touches only its `public static let version` line, a first-number change included, does not select it; `pnpm check` still verifies the file is current on every pull request.
 The setup inputs are `phone.yml`, `scripts/test-phone.ts`, `tests/helpers/phoneHome.ts`, `tests/helpers/phoneKeyboard.ts`, the activity writer `scripts/phone-activity.ts`, the leftover sweep `scripts/phone-leftovers.ts`, the check runner `scripts/phone-checks.ts`, the simulator selector `scripts/phone-simulator.ts` and its pin `scripts/phone-pin.json`, and the test plan helper `scripts/phone-test-plan.ts`.
 The runner's diagnostic inputs also select it: `scripts/phone-guest-observer.ts` and `tests/helpers/phoneWebStacks.ts`, `phoneGuestLaunches.ts`, `phoneLauncherLog.ts`, `phoneLookupWait.ts` and `phoneProxyLaunches.ts`.
-Setup the device gates never run does not select it: the chooser itself, the replacement helper `scripts/replaced-phone-runs.ts`, the local test home `scripts/phone-test-home.ts`, and the virtual Mac scripts `scripts/virtual-mac/phone.sh`, `phone-job.sh` and `vm.sh`.
+Setup the device gates never run does not select it: the chooser itself, the local test home `scripts/phone-test-home.ts`, and the virtual Mac scripts `scripts/virtual-mac/phone.sh`, `phone-job.sh` and `vm.sh`.
 Changes to general shared modules, connection/device code, packages or the lockfile alone do not select the native gate.
-The chooser runs inside the `native-phone` job on the Mac, so no Linux job stands before it (INF-2125); it reads the comparison of the pull request's merge commit with its first parent, the base branch, and an unreadable comparison selects the gate rather than silently skipping it.
+The chooser runs inside the `native-phone` job on the Mac, so no Linux job stands before it (INF-2125); it reads the comparison of the request's branch with its base, and an unreadable comparison selects the gate rather than silently skipping it.
 When the chooser selects no gate, as for a change only to the generated contract's version line, the job ends before it installs anything.
 The `native-phone` job runs the disposable `scripts/test-phone.ts --both` gate only on the required `MAC_QUEUES.phone` queue ("Each Mac job's kind and size"), without an override or fallback.
 When the job fails, or a run on request records, it keeps native result bundles, logs, published-client results and connection readings in the `phone-results` artifact.
 The same command logs also live in the smaller `phone-logs` artifact, independently of the result bundles.
 Each part's live simulator log lives in `phone-simulator-logs`, never in `phone-logs`, which keeps `phone-logs` within the app's 64 MiB artifact download.
 The pictures the journeys took live in the small `phone-pictures` artifact, exported from the result bundles by device and part.
-A failure on either device fails the job, and on a pull request the first failed part stops the other parts.
-A newer push cancels its pull request's older phone runs whose native job has not started its device gate (`scripts/replaced-phone-runs.ts`), so it never waits behind them.
+A failure on either device fails the job, and a complete branch selection stops at the first failed part ("The phone check on request").
 That gate checks and builds once, starts one simulator per device, and runs the phone journey's parts on each, one after the other on their device's simulator, the parts that choose a photo last, each part with its own test home and a clean app (`docs/ios.md`, "Disposable verification").
 The placed vBoxx guest runs the devices sequentially, one simulator at a time.
 
-### The phone parts a pull request runs
+### The phone parts a request runs
 
-On a pull request the gate runs only the closest of the journey's parts within a six-minute budget, as the Mac journeys do ("Journeys on the pull request"), and the run on `main` runs every part.
+An affected request runs every part the change reaches, by the chooser's distances below; a default request and the phone release run every part.
 The chooser (`scripts/affected-phone.ts`) gives each part a distance: 0 when the change edits UI test code the part runs, 1 when it edits a file in the part's owner table (`PART_OWNERS`), and 2 for any other phone input.
 A part's owned files are its family's, the part's name before its first hyphen, so each short part split from join, talk or cards owns what that part owned (INF-2125).
 It reads a UI test change by its declarations: each changed line counts for the functions, supported top-level structs and enums, or literal constants around it, added lines in the new version and removed ones in the old.
@@ -557,15 +557,11 @@ A setup, teardown or XCTest observation callback reaches every part, as does a c
 The rest part also starts from every test no other part names, and a change to the app-hosted tests puts it at 0.
 A blank or comment-only line counts for nothing; an edited line outside a supported declaration, a duplicate declaration name, conditional compilation or a test file it cannot read or parse counts for every part.
 Unsupported declarations, including aliases, computed properties, attributed types and executable global initializers, keep full coverage rather than using a file exemption.
-It keeps the closest part, every part at 0 even past the budget, and any other while the kept minutes stay within `PHONE_BUDGET_MS`; ties go to the shorter part, so a change only to setup the gates use runs the shortest part alone.
-A part's minutes are its longer device's time in the newest passing on-request check of `main` whose `phone-logs` artifact holds `part-times.json`, which only a full gate writes; a passing check of some parts is passed over for an older full one.
-With none readable, every part the change reaches runs.
-The job summary names each kept and left part with its distance, minutes and reason, and the `phone-placement` artifact keeps the same as JSON.
-A part the pull request leaves is checked by the next phone release; an author who wants every part first runs the phone check on request on their branch.
+An affected request keeps every part at 0 or 1, and every part when a shared input or an unreadable comparison leaves its reach unknown; a part at 2 is checked by the next phone release.
+The six-minute placement of a pull request's gate, `placeParts` in the chooser with the `--times` reading of a full gate's `part-times.json`, has no workflow caller since INF-2539; `tests/phone-chooser.test.ts` still holds it.
+The job summary names each kept part with its distance and reason, and the `phone-placement` artifact keeps the same as JSON.
 `tests/phone-chooser.test.ts` replays real changes merged to `main` through the chooser.
 Unlike the desktop journey workflow, a device gate that already started finishes and deletes the simulator it started for each device.
-A manual rerun of a replaced version stops before its gate.
-So does a run whose pull request merged or closed while it waited in the phone line, so it never holds that line for a device gate; the next phone release checks what merged.
 Each native phone job uses a group unique to its run and attempt, with `queue: max` and `cancel-in-progress: false`.
 The two vBoxx virtual places run phone checks independently; the mini serves no phone queue (`docs/ios.md`, "A phone check the placement service puts in a virtual Mac").
 Desktop journey jobs from different pull requests remain parallel.
@@ -599,7 +595,6 @@ The ordinary artifacts retain their names; each additional job keeps its own `ph
 Each additional pass keeps simulator logs separately, and uploads whole result bundles only on failure or recording, with the ordinary retention periods.
 An unavailable CI route leaves missing proof, never an automatic complete local fallback.
 Neither route starts a release, TestFlight or App Store step.
-It has no pull request, so `scripts/replaced-phone-runs.ts` cancels nothing and never stops its gate.
 Complete branch selections stop at the first failed part; proper-subset requests and main keep full discovery.
 Inside the gate a failed Swift package test no longer skips the simulator tests (`scripts/phone-checks.ts`); every failure is reported and fails the job.
 Every request uses `MAC_QUEUES.phone`, currently `mini-mac-phone`; no `mac_runner` input, `PHONE_VIRTUAL_MAC` switch or generic-Mac variable can redirect it.
@@ -632,8 +627,8 @@ The record lists selected and run files and every missing file; missing coverage
 Above the cap it requires every journey in the sweep, not merely the listed subset.
 The file names supplied to `--ran` are the crewmate's declaration from successful run artifacts, not independent proof of success or of the source version.
 No pull request job is added: the crewmate owns this comparison before offering the change.
-The pull request selection below stays in `journeys.yml`, `linux-source` included, for main's desktop release check and the alpha that replace it.
-A pull request gets `journeys.yml`'s Linux `choose-journeys` check, which installs the locked tools, selects the journey files and writes the reasons and placement in its summary.
+INF-2539 removed the pull request selection from `journeys.yml`, its Linux starter job included; a request names its journeys ("Journeys on request").
+A request runs `journeys.yml`'s Linux `choose-journeys` job, which installs the locked tools, selects the journey files and writes the reasons and placement in its summary.
 The chooser downloads `e2e-results` from the newest successful `verify.yml` run that has an unexpired artifact of that name and sums each journey file's measured Mac durations.
 Only a run of every journey keeps that artifact, so a requested check of the tagged tests alone never becomes the journeys' times.
 It finds that run in the workflow's plain run list, newest first, never through GitHub's search by result, which has answered no run while passing ones were listed.
@@ -774,7 +769,7 @@ Its on-demand `parts`, `starve` and `perf` inputs select native parts and reprod
 
 `journeys.yml` also runs on request for any branch, with the journeys it names: `POST /repos/{owner}/{repo}/actions/workflows/journeys.yml/dispatches` with `{"ref":"<branch>","inputs":{"files":"now-panel task-crewmate.spec.ts"}}`.
 The names are read as a `Journeys:` trailer's are, separated by spaces or commas, and a name that is no journey fails the chooser (`scripts/affected-journeys.ts --named`).
-The chooser places the named files exactly as it places a pull request's, every one on Linux and their tagged tests on the Mac mini, and the run skips the pull request's Linux starter coverage.
+The chooser places every named file on Linux and their tagged tests on the Mac mini.
 Its `mac_all` input runs every named journey on the Mac mini as well, every test of it, for a check of the Mac itself such as a `starve` experiment.
 It is a computer's route for journeys in CI mode ("Where the heavy checks run"), such as a journey a change is still being written against.
 Its optional `mac_runner` input selects an isolated Mac runner for that request, as `verify.yml` does, without changing shared runner variables.
@@ -1131,7 +1126,7 @@ The build also fails when the image holds any code-signing identity, so nothing 
 
 ### Each Linux job's kind
 
-DOP-251's plan moves Linux jobs to the Mac mini's Linux guests one stage at a time, so a Linux job that may move names its kind, and the repository variable `LINUX_QUEUES` maps each kind to the label of its queue, as JSON such as `{"light":"fleet-linux","light_gate":"fleet-linux-gate"}`.
+DOP-251's plan moves Linux jobs to the Mac mini's Linux guests one stage at a time, so a Linux job that may move names its kind, and the repository variable `LINUX_QUEUES` maps each kind to the label of its queue, as JSON such as `{"light":"fleet-linux","gate":"fleet-linux-gate"}`.
 Each such job reads `fromJSON(vars.LINUX_QUEUES || '{}').<kind>` after the hosted machine a call from `main.yml` or a release asks for, and before `LINUX_RUNNER` ("A release's hosted machines").
 A kind the variable leaves out, and an unset or empty variable, keep the label the job asked for before, so the variable changes nothing until it names a kind.
 Name a kind only once runner-up serves its queue, so no job waits on a label nothing serves.
@@ -1141,7 +1136,6 @@ A Linux job with no kind, such as main's startup fixtures, the Linux packages an
 | Kind | Jobs | Its old label |
 | --- | --- | --- |
 | `light` | `verify.yml`'s `request` | `LINUX_RUNNER` |
-| `light_gate` | `phone.yml`'s `cancel-replaced` | `LINUX_RUNNER` with `-gate` |
 | `ci` | `ci.yml`'s `unit-tests`, `integration-tests` and `probe-tests`, and `replay.yml`'s `replay-gate` | `LINUX_RUNNER` |
 | `gate` | `journeys.yml`'s `choose-journeys` | `LINUX_RUNNER` with `-gate` |
 | `checks` | `verify.yml`'s `linux-checks` lane | `LINUX_RUNNER` |
@@ -1199,7 +1193,7 @@ The signed installer's build and Apple-silicon checks, the release's Apple-silic
 The publication job holds no Apple signing material and uploads nothing: it fetches back and checks every copy a hosted upload job put in place from the signing job's handoff, then switches the casks and feeds (`docs/alpha.md`, "Signing on the real Mac, uploads on a hosted machine, checks in a virtual Mac").
 The signing job runs while the release's checks run (`docs/alpha.md`, "Signing while the checks run"), so it holds the real Mac during the release's Mac lane, which then takes a virtual place or waits.
 These checks require throwaway guests for their signing, trust changes or writes to `/Applications`; the signed installer's Intel check, run only on request, stays on a disposable hosted Mac (`docs/alpha.md`, "Isolated signed verification").
-The phone check reads its `phone` kind's queue, or that label from `VIRTUAL_MAC_RUNNER` when the variable is set, so it starts on the next free virtual place; the Mac mini has one, so there it starts after any other phone check (`docs/ios.md`, "A phone check the placement service puts in a virtual Mac").
+The phone check reads its `phone` kind's queue alone (the repository variable `VIRTUAL_MAC_RUNNER` is read by no workflow), so it starts on the next free virtual place; the Mac mini has one, so there it starts after any other phone check (`docs/ios.md`, "A phone check the placement service puts in a virtual Mac").
 The other Mac jobs read their kind's queue or `MAC_RUNNER` and may run in any place, a virtual one or the real Mac's.
 `tests/release-workflows.test.ts` holds which jobs ask for the real Mac.
 
@@ -1263,7 +1257,8 @@ The app ticks at its own period, so a minute pass may or may not fall in a stret
 ## The Linux source desktop
 
 `source-journeys.yml` builds the checkout and runs journeys on the app built from source on Ubuntu 24.04 x64 (`LINUX_RUNNER`, hosted when unset), under Xvfb on a 2560 by 1600 virtual screen with Chromium's sandbox enabled.
-`journeys.yml` calls it as `linux-source` on a pull request's run, which no pull request starts now ("Journeys on the pull request"), with the starter journeys, split onto two machines by the existing parallel and serial desktop lanes: `source-start`, `phase0-guardrails`, `answer-delivery` and `claude-crew-turn`, the keyboard journeys `keyboard-routing` and `keyboard-regions`, which press Ctrl where a Mac presses ⌘ (`docs/keyboard.md`, "Keys on each system"), the task browser's journeys (`task-browser`, `task-browser-actions`, `task-browser-diagnostics` and `task-browser-booking`), the device journeys (`devices`) unconditionally, without a second selector, and the voice journeys (`phase6-voice`, `voice-prompt-focus` and `repro-voice-press`), which hold right Ctrl, with a stand-in graphics card and a stand-in voice helper (`docs/e2e-contracts.md`); the real card check is the captain's on each Linux alpha (`docs/architecture.md` section 8, "Where speech runs").
+`journeys.yml` calls it as `linux-overflow` with `suite: affected` for a request's named journeys, and `ci.yml` for the critical path ("Journeys on the pull request"); INF-2539 removed the pull request's `linux-source` call and its fixed starter list.
+Linux runs the keyboard journeys `keyboard-routing` and `keyboard-regions`, which press Ctrl where a Mac presses ⌘ (`docs/keyboard.md`, "Keys on each system"), the task browser's journeys, the device journeys and the voice journeys (`phase6-voice`, `voice-prompt-focus` and `repro-voice-press`), which hold right Ctrl, with a stand-in graphics card and a stand-in voice helper (`docs/e2e-contracts.md`); the real card check is the captain's on each Linux alpha (`docs/architecture.md` section 8, "Where speech runs").
 `verify.yml` calls it as `linux-e2e` with `suite: full`: every journey in the suite, in every alpha or the swept batch it reuses and named full-run exceptions, in eight jobs, with no run-alone pass (INF-2340).
 Four take a quarter each of the parallel lanes (`styles`, `renderer` and `application`) and four a quarter each of the serial `desktop` lane, each run with `--no-deps` so neither lane waits as the other's teardown and the desktop lane still runs alone on its machine; a job is named for its share, such as `Main push · App journeys (Linux; serial group 2/4)`, a serial group being a share of the desktop lane.
 A request with `suite: alone` runs the run-alone pass over every spec file instead, in four fresh-start jobs, `Manual request · Fresh-start app journeys (Linux; group N/4)`, which divide the run-alone pass’s ordered listing by round-robin position with `--shard N/4`; together they cover every later file:line/lane selection once, without splitting tests that share a line.
@@ -1315,8 +1310,7 @@ These are bounded observations, not total job occupancy or runner waiting: join 
 A missing report records null workers and Playwright timing, never zero work or a skip.
 Run-alone keeps its existing per-selection reports unchanged and does not export the final child process as an ordinary complete timing observation.
 The affected-journey allocator consumes compatible compact reports as described under "Journeys on the pull request"; selection, worker limits, lane definitions, full-verification shard counts, cancellation and release gates stay unchanged.
-On Mac, a pull request editing `tests/e2e/layout.ts` still runs every resize and minimum-size caller selected by `scripts/journey-callers.ts`, including calls through the demo helper.
-The Mac affected-journey selector covers the same callers through their imports.
+A change to `tests/e2e/layout.ts` reaches every resize and minimum-size caller, calls through the demo helper included, through the affected-journey selector's imports (`scripts/affected-journeys.ts`).
 Window sizes in `resizeWindow`, its returned restore value and `minimumWindowSize` describe content pixels before page zoom, not outer bounds that include a native menu or frame.
 This is the source app, not a packaged Linux release check.
 The launcher gives each app a throwaway HOME, userData, TMPDIR and XDG configuration, cache and data directories, and pins the Mac home with `CFFIXED_USER_HOME`.

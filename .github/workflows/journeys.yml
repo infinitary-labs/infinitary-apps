@@ -10,8 +10,9 @@ name: journeys
 # INF-800: on request, the journeys a branch names, placed the same way
 # (docs/testing.md, "Journeys on request").
 # INF-2139 (captain: "let's pull journeys and phone checks off PRs now"): a
-# pull request no longer starts this workflow; its pull_request branches stay
-# for main's desktop release check and the alpha that replace it.
+# pull request no longer starts this workflow, and main's desktop release
+# check and the alpha run every journey through verify.yml, so only a request
+# starts it; INF-2539 removed its pull-request paths.
 
 on:
   workflow_dispatch:
@@ -49,25 +50,14 @@ permissions:
   contents: read
   actions: read
 
-# A newer push to a pull request replaces its older run. A request is its
-# own group (INF-941): another task's request on the same branch, main
-# included, never cancels it.
-concurrency:
-  group: journeys-${{ github.event_name == 'workflow_dispatch' && github.run_id || github.ref }}
-  cancel-in-progress: true
+# No run-level group (INF-941): a request is its own run, so another task's
+# request on the same branch, main included, never cancels it.
 
 jobs:
-  linux-source:
-    # The starter coverage belongs to a pull request; a request runs what it names.
-    if: github.event_name == 'pull_request'
-    name: Pull request · Starter journeys (Linux)
-    uses: ./.github/workflows/source-journeys.yml
-    with:
-      trigger: Pull request
   choose-journeys:
     name: Manual request · Choose and place app journeys
     # The PC's gate label (docs/testing.md, DOP-157): its runners take only gate jobs.
-    runs-on: ${{ fromJSON(vars.LINUX_QUEUES || '{}').gate || vars.LINUX_RUNNER && format('{0}-gate', vars.LINUX_RUNNER) || 'ubuntu-latest' }}
+    runs-on: ${{ fromJSON(vars.LINUX_QUEUES || '{}').gate || vars.LINUX_RUNNER && format('{0}-gate', vars.LINUX_RUNNER) || 'ubuntu-24.04' }}
     defaults:
       run:
         working-directory: Application Support/firstmate
@@ -77,17 +67,19 @@ jobs:
       linux-count: ${{ steps.select.outputs.linux-count }}
       linux: ${{ steps.select.outputs.linux }}
     steps:
-      # Pick from the merge diff without taking a Mac runner.
+      # Pick the named journeys without taking a Mac runner.
       - uses: actions/checkout@v4
         with:
           path: Application Support/firstmate
           fetch-depth: 0
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 24
       - uses: pnpm/action-setup@v4
         with:
           package_json_file: Application Support/firstmate/package.json
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: ${{ runner.environment == 'github-hosted' && 'pnpm' || '' }}
+          cache-dependency-path: Application Support/firstmate/pnpm-lock.yaml
       - uses: ./Application Support/firstmate/.github/actions/node-headers
       - run: pnpm install --frozen-lockfile
         # Scope Node headers to this install, never to Electron rebuilds.
@@ -192,14 +184,9 @@ jobs:
       - id: select
         name: Choose and place the journeys
         run: |
-          if [ "$EVENT" = workflow_dispatch ]; then
-            node scripts/affected-journeys.ts --named "$NAMED" --json > "$RUNNER_TEMP/affected.json"
-          else
-            node scripts/affected-journeys.ts --base "origin/${{ github.base_ref }}" --head HEAD --json > "$RUNNER_TEMP/affected.json"
-          fi
+          node scripts/affected-journeys.ts --named "$NAMED" --json > "$RUNNER_TEMP/affected.json"
           node scripts/journey-budget.ts --selection "$RUNNER_TEMP/affected.json" --timings "$RUNNER_TEMP/journey-times/e2e-results.json" --linux-timings "$RUNNER_TEMP/linux-journey-times" --linux-jobs "$RUNNER_TEMP/linux-journey-jobs.json" --platforms "$PLATFORMS" $EVERY > "$RUNNER_TEMP/placement.json"
         env:
-          EVENT: ${{ github.event_name }}
           NAMED: ${{ inputs.files }}
           PLATFORMS: ${{ inputs.platforms || 'linux' }}
           EVERY: ${{ inputs.mac_all && '--every-on-mac' || '' }}
@@ -249,8 +236,8 @@ jobs:
           fetch-depth: 1
       - name: Keep the Mac awake
         uses: ./.github/actions/keep-mac-awake
-      # The merge of the pull request into its base, with the history the
-      # diff needs: the journeys run against what the merge would produce.
+      # The requested branch, with the history the comparison with its base
+      # needs (scripts/journey-runs.ts --base).
       - uses: actions/checkout@v4
         with:
           path: Application Support/firstmate

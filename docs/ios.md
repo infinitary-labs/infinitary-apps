@@ -481,7 +481,7 @@ It deletes each simulator named `Infinitary isolated test`, shut down or booted,
 A gate makes both only after its process starts, so a running check's simulator and folder are never touched, nor a person's own simulator or another prefix's folder; the reading needs no record or age, so leftovers of runs before the sweep go the same way.
 It reads the process list itself, never through the command log the evidence keeps, and a removal that fails is reported while the gate goes on.
 A part's results are in its own folder, inside the device's folder with `--both`, and `--part` runs only the named parts.
-A `--both` run of every part writes each part's minutes on each device to `part-times.json` in the evidence folder, which a pull request's phone check reads to keep within its budget.
+A `--both` run of every part writes each part's minutes on each device to `part-times.json` in the evidence folder, a record no workflow reads since INF-2539 removed the pull request's part budget.
 The build is `xcodebuild build-for-testing` for any simulator, and each part runs `test-without-building` from a copy of the built test plan that names its own test home and selects its tests.
 The simulators of the devices that run side by side start while that build runs, so the first parts begin as it ends; a device past `--simulators` starts its own when a place frees (INF-2125).
 The Swift package tests and the build share one folder of fetched package repositories, so the build fetches nothing the package tests already did.
@@ -489,7 +489,7 @@ It is `INFINITARY_PHONE_PACKAGE_CACHE` when set, otherwise inside the gate's scr
 `phone.yml` sets it outside that folder and restores it from the newest save of `main`, matched on both package lockfiles; only a run of `main` with no exact match saves it, since a pull request reads its base branch's saves and never another pull request's.
 Any part failing fails the gate.
 Local runs stop at their first failed part by default, so a failed repeat ends after cleanup and returns its load-line place rather than running the remaining parts (INF-2014).
-With this default or `--stop-early`, which a pull request's phone check sets through `INFINITARY_PHONE_STOP_EARLY=1`, the first failed part ends the part still running on the other device, as an interrupted part does, and starts no other; every started simulator is still deleted, and the gate names the failed, stopped and unstarted parts and writes no `part-times.json`.
+With this default or `--stop-early`, which `phone.yml` sets through `INFINITARY_PHONE_STOP_EARLY=1` for a complete branch selection, the first failed part ends the part still running on the other device, as an interrupted part does, and starts no other; every started simulator is still deleted, and the gate names the failed, stopped and unstarted parts and writes no `part-times.json`.
 Set `INFINITARY_PHONE_STOP_EARLY=0` for deliberate full-discovery local runs; CI defaults to full discovery, and a workflow run on request sets `0` explicitly to run every part to its end.
 Every explicit native observation goes through `InfinitaryUITests/PhoneWaits.swift`: element presence and absence, predicate reads and the disposable home's control requests.
 `PhoneJourney.appearances` observes screenshot pixels before attaching each light/dark pair and before returning from its light restoration (INF-1537).
@@ -742,14 +742,14 @@ For interactive local development, `node scripts/phone-test-home.ts <output-json
 The output names its control address and scratch root, and is private to that run.
 `phone.yml` runs this same gate with `--both` for changes touching `ios/` or the phone-card or phone-contract generator and the contract shape guard.
 A pull request no longer starts it (INF-2139): a crewmate whose change selects it requests it on its branch with `affected: "true"`.
-Its pull request selection below stays unused; the phone release (`ios-release.yml`) runs every part, and main runs no phone check (INF-2492).
+INF-2539 removed its pull request selection; the phone release (`ios-release.yml`) runs every part, and main runs no phone check (INF-2492).
 The gate's own setup also selects it: `phone.yml`, `scripts/test-phone.ts`, `tests/helpers/phoneHome.ts`, `tests/helpers/phoneKeyboard.ts`, its activity writer `scripts/phone-activity.ts`, its leftover sweep `scripts/phone-leftovers.ts`, its check runner `scripts/phone-checks.ts` and its test plan helper `scripts/phone-test-plan.ts`.
-Setup the gate never runs does not: `scripts/affected-phone.ts`, `scripts/replaced-phone-runs.ts`, `scripts/phone-test-home.ts`, and the virtual Mac scripts `scripts/virtual-mac/phone.sh`, `phone-job.sh` and `vm.sh`.
-A pull request's gate keeps its six-minute part budget; the phone release (`ios-release.yml`) runs every part, while a crewmate's request with `affected: "true"` runs only touched parts and falls back to every part when scope is uncertain (`docs/testing.md`, "The phone parts a pull request runs").
+Setup the gate never runs does not: `scripts/affected-phone.ts`, `scripts/phone-test-home.ts`, and the virtual Mac scripts `scripts/virtual-mac/phone.sh`, `phone-job.sh` and `vm.sh`.
+The phone release (`ios-release.yml`) runs every part, while a crewmate's request with `affected: "true"` runs only touched parts and falls back to every part when scope is uncertain (`docs/testing.md`, "The phone parts a request runs").
 Shared modules, connection/device code, general packages and the lockfile alone do not select it; a changed generated Swift file does, unless it changes only its `public static let version` line, which includes a new first number: the phone and the computer come from the same pull request, so they always agree on it, and `docs/contract.json` alone never selects the gate.
 Every pull request still checks on Linux that the generated file is current, through `pnpm check` (`node scripts/generate-phone-contract.ts --check`).
-The native job runs the chooser, `scripts/affected-phone.ts`, on the Mac before its setup; an unreadable comparison runs the gate, and a change it selects no gate for ends the job there.
-A default run on request (`workflow_dispatch`) skips the chooser and runs every part on both devices, then keeps each part's minutes as `part-times.json` in `phone-logs`; it has no pull request, so nothing replaces or cancels it, and it starts no release step (`docs/testing.md`, "The phone check on request").
+On an affected request the native job runs the chooser, `scripts/affected-phone.ts`, on the Mac before its setup; an unreadable comparison runs the gate, and a change it selects no gate for ends the job there.
+A default run on request (`workflow_dispatch`) skips the chooser and runs every part on both devices, then keeps each part's minutes as `part-times.json` in `phone-logs`, and it starts no release step (`docs/testing.md`, "The phone check on request").
 Inside a gate, a failed Swift package test is reported and the simulator tests still run (`scripts/phone-checks.ts`).
 The gate does not check the generated Swift files: `pnpm check` does on every pull request, on Linux.
 The native job requires the `phone` kind's queue (`docs/testing.md`, "Each Mac job's kind and size"), with no runner override or fallback, and retains result bundles, logs and connection readings as `phone-results` when the job fails or a run on request records; a passing check uploads none of its result bundles, about 530 MB.
@@ -759,12 +759,7 @@ A third artifact, `phone-pictures`, holds only the pictures the journeys took, e
 A failed part adds to its command logs what the app, its card pages and Photos logged on its simulator, and names its failing lines in the job log.
 It also keeps, in a log of its own, what the simulator's system logged from the part's first test: SpringBoard, backboardd, the accessibility server, the keyboard and the test runner, which answer XCUITest's check for interrupting elements.
 Its package install also uses a scratch HOME and an empty local-signing directory, so the install-time signature check never reads this Mac's signing material.
-A newer push never waits behind its pull request's older phone run: `phone.yml` has no run-level concurrency group.
-Its `cancel-replaced` job cancels the pull request's older phone runs whose native job has not started its device gate, so a replaced version gives up its place in the phone queue (`scripts/replaced-phone-runs.ts`).
-A device gate that already started is never cancelled; it finishes and deletes the simulator it started for each device.
-No simulator exists right before the gate, so there a replaced version cancels its own run instead of starting the gate; a failed reading of the pull request runs the gate.
-That check also stops a manual rerun of a replaced version, which no newer run cancels, about a minute after it reaches a phone guest.
-It stops the run of a pull request that merged or closed while the run waited in the phone line the same way, so a merged pull request never holds that line for a device gate; the next phone release checks what merged.
+`phone.yml` has no run-level concurrency group: each run and attempt waits only for a free phone guest, and a device gate that started finishes and deletes the simulator it started for each device.
 Every native phone job takes a per-run, per-attempt concurrency group, with `queue: max` and cancellation disabled.
 Phone checks run side by side, one per free vBoxx virtual place ("A phone check the placement service puts in a virtual Mac").
 Desktop jobs from different pull requests have no common job-level concurrency group, so they can run side by side.

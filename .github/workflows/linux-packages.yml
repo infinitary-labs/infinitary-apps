@@ -122,9 +122,11 @@ jobs:
       # The logical version rides in the packaged package.json, which the
       # running app reports, as the Mac release's does.
       - name: Build the Ubuntu package, the Fedora package and the AppImage
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
         run: |
           pnpm exec electron-builder --linux --config electron-builder.linux.yml --publish never \
-            -c.extraMetadata.version="${{ steps.version.outputs.version }}"
+            -c.extraMetadata.version="$VERSION"
       - name: Verify the packaged release notes
         if: ${{ inputs.version }}
         env:
@@ -132,10 +134,12 @@ jobs:
           SOURCE_COMMIT: ${{ inputs.ref }}
         run: node scripts/release-notes.ts verify-package --catalog dist/linux-unpacked/resources/release-notes.json --version "$VERSION" --source "$SOURCE_COMMIT"
       - name: Render the Arch recipe and the Nix package from the Ubuntu package
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
         run: |
           mkdir -p linux-packages
           cp dist/*.deb dist/*.rpm dist/*.AppImage linux-packages/
-          node scripts/linux-recipes.ts render --version "${{ steps.version.outputs.version }}" \
+          node scripts/linux-recipes.ts render --version "$VERSION" \
             --deb "$(ls linux-packages/*.deb)" --out linux-packages
           (cd linux-packages && sha256sum *.deb *.rpm *.AppImage > SHA256SUMS && cat SHA256SUMS)
       - uses: actions/upload-artifact@v4
@@ -193,8 +197,9 @@ jobs:
           Xvfb :99 -screen 0 1920x1200x24 -ac &
           export DISPLAY=:99
           for _ in $(seq 1 20); do xdotool getmouselocation >/dev/null 2>&1 && break; sleep 0.5; done
-          scripts/check-linux-package.sh "${{ matrix.system }}" "$RUNNER_TEMP/linux-packages" "$RUNNER_TEMP/evidence"
+          scripts/check-linux-package.sh "$SYSTEM" "$RUNNER_TEMP/linux-packages" "$RUNNER_TEMP/evidence"
         env:
+          SYSTEM: ${{ matrix.system }}
           IMAGE: ${{ matrix.image }}
           NIXPKGS: https://channels.nixos.org/nixos-26.05/nixexprs.tar.xz
           VERSION: ${{ needs.build.outputs.version }}

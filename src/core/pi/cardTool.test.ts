@@ -313,7 +313,7 @@ describe("createEmitCardTool", () => {
         actions: [{ id: "merge", default: true, effect: { kind: "settle", mode: "merge" } }],
       }),
     ).rejects.toThrow(
-      "Card refused: give exactly one of body or body_file. A saved-story completion gives presentation: the newest revision prepare_change returned at the committed version. Publish it with open_change before the card, except on local-only work, which skips publication. A later commit needs a new revision.",
+      "Card refused: give exactly one of body or body_file. A saved-story completion gives presentation: the newest revision prepare_change returned at the committed version. Publish it with open_change before the card, except on local-only work, which skips publication. After a push the host republishes the published story; a story whose words changed needs a new revision.",
     );
     expect(onCard).not.toHaveBeenCalled();
   });

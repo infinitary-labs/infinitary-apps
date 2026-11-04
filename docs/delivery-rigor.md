@@ -589,6 +589,7 @@ A change that never settled with a completion card is `null`, not a failure: it 
 Observe is the one surface in the app where any of this renders: the crewmate header carries the rigor, the review verdict and its risk, and the reviewers sit in their own **Review** group with each row's verdict on it (`docs/dev-observe.md`).
 
 For a saved story on GitHub or GitLab, a host-accepted repair republishes the same content at its new head after checks pass, before the kept-approval merge.
+Any other push past the published story republishes it the same way, at the completion card or at a merge no kept approval of another version holds (INF-2509).
 It reuses confirmed attachments and the approved content hash; a separate story edit needs a new completion offer.
 The merge validates the published and PR heads without waking the work computer or inspecting its uncommitted files.
 

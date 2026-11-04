@@ -221,10 +221,13 @@ export class ChangePresentations {
     around?: StoryAround,
     opening?: PublicationOpening,
   ): Promise<ForgeChange> {
+    // INF-2509: the revision the author named stands for the host's republication of it.
+    const record = this.options.tasks.changePresentation(taskId, branch);
+    const named = (record && shownRevision(record, revision)) ?? revision;
     return this.serial(taskId, () =>
       this.publishLocked(
         taskId,
-        revision,
+        named,
         forge,
         branch,
         title,
@@ -247,7 +250,7 @@ export class ChangePresentations {
     checks: "pending" | "passed",
     recovery?: PresentationRecovery,
     remoteOnly = false,
-    inheritedContentHash?: string,
+    inherited?: { contentHash: string; refreshOf: number },
     around?: StoryAround,
     opening?: PublicationOpening,
   ): Promise<ForgeChange> {
@@ -464,7 +467,12 @@ export class ChangePresentations {
       state: "sending",
       region,
       regionHash: hash(region),
-      contentHash: inheritedContentHash ?? kept?.contentHash ?? presentationContentHash(story),
+      contentHash: inherited?.contentHash ?? kept?.contentHash ?? presentationContentHash(story),
+      ...(inherited
+        ? { refreshOf: inherited.refreshOf }
+        : kept?.refreshOf !== undefined
+          ? { refreshOf: kept.refreshOf }
+          : {}),
       ...(story.version === 2 || !fresh ? { title } : {}),
       ...(fresh?.number ? { number: fresh.number } : {}),
     };
@@ -572,7 +580,7 @@ export class ChangePresentations {
       const committed = await this.options.head(taskId);
       if (committed !== head)
         throw new Error(
-          `The current code changed before the completion card: the branch is at ${committed}, and the pushed branch at ${head}. Push it, prepare a new story revision at the pushed version with prepare_change and publish it with open_change, then show the completion card with the revision prepare_change returns as presentation.`,
+          `${pushFirst(committed, head)} Then show the completion card again with presentation ${revision}.`,
         );
       await this.checkRetained(story);
       // A displayed card owns independent copies. Story pruning never sees
@@ -865,55 +873,160 @@ export class ChangePresentations {
     title: string,
     attests?: (head: string) => boolean,
   ): Promise<void> {
-    await this.serial(taskId, async () => {
-      const record = this.ledger(taskId, branch);
-      const published = record.revisions.find(
-        (story) => story.revision === record.published?.revision,
-      );
-      if (!published || published.head === toHead) return;
-      if (published.head !== fromHead)
-        throw new Error("The repair does not start from the published story.");
-      const latest = record.revisions.at(-1) as ChangePresentation;
-      const refreshed = changePresentationSchema.parse({
-        ...published,
-        revision: published.revision + 1,
-        head: toHead,
-        views: published.views.map((view) => ({
-          ...view,
-          after: view.after.map((media) => ({
-            ...media,
-            applicability:
-              media.applicability ??
-              `The accepted repair from ${fromHead} to ${toHead} leaves this view unchanged.`,
-          })),
-        })),
-      });
+    await this.serial(taskId, () =>
+      this.republishLocked(taskId, toHead, forge, branch, title, {
+        fromHead,
+        remoteOnly: true,
+        checks: "passed",
+        ...(attests ? { attests } : {}),
+      }),
+    );
+  }
+
+  /**
+   * A pull request that moved past its published story, read at the merge
+   * (INF-2509): the story is republished at the pull request's version, its
+   * words unchanged. The pushed branch is the version merged, wherever its
+   * commits were made.
+   */
+  async republishMoved(
+    taskId: string,
+    change: ForgeChange,
+    forge: Forge,
+    attests?: (head: string) => boolean,
+  ): Promise<void> {
+    await this.serial(taskId, () =>
+      this.republishLocked(taskId, change.headSha, forge, change.branch, change.title ?? "", {
+        remoteOnly: true,
+        checks: "passed",
+        ...(attests ? { attests } : {}),
+      }),
+    );
+  }
+
+  /**
+   * The revision a completion card shows (INF-2509, INF-1868's answer 5):
+   * the one the author named, or, once the pull request moved past it, the
+   * host's republication of it at the pushed version. The author vouches for
+   * the story at the code they committed, so that code must be the pushed
+   * version. Any other mismatch is left for the completion's own refusal.
+   */
+  async atPushedVersion(
+    taskId: string,
+    revision: number,
+    change: ForgeChange,
+    forge: Forge,
+    attests?: (head: string) => boolean,
+  ): Promise<number> {
+    return this.serial(taskId, async () => {
+      const record = this.ledger(taskId, change.branch);
+      const published = record.published;
+      const newest = record.revisions.at(-1);
       if (
-        latest.revision !== published.revision &&
-        JSON.stringify(latest) !== JSON.stringify(refreshed)
+        !published ||
+        !newest ||
+        !hostedPresentation(newest.destination) ||
+        published.revision !== newest.revision ||
+        (published.revision !== revision && published.refreshOf !== revision)
       )
+        return revision;
+      if (published.head === change.headSha) return published.revision;
+      const committed = await this.options.head(taskId);
+      if (committed !== change.headSha)
         throw new Error(
-          "A newer edited story needs its own completion offer; it is not a repair's refresh.",
+          `${pushFirst(committed, change.headSha)} Then show the completion card again with presentation ${revision}.`,
         );
-      if (latest.revision === published.revision)
-        await this.save(taskId, branch, (old) => ({
-          ...this.required(old),
-          revisions: [...this.required(old).revisions, refreshed],
-        }));
-      await this.publishLocked(
-        taskId,
-        refreshed.revision,
-        forge,
-        branch,
-        title,
-        "passed",
-        undefined,
-        true,
-        record.published?.contentHash ?? presentationContentHash(published),
-        undefined,
-        attests ? { attests } : undefined,
+      return (
+        (await this.republishLocked(
+          taskId,
+          change.headSha,
+          forge,
+          change.branch,
+          change.title ?? "",
+          { remoteOnly: false, checks: "pending", ...(attests ? { attests } : {}) },
+        )) ?? revision
       );
     });
+  }
+
+  /**
+   * The published story again at `toHead`, its words and the content its
+   * completion offer approved unchanged, as a new revision that names the
+   * one its author published. Only the newest story is republished: a newer
+   * revision the author prepared is theirs to publish, and nothing happens.
+   * An accepted repair names where it starts, and refuses that newer
+   * revision instead. Answers the revision now published, if any.
+   */
+  private async republishLocked(
+    taskId: string,
+    toHead: string,
+    forge: Forge,
+    branch: string,
+    title: string,
+    how: {
+      fromHead?: string;
+      remoteOnly: boolean;
+      /** What an older story's description says of the checks: a merge runs after they passed. */
+      checks: "pending" | "passed";
+      attests?: (head: string) => boolean;
+    },
+  ): Promise<number | undefined> {
+    const record = this.ledger(taskId, branch);
+    const published = record.revisions.find(
+      (story) => story.revision === record.published?.revision,
+    );
+    if (!published || !hostedPresentation(published.destination)) return undefined;
+    if (published.head === toHead) return published.revision;
+    if (how.fromHead !== undefined && published.head !== how.fromHead)
+      throw new Error("The repair does not start from the published story.");
+    const latest = record.revisions.at(-1) as ChangePresentation;
+    const applicability =
+      how.fromHead !== undefined
+        ? `The accepted repair from ${how.fromHead} to ${toHead} leaves this view unchanged.`
+        : "Captured on an earlier version of this pull request; the story's words did not change.";
+    const refreshed = changePresentationSchema.parse({
+      ...published,
+      revision: published.revision + 1,
+      head: toHead,
+      views: published.views.map((view) => ({
+        ...view,
+        after: view.after.map((media) => ({
+          ...media,
+          applicability: media.applicability ?? applicability,
+        })),
+      })),
+    });
+    if (
+      latest.revision !== published.revision &&
+      JSON.stringify(latest) !== JSON.stringify(refreshed)
+    ) {
+      if (how.fromHead === undefined) return undefined;
+      throw new Error(
+        "A newer edited story needs its own completion offer; it is not a repair's refresh.",
+      );
+    }
+    if (latest.revision === published.revision)
+      await this.save(taskId, branch, (old) => ({
+        ...this.required(old),
+        revisions: [...this.required(old).revisions, refreshed],
+      }));
+    await this.publishLocked(
+      taskId,
+      refreshed.revision,
+      forge,
+      branch,
+      published.version === 2 ? published.title : title,
+      how.checks,
+      undefined,
+      how.remoteOnly,
+      {
+        contentHash: record.published?.contentHash ?? presentationContentHash(published),
+        refreshOf: record.published?.refreshOf ?? published.revision,
+      },
+      undefined,
+      how.attests ? { attests: how.attests } : undefined,
+    );
+    return refreshed.revision;
   }
 
   private current(taskId: string, branch: string, revision: number): ChangePresentation {
@@ -1033,8 +1146,9 @@ export class ChangePresentations {
 
 /**
  * The way to a refused completion card, said from the ledger's typed facts
- * (INF-961): a story published before a later push is never current again,
- * and a crewmate refused without these words took it as lost (INF-899).
+ * (INF-961): a crewmate refused without these words took its story as lost
+ * (INF-899). A published story follows a later push on its own (INF-2509);
+ * a story its author prepared and never published does not.
  */
 function completionWayOut(
   record: ChangePresentationRecord,
@@ -1042,11 +1156,33 @@ function completionWayOut(
   head: string,
 ): string {
   const published = record.published?.revision === newest.revision;
-  if (newest.head !== head || (published && record.published?.head !== head))
-    return `Story revision ${newest.revision} was ${published ? "published" : "prepared"} at ${published ? record.published?.head : newest.head}, and the pushed branch is now at ${head}. Prepare a new story revision at the pushed version with prepare_change, keeping its base and title and updating what was checked, publish it with open_change, then show the completion card with the revision prepare_change returns as presentation.`;
+  // INF-2509: a published story follows its pull request's later versions on its own.
+  if (published && record.published?.head !== head)
+    return `Story revision ${newest.revision} was published at ${record.published?.head}, and the pushed branch is now at ${head}: show the completion card with presentation ${newest.revision}, and the app republishes it at the pushed version.`;
+  if (newest.head !== head)
+    return `Story revision ${newest.revision} was prepared at ${newest.head} and never published, and the pushed branch is now at ${head}. Prepare a new story revision at the pushed version with prepare_change, keeping its base and title, publish it with open_change, then show the completion card with the revision prepare_change returns as presentation.`;
   if (!published || record.publication?.state !== "confirmed")
     return `Story revision ${newest.revision} is prepared at the pushed version but not yet published and read back: publish it with open_change, then show the completion card with presentation ${newest.revision}.`;
   return `The newest story is revision ${newest.revision}: show the completion card with presentation ${newest.revision}.`;
+}
+
+/** The refusal when the committed code is ahead of the pushed branch. */
+function pushFirst(committed: string, pushed: string): string {
+  return `The current code changed before the completion card: the branch is at ${committed}, and the pushed branch at ${pushed}. Push it; the app republishes the published story at the pushed version.`;
+}
+
+/**
+ * The revision a named one stands for now (INF-2509): itself while it is the
+ * newest, or the host's republication of it at a later version.
+ */
+function shownRevision(record: ChangePresentationRecord, revision: number): number | undefined {
+  const newest = record.revisions.at(-1);
+  if (!newest) return undefined;
+  if (newest.revision === revision) return revision;
+  const published = record.published;
+  return published?.revision === newest.revision && published.refreshOf === revision
+    ? newest.revision
+    : undefined;
 }
 
 function receiptMatches(

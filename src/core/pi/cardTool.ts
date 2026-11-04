@@ -402,7 +402,7 @@ export const SAVED_STORY_RULE = [
   "Pass the current revision as presentation here and to open_change, using its saved title, one settle merge action and no body, body_file, risk or required_actions. Self-merging tasks use a note without actions.",
   "Local-only skips open_change: prepare the committed story, then show it. Publish other branches with open_change; the host uses the story after checks pass.",
   "Public GitHub and GitLab upload selected inspected media; other description hosts publish text, keeping media on the card. Plain Git keeps the story there. Never downgrade a failed upload.",
-  "Keep local paths and private threads out of published text. A later commit needs a newly prepared revision with the same base and title and updated verification; publish where needed before the card.",
+  "Keep local paths and private threads out of published text. After a push, show the same presentation: the host republishes a pull request's published story at the pushed version. Changed story words, or a later local-only or plain-branch commit, need a newly prepared revision with the same base and title and updated verification; publish where needed before the card.",
 ].join(" ");
 
 const crewmateCardParams = Type.Object({
@@ -646,7 +646,7 @@ async function emitCard(
         (action) => action.effect?.kind === "settle" && action.effect.mode === "merge",
       );
     throw new Error(
-      `Card refused: give exactly one of body or body_file.${story ? " A saved-story completion gives presentation: the newest revision prepare_change returned at the committed version. Publish it with open_change before the card, except on local-only work, which skips publication. A later commit needs a new revision." : ""}`,
+      `Card refused: give exactly one of body or body_file.${story ? " A saved-story completion gives presentation: the newest revision prepare_change returned at the committed version. Publish it with open_change before the card, except on local-only work, which skips publication. After a push the host republishes the published story; a story whose words changed needs a new revision." : ""}`,
     );
   }
   if (options.firstmate && params.body_file !== undefined) {

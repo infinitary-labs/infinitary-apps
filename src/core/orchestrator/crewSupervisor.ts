@@ -142,6 +142,7 @@ import {
   UNCOMPARED_WAIT,
 } from "@shared/placement";
 import type { TypedFailure } from "@shared/plainProblem";
+import { hostedPresentation } from "@shared/presentationDestination";
 import { projectPagePathRefusal } from "@shared/projectPage";
 import {
   CREWMATE_TAB_VIA,
@@ -862,7 +863,13 @@ export type CrewSupervisorOptions = {
     taskId: string,
     revision: number,
   ) => Promise<
-    Pick<DeclaredCardInput, "title" | "body" | "pictures" | "riskDeclaration" | "requiredActions">
+    Pick<
+      DeclaredCardInput,
+      "title" | "body" | "pictures" | "riskDeclaration" | "requiredActions"
+    > & {
+      /** The revision shown, when the host republished the named one at a later version (INF-2509). */
+      revision?: number;
+    }
   >;
   validateLocalStory?: (taskId: string) => Promise<string>;
   checkChange?: (taskId: string, input?: CheckChangeInput) => Promise<string>;
@@ -10703,7 +10710,8 @@ export class CrewSupervisor {
         throw new Error(
           "A saved-story card is only a completion offer for this task, or its note when the task merges on its own.",
         );
-      return this.options.completionPresentation(task.id, revision).then(async (story) => {
+      return this.options.completionPresentation(task.id, revision).then(async (presented) => {
+        const { revision: shownRevision, ...story } = presented;
         try {
           const ledger = this.options.tasks.get(task.id)?.delivery?.presentation;
           const head = ledger?.completion?.head ?? ledger?.published?.head;
@@ -10721,7 +10729,7 @@ export class CrewSupervisor {
                 riskDeclaration: story.riskDeclaration,
               };
           return await this.addCrewmateCard(task, { ...rest, ...shown }, undefined, {
-            revision,
+            revision: shownRevision ?? revision,
             head,
           });
         } catch (caught) {
@@ -10751,12 +10759,15 @@ export class CrewSupervisor {
       input.actions.some((action) => settleEffectOf(action)?.mode === "merge") &&
       !presentationChecked
     ) {
-      // INF-961: the refusal names the way to a current story, which a push
-      // after publication needs, so a crewmate never takes its story as lost.
-      const newest = ownPresentation.revisions.at(-1)?.revision;
+      // INF-961: the refusal names the way to a current story, so a crewmate
+      // never takes its story as lost; a push after publication needs no new
+      // one, since the host republishes it (INF-2509).
+      const story = ownPresentation.revisions.at(-1);
+      const newest = story?.revision;
       const local = this.taskDelivery(task.id) === "local-only";
+      const hosted = story !== undefined && hostedPresentation(story.destination);
       throw new Error(
-        `Use presentation on the completion card so it shows the current ${local ? "committed" : "published"} story, not a second account of the change. ${newest === undefined ? "" : `This task's newest story is revision ${newest}. `}${local ? "After another commit, prepare a new story with prepare_change, then show its revision as presentation; local-only work skips open_change." : "After a push since the story was published, prepare a new story revision at the pushed version with prepare_change and publish it with open_change, then show the completion card with the revision prepare_change returns as presentation."}`,
+        `Use presentation on the completion card so it shows the current ${local ? "committed" : "published"} story, not a second account of the change. ${newest === undefined ? "" : `This task's newest story is revision ${newest}. `}${local ? "After another commit, prepare a new story with prepare_change, then show its revision as presentation; local-only work skips open_change." : hosted ? "After a push since the story was published, show the same revision as presentation: the app republishes it at the pushed version. Prepare and publish a new revision only when what the story says changed." : "After a push since the story was published, prepare a new story revision at the pushed version with prepare_change and publish it with open_change, then show the completion card with the revision prepare_change returns as presentation."}`,
       );
     }
     const before = this.options.tasks.get(task.id);

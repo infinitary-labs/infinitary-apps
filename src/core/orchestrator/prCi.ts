@@ -1458,10 +1458,12 @@ export class PrCiService {
    * (INF-1365). A pull request with no story of this task merges as it is.
    * On the captain's kept approval of a completion offer the story must be
    * the one approved; a request_merge approval names a review, which
-   * showed no story. On either kept approval, a repair the host accepted
-   * after the published version refreshes the story to the repaired version
-   * first (FI3-304). The captain's guidance that holds the merge is answered
-   * instead, read before that refresh.
+   * showed no story. A pull request that moved past the published version
+   * has the story republished at its version first, words unchanged
+   * (INF-2509): on a kept approval only at the version it covers, and a
+   * repair the host accepted keeps its own words (FI3-304). The captain's
+   * guidance that holds the merge is answered instead, read before that
+   * refresh.
    */
   private async withPublishedStory(
     taskId: string,
@@ -1509,24 +1511,36 @@ export class PrCiService {
     if (held) return { held };
     let current = read;
     const publishedHead = ledger.published?.head;
-    if (
-      authorization &&
-      candidateHead(authorization) === change.headSha &&
-      publishedHead &&
+    const moved =
+      publishedHead !== undefined &&
       publishedHead !== change.headSha &&
+      (!authorization || candidateHead(authorization) === change.headSha);
+    const repaired =
+      moved &&
+      authorization !== undefined &&
       authorization.lineage.length > 0 &&
       (publishedHead === authorization.approvedHead ||
-        authorization.lineage.some((step) => step.toHead === publishedHead))
-    ) {
-      await this.options.presentations.refreshConflictOnly(
-        taskId,
-        publishedHead,
-        change.headSha,
-        forge,
-        change.branch,
-        change.title ?? "",
-        this.attestsAt(taskId),
-      );
+        authorization.lineage.some((step) => step.toHead === publishedHead));
+    if (moved) {
+      // INF-2509: any other move past the published story republishes it
+      // too, words unchanged; a newer story its author prepared stays theirs.
+      if (repaired)
+        await this.options.presentations.refreshConflictOnly(
+          taskId,
+          publishedHead,
+          change.headSha,
+          forge,
+          change.branch,
+          change.title ?? "",
+          this.attestsAt(taskId),
+        );
+      else
+        await this.options.presentations.republishMoved(
+          taskId,
+          change,
+          forge,
+          this.attestsAt(taskId),
+        );
       const refreshed = await forge.changeFor(change.branch);
       if (!refreshed || refreshed.number !== change.number || refreshed.headSha !== change.headSha)
         throw new Error("The pull request changed during the story refresh.");
@@ -1947,7 +1961,10 @@ export class PrCiService {
     if (this.localStoryDestination(taskId)) {
       if (!this.options.presentations) throw new Error("Saved change stories are unavailable.");
       const head = await this.validateLocalStory(taskId);
-      return this.options.presentations.completion(taskId, revision, head);
+      return {
+        ...(await this.options.presentations.completion(taskId, revision, head)),
+        revision,
+      };
     }
     const located = this.locate(taskId, "open");
     if ("said" in located) throw new Error(located.said);
@@ -1957,8 +1974,33 @@ export class PrCiService {
       currentChange(located.record.delivery, located.branch).branch,
     );
     if (!change) throw new Error("The story's pull request is not open.");
-    await this.options.presentations.assertPublished(taskId, change, located.forge, revision);
-    return this.options.presentations.completion(taskId, revision, change.headSha, change.branch);
+    // INF-2509: a pull request that moved past its published story shows it
+    // republished at the pushed version, with the same words.
+    const shown = await this.options.presentations.atPushedVersion(
+      taskId,
+      revision,
+      change,
+      located.forge,
+      this.attestsAt(taskId),
+    );
+    const current =
+      shown === revision
+        ? change
+        : await located.forge.changeFor(change.branch).then((read) => {
+            if (!read || read.number !== change.number || read.headSha !== change.headSha)
+              throw new Error("The pull request changed while its story was republished.");
+            return read;
+          });
+    await this.options.presentations.assertPublished(taskId, current, located.forge, shown);
+    return {
+      ...(await this.options.presentations.completion(
+        taskId,
+        shown,
+        current.headSha,
+        current.branch,
+      )),
+      revision: shown,
+    };
   }
 
   async open(taskId: string, input: OpenChangeInput): Promise<string> {

@@ -221,7 +221,7 @@ A refused card is never shown, and the refusal text names the fix:
 The five headings are not asked of a completion card's open body.
 They remain required in the report, which `scoreRigor` reads through `reportEvidenceHeadings`, and in legacy PR bodies or those on hosts without saved stories.
 A saved-story completion names its published revision in `emit_card presentation`, supplies its title field, and omits body, body_file, risk and required_actions.
-A push after publication needs a new revision prepared and published at the pushed version first, and each completion refusal says so (`docs/forge.md`, "Saved change stories").
+After a push the card names the same revision, and the host republishes a pull request's published story at the pushed version; a new revision is prepared only when the story's words change, or after a later local-only or plain-branch commit (`docs/forge.md`, "Saved change stories").
 The saved story's title wins over the title field, and its risk and required actions supply the host's controls.
 A conventional title's breaking marker (`!:`) is metadata, not excited copy; the saved title keeps it.
 Version-2 saved stories use Why, What changed, Before and after, and Checked, with commands and unfinished work folded (`docs/forge.md`, "Saved change stories").

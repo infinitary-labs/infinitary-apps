@@ -201,8 +201,14 @@ export type PresentationPublication = {
   /** The exact generated region sent; surrounding human text is not owned by the app. */
   region: string;
   regionHash: string;
-  /** The content the completion offer approved; an accepted repair's refresh inherits it. */
+  /** The content the completion offer approved; the host's republication inherits it. */
   contentHash?: string;
+  /**
+   * INF-2509: the revision the author published, when this one is the host's
+   * republication of it at a pull request's later version, words unchanged.
+   * A completion card naming that revision shows this one.
+   */
+  refreshOf?: number;
   /** INF-717: the title the change carries once this write lands, absent where the app sent none. */
   title?: string;
   /** A deliberate opening retry was requested after a read found no open PR. */

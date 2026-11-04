@@ -9198,8 +9198,10 @@ describe("a crewmate's own completion card clears the standing CI gate first", (
         actions: [{ id: "merge", effect: SETTLE_MERGE }],
       }),
     ).toThrow(
-      // INF-961: the refusal names the way to a story at the pushed version.
+      // INF-961: the refusal names the way to a story at the pushed version,
+      // which a pull request's host republishes on its own (INF-2509).
       destination === "local" ? "Use presentation on the completion card so it shows the current committed story, not a second account of the change. This task's newest story is revision 1. After another commit, prepare a new story with prepare_change, then show its revision as presentation; local-only work skips open_change." :
+      destination === "hosted" ? "Use presentation on the completion card so it shows the current published story, not a second account of the change. This task's newest story is revision 1. After a push since the story was published, show the same revision as presentation: the app republishes it at the pushed version. Prepare and publish a new revision only when what the story says changed." :
       "Use presentation on the completion card so it shows the current published story, not a second account of the change. This task's newest story is revision 1. After a push since the story was published, prepare a new story revision at the pushed version with prepare_change and publish it with open_change, then show the completion card with the revision prepare_change returns as presentation.",
     );
     const id = await specs[0]?.onCard?.({
@@ -9221,6 +9223,97 @@ describe("a crewmate's own completion card clears the standing CI gate first", (
     if (!card) throw new Error("Missing completion card");
     expect(() => supervisor.act(card.id, "merge")).toThrow();
     expect(mergePullRequest).not.toHaveBeenCalled();
+  });
+
+  // INF-2509, INF-1868's answer 5, the captain: "The host republishes the declared story at the
+  // new head itself and refuses nothing; the merge still carries the story you saw." The card
+  // the author named by its own revision offers the republished one, so the click merges.
+  it("offers the story the host republished at the pushed version, and its click merges (INF-2509)", async () => {
+    const crewmate = fakeCrewmate();
+    const pushed = "c40687d8d4f738056e62db6ab98b90f7f7d17497";
+    let story: ChangePresentation;
+    const completionPresentation = vi.fn(async () => ({
+      title: story.title,
+      body: presentationCardBody(story),
+      riskDeclaration: story.risk,
+      requiredActions: story.requiredActions,
+      pictures: story.pictures,
+      revision: 2,
+    }));
+    const mergePullRequest = vi.fn(async () => ({ ok: true, text: "Merged" }));
+    const { supervisor, tasks, specs, cards } = setup(crewmate, {
+      checkCi: async () => "green",
+      completionPresentation,
+      mergePullRequest,
+    });
+    const { taskId } = await supervisor.commission({
+      title: "Share the completed change",
+      intent: intentOf("share the same story"),
+      shape: { rigor_ask: "quick" },
+    });
+    await tick();
+    vi.spyOn(supervisor, "taskDelivery").mockReturnValue("direct-pr");
+    story = {
+      version: 1,
+      taskId,
+      revision: 2,
+      destination: { host: "github.com", projectId: 1, fullName: "octo/meter", visibility: "private" },
+      title: "The upload survives restart",
+      base: "5ca2d466ee21f9733827383f23df81f3874e0d10",
+      head: pushed,
+      why: ["Confirmed uploads must not be sent twice."],
+      whatChanged: ["The task keeps each confirmed receipt."],
+      before: ["Restart lost the receipt."],
+      after: ["Restart reuses the receipt."],
+      views: [],
+      noPicture: "This changes upload recovery, not a visible view.",
+      verification: ["Restart recovery passed."],
+      risk: METER_RISK,
+      requiredActions: [],
+      unfinished: [],
+      projectText: "",
+      assets: [],
+      pictures: [],
+    };
+    const region = presentationMarkdown(story, new Map(), "passed");
+    // What the host left after republishing the author's revision 1 at the pushed version.
+    const publication = {
+      revision: 2,
+      head: pushed,
+      state: "confirmed" as const,
+      region,
+      regionHash: createHash("sha256").update(region).digest("hex"),
+      contentHash: "approved-story-content",
+      refreshOf: 1,
+      number: 1,
+    };
+    tasks.updateChangePresentation(taskId, () => ({
+      revisions: [story],
+      receipts: [],
+      publication,
+      published: publication,
+    }));
+    seedDelivery(tasks, taskId, { headSha: pushed, prNumber: 1, ci: "green" });
+    const id = await specs[0]?.onCard?.({
+      title: "Ignored duplicate title",
+      body: "",
+      presentationRevision: 1,
+      actions: [{ id: "merge", effect: SETTLE_MERGE }],
+    });
+    await tick();
+    expect(completionPresentation).toHaveBeenCalledWith(taskId, 1);
+    expect(tasks.get(taskId)?.delivery?.completionOffers?.at(-1)).toMatchObject({
+      presentationRevision: 2,
+      headSha: pushed,
+      presentationContentHash: "approved-story-content",
+    });
+    const card = cards().find((entry) => entry.id === id);
+    if (!card) throw new Error("Missing completion card");
+    expect(card.title).toBe(story.title);
+    crewmate.finishPrompt();
+    await tick();
+    supervisor.act(card.id, "merge");
+    await vi.waitFor(() => expect(mergePullRequest).toHaveBeenCalledTimes(1));
   });
 
   // INF-547, the captain's direction C: a task that merges on its own shows

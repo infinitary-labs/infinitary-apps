@@ -1234,6 +1234,77 @@ describe("deliberate publication recovery", () => {
     await at.service.assertPublished(TASK, at.change as ForgeChange, at.forge);
   });
 
+  // INF-2509, INF-1868's answer 5, the captain: "The host republishes the declared story at the
+  // new head itself and refuses nothing; the merge still carries the story you saw."
+  it("republishes the published story at a pushed version with its words unchanged (INF-2509)", async () => {
+    const at = await arrange();
+    await at.prepare();
+    const change = await at.publish();
+    const approved = at.tasks.changePresentation(TASK)?.published?.contentHash;
+    const squash = (await at.service.assertPublished(TASK, change, at.forge, 1)).squashMessage;
+    const pushed = "c40687d8d4f738056e62db6ab98b90f7f7d17497";
+    at.change = { ...change, headSha: pushed };
+    at.setHead(pushed);
+    expect(await at.service.atPushedVersion(TASK, 1, at.change, at.forge)).toBe(2);
+    const record = at.tasks.changePresentation(TASK);
+    expect(record?.published).toMatchObject({
+      revision: 2,
+      head: pushed,
+      refreshOf: 1,
+      contentHash: approved,
+    });
+    expect(record?.revisions.at(-1)).toMatchObject({
+      revision: 2,
+      head: pushed,
+      title: at.draft.title,
+      why: at.draft.why,
+      checked: at.draft.checked,
+      verification: at.draft.verification,
+    });
+    expect(record?.revisions.at(-1)?.views[0]?.after[0]?.applicability).toBe(
+      "Captured on an earlier version of this pull request; the story's words did not change.",
+    );
+    // The confirmed attachments are reused, not sent again.
+    expect(at.upload).toHaveBeenCalledTimes(2);
+    expect(at.update).toHaveBeenCalledTimes(1);
+    expect(
+      (await at.service.assertPublished(TASK, at.change as ForgeChange, at.forge, 2)).squashMessage,
+    ).toBe(squash);
+    // The author's revision still names it, on the card and on open_change, and nothing is sent again.
+    expect(await at.service.atPushedVersion(TASK, 1, at.change as ForgeChange, at.forge)).toBe(2);
+    await at.publish(1);
+    expect(at.update).toHaveBeenCalledTimes(1);
+
+    // A newer story its author prepared is theirs to publish: nothing is republished over it.
+    const newer = await stageChangePresentation(
+      {
+        ...at.draft,
+        head: pushed,
+        why: ["The pull request tells the newer story."],
+        views: at.draft.views.map((view) => ({
+          ...view,
+          after: view.after.map((media) => ({ ...media, captureHead: pushed })),
+        })),
+      },
+      { taskId: TASK, worktree: at.worktree, dir: at.media },
+    );
+    expect(await at.service.prepare(TASK, newer, at.forge)).toBe(3);
+    const later = "9b1f2e3d4c5a6b7c8d9e0f1a2b3c4d5e6f7a8b9c";
+    at.change = { ...(at.change as ForgeChange), headSha: later };
+    at.setHead(later);
+    await at.service.republishMoved(TASK, at.change, at.forge);
+    expect(await at.service.atPushedVersion(TASK, 1, at.change, at.forge)).toBe(1);
+    expect(at.tasks.changePresentation(TASK)?.revisions.at(-1)).toMatchObject({
+      revision: 3,
+      head: pushed,
+    });
+    expect(at.tasks.changePresentation(TASK)?.published).toMatchObject({
+      revision: 2,
+      head: pushed,
+    });
+    expect(at.update).toHaveBeenCalledTimes(1);
+  });
+
   it("keeps only the newest and published revisions and removes only their superseded copies", async () => {
     const at = await arrange();
     await at.prepare();

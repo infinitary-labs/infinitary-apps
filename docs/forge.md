@@ -931,11 +931,16 @@ Hosted files can outlive a failed or abandoned opening, and local cleanup never 
 
 New stories print no publication-time checks status; the host's live checks strip remains authoritative.
 If checked facts change after publication, the author updates them and verification in a new story revision and deliberately republishes it before offering completion.
-A push after publication is such a change: the published story keeps its own version, so the completion card is refused until a revision at the pushed version is published.
-That refusal, the refusal of an ordinary body on a saved-story task's completion card, the refusal of a completion card with neither body nor `presentation`, and the `presentation` rule itself each name the way out: `prepare_change` at the pushed version, keeping the base and title and updating what was checked, then `open_change` with that revision, then the card (INF-961).
+A push alone is not such a change: when a pull request moves past its published story, the host republishes that story at the pushed version itself (INF-2509, the captain's answer 5 on INF-1868: "The host republishes the declared story at the new head itself and refuses nothing; the merge still carries the story you saw").
+The republication is a new revision with the same words, the same confirmed attachments and the content hash the completion offer binds; it records the revision its author published as `refreshOf`, and After media without an applicability declaration gets one saying it was captured on an earlier version.
+A completion card names the author's revision or the republished one; the card offers, and the merge click checks, the republished one (`ChangePresentations.atPushedVersion`).
+The author vouches for the story at the code they committed, so the completion card first needs the committed code to be the pushed version; the refusal says to push and show the card again.
+A merge reads the pushed branch alone and republishes a story a push left behind before it sends (`republishMoved`), except where a kept approval covers another version.
+Only the newest story is republished: a newer revision its author prepared and never published is theirs to publish, and the completion card and the merge are refused until they do.
+Those refusals, the refusal of an ordinary body on a saved-story task's completion card, the refusal of a completion card with neither body nor `presentation`, and the `presentation` rule itself each name the way out (INF-961).
 The completion refusal names the revision and the versions from the ledger; the merge path's refusal reaches the captain, so it keeps its own words and names no tool.
-Only an accepted conflict repair refreshes the story on its own (`refreshConflictOnly`), because only the author can say whether its checked facts still hold after any other push.
-Evidence: `prCi.test.ts` ("names the way to a current story when a push follows its publication"), `cardTool.test.ts` and `crewSupervisor.test.ts` (the two card refusals).
+A local-only story and a plain branch's story keep no description to republish, so a later commit there still needs a newly prepared revision.
+Evidence: `prCi.test.ts` ("republishes the published story when a push follows its publication", "republishes a story a push left behind before a merge with no kept approval"), `changePresentations.test.ts` ("republishes the published story at a pushed version with its words unchanged"), `cardTool.test.ts` and `crewSupervisor.test.ts` (the two card refusals and the republished offer).
 A replacement keeps the original Before base and evidence; After needs fresh captures or an explicit applicability declaration for the current committed version.
 Confirmed receipts are reused after restart without another upload, while an open PR keeps its last complete story until the replacement is ready.
 The generated region carries stable markers and a last-published hash; replacement normalizes CRLF to LF, preserves the surrounding words, and refuses edits inside it.
@@ -1031,7 +1036,7 @@ Preparation and ordinary publication reject tracked uncommitted changes, not unt
 The completion card reads its committed version and retained files; a hosted merge compares the remote request head with the published head, not a work computer's dirty copy or availability.
 A local-only merge checks its committed branch and retained story again, without a forge read.
 An accepted repair, one its crewmate declared to leave the approved work as it was, republishes the unchanged story automatically at the repaired version after checks pass, without another upload or completion card.
-The completion offer binds a content hash; only the host's exact clone for an accepted repair inherits that hash, so a separately edited story requires a new completion offer rather than borrowing the kept approval.
+The completion offer binds a content hash; only the host's exact clone at a later version, for an accepted repair or any other push, inherits that hash, so a separately edited story requires a new completion offer rather than borrowing the kept approval.
 The story's saved title, risk and required actions win on `emit_card presentation`; its title field is supplied, and body, body_file, risk and required_actions are omitted.
 
 ### Declared validation writes

@@ -471,6 +471,13 @@ export function phoneRepeatPlan(parts: readonly string[], reach: readonly PartRe
   return { full, repeatParts: full ? EVERY.filter((part) => reach.some((each) => each.part === part && each.distance === 0)) : [] };
 }
 
+/** INF-2582 (the captain's "iPhone only; iPad waits for the release check"): on an affected request, a kept
+ * part the change only reaches runs on the iPhone alone, and a part whose test code changed, or a change
+ * that could not be read, runs on both devices. The release check runs every part on both. */
+export function iphoneOnlyParts(parts: readonly string[], reach: readonly PartReach[]): string[] {
+  return parts.filter((part) => !reach.some((each) => each.part === part && each.distance === 0));
+}
+
 function main(): void {
   const { values } = parseArgs({ options: {
     base: { type: "string", default: "origin/main" },
@@ -524,19 +531,23 @@ function main(): void {
     kept = named.length ? EVERY.filter((part) => named.includes(part)) : [...EVERY];
   }
   const repeats = phoneRepeatPlan(kept, placement);
+  // Named parts and every-part requests run on both devices, as asked.
+  const iphoneOnly = values.request && values.coverage === undefined ? iphoneOnlyParts(kept, placement) : [];
   console.log(`full=${repeats.full}`);
   console.log(`repeat_parts=${repeats.repeatParts.join(" ")}`);
+  console.log(`iphone_parts=${iphoneOnly.join(" ")}`);
   const run = values.coverage === undefined ? decision.run : kept.length > 0;
   console.log(`run=${run}`);
   console.log(`parts=${kept.join(" ")}`);
-  if (values.placement) writeFileSync(values.placement, `${JSON.stringify({ run, inputs: decision.reasons, parts: placement, coverage: kept, repeats }, null, 2)}\n`);
+  if (values.placement) writeFileSync(values.placement, `${JSON.stringify({ run, inputs: decision.reasons, parts: placement, coverage: kept, iphoneOnly, repeats }, null, 2)}\n`);
   const row = (each: Placement) =>
     `- ${each.kept ? "Runs" : "Left"}: ${each.part}, distance ${each.distance}, ${each.minutes === undefined ? "no time" : `${each.minutes.toFixed(1)} minutes`}: ${each.reason}; ${each.why}`;
   if (process.env.GITHUB_STEP_SUMMARY) appendFileSync(process.env.GITHUB_STEP_SUMMARY,
     ["### Native phone gate", "",
       ...(decision.run ? decision.reasons.map((reason) => `- ${reason}`) : ["No phone input the gate uses changed beyond the contract version number."]),
       "", `Ordinary coverage: ${kept.join(" ") || "none"}; complete live selection: ${repeats.full}.`,
-      `Two additional CI passes on each device: ${repeats.repeatParts.join(" ") || "none"}.`,
+      `On the iPhone only (the iPad waits for the release check): ${iphoneOnly.join(" ") || "none"}.`,
+      `Two additional passes on each device, in the same job: ${repeats.repeatParts.join(" ") || "none"}.`,
       "", ...(placement.length ? ["#### Parts", "", ...placement.map(row), ""] : [])].join("\n"));
 }
 

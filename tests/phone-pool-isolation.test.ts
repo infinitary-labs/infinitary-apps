@@ -7,7 +7,7 @@ import { loadYamlFile, workflowString, workflowValue } from "./helpers/releaseWo
 // phone pool, and none may read secrets. Exercise the real workflow routes;
 // caller-supplied proof-run label overrides are not repository routing policy.
 const pool = "mini-mac-phone";
-const nativeJobs = ["native-phone", "phone-repeat-2", "phone-repeat-3"];
+const nativeJobs = ["native-phone"];
 const allowed = nativeJobs.map((id) => `phone.yml:${id}`);
 const kinds = [
   "check",
@@ -155,12 +155,12 @@ describe("rented phone pool isolation (INF-2055)", () => {
 
   it("rejects a secret read in a phone check's steps", () => {
     const all = workflows();
-    const job = jobIn(all, "phone.yml", "phone-repeat-2");
+    const job = jobIn(all, "phone.yml", "native-phone");
     job.steps = [
       ...(job.steps as unknown[]),
       { run: "echo '${{ secrets.APP_STORE_CONNECT_KEY }}'" },
     ];
-    expect(inspect(all).violations).toContain("phone.yml:phone-repeat-2: reads secrets");
+    expect(inspect(all).violations).toContain("phone.yml:native-phone: reads secrets");
   });
 
   it("rejects a workflow-level secret inherited by the native checks", () => {

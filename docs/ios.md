@@ -430,7 +430,7 @@ The captain's one-time Apple setup is:
    The private-key secret contains base64 of the downloaded `.p8` file, never a value pasted into a task or a command argument.
 
 After preflight, `ios-release.yml` calls the same-source reusable `phone.yml` with the resolved `source_commit`.
-That unsigned job runs every part on both devices through the required `MAC_QUEUES.phone` queue, without affected-part filtering or edited-part repeats.
+That unsigned job runs every part on both devices through the required `MAC_QUEUES.phone` queue, without affected-part filtering or edited-part repeats, as one call per device so the iPad and the iPhone each take one phone Mac at once (INF-2582).
 It receives only contents-read and actions-read permissions, for checkout and the Export phone pictures job's download, because GitHub starts no job of a called workflow that asks for more than its caller grants; no signing secrets or release environment pass to the guest.
 Both devices run even if one fails; any failure, cancellation or skipped phone job prevents the host signing job from starting.
 The host signing job then uses the `testflight` kind's queue (`docs/testing.md`, "Each Mac job's kind and size"), otherwise `REAL_MAC_RUNNER`, then `MAC_RUNNER`, falling back only to `mini-mac`.
@@ -753,7 +753,7 @@ A pull request no longer starts it (INF-2139): a crewmate whose change selects i
 INF-2539 removed its pull request selection; the phone release (`ios-release.yml`) runs every part, and main runs no phone check (INF-2492).
 The gate's own setup also selects it: `phone.yml`, `scripts/test-phone.ts`, `tests/helpers/phoneHome.ts`, `tests/helpers/phoneKeyboard.ts`, its activity writer `scripts/phone-activity.ts`, its leftover sweep `scripts/phone-leftovers.ts`, its check runner `scripts/phone-checks.ts` and its test plan helper `scripts/phone-test-plan.ts`.
 Setup the gate never runs does not: `scripts/affected-phone.ts`, `scripts/phone-test-home.ts`, and the virtual Mac scripts `scripts/virtual-mac/phone.sh`, `phone-job.sh` and `vm.sh`.
-The phone release (`ios-release.yml`) runs every part, while a crewmate's request with `affected: "true"` runs only touched parts and falls back to every part when scope is uncertain (`docs/testing.md`, "The phone parts a request runs").
+The phone release (`ios-release.yml`) runs every part on both devices with all 20 relaunch pairs, while a crewmate's request with `affected: "true"` runs only touched parts and falls back to every part when scope is uncertain; a part it only reaches runs on the iPhone alone, and a request on a branch runs 2 of the 20 relaunch pairs (INF-2582; `docs/testing.md`, "The phone check on request").
 Shared modules, connection/device code, general packages and the lockfile alone do not select it; a changed generated Swift file does, unless it changes only its `public static let version` line, which includes a new first number: the phone and the computer come from the same pull request, so they always agree on it, and `docs/contract.json` alone never selects the gate.
 Every pull request still checks on Linux that the generated file is current, through `pnpm check` (`node scripts/generate-phone-contract.ts --check`).
 On an affected request the native job runs the chooser, `scripts/affected-phone.ts`, on the Mac before its setup; an unreadable comparison runs the gate, and a change it selects no gate for ends the job there.
@@ -779,11 +779,11 @@ Before the gate starts any phone work, `scripts/phone-activity.ts` publishes a p
 Each invocation owns one uniquely named JSON file containing only `schemaVersion: 1`, its `pid` and `processStartedAt`, the normalized `LC_ALL=C TZ=UTC /bin/ps -o lstart=` reading for that PID.
 The supervisor stays alive through teardown and removes only its own file after cleanup; this is activity reporting, with no lock, admission wait, heartbeat or age expiry.
 The paired reader is dotfiles-private's `hosts/PHONE_ACTIVITY.md` contract and idle-reboot watchdog; producer and reader must merge together before the lock removals are complete.
-The device gate has a 90-minute step limit in the placed guest.
+The device gate has a 90-minute step limit in the placed guest for each pass it runs: 90 minutes for one pass, and 270 for a request whose edited parts run two more passes in the same step (INF-2582).
 Both sequential and parallel device lanes must finish within that same limit.
 Two full checks at once, one on each of the Mac mini's virtual Macs, starve each other: their parts ran past XCTest's 20-minute allowance, and one check ran past the 90 minutes too (INF-2052).
 Xcode collects no diagnostics after a failed test (`-collect-test-diagnostics never`), since its collection held each failed part for ten minutes and the gate keeps its own failure logs (INF-2052).
-The native job retains its 165-minute job limit for setup, checks, cleanup and evidence upload, without command-admission waits.
+The native job's limit is 165 minutes for setup, the ordinary pass, cleanup and evidence upload, plus 90 for each further pass, without command-admission waits.
 Neither device's failure is ignored: both devices run every selected part, whether their lanes run side by side or sequentially, and any failing fails the gate; on a pull request the first failed part stops the rest.
 This pull-request lane neither signs a physical-device build nor publishes one; `ios-release.yml` runs the same native gates before its separately dispatched TestFlight upload.
 Mac-side checks remain the project's normal gate and affected Devices journeys.
@@ -800,13 +800,13 @@ A rerun of an old workflow still uses its old routing, so use the current workfl
 
 The `phone` kind in `MAC_QUEUES` keeps the exact label `mini-mac-phone` (INF-2202, DOP-246).
 The fleet must serve that label only from the two vBoxx virtual places, never the captain's Mac mini VM; activation is a separate fleet operation.
-All three jobs, `native-phone`, `phone-repeat-2` and `phone-repeat-3`, require that mapping with no per-run override, fixed-clone switch or generic-Mac fallback.
+The one native job, `native-phone`, requires that mapping with no per-run override, fixed-clone switch or generic-Mac fallback.
 An absent, empty or malformed mapping supplies no runnable destination instead of redirecting to the mini.
 The other nine queue mappings and the generic Mac labels remain unchanged for non-phone jobs.
-Each guest runs `scripts/test-phone.ts --both --simulators 1` directly, completing one device's lane and deleting its simulator before starting the other (INF-2101).
-The ordinary request, main's full check and the unsigned TestFlight call use the same gate, selection and failure behavior.
+Each guest runs `scripts/test-phone.ts --both --simulators 1` directly for a request, completing one device's lane and deleting its simulator before starting the other (INF-2101); each of the unsigned TestFlight call's two device calls runs one device with `--simulators 1`.
+The ordinary request and the unsigned TestFlight call use the same gate and failure behavior.
 The rented places serve only this phone queue, not journeys, signing, publishing, installer checks or borrows.
-`tests/phone-pool-isolation.test.ts` evaluates the workflows with configured queues and both release modes, allowing only the three native phone jobs there and refusing secret reads.
+`tests/phone-pool-isolation.test.ts` evaluates the workflows with configured queues and both release modes, allowing only the native phone job there and refusing secret reads.
 Other workflows' operator-controlled overrides must never point at the phone queue.
 The disposable guests have no captain signing material; the ordinary GitHub job token permits checkout and result uploads.
 Every run and attempt has its own concurrency group, so the two vBoxx places may check independently without a shared one-at-a-time line.

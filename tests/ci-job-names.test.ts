@@ -167,7 +167,6 @@ const SCENARIOS: { file: string; trigger: string; scenario: Scenario }[] = [
     scenario: {
       github: { event_name: "workflow_dispatch" },
       inputs,
-      needs: { "native-phone": { outputs: { repeat_parts: "cards" } } },
     },
   })),
   {

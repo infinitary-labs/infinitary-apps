@@ -60,7 +60,14 @@ jobs:
     if: needs.resolve.outputs.mode == 'release'
     # The reusable workflow and its checkout use this dispatch's resolved source.
     # No release environment or signing secrets cross into the disposable guest.
-    name: Requested TestFlight · Phone checks
+    # INF-2582 direction A (the captain's "A: wait once and trim the soak"): every part
+    # on each device, one call per device, so the iPad and the iPhone each take one of
+    # the two phone Macs at once; one failing never cancels the other (INF-2409).
+    name: Requested TestFlight · Phone checks (${{ matrix.device == 'ipad' && 'iPad' || 'iPhone' }})
+    strategy:
+      fail-fast: false
+      matrix:
+        device: [ipad, iphone]
     uses: ./.github/workflows/phone.yml
     # GitHub starts no job of a called workflow that asks for more than this
     # grant, even one its condition skips: phone.yml's Export phone pictures
@@ -71,6 +78,7 @@ jobs:
     with:
       trigger: Requested TestFlight
       source_commit: ${{ needs.resolve.outputs.source_commit }}
+      device: ${{ matrix.device }}
 
   testflight:
     name: Requested TestFlight · Sign and upload

@@ -110,6 +110,45 @@ export function phoneJobs(devices: PhoneDevice[], parts: readonly string[] = PHO
     .flatMap((part) => order.filter((device) => devices.includes(device)).map((device) => ({ device, part: part.name })));
 }
 
+/** INF-1735's soak: each relaunch part runs ten dark/light relaunch pairs, twenty across the two parts
+ * (PhoneJourney.swift's testRelaunchPairsFirstTen and testRelaunchPairsSecondTen). */
+export const RELAUNCH_PAIRS_PER_PART = 10;
+
+/** How many relaunch pairs each relaunch part runs: every one unless a count is given. INF-2582 direction A:
+ * a request on a branch gives 1, so it runs 2 of the 20 pairs, and the release check keeps all 20. */
+export function relaunchPairs(value: string | undefined): number {
+  if (value === undefined || value === "") return RELAUNCH_PAIRS_PER_PART;
+  const pairs = Number(value);
+  if (!Number.isInteger(pairs) || pairs < 1 || pairs > RELAUNCH_PAIRS_PER_PART)
+    throw new Error(`Relaunch pairs per part must be a whole number from 1 to ${RELAUNCH_PAIRS_PER_PART}, not ${value}`);
+  return pairs;
+}
+
+/** One part's run in a gate: its device, its part, and which pass of the gate it belongs to. */
+export type PhoneJob = { device: PhoneDevice; part: string; round: number };
+
+/** The passes after the ordinary one that a part whose test code changed takes (INF-2259: three in all). */
+export const PHONE_REPEAT_ROUNDS = [2, 3] as const;
+
+/** INF-2582 direction A (the captain's choices "A: wait once and trim the soak" and "iPhone only; iPad
+ * waits for the release check"): one gate runs every pass on the build and simulators it started.
+ * Round one runs `parts` on every device and `iphoneOnly` on the iPhone alone; rounds two and three
+ * then run `repeats` again on every device, after that device's round one. Each device's jobs are in
+ * the order its lane runs them (`runDeviceLanes`), and the iPad's lane starts first, as `phoneJobs`. */
+export function phonePasses(devices: PhoneDevice[], { parts = [], iphoneOnly = [], repeats = [] }: {
+  parts?: readonly string[]; iphoneOnly?: readonly string[]; repeats?: readonly string[];
+}): PhoneJob[] {
+  for (const part of [...parts, ...iphoneOnly, ...repeats]) partSelection(part);
+  const first = phoneJobs(devices, [...parts, ...iphoneOnly])
+    .filter(({ device, part }) => device === "iphone" || !iphoneOnly.includes(part) || parts.includes(part))
+    .map((job) => ({ ...job, round: 1 }));
+  const order: PhoneDevice[] = ["ipad", "iphone"];
+  return order.filter((device) => devices.includes(device)).flatMap((device) => [
+    ...first.filter((job) => job.device === device),
+    ...PHONE_REPEAT_ROUNDS.flatMap((round) => phoneJobs([device], repeats).map((job) => ({ ...job, round }))),
+  ]);
+}
+
 /** INF-2052: a device's Photos, made ready in two stages. `watched` begins the wait for Photos to open its library
  * once, when the device starts, since that wait reads the library's opening since boot and ends at a ceiling after
  * boot. `ready` adds the library photo once, after that wait, only when the device's first part that chooses a photo

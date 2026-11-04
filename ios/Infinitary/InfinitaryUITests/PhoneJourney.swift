@@ -913,13 +913,21 @@ import XCTest
     /// Resources: this part's own fresh simulator and home; no photo, signing material or real account.
     func testRelaunchPairsFirstTen() async throws {
         _ = try await launchWithLastTurn()
-        try await relaunchPairs(10)
+        try await relaunchPairs(soakPairs)
     }
 
     /// The second ten of INF-1735's 20 pairs, from its own fresh home as the first ten.
     func testRelaunchPairsSecondTen() async throws {
         _ = try await launchWithLastTurn()
-        try await relaunchPairs(10)
+        try await relaunchPairs(soakPairs)
+    }
+
+    /// INF-2582 direction A (the captain's "wait once and trim the soak"): the gate names how many pairs each relaunch
+    /// part runs in the test plan (scripts/test-phone.ts). A request on a branch runs 1, so 2 of the 20; the release check
+    /// and a run with no count run all ten.
+    private var soakPairs: Int {
+        let named = Int(ProcessInfo.processInfo.environment["INFINITARY_PHONE_RELAUNCH_PAIRS"] ?? "") ?? 10
+        return min(max(named, 1), 10)
     }
 
     /// INF-1735: reach and the restored last turn can precede the requested appearance's drawn chrome.

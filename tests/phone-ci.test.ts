@@ -5,7 +5,7 @@ import { data, Evaluator, Lexer, Parser } from "@actions/expressions";
 import { describe, expect, it } from "vitest";
 import { GENERATED_CONTRACT, phoneDecision } from "../scripts/affected-phone";
 import { legacyJobName } from "../scripts/ci-job-names.mjs";
-import { PHONE_PARTS } from "../scripts/phone-test-plan";
+import { PHONE_PARTS, relaunchPairs } from "../scripts/phone-test-plan";
 import { workflowString, workflowValue } from "./helpers/releaseWorkflows";
 
 // INF-79 / INF-136: the captain requested a Mac mini lane for phone changes; since INF-2139 it
@@ -164,14 +164,9 @@ function stepsThatRun(
 }
 const RESULTS = "Keep native results and connection readings";
 const SAVE_PACKAGES = "Save the Swift packages from main";
-// The steps a plain branch request skips: no edited-part pass reuses a selection or keeps its
-// own evidence.
-const SKIPPED_STEPS = [
-  "Reuse the ordinary pass's edited-part selection",
-  "Keep each additional pass's evidence",
-  "Keep each additional pass's simulator logs",
-  "Keep each additional pass's failure results",
-];
+// The steps a plain branch request skips: none since INF-2582, whose edited-part passes ride the
+// ordinary gate and its evidence.
+const SKIPPED_STEPS: string[] = [];
 const names = (steps: Step[]) => steps.map((step) => step.name ?? step.uses ?? "");
 const isGate = (step: Step) => step.name === BOTH;
 
@@ -288,19 +283,20 @@ describe("the native gate on an affected request", () => {
       { ref: "refs/pull/79/merge", run_id: "18800000001", run_attempt: "2" },
     ];
     const vars = { PHONE_VIRTUAL_MAC: TOGETHER, MAC_RUNNER: "mini-mac-any" };
-    for (const id of [NATIVE_JOB, "phone-repeat-2", "phone-repeat-3"]) {
-      const native = workflow.jobs[id].concurrency;
-      const groups = runs.map((github) =>
+    const native = workflow.jobs[NATIVE_JOB].concurrency;
+    // INF-2582: the phone release's two device calls share a run and attempt, and each waits for its own guest.
+    const groups = runs.flatMap((github) =>
+      ["", "ipad", "iphone"].map((device) =>
         workflowString(native.group, {
           github,
           vars,
-          inputs: { mac_runner: "mini-mac-real" },
+          inputs: { mac_runner: "mini-mac-real", device },
         }),
-      );
-      expect(new Set(groups).size).toBe(runs.length);
-      expect(native.queue).toBe("max");
-      expect(native["cancel-in-progress"]).toBe(false);
-    }
+      ),
+    );
+    expect(new Set(groups).size).toBe(runs.length * 3);
+    expect(native.queue).toBe("max");
+    expect(native["cancel-in-progress"]).toBe(false);
   });
   it("keeps TestFlight uploads in a line of their own, apart from the phone checks", () => {
     // INF-989 (captain: "keep TestFlight uploads in their own line").
@@ -323,13 +319,18 @@ describe("the native gate on an affected request", () => {
   });
   // INF-1083 / INF-1072: the gate, not just its lease, ends on every route. INF-2052: the captain raised its
   // limit from 60 to 90 minutes for every part on both devices; alone, a full check passed in 59.
-  it("caps every route at ninety minutes while preserving the 165-minute job", () => {
-    for (const route of [OFF, IN_TURN, TOGETHER]) {
-      const gates = stepsThatRun(route).filter(isGate);
-      expect(gates).toHaveLength(1);
-      expect(gates[0]?.["timeout-minutes"]).toBe(90);
-    }
-    expect(workflow.jobs[NATIVE_JOB]["timeout-minutes"]).toBe(165);
+  // INF-2582: the two edited-part passes run in the same gate, each with the same 90 minutes, and the job
+  // keeps 165 minutes for the ordinary pass and 90 more for each further pass.
+  it("caps every route at ninety minutes a pass, within the job's own limit", () => {
+    const passes = (repeat: string) =>
+      workflowValue(String(stepsThatRun(OFF).find(isGate)?.["timeout-minutes"]), {
+        steps: { "request-select": { outputs: { repeat_parts: repeat } } },
+      });
+    for (const route of [OFF, IN_TURN, TOGETHER])
+      expect(stepsThatRun(route).filter(isGate)).toHaveLength(1);
+    expect(passes("")).toBe(90);
+    expect(passes("talk-tasks")).toBe(90 * 3);
+    expect(workflow.jobs[NATIVE_JOB]["timeout-minutes"]).toBe(165 + 90 * 2);
   });
   it("runs only on request or a reusable call, never on a pull request", () => {
     // INF-2139 (captain: "let's pull journeys and phone checks off PRs now"); the phone
@@ -389,13 +390,13 @@ describe("the native gate on an affected request", () => {
       expect(names(ran)).toContain("Install without reading this Mac's signing material");
       expect(ran.filter(isGate)).toHaveLength(1);
       expect(ran.find(isGate)?.env?.PHONE_PARTS).toBe(
-        "${{ steps.repeat-select.outputs.parts || inputs.parts || steps.request-select.outputs.parts }}",
+        "${{ inputs.parts || steps.request-select.outputs.parts }}",
       );
     }
     // The shell execution and both-device arguments belong to release-workflows.test.ts.
   });
   it("ignores former runner overrides for every device job (INF-2202)", () => {
-    for (const id of [NATIVE_JOB, "phone-repeat-2", "phone-repeat-3"])
+    for (const id of [NATIVE_JOB])
       for (const mode of [OFF, IN_TURN, TOGETHER])
         expect(
           workflowValue(workflow.jobs[id]["runs-on"], {
@@ -411,7 +412,7 @@ describe("the native gate on an affected request", () => {
         ).toBe("mini-mac-phone");
   });
   it("supplies no runnable destination when the phone queue is absent (INF-2202)", () => {
-    for (const id of [NATIVE_JOB, "phone-repeat-2", "phone-repeat-3"]) {
+    for (const id of [NATIVE_JOB]) {
       const resolve = (mapping: string) =>
         workflowValue(workflow.jobs[id]["runs-on"], {
           vars: {
@@ -481,21 +482,18 @@ describe("the phone check's Swift packages", () => {
 // "Upload the 530 MB phone results only when a check fails"); since INF-2139 the early stop
 // belongs to a complete branch selection and its edited-part passes.
 describe("a failing phone check", () => {
-  it("stops at its first failed part only for a complete selection or an edited-part pass", () => {
+  it("stops at its first failed part only for a complete selection, its edited-part passes included", () => {
     const gate = stepsThatRun(OFF).find(isGate) as Step;
     const stopEarly = gate.env?.INFINITARY_PHONE_STOP_EARLY?.replace(/^\$\{\{\s*|\s*\}\}$/g, "");
     for (const [full, repeat, value] of [
       ["true", "", "1"],
+      ["true", "join-read", "1"],
       ["false", "", "0"],
-      ["", "join", "1"],
       ["", "", "0"],
     ] as const)
       expect(
         holds(`(${stopEarly}) == '${value}'`, {
-          steps: {
-            "request-select": { outputs: { full } },
-            "repeat-select": { outputs: { parts: repeat } },
-          },
+          steps: { "request-select": { outputs: { full, repeat_parts: repeat } } },
         }),
       ).toBe(true);
   });
@@ -526,7 +524,9 @@ describe("a failing phone check", () => {
     const temp = "/runner/temp";
     const uploaded = (name: string, files: string[]) => {
       const step = (workflow.jobs[NATIVE_JOB].steps as (Step & { with?: Plain })[]).find(
-        (each) => each.uses?.startsWith("actions/upload-artifact") && each.with?.name === name,
+        (each) =>
+          each.uses?.startsWith("actions/upload-artifact") &&
+          workflowString(String(each.with?.name ?? ""), { inputs: {} }) === name,
       );
       const lines = String(step?.with?.path)
         .split("\n")
@@ -538,9 +538,14 @@ describe("a failing phone check", () => {
         .filter((file) => taken.some((glob) => matchesGlob(`${temp}/phone/${file}`, glob)))
         .filter((file) => !left.some((glob) => matchesGlob(`${temp}/phone/${file}`, glob)));
     };
-    const simulatorLogs = (["iphone", "ipad"] as const).flatMap((device) =>
-      PHONE_PARTS.map((part) => `${device}/${part.name}/simulator-live.log`),
-    );
+    const simulatorLogs = [
+      ...(["iphone", "ipad"] as const).flatMap((device) =>
+        PHONE_PARTS.map((part) => `${device}/${part.name}/simulator-live.log`),
+      ),
+      // INF-2582: an edited part's further passes write folders beside its ordinary pass's.
+      "ipad/talk-tasks-round-2/simulator-live.log",
+      "iphone/talk-tasks-round-3/simulator-live.log",
+    ];
     const commandLogs = [
       "1-xcrun.log",
       "2-node.log",
@@ -557,6 +562,8 @@ describe("a failing phone check", () => {
       // What the app and the simulator's system logged, read after a part failed.
       "iphone/talk/71-xcrun.log",
       "iphone/talk/72-xcrun.log",
+      "ipad/talk-tasks-round-2/9-xcodebuild.log",
+      "iphone/talk-tasks-round-3/9-xcodebuild.log",
       "ipad/rest/phone.xcresult/Staging/1_Test/Diagnostics/InfinitaryUITests-71653F01-C0E0-418C-AAA9-959D2FAC473C-Configuration-Test Scheme Action-Iteration-1/scheduling.log",
     ];
     const files = [
@@ -566,8 +573,10 @@ describe("a failing phone check", () => {
       "ipad/rest/phone.xcresult/Info.plist",
     ];
     expect(uploaded("phone-logs", files)).toEqual([...commandLogs, "part-times.json"]);
+    // INF-2582: a release call of one device keeps that device's part times under its folder.
+    const deviceTimes = ["ipad/part-times.json", "iphone/part-times.json"];
+    expect(uploaded("phone-logs", deviceTimes)).toEqual(deviceTimes);
     expect(uploaded("phone-simulator-logs", files)).toEqual(simulatorLogs);
-    expect(simulatorLogs).toHaveLength(PHONE_PARTS.length * 2);
   });
 });
 
@@ -653,49 +662,62 @@ describe("affected request routing", () => {
   });
 });
 
-// INF-2259: full ordinary coverage and exactly two further edited-test passes,
-// in fresh sequential jobs at one workflow version, never retries after a failure.
+// INF-2259: full ordinary coverage and exactly two further edited-test passes, at one workflow
+// version, never retries after a failure. INF-2582 direction A (the captain's "A: wait once and
+// trim the soak"): both further passes run in the ordinary job's gate, on its build and simulators,
+// so a request waits for a phone Mac once; scripts/phone-test-plan.ts orders the passes.
 describe("complete-selection phone CI repeats", () => {
-  const repeats = ["phone-repeat-2", "phone-repeat-3"];
-  const jobRuns = (name: string, parts: string, previous: string[]) => {
-    const job = workflow.jobs[name];
-    return (
-      previous.every((result) => result === "success") &&
-      holds(job.if, {
-        needs: { "native-phone": { outputs: { repeat_parts: parts } } },
-      })
-    );
-  };
-
-  it("starts both additional passes only after successful predecessors", () => {
-    expect(jobRuns(repeats[0]!, "join talk", ["success"])).toBe(true);
-    expect(jobRuns(repeats[1]!, "join talk", ["success", "success"])).toBe(true);
-    for (const result of ["failure", "cancelled", "skipped", "pending"]) {
-      expect(jobRuns(repeats[0]!, "join talk", [result])).toBe(false);
-      expect(jobRuns(repeats[1]!, "join talk", ["success", result])).toBe(false);
-    }
-    for (const name of repeats) expect(jobRuns(name, "", ["success"])).toBe(false);
-    expect(workflow.jobs[repeats[0]!].needs).toEqual(["native-phone"]);
-    expect(workflow.jobs[repeats[1]!].needs).toEqual(["native-phone", "phone-repeat-2"]);
+  const gate = () => (workflow.jobs[NATIVE_JOB].steps as Step[]).find(isGate)!;
+  it("runs no job on a phone Mac but the one native job", () => {
+    const onPhoneMac = Object.entries(workflow.jobs as Record<string, { "runs-on": string }>)
+      .filter(([, job]) => String(job["runs-on"]).includes("MAC_QUEUES).phone"))
+      .map(([id]) => id);
+    expect(onPhoneMac).toEqual([NATIVE_JOB]);
+    expect(workflow.jobs[NATIVE_JOB].outputs).toBeUndefined();
   });
-
-  it("uses the existing isolated device gate and deadlines for each repeat", () => {
-    for (const name of repeats) {
-      const job = workflow.jobs[name];
-      expect(job.steps).toEqual(workflow.jobs[NATIVE_JOB].steps);
-      expect(job["timeout-minutes"]).toBe(workflow.jobs[NATIVE_JOB]["timeout-minutes"]);
-      expect(job.steps.find((step: Step) => step.id === "both")["timeout-minutes"]).toBe(90);
-      expect(job.env.PHONE_ROUND).not.toBe("");
-      expect(
-        holds(
-          workflow.jobs[NATIVE_JOB].steps.find((step: Step) => step.id === "request-select").if,
-          {
-            github: { event_name: "workflow_dispatch" },
-            env: { PHONE_REPEAT_PARTS: "join talk" },
-            inputs: {},
+  it("hands the chooser's edited parts and iPhone-only parts to the one gate", () => {
+    const chosen = {
+      inputs: { parts: "" },
+      steps: {
+        "request-select": {
+          outputs: {
+            parts: "join-read talk-tasks rest",
+            iphone_parts: "join-read rest",
+            repeat_parts: "talk-tasks",
+            full: "true",
           },
-        ),
-      ).toBe(false);
-    }
+        },
+      },
+    };
+    expect(workflowString(gate().env!.PHONE_PARTS!, chosen)).toBe("join-read talk-tasks rest");
+    expect(workflowString(gate().env!.PHONE_IPHONE_PARTS!, chosen)).toBe("join-read rest");
+    expect(workflowString(gate().env!.PHONE_REPEAT_PARTS!, chosen)).toBe("talk-tasks");
+    expect(workflowString(gate().env!.INFINITARY_PHONE_STOP_EARLY!, chosen)).toBe("1");
+  });
+});
+
+// INF-2582 direction A: a request on a branch runs 2 of INF-1735's 20 relaunch pairs, one per relaunch
+// part; a check of main and the phone release's call run all 20.
+describe("the relaunch soak", () => {
+  const pairs = (github: Plain, inputs: Plain = {}) =>
+    workflowString(
+      String(
+        (workflow.jobs[NATIVE_JOB].steps as Step[]).find(isGate)!.env!
+          .INFINITARY_PHONE_RELAUNCH_PAIRS,
+      ),
+      { github, inputs },
+    );
+  it("trims a branch request to one pair a part and keeps every pair on main and in the release", () => {
+    expect(pairs(BRANCH_REQUEST)).toBe("1");
+    expect(pairs(BRANCH_REQUEST, { affected: true, parts: "relaunch-first" })).toBe("1");
+    expect(relaunchPairs(pairs(BRANCH_REQUEST)) * 2).toBe(2);
+    expect(pairs({ event_name: "workflow_dispatch", ref: "refs/heads/main" })).toBe("");
+    expect(
+      pairs(
+        { event_name: "workflow_dispatch", ref: "refs/heads/main" },
+        { source_commit: "3835224557b6764d4455b13c1cee359fbb09b5f1" },
+      ),
+    ).toBe("");
+    expect(relaunchPairs("") * 2).toBe(20);
   });
 });

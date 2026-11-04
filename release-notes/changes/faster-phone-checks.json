@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "faster-phone-checks",
+      "reason": "How the project itself is checked: a phone check request runs its three passes in one job, a branch runs 2 of the 20 relaunch pairs and its reached parts on the iPhone alone, and the TestFlight check splits its two devices across both phone Macs; nothing in the app changes."
+    }
+  ]
+}

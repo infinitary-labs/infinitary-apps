@@ -7,6 +7,9 @@ import {
   phoneAnimationWaits,
   phoneExecutionArguments,
   phoneJobs,
+  phonePasses,
+  RELAUNCH_PAIRS_PER_PART,
+  relaunchPairs,
   runDeviceLanes,
   runSideBySide,
   testHomeKeys,
@@ -391,5 +394,85 @@ describe("a part's animation waits", () => {
 
   it("reads the hook's own line as a part that skipped the wait", () => {
     expect(phoneAnimationWaits(skipped)).toEqual({ skipped: true, missed: 0 });
+  });
+});
+
+// INF-2582 direction A (the captain's "A: wait once and trim the soak" and "iPhone only; iPad waits
+// for the release check"): one gate runs all three passes on the devices it started, so a request
+// waits for a phone Mac once. The selection is the shape the chooser gives a change that edits the
+// talk-tasks test and reaches join-read and rest.
+describe("every pass in one gate", () => {
+  const selection = {
+    parts: ["talk-tasks"],
+    iphoneOnly: ["join-read", "rest"],
+    repeats: ["talk-tasks"],
+  };
+  it("runs reached parts on the iPhone alone and edited parts three times on each device", () => {
+    const jobs = phonePasses(["iphone", "ipad"], selection);
+    const label = ({ device, part, round }: { device: string; part: string; round: number }) =>
+      `${device} ${part} ${round}`;
+    expect(jobs.map(label)).toEqual([
+      "ipad talk-tasks 1",
+      "ipad talk-tasks 2",
+      "ipad talk-tasks 3",
+      "iphone join-read 1",
+      "iphone talk-tasks 1",
+      "iphone rest 1",
+      "iphone talk-tasks 2",
+      "iphone talk-tasks 3",
+    ]);
+    // A gate of every part on both devices, as the release runs, has one pass and leaves no device out:
+    // each device's lane runs every part once, in the parts' own order.
+    const every = phonePasses(["iphone", "ipad"], { parts: PHONE_PARTS.map(({ name }) => name) });
+    for (const device of ["ipad", "iphone"] as const)
+      expect(every.filter((job) => job.device === device)).toEqual(
+        phoneJobs([device]).map((job) => ({ ...job, round: 1 })),
+      );
+    expect(every).toHaveLength(phoneJobs(["iphone", "ipad"]).length);
+    expect(() => phonePasses(["iphone"], { repeats: ["talk"] })).toThrow(/No phone journey part/);
+  });
+  it("starts a device's later passes after its ordinary pass, and none after a failure", async () => {
+    const jobs = phonePasses(["iphone", "ipad"], selection);
+    const lane = (fail?: string) => {
+      const started: string[] = [];
+      return {
+        started,
+        run: () =>
+          runDeviceLanes(
+            jobs,
+            1,
+            {
+              open: async (device) => device,
+              run: async (job) => {
+                const name = `${job.device} ${job.part} ${job.round}`;
+                started.push(name);
+                return { failed: name === fail };
+              },
+              close: async () => {},
+            },
+            ({ failed }) => failed,
+          ),
+      };
+    };
+    const passing = lane();
+    await passing.run();
+    expect(passing.started).toEqual(jobs.map((job) => `${job.device} ${job.part} ${job.round}`));
+    const failing = lane("ipad talk-tasks 2");
+    const outcomes = await failing.run();
+    expect(failing.started).toEqual(["ipad talk-tasks 1", "ipad talk-tasks 2"]);
+    expect(outcomes.filter(Boolean)).toHaveLength(2);
+  });
+});
+
+// INF-2582 direction A: a branch runs 2 of INF-1735's 20 relaunch pairs, one in each relaunch part.
+describe("the relaunch soak's pair count", () => {
+  it("runs every pair unless a count is given, and refuses a count outside one to ten", () => {
+    const relaunchParts = PHONE_PARTS.filter(({ name }) => name.startsWith("relaunch-"));
+    expect(relaunchParts.length * relaunchPairs(undefined)).toBe(20);
+    expect(relaunchParts.length * relaunchPairs("")).toBe(20);
+    expect(relaunchParts.length * relaunchPairs("1")).toBe(2);
+    expect(relaunchPairs(String(RELAUNCH_PAIRS_PER_PART))).toBe(RELAUNCH_PAIRS_PER_PART);
+    for (const value of ["0", "11", "1.5", "two", "-1"])
+      expect(() => relaunchPairs(value)).toThrow(/whole number from 1 to 10/);
   });
 });

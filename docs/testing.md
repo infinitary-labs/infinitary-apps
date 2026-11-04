@@ -27,7 +27,7 @@ A small local diagnostic run is allowed, not an additional mandatory gate.
 Passing checks never grants merge permission.
 
 Edited test files require three total successful runs: ordinary coverage plus two more, never an ordinary run plus three repetitions.
-An affected unedited phone part runs once per device; an unedited journey the change only reaches runs in the swept batch, never on the task branch ("What a task branch requests").
+An affected unedited phone part runs once, on the iPhone (INF-2582, "The phone check on request"); an unedited journey the change only reaches runs in the swept batch, never on the task branch ("What a task branch requests").
 Failed, skipped, cancelled, incomplete and older-version outcomes are not passing proof.
 A failed or interrupted round stops later repetitions without retries.
 Record the version, selection reasons, files or parts, required platforms or devices, rounds and outcomes in the existing task/check evidence; this adds no host gate or second selector.
@@ -54,8 +54,8 @@ Record the version, selection reasons, files or parts, required platforms or dev
   `scripts/mac-unit-tests.ts` identifies native prerequisites, not an exclusion of portable files from local rounds.
   A developer without a Mac cannot count skipped native cases as proof.
 - Edited phone parts retain three runs on each device.
-  Complete affected selections get ordinary coverage once and only distance-zero parts twice more through CI; proper subsets retain the selected local repeats, which also satisfy ordinary proof for those parts.
-  Other affected parts run once, and unreadable test changes keep conservative all-parts repetitions.
+  Complete affected selections get ordinary coverage once and only distance-zero parts twice more in the same CI gate; proper subsets retain the selected local repeats, which also satisfy ordinary proof for those parts.
+  Other affected parts run once, on the iPhone alone, and unreadable test changes keep conservative all-parts repetitions on both devices.
   See "The phone check on request" for its exact route and isolation.
 - Replay runs once in Linux CI when relevant; pictures and demos remain local.
 
@@ -577,12 +577,12 @@ The two vBoxx virtual places run phone checks independently; the mini serves no 
 Desktop journey jobs from different pull requests remain parallel.
 Desktop journeys and native phone gates run directly, without a command lease, so real and virtual Macs can check concurrently.
 The phone workflow keeps its configured concurrency groups; they do not exclude desktop checks or a local phone command.
-The native job retains its 165-minute job limit for setup, the device gate, cleanup and evidence upload; there is no command-admission wait.
+The native job's limit is 165 minutes for setup, the ordinary pass, cleanup and evidence upload, and 90 more for each of a request's two edited-part passes; there is no command-admission wait.
 `pnpm test:phone` checks the configured execution mode, then runs `scripts/test-phone.ts` directly.
 `tests/mac-check-lock.test.ts` executes the workflow and package command strings with held workloads to verify overlap, failure status and cancellation.
 `tests/phone-ci.test.ts` evaluates the required queue, rejects missing configuration and proves former overrides cannot change routing or suppress guest setup.
 The device gate always uses `--simulators 1`, completing and deleting one device before starting the next (INF-2101).
-This applies to requested checks, main's full check and unsigned TestFlight checks, with the same tests, failure propagation and allowances.
+This applies to requested checks and unsigned TestFlight checks, with the same tests, failure propagation and allowances; the TestFlight call gives each device its own call, and so its own phone Mac.
 The fixture, simulator identity and unsigned Xcode configuration are described in `docs/ios.md`, "Disposable verification".
 
 ### The phone check on request
@@ -596,20 +596,25 @@ This selection reuses `PART_OWNERS` and the Swift declaration reach reader, with
 Shared phone inputs and unreadable comparisons or test changes run every part instead.
 An affected request with no reached parts skips the native job; the summary and `phone-placement` artifact record the selection.
 Explicit `parts` still overrides automatic selection for diagnostic runs.
-The chooser compares ordinary coverage with the complete live part table, independent of order, and keeps `coverage` and `repeats` in `phone-placement`.
-A complete selection runs once in `native-phone`, then distance-zero edited-test parts run twice more, in `phone-repeat-2` and `phone-repeat-3`.
+The chooser compares ordinary coverage with the complete live part table, independent of order, and keeps `coverage`, `iphoneOnly` and `repeats` in `phone-placement`.
+INF-2582 direction A (the captain's choices "A: wait once and trim the soak" and "iPhone only; iPad waits for the release check") shapes the gate of an affected request in three ways.
+A part the change only reaches runs on the iPhone alone (the chooser's `iphone_parts`), and the iPad runs it in the next phone release; a part whose test code changed, or every part of a change the chooser could not read, runs on both devices.
+A complete selection runs once, then distance-zero edited-test parts run twice more on each device in the same gate step, on the build and simulators it started, so the request waits for a phone Mac once (`phonePasses` in `scripts/phone-test-plan.ts`).
+A request on a branch runs one of each relaunch part's ten dark and light relaunch pairs (INF-1735), so 2 of the 20, through the gate's `--relaunch-pairs`; a request on `main` and the phone release run all 20.
+Named `parts` and every-part requests run their parts on both devices.
 Unreadable test changes retain all-parts repeats; a product-only shared input does not invent edited tests.
-Each further job depends on successful predecessors, uses the same workflow version, starts fresh isolated runs, and cleans up before returning.
-Each keeps the existing 90-minute gate and 165-minute job deadlines, with no retries and no later pass after a failure, cancellation or skip.
-The ordinary artifacts retain their names; each additional job keeps its own `phone-repeat-2` or `phone-repeat-3` evidence artifact.
-Each additional pass keeps simulator logs separately, and uploads whole result bundles only on failure or recording, with the ordinary retention periods.
+Each device runs a later pass only after its own ordinary pass, each pass of a part starts from a fresh test home and app, and a complete selection's first failure stops every later part and pass, with no retries.
+Each pass keeps 90 minutes of the gate step's limit.
+A later pass writes its part's folder beside the ordinary one, named `<part>-round-<n>`, so its logs, pictures and failure results ride the ordinary artifacts.
 An unavailable CI route leaves missing proof, never an automatic complete local fallback.
 Neither route starts a release, TestFlight or App Store step.
 Complete branch selections stop at the first failed part; proper-subset requests and main keep full discovery.
 Inside the gate a failed Swift package test no longer skips the simulator tests (`scripts/phone-checks.ts`); every failure is reported and fails the job.
 Every request uses `MAC_QUEUES.phone`, currently `mini-mac-phone`; no `mac_runner` input, `PHONE_VIRTUAL_MAC` switch or generic-Mac variable can redirect it.
 Do not use local mini borrows for phone proof.
-The same-source unsigned call from `ios-release.yml` passes its resolved `source_commit`, runs every part without repeats, and must succeed before host signing starts.
+The same-source unsigned call from `ios-release.yml` passes its resolved `source_commit` and runs every part without repeats, once per device through a matrix (`ipad`, `iphone`) with fail-fast off, so both phone Macs check one device each at once (INF-2582, reusing INF-2409's split); both calls must succeed before host signing starts.
+Each call names its device in its job name and in each artifact (`phone-logs-ipad`, `phone-results-iphone` and so on), keeps its evidence under its device's folder, and writes that device's `part-times.json` there.
+The two calls share the one computer both phone Macs run on, which reported memory pressure warnings in 5 of 29 readings while both guests ran (INF-2409).
 Status-only TestFlight requests start no phone or signing job.
 
 ## The critical path
@@ -1184,7 +1189,7 @@ Other jobs read `fromJSON(vars.MAC_QUEUES || '{}').<kind>` before their old labe
 | --- | --- | --- |
 | `check` | `verify.yml`'s Mac lane, the full Mac check | anywhere |
 | `journeys` | `journeys.yml`'s `affected-journeys` | anywhere |
-| `phone` | `phone.yml`'s `native-phone`, `phone-repeat-2` and `phone-repeat-3` | only in the two vBoxx phone VMs |
+| `phone` | `phone.yml`'s `native-phone` | only in the two vBoxx phone VMs |
 | `testflight` | `ios-release.yml`'s `testflight`, which signs after the separate unsigned phone job succeeds | on the real Mac |
 | `build` | `mac-installer.yml`'s `build` | in a virtual Mac only |
 | `sign` | `release.yml`'s signing job | on the real Mac |

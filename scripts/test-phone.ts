@@ -24,7 +24,7 @@ import { GATE_SIMULATOR, removePhoneLeftovers, SCRATCH_PREFIX } from "./phone-le
 import { phoneRecording } from "./phone-recording.ts";
 import { startPhoneGuestObserver } from "./phone-guest-observer.ts";
 import { phoneSimulator, phoneXcode } from "./phone-simulator.ts";
-import { devicePhotos, PHONE_PARTS, type PhoneDevice, partSelection, phoneAnimationWaits, phoneExecutionArguments, phoneJobs, phoneStopsEarly, runDeviceLanes, testHomeKeys } from "./phone-test-plan.ts";
+import { devicePhotos, PHONE_PARTS, type PhoneDevice, type PhoneJob, partSelection, phoneAnimationWaits, phoneExecutionArguments, phonePasses, phoneStopsEarly, relaunchPairs, runDeviceLanes, testHomeKeys } from "./phone-test-plan.ts";
 
 // INF-800: with CI mode on, the phone check runs only through CI (docs/testing.md).
 const refusal = ciModeRefusal("phone");
@@ -45,6 +45,12 @@ const { values } = parseArgs({ options: {
   both: { type: "boolean", default: false },
   // INF-662 piece 2: the journey's parts to run (all of them unless named), and how many devices at once.
   part: { type: "string", multiple: true },
+  // INF-2582 direction A: parts a change only reaches, run on the iPhone alone, and parts whose test code
+  // changed, run twice more on every device after the ordinary pass, on the same build and simulators.
+  "iphone-part": { type: "string", multiple: true },
+  "repeat-part": { type: "string", multiple: true },
+  // INF-2582 direction A: how many of INF-1735's relaunch pairs each relaunch part runs; all ten unless given.
+  "relaunch-pairs": { type: "string", default: process.env.INFINITARY_PHONE_RELAUNCH_PAIRS },
   // Local repeats stop at their first failed part; CI chooses fail-fast or full discovery explicitly.
   "stop-early": { type: "boolean", default: phoneStopsEarly(process.env) },
   simulators: { type: "string", default: "6" },
@@ -60,8 +66,15 @@ if (evidence === REPO_ROOT || evidence.startsWith(REPO_ROOT + "/"))
 if (values.both && (values.ipad || values.xctestrun)) throw new Error("--both runs the iPhone and the iPad itself");
 if (values.xctestrun && values.part?.length !== 1) throw new Error("--xctestrun runs exactly one --part");
 if (!!values.xctestrun !== !!values.simulator) throw new Error("A part needs both its built plan and the gate's simulator");
+if (values.xctestrun && (values["iphone-part"] || values["repeat-part"])) throw new Error("--xctestrun runs one part once");
+if (values.waits && (values["iphone-part"] || values["repeat-part"])) throw new Error("--waits runs only the wait-clock tests");
+const pairs = relaunchPairs(values["relaunch-pairs"]);
 const devices: PhoneDevice[] = values.both ? ["iphone", "ipad"] : [values.ipad ? "ipad" : "iphone"];
-const jobs = phoneJobs(devices, values.waits ? ["rest"] : values.part ?? PHONE_PARTS.map((part) => part.name));
+// Every part on every device unless parts are named.
+const named = !!(values.part || values["iphone-part"]);
+const jobs: PhoneJob[] = phonePasses(devices, values.waits ? { parts: ["rest"] } : {
+  parts: named ? values.part ?? [] : PHONE_PARTS.map((part) => part.name),
+  iphoneOnly: values["iphone-part"], repeats: values["repeat-part"] });
 const simulators = Number(values.simulators);
 mkdirSync(evidence, { recursive: true });
 // INF-1541 piece 4 and INF-1664: a local gate waits in its computer's load line, never for a quieter
@@ -336,17 +349,23 @@ const everyPartOn = async (starting: Map<PhoneDevice, Promise<Lane>>) => {
   const plans = readdirSync(products).filter((name) => name.endsWith(".xctestrun"));
   const [plan] = plans;
   if (!plan || plans.length !== 1) throw new Error(`The build made ${plans.length} test plans, not one`);
-  // A --both run keeps a folder per device, as piece 1 did; each part writes its own folder in it.
-  const folder = (device: PhoneDevice, part: string) => values.both ? join(evidence, device, part) : join(evidence, part);
+  // A --both run keeps a folder per device, as piece 1 did; each part writes its own folder in it, and a
+  // later pass of it a folder beside it named for its round (INF-2582).
+  const folder = ({ device, part, round }: PhoneJob) => {
+    const name = round === 1 ? part : `${part}-round-${round}`;
+    return values.both ? join(evidence, device, name) : join(evidence, name);
+  };
   if (values.both) for (const device of devices) mkdirSync(join(evidence, device), { recursive: true });
   // INF-827: each part's minutes on each device, kept as part-times.json in a full gate's logs.
   const times: Record<string, Record<string, number>> = {};
-  const gate = async ({ device, part }: { device: PhoneDevice; part: string }, lane: Lane, stopping: AbortSignal) => {
-    const name = `${device} ${part}`;
+  const gate = async (job: PhoneJob, lane: Lane, stopping: AbortSignal) => {
+    const { device, part, round } = job;
+    const name = round === 1 ? `${device} ${part}` : `${device} ${part} round ${round}`;
     const began = Date.now();
     const minutes = () => ((Date.now() - began) / 60_000).toFixed(1);
     const ended = (outcome: "passed" | "stopped" | "failed") => {
-      (times[part] ??= {})[device] = Date.now() - began;
+      // A part's minutes are its ordinary pass's.
+      if (round === 1) (times[part] ??= {})[device] = Date.now() - began;
       return { name, outcome };
     };
     console.log(`${name}: began at ${new Date(began).toISOString()}`);
@@ -360,7 +379,7 @@ const everyPartOn = async (starting: Map<PhoneDevice, Promise<Lane>>) => {
     }
     const command = [process.execPath, "scripts/test-phone.ts", ...(device === "ipad" ? ["--ipad"] : []),
       ...demo.childArgs, ...(values.waits ? ["--waits"] : []), ...(values["guest-observer"] ? ["--guest-observer"] : []),
-      "--part", part, "--evidence", folder(device, part),
+      "--part", part, "--relaunch-pairs", String(pairs), "--evidence", folder(job),
       "--xctestrun", join(products, plan), "--simulator", lane.owned];
     if (values.starve) command.unshift("python3", "scripts/starve-check.py", "--timeout", "3600", "--stall-seconds", "12", "--");
     const child = spawn(command[0]!, command.slice(1), { cwd: REPO_ROOT, env, stdio: ["ignore", "pipe", "pipe"] });
@@ -399,9 +418,11 @@ const everyPartOn = async (starting: Map<PhoneDevice, Promise<Lane>>) => {
   }, values["stop-early"] ? (({ outcome }) => outcome === "failed") : undefined);
   const named = (outcome: string) => outcomes.filter((each) => each?.outcome === outcome).map((each) => each!.name);
   const [failed, stopped] = [named("failed"), named("stopped")];
-  const unstarted = jobs.filter((_, index) => !outcomes[index]).map(({ device, part }) => `${device} ${part}`);
-  // Only a full gate, every part on both devices run to its end, writes them.
-  if (values.both && !values.part && !values.waits && !stopped.length && !unstarted.length)
+  const unstarted = jobs.filter((_, index) => !outcomes[index])
+    .map(({ device, part, round }) => round === 1 ? `${device} ${part}` : `${device} ${part} round ${round}`);
+  // Only a full gate, every part on each of its devices run to its end, writes them; a gate of one device
+  // writes its own (INF-2582: the release check runs each device on its own phone Mac).
+  if (!named && !values.waits && !stopped.length && !unstarted.length)
     writeFileSync(join(evidence, "part-times.json"), `${JSON.stringify(times, null, 2)}\n`);
   if (failed.length) throw new Error([`The phone gate failed: ${failed.join(", ")}`,
     ...(stopped.length ? [`it stopped ${stopped.join(", ")}`] : []),
@@ -416,6 +437,9 @@ const planFor = async (built: string, url: string) => {
     // Xcode does not inherit the launcher's environment into its test targets.
     await run("plutil", ["-replace", key.replace(/PHONE_TEST_HOME$/, "INFINITARY_PERF_BUDGETS"),
       "-string", GRADES_BUDGETS ? "1" : "0", plan]);
+    // INF-2582: the relaunch parts read how many of INF-1735's pairs to run.
+    await run("plutil", ["-replace", key.replace(/PHONE_TEST_HOME$/, "INFINITARY_PHONE_RELAUNCH_PAIRS"),
+      "-string", String(pairs), plan]);
   }
   return plan;
 };

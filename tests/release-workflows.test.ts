@@ -30,6 +30,7 @@ import { BUILD_SCRIPTS_THAT_SHIP_NOTHING, isDesktopPath } from "../scripts/deskt
 import { laneOf } from "../scripts/journey-budget.ts";
 import { journeyArguments } from "../scripts/journey-runs.ts";
 import { MAC_UNIT_FILES } from "../scripts/mac-unit-tests.ts";
+import { RELAUNCH_PAIRS_PER_PART, relaunchPairs } from "../scripts/phone-test-plan.ts";
 import { presentationCommitMessage } from "../src/core/forge";
 import { hostEnv } from "../src/core/hostEnv";
 import { releaseSource } from "../src/core/update/releaseSource";
@@ -235,7 +236,8 @@ describe("local packaging identity (electron-builder.dev.yml)", () => {
     expect(verify?.with).not.toHaveProperty("installer_only");
 
     // The phone release calls the phone check at its resolved source and runs
-    // every part of both devices before a TestFlight upload.
+    // every part of both devices before a TestFlight upload, one call per device
+    // (INF-2582 direction A, the captain's "A: wait once and trim the soak").
     const phone = loadYamlFile(".github/workflows/phone.yml") as {
       on: Record<string, unknown>;
       jobs: Record<string, { if?: string; steps: Step[] }>;
@@ -244,7 +246,12 @@ describe("local packaging identity (electron-builder.dev.yml)", () => {
     const phoneRelease = loadYamlFile(".github/workflows/ios-release.yml") as {
       jobs: Record<
         string,
-        { uses?: string; needs?: string | string[]; with?: Record<string, string> }
+        {
+          uses?: string;
+          needs?: string | string[];
+          with?: Record<string, string>;
+          strategy?: { "fail-fast": boolean; matrix: { device: string[] } };
+        }
       >;
     };
     const releaseCall = Object.values(phoneRelease.jobs).find((job) =>
@@ -253,7 +260,10 @@ describe("local packaging identity (electron-builder.dev.yml)", () => {
     expect(releaseCall?.with).toEqual({
       trigger: "Requested TestFlight",
       source_commit: "${{ needs.resolve.outputs.source_commit }}",
+      device: "${{ matrix.device }}",
     });
+    expect(releaseCall?.strategy?.["fail-fast"]).toBe(false);
+    expect(releaseCall?.strategy?.matrix.device.toSorted()).toEqual(["ipad", "iphone"]);
     expect(phoneRelease.jobs.testflight?.needs).toContain("phone");
     const source = "6073f484509752eb55ee1b1c85c38b82b4909cc3";
     const released = {
@@ -281,6 +291,12 @@ describe("local packaging identity (electron-builder.dev.yml)", () => {
     expect(workflowValue(gate?.if ?? "", chosen)).toBe(true);
     expect(workflowString(gate?.env?.PHONE_PARTS ?? "", chosen)).toBe("");
     expect(workflowString(gate?.env?.INFINITARY_PHONE_STOP_EARLY ?? "", chosen)).toBe("0");
+    // INF-2582 direction A: the release keeps all of INF-1735's relaunch pairs and leaves no part to the iPhone alone.
+    expect(
+      relaunchPairs(workflowString(gate?.env?.INFINITARY_PHONE_RELAUNCH_PAIRS ?? "", chosen)),
+    ).toBe(RELAUNCH_PAIRS_PER_PART);
+    expect(workflowString(gate?.env?.PHONE_IPHONE_PARTS ?? "", chosen)).toBe("");
+    expect(workflowString(gate?.env?.PHONE_REPEAT_PARTS ?? "", chosen)).toBe("");
   });
 
   /**
@@ -5497,7 +5513,8 @@ describe("the Linux packages", () => {
       .flatMap((job) => job.steps ?? [])
       .find(
         (step) =>
-          step.uses?.startsWith("actions/upload-artifact") && step.with?.name === "phone-results",
+          step.uses?.startsWith("actions/upload-artifact") &&
+          workflowString(String(step.with?.name ?? ""), { inputs: {} }) === "phone-results",
       );
     const days = (recording: boolean) =>
       workflowValue(String(bundles?.with?.["retention-days"]), { inputs: { recording } });
@@ -5742,33 +5759,58 @@ describe("budgeted pull-request journey workflow (INF-658)", () => {
 
 // INF-2202: execute the actual gate shell with former overrides still present;
 // both devices stay in the placed guest, one simulator at a time, with selection intact.
+// INF-2582 direction A (the captain's "A: wait once and trim the soak" and "iPhone only; iPad
+// waits for the release check"): the chooser's reached parts go to the iPhone alone, and its
+// edited parts' two further passes ride the same gate. The selections are real chooser outputs'
+// shapes: a complete selection, one with edited tests, and one that leaves reached parts to the iPhone.
 it.each([
-  { mode: "in-turn", parts: "cards", full: "true", repeat: "", selected: [] },
+  { mode: "in-turn", parts: "cards-form", full: "true", iphone: "", repeat: "", selected: [] },
   {
     mode: "together",
-    parts: "cards",
+    parts: "cards-form talk-tasks",
     full: "true",
-    repeat: "cards",
-    selected: ["--part", "cards"],
+    iphone: "",
+    repeat: "cards-form",
+    selected: ["--repeat-part", "cards-form"],
   },
   {
     mode: "",
-    parts: "join talk",
+    parts: "join-read talk-tasks rest",
+    full: "true",
+    iphone: "join-read rest",
+    repeat: "talk-tasks",
+    selected: [
+      "--iphone-part",
+      "join-read",
+      "--part",
+      "talk-tasks",
+      "--iphone-part",
+      "rest",
+      "--repeat-part",
+      "talk-tasks",
+    ],
+  },
+  {
+    mode: "",
+    parts: "join-read talk-tasks",
     full: "false",
+    iphone: "",
     repeat: "",
-    selected: ["--part", "join", "--part", "talk"],
+    selected: ["--part", "join-read", "--part", "talk-tasks"],
   },
 ])(
-  "runs both devices directly for $mode/$full/$repeat without a local clone",
-  ({ mode, parts, full, repeat, selected }) => {
+  "runs both devices directly for $mode/$full/$iphone/$repeat without a local clone",
+  ({ mode, parts, full, iphone, repeat, selected }) => {
     const phone = loadYamlFile(".github/workflows/phone.yml") as {
       jobs: Record<string, { steps: { id?: string; run?: string }[] }>;
     };
     const command = phone.jobs["native-phone"]!.steps.find((step) => step.id === "both")!.run!;
     const call = recordedWorkflowCall(command, {
       PHONE_VIRTUAL_MAC: mode,
+      PHONE_DEVICE: "",
       PHONE_PARTS: parts,
       PHONE_FULL: full,
+      PHONE_IPHONE_PARTS: iphone,
       PHONE_REPEAT_PARTS: repeat,
     });
     expect(call.slice(0, -1)).toEqual([
@@ -5783,6 +5825,59 @@ it.each([
     expect(call.at(-1)).toMatch(/\/phone$/);
   },
 );
+
+// INF-2582 direction A: the phone release checks each device in its own call, on its own phone Mac,
+// every part with full discovery, each device's evidence in its own folder; an unknown device starts nothing.
+it.each([
+  { device: "ipad", args: ["--ipad"] },
+  { device: "iphone", args: [] },
+])("runs every part on the $device alone for a device call", ({ device, args }) => {
+  const phone = loadYamlFile(".github/workflows/phone.yml") as {
+    jobs: Record<string, { steps: { id?: string; run?: string }[] }>;
+  };
+  const command = phone.jobs["native-phone"]!.steps.find((step) => step.id === "both")!.run!;
+  const call = recordedWorkflowCall(command, {
+    PHONE_DEVICE: device,
+    PHONE_PARTS: "",
+    PHONE_FULL: "",
+    PHONE_IPHONE_PARTS: "",
+    PHONE_REPEAT_PARTS: "",
+  });
+  expect(call.slice(0, -1)).toEqual([
+    "node",
+    "scripts/test-phone.ts",
+    ...args,
+    "--simulators",
+    "1",
+    "--evidence",
+  ]);
+  expect(call.at(-1)).toMatch(new RegExp(`/phone/${device}$`));
+});
+
+it("refuses an unknown phone device before the gate starts", () => {
+  const phone = loadYamlFile(".github/workflows/phone.yml") as {
+    jobs: Record<string, { steps: { id?: string; run?: string }[] }>;
+  };
+  const command = phone.jobs["native-phone"]!.steps.find((step) => step.id === "both")!.run!;
+  const folder = scratchDir("infinitary-phone-device-");
+  const bin = join(folder, "bin");
+  mkdirSync(bin);
+  const started = join(folder, "started");
+  writeFileSync(join(bin, "node"), `#!/bin/sh\necho started > "${started}"\n`, { mode: 0o755 });
+  const result = spawnSync("bash", ["--noprofile", "--norc", "-e", "-c", command], {
+    cwd: folder,
+    encoding: "utf8",
+    env: {
+      ...hostEnv(),
+      PATH: `${bin}:${hostEnv().PATH}`,
+      RUNNER_TEMP: folder,
+      PHONE_DEVICE: "watch",
+    },
+  });
+  expect(result.status).toBe(1);
+  expect(result.stderr).toContain("Unknown phone device: watch");
+  expect(existsSync(started)).toBe(false);
+});
 
 // INF-1613's submitted unblock answer: absent storage never stops tap releases;
 // partial configuration is an error, not an accidental silent installer opt-out.

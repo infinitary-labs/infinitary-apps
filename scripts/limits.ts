@@ -404,6 +404,7 @@ export const LIMITS: Record<string, Record<string, LimitEntry>> = {
     PERSONAL_STORE_MAX_BYTES: physical("the write throws naming the cap; delete something first"),
     PERSONAL_STORE_VALUE_MAX_BYTES: physical("the write throws naming the bound; nothing changes"),
     PERSONAL_STORE_KEY_MAX_LENGTH: physical("the write throws naming the bound; nothing changes"),
+    PANEL_EVENT_ITEMS_MAX: physical("keeps an event's entry inside one store value; a look's older arrivals are dropped"),
   },
   "src/shared/personal/mounts.ts": {
     PANEL_MOUNT_WHY_MAX: physical("clipped with an ellipsis at the window; the rest is not sent"),

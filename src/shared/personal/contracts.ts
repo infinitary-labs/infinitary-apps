@@ -1224,6 +1224,60 @@ export type PanelRail = {
   show: (shown: boolean, why?: string) => void;
 };
 
+/**
+ * One integration a panel uses, as `manifest.json` `integrations` names it:
+ * the connection by its name or id (as Settings -> Integrations shows it),
+ * the actions it calls, the events it hears, and why, in the panel's own
+ * words, which an approval card shows as the panel's.
+ */
+export type PanelIntegrationUse = {
+  /** The connection's name or id, such as `github`. */
+  integration: string;
+  /** The actions it calls, such as `["read"]`. */
+  actions?: string[];
+  /** The events it hears, such as `["workflow_run_finished"]`. */
+  events?: string[];
+  /** One line of why, which the approval card shows as the panel's. */
+  why: string;
+};
+
+/**
+ * An integration's answer, the same one the first mate and a crewmate get:
+ * words, or a refusal that says why and what to do. `refused: "refused"`
+ * means the app or the captain's rule turned it down (paused, off, asking
+ * the captain, an unknown outcome); `"invalid"` means the call itself was
+ * wrong (an unknown name, an input that does not fit).
+ */
+export type PanelIntegrationAnswer = { text: string; refused?: "refused" | "invalid" };
+
+/** One thing an integration told, by the place's own id, in one line. */
+export type PanelIntegrationEventItem = { id: string; summary: string };
+
+/**
+ * The integrations a panel reaches (`PanelProps.integrations`,
+ * `ServerContext.integrations`): the same three verbs a crewmate's
+ * integrations command has, with the same answers, plus the events its
+ * manifest names. A panel sees only the connections its manifest names.
+ */
+export type PanelIntegrations = {
+  /** The connections its manifest names, with their health and the rules of the actions it uses. */
+  list: () => Promise<Record<string, unknown>[]>;
+  /** One connection's actions it uses, what each does and its input's JSON Schema; a refusal when unnamed. */
+  show: (name: string) => Promise<Record<string, unknown> | PanelIntegrationAnswer>;
+  /** Run one action it names; the answer or a refusal, never a throw for the place's own refusal. */
+  call: (name: string, action: string, input?: unknown) => Promise<PanelIntegrationAnswer>;
+  /**
+   * Hear one event its manifest names, by the connection as the manifest
+   * spells it: the app looks on the event's own cadence and hands over what
+   * arrived since. Returns the unsubscribe.
+   */
+  on: (
+    name: string,
+    event: string,
+    listener: (items: PanelIntegrationEventItem[]) => void,
+  ) => () => void;
+};
+
 /** What the host hands a panel component on every render. */
 export type PanelProps = {
   /** The extension's id: its directory name in the personal workspace. */
@@ -1237,6 +1291,8 @@ export type PanelProps = {
   invoke: <T = unknown>(action: string, input?: unknown) => Promise<T>;
   /** The app's own reads the manifest declared (`reads`), read-only. */
   reads: PanelReads;
+  /** The integrations the manifest names (`integrations`), under each action's own rule. */
+  integrations: PanelIntegrations;
   /** The shell's theme; the design tokens already follow it. */
   theme: PanelTheme;
   /** The cards this panel puts up on the main card stack (emitCard). */
@@ -1285,6 +1341,8 @@ export type ServerContext = {
    * `sql` names, answered once (no subscription).
    */
   sql: (sql: string, params?: SqlParam[]) => Promise<SqlAnswer>;
+  /** The integrations `manifest.json` `integrations` names, the same verbs the drawing gets. */
+  integrations: PanelIntegrations;
 };
 
 export type ServerAction = (input: unknown, context: ServerContext) => unknown;
@@ -1322,21 +1380,6 @@ export type PersonalPresence =
   | { always: true }
   | { store: string; when: "nonEmpty" }
   | { code: true };
-
-/**
- * A host a plugin may send requests to (`net.origins` in `manifest.json`):
- * an exact https origin, or a host the person types when adding it. GET and
- * HEAD unless `methods` says more.
- */
-export type PluginNetOrigin =
-  | {
-      origin: string;
-      methods?: ("GET" | "HEAD" | "POST" | "PUT" | "PATCH" | "DELETE")[];
-    }
-  | {
-      userSupplied: true;
-      methods?: ("GET" | "HEAD" | "POST" | "PUT" | "PATCH" | "DELETE")[];
-    };
 
 /**
  * A card the manifest names (`cards`), for a header button or a command to
@@ -1406,21 +1449,12 @@ export type PanelCommandDeclaration = {
   words?: string[];
 };
 
-/** A secret the person pastes when adding a plugin; the plugin never sees the value. */
-export type PluginSecretSlot = {
-  kind: "bearer" | "basic" | "header";
-  /** What the person is asked for, at most 80 characters. */
-  label: string;
-  /** Required for `header`: the request header the host puts it in. */
-  header?: string;
-};
-
 /**
  * `manifest.json`, every field optional: the ONE plugin manifest, whether
  * the panel is the captain's own (their personal workspace) or one they added
  * (npm, a git address, a folder). Where it came from is the host's to
- * stamp and never a field here. `reads`, `sql`, `net`, `secrets` and
- * `storage` are its capabilities: what it is served, and - for one they
+ * stamp and never a field here. `reads`, `sql`, `moves`, `integrations`
+ * and `storage` are its capabilities: what it is served, and - for one they
  * added - what they are asked to agree to. Undeclared is unserved.
  */
 export type PersonalManifest = {
@@ -1474,13 +1508,15 @@ export type PersonalManifest = {
    */
   sql?: SqlViewName[];
   /**
-   * Hosts it may send requests to, by an alias of your choosing. This
-   * version of the app sends no request for a plugin: declaring one is
-   * refused, never silently dropped.
+   * The integrations it uses (Settings -> Integrations), each by the
+   * connection's name or id, with the actions it calls, the events it hears
+   * and one line of why. A call or event it does not name is refused. Each
+   * call follows that action's own rule in Settings, the same rule the
+   * first mate and every crewmate follow. A panel brings no host, key or
+   * sign-in of its own: a service outside your projects is reached only
+   * through an integration.
    */
-  net?: { origins: Record<string, PluginNetOrigin> };
-  /** Secrets it needs, by an alias. Refused like `net` until the app serves them. */
-  secrets?: Record<string, PluginSecretSlot>;
+  integrations?: PanelIntegrationUse[];
   /**
    * How much of its own store it may keep, in bytes of JSON, at most
    * 1,048,576 (the default and the cap).

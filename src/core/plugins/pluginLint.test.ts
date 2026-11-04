@@ -1,5 +1,6 @@
 import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
+import { undeclaredIntegrationMessage } from "@shared/personal/manifest";
 import { describe, expect, it } from "vitest";
 import {
   formatPanelLint,
@@ -54,6 +55,33 @@ describe("refusals", () => {
     const bridge = findings.find((finding) => finding.rule === "host-bridge");
     expect(bridge?.severity).toBe("refuse");
     expect(bridge?.message).toContain("props");
+  });
+
+  // INF-2334 piece 1: a call the manifest does not name is refused in the
+  // same words the integrations service answers at run time.
+  it("refuses an integration call, event or connection the manifest does not name, in the service's words", () => {
+    const findings = lintPanelSources(extension("undeclared-integration")).filter(
+      (finding) => finding.rule === "undeclared-integration",
+    );
+    expect(
+      findings.map((finding) => [finding.file, finding.line, finding.severity, finding.message]),
+    ).toEqual([
+      ["panel.tsx", 10, "refuse", undeclaredIntegrationMessage("github", { action: "write" })],
+      [
+        "panel.tsx",
+        11,
+        "refuse",
+        undeclaredIntegrationMessage("github", { event: "workflow_run_finished" }),
+      ],
+      ["panel.tsx", 13, "refuse", undeclaredIntegrationMessage("calendar")],
+    ]);
+    // Without a manifest a panel names nothing, so its one call is refused too.
+    const bare = extension("undeclared-integration").filter(
+      (file) => file.path !== "manifest.json",
+    );
+    expect(
+      lintPanelSources(bare).filter((finding) => finding.rule === "undeclared-integration"),
+    ).toHaveLength(4);
   });
 
   it("refuses the host bridge under Infinitary's name for it as well", () => {

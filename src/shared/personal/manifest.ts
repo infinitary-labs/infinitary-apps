@@ -2,9 +2,9 @@ import { z } from "zod";
 import {
   capabilitiesSchema,
   type HostCapabilitySupport,
-  isExactHttpsOrigin,
-  NET_METHODS,
   type PluginCapabilities,
+  panelIntegrationsSchema,
+  retiredGrantWords,
   STORAGE_KV_MAX_BYTES,
 } from "../plugins/manifest";
 import {
@@ -15,14 +15,7 @@ import {
   panelHeaderSchema,
 } from "../plugins/panelCards";
 import { SQL_VIEWS, sqlViewNameSchema } from "../sql";
-import type {
-  PanelReadName,
-  PersonalManifest,
-  PersonalPresence,
-  PluginNetOrigin,
-  PluginSecretSlot,
-  StoreValue,
-} from "./contracts";
+import type { PanelReadName, PersonalManifest, PersonalPresence, StoreValue } from "./contracts";
 
 /**
  * The runtime side of the personal-extension contracts (src/shared/personal/
@@ -127,6 +120,43 @@ export function undeclaredReadMessage(name: string): string {
 }
 
 /**
+ * The one wording for an integration call or event a panel's manifest does
+ * not name (`manifest.json` `integrations`): the service answers it as a
+ * refusal, and the panel lint says it at the call.
+ */
+export function undeclaredIntegrationMessage(
+  integration: string,
+  what?: { action: string } | { event: string },
+): string {
+  const named = !what
+    ? `"${integration}"`
+    : "action" in what
+      ? `"${integration}"'s action "${what.action}"`
+      : `"${integration}"'s event "${what.event}"`;
+  return `Not run: this panel's manifest.json does not name ${named} under "integrations". Name the connection, its actions or events, and why there.`;
+}
+
+/**
+ * Where the app hands a panel an integration's event (`PanelIntegrations.on`):
+ * one key of its own store slice per connection, as the manifest spells it,
+ * and event, holding the latest look's items (`PanelEventEntry`). The panel's
+ * background code and its drawing both hear it from there.
+ */
+export const PANEL_EVENT_KEY_PREFIX = "integrations:";
+export function panelEventKey(integration: string, event: string): string {
+  return `${PANEL_EVENT_KEY_PREFIX}${integration}/${event}`;
+}
+/** The most items one event entry keeps: the newest, when a look found more. */
+export const PANEL_EVENT_ITEMS_MAX = 50;
+/** What an event key holds: when the app looked, what arrived since the look before. */
+export type PanelEventEntry = {
+  at: number;
+  items: { id: string; summary: string }[];
+  /** The place could not answer from where the last look ended; what happened between is not known. */
+  resynced?: true;
+};
+
+/**
  * Why a panel's `point` threw: pointing names tasks and cards by the ids
  * the board read gave, so a panel that does not read it cannot point.
  */
@@ -182,38 +212,10 @@ export const personalPlacementSchema = z.strictObject({
   y: z.enum(["top", "bottom"]),
 });
 
-const aliasSchema = z
-  .string()
-  .min(1)
-  .max(32)
-  .regex(/^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$/, "kebab-case alias");
-const methodsSchema = z.array(z.enum(NET_METHODS)).min(1).max(NET_METHODS.length).optional();
-
-const netOriginSchema: z.ZodType<PluginNetOrigin> = z.union([
-  z.strictObject({
-    origin: z
-      .string()
-      .refine(isExactHttpsOrigin, "an exact https origin (no path, wildcard, or private host)"),
-    methods: methodsSchema,
-  }),
-  z.strictObject({ userSupplied: z.literal(true), methods: methodsSchema }),
-]);
-
-const secretSlotSchema: z.ZodType<PluginSecretSlot> = z.strictObject({
-  kind: z.enum(["bearer", "basic", "header"]),
-  label: z.string().min(1).max(80),
-  header: z
-    .string()
-    .min(1)
-    .max(64)
-    .regex(/^[A-Za-z0-9-]+$/)
-    .optional(),
-});
-
 /**
  * `manifest.json` as written; strict, every field optional. The ONE plugin
- * manifest (Phase A item 1): the capability keys (`reads`, `sql`, `net`,
- * `secrets`, `storage`) are the grant model's block, spelled at the top
+ * manifest (Phase A item 1): the capability keys (`reads`, `sql`, `moves`,
+ * `integrations`, `storage`) are the grant model's block, spelled at the top
  * level where the captain's own panels already declare `reads` and `sql`,
  * so every existing manifest is already this shape. `manifestCapabilities`
  * reads them as the grant block `unservableGrants` and `consentSummary`
@@ -243,8 +245,11 @@ export const personalManifestSchema: z.ZodType<PersonalManifest> = z.strictObjec
   reads: z.array(panelReadNameSchema).max(PANEL_READ_NAMES.length).optional(),
   moves: z.literal(true).optional(),
   sql: z.array(sqlViewNameSchema).max(64).optional(),
-  net: z.strictObject({ origins: z.record(aliasSchema, netOriginSchema) }).optional(),
-  secrets: z.record(aliasSchema, secretSlotSchema).optional(),
+  integrations: panelIntegrationsSchema.optional(),
+  /** Retired: a panel reaches a service through an integration (`retiredGrantWords`). */
+  net: z.never({ message: retiredGrantWords("net") }).optional(),
+  /** Retired, with `net`. */
+  secrets: z.never({ message: retiredGrantWords("secrets") }).optional(),
   storage: z
     .strictObject({
       kv: z.strictObject({ maxBytes: z.number().int().positive().max(STORAGE_KV_MAX_BYTES) }),
@@ -265,19 +270,18 @@ export function manifestCapabilities(manifest: PersonalManifest): PluginCapabili
     ...(manifest.moves ? { moves: true } : {}),
     ...(manifest.reads?.length ? { reads: [...manifest.reads] } : {}),
     ...(manifest.sql?.length ? { sql: [...manifest.sql] } : {}),
-    ...(manifest.net ? { net: manifest.net } : {}),
-    ...(manifest.secrets ? { secrets: manifest.secrets } : {}),
+    ...(manifest.integrations?.length ? { integrations: manifest.integrations } : {}),
     ...(manifest.storage ? { storage: manifest.storage } : {}),
   });
 }
 
 /**
- * What the plugin host serves a plugin of either source today: the panel
- * reads, the published views, and its own store slice. No request leaves
- * for a plugin and no secret is held yet, so `net` and `secrets` are
- * refused wherever they are declared - loudly, never silently dropped.
+ * What the plugin host serves a plugin of either source: the panel reads,
+ * the published views, its own store slice, its moves, and the
+ * integrations it names, each under that action's own rule in Settings.
  */
 export const PLUGIN_HOST_SUPPORT: HostCapabilitySupport = {
+  integrations: true,
   reads: new Set(PANEL_READ_NAMES),
   sql: new Set(SQL_VIEWS),
   storage: true,
@@ -410,6 +414,26 @@ export const personalExtensionViewSchema = z.object({
       asked: z.boolean(),
     })
     .optional(),
+  /**
+   * Its integration calls waiting on the captain or turned down
+   * (docs/integrations.md, "Panels"): one line each, which the window draws
+   * with Ask again. Absent while none is.
+   */
+  integrationAsks: z
+    .array(
+      z.object({
+        /** The integration's id, as Ask again names it. */
+        integration: z.string().min(1).max(200),
+        /** Its name when asked. */
+        place: z.string().min(1).max(200),
+        action: z.string().min(1).max(200),
+        /** The action's few words, such as "Read from GitHub". */
+        label: z.string().min(1).max(200),
+        /** Its approval card is up, or the captain chose Not now. */
+        state: z.enum(["asking", "declined"]),
+      }),
+    )
+    .optional(),
 });
 export type PersonalExtensionView = z.infer<typeof personalExtensionViewSchema>;
 
@@ -484,6 +508,36 @@ export type PersonalStoreResponse = z.infer<typeof personalStoreResponseSchema>;
 /** How an action call is addressed: `draft`, to the server of the extension's draft. */
 export const personalInvokeOptionsSchema = z.object({ draft: draftFlag });
 export type PersonalInvokeOptions = z.infer<typeof personalInvokeOptionsSchema>;
+
+/**
+ * A panel drawing's call on its integrations (docs/integrations.md,
+ * "Panels"): the same three verbs its background code has. The core reads
+ * which connections and actions the panel may reach from its own manifest,
+ * never from the request.
+ */
+export const panelIntegrationsRequestSchema = z.discriminatedUnion("op", [
+  z.object({ op: z.literal("list") }),
+  z.object({ op: z.literal("show"), name: z.string().min(1).max(200) }),
+  z.object({
+    op: z.literal("call"),
+    name: z.string().min(1).max(200),
+    action: z.string().min(1).max(200),
+    input: z.unknown().optional(),
+  }),
+]);
+export type PanelIntegrationsRequest = z.infer<typeof panelIntegrationsRequestSchema>;
+
+/**
+ * What a panel drawing's integrations call answers: an action's answer or a
+ * refusal (`PanelIntegrationAnswer`), the connections it names for `list`,
+ * or one connection's actions for `show`.
+ */
+export const panelIntegrationsResponseSchema = z.union([
+  z.object({ text: z.string(), refused: z.enum(["refused", "invalid"]).optional() }),
+  z.array(z.record(z.string(), z.unknown())),
+  z.record(z.string(), z.unknown()),
+]);
+export type PanelIntegrationsResponse = z.infer<typeof panelIntegrationsResponseSchema>;
 
 export const personalInvokeResultSchema = z.union([
   z.object({ ok: z.literal(true), result: z.unknown() }),

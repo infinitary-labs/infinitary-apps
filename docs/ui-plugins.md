@@ -74,34 +74,30 @@ Above the left rail's top group, `Rail` draws the create-your-own-panel slot whi
 ## D6: the capability posture
 
 The finding stands as the proposal put it: letting a Jira plugin fetch Jira needs a mediated verb, not a relaxed sandbox.
-**Phase 0 lands the declaration side only.**
+That verb is the integrations (INF-2334; the captain's principle of 2026-11-02, `docs/principles.md`): a panel reaches a service outside your projects only through a connection the captain made, as one more caller of `IntegrationsService`, never through hosts or keys of its own (`docs/integrations.md`, "How a panel reaches them").
 
-Landed:
+What stands:
 
-- The grant model as schema (`capabilitiesSchema`): `net.origins` (named aliases to exact https origins, each with a method set defaulting to GET/HEAD; at most one `userSupplied` alias), `secrets` (named slots with a kind and a label - there is no field for a value), `storage.kv` (a byte cap, at most `STORAGE_KV_MAX_BYTES`), `reads` (dotted read-catalog names).
-- The declaration-time bounds: https only; exact origin, no path, no wildcard, no credentials; loopback, link-local, `.local`, and RFC 1918 hosts refused (`isExactHttpsOrigin`).
-  The request bounds the executor must honour are `NET_BOUNDS` (15s, 1MB, 4 in flight, 60/min), matching `src/core/quota/http.ts`.
+- The grant model as schema (`capabilitiesSchema`): `integrations` (each connection a panel uses, with its actions, events and why), `storage.kv` (a byte cap, at most `STORAGE_KV_MAX_BYTES`), `reads` (dotted read-catalog names), `sql` (published views) and `moves`.
+- The retired `net.origins` and `secrets` keys are refused wherever they are declared, saying to name an integration instead (`retiredGrantWords`).
 - Refusal of anything a host cannot serve: `unservableGrants` lists them read by read; `PluginHost.registerPlugin` throws on a non-empty list.
   A plugin never runs believing it has a grant it does not.
-- The consent unit as a pure derivation: `consentSummary` yields the read/send pair ("this can read X, and can send data to Y") plus write origins, secret slots, and the storage cap, for the phase-3 ceremony to render and to diff on update.
+- The consent unit as a pure derivation: `consentSummary` yields what the panel reads, the integrations it uses with their actions, events and why, its moves and its storage cap, for the consent card to render and to diff on update.
 - One definition of the frame boundary for every frame the host opens: `FRAME_SANDBOX` (`allow-scripts` alone), `FRAME_ALLOW` (no focus without the captain's gesture, "Focus and the frames" below) and `FRAME_CSP` (`default-src 'none'`, inline styles, the hash-pinned bridge) in `src/shared/plugins/containment.ts`; card bodies consume them.
   `containment.test.ts` walks `STRUCTURALLY_IMPOSSIBLE` and pins one assertion per entry.
 
-Born in phase 1, serving nothing: the mediated fetch service (`src/core/plugins/mediatedFetch.ts`, beside `quota/http.ts`) answers the `inf:plugins:fetch` core channel and refuses every call with `capability_not_granted`, because no host serves a net grant.
-Its executor - resolving an alias to its origin, refusing private addresses at resolution time, attaching the secret slot the way `requestHeaders` does, enforcing `NET_BOUNDS`, following no redirect off the allowlist - is phase 3's addition behind the same signature.
-
-Not built, by the gate: that executor and host-rendered write-only secret rows in a per-plugin 0700 directory mirroring the account vault - so `net` and `secrets` are refused wherever they are declared.
-The consent ceremony, the namespaced store, the switch and the install path were built on the one vehicle ("The one plugin vehicle" below); there is still no marketplace.
+The mediated fetch service (`src/core/plugins/mediatedFetch.ts`) still answers the `inf:plugins:fetch` core channel, which stays for older readers of the contract, and refuses every call with `capability_not_granted`, saying to name an integration instead.
 
 **The honest ledger** is unchanged for third-party plugins: plugin code never runs in the renderer or main realm, no same-origin access, no direct IPC, no reading another plugin's data or the accounts, no undeclared host, never holding or seeing a credential.
 Residual risk stays prompt-injection-shaped (response bodies and card content the agent reads back), which the write-boundary threat scan and host-stamped provenance exist to catch.
+A panel's integration answers carry the same fence as every caller's, and words of a kind kept for a while leave its store with that kind's days.
 
 A panel the captain ADDED from elsewhere is inside the ledger (one plugin vehicle, captain's A1a): its code runs only in the frame realm - a sandboxed frame at a host of its own, loading the app's React and components from a pinned lib - its data comes through the reads, views and store slice the host serves its mount, and nothing it ships runs in the core ("The frame realm" below).
 
 **Personal extensions are outside that ledger, on purpose** (captain decision Q7, 2026-09-18; "Personal extensions" below).
 A panel the captain asked for and the app's own crewmate wrote is trusted like the crewmate that wrote it - which already holds unjailed bash on the machine by a captain KEEP call (`docs/architecture.md` section 4) - so its `server.ts` runs with the captain's privilege, in a process of its own.
 Its drawing still runs in the frame realm, like every panel's (INF-2205 piece C): a panel that hangs or throws stops only its own frame, never the app's window.
-Nothing about the third-party posture moved: the frame vehicle, `FRAME_CSP` at `default-src 'none'`, the mediated fetch seam, and the consent ceremony are untouched and still gated, and `containment.test.ts` and `tests/e2e/card-containment.spec.ts` keep proving it.
+Nothing about the third-party posture moved: the frame vehicle, `FRAME_CSP` at `default-src 'none'`, and the consent ceremony are untouched, and a panel of either source reaches outside your projects only through the integrations, and `containment.test.ts` and `tests/e2e/card-containment.spec.ts` keep proving it.
 The app's own CSP admits no panel code: no panel module is a script source of the window.
 
 ## Phase 1: the frame vehicle v2
@@ -140,7 +136,7 @@ Inside the frame it exposes `window.inf` and nothing more:
 |---|---|---|
 | `inf.subscribe(read, args, onValue, onError?)` | a read-catalog subscription; the host pushes the first value and every later one as `data` messages | the plugin's declared reads; the catalog's own args schema; `FRAME_MAX_SUBSCRIPTIONS` per mount |
 | `inf.action(id, value?)` | a declared action with a bounded value | the mount's declared action ids; `ACTION_VALUE_MAX_BYTES` |
-| `inf.fetch(alias, request)` | a mediated outbound request, answered by the core's seam | forwarded to `inf:plugins:fetch`; refused until a grant is served |
+| `inf.fetch(alias, request)` | kept for older pages: a request of the page's own | forwarded to `inf:plugins:fetch`, which refuses every call; a panel calls its integrations through the `integrations` action instead |
 | `inf.theme` / `inf.onTheme(cb)` | theme as data; the bridge applies `data-theme` itself | - |
 | `inf.store(request)` / `inf.onStore(cb)` | the mount's own store slice (a panel in the frame realm's `PanelProps.store`): get, set, delete, list by key; `onStore` hears its keys change | the slice the HOST bound to the mount (`FrameMountSpec.store`); refused on a mount bound to none |
 | `inf.stage(name, value)` | a JSON snapshot staged under a name beside a card body's form; local, it leaves with a footer click or author-directed reply | the answers' 64 KiB bound at submission |
@@ -442,12 +438,12 @@ The typed reads stay for now; retiring them, one at a time once their consumers 
 |---|---|---|---|
 | comes from | the app bundle, as lib files | `userData/fleet/personal/<id>`, written by a crewmate | `userData/plugins/<id>`, pinned at install |
 | where it runs | the frame realm | the frame realm; its `server.ts` in a process of its own | the frame realm |
-| data | declared reads | declared reads, views, its store slice, its own `server.ts` | the reads, views and store slice the captain agreed to; no server |
+| data | declared reads | declared reads, views, integrations, its store slice, its own `server.ts` | the reads, views, integrations and store slice the captain agreed to; no server |
 | can it act? | the host's own gestures (`open`, `point`) and view state | its server's actions, its cards on the stack, pointing, and its moves | its cards on the stack, pointing, and the moves the captain agreed to, nothing else |
 | chrome | no attribution | "yours" | the plugin's name |
 | control | `personalize` moves or hides it | the switch, safe mode, `personalize remove` | consent, the switch, safe mode, `personalize remove` |
 
-**One manifest** (items 1 and 5; PR 326): the personal `manifest.json` is the plugin manifest (`personalManifestSchema`); its capability keys `reads`, `sql`, `net`, `secrets` and `storage` are the grant block `manifestCapabilities` reads, and `PLUGIN_HOST_SUPPORT` refuses `net` and `secrets` for every source.
+**One manifest** (items 1 and 5; PR 326): the personal `manifest.json` is the plugin manifest (`personalManifestSchema`); its capability keys `reads`, `sql`, `integrations`, `storage` and `moves` are the grant block `manifestCapabilities` reads, and the retired `net` and `secrets` are refused for every source.
 The host stamps `source` (`yours` | `installed`) from the root it found the plugin in.
 `personalPlugins.ts` registers both sources from one snapshot through `registerPlugin`, attributed "yours" or by the plugin's name, with the grants it is served.
 
@@ -710,7 +706,7 @@ Moved verbatim from `AGENTS.md` on 2026-09-24; `AGENTS.md` keeps a one-line poin
 
 - The UI plugin system (phase 0, captain's go 2026-09-05; design record and phase gates in `docs/ui-plugins.md` - read it before touching `src/renderer/src/plugins/` or `src/shared/plugins/`).
   Three of the four contribution slots are hosted (`card-kind`, `settings-section`, `side-panel`; `agent-pack` is reserved) behind one door, `pluginHost.registerPlugin(manifest, bindings)` (`src/renderer/src/plugins/host.ts`), and the app's own UI is the first plugin (`plugins/builtin/`): a new wire card kind is a manifest row (the built-in test fails without one) and a settings tab is a manifest entry plus a binding, never a hard-coded list again.
-  The manifest schema (`src/shared/plugins/manifest.ts`) is strict at every level and requires `capabilities` even when empty; it is the D6 grant model's DECLARATION side - the reads, the views and the store are served since the one plugin vehicle (below); the mediated fetch and secret slots are still refused (`PluginCapabilityError`), gated on a concrete want.
+  The manifest schema (`src/shared/plugins/manifest.ts`) is strict at every level and requires `capabilities` even when empty; it is the D6 grant model's DECLARATION side - the reads, the views and the store are served since the one plugin vehicle (below), and the integrations since INF-2334; the retired fetch and secret slots are refused.
   Frame containment is one definition for every frame (`src/shared/plugins/containment.ts`; `containment.test.ts` pins the structurally-impossible ledger).
   The home shell is two dock rails framing a stage: an empty rail is an empty element that `[data-rail]:empty` makes zero-width, visibility is data (a `PanelSource` returning null) and never a verb, and `tests/e2e/side-rails.spec.ts` proves the rail-less window is pixel-identical and a docked rail insets the stage.
   Phase 1 (frame vehicle v2, read catalog v0, ObserveTab as the first Tier-2 plugin) names the catalog as `surface: "core"` channels in `src/shared/ipc.ts` - D0/D1 landed, nothing blocks it - and is its own PR.
@@ -718,7 +714,7 @@ Moved verbatim from `AGENTS.md` on 2026-09-24; `AGENTS.md` keeps a one-line poin
   `FrameController` is the host side for every frame; `FrameMount` owns a template mount and `HtmlCardBody` uses the same controller over srcdoc.
   Observe is the first contribution on it (`plugins/builtin/observe/`, a `.frame.js` checked by `tsconfig.frames.json` against the bridge's types) and `src/core/observe/liveBuffer.ts` holds a session's in-flight turn for its `observe.live` read.
   Fonts reach every frame from `app-frame://fonts/<file>` (`src/main/frames/fontFiles.ts`, electron-vite `?asset` over the one vendored copy; `font-src app-frame:` is the sole network-shaped frame directive), and a preview's project fonts from its kept copies at `app-frame://typefaces/<name>` (`docs/card-authoring.md`, "Fonts by reference").
-  The mediated fetch seam is `src/core/plugins/mediatedFetch.ts` over `inf:plugins:fetch`, refusing everything until phase 3 serves a grant.
+  The mediated fetch seam is `src/core/plugins/mediatedFetch.ts` over `inf:plugins:fetch`, refusing everything: a panel reaches outside your projects through its integrations.
   Agent scripts in card bodies (WI-16, review in `docs/live-prototype-security.md`): a body with `<script>` is a `kind: "card"` mount at `app-frame://card-<id>/` - its OWN host, because a site shares one renderer process and a runaway card under `mount/` froze every sibling frame - with the sandbox and CSP unchanged beyond that mount's script hashes; `FrameController`'s ping/pong watchdog tears a wedged frame down to a Retry line.
   Figures: the bridge is the ONLY host-owned script a frame carries - the `fm.viz` recipe helper was deleted at contract v2.5 (the first mate cannot call a script and it was never used), so a scripted body hand-writes its SVG and a scripted card's `script-src` is the bridge plus its own hashes.
   The design skill states how a figure should LOOK to belong in the app (`components/viz/Viz.prompt.md`: scaling, token color, StatusDot's state-color semantics, type, weight) and prescribes no shape.
@@ -769,7 +765,7 @@ Moved verbatim from `AGENTS.md` on 2026-09-24; `AGENTS.md` keeps a one-line poin
   `v_feed_v1` is authored by `taskFeedLine` through SQL functions every reading connection registers (`registerViewFunctions`).
   The authoring guide is the seeded `usage` skill; retiring the typed reads is a follow-up, one read at a time.
 - One plugin vehicle (Phase A, captain's locked plan 2026-09-24, calls A1a-A4a; "The one plugin vehicle" in `docs/ui-plugins.md` is the one home, `docs/personal-panels.md` "Panels for others" the author's guide): every panel is ONE shape (`panel.tsx` taking `PanelProps` + `manifest.json`) and the source decides the privilege.
-  The personal `manifest.json` is THE plugin manifest (`personalManifestSchema`; capability keys `reads`/`sql`/`net`/`secrets`/`storage`; `PLUGIN_HOST_SUPPORT` refuses `net`/`secrets` for every source).
+  The personal `manifest.json` is THE plugin manifest (`personalManifestSchema`; capability keys `reads`/`sql`/`integrations`/`storage`/`moves`; the retired `net`/`secrets` are refused for every source).
   `PersonalExtensions` scans a second root, `userData/plugins/<id>`, from the `plugins` table (migration 43, `PluginRecords`) and stamps `source: yours | installed`; an installed plugin is served only what the captain CONSENTED to and a tree holding `server.ts` mounts nothing.
   Install by talking: `install_plugin` (the first mate's 25th tool) -> `PluginInstaller` (npm pack `--ignore-scripts`, git hooks off, a folder; pinned) -> `checkPluginTree` -> one host consent card (`card-plugin-<id>`) -> one feed line; `personalize remove` uninstalls; the `panels` switch and safe mode cover both roots.
   Every panel runs ONLY in the frame realm (`src/renderer/src/frameRealm/`), the captain's own included (INF-2205 piece C): a sandboxed document at its own host `app-frame://panel-<id>/` (`FrameMountRegistry.mountPanel`, `inf:frames:mount` `kind: "panel"`) loading React, the JSX runtime and `@infinitary/ui` from `app-frame://lib/` - built by `scripts/frame-lib.ts` inside the MAIN build into `out/frame-lib/`, every file's SHA-256 baked into main (`virtual:fm-frame-lib`) and served only while its bytes match - with its own compiled files (`compilePersonalModule`, read once at mount from `PersonalExtensions.framePanelDir`) pinned in the document's import map `integrity`, under `panelFrameCsp` (the frame policy plus `script-src app-frame://lib/ app-frame://panel-<id>/`; reviewed in `docs/live-prototype-security.md` "The frame realm").

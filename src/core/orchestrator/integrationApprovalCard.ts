@@ -22,8 +22,17 @@ export function integrationApprovalCard(
       : ask.effect === "sends"
         ? "It sends something to other people."
         : "It changes something outside your project.";
-  const asker = task ? `The crewmate on “${text(task.title)}”` : "Your first mate";
-  const words = task ? "the crewmate's words" : "your first mate's words";
+  const panel = !task && ask.by === "panel" ? ask.panel : undefined;
+  const asker = task
+    ? `The crewmate on “${text(task.title)}”`
+    : panel
+      ? `Your panel “${text(panel.title)}”`
+      : "Your first mate";
+  const words = task
+    ? "the crewmate's words"
+    : panel
+      ? "the panel's manifest"
+      : "your first mate's words";
   return {
     id: `integration-ask-${ask.id}`,
     ...(task ? { taskId: task.id } : {}),

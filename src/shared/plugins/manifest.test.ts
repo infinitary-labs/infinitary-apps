@@ -2,9 +2,6 @@ import { describe, expect, it } from "vitest";
 import {
   canonicalCapabilities,
   consentSummary,
-  isExactHttpsOrigin,
-  isPrivateOrLoopbackHost,
-  NET_READ_METHODS,
   PluginManifestError,
   type PluginManifestInput,
   parsePluginManifest,
@@ -24,16 +21,10 @@ const minimal: PluginManifestInput = {
 const withGrants: PluginManifestInput = {
   ...minimal,
   capabilities: {
-    net: {
-      origins: {
-        jira: { userSupplied: true, methods: ["GET", "POST"] },
-        atlassian: { origin: "https://api.atlassian.com" },
-      },
-    },
-    secrets: {
-      "jira-token": { kind: "bearer", label: "Jira API token" },
-      "jira-header": { kind: "header", label: "Custom header", header: "X-Jira-Auth" },
-    },
+    integrations: [
+      { integration: "github", actions: ["read"], why: "Shows the alpha's runs." },
+      { integration: "Linear", events: ["issue_changed"], why: "Counts open issues." },
+    ],
     storage: { kv: { maxBytes: 65_536 } },
     reads: ["feed.recent", "crew.counts"],
   },
@@ -46,14 +37,27 @@ describe("parsePluginManifest", () => {
     expect(manifest.capabilities).toEqual({});
   });
 
-  it("accepts the full grant model and defaults methods to read-only", () => {
+  it("accepts the integrations a panel names, each with its actions or events and why", () => {
     const manifest = parsePluginManifest(withGrants);
-    const origins = manifest.capabilities.net?.origins ?? {};
-    expect(origins.atlassian).toEqual({
-      origin: "https://api.atlassian.com",
-      methods: [...NET_READ_METHODS],
-    });
-    expect(origins.jira).toEqual({ userSupplied: true, methods: ["GET", "POST"] });
+    expect(manifest.capabilities.integrations).toEqual([
+      { integration: "github", actions: ["read"], why: "Shows the alpha's runs." },
+      { integration: "Linear", events: ["issue_changed"], why: "Counts open issues." },
+    ]);
+  });
+
+  it("refuses an integration named with no action and no event, twice, or with no why", () => {
+    const withUses = (integrations: unknown) =>
+      parsePluginManifest({ ...minimal, capabilities: { integrations } });
+    expect(() => withUses([{ integration: "github", why: "Runs." }])).toThrow(
+      /names no action and no event/,
+    );
+    expect(() =>
+      withUses([
+        { integration: "github", actions: ["read"], why: "Runs." },
+        { integration: "GitHub", actions: ["write"], why: "Reruns." },
+      ]),
+    ).toThrow(/named twice/);
+    expect(() => withUses([{ integration: "github", actions: ["read"], why: " " }])).toThrow(/why/);
   });
 
   it("requires the capabilities block even when empty", () => {
@@ -133,27 +137,15 @@ describe("parsePluginManifest", () => {
     expect(() => parsePluginManifest({ ...minimal, version: "v1" })).toThrow(/version/);
   });
 
-  it("ties the header field to the header kind", () => {
-    const missing = {
-      ...minimal,
-      capabilities: { secrets: { token: { kind: "header", label: "Token" } } },
-    };
-    expect(() => parsePluginManifest(missing)).toThrow(/names no header/);
-    const stray = {
-      ...minimal,
-      capabilities: { secrets: { token: { kind: "bearer", label: "Token", header: "X-A" } } },
-    };
-    expect(() => parsePluginManifest(stray)).toThrow(/sets header/);
-  });
-
-  it("allows at most one user-supplied origin", () => {
-    const raw = {
-      ...minimal,
-      capabilities: {
-        net: { origins: { a: { userSupplied: true }, b: { userSupplied: true } } },
-      },
-    };
-    expect(() => parsePluginManifest(raw)).toThrow(/at most one alias/);
+  it("refuses the retired hosts and keys, pointing at integrations (the captain's INF-2334 answer)", () => {
+    for (const key of ["net", "secrets"]) {
+      const raw = { ...minimal, capabilities: { [key]: {} } };
+      expect(() => parsePluginManifest(raw)).toThrow(
+        new RegExp(
+          `"${key}" is retired: a panel reaches a service outside your projects only through an integration`,
+        ),
+      );
+    }
   });
 
   it("caps namespaced storage", () => {
@@ -168,55 +160,6 @@ describe("parsePluginManifest", () => {
     expect(() =>
       parsePluginManifest({ ...minimal, capabilities: { reads: ["SELECT *"] } }),
     ).toThrow(/reads/);
-  });
-});
-
-describe("isExactHttpsOrigin", () => {
-  it("accepts exact https origins, with an explicit port", () => {
-    expect(isExactHttpsOrigin("https://acme.atlassian.net")).toBe(true);
-    expect(isExactHttpsOrigin("https://jira.example.com:8443")).toBe(true);
-    expect(isExactHttpsOrigin("https://xn--bcher-kva.example")).toBe(true);
-  });
-
-  it("refuses every non-origin shape", () => {
-    for (const value of [
-      "http://acme.atlassian.net",
-      "https://acme.atlassian.net/",
-      "https://acme.atlassian.net/rest",
-      "https://acme.atlassian.net?x=1",
-      "https://user:pw@acme.atlassian.net",
-      "https://*.atlassian.net",
-      "https://atlassian.net.",
-      "https://jira",
-      "acme.atlassian.net",
-      "wss://acme.atlassian.net",
-      "file:///etc/passwd",
-      "",
-    ]) {
-      expect(isExactHttpsOrigin(value), value).toBe(false);
-    }
-  });
-
-  it("refuses loopback, link-local, and private hosts", () => {
-    for (const value of [
-      "https://localhost",
-      "https://app.localhost",
-      "https://printer.local",
-      "https://127.0.0.1",
-      "https://10.0.0.5",
-      "https://192.168.1.1:8443",
-      "https://172.16.0.1",
-      "https://172.31.255.255",
-      "https://169.254.169.254",
-      "https://0.0.0.0",
-      "https://[::1]",
-      "https://[fe80::1]",
-      "https://[fd00::1]",
-    ]) {
-      expect(isExactHttpsOrigin(value), value).toBe(false);
-    }
-    expect(isPrivateOrLoopbackHost("172.32.0.1")).toBe(false);
-    expect(isPrivateOrLoopbackHost("8.8.8.8")).toBe(false);
   });
 });
 
@@ -254,8 +197,7 @@ describe("grants", () => {
   it("names exactly the grants a manifest asks for", () => {
     expect(requestedGrants(parsePluginManifest(minimal).capabilities)).toEqual([]);
     expect(requestedGrants(parsePluginManifest(withGrants).capabilities)).toEqual([
-      "net.origins",
-      "secrets",
+      "integrations",
       "storage.kv",
       "reads",
     ]);
@@ -264,16 +206,14 @@ describe("grants", () => {
   it("refuses every grant a host does not serve, read by read", () => {
     const capabilities = parsePluginManifest(withGrants).capabilities;
     expect(unservableGrants(capabilities, {})).toEqual([
-      "net.origins",
-      "secrets",
+      "integrations",
       "storage.kv",
       "reads:feed.recent",
       "reads:crew.counts",
     ]);
     expect(
       unservableGrants(capabilities, {
-        net: true,
-        secrets: true,
+        integrations: true,
         storage: true,
         reads: new Set(["feed.recent"]),
       }),
@@ -281,12 +221,13 @@ describe("grants", () => {
     expect(unservableGrants(parsePluginManifest(minimal).capabilities, {})).toEqual([]);
   });
 
-  it("summarises consent as the read/send pair", () => {
+  it("summarises consent as what it reads and which integrations it uses for what", () => {
     expect(consentSummary(parsePluginManifest(withGrants).capabilities)).toEqual({
       reads: ["feed.recent", "crew.counts"],
-      sendsTo: ["a host you choose", "https://api.atlassian.com"],
-      writesTo: ["a host you choose"],
-      secretSlots: ["jira-token", "jira-header"],
+      integrations: [
+        { integration: "github", actions: ["read"], why: "Shows the alpha's runs." },
+        { integration: "Linear", events: ["issue_changed"], why: "Counts open issues." },
+      ],
       storageBytes: 65_536,
       views: [],
       moves: false,
@@ -294,12 +235,25 @@ describe("grants", () => {
     expect(consentSummary(parsePluginManifest(minimal).capabilities)).toEqual({
       reads: [],
       views: [],
-      sendsTo: [],
-      writesTo: [],
-      secretSlots: [],
+      integrations: [],
       storageBytes: null,
       moves: false,
     });
+  });
+
+  it("asks again when an update widens what a panel uses an integration for", () => {
+    const reading = parsePluginManifest(withGrants).capabilities;
+    const widened = {
+      ...reading,
+      integrations: [
+        { integration: "github", actions: ["read", "write"], why: "Shows the alpha's runs." },
+        { integration: "Linear", events: ["issue_changed"], why: "Counts open issues." },
+      ],
+    };
+    expect(canonicalCapabilities(widened)).not.toBe(canonicalCapabilities(reading));
+    // The same uses in another order are what was agreed to.
+    const reordered = { ...reading, integrations: [...(reading.integrations ?? [])].reverse() };
+    expect(canonicalCapabilities(reordered)).toBe(canonicalCapabilities(reading));
   });
 
   it("asks for moves as a grant of its own: named, served only by a host that moves tasks, and part of what consent compares", () => {

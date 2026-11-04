@@ -1,5 +1,4 @@
 import { z } from "zod";
-import { NET_BOUNDS, NET_METHODS } from "./manifest";
 
 /**
  * The mediated fetch verb's wire shapes (D6, proposal section 5.3): what a
@@ -7,11 +6,17 @@ import { NET_BOUNDS, NET_METHODS } from "./manifest";
  * are the request/response halves of `inf.fetch`, and of the core channel
  * that carries it - one definition for both ends.
  *
- * The plugin names an ORIGIN ALIAS from its manifest, never a host; it sets
- * no credential header, and it receives a body bounded by NET_BOUNDS. The
- * service that honours a grant is phase 3's; the shape exists now so that
- * adding it is an addition, not a re-versioned bridge.
+ * The core refuses every call (`src/core/plugins/mediatedFetch.ts`): the
+ * per-plugin hosts and keys are retired, and a panel reaches a service
+ * outside the captain's projects through an integration. The shapes stay
+ * until a major contract change removes the channel and the verb.
  */
+
+/** The methods the verb's request shape names. */
+export const NET_METHODS = ["GET", "HEAD", "POST", "PUT", "PATCH", "DELETE"] as const;
+
+/** The bound a fetch answer's body is shaped to (proposal section 5.2). */
+export const NET_BOUNDS = { responseMaxBytes: 1_048_576 } as const;
 
 const HEADER_NAME = /^[A-Za-z0-9-]{1,64}$/;
 

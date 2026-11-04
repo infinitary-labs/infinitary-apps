@@ -825,6 +825,11 @@ export type CrewSupervisorOptions = {
     taken: IntegrationAskTaken,
     choice: IntegrationApprovalChoice,
   ) => Promise<WriteAskSent>;
+  /**
+   * What the captain chose on a panel's approval card (docs/integrations.md,
+   * "Panels"): the panel's next call hears it, never the first mate.
+   */
+  panelAskAnswered?: (askId: string, choice: IntegrationApprovalChoice) => void;
   /** The pinned pull request by its number, for a kept approval's reconcile. */
   readPull?: (taskId: string, prNumber: number) => Promise<ForgePull | undefined>;
   /** Close the change where the project lives on discard, injected beside mergePullRequest. */
@@ -15695,6 +15700,15 @@ export class CrewSupervisor {
   }
 
   /**
+   * A panel's held integration call (docs/integrations.md, "Panels"): like
+   * the first mate's, a host card with no task whose own row keeps the call.
+   * Its card names the panel, and its answer goes back to the panel.
+   */
+  askIntegrationForPanel(ask: IntegrationAsk): string {
+    return this.askIntegrationForFirstmate(ask);
+  }
+
+  /**
    * What came of the first mate's held call reaches the first mate once
    * (INF-1108): the row keeps the outcome and a line, and the wake names the
    * ask, so a click, a close and a restart together still wake it once. A
@@ -15708,6 +15722,10 @@ export class CrewSupervisor {
   ): void {
     const send = this.options.sendTakenIntegrationAsk;
     if (!send) return;
+    const kept = "ask" in taken ? taken.ask : undefined;
+    // A panel's call: the panel hears the choice, the first mate nothing.
+    const panel = kept?.kind === "integration" && kept.by === "panel";
+    if (panel) this.options.panelAskAnswered?.(askId, choice);
     const tell = (sent: WriteAskSent) => {
       if (sent.ask)
         this.options.tasks.note(rowId, writeSentLine(sent), {
@@ -15715,6 +15733,7 @@ export class CrewSupervisor {
           feed: true,
           actor: "host",
         });
+      if (panel) return;
       this.hooks.notifyOp(
         {
           facts: {

@@ -7,6 +7,7 @@ import {
   nearestShadowToken,
   nearestTextSizeToken,
 } from "@shared/designTokens";
+import { undeclaredIntegrationMessage } from "@shared/personal/manifest";
 /**
  * The personal-panel adherence lint (the talk-to-personalize plan, section 6
  * layer 5; docs/personal-panels.md).
@@ -270,6 +271,78 @@ function lintEmptyStates(files: PanelSourceFile[]): PanelLintFinding[] {
   return findings;
 }
 
+/** A literal call on a panel's integrations: `integrations.call("GitHub", "read"`, `.on(`, `.show(`. */
+const INTEGRATION_CALL =
+  /\bintegrations\s*\.\s*(call|on|show)\s*\(\s*(["'`])([^"'`]+)\2(?:\s*,\s*(["'`])([^"'`]+)\4)?/g;
+
+/** What a manifest names under `integrations`, by the connection's name in lowercase. */
+function declaredIntegrations(
+  files: PanelSourceFile[],
+): Map<string, { actions: Set<string>; events: Set<string> }> | null {
+  const manifest = files.find((file) => file.path === "manifest.json");
+  // A panel with no manifest names no integration.
+  if (!manifest) return new Map();
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(manifest.text);
+  } catch {
+    return null;
+  }
+  const uses = (parsed as { integrations?: unknown } | null)?.integrations;
+  const declared = new Map<string, { actions: Set<string>; events: Set<string> }>();
+  if (!Array.isArray(uses)) return declared;
+  for (const use of uses as { integration?: unknown; actions?: unknown; events?: unknown }[]) {
+    if (typeof use?.integration !== "string") continue;
+    const strings = (value: unknown) =>
+      new Set(Array.isArray(value) ? value.filter((v): v is string => typeof v === "string") : []);
+    declared.set(use.integration.toLowerCase(), {
+      actions: strings(use.actions),
+      events: strings(use.events),
+    });
+  }
+  return declared;
+}
+
+/**
+ * A literal call on an integration, action or event the manifest does not
+ * name (docs/integrations.md, "Panels"): the app refuses it when it runs, in
+ * these same words, so the lint says so before it does. A name the code
+ * builds at run time is the app's to check.
+ */
+function lintIntegrations(files: PanelSourceFile[]): PanelLintFinding[] {
+  const declared = declaredIntegrations(files);
+  if (!declared) return [];
+  const findings: PanelLintFinding[] = [];
+  for (const file of files) {
+    if (!/\.tsx?$/.test(file.path)) continue;
+    const source = withoutComments(file.text);
+    INTEGRATION_CALL.lastIndex = 0;
+    for (const match of source.matchAll(INTEGRATION_CALL)) {
+      const [, verb, , name = "", , second] = match;
+      const use = declared.get(name.toLowerCase());
+      const what: { action: string } | { event: string } | undefined =
+        verb === "call" && second !== undefined
+          ? { action: second }
+          : verb === "on" && second !== undefined
+            ? { event: second }
+            : undefined;
+      const named =
+        use !== undefined &&
+        (what === undefined ||
+          ("action" in what ? use.actions.has(what.action) : use.events.has(what.event)));
+      if (named) continue;
+      findings.push({
+        rule: "undeclared-integration",
+        severity: "refuse",
+        file: file.path,
+        line: lineOf(source, match.index ?? 0),
+        message: undeclaredIntegrationMessage(name, use === undefined ? undefined : what),
+      });
+    }
+  }
+  return findings;
+}
+
 /** Every finding for one extension, refusals first, then by file and line. */
 export function lintPanelSources(files: PanelSourceFile[]): PanelLintFinding[] {
   const order: Record<PanelLintSeverity, number> = { refuse: 0, warn: 1, note: 2 };
@@ -277,6 +350,7 @@ export function lintPanelSources(files: PanelSourceFile[]): PanelLintFinding[] {
     ...files.flatMap(lintFile),
     ...lintAccentBudget(files),
     ...lintEmptyStates(files),
+    ...lintIntegrations(files),
   ];
   return findings.sort(
     (left, right) =>

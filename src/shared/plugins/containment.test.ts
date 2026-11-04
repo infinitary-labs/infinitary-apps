@@ -20,7 +20,7 @@ import {
   STRUCTURALLY_IMPOSSIBLE,
 } from "./containment";
 import { frameFontUrl } from "./frameDocument";
-import { type PluginManifestInput, parsePluginManifest } from "./manifest";
+import { type PluginManifestInput, parsePluginManifest, retiredGrantWords } from "./manifest";
 
 /**
  * One assertion per entry of the "structurally impossible" ledger (D6).
@@ -228,37 +228,28 @@ describe("the structurally impossible ledger", () => {
       }
     },
     "a plugin reaching an undeclared host": () => {
-      // Origins are exact, https, non-private; there is no wildcard form
-      // and the frame CSP itself admits no network source at all.
-      expect(() =>
-        parsePluginManifest({
-          ...base,
-          capabilities: { net: { origins: { any: { origin: "https://*.example.com" } } } },
-        }),
-      ).toThrow("origin");
-      expect(() =>
-        parsePluginManifest({
-          ...base,
-          capabilities: { net: { origins: { any: { origin: "*" } } } },
-        }),
-      ).toThrow("origin");
+      // INF-2334, the captain's "retire hosts and keys": a plugin names no
+      // host at all, exact or wildcard; it reaches a service outside your
+      // projects only through an integration, and the frame CSP itself
+      // admits no network source.
+      for (const origin of ["https://api.example.com", "https://*.example.com", "*"]) {
+        expect(() =>
+          parsePluginManifest({ ...base, capabilities: { net: { origins: { any: { origin } } } } }),
+        ).toThrow(retiredGrantWords("net"));
+      }
       expect(directives(FRAME_CSP).has("connect-src")).toBe(false);
     },
     "a plugin holding or seeing a credential": () => {
-      // A secret slot has a kind and a label and nothing else; the value is
-      // typed into a host-rendered row and injected by the host.
-      expect(() =>
-        parsePluginManifest({
-          ...base,
-          capabilities: { secrets: { token: { kind: "bearer", label: "Token", value: "x" } } },
-        }),
-      ).toThrow("value");
-      expect(() =>
-        parsePluginManifest({
-          ...base,
-          capabilities: { secrets: { token: { kind: "bearer", label: "Token", echo: true } } },
-        }),
-      ).toThrow("echo");
+      // INF-2334: a plugin declares no key of its own; the integration's
+      // connection holds the sign-in, and the plugin never sees it.
+      for (const token of [
+        { kind: "bearer", label: "Token" },
+        { kind: "bearer", label: "Token", value: "x" },
+      ]) {
+        expect(() =>
+          parsePluginManifest({ ...base, capabilities: { secrets: { token } } }),
+        ).toThrow(retiredGrantWords("secrets"));
+      }
     },
   };
 

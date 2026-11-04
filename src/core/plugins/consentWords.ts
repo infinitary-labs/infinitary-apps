@@ -18,5 +18,15 @@ export const CAN_READ_WORDS = "It can read";
 export const MOVES_WORDS =
   "It can queue, start and drop your tasks, each only when you click or press a key in it. It can never merge or discard.";
 
-/** What no added panel does. */
+/** What an added panel that names no integration does. */
 export const SENDS_NOTHING_WORDS = `sends nothing off ${HERE.this}`;
+
+/**
+ * The start of the line that lists the integrations an added panel names
+ * (docs/integrations.md, "Panels"): each action keeps its rule in Settings.
+ */
+export const CAN_USE_WORDS =
+  "It can use these integrations, each action under its rule in Settings → Integrations:";
+
+/** What an added panel that names integrations does with everything else. */
+export const SENDS_ONLY_THROUGH_WORDS = `sends nothing off ${HERE.this} except through those integrations`;

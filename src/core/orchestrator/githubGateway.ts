@@ -76,6 +76,13 @@ const SEAT_CALLS = "seat:firstmate";
  */
 const LOOK_CALLS = "look:automation";
 
+/**
+ * A panel's calls (docs/integrations.md, "Panels"): a panel is no task and
+ * no seat, so its calls spend no allowance; the action's own rule and the
+ * same shape checks and caps bound them.
+ */
+const PANEL_CALLS = "panel:";
+
 /** The host's address a forge with none of its own stands for. */
 const GITHUB_HOST = "github.com";
 
@@ -166,6 +173,23 @@ export class GithubGatewayService {
    * request left is unknown, never sent again.
    */
   writeAsSeat(input: GithubWriteInput, host?: string): Promise<string> {
+    return this.writeAs(SEAT_CALLS, input, host);
+  }
+
+  /** A panel's read through the github.com sign-in: it spends no allowance (`PANEL_CALLS`). */
+  readAsPanel(panel: string, input: GithubReadInput, host?: string): Promise<string> {
+    return this.answerWith(
+      () => this.accountTarget(host),
+      ({ api }) => this.readOn(`${PANEL_CALLS}${panel}`, api, input),
+    );
+  }
+
+  /** A panel's change, once its action's rule let it run, under the seat's own guards. */
+  writeAsPanel(panel: string, input: GithubWriteInput, host?: string): Promise<string> {
+    return this.writeAs(`${PANEL_CALLS}${panel}`, input, host);
+  }
+
+  private writeAs(calls: string, input: GithubWriteInput, host?: string): Promise<string> {
     return this.answerWith(
       () => this.accountTarget(host),
       async ({ api, forge }) => {
@@ -195,7 +219,7 @@ export class GithubGatewayService {
         if (forge.kind === "github" || forge.kind === "gitlab")
           await guardApiWrite(forge.kind, route, parsed, () => forge.defaultBranch());
         const response = await this.send(
-          SEAT_CALLS,
+          calls,
           api,
           route.method,
           route.path,
@@ -704,7 +728,7 @@ export class GithubGatewayService {
 
   /** One call of the task's budget, or the refusal once it is spent. */
   private spend(taskId: string, api: ForgeApi): void {
-    if (taskId === LOOK_CALLS) return;
+    if (taskId === LOOK_CALLS || taskId.startsWith(PANEL_CALLS)) return;
     const used = this.calls.get(taskId) ?? 0;
     if (used >= API_CALLS_PER_TASK) {
       throw new ForgeError(

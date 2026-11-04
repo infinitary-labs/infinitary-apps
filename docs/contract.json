@@ -42409,6 +42409,48 @@
                     "serves",
                     "asked"
                   ]
+                },
+                "integrationAsks": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "integration": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 200
+                      },
+                      "place": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 200
+                      },
+                      "action": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 200
+                      },
+                      "label": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 200
+                      },
+                      "state": {
+                        "type": "string",
+                        "enum": [
+                          "asking",
+                          "declined"
+                        ]
+                      }
+                    },
+                    "required": [
+                      "integration",
+                      "place",
+                      "action",
+                      "label",
+                      "state"
+                    ]
+                  }
                 }
               },
               "required": [
@@ -42862,6 +42904,48 @@
                     "serves",
                     "asked"
                   ]
+                },
+                "integrationAsks": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "integration": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 200
+                      },
+                      "place": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 200
+                      },
+                      "action": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 200
+                      },
+                      "label": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 200
+                      },
+                      "state": {
+                        "type": "string",
+                        "enum": [
+                          "asking",
+                          "declined"
+                        ]
+                      }
+                    },
+                    "required": [
+                      "integration",
+                      "place",
+                      "action",
+                      "label",
+                      "state"
+                    ]
+                  }
                 }
               },
               "required": [
@@ -43377,6 +43461,160 @@
           }
         ],
         "minItems": 1,
+        "items": false
+      },
+      "response": {
+        "type": "boolean"
+      }
+    },
+    "inf:plugins:integrations": {
+      "effect": "change",
+      "reach": "home",
+      "request": {
+        "type": "array",
+        "prefixItems": [
+          {
+            "type": "string",
+            "minLength": 2,
+            "maxLength": 48,
+            "pattern": "^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$"
+          },
+          {
+            "oneOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "op": {
+                    "type": "string",
+                    "const": "list"
+                  }
+                },
+                "required": [
+                  "op"
+                ]
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "op": {
+                    "type": "string",
+                    "const": "show"
+                  },
+                  "name": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 200
+                  }
+                },
+                "required": [
+                  "op",
+                  "name"
+                ]
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "op": {
+                    "type": "string",
+                    "const": "call"
+                  },
+                  "name": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 200
+                  },
+                  "action": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 200
+                  },
+                  "input": {}
+                },
+                "required": [
+                  "op",
+                  "name",
+                  "action"
+                ]
+              }
+            ]
+          },
+          {
+            "type": "object",
+            "properties": {
+              "draft": {
+                "type": "boolean",
+                "const": true
+              }
+            }
+          }
+        ],
+        "minItems": 2,
+        "items": false
+      },
+      "response": {
+        "anyOf": [
+          {
+            "type": "object",
+            "properties": {
+              "text": {
+                "type": "string"
+              },
+              "refused": {
+                "type": "string",
+                "enum": [
+                  "refused",
+                  "invalid"
+                ]
+              }
+            },
+            "required": [
+              "text"
+            ]
+          },
+          {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "propertyNames": {
+                "type": "string"
+              },
+              "additionalProperties": {}
+            }
+          },
+          {
+            "type": "object",
+            "propertyNames": {
+              "type": "string"
+            },
+            "additionalProperties": {}
+          }
+        ]
+      }
+    },
+    "inf:plugins:ask-again": {
+      "effect": "change",
+      "reach": "home",
+      "request": {
+        "type": "array",
+        "prefixItems": [
+          {
+            "type": "string",
+            "minLength": 2,
+            "maxLength": 48,
+            "pattern": "^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$"
+          },
+          {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200
+          },
+          {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200
+          }
+        ],
+        "minItems": 3,
         "items": false
       },
       "response": {
@@ -58274,6 +58512,48 @@
                     "serves",
                     "asked"
                   ]
+                },
+                "integrationAsks": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "integration": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 200
+                      },
+                      "place": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 200
+                      },
+                      "action": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 200
+                      },
+                      "label": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 200
+                      },
+                      "state": {
+                        "type": "string",
+                        "enum": [
+                          "asking",
+                          "declined"
+                        ]
+                      }
+                    },
+                    "required": [
+                      "integration",
+                      "place",
+                      "action",
+                      "label",
+                      "state"
+                    ]
+                  }
                 }
               },
               "required": [
@@ -58727,6 +59007,48 @@
                     "serves",
                     "asked"
                   ]
+                },
+                "integrationAsks": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "integration": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 200
+                      },
+                      "place": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 200
+                      },
+                      "action": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 200
+                      },
+                      "label": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 200
+                      },
+                      "state": {
+                        "type": "string",
+                        "enum": [
+                          "asking",
+                          "declined"
+                        ]
+                      }
+                    },
+                    "required": [
+                      "integration",
+                      "place",
+                      "action",
+                      "label",
+                      "state"
+                    ]
+                  }
                 }
               },
               "required": [

@@ -14,7 +14,8 @@ How a panel looks is not this page's business: visual rules stay in the design s
 Use a panel for a view that stays on screen and updates as the facts change.
 Do not add a hard-coded rail, sidebar or React-only dock for a new view: the rails draw registered side panels, and the app's own panels are ordinary panel folders under `src/panels/`.
 Do not add a new card kind, settings tab or panel by editing a switch: a contribution is a manifest entry plus a binding through `registerPlugin`.
-Do not give a panel its own fetch of app data, its own poll, or `window.infinitary`: declare reads, and use `server.ts` only for the captain's own panel's outside data.
+Do not give a panel its own fetch of app data, its own poll, or `window.infinitary`: declare reads, and use `server.ts` only for the captain's own panel's background work.
+Do not give a panel its own sign-in, key or host list for a service outside your projects: it names the integrations it uses in its manifest and reaches them through `integrations` ([integrations.md](integrations.md)).
 Do not create a second plugin shape or a second manifest for a new source: one plugin shape, one manifest (`personalManifestSchema`).
 A one-off answer the captain reads once is a card ([cards-and-consent.md](cards-and-consent.md)), not a panel.
 
@@ -34,7 +35,7 @@ A one-off answer the captain reads once is a card ([cards-and-consent.md](cards-
 
 Registration is atomic: `registerPlugin` refuses any grant the host cannot serve (`PluginCapabilityError`), requires a binding for every declared contribution and no stray one, and unwinds everything on a refusal.
 Visibility is data, never a verb: a panel's content source returns null while its presence rule is unsatisfied, and `presence: { "code": true }` lets a panel's own code say whether it shows.
-The manifest declares title, placement, order, size, reads, views, store cap, card views, header buttons and commands; the host draws them as its own chrome and attributes the panel ("yours", the maker's name, or nothing for the app's own).
+The manifest declares title, placement, order, size, reads, views, integrations, store cap, card views, header buttons and commands; the host draws them as its own chrome and attributes the panel ("yours", the maker's name, or nothing for the app's own).
 A personal panel lives in `userData/fleet/personal/<id>/` and is built by a crewmate on a personal task that builds in place ([projects-and-working-copies.md](projects-and-working-copies.md)); the rails keep the last commit while working files run apart as a draft.
 The compiler output is content-addressed, so a new hash is the version, the hot reload (a new frame) and the core's cache bust.
 A captain's own `server.ts` runs in a process of its own, owned by the core's `PanelRuntimes` for every source: actions are callable by name, its store answers asynchronously one ask at a time, background tasks run on its own timers clamped up to `MIN_BACKGROUND_INTERVAL_MS`, a run in flight is skipped rather than overlapped, and a throw is logged with the timer kept.
@@ -47,7 +48,9 @@ Personal panels and plugins (`docs/ui-plugins.md`, `docs/personal-panels.md`): o
 The trust difference between sources is intentional.
 The captain's own panel draws in a frame of its own like every panel, and may have a `server.ts`, trusted like the crewmate that wrote it, which runs in its own process; a hang in either stops only that panel.
 An installed panel runs only in a sandboxed frame at its own host with a pinned lib, is served only the reads, views, storage and moves the captain consented to on the host's consent card (`card-plugin-<id>`), and a tree holding `server.ts` mounts nothing.
-`net` and `secrets` are refused for every source (`PLUGIN_HOST_SUPPORT`); a mediated fetch or secret grant is not available.
+A panel of either source reaches a service outside your projects only through the integrations its manifest names, each action under its rule in Settings, with one ask per panel and action at a time and a host line with Ask again meanwhile ([`../docs/integrations.md`](../docs/integrations.md), "How a panel reaches them").
+An installed panel's consent card lists each integration it names with its actions, events and why, and an update that names more asks again.
+The retired `net` and `secrets` keys are refused for every source, saying to name an integration instead.
 The compiler is the coherence gate at admission: a panel may import only `react`, the JSX runtimes, `@infinitary/ui`, type-only `@infinitary/contracts` and its own files; a server only `node:*` built-ins and its own files.
 The panels switch is one preference row written only by `ShellPreferencesService.setPersonalPanels` (the Settings control and the safe-mode boot); the first mate's `personalize` has no action for it, because the switch exists for when a panel is what went wrong.
 The words "extension" and "plugin" never reach a user surface.
@@ -57,6 +60,7 @@ The words "extension" and "plugin" never reach a user surface.
 - Data through declared reads and the `sql` grant over published views ([live-reads.md](live-reads.md)).
 - Cards on the main stack through `PanelProps.cards` ([cards-and-consent.md](cards-and-consent.md)), and pointing at tasks through `point` with `tasks.board`.
 - Task moves (`tasks.run`) on the captain's click or key for a panel whose manifest asks for `moves` ([tasks.md](tasks.md)).
+- Services outside your projects through `context.integrations` and `props.integrations` ([integrations.md](integrations.md)), and their events through the store keys the app writes them to.
 - Commands in command search as `panel:<panel>/<command>` ([keyboard](../docs/keyboard.md), "A panel's commands").
 - The personal workspace as a project kind that builds in place ([projects-and-working-copies.md](projects-and-working-copies.md)).
 

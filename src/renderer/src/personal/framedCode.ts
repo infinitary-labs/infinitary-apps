@@ -29,5 +29,7 @@ export function framedCodeOf(view: PersonalExtensionView): FramedPanelContent | 
     ...(!installed && view.stopped ? { stopped: view.stopped.reason } : {}),
     // Paused for an earlier panel API (INF-2470): not while a task builds it.
     ...(!installed && view.paused && !view.running ? { paused: { asked: view.paused.asked } } : {}),
+    // Its integration calls waiting on the captain or turned down, whatever its source.
+    ...(view.integrationAsks?.length ? { integrationAsks: view.integrationAsks } : {}),
   };
 }

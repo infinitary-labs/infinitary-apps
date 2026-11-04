@@ -28,7 +28,7 @@ import { bindTool } from "../../../session/tools";
 import { seedTask } from "../../../tasks/seedTask";
 import { TaskService } from "../../../tasks/taskService";
 import { RepoRegistry } from "../../../workspace/repoRegistry";
-import { API_RESPONSE_MAX_BYTES } from "../../api";
+import { API_CALLS_PER_TASK, API_RESPONSE_MAX_BYTES } from "../../api";
 import { GitHubForge } from "./githubForge";
 
 const HEAD = "a".repeat(40);
@@ -1527,6 +1527,45 @@ describe("the GitHub gateway through crewmate tools and the app's sign-in", () =
       "200 GitHub calls",
     );
     expect(seen).toHaveLength(200);
+  });
+
+  // INF-2334 piece 1: a panel is no task and no seat, so its reads through
+  // the integration spend no allowance; the action's rule bounds them.
+  it("reads as a panel past a task's whole budget, through the integration", async () => {
+    const { service, seen } = await fixture();
+    const integrations = new IntegrationsService({
+      bindings: [
+        githubIntegration({
+          signIns: {
+            stateOf: () => "ok",
+            loginOf: () => "octo",
+            checkNow: async () => {},
+            signOut: () => {},
+          },
+          gateway: {
+            read: (task, input, through) => service.read(task, input, through),
+            write: (task, input, through) => service.write(task, input, through, true),
+            readAsSeat: (input) => service.readAsSeat(input),
+            writeAsSeat: (input) => service.writeAsSeat(input),
+            readAsPanel: (panel, input) => service.readAsPanel(panel, input),
+            writeAsPanel: (panel, input) => service.writeAsPanel(panel, input),
+          },
+        }),
+      ],
+      store: new IntegrationSettingsStore(join(scratchDir("fm-panel-reads-"), "integrations")),
+      secrets: new FileIntegrationSecrets(join(scratchDir("fm-panel-read-keys-"), "secrets")),
+    });
+    allowIntegrationReads(integrations);
+    const panel = integrations.forPanel({
+      key: "installed:pr-checks",
+      title: "PR checks",
+      uses: [{ integration: "github", actions: ["read"], why: "Shows your pull requests." }],
+    });
+    for (let call = 0; call <= API_CALLS_PER_TASK; call++) {
+      const answer = await panel.call("github", "read", { path: "/repos/acme/site/issues" });
+      expect(answer.refused, `call ${call}`).toBeUndefined();
+    }
+    expect(seen).toHaveLength(API_CALLS_PER_TASK + 1);
   });
 
   it("INF-125: refuses to substitute release-file bytes for an approved JSON validation write", async () => {

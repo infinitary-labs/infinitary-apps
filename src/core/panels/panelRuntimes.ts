@@ -50,12 +50,28 @@ export const PANEL_SILENCE_MS = 10_000;
 /** How long a killed process has to end before it is killed by its process id. */
 export const PANEL_KILL_WAIT_MS = 2_000;
 
+/**
+ * One panel's integrations, as its process asks them: the service's
+ * `forPanel`, bound to what its manifest names (docs/integrations.md, "Panels").
+ */
+export type PanelRuntimeIntegrations = {
+  list: () => Promise<unknown>;
+  show: (name: string) => Promise<unknown>;
+  call: (name: string, action: string, input: unknown) => Promise<unknown>;
+};
+
 /** The calls the process makes on the app, bound to one runtime's store slice and grant. */
 export type PanelRuntimeServices = {
   store: StoreSlice;
   sql: (sql: string, params?: SqlParam[]) => Promise<SqlAnswer>;
   log: (message: string) => void;
+  /** Absent: its manifest names no integration, and every call is refused. */
+  integrations?: PanelRuntimeIntegrations;
 };
+
+/** The words a call answers for a panel whose host serves it no integrations. */
+export const NO_PANEL_INTEGRATIONS =
+  'Not run: this panel\'s manifest.json names no integration under "integrations".';
 
 export type PanelRuntimeState = "starting" | "running" | "stopped" | "disposed";
 
@@ -66,6 +82,8 @@ export type PanelRuntime = {
   readonly background: readonly PanelLoadedTask[];
   readonly state: PanelRuntimeState;
   invoke: (action: string, input: unknown) => Promise<unknown>;
+  /** Hand its code an event its manifest names (`context.integrations.on`). */
+  event: (integration: string, event: string, items: { id: string; summary: string }[]) => void;
   dispose: () => void;
 };
 
@@ -287,6 +305,11 @@ class Runtime implements PanelRuntime {
     });
   }
 
+  event(integration: string, event: string, items: { id: string; summary: string }[]): void {
+    if (this.state !== "running") return;
+    this.send({ type: "event", integration, event, items });
+  }
+
   dispose(): void {
     if (this.state === "disposed" || this.state === "stopped") return;
     this.state = "disposed";
@@ -378,6 +401,22 @@ class Runtime implements PanelRuntime {
         case "sql": {
           const params = Array.isArray(second) ? (second as SqlParam[]) : [];
           reply(true, await this.services.sql(String(first), params));
+          return;
+        }
+        case "integrations.list":
+        case "integrations.show":
+        case "integrations.call": {
+          const reach = this.services.integrations;
+          if (!reach) {
+            reply(
+              true,
+              op === "integrations.list" ? [] : { text: NO_PANEL_INTEGRATIONS, refused: "refused" },
+            );
+            return;
+          }
+          if (op === "integrations.list") reply(true, await reach.list());
+          else if (op === "integrations.show") reply(true, await reach.show(String(first)));
+          else reply(true, await reach.call(String(first), String(second), input[2] ?? {}));
           return;
         }
       }

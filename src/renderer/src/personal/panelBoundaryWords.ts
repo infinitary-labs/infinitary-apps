@@ -27,3 +27,19 @@ export const BACKGROUND_PAUSED_LINE =
 export const BACKGROUND_UPDATE = "Update panel";
 /** The same line for one of a panel's cards on the stack (docs/ui-plugins.md, "A panel's cards"). */
 export const CARD_STOPPED_LINE = "This card stopped drawing.";
+/**
+ * A panel's integration call that waits on the captain's approval card, or
+ * that he turned down (docs/integrations.md, "Panels"): one line each above
+ * the panel, beside Ask again, which shows the card again or raises it anew.
+ */
+export function integrationAskLine(label: string, place: string, state: "asking" | "declined") {
+  return state === "asking"
+    ? `This panel asks to ${lowerFirst(label)} on ${place}. Its approval card is up.`
+    : `You chose Not now when this panel asked to ${lowerFirst(label)} on ${place}.`;
+}
+/** The button beside it. */
+export const INTEGRATION_ASK_AGAIN = "Ask again";
+
+function lowerFirst(text: string): string {
+  return text.length > 0 ? `${text[0]?.toLowerCase()}${text.slice(1)}` : text;
+}

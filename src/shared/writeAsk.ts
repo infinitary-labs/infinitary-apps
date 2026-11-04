@@ -45,10 +45,13 @@ export type IntegrationAsk = {
   kind: "integration";
   /**
    * The first mate asked it, so it waits on the row the host filed for its
-   * card and runs as the first mate's call (INF-1108); absent, the task's
-   * crewmate asked it.
+   * card and runs as the first mate's call (INF-1108); `panel`, a panel
+   * asked it, so it waits the same way and runs as that panel's call
+   * (`panel`); absent, the task's crewmate asked it.
    */
-  by?: "firstmate";
+  by?: "firstmate" | "panel";
+  /** The panel that asked it (`by: "panel"`): its key and what the card calls it. */
+  panel?: { key: string; title: string };
   /** The integration's id, such as `google`. */
   integration: string;
   /**

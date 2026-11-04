@@ -2,7 +2,6 @@ import { randomUUID } from "node:crypto";
 import { mkdir, readFile, rename, rm, stat } from "node:fs/promises";
 import { basename, join } from "node:path";
 import type { Card } from "@shared/cards";
-import { HERE } from "@shared/deviceNames";
 import type { FmEvent } from "@shared/events";
 import type { PersonalManifest } from "@shared/personal/contracts";
 import {
@@ -13,6 +12,7 @@ import {
   personalManifestSchema,
 } from "@shared/personal/manifest";
 import {
+  type ConsentSummary,
   canonicalCapabilities,
   consentSummary,
   type PluginCapabilities,
@@ -30,10 +30,12 @@ import type { Runbooks } from "../runbooks/runbooks";
 import { runbookAddedLine, runbookConsentTitle, runbookRemovedLine } from "../runbooks/words";
 import {
   CAN_READ_WORDS,
+  CAN_USE_WORDS,
   MOVES_WORDS,
   panelByWords,
   panelConsentTitle,
   SENDS_NOTHING_WORDS,
+  SENDS_ONLY_THROUGH_WORDS,
 } from "./consentWords";
 import { lintPanelSources } from "./pluginLint";
 import type {
@@ -523,8 +525,7 @@ function basenameOf(dir: string): string {
 /** What a refused grant means, in words. */
 function unservedLine(refused: readonly string[]): string {
   const words = refused.map((grant) => {
-    if (grant === "net.origins") return `to send data off ${HERE.this}`;
-    if (grant === "secrets") return "to hold a secret";
+    if (grant === "integrations") return "to use your integrations";
     if (grant.startsWith("sql:"))
       return `to read ${grant.slice(4)}, which this app does not publish`;
     if (grant.startsWith("reads:")) return `to read "${grant.slice(6)}", which a panel cannot have`;
@@ -554,13 +555,23 @@ function consentCard(
     reads.length > 0
       ? `<p>${CAN_READ_WORDS} ${reads.join(", ")}.</p>`
       : "<p>It reads nothing of yours.</p>",
+    // Each integration it names, with the actions and events it uses and why.
+    ...(summary.integrations.length > 0
+      ? [
+          `<p>${escapeHtml(CAN_USE_WORDS)}</p><ul>${summary.integrations
+            .map((use) => `<li>${integrationUseWords(use)}</li>`)
+            .join("")}</ul>`,
+        ]
+      : []),
     // Moves are the one grant that changes your work, so they get their own line.
     ...(summary.moves ? [`<p>${MOVES_WORDS}</p>`] : []),
     `<p>It ${
       summary.storageBytes === null
         ? "keeps a little data of its own"
         : `keeps up to ${byteWords(summary.storageBytes)} of data of its own`
-    }, ${SENDS_NOTHING_WORDS}, and runs no code of its own in the app.</p>`,
+    }, ${
+      summary.integrations.length > 0 ? SENDS_ONLY_THROUGH_WORDS : SENDS_NOTHING_WORDS
+    }, and runs no code of its own in the app.</p>`,
   ];
   return {
     id: consentCardId(id),
@@ -583,6 +594,23 @@ function consentCard(
       },
     ],
   };
+}
+
+/** One integration a panel names, on its consent card: what it uses and why, in its words. */
+function integrationUseWords(use: ConsentSummary["integrations"][number]): string {
+  const parts = [
+    ...(use.actions?.length
+      ? [`${use.actions.length === 1 ? "action" : "actions"} ${codes(use.actions)}`]
+      : []),
+    ...(use.events?.length
+      ? [`${use.events.length === 1 ? "event" : "events"} ${codes(use.events)}`]
+      : []),
+  ];
+  return `<b>${escapeHtml(use.integration)}</b>: ${parts.join(" and ")}. Why, in its words: “${escapeHtml(use.why)}”`;
+}
+
+function codes(names: readonly string[]): string {
+  return names.map((name) => `<code>${escapeHtml(name)}</code>`).join(", ");
 }
 
 function byteWords(bytes: number): string {

@@ -107,6 +107,15 @@ export type SavedOutsideDataOptions = {
   runs: { rewrite: (scrub: (text: string, at: number) => Scrubbed<string>) => number };
   /** The first mate's messages no turn was handed yet, rewritten by their one writer. */
   inbox: { rewrite: (scrub: (payload: unknown) => Scrubbed<unknown>) => number };
+  /**
+   * Panels' stores that hold words from outside (`PanelOutsideData`): each
+   * sweep drops their keys past the cutoff of a kind they read, and the
+   * captain's delete empties them. Absent, no panel reads a kept kind.
+   */
+  panels?: {
+    sweep: (cutoffs: ReadonlyMap<string, number>) => number;
+    deleteAll: () => number;
+  };
   now: () => number;
   log: (line: string) => void;
 };
@@ -129,6 +138,7 @@ export class SavedOutsideData {
   deleteNow(): Promise<OutsideDataDeleted> {
     return this.queue(async () => {
       this.options.reads.setDeleteBefore(this.options.now());
+      this.panelsDo(() => this.options.panels?.deleteAll());
       const readers = [FIRSTMATE_READER, ...this.options.tasks().map((task) => task.id)];
       const visits = await this.visitAll(readers, { full: true });
       const later = new Map<string, Later & { conversations: number }>();
@@ -152,9 +162,21 @@ export class SavedOutsideData {
     return this.queue(async () => {
       const cutoff = this.cutoff();
       if (cutoff === undefined) return;
+      this.panelsDo(() => this.options.panels?.sweep(this.cutoffs()));
       const readers = this.options.reads.due(cutoff);
       if (readers.length) await this.visitAll(readers, { full: false });
     });
+  }
+
+  /** A panel's store that could not be cleaned is said, and the conversations still go. */
+  private panelsDo(run: () => unknown): void {
+    try {
+      run();
+    } catch (error) {
+      this.options.log(
+        `[outside] panels' stores not cleaned: ${error instanceof Error ? error.message : String(error)}`,
+      );
+    }
   }
 
   /** One pass at a time: a delete waits for a sweep under way, and the other way round. */

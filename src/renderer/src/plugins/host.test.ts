@@ -86,14 +86,15 @@ describe("PluginHost.registerPlugin", () => {
     const host = new PluginHost();
     const manifest = parsePluginManifest({
       ...manifestWithPanels("jira", []),
+      // INF-2334: a host that serves no integrations refuses a plugin naming one.
       capabilities: {
-        net: { origins: { jira: { userSupplied: true } } },
+        integrations: [{ integration: "jira", actions: ["read"], why: "Shows your issues." }],
         reads: ["feed.recent"],
       },
     });
     expect(() => host.registerPlugin(manifest)).toThrow(PluginCapabilityError);
     expect(() => host.registerPlugin(manifest)).toThrow(
-      'plugin "jira" asks for net.origins, reads:feed.recent, which this host does not serve',
+      'plugin "jira" asks for integrations, reads:feed.recent, which this host does not serve',
     );
   });
 

@@ -1,6 +1,6 @@
 import { mediatedFetchCallSchema } from "@shared/plugins/fetch";
 import { describe, expect, it } from "vitest";
-import { createMediatedFetch, noNetGrants } from "./mediatedFetch";
+import { createMediatedFetch, RETIRED_FETCH_WORDS } from "./mediatedFetch";
 
 describe("the mediated fetch seam", () => {
   const call = mediatedFetchCallSchema.parse({
@@ -9,25 +9,12 @@ describe("the mediated fetch seam", () => {
     request: { path: "/rest/api/3/search", query: { jql: "assignee=me" } },
   });
 
-  it("refuses every call while no grant is served, naming the plugin and alias", async () => {
-    const fetchVia = createMediatedFetch({ grants: noNetGrants });
+  it("refuses every call and sends nothing: a panel reaches a service through an integration", async () => {
+    // The captain's answer on INF-2334: retire the per-panel hosts and keys.
+    const fetchVia = createMediatedFetch();
     await expect(fetchVia(call)).resolves.toEqual({
       ok: false,
-      error: {
-        code: "capability_not_granted",
-        message: 'plugin "jira" holds no net grant for "jira"',
-      },
-    });
-  });
-
-  it("refuses a method outside the grant before anything else", async () => {
-    const fetchVia = createMediatedFetch({
-      grants: () => ({ jira: { origin: "https://acme.atlassian.net", methods: ["GET"] } }),
-    });
-    const result = await fetchVia({ ...call, request: { ...call.request, method: "POST" } });
-    expect(result).toEqual({
-      ok: false,
-      error: { code: "method_not_granted", message: '"jira" grants GET, not POST' },
+      error: { code: "capability_not_granted", message: RETIRED_FETCH_WORDS },
     });
   });
 

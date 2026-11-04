@@ -332,6 +332,14 @@ export function buildPanelDocument(parts: PanelDocumentParts): string {
 export const PANEL_SERVER_ACTION = "server.invoke";
 
 /**
+ * The action a page of a panel calls its integrations through
+ * (docs/integrations.md, "Panels"): `{ op: "list" }`, `{ op: "show", name }`
+ * or `{ op: "call", name, action, input }`, answered with what every caller
+ * gets. The core reads what the panel may reach from its own manifest.
+ */
+export const PANEL_INTEGRATIONS_ACTION = "integrations";
+
+/**
  * The action a panel's page on its rail says how its body fared with: drawn,
  * or stopped and why (`{ state: "drawn" }`, `{ state: "stopped", why }`), for
  * the window's answer about its panels (docs/personal-panels.md, "Placed on

@@ -13,6 +13,7 @@ import { createServer } from "node:http";
 import type { AddressInfo } from "node:net";
 import { join } from "node:path";
 import type { FmEvent } from "@shared/events";
+import { retiredGrantWords } from "@shared/plugins/manifest";
 import { BUILTIN_SURFACES } from "@shared/surfaces";
 import { describe, expect, it, vi } from "vitest";
 import { freshDatabase } from "../../../tests/helpers/database";
@@ -30,6 +31,7 @@ import { SettingsStore } from "../storage/settingsStore";
 import { TaskService } from "../tasks/taskService";
 import { RepoRegistry } from "../workspace/repoRegistry";
 import type { WorkspaceService } from "../workspace/workspaceService";
+import { CAN_USE_WORDS, SENDS_ONLY_THROUGH_WORDS } from "./consentWords";
 import { consentCardId, PluginInstaller } from "./pluginInstaller";
 import { PluginRecords } from "./pluginRecords";
 
@@ -310,8 +312,9 @@ describe("PluginInstaller", () => {
         { "manifest.json": manifest({ version: undefined }), "panel.tsx": PANEL },
       ],
       [
+        // INF-2334: a host of its own is retired; it names an integration instead.
         "sends-data",
-        "asks to send data off this computer",
+        retiredGrantWords("net"),
         {
           "manifest.json": manifest({
             net: { origins: { api: { origin: "https://api.example.com" } } },
@@ -760,6 +763,52 @@ describe('a panel that asks to move tasks (docs/ui-plugins.md, "A panel\'s cards
         moves: true,
       });
       expect(h.installed()[0]).toMatchObject({ id: "task-desk", moves: true, error: null });
+    } finally {
+      h.personal.dispose();
+    }
+  });
+
+  // Intent: INF-2334 piece 1, the captain's "every panel": an added panel's
+  // consent card lists each integration it names, and an update naming more
+  // asks again.
+  it("lists the integrations an added panel names on its consent card, and asks again when an update names more", async () => {
+    const h = await harness();
+    const github = {
+      integration: "github",
+      actions: ["read"],
+      why: "Shows the checks on your open pull requests.",
+    };
+    const source = h.plugin("pr-checks", {
+      "manifest.json": manifest({ title: "PR checks", sql: undefined, integrations: [github] }),
+      "panel.tsx": PANEL,
+    });
+    try {
+      await h.installer.install({ source: "path", spec: source });
+      const card = h.cards().find((entry) => entry.id === consentCardId("pr-checks"));
+      expect(card?.body).toContain(CAN_USE_WORDS);
+      expect(card?.body).toContain("<b>github</b>: action <code>read</code>.");
+      expect(card?.body).toContain(github.why);
+      expect(card?.body).toContain(SENDS_ONLY_THROUGH_WORDS);
+      h.supervisor.act(consentCardId("pr-checks"), "add");
+      await h.settled();
+      expect(h.records.get("pr-checks")?.capabilities).toMatchObject({ integrations: [github] });
+
+      // The same connection with one more action is the captain's call again.
+      const wider = { ...github, actions: ["read", "write"] };
+      writeFileSync(
+        join(source, "manifest.json"),
+        manifest({ title: "PR checks", sql: undefined, version: "1.1.0", integrations: [wider] }),
+      );
+      await h.installer.install({ source: "path", spec: source });
+      const ask = h.cards().find((entry) => entry.id === consentCardId("pr-checks"));
+      expect(ask?.title).toBe("Update the PR checks panel?");
+      expect(ask?.body).toContain("<b>github</b>: actions <code>read</code>, <code>write</code>.");
+      h.supervisor.act(consentCardId("pr-checks"), "decline");
+      await h.settled();
+      expect(h.records.get("pr-checks")).toMatchObject({
+        version: "1.0.0",
+        capabilities: { integrations: [github] },
+      });
     } finally {
       h.personal.dispose();
     }

@@ -2,6 +2,9 @@ import type {
   PanelAsks,
   PanelAskVia,
   PanelCards,
+  PanelIntegrationAnswer,
+  PanelIntegrationEventItem,
+  PanelIntegrations,
   PanelMoveResult,
   PanelOpenCard,
   PanelPoint,
@@ -16,12 +19,18 @@ import type {
   StoreValue,
 } from "@shared/personal/contracts";
 import {
+  type PanelEventEntry,
+  panelEventKey,
   pointNeedsBoardMessage,
   undeclaredReadMessage,
   undeclaredViewsMessage,
 } from "@shared/personal/manifest";
 import type { FrameBridgeApi } from "@shared/plugins/bridge";
-import { PANEL_SERVER_ACTION, type PanelFrameConfig } from "@shared/plugins/frameDocument";
+import {
+  PANEL_INTEGRATIONS_ACTION,
+  PANEL_SERVER_ACTION,
+  type PanelFrameConfig,
+} from "@shared/plugins/frameDocument";
 
 /**
  * `PanelProps` in the frame realm (one plugin vehicle, Phase A item 4): the
@@ -50,6 +59,10 @@ import { PANEL_SERVER_ACTION, type PanelFrameConfig } from "@shared/plugins/fram
  *   asked for; the host checks each again, and answers whether it happened.
  *   `view` and whether the panel is collapsed ride view state (`frameView`,
  *   `frameRail`), so the runtime hands them in on every render.
+ * - `integrations` asks the host's `integrations` action, which the core
+ *   answers over what the panel's own manifest names (docs/integrations.md,
+ *   "Panels"); `on` reads the store key the app writes each event's arrivals
+ *   to, so the drawing hears what its background code hears.
  */
 export function framePanelProps(
   config: PanelFrameConfig,
@@ -72,7 +85,56 @@ export function framePanelProps(
     cards: frameCards(bridge),
     asks: frameAsks(bridge),
     point: framePoint(config, bridge, warn),
+    integrations: frameIntegrations(bridge, warn),
     ...(config.moves ? { tasks: frameTasks(bridge) } : {}),
+  };
+}
+
+/** A panel's integrations over the bridge, and its events through the store keys the app writes them to. */
+function frameIntegrations(
+  bridge: FrameBridgeApi,
+  warn: (...args: unknown[]) => void,
+): PanelIntegrations {
+  const ask = (request: Record<string, unknown>) =>
+    bridge.action(PANEL_INTEGRATIONS_ACTION, request);
+  return {
+    list: () =>
+      ask({ op: "list" }).then((rows) =>
+        Array.isArray(rows) ? (rows as Record<string, unknown>[]) : [],
+      ),
+    show: (name) =>
+      ask({ op: "show", name }) as Promise<Record<string, unknown> | PanelIntegrationAnswer>,
+    call: (name, action, input) =>
+      ask({
+        op: "call",
+        name,
+        action,
+        ...(input === undefined ? {} : { input }),
+      }) as Promise<PanelIntegrationAnswer>,
+    on: (name, event, listener) => {
+      const key = panelEventKey(name, event);
+      let seenAt: number | null = null;
+      const hear = (first: boolean) => {
+        bridge
+          .store({ op: "get", key })
+          .then((answer) => {
+            const entry = answer.value as PanelEventEntry | undefined;
+            if (!entry || typeof entry.at !== "number") return;
+            // What was there before the panel listened is not news to it.
+            if (first || entry.at === seenAt) {
+              seenAt = entry.at;
+              return;
+            }
+            seenAt = entry.at;
+            listener(entry.items as PanelIntegrationEventItem[]);
+          })
+          .catch((error: unknown) => warn(`integrations.on "${name}" ${event}:`, error));
+      };
+      hear(true);
+      return bridge.onStore((changed) => {
+        if (changed === key) hear(false);
+      });
+    },
   };
 }
 

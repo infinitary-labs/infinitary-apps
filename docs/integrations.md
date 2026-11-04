@@ -1,8 +1,9 @@
 # Integrations
 
-An integration is a connection to something outside the person's projects, signed in as the person, that the first mate and every crewmate can reach.
+An integration is a connection to something outside the person's projects, signed in as the person, that the first mate, every crewmate, Automation and every panel can reach.
 GitHub is the first kind, an MCP server the second, and Google, for Gmail and Calendar, the third.
 The captain's design is INF-775: one core primitive, a Settings tab, the same reach for the person and the first mate, and every agent reaching what is added.
+The captain's principle of 2026-11-02 extends it to every surface: the first mate, a crewmate, Automation and every panel reach a service outside your projects through an integration, with the same connections, actions, rules and answers, and no surface brings its own sign-in, key or approval (`docs/principles.md`).
 
 ## The record
 
@@ -58,7 +59,8 @@ A field marked `required` is one the binding cannot look without, such as GitHub
 ## A stand-in
 
 An unpackaged run that names a folder in `INFINITARY_STAND_IN_INTEGRATION` connects the stand-in (`providers/standIn.ts`), which tells `item_arrived` for each line added to that folder's `items.jsonl`, `{"id": ..., "summary": ...}`.
-It has no actions and no sign-in, and a packaged build never connects it.
+Its one action, `count_items`, reads how many items the file holds, so a run can raise and allow an approval card.
+It has no sign-in, and a packaged build never connects it.
 
 ## The rules
 
@@ -314,6 +316,26 @@ The home grants the command, and its one line in the crewmate's instructions, on
 A computer on another major takes no work, and a computer without a task channel gives its crewmates neither the command nor the line.
 What a crewmate there read stays in its conversation on that computer for the same 30 days, and the delete in Settings reaches it there too, through that computer (`inf:session:delete-outside`, which a computer on the current contract major answers; [Task retention](task-retention.md#words-from-outside)).
 
+## How a panel reaches them
+
+A panel is a caller like the others (INF-2334, piece 1): its background code has `context.integrations` and its drawing `props.integrations`, each with `list`, `show`, `call` and `on`, answering what every caller gets (`PanelIntegrations`, `src/shared/personal/contracts.ts`).
+Its manifest names what it reaches under `integrations`, one entry per connection: the connection's name, the actions and events it uses, and why, in a sentence the captain reads (`panelIntegrationUseSchema`, `src/shared/plugins/manifest.ts`).
+The service serves it through `IntegrationsService.forPanel` with a panel caller (`PanelCaller`, `src/core/integrations/binding.ts`): its list and `show` hold only the connections, actions and events the manifest names, and a call outside them is refused in one wording, `undeclaredIntegrationMessage`, which the panel lint also uses for a literal call ("undeclared-integration", `src/core/plugins/pluginLint.ts`).
+The core reads what a panel names from its own manifest at each call; the window's request names only the panel and the verb (`inf:plugins:integrations`), and a background call asks the core over the process's own lane (`docs/personal-panels.md`, "Background work runs apart").
+A call follows the action's rule in Settings, as every caller's does: Always allowed runs it, and Asks you keeps it and raises the app's approval card, naming the panel and giving its manifest's why as its reason (`integrationApprovalCard`).
+The panel has no task, so the card is a host card whose own row the host files and keeps the call on, as the first mate's is; the ask is marked `by: "panel"` and its click runs the call as that panel's, and nobody is woken with the outcome.
+One ask stands per panel and action at a time (`PanelAsks`, `src/core/integrations/panelAsks.ts`, in `userData/integrations/panel-asks.json`): while its card is up, the panel's next calls answer that they wait on it, and once the captain chooses Not now or closes it, they answer that the captain did, without a card.
+Meanwhile the window draws a line above the panel for each such ask, with Ask again, which shows the open card again or raises it anew (`inf:plugins:ask-again`, `BackgroundAsking`).
+Always allow takes the line away, and the panel's next call runs; Only this time runs the kept call once and leaves Asks you.
+A panel the captain added from elsewhere has no background code, so it reaches its integrations from its drawing, and its consent card lists each connection it names with its actions, events and why; an update that names more asks again, as any other wider grant does.
+A panel's calls spend no task's or seat's allowance: GitHub's go through the gateway's `readAsPanel` and `writeAsPanel` under the same shape checks and caps.
+An action that saves a file into a task's hand-over folder is refused to a panel, as it is to the first mate.
+For each event a panel names, the app looks on the event's own cadence (`PanelEvents`, `src/core/personal/panelEvents.ts`), writes what arrived since the last look to the panel's store key `integrations:<connection>/<event>` (`panelEventKey`) and hands the same items to its background code; the drawing's `on` reads that key.
+The first look only marks where listening starts, and cursors are kept in memory, so after a restart a panel listens from then on.
+A panel that received words of a kind that keeps them for a while ("Data from outside") is held to the same days (`PanelOutsideData`, `src/core/personal/panelOutsideData.ts`, in `userData/integrations/panel-reads.json`): each sweep removes the keys of its store not rewritten within those days, and the captain's delete in Settings empties its store.
+The app cannot tell which keys hold those words, so it judges by when each key was written.
+A panel's manifest naming the retired `net` or `secrets` is refused, saying to name an integration instead (`retiredGrantWords`); the mediated fetch channel stays for older readers and refuses every call.
+
 ## Tests
 
 `src/core/integrations/service.test.ts` holds the view drawn from the github.com sign-in, settings that hold across a restart, a paused integration refusing, removal signing out, reserved names while signed out, automatic repairs and their explanations, custom names, case-insensitive conflicts and name-size boundaries.
@@ -328,6 +350,9 @@ The Google case of the same number keeps an ask through a renewal and a sign-in 
 `src/core/forge/providers/github/gateway.test.ts` holds GitHub through the integration against a stand-in GitHub: a crewmate's read runs, its write is kept as an ask even on its own project and sent by the captain's click, the first mate's read runs and its write is kept, sent once through its seat when taken and refused when GitHub refuses it, and an action turned off reaches nothing.
 `src/core/orchestrator/crewSupervisor.test.ts` holds the first mate's card: the call waits on the card's own row, the click runs it once, closing the card is Not now, and either wakes the first mate once.
 `src/core/axi/channel.test.ts` runs the command through the real launcher and channel.
+The panel caller's cases in `service.test.ts` list and show only what a manifest names, refuse an undeclared connection or action, keep one ask per panel and action, and run a kept panel call as the panel's own.
+`src/core/panels/panelRuntimes.integration.test.ts` runs a real panel process whose background code reads a stand-in GitHub through `context.integrations` and spends no allowance.
+`tests/e2e/panel-integrations.spec.ts` allows a panel's ask by keys and sees the panel's next call answered.
 `src/core/integrations/providers/inbox.test.ts` runs the inbox through the real launcher, channel, command process, integrations service and Scheduler: off it refuses, the key is 0600 in a 0700 folder, a drop answers a receipt at once and wakes the first mate with the event fenced, a repeated request id records once, a handled turn shows in the receipts, each key reaches only its own commands, and turning it off removes its folder.
 `tests/e2e/integrations-inbox.spec.ts` sees the inbox's own section off and saying what it is, turns it on and links it by keys, sees its rule turned on with it, runs the example line, sees the first mate woken with the event and the receipt handled, and after turning it off and on again sees the same one rule listen again.
 `src/core/integrations/secrets.test.ts` holds the keys against a stand-in API that sends back the header it received: the file and folder modes, a view and discovery that never carry a value, a call refused while its key is missing, a key applied to one request and replaced in the answer, a program's variables, and a change kept as an ask that runs once on the click and not at all once its action is off.

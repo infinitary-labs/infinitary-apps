@@ -1,12 +1,20 @@
 import { writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
+import { undeclaredIntegrationMessage } from "@shared/personal/manifest";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { scratchDir } from "../../../tests/helpers/scratchDirs";
+import {
+  FileIntegrationSecrets,
+  githubIntegration,
+  IntegrationSettingsStore,
+  IntegrationsService,
+} from "../integrations";
 import { PersonalStore } from "../personal/personalStore";
 import { forkChildProcess } from "../sql/forkChildProcess";
 import { openInMemoryDatabase } from "../storage/db";
 import {
+  NO_PANEL_INTEGRATIONS,
   type PanelRuntime,
   type PanelRuntimeServices,
   PanelRuntimes,
@@ -229,5 +237,114 @@ export const background = {
     );
     expect(stops.holding(identity("broken"))).toBeNull();
     expect(runtimes.running).toBe(0);
+  });
+});
+
+// INF-2334 piece 1, the captain's consent A ("one rule for every caller"):
+// a panel's background code reaches GitHub through `context.integrations`,
+// the same service and binding the agents use, here over a stand-in gateway
+// that answers in GitHub's shape. A call its manifest does not name is
+// refused before anything is sent. (The gateway's own panel reads, past a
+// task's whole allowance, are `gateway.test.ts`'s.)
+describe("a panel's background work reaches its integrations", () => {
+  it("calls GitHub as the panel through the integration, and is refused what its manifest does not name", async () => {
+    const sent: { panel: string; path: string }[] = [];
+    const integrations = new IntegrationsService({
+      bindings: [
+        githubIntegration({
+          signIns: {
+            stateOf: () => "ok",
+            loginOf: () => "kunchenguid",
+            checkNow: async () => {},
+            signOut: () => {},
+          },
+          gateway: {
+            read: async () => {
+              throw new Error("a panel's call never goes as a task's");
+            },
+            write: async () => {
+              throw new Error("a panel's call never goes as a task's");
+            },
+            readAsSeat: async () => {
+              throw new Error("a panel's call never goes as the first mate's");
+            },
+            writeAsSeat: async () => {
+              throw new Error("a panel's call never goes as the first mate's");
+            },
+            readAsPanel: async (panel, input) => {
+              sent.push({ panel, path: input.path });
+              return JSON.stringify({ status: 200, body: { login: "kunchenguid" } });
+            },
+            writeAsPanel: async () => {
+              throw new Error("the panel names no write");
+            },
+          },
+        }),
+      ],
+      store: new IntegrationSettingsStore(join(scratchDir("panel-integrations-"), "integrations")),
+      secrets: new FileIntegrationSecrets(join(scratchDir("panel-integration-keys-"), "secrets")),
+    });
+    // The captain's rule in Settings: GitHub's read is always allowed.
+    integrations.setRule("github", "read", true);
+    const reach = integrations.forPanel({
+      key: "yours:pr-checks",
+      title: "PR checks",
+      uses: [{ integration: "github", actions: ["read"], why: "Shows your pull requests." }],
+    });
+    const { runtimes, servicesFor, module } = setup();
+    const entry = module(
+      "pr-checks",
+      `export const actions = {
+  reads: (_input, { integrations }) => integrations.call("github", "read", { path: "/user" }),
+  writes: (_input, { integrations }) =>
+    integrations.call("github", "write", { method: "POST", path: "/user/repos", body: "{}" }),
+  lists: (_input, { integrations }) => integrations.list(),
+};`,
+    );
+    const runtime = await runtimes.start(
+      { source: "yours", id: "pr-checks", runtime: "live", version: "v1" },
+      entry,
+      {
+        ...servicesFor("pr-checks"),
+        integrations: {
+          list: async () => reach.list(),
+          show: async (name) => reach.show(name),
+          call: (name, action, input) => reach.call(name, action, input),
+        },
+      },
+    );
+    const answer = (await runtime.invoke("reads", null)) as { text: string; refused?: string };
+    expect(answer.refused).toBeUndefined();
+    expect(JSON.parse(answer.text)).toMatchObject({ status: 200, body: { login: "kunchenguid" } });
+    expect(sent).toEqual([{ panel: "yours:pr-checks", path: "/user" }]);
+
+    await expect(runtime.invoke("writes", null)).resolves.toEqual({
+      text: undeclaredIntegrationMessage("GitHub", { action: "write" }),
+      refused: "refused",
+    });
+    expect(sent).toHaveLength(1);
+    const listed = (await runtime.invoke("lists", null)) as { actions: { name: string }[] }[];
+    expect(listed.map((entry) => entry.actions.map((action) => action.name))).toEqual([["read"]]);
+  });
+
+  it("answers every call of a panel whose host serves it no integrations in one wording", async () => {
+    const { runtimes, servicesFor, module } = setup();
+    const entry = module(
+      "bare",
+      `export const actions = {
+  calls: (_input, { integrations }) => integrations.call("github", "read", { path: "/user" }),
+  lists: (_input, { integrations }) => integrations.list(),
+};`,
+    );
+    const runtime = await runtimes.start(
+      { source: "yours", id: "bare", runtime: "live", version: "v1" },
+      entry,
+      servicesFor("bare"),
+    );
+    await expect(runtime.invoke("calls", null)).resolves.toEqual({
+      text: NO_PANEL_INTEGRATIONS,
+      refused: "refused",
+    });
+    await expect(runtime.invoke("lists", null)).resolves.toEqual([]);
   });
 });

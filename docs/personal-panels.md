@@ -115,6 +115,7 @@ It **rewrites nothing**: it returns findings the author reads and fixes, which i
 | `off-scale-radius` | warn | Names the nearest radius (3 / 6 / 10 / 16 / pill) |
 | `off-scale-shadow` | warn | Names the nearest of the three shadow steps |
 | `two-accents` | warn | One accent per panel; names both families it found |
+| `undeclared-integration` | refuse | A literal `integrations.call`, `.on` or `.show` names a connection, action or event the manifest does not name under `integrations`, in the words the app refuses the call with (`undeclaredIntegrationMessage`) |
 | `list-without-empty` | note | A list that renders nothing when empty reads as broken (`.tsx` only: a `.ts` helper renders nothing) |
 
 Naming the nearest token needs the scale as data, which a stylesheet cannot give Node: `src/shared/designTokens.ts` mirrors it, and its test parses `src/renderer/src/design/tokens/*.css` and fails the moment the two drift.
@@ -271,6 +272,7 @@ The process imports the module, keeps its module state between calls, answers ac
 **The store answers asynchronously (panel API 2).**
 `context.db` is the same slice as before, through the store's one writer (`PersonalStore`), but each call is a message the core answers, so it returns a promise (`ServerStore`, `src/shared/personal/contracts.ts`).
 One ask is in flight per process: the next waits in the panel's process until the core acknowledged the last, so a panel that fires a thousand writes queues them in its own memory, never in the app's.
+Its integration calls (`context.integrations`) wait the same way in a lane of their own, so a slow call to a place never holds a store write behind it; the core answers them through `IntegrationsService.forPanel`, and hands the events the manifest names to `context.integrations.on` as they arrive (`docs/integrations.md`, "How a panel reaches them").
 Every message is JSON and at most `PANEL_MESSAGE_MAX_BYTES` (`src/core/panels/panelProtocol.ts`), refused in words past it.
 A runtime that was stopped or replaced is answered nothing, so a late write never lands; a write the core acknowledged stays, whatever happens to the process after.
 A `server.ts` runs only when its manifest says `"api": 2`.
@@ -323,8 +325,8 @@ What differs is where it runs and what it is served, and that is the host's call
 
 **The manifest** is the same file with two more things a panel for others must carry: `name` (the maker, shown as the panel's attribution) and `version` (semver; an update is a new version).
 Its card views (`cards/<view>.tsx`) are checked and pinned with its panel when it is added, and a card, button or command its manifest names that the folder does not have refuses the whole folder.
-The capability keys are the grant it asks for and the consent card words: `reads` (the app's own reads, `PANEL_READ_NAMES`), `sql` (published views, by their exact versioned names: `v_usage_v1`), `storage` (a byte cap under the store's own), and `moves` (it queues, starts and drops the captain's tasks on the captain's click or key, in a line of its own on the card).
-`net` and `secrets` are refused by this version of the app for every panel.
+The capability keys are the grant it asks for and the consent card words: `reads` (the app's own reads, `PANEL_READ_NAMES`), `sql` (published views, by their exact versioned names: `v_usage_v1`), `integrations` (each connection it uses, with its actions, events and why, listed on the card), `storage` (a byte cap under the store's own), and `moves` (it queues, starts and drops the captain's tasks on the captain's click or key, in a line of its own on the card).
+The retired `net` and `secrets` are refused for every panel, saying to name an integration instead: a panel reaches a service outside your projects only through the captain's own connections, each action under its rule in Settings (`docs/integrations.md`, "How a panel reaches them").
 There is no `server.ts`: a tree holding one is refused.
 
 **Where it runs.**
@@ -342,6 +344,7 @@ In the frame realm: a sandboxed frame at a host of its own, loading the app's ow
 | `card` (a card view) | the card it draws, its data as last put up, how many times it was put up (`revision`), and the place it kept (`kept`, `keep`) | the same, its data, revision and kept place pushed as view state |
 | `point`, `view` | pointing at tasks and the stack's open tasks, with `tasks.board`; `point.draft`, starting the captain's next message, whatever it reads | the same, through the actions declared for it, at work only while its frame holds the captain's focus |
 | `tasks` | its moves, when its manifest asks | the moves the captain agreed to, the same way |
+| `integrations` | `list`, `show`, `call` and `on` over the integrations its manifest names, each action under its rule in Settings | the integrations the captain agreed to, the same way |
 | `rail` (the panel itself) | whether it is collapsed, what it says it holds, and with `presence` `{ "code": true }` whether it shows and, off its rail, why | the same, its page running while collapsed or off its rail |
 
 Nothing else is reachable, and the frame proves it rather than asks for it: no network (fetch, beacons, sockets, images or frames from a host), no `window.infinitary`, no parent page, no storage, no top-level navigation or popups, no `eval` or `new Function`, no module that is not its own or the lib's (`docs/live-prototype-security.md`, "The frame realm").

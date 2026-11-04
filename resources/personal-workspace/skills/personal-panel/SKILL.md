@@ -36,10 +36,11 @@ An extension is one directory `<id>/` (kebab-case: `open-prs`, `tokyo-clock`) ho
   gets the same `PanelProps` plus `card`, the card it draws, and no `rail`.
 - `server.ts` (optional) - exports `actions` (name to handler) and `background` (name to
   task). It runs in a process of its own, beside the app, with the app's own privilege: use
-  it for anything that reads the machine, runs a command, or fetches. It runs only when
-  `manifest.json` says `"api": 2`.
+  it for anything that reads the machine or runs a command. It runs only when
+  `manifest.json` says `"api": 2`. A service outside the captain's projects (GitHub, a
+  calendar) is reached through its integrations, never fetched (below).
 - `manifest.json` (optional) - `api`, `title`, `placement`, `order`, `size`, `presence`,
-  `cards`, `header`, `commands`, `reads`, `moves`, `origin`; see `PersonalManifest`. A panel
+  `cards`, `header`, `commands`, `reads`, `integrations`, `moves`, `origin`; see `PersonalManifest`. A panel
   with a `server.ts` sets `"api": 2`.
 - a `.css` file (optional) - a stylesheet of its own, imported as text (below).
 - local helper files, used only by this extension.
@@ -74,6 +75,35 @@ stopped: its actions are refused, its panel shows that its background work stopp
 Retry, and it stays stopped through restarts and through your next save until the captain
 presses Retry. Its store stays as it was. A slow `await` (a fetch, a command) is never
 stopped. When you fix a stopped panel, say so in your report: the captain's Retry starts it.
+
+## Services outside the captain's projects: integrations
+
+A panel reaches GitHub, a calendar or any other service outside the captain's projects the
+way the first mate and a crewmate do: through the connections the captain made in Settings ->
+Integrations, never with a fetch, a key or a sign-in of its own. Name each one in
+`manifest.json` `integrations`, with the actions it calls, the events it hears, and why, in
+one sentence the captain reads on the approval card:
+
+```json
+"integrations": [
+  { "integration": "github", "actions": ["read"], "why": "Shows the checks on your open pull requests." }
+]
+```
+
+`props.integrations` in the panel and `context.integrations` in `server.ts` have `list()`,
+`show(name)` (the actions it names, each with its input's JSON Schema) and
+`call(name, action, input)`, answering `{ text }` or `{ text, refused }` exactly as the agents'
+calls do (`PanelIntegrations`); a call the manifest does not name is refused, and the
+compiler refuses a literal one. Each action follows its own rule in Settings: an action that
+asks the captain answers that it waits on the approval card, and the window draws a line
+above the panel with Ask again; once the captain chooses Always allow, its next call runs, so
+show that state calmly and try again on the next run rather than looping. A panel's calls
+spend no task's allowance.
+
+`on(name, event, listener)` hears an event the manifest names (`"events": [...]`): the app
+looks on that event's own cadence and hands over what arrived since, `{ id, summary }[]`; the
+same items wait in the store under `integrations:<name>/<event>`. Words from a kind the app
+keeps only for a while leave the panel's store with that kind's days, so rewrite what you keep.
 
 ## The app's own data, tasks and cards
 

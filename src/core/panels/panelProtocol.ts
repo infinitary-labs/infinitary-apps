@@ -8,8 +8,22 @@
  * in the app's).
  */
 
-/** What the panel's code may ask the core for: its own store slice and its granted query. */
-export type PanelAskOp = "store.get" | "store.set" | "store.delete" | "store.list" | "sql";
+/**
+ * What the panel's code may ask the core for: its own store slice, its
+ * granted query, and the integrations its manifest names
+ * (docs/integrations.md, "Panels"). The integrations' asks wait in a lane
+ * of their own, one in flight, so a slow call to a place never holds the
+ * panel's store asks behind it.
+ */
+export type PanelAskOp =
+  | "store.get"
+  | "store.set"
+  | "store.delete"
+  | "store.list"
+  | "sql"
+  | "integrations.list"
+  | "integrations.show"
+  | "integrations.call";
 
 /** One background task as the process scheduled it, after clamping. */
 export type PanelLoadedTask = { id: string; everyMs: number; declaredMs: number };
@@ -30,6 +44,17 @@ export type PanelParentMessage =
       maxBytes: number;
     }
   | { type: "invoke"; call: number; action: string; input: unknown }
+  /**
+   * An event the panel's manifest names arrived (`context.integrations.on`),
+   * by the connection as the manifest spells it; the app wrote the same
+   * items into the panel's store first (`panelEventKey`).
+   */
+  | {
+      type: "event";
+      integration: string;
+      event: string;
+      items: { id: string; summary: string }[];
+    }
   | { type: "answer"; ask: number; ok: true; value: unknown }
   | { type: "answer"; ask: number; ok: false; message: string };
 

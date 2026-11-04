@@ -169,119 +169,69 @@ export type PluginContributions = z.infer<typeof contributionsSchema>;
 /**
  * The grant model. Every grant is named, so it can be consented to and
  * revoked individually; every bound is concrete. The schema carries the
- * declaration side only - what a plugin may ASK for. Performing a request,
- * holding a secret, or serving a read is the phase-3 host's job, and none
- * of it exists until a concrete want opens that phase.
+ * declaration side: what a plugin may ASK for. Serving a read, a view, its
+ * store or an integration is the host's job.
+ *
+ * A panel brings no host, key or sign-in of its own (the captain's
+ * principle, 2026-11-02, "Integrations reach every surface the same way"):
+ * a service outside the captain's projects is reached only through an
+ * integration, named under `integrations`. The per-plugin hosts and keys
+ * (`net`, `secrets`) the first proposal sketched are retired: a manifest
+ * naming either is refused with `RETIRED_GRANT_WORDS`.
  */
-
-export const NET_METHODS = ["GET", "HEAD", "POST", "PUT", "PATCH", "DELETE"] as const;
-export type NetMethod = (typeof NET_METHODS)[number];
-/** Granted by default; anything else is its own consent line. */
-export const NET_READ_METHODS: readonly NetMethod[] = ["GET", "HEAD"];
-
-/** Request bounds the mediated fetch must honour (proposal section 5.2). */
-export const NET_BOUNDS = {
-  timeoutMs: 15_000,
-  responseMaxBytes: 1_048_576,
-  maxInFlight: 4,
-  maxPerMinute: 60,
-} as const;
 
 /** The most a plugin may ask for in namespaced KV storage. */
 export const STORAGE_KV_MAX_BYTES = 1_048_576;
 
-const HOSTNAME =
-  /^(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+(?:[a-z](?:[a-z0-9-]{0,61}[a-z0-9])?)$/;
-
-/**
- * Hosts a manifest may never name. Loopback, link-local, and RFC 1918
- * ranges are refused at declaration; the phase-3 executor re-checks the
- * resolved address, because a public name can resolve privately.
- */
-export function isPrivateOrLoopbackHost(hostname: string): boolean {
-  const host = hostname.toLowerCase().replace(/^\[|\]$/g, "");
-  if (host === "localhost" || host.endsWith(".localhost") || host.endsWith(".local")) return true;
-  if (
-    host === "::1" ||
-    host === "::" ||
-    host.startsWith("fe80:") ||
-    /^f[cd][0-9a-f]{2}:/.test(host)
-  ) {
-    return true;
-  }
-  const v4 = host.match(/^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/);
-  if (!v4) return false;
-  const [a, b] = [Number(v4[1]), Number(v4[2])];
-  return (
-    a === 0 ||
-    a === 10 ||
-    a === 127 ||
-    (a === 169 && b === 254) ||
-    (a === 172 && b >= 16 && b <= 31) ||
-    (a === 192 && b === 168)
-  );
+/** Why a manifest naming `net` or `secrets` is refused. */
+export function retiredGrantWords(key: string): string {
+  return `"${key}" is retired: a panel reaches a service outside your projects only through an integration. Name the connection, its actions and why under "integrations".`;
 }
 
-/**
- * An exact https origin: scheme + host (+ explicit port), nothing else. No
- * path, no wildcard, no credentials, no private host. `new URL` normalises
- * case and IDNs, so the declared string must already be the normalised form.
- */
-export function isExactHttpsOrigin(value: string): boolean {
-  let url: URL;
-  try {
-    url = new URL(value);
-  } catch {
-    return false;
-  }
-  if (url.protocol !== "https:" || url.origin !== value) return false;
-  if (url.username || url.password) return false;
-  const host = url.hostname;
-  if (host.includes("*")) return false;
-  if (isPrivateOrLoopbackHost(host)) return false;
-  const ipv4 = /^\d{1,3}(?:\.\d{1,3}){3}$/.test(host);
-  const ipv6 = host.startsWith("[");
-  return ipv4 || ipv6 || HOSTNAME.test(host);
-}
-
-export const httpsOriginSchema = z
+/** An integration's name or id, an action's name, or an event's name, as a manifest spells it. */
+const integrationWordSchema = z
   .string()
-  .max(253 + 14)
-  .refine(isExactHttpsOrigin, "an exact https origin (no path, wildcard, or private host)");
-
-const netMethodsSchema = z
-  .array(z.enum(NET_METHODS))
   .min(1)
-  .max(NET_METHODS.length)
-  .default([...NET_READ_METHODS])
-  .superRefine((methods, ctx) => {
-    if (new Set(methods).size !== methods.length) {
-      ctx.addIssue({ code: "custom", message: "duplicate method" });
-    }
+  .max(64)
+  .regex(/^[^\s/][^/]*$/, "a name with no slash");
+const eventWordSchema = z
+  .string()
+  .min(1)
+  .max(48)
+  .regex(/^[^\s/][^/]*$/, "a name with no slash");
+
+/**
+ * One integration a panel uses (`PanelIntegrationUse`): the connection by
+ * its name or id, the actions it calls, the events it hears, and why.
+ * It names at least one action or event.
+ */
+export const panelIntegrationUseSchema = z
+  .strictObject({
+    integration: integrationWordSchema,
+    actions: z.array(integrationWordSchema).optional(),
+    events: z.array(eventWordSchema).optional(),
+    why: z.string().trim().min(1),
+  })
+  .superRefine((use, ctx) => {
+    if (!use.actions?.length && !use.events?.length)
+      ctx.addIssue({
+        code: "custom",
+        message: `"${use.integration}" names no action and no event`,
+      });
   });
 
-const netAliasSchema = z.string().min(1).max(32).regex(KEBAB_ID, "kebab-case alias");
-
-export const netOriginGrantSchema = z.union([
-  z.strictObject({ origin: httpsOriginSchema, methods: netMethodsSchema }),
-  /** The user types the host at install (a per-tenant service such as Jira). */
-  z.strictObject({ userSupplied: z.literal(true), methods: netMethodsSchema }),
-]);
-export type NetOriginGrant = z.infer<typeof netOriginGrantSchema>;
-
-export const secretSlotSchema = z.strictObject({
-  kind: z.enum(["bearer", "basic", "header"]),
-  /** Shown on the host-rendered secret row; the value itself has no field. */
-  label: z.string().min(1).max(80),
-  /** Required for `header`: the request header the host injects into. */
-  header: z
-    .string()
-    .min(1)
-    .max(64)
-    .regex(/^[A-Za-z0-9-]+$/)
-    .optional(),
-});
-export type SecretSlot = z.infer<typeof secretSlotSchema>;
+export const panelIntegrationsSchema = z
+  .array(panelIntegrationUseSchema)
+  .superRefine((uses, ctx) => {
+    const seen = new Set<string>();
+    for (const use of uses) {
+      const key = use.integration.trim().toLowerCase();
+      if (seen.has(key))
+        ctx.addIssue({ code: "custom", message: `"${use.integration}" is named twice` });
+      seen.add(key);
+    }
+  });
+export type PanelIntegrationUseDeclared = z.infer<typeof panelIntegrationUseSchema>;
 
 const readNameSchema = z
   .string()
@@ -290,35 +240,12 @@ const readNameSchema = z
   .regex(/^[a-z][a-z0-9-]*(?:\.[a-z][a-z0-9-]*)*$/, "dotted read-catalog name");
 
 export const capabilitiesSchema = z.strictObject({
-  net: z
-    .strictObject({
-      origins: z.record(netAliasSchema, netOriginGrantSchema).superRefine((origins, ctx) => {
-        const supplied = Object.values(origins).filter((grant) => "userSupplied" in grant);
-        if (supplied.length > 1) {
-          ctx.addIssue({ code: "custom", message: "at most one alias may be userSupplied" });
-        }
-      }),
-    })
-    .optional(),
-  secrets: z
-    .record(netAliasSchema, secretSlotSchema)
-    .superRefine((slots, ctx) => {
-      for (const [name, slot] of Object.entries(slots)) {
-        if (slot.kind === "header" && !slot.header) {
-          ctx.addIssue({
-            code: "custom",
-            message: `secret "${name}" of kind header names no header`,
-          });
-        }
-        if (slot.kind !== "header" && slot.header) {
-          ctx.addIssue({
-            code: "custom",
-            message: `secret "${name}" sets header for kind ${slot.kind}`,
-          });
-        }
-      }
-    })
-    .optional(),
+  /** Retired: refused with `retiredGrantWords`. */
+  net: z.never({ message: retiredGrantWords("net") }).optional(),
+  /** Retired: refused with `retiredGrantWords`. */
+  secrets: z.never({ message: retiredGrantWords("secrets") }).optional(),
+  /** The integrations it uses, each under that action's own rule in Settings. */
+  integrations: panelIntegrationsSchema.optional(),
   storage: z
     .strictObject({
       kv: z.strictObject({
@@ -343,22 +270,13 @@ export const capabilitiesSchema = z.strictObject({
 });
 export type PluginCapabilities = z.infer<typeof capabilitiesSchema>;
 
-export const GRANT_NAMES = [
-  "net.origins",
-  "secrets",
-  "storage.kv",
-  "reads",
-  "sql",
-  "moves",
-] as const;
+export const GRANT_NAMES = ["integrations", "storage.kv", "reads", "sql", "moves"] as const;
 export type GrantName = (typeof GRANT_NAMES)[number];
 
 /** Which grants a manifest actually asks for, by name. */
 export function requestedGrants(capabilities: PluginCapabilities): GrantName[] {
   const names: GrantName[] = [];
-  if (capabilities.net && Object.keys(capabilities.net.origins).length > 0)
-    names.push("net.origins");
-  if (capabilities.secrets && Object.keys(capabilities.secrets).length > 0) names.push("secrets");
+  if (capabilities.integrations && capabilities.integrations.length > 0) names.push("integrations");
   if (capabilities.storage?.kv) names.push("storage.kv");
   if (capabilities.reads && capabilities.reads.length > 0) names.push("reads");
   if (capabilities.sql && capabilities.sql.length > 0) names.push("sql");
@@ -368,8 +286,8 @@ export function requestedGrants(capabilities: PluginCapabilities): GrantName[] {
 
 /** What a host is able to serve; every field defaults to "nothing". */
 export type HostCapabilitySupport = {
-  readonly net?: boolean;
-  readonly secrets?: boolean;
+  /** It serves a panel's integrations (`PanelProps.integrations`). */
+  readonly integrations?: boolean;
   readonly storage?: boolean;
   /** The read catalog's entry names. Absent or empty means no reads at all. */
   readonly reads?: ReadonlySet<string>;
@@ -390,8 +308,7 @@ export function unservableGrants(
 ): string[] {
   const refused: string[] = [];
   for (const grant of requestedGrants(capabilities)) {
-    if (grant === "net.origins" && !support.net) refused.push(grant);
-    if (grant === "secrets" && !support.secrets) refused.push(grant);
+    if (grant === "integrations" && !support.integrations) refused.push(grant);
     if (grant === "storage.kv" && !support.storage) refused.push(grant);
     if (grant === "moves" && !support.moves) refused.push(grant);
     if (grant === "reads") {
@@ -411,36 +328,25 @@ export function unservableGrants(
 }
 
 /**
- * The consent unit is the pair (proposal section 5.3): whatever a plugin can
- * read, it can send to the hosts it was granted. A ceremony renders both
- * halves in one sentence; a capability diff on update re-runs it.
+ * What a ceremony words: what a plugin can read, and which integrations it
+ * uses for what. A capability diff on update re-runs it.
  */
 export type ConsentSummary = {
   reads: string[];
   /** The views of the app's record it can query: what it can read, by name. */
   views: string[];
-  /** Origins data may leave for; `userSupplied` reads as a host the user chose. */
-  sendsTo: string[];
-  /** Origins granted a write method. */
-  writesTo: string[];
-  secretSlots: string[];
+  /** The integrations it uses, each with its actions, events and why. */
+  integrations: PanelIntegrationUseDeclared[];
   storageBytes: number | null;
   /** It may move the captain's tasks, each move on his click or key. */
   moves: boolean;
 };
 
 export function consentSummary(capabilities: PluginCapabilities): ConsentSummary {
-  const origins = Object.values(capabilities.net?.origins ?? {});
-  const label = (grant: NetOriginGrant) =>
-    "userSupplied" in grant ? "a host you choose" : grant.origin;
   return {
     reads: [...(capabilities.reads ?? [])],
     views: [...(capabilities.sql ?? [])],
-    sendsTo: origins.map(label),
-    writesTo: origins
-      .filter((grant) => grant.methods.some((method) => !NET_READ_METHODS.includes(method)))
-      .map(label),
-    secretSlots: Object.keys(capabilities.secrets ?? {}),
+    integrations: (capabilities.integrations ?? []).map((use) => ({ ...use })),
     storageBytes: capabilities.storage?.kv.maxBytes ?? null,
     moves: capabilities.moves === true,
   };
@@ -485,7 +391,7 @@ export function parsePluginManifest(raw: unknown): PluginManifest {
 
 /**
  * A capability block in one canonical spelling: keys sorted at every level,
- * the order-free lists (reads, views, methods) sorted, empty grants gone.
+ * the order-free lists (reads, views, integrations and their names) sorted, empty grants gone.
  * Two blocks that grant the same thing canonicalize to the same text, which
  * is what "re-consent only on a capability diff" compares (Phase A, A2a).
  */
@@ -496,17 +402,15 @@ export function canonicalCapabilities(capabilities: PluginCapabilities): string 
   if (parsed.sql?.length) block.sql = [...new Set(parsed.sql)].sort();
   if (parsed.storage) block.storage = parsed.storage;
   if (parsed.moves) block.moves = true;
-  if (parsed.secrets && Object.keys(parsed.secrets).length > 0) block.secrets = parsed.secrets;
-  if (parsed.net && Object.keys(parsed.net.origins).length > 0) {
-    block.net = {
-      origins: Object.fromEntries(
-        Object.entries(parsed.net.origins).map(([alias, grant]) => [
-          alias,
-          { ...grant, methods: [...grant.methods].sort() },
-        ]),
-      ),
-    };
-  }
+  if (parsed.integrations?.length)
+    block.integrations = [...parsed.integrations]
+      .map((use) => ({
+        integration: use.integration,
+        ...(use.actions?.length ? { actions: [...new Set(use.actions)].sort() } : {}),
+        ...(use.events?.length ? { events: [...new Set(use.events)].sort() } : {}),
+        why: use.why,
+      }))
+      .sort((a, b) => (a.integration < b.integration ? -1 : a.integration > b.integration ? 1 : 0));
   return JSON.stringify(sortKeys(block));
 }
 

@@ -15,6 +15,8 @@ import {
   DEFAULT_PERSONAL_PLACEMENT,
   manifestCapabilities,
   PANEL_READ_NAMES,
+  type PanelIntegrationsRequest,
+  type PanelIntegrationsResponse,
   PERSONAL_STORE_MAX_BYTES,
   type PersonalError,
   type PersonalExtensionView,
@@ -45,7 +47,9 @@ import {
 } from "@shared/sql";
 import type { CoreEventSink } from "../events";
 import type { HostPanelCapture } from "../host";
+import type { PanelAskLine, PanelCaller, PanelIntegrationsReach } from "../integrations";
 import {
+  NO_PANEL_INTEGRATIONS,
   type PanelRuntime,
   type PanelRuntimes,
   PanelStoppedError,
@@ -74,6 +78,7 @@ import {
   workingTree,
   writeCommittedTree,
 } from "./liveWorkspace";
+import { PanelEvents, type PanelListening } from "./panelEvents";
 import { mountLine, mountOf, type PanelMountsHolder } from "./panelMounts";
 import type { PersonalStore } from "./personalStore";
 import { seedPersonalWorkspace } from "./workspace";
@@ -205,6 +210,21 @@ export type PersonalExtensionsOptions = {
    * Absent, the press is refused.
    */
   askUpdate?: (ask: PanelUpdateAsk) => void;
+  /**
+   * One panel's reach into the captain's integrations (docs/integrations.md,
+   * "Panels"): the service's `forPanel`, over what its manifest names.
+   * Absent, a panel's calls are refused and its list is empty.
+   */
+  integrations?: (panel: PanelCaller) => PanelIntegrationsReach;
+  /**
+   * Each panel's integration asks waiting on the captain or turned down,
+   * by panel key (`source:id`), and the captain's Ask again on one.
+   */
+  panelAsks?: {
+    of: (panel: string) => PanelAskLine[];
+    askAgain: (panel: string, integration: string, action: string) => boolean;
+    subscribe: (listener: () => void) => () => void;
+  };
 };
 
 /** A panel whose `server.ts` the app refused, as the first mate hears the captain asked to update it. */
@@ -340,6 +360,11 @@ export function olderServerApiLine(id: string): string {
   );
 }
 
+/** A panel's key to the integrations: its source and id, so a draft shares its panel's asks. */
+function panelKey(entry: { source: PluginSource; id: string }): string {
+  return `${entry.source}:${entry.id}`;
+}
+
 function draftSlice(id: string): string {
   return `${id}${DRAFT_SLICE_SUFFIX}`;
 }
@@ -369,6 +394,8 @@ export class PersonalExtensions {
   private writes: Promise<unknown> = Promise.resolve();
   private lastSnapshot: PersonalSnapshot = { extensions: [] };
   private readonly unsubscribe: (() => void)[] = [];
+  /** The looks at the events panels name (docs/integrations.md, "Panels"); null without integrations. */
+  private events: PanelEvents | null = null;
   private disposed = false;
   private readonly log: (message: string) => void;
   /** The live tasks whose edits every reconcile stamps (Step 4); usually one. */
@@ -396,6 +423,14 @@ export class PersonalExtensions {
       (id) => service.loaded.get(id)?.granted.storage?.kv.maxBytes ?? PERSONAL_STORE_MAX_BYTES,
     );
     if (service.enabled) await service.activate();
+    if (options.integrations) {
+      service.events = new PanelEvents({
+        panels: () => service.listening(),
+        now: Date.now,
+        log: (message) => service.log(`personal: ${message}`),
+      });
+      if (options.watch !== false) service.events.start();
+    }
     service.unsubscribe.push(
       options.store.subscribe((slice, key) => {
         const draftOf = draftSliceOwner(slice);
@@ -406,6 +441,7 @@ export class PersonalExtensions {
         service.pushIfChanged();
       }),
       options.tasks.onChange(() => service.pushIfChanged()),
+      options.panelAsks?.subscribe(() => service.pushIfChanged()) ?? (() => {}),
       options.runtimes?.onStop((runtime, stop) => service.stoppedRuntime(runtime, stop)) ??
         (() => {}),
     );
@@ -818,6 +854,80 @@ export class PersonalExtensions {
   }
 
   /**
+   * A panel drawing's call on its integrations (docs/integrations.md,
+   * "Panels"): the same reach its background code has, over what its own
+   * manifest names, answered as every caller is answered.
+   */
+  async integrationsRequest(
+    extensionId: string,
+    request: PanelIntegrationsRequest,
+    options: PersonalInvokeOptions = {},
+  ): Promise<PanelIntegrationsResponse> {
+    const entry = (options.draft ? this.drafts : this.loaded).get(extensionId);
+    if (!entry) {
+      return request.op === "list"
+        ? []
+        : { text: `Not run: "${extensionId}" is not on a rail right now.`, refused: "refused" };
+    }
+    return this.answerIntegrations(entry, request);
+  }
+
+  /** The captain's Ask again on a panel's turned-down or waiting integration call. */
+  askAgain(extensionId: string, integration: string, action: string): boolean {
+    const entry = this.loaded.get(extensionId) ?? this.drafts.get(extensionId);
+    if (!entry || !this.options.panelAsks) return false;
+    return this.options.panelAsks.askAgain(panelKey(entry), integration, action);
+  }
+
+  /** Look at the events panels name now, as the app does on each tick (tests drive it by hand). */
+  lookAtEvents(): Promise<void> {
+    return this.events?.tick() ?? Promise.resolve();
+  }
+
+  /** Every panel, live or drafted, whose manifest names an event to hear. */
+  private listening(): PanelListening[] {
+    const reach = this.options.integrations;
+    if (!reach || !this.enabled || this.disposed) return [];
+    const store = this.options.store;
+    return [...this.loaded.values(), ...this.drafts.values()].flatMap((entry) => {
+      const uses = entry.granted.integrations ?? [];
+      if (!uses.some((use) => (use.events ?? []).length > 0)) return [];
+      return [
+        {
+          slice: entry.slice,
+          uses,
+          reach: reach(this.panelCaller(entry)),
+          write: (key, value) => store.set(entry.slice, key, value),
+          hand: (integration, event, items) => entry.server?.event(integration, event, items),
+        },
+      ];
+    });
+  }
+
+  /** What a panel is to the integrations: its key, its name, and what its manifest names. */
+  private panelCaller(entry: Loaded): PanelCaller {
+    return {
+      key: panelKey(entry),
+      title: entry.manifest.title ?? entry.id,
+      uses: entry.granted.integrations ?? [],
+    };
+  }
+
+  private async answerIntegrations(
+    entry: Loaded,
+    request: PanelIntegrationsRequest,
+  ): Promise<PanelIntegrationsResponse> {
+    const reach = this.options.integrations;
+    if (!reach || (entry.granted.integrations ?? []).length === 0) {
+      return request.op === "list" ? [] : { text: NO_PANEL_INTEGRATIONS, refused: "refused" };
+    }
+    const panel = reach(this.panelCaller(entry));
+    if (request.op === "list") return panel.list();
+    if (request.op === "show") return panel.show(request.name);
+    return panel.call(request.name, request.action, request.input ?? {});
+  }
+
+  /**
    * The captain's Retry on a stopped panel (INF-2205 piece B): the stop
    * goes, and the panel's background work starts again from its current
    * code. Only a stopped panel of his own is retried.
@@ -1030,6 +1140,7 @@ export class PersonalExtensions {
     this.disposed = true;
     this.generation += 1;
     this.stopWatching();
+    this.events?.dispose();
     for (const off of this.unsubscribe) off();
     for (const entry of [...this.loaded.values(), ...this.drafts.values()]) entry.server?.dispose();
     this.loaded.clear();
@@ -1516,7 +1627,26 @@ export class PersonalExtensions {
       },
       sql: (text, params) => this.querySql(slice, text, params),
       log: (message) => this.log(`personal ${id}: ${message}`),
+      // Read at each call, so a manifest that names another action reaches it
+      // without its background code restarting.
+      integrations: {
+        list: async () => this.slicedIntegrations(slice, { op: "list" }),
+        show: async (name) => this.slicedIntegrations(slice, { op: "show", name }),
+        call: async (name, action, input) =>
+          this.slicedIntegrations(slice, { op: "call", name, action, input }),
+      },
     });
+  }
+
+  /** A background call on its integrations, by the slice its process writes. */
+  private slicedIntegrations(slice: string, request: PanelIntegrationsRequest): Promise<unknown> {
+    const draftOf = draftSliceOwner(slice);
+    const entry = draftOf ? this.drafts.get(draftOf) : this.loaded.get(slice);
+    if (!entry)
+      return Promise.resolve(
+        request.op === "list" ? [] : { text: NO_PANEL_INTEGRATIONS, refused: "refused" },
+      );
+    return this.answerIntegrations(entry, request);
   }
 
   /** A running server the host just stopped: its panel says so and its actions are refused. */
@@ -1667,6 +1797,7 @@ export class PersonalExtensions {
             },
           }
         : {}),
+      ...this.askLines(entry),
       ...(entry.stopped
         ? {
             stopped: {
@@ -1677,6 +1808,11 @@ export class PersonalExtensions {
           }
         : {}),
     };
+  }
+
+  private askLines(entry: Loaded): Pick<PersonalExtensionView, "integrationAsks"> {
+    const lines = this.options.panelAsks?.of(panelKey(entry)) ?? [];
+    return lines.length > 0 ? { integrationAsks: lines } : {};
   }
 
   private build(): PersonalSnapshot {

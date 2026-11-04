@@ -1,6 +1,7 @@
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import type { ForgeSignInState } from "@shared/forges";
+import { undeclaredIntegrationMessage } from "@shared/personal/manifest";
 import type { IntegrationAsk } from "@shared/writeAsk";
 import { describe, expect, it, vi } from "vitest";
 import { z } from "zod";
@@ -11,6 +12,7 @@ import {
   githubIntegration,
   IntegrationSettingsStore,
   IntegrationsService,
+  PanelAsks,
 } from ".";
 import type { IntegrationActionSpec, IntegrationBinding } from "./binding";
 import { IntegrationOutcomeUnknown } from "./binding";
@@ -948,5 +950,145 @@ describe("off actions past an older build's count (INF-1407)", () => {
     // An older build forgets the connection: nothing it left behind applies.
     writeFileSync(file, JSON.stringify({}));
     expect(offIn(open())).toEqual([]);
+  });
+});
+
+describe("a panel is one more caller (INF-2334 piece 1)", () => {
+  // The captain's consent A: one rule for every caller. A panel reaches only
+  // what its manifest names, its asks raise the same approval card, one per
+  // action at a time, and Always allow lets its later calls run.
+  function fixture() {
+    const dir = scratchDir("infinitary-panel-caller-");
+    const store = new IntegrationSettingsStore(dir);
+    const notes = ["Call the dentist to move Thursday's cleaning"];
+    const actions: IntegrationActionSpec[] = [
+      {
+        name: "list_notes",
+        label: "List notes",
+        effect: "reads",
+        description: "Lists every note with its number.",
+        input: z.strictObject({}),
+      },
+      {
+        name: "add_note",
+        label: "Add a note",
+        effect: "changes",
+        description: "Adds a note to the end of the list.",
+        input: z.strictObject({ text: z.string() }),
+      },
+    ];
+    const binding: IntegrationBinding = {
+      kind: "mcp",
+      connections: () => [
+        { id: "mcp-notes", name: "Notes", account: "sam", health: "ok", actions },
+      ],
+      check: async () => {},
+      remove: () => {},
+      call: vi.fn(async (_id, action, input) => {
+        if (action === "add_note") notes.push((input as { text: string }).text);
+        return { text: notes.join("\n") };
+      }),
+    };
+    const panelAsks = new PanelAsks(join(dir, "asks"));
+    const kept = new Map<string, IntegrationAsk>();
+    const cards: string[] = [];
+    const service = new IntegrationsService({
+      bindings: [binding],
+      store,
+      secrets: new FileIntegrationSecrets(join(dir, "secrets")),
+      asks: {
+        keep: () => {
+          throw new Error("a panel's ask is never a task's");
+        },
+        keepForPanel: (ask) => {
+          const held = ask.panel
+            ? panelAsks.held(ask.panel.key, ask.integration, ask.action)
+            : undefined;
+          if (held) return { held: held.state };
+          kept.set(ask.id, ask);
+          const card = `card-${cards.length + 1}`;
+          cards.push(card);
+          panelAsks.asking(ask, card);
+          return { card };
+        },
+        take: (_row, id) => {
+          const ask = kept.get(id);
+          if (!ask || ask.sentAt !== undefined) return { refused: "already taken or absent" };
+          ask.sentAt = Date.now();
+          return { ask };
+        },
+        record: () => {},
+      },
+    });
+    const panel = service.forPanel({
+      key: "workspace:notes-board",
+      title: "Notes board",
+      uses: [{ integration: "Notes", actions: ["list_notes"], why: "Shows your notes." }],
+    });
+    return { service, panel, panelAsks, kept, cards, binding, notes };
+  }
+
+  it("lists and shows only what the manifest names, and refuses the rest in one wording", async () => {
+    const f = fixture();
+    const listed = f.panel.list();
+    expect(listed.map((entry) => entry.id)).toEqual(["mcp-notes"]);
+    expect(listed[0]?.actions).toEqual([expect.objectContaining({ name: "list_notes" })]);
+    const shown = f.panel.show("Notes") as { actions: { name: string }[] };
+    expect(shown.actions.map((action) => action.name)).toEqual(["list_notes"]);
+    const refused = await f.panel.call("Notes", "add_note", { text: "Pay the electric bill" });
+    expect(refused).toEqual({
+      text: undeclaredIntegrationMessage("Notes", { action: "add_note" }),
+      refused: "refused",
+    });
+    expect(f.notes).toHaveLength(1);
+    expect(f.cards).toEqual([]);
+  });
+
+  it("raises one card per action at a time, keeps Not now, and runs once allowed always", async () => {
+    const f = fixture();
+    const first = await f.panel.call("Notes", "list_notes", {});
+    expect(first.refused).toBe("refused");
+    expect(f.cards).toEqual(["card-1"]);
+    const [ask] = [...f.kept.values()];
+    if (!ask) throw new Error("the panel's call kept no ask");
+    expect(ask).toMatchObject({
+      by: "panel",
+      panel: { key: "workspace:notes-board", title: "Notes board" },
+      reason: "Shows your notes.",
+    });
+    expect(f.panelAsks.of("workspace:notes-board")).toEqual([
+      expect.objectContaining({ action: "list_notes", label: "List notes", state: "asking" }),
+    ]);
+    // A timer's next call waits on the same card.
+    expect((await f.panel.call("Notes", "list_notes", {})).text).toContain(
+      "waits for the captain's answer",
+    );
+    expect(f.cards).toHaveLength(1);
+    expect(f.binding.call).not.toHaveBeenCalled();
+
+    // Not now: refused without a card until the panel's line asks again.
+    expect((await f.service.sendAsk("host-row", ask.id, "deny")).ok).toBe(false);
+    f.panelAsks.answered(ask.id, true);
+    expect((await f.panel.call("Notes", "list_notes", {})).text).toContain("chose Not now");
+    expect(f.cards).toHaveLength(1);
+
+    // Ask again raises a new card; Always allow runs the kept call as the panel's.
+    f.panelAsks.forget("workspace:notes-board", "mcp-notes", "list_notes");
+    await f.panel.call("Notes", "list_notes", {});
+    expect(f.cards).toHaveLength(2);
+    const again = [...f.kept.values()].at(-1);
+    if (!again) throw new Error("Ask again kept no ask");
+    const sent = await f.service.sendAsk("host-row", again.id, "always");
+    expect(sent.answer).toContain("dentist");
+    expect(f.binding.call).toHaveBeenLastCalledWith(
+      "mcp-notes",
+      "list_notes",
+      {},
+      expect.objectContaining({ kind: "panel" }),
+    );
+    f.panelAsks.answered(again.id, false);
+    expect(f.panelAsks.of("workspace:notes-board")).toEqual([]);
+    expect((await f.panel.call("Notes", "list_notes", {})).text).toContain("dentist");
+    expect(f.cards).toHaveLength(2);
   });
 });

@@ -1,6 +1,12 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
-import type { IntegrationBinding, IntegrationEventItem, IntegrationEventSpec } from "../binding";
+import { z } from "zod";
+import type {
+  IntegrationActionSpec,
+  IntegrationBinding,
+  IntegrationEventItem,
+  IntegrationEventSpec,
+} from "../binding";
 
 /**
  * A stand-in integration for a development or end-to-end run
@@ -8,7 +14,9 @@ import type { IntegrationBinding, IntegrationEventItem, IntegrationEventSpec } f
  * time a line is added to `items.jsonl` in its folder, each line one item
  * as `{"id": ..., "summary": ...}`. Its cursor is how many lines it has
  * read; a cursor past the file's end - the file was cut short - is lost,
- * and the look starts again from now. It has no actions and no sign-in.
+ * and the look starts again from now. Its one action, `count_items`,
+ * reads how many items the file holds, so a run can ask for and approve a
+ * call (docs/integrations.md, "Panels"). It has no sign-in.
  * The composition root connects it only in an unpackaged run that names
  * the folder in `INFINITARY_STAND_IN_INTEGRATION`.
  */
@@ -24,6 +32,15 @@ export const STAND_IN_EVENT: IntegrationEventSpec = {
   every: 1,
 };
 const ITEMS_FILE = "items.jsonl";
+
+/** The stand-in's one action: it reads and changes nothing. */
+export const STAND_IN_COUNT: IntegrationActionSpec = {
+  name: "count_items",
+  label: "Count the stand-in's items",
+  effect: "reads",
+  description: "How many items the stand-in's items file holds, as a sentence.",
+  input: z.strictObject({}),
+};
 
 export type StandInIntegrationOptions = {
   /** The folder whose `items.jsonl` it reads. */
@@ -50,7 +67,7 @@ export function standInIntegration(options: StandInIntegrationOptions): Integrat
         id: STAND_IN_ID,
         account: "stand-in",
         health: "ok",
-        actions: [],
+        actions: [STAND_IN_COUNT],
         events: [STAND_IN_EVENT],
       },
     ],
@@ -64,6 +81,11 @@ export function standInIntegration(options: StandInIntegrationOptions): Integrat
     },
     check: async () => {},
     remove: () => {},
-    call: async () => ({ text: "The stand-in has no actions.", refused: "invalid" }),
+    call: async (_id, action) => {
+      if (action !== STAND_IN_COUNT.name)
+        return { text: `The stand-in has no action "${action}".`, refused: "invalid" };
+      const count = read().length;
+      return { text: `The stand-in holds ${count} ${count === 1 ? "item" : "items"}.` };
+    },
   };
 }

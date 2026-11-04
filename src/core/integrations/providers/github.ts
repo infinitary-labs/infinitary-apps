@@ -28,6 +28,13 @@ export type GithubIntegrationGateway = {
    */
   writeAsSeat: (input: GithubWriteInput) => Promise<string>;
   /**
+   * A panel's read and change (docs/integrations.md, "Panels"): a panel is
+   * no task and no seat, so its calls spend no allowance. Without them a
+   * panel's call is refused.
+   */
+  readAsPanel?: (panel: string, input: GithubReadInput) => Promise<string>;
+  writeAsPanel?: (panel: string, input: GithubWriteInput) => Promise<string>;
+  /**
    * An Automation rule's look at GitHub's events (`readForLook`), which
    * throws when it cannot read; without it the binding tells no events.
    */
@@ -124,6 +131,16 @@ export function githubIntegration(
     check: () => options.signIns.checkNow(host),
     remove: () => options.signIns.signOut(host),
     call: async (_id, action, input, caller) => {
+      if (caller.kind === "panel") {
+        const { readAsPanel, writeAsPanel } = options.gateway;
+        if (!readAsPanel || !writeAsPanel) throw new Error("panels cannot reach GitHub here.");
+        return {
+          text:
+            action === "read"
+              ? await readAsPanel(caller.panel.key, input as GithubReadInput)
+              : await writeAsPanel(caller.panel.key, input as GithubWriteInput),
+        };
+      }
       if (action === "read") {
         const read = input as GithubReadInput;
         return {

@@ -1,5 +1,9 @@
 import type { PanelAskVia } from "@shared/personal/contracts";
-import { personalDraftPanelId } from "@shared/personal/manifest";
+import {
+  type PanelIntegrationsRequest,
+  type PersonalExtensionView,
+  personalDraftPanelId,
+} from "@shared/personal/manifest";
 import type { PanelBodySaid, PanelFrameConfig, PanelModule } from "@shared/plugins/frameDocument";
 import type { BuiltinFramePanel } from "@shared/plugins/frameLib";
 import type { SidePanelSize } from "@shared/plugins/manifest";
@@ -22,6 +26,7 @@ import { usePanelView } from "../plugins/panelPoint";
 import { panelRail } from "../plugins/panelRail";
 import { FRAME_PANEL_MAX_AUTO_HEIGHT } from "../plugins/Rail";
 import { usePanelCollapsed } from "../plugins/railStore";
+import { BackgroundAsking } from "./BackgroundAsking";
 import { BackgroundPaused } from "./BackgroundPaused";
 import { BackgroundStopped } from "./BackgroundStopped";
 import { panelBodies } from "./panelBodies";
@@ -91,6 +96,8 @@ export type FramedPanelContent = {
    * the window draws why, and Update panel; `asked` once the update was asked.
    */
   paused?: { asked: boolean };
+  /** Its integration calls waiting on the captain or turned down: the window draws each, and Ask again. */
+  integrationAsks?: NonNullable<PersonalExtensionView["integrationAsks"]>;
   /** The version a crewmate is building, drawn out of sight ("Built apart"). */
   draft?: true;
 };
@@ -140,6 +147,14 @@ function serverCall(id: string, draft: boolean) {
   };
 }
 
+/** A page's calls on its panel's integrations; the core reads what it may reach from its manifest. */
+function integrationsCall(id: string, draft: boolean) {
+  return (request: PanelIntegrationsRequest): Promise<unknown> =>
+    draft
+      ? window.infinitary.plugins.integrations(id, request, { draft: true })
+      : window.infinitary.plugins.integrations(id, request);
+}
+
 /** What one page of the panel may ask the host, declared from what it was granted. */
 function usePage(
   content: FramedPanelContent,
@@ -167,6 +182,7 @@ function usePage(
       moves,
       decides,
       ...(server ? { server: serverCall(id, draft) } : {}),
+      ...(own ? {} : { integrations: integrationsCall(id, draft) }),
       ...(onBody ? { onBody } : {}),
       ...(draft ? { draft: { id: personalDraftPanelId(id) } } : {}),
     });
@@ -269,6 +285,9 @@ export function FramedPanelBody({ content }: { content: FramedPanelContent }) {
     >
       {content.stopped && <BackgroundStopped id={id} draft={draft} reason={content.stopped} />}
       {content.paused && !draft && <BackgroundPaused id={id} asked={content.paused.asked} />}
+      {content.integrationAsks?.length ? (
+        <BackgroundAsking id={id} asks={content.integrationAsks} />
+      ) : null}
       <FrameMount
         title={title}
         panel={panel}

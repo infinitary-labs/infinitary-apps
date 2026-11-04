@@ -1,3 +1,4 @@
+import { randomBytes } from "node:crypto";
 import { mkdir, readdir } from "node:fs/promises";
 import { homedir, userInfo } from "node:os";
 import { join } from "node:path";
@@ -148,6 +149,7 @@ import {
   launcherDefaultDir,
   mcpIntegration,
   OutsideReads,
+  PanelAsks,
   SavedOutsideData,
   standInIntegration,
 } from "./integrations";
@@ -188,6 +190,7 @@ import {
 import { carryPanelInstructions } from "./personal/panelInstructions";
 import { PANELS_SAFE_MODE_NOTE } from "./personal/panelLines";
 import { PanelMountsHolder } from "./personal/panelMounts";
+import { PanelOutsideData } from "./personal/panelOutsideData";
 import { PersonalExtensions } from "./personal/personalExtensions";
 import { PersonalStore } from "./personal/personalStore";
 import { LaunchWatch } from "./personal/safeMode";
@@ -214,7 +217,7 @@ import { ResourcePressure } from "./placed/resourcePressure";
 import { ResourceSampler } from "./placed/resourceSampler";
 import { WorkDevices } from "./placed/workDevices";
 import { hostPlatform, thisDeviceSystem } from "./platform";
-import { createMediatedFetch, type MediatedFetch, noNetGrants } from "./plugins/mediatedFetch";
+import { createMediatedFetch, type MediatedFetch } from "./plugins/mediatedFetch";
 import { PluginInstaller } from "./plugins/pluginInstaller";
 import { PluginRecords } from "./plugins/pluginRecords";
 import { ShellPreferencesService } from "./preferences/shellPreferences";
@@ -2051,6 +2054,7 @@ export async function createServices(
   const integrationSettings = new IntegrationSettingsStore(paths.integrationsDir);
   // The inbox's switch is its connection's pause (INF-1567): off, its door refuses.
   integrationInbox.pausedThrough(() => integrationSettings.read()[INBOX_ID]?.paused === true);
+  const panelAsks = new PanelAsks(paths.integrationsDir);
   const integrations = new IntegrationsService({
     bindings: [
       githubIntegration({
@@ -2060,6 +2064,8 @@ export async function createServices(
           write: (taskId, input, through) => githubGateway.write(taskId, input, through, true),
           readAsSeat: (input) => githubGateway.readAsSeat(input),
           writeAsSeat: (input) => githubGateway.writeAsSeat(input),
+          readAsPanel: (panel, input) => githubGateway.readAsPanel(panel, input),
+          writeAsPanel: (panel, input) => githubGateway.writeAsPanel(panel, input),
           readForLook: (input) => githubGateway.readForLook(input),
         },
         now: ticker.now,
@@ -2072,6 +2078,8 @@ export async function createServices(
             write: (taskId, input) => githubGateway.write(taskId, input, { host }, true),
             readAsSeat: (input) => githubGateway.readAsSeat(input, host),
             writeAsSeat: (input) => githubGateway.writeAsSeat(input, host),
+            readAsPanel: (panel, input) => githubGateway.readAsPanel(panel, input, host),
+            writeAsPanel: (panel, input) => githubGateway.writeAsPanel(panel, input, host),
             readForLook: (input) => githubGateway.readForLook(input, host),
           }),
         }),
@@ -2110,10 +2118,22 @@ export async function createServices(
       keep: (taskId, ask) => tasks.keepWriteAsk(taskId, ask),
       present: (taskId, ask) => supervisor.askIntegration(taskId, ask),
       keepForFirstmate: (ask) => supervisor.askIntegrationForFirstmate(ask),
+      // One ask per panel and action at a time (docs/integrations.md, "Panels").
+      keepForPanel: (ask) => {
+        const held = ask.panel
+          ? panelAsks.held(ask.panel.key, ask.integration, ask.action)
+          : undefined;
+        if (held) return { held: held.state };
+        const card = supervisor.askIntegrationForPanel(ask);
+        panelAsks.asking(ask, card);
+        return { card };
+      },
       take: (taskId, askId) => tasks.takeWriteAsk(taskId, askId),
       record: (taskId, askId, outcome) => tasks.recordWriteAskOutcome(taskId, askId, outcome),
     },
     reads: outsideReads,
+    // A panel holds words from outside no longer than their kind does.
+    panelReads: (panel, label, at) => panelOutside.noted(panel, label, at),
     // A saved Gmail attachment lands in the calling task's hand-over folder, wherever it runs.
     files: {
       refusal: (taskId) => supervisor.outsideFileRefusal(taskId),
@@ -2131,6 +2151,7 @@ export async function createServices(
   // the captain added and agreed to. The plugin host serves a panel from
   // its second root only what this record says he consented to.
   const personalStore = new PersonalStore(db);
+  const panelOutside = new PanelOutsideData(paths.integrationsDir, personalStore);
   const panelMounts = new PanelMountsHolder();
   // The personal workspace is a project from the first start, so a panel
   // instruction can be a direction scoped to it before any panel exists;
@@ -2180,6 +2201,26 @@ export async function createServices(
           ...(repoId ? { repoId } : {}),
         },
       });
+    },
+    // Every panel reaches outside your projects through the integrations,
+    // the same way every other caller does (docs/integrations.md, "Panels").
+    integrations: (panel) => integrations.forPanel(panel),
+    panelAsks: {
+      of: (panel) => panelAsks.of(panel),
+      subscribe: (listener) => panelAsks.subscribe(listener),
+      askAgain: (panel, integration, action) => {
+        const held = panelAsks.held(panel, integration, action);
+        if (!held) return false;
+        // Its card is still up: show it again rather than raise a second.
+        if (held.state === "asking" && held.card && supervisor.showOpenCard(held.card)) return true;
+        const ask = {
+          ...held.ask,
+          id: `ia${randomBytes(6).toString("hex")}`,
+          at: ticker.now(),
+        };
+        panelAsks.asking(ask, supervisor.askIntegrationForPanel(ask));
+        return true;
+      },
     },
     installed: {
       dir: paths.pluginsDir,
@@ -2502,6 +2543,7 @@ export async function createServices(
         ? integrations.sendAsk(taskId, askId, choice)
         : githubGateway.sendAsk(taskId, askId),
     sendTakenIntegrationAsk: (rowId, taken, choice) => integrations.sendTaken(rowId, taken, choice),
+    panelAskAnswered: (askId, choice) => panelAsks.answered(askId, choice === "deny"),
     reviewGate: (taskId, reviewId) => prCi.reviewGate(taskId, reviewId),
     readPull: (taskId, prNumber) => prCi.pullState(taskId, prNumber),
     closePullRequest: (taskId) => prCi.close(taskId),
@@ -3149,6 +3191,7 @@ export async function createServices(
   const savedOutsideData = new SavedOutsideData({
     paths,
     reads: outsideReads,
+    panels: panelOutside,
     task: (id) => tasks.get(id),
     tasks: () => tasks.list(),
     kept: () => integrations.kept(),
@@ -3583,7 +3626,7 @@ export async function createServices(
       },
       tasks: (query) => usageStore.tasks(query, { now: Date.now() }),
     },
-    pluginFetch: createMediatedFetch({ grants: noNetGrants }),
+    pluginFetch: createMediatedFetch(),
     sql,
     personal,
     panelMounts,

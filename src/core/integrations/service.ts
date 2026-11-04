@@ -16,6 +16,8 @@ import {
   integrationRule,
 } from "@shared/integrations";
 import { type Fence, fenced, fencedAnswer } from "@shared/outsideData";
+import type { PanelIntegrationUse } from "@shared/personal/contracts";
+import { undeclaredIntegrationMessage } from "@shared/personal/manifest";
 import type { KeptOutsideData } from "@shared/savedOutsideData";
 import type { IntegrationAsk, WriteAsk, WriteAskOutcome } from "@shared/writeAsk";
 import type { LegacyCalls } from "../storage/outsideDataScrub";
@@ -28,6 +30,7 @@ import {
   type IntegrationEventFilter,
   type IntegrationLook,
   IntegrationOutcomeUnknown,
+  type PanelCaller,
 } from "./binding";
 import { FIRSTMATE_READER } from "./outsideReads";
 import type { IntegrationSecrets } from "./secrets";
@@ -63,6 +66,13 @@ export type IntegrationsServiceOptions = {
     /** A file from outside a task's call saved, by its kept name, so it goes when due. */
     saved?: (reader: string, file: string, label: string, at: number) => void;
   };
+  /**
+   * A panel received fenced words of a kind kept for a while
+   * (`IntegrationBinding.kept`), by the fence's label: its store keys not
+   * rewritten in that kind's days go, and the captain's delete empties its
+   * store (`PanelOutsideData`).
+   */
+  panelReads?: (panel: string, label: string, at: number) => void;
   /**
    * Saves a file an action delivers (`IntegrationActionSpec.delivers`) into
    * the calling task's hand-over folder, on whichever computer runs it, and
@@ -123,8 +133,38 @@ export type IntegrationAskStore = {
    * is refused.
    */
   keepForFirstmate?: (ask: IntegrationAsk) => string;
+  /**
+   * A panel has no task either: the host keeps its ask on a row it files
+   * for the card, one card per panel and action at a time
+   * (docs/integrations.md, "Panels"). It answers the new card's id, or that
+   * one is already up for that panel and action, or that the captain chose
+   * Not now and the panel's line has not asked again since. Absent, a
+   * panel's call that asks is refused.
+   */
+  keepForPanel?: (ask: IntegrationAsk) => PanelAskKept;
   take: (taskId: string, askId: string) => IntegrationAskTaken;
   record: (taskId: string, askId: string, outcome: WriteAskOutcome) => void;
+};
+
+/** What keeping a panel's ask came to (`IntegrationAskStore.keepForPanel`). */
+export type PanelAskKept = { card: string } | { held: "asking" | "declined" };
+
+/**
+ * One panel's reach (`forPanel`): the verbs a crewmate's command has, over
+ * only the connections, actions and events its manifest names, plus `look`
+ * for the events it hears.
+ */
+export type PanelIntegrationsReach = {
+  list: () => Record<string, unknown>[];
+  show: (name: string) => Record<string, unknown> | IntegrationAnswer;
+  call: (name: string, action: string, input: unknown) => Promise<IntegrationAnswer>;
+  look: (
+    name: string,
+    event: string,
+    cursor: string | null,
+  ) => Promise<IntegrationLook | IntegrationAnswer>;
+  /** How often, in minutes, the event wants looking at; undefined when it cannot be heard. */
+  every: (name: string, event: string) => number | undefined;
 };
 
 /** A kept ask the captain's click took, once, or why it took none. */
@@ -225,21 +265,24 @@ export class IntegrationsService {
 
   /** Every integration a caller may reach, without their actions' shapes. */
   roster(): Record<string, unknown>[] {
-    return this.rows().map((row) => {
-      const view = this.viewOf(row);
-      return {
-        name: view.name,
-        id: view.id,
-        connection: row.ref,
-        kind: view.kind,
-        ...(view.renamed ? { renamed: view.renamed } : {}),
-        ...(view.account ? { account: view.account } : {}),
-        health: view.health,
-        ...(view.paused ? { paused: true } : {}),
-        actions: view.actions.map(({ name, rule }) => ({ name, rule })),
-        ...(view.events ? { events: view.events.map((event) => event.name) } : {}),
-      };
-    });
+    return this.rows().map((row) => this.rosterEntry(row));
+  }
+
+  /** One row as the roster lists it. */
+  private rosterEntry(row: Row): Record<string, unknown> {
+    const view = this.viewOf(row);
+    return {
+      name: view.name,
+      id: view.id,
+      connection: row.ref,
+      kind: view.kind,
+      ...(view.renamed ? { renamed: view.renamed } : {}),
+      ...(view.account ? { account: view.account } : {}),
+      health: view.health,
+      ...(view.paused ? { paused: true } : {}),
+      actions: view.actions.map(({ name, rule }) => ({ name, rule })),
+      ...(view.events ? { events: view.events.map((event) => event.name) } : {}),
+    };
   }
 
   /** One integration's actions with what each does and its input's JSON Schema. */
@@ -316,6 +359,10 @@ export class IntegrationsService {
   ): Promise<IntegrationAnswer> {
     let row = this.find(name);
     if (!("connection" in row)) return row;
+    if (caller.kind === "panel") {
+      const unnamed = this.panelRefusal(caller.panel, row, { action });
+      if (unnamed) return unnamed;
+    }
     if (row.settings.paused)
       return {
         text: `${this.viewOf(row).name} is paused. The captain resumes it in Settings → Integrations.`,
@@ -362,7 +409,14 @@ export class IntegrationsService {
     const noFile = this.fileRefusal(caller, view.name, spec);
     if (noFile) return { text: noFile, refused: "refused" };
     if (!this.allowed(row, spec))
-      return this.keepAsk(caller, row, view.name, spec, parsed.data, reason);
+      return this.keepAsk(
+        caller,
+        row,
+        view.name,
+        spec,
+        parsed.data,
+        caller.kind === "panel" ? this.panelUse(caller.panel, row)?.why : reason,
+      );
     const { answer } = await this.run(row, view.name, spec.name, parsed.data, caller);
     return caller.kind === "firstmate" && spec.effect !== "reads" && !answer.refused
       ? { ...answer, ran: spec.effect }
@@ -453,7 +507,12 @@ export class IntegrationsService {
     if (!parsed.success)
       return done({ kind: "refused", why: `its input no longer fits ${view.name}'s ${spec.name}` });
     const caller: IntegrationCaller =
-      ask.by === "firstmate" ? { kind: "firstmate" } : { kind: "task", taskId };
+      ask.by === "firstmate"
+        ? { kind: "firstmate" }
+        : ask.by === "panel" && ask.panel
+          ? // The captain's click runs exactly what was kept, as the panel that asked it.
+            { kind: "panel", panel: { key: ask.panel.key, title: ask.panel.title, uses: [] } }
+          : { kind: "task", taskId };
     const noFile = this.fileRefusal(caller, view.name, spec);
     if (noFile) return done({ kind: "refused", why: noFile });
     if (choice === "always") this.grant(row, spec, true);
@@ -528,6 +587,8 @@ Do not repeat this call; read ${name} to check what happened first.`
     if (spec.delivers !== "file") return undefined;
     if (caller.kind === "firstmate")
       return `Not run: ${name}'s ${spec.name} saves a file into a task's hand-over folder, so only a crewmate can call it. Start a crewmate whose brief names the call and its reason.`;
+    if (caller.kind === "panel")
+      return `Not run: ${name}'s ${spec.name} saves a file into a task's hand-over folder, so only a crewmate can call it.`;
     if (!this.options.files) return `Not run: ${name}'s ${spec.name} cannot save files here.`;
     const refusal = this.options.files.refusal(caller.taskId);
     return refusal ? `Not run: ${refusal}` : undefined;
@@ -566,8 +627,8 @@ Do not repeat this call; read ${name} to check what happened first.`
 
   /**
    * The host keeps the exact call and presents its own card (INF-950): on
-   * the caller's task, or for the first mate on the row the host files for
-   * that card (INF-1108).
+   * the caller's task, or for the first mate or a panel on the row the host
+   * files for that card (INF-1108). A panel's reason is its manifest's why.
    */
   private keepAsk(
     caller: IntegrationCaller,
@@ -579,9 +640,16 @@ Do not repeat this call; read ${name} to check what happened first.`
   ): IntegrationAnswer {
     const asks = this.options.asks;
     const firstmate = caller.kind === "firstmate";
-    if (!asks || (firstmate && !asks.keepForFirstmate))
+    if (
+      !asks ||
+      (firstmate && !asks.keepForFirstmate) ||
+      (caller.kind === "panel" && !asks.keepForPanel)
+    )
       return {
-        text: `Not run: ${name}'s ${spec.name} asks the captain. Start a crewmate whose brief names the call and its reason.`,
+        text:
+          caller.kind === "panel"
+            ? `Not run: ${name}'s ${spec.name} asks the captain, and panels cannot ask here.`
+            : `Not run: ${name}'s ${spec.name} asks the captain. Start a crewmate whose brief names the call and its reason.`,
         refused: "refused",
       };
     if (typeof reason !== "string" || !reason.trim())
@@ -593,6 +661,12 @@ Do not repeat this call; read ${name} to check what happened first.`
       id: `ia${randomUUID().replace(/-/g, "").slice(0, 12)}`,
       kind: "integration",
       ...(firstmate ? { by: "firstmate" as const } : {}),
+      ...(caller.kind === "panel"
+        ? {
+            by: "panel" as const,
+            panel: { key: caller.panel.key, title: caller.panel.title },
+          }
+        : {}),
       integration: row.connection.id,
       connection: row.ref,
       place: name,
@@ -606,23 +680,147 @@ Do not repeat this call; read ${name} to check what happened first.`
       at: (this.options.now ?? Date.now)(),
     };
     let card: string | undefined;
-    if (caller.kind === "task") {
-      asks.keep(caller.taskId, ask);
-      asks.present?.(caller.taskId, ask);
-    } else {
-      try {
-        card = asks.keepForFirstmate?.(ask);
-      } catch (error) {
+    try {
+      if (caller.kind === "task") {
+        asks.keep(caller.taskId, ask);
+        asks.present?.(caller.taskId, ask);
+      } else if (caller.kind === "panel") {
+        const kept = asks.keepForPanel?.(ask);
+        if (kept && "held" in kept)
+          return {
+            text:
+              kept.held === "asking"
+                ? `Not run: ${name}'s ${spec.name} waits for the captain's answer on its approval card. Always allow lets the panel's later calls run.`
+                : `Not run: the captain chose Not now for ${name}'s ${spec.name}. The panel's line offers Ask again.`,
+            refused: "refused",
+          };
         return {
-          text: `Not run: ${name}'s ${spec.name} asks the captain, and the app could not keep the call: ${error instanceof Error ? error.message : String(error)}`,
+          text: `Not run: ${name}'s ${spec.name} asks the captain. The app raised its approval card for ask ${ask.id}: allowing it runs this call, and Always allow lets the panel's later calls run.`,
           refused: "refused",
         };
+      } else {
+        card = asks.keepForFirstmate?.(ask);
       }
+    } catch (error) {
+      return {
+        text: `Not run: ${name}'s ${spec.name} asks the captain, and the app could not keep the call: ${error instanceof Error ? error.message : String(error)}`,
+        refused: "refused",
+      };
     }
     return {
       text: `Not run: ${name}'s ${spec.name} asks the captain. The app raised its approval card for ask ${ask.id}. Do not emit another card or repeat the call. You will hear the outcome once through write-answered.`,
       refused: "refused",
       ...(card ? { card } : {}),
+    };
+  }
+
+  /**
+   * The entry of a panel's manifest that names this row: the connection it
+   * names by name, id or reference is the row's (docs/integrations.md,
+   * "Names"), so a rename in Settings never strands it.
+   */
+  private panelUse(panel: PanelCaller, row: Row): PanelIntegrationUse | undefined {
+    return panel.uses.find((use) => {
+      const named = this.find(use.integration);
+      return "connection" in named && named.connection.id === row.connection.id;
+    });
+  }
+
+  /**
+   * Why a panel may not reach this row, action or event: its manifest names
+   * neither. Undefined when it does. One wording, the lint's too.
+   */
+  private panelRefusal(
+    panel: PanelCaller,
+    row: Row,
+    what?: { action: string } | { event: string },
+  ): IntegrationAnswer | undefined {
+    const use = this.panelUse(panel, row);
+    const name = this.viewOf(row).name;
+    if (!use) return { text: undeclaredIntegrationMessage(name), refused: "refused" };
+    if (what && "action" in what && !use.actions?.includes(what.action))
+      return { text: undeclaredIntegrationMessage(name, what), refused: "refused" };
+    if (what && "event" in what && !use.events?.includes(what.event))
+      return { text: undeclaredIntegrationMessage(name, what), refused: "refused" };
+    return undefined;
+  }
+
+  /**
+   * One panel's reach (docs/integrations.md, "Panels"): the connections its
+   * manifest names, with only the actions and events it names, the same
+   * answers every caller gets, and its calls under each action's own rule.
+   */
+  forPanel(panel: PanelCaller): PanelIntegrationsReach {
+    const caller: IntegrationCaller = { kind: "panel", panel };
+    const narrowed = (row: Row) => {
+      const use = this.panelUse(panel, row);
+      return use
+        ? { actions: new Set(use.actions ?? []), events: new Set(use.events ?? []) }
+        : undefined;
+    };
+    return {
+      list: () =>
+        this.rows().flatMap((row) => {
+          const use = narrowed(row);
+          if (!use) return [];
+          const entry = this.rosterEntry(row);
+          return [
+            {
+              ...entry,
+              actions: (entry.actions as { name: string }[]).filter((action) =>
+                use.actions.has(action.name),
+              ),
+              ...(entry.events
+                ? { events: (entry.events as string[]).filter((event) => use.events.has(event)) }
+                : {}),
+            },
+          ];
+        }),
+      show: (name) => {
+        const row = this.find(name);
+        if (!("connection" in row)) return row;
+        const unnamed = this.panelRefusal(panel, row);
+        if (unnamed) return unnamed;
+        const use = narrowed(row);
+        const shown = this.show(name);
+        if (isIntegrationAnswer(shown) || !use) return shown;
+        const { keys: _keys, ...rest } = shown;
+        return {
+          ...rest,
+          actions: (shown.actions as { name: string }[]).filter((action) =>
+            use.actions.has(action.name),
+          ),
+          ...(shown.events
+            ? {
+                events: (shown.events as { name: string; listen?: string }[])
+                  .filter((event) => use.events.has(event.name))
+                  .map(({ listen: _listen, ...event }) => event),
+              }
+            : {}),
+        };
+      },
+      call: (name, action, input) => this.call(caller, name, action, input),
+      look: async (name, event, cursor) => {
+        const row = this.find(name);
+        if (!("connection" in row)) return row;
+        const unnamed = this.panelRefusal(panel, row, { event });
+        if (unnamed) return unnamed;
+        try {
+          return await this.look(row.connection.id, event, cursor, undefined, row.ref, caller);
+        } catch (error) {
+          return {
+            text: this.options.secrets.redact(
+              error instanceof Error ? error.message : String(error),
+            ),
+            refused: "refused",
+          };
+        }
+      },
+      every: (name, event) => {
+        const row = this.find(name);
+        if (!("connection" in row) || this.panelRefusal(panel, row, { event })) return undefined;
+        return row.connection.events?.find((spec) => spec.name === event)?.every;
+      },
     };
   }
 
@@ -778,6 +976,7 @@ Do not repeat this call; read ${name} to check what happened first.`
     cursor: string | null,
     filter?: Record<string, string>,
     connection?: string,
+    reader: IntegrationCaller = { kind: "firstmate" },
   ): Promise<IntegrationLook> {
     const row = this.byId(id);
     const view = this.viewOf(row);
@@ -799,8 +998,7 @@ Do not repeat this call; read ${name} to check what happened first.`
     const look = await row.binding.look(row.connection.id, event, cursor, filter);
     const label = row.binding.fence;
     if (!label) return look;
-    // A rule's events reach the first mate.
-    const reader: IntegrationCaller = { kind: "firstmate" };
+    // A rule's events reach the first mate; a panel's, that panel.
     return {
       ...look,
       items: look.items.map((item) => ({
@@ -818,7 +1016,8 @@ Do not repeat this call; read ${name} to check what happened first.`
    */
   private fence(label: string, reader: IntegrationCaller): Fence {
     const at = (this.options.now ?? Date.now)();
-    this.options.reads?.note(reader.kind === "task" ? reader.taskId : FIRSTMATE_READER, at);
+    if (reader.kind === "panel") this.options.panelReads?.(reader.panel.key, label, at);
+    else this.options.reads?.note(reader.kind === "task" ? reader.taskId : FIRSTMATE_READER, at);
     return { label, value: randomBytes(FENCE_VALUE_BYTES).toString("hex"), at };
   }
 

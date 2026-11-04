@@ -14,6 +14,7 @@ export type {
   IntegrationEventSpec,
   IntegrationLook,
   IntegrationSecretSlot,
+  PanelCaller,
 } from "./binding";
 export { IntegrationOutcomeUnknown } from "./binding";
 export { CREWMATE_INTEGRATIONS_LINE, INBOX_COMMAND, INTEGRATIONS_COMMAND } from "./commandWords";
@@ -27,6 +28,7 @@ export {
   textFilesUnder,
 } from "./outsideDataFiles";
 export { FIRSTMATE_READER, OutsideReads } from "./outsideReads";
+export { type PanelAskLine, PanelAsks } from "./panelAsks";
 export { forgeHostIntegration, forgeIntegrationId } from "./providers/forgeHosts";
 export {
   type GithubIntegrationGateway,
@@ -80,6 +82,8 @@ export {
   IntegrationsService,
   type IntegrationsServiceOptions,
   isIntegrationAnswer,
+  type PanelAskKept,
+  type PanelIntegrationsReach,
   type TaskIntegrations,
 } from "./service";
 export { IntegrationSettingsStore } from "./store";

@@ -1,5 +1,6 @@
 import type { ForgeSignInState } from "@shared/forges";
 import type { IntegrationDoorView, IntegrationEffect, IntegrationKind } from "@shared/integrations";
+import type { PanelIntegrationUse } from "@shared/personal/contracts";
 import type { z } from "zod";
 
 /**
@@ -10,11 +11,29 @@ import type { z } from "zod";
  */
 
 /**
- * Who is calling: the first mate's seat, or one task's crewmate. A task's
- * call runs under that task's rules - a change it asks for is kept on the
- * task as an ask the captain's click sends (`docs/forge.md`, "A write that asks").
+ * Who is calling: the first mate's seat, one task's crewmate, or one panel.
+ * A task's call runs under that task's rules - a change it asks for is kept
+ * on the task as an ask the captain's click sends (`docs/forge.md`, "A
+ * write that asks"). A panel's call reaches only what its manifest names
+ * (`PanelCaller.uses`) and runs under each action's own rule, the one every
+ * caller follows (docs/integrations.md, "Panels").
  */
-export type IntegrationCaller = { kind: "firstmate" } | { kind: "task"; taskId: string };
+export type IntegrationCaller =
+  | { kind: "firstmate" }
+  | { kind: "task"; taskId: string }
+  | { kind: "panel"; panel: PanelCaller };
+
+/**
+ * One panel as a caller: `key` names it for its asks and its kept words
+ * (`yours:<id>` or `installed:<id>`), `title` is what a card calls it, and
+ * `uses` is its manifest's `integrations`, the only connections, actions
+ * and events it reaches.
+ */
+export type PanelCaller = {
+  key: string;
+  title: string;
+  uses: readonly PanelIntegrationUse[];
+};
 
 /** One action a kind can do, as its binding declares it. */
 export type IntegrationActionSpec = {

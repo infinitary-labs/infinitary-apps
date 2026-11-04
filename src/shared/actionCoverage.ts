@@ -81,6 +81,10 @@ export const ACTION_EXCEPTIONS: Partial<Record<CoreInvokeChannel, string>> = {
     "The captain's Retry on a panel whose background work the app stopped; it clears that stop and starts the panel again, and nothing is set",
   "inf:plugins:update":
     "The captain's Update panel on a panel whose background work the app refused; it tells the first mate, which starts the update, and nothing is set",
+  "inf:plugins:integrations":
+    "A panel's own call on the captain's integrations; each action keeps its Settings rule, and the first mate reaches them through its own integration tools",
+  "inf:plugins:ask-again":
+    "The captain's Ask again on a panel's integration call; it shows that call's approval card again, and nothing is set",
   "inf:plugins:personal:mounts":
     "The window's own answer about which panels it drew, sent whenever it changes; nothing is set",
   "inf:work:card": WORK_REQUEST,

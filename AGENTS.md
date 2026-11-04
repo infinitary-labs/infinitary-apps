@@ -20,6 +20,8 @@ Infinitary is an Electron desktop app: your own AI studio, a calm first mate and
 - **The two documents (F4c, F6b):** `DATA-TERMS.md`, `LICENSE` (Apache-2.0 + `NOTICE`) and `CONTRIBUTING.md` (no DCO) stay UNPUBLISHED until the public beta. A change to the terms is a new version of the file, never a silent edit; counsel reviews before publication (`docs/sharing.md`).
 - **A test runs on the Mac only when it needs a Mac (2026-10-28).** Linux runs every test it can; edited unit-file rounds run locally even for portable files (INF-2273), while the full-check Mac lane, the run on `main` (`main.yml`) included, runs only tests tagged `MAC_ONLY_TAG` (journeys) or listed in `scripts/mac-unit-tests.ts` (unit files); every alpha runs every journey itself, or reuses the swept batch's (INF-2480, INF-2508). A lint and the Linux journey jobs hold the tag to what a test needs (`docs/principles.md`, `docs/testing.md` "Tests that need a Mac").
 
+- **Integrations reach every surface the same way (2026-11-02).** The first mate, a crewmate, Automation and every panel reach a service outside your projects through an integration, with the same connections, actions, rules and answers. A new kind reaches all of them with no code of its own for any surface, and no surface brings its own sign-in, key or approval (`docs/principles.md`, `docs/integrations.md` "How a panel reaches them").
+
 - **The captain decides and the fleet does the work (2026-10-22).** Never ask the captain to do what the fleet can do, including through a crewmate; check whether it is already done first. Ask only for the captain-only part, as one click where available; post-merge fleet work is a `Continue: …` filing (`docs/principles.md`, `docs/required-actions.md`).
 
 ## Design system (mandatory)

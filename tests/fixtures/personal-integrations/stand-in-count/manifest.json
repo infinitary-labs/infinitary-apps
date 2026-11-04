@@ -1,0 +1,11 @@
+{
+  "title": "Stand-in items",
+  "placement": { "x": "right", "y": "top" },
+  "integrations": [
+    {
+      "integration": "stand-in",
+      "actions": ["count_items"],
+      "why": "Shows how many items the stand-in holds."
+    }
+  ]
+}

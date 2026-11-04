@@ -105,3 +105,13 @@ Three checks hold the rule for journeys, so it does not wear away:
 3. `tests/release-workflows.test.ts` holds the Mac steps of a request for journeys and a requested full check to the tag.
 
 How each check runs is `docs/testing.md`, "Tests that need a Mac".
+
+## Integrations reach every surface the same way (captain, 2026-11-02)
+
+The captain's words, on INF-2334: "Integrations reach every surface the same way (captain, 2026-11-02).
+The first mate, a crewmate, Automation and every panel reach a service outside your projects through an integration, with the same connections, actions, rules and answers.
+A new kind reaches all of them with no code of its own for any surface, and no surface brings its own sign-in, key or approval."
+It covers every surface the app has and every one it adds.
+A surface reaches a service outside your projects only through `IntegrationsService`, as one more caller with the same list, show and call, the same rule per action in Settings, and the same approval card.
+A new kind is a binding the service serves, and every surface reaches it with no code of its own for that kind.
+No surface keeps a sign-in or a key of its own, declares a host it may reach, or asks for approval its own way: a panel's manifest names the integrations it uses and why, never a host or a key (`docs/integrations.md`, "How a panel reaches them").

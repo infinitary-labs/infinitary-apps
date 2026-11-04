@@ -207,12 +207,16 @@ import {
   observeSessionSummarySchema,
 } from "./observe";
 import {
+  type PanelIntegrationsRequest,
+  type PanelIntegrationsResponse,
   type PersonalInvokeOptions,
   type PersonalInvokeResult,
   type PersonalSnapshot,
   type PersonalStoreChange,
   type PersonalStoreRequest,
   type PersonalStoreResponse,
+  panelIntegrationsRequestSchema,
+  panelIntegrationsResponseSchema,
   personalIdSchema,
   personalInvokeOptionsSchema,
   personalInvokeResultSchema,
@@ -2996,6 +3000,31 @@ export const invokeContract = {
     request: z.tuple([personalIdSchema]),
     response: z.boolean(),
   },
+  // A panel drawing's call on its integrations (docs/integrations.md,
+  // "Panels"): list, show or call, over only what its own manifest names,
+  // with the answer every caller gets. The core reads the panel's
+  // declarations itself; the request names only the panel and the verb.
+  "inf:plugins:integrations": {
+    effect: "change",
+    surface: "core",
+    reach: "home",
+    request: z.tuple([
+      personalIdSchema,
+      panelIntegrationsRequestSchema,
+      personalInvokeOptionsSchema.optional(),
+    ]),
+    response: panelIntegrationsResponseSchema,
+  },
+  // The captain's Ask again on a panel's integration call that waits on
+  // the captain's approval card or that the captain turned down: the card shows again, or a
+  // new one goes up. False when that panel has no such ask.
+  "inf:plugins:ask-again": {
+    effect: "change",
+    surface: "core",
+    reach: "home",
+    request: z.tuple([personalIdSchema, z.string().min(1).max(200), z.string().min(1).max(200)]),
+    response: z.boolean(),
+  },
   // The frame vehicle (phase 1): the shell serves a template document over
   // its own scheme and hands back where the iframe loads it from. A host
   // without a desktop frame would answer with its own vehicle.
@@ -3213,6 +3242,8 @@ export const RUN_HOME_ONLY_CHANNELS: ReadonlySet<CoreInvokeChannel> = new Set<Co
   "inf:plugins:db",
   "inf:plugins:retry",
   "inf:plugins:update",
+  "inf:plugins:integrations",
+  "inf:plugins:ask-again",
   "inf:sql:query",
   "inf:knowledge:enabled",
   "inf:knowledge:collections",
@@ -4033,7 +4064,15 @@ export type FirstmateApi = {
       retry: (extensionId: string, options?: PersonalInvokeOptions) => Promise<boolean>;
       /** The captain's Update panel on a panel whose background work the app refused. */
       update: (extensionId: string) => Promise<boolean>;
+      /** The captain's Ask again on a panel's integration call waiting on him or turned down. */
+      askAgain: (extensionId: string, integration: string, action: string) => Promise<boolean>;
     };
+    /** A panel drawing's call on its integrations, over what its manifest names. */
+    integrations: (
+      extensionId: string,
+      request: PanelIntegrationsRequest,
+      options?: PersonalInvokeOptions,
+    ) => Promise<PanelIntegrationsResponse>;
     invoke: (
       extensionId: string,
       action: string,

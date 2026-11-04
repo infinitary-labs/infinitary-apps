@@ -19,7 +19,9 @@ import type {
  * loop back while it waits, so it keeps beating and is never stopped.
  *
  * The panel's store and query are asks to the core, sent one at a time:
- * the next waits in this process until the core acknowledged the last.
+ * the next waits in this process until the core acknowledged the last. Its
+ * integrations' asks wait the same way in a lane of their own, so a slow
+ * call to a place never holds a store write behind it.
  * Every value crossing to the core is JSON and at most `maxBytes`.
  *
  * The same file runs under Electron's `utilityProcess` in the app and under
@@ -92,19 +94,25 @@ function asJson(value: unknown, what: string): unknown {
   return JSON.parse(text) as unknown;
 }
 
-// --- asks: one in flight, the rest queued here --------------------------------
+// --- asks: one in flight per lane, the rest queued here ------------------------
 
 type Pending = { resolve: (value: unknown) => void; reject: (error: Error) => void };
-const queue: { op: PanelAskOp; input: unknown[]; pending: Pending }[] = [];
-const waiting = new Map<number, Pending>();
+type Lane = {
+  queue: { op: PanelAskOp; input: unknown[]; pending: Pending }[];
+  waiting: Map<number, Pending>;
+};
+const lanes: Record<"store" | "integrations", Lane> = {
+  store: { queue: [], waiting: new Map() },
+  integrations: { queue: [], waiting: new Map() },
+};
 let asks = 0;
 
-function pump(): void {
-  if (waiting.size > 0) return;
-  const next = queue.shift();
+function pump(lane: Lane): void {
+  if (lane.waiting.size > 0) return;
+  const next = lane.queue.shift();
   if (!next) return;
   asks += 1;
-  waiting.set(asks, next.pending);
+  lane.waiting.set(asks, next.pending);
   port.send({ type: "ask", ask: asks, op: next.op, input: next.input });
 }
 
@@ -117,9 +125,30 @@ function ask(op: PanelAskOp, input: unknown[]): Promise<unknown> {
       reject(error as Error);
       return;
     }
-    queue.push({ op, input: checked, pending: { resolve, reject } });
-    pump();
+    // An integration's ask waits in its own lane (`PanelAskOp`).
+    const lane = lanes[op.startsWith("integrations.") ? "integrations" : "store"];
+    lane.queue.push({ op, input: checked, pending: { resolve, reject } });
+    pump(lane);
   });
+}
+
+// --- events: what the manifest names, handed over as they arrive ---------------
+
+type EventListener = (items: { id: string; summary: string }[]) => void;
+const listeners = new Map<string, Set<EventListener>>();
+
+function eventKey(integration: string, event: string): string {
+  return `${integration}\u0000${event}`;
+}
+
+function heard(message: Extract<PanelParentMessage, { type: "event" }>): void {
+  for (const listener of listeners.get(eventKey(message.integration, message.event)) ?? []) {
+    try {
+      listener(message.items);
+    } catch (error) {
+      log(`listener for "${message.integration}" ${message.event} failed: ${errorText(error)}`);
+    }
+  }
 }
 
 function contextFor(id: string): unknown {
@@ -133,6 +162,21 @@ function contextFor(id: string): unknown {
     }),
     log,
     sql: (sql: string, params?: unknown[]) => ask("sql", [sql, params ?? []]),
+    integrations: Object.freeze({
+      list: () => ask("integrations.list", []),
+      show: (name: string) => ask("integrations.show", [String(name)]),
+      call: (name: string, action: string, input?: unknown) =>
+        ask("integrations.call", [String(name), String(action), input ?? {}]),
+      on: (integration: string, event: string, listener: EventListener) => {
+        const key = eventKey(String(integration), String(event));
+        const set = listeners.get(key) ?? new Set<EventListener>();
+        set.add(listener);
+        listeners.set(key, set);
+        return () => {
+          set.delete(listener);
+        };
+      },
+    }),
   });
 }
 
@@ -244,11 +288,16 @@ port.listen((message) => {
     void invoke(message.call, message.action, message.input);
     return;
   }
-  const pending = waiting.get(message.ask);
-  waiting.delete(message.ask);
-  if (pending) {
+  if (message.type === "event") {
+    heard(message);
+    return;
+  }
+  for (const lane of Object.values(lanes)) {
+    const pending = lane.waiting.get(message.ask);
+    if (!pending) continue;
+    lane.waiting.delete(message.ask);
     if (message.ok) pending.resolve(message.value);
     else pending.reject(new Error(message.message));
+    pump(lane);
   }
-  pump();
 });

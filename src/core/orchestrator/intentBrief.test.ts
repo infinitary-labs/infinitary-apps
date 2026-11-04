@@ -353,6 +353,19 @@ describe("renderReviewBrief (delivery rigor phase 2, review-before-PR)", () => {
     expect(brief).toContain(
       "simplification means reducing complexity through non-functional refactoring",
     );
+    // INF-2645 (captain: "how much did we instruct the reviewer to criticize
+    // over-enginering and unnecessary complexity"): anything the change
+    // leaves that the goal could do without is a blocking warning, judged by
+    // the code left behind, never the diff; small tidy-ups stay info.
+    expect(brief).toContain(
+      "Over-engineering and unnecessary complexity are defects even when the change works. Judge the code as the change leaves it, whatever the size of the diff",
+    );
+    expect(brief).toContain(
+      "code the change leaves without a use, a new subsystem that existing primitives can already support, a test that's likely to fail for intentional changes rather than regressions, or a patch on a symptom where removing existing code would fix the root cause.",
+    );
+    expect(brief).toContain(
+      "Make it a warning when the change should ship in the smaller form and info when it is a small tidy-up",
+    );
     // The typed review record is the verdict (INF-1875): the code judgment
     // at the assigned head and evidence revision, the finding shape with the
     // ported severity and action vocabulary, the ported risk ladder and the

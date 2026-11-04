@@ -626,6 +626,16 @@ A home opens one for a task whose record names this computer (`task_execution.de
   The supervisor ends an `unheard` continuation as interrupted, notes "its turn had already ended where it ran, but that end never arrived; ended here as interrupted" on the timeline (`UNHEARD_END_NOTE`), and the idle ladder takes the task from there (`docs/report-sort.md`).
   A crewmate on this Mac is checked the same way against its own session.
   Nothing that still runs is stopped.
+- **What a quiet turn waits on (INF-2603).**
+  The supervisor follows every call a turn has open from its `tool_start` and `tool_end` events, and every steer handed to the turn until the session's `input_read` says the turn read it.
+  The quiet note, the first mate's `quiet` and `long-turn` wakes and the crew status (`waiting`) name each open call and when it started, and any steer still unread behind it.
+  At the twenty-minute pass the app answers its own declared reads "ask again" (`OpenReads`, src/core/session/openReads.ts): a tool of the app's own whose work request declares `effect: "read"` (`APP_TOOL_REQUESTS`), never a change the app was making and never a call the crewmate started itself, such as a shell command or a helper agent.
+  The read is answered on the computer that runs the conversation, so a home that hung, a request lost on the way and an answer lost on its way back all end the same wait.
+  On this Mac a read open since the quiet stretch began is answered; on a computer that runs work the home asks `inf:session:answer-reads` with the newest event it has taken (`through`), and that computer answers each read that began by that event, so neither clock decides; an older computer without the `answer-stuck-reads` change is not asked.
+  The timeline notes each read answered, and no "may be stuck" alert goes on that pass.
+  A steer still unread at the next twenty-minute pass wakes the first mate once (`steer-unread`), naming what it waits behind.
+  The two-hour wake goes even while a background job runs, naming the job and any open call.
+  A steer reaches a turn the crewmate carries on by itself: the computer delivers it while the live session streams, not only while a prompt it took runs.
 - **This Mac restarts.**
   A turn on another computer went on without it, so the boot neither marks its row interrupted (`interruptLeftRunning`) nor puts its in-flight rows back on the lane (`InboxStore.resetInFlight`).
   The roster's running turn is followed as a continuation that delivers its rows; a turn its crewmate carries on by itself, which the roster says streams, is followed as carried on (`PlacedSession.adopt`); and a report it gave before the restart is given to that turn again from the kept answers.

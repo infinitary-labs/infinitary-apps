@@ -59,6 +59,7 @@ import { CREWMATE_TOOLS } from "../pi/crewmateTaskTools";
 import { verifyKeptValidationEvidenceSync } from "../pi/validationEvidence";
 import { type SelfSourceReader, sourceContext } from "../selfSource/resolve";
 import { followCompletions } from "../session/followCompletions";
+import { APP_TOOL_REQUESTS, OpenReads } from "../session/openReads";
 import {
   type ClientBackgroundTask,
   LOCAL_MACHINE_ID,
@@ -209,24 +210,8 @@ export type OwnAccounts = {
 };
 
 /** The crewmate tools whose callbacks can ask the home; the home names which a task gets. */
-const FORWARDED_TOOLS = new Set([
-  "emit_card",
-  "close_card",
-  "file_followup",
-  "note_progress",
-  "report",
-  "reply",
-  "tasks",
-  "read_workflow",
-  "github_read",
-  "github_write",
-  "prepare_change",
-  "open_change",
-  "check_change",
-  "download_artifact",
-  "knowledge",
-  "record_knowledge",
-]);
+/** The crewmate tools a conversation here serves by asking its home: the app's own (`APP_TOOL_REQUESTS`). */
+const FORWARDED_TOOLS = new Set<string>(Object.keys(APP_TOOL_REQUESTS));
 
 /** The provider's retries a crewmate's turn gets when the home names none. */
 const RETRIES = 2;
@@ -259,6 +244,8 @@ type Held = {
    * start when it is this computer's stop.
    */
   clientTasks: Map<string, PlacedJob>;
+  /** The app's own reads the open conversation has open, which the home's quiet check may answer (INF-2603). */
+  readonly openReads: OpenReads;
   /** The account of this computer's own the open conversation is bound to, if it is one. */
   account: string | undefined;
   /** The session the open conversation started over from, until a turn of it finishes (`PlacedState.renewal`). */
@@ -520,6 +507,14 @@ export class SessionHost {
     request: WorkOrderRequest<C>,
   ): Promise<WorkOrderResponse<C>> {
     if (channel === "inf:session:roster") return this.roster() as WorkOrderResponse<C>;
+    // Outside the task's order of orders: an order waiting on the stuck turn never holds it.
+    if (channel === "inf:session:answer-reads") {
+      const [ask] = request as WorkOrderRequest<"inf:session:answer-reads">;
+      const answered = (this.held.get(ask.task)?.openReads.answer(ask.through) ?? []).map(
+        (read) => ({ tool: read.tool, waitedMs: Math.max(0, this.now() - read.since) }),
+      );
+      return { answered: answered.slice(0, 100) } as WorkOrderResponse<C>;
+    }
     const [fields] = request as [{ task: string; orderId?: string }];
     if (channel === "inf:session:copy") {
       const [copy] = request as WorkOrderRequest<"inf:session:copy">;
@@ -565,8 +560,10 @@ export class SessionHost {
       case "inf:session:steer": {
         const [steer] = request as WorkOrderRequest<"inf:session:steer">;
         const session = this.conversation(held);
-        // A turn that ended took nothing: the home puts the words back on its lane.
-        if (!held.state.running) answer = { delivered: false };
+        // A turn that ended took nothing: the home puts the words back on its
+        // lane. Whether one runs is the live session's answer, so a turn the
+        // crewmate carries on by itself takes them too (INF-2603).
+        if (!held.state.running && !session.isStreaming()) answer = { delivered: false };
         else {
           await session.steer(steer.text, steer.images);
           answer = { delivered: true };
@@ -857,14 +854,16 @@ export class SessionHost {
               ...(spec.integrations ? { integrations: this.integrationsOf(held) } : {}),
             })
           : undefined;
-      const tools = bindTools(
-        (
-          this.options.tools ?? CREWMATE_TOOLS.filter((tool) => FORWARDED_TOOLS.has(tool.name))
-        ).filter((tool) => spec.tools.includes(tool.name)),
-        {
-          ...this.delegate(held, folders),
-          ...(granted?.browser ? { browser: granted.browser } : {}),
-        },
+      const tools = held.openReads.serve(
+        bindTools(
+          (
+            this.options.tools ?? CREWMATE_TOOLS.filter((tool) => FORWARDED_TOOLS.has(tool.name))
+          ).filter((tool) => spec.tools.includes(tool.name)),
+          {
+            ...this.delegate(held, folders),
+            ...(granted?.browser ? { browser: granted.browser } : {}),
+          },
+        ),
       );
       const sessionSpec: SessionSpec = {
         machine: LOCAL_MACHINE_ID,
@@ -1642,6 +1641,8 @@ export class SessionHost {
       jobs: undefined,
       jobId: undefined,
       clientTasks: new Map(),
+      // Marked by event number: the home names reads by the events it has taken.
+      openReads: new OpenReads(this.now, () => held.state.seq),
       account: undefined,
       renewal: undefined,
       opening: null,

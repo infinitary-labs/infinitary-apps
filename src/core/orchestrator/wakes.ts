@@ -752,6 +752,10 @@ export type WakeFacts =
       task: WakeTask;
       crewmate: string;
       minutes: number;
+      /** The calls the turn has open, oldest first, whoever started them (INF-2603). */
+      calls?: OpenCallFact[];
+      /** Steers handed into the turn its session has not read, and when the oldest was handed over. */
+      steers?: { count: number; since: number };
     }
   | {
       /** One turn past the wall-clock bound, in hours to one decimal. */
@@ -759,6 +763,21 @@ export type WakeFacts =
       task: WakeTask;
       crewmate: string;
       hours: number;
+      /** The task's oldest background job still running, which no longer silences this wake (INF-2603). */
+      job?: { command: string; since: number };
+      calls?: OpenCallFact[];
+    }
+  | {
+      /**
+       * A steer two twenty-minute checks in a row found unread (INF-2603):
+       * handed over at `since`, it waits behind `calls`, the turn's open
+       * calls, which may be none the app can see.
+       */
+      kind: "steer-unread";
+      task: WakeTask;
+      crewmate: string;
+      since: number;
+      calls: OpenCallFact[];
     }
   | {
       /**
@@ -2183,9 +2202,11 @@ function renderFacts(facts: WakeFacts, wake: Pick<WakeEnvelope, "ways" | "text">
     case "possible-repetition":
       return `${POSSIBLE_REPETITION_OPENING}${facts.task.id} "${facts.task.title}": ${facts.notice.toolName} returned identical content and error status ${facts.notice.count} times for the same arguments. First/latest call references: ${JSON.stringify({ first: facts.notice.first, latest: facts.notice.latest })}. Elapsed: ${Math.max(0, facts.notice.latest.at - facts.notice.first.at)} ms. Latest available usage reading (not a total): ${JSON.stringify(facts.usage)}. Missing fields and cost are unknown, not zero. Inspect the task. Repeated tests, rereads and polling may be useful. Judge against the original task before steering or interrupting within its scope. This observation is not a loop verdict or an automatic stop.`;
     case "quiet":
-      return `[fm-op] ${facts.crewmate} on task ${facts.task.id} "${facts.task.title}" has produced no events for ${facts.minutes} minutes; it may be stuck. You can steer or interrupt it.`;
+      return `[fm-op] ${facts.crewmate} on task ${facts.task.id} "${facts.task.title}" has produced no events for ${facts.minutes} minutes; it may be stuck.${openCallsText(facts.calls)}${facts.steers ? ` ${facts.steers.count === 1 ? "1 steer" : `${facts.steers.count} steers`} handed over since ${isoOf(facts.steers.since)} not read yet: the turn reads a steer only once its open call returns.` : ""} You can steer or interrupt it.`;
     case "long-turn":
-      return `[fm-op] ${facts.crewmate} on task ${facts.task.id} "${facts.task.title}" has been on one turn for ${facts.hours} hours.`;
+      return `[fm-op] ${facts.crewmate} on task ${facts.task.id} "${facts.task.title}" has been on one turn for ${facts.hours} hours.${facts.job ? ` Its background job runs since ${isoOf(facts.job.since)}: ${facts.job.command}. A running job shows the job works, not the turn.` : ""}${openCallsText(facts.calls)}`;
+    case "steer-unread":
+      return `[fm-op] a steer handed to ${facts.crewmate} on task ${facts.task.id} "${facts.task.title}" at ${isoOf(facts.since)} is still unread after two quiet checks.${facts.calls.length > 0 ? ` It waits behind ${callsList(facts.calls)}, and the turn reads it only once that call returns.` : " The turn has no open call the app can see."} You can wait, or interrupt the turn so the steer goes into its next turn.`;
     case "queued-started":
       return `[fm-op] queued task ${facts.task.id} "${facts.task.title}" started - its wait ended. A crewmate is working on it now${facts.model ? `, ${namedModelWords(facts.model)}` : ""}.`;
     case "queued-start-failed":
@@ -2762,3 +2783,20 @@ export const MERGE_CONTINUED_LEAD = "the captain merged";
 
 /** How a `write-answered` steer opens when the captain's click sent the write. */
 export const WRITE_ANSWERED_LEAD = "the captain sent ask";
+
+/** One call a quiet turn has open, by its tool and when it began (INF-2603). */
+export type OpenCallFact = { tool: string; since: number };
+
+function isoOf(at: number): string {
+  return new Date(at).toISOString();
+}
+
+/** A turn's open calls in words: `github_read since 2026-11-04T03:02:08.000Z`. */
+function callsList(calls: readonly OpenCallFact[]): string {
+  return calls.map((call) => `${call.tool} since ${isoOf(call.since)}`).join(", ");
+}
+
+/** The open calls a wake names, as one sentence, or nothing when none is open. */
+function openCallsText(calls: readonly OpenCallFact[] | undefined): string {
+  return calls?.length ? ` It is inside ${callsList(calls)}.` : "";
+}

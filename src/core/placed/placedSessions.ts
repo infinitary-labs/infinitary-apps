@@ -49,6 +49,7 @@ import {
 } from "@shared/work";
 import { z } from "zod";
 import { DeviceOutOfReachError, type WorkDeviceContact } from "../connection/connection";
+import { contractChange, listsChange } from "../connection/contractChanges";
 import {
   dueIn,
   dueRule,
@@ -184,6 +185,15 @@ export type CrewMachines = {
    * turn works, ends nothing here, or never comes.
    */
   confirm?(taskId: string): Promise<boolean>;
+  /**
+   * Asks the task's computer, while in reach, to answer "ask again" each of
+   * the app's own reads its conversation began by the newest event the home
+   * has taken (INF-2603, `answer-stuck-reads.md`): asked after a quiet
+   * stretch, each such read has waited at least that long. Answers the
+   * reads it answered, each with how long it waited; none from a computer
+   * without the change, or out of reach.
+   */
+  answerReads?(taskId: string): Promise<AnsweredWait[]>;
   /**
    * Whether the computer's crewmates can report a typed result
    * (`report-result.md`); false while the home cannot tell.
@@ -559,6 +569,11 @@ const callLineSchema = z.object({
 });
 
 const rosterSchema = workOrders["inf:session:roster"].response;
+/** The quiet watchdog's answer to a stuck read there (`answer-stuck-reads.md`). */
+const ANSWER_STUCK_READS = contractChange("answer-stuck-reads");
+
+/** A read a computer that runs work answered "ask again", and how long it had waited. */
+export type AnsweredWait = { tool: string; waitedMs: number };
 const openAnswerSchema = workOrders["inf:session:open"].response;
 
 export class PlacedSessions implements PlacedWork, CrewMachines {
@@ -1356,6 +1371,20 @@ export class PlacedSessions implements PlacedWork, CrewMachines {
   }
 
   // ---- what the computer says is working ------------------------------------------
+
+  async answerReads(taskId: string): Promise<AnsweredWait[]> {
+    const deviceId = this.options.tasks.get(taskId)?.deviceId;
+    if (!deviceId || !this.options.devices.inReach(deviceId)) return [];
+    if (!listsChange(this.options.devices.version(deviceId)?.changes, ANSWER_STUCK_READS))
+      return [];
+    const through = this.load(taskId, deviceId).through;
+    const answer = workOrders["inf:session:answer-reads"].response.parse(
+      await this.options.devices.ask(deviceId, "inf:session:answer-reads", [
+        { task: taskId, through },
+      ]),
+    );
+    return answer.answered;
+  }
 
   async confirm(taskId: string): Promise<boolean> {
     const record = this.options.tasks.get(taskId);

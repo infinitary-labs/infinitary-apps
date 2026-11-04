@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "id": "quiet-turn-waits",
+      "kind": "fix",
+      "title": "A crewmate stuck waiting on Infinitary itself carries on",
+      "body": "When a crewmate's work goes quiet for twenty minutes, Infinitary now says what it is waiting on and since when. If it is waiting for something Infinitary itself was asked to look up, Infinitary answers \"ask again\" so the work goes on and reads any message you sent it. Nothing Infinitary was changing, and nothing the crewmate started itself, is cut short. A message still unread twenty minutes later is pointed out to the first mate once, and the two-hour check names any background work still running.",
+      "area": "crewmates",
+      "noPicture": "Nothing on screen changes: the change is in what a stuck crewmate is told and what the first mate hears.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

@@ -112,6 +112,12 @@ export type CrewStatusEntry = {
    * read, never guessed.
    */
   job?: string;
+  /**
+   * What a quiet turn waits on, once the twenty-minute check named it and
+   * until the turn moves (INF-2603): its open calls and unread steers,
+   * `inside github_read 13h 46m; 1 steer unread 12h`.
+   */
+  waiting?: string;
   /** How long ago its crewmate last reported (INF-1244): `1h 26m ago`. */
   reported?: string;
   /**
@@ -145,6 +151,10 @@ export type CrewStatusEntry = {
     checkBackFor?: string;
     stalledSince?: number;
     stalledWakes?: number;
+    /** The named wait's open calls and its oldest unread steer (INF-2603). */
+    calls?: { tool: string; since: number }[];
+    steersUnread?: number;
+    steersSince?: number;
   };
 };
 

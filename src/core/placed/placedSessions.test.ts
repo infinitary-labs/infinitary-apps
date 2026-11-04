@@ -117,6 +117,7 @@ import { crewmateComputersNote } from "../pi/piResources";
 import { createPiSessionFactory } from "../pi/sessionFactory";
 import type { ModelRuntime } from "../pi/types";
 import { Router } from "../routing/router";
+import { answeredReadText } from "../session/openReads";
 import type { CrewmateTool } from "../session/tools";
 import { forkChildProcess } from "../sql/forkChildProcess";
 import { SettingsStore } from "../storage/settingsStore";
@@ -1977,6 +1978,57 @@ describe("a task that runs on a computer that runs work", () => {
       }
     },
   );
+
+  // INF-2603, the captain's approved direction B: "Name the wait and settle
+  // the app's own calls". A read the crewmate there asked its home and the
+  // home never answered (INF-2550's 13 hours inside one github_read) is
+  // answered "ask again" at the twenty-minute check on the computer that runs
+  // the turn, so the turn goes on and reads the steer queued behind it.
+  it("answers a read the home never answered at the twenty-minute check, and the steer behind it reaches the carried-on turn (INF-2603)", async () => {
+    const claude = await scriptedClaudeWorld();
+    stops.push(scriptedClaudeCleanup);
+    const at = await world(undefined, { claude });
+    const home = at.home();
+    const taskId = "t-lost-read";
+    // The home never answers the crewmate's task read: lost on the way.
+    const answer = home.placed.answer.bind(home.placed);
+    let readAsked = false;
+    const lost = vi.spyOn(home.placed, "answer").mockImplementation(((device, channel, request) => {
+      if (channel !== "inf:work:tasks") return answer(device, channel, request);
+      readAsked = true;
+      return new Promise(() => {});
+    }) as typeof home.placed.answer);
+    claude.answer({ text: "The background check started." });
+    try {
+      await at.start(taskId);
+      await expect.poll(() => home.tasks.get(taskId)?.activity).toBe("idle");
+      claude.answer({ tool: "tasks", args: { status: "open" }, answer: "Done reading." });
+      claude.continueTurn();
+      await expect.poll(() => readAsked).toBe(true);
+      // INF-2558: a steer reaches the turn the crewmate carries on by itself.
+      await home.supervisor.steerCrewmate(taskId, "Check the header too.");
+      const asked = claude.served().length;
+      home.supervisor.checkQuietTasks(now() + QUIET_CARD_MS);
+      await expect.poll(() => home.tasks.get(taskId)?.outcome).toBe("Done reading.");
+      // The turn goes on with the answer, and reads the steer in that same request.
+      const answered = answeredReadText("tasks", QUIET_CARD_MS).split(":")[0] ?? "";
+      const goesOn = claude
+        .served()
+        .slice(asked)
+        .find((served) => served.said.includes(answered));
+      expect(goesOn?.said).toContain("Check the header too.");
+      // The home named what it did on the timeline, and raised no quiet alert for it.
+      expect(home.tasks.timeline(taskId).map((event) => event.text)).toContainEqual(
+        expect.stringContaining('answered tasks "ask again" for the crewmate'),
+      );
+      expect(
+        home.tasks.timeline(taskId).some((event) => event.text?.includes("may be stuck")),
+      ).toBe(false);
+    } finally {
+      lost.mockRestore();
+      claude.endClient();
+    }
+  });
 
   // The captain's "Ask first, then alert": the alert is held back only when
   // the computer's answer ends the turn here. An answer that it is not

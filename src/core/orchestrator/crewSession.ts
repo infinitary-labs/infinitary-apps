@@ -14,6 +14,7 @@ import {
 import { timeZoneFact } from "../prompts/timeZone";
 import type { SelfSourceFacts } from "../selfSource/resolve";
 import { sourceContext, sourceIdentity } from "../selfSource/resolve";
+import type { OpenReads } from "../session/openReads";
 import {
   type ContractStamp,
   LOCAL_MACHINE_ID,
@@ -45,6 +46,11 @@ export type CrewmateSpec = CrewmateToolDelegate & {
   taskId: string;
   /** The machine it runs on (D-11): "local", or the computer that runs work its task names. */
   machineId: string;
+  /**
+   * The app's own reads its conversation here has open, which the quiet
+   * watchdog may answer (INF-2603); a computer that runs work keeps its own.
+   */
+  openReads?: OpenReads;
   /** The task worktree the crewmate operates in. */
   cwd: string;
   /**
@@ -227,7 +233,8 @@ export function crewmateSessionSpec(
     (spec.machineId === LOCAL_MACHINE_ID
       ? `\n${sourceContext(spec.source, spec.source && sourceIdentity(spec.source))}`
       : "\nThe executing computer supplies its own Infinitary source facts separately. If absent, its source is unknown; never reuse a path from another computer.");
-  const tools = bindTools(CREWMATE_TOOLS, spec);
+  const bound = bindTools(CREWMATE_TOOLS, spec);
+  const tools = spec.openReads ? spec.openReads.serve(bound) : bound;
   return {
     ...(spec.source ? { homeSource: sourceIdentity(spec.source) } : {}),
     machine: spec.machineId,

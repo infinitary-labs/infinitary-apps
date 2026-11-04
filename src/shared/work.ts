@@ -1162,6 +1162,25 @@ export const workOrders = {
     request: ordered({ failure: z.string().optional() }),
     response: doneSchema,
   },
+  /**
+   * The quiet watchdog's ask (INF-2603, `answer-stuck-reads.md`): each of
+   * the app's own reads the conversation began by event `through`, the
+   * newest the home has taken, is answered "ask again" there, so its turn
+   * goes on. Never a change, and never a call the crewmate started itself;
+   * asked again, it answers only reads still open. Answered outside the
+   * task's order of orders, so an order waiting on the turn never holds it.
+   */
+  "inf:session:answer-reads": {
+    effect: "change",
+    request: z.tuple([
+      z.object({ task: placedTaskIdSchema, through: z.number().int().nonnegative() }),
+    ]),
+    response: z.object({
+      answered: z
+        .array(z.object({ tool: z.string(), waitedMs: z.number().int().nonnegative() }))
+        .max(100),
+    }),
+  },
   /** Lets go of the live client at an idle boundary; the next prompt reattaches. */
   "inf:session:detach": {
     effect: "change",

@@ -4173,6 +4173,21 @@ export class FirstmateAgent {
             ...(times.jobSince !== undefined
               ? { job: `running since ${iso(times.jobSince)}: ${times.job ?? ""}` }
               : {}),
+            // What a quiet turn waits on, once the twenty-minute check named it (INF-2603).
+            ...(times.calls?.length || times.steersUnread
+              ? {
+                  waiting: [
+                    ...(times.calls ?? []).map(
+                      (call) => `inside ${call.tool} since ${iso(call.since)}`,
+                    ),
+                    ...(times.steersUnread
+                      ? [
+                          `${times.steersUnread} steer${times.steersUnread === 1 ? "" : "s"} unread since ${iso(times.steersSince ?? 0)}`,
+                        ]
+                      : []),
+                  ].join("; "),
+                }
+              : {}),
             ...(times.reportedAt !== undefined ? { reported_at: iso(times.reportedAt) } : {}),
             ...(times.checkBackUntil !== undefined
               ? { check_back: `${iso(times.checkBackUntil)}: ${times.checkBackFor ?? ""}` }

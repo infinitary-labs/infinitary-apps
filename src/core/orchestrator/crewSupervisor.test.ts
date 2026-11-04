@@ -1070,6 +1070,122 @@ describe("CrewSupervisor", () => {
     expect(ops.some((line) => line.includes("may be stuck"))).toBe(true);
   });
 
+  // INF-2603, the captain's direction B: "Name the wait and settle the app's
+  // own calls". INF-2550's turn sat 13 hours inside one github_read that
+  // never answered, with two steers queued behind it. The twenty-minute
+  // check answers the app's own read "ask again", so the turn goes on.
+  it("answers a GitHub read that never returns at the twenty-minute check, so the turn goes on (INF-2603)", async () => {
+    const crewmate = fakeCrewmate();
+    const githubRead = vi.fn(() => new Promise<string>(() => {}));
+    const { supervisor, tasks, repos, sessionSpecs, ops } = setup(crewmate, { githubRead });
+    const { repo } = await repos.setup({ kind: "init", name: "shop" });
+    repos.configure(repo.id, { delivery: "direct-pr" });
+    const { taskId } = await supervisor.commission({
+      title: "Find the failed phone runs",
+      intent: intentOf("find the failed phone runs"),
+      repoId: repo.id,
+    });
+    await tick();
+    const read = sessionSpecs[0]?.tools.find((tool) => tool.name === "github_read");
+    if (!read) throw new Error("the crewmate holds no github_read");
+    const start = Date.now();
+    crewmate.emit({ type: "tool_start", taskId, callId: "call-1", toolName: "github_read" });
+    const reading = read.run(
+      { path: "/repos/acme/shop/actions/runs?per_page=100" },
+      new AbortController().signal,
+    );
+    await supervisor.steerCrewmate(taskId, "Also say which of them failed on the phone.");
+    expect(crewmate.steer).toHaveBeenCalledTimes(1);
+
+    supervisor.checkQuietTasks(start + QUIET_CARD_MS + 60_000);
+
+    await expect(reading).rejects.toThrow("Infinitary answered this github_read call for you");
+    expect(
+      tasks.timeline(taskId).some((event) => event.text?.startsWith('answered github_read "ask again"')),
+    ).toBe(true);
+    // The answer moves the turn on, so nobody is woken for it.
+    expect(ops.some((line) => line.includes("may be stuck"))).toBe(false);
+    expect(ops.some((line) => line.includes("still unread"))).toBe(false);
+    // The turn goes on: the read ends and its session reads the steer.
+    crewmate.emit({ type: "tool_end", taskId, callId: "call-1", toolName: "github_read", isError: true });
+    const steered = crewmate.steer.mock.calls[0]?.[0] ?? "";
+    crewmate.emit({
+      type: "input_read",
+      textSha256: createHash("sha256").update(steered).digest("hex"),
+    });
+    expect(supervisor.crewStatus(taskId)[0]?.waiting).toBeUndefined();
+  });
+
+  // INF-2603, the captain's answers "Any open call, including the
+  // crewmate's own, such as a test run open for 40 minutes" and "Wake the
+  // first mate once, naming what the steer waits behind". A call the
+  // crewmate started is never answered for it: it is named.
+  it("names a crewmate's own open call and unread steer, and wakes once for a steer two checks find unread (INF-2603)", async () => {
+    const crewmate = fakeCrewmate();
+    const { supervisor, tasks, ops } = setup(crewmate);
+    const { taskId } = await supervisor.commission({
+      title: "Run the phone tests",
+      intent: intentOf("run the phone tests"),
+    });
+    await tick();
+    const start = Date.now();
+    crewmate.emit({ type: "tool_start", taskId, callId: "call-1", toolName: "bash" });
+    await supervisor.steerCrewmate(taskId, "Stop after the first failure.");
+
+    supervisor.checkQuietTasks(start + QUIET_CARD_MS + 60_000);
+    await tick();
+
+    const quiet = ops.find((line) => line.includes("may be stuck"));
+    expect(quiet).toContain(`It is inside bash since ${new Date(start).toISOString().slice(0, 16)}`);
+    expect(quiet).toContain("1 steer handed over since");
+    expect(
+      tasks.timeline(taskId).some(
+        (event) => event.text?.includes("may be stuck; inside bash for") && event.text.includes("1 steer unread"),
+      ),
+    ).toBe(true);
+    expect(supervisor.crewStatus(taskId)[0]?.waiting).toMatch(/^inside bash .*; 1 steer unread /);
+    // The first check found it unread; the next one wakes the first mate once.
+    expect(ops.some((line) => line.includes("still unread"))).toBe(false);
+    supervisor.checkQuietTasks(start + 2 * QUIET_CARD_MS + 120_000);
+    await tick();
+    const unread = ops.filter((line) => line.includes("still unread after two quiet checks"));
+    expect(unread).toHaveLength(1);
+    expect(unread[0]).toContain("It waits behind bash since");
+    supervisor.checkQuietTasks(start + 3 * QUIET_CARD_MS + 180_000);
+    await tick();
+    expect(ops.filter((line) => line.includes("still unread after two quiet checks"))).toHaveLength(1);
+  });
+
+  // INF-2603, the captain's answer "Keep it for the 20-minute alert; the
+  // two-hour wake fires anyway, naming the job and any open call".
+  it("keeps a running job's silence for the quiet alert, and wakes at two hours naming the job and the open call (INF-2603)", async () => {
+    const crewmate = fakeCrewmate();
+    const jobStart = Date.now();
+    const { supervisor, ops } = setup(crewmate, {
+      hasRunningJobs: () => true,
+      oldestRunningJob: () => ({ jobId: "j1", command: "pnpm test:phone", startedAt: jobStart }),
+    });
+    const { taskId } = await supervisor.commission({
+      title: "Run the phone tests",
+      intent: intentOf("run the phone tests"),
+    });
+    await tick();
+    crewmate.emit({ type: "tool_start", taskId, callId: "call-1", toolName: "Agent" });
+
+    supervisor.checkQuietTasks(jobStart + QUIET_CARD_MS + 60_000);
+    await tick();
+    expect(ops.some((line) => line.includes("may be stuck"))).toBe(false);
+
+    supervisor.checkQuietTasks(jobStart + 125 * 60_000);
+    await tick();
+    const long = ops.find((line) => line.includes("has been on one turn for"));
+    expect(long).toContain(
+      `Its background job runs since ${new Date(jobStart).toISOString()}: pnpm test:phone.`,
+    );
+    expect(long).toContain("It is inside Agent since");
+    expect(ops.some((line) => line.includes("may be stuck"))).toBe(false);
+  });
+
   it("rejects an unknown repo id loudly instead of defaulting", async () => {
     const crewmate = fakeCrewmate();
     const { supervisor } = setup(crewmate);

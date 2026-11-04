@@ -313,6 +313,7 @@ import {
 import { isDowngrade } from "../routing/routingEngine";
 import { crewRunbookText, type Runbooks } from "../runbooks/runbooks";
 import { followCompletions } from "../session/followCompletions";
+import { type AnsweredRead, OpenReads } from "../session/openReads";
 import {
   type BackgroundJobName,
   type ClientBackgroundTask,
@@ -500,6 +501,7 @@ import {
   conversationRestartWake,
   laneText,
   laneTurnText,
+  type OpenCallFact,
   outageFailedWake,
   PENDING_RESPONSES_END,
   PENDING_RESPONSES_OPENING,
@@ -1156,6 +1158,26 @@ type TaskRuntime = {
   /** The 2h wall-clock escalation fired for this turn. */
   wallClockEscalated: boolean;
   /**
+   * The calls the turn has open now, by call id, each by its tool and when
+   * it began (INF-2603): what a quiet turn waits on, named whoever started
+   * the call.
+   */
+  openCalls: Map<string, { tool: string; since: number }>;
+  /**
+   * The steers handed into the turn that its session has not read yet,
+   * oldest first: one is read once the session says so (`input_read`), or
+   * once a model request begins after it was handed over (INF-2603).
+   */
+  unreadSteers: UnreadSteer[];
+  /** The steers the previous twenty-minute check found unread: one still unread at the next wakes the first mate once. */
+  steersAtCheck?: readonly UnreadSteer[];
+  /** The app's own reads a conversation on this Mac has open, which the twenty-minute check may answer. */
+  openReads: OpenReads;
+  /** The twenty-minute check named this quiet stretch's wait: crew status names it until the turn moves. */
+  waitNamed?: true;
+  /** The twenty-minute check answered an app read: the quiet alert waits for the next check, which finds the turn moving or names it. */
+  readsAnsweredAt?: number;
+  /**
    * Durable-inbox rows delivered into the current turn (the brief, steers,
    * job results). Acknowledged when the turn ends clean; released for a
    * grace-spaced retry when it fails. Guidance for a backend that cannot
@@ -1190,6 +1212,9 @@ type TaskRuntime = {
    */
   paused?: { computer?: string; row?: number; unstarted?: true };
 };
+
+/** A steer handed into a running turn, by its words' digest and when it was handed over. */
+type UnreadSteer = { sha: string; since: number; woken?: true };
 
 /** How a save for this computer's own update ended (`saveForUpdate`). */
 export type UpdateSaveOutcome = "saved" | "withdrawn";
@@ -5849,6 +5874,9 @@ export class CrewSupervisor {
       inFlightInboxIds: [],
       steeredInboxIds: [],
       clientTasks: new Map(),
+      openCalls: new Map(),
+      unreadSteers: [],
+      openReads: new OpenReads(this.now),
     };
     this.tasks.set(taskId, task);
     this.broadcastCrewCounts();
@@ -6231,6 +6259,8 @@ export class CrewSupervisor {
       procedure: crewmateProcedureFor(this.policiesOf(this.options.tasks.get(task.id))),
       // Every crewmate is told the captain's computers and which one it runs on (INF-992).
       ...this.computersFor(crewmate.machineId),
+      // Its app reads here are answerable by the quiet check; there, that computer keeps its own.
+      ...(crewmate.machineId === LOCAL_MACHINE_ID ? { openReads: task.openReads } : {}),
     };
     task.backend = binding.backend;
     let runbookSkills: SessionSpec["runbookSkills"];
@@ -6589,6 +6619,12 @@ export class CrewSupervisor {
           this.recordRestartOutcome(task.id, "resumed");
         if (event.type === "turn_failed" && !task.paused)
           this.recordRestartOutcome(task.id, "stopped", event.error);
+        // A steer is read once its session says so, or once a model request
+        // begins after it was handed over (INF-2603).
+        if (event.type === "input_read") {
+          const at = task.unreadSteers.findIndex((steer) => steer.sha === event.textSha256);
+          if (at >= 0) task.unreadSteers.splice(at, 1);
+        } else if (event.type === "request_started") task.unreadSteers = [];
         if (event.type === "background_work_changed") {
           task.clientJobs = event.count;
           task.clientJobsSince =
@@ -7404,6 +7440,7 @@ export class CrewSupervisor {
     task.turnStartedAt = this.now();
     task.quietLevel = 0;
     task.wallClockEscalated = false;
+    this.clearWait(task);
     // The task moving on its own ends its idle episode (docs/report-sort.md):
     // the clock, the rungs and the host's stall card all go. The one turn
     // that does not is the ladder's own nudge - that turn is the ladder
@@ -7601,6 +7638,7 @@ export class CrewSupervisor {
    * failed turn, never an outcome.
    */
   private turnComplete(task: TaskRuntime, options: { interrupted?: boolean } = {}): void {
+    this.clearWait(task);
     const placement = this.options.tasks.get(task.id)?.placement;
     if (placement)
       this.options.tasks.releasePlacement(task.id, placement.snapshot.orderId, "ended");
@@ -8795,6 +8833,11 @@ export class CrewSupervisor {
   ): Promise<void> {
     task.inFlightInboxIds.push(...ids);
     task.steeredInboxIds.push(ids);
+    const handed: UnreadSteer = {
+      sha: createHash("sha256").update(text).digest("hex"),
+      since: this.now(),
+    };
+    task.unreadSteers.push(handed);
     const order = laneOrder(ids);
     try {
       if (images) await session.steer(text, images, order);
@@ -8803,6 +8846,7 @@ export class CrewSupervisor {
     } catch (caught) {
       task.inFlightInboxIds = task.inFlightInboxIds.filter((id) => !ids.includes(id));
       task.steeredInboxIds = task.steeredInboxIds.filter((steered) => steered !== ids);
+      task.unreadSteers = task.unreadSteers.filter((steer) => steer !== handed);
       throw caught;
     }
   }
@@ -8971,6 +9015,9 @@ export class CrewSupervisor {
       inFlightInboxIds: [],
       steeredInboxIds: [],
       clientTasks: new Map(),
+      openCalls: new Map(),
+      unreadSteers: [],
+      openReads: new OpenReads(this.now),
     };
     const livePersonal = this.isPersonalTask(record.id) ? this.options.personal : undefined;
     // Register before opening the session: a resumed provider can carry on
@@ -10491,7 +10538,7 @@ export class CrewSupervisor {
    * reported, and the check-back its report named.
    */
   private timingFacts(record: TaskRecord): {
-    words: Pick<CrewStatusEntry, "job" | "reported" | "checkBack">;
+    words: Pick<CrewStatusEntry, "job" | "waiting" | "reported" | "checkBack">;
     times: NonNullable<CrewStatusEntry["times"]>;
   } {
     const now = this.now();
@@ -10503,9 +10550,14 @@ export class CrewSupervisor {
     const reportedAt =
       record.status === "active" ? this.options.tasks.lastReportAt(record.id) : undefined;
     const back = record.delivery?.checkBack;
+    const waiting = record.status === "active" ? this.namedWait(record.id) : undefined;
     const times: NonNullable<CrewStatusEntry["times"]> = {
       ...(job
         ? { jobSince: job.startedAt, job: job.command.replace(/\s+/g, " ").slice(0, 80) }
+        : {}),
+      ...(waiting?.calls.length ? { calls: waiting.calls } : {}),
+      ...(waiting?.steers
+        ? { steersUnread: waiting.steers, steersSince: waiting.steersSince }
         : {}),
       ...(reportedAt !== undefined ? { reportedAt } : {}),
       ...(back ? { checkBackUntil: back.until, checkBackFor: back.waitingFor } : {}),
@@ -10516,6 +10568,7 @@ export class CrewSupervisor {
             job: `running ${formatDurationShort(now - job.startedAt)}: ${job.command.replace(/\s+/g, " ").slice(0, 80)}`,
           }
         : {}),
+      ...(waiting?.words ? { waiting: waiting.words } : {}),
       ...(reportedAt !== undefined
         ? { reported: `${formatDurationShort(now - reportedAt)} ago` }
         : {}),
@@ -10596,7 +10649,12 @@ export class CrewSupervisor {
         task.lastTurnCutOff = event.cutOff;
         break;
       }
+      case "tool_start": {
+        task.openCalls.set(event.callId, { tool: event.toolName, since: this.now() });
+        break;
+      }
       case "tool_end": {
+        task.openCalls.delete(event.callId);
         if (event.usage) this.recordUsage(task, event.usage);
         break;
       }
@@ -12436,6 +12494,16 @@ export class CrewSupervisor {
   private noteTaskActivity(task: TaskRuntime): void {
     task.lastEventAt = this.now();
     task.quietLevel = 0;
+    task.waitNamed = undefined;
+  }
+
+  /** A turn began or ended: nothing it had open, or was handed, waits any more. */
+  private clearWait(task: TaskRuntime): void {
+    task.openCalls.clear();
+    task.unreadSteers = [];
+    task.steersAtCheck = undefined;
+    task.waitNamed = undefined;
+    task.readsAnsweredAt = undefined;
   }
 
   /** External activity proof for a task (a running R2 job reporting in). */
@@ -12767,8 +12835,11 @@ export class CrewSupervisor {
    * One watchdog pass, which never stops a turn that still runs: a quiet
    * streaming task earns a feed line at ten minutes, and at twenty its live
    * session is asked whether the turn still works - one already over ends
-   * as interrupted - and otherwise a wake with the choices; a turn past the
-   * wall-clock bound escalates once more. The Firstmate holds interrupt_crewmate, so the wake is the whole
+   * as interrupted. A turn that goes on has its wait named (`nameWait`):
+   * each of the app's own reads still open is answered "ask again" so the
+   * turn goes on, and otherwise a wake names what it waits on; a turn past
+   * the wall-clock bound escalates once more, naming its job and open call.
+   * The Firstmate holds interrupt_crewmate, so the wake is the whole
    * escalation - no host card (cards/tasks/agents P0, WI-3).
    */
   checkQuietTasks(now: number): void {
@@ -12783,31 +12854,198 @@ export class CrewSupervisor {
       // computer answers, unless the answer ended the turn here.
       if (now - Math.max(task.lastEventAt, task.confirmedAt ?? 0) >= QUIET_CARD_MS) {
         task.confirmedAt = now;
-        if (this.machineOf(task.id) !== LOCAL_MACHINE_ID) task.quietAsk = true;
-        this.confirmTurn(task, (ended) => {
-          if (!task.quietAsk || task.confirmedAt !== now) return;
-          task.quietAsk = undefined;
-          if (!ended) this.quietAlerts(task, now);
-        });
+        if (this.machineOf(task.id) !== LOCAL_MACHINE_ID) {
+          task.quietAsk = true;
+          this.confirmTurn(task, (ended) => {
+            if (!task.quietAsk || task.confirmedAt !== now) return;
+            if (ended) {
+              task.quietAsk = undefined;
+              return;
+            }
+            void this.answerReadsThere(task.id).then((answered) => {
+              if (!task.quietAsk || task.confirmedAt !== now) return;
+              task.quietAsk = undefined;
+              this.nameWait(task, now, answered);
+              this.quietAlerts(task, now);
+            });
+          });
+        } else {
+          this.confirmTurn(task);
+          if (task.state === "streaming" || task.state === "starting")
+            this.nameWait(task, now, task.openReads.answer(now - QUIET_CARD_MS));
+        }
         if (task.state !== "streaming" && task.state !== "starting") continue;
       }
       this.quietAlerts(task, now);
     }
   }
 
+  /**
+   * The reads a task's computer answered "ask again" at the quiet check,
+   * as this Mac's clock reads when each began; none when it could not be asked.
+   */
+  private async answerReadsThere(taskId: string): Promise<AnsweredRead[]> {
+    const ask = this.options.machines?.answerReads;
+    if (!ask) return [];
+    try {
+      const answered = await ask.call(this.options.machines, taskId);
+      const at = this.now();
+      return answered.map((read) => ({ tool: read.tool, since: at - read.waitedMs }));
+    } catch (caught) {
+      console.warn(
+        `[crew] could not ask ${taskId}'s computer to answer its open reads: ${messageOf(caught)}`,
+      );
+      return [];
+    }
+  }
+
+  /**
+   * The twenty-minute check's account of what a quiet turn that goes on
+   * waits on (INF-2603). Reads the app answered "ask again" go on the
+   * timeline, and the quiet alert waits for the next check, which finds the
+   * turn moving or names it. A steer this check and the previous one both
+   * found unread wakes the first mate once, naming what it waits behind,
+   * unless the answered reads were all it waited on.
+   */
+  private nameWait(task: TaskRuntime, now: number, answered: readonly AnsweredRead[]): void {
+    if (task.state !== "streaming" && task.state !== "starting") return;
+    task.waitNamed = true;
+    task.readsAnsweredAt = answered.length > 0 ? now : undefined;
+    for (const read of answered)
+      this.options.tasks.note(
+        task.id,
+        `answered ${read.tool} "ask again" for the crewmate: it had no answer for ${formatDurationShort(Math.max(0, now - read.since))}`,
+        { news: true },
+      );
+    const unread = [...task.unreadSteers];
+    const before = new Set(task.steersAtCheck ?? []);
+    task.steersAtCheck = unread;
+    // The calls it still waits behind: the reads just answered end on their own.
+    const calls = this.openCallFacts(task);
+    for (const read of answered) {
+      const at = calls.findIndex((call) => call.tool === read.tool);
+      if (at >= 0) calls.splice(at, 1);
+    }
+    if (answered.length > 0 && calls.length === 0) return;
+    for (const steer of unread) {
+      if (!before.has(steer) || steer.woken) continue;
+      steer.woken = true;
+      this.routeCrewEvent(
+        task.id,
+        {
+          once: `steer-unread:${task.id}:${steer.since}`,
+          facts: {
+            kind: "steer-unread",
+            task: { id: task.id, title: task.title },
+            crewmate: task.crewmate,
+            since: steer.since,
+            calls,
+          },
+        },
+        "agent",
+      );
+    }
+  }
+
+  /** What a turn has open now, oldest first, for a wake (INF-2603). */
+  private openCallFacts(task: TaskRuntime): OpenCallFact[] {
+    return [...task.openCalls.values()]
+      .sort((a, b) => a.since - b.since)
+      .map((call) => ({ tool: call.tool, since: call.since }));
+  }
+
+  /**
+   * The wait a quiet turn's twenty-minute check named, as crew status
+   * shows it until the turn moves: its open calls and unread steers.
+   */
+  private namedWait(
+    taskId: string,
+  ): { words?: string; calls: OpenCallFact[]; steers: number; steersSince?: number } | undefined {
+    const task = this.tasks.get(taskId);
+    if (!task?.waitNamed || (task.state !== "streaming" && task.state !== "starting"))
+      return undefined;
+    const calls = this.openCallFacts(task);
+    const steers = task.unreadSteers.length;
+    if (calls.length === 0 && steers === 0) return undefined;
+    const now = this.now();
+    const parts = [
+      ...calls.map(
+        (call) => `inside ${call.tool} ${formatDurationShort(Math.max(0, now - call.since))}`,
+      ),
+      ...(steers > 0
+        ? [
+            `${steers} steer${steers === 1 ? "" : "s"} unread ${formatDurationShort(Math.max(0, now - (task.unreadSteers[0]?.since ?? now)))}`,
+          ]
+        : []),
+    ];
+    return {
+      words: parts.join("; "),
+      calls,
+      steers,
+      ...(steers > 0 ? { steersSince: task.unreadSteers[0]?.since } : {}),
+    };
+  }
+
   /** The quiet watchdog's alerts for one turn, as quiet as it is at `now`. */
   private quietAlerts(task: TaskRuntime, now: number): void {
     if (task.state !== "streaming" && task.state !== "starting") return;
+    // Two hours on one turn escalates whatever runs (INF-2603): a job
+    // proves the job works, not that the turn does. The wake names the job
+    // and what the turn has open.
+    if (now - task.turnStartedAt >= TURN_WALL_CLOCK_MS && !task.wallClockEscalated) {
+      task.wallClockEscalated = true;
+      const hours = Math.round(((now - task.turnStartedAt) / 3_600_000) * 10) / 10;
+      const running =
+        this.options.hasRunningJobs?.(task.id) === true ||
+        this.clientJobStart(task.id) !== undefined;
+      const job = running ? this.oldestJob(task.id) : undefined;
+      const calls = this.openCallFacts(task);
+      this.routeCrewEvent(
+        task.id,
+        {
+          facts: {
+            kind: "long-turn",
+            task: { id: task.id, title: task.title },
+            crewmate: task.crewmate,
+            hours,
+            ...(job
+              ? {
+                  job: {
+                    command: job.command.replace(/\s+/g, " ").slice(0, 80),
+                    since: job.startedAt,
+                  },
+                }
+              : {}),
+            ...(calls.length > 0 ? { calls } : {}),
+          },
+        },
+        "agent",
+      );
+    }
     // A running background job is proof of life (R2): a quiet turn that
     // is waiting on its own build is not stuck.
     if (this.options.hasRunningJobs?.(task.id)) return;
     const quietFor = now - task.lastEventAt;
     const minutes = Math.round(quietFor / 60_000);
-    if (quietFor >= QUIET_CARD_MS && task.quietLevel < 2 && !task.quietAsk) {
+    // A read the check just answered moves the turn on; the next check names it if not.
+    const answered = task.readsAnsweredAt !== undefined && task.readsAnsweredAt >= task.lastEventAt;
+    if (quietFor >= QUIET_CARD_MS && task.quietLevel < 2 && !task.quietAsk && !answered) {
       task.quietLevel = 2;
-      this.options.tasks.note(task.id, `quiet for ${minutes} minutes; may be stuck`, {
-        news: true,
-      });
+      const calls = this.openCallFacts(task);
+      const unread = task.unreadSteers;
+      const waits = [
+        ...calls.map(
+          (call) => `inside ${call.tool} for ${formatDurationShort(Math.max(0, now - call.since))}`,
+        ),
+        ...(unread.length > 0
+          ? [`${unread.length} steer${unread.length === 1 ? "" : "s"} unread`]
+          : []),
+      ];
+      this.options.tasks.note(
+        task.id,
+        `quiet for ${minutes} minutes; may be stuck${waits.length > 0 ? `; ${waits.join("; ")}` : ""}`,
+        { news: true },
+      );
       this.routeCrewEvent(
         task.id,
         {
@@ -12816,6 +13054,10 @@ export class CrewSupervisor {
             task: { id: task.id, title: task.title },
             crewmate: task.crewmate,
             minutes,
+            ...(calls.length > 0 ? { calls } : {}),
+            ...(unread.length > 0
+              ? { steers: { count: unread.length, since: unread[0]?.since ?? now } }
+              : {}),
           },
         },
         "agent",
@@ -12827,22 +13069,6 @@ export class CrewSupervisor {
         type: "firstmate_note",
         text: `Task ${task.title} quiet: ${minutes} minutes without an update`,
       });
-    }
-    if (now - task.turnStartedAt >= TURN_WALL_CLOCK_MS && !task.wallClockEscalated) {
-      task.wallClockEscalated = true;
-      const hours = Math.round(((now - task.turnStartedAt) / 3_600_000) * 10) / 10;
-      this.routeCrewEvent(
-        task.id,
-        {
-          facts: {
-            kind: "long-turn",
-            task: { id: task.id, title: task.title },
-            crewmate: task.crewmate,
-            hours,
-          },
-        },
-        "agent",
-      );
     }
   }
 

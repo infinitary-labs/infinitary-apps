@@ -15,10 +15,13 @@ export function QuestionBubble({
   text,
   open,
   onOpenChange,
+  selectable = false,
 }: {
   text: string;
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  /** Read-only conversation views preserve selecting the question as well as the reply. */
+  selectable?: boolean;
 }) {
   const [cut, setCut] = useState(false);
   const words = useRef<HTMLSpanElement>(null);
@@ -43,7 +46,20 @@ export function QuestionBubble({
       disabled={!interactive}
       aria-expanded={interactive ? open : undefined}
       aria-label={interactive ? (open ? ASKED_SHOW_LESS : ASKED_SHOW_ALL) : undefined}
-      onClick={() => onOpenChange(!open)}
+      onClick={(event) => {
+        const selection = event.currentTarget.ownerDocument.getSelection();
+        // Dragging selects the captain's words; a pointer release must not fold them away.
+        if (
+          selectable &&
+          event.detail > 0 &&
+          selection &&
+          !selection.isCollapsed &&
+          selection.anchorNode &&
+          event.currentTarget.contains(selection.anchorNode)
+        )
+          return;
+        onOpenChange(!open);
+      }}
       style={{
         alignSelf: "flex-start",
         maxWidth: "100%",
@@ -66,6 +82,7 @@ export function QuestionBubble({
           lineHeight: "var(--leading-body)",
           color: "var(--fg-2)",
           overflowWrap: "anywhere",
+          userSelect: selectable ? "text" : undefined,
           ...(open
             ? { display: "block", whiteSpace: "pre-wrap" }
             : {

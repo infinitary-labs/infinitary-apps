@@ -20,6 +20,17 @@ Seen means shown on the stage while the window is visible and focused, so revisi
 The line and the bars stay until the next revision or until the card leaves; removed parts are only counted, there is no switch to read the previous version, and there is no setting.
 The comparison ignores the host's own picture-copy names and the host's fact strip and follow-up rows, which the host rewrites on every call.
 
+### Conversation reading view
+
+The read-only view opened from a conversation reply is a narrow exception to cards-not-chat (INF-2218, A · Open reply).
+It keeps the Note shell, sizing, stack and close behavior, with a quiet Conversation heading beside the Note chip instead of a quoted question title.
+The captain's question sits at the right, below a You label, in the shared question bubble; a long question folds to two lines and the bubble itself opens or folds it by pointer, Enter or Space.
+The first mate's existing hexagonal mark and First mate label introduce the unboxed reply below, at the left.
+Desktop speaker labels use `--font-mono` `--text-xs` `--fg-3`, the question keeps the shared bubble's regular `--text-sm` type, and the reply uses regular `--text-base` `--fg-1`, or `--danger` for a problem.
+The original words stay selectable and literal, with their line breaks; a picture-only question reads A picture, and long replies scroll inside the existing shell.
+The iPhone and iPad adapt this treatment inside their existing Reply sheet, with native type sizes, Done dismissal and unchanged sheet sizes.
+The view adds no timestamp, message field, attachment viewer or saved-data change; ordinary cards, threads and the conversation lane are unchanged.
+
 ### The You asked line
 
 A card about one of the captain's messages carries the "You asked" line under its title and the revised line, `--space-2` below them, so every card about that message, from a plan to a merge, names what the captain asked (INF-1610).

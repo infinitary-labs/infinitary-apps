@@ -1,0 +1,18 @@
+{
+  "entries": [
+    {
+      "id": "conversation-reading",
+      "kind": "improvement",
+      "area": "message-box",
+      "title": "Read conversation replies as messages",
+      "body": "Opening a reply above the message box now shows your question in a grey bubble, followed by your first mate's answer. Press a long question to open or fold it. The same layout appears in the existing reply sheet on iPhone and iPad; reading or closing it sends nothing.",
+      "picture": {
+        "dark": "conversation-reading-dark.webp",
+        "light": "conversation-reading-light.webp",
+        "alt": "A conversation note with the question in a grey bubble below You and an unboxed multiline answer below the first mate's mark and label"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

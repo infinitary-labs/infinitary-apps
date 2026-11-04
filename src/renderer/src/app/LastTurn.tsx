@@ -73,7 +73,7 @@ function mateKey(mate: Mate | null): string {
  * sixth of a turn over --dur-med as it fades back to cyan. Under reduced
  * motion it turns ember and stands still.
  */
-function MateMark({ working }: { working: boolean }) {
+export function MateMark({ working }: { working: boolean }) {
   const ref = useRef<SVGSVGElement>(null);
   const spin = useRef<Animation | null>(null);
   useEffect(() => {

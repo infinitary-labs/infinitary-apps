@@ -177,8 +177,10 @@ A round is one message of the captain's and the reply line kept beside it.
 - **The reply note.**
   A click on the reply line, or Enter or Space on it, opens the whole reply as a note at the front of the stack, in front of any open card (INF-1102's plan, the captain's Approve and build, reversing "neither line is a control" for the reply line only).
   The window holds it, as it holds a past card (`{ replyNote }` in `OpenRecord`, `store.ts`): nothing is saved or sent, and the first mate is not told.
-  Its title is that round's message in quotation marks, so the card reads as the round unfolded; a message that was only pictures reads "A picture".
-  Its body is the reply as the first mate wrote it, line breaks kept and nothing read as formatting; a reply saved before the words were kept, a typed line and a problem show the line itself, a problem in `--danger`.
+  The Note shell carries a quiet Conversation heading, then that round's question in the shared grey bubble at the right under You, and the first mate's mark and First mate label above the unboxed reply at the left (INF-2218, A · Open reply).
+  `QuestionBubble` owns the question's two-line fold, overflow measurement and pointer/Enter/Space activation; its caller owns expansion state, reset for another opened round, and a message that was only pictures reads A picture.
+  This read-only view opts into selecting question text through that same owner, so a drag selects words without folding them; ordinary asked lines retain their existing activation.
+  The reply stays as the first mate wrote it, selectable with line breaks kept and nothing read as formatting; a reply saved before the words were kept, a typed line and a problem show the line itself, a problem in `--danger`.
   It has the Note chip and no buttons or reply row; the × or Esc closes it.
   There is one reply note: opening it again brings it to the front with the reply whose line was pressed, and it stays until it is closed, even after a new message.
   Opening it hides the older round and pauses its clock; closing it resumes the remaining reading time.

@@ -49,6 +49,7 @@ import type {
   PhoneTouchOutcome,
 } from "./phoneKeyboard";
 import { phoneSceneFixture } from "./phoneScene";
+import { seedReplyReading } from "./replyReading";
 import { startScriptedClient } from "./scriptedClient";
 import { type SshServer, startSshServer } from "./sshServer";
 
@@ -1447,6 +1448,9 @@ export async function startPhoneHome(
         case "POST capture-scene-keyboard-start":
           await controls?.start("native-scene-keyboard");
           result = { ok: true };
+          break;
+        case "POST reply-reading-fixture":
+          result = seedReplyReading(core.services.tasks);
           break;
         case "POST talk-fixture": {
           // INF-64 piece 5: the existing provider holds a real Pi turn until the captain steers or interrupts it.

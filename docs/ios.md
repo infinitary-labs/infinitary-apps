@@ -334,7 +334,10 @@ The message box keeps the captain’s last two messages and the first mate’s r
 The phone sets them as a quiet glance (INF-1846): 15-point rows, one step under the box's 16-point words and one line each, the bubble hugging its words up to three quarters of the column, each reply in the secondary colour on a 24-point row pressable across its width, 4 points within a round and 12 between rounds and above the box.
 While the first mate is busy its line shows the mark turned ember and spinning, beside Working… or the reply; a message that was only photos reads "A picture".
 A completed reply fades after 15 seconds on screen over 0.7 seconds, an instant under reduced motion, keeping its room so the input never moves; the count runs only while Home is shown, the app is in front, the phone is upright and the first mate is idle.
-A tap on a reply line opens that whole reply in a half-height sheet, titled by its message, as the Mac's reply note.
+A tap on a reply line opens that whole reply in the existing Reply sheet, with its medium and large sizes and Done dismissal.
+The captain's message sits in the shared question bubble below You at the right, followed by the first mate's mark, First mate label and unboxed reply at the left (INF-2218, A · Open reply).
+The shared `PhoneQuestionBubble` owns the grey surface and two-line fold; a tap on a long question opens or folds it, and the sheet owns that expansion state.
+The reply keeps its literal words, line breaks, text selection and problem colour; reading or dismissing it sends nothing.
 Its component owns messages and photos; the shared shell places it at the foot of Home.
 A send carries the visible entry’s `visibleCardId`, `pastCardId` or `taskId` through the published conversation request as a hint, never as the message’s topic.
 The native multiline field uses the keyboard’s own dictation; Infinitary adds no speech model or microphone permission.

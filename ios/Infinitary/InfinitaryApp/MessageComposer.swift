@@ -309,24 +309,41 @@ private struct MarkDot: Shape {
     }
 }
 
-/// Its title is the captain's message in quotation marks; its body the reply as written, a problem in red.
+/// INF-2218, A · Open reply: the saved question in the shared bubble above an unboxed answer.
+/// Reading stays inside the existing sheet, with native sizing and Done dismissal; nothing is sent.
 private struct PhoneReplySheet: View {
     let round: PhoneLastRound
     @Environment(\.dismiss) private var dismiss
+    @State private var questionOpen = false
 
     var body: some View {
         NavigationStack {
             ScrollView {
-                VStack(alignment: .leading, spacing: PhoneTheme.space2) {
-                    Text(round.you.isEmpty ? "A picture" : "“\(round.you)”").font(PhoneFont.headline)
-                        .accessibilityIdentifier("reply-note-title")
+                VStack(alignment: .leading, spacing: PhoneTheme.space5) {
+                    BubbleColumn {
+                        VStack(alignment: .trailing, spacing: 4) {
+                            Text("You").font(PhoneFont.mono).foregroundStyle(PhoneTheme.muted)
+                            PhoneQuestionBubble(
+                                text: round.you,
+                                open: $questionOpen,
+                                identifier: "reply-note-question")
+                        }
+                    }
                     if let reply = round.reply {
-                        Text(reply.words ?? reply.text).font(PhoneFont.callout)
-                            .foregroundStyle(reply.problem == true ? PhoneTheme.danger : PhoneTheme.text)
-                            .textSelection(.enabled).accessibilityIdentifier("reply-note-words")
+                        VStack(alignment: .leading, spacing: PhoneTheme.space2) {
+                            HStack(spacing: PhoneTheme.space2) {
+                                MateMark(working: false, still: true).frame(width: 16, height: 16)
+                                Text("First mate").font(PhoneFont.mono).foregroundStyle(PhoneTheme.muted)
+                            }
+                            Text(reply.words ?? reply.text).font(PhoneFont.callout)
+                                .foregroundStyle(reply.problem == true ? PhoneTheme.danger : PhoneTheme.text)
+                                .textSelection(.enabled).accessibilityIdentifier("reply-note-words")
+                                .padding(.leading, PhoneTheme.space4 + PhoneTheme.space2)
+                        }
                     }
                 }.padding(PhoneTheme.space5).frame(maxWidth: .infinity, alignment: .leading)
             }
+            .accessibilityIdentifier("reply-note-scroll")
             .phoneTitle("Reply")
             .toolbar { ToolbarItem(placement: .confirmationAction) {
                 Button("Done") { dismiss() }.accessibilityIdentifier("close-reply-note")

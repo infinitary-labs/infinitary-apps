@@ -12,7 +12,7 @@ Where a choice is a way in or a thing to pick rather than a decision, it is a ro
 A plain field, such as the task search, a crewmate message or a computer's link, is the app's field: the panel fill, a hairline and the control radius.
 A card's reply row is shaped like the message capsule: one shape with the send arrow inside at its right edge, dimmed until there is text, on the field's fill and hairline.
 That shape is the Mac's input, a pill at one line and a rounded rectangle with the same 22-point radius when it grows.
-The app follows the device's appearance; it never presents message bubbles.
+The app follows the device's appearance; its read-only Reply sheet uses the conversation treatment in `../cards/ResponseCard.prompt.md`, without extending that treatment to ordinary cards or their threads.
 One soft tap of haptic feedback confirms that the computer accepted something: a message, a card's answer or reply, a task's start, continue, interrupt or steer, and the computer coming back after it was out of reach.
 Nothing else taps, not a page turn, an arrival or the ordinary reconnection when the app opens.
 

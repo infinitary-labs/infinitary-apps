@@ -1,0 +1,14 @@
+{
+  "entries": [
+    {
+      "id": "phone-thread-stays-on-revision",
+      "kind": "fix",
+      "area": "cards",
+      "title": "A card's thread stays open on your iPhone when the card changes",
+      "body": "When you are reading a card's thread on your iPhone or iPad and the card is updated, the card no longer turns back to its front on its own. A small dot on the Card button at the top of the thread tells you the card changed, and Card turns it over to show the new version.",
+      "noPicture": "The change is on the iPhone and iPad card, and the turn it removes is motion that a still picture of the Mac cannot show.",
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

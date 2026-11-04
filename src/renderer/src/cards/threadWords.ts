@@ -33,3 +33,6 @@ export function threadCountWords(count: number): string {
 
 /** The way back from the thread to the card's face: the in-place rung's segment, and the phone card's back. */
 export const THREAD_CARD = "card";
+
+/** The card changed while its thread showed: what the mark beside the phone card back's Card says (INF-2565). */
+export const THREAD_CARD_UPDATED = "updated";

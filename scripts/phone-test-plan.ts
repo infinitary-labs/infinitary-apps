@@ -51,6 +51,8 @@ export const PHONE_PARTS = [
   { name: "address", test: "testJoinByAddress", photos: false },
   // INF-2095: the pager pick journey launches fresh, so it needs a simulator no other journey joined first.
   { name: "pick", test: "testMenuPickSurvivesAWorkspaceRedraw", photos: false },
+  // INF-2565: a revision while the thread shows keeps the card on its back.
+  { name: "cards-revise", test: "testRevisionKeepsTheThreadShowing", photos: false },
   { name: "talk-compose", test: "testComposeAndSend", photos: true },
   // The last part runs every test no other part names: the app-hosted tests and any new one that
   // needs no fresh app, since its simulator already holds the character journey's join.

@@ -14,6 +14,9 @@ struct PhoneCards: View {
     /// INF-1524, the captain's yes on iPad only: the card takes the stage's whole width, as the Mac's maximize does.
     @State private var maximized = false
     @State private var pagerMenu = PhoneCardPager()
+    /// INF-2565, the captain: "i don't think we should auto flip". A revision gives the card a new offer, so its pane is
+    /// built again to draw the new body; the side it shows and the thread it has read live here, per card, and outlast that.
+    @State private var sides: [String: PhoneCardSide] = [:]
     private var card: PhoneCard? { past ?? session.stack.first(where: { $0.id == selected }) ?? session.stack.first }
 
     var body: some View {
@@ -30,7 +33,8 @@ struct PhoneCards: View {
                     showsNext: past == nil && index < session.stack.count - 1, visible: messageContext.cardsVisible,
                     replyLeaves: !card.value["holdsPlace"].flag && session.stack.count > 1,
                     maximized: $maximized,
-                    onTask: { messageContext.openTask = $0 }, onDraft: { messageContext.draft = $0 })
+                    onTask: { messageContext.openTask = $0 }, onDraft: { messageContext.draft = $0 },
+                    side: Binding(get: { sides[card.id] ?? PhoneCardSide() }, set: { sides[card.id] = $0 }))
                     .id("\(card.id):\(card.offerID ?? card.body):\(card.isPast)")
             } else {
                 // INF-1060 keeps the empty stage free of placeholder words; INF-1066 adds its native crew.
@@ -56,6 +60,7 @@ struct PhoneCards: View {
             }
             showRestored(ids)
             previousIDs = ids
+            sides = sides.filter { ids.contains($0.key) || $0.key == past?.id }
             if let past, ids.contains(past.id) { self.past = nil }
         }
         .onChange(of: messageContext.restoring) { _, _ in showRestored(session.stack.map(\.id)) }
@@ -200,6 +205,14 @@ extension UIApplication {
     @objc fileprivate func infinitaryPageCard(_ command: UIKeyCommand) { PhonePagerKeys.Anchor.shown?.press(command) }
 }
 
+/// What a card's pane keeps across a revision that builds it again (INF-2565): the side it shows, how much of its thread
+/// the captain has read, and the offer the face last showed, so the back marks a revision that came while it showed.
+struct PhoneCardSide: Equatable {
+    var turned = false
+    var readCount: Int?
+    var faceOffer: String?
+}
+
 private struct PhoneCardPane: View {
     let card: PhoneCard
     let session: ReadOnlySession
@@ -229,7 +242,12 @@ private struct PhoneCardPane: View {
     @State private var factsHost: CardWebHost?
     @State private var problem: String?
     /// INF-1919, the captain's pick: the thread lives on the card's back, and the card turns over to show it.
-    @State private var turned = false
+    /// INF-2565: the side, the read count and the face's offer are the stage's, so a revision never turns the card.
+    @Binding var side: PhoneCardSide
+    private var turned: Bool {
+        get { side.turned }
+        nonmutating set { side.turned = newValue }
+    }
     /// Where the turn stands: the back is drawn only while it shows or turns, and the face's own field and choices give
     /// way while the back shows, so one control of each kind is on the card for a tap or for accessibility to find.
     @State private var flipped = false
@@ -237,7 +255,10 @@ private struct PhoneCardPane: View {
     /// The side whose field takes the focus once a turn draws it.
     @State private var pendingFocus: CardSide?
     /// How many of the thread's messages the captain has seen on the back; nil until the thread is first read.
-    @State private var readCount: Int?
+    private var readCount: Int? {
+        get { side.readCount }
+        nonmutating set { side.readCount = newValue }
+    }
     @State private var backHeadHeight: CGFloat = 0
     @State private var threadHeight: CGFloat = 0
     @State private var backFootHeight: CGFloat = 0
@@ -265,12 +286,17 @@ private struct PhoneCardPane: View {
 
     init(card: PhoneCard, session: ReadOnlySession, fill: PhoneJSON, reply: Binding<String>,
          onReading: @escaping (PhoneJSON) -> Void, onSeen: @escaping () -> Void, onHide: @escaping () -> Void, onPage: @escaping (Int) -> Void, onSent: @escaping () -> Void, showsNext: Bool, visible: Bool, replyLeaves: Bool,
-         maximized: Binding<Bool>, onTask: @escaping (String) -> Void, onDraft: @escaping (String) -> Void) {
+         maximized: Binding<Bool>, onTask: @escaping (String) -> Void, onDraft: @escaping (String) -> Void,
+         side: Binding<PhoneCardSide>) {
         self.card = card; self.session = session; _reply = reply
         self.onReading = onReading; self.onSeen = onSeen; self.onHide = onHide; self.onPage = onPage; self.onSent = onSent
         self.showsNext = showsNext; self.visible = visible; self.replyLeaves = replyLeaves
         _maximized = maximized; self.onTask = onTask; self.onDraft = onDraft
         _host = State(initialValue: Self.bodyHost(card, session, fill))
+        _side = side
+        // A pane built again while its back shows starts on the back, with no turn.
+        let showsBack = side.wrappedValue.turned && !Self.messages(card, session).isEmpty
+        _flipped = State(initialValue: showsBack); _backMounted = State(initialValue: showsBack)
     }
     private static func bodyHost(_ card: PhoneCard, _ session: ReadOnlySession, _ fill: PhoneJSON,
                                  heightLag: TimeInterval = 0) -> CardWebHost {
@@ -279,7 +305,14 @@ private struct PhoneCardPane: View {
         let keys = (session.board?.tasks ?? []).filter { $0.id != own }.map(\.key)
         return CardWebHost(card: card, session: session, fill: fill, keys: keys, heightLag: heightLag)
     }
-    private var messages: [PhoneJSON] { card.isPast ? card.value["messages"].list : session.threads[card.id]?["messages"].list ?? [] }
+    private static func messages(_ card: PhoneCard, _ session: ReadOnlySession) -> [PhoneJSON] {
+        card.isPast ? card.value["messages"].list : session.threads[card.id]?["messages"].list ?? []
+    }
+    private var messages: [PhoneJSON] { Self.messages(card, session) }
+    /// What the face draws; a revision that changes it gives the card a new offer.
+    private var offer: String { card.offerID ?? card.body }
+    /// INF-2565, the captain: "at most we should show an indicator near the "< card" button to show there's an update".
+    private var updatedBehind: Bool { showsBack && side.faceOffer != nil && side.faceOffer != offer }
     private var reachable: Bool { session.contact == "in-reach" }
     private var replyWords: String { reply.trimmingCharacters(in: .whitespacesAndNewlines) }
     private var canSendReply: Bool { !host.changing && session.canChange && host.drawn && replyFits }
@@ -376,7 +409,7 @@ private struct PhoneCardPane: View {
         }
         .onChange(of: messages.count) { _, count in if showsBack { readCount = count } }
         .onChange(of: showsBack) { _, back in
-            if back { readCount = messages.count }
+            if back { readCount = messages.count; side.faceOffer = offer }
             turn(to: back)
         }
         .sheet(isPresented: Binding(get: { host.presentation != nil }, set: { if !$0 { host.presentation = nil } })) {
@@ -469,10 +502,21 @@ private struct PhoneCardPane: View {
             VStack(alignment: .leading, spacing: 0) {
                 HStack(spacing: PhoneTheme.space2) {
                     Button { turnOver(back: false) } label: {
-                        Label(PhoneCardWords.threadCard, systemImage: "chevron.left")
-                            .frame(minHeight: 44).contentShape(Rectangle())
+                        Label {
+                            Text(PhoneCardWords.threadCard)
+                        } icon: {
+                            // The latest line's own mark: a dot on the chevron, here for a revision behind the thread.
+                            Image(systemName: "chevron.left").overlay(alignment: .topTrailing) {
+                                if updatedBehind {
+                                    Circle().fill(PhoneTheme.accent).frame(width: 6, height: 6).offset(x: 3, y: -3)
+                                        .accessibilityHidden(true)
+                                }
+                            }
+                        }
+                        .frame(minHeight: 44).contentShape(Rectangle())
                     }
                     .foregroundStyle(PhoneTheme.secondary)
+                    .accessibilityValue(updatedBehind ? PhoneCardWords.threadCardUpdated : "")
                     .keyboardShortcut(showsBack ? KeyboardShortcut("\\", modifiers: .command) : nil)
                     .accessibilityIdentifier("thread-return")
                     Spacer(minLength: PhoneTheme.space2)
@@ -689,7 +733,8 @@ private struct PhoneCardPane: View {
             let required = card.value["requiredActions"].list
             if !required.isEmpty { PhoneRequiredActions(actions: required) }
             if let problem { Text(problem).foregroundStyle(PhoneTheme.warning).accessibilityIdentifier("card-error") }
-            if !messages.isEmpty { latestLine }
+            // INF-2565: a pane built again while its back shows starts turned, and its latest line gives way as the field does.
+            if !messages.isEmpty { latestLine.modifier(PhoneFaceOnly(angle: turnAngle)) }
             if takesReply { replyField(.face).modifier(PhoneFaceOnly(angle: turnAngle)) }
             if card.isPast, let words = sentWords {
                 Text("\(PhoneCardWords.sentWithChoice) \(words)").font(PhoneFont.caption).foregroundStyle(PhoneTheme.secondary)

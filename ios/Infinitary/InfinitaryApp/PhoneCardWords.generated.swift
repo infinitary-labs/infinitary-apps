@@ -19,6 +19,7 @@ enum PhoneCardWords {
     static let threadWho = ["captain": "you", "crewmate": "crew", "firstmate": "mate", "host": "app"]
     static let threadWorking = "working"
     static let threadCard = "Card"
+    static let threadCardUpdated = "updated"
     static let driverWords = ["crewmate": "the crewmate is driving", "nobody": "nobody is driving", "waiting": "paused for your help", "taking": "you are taking control", "captain": "you have control"]
     static let stopLineWords = ["captain": "you stopped it", "crewmate": "the crewmate closed it", "idle": "stopped after 30 minutes unused", "gone": "its page stopped working", "task-closed": "stopped when the task closed"]
     static let staleBrowser = "this card's browser has stopped"

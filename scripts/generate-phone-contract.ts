@@ -171,6 +171,7 @@ enum PhoneCardWords {
     static let threadWho = ${table(thread.THREAD_WHO_LABELS)}
     static let threadWorking = ${text(thread.THREAD_WORKING)}
     static let threadCard = ${text(thread.THREAD_CARD.charAt(0).toUpperCase() + thread.THREAD_CARD.slice(1))}
+    static let threadCardUpdated = ${text(thread.THREAD_CARD_UPDATED)}
     static let driverWords = ${table(browser.DRIVER_WORDS)}
     static let stopLineWords = ${table(browser.STOP_LINE_WORDS)}
     static let staleBrowser = ${JSON.stringify(browser.STALE_ATTACHMENT_LINE)}

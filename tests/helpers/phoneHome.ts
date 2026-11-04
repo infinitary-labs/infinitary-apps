@@ -174,6 +174,7 @@ export async function startPhoneHome(
     context: "",
     merge: "",
     news: "",
+    flip: "",
   };
   const cardBarrier = () => {
     let resolve!: () => void;
@@ -861,6 +862,65 @@ export async function startPhoneHome(
             anythingElse: ANYTHING_ELSE_ANSWER,
             requiredLead: REQUIRED_ACTIONS_LEAD,
             threadCrew: THREAD_WHO_LABELS.crewmate,
+          };
+          break;
+        }
+        // INF-2565: a first mate card whose thread the captain is reading when the card is revised.
+        case "POST flip-card": {
+          for (const card of await core.dispatch("inf:cards:list", []))
+            await core.dispatch("inf:cards:close", [card.id]);
+          cardIDs.flip = core.services.supervisor.addFirstmateCard({
+            id: "phone-flip",
+            title: "Yes, crewmates on the Mac mini are waiting in its test line",
+            body: "<p>Four builds wait in the Mac mini's test line behind one long check.</p>",
+            actions: [
+              { id: "backlog", label: "Move the four newest builds to the backlog" },
+              { id: "drain", label: "Let it drain", default: true },
+            ],
+          });
+          core.services.supervisor.addCardMessage(
+            cardIDs.flip,
+            "captain",
+            "but is the mini indeed running out of ram?",
+          );
+          core.services.supervisor.addCardMessage(
+            cardIDs.flip,
+            "firstmate",
+            "I can't see the mini's live memory from here, so I don't know yet. I'll update this card with the answer.",
+          );
+          core.services.supervisor.firstmateClosedOut();
+          core.services.supervisor.flushCards();
+          result = {
+            offerId:
+              core.services.supervisor.cardsSnapshot().find((card) => card.id === cardIDs.flip)
+                ?.offerId ?? null,
+            title: "Yes, crewmates on the Mac mini are waiting in its test line",
+            mate: "I can't see the mini's live memory from here, so I don't know yet. I'll update this card with the answer.",
+          };
+          break;
+        }
+        // The first mate revises that card with the answer: same id, new body, so a new offer.
+        case "POST flip-card-revise": {
+          const title = "Yes, crewmates on the Mac mini are waiting in its test line";
+          const added = "The Mac mini has memory to spare: it is not running out.";
+          core.services.supervisor.addFirstmateCard({
+            id: cardIDs.flip,
+            title,
+            body: `<p>Four builds wait in the Mac mini's test line behind one long check.</p><p>${added}</p>`,
+            actions: [
+              { id: "backlog", label: "Move the four newest builds to the backlog" },
+              { id: "drain", label: "Let it drain", default: true },
+            ],
+          });
+          core.services.supervisor.firstmateClosedOut();
+          core.services.supervisor.flushCards();
+          const shown = core.services.supervisor
+            .cardsSnapshot()
+            .find((card) => card.id === cardIDs.flip);
+          result = {
+            added,
+            offerId: shown?.offerId ?? null,
+            messages: core.services.supervisor.cardThread(cardIDs.flip),
           };
           break;
         }

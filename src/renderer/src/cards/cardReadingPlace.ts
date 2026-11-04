@@ -3,8 +3,15 @@ import { useCallback } from "react";
 /** In-session reading places, like answer and reply drafts; never saved across a restart. */
 const places = new Map<string, number>();
 
-/** A remounted card waits for its body to draw before restoring the saved reading place. */
-export function useCardReadingPlace(id: string) {
+/**
+ * A remounted card waits for its body to draw before restoring the saved
+ * reading place. Only a `shown` copy is where the captain reads: the stage
+ * prepares a live card's successor unseen and bare, with less room to
+ * scroll, so a prepared or leaving copy saves nothing and its restore stays
+ * pending - a restore its final height cuts short is not the captain's place
+ * (INF-2043). Showing the copy restores the place again.
+ */
+export function useCardReadingPlace(id: string, shown = true) {
   return useCallback(
     (body: HTMLDivElement | null) => {
       if (!body) return;
@@ -13,10 +20,10 @@ export function useCardReadingPlace(id: string) {
       const restore = () => {
         if (restored) return;
         body.scrollTop = top;
-        if (body.scrollTop >= top - 1) restored = true;
+        if (shown && body.scrollTop >= top - 1) restored = true;
       };
       const keep = () => {
-        if (restored) places.set(id, body.scrollTop);
+        if (shown && restored) places.set(id, body.scrollTop);
       };
       // A person who scrolls before the saved place is reachable keeps the place they chose.
       const taken = () => {
@@ -41,7 +48,7 @@ export function useCardReadingPlace(id: string) {
         body.removeEventListener("keydown", taken);
       };
     },
-    [id],
+    [id, shown],
   );
 }
 

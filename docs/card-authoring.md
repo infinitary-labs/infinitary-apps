@@ -1002,6 +1002,7 @@ Task records, past cards, the task board, browser views and crewmate views keep 
 The renderer keeps answers and reply drafts in their existing in-session stores while a card is minimized.
 `useCardReadingPlace` keeps its body’s reading place across remounts for the same run, for live cards, task records (`record:<task>`) and past cards (`past:<card>`); the stack's retirement leaves the last two alone, and closing a record or past card forgets its place.
 A person's own wheel, touch or key before a saved place is reachable ends the pending restore.
+Only the shown copy of a live card saves its place or ends its restore: the copy the stage prepares unseen is bare, so its body has less room to scroll, and whatever its scroller does there, such as a restore its final height cuts short, saves nothing, and the restore runs again once the copy is shown (INF-2043).
 A record also keeps the sections the captain opened, per task, and hands them to its frame at birth (`openSections` view state), until the record is closed, which reopens compact; a live card's own `<details>` still reload closed.
 Bringing it back focuses the card at the default size; a restart drops unsent drafts as before.
 The first mate’s asked `show-card` action uses `inf:cards:show`: an open card returns, and a closed card opens read-only.

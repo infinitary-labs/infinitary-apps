@@ -1965,7 +1965,8 @@ function StackedCard({
   onInteraction,
   style,
 }: StackedCardProps) {
-  const bodyRef = useCardReadingPlace(card.id);
+  // Only the shown copy keeps the reading place; a prepared one is bare.
+  const bodyRef = useCardReadingPlace(card.id, active);
   const pending = useShellStore((s) => s.pendingCardActions[card.id]);
   const error = useShellStore((s) => s.cardActionErrors[card.id]);
   // On a Mac controlling another, its buttons are off while that Mac is

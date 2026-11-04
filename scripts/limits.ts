@@ -68,6 +68,11 @@ export const LIMITS: Record<string, Record<string, LimitEntry>> = {
   },
   "src/core/claude/session.ts": {
     CLAUDE_THINKING_FLOOR_TOKENS: outside("thinking turns off when the output cap is at or under it"),
+    // The captain chose 3 days (2026-11-04), a policy value, not a measured need.
+    CLAUDE_COMMAND_TIME_CEILING_MS: {
+      rests: "consent",
+      way: "the client stops the command; the crewmate starts it again with a fresh limit",
+    },
   },
   "src/core/connection/journal.ts": {
     DEFAULT_JOURNAL_LIMITS: physical("the oldest pushes drop; a device behind them is told to reload"),

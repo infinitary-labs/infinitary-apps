@@ -279,6 +279,29 @@ export const CLAUDE_SESSION_ENV = { CLAUDE_CODE_DISABLE_AUTO_MEMORY: "1" } as co
  */
 export const CLAUDE_CODING_SETTINGS = { attribution: { commit: "", pr: "" } } as const;
 
+/**
+ * The longest time limit a coding session's command may ask for (the
+ * captain, 2026-11-04, INF-2490 and INF-2225's lost runs: "change highest to
+ * 3 days, not 24 which is too much"). The client counts a command's limit
+ * from its start, so a heavy run waiting in its computer's line
+ * (docs/heavy-runs.md) spends its limit while it waits; left to its default
+ * the client stops a background command after 2 hours at most.
+ */
+export const CLAUDE_COMMAND_TIME_CEILING_MS = 3 * 24 * 60 * 60 * 1000;
+
+/**
+ * The client's documented ceiling on a command's time limit, handed to
+ * every coding session over any value the host's shell has. The client
+ * honors a command's own limit up to it, so a heavy run started with a
+ * 3-day limit is not stopped at the 30-minute background default
+ * (`claudeCommandTimeLimit.integration.test.ts`). The default itself,
+ * `BASH_DEFAULT_TIMEOUT_MS`, stays the client's own: it is also the
+ * 2-minute limit of every ordinary command started without one.
+ */
+export const CLAUDE_CODING_ENV = {
+  BASH_MAX_TIMEOUT_MS: String(CLAUDE_COMMAND_TIME_CEILING_MS),
+} as const;
+
 /** Claude clamps this to its model window, then subtracts output room and a 13k buffer. */
 export const CLAUDE_COMPACTION_SETTINGS = {
   autoCompactEnabled: true,
@@ -409,13 +432,13 @@ export function claudeSessionOptions(input: ClaudeSessionOptionsInput): Options 
         : {}),
       // The machine's default login and nothing ambient, none of the
       // person's Claude notes, plus the session state events the settle rule
-      // reads, the output bound, and for the seat none of the client's
-      // per-turn extras.
+      // reads, the output bound, for the seat none of the client's per-turn
+      // extras, and for a coding session the longest command time limit.
       env: {
         ...claudeSessionEnv(input.env),
         ...CLAUDE_SESSION_ENV,
         ...CLAUDE_ROLLING_ENV,
-        ...(coding ? {} : CLAUDE_SEAT_ENV),
+        ...(coding ? CLAUDE_CODING_ENV : CLAUDE_SEAT_ENV),
         ...outputCap,
       },
       // The person's own Claude configuration is not the app's: a session

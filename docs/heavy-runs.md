@@ -24,6 +24,10 @@ Short claim requests use the existing two-second cadence and bypass the shell's 
 A command process that cannot start, exits without answering or reaches its deadline answers an admission claim with the typed `CLAIM_UNAVAILABLE` outcome and the same reading cadence.
 A transport timeout on a claim carries that outcome too; a first transport timeout has already waited out its bound, and later attempts reuse the last cadence received.
 The wrapper keeps the same process group and declaration and asks again, without a limit on how long it can remain queued.
+The wrapper waits inside the caller's shell command, so a shell that stops a command after a time limit counts the wait against it.
+The served words tell a crewmate to give a heavy run the longest limit its shell allows.
+A Pi crewmate's background commands have no time limit.
+A Claude crewmate's client counts a command's own limit from its start and stops the whole process tree when it passes, so every Claude coding session raises the longest limit a command may ask for to 3 days ([Claude client](claude-client.md), "The crewmate on Claude").
 A lost claim reply may finish on the host later, but neither that reply nor a remembered admission starts the program: the wrapper still requires its own fresh successful admission answer.
 Admission recovery applies only before payload creation, never to a payload launch or another command's effects; invalid requests, revoked keys, lost channels and owner refusals still end the waiting wrapper.
 If a later process-table reading is unavailable, a previously verified caller with the same task, group and declaration keeps waiting in its existing place instead of treating the missing reading as proof it ended.

@@ -387,12 +387,30 @@ export interface Forge {
    * never retried; only the captain's click on its card calls it.
    */
   putInSkippingRules?(change: ForgeChange, headSha: string): Promise<ForgeSkipMerge>;
+  /**
+   * Mark `sha` with the app's queue status as waiting (docs/forge.md, "A
+   * project's queue"): the captain's kept merge approval at that version,
+   * which a project's own queue reads and answers on the same status. GitHub
+   * only; absent where the host has no commit statuses.
+   */
+  markQueued?(sha: string): Promise<void>;
   /** Close the change without putting it in. */
   close(change: ForgeChange): Promise<void>;
   /** How the change is named on a surface: `#N`, `!N`, or the branch where it has no number. */
   label(change: ForgeChange): string;
   url(change: ForgeChange): string | null;
 }
+
+/**
+ * The commit status that is the app's contract with a project's own queue
+ * (docs/forge.md, "A project's queue"): the app writes it as waiting on the
+ * version the captain approved, and the queue answers success or failure on
+ * it. The kept merge reads it like any other check.
+ */
+export const QUEUE_STATUS = "infinitary/queue";
+
+/** The waiting status's description, in the words a person reads on GitHub. */
+export const QUEUE_WAITING_WORDS = "Waiting for the batch check";
 
 /** A full commit id: 40 hexadecimal characters, or 64 in a SHA-256 repository. */
 export function isFullCommitId(sha: string): boolean {

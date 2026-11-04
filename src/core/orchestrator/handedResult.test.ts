@@ -37,7 +37,13 @@ function fixture(deliverable: "answer" | "change" = "answer", reported = true) {
     runtimeState: () => "idle",
     resolveTaskRef: (ref: string) => tasks.resolve(ref),
     deliverableOf: () => deliverable,
-    cards: { snapshot: () => cards, retireTaskCards: () => {}, scheduleBroadcast: () => {} },
+    cards: {
+      snapshot: () => cards,
+      retireTaskCards: () => {},
+      // Every close takes down a clicked merge's pending note (INF-1275).
+      withdrawHostCard: () => {},
+      scheduleBroadcast: () => {},
+    },
     inbox: new InboxStore(db),
     endLiveTask: () => {},
     stopRuntime: () => undefined,

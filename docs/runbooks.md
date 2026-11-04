@@ -15,7 +15,7 @@ The host does not decide which subject an ask belongs to.
 Settings → Runbooks sits immediately after Intelligence and shares its visibility rules.
 Built in lists the bundled runbooks; Yours lists installed and personal ones, including an unreadable folder with its reason and no switch.
 Each valid row has its manifest's name and description, a keyboard-operable switch and save feedback.
-Runbook rows carry optional source and error fields (`src/shared/contract-changes/runbook-sources-and-errors.md`).
+Runbook rows carry optional source and error fields (`runbookViewSchema`, `src/shared/runbooks.ts`).
 A built-in's View button opens a fresh read-only copy in a private temporary folder, never the signed app's own files.
 Its label on pointer rest or keyboard focus tells the person to ask the first mate to customize it.
 Open folder creates the personal runbooks folder if needed and opens it through a local host request using `shell.openPath`; that request accepts only a built-in identity or the personal folder, never an arbitrary path.
@@ -131,7 +131,7 @@ Turning naming off drops that check's convention, but a project's own instructio
 
 Runbook guidance may decide author choices on the cards it describes, such as voice, length, layout, opening and button names.
 The fixed card shape, merge authorization, consent, delivery and care facts remain core.
-Delivery judgment supplies only direct-pr crewmates with the checks, repair, readiness and stopping guidance.
+Delivery judgment supplies only crewmates on pull request delivery (direct-pr or queue-pr) with the checks, repair, readiness and stopping guidance.
 Its switch removes those judgments from new crew prompts without changing check facts, merge authorization, consent or the care names on the record.
 The host tools carry check facts and record declarations; the runbook holds the judgments, including the default repair and rerun counts.
 The panel-building runbook was not selected, so those skills and the design skill stay workspace-owned.

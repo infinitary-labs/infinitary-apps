@@ -2473,17 +2473,22 @@ export class CardService {
 
   /**
    * A card the host itself authors, put up (or revised in place under the
-   * same id) by a core service that owns the question - the plugin consent
-   * card is the one caller (Phase A, A2a). The host stamps the author and
-   * the priority; the caller's actions carry host effects only the
-   * captain's click can run.
+   * same id) by a core service that owns the question, such as the plugin
+   * consent card (Phase A, A2a). The host stamps the author and the
+   * priority; the caller's actions carry host effects only the captain's
+   * click can run. A note (no choice to make, such as a clicked merge's
+   * pending note) sits below every decision, so a question it accompanies -
+   * signing in again - stays in front.
    */
-  raiseHostCard(card: Omit<Card, "author" | "priority" | "status" | "createdAt">): void {
+  raiseHostCard(
+    card: Omit<Card, "author" | "priority" | "status" | "createdAt">,
+    options: { note?: boolean } = {},
+  ): void {
     const previous = this.cards.get(card.id);
     const raised: Card = {
       ...card,
       author: "host",
-      priority: HOST_CARD_PRIORITY,
+      priority: options.note ? HOST_NOTE_PRIORITY : HOST_CARD_PRIORITY,
       status: "ready",
       createdAt: previous?.createdAt ?? this.host.now(),
     };

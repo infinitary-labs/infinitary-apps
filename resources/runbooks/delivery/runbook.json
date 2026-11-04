@@ -6,7 +6,8 @@
     "file": "crew.md",
     "when": {
       "delivery": [
-        "direct-pr"
+        "direct-pr",
+        "queue-pr"
       ]
     }
   }

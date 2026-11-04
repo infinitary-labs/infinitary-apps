@@ -615,7 +615,7 @@ describe("the home's connection", () => {
 
     changed(at.events);
     at.events.emit("inf:cards", []);
-    const back = await connectClient(grant, { cursor });
+    const back = await connectClient(grant, { cursor, protocolVersion: "12.0.0", viewFloor: 11 });
     expect(back.welcome.catchUp).toBe("replay");
     expect(back.welcome.seq).toBe(cursor.seq + 2);
     expect(back.pushes.map((push) => [push.seq, push.channel])).toEqual([
@@ -654,21 +654,31 @@ describe("the home's connection", () => {
       }) as CoreDispatch,
     });
     const grant = await at.join();
-    const old = await connectClient(grant);
-    const newer = await connectClient(grant, { changes: ["card-current-update-seen"] });
+    // A desktop on major 12 without the change still reads cards (it changes nothing below the
+    // view floor); one on major 12 naming it, and every client on this major, read the update.
+    const old = await connectClient(grant, { protocolVersion: "12.0.0", viewFloor: 11 });
+    const newer = await connectClient(grant, {
+      protocolVersion: "12.0.0",
+      viewFloor: 11,
+      changes: ["card-current-update-seen"],
+    });
+    const current = await connectClient(grant);
     const phone = await connectClient(grant, { system: { system: "ios" } });
     const legacyDecoder = cardSchema.omit({ currentUpdateId: true, currentUpdateSeen: true });
-    expect(old.welcome.access).toBe("full");
+    expect(old.welcome.access).toBe("read");
     const listed = await old.invoke("inf:cards:list", []);
     expect(legacyDecoder.parse(listed[0])).toMatchObject({ id: card.id, seen: true });
     expect(listed[0]?.currentUpdateId).toBeUndefined();
     expect((await newer.invoke("inf:cards:list", []))[0]?.currentUpdateId).toBe(
       card.currentUpdateId,
     );
+    expect((await current.invoke("inf:cards:list", []))[0]?.currentUpdateId).toBe(
+      card.currentUpdateId,
+    );
     expect((await phone.invoke("inf:cards:list", []))[0]?.currentUpdateId).toBe(
       card.currentUpdateId,
     );
-    expect(await old.invoke("inf:cards:minimize", [card.id, true])).toEqual({ ok: true });
+    expect(await current.invoke("inf:cards:minimize", [card.id, true])).toEqual({ ok: true });
     expect(await phone.invoke("inf:cards:minimize", [card.id, false])).toEqual({ ok: true });
     at.events.emit("inf:cards", [card]);
     const oldPush = await old.push((push) => push.channel === "inf:cards");
@@ -677,13 +687,14 @@ describe("the home's connection", () => {
     const cursor = old.cursor();
     await old.close();
     at.events.emit("inf:cards", [{ ...card, currentUpdateSeen: true }]);
-    const back = await connectClient(grant, { cursor });
+    const back = await connectClient(grant, { cursor, protocolVersion: "12.0.0", viewFloor: 11 });
     expect(back.welcome.catchUp).toBe("replay");
     const replay = await back.push((push) => push.seq > cursor.seq);
     expect(legacyDecoder.parse((replay.payload as unknown[])[0])).toMatchObject({ id: card.id });
     expect((replay.payload as { currentUpdateId?: string }[])[0]?.currentUpdateId).toBeUndefined();
     await back.close();
     await newer.close();
+    await current.close();
     await phone.close();
   });
 

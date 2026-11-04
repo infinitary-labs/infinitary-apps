@@ -54,7 +54,7 @@ export class WorkflowEvidenceService {
       forgeFor: (repo: ForgeRepo | undefined, fallbackDir?: string) => Forge;
       /** A task on a computer that runs work keeps its working copy there. */
       writeElsewhere?: ArtifactElsewhere;
-      /** Whether that computer writes a selection of an artifact's files (`artifact-parts`). */
+      /** Whether that computer writes a selection of an artifact's files: one on the home's contract major. */
       partsElsewhere?: (deviceId: string) => boolean;
       evidenceDir?: (taskId: string) => string;
       tempDir?: (taskId: string) => string;

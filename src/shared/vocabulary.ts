@@ -22,6 +22,7 @@ type Words<State extends string> = Readonly<Record<State, string>> &
 /** Where a finished change goes, by delivery posture. */
 export const DELIVERY_WORDS: Record<string, string> = {
   "direct-pr": "pull request",
+  "queue-pr": "pull request through your project's queue",
   "local-only": "merged locally",
   "in-place": "built in place",
 };
@@ -29,6 +30,7 @@ export const DELIVERY_WORDS: Record<string, string> = {
 /** Compact delivery labels for project badges and policy choices, not task prose. */
 export const PROJECT_DELIVERY_WORDS: Words<RepoDelivery> = {
   "direct-pr": "pull requests",
+  "queue-pr": "pull requests through your queue",
   "local-only": "local merge",
 };
 

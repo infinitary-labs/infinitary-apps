@@ -25,7 +25,7 @@ import {
   type LocalPresentationDestination,
   type PresentationDestination,
 } from "@shared/presentationDestination";
-import { deliveryForRecord, type RepoView } from "@shared/repos";
+import { deliveryForRecord, opensPullRequest, type RepoView } from "@shared/repos";
 import { effectiveTaskPolicies } from "@shared/taskPolicies";
 import { NEVER_SENT_AGAIN } from "@shared/writeAsk";
 import type { NamingRule } from "../../shared/runbooks";
@@ -50,6 +50,8 @@ import {
   messageWithoutPresentation,
   PresentationAroundError,
   presentationLines,
+  QUEUE_STATUS,
+  QUEUE_WAITING_WORDS,
 } from "../forge";
 import type { CiWatch, TaskDelivery, TaskRecord } from "../storage/taskStore";
 import { earlyPublication } from "../tasks/liveValidation";
@@ -77,6 +79,9 @@ import { carryPassedReview, reviewCoversHead } from "./reviewCarry";
 /** Reads forge facts and records the crew's version-bound declarations.
  * Merge identity, consent, host readiness and send-once effects remain host-owned.
  */
+
+/** A check state that lets a merge through: passed, or not run on purpose. */
+const PASSED_STATES = new Set<ForgeCheckState>(["success", "skipped", "neutral"]);
 
 /**
  * `merged`: no open change for the branch, and the pull request the task
@@ -149,7 +154,8 @@ export type MergeStop =
   | "sign-in"
   | "transient"
   | "outcome"
-  | "guidance";
+  | "guidance"
+  | "queue";
 
 /**
  * What a merge under the captain's kept approval holds to (FI3-304): the one
@@ -158,7 +164,11 @@ export type MergeStop =
  * last look right before the request goes out - a refusal there stops it.
  */
 export type MergeBoundary = {
-  beforeDispatch: (head: string) => string | undefined;
+  /**
+   * `mark` true is the same look before a queue-pr version is marked for
+   * the project's queue: nothing is recorded, since no merge request goes out.
+   */
+  beforeDispatch: (head: string, mark?: boolean) => string | undefined;
   unattended: boolean;
 };
 
@@ -168,7 +178,7 @@ export type MergeGuard = {
   unattended: boolean;
   /** A hold on the approval right now: the merge waits on it and the approval stands. */
   held?: () => string | undefined;
-  beforeDispatch: (head: string) => string | undefined;
+  beforeDispatch: (head: string, mark?: boolean) => string | undefined;
 };
 
 /**
@@ -813,7 +823,12 @@ export class PrCiService {
     forge: Forge,
     pull: ForgePull,
   ): Promise<
-    | { ok: true; rules: SkippedRule[]; failedChecks: string[] }
+    | {
+        ok: true;
+        rules: SkippedRule[];
+        failedChecks: string[];
+        queueWait?: { state: ForgeCheckState | undefined };
+      }
     | { ok: false; text: string; stop?: MergeStop }
   > {
     const place = forge.place ?? "GitHub";
@@ -859,17 +874,23 @@ export class PrCiService {
       return { ok: false, text: `The checks cannot be read. ${checks.problem}`, stop: "checks" };
     const record = this.options.tasks.get(taskId);
     const absent = record && this.absenceDeclared(record, { forge, change });
+    // Nothing skips a queue-pr project's queue: its batch check is never a
+    // check to finish or skip here, and the send waits on it.
+    const queueWait = this.queueWait(taskId, pull.headSha, checks.items);
+    const items = this.queued(taskId)
+      ? checks.items.filter((item) => item.name !== QUEUE_STATUS)
+      : checks.items;
     if (
       checks.complete === false ||
-      checks.items.some((item) => item.state === "pending") ||
-      (checks.items.length === 0 && !absent)
+      items.some((item) => item.state === "pending") ||
+      (items.length === 0 && !absent)
     )
       return {
         ok: false,
         text: "The checks have not finished. Wait for their final results before preparing or sending a rule-bypass review.",
         stop: "checks",
       };
-    const failedChecks = checks.items
+    const failedChecks = items
       .filter((item) => isRedCheckState(item.state))
       .map((item) => item.name);
     const holding = sets.filter((set) => set.rules.some((rule) => mergeRuleWords(rule)));
@@ -904,7 +925,7 @@ export class PrCiService {
         return words ? [{ ruleset: set.name, rule: words }] : [];
       }),
     );
-    return { ok: true, rules, failedChecks };
+    return { ok: true, rules, failedChecks, ...(queueWait ? { queueWait } : {}) };
   }
 
   /**
@@ -916,7 +937,13 @@ export class PrCiService {
     taskId: string,
     review: MergeReview,
   ): Promise<
-    { ok: true; forge: Forge; pull: ForgePull } | { ok: false; text: string; stop?: MergeStop }
+    | {
+        ok: true;
+        forge: Forge;
+        pull: ForgePull;
+        queueWait?: { state: ForgeCheckState | undefined };
+      }
+    | { ok: false; text: string; stop?: MergeStop }
   > {
     const located = this.locate(taskId);
     if ("said" in located) return { ok: false, text: located.said };
@@ -986,7 +1013,7 @@ export class PrCiService {
         stop: "checks",
       };
     }
-    return { ok: true, forge, pull };
+    return { ok: true, forge, pull, ...(read.queueWait ? { queueWait: read.queueWait } : {}) };
   }
 
   /**
@@ -1073,6 +1100,39 @@ export class PrCiService {
       const message = caught instanceof Error ? caught.message : String(caught);
       return { ok: false, relationship, text: `Cannot merge: ${message}`, problem: message };
     }
+    // A queue-pr project's queue answers first: the click marks the version
+    // and sends nothing, and the review stays unsent for a click once it passes.
+    if (fresh.queueWait) {
+      try {
+        const waiting = await this.enqueue(
+          taskId,
+          forge,
+          change,
+          fresh.queueWait.state,
+          () => undefined,
+        );
+        return {
+          ...waiting,
+          relationship,
+          text: `${waiting.text} Nothing was sent; the same review merges on a new click once the queue passes it.`,
+        };
+      } catch (caught) {
+        // A status write the host refused is an outcome like the referenced
+        // route's, never an error that escapes the click.
+        const message = caught instanceof Error ? caught.message : String(caught);
+        return {
+          ok: false,
+          relationship,
+          text: `Cannot merge: ${message}`,
+          problem: message,
+          ...(isSignInForgeFailure(caught)
+            ? { stop: "sign-in" as const }
+            : isTransientForgeFailure(caught)
+              ? { stop: "transient" as const }
+              : {}),
+        };
+      }
+    }
     // Marked before the send: whatever happens next, it is never sent twice.
     this.markSkipSent(taskId, review.id, {});
     const whose = relationship === "owned" ? "" : " The task stays open.";
@@ -1156,7 +1216,13 @@ export class PrCiService {
     review: MergeReview,
     click = false,
   ): Promise<
-    { ok: true; forge: Forge; pull: ForgePull } | { ok: false; text: string; stop?: MergeStop }
+    | {
+        ok: true;
+        forge: Forge;
+        pull: ForgePull;
+        queueWait?: { state: ForgeCheckState | undefined };
+      }
+    | { ok: false; text: string; stop?: MergeStop }
   > {
     const located = this.locate(taskId);
     if ("said" in located) return { ok: false, text: located.said };
@@ -1233,18 +1299,6 @@ export class PrCiService {
         stop: "identity",
       };
     }
-    const held = readinessStop(forge, pull, { head: review.headSha });
-    if (held) {
-      const plain = held.plain ?? held.text;
-      return {
-        ok: false,
-        text:
-          held.stop === "computing" && waited > 0
-            ? `${plain}, after reading it again for ${Math.round(waited / 1_000)} seconds. Nothing merged.`
-            : plain,
-        stop: held.stop,
-      };
-    }
     const change: ForgeChange = {
       number: pull.number,
       url: null,
@@ -1264,9 +1318,27 @@ export class PrCiService {
         stop: isSignInForgeFailure(caught) ? "sign-in" : "checks",
       };
     }
+    // A queue-pr project's own batch check is the queue's to answer, read by
+    // the merge that marks it, never a check or a rule this gate stops on.
+    const queueWait = this.queueWait(taskId, pull.headSha, checks.items);
+    const items = this.queued(taskId)
+      ? checks.items.filter((item) => item.name !== QUEUE_STATUS)
+      : checks.items;
+    const held = readinessStop(forge, pull, { head: review.headSha });
+    if (held && !(queueWait && held.stop === "protected")) {
+      const plain = held.plain ?? held.text;
+      return {
+        ok: false,
+        text:
+          held.stop === "computing" && waited > 0
+            ? `${plain}, after reading it again for ${Math.round(waited / 1_000)} seconds. Nothing merged.`
+            : plain,
+        stop: held.stop,
+      };
+    }
     const record = this.options.tasks.get(taskId);
     if (
-      checks.items.length === 0 &&
+      items.length === 0 &&
       (!record || !this.absenceDeclared(record, { forge, change })) &&
       !overridePasses(record?.delivery, "checks", pull.headSha)
     )
@@ -1277,7 +1349,7 @@ export class PrCiService {
       };
     const status = checkSnapshotSummary({
       headSha: pull.headSha,
-      items: checks.items,
+      items,
       complete: checks.complete,
       problem: checks.problem,
       absenceDeclared: Boolean(record && this.absenceDeclared(record, { forge, change })),
@@ -1296,7 +1368,7 @@ export class PrCiService {
             : MERGE_CHECKS_HOLD_REASON,
         stop: "checks",
       };
-    return { ok: true, forge, pull };
+    return { ok: true, forge, pull, ...(queueWait ? { queueWait } : {}) };
   }
 
   private async mergeReferenced(
@@ -1352,6 +1424,12 @@ export class PrCiService {
         requireConventional(change.title ?? "", "pull request title", this.options.namingRule?.());
       const held = guard?.held?.();
       if (held) return { ok: false, relationship: "referenced", stop: "guidance", text: held };
+      if (fresh.queueWait) {
+        const waiting = await this.enqueue(taskId, forge, change, fresh.queueWait.state, () =>
+          guard?.beforeDispatch(candidate.headSha, true),
+        );
+        return { ...waiting, relationship: "referenced" };
+      }
       const stopped = guard?.beforeDispatch(candidate.headSha);
       if (stopped)
         return { ok: false, relationship: "referenced", stop: "withdrawn", text: stopped };
@@ -1731,7 +1809,7 @@ export class PrCiService {
           current,
           current.repoId ? this.options.repos.get(current.repoId) : undefined,
         );
-      if (!current || !policy || policy.delivery.value !== "direct-pr")
+      if (!current || !policy || !opensPullRequest(policy.delivery.value))
         return "Cannot open the change: its delivery policy changed. Read the current task record.";
       let prerequisite: string | undefined;
       let validationHead: string | undefined;
@@ -2234,7 +2312,7 @@ export class PrCiService {
       return { said: `Task ${record.id}'s repository is no longer registered; cannot check CI.` };
     }
     const delivery = deliveryForRecord(record, repo?.delivery);
-    if (delivery !== "direct-pr") {
+    if (!opensPullRequest(delivery)) {
       return {
         said:
           purpose === "open"
@@ -2509,6 +2587,25 @@ export class PrCiService {
         };
       }
     }
+    // A queue-pr project's batch check is waiting at this version while the
+    // pull request's own checks passed: the merge waits on the queue, which
+    // no checks override passes (docs/forge.md, "A project's queue").
+    const queued = this.queued(taskId);
+    if (queued && checked) {
+      const items = this.queueItems(taskId, checked.change.headSha);
+      const queue = items?.find((item) => item.name === QUEUE_STATUS);
+      const othersPassed =
+        items?.every((item) => item.name === QUEUE_STATUS || PASSED_STATES.has(item.state)) ===
+        true;
+      if (queue?.state === "pending" && othersPassed && status.recorded) {
+        return {
+          ok: false,
+          text: `Cannot merge yet - ${QUEUE_WAITING_WORDS}: the project's queue has not passed ${checked.change.headSha} (${QUEUE_STATUS} is pending). ${status.text}`,
+          plain: QUEUE_WAITING_WORDS.toLowerCase(),
+          stop: "queue",
+        };
+      }
+    }
     // Actual check results are a soft hold: the captain's override on
     // the checks passes them at the version it covers. GitHub's own rules
     // still decide whether it merges.
@@ -2564,12 +2661,13 @@ export class PrCiService {
       // a sign-in that could bypass the branch's rules (FI3-304 section 4).
       // Guidance is read after the carry, so a newer word during that wait
       // still stops the merge.
+      const queueWait = this.queueWait(taskId, change.headSha);
       if (hasChangeRequests(forge.kind) && (guard?.unattended || boundary?.unattended)) {
         if (change.number === undefined)
           return { ok: false, text: "Cannot merge: the pull request identity is missing." };
         const pull = await this.pullOf(forge, guard?.prNumber ?? change.number);
         const held = readinessStop(forge, pull, { head: guard?.head ?? change.headSha });
-        if (held) return held;
+        if (held && !(queueWait && held.stop === "protected")) return held;
       }
       let publishedChange = change;
       // INF-1365: the captain's override on the saved story passes its publication at this
@@ -2640,6 +2738,16 @@ export class PrCiService {
       }
       const held = guard?.held?.();
       if (held) return { ok: false, text: `Cannot merge yet: ${held}.`, stop: "guidance" };
+      if (queueWait)
+        return await this.enqueue(
+          taskId,
+          forge,
+          change,
+          queueWait.state,
+          () =>
+            guard?.beforeDispatch(change.headSha, true) ??
+            boundary?.beforeDispatch(change.headSha, true),
+        );
       const withdrawn =
         guard?.beforeDispatch(change.headSha) ?? boundary?.beforeDispatch(change.headSha);
       if (withdrawn) {
@@ -2674,6 +2782,94 @@ export class PrCiService {
     }
   }
 
+  /** Whether the task merges through its project's queue (`queue-pr`). */
+  private queued(taskId: string): boolean {
+    const record = this.options.tasks.get(taskId);
+    const repo = record?.repoId ? this.options.repos.get(record.repoId) : undefined;
+    return record !== undefined && deliveryForRecord(record, repo?.delivery) === "queue-pr";
+  }
+
+  /**
+   * Where a version of a queue-pr task stands with the project's queue:
+   * undefined when the task does not merge through a queue or the queue
+   * passed that version, otherwise the queue status's state there, absent
+   * before the host marks it. Until it passes, a required queue status is
+   * what holds the pull request, so GitHub's rules wait on the mark rather
+   * than stop it (docs/forge.md, "A project's queue").
+   */
+  private queueWait(
+    taskId: string,
+    head: string,
+    items = this.queueItems(taskId, head),
+  ): { state: ForgeCheckState | undefined } | undefined {
+    if (!this.queued(taskId)) return undefined;
+    const state = items?.find((item) => item.name === QUEUE_STATUS)?.state;
+    return state === "success" ? undefined : { state };
+  }
+
+  /** The checks the change record holds at one version of the task's change. */
+  private queueItems(
+    taskId: string,
+    head: string,
+  ): { name: string; state: ForgeCheckState }[] | undefined {
+    const version = this.options.tasks
+      .changeFor(taskId)
+      ?.versions.find((item) => item.head === head);
+    const snapshot = version?.checks?.snapshot;
+    return snapshot?.headSha === head ? snapshot.items : undefined;
+  }
+
+  /**
+   * A queue-pr merge whose batch check has not passed at this version: after
+   * the same last look a merge request takes (`look`, which records
+   * nothing), the host marks the version waiting with `infinitary/queue`
+   * once, reads the checks again so the watch follows the queue's answer,
+   * and stops on the queue. Nothing is merged; a failed batch stops on the
+   * checks.
+   */
+  private async enqueue(
+    taskId: string,
+    forge: Forge,
+    change: ForgeChange,
+    state: ForgeCheckState | undefined,
+    look: () => string | undefined,
+  ): Promise<PrOutcome> {
+    if (state !== undefined && state !== "pending") {
+      return {
+        ok: false,
+        text: `Cannot merge yet - the project's queue did not pass ${change.headSha} (${QUEUE_STATUS} is ${state}).`,
+        plain: "the batch check failed",
+        notGreen: true,
+        stop: "checks",
+      };
+    }
+    if (!forge.markQueued)
+      throw new Error("This project's host cannot mark a version for its queue.");
+    const withdrawn = look();
+    if (withdrawn) {
+      return {
+        ok: false,
+        text: `Cannot merge: ${withdrawn}${withdrawn.endsWith(".") ? "" : "."}`,
+        stop: "withdrawn",
+      };
+    }
+    if (state === undefined) {
+      await forge.markQueued(change.headSha);
+      this.options.tasks.note(
+        taskId,
+        `Marked ${change.headSha} with ${QUEUE_STATUS}, waiting for the project's queue.`,
+        { news: false, data: { queue: change.headSha } },
+      );
+      await this.run(taskId);
+    }
+    return {
+      ok: false,
+      text: `Cannot merge yet - ${QUEUE_WAITING_WORDS}: the host marked ${change.headSha} with ${QUEUE_STATUS}, waiting; the project's queue sets it to success or failure.`,
+      plain: QUEUE_WAITING_WORDS.toLowerCase(),
+      stop: "queue",
+    };
+  }
+
   /**
    * The pinned pull request read by its number (FI3-304): what a kept
    * approval's reconcile asks after a restart or an answer that never came.
@@ -2682,7 +2878,7 @@ export class PrCiService {
   async pullState(taskId: string, prNumber: number): Promise<ForgePull | undefined> {
     const record = this.options.tasks.get(taskId);
     const repo = record?.repoId ? this.options.repos.get(record.repoId) : undefined;
-    if (!record || !repo || deliveryForRecord(record, repo.delivery) !== "direct-pr")
+    if (!record || !repo || !opensPullRequest(deliveryForRecord(record, repo.delivery)))
       return undefined;
     // Reading a named pull request needs the project's saved host identity,
     // not a local branch or folder (nor an in-reach work computer).

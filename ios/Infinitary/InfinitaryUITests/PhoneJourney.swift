@@ -1527,16 +1527,6 @@ import XCTest
         showCard(leader)
         XCTAssertTrue(app.buttons["card-new"].waitForAbsence(timeout: 10), app.debugDescription)
         picture("shared-seen-relaunched")
-        // An updated phone against a home without the named change keeps the old request and ordinary actions.
-        _ = try await home("shared-seen-legacy")
-        showCard(target)
-        let fallback = try await home("shared-seen-legacy-wait")
-        let calls = try XCTUnwrap(fallback["calls"] as? [[String: Any]])
-        XCTAssertFalse(calls.contains { $0["channel"] as? String == "inf:cards:seen-update" })
-        waitUntilEnabled(app.buttons["close-card"])
-        reveal(app.buttons["close-card"]); tapOnPhone(app.buttons["close-card"])
-        XCTAssertTrue(cardHeading(target).waitForAbsence(timeout: 10), app.debugDescription)
-        _ = try await home("shared-seen-current")
     }
 
     private func verifyCardForm() async throws {

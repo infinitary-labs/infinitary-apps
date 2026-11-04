@@ -3,7 +3,6 @@ import { LOAD_ORDER, type LoadSnapshot } from "@shared/load";
 import { RESOURCE_MAX_AGE_MS, RESOURCE_READ_TIMEOUT_MS } from "@shared/resources";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { WorkDeviceContact, WorkDeviceVersion } from "../connection/connection";
-import { contractChange } from "../connection/contractChanges";
 import { ComputerLoads } from "./computerLoads";
 
 // INF-1621 piece 2: the home's reader must not invent completion when contact is lost.
@@ -19,7 +18,6 @@ const snapshot: LoadSnapshot = {
     },
   ],
 };
-const change = contractChange("heavy-run-line");
 const cleanups: (() => void)[] = [];
 afterEach(() => {
   for (const cleanup of cleanups.splice(0)) cleanup();
@@ -32,7 +30,6 @@ function fixture() {
   let version: WorkDeviceVersion = {
     contract: PROTOCOL_VERSION,
     takesWork: true,
-    changes: [change],
   };
   let contact: (event: WorkDeviceContact) => void = () => {};
   const ask = vi.fn(
@@ -63,8 +60,9 @@ function fixture() {
     age: (age: number) => {
       now = age;
     },
+    // A computer on the previous major takes no work, so it has no line to read.
     older: () => {
-      version = { contract: PROTOCOL_VERSION, takesWork: true };
+      version = { contract: `${Number(PROTOCOL_VERSION.split(".")[0]) - 1}.0.0`, takesWork: false };
     },
     contact: (state: "in-reach" | "gone") => {
       reachable = state === "in-reach";
@@ -108,7 +106,7 @@ describe("a computer's declared runs at the home", () => {
       }),
     );
   });
-  it("asks only a computer advertising the change and carries the recorded overrides", async () => {
+  it("asks only a computer on this major and carries the recorded overrides", async () => {
     const f = fixture();
     expect(f.reader.read("mini")).toBeUndefined();
     await f.reader.refresh("mini");

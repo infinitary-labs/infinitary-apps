@@ -47,7 +47,7 @@ import {
   sameDropReview,
 } from "@shared/recordDrop";
 import { type KeptRecoveryWay, recoveryWay, type WorkWait } from "@shared/recovery";
-import { deliveryForRecord, type RepoView } from "@shared/repos";
+import { deliveryForRecord, opensPullRequest, type RepoView } from "@shared/repos";
 import {
   type CaptainAction,
   captainActionResult,
@@ -6273,7 +6273,7 @@ export class TaskService {
       if (!to || to === row.repoId || !this.options.repos) continue;
       const repo = this.options.repos.get(to);
       if (repo?.kind === "personal" || repo?.origin) continue;
-      if (deliveryForRecord(row, "local-only") !== "direct-pr") continue;
+      if (!opensPullRequest(deliveryForRecord(row, "local-only"))) continue;
       const name = repo?.name ?? project.name;
       const handle = row.key || row.id;
       throw new TaskGraphRefusal(

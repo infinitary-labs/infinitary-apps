@@ -169,6 +169,7 @@ import {
   autonomyForRecord,
   deliveryFor,
   deliveryForRecord,
+  opensPullRequest,
   type RepoDelivery,
   type RepoView,
   RUNS_ON_THIS_MAC,
@@ -5816,7 +5817,7 @@ export class CrewSupervisor {
           throw new Error("The computer this task runs on is out of reach.");
         if (
           record &&
-          this.taskDelivery(taskId) === "direct-pr" &&
+          opensPullRequest(this.taskDelivery(taskId)) &&
           this.deliverableOf(record) === "change" &&
           !machines.takesCheckDeclarations?.(machine)
         )
@@ -10293,7 +10294,7 @@ export class CrewSupervisor {
       // Where its proposed change goes, in the person's word for the host
       // (git integration PR 1.3) - only where one goes somewhere.
       const goesIn =
-        delivery === "direct-pr" && repo?.host
+        opensPullRequest(delivery) && repo?.host
           ? forgePlace({ kind: repo.host.kind, host: repo.host.name })
           : null;
       return {
@@ -10852,7 +10853,7 @@ export class CrewSupervisor {
         if (
           ready?.revision !== presentationChecked.revision ||
           ready.head !== presentationChecked.head ||
-          (this.taskDelivery(task.id) === "direct-pr" &&
+          (opensPullRequest(this.taskDelivery(task.id)) &&
             current.delivery?.headSha !== presentationChecked.head)
         )
           throw new Error(
@@ -11392,7 +11393,7 @@ export class CrewSupervisor {
       });
     }
     const carriesMerge = input.actions.some((action) => settleEffectOf(action)?.mode === "merge");
-    if (!carriesMerge || this.taskDelivery(taskId) !== "direct-pr") return undefined;
+    if (!carriesMerge || !opensPullRequest(this.taskDelivery(taskId))) return undefined;
     if (!this.options.checkCi) return undefined;
     return this.options.checkCi(taskId).then((result) => {
       const read =
@@ -12043,7 +12044,7 @@ export class CrewSupervisor {
         `${statusDot(dot)}${span ? checksSpanWords(words, span, this.now()) : words}${span?.finishedAt != null ? ` · ${checksFinishedAgo(span.finishedAt, this.now())}` : ""}`,
         checksRestWords(span, ciAt),
       );
-    } else if (delivery === "direct-pr") {
+    } else if (opensPullRequest(delivery)) {
       cell("checks", "Checks", `${statusDot("idle")}${CHECKS_NOT_READ_WORDS}`);
     }
     if (record.delivery) cells.push(checkVerdicts(record.delivery, this.now()));
@@ -13490,7 +13491,7 @@ export class CrewSupervisor {
     // INF-994: records are kept at every care level, so a raise to Careful
     // mid-task keeps them. A review's record is the verdict on any change
     // (INF-1875), however it delivers.
-    if (input.kind !== "review" && this.taskDelivery(owner.id) !== "direct-pr")
+    if (input.kind !== "review" && !opensPullRequest(this.taskDelivery(owner.id)))
       throw new Error("Live validation belongs to a change delivered through a pull request.");
     // A review's record binds to the head its turn was assigned (INF-1875):
     // the version under review, read when the turn began, never the
@@ -13715,7 +13716,7 @@ export class CrewSupervisor {
     if (completion) {
       const delivery = this.options.tasks.get(task.id)?.delivery;
       if (
-        this.taskDelivery(task.id) !== "direct-pr" ||
+        !opensPullRequest(this.taskDelivery(task.id)) ||
         delivery?.prNumber !== completion.prNumber ||
         delivery?.headSha !== completion.headSha
       ) {
@@ -15606,7 +15607,7 @@ export class CrewSupervisor {
    * effect never learns the difference (ruling D2).
    */
   private mergeModeFor(taskId: string): "merge-pr" | "land" {
-    return this.taskDelivery(taskId) === "direct-pr" ? "merge-pr" : "land";
+    return opensPullRequest(this.taskDelivery(taskId)) ? "merge-pr" : "land";
   }
 
   /**

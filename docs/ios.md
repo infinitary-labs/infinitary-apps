@@ -142,7 +142,7 @@ Native code reveals the body from the web view's own layout once its bounds hold
 The page tells the body's bridge that its pictures can arrive late (`latePictures` on `initialize`), so the body reports drawn once the fonts its layout asked for are in.
 WebKit's `document.fonts.ready`, which the bridge waits for otherwise, resolves only after the page's load event, and that waits for every picture; a picture waiting for its computer to come back in reach would keep the body's words clipped and out of accessibility (INF-1562).
 On a short stage, such as an iPhone on its side, where the pinned head and choices would take more room than the body keeps, the whole card scrolls in that one scroller instead.
-When the home advertises `card-current-update-seen`, every snapshot supplies the owner's exact released-update seen state, which drives unread counts and the next chevron's dot.
+When the home is on `CARD_SEEN_UPDATE_SINCE` (major 13) or later, or advertises `card-current-update-seen`, every snapshot supplies the owner's exact released-update seen state, which drives unread counts and the next chevron's dot.
 A sighting acknowledges the exact released update only after the pane draws while visible, active and connected; reading never hides a note or changes another view's selection.
 The session consumes initial state before reporting again on reconnect and never queues offline sightings.
 A home without that named change retains the legacy two-argument request and session-local offer marks, with existing card actions unchanged.

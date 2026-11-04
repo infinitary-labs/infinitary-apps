@@ -200,7 +200,7 @@ Each input the first mate is served opens with one context, and a context carrie
 - **The crew lists started work.**
   `crew` lists every active task: running, idle, paused, held, and work on a computer that cannot be reached.
   Unstarted work is the `backlog` section's count per project; the `tasks` query reads it, a page at a time: a list that stops short names the `next` that alone reads its later pages from the one cut its first page took, under that page's filters, and a `next` whose cut is no longer kept, or was taken by an earlier session's tool, is refused.
-  A list that stops short keeps the one cut its owner took in the same read as the first page - every matching task id, in order - and its later pages read those ids, so work started or updated between pages neither drops nor repeats a row (`task-list-snapshot.md`); a page with no kept first page reads the live list.
+  A list that stops short keeps the one cut its owner took in the same read as the first page - every matching task id, in order - and its later pages read those ids, so work started or updated between pages neither drops nor repeats a row; a page with no kept first page reads the live list.
 - **A fold reads open work back.**
   After a fold, the next context carries `recovery` (`FOLD_RECOVERY`): before going on, the first mate reads `open_work`, which lists every message of the captain's not yet ended and every open card as the app holds them now, and reads one whole by `ask` or `card`.
   The messages include those still in a turn or waiting to be read, which the answer check judges only once their turn closes; `open_asks` lists them too.

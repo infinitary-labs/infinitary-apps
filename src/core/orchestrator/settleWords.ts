@@ -220,3 +220,18 @@ export function hasMergeLine(body: string): boolean {
 export function withMergeLine(body: string, line: string): string {
   return hasMergeLine(body) ? body.replace(MERGE_LINE, () => line) : `${line}${body}`;
 }
+
+/**
+ * The note that holds the captain's merge click in view (INF-1275): the
+ * completion card leaves on the click, and this note stays until the merge
+ * goes through or says why it could not. A queue-pr wait reads as the
+ * queue's own words (`QUEUE_WAITING_WORDS`).
+ */
+export function mergePendingCardId(taskId: string): string {
+  return `card-merge-pending-${taskId}`;
+}
+export const MERGE_PENDING_TITLE = "Merge pending";
+export const MERGE_STOPPED_TITLE = "Merge did not go through";
+export function mergePendingBody(words: string, taskTitle: string): string {
+  return `<p>${escapeCardText(words)}</p><p class="inf-muted">${escapeCardText(taskTitle)}</p>`;
+}

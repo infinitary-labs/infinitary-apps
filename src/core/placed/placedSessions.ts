@@ -49,8 +49,6 @@ import {
 } from "@shared/work";
 import { z } from "zod";
 import { DeviceOutOfReachError, type WorkDeviceContact } from "../connection/connection";
-import { contractChange, listsChange } from "../connection/contractChanges";
-import { CREW_RESPONSES } from "../connection/crewResponses";
 import {
   dueIn,
   dueRule,
@@ -165,13 +163,6 @@ export type PlacedHost = {
   toolsNow?(taskId: string): readonly string[] | undefined;
 };
 
-const CHECK_DECLARATIONS = contractChange("check-declarations");
-const MERGE_OFFER_READINESS = contractChange("merge-offer-readiness");
-/** A started task's move to or from that computer (`task-move.md`). */
-const TASK_MOVE = contractChange("task-move");
-/** Files from outside in a task's hand-over folder, removed when due (`outside-data-files.md`). */
-const OUTSIDE_DATA_FILES = contractChange("outside-data-files");
-
 /** What the crew reads of the computers that run work (`CrewSupervisorOptions.machines`). */
 export type CrewMachines = {
   /** The factories that open a conversation there; undefined when no computer can. */
@@ -223,8 +214,7 @@ export type CrewMachines = {
   takesHandover?(machine: string): boolean;
   /**
    * Whether the computer removes files from outside from a task's
-   * hand-over folder when they are due (`outside-data-files.md`); false
-   * while the home cannot tell.
+   * hand-over folder when they are due; false while the home cannot tell.
    */
   takesOutsideFiles?(machine: string): boolean;
   /** Carry a home ref into the destination repository before naming it in the brief. */
@@ -263,7 +253,7 @@ export type CrewMachines = {
   install(machine: string, taskId: string): Promise<DependencyInstall>;
   /**
    * Whether the computer takes a started task's move to or from it
-   * (`task-move`, docs/helper.md, "Moving a started task"); false while the
+   * (docs/helper.md, "Moving a started task"); false while the
    * home cannot tell.
    */
   takesMoves?(machine: string): boolean;
@@ -621,11 +611,7 @@ export class PlacedSessions implements PlacedWork, CrewMachines {
   }
 
   takesCheckDeclarations(machine: string): boolean {
-    return (
-      this.takesCurrentWork(machine) &&
-      listsChange(this.options.devices.version(machine)?.changes, CHECK_DECLARATIONS) &&
-      listsChange(this.options.devices.version(machine)?.changes, MERGE_OFFER_READINESS)
-    );
+    return this.takesCurrentWork(machine);
   }
 
   takesResults(machine: string): boolean {
@@ -633,10 +619,7 @@ export class PlacedSessions implements PlacedWork, CrewMachines {
   }
 
   takesResponses(machine: string): boolean {
-    return (
-      this.takesCurrentWork(machine) &&
-      listsChange(this.options.devices.version(machine)?.changes, CREW_RESPONSES)
-    );
+    return this.takesCurrentWork(machine);
   }
 
   takesKnowledge(machine: string): boolean {
@@ -680,12 +663,9 @@ export class PlacedSessions implements PlacedWork, CrewMachines {
     return this.takesCurrentWork(machine);
   }
 
-  /** Whether the computer removes files from outside when they are due (`outside-data-files.md`). */
+  /** Whether the computer removes files from outside when they are due: every one on the home's major. */
   takesOutsideFiles(machine: string): boolean {
-    return (
-      this.takesCurrentWork(machine) &&
-      listsChange(this.options.devices.version(machine)?.changes, OUTSIDE_DATA_FILES)
-    );
+    return this.takesCurrentWork(machine);
   }
 
   sourceRef(
@@ -710,7 +690,7 @@ export class PlacedSessions implements PlacedWork, CrewMachines {
     return this.copies.install(machine, taskId);
   }
   takesMoves(machine: string): boolean {
-    return listsChange(this.options.devices.version(machine)?.changes, TASK_MOVE);
+    return this.takesCurrentWork(machine);
   }
 
   moveOut(
@@ -978,10 +958,7 @@ export class PlacedSessions implements PlacedWork, CrewMachines {
       throw new Error(
         `${this.nameOf(deviceId)} is ${awayWord(this.options.reachOf?.(deviceId) === "connecting")}, so the conversation waits`,
       );
-    if (
-      spec.runbookSkills?.length &&
-      !listsChange(this.options.devices.version(deviceId)?.changes, contractChange("runbooks"))
-    )
+    if (spec.runbookSkills?.length && !this.takesCurrentWork(deviceId))
       throw new Error(
         `Update Infinitary on ${this.nameOf(deviceId)} before it can receive this task's runbook skills.`,
       );

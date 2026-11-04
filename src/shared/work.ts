@@ -214,12 +214,11 @@ export const placedSpecSchema = z.object({
    * `infinitary-integrations-axi` in its shell there, each list, show and
    * call asked of the home (`inf:work:integrations`,
    * `inf:work:use-integration`; docs/integrations.md, "On a computer that
-   * runs work"). The home sends it only to a computer that lists the
-   * `integrations-there` change and keeps task browsers, whose task channel
-   * the command rides.
+   * runs work"). The home sends it only to a computer that keeps task
+   * browsers, whose task channel the command rides.
    */
   integrations: z.boolean().optional(),
-  /** The named heavy-run-line change grants this computer's load command. */
+  /** The home grants this computer's load command (docs/heavy-runs.md). */
   load: z.boolean().optional(),
 });
 export type PlacedSpec = z.infer<typeof placedSpecSchema>;
@@ -240,7 +239,7 @@ export const placedEventSchema = z.union([
       count: z.number().int().nonnegative().optional(),
       /**
        * A Pi conversation's longest-running shell job there, by its id and
-       * command, while the count is above zero (`background-job-named.md`).
+       * command, while the count is above zero.
        */
       job: z.object({ id: z.string().min(1), command: z.string() }).optional(),
     }),
@@ -626,7 +625,7 @@ export const workRequests = {
   },
   "inf:work:reply": {
     effect: "change",
-    /** `interim` marks a still-working line (`work-reply-interim.md`); an older home drops it. */
+    /** `interim` marks a still-working line. */
     request: asked({ cardId: z.string(), text: z.string(), interim: z.boolean().optional() }),
     response: toolTextSchema,
   },
@@ -652,7 +651,7 @@ export const workRequests = {
         parent: z.string().optional(),
         limit: z.number().int().min(1).max(100).optional(),
         skip: z.number().int().nonnegative().optional(),
-        // One cut of a list that stops short, and its later pages (`task-list-snapshot.md`).
+        // One cut of a list that stops short, and its later pages.
         snapshot: z.boolean().optional(),
         ids: z.array(z.string()).max(100).optional(),
         // Every project and its folder instead of tasks (`project-folders.md`).
@@ -731,13 +730,13 @@ export const workRequests = {
       input: z.object({
         runId: z.number().int().positive(),
         artifactId: z.number().int().positive(),
-        /** One exact member streamed into task evidence (workflow-evidence-file). */
+        /** One exact member streamed into task evidence. */
         file: z.string().min(1).max(4096).optional(),
-        /** The archive's files instead of saving anything (`artifact-parts`). */
+        /** The archive's files instead of saving anything. */
         list: z.boolean().optional(),
-        /** Paths inside the archive to save, or to narrow a listing to (`artifact-parts`). */
+        /** Paths inside the archive to save, or to narrow a listing to. */
         files: z.array(z.string().min(1).max(4096)).optional(),
-        /** The listing's first file, 1-based (`artifact-parts`). */
+        /** The listing's first file, 1-based. */
         offset: z.number().int().positive().optional(),
       }),
     }),
@@ -766,8 +765,7 @@ export const workRequests = {
   /**
    * The integrations command's list, with no name, and its show: the home
    * reads its own integrations for the crewmate, as for a crewmate of its
-   * own (docs/integrations.md, "On a computer that runs work"), from the
-   * `integrations-there` change on.
+   * own (docs/integrations.md, "On a computer that runs work").
    */
   "inf:work:integrations": {
     effect: "read",
@@ -1037,7 +1035,7 @@ const bundleSchema = z.object({
 export const bundledRefSchema = z.enum(["branch", "kept"]);
 export type BundledRef = z.infer<typeof bundledRefSchema>;
 
-/** What `read` reads: a bundle, or the pack of a task that moves (`task-move`). */
+/** What `read` reads: a bundle, or the pack of a task that moves. */
 export const readableRefSchema = z.enum(["branch", "kept", "move"]);
 export type ReadableRef = z.infer<typeof readableRefSchema>;
 
@@ -1232,7 +1230,7 @@ export const workOrders = {
         .max(64),
       /**
        * Files from outside due in the task's hand-over folder, by kept name,
-       * removed first (`outside-data-files.md`).
+       * removed first.
        */
       files: z.array(z.string().regex(HANDOVER_FILE_NAME)).max(1024).optional(),
     }),
@@ -1490,7 +1488,7 @@ export const workOrders = {
         task: placedTaskIdSchema,
         runId: z.number().int().positive(),
         artifactId: z.number().int().positive(),
-        /** A selection of the artifact's files, named by its SHA-256's start (`artifact-parts`). */
+        /** A selection of the artifact's files, named by its SHA-256's start. */
         part: z
           .string()
           .regex(/^[0-9a-f]{12}$/)
@@ -1505,8 +1503,8 @@ export const workOrders = {
     response: z.object({ outcome: z.enum(["partial", "written", "exists"]) }),
   },
   /**
-   * Packs the task's work to move it to another computer (`task-move`,
-   * docs/helper.md, "Moving a started task"): its conversation must be idle
+   * Packs the task's work to move it to another computer
+   * (docs/helper.md, "Moving a started task"): its conversation must be idle
    * and is let go first, never closed, so the task can run here again if the
    * move does not finish. The pack - what is staged and not, untracked
    * files and the task's own folders - waits in `bundles/` for `read` with
@@ -1521,7 +1519,7 @@ export const workOrders = {
     response: z.object({ head: commitSchema, branch: z.string().min(1), pack: bundleSchema }),
   },
   /**
-   * Makes the working copy of a task that moves here (`task-move`): asked
+   * Makes the working copy of a task that moves here: asked
    * first with neither file, it answers the commits it holds that a bundle
    * may leave out (`need`); then, with the task's branch as a source file
    * (none when every commit is here) and its pack, it fetches the branch,

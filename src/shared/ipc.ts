@@ -433,7 +433,7 @@ import { workRequests, workRequestWire } from "./work";
  * client can refuse or degrade on a mismatch instead of failing one call at
  * a time.
  */
-export const PROTOCOL_VERSION = "12.0.0";
+export const PROTOCOL_VERSION = "13.0.0";
 
 /**
  * The version rule's window for a computer that runs work (docs/contract.md):
@@ -457,7 +457,7 @@ export const PROTOCOL_MAJORS_BEHIND = 0;
  * A view says its own floor in its hello (`viewFloor`), so a newer view
  * keeps changing things on an older home its floor reaches.
  */
-export const VIEW_FLOOR = 11;
+export const VIEW_FLOOR = 13;
 
 /** What a client may ask of a home under the version rule: everything, or the reads alone. */
 export type ContractAccess = "full" | "read";
@@ -632,6 +632,25 @@ export function readsFetchAppSystem(homeVersion: string): boolean {
  * older home for them only when its welcome names the change (docs/ios.md).
  */
 export const SCENE_OBSERVATIONS_SINCE = "12.0.0";
+
+/**
+ * The first contract whose home answers `inf:cards:seen-update` without
+ * naming `card-current-update-seen`: major 13 folded that name in. A view
+ * reports the exact update it drew to such a home, or to an older home whose
+ * changes name it, and the offer sighting to any other.
+ */
+export const CARD_SEEN_UPDATE_SINCE = "13.0.0";
+
+/** Whether a home answers current-update sightings (`CARD_SEEN_UPDATE_SINCE`, or its older name). */
+export function readsSeenUpdate(
+  homeVersion: string | undefined,
+  homeChanges: readonly string[] | undefined,
+): boolean {
+  return (
+    (homeVersion !== undefined && speaksSince(homeVersion, CARD_SEEN_UPDATE_SINCE)) ||
+    (homeChanges?.includes("card-current-update-seen") ?? false)
+  );
+}
 
 /** Whether a computer takes a task with no project (`PLACED_SEED_SINCE`). */
 export function speaksSeed(deviceVersion: string): boolean {

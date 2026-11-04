@@ -109,6 +109,7 @@ export const POLICY_SOURCE_WORDS = { task: "This task", project: "Project settin
 export const RUNS_ON_SOURCE_WORDS = { ...POLICY_SOURCE_WORDS, parent: "Parent task" } as const;
 export const POLICY_DELIVERY_WORDS = {
   "direct-pr": "Pull request",
+  "queue-pr": "Pull request through your queue",
   "local-only": "Local merge",
 } as const;
 export const POLICY_MERGING_WORDS = { on: "Merges on its own", off: "Asks first" } as const;

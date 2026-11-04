@@ -61,6 +61,7 @@ function fixture() {
   const merge = vi.fn();
   const cards = {
     retireTaskCards: vi.fn(),
+    withdrawHostCard: vi.fn(),
     values: () => [],
     stored: () => undefined,
     shownAt: () => 0,

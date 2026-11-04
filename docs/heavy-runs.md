@@ -116,8 +116,7 @@ The optional load facts ride the existing computer-resource view and its two-sec
 The authenticated `inf:computer:load` order carries only already-recorded overrides and returns line facts, never process identities or commands.
 The home reads standing overrides through `TaskService.passingOverridesForComputer`, seeking only non-null permission overrides and joining their execution computer and evidence head by task id, without composing task records.
 Closed tasks remain eligible because a declared process group can survive its task closing; `overridePasses` retains the recorded hold and version scope.
-The home asks and grants the load capability only when the work computer lists the named `heavy-run-line` contract change.
-An older computer is not asked and retains its existing capabilities.
+Every computer that takes work runs the home's contract major, so the home asks each one for its load and grants it the load capability.
 The iPhone and iPad app retains its existing surface and ignores these optional facts.
 
 ## Checks

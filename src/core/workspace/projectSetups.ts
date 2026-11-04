@@ -15,6 +15,8 @@ import {
   SETUP_CARD_WORDS as WORDS,
 } from "@shared/projectSetup";
 import {
+  deliveryChoices,
+  opensPullRequest,
   type RepoPolicyPatch,
   type RepoSetupCheck,
   type RepoSetupSpec,
@@ -104,9 +106,13 @@ export class ProjectSetups {
         text: `${checked.existing.name} is already one of the captain's projects (repo_id ${checked.existing.id}), so no setup card went up.`,
       };
     }
-    if (delivery === "direct-pr" && !checked.origin)
+    if (opensPullRequest(delivery) && !checked.origin)
       throw new Error(
         "This project is kept on this computer. Use Local merge until it lives somewhere else.",
+      );
+    if (delivery && !deliveryChoices(checked.host).includes(delivery))
+      throw new Error(
+        "Only a project on GitHub can merge through its queue. Choose pull requests or a local merge.",
       );
     const computers = runsHereOnly({ kind: "project", origin: checked.origin })
       ? []

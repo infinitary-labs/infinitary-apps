@@ -166,7 +166,7 @@ Unconsumed steers, provider failures and interrupted or update-paused turns are 
 The remote session's ordered event lane supplies the same completed-turn boundary; an incomplete stream supplies none.
 Adoption and event replay await asynchronous report callbacks before consuming later events, so recovery cannot declare an answer missing while its saved callback is still restoring it.
 The first mate decides whether to wait, request a repost or reassign, without a second queue, grace timer or recovery-count rule.
-`crew-responses` is the named work-contract change: the home refuses tracked steers to an older work computer, and a work computer refuses correlated reports to an older home without dropping their references.
+Correlated responses ride the work contract's current major: a computer takes work only on its home's major (`takesWork`), so the home and every computer that runs work keep their references.
 Both model backends use the same tool schema and writer.
 Shared card answers will use this same writer when card collaboration is implemented; existing card ownership and consent remain unchanged here.
 

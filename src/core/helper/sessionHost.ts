@@ -37,8 +37,6 @@ import {
   workRequests,
 } from "@shared/work";
 import type { CrewmateBrowser } from "../browser/taskBrowsers";
-import { contractChange, listsChange } from "../connection/contractChanges";
-import { CREW_RESPONSES } from "../connection/crewResponses";
 import { WorkRequestAbortedError } from "../devices/homeLink";
 import { PLACED_RELEASE_FILE_REFUSAL } from "../forge";
 import {
@@ -119,10 +117,6 @@ import type { WorkingCopies } from "./workingCopies";
  * background task a Claude client still ran when it ended while this
  * computer ran on.
  */
-
-const FIRST_RELEASE_REPORTS = contractChange("first-release-reports");
-/** A task list's one cut and its later pages (`task-list-snapshot.md`). */
-const TASK_LIST_SNAPSHOT = contractChange("task-list-snapshot");
 
 export type SessionHostOptions = {
   source?: SelfSourceReader;
@@ -235,13 +229,6 @@ const FORWARDED_TOOLS = new Set([
 
 /** The provider's retries a crewmate's turn gets when the home names none. */
 const RETRIES = 2;
-
-const CHECK_DECLARATIONS = contractChange("check-declarations");
-const MERGE_OFFER_READINESS = contractChange("merge-offer-readiness");
-/** Listing an artifact's files and saving selected ones (`artifact-parts.md`). */
-const ARTIFACT_PARTS = contractChange("artifact-parts");
-/** One streamed member into task evidence, on both computers. */
-const WORKFLOW_EVIDENCE_FILE = contractChange("workflow-evidence-file");
 
 const toolTextSchema = workRequests["inf:work:close-card"].response;
 const integrationAnswerSchema = workRequests["inf:work:use-integration"].response;
@@ -370,7 +357,7 @@ export class SessionHost {
     const count = this.options.runningJobCount?.(held.task);
     if (count === undefined) return;
     // The home cannot see these jobs, so the count names the oldest one
-    // for its words about it (`background-job-named.md`).
+    // for its words about it.
     const oldest = count > 0 ? this.options.oldestRunningJob?.(held.task) : undefined;
     if (!snapshot && count === held.jobs && oldest?.jobId === held.jobId) return;
     held.jobs = count;
@@ -959,7 +946,8 @@ export class SessionHost {
           this.record(held, event);
         },
         this.now,
-        listsChange(this.options.homeChanges?.(), contractChange("tool-observations")),
+        // Its home runs this major, which keeps tool observations.
+        true,
         join(folders.root, "completions.sqlite"),
       );
       if (this.stopped) {
@@ -1343,20 +1331,6 @@ export class SessionHost {
         this.withDeadline(
           "inf:work:report",
           async (signal) => {
-            if (
-              declared?.responses?.length &&
-              !listsChange(this.options.homeChanges?.(), CREW_RESPONSES)
-            )
-              throw new Error(
-                "The home cannot save correlated responses yet. Nothing was sent; update Infinitary at home before submitting this answer.",
-              );
-            if (
-              declared?.firstRelease &&
-              !listsChange(this.options.homeChanges?.(), FIRST_RELEASE_REPORTS)
-            )
-              throw new Error(
-                "The home cannot record first-release facts yet. Nothing was sent; report the verification gap to the first mate.",
-              );
             if (declared?.validation?.kind === "run") {
               verifyKeptValidationEvidenceSync(
                 declared.validation.evidence,
@@ -1436,27 +1410,8 @@ export class SessionHost {
         this.withDeadline(
           "inf:work:tasks",
           async (signal) => {
-            const changes = this.options.homeChanges?.();
-            if (input.skip !== undefined && !listsChange(changes, FIRST_RELEASE_REPORTS))
-              throw new Error(
-                "The home cannot page task lists yet. Nothing was sent; report the verification gap to the first mate.",
-              );
-            // An older home keeps no cut: its first page goes as before and
-            // names no next page; a later page of a cut it never kept is refused.
-            const snapshots = listsChange(changes, TASK_LIST_SNAPSHOT);
-            if (input.ids !== undefined && !snapshots)
-              throw new Error(
-                "The home cannot page this task list. Nothing was sent; read the list again from its first page.",
-              );
-            const { snapshot, ...plain } = input;
-            const sent = snapshot && snapshots ? input : plain;
             const answer = tasksAnswerSchema.parse(
-              await this.call(
-                held,
-                "inf:work:tasks",
-                { callId: randomUUID(), input: sent },
-                signal,
-              ),
+              await this.call(held, "inf:work:tasks", { callId: randomUUID(), input }, signal),
             );
             return {
               rows: answer.rows as TaskQueryRow[],
@@ -1505,14 +1460,6 @@ export class SessionHost {
         return ask("inf:work:open-change", { input }, signal);
       },
       onCheckChange: (input, signal) => {
-        if (!listsChange(this.options.homeChanges?.(), MERGE_OFFER_READINESS))
-          throw new Error(
-            `Check reading refused: ${HOME.the} needs an update before it understands current check facts and merge offers. Nothing was sent.`,
-          );
-        if (input?.declaration && !listsChange(this.options.homeChanges?.(), CHECK_DECLARATIONS))
-          throw new Error(
-            `Check declaration refused: ${HOME.the} needs an update before it can record crew check judgments. Nothing was sent.`,
-          );
         const repair = input?.conflictRepair;
         const wire = repair
           ? { ...input, conflictRepair: { ...repair, impact: wireRepairImpact(repair.impact) } }
@@ -1520,20 +1467,6 @@ export class SessionHost {
         return ask("inf:work:check-change", { input: wire ?? {} }, signal);
       },
       onDownloadArtifact: (input, signal) => {
-        if (
-          input.file !== undefined &&
-          !listsChange(this.options.homeChanges?.(), WORKFLOW_EVIDENCE_FILE)
-        )
-          throw new Error(
-            `Artifact file refused: ${HOME.the} needs an update before it can save a file into task evidence. Nothing was sent.`,
-          );
-        if (
-          (input.list || input.files !== undefined) &&
-          !listsChange(this.options.homeChanges?.(), ARTIFACT_PARTS)
-        )
-          throw new Error(
-            `Artifact listing refused: ${HOME.the} needs an update before it can list an artifact's files or save selected ones. Nothing was sent.`,
-          );
         return ask("inf:work:download-artifact", { input }, signal);
       },
       // The home's knowledge, read and written there as for a crewmate of its own.

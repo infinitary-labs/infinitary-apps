@@ -38,7 +38,6 @@ import {
 import type { ContractWorld } from "../../../tests/helpers/sessionContract";
 import { moveWorkFolder, olderWorkFolder } from "../../../tests/helpers/workFolderMove";
 import { type HomeConnection, startConnection } from "../connection/connection";
-import { CONTRACT_CHANGES } from "../connection/contractChanges";
 import { DevicePairing } from "../devices/pairing";
 import type { CoreActor, CoreDispatch } from "../dispatcher";
 import { CoreEventBus } from "../events";
@@ -482,120 +481,96 @@ async function placed(
 }
 
 describe("a conversation held on a computer that runs work", () => {
-  it.each([true, false])(
-    "INF-2214 preserves response correlation or explicitly refuses an older home (supported: %s)",
-    async (supported) => {
-      const at = await placed({ homeChanges: supported ? ["crew-responses"] : [] });
-      await at.open();
-      model([
-        {
-          tools: [
-            {
-              name: "report",
-              args: {
-                text: "The remover is at the verified target path.",
-                responses: [
-                  { request_id: "path-request", response_id: "path-answer", status: "answered" },
-                ],
-              },
+  it("INF-2214 preserves response correlation through the home", async () => {
+    const at = await placed();
+    await at.open();
+    model([
+      {
+        tools: [
+          {
+            name: "report",
+            args: {
+              text: "The remover is at the verified target path.",
+              responses: [
+                { request_id: "path-request", response_id: "path-answer", status: "answered" },
+              ],
             },
-          ],
-        },
-        { text: "Response submitted." },
-      ]);
-      await at.order("inf:session:prompt", [
-        { orderId: "path:1", task: TASK, text: "Answer path-request." },
-      ]);
-      await at.ended(1);
-      const reports = at.home.effects.filter((effect) => effect.channel === "inf:work:report");
-      if (supported)
-        expect(reports[0]?.request).toMatchObject({
-          declared: {
-            responses: [
-              { requestId: "path-request", responseId: "path-answer", status: "answered" },
-            ],
           },
-        });
-      else {
-        expect(reports).toEqual([]);
-        expect(
-          at.home.events.find(
-            (record) => record.event.type === "tool_end" && record.event.toolName === "report",
-          )?.event,
-        ).toMatchObject({ isError: true });
-      }
-    },
-  );
-  it.each([true, false])(
-    "forwards first-release facts only to a home that records them (INF-1607; supported: %s)",
-    async (supported) => {
-      const at = await placed({ homeChanges: supported ? ["first-release-reports"] : [] });
-      await at.open();
-      const release = {
-        version: "0.6.0",
-        url: "https://github.com/infinitary-labs/infinitary/releases/tag/v0.6.0",
-        evidence: "Published source contains the task's merge; earlier published sources do not.",
-        tasks: ["INF-1607"],
-      };
-      model([
-        { tools: [{ name: "tasks", args: { status: "done", skip: 100 } }] },
-        {
-          tools: [
-            {
-              name: "report",
-              args: {
-                text: "Verified the first published release of the merged fix.",
-                first_release: release,
-              },
+        ],
+      },
+      { text: "Response submitted." },
+    ]);
+    await at.order("inf:session:prompt", [
+      { orderId: "path:1", task: TASK, text: "Answer path-request." },
+    ]);
+    await at.ended(1);
+    const reports = at.home.effects.filter((effect) => effect.channel === "inf:work:report");
+    expect(reports[0]?.request).toMatchObject({
+      declared: {
+        responses: [{ requestId: "path-request", responseId: "path-answer", status: "answered" }],
+      },
+    });
+  });
+  it("forwards first-release facts and a task list page to the home that records them (INF-1607)", async () => {
+    const at = await placed();
+    await at.open();
+    const release = {
+      version: "0.6.0",
+      url: "https://github.com/infinitary-labs/infinitary/releases/tag/v0.6.0",
+      evidence: "Published source contains the task's merge; earlier published sources do not.",
+      tasks: ["INF-1607"],
+    };
+    model([
+      { tools: [{ name: "tasks", args: { status: "done", skip: 100 } }] },
+      {
+        tools: [
+          {
+            name: "report",
+            args: {
+              text: "Verified the first published release of the merged fix.",
+              first_release: release,
             },
-          ],
-        },
-        { text: "Reported the release verification." },
-      ]);
-      await at.order("inf:session:prompt", [
-        { orderId: "release:1", task: TASK, text: "Record the verified release." },
-      ]);
-      await at.ended(1);
-      const queries = at.home.effects.filter((effect) => effect.channel === "inf:work:tasks");
-      if (supported)
-        expect(queries[0]?.request).toMatchObject({ input: { status: "done", skip: 100 } });
-      else expect(queries).toEqual([]);
-      const reports = at.home.effects.filter((effect) => effect.channel === "inf:work:report");
-      if (supported)
-        expect(reports[0]?.request).toMatchObject({ declared: { firstRelease: release } });
-      else expect(reports).toEqual([]);
-      expect(
-        at.home.events.find(
-          (record) => record.event.type === "tool_end" && record.event.toolName === "report",
-        )?.event,
-      ).toMatchObject({ isError: !supported });
-    },
-  );
+          },
+        ],
+      },
+      { text: "Reported the release verification." },
+    ]);
+    await at.order("inf:session:prompt", [
+      { orderId: "release:1", task: TASK, text: "Record the verified release." },
+    ]);
+    await at.ended(1);
+    const queries = at.home.effects.filter((effect) => effect.channel === "inf:work:tasks");
+    expect(queries[0]?.request).toMatchObject({ input: { status: "done", skip: 100 } });
+    const reports = at.home.effects.filter((effect) => effect.channel === "inf:work:report");
+    expect(reports[0]?.request).toMatchObject({ declared: { firstRelease: release } });
+    expect(
+      at.home.events.find(
+        (record) => record.event.type === "tool_end" && record.event.toolName === "report",
+      )?.event,
+    ).toMatchObject({ isError: false });
+  });
 
-  it.each([true, false])(
-    "asks a home for a task list's cut only when it keeps one, and an older home still answers the first page (INF-1746 R9; supported: %s)",
-    async (supported) => {
-      const at = await placed({ homeChanges: supported ? ["task-list-snapshot"] : [] });
-      await at.open();
-      model([
-        { tools: [{ name: "tasks", args: { status: "open", limit: 1 } }] },
-        { text: "Listed." },
-      ]);
-      await at.order("inf:session:prompt", [
-        { orderId: "list:1", task: TASK, text: "List the open work." },
-      ]);
-      await at.ended(1);
-      const [query] = at.home.effects.filter((effect) => effect.channel === "inf:work:tasks");
-      const input = (query?.request as { input?: Record<string, unknown> } | undefined)?.input;
-      expect(input).toMatchObject({ status: "open", limit: 1 });
-      expect(input?.snapshot).toBe(supported ? true : undefined);
-      expect(
-        at.home.events.find(
-          (record) => record.event.type === "tool_end" && record.event.toolName === "tasks",
-        )?.event,
-      ).toMatchObject({ isError: false });
-    },
-  );
+  it("asks the home for a task list's cut (INF-1746 R9)", async () => {
+    const at = await placed();
+    await at.open();
+    model([
+      { tools: [{ name: "tasks", args: { status: "open", limit: 1 } }] },
+      { text: "Listed." },
+    ]);
+    await at.order("inf:session:prompt", [
+      { orderId: "list:1", task: TASK, text: "List the open work." },
+    ]);
+    await at.ended(1);
+    const [query] = at.home.effects.filter((effect) => effect.channel === "inf:work:tasks");
+    const input = (query?.request as { input?: Record<string, unknown> } | undefined)?.input;
+    expect(input).toMatchObject({ status: "open", limit: 1 });
+    expect(input?.snapshot).toBe(true);
+    expect(
+      at.home.events.find(
+        (record) => record.event.type === "tool_end" && record.event.toolName === "tasks",
+      )?.event,
+    ).toMatchObject({ isError: false });
+  });
 
   it("runs the home's prompt there, does each callback once at the home, and tells the home every event once, in order", async () => {
     const at = await placed();
@@ -1442,126 +1417,92 @@ describe("a conversation held on a computer that runs work", () => {
     );
   });
 
-  // INF-1555 F12: an older home must not silently apply a separate-ready protocol.
-  it.each(["check-declarations", "merge-offer-readiness", undefined] as const)(
-    "forwards current check declarations only with the current protocol (missing: %s)",
-    async (missing) => {
-      const supported = missing === undefined;
-      const at = await placed({
-        homeChanges: CONTRACT_CHANGES.names.filter((name) => name !== missing),
-      });
-      await at.order("inf:session:open", [
-        {
-          orderId: `open:${TASK}:1`,
-          task: TASK,
-          spec: { ...at.spec, tools: [...at.spec.tools, "check_change"] },
-        },
-      ]);
-      const input = {
-        declaration: {
-          headSha: "93355db9d04e964513879db74d068a7789cb4c16",
-          verdict: "flake",
-          check: "linux-checks",
-          evidence: "The failed log differs from the successful same-version rerun.",
-        },
-      };
-      model([{ tools: [{ name: "check_change", args: input }] }, { text: "Recorded the result." }]);
-      await at.order("inf:session:prompt", [
-        { orderId: "check-judgment", task: TASK, text: "Record the check judgment." },
-      ]);
-      await at.ended(1);
-      const effects = at.home.effects.filter(
-        (effect) => effect.channel === "inf:work:check-change",
-      );
-      if (supported) expect(effects.map((effect) => effect.request.input)).toEqual([input]);
-      else {
-        expect(effects).toEqual([]);
-        expect(JSON.stringify(api.requests.at(-1)?.body?.messages)).toContain("Nothing was sent");
-      }
-    },
-  );
+  // INF-1555 F12: the home on this major records the crew's check judgments.
+  it("forwards current check declarations to the home", async () => {
+    const at = await placed();
+    await at.order("inf:session:open", [
+      {
+        orderId: `open:${TASK}:1`,
+        task: TASK,
+        spec: { ...at.spec, tools: [...at.spec.tools, "check_change"] },
+      },
+    ]);
+    const input = {
+      declaration: {
+        headSha: "93355db9d04e964513879db74d068a7789cb4c16",
+        verdict: "flake",
+        check: "linux-checks",
+        evidence: "The failed log differs from the successful same-version rerun.",
+      },
+    };
+    model([{ tools: [{ name: "check_change", args: input }] }, { text: "Recorded the result." }]);
+    await at.order("inf:session:prompt", [
+      { orderId: "check-judgment", task: TASK, text: "Record the check judgment." },
+    ]);
+    await at.ended(1);
+    const effects = at.home.effects.filter((effect) => effect.channel === "inf:work:check-change");
+    expect(effects.map((effect) => effect.request.input)).toEqual([input]);
+  });
 
-  // INF-1932: an older home drops list and files and would save the whole archive instead.
-  it.each([true, false])(
-    "asks the home to list or select an artifact's files only when it lists the change (has it: %s)",
-    async (supported) => {
-      const at = await placed({
-        homeChanges: CONTRACT_CHANGES.names.filter(
-          (name) => supported || name !== "artifact-parts",
-        ),
-      });
-      await at.order("inf:session:open", [
-        {
-          orderId: `open:${TASK}:1`,
-          task: TASK,
-          spec: { ...at.spec, tools: [...at.spec.tools, "download_artifact"] },
-        },
-      ]);
-      const whole = { runId: 41007625484, artifactId: 12960596943 };
-      const selected = { ...whole, files: ["ipad/join/48-xcodebuild.log"] };
-      model([
-        {
-          tools: [
-            { name: "download_artifact", args: whole },
-            { name: "download_artifact", args: selected },
-          ],
-        },
-        { text: "Read the log." },
-      ]);
-      await at.order("inf:session:prompt", [
-        { orderId: "artifact-parts", task: TASK, text: "Read the iPad join log." },
-      ]);
-      await at.ended(1);
-      const asked = at.home.effects
-        .filter((effect) => effect.channel === "inf:work:download-artifact")
-        .map((effect) => effect.request.input);
-      expect(asked).toEqual(supported ? [whole, selected] : [whole]);
-      if (!supported)
-        expect(JSON.stringify(api.requests.at(-1)?.body?.messages)).toContain(
-          "needs an update before it can list an artifact's files or save selected ones. Nothing was sent.",
-        );
-    },
-  );
+  // INF-1932: the home lists an artifact's files and saves selected ones.
+  it("asks the home to list or select an artifact's files", async () => {
+    const at = await placed();
+    await at.order("inf:session:open", [
+      {
+        orderId: `open:${TASK}:1`,
+        task: TASK,
+        spec: { ...at.spec, tools: [...at.spec.tools, "download_artifact"] },
+      },
+    ]);
+    const whole = { runId: 41007625484, artifactId: 12960596943 };
+    const selected = { ...whole, files: ["ipad/join/48-xcodebuild.log"] };
+    model([
+      {
+        tools: [
+          { name: "download_artifact", args: whole },
+          { name: "download_artifact", args: selected },
+        ],
+      },
+      { text: "Read the log." },
+    ]);
+    await at.order("inf:session:prompt", [
+      { orderId: "artifact-parts", task: TASK, text: "Read the iPad join log." },
+    ]);
+    await at.ended(1);
+    const asked = at.home.effects
+      .filter((effect) => effect.channel === "inf:work:download-artifact")
+      .map((effect) => effect.request.input);
+    expect(asked).toEqual([whole, selected]);
+  });
 
-  // INF-2330: an old home must not strip file and download a different archive.
-  it.each([true, false])(
-    "sends an exact workflow file only to a home that understands it (%s)",
-    async (supported) => {
-      const at = await placed({
-        homeChanges: CONTRACT_CHANGES.names.filter(
-          (name) => supported || name !== "workflow-evidence-file",
-        ),
-      });
-      await at.order("inf:session:open", [
-        {
-          orderId: `open:${TASK}:1`,
-          task: TASK,
-          spec: { ...at.spec, tools: [...at.spec.tools, "download_artifact"] },
-        },
-      ]);
-      const input = {
-        runId: 41464279524,
-        artifactId: 13168688886,
-        file: "ipad/rest/77D9D1B4-0109-473B-849C-B88EBF3250C7.mp4",
-      };
-      model([
-        { tools: [{ name: "download_artifact", args: input }] },
-        { text: "Read the recording." },
-      ]);
-      await at.order("inf:session:prompt", [
-        { orderId: "evidence-file", task: TASK, text: "Read the recording." },
-      ]);
-      await at.ended(1);
-      const asked = at.home.effects
-        .filter((effect) => effect.channel === "inf:work:download-artifact")
-        .map((effect) => effect.request.input);
-      expect(asked).toEqual(supported ? [input] : []);
-      if (!supported)
-        expect(JSON.stringify(api.requests.at(-1)?.body?.messages)).toContain(
-          "needs an update before it can save a file into task evidence. Nothing was sent.",
-        );
-    },
-  );
+  // INF-2330: the home saves one exact workflow file into task evidence.
+  it("sends an exact workflow file to the home", async () => {
+    const at = await placed();
+    await at.order("inf:session:open", [
+      {
+        orderId: `open:${TASK}:1`,
+        task: TASK,
+        spec: { ...at.spec, tools: [...at.spec.tools, "download_artifact"] },
+      },
+    ]);
+    const input = {
+      runId: 41464279524,
+      artifactId: 13168688886,
+      file: "ipad/rest/77D9D1B4-0109-473B-849C-B88EBF3250C7.mp4",
+    };
+    model([
+      { tools: [{ name: "download_artifact", args: input }] },
+      { text: "Read the recording." },
+    ]);
+    await at.order("inf:session:prompt", [
+      { orderId: "evidence-file", task: TASK, text: "Read the recording." },
+    ]);
+    await at.ended(1);
+    const asked = at.home.effects
+      .filter((effect) => effect.channel === "inf:work:download-artifact")
+      .map((effect) => effect.request.input);
+    expect(asked).toEqual([input]);
+  });
 
   // INF-497: a home before `STORY_AROUND_SINCE` strips around from open_change and
   // would answer as if the words had been changed; the computer refuses first.

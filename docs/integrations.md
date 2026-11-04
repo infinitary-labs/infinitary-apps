@@ -185,7 +185,7 @@ Gmail's actions (`gmail.ts`) are `search_mail`, `read_message` and `save_attachm
 It declares `delivers: "file"`, so only a crewmate may call it: the first mate is refused with words to start a crewmate, before any card.
 The host checks no file name: the approval card shows the exact input and the crewmate's reason, which says which attachment it is and why.
 The service saves the bytes into the calling task's hand-over folder through `IntegrationsServiceOptions.files`, 0600 and named by its sha256 and its own name (`handoverFileName`), on this Mac or through the source-file order on a computer that runs work, and answers only its name, type, size and path, fenced.
-A computer that runs work without `outside-data-files` is refused before the card and told to update, since it could not remove the file when due.
+A computer that runs work and does not take work on the home's contract major is refused before the card and told to update, since it could not remove the file when due.
 A saved file stays until the task closes, or until Google's words would go (30 days, or Delete Gmail and Calendar content), whichever is first ([Task retention](task-retention.md#words-from-outside)).
 Words read inside a saved file reach the crewmate unmarked, and Google's notice says so.
 A message read is its plain text, or its HTML read as text in one pass over it, so markup a sender never closes cannot slow the app's own process.

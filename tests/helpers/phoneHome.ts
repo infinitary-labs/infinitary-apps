@@ -290,17 +290,11 @@ export async function startPhoneHome(
   let loseNextReply = false;
   // The core's own id for the hero card (a first mate card's id is the core's, not the one asked for).
   let heroId = "";
-  let legacySeenFrom = 0;
   let sceneObservationReads = 0;
   // INF-1390: the core reaches each connection this home starts, as the app's shell attaches its
   // own (src/main/shell.ts), so the core's door answers the phone's link once it listens.
   let unreach = () => {};
-  const connect = (
-    protocolVersion = PROTOCOL_VERSION,
-    sceneSupport = true,
-    viewFloor?: number,
-    sharedSeenSupport = true,
-  ) => {
+  const connect = (protocolVersion = PROTOCOL_VERSION, sceneSupport = true, viewFloor?: number) => {
     const connection = startConnection({
       dispatch: async (channel, args, actor) => {
         if (channel === "inf:conversation:state" || channel === "inf:computers:presence") {
@@ -321,8 +315,6 @@ export async function startPhoneHome(
           ].includes(channel)
         )
           cardRequests.push({ channel, args });
-        if (channel === "inf:cards:seen-update" && !sharedSeenSupport)
-          throw new Error("This older home has no exact-update sightings");
         if (
           ["inf:converse", "inf:task:run", "inf:task:steer", "inf:task:interrupt"].includes(channel)
         ) {
@@ -359,11 +351,7 @@ export async function startPhoneHome(
           held.entered.resolve();
           await held.released.promise;
         }
-        let result = await core.dispatch(channel, args, actor);
-        if (!sharedSeenSupport && channel === "inf:cards:list")
-          result = (result as import("../../src/shared/cards").Card[]).map(
-            ({ currentUpdateId: _id, currentUpdateSeen: _seen, ...card }) => card,
-          ) as typeof result;
+        const result = await core.dispatch(channel, args, actor);
 
         if (loseNextReply && channel === "inf:converse") {
           loseNextReply = false;
@@ -378,11 +366,7 @@ export async function startPhoneHome(
       name: () => "Test Mac mini",
       protocolVersion,
       ...(viewFloor !== undefined ? { viewFloor } : {}),
-      changes: sceneSupport
-        ? CONTRACT_CHANGES.names.filter(
-            (name) => sharedSeenSupport || name !== "card-current-update-seen",
-          )
-        : [],
+      changes: sceneSupport ? CONTRACT_CHANGES.names : [],
     });
     connection.onViewDevice(({ deviceId, contact }) => {
       if (contact === "in-reach") {
@@ -1135,27 +1119,6 @@ export async function startPhoneHome(
             core.services.supervisor.cardsSnapshot().find((card) => card.title === title);
           if (!read()) throw new Error(`No card is titled ${title}`);
           await until(() => read()?.currentUpdateSeen === true);
-          result = { ok: true };
-          break;
-        }
-        case "POST shared-seen-legacy-wait": {
-          await until(() =>
-            cardRequests.slice(legacySeenFrom).some((call) => call.channel === "inf:cards:seen"),
-          );
-          result = { calls: structuredClone(cardRequests.slice(legacySeenFrom)) };
-          break;
-        }
-        case "POST shared-seen-legacy":
-        case "POST shared-seen-current": {
-          legacySeenFrom = cardRequests.length;
-          await connection.close();
-          connection = connect(
-            PROTOCOL_VERSION,
-            true,
-            undefined,
-            command === "shared-seen-current",
-          );
-          await connection.settled();
           result = { ok: true };
           break;
         }

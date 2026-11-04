@@ -476,7 +476,7 @@ The wake carries the observed task shares, unclaimed use, process count and swap
 The first mate decides what to steer; this observation path never kills, pauses, slows or gates a run.
 The task record’s Use row reads these same live observations, with explicit unavailable words when they are missing or stale.
 The separate [heavy-run line](heavy-runs.md) consumes the completed sample to admit caller-declared programs, retains their groups across restart, and supplies the task record's separate Run row.
-The named `heavy-run-line` order shares the resource feed's cadence and is asked only of a work computer that advertises it.
+Its order shares the resource feed's cadence and is asked of every computer that runs work.
 
 
 ## Holding a conversation
@@ -551,7 +551,7 @@ A home opens one for a task whose record names this computer (`task_execution.de
 - **Words from outside.**
   The home asks `inf:session:delete-outside` when the Gmail and Calendar content a conversation here read is past its days, or the captain deletes it (`docs/task-retention.md`, "Words from outside"); a home asks only a computer on the current contract major.
   The order names each kind's label, the moment its words read by then are due, and the note that takes their place, so this computer holds none of the home's rules.
-  Its `files` names the files from outside, such as a saved Gmail attachment, due in the task's hand-over folder here, which this computer removes first, whatever the conversation is doing (`outside-data-files`); the home saves no such file into a task here without that change.
+  Its `files` names the files from outside, such as a saved Gmail attachment, due in the task's hand-over folder here, which this computer removes first, whatever the conversation is doing.
   It reads the conversation's record and this Mac's own Claude client's files for it (`claudeConfigDir`), and answers `waiting` while a turn runs, the conversation opens or carries on by itself, or its client runs work of its own.
   A conversation open here is let go of first, so its files have no writer and nothing of them stays in memory, its due files are written again through a temporary file and one rename, and it opens again with what the home opened it with, from its record (`state`).
   Its answer names each file it changed under the record's folder, which the home copies whole; nothing is remembered, since asked again it finds nothing left to replace.
@@ -674,7 +674,7 @@ A task runs in a working copy of its own on the computer that runs it, made from
 - **An artifact.**
   `inf:working-copy:artifact` takes an artifact the home downloaded in pieces, outside the working copy, and once every byte is there and its digest matches writes it where the home writes one, with the same rules (`writeArtifact`, `src/core/workspace/artifacts.ts`): `.infinitary-artifacts/run-<run>/artifact-<id>.zip`, each folder refused when it is a link, never over a file already there.
   A computer on a contract before 8.4 writes it under `.firstmate-artifacts/`, and the home names that path to its crewmate.
-  A selection of an artifact's files arrives with a `part` and is written beside the whole one at `artifact-<id>-<part>.zip` (`docs/forge.md`, "Workflow logs and artifacts"); the home sends one only to a computer that lists `artifact-parts`, since an older one would drop the `part` and write it where the whole archive goes.
+  A selection of an artifact's files arrives with a `part` and is written beside the whole one at `artifact-<id>-<part>.zip` (`docs/forge.md`, "Workflow logs and artifacts").
 
 **At the home** (`PlacedCopies`, `src/core/placed/placedCopies.ts`, held by `PlacedSessions` as `copies`):
 
@@ -693,7 +693,7 @@ A task runs in a working copy of its own on the computer that runs it, made from
 - **Opening, checking and merging** stay this Mac's, with its own sign-in: a crewmate there calls `open_change`, `check_change` and `download_artifact` as one here does, and the home does each (`inf:work:open-change`, `inf:work:check-change`, `inf:work:download-artifact`).
   `prepare_change` transfers its inspected media to the home through `inf:work:prepare-change`, gated by `CHANGE_PRESENTATIONS_SINCE`; the home retains the story without publishing it (`docs/forge.md`, "Saved change stories").
   A whole or selected archive is downloaded here and written into the working copy there before the tool answers, never kept in a folder here.
-  A listing or a selection of its files (`list`, `files`) is asked only of a home that lists `artifact-parts`; the computer refuses it, sending nothing, when its home does not, since an older home would drop the fields and download the whole archive.
+  A listing or a selection of its files (`list`, `files`) is asked of the home like a whole archive.
   A crewmate there calls `read_workflow` as one here does (`inf:work:read-workflow`), and the home reads the run through the project's own forge: with `runId` alone the short read, whose run watch wakes the crewmate there (`docs/forge.md`, "The run watch"), and with `jobId` that job's log.
 - **Discarding.**
   A discard asks that computer what the working copy holds; while it is out of reach nobody can tell, so the discard asks for confirmation.
@@ -726,7 +726,7 @@ An exact `download_artifact` file request uses the home's existing forge sign-in
 The home streams and verifies the selected member into its task temporary folder, then sends bounded `inf:session:source-file` pieces with `evidence: true` through `PlacedCopies.writeEvidenceFile`.
 `PlacedTasks` publishes the file in its task evidence folder only after the size and SHA-256 match; interrupted pieces remain temporary, corrupt pieces are removed, and existing evidence is never replaced.
 The home removes its staging copy after the transfer attempt.
-Both sides require the `workflow-evidence-file` contract change; the ordinary source-card and hand-over destinations are unchanged.
+The ordinary source-card and hand-over destinations are unchanged.
 
 ## Runs on
 
@@ -962,7 +962,7 @@ Nothing moves work on its own, to balance load or to fail over.
 
 - **What may move.**
   Started work with a working copy of its own moves; the personal workspace, work in a project's own folder and an independent review do not (`CrewSupervisor.moveRefusal`).
-  A computer that runs work must list the `task-move` contract change to move a task to or from it (`src/shared/contract-changes/task-move.md`); an older one is named with "Update it first."
+  A computer that runs work takes a move only when it takes work on the home's contract major (`PlacedSessions.takesMoves`); an older one is named with "Update it first."
   A destination must be in reach and must serve the task's own model through a signed-in account of its own (`destinationRefusal`); the task never changes model on the way.
   It must also be able to run the task, read as a start reads it: the system and chip the project or task names, the programs it needs, and, for a project that lives on a forge, its own sign-in there, read from the sign-ins it lists rather than from whether it can reach the project, which a public project answers without one (`AutomaticPlacement.moveRefusal`); a move back to this computer reads this computer's own list the same way, so a sign-in that needs renewing counts as none, and a list that cannot be read, or a sign-in in unknown health because its file is unreadable or its health is not read yet, is named as unread.
   A refusal says which, such as "Mac mini is not signed in to github.com, where meter lives."

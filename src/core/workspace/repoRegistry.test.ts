@@ -250,6 +250,37 @@ describe("RepoRegistry.setRunsOn", () => {
 });
 
 /**
+ * A project's queue (INF-2430 piece 2; review INF-2549): only a project on
+ * GitHub merges through its queue, so a new address is checked against the
+ * delivery the project would have, whether the same patch chooses it or it
+ * was chosen before.
+ */
+describe("RepoRegistry delivery through a project's queue", () => {
+  it("refuses an address that would leave a queue-pr project off GitHub, in the same patch or later", async () => {
+    const { registry } = setup();
+    const { repo } = await registry.setup({ kind: "init", name: "meter" });
+    const github = "https://github.com/o/meter.git";
+    const gitlab = "https://gitlab.com/o/meter.git";
+    const refusal = "Only a project on GitHub can merge through its queue.";
+    expect(() => registry.configure(repo.id, { delivery: "queue-pr", origin: gitlab })).toThrow(
+      refusal,
+    );
+    expect(registry.get(repo.id)?.origin).toBeNull();
+    expect(registry.configure(repo.id, { delivery: "queue-pr", origin: github })).toMatchObject({
+      delivery: "queue-pr",
+      host: { kind: "github" },
+    });
+    expect(() => registry.configure(repo.id, { origin: gitlab })).toThrow(refusal);
+    expect(() => registry.configure(repo.id, { origin: null })).toThrow(refusal);
+    expect(registry.get(repo.id)).toMatchObject({ origin: github, delivery: "queue-pr" });
+    expect(registry.configure(repo.id, { delivery: "direct-pr", origin: gitlab })).toMatchObject({
+      delivery: "direct-pr",
+      host: { kind: "gitlab" },
+    });
+  });
+});
+
+/**
  * A host on the person's own server (`docs/forge.md`, "Hosts on your own
  * server"): a project there is a plain Git host until the app knows the
  * host, then the kind it runs - stamped at setup once known, and stamped

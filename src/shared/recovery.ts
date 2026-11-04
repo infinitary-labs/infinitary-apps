@@ -25,7 +25,7 @@ export type RecoveryWay = z.infer<typeof recoveryWaySchema>;
 /**
  * A way as a home reads it from another build or a saved report (R6 of INF-1644): a hold or
  * approach this build does not know stays as words and needs the captain, so a registry change
- * never refuses a report (`work-recovery.md`). The crewmate's own tool keeps the closed sets.
+ * never refuses a report. The crewmate's own tool keeps the closed sets.
  */
 export const keptRecoveryWaySchema = recoveryWaySchema.extend({
   approach: z.string().trim().min(1).optional(),

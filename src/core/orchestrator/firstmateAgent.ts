@@ -38,7 +38,7 @@ import {
   servedModelKey,
   servedProviderOf,
 } from "@shared/quota";
-import type { RepoView } from "@shared/repos";
+import { opensPullRequest, type RepoView } from "@shared/repos";
 import {
   frameServedInput,
   type ServedSegmentInput,
@@ -3959,7 +3959,7 @@ export class FirstmateAgent {
   private livesFact(repo: RepoView): string {
     const host = repo.host;
     if (!host) return "none";
-    if (repo.kind === "personal" || repo.delivery !== "direct-pr") return host.kind;
+    if (repo.kind === "personal" || !opensPullRequest(repo.delivery)) return host.kind;
     const signIn = host.name ? this.options.forges?.signInOn(host.name) : undefined;
     if (signIn === undefined) {
       // A plain host has no name of its own but its address.

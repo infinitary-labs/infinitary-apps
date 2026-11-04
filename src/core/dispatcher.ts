@@ -43,7 +43,12 @@ import { type AuthPromptView, providerServesRole } from "@shared/providers";
 import { releaseNoteToShow } from "@shared/releaseTracking";
 import type { RemoteLoginRefusedAnswer } from "@shared/remoteLogin";
 import type { RepoPolicyPatch, RepoSetupResult } from "@shared/repos";
-import { type RepoView, repoConfiguredEvent, repoRemovalRefusal } from "@shared/repos";
+import {
+  opensPullRequest,
+  type RepoView,
+  repoConfiguredEvent,
+  repoRemovalRefusal,
+} from "@shared/repos";
 import { devicePlace } from "@shared/signIns";
 import type { AppPanelGates } from "@shared/surfaces";
 import { resolveWorkComputer } from "@shared/workComputer";
@@ -342,7 +347,7 @@ export function createCoreDispatcher(options: CoreDispatcherOptions): CoreDispat
         await services.repos.checkDetails(repoId, changes);
         const current = services.repos.get(repoId);
         if (
-          (changes.delivery ?? current?.delivery) === "direct-pr" &&
+          opensPullRequest(changes.delivery ?? current?.delivery) &&
           !(changes.origin === undefined ? current?.origin : changes.origin)
         )
           throw new Error(

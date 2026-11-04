@@ -4,7 +4,6 @@ import { LOAD_ORDER } from "@shared/load";
 import { expect, it, vi } from "vitest";
 import { freshDatabase, rowsRead } from "../../../tests/helpers/database";
 import { seedDelivery } from "../../../tests/helpers/taskDelivery";
-import { contractChange } from "../connection/contractChanges";
 import { ComputerLoads } from "../placed/computerLoads";
 import { seedTask } from "./seedTask";
 import { TaskService } from "./taskService";
@@ -85,7 +84,6 @@ it("sends the persisted overrides in a load round without reading more rows when
       version: () => ({
         contract: PROTOCOL_VERSION,
         takesWork: true,
-        changes: [contractChange("heavy-run-line")],
       }),
       onWorkDevice: () => () => {},
     },

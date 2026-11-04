@@ -4,6 +4,7 @@ import type { AddressInfo } from "node:net";
 import { Readable } from "node:stream";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { checkSnapshotSummary } from "../../../../shared/checkSnapshot";
+import { QUEUE_STATUS, QUEUE_WAITING_WORDS } from "../../forge";
 import { presentationCommitMessage } from "../../presentation";
 import { readOpenChanges } from "./changes";
 import {
@@ -319,6 +320,38 @@ describe("GitHubForge", () => {
       `/repos/octo/meter/commits/${sha}/check-runs`,
       `/repos/octo/meter/commits/${sha}/status`,
       "/repos/octo/meter/actions/runs",
+    ]);
+  });
+
+  // INF-2430 piece 2: the app's contract with a project's queue is one commit
+  // status, infinitary/queue, which the merge click writes as waiting.
+  it("marks a version waiting for the project's queue with the infinitary/queue status, then reads the queue's answer as a check", async () => {
+    let statuses: { context: string; state: string }[] = [];
+    const { forge, seen } = await stub({
+      "POST /repos/octo/meter/statuses/feedbeef": (request) => {
+        statuses = [{ context: "infinitary/queue", state: "pending" }];
+        return { status: 201, json: { id: 1, ...(request.body as object) } };
+      },
+      "GET /repos/octo/meter/commits/feedbeef/check-runs": () => ({
+        json: { total_count: 0, check_runs: [] },
+      }),
+      "GET /repos/octo/meter/commits/feedbeef/status": () => ({ json: { statuses } }),
+    });
+    await forge.markQueued("feedbeef");
+    const write = seen.find((request) => request.method === "POST");
+    expect(write?.body).toEqual({
+      state: "pending",
+      context: QUEUE_STATUS,
+      description: QUEUE_WAITING_WORDS,
+    });
+    const change = { number: 23, url: null, branch: "b", headSha: "feedbeef", title: "fix: x" };
+    expect((await forge.checks(change)).items).toMatchObject([
+      { name: QUEUE_STATUS, state: "pending" },
+    ]);
+    // The queue's own answer, written where the project lives, is the check's state.
+    statuses = [{ context: "infinitary/queue", state: "failure" }];
+    expect((await forge.checks(change)).items).toMatchObject([
+      { name: QUEUE_STATUS, state: "failure" },
     ]);
   });
 

@@ -40,7 +40,7 @@ export type TaskQueryInput = {
   /**
    * A list that stops short also answers `order`: every matching task id in
    * this read's order, one cut taken in the same read, so later pages read
-   * that cut by `ids` (`task-list-snapshot.md`).
+   * that cut by `ids`.
    */
   snapshot?: boolean;
   /** These tasks' rows, in this order: a later page of a kept `order`. */

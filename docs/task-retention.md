@@ -163,7 +163,7 @@ Delete Gmail and Calendar content, in Settings → Integrations' Data section, d
 Its answer says how many conversations changed, how many are cleaned once their work pauses, and how many on each computer that runs work follow once it is back in reach or Infinitary there is updated (`elsewhere`).
 
 A file from outside saved into a task's hand-over folder, such as a Gmail attachment (`save_attachment`, [Integrations](integrations.md#google)), goes on the same clock: `OutsideReads` keeps its kept name, kind and time per task, and the pass that replaces that task's words removes each due file, or the delete removes it at once.
-On a computer that runs work the pass names the due files in `inf:session:delete-outside`'s `files`, and that computer removes them first, whatever its conversation is doing (`outside-data-files`).
+On a computer that runs work the pass names the due files in `inf:session:delete-outside`'s `files`, and that computer removes them first, whatever its conversation is doing.
 The task's close removes the folder sooner.
 Words a crewmate read inside such a file are not fenced, so no pass finds them; Google's notice says so.
 

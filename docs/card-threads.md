@@ -121,7 +121,7 @@ A thread line shows as soon as it is sent, so `CARD_REPLY` and the steer preambl
 **An interim line** (INF-990 friction 3: replies asking for code changes went 26 and 41 minutes with no sign of work): when the work will take more than a few minutes, the crewmate's steer preamble tells it to post one line first with `reply` and `interim` true, saying what it is doing.
 The line paints in the thread at once, like any author line, but it is declared, never inferred: `CardService.addMessage` keeps the card's `answer` hold, so the reply still waits, the waiting line or `working` follows, a revision without `reply` is still refused, and the whose-turn rule and the idle ladder still see an answer owed.
 Under a card nobody waits on, `interim` is an ordinary reply.
-The mark crosses from a computer that runs work too: `inf:work:reply` carries `interim` (`work-reply-interim.md`), so a crewmate there keeps the reply waiting the same way (INF-1623).
+The mark crosses from a computer that runs work too: `inf:work:reply` carries `interim`, so a crewmate there keeps the reply waiting the same way (INF-1623).
 An interim line never brings back a card the captain put aside: the card comes back with the final answer.
 The rule lives in the steer preamble and the tool's `interim` parameter, both crewmate-only, so the first mate's contract is unchanged.
 Closing a card asks first while its hold says a reply waits, as well as while the captain's line is the newest (`replyUnanswered`).

@@ -73,7 +73,6 @@ import { attachmentPath, keepImages } from "../attachments";
 import { renderIntegrationReply } from "../axi/integrationCommands";
 import type { IntegrationReply } from "../axi/protocol";
 import { CLAUDE_MODELS } from "../claude/claudeModels";
-import { CONTRACT_CHANGES } from "../connection/contractChanges";
 import { Computers } from "../devices/computers";
 import { DevicePairing } from "../devices/pairing";
 import { pathsOf } from "../folderMove/due";
@@ -1131,22 +1130,12 @@ describe("a task that runs on a computer that runs work", () => {
   });
 
   // INF-1555 F12: both declaration and offer semantics are required before remote work begins.
-  it("keeps a direct-pr change queued until both current protocol names are advertised", async () => {
-    const at = await world(undefined, {
-      changes: CONTRACT_CHANGES.names.filter((change) => change !== "check-declarations"),
-    });
+  it("keeps a direct-pr change queued until its computer runs this contract major", async () => {
+    // The check tool's declarations and merge offers are part of this major (major-13.md).
+    const previous = `${Number(PROTOCOL_VERSION.split(".")[0]) - 1}.0.0`;
+    const at = await world(undefined, { protocolVersion: previous });
     const home = at.home();
-    await expect
-      .poll(() => home.devices.version(at.deviceId)?.changes)
-      .toEqual(CONTRACT_CHANGES.names.filter((change) => change !== "check-declarations"));
-    expect(home.placed.takesCheckDeclarations(at.deviceId)).toBe(false);
-    // The same computer now reports the older draft's declarations but not the replacement offer semantics.
-    await at.restartComputer({
-      changes: CONTRACT_CHANGES.names.filter((change) => change !== "merge-offer-readiness"),
-    });
-    await expect
-      .poll(() => home.devices.version(at.deviceId)?.changes)
-      .toEqual(CONTRACT_CHANGES.names.filter((change) => change !== "merge-offer-readiness"));
+    await expect.poll(() => home.devices.version(at.deviceId)?.contract).toBe(previous);
     expect(home.placed.takesCheckDeclarations(at.deviceId)).toBe(false);
 
     const { repo } = await home.repos.setup({ kind: "init", name: "check-declarations" });
@@ -1161,16 +1150,10 @@ describe("a task that runs on a computer that runs work", () => {
     });
     const requests = api.requests.length;
     await home.supervisor.dispatchQueuedTask("t-old-check-tool");
-    expect(home.tasks.get("t-old-check-tool")).toMatchObject({
-      status: "open",
-      gate: {
-        kind: "captain",
-        ref: "dispatch-failed",
-        reason: expect.stringContaining("must be updated"),
-      },
-    });
+    expect(home.tasks.get("t-old-check-tool")).toMatchObject({ status: "open", activity: null });
+    expect(home.placed.ready(at.deviceId, "t-old-check-tool")).toBe(false);
     expect(api.requests).toHaveLength(requests);
-    await at.restartComputer({ changes: CONTRACT_CHANGES.names });
+    await at.restartComputer({ protocolVersion: PROTOCOL_VERSION });
     await expect.poll(() => home.placed.takesCheckDeclarations(at.deviceId)).toBe(true);
   });
 
@@ -4018,25 +4001,6 @@ describe("Gmail and Calendar content on a computer that runs work", () => {
 
     await outsideData.deleteNow();
     expect(existsSync(path)).toBe(false);
-  });
-
-  it("refuses to save an attachment on a computer without the change, and asks to update it", async () => {
-    const { google, at, home } = await withGoogle(
-      CONTRACT_CHANGES.names.filter((change) => change !== "outside-data-files"),
-    );
-    const id = google.deliver({
-      ...LENA,
-      attachment: { name: "invoice-2214.pdf", type: "application/pdf", size: 1_024 },
-    });
-    const heard = await runThere(
-      at,
-      "t-lena",
-      `${INTEGRATIONS_COMMAND} call Google save_attachment '${JSON.stringify({ id, part: "1" })}'`,
-    );
-    expect(heard).toContain("update Infinitary on");
-    expect(existsSync(join(at.folders("t-lena").temp, "handover"))).toBe(false);
-    expect(google.seen.some((request) => request.path.includes("/attachments/"))).toBe(false);
-    expect(home.placed.takesOutsideFiles(at.deviceId)).toBe(false);
   });
 
   it("replaces what it read there and in this Mac's copy on the captain's delete, counts it, and its next turn reads the note", async () => {

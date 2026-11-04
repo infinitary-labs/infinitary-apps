@@ -4,8 +4,10 @@ import {
   autonomyFor,
   autonomyForRecord,
   type DeliveryInput,
+  deliveryChoices,
   deliveryFor,
   deliveryForRecord,
+  opensPullRequest,
   repoConfiguredEvent,
   repoDeliverySchema,
   repoKindSchema,
@@ -68,9 +70,35 @@ describe("deliveryForRecord", () => {
   });
 });
 
+// INF-2430 piece 2: a project on GitHub may merge its pull requests through its own queue.
+describe("a project's delivery choices", () => {
+  it("offers the queue only to a project on GitHub", () => {
+    expect(deliveryChoices({ kind: "github", name: "github.com" })).toEqual([
+      "direct-pr",
+      "queue-pr",
+      "local-only",
+    ]);
+    expect(deliveryChoices({ kind: "gitlab", name: "gitlab.com" })).toEqual([
+      "direct-pr",
+      "local-only",
+    ]);
+    expect(deliveryChoices(undefined)).toEqual(["local-only"]);
+  });
+
+  it("treats the queue as a pull request everywhere a pull request is asked", () => {
+    expect(opensPullRequest("queue-pr")).toBe(true);
+    expect(opensPullRequest("direct-pr")).toBe(true);
+    expect(opensPullRequest("local-only")).toBe(false);
+    expect(deliveryForRecord({ shape: { delivery_ask: "local-only" } }, "queue-pr")).toBe(
+      "local-only",
+    );
+    expect(deliveryForRecord({}, "queue-pr")).toBe("queue-pr");
+  });
+});
+
 describe("the delivery enum says only where a change lands", () => {
   it("has no personal posture: the workspace kind carries that", () => {
-    expect(repoDeliverySchema.options).toEqual(["direct-pr", "local-only"]);
+    expect(repoDeliverySchema.options).toEqual(["direct-pr", "queue-pr", "local-only"]);
     expect(repoDeliverySchema.safeParse("live").success).toBe(false);
     expect(repoKindSchema.options).toEqual(["project", "personal"]);
   });

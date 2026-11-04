@@ -6,7 +6,12 @@ import { type Card, FIRSTMATE_CARD_META } from "@shared/cards";
 import type { DeviceView } from "@shared/devices";
 import { deviceRunsWork } from "@shared/devices";
 import { AUTOMATIC_COMPUTER, AUTOMATIC_WORD, type PlacementRequirements } from "@shared/placement";
-import { type RepoPolicyPatch, type RepoView, RUNS_ON_THIS_MAC } from "@shared/repos";
+import {
+  opensPullRequest,
+  type RepoPolicyPatch,
+  type RepoView,
+  RUNS_ON_THIS_MAC,
+} from "@shared/repos";
 import { devicePlace } from "@shared/signIns";
 import { AUTONOMY_WORDS, CARE_WORDS, PROJECT_DELIVERY_WORDS } from "@shared/vocabulary";
 import { resolveWorkComputer } from "@shared/workComputer";
@@ -57,7 +62,7 @@ export class ProjectChanges {
       const patch = value.changes as RepoPolicyPatch;
       if (patch.origin === null && patch.delivery === undefined) patch.delivery = "local-only";
       if (
-        (patch.delivery ?? (before as RepoView).delivery) === "direct-pr" &&
+        opensPullRequest(patch.delivery ?? (before as RepoView).delivery) &&
         !(patch.origin === undefined ? (before as RepoView).origin : patch.origin)
       )
         throw new Error(

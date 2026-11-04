@@ -1,5 +1,5 @@
 import type { Card } from "@shared/cards";
-import type { FirstmateApi } from "@shared/ipc";
+import { type FirstmateApi, readsSeenUpdate } from "@shared/ipc";
 import { useEffect, useState } from "react";
 import { useShellStore } from "../app/store";
 
@@ -11,10 +11,10 @@ function windowPresent(): boolean {
 /** Choose only a request the home advertised; legacy reports keep their two arguments. */
 export async function reportDrawnUpdate(
   card: Pick<Card, "id" | "offerId" | "lifecycleId" | "currentUpdateId">,
-  changes: readonly string[] | undefined,
+  home: { protocolVersion?: string; changes?: readonly string[] },
   reporter: Pick<FirstmateApi["cards"], "seen" | "seenUpdate">,
 ): Promise<void> {
-  if (changes?.includes("card-current-update-seen")) {
+  if (readsSeenUpdate(home.protocolVersion, home.changes)) {
     if (card.lifecycleId && card.currentUpdateId)
       await reporter.seenUpdate(card.id, card.lifecycleId, card.currentUpdateId);
   } else if (card.offerId) {
@@ -59,7 +59,7 @@ export function useSeenReport(card: Card | undefined, drawn: boolean): void {
         if (cancelled || !windowPresent()) return;
         await reportDrawnUpdate(
           { id, offerId, lifecycleId, currentUpdateId: updateId },
-          home.changes,
+          home,
           window.infinitary.cards,
         );
       })

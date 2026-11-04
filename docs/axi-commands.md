@@ -74,7 +74,7 @@ It never calls a hook installer and never writes provider settings.
 ## The load command
 
 `infinitary-load-axi` reaches this computer's declared heavy-run line, through an optional `load` grant on the same task channel.
-The home grants it to local tasks with a command process and to work computers that advertise `heavy-run-line`; the work computer owns the actual line.
+The home grants it to local tasks with a command process and to every computer that runs work; the work computer owns the actual line.
 Its bare invocation reads the task's declarations.
 Its `run --processors <number> --memory-mib <number> -- <program> [arguments]` path dispatches to the native Bash wrapper before the generic request path, so the program retains the caller's streams and environment.
 The wrapper's `claim` requests carry only its process identity, demand and optional outer hold.

@@ -135,7 +135,12 @@ describe("a kept merge carries a passed review across a pure update", () => {
       tasks,
       inbox: {} as InboxStore,
       repos,
-      cards: { openMergeAction: () => undefined } as unknown as CardService,
+      cards: {
+        openMergeAction: () => undefined,
+        get: () => undefined,
+        raiseHostCard: () => undefined,
+        withdrawHostCard: () => undefined,
+      } as unknown as CardService,
       runtimeState: () => undefined,
       stopRuntime: () => undefined,
       endLiveTask: () => undefined,

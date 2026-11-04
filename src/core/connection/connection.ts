@@ -50,6 +50,7 @@ import {
   isViewInvokeChannel,
   isWorkInvokeChannel,
   PROTOCOL_VERSION,
+  readsSeenUpdate,
   takesWork,
   VIEW_FLOOR,
 } from "@shared/ipc";
@@ -58,7 +59,7 @@ import { copyStream, type FarBuild } from "../devices/farBuilds";
 import type { CoreActor, CoreDispatch } from "../dispatcher";
 import type { CoreEventBus } from "../events";
 import { listenAddresses, listenOn } from "./addresses";
-import { CONTRACT_CHANGES, contractChange } from "./contractChanges";
+import { CONTRACT_CHANGES } from "./contractChanges";
 import {
   DEFAULT_JOURNAL_LIMITS,
   EventJournal,
@@ -328,9 +329,6 @@ export type HomeConnection = {
   /** Stops listening and following pairing, then drains device closes with a two-second grace. */
   close(): Promise<void>;
 };
-
-/** The additive card-reading capability, checked against the registered change at module load. */
-const CURRENT_UPDATE_SEEN = contractChange("card-current-update-seen");
 
 type Client = {
   readonly ws: WebSocket;
@@ -640,7 +638,7 @@ export function startConnection(options: ConnectionOptions): HomeConnection {
       client.spelling = spellingFor(readSpellings(hello.spellings), speaks);
       client.appVersion = hello.appVersion;
       client.cardUpdates =
-        hello.system === "ios" || (hello.changes?.includes(CURRENT_UPDATE_SEEN) ?? false);
+        hello.system === "ios" || readsSeenUpdate(hello.protocolVersion, hello.changes);
       // A view changes things across majors its floor allows; work only on this home's own.
       // A computer viewing from before the floor (its hello says none) reads closed lists
       // strictly, so like work it changes things only on this home's major (INF-1649 review

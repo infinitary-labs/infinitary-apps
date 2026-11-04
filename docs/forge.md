@@ -315,7 +315,7 @@ A short read does keep the run's failed jobs on the repair ledger, so `check_cha
   A partial or corrupt local download is removed; an existing destination, a linked evidence folder or a linked destination is never overwritten.
   On another computer, the home stages the verified file in task temporary storage and reuses the bounded source-file transport with `evidence: true`; the receiver verifies size and SHA-256 before publishing in evidence, and the home removes staging even after transfer failure.
   Incomplete receiver pieces stay only in the task's temporary folder until a deliberate resumed transfer or task cleanup; they are never reported as complete evidence.
-  Both computers require `workflow-evidence-file` before this mode starts; older computers get an update refusal, never a fallback to downloading the whole archive.
+  A computer on an older contract major takes no work from the home, so this mode never falls back to downloading the whole archive.
   This evidence-only transfer has no total-size cap; other source-file transfers retain their 1 GiB bound, and disk space or an expired signed address can still stop a download.
 - Download redirects are followed manually with a 30-second request bound and at most three redirects.
   The app's sign-in is sent only to the initial GitHub API request, never signed storage; production accepts only HTTPS GitHub-owned storage or Azure Blob storage.
@@ -594,6 +594,25 @@ An owned review finishes the task and a referenced one continues it, as above.
 Not established: whether GitHub honours `bypass_rules` for the app's sign-in, an OAuth App, or on GitHub Enterprise Server.
 No real merge past the rules has been attempted; the check is the captain's, on a throwaway repository.
 Evidence: `tests/e2e/request-merge.spec.ts` ("a merge that skips the branch rules ...") has a scripted crewmate prepare an adopted release pull request held by a review rule and a failed check, reads the rules and the check off the card, finds nothing sent before the captain's key and one asynchronous merge with `bypass_rules` after it, and refuses the same review on a revised card.
+
+## A project's queue
+
+A project on GitHub may merge its pull requests through its own queue, a job of the project's that tests approved work together before it merges (INF-2430 piece 2).
+It is off by default, and a project chooses it in Settings → Projects or through the first mate's project settings.
+The app's whole contract with any such queue is one commit status, `infinitary/queue` (`QUEUE_STATUS`, `src/core/forge/forge.ts`), on the pull request's version.
+Nothing writes it before the captain's merge click: the pull request's own checks still hold the completion card as they do today.
+The click publishes the story and checks the title as any merge does, keeps the captain's approval, and writes `infinitary/queue` as `pending` on the approved version with the words "Waiting for the batch check" (`GitHubForge.markQueued`).
+A repair that carries the click marks its new version the same way, once that version's own checks pass.
+The mark comes after the same last look a merge request takes - the same approval and head, the crewmate idle, no newer completion card - which records no attempt, since nothing is sent to merge.
+Until the queue passes a version, GitHub's rules reading the pull request as held are not a stop: a required `infinitary/queue` status is what holds it, and the mark answers it.
+Every route to a merge waits on the queue the same way: the completion card's click, a `request_merge` review the task owns or references, and a merge past the branch rules, whose click marks the version and sends nothing, so the same review merges on a new click once the queue passes.
+The project's queue finds the versions marked `pending`, tests them, and sets the status to `success` or `failure` on each, with its reason in the description and a link to the run in `target_url`.
+The status is read as one more check (`GitHubForge.checks`), so the check watch follows it, and the kept approval merges only once it reads `success` at that exact version, through the same version guard and with no new click (`PrCiService.mergeOnce`).
+A failed status wakes the crewmate through the failed-check wake like any failed check; the crewmate reads the batch's reason and link off the status with `github_read`, and its repair declarations decide whether the click carries to the fixed version.
+No checks override passes the queue.
+While the queue runs, the kept approval waits on `queue`, the pending note reads "Waiting for the batch check", and the tick reads it again every ten minutes past the watch's bound.
+A first mate merge on project autonomy marks the version the same way and stops; it keeps no approval, so the first mate merges again once the queue passes.
+Evidence: `prCi.test.ts` ("merges a queue-pr change only once its queue passes ...") and `githubForge.test.ts` ("marks a version waiting for the project's queue ...").
 
 ## The check watch
 

@@ -201,9 +201,8 @@ export const taskBrowserInputSchema = z.discriminatedUnion("kind", [
     command: z.enum(["selectAll", "undo", "redo", "cut", "copy", "paste"]).optional(),
     /**
      * With paste, the words on the clipboard of the computer whose window
-     * the captain pressed it in, which need not be the page's own
-     * (`task-browser-paste-text.md`). Without it, the page pastes from its
-     * own computer's clipboard.
+     * the captain pressed it in, which need not be the page's own. Without
+     * it, the page pastes from its own computer's clipboard.
      */
     clipboard: z.string().max(TASK_BROWSER_PASTE_MAX).optional(),
   }),

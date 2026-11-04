@@ -1,4 +1,4 @@
-import type { RepoPolicyPatch, RepoView } from "@shared/repos";
+import { deliveryChoices, type RepoPolicyPatch, type RepoView } from "@shared/repos";
 import type { Rigor } from "@shared/rigor";
 import type { DeviceSignIns } from "@shared/signIns";
 import {
@@ -33,11 +33,6 @@ import { useSettingSave } from "./useSettingSave";
  * delivery, autonomy, and standing rigor are accordion rows that write the
  * same policy `app_change project-settings` already writes.
  */
-
-const DELIVERY_OPTIONS = [
-  { value: "direct-pr" as const, label: PROJECT_DELIVERY_WORDS["direct-pr"] },
-  { value: "local-only" as const, label: PROJECT_DELIVERY_WORDS["local-only"] },
-];
 
 const RIGOR_OPTIONS = [
   { value: "quick" as const, label: CARE_WORDS.quick },
@@ -638,9 +633,10 @@ function ProjectRow({
                   name="Where changes go"
                   htmlName={`delivery-${repo.id}`}
                   value={repo.delivery}
-                  options={DELIVERY_OPTIONS.filter(
-                    (option) => repo.origin || option.value === "local-only",
-                  )}
+                  options={deliveryChoices(repo.origin ? repo.host : null).map((value) => ({
+                    value,
+                    label: PROJECT_DELIVERY_WORDS[value],
+                  }))}
                   onChange={(delivery) => onPatch({ delivery })}
                 />
               )

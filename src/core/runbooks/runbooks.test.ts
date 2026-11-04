@@ -287,11 +287,13 @@ describe("runbooks over existing prompt and skill doors", () => {
     expect(off.crew({ ...code, care: "reviewed" }).text).not.toContain(section("careful.json"));
     expect(off.crew(code).skills.map((skill) => skill.name)).not.toContain("careful-change");
   });
-  it("serves delivery judgment only to direct-pr crew, and its switch removes it", () => {
+  // Intent: INF-2435 and review INF-2557, a queue-pr crewmate drives its pull request green like direct-pr.
+  it("serves delivery judgment only to pull request crew, and its switch removes it", () => {
     const { books, db } = fixture();
     const passage = readFileSync(join(root, "delivery/crew.md"), "utf8").trim();
     for (const backend of ["pi", "claude"]) {
       expect(books.crew({ ...code, backend }).text).toContain(passage);
+      expect(books.crew({ ...code, backend, delivery: "queue-pr" }).text).toContain(passage);
       expect(books.crew({ ...code, backend, delivery: "local-only" }).text).not.toContain(passage);
     }
     expect(books.firstmate().text).not.toContain(passage);

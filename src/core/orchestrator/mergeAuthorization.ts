@@ -6,8 +6,8 @@ import {
   repairImpact,
 } from "@shared/checkRepair";
 import { hasChangeRequests } from "@shared/forge";
-import type { RepoDelivery } from "@shared/repos";
-import { type ForgeRepo, forgeLocationOf } from "../forge";
+import { opensPullRequest, type RepoDelivery } from "@shared/repos";
+import { type ForgeRepo, forgeLocationOf, QUEUE_STATUS, QUEUE_WAITING_WORDS } from "../forge";
 import type {
   CompletionOffer,
   MergeAuthorization,
@@ -45,9 +45,10 @@ import type { WakeBody } from "./wakes";
 
 /**
  * The offer a captain's merge click on this card approves (FI3-304): the
- * completion offer the host published after reading its known
- * head, on a direct-pr task whose project lives on GitHub or GitLab, for
- * the pull request the task still names - with where that project lives.
+ * completion offer the host published after reading its known head, on a
+ * pull request task (direct-pr or queue-pr) whose project lives on GitHub
+ * or GitLab, for the pull request the task still names - with where that
+ * project lives.
  * Undefined where the click approves no head and is one attempt: a first
  * mate card, a seeded card, a plain Git host or an ambiguous baseline.
  */
@@ -59,7 +60,8 @@ export function approvableOffer(
 ):
   | { baseline: CompletionOffer & { prNumber: number }; host: string; owner: string; name: string }
   | undefined {
-  if (!card.offerId || delivery !== "direct-pr" || record.delivery?.checkTarget) return undefined;
+  if (!card.offerId || !opensPullRequest(delivery) || record.delivery?.checkTarget)
+    return undefined;
   if (!repo || !record.repoId || !hasChangeRequests(repo.host?.kind) || !record.branch)
     return undefined;
   const location = forgeLocationOf(repo);
@@ -634,6 +636,8 @@ export function keptFeedLine(wait: MergeWait, place: string, checks?: string): s
       return `Cannot merge yet: ${place} refused it. ${kept} and runs again once its crewmate has fixed the cause.`;
     case "guidance":
       return `Cannot merge yet: its crewmate has not said whether your newer words change the work you approved. ${kept} and runs once it says they do not.`;
+    case "queue":
+      return `${QUEUE_WAITING_WORDS}: your project's queue is testing this version with other approved work. ${kept} and runs once that check passes.`;
   }
 }
 
@@ -672,6 +676,8 @@ export function keptNote(wait: MergeWait, head: string, place: string, checks?: 
       return `${kept} Steer the crewmate to fix the cause without changing the approved work; the host tries again when its turn ends. ${declare}`;
     case "guidance":
       return `${kept} The captain gave the crewmate new guidance after their click, and the merge holds until it declares that guidance's impact with check_change captainGuidance: none keeps the approval; changed-work ends it and it puts up a new completion card. The message itself told the crewmate, so nothing is needed from you unless it ends its turn without declaring.`;
+    case "queue":
+      return `${kept} The project merges through its queue: the host marked ${head} with the ${QUEUE_STATUS} status, waiting, and merges once the queue sets it to success. A failed batch wakes the crewmate like any failed check. ${declare}`;
   }
 }
 
@@ -687,6 +693,8 @@ const TIMED_WAITS: Partial<Record<MergeWait, number>> = {
   outcome: 60_000,
   "sign-in": 10 * 60_000,
   draft: 10 * 60_000,
+  // The check watch wakes on the queue's answer; this reads it again past the watch's bound.
+  queue: 10 * 60_000,
 };
 
 /** The longest a timed wait backs off to. */

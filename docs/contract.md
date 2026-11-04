@@ -8,11 +8,10 @@ How the connection carries it is `docs/connection.md`; how a device pairs is `do
 
 `card-current-update-seen` adds optional `currentUpdateId` and `currentUpdateSeen` snapshot fields and a separate `inf:cards:seen-update(cardId, lifecycleId, updateId)` request.
 The existing two-argument `inf:cards:seen` request and lifecycle-wide `Card.seen` retain their meanings; legacy reports cannot acknowledge an unidentifiable newer answer.
-Updated views use the new request only when the home lists the named change, through the connection welcome or the healthcheck's optional `changes` list.
-An older home keeps the legacy path, and an older phone ignores the new fields.
-Older desktop card decoders are strict, so the connection omits the added snapshot fields for desktops that did not advertise the named change, on list replies, live pushes and replay alike.
-This compatibility projection changes neither permissions nor access; mixed versions compatible under the existing floor retain their ordinary card actions.
-No protocol version or view-floor change is required.
+Updated views use the new request with a home on `CARD_SEEN_UPDATE_SINCE` (major 13) or later, read from the healthcheck's `protocolVersion`, or with an older home that lists the named change through the connection welcome or the healthcheck's optional `changes` list (`readsSeenUpdate`, `src/shared/ipc.ts`).
+Any other home keeps the legacy path, and an older phone ignores the new fields.
+Older desktop card decoders are strict, so the connection omits the added snapshot fields for a desktop on an earlier major that did not advertise the named change, on list replies, live pushes and replay alike.
+This compatibility projection changes neither permissions nor access.
 
 ## The file
 
@@ -143,8 +142,8 @@ Where a feature waits for the other side, its number is in the tables above.
 
 Cards, captured offers and placed card requests carry an optional `holdsPlace`, which declares forward arrival and leaves unmarked cards unchanged.
 They also carry an optional `continues`, a crewmate's declaration that the captain's choice on the card is not its task's answer (`card-continues.md`); a home without it reads the card as before, so the choice closes a task that only answers.
-They also carry an optional `answering`, the author's declaration that the card answers the captain's message it is about, and a card in the snapshot carries an optional `asked`, when that message was sent and its words, which the home reads from the saved message and a view draws as the "You asked" line (`card-asked-line.md`); an older view ignores both.
-A card in the snapshot may carry an optional `answeredBy`, "firstmate" on the host's stuck alert, which a view reads as taking a reply that the first mate answers (`card-answered-by.md`); an older view draws no reply row on it, as before.
+They also carry an optional `answering`, the author's declaration that the card answers the captain's message it is about, and a card in the snapshot carries an optional `asked`, when that message was sent and its words, which the home reads from the saved message and a view draws as the "You asked" line; an older view ignores both.
+A card in the snapshot may carry an optional `answeredBy`, "firstmate" on the host's stuck alert, which a view reads as taking a reply that the first mate answers; an older view draws no reply row on it, as before.
 A card action's effect may be `request_write`: a crewmate's ask to send a write it kept where its project lives, which only the captain's click sends (`docs/forge.md`, "A write that asks").
 The setup card's Add project and Not now carry the host ops `add-project` and `decline-project` (`docs/fleet.md`, "Asking the first mate to add a project"), and the project-change card's Apply change and Not now carry `apply-project-change` and `decline-project-change`.
 
@@ -173,6 +172,10 @@ A saved story's `version` is 1 or 2: version 2 carries up to six typed `checked`
 A home before `STORY_AROUND_SINCE` would strip `around` and answer as if nothing was asked, so a computer that runs work refuses such a call to it and sends nothing.
 
 ### Tasks, projects and routing
+
+A project's delivery, a task's delivery and a task's asked delivery may be `queue-pr`, a pull request whose kept merge click waits for the project's own queue (`major-13.md`; `docs/forge.md`, "A project's queue").
+A computer on another major takes no work, and a view on major 12 reads only, since it reads a delivery strictly; the view floor is 13.
+The named waits before it retire: every computer taking work on this major has each earlier change, and a view meets an older home's current-update sightings through `CARD_SEEN_UPDATE_SINCE`.
 
 Tasks may deliver `operation`, constraints may declare it, model reasons carry R12, and Usage’s closed grouping set includes operation (`major-12.md`).
 A computer on another major takes no work, so the new deliverable is never sent to a computer that cannot read it.

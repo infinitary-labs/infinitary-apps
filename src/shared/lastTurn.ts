@@ -47,7 +47,7 @@ export type LastRound = z.infer<typeof lastRoundSchema>;
  * The newest round, with the round before it (INF-1771, the captain's
  * Approve and build on INF-1770's plan: the last two rounds, the older one
  * faded). `previous` is absent from an older core and null before a second
- * message (`last-turn-previous.md`).
+ * message.
  */
 export const lastTurnSchema = lastRoundSchema.extend({
   previous: lastRoundSchema.nullable().optional(),

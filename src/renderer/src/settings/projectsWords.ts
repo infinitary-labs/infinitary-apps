@@ -10,7 +10,7 @@ import { AUTONOMY_WORDS, CARE_WORDS, PROJECT_DELIVERY_WORDS } from "@shared/voca
 export const PROJECT_POLICY_WORDS = {
   /** What "Where changes go" says on every project but the personal workspace. */
   delivery:
-    "Offered as a pull request where the project lives, or merged locally with no pull request.",
+    "Offered as a pull request where the project lives, merged once your project's queue passes it, or merged locally with no pull request.",
 } as const;
 
 /**

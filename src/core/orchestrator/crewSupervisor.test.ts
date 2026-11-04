@@ -227,7 +227,15 @@ import {
   MERGE_CHECKS_HOLD_REASON,
 } from "./mergeAuthorization";
 import { PrCiService, type PrOutcome } from "./prCi";
-import { closingNoteTitle, droppedLine, pendingMergeLine } from "./settleWords";
+import {
+  closingNoteTitle,
+  droppedLine,
+  MERGE_PENDING_TITLE,
+  MERGE_STOPPED_TITLE,
+  mergePendingBody,
+  mergePendingCardId,
+  pendingMergeLine,
+} from "./settleWords";
 import { Ticker } from "./ticker";
 import { renderReviewHistory } from "./reviewHistory";
 import {
@@ -3441,7 +3449,11 @@ describe("CrewSupervisor", () => {
       supervisor.act(second, action); // Another card cannot race this task.
       expect(await supervisor.settleTask("receipt", "merge-pr")).toContain("already in progress");
       await tick();
-      expect(cards()).toEqual([]); // Coalesced push is independent of the operation.
+      // Coalesced push is independent of the operation. A merge click stays
+      // in view as one pending note until its outcome (INF-1275).
+      expect(cards().map((card) => card.id)).toEqual(
+        action === "discard" ? [] : [mergePendingCardId("receipt")],
+      );
       // The second card's attempt settled nothing: the attempt that owns the task says what happened.
       expect(settleLines(tasks, "receipt")).toHaveLength(1);
       expect(events.filter((event) => event.type === "firstmate_note")).toEqual([]);
@@ -3464,6 +3476,8 @@ describe("CrewSupervisor", () => {
       await vi.waitFor(async () =>
         expect(await supervisor.settleTask("receipt", "discard")).not.toContain("in progress"),
       );
+      // The merge went in: its pending note is gone (INF-1275).
+      await vi.waitFor(() => expect(cards()).toEqual([]));
     },
   );
 
@@ -4722,6 +4736,54 @@ describe("CrewSupervisor", () => {
         h.forge.states = ["success"];
       });
       await vi.waitFor(() => expect(h.forge.merges).toEqual([APPROVED]));
+    });
+
+    // INF-1275, the captain's ask: a merge click shows a visible pending
+    // state until the merge happens or says why it could not.
+    it("keeps a clicked merge in view as pending, says what it waits for, and takes the note down once it merges", async () => {
+      const h = await approved();
+      const pending = () => h.cards().find((card) => card.id === mergePendingCardId(h.taskId));
+      h.forge.states = ["failure"];
+      await h.declare({});
+      h.supervisor.act(h.card.id, "merge");
+      await vi.waitFor(() => expect(h.authorization()?.waiting).toMatchObject({ on: "checks" }));
+      const title = h.tasks.get(h.taskId)?.title ?? "";
+      expect(pending()).toMatchObject({
+        title: MERGE_PENDING_TITLE,
+        author: "host",
+        actions: [],
+        body: mergePendingBody(keptFeedLine("checks", "GitHub", "red"), title),
+      });
+      // The merged task's working copy is still being removed when its close is recorded.
+      const cleanup = deferred<void>();
+      vi.mocked(h.workspace.removeTaskWorktree).mockReturnValue(cleanup.promise);
+      await repairTurn(h, async () => {
+        h.forge.states = ["success"];
+      });
+      await vi.waitFor(() => expect(h.forge.merges).toEqual([APPROVED]));
+      // The note leaves with the close itself: no reader sees the task
+      // merged while it still says pending.
+      await vi.waitFor(() => expect(h.tasks.get(h.taskId)?.closedReason).toBe("merged"));
+      expect(pending()).toBeUndefined();
+      cleanup.resolve();
+    });
+
+    // INF-1275 (review INF-2549): a request_merge click stays in view as a
+    // completion card's does, and the note leaves once that merge goes through.
+    it("keeps a clicked request_merge review in view as pending and takes the note down once it merges", async () => {
+      const h = await approved({ referenced: true });
+      const pending = () => h.cards().find((card) => card.id === mergePendingCardId(h.taskId));
+      h.forge.readiness = "conflict";
+      h.supervisor.act(h.card.id, "merge");
+      await vi.waitFor(() => expect(h.authorization()?.waiting?.on).toBe("conflict"));
+      expect(pending()).toMatchObject({ title: MERGE_PENDING_TITLE, author: "host", actions: [] });
+      expect(h.forge.merges).toEqual([]);
+      h.forge.readiness = "clean";
+      await repairTurn(h, async () => {});
+      await vi.waitFor(() => expect(h.forge.merges).toEqual([APPROVED]));
+      // A referenced merge keeps its task open; the note still goes.
+      expect(h.tasks.get(h.taskId)?.status).toBe("active");
+      expect(pending()).toBeUndefined();
     });
 
     // INF-834 friction 4, the captain's ask: "A crewmate can revise a
@@ -6587,9 +6649,17 @@ describe("CrewSupervisor", () => {
     supervisor.act(settle.id, "merge");
     await tick();
 
-    // The host raises nothing (cards/tasks/agents P0, WI-3): the refusal is
-    // one feed line and one wake carrying it, and the task stays live.
-    expect(cards()).toEqual([]);
+    // The host raises no retry card (cards/tasks/agents P0, WI-3): the refusal is
+    // one feed line and one wake carrying it, and the task stays live. The
+    // click's pending note says why it did not merge, with nothing to press (INF-1275).
+    expect(cards()).toEqual([
+      expect.objectContaining({
+        id: mergePendingCardId(taskId),
+        title: MERGE_STOPPED_TITLE,
+        actions: [],
+        body: expect.stringContaining("not fully green"),
+      }),
+    ]);
     expect(settleWakes(ops)).toHaveLength(1);
     expect(settleWakes(ops)[0]).toContain("not fully green");
     expect(tasks.get(taskId)?.status).toBe("active");
@@ -6601,6 +6671,33 @@ describe("CrewSupervisor", () => {
     expect(mergePullRequest).toHaveBeenCalledTimes(2);
     expect(tasks.get(taskId)).toMatchObject({ status: "done", closedReason: "merged" });
     expect(tasks.timeline(taskId).some((event) => /Merged #23/.test(event.text))).toBe(true);
+    await vi.waitFor(() => expect(cards()).toEqual([]));
+  });
+
+  // INF-1275 beside the host's sign-in card: a click refused because the
+  // sign-in no longer works leaves that card as the one thing to do.
+  it("takes a clicked merge's pending note down when the merge is refused for the sign-in", async () => {
+    const mergePullRequest = vi.fn(async () => ({
+      ok: false,
+      text: "Cannot merge yet - the checks could not be read.",
+      problem: "Not signed in to GitHub (github.com)",
+      signIn: { host: "github.com", name: "GitHub", repoId: "repo-1" },
+    }));
+    const { supervisor, tasks, cards } = setup(fakeCrewmate(), { mergePullRequest });
+    seedTask(tasks, { id: "signin", title: "Ship the fix", status: "idle", worktreeDir: "/signin" });
+    vi.spyOn(supervisor, "taskDelivery").mockReturnValue("direct-pr");
+    const offer = supervisor.addFirstmateCard({
+      requiredActions: [],
+      taskId: "signin",
+      title: "Settle",
+      body: "Choose.",
+      actions: [{ id: "merge-pr", label: "Merge PR", effect: SETTLE_MERGE }],
+    });
+    supervisor.act(offer, "merge-pr");
+    await vi.waitFor(() => expect(mergePullRequest).toHaveBeenCalledTimes(1));
+    await tick();
+    expect(cards().find((card) => card.id === mergePendingCardId("signin"))).toBeUndefined();
+    expect(tasks.get("signin")?.status).not.toBe("done");
   });
 
   it("a contention refusal (another settle already in flight) wakes nobody; the real attempt does", async () => {
@@ -6630,10 +6727,13 @@ describe("CrewSupervisor", () => {
     expect(settleWakes(ops)).toEqual([]);
     operation.resolve({ ok: false, text: "PR merge blocked: CI is not fully green." });
     await tick();
-    // Only the real (first) attempt's refusal reaches the Firstmate, and no card does.
+    // Only the real (first) attempt's refusal reaches the Firstmate, and no
+    // card does but the click's own pending note, which says why (INF-1275).
     expect(settleWakes(ops)).toHaveLength(1);
     expect(settleWakes(ops)[0]).toContain("not fully green");
-    expect(cards()).toEqual([]);
+    expect(cards()).toEqual([
+      expect.objectContaining({ id: mergePendingCardId("merge"), title: MERGE_STOPPED_TITLE }),
+    ]);
   });
 
   it("discards from a crewmate settle card without steering", async () => {
@@ -10324,6 +10424,47 @@ describe("the task graph (R1)", () => {
     });
     await tick();
     expect(decideCalls.at(-1)?.shape).toMatchObject({ basis: "FM3K-404", basis_verified: false });
+  });
+
+  // INF-1275 (review INF-2549): a clicked merge's pending note carries no task,
+  // so it ends with its task however that closes - here an escalation's
+  // supersede, which closes outside the settle's own close.
+  it("takes a clicked merge's pending note down when an escalation supersedes its task", async () => {
+    const crewmate = fakeCrewmate();
+    const mergePullRequest = vi
+      .fn()
+      .mockResolvedValue({ ok: false, text: "PR merge blocked: CI is not fully green." });
+    const { supervisor, tasks, specs, cards } = setup(crewmate, { mergePullRequest });
+    const { taskId } = await supervisor.commission({
+      title: "Ship the PR",
+      intent: intentOf("done work"),
+      shape: { rigor_ask: "quick" },
+    });
+    await tick();
+    vi.spyOn(supervisor, "taskDelivery").mockReturnValue("direct-pr");
+    specs[0]?.onCard?.({
+      requiredActions: [],
+      title: "The PR is ready",
+      body: completionBody(
+        "<p>The PR is ready to merge.</p><p>CI is green on the head commit.</p>",
+      ),
+      actions: [{ id: "merge-pr", label: "Merge PR", default: true, effect: SETTLE_MERGE }],
+    });
+    crewmate.finishPrompt();
+    await tick();
+    const settle = cards().find((card) => card.title === "The PR is ready") as Card;
+    supervisor.act(settle.id, "merge");
+    await tick();
+    expect(cards().map((card) => card.id)).toContain(mergePendingCardId(taskId));
+
+    await supervisor.commission({
+      title: "Ship the PR",
+      intent: intentOf("that is not it, try again"),
+      shape: { escalate_from: tasks.get(taskId)?.key },
+    });
+    await tick();
+    expect(tasks.get(taskId)).toMatchObject({ status: "dropped", closedReason: "superseded" });
+    expect(cards().map((card) => card.id)).not.toContain(mergePendingCardId(taskId));
   });
 
   it("dispatches a queued row from the shape it was commissioned with (S2)", async () => {

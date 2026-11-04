@@ -5,7 +5,7 @@ import { join } from "node:path";
 import { HERE } from "@shared/deviceNames";
 import type { FmEvent } from "@shared/events";
 import { forgeOf } from "@shared/forge";
-import { speaksInfinitaryNames } from "@shared/ipc";
+import { speaksInfinitaryNames, takesWork } from "@shared/ipc";
 import {
   type BundledRef,
   PLACED_COPY_CHUNK_BYTES,
@@ -15,7 +15,6 @@ import {
   type WorkOrderResponse,
   workOrders,
 } from "@shared/work";
-import { contractChange, listsChange } from "../connection/contractChanges";
 import { type AppPaths, crewmatePlacedDir } from "../paths";
 import { TaskService } from "../tasks/taskService";
 import { ARTIFACTS_FOLDER, artifactPath, OLDER_ARTIFACTS_FOLDER } from "../workspace/artifacts";
@@ -35,11 +34,6 @@ import {
 } from "../workspace/workspaceService";
 import { sendSourceFile } from "./sourceFiles";
 import type { WorkDevices } from "./workDevices";
-
-/** A selection of an artifact's files, written beside the whole one (`artifact-parts.md`). */
-const ARTIFACT_PARTS = contractChange("artifact-parts");
-/** One streamed member into task evidence, on both computers. */
-const WORKFLOW_EVIDENCE_FILE = contractChange("workflow-evidence-file");
 
 /**
  * The home's side of a task's working copy on a computer that runs work
@@ -602,7 +596,7 @@ export class PlacedCopies {
   }
 
   writesEvidenceFiles(deviceId: string): boolean {
-    return listsChange(this.options.devices.version(deviceId)?.changes, WORKFLOW_EVIDENCE_FILE);
+    return this.takesCurrentWork(deviceId);
   }
 
   async writeEvidenceFile(
@@ -618,7 +612,13 @@ export class PlacedCopies {
 
   /** Whether that computer writes a selection of an artifact's files beside the whole one. */
   writesArtifactParts(deviceId: string): boolean {
-    return listsChange(this.options.devices.version(deviceId)?.changes, ARTIFACT_PARTS);
+    return this.takesCurrentWork(deviceId);
+  }
+
+  /** Every computer on this home's major writes evidence files and artifact selections. */
+  private takesCurrentWork(deviceId: string): boolean {
+    const version = this.options.devices.version(deviceId);
+    return !!version && takesWork(version.contract);
   }
 
   /**

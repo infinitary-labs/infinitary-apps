@@ -34,6 +34,8 @@ import {
   isSignInForgeFailure,
   isTransientForgeFailure,
   ownChecksOf,
+  QUEUE_STATUS,
+  QUEUE_WAITING_WORDS,
 } from "../../forge";
 import { RELEASE_UPLOAD_TIMEOUT_MS } from "../../releaseFile";
 import type { ArchiveRanges } from "../../workflows";
@@ -821,6 +823,14 @@ export class GitHubForge implements Forge {
           ? `${this.place} put it in a merge queue instead of merging it`
           : `${this.place} had not finished the merge when the app stopped reading`,
     };
+  }
+
+  async markQueued(sha: string): Promise<void> {
+    await this.request("POST", `${this.repoPath()}/statuses/${encodeURIComponent(sha)}`, {
+      state: "pending",
+      context: QUEUE_STATUS,
+      description: QUEUE_WAITING_WORDS,
+    });
   }
 
   async close(change: ForgeChange): Promise<void> {

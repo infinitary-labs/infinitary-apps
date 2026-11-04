@@ -1,3 +1,4 @@
+import { takesWork } from "@shared/ipc";
 import {
   type ComputerLoadReading,
   LOAD_ORDER,
@@ -5,11 +6,8 @@ import {
   loadSnapshotSchema,
 } from "@shared/load";
 import { RESOURCE_MAX_AGE_MS, RESOURCE_READ_TIMEOUT_MS } from "@shared/resources";
-import { contractChange, listsChange } from "../connection/contractChanges";
 import type { LoadLine } from "./loadLine";
 import type { WorkDevices } from "./workDevices";
-
-const HEAVY_RUN_LINE = contractChange("heavy-run-line");
 
 /** The home's receiver of declared-run facts; it owns no queue on a second computer. */
 export class ComputerLoads {
@@ -105,7 +103,8 @@ export class ComputerLoads {
   }
 
   supports(computerId: string): boolean {
-    return listsChange(this.options.work.version(computerId)?.changes, HEAVY_RUN_LINE);
+    const version = this.options.work.version(computerId);
+    return !!version && takesWork(version.contract);
   }
 
   /** Called by the existing two-second resource feed, not a second sampling loop. */

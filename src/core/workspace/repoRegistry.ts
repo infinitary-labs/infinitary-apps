@@ -15,6 +15,7 @@ import { basename, isAbsolute, join, resolve, sep } from "node:path";
 import { type ForgeKind, forgeOf, type KnownForgeHost } from "@shared/forge";
 import { AUTOMATIC_COMPUTER, placementRequirementsSchema } from "@shared/placement";
 import {
+  deliveryChoices,
   type ProjectsFolderView,
   type RepoDelivery,
   type RepoKind,
@@ -495,6 +496,19 @@ export class RepoRegistry {
       if (path !== repo.path && existsSync(repo.path))
         throw new Error("Move the project's folder first; changing its folder never moves files.");
     }
+    // The delivery the project would have, against the host it would live on:
+    // a new address can move a queue-pr project off GitHub too.
+    const host =
+      changes.origin === undefined
+        ? repo.host
+        : repoHostFrom(forgeOf(changes.origin, this.options.knownHosts?.()));
+    if (
+      (changes.delivery ?? repo.delivery) === "queue-pr" &&
+      !deliveryChoices(host).includes("queue-pr")
+    )
+      throw new Error(
+        "Only a project on GitHub can merge through its queue. Choose pull requests or a local merge.",
+      );
     if (
       name !== repo.name &&
       (!/^[\w][\w.-]*$/.test(name) || this.nameTaken(name, undefined, ownFolder))

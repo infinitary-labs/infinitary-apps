@@ -45,7 +45,7 @@ This is logical notice deduplication through the existing inbox, not an exactly-
 
 A work computer retains observations in the existing numbered outbox before acknowledging its local source.
 `PlacedSessions` already waits at event gaps and rejects duplicate delivery before the home consumes observations.
-The work computer enables observation only when its home lists the `tool-observations` contract change; older homes receive the existing events without this coverage.
+The work computer always sends these observations, since it takes work only from a home on its own contract major.
 The home never fingerprints its copied transcript again.
 
 The first mate's wake includes the first/latest inspectable calls, count and elapsed time, plus the latest available ledger reading through the existing usage owner.

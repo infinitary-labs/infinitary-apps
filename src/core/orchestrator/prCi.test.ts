@@ -30,6 +30,7 @@ import {
   presentationCommitMessage,
   presentationContentHash,
   presentationMarkdown,
+  QUEUE_STATUS,
 } from "../forge";
 import { stageChangePresentation } from "../pi/changePresentation";
 import { type MergeAuthorization, TaskStore } from "../storage/taskStore";
@@ -170,6 +171,8 @@ class FakeForge implements Forge {
     return this.change;
   }
   branchesAt?: Forge["branchesAt"];
+  /** Marks a version for the project's queue, where a test gives the host it. */
+  markQueued?: Forge["markQueued"];
   /** The default branch's own checks, where a test gives the host them. */
   branchChecks?: Forge["branchChecks"];
   async checks(change: ForgeChange, movedPast?: string) {
@@ -2385,6 +2388,231 @@ describe("a merge under the captain's kept approval (FI3-304)", () => {
     const other = await service.merge("ab12cd34", attended);
     expect(other.ok).toBe(false);
     expect(other.stop).toBeUndefined();
+  });
+
+  it("merges a queue-pr change only once its queue passes the approved version, marking each version it waits on (INF-2430 piece 2)", async () => {
+    // The captain's plan: the click marks the approved version with
+    // infinitary/queue, waiting; the kept click merges only once it passes
+    // there; a repair that carries the click marks its new version the same way.
+    const forge = new PinnedForge();
+    const harness = setup({ forge });
+    await insertDirectPrTask(harness.tasks, harness.repos, {
+      shape: { kind: "fix", kind_source: "none", delivery_ask: "queue-pr" },
+    });
+    const marked: string[] = [];
+    forge.markQueued = async (sha: string) => {
+      marked.push(sha);
+      forge.calls.push(`markQueued ${sha}`);
+      forge.atHead[sha] = [
+        { name: "linux-checks", state: "success" },
+        { name: QUEUE_STATUS, state: "pending" },
+      ];
+    };
+    let refuse: string | undefined;
+    const guard = (head: string): MergeGuard => ({
+      head,
+      prNumber: 23,
+      unattended: true,
+      beforeDispatch: (at, mark) => {
+        forge.calls.push(`beforeDispatch ${at}${mark ? " mark" : ""}`);
+        return refuse;
+      },
+    });
+    const putIns = () => forge.calls.filter((call) => call.startsWith("putIn"));
+    const looks = () => forge.calls.filter((call) => call.startsWith("beforeDispatch"));
+
+    // INF-2549: the last look comes before the mark - a refused one writes nothing.
+    refuse = "a new completion card is up";
+    expect(await harness.service.merge("ab12cd34", guard("feedbeef"))).toMatchObject({
+      ok: false,
+      stop: "withdrawn",
+    });
+    expect(marked).toEqual([]);
+    refuse = undefined;
+    // The click: the pull request's own checks passed, so the version is marked
+    // waiting - although GitHub holds the pull request, since the project's
+    // rules may require infinitary/queue itself (INF-2549).
+    forge.readiness = "blocked";
+    forge.calls.length = 0;
+    expect(await harness.service.merge("ab12cd34", guard("feedbeef"))).toMatchObject({
+      ok: false,
+      stop: "queue",
+    });
+    expect(marked).toEqual(["feedbeef"]);
+    const lookAt = forge.calls.indexOf("beforeDispatch feedbeef mark");
+    expect(lookAt).toBeGreaterThan(-1);
+    expect(lookAt).toBeLessThan(forge.calls.indexOf("markQueued feedbeef"));
+    // The kept approval reads it again while the batch runs: nothing is marked twice.
+    expect(await harness.service.merge("ab12cd34", guard("feedbeef"))).toMatchObject({
+      ok: false,
+      stop: "queue",
+    });
+    expect(marked).toEqual(["feedbeef"]);
+    // The batch sends it back: a failed check, never a merge.
+    forge.atHead.feedbeef = [
+      { name: "linux-checks", state: "success" },
+      { name: QUEUE_STATUS, state: "failure" },
+    ];
+    expect(await harness.service.merge("ab12cd34", guard("feedbeef"))).toMatchObject({
+      ok: false,
+      stop: "checks",
+    });
+    // A repair carried the click to a new version: it is marked the same way.
+    if (!forge.change) throw new Error("the pull request is gone");
+    forge.change = { ...forge.change, headSha: "repair01" };
+    expect(await harness.service.merge("ab12cd34", guard("repair01"))).toMatchObject({
+      ok: false,
+      stop: "queue",
+    });
+    expect(marked).toEqual(["feedbeef", "repair01"]);
+    expect(putIns()).toEqual([]);
+    // Every look before a mark records nothing: none was a merge request's.
+    expect(looks().every((call) => call.endsWith(" mark"))).toBe(true);
+    // The batch passes there: GitHub's rules stop the merge again until they clear.
+    forge.atHead.repair01 = [
+      { name: "linux-checks", state: "success" },
+      { name: QUEUE_STATUS, state: "success" },
+    ];
+    expect(await harness.service.merge("ab12cd34", guard("repair01"))).toMatchObject({
+      ok: false,
+      stop: "protected",
+    });
+    expect(putIns()).toEqual([]);
+    // Then the kept click merges that version.
+    forge.readiness = "clean";
+    expect(await harness.service.merge("ab12cd34", guard("repair01"))).toMatchObject({
+      ok: true,
+      receipt: { head: "repair01" },
+    });
+    expect(putIns()).toEqual(["putIn fm/task-ab12cd34 repair01"]);
+  });
+
+  it("routes a referenced request_merge review and a merge past the rules through a queue-pr project's queue (INF-2549)", async () => {
+    // The captain chose "a swept batch before main": no route to a merge passes
+    // the queue, and a required infinitary/queue status is what holds GitHub.
+    const forge = new FakeForge();
+    const { tasks, repos, service } = setup({ forge });
+    await insertDirectPrTask(tasks, repos, {
+      shape: { kind: "fix", kind_source: "none", delivery_ask: "queue-pr" },
+    });
+    repos.configure(tasks.get("ab12cd34")!.repoId!, { origin: "https://github.com/x/y.git" });
+    const pulls: Record<number, { headSha: string; branch: string; readiness: ForgeReadiness }> = {
+      41: { headSha: "other001", branch: "fm/task-other", readiness: "blocked" },
+      42: { headSha: "skip0001", branch: "fm/task-skipped", readiness: "blocked" },
+    };
+    forge.atHead.other001 = [{ name: "linux-checks", state: "success" }];
+    forge.atHead.skip0001 = [{ name: "unit-tests", state: "failure" }];
+    const marked: string[] = [];
+    const send = vi.fn(async () => ({ status: "merged" as const, sha: "squash42" }));
+    Object.assign(forge, {
+      pull: async (number: number): Promise<ForgePull> => ({
+        number,
+        state: "open",
+        merged: false,
+        headSha: pulls[number]!.headSha,
+        base: "main",
+        branch: pulls[number]!.branch,
+        headRepo: "x/y",
+        title: "fix: ship the meter",
+        readiness: pulls[number]!.readiness,
+      }),
+      branchRules: async () => [
+        { id: 1, name: "main checks", bypass: "always", rules: ["required_status_checks"] },
+      ],
+      putInSkippingRules: send,
+      markQueued: async (sha: string) => {
+        marked.push(sha);
+        forge.calls.push(`markQueued ${sha}`);
+        const held = forge.atHead[sha];
+        if (Array.isArray(held))
+          forge.atHead[sha] = [...held, { name: QUEUE_STATUS, state: "pending" }];
+      },
+    });
+    const passQueue = (sha: string, number: number) => {
+      const held = forge.atHead[sha];
+      if (!Array.isArray(held)) throw new Error("no checks at that version");
+      forge.atHead[sha] = [
+        ...held.filter((item) => item.name !== QUEUE_STATUS),
+        { name: QUEUE_STATUS, state: "success" },
+      ];
+      pulls[number]!.readiness = "clean";
+    };
+
+    // A referenced review: the click looks, then marks, and merges nothing.
+    const referenced: MergeReview = {
+      id: "mrqueued41",
+      relationship: "referenced",
+      kind: "github",
+      host: "github.com",
+      owner: "x",
+      name: "y",
+      number: 41,
+      headSha: "other001",
+      base: "main",
+      branch: "fm/task-other",
+      method: "squash",
+      title: "fix: ship the meter",
+      at: Date.now(),
+    };
+    seedDelivery(tasks, "ab12cd34", { mergeReviews: [referenced] });
+    const guard: MergeGuard = {
+      head: "other001",
+      prNumber: 41,
+      unattended: false,
+      beforeDispatch: (at, mark) => {
+        forge.calls.push(`beforeDispatch ${at}${mark ? " mark" : ""}`);
+        return undefined;
+      },
+    };
+    expect(await service.reviewGate("ab12cd34", referenced.id)).toBeUndefined();
+    expect(await service.mergeReview("ab12cd34", referenced.id, guard)).toMatchObject({
+      ok: false,
+      stop: "queue",
+      relationship: "referenced",
+    });
+    expect(marked).toEqual(["other001"]);
+    expect(forge.calls.indexOf("beforeDispatch other001 mark")).toBeLessThan(
+      forge.calls.indexOf("markQueued other001"),
+    );
+    passQueue("other001", 41);
+    expect(await service.mergeReview("ab12cd34", referenced.id, guard)).toMatchObject({
+      ok: true,
+      relationship: "referenced",
+      receipt: { head: "other001" },
+    });
+    expect(forge.calls).toContain("putIn fm/task-other other001");
+
+    // A merge past the rules: its click marks the version and sends nothing;
+    // the same review merges on a new click once the queue passes it.
+    const input = { pull: 42, skipRules: { headSha: "skip0001", method: "squash" as const } };
+    expect(await service.checkForCrew("ab12cd34", input)).toContain("Merge review");
+    const skip = tasks.get("ab12cd34")!.delivery!.mergeReviews!.find((entry) => entry.skips)!;
+    expect(skip.skips?.failedChecks).toEqual(["unit-tests"]);
+    // A status write GitHub refuses is the click's outcome, as on the referenced
+    // route, never an error that escapes it (re-review INF-2549).
+    const mark = forge.markQueued;
+    forge.markQueued = async () => {
+      throw new ForgeError("refused", "GitHub answered 403 to POST /repos/x/y/statuses/skip0001");
+    };
+    expect(await service.mergeReview("ab12cd34", skip.id)).toMatchObject({
+      ok: false,
+      problem: "GitHub answered 403 to POST /repos/x/y/statuses/skip0001",
+    });
+    expect(send).not.toHaveBeenCalled();
+    forge.markQueued = mark;
+    expect(await service.mergeReview("ab12cd34", skip.id)).toMatchObject({
+      ok: false,
+      stop: "queue",
+    });
+    expect(marked).toEqual(["other001", "skip0001"]);
+    expect(send).not.toHaveBeenCalled();
+    expect(
+      tasks.get("ab12cd34")!.delivery!.mergeReviews!.find((entry) => entry.id === skip.id)?.sent,
+    ).toBeUndefined();
+    passQueue("skip0001", 42);
+    pulls[42]!.readiness = "blocked";
+    expect(await service.mergeReview("ab12cd34", skip.id)).toMatchObject({ ok: true });
+    expect(send).toHaveBeenCalledTimes(1);
   });
 
   it("never sends a merge twice: an answer that never came is read back first", async () => {

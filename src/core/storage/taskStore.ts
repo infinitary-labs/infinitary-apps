@@ -183,7 +183,9 @@ export type MergeWait =
   /** Another refusal the crewmate can fix: a title, a missing version, access. */
   | "refused"
   /** The captain's newer guidance waits for its crewmate to declare its impact. */
-  | "guidance";
+  | "guidance"
+  /** A queue-pr project's queue has not passed this version yet: its \`infinitary/queue\` status is waiting. */
+  | "queue";
 
 /**
  * The captain's merge approval (FI3-304), version 1: minted by his click on

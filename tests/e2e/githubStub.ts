@@ -161,6 +161,16 @@ export type GitHubStub = {
    * pull request workflow; the version's workflow runs list those runs.
    */
   setChecks: (runs: StubCheckRun[]) => void;
+  /**
+   * Every commit status the app or the test set, by commit, as GitHub's
+   * combined status lists them: one per context, the newest kept.
+   */
+  statuses: (sha: string) => { context: string; state: string; description?: string }[];
+  /** Sets a commit status, as a project's own workflow does through `POST /statuses/{sha}`. */
+  setStatus: (
+    sha: string,
+    status: { context: string; state: string; description?: string },
+  ) => void;
   /** INF-1555 F14: refuse the version's workflow metadata list, not its sign-in or registered checks. */
   setWorkflowReadFailure: (failure: { status: number; message: string } | undefined) => void;
   /** Every failed-job rerun GitHub accepted, `POST /path`, in order. */
@@ -226,6 +236,18 @@ export async function startGitHubStub(
   const evidenceProjects = new Set<number>();
   const evidence = new Map<string, { bytes: Buffer; mediaType: string }>();
   const merges: StubMerge[] = [];
+  const commitStatuses = new Map<
+    string,
+    { context: string; state: string; description?: string }[]
+  >();
+  const putStatus = (
+    sha: string,
+    status: { context: string; state: string; description?: string },
+  ) =>
+    commitStatuses.set(sha, [
+      ...(commitStatuses.get(sha) ?? []).filter((item) => item.context !== status.context),
+      status,
+    ]);
   const asyncMerges: StubAsyncMerge[] = [];
   const asyncResults = new Map<string, { status: string; details: Record<string, unknown> }>();
   let rulesets: StubRuleset[] = [];
@@ -809,8 +831,26 @@ export async function startGitHubStub(
           send(200, { total_count: runs.length, workflow_runs: runs });
           return;
         }
-        if (method === "GET" && /^\/commits\/[^/]+\/status$/.test(rest)) {
-          send(200, { state: "success", statuses: [] });
+        const statusPost = method === "POST" ? /^\/statuses\/([^/]+)$/.exec(rest) : null;
+        if (statusPost?.[1]) {
+          const body = JSON.parse(raw) as { context: string; state: string; description?: string };
+          putStatus(decodeURIComponent(statusPost[1]), body);
+          send(201, { id: 1, ...body });
+          return;
+        }
+        const statusRead = method === "GET" ? /^\/commits\/([^/]+)\/status$/.exec(rest) : null;
+        if (statusRead?.[1]) {
+          const statuses = (commitStatuses.get(decodeURIComponent(statusRead[1])) ?? []).map(
+            (status, index) => ({ id: index + 1, ...status }),
+          );
+          const state = statuses.some(
+            (status) => status.state === "failure" || status.state === "error",
+          )
+            ? "failure"
+            : statuses.some((status) => status.state === "pending")
+              ? "pending"
+              : "success";
+          send(200, { state, statuses, total_count: statuses.length });
           return;
         }
         if (method === "GET" && /^\/rules\/branches\/.+$/.test(rest)) {
@@ -1025,6 +1065,8 @@ export async function startGitHubStub(
     setChecks: (runs) => {
       checkRuns = runs;
     },
+    statuses: (sha) => [...(commitStatuses.get(sha) ?? [])],
+    setStatus: putStatus,
     setWorkflowReadFailure: (failure) => {
       workflowReadFailure = failure;
     },

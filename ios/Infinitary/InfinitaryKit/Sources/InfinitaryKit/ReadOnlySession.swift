@@ -563,7 +563,8 @@ public struct PhoneNotice: Equatable, Sendable {
             }
             // A major folds every earlier change name in, so a home from sceneObservationsSince on has them without naming them.
             let homeMajor = ((frame["protocolVersion"] as? String)?.split(separator: ".").first).flatMap { Int($0) } ?? 0
-            sharedCardSeen = (frame["changes"] as? [String] ?? []).contains(PhoneContract.cardCurrentUpdateSeen)
+            sharedCardSeen = homeMajor >= PhoneContract.cardCurrentUpdateSeenSince
+                || (frame["changes"] as? [String] ?? []).contains(PhoneContract.cardCurrentUpdateSeen)
             sceneObservations = homeMajor >= PhoneContract.sceneObservationsSince
                 || (frame["changes"] as? [String] ?? []).contains(PhoneContract.sceneObservations)
             if !sceneObservations { computers = [] }

@@ -1,3 +1,4 @@
+import { PROTOCOL_VERSION } from "@shared/ipc";
 import { describe, expect, it, vi } from "vitest";
 import { reportDrawnUpdate } from "./useSeenReport";
 
@@ -15,8 +16,12 @@ describe("drawn update request compatibility", () => {
     const seenUpdate = vi.fn(async () => {
       throw new Error("Unsupported request");
     });
-    await reportDrawnUpdate(drawn, undefined, { seen, seenUpdate });
-    await reportDrawnUpdate(drawn, ["another-change"], { seen, seenUpdate });
+    await reportDrawnUpdate(drawn, {}, { seen, seenUpdate });
+    await reportDrawnUpdate(
+      drawn,
+      { protocolVersion: "12.0.0", changes: ["another-change"] },
+      { seen, seenUpdate },
+    );
     expect(seen.mock.calls).toEqual([
       [drawn.id, drawn.offerId],
       [drawn.id, drawn.offerId],
@@ -27,14 +32,27 @@ describe("drawn update request compatibility", () => {
   it("uses the exact released identifier only when supported, never falling back for an unidentified update", async () => {
     const seen = vi.fn(async () => ({ ok: true as const }));
     const seenUpdate = vi.fn(async () => ({ ok: true as const }));
-    await reportDrawnUpdate(drawn, ["card-current-update-seen"], { seen, seenUpdate });
-    expect(seenUpdate.mock.calls).toEqual([[drawn.id, drawn.lifecycleId, drawn.currentUpdateId]]);
+    // An older home names the change; a home on major 13 or later folds the name in.
     await reportDrawnUpdate(
-      { ...drawn, currentUpdateId: undefined },
-      ["card-current-update-seen"],
+      drawn,
+      { protocolVersion: "12.0.0", changes: ["card-current-update-seen"] },
       { seen, seenUpdate },
     );
-    expect(seenUpdate).toHaveBeenCalledOnce();
+    await reportDrawnUpdate(
+      drawn,
+      { protocolVersion: PROTOCOL_VERSION, changes: [] },
+      { seen, seenUpdate },
+    );
+    expect(seenUpdate.mock.calls).toEqual([
+      [drawn.id, drawn.lifecycleId, drawn.currentUpdateId],
+      [drawn.id, drawn.lifecycleId, drawn.currentUpdateId],
+    ]);
+    await reportDrawnUpdate(
+      { ...drawn, currentUpdateId: undefined },
+      { protocolVersion: PROTOCOL_VERSION },
+      { seen, seenUpdate },
+    );
+    expect(seenUpdate).toHaveBeenCalledTimes(2);
     expect(seen).not.toHaveBeenCalled();
   });
 });

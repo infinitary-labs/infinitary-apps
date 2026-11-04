@@ -1,7 +1,7 @@
 import { createHash } from "node:crypto";
 import { COMPLETION_CARD_HEADINGS } from "@shared/cardHeadings";
 import { HERE, HOME } from "@shared/deviceNames";
-import type { RepoDelivery } from "@shared/repos";
+import { opensPullRequest, type RepoDelivery } from "@shared/repos";
 import type { Rigor } from "@shared/rigor";
 import type { EffectiveTaskPolicies } from "@shared/taskPolicies";
 import careCarefulGuide from "../../../resources/runbooks/care/careful.json" with { type: "json" };
@@ -190,13 +190,13 @@ export function careGuideFor(procedure?: CrewmateProcedureFacts): string[] {
 }
 
 /**
- * Full guidance when the facts are unknown or name direct-pr. Otherwise the
- * delivery passage those facts do not call for is left out, and the brief
- * remains the authority for it. How each care level is carried out is the
+ * Full guidance when the facts are unknown or name a pull request delivery
+ * (direct-pr or queue-pr). Otherwise the delivery passage those facts do
+ * not call for is left out, and the brief remains the authority for it. How each care level is carried out is the
  * care runbook's, never this prompt's (INF-1868, piece 5).
  */
 function applicableCore(full: string, procedure?: CrewmateProcedureFacts): string {
-  if (!procedure || procedure.delivery === "direct-pr") return full;
+  if (!procedure || opensPullRequest(procedure.delivery)) return full;
   const parts = full.split("\n\n");
   if (parts.length !== 5) throw new Error("crewmate prompt paragraphs moved");
   const [identity, , pictures, safety, cards] = parts;
@@ -252,7 +252,7 @@ The user sees cards and their threads, never a chat of your own. Follow emit_car
       ? [
           ...careGuideFor(procedure),
           CREWMATE_TEST_DEFAULT,
-          ...(!procedure || procedure.delivery === "direct-pr" ? [deliveryGuide.trim()] : []),
+          ...(!procedure || opensPullRequest(procedure.delivery) ? [deliveryGuide.trim()] : []),
         ]
       : [runbookText]),
     CARD_AUTHORING,

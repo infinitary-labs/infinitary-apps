@@ -77,7 +77,7 @@ The brief's `tests-required` constraint asks for tests of the task's stated inte
 
 The middle care is **Default** (stored `standard`), not "checked" (captain's call): it is what a careful engineer does by default, not an extra step layered on.
 The host knows the three names as a typed fact on the record: it selects guidance by them (`Runbooks.crewSections`), shows them on the fact strip, in `crew_status` and in the brief's one care line (`renderRigorSection`), and holds nothing by them - no review hold, no live-proof hold, no refusal of an early card (INF-1876).
-Two host rules still read the name as a fact: a Quick task is exempt from the completion card's picture check, and the delivery judgment is served only to direct-pr work.
+Two host rules still read the name as a fact: a Quick task is exempt from the completion card's picture check, and the delivery judgment is served only to pull request delivery (direct-pr or queue-pr).
 The review and live proof Careful's guidance orders are recorded when they happen, and the host reads those records only to attest a pull request (`docs/forge.md`, "No-mistakes' attestation") and to show them beside the checks.
 
 ### What Default asks
@@ -365,7 +365,7 @@ The personal workspace takes no policy at all - its registry refuses the whole p
 
 **Check facts and declarations.**
 `check_change` returns check and mergeability facts and records the crewmate's evidence-backed judgments (`docs/forge.md`, "Check facts and crew judgment").
-The crew-only Delivery judgment runbook (`resources/runbooks/delivery`) supplies direct-pr work with readiness, diagnosis, repair, rerun and stopping guidance.
+The crew-only Delivery judgment runbook (`resources/runbooks/delivery`) supplies pull request delivery (direct-pr or queue-pr) with readiness, diagnosis, repair, rerun and stopping guidance.
 Its switch changes new crew prompts, not the fixed care procedure, actual check facts, consent or merge authorization.
 The host does not decide green from check states, automatically settle repairs, or enforce a repair, rerun or review-round count.
 The delivery guidance tells the crew how to judge readiness, diagnose a failure, investigate uncertainty and decide when to stop.
@@ -458,6 +458,12 @@ The captain's merge click on a completion card or an ordinary `request_merge` ca
   A conflict, a moved head, checks, a review, GitHub's rules, GitHub not knowing yet, a draft, a sign-in, a hiccup, the captain's undeclared guidance or another refusal leaves the approval standing with `waiting` on that stop.
   A wait new for its head is a quiet timeline line, and one wake to the first mate where someone other than the crewmate the check watch wakes must move.
   Timed waits (`retryAt`, backing off to 30 minutes) are read again by the tick, never in a hot loop.
+- **A project's queue (INF-2430 piece 2).**
+  On a project that merges through its queue, the attempt that passed every gate above and the last look below, which then records no attempt, writes `infinitary/queue` as waiting on its version instead of merging, and waits on `queue`; it merges only once that status reads `success` at that version ([the forge seam](forge.md), "A project's queue").
+- **The pending note (INF-1275).**
+  A captain's merge click on any project, on a completion card or a `request_merge` review, puts up one host note under the task's key (`mergePendingCardId`), so the click never vanishes without a word.
+  It reads Merge pending with the click's words, is revised in place with each new wait's words (`keptFeedLine`; Waiting for the batch check on a queue), reads Merge did not go through with the reason when the merge is refused and nothing is kept or the approval ends, and goes once the merge goes through, a new completion card supersedes the approval, or the task closes any way (`SettleService.closeAndPurge`).
+  It has no actions and carries no task, so it holds no one's turn.
 - **Restart safety.**
   Right before the merge request goes out the guard's `beforeDispatch` re-reads the approval (same id, generation and head, the crewmate idle, no new card) and persists an `attempt` token.
   Its answer clears it; a 200 merges only when GitHub says `merged`.

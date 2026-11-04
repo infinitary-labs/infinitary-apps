@@ -69,7 +69,8 @@ export function rigorFor(input: RigorInput): RigorDecision {
     return { reason: "the work lands through no gate: no rigor" };
   }
   const bound = (rigor: Rigor, reason: string): RigorDecision => {
-    if (rigor === "reviewed" && input.delivery !== "direct-pr") {
+    // Inline, not `opensPullRequest`: repos.ts imports this module.
+    if (rigor === "reviewed" && input.delivery !== "direct-pr" && input.delivery !== "queue-pr") {
       return {
         rigor: "standard",
         reason: `${reason}; reviewed ships a pull request, so ${input.delivery} ships standard`,

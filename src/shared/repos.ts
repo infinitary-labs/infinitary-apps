@@ -65,12 +65,24 @@ export type RepoKind = z.infer<typeof repoKindSchema>;
 
 /**
  * How the agent ships finished work on the repo. `direct-pr` pushes a
- * branch and opens a PR; `local-only` lands on a local branch and never
- * leaves the machine. New postures (a validation pipeline, say) extend this
- * enum - the registry and display render whatever it carries.
+ * branch and opens a PR; `queue-pr` does the same, and the captain's merge
+ * click waits for the project's own queue to pass that version before it
+ * merges (`infinitary/queue`, docs/forge.md "A project's queue"); `local-only`
+ * lands on a local branch and never leaves the machine. New postures extend
+ * this enum - the registry and display render whatever it carries.
  */
-export const repoDeliverySchema = z.enum(["direct-pr", "local-only"]);
+export const repoDeliverySchema = z.enum(["direct-pr", "queue-pr", "local-only"]);
 export type RepoDelivery = z.infer<typeof repoDeliverySchema>;
+
+/** The postures that ship through a pull request: everything but a local land. */
+export type PullRequestDelivery = Exclude<RepoDelivery, "local-only">;
+
+/** Whether a delivery ships through a pull request (`direct-pr` or `queue-pr`). */
+export function opensPullRequest(
+  delivery: string | null | undefined,
+): delivery is PullRequestDelivery {
+  return delivery === "direct-pr" || delivery === "queue-pr";
+}
 
 /**
  * The delivery a single task ships at. The captain's ask (in words, as
@@ -208,6 +220,19 @@ export const repoHostSchema = z
   })
   .nullable();
 export type RepoHost = z.infer<typeof repoHostSchema>;
+
+/**
+ * The deliveries a project may choose where it lives: a project kept only on
+ * this Mac lands locally; one with a host also opens pull requests; and only
+ * one on GitHub can merge through its own queue, since the app marks the
+ * approved version with a GitHub commit status (`infinitary/queue`).
+ */
+export function deliveryChoices(host: RepoHost | undefined): RepoDelivery[] {
+  if (!host) return ["local-only"];
+  return host.kind === "github"
+    ? ["direct-pr", "queue-pr", "local-only"]
+    : ["direct-pr", "local-only"];
+}
 
 /** A parsed origin (`forgeOf`) as a project's host, or null when it lives only on this Mac. */
 export function repoHostFrom(where: { kind: ForgeKind; host: string | null }): RepoHost {

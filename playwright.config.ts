@@ -79,6 +79,13 @@ if (process.argv[2] === "test" && !process.env.CI) {
   }
 }
 
+/** The tag, such as MAC_ONLY_TAG, every lane keeps to; none keeps every test. */
+function laneTag(tag: string | undefined): RegExp | undefined {
+  if (!tag) return undefined;
+  if (!/^@[\w-]+$/.test(tag)) throw new Error(`INFINITARY_E2E_TAG is not a tag: ${tag}`);
+  return new RegExp(`${tag}(?![\\w-])`);
+}
+
 // Each run keeps its own evidence, so a second run never clears the first's
 // (tests/e2e/runEvidence.ts, docs/testing.md "Per-run e2e evidence").
 const run = runDir();
@@ -106,6 +113,10 @@ export default defineConfig({
   // Local journeys use the approved default; CI keeps its job-sized allowance.
   // Native work stays serial, and Playwright resolves explicit CLI overrides.
   workers: process.env.CI ? Math.min(E2E_MAX_WORKERS, jobCores()) : LOCAL_JOURNEY_WORKERS,
+  // A tag every lane honors, the desktop teardown included: the command line's
+  // --grep filters only the lanes a run names, so a teardown lane would still
+  // run all its tests (docs/testing.md, "E2E scheduling and launch diagnostics").
+  grep: laneTag(process.env.INFINITARY_E2E_TAG),
   projects: E2E_PROJECTS,
   reporter: [
     // The console reporter Playwright picks on its own: dots on CI, a line per test here.

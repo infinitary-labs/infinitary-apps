@@ -108,7 +108,7 @@ function recordedWorkflowCall(command: string, environment: Record<string, strin
 
 /** verify.yml's full Mac e2e command: half the job's cores (scripts/job-cores.ts). */
 const VERIFY_E2E_RUN =
-  'cores="$(node scripts/job-cores.ts)"\npnpm exec playwright test --workers=$(( cores > 1 ? cores / 2 : 1 )) $ONLY\n';
+  'cores="$(node scripts/job-cores.ts)"\npnpm exec playwright test --workers=$(( cores > 1 ? cores / 2 : 1 ))\n';
 
 describe("local packaging identity (electron-builder.dev.yml)", () => {
   // INF-2267: keep these smoke-workflow assertions separate from the native bundle checks.
@@ -500,9 +500,10 @@ describe("local packaging identity (electron-builder.dev.yml)", () => {
     const steps = verify.jobs.lane.steps;
     const e2e = steps.find((step) => step.id === "e2e");
     expect(e2e?.run).toBe(VERIFY_E2E_RUN);
+    // The tag reaches every lane, the desktop teardown included (playwright.config.ts).
     const verifyOnly = (all_journeys: boolean) =>
-      workflowString(e2e?.env?.ONLY ?? "", { inputs: { all_journeys } });
-    expect(verifyOnly(false)).toBe(`--grep ${MAC_ONLY_TAG}`);
+      workflowString(e2e?.env?.INFINITARY_E2E_TAG ?? "", { inputs: { all_journeys } });
+    expect(verifyOnly(false)).toBe(MAC_ONLY_TAG);
     expect(verifyOnly(true)).toBe("");
     // Only a run of every journey supplies the chooser's journey times.
     const kept = steps.find((step) => step.name === "Keep the e2e result");
@@ -2635,7 +2636,8 @@ describe("the signed channel workflow", () => {
       workflowValue(jobOf(verify, "linux-e2e").if ?? "", { inputs });
     const only = (inputs: Record<string, unknown>) =>
       workflowValue(
-        (lane.steps ?? []).find((candidate) => candidate.id === "e2e")?.env?.ONLY ?? "",
+        (lane.steps ?? []).find((candidate) => candidate.id === "e2e")?.env?.INFINITARY_E2E_TAG ??
+          "",
         { inputs },
       );
     // A call's inputs, with verify.yml's own defaults for those it leaves out.
@@ -2665,7 +2667,7 @@ describe("the signed channel workflow", () => {
     ]);
     expect(ran("mac", checks)).toEqual(whole);
     expect(ran("linux-checks", checks)).toEqual(ran("linux-checks", called({})));
-    expect(only(checks)).toBe("--grep @mac-only");
+    expect(only(checks)).toBe(MAC_ONLY_TAG);
 
     // The journeys part: every Linux journey, and on the Mac every journey and what it needs.
     const journeys = called({ part: "journeys" });
@@ -4827,7 +4829,7 @@ describe("each Mac job's kind", () => {
           ...env,
           PATH: `${bin}:${process.env.PATH}`,
           COMMAND_LOG: log,
-          ONLY: "",
+          INFINITARY_E2E_TAG: "",
           ...(cores === undefined ? {} : { RUNNER_UP_CORES: cores }),
         },
         encoding: "utf8",

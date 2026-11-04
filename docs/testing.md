@@ -307,7 +307,9 @@ Three checks hold the tag to what a test needs:
 2. The `e2e-mac-tag` lint in `pnpm check` (`tests/lint/e2eMacTag.ts`) refuses an untagged test that reads a Mac fact, and a tagged test that reads none.
    A test reads a Mac fact when its own code, or a `test.skip` or hook of the describe or file around it, names `THIS_DESKTOP` or `HAS_APP_MENU` (`tests/e2e/desktop.ts`) or the platform name "darwin".
    A step only Linux runs, such as a comparison with "linux", needs no Mac, and a helper the test calls is not followed.
-3. `tests/release-workflows.test.ts` holds the Mac steps of `journeys.yml` and `verify.yml` to the tag (`--grep @mac-only`), and the untagged-skip step to every Linux journey job.
+3. `tests/release-workflows.test.ts` holds the Mac steps of `journeys.yml` (`--grep @mac-only`) and `verify.yml` (`INFINITARY_E2E_TAG=@mac-only`) to the tag, and the untagged-skip step to every Linux journey job.
+   `verify.yml` names the tag in `INFINITARY_E2E_TAG`, which `playwright.config.ts` makes every lane's filter: the command line's `--grep` filters only the lanes a run names, so the `desktop` lane, the others' teardown, would still run every test it holds.
+   `tests/e2e-lanes.test.ts` runs the real lanes over fixture specs to hold this, with `desktop` still running after the parallel lanes.
 
 `tests/e2e-mac-tag.test.ts` drives the first two on this repository's own journeys and a Linux run's real result.
 

@@ -353,6 +353,10 @@ jobs:
       # tests tagged MAC_ONLY_TAG (tests/e2e/tags.ts), since linux-e2e runs
       # every other one (docs/principles.md, 2026-10-28), and so does the run
       # on main, which leaves every other journey to the release (INF-2480).
+      # The tag goes to every lane through INFINITARY_E2E_TAG
+      # (playwright.config.ts), never --grep: desktop is the other lanes'
+      # teardown, which ignores the command line's filter, and it still runs
+      # last, alone, as in a run of every journey.
       # A local run keeps its JSON result in its own run directory
       # (tests/e2e/runEvidence.ts); this one names the fixed path kept below.
       # The parallel lanes take half the job's cores: its size when the
@@ -366,9 +370,9 @@ jobs:
         timeout-minutes: 180
         run: |
           cores="$(node scripts/job-cores.ts)"
-          pnpm exec playwright test --workers=$(( cores > 1 ? cores / 2 : 1 )) $ONLY
+          pnpm exec playwright test --workers=$(( cores > 1 ? cores / 2 : 1 ))
         env:
-          ONLY: ${{ !inputs.all_journeys && '--grep @mac-only' || '' }}
+          INFINITARY_E2E_TAG: ${{ !inputs.all_journeys && '@mac-only' || '' }}
           INFINITARY_E2E_RUN_MINUTES: 150
           PLAYWRIGHT_JSON_OUTPUT_FILE: playwright-report/e2e-results.json
       # What the e2e run leaves for whoever reads it (docs/testing.md):

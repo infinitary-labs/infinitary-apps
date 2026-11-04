@@ -3,6 +3,7 @@ import { mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { expect, it } from "vitest";
 import { E2E_PROJECTS } from "./e2e/lanes";
+import { MAC_ONLY_TAG } from "./e2e/tags";
 import { scratchDir } from "./helpers/scratchDirs";
 
 type Suite = {
@@ -232,6 +233,86 @@ it("reports every failure and still runs later tests and the desktop lane", () =
     ...ran.filter((test) => test.lane === "application").map((test) => test.end),
   );
   expect(desktop?.start).toBeGreaterThanOrEqual(lastApplication);
+}, 60_000);
+
+// INF-2480 and INF-2641's mac-filter: main's Mac lane runs only the tests tagged
+// MAC_ONLY_TAG. The command line's --grep skips the desktop lane, the others'
+// teardown, which ran every untagged journey too; the config's tag reaches
+// every lane, and desktop still runs after the parallel lanes.
+it("keeps every lane, the desktop teardown included, to the tag a run names", () => {
+  const dir = scratchDir("infinitary-lane-tag-");
+  writeFileSync(join(dir, "package.json"), JSON.stringify({ type: "module" }));
+  const testModule = join(process.cwd(), "node_modules/@playwright/test/index.mjs");
+  const tagged = (lane: string) =>
+    `test('${lane} needs a Mac', { tag: ${JSON.stringify(MAC_ONLY_TAG)} }, () => expect(1).toBe(1));
+    test('${lane} runs anywhere', () => expect(1).toBe(1));`;
+  const spec = (name: string, body: string) =>
+    writeFileSync(
+      join(dir, name),
+      `import { test, expect } from ${JSON.stringify(testModule)};\n${body}`,
+    );
+  // An application suite and a file in no reviewed list, which defaults to desktop.
+  spec("view.spec.ts", tagged("application"));
+  spec("native-focus.spec.ts", tagged("desktop"));
+  const results = join(dir, "results.json");
+  const config = join(dir, "playwright.config.ts");
+  mkdirSync(join(dir, "output"));
+  writeFileSync(
+    config,
+    `import config from ${JSON.stringify(join(process.cwd(), "playwright.config.ts"))};
+    import { E2E_PROJECTS } from ${JSON.stringify(join(process.cwd(), "tests/e2e/lanes.ts"))};
+    export default { ...config, testDir: ${JSON.stringify(dir)}, globalSetup: undefined,
+      tsconfig: ${JSON.stringify(join(process.cwd(), "tsconfig.node.json"))},
+      projects: E2E_PROJECTS.filter((project) => project.name !== 'styles'),
+      reporter: [['json', { outputFile: ${JSON.stringify(results)} }]],
+      outputDir: ${JSON.stringify(join(dir, "output"))} };`,
+  );
+  type RunSuite = {
+    specs?: {
+      title: string;
+      tests: { projectName: string; results: { startTime: string; duration: number }[] }[];
+    }[];
+    suites?: RunSuite[];
+  };
+  const ranWith = (tag: string) => {
+    const env: NodeJS.ProcessEnv = { ...process.env, CI: "true", INFINITARY_E2E_TAG: tag };
+    delete env.PLAYWRIGHT_JSON_OUTPUT_FILE;
+    const run = spawnSync(
+      process.execPath,
+      ["node_modules/@playwright/test/cli.js", "test", "--config", config],
+      { encoding: "utf8", env },
+    );
+    expect(run.status, run.stdout + run.stderr).toBe(0);
+    const ran: { title: string; lane: string; start: number; end: number }[] = [];
+    const visit = (suite: RunSuite) => {
+      for (const spec of suite.specs ?? [])
+        for (const test of spec.tests)
+          for (const result of test.results) {
+            const start = Date.parse(result.startTime);
+            ran.push({
+              title: spec.title,
+              lane: test.projectName,
+              start,
+              end: start + result.duration,
+            });
+          }
+      for (const child of suite.suites ?? []) visit(child);
+    };
+    for (const suite of (JSON.parse(readFileSync(results, "utf8")) as { suites: RunSuite[] })
+      .suites)
+      visit(suite);
+    return ran;
+  };
+  const tagOnly = ranWith(MAC_ONLY_TAG);
+  expect(tagOnly.map((test) => `${test.lane}: ${test.title}`).sort()).toEqual([
+    "application: application needs a Mac",
+    "desktop: desktop needs a Mac",
+  ]);
+  const desktop = tagOnly.find((test) => test.lane === "desktop");
+  const application = tagOnly.find((test) => test.lane === "application");
+  expect(desktop?.start).toBeGreaterThanOrEqual(application?.end ?? Number.POSITIVE_INFINITY);
+  // No tag keeps every test, as an alpha's run of every journey.
+  expect(ranWith("")).toHaveLength(4);
 }, 60_000);
 
 // A harmless journey through the real project config, with app fixtures removed:

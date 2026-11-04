@@ -11,7 +11,7 @@ Successful responses and IPC schemas are unchanged; the renderer does not parse 
 Refresh and purge retain their in-flight guards, and a refused purge resets the confirmation so retry requires confirming again.
 
 `src/preload/readableRequest.test.ts` owns exact error composition and fallbacks.
-`tests/e2e/card-action-feedback.spec.ts` exercises real rejected Electron calls for refresh, its model-list reload, purge, account connection and sign-in, including clean fallbacks and retry controls.
+`tests/browser/card-action-feedback-refresh.test.tsx` and `tests/browser/card-action-feedback-accounts.test.tsx` exercise rejected calls, as Electron hands them to the window, for refresh, its model-list reload, purge, account connection and sign-in, including clean fallbacks and retry controls; `tests/e2e/card-action-feedback.spec.ts` keeps the card refusals the core itself makes.
 Card wording and behavior remain unchanged.
 
 Routing (including pins), notifications, presence, model-slot membership/reset and decision-model/key writes also use that boundary.
@@ -29,7 +29,8 @@ Opening Appearance or Usage reads the saved look again, so the advice to reopen 
 An account's refused edit is told under its row while the list shows what is saved; when that row is gone, as after a disconnect that went through before failing, it is told under the list.
 
 `settings/settingSave.test.ts` covers receipt, partial-write recovery, failed recovery, ordering, stale polls and pushes; `app/store.test.ts` covers the look's writer.
-`tests/e2e/settings-save-recovery.spec.ts` drives the controls through rejected Electron requests, retries real writes and checks their saved state after reopening Settings, the General and model board ones in both themes.
+`tests/e2e/settings-save-recovery.spec.ts` drives the notification, presence, routing, slot, decision and appearance controls through rejected Electron requests, retries real writes and checks their saved state after reopening Settings.
+`tests/browser/settings-save-recovery.test.tsx` does the same for the panels, sharing, Firstmate model and account controls, against the core's answers written in the test.
 The login-item interface is boxed because login items are shared OS state; all other data is disposable.
 
 ## Notes

@@ -6,11 +6,9 @@ import { scratchDir } from "../helpers/scratchDirs";
 import { seedAccountAuth, seedAccountRegistry, seedAccountStore } from "./accountFixtures";
 import { expectClaudeConnected, launchSignedInClaude } from "./claudeAccount";
 import type { LaunchedApp } from "./launch";
-import { minimumWindowSize, resizeWindow } from "./layout";
 import { writeMockClaudeClient } from "./mockClaudeClient";
 import {
   alwaysUseSwitch,
-  closeModelPanel,
   levelLane,
   modelName,
   modelsSection,
@@ -500,40 +498,6 @@ test("slot membership and off persist across a settings round-trip", async () =>
   await expect(nameIn("off")).toBeVisible();
   await expect(rowIn("medium")).toHaveCount(0);
   await expect(rowIn("low")).toHaveCount(0);
-});
-
-test("a model at the bottom of the shortest window can still be taken out of use and put back", async () => {
-  // The full e2e run once caught a Models row's menu item "outside of the
-  // viewport": a row low in the Models list opened a menu no click could
-  // reach. The board has no row menu now; what a person reaches from the
-  // bottom edge is the model's panel, and it has to stay workable there.
-  const { page, app } = launched;
-  const view = await page.evaluate(() => window.infinitary.models.slots());
-  const model = view.models.find((row) => row.slots.length === 1 && row.slots[0] === "low");
-  if (!model) throw new Error("No listed model sits in low alone");
-  const key = offeringKey(model);
-  const rowIn = (slot: string) =>
-    page.locator(`[data-slot-group="${slot}"] [data-model-row="${key}"]`);
-  const models = await openModels(page);
-  // The shortest window the app allows, at today's width.
-  const originalSize = await resizeWindow(app, page, {
-    width: await page.evaluate(() => window.innerWidth),
-    height: (await minimumWindowSize(app)).height,
-  });
-  try {
-    await rowIn("low").evaluate((element) => element.scrollIntoView({ block: "end" }));
-    const panel = await openModelPanel(page, levelLane(models, "low"), model.label);
-    await removeFromAllLevels(panel, model.label);
-    await expect(rowIn("off")).toHaveCount(1);
-    await expect(rowIn("low")).toHaveCount(0);
-    // And back where it was, from the bottom edge again.
-    await rowIn("off").evaluate((element) => element.scrollIntoView({ block: "end" }));
-    await setLevelInPanel(panel, model.label, "low", true);
-    await expect(rowIn("low")).toHaveCount(1);
-    await closeModelPanel(models);
-  } finally {
-    await resizeWindow(app, page, originalSize);
-  }
 });
 
 test("the dynamic routing toggle round-trips through settings", async () => {

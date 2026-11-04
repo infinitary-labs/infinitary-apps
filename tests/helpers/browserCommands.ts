@@ -8,29 +8,40 @@ import type { ReducedMotion } from "./browserProvided";
  * own user events (docs/testing.md, "The browser layer"): the media a
  * person's Mac sets (Reduced motion), applied to the whole page as the
  * window's Chromium applies the system setting, a reading inside a
- * sandboxed frame the page cannot script, the page's cookies cleared, and
- * the answers of a home seeded for the test's story.
+ * sandboxed frame the page cannot script, the page's cookies cleared, its
+ * garbage collected, and the answers of a home seeded for the test's story.
  */
 const emulateReducedMotion: BrowserCommand<[ReducedMotion]> = async (context, reducedMotion) => {
   await context.page.emulateMedia({ reducedMotion });
 };
 
 /**
- * Runs a function, given as its source, in the frame of the test's page that
- * carries `name`, and answers what it returns. A card body draws in a
- * sandboxed frame of its own origin, which the page that holds it cannot
- * script; the browser can, as the journeys' frame locators did.
+ * Runs a function, given as its source, in a frame of the test's page - the
+ * one named `frame`, or the one whose element carries `frame.title`, as a
+ * card body's frame carries its card's - and answers what it returns. A card
+ * body draws in a sandboxed frame of its own origin, which the page that
+ * holds it cannot script; the browser can, as the journeys' frame locators did.
  */
-const evaluateInFrame: BrowserCommand<[name: string, source: string, argument?: unknown]> = async (
-  context,
-  name,
-  source,
-  argument,
-) => {
-  const frame = context.page.frame({ name });
-  if (!frame) throw new Error(`The page has no frame named ${name}`);
+const evaluateInFrame: BrowserCommand<
+  [frame: string | { title: string }, source: string, argument?: unknown]
+> = async ({ page }, frame, source, argument) => {
+  let found = typeof frame === "string" ? page.frame({ name: frame }) : null;
+  if (typeof frame !== "string") {
+    // More than one element may carry the title - a card leaving the stage
+    // keeps its drawing a moment longer - so the one that shows wins.
+    for (const candidate of page.frames()) {
+      const element = await candidate.frameElement().catch(() => null);
+      if (!element || (await element.getAttribute("title")) !== frame.title) continue;
+      found ??= candidate;
+      if (await element.isVisible()) {
+        found = candidate;
+        break;
+      }
+    }
+  }
+  if (!found) throw new Error(`The page has no frame ${JSON.stringify(frame)}`);
   // The function arrives as its source, so the frame evaluates a call of it.
-  return frame.evaluate(`(${source})(${JSON.stringify(argument ?? null)})`);
+  return found.evaluate(`(${source})(${JSON.stringify(argument ?? null)})`);
 };
 
 /**
@@ -39,6 +50,24 @@ const evaluateInFrame: BrowserCommand<[name: string, source: string, argument?: 
  */
 const clearCookies: BrowserCommand<[]> = async (context) => {
   await context.page.context().clearCookies();
+};
+
+/**
+ * Collects the page's garbage, as a fresh window holds none. Each file's
+ * window draws in a frame the runner drops when the file ends, and what it
+ * drew holds the browser's shared memory until a collection finds the frame
+ * gone. The script heap that would prompt one stays small, so without this
+ * the drawings of file after file pile up. On Linux the page's Chromium
+ * keeps that memory in files under the temp folder, so the pile fills the
+ * disk.
+ */
+const collectGarbage: BrowserCommand<[]> = async ({ page }) => {
+  const session = await page.context().newCDPSession(page);
+  try {
+    await session.send("HeapProfiler.collectGarbage");
+  } finally {
+    await session.detach();
+  }
 };
 
 /**
@@ -63,4 +92,10 @@ const seededHome: BrowserCommand<[input?: unknown]> = async ({ project, testPath
   return home.readHome(seed.default, input, seed.asked);
 };
 
-export const browserCommands = { emulateReducedMotion, evaluateInFrame, clearCookies, seededHome };
+export const browserCommands = {
+  emulateReducedMotion,
+  evaluateInFrame,
+  clearCookies,
+  collectGarbage,
+  seededHome,
+};

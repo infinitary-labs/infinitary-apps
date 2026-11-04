@@ -11,10 +11,11 @@ import { reportLine, startedLine, taskKey } from "./rails";
 
 /**
  * Phase 1 acceptance (docs/architecture.md §17): walk the shell states
- * listening (the dictation key, synthetic) -> working (stub card) -> settings and
- * back in the dark theme; screenshots land in each test's own output directory
- * (docs/testing.md, "Per-run e2e evidence") for review against the design
- * skill's reference states.
+ * listening (the dictation key, synthetic) -> working (stub card) in the dark
+ * theme; screenshots land in each test's own output directory (docs/testing.md,
+ * "Per-run e2e evidence") for review against the design skill's reference
+ * states. Settings and back is the browser test's
+ * (tests/browser/phase1-shell.test.tsx).
  */
 
 const themes = [{ name: "dark" }] as const;
@@ -113,22 +114,6 @@ for (const theme of themes) {
       });
       await page.waitForTimeout(400);
       await page.screenshot({ path: test.info().outputPath(`${theme.name}-idle.png`) });
-    });
-
-    test("settings opens as its own state, and the keyboard leaves it", async () => {
-      const { page } = launched;
-      await page.getByRole("button", { name: "Settings" }).click();
-      await expect(page.locator("[data-screen-label]")).toHaveAttribute(
-        "data-screen-label",
-        "Settings",
-      );
-      // Focus lands on the back control, so a keyboard user leaves the way
-      // they came.
-      await page.keyboard.press("Enter");
-      await expect(page.locator("[data-screen-label]")).toHaveAttribute(
-        "data-screen-label",
-        "Null state",
-      );
     });
 
     if (theme.name === "dark") {

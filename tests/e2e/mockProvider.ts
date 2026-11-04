@@ -159,8 +159,6 @@ export const pictureFile = (picture: PictureFixture) => ({
   bytes: bytesOf(picture),
 });
 
-export const BEFORE_AFTER_NEW_PICTURE = CHANGE_AFTER_PICTURES[2] as PictureFixture;
-
 /**
  * Delivery rigor, phase 1 (the standard tier): a crewmate briefed with
  * "ship at the standard tier" reports under the five headings the tier

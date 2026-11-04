@@ -15,14 +15,7 @@ export const REVISION_BASE = `<h2>What you asked</h2><p>Review the project befor
 
 /** Seed through the real producer, storage and publication seams; a launch reads its saved result. */
 export function seedRevisionCard(
-  options: {
-    removed?: boolean;
-    many?: boolean;
-    chrome?: boolean;
-    preview?: boolean;
-    simple?: boolean;
-    legacy?: boolean;
-  } = {},
+  options: { many?: boolean; preview?: boolean; simple?: boolean } = {},
 ) {
   const userDataDir = scratchDir("infinitary-revisions-");
   const db = openDatabase(userDataDir);
@@ -49,19 +42,12 @@ export function seedRevisionCard(
     : REVISION_BASE;
   const initial = {
     id: "revision-demo",
-    title: options.chrome ? "Earlier project checks" : REVISION_TITLE,
-    body: options.legacy ? "First paragraph.\n\nSecond paragraph." : base,
+    title: REVISION_TITLE,
+    body: base,
     actions: [],
   };
   const id = service.addFirstmateCard(initial);
   service.addMessage(id, "captain", "Check the connected account before starting.");
-  if (options.legacy) {
-    service.addMessage(id, "host", "An earlier revision");
-    service.closeOut({ kind: "firstmate" }, "turn-end");
-    service.dispose();
-    db.close();
-    return { userDataDir, id };
-  }
   // The captain's line waits on the Firstmate, so each revision answers it.
   const revise = (card: Parameters<typeof service.addFirstmateCard>[0]) =>
     service.addFirstmateCard({ ...card, reply: "Done." });
@@ -72,11 +58,6 @@ export function seedRevisionCard(
     "I will check the connected account before starting work.",
   );
   revise({ ...initial, body: checks });
-  if (options.removed)
-    revise({
-      ...initial,
-      body: checks.replace('<h2 id="signin">Sign-in</h2><p>Use your connected account.</p>', ""),
-    });
   if (options.many)
     revise({
       ...initial,
@@ -85,16 +66,6 @@ export function seedRevisionCard(
         Array.from({ length: 5 }, (_, i) => `<h2>Area ${i + 1}</h2><p>New area ${i + 1}</p>`).join(
           "",
         ),
-    });
-  if (options.chrome)
-    revise({
-      ...initial,
-      title: REVISION_TITLE,
-      body: checks,
-      actions: [
-        { id: "keep", label: "Keep waiting", default: true },
-        { id: "leave", label: "Leave it" },
-      ],
     });
   if (options.preview)
     revise({

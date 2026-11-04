@@ -6,12 +6,7 @@ import { CardStore } from "../../src/core/storage/cardStore";
 import { openDatabase } from "../../src/core/storage/db";
 import { seedTask } from "../../src/core/tasks/seedTask";
 import { TaskService } from "../../src/core/tasks/taskService";
-import {
-  CARD_REPLY_MAX_CHARS,
-  type Card,
-  TURN_IMAGE_MAX_BYTES,
-  TURN_IMAGES_MAX,
-} from "../../src/shared/cards";
+import { CARD_REPLY_MAX_CHARS, type Card } from "../../src/shared/cards";
 import { COMPOSER_NOTICE_WORDS } from "../../src/shared/composer";
 import { reportSummary } from "../../src/shared/feed";
 import { applyTaskBoardDelta, type TaskBoard, type TaskBoardDelta } from "../../src/shared/tasks";
@@ -40,7 +35,7 @@ import {
   THREAD_TREE_PROMPT_MARKER,
   THREAD_WORKING_SIBLING_MARKER,
 } from "./mockProvider";
-import { pastePictures, promptInput } from "./prompt";
+import { promptInput } from "./prompt";
 import {
   expandDock,
   expectRecordBody,
@@ -74,7 +69,6 @@ import {
   closeQuestion,
   expectNoCard,
   pager,
-  pagerAt,
   SHOWN_ENTRY,
   showCard,
   shownCard,
@@ -523,47 +517,6 @@ test("a captain reply on a Firstmate card revises it or lands as prose in the th
       ),
     )
     .toBe(false);
-});
-
-test("a card reply refuses pictures beyond the shared limit and shows the shared notice", async () => {
-  const { page } = launched;
-  await closeOpenCards(page);
-  await sendPrompt(page, FM_THREAD_PROMPT_MARKER);
-  await expect(shownCard(page, FM_THREAD_CARD_TITLE)).toBeVisible({ timeout: 30_000 });
-
-  const reply = cardReply(page);
-  await pastePictures(
-    reply.field,
-    Array.from({ length: TURN_IMAGES_MAX + 1 }, (_, i) => ({ name: `reply-${i}.png` })),
-  );
-  await expect(reply.pictures).toHaveCount(TURN_IMAGES_MAX);
-  await expect(reply.notice("pictures-max")).toBeVisible();
-
-  // The row remains capped when another picture is pasted later, too.
-  await pastePictures(reply.field, [{ name: "extra.png" }]);
-  await expect(reply.pictures).toHaveCount(TURN_IMAGES_MAX);
-
-  // A picture past the shared size limit also refuses visibly in this field.
-  await pastePictures(reply.field, [{ name: "oversized.png", bytes: TURN_IMAGE_MAX_BYTES + 1 }]);
-  await expect(reply.pictures).toHaveCount(TURN_IMAGES_MAX);
-  await expect(reply.notice("picture-too-big")).toBeVisible();
-});
-
-test("a card reply takes multiple lines without hiding their text", async () => {
-  const { page } = launched;
-  await closeOpenCards(page);
-  await sendPrompt(page, FM_THREAD_PROMPT_MARKER);
-  await expect(shownCard(page, FM_THREAD_CARD_TITLE)).toBeVisible({ timeout: 30_000 });
-  const reply = cardReply(page);
-  await reply.field.click();
-  await reply.field.pressSequentially("a");
-  await reply.field.press("Shift+Enter");
-  await reply.field.pressSequentially("b");
-  await expect(reply.field).toHaveValue("a\nb");
-  await expect
-    .poll(() => reply.field.evaluate((field) => field.scrollHeight <= field.clientHeight))
-    .toBe(true);
-  await reply.field.fill("");
 });
 
 test("a card reply takes the shell keys and undoes typing by the run, but never brings back the main message", {

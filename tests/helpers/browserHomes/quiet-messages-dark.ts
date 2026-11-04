@@ -1,0 +1,35 @@
+import type { Theme } from "@shared/preferences";
+import { openDatabase } from "../../../src/core/storage/db";
+import { SettingsStore } from "../../../src/core/storage/settingsStore";
+import { TaskService } from "../../../src/core/tasks/taskService";
+
+/** One finished round: the captain's message and the first mate's reply line. */
+type Round = { ask: string; reply: string };
+
+/** What a quiet-messages test's story reads back: the look, and its two rounds, oldest first. */
+type Input = { theme: Theme; rounds: Round[] };
+
+/**
+ * A conversation of two finished turns in the look the captain chose: both
+ * rounds hang above the input, the older one quieter, as a finished turn
+ * keeps them. Both theme files seed through it
+ * (./quiet-messages-light.ts).
+ */
+export default function seed(userDataDir: string, { theme, rounds }: Input): void {
+  const db = openDatabase(userDataDir);
+  try {
+    const settings = new SettingsStore(db);
+    const start = Date.now() - rounds.length * 60_000;
+    settings.setFirstRun({ welcomedAt: start, welcomeState: "consumed", firstTurnAt: start });
+    settings.setAppearance({ ...settings.getAppearance(), theme });
+    const tasks = new TaskService({ db, strict: true });
+    rounds.forEach(({ ask, reply }, index) => {
+      const id = `ask-quiet-${index + 1}`;
+      tasks.openAsk({ id, text: ask, at: start + index * 60_000 });
+      tasks.setAskReply(id, { text: reply, eligibility: "completed" });
+      tasks.closeAsk(id, "closed");
+    });
+  } finally {
+    db.close();
+  }
+}

@@ -25,6 +25,13 @@ import { type BridgeIpc, createApi } from "../../src/preload/api";
  * names every answer the screen it draws needs.
  */
 
+/**
+ * What an answer throws when it has nothing for the request the window sent,
+ * such as a home asked for a card it did not read: the request rejects and
+ * its channel is listed in `unanswered`, as a channel with no answer is.
+ */
+export class NoAnswer extends Error {}
+
 type Handler = (event: unknown, raw: unknown) => void;
 
 /** A channel's answer: the value itself, or a function of the request that returns it. */
@@ -43,7 +50,7 @@ export type FakeBridge = {
   push<C extends PushChannel>(channel: C, payload: PushPayload<C>): void;
   /** Every request the window sent on a channel, in order. */
   requests<C extends InvokeChannel>(channel: C): InvokeRequest<C>[];
-  /** The channels the window asked that had no answer, in order. */
+  /** The channels the window asked that had no answer, or no answer for its request, in order. */
   unanswered: string[];
 };
 
@@ -67,10 +74,14 @@ export function fakeBridge(answers: Answers = {}): FakeBridge {
         throw new Error(`The browser test gave no answer for ${channel}`);
       }
       const answer = table.get(channel);
-      // A copy each time, as an answer crosses the process boundary.
-      return typeof answer === "function"
-        ? structuredClone(await answer(...args))
-        : structuredClone(answer);
+      if (typeof answer !== "function") return structuredClone(answer);
+      try {
+        // A copy each time, as an answer crosses the process boundary.
+        return structuredClone(await answer(...args));
+      } catch (error) {
+        if (error instanceof NoAnswer) unanswered.push(channel);
+        throw error;
+      }
     },
     on(channel, handler) {
       const set = listeners.get(channel) ?? new Set();

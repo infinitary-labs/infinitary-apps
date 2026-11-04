@@ -1,3 +1,5 @@
+import { type Locator, page } from "vitest/browser";
+
 /**
  * The window's message box as a browser test reads and feeds it
  * (docs/composer.md).
@@ -10,6 +12,18 @@
  */
 export function messageBox(): HTMLTextAreaElement | null {
   return document.querySelector<HTMLTextAreaElement>('[name="task-prompt"]');
+}
+
+/**
+ * The message box as the browser's user events reach it: by its role and
+ * accessible name, which stay put while its hint changes. A user event given
+ * the field itself finds it by its hint, which the field refits to its width
+ * and font (ComposerField), so on a computer whose fonts measure differently
+ * the hint can change between finding the field and pressing on it, and the
+ * press then finds nothing.
+ */
+export function messageBoxLocator(): Locator {
+  return page.getByRole("textbox", { name: "Task prompt", exact: true });
 }
 
 /** A real picture: a 16 by 16 PNG, painted and encoded by the page's own canvas. */

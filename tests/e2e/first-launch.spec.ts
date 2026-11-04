@@ -10,12 +10,10 @@ import { expectClaudeConnected } from "./claudeAccount";
 import { claudeSeatRequests, NO_CLAUDE_LOGIN_USER, otherSeatRequests } from "./claudeSeat";
 import { DICTATION_KEY, firstRunHintOnThisComputer, hintOnThisComputer } from "./dictation";
 import { committedWelcome, observeWelcomeReadiness, reloadTypingEarly } from "./firstLaunch";
-import { askFirstmate } from "./lastTurn";
 import { type LaunchedApp, launchApp } from "./launch";
 import {
   atRest,
   expectClearOf,
-  intersects,
   minimumWindowSize,
   overflows,
   resizeWindow,
@@ -634,30 +632,5 @@ test("a Mac with only Claude: connecting it on the stage closes the gate, and th
   } finally {
     await app.close();
     await mockProvider.close();
-  }
-});
-
-test("a gate that reopens over a conversation keeps its words and chips clear of the last turn", async () => {
-  const { app, page } = launched;
-  await connectThroughGate(page);
-  await expect(shownCard(page, WELCOME_TITLE)).toBeVisible();
-  await askFirstmate(page, "Please pause the work for now");
-  const last = page.locator("[data-last-turn]");
-  await expect(last).toBeVisible();
-  for (const account of await page.evaluate(() => window.infinitary.accounts.list()))
-    await page.evaluate((id) => window.infinitary.accounts.remove(id), account.id);
-  await page.evaluate(async () => {
-    for (const card of await window.infinitary.cards.list())
-      await window.infinitary.cards.close(card.id);
-  });
-  const gate = page.locator("[data-first-run-gate='open']");
-  await expect(gate).toBeVisible({ timeout: 20_000 });
-  for (const size of [await minimumWindowSize(app), { width: 1280, height: 800 }]) {
-    await resizeWindow(app, page, size);
-    await atRest(gate);
-    // The band scrolls what does not fit, so its own box is what shows.
-    const band = await gate.evaluate((element) => element.getBoundingClientRect().toJSON());
-    const lane = await last.evaluate((element) => element.getBoundingClientRect().toJSON());
-    expect(intersects(band, lane), `${size.width}x${size.height}`).toBe(false);
   }
 });

@@ -5,7 +5,7 @@ import { commands } from "vitest/browser";
 import "../helpers/browserProvided";
 import { InstalledKeymap } from "../../src/main/keyboard";
 import type { FreshHomeAnswers } from "../helpers/browserProvided";
-import type { Answers } from "./bridge";
+import { type Answers, NoAnswer } from "./bridge";
 
 /**
  * The answers a fresh home gives the window (docs/testing.md, "The browser
@@ -52,7 +52,7 @@ function homeAnswers({ plain, asked }: FreshHomeAnswers): Answers {
       (...request: unknown[]) => {
         const key = JSON.stringify(request);
         if (!(key in byRequest))
-          throw new Error(
+          throw new NoAnswer(
             `The home read ${channel} only for ${Object.keys(byRequest).join(", ")}, not ${key}; add it to ASKED in tests/helpers/browserFreshHome.ts, to the seed's asked, or answer it in the test`,
           );
         return byRequest[key];

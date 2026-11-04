@@ -270,61 +270,6 @@ test("each revision keeps its own links and reveals folded current content witho
   }
 });
 
-test("an older missing area keeps its link and does not move the current card", async () => {
-  const { seedRevisionCard, revisionLinks, cardScroller } = await import("./revisions");
-  const fixture = seedRevisionCard({ removed: true });
-  const app = await launchApp({
-    withMockProvider: true,
-    scenarios: [changeMarkVersions],
-    userDataDir: fixture.userDataDir,
-  });
-  try {
-    const { page } = app;
-    const link = revisionLinks(page).first();
-    await expect(link).toBeVisible();
-    await cardScroller(page).evaluate((el) => (el.scrollTop = 0));
-    await link.click();
-    await expect(page.locator("[data-revision-links]").first().getByRole("status")).toBeVisible();
-    expect(await cardScroller(page).evaluate((el) => el.scrollTop)).toBe(0);
-    await expect(link).toBeVisible();
-  } finally {
-    await app.close();
-  }
-});
-
-test("title and button revision links focus their real regions without choosing", async () => {
-  const { seedRevisionCard, revisionRows, cardScroller } = await import("./revisions");
-  const { untilWindowCommands } = await import("./windowKeys");
-  const fixture = seedRevisionCard({ chrome: true });
-  const { app, page } = await launchApp({ userDataDir: fixture.userDataDir });
-  try {
-    await untilWindowCommands(page);
-    const row = revisionRows(page).last();
-    await expect(row.locator("[data-revision-link]")).toHaveCount(2);
-    await cardScroller(page).evaluate((el) => {
-      el.scrollTop = el.scrollHeight;
-    });
-    const title = row.locator("[data-revision-link]").first();
-    await focusOn(title);
-    await title.press("Enter");
-    const card = page.locator("[data-stage-entry='shown']");
-    await expect(card.locator("[data-card-title]")).toBeFocused();
-    await card.locator("[data-card-title]").press("Escape");
-    await expect(title).toBeFocused();
-    const buttons = row.locator("[data-revision-link]").last();
-    await focusOn(buttons);
-    await buttons.press("Enter");
-    await expect(card.locator("[data-card-actions]")).toBeFocused();
-    await card.locator("[data-card-actions]").press("Escape");
-    await expect(buttons).toBeFocused();
-    expect(
-      (await page.evaluate(() => window.infinitary.cards.list())).some((c) => c.id === fixture.id),
-    ).toBe(true);
-  } finally {
-    await app.close();
-  }
-});
-
 test("a preview revision returns to its current beginning without running a choice", async () => {
   const { seedRevisionCard, revisionRows, cardScroller, revisionFrame } = await import(
     "./revisions"
@@ -346,31 +291,6 @@ test("a preview revision returns to its current beginning without running a choi
     await expect(link).toBeFocused();
     expect(
       (await page.evaluate(() => window.infinitary.cards.list())).some((c) => c.id === fixture.id),
-    ).toBe(true);
-  } finally {
-    await app.close();
-  }
-});
-
-test("legacy revisions have no guessed links and keep plain-text paragraph breaks", async () => {
-  const { seedRevisionCard, revisionFrame, revisionLinks } = await import("./revisions");
-  const { untilWindowCommands } = await import("./windowKeys");
-  const fixture = seedRevisionCard({ legacy: true });
-  const { app, page } = await launchApp({ userDataDir: fixture.userDataDir });
-  try {
-    await untilWindowCommands(page);
-    await expect(
-      page.locator("[data-stage-entry='shown'] [data-revision-unavailable]"),
-    ).toBeVisible();
-    await expect(revisionLinks(page)).toHaveCount(0);
-    await expect(revisionFrame(page).locator("p")).toHaveText([
-      "First paragraph.",
-      "Second paragraph.",
-    ]);
-    expect(
-      (await page.evaluate((id) => window.infinitary.cards.thread(id), fixture.id)).messages.every(
-        (m) => !m.revision,
-      ),
     ).toBe(true);
   } finally {
     await app.close();

@@ -225,9 +225,14 @@ export default defineConfig({
             // The window's Chromium runs with Web Share on, which the shell
             // spends a page's activation through, and with a frame's focus
             // held to a person's gesture (src/main/app.ts); the test page's
-            // Chromium runs the same.
+            // Chromium runs the same. The window draws scrollbars as its
+            // system does - over the content on a Mac by default, beside it
+            // on Linux, and beside it wherever a page styles them - where a
+            // headless page hides them all, so the page keeps them
+            // (tests/browser/card-resize.test.tsx reads a scrollbar's width).
             provider: playwright({
               launchOptions: {
+                ignoreDefaultArgs: ["--hide-scrollbars"],
                 args: [`--enable-blink-features=WebShare,${FRAME_FOCUS_BLINK_FEATURE}`],
               },
             }),

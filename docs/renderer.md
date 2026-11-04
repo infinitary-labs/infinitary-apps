@@ -9,14 +9,14 @@ The crew orbit is `docs/crew-orbits.md`.
 Its `overflow-y: auto` uses `scrollbar-gutter: stable` so a width-consuming scrollbar cannot change the frame width when overflow appears or disappears.
 Otherwise a fluid drawing can shrink enough to remove overflow, widen again, and repeat the height-report cycle indefinitely.
 `overflow: overlay` is not a width guarantee: Chromium computes it to `auto`.
-`tests/e2e/card-resize.spec.ts` exercises this threshold in the real sandboxed card.
-The threshold moves whenever the card's cap or chrome does, so the spec reads the cap with its drawing overflowing and gives the drawing the proportions that fit the body with the scrollbar's width taken but not without it.
+`tests/browser/card-resize.test.tsx` exercises this threshold in the real card frame, with the page drawing scrollbars as the window does.
+The threshold moves whenever the card's cap or chrome does, so the test reads the cap with its drawing overflowing and gives the drawing the proportions that fit the body with the scrollbar's width taken but not without it.
 It checks the settled body sits there, then grows and shrinks the body to verify sizing and single-surface scrolling still work.
 
 `HtmlCardBody` owns the card's vertical `--space-1` inset outside the frame, while `cardStylesheet` keeps horizontal padding and uses `display: flow-root` to retain child margins in the measured body.
 Padding inside an auto-sized viewport makes a `min-height:100vh` child report the current viewport height plus that padding on every resize, growing indefinitely.
 Both static srcdoc and scripted card mounts share the external inset; the shared bridge, plugin/panel stylesheets and authored markup are unchanged.
-`tests/e2e/card-viewport-height.spec.ts` emits each vehicle through the real UI, checks the frame stops resizing with all its content inside, and verifies subsequent growth, outer scrolling and shrinkage.
+`tests/browser/card-viewport-height.test.tsx` shows the static vehicle and `tests/e2e/card-viewport-height.spec.ts` emits the scripted one through the real UI; each checks the frame stops resizing with all its content inside, and verifies subsequent growth, outer scrolling and shrinkage.
 This removes the host's additive feedback, not intentionally self-expanding author CSS such as `calc(100vh + 10px)`.
 
 A static body's frame keeps its first document until that document has loaded, then takes every later body at once (`SrcdocCardBody`).
@@ -175,7 +175,7 @@ Natural measurement temporarily releases the shell constraint before paint, then
 Same-entry growth, drafts and controls remain instant.
 Resize/drag/focus, reduced motion and error/Retry also remain usable.
 
-How a replacement draws is judged by eye and by recordings; the journeys through it (paging, a reply draft kept across paging and a card-body disclosure in `phase4-cards.spec.ts`; Close, the next-card rule and a lone card's reply keeping its body in `stage-reveals.spec.ts`) are end-to-end tests, and `stageSlots.test.ts` and `store.test.ts` own the lifecycle and selection ordering.
+How a replacement draws is judged by eye and by recordings; the journeys through it (paging, a reply draft kept across paging and a card-body disclosure in `tests/browser/phase4-cards.test.tsx`; Close, the next-card rule and a lone card's reply keeping its body in `stage-reveals.spec.ts`) are end-to-end and browser tests, and `stageSlots.test.ts` and `store.test.ts` own the lifecycle and selection ordering.
 Shared e2e helpers read the shown entry (`tests/e2e/stack.ts` `SHOWN_ENTRY`): a prepared or leaving entry is never "the card".
 
 ### Held preparation
@@ -195,7 +195,7 @@ A prepared scripted card costs one more idle renderer process while it waits.
 Not held: animated GIF and WebP pictures, `<marquee>`, and `@starting-style` entrances.
 A slow synchronous start still costs its time after the click.
 
-`tests/e2e/stage-reveals.spec.ts` shows a prepared scripted card doing nothing before it is shown and starting on the same page once it is, a plain card's animation waiting the same way, and a card whose own script fills its settings closing without asking; `frameController.test.ts` owns the activation order.
+`tests/e2e/stage-reveals.spec.ts` shows a prepared scripted card doing nothing before it is shown and starting on the same page once it is, and a card whose own script fills its settings closing without asking; `tests/browser/stage-reveals-plain-next.test.tsx` shows a plain card's animation waiting the same way; `frameController.test.ts` owns the activation order.
 
 ### Timing marks
 

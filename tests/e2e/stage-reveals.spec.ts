@@ -22,7 +22,6 @@ import {
 } from "./scenarios/firstmateThread";
 import {
   cardReply,
-  cardSurface,
   closeQuestion,
   expectNoCard,
   expectUpdateSeen,
@@ -31,9 +30,7 @@ import {
   shownCard,
   shownCardFrame,
   shownEntry,
-  stagePrepared,
 } from "./stack";
-import { typeInto } from "./windowKeys";
 
 /** A plain card seeded straight into the store, oldest first by `at`. */
 function seededCard(
@@ -92,7 +89,6 @@ const LAST_CARD = "The last card";
 const READING_NOTE = "The harbour note you are reading";
 const NEXT_PLAN = "The next harbour plan";
 const BERTH_CARD = "Choose a berth";
-const TIDE_TABLE = "The tide table";
 
 test("under reduced motion a new reply arrives without moving, and stays after a reload", async () => {
   const app = await launchApp({ scenarios: [firstmateThread], withMockProvider: true });
@@ -342,41 +338,6 @@ test("a reply under a lone card keeps its body as the captain left it", async ()
   }
 });
 
-// FI3-722: the reply field keeps the focus through a send, by Enter or by the
-// send control, so the captain types the next reply straight away. The keys
-// go to whatever holds the focus; nothing clicks the field again.
-test("after a reply under a lone card, the next reply is typed straight away", async () => {
-  const app = await launchWithCards([
-    seededCard("lone", "Plot the next leg", "<p>Two questions follow.</p>", 0),
-  ]);
-  try {
-    const { page } = app;
-    const reply = cardReply(page).field;
-    const sent = (text: string) =>
-      shownEntry(page).locator('[data-thread-message="captain"]').filter({ hasText: text });
-    const byEnter = `By Enter: ${THREAD_PROSE_REPLY}`;
-    const bySend = `By the send control: ${THREAD_PROSE_REPLY}`;
-    await reply.click();
-    await typeInto(reply, byEnter);
-    await page.keyboard.press("Enter");
-    await expect(sent(byEnter)).toBeVisible();
-    await expect(reply).toHaveValue("");
-    await expect(reply).toBeFocused();
-
-    await typeInto(reply, bySend);
-    await expect(reply).toHaveValue(bySend);
-    await cardReply(page).send.click();
-    await expect(sent(bySend)).toBeVisible();
-    await expect(reply).toHaveValue("");
-    await expect(reply).toBeFocused();
-
-    await typeInto(reply, "And the tide table?");
-    await expect(reply).toHaveValue("And the tide table?");
-  } finally {
-    await app.close();
-  }
-});
-
 for (const held of ["record", "past"] as const) {
   test(`Hide on a ${held} reuses the prepared first live card despite an unread arrival`, async () => {
     const userDataDir = scratchDir("infinitary-hide-successor-");
@@ -469,60 +430,6 @@ for (const held of ["record", "past"] as const) {
     }
   });
 }
-
-// INF-624: the card after the next one is prepared once the next card's
-// height easing has finished (docs/renderer.md). On a MacBook the easing's
-// animation clock started 1.85 ms ahead of the page clock its deadline was
-// read on, so it finished 1.2 ms before that deadline, the card never
-// settled and nothing was prepared. Here the easing starts 100 ms ahead, so
-// its finish comes before the deadline whatever the display's frame rate.
-const EASING_LEAD_MS = 100;
-const SHORT_NOTE = "A short harbour note";
-const TALL_NOTE = "A tall harbour note";
-const LATER_NOTE = "A later harbour note";
-
-test("the card after next is prepared when the height easing finishes ahead of the page clock", async () => {
-  const berths = Array.from(
-    { length: 8 },
-    (_, index) => `<p>Berth ${index + 1} is free at high tide.</p>`,
-  ).join("");
-  const app = await launchWithCards([
-    seededCard("short", SHORT_NOTE, "<p>Close me.</p>", 0),
-    seededCard("tall", TALL_NOTE, berths, 1),
-    seededCard("later", LATER_NOTE, "<p>Waiting its turn.</p>", 2),
-  ]);
-  try {
-    const { page } = app;
-    await expect(shownCard(page, SHORT_NOTE)).toBeVisible();
-    await expect(warmElement(page)).toHaveAttribute("title", `${TALL_NOTE} body`);
-    await stagePrepared(page);
-    await page.evaluate((lead) => {
-      const easings: string[] = [];
-      (window as unknown as { easings: string[] }).easings = easings;
-      const animate = Element.prototype.animate;
-      Element.prototype.animate = function (keyframes, options) {
-        const animation = animate.call(this, keyframes, options);
-        if (this.hasAttribute("data-card-presentation")) {
-          animation.startTime = Number(document.timeline.currentTime) - lead;
-          easings.push("started");
-          animation.addEventListener("finish", () => easings.push("finished"));
-        }
-        return animation;
-      };
-    }, EASING_LEAD_MS);
-    await shownEntry(page).getByRole("button", { name: "Close", exact: true }).click();
-    await expect(shownCard(page, TALL_NOTE)).toBeVisible();
-    // The close eased the card's height, and the easing finished.
-    await expect
-      .poll(() => page.evaluate(() => (window as unknown as { easings: string[] }).easings))
-      .toContain("finished");
-    await expect(cardSurface(page)).not.toHaveAttribute("data-card-geometry", "animating");
-    await expect(warmElement(page)).toHaveAttribute("title", `${LATER_NOTE} body`);
-    await stagePrepared(page);
-  } finally {
-    await app.close();
-  }
-});
 
 // FI3-871: the next card is prepared even when its body has a script. Its
 // page loads while the captain reads, and nothing of its own runs until it
@@ -635,40 +542,6 @@ test("a prepared scripted card whose script fills in its settings closes without
     await shownEntry(page).getByRole("button", { name: "Close", exact: true }).click();
     await expectNoCard(page, BERTH_CARD);
     await expect(closeQuestion(page)).toHaveCount(0);
-  } finally {
-    await app.close();
-  }
-});
-
-// FI3-871: a prepared card without a script holds its animations the same way.
-test("a plain next card's animation waits until it is shown", async () => {
-  const fading =
-    "<style>@keyframes harbour-in { from { opacity: 0 } to { opacity: 1 } } #fade { animation: harbour-in 1s linear forwards }</style>" +
-    '<p id="fade">The tide table, fading in.</p>';
-  const app = await launchWithCards([
-    seededCard("reading", READING_NOTE, "<p>Close me.</p>", 0),
-    seededCard("tides", TIDE_TABLE, fading, 1),
-  ]);
-  try {
-    const { page } = app;
-    const prepared = warmElement(page);
-    await expect(prepared).toHaveAttribute("title", `${TIDE_TABLE} body`);
-    await expect(prepared).toHaveAttribute("data-frame-drawn", "", { timeout: 15_000 });
-    const fade = (frame: FrameLocator) =>
-      frame.locator("#fade").evaluate((element) => {
-        const animation = element.getAnimations()[0];
-        return animation
-          ? { state: animation.playState, time: Number(animation.currentTime) }
-          : null;
-      });
-    await page.waitForTimeout(300);
-    expect(await fade(warmBody(page))).toEqual({
-      state: "paused",
-      time: 0,
-    });
-    await shownEntry(page).getByRole("button", { name: "Close", exact: true }).click();
-    await expect(shownCard(page, TIDE_TABLE)).toBeVisible();
-    await expect.poll(async () => (await fade(shownCardFrame(page)))?.state).not.toBe("paused");
   } finally {
     await app.close();
   }

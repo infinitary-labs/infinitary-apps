@@ -1,7 +1,14 @@
 import { cpSync, mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { type CoreInvokeChannel, invokeContract, type PushChannel } from "@shared/ipc";
+import { CARD_PICTURE_HOST } from "@shared/cardPictures";
+import { APP_FRAME_SCHEME } from "@shared/csp";
+import {
+  type CoreInvokeChannel,
+  type InvokeResponse,
+  invokeContract,
+  type PushChannel,
+} from "@shared/ipc";
 import type { TaskBoard } from "@shared/tasks";
 import { DEFAULT_USAGE_QUERY, USAGE_TASK_PAGE } from "@shared/usage";
 import type { TestProject } from "vitest/node";
@@ -140,6 +147,8 @@ async function bootAndRead<T>(
         byRequest[JSON.stringify(request)] = await core.dispatch(channel, request as never);
         answers.asked[channel] = byRequest;
       }
+      const cards = answers.plain["inf:cards:list"] as InvokeResponse<"inf:cards:list"> | undefined;
+      if (cards) answers.plain["inf:cards:list"] = await picturesAsData(core, cards);
       played = await play?.(core);
     } finally {
       await core.dispose();
@@ -154,6 +163,34 @@ async function bootAndRead<T>(
       else process.env[name] = value;
     }
   }
+}
+
+/** A verified picture's address in a card body, as the core writes it; its one segment is the picture's name. */
+const PICTURE_ADDRESS = new RegExp(`${APP_FRAME_SCHEME}://${CARD_PICTURE_HOST}/([^"'\\s>)]+)`, "g");
+
+/**
+ * The cards with each verified picture as data. A card body names the core's
+ * copy of a picture at the shell's own scheme, which main serves and a page
+ * cannot load; the reading carries the very bytes main would serve, read as
+ * a view's frames read them (`inf:cards:picture`), so a card body draws its
+ * pictures in a page with the size and markup the core gave them.
+ */
+async function picturesAsData(
+  core: Core,
+  cards: InvokeResponse<"inf:cards:list">,
+): Promise<InvokeResponse<"inf:cards:list">> {
+  return Promise.all(
+    cards.map(async (card) => {
+      let body = card.body;
+      for (const [address, name] of new Map(
+        [...card.body.matchAll(PICTURE_ADDRESS)].map((found) => [found[0], found[1] ?? ""]),
+      )) {
+        const { contentType, data } = await core.dispatch("inf:cards:picture", [name]);
+        body = body.replaceAll(address, `data:${contentType};base64,${data}`);
+      }
+      return { ...card, body };
+    }),
+  );
 }
 
 export default async function setup(project: TestProject): Promise<void> {

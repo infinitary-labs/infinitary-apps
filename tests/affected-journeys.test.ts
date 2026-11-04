@@ -944,8 +944,10 @@ describe("complete journey selection", () => {
     for (const why of [...byModule.values()].flat())
       expect(why).not.toContain(`directly imports ${hubModule}`);
 
-    const screen = "src/renderer/src/plugins/frames/FrameMount.tsx";
-    const hook = "data-stage-entry";
+    // A hook far more than the cap of journeys read in their own text and
+    // narrow helpers, so moving a few journeys off the window leaves it a hub.
+    const screen = "src/renderer/src/settings/SettingsScreen.tsx";
+    const hook = "data-screen-label";
     expect(actualRead(screen)).toContain(hook);
     const readsHook = (reasons: Map<string, string[]>) =>
       [...reasons.values()].filter((why) => why.some((one) => one.startsWith(`reads ${hook},`)))

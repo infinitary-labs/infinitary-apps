@@ -25,7 +25,9 @@ import { pressKey, pressWindowKey, runFromSearch } from "./windowKeys";
  * crew dim on the stage, the focus survives a restart, and Show all
  * projects lets it go. Under focus the card stack holds other projects'
  * cards back and Activity hides their lines (INF-1098, the captain's
- * answers to INF-1091's questions 2 and 3).
+ * answers to INF-1091's questions 2 and 3). A still click on the pill, and
+ * the pointer lighting a project, are the browser test's
+ * (tests/browser/project-focus-still-click.test.tsx).
  */
 
 const PROJECTS = [
@@ -344,74 +346,6 @@ test("with one project and an idle workspace the top bar shows no pill, and a wo
       await expect(option(page, workspace?.key ?? "")).toBeVisible();
       await expect(option(page, "INF")).toBeVisible();
       await expect(page.locator("[data-project-focus-option]")).toHaveCount(3);
-    });
-  } finally {
-    await launched.close();
-  }
-});
-
-test("a still click opens the row without dimming any crew, and moving onto a pill lights its project", async () => {
-  // INF-1292: the row opens under the pointer that pressed the pill, and the
-  // pill it lands on lit its project with no movement, dimming the rest.
-  test.setTimeout(180_000);
-  const userDataDir = scratchDir("infinitary-project-focus-pointer-");
-  seed(userDataDir);
-  const launched = await launchApp({ userDataDir, withMockProvider: true });
-  try {
-    const { page } = launched;
-    await expect
-      .poll(async () => (await page.evaluate(() => window.infinitary.tasks.board())).tasks.length)
-      .toBe(WORK.length + WAITS_ON.length);
-    for (const work of WORK) await expect.poll(() => crewLight(page, work.id)).toBeGreaterThan(0.6);
-    // Which row pill the browser says the pointer entered.
-    await page.evaluate(() => {
-      const entered: string[] = [];
-      (window as unknown as { entered: string[] }).entered = entered;
-      window.addEventListener(
-        "pointerover",
-        (event) => {
-          const option = (event.target as Element).closest("[data-project-focus-option]");
-          if (option) entered.push(option.getAttribute("data-project-focus-option") ?? "");
-        },
-        true,
-      );
-    });
-    const entered = () => page.evaluate(() => (window as unknown as { entered: string[] }).entered);
-    const box = await pill(page).boundingBox();
-    if (!box) throw new Error("the pill has no box");
-    const at = { x: box.x + box.width / 2, y: box.y + box.height / 2 };
-
-    await test.step("a click with the pointer held still opens the row and every crewmate stays lit", async () => {
-      await page.mouse.move(at.x, at.y);
-      await page.mouse.click(at.x, at.y);
-      await expect(row(page)).toBeVisible();
-      // The row's pills glide out under the still pointer, and the browser
-      // reports a project's pill entered, as the reporter's did.
-      await expect.poll(async () => (await entered()).some((key) => key !== "all")).toBe(true);
-      // The stage drew frames enough for the light's ease after that pill was
-      // entered, and no crewmate dimmed.
-      await page.evaluate(
-        () =>
-          new Promise<void>((done) => {
-            let left = 30;
-            const tick = () => (--left === 0 ? done() : requestAnimationFrame(tick));
-            requestAnimationFrame(tick);
-          }),
-      );
-      for (const work of WORK) expect(await crewLight(page, work.id)).toBeGreaterThan(0.6);
-    });
-
-    await test.step("moving onto a project's pill lights it, and onto All projects lights everyone", async () => {
-      const lab = await option(page, "LAB").boundingBox();
-      if (!lab) throw new Error("the quota-lab pill has no box");
-      await page.mouse.move(lab.x + lab.width / 2, lab.y + lab.height / 2, { steps: 3 });
-      await expect.poll(() => crewLight(page, "inf-1")).toBeLessThan(0.4);
-      await expect.poll(() => crewLight(page, "lab-1")).toBeGreaterThan(0.6);
-      const all = await option(page, "all").boundingBox();
-      if (!all) throw new Error("the All projects pill has no box");
-      await page.mouse.move(all.x + all.width / 2, all.y + all.height / 2, { steps: 3 });
-      for (const work of WORK)
-        await expect.poll(() => crewLight(page, work.id)).toBeGreaterThan(0.6);
     });
   } finally {
     await launched.close();

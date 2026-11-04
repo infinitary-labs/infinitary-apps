@@ -5,6 +5,8 @@
  * is leaving.
  */
 
+import { expect } from "vitest";
+import { commands } from "vitest/browser";
 import type { Answers, FakeBridge } from "./bridge";
 
 /** A selector for the shown stack entry, once it is ready to read. */
@@ -19,6 +21,48 @@ export function inShown(selector: string): HTMLElement {
   if (!part) throw new Error(`The shown card drew no ${selector}`);
   return part;
 }
+
+/** The shown card's frame titled `frameTitle` - its body's or its facts' - or null before it mounts. */
+const shownFrame = (frameTitle: string) =>
+  document.querySelector<HTMLIFrameElement>(
+    `${SHOWN_ENTRY} iframe[title=${JSON.stringify(frameTitle)}]`,
+  );
+
+/** The shown card's body frame, by its card's title, or null before it mounts. */
+export const cardBodyFrame = (title: string) => shownFrame(`${title} body`);
+
+/** The frame the shown card's settle facts draw in beside its buttons, or null when it has none. */
+export const cardFactsFrame = (title: string) => shownFrame(`${title} facts`);
+
+/**
+ * Returns once the shown card titled `title` has drawn its body: its title
+ * shows while the frame still holds the empty document it was born with
+ * (docs/renderer.md), and loading the body replaces that document.
+ */
+export async function bodyDrawn(title: string): Promise<HTMLIFrameElement> {
+  await expect.poll(() => cardBodyFrame(title)?.hasAttribute("data-frame-drawn")).toBe(true);
+  return cardBodyFrame(title) as HTMLIFrameElement;
+}
+
+/**
+ * Runs `read`, which closes over nothing, inside the frame titled
+ * `frameTitle` with `argument`, and answers what it returns: a card draws its
+ * body and its facts in sandboxed frames the page cannot script, so the
+ * browser runs it there.
+ */
+export function inFrameTitled<T, A = null>(
+  frameTitle: string,
+  read: (argument: A) => T,
+  argument?: A,
+): Promise<Awaited<T>> {
+  return commands.evaluateInFrame({ title: frameTitle }, read.toString(), argument) as Promise<
+    Awaited<T>
+  >;
+}
+
+/** Runs `read` inside the body of the card titled `title`, as `inFrameTitled` does. */
+export const inCardBody = <T, A = null>(title: string, read: (argument: A) => T, argument?: A) =>
+  inFrameTitled(`${title} body`, read, argument);
 
 const nextFrame = () => new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
 

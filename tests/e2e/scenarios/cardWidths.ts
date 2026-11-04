@@ -22,35 +22,19 @@ const WIDTH_CARD_FIGURE = "Cost grows with the turn";
 const WIDTH_CARD_PARAGRAPH =
   "Each row is one model family, measured over the same forty recorded turns, and the columns read left to right from the cheapest input to the costliest output, so the row that matters most is the one whose last two columns grow fastest as the turn grows longer.";
 
-/** FI3-234's fluid SVG; card-resize gives it the proportions of the card's overflow threshold. */
-export const CARD_RESIZE_PROMPT_MARKER = "show the resize reproduction";
-export const CARD_RESIZE_FIGURE = "Resize reproduction";
-export const CARD_RESIZE_BODY = `<p>A drawing.</p><figure aria-label="${CARD_RESIZE_FIGURE}"><svg viewBox="0 0 510 290" width="100%" role="img" aria-label="${CARD_RESIZE_FIGURE}"><rect width="510" height="290" style="fill:var(--accent)"/></svg></figure>`;
-
-function resizeCardToolCalls(): ScriptedCall[] {
-  return [
-    { name: "emit_card", args: { title: WIDTH_CARD_TITLES.regular, body: CARD_RESIZE_BODY } },
-  ];
-}
-
-/** A clean emitted-card reproduction of the separate viewport-height feedback. */
+/**
+ * A clean emitted-card reproduction of the separate viewport-height
+ * feedback, in a scripted body, which mounts over the shell's own frame
+ * scheme (`tests/e2e/card-viewport-height.spec.ts`; the static body's twin is
+ * `tests/browser/card-viewport-height.test.tsx`).
+ */
 export const CARD_VIEWPORT_PROMPT_MARKER = "show the viewport height reproduction";
 export const CARD_VIEWPORT_TITLE = "A viewport-height card";
 export const CARD_VIEWPORT_BODY =
-  '<div data-viewport-content style="min-height:100vh;display:flex;flex-direction:column;justify-content:space-between"><span>Viewport-height content</span><span>Bottom of the content</span></div>';
-export const CARD_VIEWPORT_SCRIPT =
-  '<script>document.documentElement.setAttribute("data-body-script", "ran");</script>';
+  '<div data-viewport-content style="min-height:100vh;display:flex;flex-direction:column;justify-content:space-between"><span>Viewport-height content</span><span>Bottom of the content</span></div><script>document.documentElement.setAttribute("data-body-script", "ran");</script>';
 
-function viewportCardToolCalls(scripted: boolean): ScriptedCall[] {
-  return [
-    {
-      name: "emit_card",
-      args: {
-        title: CARD_VIEWPORT_TITLE,
-        body: CARD_VIEWPORT_BODY + (scripted ? CARD_VIEWPORT_SCRIPT : ""),
-      },
-    },
-  ];
+function viewportCardToolCalls(): ScriptedCall[] {
+  return [{ name: "emit_card", args: { title: CARD_VIEWPORT_TITLE, body: CARD_VIEWPORT_BODY } }];
 }
 
 function widthCardToolCalls(): ScriptedCall[] {
@@ -99,14 +83,13 @@ function widthCardToolCalls(): ScriptedCall[] {
   ];
 }
 
-/** The crewmate shows the cards a journey sizes: the widths, the resize drawing, or the viewport-height body. */
+/** The crewmate shows the cards a journey sizes: the widths, or the scripted viewport-height body. */
 export const cardWidths: Scenario =
   () =>
   ({ isFirstmate, wantsStream, latestUserTail, hasToolResults }) => {
     if (isFirstmate || !wantsStream || hasToolResults) return undefined;
     if (latestUserTail.includes(CARD_VIEWPORT_PROMPT_MARKER))
-      return { calls: viewportCardToolCalls(latestUserTail.includes("scripted")) };
-    if (latestUserTail.includes(CARD_RESIZE_PROMPT_MARKER)) return { calls: resizeCardToolCalls() };
+      return { calls: viewportCardToolCalls() };
     if (latestUserTail.includes(CARD_WIDTH_PROMPT_MARKER)) return { calls: widthCardToolCalls() };
     return undefined;
   };

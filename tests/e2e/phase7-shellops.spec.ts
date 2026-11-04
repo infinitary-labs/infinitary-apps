@@ -1,7 +1,6 @@
 import { existsSync, readdirSync } from "node:fs";
 import { join } from "node:path";
 import { expect, test } from "@playwright/test";
-import { upgradeCommandFor } from "../../src/core/update/updateChannels";
 import { purgedTasksText } from "../../src/renderer/src/settings/generalWords";
 import { waitForFirstmateIdle } from "./crew";
 import { type LaunchedApp, launchApp } from "./launch";
@@ -11,8 +10,9 @@ import { readSavedData } from "./savedData";
 import { seedRetiredTranscripts } from "./savedDataFixtures";
 
 /**
- * Phase 7 (docs/architecture.md §17): the update indicator with the cask
- * upgrade command, and the retention purge control (D-13).
+ * Phase 7 (docs/architecture.md §17): the retention purge control (D-13).
+ * The update indicator is read in the browser layer
+ * (tests/browser/phase7-shellops.test.tsx).
  */
 
 let launched: LaunchedApp;
@@ -23,28 +23,6 @@ test.beforeAll(async () => {
 
 test.afterAll(async () => {
   await launched.close();
-});
-
-test("the update indicator opens with the cask upgrade command", async () => {
-  const { page } = launched;
-  // Dev builds simulate an available update so the affordance is testable.
-  // With no installer marker in this run's own data root and a stable
-  // version, the subscription is stable (channel journeys:
-  // update-channels.spec.ts).
-  const indicator = page.getByRole("button", { name: /Update available/ });
-  await expect(indicator).toBeVisible({ timeout: 10_000 });
-  await indicator.click();
-  const { latestVersion } = await page.evaluate(() => window.infinitary.update.status());
-  expect(latestVersion).toBeTruthy();
-  await expect(page.locator("[data-update-offered]")).toContainText(latestVersion as string);
-  await expect(page.locator("[data-update-channel]")).toHaveAttribute(
-    "data-update-channel",
-    "stable",
-  );
-  await expect(page.getByText(upgradeCommandFor("stable"), { exact: true })).toBeVisible();
-  await expect(page.getByRole("button", { name: "View release" })).toBeVisible();
-  await page.keyboard.press("Escape");
-  await page.mouse.click(10, 200);
 });
 
 test("the purge control removes every task and its data", async () => {

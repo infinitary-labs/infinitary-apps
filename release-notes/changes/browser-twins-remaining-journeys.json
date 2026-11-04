@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "browser-twins-remaining-journeys",
+      "reason": "Internal test work: the remaining journeys and journey tests that only draw the window move to browser tests on seeded homes booted by a real core, and every journey they fully replace is deleted; nothing a person sees changes."
+    }
+  ]
+}

@@ -11,27 +11,18 @@ import { pressKey } from "./windowKeys";
 
 /**
  * Real crewmate emits through the mock provider and the host's width rule:
- * wide content stays reachable whole, a card that folds the docks gives them
- * back on the edge tab, and the captain's drag resizes a card and holds.
- * The widths themselves are `cardGeometry.test.ts`'s.
+ * wide content stays reachable whole, and a card that folds the docks gives
+ * them back on the edge tab, with the Tasks dock's own frame putting it on
+ * its rail. The captain's drag is `tests/browser/card-width.test.tsx`'s; the
+ * widths themselves are `cardGeometry.test.ts`'s.
  */
 
 let launched: LaunchedApp;
-
-const layer = (page: Page) => page.locator("[data-card-layer]");
 
 async function boxOf(locator: Locator): Promise<Rect> {
   const box = await locator.boundingBox();
   if (!box) throw new Error(`${locator} has no box`);
   return box;
-}
-
-/** The shown card's box once its move has settled. */
-const cardBox = (page: Page) => settled(page, () => boxOf(layer(page)));
-
-/** The shown card's width once its move has settled. */
-async function expectCardWidth(page: Page, width: number) {
-  await expect.poll(async () => (await boxOf(layer(page))).width).toBeCloseTo(width, 0);
 }
 
 const body = (page: Page, title: string) => cardBody(page, title);
@@ -97,43 +88,4 @@ test("a wide card's table is reachable whole at the smallest window, and the rai
   await page.keyboard.press("Enter");
   await expect(page.locator('[data-rail="left"]')).toBeVisible();
   await expect(page.locator('[data-rail="right"]')).toBeVisible();
-});
-
-test("the captain's drag resizes a card and holds while it is up", async () => {
-  const { page } = launched;
-  await showCard(page, WIDTH_CARD_TITLES.regular);
-  const regular = (await cardBox(page)).width;
-  await showCard(page, WIDTH_CARD_TITLES.wide);
-  const decided = (await cardBox(page)).width;
-  const edge = page.locator('[data-card-edge="right"]');
-  await expect(edge).toHaveAttribute("aria-valuenow", String(Math.round(decided)));
-  const box = await boxOf(edge);
-  const x = box.x + box.width / 2;
-  const y = box.y + box.height / 2;
-
-  // Far enough inward on one edge to take the card under regular, so the
-  // docks the wide card folded come back.
-  const inward = Math.ceil((decided - regular) / 2) + 20;
-  await page.mouse.move(x, y);
-  await page.mouse.down();
-  await page.mouse.move(x - inward / 2, y, { steps: 4 });
-  await page.mouse.move(x - inward, y, { steps: 4 });
-  await page.mouse.up();
-  await expect.poll(async () => (await cardBox(page)).width).toBeLessThan(decided);
-  const dragged = (await cardBox(page)).width;
-
-  // Paged away and back, the drag holds.
-  await showCard(page, WIDTH_CARD_TITLES.regular);
-  await expectCardWidth(page, regular);
-  await showCard(page, WIDTH_CARD_TITLES.wide);
-  await expectCardWidth(page, dragged);
-
-  // The keyboard also widens the card.
-  await pressKey(page.locator('[data-card-edge="right"]'), "ArrowRight");
-  await expect.poll(async () => (await cardBox(page)).width).toBeGreaterThan(dragged);
-
-  // A double click gives the card back the width the host decided.
-  await page.locator('[data-card-edge="left"]').dblclick();
-  await expectCardWidth(page, decided);
-  await expect(page.locator('[data-rail-tab="left"]')).toBeVisible();
 });

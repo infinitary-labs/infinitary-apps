@@ -2,7 +2,6 @@ import { expect, test } from "@playwright/test";
 import { CARE_WORDS, DEFAULT_WORKSPACE_WORD, MERGE_WORDS } from "../../src/shared/vocabulary";
 import { cardBody } from "./frames";
 import { type LaunchedApp, launchApp } from "./launch";
-import { minimumWindowSize, resizeWindow, settled, within } from "./layout";
 import { MOCK_MODEL_ID } from "./mockProvider";
 import { promptInput } from "./prompt";
 import {
@@ -16,20 +15,10 @@ import {
   EMIT_CARDS_PROMPT_MARKER,
   everyCardKind,
   MOCK_CHOICE_CARD_TITLE,
-  MOCK_LONG_ACTION_LABEL,
   MOCK_PREVIEW_CARD_TITLE,
   MOCK_QUOTA_NOTE_TITLE,
 } from "./scenarios/everyCardKind";
-import {
-  cardReply,
-  cardScroller,
-  cardSurface,
-  expectNoCard,
-  factsStrip,
-  pager,
-  showCard,
-  shownCard,
-} from "./stack";
+import { expectNoCard, factsStrip, pager, showCard, shownCard } from "./stack";
 
 /**
  * Phase 4 acceptance (docs/architecture.md §17): a crewmate's cards wear
@@ -58,96 +47,6 @@ test.beforeAll(async () => {
 
 test.afterAll(async () => {
   await launched.close();
-});
-
-test("long footer actions stay whole and usable at the smallest window", async () => {
-  const { app, page } = launched;
-  const original = await resizeWindow(app, page, await minimumWindowSize(app));
-  try {
-    await showCard(page, MOCK_CHOICE_CARD_TITLE);
-    const card = cardSurface(page);
-    for (const name of [MOCK_LONG_ACTION_LABEL, "Await the queue"]) {
-      const action = card.getByRole("button", { name });
-      // A trial click: Playwright's own checks that a press would land on it.
-      await action.click({ trial: true });
-      const boxes = await settled(page, async () => ({
-        action: await action.boundingBox(),
-        card: await card.boundingBox(),
-      }));
-      if (!boxes.action || !boxes.card) throw new Error(`${name} or its card has no box`);
-      expect(within(boxes.action, boxes.card), `${name} is not cut off`).toEqual([]);
-    }
-  } finally {
-    await resizeWindow(app, page, original);
-  }
-});
-
-test("a long decision body reads to its end by scrolling the card", async () => {
-  const { page } = launched;
-  await showCard(page, MOCK_CHOICE_CARD_TITLE);
-  const frame = cardBody(page, MOCK_CHOICE_CARD_TITLE);
-  // The card's own document, not the frame's initial blank one.
-  await expect(frame.getByText("Awaiting the job queue")).toBeVisible();
-
-  await frame.locator("body").evaluate((body) => {
-    const overflow = document.createElement("div");
-    overflow.dataset.overflowProof = "";
-    overflow.innerHTML = Array.from(
-      { length: 80 },
-      (_, index) => `<p>Decision evidence row ${index + 1}</p>`,
-    ).join("");
-    body.appendChild(overflow);
-  });
-
-  // Scrolling the card reaches the body's last line.
-  const last = frame.getByText("Decision evidence row 80", { exact: true });
-  const scroller = cardScroller(page);
-  await expect
-    .poll(async () => {
-      await scroller.evaluate((element) => {
-        element.scrollTop = element.scrollHeight;
-      });
-      const [row, view] = await Promise.all([last.boundingBox(), scroller.boundingBox()]);
-      return row && view ? within(row, view) : ["unmeasured"];
-    })
-    .toEqual([]);
-
-  await frame.locator("[data-overflow-proof]").evaluate((element) => element.remove());
-});
-
-test("a decision reveals its extra prose on demand at the smallest window, and keeps a reply draft across paging", async () => {
-  const { app, page } = launched;
-  const title = MOCK_CHOICE_CARD_TITLE;
-  await showCard(page, title);
-  const frame = cardBody(page, title);
-
-  // A reply begun on this card is still there after paging away and back.
-  const draft = "Keep this draft";
-  await cardReply(page).field.fill(draft);
-  await showCard(page, MOCK_QUOTA_NOTE_TITLE);
-  await showCard(page, title);
-  await expect(cardReply(page).field).toHaveValue(draft);
-  await cardReply(page).field.fill("");
-
-  const original = await resizeWindow(app, page, await minimumWindowSize(app));
-  try {
-    const detail = frame.getByText("Awaiting the queue adds 40ms to the run.");
-    await expect(detail).toBeHidden();
-    // In-frame click: the hidden e2e window drops native input into the frame.
-    await frame
-      .getByText("Latency trade-off", { exact: true })
-      .evaluate((element) => (element as HTMLElement).click());
-    await expect(detail).toBeVisible();
-    // Opening it decided nothing: the card and its choice are still there.
-    await expect(pager(page, 3)).toBeVisible();
-    await expect(page.getByRole("button", { name: "Await the queue" })).toBeEnabled();
-    await frame
-      .getByText("Latency trade-off", { exact: true })
-      .evaluate((element) => (element as HTMLElement).click());
-    await expect(detail).toBeHidden();
-  } finally {
-    await resizeWindow(app, page, original);
-  }
 });
 
 test("a click inside the preview rounds the declared action back, and resolving the decision keeps the choice", async () => {

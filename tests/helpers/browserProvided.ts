@@ -57,8 +57,13 @@ declare module "vitest" {
 declare module "vitest/browser" {
   interface BrowserCommands {
     emulateReducedMotion(reducedMotion: ReducedMotion): Promise<void>;
-    evaluateInFrame(name: string, source: string, argument?: unknown): Promise<unknown>;
+    evaluateInFrame(
+      frame: string | { title: string },
+      source: string,
+      argument?: unknown,
+    ): Promise<unknown>;
     clearCookies(): Promise<void>;
+    collectGarbage(): Promise<void>;
     seededHome(input?: unknown): Promise<FreshHomeAnswers>;
   }
 }

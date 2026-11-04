@@ -3,7 +3,6 @@ import { STANDARD_PLACEHOLDER } from "@shared/firstRun";
 import { DICTATION_KEY, hintOnThisComputer } from "./dictation";
 import { launchApp } from "./launch";
 import { latestServedTurn } from "./providerRequest";
-import { typeInto } from "./windowKeys";
 
 // The offscreen audio device has no speech: supply PCM frames at the worklet
 // boundary, and the voice helper's model is a stand-in that answers these
@@ -110,27 +109,6 @@ test("a transcribed hold and a toggled recording both return focus to the end of
         ),
       )
       .toBe(true);
-    await expect(input).toHaveValue("");
-    await expect(input).toBeFocused();
-  } finally {
-    await app.close();
-  }
-});
-
-test("clicking submit leaves the prompt ready for the next typed turn", async () => {
-  const app = await launchApp({ withMockProvider: true });
-  try {
-    const { page } = app;
-    const input = page.getByRole("textbox", { name: "Task prompt" });
-    await expect(input).toBeEnabled();
-    await input.fill("First question");
-    await page.getByRole("button", { name: "Submit" }).click();
-    await expect(input).toHaveValue("");
-    await expect(input).toBeFocused();
-    await typeInto(input, "Follow-up question");
-    await expect(input).toHaveValue("Follow-up question");
-    await page.screenshot({ path: test.info().outputPath("voice-click-submit-focused.png") });
-    await page.keyboard.press("Enter");
     await expect(input).toHaveValue("");
     await expect(input).toBeFocused();
   } finally {

@@ -184,7 +184,7 @@ Each dot is a target and a Tab stop of its own, in the radar's order, right afte
 Resting on it, or the keyboard's focus, lights its label on the outer ring and opens its note to the left of the chart, level with the dot: the dimension and its level in words, the crewmate's line.
 Leaving it, Esc - which closes nothing else - or a scroll of the body lets the note go, and a dot the keyboard reaches scrolls the body back to its top.
 A past card keeps the chart of the version the captain saw.
-`tests/e2e/risk-chart.spec.ts` reads the chart through `riskChart` in `tests/e2e/stack.ts`: each dot's `data-risk-dot` and `data-risk-level`, and its note's `data-risk-note`.
+`tests/browser/risk-chart.test.tsx` reads the chart, and a journey through `riskChart` in `tests/e2e/stack.ts`: each dot's `data-risk-dot` and `data-risk-level`, and its note's `data-risk-note`.
 
 ## The picture check
 
@@ -864,7 +864,7 @@ Moved verbatim from `AGENTS.md` on 2026-09-24; `AGENTS.md` keeps a one-line poin
 - Card pictures by reference (card pictures phase 2 of the locked plan `fm3000-card-images-proposal-s1`; `docs/card-authoring.md` "What contains a body" is the one home): a picture is an `<img src="<working-copy path>" alt>` in the body and `emit_card` has no `images` parameter.
   `verifyCardImages` (`src/core/pi/cardImages.ts`) verifies each (PNG, JPEG or WebP, 8 MB each, 64 MB a card, no count cap), copies it to `crewmates/<taskId>/cards/<taskId>-<32 hex>.<ext>`, rewrites only `src`/`width`/`height`, and hands `cards.pictures` (migration 41) to the row; the frame scheme's `images` host serves those names alone (`@shared/cardPictures` mints and parses them).
   A group is `figure.inf-pictures`, laid out by `FRAME_BASE_STYLE` alone so a `data:` group looks the same.
-  `src/core/pi/cardImages.test.ts` binds the copy and the rewrite, and `tests/e2e/card-picture-fit.spec.ts` a picture shown whole in its card.
+  `src/core/pi/cardImages.test.ts` binds the copy and the rewrite, and `tests/browser/card-picture-fit.test.tsx` a picture shown whole in its card.
   Phase 3, the viewer: the bridge's `image` message (any `<img>` click, or a group's `+N` tile) carries the clicked index and its group's pictures; `viewablePictures` admits only the host's minted copies and `data:` rasters; `design/cards/PictureViewer.tsx` (design skill `PictureViewer.prompt.md`) is window-wide host chrome whose keys are a window capture listener, so they never reach the stack or the shell's Escape; `tests/e2e/card-pictures.spec.ts` is its binding test.
 
 When a crewmate must put its own change in before the rest can proceed, an intermediate card cannot do that: it files the rest as `Continue: …`, names the filing in its report in a turn without a card, waits for the first mate's steer after triage, then names it in the completion-card body and says it starts once the change is in.

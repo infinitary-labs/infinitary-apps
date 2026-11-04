@@ -95,7 +95,12 @@ Only a closed list of non-streaming events that can change the feed requests a c
 The feed owner exports `FEED_EVENT_TYPES`, with its authoring switch checked exhaustively against that list, and the contract generator derives the Swift `FeedChange` enum from it.
 A gap in numbering drops the cursor and reconnects rather than silently losing updates.
 Successful frames and pongs update the last-heard time; bounded handshake, welcome, read, Leave and heartbeat waits cut a stalled connection.
-The watchdog starts before sending hello and cancels the transport too, so a stalled TLS handshake does not inherit the socket's longer lifetime.
+Each round dials every saved and nearby address together (INF-2157): private IPv4 candidates first and the rest a quarter second later (`ReadOnlySession.privateLead`, RFC 8305's attempt delay), so the private network wins when both answer.
+The first attempt whose WebSocket opens (`PinnedTransport.opened`, after the pinned TLS, the phone's key and the upgrade) is kept and greeted; the others are closed before any hello, so each round makes one welcomed connection.
+A round fails once every attempt failed or none opened within `ReadOnlySession.dialLimit`; the watchdog then bounds the welcome and the first reads, and cancels the transport too, so a stalled TLS handshake does not inherit the socket's longer lifetime.
+While a round dials the reach line says "Reaching your computer…"; "Out of reach" is said only once a whole round failed, and later rounds that try again on their own keep it.
+Reopening the app, or a change of network (`PhoneModel`'s path monitor), looks again at once: a kept connection must answer a ping within `ReadOnlySession.reopenAnswer` or it is cut and redialed, and a wait between rounds ends and the next round dials now.
+`PhoneReopenTests` reopens against the test home through a route that goes silent under a kept connection, and during a wait between rounds.
 The app keeps only its in-memory view while out of reach and shows its last-heard time.
 Out of reach is said once, by the reach line under the top bar with the time the computer was last heard; the message capsule and a card's reply row dim, and `changesOffLine` puts the Mac's own words (`changesOffWords`, `src/renderer/src/devices/viewWords.ts`) under the message box.
 `ReadOnlySession.returns` counts the times the computer came back in reach after a failed attempt, so the app can mark a return without mistaking the ordinary reconnection when it opens for one.
@@ -103,7 +108,7 @@ A trip to the background keeps the connection for the background time iOS gives 
 When iOS ends that time, the app cancels the connection generation before it is suspended, and activation starts it again; an inactive scene such as Control Center does not disconnect.
 A late callback from an old connection cannot clear or overwrite a newer connection.
 Nearby addresses may be tried with the original pin.
-Each reconnect orders the saved and nearby alternatives with private IPv4 candidates first, without letting a successful local fallback permanently reverse that preference.
+Each reconnect gives the saved and nearby private IPv4 candidates their head start, without letting a successful local fallback permanently reverse that preference.
 The authenticated welcome may carry `addresses`, which refreshes the saved alternatives without changing the phone identity or home pin, erasing local fallbacks or interrupting the working socket.
 An older home that omits the field leaves the saved alternatives unchanged.
 The computer sheet displays the last authenticated address actually reached, separately from the saved preference; before any successful connection it shows no reached address.
@@ -578,14 +583,14 @@ The gate keeps that wait's own log output, with Photos' calls and the scheduler'
 The phone workflow's `evidence_run` request exports native-scene attachments from an existing run that kept `phone-results`, a failed or recording one, on the Xcode host, without building or starting a simulator.
 Request the export before that artifact's three-day retention expires (`docs/testing.md`, "Actions artifact retention").
 It keeps the selected images, timing readings and scene recordings in a small artifact separately from the complete result bundles.
-Add `--demo`, with FFmpeg installed, to keep real-speed reconnect, card, character, scene-panning and task-start recordings with their posters beside the test results.
+Add `--demo`, with FFmpeg installed, to keep real-speed reconnect, reopen, card, character, scene-panning and task-start recordings with their posters beside the test results.
 A manual phone workflow request with `recording` enabled passes `--raw-demo` through `PHONE_RECORDING=1`, including the virtual-Mac route; ordinary checks do not record.
 That mode keeps the simulator’s original silent H.264 capture as `*-raw.mp4` and needs no encoder on the test Mac.
 Requested raw clips, encoded clips and posters are deliverables, not optional diagnostics: a finalization error fails a part whose native test passed.
 If the native test already failed, its failure and output take precedence, and the runner reports any recording finalization error without replacing them.
 Diagnostic shutdown and recording-log failures still do not prevent the recording finalizer from running.
 Convert those captures to the card’s bounded H.264 format and inspect their posters on the evidence reader’s computer before publication; `--demo` still performs that conversion where FFmpeg is installed.
-The reconnect recording crops the top of the phone view around the connection state and card; the card recordings keep the full native view.
+The reconnect and reopen recordings crop the top of the phone view around the connection state and card; the card recordings keep the full native view.
 An encoded demo retains real speed and holds the final frame for five seconds, within a fifteen-second cap; a raw capture preserves the complete recorded interaction.
 The runner creates and deletes its own simulator, scratch HOME, real-core home, mock provider, data and keys, never borrows or erases a person's simulator, and saves logs and the result bundle outside the working copy.
 The test home uses the real stores, dispatcher, pairing and TLS connection, with sample cards, feed lines and a task; its control interface listens only on loopback behind a fresh per-run token.
@@ -596,7 +601,7 @@ In that mode `INFINITARY_TEST_NEARBY_SSH` (`name|host|port`) names the one stand
 `INFINITARY_TEST_RETRIED_CARD_LAG` (seconds) holds a retried card body's drawn height that long before its web view takes it, standing in for a loaded computer; every cards part sets it, so the stalled-answer check taps a body that has drawn but not yet grown.
 `INFINITARY_TEST_MENU_TAP_REDRAW` (`1`) has the app redraw its workspace 10 ms into each touch on a menu item, clearing a reply notice when one shows, and count each run of the card pager's menu between that redraw and the pick under `menu-tap-probe`; the pick part's `testMenuPickSurvivesAWorkspaceRedraw` sets it (INF-2095).
 It first verifies the independent published-contract client can join and read the sample card.
-The join parts cover a wrong Mac pin, joining, cards and feed (`join-read`); Activity scrolled to its last whole row, identity across relaunch, out-of-reach state and catch-up after a home restart (`join-activity`); and a short trip to the background that keeps its connection, background/foreground replay after the background time ends, Leave, local Forget and Removed (`join-away`).
+The join parts cover a wrong Mac pin, joining, cards and feed (`join-read`); Activity scrolled to its last whole row, identity across relaunch, out-of-reach state and catch-up after a home restart (`join-activity`); and a short trip to the background that keeps its connection, background/foreground replay after the background time ends, a reopen that reaches the home while a stalled saved address is still dialing, Leave, local Forget and Removed (`join-away`).
 The address part starts the Mac's own `sshd` beside its home (`tests/helpers/sshServer.ts`), run as the test's user with a scratch home folder and every session handed the home's data folder; it checks the home's sshd listed as the stand-in computer, the sweep asked first and reading that sshd's real banner, a tap filling the address and port under the account, Not this one, the fingerprint asked again for a typed address, the key refused, a wrong password's words, then adds the key the phone shows and joins.
 That `sshd` can check no password, so the password that lets the key in is checked by the package tests against an SSH server of their own (`SSHJoinTests`).
 Every other part first joins its own home, and reaches the state its checks read: `join-activity` reads and closes the review finding, `talk-compose` puts the hero card on the stage and relaunches the app, and the cards parts each put their own cards on the stage.

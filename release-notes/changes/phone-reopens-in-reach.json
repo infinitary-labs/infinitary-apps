@@ -1,0 +1,14 @@
+{
+  "entries": [
+    {
+      "id": "phone-reopens-in-reach",
+      "kind": "fix",
+      "area": "devices",
+      "title": "Your iPhone and iPad reach your computer right away when you reopen Infinitary",
+      "body": "Reopening Infinitary on your iPhone or iPad now tries every way to your computer at once, so one that stopped answering, such as a private network that is off, no longer holds it up for ten seconds. A connection that went quiet while the app was away is checked the moment you return, and a change of network tries again at once. While it connects, the line under the top bar says Reaching your computer…, and it says Out of reach only once every way failed.",
+      "noPicture": "The change is how quickly the phone connects, which a still picture cannot show; the screens look as before apart from the Reaching your computer… line.",
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

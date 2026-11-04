@@ -264,16 +264,77 @@ public struct PhoneNotice: Equatable, Sendable {
 
     public init(mac: JoinedMac, phone: PhoneIdentity) { self.mac = mac; self.phone = phone }
 
+    /// INF-2157: the app's reopen, and a change of network, start the loop or, while it runs, look again at once:
+    /// a kept connection must answer a ping within `reopenAnswer`, and a wait between rounds ends now.
     public func start() {
-        guard loop == nil, !removed else { return }
+        guard !removed else { return }
+        guard loop == nil else { lookAgain(); return }
         generation += 1
         let current = generation
+        contact = "reaching"
         loop = Task { [weak self] in await self?.run(generation: current) }
+    }
+
+    /// INF-2157: how long a kept connection has to answer the reopen's ping before it is cut and redialed.
+    static let reopenAnswer: Duration = .seconds(2)
+    /// INF-2157 (RFC 8305's attempt delay): the private network's lead over the other addresses, so it wins when both answer.
+    static let privateLead: Duration = .milliseconds(250)
+    /// How long a round's addresses have to open before the round fails, as the watchdog allowed one address before.
+    static let dialLimit: Duration = .seconds(10)
+
+    /// Why the last connection that opened ended, for the app-hosted tests.
+    enum Cut: Equatable { case unanswered, quiet, failed }
+    @ObservationIgnored private(set) var lastCut: Cut?
+    /// When the wait between rounds is due to end, while the loop waits.
+    @ObservationIgnored private(set) var pausedUntil: ContinuousClock.Instant?
+    @ObservationIgnored private var pause: CheckedContinuation<Void, Never>?
+    @ObservationIgnored private var pauseTimer: Task<Void, Never>?
+    @ObservationIgnored private var checking: URLSessionWebSocketTask?
+    @ObservationIgnored private var cutting: Cut?
+    /// A reopen or a change of network ended the wait, so the next round says it is reaching again.
+    @ObservationIgnored private var woken = false
+
+    private func lookAgain() {
+        if pause != nil { woken = true; contact = "reaching" }
+        endPause()
+        guard contact == "in-reach", let socket, checking !== socket else { return }
+        checking = socket
+        socket.sendPing { [weak self, weak socket] error in
+            Task { @MainActor in
+                guard let self, let socket, self.socket === socket, self.checking === socket else { return }
+                self.checking = nil
+                if error != nil { self.cut(socket, .failed) } else { self.heardAt = Date() }
+            }
+        }
+        Task { [weak self, weak socket] in
+            try? await Task.sleep(for: Self.reopenAnswer)
+            guard let self, let socket, self.socket === socket, self.checking === socket else { return }
+            self.checking = nil
+            self.cut(socket, .unanswered)
+        }
+    }
+
+    private func waitBetweenRounds(_ seconds: Int) async {
+        let until = ContinuousClock.now + .seconds(seconds)
+        await withCheckedContinuation { (continuation: CheckedContinuation<Void, Never>) in
+            pause = continuation; pausedUntil = until
+            pauseTimer = Task { [weak self] in
+                try? await Task.sleep(until: until)
+                self?.endPause()
+            }
+        }
+    }
+
+    private func endPause() {
+        pauseTimer?.cancel(); pauseTimer = nil; pausedUntil = nil
+        let continuation = pause; pause = nil
+        continuation?.resume()
     }
 
     public func stop() {
         generation += 1
         loop?.cancel(); loop = nil
+        endPause()
         finishLeave(PhoneError.unavailable)
         failCalls(); notice = nil; access = "read"; firstmateBusy = false; firstmateObserved = false
         socket?.cancel(with: .goingAway, reason: nil); socket = nil
@@ -300,10 +361,11 @@ public struct PhoneNotice: Equatable, Sendable {
         }
     }
 
-    private func abort(_ socket: URLSessionWebSocketTask) {
+    private func cut(_ socket: URLSessionWebSocketTask, _ why: Cut) {
         guard self.socket === socket else { return }
+        // The first reason holds: cancelling fails every ping still out, which is not why it was cut.
+        if cutting == nil { cutting = why }
         socket.cancel(with: .goingAway, reason: nil)
-        // Also cancel a handshake that has not become a WebSocket yet.
         transport?.close()
     }
 
@@ -312,102 +374,165 @@ public struct PhoneNotice: Equatable, Sendable {
         if let error { continuation?.resume(throwing: error) } else { continuation?.resume() }
     }
 
+    private func alive(_ current: Int) -> Bool { !Task.isCancelled && !removed && current == generation }
+
+    /// Each round dials every saved and nearby address together, keeps the first whose WebSocket opens and greets
+    /// only that one. "Out of reach" is said once a whole round failed; until then the words say it is reaching.
     private func run(generation current: Int) async {
         var attempt = 0
-        while !Task.isCancelled && !removed && current == generation {
-            let addresses = PhoneAddresses.preferred(mac.addresses + discoveries)
-            for address in addresses {
-                if Task.isCancelled || removed || current != generation { return }
-                let transport = PinnedTransport(pin: mac.pin, phone: phone, purpose: .connection)
-                self.transport = transport
-                var connection: URLSessionWebSocketTask?
-                do {
-                    let socket = try transport.socket(at: address)
-                    connection = socket; self.socket = socket
-                    failCalls()
-                    pending.removeAll(); waitingSince.removeAll(); dirty.removeAll(); ready.removeAll()
-                    access = "read"; firstmateBusy = false; firstmateObserved = false
-                    contact = heardAt == nil ? "reaching" : "lost"
-                    var hello: [String: Any] = ["t": "hello", "protocolVersion": PhoneContract.version,
-                        "as": "view", "viewFloor": PhoneContract.viewFloor, "system": "ios", "spellings": ["inf"], "appVersion": "0.1.0"]
-                    if let epoch { hello["cursor"] = ["epoch": epoch, "seq": sequence] }
-                    let watchdog = Task { [weak self, weak socket] in
-                        // Bound the handshake too: send(hello) can wait for a connection to open.
-                        // Each successful pong proves liveness; welcome/reads have a separate bounded wait.
-                        var welcomed = false
-                        while !Task.isCancelled {
-                            try? await Task.sleep(for: .seconds(10))
-                            guard !Task.isCancelled, let self, let socket, self.socket === socket else { return }
-                            let waiting = self.waitingSince.values.contains { Date().timeIntervalSince($0) > 15 }
-                            let leaveWait = self.leaveStarted.map { Date().timeIntervalSince($0) > 15 } ?? false
-                            if waiting || leaveWait { self.abort(socket); return }
-                            if !welcomed && self.contact != "in-reach" {
-                                self.abort(socket); return
-                            }
-                            welcomed = true
-                            if let heard = self.heardAt, Date().timeIntervalSince(heard) > 25 {
-                                self.abort(socket); return
-                            }
-                            socket.sendPing { [weak self, weak socket] error in
-                                Task { @MainActor in
-                                    guard let self, let socket, self.socket === socket else { return }
-                                    if error != nil { self.abort(socket) }
-                                    else { self.heardAt = Date() }
-                                }
-                            }
-                        }
+        while alive(current) {
+            failCalls()
+            pending.removeAll(); waitingSince.removeAll(); dirty.removeAll(); ready.removeAll()
+            access = "read"; firstmateBusy = false; firstmateObserved = false
+            // Out of reach stays while later rounds try again on their own; a reopen says it is reaching.
+            if attempt == 0 || woken { contact = "reaching" }
+            woken = false
+            let dialed = await dial(PhoneAddresses.preferred(mac.addresses + discoveries), generation: current)
+            guard alive(current) else { dialed?.transport.close(); return }
+            if let dialed, await serve(dialed, generation: current) {
+                attempt = 0
+                continue
+            }
+            guard alive(current) else { return }
+            contact = "lost"; missed = true
+            finishLeave(PhoneError.unavailable)
+            attempt = min(attempt + 1, 5)
+            await waitBetweenRounds(attempt)
+        }
+    }
+
+    private struct Dialed: @unchecked Sendable { let address: String; let transport: PinnedTransport; let socket: URLSessionWebSocketTask }
+    private enum Dial: Sendable { case opened(Dialed), failed(status: Int?), timedOut }
+    private struct Attempt: Sendable { let address: String; let transport: PinnedTransport; let delay: Duration }
+
+    private nonisolated static func open(_ attempt: Attempt) async -> Dial {
+        if attempt.delay > .zero { try? await Task.sleep(for: attempt.delay) }
+        if Task.isCancelled { attempt.transport.close(); return .failed(status: nil) }
+        guard let socket = try? attempt.transport.socket(at: attempt.address) else {
+            attempt.transport.close(); return .failed(status: nil)
+        }
+        do {
+            try await attempt.transport.opened()
+            return .opened(Dialed(address: attempt.address, transport: attempt.transport, socket: socket))
+        } catch {
+            return .failed(status: (socket.response as? HTTPURLResponse)?.statusCode)
+        }
+    }
+
+    /// The private network dials first and the rest `privateLead` later; nothing else orders the addresses.
+    private func dial(_ addresses: [String], generation current: Int) async -> Dialed? {
+        let lead = addresses.contains(where: PhoneAddresses.isPrivate) ? Self.privateLead : .zero
+        let attempts = addresses.map { address in
+            Attempt(address: address, transport: PinnedTransport(pin: mac.pin, phone: phone, purpose: .connection),
+                    delay: PhoneAddresses.isPrivate(address) ? .zero : lead)
+        }
+        guard !attempts.isEmpty else { return nil }
+        var kept: PinnedTransport?
+        defer { for attempt in attempts where attempt.transport !== kept { attempt.transport.close() } }
+        return await withTaskGroup(of: Dial.self) { group in
+            for attempt in attempts { group.addTask { await Self.open(attempt) } }
+            group.addTask { try? await Task.sleep(for: Self.dialLimit); return .timedOut }
+            var left = attempts.count
+            for await outcome in group {
+                guard alive(current) else { break }
+                switch outcome {
+                case .opened(let dialed):
+                    group.cancelAll()
+                    kept = dialed.transport
+                    transport = dialed.transport
+                    return dialed
+                case .failed(let status):
+                    if status == 401 { refused += 1 } else if status != nil { refused = 0 }
+                    if refused >= 2 {
+                        group.cancelAll()
+                        removed = true; clearContent(); contact = "removed"
+                        finishLeave(); onRemoved?()
+                        return nil
                     }
-                    defer { watchdog.cancel() }
-                    try await send(hello, on: socket)
-                    while !Task.isCancelled {
-                        let message = try await socket.receive()
-                        guard current == generation, !Task.isCancelled else { break }
-                        let data: Data
-                        switch message {
-                        case .string(let text): data = Data(text.utf8)
-                        default: throw PhoneError.invalidReply
-                        }
-                        try await receive(data, on: socket)
-                        guard current == generation, !Task.isCancelled else { break }
-                        if contact == "in-reach" {
-                            attempt = 0; refused = 0
-                            reachedAddress = address
-                            let preferred = Array(PhoneAddresses.preferred(mac.addresses + [address]).prefix(25))
-                            if mac.addresses != preferred {
-                                mac.addresses = preferred
-                                onMacChanged?(mac)
-                            }
-                        }
-                    }
-                } catch {
-                    guard current == generation, !Task.isCancelled else { transport.close(); return }
-                    let code = connection?.closeCode.rawValue
-                    let status = (connection?.response as? HTTPURLResponse)?.statusCode
-                    if code == 4401 {
-                        removed = true; clearContent()
-                        contact = "removed"; finishLeave(); onRemoved?()
-                    } else {
-                        if status == 401 { refused += 1 }
-                        else if status != nil { refused = 0 }
-                        if refused >= 2 {
-                            removed = true; clearContent(); contact = "removed"
-                            finishLeave(); onRemoved?()
-                        } else {
-                            contact = code == 1001 ? "closed" : "lost"
-                            missed = true
-                            finishLeave(PhoneError.unavailable)
-                        }
+                    left -= 1
+                    if left == 0 { group.cancelAll(); return nil }
+                case .timedOut:
+                    group.cancelAll()
+                    return nil
+                }
+            }
+            group.cancelAll()
+            return nil
+        }
+    }
+
+    /// Greets the opened socket and reads it until it ends; true when the computer was in reach on it.
+    private func serve(_ dialed: Dialed, generation current: Int) async -> Bool {
+        let (address, transport, socket) = (dialed.address, dialed.transport, dialed.socket)
+        self.socket = socket; cutting = nil
+        var reached = false
+        var hello: [String: Any] = ["t": "hello", "protocolVersion": PhoneContract.version,
+            "as": "view", "viewFloor": PhoneContract.viewFloor, "system": "ios", "spellings": ["inf"], "appVersion": "0.1.0"]
+        if let epoch { hello["cursor"] = ["epoch": epoch, "seq": sequence] }
+        let watchdog = Task { [weak self, weak socket] in
+            // Each successful pong proves liveness; welcome/reads have a separate bounded wait.
+            var welcomed = false
+            while !Task.isCancelled {
+                try? await Task.sleep(for: .seconds(10))
+                guard !Task.isCancelled, let self, let socket, self.socket === socket else { return }
+                let waiting = self.waitingSince.values.contains { Date().timeIntervalSince($0) > 15 }
+                let leaveWait = self.leaveStarted.map { Date().timeIntervalSince($0) > 15 } ?? false
+                if waiting || leaveWait { self.cut(socket, .quiet); return }
+                if !welcomed && self.contact != "in-reach" {
+                    self.cut(socket, .quiet); return
+                }
+                welcomed = true
+                if let heard = self.heardAt, Date().timeIntervalSince(heard) > 25 {
+                    self.cut(socket, .quiet); return
+                }
+                socket.sendPing { [weak self, weak socket] error in
+                    Task { @MainActor in
+                        guard let self, let socket, self.socket === socket else { return }
+                        if error != nil { self.cut(socket, .failed) }
+                        else { self.heardAt = Date() }
                     }
                 }
-                failCalls(); firstmateBusy = false; firstmateObserved = false
-                transport.close()
-                guard current == generation else { return }
-                self.socket = nil; self.transport = nil
-                if Task.isCancelled || removed || current != generation { return }
             }
-            attempt = min(attempt + 1, 5)
-            try? await Task.sleep(for: .seconds(attempt))
         }
+        defer { watchdog.cancel() }
+        do {
+            try await send(hello, on: socket)
+            while !Task.isCancelled {
+                let message = try await socket.receive()
+                guard current == generation, !Task.isCancelled else { break }
+                let data: Data
+                switch message {
+                case .string(let text): data = Data(text.utf8)
+                default: throw PhoneError.invalidReply
+                }
+                try await receive(data, on: socket)
+                guard current == generation, !Task.isCancelled else { break }
+                if contact == "in-reach" {
+                    reached = true; refused = 0
+                    reachedAddress = address
+                    let preferred = Array(PhoneAddresses.preferred(mac.addresses + [address]).prefix(25))
+                    if mac.addresses != preferred {
+                        mac.addresses = preferred
+                        onMacChanged?(mac)
+                    }
+                }
+            }
+        } catch {
+            guard current == generation, !Task.isCancelled else { transport.close(); return reached }
+            lastCut = cutting ?? .failed; cutting = nil
+            if socket.closeCode.rawValue == 4401 {
+                removed = true; clearContent()
+                contact = "removed"; finishLeave(); onRemoved?()
+            } else {
+                missed = true
+                finishLeave(PhoneError.unavailable)
+            }
+        }
+        failCalls(); firstmateBusy = false; firstmateObserved = false
+        transport.close()
+        guard current == generation else { return reached }
+        self.socket = nil; self.transport = nil; checking = nil
+        return reached
     }
 
     private func receive(_ data: Data, on socket: URLSessionWebSocketTask) async throws {

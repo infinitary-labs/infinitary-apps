@@ -19,7 +19,7 @@ export function phoneRecording(mode: "off" | "raw" | "encoded", run: Run) {
       }
       if (mode !== "encoded") return;
       for (const { name, raw } of recordings) {
-        const crop = name === "reconnect" ? "crop=iw:trunc(ih*0.55/2)*2:0:0," : "";
+        const crop = name === "reconnect" || name === "reopen" ? "crop=iw:trunc(ih*0.55/2)*2:0:0," : "";
         await run("ffmpeg", ["-y", "-i", raw, "-vf", `${crop}scale=-2:720,pad=1280:720:(ow-iw)/2:(oh-ih)/2:color=black,tpad=stop_mode=clone:stop_duration=5`, "-r", "24", "-t", "15", "-an", "-c:v", "libx264", "-pix_fmt", "yuv420p", "-movflags", "+faststart", join(evidence, `${name}.mp4`)]);
         await run("ffmpeg", ["-y", "-sseof", "-0.25", "-i", join(evidence, `${name}.mp4`), "-frames:v", "1", join(evidence, `${name}-poster.png`)]);
       }

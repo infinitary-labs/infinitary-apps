@@ -2,7 +2,7 @@ import { randomBytes } from "node:crypto";
 import { subscribe, unsubscribe } from "node:diagnostics_channel";
 import { appendFileSync, copyFileSync, mkdirSync, writeFileSync } from "node:fs";
 import { createServer, type IncomingMessage } from "node:http";
-import { createServer as createTCPServer, type Socket } from "node:net";
+import { createConnection, createServer as createTCPServer, type Socket } from "node:net";
 import { join } from "node:path";
 import { type PairedDevice, startConnection } from "@core/connection/connection";
 import { claimLink } from "@core/devices/dial";
@@ -113,6 +113,12 @@ export async function startPhoneHome(
     connections: 0,
     stalledConnections: 0,
     homeAttempts: 0,
+    // INF-2157: stalled connections the phone gave up on, and how many it had given up on when it last
+    // reached the home's port. A phone that dials every address together reaches the home before it cuts
+    // the stalled attempt; one that waits out the stalled address first cuts it before. The two TCP accepts
+    // of a joint dial land in either order, so neither reading asks which socket the home saw first.
+    stalledCuts: 0,
+    stalledCutsAtHomeAttempt: 0,
     refusals: 0,
   };
   const observations: unknown[] = [];
@@ -192,7 +198,10 @@ export async function startPhoneHome(
   const stalledServer = createTCPServer((socket) => {
     readings.stalledConnections += 1;
     stalledSockets.add(socket);
-    socket.once("close", () => stalledSockets.delete(socket));
+    socket.once("close", () => {
+      stalledSockets.delete(socket);
+      readings.stalledCuts += 1;
+    });
   });
   await new Promise<void>((resolve) => stalledServer.listen(0, "127.0.0.1", resolve));
   const stalledPort = (stalledServer.address() as { port: number }).port;
@@ -200,8 +209,48 @@ export async function startPhoneHome(
   // phone's own handshake deadline cuts a slow but genuine handshake here, no request arrives, so
   // only this count sees that attempt.
   const countAttempt = (message: unknown) => {
-    if ((message as { socket: Socket }).socket.localPort === port) readings.homeAttempts += 1;
+    if ((message as { socket: Socket }).socket.localPort !== port) return;
+    readings.homeAttempts += 1;
+    readings.stalledCutsAtHomeAttempt = readings.stalledCuts;
   };
+  // INF-2157: a route to the home that can go silent without closing, as a path that died under a kept
+  // connection while the app was in the background (Wi-Fi asleep, left the house).
+  let relayFrozen = false;
+  const relayPairs = new Set<{ client: Socket; upstream: Socket }>();
+  // Every socket the relay holds, frozen arrivals included: closing the relay server waits for each to end, so
+  // the home's close destroys them all rather than wait on a peer that may never hang up.
+  const relaySockets = new Set<Socket>();
+  const holdRelaySocket = (socket: Socket) => {
+    relaySockets.add(socket);
+    socket.once("close", () => relaySockets.delete(socket));
+  };
+  const relayServer = createTCPServer((client) => {
+    client.on("error", () => {});
+    holdRelaySocket(client);
+    if (relayFrozen) return;
+    const upstream = createConnection(port, "127.0.0.1");
+    holdRelaySocket(upstream);
+    const pair = { client, upstream };
+    relayPairs.add(pair);
+    upstream.on("error", () => {});
+    client.on("data", (data) => {
+      if (!relayFrozen) upstream.write(data);
+    });
+    upstream.on("data", (data) => {
+      if (!relayFrozen) client.write(data);
+    });
+    const end = () => {
+      relayPairs.delete(pair);
+      client.destroy();
+      upstream.destroy();
+    };
+    client.once("close", end);
+    upstream.once("close", () => {
+      if (!relayFrozen) end();
+    });
+  });
+  await new Promise<void>((resolve) => relayServer.listen(0, "127.0.0.1", resolve));
+  const relayPort = (relayServer.address() as { port: number }).port;
   subscribe("net.server.socket", countAttempt);
   // A refusal is a connection request pairing admits no device for: the 401 a removed phone reads.
   const pairing = core.services.devices;
@@ -473,6 +522,19 @@ export async function startPhoneHome(
         case "POST routing-refresh":
           routingAddresses = [`100.101.7.3:${port}`, `localhost:${port}`];
           result = { addresses: routingAddresses, at: `127.0.0.1:${port}` };
+          break;
+        // INF-2157: the welcome names an address that never answers ahead of the home's own.
+        case "POST routing-stalled-first":
+          routingAddresses = [`127.0.0.1:${stalledPort}`, `127.0.0.1:${port}`];
+          result = { addresses: routingAddresses };
+          break;
+        case "POST relay-thaw":
+          relayFrozen = false;
+          result = { address: `127.0.0.1:${relayPort}`, at: `127.0.0.1:${port}` };
+          break;
+        case "POST relay-freeze":
+          relayFrozen = true;
+          result = { held: relayPairs.size };
           break;
         case "POST routing-legacy":
           legacyRouting = true;
@@ -1519,6 +1581,10 @@ export async function startPhoneHome(
           await controls?.start("talk");
           result = { ok: true };
           break;
+        case "POST capture-reopen-start":
+          await controls?.start("reopen");
+          result = { ok: true };
+          break;
         case "POST capture-start":
           await controls?.start();
           result = { ok: true };
@@ -1611,6 +1677,8 @@ export async function startPhoneHome(
       unsubscribe("net.server.socket", countAttempt);
       for (const socket of stalledSockets) socket.destroy();
       await new Promise<void>((resolve) => stalledServer.close(() => resolve()));
+      for (const socket of relaySockets) socket.destroy();
+      await new Promise<void>((resolve) => relayServer.close(() => resolve()));
       stopConversationReading();
       await core.dispose();
       await provider.close();

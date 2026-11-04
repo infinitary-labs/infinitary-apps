@@ -479,6 +479,31 @@ import XCTest
         // on the first card. The home's own mark of this card closes that race before the phone leaves.
         _ = try await home("seen-wait", body: replayed)
 
+        // INF-2157, the captain: "often when i reopen my ios app, it takes a long time before the app would attempt
+        // to reconnect." A reopen dials every saved address together, so one that never answers holds nothing up:
+        // this connection's welcome names a stalled address ahead of the home's own, and the next reopen reaches the
+        // home while that stalled attempt is still open, with one connection.
+        _ = try await home("routing-stalled-first")
+        try await background()
+        app.activate()
+        reach("In reach", timeout: 20)
+        try await background()
+        let beforeReopenState = try await home("state", method: "GET")
+        let beforeReopen = try XCTUnwrap(beforeReopenState["readings"] as? [String: Int])
+        _ = try await home("capture-reopen-start")
+        app.activate()
+        reach("In reach", timeout: 20)
+        _ = try await home("capture-stop")
+        let afterReopenState = try await home("state", method: "GET")
+        let afterReopen = try XCTUnwrap(afterReopenState["readings"] as? [String: Int])
+        func reopened(_ reading: String) throws -> Int { try XCTUnwrap(afterReopen[reading]) - XCTUnwrap(beforeReopen[reading]) }
+        XCTAssertEqual(try reopened("stalledConnections"), 1,
+            "The reopen dialed the stalled address too: before \(beforeReopen), after \(afterReopen)")
+        XCTAssertEqual(afterReopen["stalledCutsAtHomeAttempt"], beforeReopen["stalledCuts"],
+            "The reopen reached the home before giving up on the stalled address: before \(beforeReopen), after \(afterReopen)")
+        XCTAssertEqual(try reopened("connections"), 1, "One welcomed connection per reopen")
+        _ = try await home("routing-reset")
+
         computerDetails()
         tapOnPhone(app.buttons["leave"])
         // INF-589 item 4: Keep it stays in view beside Leave.
@@ -526,10 +551,10 @@ import XCTest
         func since(_ reading: String) throws -> Int { try XCTUnwrap(after[reading]) - XCTUnwrap(before[reading]) }
         let readings = "before removal \(before), after \(after)"
         XCTAssertEqual(try since("refusals"), 2, "Two authenticated refusals, and no more, prove removal: \(readings)")
-        // INF-1168: the phone tries the home, then the stalled address, each round. A starved simulator can also
-        // outlast the phone's own handshake deadline at the home, which sends no request and adds a round, so the
-        // address order, not the clock, fixes the count: one stall after every attempt at the home but the last.
-        XCTAssertEqual(try since("stalledConnections"), try since("homeAttempts") - 1,
+        // INF-1168, INF-2157: each round dials the home and the stalled address together, and the second refusal
+        // ends its round at once. A starved simulator can also outlast the phone's own deadline at the home, which
+        // sends no request and adds a round, so the rounds, not the clock, fix the count: one stall per home attempt.
+        XCTAssertEqual(try since("stalledConnections"), try since("homeAttempts"),
             "Removal survives a stalled handshake with no HTTP response between authenticated refusals: \(readings)")
         tapOnPhone(app.buttons["join-again"])
         app.terminate(); try await launchPhoneApp(app)

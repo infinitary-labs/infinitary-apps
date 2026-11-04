@@ -422,10 +422,10 @@ On a GitLab project the same two tools reach GitLab's API (below); they keep the
   A manual `verify.yml` full-system request uses `{"ref":"<workflow-branch>","inputs":{"full_system":true,"ref":"<exact-source-commit>","task":"<task-key>","reason":"<named exception; why narrower proof cannot suffice>"}}`.
   Both verification profiles include Linux and Mac; `all_journeys: false` narrows Mac journeys, not the broad Mac job, signing or packaging.
   Without the explicit selection, verification stops before expensive jobs; installer-only/reuse routes remain separate and reject a simultaneous full-system selection.
-  Main and release reusable callers keep full-system coverage without this manual selection.
+  Main and release reusable callers need no manual selection, and together keep full-system coverage: main runs every check but the old journey set, and every alpha runs every journey or reuses the swept batch's.
   A Linux-only result cannot satisfy their full-system proof, and a request for all Linux tests does not authorize Mac work.
   The caller chooses the workflow, ref and optional inputs its task needs; the host adds no task-branch or input restrictions.
-  In this repository, `verify.yml` on request runs only the tests tagged `MAC_ONLY_TAG` on the Mac; a request may pass `"all_journeys":true` to run every journey there, as main's desktop release check does (`docs/testing.md`, "Tests that need a Mac").
+  In this repository, `verify.yml` on request runs only the tests tagged `MAC_ONLY_TAG` on the Mac; a request may pass `"all_journeys":true` to run every journey there, as every alpha does (`docs/testing.md`, "Tests that need a Mac").
   Starting, cancelling, enabling, disabling and rerunning workflows are project operations, not account administration.
   A successful response means GitHub accepted the request, not that checks passed; find its run with `github_read`, confirm `head_sha`, then take a short `read_workflow({ runId })` read to watch that run and end the turn.
   Use `check_change` separately for a pull request's checks.

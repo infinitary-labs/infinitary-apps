@@ -11,9 +11,11 @@ import {
   rmSync,
   writeFileSync,
 } from "node:fs";
+import { createRequire } from "node:module";
 import { availableParallelism } from "node:os";
 import { dirname, join, posix } from "node:path";
-import { pathToFileURL } from "node:url";
+import { fileURLToPath, pathToFileURL } from "node:url";
+import { compileFunction, constants } from "node:vm";
 import { data, Evaluator, Lexer, Parser } from "@actions/expressions";
 import type { PlaywrightTestConfig } from "@playwright/test";
 import type {
@@ -169,8 +171,10 @@ describe("local packaging identity (electron-builder.dev.yml)", () => {
 
   /**
    * INF-2146, the captain's approved plan (direction B, trigger "push"): every
-   * push to main runs the full check with every journey on the Mac, and
-   * INF-2492 (the captain: "remove phone check from main altogether. we run
+   * push to main runs the full check. INF-2480 (the captain: "old set at the
+   * release check only, from the first piece on") leaves the old journey set
+   * to the release, so main's check is verify.yml's checks part with only the
+   * tests that need a Mac on the Mac. INF-2492 (the captain: "remove phone check from main altogether. we run
    * all phone check parts at release") takes the phone check off it, so the
    * phone release runs every part instead. Runs queue instead of
    * cancelling, so GitHub keeps one running and at most one waiting run.
@@ -215,10 +219,11 @@ describe("local packaging identity (electron-builder.dev.yml)", () => {
       "./.github/workflows/verify.yml",
     ]);
     const verify = Object.values(main.jobs).find((job) => job.uses?.endsWith("verify.yml"));
-    // The pushed version, with every journey on the Mac and the full lanes.
+    // The pushed version, with the checks part and only the tagged journeys on the Mac.
     expect(verify?.with).toMatchObject({
       ref: "${{ github.sha }}",
-      all_journeys: true,
+      part: "checks",
+      all_journeys: false,
       profile: "stable",
     });
     expect(verify?.with).not.toHaveProperty("installer_only");
@@ -1125,12 +1130,14 @@ describe("local packaging identity (electron-builder.dev.yml)", () => {
    * Whether Actions runs a step in a lane (the mac lane unless named) once
    * the earlier steps ended with these outcomes: its condition through
    * GitHub's own evaluator, with the status functions the job's state gives,
-   * and a condition naming none of them runs only on success().
+   * and a condition naming none of them runs only on success(). The call
+   * names its part (INF-2480), the whole check unless named.
    */
   const stepRuns = (
     step: Step | undefined,
     outcomes: Record<string, string>,
     lane: "mac" | "linux-checks" = "mac",
+    part: "all" | "checks" | "journeys" = "all",
   ) => {
     const failed = Object.values(outcomes).includes("failure");
     const status: Array<[string, boolean]> = [
@@ -1151,7 +1158,7 @@ describe("local packaging identity (electron-builder.dev.yml)", () => {
       : `success() && (${condition})`;
     const ast = new Parser(
       new Lexer(expression).lex().tokens,
-      ["steps", "matrix"],
+      ["steps", "matrix", "inputs"],
       functions,
     ).parse();
     const steps = new data.Dictionary(
@@ -1161,9 +1168,11 @@ describe("local packaging identity (electron-builder.dev.yml)", () => {
       })),
     );
     const matrix = new data.Dictionary({ key: "lane", value: new data.StringData(lane) });
+    const inputs = new data.Dictionary({ key: "part", value: new data.StringData(part) });
     const context = new data.Dictionary(
       { key: "steps", value: steps },
       { key: "matrix", value: matrix },
+      { key: "inputs", value: inputs },
     );
     const evaluator = new Evaluator(ast, context, new Map(functions.map((f) => [f.name, f])));
     return evaluator.evaluate().coerceString() === "true";
@@ -2512,9 +2521,7 @@ describe("the signed channel workflow", () => {
     const summary = step("Summarize the publication").env ?? {};
     for (const required of ["true", "false"]) {
       const context = {
-        needs: {
-          resolve: { outputs: { verify_required: required, full_verify_required: required } },
-        },
+        needs: { resolve: { outputs: { verify_required: required, main_run: "" } } },
       };
       expect(workflowValue(summary.LANES ?? "", context)).toBe(
         required === "true" ? "linux-checks, linux-e2e, mac" : "none",
@@ -2523,6 +2530,119 @@ describe("the signed channel workflow", () => {
         required === "true" ? /^none$/ : /inherited from the published alpha, not passed/,
       );
     }
+    // INF-2480: an alpha reusing main's checks runs every journey itself.
+    const reused = {
+      needs: {
+        resolve: {
+          outputs: {
+            verify_required: "true",
+            main_run: "https://github.com/infinitary-labs/infinitary/actions/runs/41657804530",
+            main_journeys: "false",
+          },
+        },
+      },
+    };
+    expect(workflowValue(summary.LANES ?? "", reused)).toBe("linux-e2e, mac (every journey)");
+    expect(workflowValue(summary.OMITTED ?? "", reused)).toBe(
+      "linux-checks and the mac lane's other stages; inherited from rolling main https://github.com/infinitary-labs/infinitary/actions/runs/41657804530, not repeated here",
+    );
+    // The captain on INF-2508: "Keep every journey in the batch, and let an
+    // alpha reuse them". An alpha from a swept batch that ran every journey
+    // runs no lane, and names the batch run it inherited them from.
+    const batchRun = "https://github.com/infinitary-labs/infinitary/actions/runs/41600000001";
+    const swept = {
+      needs: {
+        resolve: {
+          outputs: { verify_required: "true", main_run: batchRun, main_journeys: "true" },
+        },
+      },
+    };
+    expect(workflowValue(summary.LANES ?? "", swept)).toBe("none");
+    expect(workflowValue(summary.OMITTED ?? "", swept)).toBe(
+      `linux-checks, linux-e2e and mac; inherited from ${batchRun}, not repeated here`,
+    );
+  });
+
+  /**
+   * INF-2480 (the captain: "old set at the release check only, from the first
+   * piece on"): a call names its part. main.yml's checks part runs every lane
+   * but the Linux journeys, with only the tests that need a Mac on the Mac;
+   * the journeys part, which an alpha reusing main's checks runs, is every
+   * journey on Linux and the Mac and none of the checks main already passed.
+   * Each step's outcome feeds the next, as Actions gives them.
+   */
+  it("runs the old journey set in the journeys part and leaves it out of main's checks part", () => {
+    const ran = (name: string, inputs: Record<string, unknown>) => {
+      const outcomes: Record<string, { outcome: string }> = {};
+      const commands: string[] = [];
+      for (const candidate of lane.steps ?? []) {
+        const runs =
+          candidate.if === undefined ||
+          workflowValue(candidate.if, { matrix: { lane: name }, inputs, steps: outcomes }) === true;
+        if (candidate.id) outcomes[candidate.id] = { outcome: runs ? "success" : "skipped" };
+        if (runs && candidate.run) commands.push(candidate.id ?? candidate.name ?? candidate.run);
+      }
+      return commands;
+    };
+    const linuxJourneys = (inputs: Record<string, unknown>) =>
+      workflowValue(jobOf(verify, "linux-e2e").if ?? "", { inputs });
+    const only = (inputs: Record<string, unknown>) =>
+      workflowValue(
+        (lane.steps ?? []).find((candidate) => candidate.id === "e2e")?.env?.ONLY ?? "",
+        { inputs },
+      );
+    // A call's inputs, with verify.yml's own defaults for those it leaves out.
+    const called = (inputs: Record<string, unknown>) => ({
+      ...Object.fromEntries(
+        Object.entries(verify.on.workflow_call?.inputs ?? {}).flatMap(([name, input]) =>
+          "default" in input ? [[name, input.default]] : [],
+        ),
+      ),
+      ...inputs,
+    });
+    // The part is a call's alone; a request and every caller that names none run the whole check.
+    expect(verify.on.workflow_call?.inputs?.part).toMatchObject({ default: "all", type: "string" });
+    expect(verify.on.workflow_dispatch?.inputs).not.toHaveProperty("part");
+    const whole = ran("mac", called({}));
+    expect(linuxJourneys(called({}))).toBe(true);
+
+    // main.yml's call: no Linux journey, and on the Mac only the tagged tests beside every check.
+    const main = loadYamlFile(".github/workflows/main.yml") as Workflow;
+    const checks = called(
+      Object.values(main.jobs).find((job) => job.uses?.endsWith("verify.yml"))?.with ?? {},
+    );
+    expect(linuxJourneys(checks)).toBe(false);
+    expect(workflowValue(lane.strategy?.matrix.lane ?? "", { inputs: checks })).toEqual([
+      "linux-checks",
+      "mac",
+    ]);
+    expect(ran("mac", checks)).toEqual(whole);
+    expect(ran("linux-checks", checks)).toEqual(ran("linux-checks", called({})));
+    expect(only(checks)).toBe("--grep @mac-only");
+
+    // The journeys part: every Linux journey, and on the Mac every journey and what it needs.
+    const journeys = called({ part: "journeys" });
+    expect(linuxJourneys(journeys)).toBe(true);
+    expect(workflowValue(lane.strategy?.matrix.lane ?? "", { inputs: journeys })).toEqual(["mac"]);
+    expect(only(journeys)).toBe("");
+    expect(ran("mac", journeys)).toEqual([
+      "install",
+      "build",
+      "recorder",
+      "Read the dev Electron's signature",
+      "e2e",
+      "Summarize",
+    ]);
+    expect(whole).toEqual(
+      expect.arrayContaining([
+        "unit",
+        "claude-client",
+        "replay",
+        "dev-signing",
+        "package",
+        "helper",
+      ]),
+    );
   });
 
   // Captain's accepted INF-1258 mac-unit-only option: all files still run
@@ -2594,7 +2714,7 @@ describe("the signed channel workflow", () => {
         const needs = {
           resolve: {
             result: "success",
-            outputs: { verify_required: required, full_verify_required: required },
+            outputs: { verify_required: required },
           },
           notes: { result: "success" },
           verify: { result },
@@ -2701,7 +2821,7 @@ describe("the signed channel workflow", () => {
           const needs = {
             resolve: {
               result: "success",
-              outputs: { verify_required: required, full_verify_required: required },
+              outputs: { verify_required: required },
             },
             ...checks(required),
             release: { result },
@@ -2731,7 +2851,7 @@ describe("the signed channel workflow", () => {
         const needs = {
           resolve: {
             result: "success",
-            outputs: { verify_required: required, full_verify_required: required },
+            outputs: { verify_required: required },
           },
           ...checks(required),
           release: { result },
@@ -3520,19 +3640,42 @@ describe("the signed channel workflow", () => {
     expect(signing).not.toContain("update");
   });
 
+  /**
+   * A stable inherits its alpha's checks, or is refused. INF-2480 (the
+   * captain: "old set at the release check only, from the first piece on"):
+   * an alpha that reused main's checks ran every journey itself, and one
+   * that ran no lane reused a main run from before it that carried every
+   * journey, or (the captain on INF-2508: "Keep every journey in the batch,
+   * and let an alpha reuse them") the swept batch a covered main run names;
+   * each is promoted only beside main's exact-source run. Job names follow
+   * alpha run 41685154411 and main run 41657804530.
+   */
   it("inherits the published alpha's run, found by its number, only when both lanes passed in its latest attempt, and refuses the stable otherwise", async () => {
     const script = (jobOf(release, "resolve").steps ?? []).find(
       (candidate) => candidate.id === "verification",
     )?.with?.script;
     expect(typeof script).toBe("string");
-    const AsyncFunction = Object.getPrototypeOf(async () => {}).constructor;
-    const execute = new AsyncFunction("core", "exec", "github", "context", "process", script);
+    // Execute the unchanged action body with Node's real module loader, which
+    // its import of scripts/main-alpha-proof.mjs needs.
+    const execute = compileFunction(
+      `return (async () => {\n${script}\n})()`,
+      ["core", "exec", "github", "context", "process", "require"],
+      { importModuleDynamically: constants.USE_MAIN_CONTEXT_DEFAULT_LOADER },
+    );
     const url = "https://github.com/example/project/actions/runs/123";
+    const source = "c".repeat(40);
+    const mainUrl = "https://github.com/example/project/actions/runs/41657804530";
+    const linuxJourneys = ["parallel", "desktop"].flatMap((lane) =>
+      [1, 2, 3, 4].map((shard) => `verify / linux-e2e / journeys (${lane} ${shard}/4)`),
+    );
     for (const scenario of [
       "alpha",
       "stable rehearsal without promotion",
       "eligible stable",
       "eligible stable from before the update check",
+      "eligible stable from an alpha that ran only the journeys",
+      "eligible stable from an alpha that reused every lane",
+      "eligible stable from an alpha that reused a swept batch",
       "failed mac",
       "skipped mac",
       "pending mac",
@@ -3542,6 +3685,9 @@ describe("the signed channel workflow", () => {
       "pending Apple silicon proof",
       "failed alpha run",
       "missing alpha run",
+      "alpha that ran only the journeys, with no main run",
+      "alpha that ran only the journeys, missing a shard",
+      "alpha that reused a main run without the journeys",
     ]) {
       const outputs: Record<string, string> = {};
       const failures: string[] = [];
@@ -3561,11 +3707,20 @@ describe("the signed channel workflow", () => {
       const updateCheck = legacy
         ? "Verify signed installer and updater"
         : "Update from the last published alpha";
+      const journeysOnly = scenario.includes("ran only the journeys");
+      const reusedEvery = scenario.includes("reused");
+      const lanes = reusedEvery
+        ? ["verify"]
+        : [
+            "verify / Validate verification selection",
+            ...(journeysOnly ? [] : ["verify / linux-checks"]),
+            ...(scenario.endsWith("missing a shard") ? linuxJourneys.slice(1) : linuxJourneys),
+            "verify / mac",
+          ];
       const jobs = [
-        "verify / linux-checks",
-        "verify / linux-e2e / journeys (1/2)",
-        "verify / linux-e2e / journeys (2/2)",
-        "verify / mac",
+        "Resolve the source commit and version",
+        "Check the release notes",
+        ...lanes,
         `${updateCheck} / Apple silicon`,
         ...(legacy ? [`${updateCheck} / Intel`] : []),
       ]
@@ -3582,14 +3737,77 @@ describe("the signed channel workflow", () => {
               ? "in_progress"
               : "completed",
           conclusion:
-            scenario === "failed Intel proof from before the update check" && name.endsWith("Intel")
-              ? "failure"
-              : name.endsWith("mac") && scenario === "failed mac"
+            name === "verify"
+              ? "skipped"
+              : scenario === "failed Intel proof from before the update check" &&
+                  name.endsWith("Intel")
                 ? "failure"
-                : name.endsWith("mac") && scenario === "skipped mac"
-                  ? "skipped"
-                  : "success",
+                : name.endsWith("mac") && scenario === "failed mac"
+                  ? "failure"
+                  : name.endsWith("mac") && scenario === "skipped mac"
+                    ? "skipped"
+                    : "success",
         }));
+      // main's exact-source run: its checks part, and every journey when it
+      // came before INF-2480; or a covered push that names its swept batch,
+      // whose sweep ran every journey on the source's files.
+      const swept = scenario.endsWith("a swept batch");
+      const tree = "f".repeat(40);
+      const batchRun = {
+        id: 41600000001,
+        run_attempt: 1,
+        path: ".github/workflows/batch.yml",
+        head_branch: "main",
+        status: "completed",
+        conclusion: "success",
+        head_repository: { full_name: "example/project" },
+        repository: { full_name: "example/project" },
+        html_url: "https://github.com/example/project/actions/runs/41600000001",
+      };
+      const batchJobs = [
+        "sweep / linux-checks",
+        "sweep / mac",
+        ...linuxJourneys.map((name) => name.replace("verify / ", "sweep / ")),
+        `verdict (tree ${tree})`,
+      ].map((name) => ({
+        name,
+        run_id: batchRun.id,
+        run_attempt: 1,
+        status: "completed",
+        conclusion: "success",
+      }));
+      const mainRun = {
+        id: 41657804530,
+        run_attempt: 1,
+        path: ".github/workflows/main.yml",
+        event: "push",
+        head_branch: "main",
+        head_sha: source,
+        status: "completed",
+        conclusion: "success",
+        head_repository: { full_name: "example/project" },
+        repository: { full_name: "example/project" },
+        html_url: mainUrl,
+      };
+      const mainJobs = (
+        swept
+          ? ["sort", `covered by batch ${batchRun.id}`, "verify"]
+          : [
+              "verify / Validate verification selection",
+              "verify / linux-checks",
+              "verify / mac",
+              ...(scenario === "eligible stable from an alpha that reused every lane"
+                ? linuxJourneys
+                : []),
+            ]
+      ).map((name) => ({
+        name,
+        run_id: mainRun.id,
+        run_attempt: 1,
+        head_sha: source,
+        status: "completed",
+        conclusion: swept && name === "verify" ? "skipped" : "success",
+      }));
       const listRuns = Symbol("runs");
       const listJobs = Symbol("jobs");
       await execute(
@@ -3603,8 +3821,28 @@ describe("the signed channel workflow", () => {
         },
         {},
         {
-          rest: { actions: { listWorkflowRuns: listRuns, listJobsForWorkflowRun: listJobs } },
+          rest: {
+            actions: {
+              listWorkflowRuns: listRuns,
+              listJobsForWorkflowRun: listJobs,
+              getWorkflowRun: async ({ run_id }: { run_id: number }) => {
+                expect(run_id).toBe(batchRun.id);
+                return { data: batchRun };
+              },
+            },
+            git: {
+              getCommit: async ({ commit_sha }: { commit_sha: string }) => {
+                expect(commit_sha).toBe(source);
+                return { data: { sha: source, tree: { sha: tree } } };
+              },
+            },
+          },
           paginate: async (method: symbol, parameters: Record<string, unknown>) => {
+            if (method === listRuns && parameters.workflow_id === "main.yml") {
+              // Only a push to main of the alpha's exact source vouches for it.
+              expect(parameters).toMatchObject({ head_sha: source, event: "push", branch: "main" });
+              return scenario.endsWith("with no main run") ? [] : [mainRun];
+            }
             if (method === listRuns) {
               // Dispatched from main, the alpha's run records main's commit, never
               // the candidate it built: it is found by number, not by commit.
@@ -3629,7 +3867,7 @@ describe("the signed channel workflow", () => {
                 other,
                 {
                   id: 123,
-                  head_sha: "c".repeat(40),
+                  head_sha: "e".repeat(40),
                   run_number: 13,
                   status: "completed",
                   conclusion: scenario === "failed alpha run" ? "failure" : "success",
@@ -3638,6 +3876,8 @@ describe("the signed channel workflow", () => {
               ];
             }
             expect(parameters.filter).toBe("latest");
+            if (parameters.run_id === mainRun.id) return mainJobs;
+            if (parameters.run_id === batchRun.id) return batchJobs;
             expect(parameters.run_id).toBe(123);
             return jobs;
           },
@@ -3650,8 +3890,11 @@ describe("the signed channel workflow", () => {
               scenario === "alpha" || scenario === "stable rehearsal without promotion"
                 ? ""
                 : "1.2.3-alpha.13",
+            SOURCE_COMMIT: source,
+            GITHUB_WORKSPACE: fileURLToPath(new URL("../", import.meta.url)),
           },
         },
+        createRequire(import.meta.url),
       );
       const inherited = scenario.startsWith("eligible stable");
       const refused =
@@ -3660,6 +3903,12 @@ describe("the signed channel workflow", () => {
       expect(outputs.alpha_run, scenario).toBe(inherited ? url : "");
       expect(summaries.length, scenario).toBe(inherited ? 1 : 0);
       if (inherited) expect(summaries[0]).toContain("omitted, not passed here");
+      if (journeysOnly && inherited)
+        expect(summaries[0]).toContain(`every journey in its run ${url}, the rest in ${mainUrl}`);
+      if (reusedEvery && inherited)
+        expect(summaries[0]).toContain(
+          `in ${swept ? batchRun.html_url : mainUrl}, which its run ${url} reused`,
+        );
       expect(failures.length, scenario).toBe(refused ? 1 : 0);
       if (refused) expect(failures[0]).toContain("Alpha 1.2.3-alpha.13 cannot be promoted");
       console.log(
@@ -5984,7 +6233,6 @@ describe("an alpha with nothing new to build", () => {
     const outputs = {
       skip,
       verify_required: skip === "true" ? "" : "true",
-      full_verify_required: skip === "true" ? "" : "false",
       main_run: skip === "true" ? "" : url(73),
     };
     for (const [id, job] of Object.entries(release.jobs)) {
@@ -6019,7 +6267,17 @@ describe("an alpha with nothing new to build", () => {
       Object.entries(skipped).filter(([id, value]) => id !== "resolve" && value !== "skipped"),
     ).toEqual([]);
     const cut = results("false");
-    for (const id of ["notes", "phone", "linux", "release", "update", "upload", "publish"])
+    // INF-2480: a rolling alpha runs every journey itself, so its verify call runs too.
+    for (const id of [
+      "notes",
+      "verify",
+      "phone",
+      "linux",
+      "release",
+      "update",
+      "upload",
+      "publish",
+    ])
       expect(cut[id], id).toBe("success");
     // The gate's skip reaches the resolve job's own later steps and outputs.
     expect(release.jobs.resolve?.outputs?.skip).toContain("steps.gate.outputs.skip");

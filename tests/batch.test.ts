@@ -370,6 +370,10 @@ describe("batch.yml", () => {
     const sweep = batch.jobs.sweep!;
     expect(sweep.uses).toBe("./.github/workflows/verify.yml");
     expect(sweep.with).toMatchObject({ hosted: true, all_journeys: true, profile: "stable" });
+    // The captain on INF-2508: "Keep every journey in the batch, and let an
+    // alpha reuse them". The sweep calls the whole check, never a part, so
+    // its journeys are there for the alpha to reuse.
+    expect(sweep.with!.part).toBeUndefined();
     const vars = {
       MAC_QUEUES: JSON.stringify({ check: "mini-mac-check", release_check: "mini-mac-release" }),
     };

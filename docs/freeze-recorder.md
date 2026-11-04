@@ -117,7 +117,7 @@ It fails, naming the call path, on any recorded stall of 250 ms or more of the m
 It grades processor time, never wall time, so a busy test computer that stretches a stall does not fail it.
 Every run prints and annotates its busiest stall, so a change that brings the app nearer the line shows before it crosses it.
 The journey chooser selects it for every change that edits the recorder or the main process's own start and clock, and for other main-process changes only through its ordinary rules (`docs/testing.md`, "Journeys on the pull request", rule 11; INF-2486).
-A pull request no longer starts journeys, so a crewmate whose change it selects runs it on request before the merge card (`docs/testing.md`, "Journeys on request"), and it runs on Linux in every full check, including main's desktop release check.
+A pull request no longer starts journeys, so a crewmate whose change it selects runs it on request before the merge card (`docs/testing.md`, "Journeys on request"), and it runs on Linux in every alpha's check, or in the swept batch it reuses.
 
 A wait on another program spends almost no processor time, so the journey records it without failing it.
 The wait check (`scripts/main-thread-waits.ts`, in `pnpm check`) covers it instead: it refuses `execSync`, `execFileSync` and `spawnSync` in `src/main`, `src/core` and `src/shared`, except a file listed in `LISTED_WAITS` with its reason.

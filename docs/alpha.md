@@ -192,14 +192,19 @@ The switch lists `alpha` and `stable`; releases of either channel also update th
   The upload job waits for it, lays out the Linux files (`linux-files`) from its artifact and uploads them beside the zip to every place, adopting any package a retry finds already published on one of them.
   The publication job fetches every Linux file back from each place like the zip - the public copies without a credential - and compares it and its sidecar with the upload job's list before the feed commit writes the builds file.
 - **Full alpha checks, inherited stable checks (FI3-482).**
-  An automatic alpha reuses the completed rolling-main run's `linux-checks`, `linux-e2e` and `mac` lanes without running them again: those lanes cover Linux typecheck, lint, adherence lint, unit tests and build; every Playwright journey on Linux, in shards (`docs/testing.md`, "The Linux source desktop"); macOS unit tests, every Playwright journey, the installed Claude client check, the replay gate, and the development package with its signature, data-folder and bundled-git checks.
+  Every alpha needs every Playwright journey passed on its exact files, on Linux in shards (`docs/testing.md`, "The Linux source desktop") and on the Mac, since main runs none of the old journey set (INF-2480, the captain: "old set at the release check only, from the first piece on").
+  An automatic alpha whose files a green swept batch checked with every journey reuses that batch's run and runs no lane itself (the captain on INF-2508: "Keep every journey in the batch, and let an alpha reuse them"; `docs/testing.md`, "The swept batch").
+  Any other automatic alpha calls `verify.yml` with `part: journeys` for them, and reuses the rest of the completed rolling-main run's full check without running it again: its `linux-checks` lane, with Linux typecheck, lint, adherence lint, unit tests and build, and its `mac` lane's macOS unit tests, tests tagged `MAC_ONLY_TAG`, installed Claude client check, replay gate, and development package with its signature, data-folder and bundled-git checks.
+  The journeys part's Mac lane runs only the install, the build, the recorder and the suite.
   The release also runs the update check (`mac-update.yml`, "The update check" below) on Apple silicon: the real update from the signing job's handoff, once every check passed, before publication.
   There is no Linux-only bypass.
   Performance grading stays on request (`verify.yml` with explicit `full_system=true`, task/source/reason and `perf=true`; `docs/forge.md`, "Verification workflow requests").
   A stable omits verify and inherits its alpha's checks: the resolve job reads the published alpha's release run, found by its run number (the alpha's suffix), because a run dispatched from main records main's commit rather than the candidate it built.
   The stable's source is the alpha tag's own commit, so nothing differs from what that run checked.
-  The run must have succeeded with every lane's latest execution completed successfully, each Linux journey shard included, or carry validated exact-source main proof for an automatic alpha.
-  Reuse reads GitHub's run and latest per-job executions, requires the trusted main-push identity, every full-check owner and complete Linux shard sets, and refuses skipped required owners, partial, cancelled, failed or other-source results.
+  The run must have succeeded with every lane's latest execution completed successfully, each Linux journey shard included.
+  An alpha that ran only the journeys part, with no `linux-checks` job, needs complete Linux shard sets and also validated exact-source main proof for the rest.
+  An automatic alpha that ran no lane reused every one, so it is promoted only when the run it reused also holds complete Linux shard sets: its swept batch's, or a main run from before INF-2480, which carried every journey (`scripts/main-alpha-proof.mjs`).
+  Reuse reads GitHub's run and latest per-job executions, requires the trusted main-push identity and both full-check owners, `linux-checks` and `mac`, and refuses skipped required owners, partial, cancelled, failed or other-source results.
   A manual alpha without reusable main proof, including a rehearsal, still runs full verification.
   A stable is refused without its alpha's proof, never verified again on its own.
   A promoted alpha must also have a passing update check on Apple silicon, or, for an alpha released before the update check, passing five-copy signed installer and updater jobs for both architectures.
@@ -234,7 +239,7 @@ The switch lists `alpha` and `stable`; releases of either channel also update th
 - **Release notes are checked first (`docs/release-notes.md`).**
   The `notes` job runs before `verify` or any signing, on the resolved source with full history.
   Every source change since the previous release needs a note or a reviewed exclusion, reviewed with its change before merge.
-  An automatic alpha validates its exact-main source with `--verified-main`; it makes no new notes commit that would invalidate the inherited full check.
+  An automatic alpha validates its exact-main source with `--verified-main`; it makes no new notes commit that would invalidate the reused main check.
   The existing published-release reader derives historical manifests from immutable tags when no committed record exists.
   A manual notes-only candidate keeps its existing reviewed-source and committed-history checks.
   The job generates the offline catalog, the signing job packages it as `Resources/release-notes.json`, and the packaged copy's logical version and source commit are verified before notarization.
@@ -242,13 +247,15 @@ The switch lists `alpha` and `stable`; releases of either channel also update th
   Its highlights are the captain's picks, written into the generated catalog by the workflow's own tooling ("Promoting an alpha").
   The publication itself changes nothing in the project, and a rehearsal pins nothing.
 - **No local full e2e run before a cut.**
-  Rolling main supplies the automatic alpha's full Mac and Linux proof; an alpha without reusable proof runs its own `verify.yml` lanes.
+  An alpha with exact-source proof from main's run runs every journey on Linux and the Mac in its own `verify.yml` call and reuses main's other checks.
+  An alpha whose swept batch ran every journey on its files reuses every lane, and an alpha without reusable proof runs every lane.
   Full e2e runs are CI-only, including release preparation; request an additional run for any branch on GitHub's Actions page, or through `github_write` for the ref the crewmate's task needs (`docs/forge.md`, "Verification workflow requests").
   Locally, run only affected spec files (with `--no-deps` for renderer/application specs).
 - **Failed alpha checks.**
   Nothing is recorded or published: the signing job may have finished, but its signed files stay only in the run's handoff artifact, which expires after seven days.
   Automatic journey retries stay zero.
   When a test fails, the release crewmate gets it fixed on main; its next rolling run that passes starts the next alpha automatically.
+  Until the swept batch runs, an untagged journey first fails here, in the run named "Alpha from main run N", since main runs only the tagged ones (INF-2480).
   Only when the failing journey passes alone on the same commit may the failed checks be manually re-run once, keeping the alpha's version; if they still fail, diagnose rather than retry again.
   No urgent-alpha bypass.
 - **Published bytes never change** (`scripts/publish-release-asset.sh`).
@@ -316,21 +323,23 @@ After that setup, a separately authorized alpha proves public fetch-back, both t
 
 A rolling `main.yml` run that passed automatically starts an alpha at that exact commit (INF-2259, the captain's accepted override).
 The alpha cuts only when no earlier alpha is still being cut and something the desktop app is built from changed since the previous release ("An alpha with nothing new to build", below).
-The `workflow_run` completion trigger uses the checked source, not main's newer head, and never dispatches another full check just for the cut.
+The `workflow_run` completion trigger uses the checked source, not main's newer head, and runs only the journeys part of the full check, which main leaves to the release (INF-2480, the captain: "old set at the release check only, from the first piece on").
+A source the swept batch checked with every journey runs no part: the batch already ran them on its files (the captain on INF-2508: "Keep every journey in the batch, and let an alpha reuse them").
 Main runs no phone check ("An alpha does not wait on the phone check", below).
 A failed, cancelled or incomplete main run cuts nothing; main's waiting-version coalescing and fix-forward process stay unchanged.
 
 1. **Validate the completed run.**
    The resolver reads the completed successful trusted main-push run and every latest per-job execution from GitHub.
-   It requires every full-check owner and all Linux journey shards at exactly the source being released.
-   A covered main run, whose files a green swept batch already checked, names that batch run instead; the resolver then reads the batch run's full check and requires its verdict's tree to be the source's tree (`docs/testing.md`, "The swept batch").
+   It requires both full-check owners, `linux-checks` and `mac`, at exactly the source being released.
+   A covered main run, whose files a green swept batch already checked, names that batch run instead; the resolver then reads the batch run's two owners and requires its verdict's tree to be the source's tree (`docs/testing.md`, "The swept batch").
 2. **Keep the same source.**
    The notes check validates committed declarations without a separate notes-review commit.
    Existing immutable tags supply published manifests through the same ledger reader when they have not been committed afterward.
    Missing or invalid notes still fail the release; editorial corrections merge normally and wait for their own passing main check.
 3. **Run release-only gates and publish.**
    Phone availability, Linux package installation, signing, notarization, actual signed update and public-download checks still run.
-   Only broad `verify.yml` coverage is inherited; a skipped verification call is not reported as a new pass.
+   Every journey runs on Linux and the Mac in `verify.yml`'s journeys part, and the update check and publication wait for it, unless the swept batch's run already holds every journey for these files.
+   Only the reused `verify.yml` coverage is skipped, and the summary names it inherited, not passed here.
    The source tag `v<version>` names the exact checked commit.
 
 ### An alpha with nothing new to build
@@ -435,7 +444,7 @@ Read the named job's log on a failure wake; a release run outcome is not a pull 
    `gh workflow run release.yml --ref main -f channel=stable -f promote=<alpha version> -f highlights=<lead>,<second>,<third>` (for example `0.1.31-alpha.40`, and the picked changes' entry ids).
    The resolver refuses unless the alpha has a source tag `v<alpha>`, its numeric core is newer than the latest stable, and it carries a feat, fix or breaking change since that stable.
    It also refuses a live stable without highlights, and highlights that are not one to three different entry ids.
-   The resolve job then refuses unless the alpha's release run has every lane's latest execution passed, or validated exact-source main proof ("Full alpha checks, inherited stable checks").
+   The resolve job then refuses unless the alpha's release run has every lane's latest execution passed, its journeys part passed beside validated exact-source main proof, or it ran no lane beside proof that carried every journey ("Full alpha checks, inherited stable checks").
 3. **Release.**
    The run builds the alpha tag's own commit as the alpha's numeric core, `X.Y.Z`, signs and publishes it, and tags `vX.Y.Z` on that same commit.
    Its notes job writes the picks into the stable's catalog as its only highlights, in order, and clears every other rank (`docs/release-notes.md` "The release check").

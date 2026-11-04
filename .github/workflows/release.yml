@@ -8,17 +8,22 @@ name: release
 #
 # Two channels through one pipeline (docs/alpha.md "The signed channel
 # workflow"), from main. Passing rolling-main runs automatically start an
-# alpha at their exact source without duplicating the full check. A manually
+# alpha at their exact source without duplicating main's checks. A manually
 # dispatched alpha releases its candidate - the
 # commit the release crewmate committed its notes review on, main's code plus
 # release-notes/ changes only - named X.Y.Z-alpha.<run number> from the
 # newest stable tag. A stable promotes a published alpha: it builds that
 # alpha's own commit as X.Y.Z, with the highlights the captain picked on a
 # card, and opens no pull request. Both resolve ONE
-# source commit first and verify, package and publish exactly it. Every alpha
-# inherits every verification lane from its exact successful rolling-main
-# source, or runs them when no reusable proof exists. A stable relies on its
-# alpha's successful release and inherited or direct full verification.
+# source commit first and verify, package and publish exactly it. Main's
+# check runs no old journey set (INF-2480, the captain: "old set at the
+# release check only, from the first piece on"), so an alpha from a main run
+# reuses its checks and runs every journey on Linux and the Mac itself. One
+# from a merge the swept batch checked reuses every lane, journeys included
+# (the captain on INF-2508: "Keep every journey in the batch, and let an
+# alpha reuse them"). An alpha with no reusable proof runs every lane. A
+# stable relies on its alpha's successful release and inherited or direct
+# full verification.
 #
 # Every release carries Linux too (docs/linux-packages.md): the linux job
 # builds the Ubuntu and Fedora packages, the AppImage and each channel's Arch
@@ -88,7 +93,7 @@ on:
         required: false
         type: string
       verified_main_run:
-        description: Alpha recovery only - successful rolling-main run for the exact candidate; reuses broad checks, not release-specific gates
+        description: Alpha recovery only - successful rolling-main run for the exact candidate; reuses its checks, not every journey or release-specific gates
         required: false
         type: string
       promote:
@@ -169,8 +174,8 @@ jobs:
       promoted_from: ${{ steps.resolve.outputs.promoted_from }}
       highlights: ${{ steps.resolve.outputs.highlights }}
       verify_required: ${{ steps.verification.outputs.required }}
-      full_verify_required: ${{ steps.main-proof.outputs.inherited == 'true' && 'false' || steps.verification.outputs.required }}
       main_run: ${{ steps.main-proof.outputs.url }}
+      main_journeys: ${{ steps.main-proof.outputs.journeys }}
       alpha_run: ${{ steps.verification.outputs.alpha_run }}
       release_repository: ${{ steps.destination.outputs.repository }}
       download_base: ${{ steps.destination.outputs.download_base }}
@@ -254,8 +259,14 @@ jobs:
             core.setOutput('inherited', 'true');
             core.setOutput('source', proof.source);
             core.setOutput('url', proof.url);
+            // A swept batch that ran every journey on these files vouches for
+            // them too, so the alpha runs no lane (the captain on INF-2508:
+            // "Keep every journey in the batch, and let an alpha reuse them").
+            core.setOutput('journeys', proof.journeys ? 'true' : 'false');
             await core.summary.addHeading('Inherited rolling-main verification')
-              .addRaw(`Every check of main's full check passed at the exact alpha source in ${proof.url} and is reused, not repeated. Release-specific gates still run.`).write();
+              .addRaw(proof.journeys
+                ? `The full check passed on the exact alpha source's files in ${proof.url}, with every journey: every lane is reused, not repeated. This release runs its release-specific gates.`
+                : `Main's full check passed at the exact alpha source in ${proof.url}: its Linux checks and its Mac lane are reused, not repeated. This release runs every journey on Linux and the Mac itself, and its release-specific gates.`).write();
 
       - name: Resolve the release
         id: resolve
@@ -292,6 +303,10 @@ jobs:
       # dispatched from main and records main's commit, not the candidate it
       # built, so it is found by its run number, the alpha's suffix; the
       # stable's source is the alpha tag's own commit (the resolver above).
+      # An alpha that ran only the journeys reused main's checks, and one
+      # that ran no lane reused every journey too, from a swept batch or a
+      # main run from before INF-2480 (scripts/main-alpha-proof.mjs,
+      # alphaVerification).
       - name: Identify inherited alpha verification
         id: verification
         if: steps.gate.outputs.skip != 'true'
@@ -321,28 +336,37 @@ jobs:
             });
             const green = job => job.status === 'completed' && job.conclusion === 'success';
             const passed = name => jobs.some(job => job.name === name && green(job));
-            // The Linux journeys run in shards, one job each: every one passed.
-            const shards = jobs.filter(job => job.name.startsWith('verify / linux-e2e / '));
-            const linux = shards.length > 0 && shards.every(green);
-            if (!passed('verify / linux-checks') || !linux || !passed('verify / mac')) {
-              // Inheritance replaces an omitted broad check, never a failed,
-              // pending or partial direct verification in the alpha release.
-              if (jobs.some(job => job.name.startsWith('verify / ') &&
-                  !(job.status === 'completed' && job.conclusion === 'skipped'))) {
-                core.setFailed(`Alpha ${alpha} cannot be promoted: its release run ${run.html_url} did not pass every check lane in its latest attempt.`);
-                return;
-              }
+            const {pathToFileURL} = require('node:url');
+            const {alphaVerification, proveMain} = await import(pathToFileURL(`${process.env.GITHUB_WORKSPACE}/scripts/main-alpha-proof.mjs`).href);
+            // Inheritance replaces an omitted broad check, never a failed,
+            // pending or partial direct verification in the alpha release.
+            const own = alphaVerification(jobs);
+            if (!own) {
+              core.setFailed(`Alpha ${alpha} cannot be promoted: its release run ${run.html_url} did not pass every check lane in its latest attempt.`);
+              return;
+            }
+            let mainUrl = '';
+            if (own !== 'all') {
               // Automatic alphas inherit exact-source rolling-main proof. They
               // still need this release's successful update check below.
-              const {pathToFileURL} = require('node:url');
-              const {proveMain} = await import(pathToFileURL(`${process.env.GITHUB_WORKSPACE}/scripts/main-alpha-proof.mjs`).href);
               const candidates = await github.paginate(github.rest.actions.listWorkflowRuns, {
                 ...context.repo, workflow_id: 'main.yml', head_sha: process.env.SOURCE_COMMIT,
                 event: 'push', branch: 'main', per_page: 100
               });
               const main = candidates.find(candidate => candidate.status === 'completed' && candidate.conclusion === 'success');
-              if (!main) throw new Error(`Alpha ${alpha} has neither full release verification nor successful exact-source main proof`);
-              await proveMain(github, context.repo, main, process.env.SOURCE_COMMIT);
+              if (!main) {
+                core.setFailed(`Alpha ${alpha} cannot be promoted: its release run ${run.html_url} reused main's checks, and main has no successful run of its exact source.`);
+                return;
+              }
+              const proof = await proveMain(github, context.repo, main, process.env.SOURCE_COMMIT);
+              // INF-2480: main's run no longer runs every journey, so an alpha
+              // that ran none itself is promoted only on proof that did: its
+              // swept batch, or a main run from before INF-2480.
+              if (own === 'none' && !proof.journeys) {
+                core.setFailed(`Alpha ${alpha} cannot be promoted: neither its release run ${run.html_url} nor the run it reused, ${proof.url}, ran every journey.`);
+                return;
+              }
+              mainUrl = proof.url;
             }
             // Its update check on Apple silicon (INF-1900; Intel is best effort), or,
             // for an alpha released before it, the five-copy check on both chips.
@@ -354,8 +378,11 @@ jobs:
             }
             core.setOutput('required', 'false');
             core.setOutput('alpha_run', run.html_url);
+            const where = own === 'all' ? `in alpha ${alpha}, ${run.html_url}`
+              : own === 'journeys' ? `for alpha ${alpha}: every journey in its run ${run.html_url}, the rest in ${mainUrl}`
+              : `for alpha ${alpha} in ${mainUrl}, which its run ${run.html_url} reused`;
             await core.summary.addHeading('Inherited alpha verification')
-              .addRaw(`Verification lanes omitted, not passed here: linux-checks, linux-e2e and mac passed in alpha ${alpha}, ${run.html_url}. The signing job's gates and the download gates still run.`)
+              .addRaw(`Verification lanes omitted, not passed here: linux-checks, linux-e2e and mac passed ${where}. The signing job's gates and the download gates still run.`)
               .write();
 
   # The release notes (docs/release-notes.md), before anything verifies or
@@ -459,14 +486,19 @@ jobs:
           retention-days: 7
 
   # An alpha must pass every lane before anything is recorded or published;
-  # the signing job runs beside it. A stable omits the reusable workflow,
-  # relying on its alpha's run (no green skipped lanes).
+  # the signing job runs beside it. One that reuses main's exact-source checks
+  # runs the journeys part, every journey on Linux and the Mac, which main no
+  # longer runs (INF-2480); one whose swept batch ran every journey on its
+  # files reuses every lane and omits this call (INF-2508); any other alpha
+  # runs every lane. A stable omits the reusable workflow, relying on its
+  # alpha's run (no green skipped lanes).
   verify:
-    if: ${{ needs.resolve.outputs.full_verify_required == 'true' }}
+    if: ${{ needs.resolve.outputs.verify_required == 'true' && needs.resolve.outputs.main_journeys != 'true' }}
     needs: [resolve, notes]
     uses: ./.github/workflows/verify.yml
     with:
       ref: ${{ needs.resolve.outputs.source_commit }}
+      part: ${{ needs.resolve.outputs.main_run != '' && 'journeys' || 'all' }}
       # Publishing or dry run, its Linux jobs run on GitHub's hosted machines
       # (docs/testing.md, "A release's hosted machines").
       hosted: true
@@ -1010,7 +1042,7 @@ jobs:
   update:
     name: Update from the last published alpha
     needs: [resolve, notes, verify, linux, phone, release]
-    if: ${{ always() && !cancelled() && needs.resolve.outputs.verify_required == 'true' && needs.resolve.result == 'success' && needs.notes.result == 'success' && (needs.verify.result == 'success' || (needs.resolve.outputs.main_run != '' && needs.verify.result == 'skipped')) && needs.linux.result == 'success' && needs.phone.result == 'success' && needs.release.result == 'success' }}
+    if: ${{ always() && !cancelled() && needs.resolve.outputs.verify_required == 'true' && needs.resolve.result == 'success' && needs.notes.result == 'success' && (needs.verify.result == 'success' || (needs.resolve.outputs.main_journeys == 'true' && needs.verify.result == 'skipped')) && needs.linux.result == 'success' && needs.phone.result == 'success' && needs.release.result == 'success' }}
     uses: ./.github/workflows/mac-update.yml
     with:
       ref: ${{ needs.resolve.outputs.source_commit }}
@@ -1042,7 +1074,7 @@ jobs:
   upload:
     name: Upload every download to every place at once (a dry run uploads nothing)
     needs: [resolve, notes, verify, linux, phone, release, update]
-    if: ${{ always() && !cancelled() && needs.resolve.result == 'success' && needs.notes.result == 'success' && needs.linux.result == 'success' && needs.phone.result == 'success' && needs.release.result == 'success' && ((needs.resolve.outputs.verify_required == 'true' && (needs.verify.result == 'success' || (needs.resolve.outputs.main_run != '' && needs.verify.result == 'skipped')) && needs.update.result == 'success') || (needs.resolve.outputs.verify_required == 'false' && needs.verify.result == 'skipped' && needs.update.result == 'skipped')) }}
+    if: ${{ always() && !cancelled() && needs.resolve.result == 'success' && needs.notes.result == 'success' && needs.linux.result == 'success' && needs.phone.result == 'success' && needs.release.result == 'success' && ((needs.resolve.outputs.verify_required == 'true' && (needs.verify.result == 'success' || (needs.resolve.outputs.main_journeys == 'true' && needs.verify.result == 'skipped')) && needs.update.result == 'success') || (needs.resolve.outputs.verify_required == 'false' && needs.verify.result == 'skipped' && needs.update.result == 'skipped')) }}
     # A release's Linux jobs run on GitHub's hosted machines (docs/testing.md, "A release's hosted machines").
     runs-on: ubuntu-24.04
     timeout-minutes: 30
@@ -1503,7 +1535,7 @@ jobs:
   publish:
     name: Check every copy, then switch the casks and feeds (a dry run switches nothing)
     needs: [resolve, notes, verify, linux, phone, release, update, upload]
-    if: ${{ always() && !cancelled() && needs.upload.result == 'success' && needs.resolve.result == 'success' && needs.notes.result == 'success' && needs.linux.result == 'success' && needs.phone.result == 'success' && needs.release.result == 'success' && ((needs.resolve.outputs.verify_required == 'true' && (needs.verify.result == 'success' || (needs.resolve.outputs.main_run != '' && needs.verify.result == 'skipped')) && needs.update.result == 'success') || (needs.resolve.outputs.verify_required == 'false' && needs.verify.result == 'skipped' && needs.update.result == 'skipped')) }}
+    if: ${{ always() && !cancelled() && needs.upload.result == 'success' && needs.resolve.result == 'success' && needs.notes.result == 'success' && needs.linux.result == 'success' && needs.phone.result == 'success' && needs.release.result == 'success' && ((needs.resolve.outputs.verify_required == 'true' && (needs.verify.result == 'success' || (needs.resolve.outputs.main_journeys == 'true' && needs.verify.result == 'skipped')) && needs.update.result == 'success') || (needs.resolve.outputs.verify_required == 'false' && needs.verify.result == 'skipped' && needs.update.result == 'skipped')) }}
     # The light kind's virtual-only queue once MAC_QUEUES names it, and
     # release_light for a publishing run (docs/testing.md, "Each Mac job's kind and size").
     runs-on: ${{ needs.resolve.outputs.dry_run == 'false' && fromJSON(vars.MAC_QUEUES || '{}').release_light || fromJSON(vars.MAC_QUEUES || '{}').light || 'mini-mac-virtual' }}
@@ -1873,8 +1905,8 @@ jobs:
         if: always()
         continue-on-error: true
         env:
-          LANES: ${{ needs.resolve.outputs.full_verify_required == 'true' && 'linux-checks, linux-e2e, mac' || 'none' }}
-          OMITTED: ${{ needs.resolve.outputs.main_run != '' && format('linux-checks, linux-e2e and mac; inherited from rolling main {0}, not repeated here', needs.resolve.outputs.main_run) || needs.resolve.outputs.verify_required == 'true' && 'none' || 'linux-checks, linux-e2e and mac; inherited from the published alpha, not passed in this run' }}
+          LANES: ${{ (needs.resolve.outputs.verify_required != 'true' || needs.resolve.outputs.main_journeys == 'true') && 'none' || needs.resolve.outputs.main_run != '' && 'linux-e2e, mac (every journey)' || 'linux-checks, linux-e2e, mac' }}
+          OMITTED: ${{ needs.resolve.outputs.main_journeys == 'true' && format('linux-checks, linux-e2e and mac; inherited from {0}, not repeated here', needs.resolve.outputs.main_run) || needs.resolve.outputs.main_run != '' && format('linux-checks and the mac lane''s other stages; inherited from rolling main {0}, not repeated here', needs.resolve.outputs.main_run) || needs.resolve.outputs.verify_required == 'true' && 'none' || 'linux-checks, linux-e2e and mac; inherited from the published alpha, not passed in this run' }}
           SHA256: ${{ needs.release.outputs.sha256 }}
           HANDOFF: artifact ${{ needs.release.outputs.handoff_id || 'none' }}, manifest sha256 ${{ needs.release.outputs.handoff_manifest || 'none' }}, from attempt ${{ needs.upload.outputs.attempt || 'unread' }}
           GATES: >-

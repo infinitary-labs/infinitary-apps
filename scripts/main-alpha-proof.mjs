@@ -6,16 +6,27 @@
 // desktop app's and the run itself must have succeeded. The phone's own gates
 // run in ios-release.yml before TestFlight, and the release's phone job still
 // waits for a TestFlight build.
-const green = (job) => job.status === "completed" && job.conclusion === "success";
+//
+// Main runs no old journey set either (INF-2480, the captain: "old set at the
+// release check only, from the first piece on"): its full check is the Linux
+// checks and the Mac lane with only the tests that need a Mac, so what an
+// alpha reuses from it is those two owners, and the alpha runs every journey
+// itself (release.yml's verify call with part journeys). A swept batch runs
+// every journey on the alpha source's files, so an alpha it proves reuses
+// them too and runs no lane (the captain on INF-2508: "Keep every journey in
+// the batch, and let an alpha reuse them").
 
-/** Every full-check owner of verify.yml, called as job `prefix`, passed and none is absent. */
-function fullCheckPassed(jobs, prefix) {
-  const passed = (name) => jobs.some((job) => job.name === name && green(job));
+const green = (job) => job.status === "completed" && job.conclusion === "success";
+const skipped = (job) => job.status === "completed" && job.conclusion === "skipped";
+
+/** Whether `jobs` hold every Linux journey of a full suite under verify.yml
+ * called as job `prefix`, each job passed: the parallel and desktop shards,
+ * each lane a complete numbered set (`journeys (<lane> <n>/<total>)`).
+ * INF-2340: the run-alone pass is not part of it, and any other journey job
+ * must still be green. */
+export function everyLinuxJourney(jobs, prefix = "verify / ") {
   const journeys = jobs.filter((job) => job.name.startsWith(`${prefix}linux-e2e / `));
-  // INF-2340: the run-alone pass left main's full check for the proof of
-  // edited journeys, so full coverage is the parallel and desktop shards; any
-  // other journey job a run holds must still be green.
-  const completeJourneys = ["parallel", "desktop"].every((lane) => {
+  return journeys.length > 0 && journeys.every(green) && ["parallel", "desktop"].every((lane) => {
     const shards = journeys.filter((job) => job.name.includes(`(${lane} `)).map((job) => {
       const match = / (\d+)\/(\d+)\)$/.exec(job.name);
       return match ? { index: Number(match[1]), total: Number(match[2]) } : null;
@@ -25,19 +36,26 @@ function fullCheckPassed(jobs, prefix) {
       new Set(shards.map((shard) => shard?.index)).size === total &&
       shards.every((shard) => shard && shard.total === total && shard.index >= 1 && shard.index <= total);
   });
-  // Full source coverage is every parallel and desktop shard.
-  // All jobs of the successful run must be completed; an optional lane may skip,
-  // but none of these full-check owners may be skipped or merely absent.
+}
+
+/** The checks an alpha reuses from verify.yml, called as job `prefix`: its
+ * Linux checks and its Mac lane passed, and every job of the run completed. */
+function checksPassed(jobs, prefix) {
+  const passed = (name) => jobs.some((job) => job.name === name && green(job));
+  // All jobs of the successful run must be completed; an optional lane may
+  // skip, but neither full-check owner may be skipped or merely absent.
   return passed(`${prefix}linux-checks`) && passed(`${prefix}mac`) &&
-    journeys.length > 0 && journeys.every(green) && completeJourneys &&
     jobs.every((job) => job.status === "completed" && ["success", "skipped"].includes(job.conclusion));
 }
 
 export function verifyMainEvidence(run, jobs, repository, source) {
   checkMainRun(run, jobs, repository, source);
-  if (!fullCheckPassed(jobs, "verify / "))
+  if (!checksPassed(jobs, "verify / "))
     throw new Error("The rolling-main run did not complete every full-check owner successfully.");
-  return { source, runId: run.id, attempt: run.run_attempt, url: run.html_url };
+  // A main run from before INF-2480 also ran every journey, on Linux and with
+  // every journey on the Mac; only such a run vouches for the journeys of an
+  // alpha that ran none itself.
+  return { source, runId: run.id, attempt: run.run_attempt, url: run.html_url, journeys: everyLinuxJourney(jobs) };
 }
 
 function checkMainRun(run, jobs, repository, source) {
@@ -83,9 +101,9 @@ export function verifyBatchEvidence(run, jobs, repository, tree) {
     throw new Error("Batch jobs must belong to a completed attempt of this run.");
   if (!jobs.some((job) => job.name === `verdict (tree ${tree})` && green(job)))
     throw new Error("The batch run swept other files than the alpha source.");
-  if (!fullCheckPassed(jobs, "sweep / "))
+  if (!checksPassed(jobs, "sweep / "))
     throw new Error("The batch run did not complete every full-check owner successfully.");
-  return { runId: run.id, attempt: run.run_attempt, url: run.html_url };
+  return { runId: run.id, attempt: run.run_attempt, url: run.html_url, journeys: everyLinuxJourney(jobs, "sweep / ") };
 }
 
 /**
@@ -103,5 +121,28 @@ export async function proveMain(github, repo, run, source) {
   const { data: commit } = await github.rest.git.getCommit({ ...repo, commit_sha: source });
   const { data: batch } = await github.rest.actions.getWorkflowRun({ ...repo, run_id: batchId });
   const proof = verifyBatchEvidence(batch, await jobsOf(batch.id), repository, commit.tree.sha);
-  return { source, runId: run.id, attempt: run.run_attempt, url: proof.url };
+  return { source, runId: run.id, attempt: run.run_attempt, url: proof.url, journeys: proof.journeys };
+}
+
+/** What a published alpha's release run proved itself, from its latest job
+ * executions, for a stable that promotes it:
+ * - "all": linux-checks, every Linux journey shard and mac passed in it;
+ * - "journeys": it ran only the journey part, with no linux-checks job, and
+ *   every Linux journey shard and mac passed (an alpha that reused main's
+ *   checks, INF-2480);
+ * - "none": its verify call skipped, so it ran no lane (an automatic alpha
+ *   that reused every lane, from its swept batch or a main run from before
+ *   INF-2480); GitHub lists a skipped call as one job named `verify`;
+ * - null: a lane failed, is pending, skipped or partial, and the alpha is refused. */
+export function alphaVerification(jobs) {
+  const lanes = jobs.filter((job) => job.name === "verify" || job.name.startsWith("verify / "));
+  if (lanes.every(skipped)) return "none";
+  const passed = (name) => jobs.some((job) => job.name === name && green(job));
+  const shards = lanes.filter((job) => job.name.startsWith("verify / linux-e2e / "));
+  const linux = shards.length > 0 && shards.every(green);
+  if (passed("verify / linux-checks") && linux && passed("verify / mac")) return "all";
+  if (!lanes.some((job) => job.name === "verify / linux-checks") && everyLinuxJourney(lanes) &&
+      passed("verify / mac") && lanes.every((job) => green(job) || skipped(job)))
+    return "journeys";
+  return null;
 }

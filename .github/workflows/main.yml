@@ -1,12 +1,18 @@
 name: main
 
 # Main's desktop release check (INF-2146, the captain's approved plan, direction
-# B): every push to main starts the full check with every journey on the Mac.
-# It checks the desktop app's release (INF-2498, the captain: "the main check
-# should be clarified to be specifically about the desktop app's release"): its
-# passing run is what the desktop app's alpha is cut from. The workflow's name,
-# main, and its job names stay, since the Automation rule, the alpha's proof
-# reader and stable promotion read them. It replaces the nightly full check. Main runs no phone check (INF-2492, the
+# B): every push to main starts the full check. It checks the desktop app's
+# release (INF-2498, the captain: "the main check should be clarified to be
+# specifically about the desktop app's release"): its passing run is what the
+# desktop app's alpha is cut from. The workflow's name, main, and its job names
+# stay, since the Automation rule, the alpha's proof reader and stable
+# promotion read them. It replaces the nightly full check. Main runs no old
+# journey set (INF-2480, the captain: "old set at the release check only, from
+# the first piece on"): its full check is the Linux checks and the Mac lane
+# with only the tests that need a Mac, and every alpha runs every journey on
+# Linux and the Mac itself, unless the swept batch already ran them on its
+# files (release.yml, docs/alpha.md "Cutting an alpha").
+# Main runs no phone check (INF-2492, the
 # captain: "remove phone check from main altogether. we run all phone check
 # parts at release"): ios-release.yml runs every part on iPhone and iPad
 # before each TestFlight upload.
@@ -105,7 +111,9 @@ jobs:
       - env:
           BATCH: ${{ needs.sort.outputs.batch }}
         run: echo "Batch run $BATCH swept exactly these files."
-  # The full check: Linux checks, every Linux journey, and every journey on the Mac.
+  # The full check's checks part: the Linux checks, and the Mac lane with only
+  # the journeys tagged MAC_ONLY_TAG. The rest of the journeys run at the
+  # release (INF-2480).
   verify:
     needs: [alpha-wait, sort]
     if: ${{ !cancelled() && needs.sort.outputs.kind != 'covered' && needs.sort.outputs.kind != 'landing' }}
@@ -113,7 +121,8 @@ jobs:
     with:
       ref: ${{ github.sha }}
       profile: stable
-      all_journeys: true
+      part: checks
+      all_journeys: false
       # Main's Linux jobs run on GitHub's hosted machines
       # (docs/testing.md, "Main's desktop release check").
       hosted: true

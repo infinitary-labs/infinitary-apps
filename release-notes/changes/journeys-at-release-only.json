@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "journeys-at-release-only",
+      "reason": "CI work: main's continuous check no longer runs the old journey set, which every alpha now runs in full before it publishes, or reuses from the swept batch that checked its files, with no change to the app."
+    }
+  ]
+}

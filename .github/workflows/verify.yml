@@ -13,6 +13,12 @@ name: verify
 # stable and alpha both run the full Linux and Mac lanes. Stable
 # promotions omit this workflow entirely, relying on their published alpha's run.
 #
+# A call names its part (INF-2480, the captain: "old set at the release check
+# only, from the first piece on"): main.yml's call runs the checks part, every
+# lane but the journeys, with only the tagged tests on the Mac; an alpha that
+# reuses main's checks runs the journeys part, every journey on Linux and the
+# Mac and nothing else; every other run is the whole check.
+#
 # The e2e paint and latency budgets are graded only on request, on a quiet
 # host (captain's B1, 2026-09-24; tests/e2e/perf.ts): every e2e run prints
 # them, and `-f perf=true` adds a run of the @perf-tagged specs that holds
@@ -64,7 +70,14 @@ on:
         required: false
         type: string
         default: stable
-      # An alpha runs every journey on the Mac.
+      # Only a call takes it, as hosted (docs/testing.md, "Main's desktop release check").
+      part:
+        description: all (every lane), checks (no Linux journeys; the Mac's journeys follow all_journeys) or journeys (every journey on Linux and the Mac, nothing else)
+        required: false
+        type: string
+        default: all
+      # An alpha's and the swept batch's calls run every journey on the Mac;
+      # main.yml's call runs the tagged ones.
       all_journeys:
         description: Run every journey on the Mac, not only the tests that need a Mac
         required: false
@@ -123,7 +136,7 @@ on:
         type: boolean
         default: false
       # A requested check runs only the tests that need a Mac there, since
-      # linux-e2e runs every other one; main.yml's call sets this instead.
+      # linux-e2e runs every other one; a release's call runs every journey.
       all_journeys:
         description: Run every journey on the Mac, not only the tests that need a Mac
         required: false
@@ -167,10 +180,11 @@ jobs:
   # linux-e2e: every Playwright journey on the app built from source on
   # Ubuntu (LINUX_RUNNER, hosted when unset), in shards (docs/testing.md, "The Linux source desktop").
   # A call from main.yml or release.yml runs them on GitHub's hosted Ubuntu instead.
-  # Journeys that are the Mac's alone skip there and say why.
+  # Journeys that are the Mac's alone skip there and say why. The checks part
+  # (main.yml's call) leaves it out of the run.
   linux-e2e:
     needs: request
-    if: ${{ !inputs.installer_only && !inputs.installer_reuse }}
+    if: ${{ !inputs.installer_only && !inputs.installer_reuse && inputs.part != 'checks' }}
     uses: ./.github/workflows/source-journeys.yml
     with:
       ref: ${{ inputs.ref || github.ref }}
@@ -181,7 +195,9 @@ jobs:
   # The profile's lanes, as one matrix: an omitted lane is absent from the
   # run, never a skipped job that reads as green. linux-checks is the main
   # checks' commands in one job; mac is the full macOS verification. Each step names
-  # the lane it belongs to.
+  # the lane it belongs to. The journeys part runs the mac lane alone, and
+  # there only the stages the journeys need: the install, the build, the
+  # recorder and the suite.
   installer:
     needs: request
     name: Verify signed installer and updater
@@ -203,7 +219,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        lane: ${{ fromJSON('["linux-checks","mac"]') }}
+        lane: ${{ fromJSON(inputs.part == 'journeys' && '["mac"]' || '["linux-checks","mac"]') }}
     runs-on: ${{ matrix.lane == 'mac' && (inputs.mac_runner || fromJSON(vars.MAC_QUEUES || '{}').check || vars.MAC_RUNNER || 'macos-15') || inputs.hosted && 'ubuntu-24.04' || fromJSON(vars.LINUX_QUEUES || '{}').checks || vars.LINUX_RUNNER || 'ubuntu-latest' }}
     # Every crewmate works under "Application Support". The gate here does
     # too, so a check that only fails from a path with a space fails here
@@ -292,10 +308,10 @@ jobs:
       # only files with Mac-specific cases/readings; keep mixed files whole so
       # none of their Mac-only cases is lost (scripts/mac-unit-tests.ts).
       - name: Read the temporary volume's filesystem type
-        if: ${{ !cancelled() && matrix.lane == 'mac' && steps.install.outcome == 'success' }}
+        if: ${{ !cancelled() && matrix.lane == 'mac' && inputs.part != 'journeys' && steps.install.outcome == 'success' }}
         run: node -e 'console.log(require("fs").statfsSync(require("os").tmpdir()).type)'
       - id: unit
-        if: ${{ !cancelled() && matrix.lane == 'mac' && steps.install.outcome == 'success' }}
+        if: ${{ !cancelled() && matrix.lane == 'mac' && inputs.part != 'journeys' && steps.install.outcome == 'success' }}
         timeout-minutes: 60
         run: |
           mac_tests="$(node scripts/mac-unit-tests.ts)"
@@ -319,9 +335,10 @@ jobs:
         run: codesign -dvv "$(node -p 'require("electron")')" 2>&1 | grep -E '^(Identifier|Authority|Signature|TeamIdentifier|CDHash)=' || true
       # The complete desktop suite, on the build above and Electron's supplied
       # signature (`pnpm test:e2e` is the same two commands in one), when
-      # all_journeys is set: every alpha and the run on main. A requested
-      # check runs only the tests tagged MAC_ONLY_TAG (tests/e2e/tags.ts),
-      # since linux-e2e runs every other one (docs/principles.md, 2026-10-28).
+      # all_journeys is set: every alpha. A requested check runs only the
+      # tests tagged MAC_ONLY_TAG (tests/e2e/tags.ts), since linux-e2e runs
+      # every other one (docs/principles.md, 2026-10-28), and so does the run
+      # on main, which leaves every other journey to the release (INF-2480).
       # A local run keeps its JSON result in its own run directory
       # (tests/e2e/runEvidence.ts); this one names the fixed path kept below.
       # The parallel lanes take half the job's cores: its size when the
@@ -399,7 +416,7 @@ jobs:
       # updated or replaced from here; only a runner with none gets one the
       # way a person does, from the vendor's native installer.
       - id: claude-client
-        if: ${{ !cancelled() && matrix.lane == 'mac' && steps.install.outcome == 'success' }}
+        if: ${{ !cancelled() && matrix.lane == 'mac' && inputs.part != 'journeys' && steps.install.outcome == 'success' }}
         run: |
           claude_bin="$(command -v claude || true)"
           if [ -z "$claude_bin" ] && [ -x "$HOME/.local/bin/claude" ]; then claude_bin="$HOME/.local/bin/claude"; fi
@@ -414,7 +431,7 @@ jobs:
       # committed captain sessions and fails on any metric that regressed
       # from tests/fixtures/replay/baseline.json.
       - id: replay
-        if: ${{ !cancelled() && matrix.lane == 'mac' && steps.install.outcome == 'success' }}
+        if: ${{ !cancelled() && matrix.lane == 'mac' && inputs.part != 'journeys' && steps.install.outcome == 'success' }}
         run: pnpm replay:gate
       - uses: actions/upload-artifact@v4
         if: always() && matrix.lane == 'mac'
@@ -431,7 +448,7 @@ jobs:
       # package below is its own copy, signed through the same identity, and
       # the codesign stage checks both. A red signing stage still ends the job red.
       - id: dev-signing
-        if: ${{ !cancelled() && matrix.lane == 'mac' && steps.install.outcome == 'success' }}
+        if: ${{ !cancelled() && matrix.lane == 'mac' && inputs.part != 'journeys' && steps.install.outcome == 'success' }}
         run: pnpm codesign:local
       # electron-builder refuses to sign pull-request builds by default, which
       # would skip the one step this smoke exists for: the fuse-flipped

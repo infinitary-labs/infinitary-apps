@@ -1,4 +1,5 @@
 import {
+  CARD_CONTRIBUTIONS_VERSION,
   CREW_RESPONSE_VERSION,
   openInMemoryDatabase,
   TASK_RECORD_RETIREMENT_VERSION,
@@ -44,6 +45,13 @@ export function taskRecordRetirementReverseSql(): string {
       DROP TABLE task_session_observations;
       DROP INDEX task_events_identity;
       ALTER TABLE task_events DROP COLUMN identity;
+      DROP TABLE IF EXISTS card_contributions;
+      DROP INDEX IF EXISTS card_messages_answers;
+      ALTER TABLE card_messages DROP COLUMN contributor_json;
+      ALTER TABLE card_messages DROP COLUMN answers_message;
+      ALTER TABLE card_messages DROP COLUMN clarification;
+      ALTER TABLE card_messages DROP COLUMN response_id;
+      DELETE FROM schema_migrations WHERE version = ${CARD_CONTRIBUTIONS_VERSION};
       DROP TABLE IF EXISTS crew_responses;
       DROP TABLE IF EXISTS response_requests;
       DELETE FROM schema_migrations WHERE version = ${CREW_RESPONSE_VERSION};

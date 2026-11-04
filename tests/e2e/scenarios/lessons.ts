@@ -22,7 +22,13 @@ import {
   LESSON_WELCOME_TITLE,
   lessonRoundBody,
 } from "../lessonFixtures";
-import { calledTool, type Scenario, type ScriptedCall, toolAnswers } from "../mockProvider";
+import {
+  answering,
+  calledTool,
+  type Scenario,
+  type ScriptedCall,
+  toolAnswers,
+} from "../mockProvider";
 import { providerMessages } from "../providerRequest";
 
 const LESSONS_STOPPED_REPORT = "Lessons stopped; records kept.";
@@ -227,7 +233,14 @@ export const lessons: Scenario =
     if (latestUserTail.includes(LESSON_REPLY_WORDS)) {
       const shown = latestUserTail.match(/Card \\+"[^"]*\\+" \(([^)]+)\)/)?.[1];
       if (!shown) throw new Error("The learner's reply named no card");
-      return { calls: [{ name: "reply", args: { card_id: shown, text: LESSON_REPLY_ANSWER } }] };
+      return {
+        calls: [
+          {
+            name: "reply",
+            args: { card_id: shown, text: LESSON_REPLY_ANSWER, ...answering(latestUserTail) },
+          },
+        ],
+      };
     }
     // The first turn: the goal comes first.
     return {

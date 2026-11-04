@@ -796,6 +796,15 @@ const tick = () =>
     ? vi.advanceTimersByTimeAsync(80)
     : new Promise((resolve) => setTimeout(resolve, 80));
 
+/**
+ * The id of the captain's newest line under a card: what an answer names in
+ * answers_message, since only a line naming it ends their question (the
+ * captain's "Only a line that says it answers it; a handoff stays open").
+ */
+function askedOn(supervisor: Pick<CrewSupervisor, "cardThread">, cardId: string) {
+  return supervisor.cardThread(cardId).messages.findLast((line) => line.who === "captain")?.id;
+}
+
 /** A crewmate's whole risk declaration: every dimension rated. */
 const METER_RISK: RiskDeclaration = {
   blast: { level: "low", why: "Two files in the meter" },
@@ -864,11 +873,14 @@ function handedCard(brief: string): { file: string; body: string } {
  * synchronous string it always was. Fails loudly instead of silently
  * comparing a Promise if that assumption ever stops holding.
  */
-function syncCardId(id: string | Promise<string | undefined> | undefined): string | undefined {
+function syncCardId(
+  id: string | { cardId: string } | Promise<unknown> | undefined,
+): string | undefined {
   if (id instanceof Promise) {
     throw new Error("expected a synchronous card id in this fixture; got a pending CI gate");
   }
-  return id;
+  // A write on someone else's card answers its typed result, which names the card.
+  return typeof id === "object" ? id.cardId : id;
 }
 
 /** The bundled runbooks, read as the app serves them, with every switch on. */
@@ -5050,7 +5062,7 @@ describe("CrewSupervisor", () => {
           title: "Ready to merge",
           body: completionBody("<p>The change is one setting now.</p><p>Pushed.</p>"),
           actions: [{ id: "merge-pr", label: "Merge PR", default: true, effect: SETTLE_MERGE }],
-          ...(reply ? { reply } : {}),
+          ...(reply ? { reply, answersMessage: askedOn(h.supervisor, id) } : {}),
         });
       // The captain asks for a smaller change; the rebuilt version's checks run.
       h.supervisor.replyToCard(h.card.id, "this is over-engineering a bit");
@@ -9157,7 +9169,11 @@ describe("a crewmate's own completion card clears the standing CI gate first", (
       "The captain's reply in your card's thread is still unanswered: answer it now with reply",
     );
     // Once the thread has its answer, the refusal is the checks' alone.
-    specs[0]?.onReply?.({ cardId: card.id, text: "Renamed; the checks are running again." });
+    specs[0]?.onReply?.({
+      cardId: card.id,
+      text: "Renamed; the checks are running again.",
+      answersMessage: askedOn(supervisor, card.id),
+    });
     await expect(
       specs[0]?.onCard?.(completion("<p>The flag is renamed.</p><p>Pushed.</p>", "renamed")),
     ).rejects.not.toThrow(/still unanswered/);
@@ -12903,21 +12919,26 @@ describe("emit_card stable id revision", () => {
     expect(snapshot.find((card) => card.id === `card-${taskId}-other-topic`)?.title).toBe("Aside");
   });
 
+  // A named id resolves to the card it names before a new card is filed, so
+  // the crewmate's write on the app's card is refused, never filed beside it
+  // (INF-2225's approved "canonical ids resolve before creation prefixes";
+  // docs/card-threads.md "Shared cards").
   it("does not let a crewmate clobber an app-raised singleton", async () => {
     const { supervisor, cards, specs } = setup(fakeCrewmate());
     supervisor.addAuthDecisionCard("card-fm-auth", "firstmate", "Sign in needed.");
     await supervisor.commission({ title: "proto", intent: intentOf("work") });
     await tick();
-    specs[0]?.onCard?.({
+    const result = await specs[0]?.onCard?.({
       id: "card-fm-auth",
       title: "Not auth",
       body: "Crewmate copy.",
       actions: [],
     });
     await tick();
+    expect(result).toMatchObject({ effect: "refused", cardId: "card-fm-auth" });
     expect(cards().find((card) => card.id === "card-fm-auth")?.body).toBe("Sign in needed.");
-    expect(cards().some((card) => card.body === "Crewmate copy.")).toBe(true);
-    expect(cards()).toHaveLength(2);
+    expect(cards().some((card) => card.body === "Crewmate copy.")).toBe(false);
+    expect(cards()).toHaveLength(1);
   });
 });
 
@@ -14305,7 +14326,11 @@ describe("the whose-turn rule at the report's call site (S7c, R4.8)", () => {
         // Ordinary feedback stays quiet: the card still holds the turn.
         supervisor.replyToCard(card.id, "say which decision moves");
         await tick();
-        specs[0]?.onReply?.({ cardId: card.id, text: "Decision 5 moves; the rest stand." });
+        specs[0]?.onReply?.({
+          cardId: card.id,
+          text: "Decision 5 moves; the rest stand.",
+          answersMessage: askedOn(supervisor, card.id),
+        });
         specs[0]?.onReport?.("Answered the captain's question under the plan card.");
         await endTurn(crewmate, taskId);
         expect(sorts.at(-1)).toEqual({ taskId, verdict: "routine", rule: "captain-card" });
@@ -14315,7 +14340,11 @@ describe("the whose-turn rule at the report's call site (S7c, R4.8)", () => {
         // relay declared.
         supervisor.replyToCard(card.id, APPROVAL);
         await tick();
-        specs[0]?.onReply?.({ cardId: card.id, text: "Firstmate starts the builder next." });
+        specs[0]?.onReply?.({
+          cardId: card.id,
+          text: "Firstmate starts the builder next.",
+          answersMessage: askedOn(supervisor, card.id),
+        });
         expect(specs[0]?.onReport?.(RELAY, undefined, { needsFirstmate: ASK })).toBe(
           "Reported. The first mate is woken for it when this turn ends.",
         );
@@ -14395,7 +14424,11 @@ describe("the whose-turn rule at the report's call site (S7c, R4.8)", () => {
       });
       supervisor.replyToCard(card.id, APPROVAL);
       await tick();
-      specs[0]?.onReply?.({ cardId: card.id, text: "Firstmate starts the builder next." });
+      specs[0]?.onReply?.({
+          cardId: card.id,
+          text: "Firstmate starts the builder next.",
+          answersMessage: askedOn(supervisor, card.id),
+        });
       // The same call twice in one turn is one report and one sort.
       specs[0]?.onReport?.(RELAY, undefined, { needsFirstmate: ASK });
       specs[0]?.onReport?.(RELAY, undefined, { needsFirstmate: ASK });
@@ -15853,14 +15886,36 @@ describe("the idle ladder (idle crew recovery, docs/report-sort.md)", () => {
     await tick();
     expect(cards().some((card) => card.id === stall)).toBe(true);
     await endTurn(crewmate, taskId, "Step two done.");
-    expect(supervisor.recordFirstmateThreadAnswer(stall, "Yes: it waits on PR #496.")).toBe(true);
+    // The first mate's closing words are its line, naming no message: their
+    // question stays open (the captain's "a handoff stays open").
+    expect(supervisor.recordFirstmateThreadAnswer(stall, "Reading PR #496 now.")).toBe(true);
+    expect(
+      supervisor.threadActivitySince(0).find((entry) => entry.card.id === stall)?.owed,
+    ).toBe("firstmate");
+    await supervisor.steerCrewmate(taskId, "and step three");
+    await tick();
+    expect(cards().some((card) => card.id === stall)).toBe(true);
+    await endTurn(crewmate, taskId, "Step three done.");
+    // Its answer names their message, in a reply on the app's own card.
+    const shown = cards().find((card) => card.id === stall) as Card;
+    expect(
+      supervisor.contributeAsFirstmate({
+        id: stall,
+        title: shown.title,
+        body: shown.body,
+        actions: [],
+        reply: "Yes: it waits on PR #496.",
+        answersMessage: askedOn(supervisor, stall),
+      }),
+    ).toMatchObject({ effect: "reply-only" });
     expect(supervisor.cardThread(stall).messages.map((message) => message.who)).toEqual([
       "captain",
+      "firstmate",
       "firstmate",
     ]);
 
     // Answered, the next move takes it down as before.
-    await supervisor.steerCrewmate(taskId, "and step three");
+    await supervisor.steerCrewmate(taskId, "and step four");
     await tick();
     expect(cards().some((card) => card.id === stall)).toBe(false);
   });
@@ -16885,7 +16940,11 @@ describe("the idle ladder (idle crew recovery, docs/report-sort.md)", () => {
       ]) {
         supervisor.replyToCard(note.id, question as string);
         await tick();
-        specs[0]?.onReply?.({ cardId: note.id, text: answer as string });
+        specs[0]?.onReply?.({
+          cardId: note.id,
+          text: answer as string,
+          answersMessage: askedOn(supervisor, note.id),
+        });
         specs[0]?.onReport?.(`${answer} The note is the final answer.`, undefined, {
           finished: true,
         });
@@ -17742,7 +17801,11 @@ describe("the idle ladder (idle crew recovery, docs/report-sort.md)", () => {
       await endTurn(crewmate, taskId);
       expect(wait()).toEqual({ on: "author" });
       // Its answer ends the wait.
-      specs[0]?.onReply?.({ cardId: card.id, text: "The northern route adds a day." });
+      specs[0]?.onReply?.({
+        cardId: card.id,
+        text: "The northern route adds a day.",
+        answersMessage: askedOn(supervisor, card.id),
+      });
       await tick();
       expect(wait()).toBeUndefined();
     });
@@ -18140,7 +18203,7 @@ describe("the idle ladder (idle crew recovery, docs/report-sort.md)", () => {
       // INF-990 friction 4: the reminders name the card the captain wrote
       // under, so its crewmate answers that card and not another of its own.
       expect(crewmate.promptCalls.at(-1)).toBe(
-        `The captain wrote under your card "Pick a course" (${card.id}) and you have not answered: answer in that card's thread with reply, naming its card_id, or pass your answer as the reply of that card's emit_card revision under the same id.`,
+        `The captain wrote under your card "Pick a course" (${card.id}) and you have not answered: answer in that card's thread with reply, naming its card_id, or pass your answer as the reply of that card's emit_card revision under the same id, naming their message in answers_message.`,
       );
       await endTurn(crewmate, taskId);
       await at(minutes(21));
@@ -25313,6 +25376,7 @@ describe("CrewSupervisor: the card thread", () => {
         body: "<p>Ignored instructions</p>",
         actions: [],
         reply: answer,
+        answersMessage: askedOn(h.supervisor, card.id),
       }),
     ).toBe(card.id);
     const current = h.supervisor.cardsSnapshot().find((entry) => entry.id === card.id);
@@ -25363,6 +25427,81 @@ describe("CrewSupervisor: the card thread", () => {
     expect(() => h.supervisor.act(card.id, "confirm")).toThrow();
     await tick();
   });
+  // INF-2225, carrying out INF-2214's approved shared cards: the DOP-217
+  // required action named a remover the captain could not find. Another
+  // task's crewmate reads the card, corrects the words in place and answers
+  // the captain's message by name, with no grant and no second card. Nothing
+  // here touches a PC or runs the remover.
+  it("INF-2225 corrects a required action's remover path and answers the captain on the same card", async () => {
+    const { h, taskId, card } = withRequiredAction();
+    const converse = vi.fn();
+    h.supervisor.setFirstmateHooks({
+      notifyOp: vi.fn(),
+      retryConverse: vi.fn(),
+      converseAboutCard: converse,
+    });
+    const remover = "C:\\FleetCheckSetup\\shell-pc-job-host-remove.cmd";
+    h.supervisor.replyToCard(card.id, "Where is the remover? I cannot find it on the PC.");
+    expect(converse).toHaveBeenCalledTimes(1);
+    const { taskId: helper } = await h.supervisor.commission({
+      title: "Find the remover",
+      intent: intentOf("find the remover path"),
+    });
+    await tick();
+    const spec = h.specs[0];
+    const read = JSON.parse((await spec?.onReadCard?.(card.id)) as string);
+    const asked = read.thread.at(-1).id as number;
+    expect(read).toMatchObject({
+      id: card.id,
+      waitingOn: { messageId: asked },
+      requiredAction: { generation: 1, state: "ready" },
+    });
+    const source = read.requiredAction.requirements[0].source as string;
+
+    const corrected = await spec?.onReviseRequiredAction?.({
+      action: card.id,
+      source,
+      actionId: "rebuild",
+      expectedGeneration: 1,
+      patch: { instructions: [`Run ${remover} as an administrator.`] },
+      reason: "The instructions named no remover path",
+      operationId: "op-remover-path",
+      sameAction: true,
+    });
+    const key = h.tasks.get(helper)?.key;
+    expect(corrected).toContain(`Revised card "Rebuild the setup" (${card.id}) as the crewmate on ${key}.`);
+    expect(corrected).toContain("Its required action is at generation 2.");
+    expect(
+      spec?.onReply?.({ cardId: card.id, text: `It is at ${remover}.`, answersMessage: asked }),
+    ).toContain(`it answers the captain's message ${asked} and ends that question`);
+
+    // One card, under its own task, now naming the path at generation 2.
+    const cards = h.supervisor.cardsSnapshot();
+    expect(cards.filter((entry) => entry.taskId === taskId)).toHaveLength(1);
+    expect(cards.filter((entry) => entry.taskId === helper)).toEqual([]);
+    const now = cards.find((entry) => entry.id === card.id) as Card;
+    expect(now.body).toContain("FleetCheckSetup");
+    expect(h.tasks.get(taskId)?.delivery?.captainAction).toMatchObject({
+      generation: 2,
+      state: "ready",
+    });
+    expect(
+      h.supervisor
+        .cardThread(card.id)
+        .messages.map((message) => [message.who, message.contributor?.taskId, message.answersMessage]),
+    ).toEqual([
+      ["captain", undefined, undefined],
+      ["host", helper, undefined],
+      ["crewmate", helper, asked],
+    ]);
+    // The first mate was asked once, and nothing asked the captain again.
+    expect(converse).toHaveBeenCalledTimes(1);
+    // The confirmation offered at generation 1 cannot complete generation 2.
+    expect(h.tasks.completeCaptainAction(taskId, 1, "confirmed")).toBe(false);
+    expect(h.tasks.get(taskId)?.status).toBe("open");
+    await tick();
+  });
+
   /** Commission a task and give it one crewmate card; returns that card. */
   async function withCard(
     harness: ReturnType<typeof setup>,
@@ -25582,7 +25721,11 @@ describe("CrewSupervisor: the card thread", () => {
 
     harness.supervisor.replyToCard(card.id, "and the flaky retry - keep it?");
     await tick();
-    harness.specs[0]?.onReply?.({ cardId: card.id, text: "kept it; the checks still pass" });
+    harness.specs[0]?.onReply?.({
+      cardId: card.id,
+      text: "kept it; the checks still pass",
+      answersMessage: askedOn(harness.supervisor, card.id),
+    });
     crewmate.emit({ type: "assistant_delta", taskId, text: "Kept the retry as asked." });
     crewmate.emit({ type: "turn_end", taskId });
     crewmate.finishPrompt();
@@ -25621,7 +25764,11 @@ describe("CrewSupervisor: the card thread", () => {
     expect(harness.sorts.at(-1)?.rule).toBe("thread-unanswered");
     expect(awaiting()).toBe("answer");
 
-    harness.specs[0]?.onReply?.({ cardId: card.id, text: "Renamed; the evaluations pass." });
+    harness.specs[0]?.onReply?.({
+      cardId: card.id,
+      text: "Renamed; the evaluations pass.",
+      answersMessage: askedOn(harness.supervisor, card.id),
+    });
     expect(awaiting()).not.toBe("answer");
   });
 
@@ -26147,8 +26294,10 @@ describe("CrewSupervisor: a card reaches the stage at its author's close-out", (
     syncCardId(
       spec?.onCard?.({
         id: stable,
-        // Every revision after the turn's answer says what it changed (INF-1623).
+        // The acknowledgement left their question open; the revision's reply
+        // answers it by naming it.
         reply: "I rewrote the card around one reconciler; the choices now lead with building it.",
+        answersMessage: askedOn(harness.supervisor, cardId),
         title: "General idle crew recovery · round 2",
         body: "<p>One reconciler reads every idle crewmate on a durable clock.</p><p>Every idle case in the record is one missing witness.</p>",
         actions: [
@@ -26235,6 +26384,7 @@ describe("CrewSupervisor: a card reaches the stage at its author's close-out", (
     spec?.onReply?.({
       cardId,
       text: "Yes. I can put a separate set of clickable choices beside each question in the card. I'll keep your first three answers marked as recorded.",
+      answersMessage: askedOn(harness.supervisor, cardId),
     });
     await tick();
     expect(staged(harness, cardId)).toBeUndefined();
@@ -26296,6 +26446,7 @@ describe("CrewSupervisor: a card reaches the stage at its author's close-out", (
       spec?.onCard?.({
         id: stable,
         reply: "That is the gap; the card now says so.",
+        answersMessage: askedOn(harness.supervisor, cardId),
         title: "Claude's saved sign-in needs a product fix",
         body: "<p>A fix for every install, not an edit to your saved item.</p><p>The saved item's own rule is the gap.</p>",
         actions: [
@@ -26310,6 +26461,8 @@ describe("CrewSupervisor: a card reaches the stage at its author's close-out", (
     syncCardId(
       spec?.onCard?.({
         id: stable,
+        // Every revision after the turn's answer says what it changed (INF-1623).
+        reply: "I turned the card into a note on why Always Allow did not survive.",
         title: "Why Always Allow did not survive",
         body: "<p>The saved item's own rule still grants only Apple's tools.</p>",
         actions: [],
@@ -26359,7 +26512,10 @@ describe("CrewSupervisor: a card reaches the stage at its author's close-out", (
   // INF-1623: INF-1595's exchange. The captain asked under the card, the
   // crewmate's "Checking..." line ended the wait, and the revision a minute
   // later carried its answer, which the app dropped because nothing waited.
-  it("puts a revision's answer right after its revised line when an earlier line already ended the wait", async () => {
+  // Now a line naming no message leaves the wait open (the captain's "Only
+  // a line that says it answers it; a handoff stays open"), and the
+  // revision's reply naming it ends it.
+  it("keeps the wait open through a still-working line, and puts the revision's answer right after its revised line", async () => {
     const crewmate = fakeCrewmate();
     const harness = setup(crewmate);
     const body =
@@ -26380,12 +26536,15 @@ describe("CrewSupervisor: a card reaches the stage at its author's close-out", (
       cardId,
       text: "Checking how this change meets the warm pool of ready working copies before I answer.",
     });
+    const awaiting = () => harness.cards().find((card) => card.id === cardId)?.awaiting;
+    expect(awaiting()).toBe("answer");
     const answer =
       "Yes, these are the tasks' worktrees; retiring one resets it into the warm pool. I added a bullet under What changed.";
     syncCardId(
       spec?.onCard?.({
         id: stable,
         reply: answer,
+        answersMessage: askedOn(harness.supervisor, cardId),
         title: "fix(work): retire a closed task's working copy",
         body: `${body.replace("is deleted", "is retired")}<p>A retired copy goes to the pool of ready working copies.</p>`,
         actions: [],
@@ -26403,6 +26562,7 @@ describe("CrewSupervisor: a card reaches the stage at its author's close-out", (
       ["host", "revised: fix(work): retire a closed task's working copy"],
       ["crewmate", answer],
     ]);
+    expect(awaiting()).toBe("close-out");
   });
 
   // INF-1623, the captain's "every": each revision made while answering
@@ -26418,7 +26578,11 @@ describe("CrewSupervisor: a card reaches the stage at its author's close-out", (
     harness.supervisor.replyToCard(cardId, "do you mean worktrees?");
     await tick();
     const spec = harness.specs[0];
-    spec?.onReply?.({ cardId, text: "Yes; retiring one puts it back in the warm pool." });
+    spec?.onReply?.({
+      cardId,
+      text: "Yes; retiring one puts it back in the warm pool.",
+      answersMessage: askedOn(harness.supervisor, cardId),
+    });
     const revision = {
       id: stable,
       title: "Retire closed working copies",
@@ -26476,6 +26640,7 @@ describe("CrewSupervisor: a card reaches the stage at its author's close-out", (
       spec?.onCard?.({
         id: stable,
         reply: answer,
+        answersMessage: askedOn(harness.supervisor, cardId),
         title: "Retire closed working copies",
         body: "<h2>What changed</h2><p>A closed task's copy is retired into the warm pool.</p>",
         actions: [],
@@ -26490,6 +26655,52 @@ describe("CrewSupervisor: a card reaches the stage at its author's close-out", (
       who: "crewmate",
       text: answer,
     });
+  });
+
+  // The captain's "Only a line that says it answers it; a handoff stays
+  // open", with INF-1623's "it only gets brought back after the final reply
+  // is in place": a handoff line, or a revision whose reply names no
+  // message, leaves their question waiting and the card aside.
+  it("keeps a card put aside away through a handoff line and an unnamed revision, and brings it back with the named answer", async () => {
+    const crewmate = fakeCrewmate();
+    const harness = setup(crewmate);
+    const { taskId, cardId, stable } = await onTheStage(harness, crewmate, {
+      title: "Retire closed working copies",
+      body: "<h2>What changed</h2><p>A closed task's copy is deleted.</p>",
+      actions: [],
+    });
+    const shown = () => harness.cards().find((card) => card.id === cardId);
+    harness.supervisor.replyToCard(cardId, "do you mean worktrees?");
+    await tick();
+    harness.supervisor.setCardMinimized(cardId, true);
+    const spec = harness.specs[0];
+    spec?.onReply?.({ cardId, text: "I'm asking the first mate which copies count as warm." });
+    syncCardId(
+      spec?.onCard?.({
+        id: stable,
+        reply: "I added a note that the warm pool question is still open.",
+        title: "Retire closed working copies",
+        body: "<h2>What changed</h2><p>A closed task's copy is deleted.</p><p>Warm pool: open.</p>",
+        actions: [],
+      }),
+    );
+    crewmate.finishPrompt();
+    await tick();
+    expect(shown()).toMatchObject({ minimized: true, awaiting: "answer" });
+
+    await harness.supervisor.steerCrewmate(taskId, "Go on.");
+    await tick();
+    spec?.onReply?.({
+      cardId,
+      text: "Yes; retiring one resets it into the warm pool.",
+      answersMessage: askedOn(harness.supervisor, cardId),
+    });
+    await tick();
+    expect(shown()?.minimized).toBe(true);
+    crewmate.finishPrompt();
+    await tick();
+    expect(shown()?.minimized).toBeUndefined();
+    expect(shown()?.awaiting).toBeUndefined();
   });
 
   // INF-797: a card the captain put aside must not come back "while the
@@ -26513,7 +26724,11 @@ describe("CrewSupervisor: a card reaches the stage at its author's close-out", (
     expect(aside()).toBe(true);
 
     const spec = harness.specs[0];
-    spec?.onReply?.({ cardId, text: "Windows builds on Saturday, so I am moving the plan." });
+    spec?.onReply?.({
+      cardId,
+      text: "Windows builds on Saturday, so I am moving the plan.",
+      answersMessage: askedOn(harness.supervisor, cardId),
+    });
     syncCardId(
       spec?.onCard?.({
         id: stable,
@@ -26691,7 +26906,11 @@ describe("parent tasks with planned children", () => {
     expect(tasks.get(implement.id)?.shape).toMatchObject({ basis: planKey });
     expect(tasks.basisOf(implement)).toEqual({ ref: planKey, verified: false });
 
-    supervisor.addCardMessage(card.id, "captain", "B, but keep the gear icon where it is");
+    const asked = supervisor.addCardMessage(
+      card.id,
+      "captain",
+      "B, but keep the gear icon where it is",
+    );
     planner.emit({
       type: "assistant_delta",
       taskId: plan.taskId,
@@ -26701,6 +26920,7 @@ describe("parent tasks with planned children", () => {
       card.id,
       "crewmate",
       "B groups the rows into sections and keeps the gear icon in place.",
+      asked.id,
     );
     planner.emit({ type: "turn_end", taskId: plan.taskId });
     planner.finishPrompt();
@@ -27667,9 +27887,12 @@ describe("the served text of every remaining wake (the typed envelope, P3)", () 
     ]);
   });
 
+  // Each reply names the captain message it is and the card's lifecycle, so
+  // the crewmate's line answers exactly that question (INF-2225's approved
+  // "named answers end only their question"; docs/card-threads.md "Shared cards").
   it("the captain's thread replies, with and without pictures", async () => {
     const crewmate = fakeCrewmate();
-    const { supervisor, specs } = setup(crewmate);
+    const { supervisor, specs, cards } = setup(crewmate);
     const { taskId } = await supervisor.commission({ title: "Owner", intent: intentOf("emit") });
     await tick();
     const card = syncCardId(
@@ -27677,16 +27900,20 @@ describe("the served text of every remaining wake (the typed envelope, P3)", () 
     );
     crewmate.finishPrompt();
     await tick();
+    const lifecycle = cards().find((shown) => shown.id === card)?.lifecycleId;
+    expect(lifecycle).toBeTruthy();
     const before = crewmate.promptCalls.length;
-    supervisor.replyToCard(card ?? "", "  the checks failed on windows  ");
+    const first = supervisor.replyToCard(card ?? "", "  the checks failed on windows  ");
     await tick();
     crewmate.finishPrompt();
     await tick();
-    supervisor.replyToCard(card ?? "", "see this", [pngImage]);
+    const second = supervisor.replyToCard(card ?? "", "see this", [pngImage]);
     await tick();
+    const asked = (thread: { messages: { id: number }[] }) =>
+      ` This is the captain's message ${thread.messages.at(-1)?.id} in lifecycle ${lifecycle}; a line on this card answers it only when it names it in answers_message.`;
     expect(crewmate.promptCalls.slice(before)).toEqual([
-      `${THREAD_STEER_PREAMBLE}\nCard "Owner note" (card-${taskId}-1).\nThe captain's words, verbatim:\nthe checks failed on windows`,
-      `${THREAD_STEER_PREAMBLE}\nCard "Owner note" (card-${taskId}-1).\nThe captain's words, verbatim:\nsee this\n\n[attached: 1 picture: png]`,
+      `${THREAD_STEER_PREAMBLE}\nCard "Owner note" (card-${taskId}-1).${asked(first)}\nThe captain's words, verbatim:\nthe checks failed on windows`,
+      `${THREAD_STEER_PREAMBLE}\nCard "Owner note" (card-${taskId}-1).${asked(second)}\nThe captain's words, verbatim:\nsee this\n\n[attached: 1 picture: png]`,
     ]);
     expect(crewmate.promptImageCalls.at(-1)).toEqual([pngImage]);
   });
@@ -28751,7 +28978,11 @@ describe("a cardless internal step's report", () => {
       await tick();
       expect(crewmate.promptCalls.slice(before).join("\n")).toContain("What does logging cost?");
       expect(ops).toEqual([]);
-      specs[0]?.onReply?.({ cardId: card.id, text: "Logging adds no account access." });
+      specs[0]?.onReply?.({
+        cardId: card.id,
+        text: "Logging adds no account access.",
+        answersMessage: askedOn(supervisor, card.id),
+      });
       specs[0]?.onReport?.("The choice remains logging or stopping.");
       crewmate.emit({ type: "turn_end", taskId });
       crewmate.finishPrompt();
@@ -32601,12 +32832,14 @@ describe("INF-2214 reliable requested answers", () => {
       intent: intentOf("Find the full path"),
     });
     await tick();
-    const cardId = await h.specs[0]?.onCard?.({
-      id: "path-question",
-      title: "Find the remover",
-      body: "<p>The target path is being checked.</p>",
-      actions: [],
-    });
+    const cardId = syncCardId(
+      await h.specs[0]?.onCard?.({
+        id: "path-question",
+        title: "Find the remover",
+        body: "<p>The target path is being checked.</p>",
+        actions: [],
+      }),
+    );
     expect(cardId).toBeDefined();
     const thread = h.supervisor.replyToCard(cardId!, "What is the full path?");
     const card = h.cardStore.get(cardId!)!;

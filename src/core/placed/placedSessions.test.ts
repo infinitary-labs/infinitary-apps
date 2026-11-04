@@ -78,6 +78,7 @@ import { attachmentPath, keepImages } from "../attachments";
 import { renderIntegrationReply } from "../axi/integrationCommands";
 import type { IntegrationReply } from "../axi/protocol";
 import { CLAUDE_MODELS } from "../claude/claudeModels";
+import { CONTRACT_CHANGES } from "../connection/contractChanges";
 import { Computers } from "../devices/computers";
 import { DevicePairing } from "../devices/pairing";
 import { pathsOf } from "../folderMove/due";
@@ -1141,6 +1142,48 @@ describe("a task that runs on a computer that runs work", () => {
     );
   });
 
+  // INF-2225, INF-2214's approved shared cards: a computer from before shared
+  // cards would read a write on someone else's card as its own card shown,
+  // so the home refuses it before anything is saved.
+  it("refuses a write on someone else's card from a computer before shared cards, saving nothing", async () => {
+    const at = await world(undefined, {
+      changes: CONTRACT_CHANGES.names.filter((change) => change !== "shared-cards"),
+    });
+    const home = at.home();
+    // Its hello has arrived; a list with no names is sent as none at all.
+    await expect.poll(() => home.devices.version(at.deviceId)?.contract).toBe(PROTOCOL_VERSION);
+    expect(home.devices.version(at.deviceId)?.changes ?? []).not.toContain("shared-cards");
+    expect(home.placed.takesSharedCards(at.deviceId)).toBe(false);
+    model([{ text: "Looking for the remover." }]);
+    await at.start("t-old-cards", "Find the job host remover's path.");
+    await expect.poll(() => home.tasks.get("t-old-cards")?.activity).toBe("idle");
+    const id = home.supervisor.addFirstmateCard({
+      title: "Remove the job host",
+      body: "<p>Run the remover on the shell PC.</p>",
+      actions: [],
+    });
+    const answer = await home.placed.answer(at.deviceId, "inf:work:card", {
+      task: "t-old-cards",
+      callId: "old-shared-write",
+      card: {
+        id,
+        title: "Remove the job host",
+        body: "<p>Run C:\\FleetCheckSetup\\shell-pc-job-host-remove.cmd on the shell PC.</p>",
+        actions: [],
+        reply: "It is at C:\\FleetCheckSetup\\shell-pc-job-host-remove.cmd.",
+      },
+    });
+    expect(answer).toMatchObject({
+      refused: { reason: "other", why: expect.stringContaining("runs an older Infinitary") },
+    });
+    expect(home.supervisor.cardThread(id).messages).toEqual([]);
+    const cards = home.supervisor.cardsSnapshot();
+    expect(cards.find((card) => card.id === id)?.body).toBe(
+      "<p>Run the remover on the shell PC.</p>",
+    );
+    expect(cards.filter((card) => card.taskId === "t-old-cards")).toEqual([]);
+  });
+
   // INF-1555 F12: both declaration and offer semantics are required before remote work begins.
   it("keeps a direct-pr change queued until its computer runs this contract major", async () => {
     // The check tool's declarations and merge offers are part of this major (major-13.md).
@@ -1423,7 +1466,7 @@ describe("a task that runs on a computer that runs work", () => {
     await expect.poll(() => api.requests.length).toBe(requests + 2);
     await expect.poll(() => home.tasks.get("t-interim")?.activity).toBe("idle");
     expect(JSON.stringify(api.requests.at(-1)?.body)).toContain(
-      "the captain's reply still waits for your answer",
+      "still waits for your answer when the work is done",
     );
     expect(home.cards().find((shown) => shown.id === card.id)?.awaiting).toBe("answer");
   });

@@ -103,6 +103,19 @@ const CALLS: Record<string, { params: Record<string, unknown>; callback: string 
     callback: "onReport",
   },
   reply: { params: { card_id: "card-task-1-1", text: "Yes" }, callback: "onReply" },
+  revise_required_action: {
+    params: {
+      action: "task-2",
+      source: "INF-1",
+      action_id: "remove-job-host",
+      expected_generation: 1,
+      patch: { instructions: ["Run C:\\FleetCheckSetup\\shell-pc-job-host-remove.cmd"] },
+      reason: "The remover's path was wrong",
+      operation_id: "op-1",
+      same_action: true,
+    },
+    callback: "onReviseRequiredAction",
+  },
   tasks: { params: { status: "live", limit: 5 }, callback: "onQueryTasks" },
   knowledge: { params: { action: "search", query: "wake queue" }, callback: "knowledge.read" },
   record_knowledge: {

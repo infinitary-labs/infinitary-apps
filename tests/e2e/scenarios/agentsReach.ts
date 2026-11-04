@@ -3,6 +3,7 @@ import { checkSnapshotSummary } from "../../../src/shared/checkSnapshot";
 import { fixedHoldWords, type OverridableHold } from "../../../src/shared/holds";
 import { noSurfaceProof } from "../../helpers/liveValidation";
 import {
+  answering,
   browserShellMessages,
   contextRepos,
   findCrewTaskId,
@@ -361,7 +362,7 @@ function crewmateMove({ body, hasToolResults }: ScenarioRequest): ScenarioAnswer
       if (results.length > 0) return { text: "" };
       return {
         calls: [
-          { name: "reply", args: { card_id: card, text: REACH_RERUN_ANSWER } },
+          { name: "reply", args: { card_id: card, text: REACH_RERUN_ANSWER, ...answering(user) } },
           {
             name: "report",
             args: {

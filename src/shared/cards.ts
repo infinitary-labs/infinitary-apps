@@ -1279,9 +1279,72 @@ export const revisionShownSchema = z.strictObject({
 });
 export type RevisionShown = z.infer<typeof revisionShownSchema>;
 
+/**
+ * Who actually wrote a line or a revision on a card that is not their own
+ * (docs/card-threads.md, "Shared cards"): the first mate, or a crewmate by
+ * its task. `label` is the host's words for them, the same on every view.
+ * A line with no contributor was written by the card's own author, or is
+ * older than this record and stays unattributed.
+ */
+export const cardContributorSchema = z.strictObject({
+  actor: z.enum(["crewmate", "firstmate"]),
+  taskId: z.string().min(1).max(64).optional(),
+  label: z.string().min(1).max(160),
+});
+export type CardContributor = z.infer<typeof cardContributorSchema>;
+
+/**
+ * What one write on a shared card did (docs/card-threads.md, "Shared
+ * cards"), as the tool text, the record and the answer count all read it:
+ * created, revised, a reply alone, unchanged, or refused with nothing
+ * written. `display` is whether the captain can see the write now or it
+ * waits for its writer's turn to end; neither says it was read.
+ */
+export const CARD_MUTATION_EFFECTS = [
+  "created",
+  "revised",
+  "reply-only",
+  "unchanged",
+  "refused",
+] as const;
+export const cardMutationSchema = z.object({
+  effect: z.enum(CARD_MUTATION_EFFECTS),
+  cardId: z.string(),
+  title: z.string().optional(),
+  /** The card's lifecycle and current revision (its offer) after the write. */
+  lifecycleId: z.string().optional(),
+  revision: z.string().optional(),
+  /** A required action's generation after the write. */
+  generation: z.number().int().optional(),
+  contributor: cardContributorSchema,
+  /** The thread line it wrote, and the captain message that line ended. */
+  replyId: z.number().int().optional(),
+  answered: z.number().int().optional(),
+  /** A captain message someone had already answered: the line is a comment. */
+  alreadyAnswered: z
+    .object({ messageId: z.number().int(), by: z.string(), text: z.string() })
+    .optional(),
+  /** A closed card's dated note. */
+  clarification: z.literal(true).optional(),
+  /** What the write kept as it was. */
+  unchanged: z.array(z.string()).optional(),
+  display: z.enum(["available", "held"]),
+  responseId: z.string().optional(),
+  refusal: z.string().optional(),
+  /** The same operation identity answered its earlier result. */
+  repeated: z.literal(true).optional(),
+});
+export type CardMutation = z.infer<typeof cardMutationSchema>;
+
 export const cardMessageSchema = z.strictObject({
   revision: cardRevisionSchema.optional(),
   revisionShown: revisionShownSchema.optional(),
+  /** Who wrote a line on a card that is not theirs (`shared-cards.md`). */
+  contributor: cardContributorSchema.optional(),
+  /** The captain's message this line answers and ends, by its row id. */
+  answersMessage: z.number().int().positive().optional(),
+  /** A dated note added after the card closed; it reopens and changes nothing. */
+  clarification: z.literal(true).optional(),
   /** Row id, ascending with `at`; the renderer's key. */
   id: z.number(),
   cardId: z.string(),

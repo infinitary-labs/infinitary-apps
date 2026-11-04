@@ -2,8 +2,20 @@ import type { Card } from "@shared/cards";
 import type { CaptainAction } from "@shared/requiredActions";
 import { escapeCardText } from "./cardText";
 
+/**
+ * Where each requirement came from and who corrected its words, as the card
+ * says it on every view (docs/required-actions.md, "Correcting the words"):
+ * the source task's name for its filing. Absent, the card says neither.
+ */
+export type RequiredActionProvenance = { filedFrom: (sourceId: string) => string };
+
 /** Instructions stay inert; completion and deferral alone carry host lifecycle effects. */
-export function requiredActionCard(taskId: string, action: CaptainAction, now: number): Card {
+export function requiredActionCard(
+  taskId: string,
+  action: CaptainAction,
+  now: number,
+  provenance?: RequiredActionProvenance,
+): Card {
   const requirements = action.requirements;
   const first = requirements[0];
   if (!first) throw new Error("A required action has no requirements.");
@@ -21,8 +33,8 @@ export function requiredActionCard(taskId: string, action: CaptainAction, now: n
     body:
       requirements
         .map(
-          ({ action: entry }) =>
-            `<section><p>${e(entry.consequence)}</p><p>On ${e(entry.target)}</p><ol>${entry.instructions.map((instruction) => `<li>${e(instruction)}</li>`).join("")}</ol><p>Complete when: ${e(entry.criterion)}</p></section>`,
+          ({ action: entry, source, corrections }) =>
+            `<section><p>${e(entry.consequence)}</p><p>On ${e(entry.target)}</p><ol>${entry.instructions.map((instruction) => `<li>${e(instruction)}</li>`).join("")}</ol><p>Complete when: ${e(entry.criterion)}</p>${provenance ? provenanceLines(provenance.filedFrom(source), corrections ?? []) : ""}</section>`,
         )
         .join("") +
       "<p>If this fails, paste the output below and choose It failed.</p>" +
@@ -65,4 +77,19 @@ export function requiredActionCard(taskId: string, action: CaptainAction, now: n
           ]),
     ],
   };
+}
+
+/** The filing and each correction, in the card's muted small print. */
+function provenanceLines(
+  filedFrom: string,
+  corrections: NonNullable<CaptainAction["requirements"][number]["corrections"]>,
+): string {
+  const e = escapeCardText;
+  const lines = [
+    `Filed from ${e(filedFrom)}`,
+    ...corrections.map(
+      (correction) => `Corrected by ${e(correction.label)}: ${e(correction.reason)}`,
+    ),
+  ];
+  return `<p class="inf-muted" data-inf-provenance>${lines.join("<br>")}</p>`;
 }

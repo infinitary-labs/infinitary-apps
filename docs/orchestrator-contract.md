@@ -17,7 +17,7 @@ Moved verbatim from `AGENTS.md` on 2026-09-24; `AGENTS.md` keeps a one-line poin
   The seat itself is backend-neutral (`src/core/orchestrator/seat.ts`, `docs/architecture.md` §2 "The seat seam"): the spec carries the binding, the spec tools and a per-backend resume, and a seat speaks `FmEvent`s plus `turn_closed`, so nothing in `src/core/orchestrator/` reads a Pi event.
   The answer move is answer-with-default: an answer that implies a next step is ONE `decision` whose proposed step is its `default` action; a pure fact is a `note`; an active crewmate shows what the captain must see or decide on its own card, and the first mate acts on its report rather than relaying it; there is no seventh move, no propose tool, no recommendation kind.
   Reading is a crewmate's job: anything needing code, files, logs, git history, builds or reproduction is an investigation spawn (the standing rule in the prompt).
-  On a task whose crewmate has a card open, the first mate's `emit_card` is refused with "steer the crewmate to revise card X (same id)", and every emitter revises an overlapping open card in place (no one-card-per-topic cap).
+  On a task whose crewmate has a card open, the first mate's new `emit_card` is refused with "write on that card instead of a second one beside it", and every emitter writes on an overlapping open card in place, its own or someone else's (`docs/card-threads.md`, "Shared cards"; no one-card-per-topic cap).
   Thinking is medium for a captain turn, low for an `[fm-op]` drain (`FIRSTMATE_CAPTAIN_THINKING_LEVEL`).
   `emote` is visual only and motion only: it takes no words (INF-772).
   A turn ends with one plain sentence of about 40 characters saying what took effect, never the answer; on a captain turn it is the reply line beside the captain's message, and the typed line fills in when it is empty (`docs/composer.md` "The last turn").
@@ -147,8 +147,8 @@ A rule that the core, a tool description and a parameter each stated is said onc
 
 - **One home per rule.**
   The core keeps which move and when.
-  How a call works is the tool's own text: what a spawn's intent carries and what queues it, each `shape` fact's rule, the notes policy (`remember`), revise-in-place and what an effect is (`emit_card`).
-  A tool's text drops what the core already says: who may close a card, that crew_status outranks memory, that a red check is diagnosed first, where theme and panel changes go.
+  How a call works is the tool's own text: what a spawn's intent carries and what queues it, each `shape` fact's rule, the notes policy (`remember`), revise-in-place and what an effect is (`emit_card`), and that only a card's author withdraws it (`close_card`).
+  A tool's text drops what the core already says: that crew_status outranks memory, that a red check is diagnosed first, where theme and panel changes go.
   A rule the host enforces is said once, as its refusal's text, and neither the core nor a tool's text repeats it: a note with no task, a second card beside a crewmate's, a merge card the crewmate owes, a merge with autonomy off.
   A rule a wake carries leaves the core: what the captain's Start asks, and what a capped task holds until the steer.
   A sentence kept to compensate for today's model stays and is marked as a ceiling in a comment beside it (`docs/principles.md`, "Build the agent's reach, never its verdicts").

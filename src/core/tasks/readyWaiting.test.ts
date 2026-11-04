@@ -252,13 +252,17 @@ describe("ready decisions are the sole waiting fact", () => {
       h.assertWaiting("t", id);
       const ready = h.protocol.board();
       h.pauseTransport(true);
-      h.cards.addMessage(id, "captain", "Why this choice?");
+      const first = h.cards.addMessage(id, "captain", "Why this choice?");
       await h.flush();
-      h.cards.replyFromCrewmate("t", { cardId: id, text: "This is the safer choice." });
+      h.cards.replyFromCrewmate("t", {
+        cardId: id,
+        text: "This is the safer choice.",
+        answersMessage: first.id,
+      });
       h.cards.closeOut({ kind: "crewmate", taskId: "t" }, "idle");
       await h.flush();
       h.pauseTransport(false);
-      h.cards.addMessage(id, "captain", "Why this choice?");
+      const second = h.cards.addMessage(id, "captain", "Why this choice?");
       await h.flush();
       h.assertWaiting("t", null);
       expect(h.boards.at(-1)?.seq).toBe(h.protocol.board().seq);
@@ -268,7 +272,11 @@ describe("ready decisions are the sole waiting fact", () => {
       h.transport("inf:tasks", ready);
       expect(h.boards.at(-1)?.seq).toBe(h.protocol.board().seq);
       h.assertWaiting("t", null);
-      h.cards.replyFromCrewmate("t", { cardId: id, text: "This is the safer choice." });
+      h.cards.replyFromCrewmate("t", {
+        cardId: id,
+        text: "This is the safer choice.",
+        answersMessage: second.id,
+      });
       h.cards.closeOut({ kind: "crewmate", taskId: "t" }, "idle");
       await h.flush();
       h.assertWaiting("t", id);
@@ -309,14 +317,21 @@ describe("ready decisions are the sole waiting fact", () => {
         // A refused reply restores the same projection without writing a task.
         h.local(h.cards.snapshot());
         expect(h.boards.at(-1)?.tasks[0]?.waitingCardId).toBe(id);
-        h.cards.addMessage(id, "captain", "Why?");
+        const why = h.cards.addMessage(id, "captain", "Why?");
         h.cards.replyFromCrewmate("t", { cardId: id, text: "Checking." });
         await h.flush();
         h.assertWaiting("t", null);
-        // INF-1623: a revision made while answering carries its own answer.
+        // INF-1623: a revision made while answering carries its own answer,
+        // which names the captain's message.
         h.cards.emitCrewmateCard(
           "t",
-          { ...decision, id, title: "Answered", reply: "I retitled the card Answered." },
+          {
+            ...decision,
+            id,
+            title: "Answered",
+            reply: "I retitled the card Answered.",
+            answersMessage: why.id,
+          },
           "route",
         );
         await h.flush();
@@ -333,14 +348,18 @@ describe("ready decisions are the sole waiting fact", () => {
         const records = h.tasks.list();
         const events = h.events.length;
         const afterReportTimeline = h.tasks.timeline("t");
-        h.cards.addMessage(id, "captain", "Why this choice?");
+        const again = h.cards.addMessage(id, "captain", "Why this choice?");
         await h.flush();
         h.assertWaiting("t", null);
         expect(h.tasks.boardSeq()).toBeGreaterThan(seq);
         expect(h.tasks.list()).toEqual(records);
         expect(h.tasks.timeline("t")).toEqual(afterReportTimeline);
         expect(h.events).toHaveLength(events);
-        h.cards.replyFromCrewmate("t", { cardId: id, text: "This is the safer choice." });
+        h.cards.replyFromCrewmate("t", {
+          cardId: id,
+          text: "This is the safer choice.",
+          answersMessage: again.id,
+        });
         h.cards.closeOut({ kind: "crewmate", taskId: "t" }, "idle");
         await h.flush();
         h.assertWaiting("t", id);
@@ -468,10 +487,16 @@ describe("ready decisions are the sole waiting fact", () => {
       h.subscribe("t");
       await h.flush();
       h.assertWaiting("t", id);
-      h.cards.addMessage(id, "captain", "Explain");
+      const explain = h.cards.addMessage(id, "captain", "Explain");
       await h.flush();
       h.assertWaiting("t", null);
-      h.cards.recordFirstmateThreadAnswer(id, "Answer");
+      // Closing words name no message: the captain's question still waits
+      // (the captain's "Only a line that says it answers it").
+      h.cards.recordFirstmateThreadAnswer(id, "Looking into it.");
+      h.cards.closeOut({ kind: "firstmate" }, "turn-end");
+      await h.flush();
+      h.assertWaiting("t", null);
+      h.cards.addFirstmateCard({ ...decision, id, reply: "Answer", answersMessage: explain.id });
       await h.flush();
       h.assertWaiting("t", null);
       h.cards.closeOut({ kind: "firstmate" }, "turn-end");
@@ -530,14 +555,18 @@ describe("ready decisions are the sole waiting fact", () => {
       h.cards.setMinimized(id, true);
       await h.flush();
       h.assertWaiting("t", id);
-      h.cards.addMessage(id, "captain", "Why is this route safer?");
+      const asked = h.cards.addMessage(id, "captain", "Why is this route safer?");
       await h.flush();
       h.assertWaiting("t", null);
       expect(h.cards.shown(id)).toMatchObject({ minimized: true, awaiting: "answer" });
       // The turn is now running; answering alone cannot make the decision
       // ready before its author's turn ends.
       h.tasks.setActivity("t", "running");
-      h.cards.replyFromCrewmate("t", { cardId: id, text: "This route avoids the closed road." });
+      h.cards.replyFromCrewmate("t", {
+        cardId: id,
+        text: "This route avoids the closed road.",
+        answersMessage: asked.id,
+      });
       await h.flush();
       h.assertWaiting("t", null);
       h.tasks.setActivity("t", "idle");
@@ -562,11 +591,11 @@ describe("ready decisions are the sole waiting fact", () => {
       h.restart();
       await h.flush();
       h.assertWaiting("t", id);
-      h.cards.addMessage(id, "captain", "Why?");
+      const why = h.cards.addMessage(id, "captain", "Why?");
       h.restart();
       await h.flush();
       h.assertWaiting("t", null);
-      h.cards.replyFromCrewmate("t", { cardId: id, text: "Answer" });
+      h.cards.replyFromCrewmate("t", { cardId: id, text: "Answer", answersMessage: why.id });
       h.restart();
       await h.flush();
       h.assertWaiting("t", id);

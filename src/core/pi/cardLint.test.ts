@@ -10,6 +10,7 @@ import {
   lintCardShape,
   lintCrewmateCard,
   lintFirstmateCard,
+  steerNotAnswerRefusal,
   untaggedNewMarkRefusal,
   writeInGaps,
 } from "./cardLint";
@@ -1105,16 +1106,19 @@ describe("lintFirstmateCard", () => {
     ).toBeUndefined();
   });
 
-  it("WI-12: refuses a card on a task its crewmate already carded, naming the card to revise", () => {
+  // INF-2214's approved shared cards: the refusal names the crewmate's card
+  // as the place to write, by revision or by reply, instead of a second card.
+  it("WI-12: refuses a card on a task its crewmate already carded, naming the card to write on", () => {
     const crew = { id: "card-t58-3", title: "PR 58 is merged" };
     const ctx = context({
       openCrewmateCard: (taskId) => (taskId === "t58" ? crew : undefined),
       isOpenFirstmateCard: (cardId) => cardId === "card-fm-7-abc123",
     });
     const answer = note({ taskId: "t58", title: "PR 58 merged", body: "<p>It merged.</p>" });
-    expect(lintFirstmateCard(answer, ctx)).toBe(
-      'task t58 already has its crewmate\'s card "PR 58 is merged" (card-t58-3) on screen: steer the crewmate with steer_crewmate to revise card card-t58-3 (same id) with what you would add, instead of answering it in a new card.',
-    );
+    const refusal = lintFirstmateCard(answer, ctx);
+    expect(refusal).toBe(steerNotAnswerRefusal("t58", crew));
+    expect(refusal).toContain("emit_card with id card-t58-3");
+    expect(refusal).toContain("expected_revision");
     // A task without a crewmate card on screen is the Firstmate's to answer.
     expect(lintFirstmateCard({ ...answer, taskId: "t77" }, ctx)).toBeUndefined();
     // Revising the Firstmate's own open card on that task is not a second answer.

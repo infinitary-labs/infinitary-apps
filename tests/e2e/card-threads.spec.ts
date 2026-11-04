@@ -6,6 +6,7 @@ import { CardStore } from "../../src/core/storage/cardStore";
 import { openDatabase } from "../../src/core/storage/db";
 import { seedTask } from "../../src/core/tasks/seedTask";
 import { TaskService } from "../../src/core/tasks/taskService";
+import { CLOSE_ANYWAY } from "../../src/renderer/src/app/closeQuestionWords";
 import { CARD_REPLY_MAX_CHARS, type Card } from "../../src/shared/cards";
 import { COMPOSER_NOTICE_WORDS } from "../../src/shared/composer";
 import { reportSummary } from "../../src/shared/feed";
@@ -675,8 +676,8 @@ test("a reply keeps the card shown with its thread while another card waits; an 
   await expect(pager(page, 2)).toBeVisible();
   await expect(thread.getByText(THREAD_ACK_TEXT)).toBeVisible();
   await expect(thread.getByText(`revised: ${THREAD_ACK_REVISED_TITLE}`)).toBeVisible();
-  // INF-1623: the revision's own answer lands after its revised line, though
-  // the acknowledgement already ended the reply's wait.
+  // INF-1623: the revision's own answer lands after its revised line; it
+  // names the reply, which the acknowledgement left waiting.
   await expect(thread.getByText(THREAD_ACK_ANSWER)).toBeVisible();
   await expect(newBadge).toHaveCount(0);
   await page.screenshot({ path: test.info().outputPath("answer-in-place.png") });
@@ -704,12 +705,15 @@ test("a lone replied-under card closes from its own X and stays closed through i
   await expect.poll(() => mockProvider?.heldThreadAnswers() ?? 0, { timeout: 30_000 }).toBe(1);
   await windowCaughtUp(page, cardId);
 
-  // The captain closes it with its own X.
+  // The captain closes it with its own X. The acknowledgement named no
+  // message, so the reply still waits (the captain's "a handoff stays
+  // open") and the close asks first; Close anyway closes it.
   await expect(shownCard(page, THREAD_CARD_TITLE)).toBeVisible();
   await shownEntry(page)
     .locator("[data-card-pair]")
     .getByRole("button", { name: "Close", exact: true })
     .click();
+  await closeQuestion(page).getByRole("button", { name: CLOSE_ANYWAY, exact: true }).click();
   await expectNoCard(page, THREAD_CARD_TITLE);
 
   // The answer it was writing - a revision under the same id - lands after

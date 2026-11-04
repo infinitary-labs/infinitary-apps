@@ -47,10 +47,11 @@ export function seedRevisionCard(
     actions: [],
   };
   const id = service.addFirstmateCard(initial);
-  service.addMessage(id, "captain", "Check the connected account before starting.");
-  // The captain's line waits on the Firstmate, so each revision answers it.
+  const asked = service.addMessage(id, "captain", "Check the connected account before starting.");
+  // The captain's line waits on the Firstmate, so each revision answers it,
+  // naming it: only a line that names the captain's message answers it.
   const revise = (card: Parameters<typeof service.addFirstmateCard>[0]) =>
-    service.addFirstmateCard({ ...card, reply: "Done." });
+    service.addFirstmateCard({ ...card, reply: "Done.", answersMessage: asked.id });
   const account = base.replace("Use another account.", "Use your connected account.");
   if (!options.simple) revise({ ...initial, body: account });
   const checks = account.replace(

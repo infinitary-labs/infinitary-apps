@@ -135,7 +135,7 @@ A first mate message sent through `steer_crewmate` expects a response by default
 Dispatch briefs, captain messages and host operational wakes retain their existing semantics.
 `InboxStore.requestResponse` commits the original message and its expectation together, before dispatch, retaining request identity, source message and session, target task and session, and original words.
 A delivery failure retains that same inbox row and request identity; it never claims the crewmate read the request.
-An optional `response_context` names an exact card lifecycle and captain message; the host validates that reference on request and answer without granting card-edit authority.
+An optional `response_context` names an exact card lifecycle and captain message; the host validates that reference on request and answer.
 Pending expectations survive task closure, restart and compaction and remain readable in a by-key `tasks` read as `response_requests`.
 The next host-started turn serves each current request in its guidance once and carries other pending requests in a recovery-context snapshot, selected by inbox identity rather than words.
 The snapshot has an explicit end marker before any refreshed review assignment: earlier requests are context, not another current command, and the complete provider input remains intact.
@@ -148,7 +148,8 @@ No ordinary report, next-report ordering, id mentioned in prose, or punctuation 
 Multiple references in one report commit together or not at all.
 `not-yet-answered` notifies the first mate and leaves the request pending; a final answer clears only its explicitly named request.
 Retries reuse the response identity and return its saved record; a correction uses a new identity and appends rather than replacing the earlier answer.
-An authenticated contributor may answer a named request for another task; that is no grant to edit its card or execute an effect.
+A crewmate's `reply` may carry the same correlated response: the card line is then its exact answer, saved with the line's message id (`crew_responses.card_message_id`), so a report naming that response identity afterwards is the same response, kept once with one notification (`docs/card-threads.md`, "Shared cards").
+An authenticated contributor may answer a named request for another task; that alone executes no effect, and its words on the card follow the shared-card rules (`docs/card-threads.md`, "Shared cards").
 Long answers stay exact in the database and use the existing overflow owner in served wakes.
 The wake has no task ref, so the originating worker's close cannot purge it.
 Later ordinary reports, still-running jobs and report sorting cannot replace or suppress this row.

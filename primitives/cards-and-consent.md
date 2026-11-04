@@ -10,6 +10,7 @@ A card with no actions is a note: one fact, never a progress update.
 A card authored by the host itself reads as attention (the agent-down set, sign-ins, refusals, a stuck crewmate).
 Nothing declares a kind; the chrome is derived from what the card carries (`cardPresentation` in `src/shared/cards.ts`).
 Every card is the head of a thread between the captain and the card's author (`docs/card-threads.md`).
+Any first mate or crewmate may write on a card it did not author, as itself and with no grant (`docs/card-threads.md`, "Shared cards").
 
 ## When to use it, and when not
 
@@ -24,9 +25,12 @@ A question that needs a structured answer uses the questions in the body ([decis
 
 ## Owner and entry points
 
-- [`CardService`](../src/core/orchestrator/cardService.ts) is the one writer of the card stack and its threads, with [`CardStore`](../src/core/storage/cardStore.ts) beneath it (`card_revisions`, `card_messages`, `card_observations`).
+- [`CardService`](../src/core/orchestrator/cardService.ts) is the one writer of the card stack and its threads, with [`CardStore`](../src/core/storage/cardStore.ts) beneath it (`card_revisions`, `card_messages`, `card_contributions`, `card_observations`).
+  A thread line keeps who wrote it when that is not the card's answerer, the captain message it answers, whether it was written after the card closed, and the response it carries (`card_messages.contributor_json`, `answers_message`, `clarification`, `response_id`); `card_contributions` keeps each write on someone else's card with its operation id, writer, task, reason, time and typed result.
 - The wire shape, actions and effects: `cardSchema`, `cardActionSchema`, `cardPresentation` and `isPreviewBody` in [`src/shared/cards.ts`](../src/shared/cards.ts).
 - Agent entry: `emit_card` ([`src/core/pi/cardTool.ts`](../src/core/pi/cardTool.ts)), the crewmate's `reply(card_id, text)`, and `close_card` for an author's own card.
+- A write on someone else's card: `tasks card` reads it first (`CardService.cardRead`); `emit_card` with `expected_revision` revises it and without it writes its `reply` alone (`CardService.contribute`); a crewmate's `reply` writes a line (`CardService.replyAs`); `answers_message` names the captain message a line ends, and `operation_id` returns the first result when sent again.
+- A required action's words: the first mate's `update_task revise_required_action` and the crewmate's `revise_required_action`, through `CardService.reviseRequiredAction` to `TaskService.reviseRequiredAction` (`docs/required-actions.md`, "Correcting the words").
 - The shape lint at both emit boundaries: [`src/core/pi/cardLint.ts`](../src/core/pi/cardLint.ts).
 - Card pictures: `verifyCardImages` in [`src/core/pi/cardImages.ts`](../src/core/pi/cardImages.ts).
 - A click: `CrewSupervisor.act` in [`src/core/orchestrator/crewSupervisor.ts`](../src/core/orchestrator/crewSupervisor.ts) dispatches on the action's `effect`, never on its id.
@@ -38,9 +42,12 @@ A question that needs a structured answer uses the questions in the body ([decis
 - Revise: `emit_card` with the same stable, namespaced kebab-case id replaces the open card in place; the replaced version is kept in `card_revisions` (`CardStore.history`) and the host marks what changed since the captain looked.
 - A distinct finding is a new card; there is no one-card-per-topic cap.
 - Release: a crewmate's card reaches the stage at its author's close-out (its next report or its idle); a card already shown waits for its author's idle (`docs/card-threads.md` "When a card reaches the stage"); the story note of a task that merges on its own waits for the merge's result (INF-2533).
-- Reply: the captain's words under a card go to its author as a steer stamped `via: "thread"`; the author answers once, revising with `reply` or answering with `reply(card_id, text)` (`CARD_REPLY`).
+  Someone else's write the stage holds, a revision or an answer it named, reaches it at that writer's own close-out; the author's close-out still ends what its own turn held.
+- Reply: the captain's words under a card go to its answerer (its author, or the first mate for its own cards and for a crewmate's card whose task closed) as a steer stamped `via: "thread"`; the answerer answers once, revising with `reply` or answering with `reply(card_id, text)` (`CARD_REPLY`), naming the message in `answers_message`.
 - Choose: every declared action closes its card; an action with no effect returns to its author as the captain's choice, and an action with an effect is run by the host.
 - Close: the captain's close is the keep; it runs nothing, is not a choice, and reaches a crewmate author as the typed `card-closed` wake for it to judge.
+- Contribute: a write on someone else's card keeps its author, task, lifecycle, source offer and answerer; a revision names the revision it read, and a closed card takes a dated clarification alone.
+  Any writer's line, the answerer's own included, ends a captain question only when `answers_message` names the one the card waits on; a handoff stays open.
 - Withdraw: only a card's own author withdraws it (`CardService.close` refuses the first mate closing someone else's card).
 - Every card with actions places the `captain` gate on its task (`IdleLadder.syncCaptainGate`); a task-less host card files an `operation` row (`TaskService.fileHostCardTask`); the card leaving releases the gate (`docs/card-authoring.md` "A card places the gate").
 - Evidence: every offer, availability change, admitted action, thread line, exit and stage sighting is appended to `card_observations` by `CardStore.observe`, inside the same transaction as the write it describes (`docs/card-evidence.md`).
@@ -48,6 +55,8 @@ A question that needs a structured answer uses the questions in the body ([decis
 ## Authority
 
 - Only the captain's click on host chrome runs an effect.
+- Writing on someone else's card needs no grant and moves no responsibility: it never hands the work to the writer, files the card on the writer's task, withdraws or reopens it, or runs, approves, completes or settles anything.
+  Another writer's revision is refused on a choice that carries an effect, a saved change story, a closed card's words, a required action's words and the app's own cards, each of which changes only through its own owner.
 - An action carrying an effect is never declared to the body's frame (`bridgeActionIds` in [`src/renderer/src/cards/bridgeActions.ts`](../src/renderer/src/cards/bridgeActions.ts)), so a body's own script cannot settle a task.
 - Effects an agent may declare: `settle merge`, `settle discard` (always danger; `confirm` only when the body says work is unlanded), `open` a Settings section or the task browser, `request_merge` of a stored review, and `request_write` of a kept forge write.
 - The `host` effect kind belongs only to cards the app authors; every emit boundary refuses it from an agent.
@@ -82,6 +91,8 @@ A question that needs a structured answer uses the questions in the body ([decis
 - A choice the shown offer did not declare, or one on a closed task's card, refuses before any bookkeeping and leaves the card open.
 - A refused settle comes back to the first mate as an outcome, which re-settles or raises a decision; it never returns as a steer.
 - `emit_card` under a card that awaits the author's answer is refused unless it carries `reply`.
+- A write on someone else's card that names an older revision is refused with the current one, an unknown `card-` id is refused rather than filed as a new card, and nothing is written.
+- A computer without the shared-card change is refused these writes; a desktop view without it gets thread lines without who wrote them (`SHARED_CARDS`).
 - Cancellation or terminal session failure retires the task's open cards without releasing them; notes on a task that closes done stay until the captain closes them.
 
 ## Uses
@@ -99,6 +110,7 @@ A question that needs a structured answer uses the questions in the body ([decis
 - [`src/core/claude/claudeToolSurface.test.ts`](../src/core/claude/claudeToolSurface.test.ts): `CARD_MECHANICS` is served as written.
 - [`src/core/pi/cardLint.test.ts`](../src/core/pi/cardLint.test.ts): the shape rules.
 - [`src/core/orchestrator/cardService.test.ts`](../src/core/orchestrator/cardService.test.ts) and [`src/core/storage/cardStore.test.ts`](../src/core/storage/cardStore.test.ts): stack, threads, revisions and evidence.
+- [`src/core/orchestrator/sharedCards.test.ts`](../src/core/orchestrator/sharedCards.test.ts) and [`src/core/tasks/requiredActionCorrection.test.ts`](../src/core/tasks/requiredActionCorrection.test.ts): writes on someone else's card and corrections of a required action's words.
 - [`src/renderer/src/cards/bridgeActions.test.ts`](../src/renderer/src/cards/bridgeActions.test.ts): effects never reach the frame.
 - [`tests/e2e/card-containment.spec.ts`](../tests/e2e/card-containment.spec.ts), [`tests/e2e/card-threads.spec.ts`](../tests/e2e/card-threads.spec.ts), [`tests/e2e/card-evidence.spec.ts`](../tests/e2e/card-evidence.spec.ts) and [`tests/e2e/required-action-row.spec.ts`](../tests/e2e/required-action-row.spec.ts).
 - A PR touching the prompt, the card lint or `src/renderer/src/cards/` runs `pnpm replay:gate` (`docs/replay-harness.md`).
@@ -107,7 +119,7 @@ A question that needs a structured answer uses the questions in the body ([decis
 
 - [`docs/card-authoring.md`](../docs/card-authoring.md): "One card", "Actions and effects", "The shape lint", "Revising a card", "HTML bodies", "A card places the gate", "Work that closed without the captain's click", "The handoff".
 - Card pictures: [`docs/card-authoring.md`](../docs/card-authoring.md) "What contains a body".
-- [`docs/card-threads.md`](../docs/card-threads.md): the thread record, "When a card reaches the stage", "The contract both agents read", "The settle hand-off, with no classifier".
+- [`docs/card-threads.md`](../docs/card-threads.md): the thread record, "When a card reaches the stage", "Shared cards", "The contract both agents read", "The settle hand-off, with no classifier".
 - Card evidence and its export: [`docs/card-evidence.md`](../docs/card-evidence.md).
-- [`docs/required-actions.md`](../docs/required-actions.md): required captain actions.
+- [`docs/required-actions.md`](../docs/required-actions.md): required captain actions, and "Correcting the words".
 - [`docs/live-prototype-security.md`](../docs/live-prototype-security.md): why there is no sanitizer.

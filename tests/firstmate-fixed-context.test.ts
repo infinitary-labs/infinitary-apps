@@ -460,11 +460,6 @@ const LEDGER: { rule: string; home: Home; says: string }[] = [
     says: "Current context and crew_status outrank transcripts for fleet state.",
   },
   {
-    rule: "only a card's own author closes it",
-    home: "core",
-    says: "A card is never yours to close but your own",
-  },
-  {
     rule: "a red check is diagnosed before it is fixed",
     home: "core",
     says: "Read PR ci from its report or crew_status. Not green: failed-step/log diagnosis;",
@@ -495,9 +490,10 @@ const LEDGER: { rule: string; home: Home; says: string }[] = [
     says: "Find it first: the about line, the crew and open cards in the context block, crew_status, or the tasks query, which reads the backlog.",
   },
   {
-    rule: "a carded task is revised through its crewmate",
+    // Shared cards (INF-2214): the first mate writes on the crewmate's card itself.
+    rule: "a carded task is written on, never answered beside",
     home: { refusal: "a second card beside a crewmate's" },
-    says: "steer the crewmate with steer_crewmate to revise card card-t1 (same id) with what you would add, instead of answering it in a new card",
+    says: "write on that card instead of a second one beside it. Read it with tasks card, then emit_card with id card-t1",
   },
   {
     rule: "every action closes the card, and a revision is asked by reply",
@@ -695,6 +691,48 @@ const LEDGER: { rule: string; home: Home; says: string }[] = [
     rule: "a revision's answer says what changed where",
     home: { tool: "emit_card", parameter: "reply" },
     says: "saying what changed where",
+  },
+  // INF-2225 fits shared cards beside main's card origin words: each rule below
+  // was said twice, and keeps the one home named here.
+  {
+    rule: "only a card's own author closes it",
+    home: { tool: "close_card" },
+    says: "Withdraw a card of YOUR OWN",
+  },
+  {
+    rule: "an open card's id revises it in place",
+    home: { tool: "emit_card" },
+    says: "Reuse an open card's id to revise it in place",
+  },
+  {
+    rule: "a card body is a raw HTML fragment",
+    home: { tool: "emit_card" },
+    says: "body is a raw HTML fragment",
+  },
+  {
+    rule: "a card about existing work names its task",
+    home: { tool: "emit_card" },
+    says: "Pass task_id when the card concerns existing work",
+  },
+  {
+    rule: "a filing answering one of several read wakes names it",
+    home: { tool: "create_task", parameter: "origin" },
+    says: "the one this answers, by automation id, card id or reporting task key",
+  },
+  {
+    rule: "what each priority number means",
+    home: { tool: "create_task", parameter: "priority" },
+    says: "0 urgent, 1 high, 2 normal (default), 3 low",
+  },
+  {
+    rule: "a drop names its reason",
+    home: { tool: "update_task" },
+    says: "To drop a task pass drop true with reason",
+  },
+  {
+    rule: "a duplicate's flag names both cards",
+    home: { tool: "flag_duplicate" },
+    says: "pass the duplicate's card id and the id of the earlier card it repeats",
   },
 ];
 

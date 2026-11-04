@@ -38,6 +38,7 @@ import {
 } from "@shared/work";
 import type { CrewmateBrowser } from "../browser/taskBrowsers";
 import { contractChange, listsChange } from "../connection/contractChanges";
+import { SHARED_CARDS } from "../connection/sharedCards";
 import { WorkRequestAbortedError } from "../devices/homeLink";
 import { PLACED_RELEASE_FILE_REFUSAL } from "../forge";
 import {
@@ -1294,6 +1295,19 @@ export class SessionHost {
         this.withDeadline(
           "inf:work:card",
           async (signal) => {
+            // A shared-card write goes only to a home that keeps its expected
+            // revision and operation identity; an older one would drop them
+            // and write as if the card were this task's own.
+            if (
+              (card.expectedRevision !== undefined ||
+                card.contributionReason !== undefined ||
+                card.operationId !== undefined ||
+                card.answersMessage !== undefined) &&
+              !listsChange(this.options.homeChanges?.(), SHARED_CARDS)
+            )
+              throw new Error(
+                `Card write refused: ${HOME.the} runs an older Infinitary that cannot keep a shared-card write. Nothing was sent; report the gap to the first mate.`,
+              );
             // A card whose preview names a project font of this task's own goes
             // only to a home that keeps one: an older home is told nothing, not
             // even the card's pictures.
@@ -1334,7 +1348,7 @@ export class SessionHost {
                 answer.refused.reason,
                 answer.refused.why,
               );
-            return answer.cardId;
+            return answer.mutation ?? answer.cardId;
           },
           toolSignal,
         ),
@@ -1426,7 +1440,38 @@ export class SessionHost {
           },
           toolSignal,
         ),
-      onReply: (input, signal) => ask("inf:work:reply", input, signal),
+      onReply: (input, signal) => {
+        if (
+          (input.answersMessage !== undefined ||
+            input.operationId !== undefined ||
+            input.response !== undefined) &&
+          !listsChange(this.options.homeChanges?.(), SHARED_CARDS)
+        )
+          return Promise.reject(
+            new Error(
+              `Reply refused: ${HOME.the} runs an older Infinitary that cannot name the captain message a line answers. Nothing was sent; reply without it or report the gap to the first mate.`,
+            ),
+          );
+        return ask("inf:work:reply", input, signal);
+      },
+      onReviseRequiredAction: (input, signal) => {
+        if (!listsChange(this.options.homeChanges?.(), SHARED_CARDS))
+          return Promise.reject(
+            new Error(
+              `Correction refused: ${HOME.the} runs an older Infinitary that cannot correct a required action's words. Nothing was sent; report the gap to the first mate.`,
+            ),
+          );
+        return ask("inf:work:revise-required-action", { input }, signal);
+      },
+      onReadCard: (cardId, signal) => {
+        if (!listsChange(this.options.homeChanges?.(), SHARED_CARDS))
+          return Promise.reject(
+            new Error(
+              `Card read refused: ${HOME.the} runs an older Infinitary that cannot read one card. Read the task with tasks instead.`,
+            ),
+          );
+        return ask("inf:work:read-card", { cardId }, signal);
+      },
       onQueryTasks: (input, toolSignal) =>
         this.withDeadline(
           "inf:work:tasks",

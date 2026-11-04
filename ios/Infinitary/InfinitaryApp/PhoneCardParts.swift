@@ -239,6 +239,15 @@ private struct PhoneThreadMessage: View {
             }
             Text(message["text"].text ?? "").textSelection(.enabled)
                 .foregroundStyle(who == "host" ? PhoneTheme.secondary : PhoneTheme.text)
+            let contributor = PhoneCardWords.contributor(
+                host: who == "host",
+                label: message["contributor"]["label"].text,
+                clarification: message["clarification"].flag
+            )
+            if !contributor.isEmpty {
+                Text(contributor).font(PhoneFont.micro).foregroundStyle(PhoneTheme.muted)
+                    .accessibilityIdentifier("thread-contributor")
+            }
             let rows = Self.settingsRows(message["answers"].list)
             if who == "captain", !rows.isEmpty {
                 DisclosureGroup(PhoneCardWords.settingsCount(rows.count), isExpanded: $settingsOpen) {

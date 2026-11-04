@@ -645,7 +645,7 @@ export function crewmateOwesCompletionRefusal(taskId: string): string {
  * whether the instruction now holds without it.
  */
 export function steerNotAnswerRefusal(taskId: string, card: { id: string; title: string }): string {
-  return `task ${taskId} already has its crewmate's card "${card.title}" (${card.id}) on screen: steer the crewmate with steer_crewmate to revise card ${card.id} (same id) with what you would add, instead of answering it in a new card.`;
+  return `task ${taskId} already has its crewmate's card "${card.title}" (${card.id}) on screen: write on that card instead of a second one beside it. Read it with tasks card, then emit_card with id ${card.id}: with its expected_revision to revise it, or with reply alone to answer in its thread. Steer the crewmate with steer_crewmate when the work is its to do.`;
 }
 
 /**
@@ -681,8 +681,10 @@ export function lintFirstmateCard(card: EmittedCard, context: CardLintContext): 
   }
 
   // WI-12 steer-not-answer: a task whose crewmate already carded it gets
-  // its card revised by that crewmate, not a second answer beside it. A
-  // revision of the Firstmate's own open card on the task is not an answer.
+  // that card written on, not a second answer beside it. A revision of the
+  // Firstmate's own open card on the task is not an answer, and a write on
+  // the crewmate's own card never reaches this lint (docs/card-threads.md,
+  // "Shared cards").
   if (card.taskId && context.openCrewmateCard) {
     const crewCard = context.openCrewmateCard(card.taskId);
     const revising =

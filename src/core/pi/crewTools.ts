@@ -488,11 +488,7 @@ export function createCrewTools(delegate: CrewDelegate) {
         }),
       ),
       priority: Type.Optional(
-        Type.Integer({
-          minimum: 0,
-          maximum: 3,
-          description: "0 urgent, 1 high, 2 normal (default), 3 low",
-        }),
+        Type.Integer({ minimum: 0, maximum: 3, description: "As create_task's priority." }),
       ),
       shape: Type.Optional(
         Type.Object(

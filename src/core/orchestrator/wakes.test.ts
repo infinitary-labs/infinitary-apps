@@ -790,7 +790,10 @@ describe("the answer-delivery wake", () => {
     );
     expect(text).toContain('Their words, verbatim: "is PR 58 merged?"');
     expect(text).toContain('filed on task t58 "Check PR 58"');
-    expect(text).toContain("the crewmate's card card-t58-1 owns that work");
+    // Shared cards (INF-2214): the retry names the card to write on.
+    expect(text).toContain(
+      "the crewmate's card card-t58-1 is already on screen for that work: write on it with emit_card and its id",
+    );
     expect(text).toContain("refused this turn");
   });
 

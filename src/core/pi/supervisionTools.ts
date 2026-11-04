@@ -93,8 +93,9 @@ export function createFlagDuplicateTool(delegate: DuplicateDelegate) {
       "is for that. It writes a label and closes the duplicate, with no card; a crewmate's card's author is told.",
     ].join(" "),
     parameters: Type.Object({
-      card_id: Type.String({ description: "The duplicate card's id" }),
-      duplicate_of: Type.String({ description: "The id of the earlier card it repeats" }),
+      // The description names both ids (the duplicate's card id and the earlier card it repeats).
+      card_id: Type.String(),
+      duplicate_of: Type.String(),
       note: Type.String({ description: "The user's words on why it is a duplicate" }),
     }),
     run: async (params) => {

@@ -124,11 +124,15 @@ function buildUserData(dir: string): { first: Card; revisedTitle: string } {
   const id = cards.emitCrewmateCard("t1", decision, "Build it");
   cards.closeOut({ kind: "crewmate", taskId: "t1" }, "report");
   const first = cards.shown(id) as Card;
-  cards.addMessage(id, "captain", "Does wide include archived projects?", {
+  const asked = cards.addMessage(id, "captain", "Does wide include archived projects?", {
     id: "gesture-reply",
     offerId: first.offerId,
   });
-  cards.replyFromCrewmate("t1", { cardId: id, text: "No, archived ones stay out." });
+  cards.replyFromCrewmate("t1", {
+    cardId: id,
+    text: "No, archived ones stay out.",
+    answersMessage: asked.id,
+  });
   cards.closeOut({ kind: "crewmate", taskId: "t1" }, "idle");
   // The author revises while the answered version is on the stage.
   const revisedTitle = "Pick the reach, archived excluded";

@@ -185,6 +185,17 @@ enum PhoneCardWords {
     }
     static func newCount(_ count: Int) -> String { ${fill(thread.newCountWords(7), { 7: "count" })} }
     static func threadCount(_ count: Int) -> String { ${fill(thread.threadCountWords(7), { 7: "count" })} }
+    /** Who really wrote a thread line, and whether it came after the card closed ("Shared cards"). */
+    static func contributor(host: Bool, label: String?, clarification: Bool) -> String {
+        switch (host, label, clarification) {
+        case (true, let label?, false): ${fill(thread.contributorWords({ host: true, label: "LABEL-1" }), { "LABEL-1": "label" })}
+        case (true, let label?, true): ${fill(thread.contributorWords({ host: true, label: "LABEL-1", clarification: true }), { "LABEL-1": "label" })}
+        case (false, let label?, false): ${fill(thread.contributorWords({ host: false, label: "LABEL-1" }), { "LABEL-1": "label" })}
+        case (false, let label?, true): ${fill(thread.contributorWords({ host: false, label: "LABEL-1", clarification: true }), { "LABEL-1": "label" })}
+        case (_, nil, true): ${text(thread.contributorWords({ host: false, clarification: true }))}
+        default: ""
+        }
+    }
     static func closeRest(_ key: String?) -> String {
         guard let key else { return ${text(close.closeRestWords(undefined))} }
         return ${fill(close.closeRestWords("KEY-1"), { "KEY-1": "key" })}

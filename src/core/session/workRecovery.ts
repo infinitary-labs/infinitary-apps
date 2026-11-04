@@ -49,6 +49,11 @@ export const CHANGE_RECOVERY: Partial<
     "the reply may already be there",
     "Read your task with tasks before continuing. That cannot confirm whether the reply was posted, so do not repeat it automatically.",
   ],
+  "inf:work:revise-required-action": [
+    "correcting this required action",
+    "the correction may already be saved",
+    "Read the card with tasks card before correcting it again; the same operation identity returns its earlier result.",
+  ],
   "inf:work:speed-note": [
     "recording the model selection",
     "the selection may already be recorded",

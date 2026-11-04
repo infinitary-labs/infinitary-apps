@@ -24,7 +24,7 @@ import {
   KEEP_ANSWERING,
 } from "../../src/renderer/src/app/closeQuestionWords";
 import { REQUIRED_ACTIONS_LEAD } from "../../src/renderer/src/cards/requiredActionsWords";
-import { THREAD_WHO_LABELS } from "../../src/renderer/src/cards/threadWords";
+import { contributorWords, THREAD_WHO_LABELS } from "../../src/renderer/src/cards/threadWords";
 import {
   ANSWER_PROMPT_MARKER,
   CLAUDE_CREW_PROMPT_MARKER,
@@ -187,6 +187,8 @@ export async function startPhoneHome(
     news: "",
     flip: "",
   };
+  // The captain's question on the flip card, which the first mate's revision answers by its id.
+  let flipQuestion: number | undefined;
   const cardBarrier = () => {
     let resolve!: () => void;
     const promise = new Promise<void>((done) => {
@@ -859,7 +861,7 @@ export async function startPhoneHome(
           );
           // The crewmate's turn ends, which brings its card to the stage.
           cards.closeOut({ kind: "crewmate", taskId: merging.id }, "idle");
-          core.services.supervisor.addCardMessage(
+          const tideQuestion = core.services.supervisor.addCardMessage(
             cardIDs.merge,
             "captain",
             "Does it cover the evening tide too?",
@@ -872,12 +874,38 @@ export async function startPhoneHome(
             {
               ...story("<h3>After</h3><p>The evening tide keeps the entrance clear too.</p>"),
               reply: "Yes: the chart keeps it clear at every tide.",
+              // Only a line that names the captain's message answers it.
+              answersMessage: tideQuestion.id,
             },
             merging.title,
             "Sonnet 5.5",
             "on Mac mini",
           );
           cards.closeOut({ kind: "crewmate", taskId: merging.id }, "idle");
+          // INF-2225 (the captain approved shared cards: "Any crewmate or first mate, without a per-card permission
+          // grant."): a crewmate on another task writes on this card's thread through the crew's shared-card writer,
+          // and the phone names who really wrote it in the Mac's words.
+          const surveying = seedTask(core.services.tasks, {
+            id: "phone-survey",
+            title: "Check the evening tide marks",
+            status: "idle",
+          });
+          const contributed = cards.contribute(
+            { actor: "crewmate", taskId: surveying.id },
+            {
+              id: cardIDs.merge,
+              title: "",
+              body: "",
+              actions: [],
+              reply: "The survey boat checked the evening tide marks; they match the chart.",
+            },
+            { operationId: "phone-survey-line" },
+          );
+          if (contributed.effect !== "reply-only") {
+            throw new Error(
+              `the survey crewmate's line was not written: ${JSON.stringify(contributed)}`,
+            );
+          }
           // The words the phone shows come from the Mac's owners, which the phone's generated words copy.
           result = {
             title: "Merge the north entrance chart",
@@ -891,6 +919,10 @@ export async function startPhoneHome(
             anythingElse: ANYTHING_ELSE_ANSWER,
             requiredLead: REQUIRED_ACTIONS_LEAD,
             threadCrew: THREAD_WHO_LABELS.crewmate,
+            threadContributor: contributorWords({
+              host: false,
+              label: contributed.contributor.label,
+            }),
           };
           break;
         }
@@ -907,11 +939,13 @@ export async function startPhoneHome(
               { id: "drain", label: "Let it drain", default: true },
             ],
           });
-          core.services.supervisor.addCardMessage(
+          flipQuestion = core.services.supervisor.addCardMessage(
             cardIDs.flip,
             "captain",
             "but is the mini indeed running out of ram?",
-          );
+          ).id;
+          // INF-2225 (the captain: "Only a line that says it answers it; a handoff stays open"): this line hands
+          // off, so the captain's question still waits on the first mate's revision.
           core.services.supervisor.addCardMessage(
             cardIDs.flip,
             "firstmate",
@@ -928,7 +962,8 @@ export async function startPhoneHome(
           };
           break;
         }
-        // The first mate revises that card with the answer: same id, new body, so a new offer.
+        // The first mate revises that card with the answer: same id, new body, so a new offer. The question
+        // still waits, so the revision carries its answer naming it, which the thread shows after the revised line.
         case "POST flip-card-revise": {
           const title = "Yes, crewmates on the Mac mini are waiting in its test line";
           const added = "The Mac mini has memory to spare: it is not running out.";
@@ -940,6 +975,8 @@ export async function startPhoneHome(
               { id: "backlog", label: "Move the four newest builds to the backlog" },
               { id: "drain", label: "Let it drain", default: true },
             ],
+            reply: "No: it has memory to spare. I added that to the card.",
+            answersMessage: flipQuestion,
           });
           core.services.supervisor.firstmateClosedOut();
           core.services.supervisor.flushCards();
@@ -1260,10 +1297,15 @@ export async function startPhoneHome(
           result = { ok: true };
           break;
         case "POST thread-answer":
+          // The first mate's answer names the captain's reply; its closing
+          // words before it left that reply open.
           core.services.supervisor.addCardMessage(
             cardIDs.conversation,
             "firstmate",
             "I kept your harbour reply with this chart.",
+            core.services.supervisor
+              .cardThread(cardIDs.conversation)
+              .messages.findLast((line) => line.who === "captain")?.id,
           );
           core.services.supervisor.firstmateClosedOut();
           result = { ok: true };

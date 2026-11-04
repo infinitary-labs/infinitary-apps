@@ -143,6 +143,7 @@ import {
 import { AnswerDeliveryCheck } from "./answerDeliveryCheck";
 import { withAskAttribution } from "./askAttribution";
 import { AskCapture, type TurnOrigin } from "./askCapture";
+import { cardMutationText } from "./cardMutationText";
 import {
   cardEmitter,
   FIRSTMATE_FAILURE_CARD_ID,
@@ -2552,6 +2553,25 @@ export class FirstmateAgent {
     let cardOwner: { id: string } | undefined;
     const emitCard = createEmitCardTool(
       (card) => {
+        // A write on someone else's card is a contribution
+        // (docs/card-threads.md, "Shared cards"): it keeps that card's
+        // author, task and answerer, files nothing and answers its typed result.
+        const contribution = supervisor.contributeAsFirstmate(card);
+        if (contribution) {
+          // Only a write that changed the record is an action; an unchanged
+          // card took no effect and a refusal changed nothing.
+          if (contribution.effect === "refused") {
+            this.noteDelivery({ outcome: "refused", tool: "emit_card", reason: "card-refused" });
+          } else if (contribution.effect !== "unchanged") {
+            this.noteDelivery({
+              outcome: "action",
+              kind: "card",
+              tool: "emit_card",
+              ref: contribution.cardId,
+            });
+          }
+          return contribution;
+        }
         const cardId = supervisor.addFirstmateCard(card);
         this.decisions.noteCard(cardId);
         // Attach first (P1): the card lands on its task, or files one.
@@ -2561,6 +2581,9 @@ export class FirstmateAgent {
         return cardId;
       },
       (card) => {
+        // Someone else's card keeps its own rules: the contribution refuses
+        // what its writer may not change, so this card's lint is not its.
+        if (supervisor.writesOnOthersCard(card.id)) return undefined;
         let crewCard: { id: string; title: string } | undefined;
         const refusal = lintFirstmateCard(card, {
           resolveCardId: resolveFirstmateCardId,
@@ -3339,6 +3362,19 @@ export class FirstmateAgent {
           }
           return text;
         }),
+      reviseRequiredAction: (input) =>
+        asText(() => {
+          const mutation = supervisor.reviseRequiredActionAs({ actor: "firstmate" }, input);
+          if (mutation.effect === "revised") {
+            this.noteDelivery({
+              outcome: "action",
+              kind: "card",
+              tool: "update_task",
+              ref: mutation.cardId,
+            });
+          }
+          return cardMutationText(mutation);
+        }),
       withdrawMerge: (input) =>
         asText(() => {
           const record = resolve(input.task);
@@ -3465,6 +3501,7 @@ export class FirstmateAgent {
         }
         return text;
       },
+      readCard: (cardId) => supervisor.readCard(cardId),
       query: (input) =>
         queryTasks(
           tasks,
@@ -3777,14 +3814,24 @@ export class FirstmateAgent {
     const requiredActionGuide = requiredActionTask
       ? `; required captain action task_id ${requiredActionTask}. Answer with emit_card using this same id, task_id and reply; the host preserves instructions and controls. For failure, read the output, arrange repair through the crew and keep repair status in this thread. Never confirm for the captain.`
       : "";
-    // INF-1670: the host's stuck alert names the first mate as its answerer;
-    // the host wrote it, so the answer is the turn's closing words.
+    // INF-1670: the host's stuck alert names the first mate as its answerer.
     const hostAlertGuide =
       aboutCard?.author === "host" && aboutCard.answeredBy === "firstmate"
-        ? `; the host's stuck alert on task_id ${aboutCard.taskId ?? ""}, which you answer and cannot revise: your closing words are the answer in its thread, and any act it asks goes through your tools`
+        ? `; the host's stuck alert on task_id ${aboutCard.taskId ?? ""}, which you answer and cannot revise: any act it asks goes through your tools`
         : "";
+    // Only a line naming the captain's message answers it; the closing
+    // words are a line that leaves it open (the captain's "Only a line that
+    // says it answers it; a handoff stays open").
+    const asked = aboutCard
+      ? this.options.supervisor
+          .cardThread(aboutCard.id)
+          .messages.findLast((line) => line.who === "captain")
+      : undefined;
+    const answerGuide = asked
+      ? ` as message ${asked.id}; answer it with an emit_card reply on this id naming answers_message ${asked.id}, since your closing words alone leave it open`
+      : "";
     const aboutCardLine = aboutCard
-      ? `about: card ${aboutCard.id} (${cardPresentation(aboutCard)}) "${aboutCard.title}" - the captain replied in its thread${requiredActionGuide}${hostAlertGuide}`
+      ? `about: card ${aboutCard.id} (${cardPresentation(aboutCard)}) "${aboutCard.title}" - the captain replied in its thread${answerGuide}${requiredActionGuide}${hostAlertGuide}`
       : undefined;
     const maybeCard = aboutCardLine ? undefined : shown ? maybeCardContextLine(shown) : undefined;
     // The task the turn points at (the open card, or the record card): the
@@ -4593,11 +4640,13 @@ export class FirstmateAgent {
     const tookIn = this.redeliverUndeliveredSteers(session);
     if (recoverContext) this.detachSession();
     this.clearQuiet();
-    // The closing words answer every card reply this turn read - its own
-    // about card, and one the captain sent while it ran - unless it
-    // revised that card instead.
+    // The closing words are the line under every card reply this turn read -
+    // its own about card, and one the captain sent while it ran - unless it
+    // already wrote there. They name no captain message, so they answer
+    // none: a handoff stays open (the captain's choice), and an answer is an
+    // emit_card reply naming the message.
     const threadAnswer = (this.lastTurnText ?? "").trim();
-    const answered = new Set(
+    const repliedUnder = new Set(
       [this.turnAboutCardId, ...tookIn.map((steer) => steer.aboutCardId)].filter(
         (cardId): cardId is string => cardId !== undefined,
       ),
@@ -4605,14 +4654,14 @@ export class FirstmateAgent {
     // The reply line goes out before the busy signal falls, so the
     // working line turns straight into it; an answer in a card's replies
     // is an answer on that card, and its words are the line too.
-    if (!failed && threadAnswer && answered.size > 0) this.replyFacts.acted = true;
+    if (!failed && threadAnswer && repliedUnder.size > 0) this.replyFacts.acted = true;
     this.replyToLastMessage(
       [...this.readThisTurn],
       failed ? plainProblem(this.turnError, cutOff ? { cutOff } : undefined) : undefined,
     );
     this.options.broadcastEvent({ type: "firstmate_state", busy: false });
     if (!failed && threadAnswer) {
-      for (const cardId of answered) {
+      for (const cardId of repliedUnder) {
         try {
           if (this.options.supervisor.recordFirstmateThreadAnswer(cardId, threadAnswer)) {
             this.delivery.creditReply(cardId);

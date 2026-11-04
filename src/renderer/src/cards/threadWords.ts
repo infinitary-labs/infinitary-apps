@@ -36,3 +36,19 @@ export const THREAD_CARD = "card";
 
 /** The card changed while its thread showed: what the mark beside the phone card back's Card says (INF-2565). */
 export const THREAD_CARD_UPDATED = "updated";
+
+/**
+ * Who really wrote a thread line that is not the card's own answerer's, and
+ * whether it is a clarification on a closed card (docs/card-threads.md,
+ * "Shared cards"): the same words on the Mac and the phone. `label` is the
+ * host's own name for the writer, such as "the crewmate on INF-12".
+ */
+export function contributorWords(line: {
+  host: boolean;
+  label?: string;
+  clarification?: boolean;
+}): string {
+  const by = line.label ? `${line.host ? "Revised" : "Written"} by ${line.label}` : "";
+  if (!line.clarification) return by;
+  return by ? `${by}, after the card closed` : "Written after the card closed";
+}

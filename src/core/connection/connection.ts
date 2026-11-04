@@ -66,6 +66,7 @@ import {
   type JournalEntry,
   type JournalLimits,
 } from "./journal";
+import { SHARED_CARDS } from "./sharedCards";
 
 /**
  * A device the pairing seam vouches for (docs/devices.md): a `mac` both
@@ -344,6 +345,8 @@ type Client = {
   appVersion: string | undefined;
   /** Older desktop card decoders are strict; only capable desktops receive the added fields. */
   cardUpdates: boolean;
+  /** Whether it reads a thread line's contributor fields (`shared-cards.md`). */
+  sharedCards: boolean;
   access: ContractAccess;
   closing: boolean;
   answeredPing: boolean;
@@ -393,8 +396,60 @@ function legacyCardSnapshot(value: unknown): unknown {
   return value.map(({ currentUpdateId: _id, currentUpdateSeen: _seen, ...card }) => card);
 }
 
-function cardPushFor(entry: JournalEntry, spelling: Spelling, currentUpdates: boolean): string {
+/**
+ * A desktop from before shared cards decodes thread lines strictly: its
+ * copy of a thread, or of a past card's, leaves out who contributed a line,
+ * which captain message it answers and whether it is a clarification
+ * (docs/card-threads.md, "Shared cards"). Phones ignore unknown fields.
+ */
+function legacyThreadLines(value: unknown): unknown {
+  if (Array.isArray(value)) return value.map(legacyThreadLines);
+  if (!value || typeof value !== "object") return value;
+  const record = value as Record<string, unknown>;
+  if (!Array.isArray(record.messages)) {
+    return "cards" in record && Array.isArray(record.cards)
+      ? { ...record, cards: record.cards.map(legacyThreadLines) }
+      : value;
+  }
+  return {
+    ...record,
+    messages: record.messages.map((message) => {
+      if (!message || typeof message !== "object") return message;
+      const {
+        contributor: _contributor,
+        answersMessage: _answers,
+        clarification: _clarification,
+        ...line
+      } = message as Record<string, unknown>;
+      return line;
+    }),
+  };
+}
+
+/**
+ * Every channel a view may ask, or hears, whose answer carries card lines:
+ * an older desktop reads each line strictly, so it gets them without who
+ * wrote them.
+ */
+const THREAD_CHANNELS = new Set([
+  "inf:cards:show",
+  "inf:cards:thread",
+  "inf:cards:past",
+  "inf:cards:show-past",
+  "inf:cards:reply",
+]);
+
+function cardPushFor(
+  entry: JournalEntry,
+  spelling: Spelling,
+  currentUpdates: boolean,
+  sharedCards = true,
+): string {
   const text = pushFrameIn(entry, spelling);
+  if (!sharedCards && THREAD_CHANNELS.has(entry.channel)) {
+    const frame = JSON.parse(text);
+    return JSON.stringify({ ...frame, payload: legacyThreadLines(frame.payload) });
+  }
   if (currentUpdates || entry.channel !== "inf:cards") return text;
   const frame = JSON.parse(text);
   return JSON.stringify({ ...frame, payload: legacyCardSnapshot(frame.payload) });
@@ -615,7 +670,10 @@ export function startConnection(options: ConnectionOptions): HomeConnection {
         );
         for (const client of clients)
           if (client.welcomed && client.role === "view")
-            send(client, cardPushFor(entry, client.spelling, client.cardUpdates));
+            send(
+              client,
+              cardPushFor(entry, client.spelling, client.cardUpdates, client.sharedCards),
+            );
       } catch (error) {
         onProblem(`could not send ${channel}: ${(error as Error).message}`);
         journal = new EventJournal(options.journal ?? DEFAULT_JOURNAL_LIMITS);
@@ -639,6 +697,8 @@ export function startConnection(options: ConnectionOptions): HomeConnection {
       client.appVersion = hello.appVersion;
       client.cardUpdates =
         hello.system === "ios" || readsSeenUpdate(hello.protocolVersion, hello.changes);
+      client.sharedCards =
+        hello.system === "ios" || (hello.changes?.includes(SHARED_CARDS) ?? false);
       // A view changes things across majors its floor allows; work only on this home's own.
       // A computer viewing from before the floor (its hello says none) reads closed lists
       // strictly, so like work it changes things only on this home's major (INF-1649 review
@@ -681,7 +741,7 @@ export function startConnection(options: ConnectionOptions): HomeConnection {
         }),
       );
       for (const entry of missed ?? [])
-        send(client, cardPushFor(entry, client.spelling, client.cardUpdates));
+        send(client, cardPushFor(entry, client.spelling, client.cardUpdates, client.sharedCards));
       client.welcomed = true;
       if (hello.system || hello.chip || hello.automaticStartup)
         devices.noteSystem?.(client.device.id, {
@@ -759,7 +819,11 @@ export function startConnection(options: ConnectionOptions): HomeConnection {
         reply({
           ok: true,
           value:
-            channel === "inf:cards:list" && !client.cardUpdates ? legacyCardSnapshot(value) : value,
+            channel === "inf:cards:list" && !client.cardUpdates
+              ? legacyCardSnapshot(value)
+              : THREAD_CHANNELS.has(channel) && !client.sharedCards
+                ? legacyThreadLines(value)
+                : value,
         });
       } catch (error) {
         reply({ ok: false, error: error instanceof Error ? error.message : String(error) });
@@ -787,6 +851,7 @@ export function startConnection(options: ConnectionOptions): HomeConnection {
         spelling: FIRST_SPELLING,
         appVersion: undefined,
         cardUpdates: false,
+        sharedCards: false,
         access: "read",
         closing: false,
         answeredPing: true,

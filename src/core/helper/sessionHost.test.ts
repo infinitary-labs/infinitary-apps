@@ -512,6 +512,61 @@ describe("a conversation held on a computer that runs work", () => {
       },
     });
   });
+  // INF-2225, INF-2214's approved shared cards: an older home would drop the
+  // revision read and write as if the card were this task's own, so the
+  // write is refused before anything is sent.
+  it.each([true, false])(
+    "sends a shared-card correction only to a home that keeps it (INF-2225; supported: %s)",
+    async (supported) => {
+      const at = await placed({ homeChanges: supported ? ["shared-cards"] : [] });
+      at.spec.tools.push("revise_required_action");
+      await at.open();
+      model([
+        {
+          tools: [
+            {
+              name: "revise_required_action",
+              args: {
+                action: "card-fm-required-action-op1",
+                source: "DOP-208",
+                action_id: "remove-job-host",
+                expected_generation: 1,
+                patch: { instructions: ["Run C:\\FleetCheckSetup\\shell-pc-job-host-remove.cmd"] },
+                reason: "The remover path was wrong",
+                operation_id: "op-remover-path",
+                same_action: true,
+              },
+            },
+          ],
+        },
+        { text: "Corrected." },
+      ]);
+      await at.order("inf:session:prompt", [
+        { orderId: "fix:1", task: TASK, text: "Correct the remover path." },
+      ]);
+      await at.ended(1);
+      const sent = at.home.effects.filter(
+        (effect) => effect.channel === "inf:work:revise-required-action",
+      );
+      const ended = at.home.events.find(
+        (record) =>
+          record.event.type === "tool_end" && record.event.toolName === "revise_required_action",
+      )?.event;
+      if (supported) {
+        expect(sent[0]?.request).toMatchObject({
+          input: {
+            action: "card-fm-required-action-op1",
+            expectedGeneration: 1,
+            operationId: "op-remover-path",
+            sameAction: true,
+          },
+        });
+      } else {
+        expect(sent).toEqual([]);
+        expect(ended).toMatchObject({ isError: true });
+      }
+    },
+  );
   it("forwards first-release facts and a task list page to the home that records them (INF-1607)", async () => {
     const at = await placed();
     await at.open();

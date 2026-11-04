@@ -3,12 +3,11 @@ import { formatResetText } from "./quota";
 import type { AccountHold, WorkPosture } from "./workPosture";
 
 /**
- * What the captain's reply under a crewmate's card is waiting on, while his
- * line is the newest on the thread and no turn of its author's is running
- * (FI3-592; docs/card-threads.md, "The waiting line"). It is read from the
- * task's work posture - the same typed state the Tasks dot reads - never
- * from anyone's words, and it is never a thread message: a host line would
- * end the reply's wait (`CardService.addMessage`), and the card keeps
+ * What the captain's reply under a crewmate's card is waiting on, while no
+ * line has answered it and no turn of its author's is running (FI3-592;
+ * docs/card-threads.md, "The waiting line"). It is read from the task's
+ * work posture - the same typed state the Tasks dot reads - never from
+ * anyone's words, and it is never a thread message, so the card keeps
  * showing what it showed.
  */
 export type ThreadWait =

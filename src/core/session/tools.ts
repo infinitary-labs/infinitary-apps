@@ -1,8 +1,9 @@
-import type { CardEffect, CardPicture, LiveAttachment } from "@shared/cards";
+import type { CardEffect, CardMutation, CardPicture, LiveAttachment } from "@shared/cards";
 import type { CheckChangeInput } from "@shared/checkRepair";
+import type { CrewResponse } from "@shared/crewResponses";
 import type { CrewSpeed, SpeedSelection } from "@shared/crewSpeed";
 import type { InvokeRequest } from "@shared/ipc";
-import type { RequiredAction } from "@shared/requiredActions";
+import type { RequiredAction, RequiredActionRevisionInput } from "@shared/requiredActions";
 import type { Rigor } from "@shared/rigor";
 import type { RiskAssessment, RiskDeclaration } from "@shared/risk";
 import { type Static, type TObject, type TUnsafe, Type } from "typebox";
@@ -125,6 +126,15 @@ export type EmittedCardInput = {
   continues?: boolean;
   /** Declared: it answers the captain's message it is about (INF-1610). */
   answering?: boolean;
+  /**
+   * On someone else's card (docs/card-threads.md, "Shared cards"): the
+   * revision the writer read, which a revision must name, why it writes,
+   * its operation identity, and the captain message its reply answers.
+   */
+  expectedRevision?: string;
+  contributionReason?: string;
+  operationId?: string;
+  answersMessage?: number;
 };
 
 /**
@@ -302,7 +312,7 @@ export type CrewmateToolDelegate = {
   onCard?: (
     card: DeclaredCardInput,
     signal?: AbortSignal,
-  ) => string | undefined | Promise<string | undefined>;
+  ) => string | CardMutation | undefined | Promise<string | CardMutation | undefined>;
   /**
    * A card declaring a settle effect - the completion card - that the card
    * tool refused, at whatever step refused it, so the host records the
@@ -337,9 +347,32 @@ export type CrewmateToolDelegate = {
    * second card. Returns the tool text, refusals included.
    */
   onReply?: (
-    input: { cardId: string; text: string; interim?: boolean },
+    input: {
+      cardId: string;
+      text: string;
+      interim?: boolean;
+      /** The captain message this line answers (docs/card-threads.md, "Shared cards"). */
+      answersMessage?: number;
+      operationId?: string;
+      /** The correlated response this line carries (INF-2222's one writer). */
+      response?: CrewResponse;
+    },
     signal?: AbortSignal,
   ) => Awaitable<string>;
+  /**
+   * Correct the words of a required action (docs/required-actions.md,
+   * "Correcting the words"); returns the tool text of its typed result.
+   */
+  onReviseRequiredAction?: (
+    input: RequiredActionRevisionInput,
+    signal?: AbortSignal,
+  ) => Awaitable<string>;
+  /**
+   * One card as it stands, to read before revising or answering it
+   * (docs/card-threads.md, "Shared cards"): its words, revision, lifecycle,
+   * choices and thread with message ids. Reads only.
+   */
+  onReadCard?: (cardId: string, signal?: AbortSignal) => Awaitable<string>;
   /**
    * The read-only tasks query (cards/tasks/agents P0, WI-4): every crewmate
    * can search the backlog before filing, the way every engineer can read

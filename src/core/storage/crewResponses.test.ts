@@ -145,6 +145,33 @@ describe("requested answers (INF-2214)", () => {
     db.close();
   });
 
+  // INF-2225, the accepted response writer link: a card answer and the report
+  // that names the same response are one response and one notification.
+  it("saves a card answer's response with its line, so the report naming it notifies nobody twice", () => {
+    const { db, inbox, request } = setup();
+    const response = {
+      requestId: request.id,
+      responseId: "path-answer",
+      status: "answered" as const,
+    };
+    const saved = inbox.submitResponse(response, actor, `It is at ${path}.`, {
+      cardId: "card-fm-required-action-op1",
+      messageId: 7,
+    });
+    expect(saved).toMatchObject({ cardMessageId: 7, text: `It is at ${path}.` });
+    // The report's own words for the same response add nothing.
+    expect(inbox.submitResponse(response, actor, `Answered on the card: ${path}`)).toEqual(saved);
+    expect(inbox.allFor(FIRSTMATE_RECIPIENT)).toHaveLength(1);
+    // A second card line under the same identity is a different answer.
+    expect(() =>
+      inbox.submitResponse(response, actor, `It is at ${path}.`, {
+        cardId: "card-fm-required-action-op1",
+        messageId: 9,
+      }),
+    ).toThrow("new response identity");
+    db.close();
+  });
+
   it("only the caller's consumed clean-turn rows can produce a missing-response fact, once for that turn", () => {
     const { db, inbox, request, inboxId } = setup();
     const turn = { id: "dop-208-turn", since: 1_000, report: "Checks are still running." };

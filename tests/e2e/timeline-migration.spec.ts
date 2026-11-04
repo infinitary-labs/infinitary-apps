@@ -43,10 +43,15 @@ function olderProfile() {
   const userDataDir = scratchDir("timeline-upgrade-");
   const db = openDatabase(userDataDir, TASK_RECORD_RETIREMENT_VERSION - 1);
   // Today's card writer names INF-1610's later `answering` and INF-1670's
-  // `answered_by` columns, lent to the older schema here; their own
-  // migrations leave a column already there.
+  // `answered_by` columns, and its thread writer INF-2225's shared-card
+  // columns, lent to the older schema here; their own migrations leave a
+  // column already there.
   db.exec("ALTER TABLE cards ADD COLUMN answering INTEGER");
   db.exec("ALTER TABLE cards ADD COLUMN answered_by TEXT");
+  db.exec("ALTER TABLE card_messages ADD COLUMN contributor_json TEXT");
+  db.exec("ALTER TABLE card_messages ADD COLUMN answers_message INTEGER");
+  db.exec("ALTER TABLE card_messages ADD COLUMN clarification INTEGER");
+  db.exec("ALTER TABLE card_messages ADD COLUMN response_id TEXT");
   const at = Date.now() - 3600000;
   const now = () => at;
   const tasks = new TaskService({ db, strict: true, now });

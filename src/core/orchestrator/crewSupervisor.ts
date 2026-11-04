@@ -24,6 +24,7 @@ import {
   type CardAnswer,
   type CardMessage,
   type CardMessageWho,
+  type CardMutation,
   type CardThread,
   type CardWidth,
   cardAnswerLines,
@@ -69,7 +70,7 @@ import {
   checksSpanWords,
 } from "@shared/checksSpan";
 import { isClientIssueReason } from "@shared/claudeClient";
-import { crewResponseSchema, type ResponsePolicy } from "@shared/crewResponses";
+import { type CrewResponse, crewResponseSchema, type ResponsePolicy } from "@shared/crewResponses";
 import { type CrewSpeed, type SpeedSelection, speedNote } from "@shared/crewSpeed";
 import type { CrewSendResult } from "@shared/crewTranscript";
 import { isCustomApiProvider } from "@shared/customApi";
@@ -177,6 +178,7 @@ import {
   RUNS_ON_THIS_MAC,
   runsHereOnly,
 } from "@shared/repos";
+import type { RequiredActionRevisionInput } from "@shared/requiredActions";
 import { REVIEW_VERDICT_OF_CODE, type Rigor, renderFinding } from "@shared/rigor";
 import { RISK_DIMENSIONS, RISK_WORDS, type RiskAssessment } from "@shared/risk";
 import {
@@ -405,7 +407,9 @@ import {
 import { CREWMATE_ANSWER_ASK } from "./answerDelivery";
 import { type AskEnding, askEndingOf } from "./askEnding";
 import { revisionNotice } from "./cardChanges";
+import { cardMutationText } from "./cardMutationText";
 import {
+  type CardCaller,
   type CardInteractionEvidence,
   CardService,
   cardEmitter,
@@ -1757,6 +1761,16 @@ export class CrewSupervisor {
         this.askEnding.captainResponded(card, response, action);
         this.hooks.asksMoved?.();
       },
+      checkCardResponse: (_taskId, response, card) => this.checkCardResponse(response, card),
+      submitCardResponse: (taskId, response, text, line) => {
+        options.inbox.submitResponse(
+          response,
+          { task: taskId, session: this.tasks.get(taskId)?.session?.recordPath() ?? null },
+          text,
+          line,
+        );
+        queueMicrotask(() => this.hooks.pokeInbox?.());
+      },
     });
     this.askEnding = askEndingOf(options.tasks, this.cards);
     this.settle = new SettleService({
@@ -3018,6 +3032,35 @@ export class CrewSupervisor {
   }
 
   /** A card the Firstmate agent emits: its only user-facing output channel. */
+  /** A required action's words corrected by a first mate or crewmate (docs/required-actions.md). */
+  reviseRequiredActionAs(caller: CardCaller, input: RequiredActionRevisionInput): CardMutation {
+    return this.cards.reviseRequiredAction(caller, input);
+  }
+
+  /**
+   * Whether the first mate's emit_card names a card that is not its own -
+   * someone else's open or closed card, or a card id the record lacks -
+   * so the write is a contribution (docs/card-threads.md, "Shared cards").
+   */
+  writesOnOthersCard(id: string | undefined): boolean {
+    const target = this.cards.targetOf({ actor: "firstmate" }, id);
+    return target.kind !== "new" && target.kind !== "own";
+  }
+
+  /**
+   * The first mate's write on someone else's card, typed; undefined when the
+   * card is its own or new, which `addFirstmateCard` shows.
+   */
+  contributeAsFirstmate(input: EmittedCardInput): CardMutation | undefined {
+    if (!this.writesOnOthersCard(input.id)) return undefined;
+    return this.cards.contribute({ actor: "firstmate" }, input, {
+      ...(input.expectedRevision !== undefined ? { expectedRevision: input.expectedRevision } : {}),
+      ...(input.contributionReason ? { reason: input.contributionReason } : {}),
+      ...(input.operationId ? { operationId: input.operationId } : {}),
+      ...(input.answersMessage !== undefined ? { answersMessage: input.answersMessage } : {}),
+    });
+  }
+
   addFirstmateCard(input: EmittedCardInput): string {
     if (input.requiredActions !== undefined) {
       const priorSource = input.id
@@ -3189,8 +3232,23 @@ export class CrewSupervisor {
     this.cards.seenUpdate(cardId, lifecycleId, updateId);
   }
 
-  addCardMessage(cardId: string, who: CardMessageWho, text: string): CardMessage {
-    return this.cards.addMessage(cardId, who, text);
+  /** A line in a card's thread; it answers a captain message only when it names it. */
+  addCardMessage(
+    cardId: string,
+    who: CardMessageWho,
+    text: string,
+    answersMessage?: number,
+  ): CardMessage {
+    return this.cards.addMessage(
+      cardId,
+      who,
+      text,
+      undefined,
+      undefined,
+      undefined,
+      false,
+      answersMessage !== undefined ? { answersMessage } : {},
+    );
   }
 
   recordFirstmateThreadAnswer(cardId: string, text: string): boolean {
@@ -6492,7 +6550,7 @@ export class CrewSupervisor {
       ...(machine === LOCAL_MACHINE_ID && this.options.probeTypeface
         ? { probeTypeface: this.options.probeTypeface }
         : {}),
-      onCard: (card) => this.addCrewmateCard(task, card),
+      onCard: (card) => this.crewmateCardWrite(task, card),
       onCardRefused: (refusal) => this.recordCardRefusal(task, refusal),
       onCloseCard: (input) =>
         this.closeCard(input.cardId, { kind: "crewmate", taskId: task.id }, input.reason),
@@ -6501,6 +6559,11 @@ export class CrewSupervisor {
       onReport: (text, summary, declared) =>
         this.recordReportFromSession(task, text, summary, declared),
       onReply: (input) => this.cards.replyFromCrewmate(task.id, input),
+      onReviseRequiredAction: (input) =>
+        cardMutationText(
+          this.cards.reviseRequiredAction({ actor: "crewmate", taskId: task.id }, input),
+        ),
+      onReadCard: (cardId) => this.readCard(cardId),
       onQueryTasks: (input) => this.queryTasks(input),
       ...this.knowledgeHooks(task, machine),
       ...this.panelToolHooks(task, personal),
@@ -7367,6 +7430,19 @@ export class CrewSupervisor {
     });
   }
 
+  /** What another writer already answered of the thread replies these rows carry. */
+  private answeredWhileQueued(inboxIds: readonly number[]): string[] {
+    return inboxIds.flatMap((id) => {
+      const facts = this.options.inbox.get(id)?.facts;
+      if (facts?.kind !== "thread-reply" || facts.card.messageId === undefined) return [];
+      const line = this.cards.answeredByContributor(facts.card.id, facts.card.messageId);
+      if (!line?.contributor) return [];
+      return [
+        `On card "${facts.card.title}" (${facts.card.id}), ${line.contributor.label} already answered the captain's message ${facts.card.messageId} (message ${line.id}): "${line.text}" Do not answer it again; write on its thread only with something new, as a comment.`,
+      ];
+    });
+  }
+
   /** A spawn that failed before the crewmate ran leaves nothing behind. */
   private async cleanupFailedSpawn(task: TaskRuntime): Promise<void> {
     await task.unsubscribe?.();
@@ -7399,6 +7475,9 @@ export class CrewSupervisor {
     // computer starts it once however often it is asked.
     const order = laneOrder(ids);
     let served = leading.length > 0 ? `${laneTurnText(leading)}\n\n${text}` : text;
+    // A captain question someone else answered while this steer waited is
+    // told now, so its answerer does not answer it twice ("Shared cards").
+    for (const answered of this.answeredWhileQueued(inboxIds)) served += `\n\n${answered}`;
     try {
       // The one place a crewmate is told its project's directions: the
       // brief holds none, so a first turn carries them once, and a brief
@@ -10729,6 +10808,71 @@ export class CrewSupervisor {
    * stays synchronous whenever the gate does not apply, which is what most
    * of this file's tests exercise.
    */
+  /**
+   * A crewmate's emit_card: its own card as ever, or a contribution to
+   * someone else's (docs/card-threads.md, "Shared cards"), which keeps that
+   * card's author, task and answerer and returns the typed result of what
+   * the host saved. A card id the record lacks outside the crewmate's own
+   * namespace is refused, never filed as a new card.
+   */
+  private crewmateCardWrite(
+    task: TaskRuntime,
+    input: DeclaredCardInput,
+  ): string | CardMutation | Promise<string> {
+    const caller: CardCaller = { actor: "crewmate", taskId: task.id };
+    const target = this.cards.targetOf(caller, input.id);
+    // A computer from before shared cards would read the typed result as
+    // its own card shown: it is refused before anything is written.
+    const machine = this.machineOf(task.id);
+    if (
+      target.kind !== "new" &&
+      target.kind !== "own" &&
+      machine !== LOCAL_MACHINE_ID &&
+      !this.options.machines?.takesSharedCards?.(machine)
+    ) {
+      const why = `card ${target.id} is not this task's, and ${this.options.machines?.placeOf(machine).who ?? "the computer this task runs on"} runs an older Infinitary that cannot write on someone else's card. Nothing was written; reply on it or report the gap to the first mate.`;
+      throw new CardRefusedError(`Card refused: ${why}`, "other", why);
+    }
+    if (target.kind === "new" || target.kind === "own") {
+      if (input.expectedRevision !== undefined) {
+        const own = target.kind === "own" ? this.cards.cardRead(target.id) : undefined;
+        if (own && own.revision !== input.expectedRevision)
+          throw new Error(
+            `Nothing changed on card "${own.title}" (${own.id}): you read revision ${input.expectedRevision}, and it is at ${own.revision ?? "none"} now. Read it again before revising it.`,
+          );
+      }
+      return this.addCrewmateCard(task, input);
+    }
+    const unlabeled = input.actions.find((action) => !action.label?.trim());
+    if (unlabeled)
+      return cardRefusedMutation(
+        this.cards,
+        caller,
+        target.id,
+        `choice "${unlabeled.id}" needs its label.`,
+      );
+    const actions = input.actions.map((action) => ({ ...action, label: action.label ?? "" }));
+    return this.cards.contribute(
+      caller,
+      { ...input, actions },
+      {
+        ...(input.expectedRevision !== undefined
+          ? { expectedRevision: input.expectedRevision }
+          : {}),
+        ...(input.contributionReason ? { reason: input.contributionReason } : {}),
+        ...(input.operationId ? { operationId: input.operationId } : {}),
+        ...(input.answersMessage !== undefined ? { answersMessage: input.answersMessage } : {}),
+      },
+    );
+  }
+
+  /** One card as it stands, for a writer about to revise or answer it. */
+  readCard(cardId: string): string {
+    const read = this.cards.cardRead(cardId.trim());
+    if (!read) return `No card "${cardId.trim()}" is on the record. Read the id again.`;
+    return JSON.stringify(read, null, 2);
+  }
+
   private addCrewmateCard(
     task: TaskRuntime,
     input: DeclaredCardInput,
@@ -11698,7 +11842,7 @@ export class CrewSupervisor {
    */
   private waitingReplyNote(taskId: string): string {
     return this.cards.threadAwaitingAuthor(taskId)
-      ? " The captain's reply in your card's thread is still unanswered: answer it now with reply, in one line saying what you did and who goes next, and update the card once the proposed change can be read."
+      ? " The captain's reply in your card's thread is still unanswered: answer it now with reply, in one line saying what you did and who goes next, naming their message in answers_message, and update the card once the proposed change can be read."
       : "";
   }
 
@@ -11789,7 +11933,13 @@ export class CrewSupervisor {
     // thread or the lane records it (the Firstmate's own turn keeps its own).
     const kept =
       hasImages && !toFirstmate && card.taskId ? keepImages(randomUUID(), images ?? []) : undefined;
-    this.cards.addMessage(id, "captain", shown || "sent a picture", submission, answers);
+    const asked = this.cards.addMessage(
+      id,
+      "captain",
+      shown || "sent a picture",
+      submission,
+      answers,
+    );
     if (toFirstmate) {
       this.hooks.converseAboutCard?.(
         id,
@@ -11811,7 +11961,12 @@ export class CrewSupervisor {
       const reply: TypedWake = {
         facts: {
           kind: "thread-reply",
-          card: { id: card.id, title: card.title },
+          card: {
+            id: card.id,
+            title: card.title,
+            messageId: asked.id,
+            ...(card.lifecycleId ? { lifecycle: card.lifecycleId } : {}),
+          },
           words: text,
           answers,
         },
@@ -14093,6 +14248,36 @@ export class CrewSupervisor {
       );
     }
     return receipt.join(" ");
+  }
+
+  /**
+   * A response a card line carries (docs/card-threads.md, "Shared cards"):
+   * its request is live, a request about a card names this card's current
+   * lifecycle, and an answer names the captain message the request is
+   * about. An identity already saved is refused: a correction is a new one.
+   * Nothing is written here; a refusal changes nothing.
+   */
+  private checkCardResponse(
+    response: CrewResponse,
+    card: { id: string; lifecycleId?: string; messageId?: number },
+  ): void {
+    const parsed = crewResponseSchema.parse(response);
+    const request = this.options.inbox.responseRequest(parsed.requestId);
+    if (!request) throw new Error(`there is no response request ${parsed.requestId}.`);
+    if (request.state === "cancelled") throw new Error("that response request was cancelled.");
+    if (this.options.inbox.savedResponse(parsed.responseId))
+      throw new Error(
+        `response ${parsed.responseId} is already saved; a corrected answer needs a new response identity.`,
+      );
+    if (!request.card) return;
+    if (request.card.id !== card.id || request.card.lifecycle !== card.lifecycleId)
+      throw new Error(
+        `request ${request.id} is about card ${request.card.id} in lifecycle ${request.card.lifecycle}; answer it there.`,
+      );
+    if (parsed.status === "answered" && card.messageId !== request.card.messageId)
+      throw new Error(
+        `request ${request.id} asks about the captain's message ${request.card.messageId}; name it in answers_message.`,
+      );
   }
 
   /** A response's optional captain reference is factual routing, never edit authority. */
@@ -17198,4 +17383,24 @@ function warnMove(caught: unknown): void {
 
 function messageOf(caught: unknown): string {
   return caught instanceof Error ? caught.message : String(caught);
+}
+
+/** A contribution refused before it reached the card's writer, in its typed shape. */
+function cardRefusedMutation(
+  cards: CardService,
+  caller: CardCaller,
+  cardId: string,
+  refusal: string,
+): CardMutation {
+  const read = cards.cardRead(cardId);
+  return {
+    effect: "refused",
+    cardId,
+    ...(read?.title ? { title: read.title } : {}),
+    ...(read?.lifecycle ? { lifecycleId: read.lifecycle } : {}),
+    ...(read?.revision ? { revision: read.revision } : {}),
+    contributor: cards.contributorOf(caller),
+    display: "available",
+    refusal,
+  };
 }

@@ -269,7 +269,7 @@ There is no one-card-per-topic cap - several open decisions on one task are legi
 - App-raised singletons (`card-fm-auth`, flagship quota cards) are only overwritten when the id matches that singleton.
 
 Every emitter sees what is on screen: the first mate's context lists every open card, and a crewmate's report wake names its cards.
-On a task whose crewmate already has a card open, the first mate's `emit_card` is refused with "steer the crewmate to revise card X (same id)" - it adds to the crewmate's card through the crewmate, never beside it.
+On a task whose crewmate already has a card open, the first mate's new `emit_card` is refused with "write on that card instead of a second one beside it": it reads that card with `tasks card` and writes on it under its id, never beside it (`docs/card-threads.md`, "Shared cards").
 
 When the captain says a card repeats an earlier one, the first mate's `flag_duplicate` stamps `duplicate_of`, `duplicate_note`, and `duplicate_at` on the card, closes it, and writes one feed line.
 It has no user surface; the label feeds the duplicate metric.
@@ -723,6 +723,7 @@ So the card carries the answer itself rather than a pointer to it: a builder spa
 Every card is the head of a thread with its AUTHOR (`docs/card-threads.md`).
 `CARD_REPLY` is the third constant in `cardContract.ts` and the third thing every persona includes exactly once: revise the card when the captain's words change what it should say (same id), answer in prose when nothing on it changes, and a reply is prose only and resolves nothing.
 A crewmate's `reply(card_id, text)` is the prose half; `emit_card` under the same id is the other, and the host puts one "revised: …" line in the thread when it lands.
+Any first mate or crewmate may also write on a card it did not author, as itself (`docs/card-threads.md`, "Shared cards"): it reads the card with `tasks card`, revises it with `emit_card` and `expected_revision` or writes a reply alone, and its line ends a captain question only when `answers_message` names it, as the answerer's own line does.
 
 ## Closing a card
 
@@ -1022,6 +1023,7 @@ The Mac stack and pager omit minimized cards, and so does the phone's stack, whi
 Every Mac showing this first mate shares that fact, including after a restart.
 A crewmate's revision or answer brings the card back unread when that crewmate's turn ends, never at a report mid-turn (INF-926); the first mate's own answer brings it back at once.
 It comes back the same way when the captain put it aside after that write, while the stage still showed the earlier version (INF-1472).
+While the captain's question waits, a line or a revision's `reply` that names no message leaves the card aside, so it comes back with the answer (INF-1623; the captain's "a handoff stays open").
 Task records, past cards, the task board, browser views and crewmate views keep Hide and have no Put aside.
 
 The renderer keeps answers and reply drafts in their existing in-session stores while a card is minimized.

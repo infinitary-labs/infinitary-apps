@@ -33,6 +33,17 @@ enum PhoneCardWords {
     }
     static func newCount(_ count: Int) -> String { "\(count) new" }
     static func threadCount(_ count: Int) -> String { "thread · \(count)" }
+    /** Who really wrote a thread line, and whether it came after the card closed ("Shared cards"). */
+    static func contributor(host: Bool, label: String?, clarification: Bool) -> String {
+        switch (host, label, clarification) {
+        case (true, let label?, false): "Revised by \(label)"
+        case (true, let label?, true): "Revised by \(label), after the card closed"
+        case (false, let label?, false): "Written by \(label)"
+        case (false, let label?, true): "Written by \(label), after the card closed"
+        case (_, nil, true): "Written after the card closed"
+        default: ""
+        }
+    }
     static func closeRest(_ key: String?) -> String {
         guard let key else { return "Close · stays readable in Tasks" }
         return "Close · stays on \(key)'s record"

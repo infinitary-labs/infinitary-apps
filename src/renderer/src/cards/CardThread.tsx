@@ -44,6 +44,7 @@ import { RevisionLinks } from "./RevisionNavigation";
 import { useMessageEntrance, useWorkingEntrance } from "./SurfaceReveal";
 import { KeyedText } from "./TaskKey";
 import {
+  contributorWords,
   messageCountWords,
   settingsCountWords,
   THREAD_CARD,
@@ -857,6 +858,18 @@ function Message({ message, own }: { message: CardMessage; own: string | undefin
             {timeOf(message.at)}
           </span>
         </span>
+        {message.contributor || message.clarification ? (
+          <span
+            data-thread-contributor=""
+            style={{ fontSize: "var(--text-xs)", color: "var(--fg-3)" }}
+          >
+            {contributorWords({
+              host,
+              ...(message.contributor ? { label: message.contributor.label } : {}),
+              ...(message.clarification ? { clarification: true } : {}),
+            })}
+          </span>
+        ) : null}
         {message.who === "host" && <RevisionLinks message={message} />}
         {message.who === "captain" && message.answers?.length ? (
           <ReplySettings answers={message.answers} at={message.at} />

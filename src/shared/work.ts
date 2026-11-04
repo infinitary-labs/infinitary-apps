@@ -1,6 +1,11 @@
 import { z } from "zod";
 import { CARD_MEDIA_KINDS, CARD_MEDIA_PIECE_BYTES, CARD_TYPEFACE_KINDS } from "./cardPictures";
-import { cardEffectSchema, cardPictureSchema, riskDeclarationSchema } from "./cards";
+import {
+  cardEffectSchema,
+  cardMutationSchema,
+  cardPictureSchema,
+  riskDeclarationSchema,
+} from "./cards";
 import { openChangeInputSchema, stagedChangePresentationSchema } from "./changePresentation";
 import {
   CHECK_DECLARATION_VERDICTS,
@@ -18,7 +23,7 @@ import {
 } from "./placement";
 import { reasoningSchema } from "./reasoning";
 import { keptRecoveryWaySchema, workWaitSchema } from "./recovery";
-import { requiredActionsSchema } from "./requiredActions";
+import { requiredActionRevisionInputSchema, requiredActionsSchema } from "./requiredActions";
 import { runbookSkillFilesSchema } from "./runbooks";
 import { sourceIdentitySchema } from "./selfSource";
 import {
@@ -355,6 +360,11 @@ export const placedCardSchema = z.object({
   continues: z.boolean().optional(),
   /** It answers the captain's message it is about (INF-1610, `Card.answering`). */
   answering: z.boolean().optional(),
+  /** A write on someone else's card (`shared-cards.md`); an older home drops them. */
+  expectedRevision: z.string().optional(),
+  contributionReason: z.string().optional(),
+  operationId: z.string().optional(),
+  answersMessage: z.number().int().optional(),
   /** The label of the card's door to its task's browser, from a crewmate whose task has one there. */
   browserButton: z.string().optional(),
   /** Its request that the captain take its browser over (docs/task-browser.md, "Asking for help"). */
@@ -380,7 +390,12 @@ const cardRefusalReasonSchema = z.enum(["checks", "ci-cap", "review", "shape", "
 
 /** A card answer: shown, or refused with the typed reason a completion card's refusal keeps. */
 export const placedCardAnswerSchema = z.union([
-  z.object({ shown: z.literal(true), cardId: z.string().optional() }),
+  z.object({
+    shown: z.literal(true),
+    cardId: z.string().optional(),
+    /** What a write on someone else's card did (`shared-cards.md`). */
+    mutation: cardMutationSchema.optional(),
+  }),
   z.object({
     refused: z.object({ message: z.string(), reason: cardRefusalReasonSchema, why: z.string() }),
   }),
@@ -626,7 +641,27 @@ export const workRequests = {
   "inf:work:reply": {
     effect: "change",
     /** `interim` marks a still-working line. */
-    request: asked({ cardId: z.string(), text: z.string(), interim: z.boolean().optional() }),
+    request: asked({
+      cardId: z.string(),
+      text: z.string(),
+      interim: z.boolean().optional(),
+      /** `shared-cards.md`: the captain message it answers, its operation and response. */
+      answersMessage: z.number().int().optional(),
+      operationId: z.string().optional(),
+      response: crewResponseSchema.optional(),
+    }),
+    response: toolTextSchema,
+  },
+  /** Correct a required action's words (`shared-cards.md`); an older home lacks it. */
+  "inf:work:revise-required-action": {
+    effect: "change",
+    request: asked({ input: requiredActionRevisionInputSchema }),
+    response: toolTextSchema,
+  },
+  /** Read one card before revising or answering it (`shared-cards.md`); an older home lacks it. */
+  "inf:work:read-card": {
+    effect: "read",
+    request: asked({ cardId: z.string().min(1) }),
     response: toolTextSchema,
   },
   "inf:work:speed-note": {

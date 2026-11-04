@@ -3065,6 +3065,12 @@ export const invokeContract = {
   "inf:work:progress": { ...workRequests["inf:work:progress"], surface: "core", reach: "work" },
   "inf:work:report": { ...workRequests["inf:work:report"], surface: "core", reach: "work" },
   "inf:work:reply": { ...workRequests["inf:work:reply"], surface: "core", reach: "work" },
+  "inf:work:revise-required-action": {
+    ...workRequests["inf:work:revise-required-action"],
+    surface: "core",
+    reach: "work",
+  },
+  "inf:work:read-card": { ...workRequests["inf:work:read-card"], surface: "core", reach: "work" },
   "inf:work:speed-note": { ...workRequests["inf:work:speed-note"], surface: "core", reach: "work" },
   "inf:work:speed": { ...workRequests["inf:work:speed"], surface: "core", reach: "work" },
   "inf:work:tasks": { ...workRequests["inf:work:tasks"], surface: "core", reach: "work" },

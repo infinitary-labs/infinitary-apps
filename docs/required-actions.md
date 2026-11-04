@@ -56,6 +56,28 @@ An explicit drop records cancellation separately and does not complete dependent
 `update_task correct_required_action` reopens a mistaken confirmation while preserving its history; it does not reverse work already continued.
 Ordinary crewmate continuation tasks remain separate.
 
+## Correcting the words
+
+A required action's words can be wrong: DOP-217 named a remover the captain could not find, and the crewmate that knew the right path had no way to say it on the card.
+The captain approved that the words stay correctable, with who corrected them and why (INF-2214, built by INF-2225).
+
+The first mate corrects them with `update_task revise_required_action`, a crewmate with its own `revise_required_action` output, and both go through `CardService.reviseRequiredAction` to `TaskService.reviseRequiredAction`.
+The writer names the requirement by its source task and action id, the generation it read, only the fields it changes, a reason, a stable operation id, and `same_action` true, declaring it is still the same intended action.
+Only the title, consequence, instructions and criterion change, and only on that requirement.
+Its target, ids, source filing, prerequisites and completion mode stay, as do the other requirements of a shared action, its state (blocked, ready or deferred) and its card's thread.
+A different action is a cancellation and a new declaration instead.
+
+A real change moves the generation by one, so a confirmation offered for the older words no longer completes the action.
+The words already say what they said, and the generation stays.
+The correction is kept on its requirement, with the words it replaced, who made it, when, why and the generation it made, and a task timeline line names it.
+The same operation id answers its earlier correction again and writes nothing new.
+A stale generation, a different action, an unknown requirement, words that do not fit a required action, and a completed, checked or cancelled action are refused, and nothing is written.
+
+A card on the stack shows the new words and generation at once, with a host line in its thread naming who corrected it.
+Under each requirement the card says where it came from and every correction in its small print: "Filed from …", then "Corrected by …: why".
+The writer verifies the right words itself on the target first, and never asks the captain to find them.
+`correct_required_action` stays separate: it reopens a mistaken confirmation, while a correction of the words reopens nothing.
+
 ## Observed completion
 
 The supported observation is `device-version`: stable device ID, minimum app version and work compatibility.

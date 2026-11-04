@@ -31,7 +31,7 @@ Derived reads: `flagsOf` (`blocked`, `held`, `ready`, `deadBlocker`), `relations
 Typed results: `resultSchemaRefusal` and `resultRefusal` in [`../src/core/tasks/taskResult.ts`](../src/core/tasks/taskResult.ts).
 Reports and results as entries: `reportEntryOf` and `latestResultOf` in [`../src/core/tasks/reportEntry.ts`](../src/core/tasks/reportEntry.ts); one task's entries from every owner, read only: `TaskTimeline` in [`../src/core/tasks/taskTimeline.ts`](../src/core/tasks/taskTimeline.ts), its shape in [`../src/shared/timeline.ts`](../src/shared/timeline.ts).
 Settling and its refusals: `SettleService` ([`../src/core/orchestrator/settleService.ts`](../src/core/orchestrator/settleService.ts)), returning a structured `SettleRefusal`.
-Agent tools: the first mate's `create_task`, `update_task`, `link_tasks` and `tasks` in [`../src/core/pi/taskTools.ts`](../src/core/pi/taskTools.ts); the crewmate's `file_followup`, `note_progress` and read-only `tasks` in [`../src/core/pi/crewmateTaskTools.ts`](../src/core/pi/crewmateTaskTools.ts) and [`../src/core/claude/claudeTaskTools.ts`](../src/core/claude/claudeTaskTools.ts).
+Agent tools: the first mate's `create_task`, `update_task`, `link_tasks` and `tasks` in [`../src/core/pi/taskTools.ts`](../src/core/pi/taskTools.ts); the crewmate's `file_followup`, `note_progress`, `revise_required_action` and read-only `tasks` in [`../src/core/pi/crewmateTaskTools.ts`](../src/core/pi/crewmateTaskTools.ts) and [`../src/core/claude/claudeTaskTools.ts`](../src/core/claude/claudeTaskTools.ts).
 
 ## Operations and lifecycle
 
@@ -80,6 +80,7 @@ Overriding a soft hold needs the captain's words in that turn.
 - A `Continue: …` filing waits on its origin through a `blocks` edge set from origin to continuation before it is made `when-ready`.
 - Cards with actions hold their task through the `captain` gate ([cards-and-consent.md](cards-and-consent.md)).
 - Captain-owned required actions are durable operation records whose prerequisites are ordinary `blocks` links ([required actions](../docs/required-actions.md)).
+  Their words change only through `TaskService.reviseRequiredAction`, which moves the requirement's generation and refuses a completed action ([required actions](../docs/required-actions.md), "Correcting the words").
 
 ## Failure and recovery
 

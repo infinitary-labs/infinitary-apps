@@ -1,0 +1,18 @@
+{
+  "entries": [
+    {
+      "id": "shared-cards",
+      "kind": "feature",
+      "area": "cards",
+      "title": "Any crewmate can correct or answer a card",
+      "body": "When a card says something wrong, such as the path in a step you are asked to do, the crewmate that knows the right words, or your first mate, can now correct the card or answer under it, even when the card is not its own. The thread says who wrote each line that is not the card's own, and a corrected step says who corrected it and why. Your replies still go to the card's own crewmate, and nothing is run or completed for you.",
+      "picture": {
+        "dark": "shared-cards-dark.webp",
+        "light": "shared-cards-light.webp",
+        "alt": "A card asking you to remove a job host from a PC, its step corrected to the remover's real path with Corrected by the crewmate on DOP-217 below it, and the thread marking the crewmate's answer as Written by the crewmate on DOP-217."
+      },
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

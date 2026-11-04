@@ -9961,6 +9961,41 @@
                         "targets"
                       ]
                     },
+                    "contributor": {
+                      "type": "object",
+                      "properties": {
+                        "actor": {
+                          "type": "string",
+                          "enum": [
+                            "crewmate",
+                            "firstmate"
+                          ]
+                        },
+                        "taskId": {
+                          "type": "string",
+                          "minLength": 1,
+                          "maxLength": 64
+                        },
+                        "label": {
+                          "type": "string",
+                          "minLength": 1,
+                          "maxLength": 160
+                        }
+                      },
+                      "required": [
+                        "actor",
+                        "label"
+                      ]
+                    },
+                    "answersMessage": {
+                      "type": "integer",
+                      "exclusiveMinimum": 0,
+                      "maximum": 9007199254740991
+                    },
+                    "clarification": {
+                      "type": "boolean",
+                      "const": true
+                    },
                     "id": {
                       "type": "number"
                     },
@@ -10297,6 +10332,41 @@
                     "offerId",
                     "targets"
                   ]
+                },
+                "contributor": {
+                  "type": "object",
+                  "properties": {
+                    "actor": {
+                      "type": "string",
+                      "enum": [
+                        "crewmate",
+                        "firstmate"
+                      ]
+                    },
+                    "taskId": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 64
+                    },
+                    "label": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 160
+                    }
+                  },
+                  "required": [
+                    "actor",
+                    "label"
+                  ]
+                },
+                "answersMessage": {
+                  "type": "integer",
+                  "exclusiveMinimum": 0,
+                  "maximum": 9007199254740991
+                },
+                "clarification": {
+                  "type": "boolean",
+                  "const": true
                 },
                 "id": {
                   "type": "number"
@@ -11118,6 +11188,41 @@
                         "targets"
                       ]
                     },
+                    "contributor": {
+                      "type": "object",
+                      "properties": {
+                        "actor": {
+                          "type": "string",
+                          "enum": [
+                            "crewmate",
+                            "firstmate"
+                          ]
+                        },
+                        "taskId": {
+                          "type": "string",
+                          "minLength": 1,
+                          "maxLength": 64
+                        },
+                        "label": {
+                          "type": "string",
+                          "minLength": 1,
+                          "maxLength": 160
+                        }
+                      },
+                      "required": [
+                        "actor",
+                        "label"
+                      ]
+                    },
+                    "answersMessage": {
+                      "type": "integer",
+                      "exclusiveMinimum": 0,
+                      "maximum": 9007199254740991
+                    },
+                    "clarification": {
+                      "type": "boolean",
+                      "const": true
+                    },
                     "id": {
                       "type": "number"
                     },
@@ -11826,6 +11931,41 @@
                     "targets"
                   ]
                 },
+                "contributor": {
+                  "type": "object",
+                  "properties": {
+                    "actor": {
+                      "type": "string",
+                      "enum": [
+                        "crewmate",
+                        "firstmate"
+                      ]
+                    },
+                    "taskId": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 64
+                    },
+                    "label": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 160
+                    }
+                  },
+                  "required": [
+                    "actor",
+                    "label"
+                  ]
+                },
+                "answersMessage": {
+                  "type": "integer",
+                  "exclusiveMinimum": 0,
+                  "maximum": 9007199254740991
+                },
+                "clarification": {
+                  "type": "boolean",
+                  "const": true
+                },
                 "id": {
                   "type": "number"
                 },
@@ -12229,6 +12369,41 @@
                     "offerId",
                     "targets"
                   ]
+                },
+                "contributor": {
+                  "type": "object",
+                  "properties": {
+                    "actor": {
+                      "type": "string",
+                      "enum": [
+                        "crewmate",
+                        "firstmate"
+                      ]
+                    },
+                    "taskId": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 64
+                    },
+                    "label": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 160
+                    }
+                  },
+                  "required": [
+                    "actor",
+                    "label"
+                  ]
+                },
+                "answersMessage": {
+                  "type": "integer",
+                  "exclusiveMinimum": 0,
+                  "maximum": 9007199254740991
+                },
+                "clarification": {
+                  "type": "boolean",
+                  "const": true
                 },
                 "id": {
                   "type": "number"
@@ -27008,6 +27183,86 @@
                                       "prerequisites",
                                       "completion"
                                     ]
+                                  },
+                                  "corrections": {
+                                    "type": "array",
+                                    "items": {
+                                      "type": "object",
+                                      "properties": {
+                                        "operationId": {
+                                          "type": "string",
+                                          "minLength": 1,
+                                          "maxLength": 128
+                                        },
+                                        "actor": {
+                                          "type": "string",
+                                          "enum": [
+                                            "crewmate",
+                                            "firstmate"
+                                          ]
+                                        },
+                                        "taskId": {
+                                          "type": "string"
+                                        },
+                                        "label": {
+                                          "type": "string",
+                                          "minLength": 1,
+                                          "maxLength": 160
+                                        },
+                                        "at": {
+                                          "type": "number"
+                                        },
+                                        "reason": {
+                                          "type": "string",
+                                          "minLength": 1,
+                                          "maxLength": 500
+                                        },
+                                        "generation": {
+                                          "type": "integer",
+                                          "exclusiveMinimum": 0,
+                                          "maximum": 9007199254740991
+                                        },
+                                        "previous": {
+                                          "type": "object",
+                                          "properties": {
+                                            "title": {
+                                              "type": "string",
+                                              "minLength": 1,
+                                              "maxLength": 200
+                                            },
+                                            "consequence": {
+                                              "type": "string",
+                                              "minLength": 1,
+                                              "maxLength": 500
+                                            },
+                                            "instructions": {
+                                              "minItems": 1,
+                                              "maxItems": 20,
+                                              "type": "array",
+                                              "items": {
+                                                "type": "string",
+                                                "minLength": 1,
+                                                "maxLength": 2000
+                                              }
+                                            },
+                                            "criterion": {
+                                              "type": "string",
+                                              "minLength": 1,
+                                              "maxLength": 1000
+                                            }
+                                          }
+                                        }
+                                      },
+                                      "required": [
+                                        "operationId",
+                                        "actor",
+                                        "label",
+                                        "at",
+                                        "reason",
+                                        "generation",
+                                        "previous"
+                                      ]
+                                    }
                                   }
                                 },
                                 "required": [
@@ -28535,6 +28790,86 @@
                                 "prerequisites",
                                 "completion"
                               ]
+                            },
+                            "corrections": {
+                              "type": "array",
+                              "items": {
+                                "type": "object",
+                                "properties": {
+                                  "operationId": {
+                                    "type": "string",
+                                    "minLength": 1,
+                                    "maxLength": 128
+                                  },
+                                  "actor": {
+                                    "type": "string",
+                                    "enum": [
+                                      "crewmate",
+                                      "firstmate"
+                                    ]
+                                  },
+                                  "taskId": {
+                                    "type": "string"
+                                  },
+                                  "label": {
+                                    "type": "string",
+                                    "minLength": 1,
+                                    "maxLength": 160
+                                  },
+                                  "at": {
+                                    "type": "number"
+                                  },
+                                  "reason": {
+                                    "type": "string",
+                                    "minLength": 1,
+                                    "maxLength": 500
+                                  },
+                                  "generation": {
+                                    "type": "integer",
+                                    "exclusiveMinimum": 0,
+                                    "maximum": 9007199254740991
+                                  },
+                                  "previous": {
+                                    "type": "object",
+                                    "properties": {
+                                      "title": {
+                                        "type": "string",
+                                        "minLength": 1,
+                                        "maxLength": 200
+                                      },
+                                      "consequence": {
+                                        "type": "string",
+                                        "minLength": 1,
+                                        "maxLength": 500
+                                      },
+                                      "instructions": {
+                                        "minItems": 1,
+                                        "maxItems": 20,
+                                        "type": "array",
+                                        "items": {
+                                          "type": "string",
+                                          "minLength": 1,
+                                          "maxLength": 2000
+                                        }
+                                      },
+                                      "criterion": {
+                                        "type": "string",
+                                        "minLength": 1,
+                                        "maxLength": 1000
+                                      }
+                                    }
+                                  }
+                                },
+                                "required": [
+                                  "operationId",
+                                  "actor",
+                                  "label",
+                                  "at",
+                                  "reason",
+                                  "generation",
+                                  "previous"
+                                ]
+                              }
                             }
                           },
                           "required": [
@@ -32971,6 +33306,86 @@
                                   "prerequisites",
                                   "completion"
                                 ]
+                              },
+                              "corrections": {
+                                "type": "array",
+                                "items": {
+                                  "type": "object",
+                                  "properties": {
+                                    "operationId": {
+                                      "type": "string",
+                                      "minLength": 1,
+                                      "maxLength": 128
+                                    },
+                                    "actor": {
+                                      "type": "string",
+                                      "enum": [
+                                        "crewmate",
+                                        "firstmate"
+                                      ]
+                                    },
+                                    "taskId": {
+                                      "type": "string"
+                                    },
+                                    "label": {
+                                      "type": "string",
+                                      "minLength": 1,
+                                      "maxLength": 160
+                                    },
+                                    "at": {
+                                      "type": "number"
+                                    },
+                                    "reason": {
+                                      "type": "string",
+                                      "minLength": 1,
+                                      "maxLength": 500
+                                    },
+                                    "generation": {
+                                      "type": "integer",
+                                      "exclusiveMinimum": 0,
+                                      "maximum": 9007199254740991
+                                    },
+                                    "previous": {
+                                      "type": "object",
+                                      "properties": {
+                                        "title": {
+                                          "type": "string",
+                                          "minLength": 1,
+                                          "maxLength": 200
+                                        },
+                                        "consequence": {
+                                          "type": "string",
+                                          "minLength": 1,
+                                          "maxLength": 500
+                                        },
+                                        "instructions": {
+                                          "minItems": 1,
+                                          "maxItems": 20,
+                                          "type": "array",
+                                          "items": {
+                                            "type": "string",
+                                            "minLength": 1,
+                                            "maxLength": 2000
+                                          }
+                                        },
+                                        "criterion": {
+                                          "type": "string",
+                                          "minLength": 1,
+                                          "maxLength": 1000
+                                        }
+                                      }
+                                    }
+                                  },
+                                  "required": [
+                                    "operationId",
+                                    "actor",
+                                    "label",
+                                    "at",
+                                    "reason",
+                                    "generation",
+                                    "previous"
+                                  ]
+                                }
                               }
                             },
                             "required": [
@@ -37968,6 +38383,41 @@
                           "offerId",
                           "targets"
                         ]
+                      },
+                      "contributor": {
+                        "type": "object",
+                        "properties": {
+                          "actor": {
+                            "type": "string",
+                            "enum": [
+                              "crewmate",
+                              "firstmate"
+                            ]
+                          },
+                          "taskId": {
+                            "type": "string",
+                            "minLength": 1,
+                            "maxLength": 64
+                          },
+                          "label": {
+                            "type": "string",
+                            "minLength": 1,
+                            "maxLength": 160
+                          }
+                        },
+                        "required": [
+                          "actor",
+                          "label"
+                        ]
+                      },
+                      "answersMessage": {
+                        "type": "integer",
+                        "exclusiveMinimum": 0,
+                        "maximum": 9007199254740991
+                      },
+                      "clarification": {
+                        "type": "boolean",
+                        "const": true
                       },
                       "id": {
                         "type": "number"
@@ -44711,6 +45161,20 @@
                   "answering": {
                     "type": "boolean"
                   },
+                  "expectedRevision": {
+                    "type": "string"
+                  },
+                  "contributionReason": {
+                    "type": "string"
+                  },
+                  "operationId": {
+                    "type": "string"
+                  },
+                  "answersMessage": {
+                    "type": "integer",
+                    "minimum": -9007199254740991,
+                    "maximum": 9007199254740991
+                  },
                   "browserButton": {
                     "type": "string"
                   },
@@ -44790,6 +45254,128 @@
               },
               "cardId": {
                 "type": "string"
+              },
+              "mutation": {
+                "type": "object",
+                "properties": {
+                  "effect": {
+                    "type": "string",
+                    "enum": [
+                      "created",
+                      "revised",
+                      "reply-only",
+                      "unchanged",
+                      "refused"
+                    ]
+                  },
+                  "cardId": {
+                    "type": "string"
+                  },
+                  "title": {
+                    "type": "string"
+                  },
+                  "lifecycleId": {
+                    "type": "string"
+                  },
+                  "revision": {
+                    "type": "string"
+                  },
+                  "generation": {
+                    "type": "integer",
+                    "minimum": -9007199254740991,
+                    "maximum": 9007199254740991
+                  },
+                  "contributor": {
+                    "type": "object",
+                    "properties": {
+                      "actor": {
+                        "type": "string",
+                        "enum": [
+                          "crewmate",
+                          "firstmate"
+                        ]
+                      },
+                      "taskId": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 64
+                      },
+                      "label": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 160
+                      }
+                    },
+                    "required": [
+                      "actor",
+                      "label"
+                    ]
+                  },
+                  "replyId": {
+                    "type": "integer",
+                    "minimum": -9007199254740991,
+                    "maximum": 9007199254740991
+                  },
+                  "answered": {
+                    "type": "integer",
+                    "minimum": -9007199254740991,
+                    "maximum": 9007199254740991
+                  },
+                  "alreadyAnswered": {
+                    "type": "object",
+                    "properties": {
+                      "messageId": {
+                        "type": "integer",
+                        "minimum": -9007199254740991,
+                        "maximum": 9007199254740991
+                      },
+                      "by": {
+                        "type": "string"
+                      },
+                      "text": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "messageId",
+                      "by",
+                      "text"
+                    ]
+                  },
+                  "clarification": {
+                    "type": "boolean",
+                    "const": true
+                  },
+                  "unchanged": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  },
+                  "display": {
+                    "type": "string",
+                    "enum": [
+                      "available",
+                      "held"
+                    ]
+                  },
+                  "responseId": {
+                    "type": "string"
+                  },
+                  "refusal": {
+                    "type": "string"
+                  },
+                  "repeated": {
+                    "type": "boolean",
+                    "const": true
+                  }
+                },
+                "required": [
+                  "effect",
+                  "cardId",
+                  "contributor",
+                  "display"
+                ]
               }
             },
             "required": [
@@ -46154,6 +46740,39 @@
               },
               "interim": {
                 "type": "boolean"
+              },
+              "answersMessage": {
+                "type": "integer",
+                "minimum": -9007199254740991,
+                "maximum": 9007199254740991
+              },
+              "operationId": {
+                "type": "string"
+              },
+              "response": {
+                "type": "object",
+                "properties": {
+                  "requestId": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "responseId": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "status": {
+                    "type": "string",
+                    "enum": [
+                      "answered",
+                      "not-yet-answered"
+                    ]
+                  }
+                },
+                "required": [
+                  "requestId",
+                  "responseId",
+                  "status"
+                ]
               }
             },
             "required": [
@@ -46161,6 +46780,170 @@
               "callId",
               "cardId",
               "text"
+            ]
+          }
+        ],
+        "minItems": 1,
+        "items": false
+      },
+      "response": {
+        "type": "object",
+        "properties": {
+          "text": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "text"
+        ]
+      }
+    },
+    "inf:work:revise-required-action": {
+      "effect": "change",
+      "reach": "work",
+      "request": {
+        "type": "array",
+        "prefixItems": [
+          {
+            "type": "object",
+            "properties": {
+              "task": {
+                "type": "string",
+                "pattern": "^[A-Za-z0-9_-]{1,64}$"
+              },
+              "callId": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 128
+              },
+              "input": {
+                "type": "object",
+                "properties": {
+                  "action": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 128
+                  },
+                  "source": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 64
+                  },
+                  "actionId": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 64
+                  },
+                  "expectedGeneration": {
+                    "type": "integer",
+                    "exclusiveMinimum": 0,
+                    "maximum": 9007199254740991
+                  },
+                  "patch": {
+                    "type": "object",
+                    "properties": {
+                      "title": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 200
+                      },
+                      "consequence": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 500
+                      },
+                      "instructions": {
+                        "minItems": 1,
+                        "maxItems": 20,
+                        "type": "array",
+                        "items": {
+                          "type": "string",
+                          "minLength": 1,
+                          "maxLength": 2000
+                        }
+                      },
+                      "criterion": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 1000
+                      }
+                    }
+                  },
+                  "reason": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 500
+                  },
+                  "operationId": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 128
+                  },
+                  "sameAction": {
+                    "type": "boolean"
+                  }
+                },
+                "required": [
+                  "action",
+                  "source",
+                  "actionId",
+                  "expectedGeneration",
+                  "patch",
+                  "reason",
+                  "operationId",
+                  "sameAction"
+                ]
+              }
+            },
+            "required": [
+              "task",
+              "callId",
+              "input"
+            ]
+          }
+        ],
+        "minItems": 1,
+        "items": false
+      },
+      "response": {
+        "type": "object",
+        "properties": {
+          "text": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "text"
+        ]
+      }
+    },
+    "inf:work:read-card": {
+      "effect": "read",
+      "reach": "work",
+      "request": {
+        "type": "array",
+        "prefixItems": [
+          {
+            "type": "object",
+            "properties": {
+              "task": {
+                "type": "string",
+                "pattern": "^[A-Za-z0-9_-]{1,64}$"
+              },
+              "callId": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 128
+              },
+              "cardId": {
+                "type": "string",
+                "minLength": 1
+              }
+            },
+            "required": [
+              "task",
+              "callId",
+              "cardId"
             ]
           }
         ],
@@ -54998,6 +55781,41 @@
                     "targets"
                   ]
                 },
+                "contributor": {
+                  "type": "object",
+                  "properties": {
+                    "actor": {
+                      "type": "string",
+                      "enum": [
+                        "crewmate",
+                        "firstmate"
+                      ]
+                    },
+                    "taskId": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 64
+                    },
+                    "label": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 160
+                    }
+                  },
+                  "required": [
+                    "actor",
+                    "label"
+                  ]
+                },
+                "answersMessage": {
+                  "type": "integer",
+                  "exclusiveMinimum": 0,
+                  "maximum": 9007199254740991
+                },
+                "clarification": {
+                  "type": "boolean",
+                  "const": true
+                },
                 "id": {
                   "type": "number"
                 },
@@ -55980,6 +56798,86 @@
                                       "prerequisites",
                                       "completion"
                                     ]
+                                  },
+                                  "corrections": {
+                                    "type": "array",
+                                    "items": {
+                                      "type": "object",
+                                      "properties": {
+                                        "operationId": {
+                                          "type": "string",
+                                          "minLength": 1,
+                                          "maxLength": 128
+                                        },
+                                        "actor": {
+                                          "type": "string",
+                                          "enum": [
+                                            "crewmate",
+                                            "firstmate"
+                                          ]
+                                        },
+                                        "taskId": {
+                                          "type": "string"
+                                        },
+                                        "label": {
+                                          "type": "string",
+                                          "minLength": 1,
+                                          "maxLength": 160
+                                        },
+                                        "at": {
+                                          "type": "number"
+                                        },
+                                        "reason": {
+                                          "type": "string",
+                                          "minLength": 1,
+                                          "maxLength": 500
+                                        },
+                                        "generation": {
+                                          "type": "integer",
+                                          "exclusiveMinimum": 0,
+                                          "maximum": 9007199254740991
+                                        },
+                                        "previous": {
+                                          "type": "object",
+                                          "properties": {
+                                            "title": {
+                                              "type": "string",
+                                              "minLength": 1,
+                                              "maxLength": 200
+                                            },
+                                            "consequence": {
+                                              "type": "string",
+                                              "minLength": 1,
+                                              "maxLength": 500
+                                            },
+                                            "instructions": {
+                                              "minItems": 1,
+                                              "maxItems": 20,
+                                              "type": "array",
+                                              "items": {
+                                                "type": "string",
+                                                "minLength": 1,
+                                                "maxLength": 2000
+                                              }
+                                            },
+                                            "criterion": {
+                                              "type": "string",
+                                              "minLength": 1,
+                                              "maxLength": 1000
+                                            }
+                                          }
+                                        }
+                                      },
+                                      "required": [
+                                        "operationId",
+                                        "actor",
+                                        "label",
+                                        "at",
+                                        "reason",
+                                        "generation",
+                                        "previous"
+                                      ]
+                                    }
                                   }
                                 },
                                 "required": [
@@ -57507,6 +58405,86 @@
                                       "prerequisites",
                                       "completion"
                                     ]
+                                  },
+                                  "corrections": {
+                                    "type": "array",
+                                    "items": {
+                                      "type": "object",
+                                      "properties": {
+                                        "operationId": {
+                                          "type": "string",
+                                          "minLength": 1,
+                                          "maxLength": 128
+                                        },
+                                        "actor": {
+                                          "type": "string",
+                                          "enum": [
+                                            "crewmate",
+                                            "firstmate"
+                                          ]
+                                        },
+                                        "taskId": {
+                                          "type": "string"
+                                        },
+                                        "label": {
+                                          "type": "string",
+                                          "minLength": 1,
+                                          "maxLength": 160
+                                        },
+                                        "at": {
+                                          "type": "number"
+                                        },
+                                        "reason": {
+                                          "type": "string",
+                                          "minLength": 1,
+                                          "maxLength": 500
+                                        },
+                                        "generation": {
+                                          "type": "integer",
+                                          "exclusiveMinimum": 0,
+                                          "maximum": 9007199254740991
+                                        },
+                                        "previous": {
+                                          "type": "object",
+                                          "properties": {
+                                            "title": {
+                                              "type": "string",
+                                              "minLength": 1,
+                                              "maxLength": 200
+                                            },
+                                            "consequence": {
+                                              "type": "string",
+                                              "minLength": 1,
+                                              "maxLength": 500
+                                            },
+                                            "instructions": {
+                                              "minItems": 1,
+                                              "maxItems": 20,
+                                              "type": "array",
+                                              "items": {
+                                                "type": "string",
+                                                "minLength": 1,
+                                                "maxLength": 2000
+                                              }
+                                            },
+                                            "criterion": {
+                                              "type": "string",
+                                              "minLength": 1,
+                                              "maxLength": 1000
+                                            }
+                                          }
+                                        }
+                                      },
+                                      "required": [
+                                        "operationId",
+                                        "actor",
+                                        "label",
+                                        "at",
+                                        "reason",
+                                        "generation",
+                                        "previous"
+                                      ]
+                                    }
                                   }
                                 },
                                 "required": [

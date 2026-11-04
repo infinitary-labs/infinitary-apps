@@ -3,6 +3,7 @@ import { HOME } from "@shared/deviceNames";
 import { HOLD_KINDS, isOverridable, type OverridableHold, overrideRefusal } from "@shared/holds";
 import { type ReasoningChoice, reasoningChoiceSchema } from "@shared/modelSlots";
 import type { PlacementRequirements } from "@shared/placement";
+import type { RequiredActionRevisionInput } from "@shared/requiredActions";
 import { CLASSIFIABLE_KINDS, type WorkShapeAsk } from "@shared/routingPolicy";
 import type { TaskPolicyEdits } from "@shared/taskPolicies";
 import { type Static, Type } from "typebox";
@@ -81,6 +82,8 @@ export type TaskToolsDelegate = {
   drop(input: { task: string; reason: string; confirm?: boolean; replacedBy?: string }): string;
   /** Withdraw the captain's kept merge approval on his words; the work stays (FI3-304). */
   withdrawMerge(input: { task: string }): string;
+  /** Correct a required action's words, keeping its filing (docs/required-actions.md). */
+  reviseRequiredAction?(input: RequiredActionRevisionInput): string;
   /**
    * Record the captain's override (docs/delivery-rigor.md, "The holds"):
    * his words from this turn, or from the message `from` cites - his reply
@@ -99,6 +102,8 @@ export type TaskToolsDelegate = {
   startNow(input: { task: string }): Promise<string>;
   startAgain(input: { task: string }): Promise<string>;
   link(input: { from: string; to: string; type: TaskLinkType; remove?: boolean }): string;
+  /** One card as it stands, before a revision or an answer on it (docs/card-threads.md). */
+  readCard?(cardId: string): string;
   query(input: TaskQueryInput): {
     rows: TaskQueryRow[];
     total: number;
@@ -250,7 +255,9 @@ export function createTaskTools(delegate: TaskToolsDelegate) {
       task: Type.String({ description: "The task id or key" }),
       title: Type.Optional(Type.String({ description: "As create_task's title." })),
       goal: Type.Optional(Type.String({ description: "New one-sentence goal" })),
-      priority: PRIORITY,
+      priority: Type.Optional(
+        Type.Integer({ minimum: 0, maximum: 3, description: "As create_task's priority." }),
+      ),
       // What each policy means is said once, on create_task's start_policy.
       start_policy: Type.Optional(
         stringEnum(START_POLICY_VALUES, {
@@ -340,12 +347,35 @@ export function createTaskTools(delegate: TaskToolsDelegate) {
       // What start_again and start_now do is said once, in the description above.
       start_again: Type.Optional(Type.Boolean()),
       start_now: Type.Optional(Type.Boolean()),
-      drop: Type.Optional(Type.Boolean({ description: "Close the task as dropped" })),
+      // The description says how to drop a task (drop true with reason), and the
+      // refusal says a drop needs its reason, so drop is served bare.
+      drop: Type.Optional(Type.Boolean()),
       correct_required_action: Type.Optional(
         Type.Boolean({
           description:
             "On the captain's words that they confirmed a required action by mistake: reopen its durable operation and preserve the confirmation history. This does not reverse work that already continued. Cancel an unneeded action with drop and reason, never confirm it.",
         }),
+      ),
+      revise_required_action: Type.Optional(
+        Type.Object(
+          {
+            source: Type.String(),
+            action_id: Type.String(),
+            expected_generation: Type.Integer({ minimum: 0 }),
+            patch: Type.Object({
+              title: Type.Optional(Type.String()),
+              consequence: Type.Optional(Type.String()),
+              instructions: Type.Optional(Type.Array(Type.String())),
+              criterion: Type.Optional(Type.String()),
+            }),
+            reason: Type.String(),
+            operation_id: Type.String(),
+            same_action: Type.Boolean(),
+          },
+          {
+            description: "Correct a required action's verified-wrong words; it reopens nothing.",
+          },
+        ),
       ),
       withdraw_merge: Type.Optional(
         Type.Boolean({
@@ -370,7 +400,7 @@ export function createTaskTools(delegate: TaskToolsDelegate) {
       reason: Type.Optional(
         Type.String({
           description:
-            "Why it is dropped (required with drop); for work another task did or holds, covered by its key. With start_policy on-request on started work, why it goes back to the backlog",
+            "Why it is dropped; for work another task did or holds, covered by its key. With start_policy on-request on started work, why it goes back to the backlog",
         }),
       ),
       confirm: Type.Optional(
@@ -409,6 +439,23 @@ export function createTaskTools(delegate: TaskToolsDelegate) {
         return { text: await delegate.startAgain({ task: params.task }) };
       }
       if (params.withdraw_merge) return { text: delegate.withdrawMerge({ task: params.task }) };
+      if (params.revise_required_action) {
+        const revision = params.revise_required_action;
+        if (!delegate.reviseRequiredAction)
+          return { text: "Required-action corrections are not available here." };
+        return {
+          text: delegate.reviseRequiredAction({
+            action: params.task,
+            source: revision.source,
+            actionId: revision.action_id,
+            expectedGeneration: revision.expected_generation,
+            patch: revision.patch,
+            reason: revision.reason,
+            operationId: revision.operation_id,
+            sameAction: revision.same_action,
+          }),
+        };
+      }
       if (params.override) {
         const { holds, until } = params.override;
         const refusal = overrideRefusal(holds);
@@ -524,7 +571,15 @@ export function createTaskTools(delegate: TaskToolsDelegate) {
     },
   });
 
-  return [create, update, link, createTasksQueryTool((input) => delegate.query(input))];
+  return [
+    create,
+    update,
+    link,
+    createTasksQueryTool(
+      (input) => delegate.query(input),
+      delegate.readCard ? (cardId) => delegate.readCard?.(cardId) ?? "" : undefined,
+    ),
+  ];
 }
 
 export const TASKS_QUERY_TOOL_NAME = "tasks";
@@ -541,6 +596,7 @@ export const TASKS_QUERY_TOOL_DESCRIPTION = [
   "Key reads: reports, cards, choices, brief, checks/reviews, sessions, earlier attempt. Timeline and exact sources only with field: timeline.",
   "Resolution is facts; HANDOFF governs authorization. History grants none; later reports preserve prior specs.",
   "Paging names remaining fields/lengths; identical card bodies appear once.",
+  "card alone reads one card.",
 ].join(" ");
 
 /**
@@ -777,6 +833,7 @@ const TASKS_QUERY_PARAMETERS = {
   text: Type.Optional(Type.String({ description: "Substring over title and goal" })),
   parent: Type.Optional(Type.String({ description: "List the children of this task" })),
   limit: Type.Optional(Type.Integer({ minimum: 1, maximum: 100 })),
+  card: Type.Optional(Type.String()),
 };
 
 const TASKS_QUERY_OBJECT = Type.Object(TASKS_QUERY_PARAMETERS);
@@ -813,7 +870,10 @@ function listCursor(next: string): { cut: string; skip: number } | undefined {
   return undefined;
 }
 
-function tasksQueryRun(onQueryTasks: NonNullable<CrewmateToolDelegate["onQueryTasks"]>) {
+function tasksQueryRun(
+  onQueryTasks: NonNullable<CrewmateToolDelegate["onQueryTasks"]>,
+  onReadCard?: CrewmateToolDelegate["onReadCard"],
+) {
   // Retain only this tool's most recent incomplete field read, by canonical id.
   // A new read supersedes the previous one; never combine pages from different cuts.
   const timelines = new Map<string, TaskQueryRow>();
@@ -836,6 +896,14 @@ function tasksQueryRun(onQueryTasks: NonNullable<CrewmateToolDelegate["onQueryTa
     },
     signal?: AbortSignal,
   ) => {
+    if (params.card !== undefined) {
+      // One card as it stands (docs/card-threads.md, "Shared cards").
+      const { card, ...rest } = params;
+      if (Object.values(rest).some((value) => value !== undefined))
+        return { text: "card reads one card alone; give it without other filters." };
+      if (!onReadCard) return { text: "Card reads are not available here." };
+      return { text: await callWithSignal(onReadCard, [card], signal) };
+    }
     if ((params.field !== undefined || params.offset !== undefined) && !params.key) {
       return { text: "field and offset apply only with a key." };
     }
@@ -972,7 +1040,7 @@ export const TASKS_QUERY_TOOL = crewmateTool({
     // A list's More line names `next` with its value, so it needs no description.
     next: Type.Optional(Type.String()),
   }),
-  bind: ({ onQueryTasks }) => onQueryTasks && tasksQueryRun(onQueryTasks),
+  bind: ({ onQueryTasks, onReadCard }) => onQueryTasks && tasksQueryRun(onQueryTasks, onReadCard),
 });
 
 /**
@@ -987,6 +1055,10 @@ export function createTasksQueryTool(
     projects?: TaskQueryProject[];
     order?: string[];
   },
+  readCard?: (cardId: string) => string,
 ) {
-  return bindTool(TASKS_QUERY_TOOL, { onQueryTasks: query });
+  return bindTool(TASKS_QUERY_TOOL, {
+    onQueryTasks: query,
+    ...(readCard ? { onReadCard: readCard } : {}),
+  });
 }

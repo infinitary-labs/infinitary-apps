@@ -38,6 +38,8 @@ export function crewmateToolDelegate(): Required<
     onProgress: answer("onProgress", "noted"),
     onReport: answer("onReport", "reported"),
     onReply: answer("onReply", "replied"),
+    onReviseRequiredAction: answer("onReviseRequiredAction", "corrected"),
+    onReadCard: answer("onReadCard", "read"),
     onQueryTasks: (input) => {
       calls.push({ callback: "onQueryTasks", input });
       return { rows: [], total: 0 };

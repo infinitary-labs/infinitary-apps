@@ -11,10 +11,12 @@ import {
   type CardAsked,
   type CardAwaiting,
   type CardChanges,
+  type CardContributor,
   type CardDecisionContext,
   type CardDisplay,
   type CardMessage,
   type CardMessageWho,
+  type CardMutation,
   type CardObservation,
   type CardObservationActor,
   type CardObservationPayload,
@@ -24,9 +26,11 @@ import {
   type CardThread,
   type CardWidth,
   cardAnswerLines,
+  cardMutationSchema,
   cardQuestionsBytes,
   cardQuestionsSchema,
   cardSubmissionSchema,
+  cardTakesReplies,
   cardWord,
   compareStack,
   FIRSTMATE_CARD_META,
@@ -38,11 +42,13 @@ import {
   type PastCard,
   settleEffectOf,
   splitSettleFacts,
+  takesFactStrip,
   takesTaskFacts,
   withMergeClosesLine,
 } from "@shared/cards";
 import { readyPresentation } from "@shared/changePresentation";
 import { NEEDS_REAUTH_CONSEQUENCE, restoreAccountEffect } from "@shared/credentialHealth";
+import type { CrewResponse } from "@shared/crewResponses";
 import { HERE } from "@shared/deviceNames";
 import {
   deviceForgeSignInBody,
@@ -58,6 +64,7 @@ import {
 } from "@shared/forges";
 import { INTEGRATIONS_WORDS } from "@shared/integrations";
 import { FIRSTMATE_SESSION_ID } from "@shared/observe";
+import type { RequiredActionText } from "@shared/requiredActions";
 import { MERGE_ANYWAY_WORDS } from "@shared/vocabulary";
 import { z } from "zod";
 import { parseStableCardId, resolveFirstmateCardId } from "../pi/cardTool";
@@ -72,8 +79,9 @@ import {
 import type { TaskOriginLine } from "../tasks/taskOrigin";
 import { TaskService } from "../tasks/taskService";
 import { cardChanges } from "./cardChanges";
+import { cardMutationText } from "./cardMutationText";
 import { resolveRevisionTargets, revisionLinks } from "./cardNavigation";
-import { requiredActionCard } from "./requiredActionCard";
+import { type RequiredActionProvenance, requiredActionCard } from "./requiredActionCard";
 import type { SeatPauseClass } from "./seat";
 import { type WakeCard, waitingCardWords } from "./wakes";
 
@@ -121,6 +129,46 @@ export type CardAuthorRef = { kind: "crewmate"; taskId: string } | { kind: "firs
  * ended every author's turn.
  */
 export type CloseOut = "report" | "idle" | "turn-end" | "restart";
+
+/**
+ * Who is writing on a card (docs/card-threads.md, "Shared cards"): the
+ * first mate, or a crewmate by its task. The host passes the caller it
+ * authenticated, never one an agent named.
+ */
+export type CardCaller = { actor: "firstmate" } | { actor: "crewmate"; taskId: string };
+
+/**
+ * What an emit's id names for its caller: no card yet (a new one in the
+ * caller's own namespace), one of the caller's own cards, someone else's
+ * open card, someone else's closed card, or a card id the record lacks.
+ */
+export type CardTarget =
+  | { kind: "new" }
+  | { kind: "own"; id: string }
+  | { kind: "foreign"; id: string; card: Card }
+  | { kind: "closed"; id: string; card: Card }
+  | { kind: "unknown"; id: string };
+
+/** A contribution's declared facts beside the card it writes (`shared-cards.md`). */
+export type CardContribution = {
+  /** The revision (offer id) the contributor read; a revision needs it. */
+  expectedRevision?: string;
+  reason?: string;
+  operationId?: string;
+  /** The captain message this contribution's reply answers. */
+  answersMessage?: number;
+};
+
+/** A thread line's facts beyond its words (`CardService.addMessage`). */
+type MessageFacts = {
+  contributor?: CardContributor;
+  answersMessage?: number;
+  clarification?: true;
+  responseId?: string;
+};
+
+/** What a reply alone keeps of its card, as its receipt names it. */
+const REPLY_FIELDS_KEPT = ["title", "body", "choices"];
 
 /**
  * Who owes the captain an answer on a card's thread now (docs/card-threads.md
@@ -185,6 +233,23 @@ export type CardServiceHost = {
   captainResponded?: (card: Card, response: "choice" | "close", action?: string) => void;
   /** The app build every observation is stamped with (docs/card-evidence.md). */
   build?: string;
+  /**
+   * A card answer carries a correlated response (INF-2222's one writer):
+   * check it names a live request, this card's lifecycle and the captain
+   * message the line answers, before anything is written; then save it in
+   * the same transaction as the line. Absent, a response is refused.
+   */
+  checkCardResponse?: (
+    taskId: string,
+    response: CrewResponse,
+    card: { id: string; lifecycleId?: string; messageId?: number },
+  ) => void;
+  submitCardResponse?: (
+    taskId: string,
+    response: CrewResponse,
+    text: string,
+    line: { cardId: string; messageId: number },
+  ) => void;
 };
 
 /**
@@ -321,6 +386,19 @@ export class CardService {
    * until the crewmate closes out. Memory only: a restart closes everyone out.
    */
   private readonly closedAwaitingAnswer = new Map<string, string>();
+  /**
+   * Cards holding a write from someone other than their author - a
+   * revision the stage holds back, or an answer it named - whose writer has
+   * not closed out since, by card, with that writer (`authorKey`) and the
+   * lifecycle written on: that writer's turn end releases what the card
+   * holds, never an unrelated turn of the card's own author. A card that
+   * left the stack comes back under a new lifecycle, which no writer holds.
+   * Memory only: a restart closes every author out.
+   */
+  private readonly contributedUntilCloseOut = new Map<
+    string,
+    { writer: string; lifecycleId: string }
+  >();
   private presentation = "";
   private readonly threadOffers = new Map<string, string | undefined>();
   private cardSeq = 0;
@@ -957,6 +1035,686 @@ export class CardService {
   }
 
   /**
+   * What an emit's id names for its caller (docs/card-threads.md, "Shared
+   * cards"): an exact existing card id wins before the caller's own
+   * prefixing, so a full id another agent read reaches that card; a card id
+   * the record lacks, outside the caller's own namespace, is an unknown
+   * target and never a new card.
+   */
+  targetOf(caller: CardCaller, rawId: string | undefined): CardTarget {
+    const id = rawId?.trim() ?? "";
+    if (!id) return { kind: "new" };
+    const card = this.cards.get(id) ?? this.host.cardStore.get(id);
+    if (card) {
+      if (ownedBy(card, caller)) return { kind: "own", id };
+      return this.cards.has(id) ? { kind: "foreign", id, card } : { kind: "closed", id, card };
+    }
+    const own =
+      caller.actor === "firstmate"
+        ? id.startsWith(FIRSTMATE_CARD_PREFIX)
+        : id.startsWith(`card-${caller.taskId}-`);
+    return id.startsWith("card-") && !own ? { kind: "unknown", id } : { kind: "new" };
+  }
+
+  /**
+   * The line someone other than the card's answerer wrote that answered
+   * this captain message, if one did: a queued answerer hears it instead of
+   * answering the same question again (docs/card-threads.md, "Shared cards").
+   */
+  answeredByContributor(cardId: string, messageId: number): CardMessage | undefined {
+    const line = this.host.cardStore.answerTo(cardId, messageId);
+    return line?.contributor ? line : undefined;
+  }
+
+  /** The host's words for a writer, the same on every view and receipt. */
+  contributorOf(caller: CardCaller): CardContributor {
+    if (caller.actor === "firstmate") return { actor: "firstmate", label: "your first mate" };
+    const key = this.host.tasks.get(caller.taskId)?.key || caller.taskId;
+    return { actor: "crewmate", taskId: caller.taskId, label: `the crewmate on ${key}` };
+  }
+
+  /**
+   * One card's current facts for a writer about to edit or answer it
+   * (read-before-edit): its revision and lifecycle, the captain question it
+   * waits on, its choices, words and thread with message ids, and for a
+   * required action its generation and filings. Undefined for no card.
+   */
+  cardRead(id: string): CardRead | undefined {
+    const card = this.cards.get(id) ?? this.host.cardStore.get(id);
+    if (!card) return undefined;
+    const open = this.cards.has(id);
+    const task = card.taskId ? this.host.tasks.get(card.taskId) : undefined;
+    const captainAction = task?.delivery?.captainAction;
+    const question =
+      open && this.host.cardStore.awaitingAuthor(id)
+        ? this.host.cardStore.newestCaptainMessage(id)
+        : undefined;
+    return {
+      id: card.id,
+      title: card.title,
+      author: card.author,
+      ...(task ? { task: task.key || task.id } : {}),
+      open,
+      ...(card.lifecycleId ? { lifecycle: card.lifecycleId } : {}),
+      ...(card.offerId ? { revision: card.offerId } : {}),
+      ...(question ? { waitingOn: { messageId: question.id, text: question.text } } : {}),
+      choices: card.actions.map((action) => ({
+        id: action.id,
+        label: action.label,
+        ...(action.effect ? { effect: action.effect.kind } : {}),
+      })),
+      body: card.body,
+      thread: this.host.cardStore.messages(id).map((message) => ({
+        id: message.id,
+        who: message.who,
+        at: message.at,
+        text: message.text,
+        ...(message.contributor ? { by: message.contributor.label } : {}),
+        ...(message.answersMessage !== undefined ? { answers: message.answersMessage } : {}),
+        ...(message.clarification ? { clarification: true } : {}),
+      })),
+      ...(captainAction && captainAction.cardId === id
+        ? {
+            requiredAction: {
+              task: task?.key || card.taskId,
+              generation: captainAction.generation,
+              state: captainAction.state,
+              requirements: captainAction.requirements.map((entry) => ({
+                source: this.host.tasks.get(entry.source)?.key || entry.source,
+                action: entry.action.id,
+                title: entry.action.title,
+                consequence: entry.action.consequence,
+                instructions: entry.action.instructions,
+                criterion: entry.action.criterion,
+                corrections: (entry.corrections ?? []).map((correction) => ({
+                  by: correction.label,
+                  at: correction.at,
+                  reason: correction.reason,
+                  generation: correction.generation,
+                })),
+              })),
+            },
+          }
+        : {}),
+    };
+  }
+
+  /**
+   * Revise or answer someone else's card (docs/card-threads.md, "Shared
+   * cards"). Any first mate or crewmate may, with no grant: the card keeps
+   * its author, task, lifecycle, source offer and answerer, the write
+   * records who really made it, and nothing transfers responsibility,
+   * attaches the card to the writer's task, approves, completes or settles.
+   * A revision names the revision it read; a stale one, a closed card, a
+   * card the host owns or a choice that carries an effect is refused with
+   * nothing written. Without a revision named, it is a reply alone.
+   */
+  contribute(caller: CardCaller, raw: EmittedCardInput, facts: CardContribution): CardMutation {
+    const contributor = this.contributorOf(caller);
+    const target = this.targetOf(caller, raw.id);
+    if (target.kind !== "foreign" && target.kind !== "closed") {
+      return {
+        effect: "refused",
+        cardId: raw.id?.trim() ?? "",
+        contributor,
+        display: "available",
+        refusal:
+          target.kind === "unknown"
+            ? "that id names no card on the record."
+            : "that id names no card of someone else's; write your own card under your own id.",
+      };
+    }
+    const repeated = this.repeatedContribution(facts.operationId, target.id, contributor);
+    if (repeated) return repeated;
+    const card = target.card;
+    if (facts.expectedRevision === undefined) {
+      const text = raw.reply?.trim();
+      if (!text) {
+        return this.refusedOn(
+          card,
+          contributor,
+          "a revision of someone else's card names expected_revision, the revision you read; a reply alone carries reply. Read the card first.",
+        );
+      }
+      return this.replyAs(caller, {
+        cardId: card.id,
+        text,
+        ...(facts.answersMessage !== undefined ? { answersMessage: facts.answersMessage } : {}),
+        ...(facts.operationId ? { operationId: facts.operationId } : {}),
+      });
+    }
+    const refusal = this.contributionRefusal(card, target.kind === "closed", raw, facts);
+    if (refusal) return this.refusedOn(card, contributor, refusal);
+    const answer = raw.reply?.trim();
+    if (answer && answer.length > CARD_REPLY_MAX_CHARS) {
+      return this.refusedOn(
+        card,
+        contributor,
+        `reply is at most ${CARD_REPLY_MAX_CHARS} characters; say it shorter.`,
+      );
+    }
+    const answerFacts = answer ? this.answerFacts(card, facts.answersMessage) : undefined;
+    if (answerFacts && "refusal" in answerFacts) {
+      return this.refusedOn(card, contributor, answerFacts.refusal);
+    }
+    const answerer = answersFor(card, caller, (other) => this.firstmateAnswers(other));
+    const author = card.author === "crewmate" ? "crewmate" : "firstmate";
+    const declared = buildEmittedCard(
+      card.id,
+      { ...raw, taskId: card.taskId },
+      {
+        author,
+        meta: card.meta,
+        ...(card.taskId ? { taskId: card.taskId } : {}),
+        ...(card.model ? { model: card.model } : {}),
+        ...(card.place ? { place: card.place } : {}),
+      },
+      card.createdAt,
+    );
+    const { pictures: _pictures, width: _width, ...kept } = card;
+    const revised: Card = {
+      ...kept,
+      title: declared.title,
+      body: declared.body,
+      actions: declared.actions,
+      priority: declared.priority,
+      ...(declared.pictures ? { pictures: declared.pictures } : {}),
+      ...(declared.width ? { width: declared.width } : {}),
+    };
+    const changed =
+      card.title !== revised.title ||
+      card.body !== revised.body ||
+      JSON.stringify(card.actions) !== JSON.stringify(revised.actions) ||
+      JSON.stringify(card.pictures) !== JSON.stringify(revised.pictures);
+    if (!changed && !answer) {
+      return { ...this.mutationBase(card, contributor), effect: "unchanged" };
+    }
+    if (!changed && answer) {
+      return this.replyAs(caller, {
+        cardId: card.id,
+        text: answer,
+        ...(facts.answersMessage !== undefined ? { answersMessage: facts.answersMessage } : {}),
+        ...(facts.operationId ? { operationId: facts.operationId } : {}),
+      });
+    }
+    const { card: updated, offer } = this.stamp(revised);
+    // The stage keeps what it showed until the writer's own turn ends: a
+    // crewmate's always, the first mate's while the card waits on its
+    // author. A card not yet on the stage takes the write with it.
+    const staged =
+      this.staged.get(card.id) ??
+      (onStage(card) && (caller.actor === "crewmate" || card.awaiting !== undefined)
+        ? card
+        : undefined);
+    let line: CardMessage | undefined;
+    let replyLine: CardMessage | undefined;
+    const mutation = this.host.cardStore.transaction((): CardMutation => {
+      this.host.cardStore.revise(updated);
+      if (offer) this.noteOffer(updated, "emitted", "tool");
+      this.noteStage({ head: updated, shown: staged ?? updated }, "revise", { source: "tool" });
+      this.cards.set(card.id, updated);
+      line = this.addMessage(
+        card.id,
+        "host",
+        `revised: ${updated.title}`,
+        undefined,
+        undefined,
+        revisionLinks(card, updated),
+        false,
+        { contributor },
+      );
+      if (answer && answerFacts) {
+        replyLine = this.addMessage(
+          card.id,
+          caller.actor,
+          answer,
+          undefined,
+          undefined,
+          undefined,
+          false,
+          { ...answerFacts.facts, ...(answerer ? {} : { contributor }) },
+        );
+      }
+      const result: CardMutation = {
+        ...this.mutationBase(updated, contributor),
+        effect: "revised",
+        unchanged: ["author", "task", "lifecycle", "answerer"],
+        display: staged ? "held" : "available",
+        ...(replyLine ? this.lineResult(replyLine, answerFacts) : {}),
+      };
+      this.recordContribution(facts, card.id, caller, result);
+      return result;
+    });
+    void line;
+    if (staged) {
+      this.staged.set(card.id, staged);
+      if (updated.lifecycleId) {
+        this.contributedUntilCloseOut.set(card.id, {
+          writer: authorKey(caller),
+          lifecycleId: updated.lifecycleId,
+        });
+      }
+    }
+    this.placed(updated);
+    this.scheduleBroadcast();
+    return mutation;
+  }
+
+  /**
+   * A line in a card's thread from any first mate or crewmate (the `reply`
+   * output; docs/card-threads.md, "Shared cards"). Anyone but the card's
+   * own answerer has its line carry who wrote it. Any line ends a captain
+   * question only when it names that message and it is the one the card
+   * waits on. A line naming a question already answered is kept as a
+   * comment. A closed card takes a dated clarification that reopens
+   * nothing. A response it carries is saved with it, once.
+   */
+  replyAs(
+    caller: CardCaller,
+    input: {
+      cardId: string;
+      text: string;
+      interim?: boolean;
+      answersMessage?: number;
+      operationId?: string;
+      response?: CrewResponse;
+    },
+  ): CardMutation {
+    const contributor = this.contributorOf(caller);
+    const id = input.cardId.trim();
+    const refuse = (refusal: string, card?: Card): CardMutation =>
+      card
+        ? this.refusedOn(card, contributor, refusal)
+        : { effect: "refused", cardId: id, contributor, display: "available", refusal };
+    if (!id) return refuse("reply needs card_id.");
+    const card = this.cards.get(id) ?? this.host.cardStore.get(id);
+    if (!card) return refuse("that id names no card on the record.");
+    const repeated = this.repeatedContribution(input.operationId, id, contributor);
+    if (repeated) return repeated;
+    const open = this.cards.has(id);
+    if (open && !cardTakesReplies(card)) {
+      return refuse(
+        card.replies === false ? "this card takes no reply." : "this card has no thread.",
+        card,
+      );
+    }
+    const text = input.text.trim();
+    if (!text) return refuse("a reply needs some words.", card);
+    if (text.length > CARD_REPLY_MAX_CHARS) {
+      return refuse(
+        `a reply is at most ${CARD_REPLY_MAX_CHARS} characters; say it shorter, or revise the card.`,
+        card,
+      );
+    }
+    if (input.response && caller.actor !== "crewmate") {
+      return refuse("only a crewmate's line carries a response.", card);
+    }
+    // The card's own answerer writes as before; anyone else's line says who.
+    const answerer = answersFor(card, caller, (other) => this.firstmateAnswers(other));
+    const designated = open && answerer;
+    const facts: MessageFacts = answerer ? {} : { contributor };
+    if (!open) facts.clarification = true;
+    if (!open && input.answersMessage !== undefined) {
+      return refuse(
+        "the card is closed, so a line on it answers no question; drop answers_message to add a dated clarification.",
+        card,
+      );
+    }
+    let answer = open ? this.answerFacts(card, input.answersMessage) : undefined;
+    if (answer && "refusal" in answer) return refuse(answer.refusal, card);
+    // A queued answerer whose question someone else already answered hears
+    // that answer instead of answering again: its line is a comment.
+    if (designated && input.answersMessage === undefined && card.awaiting !== "answer") {
+      const newest = this.host.cardStore.newestCaptainMessage(id);
+      const done = newest ? this.host.cardStore.answerTo(id, newest.id) : undefined;
+      if (done?.contributor) answer = { facts: {}, already: done };
+    }
+    Object.assign(facts, answer?.facts ?? {});
+    if (input.response && caller.actor === "crewmate") {
+      if (!this.host.checkCardResponse || !this.host.submitCardResponse) {
+        return refuse("this home cannot save a response with a card line.", card);
+      }
+      try {
+        this.host.checkCardResponse(caller.taskId, input.response, {
+          id,
+          ...(card.lifecycleId ? { lifecycleId: card.lifecycleId } : {}),
+          ...(facts.answersMessage !== undefined ? { messageId: facts.answersMessage } : {}),
+        });
+      } catch (caught) {
+        return refuse(caught instanceof Error ? caught.message : String(caught), card);
+      }
+      facts.responseId = input.response.responseId;
+    }
+    // An interim line keeps the captain's reply waiting only from the card's
+    // own answerer while one waits; anyone else's is a comment.
+    const interim = designated && input.interim === true && card.awaiting === "answer";
+    const response = input.response;
+    return this.host.cardStore.transaction((): CardMutation => {
+      const line = this.addMessage(
+        id,
+        caller.actor,
+        text,
+        undefined,
+        undefined,
+        undefined,
+        interim,
+        facts,
+      );
+      if (response && caller.actor === "crewmate") {
+        this.host.submitCardResponse?.(caller.taskId, response, text, {
+          cardId: id,
+          messageId: line.id,
+        });
+      }
+      const result: CardMutation = {
+        ...this.mutationBase(this.cards.get(id) ?? card, contributor),
+        effect: "reply-only",
+        unchanged: REPLY_FIELDS_KEPT,
+        display: "available",
+        ...this.lineResult(line, answer),
+      };
+      this.recordContribution(input, id, caller, result);
+      return result;
+    });
+  }
+
+  /**
+   * Correct a required action's words on its card (docs/required-actions.md,
+   * "Correcting the words"): `TaskService.reviseRequiredAction` writes the
+   * correction, and a card on the stack shows the new words and generation
+   * at once with a thread line naming who corrected it. Every refusal
+   * writes nothing.
+   */
+  reviseRequiredAction(
+    caller: CardCaller,
+    input: {
+      action: string;
+      source: string;
+      actionId: string;
+      expectedGeneration: number;
+      patch: RequiredActionText;
+      reason: string;
+      operationId: string;
+      sameAction: boolean;
+    },
+  ): CardMutation {
+    const contributor = this.contributorOf(caller);
+    const ref = input.action.trim();
+    const rowId = ref.startsWith("card-fm-required-action-")
+      ? ref.slice("card-fm-required-action-".length)
+      : ref;
+    const row = this.host.tasks.resolve(rowId);
+    const cardId = row?.delivery?.captainAction?.cardId ?? ref;
+    const shown = this.cards.get(cardId);
+    let updated: Card | undefined;
+    const result = this.host.tasks.atomic(
+      () => {
+        const revision = this.host.tasks.reviseRequiredAction(ref, {
+          source: input.source,
+          actionId: input.actionId,
+          expectedGeneration: input.expectedGeneration,
+          patch: input.patch,
+          reason: input.reason,
+          operationId: input.operationId,
+          sameAction: input.sameAction,
+          by: {
+            actor: contributor.actor,
+            ...(contributor.taskId ? { taskId: contributor.taskId } : {}),
+            label: contributor.label,
+          },
+          presented: shown !== undefined,
+        });
+        if (revision.effect !== "revised" || !shown || !row) return revision;
+        const action = this.host.tasks.get(row.id)?.delivery?.captainAction;
+        if (!action) return revision;
+        const next = requiredActionCard(
+          row.id,
+          action,
+          shown.createdAt,
+          this.requiredActionProvenance(),
+        );
+        const { card } = this.stamp({
+          ...shown,
+          title: next.title,
+          body: next.body,
+          actions: next.actions,
+          width: decidedCardWidth({ body: next.body }),
+        });
+        this.host.cardStore.revise(card);
+        this.noteOffer(card, "put", "host");
+        this.noteStage({ head: card, shown: card }, "revise", { source: "host" });
+        this.cards.set(card.id, card);
+        this.addMessage(
+          card.id,
+          "host",
+          `revised: ${card.title}`,
+          undefined,
+          undefined,
+          revisionLinks(shown, card),
+          false,
+          { contributor },
+        );
+        updated = card;
+        return revision;
+      },
+      () => {
+        if (updated) {
+          this.placed(updated);
+          this.scheduleBroadcast();
+        }
+      },
+    );
+    const card = updated ?? shown ?? this.host.cardStore.get(cardId);
+    const base: Omit<CardMutation, "effect"> = card
+      ? this.mutationBase(card, contributor)
+      : { cardId, contributor, display: "available" };
+    const generation = "generation" in result ? result.generation : undefined;
+    switch (result.effect) {
+      case "refused":
+        return {
+          ...base,
+          effect: "refused",
+          refusal: result.refusal,
+          ...(generation !== undefined ? { generation } : {}),
+        };
+      case "unchanged":
+        return { ...base, effect: "unchanged", generation: result.generation };
+      case "repeated":
+      case "revised": {
+        // A repeated operation answers the revision it made the first time,
+        // read back from the correction that operation saved.
+        const changed =
+          result.effect === "revised"
+            ? result.changed
+            : result.correction
+              ? Object.keys(result.correction.previous)
+              : undefined;
+        return {
+          ...base,
+          effect: "revised",
+          generation:
+            result.effect === "repeated"
+              ? (result.correction?.generation ?? result.generation)
+              : result.generation,
+          ...(result.effect === "repeated" ? { repeated: true } : {}),
+          unchanged: [
+            "target",
+            "filing",
+            "prerequisites",
+            "completion",
+            "state",
+            "thread",
+            ...(changed
+              ? (["title", "consequence", "instructions", "criterion"] as const).filter(
+                  (field) => !changed.includes(field),
+                )
+              : []),
+          ],
+        };
+      }
+    }
+  }
+
+  /**
+   * Why someone else's open card cannot take this revision, or undefined
+   * when it can (docs/card-threads.md, "Shared cards"): a closed card keeps
+   * its offered words and choices; the app's own cards, a required action's
+   * words and a saved change story have their own owners; a choice that
+   * carries an effect is validated only on its own task's path; and the
+   * facts that belong to the card's own task and author stay theirs.
+   */
+  private contributionRefusal(
+    card: Card,
+    closed: boolean,
+    raw: EmittedCardInput,
+    facts: CardContribution,
+  ): string | undefined {
+    if (closed) {
+      return "the card is closed, so its offered words, choices and decision history stay as they were. Add a dated clarification with reply alone.";
+    }
+    const task = card.taskId ? this.host.tasks.get(card.taskId) : undefined;
+    if (task?.delivery?.captainAction?.cardId === card.id) {
+      return "a required action's words change only through revise_required_action, which keeps its filing and moves its generation; its thread takes a reply.";
+    }
+    if (card.author !== "crewmate" && card.author !== "firstmate") {
+      return "the app wrote this card, so its words and controls are not prose anyone revises; its thread takes a reply when it has one.";
+    }
+    if (facts.expectedRevision !== card.offerId) {
+      return `you read revision ${facts.expectedRevision}, and the card has changed since. Read it again, then revise the version it shows now.`;
+    }
+    if (raw.taskId && raw.taskId !== card.taskId) {
+      return "a contribution keeps the card on its own task; drop task_id.";
+    }
+    const effect = [...card.actions, ...raw.actions].find((action) => action.effect);
+    if (effect || takesFactStrip(card)) {
+      return `choice "${effect?.id ?? "merge"}" carries an effect the app checks against this card's own task, checks and version, so only its author's own path changes it. Write on its thread with reply instead.`;
+    }
+    if (task?.delivery?.presentation && card.author === "crewmate") {
+      return "this task's saved change story owns its completion words, bound to its checked version; its own crewmate revises the story. Write on its thread with reply instead.";
+    }
+    const owned = [
+      raw.requiredActions !== undefined && "required_actions",
+      raw.riskDeclaration && "risk",
+      raw.presentationRevision !== undefined && "presentation",
+      raw.reviewTaskId && "review_task_id",
+      raw.validationDecision && "validation_request",
+      (raw.browserButton !== undefined || raw.browserPage !== undefined || raw.browserHandoff) &&
+        "browser controls",
+    ].filter(Boolean);
+    if (owned.length > 0) {
+      return `${owned.join(", ")} belong to the card's own task and author; leave them out of a contribution.`;
+    }
+    return undefined;
+  }
+
+  /** The filing words every required-action card shows. */
+  private requiredActionProvenance(): RequiredActionProvenance {
+    return { filedFrom: (sourceId) => this.host.tasks.get(sourceId)?.key || sourceId };
+  }
+
+  /** What a refusal or a result names of the card as it stands. */
+  private mutationBase(card: Card, contributor: CardContributor): Omit<CardMutation, "effect"> {
+    return {
+      cardId: card.id,
+      title: card.title,
+      ...(card.lifecycleId ? { lifecycleId: card.lifecycleId } : {}),
+      ...(card.offerId ? { revision: card.offerId } : {}),
+      contributor,
+      display: "available",
+    };
+  }
+
+  private refusedOn(card: Card, contributor: CardContributor, refusal: string): CardMutation {
+    return { ...this.mutationBase(card, contributor), effect: "refused", refusal };
+  }
+
+  /** The same operation identity answers its earlier result, on its own card only. */
+  private repeatedContribution(
+    operationId: string | undefined,
+    cardId: string,
+    contributor: CardContributor,
+  ): CardMutation | undefined {
+    if (!operationId) return undefined;
+    const prior = this.host.cardStore.contribution(operationId);
+    if (!prior) return undefined;
+    if (prior.cardId !== cardId) {
+      return {
+        effect: "refused",
+        cardId,
+        contributor,
+        display: "available",
+        refusal: `operation ${operationId} already wrote on card ${prior.cardId}; give this write its own operation identity.`,
+      };
+    }
+    const parsed = cardMutationSchema.safeParse(prior.result);
+    return parsed.success ? { ...parsed.data, repeated: true } : undefined;
+  }
+
+  private recordContribution(
+    facts: { operationId?: string; reason?: string },
+    cardId: string,
+    caller: CardCaller,
+    result: CardMutation,
+  ): void {
+    if (!facts.operationId) return;
+    this.host.cardStore.recordContribution({
+      operationId: facts.operationId,
+      cardId,
+      actor: caller.actor,
+      ...(caller.actor === "crewmate" ? { taskId: caller.taskId } : {}),
+      ...(facts.reason?.trim() ? { reason: facts.reason.trim().slice(0, 500) } : {}),
+      at: this.host.now(),
+      result,
+    });
+  }
+
+  /**
+   * Which captain message a line answers, read from the record: the one it
+   * names, checked to be a captain message on this card; a line naming none
+   * answers none. A named message someone already answered makes the line
+   * a comment.
+   */
+  private answerFacts(
+    card: Card,
+    named: number | undefined,
+  ): { facts: MessageFacts; already?: CardMessage } | { refusal: string } {
+    if (named === undefined) return { facts: {} };
+    const message = this.host.cardStore.messageById(named);
+    if (!message || message.cardId !== card.id || message.who !== "captain") {
+      return {
+        refusal: `message ${named} is not a captain message on this card; read the card and name the captain message you answer.`,
+      };
+    }
+    const already = this.host.cardStore.answerTo(card.id, named);
+    if (already) return { facts: {}, already };
+    return { facts: { answersMessage: named } };
+  }
+
+  /** The thread facts a write's result names. */
+  private lineResult(
+    line: CardMessage,
+    answer: { facts: MessageFacts; already?: CardMessage } | { refusal: string } | undefined,
+  ): Partial<CardMutation> {
+    const already = answer && "already" in answer ? answer.already : undefined;
+    return {
+      replyId: line.id,
+      ...(line.answersMessage !== undefined && !already ? { answered: line.answersMessage } : {}),
+      ...(line.clarification ? { clarification: true as const } : {}),
+      ...(already
+        ? {
+            alreadyAnswered: {
+              messageId: already.answersMessage ?? 0,
+              by:
+                already.contributor?.label ??
+                (already.who === "firstmate" ? "your first mate" : "the card's author"),
+              text: already.text.replace(/\s+/g, " ").slice(0, 160),
+            },
+          }
+        : {}),
+    };
+  }
+
+  /**
    * A host-presented Firstmate note with its completed answer and caller's
    * durable record in the same commit. No model turn or close-out hold.
    * The stack changes only after all writers have committed successfully.
@@ -1127,13 +1885,33 @@ export class CardService {
       const notice = this.host.followupNotice(context.taskId);
       if (notice) input = { ...input, body: `${input.body}${notice}` };
     }
+    // An exact card id wins before the author's own prefixing, and a card id
+    // the record lacks is an unknown target, never a new card. Someone
+    // else's card is written through `contribute`, never here.
+    const target = this.targetOf(
+      context.author === "firstmate"
+        ? { actor: "firstmate" }
+        : { actor: "crewmate", taskId: context.taskId ?? "" },
+      input.id,
+    );
+    if (target.kind === "unknown") {
+      throw new Error(
+        `Card refused: "${target.id}" names no card on the record, so there is nothing to update. Read the card's id again, or give a short id of your own for a new card. Nothing was shown.`,
+      );
+    }
+    if (target.kind === "foreign" || target.kind === "closed") {
+      throw new Error(
+        `Card refused: card "${target.id}" is someone else's, so this write is a contribution. Read the card, then pass expected_revision with the revision you read to revise it, or give reply alone to write on its thread. Nothing was shown.`,
+      );
+    }
     let stableId: string | undefined;
     try {
       stableId = parseStableCardId(input.id);
     } catch {
       stableId = undefined;
     }
-    const resolved = stableId ? context.resolveId(stableId) : undefined;
+    const resolved =
+      target.kind === "own" ? target.id : stableId ? context.resolveId(stableId) : undefined;
     const existing = resolved ? this.cards.get(resolved) : undefined;
     const owner =
       existing?.taskId ?? (resolved ? this.host.cardStore.get(resolved)?.taskId : undefined);
@@ -1154,7 +1932,18 @@ export class CardService {
       ) {
         if (answer.length > CARD_REPLY_MAX_CHARS)
           throw new Error(`A reply is at most ${CARD_REPLY_MAX_CHARS} characters.`);
-        this.addMessage(existing.id, "firstmate", answer);
+        const named = this.answerFacts(existing, input.answersMessage);
+        if ("refusal" in named) throw new Error(`Card refused: ${named.refusal}`);
+        this.addMessage(
+          existing.id,
+          "firstmate",
+          answer,
+          undefined,
+          undefined,
+          undefined,
+          false,
+          named.facts,
+        );
         return existing.id;
       }
       throw new Error(
@@ -1174,13 +1963,18 @@ export class CardService {
       const waiting = this.host.cardStore.awaitingAuthor(resolved);
       if (waiting && !answer) {
         throw new Error(
-          `Card refused: the captain's reply under card "${resolved}" waits on your answer, and a revision alone does not give it. Call emit_card again with the same id and the same card plus reply: one to three sentences answering them and saying what you changed on the card and under which heading. The card and its thread are unchanged.`,
+          `Card refused: the captain's reply under card "${resolved}" waits on your answer, and a revision alone does not give it. Call emit_card again with the same id and the same card plus reply: one to three sentences answering them and saying what you changed on the card and under which heading, with answers_message naming their message when it answers it. The card and its thread are unchanged.`,
         );
       }
       if (answer && answer.length > CARD_REPLY_MAX_CHARS) {
         throw new Error(
           `Card refused: reply is at most ${CARD_REPLY_MAX_CHARS} characters; say it shorter. The card and its thread are unchanged.`,
         );
+      }
+      // The reply ends the captain's question only when it names it.
+      const named = this.answerFacts(existing, answer ? input.answersMessage : undefined);
+      if ("refusal" in named) {
+        throw new Error(`Card refused: ${named.refusal} The card and its thread are unchanged.`);
       }
       const revised = buildEmittedCard(resolved, input, context, existing.createdAt);
       const changed =
@@ -1207,9 +2001,15 @@ export class CardService {
       // showed until its crewmate author's turn ends (the one rule), and so
       // does one still waiting on its author after the captain's reply,
       // whoever its author is. The Firstmate's own revision of any other
-      // card on the stage redraws at once.
+      // card on the stage redraws at once. One the captain put aside stays
+      // aside while its reply leaves their question waiting (INF-1623).
+      const stillAsked =
+        waiting &&
+        named.facts.answersMessage !== this.host.cardStore.newestCaptainMessage(resolved)?.id;
+      const aside = existing.minimized === true && stillAsked;
       const { card: updated, offer } = this.stamp({
         ...revised,
+        ...(aside ? { minimized: true as const } : {}),
         ...(existing.awaiting ? { awaiting: existing.awaiting } : {}),
         ...(existing.sentBackAt !== undefined ? { sentBackAt: existing.sentBackAt } : {}),
       });
@@ -1230,7 +2030,7 @@ export class CardService {
       this.cards.set(resolved, updated);
       // A crewmate's revision of a card the captain put aside brings it back
       // when that crewmate's turn ends, never mid-turn (INF-926).
-      if (existing.minimized && context.author === "crewmate" && updated.lifecycleId)
+      if (existing.minimized && !aside && context.author === "crewmate" && updated.lifecycleId)
         this.asideUntilTurnEnd.set(resolved, updated.lifecycleId);
       this.placed(updated);
       // The preferred answer to a thread message is a revision of the head
@@ -1251,7 +2051,16 @@ export class CardService {
       // captain's reply still waits (INF-1623): an earlier line that ended
       // the wait never makes the answer vanish.
       if (answer && (waiting || this.host.cardStore.messages(resolved).length > 0)) {
-        this.addMessage(resolved, context.author, answer);
+        this.addMessage(
+          resolved,
+          context.author,
+          answer,
+          undefined,
+          undefined,
+          undefined,
+          false,
+          named.facts,
+        );
       }
       this.scheduleBroadcast();
       return resolved;
@@ -1579,15 +2388,29 @@ export class CardService {
     }
     let moved = false;
     const released: string[] = [];
+    const key = authorKey(author);
     for (let card of [...this.cards.values()]) {
       const mine =
         author.kind === "firstmate"
           ? this.firstmateAnswers(card)
           : card.author === "crewmate" && card.taskId === author.taskId;
-      if (!mine) continue;
+      // Someone else's held write - a revision, or an answer it named -
+      // moves the stage with its own writer's turn end, never with an
+      // unrelated turn of the card's author (docs/card-threads.md, "Shared
+      // cards"). The author's turn end still ends what it held for that
+      // turn, and the writer's then releases everything the card holds.
+      const held = this.contributedUntilCloseOut.get(card.id);
+      const contributor =
+        held !== undefined && held.lifecycleId === card.lifecycleId ? held.writer : undefined;
+      const writer = contributor === key;
+      if (!mine && !writer) continue;
       if (reason === "report" && this.reachedStage(card)) continue;
-      this.answeringUntilCloseOut.delete(card.id);
-      if (this.asideUntilTurnEnd.delete(card.id)) moved = true;
+      if (mine) {
+        this.answeringUntilCloseOut.delete(card.id);
+        if (this.asideUntilTurnEnd.delete(card.id)) moved = true;
+      }
+      if (contributor !== undefined && !writer) continue;
+      this.contributedUntilCloseOut.delete(card.id);
       let wrote = false;
       if (card.awaiting !== "answer" && card.lifecycleId) {
         if (this.host.cardStore.releaseRevisions(card.id, card.lifecycleId)) {
@@ -1741,7 +2564,7 @@ export class CardService {
       // its AUTHOR's withdrawal - so words about someone else's card are a
       // steer to that author, and the captain's × is the only dismissal.
       throw new Error(
-        `Card "${id}" is not yours to close: steer task ${card.taskId ?? "it"} to revise it under the same id, or to withdraw it. Only the captain dismisses a card they are looking at.`,
+        `Card "${id}" is not yours to close: only its author withdraws it, and only the captain dismisses a card they are looking at. To change what it says, revise it yourself under its full id with expected_revision, or write on its thread with reply.`,
       );
     }
     if (actor.kind === "crewmate" && card.taskId !== actor.taskId) {
@@ -1817,19 +2640,34 @@ export class CardService {
     answers?: CardAnswer[],
     revision?: CardRevisionLinks,
     interim = false,
+    facts: MessageFacts = {},
   ): CardMessage {
-    // The captain's line holds the card, still shown, until its author
-    // answers and closes out; any other line - the author's answer, or the
-    // host's "revised:" for a revision - ends his line being the newest.
-    // An author's interim line, declared as one, keeps the hold: it says
-    // what the author is doing, and the answer is still owed (INF-990
-    // friction 3).
+    // The captain's line holds the card, still shown, until a line answers
+    // it and that line's writer closes out. An author's interim line,
+    // declared as one, keeps the hold too: it says what the author is
+    // doing, and the answer is still owed (INF-990 friction 3).
+    // A line ends the captain's question only when it says so: it names the
+    // one the card waits on in `facts.answersMessage`, whoever wrote it
+    // (docs/card-threads.md, "Shared cards"; the captain's "Only a line that
+    // says it answers it; a handoff stays open"). Any other line - a
+    // handoff, a comment, the host's "revised:" - leaves it waiting.
     // An author's line brings back a card the captain put aside: the
-    // Firstmate's at once, a crewmate's when its turn ends (INF-926). An
-    // interim line does not: the card comes back with the final answer
-    // (INF-1623).
-    if (who === "firstmate" && !interim) this.setMinimized(cardId, false);
-    if (who === "crewmate" && !interim) this.backAtTurnEnd(cardId);
+    // Firstmate's at once, a crewmate's when its turn ends (INF-926). A line
+    // that leaves their question waiting - an interim line or a handoff - does
+    // not: the card comes back with the final answer (INF-1623).
+    const contributed = facts.contributor !== undefined;
+    const asking = this.cards.get(cardId)?.awaiting === "answer";
+    const waiting = !interim && asking;
+    const answersMessage = facts.answersMessage;
+    const question =
+      waiting && answersMessage !== undefined && (who === "crewmate" || who === "firstmate")
+        ? this.host.cardStore.newestCaptainMessage(cardId)
+        : undefined;
+    const answered = question !== undefined && answersMessage === question.id;
+    const settles = answered || (!interim && !asking);
+    if (who === "firstmate" && settles && !contributed) this.setMinimized(cardId, false);
+    if (who === "crewmate" && settles && !contributed) this.backAtTurnEnd(cardId);
+    if (answered && contributed) this.setMinimized(cardId, false);
     const card = this.cards.get(cardId);
     // The captain writes about the version the stage shows him; an author,
     // or the host's line for its revision, about the newest one it wrote.
@@ -1839,7 +2677,6 @@ export class CardService {
       actor: who,
       source: who === "host" ? "host" : "thread",
     };
-    const answered = !interim && card?.awaiting === "answer";
     let held: Card | undefined;
     const message = this.host.cardStore.transaction(() => {
       const message = this.host.cardStore.appendMessage({
@@ -1847,6 +2684,10 @@ export class CardService {
         who,
         text,
         ...(revision ? { revision } : {}),
+        ...(facts.contributor ? { contributor: facts.contributor } : {}),
+        ...(answersMessage !== undefined && who !== "host" ? { answersMessage } : {}),
+        ...(facts.clarification ? { clarification: true as const } : {}),
+        ...(facts.responseId ? { responseId: facts.responseId } : {}),
       });
       if (about?.lifecycleId) {
         this.host.cardStore.observe({
@@ -1876,8 +2717,20 @@ export class CardService {
       return message;
     });
     if (who === "captain" || answered) this.applyHold(cardId, held);
-    if (answered && card?.lifecycleId && (who === "crewmate" || who === "firstmate")) {
+    if (
+      answered &&
+      !contributed &&
+      card?.lifecycleId &&
+      (who === "crewmate" || who === "firstmate")
+    ) {
       this.answeringUntilCloseOut.set(cardId, card.lifecycleId);
+    }
+    // Another writer's answer reaches the stage when that writer's turn ends.
+    if (answered && facts.contributor && card?.lifecycleId) {
+      this.contributedUntilCloseOut.set(cardId, {
+        writer: authorKey(facts.contributor),
+        lifecycleId: card.lifecycleId,
+      });
     }
     this.host.broadcastThread?.(this.thread(cardId));
     // An author's answer is a row on the card's task too (FI3-1189's rule
@@ -1887,7 +2740,20 @@ export class CardService {
         ? this.host.tasks.get(about.taskId)
         : (this.host.tasks.openCardTaskFor(cardId) ?? this.host.tasks.taskForCard(cardId));
       if (task) {
-        this.host.tasks.recordReply(task.id, { cardId, title: about.title, text, actor: who });
+        this.host.tasks.recordReply(task.id, {
+          cardId,
+          title: about.title,
+          text,
+          actor: who,
+          ...(facts.contributor
+            ? {
+                contributor: {
+                  ...(facts.contributor.taskId ? { taskId: facts.contributor.taskId } : {}),
+                  label: facts.contributor.label,
+                },
+              }
+            : {}),
+        });
       }
     }
     return message;
@@ -1907,10 +2773,13 @@ export class CardService {
   }
 
   /**
-   * Capture the Firstmate's closing words as its answer in one of its own
-   * cards' threads (phase 2). No-op without a current answer hold - a
-   * revision may have answered it, or the old lifecycle may have closed.
-   * Returns whether the answer was written.
+   * Capture the Firstmate's closing words as its line in the thread of a
+   * card it answers (phase 2). The line names no captain message, so it
+   * leaves the question waiting: a handoff stays open, and the Firstmate
+   * answers with an emit_card reply that names the message. No-op without
+   * a current answer hold - a named reply may have answered it, or the old
+   * lifecycle may have closed - or when the Firstmate already wrote its
+   * own line since the captain's. Returns whether the line was written.
    */
   recordFirstmateThreadAnswer(cardId: string, text: string): boolean {
     const card = this.cards.get(cardId);
@@ -1918,6 +2787,11 @@ export class CardService {
     if (!this.host.cardStore.awaitingAuthor(cardId)) return false;
     const trimmed = text.trim();
     if (!trimmed) return false;
+    const asked = this.host.cardStore.newestCaptainMessage(cardId)?.id ?? 0;
+    const wrote = this.host.cardStore
+      .messages(cardId)
+      .some((line) => line.id > asked && line.who === "firstmate" && !line.contributor);
+    if (wrote) return false;
     this.addMessage(cardId, "firstmate", trimmed);
     return true;
   }
@@ -1944,40 +2818,57 @@ export class CardService {
   }
 
   /**
-   * A crewmate answering in one of its own card's threads (the `reply`
-   * output, contract v4.1). Prose only, and never a second card: the host
-   * renders it as a message. Refusals are tool text, not throws, except the
-   * ownership one - a crewmate must not be able to write into another
-   * task's conversation.
+   * A crewmate's line in a card's thread (the `reply` output, contract
+   * v4.1): prose only, and never a second card. On its own card it writes
+   * as the author; on anyone else's card - another task's, the first
+   * mate's, a required action - it writes with its name on the line
+   * (`replyAs`, docs/card-threads.md "Shared cards"). Either way it ends a
+   * captain question only by naming it. Refusals are tool text and write
+   * nothing.
    */
   replyFromCrewmate(
     taskId: string,
-    input: { cardId: string; text: string; interim?: boolean },
+    input: {
+      cardId: string;
+      text: string;
+      interim?: boolean;
+      answersMessage?: number;
+      operationId?: string;
+      response?: CrewResponse;
+    },
   ): string {
     const id = input.cardId.trim();
-    if (!id) return "reply needs card_id: the id emit_card returned.";
+    if (!id) return "reply needs card_id: the id of the card whose thread you write in.";
     const card = this.cards.get(id) ?? this.host.cardStore.get(id);
-    if (!card) return `Unknown card "${id}". Only a card you emitted has a thread.`;
-    if (card.taskId !== taskId) {
-      return `Card "${id}" is not yours: only the card's own author answers in its thread.`;
+    if (!card) {
+      return `Unknown card "${id}". Read the card's id again; a reply names a card on the record.`;
     }
-    const text = input.text.trim();
-    if (!text) return "reply needs some words.";
-    if (text.length > CARD_REPLY_MAX_CHARS) {
-      return `A reply is at most ${CARD_REPLY_MAX_CHARS} characters; say it shorter, or revise the card.`;
+    const caller: CardCaller = { actor: "crewmate", taskId };
+    const own =
+      this.cards.has(id) && answersFor(card, caller, (other) => this.firstmateAnswers(other));
+    const mutation = this.replyAs(caller, input);
+    if (!own || mutation.effect !== "reply-only" || mutation.alreadyAnswered || mutation.repeated) {
+      return cardMutationText(mutation);
     }
-    // An interim line keeps the captain's reply waiting for the answer
-    // only while one waits; under an answered card it is an ordinary reply.
-    const interim = input.interim === true && card.awaiting === "answer";
-    this.addMessage(id, "crewmate", text, undefined, undefined, undefined, interim);
-    if (interim) {
-      return `Posted in the thread on "${card.title}" (${id}); the captain's reply still waits for your answer when the work is done.`;
+    const question = this.host.cardStore.awaitingAuthor(id)
+      ? this.host.cardStore.newestCaptainMessage(id)
+      : undefined;
+    if (input.interim === true && question) {
+      return `Posted in the thread on "${card.title}" (${id}); the captain's message ${question.id} still waits for your answer when the work is done, in a line naming it in answers_message.`;
     }
     const replied = `Replied in the thread on "${card.title}" (${id}).`;
+    const answered =
+      mutation.answered !== undefined
+        ? ` It answers the captain's message ${mutation.answered}.`
+        : question
+          ? ` The captain's message ${question.id} still waits: a line answers it only by naming it in answers_message.`
+          : "";
     // An answer under another card leaves the captain's reply waiting
     // (INF-990 friction 4): the receipt names the card that still waits.
     const still = this.threadsAwaitingAuthor(taskId).filter((other) => other.id !== id);
-    return still.length > 0 ? `${replied} ${stillWaitingWords(still)}` : replied;
+    return still.length > 0
+      ? `${replied}${answered} ${stillWaitingWords(still)}`
+      : `${replied}${answered}`;
   }
 
   /** Whether a captain reply on this open card still waits for its answer. */
@@ -2545,7 +3436,12 @@ export class CardService {
       () => {
         const action = this.host.tasks.presentCaptainAction(taskId);
         if (!action) throw new Error("The required action is no longer ready.");
-        const next = requiredActionCard(taskId, action, this.host.now());
+        const next = requiredActionCard(
+          taskId,
+          action,
+          this.host.now(),
+          this.requiredActionProvenance(),
+        );
         const { card, offer, opened } = this.stamp({
           ...next,
           width: decidedCardWidth({ body: next.body }),
@@ -3224,8 +4120,72 @@ function buildEmittedCard(
  */
 /** What a receipt adds when another card's thread still waits on its author. */
 function stillWaitingWords(cards: readonly { id: string; title: string }[]): string {
-  return `The captain's reply under ${waitingCardWords(cards)} still waits on your answer: answer it there with reply, or in that card's emit_card revision.`;
+  return `The captain's reply under ${waitingCardWords(cards)} still waits on your answer: answer it there with reply, or in that card's emit_card revision, naming their message in answers_message.`;
 }
+
+/** Whether a card is the caller's own: the first mate's, or its crewmate's on its task. */
+function ownedBy(card: Card, caller: CardCaller): boolean {
+  return caller.actor === "firstmate"
+    ? card.author === "firstmate"
+    : card.author === "crewmate" && card.taskId === caller.taskId;
+}
+
+/** Whether the caller is the one the card's thread routes the captain's replies to. */
+function answersFor(
+  card: Card,
+  caller: CardCaller,
+  firstmateAnswers: (card: Card) => boolean,
+): boolean {
+  // A crewmate answers every card on its own task, as it always has
+  // (INF-1273: a first mate card its task's crewmate is asked to answer).
+  return caller.actor === "firstmate" ? firstmateAnswers(card) : card.taskId === caller.taskId;
+}
+
+/** A writer's key in `contributedUntilCloseOut`, matched by `closeOut`. */
+function authorKey(author: CardCaller | CardAuthorRef | CardContributor): string {
+  const kind = "actor" in author ? author.actor : author.kind;
+  return kind === "firstmate" ? "firstmate" : `crewmate:${(author as { taskId: string }).taskId}`;
+}
+
+/**
+ * One card as a writer reads it before editing or answering
+ * (`CardService.cardRead`): JSON for the `tasks` read's card field.
+ */
+export type CardRead = {
+  id: string;
+  title: string;
+  author: Card["author"];
+  task?: string;
+  open: boolean;
+  lifecycle?: string;
+  revision?: string;
+  waitingOn?: { messageId: number; text: string };
+  choices: { id: string; label: string; effect?: string }[];
+  body: string;
+  thread: {
+    id: number;
+    who: CardMessageWho;
+    at: number;
+    text: string;
+    by?: string;
+    answers?: number;
+    clarification?: boolean;
+  }[];
+  requiredAction?: {
+    task?: string;
+    generation: number;
+    state: string;
+    requirements: {
+      source: string;
+      action: string;
+      title: string;
+      consequence: string;
+      instructions: string[];
+      criterion: string;
+      corrections: { by: string; at: number; reason: string; generation: number }[];
+    }[];
+  };
+};
 
 function crewmateCardId(taskId: string, stableId: string): string {
   return stableId.startsWith(`card-${taskId}-`) ? stableId : `card-${taskId}-${stableId}`;

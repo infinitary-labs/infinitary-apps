@@ -26,6 +26,57 @@ export const requiredActionSchema = z.object({
 export const requiredActionsSchema = z.array(requiredActionSchema).max(20);
 export type RequiredAction = z.infer<typeof requiredActionSchema>;
 
+/** The words a correction may replace; target, ids, completion and prerequisites stay. */
+export const REQUIRED_ACTION_TEXT_FIELDS = [
+  "title",
+  "consequence",
+  "instructions",
+  "criterion",
+] as const;
+export type RequiredActionTextField = (typeof REQUIRED_ACTION_TEXT_FIELDS)[number];
+export const requiredActionTextSchema = requiredActionSchema
+  .pick({ title: true, consequence: true, instructions: true, criterion: true })
+  .partial();
+export type RequiredActionText = z.infer<typeof requiredActionTextSchema>;
+
+/**
+ * One correction of a required action's words (docs/required-actions.md,
+ * "Correcting the words"): who made it, when, why, the generation it
+ * produced and the words it replaced. The original filing - its source
+ * task, offer and version - stays on the requirement beside it.
+ */
+export const requiredActionCorrectionSchema = z.object({
+  operationId: z.string().min(1).max(128),
+  actor: z.enum(["crewmate", "firstmate"]),
+  /** The contributing crewmate's task; absent for the first mate. */
+  taskId: z.string().optional(),
+  /** The host's words for who made it, as every view shows them. */
+  label: z.string().min(1).max(160),
+  at: z.number(),
+  reason: z.string().min(1).max(500),
+  generation: z.number().int().positive(),
+  previous: requiredActionTextSchema,
+});
+export type RequiredActionCorrection = z.infer<typeof requiredActionCorrectionSchema>;
+
+/**
+ * A correction as a writer asks for it: the action (its task or card), the
+ * requirement by its source task and action id, the generation read, the
+ * new words, why, an operation identity, and the declaration that it is
+ * still the same intended action.
+ */
+export const requiredActionRevisionInputSchema = z.object({
+  action: z.string().min(1).max(128),
+  source: z.string().min(1).max(64),
+  actionId: z.string().min(1).max(64),
+  expectedGeneration: z.number().int().positive(),
+  patch: requiredActionTextSchema,
+  reason: z.string().min(1).max(500),
+  operationId: z.string().min(1).max(128),
+  sameAction: z.boolean(),
+});
+export type RequiredActionRevisionInput = z.infer<typeof requiredActionRevisionInputSchema>;
+
 export const captainActionSchema = z.object({
   requirements: z.array(
     z.object({
@@ -33,6 +84,8 @@ export const captainActionSchema = z.object({
       offer: z.string(),
       head: z.string().optional(),
       action: requiredActionSchema,
+      /** Corrections of this requirement's words, oldest first. */
+      corrections: z.array(requiredActionCorrectionSchema).optional(),
     }),
   ),
   generation: z.number().int().positive(),

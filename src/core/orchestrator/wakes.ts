@@ -147,7 +147,7 @@ export function isCardClosedSteer(text: string): boolean {
 
 /** The nudge when the captain wrote last under one of this crewmate's cards. */
 export const IDLE_THREAD_NUDGE_TEXT =
-  "The captain wrote under your card and you have not answered: answer in the thread with reply, or pass your answer as the reply of your emit_card revision.";
+  "The captain wrote under your card and you have not answered: answer in the thread with reply, or pass your answer as the reply of your emit_card revision, naming their message in answers_message.";
 
 /**
  * The nudge naming the cards the captain wrote under (INF-990 friction 4):
@@ -157,7 +157,7 @@ export const IDLE_THREAD_NUDGE_TEXT =
 export function idleThreadNudgeText(waiting?: readonly WakeNote[]): string {
   if (!waiting?.length) return IDLE_THREAD_NUDGE_TEXT;
   const one = waiting.length === 1;
-  return `The captain wrote under your ${waitingCardWords(waiting)} and you have not answered: answer in ${one ? "that card's" : "each card's"} thread with reply, naming its card_id, or pass your answer as the reply of ${one ? "that card's" : "its"} emit_card revision under the same id.`;
+  return `The captain wrote under your ${waitingCardWords(waiting)} and you have not answered: answer in ${one ? "that card's" : "each card's"} thread with reply, naming its card_id, or pass your answer as the reply of ${one ? "that card's" : "its"} emit_card revision under the same id, naming their message in answers_message.`;
 }
 
 /**
@@ -917,7 +917,11 @@ export type WakeFacts =
   | {
       /** The captain replied in a crewmate card's thread: the crewmate's steer. */
       kind: "thread-reply";
-      card: { id: string; title: string };
+      /**
+       * The card, and the captain message and lifecycle this reply is
+       * (docs/card-threads.md, "Shared cards"); older rows name neither.
+       */
+      card: { id: string; title: string; messageId?: number; lifecycle?: string };
       /** The captain's words, verbatim. */
       words: string;
       answers?: CardAnswer[];
@@ -1948,7 +1952,7 @@ const SECOND_WAKE =
 function threadReplyLead(facts: Extract<WakeFacts, { kind: "thread-reply" }>): string {
   return [
     THREAD_STEER_PREAMBLE,
-    `Card "${facts.card.title}" (${facts.card.id}).`,
+    `Card "${facts.card.title}" (${facts.card.id}).${facts.card.messageId !== undefined ? ` This is the captain's message ${facts.card.messageId}${facts.card.lifecycle ? ` in lifecycle ${facts.card.lifecycle}` : ""}; a line on this card answers it only when it names it in answers_message.` : ""}`,
     "The captain's words, verbatim:",
   ].join("\n");
 }
@@ -2365,7 +2369,7 @@ function renderAnswerMissing(facts: Extract<WakeFacts, { kind: "answer-missing" 
       : "";
   const refused = facts.refusal
     ? facts.refusal === "crewmate-owns"
-      ? ` Your card was refused because ${facts.ownedBy ? `the crewmate's card ${facts.ownedBy}` : "the crewmate's card"} owns that work.`
+      ? ` Your card was refused because ${facts.ownedBy ? `the crewmate's card ${facts.ownedBy}` : "the crewmate's card"} is already on screen for that work: write on it with emit_card and its id.`
       : " Your card was refused."
     : "";
   if (facts.workEnded?.length) {

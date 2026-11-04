@@ -456,8 +456,20 @@ function seedHistory(userDataDir: string): string {
       },
       "Rerun",
     );
-    cards.addMessage(card, "captain", "does the flush cover windows too?");
-    cards.addMessage(card, "crewmate", "Yes: the flush runs on every platform.");
+    const asked = cards.addMessage(card, "captain", "does the flush cover windows too?");
+    // The crewmate's line names the captain's message, which is what answers it.
+    cards.addMessage(
+      card,
+      "crewmate",
+      "Yes: the flush runs on every platform.",
+      undefined,
+      undefined,
+      undefined,
+      false,
+      {
+        answersMessage: asked.id,
+      },
+    );
     cards.resolve(cards.get(card) as Card, "flush", "flush");
     tasks.recordReport(HISTORY_ID, {
       text: "The Mac check passes with the queue flush. I kept it and removed the retry.",

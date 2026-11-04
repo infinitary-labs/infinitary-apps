@@ -1,4 +1,4 @@
-import { calledTool, type Scenario } from "../mockProvider";
+import { answering, calledTool, type Scenario } from "../mockProvider";
 
 /**
  * A crewmate working on a captain reply that takes a while (INF-990
@@ -48,7 +48,14 @@ export const replyProgress: Scenario =
         return {
           afterMs: REPLY_PROGRESS_WORK_MS,
           calls: [
-            { name: "reply", args: { card_id: shownCardId, text: REPLY_PROGRESS_ANSWER } },
+            {
+              name: "reply",
+              args: {
+                card_id: shownCardId,
+                text: REPLY_PROGRESS_ANSWER,
+                ...answering(latestUserTail),
+              },
+            },
             { name: "report", args: { text: REPLY_PROGRESS_ANSWER } },
           ],
         };

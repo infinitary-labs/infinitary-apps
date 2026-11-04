@@ -5,6 +5,7 @@ import { runbookManifestSchema } from "../../../src/shared/runbooks";
 import { completionCardBody } from "../../helpers/completionCard";
 import type { ScriptedArgs, ScriptedCall } from "../../helpers/scriptedCalls";
 import {
+  answering,
   CLAUDE_CREW_MODEL,
   calledTool,
   lookUpTask,
@@ -676,7 +677,7 @@ function sequencesCrewmateMove(
         calls: [
           {
             name: "reply",
-            args: { card_id: shown, text: SEQ_THREAD_ANSWER },
+            args: { card_id: shown, text: SEQ_THREAD_ANSWER, ...answering(user) },
           },
           // The plan changed: the task records the final agreed spec.
           { name: "report", args: { text: SEQ_PLAN_FINAL_SPEC } },

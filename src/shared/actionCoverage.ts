@@ -95,6 +95,7 @@ export const ACTION_EXCEPTIONS: Partial<Record<CoreInvokeChannel, string>> = {
   "inf:work:speed-note": WORK_REQUEST,
   "inf:work:report": WORK_REQUEST,
   "inf:work:reply": WORK_REQUEST,
+  "inf:work:revise-required-action": WORK_REQUEST,
   "inf:work:github-write": WORK_REQUEST,
   "inf:work:prepare-change": WORK_REQUEST,
   "inf:work:open-change": WORK_REQUEST,

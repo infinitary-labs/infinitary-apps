@@ -39,6 +39,11 @@ const ORIGIN = Type.Optional(
   }),
 );
 
+// spawn_crewmate's points at create_task's, as its title does, so the rule is said once.
+const ORIGIN_AS_CREATE_TASK = Type.Optional(
+  Type.String({ description: "As create_task's origin." }),
+);
+
 // Distribute over the tool union so each name keeps its own argument schema.
 type AttributedTool<Tool> =
   Tool extends BoundTool<infer Name, infer Params>
@@ -67,7 +72,9 @@ export function withAskAttribution<Tool extends BoundTool>(
     properties: {
       ...tool.parameters.properties,
       ask_id: ASK_ID,
-      ...(FILING_TOOLS.has(tool.name) ? { origin: ORIGIN } : {}),
+      ...(FILING_TOOLS.has(tool.name)
+        ? { origin: tool.name === "create_task" ? ORIGIN : ORIGIN_AS_CREATE_TASK }
+        : {}),
     },
   };
   return {

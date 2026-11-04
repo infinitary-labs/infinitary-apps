@@ -52,11 +52,18 @@ export default function seed(userDataDir: string, input: Input): void {
     try {
       const first = { id: STABLE_ID, actions: [], ...input.first };
       const id = service.addFirstmateCard(first);
-      service.addMessage(id, "captain", input.captain);
+      const question = service.addMessage(id, "captain", input.captain);
       if (input.earlier !== undefined) service.addMessage(id, "host", input.earlier);
-      // The captain's line waits on the first mate, so each revision answers it.
+      // The captain's line waits on the first mate, so each revision answers it,
+      // naming it: only a line that names the captain's message answers it.
       for (const { write, reply } of input.revisions ?? [])
-        service.addFirstmateCard({ ...first, actions: [], ...write, reply });
+        service.addFirstmateCard({
+          ...first,
+          actions: [],
+          ...write,
+          reply,
+          answersMessage: question.id,
+        });
       service.closeOut({ kind: "firstmate" }, "turn-end");
     } finally {
       service.dispose();

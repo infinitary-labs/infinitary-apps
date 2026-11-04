@@ -192,6 +192,7 @@ A new offer builds the card's pane again to draw its new body, so the stage keep
 A revision that came while the back showed puts a dot on Card's chevron, with the value `updated`, until Card turns the card to its face.
 The thread shows each message as the Mac's does: who wrote it (you, crew, mate or app) in its color, its time, its words as plain text and a captain's settings folded on one line, then a working line while its author is at work.
 The thread's words (the count, `1 new`, Card, `updated`) are the Mac's own, from `src/renderer/src/cards/threadWords.ts`.
+A line someone other than the card's answerer wrote carries the same small line as on the Mac, "Revised by …" or "Written by …", and ", after the card closed" on a clarification (`PhoneCardWords.contributor`, generated from `contributorWords`; `docs/card-threads.md`, "Shared cards").
 The body's change bars mark the parts the revised line counts, and the body's task keys open their records.
 A link in the body opens in the device's default browser, and a draft button puts its words at the start of the message box, unsent.
 A crewmate's browser on its card is a strip naming Browser, the page's site and who is driving, read from its task's record; its button names the computer.

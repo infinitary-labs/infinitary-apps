@@ -58,6 +58,50 @@ describe("card thread messages", () => {
       /<span style="[^"]*white-space:pre-wrap[^"]*">the second option is wrong\n\n {2}keep the first/,
     );
   });
+
+  // INF-2225, INF-2214's approved shared cards: a line someone other than the
+  // card's author wrote names who wrote it, the same words the phone shows.
+  it("names who wrote a line on someone else's card, and a clarification after it closed", () => {
+    const contributor = {
+      actor: "crewmate" as const,
+      taskId: "t2",
+      label: "the crewmate on DOP-208",
+    };
+    const markup = renderToStaticMarkup(
+      <MessageList
+        messages={[
+          { id: 1, cardId: "card-1", who: "captain", text: "Where is the remover?", at: 0 },
+          { id: 2, cardId: "card-1", who: "host", text: "revised: Remove it", at: 1, contributor },
+          {
+            id: 3,
+            cardId: "card-1",
+            who: "crewmate",
+            text: "It is under FleetCheckSetup.",
+            at: 2,
+            contributor,
+            answersMessage: 1,
+          },
+          {
+            id: 4,
+            cardId: "card-1",
+            who: "firstmate",
+            text: "For the record.",
+            at: 3,
+            contributor: { actor: "firstmate", label: "your first mate" },
+            clarification: true,
+          },
+        ]}
+      />,
+    );
+    const said = [...markup.matchAll(/data-thread-contributor[^>]*>([^<]*)</g)].map(
+      (match) => match[1],
+    );
+    expect(said).toEqual([
+      "Revised by the crewmate on DOP-208",
+      "Written by the crewmate on DOP-208",
+      "Written by your first mate, after the card closed",
+    ]);
+  });
 });
 
 describe("card thread reply settings", () => {

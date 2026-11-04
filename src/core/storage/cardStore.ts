@@ -3,6 +3,7 @@ import {
   CARD_CAPTURE_VERSION,
   type Card,
   type CardAnswer,
+  type CardContributor,
   type CardMessage,
   type CardMessageWho,
   type CardObservation,
@@ -12,6 +13,7 @@ import {
   type CardObservationSource,
   type CardRevisionLinks,
   cardAnswersSchema,
+  cardContributorSchema,
   cardObservationPayloadSchemas,
   cardRevisionSchema,
   cardSchema,
@@ -255,9 +257,13 @@ type MessageRow = {
   at: number;
   ref_json: string | null;
   revision_json: string | null;
+  contributor_json: string | null;
+  answers_message: number | null;
+  clarification: number | null;
 };
 
 const MESSAGE_COLUMNS = `m.id, m.card_id, m.who, m.text, m.at, m.revision_json,
+  m.contributor_json, m.answers_message, m.clarification,
   (SELECT o.payload_json FROM card_observations o
     WHERE o.card_id = m.card_id AND o.kind = 'message_ref' AND o.message_id = m.id
     ORDER BY o.seq LIMIT 1) AS ref_json`;
@@ -270,6 +276,16 @@ function messageOf(row: MessageRow): CardMessage {
     text: row.text,
     at: row.at,
   };
+  if (row.contributor_json) {
+    try {
+      const contributor = cardContributorSchema.safeParse(JSON.parse(row.contributor_json));
+      if (contributor.success) message.contributor = contributor.data;
+    } catch {
+      /* An unreadable identity stays unknown, never guessed. */
+    }
+  }
+  if (row.answers_message !== null) message.answersMessage = row.answers_message;
+  if (row.clarification === 1) message.clarification = true;
   if (row.who === "host" && row.revision_json) {
     try {
       const revision = cardRevisionSchema.safeParse(JSON.parse(row.revision_json));
@@ -843,11 +859,21 @@ export class CardStore {
     text: string;
     at?: number;
     revision?: CardRevisionLinks;
+    /** Who wrote it, when that is not the card's own author (`shared-cards.md`). */
+    contributor?: CardContributor;
+    /** The captain message this line answers and ends. */
+    answersMessage?: number;
+    /** A dated note on a closed card. */
+    clarification?: true;
+    /** The correlated response this line carries (`InboxStore.submitResponse`). */
+    responseId?: string;
   }): CardMessage {
     const at = input.at ?? Date.now();
     const result = this.db
       .prepare(
-        "INSERT INTO card_messages (card_id, who, text, at, revision_json) VALUES (?, ?, ?, ?, ?)",
+        `INSERT INTO card_messages
+          (card_id, who, text, at, revision_json, contributor_json, answers_message, clarification, response_id)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       )
       .run(
         input.cardId,
@@ -855,6 +881,10 @@ export class CardStore {
         input.text,
         at,
         input.revision ? JSON.stringify(cardRevisionSchema.parse(input.revision)) : null,
+        input.contributor ? JSON.stringify(cardContributorSchema.parse(input.contributor)) : null,
+        input.answersMessage ?? null,
+        input.clarification ? 1 : null,
+        input.responseId ?? null,
       );
     return {
       id: Number(result.lastInsertRowid),
@@ -863,7 +893,71 @@ export class CardStore {
       text: input.text,
       at,
       ...(input.revision ? { revision: input.revision } : {}),
+      ...(input.contributor ? { contributor: input.contributor } : {}),
+      ...(input.answersMessage !== undefined ? { answersMessage: input.answersMessage } : {}),
+      ...(input.clarification ? { clarification: true as const } : {}),
     };
+  }
+
+  /** The first line that answered a captain message, sought by its index. */
+  answerTo(cardId: string, messageId: number): CardMessage | undefined {
+    const row = this.db
+      .prepare(
+        `SELECT ${MESSAGE_COLUMNS} FROM card_messages m
+         WHERE m.card_id = ? AND m.answers_message = ? ORDER BY m.id LIMIT 1`,
+      )
+      .get(cardId, messageId) as MessageRow | undefined;
+    return row ? messageOf(row) : undefined;
+  }
+
+  /** The card's newest captain line, the question its answer hold is about. */
+  newestCaptainMessage(cardId: string): CardMessage | undefined {
+    const row = this.db
+      .prepare(
+        `SELECT ${MESSAGE_COLUMNS} FROM card_messages m
+         WHERE m.card_id = ? AND m.who = 'captain' ORDER BY m.id DESC LIMIT 1`,
+      )
+      .get(cardId) as MessageRow | undefined;
+    return row ? messageOf(row) : undefined;
+  }
+
+  /** A contribution's saved result by its operation identity (`shared-cards.md`). */
+  contribution(operationId: string): { cardId: string; result: unknown } | undefined {
+    const row = this.db
+      .prepare("SELECT card_id, result_json FROM card_contributions WHERE operation_id = ?")
+      .get(operationId) as { card_id: string; result_json: string } | undefined;
+    if (!row) return undefined;
+    try {
+      return { cardId: row.card_id, result: JSON.parse(row.result_json) };
+    } catch {
+      return { cardId: row.card_id, result: undefined };
+    }
+  }
+
+  /** Keep a contribution's result under its operation identity, once. */
+  recordContribution(input: {
+    operationId: string;
+    cardId: string;
+    actor: "crewmate" | "firstmate";
+    taskId?: string;
+    reason?: string;
+    at: number;
+    result: unknown;
+  }): void {
+    this.db
+      .prepare(
+        `INSERT OR IGNORE INTO card_contributions
+          (operation_id, card_id, actor, task_id, reason, at, result_json) VALUES (?, ?, ?, ?, ?, ?, ?)`,
+      )
+      .run(
+        input.operationId,
+        input.cardId,
+        input.actor,
+        input.taskId ?? null,
+        input.reason ?? null,
+        input.at,
+        JSON.stringify(input.result),
+      );
   }
 
   /** Publish every write from the turn, not merely its newest offer. */
@@ -980,7 +1074,12 @@ export class CardStore {
   deleteForTask(taskId: string): void {
     this.db.transaction(() => {
       // The thread, the revisions and the evidence die with their card.
-      for (const table of ["card_messages", "card_revisions", "card_observations"]) {
+      for (const table of [
+        "card_messages",
+        "card_revisions",
+        "card_observations",
+        "card_contributions",
+      ]) {
         this.db
           .prepare(`DELETE FROM ${table} WHERE card_id IN (SELECT id FROM cards WHERE task_id = ?)`)
           .run(taskId);

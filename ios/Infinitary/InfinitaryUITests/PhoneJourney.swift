@@ -700,9 +700,10 @@ import XCTest
     /// INF-2565, the captain: "when the card content gets updated, it will automatically flip to the card side, which is
     /// disruptive when the user is reading the chat thread. i don't think we should auto flip. at most we should show an
     /// indicator near the "< card" button to show there's an update".
-    /// Data: a first mate card with two choices and a two-message thread, then the first mate's revision of its body.
-    /// Completion: the revision's own thread line reaches the phone; the card still shows its back, Card carries the
-    /// update's mark, and Card turns to a face that draws the revised body.
+    /// Data: a first mate card with two choices and a two-message thread, then the first mate's revision of its body,
+    /// which carries its answer to the captain's question (INF-2225: a handoff line leaves the question waiting).
+    /// Completion: the revision's own thread line and its answer reach the phone; the card still shows its back, Card
+    /// carries the update's mark, and Card turns to a face that draws the revised body.
     func testRevisionKeepsTheThreadShowing() async throws {
         try await launchJoined()
         let fixture = try await home("flip-card")
@@ -722,9 +723,10 @@ import XCTest
         let revised = try await home("flip-card-revise")
         let added = try XCTUnwrap(revised["added"] as? String)
         XCTAssertNotEqual(fixture["offerId"] as? String, revised["offerId"] as? String, "The revision kept its offer")
-        // The revision has reached the phone once the thread counts its "revised:" line, on whichever side shows.
+        // The revision has reached the phone once the thread counts its "revised:" line and the answer after it, on
+        // whichever side shows.
         let arrived = NSPredicate { _, _ in
-            (count.exists && count.label == "THREAD · 3") || (cue.exists && cue.label.hasSuffix("3"))
+            (count.exists && count.label == "THREAD · 4") || (cue.exists && cue.label.hasSuffix("4"))
         }
         XCTAssertEqual(waitForPhonePredicate(arrived, object: nil, timeout: 20), .completed, app.debugDescription)
         picture("2-after-revision")
@@ -1640,7 +1642,8 @@ import XCTest
 
     /// INF-1524, the captain: "ios app's cards don't have minimize button. also the merge card doesn't have the radar chart."
     /// Data: a crewmate's merge card with its task, model, place, risk, the host's fact strip, an action to take after
-    /// merging, a revision and a thread. Completion: the phone draws the Mac's head and foot, puts the card aside on the
+    /// merging, a revision and a thread with a line another task's crewmate wrote (INF-2225). Completion: the phone draws
+    /// the Mac's head and foot, names that line's true writer, puts the card aside on the
     /// computer, asks before discarding typed words, counts a new card beside the pager and sends the words with a choice.
     private func verifyMergeCard() async throws {
         let fixture = try await home("merge-card")
@@ -1674,6 +1677,10 @@ import XCTest
         let cue = app.buttons["thread-cue"]
         reveal(cue); tapOnPhone(cue)
         XCTAssertTrue(app.staticTexts[try XCTUnwrap(fixture["threadCrew"] as? String)].waitForPresence(timeout: 10), app.debugDescription)
+        // INF-2225: a line another task's crewmate wrote on this card names its true writer in the Mac's words.
+        let contributor = app.staticTexts["thread-contributor"]
+        XCTAssertTrue(contributor.waitForPresence(timeout: 10), app.debugDescription)
+        XCTAssertEqual(contributor.label, try XCTUnwrap(fixture["threadContributor"] as? String))
         picture("merge-thread")
         tapOnPhone(app.buttons["thread-return"])
         XCTAssertTrue(app.descendants(matching: .any).matching(identifier: "card-back").firstMatch.waitForAbsence(timeout: 10),

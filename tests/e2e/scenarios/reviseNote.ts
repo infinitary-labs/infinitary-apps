@@ -1,4 +1,4 @@
-import type { Scenario } from "../mockProvider";
+import { answering, type Scenario } from "../mockProvider";
 import { MOCK_QUOTA_NOTE_TITLE } from "./everyCardKind";
 
 export const MOCK_REVISED_NOTE_TEXT = "Codex weekly is now at 58% - still routing on pace.";
@@ -32,6 +32,7 @@ export const reviseNote: Scenario =
               // INF-2022: an emit under a waiting thread must answer the captain too.
               // Without this, CardService refuses the revision and leaves the original body intact.
               reply: "I updated the weekly reading under Quota note.",
+              ...answering(latestUserTail),
               title: MOCK_QUOTA_NOTE_TITLE,
               body: `<p>${MOCK_REVISED_NOTE_TEXT}</p>`,
             },

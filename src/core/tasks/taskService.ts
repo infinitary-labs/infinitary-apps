@@ -51,8 +51,12 @@ import { deliveryForRecord, opensPullRequest, type RepoView } from "@shared/repo
 import {
   type CaptainAction,
   captainActionResult,
+  REQUIRED_ACTION_TEXT_FIELDS,
   type RequiredAction,
+  type RequiredActionCorrection,
   type RequiredActionOffer,
+  type RequiredActionText,
+  requiredActionSchema,
 } from "@shared/requiredActions";
 import { type HostStamp, stampOnto, type WorkShape } from "@shared/routingPolicy";
 import type { PlanItem } from "@shared/taskPlan";
@@ -311,6 +315,28 @@ export type TaskFlags = {
 };
 
 /** The editable fields (update_task); every one optional. */
+/** What a required-action correction did (`TaskService.reviseRequiredAction`). */
+export type RequiredActionRevision =
+  | {
+      effect: "refused";
+      refusal: string;
+      taskId?: string;
+      cardId?: string;
+      generation?: number;
+      state?: CaptainAction["state"];
+    }
+  | {
+      effect: "revised" | "unchanged" | "repeated";
+      taskId: string;
+      cardId: string;
+      generation: number;
+      state: CaptainAction["state"];
+      source: string;
+      actionId: string;
+      changed?: string[];
+      correction?: RequiredActionCorrection;
+    };
+
 export type UpdateTaskPatch = {
   placementRequirements?: PlacementRequirements | null;
   correctRequiredAction?: boolean;
@@ -4456,7 +4482,14 @@ export class TaskService {
    */
   recordReply(
     id: string,
-    input: { cardId: string; title: string; text: string; actor: "crewmate" | "firstmate" },
+    input: {
+      cardId: string;
+      title: string;
+      text: string;
+      actor: "crewmate" | "firstmate";
+      /** Who wrote it when not the card's author (docs/card-threads.md, "Shared cards"). */
+      contributor?: { taskId?: string; label: string };
+    },
   ): void {
     const at = this.now();
     const run = this.write(() => {
@@ -4468,7 +4501,11 @@ export class TaskService {
         actor: input.actor,
         kind: "replied",
         text: redactObserveText(input.text),
-        data: { cardId: input.cardId, title: input.title },
+        data: {
+          cardId: input.cardId,
+          title: input.title,
+          ...(input.contributor ? { contributor: input.contributor } : {}),
+        },
         ref: input.cardId,
         feed: false,
       });
@@ -5113,6 +5150,188 @@ export class TaskService {
         feed: false,
       });
     }
+  }
+
+  /**
+   * Correct the words of one requirement of an outstanding required action
+   * (docs/required-actions.md, "Correcting the words"). The caller names the
+   * requirement by its source task and action id, the generation it read,
+   * the words to replace, why, and an operation identity; it declares that
+   * this is still the same intended action, and a different one is a
+   * cancellation and a new declaration instead. Only title, consequence,
+   * instructions and criterion change; the original filing, target, ids,
+   * prerequisites and completion mode stay. A real change moves the
+   * generation, so an older confirmation offer no longer completes it, and
+   * keeps its blocked, ready or deferred state. A completed or closed action
+   * refuses, and nothing is written on any refusal. The same operation
+   * identity answers its earlier result again.
+   */
+  reviseRequiredAction(
+    ref: string,
+    input: {
+      source: string;
+      actionId: string;
+      expectedGeneration: number;
+      patch: RequiredActionText;
+      reason: string;
+      operationId: string;
+      sameAction: boolean;
+      by: Pick<RequiredActionCorrection, "actor" | "taskId" | "label">;
+      /** The action's card is on the captain's stack, so the new words are what it offers. */
+      presented: boolean;
+    },
+  ): RequiredActionRevision {
+    return this.write((): RequiredActionRevision => {
+      const cardRef = ref.startsWith("card-fm-required-action-")
+        ? ref.slice("card-fm-required-action-".length)
+        : ref;
+      const row = this.resolve(cardRef);
+      const action = row?.delivery?.captainAction;
+      if (!row || !action) {
+        return { effect: "refused", refusal: `No required action is filed as ${ref}.` };
+      }
+      const current = { taskId: row.id, cardId: action.cardId, generation: action.generation };
+      const earlier = action.requirements.find((entry) =>
+        entry.corrections?.some((correction) => correction.operationId === input.operationId),
+      );
+      if (earlier) {
+        const kept = earlier.corrections?.find(
+          (correction) => correction.operationId === input.operationId,
+        );
+        return {
+          effect: "repeated",
+          ...current,
+          state: action.state,
+          source: earlier.source,
+          actionId: earlier.action.id,
+          ...(kept ? { correction: kept } : {}),
+        };
+      }
+      const refuse = (refusal: string): RequiredActionRevision => ({
+        effect: "refused",
+        refusal,
+        ...current,
+        state: action.state,
+      });
+      if (row.status !== "open" || ["confirmed", "checked", "cancelled"].includes(action.state)) {
+        return refuse(
+          action.state === "cancelled" || row.status === "dropped"
+            ? "This required action was cancelled, so its words stay as they were."
+            : "This required action is already completed, so its words stay as the captain confirmed them. Clarify the history in its card's thread instead.",
+        );
+      }
+      if (input.expectedGeneration !== action.generation) {
+        return refuse(
+          `You read generation ${input.expectedGeneration}, and the action is now at generation ${action.generation}. Read it again before correcting it.`,
+        );
+      }
+      if (!input.sameAction) {
+        return refuse(
+          "A correction keeps the same intended action. For a different action, cancel this one and declare the new one from its source task.",
+        );
+      }
+      const reason = input.reason.replace(/\s+/g, " ").trim();
+      if (!reason) return refuse("A correction needs its reason.");
+      const sourceId = this.resolve(input.source)?.id ?? input.source;
+      const index = action.requirements.findIndex(
+        (entry) => entry.source === sourceId && entry.action.id === input.actionId,
+      );
+      const requirement = action.requirements[index];
+      if (!requirement) {
+        const named = action.requirements
+          .map((entry) => `${this.get(entry.source)?.key ?? entry.source} / ${entry.action.id}`)
+          .join(", ");
+        return refuse(
+          `No requirement of this action was filed by ${input.source} as ${input.actionId}. Its requirements: ${named}.`,
+        );
+      }
+      const patch = Object.fromEntries(
+        REQUIRED_ACTION_TEXT_FIELDS.flatMap((field) =>
+          input.patch[field] !== undefined ? [[field, input.patch[field]]] : [],
+        ),
+      ) as RequiredActionText;
+      const parsed = requiredActionSchema.safeParse({ ...requirement.action, ...patch });
+      if (!parsed.success) {
+        return refuse(
+          `The corrected words do not fit a required action: ${parsed.error.issues[0]?.message ?? "invalid"}.`,
+        );
+      }
+      const next: RequiredAction = parsed.data;
+      const changed = REQUIRED_ACTION_TEXT_FIELDS.filter(
+        (field) => JSON.stringify(next[field]) !== JSON.stringify(requirement.action[field]),
+      );
+      if (changed.length === 0) {
+        return {
+          effect: "unchanged",
+          ...current,
+          state: action.state,
+          source: sourceId,
+          actionId: input.actionId,
+        };
+      }
+      const generation = action.generation + 1;
+      const correction: RequiredActionCorrection = {
+        operationId: input.operationId,
+        actor: input.by.actor,
+        ...(input.by.taskId ? { taskId: input.by.taskId } : {}),
+        label: input.by.label,
+        at: this.now(),
+        reason: reason.slice(0, 500),
+        generation,
+        previous: Object.fromEntries(
+          changed.map((field) => [field, requirement.action[field]]),
+        ) as RequiredActionText,
+      };
+      const requirements = action.requirements.map((entry, at) =>
+        at === index
+          ? { ...entry, action: next, corrections: [...(entry.corrections ?? []), correction] }
+          : entry,
+      );
+      const state: CaptainAction = {
+        ...action,
+        requirements,
+        generation,
+        ...(input.presented ? { presentedGeneration: generation } : {}),
+      };
+      this.writeDeliveryRecords(row.id, { captainAction: state });
+      const first = requirements[0]?.action;
+      if (
+        first &&
+        index === 0 &&
+        changed.some((field) => field === "title" || field === "criterion")
+      )
+        this.patch(row.id, {
+          title: first.title.slice(0, 64),
+          goal: first.criterion,
+          updatedAt: this.now(),
+        });
+      this.addEvent({
+        taskId: row.id,
+        at: correction.at,
+        actor: input.by.actor === "firstmate" ? "firstmate" : "crewmate",
+        kind: "note",
+        text: `${correction.label} corrected the required action's ${changed.join(", ")}: ${correction.reason}`,
+        data: {
+          source: sourceId,
+          action: input.actionId,
+          generation,
+          operationId: input.operationId,
+          previous: correction.previous,
+          ...(input.by.taskId ? { contributor: input.by.taskId } : {}),
+        },
+        feed: false,
+      });
+      return {
+        effect: "revised",
+        ...current,
+        generation,
+        state: state.state,
+        source: sourceId,
+        actionId: input.actionId,
+        changed,
+        correction,
+      };
+    })();
   }
 
   captainActionReady(id: string): boolean {

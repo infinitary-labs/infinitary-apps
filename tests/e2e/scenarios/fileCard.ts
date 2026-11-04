@@ -1,4 +1,4 @@
-import { calledTool, type Scenario } from "../mockProvider";
+import { answering, calledTool, type Scenario } from "../mockProvider";
 
 export const FILE_CARD_PROMPT_MARKER = "show a file-backed card";
 export const FILE_CARD_REVISE_MARKER = "show the edited card file";
@@ -47,6 +47,7 @@ export const fileCard: Scenario =
               title: FILE_CARD_TITLE,
               id: "file-answer",
               reply: "Updated the answer from the file.",
+              ...answering(latestUserTail),
               body_file: `${dir}/answer.html`,
             },
           },

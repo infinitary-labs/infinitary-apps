@@ -1,4 +1,4 @@
-import { calledTool, type Scenario } from "../mockProvider";
+import { answering, calledTool, type Scenario } from "../mockProvider";
 
 /**
  * Inline decisions (contract 4.22; tests/e2e/card-questions.spec.ts): a
@@ -47,7 +47,12 @@ export const inlineQuestions: Scenario =
             name: "emit_card",
             args: {
               id: "inline-questions",
-              ...(revise ? { reply: "Renamed one question; your other picks stay." } : {}),
+              ...(revise
+                ? {
+                    reply: "Renamed one question; your other picks stay.",
+                    ...answering(latestUserTail),
+                  }
+                : {}),
               title: revise ? INLINE_QUESTIONS_REVISED_TITLE : INLINE_QUESTIONS_TITLE,
               body: inlineQuestionsBody(revise),
               actions: [

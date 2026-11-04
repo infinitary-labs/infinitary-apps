@@ -507,8 +507,12 @@ describe("CardService", () => {
     expect(shown()).toMatchObject({ body: "<p>Keep Friday for the review.</p>" });
     expect(shown()?.minimized).toBeUndefined();
     // A thread answer written, then put aside before the turn ends.
-    cards.addMessage(id, "captain", "Why Friday?");
-    cards.replyFromCrewmate("launch", { cardId: id, text: "Friday keeps the review beside it." });
+    const why = cards.addMessage(id, "captain", "Why Friday?");
+    cards.replyFromCrewmate("launch", {
+      cardId: id,
+      text: "Friday keeps the review beside it.",
+      answersMessage: why.id,
+    });
     cards.setMinimized(id, true);
     cards.closeOut({ kind: "crewmate", taskId: "launch" }, "idle");
     expect(shown()?.minimized).toBeUndefined();
@@ -716,7 +720,7 @@ describe("CardService", () => {
     const before = make();
     const asked = before.emitCrewmateCard("t1", decision, "m");
     before.closeOut({ kind: "crewmate", taskId: "t1" }, "report");
-    before.addMessage(asked, "captain", "why not left?");
+    const question = before.addMessage(asked, "captain", "why not left?");
     // Written, not yet reported, when the app quits.
     const unsaid = before.emitCrewmateCard(
       "t1",
@@ -739,7 +743,11 @@ describe("CardService", () => {
     ).toEqual([expect.objectContaining({ closeOut: "restart" })]);
 
     // The held card comes back when its author answers and its turn ends.
-    after.replyFromCrewmate("t1", { cardId: asked, text: "Left races the queue." });
+    after.replyFromCrewmate("t1", {
+      cardId: asked,
+      text: "Left races the queue.",
+      answersMessage: question.id,
+    });
     expect(after.get(asked)?.awaiting).toBe("close-out");
     after.closeOut({ kind: "crewmate", taskId: "t1" }, "report");
     expect(after.snapshot().find((card) => card.id === asked)?.awaiting).toBe("close-out");
@@ -900,12 +908,18 @@ describe("CardService", () => {
     cards.addFirstmateCard({ ...decision, id, body: "<p>Now three ways.</p>" });
     expect(cards.snapshot()[0]?.body).toBe("<p>Now three ways.</p>");
 
-    cards.addMessage(id, "captain", "and the fourth?");
+    const fourth = cards.addMessage(id, "captain", "and the fourth?");
     expect(cards.snapshot()[0]?.awaiting).toBe("answer");
     // A turn that ends without answering leaves it held.
     cards.closeOut({ kind: "firstmate" }, "turn-end");
     expect(cards.snapshot()[0]?.awaiting).toBe("answer");
-    cards.recordFirstmateThreadAnswer(id, "There is no fourth.");
+    cards.addFirstmateCard({
+      ...decision,
+      id,
+      body: "<p>Now three ways.</p>",
+      reply: "There is no fourth.",
+      answersMessage: fourth.id,
+    });
     cards.closeOut({ kind: "firstmate" }, "turn-end");
     expect(cards.snapshot()[0]?.awaiting).toBeUndefined();
   });
@@ -936,16 +950,23 @@ describe("CardService", () => {
     pushes.length = 0;
     const waits = () => pushes.map((push) => push.find((card) => card.id === id)?.awaiting);
 
-    cards.addMessage(id, "captain", "and the fourth?");
+    const fourth = cards.addMessage(id, "captain", "and the fourth?");
     // No timer has run: the window already has the card waiting on its answer.
     expect(waits()).toEqual(["answer"]);
-    cards.recordFirstmateThreadAnswer(id, "There is no fourth.");
+    cards.addFirstmateCard({
+      ...decision,
+      id,
+      reply: "There is no fourth.",
+      answersMessage: fourth.id,
+    });
     cards.closeOut({ kind: "firstmate" }, "turn-end");
     vi.runAllTimers();
     expect(waits()).toEqual(["answer", undefined]);
   });
 
-  it("takes the Firstmate's closing words under a note its closed task kept, and clears the wait", () => {
+  // The captain's choice on handoff-ends-question: "Only a line that says it
+  // answers it; a handoff stays open".
+  it("takes the Firstmate's closing words under a note its closed task kept as a line that leaves the wait, and its named reply clears it", () => {
     const { tasks, make } = setup();
     seedTask(tasks, { id: "t1", title: "Ship it", status: "idle" });
     const cards = make();
@@ -962,16 +983,28 @@ describe("CardService", () => {
     expect(cards.thread(note).messages.map((message) => message.who)).toEqual(["captain"]);
 
     tasks.close("t1", { status: "done", reason: "merged", actor: "host" });
-    cards.addMessage(note, "captain", "and the version?");
+    const version = cards.addMessage(note, "captain", "and the version?");
     expect(cards.snapshot().find((card) => card.id === note)?.awaiting).toBe("answer");
-    expect(cards.recordFirstmateThreadAnswer(note, "It is in 0.2.")).toBe(true);
+    expect(cards.recordFirstmateThreadAnswer(note, "I asked a crewmate to check.")).toBe(true);
     expect(cards.thread(note).messages.map((message) => message.who)).toEqual([
       "captain",
       "captain",
       "firstmate",
     ]);
     cards.closeOut({ kind: "firstmate" }, "turn-end");
+    expect(cards.snapshot().find((card) => card.id === note)?.awaiting).toBe("answer");
+    // Its next turn's closing words add nothing beside its own line.
+    expect(cards.recordFirstmateThreadAnswer(note, "Still checking.")).toBe(false);
+    cards.replyAs(
+      { actor: "firstmate" },
+      { cardId: note, text: "It is in 0.2.", answersMessage: version.id },
+    );
+    cards.closeOut({ kind: "firstmate" }, "turn-end");
     expect(cards.snapshot().find((card) => card.id === note)?.awaiting).toBeUndefined();
+    expect(cards.thread(note).messages.at(-1)).toMatchObject({
+      who: "firstmate",
+      answersMessage: version.id,
+    });
   });
 
   // INF-770 direction A: a reply never moves a card, whatever waits behind it.
@@ -989,7 +1022,7 @@ describe("CardService", () => {
         .map((card) => card.id);
     expect(staged()).toEqual([asked, other]);
 
-    cards.addMessage(asked, "captain", "why not left?");
+    const question = cards.addMessage(asked, "captain", "why not left?");
     // On the stage, in its place, carrying what it waits on.
     expect(staged()).toEqual([asked, other]);
     const waiting = cards.snapshot().find((card) => card.id === asked);
@@ -1021,7 +1054,11 @@ describe("CardService", () => {
 
     // The author answers: its report leaves the card in its place, waiting
     // on its turn end, which redraws the newest version there.
-    restored.replyFromCrewmate("t1", { cardId: asked, text: "Left races the queue." });
+    restored.replyFromCrewmate("t1", {
+      cardId: asked,
+      text: "Left races the queue.",
+      answersMessage: question.id,
+    });
     restored.closeOut({ kind: "crewmate", taskId: "t1" }, "report");
     expect(restored.snapshot().find((card) => card.id === asked)?.awaiting).toBe("close-out");
     expect(restored.snapshot().map((card) => card.id)).toEqual([asked, other, later]);
@@ -1454,7 +1491,7 @@ describe("CardService", () => {
       "m",
     );
     cards.closeOut({ kind: "crewmate", taskId: "t1" }, "report");
-    cards.addMessage(first, "captain", "that seems inconsistent");
+    const inconsistent = cards.addMessage(first, "captain", "that seems inconsistent");
     const answer = {
       id: "models-chip-color",
       title: "The chip uses separate colors",
@@ -1473,13 +1510,13 @@ describe("CardService", () => {
     // first card still waits, and closing it leaves that card named.
     const second = cards.emitCrewmateCard("t1", { ...answer, reply: undefined }, "m");
     expect(cards.replyFromCrewmate("t1", { cardId: second, text: "Muted means a prefix." })).toBe(
-      `Replied in the thread on "The chip uses separate colors" (${second}). The captain's reply under card "The chip colors distinguish prefixes" (${first}) still waits on your answer: answer it there with reply, or in that card's emit_card revision.`,
+      `Replied in the thread on "The chip uses separate colors" (${second}). The captain's reply under card "The chip colors distinguish prefixes" (${first}) still waits on your answer: answer it there with reply, or in that card's emit_card revision, naming their message in answers_message.`,
     );
     cards.close(second, { kind: "crewmate", taskId: "t1" }, "relayed");
     expect(cards.threadsAwaitingAuthor("t1").map((card) => card.id)).toEqual([first]);
 
     // The revision of the card the captain wrote under answers them.
-    cards.emitCrewmateCard("t1", { ...answer, id: first }, "m");
+    cards.emitCrewmateCard("t1", { ...answer, id: first, answersMessage: inconsistent.id }, "m");
     expect(cardStore.awaitingAuthor(first)).toBe(false);
     expect(cards.threadAwaitingAuthor("t1")).toBe(false);
     expect(cardStore.messages(first).map((message) => message.who)).toEqual([
@@ -1552,21 +1589,34 @@ describe("CardService", () => {
     expect(cards.threadFacts([]).size).toBe(0);
   });
 
-  it("writes a crewmate's thread answer only on its own card, and pushes the thread whole", () => {
+  // INF-2214's approved shared cards: another task's crewmate writes on the
+  // card with no grant, recorded as itself; the card's own answerer is unchanged.
+  it("takes another task's crewmate's line with its true writer, and pushes the thread whole", () => {
     const { tasks, threads, make } = setup();
     seedTask(tasks, { id: "t1", title: "Build it", status: "idle" });
     seedTask(tasks, { id: "t2", title: "Other", status: "idle" });
     const cards = make();
     const id = cards.emitCrewmateCard("t1", decision, "m");
+    const other = tasks.get("t2")?.key;
 
-    expect(cards.replyFromCrewmate("t2", { cardId: id, text: "mine now" })).toMatch(/not yours/);
+    expect(cards.replyFromCrewmate("t2", { cardId: id, text: "Right is cheaper." })).toBe(
+      `Wrote on the thread of card "${decision.title}" (${id}) as the crewmate on ${other}. Your line is message 1, a comment; it ends no question. The card itself is unchanged (title, body, choices).`,
+    );
     expect(cards.replyFromCrewmate("t1", { cardId: id, text: "Left is safer." })).toMatch(
       /^Replied in the thread/,
     );
-    expect(threads.at(-1)?.messages.map((message) => [message.who, message.text])).toEqual([
-      ["crewmate", "Left is safer."],
+    expect(
+      threads.at(-1)?.messages.map((message) => [message.who, message.text, message.contributor]),
+    ).toEqual([
+      [
+        "crewmate",
+        "Right is cheaper.",
+        { actor: "crewmate", taskId: "t2", label: `the crewmate on ${other}` },
+      ],
+      ["crewmate", "Left is safer.", undefined],
     ]);
-    expect(cards.threadFact("t1")).toBe("thread: 1 message, last from crewmate");
+    expect(cards.get(id)?.taskId).toBe("t1");
+    expect(cards.threadFact("t1")).toBe("thread: 2 messages, last from crewmate");
   });
 
   // INF-1273: an answer the first mate asks its task's crewmate for lands in
@@ -1591,7 +1641,11 @@ describe("CardService", () => {
     const before = cards.get(id);
     const taskBefore = tasks.get("build");
 
-    expect(cards.replyFromCrewmate("other", { cardId: id, text: "Yes." })).toMatch(/not yours/);
+    // INF-2214: another task's crewmate may write here too, as itself, and
+    // ends no question it does not name.
+    expect(cards.replyFromCrewmate("other", { cardId: id, text: "I have not tried it." })).toMatch(
+      /^Wrote on the thread of card .* as the crewmate on .*a comment; it ends no question\./,
+    );
     expect(
       cards.replyFromCrewmate("build", {
         cardId: id,
@@ -1599,11 +1653,14 @@ describe("CardService", () => {
       }),
     ).toMatch(/^Replied in the thread/);
 
-    expect(threads.length).toBe(pushed + 1);
-    expect(threads.at(-1)?.messages.map((message) => message.who)).toEqual([
-      "captain",
-      "firstmate",
-      "crewmate",
+    expect(threads.length).toBe(pushed + 2);
+    expect(
+      threads.at(-1)?.messages.map((message) => [message.who, message.contributor?.taskId]),
+    ).toEqual([
+      ["captain", undefined],
+      ["firstmate", undefined],
+      ["crewmate", "other"],
+      ["crewmate", undefined],
     ]);
     expect(cardStore.messages(id).at(-1)?.text).toMatch(/^Yes: without FUSE/);
     expect([...cards.values()].map((card) => [card.id, card.author])).toEqual([[id, "firstmate"]]);
@@ -1776,7 +1833,7 @@ describe("CardService evidence", () => {
     expect(only(cardStore, id, "action")[0]?.payload).toMatchObject({ answers });
 
     // A genuine new reply survives restart. An unrelated note is no answer.
-    cards.addMessage(id, "captain", "change the capacity");
+    const change = cards.addMessage(id, "captain", "change the capacity");
     cards.emitCrewmateCard(
       "t1",
       { title: "Other note", body: "Unrelated.", actions: [] },
@@ -1790,7 +1847,11 @@ describe("CardService evidence", () => {
       report: { rule: "thread-unanswered", wake: false },
       idle: "thread",
     });
-    cards.replyFromCrewmate("t1", { cardId: id, text: "Capacity corrected." });
+    cards.replyFromCrewmate("t1", {
+      cardId: id,
+      text: "Capacity corrected.",
+      answersMessage: change.id,
+    });
     expect(cards.get(id)?.awaiting).toBe("close-out");
     expect(cards.threadAwaitingAuthor("t1")).toBe(false);
     cards.closeOut({ kind: "crewmate", taskId: "t1" }, "idle");
@@ -1809,9 +1870,10 @@ describe("CardService evidence", () => {
     expect(cards.recordFirstmateThreadAnswer(id, "Unrelated close-out.")).toBe(false);
     expect(cardStore.messages(id).map((message) => message.text)).toEqual(["build it"]);
     cards.addMessage(id, "captain", "new question");
-    expect(cards.recordFirstmateThreadAnswer(id, "Current answer.")).toBe(true);
-    expect(cardStore.messages(id).at(-1)?.text).toBe("Current answer.");
-    expect(cardStore.awaitingAuthor(id)).toBe(false);
+    expect(cards.recordFirstmateThreadAnswer(id, "Current line.")).toBe(true);
+    expect(cardStore.messages(id).at(-1)?.text).toBe("Current line.");
+    // The closing words name no message, so the question still waits.
+    expect(cardStore.awaitingAuthor(id)).toBe(true);
   });
 
   it("says who owes each thread an answer from the current lifecycle, across reopen, close and restart (FI3-359)", () => {
@@ -1847,10 +1909,10 @@ describe("CardService evidence", () => {
       { title: "Which retry?", body: "<p>Keep it?</p>", actions: [] },
       "Build it",
     );
-    cards.addMessage(question, "captain", "keep it?");
+    const keep = cards.addMessage(question, "captain", "keep it?");
     restart();
     expect(owed()[question]).toEqual(["captain", "author"]);
-    cards.replyFromCrewmate("t1", { cardId: question, text: "Kept it." });
+    cards.replyFromCrewmate("t1", { cardId: question, text: "Kept it.", answersMessage: keep.id });
     expect(owed()[question]).toEqual(["crewmate", "none"]);
 
     // The Firstmate answers its own card, and a note its done task kept.
@@ -2281,8 +2343,17 @@ describe("CardService current-update sightings", () => {
     ).toHaveLength(1);
     vi.runOnlyPendingTimers();
     expect(pushes.at(-1)?.find((card) => card.id === id)?.currentUpdateSeen).toBe(true);
-    cards.addMessage(id, "captain", "Can you confirm the findings?");
-    cards.addMessage(id, "crewmate", "The findings are unchanged.");
+    const confirm = cards.addMessage(id, "captain", "Can you confirm the findings?");
+    cards.addMessage(
+      id,
+      "crewmate",
+      "The findings are unchanged.",
+      undefined,
+      undefined,
+      undefined,
+      false,
+      { answersMessage: confirm.id },
+    );
     cards.closeOut({ kind: "crewmate", taskId: "findings" }, "idle");
     const answer = head();
     expect(answer.offerId).toBe(first.offerId);
@@ -2510,10 +2581,16 @@ describe("revision link publication", () => {
     const id = cards.emitCrewmateCard("revisions", { ...decision, body: base }, "Review", "model");
     cards.closeOut({ kind: "crewmate", taskId: "revisions" }, "report");
     const first = cards.get(id)?.offerId;
-    cards.addMessage(id, "captain", "Check these");
+    const check = cards.addMessage(id, "captain", "Check these");
     cards.emitCrewmateCard(
       "revisions",
-      { ...decision, id, body: base.replace("Old account", "Connected"), reply: "Done." },
+      {
+        ...decision,
+        id,
+        body: base.replace("Old account", "Connected"),
+        reply: "Done.",
+        answersMessage: check.id,
+      },
       "Review",
       "model",
     );
@@ -2524,6 +2601,7 @@ describe("revision link publication", () => {
         ...decision,
         id,
         body: base.replace("Old account", "Connected").replace("Old checks", "Passed"),
+        reply: "Checks passed.",
       },
       "Review",
       "model",

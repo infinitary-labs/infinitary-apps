@@ -1220,6 +1220,7 @@ const MIGRATIONS: readonly Migration[] = [
   );
   `,
   addCrewResponses,
+  addCardContributions,
 ];
 
 /** The inbox owns these additive records; worker closure never cascades into them. */
@@ -1254,8 +1255,42 @@ function addCrewResponses(db: AppDatabase): void {
   `);
 }
 
+/**
+ * Shared cards (INF-2225, docs/card-threads.md "Shared cards"): who actually
+ * wrote a thread line on a card that is not theirs, which captain message a
+ * final answer ends, a closed card's dated clarification, the response a
+ * card answer carries, and each contribution's operation identity with the
+ * result it returned, so a repeated operation answers that result again.
+ * A column today's thread writer names may already be there, lent to an
+ * older profile, so each is added only when missing.
+ */
+function addCardContributions(db: AppDatabase): void {
+  addColumn(db, "card_messages", "contributor_json", "TEXT");
+  addColumn(db, "card_messages", "answers_message", "INTEGER");
+  addColumn(db, "card_messages", "clarification", "INTEGER");
+  addColumn(db, "card_messages", "response_id", "TEXT");
+  db.exec(`
+    CREATE INDEX card_messages_answers ON card_messages (card_id, answers_message)
+      WHERE answers_message IS NOT NULL;
+    CREATE TABLE card_contributions (
+      operation_id TEXT PRIMARY KEY,
+      card_id TEXT NOT NULL,
+      actor TEXT NOT NULL,
+      task_id TEXT,
+      reason TEXT,
+      at INTEGER NOT NULL,
+      result_json TEXT NOT NULL
+    );
+    CREATE INDEX card_contributions_card ON card_contributions (card_id, at);
+    ALTER TABLE crew_responses ADD COLUMN card_message_id INTEGER;
+  `);
+}
+
 /** The response migration's identity, including for exact predecessor-schema fixtures. */
 export const CREW_RESPONSE_VERSION = MIGRATIONS.indexOf(addCrewResponses) + 1;
+
+/** The shared-card migration's identity (INF-2225), for exact predecessor-schema fixtures. */
+export const CARD_CONTRIBUTIONS_VERSION = MIGRATIONS.indexOf(addCardContributions) + 1;
 
 /** The current database format, derived from the embedded migration ledger. */
 export const DATABASE_VERSION = MIGRATIONS.length;

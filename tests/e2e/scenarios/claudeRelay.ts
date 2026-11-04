@@ -1,4 +1,4 @@
-import { CLAUDE_CREW_PROMPT_MARKER, type Scenario } from "../mockProvider";
+import { answering, CLAUDE_CREW_PROMPT_MARKER, type Scenario } from "../mockProvider";
 
 /**
  * A Claude crewmate that relays a captain decision only the Firstmate can
@@ -33,7 +33,10 @@ export const claudeRelay: Scenario =
     if (cardId) {
       return {
         calls: [
-          { name: "reply", args: { card_id: cardId, text: MOCK_CLAUDE_RELAY_ANSWER } },
+          {
+            name: "reply",
+            args: { card_id: cardId, text: MOCK_CLAUDE_RELAY_ANSWER, ...answering(latestUserTail) },
+          },
           {
             name: "report",
             args: { text: MOCK_CLAUDE_RELAY_REPORT, needs_firstmate: MOCK_CLAUDE_RELAY_ASK },

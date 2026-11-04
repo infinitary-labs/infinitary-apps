@@ -4,16 +4,19 @@ import { request as httpsRequest } from "node:https";
 import { connect as plainConnect } from "node:net";
 import { join } from "node:path";
 import { connect, createServer as createTlsServer } from "node:tls";
-import { cardSchema } from "@shared/cards";
+import { cardMessageSchema, cardSchema, cardThreadSchema, pastCardSchema } from "@shared/cards";
 import { CONNECTION_CLOSE, PAIR_PATH } from "@shared/connection";
 import { HOME } from "@shared/deviceNames";
 import { type DeviceGrant, type DeviceKind, parsePairingLink } from "@shared/devices";
 import {
+  type CoreInvokeChannel,
   HOME_CAPABILITIES,
+  isRunViewInvokeChannel,
   PLACED_WORK_SINCE,
   PROTOCOL_VERSION,
   RUN_HOME_ONLY_CHANNELS,
 } from "@shared/ipc";
+import { publishedContract } from "@shared/publishedContract";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { claimedPort } from "../../../tests/helpers/claimedPort";
 import { connectClient } from "../../../tests/helpers/connectionClient";
@@ -695,6 +698,111 @@ describe("the home's connection", () => {
     await back.close();
     await newer.close();
     await current.close();
+    await phone.close();
+  });
+
+  // INF-2225, INF-2214's approved shared cards: a desktop from before shared
+  // cards decodes thread lines strictly, so its copy leaves out who
+  // contributed a line, what it answers and whether it is a clarification;
+  // a current desktop and the phone read them.
+  it("keeps an older desktop's thread decoding while current views read who wrote each line", async () => {
+    // INF-2555: every answer or push a view reads that carries card lines,
+    // read from the published contract, so a channel added later that
+    // carries them fails here until an older desktop gets them translated.
+    const contract = publishedContract();
+    const carriesLines = (schema: unknown) => JSON.stringify(schema).includes('"answersMessage"');
+    const asked = Object.entries(contract.requests)
+      .filter(
+        ([channel, declared]) =>
+          isRunViewInvokeChannel(channel as CoreInvokeChannel) && carriesLines(declared.response),
+      )
+      .map(([channel]) => channel)
+      .sort();
+    const heard = Object.entries(contract.pushes)
+      .filter(([, declared]) => carriesLines(declared.payload))
+      .map(([channel]) => channel);
+
+    const contributor = { actor: "crewmate", taskId: "dop208", label: "the crewmate on DOP-208" };
+    const thread = cardThreadSchema.parse({
+      cardId: "card-fm-required-action-op1",
+      messages: [
+        {
+          id: 1,
+          cardId: "card-fm-required-action-op1",
+          who: "captain",
+          text: "Where is it?",
+          at: 1,
+        },
+        {
+          id: 2,
+          cardId: "card-fm-required-action-op1",
+          who: "crewmate",
+          text: "It is at C:\\FleetCheckSetup\\shell-pc-job-host-remove.cmd.",
+          at: 2,
+          contributor,
+          answersMessage: 1,
+        },
+      ],
+    });
+    const past = pastCardSchema.parse({
+      id: "card-fm-old",
+      author: "firstmate",
+      title: "Remove the job host",
+      meta: "First mate",
+      body: "<p>Done.</p>",
+      actions: [],
+      ending: { how: "dismissed", at: 3 },
+      answers: [],
+      messages: [{ ...thread.messages[1], id: 3, cardId: "card-fm-old", clarification: true }],
+    });
+    // What each channel answers, with the arguments a view sends it: a
+    // reply answers the card's thread, and showing a closed card its past.
+    const answers: Record<string, { args: unknown[]; value: unknown }> = {
+      "inf:cards:past": { args: [past.id], value: past },
+      "inf:cards:reply": { args: [thread.cardId, "Thanks."], value: thread },
+      "inf:cards:show": { args: [past.id], value: past },
+      "inf:cards:show-past": { args: [past.id], value: past },
+      "inf:cards:thread": { args: [thread.cardId], value: thread },
+    };
+    expect(asked).toEqual(Object.keys(answers).sort());
+    expect(heard).toEqual(["inf:cards:thread"]);
+
+    const at = await home({
+      dispatch: (async (channel) => {
+        const answer = answers[channel];
+        if (!answer) throw new Error("Unexpected request");
+        return answer.value;
+      }) as CoreDispatch,
+    });
+    const grant = await at.join();
+    const old = await connectClient(grant);
+    const newer = await connectClient(grant, { changes: ["shared-cards"] });
+    const phone = await connectClient(grant, { system: { system: "ios" } });
+    // The line an older desktop parses: strict, without who wrote it.
+    const legacyLine = cardMessageSchema.omit({
+      contributor: true,
+      answersMessage: true,
+      clarification: true,
+    });
+    const linesOf = (value: unknown) => (value as { messages: unknown[] }).messages;
+    for (const [name, { args, value }] of Object.entries(answers)) {
+      const channel = name as CoreInvokeChannel;
+      const oldLines = linesOf(await old.invoke(channel, args));
+      expect(
+        oldLines.map((line) => legacyLine.parse(line).text),
+        channel,
+      ).toEqual(linesOf(value).map((line) => (line as { text: string }).text));
+      expect(await newer.invoke(channel, args), channel).toEqual(value);
+      expect(await phone.invoke(channel, args), channel).toEqual(value);
+    }
+    for (const channel of heard) {
+      at.events.emit(channel as "inf:cards:thread", thread);
+      const pushed = await old.push((push) => push.channel === channel);
+      expect(linesOf(pushed.payload).map((line) => legacyLine.parse(line).id)).toEqual([1, 2]);
+      expect((await newer.push((push) => push.channel === channel)).payload).toEqual(thread);
+    }
+    await old.close();
+    await newer.close();
     await phone.close();
   });
 

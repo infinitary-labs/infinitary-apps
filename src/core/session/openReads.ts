@@ -15,6 +15,7 @@ export const APP_TOOL_REQUESTS = {
   note_progress: "inf:work:progress",
   report: "inf:work:report",
   reply: "inf:work:reply",
+  revise_required_action: "inf:work:revise-required-action",
   tasks: "inf:work:tasks",
   read_workflow: "inf:work:read-workflow",
   github_read: "inf:work:github-read",

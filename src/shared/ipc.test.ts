@@ -371,9 +371,11 @@ describe("ipc contract", () => {
    * (src/shared/work.ts): one request per tool callback - the change and
    * artifact tools among them, which the home does with its own sign-in,
    * the knowledge pair, which reads and writes the home's knowledge, and
-   * the integrations pair, which the integrations command asks - a card
-   * picture, a job's end, the numbered events and what a task's browser
-   * there tells the home, and nothing a view or the window asks.
+   * the integrations pair, which the integrations command asks, and the
+   * shared-card pair that reads one card and corrects a required action's
+   * words (INF-2214, docs/card-threads.md "Shared cards") - a card picture, a
+   * job's end, the numbered events and what a task's browser there tells the
+   * home, and nothing a view or the window asks.
    */
   it("lets a computer that runs work ask only the work requests", () => {
     expect([...WORK_INVOKE_CHANNELS].sort()).toEqual([
@@ -399,10 +401,12 @@ describe("ipc contract", () => {
       "inf:work:picture",
       "inf:work:prepare-change",
       "inf:work:progress",
+      "inf:work:read-card",
       "inf:work:read-workflow",
       "inf:work:record-knowledge",
       "inf:work:reply",
       "inf:work:report",
+      "inf:work:revise-required-action",
       "inf:work:sign-in",
       "inf:work:sign-ins",
       "inf:work:speed",

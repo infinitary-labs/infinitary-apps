@@ -50,6 +50,7 @@ import {
 import { z } from "zod";
 import { DeviceOutOfReachError, type WorkDeviceContact } from "../connection/connection";
 import { contractChange, listsChange } from "../connection/contractChanges";
+import { SHARED_CARDS } from "../connection/sharedCards";
 import {
   dueIn,
   dueRule,
@@ -60,6 +61,7 @@ import {
   textFilesUnder,
 } from "../integrations";
 import type { JobExit } from "../jobs/jobManager";
+import { cardMutationText } from "../orchestrator/cardMutationText";
 import { crewmateResumeToken } from "../orchestrator/crewSession";
 import {
   type AppPaths,
@@ -201,6 +203,12 @@ export type CrewMachines = {
   takesResults?(machine: string): boolean;
   /** Individually correlated responses, saved immediately at home. */
   takesResponses?(machine: string): boolean;
+  /**
+   * Whether the computer's crewmates read a shared-card write's typed result
+   * (`SHARED_CARDS`, docs/card-threads.md "Shared cards"); false while the
+   * home cannot tell.
+   */
+  takesSharedCards?(machine: string): boolean;
   /** The computer understands current check declarations and offer-based readiness. */
   takesCheckDeclarations?(machine: string): boolean;
   /**
@@ -658,6 +666,13 @@ export class PlacedSessions implements PlacedWork, CrewMachines {
 
   takesResponses(machine: string): boolean {
     return this.takesCurrentWork(machine);
+  }
+
+  takesSharedCards(machine: string): boolean {
+    return (
+      this.takesCurrentWork(machine) &&
+      listsChange(this.options.devices.version(machine)?.changes, SHARED_CARDS)
+    );
   }
 
   takesKnowledge(machine: string): boolean {
@@ -1495,8 +1510,19 @@ export class PlacedSessions implements PlacedWork, CrewMachines {
         const { card } = request as InvokeRequest<"inf:work:card">[0];
         const onCard = callbacks?.onCard ?? missing();
         try {
-          const cardId = await onCard(card as DeclaredCardInput);
-          return { shown: true, ...(cardId ? { cardId } : {}) };
+          const shown = await onCard(card as DeclaredCardInput);
+          if (shown && typeof shown === "object") {
+            // The supervisor refuses a computer from before shared cards a
+            // write on someone else's card before writing anything
+            // (`takesSharedCards`); should one still come back, that
+            // computer hears what the host saved in words, never "shown".
+            if (!this.takesSharedCards(placed.deviceId)) {
+              const why = cardMutationText(shown);
+              return { refused: { message: why, reason: "other", why } };
+            }
+            return { shown: true, cardId: shown.cardId, mutation: shown };
+          }
+          return { shown: true, ...(shown ? { cardId: shown } : {}) };
         } catch (caught) {
           if (!(caught instanceof CardRefusedError)) throw caught;
           return { refused: { message: caught.message, reason: caught.reason, why: caught.why } };
@@ -1525,14 +1551,26 @@ export class PlacedSessions implements PlacedWork, CrewMachines {
         return { text: await (callbacks?.onReport ?? missing())(text, summary, declared) };
       }
       case "inf:work:reply": {
-        const { cardId, text, interim } = request as InvokeRequest<"inf:work:reply">[0];
+        const { cardId, text, interim, answersMessage, operationId, response } =
+          request as InvokeRequest<"inf:work:reply">[0];
         return {
           text: await (callbacks?.onReply ?? missing())({
             cardId,
             text,
             ...(interim !== undefined ? { interim } : {}),
+            ...(answersMessage !== undefined ? { answersMessage } : {}),
+            ...(operationId ? { operationId } : {}),
+            ...(response ? { response } : {}),
           }),
         };
+      }
+      case "inf:work:revise-required-action": {
+        const { input } = request as InvokeRequest<"inf:work:revise-required-action">[0];
+        return { text: await (callbacks?.onReviseRequiredAction ?? missing())(input) };
+      }
+      case "inf:work:read-card": {
+        const { cardId } = request as InvokeRequest<"inf:work:read-card">[0];
+        return { text: await (callbacks?.onReadCard ?? missing())(cardId) };
       }
       case "inf:work:speed-note": {
         const { model, selection } = request as InvokeRequest<"inf:work:speed-note">[0];

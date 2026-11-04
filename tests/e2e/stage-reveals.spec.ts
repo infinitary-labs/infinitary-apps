@@ -21,6 +21,12 @@ import {
   firstmateThread,
 } from "./scenarios/firstmateThread";
 import {
+  REPLYING_NOTE,
+  REPLYING_NOTE_BODY,
+  REPLYING_QUESTION,
+  replyingNote,
+} from "./scenarios/replyingNote";
+import {
   cardReply,
   closeQuestion,
   expectNoCard,
@@ -60,7 +66,11 @@ async function launchWithCards(cards: ReturnType<typeof seededCard>[]) {
   const store = new CardStore(db);
   for (const card of cards) store.upsert(card);
   db.close();
-  return launchApp({ scenarios: [firstmateThread], userDataDir, withMockProvider: true });
+  return launchApp({
+    scenarios: [firstmateThread, replyingNote],
+    userDataDir,
+    withMockProvider: true,
+  });
 }
 
 /** A new card behind the shown one: Firstmate's answer, unread until shown. */
@@ -84,7 +94,6 @@ const HARBOUR_NOTES = [
 ] as const;
 const READ_NOTE = "Already read harbour note";
 const CLOSING_NOTE = "Close this harbour note";
-const REPLYING_NOTE = "Reply under this harbour note";
 const LAST_CARD = "The last card";
 const READING_NOTE = "The harbour note you are reading";
 const NEXT_PLAN = "The next harbour plan";
@@ -215,7 +224,7 @@ test("closing a card brings up the first unread card, not the first card, and a 
   const app = await launchWithCards([
     seededCard("seen-first", READ_NOTE, "<p>Read before.</p>", 0),
     seededCard("closing", CLOSING_NOTE, "<p>Closed next.</p>", 1),
-    seededCard("replying", REPLYING_NOTE, "<p>Answered next.</p>", 2),
+    seededCard("replying", REPLYING_NOTE, REPLYING_NOTE_BODY, 2),
   ]);
   try {
     const { page } = app;
@@ -244,7 +253,7 @@ test("closing a card brings up the first unread card, not the first card, and a 
       await receiveUnreadCard(page);
       arrived = (await answers()).find((id) => !earlier.includes(id)) ?? "";
       if (!arrived) throw new Error("No second answer arrived");
-      await cardReply(page).field.fill("Which tide is this for?");
+      await cardReply(page).field.fill(REPLYING_QUESTION);
       await cardReply(page).send.click();
       await expect(cardReply(page).row).toHaveAttribute("data-card-reply", "replying");
       await expect(shownCard(page, REPLYING_NOTE)).toBeVisible();

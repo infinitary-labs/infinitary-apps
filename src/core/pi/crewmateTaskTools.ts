@@ -60,9 +60,28 @@ export const REPLY_TOOL_NAME = "reply";
  * it stays well under the Claude transport's 2,048-character cap.
  */
 export const REPLY_TOOL_DESCRIPTION = [
-  "Answer the captain in the thread under one of your own cards, or a first mate card on your task: plain prose, a few sentences.",
-  "Never a card and never actions - to change what the card says, call emit_card again with the same id, passing your answer as its reply so one call does both.",
-  "Pass the card id emit_card returned.",
+  "Write in any card's thread, yours or another task's, with no grant: plain prose, a few sentences.",
+  "Only a line whose answers_message names a captain message ends that question, on your own card too.",
+  // Reading the card first is said once, on tasks card; a closed card's dated
+  // clarification and a line on a question someone already answered are said
+  // by the host's own refusal and result (docs/orchestrator-contract.md, "The
+  // fixed-context budget").
+  "Never a card and never actions - to change what your card says, call emit_card again with the same id, passing your answer as its reply so one call does both.",
+].join(" ");
+
+/**
+ * Correct a required action's words (docs/required-actions.md, "Correcting
+ * the words"): any crewmate may, with no grant, and the app keeps the
+ * filing, the target and the completion as they were. A stale generation
+ * and a completed action are said by the correction's own refusals; the
+ * card read lists the generation and each filing's source and action id,
+ * and the patch's fields name the words (docs/orchestrator-contract.md,
+ * "The fixed-context budget").
+ */
+export const REVISE_REQUIRED_ACTION_TOOL_DESCRIPTION = [
+  "Correct a required action's wrong words once you verified the right ones on its target yourself.",
+  "Read its card first with tasks card.",
+  "A different action is a cancellation plus a new declaration, never a correction.",
 ].join(" ");
 
 /**
@@ -433,6 +452,20 @@ export const REPLY_TOOL = crewmateTool({
           "True for one line saying what you are doing, before long work on the captain's reply; their reply keeps waiting for your answer.",
       }),
     ),
+    // The description says a line ends a captain question only when answers_message names it.
+    answers_message: Type.Optional(Type.Integer({ minimum: 1 })),
+    // A resent operation_id answers with its first result, which says so.
+    operation_id: Type.Optional(Type.String()),
+    response: Type.Optional(
+      Type.Object(
+        {
+          request_id: Type.String(),
+          response_id: Type.String(),
+          status: stringEnum(["answered", "not-yet-answered"]),
+        },
+        { description: "As report's response; a report reusing its response_id adds nothing." },
+      ),
+    ),
   }),
   bind: ({ onReply }) =>
     onReply &&
@@ -444,6 +477,66 @@ export const REPLY_TOOL = crewmateTool({
             cardId: params.card_id,
             text: params.text,
             ...(params.interim === true ? { interim: true } : {}),
+            ...(params.answers_message !== undefined
+              ? { answersMessage: params.answers_message }
+              : {}),
+            ...(params.operation_id?.trim() ? { operationId: params.operation_id.trim() } : {}),
+            ...(params.response
+              ? {
+                  response: {
+                    requestId: params.response.request_id,
+                    responseId: params.response.response_id,
+                    status: params.response.status,
+                  },
+                }
+              : {}),
+          },
+        ],
+        signal,
+      ),
+    })),
+});
+
+/** Correct a required action's words, keeping its filing (docs/required-actions.md). */
+export const REVISE_REQUIRED_ACTION_TOOL = crewmateTool({
+  name: "revise_required_action",
+  label: "Correct required action",
+  description: REVISE_REQUIRED_ACTION_TOOL_DESCRIPTION,
+  parameters: Type.Object({
+    action: Type.String({ description: "Its card id or task key" }),
+    // The description says to read the card first, and the card read lists the
+    // generation and each filing's source and action id, so the three are served bare.
+    source: Type.String(),
+    action_id: Type.String(),
+    expected_generation: Type.Integer({ minimum: 0 }),
+    // The patch carries only the words that change, and reason says why they were wrong.
+    patch: Type.Object({
+      title: Type.Optional(Type.String()),
+      consequence: Type.Optional(Type.String()),
+      instructions: Type.Optional(Type.Array(Type.String())),
+      criterion: Type.Optional(Type.String()),
+    }),
+    reason: Type.String(),
+    // A resent operation_id answers with its first result, which says so.
+    operation_id: Type.String(),
+    // The description and the refusal of a different action say what it declares.
+    same_action: Type.Boolean(),
+  }),
+  bind: ({ onReviseRequiredAction }) =>
+    onReviseRequiredAction &&
+    (async (params, signal) => ({
+      text: await callWithSignal(
+        onReviseRequiredAction,
+        [
+          {
+            action: params.action,
+            source: params.source,
+            actionId: params.action_id,
+            expectedGeneration: params.expected_generation,
+            patch: params.patch,
+            reason: params.reason,
+            operationId: params.operation_id,
+            sameAction: params.same_action,
           },
         ],
         signal,
@@ -472,6 +565,7 @@ export const CREWMATE_TOOLS = [
   NOTE_PROGRESS_TOOL,
   REPORT_TOOL,
   REPLY_TOOL,
+  REVISE_REQUIRED_ACTION_TOOL,
   TASKS_QUERY_TOOL,
   KNOWLEDGE_TOOL,
   RECORD_KNOWLEDGE_TOOL,

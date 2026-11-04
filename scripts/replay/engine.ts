@@ -90,6 +90,7 @@ import {
 } from "../../src/shared/rigor.ts";
 import { legacyShapeFromDifficulty } from "../../src/core/routing/policy.ts";
 import { type WorkShape, workShapeSchema } from "../../src/shared/routingPolicy.ts";
+import { resolveFirstmateCardId } from "../../src/core/pi/cardTool.ts";
 import { groupSpawnArgs } from "../../src/core/pi/crewTools.ts";
 import { preansweredQuestions, writeInGaps } from "../../src/core/pi/cardLint.ts";
 import type { IntelligenceBucket } from "../../src/shared/modelSlots.ts";
@@ -1823,6 +1824,13 @@ class Replay {
       if (call.name === "emit_card") {
         if (typeof args.body === "string") args.body = recordedQuestions(args.body, args.actions);
         args.actions = recordedActions(args.actions);
+        // Its reply names the captain message it answered, as the host read it then.
+        const id = typeof args.id === "string" ? args.id : "";
+        const answers =
+          typeof args.reply === "string" && id
+            ? this.recordedAnswer(args, [id, resolveFirstmateCardId(id)])
+            : undefined;
+        if (answers !== undefined) args.answers_message = answers;
       }
       // The same for a spawn recorded under the pre-v2.8 contract: its
       // judged `difficulty` and `model_id` become the shape facts they
@@ -1954,6 +1962,24 @@ class Replay {
         })
         .map((record) => record.id),
     );
+  }
+
+  /**
+   * The captain message a recorded line answers. A line recorded before a
+   * line named the message it answers (`answers_message`) was its author's
+   * answer to the newest captain message on the card it waited on, as the
+   * host then read it; today's host ends a question only on a line naming
+   * it (docs/card-threads.md, "Shared cards"), so the line stands in naming
+   * it. An explicitly recorded name passes through.
+   */
+  private recordedAnswer(args: JsonRecord, ids: string[]): number | undefined {
+    if (typeof args.answers_message === "number") return args.answers_message;
+    const card = this.supervisor
+      .cardsSnapshot()
+      .find((shown) => ids.includes(shown.id) && shown.awaiting === "answer");
+    if (!card) return undefined;
+    return this.supervisor.cardThread(card.id).messages.findLast((line) => line.who === "captain")
+      ?.id;
   }
 
   /** What each answered choice started, now that its turn has played. */
@@ -2180,6 +2206,10 @@ class Replay {
               // A revision recorded before revisions carried an answer stands
               // in with one, or today's host refuses it while the captain waits.
               reply: text("reply") || RECORDED_REVISION_ANSWER,
+              answersMessage: this.recordedAnswer(args, [
+                text("id"),
+                `card-${spec.taskId}-${text("id")}`,
+              ]),
             }),
           );
           if (shown) {
@@ -2193,7 +2223,11 @@ class Replay {
           spec.onCloseCard?.({ cardId: text("card_id"), reason: text("reason") || undefined });
           break;
         case "reply":
-          spec.onReply?.({ cardId: text("card_id"), text: text("text") });
+          spec.onReply?.({
+            cardId: text("card_id"),
+            text: text("text"),
+            answersMessage: args.interim === true ? undefined : this.recordedAnswer(args, [text("card_id")]),
+          });
           break;
         case "report":
           spec.onReport?.(text("text"));
@@ -2777,11 +2811,14 @@ class Replay {
  * `checkCi` (its mergePullRequest is a stub), so the gate never applies
  * here and every card resolves synchronously, exactly as before.
  */
-function syncCardId(id: string | Promise<string | undefined> | undefined): string | undefined {
+function syncCardId(
+  id: string | { cardId: string } | Promise<unknown> | undefined,
+): string | undefined {
   if (id instanceof Promise) {
     throw new Error("replay does not expect a pending CI gate on a recorded card");
   }
-  return id;
+  // A write on someone else's card answers its typed result, which names the card.
+  return typeof id === "object" ? id.cardId : id;
 }
 
 /**

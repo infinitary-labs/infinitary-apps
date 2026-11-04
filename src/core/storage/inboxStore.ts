@@ -247,6 +247,7 @@ type SavedCrewResponseRow = {
   wake_id: number;
   delivered_at: number | null;
   handled_at: number | null;
+  card_message_id: number | null;
 };
 
 function savedCrewResponseOf(row: SavedCrewResponseRow): SavedCrewResponse {
@@ -261,6 +262,7 @@ function savedCrewResponseOf(row: SavedCrewResponseRow): SavedCrewResponse {
     wakeId: row.wake_id,
     deliveredAt: row.delivered_at,
     handledAt: row.handled_at,
+    ...(row.card_message_id !== null ? { cardMessageId: row.card_message_id } : {}),
   };
 }
 
@@ -990,22 +992,28 @@ export class InboxStore {
    * One answer writer. Exact text, authenticated contributor and first mate
    * row commit together. No task ref on the wake: purgeTask must not erase it.
    * The returned row id is a queued fact, never a read/handled claim.
+   *
+   * A response a card line carries names that line (docs/card-threads.md,
+   * "Shared cards"): the line is its exact answer, so a report naming the
+   * same response identity afterwards is the same response, kept once with
+   * one notification, whatever the report's own words.
    */
   submitResponse(
     input: CrewResponse,
     contributor: { task: string; session: string | null },
     text: string,
+    line?: { cardId: string; messageId: number },
   ): SavedCrewResponse {
     if (!text.trim()) throw new Error("A response needs its exact answer text.");
     return this.transaction(() => {
       const previous = this.savedResponse(input.responseId);
       if (previous) {
-        if (
-          previous.requestId !== input.requestId ||
-          previous.status !== input.status ||
-          previous.contributorTask !== contributor.task ||
-          previous.text !== text
-        )
+        const sameShape =
+          previous.requestId === input.requestId &&
+          previous.status === input.status &&
+          previous.contributorTask === contributor.task;
+        const sameWords = previous.cardMessageId !== undefined || previous.text === text;
+        if (!sameShape || !sameWords || (line && previous.cardMessageId !== line.messageId))
           throw new Error(
             "That response identity already names different content. Corrected answers need a new response identity.",
           );
@@ -1036,7 +1044,7 @@ export class InboxStore {
       );
       this.db
         .prepare(
-          "INSERT INTO crew_responses (response_id, request_id, contributor_task, contributor_session, status, text, at, wake_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+          "INSERT INTO crew_responses (response_id, request_id, contributor_task, contributor_session, status, text, at, wake_id, card_message_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
         )
         .run(
           input.responseId,
@@ -1047,6 +1055,7 @@ export class InboxStore {
           text,
           at,
           wakeId,
+          line?.messageId ?? null,
         );
       if (input.status === "answered")
         this.db

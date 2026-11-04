@@ -1,4 +1,9 @@
-import { type AgentEffect, type CardPicture, LIVE_ATTACHMENT_LABEL_MAX } from "@shared/cards";
+import {
+  type AgentEffect,
+  type CardMutation,
+  type CardPicture,
+  LIVE_ATTACHMENT_LABEL_MAX,
+} from "@shared/cards";
 import { type RequiredAction, requiredActionsSchema } from "@shared/requiredActions";
 import {
   RISK_DIMENSIONS,
@@ -10,6 +15,7 @@ import {
 import { TASK_BROWSER_REQUEST_MAX, UNKNOWN_OUTCOME_WORDS } from "@shared/taskBrowser";
 import { type Static, type TSchema, Type } from "typebox";
 import { browserCommand } from "../browser/commandWords";
+import { cardMutationText } from "../orchestrator/cardMutationText";
 import {
   CARD_PARAMS,
   CREWMATE_EMIT_CARD_DESCRIPTION,
@@ -55,7 +61,8 @@ export const CLOSE_CARD_TOOL_DESCRIPTION = [
   "Withdraw a card of YOUR OWN that is no longer valid or necessary, without waiting for the captain, by the id emit_card returned.",
   "A note you emitted as this turn's answer is current and must not be withdrawn during this turn.",
   "Close a decision only when the choice no longer applies - you are withdrawing it as obsolete, not answering for the captain.",
-  "Someone else's card is not yours to close - steer its author instead; the captain dismisses a card themselves.",
+  // Someone else's card is said by close_card's own refusal, which names
+  // revising it or replying on it (docs/card-threads.md, "Shared cards").
 ].join(" ");
 
 const STABLE_CARD_ID = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
@@ -212,7 +219,9 @@ export type EmittedCard = {
   answering?: boolean;
 };
 
-export type OnCardEmitted = (card: EmittedCard) => string | undefined | Promise<string | undefined>;
+export type OnCardEmitted = (
+  card: EmittedCard,
+) => string | CardMutation | undefined | Promise<string | CardMutation | undefined>;
 
 /** A card as the tool reads it from the call, before any action is checked for words. */
 type DeclaredCard = Omit<EmittedCard, "actions"> & { actions: DeclaredAction[] };
@@ -338,6 +347,16 @@ const sharedCardParams = {
   holds_place: Type.Optional(Type.Boolean({ description: CARD_PARAMS.holds_place })),
   reply: Type.Optional(Type.String({ description: CARD_PARAMS.reply })),
   answering: Type.Optional(Type.Boolean({ description: CARD_PARAMS.answering })),
+  // A write on someone else's card, all four served bare
+  // (docs/orchestrator-contract.md, "The fixed-context budget"): the refusal
+  // of a write there says to pass expected_revision with the revision read,
+  // or reply alone for the thread; a resent operation_id's receipt says it
+  // already ran; and every refusal, wake and receipt about a waiting captain
+  // question names answers_message, as reply's description does.
+  expected_revision: Type.Optional(Type.String()),
+  contribution_reason: Type.Optional(Type.String()),
+  operation_id: Type.Optional(Type.String()),
+  answers_message: Type.Optional(Type.Integer({ minimum: 1 })),
   actions: Type.Optional(
     Type.Array(
       actionParam(Type.Union([settleEffectParam, requestMergeEffectParam, openEffectParam])),
@@ -371,7 +390,14 @@ const riskParam = Type.Object(
 
 /** The Firstmate's attribution and attach-first fields (task-system P1); no crewmate schema carries them. */
 const firstmateCardParams = {
-  task_id: Type.Optional(Type.String({ description: CARD_PARAMS.task_id })),
+  // The first mate's fixed context is held to its boundary
+  // (tests/firstmate-fixed-context.test.ts), and its descriptor already says
+  // what body and id are (`CARD_MECHANICS`: a raw HTML fragment; reuse an open
+  // card's id to revise it in place) and when to pass task_id
+  // (`FIRSTMATE_CARD_ADDENDUM`), so the three are served bare to it.
+  body: Type.String(),
+  id: Type.Optional(Type.String()),
+  task_id: Type.Optional(Type.String()),
   review_task_id: Type.Optional(Type.String({ description: CARD_PARAMS.review_task_id })),
   standalone: Type.Optional(Type.Boolean({ description: CARD_PARAMS.standalone })),
 };
@@ -591,7 +617,9 @@ export function riskDeclarationOf(raw: unknown): RiskDeclaration {
 async function emitCard(
   params: EmitCardParams,
   options: {
-    onCard: (card: DeclaredCard) => string | undefined | Promise<string | undefined>;
+    onCard: (
+      card: DeclaredCard,
+    ) => string | CardMutation | undefined | Promise<string | CardMutation | undefined>;
     firstmate?: boolean;
     pictures?: CardPictureRoot;
     cardBodiesDir?: string;
@@ -624,7 +652,7 @@ async function emitCard(
         "A saved-story completion gives presentation and one settle merge action, or no actions for a note when the task merges on its own, without body, risk, required_actions or browser controls; those facts come from its saved revision.",
       );
     const id = parseStableCardId(params.id);
-    const cardId = await options.onCard({
+    const shown = await options.onCard({
       title: params.title,
       body: "",
       presentationRevision: params.presentation,
@@ -635,7 +663,8 @@ async function emitCard(
       ...(params.answering ? { answering: true } : {}),
       ...(params.width ? { width: params.width } : {}),
     });
-    return `Card shown from presentation ${params.presentation}${cardId ? ` (${cardId})` : ""}`;
+    if (typeof shown === "object") return cardMutationText(shown);
+    return `Card shown from presentation ${params.presentation}${shown ? ` (${shown})` : ""}`;
   }
   if ((params.body !== undefined) === (params.body_file !== undefined)) {
     // INF-961: a completion card given neither may have meant its saved story.
@@ -738,10 +767,21 @@ async function emitCard(
       ? { reviewTaskId: params.review_task_id.trim() }
       : {}),
     ...(firstmate && params.standalone ? { standalone: true } : {}),
+    // On someone else's card (docs/card-threads.md, "Shared cards").
+    ...(params.expected_revision?.trim()
+      ? { expectedRevision: params.expected_revision.trim() }
+      : {}),
+    ...(params.contribution_reason?.trim()
+      ? { contributionReason: params.contribution_reason.trim() }
+      : {}),
+    ...(params.operation_id?.trim() ? { operationId: params.operation_id.trim() } : {}),
+    ...(params.answers_message !== undefined ? { answersMessage: params.answers_message } : {}),
   };
-  const cardId = await options.onCard(card);
-  return typeof cardId === "string" && cardId
-    ? `Card shown: ${params.title} (${cardId})`
+  const shown = await options.onCard(card);
+  // A write on someone else's card answers what the host saved, typed.
+  if (typeof shown === "object") return cardMutationText(shown);
+  return typeof shown === "string" && shown
+    ? `Card shown: ${params.title} (${shown})`
     : `Card shown: ${params.title}`;
 }
 

@@ -153,7 +153,7 @@ A round is one message of the captain's and the reply line kept beside it.
   Without one, the latest app-written reply says `Started: <task title>` when work starts, or the app's reply words (`AUTOMATIC_EMOTE_WORDS`: Got it, Noted, All set).
   Successful filing says `Filed <task key>: <title>`; task updates, drops, links and unlinks, merge-approval withdrawals, and schedule creation or cancellation also name the action that took effect.
   Refused and unchanged record writes supply no success reply.
-  A reply under the first mate's own card answered in its closing words shows those words on the line as well as in the card's thread; another action supplies Got it when nothing else replied.
+  A reply under the first mate's own card whose closing words land in the card's thread shows those words on the line as well; another action supplies Got it when nothing else replied.
   When nothing took effect the line stays absent, whatever the closing words say, and the answer check retries the message (`docs/task-capture.md`).
   An unread message receives no line, and a later turn that never reads the newest message leaves its saved reply untouched.
   A failed or paused turn's line is `plainProblem`'s words for it, in `--danger`.

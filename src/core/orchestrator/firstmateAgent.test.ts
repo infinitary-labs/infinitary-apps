@@ -1618,8 +1618,9 @@ describe("FirstmateAgent", () => {
     supervisor.replyToCard(card?.id ?? "", "the second option is wrong");
     await drained(session, 1);
     const turn = session.prompts[0] as string;
+    const asked = supervisor.cardThread(card?.id ?? "").messages[0]?.id;
     expect(decodeContext(turn).about).toBe(
-      `about: card ${card?.id} (decision) "Pick one" - the captain replied in its thread`,
+      `about: card ${card?.id} (decision) "Pick one" - the captain replied in its thread as message ${asked}; answer it with an emit_card reply on this id naming answers_message ${asked}, since your closing words alone leave it open`,
     );
     expect(turn).not.toContain("maybe on screen");
     expect(turn).toContain("[user]\nthe second option is wrong");
@@ -1636,19 +1637,24 @@ describe("FirstmateAgent", () => {
         { who: "firstmate", text: "Kept the retry." },
       ]),
     );
+    // The closing words name no message: the captain's question stays open
+    // (the captain's "Only a line that says it answers it; a handoff stays open").
+    expect(supervisor.cardsSnapshot().find((one) => one.id === card?.id)?.awaiting).toBe("answer");
   });
 
   /**
    * The design's case D (`card-fm-6-84f4c7`, "What Default means for Care",
    * 24 Sep), replayed against the one rule: a captain reply on the
    * Firstmate's own card holds it, still shown in its place, until the
-   * Firstmate's turn ends having answered (INF-770), a write mid-turn - here the
+   * Firstmate's turn ends having answered (INF-770). A write mid-turn - here the
    * delegation the persona now asks for, said on the card - does not redraw
-   * it, and
-   * the answer the crewmate's research brings revises the same card in
-   * place instead of arriving as a new one.
+   * it, and as a handoff it answers nothing, so the card stays held past that
+   * turn's end (the captain's "Only a line that says it answers it; a handoff
+   * stays open"). The answer the crewmate's research brings names the
+   * question and revises the same card in place instead of arriving as a new
+   * one.
    */
-  it("D: a reply on its own card comes back at its turn end, and the delegated answer redraws it in place", async () => {
+  it("D: a reply on its own card stays held through the handoff, and the delegated answer redraws it in place", async () => {
     const { session, supervisor, specs } = setup();
     const cardId = supervisor.addFirstmateCard({
       title: "What Default means for Care",
@@ -1688,28 +1694,40 @@ describe("FirstmateAgent", () => {
 
     session.emitTurnEnd("Asked a crewmate for the exact rules.");
     session.resolveNextPrompt();
-    await vi.waitFor(() => expect(shown()?.body).toContain("A crewmate is checking"));
-    // The reply answered him after the revised line, so the closing words are not a thread line.
-    expect(supervisor.cardThread(cardId).messages.map((message) => message.who)).toEqual([
-      "captain",
-      "host",
-      "firstmate",
-    ]);
+    // Its own reply after the revised line is its line, so the closing words
+    // are not a second one, and the handoff left the question open.
+    await vi.waitFor(() =>
+      expect(supervisor.cardThread(cardId).messages.map((message) => message.who)).toEqual([
+        "captain",
+        "host",
+        "firstmate",
+      ]),
+    );
+    const held = supervisor.cardsSnapshot().find((card) => card.id === cardId);
+    expect(held?.awaiting).toBe("answer");
+    expect(held?.body).toContain("Default is the care every project starts with");
 
-    // The research lands and the same card carries it, redrawn on the stage.
+    // The research lands and the same card carries it, naming the question,
+    // and the turn's end redraws it on the stage.
+    const asked = supervisor.cardThread(cardId).messages[0]?.id;
     await emit?.execute("c2", {
       id: cardId,
       title: "How Default Care is chosen",
       body: "<p>Default is standard care unless the project sets its own.</p><p>A task's own words can ask for more.</p>",
       standalone: true,
+      reply: "Default is standard care unless the project sets its own.",
+      answers_message: asked,
     });
+    expect(shown()).toBeUndefined();
+    // The turn that carried the research ends: its close-out.
+    supervisor.firstmateClosedOut();
     expect(shown()?.title).toBe("How Default Care is chosen");
     expect(supervisor.cardsSnapshot().filter((card) => card.author === "firstmate")).toHaveLength(
       1,
     );
   });
 
-  it("takes its closing words as the answer to a card reply it read mid-turn", async () => {
+  it("takes its closing words as its line under a card reply it read mid-turn", async () => {
     const { agent, session, supervisor } = setup();
     const cardId = supervisor.addFirstmateCard({
       title: "Pick one",
@@ -1800,9 +1818,9 @@ describe("FirstmateAgent", () => {
     supervisor.replyToCard(own, "why A?");
     await drained(session, 2);
     expect(line(1, own)).toMatch(/"why A\?" \(awaiting your answer\)$/);
-    // Its closing words answered the note: nothing is owed there now.
+    // Its closing words name no message: the note's question is still its own to answer.
     expect(line(1, "card-t58-1")).toMatch(
-      /last from firstmate .* - "It shipped as 0\.2\." \(no answer owed\)$/,
+      /last from firstmate .* - "It shipped as 0\.2\." \(awaiting your answer\)$/,
     );
   });
 
@@ -3180,7 +3198,8 @@ describe("FirstmateAgent", () => {
         task_id: "t58",
       }),
     ).rejects.toThrow(
-      /steer the crewmate with steer_crewmate to revise card card-t58-1 \(same id\)/,
+      // Shared cards (INF-2214): the first mate writes on the crewmate's card itself.
+      /write on that card instead of a second one beside it\. Read it with tasks card, then emit_card with id card-t58-1: with its expected_revision to revise it/,
     );
     // A second control beside the crewmate's card is refused the same way.
     await expect(
@@ -3193,7 +3212,7 @@ describe("FirstmateAgent", () => {
         ],
         task_id: "t58",
       }),
-    ).rejects.toThrow(/revise card card-t58-1/);
+    ).rejects.toThrow(/emit_card with id card-t58-1/);
     expect(supervisor.cardsSnapshot()).toHaveLength(1);
   });
 
@@ -3213,6 +3232,14 @@ describe("FirstmateAgent", () => {
       task_id: "t58",
     });
     expect(shown?.content[0]?.text).toContain("Card shown");
+    const asked = supervisor.cardThread("card-t58-1").messages[0]?.id;
+    await toolsOf(specs).get("emit_card")?.execute("c2", {
+      id: "card-t58-1",
+      title: "Release shipped",
+      body: "<p>It is out.</p>",
+      reply: "It shipped as 0.2.",
+      answers_message: asked,
+    });
     session.emitTurnEnd("It shipped as 0.2.");
     session.resolveNextPrompt();
     await vi.waitFor(() =>
@@ -8755,12 +8782,15 @@ describe("FirstmateAgent answer delivery", () => {
         body: "<p>Restating.</p>",
         task_id: "t58",
       }),
-    ).rejects.toThrow(/revise card card-t58-1/);
+    ).rejects.toThrow(/emit_card with id card-t58-1/);
     await tools.get("emote")?.execute("e1", { emote: "nod" });
     await finish(f, "SECRET closing words <script>alert(1)</script>");
     await drained(f.session, 2);
     expect(states(f)).toEqual(["retrying"]);
-    expect(f.session.prompts[1]).toContain("the crewmate's card card-t58-1 owns that work");
+    // Shared cards (INF-2214): the retry names the card to write on.
+    expect(f.session.prompts[1]).toContain(
+      "the crewmate's card card-t58-1 is already on screen for that work: write on it with emit_card and its id",
+    );
 
     // The retry shows nothing either: one notice, and no second retry.
     await finish(f, "Still nothing.");

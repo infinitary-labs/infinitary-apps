@@ -454,6 +454,21 @@ export function firstSentence(text: string | undefined): string {
   return (passage ?? "").split("\n")[0]?.split(/(?<=[.:])\s/)[0] ?? "";
 }
 
+/**
+ * The captain message a reply's served words name - a crewmate's thread
+ * steer ("This is the captain's message N") or the first mate's about line
+ * ("replied in its thread as message N") - as `answers_message`, which a
+ * real answer passes: only a line naming it ends the captain's question
+ * (the captain's "Only a line that says it answers it; a handoff stays
+ * open"). Empty when the words name none, so an acknowledgement stays unnamed.
+ */
+export function answering(served: string): { answers_message?: number } {
+  const named = [
+    ...served.matchAll(/(?:This is the captain's message|replied in its thread as message) (\d+)/g),
+  ].at(-1)?.[1];
+  return named ? { answers_message: Number(named) } : {};
+}
+
 /** The tool answers after a place in the conversation, oldest first, as the scripts read them. */
 export function answersAfter(
   messages: ReturnType<typeof providerMessages>,
@@ -1974,6 +1989,8 @@ export async function startMockProvider(
                     args: {
                       id: "thread-card",
                       reply: THREAD_ACK_ANSWER,
+                      // The answer names the reply; the acknowledgement did not.
+                      ...answering(latestUserTail),
                       title: THREAD_ACK_REVISED_TITLE,
                       body: "<p>Awaiting the job queue removes the race on every platform.</p><p>The windows retry waits on the same queue flush.</p>",
                       actions: [
@@ -2002,6 +2019,7 @@ export async function startMockProvider(
                 args: {
                   id: "thread-card",
                   reply: THREAD_REVISE_ANSWER,
+                  ...answering(latestUserTail),
                   title: THREAD_CARD_REVISED_TITLE,
                   body: "<p>Awaiting the job queue removes the race entirely.</p><p>Mocking the clock leaves write order uncertain, which is what you spotted.</p>",
                   actions: [
@@ -2018,7 +2036,11 @@ export async function startMockProvider(
             streamToolCalls([
               {
                 name: "reply",
-                args: { card_id: shownCardId, text: THREAD_PROSE_ANSWER },
+                args: {
+                  card_id: shownCardId,
+                  text: THREAD_PROSE_ANSWER,
+                  ...answering(latestUserTail),
+                },
               },
             ]);
             return;
@@ -2071,7 +2093,14 @@ export async function startMockProvider(
               : undefined;
             streamToolCalls([
               cardId
-                ? { name: "reply", args: { card_id: cardId, text: MOCK_CLAUDE_HELD_ANSWER } }
+                ? {
+                    name: "reply",
+                    args: {
+                      card_id: cardId,
+                      text: MOCK_CLAUDE_HELD_ANSWER,
+                      ...answering(latestUserTail),
+                    },
+                  }
                 : {
                     name: "emit_card",
                     args: {

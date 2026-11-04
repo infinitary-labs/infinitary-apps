@@ -1735,6 +1735,7 @@ export class SessionHost {
           if (this.stopped) return;
           held.refused = true;
           this.log(`the home refused ${held.task}'s events: ${messageOf(error)}`);
+          if (held.state.closed) this.letGoOfEvents(held);
         },
       )
       .finally(() => {
@@ -1742,6 +1743,23 @@ export class SessionHost {
         this.settleFlushes(held);
         this.pump(held);
       });
+  }
+
+  /**
+   * The home refused the events of a conversation it closed here for good,
+   * and it takes no event of a task it closed: they go, from memory and from
+   * the outbox, so no welcome or later start sends them again (INF-2080).
+   * A refusal of an open conversation's events may pass, so those wait.
+   */
+  private letGoOfEvents(held: Held): void {
+    if (held.removed) return;
+    held.outbox = [];
+    held.unwritten = [];
+    try {
+      this.options.tasks.trim(held.task, held.state.seq);
+    } catch (error) {
+      this.log(`could not let go of ${held.task}'s refused events: ${messageOf(error)}`);
+    }
   }
 
   /** Resolves once the home has every event written before now, or refused them. */

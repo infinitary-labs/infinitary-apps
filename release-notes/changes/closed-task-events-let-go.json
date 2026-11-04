@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "closed-task-events-let-go",
+      "reason": "Internal traffic between computers: a computer that runs work stops sending again, at every welcome and start, the events of a task its home closed and refused; nothing a person sees changes."
+    }
+  ]
+}

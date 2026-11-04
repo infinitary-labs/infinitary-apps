@@ -527,6 +527,8 @@ A home opens one for a task whose record names this computer (`task_execution.de
   Older homes ignore the separate file; the request and answer formats are unchanged.
   Events are numbered per task, written to `tasks/<task>/outbox.jsonl` before they are sent, sent one request at a time from the number after the home's `through`, and forgotten up to the home's `kept`.
   After every welcome the events after the home's `kept` go again, since a home that restarted within the link's grace holds only what it kept and this Mac saw no change of contact; a home that only lost the connection skips the ones it has.
+  A refusal holds a task's events until the next welcome or order from the home.
+  The home takes no event of a task it closed, so once it refuses the events of a conversation it closed here for good, this Mac lets them go, from memory and from the outbox, and no welcome or later start sends them again (INF-2080).
   An answer to events that arrives after this computer's conversations stopped changes nothing here: the run that starts next from the folder may already have gone on, and it sends again the events after the `kept` it reads, which the home skips where it has them.
 - **Lost contact.**
   The turn goes on while the home is out of reach, and a tool callback waits at most 24 days (`PLACED_REQUEST_WAIT_MS`), for either provider.

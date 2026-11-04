@@ -1674,6 +1674,133 @@ describe("a conversation held on a computer that runs work", () => {
     }
   });
 
+  // INF-2080: the home refuses every event of a task it closed, so a closed
+  // conversation's events it refused once are sent at no later welcome or start.
+  it("sends a closed conversation's refused events at no later welcome or start (INF-2080)", async () => {
+    const home = standInHome();
+    const dir = scratchDir("infinitary-placed-closed-refused-");
+    const spec: PlacedSpec = {
+      binding: { backend: "pi", provider: PROVIDER },
+      model: { provider: PROVIDER, id: MODEL },
+      thinking: { level: "off" },
+      instructions: "You are a crewmate on another Mac.",
+      tools: [],
+    };
+    // The home's record closes before it orders the conversation closed, and
+    // from then on it refuses that task's events, as the real home does.
+    let closedAtHome = false;
+    const refused: number[][] = [];
+    const ask: SessionHostOptions["ask"] = (channel, args) => {
+      if (channel === "inf:work:events" && closedAtHome) {
+        const [{ events }] = args as [{ events: PlacedEventRecord[] }];
+        refused.push(events.map(({ seq }) => seq));
+        return Promise.reject(new Error("That task is closed on this computer."));
+      }
+      return home.dispatch(channel, args);
+    };
+    const host = () =>
+      new SessionHost({
+        tasks: new PlacedTasks(dir),
+        ask,
+        factories: { pi: createPiSessionFactory({ agentDir: join(dir, "pi-agent") }) },
+        bind: async () => ({ backend: "pi", runtime }),
+        log: () => {},
+      });
+    const tasks = new PlacedTasks(dir);
+    const first = host();
+    let next: SessionHost | undefined;
+    // The home holds the turn's first events, so the rest wait here until it has closed.
+    const gate = home.hold("inf:work:events");
+    model([]);
+    try {
+      await first.answer("inf:session:open", [{ orderId: "open:1", task: TASK, spec }]);
+      await first.answer("inf:session:prompt", [{ orderId: "rows:1", task: TASK, text: "Go." }]);
+      await gate.reached;
+      await expect
+        .poll(() => {
+          const state = tasks.state(TASK);
+          return state.turn === 1 && !state.running;
+        })
+        .toBe(true);
+      closedAtHome = true;
+      await first.answer("inf:session:close", [{ orderId: "close:1", task: TASK }]);
+      gate.open();
+      // The refusal is answered in the same pass as its request, before this poll's next look.
+      await expect.poll(() => refused.length).toBe(1);
+      expect(home.types()).not.toContain("turn_ended");
+      expect(refused[0]).toContain(tasks.state(TASK).seq);
+
+      // A later welcome (`reached`, each welcome's call) sends nothing for it:
+      // a send asks before `reached` returns.
+      first.reached();
+      expect(refused).toHaveLength(1);
+      // Nothing of the refused events is left to send.
+      expect(tasks.outbox(TASK, tasks.state(TASK).kept)).toEqual([]);
+
+      // Nor does the run that starts next from the same folder.
+      await first.close();
+      next = host();
+      next.reached();
+      expect(refused).toHaveLength(1);
+      expect(tasks.state(TASK).closed).toBe(true);
+    } finally {
+      gate.open();
+      await first.close();
+      await next?.close();
+    }
+  });
+
+  // INF-2080's other side: a refusal of an open conversation's events may
+  // pass, so the next welcome sends them again.
+  it("sends an open conversation's refused events again at the next welcome (INF-2080)", async () => {
+    const home = standInHome();
+    const dir = scratchDir("infinitary-placed-open-refused-");
+    const spec: PlacedSpec = {
+      binding: { backend: "pi", provider: PROVIDER },
+      model: { provider: PROVIDER, id: MODEL },
+      thinking: { level: "off" },
+      instructions: "You are a crewmate on another Mac.",
+      tools: [],
+    };
+    let refusing = true;
+    let refusals = 0;
+    const host = new SessionHost({
+      tasks: new PlacedTasks(dir),
+      ask: (channel, args) => {
+        if (channel === "inf:work:events" && refusing) {
+          refusals += 1;
+          return Promise.reject(new Error("The home is not ready for this task's events yet."));
+        }
+        return home.dispatch(channel, args);
+      },
+      factories: { pi: createPiSessionFactory({ agentDir: join(dir, "pi-agent") }) },
+      bind: async () => ({ backend: "pi", runtime }),
+      log: () => {},
+    });
+    const tasks = new PlacedTasks(dir);
+    model([]);
+    try {
+      await host.answer("inf:session:open", [{ orderId: "open:1", task: TASK, spec }]);
+      await host.answer("inf:session:prompt", [{ orderId: "rows:1", task: TASK, text: "Go." }]);
+      await expect
+        .poll(() => {
+          const state = tasks.state(TASK);
+          return state.turn === 1 && !state.running && refusals > 0;
+        })
+        .toBe(true);
+      expect(home.types()).toEqual([]);
+
+      refusing = false;
+      host.reached();
+      await expect.poll(() => home.types()).toContain("turn_ended");
+      expect(home.events.map(({ seq }) => seq)).toEqual(
+        Array.from({ length: tasks.state(TASK).seq }, (_, index) => index + 1),
+      );
+    } finally {
+      await host.close();
+    }
+  });
+
   // Captain's INF-352 W1: helper shutdown/recovery must terminate its own continuation.
   it.each(["stop", "crash", "older-crash", "closed"] as const)(
     "records terminal Claude endings only for open work after %s",

@@ -32,6 +32,7 @@ Work that ships nothing - an answer, a review the host raised, work in the perso
 
 A change comes into being when its task first carries one - work on a project the app manages, on a branch of its own, not building in place and not raised by the host on another task's change, while the task is open - and `TaskStore` projects it again on every write that can move it.
 Another pull request's change comes into being when the task first names it, by a review, a selection or an approval of it on another branch.
+One the task opened in another project the app manages is that project's change: its review names the project (`MergeReview.repoId`), and the record keeps it under that project's id (INF-2510; [the forge seam](../docs/forge.md), "A change in another project").
 Each head the project's host saw makes one version, in order: a check read, an owned merge review, a published story, a merge click and the repairs it was carried to, a completion offer, or an override given for one version.
 A plain branch's confirmed story and a local story's committed-head completion binding also make a version, without inventing a hosted request or upload.
 A review, a reading of the working copy or an unbound prepared story makes no version; they attach once its head is observed.

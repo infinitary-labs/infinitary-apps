@@ -1,0 +1,17 @@
+{
+  "entries": [
+    {
+      "id": "changes-in-other-projects",
+      "kind": "feature",
+      "area": "crewmates",
+      "title": "A crewmate can open a pull request in another of your projects",
+      "body": "A crewmate working on one project can now open its pull request in another project you have added to the app, for example your dotfiles while it works on your app. It reads that pull request's checks there, and its completion card names the project beside the pull request, so merging from the card merges it in that project. A project you have not added to the app is still refused.",
+      "picture": {
+        "dark": "changes-in-other-projects-dark.webp",
+        "light": "changes-in-other-projects-light.webp",
+        "alt": "A completion card for a shipyard task whose pull request reads dotfiles-private #100, beside the Merge the pull request button"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

@@ -220,6 +220,8 @@ function setup(
     bringBranchHome?: (taskId: string) => Promise<string | undefined>;
     /** The branch a placed task's working copy has checked out there, wired as the app wires it. */
     checkedOut?: CheckedOut;
+    /** One forge per project, by its origin, where a test names more than one project. */
+    forgeFor?: (repo: { origin?: string | null } | undefined) => FakeForge;
   } = {},
 ) {
   const db = freshDatabase();
@@ -237,7 +239,7 @@ function setup(
   const service = new PrCiService({
     tasks,
     repos,
-    forgeFor: () => forge,
+    forgeFor: options.forgeFor ?? (() => forge),
     presentations,
     ...(options.checkedOut ? { checkedOut: options.checkedOut } : {}),
     ...(options.bringBranchHome ? { bringBranchHome: options.bringBranchHome } : {}),
@@ -889,8 +891,9 @@ describe("PrCiService", () => {
     expect(service.reading("ab12cd34")?.overall).toBe("green");
   });
 
-  it("names the change: check_change reads only this task's change by its id, and open_change opens only on the task's project, onto the base it names (INF-1873)", async () => {
+  it("names the change: check_change reads only this task's change by its id, and open_change opens only on a project the app manages, onto the base it names (INF-1873, INF-2510)", async () => {
     // INF-1868 piece 2: open_change takes a repository and base; checks name a change.
+    // The captain's INF-1868 answer 2: "Only repositories the app manages as projects".
     const forge = new FakeForge();
     forge.change = null;
     const { tasks, repos, service } = setup({ forge });
@@ -903,7 +906,10 @@ describe("PrCiService", () => {
       repository: "octo/other",
     });
     expect(elsewhere).toBe(
-      `Cannot open the change on "octo/other": this task works in ${project.name}, and a task's change opens only there. Name that project, or leave repository out.`,
+      `Cannot open the change on "octo/other": a change opens only in a project the app manages (${repos
+        .list()
+        .map((repo) => repo.name)
+        .join(", ")}). Name one of them, or leave repository out for this task's own.`,
     );
     expect(forge.calls).toEqual([]);
     const opened = await service.open("ab12cd34", {
@@ -975,6 +981,135 @@ describe("PrCiService", () => {
     expect(own?.handle?.number).toBe(42);
     expect(await service.checkForCrew("ab12cd34", { change: own?.id })).toContain("facts: ");
     expect(tasks.get("ab12cd34")?.delivery?.checkTarget).toBeUndefined();
+  });
+
+  // INF-2510, the captain's INF-1868 answer 2: a change may open in any
+  // project the app manages, "for example dotfiles-private while working on
+  // INF". It opens there from the branch pushed there, becomes the task's
+  // current change, and every read and the merge go to that project's host.
+  it("opens, reads and merges a change in another project the app manages through that project's host (INF-2510)", async () => {
+    const own = new FakeForge();
+    const dotfiles = new FakeForge();
+    const { tasks, repos, service } = setup({
+      forge: own,
+      forgeFor: (repo) => (repo?.origin?.includes("octo/dotfiles") ? dotfiles : own),
+    });
+    await insertDirectPrTask(tasks, repos);
+    const taskRepo = tasks.get("ab12cd34")!.repoId!;
+    repos.configure(taskRepo, { origin: "https://github.com/x/y.git" });
+    const { repo: other } = await repos.setup({ kind: "init", name: "dotfiles-private" });
+    repos.configure(other.id, { origin: "https://github.com/octo/dotfiles.git" });
+    dotfiles.change = null;
+    dotfiles.opened = {
+      number: 7,
+      url: "https://github.com/octo/dotfiles/pull/7",
+      headSha: "d07f11e5",
+      title: "fix: keep the shell aliases",
+    };
+    const branch = "fm/dotfiles-aliases";
+    Object.assign(dotfiles, {
+      pull: async (number: number) => ({
+        number,
+        state: "open",
+        merged: false,
+        headSha: "d07f11e5",
+        base: "main",
+        branch,
+        headRepo: "octo/dotfiles",
+        title: "fix: keep the shell aliases",
+        readiness: "clean",
+      }),
+    });
+
+    const opened = await service.open("ab12cd34", {
+      title: "fix: keep the shell aliases",
+      body: "The aliases the captain asked for.",
+      repository: "octo/dotfiles",
+      branch,
+    });
+    expect(opened).toContain(
+      `Opened pull request #7 https://github.com/octo/dotfiles/pull/7 in dotfiles-private for ${branch}.`,
+    );
+    expect(dotfiles.calls).toContain(`openChange ${branch} fix: keep the shell aliases`);
+    expect(own.calls.filter((call) => call.startsWith("openChange"))).toEqual([]);
+    expect(tasks.get("ab12cd34")?.delivery?.checkTarget).toMatchObject({
+      repoId: other.id,
+      owner: "octo",
+      name: "dotfiles",
+      number: 7,
+      branch,
+    });
+    const change = tasks.changesFor("ab12cd34").find((item) => item.handle?.number === 7);
+    expect(change).toMatchObject({ repoId: other.id, head: { branch } });
+
+    // Its checks are read where it lives.
+    own.calls.length = 0;
+    const reading = await service.checkForCrew("ab12cd34");
+    expect(reading).toContain(
+      "pull request #7 https://github.com/octo/dotfiles/pull/7 head d07f11e5",
+    );
+    expect(dotfiles.calls).toContain("checks d07f11e5");
+    expect(own.calls).toEqual([]);
+    expect(service.reading("ab12cd34")?.overall).toBe("green");
+    expect(await service.pullState("ab12cd34", 7)).toMatchObject({ headRepo: "octo/dotfiles" });
+
+    // check_change pull of that number reviews it in that project.
+    expect(await service.checkForCrew("ab12cd34", { pull: 7 })).toContain("Merge review mr");
+    expect(tasks.get("ab12cd34")?.delivery?.mergeReviews?.[0]).toMatchObject({
+      repoId: other.id,
+      owner: "octo",
+      name: "dotfiles",
+      number: 7,
+    });
+
+    // The completion card's merge goes there; discarding the task closes
+    // only its own change.
+    expect((await service.merge("ab12cd34")).ok).toBe(true);
+    expect(dotfiles.calls).toContain(`putIn ${branch} d07f11e5`);
+    expect(own.calls.filter((call) => call.startsWith("putIn"))).toEqual([]);
+    await service.close("ab12cd34");
+    expect(dotfiles.calls.filter((call) => call.startsWith("close"))).toEqual([]);
+  });
+
+  it("opens a change in another project only from a branch of its own pushed there, with a description rather than a saved story (INF-2510)", async () => {
+    const own = new FakeForge();
+    const plain = new FakeForge({ kind: "git", place: null });
+    const dotfiles = new FakeForge();
+    const { tasks, repos, service } = setup({
+      forge: own,
+      forgeFor: (repo) =>
+        repo?.origin?.includes("octo/dotfiles")
+          ? dotfiles
+          : repo?.origin?.includes("git.example.com")
+            ? plain
+            : own,
+    });
+    await insertDirectPrTask(tasks, repos);
+    const { repo: other } = await repos.setup({ kind: "init", name: "dotfiles-private" });
+    repos.configure(other.id, { origin: "https://github.com/octo/dotfiles.git" });
+    const { repo: kept } = await repos.setup({ kind: "init", name: "notes" });
+    repos.configure(kept.id, { origin: "ssh://git.example.com/notes.git" });
+    const ask = { title: "fix: keep the shell aliases", body: "b", repository: "dotfiles-private" };
+    expect(await service.open("ab12cd34", ask)).toBe(
+      "Name the branch you pushed to dotfiles-private with branch: a change in another project opens from its own pushed branch.",
+    );
+    expect(await service.open("ab12cd34", { ...ask, branch: "fm/task-ab12cd34" })).toBe(
+      "Cannot open the change in dotfiles-private from fm/task-ab12cd34: that name is this task's own branch. Push the work there under another branch name, then name it with branch.",
+    );
+    expect(
+      await service.open("ab12cd34", {
+        title: ask.title,
+        repository: ask.repository,
+        branch: "fm/aliases",
+        presentation: 1,
+      }),
+    ).toBe(
+      "A change in another project carries no saved story: pass body as its description, without presentation, around or recovery.",
+    );
+    expect(
+      await service.open("ab12cd34", { ...ask, repository: "notes", branch: "fm/notes" }),
+    ).toContain("Cannot open the change in notes:");
+    expect([...own.calls, ...dotfiles.calls, ...plain.calls]).toEqual([]);
   });
 
   describe("checkOverall", () => {

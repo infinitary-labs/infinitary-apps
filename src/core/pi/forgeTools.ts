@@ -134,7 +134,8 @@ export const OPEN_CHANGE_TOOL = crewmateTool({
     title: Type.String({ description: "The pull request's title" }),
     repository: Type.Optional(
       Type.String({
-        description: "Your task's own project, by name or owner/name; any other is refused.",
+        description:
+          "The project the change opens in, by name or owner/name: your task's own, or another project the app manages, from the branch you pushed there (name it with branch) with body as its description. It becomes your current change: check_change and the merge act there. A project the app does not manage is refused.",
       }),
     ),
     base: Type.Optional(
@@ -281,7 +282,7 @@ export const CHECK_CHANGE_TOOL = crewmateTool({
       Type.Integer({
         minimum: 1,
         description:
-          "Prepare a merge review of any open pull request number in the task's project, whoever opened it: it becomes your task's current change. Grants no approval and merges nothing.",
+          "Prepare a merge review of any open pull request number in the task's project, or in the project your current change is in when it is that change, whoever opened it: it becomes your task's current change. Grants no approval and merges nothing.",
       }),
     ),
     skipRules: Type.Optional(

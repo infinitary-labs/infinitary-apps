@@ -12112,8 +12112,17 @@ export class CrewSupervisor {
       (record.delivery?.prNumber !== undefined ? `#${record.delivery.prNumber}` : undefined);
     const prUrl = record.delivery?.prUrl;
     const link = prUrl && /^https:\/\//.test(prUrl) ? escapeCardText(prUrl) : undefined;
+    // A change open_change opened in another managed project names that
+    // project beside its number (INF-2510).
+    const target = record.delivery?.checkTarget;
+    const elsewhere =
+      target?.repoId && target.repoId !== record.repoId
+        ? this.options.repos.get(target.repoId)?.name
+        : undefined;
     if (changeLabel || link) {
-      const label = escapeCardText(changeLabel ?? (prUrl as string));
+      const label = escapeCardText(
+        `${elsewhere ? `${elsewhere} ` : ""}${changeLabel ?? (prUrl as string)}`,
+      );
       cell(
         "change",
         record.delivery?.prNumber !== undefined ? "Pull request" : "Branch",

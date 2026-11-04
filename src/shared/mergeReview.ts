@@ -40,6 +40,12 @@ export type MergeSkips = {
  */
 export type MergeReview = {
   id: string;
+  /**
+   * The managed project the pull request is in when it is not the task's
+   * own (INF-2510): open_change opened it there. Absent means the task's
+   * own project.
+   */
+  repoId?: string;
   /** `github` includes GitHub Enterprise. */
   kind: "github" | "gitlab";
   host: string;

@@ -164,8 +164,9 @@ export const openChangeInputSchema = z.object({
   title: z.string(),
   /**
    * The project the change opens on, as the crewmate names it (INF-1873): the
-   * task's own project by name, id or owner/name where it lives. Any other is
-   * refused: a task's change opens on no other project.
+   * task's own or another project the app manages (INF-2510), by name, id,
+   * owner/name or origin where it lives. A project the app does not manage
+   * is refused.
    */
   repository: z.string().optional(),
   /** The branch the change targets, when not the default branch: another change's branch for a stacked change. */

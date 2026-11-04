@@ -12,6 +12,7 @@ import {
   type ChangeRepo,
   carriesChange,
   otherChangeNumbers,
+  otherChangeRepoId,
   type ProjectedChange,
   projectChange,
   projectOtherChange,
@@ -282,8 +283,12 @@ export class ChangeStore {
         this.db,
         "SELECT * FROM changes WHERE task_id = ? AND handle_number = ? AND head_branch IS NOT ?",
       ).get(task.id, number, task.branch) as ChangeRow | undefined;
+      // A change the task opened in another managed project is that project's (INF-2510).
+      const elsewhere = otherChangeRepoId(task, number);
+      const where = elsewhere ? this.repo(elsewhere) : repo;
+      if (!where) continue;
       this.write(other, task.updatedAt, (recorded) =>
-        projectOtherChange(task, repo, number, recorded),
+        projectOtherChange(task, where, number, recorded),
       );
     }
   }

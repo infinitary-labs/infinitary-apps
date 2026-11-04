@@ -626,7 +626,25 @@ export function projectOtherChange(
     own: false,
     current: record.delivery.checkTarget?.number === number,
   });
-  return { ...change, base: change.base ?? review?.base ?? null };
+  // `repo` is the project it is in: another managed one when the task opened it there.
+  return {
+    ...change,
+    repoId: otherChangeRepoId(record, number) ?? change.repoId,
+    base: change.base ?? review?.base ?? null,
+  };
+}
+
+/**
+ * The managed project another pull request the task names is in, as its
+ * newest review says (INF-2510): another project open_change opened it in,
+ * else undefined for the task's own.
+ */
+export function otherChangeRepoId(record: TaskRecord, number: number): string | undefined {
+  if (!record.delivery) return undefined;
+  const review = reviewsOf(record.delivery)
+    .filter((entry) => entry.number === number)
+    .sort((a, b) => b.at - a.at)[0];
+  return review?.repoId && review.repoId !== record.repoId ? review.repoId : undefined;
 }
 
 /** The branch another pull request the task names is on, as its newest review or its approval says. */

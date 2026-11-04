@@ -58,7 +58,7 @@ import type { CiWatch, TaskDelivery, TaskRecord } from "../storage/taskStore";
 import { earlyPublication } from "../tasks/liveValidation";
 import type { TaskService } from "../tasks/taskService";
 import { requireConventional, requireConventionalRange } from "../workspace/conventional";
-import { git } from "../workspace/git";
+import { git, gitFailure } from "../workspace/git";
 import type { RepoRegistry } from "../workspace/repoRegistry";
 import { checkedOutRefFor, readChangeReading } from "../workspace/workspaceService";
 import type { ChangePresentations } from "./changePresentations";
@@ -397,7 +397,9 @@ export class PrCiService {
         ).filter((field) => input[field] !== undefined);
         if (beside.length)
           return `check_change refused: change "${named.id}" is not the current change; read it first with change alone, then send ${beside.join(", ")}.`;
-        return this.prepareReview(taskId, named.handle.number, input.absentChecks);
+        return this.prepareReview(taskId, named.handle.number, input.absentChecks, {
+          repoId: named.repoId,
+        });
       }
       if (record && named.head.branch !== record.branch && review) this.select(record, review);
       else if (record && named.head.branch === record.branch)
@@ -468,10 +470,8 @@ export class PrCiService {
       }
       const located = this.locate(taskId);
       if ("said" in located) return located.said;
-      const { record } = located;
+      const { record, dir } = located;
       const approvedHead = record.delivery?.mergeAuthorization?.approvedHead;
-      const repo = record.repoId ? this.options.repos.get(record.repoId) : undefined;
-      const dir = repo?.path ?? record.repoDir;
       await this.branchHome(record);
       const facts: LineageFacts =
         !approvedHead || !dir
@@ -532,7 +532,7 @@ export class PrCiService {
     taskId: string,
     absent: NonNullable<CheckChangeInput["absentChecks"]>,
   ): Promise<string> {
-    const located = this.locate(taskId);
+    const located = this.locate(taskId, "check", "own");
     if ("said" in located) return located.said;
     const { record, branch, forge } = located;
     if (!forge.hasChecks)
@@ -550,7 +550,7 @@ export class PrCiService {
       return "Absence declaration refused: this task has no open pull request for its branch yet. Open it with open_change first, or name the pull request with pull.";
     if (absent.headSha !== change.headSha)
       return `Absence declaration refused: it names ${absent.headSha}, but this task's pull request ${forge.label(change)} is at ${change.headSha}. Declare that version, with the evidence and the local gate run at it.`;
-    const answer = await this.prepareReview(taskId, change.number, absent);
+    const answer = await this.prepareReview(taskId, change.number, absent, {});
     return answer.replace(/^Merge review refused:/, "Absence declaration refused:");
   }
 
@@ -562,15 +562,22 @@ export class PrCiService {
     taskId: string,
     number: number,
     absent: CheckChangeInput["absentChecks"],
+    within?: { repoId?: string },
   ): Promise<string> {
     if (!Number.isInteger(number) || number < 1) {
       return "Merge review refused: pull must be the pull request's number.";
     }
-    const located = this.locate(taskId);
+    // The number is read in the task's own project, or in the other managed
+    // project the current change is in when it names that change (INF-2510).
+    const target = this.options.tasks.get(taskId.trim())?.delivery?.checkTarget;
+    const located = this.locate(
+      taskId,
+      "check",
+      within ?? (target?.repoId && target.number === number ? target : "own"),
+    );
     if ("said" in located) return located.said;
     const { record, forge } = located;
-    const repo = record.repoId ? this.options.repos.get(record.repoId) : undefined;
-    const origin = forgeOf(repo?.origin);
+    const origin = forgeOf(located.repo?.origin);
     if (!origin.owner || !origin.name || !origin.host) {
       return "Merge review refused: this project has no pull requests where it lives.";
     }
@@ -583,7 +590,7 @@ export class PrCiService {
     } catch (caught) {
       const message = caught instanceof Error ? caught.message : String(caught);
       if (isSignInForgeFailure(caught))
-        return crewSignInText(this.signInFact(forge, record.repoId));
+        return crewSignInText(this.signInFact(forge, located.repo?.id ?? record.repoId));
       return `Merge review refused: could not read pull request ${number}. ${message}`;
     }
     if (pull.number !== number || pull.state !== "open" || pull.merged) {
@@ -607,6 +614,7 @@ export class PrCiService {
     }
     const review: MergeReview = {
       id: `mr${randomUUID().replace(/-/g, "").slice(0, 12)}`,
+      ...(located.elsewhere && located.repo ? { repoId: located.repo.id } : {}),
       kind: forge.kind === "gitlab" ? "gitlab" : "github",
       host: origin.host,
       owner: origin.owner,
@@ -732,7 +740,7 @@ export class PrCiService {
     if (skip.method !== "squash") {
       return "Merge review refused: a merge that skips the branch rules uses squash only.";
     }
-    const located = this.locate(taskId);
+    const located = this.locate(taskId, "check", "own");
     if ("said" in located) return located.said;
     const { record, forge } = located;
     const repo = record.repoId ? this.options.repos.get(record.repoId) : undefined;
@@ -942,7 +950,7 @@ export class PrCiService {
       }
     | { ok: false; text: string; stop?: MergeStop }
   > {
-    const located = this.locate(taskId);
+    const located = this.locate(taskId, "check", review);
     if ("said" in located) return { ok: false, text: located.said };
     const { forge } = located;
     if (forge.kind !== "github" || !forge.pull || !forge.putInSkippingRules) {
@@ -1033,7 +1041,7 @@ export class PrCiService {
     const fresh = await this.readSkipTarget(taskId, review);
     if (!fresh.ok) {
       if (fresh.text === "already-merged") {
-        const located = this.locate(taskId);
+        const located = this.locate(taskId, "check", review);
         const pull =
           "said" in located
             ? undefined
@@ -1191,11 +1199,11 @@ export class PrCiService {
       }
     | { ok: false; text: string; stop?: MergeStop }
   > {
-    const located = this.locate(taskId);
+    // The review's own project: the task's, or the one open_change opened it in (INF-2510).
+    const located = this.locate(taskId, "check", review);
     if ("said" in located) return { ok: false, text: located.said };
     const { forge } = located;
-    const repo = located.record.repoId ? this.options.repos.get(located.record.repoId) : undefined;
-    const origin = forgeOf(repo?.origin);
+    const origin = forgeOf(located.repo?.origin);
     if (
       origin.host !== review.host ||
       origin.owner !== review.owner ||
@@ -1345,7 +1353,7 @@ export class PrCiService {
     const fresh = await this.readReviewTarget(taskId, candidate, !guard?.unattended);
     if (!fresh.ok) {
       if (fresh.text === "already-merged") {
-        const located = this.locate(taskId);
+        const located = this.locate(taskId, "check", review);
         if (!("said" in located) && located.forge.pull) {
           const pull = await located.forge.pull(review.number).catch(() => undefined);
           if (pull?.merged && pull.headSha === candidate.headSha) {
@@ -1575,15 +1583,17 @@ export class PrCiService {
    * A change open_change opened from an existing branch (INF-2184) becomes
    * the task's current change, selected the way a named pull request is.
    * A host with no pull requests keeps no selection: its branch is read by
-   * name.
+   * name. One opened in another managed project names that project
+   * (INF-2510).
    */
   private async selectOpened(
     record: TaskRecord,
     forge: Forge,
     change: ForgeChange,
     asked: string | undefined,
+    elsewhere?: RepoView,
   ): Promise<void> {
-    const repo = record.repoId ? this.options.repos.get(record.repoId) : undefined;
+    const repo = elsewhere ?? (record.repoId ? this.options.repos.get(record.repoId) : undefined);
     const origin = forgeOf(repo?.origin);
     if (
       change.number === undefined ||
@@ -1596,6 +1606,7 @@ export class PrCiService {
     const base = change.base ?? asked ?? (await forge.defaultBranch());
     this.select(this.options.tasks.get(record.id) ?? record, {
       id: `mr${randomUUID().replace(/-/g, "").slice(0, 12)}`,
+      ...(elsewhere ? { repoId: elsewhere.id } : {}),
       kind: forge.kind === "gitlab" ? "gitlab" : "github",
       host: origin.host,
       owner: origin.owner,
@@ -1623,7 +1634,7 @@ export class PrCiService {
     const current = currentChange(record.delivery, located.branch);
     const branch = current.branch;
     try {
-      let change = await this.checkChange(record, branch, forge);
+      let change = await this.checkChange(record, branch, forge, located.repo);
       if (!change) {
         const pull = await this.namedPull(forge, current.number);
         this.assertCheckTarget(record);
@@ -1699,7 +1710,7 @@ export class PrCiService {
         return {
           kind: "failed",
           transient: false,
-          problem: crewSignInText(this.signInFact(forge, record.repoId)),
+          problem: crewSignInText(this.signInFact(forge, located.repo?.id ?? record.repoId)),
           signIn: true,
         };
       }
@@ -1809,7 +1820,9 @@ export class PrCiService {
         const revision = await this.options.presentations.prepare(taskId, staged, local);
         return `Prepared presentation ${revision} for ${staged.head}. Nothing was uploaded and no card was shown. This work merges locally: pass presentation: ${revision} to emit_card; no open_change or host sign-in is needed.`;
       }
-      const located = this.locate(taskId, "open");
+      // A story is prepared for the task's own project; a change opened in
+      // another managed project carries its body instead (INF-2510).
+      const located = this.locate(taskId, "open", "own");
       if ("said" in located) return located.said;
       if (!this.options.presentations) return "Saved change stories are unavailable.";
       try {
@@ -1949,17 +1962,18 @@ export class PrCiService {
   }
 
   async open(taskId: string, input: OpenChangeInput): Promise<string> {
-    const located = this.locate(taskId, "open");
+    const located = this.locate(taskId, "open", "own");
     if ("said" in located) return located.said;
     const { record, forge } = located;
+    if (input.repository !== undefined) {
+      const named = this.projectNamed(record, input.repository);
+      if ("said" in named) return named.said;
+      if (!named.own) return this.openElsewhere(record, named.repo, input);
+    }
     // INF-2184: an existing branch the crewmate names opens as it is, at
     // its own head; the task's own branch is the default.
     const branch = input.branch?.trim() || located.branch;
     const own = branch === record.branch;
-    if (input.repository !== undefined) {
-      const refused = this.foreignRepository(record, input.repository);
-      if (refused) return refused;
-    }
     try {
       requireConventional(input.title, "pull request title", this.options.namingRule?.());
       if (own) {
@@ -2194,30 +2208,144 @@ export class PrCiService {
         ? `A pull request for ${branch} is already open: ${changeWords(forge, change)}.${said} ${next}`
         : `Opened ${changeWords(forge, change)} for ${branch}.${said} ${next}`;
     } catch (caught) {
-      const message = caught instanceof Error ? caught.message : String(caught);
-      if (isSignInForgeFailure(caught)) {
-        return crewSignInText(this.signInFact(forge, record.repoId));
-      }
-      // An evidence upload says what stopped it; the branch is already pushed (INF-290 F4).
-      // A permission refusal keeps the write-access note and blocker words below (INF-290 G1).
-      if (caught instanceof AttachmentUploadError && caught.failure !== "permission")
-        return message;
-      // INF-497: nothing was sent, or what the host shows; the words carry the current text.
-      if (caught instanceof PresentationAroundError) return message;
-      const place = forge.place ?? "the project's host";
-      if (caught instanceof ForgeError && caught.failure === "permission") {
-        const repo = record.repoId ? this.options.repos.get(record.repoId) : undefined;
-        this.options.onNote?.(
-          `${place} did not allow the change on ${repo?.name ?? record.title} - ask its owner for write access.`,
-          record.id,
-        );
-        return `${place} did not allow opening the change: ${message}. Report this as a blocker: the captain needs write access to the project there.`;
-      }
-      if (caught instanceof ForgeError && caught.failure === "refused") {
-        return `${place} refused to open the change: ${message}. Push your branch first (git push) if you have not, then call open_change again.`;
-      }
-      return `Could not open the pull request: ${message}`;
+      return this.openFailure(record, forge, located.repo, caught);
     }
+  }
+
+  /**
+   * open_change in another project the app manages (INF-2510): the crewmate
+   * pushed a branch to where that project lives. The host reads the branch
+   * into that project's folder, checks its commit names there, and opens the
+   * change with the crewmate's description through that project's host. The
+   * change becomes the task's current one, so check_change and the merge
+   * read and act on it there. It carries no saved story: prepare_change
+   * prepares the task's own project's.
+   */
+  private async openElsewhere(
+    record: TaskRecord,
+    repo: RepoView,
+    input: OpenChangeInput,
+  ): Promise<string> {
+    const forge = this.options.forgeFor(repo, repo.path);
+    if (!hasChangeRequests(forge.kind))
+      return `Cannot open the change in ${repo.name}: ${forge.place ?? "where it lives"} has no pull requests, so the app opens no change there for another project's task.`;
+    const branch = input.branch?.trim();
+    if (!branch)
+      return `Name the branch you pushed to ${repo.name} with branch: a change in another project opens from its own pushed branch.`;
+    if (branch === record.branch)
+      return `Cannot open the change in ${repo.name} from ${branch}: that name is this task's own branch. Push the work there under another branch name, then name it with branch.`;
+    if (
+      input.presentation !== undefined ||
+      input.around !== undefined ||
+      input.recovery !== undefined
+    )
+      return "A change in another project carries no saved story: pass body as its description, without presentation, around or recovery.";
+    if (!existsSync(repo.path)) return `${repo.name}'s folder is gone; cannot open a change there.`;
+    try {
+      requireConventional(input.title, "pull request title", this.options.namingRule?.());
+      await this.validateElsewhere(record.id, repo.path, branch, forge);
+      const existing = await forge.changeFor(branch);
+      let change: ForgeChange;
+      let described = "";
+      if (existing) {
+        requireConventional(
+          changeTitle(forge.kind, existing) ?? "",
+          "existing pull request title",
+          this.options.namingRule?.(),
+        );
+        ({ change, said: described } = await this.redescribe(forge, branch, existing, input));
+      } else {
+        if (input.body === undefined) return "The pull request description is missing.";
+        change = await forge.openChange({
+          branch,
+          title: input.title,
+          body: input.body,
+          ...(input.base ? { base: input.base } : {}),
+        });
+      }
+      await this.selectOpened(record, forge, change, input.base, repo);
+      this.noteChange(record.id, { change, forge });
+      const next =
+        "Read its checks with check_change; they are read there, and the merge goes there. Show its outcome on the completion decision after they pass.";
+      const said = described ? ` ${described}` : "";
+      return existing
+        ? `A pull request for ${branch} in ${repo.name} is already open: ${changeWords(forge, change)}.${said} ${next}`
+        : `Opened ${changeWords(forge, change)} in ${repo.name} for ${branch}.${said} ${next}`;
+    } catch (caught) {
+      return this.openFailure(record, forge, repo, caught);
+    }
+  }
+
+  /**
+   * Reads a branch pushed to another managed project into that project's
+   * folder, beside its default branch, then checks the branch's own commit
+   * names there (INF-2510). Its private ref leaves the person's branches as
+   * they were.
+   */
+  private async validateElsewhere(
+    taskId: string,
+    dir: string,
+    branch: string,
+    forge: Forge,
+  ): Promise<void> {
+    if (this.options.validateRange) {
+      await this.options.validateRange(dir, branch, forge, branch);
+      return;
+    }
+    const name = await forge.defaultBranch();
+    const head = `refs/infinitary/opened/${taskId}`;
+    try {
+      await git(
+        dir,
+        [
+          "fetch",
+          "--quiet",
+          "--no-tags",
+          "origin",
+          `+refs/heads/${name}:refs/remotes/origin/${name}`,
+          `+refs/heads/${branch}:${head}`,
+        ],
+        { env: { GIT_TERMINAL_PROMPT: "0" } },
+      );
+    } catch (caught) {
+      throw new ForgeError(
+        "refused",
+        `could not read ${branch} there (${gitFailure(caught)})`,
+        true,
+      );
+    }
+    const base = await git(dir, ["merge-base", head, `refs/remotes/origin/${name}`]);
+    await requireConventionalRange(dir, base, head, this.options.namingRule?.());
+  }
+
+  /** What open_change says when the host or the checks refused the change, in either project. */
+  private openFailure(
+    record: TaskRecord,
+    forge: Forge,
+    repo: RepoView | undefined,
+    caught: unknown,
+  ): string {
+    const message = caught instanceof Error ? caught.message : String(caught);
+    if (isSignInForgeFailure(caught)) {
+      return crewSignInText(this.signInFact(forge, repo?.id ?? record.repoId));
+    }
+    // An evidence upload says what stopped it; the branch is already pushed (INF-290 F4).
+    // A permission refusal keeps the write-access note and blocker words below (INF-290 G1).
+    if (caught instanceof AttachmentUploadError && caught.failure !== "permission") return message;
+    // INF-497: nothing was sent, or what the host shows; the words carry the current text.
+    if (caught instanceof PresentationAroundError) return message;
+    const place = forge.place ?? "the project's host";
+    if (caught instanceof ForgeError && caught.failure === "permission") {
+      this.options.onNote?.(
+        `${place} did not allow the change on ${repo?.name ?? record.title} - ask its owner for write access.`,
+        record.id,
+      );
+      return `${place} did not allow opening the change: ${message}. Report this as a blocker: the captain needs write access to the project there.`;
+    }
+    if (caught instanceof ForgeError && caught.failure === "refused") {
+      return `${place} refused to open the change: ${message}. Push your branch first (git push) if you have not, then call open_change again.`;
+    }
+    return `Could not open the pull request: ${message}`;
   }
 
   /**
@@ -2485,9 +2613,18 @@ export class PrCiService {
   private locate(
     taskId: string,
     purpose: "check" | "open" = "check",
+    on: "current" | "own" | { repoId?: string } = "current",
   ):
     | { said: string }
-    | { record: NonNullable<ReturnType<TaskService["get"]>>; branch: string; forge: Forge } {
+    | {
+        record: NonNullable<ReturnType<TaskService["get"]>>;
+        branch: string;
+        forge: Forge;
+        /** The project the change is in: the task's own unless it opened one in another (INF-2510). */
+        repo: RepoView | undefined;
+        dir: string;
+        elsewhere: boolean;
+      } {
     const record = this.options.tasks.get(taskId.trim());
     if (!record) return { said: `Unknown task "${taskId}". Use a task id from crew_status.` };
     if (!record.branch) {
@@ -2514,24 +2651,69 @@ export class PrCiService {
     if (!dir || !existsSync(dir)) {
       return { said: `Task ${record.id}'s working directory is gone; cannot check CI.` };
     }
-    return { record, branch: record.branch, forge: this.options.forgeFor(repo, dir) };
+    // The change's own project: another managed project when the change
+    // open_change opened there is the one asked for (INF-2510).
+    const review = on === "own" ? undefined : on === "current" ? record.delivery?.checkTarget : on;
+    const elsewhereId =
+      review?.repoId && review.repoId !== record.repoId ? review.repoId : undefined;
+    if (elsewhereId) {
+      const other = this.options.repos.get(elsewhereId);
+      if (!other)
+        return {
+          said: "The project this task's change is in is no longer managed by the app; cannot read the change.",
+        };
+      if (!existsSync(other.path))
+        return { said: `${other.name}'s folder is gone; cannot read this task's change there.` };
+      return {
+        record,
+        branch: record.branch,
+        forge: this.options.forgeFor(other, other.path),
+        repo: other,
+        dir: other.path,
+        elsewhere: true,
+      };
+    }
+    return {
+      record,
+      branch: record.branch,
+      forge: this.options.forgeFor(repo, dir),
+      repo,
+      dir,
+      elsewhere: false,
+    };
   }
 
   /**
-   * open_change names the project the change opens on (INF-1873): the task's
-   * own, by its name, id, owner/name or origin where it lives. A task's
-   * change opens on no other project, so any other name is refused in words.
+   * open_change names the project the change opens on (INF-1873): the
+   * task's own or any other project the app manages (INF-2510), by its
+   * name, id, owner/name or origin where it lives. A name the app does not
+   * manage is refused in words that list the ones it does.
    */
-  private foreignRepository(record: TaskRecord, repository: string): string | undefined {
-    const repo = record.repoId ? this.options.repos.get(record.repoId) : undefined;
-    const origin = forgeOf(repo?.origin);
-    const full = origin.owner && origin.name ? `${origin.owner}/${origin.name}` : undefined;
+  private projectNamed(
+    record: TaskRecord,
+    repository: string,
+  ): { repo: RepoView; own: boolean } | { said: string } {
     const asked = repository.trim().toLowerCase();
-    const names = [repo?.id, repo?.name, full, repo?.origin]
-      .filter((name): name is string => Boolean(name))
-      .map((name) => name.toLowerCase());
-    if (names.includes(asked)) return undefined;
-    return `Cannot open the change on "${repository}": this task works in ${repo?.name ?? "its own project"}${full ? ` (${full})` : ""}, and a task's change opens only there. Name that project, or leave repository out.`;
+    const namesOf = (repo: RepoView) => {
+      const origin = forgeOf(repo.origin);
+      const full = origin.owner && origin.name ? `${origin.owner}/${origin.name}` : undefined;
+      return [repo.id, repo.name, full, repo.origin]
+        .filter((name): name is string => Boolean(name))
+        .map((name) => name.toLowerCase());
+    };
+    const repos = this.options.repos.list();
+    const own = record.repoId ? repos.find((repo) => repo.id === record.repoId) : undefined;
+    if (own && namesOf(own).includes(asked)) return { repo: own, own: true };
+    const matches = repos.filter((repo) => repo.id !== own?.id && namesOf(repo).includes(asked));
+    if (matches.length === 1) return { repo: matches[0] as RepoView, own: false };
+    const managed = repos.map((repo) => repo.name).join(", ");
+    if (matches.length > 1)
+      return {
+        said: `Cannot open the change on "${repository}": more than one project the app manages answers to that name (${matches.map((repo) => repo.name).join(", ")}). Name it by owner/name or its origin.`,
+      };
+    return {
+      said: `Cannot open the change on "${repository}": a change opens only in a project the app manages${managed ? ` (${managed})` : ""}. Name one of them, or leave repository out for this task's own.`,
+    };
   }
 
   private assertCheckTarget(record: NonNullable<ReturnType<TaskService["get"]>>): void {
@@ -2546,10 +2728,11 @@ export class PrCiService {
     record: NonNullable<ReturnType<TaskService["get"]>>,
     branch: string,
     forge: Forge,
+    /** The project the change is in, as `locate` found it (INF-2510). */
+    repo: RepoView | undefined,
   ): Promise<ForgeChange | null> {
     const target = record.delivery?.checkTarget;
     if (!target) return forge.changeFor(branch);
-    const repo = record.repoId ? this.options.repos.get(record.repoId) : undefined;
     const origin = forgeOf(repo?.origin);
     if (
       origin.host !== target.host ||
@@ -2576,7 +2759,7 @@ export class PrCiService {
     const current = currentChange(record.delivery, located.branch);
     const branch = current.branch;
     try {
-      let change = await this.checkChange(record, branch, forge);
+      let change = await this.checkChange(record, branch, forge, located.repo);
       if (!change) {
         // The pull request the task names may have been merged or closed
         // outside the app: read it by its number, never guessed from its
@@ -2672,7 +2855,9 @@ export class PrCiService {
         recorded: false,
         problem: message,
         transient: isTransientForgeFailure(caught),
-        ...(isSignInForgeFailure(caught) ? { signIn: this.signInFact(forge, record.repoId) } : {}),
+        ...(isSignInForgeFailure(caught)
+          ? { signIn: this.signInFact(forge, located.repo?.id ?? record.repoId) }
+          : {}),
       };
     }
   }
@@ -2822,7 +3007,13 @@ export class PrCiService {
       // checked when the task opened it; its title is checked below.
       const own = change.branch === record?.branch;
       if (own && record && !record.delivery?.presentation) await this.branchHome(record);
-      const repo = record?.repoId ? this.options.repos.get(record.repoId) : undefined;
+      // Another change is read in the project it is in (INF-2510).
+      const elsewhere =
+        !own && record && change.number !== undefined
+          ? this.projectOfNumber(record, change.number)
+          : undefined;
+      const repo =
+        elsewhere ?? (record?.repoId ? this.options.repos.get(record.repoId) : undefined);
       const dir = own
         ? await this.validateRange(
             record?.repoId,
@@ -2911,6 +3102,11 @@ export class PrCiService {
   /** Whether the task merges through its project's queue (`queue-pr`). */
   private queued(taskId: string): boolean {
     const record = this.options.tasks.get(taskId);
+    // A change opened in another managed project merges by that project's
+    // delivery (INF-2510); the task's own decides its own.
+    const target = record?.delivery?.checkTarget;
+    if (record && target?.repoId && target.repoId !== record.repoId)
+      return this.options.repos.get(target.repoId)?.delivery === "queue-pr";
     const repo = record?.repoId ? this.options.repos.get(record.repoId) : undefined;
     return record !== undefined && deliveryForRecord(record, repo?.delivery) === "queue-pr";
   }
@@ -3011,9 +3207,38 @@ export class PrCiService {
     if (!record || !repo || !opensPullRequest(deliveryForRecord(record, repo.delivery)))
       return undefined;
     // Reading a named pull request needs the project's saved host identity,
-    // not a local branch or folder (nor an in-reach work computer).
-    const forge = this.options.forgeFor(repo);
+    // not a local branch or folder (nor an in-reach work computer): the
+    // task's own project, or the other managed one the task opened that
+    // number in (INF-2510).
+    const elsewhere = this.projectOfNumber(record, prNumber);
+    if (elsewhere === null) return undefined;
+    const forge = this.options.forgeFor(elsewhere ?? repo);
     return forge.pull ? this.pullOf(forge, prNumber) : undefined;
+  }
+
+  /**
+   * The other managed project a pull request number of this task is in
+   * (INF-2510): the one its current change, its approved review, a kept
+   * review or a change record names for that number, in that order.
+   * Undefined for the task's own project; null when that project is no
+   * longer managed.
+   */
+  private projectOfNumber(record: TaskRecord, number: number): RepoView | undefined | null {
+    const delivery = record.delivery;
+    const reviews = [
+      delivery?.checkTarget,
+      delivery?.mergeAuthorization?.review,
+      ...[...(delivery?.mergeReviews ?? [])].sort((a, b) => b.at - a.at),
+    ];
+    const review = reviews.find((item) => item?.number === number);
+    const repoId = review
+      ? review.repoId
+      : this.options.tasks
+          .changesFor(record.id)
+          .find((change) => change.handle?.number === number && change.repoId !== record.repoId)
+          ?.repoId;
+    if (!repoId || repoId === record.repoId) return undefined;
+    return this.options.repos.get(repoId) ?? null;
   }
 
   /**
@@ -3140,7 +3365,8 @@ export class PrCiService {
     if (delivery?.prNumber === undefined && delivery?.changeLabel === undefined) {
       return { ok: true, text: "" };
     }
-    const located = this.locate(record.id);
+    // The task's own branch: a change it opened elsewhere stays as it is.
+    const located = this.locate(record.id, "check", "own");
     if ("said" in located) return { ok: true, text: "" };
     const { forge, branch } = located;
     try {
@@ -3184,11 +3410,12 @@ export class PrCiService {
         ? [record.delivery.mergeAuthorization.review]
         : []),
     ];
-    const origin = forgeOf(
-      record.repoId ? this.options.repos.get(record.repoId)?.origin : undefined,
-    );
-    return reviews.some(
-      (review) =>
+    // Each review is matched against the project it is in (INF-2510).
+    const originOf = (repoId: string | null | undefined) =>
+      forgeOf(repoId ? this.options.repos.get(repoId)?.origin : undefined);
+    return reviews.some((review) => {
+      const origin = originOf(review.repoId ?? record.repoId);
+      return (
         review.kind === checked.forge.kind &&
         review.host === origin.host &&
         review.owner === origin.owner &&
@@ -3196,8 +3423,9 @@ export class PrCiService {
         review.number === change.number &&
         review.branch === change.branch &&
         review.headSha === change.headSha &&
-        review.absentChecks?.headSha === change.headSha,
-    );
+        review.absentChecks?.headSha === change.headSha
+      );
+    });
   }
 
   /**

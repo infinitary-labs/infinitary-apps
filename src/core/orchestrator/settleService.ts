@@ -2298,7 +2298,9 @@ export class SettleService {
     const review = reviewId
       ? record.delivery?.mergeReviews?.find((item) => item.id === reviewId)
       : undefined;
-    const location = repo ? forgeLocationOf(repo) : undefined;
+    // The review's own project: another managed one when the task opened it there (INF-2510).
+    const reviewRepo = review?.repoId ? this.host.repos.get(review.repoId) : repo;
+    const location = reviewRepo ? forgeLocationOf(reviewRepo) : undefined;
     // A request review is a typed, head-bound offer. Rule-skipping clicks remain one-shot.
     if (
       reviewId &&
@@ -2313,7 +2315,12 @@ export class SettleService {
       return undefined;
     const offer = review
       ? { baseline: { headSha: review.headSha, prNumber: review.number }, ...review }
-      : approvableOffer(record, repo, this.host.taskDelivery(record.id), approval);
+      : approvableOffer(
+          record,
+          this.changeRepoOf(record, repo),
+          this.host.taskDelivery(record.id),
+          approval,
+        );
     const offerId = approval.offerId;
     if (!offer || !offerId || !record.repoId || !record.branch) return undefined;
     const { baseline } = offer;
@@ -2579,12 +2586,13 @@ export class SettleService {
   ): string | undefined {
     const target = authorization.target;
     const repo = record.repoId ? this.host.repos.get(record.repoId) : undefined;
-    const location = repo ? forgeLocationOf(repo) : undefined;
+    const changeRepo = this.changeRepoOf(record, repo);
+    const location = changeRepo ? forgeLocationOf(changeRepo) : undefined;
     return !opensPullRequest(this.host.taskDelivery(record.id))
       ? "the project no longer delivers as a pull request"
       : record.repoId !== target.repoId || !repo
         ? "the task's project is no longer the one approved"
-        : !hasChangeRequests(repo.host?.kind) ||
+        : !hasChangeRequests(changeRepo?.host?.kind) ||
             location?.host !== target.host ||
             location.owner !== target.owner ||
             location.name !== target.name
@@ -2594,6 +2602,20 @@ export class SettleService {
               currentChange(record.delivery, record.branch).number !== target.prNumber
             ? "the task's current change is not the one approved"
             : undefined;
+  }
+
+  /**
+   * The project the task's current change is in: another managed one when
+   * open_change opened it there (INF-2510), else the task's own.
+   */
+  private changeRepoOf(
+    record: TaskRecord,
+    own: ReturnType<RepoRegistry["get"]>,
+  ): ReturnType<RepoRegistry["get"]> {
+    const target = record.delivery?.checkTarget;
+    return target?.repoId && target.repoId !== record.repoId
+      ? this.host.repos.get(target.repoId)
+      : own;
   }
 
   private preflight(

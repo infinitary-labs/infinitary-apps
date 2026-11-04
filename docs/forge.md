@@ -91,7 +91,7 @@ GitHub, each GitLab host and each GitHub Enterprise host are shown in Settings -
   The worktree is not created and the task returns to the queue behind `forge-sign-in:<host>`; a host card opens Integrations with that host's sign-in started.
   When the host's existing sign-in reports `ok`, the gate is cleared and the task is dispatched again, re-fetching its base.
   DNS, connection, SSH, other-host and unstructured text failures continue through the ordinary stale-ref fallback; they never trigger GitHub sign-in.
-- **The crewmate's pair** (`src/core/pi/forgeTools.ts`): `open_change` offers the pushed branch, on the task's own project (`repository`, any other refused) and onto the branch it names (`base`; the default branch otherwise); `check_change` names the task's change (`change`) and reads raw check and mergeability facts and records evidence-backed declarations without deciding readiness or repair settlement.
+- **The crewmate's pair** (`src/core/pi/forgeTools.ts`): `open_change` offers the pushed branch, on the task's own project or another project the app manages (`repository`, a project it does not manage refused; "A change in another project" below) and onto the branch it names (`base`; the default branch otherwise); `check_change` names the task's change (`change`) and reads raw check and mergeability facts and records evidence-backed declarations without deciding readiness or repair settlement.
   A base other than the default branch is a stacked change's; the app retargets nothing when that branch merges, and the host's own behavior decides where the change then points, which each reading records (`TaskDelivery.prBase`).
   Existing diagnosis, repair and rerun fields remain readable; conflictRepair and captainGuidance retain the captain's approval boundary.
   Handed to every crewmate whose task ships a change, never on the personal workspace or an answer task.
@@ -557,6 +557,18 @@ The task's single pull request fields then name its own pull request at its own 
 Every change id a reading reports is the id of the change it read, so passing it back selects that same change; a change whose review the capped list no longer keeps is read again by its number, never swapped for the current one.
 `open_change` with `branch` opens or updates the pull request of an existing pushed branch the captain asked for, without moving its head, and that pull request becomes the current change (INF-2184).
 A crewmate on a computer that runs work does the same with a branch it checked out there: the home reads its checkout for the story and brings that branch home to read it (`docs/helper.md`, "Reading its branch here").
+
+### A change in another project
+
+`open_change` with `repository` naming another project the app manages opens the change there (INF-2510, the captain's INF-1868 answer: "Only repositories the app manages as projects").
+The crewmate pushes a branch to where that project lives and names it with `branch`; the branch needs a name other than the task's own branch, which names the task's own change.
+The home reads that branch from the project's host into the project's folder under a private ref (`refs/infinitary/opened/<task>`), beside its default branch, and checks the branch's own commit names there, so a placed task's crewmate needs nothing brought home.
+The change opens through that project's host with `body` as its description: it carries no saved story, since `prepare_change` prepares the task's own project's.
+The project must be on a host with pull requests (GitHub or GitLab); a plain Git host is refused in words, and so is a name the app does not manage, with the names it does.
+The opened pull request becomes the task's current change through a review that names its project (`MergeReview.repoId`), so `check_change`, the check watch, `check_change pull` of that number, the kept approval, the completion card's merge and the reads by number after a merge all go to that project, and the change record keeps it under that project's id.
+Its merge follows that project's delivery: a `queue-pr` project's queue holds it as it holds the project's own changes.
+Discarding the task closes only the task's own change; the change in the other project stays open.
+Evidence: `prCi.test.ts` (INF-2510) opens, reads and merges a change in a second project through that project's host, and refuses a project the app does not manage.
 The card effect `request_merge` names that id.
 With autonomy off, only the captain's button authorizes the merge.
 A merge card names one change, and the host writes on it whether its click closes the task (`mergeClosesLine`, `src/shared/cards.ts`): "Merging closes this task" on the completion card's settle merge, "The task continues after this merge" on a `request_merge` card.

@@ -407,16 +407,15 @@ describe("the declared heavy-run line through its native command", () => {
         "-e",
         "console.log('following admitted')",
       ]);
-      await expect
-        .poll(() => line.snapshot().runs.map((run) => [run.taskId, run.state]))
-        .toEqual([
-          ["surviving", "running"],
-          ["following", "waiting"],
-        ]);
-      expect(second.output()).toBe("");
-      await stopDescendant();
+      // INF-2570 direction 1: its program has exited, so the surviving group keeps its
+      // hold and attribution but reserves only what it measurably uses; the next run starts.
       expect(await second.ended).toBe(0);
       expect(second.output()).toContain("following admitted");
+      // The line sees the following group end at its next lifetime pass.
+      await expect
+        .poll(() => line.snapshot().runs.map((run) => [run.taskId, run.state]))
+        .toEqual([["surviving", "running"]]);
+      await stopDescendant();
       await expect.poll(() => line.snapshot().runs).toEqual([]);
       console.info(
         "Group lifetime proof",

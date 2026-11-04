@@ -4,7 +4,7 @@ import { RESOURCE_MAX_AGE_MS, type ResourceObservation } from "@shared/resources
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { deferred } from "../../../tests/helpers/deferred";
 import { scratchDir } from "../../../tests/helpers/scratchDirs";
-import { LoadLine } from "./loadLine";
+import { JOURNAL_FILE, JOURNAL_MAX_BYTES, type LoadJournalEntry, LoadLine } from "./loadLine";
 import { type ProcessReading, processesFromPs } from "./processResources";
 
 // INF-1685 accepted direction A: the plan's worked 14-core case and its busy
@@ -520,5 +520,171 @@ describe("verified processor startup coverage", () => {
     expect(
       JSON.parse(readFileSync(join(dir, "saved", "holds.json"), "utf8"))[0].launch,
     ).toBeUndefined();
+  });
+});
+
+// INF-2570 direction 1, approved by the captain: "Free what nothing uses ... make
+// reservations end with their programs and add the line's journal". The rows are
+// Mac ps metadata in the recorded format above; pid 19260 is the 7.8 MB helper that
+// kept INF-2413's 8-processor, 7.8 GiB reservation booked for six hours.
+describe("reservations that nothing uses", () => {
+  const wall = Date.parse("2026-11-03T22:41:00-08:00");
+  const table = (text: string) => processesFromPs(text) ?? [];
+  function line(rows: () => ProcessReading[]) {
+    const folder = scratchDir("unused-line-");
+    const created = new LoadLine({
+      stateFile: join(folder, "holds.json"),
+      now: () => 0,
+      wallClock: () => wall,
+      processes: async () => rows(),
+      groupExists: () => true,
+    });
+    lines.push(created);
+    const journal = (): LoadJournalEntry[] =>
+      readFileSync(join(folder, JOURNAL_FILE), "utf8")
+        .trim()
+        .split("\n")
+        .map((text) => JSON.parse(text));
+    return { line: created, journal, folder };
+  }
+  const gib = 1024 ** 3;
+  const busy = { ...reading, cpu: { ...reading.cpu, idleFraction: 9.5 / 14 } };
+
+  it("drops an exited program's reservation to what its leftover processes use", async () => {
+    let rows = table(`  4301  4210  4210 0:00.02  2800 Tue Nov  3 16:25:01 2026
+  4302  4301  4302 0:00.04  3120 Tue Nov  3 16:25:01 2026
+  4402  4210  4210 0:00.02  2800 Tue Nov  3 21:25:10 2026
+  4403  4402  4403 0:00.03  3100 Tue Nov  3 21:25:10 2026
+`);
+    const f = line(() => rows);
+    f.line.observe(busy, rows);
+    const first = await f.line
+      .forTask("INF-2413")
+      .claim({ pid: 4302, demand: { cpu: 8, memoryBytes: 8 * gib } });
+    expect(first.state).toBe("running");
+    const second = { pid: 4403, demand: { cpu: 6, memoryBytes: 10 * gib } };
+    expect((await f.line.forTask("INF-2225").claim(second)).state).toBe("waiting");
+
+    // The program and its supervisor exit; only the test's helper is left in the group.
+    rows = [
+      ...rows.filter((row) => row.pid !== 4302),
+      ...table("19260     1  4302 0:00.04  7980 Tue Nov  3 16:31:44 2026"),
+    ];
+    f.line.observe(busy, rows);
+    const runs = f.line.snapshot().runs;
+    expect(runs.find((run) => run.id === first.id)?.state).toBe("running");
+    expect(runs.find((run) => run.taskId === "INF-2225")?.state).toBe("running");
+    const journal = f.journal();
+    expect(journal.find((entry) => entry.event === "exited")).toMatchObject({
+      hold: first.id,
+      taskId: "INF-2413",
+      residentBytes: 7980 * 1024,
+    });
+    expect(journal.filter((entry) => entry.event === "release")).toEqual([]);
+
+    // The helper ends too: the hold is released, once.
+    rows = rows.filter((row) => row.pid !== 19260);
+    f.line.observe(busy, rows);
+    expect(f.line.snapshot().runs.map((run) => run.taskId)).toEqual(["INF-2225"]);
+    expect(f.journal().filter((entry) => entry.event === "release")).toMatchObject([
+      { hold: first.id, why: "its process group ended" },
+    ]);
+  });
+
+  it("removes a waiter whose caller ended and refuses its next claim", async () => {
+    let rows = table(`  4301  4210  4210 0:00.02  2800 Tue Nov  3 21:20:01 2026
+  4302  4301  4302 0:00.04  3120 Tue Nov  3 21:20:01 2026
+  4402  4210  4210 0:00.02  2800 Tue Nov  3 21:25:10 2026
+  4403  4402  4403 0:00.03  3100 Tue Nov  3 21:25:10 2026
+  4502  4210  4210 0:00.02  2800 Tue Nov  3 21:31:40 2026
+  4503  4502  4503 0:00.03  3100 Tue Nov  3 21:31:40 2026
+`);
+    const f = line(() => rows);
+    f.line.observe(busy, rows);
+    const front = await f.line
+      .forTask("running")
+      .claim({ pid: 4302, demand: { cpu: 8, memoryBytes: 8 * gib } });
+    const orphan = { pid: 4403, demand: { cpu: 6, memoryBytes: 10 * gib } };
+    const behind = { pid: 4503, demand: { cpu: 2, memoryBytes: 10 * gib } };
+    expect((await f.line.forTask("INF-2225").claim(orphan)).state).toBe("waiting");
+    expect((await f.line.forTask("behind").claim(behind)).ahead).toBe(2);
+
+    // The crewmate's shell ends: both outer wrappers are gone and the system adopts the leaders.
+    const adopted = (pid: number) => (row: ProcessReading) =>
+      row.pid === pid ? { ...row, parent: 1 } : row;
+    rows = rows
+      .filter((row) => row.pid !== 4301 && row.pid !== 4402)
+      .map(adopted(4302))
+      .map(adopted(4403));
+    f.line.observe(busy, rows);
+    // A running group keeps its hold whatever became of its caller; the waiter leaves.
+    expect(f.line.snapshot().runs).toMatchObject([
+      { id: front.id, state: "running" },
+      { taskId: "behind", state: "waiting", ahead: 1 },
+    ]);
+    await expect(f.line.forTask("INF-2225").claim(orphan)).rejects.toThrow("caller has ended");
+    expect(f.line.snapshot().runs.map((run) => run.taskId)).toEqual(["running", "behind"]);
+    const journal = f.journal();
+    expect(journal.filter((entry) => entry.taskId === "INF-2225")).toMatchObject([
+      { event: "wait", ahead: 1 },
+      { event: "blocked", running: 1 },
+      { event: "release", why: "it left the line: its caller ended" },
+      { event: "refuse", why: expect.stringContaining("caller has ended") },
+    ]);
+  });
+
+  it("journals each admission and block with the capacity it compared against", async () => {
+    const rows = table(`  4301  4210  4210 0:00.02  2800 Tue Nov  3 21:20:01 2026
+  4302  4301  4302 0:00.04  3120 Tue Nov  3 21:20:01 2026
+  4402  4210  4210 0:00.02  2800 Tue Nov  3 21:25:10 2026
+  4403  4402  4403 0:00.03  3100 Tue Nov  3 21:25:10 2026
+`);
+    const f = line(() => rows);
+    f.line.observe(busy, rows);
+    const front = await f.line
+      .forTask("front")
+      .claim({ pid: 4302, demand: { cpu: 8, memoryBytes: 8 * gib } });
+    const next = { pid: 4403, demand: { cpu: 6, memoryBytes: 10 * gib } };
+    await f.line.forTask("next").claim(next);
+    // Repeated passes with nothing new add no lines.
+    f.line.observe(busy, rows);
+    await f.line.forTask("next").claim(next);
+    f.line.observe({ ...busy, memory: { ...busy.memory, memoryPressure: "warning" } }, rows);
+    const journal = f.journal();
+    expect(journal.every((entry) => entry.at === new Date(wall).toISOString())).toBe(true);
+    expect(journal.map((entry) => [entry.event, entry.taskId])).toEqual([
+      ["wait", "front"],
+      ["admit", "front"],
+      ["wait", "next"],
+      ["blocked", "next"],
+      ["blocked", "next"],
+    ]);
+    const [, admitted, , blocked, pressured] = journal;
+    expect(admitted).toMatchObject({ hold: front.id, basis: "installed", running: 0 });
+    expect(admitted?.capacity?.memoryBytes).toBeGreaterThanOrEqual(8 * gib);
+    expect(blocked).toMatchObject({ demand: next.demand, running: 1, pressure: "normal" });
+    expect(blocked?.capacity?.memoryBytes).toBeLessThan(next.demand.memoryBytes);
+    expect(pressured).toMatchObject({ capacity: null, pressure: "warning" });
+  });
+
+  it("keeps the journal's newest lines within its size", async () => {
+    const rows = table(`  4301  4210  4210 0:00.02  2800 Tue Nov  3 21:20:01 2026
+  4302  4301  4302 0:00.04  3120 Tue Nov  3 21:20:01 2026
+`);
+    const f = line(() => rows);
+    const old = `${JSON.stringify({ at: "2026-11-01T00:00:00.000Z", event: "wait", taskId: "old" })}\n`;
+    writeFileSync(
+      join(f.folder, JOURNAL_FILE),
+      old.repeat(Math.ceil(JOURNAL_MAX_BYTES / old.length)),
+    );
+    await f.line.forTask("new").claim({ pid: 4302, demand: { cpu: 2, memoryBytes: gib } });
+    const text = readFileSync(join(f.folder, JOURNAL_FILE), "utf8");
+    expect(text.length).toBeLessThan(JOURNAL_MAX_BYTES);
+    // With no reading yet, the new run is journaled waiting and blocked on an unread capacity.
+    expect(f.journal().filter((entry) => entry.taskId === "new")).toMatchObject([
+      { event: "wait" },
+      { event: "blocked", capacity: null },
+    ]);
+    expect(f.journal()[0]).toMatchObject({ taskId: "old" });
   });
 });

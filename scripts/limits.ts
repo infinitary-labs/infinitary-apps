@@ -251,6 +251,11 @@ export const LIMITS: Record<string, Record<string, LimitEntry>> = {
   "src/core/pi/personalizeTool.ts": {
     SURFACES_CONTEXT_LIMIT: physical("the rest are a count; an unknown id is refused with every id"),
   },
+  "src/core/placed/loadLine.ts": {
+    JOURNAL_MAX_BYTES: physical(
+      "the oldest lines drop so the file on disk stays small; the newest half is kept",
+    ),
+  },
   "src/core/placed/placedCopies.ts": {
     HAVE_MAX: physical("extra haves drop; the bundle then carries more history"),
   },

@@ -1,8 +1,8 @@
 import { execFileSync, spawn } from "node:child_process";
-import { copyFileSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { copyFileSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { createRequire } from "node:module";
 import { dirname, join } from "node:path";
-import { expect, it } from "vitest";
+import { expect, it, onTestFinished } from "vitest";
 import { notarizationRunner } from "../scripts/installer-notarize.ts";
 import { hostEnv } from "../src/core/hostEnv";
 import { scratchDir } from "./helpers/scratchDirs";
@@ -76,24 +76,40 @@ it.each(["build-installer-fixtures.sh", "build-mac-dmg.sh"])(
 // Replay the real early output from run 39712112107/job 119605613318 in a
 // local child that cannot finish until its output reaches the observer.
 // No Apple program or credential is involved; the existing 5 s cohort budget holds.
+const received = "Submission ID received\n  id: 1c958e60-ed9e-4947-9324-fb5519463ba9\n";
+
+/** The upload stand-in: it finishes when the test writes `finish`, or leaves when its folder goes. */
+function uploadStandIn(root: string): string {
+  const script = join(root, "upload.mjs");
+  writeFileSync(
+    script,
+    `import { existsSync } from 'node:fs';
+import { join } from 'node:path';
+const root = ${JSON.stringify(root)};
+// It reads its folder rather than watching it: under a busy file-change indexer
+// a watch event can arrive seconds past the test budget. A test that ends before writing
+// finish still removes this folder, and the stand-in leaves with it (INF-2570).
+const poll = setInterval(() => {
+  if (!existsSync(root)) return clearInterval(poll);
+  if (!existsSync(join(root, 'finish'))) return;
+  clearInterval(poll);
+  process.stdout.write('Successfully uploaded file\\n');
+}, 100);
+process.stdout.write(${JSON.stringify(received)});
+`,
+  );
+  return script;
+}
+
 it.each(["complete", "journal-refused"] as const)(
   "streams upload output before process exit and handles %s without leaking the child",
   async (outcome) => {
     const root = scratchDir("inf-notary-process-");
-    const script = join(root, "upload.mjs");
-    const received = "Submission ID received\n  id: 1c958e60-ed9e-4947-9324-fb5519463ba9\n";
-    writeFileSync(
-      script,
-      `import { watch } from 'node:fs';
-const watcher = watch(${JSON.stringify(root)}, (_event, name) => {
-  if (name !== 'finish') return;
-  watcher.close();
-  process.stdout.write('Successfully uploaded file\\n');
-});
-process.stdout.write(${JSON.stringify(received)});
-`,
-    );
+    const script = uploadStandIn(root);
     let child: ReturnType<typeof spawn> | undefined;
+    onTestFinished(() => {
+      if (child?.exitCode === null && child.signalCode === null) child.kill("SIGKILL");
+    });
     const run = notarizationRunner(hostEnv(), (_command, _args, options) => {
       expect(options.timeout).toBeUndefined();
       const upload = spawn(process.execPath, [script], options);
@@ -124,6 +140,30 @@ process.stdout.write(${JSON.stringify(received)});
     console.log(JSON.stringify({ outcome, receivedBeforeExit }));
   },
 );
+
+// INF-2570: a stand-in left waiting for a finish that never came kept an
+// 8-processor, 7.8 GiB load reservation booked for six hours after its test ended.
+it("the upload stand-in exits once its scratch folder is removed", async () => {
+  const root = scratchDir("inf-notary-orphan-");
+  const child = spawn(process.execPath, [uploadStandIn(root)], {
+    stdio: ["ignore", "pipe", "inherit"],
+  });
+  onTestFinished(() => {
+    if (child.exitCode === null && child.signalCode === null) child.kill("SIGKILL");
+  });
+  const exited = new Promise<number | null>((resolve) => child.once("exit", resolve));
+  let output = "";
+  await new Promise<void>((resolve) =>
+    child.stdout.on("data", (chunk) => {
+      output += chunk;
+      if (output.includes(received)) resolve();
+    }),
+  );
+  expect(child.exitCode).toBeNull();
+  rmSync(root, { recursive: true, force: true });
+  expect(await exited).toBe(0);
+  expect(output).toBe(received);
+});
 
 it.each([
   "scripts/installer-environment.ts",

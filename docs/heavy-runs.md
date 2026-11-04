@@ -86,9 +86,17 @@ The app checks group existence without sending a terminating or scheduling signa
 A completed process-table reading also detects an ended group or a reused group identifier with a different birth stamp.
 The line releases a declaration only after the registered group ends.
 A descendant that survives its leader therefore keeps its hold and explicit task attribution, including after an app restart.
+The group leader is the supervisor that ran the admitted program, so a readable process table without that leader, or with it exited, means the program has ended (INF-2570).
+From then on the hold reserves nothing beyond what its surviving processes measurably use, which the reading already includes: no processor startup charge, no declared memory, and it no longer counts as an admitted run for the lone-run exception.
+Until the first reading after a restart, a restored hold keeps its full declaration.
+
+A waiting run whose caller has gone leaves the line (INF-2570).
+At its first claim the line records the waiting wrapper's parent process and birth stamp, unless that parent is the system's first process.
+When a readable table shows that parent ended, changed birth stamp, or the wrapper now has another parent, the line removes the waiting hold and refuses that wrapper's next claim, which ends it.
+A running group keeps its hold whatever becomes of its caller, and a hold saved without a caller learns it from the next claim of a wrapper whose parent is still alive.
 `ProcessRoots` registers group ownership separately from process roots, so an unrelated process that reuses the departed leader's PID cannot inherit its task attribution.
 
-The line persists only the task id, request id, declaration, group id, birth stamp, waiting/running state and optional verified payload identity in its own `load/holds.json`, under the home or work data folder.
+The line persists only the task id, request id, declaration, group id, birth stamp, waiting/running state, optional verified payload identity and optional caller identity in its own `load/holds.json`, under the home or work data folder.
 It writes before answering admission and refuses admissions when its saved state cannot be read or written.
 A failed declaration store leaves independent measured Use available and marks last-known declarations unavailable, never ended.
 It stores no command, arguments, environment or credentials.
@@ -102,6 +110,15 @@ The caller includes that work's needs in its declaration and keeps the wrapped r
 This project's local virtual Macs borrow a virtual place through `borrow-virtual-mac` instead (`docs/testing.md`, "A virtual Mac as a runner").
 Their phone and journey gates reuse `BORROWED_PLACE` and do not ask this load line; the virtual Mac appears here only as measured load.
 Programs that never declare a run stay visible through measured resource use; the app does not pretend to contain them.
+
+## The journal
+
+Beside its saved holds the line appends one JSON line per event to `load/journal.jsonl`, with the wall-clock time, task id, hold and declaration.
+It records a run joining the line and how many are ahead, each admission with the capacity it compared against and its basis (measured capacity, installed memory for a lone run, or a recorded override), a blocked front with that capacity or a null capacity and the pressure level, a program that exited with its leftovers' resident memory, each release and why, and each refused claim and its words.
+A blocked front is written when the front or its reason changes, not on every two-second pass.
+The file keeps its newest lines within `JOURNAL_MAX_BYTES`; the oldest half drops.
+The journal is a record for reading later: a failed write never changes admission, and the saved holds stay the truth.
+It stores no command, arguments, environment, process identity or credentials.
 
 ## What the task shows
 
@@ -124,5 +141,6 @@ The iPhone and iPad app retains its existing surface and ignores these optional 
 `src/core/placed/loadLine.integration.test.ts` runs real native wrappers through the task channel with a recorded ordinary-use Mac reading and explicitly supplied pressure states.
 It exercises queue order, unchanged streams and exit status, pressure admission, unknown and stale readings, interrupted claim commands retaining their identity and hold, revoked waiters, surviving descendants, restart restoration, failed state writes, nested demands and recorded overrides.
 `src/core/axi/channel.test.ts` checks the launcher's transport-timeout classification and that an interrupted non-load action remains terminal rather than gaining retry permission.
+`src/core/placed/loadLine.test.ts` covers an exited program's reservation dropping to its leftovers' use, a waiter whose caller ended leaving the line, and the journal's entries and size.
 `src/core/placed/processResources.test.ts` exercises declared-group attribution, PID reuse and explicit nested roots using recorded process metadata.
 This project's own local phone gate and journey runs declare their runs through this command (`docs/testing.md`, "A local heavy run's place").

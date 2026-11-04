@@ -1,0 +1,19 @@
+{
+  "entries": [
+    {
+      "id": "load-line-frees-unused",
+      "kind": "fix",
+      "area": "crewmates",
+      "title": "Heavy runs no longer wait behind work nobody is using",
+      "body": "When a crewmate's heavy run finishes but leaves a small helper process behind, the computer now counts only what that helper uses, so the next run can start. A heavy run whose crewmate stopped waiting for it leaves the line, so the runs behind it move up.",
+      "noPicture": "This changes when waiting heavy runs start, not the layout or words of a screen.",
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": [
+    {
+      "id": "installer-test-stand-in-exits",
+      "reason": "Test-only: the installer packaging test's upload stand-in exits once its scratch folder is removed. Nothing in the app changes."
+    }
+  ]
+}

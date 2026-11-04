@@ -1,6 +1,13 @@
 import { randomUUID } from "node:crypto";
-import { mkdirSync, readFileSync, renameSync, writeFileSync } from "node:fs";
-import { dirname } from "node:path";
+import {
+  appendFileSync,
+  mkdirSync,
+  readFileSync,
+  renameSync,
+  statSync,
+  writeFileSync,
+} from "node:fs";
+import { dirname, join } from "node:path";
 import { softHoldWords } from "@shared/holds";
 import { type LoadDemand, type LoadRun, type LoadSnapshot, loadDemandSchema } from "@shared/load";
 import {
@@ -23,8 +30,36 @@ const heldSchema = z.object({
   started: z.string().min(1),
   state: z.enum(["waiting", "running"]),
   launch: z.object({ pid: z.number().int().positive(), started: z.string().min(1) }).optional(),
+  /** The process that started the waiting wrapper; its end means nobody reads the run. */
+  caller: z.object({ pid: z.number().int().positive(), started: z.string().min(1) }).optional(),
 });
 type Held = z.infer<typeof heldSchema>;
+
+/** The journal keeps its newest lines within this size; the oldest half drops. */
+export const JOURNAL_MAX_BYTES = 1024 * 1024;
+/** The line's journal sits beside its saved holds. */
+export const JOURNAL_FILE = "journal.jsonl";
+/** The operating system's first process adopts a wrapper whose caller ended. */
+const ADOPTER_PID = 1;
+const CALLER_GONE = "The run's caller has ended, so the run left the line; nothing started.";
+
+/** One journal line: what the line did, to which run, and what it compared against. */
+export type LoadJournalEntry = {
+  at: string;
+  event: "wait" | "admit" | "blocked" | "exited" | "release" | "refuse";
+  taskId: string;
+  hold?: string;
+  demand?: LoadDemand;
+  /** What the line had left to give when it compared, or null without a fresh normal reading. */
+  capacity?: LoadDemand | null;
+  /** installed: judged against installed memory with nothing running; override: a recorded override passed it. */
+  basis?: "capacity" | "installed" | "override";
+  pressure?: string;
+  running?: number;
+  ahead?: number;
+  residentBytes?: number;
+  why?: string;
+};
 
 export type LoadClaim = { pid: number; demand: LoadDemand; parent?: string };
 export type LoadReceipt = { hold: string; pid: number; payload: number; started: string };
@@ -64,6 +99,12 @@ export class LoadLine {
   private cpuSequence = -Infinity;
   private readonly retiredEpochs = new Set<string>();
   private measuredMemory = new Map<string, number>();
+  /** Running holds whose admitted program has exited while other group members live on. */
+  private exited = new Set<string>();
+  private readonly journaledExits = new Set<string>();
+  /** Waiting groups that left because their caller ended; a later claim from one is refused. */
+  private readonly left = new Set<string>();
+  private blocked: string | undefined;
   private failure: unknown;
   private stopped = false;
 
@@ -75,6 +116,9 @@ export class LoadLine {
       overridden?: (taskId: string) => boolean;
       changed?: () => void;
       now?: () => number;
+      /** Wall-clock time for journal lines; admission keeps its monotonic clock. */
+      wallClock?: () => number;
+      journalFile?: string;
     },
   ) {
     try {
@@ -151,6 +195,19 @@ export class LoadLine {
             return !leader || leader.group !== held.pid || leader.started === held.started;
           }),
         );
+        // A waiter whose caller ended would start a run nobody reads (INF-2570).
+        const orphaned = this.held.filter((held) => this.callerGone(held, byPid));
+        for (const held of orphaned) this.left.add(`${held.pid}:${held.started}`);
+        if (orphaned.length)
+          this.commit(
+            this.held.filter((held) => !orphaned.includes(held)),
+            "its caller ended",
+          );
+        for (const key of this.left)
+          if (!byPid.has(Number(key.slice(0, key.indexOf(":"))))) this.left.delete(key);
+        this.exited = new Set(
+          this.held.filter((held) => this.programExited(held, byPid)).map((held) => held.id),
+        );
       }
       if (cpuWindow && observation.status === "sampled") {
         for (const held of this.held) {
@@ -173,6 +230,18 @@ export class LoadLine {
           if (id)
             this.measuredMemory.set(id, (this.measuredMemory.get(id) ?? 0) + row.residentBytes);
         }
+      }
+      for (const held of this.held) {
+        if (!this.exited.has(held.id) || this.journaledExits.has(held.id)) continue;
+        this.journaledExits.add(held.id);
+        this.journal({
+          event: "exited",
+          taskId: held.taskId,
+          hold: held.id,
+          demand: held.demand,
+          residentBytes: this.measuredMemory.get(held.id) ?? 0,
+          why: "its program exited; the reservation drops to what its processes use",
+        });
       }
       this.admit();
     } catch (error) {
@@ -244,6 +313,20 @@ export class LoadLine {
   }
 
   private async claim(taskId: string, input: LoadClaim): Promise<LoadRun> {
+    try {
+      return await this.claimOnce(taskId, input);
+    } catch (error) {
+      this.journal({
+        event: "refuse",
+        taskId,
+        ...(loadDemandSchema.safeParse(input?.demand).success ? { demand: input.demand } : {}),
+        why: (error as Error).message,
+      });
+      throw error;
+    }
+  }
+
+  private async claimOnce(taskId: string, input: LoadClaim): Promise<LoadRun> {
     this.check();
     const demand = loadDemandSchema.parse(input.demand);
     if (!Number.isSafeInteger(input.pid) || input.pid <= 0)
@@ -282,6 +365,10 @@ export class LoadLine {
       throw new Error(
         "The run must ask from its own process group through infinitary-load-axi run.",
       );
+    if (this.left.has(`${row.pid}:${row.started}`)) throw new Error(CALLER_GONE);
+    const byPid = new Map(rows?.map((row) => [row.pid, row]));
+    const parentRow = row.parent === ADOPTER_PID ? undefined : byPid.get(row.parent);
+    const caller = parentRow ? { pid: parentRow.pid, started: parentRow.started } : undefined;
     const existing = this.held.find((held) => held.pid === row.pid && held.started === row.started);
     if (existing) {
       if (
@@ -290,6 +377,19 @@ export class LoadLine {
         existing.demand.memoryBytes !== demand.memoryBytes
       )
         throw new Error("This process group already declared a different hold.");
+      if (this.callerGone(existing, byPid)) {
+        this.left.add(`${row.pid}:${row.started}`);
+        this.commit(
+          this.held.filter((held) => held.id !== existing.id),
+          "its caller ended",
+        );
+        throw new Error(CALLER_GONE);
+      }
+      // A hold saved before callers were recorded learns its caller from a living wrapper.
+      if (existing.state === "waiting" && !existing.caller && caller)
+        this.commit(
+          this.held.map((held) => (held.id === existing.id ? { ...held, caller } : held)),
+        );
     } else {
       const held: Held = {
         id: randomUUID(),
@@ -298,8 +398,16 @@ export class LoadLine {
         pid: row.pid,
         started: row.started,
         state: "waiting",
+        ...(caller ? { caller } : {}),
       };
       this.commit([...this.held.filter((held) => held.pid !== row.pid), held]);
+      this.journal({
+        event: "wait",
+        taskId,
+        hold: held.id,
+        demand,
+        ahead: this.held.filter((other) => other.id !== held.id).length,
+      });
     }
     this.admit();
     this.watch();
@@ -403,6 +511,9 @@ export class LoadLine {
     if (remaining) {
       for (const held of this.held) {
         if (held.state !== "running") continue;
+        // Its program has exited: what its surviving processes use is already in
+        // the reading, so nothing more is reserved and it no longer counts as admitted.
+        if (this.exited.has(held.id)) continue;
         running++;
         // Aggregate idle already excludes all real use. Only starts not yet
         // covered by a complete post-verification interval retain a CPU charge.
@@ -420,6 +531,15 @@ export class LoadLine {
     const total = this.observation()?.value.memory.totalBytes ?? 0;
     const installed = Math.max(0, Math.floor(total - memoryMarginBytes(total)));
     let earlier = false;
+    let blocked: string | undefined;
+    const entries: Omit<LoadJournalEntry, "at">[] = [];
+    const pressure = this.observation()?.value.memory.memoryPressure;
+    const compared = (): LoadDemand | null =>
+      remaining === null
+        ? null
+        : running === 0
+          ? { cpu: round(remaining.cpu), memoryBytes: installed }
+          : { cpu: round(remaining.cpu), memoryBytes: Math.floor(remaining.memoryBytes) };
     const next = this.held.map((held): Held => {
       if (held.state === "running") return held;
       const overridden = this.options.overridden?.(held.taskId) === true;
@@ -429,10 +549,28 @@ export class LoadLine {
         (running === 0
           ? held.demand.memoryBytes <= installed
           : held.demand.cpu <= remaining.cpu && held.demand.memoryBytes <= remaining.memoryBytes);
+      const entry = {
+        taskId: held.taskId,
+        hold: held.id,
+        demand: held.demand,
+        capacity: compared(),
+        ...(pressure ? { pressure } : {}),
+        running,
+      };
       if (!overridden && !fits) {
+        if (!earlier) {
+          // One line per new front or new reason, not one per two-second pass.
+          blocked = `${held.id}:${entry.capacity === null ? (pressure ?? "unread") : "capacity"}`;
+          if (blocked !== this.blocked) entries.push({ ...entry, event: "blocked" });
+        }
         earlier = true;
         return held;
       }
+      entries.push({
+        ...entry,
+        event: "admit",
+        basis: !fits ? "override" : running === 0 ? "installed" : "capacity",
+      });
       if (remaining) {
         remaining.cpu -= held.demand.cpu;
         remaining.memoryBytes -= held.demand.memoryBytes;
@@ -441,9 +579,11 @@ export class LoadLine {
       return { ...held, state: "running" };
     });
     this.commit(next);
+    this.blocked = blocked;
+    for (const entry of entries) this.journal(entry);
   }
 
-  private commit(next: Held[]): void {
+  private commit(next: Held[], why = "its process group ended"): void {
     if (JSON.stringify(next) === JSON.stringify(this.held)) return;
     // Persist before a caller can receive a grant. A failed write grants nothing.
     mkdirSync(dirname(this.options.stateFile), { recursive: true, mode: 0o700 });
@@ -456,10 +596,63 @@ export class LoadLine {
       this.roots.delete(held.id);
       this.verified.delete(held.id);
       this.covered.delete(held.id);
+      this.exited.delete(held.id);
+      this.journaledExits.delete(held.id);
+      this.journal({
+        event: "release",
+        taskId: held.taskId,
+        hold: held.id,
+        demand: held.demand,
+        why: held.state === "waiting" ? `it left the line: ${why}` : why,
+      });
     }
     this.held = next;
     for (const held of next) if (!this.roots.has(held.id)) this.track(held);
     this.options.changed?.();
+  }
+
+  /** A waiter only: the recorded caller ended, or the wrapper now has another parent. */
+  private callerGone(held: Held, byPid: Map<number, ProcessReading>): boolean {
+    if (held.state !== "waiting" || !held.caller) return false;
+    const leader = byPid.get(held.pid);
+    if (!leader || leader.started !== held.started) return false;
+    const caller = byPid.get(held.caller.pid);
+    return (
+      leader.parent !== held.caller.pid ||
+      !caller ||
+      caller.started !== held.caller.started ||
+      caller.exited === true
+    );
+  }
+
+  /** The admitted program ran in the group leader; the group outliving it is leftovers. */
+  private programExited(held: Held, byPid: Map<number, ProcessReading>): boolean {
+    if (held.state !== "running") return false;
+    const leader = byPid.get(held.pid);
+    return (
+      !leader ||
+      leader.group !== held.pid ||
+      leader.started !== held.started ||
+      leader.exited === true
+    );
+  }
+
+  /** Diagnostic only: a failed journal write never changes admission. */
+  private journal(entry: Omit<LoadJournalEntry, "at">): void {
+    try {
+      const file = this.options.journalFile ?? join(dirname(this.options.stateFile), JOURNAL_FILE);
+      const at = new Date((this.options.wallClock ?? Date.now)()).toISOString();
+      mkdirSync(dirname(file), { recursive: true, mode: 0o700 });
+      appendFileSync(file, `${JSON.stringify({ at, ...entry })}\n`, { mode: 0o600 });
+      if (statSync(file).size <= JOURNAL_MAX_BYTES) return;
+      const text = readFileSync(file);
+      const tail = text.subarray(text.length - JOURNAL_MAX_BYTES / 2);
+      const temporary = `${file}.new`;
+      writeFileSync(temporary, tail.subarray(tail.indexOf(10) + 1), { mode: 0o600 });
+      renameSync(temporary, file);
+    } catch {
+      // The journal is a record for reading later; the line's saved holds remain the truth.
+    }
   }
 
   private track(held: Held): void {
@@ -493,6 +686,10 @@ export class LoadLine {
   private now(): number {
     return (this.options.now ?? (() => performance.now()))();
   }
+}
+
+function round(value: number): number {
+  return Math.round(value * 100) / 100;
 }
 
 export function loadWaitWords(): string {

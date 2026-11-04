@@ -35,6 +35,7 @@ import {
   type DropTaskReview,
   HOST_DECLINE_OPS,
   type HostEffect,
+  isStoryNote,
   LIVE_ATTACHMENT_LABEL_MAX,
   type LiveAttachment,
   onStage,
@@ -1739,6 +1740,8 @@ export class CrewSupervisor {
       settleFacts: (taskId) => this.settleFacts(taskId),
       mergeLabel: (card) => this.mergeLabel(card),
       mergeAnyway: (card) => this.mergeAnyway(card),
+      holdsUntilMerge: (card, merging) => this.holdsUntilMerge(card, merging === true),
+      otherChangeOpen: (taskId) => this.otherChangeOpen(taskId),
       followupNotice: (taskId) => this.followupNotice(taskId),
       choiceUnheard: (card) => {
         const lane = card.id.startsWith(FIRSTMATE_CARD_PREFIX) ? FIRSTMATE_RECIPIENT : card.taskId;
@@ -1789,10 +1792,15 @@ export class CrewSupervisor {
               kind: "merge-continued",
               ok: outcome.ok,
               ...(outcome.stop === "outcome" ? { unknown: true } : {}),
-              change: review ? `#${review.number}` : "the reviewed pull request",
+              change: review
+                ? `#${review.number}`
+                : still?.delivery?.prNumber !== undefined && outcome.stillOpen
+                  ? `#${still.delivery.prNumber}`
+                  : "the reviewed pull request",
               ...(outcome.receipt?.head || review?.headSha
                 ? { head: outcome.receipt?.head ?? review?.headSha }
                 : {}),
+              ...(outcome.stillOpen ? { open: outcome.stillOpen } : {}),
               text: outcome.text,
             },
             ...(outcome.ok && review ? { once: `merge-continued:${review.id}` } : {}),
@@ -7190,6 +7198,39 @@ export class CrewSupervisor {
    * reader for the settle refusal, `crew_status` and the fact strip, so
    * none of the three can disagree with another.
    */
+  /**
+   * Whether a story note stays off the stack until its task's merge has a
+   * result (INF-2533): a task that merges on its own, open, with a saved
+   * story, whose change has not merged (`merging`: is merging now).
+   */
+  private holdsUntilMerge(card: Card, merging: boolean): boolean {
+    if (!card.taskId || !isStoryNote(card)) return false;
+    const record = this.options.tasks.get(card.taskId);
+    if (!record || TaskService.isClosed(record) || !record.delivery?.presentation) return false;
+    if (!this.taskAutonomy(record.id)) return false;
+    if (merging) return true;
+    return (
+      record.delivery.ci !== "merged" &&
+      this.options.tasks.changeFor(record.id)?.receipt?.outcome !== "merged"
+    );
+  }
+
+  /**
+   * Another pull request the task's record keeps that has not ended,
+   * besides its current one (INF-2525): its merge card's line reads it.
+   */
+  private otherChangeOpen(taskId: string): boolean {
+    const current = this.options.tasks.get(taskId)?.delivery?.prNumber;
+    return this.options.tasks
+      .changesFor(taskId)
+      .some(
+        (change) =>
+          change.handle?.number !== undefined &&
+          change.handle.number !== current &&
+          !change.receipt,
+      );
+  }
+
   taskAutonomy(taskId: string): boolean {
     const record = this.options.tasks.get(taskId);
     if (!record) return false;

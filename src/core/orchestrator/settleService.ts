@@ -5,7 +5,7 @@ import {
   COMPLETION_CARD_HEADINGS,
   TIERED_STORY_HEADINGS,
 } from "@shared/cardHeadings";
-import { type Card, settleEffectOf } from "@shared/cards";
+import { type Card, isRoutineMergeCard, keepsTaskOpen, settleEffectOf } from "@shared/cards";
 import { readyPresentation } from "@shared/changePresentation";
 import { currentCheckStatus } from "@shared/checkSnapshot";
 import { HERE } from "@shared/deviceNames";
@@ -137,6 +137,14 @@ export type SettleOutcome = {
    * the settle left behind.
    */
   followup?: string;
+  /** The merge went through and the task stays open (INF-2490, INF-2525). */
+  continued?: boolean;
+  /**
+   * What on the task is still open after a merge that kept it open, as a
+   * clause - a question, by its title, or another pull request (INF-2525) -
+   * which its crewmate judges what to do about.
+   */
+  stillOpen?: string;
 };
 
 /**
@@ -244,14 +252,7 @@ export type TaskClose = {
   data?: Record<string, unknown>;
 };
 
-/** A typed merge/discard completion offer (with the host's Review carefully), never an unrelated decision. */
-export function isRoutineMergeCard(card: Card): boolean {
-  return (
-    card.author === "crewmate" &&
-    card.actions.some((action) => settleEffectOf(action)?.mode === "merge") &&
-    card.actions.every((action) => settleEffectOf(action) || action.care)
-  );
-}
+export { isRoutineMergeCard };
 
 /** What settling needs from the supervisor that composes it. */
 export type SettleServiceHost = {
@@ -808,6 +809,18 @@ export class SettleService {
         beforeDispatch,
       );
       this.host.broadcastEvent({ type: "task_landed", taskId, title: record.title, mode });
+      // A question still open on the task keeps it open past the merge (INF-2525).
+      const stillOpen = await this.stillOpen(record, undefined);
+      if (stillOpen) {
+        const continued = {
+          ok: true,
+          text: `Merged "${record.title}" into main.`,
+          continued: true,
+          stillOpen,
+        };
+        this.finishContinued(taskId, undefined, continued, actor);
+        return continued;
+      }
       await this.closeTask(taskId, {
         status: "done",
         reason: "landed",
@@ -885,7 +898,44 @@ export class SettleService {
       };
     }
     if (guard) this.consumeStanding(taskId, result.receipt);
+    // Something else on the task is still open (INF-2525): the merge went
+    // through and the task stays, for its crewmate to judge what is next.
+    const merged = record.delivery?.prNumber;
+    const stillOpen = await this.stillOpen(record, merged);
+    if (stillOpen) {
+      const head = result.receipt?.head ?? record.delivery?.headSha;
+      this.host.tasks.recordChangeEvidence(taskId, {
+        ci: "merged",
+        ...(head ? { headSha: head } : {}),
+        ciAt: this.host.now(),
+        ciWatch: undefined,
+      });
+      const continued = { ...result, continued: true, stillOpen };
+      this.finishContinued(taskId, undefined, continued, actor);
+      return continued;
+    }
     return this.closeMerged(record, actor, result);
+  }
+
+  /**
+   * What on the task is still open besides the change that merged
+   * (INF-2525), in words its crewmate reads: an open question of its
+   * crewmate's or the first mate's, or another of its pull requests that
+   * is open or could not be read. Undefined when nothing is, and the merge
+   * may close the task.
+   */
+  private async stillOpen(
+    record: TaskRecord,
+    merged: number | undefined,
+  ): Promise<string | undefined> {
+    const question = [...this.host.cards.values()].find(
+      (card) => card.taskId === record.id && keepsTaskOpen(card),
+    );
+    if (question) return `the card "${question.title}" on this task is still open`;
+    if (merged === undefined) return undefined;
+    const open = await this.otherOpenChange(record, merged);
+    if (!open) return undefined;
+    return `${this.changeName(record, open.number)} on this task ${open.unread ? "could not be read, so it may still be open" : "is still open"}`;
   }
 
   /**
@@ -924,7 +974,10 @@ export class SettleService {
         ciWatch: undefined,
       });
       const completion = current.delivery?.mergeCompletion;
+      // Another of its pull requests still open keeps the task open (INF-2525).
+      const other = await this.otherOpenChange(current, pull.number);
       if (
+        other !== undefined ||
         completion?.prNumber !== pull.number ||
         completion.headSha !== pull.headSha ||
         this.working(taskId) ||
@@ -947,6 +1000,11 @@ export class SettleService {
               kind: "external-merge",
               change: this.changeName(current, pull.number),
               head: pull.headSha,
+              ...(other
+                ? {
+                    open: `${this.changeName(current, other.number)} on this task ${other.unread ? "could not be read, so it may still be open" : "is still open"}`,
+                  }
+                : {}),
             },
             once,
           });
@@ -1213,7 +1271,7 @@ export class SettleService {
         if (!unattended && review) this.host.mergeContinued?.(taskId, review, outcome);
         return outcome;
       }
-      this.finishContinued(taskId, review, result);
+      this.finishContinued(taskId, review, result, "captain");
       return { ...result, continued: true };
     } finally {
       this.settlingTasks.delete(taskId);
@@ -1224,8 +1282,26 @@ export class SettleService {
     taskId: string,
     review: MergeReview | undefined,
     result: SettleOutcome,
+    actor: TaskClose["actor"],
   ): void {
     this.clearPendingMerge(taskId, "merged");
+    // The merge has a result: a story note held for it shows now, once,
+    // with the merged line and that the task continues (INF-2533).
+    const record = this.host.tasks.get(taskId);
+    const number = review?.number ?? record?.delivery?.prNumber;
+    const label = number !== undefined ? `PR ${this.changeName(record, number)}` : undefined;
+    const url = review ? undefined : record?.delivery?.prUrl;
+    this.host.cards.showHeld(taskId, (body) =>
+      withMergeLine(
+        body,
+        mergedLine({
+          at: this.host.now(),
+          onItsOwn: actor !== "captain",
+          ...(label ? { change: { label, ...(url ? { url } : {}) } } : {}),
+          continues: true,
+        }),
+      ),
+    );
     this.host.tasks.atomic(
       () => {
         const authorization = standingAuthorization(this.host.tasks.get(taskId)?.delivery);
@@ -2052,14 +2128,14 @@ export class SettleService {
     // off, once none of its changes is still open (FI3-213, INF-2490).
     if (mode === "merge-pr" && actor === "firstmate") {
       const pull = await this.mergedOutside(record);
-      const open = pull ? await this.otherOpenChange(record, pull.number) : undefined;
-      if (pull && open !== undefined) {
+      // Its question, or another of its pull requests, still open keeps the
+      // task open too (INF-2525).
+      const stillOpen = pull ? await this.stillOpen(record, pull.number) : undefined;
+      if (pull && stillOpen !== undefined) {
         return {
           ok: false,
-          text: `Cannot close as merged: ${this.changeName(record, pull.number)} is merged, and ${this.changeName(record, open.number)} on this task ${open.unread ? "could not be read, so it may still be open" : "is still open"}. The task closes as merged once none of its changes is open.`,
-          plain: open.unread
-            ? "another of its pull requests could not be read"
-            : "another of its pull requests is still open",
+          text: `Cannot close as merged: ${this.changeName(record, pull.number)} is merged, and ${stillOpen}. The task closes as merged once nothing else on it is open; its crewmate judges what comes next.`,
+          plain: "something else on the task is still open",
         };
       }
       if (pull) return this.closeMergedOutside(taskId, actor, pull);
@@ -2898,15 +2974,20 @@ export class SettleService {
       const authorization = standingAuthorization(this.host.tasks.get(taskId)?.delivery);
       // A kept request_merge approval merged a continuing change (INF-2490).
       if (authorization?.review) {
-        this.finishContinued(taskId, authorization.review, {
-          ok: true,
-          text: `Merged ${this.changeName(this.host.tasks.get(taskId), pull.number)} on ${this.placeOf(this.host.tasks.get(taskId))}. The task stays open.`,
-          receipt: {
-            head: pull.headSha,
-            ...(pull.mergedSha ? { sha: pull.mergedSha } : {}),
-            already: true,
+        this.finishContinued(
+          taskId,
+          authorization.review,
+          {
+            ok: true,
+            text: `Merged ${this.changeName(this.host.tasks.get(taskId), pull.number)} on ${this.placeOf(this.host.tasks.get(taskId))}. The task stays open.`,
+            receipt: {
+              head: pull.headSha,
+              ...(pull.mergedSha ? { sha: pull.mergedSha } : {}),
+              already: true,
+            },
           },
-        });
+          "captain",
+        );
         return;
       }
       this.consumeStanding(taskId, {
@@ -2916,6 +2997,20 @@ export class SettleService {
       });
       const record = this.host.tasks.get(taskId);
       const text = `Merged ${this.changeName(record, pull.number)} on ${this.placeOf(record)}.`;
+      // Something else on the task still open keeps it open (INF-2525).
+      const stillOpen = record ? await this.stillOpen(record, pull.number) : undefined;
+      if (stillOpen) {
+        this.host.tasks.recordChangeEvidence(taskId, {
+          ci: "merged",
+          headSha: pull.headSha,
+          ciAt: this.host.now(),
+          ciWatch: undefined,
+        });
+        const continued = { ok: true, text, continued: true, stillOpen };
+        this.finishContinued(taskId, undefined, continued, "captain");
+        this.reportOutcome(taskId, title, "merge-pr", undefined, continued, undefined);
+        return;
+      }
       await this.closeTask(taskId, {
         status: "done",
         reason: "merged",
@@ -3054,10 +3149,11 @@ export class SettleService {
     // discard that closed it with nothing more to say ("Discarded").
     const record = this.host.tasks.get(taskId);
     const merged =
-      result.ok &&
-      record &&
-      TaskService.isClosed(record) &&
-      (mode !== "discard" || (!result.problem && !result.plain));
+      (result.ok && result.continued) ||
+      (result.ok &&
+        record &&
+        TaskService.isClosed(record) &&
+        (mode !== "discard" || (!result.problem && !result.plain)));
     if (mode !== "discard" && !result.contention) {
       if (result.ok) this.clearPendingMerge(taskId, "merged");
       // A refused sign-in raises the host's own sign-in card, the one thing
@@ -3254,6 +3350,9 @@ export class SettleService {
     if (record && record.status !== "done" && record.status !== "dropped") {
       this.placeOutcome(record, close.reason, close.actor, sentence);
     }
+    // A kept note still waiting on the crewmate shows now, after the close
+    // wrote its outcome on it, so its first showing carries it (INF-2533).
+    this.host.cards.releaseNotes(taskId);
     this.host.asksMoved?.();
     this.host.cards.scheduleBroadcast();
     this.host.broadcastCrewCounts();

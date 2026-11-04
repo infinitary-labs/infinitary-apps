@@ -31,6 +31,8 @@ import {
   compareStack,
   FIRSTMATE_CARD_META,
   isPreviewBody,
+  isStoryNote,
+  keepsTaskOpen,
   MERGE_ANYWAY_ACTION,
   onStage,
   type PastCard,
@@ -151,6 +153,18 @@ export type CardServiceHost = {
   mergeLabel?(card: Card): string | undefined;
   /** Whether a settle card offers Merge anyway beside its merge now (INF-1137 friction 6). */
   mergeAnyway?(card: Card): boolean;
+  /**
+   * Whether a story note stays off the stack until its task's merge has a
+   * result (INF-2533): the task merges on its own, is open, and its change
+   * has not merged - or, with `merging`, is merging now. Read from typed
+   * facts, never the card's words.
+   */
+  holdsUntilMerge?(card: Card, merging?: boolean): boolean;
+  /**
+   * Another of the task's pull requests the record keeps that has not
+   * merged, besides the one its completion offer merges (INF-2525).
+   */
+  otherChangeOpen?(taskId: string): boolean;
   followupNotice(taskId: string): string | undefined;
   /**
    * Whether the captain's choice on this card still waits on its author's
@@ -423,6 +437,7 @@ export class CardService {
       const facts = withMergeClosesLine(
         record ? this.host.tasks.projectedFact(record, factsOwner, read) : read(),
         card.actions,
+        this.othersOpen(taskId, card.id),
       );
       const split = facts ? splitSettleFacts(card.body) : undefined;
       if (!facts || !split) return anyway(relabeled(card));
@@ -1094,7 +1109,11 @@ export class CardService {
     // closes the task (INF-2490).
     if (context.taskId) {
       const facts = takesTaskFacts(input) ? this.host.settleFacts(context.taskId) : undefined;
-      const strip = withMergeClosesLine(facts, input.actions);
+      const strip = withMergeClosesLine(
+        facts,
+        input.actions,
+        this.othersOpen(context.taskId, input.id),
+      );
       if (strip) input = { ...input, body: `${input.body}${strip}` };
     }
     // A settle card says what the crew filed under this task's name
@@ -1627,7 +1646,9 @@ export class CardService {
    * arrival is the `card_raised` it always was, and a return after the
    * captain's reply says so, so the replay can count a late return.
    */
-  private release(card: Card, reason: CloseOut): void {
+  private release(card: Card, reason: CloseOut, held = false): void {
+    // A story note waits for its task's merge, not its author (INF-2533).
+    if (!held && card.awaiting === "close-out" && this.host.holdsUntilMerge?.(card)) return;
     const { awaiting: _awaiting, sentBackAt: _sentBackAt, ...shown } = card;
     this.host.cardStore.transaction(() => {
       this.host.cardStore.upsert(shown);
@@ -2636,6 +2657,50 @@ export class CardService {
     this.scheduleBroadcast();
   }
 
+  /**
+   * A closed task's notes still waiting on its crewmate reach the stage:
+   * the crewmate is gone. The Firstmate is not, so a reply on its note
+   * keeps its wait. A close calls it after writing its outcome on the
+   * note, so a story note held for the merge shows once, with its merged
+   * line (INF-2533).
+   */
+  releaseNotes(taskId: string): void {
+    let moved = false;
+    for (const card of [...this.cards.values()]) {
+      if (card.taskId !== taskId || card.author !== "crewmate" || card.awaiting === undefined)
+        continue;
+      if (card.actions.length > 0) continue;
+      this.release(card, "idle");
+      moved = true;
+    }
+    if (moved) this.scheduleBroadcast();
+  }
+
+  /**
+   * A merge that kept the task open has a result (INF-2533): a story note
+   * held for it shows once, its body first revised by `revise`.
+   */
+  showHeld(taskId: string, revise: (body: string) => string): void {
+    for (const card of [...this.cards.values()]) {
+      if (card.taskId !== taskId || card.awaiting !== "close-out" || !isStoryNote(card)) continue;
+      if (!this.host.holdsUntilMerge?.(card, true)) continue;
+      this.reviseBody(card.id, revise(card.body));
+      const revised = this.cards.get(card.id);
+      if (revised) this.release(revised, "idle", true);
+    }
+    this.scheduleBroadcast();
+  }
+
+  /**
+   * Whether something besides the card `except` keeps the task open past
+   * its merge (INF-2525): an open question, or another pull request.
+   */
+  private othersOpen(taskId: string, except: string | undefined): boolean {
+    for (const card of this.cards.values())
+      if (card.taskId === taskId && card.id !== except && keepsTaskOpen(card)) return true;
+    return this.host.otherChangeOpen?.(taskId) === true;
+  }
+
   /** Take a card down unanswered: the question it asked is gone. */
   takeDown(id: string, resolution: string): void {
     const card = this.cards.get(id);
@@ -2660,6 +2725,8 @@ export class CardService {
   private placed(card: Card): void {
     if (card.taskId) {
       this.host.syncCaptainGate(card.taskId, this.host.now());
+      // Its merge card's line follows what else is open (INF-2525).
+      this.refreshSettleFacts([card.taskId]);
       return;
     }
     if (card.author !== "host" || cardWord(card) !== "decision") return;
@@ -2675,6 +2742,7 @@ export class CardService {
   private left(card: Card): void {
     if (card.taskId) {
       this.host.syncCaptainGate(card.taskId, this.host.now());
+      this.refreshSettleFacts([card.taskId]);
       return;
     }
     const row = this.host.tasks.openCardTaskFor(card.id);
@@ -2747,8 +2815,7 @@ export class CardService {
       if (card.taskId !== taskId) continue;
       if (options.keepNotes && card.author !== "host" && card.actions.length === 0) {
         // The crewmate is gone: a note still waiting on it reaches the stage
-        // now. The Firstmate is not, so a reply on its note keeps its wait.
-        if (card.author === "crewmate" && card.awaiting !== undefined) this.release(card, "idle");
+        // once the close wrote its outcome on it (`releaseNotes`).
         this.staged.delete(cardId);
         this.asideUntilTurnEnd.delete(cardId);
         continue;

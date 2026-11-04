@@ -571,10 +571,15 @@ Discarding the task closes only the task's own change; the change in the other p
 Evidence: `prCi.test.ts` (INF-2510) opens, reads and merges a change in a second project through that project's host, and refuses a project the app does not manage.
 The card effect `request_merge` names that id.
 With autonomy off, only the captain's button authorizes the merge.
-A merge card names one change, and the host writes on it whether its click closes the task (`mergeClosesLine`, `src/shared/cards.ts`): "Merging closes this task" on the completion card's settle merge, "The task continues after this merge" on a `request_merge` card.
+A merge card names one change, and the host writes on it whether its click closes the task (`mergeClosesLine`, `src/shared/cards.ts`): "Merging closes this task" on the completion card's settle merge, "The task continues after this merge" on a `request_merge` card, and on a settle merge too while a question or another pull request on the task is open.
 A card that carries both is refused.
 A `request_merge` merge is a continuing merge, on the task's own branch or any other: it keeps the task and its working copy and wakes the crewmate once.
 The completion card's settle merge is the finishing merge: it merges the task's current change, whichever branch it is on, through the same gates, and closes the task as merged.
+The captain's words on INF-2525: "if they both got raised, then we should make sure the merge card doesn't close the task directly".
+So every merged close shares one rule: a task closes as merged once its finishing change merged and nothing else on it is open - an open question of its crewmate's or the first mate's (`keepsTaskOpen`, `src/shared/cards.ts`), or another of its pull requests that is open or could not be read (`SettleService.stillOpen`).
+With one open, the captain's Merge click, the first mate's merge and a kept approval merge without closing the task: the change is recorded as merged, the task, its working copy and its cards stay, and its crewmate hears the merge once with what is still open.
+The first mate's close of a change already merged refuses while one is open, and the watch on outside merges wakes the crewmate instead of closing.
+What comes next is the crewmate's judgment, never a close the host schedules: the captain's words were "it should become the agent's judgment for what's the appropriate next steps".
 A changed head, a failed or unreadable check, or a draft or protected branch sends no merge.
 An ordinary requested-merge click keeps the same head-bound approval as a completion click, including for another branch's pull request (INF-1246).
 Its immutable review snapshot lives on `delivery.mergeAuthorization`, independently of the capped review list, and the existing repair declarations, guidance hold, revocation and restart reconciliation apply.

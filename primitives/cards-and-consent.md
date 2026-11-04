@@ -37,7 +37,7 @@ A question that needs a structured answer uses the questions in the body ([decis
 - Emit: one card shape on the wire, a title, an HTML body and the declared actions.
 - Revise: `emit_card` with the same stable, namespaced kebab-case id replaces the open card in place; the replaced version is kept in `card_revisions` (`CardStore.history`) and the host marks what changed since the captain looked.
 - A distinct finding is a new card; there is no one-card-per-topic cap.
-- Release: a crewmate's card reaches the stage at its author's close-out (its next report or its idle); a card already shown waits for its author's idle (`docs/card-threads.md` "When a card reaches the stage").
+- Release: a crewmate's card reaches the stage at its author's close-out (its next report or its idle); a card already shown waits for its author's idle (`docs/card-threads.md` "When a card reaches the stage"); the story note of a task that merges on its own waits for the merge's result (INF-2533).
 - Reply: the captain's words under a card go to its author as a steer stamped `via: "thread"`; the author answers once, revising with `reply` or answering with `reply(card_id, text)` (`CARD_REPLY`).
 - Choose: every declared action closes its card; an action with no effect returns to its author as the captain's choice, and an action with an effect is run by the host.
 - Close: the captain's close is the keep; it runs nothing, is not a choice, and reaches a crewmate author as the typed `card-closed` wake for it to judge.
@@ -55,6 +55,7 @@ A question that needs a structured answer uses the questions in the body ([decis
 - On a completion offer the crewmate declares one `settle merge` and the host writes the merge-and-discard pair for the task's posture (`CrewSupervisor.withCompletionActions`, captain lock 3).
   A first-mate `settle merge` card on a task with a saved story binds that story once it is published, and is refused before display until then (INF-2490).
   Every merge offer names the change it was shown for, and its click refuses once another change is current.
+  A merge leaves a task open while a question or another of its pull requests is open, and the crewmate judges what comes next (INF-2525; `docs/forge.md`, "A requested merge").
   First-mate cards, including older restored merge cards, never count as replacement completion offers that end a kept approval.
 - What a choice authorizes (`HANDOFF`, contract v4.41): Approve and build authorizes implementation, not merging; Save and defer keeps the plan and authorizes no build; Abandon files nothing.
 - Explicit build words in a reply authorize implementation, not merging; settings, selection, praise, dismissal, script-triggered actions and a preview's controls authorize neither.

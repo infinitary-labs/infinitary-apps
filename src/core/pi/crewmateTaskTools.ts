@@ -74,7 +74,7 @@ export const REPORT_TOOL_DESCRIPTION = [
   "The first mate hears only an explicit report, or your final message when a turn ends with text; ending silently reports nothing.",
   "For new outcomes, lead with the result in a few plain sentences.",
   "Not progress (note_progress) or repeated reports.",
-  "Autonomy on: at green, show the completion story as a note without actions; report needs_firstmate to merge. A standing exception needs a completion decision and needs_firstmate to set ask-first, citing the direction.",
+  "Autonomy on: at green, show the completion story as a note without actions, which the app shows once the merge has a result; report needs_firstmate to merge. A standing exception needs a completion decision and needs_firstmate to set ask-first, citing the direction.",
 ].join(" ");
 
 export const FILE_FOLLOWUP_TOOL_DESCRIPTION = [

@@ -237,6 +237,8 @@ import {
   MERGE_STOPPED_TITLE,
   mergePendingBody,
   mergePendingCardId,
+  MERGES_NEXT_WORDS,
+  mergedWords,
   pendingMergeLine,
 } from "./settleWords";
 import { Ticker } from "./ticker";
@@ -6209,6 +6211,83 @@ describe("CrewSupervisor", () => {
       expect(forge.merges).toEqual([]);
     });
 
+    // INF-2525, the captain's words: "if they both got raised, then we
+    // should make sure the merge card doesn't close the task directly", and
+    // their written-in answer: "it should become the agent's judgment for
+    // what's the appropriate next steps". A question up beside the merge
+    // card: the click merges, the task and the question stay, the crewmate
+    // hears what is still open, and only its own next step closes the task.
+    it("merges on the captain's click with a question open, keeps the task and the question, and closes as merged once it is settled (INF-2525)", async () => {
+      const h = await approved();
+      await h.specs[0]?.onCard?.({
+        title: "Which unit should the meter show?",
+        body: "<p>Amps or volts?</p>",
+        actions: [
+          { id: "amps", label: "Amps", default: true },
+          { id: "volts", label: "Volts" },
+        ],
+      });
+      await tick();
+      const merge = () => h.supervisor.cardsSnapshot().find((card) => card.id === h.card.id);
+      expect(splitSettleFacts(merge()?.body ?? "")?.facts).toContain(MERGE_CLOSES_WORDS.continues);
+      h.supervisor.act(h.card.id, "merge");
+      await vi.waitFor(() => expect(h.forge.merges).toEqual([APPROVED]));
+      await vi.waitFor(() =>
+        expect(h.crewmate.promptCalls.join("\n")).toContain(
+          'because the card "Which unit should the meter show?" on this task is still open',
+        ),
+      );
+      expect(h.tasks.get(h.taskId)).toMatchObject({
+        status: "active",
+        workspaceState: "present",
+        delivery: { ci: "merged" },
+      });
+      const question = h.cards().find((card) => card.title === "Which unit should the meter show?");
+      expect(question).toBeDefined();
+      h.crewmate.finishPrompt();
+      await tick();
+      // The first mate's close waits too while the question is open.
+      const held = await h.supervisor.settleTaskDetailed(h.taskId, "merge-pr");
+      expect(held.text).toContain(
+        'the card "Which unit should the meter show?" on this task is still open',
+      );
+      expect(h.tasks.get(h.taskId)?.status).toBe("active");
+      // The crewmate settles its question; the first mate closes as merged.
+      h.supervisor.closeCard(question?.id ?? "", { kind: "crewmate", taskId: h.taskId });
+      const result = await h.supervisor.settleTaskDetailed(h.taskId, "merge-pr");
+      expect(result.text).toBe("#7 is already merged on GitHub.");
+      expect(h.tasks.get(h.taskId)).toMatchObject({ status: "done", closedReason: "merged" });
+      expect(h.forge.merges).toEqual([APPROVED]);
+    });
+
+    // INF-2525: another of the task's pull requests still open keeps it open
+    // past the captain's merge of the finishing change too.
+    it("merges on the captain's click with another pull request open and keeps the task open (INF-2525)", async () => {
+      const h = await approved();
+      const next: MergeReview = {
+        id: "review-next",
+        kind: "github",
+        host: "github.com",
+        owner: "o",
+        name: "r",
+        number: 8,
+        headSha: REPAIRED,
+        base: "main",
+        branch: "fm/task-next",
+        method: "squash",
+        title: "fix: label the meter",
+        at: Date.now(),
+      };
+      seedDelivery(h.tasks, h.taskId, { mergeReviews: [next] });
+      h.forge.openNumbers.add(8);
+      h.supervisor.act(h.card.id, "merge");
+      await vi.waitFor(() => expect(h.forge.merges).toEqual([APPROVED]));
+      await vi.waitFor(() =>
+        expect(h.crewmate.promptCalls.join("\n")).toContain("because #8 on this task is still open"),
+      );
+      expect(h.tasks.get(h.taskId)).toMatchObject({ status: "active", delivery: { ci: "merged" } });
+    });
+
     // INF-2490: a merge card names one change, finishing or continuing, so
     // its line can say whether the click closes the task.
     it("refuses a card that offers both the finishing merge and a continuing one (INF-2490)", async () => {
@@ -9472,6 +9551,96 @@ describe("a crewmate's own completion card clears the standing CI gate first", (
     expect(card?.requiredActions).toBeUndefined();
     // The note records no offer of its own; only the first mate's merge card's stands.
     expect(tasks.get(taskId)?.delivery?.completionOffers).toEqual([firstmateOffer]);
+  });
+
+  // INF-2533, the captain's words: "we should probably not show the note
+  // card and wait for the final update with "merged on its own" already
+  // present". The story note waits off the stack through its crewmate's
+  // close-out, and the first mate's merge shows it once, already merged.
+  it("keeps a self-merging task's story note off the stack until the first mate's merge, then shows it once saying it merged (INF-2533)", async () => {
+    const crewmate = fakeCrewmate();
+    const head = "5ca2d466ee21f9733827383f23df81f3874e0d10";
+    let story: ChangePresentation;
+    const completionPresentation = vi.fn(async () => ({
+      title: story.title,
+      body: presentationCardBody(story),
+      riskDeclaration: story.risk,
+      requiredActions: story.requiredActions,
+      pictures: story.pictures,
+    }));
+    const mergePullRequest = vi.fn(async () => ({ ok: true, text: "Merged #1 on GitHub." }));
+    const { supervisor, tasks, specs } = setup(crewmate, {
+      checkCi: async () => "green",
+      completionPresentation,
+      mergePullRequest,
+    });
+    const { taskId } = await supervisor.commission({
+      title: "Share the completed change",
+      intent: intentOf("share the same story"),
+      shape: { rigor_ask: "quick" },
+    });
+    await tick();
+    vi.spyOn(supervisor, "taskDelivery").mockReturnValue("direct-pr");
+    vi.spyOn(supervisor, "taskAutonomy").mockReturnValue(true);
+    story = {
+      version: 1,
+      taskId,
+      revision: 1,
+      destination: { host: "github.com", projectId: 1, fullName: "octo/meter", visibility: "private" },
+      title: "The upload survives restart",
+      base: head,
+      head,
+      why: ["Confirmed uploads must not be sent twice."],
+      whatChanged: ["The task keeps each confirmed receipt."],
+      before: ["Restart lost the receipt."],
+      after: ["Restart reuses the receipt."],
+      views: [],
+      noPicture: "This changes upload recovery, not a visible view.",
+      verification: ["Restart recovery passed."],
+      risk: METER_RISK,
+      requiredActions: [],
+      unfinished: [],
+      projectText: "",
+      assets: [],
+      pictures: [],
+    };
+    const region = presentationMarkdown(story, new Map(), "passed");
+    const publication = {
+      revision: 1,
+      head,
+      state: "confirmed" as const,
+      region,
+      regionHash: createHash("sha256").update(region).digest("hex"),
+      number: 1,
+    };
+    tasks.updateChangePresentation(taskId, () => ({
+      revisions: [story],
+      receipts: [],
+      publication,
+      published: publication,
+    }));
+    seedDelivery(tasks, taskId, { headSha: head, prNumber: 1, ci: "green" });
+    const emitCard = bindTool(EMIT_CARD_TOOL, specs[0] as CrewmateSpec);
+    await emitCard.run({ title: "Ignored", presentation: 1, actions: [] });
+    crewmate.finishPrompt();
+    await tick();
+    const note = () => supervisor.cardsSnapshot().find((card) => card.taskId === taskId);
+    expect(note()?.body).toContain(MERGES_NEXT_WORDS);
+    expect(note()?.awaiting).toBe("close-out");
+    expect(onStage(note() as Card)).toBe(false);
+
+    await supervisor.settleTaskDetailed(taskId, "merge-pr");
+    expect(mergePullRequest).toHaveBeenCalledOnce();
+    expect(tasks.get(taskId)).toMatchObject({ status: "done", closedReason: "merged" });
+    const shown = note() as Card;
+    expect(onStage(shown)).toBe(true);
+    expect(shown.body).toContain(mergedWords("", true).trim());
+    expect(shown.body).not.toContain(MERGES_NEXT_WORDS);
+    // One card, raised once: no second note beside it.
+    expect(supervisor.cardsSnapshot()).toHaveLength(1);
+    expect(
+      tasks.timeline(taskId).filter((event) => event.kind === "card_raised" && event.ref === shown.id),
+    ).toHaveLength(1);
   });
 
   // INF-2490, the captain's q8 "include first-mate-merge": the first mate's

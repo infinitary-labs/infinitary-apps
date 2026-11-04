@@ -1,0 +1,27 @@
+{
+  "entries": [
+    {
+      "id": "merge-keeps-open-questions",
+      "kind": "fix",
+      "area": "cards",
+      "title": "Merging keeps your open questions",
+      "body": "When a task has a question waiting for you, merging its change no longer closes the task and takes the question away. The merge card says the task continues after the merge, the question stays up, and the crewmate decides what comes next once you answer.",
+      "noPicture": "The cards look as before; what changed is that the task and its question stay open after a merge.",
+      "provenance": { "origin": "change" }
+    },
+    {
+      "id": "self-merge-note-once",
+      "kind": "improvement",
+      "area": "cards",
+      "title": "Work that merges on its own shows one card, after the merge",
+      "body": "A task that merges on its own no longer puts its note up while the merge is still on the way. The note appears once, when the change has merged, saying so beside its risk chart and pull request facts.",
+      "picture": {
+        "dark": "self-merge-note-once-dark.webp",
+        "light": "self-merge-note-once-light.webp",
+        "alt": "A note for a change that merged on its own, with its risk chart at the top right, a line reading Merged on its own with the pull request and the first mate's sentence, and the project, model, care, pull request, lines and checks along the bottom"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

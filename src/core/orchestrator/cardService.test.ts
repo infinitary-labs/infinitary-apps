@@ -2,6 +2,8 @@ import {
   type Card,
   type CardObservation,
   type CardThread,
+  isStoryNote,
+  MERGE_CLOSES_WORDS,
   onStage,
   SETTLE_FACTS_OPEN,
   withMergeClosesLine,
@@ -28,6 +30,7 @@ function setup(db = openInMemoryDatabase(), now = () => 1000) {
   const make = (
     settleFacts: (taskId: string) => string | undefined = () => undefined,
     captainResponded?: CardServiceHost["captainResponded"],
+    extra: Partial<CardServiceHost> = {},
   ) =>
     new CardService({
       now,
@@ -43,9 +46,23 @@ function setup(db = openInMemoryDatabase(), now = () => 1000) {
       broadcastEvent: () => {},
       broadcastCards: (cards) => pushes.push(cards),
       broadcastThread: (thread) => threads.push(thread),
+      ...extra,
     });
   return { db, tasks, cardStore, gates, pushes, threads, make };
 }
+
+/** A crewmate's whole risk declaration, as a saved story carries it. */
+const STORY_RISK: Card["risk"] = {
+  declared: {
+    blast: { level: "low", why: "Two files in the meter" },
+    behavior: { level: "low", why: "Corrects the unit" },
+    undo: { level: "low", why: "A revert restores the old meter" },
+    evidence: { level: "medium", why: "The meter test" },
+    sensitivity: { level: "low", why: "No sign-in, data or release code" },
+    novelty: { level: "low", why: "Edits the existing reading" },
+    deps: { level: "low", why: "Nothing added" },
+  },
+};
 
 const decision = {
   title: "Which way?",
@@ -728,6 +745,107 @@ describe("CardService", () => {
     expect(after.snapshot().find((card) => card.id === asked)?.awaiting).toBe("close-out");
     after.closeOut({ kind: "crewmate", taskId: "t1" }, "idle");
     expect(after.snapshot().find((card) => card.id === asked)?.awaiting).toBeUndefined();
+  });
+
+  // INF-2533, the captain's words: "we should probably not show the note
+  // card and wait for the final update with "merged on its own" already
+  // present". The story note of a task that merges on its own stays in its
+  // close-out wait while its merge is still to come - through its author's
+  // close-outs and a restart - and shows once, after the close wrote its
+  // merged line on it.
+  it("holds a self-merging task's story note until its merge, then shows it once with its merged line (INF-2533)", () => {
+    const { tasks, make } = setup();
+    seedTask(tasks, { id: "t1", title: "Fix the meter", status: "idle" });
+    let merged = false;
+    const holdsUntilMerge = (card: Card, merging?: boolean) =>
+      isStoryNote(card) && (merging === true || !merged);
+    const before = make(undefined, undefined, { holdsUntilMerge });
+    const note = before.emitCrewmateCard(
+      "t1",
+      {
+        title: "The meter reads on time",
+        body: "<p>The story.</p>",
+        actions: [],
+        risk: STORY_RISK,
+      },
+      "m",
+    );
+    // A question of the same crewmate is not held.
+    const asked = before.emitCrewmateCard("t1", decision, "m");
+    before.closeOut({ kind: "crewmate", taskId: "t1" }, "report");
+    before.closeOut({ kind: "crewmate", taskId: "t1" }, "idle");
+    expect(before.get(note)?.awaiting).toBe("close-out");
+    expect(before.get(asked)?.awaiting).toBeUndefined();
+
+    const after = make(undefined, undefined, { holdsUntilMerge });
+    expect(after.get(note)?.awaiting).toBe("close-out");
+    expect(onStage(after.snapshot().find((card) => card.id === note) as Card)).toBe(false);
+
+    // The merge closes the task: the close keeps the note, writes its line, then shows it.
+    merged = true;
+    after.retireTaskCards("t1", "merged", { keepNotes: true });
+    expect(after.get(note)?.awaiting).toBe("close-out");
+    after.reviseBody(note, "<p>Merged on its own at 2:03 PM</p><p>The story.</p>");
+    after.releaseNotes("t1");
+    const shown = after.snapshot().find((card) => card.id === note) as Card;
+    expect(shown.awaiting).toBeUndefined();
+    expect(shown.body).toContain("Merged on its own at 2:03 PM");
+    expect(
+      tasks.timeline("t1").filter((event) => event.kind === "card_raised" && event.ref === note),
+    ).toHaveLength(1);
+  });
+
+  // INF-2533: a merge that keeps the task open has a result too, so the held
+  // note shows then, revised first.
+  it("shows a held story note when a merge keeps its task open (INF-2533)", () => {
+    const { tasks, make } = setup();
+    seedTask(tasks, { id: "t1", title: "Fix the meter", status: "idle" });
+    const cards = make(undefined, undefined, {
+      // The merge that keeps the task open is under way: it is still to come.
+      holdsUntilMerge: (card) => isStoryNote(card),
+    });
+    const note = cards.emitCrewmateCard(
+      "t1",
+      {
+        title: "The meter reads on time",
+        body: "<p>The story.</p>",
+        actions: [],
+        risk: STORY_RISK,
+      },
+      "m",
+    );
+    cards.closeOut({ kind: "crewmate", taskId: "t1" }, "idle");
+    expect(cards.get(note)?.awaiting).toBe("close-out");
+    cards.showHeld("t1", (body) => `<p>Merged · ${MERGE_CLOSES_WORDS.continues}.</p>${body}`);
+    expect(cards.get(note)?.awaiting).toBeUndefined();
+    expect(cards.get(note)?.body).toContain(MERGE_CLOSES_WORDS.continues);
+  });
+
+  // INF-2525, the captain's words: "if they both got raised, then we should
+  // make sure the merge card doesn't close the task directly". The merge
+  // card's line says the task continues while a question is open beside it,
+  // and changes back when that question closes.
+  it("says on a merge card that the task continues while a question on the task is open (INF-2525)", () => {
+    const { tasks, make } = setup();
+    seedTask(tasks, { id: "t1", title: "Fix the meter", status: "idle" });
+    const cards = make();
+    const merge = cards.emitCrewmateCard(
+      "t1",
+      {
+        title: "Ready to merge",
+        body: "<p>The change is ready.</p>",
+        actions: [
+          { id: "merge", label: "Merge", default: true, effect: { kind: "settle", mode: "merge" } },
+        ],
+      },
+      "m",
+    );
+    expect(cards.get(merge)?.body).toContain(MERGE_CLOSES_WORDS.closes);
+    const asked = cards.emitCrewmateCard("t1", decision, "m");
+    expect(cards.get(merge)?.body).toContain(MERGE_CLOSES_WORDS.continues);
+    expect(cards.get(merge)?.body).not.toContain(MERGE_CLOSES_WORDS.closes);
+    cards.resolve(cards.get(asked) as Card, "left", "left");
+    expect(cards.get(merge)?.body).toContain(MERGE_CLOSES_WORDS.closes);
   });
 
   it("records an author's thread answer as a row on the card's task, and never the captain's words", () => {

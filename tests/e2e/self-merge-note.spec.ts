@@ -9,8 +9,7 @@ import {
 } from "../../src/core/orchestrator/settleWords";
 import { openDatabase } from "../../src/core/storage/db";
 import type { RiskDimension } from "../../src/shared/cards";
-import { POLICY_MERGING_WORDS } from "../../src/shared/taskPolicies";
-import { CARE_WORDS, CHECK_WORDS } from "../../src/shared/vocabulary";
+import { CARE_WORDS } from "../../src/shared/vocabulary";
 import { scratchDir } from "../helpers/scratchDirs";
 import { cardBody } from "./frames";
 import { type GitHubStub, seedGitHubSignIn, startGitHubStub } from "./githubStub";
@@ -35,16 +34,17 @@ import { factsStrip, riskChart, shownCard } from "./stack";
 /**
  * INF-1219, the captain's words: "this card UI in infinitary needs an UX
  * improvement - it misses the radar chart, and also it's not clear that this
- * was a change merged by itself". The promised result, direction A: the
- * story note of a task that merges on its own draws its crewmate's risk
- * radar and the merge card's fact strip, opens with a line saying it merges
- * on its own, and at the first mate's merge that same note says it merged,
- * with the first mate's closing sentence, and no second note goes up. The
- * data is a project on a local GitHub stand-in set to merge on its own, with
- * one commissioned task that publishes a saved story; the completion
- * signals are the note on the stack, the stand-in's recorded merge and the
- * task's merged record. It needs the hermetic launcher and its own stand-in,
- * and shares nothing with another test.
+ * was a change merged by itself". INF-2533 moved when the note shows: a
+ * task that merges on its own keeps its story note off the stack until the
+ * merge has a result, then shows it once. The promised result: before the
+ * first mate's merge no card is up; after it, one note draws its crewmate's
+ * risk radar and the merge card's fact strip and says it merged, with the
+ * first mate's closing sentence. The data is a project on a local GitHub
+ * stand-in set to merge on its own, with one commissioned task that
+ * publishes a saved story; the completion signals are the risk the task's
+ * record keeps from the note, the stand-in's recorded merge and the task's
+ * merged record. It needs the hermetic launcher and its own stand-in, and
+ * shares nothing with another test.
  */
 
 const git = (...args: string[]) => execFileSync("git", args, { stdio: "pipe" }).toString().trim();
@@ -102,7 +102,7 @@ async function send(text: string): Promise<void> {
   await input.press("Enter");
 }
 
-test("a note that merges on its own shows its radar and facts, then says it merged", async () => {
+test("a note that merges on its own shows once, after the merge, with its radar, facts and merged line", async () => {
   test.setTimeout(3 * 60_000);
   const userDataDir = scratchDir("infinitary-self-merge-note-");
   const bare = seedMeterlab(userDataDir);
@@ -123,13 +123,43 @@ test("a note that merges on its own shows its radar and facts, then says it merg
   const frame = cardBody(page, MOCK_SELF_MERGE_CHANGE_TITLE);
   let taskId = "";
 
-  await test.step("the story note draws the radar, the facts and the line before the merge", async () => {
+  await test.step("the story note stays off the stack before the merge", async () => {
     await send(`${SPAWN_PROMPT_MARKER} ${title}`);
-    await expect(note).toBeVisible({ timeout: 45_000 });
-    const board = await page.evaluate(() => window.infinitary.tasks.board());
-    const task = board.tasks.find((row) => row.title === title);
-    taskId = task?.id ?? "";
-    expect(taskId).not.toBe("");
+    // The crewmate showed its note and reported: its turn is over.
+    await expect
+      .poll(
+        async () => {
+          const board = await page.evaluate(() => window.infinitary.tasks.board());
+          const row = board.tasks.find((entry) => entry.title === title);
+          taskId = row?.id ?? "";
+          const cards = await page.evaluate(() => window.infinitary.cards.list());
+          return {
+            activity: row?.activity,
+            held: cards.map((card) => [card.title, card.awaiting]),
+          };
+        },
+        { timeout: 45_000 },
+      )
+      .toEqual({ activity: "idle", held: [[MOCK_SELF_MERGE_CHANGE_TITLE, "close-out"]] });
+    // The task's record keeps the note's ratings, as it keeps a merge card's.
+    const detail = await page.evaluate((id) => window.infinitary.tasks.detail(id), taskId);
+    expect(detail?.delivery?.risk?.declared).toEqual(MOCK_RISK);
+    // The app holds the note until the merge: nothing is on the stack.
+    expect(github.merges()).toHaveLength(0);
+    await expect(note).toHaveCount(0);
+  });
+
+  await test.step("the first mate merges, and the note shows once saying so", async () => {
+    await send(`${MERGE_PROMPT_MARKER}${title}`);
+    await expect(note).toBeVisible({ timeout: 30_000 });
+    const line = frame.locator(`[${MERGE_LINE_MARK}]`);
+    await expect(line).toContainText(MOCK_CLOSING_SENTENCES["merge-pr"]);
+    expect(github.merges()).toHaveLength(1);
+    // The lead before its time, from the words' owner.
+    await expect(line).toContainText(mergedWords("", true).trim());
+    const number = github.merges()[0]?.number;
+    await expect(line.locator("a")).toHaveText(`PR #${number}`);
+    await expect(line).not.toContainText(MERGE_SETTING_WORDS.project);
     // The crewmate's own seven ratings from its saved story, as a merge card draws them.
     const risk = riskChart(page);
     await expect(risk.chart).toBeVisible();
@@ -143,29 +173,7 @@ test("a note that merges on its own shows its radar and facts, then says it merg
     await expect(facts.project).toHaveText("meterlab");
     await expect(facts.care).toHaveText(CARE_WORDS.quick);
     await expect(facts.change.locator("a")).toHaveAttribute("href", /\/pull\/\d+$/);
-    await expect(facts.checks).toHaveText(CHECK_WORDS.green);
-    // The line before the merge, in the app's words from the project's setting.
-    const line = frame.locator(`[${MERGE_LINE_MARK}]`);
-    await expect(line).toContainText(POLICY_MERGING_WORDS.on);
-    await expect(line).toContainText(MERGE_SETTING_WORDS.project);
-    // The task's record keeps the note's ratings, as it keeps a merge card's.
-    const detail = await page.evaluate((id) => window.infinitary.tasks.detail(id), taskId);
-    expect(detail?.delivery?.risk?.declared).toEqual(MOCK_RISK);
-    if (pictures) await regionShot(note, join(pictures, "self-merge-note-before-merge.png"));
-  });
-
-  await test.step("the first mate merges, and the same note says so", async () => {
-    await send(`${MERGE_PROMPT_MARKER}${title}`);
-    const line = frame.locator(`[${MERGE_LINE_MARK}]`);
-    await expect(line).toContainText(MOCK_CLOSING_SENTENCES["merge-pr"], { timeout: 30_000 });
-    expect(github.merges()).toHaveLength(1);
-    // The lead before its time, from the words' owner.
-    await expect(line).toContainText(mergedWords("", true).trim());
-    const number = github.merges()[0]?.number;
-    await expect(line.locator("a")).toHaveText(`PR #${number}`);
-    await expect(line).not.toContainText(MERGE_SETTING_WORDS.project);
-    // The same note, revised in place: no closing note of the first mate's beside it.
-    await expect(riskChart(page).chart).toBeVisible();
+    // One note: no closing note of the first mate's beside it.
     expect(
       (await page.evaluate(() => window.infinitary.cards.list())).map((card) => card.title),
     ).toEqual([MOCK_SELF_MERGE_CHANGE_TITLE]);
@@ -176,7 +184,7 @@ test("a note that merges on its own shows its radar and facts, then says it merg
     // The release note's picture: the merged note with its radar and facts.
     await heroShot(launched.app, page, {
       region: note,
-      name: "self-merge-note",
+      name: "self-merge-note-once",
       dir: test.info().outputPath("hero"),
     });
   });

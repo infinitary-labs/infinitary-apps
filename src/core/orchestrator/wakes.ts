@@ -1047,6 +1047,8 @@ export type WakeFacts =
       unknown?: boolean;
       change: string;
       head?: string;
+      /** What else on the task is still open, as a clause, which kept it open past the merge (INF-2525). */
+      open?: string;
       text: string;
     }
   | {
@@ -1054,6 +1056,8 @@ export type WakeFacts =
       kind: "external-merge";
       change: string;
       head: string;
+      /** Another of the task's pull requests still open, as a clause (INF-2525). */
+      open?: string;
     }
   | {
       /**
@@ -2271,10 +2275,10 @@ function renderFacts(facts: WakeFacts, wake: Pick<WakeEnvelope, "ways" | "text">
     case "turn-resumed":
       return `${facts.stopped === "update" ? `Your last turn stopped part way while Infinitary${facts.computer ? ` on ${facts.computer}` : ""} was updated; it is back now.` : "Your last turn stopped part way when the app closed - a quit or an update; it is open again."} ${RESUME_CHECK}`;
     case "external-merge":
-      return `The project's host confirms ${facts.change} merged at ${facts.head}. This task remains open because completion was not declared or work still remains. Read its remaining work and instructions; continue them, or report merge_completes_task for this PR and version when the merge finishes all your work. Do not ask for another merge or discard.`;
+      return `The project's host confirms ${facts.change} merged at ${facts.head}. This task remains open because ${facts.open ?? "completion was not declared or work still remains"}. Read its remaining work and instructions; continue them, or report merge_completes_task for this PR and version when the merge finishes all your work. Do not ask for another merge or discard.`;
     case "merge-continued":
       return facts.ok
-        ? `[fm-op] ${MERGE_CONTINUED_LEAD} ${facts.change}${facts.head ? ` at ${facts.head}` : ""}. The task stays open. Continue from that result. Dropping this task does not close that pull request. ${facts.text}`
+        ? `[fm-op] ${MERGE_CONTINUED_LEAD} ${facts.change}${facts.head ? ` at ${facts.head}` : ""}. The task stays open${facts.open ? ` because ${facts.open}; judge what comes next from it and your remaining work` : ""}. Continue from that result. Dropping this task does not close that pull request. ${facts.text}`
         : facts.unknown
           ? `[fm-op] the outcome of the captain's merge of ${facts.change} is unknown. Do not resend it; the host reads its result before continuing. ${facts.text}`
           : `[fm-op] the captain's merge of ${facts.change} did not happen. Nothing was merged. ${facts.text}`;

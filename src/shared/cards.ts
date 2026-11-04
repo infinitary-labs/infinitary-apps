@@ -540,6 +540,47 @@ export function takesTaskFacts(card: Pick<Card, "actions" | "reviewTaskId" | "ri
 }
 
 /**
+ * The story note of a task that merges on its own (INF-1219): a crewmate's
+ * card with a risk assessment and no actions. Its task's open change keeps
+ * it off the stack until the merge has a result (INF-2533).
+ */
+export function isStoryNote(
+  card: Pick<Card, "author" | "actions" | "reviewTaskId" | "risk">,
+): boolean {
+  return (
+    card.author === "crewmate" &&
+    !card.reviewTaskId &&
+    card.risk !== undefined &&
+    card.actions.length === 0
+  );
+}
+
+/** A typed merge/discard completion offer (with the host's Review carefully), never an unrelated decision. */
+export function isRoutineMergeCard(card: Pick<Card, "author" | "actions">): boolean {
+  return (
+    card.author === "crewmate" &&
+    card.actions.some((action) => settleEffectOf(action)?.mode === "merge") &&
+    card.actions.every((action) => settleEffectOf(action) || action.care)
+  );
+}
+
+/**
+ * A card that keeps its task open past a merge (INF-2525): an open
+ * question of its crewmate's or the first mate's - any card with actions
+ * but a merge card, whose pull request the task's changes answer for. The
+ * app's own cards never do.
+ */
+export function keepsTaskOpen(card: Pick<Card, "author" | "actions">): boolean {
+  return (
+    card.author !== "host" &&
+    card.actions.length > 0 &&
+    !card.actions.some(
+      (action) => settleEffectOf(action)?.mode === "merge" || requestMergeEffectOf(action),
+    )
+  );
+}
+
+/**
  * Whether a card carries the host's strip, which the stage draws beside the
  * buttons: every card with its task's facts, and a `request_merge` card,
  * whose strip holds only the merge line (INF-2490).
@@ -551,9 +592,11 @@ export function takesFactStrip(card: Pick<Card, "actions" | "reviewTaskId" | "ri
 /**
  * The app's line on every merge card (INF-2490, the captain's answer to
  * INF-2489's question 4): whether the click closes the task. A settle merge
- * merges the task's finishing change and closes it; a `request_merge`
- * merges a continuing change and the task stays open. The host reads it
- * from the card's own actions, never from its words.
+ * merges the task's finishing change and closes it, unless a question or
+ * another pull request on the task is still open (INF-2525); a
+ * `request_merge` merges a continuing change and the task stays open. The
+ * host reads it from the card's own actions and the task's open cards and
+ * pull requests, never from its words.
  */
 export const MERGE_CLOSES_WORDS = {
   closes: "Merging closes this task",
@@ -563,12 +606,19 @@ export const MERGE_CLOSES_WORDS = {
 /** The merge line's mark, which readers find it by. */
 export const MERGE_CLOSES_MARK = "data-merge-closes";
 
-/** The merge line for a card's actions, or undefined on a card that merges nothing. */
+/**
+ * The merge line for a card's actions, or undefined on a card that merges
+ * nothing. A settle merge continues the task too while something else on
+ * it is open - a question or another pull request (`othersOpen`, INF-2525).
+ */
 export function mergeClosesLine(
   actions: readonly Pick<CardAction, "effect">[],
+  othersOpen = false,
 ): string | undefined {
   const words = actions.some((action) => settleEffectOf(action)?.mode === "merge")
-    ? MERGE_CLOSES_WORDS.closes
+    ? othersOpen
+      ? MERGE_CLOSES_WORDS.continues
+      : MERGE_CLOSES_WORDS.closes
     : actions.some((action) => requestMergeEffectOf(action))
       ? MERGE_CLOSES_WORDS.continues
       : undefined;
@@ -582,8 +632,9 @@ export function mergeClosesLine(
 export function withMergeClosesLine(
   strip: string | undefined,
   actions: readonly Pick<CardAction, "effect">[],
+  othersOpen = false,
 ): string | undefined {
-  const line = mergeClosesLine(actions);
+  const line = mergeClosesLine(actions, othersOpen);
   if (!line) return strip;
   if (!strip?.endsWith("</div>")) return `${SETTLE_FACTS_OPEN}${line}</div>`;
   return `${strip.slice(0, -"</div>".length)}${line}</div>`;

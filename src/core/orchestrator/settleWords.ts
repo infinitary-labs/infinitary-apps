@@ -1,3 +1,4 @@
+import { MERGE_CLOSES_WORDS } from "@shared/cards";
 import {
   type FolderNoticed,
   type FolderRefreshCause,
@@ -196,6 +197,8 @@ export function mergedLine(input: {
   onItsOwn: boolean;
   change?: { label: string; url?: string };
   sentence?: string;
+  /** The merge kept the task open (INF-2533): the line says it continues. */
+  continues?: boolean;
 }): string {
   const time = new Date(input.at).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
   const change = input.change
@@ -208,7 +211,8 @@ export function mergedLine(input: {
   const sentence = input.sentence?.trim()
     ? `<br>Your first mate: “${escapeCardText(input.sentence.trim())}”`
     : "";
-  return `${MERGE_LINE_OPEN}<strong>${mergedWords(time, input.onItsOwn)}</strong>${change}${sentence}</p>`;
+  const continues = input.continues ? `<br>${MERGE_CLOSES_WORDS.continues}.` : "";
+  return `${MERGE_LINE_OPEN}<strong>${mergedWords(time, input.onItsOwn)}</strong>${change}${continues}${sentence}</p>`;
 }
 
 /** Whether a body carries the merge line. */

@@ -57,6 +57,7 @@ A refused reply moves nothing and keeps the draft.
 Captain-approved on a board in two rounds on 2026-09-27 ("ship it", verdict "Ship it as recommended"; the decided design is sections 0, 6 and R2 of `fm3000-card-return-closeout-r1/design-excerpt.md`).
 **One rule for every crewmate card** (the captain's Q1 A and Q5 A): a crewmate's card - new, revised, or answered in its thread - reaches the stage at the crewmate's CLOSE-OUT after its last write.
 A new card's close-out is its next `report`, or its idle (its resumable turn ending), whichever comes first.
+The one exception waits for a merge, not its crewmate: the story note of a task that merges on its own stays in its close-out wait until the merge has a result, and shows once with its merged or close line (INF-2533; `docs/card-authoring.md`, "Work that closed without the captain's click").
 A card the stage has already shown in its lifecycle - one the captain replied under, put aside, or is reading while its crewmate revises it - waits for its crewmate's idle, so it comes back or redraws once, with the last write, never at a report while its crewmate works on (INF-926; INF-797: "it should come back when the crewmate's turn is finished").
 Cancellation and terminal session failure close the task and retire all its open cards, including hidden replies and pending revisions, without releasing them onto the stage.
 Card rows, revisions and threads remain on the record; they do not return after restart.

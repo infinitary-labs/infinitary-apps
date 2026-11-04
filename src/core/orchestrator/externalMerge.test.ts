@@ -61,6 +61,8 @@ function fixture() {
   const merge = vi.fn();
   const cards = {
     retireTaskCards: vi.fn(),
+    releaseNotes: vi.fn(),
+    showHeld: vi.fn(),
     withdrawHostCard: vi.fn(),
     values: () => [],
     stored: () => undefined,
@@ -228,6 +230,48 @@ describe("external merge reconciliation", () => {
     await h.watcher().poll(h.now());
     expect(h.tasks.get("meter")?.closedReason).toBe("merged");
     expect(h.retire).toHaveBeenCalledOnce();
+  });
+
+  // INF-2525, the captain's words: "if they both got raised, then we should
+  // make sure the merge card doesn't close the task directly". Another of
+  // the task's pull requests still open keeps it open past an outside merge
+  // of a declared completion, and its crewmate hears which one.
+  it("keeps the task open on an outside merge while another of its pull requests is open (INF-2525)", async () => {
+    const h = fixture();
+    seedDelivery(h.tasks, "meter", {
+      mergeReviews: [
+        {
+          id: "review-next",
+          kind: "github",
+          host: "github.com",
+          owner: "o",
+          name: "meter",
+          number: 72,
+          headSha: "c".repeat(40),
+          base: "main",
+          branch: "fm/task-label",
+          method: "squash",
+          title: "fix: label the meter",
+          at: 1,
+        },
+      ],
+    });
+    h.merged();
+    const merged = h.pull();
+    h.readPull.mockImplementation(async (...args: unknown[]) =>
+      args.includes(72) ? { ...merged, number: 72, state: "open", merged: false } : merged,
+    );
+    await h.watcher().poll(h.now());
+    expect(h.tasks.get("meter")).toMatchObject({ status: "active", delivery: { ci: "merged" } });
+    expect(h.retire).not.toHaveBeenCalled();
+    expect(h.inbox.allFor("meter")).toEqual([
+      expect.objectContaining({
+        facts: expect.objectContaining({
+          kind: "external-merge",
+          open: "#72 on this task is still open",
+        }),
+      }),
+    ]);
   });
 
   // INF-1391: the external-merge journey found a tick deleting escalated
@@ -457,6 +501,21 @@ describe("external merge reconciliation", () => {
       base: "main",
       readiness: "clean",
     });
+    // The task's own pull request reads by its own number, closed when the
+    // release became the finishing change (INF-2525: an open one would keep
+    // the task open).
+    const released = h.pull();
+    h.readPull.mockImplementation(async (...args: unknown[]) =>
+      args.includes(71)
+        ? {
+            ...released,
+            number: 71,
+            merged: false,
+            branch: "fm/task-meter",
+            headSha: "a".repeat(40),
+          }
+        : released,
+    );
     await h.watcher().poll(h.now());
     expect(h.tasks.get("meter")).toMatchObject({ status: "done", closedReason: "merged" });
     expect(h.merge).not.toHaveBeenCalled();

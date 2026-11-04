@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "phone-taps-through-owner",
+      "reason": "Internal phone journey repair: the card journeys send every tap through the tap helper, which waits for the close question and other arriving views to hold still before tapping, and a project check now refuses a plain tap in the phone UI tests."
+    }
+  ]
+}

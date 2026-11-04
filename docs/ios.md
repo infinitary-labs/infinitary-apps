@@ -630,6 +630,7 @@ An evidence-writer failure stops the observer, rejects readiness and waits for b
 An app-side command list is not that acknowledgement; a missing witness fails before sending the chord, without a delay, another priming attempt or a repeated chord.
 For Return, the driver checks the router's carriage-return registration but supplies newline to XCTest: Xcode 26.4 emits the physical Return key for newline and no key for its Return constant.
 Every tap a native journey sends, on an element or a point, goes through `tapOnPhone`, the one way a journey sends a tap again besides the photo pick below (INF-1477, the captain's "Allow a proven second tap").
+The tap check (`scripts/phone-taps.ts`, in `pnpm check`) refuses a plain XCTest `.tap()` anywhere in the UI tests but inside `tapOnPhone` itself (INF-2485).
 A swipe, a drag or a key is sent once, as before.
 XCTest gives each synthesized tap a virtual touch screen of its own, and on a starved simulator backboardd can fail to read that screen's properties in time.
 It then attaches the screen as an accessory, or as a bad usage pair when it read no usage page, and ignores its touches, and XCTest confirms the tap after five seconds with no error.
@@ -679,6 +680,7 @@ An unreadable supported crop is a missing observation, never a steady blank targ
 It runs in the ordinary rest part, outside the clock-only `PhoneWaitsTests` selection.
 A crewmate orbiting in the scene waits instead until every orbiting crewmate rides its own orbit no faster than that orbit's pace (`PhoneOrbitPace`, INF-2039), since the first mate's warp fidget speeds the crew up until a neighbour reaches the tapped point before the touch lands.
 The frame alone is not enough: UIKit gives a sheet or an alert its final frame as it starts to slide or fade in, and drops a touch until it has arrived.
+The app's own UIKit log names that drop: it evaluates the touch with `ignoreInteractionEvents: 1` and sends it to no view, while backboardd still reports the contact touching, so the touch outcome reads delivered and only the wait before the tap prevents it (INF-2485).
 A check that a control can be pressed waits the same way before it asks XCTest, since right after the iPad's last card closed, XCTest found no tap point for the reply line when the check asked at once.
 Any other such check waits on the load clock until XCTest finds the control's tap point (`waitForPhonePress`), since on a busy iPad the sidebar's first group read none right after it appeared.
 A typed field waits for keyboard focus after its tap (`focusForPhoneTyping`), so a dropped tap fails where it happened rather than at the typing.

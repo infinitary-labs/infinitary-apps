@@ -1357,12 +1357,12 @@ import XCTest
         // Both appearances of the merge card supply the release note's hero pair.
         try await appearances("merge-card", showing: cardHeading(title))
         // The risk: seven dots that open each dimension's words and the crewmate's why.
-        reveal(app.buttons["card-risk"]); app.buttons["card-risk"].tap()
+        reveal(app.buttons["card-risk"]); tapOnPhone(app.buttons["card-risk"])
         let blast = app.descendants(matching: .any).matching(identifier: "risk-blast").firstMatch
         XCTAssertTrue(blast.waitForPresence(timeout: 10), app.debugDescription)
         XCTAssertTrue(blast.label.hasPrefix(try XCTUnwrap(fixture["blast"] as? String)), blast.label)
         picture("merge-risk")
-        app.buttons["Done"].tap()
+        tapOnPhone(app.buttons["Done"])
         XCTAssertTrue(blast.waitForAbsence(timeout: 10))
         // The thread names who wrote each message in the Mac's words, on the card's back (INF-1919): its latest line
         // turns the card over, and Card turns it back to the face, which leaves the back undrawn.
@@ -1380,20 +1380,20 @@ import XCTest
         // The focused field holds the scroll while the keyboard is up, so Done hides it, keeping the words, before the head is reached.
         if app.keyboards.firstMatch.exists {
             let done = app.buttons["dismiss-phone-keyboard"]
-            XCTAssertTrue(done.waitForPresence(timeout: 10), app.debugDescription); done.tap()
+            XCTAssertTrue(done.waitForPresence(timeout: 10), app.debugDescription); tapOnPhone(done)
             XCTAssertTrue(app.keyboards.firstMatch.waitForAbsence(timeout: 10), app.debugDescription)
         }
         let close = app.buttons["close-card"]
-        reveal(close); close.tap()
+        reveal(close); tapOnPhone(close)
         let question = app.alerts[try XCTUnwrap(fixture["closeTitle"] as? String)]
         XCTAssertTrue(question.waitForPresence(timeout: 10), app.debugDescription)
         picture("merge-close-question")
-        question.buttons[try XCTUnwrap(fixture["keepAnswering"] as? String)].tap()
+        tapOnPhone(question.buttons[try XCTUnwrap(fixture["keepAnswering"] as? String)])
         XCTAssertTrue(question.waitForAbsence(timeout: 10))
         XCTAssertTrue(cardHeading(title).exists, "Keep answering keeps the card")
         // Put aside is the Mac's minimize: the card leaves the stack and waits on its task's row in Tasks (INF-1517).
         let putAside = app.buttons["put-aside-card"]
-        reveal(putAside); putAside.tap()
+        reveal(putAside); tapOnPhone(putAside)
         XCTAssertTrue(cardHeading(title).waitForAbsence(timeout: 10), app.debugDescription)
         let aside = try await home("card-state", method: "GET")
         XCTAssertEqual((aside["mergeCard"] as? [String: Any])?["minimized"] as? Bool, true, "Put aside minimizes the card on the computer")
@@ -1405,7 +1405,7 @@ import XCTest
         tab("Tasks")
         let restore = app.buttons.matching(identifier: "task-\(try XCTUnwrap(fixture["taskId"] as? String))").firstMatch
         XCTAssertTrue(restore.waitForPresence(timeout: 10), app.debugDescription)
-        restore.tap()
+        tapOnPhone(restore)
         XCTAssertTrue(cardHeading(title).waitForPresence(timeout: 10), app.debugDescription)
         // A card that arrives while this one is read is counted beside the pager, not in a pill over the stage.
         // The first mate's new card replaces its earlier note, so the count is read as a count, not as a number.
@@ -1418,7 +1418,7 @@ import XCTest
         // The words in the field go with a choice.
         let later = app.buttons["card-action-later"]
         waitUntilEnabled(later)
-        reveal(later); later.tap()
+        reveal(later); tapOnPhone(later)
         XCTAssertTrue(cardHeading(title).waitForAbsence(timeout: 10), app.debugDescription)
         let chosen = try await home("card-state", method: "GET")
         let past = try XCTUnwrap(chosen["merge"] as? [String: Any])
@@ -1430,10 +1430,10 @@ import XCTest
         XCTAssertEqual(sent.label, "\(try XCTUnwrap(fixture["sentLead"] as? String)) \(words)")
         XCTAssertEqual(app.buttons["card-action-later"].value as? String, "Chosen")
         picture("merge-past")
-        reveal(app.buttons["close-card"]); app.buttons["close-card"].tap()
+        reveal(app.buttons["close-card"]); tapOnPhone(app.buttons["close-card"])
         let newsTitle = try XCTUnwrap(news["title"] as? String)
         showCard(newsTitle)
-        reveal(app.buttons["close-card"]); app.buttons["close-card"].tap()
+        reveal(app.buttons["close-card"]); tapOnPhone(app.buttons["close-card"])
         XCTAssertTrue(cardHeading(newsTitle).waitForAbsence(timeout: 10))
     }
 
@@ -1468,7 +1468,7 @@ import XCTest
         let calls = try XCTUnwrap(fallback["calls"] as? [[String: Any]])
         XCTAssertFalse(calls.contains { $0["channel"] as? String == "inf:cards:seen-update" })
         waitUntilEnabled(app.buttons["close-card"])
-        reveal(app.buttons["close-card"]); app.buttons["close-card"].tap()
+        reveal(app.buttons["close-card"]); tapOnPhone(app.buttons["close-card"])
         XCTAssertTrue(cardHeading(target).waitForAbsence(timeout: 10), app.debugDescription)
         _ = try await home("shared-seen-current")
     }
@@ -1621,7 +1621,11 @@ import XCTest
         tapOnPhone(app.buttons["close-card"])
         let question = app.alerts[try XCTUnwrap(fixture["closeTitle"] as? String)]
         XCTAssertTrue(question.waitForPresence(timeout: 10), app.debugDescription)
-        question.buttons[try XCTUnwrap(fixture["discardAndClose"] as? String)].tap()
+        // INF-2485: the app ignores every touch until the alert has arrived. A plain tap sent 0.44 s into its entrance
+        // reached the app while UIKit still ignored touches, and the alert stayed open; tapOnPhone waits for the button,
+        // and the screen inside it, to hold still first.
+        tapOnPhone(question.buttons[try XCTUnwrap(fixture["discardAndClose"] as? String)])
+        XCTAssertTrue(question.waitForAbsence(timeout: 10), app.debugDescription)
         XCTAssertTrue(cardHeading(choice).waitForAbsence(timeout: 10), app.debugDescription)
 
         showCard(chart)

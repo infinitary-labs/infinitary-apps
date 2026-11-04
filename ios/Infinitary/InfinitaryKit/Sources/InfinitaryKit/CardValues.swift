@@ -154,6 +154,8 @@ public struct PhoneCard: Decodable, Identifiable, Sendable {
     public init(_ value: PhoneJSON) throws {
         self = try JSONDecoder().decode(Self.self, from: JSONEncoder().encode(value))
     }
+    /// A card the phone already read, with a field the intent layer folded in (INF-2553).
+    init(trusted value: PhoneJSON) { self.value = value }
     public static func canSendReply(_ text: String) -> Bool {
         !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty && text.utf16.count <= PhoneLimits.reply
     }

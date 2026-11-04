@@ -120,6 +120,12 @@ struct PhoneWorkspace<Stage: View, Tasks: View, Composer: View>: View {
             try? await Task.sleep(for: .seconds(5))
             if session.notice == notice { session.notice = nil }
         }
+        .task(id: session.changeNotice) {
+            // INF-2553: the words about a taken-back change stay long enough to read, then leave on their own.
+            guard let change = session.changeNotice, !voiceOver else { return }
+            try? await Task.sleep(for: .seconds(8))
+            if session.changeNotice == change { session.changeNotice = nil }
+        }
         // INF-2095: the isolated phone gate's menu tap probe, in a simulator build with its switch only.
         .overlay(alignment: .topLeading) {
             if let probe = PhoneMenuTapProbe.shared { PhoneMenuTapProbeReading(probe: probe).id(probe.redraws) }
@@ -231,13 +237,20 @@ struct PhoneWorkspace<Stage: View, Tasks: View, Composer: View>: View {
     }
 
     /// INF-589 item 6, placed by item 16: the pill sits at the top of what it is over, under the bar and beside the sidebar.
-    /// An iPhone on its side gives the card that height, so the pill waits until it is upright.
+    /// An iPhone on its side gives the card that height, so it shows no pill: a new card's waits until it is upright, and a
+    /// change taken back says why on its place's own line instead (`ReadOnlySession.takenBack`), until the pill shows it upright.
     /// INF-1524, the captain's pick: on Home a new card is counted beside the pager instead, so only a reply's pill shows there.
     private func noticed(_ content: some View, home: Bool = false) -> some View {
         content.overlay(alignment: .top) {
             ZStack {
-                // The card already on the stage needs no pill pointing at it.
-                if let notice = session.notice, !phoneOnItsSide(verticalSize), !(home && !notice.reply),
+                // INF-2553: a change shown at the tap that the computer refused or could not confirm says why here,
+                // in front of any other notice, since it is about what the captain just did.
+                if let change = session.changeNotice, !phoneOnItsSide(verticalSize) {
+                    PhoneChangePill(notice: change) { if session.changeNotice == change { session.changeNotice = nil } }
+                    .task(id: change.id) { session.noticeShown(change) }
+                    .padding(.top, PhoneTheme.space2).padding(.horizontal, PhoneTheme.space4)
+                    .transition(reduceMotion ? .opacity : .move(edge: .top).combined(with: .opacity))
+                } else if let notice = session.notice, !phoneOnItsSide(verticalSize), !(home && !notice.reply),
                    !(messageContext.cardsVisible && messageContext.card == .current(notice.cardID)) {
                     PhoneNoticePill(notice: notice, open: {
                         selection = .home; session.showCardID = notice.cardID; session.notice = nil
@@ -245,7 +258,7 @@ struct PhoneWorkspace<Stage: View, Tasks: View, Composer: View>: View {
                     .padding(.top, PhoneTheme.space2).padding(.horizontal, PhoneTheme.space4)
                     .transition(reduceMotion ? .opacity : .move(edge: .top).combined(with: .opacity))
                 }
-            }.animation(.snappy, value: session.notice)
+            }.animation(.snappy, value: session.notice).animation(.snappy, value: session.changeNotice)
         }
     }
 
@@ -386,6 +399,26 @@ private struct PhoneNoticePill: View {
         .accessibilityHint("Opens the card")
         .accessibilityAction(named: "Dismiss", dismiss)
         .accessibilityIdentifier("phone-notice")
+    }
+}
+
+/// INF-2553: why a change shown at the tap was taken back, in the notice pill's place and surface. A tap or a swipe
+/// dismisses it.
+private struct PhoneChangePill: View {
+    let notice: PhoneChangeNotice
+    let dismiss: () -> Void
+
+    var body: some View {
+        Button(action: dismiss) {
+            Text(notice.words).font(PhoneFont.callout).foregroundStyle(PhoneTheme.text).multilineTextAlignment(.leading)
+                .padding(.horizontal, PhoneTheme.space4).padding(.vertical, PhoneTheme.space2).frame(minHeight: 44)
+                .modifier(PhoneNoticeSurface())
+                .contentShape(Capsule())
+        }
+        .buttonStyle(.plain).frame(maxWidth: PhoneColumn.inside)
+        .highPriorityGesture(DragGesture(minimumDistance: 12).onEnded { _ in dismiss() })
+        .accessibilityHint("Dismisses this notice")
+        .accessibilityIdentifier("change-notice")
     }
 }
 

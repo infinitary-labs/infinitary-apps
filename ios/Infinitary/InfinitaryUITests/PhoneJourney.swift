@@ -11,6 +11,11 @@ import XCTest
     /// ended it first. PHONE_DISPLAY_REQUEST_BUDGET_MS in tests/helpers/phoneKeyboard.ts mirrors it.
     private let displayBudget: TimeInterval = 600
 
+    /// The record's state line (key · state · computer) reading this state.
+    private func recordReads(_ state: String) -> XCUIElement {
+        app.staticTexts.matching(NSPredicate(format: "label CONTAINS %@", " · \(state) · ")).firstMatch
+    }
+
     private func home(_ command: String, method: String = "POST", body: String? = nil, budget: TimeInterval = 60) async throws -> [String: Any] {
         var request = URLRequest(url: URL(string: control + "/" + command)!, timeoutInterval: budget)
         request.httpMethod = method
@@ -2013,17 +2018,17 @@ import XCTest
         let afterReconnect = try await home("card-state", method: "GET")
         let writes: ([String: Any]) -> Int = { state in (state["calls"] as? [[String: Any]] ?? []).filter { $0["channel"] as? String == "inf:cards:act" }.count }
         XCTAssertEqual(writes(afterReconnect), writes(atDisconnect), "An offline body action is never replayed")
+        // INF-2553 (the captain: "the card leaves at the tap and the next card is up at once"): the body's choice
+        // takes the card off Home while the computer still holds its request, so no second input can reach it.
         _ = try await home("hold-card-action")
         reveal(bodyButton); tapOnPhone(bodyButton)
         _ = try await home("card-action-held")
-        XCTAssertFalse(app.buttons["card-action-body"].isEnabled, "A body choice owns the same pending gate as the footer")
-        XCTAssertFalse(app.buttons["close-card"].isEnabled)
-        tapOnPhone(bodyButton)
-        XCTAssertTrue(app.staticTexts["This card already has a choice in progress."].waitForPresence(timeout: 10))
+        XCTAssertTrue(cardHeading(chart).waitForAbsence(timeout: 10), "A body choice shows at the tap, before the computer answers")
+        picture("card-choice-at-tap")
         _ = try await home("release-card-action")
-        XCTAssertTrue(cardHeading(chart).waitForAbsence(timeout: 10))
+        XCTAssertFalse(cardHeading(chart).exists, "The computer's answer leaves the choice as shown")
         let bodyChoice = try await home("card-state", method: "GET")
-        XCTAssertEqual(writes(bodyChoice), writes(afterReconnect) + 1, "The competing body input sends no second change")
+        XCTAssertEqual(writes(bodyChoice), writes(afterReconnect) + 1, "The choice sends one change")
         let bodyPast = try XCTUnwrap(bodyChoice["conversation"] as? [String: Any])
         XCTAssertEqual((bodyPast["ending"] as? [String: Any])?["actionId"] as? String, "body")
         // The choice wakes the first mate; its turn ends before INF-1060 below reads the footer's reply button.
@@ -2036,8 +2041,69 @@ import XCTest
         picture("past-body-choice")
         tapOnPhone(app.buttons["close-card"])
         showCard(note)
+        // INF-2553 (the captain: "to its place in the stack, with a short notice where you are"): a close the
+        // computer refuses brings the card back where it was and says why on Home.
+        let refusal = "This card changed on your computer. Look at it again."
+        _ = try await home("refuse-next-change", body: #"{"channel":"inf:cards:close","words":"\#(refusal)"}"#)
         tapOnPhone(app.buttons["close-card"])
-        XCTAssertTrue(cardHeading(note).waitForAbsence(timeout: 10))
+        let notice = app.buttons["change-notice"]
+        XCTAssertTrue(notice.waitForPresence(timeout: 10), app.debugDescription)
+        XCTAssertEqual(notice.label, refusal)
+        XCTAssertTrue(cardHeading(note).waitForPresence(timeout: 10), "A refused close puts the card back")
+        picture("card-close-refused")
+        tapOnPhone(notice)
+        XCTAssertTrue(notice.waitForAbsence(timeout: 10))
+        if UIDevice.current.userInterfaceIdiom == .phone {
+            // INF-2553, the captain's pick for an iPhone on its side, where the pill has no room: the words stay on
+            // the place's own line until its next change, so they are never cleared unseen. In a stack of two, the
+            // card that came back keeps them while the other card is up.
+            let asked = try await home("asked-card")
+            let second = try XCTUnwrap(asked["title"] as? String)
+            showCard(second)
+            turnPhone(to: .landscapeLeft, in: app, moving: cardHeading(second))
+            _ = try await home("refuse-next-change", body: #"{"channel":"inf:cards:close","words":"\#(refusal)"}"#)
+            tapOnPhone(app.buttons["close-card"])
+            showCard(note)
+            XCTAssertFalse(app.staticTexts["card-error"].exists, "The words stay with the card that came back")
+            showCard(second)
+            let line = app.staticTexts["card-error"]
+            XCTAssertTrue(line.waitForPresence(timeout: 10), app.debugDescription)
+            XCTAssertEqual(line.label, refusal)
+            XCTAssertFalse(notice.exists, "On its side the words are on the card's line, not in a pill")
+            picture("card-close-refused-on-its-side")
+            // A message the computer refuses goes back in the box and says why on the composer's own line.
+            let messageRefusal = "Your computer could not take this message. Try again."
+            _ = try await home("refuse-next-change", body: #"{"channel":"inf:converse","words":"\#(messageRefusal)"}"#)
+            let input = app.textFields["message-box"]
+            let message = "Count the north buoys"
+            focusForPhoneTyping(input, in: app); input.typeText(message)
+            tapOnPhone(app.buttons["send-message"])
+            let messageLine = app.staticTexts["message-problem"]
+            XCTAssertTrue(messageLine.waitForPresence(timeout: 10), app.debugDescription)
+            XCTAssertEqual(messageLine.label, messageRefusal)
+            XCTAssertEqual(input.value as? String, message, "A refused message goes back in the box")
+            XCTAssertFalse(notice.exists, "On its side the words are on the composer's line, not in a pill")
+            picture("message-refused-on-its-side")
+            turnPhone(to: .portrait, in: app, moving: cardHeading(second))
+            // Upright, the pill may still show the words until they leave on their own, and the lines stay quiet.
+            XCTAssertTrue(notice.waitForAbsence(timeout: 20))
+            XCTAssertFalse(messageLine.exists, "Upright, the pill says it instead of the composer's line")
+            // The words go back out of the box, so the rest of the journey starts from an empty one.
+            focusForPhoneTyping(input, in: app)
+            input.typeText(String(repeating: XCUIKeyboardKey.delete.rawValue, count: message.count))
+            let done = app.navigationBars.buttons["dismiss-phone-keyboard"]
+            XCTAssertTrue(done.waitForPresence(timeout: 10), app.debugDescription); tapOnPhone(done)
+            XCTAssertTrue(app.keyboards.firstMatch.waitForAbsence(timeout: 10))
+            tapOnPhone(app.buttons["close-card"])
+            XCTAssertTrue(cardHeading(second).waitForAbsence(timeout: 10), app.debugDescription)
+            showCard(note)
+        }
+        // A close the computer still holds has already taken the card off Home.
+        _ = try await home("hold-card-action", body: #"{"channel":"inf:cards:close"}"#)
+        tapOnPhone(app.buttons["close-card"])
+        _ = try await home("card-action-held")
+        XCTAssertTrue(cardHeading(note).waitForAbsence(timeout: 10), "A close shows at the tap, before the computer answers")
+        _ = try await home("release-card-action")
         let closed = try await home("card-state", method: "GET")
         XCTAssertNotNil(closed["note"] as? [String: Any])
         XCTAssertEqual(closed["leaks"] as? Int, 0)
@@ -2101,6 +2167,22 @@ import XCTest
         XCTAssertTrue(restore.waitForPresence(timeout: 10), app.debugDescription)
         XCTAssertLessThan(app.buttons["group-waiting"].frame.minY, restore.frame.minY, "It is listed under Waiting on you")
         picture("tasks-minimized")
+        if UIDevice.current.userInterfaceIdiom == .phone {
+            // INF-2553: on an iPhone on its side, a bring-back the computer refuses puts the card aside again and says
+            // why on the Tasks list's own line, as a refused bring-back did before.
+            turnPhone(to: .landscapeLeft, in: app, moving: restore)
+            _ = try await home("refuse-next-change", body: #"{"channel":"inf:cards:minimize","words":"\#(refusal)"}"#)
+            tapOnPhone(restore)
+            tab("Tasks")
+            let asideLine = app.staticTexts["tasks-problem"]
+            XCTAssertTrue(asideLine.waitForPresence(timeout: 10), app.debugDescription)
+            XCTAssertEqual(asideLine.label, refusal)
+            XCTAssertTrue(restore.waitForPresence(timeout: 10), "A refused bring-back puts the card aside again")
+            XCTAssertFalse(app.buttons["change-notice"].exists, "On its side the words are on the list's line, not in a pill")
+            picture("bring-back-refused-on-its-side")
+            turnPhone(to: .portrait, in: app, moving: restore)
+            XCTAssertTrue(app.buttons["change-notice"].waitForAbsence(timeout: 20))
+        }
         tapOnPhone(restore)
         XCTAssertTrue(cardHeading(heroTitle).waitForPresence(timeout: 10), "Its row brings the card back on Home")
         XCTAssertEqual(waitForPhonePredicate(NSPredicate(format: "selected == true"), object: app.buttons["tab-home"], timeout: 10), .completed)
@@ -2337,7 +2419,14 @@ import XCTest
         XCTAssertTrue(app.buttons["start-task"].waitForPresence(timeout: 10))
         picture("task-before-start")
         _ = try await home("capture-talk-start")
+        // INF-2553, the captain's "everything at once, the task record included": a start the computer still holds
+        // already reads Starting on the record.
+        _ = try await home("hold-card-action", body: #"{"channel":"inf:task:run"}"#)
         tapOnPhone(app.buttons["start-task"])
+        _ = try await home("card-action-held")
+        XCTAssertTrue(recordReads("Starting").waitForPresence(timeout: 10), "A start shows at the tap, before the computer answers")
+        picture("task-start-at-tap")
+        _ = try await home("release-card-action")
         let started = try await home("talk-started")
         XCTAssertNotNil(started["startedAt"] as? Double)
         XCTAssertTrue(started["executionDeviceId"] is NSNull, "The phone starts work on its Mac, never on the phone")
@@ -2345,7 +2434,13 @@ import XCTest
         XCTAssertTrue(app.buttons["interrupt-task"].waitForPresence(timeout: 10))
         picture("crewmate-working")
         _ = try await home("capture-stop")
+        // INF-2553: an interrupt the computer still holds already reads Stopping on the record.
+        _ = try await home("hold-card-action", body: #"{"channel":"inf:task:interrupt"}"#)
         tapOnPhone(app.buttons["interrupt-task"])
+        _ = try await home("card-action-held")
+        XCTAssertTrue(recordReads("Stopping").waitForPresence(timeout: 10), "An interrupt shows at the tap, before the computer answers")
+        picture("task-interrupt-at-tap")
+        _ = try await home("release-card-action")
         let interrupted = try await home("talk-interrupted")
         let events = try XCTUnwrap(interrupted["events"] as? [[String: Any]])
         XCTAssertTrue(events.contains { $0["kind"] as? String == "interrupted" && $0["actor"] as? String == "captain" })
@@ -2358,7 +2453,15 @@ import XCTest
         let steer = try XCTUnwrap(fixture["steer"] as? String)
         let steerField = app.textFields["steer-box"]
         focusForPhoneTyping(steerField, in: app); steerField.typeText(steer)
+        // INF-2553: a steer the computer still holds already shows in the transcript, marked sending, and the box clears.
+        _ = try await home("hold-card-action", body: #"{"channel":"inf:task:steer"}"#)
         tapOnPhone(app.buttons["steer-task"])
+        _ = try await home("card-action-held")
+        XCTAssertTrue(app.staticTexts["crew-sending"].waitForPresence(timeout: 10), "A steer shows at the tap, before the computer answers")
+        XCTAssertTrue(app.staticTexts.matching(NSPredicate(format: "label == %@", steer)).firstMatch.exists, "The sending line carries the steer's words")
+        XCTAssertNotEqual(steerField.value as? String, steer, "The steer box clears at the tap")
+        picture("task-steer-at-tap")
+        _ = try await home("release-card-action")
         let steered = try await home("talk-steered")
         let task = try XCTUnwrap(steered["task"] as? [String: Any])
         XCTAssertEqual(task["outcome"] as? String, fixture["report"] as? String)
@@ -2427,21 +2530,50 @@ import XCTest
         let after = try await home("talk-state", method: "GET")
         XCTAssertEqual((after["writes"] as? [Any])?.count, allWrites.count, "Reconnecting never sends the retained draft")
         XCTAssertEqual(input.value as? String, "Keep this unsent draft")
-        _ = try await home("lose-reply")
+        // INF-2553 (the captain: "the box clears and the message shows as the last turn marked sending", and a lost
+        // answer stays shown "until the next snapshot after reconnecting says otherwise"): the connection drops
+        // before the computer takes this message, so it stays marked sending while out of reach, and the first last
+        // turn read after reconnecting takes it back with the unconfirmed words and the draft.
+        let lastYou = app.staticTexts["last-turn-you"]
+        _ = try await home("lose-reply", body: #"{"before":true}"#)
         tapOnPhone(app.buttons["send-message"])
-        let unconfirmed = app.staticTexts["message-problem"]
-        XCTAssertTrue(unconfirmed.waitForPresence(timeout: 20))
-        XCTAssertTrue(unconfirmed.label.contains("Could not confirm"), unconfirmed.label)
+        XCTAssertTrue(app.staticTexts["Out of reach"].waitForPresence(timeout: 20), app.debugDescription)
+        XCTAssertTrue(app.staticTexts["last-turn-sending"].exists, "A message whose answer was lost stays marked sending")
+        XCTAssertEqual(lastYou.label, "Keep this unsent draft")
+        XCTAssertNotEqual(input.value as? String, "Keep this unsent draft", "The box stays clear while the answer is unknown")
         verifyPhoneComposerBounds(app: app)
         picture("unconfirmed-send")
-        XCTAssertGreaterThanOrEqual(unconfirmed.frame.minY, app.frame.minY)
-        XCTAssertLessThanOrEqual(unconfirmed.frame.maxY, app.frame.maxY, "The entire unconfirmed-send warning stays on screen")
-        XCTAssertTrue(waitForPhonePress(unconfirmed), "Nothing sits over the warning at the foot")
         _ = try await home("online")
         reach("In reach", timeout: 20)
+        let unconfirmed = app.buttons["change-notice"]
+        XCTAssertTrue(unconfirmed.waitForPresence(timeout: 20), app.debugDescription)
+        XCTAssertEqual(unconfirmed.label, "Could not confirm the change. Check your computer before sending it again.")
+        XCTAssertFalse(app.staticTexts["last-turn-sending"].exists, "The snapshot after reconnecting takes the message back")
+        XCTAssertEqual(input.value as? String, "Keep this unsent draft", "A message taken back returns to the box")
+        picture("unconfirmed-send-taken-back")
+        tapOnPhone(unconfirmed)
+        XCTAssertTrue(unconfirmed.waitForAbsence(timeout: 10))
+        let lostBefore = try await home("talk-state", method: "GET")
+        XCTAssertEqual((lostBefore["writes"] as? [Any])?.count, allWrites.count, "The computer never took the lost message")
+        // This time the computer takes the message before the connection drops, so the first last turn read after
+        // reconnecting keeps it, quietly.
+        _ = try await home("lose-reply")
+        tapOnPhone(app.buttons["send-message"])
+        XCTAssertEqual(waitForPhonePredicate(NSPredicate(format: "value != %@", "Keep this unsent draft"), object: input, timeout: 10), .completed,
+                       "The box clears at the tap")
+        XCTAssertEqual(waitForPhonePredicate(NSPredicate(format: "label == %@", "Keep this unsent draft"), object: lastYou, timeout: 10), .completed,
+                       app.debugDescription)
+        verifyPhoneComposerBounds(app: app)
+        picture("lost-answer-kept")
+        _ = try await home("online")
+        reach("In reach", timeout: 20)
+        XCTAssertTrue(app.staticTexts["last-turn-sending"].waitForAbsence(timeout: 20), "The snapshot after reconnecting settles the message")
+        XCTAssertEqual(lastYou.label, "Keep this unsent draft", "The message the computer holds stays the last turn")
+        XCTAssertFalse(app.buttons["change-notice"].exists, "A change the computer holds is never taken back")
         let once = try await home("talk-state", method: "GET")
         XCTAssertEqual((once["writes"] as? [Any])?.count, allWrites.count + 1, "A lost reply never repeats the mutation")
-        XCTAssertEqual(input.value as? String, "Keep this unsent draft")
+        // The draft the next sections carry across homes, typed again.
+        focusForPhoneTyping(input, in: app); input.typeText("Keep this unsent draft")
         _ = try await home("read-only")
         reach("In reach", timeout: 20)
         XCTAssertFalse(app.buttons["send-message"].isEnabled, "A version-mismatched view can read but cannot act")

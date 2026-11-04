@@ -1,0 +1,14 @@
+{
+  "entries": [
+    {
+      "id": "phone-changes-show-at-the-tap",
+      "kind": "improvement",
+      "area": "devices",
+      "title": "Your iPhone and iPad show each change the moment you tap",
+      "body": "On your iPhone and iPad, closing a card, choosing on it or putting it aside now takes it off Home at once, and the next card is up. A message, a reply or a steer clears its box and shows marked Sending… until your computer has it, and Start and Interrupt read Starting and Stopping straight away. If your computer refuses a change, it goes back where it was, your words come back, and a short notice says why.",
+      "noPicture": "This changes when the iPhone and iPad app moves after a tap, which the desktop's hero pictures do not show.",
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

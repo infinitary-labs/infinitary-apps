@@ -230,7 +230,12 @@ private struct PhoneThreadMessage: View {
         VStack(alignment: .leading, spacing: 2) {
             HStack(alignment: .firstTextBaseline, spacing: PhoneTheme.space2) {
                 Text(PhoneCardWords.threadWho[who] ?? who).font(PhoneFont.mono).foregroundStyle(color)
-                Text(time).font(PhoneFont.micro).foregroundStyle(PhoneTheme.muted)
+                // INF-2553: a reply the computer has not carried yet is marked sending where its time will be.
+                if message["sending"].flag {
+                    Text("Sending…").font(PhoneFont.micro).foregroundStyle(PhoneTheme.muted).accessibilityIdentifier("thread-sending")
+                } else {
+                    Text(time).font(PhoneFont.micro).foregroundStyle(PhoneTheme.muted)
+                }
             }
             Text(message["text"].text ?? "").textSelection(.enabled)
                 .foregroundStyle(who == "host" ? PhoneTheme.secondary : PhoneTheme.text)

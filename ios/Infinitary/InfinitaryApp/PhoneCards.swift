@@ -279,6 +279,7 @@ private struct PhoneCardPane: View {
     @Environment(PhoneMessageContext.self) private var messageContext
     @Environment(\.openURL) private var openURL
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.verticalSizeClass) private var verticalSize
     /// The field has the focus on this side; a turn carries it to the field on the other.
     @FocusState private var replyFocus: CardSide?
     /// INF-2568: where the face's field sits in the pane, read in the pane's own space before the lift moves it.
@@ -341,8 +342,12 @@ private struct PhoneCardPane: View {
     /// A closing choice waits until every required question has an answer (the captain's Q2 A on the Mac).
     private var unanswered: Bool { asking && (host.reading["answered"].numeric ?? 0) < (host.reading["of"].numeric ?? 0) }
 
+    /// INF-2553, the captain's pick: an iPhone on its side has no room for the notice pill, so the words about a change
+    /// taken back on this card stay on its own line until its next change, as a refused change's did before.
+    private var line: String? { problem ?? (phoneOnItsSide(verticalSize) ? session.takenBack[card.id] : nil) }
+
     private var hasFoot: Bool {
-        !card.actions.isEmpty || problem != nil || takesReply || factsHost != nil || !card.value["requiredActions"].list.isEmpty
+        !card.actions.isEmpty || line != nil || takesReply || factsHost != nil || !card.value["requiredActions"].list.isEmpty
             || !messages.isEmpty
     }
     /// The back shows: a card has a back only once its thread has a message.
@@ -780,7 +785,7 @@ private struct PhoneCardPane: View {
             }
             let required = card.value["requiredActions"].list
             if !required.isEmpty { PhoneRequiredActions(actions: required) }
-            if let problem { Text(problem).foregroundStyle(PhoneTheme.warning).accessibilityIdentifier("card-error") }
+            if let line { Text(line).foregroundStyle(PhoneTheme.warning).accessibilityIdentifier("card-error") }
             // INF-2565: a pane built again while its back shows starts turned, and its latest line gives way as the field does.
             if !messages.isEmpty { latestLine.modifier(PhoneFaceOnly(angle: turnAngle)) }
             if takesReply {
@@ -898,7 +903,7 @@ private struct PhoneCardPane: View {
     private func choose(_ action: PhoneJSON) {
         if onMac(action) { host.notice = "Do this on \(session.mac.name)."; return }
         let id = action["id"].text
-        perform(closesCard: true) {
+        perform {
             pending = id
             defer { pending = nil }
             let snapshot = try await host.submissionReading()
@@ -913,11 +918,13 @@ private struct PhoneCardPane: View {
                 answers.append(.object(["name": .string(PhoneCardWords.anythingElse), "values": .array([]),
                                         "changed": .bool(true), "written": .string(words)]))
             }
-            let result = try await session.ask(.act, [.string(card.id), action["id"], .string("chrome"),
-                .object(["answers": .array(answers)]), card.submission(reading: reading, fresh: snapshot.fresh)])
-            if let refusal = result["refusal"].text { throw PhoneRequestError(refusal) }
+            // INF-2553: the card leaves at the tap with its words; a refusal brings it back to its place with them.
             if replyWords == words { reply = "" }
-            onSent()
+            let sent = await send(.choose(card: card.id, lifecycle: card.lifecycleID, offer: card.offerID), .act,
+                [.string(card.id), action["id"], .string("chrome"), .object(["answers": .array(answers)]),
+                 card.submission(reading: reading, fresh: snapshot.fresh)],
+                restore: { [reply = $reply] in if reply.wrappedValue.isEmpty { reply.wrappedValue = words } })
+            if sent { host.chosen = true; onSent() }
         }
     }
 
@@ -931,12 +938,19 @@ private struct PhoneCardPane: View {
             if !sent.isEmpty {
                 payload["images"] = .array(sent.map { photo in .object(photo.wire.mapValues(PhoneJSON.string)) })
             }
-            _ = try await session.ask(.reply, [.string(card.id), .object(payload),
-                card.submission(reading: reading, fresh: snapshot.fresh), .bool(replyLeaves)])
+            // INF-2553: the words join the thread at once, marked sending, and the draft clears; a refusal puts the
+            // words and photos back. INF-1919: a send from either side shows its line on the back, the first included.
             if reply == text { reply = "" }
             photos.removeAll { photo in sent.contains { $0.id == photo.id } }
-            // INF-1919: a send from either side shows its line on the back, the first message included.
-            turned = true; replyFocus = nil; onSent()
+            turned = true; replyFocus = nil
+            let before = PhoneIntentLedger.captainMessages(session.threads[card.id])
+            let delivered = await self.send(.reply(card: card.id, text: text, before: before), .reply,
+                [.string(card.id), .object(payload), card.submission(reading: reading, fresh: snapshot.fresh), .bool(replyLeaves)],
+                restore: { [reply = $reply, photos = $photos] in
+                    if reply.wrappedValue.isEmpty { reply.wrappedValue = text }
+                    photos.wrappedValue = sent + photos.wrappedValue
+                })
+            if delivered { onSent() }
         }
     }
 
@@ -953,22 +967,37 @@ private struct PhoneCardPane: View {
             + (waiting ? [PhoneCardWords.unansweredReply(author: author, key: task?.key)] : [])
         closeAsk = CloseAsk(words: words.joined(separator: " "), picks: picks)
     }
+    /// INF-2553: the card leaves at the tap and the next one is up; a refusal brings it back to its place.
     private func close() {
-        perform(closesCard: true) { _ = try await session.ask(.close, [.string(card.id), card.submission()]) }
+        perform {
+            let sent = await send(.close(card: card.id, lifecycle: card.lifecycleID, offer: card.offerID), .close,
+                                  [.string(card.id), card.submission()])
+            if sent { host.chosen = true }
+        }
     }
-    /// Put aside: the Mac's minimize. The card leaves the stack and comes back when it changes.
+    /// Put aside: the Mac's minimize. The card leaves the stack at the tap and comes back when it changes.
     private func putAside() {
-        perform(closesCard: true) { _ = try await session.ask(.minimize, [.string(card.id), .bool(true)]) }
+        perform {
+            let sent = await send(.putAside(card: card.id, lifecycle: card.lifecycleID, offer: card.offerID), .minimize,
+                                  [.string(card.id), .bool(true)])
+            if sent { host.chosen = true }
+        }
     }
 
-    private func perform(closesCard: Bool = false, _ operation: @escaping @MainActor () async throws -> Void) {
+    /// Sends one change through the session's intent layer, which shows it now and says why when it is taken back,
+    /// so the pane itself says nothing more; true once the computer accepted it.
+    private func send(_ kind: PhoneIntent.Kind, _ channel: PhoneCardRequest, _ args: [PhoneJSON],
+                      restore: (@MainActor () -> Void)? = nil) async -> Bool {
+        do { try await session.change(kind, channel, args, restore: restore); return true } catch { return false }
+    }
+
+    private func perform(_ operation: @escaping @MainActor () async throws -> Void) {
         let activeHost = host
         guard activeHost.beginChange() else { return }
         problem = nil
         Task {
             defer { activeHost.busy = false }
-            do { try await operation(); if closesCard { activeHost.chosen = true } }
-            catch { problem = error.localizedDescription }
+            do { try await operation() } catch { problem = error.localizedDescription }
         }
     }
     private func connectHost() {

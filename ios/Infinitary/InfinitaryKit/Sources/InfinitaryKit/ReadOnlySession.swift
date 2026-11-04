@@ -39,6 +39,7 @@ public struct PhoneNotice: Equatable, Sendable {
     /// The last authenticated route, separate from saved preference. Never a route merely attempted.
     public private(set) var reachedAddress: String?
     public private(set) var mac: JoinedMac
+    /// What the screens show: the home's last snapshot with the captain's pending intents folded over it (INF-2553).
     public private(set) var cards: [PhoneCard] = []
     public private(set) var activity: [ActivityLine] = []
     public private(set) var threads: [String: PhoneJSON] = [:]
@@ -47,6 +48,23 @@ public struct PhoneNotice: Equatable, Sendable {
     @ObservationIgnored private var threadRevisions: [String: Int] = [:]
     public private(set) var board: PhoneBoard?
     public private(set) var lastTurn: PhoneLastTurn?
+    /// INF-2553: the home's own snapshots, never edited; the shown values above are these with `intents` folded over.
+    @ObservationIgnored private var syncedCards: [PhoneCard] = []
+    @ObservationIgnored private var syncedThreads: [String: PhoneJSON] = [:]
+    @ObservationIgnored private var syncedBoard: PhoneBoard?
+    @ObservationIgnored private var syncedTurn: PhoneLastTurn?
+    /// The captain's changes this phone already shows and its computer has not yet confirmed, in the order sent.
+    public private(set) var ledger = PhoneIntentLedger()
+    /// Why a change shown at the tap was taken back: the home refused it, or could not confirm it after reconnecting.
+    public var changeNotice: PhoneChangeNotice?
+    /// INF-2553, the captain's pick: an iPhone on its side shows no notice pill, so the same words stay on the place's
+    /// own line (`PhoneIntent.place`) until that place's next change or the upright pill shows them, never cleared unseen.
+    public private(set) var takenBack: [String: String] = [:]
+    @ObservationIgnored private var restorers: [Int: @MainActor () -> Void] = [:]
+    /// Each welcome counts, so a change whose result was lost is settled by a snapshot read after the next one.
+    @ObservationIgnored private var welcomes = 0
+    /// The journal's newest push when the last welcome came: the pushes up to it are replayed catch-up.
+    @ObservationIgnored private var welcomeSeq = 0
     /// Only the home's busy snapshot or numbered firstmate_state event establishes a conversational turn.
     /// An older home keeps event-only activity; there is still no phone dictation/listening signal.
     public private(set) var firstmateBusy = false
@@ -120,7 +138,7 @@ public struct PhoneNotice: Equatable, Sendable {
         try Task.checkCancellation()
         do { return try JSONDecoder().decode(T.self, from: answer) }
         catch {
-            if channel.changes { throw PhoneError.refused("Could not confirm the change. Check your computer before sending it again.") }
+            if channel.changes { throw PhoneError.unconfirmed }
             throw PhoneError.invalidReply
         }
     }
@@ -147,7 +165,7 @@ public struct PhoneNotice: Equatable, Sendable {
         try Task.checkCancellation()
         do { return try JSONDecoder().decode(PhoneJSON.self, from: answer) }
         catch {
-            if channel.changes { throw PhoneError.refused("Could not confirm the change. Check your computer before sending it again.") }
+            if channel.changes { throw PhoneError.unconfirmed }
             throw PhoneError.invalidReply
         }
     }
@@ -189,7 +207,7 @@ public struct PhoneNotice: Equatable, Sendable {
     public func readThread(_ id: String) async throws {
         let revision = threadRevisions[id, default: 0]
         let thread = try await ask(.thread, [.string(id)])
-        if revision == threadRevisions[id, default: 0] { threads[id] = thread }
+        if revision == threadRevisions[id, default: 0] { syncedThreads[id] = thread; saw(.thread(card: id, thread)) }
     }
 
     public func readPast(_ id: String) async throws {
@@ -202,16 +220,15 @@ public struct PhoneNotice: Equatable, Sendable {
     private func failCall(_ id: Int) {
         waitingSince.removeValue(forKey: id)
         guard let (changes, continuation) = calls.removeValue(forKey: id) else { return }
-        continuation.resume(throwing: changes
-            ? PhoneError.refused("Could not confirm the change. Check your computer before sending it again.")
-            : PhoneError.unavailable)
+        continuation.resume(throwing: changes ? PhoneError.unconfirmed : PhoneError.unavailable)
     }
     private func failCalls() { for id in Array(calls.keys) { failCall(id) } }
 
     private func clearContent() {
         computers = []
-        cards = []; activity = []; board = nil; lastTurn = nil; notice = nil; firstmateBusy = false; firstmateObserved = false
-        threads = [:]; pastCards = []; showCardID = nil; threadRevisions = [:]; seenCards = []
+        syncedCards = []; activity = []; syncedBoard = nil; syncedTurn = nil; notice = nil; firstmateBusy = false; firstmateObserved = false
+        syncedThreads = [:]; pastCards = []; showCardID = nil; threadRevisions = [:]; seenCards = []
+        ledger.clear(); restorers = [:]; changeNotice = nil; takenBack = [:]; refold()
         notified = [:]; awaited = []; primed = false; workRevision += 1
         wakeReachWaiters()
     }
@@ -260,6 +277,137 @@ public struct PhoneNotice: Equatable, Sendable {
             if let current = cards.first(where: { $0.id == newest.id }), (sharedCardSeen || !reply) && hasSeen(current) { return }
             notice = PhoneNotice(cardID: newest.id, title: newest.title, reply: reply)
         }
+    }
+
+    // MARK: INF-2553, the captain's direction B: every tap shows at once and settles on the home's evidence.
+
+    /// Sends a card change and shows it at once. A refusal takes it back with the home's words in `changeNotice` and
+    /// runs `restore`; a lost result keeps it shown until a snapshot read after reconnecting settles it. Nothing is
+    /// queued or sent again.
+    @discardableResult
+    public func change(_ kind: PhoneIntent.Kind, _ channel: PhoneCardRequest, _ args: [PhoneJSON],
+                       restore: (@MainActor () -> Void)? = nil) async throws -> PhoneJSON {
+        let id = begin(kind, restore)
+        do {
+            let result = try await ask(channel, args)
+            if let refusal = result["refusal"].text { refuse(id, refusal); throw PhoneRequestError(refusal) }
+            accept(id)
+            return result
+        } catch { settle(id, after: error); throw error }
+    }
+
+    /// The same for a message, a start, an interrupt or a steer, each answered as accepted or not.
+    public func change(_ kind: PhoneIntent.Kind, _ channel: PhoneRequest, args: [Any],
+                       restore: (@MainActor () -> Void)? = nil) async throws {
+        let id = begin(kind, restore)
+        do {
+            let answer: PhoneAnswer = try await request(channel, args: args)
+            if !answer.ok {
+                let words = answer.text ?? "Your computer could not make this change."
+                refuse(id, words); throw PhoneError.refused(words)
+            }
+            accept(id)
+        } catch { settle(id, after: error); throw error }
+    }
+
+    /// A task record's own read, which also settles the intents it speaks about; the record draws `shown(_:)` of it.
+    public func readDetail(_ id: String) async throws -> PhoneTask {
+        let task: PhoneTask = try await request(.detail, args: [id])
+        saw(.task(task))
+        return task
+    }
+
+    public func readCrew(_ id: String) async throws -> PhoneCrew {
+        let crew: PhoneCrew = try await request(.crew, args: [id])
+        saw(.crew(crew))
+        return crew
+    }
+
+    /// A record's task or transcript as the screens show it, with the pending intents drawn over it.
+    public func shown(_ task: PhoneTask) -> PhoneTask { PhoneIntentFold.task(task, ledger.intents) }
+    public func shown(_ crew: PhoneCrew) -> PhoneCrew { PhoneIntentFold.crew(crew, ledger.intents) }
+
+    /// A message to the first mate is on its way: the last turn shows it, marked sending.
+    public var messageSending: Bool { ledger.intents.contains { if case .send = $0.kind { true } else { false } } }
+
+    /// How long an accepted change may wait for the snapshot that shows it, the serve watchdog's own wait.
+    static let acceptedWait: Duration = .seconds(15)
+
+    private func begin(_ kind: PhoneIntent.Kind, _ restore: (@MainActor () -> Void)?) -> Int {
+        let id = ledger.add(kind)
+        if let restore { restorers[id] = restore }
+        changeNotice = nil
+        if let place = ledger.intent(id)?.place { takenBack[place] = nil }
+        refold()
+        return id
+    }
+
+    /// The home accepted it. The snapshot that holds the change retires it; one that never comes lets it go quietly.
+    private func accept(_ id: Int) {
+        ledger.accept(id)
+        guard ledger.intent(id)?.state == .accepted else { restorers.removeValue(forKey: id); return }
+        // Ids are never reused, so a reconnect in between leaves the wait to end as it would have.
+        Task { [weak self] in
+            try? await Task.sleep(for: Self.acceptedWait)
+            guard let self, self.ledger.intent(id)?.state == .accepted else { return }
+            self.ledger.drop(id); self.restorers.removeValue(forKey: id); self.refold()
+        }
+    }
+
+    private func settle(_ id: Int, after error: Error) {
+        guard ledger.intent(id)?.state == .sent else { return }
+        switch error {
+        case PhoneError.unconfirmed, is CancellationError: ledger.lose(id, welcome: welcomes)
+        case PhoneError.unavailable: refuse(id, changeRefusal ?? error.localizedDescription)
+        default: refuse(id, error.localizedDescription)
+        }
+    }
+
+    private func refuse(_ id: Int, _ words: String) {
+        guard let intent = ledger.drop(id) else { return }
+        restorers.removeValue(forKey: id)?()
+        say(words, at: intent)
+        refold()
+    }
+
+    private func say(_ words: String, at intent: PhoneIntent) {
+        changeNotice = PhoneChangeNotice(words: words, place: intent.place)
+        if let place = intent.place { takenBack[place] = words }
+    }
+
+    /// The upright pill showed the notice, so its place's line has nothing left unseen to say.
+    public func noticeShown(_ change: PhoneChangeNotice) {
+        guard changeNotice == change, let place = change.place else { return }
+        takenBack[place] = nil
+    }
+
+    /// A snapshot from the home: retire what it holds, void what changed under it, and take back with today's
+    /// unconfirmed words what it contradicts after reconnecting.
+    private func saw(_ snapshot: PhoneSnapshot, replayed: Bool = false) {
+        let before = ledger.intents.map(\.id)
+        // A push the welcome replays can predate a change whose result was lost, so it settles only what it holds.
+        let contradicted = ledger.saw(snapshot, welcome: replayed ? Int.min : welcomes)
+        for intent in contradicted {
+            restorers.removeValue(forKey: intent.id)?()
+            say(PhoneError.unconfirmed.localizedDescription, at: intent)
+        }
+        let after = Set(ledger.intents.map(\.id))
+        for id in before where !after.contains(id) { restorers.removeValue(forKey: id) }
+        if after.count != before.count { refold(); return }
+        switch snapshot {
+        case .cards: cards = PhoneIntentFold.cards(syncedCards, ledger.intents)
+        case .thread: threads = PhoneIntentFold.threads(syncedThreads, ledger.intents)
+        case .board: board = PhoneIntentFold.board(syncedBoard, ledger.intents)
+        case .turn: lastTurn = PhoneIntentFold.lastTurn(syncedTurn, ledger.intents)
+        case .task, .crew: break
+        }
+    }
+
+    private func refold() {
+        cards = PhoneIntentFold.cards(syncedCards, ledger.intents)
+        threads = PhoneIntentFold.threads(syncedThreads, ledger.intents)
+        board = PhoneIntentFold.board(syncedBoard, ledger.intents)
+        lastTurn = PhoneIntentFold.lastTurn(syncedTurn, ledger.intents)
     }
 
     public init(mac: JoinedMac, phone: PhoneIdentity) { self.mac = mac; self.phone = phone }
@@ -548,6 +696,8 @@ public struct PhoneNotice: Equatable, Sendable {
             access = frame["access"] as? String == "full" ? "full" : "read"
             homeVersion = frame["protocolVersion"] as? String
             self.epoch = epoch
+            welcomeSeq = seq
+            welcomes += 1
             refused = 0
             if let name = frame["name"] as? String, !name.isEmpty {
                 mac.name = name; onMacChanged?(mac)
@@ -578,29 +728,34 @@ public struct PhoneNotice: Equatable, Sendable {
             if seq <= sequence { return }
             guard seq == sequence + 1 else { epoch = nil; throw PhoneError.invalidReply }
             sequence = seq
+            let replayed = seq <= welcomeSeq
             if frame["channel"] as? String == "inf:cards" {
                 guard frame["payload"] != nil else { throw PhoneError.invalidReply }
                 let updated = try decoded.cards()
-                let departed = cards.filter { old in !updated.contains { $0.id == old.id } }.map(\.id)
-                cards = updated
+                let departed = syncedCards.filter { old in !updated.contains { $0.id == old.id } }.map(\.id)
+                syncedCards = updated
                 for id in departed { Task { try? await self.readPast(id) } }
-                observeCards(cards)
-                supersede(PhoneContract.cards)
+                observeCards(syncedCards)
+                saw(.cards(updated), replayed: replayed)
+                // A replayed push can predate a lost change, so the cards read sent at the welcome still settles it.
+                if !replayed { supersede(PhoneContract.cards) }
             }
             if frame["channel"] as? String == "inf:computers:presence", frame["payload"] != nil, sceneObservations {
                 computers = try decoded.computers()
                 supersede(PhoneRequest.computers.rawValue)
             }
             if frame["channel"] as? String == "inf:tasks", frame["payload"] != nil {
-                board = try decoded.board()
-                supersede(PhoneRequest.board.rawValue); workRevision += 1
+                syncedBoard = try decoded.board()
+                saw(.board(syncedBoard!), replayed: replayed)
+                if !replayed { supersede(PhoneRequest.board.rawValue) }
+                workRevision += 1
             }
             // A delta folds onto the board held, as on the Mac (INF-1854); a full read is the contract's resync path
             // for a delta with no base to apply to.
             if frame["channel"] as? String == "inf:tasks:delta", frame["payload"] != nil {
                 let delta = try decoded.delta()
-                if let held = board, let next = held.applying(delta) {
-                    if next.seq != held.seq { board = next; supersede(PhoneRequest.board.rawValue); workRevision += 1 }
+                if let held = syncedBoard, let next = held.applying(delta) {
+                    if next.seq != held.seq { syncedBoard = next; saw(.board(next), replayed: replayed); if !replayed { supersede(PhoneRequest.board.rawValue) }; workRevision += 1 }
                 } else {
                     try await refresh(PhoneRequest.board.rawValue, on: socket)
                 }
@@ -621,7 +776,8 @@ public struct PhoneNotice: Equatable, Sendable {
                 let thread = try PhoneJSON.read(payload)
                 if let id = thread["cardId"].text {
                     threadRevisions[id, default: 0] += 1
-                    threads[id] = thread
+                    syncedThreads[id] = thread
+                    saw(.thread(card: id, thread), replayed: replayed)
                 }
             }
             if frame["channel"] as? String == "inf:event", let event = frame["payload"] as? [String: Any],
@@ -655,14 +811,17 @@ public struct PhoneNotice: Equatable, Sendable {
                 throw PhoneError.invalidReply
             }
             switch channel {
-            case PhoneContract.cards: cards = try decoded.cards(); observeCards(cards)
+            case PhoneContract.cards:
+                syncedCards = try decoded.cards(); observeCards(syncedCards); saw(.cards(syncedCards))
             case PhoneContract.feed: activity = try decoded.feed()
-            case PhoneRequest.board.rawValue: board = try decoded.board(); workRevision += 1
+            case PhoneRequest.board.rawValue:
+                syncedBoard = try decoded.board(); saw(.board(syncedBoard!)); workRevision += 1
             case PhoneRequest.conversationState.rawValue:
                 firstmateBusy = try decoded.conversation().busy
                 firstmateObserved = true
             case PhoneRequest.computers.rawValue: computers = try decoded.computers()
-            case PhoneRequest.lastTurn.rawValue: lastTurn = try decoded.lastTurn()
+            case PhoneRequest.lastTurn.rawValue:
+                syncedTurn = try decoded.lastTurn(); saw(.turn(syncedTurn))
             default: break
             }
             markReady(channel)

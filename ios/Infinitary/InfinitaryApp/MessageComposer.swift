@@ -10,7 +10,6 @@ struct MessageComposer: View {
     @State private var photos: [Photo] = []
     @State private var selection: [PhotosPickerItem] = []
     @State private var loading = false
-    @State private var sending = false
     @State private var problem: String?
     @State private var sent = 0
     @FocusState private var focused: Bool
@@ -33,7 +32,7 @@ struct MessageComposer: View {
     }
 
     private var canSend: Bool {
-        session.canChange && !sending && !loading && !(text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty && photos.isEmpty)
+        session.canChange && !loading && !(text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty && photos.isEmpty)
     }
 
     typealias Photo = PhonePhoto
@@ -55,7 +54,7 @@ struct MessageComposer: View {
                                 }.accessibilityLabel("Remove photo").accessibilityIdentifier("photo-chip")
                             }
                         }
-                    }.frame(maxWidth: compact ? 96 : .infinity).disabled(sending)
+                    }.frame(maxWidth: compact ? 96 : .infinity)
                 }
                 // INF-1517, the captain's pick from ChatGPT's input: 48 points tall, the photo glyph 16 points in,
                 // the words 52 points in, and send a 32-point circle 8 points from the end, each in a 44-point touch area.
@@ -65,9 +64,9 @@ struct MessageComposer: View {
                         // inside the button, so its frame starts where the box does, on the reading column.
                         Label("Photos", systemImage: "photo").labelStyle(.iconOnly).frame(width: 44, height: 48)
                             .padding(.leading, 5).contentShape(Rectangle())
-                    }.disabled(loading || sending || photos.count >= PhoneLimits.images).accessibilityIdentifier("add-photos")
+                    }.disabled(loading || photos.count >= PhoneLimits.images).accessibilityIdentifier("add-photos")
                     TextField("Give your first mate a task", text: $text, axis: .vertical)
-                        .lineLimit(1...(compact ? 2 : 4)).focused($focused).disabled(sending)
+                        .lineLimit(1...(compact ? 2 : 4)).focused($focused)
                         .padding(.vertical, PhoneTheme.space3).frame(minHeight: 48)
                         .padding(.leading, 3)
                         .accessibilityIdentifier("message-box")
@@ -86,13 +85,13 @@ struct MessageComposer: View {
                     .opacity(session.canChange ? 1 : 0.5)
             }
             if loading { ProgressView("Adding photos…") }
-            if sending { ProgressView("Sending…") }
             if let words = session.changesOffLine {
                 Text(words).font(PhoneFont.caption).foregroundStyle(PhoneTheme.secondary)
                     .frame(maxWidth: .infinity).multilineTextAlignment(.center)
                     .accessibilityIdentifier("connection-refusal")
             }
-            if let problem {
+            // INF-2553: on its side there is no notice pill, so a message taken back says why here, as a refusal did before.
+            if let problem = problem ?? (compact ? session.takenBack[PhoneIntent.messagePlace] : nil) {
                 Text(problem).foregroundStyle(PhoneTheme.warning).accessibilityIdentifier("message-problem")
             }
         }.font(PhoneFont.callout).padding(.top, compact ? PhoneTheme.space2 : PhoneTheme.space3)
@@ -151,7 +150,7 @@ struct MessageComposer: View {
                         topLeadingRadius: 14, bottomLeadingRadius: 14, bottomTrailingRadius: 5, topTrailingRadius: 14))
                     .accessibilityIdentifier("\(id)-you")
             }
-            if round.reply != nil || busy {
+            if round.reply != nil || busy || (newest && session.messageSending) {
                 HStack(spacing: 8) {
                     MateMark(working: busy, still: reduceMotion).frame(width: 16, height: 16)
                     if let reply = round.reply {
@@ -160,6 +159,10 @@ struct MessageComposer: View {
                                 .frame(maxWidth: .infinity, minHeight: 24, alignment: .leading).contentShape(Rectangle())
                         }.buttonStyle(.plain).accessibilityHint("Opens the whole reply")
                             .accessibilityIdentifier("\(id)-reply")
+                    } else if newest && session.messageSending {
+                        // INF-2553: the message is the last turn at the tap, marked sending until the computer has it.
+                        Text("Sending…").foregroundStyle(PhoneTheme.muted)
+                            .frame(minHeight: 24).accessibilityElement(children: .combine).accessibilityIdentifier("last-turn-sending")
                     } else {
                         Text("Working…").foregroundStyle(PhoneTheme.muted)
                             .frame(minHeight: 24).accessibilityElement(children: .combine).accessibilityIdentifier("\(id)-reply")
@@ -190,20 +193,29 @@ struct MessageComposer: View {
         withAnimation(reduceMotion ? nil : .linear(duration: 0.7)) { faded = true }
     }
 
+    /// INF-2553: the box clears at the tap and the message is the last turn, marked sending; a refusal puts the words and
+    /// pictures back in front of anything typed since, and the session says why.
     private func send() {
-        guard !sending, !loading, session.canChange else { return }
+        guard !loading, session.canChange else { return }
         guard text.utf16.count <= PhoneLimits.text else { problem = "This message is too long. Shorten it before sending."; return }
-        var payload: [String: Any] = ["text": text, "images": photos.map(\.wire)]
+        let words = text, pictures = photos
+        var payload: [String: Any] = ["text": words, "images": pictures.map(\.wire)]
         for (key, value) in messageContext.fields { payload[key] = value }
         focused = false
-        sending = true; problem = nil
+        problem = nil
+        text = ""; photos = []
+        // The computer keeps the words trimmed, and its turn for them follows the last turn shown now.
+        let intent = PhoneIntent.Kind.send(text: words.trimmingCharacters(in: .whitespacesAndNewlines), before: PhoneTurnMark(session.lastTurn))
         Task {
-            defer { sending = false }
             do {
-                let result: PhoneAnswer = try await session.request(.converse, args: [payload])
-                try result.accepted()
-                text = ""; photos = []; sent += 1
-            } catch { problem = error.localizedDescription }
+                let box = $text, shelf = $photos
+                let restore: @MainActor () -> Void = { @MainActor in
+                    box.wrappedValue = box.wrappedValue.isEmpty ? words : words + "\n" + box.wrappedValue
+                    shelf.wrappedValue = Array((pictures + shelf.wrappedValue).prefix(PhoneLimits.images))
+                }
+                try await session.change(intent, .converse, args: [payload], restore: restore)
+                sent += 1
+            } catch {}
         }
     }
 

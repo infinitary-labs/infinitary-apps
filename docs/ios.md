@@ -171,15 +171,14 @@ The words a phone card shows come from the Mac's owners through `PhoneCardWords.
 The footer choices are the Mac's row (`PhoneChoiceStyle` in `PhoneChoiceRow`): rounded rectangles with 16-point words, drawn about 37 points tall inside a 44-point touch area, each keeping its own width at the trailing edge and wrapping onto another line when they do not fit.
 As on the Mac (`footerGroups`), the default is drawn last, filled with the accent; a danger choice has a red outline and the rest a hairline outline.
 The answers line (`answersLine.ts`) sits in mono at the start of the first line, and a hairline sits above the row while the body runs on beneath it.
-While a required question has no answer the default choice is drawn muted, and a press of it asks for the missing answer; a pressed choice shows a pending mark until the computer answers.
+While a required question has no answer the default choice is drawn muted, and a press of it asks for the missing answer; a pressed choice shows a pending mark while its answers are read from the body.
 Above the choices sit the host's fact strip, which the body's page splits off as the Mac does and a second read-only web view draws, then the actions to take after merging, one written out or more folded under their count, as the Mac shows them, then the reply field.
 The reply field reads "anything to add?", takes photos from the library or the camera, and its words also go with a choice as the `anything_else` answer, as the Mac's field does.
 A footer press collects a fresh form reading through the computer’s shared bridge, including question definitions and staged settings, and sends the mounted offer and lifecycle with its own interaction id.
 If the body has already failed, a later deliberate press may use its last observed draft, marked `fallback` with `no-fresh-reading` rather than fresh question evidence.
 A timeout on the current press still refuses it; a body that never supplied a reading keeps choices unavailable rather than inventing answers.
 The default choice waits for every required question; other choices carry the current answers.
-The core still owns refusals, effects and closing, and a refusal leaves the card and draft in place.
-Body and footer choices share one native pending gate, and an accepted choice remains locked until its card leaves.
+The core still owns refusals, effects and closing; a choice, close or put-aside takes the card off Home at the tap, and a refusal puts it back in its place with the draft (see "Changes show at the tap" below).
 Reply admission counts UTF-16 units against `PhoneLimits.reply`, generated from the published request’s text limit.
 A shown, drawn card reports seen only while the phone is active and the Mac is in reach.
 A reply sends its words, photos and current settings to the card’s author and makes no closing choice.
@@ -356,7 +355,7 @@ Its component owns messages and photos; the shared shell places it at the foot o
 A send carries the visible entry’s `visibleCardId`, `pastCardId` or `taskId` through the published conversation request as a hint, never as the message’s topic.
 The native multiline field uses the keyboard’s own dictation; Infinitary adds no speech model or microphone permission.
 Photos uses the system library picker, converts selected images to orientation-correct JPEG thumbnails up to 2,048 pixels, and bounds each attachment and turn by the published limits.
-Selected photos appear as removable chips; messages and photos remain in memory until a confirmed send clears them.
+Selected photos appear as removable chips; a send clears the box and its photos at the tap, and a refusal puts them back in front of anything typed since.
 Command-Return sends from either message field; native controls retain hardware-keyboard focus, VoiceOver and Dynamic Type.
 
 The Tasks tab combines a filter of the live board with the Mac’s earlier-task search.
@@ -384,8 +383,31 @@ Task cards, browser pages and rich transcript pictures remain outside this piece
 A mutation requires both **In reach** and the welcome’s `full` access.
 The phone connects as a view, and its hello says its build's view floor (`viewFloor`, generated from the published contract), so it keeps changing things across majors that kept views, in both directions (`docs/contract.md`, "The version rule").
 Outside that window the line under the message box names the older side (`PhoneUpdate`): "Update Infinitary on this phone to make changes." when the computer is newer, and "Update Infinitary on your computer to make changes." when it is older.
-Every request has one connection-bound response and a bounded wait; a disconnect, timeout or unreadable mutation response explains that its outcome is unconfirmed.
-The phone retains the draft, asks the captain to check the Mac, and never queues or retries a mutation after reconnecting.
+Every request has one connection-bound response and a bounded wait; a disconnect, timeout or unreadable mutation response leaves its outcome unconfirmed.
+The phone never queues or retries a mutation after reconnecting.
+
+### Changes show at the tap
+
+Every change the captain makes on the phone shows at once and settles on the computer's own evidence (INF-2553, the captain's direction B).
+The session (`ReadOnlySession`) keeps the computer's last snapshots untouched and a ledger of pending intents (`PhoneIntents.swift`), and every screen reads the snapshots with the intents drawn over them in the order they were sent.
+A close or a choice takes the card off Home and the next card is up; putting a card aside moves it to its task row, and bringing cards back puts them on Home with the first one up.
+A reply joins the card's thread marked Sending… where its time will be, and the draft and photos clear.
+A message clears the box and stands as the last turn, marked Sending… until the computer has it.
+Start and Continue read Starting on the record and its row, Interrupt reads Stopping, and a steer shows in the transcript marked Sending… as its draft clears.
+A snapshot that holds the change retires its intent with nothing moving.
+A reply or a steer is held once the thread or transcript has more of the captain's messages than it showed at the tap, and a message once the last turn follows the one shown at the tap, since the computer writes the words its own way (trimmed, with a line for each picture).
+A snapshot whose card or task changed under the intent, such as a revised offer or a closed task, voids it quietly.
+A refusal takes the change back: the card returns to its place in the stack, the draft returns, and a short notice where the captain is says the computer's words, a pill at the top of the tab or a line at the record's foot, leaving after eight seconds or on a tap.
+An iPhone on its side has no room for the pill, so the same words stay on the place's own line until that place's next change or the upright pill shows them, as a refusal's did before: a card's line, whether or not it is the card up, the Tasks list's line for a card put aside again, and the composer's line for a message.
+An accepted change waits up to 15 seconds for the snapshot that shows it, then goes quietly, even when the phone reconnected meanwhile.
+A change whose answer was lost to a disconnect stays shown until the first snapshot after reconnecting, which retires it or takes it back with "Could not confirm the change.
+Check your computer before sending it again."
+A push the welcome replays can predate the change, so it only retires; the snapshots that can take a change back are the reads after the welcome and the pushes newer than it.
+A replayed push never stands in for the reads sent at the welcome, so those reads still settle a lost change.
+A reply, message or steer the computer refused or never took stops counting toward the later ones in its place, so each still settles on its own entry.
+Nothing is queued or sent again.
+The computer sends a choice's or close's cards to every view before it answers, so a view settles without waiting out the stack's coalescing.
+The intent table (`src/shared/intents.ts`) names each kind's prediction and evidence for every view, and its fixture (`InfinitaryKit/Tests/InfinitaryKitTests/Fixtures/PhoneIntents.json`) is replayed by the phone's tests and the shared ones, so a view that takes the table predicts and settles a tap as the phone does.
 A native draft, last turn, task and transcript are never written to the phone’s saved connection file.
 
 A new card or an answered reply raises an in-app notice while the app is open, after reading the Mac’s Notifications switch.

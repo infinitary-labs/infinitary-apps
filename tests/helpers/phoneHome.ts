@@ -64,7 +64,18 @@ const PHONE_ASKED_MESSAGE = [
   "if it is a regression, please fix it, but keep minimize as it is.",
 ].join("\n\n");
 
+/** A control request's small JSON body, or "" when it sent none. */
+async function controlBody(request: IncomingMessage): Promise<string> {
+  let body = "";
+  for await (const chunk of request) {
+    body += chunk.toString();
+    if (body.length > 1024) throw new Error("A control request is too large");
+  }
+  return body;
+}
+
 /** INF-64 piece 2: a disposable real home, never a replacement for the wire or stores. */
+
 export async function startPhoneHome(
   root: string,
   controls?: {
@@ -184,8 +195,14 @@ export async function startPhoneHome(
     return { promise, resolve };
   };
   let cardHold:
-    | { entered: ReturnType<typeof cardBarrier>; released: ReturnType<typeof cardBarrier> }
+    | {
+        channel: string;
+        entered: ReturnType<typeof cardBarrier>;
+        released: ReturnType<typeof cardBarrier>;
+      }
     | undefined;
+  // INF-2553: the next change on this channel is refused with these words, so the phone takes its prediction back.
+  let refuseNext: { channel: string; words: string } | undefined;
   // INF-1059: the phone's next board read is held, so a card from its first cards read is drawn while it is still reaching.
   let boardHold:
     | {
@@ -289,7 +306,9 @@ export async function startPhoneHome(
       return typeof value === "function" ? value.bind(target) : value;
     },
   });
-  let loseNextReply = false;
+  // "after": the computer takes the message, then the connection drops before its answer; "before": the
+  // connection drops first, so the computer never takes it (INF-2553's unconfirmed take-back).
+  let loseNextReply: "after" | "before" | undefined;
   // The core's own id for the hero card (a first mate card's id is the core's, not the one asked for).
   let heroId = "";
   let sceneObservationReads = 0;
@@ -302,6 +321,11 @@ export async function startPhoneHome(
         if (channel === "inf:conversation:state" || channel === "inf:computers:presence") {
           sceneObservationReads += 1;
           if (!sceneSupport) throw new Error("This older home has no scene observation reads");
+        }
+        if (loseNextReply === "before" && channel === "inf:converse") {
+          loseNextReply = undefined;
+          await connection.close();
+          throw new Error("The connection dropped before the computer took the message");
         }
         if (channel === "inf:cards:list") readings.cards += 1;
         if (channel === "inf:feed:recent") readings.feed += 1;
@@ -348,15 +372,20 @@ export async function startPhoneHome(
           args[0] === latePicture.name
         )
           latePicture.asked.resolve();
-        if (channel === "inf:cards:act" && cardHold) {
+        if (cardHold && channel === cardHold.channel) {
           const held = cardHold;
           held.entered.resolve();
           await held.released.promise;
         }
+        if (refuseNext && channel === refuseNext.channel) {
+          const { words } = refuseNext;
+          refuseNext = undefined;
+          throw new Error(words);
+        }
         const result = await core.dispatch(channel, args, actor);
 
-        if (loseNextReply && channel === "inf:converse") {
-          loseNextReply = false;
+        if (loseNextReply === "after" && channel === "inf:converse") {
+          loseNextReply = undefined;
           await connection.close();
         }
         return result;
@@ -1027,10 +1056,28 @@ export async function startPhoneHome(
           break;
         }
         // INF-499 #9: hold the real request before dispatch so a competing input has an observable window.
-        case "POST hold-card-action":
-          cardHold = { entered: cardBarrier(), released: cardBarrier() };
+        // INF-2553: any change channel may be held (a card choice by default), so the phone's prediction shows
+        // while its request is still out.
+        case "POST hold-card-action": {
+          const said = await controlBody(request);
+          const { channel = "inf:cards:act" } = (said ? JSON.parse(said) : {}) as {
+            channel?: string;
+          };
+          cardHold = { channel, entered: cardBarrier(), released: cardBarrier() };
           result = { ok: true };
           break;
+        }
+        case "POST refuse-next-change": {
+          const asked = JSON.parse(await controlBody(request)) as {
+            channel?: unknown;
+            words?: unknown;
+          };
+          if (typeof asked.channel !== "string" || typeof asked.words !== "string")
+            throw new Error("A refusal must name its channel and its words");
+          refuseNext = { channel: asked.channel, words: asked.words };
+          result = { ok: true };
+          break;
+        }
         case "POST card-action-held": {
           if (!cardHold) throw new Error("No card action is held");
           let timer: DeadlineTimer | undefined;
@@ -1401,10 +1448,13 @@ export async function startPhoneHome(
           result = { ok: true };
           break;
         }
-        case "POST lose-reply":
-          loseNextReply = true;
+        case "POST lose-reply": {
+          const said = await controlBody(request);
+          const { before = false } = (said ? JSON.parse(said) : {}) as { before?: boolean };
+          loseNextReply = before ? "before" : "after";
           result = { ok: true };
           break;
+        }
         case "POST character-fixture": {
           // INF-82: the actual first mate holds a turn; never emit a synthetic busy event.
           await until(() => !firstmateBusy);

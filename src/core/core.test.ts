@@ -3568,6 +3568,33 @@ describe("the connection serves the core to paired devices", () => {
     expect(connection.listening()).toEqual([]);
   });
 
+  // INF-2553 (the captain: "closing a card on the ios would not immediately take effect, but seems to rely on server
+  // response"): a view shows a close at the tap and settles it on the next cards snapshot, so the home sends the
+  // snapshot without the card before it answers the close, never a coalescing window after it.
+  it("sends a view the cards without a closed card before it answers the close", async () => {
+    const { grant } = await pairDevice("view", "Phone");
+    const view = await connectClient(grant);
+    const holds = (id: string) => (push: ReceivedPush) =>
+      push.channel === "inf:cards" && (push.payload as Card[]).some((card) => card.id === id);
+    core.services.supervisor.addSystemNoteCard(
+      "card-close-first",
+      "Closed from the phone",
+      "<p>Gone at once</p>",
+    );
+    const shown = await view.push(holds("card-close-first"));
+
+    await view.invoke("inf:cards:close", ["card-close-first"]);
+    const after = view.pushes.filter(
+      (push) => push.seq > shown.seq && push.channel === "inf:cards",
+    );
+    expect(after.at(-1)).toBeDefined();
+    expect(holds("card-close-first")(after.at(-1)!)).toBe(false);
+
+    await view.close();
+    await core.dispatch("inf:devices:remove", [grant.deviceId]);
+    await connection.settled();
+  });
+
   it("says in Devices while a Mac that controls this Firstmate is connected, and since when it is out of reach", async () => {
     // The shell attaches the connection to the core's devices, as the app does.
     const unreach = core.services.workDevices.attach(connection);

@@ -468,9 +468,14 @@ export function createCoreDispatcher(options: CoreDispatcherOptions): CoreDispat
 
     "inf:cards:list": () => services.supervisor.cardsSnapshot(),
 
+    // INF-2553: a captain's choice or close goes out to every view before its
+    // result does, so a view settling its prediction on the next snapshot
+    // never waits out the stack's coalescing window.
     "inf:cards:act": (cardId, actionId, source, value, submission) => {
       try {
-        return services.supervisor.act(cardId, actionId, source, value, submission);
+        const result = services.supervisor.act(cardId, actionId, source, value, submission);
+        services.supervisor.flushCards();
+        return result;
       } catch (error) {
         if (!(error instanceof CardChoiceUnavailableError)) throw error;
         return { refusal: error.message };
@@ -491,6 +496,7 @@ export function createCoreDispatcher(options: CoreDispatcherOptions): CoreDispat
     },
     "inf:cards:close": (cardId, submission) => {
       services.supervisor.close(cardId, submission);
+      services.supervisor.flushCards();
       return { ok: true as const };
     },
 
